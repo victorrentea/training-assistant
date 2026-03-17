@@ -5,33 +5,36 @@ title Workshop Live Interaction Tool — C2: Container Diagram
 
 LAYOUT_WITH_LEGEND()
 
-Person(victor, "Victor (Host/Trainer)", "Facilitates session, runs daemon on Mac")
-Person(participant, "Participant", "Audience member")
+Person(victor, "Victor (Host/Trainer)", "Workshop facilitator.\nRuns daemon on his Mac.")
+Person(participant, "Participant", "Audience member.")
 
-System_Ext(claude_api, "Anthropic Claude API", "LLM quiz generation")
-System_Ext(nominatim, "Nominatim", "Reverse geocoding")
+System_Ext(audio_hijack, "Audio Hijack", "Captures and transcribes workshop audio\nto a local file on Victor's Mac.")
+System_Ext(claude_api, "Anthropic Claude API", "LLM for quiz generation.")
+System_Ext(nominatim, "Nominatim", "Reverse geocoding.")
 
 System_Boundary(workshop, "Workshop Tool") {
 
-    Container(caddy, "Caddy Reverse Proxy", "Caddy (single binary)", "Terminates TLS (Let's Encrypt).\nEnforces HTTP Basic Auth on\n/host, /api/poll, /api/poll/status,\n/api/quiz-*.\nForwards to FastAPI on :8000.")
+    Container(caddy, "Caddy Reverse Proxy", "Caddy (single binary)", "TLS termination (Let's Encrypt).\nHTTP Basic Auth on /host and /api/*.\nForwards to FastAPI on :8000.")
 
-    Container(fastapi, "FastAPI Backend", "Python 3.9 / FastAPI / Uvicorn\n(port 8000, 127.0.0.1)", "All business logic.\nREST endpoints + WebSocket.\nServes static HTML/JS/CSS.\nRuns as systemd workshop.service.")
+    Container(fastapi, "FastAPI Backend", "Python 3.9 / FastAPI / Uvicorn", "REST endpoints + WebSocket.\nServes static HTML/JS/CSS.\nRuns as systemd workshop.service.")
 
-    Container(appstate, "In-Memory AppState", "Python singleton (dict)\nno database", "Single-room session model.\nHolds poll, votes, scores,\nparticipant WebSocket refs,\nlocations, quiz pipeline state.\nCleared on server restart.")
+    Container(appstate, "In-Memory AppState", "Python singleton", "Holds poll, votes, scores,\nparticipant WebSockets, locations,\nquiz pipeline state.")
 
-    Container(static_files, "Static Files", "HTML / Vanilla JS / CSS\n(served by FastAPI /static)", "participant.html + participant.js\nhost.html + host.js\ncommon.css, participant.css, host.css")
+    Container(static_files, "Static Files", "HTML / Vanilla JS / CSS", "participant.html, host.html,\nparticipant.js, host.js, CSS files.")
 
-    Container(quiz_daemon, "Quiz Daemon", "Python 3.12 CLI\n(Victor's Mac)", "Long-running background process.\nPolls /api/quiz-request every 1s.\nLoads local .txt/.vtt/.srt transcript.\nCalls Claude API to generate questions.\nPosts preview to backend.")
+    Container(quiz_daemon, "Quiz Daemon", "Python 3.12 CLI (Victor's Mac)", "Long-polls backend for quiz requests.\nReads local transcript files.\nPosts AI-generated preview to backend.")
 }
 
-Rel(victor, caddy, "Opens host panel, manages polls", "HTTPS :443")
-Rel(participant, caddy, "Opens participant page, votes", "HTTPS :443 / WSS")
-Rel(victor, quiz_daemon, "Starts/stops daemon process", "Local terminal")
+Rel(victor, audio_hijack, "Records live workshop audio", "Local on Mac")
+Rel(audio_hijack, quiz_daemon, "Produces transcript file", "Local file")
+Rel(victor, caddy, "Manages polls and quiz previews", "HTTPS :443")
+Rel(participant, caddy, "Votes on polls, sees results", "HTTPS :443 / WSS")
+Rel(victor, quiz_daemon, "Starts/stops", "Local terminal")
 Rel(caddy, fastapi, "Proxies all requests", "HTTP :8000")
-Rel(fastapi, appstate, "Reads and mutates session state", "In-process Python call")
-Rel(fastapi, static_files, "Serves HTML/JS/CSS files", "FileResponse / StaticFiles mount")
+Rel(fastapi, appstate, "Reads and writes session state", "In-process")
+Rel(fastapi, static_files, "Serves files", "StaticFiles mount")
 Rel(quiz_daemon, caddy, "Polls for requests, posts quiz preview", "HTTPS REST (Basic Auth)")
-Rel(quiz_daemon, claude_api, "Generates quiz from transcript text", "HTTPS REST (Anthropic SDK, from Mac)")
-Rel(participant, nominatim, "Reverse geocodes GPS", "HTTPS REST (browser fetch)")
+Rel(quiz_daemon, claude_api, "Generates quiz from transcript", "HTTPS REST (Anthropic SDK)")
+Rel(participant, nominatim, "Resolves GPS to city/country", "HTTPS REST")
 
 @enduml
