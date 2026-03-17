@@ -231,7 +231,7 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
 
 .no-poll { color: var(--muted); font-size: .9rem; text-align: center; padding: 2rem 0; }
 
-.llm-hint { opacity: .45; font-size: .85em; margin-left: .2rem; }
+.llm-hint { opacity: .3; font-size: .8em; margin-left: .25rem; color: var(--muted); }
 
 /* ── Timer ── */
 .timer-btns { display: flex; align-items: center; gap: .5rem; margin-top: .6rem; flex-wrap: wrap; }
