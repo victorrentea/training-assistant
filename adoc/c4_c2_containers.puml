@@ -18,8 +18,6 @@ System_Boundary(workshop, "Workshop Tool") {
 
     Container(fastapi, "FastAPI Backend", "Python 3.9 / FastAPI / Uvicorn", "REST endpoints + WebSocket.\nRuns as systemd service on Oracle Cloud.")
 
-    Container(appstate, "In-Memory AppState", "Python singleton", "Poll, votes, scores,\nparticipant WebSockets, locations,\nquiz pipeline state.")
-
     Container(participant_spa, "Participant SPA", "Vanilla JS (runs in trainee's browser)", "Voting UI, live results,\ngeolocation, WebSocket client.")
 
     Container(host_spa, "Host SPA", "Vanilla JS (runs in Victor's browser)", "Poll management, participant list,\nmap view (Leaflet), quiz preview.")
@@ -35,7 +33,6 @@ Rel(host_spa, caddy, "Poll API, WebSocket", "HTTPS / WSS")
 Rel(participant_spa, caddy, "Vote API, WebSocket", "HTTPS / WSS")
 Rel(caddy, fastapi, "Proxies API and WebSocket", "HTTP :8000")
 Rel(participant_spa, nominatim, "Reverse geocodes GPS", "HTTPS REST")
-Rel(fastapi, appstate, "Reads and writes session state", "In-process")
 Rel(quiz_daemon, caddy, "Polls for requests, posts preview", "HTTPS REST (Basic Auth)")
 Rel(quiz_daemon, claude_api, "Generates quiz from transcript", "HTTPS REST")
 
