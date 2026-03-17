@@ -46,6 +46,10 @@
     };
   }
 
+  function escHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
   function setBadge(ok) {
     const b = document.getElementById('ws-badge');
     b.textContent = ok ? '● Connected' : '● Disconnected';
