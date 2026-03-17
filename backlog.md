@@ -5,4 +5,4 @@
 - [x] quiz_generator: Instead of the expected tag with an arrow before, prefer a shorter green check emoji when displaying the suggested question.
 - [x] quiz_generator: in the user input, typing a letter from A to B or D or E should just replace that letter with another option as a shorthand from typing R and then telling what option to replace.
 - [x] When generating a question, encourage the LLM to search the web.
-- 
+- [x] Add automated e2e tests at the API level for the current functionality. create a testing DSL that allows for readable tests.

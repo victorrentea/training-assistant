@@ -154,7 +154,7 @@ async def websocket_endpoint(websocket: WebSocket, participant_name: str):
             elif data.get("type") == "vote":
                 option_id = data.get("option_id")
                 valid_ids = [o["id"] for o in state.poll["options"]] if state.poll else []
-                if state.poll_active and state.poll and option_id in valid_ids:
+                if state.poll_active and state.poll and not state.poll.get("multi") and option_id in valid_ids:
                     state.votes[name] = option_id
                     await broadcast({
                         "type": "vote_update",
