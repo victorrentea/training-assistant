@@ -241,3 +241,9 @@ python3 -m uvicorn main:app --reload --port 8000
 - [ ] Implement word cloud feature (Phase 2)
 - [ ] Add session history / export (optional)
 - [ ] Claude API integration for AI-assisted Q&A summarisation (Phase 3)
+
+---
+
+## Workflow
+
+- **After completing each backlog item**: create a git commit.

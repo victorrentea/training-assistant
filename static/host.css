@@ -73,7 +73,7 @@ input[type=text], textarea {
 input[type=text]:focus, textarea:focus { border-color: var(--accent); }
 textarea { resize: none; min-height: 80px; overflow: hidden; }
 
-/* ── Poll composer — contenteditable div replacing question + options inputs ── */
+/* ── Poll composer (contenteditable) ── */
 .poll-composer {
   width: 100%;
   padding: .9rem 1rem;
@@ -84,42 +84,45 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
   outline: none;
   transition: border-color .2s;
   font-family: inherit;
+  font-size: .95rem;
+  line-height: 1.6;
   min-height: 130px;
-  cursor: text;
+  box-sizing: border-box;
   white-space: pre-wrap;
   word-break: break-word;
+  cursor: text;
 }
 .poll-composer:focus { border-color: var(--accent); }
 
-/* Placeholder when empty */
+/* Placeholder via data attribute */
 .poll-composer:empty::before {
   content: attr(data-placeholder);
   color: var(--muted);
   pointer-events: none;
-  white-space: pre;
+  white-space: pre-wrap;
 }
 
-/* First line = question: larger, bold */
+/* First line = question */
 .poll-composer .q-line {
   display: block;
-  font-size: 1.1rem;
+  font-size: 1.15rem;
   font-weight: 700;
   color: var(--text);
   line-height: 1.4;
 }
 
 /* Blank separator line */
-.poll-composer .sep-line {
+.poll-composer .blank-line {
   display: block;
-  height: .6em;
+  line-height: .8;
 }
 
-/* Option lines: smaller, muted */
+/* Option lines */
 .poll-composer .opt-line {
   display: block;
-  font-size: .88rem;
+  font-size: .9rem;
   color: var(--muted);
-  line-height: 1.6;
+  line-height: 1.7;
 }
 
 /* ── Quiz gen row inside Create Poll card ── */
@@ -189,6 +192,19 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
 .status-pill.open   { background: #48cfad22; color: var(--accent2); border: 1px solid var(--accent2); }
 .status-pill.closed { background: #ff6b6b22; color: var(--danger);  border: 1px solid var(--danger); }
 .status-pill.draft  { background: #6c63ff22; color: var(--accent);  border: 1px solid var(--accent); }
+
+.mode-pill {
+  display: inline-block;
+  margin-left: .5rem;
+  padding: .25rem .7rem;
+  border-radius: 20px;
+  font-size: .78rem;
+  font-weight: 600;
+  background: var(--surface2);
+  color: var(--muted);
+  border: 1px solid var(--border);
+  margin-bottom: 1rem;
+}
 
 .no-poll { color: var(--muted); font-size: .9rem; text-align: center; padding: 2rem 0; }
 

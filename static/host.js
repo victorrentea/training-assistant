@@ -165,99 +165,54 @@
   // ── Poll composer (contenteditable) ──
   const pollInput = document.getElementById('poll-input');
 
+  // Read plain text lines from contenteditable div
+  function getLines() {
+    // innerText gives newline-separated lines reliably
+    return (pollInput.innerText || '').split('\n');
+  }
+
   function parsePollInput() {
-    const raw = pollInput.innerText || '';
-    const lines = raw.split('\n');
-    // First non-empty line = question; blank line separates; rest = options
+    const lines = getLines();
     let question = '';
     const options = [];
-    let pastBlank = false;
     for (const line of lines) {
       const t = line.trim();
-      if (!question) { if (t) question = t; continue; }
-      if (!t) { pastBlank = true; continue; }
-      if (pastBlank) options.push(t);
+      if (!t) continue;
+      if (!question) { question = t; continue; }
+      options.push(t);
     }
     return { question, options };
   }
 
-  function renderComposer() {
-    // Re-render styled spans in-place, preserving cursor position
-    const sel = window.getSelection();
-    const raw = pollInput.innerText || '';
-    const lines = raw.split('\n');
+  // Reclassify child divs (lines) without touching their content
+  function reclassifyLines() {
+    const children = Array.from(pollInput.children);
+    if (children.length === 0) return;
 
-    let html = '';
-    let questionDone = false;
-    let blankSeen = false;
-    for (const line of lines) {
-      const t = line.trim();
-      if (!questionDone) {
-        html += `<span class="q-line">${escHtml(line) || '\u200b'}</span>`;
-        if (t) questionDone = true;
-      } else if (!blankSeen) {
-        html += `<span class="sep-line">${escHtml(line) || '\u200b'}</span>`;
-        if (!t) blankSeen = true;
-      } else {
-        html += `<span class="opt-line">${escHtml(line) || '\u200b'}</span>`;
-      }
-    }
+    let questionSeen = false;
 
-    // Only update DOM if content actually changed (avoids cursor jump)
-    if (pollInput.innerHTML !== html) {
-      // Save and restore cursor
-      const range = sel && sel.rangeCount ? sel.getRangeAt(0) : null;
-      const offset = range ? getTextOffset(pollInput, range.startContainer, range.startOffset) : null;
-      pollInput.innerHTML = html;
-      if (offset !== null) restoreCursor(pollInput, offset);
-    }
+    children.forEach(el => {
+      const text = el.textContent.trim();
+      if (!text) { el.className = 'blank-line'; return; }
+      if (!questionSeen) { el.className = 'q-line'; questionSeen = true; }
+      else el.className = 'opt-line';
+    });
   }
 
-  function escHtml(s) {
-    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  // Init with default content using divs (contenteditable line model)
+  function initComposer(text) {
+    const lines = text.split('\n');
+    pollInput.innerHTML = lines.map(l => `<div>${l || '<br>'}</div>`).join('');
+    reclassifyLines();
   }
 
-  function getTextOffset(root, node, offset) {
-    const iter = document.createNodeIterator(root, NodeFilter.SHOW_TEXT);
-    let total = 0, n;
-    while ((n = iter.nextNode())) {
-      if (n === node) return total + offset;
-      total += n.textContent.length;
-    }
-    return total;
-  }
+  initComposer('How are you feeling today?\n\nEnergized\nGood enough\nA bit tired\nNeed coffee');
 
-  function restoreCursor(root, offset) {
-    const iter = document.createNodeIterator(root, NodeFilter.SHOW_TEXT);
-    let total = 0, n;
-    while ((n = iter.nextNode())) {
-      if (total + n.textContent.length >= offset) {
-        const range = document.createRange();
-        range.setStart(n, offset - total);
-        range.collapse(true);
-        const sel = window.getSelection();
-        sel.removeAllRanges();
-        sel.addRange(range);
-        return;
-      }
-      total += n.textContent.length;
-    }
-  }
-
-  // Init with default content
-  pollInput.innerText = 'How are you feeling today?\n\nEnergized\nGood enough\nA bit tired\nNeed coffee';
-  renderComposer();
-
-  pollInput.addEventListener('input', renderComposer);
+  pollInput.addEventListener('input', reclassifyLines);
   pollInput.addEventListener('keydown', e => {
     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
       e.preventDefault();
       document.getElementById('create-btn').click();
-    }
-    // Prevent Enter from inserting <div> — use \n instead
-    if (e.key === 'Enter' && !e.ctrlKey && !e.metaKey) {
-      e.preventDefault();
-      document.execCommand('insertText', false, '\n');
     }
   });
 
@@ -277,8 +232,7 @@
     if (res.ok) {
       await setPollStatus(true);
       toast('Poll created & opened ✓');
-      pollInput.innerText = '';
-      renderComposer();
+      pollInput.innerHTML = '<div><br></div>';
       document.getElementById('multi-check').checked = false;
     } else {
       const err = await res.json();
@@ -329,6 +283,7 @@
 
     el.innerHTML = `
       <span class="status-pill ${statusLabel}">${statusText}</span>
+      <span class="mode-pill">${currentPoll.multi ? '☑ Multi-select' : '◉ Single-select'}</span>
       <p class="poll-question">${currentPoll.question}</p>
       ${bars}
       <p style="font-size:.8rem; color:var(--muted); margin-top:.5rem;">${totalVotes} total vote${totalVotes!==1?'s':''}</p>

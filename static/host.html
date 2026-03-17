@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Workshop — Host Panel</title>
+  <link rel="icon" type="image/svg+xml" href="/static/favicon-host.svg" />
   <link rel="stylesheet" href="/static/common.css" />
   <link rel="stylesheet" href="/static/host.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -56,14 +57,14 @@
       <div class="quiz-gen-row">
         <button class="btn btn-warn" id="gen-quiz-btn" onclick="requestQuiz()">🤖 Generate Quiz</button>
         <label style="display:flex;align-items:center;gap:.4rem;font-size:.9rem;color:var(--text);cursor:pointer;margin:0;">
-          Scan last
+          from last
           <select id="quiz-minutes" style="background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:.3rem .5rem;font-size:.9rem;cursor:pointer;">
             <option value="15">15 min</option>
             <option value="30" selected>30 min</option>
             <option value="60">1 hour</option>
             <option value="480">whole day</option>
           </select>
-          of transcript
+          of discussion
         </label>
       </div>
       <div id="quiz-status" style="margin-top:.5rem;font-size:.85rem;color:var(--muted);min-height:1.2em;"></div>
