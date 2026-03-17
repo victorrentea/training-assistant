@@ -41,9 +41,8 @@
     const history = loadPollHistory();
     if (!history.length) { toast('No polls recorded today'); return; }
     const lines = history.map((e, n) => {
-      const correct = e.options.filter(o => o.correct).map(o => o.text);
       const opts = e.options.map((o, i) => `  ${String.fromCharCode(65+i)}. ${o.text}${o.correct ? ' ✅' : ''}`).join('\n');
-      return `${n+1}. ${e.question}\n${opts}${correct.length ? `\n  → Correct: ${correct.join(', ')}` : ''}`;
+      return `${n+1}. ${e.question}\n${opts}`;
     }).join('\n\n');
     const blob = new Blob([lines], { type: 'text/plain' });
     const a = document.createElement('a');
@@ -135,18 +134,25 @@
   }
 
   function renderDaemonStatus(connected, lastSeenIso) {
-    const el = document.getElementById('daemon-status');
+    const el = document.getElementById('daemon-badge');
     if (!el) return;
     if (!lastSeenIso) {
-      el.innerHTML = '🤖 Conversation access: <span style="color:var(--danger)">never connected</span>';
+      el.textContent = '🤖 Never';
+      el.className = 'badge disconnected';
+      el.title = 'Conversation access: never connected';
       return;
     }
     const ago = Math.round((Date.now() - new Date(lastSeenIso)) / 1000);
     const agoText = ago < 60 ? `${ago}s ago` : `${Math.round(ago/60)}m ago`;
     if (connected) {
-      el.innerHTML = `🤖 Conversation access: <span style="color:var(--accent2)">● active</span> <span style="opacity:.6">(last seen ${agoText})</span>`;
+      el.textContent = `🤖 ● ${agoText}`;
+      el.className = 'badge connected';
+      el.title = `Conversation access: active (last seen ${agoText})`;
     } else {
-      el.innerHTML = `🤖 Conversation access: <span style="color:var(--warn)">● idle</span> <span style="opacity:.6">(last seen ${agoText})</span>`;
+      el.textContent = `🤖 ${agoText}`;
+      el.className = 'badge';
+      el.style.cssText = 'background:#ffaa0022;color:var(--warn);border:1px solid var(--warn);';
+      el.title = `Conversation access: idle (last seen ${agoText})`;
     }
   }
 
@@ -384,17 +390,19 @@
     const statusText  = pollActive ? 'Voting open' : (totalVotes > 0 ? 'Voting closed' : 'Not started');
 
     const canMark = !pollActive && totalVotes > 0;
+    const llmHints = canMark ? getLlmHints(currentPoll.question) : null;
     const bars = currentPoll.options.map((opt, i) => {
       const count = voteCounts[opt.id] || 0;
       const pct = totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
       const maxCount = Math.max(...Object.values(voteCounts));
       const leading = count === maxCount && count > 0 ? 'leading' : '';
       const correct = correctOptIds.has(opt.id) ? 'correct' : '';
+      const llmHint = llmHints && llmHints.includes(i) && !correct;
       const clickable = canMark ? `onclick="toggleCorrect('${opt.id}')" title="Click to mark as correct"` : '';
       return `
         <div class="result-row ${correct} ${canMark ? 'markable' : ''}" data-id="${opt.id}" ${clickable}>
           <div class="result-label">
-            <span>${opt.text}${correct ? ' ✅' : ''}</span>
+            <span>${opt.text}${correct ? ' ✅' : ''}${llmHint ? ' <span class="llm-hint" title="LLM suggestion">☑</span>' : ''}</span>
             <span class="pct">${count} vote${count!==1?'s':''} · ${pct}%</span>
           </div>
           <div class="bar-track">
@@ -529,22 +537,21 @@
   }
 
   function _applyRefineGrayOut(target) {
+    // Gray out the specific element being regenerated
     if (target === 'question') {
       const q = document.querySelector('#preview-display .poll-question');
-      const btn = document.querySelector('#preview-display .preview-question-row .refresh-btn');
       if (q) q.style.opacity = '.35';
-      if (btn) { btn.disabled = true; btn.style.opacity = '.35'; }
     } else {
       const idx = parseInt(target.slice(3));
       const opts = document.querySelectorAll('#preview-display .preview-option');
-      const opt = opts[idx];
-      if (opt) {
-        const span = opt.querySelector('span');
-        const btn = opt.querySelector('.refresh-btn');
-        if (span) span.style.opacity = '.35';
-        if (btn) { btn.disabled = true; btn.style.opacity = '.35'; }
-      }
+      const span = opts[idx]?.querySelector('span');
+      if (span) span.style.opacity = '.35';
     }
+    // Disable ALL refresh buttons while in-flight
+    document.querySelectorAll('#preview-display .refresh-btn').forEach(btn => {
+      btn.disabled = true;
+      btn.style.opacity = '.35';
+    });
   }
 
   async function firePreview() {
@@ -555,6 +562,13 @@
       body: JSON.stringify(pendingPreview),
     });
     if (res.ok) {
+      // Store LLM's correct_indices hint keyed by question for post-close display
+      if (pendingPreview.correct_indices?.length) {
+        localStorage.setItem(
+          'host_llm_hints_' + pendingPreview.question,
+          JSON.stringify(pendingPreview.correct_indices)
+        );
+      }
       await setPollStatus(true);
       await fetch('/api/quiz-preview', { method: 'DELETE' });
       toast('Poll fired ✓');
@@ -562,6 +576,12 @@
       const err = await res.json();
       toast(err.detail || 'Error firing poll');
     }
+  }
+
+  function getLlmHints(question) {
+    try {
+      return JSON.parse(localStorage.getItem('host_llm_hints_' + question) || 'null');
+    } catch { return null; }
   }
 
   async function dismissPreview() {
@@ -580,7 +600,9 @@
     const colors = { requested: 'var(--muted)', generating: 'var(--warn)', done: 'var(--accent2)', error: 'var(--danger)' };
     const icons  = { requested: '⏳', generating: '⚙️', done: '✅', error: '❌' };
     el.style.color = colors[status] || 'var(--muted)';
+    // Keep it short for the inline position
     el.textContent = `${icons[status] || ''} ${message}`;
+    el.title = message;
   }
 
   function toast(msg) {

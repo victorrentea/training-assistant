@@ -147,6 +147,13 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
   gap: .75rem;
   flex-wrap: nowrap;
 }
+#quiz-status {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
 
 /* ── Buttons ── */
 .btn {
@@ -223,6 +230,8 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
 }
 
 .no-poll { color: var(--muted); font-size: .9rem; text-align: center; padding: 2rem 0; }
+
+.llm-hint { opacity: .45; font-size: .85em; margin-left: .2rem; }
 
 .preview-question-row {
   display: flex;
