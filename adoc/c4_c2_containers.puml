@@ -6,7 +6,7 @@ title Workshop Live Interaction Tool — C2: Container Diagram
 LAYOUT_WITH_LEGEND()
 
 Person(victor, "Victor (Host/Trainer)", "Workshop facilitator.")
-Person(participant, "Participant", "Audience member.")
+Person(participant, "Participant", "Trainee.")
 
 System_Ext(audio_hijack, "Audio Hijack", "Captures live audio and writes\ntranscript file on Victor's Mac.")
 System_Ext(claude_api, "Anthropic Claude API", "LLM for quiz generation.")

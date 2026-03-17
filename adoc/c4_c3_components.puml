@@ -6,7 +6,7 @@ title Workshop Live Interaction Tool — C3: Component Diagram (FastAPI Backend)
 LAYOUT_WITH_LEGEND()
 
 Person(victor, "Victor (Host/Trainer)", "Workshop facilitator.")
-Person(participant, "Participant", "Audience member.")
+Person(participant, "Participant", "Trainee.")
 Container_Ext(quiz_daemon, "Quiz Daemon", "Python CLI on Victor's Mac.")
 Container_Ext(caddy, "Caddy", "Reverse proxy / TLS termination.")
 

@@ -6,9 +6,9 @@ title Workshop Live Interaction Tool — C1: System Context
 LAYOUT_WITH_LEGEND()
 
 Person(victor, "Victor (Host/Trainer)", "Workshop facilitator.")
-Person(participant, "Participant", "Audience member.")
+Person(participant, "Participant", "Trainee.")
 
-System(workshop, "Workshop Tool", "Real-time audience interaction platform.\nHosted on Oracle Cloud.")
+System(workshop, "Workshop Tool", "Real-time trainee interaction platform.\nHosted on Oracle Cloud.")
 
 System_Ext(audio_hijack, "Audio Hijack", "Captures and transcribes live workshop audio\nto a local file on Victor's Mac.")
 System_Ext(claude_api, "Anthropic Claude API", "LLM for quiz generation.")
