@@ -6,7 +6,9 @@
   <title>Workshop — Host Panel</title>
   <link rel="stylesheet" href="/static/common.css" />
   <link rel="stylesheet" href="/static/host.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://cdn.jsdelivr.net/npm/qrcodejs/qrcode.min.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
 <body>
 <div class="layout">
@@ -25,7 +27,7 @@
       <h2>Session</h2>
       <div class="stat" id="pax-count">0</div>
       <div class="stat-label">participants connected</div>
-      <ul id="pax-list" class="pax-list"></ul>
+      <ul id="pax-list" class="pax-list" title="Click a location to view map"></ul>
       <div style="margin-top:1.2rem; font-size:.85rem; color:var(--muted);">
         Participant link:<br>
         <a id="participant-link" style="color:var(--accent); word-break:break-all;" href="/" target="_blank"></a>
@@ -68,6 +70,17 @@ Need coffee</textarea>
 </div>
 
 <div class="toast" id="toast"></div>
+
+<!-- Map modal -->
+<div id="map-overlay" onclick="closeMap(event)">
+  <div id="map-dialog" onclick="event.stopPropagation()">
+    <div id="map-header">
+      <span id="map-title">Participant Locations</span>
+      <button id="map-close" onclick="closeMap()" title="Close">✕</button>
+    </div>
+    <div id="map-container"></div>
+  </div>
+</div>
 
 <script src="/static/host.js"></script>
 </body>

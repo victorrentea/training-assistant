@@ -50,9 +50,85 @@
     const ul = document.getElementById('pax-list');
     ul.innerHTML = names.map(n => {
       const loc = participantLocations[n];
-      return `<li>${n}${loc ? `<span class="pax-location">${loc}</span>` : ''}</li>`;
+      return `<li>${n}${loc ? `<span class="pax-location" onclick="openMap()" title="View all on map">📍 ${loc}</span>` : ''}</li>`;
     }).join('');
   }
+
+  // ── Participant map ──
+  let leafletMap = null;
+
+  async function geocode(locationStr) {
+    // If already "lat, lon" — parse directly
+    const coordMatch = locationStr.match(/^(-?\d+\.?\d*),\s*(-?\d+\.?\d*)$/);
+    if (coordMatch) return [parseFloat(coordMatch[1]), parseFloat(coordMatch[2])];
+
+    // Strip timezone prefix if present
+    const label = locationStr.replace(/^🕐\s*/, '');
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(label)}&format=json&limit=1`,
+        { headers: { 'Accept-Language': 'en' } }
+      );
+      const data = await res.json();
+      if (data.length > 0) return [parseFloat(data[0].lat), parseFloat(data[0].lon)];
+    } catch { /* ignore */ }
+    return null;
+  }
+
+  async function openMap() {
+    document.getElementById('map-overlay').classList.add('open');
+
+    // Init map lazily
+    if (!leafletMap) {
+      leafletMap = L.map('map-container').setView([20, 10], 2);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+        maxZoom: 18,
+      }).addTo(leafletMap);
+    }
+
+    // Clear existing markers
+    leafletMap.eachLayer(layer => { if (layer instanceof L.Marker) leafletMap.removeLayer(layer); });
+
+    // Geocode each participant with a location and add markers
+    const entries = Object.entries(participantLocations).filter(([, loc]) => loc);
+    const points = [];
+
+    await Promise.all(entries.map(async ([name, loc]) => {
+      const coords = await geocode(loc);
+      if (!coords) return;
+      points.push(coords);
+      L.marker(coords)
+        .addTo(leafletMap)
+        .bindPopup(`<strong>${name}</strong><br>${loc}`);
+    }));
+
+    // Fit map to markers
+    if (points.length === 1) {
+      leafletMap.setView(points[0], 6);
+    } else if (points.length > 1) {
+      leafletMap.fitBounds(L.latLngBounds(points), { padding: [40, 40] });
+    }
+
+    // Leaflet needs a size hint after the modal becomes visible
+    setTimeout(() => leafletMap.invalidateSize(), 50);
+
+    const count = points.length;
+    document.getElementById('map-title').textContent =
+      `Participant Locations (${count} of ${entries.length} mapped)`;
+  }
+
+  function closeMap(event) {
+    if (event && event.target !== document.getElementById('map-overlay')) return;
+    document.getElementById('map-overlay').classList.remove('open');
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+      closeMap();
+      closeQR();
+    }
+  });
 
   // ── QR code ──
   const style = getComputedStyle(document.documentElement);
@@ -83,9 +159,6 @@
     document.getElementById('qr-overlay').classList.remove('open');
   }
 
-  document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') closeQR();
-  });
 
   // ── Create poll ──
   document.getElementById('create-btn').addEventListener('click', async () => {

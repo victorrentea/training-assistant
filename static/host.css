@@ -194,3 +194,68 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
   z-index: 999;
 }
 .toast.show { opacity: 1; }
+
+/* ── Participant location pin ── */
+.pax-location {
+  cursor: pointer;
+  text-decoration: underline dotted;
+}
+.pax-location:hover { color: var(--accent); }
+
+/* ── Map modal ── */
+#map-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.7);
+  z-index: 2000;
+  align-items: center;
+  justify-content: center;
+}
+#map-overlay.open { display: flex; }
+
+#map-dialog {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  width: min(860px, 94vw);
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+#map-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: .9rem 1.2rem;
+  border-bottom: 1px solid var(--border);
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+#map-close {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 1.1rem;
+  cursor: pointer;
+  line-height: 1;
+  padding: .2rem .4rem;
+}
+#map-close:hover { color: var(--danger); }
+
+#map-container {
+  flex: 1;
+  min-height: 420px;
+}
+
+/* Leaflet popup tweak for dark theme */
+.leaflet-popup-content-wrapper {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  box-shadow: none;
+}
+.leaflet-popup-tip { background: var(--surface); }
