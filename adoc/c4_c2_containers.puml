@@ -15,7 +15,7 @@ System_Boundary(workshop, "Workshop Tool") {
 
     Container(caddy, "Caddy Reverse Proxy", "Caddy (single binary)", "TLS termination.\nAuth for host endpoints.\nForwards to FastAPI on :8000.")
 
-    Container(fastapi, "FastAPI Backend", "Python 3.9 / FastAPI / Uvicorn", "REST endpoints + WebSocket.\nRuns as systemd service on Oracle Cloud.", $link="c4_c3_components.puml")
+    Container(fastapi, "[[c4_c3_components.puml FastAPI Backend]]", "Python 3.9 / FastAPI / Uvicorn", "REST endpoints + WebSocket.\nRuns as systemd service on Oracle Cloud.")
 
     Container(host_spa, "Host SPA", "Vanilla JS (host's browser)", "Poll management, participant list,\nmap view (Leaflet), quiz preview.")
 
