@@ -22,3 +22,4 @@
 - [x] change the favicon of host to be a brain emoji on red background, and of partiipants a brain emoji on transparent bg
 - [x] bug: if the question text doesn't contain an empty line between the title and the options, the option rendering gets scrambled.  The goal would be to not require an empty line between the title and the options but still render it differently from the rest.
 - [x] bug: on paste in the text box, the formatting is flawed
+- [x] Make the back-end, when displaying the Host page, show: When is the last time the daemon has connected to ask for instructions  + Whether the daemon is currently connected

@@ -12,6 +12,7 @@ import json
 import asyncio
 import logging
 import random
+from datetime import datetime, timezone
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -43,6 +44,7 @@ class AppState:
         self.locations: dict[str, str] = {}        # participant_name -> location string
         self.quiz_request: Optional[dict] = None   # pending {minutes} from host
         self.quiz_status: Optional[dict] = None    # last status from daemon
+        self.daemon_last_seen: Optional[datetime] = None  # last time daemon polled
 
     def suggest_name(self) -> str:
         taken = set(self.participants.keys()) | self.suggested_names
@@ -110,6 +112,9 @@ def participant_names() -> list[str]:
 
 def build_state_message() -> dict:
     names = participant_names()
+    now = datetime.now(timezone.utc)
+    last_seen = state.daemon_last_seen
+    daemon_connected = last_seen is not None and (now - last_seen).total_seconds() < 5
     return {
         "type": "state",
         "poll": state.poll,
@@ -118,6 +123,8 @@ def build_state_message() -> dict:
         "participant_count": len(names),
         "participant_names": names,
         "participant_locations": {n: state.locations.get(n, "") for n in names},
+        "daemon_last_seen": last_seen.isoformat() if last_seen else None,
+        "daemon_connected": daemon_connected,
     }
 
 # ---------------------------------------------------------------------------
@@ -278,6 +285,7 @@ async def request_quiz(body: QuizRequest):
 @app.get("/api/quiz-request")
 async def poll_quiz_request():
     """Daemon polls this to pick up a pending request. Clears it on read."""
+    state.daemon_last_seen = datetime.now(timezone.utc)
     req = state.quiz_request
     state.quiz_request = None
     return {"request": req}  # None if nothing pending

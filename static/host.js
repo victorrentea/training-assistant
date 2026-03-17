@@ -27,6 +27,7 @@
         participantLocations = msg.participant_locations || {};
         document.getElementById('pax-count').textContent = msg.participant_count;
         renderParticipantList(msg.participant_names || []);
+        renderDaemonStatus(msg.daemon_connected, msg.daemon_last_seen);
         renderPollDisplay();
       } else if (msg.type === 'vote_update') {
         voteCounts = msg.vote_counts || {};
@@ -46,6 +47,22 @@
     const b = document.getElementById('ws-badge');
     b.textContent = ok ? '● Connected' : '● Disconnected';
     b.className = `badge ${ok ? 'connected' : 'disconnected'}`;
+  }
+
+  function renderDaemonStatus(connected, lastSeenIso) {
+    const el = document.getElementById('daemon-status');
+    if (!el) return;
+    if (!lastSeenIso) {
+      el.innerHTML = '🤖 Daemon: <span style="color:var(--danger)">never connected</span>';
+      return;
+    }
+    const ago = Math.round((Date.now() - new Date(lastSeenIso)) / 1000);
+    const agoText = ago < 60 ? `${ago}s ago` : `${Math.round(ago/60)}m ago`;
+    if (connected) {
+      el.innerHTML = `🤖 Daemon: <span style="color:var(--accent2)">● active</span> <span style="opacity:.6">(last seen ${agoText})</span>`;
+    } else {
+      el.innerHTML = `🤖 Daemon: <span style="color:var(--warn)">● idle</span> <span style="opacity:.6">(last seen ${agoText})</span>`;
+    }
   }
 
   function renderParticipantList(names) {
