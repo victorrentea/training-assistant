@@ -36,7 +36,7 @@ class AppState:
     def suggest_name(self) -> str:
         taken = set(self.participants.keys()) | self.suggested_names
         available = [n for n in LOTR_NAMES if n not in taken]
-        name = random.choice(available) if available else f"Guest{random.randint(100, 999)}"
+        name = available[0] if available else f"Guest{random.randint(100, 999)}"
         self.suggested_names.add(name)
         return name
 
