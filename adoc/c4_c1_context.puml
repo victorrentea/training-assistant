@@ -5,22 +5,21 @@ title Workshop Live Interaction Tool — C1: System Context
 
 LAYOUT_WITH_LEGEND()
 
-Person(victor, "Victor (Host/Trainer)", "Workshop facilitator.\nRuns quiz_daemon.py on his Mac.")
-Person(participant, "Participant", "Audience member.\nNo install or account required.")
+Person(victor, "Victor (Host/Trainer)", "Workshop facilitator.")
+Person(participant, "Participant", "Audience member.")
 
-System(workshop, "Workshop Tool", "Self-hosted real-time audience\ninteraction platform.")
+System(workshop, "Workshop Tool", "Real-time audience interaction platform.\nHosted on Oracle Cloud.")
 
-System_Ext(audio_hijack, "Audio Hijack", "Captures live audio from the workshop\nand transcribes it to a local text file\non Victor's Mac.")
+System_Ext(audio_hijack, "Audio Hijack", "Captures and transcribes live workshop audio\nto a local file on Victor's Mac.")
 System_Ext(claude_api, "Anthropic Claude API", "LLM for quiz generation.")
-System_Ext(nominatim, "Nominatim (OpenStreetMap)", "Reverse geocoding.\nGPS → city + country.")
-System_Ext(browser_apis, "Browser APIs", "Geolocation, localStorage,\nnative WebSocket.")
+System_Ext(nominatim, "Nominatim (OpenStreetMap)", "GPS → city + country.")
+System_Ext(browser_apis, "Browser APIs", "Geolocation, localStorage, WebSocket.")
 
-Rel(victor, audio_hijack, "Records live workshop audio", "Local on Mac")
-Rel(audio_hijack, victor, "Produces transcript file", "Local file")
-Rel(victor, workshop, "Manages polls and participants", "HTTPS / WebSocket (Basic Auth)")
-Rel(victor, claude_api, "Daemon generates quiz from transcript", "HTTPS REST (Anthropic SDK)")
+Rel(audio_hijack, victor, "Transcript file", "Local file on Mac")
+Rel(victor, workshop, "Manages polls and participants", "HTTPS / WebSocket")
+Rel(victor, claude_api, "Generates quiz from transcript", "HTTPS REST")
 Rel(participant, workshop, "Votes on polls, sees results", "HTTPS / WebSocket")
-Rel(participant, nominatim, "Resolves GPS to city/country", "HTTPS REST")
-Rel(participant, browser_apis, "Uses geolocation and local storage", "Browser-internal")
+Rel(participant, nominatim, "Reverse geocodes GPS", "HTTPS REST")
+Rel(participant, browser_apis, "Geolocation and local storage", "Browser-internal")
 
 @enduml
