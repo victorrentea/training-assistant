@@ -7,6 +7,8 @@ LAYOUT_WITH_LEGEND()
 
 Person(victor, "Victor (Host/Trainer)", "Workshop facilitator.")
 Person(participant, "Participant", "Trainee.")
+Container_Ext(participant_spa, "Participant SPA", "Vanilla JS in trainee's browser.")
+Container_Ext(host_spa, "Host SPA", "Vanilla JS in Victor's browser.")
 Container_Ext(quiz_daemon, "Quiz Daemon", "Python CLI on Victor's Mac.")
 Container_Ext(caddy, "Caddy", "Reverse proxy / TLS termination.")
 
@@ -42,8 +44,8 @@ Rel(scores_router, messaging_module, "broadcast()")
 Rel(quiz_router, state_module, "Quiz pipeline state")
 Rel(quiz_router, messaging_module, "broadcast()")
 
-Rel(participant, caddy, "Vote, connect WS, send location", "WSS / HTTPS")
-Rel(victor, caddy, "Manage polls, mark correct, reset scores", "HTTPS (Basic Auth)")
+Rel(participant_spa, caddy, "Vote, connect WS, send location", "WSS / HTTPS")
+Rel(host_spa, caddy, "Manage polls, mark correct, reset scores", "HTTPS / WSS (Basic Auth)")
 Rel(quiz_daemon, caddy, "Poll requests, post preview and status", "HTTPS (Basic Auth)")
 
 @enduml
