@@ -5,18 +5,18 @@ title Workshop Live Interaction Tool — C1: System Context
 
 LAYOUT_WITH_LEGEND()
 
-Person(victor, "Victor (Host/Trainer)", "Workshop facilitator.")
+Person(host, "Host", "Workshop facilitator.")
 Person(participant, "Participant", "Trainee.")
 
 System(workshop, "Workshop Tool", "Real-time trainee interaction platform.\nHosted on Oracle Cloud.")
 
-System_Ext(audio_hijack, "Audio Hijack", "Captures and transcribes live workshop audio\nto a local file on Victor's Mac.")
+System_Ext(audio_hijack, "Audio Hijack", "Captures and transcribes live workshop audio\nto a local file on the host's Mac.")
 System_Ext(claude_api, "Anthropic Claude API", "LLM for quiz generation.")
 System_Ext(nominatim, "Nominatim (OpenStreetMap)", "GPS → city + country.")
 
-Rel(audio_hijack, victor, "Transcript file", "Local file on Mac")
-Rel(victor, workshop, "Manages polls and participants", "HTTPS / WebSocket")
-Rel(victor, claude_api, "Generates quiz from transcript", "HTTPS REST")
+Rel(audio_hijack, host, "Transcript file", "Local file on Mac")
+Rel(host, workshop, "Manages polls and participants", "HTTPS / WebSocket")
+Rel(host, claude_api, "Generates quiz from transcript", "HTTPS REST")
 Rel(participant, workshop, "Votes on polls, sees results", "HTTPS / WebSocket")
 Rel(workshop, nominatim, "Resolves participant GPS to city", "HTTPS REST")
 

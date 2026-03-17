@@ -5,11 +5,11 @@ title Workshop Live Interaction Tool — C3: Component Diagram (FastAPI Backend)
 
 LAYOUT_WITH_LEGEND()
 
-Person(victor, "Victor (Host/Trainer)", "Workshop facilitator.")
+Person(host, "Host", "Workshop facilitator.")
 Person(participant, "Participant", "Trainee.")
 Container_Ext(participant_spa, "Participant SPA", "Vanilla JS in trainee's browser.")
-Container_Ext(host_spa, "Host SPA", "Vanilla JS in Victor's browser.")
-Container_Ext(quiz_daemon, "Quiz Daemon", "Python CLI on Victor's Mac.")
+Container_Ext(host_spa, "Host SPA", "Vanilla JS in host's browser.")
+Container_Ext(quiz_daemon, "Quiz Daemon", "Python CLI on host's Mac.")
 Container_Ext(caddy, "Caddy", "Reverse proxy / TLS termination.")
 
 Container_Boundary(fastapi, "FastAPI Backend") {
