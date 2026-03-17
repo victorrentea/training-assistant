@@ -279,9 +279,11 @@
       footer = `<div class="closed-banner">Voting is closed — final results shown above</div>`;
     } else if (multi) {
       const selCount = myVote instanceof Set ? myVote.size : 0;
+      const warning = selCount === 1
+        ? `<div class="multi-warning blink">⚠️ Multiple answers may be correct!</div>` : '';
       footer = `<div class="vote-msg">${selCount > 0
-        ? `✅ ${selCount} option${selCount > 1 ? 's' : ''} selected — click to toggle.${selCount === 1 ? ' ⚠️ Multiple answers may be correct!' : ''}`
-        : 'Select one or more options.'}</div>`;
+        ? `✅ ${selCount} option${selCount > 1 ? 's' : ''} selected — click to toggle.`
+        : 'Select one or more options.'}</div>${warning}`;
     } else if (hasVoted) {
       footer = `<div class="vote-msg">✅ Vote registered! Click another option to change it.</div>`;
     } else {
@@ -357,16 +359,21 @@
     let footerHTML = '';
     if (multi) {
       const selCount = myVote instanceof Set ? myVote.size : 0;
+      const warning = selCount === 1
+        ? `<div class="multi-warning blink">⚠️ Multiple answers may be correct!</div>` : '';
       footerHTML = `<div class="vote-msg">${selCount > 0
-        ? `✅ ${selCount} option${selCount > 1 ? 's' : ''} selected — click to toggle.${selCount === 1 ? ' ⚠️ Multiple answers may be correct!' : ''}`
-        : 'Select one or more options.'}</div>`;
+        ? `✅ ${selCount} option${selCount > 1 ? 's' : ''} selected — click to toggle.`
+        : 'Select one or more options.'}</div>${warning}`;
     } else {
       footerHTML = `<div class="vote-msg">✅ Vote registered! Click another option to change it.</div>`;
     }
     const card = document.querySelector('.poll-card');
     if (card) {
+      // Replace both vote-msg and any existing warning
       const existing = card.querySelector('.vote-msg');
+      const existingWarn = card.querySelector('.multi-warning');
       if (existing) existing.outerHTML = footerHTML;
       else card.insertAdjacentHTML('beforeend', footerHTML);
+      if (existingWarn) existingWarn.remove();
     }
   }

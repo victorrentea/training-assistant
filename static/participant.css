@@ -166,6 +166,20 @@ h1 { font-size: 1.4rem; color: var(--accent); letter-spacing: .05em; margin-bott
   color: var(--accent2);
 }
 
+.multi-warning {
+  margin-top: .5rem;
+  text-align: center;
+  font-size: .9rem;
+  font-weight: 700;
+  color: var(--warn);
+}
+
+@keyframes warn-blink {
+  0%, 100% { opacity: 1; }
+  40%       { opacity: 0; }
+}
+.blink { animation: warn-blink .6s ease-in-out 3; }
+
 .pax-countdown {
   text-align: center;
   font-size: 1.6rem;
