@@ -244,6 +244,12 @@ python3 -m uvicorn main:app --reload --port 8000
 
 ---
 
+## Memory
+
+Whenever the user says "remember" or asks you to remember something, add it to this file (CLAUDE.md).
+
+---
+
 ## Communication Notes
 
 The user frequently uses a dictation tool. Messages may contain misheard or mistyped words (e.g. "non-mina team" for "Nominatim", "entropic" for "Anthropic"). Use context to infer the intended meaning rather than taking words literally.
