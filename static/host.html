@@ -14,13 +14,6 @@
 <body>
 <div class="layout">
 
-  <header>
-    <h1>🎛 Host Panel</h1>
-    <div>
-      <span id="ws-badge" class="badge disconnected">● Disconnected</span>
-    </div>
-  </header>
-
   <div class="grid">
 
     <!-- Stats -->
@@ -47,7 +40,10 @@
 
     <!-- Create poll -->
     <div class="card">
-      <h2>Create Poll</h2>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:.9rem;">
+        <h2 style="margin:0;">Create Poll</h2>
+        <span id="ws-badge" class="badge disconnected">● Disconnected</span>
+      </div>
       <div id="poll-input" class="poll-composer" contenteditable="true" spellcheck="false"
            data-placeholder="Question title&#10;&#10;Option A&#10;Option B&#10;Option C"></div>
       <div class="btn-row" style="align-items:center;">

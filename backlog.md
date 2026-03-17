@@ -37,6 +37,6 @@
 - [ ] feat explain the error message from claude api better from the daemon to the host ui
 - [ ] feat daemon should detect if it's already running and kill its previous instance, to allow quick re-run without knowing [if] in what terminal it run already.
 - [x] Bug: If the host clicks, selects, and deselects an option as being correct or not again and again, the participants get awarded repeatedly.
-- [ ] Feat: Place the connected label into the div for "create poll" To the right of the title  and remove the "host panel" title completely so that we gain more vertical space on the screen.
+- [x] Feat: Place the connected label into the div for "create poll" To the right of the title  and remove the "host panel" title completely so that we gain more vertical space on the screen.
 - [ ] Feature: Visually display in the participants view whether a selection they made was correct or not., for example with green / red colors
-- 
+- [ ] Testing, since this interaction becomes complicated for participants voting in a certain amount of time. How's the wording points right? Tests for this part: study deeper the logic and look for more flaws in the logic. 
