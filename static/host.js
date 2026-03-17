@@ -64,6 +64,29 @@
     colorLight: style.getPropertyValue('--surface').trim(),
   });
 
+  // Fullscreen QR overlay
+  const qrSize = Math.min(window.innerWidth, window.innerHeight) * 0.8;
+  new QRCode(document.getElementById('qr-fullscreen'), {
+    text: link,
+    width: qrSize,
+    height: qrSize,
+    colorDark: '#000000',
+    colorLight: '#ffffff',
+  });
+  document.getElementById('qr-overlay-url').textContent = link;
+
+  document.getElementById('qr-code').addEventListener('click', () => {
+    document.getElementById('qr-overlay').classList.add('open');
+  });
+
+  function closeQR() {
+    document.getElementById('qr-overlay').classList.remove('open');
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeQR();
+  });
+
   // ── Create poll ──
   document.getElementById('create-btn').addEventListener('click', async () => {
     const question = document.getElementById('q-input').value.trim();

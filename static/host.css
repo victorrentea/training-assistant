@@ -136,6 +136,28 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
   margin-top: 1.2rem;
   display: flex;
   justify-content: center;
+  cursor: pointer;
+}
+
+#qr-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.92);
+  z-index: 1000;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+  cursor: pointer;
+}
+#qr-overlay.open { display: flex; }
+#qr-fullscreen canvas, #qr-fullscreen img { display: block; }
+#qr-overlay-url {
+  color: #fff;
+  font-size: 1.1rem;
+  letter-spacing: .03em;
+  opacity: .85;
 }
 
 .toast {

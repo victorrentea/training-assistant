@@ -146,7 +146,7 @@
       const count = (voteCounts || {})[opt.id] || 0;
       const pct = totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
       const selected = myVote === opt.id ? 'selected' : '';
-      const disabled = (!pollActive || alreadyVoted) ? 'disabled' : '';
+      const disabled = !pollActive ? 'disabled' : '';
       return `
         <button class="option-btn ${selected}" ${disabled} onclick="castVote('${opt.id}')">
           <div class="bar" style="width:${alreadyVoted || !pollActive ? pct : 0}%"></div>
@@ -159,7 +159,7 @@
     if (!pollActive && currentPoll) {
       footer = `<div class="closed-banner">Voting is closed — final results shown above</div>`;
     } else if (alreadyVoted) {
-      footer = `<div class="vote-msg">✅ Vote registered! Results update live.</div>`;
+      footer = `<div class="vote-msg">✅ Vote registered! Click another option to change it.</div>`;
     } else {
       footer = `<div class="vote-msg">Choose an option to vote.</div>`;
     }
@@ -194,7 +194,7 @@
 
   function castVote(optionId) {
     if (!ws || ws.readyState !== WebSocket.OPEN) return;
-    if (!pollActive || myVote !== null) return;
+    if (!pollActive || myVote === optionId) return;
     myVote = optionId;
     ws.send(JSON.stringify({ type: 'vote', option_id: optionId }));
     renderContent({});   // re-render to show "voted" state

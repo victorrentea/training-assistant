@@ -30,7 +30,13 @@
         Participant link:<br>
         <a id="participant-link" style="color:var(--accent); word-break:break-all;" href="/" target="_blank"></a>
       </div>
-      <div id="qr-code" class="qr-code"></div>
+      <div id="qr-code" class="qr-code" title="Click to enlarge"></div>
+
+  <!-- QR fullscreen overlay -->
+  <div id="qr-overlay" onclick="closeQR()">
+    <div id="qr-fullscreen"></div>
+    <div id="qr-overlay-url"></div>
+  </div>
     </div>
 
     <!-- Create poll -->
