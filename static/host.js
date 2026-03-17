@@ -206,7 +206,7 @@
     reclassifyLines();
   }
 
-  initComposer('How are you feeling today?\n\nEnergized\nGood enough\nA bit tired\nNeed coffee');
+  initComposer('How are you feeling today?\nEnergized\nGood enough\nA bit tired\nNeed coffee');
 
   pollInput.addEventListener('input', reclassifyLines);
 
