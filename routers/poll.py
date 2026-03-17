@@ -77,14 +77,34 @@ async def set_correct_options(body: PollCorrect):
     now = datetime.now(timezone.utc)
     opened_at = state.poll_opened_at or now
 
+    multi = state.poll.get("multi", False)
+    total_options = len(state.poll.get("options", []))
+    all_option_ids = {opt["id"] for opt in state.poll.get("options", [])}
+    wrong_set = all_option_ids - correct_set
+
     new_scores = dict(state.base_scores)
     for name, selection in state.votes.items():
         voted = set(selection) if isinstance(selection, list) else {selection}
-        if voted & correct_set:
-            elapsed = (state.vote_times.get(name, now) - opened_at).total_seconds()
-            elapsed = max(0, min(elapsed, _SPEED_WINDOW))
-            pts = round(_MAX_POINTS * (1 - 0.5 * elapsed / _SPEED_WINDOW))
-            pts = max(pts, _MIN_POINTS)
+        if multi and correct_set:
+            # Proportional (R - W) / C, floored at 0
+            R = len(voted & correct_set)   # correct options selected
+            W = len(voted & wrong_set)     # wrong options selected
+            C = len(correct_set)
+            ratio = max(0.0, (R - W) / C)
+            if ratio == 0:
+                continue
+        else:
+            # Single-select: must match exactly
+            if not (voted & correct_set):
+                continue
+            ratio = 1.0
+
+        elapsed = (state.vote_times.get(name, now) - opened_at).total_seconds()
+        elapsed = max(0, min(elapsed, _SPEED_WINDOW))
+        max_pts = round(_MAX_POINTS * (1 - 0.5 * elapsed / _SPEED_WINDOW))
+        max_pts = max(max_pts, _MIN_POINTS)
+        pts = round(max_pts * ratio)
+        if pts > 0:
             new_scores[name] = new_scores.get(name, 0) + pts
 
     state.scores = new_scores
