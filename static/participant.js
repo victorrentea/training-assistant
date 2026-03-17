@@ -1,4 +1,5 @@
   const LS_KEY = 'workshop_participant_name';
+  const LS_VOTE_KEY = 'workshop_vote';
   let ws = null;
   let myName = '';
   let myVote = null;      // string (single) or Set of option_ids (multi)
@@ -54,6 +55,7 @@
   document.getElementById('leave-btn').addEventListener('click', () => {
     if (ws) { ws.onclose = null; ws.close(); ws = null; }
     localStorage.removeItem(LS_KEY);
+    clearVote();
     myName = '';
     myVote = null;
     document.getElementById('main-screen').style.display = 'none';
@@ -119,11 +121,41 @@
     };
   }
 
+  // ── Vote persistence ──
+  function saveVote() {
+    if (!currentPoll) return;
+    const stored = {
+      question: currentPoll.question,
+      vote: currentPoll.multi ? [...myVote] : myVote,
+    };
+    localStorage.setItem(LS_VOTE_KEY, JSON.stringify(stored));
+  }
+
+  function restoreVote(poll) {
+    if (!poll) return;
+    try {
+      const stored = JSON.parse(localStorage.getItem(LS_VOTE_KEY) || 'null');
+      if (!stored || stored.question !== poll.question) return;
+      if (poll.multi) {
+        myVote = new Set(Array.isArray(stored.vote) ? stored.vote : []);
+      } else {
+        myVote = typeof stored.vote === 'string' ? stored.vote : null;
+      }
+    } catch { /* ignore */ }
+  }
+
+  function clearVote() {
+    localStorage.removeItem(LS_VOTE_KEY);
+  }
+
   // ── Message handler ──
   function handleMessage(msg) {
     switch (msg.type) {
       case 'state':
-        if (msg.poll?.question !== currentPoll?.question) myVote = msg.poll?.multi ? new Set() : null;
+        if (msg.poll?.question !== currentPoll?.question) {
+          myVote = msg.poll?.multi ? new Set() : null;
+          restoreVote(msg.poll);
+        }
         currentPoll = msg.poll;
         pollActive = msg.poll_active;
         updateParticipantCount(msg.participant_count);
@@ -227,5 +259,6 @@
       myVote = optionId;
       ws.send(JSON.stringify({ type: 'vote', option_id: optionId }));
     }
+    saveVote();
     renderContent({});
   }

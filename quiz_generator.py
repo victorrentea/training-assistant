@@ -15,6 +15,7 @@ Environment variables (override with CLI flags):
 """
 
 import argparse
+import base64
 import json
 import os
 import re
@@ -45,9 +46,25 @@ class Config:
     api_key: str
     model: str
     dry_run: bool
+    host_username: str
+    host_password: str
+
+
+def _load_secrets_env() -> None:
+    """Load key=value pairs from secrets.env in the script's directory into os.environ."""
+    secrets_file = Path(__file__).parent / "secrets.env"
+    if not secrets_file.exists():
+        return
+    for line in secrets_file.read_text().splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, _, value = line.partition("=")
+        os.environ.setdefault(key.strip(), value.strip())
 
 
 def parse_args() -> Config:
+    _load_secrets_env()
     parser = argparse.ArgumentParser(
         description="Generate a quiz from live transcription and post it as a workshop poll."
     )
@@ -82,6 +99,16 @@ def parse_args() -> Config:
         action="store_true",
         help="Preview the generated quiz without posting to the server",
     )
+    parser.add_argument(
+        "--host-username",
+        default=os.environ.get("HOST_USERNAME", "host"),
+        help="Basic Auth username for the workshop server (default: host)",
+    )
+    parser.add_argument(
+        "--host-password",
+        default=os.environ.get("HOST_PASSWORD", ""),
+        help="Basic Auth password for the workshop server (or set HOST_PASSWORD env var)",
+    )
 
     args = parser.parse_args()
 
@@ -105,6 +132,8 @@ def parse_args() -> Config:
         api_key=args.api_key,
         model=args.model,
         dry_run=args.dry_run,
+        host_username=args.host_username,
+        host_password=args.host_password,
     )
 
 
@@ -312,9 +341,15 @@ Rules:
   not trivial recall of a specific phrase.
 - Prefer questions where the answer is not obvious at first glance — the goal is
   to reveal disagreement and trigger debate, not to test rote memory.
+- Draw on your broad knowledge of the field (books, research papers, industry
+  best practices, well-known experts) to craft richer, more nuanced options —
+  not just options derived directly from the transcript text.
+- Include at least one option that references a real-world pattern, anti-pattern,
+  or expert opinion that extends beyond what was explicitly said in the transcript.
 - If multiple answers are expected, start the question with "Which of the following..."
   and list all expected indices in correct_indices.
-- All options must be plausible; distractors should reflect common misconceptions.
+- All options must be plausible; distractors should reflect common misconceptions
+  or subtly wrong interpretations from real-world practice.
 - Each option must be concise enough for a poll display (max 80 characters).
 - Do not add any explanation, markdown code fences, or text outside the JSON object.
 """
@@ -443,15 +478,14 @@ def _quiz_error(msg: str, raw: str) -> None:
 # Workshop server integration
 # ---------------------------------------------------------------------------
 
-def _post_json(url: str, payload: dict) -> dict:
+def _post_json(url: str, payload: dict, username: str = "", password: str = "") -> dict:
     """POST JSON to a URL and return the parsed response. Raises on HTTP error."""
     data = json.dumps(payload).encode("utf-8")
-    req = urllib.request.Request(
-        url,
-        data=data,
-        headers={"Content-Type": "application/json"},
-        method="POST",
-    )
+    headers = {"Content-Type": "application/json"}
+    if username:
+        token = base64.b64encode(f"{username}:{password}".encode()).decode()
+        headers["Authorization"] = f"Basic {token}"
+    req = urllib.request.Request(url, data=data, headers=headers, method="POST")
     try:
         with urllib.request.urlopen(req) as resp:
             return json.loads(resp.read())
@@ -467,12 +501,12 @@ def post_poll(quiz: dict, config: Config) -> None:
         "options": quiz["options"],
         "multi": len(quiz.get("correct_indices", [])) > 1,
     }
-    _post_json(f"{config.server_url}/api/poll", payload)
+    _post_json(f"{config.server_url}/api/poll", payload, config.host_username, config.host_password)
 
 
 def open_poll(config: Config) -> None:
     """Open the poll for voting."""
-    _post_json(f"{config.server_url}/api/poll/status", {"open": True})
+    _post_json(f"{config.server_url}/api/poll/status", {"open": True}, config.host_username, config.host_password)
 
 
 # ---------------------------------------------------------------------------

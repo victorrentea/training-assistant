@@ -6,6 +6,10 @@ body {
   padding: 2rem 1rem;
 }
 
+@media (max-width: 640px) {
+  body { padding: 1rem .75rem; }
+}
+
 .layout { max-width: 900px; margin: 0 auto; }
 
 header {
@@ -13,6 +17,11 @@ header {
   margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;
 }
 header h1 { font-size: 1.3rem; color: var(--accent); }
+
+@media (max-width: 640px) {
+  header { margin-bottom: 1.25rem; gap: .6rem; }
+  header h1 { font-size: 1.1rem; }
+}
 .badge {
   padding: .35rem .85rem;
   border-radius: 20px;
@@ -30,6 +39,10 @@ header h1 { font-size: 1.3rem; color: var(--accent); }
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 1.5rem;
+}
+
+@media (max-width: 640px) {
+  .card { padding: 1rem; }
 }
 .card h2 { font-size: .95rem; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 1.2rem; }
 
@@ -51,6 +64,11 @@ input[type=text], textarea {
   outline: none;
   transition: border-color .2s;
   font-family: inherit;
+  min-height: 44px;
+}
+
+@media (max-width: 640px) {
+  input[type=text], textarea { font-size: 1rem; } /* prevent iOS auto-zoom */
 }
 input[type=text]:focus, textarea:focus { border-color: var(--accent); }
 textarea { resize: none; min-height: 80px; overflow: hidden; }
@@ -64,6 +82,7 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
   font-weight: 600;
   cursor: pointer;
   transition: opacity .2s, transform .1s;
+  min-height: 44px;
 }
 .btn:hover { opacity: .85; }
 .btn:active { transform: scale(.97); }
@@ -74,6 +93,11 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
 .btn:disabled { opacity: .35; cursor: default; }
 
 .btn-row { display: flex; gap: .75rem; flex-wrap: wrap; margin-top: 1rem; }
+
+@media (max-width: 480px) {
+  .btn-row { gap: .5rem; }
+  .btn-row .btn { flex: 1 1 auto; font-size: .85rem; }
+}
 
 /* ── Current poll display ── */
 .poll-question { font-size: 1.05rem; font-weight: 600; margin-bottom: 1rem; line-height: 1.4; }

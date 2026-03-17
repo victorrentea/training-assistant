@@ -9,7 +9,15 @@ body {
   padding: 2rem 1rem;
 }
 
+@media (max-width: 480px) {
+  body { padding: 1rem .75rem; }
+}
+
 h1 { font-size: 1.4rem; color: var(--accent); letter-spacing: .05em; margin-bottom: 2rem; }
+
+@media (max-width: 480px) {
+  h1 { font-size: 1.2rem; margin-bottom: 1.25rem; }
+}
 
 /* ── Join screen ── */
 #join-screen {
@@ -20,6 +28,10 @@ h1 { font-size: 1.4rem; color: var(--accent); letter-spacing: .05em; margin-bott
   width: 100%;
   max-width: 400px;
   text-align: center;
+}
+
+@media (max-width: 480px) {
+  #join-screen { padding: 1.5rem 1rem; }
 }
 #join-screen h2 { margin-bottom: 1rem; font-size: 1.1rem; }
 .name-input-wrap {
@@ -36,6 +48,7 @@ h1 { font-size: 1.4rem; color: var(--accent); letter-spacing: .05em; margin-bott
   border-radius: 8px;
   color: var(--text);
   font-size: 1rem;
+  min-height: 44px;
   outline: none;
   transition: border-color .2s;
 }
@@ -64,6 +77,7 @@ h1 { font-size: 1.4rem; color: var(--accent); letter-spacing: .05em; margin-bott
   cursor: pointer;
   font-weight: 600;
   transition: opacity .2s;
+  min-height: 48px;
 }
 #join-btn:hover { opacity: .85; }
 
@@ -77,6 +91,12 @@ h1 { font-size: 1.4rem; color: var(--accent); letter-spacing: .05em; margin-bott
   padding: .5rem 0 1.5rem;
   font-size: .85rem;
   color: var(--muted);
+  flex-wrap: wrap;
+  gap: .4rem;
+}
+
+@media (max-width: 480px) {
+  .status-bar { font-size: .8rem; padding: .4rem 0 1rem; }
 }
 .dot { width:8px; height:8px; border-radius:50%; background: var(--accent2); display:inline-block; margin-right:.4rem; animation: pulse 2s infinite; }
 #leave-btn { background:none; border:1px solid var(--border); color:var(--muted); border-radius:6px; padding:.2rem .6rem; font-size:.78rem; cursor:pointer; }
@@ -92,11 +112,17 @@ h1 { font-size: 1.4rem; color: var(--accent); letter-spacing: .05em; margin-bott
 }
 .poll-card h2 { font-size: 1.15rem; line-height: 1.4; margin-bottom: 1.5rem; }
 
+@media (max-width: 480px) {
+  .poll-card { padding: 1.2rem 1rem; }
+  .poll-card h2 { font-size: 1.05rem; margin-bottom: 1rem; }
+}
+
 .option-btn {
   display: block;
   width: 100%;
   margin-bottom: .75rem;
   padding: .85rem 1.1rem;
+  min-height: 48px;
   background: var(--bg);
   border: 1.5px solid var(--border);
   border-radius: 8px;
@@ -110,6 +136,10 @@ h1 { font-size: 1.4rem; color: var(--accent); letter-spacing: .05em; margin-bott
 }
 .option-btn:hover:not(:disabled) { border-color: var(--accent); transform: translateX(3px); }
 .option-btn:disabled { cursor: default; }
+
+@media (max-width: 480px) {
+  .option-btn { font-size: .9rem; padding: .75rem .9rem; }
+}
 .option-btn.selected { border-color: var(--accent); background: #6c63ff18; }
 
 /* result bar behind button text */

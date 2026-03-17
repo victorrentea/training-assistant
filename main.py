@@ -27,7 +27,7 @@ LOTR_NAMES = [
     "Merry", "Pippin", "Galadriel", "Elrond", "Saruman", "Faramir",
     "Eowyn", "Theoden", "Treebeard", "Bilbo", "Thorin", "Smaug", "Gollum",
     "Radagast", "Tom Bombadil", "Glorfindel", "Celeborn", "Arwen", "Eomer",
-    "Haldir", "Shadowfax", "Grima Wormtongue",
+    "Haldir", "Shadowfax", "Grima Wormtongue", "The One Ring"
 ]
 
 class AppState:
