@@ -64,8 +64,12 @@
   }
   async function toggleCorrect(optId) {
     if (!currentPoll) return;
-    if (correctOptIds.has(optId)) correctOptIds.delete(optId);
-    else correctOptIds.add(optId);
+    if (correctOptIds.has(optId)) {
+      correctOptIds.delete(optId);
+    } else {
+      if (!currentPoll.multi && correctOptIds.size > 0) correctOptIds.clear(); // single-select: only one correct
+      correctOptIds.add(optId);
+    }
     saveCorrectOpts(currentPoll.question);
     renderBars();
     recordPollInHistory(currentPoll, correctOptIds);
