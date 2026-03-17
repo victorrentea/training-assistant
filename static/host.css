@@ -233,6 +233,16 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
 
 .llm-hint { opacity: .45; font-size: .85em; margin-left: .2rem; }
 
+/* ── Timer ── */
+.timer-btns { display: flex; align-items: center; gap: .5rem; margin-top: .6rem; flex-wrap: wrap; }
+.countdown-display {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--warn);
+  margin-top: .5rem;
+  letter-spacing: .02em;
+}
+
 .preview-question-row {
   display: flex;
   align-items: flex-start;

@@ -93,6 +93,7 @@
       if (msg.type === 'state') {
         const prevQuestion = currentPoll?.question;
         currentPoll = msg.poll;
+        if (!msg.poll_active && pollActive) _clearTimer(); // poll just closed
         pollActive = msg.poll_active;
         if (currentPoll && currentPoll.question !== prevQuestion) loadCorrectOpts(currentPoll.question);
         voteCounts = msg.vote_counts || {};
@@ -115,6 +116,8 @@
       } else if (msg.type === 'scores') {
         scores = msg.scores || {};
         renderParticipantList(cachedNames);
+      } else if (msg.type === 'timer') {
+        _applyTimer(msg.seconds, msg.started_at);
       } else if (msg.type === 'quiz_status') {
         renderQuizStatus(msg.status, msg.message);
       } else if (msg.type === 'quiz_preview') {
@@ -365,6 +368,45 @@
     }
   });
 
+  // ── Timer ──
+  let activeTimer = null;   // {seconds, started_at (ms)} or null
+  let _timerInterval = null;
+
+  async function startTimer(seconds) {
+    const res = await fetch('/api/poll/timer', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ seconds }),
+    });
+    if (!res.ok) { const e = await res.json(); toast(e.detail || 'Error'); }
+  }
+
+  function _applyTimer(seconds, startedAtIso) {
+    activeTimer = { seconds, startedAt: new Date(startedAtIso).getTime() };
+    renderPollDisplay();
+  }
+
+  function _clearTimer() {
+    activeTimer = null;
+    clearInterval(_timerInterval);
+    _timerInterval = null;
+  }
+
+  function _startHostCountdown() {
+    clearInterval(_timerInterval);
+    _timerInterval = setInterval(() => {
+      const el = document.getElementById('host-countdown');
+      if (!el || !activeTimer) { clearInterval(_timerInterval); return; }
+      const elapsed = (Date.now() - activeTimer.startedAt) / 1000;
+      const remaining = Math.max(0, activeTimer.seconds - elapsed);
+      el.textContent = `⏱ ${Math.ceil(remaining)}s`;
+      if (remaining <= 0) {
+        _clearTimer();
+        setPollStatus(false);
+      }
+    }, 200);
+  }
+
   // ── Open / close / clear ──
   async function setPollStatus(open) {
     await fetch('/api/poll/status', {
@@ -411,18 +453,34 @@
         </div>`;
     }).join('');
 
+    const timerSection = pollActive ? `
+      <div id="host-timer-area">
+        ${activeTimer
+          ? `<div class="countdown-display" id="host-countdown"></div>`
+          : `<div class="timer-btns">
+               <span style="font-size:.8rem;color:var(--muted);">Close in:</span>
+               ${[5,10,15,20].map(s =>
+                 `<button class="btn btn-warn" style="padding:.35rem .7rem;font-size:.82rem;min-height:unset;" onclick="startTimer(${s})">${s}s</button>`
+               ).join('')}
+             </div>`
+        }
+      </div>` : '';
+
     el.innerHTML = `
       <span class="status-pill ${statusLabel}">${statusText}</span>
       <span class="mode-pill">${currentPoll.multi ? '☑ Multi-select' : '◉ Single-select'}</span>
       <p class="poll-question">${currentPoll.question}</p>
       ${bars}
       <p style="font-size:.8rem; color:var(--muted); margin-top:.5rem;">${totalVotes} total vote${totalVotes!==1?'s':''}</p>
+      ${timerSection}
       <div class="btn-row">
         ${!pollActive
           ? `<button class="btn btn-success" onclick="setPollStatus(true)">▶ Open voting</button>`
           : `<button class="btn btn-warn"    onclick="setPollStatus(false)">⏹ Close voting</button>`}
         <button class="btn btn-danger" onclick="clearPoll()">🗑 Remove poll</button>
       </div>`;
+
+    if (pollActive && activeTimer) _startHostCountdown();
   }
 
   function renderBars() {
