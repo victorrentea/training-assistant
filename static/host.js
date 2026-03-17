@@ -506,7 +506,7 @@
       <div class="btn-row">
         <span class="status-pill ${statusLabel}">${statusText}</span>
         ${!pollActive
-          ? `<button class="btn btn-success" onclick="setPollStatus(true)">▶ Open voting</button>`
+          ? `<button class="btn btn-success" onclick="setPollStatus(true)">${totalVotes > 0 ? '↺ Re-open' : '▶ Open voting'}</button>`
           : `<button class="btn btn-warn"    onclick="setPollStatus(false)">⏹ Close voting</button>`}
         ${timerBtns}
         <button class="btn btn-danger" onclick="clearPoll()">🗑 Remove poll</button>
