@@ -155,7 +155,7 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
   display: flex;
   align-items: center;
   gap: .75rem;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
 }
 
 /* ── Buttons ── */
