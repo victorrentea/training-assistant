@@ -8,3 +8,4 @@
 - [x] Add automated e2e tests at the API level for the current functionality. create a testing DSL that allows for readable tests.
 - [x] Location is not collected from android chrome, despite the user accept.
 - [x] Make the locations of participants in the host screen buildings. When I click on any of them, a Google Maps should open that displays the location of all the participants currently active and connected. Design all this into a separate HTML/JavaScript. The map should open as a modal dialog.
+- [x] quiz_generator: after having pushed the question to the quiz backend, ask the LLM to synthesize the main topics that were discussed in the shape of a bullet list wrapped in a prompt that tells an LLM to generate quiz questions based on this topic list. I automatically copy this generated prompt into the clipboard of my Mac OS.

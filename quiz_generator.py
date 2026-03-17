@@ -20,6 +20,7 @@ import json
 import os
 import re
 import ssl
+import subprocess
 import sys
 import urllib.error
 import urllib.request
@@ -355,6 +356,26 @@ Rules:
 - Do not add any explanation, markdown code fences, or text outside the JSON object.
 """
 
+_TOPICS_SYSTEM = """\
+You are a workshop assistant. Given a transcript excerpt, extract the main topics discussed
+and produce a ready-to-use prompt that a trainer can paste into any LLM to generate more
+quiz questions on those topics.
+
+Output format — return ONLY the following text, nothing else:
+
+Generate debate-triggering poll questions for a live technical workshop.
+The session covered these topics:
+- <topic 1>
+- <topic 2>
+- <topic N>
+
+For each question:
+- Probe understanding of a concept, not trivial recall
+- Make the correct answer non-obvious to spark discussion
+- Provide 4 plausible options (max 80 chars each) reflecting real-world misconceptions
+- Return JSON: {"question": "...", "options": [...], "correct_indices": [...]}
+"""
+
 _REFINE_SYSTEM = """\
 You previously generated a quiz question. The trainer has requested a change to one option.
 Apply the requested change and return the COMPLETE updated quiz JSON in the same schema:
@@ -520,6 +541,32 @@ def open_poll(config: Config) -> None:
     _post_json(f"{config.server_url}/api/poll/status", {"open": True}, config.host_username, config.host_password)
 
 
+def generate_topic_prompt(text: str, config: Config) -> str:
+    """Ask Claude to summarise the session topics and return a ready-to-paste LLM prompt."""
+    client = anthropic.Anthropic(api_key=config.api_key)
+    print("[info] Generating topic summary...")
+    try:
+        response = client.messages.create(
+            model=config.model,
+            max_tokens=400,
+            system=_TOPICS_SYSTEM,
+            messages=[{"role": "user", "content": text}],
+        )
+    except anthropic.APIError as e:
+        print(f"[warn] Could not generate topic summary: {e}", file=sys.stderr)
+        return ""
+    return response.content[0].text.strip()
+
+
+def copy_to_clipboard(text: str) -> bool:
+    """Copy text to the macOS clipboard via pbcopy. Returns True on success."""
+    try:
+        subprocess.run(["pbcopy"], input=text.encode(), check=True)
+        return True
+    except (FileNotFoundError, subprocess.CalledProcessError):
+        return False
+
+
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
@@ -601,6 +648,19 @@ def main() -> None:
     except RuntimeError as e:
         print(f"[error] Failed to post poll: {e}", file=sys.stderr)
         sys.exit(1)
+
+    # 7. Generate topic summary prompt and copy to clipboard
+    topic_prompt = generate_topic_prompt(text, config)
+    if topic_prompt:
+        if copy_to_clipboard(topic_prompt):
+            print()
+            print("[ok] Topic summary prompt copied to clipboard ✓")
+            print("-" * 60)
+            print(topic_prompt)
+            print("-" * 60)
+        else:
+            print("[warn] Could not copy to clipboard (pbcopy not available)")
+            print(topic_prompt)
 
 
 if __name__ == "__main__":
