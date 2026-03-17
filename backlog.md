@@ -29,9 +29,10 @@
 - [ ] feat: in the generated question preview, each option should have a refresh icon next to it, allowing me to request via the daemon the Claude API to generate another option for that particular one. A similar refresh icon should be displayed also on the question title level, allowing me to generate a brand new question with new options completely. Important! This will require the daemon to maintain conversation state with the Claude API so that new options are generated or new questions all together are generated based on the conversation transcript originally uploaded. 
 - [x] feat: when more than seven or eight participants join, the list should get a vertical scroll bar so that it does not expand too much down. in the host ui.
 - [x] Feature: Allow the host to click items in the current poll after closing the voting to mean correct options (one or multi) depending on what was chosen.
-- [ ] Feature. Depending on the host selection of the correct options, each participant should get points which are displayed next to their name in the list of participants and also in the participant view. 
+- [x] Feature. Depending on the host selection of the correct options, each participant should get points which are displayed next to their name in the list of participants and also in the participant view.
 - [ ] The faster the participants have selected the options, the more points they should be awarded. Propose a similar voting scoring scheme as used by Quizzes or Kahoot. 
 - [ ] Feature: Rewarder participants based on the points they've accumulated by this moment in the host list of participants. 
 - [ ] Feature from the host user interface to allow downloading all the poll questions along with the correctly marked options by the host. All the poll questions asked during the current day can be stored in local storage on the host browser.
 - [ ] Feature: when saying "sending .. chars to Claude", include the time frame that is being sent and number of lines of transcription
 - [ ] feat explain the error message from claude api better from the daemon to the host ui
+- [ ] feat daemon should detect if it's already running and kill its previous instance, to allow quick re-run without knowing [if] in what terminal it run already. 

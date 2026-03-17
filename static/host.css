@@ -256,6 +256,12 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
   display: flex; justify-content: space-between; align-items: center; gap: .5rem;
 }
 .pax-list li:last-child { border-bottom: none; }
+.pax-score {
+  font-size: .78rem;
+  color: var(--accent2);
+  font-weight: 700;
+  margin-left: .4rem;
+}
 .pax-location {
   color: var(--muted);
   font-size: .78rem;

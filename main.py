@@ -46,6 +46,7 @@ class AppState:
         self.quiz_status: Optional[dict] = None    # last status from daemon
         self.daemon_last_seen: Optional[datetime] = None  # last time daemon polled
         self.quiz_preview: Optional[dict] = None   # generated quiz awaiting host approval
+        self.scores: dict[str, int] = {}           # participant_name -> cumulative score
 
     def suggest_name(self) -> str:
         taken = set(self.participants.keys()) | self.suggested_names
@@ -92,6 +93,9 @@ class QuizPreview(BaseModel):
     options: list[str]
     multi: bool = False
 
+class PollCorrect(BaseModel):
+    correct_ids: list[str]   # option ids the host marked as correct
+
 # ---------------------------------------------------------------------------
 # Broadcast helpers
 # ---------------------------------------------------------------------------
@@ -132,6 +136,7 @@ def build_state_message() -> dict:
         "daemon_last_seen": last_seen.isoformat() if last_seen else None,
         "daemon_connected": daemon_connected,
         "quiz_preview": state.quiz_preview,
+        "scores": state.scores,
     }
 
 # ---------------------------------------------------------------------------
@@ -252,6 +257,21 @@ async def set_poll_status(body: PollOpen):
     state.poll_active = body.open
     await broadcast(build_state_message())
     return {"ok": True, "poll_active": state.poll_active}
+
+
+@app.post("/api/poll/correct")
+async def set_correct_options(body: PollCorrect):
+    """Host marks correct options; award 1 point to each participant who answered correctly."""
+    if not state.poll:
+        raise HTTPException(400, "No active poll")
+    correct_set = set(body.correct_ids)
+    # Award points to participants whose vote fully matches the correct set
+    for name, selection in state.votes.items():
+        voted = set(selection) if isinstance(selection, list) else {selection}
+        if voted & correct_set:  # at least one correct answer selected
+            state.scores[name] = state.scores.get(name, 0) + 1
+    await broadcast({"type": "scores", "scores": state.scores})
+    return {"ok": True}
 
 
 @app.delete("/api/poll")

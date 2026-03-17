@@ -5,6 +5,8 @@
   let totalVotes = 0;
   let participantLocations = {};
   let correctOptIds = new Set(); // host-marked correct options for current poll
+  let scores = {};               // participant_name -> score
+  let cachedNames = [];          // last known participant names
 
   function loadCorrectOpts(question) {
     try {
@@ -15,12 +17,18 @@
   function saveCorrectOpts(question) {
     localStorage.setItem('host_correct_' + question, JSON.stringify([...correctOptIds]));
   }
-  function toggleCorrect(optId) {
+  async function toggleCorrect(optId) {
     if (!currentPoll) return;
     if (correctOptIds.has(optId)) correctOptIds.delete(optId);
     else correctOptIds.add(optId);
     saveCorrectOpts(currentPoll.question);
     renderBars();
+    // Post to backend to award points
+    await fetch('/api/poll/correct', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ correct_ids: [...correctOptIds] }),
+    });
   }
 
   // Set participant link
@@ -45,6 +53,7 @@
         voteCounts = msg.vote_counts || {};
         totalVotes = Object.values(voteCounts).reduce((a,b)=>a+b,0);
         participantLocations = msg.participant_locations || {};
+        scores = msg.scores || {};
         document.getElementById('pax-count').textContent = msg.participant_count;
         renderParticipantList(msg.participant_names || []);
         renderDaemonStatus(msg.daemon_connected, msg.daemon_last_seen);
@@ -58,6 +67,9 @@
         document.getElementById('pax-count').textContent = msg.count;
         participantLocations = msg.locations || participantLocations;
         renderParticipantList(msg.names || []);
+      } else if (msg.type === 'scores') {
+        scores = msg.scores || {};
+        renderParticipantList(cachedNames);
       } else if (msg.type === 'quiz_status') {
         renderQuizStatus(msg.status, msg.message);
       } else if (msg.type === 'quiz_preview') {
@@ -93,10 +105,13 @@
   }
 
   function renderParticipantList(names) {
+    cachedNames = names;
     const ul = document.getElementById('pax-list');
     ul.innerHTML = names.map(n => {
       const loc = participantLocations[n];
-      return `<li>${n}${loc ? `<span class="pax-location" onclick="openMap()" title="View all on map">📍 ${loc}</span>` : ''}</li>`;
+      const pts = scores[n];
+      const scoreTag = pts ? `<span class="pax-score">⭐ ${pts}</span>` : '';
+      return `<li>${n}${scoreTag}${loc ? `<span class="pax-location" onclick="openMap()" title="View all on map">📍 ${loc}</span>` : ''}</li>`;
     }).join('');
   }
 

@@ -163,6 +163,7 @@
         currentPoll = msg.poll;
         pollActive = msg.poll_active;
         updateParticipantCount(msg.participant_count);
+        updateScore((msg.scores || {})[myName]);
         renderContent(msg.vote_counts);
         break;
       case 'vote_update':
@@ -171,11 +172,25 @@
       case 'participant_count':
         updateParticipantCount(msg.count);
         break;
+      case 'scores':
+        updateScore((msg.scores || {})[myName]);
+        break;
     }
   }
 
   function updateParticipantCount(n) {
     document.getElementById('pax-count').textContent = `👥 ${n} participant${n !== 1 ? 's' : ''}`;
+  }
+
+  function updateScore(pts) {
+    const el = document.getElementById('my-score');
+    if (!el) return;
+    if (pts) {
+      el.textContent = `⭐ ${pts} pt${pts !== 1 ? 's' : ''}`;
+      el.style.display = '';
+    } else {
+      el.style.display = 'none';
+    }
   }
 
   // ── Render ──
