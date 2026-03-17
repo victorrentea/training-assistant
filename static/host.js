@@ -378,6 +378,8 @@
     });
     const data = await res.json().catch(() => ({}));
     if (res.ok) {
+      // Erase any LLM hints for this question so manual polls never show suggestions
+      localStorage.removeItem('host_llm_hints_' + question);
       await setPollStatus(true);
       toast('Poll created & opened ✓');
       pollInput.innerHTML = '<div><br></div>';
@@ -466,7 +468,7 @@
       return `
         <div class="result-row ${correct} ${canMark ? 'markable' : ''}" data-id="${opt.id}" ${clickable}>
           <div class="result-label">
-            <span>${opt.text}${isCorrect ? ' ✅' : ''}${llmHint ? ' <span class="llm-hint" title="LLM suggestion">☑</span>' : ''}</span>
+            <span>${opt.text}${isCorrect ? ' ✅' : ''}${llmHint ? ' <span class="llm-hint" title="AI suggestion">✅ 🤔</span>' : ''}</span>
             <span class="pct">${count} vote${count!==1?'s':''} · ${pct}%</span>
           </div>
           <div class="bar-track">
@@ -518,7 +520,7 @@
         const hints = canMarkNow ? getLlmHints(currentPoll.question) : null;
         const llmHint = hints && hints.includes(currentPoll.options.indexOf(opt)) && !isCorrect;
         labelSpan.innerHTML = escHtml(opt.text) + (isCorrect ? ' ✅' : '') +
-          (llmHint ? ' <span class="llm-hint" title="LLM suggestion">☑</span>' : '');
+          (llmHint ? ' <span class="llm-hint" title="AI suggestion">✅ 🤔</span>' : '');
       }
       if (fill) {
         fill.style.width = `${pct}%`;
