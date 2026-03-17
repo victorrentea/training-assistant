@@ -106,8 +106,11 @@
 
   function renderParticipantList(names) {
     cachedNames = names;
+    const sorted = Object.keys(scores).length > 0
+      ? [...names].sort((a, b) => (scores[b] || 0) - (scores[a] || 0))
+      : names;
     const ul = document.getElementById('pax-list');
-    ul.innerHTML = names.map(n => {
+    ul.innerHTML = sorted.map(n => {
       const loc = participantLocations[n];
       const pts = scores[n];
       const scoreTag = pts ? `<span class="pax-score">⭐ ${pts}</span>` : '';

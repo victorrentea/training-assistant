@@ -47,6 +47,9 @@ class AppState:
         self.daemon_last_seen: Optional[datetime] = None  # last time daemon polled
         self.quiz_preview: Optional[dict] = None   # generated quiz awaiting host approval
         self.scores: dict[str, int] = {}           # participant_name -> cumulative score
+        self.base_scores: dict[str, int] = {}      # scores before current poll's awards
+        self.poll_opened_at: Optional[datetime] = None  # when voting was opened
+        self.vote_times: dict[str, datetime] = {}  # participant_name -> when they voted
 
     def suggest_name(self) -> str:
         taken = set(self.participants.keys()) | self.suggested_names
@@ -184,6 +187,8 @@ async def websocket_endpoint(websocket: WebSocket, participant_name: str):
                 valid_ids = [o["id"] for o in state.poll["options"]] if state.poll else []
                 if state.poll_active and state.poll and not state.poll.get("multi") and option_id in valid_ids:
                     state.votes[name] = option_id
+                    if name not in state.vote_times:
+                        state.vote_times[name] = datetime.now(timezone.utc)
                     await broadcast({
                         "type": "vote_update",
                         "vote_counts": state.vote_counts(),
@@ -201,6 +206,8 @@ async def websocket_endpoint(websocket: WebSocket, participant_name: str):
                     and all(oid in valid_ids for oid in option_ids)
                 ):
                     state.votes[name] = option_ids
+                    if name not in state.vote_times:
+                        state.vote_times[name] = datetime.now(timezone.utc)
                     await broadcast({
                         "type": "vote_update",
                         "vote_counts": state.vote_counts(),
@@ -255,21 +262,39 @@ async def set_poll_status(body: PollOpen):
     if not state.poll:
         raise HTTPException(400, "No poll created yet")
     state.poll_active = body.open
+    if body.open:
+        state.poll_opened_at = datetime.now(timezone.utc)
+        state.vote_times = {}
+        state.base_scores = dict(state.scores)  # snapshot before this poll
     await broadcast(build_state_message())
     return {"ok": True, "poll_active": state.poll_active}
 
 
+_MAX_POINTS = 1000
+_MIN_POINTS = 500
+_SPEED_WINDOW = 30  # seconds over which speed bonus applies
+
 @app.post("/api/poll/correct")
 async def set_correct_options(body: PollCorrect):
-    """Host marks correct options; award 1 point to each participant who answered correctly."""
+    """Host marks correct options; recompute speed-based scores for this poll."""
     if not state.poll:
         raise HTTPException(400, "No active poll")
     correct_set = set(body.correct_ids)
-    # Award points to participants whose vote fully matches the correct set
+    now = datetime.now(timezone.utc)
+    opened_at = state.poll_opened_at or now
+
+    # Recompute scores from scratch using base_scores (pre-poll) + this poll's awards
+    new_scores = dict(state.base_scores)
     for name, selection in state.votes.items():
         voted = set(selection) if isinstance(selection, list) else {selection}
-        if voted & correct_set:  # at least one correct answer selected
-            state.scores[name] = state.scores.get(name, 0) + 1
+        if voted & correct_set:
+            elapsed = (state.vote_times.get(name, now) - opened_at).total_seconds()
+            elapsed = max(0, min(elapsed, _SPEED_WINDOW))
+            pts = round(_MAX_POINTS * (1 - 0.5 * elapsed / _SPEED_WINDOW))
+            pts = max(pts, _MIN_POINTS)
+            new_scores[name] = new_scores.get(name, 0) + pts
+
+    state.scores = new_scores
     await broadcast({"type": "scores", "scores": state.scores})
     return {"ok": True}
 
