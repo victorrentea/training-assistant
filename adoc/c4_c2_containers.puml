@@ -5,36 +5,35 @@ title Workshop Live Interaction Tool — C2: Container Diagram
 
 LAYOUT_WITH_LEGEND()
 
-Person(victor, "Victor (Host/Trainer)", "Workshop facilitator.\nRuns daemon on his Mac.")
+Person(victor, "Victor (Host/Trainer)", "Workshop facilitator.")
 Person(participant, "Participant", "Audience member.")
 
-System_Ext(audio_hijack, "Audio Hijack", "Captures and transcribes workshop audio\nto a local file on Victor's Mac.")
+System_Ext(audio_hijack, "Audio Hijack", "Captures live audio and writes\ntranscript file on Victor's Mac.")
 System_Ext(claude_api, "Anthropic Claude API", "LLM for quiz generation.")
-System_Ext(nominatim, "Nominatim", "Reverse geocoding.")
+System_Ext(nominatim, "Nominatim", "GPS → city + country.")
 
 System_Boundary(workshop, "Workshop Tool") {
 
-    Container(caddy, "Caddy Reverse Proxy", "Caddy (single binary)", "TLS termination (Let's Encrypt).\nHTTP Basic Auth on /host and /api/*.\nForwards to FastAPI on :8000.")
+    Container(caddy, "Caddy Reverse Proxy", "Caddy (single binary)", "TLS termination.\nHTTP Basic Auth on /host and /api/*.\nForwards to FastAPI on :8000.")
 
-    Container(fastapi, "FastAPI Backend", "Python 3.9 / FastAPI / Uvicorn", "REST endpoints + WebSocket.\nServes static HTML/JS/CSS.\nRuns as systemd workshop.service.")
+    Container(fastapi, "FastAPI Backend", "Python 3.9 / FastAPI / Uvicorn", "REST endpoints + WebSocket.\nServes static files.\nRuns as systemd service on Oracle Cloud.")
 
-    Container(appstate, "In-Memory AppState", "Python singleton", "Holds poll, votes, scores,\nparticipant WebSockets, locations,\nquiz pipeline state.")
+    Container(appstate, "In-Memory AppState", "Python singleton", "Poll, votes, scores,\nparticipant WebSockets, locations,\nquiz pipeline state.")
 
     Container(static_files, "Static Files", "HTML / Vanilla JS / CSS", "participant.html, host.html,\nparticipant.js, host.js, CSS files.")
 
-    Container(quiz_daemon, "Quiz Daemon", "Python 3.12 CLI (Victor's Mac)", "Long-polls backend for quiz requests.\nReads local transcript files.\nPosts AI-generated preview to backend.")
+    Container(quiz_daemon, "Quiz Daemon", "Python 3.12 CLI (Victor's Mac)", "Long-polls backend for quiz requests.\nPosts AI-generated preview to backend.")
 }
 
-Rel(victor, audio_hijack, "Records live workshop audio", "Local on Mac")
-Rel(audio_hijack, quiz_daemon, "Produces transcript file", "Local file")
-Rel(victor, caddy, "Manages polls and quiz previews", "HTTPS :443")
-Rel(participant, caddy, "Votes on polls, sees results", "HTTPS :443 / WSS")
+Rel(audio_hijack, quiz_daemon, "Transcript file", "Local file")
+Rel(victor, caddy, "Manages polls and quiz previews", "HTTPS / WSS")
 Rel(victor, quiz_daemon, "Starts/stops", "Local terminal")
+Rel(participant, caddy, "Votes on polls, sees results", "HTTPS / WSS")
 Rel(caddy, fastapi, "Proxies all requests", "HTTP :8000")
 Rel(fastapi, appstate, "Reads and writes session state", "In-process")
 Rel(fastapi, static_files, "Serves files", "StaticFiles mount")
-Rel(quiz_daemon, caddy, "Polls for requests, posts quiz preview", "HTTPS REST (Basic Auth)")
-Rel(quiz_daemon, claude_api, "Generates quiz from transcript", "HTTPS REST (Anthropic SDK)")
-Rel(participant, nominatim, "Resolves GPS to city/country", "HTTPS REST")
+Rel(quiz_daemon, caddy, "Polls for requests, posts preview", "HTTPS REST (Basic Auth)")
+Rel(quiz_daemon, claude_api, "Generates quiz from transcript", "HTTPS REST")
+Rel(participant, nominatim, "Reverse geocodes GPS", "HTTPS REST")
 
 @enduml
