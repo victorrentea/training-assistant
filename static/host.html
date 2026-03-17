@@ -57,11 +57,10 @@
           Multi-select
         </label>
       </div>
-      <div class="or-divider">or</div>
       <div class="or-divider"><span>or</span></div>
       <div class="quiz-gen-row">
         <button class="btn btn-warn" id="gen-quiz-btn" onclick="requestQuiz()">🤖 Generate</button>
-        <label style="display:flex;align-items:center;gap:.4rem;font-size:.9rem;color:var(--text);cursor:pointer;margin:0;">
+        <div style="display:flex;align-items:center;gap:.4rem;font-size:.9rem;color:var(--text);">
           from last
           <select id="quiz-minutes" style="background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:.3rem .5rem;font-size:.9rem;cursor:pointer;">
             <option value="15">15 min</option>
@@ -69,8 +68,7 @@
             <option value="60">1 hour</option>
             <option value="480">whole day</option>
           </select>
-          of discussion
-        </label>
+        </div>
       </div>
       <div id="quiz-status" style="margin-top:.4rem;font-size:.85rem;color:var(--muted);min-height:1.2em;"></div>
       <div id="daemon-status" style="margin-top:.25rem; font-size:.82rem; color:var(--muted);"></div>
