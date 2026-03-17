@@ -690,7 +690,7 @@
     const el = document.getElementById('quiz-status');
     if (!el) return;
     const colors = { requested: 'var(--muted)', generating: 'var(--warn)', done: 'var(--accent2)', error: 'var(--danger)' };
-    const icons  = { requested: '⏳', generating: '⚙️', done: '✅', error: '❌' };
+    const icons  = { requested: '⏳', generating: '⚙️', done: '', error: '❌' };
     el.style.color = colors[status] || 'var(--muted)';
     el.textContent = `${icons[status] || ''} ${message}`;
     el.title = message;
