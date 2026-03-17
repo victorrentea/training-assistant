@@ -250,7 +250,7 @@
     const multi = !!currentPoll.multi;
     const totalVotes = Object.values(voteCounts || {}).reduce((a, b) => a + b, 0);
     const hasVoted = multi ? myVote instanceof Set && myVote.size > 0 : myVote !== null;
-    const showResults = hasVoted || !pollActive;
+    const showResults = !pollActive;
 
     let optionsHTML = currentPoll.options.map(opt => {
       const count = (voteCounts || {})[opt.id] || 0;
@@ -305,7 +305,7 @@
 
   function renderOptions(voteCounts, totalVotes) {
     // Lightweight update — only refresh option bars/pcts without full re-render
-    if (!currentPoll) return;
+    if (!currentPoll || pollActive) return;
     document.querySelectorAll('.option-btn').forEach((btn, i) => {
       const opt = currentPoll.options[i];
       if (!opt) return;
