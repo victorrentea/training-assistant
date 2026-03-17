@@ -4,6 +4,7 @@
   let voteCounts = {};
   let totalVotes = 0;
   let participantLocations = {};
+  const resolvedCities = {};   // raw "lat, lon" -> resolved city string cache
   let correctOptIds = new Set(); // host-marked correct options for current poll
   let scores = {};               // participant_name -> score
   let cachedNames = [];          // last known participant names
@@ -169,8 +170,28 @@
       const loc = participantLocations[n];
       const pts = scores[n];
       const scoreTag = pts ? `<span class="pax-score">⭐ ${pts}</span>` : '';
-      return `<li>${n}${scoreTag}${loc ? `<span class="pax-location" onclick="openMap()" title="View all on map">📍 ${loc}</span>` : ''}</li>`;
+      const locLabel = loc ? resolvedCities[loc] || loc : null;
+      return `<li>${n}${scoreTag}${locLabel ? `<span class="pax-location" onclick="openMap()" title="View all on map">📍 ${locLabel}</span>` : ''}</li>`;
     }).join('');
+
+    // Lazily resolve any raw "lat, lon" strings to city names
+    sorted.forEach(n => {
+      const loc = participantLocations[n];
+      if (!loc || resolvedCities[loc]) return;
+      const coordMatch = loc.match(/^(-?\d+\.?\d*),\s*(-?\d+\.?\d*)$/);
+      if (!coordMatch) return;
+      resolvedCities[loc] = loc; // placeholder to avoid duplicate requests
+      fetch(`https://nominatim.openstreetmap.org/reverse?lat=${coordMatch[1]}&lon=${coordMatch[2]}&format=json`,
+        { headers: { 'Accept-Language': 'en' } })
+        .then(r => r.json())
+        .then(data => {
+          const city = data.address?.city || data.address?.town || data.address?.village || data.address?.county || '';
+          const country = data.address?.country_code?.toUpperCase() || data.address?.country || '';
+          resolvedCities[loc] = [city, country].filter(Boolean).join(', ') || loc;
+          renderParticipantList(cachedNames);
+        })
+        .catch(() => { resolvedCities[loc] = loc; });
+    });
   }
 
   // ── Participant map ──

@@ -49,3 +49,4 @@
 - [x] change To further save vertical space, remove the div in which the notification after generating the new question is displayed, and move the conversation access more compact as another label at the top next to the connected. Perhaps make a distinction between server with a green check versus Victor with the green check. Be sure to preserve the last seen ts of the demon.
 - [x] bug: The hints about which is the correct option should only be displayed in the host view after the poll is closed, and even then in a subtle suggestion, like a grade checkbox or a translucent suggestion somehow.
 - [x] Extract from the code structure of the backend a C4 plant UML diagram at the C1, C2, and C3 level, the first three levels.
+- [x] Move Nominatim call out of participant browser: send raw GPS coords over WebSocket; host SPA resolves coords to city name lazily when rendering the map.

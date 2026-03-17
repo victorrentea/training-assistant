@@ -7,7 +7,6 @@ LAYOUT_LEFT_RIGHT()
 
 ' ── left: live traffic ──────────────────────────────────────────
 Person(participant, "Participant", "Trainee.")
-System_Ext(nominatim, "Nominatim", "GPS → city + country.")
 
 ' ── centre: the system ──────────────────────────────────────────
 System_Boundary(workshop, "Workshop Tool") {
@@ -27,17 +26,17 @@ System_Boundary(workshop, "Workshop Tool") {
 Person(victor, "Victor (Host/Trainer)", "Workshop facilitator.")
 System_Ext(audio_hijack, "Audio Hijack", "Captures live audio and writes\ntranscript file on Victor's Mac.")
 System_Ext(claude_api, "Anthropic Claude API", "LLM for quiz generation.")
+System_Ext(nominatim, "Nominatim", "GPS coords → city + country.")
 
 ' layout hints
 Lay_L(participant, participant_spa)
-Lay_L(nominatim, participant_spa)
 Lay_R(victor, host_spa)
 Lay_R(claude_api, quiz_daemon)
 Lay_R(audio_hijack, quiz_daemon)
+Lay_R(nominatim, host_spa)
 
 ' relationships
 Rel(participant, participant_spa, "Votes, sees live results", "Browser")
-Rel(participant_spa, nominatim, "GPS → city name", "HTTPS REST")
 Rel(participant_spa, caddy, "Vote API, WebSocket", "HTTPS / WSS")
 Rel(caddy, fastapi, "Proxies API and WebSocket", "HTTP :8000")
 Rel(host_spa, caddy, "Poll API, WebSocket", "HTTPS / WSS")
@@ -46,6 +45,6 @@ Rel(victor, quiz_daemon, "Starts/stops", "Local terminal")
 Rel(audio_hijack, quiz_daemon, "Transcript file", "Local file")
 Rel(quiz_daemon, caddy, "Polls for requests, posts preview", "HTTPS REST (Basic Auth)")
 Rel(quiz_daemon, claude_api, "Generates quiz from transcript", "HTTPS REST")
-Rel(host_spa, nominatim, "City name → coordinates for map", "HTTPS REST")
+Rel(host_spa, nominatim, "Resolves GPS coords to city and map coordinates", "HTTPS REST")
 
 @enduml
