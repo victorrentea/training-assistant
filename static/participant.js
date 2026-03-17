@@ -17,6 +17,7 @@
   const savedName = localStorage.getItem(LS_KEY);
   if (savedName) {
     nameInput.value = savedName;
+    join();   // auto-join
   } else {
     fetchSuggestedName().then(name => nameInput.placeholder = name);
   }
@@ -48,6 +49,19 @@
     localStorage.setItem(LS_KEY, name);
     connectWS(name);
   }
+
+  // ── Leave ──
+  document.getElementById('leave-btn').addEventListener('click', () => {
+    if (ws) { ws.onclose = null; ws.close(); ws = null; }
+    localStorage.removeItem(LS_KEY);
+    myName = '';
+    myVote = null;
+    document.getElementById('main-screen').style.display = 'none';
+    document.getElementById('join-screen').style.display = 'block';
+    nameInput.value = '';
+    fetchSuggestedName().then(name => nameInput.placeholder = name);
+    updateClearBtn();
+  });
 
   // ── Location ──
   async function resolveLocation() {

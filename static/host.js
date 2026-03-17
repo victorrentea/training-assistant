@@ -125,7 +125,6 @@
   }
 
   async function clearPoll() {
-    if (!confirm('Remove current poll?')) return;
     await fetch('/api/poll', { method: 'DELETE' });
   }
 

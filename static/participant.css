@@ -79,6 +79,8 @@ h1 { font-size: 1.4rem; color: var(--accent); letter-spacing: .05em; margin-bott
   color: var(--muted);
 }
 .dot { width:8px; height:8px; border-radius:50%; background: var(--accent2); display:inline-block; margin-right:.4rem; animation: pulse 2s infinite; }
+#leave-btn { background:none; border:1px solid var(--border); color:var(--muted); border-radius:6px; padding:.2rem .6rem; font-size:.78rem; cursor:pointer; }
+#leave-btn:hover { border-color:var(--danger); color:var(--danger); }
 @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
 
 /* ── Poll card ── */

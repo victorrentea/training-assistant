@@ -1,4 +1,3 @@
-- [ ] The participants should auto-join any open session when they loaded the page in their browsers and they've previously logged in. 
-- [ ] The application should allow them to log out, though, in which case, with a button, they need to re-choose a name or pick the randomly generated one. 
-- [ ] Make sure the application is mobile friendly also. 
-- [ ] 
+- [x] The participants should auto-join any open session when they loaded the page in their browsers and they've previously logged in.
+- [x] The application should allow them to log out, though, in which case, with a button, they need to re-choose a name or pick the randomly generated one.
+- [ ] Make sure the application is mobile friendly also.

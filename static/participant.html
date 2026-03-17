@@ -25,7 +25,10 @@
   <div id="main-screen">
     <div class="status-bar">
       <span><span class="dot"></span> Connected as <strong id="display-name"></strong></span>
-      <span id="pax-count"></span>
+      <span style="display:flex;align-items:center;gap:1rem;">
+        <span id="pax-count"></span>
+        <button id="leave-btn" title="Change name">✕ Leave</button>
+      </span>
     </div>
     <div id="content"></div>
   </div>
