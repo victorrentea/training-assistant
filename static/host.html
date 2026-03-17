@@ -29,7 +29,7 @@
       <ul id="pax-list" class="pax-list" title="Click a location to view map"></ul>
       <div style="margin-top:.75rem; font-size:.85rem; color:var(--muted); display:flex; justify-content:space-between; align-items:center; gap:.5rem; flex-wrap:wrap;">
         <span>Join at: <a id="participant-link" style="color:var(--accent); word-break:break-all;" href="/" target="_blank"></a></span>
-        <button class="btn btn-danger" style="font-size:.75rem; padding:.3rem .7rem; min-height:unset;" onclick="resetScores()" title="Reset all scores to zero">↺ Reset scores</button>
+        <button class="btn btn-danger" onclick="resetScores()" title="Reset all scores to zero">↺ Reset scores</button>
       </div>
     </div>
 
@@ -88,7 +88,7 @@
     <div class="card" style="grid-column: 1 / -1;">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:.9rem;">
         <h2 style="margin:0;">Current Poll</h2>
-        <button class="btn btn-primary" style="font-size:.8rem; padding:.4rem .8rem; min-height:unset;" onclick="downloadPollHistory()" title="Download today's polls">⬇ Quiz Q&amp;A</button>
+        <button class="btn btn-primary" onclick="downloadPollHistory()" title="Download today's polls">⬇ Quiz Q&amp;A</button>
       </div>
       <div id="poll-display"></div>
     </div>
