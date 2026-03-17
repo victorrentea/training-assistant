@@ -121,6 +121,7 @@ async def set_correct_options(body: PollCorrect):
             "type": "result",
             "correct_ids": list(correct_set),
             "voted_ids": list(voted),
+            "score": state.scores.get(name, 0),
         }))
 
     return {"ok": True}

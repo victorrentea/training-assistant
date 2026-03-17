@@ -171,6 +171,7 @@
         break;
       case 'result':
         pollResult = { correct_ids: new Set(msg.correct_ids), voted_ids: new Set(msg.voted_ids) };
+        if (msg.score !== undefined) updateScore(msg.score);
         applyResultColors();
         break;
       case 'timer':
