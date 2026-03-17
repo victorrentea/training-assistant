@@ -25,23 +25,27 @@
 
     <!-- Stats -->
     <div class="card">
-      <h2>Session</h2>
-      <div class="stat" id="pax-count">0</div>
-      <div class="stat-label">participants connected</div>
+      <div class="session-header">
+        <div>
+          <h2 style="margin-bottom:.5rem;">Session</h2>
+          <div class="stat" id="pax-count">0</div>
+          <div class="stat-label">participants connected</div>
+        </div>
+        <div id="qr-code" class="qr-code" title="Click to enlarge" style="margin-top:0; flex-shrink:0;"></div>
+      </div>
       <ul id="pax-list" class="pax-list" title="Click a location to view map"></ul>
-      <div style="margin-top:1.2rem; font-size:.85rem; color:var(--muted);">
-        Participant link:<br>
+      <div style="margin-top:.75rem; font-size:.85rem; color:var(--muted);">
+        Participant link:
         <a id="participant-link" style="color:var(--accent); word-break:break-all;" href="/" target="_blank"></a>
       </div>
-      <div id="daemon-status" style="margin-top:1rem; font-size:.82rem; color:var(--muted);"></div>
-      <div id="qr-code" class="qr-code" title="Click to enlarge"></div>
+      <div id="daemon-status" style="margin-top:.5rem; font-size:.82rem; color:var(--muted);"></div>
+    </div>
 
   <!-- QR fullscreen overlay -->
   <div id="qr-overlay" onclick="closeQR()">
     <div id="qr-fullscreen"></div>
     <div id="qr-overlay-url"></div>
   </div>
-    </div>
 
     <!-- Create poll -->
     <div class="card">

@@ -153,8 +153,8 @@
   const style = getComputedStyle(document.documentElement);
   new QRCode(document.getElementById('qr-code'), {
     text: link,
-    width: 200,
-    height: 200,
+    width: 120,
+    height: 120,
     colorDark: style.getPropertyValue('--text').trim(),
     colorLight: style.getPropertyValue('--surface').trim(),
   });
