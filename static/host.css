@@ -13,11 +13,11 @@ body {
 .layout { max-width: 900px; margin: 0 auto; }
 
 .badge {
-  padding: .45rem .85rem;
+  padding: 0 .85rem;
   border-radius: 20px;
   font-size: .8rem;
   font-weight: 600;
-  min-height: 34px;
+  height: 34px;
   display: inline-flex;
   align-items: center;
   box-sizing: border-box;
@@ -147,28 +147,37 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
 /* ── Quiz gen row inside Create Poll card ── */
 .quiz-gen-row {
   display: flex;
+  flex-direction: column;
+  gap: .4rem;
+}
+.quiz-gen-controls {
+  display: flex;
   align-items: center;
   gap: .75rem;
-  flex-wrap: nowrap;
 }
 #quiz-status {
-  flex: 1;
+  font-size: .82rem;
+  color: var(--muted);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  min-width: 0;
 }
 
 /* ── Buttons ── */
 .btn {
-  padding: .45rem 1.1rem;
+  padding: 0 1.1rem;
   border: none;
   border-radius: 8px;
   font-size: .9rem;
   font-weight: 600;
   cursor: pointer;
   transition: opacity .2s, transform .1s;
-  min-height: 34px;
+  height: 34px;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
 }
 .btn:hover { opacity: .85; }
 .btn:active { transform: scale(.97); }
@@ -178,7 +187,7 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
 .btn-warn    { background: var(--warn);    color: var(--bg); }
 .btn:disabled { opacity: .35; cursor: default; }
 
-.btn-row { display: flex; gap: .75rem; flex-wrap: wrap; margin-top: 1rem; }
+.btn-row { display: flex; gap: .75rem; flex-wrap: wrap; margin-top: 1rem; align-items: center; }
 
 @media (max-width: 480px) {
   .btn-row { gap: .5rem; }
@@ -209,12 +218,15 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
 .bar-fill.leading { background: var(--accent2); }
 
 .status-pill {
-  display: inline-block;
-  padding: .25rem .7rem;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 .7rem;
   border-radius: 20px;
   font-size: .78rem;
   font-weight: 600;
-  margin-bottom: 1rem;
+  height: 34px;
+  box-sizing: border-box;
+  white-space: nowrap;
 }
 .status-pill.open   { background: #48cfad22; color: var(--accent2); border: 1px solid var(--accent2); }
 .status-pill.closed { background: #ff6b6b22; color: var(--danger);  border: 1px solid var(--danger); }
@@ -222,7 +234,6 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
 
 .mode-pill {
   display: inline-block;
-  margin-left: .5rem;
   padding: .25rem .7rem;
   border-radius: 20px;
   font-size: .78rem;
@@ -230,7 +241,6 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
   background: var(--surface2);
   color: var(--muted);
   border: 1px solid var(--border);
-  margin-bottom: 1rem;
 }
 
 .no-poll { color: var(--muted); font-size: .9rem; text-align: center; padding: 2rem 0; }

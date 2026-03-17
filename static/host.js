@@ -448,6 +448,8 @@
     const el = document.getElementById('poll-display');
     if (!currentPoll) {
       el.innerHTML = `<p class="no-poll">No poll yet — create one above.</p>`;
+      const pillsEl = document.getElementById('poll-pills');
+      if (pillsEl) pillsEl.innerHTML = '';
       return;
     }
 
@@ -484,14 +486,17 @@
           `<button class="btn btn-warn" onclick="startTimer(${s})">${s}s</button>`
         ).join('') : '';
 
+    const pillsEl = document.getElementById('poll-pills');
+    if (pillsEl) pillsEl.innerHTML =
+      `<span class="mode-pill">${currentPoll.multi ? '☑ Multi-select' : '◉ Single-select'}</span>`;
+
     el.innerHTML = `
-      <span class="status-pill ${statusLabel}">${statusText}</span>
-      <span class="mode-pill">${currentPoll.multi ? '☑ Multi-select' : '◉ Single-select'}</span>
       <p class="poll-question">${currentPoll.question}</p>
       ${bars}
       <p style="font-size:.8rem; color:var(--muted); margin-top:.5rem;">${totalVotes} total vote${totalVotes!==1?'s':''}</p>
       ${countdownEl}
       <div class="btn-row">
+        <span class="status-pill ${statusLabel}">${statusText}</span>
         ${!pollActive
           ? `<button class="btn btn-success" onclick="setPollStatus(true)">▶ Open voting</button>`
           : `<button class="btn btn-warn"    onclick="setPollStatus(false)">⏹ Close voting</button>`}
@@ -683,7 +688,6 @@
     const colors = { requested: 'var(--muted)', generating: 'var(--warn)', done: 'var(--accent2)', error: 'var(--danger)' };
     const icons  = { requested: '⏳', generating: '⚙️', done: '✅', error: '❌' };
     el.style.color = colors[status] || 'var(--muted)';
-    // Keep it short for the inline position
     el.textContent = `${icons[status] || ''} ${message}`;
     el.title = message;
   }

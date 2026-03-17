@@ -59,17 +59,19 @@
       </div>
       <div class="or-divider"><span>or</span></div>
       <div class="quiz-gen-row">
-        <button class="btn btn-warn" id="gen-quiz-btn" onclick="requestQuiz()">🤖 Generate</button>
-        <div style="display:flex;align-items:center;gap:.4rem;font-size:.9rem;color:var(--text);">
-          from last
-          <select id="quiz-minutes" style="background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:.3rem .5rem;font-size:.9rem;cursor:pointer;">
-            <option value="15">15 min</option>
-            <option value="30" selected>30 min</option>
-            <option value="60">1 hour</option>
-            <option value="480">whole day</option>
-          </select>
+        <div class="quiz-gen-controls">
+          <button class="btn btn-warn" id="gen-quiz-btn" onclick="requestQuiz()">🤖 Generate</button>
+          <div style="display:flex;align-items:center;gap:.4rem;font-size:.9rem;color:var(--text);">
+            from last
+            <select id="quiz-minutes" style="background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:.3rem .5rem;font-size:.9rem;cursor:pointer;">
+              <option value="15">15 min</option>
+              <option value="30" selected>30 min</option>
+              <option value="60">1 hour</option>
+              <option value="480">whole day</option>
+            </select>
+          </div>
         </div>
-        <span id="quiz-status" style="font-size:.82rem;color:var(--muted);"></span>
+        <span id="quiz-status"></span>
       </div>
     </div>
 
@@ -86,8 +88,11 @@
 
     <!-- Poll controls -->
     <div class="card" style="grid-column: 1 / -1;">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:.9rem;">
-        <h2 style="margin:0;">Current Poll</h2>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:.9rem; gap:.5rem; flex-wrap:wrap;">
+        <div style="display:flex; align-items:center; gap:.5rem; flex-wrap:wrap;">
+          <h2 style="margin:0;">Current Poll</h2>
+          <span id="poll-pills"></span>
+        </div>
         <button class="btn btn-primary" onclick="downloadPollHistory()" title="Download today's polls">⬇ Quiz Q&amp;A</button>
       </div>
       <div id="poll-display"></div>
