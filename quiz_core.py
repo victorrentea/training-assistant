@@ -342,6 +342,21 @@ def _ssl_context() -> ssl.SSLContext:
         return ssl.create_default_context()
 
 
+_HTTP_ERROR_HINTS = {
+    401: "wrong credentials (check HOST_USERNAME / HOST_PASSWORD)",
+    403: "access denied (check Caddy basic_auth config)",
+    404: "endpoint not found (server may be outdated)",
+    500: "server internal error (check uvicorn logs)",
+    502: "bad gateway (reverse proxy issue — Caddy/nginx)",
+    503: "server unavailable (workshop service may be down)",
+}
+
+
+def _http_error_message(code: int, url: str) -> str:
+    hint = _HTTP_ERROR_HINTS.get(code, "unexpected server response")
+    return f"HTTP {code} — {hint} [{url}]"
+
+
 def _post_json(url: str, payload: dict, username: str = "", password: str = "") -> dict:
     data = json.dumps(payload).encode("utf-8")
     headers = {"Content-Type": "application/json"}
@@ -352,7 +367,9 @@ def _post_json(url: str, payload: dict, username: str = "", password: str = "") 
         with urllib.request.urlopen(req, context=_ssl_context()) as resp:
             return json.loads(resp.read())
     except urllib.error.HTTPError as e:
-        raise RuntimeError(f"HTTP {e.code} from {url}: {e.read().decode(errors='replace')}") from e
+        raise RuntimeError(_http_error_message(e.code, url)) from e
+    except urllib.error.URLError as e:
+        raise RuntimeError(f"Cannot reach server: {e.reason} [{url}]") from e
 
 
 def _get_json(url: str, username: str = "", password: str = "") -> dict:
@@ -364,7 +381,9 @@ def _get_json(url: str, username: str = "", password: str = "") -> dict:
         with urllib.request.urlopen(req, context=_ssl_context()) as resp:
             return json.loads(resp.read())
     except urllib.error.HTTPError as e:
-        raise RuntimeError(f"HTTP {e.code} from {url}: {e.read().decode(errors='replace')}") from e
+        raise RuntimeError(_http_error_message(e.code, url)) from e
+    except urllib.error.URLError as e:
+        raise RuntimeError(f"Cannot reach server: {e.reason} [{url}]") from e
 
 
 def post_poll(quiz: dict, config: Config) -> None:
@@ -394,7 +413,7 @@ def post_status(status: str, message: str, config: Config) -> None:
 # ---------------------------------------------------------------------------
 
 def auto_generate(minutes: int, config: Config) -> None:
-    """Load transcript → generate quiz → post poll → topic summary → clipboard."""
+    """Load transcript → generate quiz → post poll."""
     post_status("generating", f"Loading transcript (last {minutes} min)…", config)
 
     entries = load_transcription_files(config.folder)
