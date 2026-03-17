@@ -45,6 +45,7 @@ class AppState:
         self.quiz_request: Optional[dict] = None   # pending {minutes} from host
         self.quiz_status: Optional[dict] = None    # last status from daemon
         self.daemon_last_seen: Optional[datetime] = None  # last time daemon polled
+        self.quiz_preview: Optional[dict] = None   # generated quiz awaiting host approval
 
     def suggest_name(self) -> str:
         taken = set(self.participants.keys()) | self.suggested_names
@@ -86,6 +87,11 @@ class QuizStatus(BaseModel):
     status: str                 # "generating" | "done" | "error"
     message: str = ""
 
+class QuizPreview(BaseModel):
+    question: str
+    options: list[str]
+    multi: bool = False
+
 # ---------------------------------------------------------------------------
 # Broadcast helpers
 # ---------------------------------------------------------------------------
@@ -125,6 +131,7 @@ def build_state_message() -> dict:
         "participant_locations": {n: state.locations.get(n, "") for n in names},
         "daemon_last_seen": last_seen.isoformat() if last_seen else None,
         "daemon_connected": daemon_connected,
+        "quiz_preview": state.quiz_preview,
     }
 
 # ---------------------------------------------------------------------------
@@ -296,6 +303,22 @@ async def update_quiz_status(body: QuizStatus):
     """Daemon posts status updates (generating / done / error)."""
     state.quiz_status = {"status": body.status, "message": body.message}
     await broadcast({"type": "quiz_status", **state.quiz_status})
+    return {"ok": True}
+
+
+@app.post("/api/quiz-preview")
+async def set_quiz_preview(body: QuizPreview):
+    """Daemon posts generated quiz for host to review before firing."""
+    state.quiz_preview = {"question": body.question, "options": body.options, "multi": body.multi}
+    await broadcast({"type": "quiz_preview", "quiz": state.quiz_preview})
+    return {"ok": True}
+
+
+@app.delete("/api/quiz-preview")
+async def clear_quiz_preview():
+    """Host dismisses the preview."""
+    state.quiz_preview = None
+    await broadcast({"type": "quiz_preview", "quiz": None})
     return {"ok": True}
 
 # ---------------------------------------------------------------------------

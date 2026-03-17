@@ -230,6 +230,14 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
 
 .no-poll { color: var(--muted); font-size: .9rem; text-align: center; padding: 2rem 0; }
 
+.preview-option {
+  font-size: .9rem;
+  color: var(--muted);
+  padding: .3rem 0;
+  border-bottom: 1px solid var(--border);
+}
+.preview-option:last-child { border-bottom: none; }
+
 .pax-list {
   list-style: none;
   margin-top: .75rem;

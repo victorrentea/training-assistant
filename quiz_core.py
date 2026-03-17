@@ -437,10 +437,13 @@ def auto_generate(minutes: int, config: Config) -> None:
     print_quiz(quiz)
 
     try:
-        post_poll(quiz, config)
-        open_poll(config)
+        _post_json(f"{config.server_url}/api/quiz-preview", {
+            "question": quiz["question"],
+            "options": quiz["options"],
+            "multi": len(quiz.get("correct_indices", [])) > 1,
+        }, config.host_username, config.host_password)
     except RuntimeError as e:
-        post_status("error", f"Failed to post poll: {e}", config)
+        post_status("error", f"Failed to post preview: {e}", config)
         return
 
-    post_status("done", "✅ Poll created and opened.", config)
+    post_status("done", "✅ Question ready — review and fire from host panel.", config)

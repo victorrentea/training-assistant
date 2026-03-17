@@ -28,6 +28,7 @@
         document.getElementById('pax-count').textContent = msg.participant_count;
         renderParticipantList(msg.participant_names || []);
         renderDaemonStatus(msg.daemon_connected, msg.daemon_last_seen);
+        renderPreview(msg.quiz_preview || null);
         renderPollDisplay();
       } else if (msg.type === 'vote_update') {
         voteCounts = msg.vote_counts || {};
@@ -39,6 +40,8 @@
         renderParticipantList(msg.names || []);
       } else if (msg.type === 'quiz_status') {
         renderQuizStatus(msg.status, msg.message);
+      } else if (msg.type === 'quiz_preview') {
+        renderPreview(msg.quiz || null);
       }
     };
   }
@@ -357,6 +360,41 @@
       renderQuizStatus('error', 'Failed to reach server.');
     }
     setTimeout(() => { btn.disabled = false; }, 5000);
+  }
+
+  let pendingPreview = null;
+
+  function renderPreview(quiz) {
+    pendingPreview = quiz;
+    const card = document.getElementById('preview-card');
+    const el = document.getElementById('preview-display');
+    if (!quiz) { card.style.display = 'none'; return; }
+    card.style.display = '';
+    el.innerHTML =
+      `<p class="poll-question">${escHtml(quiz.question)}</p>` +
+      `<span class="mode-pill" style="margin-left:0; margin-bottom:.75rem;">${quiz.multi ? '☑ Multi-select' : '◉ Single-select'}</span>` +
+      quiz.options.map(o => `<div class="preview-option">${escHtml(o)}</div>`).join('');
+  }
+
+  async function firePreview() {
+    if (!pendingPreview) return;
+    const res = await fetch('/api/poll', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(pendingPreview),
+    });
+    if (res.ok) {
+      await setPollStatus(true);
+      await fetch('/api/quiz-preview', { method: 'DELETE' });
+      toast('Poll fired ✓');
+    } else {
+      const err = await res.json();
+      toast(err.detail || 'Error firing poll');
+    }
+  }
+
+  async function dismissPreview() {
+    await fetch('/api/quiz-preview', { method: 'DELETE' });
   }
 
   function renderQuizStatus(status, message) {
