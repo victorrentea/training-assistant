@@ -247,3 +247,4 @@ python3 -m uvicorn main:app --reload --port 8000
 ## Workflow
 
 - **After completing each backlog item**: create a git commit.
+- **After any significant architectural change**: update the C4 diagrams in `adoc/` (c4_c1_context.puml, c4_c2_containers.puml, c4_c3_components.puml) to reflect the new structure.
