@@ -8,7 +8,6 @@ import json
 import os
 import re
 import ssl
-import subprocess
 import sys
 import urllib.error
 import urllib.request
@@ -233,25 +232,6 @@ Rules:
 - Do not add any explanation, markdown code fences, or text outside the JSON object.
 """
 
-_TOPICS_SYSTEM = """\
-You are a workshop assistant. Given a transcript excerpt, extract the main topics discussed
-and produce a ready-to-use prompt that a trainer can paste into any LLM to generate more
-quiz questions on those topics.
-
-Output format — return ONLY the following text, nothing else:
-
-Generate debate-triggering poll questions for a live technical workshop.
-The session covered these topics:
-- <topic 1>
-- <topic 2>
-- <topic N>
-
-For each question:
-- Probe understanding of a concept, not trivial recall
-- Make the correct answer non-obvious to spark discussion
-- Provide 4 plausible options (max 80 chars each) reflecting real-world misconceptions
-- Return JSON: {"question": "...", "options": [...], "correct_indices": [...]}
-"""
 
 _REFINE_SYSTEM = """\
 You previously generated a quiz question. The trainer has requested a change to one option.
@@ -316,20 +296,6 @@ def refine_option(quiz: dict, feedback: str, config: Config) -> dict:
     _validate_quiz(updated, raw)
     return updated
 
-
-def generate_topic_prompt(text: str, config: Config) -> str:
-    client = anthropic.Anthropic(api_key=config.api_key)
-    print("[info] Generating topic summary...")
-    try:
-        response = client.messages.create(
-            model=config.model, max_tokens=400,
-            system=_TOPICS_SYSTEM,
-            messages=[{"role": "user", "content": text}],
-        )
-    except anthropic.APIError as e:
-        print(f"[warn] Could not generate topic summary: {e}", file=sys.stderr)
-        return ""
-    return response.content[0].text.strip()
 
 
 def _validate_quiz(quiz: dict, raw: str) -> None:
@@ -422,17 +388,6 @@ def post_status(status: str, message: str, config: Config) -> None:
         print(f"[warn] Could not post status: {e}", file=sys.stderr)
 
 
-# ---------------------------------------------------------------------------
-# Clipboard
-# ---------------------------------------------------------------------------
-
-def copy_to_clipboard(text: str) -> bool:
-    try:
-        subprocess.run(["pbcopy"], input=text.encode(), check=True)
-        return True
-    except (FileNotFoundError, subprocess.CalledProcessError):
-        return False
-
 
 # ---------------------------------------------------------------------------
 # Auto-generate (non-interactive, used by daemon)
@@ -470,11 +425,3 @@ def auto_generate(minutes: int, config: Config) -> None:
         return
 
     post_status("done", "✅ Poll created and opened.", config)
-
-    topic_prompt = generate_topic_prompt(text, config)
-    if topic_prompt:
-        if copy_to_clipboard(topic_prompt):
-            print("[ok] Topic summary prompt copied to clipboard ✓")
-        print("-" * 60)
-        print(topic_prompt)
-        print("-" * 60)

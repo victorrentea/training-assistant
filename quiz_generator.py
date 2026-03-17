@@ -20,8 +20,8 @@ from quiz_core import (
     DEFAULT_MINUTES, DEFAULT_MODEL, DEFAULT_SERVER_URL,
     Config, load_secrets_env,
     load_transcription_files, extract_last_n_minutes,
-    generate_quiz, refine_option, generate_topic_prompt,
-    print_quiz, post_poll, open_poll, copy_to_clipboard,
+    generate_quiz, refine_option,
+    print_quiz, post_poll, open_poll,
 )
 from pathlib import Path
 
@@ -133,16 +133,6 @@ def main() -> None:
     except RuntimeError as e:
         print(f"[error] Failed to post poll: {e}", file=sys.stderr)
         sys.exit(1)
-
-    # 6. Topic summary → clipboard
-    topic_prompt = generate_topic_prompt(text, config)
-    if topic_prompt:
-        if copy_to_clipboard(topic_prompt):
-            print("\n[ok] Topic summary prompt copied to clipboard ✓")
-        print("-" * 60)
-        print(topic_prompt)
-        print("-" * 60)
-
 
 if __name__ == "__main__":
     main()
