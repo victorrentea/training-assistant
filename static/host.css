@@ -224,13 +224,45 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
 
 .no-poll { color: var(--muted); font-size: .9rem; text-align: center; padding: 2rem 0; }
 
+.preview-question-row {
+  display: flex;
+  align-items: flex-start;
+  gap: .5rem;
+  margin-bottom: .5rem;
+}
+
 .preview-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .5rem;
   font-size: .9rem;
   color: var(--muted);
   padding: .3rem 0;
   border-bottom: 1px solid var(--border);
 }
 .preview-option:last-child { border-bottom: none; }
+
+.refresh-btn {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  border-radius: 6px;
+  font-size: .85rem;
+  padding: .15rem .45rem;
+  cursor: pointer;
+  line-height: 1;
+  flex-shrink: 0;
+  transition: color .15s, border-color .15s;
+}
+.refresh-btn:hover { color: var(--accent); border-color: var(--accent); }
+
+@keyframes preview-flash {
+  0%   { background: #6c63ff40; }
+  60%  { background: #6c63ff28; }
+  100% { background: transparent; }
+}
+.preview-flash { border-radius: 4px; animation: preview-flash .8s ease-out; }
 
 .pax-list {
   list-style: none;

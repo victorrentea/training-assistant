@@ -233,14 +233,18 @@ Rules:
 """
 
 
-_REFINE_SYSTEM = """\
-You previously generated a quiz question. The trainer has requested a change to one option.
-Apply the requested change and return the COMPLETE updated quiz JSON in the same schema:
-{
-  "question": "<the question text>",
-  "options": ["<option A>", "<option B>", "<option C>", "<option D>"],
-  "correct_indices": [<zero-based index>, ...]
-}
+_REFINE_OPTION_PROMPT = """\
+The trainer wants to replace option {letter} ("{old_text}") with a different alternative.
+Generate a new option that is distinct from all current options, plausible, and consistent
+with the question and the training transcript.
+Return the COMPLETE updated quiz JSON (same schema as before).
+Return ONLY the JSON, no explanation.
+"""
+
+_REFINE_QUESTION_PROMPT = """\
+The trainer wants an entirely new question with new options, based on the same transcript.
+Generate a fresh question that covers a DIFFERENT concept than the current one.
+Return the COMPLETE updated quiz JSON (same schema as before).
 Return ONLY the JSON, no explanation.
 """
 
@@ -256,38 +260,54 @@ def _parse_raw_response(raw: str) -> dict:
 
 def generate_quiz(text: str, config: Config) -> dict:
     client = anthropic.Anthropic(api_key=config.api_key)
-    print(f"[info] Sending {len(text):,} chars to {config.model}...")
+    line_count = len([l for l in text.splitlines() if l.strip()])
+    print(f"[info] Sending {len(text):,} chars ({line_count} lines) to {config.model}...")
     try:
         response = client.messages.create(
             model=config.model, max_tokens=600,
             system=_SYSTEM_PROMPT,
             messages=[{"role": "user", "content": text}],
         )
+    except anthropic.APIStatusError as e:
+        hint = _ANTHROPIC_ERROR_HINTS.get(e.status_code, "unexpected error")
+        raise RuntimeError(f"Claude API {e.status_code} — {hint}") from e
     except anthropic.APIError as e:
-        print(f"[error] Claude API error: {e}", file=sys.stderr)
-        sys.exit(1)
+        raise RuntimeError(f"Claude API error — {e}") from e
     raw = response.content[0].text
     try:
         quiz = _parse_raw_response(raw)
     except json.JSONDecodeError as e:
-        print(f"[error] Claude returned invalid JSON: {e}\n{raw}", file=sys.stderr)
-        sys.exit(1)
+        raise RuntimeError(f"Claude returned invalid JSON: {e}") from e
     _validate_quiz(quiz, raw)
     return quiz
 
 
-def refine_option(quiz: dict, feedback: str, config: Config) -> dict:
+def refine_quiz(quiz: dict, target: str, original_text: str, config: Config) -> dict:
+    """Refine quiz using multi-turn conversation. target='question' or 'opt0'..'opt7'."""
     client = anthropic.Anthropic(api_key=config.api_key)
-    current = json.dumps(quiz, indent=2)
+
+    if target == "question":
+        refine_prompt = _REFINE_QUESTION_PROMPT
+    else:
+        idx = int(target[3:])  # 'opt2' -> 2
+        old_text = quiz["options"][idx] if idx < len(quiz["options"]) else "?"
+        letter = chr(65 + idx)
+        refine_prompt = _REFINE_OPTION_PROMPT.format(letter=letter, old_text=old_text)
+
+    # Multi-turn: transcript → first generation → refine request
+    messages = [
+        {"role": "user", "content": original_text},
+        {"role": "assistant", "content": json.dumps(quiz)},
+        {"role": "user", "content": refine_prompt},
+    ]
     try:
         response = client.messages.create(
             model=config.model, max_tokens=600,
-            system=_REFINE_SYSTEM,
-            messages=[{"role": "user", "content": f"Current quiz:\n{current}\n\nRequested change: {feedback}"}],
+            system=_SYSTEM_PROMPT,
+            messages=messages,
         )
     except anthropic.APIError as e:
-        print(f"[error] Claude API error: {e}", file=sys.stderr)
-        sys.exit(1)
+        raise RuntimeError(f"Claude API error: {e}") from e
     raw = response.content[0].text
     try:
         updated = _parse_raw_response(raw)
@@ -327,7 +347,7 @@ def print_quiz(quiz: dict) -> None:
 
 def _quiz_error(msg: str, raw: str) -> None:
     print(f"[error] Invalid quiz format: {msg}\n{raw}", file=sys.stderr)
-    sys.exit(1)
+    raise RuntimeError(f"Invalid quiz format: {msg}")
 
 
 # ---------------------------------------------------------------------------
@@ -349,6 +369,15 @@ _HTTP_ERROR_HINTS = {
     500: "server internal error (check uvicorn logs)",
     502: "bad gateway (reverse proxy issue — Caddy/nginx)",
     503: "server unavailable (workshop service may be down)",
+}
+
+_ANTHROPIC_ERROR_HINTS = {
+    400: "bad request — check model name or prompt format",
+    401: "invalid API key — check ANTHROPIC_API_KEY",
+    403: "access denied — API key lacks permission",
+    429: "rate limited or quota exceeded — wait and retry",
+    500: "Anthropic server error — try again shortly",
+    529: "Anthropic overloaded — try again in a few minutes",
 }
 
 
@@ -412,27 +441,28 @@ def post_status(status: str, message: str, config: Config) -> None:
 # Auto-generate (non-interactive, used by daemon)
 # ---------------------------------------------------------------------------
 
-def auto_generate(minutes: int, config: Config) -> None:
-    """Load transcript → generate quiz → post poll."""
+def auto_generate(minutes: int, config: Config) -> Optional[tuple]:
+    """Load transcript → generate quiz → post preview. Returns (quiz, text) or None on failure."""
     post_status("generating", f"Loading transcript (last {minutes} min)…", config)
 
     entries = load_transcription_files(config.folder)
     if not entries:
         post_status("error", "No transcription files found.", config)
-        return
+        return None
 
     text = extract_last_n_minutes(entries, minutes)
     if not text:
         post_status("error", "Extracted text is empty.", config)
-        return
+        return None
 
-    post_status("generating", f"Sending {len(text):,} chars to Claude…", config)
+    line_count = len([l for l in text.splitlines() if l.strip()])
+    post_status("generating", f"Sending {len(text):,} chars ({line_count} lines, last {minutes} min) to Claude…", config)
 
     try:
         quiz = generate_quiz(text, config)
-    except SystemExit:
-        post_status("error", "Claude failed to generate a valid quiz.", config)
-        return
+    except RuntimeError as e:
+        post_status("error", str(e), config)
+        return None
 
     print_quiz(quiz)
 
@@ -444,6 +474,32 @@ def auto_generate(minutes: int, config: Config) -> None:
         }, config.host_username, config.host_password)
     except RuntimeError as e:
         post_status("error", f"Failed to post preview: {e}", config)
-        return
+        return None
 
     post_status("done", "✅ Question ready — review and fire from host panel.", config)
+    return quiz, text
+
+
+def auto_refine(target: str, current_quiz: dict, original_text: str, config: Config) -> Optional[dict]:
+    """Refine a specific option or the whole question. Returns updated quiz or None on failure."""
+    label = "question" if target == "question" else f"option {chr(65 + int(target[3:]))}"
+    post_status("generating", f"Regenerating {label}…", config)
+    try:
+        updated = refine_quiz(current_quiz, target, original_text, config)
+    except RuntimeError as e:
+        post_status("error", f"Claude API error: {e}", config)
+        return None
+
+    print_quiz(updated)
+    try:
+        _post_json(f"{config.server_url}/api/quiz-preview", {
+            "question": updated["question"],
+            "options": updated["options"],
+            "multi": len(updated.get("correct_indices", [])) > 1,
+        }, config.host_username, config.host_password)
+    except RuntimeError as e:
+        post_status("error", f"Failed to post updated preview: {e}", config)
+        return None
+
+    post_status("done", "✅ Updated — review and fire from host panel.", config)
+    return updated

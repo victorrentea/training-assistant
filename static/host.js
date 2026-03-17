@@ -8,6 +8,51 @@
   let scores = {};               // participant_name -> score
   let cachedNames = [];          // last known participant names
 
+  // ── Poll history (persisted in localStorage, keyed by today's date) ──
+  const TODAY_KEY = `host_polls_${new Date().toISOString().slice(0, 10)}`;
+
+  function loadPollHistory() {
+    try { return JSON.parse(localStorage.getItem(TODAY_KEY) || '[]'); } catch { return []; }
+  }
+
+  function savePollHistory(history) {
+    localStorage.setItem(TODAY_KEY, JSON.stringify(history));
+  }
+
+  function recordPollInHistory(poll, correctIds) {
+    if (!poll) return;
+    const history = loadPollHistory();
+    const entry = {
+      question: poll.question,
+      options: poll.options.map(o => ({
+        text: o.text,
+        correct: correctIds.has(o.id),
+      })),
+      multi: !!poll.multi,
+      recorded_at: new Date().toISOString(),
+    };
+    // Avoid duplicates by question
+    const idx = history.findIndex(e => e.question === poll.question);
+    if (idx >= 0) history[idx] = entry; else history.push(entry);
+    savePollHistory(history);
+  }
+
+  function downloadPollHistory() {
+    const history = loadPollHistory();
+    if (!history.length) { toast('No polls recorded today'); return; }
+    const lines = history.map((e, n) => {
+      const correct = e.options.filter(o => o.correct).map(o => o.text);
+      const opts = e.options.map((o, i) => `  ${String.fromCharCode(65+i)}. ${o.text}${o.correct ? ' ✅' : ''}`).join('\n');
+      return `${n+1}. ${e.question}\n${opts}${correct.length ? `\n  → Correct: ${correct.join(', ')}` : ''}`;
+    }).join('\n\n');
+    const blob = new Blob([lines], { type: 'text/plain' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `polls_${new Date().toISOString().slice(0, 10)}.txt`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
   function loadCorrectOpts(question) {
     try {
       const saved = JSON.parse(localStorage.getItem('host_correct_' + question) || '[]');
@@ -23,6 +68,7 @@
     else correctOptIds.add(optId);
     saveCorrectOpts(currentPoll.question);
     renderBars();
+    recordPollInHistory(currentPoll, correctOptIds);
     // Post to backend to award points
     await fetch('/api/poll/correct', {
       method: 'POST',
@@ -92,15 +138,15 @@
     const el = document.getElementById('daemon-status');
     if (!el) return;
     if (!lastSeenIso) {
-      el.innerHTML = '🤖 Daemon: <span style="color:var(--danger)">never connected</span>';
+      el.innerHTML = '🤖 Conversation access: <span style="color:var(--danger)">never connected</span>';
       return;
     }
     const ago = Math.round((Date.now() - new Date(lastSeenIso)) / 1000);
     const agoText = ago < 60 ? `${ago}s ago` : `${Math.round(ago/60)}m ago`;
     if (connected) {
-      el.innerHTML = `🤖 Daemon: <span style="color:var(--accent2)">● active</span> <span style="opacity:.6">(last seen ${agoText})</span>`;
+      el.innerHTML = `🤖 Conversation access: <span style="color:var(--accent2)">● active</span> <span style="opacity:.6">(last seen ${agoText})</span>`;
     } else {
-      el.innerHTML = `🤖 Daemon: <span style="color:var(--warn)">● idle</span> <span style="opacity:.6">(last seen ${agoText})</span>`;
+      el.innerHTML = `🤖 Conversation access: <span style="color:var(--warn)">● idle</span> <span style="opacity:.6">(last seen ${agoText})</span>`;
     }
   }
 
@@ -300,14 +346,16 @@
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ question, options, multi }),
     });
+    const data = await res.json().catch(() => ({}));
     if (res.ok) {
       await setPollStatus(true);
       toast('Poll created & opened ✓');
       pollInput.innerHTML = '<div><br></div>';
       document.getElementById('multi-check').checked = false;
+      // Record poll in history (correct answers will be updated later via toggleCorrect)
+      if (data.poll) recordPollInHistory(data.poll, new Set());
     } else {
-      const err = await res.json();
-      toast(err.detail || 'Error');
+      toast(data.detail || 'Error');
     }
   });
 
@@ -412,17 +460,91 @@
   }
 
   let pendingPreview = null;
+  let refiningTarget = null; // 'question' | 'opt0' | null
 
   function renderPreview(quiz) {
+    const oldPreview = pendingPreview;
     pendingPreview = quiz;
     const card = document.getElementById('preview-card');
     const el = document.getElementById('preview-display');
-    if (!quiz) { card.style.display = 'none'; return; }
+    if (!quiz) { card.style.display = 'none'; refiningTarget = null; return; }
     card.style.display = '';
     el.innerHTML =
-      `<p class="poll-question">${escHtml(quiz.question)}</p>` +
+      `<div class="preview-question-row">` +
+      `<p class="poll-question" style="margin:0; flex:1;">${escHtml(quiz.question)}</p>` +
+      `<button class="refresh-btn" title="Generate new question" onclick="refinePreview('question')">↻</button>` +
+      `</div>` +
       `<span class="mode-pill" style="margin-left:0; margin-bottom:.75rem;">${quiz.multi ? '☑ Multi-select' : '◉ Single-select'}</span>` +
-      quiz.options.map(o => `<div class="preview-option">${escHtml(o)}</div>`).join('');
+      quiz.options.map((o, i) =>
+        `<div class="preview-option">` +
+        `<span>${escHtml(o)}</span>` +
+        `<button class="refresh-btn" title="Regenerate this option" onclick="refinePreview('opt${i}')">↻</button>` +
+        `</div>`
+      ).join('');
+
+    // Flash changed element after DOM update
+    if (oldPreview && refiningTarget) {
+      const target = refiningTarget;
+      refiningTarget = null;
+      requestAnimationFrame(() => _flashChanged(target, oldPreview, quiz));
+    }
+  }
+
+  function _flashChanged(target, oldQuiz, newQuiz) {
+    let el = null;
+    if (target === 'question') {
+      if (oldQuiz.question !== newQuiz.question) {
+        el = document.querySelector('#preview-display .poll-question');
+      }
+    } else {
+      const idx = parseInt(target.slice(3));
+      if ((oldQuiz.options[idx] || '') !== (newQuiz.options[idx] || '')) {
+        const opts = document.querySelectorAll('#preview-display .preview-option span');
+        el = opts[idx] || null;
+      }
+    }
+    if (!el) return;
+    el.classList.add('preview-flash');
+    setTimeout(() => el.classList.remove('preview-flash'), 1200);
+  }
+
+  async function refinePreview(target) {
+    refiningTarget = target;
+    _applyRefineGrayOut(target);
+    try {
+      const res = await fetch('/api/quiz-refine', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ target }),
+      });
+      if (!res.ok) {
+        refiningTarget = null;
+        const err = await res.json();
+        toast(err.detail || 'Error requesting refine');
+      }
+    } catch (e) {
+      refiningTarget = null;
+      toast('Failed to reach server');
+    }
+  }
+
+  function _applyRefineGrayOut(target) {
+    if (target === 'question') {
+      const q = document.querySelector('#preview-display .poll-question');
+      const btn = document.querySelector('#preview-display .preview-question-row .refresh-btn');
+      if (q) q.style.opacity = '.35';
+      if (btn) { btn.disabled = true; btn.style.opacity = '.35'; }
+    } else {
+      const idx = parseInt(target.slice(3));
+      const opts = document.querySelectorAll('#preview-display .preview-option');
+      const opt = opts[idx];
+      if (opt) {
+        const span = opt.querySelector('span');
+        const btn = opt.querySelector('.refresh-btn');
+        if (span) span.style.opacity = '.35';
+        if (btn) { btn.disabled = true; btn.style.opacity = '.35'; }
+      }
+    }
   }
 
   async function firePreview() {
@@ -444,6 +566,12 @@
 
   async function dismissPreview() {
     await fetch('/api/quiz-preview', { method: 'DELETE' });
+  }
+
+  async function resetScores() {
+    if (!confirm('Reset all participant scores to zero?')) return;
+    await fetch('/api/scores', { method: 'DELETE' });
+    toast('Scores reset ✓');
   }
 
   function renderQuizStatus(status, message) {

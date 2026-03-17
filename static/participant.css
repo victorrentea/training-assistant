@@ -141,6 +141,8 @@ h1 { font-size: 1.4rem; color: var(--accent); letter-spacing: .05em; margin-bott
   .option-btn { font-size: .9rem; padding: .75rem .9rem; }
 }
 .option-btn.selected { border-color: var(--accent); background: #6c63ff18; }
+.option-btn.correct  { border-color: var(--accent2); background: #48cfad22; color: var(--accent2); }
+.option-btn.incorrect { border-color: var(--danger); background: #ff6b6b18; color: var(--danger); }
 
 /* result bar behind button text */
 .option-btn .bar {

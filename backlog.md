@@ -26,17 +26,19 @@
 - [x] Remove from the daemon the need for copying the summary of the transcript. Drop that feature. I don't need that anymore as I will operate the quizzes solely from the transcription.
 - [x] The message displayed by the daemon into the host user interface should be a bit more specific. In particular, distinguishing the remote status code if it's 500 or 529, explain in a brief line what is the cause of the error.
 - [x] feat: after generating the question, the host UI should render the incoming question first and have a separate button to fire that tentative question out to the participants. The display should be a distinct div from the one in which we manually edit.
-- [ ] feat: in the generated question preview, each option should have a refresh icon next to it, allowing me to request via the daemon the Claude API to generate another option for that particular one. A similar refresh icon should be displayed also on the question title level, allowing me to generate a brand new question with new options completely. Important! This will require the daemon to maintain conversation state with the Claude API so that new options are generated or new questions all together are generated based on the conversation transcript originally uploaded. 
+- [x] feat: in the generated question preview, each option should have a refresh icon next to it, allowing me to request via the daemon the Claude API to generate another option for that particular one. A similar refresh icon should be displayed also on the question title level, allowing me to generate a brand new question with new options completely. Important! This will require the daemon to maintain conversation state with the Claude API so that new options are generated or new questions all together are generated based on the conversation transcript originally uploaded.
 - [x] feat: when more than seven or eight participants join, the list should get a vertical scroll bar so that it does not expand too much down. in the host ui.
 - [x] Feature: Allow the host to click items in the current poll after closing the voting to mean correct options (one or multi) depending on what was chosen.
 - [x] Feature. Depending on the host selection of the correct options, each participant should get points which are displayed next to their name in the list of participants and also in the participant view.
 - [x] The faster the participants have selected the options, the more points they should be awarded. Propose a similar voting scoring scheme as used by Quizzes or Kahoot.
 - [x] Feature: Rewarder participants based on the points they've accumulated by this moment in the host list of participants.
-- [ ] Feature from the host user interface to allow downloading all the poll questions along with the correctly marked options by the host. All the poll questions asked during the current day can be stored in local storage on the host browser.
-- [ ] Feature: when saying "sending .. chars to Claude", include the time frame that is being sent and number of lines of transcription
-- [ ] feat explain the error message from claude api better from the daemon to the host ui
-- [ ] feat daemon should detect if it's already running and kill its previous instance, to allow quick re-run without knowing [if] in what terminal it run already.
+- [x] Feature from the host user interface to allow downloading all the poll questions along with the correctly marked options by the host. All the poll questions asked during the current day can be stored in local storage on the host browser.
+- [x] Feature: when saying "sending .. chars to Claude", include the time frame that is being sent and number of lines of transcription
+- [x] feat explain the error message from claude api better from the daemon to the host ui
+- [x] feat daemon should detect if it's already running and kill its previous instance, to allow quick re-run without knowing [if] in what terminal it run already.
 - [x] Bug: If the host clicks, selects, and deselects an option as being correct or not again and again, the participants get awarded repeatedly.
 - [x] Feat: Place the connected label into the div for "create poll" To the right of the title  and remove the "host panel" title completely so that we gain more vertical space on the screen.
-- [ ] Feature: Visually display in the participants view whether a selection they made was correct or not., for example with green / red colors
-- [ ] Testing, since this interaction becomes complicated for participants voting in a certain amount of time. How's the wording points right? Tests for this part: study deeper the logic and look for more flaws in the logic. 
+- [x] Feature: Visually display in the participants view whether a selection they made was correct or not., for example with green / red colors
+- [x] Testing, since this interaction becomes complicated for participants voting in a certain amount of time. How's the wording points right? Tests for this part: study deeper the logic and look for more flaws in the logic.
+- [x] feature: have a button next to the join link in host ui to reset accumulated scores of participants
+- [x] feature: Improve the user experience when asking for a refresh of a single option: - Gray out the refresh button.- Gray out the text itself.- When the new text comes in, highlight it in a flashing color to draw attention to it.

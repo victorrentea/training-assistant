@@ -43,6 +43,7 @@ class AppState:
         self.suggested_names: set[str] = set()     # names handed out but not yet connected
         self.locations: dict[str, str] = {}        # participant_name -> location string
         self.quiz_request: Optional[dict] = None   # pending {minutes} from host
+        self.quiz_refine_request: Optional[dict] = None  # pending {target} refine from host
         self.quiz_status: Optional[dict] = None    # last status from daemon
         self.daemon_last_seen: Optional[datetime] = None  # last time daemon polled
         self.quiz_preview: Optional[dict] = None   # generated quiz awaiting host approval
@@ -98,6 +99,9 @@ class QuizPreview(BaseModel):
 
 class PollCorrect(BaseModel):
     correct_ids: list[str]   # option ids the host marked as correct
+
+class QuizRefineRequest(BaseModel):
+    target: str              # "question" | "opt0" | "opt1" | ... index of option to regenerate
 
 # ---------------------------------------------------------------------------
 # Broadcast helpers
@@ -296,6 +300,21 @@ async def set_correct_options(body: PollCorrect):
 
     state.scores = new_scores
     await broadcast({"type": "scores", "scores": state.scores})
+
+    # Notify each participant individually whether their selection was correct
+    for name, ws in list(state.participants.items()):
+        if name == "__host__":
+            continue
+        selection = state.votes.get(name)
+        if selection is None:
+            continue
+        voted = set(selection) if isinstance(selection, list) else {selection}
+        await ws.send_text(json.dumps({
+            "type": "result",
+            "correct_ids": list(correct_set),
+            "voted_ids": list(voted),
+        }))
+
     return {"ok": True}
 
 
@@ -359,12 +378,41 @@ async def set_quiz_preview(body: QuizPreview):
     return {"ok": True}
 
 
+@app.delete("/api/scores")
+async def reset_scores():
+    """Host resets all participant scores to zero."""
+    state.scores = {}
+    state.base_scores = {}
+    await broadcast({"type": "scores", "scores": state.scores})
+    return {"ok": True}
+
+
 @app.delete("/api/quiz-preview")
 async def clear_quiz_preview():
     """Host dismisses the preview."""
     state.quiz_preview = None
     await broadcast({"type": "quiz_preview", "quiz": None})
     return {"ok": True}
+
+
+@app.post("/api/quiz-refine")
+async def request_quiz_refine(body: QuizRefineRequest):
+    """Host requests the daemon to regenerate a specific option or the whole question."""
+    if not state.quiz_preview:
+        raise HTTPException(400, "No preview to refine")
+    state.quiz_refine_request = {"target": body.target}
+    state.quiz_status = {"status": "generating", "message": f"Regenerating {'question' if body.target == 'question' else 'option'}…"}
+    await broadcast({"type": "quiz_status", **state.quiz_status})
+    return {"ok": True}
+
+
+@app.get("/api/quiz-refine")
+async def poll_quiz_refine():
+    """Daemon polls this to pick up a pending refine request. Clears it on read."""
+    state.daemon_last_seen = datetime.now(timezone.utc)
+    req = state.quiz_refine_request
+    state.quiz_refine_request = None
+    return {"request": req, "preview": state.quiz_preview}
 
 # ---------------------------------------------------------------------------
 # Serve static files & pages

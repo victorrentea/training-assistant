@@ -5,6 +5,7 @@
   let myVote = null;      // string (single) or Set of option_ids (multi)
   let currentPoll = null;
   let pollActive = false;
+  let pollResult = null;  // {correct_ids, voted_ids} once host marks correct options
 
   async function fetchSuggestedName() {
     const res = await fetch('/api/suggest-name');
@@ -158,6 +159,7 @@
       case 'state':
         if (msg.poll?.question !== currentPoll?.question) {
           myVote = msg.poll?.multi ? new Set() : null;
+          pollResult = null;
           restoreVote(msg.poll);
         }
         currentPoll = msg.poll;
@@ -174,6 +176,10 @@
         break;
       case 'scores':
         updateScore((msg.scores || {})[myName]);
+        break;
+      case 'result':
+        pollResult = { correct_ids: new Set(msg.correct_ids), voted_ids: new Set(msg.voted_ids) };
+        applyResultColors();
         break;
     }
   }
@@ -193,6 +199,19 @@
     }
   }
 
+  function applyResultColors() {
+    if (!pollResult || !currentPoll) return;
+    document.querySelectorAll('.option-btn').forEach((btn, i) => {
+      const opt = currentPoll.options[i];
+      if (!opt) return;
+      const wasVoted = pollResult.voted_ids.has(opt.id);
+      const isCorrect = pollResult.correct_ids.has(opt.id);
+      btn.classList.remove('correct', 'incorrect');
+      if (wasVoted && isCorrect) btn.classList.add('correct');
+      else if (wasVoted && !isCorrect) btn.classList.add('incorrect');
+    });
+  }
+
   // ── Render ──
   function renderContent(voteCounts) {
     const el = document.getElementById('content');
@@ -201,6 +220,7 @@
       return;
     }
     renderPollCard(el, voteCounts);
+    applyResultColors();
   }
 
   function renderPollCard(container, voteCounts) {

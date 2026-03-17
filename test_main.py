@@ -114,6 +114,16 @@ class ParticipantSession:
         poll = self._last_state.get("poll") or state.poll
         assert poll and poll.get("multi"), f"{self.name}: poll is not multi-select"
 
+    def assert_score(self, expected_pts: int):
+        """Assert this participant's score in server state."""
+        actual = state.scores.get(self.name, 0)
+        assert actual == expected_pts, f"{self.name}: score={actual}, expected {expected_pts}"
+
+    def assert_no_score(self):
+        assert self.name not in state.scores or state.scores[self.name] == 0, (
+            f"{self.name}: expected no score but got {state.scores.get(self.name)}"
+        )
+
     # ── Internal helpers ──
 
     def _option_id(self, text: str) -> str:
@@ -133,13 +143,30 @@ class WorkshopSession:
 
     def __init__(self):
         self._client = TestClient(app)
+        self._poll: dict | None = None
 
     # ── Poll management ──
 
     def create_poll(self, question: str, options: list[str], multi: bool = False) -> dict:
         resp = self._client.post("/api/poll", json={"question": question, "options": options, "multi": multi})
         assert resp.status_code == 200, f"create_poll failed: {resp.text}"
-        return resp.json()["poll"]
+        self._poll = resp.json()["poll"]
+        return self._poll
+
+    def mark_correct(self, *option_texts: str):
+        """Mark options as correct by text."""
+        assert self._poll, "No current poll"
+        text_to_id = {o["text"]: o["id"] for o in self._poll["options"]}
+        ids = [text_to_id[t] for t in option_texts]
+        resp = self._client.post("/api/poll/correct", json={"correct_ids": ids})
+        assert resp.status_code == 200, f"mark_correct failed: {resp.text}"
+
+    def get_scores(self) -> dict:
+        return dict(state.scores)
+
+    def reset_scores(self):
+        resp = self._client.delete("/api/scores")
+        assert resp.status_code == 200
 
     def open_poll(self):
         resp = self._client.post("/api/poll/status", json={"open": True})
@@ -369,3 +396,128 @@ class TestPollLifecycle:
             alice.vote_for("A")
         session.assert_status(total_votes=1, poll_active=True)
         session.assert_vote_counts({"A": 1, "B": 0})
+
+
+class TestScoring:
+
+    def test_correct_voter_receives_points(self, session):
+        session.create_poll("Q?", ["A", "B"])
+        session.open_poll()
+        with session.participant("Alice") as alice:
+            alice.vote_for("A")
+        session.close_poll()
+        session.mark_correct("A")
+        scores = session.get_scores()
+        assert "Alice" in scores
+        assert scores["Alice"] >= 500  # at minimum 500 pts
+
+    def test_incorrect_voter_receives_no_points(self, session):
+        session.create_poll("Q?", ["A", "B"])
+        session.open_poll()
+        with session.participant("Alice") as alice:
+            alice.vote_for("B")
+        session.close_poll()
+        session.mark_correct("A")
+        scores = session.get_scores()
+        assert scores.get("Alice", 0) == 0
+
+    def test_non_voter_receives_no_points(self, session):
+        session.create_poll("Q?", ["A", "B"])
+        session.open_poll()
+        session.close_poll()
+        session.mark_correct("A")
+        with session.participant("Silent") as s:
+            s.assert_no_score()
+
+    def test_score_capped_between_500_and_1000(self, session):
+        session.create_poll("Q?", ["A", "B"])
+        session.open_poll()
+        with session.participant("Alice") as alice:
+            alice.vote_for("A")
+        session.close_poll()
+        session.mark_correct("A")
+        pts = session.get_scores().get("Alice", 0)
+        assert 500 <= pts <= 1000
+
+    def test_toggling_correct_does_not_double_award(self, session):
+        """Toggling A off and on again must not accumulate extra points."""
+        session.create_poll("Q?", ["A", "B"])
+        session.open_poll()
+        with session.participant("Alice") as alice:
+            alice.vote_for("A")
+        session.close_poll()
+        session.mark_correct("A")
+        pts_first = session.get_scores().get("Alice", 0)
+        # Toggle off then on again
+        session.mark_correct()         # no correct options
+        session.mark_correct("A")      # re-mark A as correct
+        pts_after = session.get_scores().get("Alice", 0)
+        assert pts_after == pts_first, (
+            f"Double-award detected: {pts_first} → {pts_after}"
+        )
+
+    def test_scores_accumulate_across_polls(self, session):
+        """Points from multiple polls should stack."""
+        session.create_poll("Poll 1", ["A", "B"])
+        session.open_poll()
+        with session.participant("Alice") as alice:
+            alice.vote_for("A")
+        session.close_poll()
+        session.mark_correct("A")
+        pts_after_poll1 = session.get_scores().get("Alice", 0)
+
+        session.create_poll("Poll 2", ["X", "Y"])
+        session.open_poll()
+        with session.participant("Alice") as alice:
+            alice.vote_for("X")
+        session.close_poll()
+        session.mark_correct("X")
+        pts_after_poll2 = session.get_scores().get("Alice", 0)
+
+        assert pts_after_poll2 > pts_after_poll1, "Points from poll 2 should be added to poll 1"
+        assert pts_after_poll2 <= pts_after_poll1 + 1000
+
+    def test_multi_poll_partial_correct_awards_points(self, session):
+        """In a multi-select poll, selecting at least one correct option earns points."""
+        session.create_poll("Which?", ["A", "B", "C"], multi=True)
+        session.open_poll()
+        with session.participant("Alice") as alice:
+            alice.multi_vote("A", "B")
+        session.close_poll()
+        session.mark_correct("A")   # A is correct, B is not; Alice selected both
+        pts = session.get_scores().get("Alice", 0)
+        assert pts >= 500, "Partial match should still earn points"
+
+    def test_reset_scores_clears_all(self, session):
+        session.create_poll("Q?", ["A", "B"])
+        session.open_poll()
+        with session.participant("Alice") as alice:
+            alice.vote_for("A")
+        session.close_poll()
+        session.mark_correct("A")
+        assert session.get_scores().get("Alice", 0) > 0
+        session.reset_scores()
+        assert session.get_scores() == {}
+
+    def test_faster_voter_scores_higher(self, session):
+        """Voter who votes immediately should score higher than one who votes after a delay."""
+        from datetime import datetime, timezone, timedelta
+
+        session.create_poll("Q?", ["A", "B"])
+        session.open_poll()
+
+        with session.participant("Fast") as fast:
+            fast.vote_for("A")
+
+        # Simulate Bob voting 20 seconds later by backdating his vote_time
+        with session.participant("Slow") as slow:
+            slow.vote_for("A")
+            # backdate slow's vote by 20 seconds
+            state.vote_times["Slow"] = state.vote_times.get("Slow", datetime.now(timezone.utc)) - timedelta(seconds=20)
+
+        session.close_poll()
+        session.mark_correct("A")
+        scores = session.get_scores()
+        assert scores.get("Fast", 0) >= scores.get("Slow", 0), (
+            f"Fast={scores.get('Fast')}, Slow={scores.get('Slow')} — faster voter should score >= slower"
+        )
