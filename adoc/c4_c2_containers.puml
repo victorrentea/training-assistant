@@ -3,38 +3,49 @@
 
 title Workshop Live Interaction Tool — C2: Container Diagram
 
-LAYOUT_WITH_LEGEND()
+LAYOUT_LEFT_RIGHT()
 
-Person(victor, "Victor (Host/Trainer)", "Workshop facilitator.")
+' ── left: live traffic ──────────────────────────────────────────
 Person(participant, "Participant", "Trainee.")
-
-System_Ext(audio_hijack, "Audio Hijack", "Captures live audio and writes\ntranscript file on Victor's Mac.")
-System_Ext(claude_api, "Anthropic Claude API", "LLM for quiz generation.")
 System_Ext(nominatim, "Nominatim", "GPS → city + country.")
 
+' ── centre: the system ──────────────────────────────────────────
 System_Boundary(workshop, "Workshop Tool") {
+
+    Container(participant_spa, "Participant SPA", "Vanilla JS (runs in trainee's browser)", "Voting UI, live results,\ngeolocation, WebSocket client.")
 
     Container(caddy, "Caddy Reverse Proxy", "Caddy (single binary)", "TLS termination.\nHTTP Basic Auth on /host and /api/*.\nForwards to FastAPI on :8000.")
 
     Container(fastapi, "FastAPI Backend", "Python 3.9 / FastAPI / Uvicorn", "REST endpoints + WebSocket.\nRuns as systemd service on Oracle Cloud.")
-
-    Container(participant_spa, "Participant SPA", "Vanilla JS (runs in trainee's browser)", "Voting UI, live results,\ngeolocation, WebSocket client.")
 
     Container(host_spa, "Host SPA", "Vanilla JS (runs in Victor's browser)", "Poll management, participant list,\nmap view (Leaflet), quiz preview.")
 
     Container(quiz_daemon, "Quiz Daemon", "Python 3.12 CLI (Victor's Mac)", "Long-polls backend for quiz requests.\nPosts AI-generated preview to backend.")
 }
 
-Rel(audio_hijack, quiz_daemon, "Transcript file", "Local file")
-Rel(victor, host_spa, "Manages polls, views results", "Browser")
-Rel(victor, quiz_daemon, "Starts/stops", "Local terminal")
+' ── right: management / AI ──────────────────────────────────────
+Person(victor, "Victor (Host/Trainer)", "Workshop facilitator.")
+System_Ext(audio_hijack, "Audio Hijack", "Captures live audio and writes\ntranscript file on Victor's Mac.")
+System_Ext(claude_api, "Anthropic Claude API", "LLM for quiz generation.")
+
+' layout hints
+Lay_L(participant, participant_spa)
+Lay_L(nominatim, participant_spa)
+Lay_R(victor, host_spa)
+Lay_R(claude_api, quiz_daemon)
+Lay_R(audio_hijack, quiz_daemon)
+
+' relationships
 Rel(participant, participant_spa, "Votes, sees live results", "Browser")
-Rel(host_spa, caddy, "Poll API, WebSocket", "HTTPS / WSS")
+Rel(participant_spa, nominatim, "GPS → city name", "HTTPS REST")
 Rel(participant_spa, caddy, "Vote API, WebSocket", "HTTPS / WSS")
 Rel(caddy, fastapi, "Proxies API and WebSocket", "HTTP :8000")
-Rel(participant_spa, nominatim, "GPS → city name", "HTTPS REST")
-Rel(host_spa, nominatim, "City name → coordinates for map", "HTTPS REST")
+Rel(host_spa, caddy, "Poll API, WebSocket", "HTTPS / WSS")
+Rel(victor, host_spa, "Manages polls, views results", "Browser")
+Rel(victor, quiz_daemon, "Starts/stops", "Local terminal")
+Rel(audio_hijack, quiz_daemon, "Transcript file", "Local file")
 Rel(quiz_daemon, caddy, "Polls for requests, posts preview", "HTTPS REST (Basic Auth)")
 Rel(quiz_daemon, claude_api, "Generates quiz from transcript", "HTTPS REST")
+Rel(host_spa, nominatim, "City name → coordinates for map", "HTTPS REST")
 
 @enduml
