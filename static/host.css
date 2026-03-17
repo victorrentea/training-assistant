@@ -133,15 +133,29 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
   line-height: 1.7;
 }
 
+/* ── "or" divider ── */
+.or-divider {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  margin: .9rem 0 .6rem;
+  color: var(--muted);
+  font-size: .8rem;
+}
+.or-divider::before,
+.or-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
 /* ── Quiz gen row inside Create Poll card ── */
 .quiz-gen-row {
   display: flex;
   align-items: center;
   gap: .75rem;
   flex-wrap: wrap;
-  margin-top: 1rem;
-  padding-top: 1rem;
-  border-top: 1px solid var(--border);
 }
 
 /* ── Buttons ── */

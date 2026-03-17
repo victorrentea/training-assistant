@@ -35,10 +35,8 @@
       </div>
       <ul id="pax-list" class="pax-list" title="Click a location to view map"></ul>
       <div style="margin-top:.75rem; font-size:.85rem; color:var(--muted);">
-        Participant link:
-        <a id="participant-link" style="color:var(--accent); word-break:break-all;" href="/" target="_blank"></a>
+        Join at: <a id="participant-link" style="color:var(--accent); word-break:break-all;" href="/" target="_blank"></a>
       </div>
-      <div id="daemon-status" style="margin-top:.5rem; font-size:.82rem; color:var(--muted);"></div>
     </div>
 
   <!-- QR fullscreen overlay -->
@@ -49,16 +47,18 @@
 
     <!-- Create poll -->
     <div class="card">
-      <h2>Manual Create</h2>
+      <h2>Create Poll</h2>
       <div id="poll-input" class="poll-composer" contenteditable="true" spellcheck="false"
            data-placeholder="Question title&#10;&#10;Option A&#10;Option B&#10;Option C"></div>
       <div class="btn-row" style="align-items:center;">
-        <button class="btn btn-primary" id="create-btn">Create poll</button>
+        <button class="btn btn-primary" id="create-btn">Create</button>
         <label style="display:flex; align-items:center; gap:.4rem; font-size:.9rem; color:var(--text); cursor:pointer; margin:0;">
           <input type="checkbox" id="multi-check" style="width:1rem; height:1rem; cursor:pointer;" />
           Multi-select
         </label>
       </div>
+      <div class="or-divider">or</div>
+      <div class="or-divider"><span>or</span></div>
       <div class="quiz-gen-row">
         <button class="btn btn-warn" id="gen-quiz-btn" onclick="requestQuiz()">🤖 Generate</button>
         <label style="display:flex;align-items:center;gap:.4rem;font-size:.9rem;color:var(--text);cursor:pointer;margin:0;">
@@ -72,7 +72,8 @@
           of discussion
         </label>
       </div>
-      <div id="quiz-status" style="margin-top:.5rem;font-size:.85rem;color:var(--muted);min-height:1.2em;"></div>
+      <div id="quiz-status" style="margin-top:.4rem;font-size:.85rem;color:var(--muted);min-height:1.2em;"></div>
+      <div id="daemon-status" style="margin-top:.25rem; font-size:.82rem; color:var(--muted);"></div>
     </div>
 
     <!-- Poll controls -->
