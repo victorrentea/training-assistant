@@ -217,9 +217,21 @@
       if (!opt) return;
       const wasVoted = pollResult.voted_ids.has(opt.id);
       const isCorrect = pollResult.correct_ids.has(opt.id);
-      btn.classList.remove('correct', 'incorrect');
-      if (wasVoted && isCorrect) btn.classList.add('correct');
+      btn.classList.remove('correct', 'incorrect', 'correct-missed');
+      if (isCorrect && wasVoted) btn.classList.add('correct');
+      else if (isCorrect && !wasVoted) btn.classList.add('correct-missed');
       else if (wasVoted && !isCorrect) btn.classList.add('incorrect');
+
+      // Inject/update result icon
+      let icon = btn.querySelector('.result-icon');
+      if (!icon) {
+        icon = document.createElement('span');
+        icon.className = 'result-icon';
+        btn.querySelector('span')?.insertAdjacentElement('afterend', icon);
+      }
+      if (isCorrect) icon.textContent = '✅';
+      else if (wasVoted) icon.textContent = '❌';
+      else icon.textContent = '';
     });
   }
 
@@ -246,10 +258,18 @@
       const selected = multi ? (myVote instanceof Set && myVote.has(opt.id) ? 'selected' : '')
                               : (myVote === opt.id ? 'selected' : '');
       const disabled = !pollActive ? 'disabled' : '';
+      let resultIcon = '';
+      if (pollResult) {
+        const wasVoted = pollResult.voted_ids.has(opt.id);
+        const isCorrect = pollResult.correct_ids.has(opt.id);
+        if (isCorrect) resultIcon = `<span class="result-icon">✅</span>`;
+        else if (wasVoted) resultIcon = `<span class="result-icon">❌</span>`;
+      }
       return `
         <button class="option-btn ${selected}" ${disabled} onclick="castVote('${opt.id}')">
           <div class="bar" style="width:${showResults ? pct : 0}%"></div>
           <span>${opt.text}</span>
+          ${resultIcon}
           ${showResults ? `<span class="pct">${pct}%</span>` : ''}
         </button>`;
     }).join('');
