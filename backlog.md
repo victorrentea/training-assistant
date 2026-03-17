@@ -21,4 +21,4 @@
 - [x] "scan last" -> "... from last " + align it next to generate button in host ui; + replace "transcript" -> "discussion"
 - [x] change the favicon of host to be a brain emoji on red background, and of partiipants a brain emoji on transparent bg
 - [x] bug: if the question text doesn't contain an empty line between the title and the options, the option rendering gets scrambled.  The goal would be to not require an empty line between the title and the options but still render it differently from the rest.
-- [ ] bug: on paste in the text box, the formatting is flawed
+- [x] bug: on paste in the text box, the formatting is flawed

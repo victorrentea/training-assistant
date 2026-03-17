@@ -209,6 +209,15 @@
   initComposer('How are you feeling today?\n\nEnergized\nGood enough\nA bit tired\nNeed coffee');
 
   pollInput.addEventListener('input', reclassifyLines);
+
+  // Intercept paste: always insert as plain text to avoid rich-HTML corruption
+  pollInput.addEventListener('paste', e => {
+    e.preventDefault();
+    const text = (e.clipboardData || window.clipboardData).getData('text/plain');
+    // Insert at current cursor position using execCommand (works in all browsers for contenteditable)
+    document.execCommand('insertText', false, text);
+  });
+
   pollInput.addEventListener('keydown', e => {
     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
       e.preventDefault();
