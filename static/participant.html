@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Workshop</title>
+  <link rel="stylesheet" href="/static/common.css" />
+  <link rel="stylesheet" href="/static/participant.css" />
+</head>
+<body>
+
+  <h1>🎙 Workshop</h1>
+
+  <!-- Join screen -->
+  <div id="join-screen">
+    <h2>Enter your name to join</h2>
+    <div class="name-input-wrap">
+      <input id="name-input" type="text" maxlength="32" autocomplete="off" />
+      <button id="clear-name" title="Clear name">✕</button>
+    </div>
+    <button id="join-btn">Join session</button>
+  </div>
+
+  <!-- Main screen (shown after joining) -->
+  <div id="main-screen">
+    <div class="status-bar">
+      <span><span class="dot"></span> Connected as <strong id="display-name"></strong></span>
+      <span id="pax-count"></span>
+    </div>
+    <div id="content"></div>
+  </div>
+
+<script src="/static/participant.js"></script>
+</body>
+</html>

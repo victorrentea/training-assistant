@@ -1,0 +1,14 @@
+[Unit]
+Description=Workshop Live Interaction Tool
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/workshop-tool
+ExecStart=/home/ubuntu/workshop-tool/venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

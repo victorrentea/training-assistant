@@ -1,0 +1,31 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:        #0f1117;
+  --surface:   #1c1f2e;
+  --surface2:  #252840;
+  --border:    #2e3250;
+  --accent:    #6c63ff;
+  --accent2:   #48cfad;
+  --text:      #e8eaf0;
+  --muted:     #7b80a0;
+  --danger:    #ff6b6b;
+  --warn:      #ffd166;
+  --radius:    12px;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg:        #f4f5f9;
+    --surface:   #ffffff;
+    --surface2:  #e8eaf0;
+    --border:    #d0d4e8;
+    --accent:    #5a52e0;
+    --accent2:   #2daa8a;
+    --text:      #1a1d2e;
+    --muted:     #6b7094;
+    --danger:    #d94f4f;
+    --warn:      #c89400;
+    --radius:    12px;
+  }
+}

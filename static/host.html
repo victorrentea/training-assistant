@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Workshop — Host Panel</title>
+  <link rel="stylesheet" href="/static/common.css" />
+  <link rel="stylesheet" href="/static/host.css" />
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs/qrcode.min.js"></script>
+</head>
+<body>
+<div class="layout">
+
+  <header>
+    <h1>🎛 Host Panel</h1>
+    <div>
+      <span id="ws-badge" class="badge disconnected">● Disconnected</span>
+    </div>
+  </header>
+
+  <div class="grid">
+
+    <!-- Stats -->
+    <div class="card">
+      <h2>Session</h2>
+      <div class="stat" id="pax-count">0</div>
+      <div class="stat-label">participants connected</div>
+      <ul id="pax-list" class="pax-list"></ul>
+      <div style="margin-top:1.2rem; font-size:.85rem; color:var(--muted);">
+        Participant link:<br>
+        <a id="participant-link" style="color:var(--accent); word-break:break-all;" href="/" target="_blank"></a>
+      </div>
+      <div id="qr-code" class="qr-code"></div>
+    </div>
+
+    <!-- Create poll -->
+    <div class="card">
+      <h2>Create Poll</h2>
+      <label>Question</label>
+      <input type="text" id="q-input" placeholder="What is your question?" maxlength="200" value="How are you feeling today?" />
+      <label>Options <span style="font-weight:400">(one per line, 2–8)</span></label>
+      <textarea id="opts-input" placeholder="Option A&#10;Option B&#10;Option C">Energized
+Good enough
+A bit tired
+Need coffee</textarea>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="create-btn">Create poll</button>
+      </div>
+    </div>
+
+    <!-- Poll controls -->
+    <div class="card" style="grid-column: 1 / -1;">
+      <h2>Current Poll</h2>
+      <div id="poll-display"></div>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="/static/host.js"></script>
+</body>
+</html>
