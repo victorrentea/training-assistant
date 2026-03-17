@@ -96,16 +96,18 @@
     if (!question) { toast('Enter a question'); return; }
     if (options.length < 2) { toast('Add at least 2 options'); return; }
 
+    const multi = document.getElementById('multi-check').checked;
     const res = await fetch('/api/poll', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ question, options }),
+      body: JSON.stringify({ question, options, multi }),
     });
     if (res.ok) {
       await setPollStatus(true);
       toast('Poll created & opened ✓');
       document.getElementById('q-input').value = '';
       document.getElementById('opts-input').value = '';
+      document.getElementById('multi-check').checked = false;
       autoResize();
     } else {
       const err = await res.json();

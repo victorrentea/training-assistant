@@ -53,9 +53,12 @@ class AppState:
         if not self.poll:
             return {}
         counts = {opt["id"]: 0 for opt in self.poll["options"]}
-        for option_id in self.votes.values():
-            if option_id in counts:
-                counts[option_id] += 1
+        for selection in self.votes.values():
+            # selection is a list for multi polls, a string for single polls
+            ids = selection if isinstance(selection, list) else [selection]
+            for option_id in ids:
+                if option_id in counts:
+                    counts[option_id] += 1
         return counts
 
 state = AppState()
@@ -67,6 +70,7 @@ state = AppState()
 class PollCreate(BaseModel):
     question: str
     options: list[str]          # list of option texts
+    multi: bool = False         # allow multiple selections per participant
 
 class PollOpen(BaseModel):
     open: bool                  # True = open voting, False = close voting
@@ -147,15 +151,28 @@ async def websocket_endpoint(websocket: WebSocket, participant_name: str):
                         "locations": {n: state.locations.get(n, "") for n in names},
                     })
 
-            # Only message participants send: casting a vote
             elif data.get("type") == "vote":
                 option_id = data.get("option_id")
+                valid_ids = [o["id"] for o in state.poll["options"]] if state.poll else []
+                if state.poll_active and state.poll and option_id in valid_ids:
+                    state.votes[name] = option_id
+                    await broadcast({
+                        "type": "vote_update",
+                        "vote_counts": state.vote_counts(),
+                        "total_votes": len(state.votes),
+                    })
+
+            elif data.get("type") == "multi_vote":
+                option_ids = data.get("option_ids", [])
+                valid_ids = [o["id"] for o in state.poll["options"]] if state.poll else []
                 if (
                     state.poll_active
                     and state.poll
-                    and option_id in [o["id"] for o in state.poll["options"]]
+                    and state.poll.get("multi")
+                    and isinstance(option_ids, list)
+                    and all(oid in valid_ids for oid in option_ids)
                 ):
-                    state.votes[name] = option_id
+                    state.votes[name] = option_ids
                     await broadcast({
                         "type": "vote_update",
                         "vote_counts": state.vote_counts(),
@@ -190,6 +207,7 @@ async def create_poll(poll: PollCreate):
 
     state.poll = {
         "question": poll.question.strip(),
+        "multi": poll.multi,
         "options": [
             {"id": f"opt{i}", "text": opt.strip()}
             for i, opt in enumerate(poll.options)

@@ -465,6 +465,7 @@ def post_poll(quiz: dict, config: Config) -> None:
     payload = {
         "question": quiz["question"],
         "options": quiz["options"],
+        "multi": len(quiz.get("correct_indices", [])) > 1,
     }
     _post_json(f"{config.server_url}/api/poll", payload)
 

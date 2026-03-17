@@ -1,7 +1,7 @@
   const LS_KEY = 'workshop_participant_name';
   let ws = null;
   let myName = '';
-  let myVote = null;      // option_id I voted for
+  let myVote = null;      // string (single) or Set of option_ids (multi)
   let currentPoll = null;
   let pollActive = false;
 
@@ -109,7 +109,7 @@
   function handleMessage(msg) {
     switch (msg.type) {
       case 'state':
-        if (msg.poll?.question !== currentPoll?.question) myVote = null;
+        if (msg.poll?.question !== currentPoll?.question) myVote = msg.poll?.multi ? new Set() : null;
         currentPoll = msg.poll;
         pollActive = msg.poll_active;
         updateParticipantCount(msg.participant_count);
@@ -139,26 +139,33 @@
   }
 
   function renderPollCard(container, voteCounts) {
+    const multi = !!currentPoll.multi;
     const totalVotes = Object.values(voteCounts || {}).reduce((a, b) => a + b, 0);
-    const alreadyVoted = myVote !== null;
+    const hasVoted = multi ? myVote instanceof Set && myVote.size > 0 : myVote !== null;
+    const showResults = hasVoted || !pollActive;
 
     let optionsHTML = currentPoll.options.map(opt => {
       const count = (voteCounts || {})[opt.id] || 0;
       const pct = totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
-      const selected = myVote === opt.id ? 'selected' : '';
+      const selected = multi ? (myVote instanceof Set && myVote.has(opt.id) ? 'selected' : '')
+                              : (myVote === opt.id ? 'selected' : '');
       const disabled = !pollActive ? 'disabled' : '';
       return `
         <button class="option-btn ${selected}" ${disabled} onclick="castVote('${opt.id}')">
-          <div class="bar" style="width:${alreadyVoted || !pollActive ? pct : 0}%"></div>
+          <div class="bar" style="width:${showResults ? pct : 0}%"></div>
           <span>${opt.text}</span>
-          ${alreadyVoted || !pollActive ? `<span class="pct">${pct}%</span>` : ''}
+          ${showResults ? `<span class="pct">${pct}%</span>` : ''}
         </button>`;
     }).join('');
 
     let footer = '';
-    if (!pollActive && currentPoll) {
+    if (!pollActive) {
       footer = `<div class="closed-banner">Voting is closed — final results shown above</div>`;
-    } else if (alreadyVoted) {
+    } else if (multi) {
+      footer = `<div class="vote-msg">${myVote instanceof Set && myVote.size > 0
+        ? `✅ ${myVote.size} option${myVote.size > 1 ? 's' : ''} selected — click to toggle.`
+        : 'Select one or more options.'}</div>`;
+    } else if (hasVoted) {
       footer = `<div class="vote-msg">✅ Vote registered! Click another option to change it.</div>`;
     } else {
       footer = `<div class="vote-msg">Choose an option to vote.</div>`;
@@ -194,8 +201,17 @@
 
   function castVote(optionId) {
     if (!ws || ws.readyState !== WebSocket.OPEN) return;
-    if (!pollActive || myVote === optionId) return;
-    myVote = optionId;
-    ws.send(JSON.stringify({ type: 'vote', option_id: optionId }));
-    renderContent({});   // re-render to show "voted" state
+    if (!pollActive) return;
+
+    if (currentPoll.multi) {
+      if (!(myVote instanceof Set)) myVote = new Set();
+      if (myVote.has(optionId)) myVote.delete(optionId);
+      else myVote.add(optionId);
+      ws.send(JSON.stringify({ type: 'multi_vote', option_ids: [...myVote] }));
+    } else {
+      if (myVote === optionId) return;
+      myVote = optionId;
+      ws.send(JSON.stringify({ type: 'vote', option_id: optionId }));
+    }
+    renderContent({});
   }
