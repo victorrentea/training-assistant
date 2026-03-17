@@ -141,22 +141,22 @@
     const el = document.getElementById('daemon-badge');
     if (!el) return;
     if (!lastSeenIso) {
-      el.textContent = '🤖 Never';
+      el.textContent = '🤖 –';
       el.className = 'badge disconnected';
-      el.title = 'Conversation access: never connected';
+      el.title = 'Daemon: never connected';
       return;
     }
     const ago = Math.round((Date.now() - new Date(lastSeenIso)) / 1000);
-    const agoText = ago < 60 ? `${ago}s ago` : `${Math.round(ago/60)}m ago`;
+    const agoText = ago < 60 ? `${ago}s` : `${Math.round(ago/60)}m`;
     if (connected) {
       el.textContent = `🤖 ● ${agoText}`;
       el.className = 'badge connected';
-      el.title = `Conversation access: active (last seen ${agoText})`;
+      el.title = `Daemon active (last seen ${agoText} ago)`;
     } else {
       el.textContent = `🤖 ${agoText}`;
       el.className = 'badge';
       el.style.cssText = 'background:#ffaa0022;color:var(--warn);border:1px solid var(--warn);';
-      el.title = `Conversation access: idle (last seen ${agoText})`;
+      el.title = `Daemon idle (last seen ${agoText} ago)`;
     }
   }
 
@@ -459,13 +459,14 @@
       const pct = totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
       const maxCount = Math.max(...Object.values(voteCounts));
       const leading = count === maxCount && count > 0 ? 'leading' : '';
-      const correct = correctOptIds.has(opt.id) ? 'correct' : '';
-      const llmHint = llmHints && llmHints.includes(i) && !correct;
+      const isCorrect = canMark && correctOptIds.has(opt.id);
+      const correct = isCorrect ? 'correct' : '';
+      const llmHint = llmHints && llmHints.includes(i) && !isCorrect;
       const clickable = canMark ? `onclick="toggleCorrect('${opt.id}')" title="Click to mark as correct"` : '';
       return `
         <div class="result-row ${correct} ${canMark ? 'markable' : ''}" data-id="${opt.id}" ${clickable}>
           <div class="result-label">
-            <span>${opt.text}${correct ? ' ✅' : ''}${llmHint ? ' <span class="llm-hint" title="LLM suggestion">☑</span>' : ''}</span>
+            <span>${opt.text}${isCorrect ? ' ✅' : ''}${llmHint ? ' <span class="llm-hint" title="LLM suggestion">☑</span>' : ''}</span>
             <span class="pct">${count} vote${count!==1?'s':''} · ${pct}%</span>
           </div>
           <div class="bar-track">
@@ -474,18 +475,12 @@
         </div>`;
     }).join('');
 
-    const timerSection = pollActive ? `
-      <div id="host-timer-area">
-        ${activeTimer
-          ? `<div class="countdown-display" id="host-countdown"></div>`
-          : `<div class="timer-btns">
-               <span style="font-size:.8rem;color:var(--muted);">Close in:</span>
-               ${[5,10,15,20].map(s =>
-                 `<button class="btn btn-warn" style="padding:.35rem .7rem;font-size:.82rem;min-height:unset;" onclick="startTimer(${s})">${s}s</button>`
-               ).join('')}
-             </div>`
-        }
-      </div>` : '';
+    const countdownEl = pollActive && activeTimer
+      ? `<div class="countdown-display" id="host-countdown"></div>` : '';
+    const timerBtns = pollActive && !activeTimer
+      ? [5,10,15,20].map(s =>
+          `<button class="btn btn-warn" onclick="startTimer(${s})">${s}s</button>`
+        ).join('') : '';
 
     el.innerHTML = `
       <span class="status-pill ${statusLabel}">${statusText}</span>
@@ -493,11 +488,12 @@
       <p class="poll-question">${currentPoll.question}</p>
       ${bars}
       <p style="font-size:.8rem; color:var(--muted); margin-top:.5rem;">${totalVotes} total vote${totalVotes!==1?'s':''}</p>
-      ${timerSection}
+      ${countdownEl}
       <div class="btn-row">
         ${!pollActive
           ? `<button class="btn btn-success" onclick="setPollStatus(true)">▶ Open voting</button>`
           : `<button class="btn btn-warn"    onclick="setPollStatus(false)">⏹ Close voting</button>`}
+        ${timerBtns}
         <button class="btn btn-danger" onclick="clearPoll()">🗑 Remove poll</button>
       </div>`;
 
@@ -514,13 +510,14 @@
       const pct = totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
       const fill = row.querySelector('.bar-fill');
       const pctEl = row.querySelector('.pct');
-      const correct = correctOptIds.has(opt.id);
-      row.className = `result-row${correct ? ' correct' : ''}${!pollActive && totalVotes > 0 ? ' markable' : ''}`;
+      const canMarkNow = !pollActive && totalVotes > 0;
+      const isCorrect = canMarkNow && correctOptIds.has(opt.id);
+      row.className = `result-row${isCorrect ? ' correct' : ''}${canMarkNow ? ' markable' : ''}`;
       const labelSpan = row.querySelector('.result-label span:first-child');
       if (labelSpan) {
-        const hints = (!pollActive && totalVotes > 0) ? getLlmHints(currentPoll.question) : null;
-        const llmHint = hints && hints.includes(currentPoll.options.indexOf(opt)) && !correct;
-        labelSpan.innerHTML = escHtml(opt.text) + (correct ? ' ✅' : '') +
+        const hints = canMarkNow ? getLlmHints(currentPoll.question) : null;
+        const llmHint = hints && hints.includes(currentPoll.options.indexOf(opt)) && !isCorrect;
+        labelSpan.innerHTML = escHtml(opt.text) + (isCorrect ? ' ✅' : '') +
           (llmHint ? ' <span class="llm-hint" title="LLM suggestion">☑</span>' : '');
       }
       if (fill) {
@@ -538,7 +535,7 @@
     const minutes = parseInt(document.getElementById('quiz-minutes').value, 10);
     const btn = document.getElementById('gen-quiz-btn');
     btn.disabled = true;
-    renderQuizStatus('requested', `Waiting for daemon (last ${minutes} min)…`);
+    renderQuizStatus('requested', `Waiting… (${minutes}m)`);
     try {
       await fetch('/api/quiz-request', {
         method: 'POST',

@@ -13,10 +13,14 @@ body {
 .layout { max-width: 900px; margin: 0 auto; }
 
 .badge {
-  padding: .35rem .85rem;
+  padding: .45rem .85rem;
   border-radius: 20px;
   font-size: .8rem;
   font-weight: 600;
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  box-sizing: border-box;
 }
 .badge.connected { background: #48cfad22; color: var(--accent2); border: 1px solid var(--accent2); }
 .badge.disconnected { background: #ff6b6b22; color: var(--danger); border: 1px solid var(--danger); }
@@ -84,7 +88,7 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
   font-family: inherit;
   font-size: .95rem;
   line-height: 1.6;
-  min-height: 130px;
+  min-height: 65px;
   box-sizing: border-box;
   white-space: pre-wrap;
   word-break: break-word;
@@ -157,14 +161,14 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
 
 /* ── Buttons ── */
 .btn {
-  padding: .7rem 1.3rem;
+  padding: .45rem 1.1rem;
   border: none;
   border-radius: 8px;
   font-size: .9rem;
   font-weight: 600;
   cursor: pointer;
   transition: opacity .2s, transform .1s;
-  min-height: 44px;
+  min-height: 34px;
 }
 .btn:hover { opacity: .85; }
 .btn:active { transform: scale(.97); }

@@ -258,8 +258,9 @@
     if (!pollActive) {
       footer = `<div class="closed-banner">Voting is closed — final results shown above</div>`;
     } else if (multi) {
-      footer = `<div class="vote-msg">${myVote instanceof Set && myVote.size > 0
-        ? `✅ ${myVote.size} option${myVote.size > 1 ? 's' : ''} selected — click to toggle.`
+      const selCount = myVote instanceof Set ? myVote.size : 0;
+      footer = `<div class="vote-msg">${selCount > 0
+        ? `✅ ${selCount} option${selCount > 1 ? 's' : ''} selected — click to toggle.${selCount === 1 ? ' ⚠️ Multiple answers may be correct!' : ''}`
         : 'Select one or more options.'}</div>`;
     } else if (hasVoted) {
       footer = `<div class="vote-msg">✅ Vote registered! Click another option to change it.</div>`;
@@ -335,8 +336,9 @@
     const hasVoted = multi ? myVote instanceof Set && myVote.size > 0 : myVote !== null;
     let footerHTML = '';
     if (multi) {
-      footerHTML = `<div class="vote-msg">${hasVoted
-        ? `✅ ${myVote.size} option${myVote.size > 1 ? 's' : ''} selected — click to toggle.`
+      const selCount = myVote instanceof Set ? myVote.size : 0;
+      footerHTML = `<div class="vote-msg">${selCount > 0
+        ? `✅ ${selCount} option${selCount > 1 ? 's' : ''} selected — click to toggle.${selCount === 1 ? ' ⚠️ Multiple answers may be correct!' : ''}`
         : 'Select one or more options.'}</div>`;
     } else {
       footerHTML = `<div class="vote-msg">✅ Vote registered! Click another option to change it.</div>`;
