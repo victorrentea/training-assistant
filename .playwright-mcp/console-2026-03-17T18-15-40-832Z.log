@@ -1,0 +1,2 @@
+[ 6835318ms] [ERROR] WebSocket connection to 'wss://interact.victorrentea.ro/ws/__host__' failed: Error during WebSocket handshake: Unexpected response code: 502 @ https://host:hostvibe!@interact.victorrentea.ro/static/host.js:15
+[ 6838608ms] [ERROR] WebSocket connection to 'wss://interact.victorrentea.ro/ws/__host__' failed: Error during WebSocket handshake: Unexpected response code: 502 @ https://host:hostvibe!@interact.victorrentea.ro/static/host.js:15

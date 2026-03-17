@@ -163,6 +163,15 @@ h1 { font-size: 1.4rem; color: var(--accent); letter-spacing: .05em; margin-bott
   color: var(--accent2);
 }
 
+.pax-countdown {
+  text-align: center;
+  font-size: 1.6rem;
+  font-weight: 700;
+  margin-top: .75rem;
+  min-height: 2rem;
+  letter-spacing: .02em;
+}
+
 /* ── Waiting state ── */
 .waiting {
   background: var(--surface);

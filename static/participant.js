@@ -6,6 +6,8 @@
   let currentPoll = null;
   let pollActive = false;
   let pollResult = null;  // {correct_ids, voted_ids} once host marks correct options
+  let activeTimer = null; // {seconds, startedAt (ms)} or null
+  let _timerInterval = null;
 
   async function fetchSuggestedName() {
     const res = await fetch('/api/suggest-name');
@@ -160,6 +162,8 @@
         if (msg.poll?.question !== currentPoll?.question) {
           myVote = msg.poll?.multi ? new Set() : null;
           pollResult = null;
+          activeTimer = null;
+          clearInterval(_timerInterval);
           restoreVote(msg.poll);
         }
         currentPoll = msg.poll;
@@ -181,7 +185,28 @@
         pollResult = { correct_ids: new Set(msg.correct_ids), voted_ids: new Set(msg.voted_ids) };
         applyResultColors();
         break;
+      case 'timer':
+        activeTimer = { seconds: msg.seconds, startedAt: new Date(msg.started_at).getTime() };
+        _startParticipantCountdown();
+        break;
     }
+  }
+
+  function _startParticipantCountdown() {
+    clearInterval(_timerInterval);
+    _timerInterval = setInterval(() => {
+      const el = document.getElementById('pax-countdown');
+      if (!el || !activeTimer) { clearInterval(_timerInterval); return; }
+      const elapsed = (Date.now() - activeTimer.startedAt) / 1000;
+      const remaining = Math.max(0, activeTimer.seconds - elapsed);
+      el.textContent = `⏱ ${Math.ceil(remaining)}s`;
+      el.style.color = remaining <= 5 ? 'var(--danger)' : 'var(--warn)';
+      if (remaining <= 0) {
+        clearInterval(_timerInterval);
+        activeTimer = null;
+        el.textContent = '';
+      }
+    }, 200);
   }
 
   function updateParticipantCount(n) {
@@ -256,12 +281,19 @@
       footer = `<div class="vote-msg">Choose an option to vote.</div>`;
     }
 
+    const countdownEl = activeTimer
+      ? `<div id="pax-countdown" class="pax-countdown" style="color:var(--warn);"></div>`
+      : `<div id="pax-countdown" class="pax-countdown"></div>`;
+
     container.innerHTML = `
       <div class="poll-card">
         <h2>${currentPoll.question}</h2>
         ${optionsHTML}
+        ${countdownEl}
         ${footer}
       </div>`;
+
+    if (activeTimer) _startParticipantCountdown();
   }
 
   function renderOptions(voteCounts, totalVotes) {

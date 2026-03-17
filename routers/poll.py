@@ -19,6 +19,9 @@ class PollCreate(BaseModel):
     options: list[str]
     multi: bool = False
 
+class PollTimer(BaseModel):
+    seconds: int
+
 
 class PollOpen(BaseModel):
     open: bool
@@ -100,6 +103,18 @@ async def set_correct_options(body: PollCorrect):
             "voted_ids": list(voted),
         }))
 
+    return {"ok": True}
+
+
+@router.post("/api/poll/timer")
+async def start_poll_timer(body: PollTimer):
+    """Host starts a countdown; broadcasts timer to all clients."""
+    if not state.poll_active:
+        raise HTTPException(400, "Poll is not open")
+    if not (1 <= body.seconds <= 120):
+        raise HTTPException(400, "seconds must be 1–120")
+    started_at = datetime.now(timezone.utc)
+    await broadcast({"type": "timer", "seconds": body.seconds, "started_at": started_at.isoformat()})
     return {"ok": True}
 
 
