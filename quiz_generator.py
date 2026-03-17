@@ -33,7 +33,7 @@ import anthropic
 
 DEFAULT_SERVER_URL = "http://localhost:8000"
 DEFAULT_MODEL = "claude-sonnet-4-6"
-DEFAULT_MINUTES = 30
+DEFAULT_MINUTES = 60
 MAX_CHARS_TO_CLAUDE = 60_000  # Hard cap to control API cost
 
 
