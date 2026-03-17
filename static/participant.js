@@ -264,5 +264,34 @@
       ws.send(JSON.stringify({ type: 'vote', option_id: optionId }));
     }
     saveVote();
-    renderContent({});
+    updateSelectionUI();
+  }
+
+  // Update only selected state and footer after casting a vote — no bar animation flicker
+  function updateSelectionUI() {
+    const multi = !!currentPoll.multi;
+    document.querySelectorAll('.option-btn').forEach((btn, i) => {
+      const opt = currentPoll.options[i];
+      if (!opt) return;
+      const selected = multi
+        ? (myVote instanceof Set && myVote.has(opt.id))
+        : (myVote === opt.id);
+      btn.classList.toggle('selected', selected);
+    });
+
+    const hasVoted = multi ? myVote instanceof Set && myVote.size > 0 : myVote !== null;
+    let footerHTML = '';
+    if (multi) {
+      footerHTML = `<div class="vote-msg">${hasVoted
+        ? `✅ ${myVote.size} option${myVote.size > 1 ? 's' : ''} selected — click to toggle.`
+        : 'Select one or more options.'}</div>`;
+    } else {
+      footerHTML = `<div class="vote-msg">✅ Vote registered! Click another option to change it.</div>`;
+    }
+    const card = document.querySelector('.poll-card');
+    if (card) {
+      const existing = card.querySelector('.vote-msg');
+      if (existing) existing.outerHTML = footerHTML;
+      else card.insertAdjacentHTML('beforeend', footerHTML);
+    }
   }
