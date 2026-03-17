@@ -74,23 +74,27 @@
       }
       navigator.geolocation.getCurrentPosition(
         async (pos) => {
+          const { latitude: lat, longitude: lon } = pos.coords;
           try {
-            const { latitude: lat, longitude: lon } = pos.coords;
             const res = await fetch(
-              `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`
+              `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`,
+              { headers: { 'Accept-Language': 'en' } }
             );
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const data = await res.json();
             const city = data.address?.city || data.address?.town || data.address?.village || data.address?.county || '';
-            const country = data.address?.country || '';
-            resolve({ location: [city, country].filter(Boolean).join(', ') || 'Unknown' });
+            const country = data.address?.country_code?.toUpperCase() || data.address?.country || '';
+            const label = [city, country].filter(Boolean).join(', ');
+            resolve({ location: label || `${lat.toFixed(2)}, ${lon.toFixed(2)}` });
           } catch {
-            resolve({ timezone: Intl.DateTimeFormat().resolvedOptions().timeZone });
+            // Nominatim failed — send raw coords so host sees something
+            resolve({ location: `${lat.toFixed(2)}, ${lon.toFixed(2)}` });
           }
         },
         () => {
           resolve({ timezone: Intl.DateTimeFormat().resolvedOptions().timeZone });
         },
-        { timeout: 8000 }
+        { timeout: 15000, maximumAge: 60000 }
       );
     });
   }
