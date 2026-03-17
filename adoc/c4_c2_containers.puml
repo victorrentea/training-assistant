@@ -9,13 +9,13 @@ LAYOUT_LEFT_RIGHT()
 Person(participant, "Participant", "Trainee.")
 
 ' ── centre: the system ───────────────────────────────────────────
-System_Boundary(workshop, "Workshop Tool") {
+System_Boundary(workshop, "Workshop Tool", $link="c4_c3_components.puml") {
 
     Container(participant_spa, "Participant SPA", "Vanilla JS (trainee's browser)", "Voting UI, live results,\ngeolocation, WebSocket client.")
 
     Container(caddy, "Caddy Reverse Proxy", "Caddy (single binary)", "TLS termination.\nAuth for host endpoints.\nForwards to FastAPI on :8000.")
 
-    Container(fastapi, "[[c4_c3_components.puml FastAPI Backend]]", "Python 3.9 / FastAPI / Uvicorn", "REST endpoints + WebSocket.\nRuns as systemd service on Oracle Cloud.")
+    Container(fastapi, "FastAPI Backend", "Python 3.9 / FastAPI / Uvicorn", "REST endpoints + WebSocket.\nRuns as systemd service on Oracle Cloud.", $link="c4_c3_components.puml")
 
     Container(host_spa, "Host SPA", "Vanilla JS (host's browser)", "Poll management, participant list,\nmap view (Leaflet), quiz preview.")
 
