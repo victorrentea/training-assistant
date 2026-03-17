@@ -34,6 +34,6 @@ Rel(fastapi, appstate, "Reads and writes session state", "In-process")
 Rel(fastapi, static_files, "Serves files", "StaticFiles mount")
 Rel(quiz_daemon, caddy, "Polls for requests, posts preview", "HTTPS REST (Basic Auth)")
 Rel(quiz_daemon, claude_api, "Generates quiz from transcript", "HTTPS REST")
-Rel(participant, nominatim, "Reverse geocodes GPS", "HTTPS REST")
+Rel(static_files, nominatim, "Reverse geocodes participant GPS", "HTTPS REST (from browser)")
 
 @enduml
