@@ -1,0 +1,23 @@
+@startuml C1_SystemContext
+!include <C4/C4_Context>
+
+title Workshop Live Interaction Tool — C1: System Context
+
+LAYOUT_WITH_LEGEND()
+
+Person(victor, "Victor (Host/Trainer)", "Facilitates the session from the host panel.\nRuns quiz_daemon.py on his Mac to trigger\nAI quiz generation from transcription files.")
+Person(participant, "Participant", "Audience member joining via browser.\nVotes on polls, sees live results.\nNo install or account required.")
+
+System(workshop, "Workshop Tool", "Self-hosted real-time audience\ninteraction platform.\nFastAPI + WebSocket backend,\nvanilla JS frontend.")
+
+System_Ext(claude_api, "Anthropic Claude API", "LLM API used to generate\ndebate-triggering poll questions\nfrom workshop transcripts.")
+System_Ext(nominatim, "Nominatim (OpenStreetMap)", "Reverse geocoding API.\nConverts GPS coordinates to\ncity + country strings.")
+System_Ext(browser_apis, "Browser APIs", "Geolocation API, localStorage,\nnative WebSocket client.\nUsed by participant pages.")
+
+Rel(victor, workshop, "Manages polls, reviews quiz previews, monitors participants", "HTTPS / WebSocket (Basic Auth)")
+Rel(victor, claude_api, "Daemon generates quiz questions from transcript", "HTTPS REST (Anthropic SDK, from Mac)")
+Rel(participant, workshop, "Joins session, votes on polls", "HTTPS / WebSocket (no auth)")
+Rel(workshop, nominatim, "Participants resolve GPS to city/country", "HTTPS REST (from browser)")
+Rel(participant, browser_apis, "Geolocation, localStorage, WebSocket", "Browser-internal")
+
+@enduml

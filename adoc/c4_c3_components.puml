@@ -1,0 +1,49 @@
+@startuml C3_Components
+!include <C4/C4_Component>
+
+title Workshop Live Interaction Tool — C3: Component Diagram (FastAPI Backend)
+
+LAYOUT_WITH_LEGEND()
+
+Person(victor, "Victor (Host/Trainer)", "Facilitates session, runs daemon on Mac")
+Person(participant, "Participant", "Audience member")
+Container_Ext(quiz_daemon, "Quiz Daemon", "Python CLI on Victor's Mac\n(calls Claude API directly)")
+Container_Ext(caddy, "Caddy", "Reverse proxy / TLS termination")
+
+Container_Boundary(fastapi, "FastAPI Backend") {
+
+    Component(pages_router, "pages.py", "FastAPI APIRouter", "Serves static HTML pages.\nGET / → participant.html\nGET /host → host.html")
+
+    Component(ws_router, "routers/ws.py", "FastAPI APIRouter\nWebSocket endpoint", "WS /ws/{participant_name}\nHandles: connect, disconnect,\nvote (single), multi_vote,\nlocation message.\nBroadcasts vote_update and\nparticipant_count to all peers.")
+
+    Component(poll_router, "routers/poll.py", "FastAPI APIRouter\nREST endpoints", "POST /api/poll — create poll\nPOST /api/poll/status — open/close\nPOST /api/poll/correct — score + reveal\nPOST /api/poll/timer — countdown\nDELETE /api/poll — clear poll\nGET /api/suggest-name — LOTR name\nGET /api/status — public summary")
+
+    Component(scores_router, "routers/scores.py", "FastAPI APIRouter\nREST endpoint", "DELETE /api/scores\nResets scores and base_scores,\nbroadcasts empty scores message.")
+
+    Component(quiz_router, "routers/quiz.py", "FastAPI APIRouter\nREST endpoints", "POST /api/quiz-request — host triggers AI gen\nGET /api/quiz-request — daemon polls (clears)\nPOST /api/quiz-status — daemon reports progress\nPOST /api/quiz-preview — daemon posts result\nDELETE /api/quiz-preview — host clears preview\nPOST /api/quiz-refine — host requests regen\nGET /api/quiz-refine — daemon polls (clears)")
+
+    Component(state_module, "state.py", "Python module\nAppState singleton", "AppState class: poll, poll_active,\nvotes, participants (name→WebSocket),\nsuggested_names, locations, scores,\nbase_scores, vote_times, poll_opened_at,\nquiz_request, quiz_refine_request,\nquiz_status, quiz_preview,\ndaemon_last_seen.\nMethods: suggest_name(), vote_counts()")
+
+    Component(messaging_module, "messaging.py", "Python module\nasync helpers", "build_state_message() — assembles\nfull state snapshot dict including\ndaemon_connected heartbeat check.\nbroadcast(msg, exclude) — sends JSON\nto all connected WebSockets.\nsend_state_to(ws) — sends state\nsnapshot to a single client.")
+}
+
+Rel(caddy, pages_router, "GET /, GET /host", "HTTP (proxied)")
+Rel(caddy, ws_router, "WS /ws/{name}", "WebSocket upgrade (proxied)")
+Rel(caddy, poll_router, "POST/DELETE /api/poll, /api/suggest-name", "HTTP (proxied)")
+Rel(caddy, scores_router, "DELETE /api/scores", "HTTP (proxied, Basic Auth)")
+Rel(caddy, quiz_router, "POST/GET/DELETE /api/quiz-*", "HTTP (proxied, Basic Auth)")
+
+Rel(ws_router, state_module, "Registers/removes participants,\nrecords votes and locations")
+Rel(ws_router, messaging_module, "broadcast(), send_state_to()")
+Rel(poll_router, state_module, "Creates/clears poll,\ncalculates scores")
+Rel(poll_router, messaging_module, "broadcast(), build_state_message()")
+Rel(scores_router, state_module, "Clears scores and base_scores")
+Rel(scores_router, messaging_module, "broadcast()")
+Rel(quiz_router, state_module, "Stores quiz_request, quiz_preview,\nrefine_request, daemon_last_seen")
+Rel(quiz_router, messaging_module, "broadcast() quiz_status + quiz_preview")
+
+Rel(participant, caddy, "Connects WS, votes, sends location", "WSS / HTTPS")
+Rel(victor, caddy, "Creates polls, opens/closes,\nsets correct options, resets scores", "HTTPS (Basic Auth)")
+Rel(quiz_daemon, caddy, "Polls quiz-request, posts quiz-preview,\nposts quiz-status, polls quiz-refine", "HTTPS (Basic Auth)")
+
+@enduml
