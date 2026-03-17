@@ -36,6 +36,8 @@
         document.getElementById('pax-count').textContent = msg.count;
         participantLocations = msg.locations || participantLocations;
         renderParticipantList(msg.names || []);
+      } else if (msg.type === 'quiz_status') {
+        renderQuizStatus(msg.status, msg.message);
       }
     };
   }
@@ -260,6 +262,33 @@
     });
     const totalEl = document.querySelector('#poll-display p[style]');
     if (totalEl) totalEl.textContent = `${totalVotes} total vote${totalVotes!==1?'s':''}`;
+  }
+
+  // ── Quiz generator ──
+  async function requestQuiz() {
+    const minutes = parseInt(document.getElementById('quiz-minutes').value, 10);
+    const btn = document.getElementById('gen-quiz-btn');
+    btn.disabled = true;
+    renderQuizStatus('requested', `Waiting for daemon (last ${minutes} min)…`);
+    try {
+      await fetch('/api/quiz-request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ minutes }),
+      });
+    } catch (e) {
+      renderQuizStatus('error', 'Failed to reach server.');
+    }
+    setTimeout(() => { btn.disabled = false; }, 5000);
+  }
+
+  function renderQuizStatus(status, message) {
+    const el = document.getElementById('quiz-status');
+    if (!el) return;
+    const colors = { requested: 'var(--muted)', generating: 'var(--warn)', done: 'var(--accent2)', error: 'var(--danger)' };
+    const icons  = { requested: '⏳', generating: '⚙️', done: '✅', error: '❌' };
+    el.style.color = colors[status] || 'var(--muted)';
+    el.textContent = `${icons[status] || ''} ${message}`;
   }
 
   function toast(msg) {

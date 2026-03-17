@@ -50,6 +50,7 @@ class Config:
     dry_run: bool
     host_username: str
     host_password: str
+    daemon: bool = False
 
 
 def _load_secrets_env() -> None:
@@ -102,6 +103,11 @@ def parse_args() -> Config:
         help="Preview the generated quiz without posting to the server",
     )
     parser.add_argument(
+        "--daemon",
+        action="store_true",
+        help="Run in background daemon mode: poll the server for quiz requests and handle them automatically",
+    )
+    parser.add_argument(
         "--host-username",
         default=os.environ.get("HOST_USERNAME", "host"),
         help="Basic Auth username for the workshop server (default: host)",
@@ -136,6 +142,7 @@ def parse_args() -> Config:
         dry_run=args.dry_run,
         host_username=args.host_username,
         host_password=args.host_password,
+        daemon=args.daemon,
     )
 
 
@@ -541,6 +548,33 @@ def open_poll(config: Config) -> None:
     _post_json(f"{config.server_url}/api/poll/status", {"open": True}, config.host_username, config.host_password)
 
 
+def _get_json(url: str, username: str = "", password: str = "") -> dict:
+    """GET JSON from a URL. Raises on HTTP error."""
+    headers = {}
+    if username:
+        token = base64.b64encode(f"{username}:{password}".encode()).decode()
+        headers["Authorization"] = f"Basic {token}"
+    req = urllib.request.Request(url, headers=headers)
+    try:
+        with urllib.request.urlopen(req, context=_ssl_context()) as resp:
+            return json.loads(resp.read())
+    except urllib.error.HTTPError as e:
+        body = e.read().decode("utf-8", errors="replace")
+        raise RuntimeError(f"HTTP {e.code} from {url}: {body}") from e
+
+
+def post_status(status: str, message: str, config: Config) -> None:
+    """Post a quiz generation status update to the server."""
+    try:
+        _post_json(
+            f"{config.server_url}/api/quiz-status",
+            {"status": status, "message": message},
+            config.host_username, config.host_password,
+        )
+    except RuntimeError as e:
+        print(f"[warn] Could not post status: {e}", file=sys.stderr)
+
+
 def generate_topic_prompt(text: str, config: Config) -> str:
     """Ask Claude to summarise the session topics and return a ready-to-paste LLM prompt."""
     client = anthropic.Anthropic(api_key=config.api_key)
@@ -568,11 +602,101 @@ def copy_to_clipboard(text: str) -> bool:
 
 
 # ---------------------------------------------------------------------------
+# Daemon mode
+# ---------------------------------------------------------------------------
+
+DAEMON_POLL_INTERVAL = 3  # seconds
+
+
+def auto_generate(minutes: int, config: Config) -> None:
+    """Non-interactive generation: load transcript → generate → post poll → topic summary."""
+    cfg = Config(
+        folder=config.folder,
+        minutes=minutes,
+        server_url=config.server_url,
+        api_key=config.api_key,
+        model=config.model,
+        dry_run=config.dry_run,
+        host_username=config.host_username,
+        host_password=config.host_password,
+        daemon=True,
+    )
+
+    post_status("generating", f"Loading transcript (last {minutes} min)…", cfg)
+
+    entries = load_transcription_files(cfg.folder)
+    if not entries:
+        post_status("error", "No transcription files found.", cfg)
+        return
+
+    text = extract_last_n_minutes(entries, minutes)
+    if not text:
+        post_status("error", "Extracted text is empty.", cfg)
+        return
+
+    post_status("generating", f"Sending {len(text):,} chars to Claude…", cfg)
+
+    try:
+        quiz = generate_quiz(text, cfg)
+    except SystemExit:
+        post_status("error", "Claude failed to generate a valid quiz.", cfg)
+        return
+
+    _print_quiz(quiz)
+
+    try:
+        post_poll(quiz, cfg)
+        open_poll(cfg)
+    except RuntimeError as e:
+        post_status("error", f"Failed to post poll: {e}", cfg)
+        return
+
+    post_status("done", f"✅ Poll created and opened.", cfg)
+
+    # Topic summary → clipboard
+    topic_prompt = generate_topic_prompt(text, cfg)
+    if topic_prompt:
+        if copy_to_clipboard(topic_prompt):
+            print("[ok] Topic summary prompt copied to clipboard ✓")
+        print("-" * 60)
+        print(topic_prompt)
+        print("-" * 60)
+
+
+def run_daemon(config: Config) -> None:
+    """Poll the server for quiz requests and handle them automatically."""
+    import time
+    print(f"[daemon] Started — polling {config.server_url} every {DAEMON_POLL_INTERVAL}s")
+    print("[daemon] Press Ctrl+C to stop.\n")
+    while True:
+        try:
+            data = _get_json(
+                f"{config.server_url}/api/quiz-request",
+                config.host_username, config.host_password,
+            )
+            req = data.get("request")
+            if req:
+                minutes = req.get("minutes", config.minutes)
+                print(f"\n[daemon] Received quiz request: last {minutes} min")
+                auto_generate(minutes, config)
+        except RuntimeError as e:
+            print(f"[daemon] Server unreachable: {e}", file=sys.stderr)
+        except KeyboardInterrupt:
+            print("\n[daemon] Stopped.")
+            return
+        time.sleep(DAEMON_POLL_INTERVAL)
+
+
+# ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 
 def main() -> None:
     config = parse_args()
+
+    if config.daemon:
+        run_daemon(config)
+        return
 
     # 1. Load transcription files
     entries = load_transcription_files(config.folder)

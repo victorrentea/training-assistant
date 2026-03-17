@@ -41,6 +41,8 @@ class AppState:
         self.participants: dict[str, WebSocket] = {}  # name -> ws
         self.suggested_names: set[str] = set()     # names handed out but not yet connected
         self.locations: dict[str, str] = {}        # participant_name -> location string
+        self.quiz_request: Optional[dict] = None   # pending {minutes} from host
+        self.quiz_status: Optional[dict] = None    # last status from daemon
 
     def suggest_name(self) -> str:
         taken = set(self.participants.keys()) | self.suggested_names
@@ -74,6 +76,13 @@ class PollCreate(BaseModel):
 
 class PollOpen(BaseModel):
     open: bool                  # True = open voting, False = close voting
+
+class QuizRequest(BaseModel):
+    minutes: int = 30           # how many minutes of transcript to scan
+
+class QuizStatus(BaseModel):
+    status: str                 # "generating" | "done" | "error"
+    message: str = ""
 
 # ---------------------------------------------------------------------------
 # Broadcast helpers
@@ -255,6 +264,31 @@ async def status():
         "vote_counts": state.vote_counts(),
         "total_votes": len(state.votes),
     }
+
+
+@app.post("/api/quiz-request")
+async def request_quiz(body: QuizRequest):
+    """Host requests the local daemon to generate a quiz."""
+    state.quiz_request = {"minutes": body.minutes}
+    state.quiz_status = {"status": "requested", "message": f"Waiting for daemon (last {body.minutes} min)…"}
+    await broadcast({"type": "quiz_status", **state.quiz_status})
+    return {"ok": True}
+
+
+@app.get("/api/quiz-request")
+async def poll_quiz_request():
+    """Daemon polls this to pick up a pending request. Clears it on read."""
+    req = state.quiz_request
+    state.quiz_request = None
+    return {"request": req}  # None if nothing pending
+
+
+@app.post("/api/quiz-status")
+async def update_quiz_status(body: QuizStatus):
+    """Daemon posts status updates (generating / done / error)."""
+    state.quiz_status = {"status": body.status, "message": body.message}
+    await broadcast({"type": "quiz_status", **state.quiz_status})
+    return {"ok": True}
 
 # ---------------------------------------------------------------------------
 # Serve static files & pages
