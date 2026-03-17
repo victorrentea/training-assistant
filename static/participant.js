@@ -8,6 +8,7 @@
   let pollResult = null;  // {correct_ids, voted_ids} once host marks correct options
   let activeTimer = null; // {seconds, startedAt (ms)} or null
   let _timerInterval = null;
+  let _multiWarnShown = false; // true once warning has been shown for current poll
 
   async function fetchSuggestedName() {
     const res = await fetch('/api/suggest-name');
@@ -149,6 +150,7 @@
           myVote = msg.poll?.multi ? new Set() : null;
           pollResult = null;
           activeTimer = null;
+          _multiWarnShown = false;
           clearInterval(_timerInterval);
           restoreVote(msg.poll);
         }
@@ -279,8 +281,12 @@
       footer = `<div class="closed-banner">Voting is closed — final results shown above</div>`;
     } else if (multi) {
       const selCount = myVote instanceof Set ? myVote.size : 0;
-      const warning = selCount === 1
-        ? `<div class="multi-warning blink">⚠️ Multiple answers may be correct!</div>` : '';
+      let warning = '';
+      if (selCount > 0) {
+        const blink = !_multiWarnShown ? ' blink' : '';
+        if (!_multiWarnShown) _multiWarnShown = true;
+        warning = `<div class="multi-warning${blink}">⚠️ Multiple answers may be correct!</div>`;
+      }
       footer = `<div class="vote-msg">${selCount > 0
         ? `✅ ${selCount} option${selCount > 1 ? 's' : ''} selected — click to toggle.`
         : 'Select one or more options.'}</div>${warning}`;
@@ -359,8 +365,12 @@
     let footerHTML = '';
     if (multi) {
       const selCount = myVote instanceof Set ? myVote.size : 0;
-      const warning = selCount === 1
-        ? `<div class="multi-warning blink">⚠️ Multiple answers may be correct!</div>` : '';
+      let warning = '';
+      if (selCount > 0) {
+        const blink = !_multiWarnShown ? ' blink' : '';
+        if (!_multiWarnShown) _multiWarnShown = true;
+        warning = `<div class="multi-warning${blink}">⚠️ Multiple answers may be correct!</div>`;
+      }
       footerHTML = `<div class="vote-msg">${selCount > 0
         ? `✅ ${selCount} option${selCount > 1 ? 's' : ''} selected — click to toggle.`
         : 'Select one or more options.'}</div>${warning}`;
