@@ -186,7 +186,11 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
 
 /* ── Current poll display ── */
 .poll-question { font-size: 1.05rem; font-weight: 600; margin-bottom: 1rem; line-height: 1.4; }
-.result-row { margin-bottom: .75rem; }
+.result-row { margin-bottom: .75rem; border-radius: 6px; padding: .1rem .3rem; }
+.result-row.markable { cursor: pointer; }
+.result-row.markable:hover { background: var(--surface2); }
+.result-row.correct { background: #48cfad18; }
+.result-row.correct .result-label span:first-child { color: var(--accent2); font-weight: 600; }
 .result-label {
   display: flex; justify-content: space-between;
   font-size: .85rem; margin-bottom: .3rem;

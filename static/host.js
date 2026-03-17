@@ -4,6 +4,24 @@
   let voteCounts = {};
   let totalVotes = 0;
   let participantLocations = {};
+  let correctOptIds = new Set(); // host-marked correct options for current poll
+
+  function loadCorrectOpts(question) {
+    try {
+      const saved = JSON.parse(localStorage.getItem('host_correct_' + question) || '[]');
+      correctOptIds = new Set(saved);
+    } catch { correctOptIds = new Set(); }
+  }
+  function saveCorrectOpts(question) {
+    localStorage.setItem('host_correct_' + question, JSON.stringify([...correctOptIds]));
+  }
+  function toggleCorrect(optId) {
+    if (!currentPoll) return;
+    if (correctOptIds.has(optId)) correctOptIds.delete(optId);
+    else correctOptIds.add(optId);
+    saveCorrectOpts(currentPoll.question);
+    renderBars();
+  }
 
   // Set participant link
   const link = `${location.protocol}//${location.host}/`;
@@ -20,8 +38,10 @@
     ws.onmessage = (e) => {
       const msg = JSON.parse(e.data);
       if (msg.type === 'state') {
+        const prevQuestion = currentPoll?.question;
         currentPoll = msg.poll;
         pollActive = msg.poll_active;
+        if (currentPoll && currentPoll.question !== prevQuestion) loadCorrectOpts(currentPoll.question);
         voteCounts = msg.vote_counts || {};
         totalVotes = Object.values(voteCounts).reduce((a,b)=>a+b,0);
         participantLocations = msg.participant_locations || {};
@@ -297,15 +317,18 @@
     const statusLabel = pollActive ? 'open' : (totalVotes > 0 ? 'closed' : 'draft');
     const statusText  = pollActive ? 'Voting open' : (totalVotes > 0 ? 'Voting closed' : 'Not started');
 
+    const canMark = !pollActive && totalVotes > 0;
     const bars = currentPoll.options.map((opt, i) => {
       const count = voteCounts[opt.id] || 0;
       const pct = totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
       const maxCount = Math.max(...Object.values(voteCounts));
       const leading = count === maxCount && count > 0 ? 'leading' : '';
+      const correct = correctOptIds.has(opt.id) ? 'correct' : '';
+      const clickable = canMark ? `onclick="toggleCorrect('${opt.id}')" title="Click to mark as correct"` : '';
       return `
-        <div class="result-row" data-id="${opt.id}">
+        <div class="result-row ${correct} ${canMark ? 'markable' : ''}" data-id="${opt.id}" ${clickable}>
           <div class="result-label">
-            <span>${opt.text}</span>
+            <span>${opt.text}${correct ? ' ✅' : ''}</span>
             <span class="pct">${count} vote${count!==1?'s':''} · ${pct}%</span>
           </div>
           <div class="bar-track">
@@ -338,6 +361,10 @@
       const pct = totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
       const fill = row.querySelector('.bar-fill');
       const pctEl = row.querySelector('.pct');
+      const correct = correctOptIds.has(opt.id);
+      row.className = `result-row${correct ? ' correct' : ''}${!pollActive && totalVotes > 0 ? ' markable' : ''}`;
+      const labelSpan = row.querySelector('.result-label span:first-child');
+      if (labelSpan) labelSpan.textContent = opt.text + (correct ? ' ✅' : '');
       if (fill) {
         fill.style.width = `${pct}%`;
         fill.className = `bar-fill ${count === maxCount && count > 0 ? 'leading' : ''}`;
