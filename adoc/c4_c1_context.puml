@@ -8,7 +8,7 @@ LAYOUT_WITH_LEGEND()
 Person(host, "Host", "Workshop facilitator.")
 Person(participant, "Participant", "Trainee.")
 
-System(workshop, "Workshop Live Interaction Tool", "Real-time trainee interaction platform\nfor live workshops.")
+System(workshop, "Workshop Live Interaction Tool", "Real-time trainee interaction platform\nfor live workshops.", $link="c4_c2_containers.puml")
 
 System_Ext(audio_hijack, "Audio Hijack", "Captures and transcribes live workshop audio\nto a local file.")
 System_Ext(claude_api, "Anthropic Claude API", "LLM for quiz generation.")
