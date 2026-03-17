@@ -8,16 +8,16 @@ LAYOUT_WITH_LEGEND()
 Person(host, "Host", "Workshop facilitator.")
 Person(participant, "Participant", "Trainee.")
 
-System(workshop, "Workshop Tool", "Real-time trainee interaction platform.\nHosted on Oracle Cloud.")
+System(workshop, "Workshop Live Interaction Tool", "Real-time trainee interaction platform\nfor live workshops.")
 
-System_Ext(audio_hijack, "Audio Hijack", "Captures and transcribes live workshop audio\nto a local file on the host's Mac.")
+System_Ext(audio_hijack, "Audio Hijack", "Captures and transcribes live workshop audio\nto a local file.")
 System_Ext(claude_api, "Anthropic Claude API", "LLM for quiz generation.")
 System_Ext(nominatim, "Nominatim (OpenStreetMap)", "GPS → city + country.")
 
-Rel(audio_hijack, host, "Transcript file", "Local file on Mac")
+Rel(audio_hijack, host, "Transcript file", "Local file")
 Rel(host, workshop, "Manages polls and participants", "HTTPS / WebSocket")
-Rel(host, claude_api, "Generates quiz from transcript", "HTTPS REST")
 Rel(participant, workshop, "Votes on polls, sees results", "HTTPS / WebSocket")
+Rel(workshop, claude_api, "Generates quiz from transcript", "HTTPS REST")
 Rel(workshop, nominatim, "Resolves participant GPS to city", "HTTPS REST")
 
 @enduml
