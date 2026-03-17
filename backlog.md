@@ -1,3 +1,8 @@
 - [x] The participants should auto-join any open session when they loaded the page in their browsers and they've previously logged in.
 - [x] The application should allow them to log out, though, in which case, with a button, they need to re-choose a name or pick the randomly generated one.
 - [x] Make sure the application is mobile friendly also.
+- [x] In the quiz_generator local program make sure you identify the last transcription available in the folder first.
+- [x] quiz_generator: Instead of the expected tag with an arrow before, prefer a shorter green check emoji when displaying the suggested question.
+- [x] quiz_generator: in the user input, typing a letter from A to B or D or E should just replace that letter with another option as a shorthand from typing R and then telling what option to replace.
+- [x] When generating a question, encourage the LLM to search the web.
+- 

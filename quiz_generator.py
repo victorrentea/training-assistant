@@ -19,6 +19,7 @@ import base64
 import json
 import os
 import re
+import ssl
 import sys
 import urllib.error
 import urllib.request
@@ -223,9 +224,8 @@ def _parse_txt(text: str) -> list[tuple[Optional[float], str]]:
 
 def load_transcription_files(folder: Path) -> list[tuple[Optional[float], str]]:
     """
-    Load all .txt/.vtt/.srt files from folder, sorted by mtime (oldest first).
-    Returns a unified list of (timestamp_seconds_or_None, text) tuples.
-    For timed formats, timestamps are offset so files form a continuous timeline.
+    Load the most recently modified transcription file from folder.
+    Returns a list of (timestamp_seconds_or_None, text) tuples.
     """
     files = sorted(
         [f for f in folder.iterdir() if f.suffix.lower() in {".txt", ".vtt", ".srt"}],
@@ -236,12 +236,13 @@ def load_transcription_files(folder: Path) -> list[tuple[Optional[float], str]]:
         print(f"[error] No .txt, .vtt, or .srt files found in {folder}", file=sys.stderr)
         sys.exit(1)
 
-    print(f"[info] Found {len(files)} transcription file(s) in {folder}")
+    latest = files[-1]
+    print(f"[info] Using latest transcription: {latest.name}")
 
     all_entries: list = []
     time_offset = 0.0
 
-    for i, f in enumerate(files):
+    for i, f in enumerate([latest]):
         raw = f.read_text(encoding="utf-8", errors="replace")
         ext = f.suffix.lower()
 
@@ -460,7 +461,7 @@ def _print_quiz(quiz: dict) -> None:
     print(f"Q: {quiz['question']}")
     print()
     for i, opt in enumerate(quiz["options"]):
-        marker = "  <-- expected" if i in correct else ""
+        marker = " ✅" if i in correct else ""
         print(f"  {chr(65 + i)}. {opt}{marker}")
     if len(correct) > 1:
         print(f"\n  (multiple expected: {', '.join(chr(65+i) for i in sorted(correct))})")
@@ -478,6 +479,16 @@ def _quiz_error(msg: str, raw: str) -> None:
 # Workshop server integration
 # ---------------------------------------------------------------------------
 
+def _ssl_context() -> ssl.SSLContext:
+    """Return an SSL context with certifi's CA bundle (fixes macOS Python cert issues)."""
+    try:
+        import certifi
+        ctx = ssl.create_default_context(cafile=certifi.where())
+    except ImportError:
+        ctx = ssl.create_default_context()
+    return ctx
+
+
 def _post_json(url: str, payload: dict, username: str = "", password: str = "") -> dict:
     """POST JSON to a URL and return the parsed response. Raises on HTTP error."""
     data = json.dumps(payload).encode("utf-8")
@@ -487,7 +498,7 @@ def _post_json(url: str, payload: dict, username: str = "", password: str = "") 
         headers["Authorization"] = f"Basic {token}"
     req = urllib.request.Request(url, data=data, headers=headers, method="POST")
     try:
-        with urllib.request.urlopen(req) as resp:
+        with urllib.request.urlopen(req, context=_ssl_context()) as resp:
             return json.loads(resp.read())
     except urllib.error.HTTPError as e:
         body = e.read().decode("utf-8", errors="replace")
@@ -545,7 +556,9 @@ def main() -> None:
             print("[dry-run] Skipping post to server.")
             return
 
-        print("  [y] Post to server   [r] Replace an option   [n] Abort")
+        n_opts = len(quiz["options"])
+        opt_letters = "/".join(chr(65 + i) for i in range(n_opts))
+        print(f"  [y] Post to server   [{opt_letters}] Replace that option   [n] Abort")
         try:
             answer = input("> ").strip().lower()
         except (EOFError, KeyboardInterrupt):
@@ -554,6 +567,19 @@ def main() -> None:
 
         if answer == "y":
             break
+        elif answer == "n":
+            print("Aborted.")
+            return
+        elif len(answer) == 1 and answer.isalpha() and (idx := ord(answer.upper()) - 65) < n_opts:
+            opt_label = chr(65 + idx)
+            try:
+                feedback = input(f"Replace option {opt_label} with what? ").strip()
+            except (EOFError, KeyboardInterrupt):
+                print("\nAborted.")
+                return
+            if feedback:
+                print("[info] Asking Claude to refine...")
+                quiz = refine_option(quiz, f"replace option {opt_label} with: {feedback}", config)
         elif answer == "r":
             try:
                 feedback = input("Describe the change (e.g. 'replace option B with a better distractor about X'): ").strip()
@@ -563,10 +589,6 @@ def main() -> None:
             if feedback:
                 print("[info] Asking Claude to refine...")
                 quiz = refine_option(quiz, feedback, config)
-            # loop back to preview
-        elif answer == "n":
-            print("Aborted.")
-            return
         # any other input — just re-show the menu
 
     # 6. Post and open
