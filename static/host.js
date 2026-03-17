@@ -162,11 +162,108 @@
   }
 
 
+  // ── Poll composer (contenteditable) ──
+  const pollInput = document.getElementById('poll-input');
+
+  function parsePollInput() {
+    const raw = pollInput.innerText || '';
+    const lines = raw.split('\n');
+    // First non-empty line = question; blank line separates; rest = options
+    let question = '';
+    const options = [];
+    let pastBlank = false;
+    for (const line of lines) {
+      const t = line.trim();
+      if (!question) { if (t) question = t; continue; }
+      if (!t) { pastBlank = true; continue; }
+      if (pastBlank) options.push(t);
+    }
+    return { question, options };
+  }
+
+  function renderComposer() {
+    // Re-render styled spans in-place, preserving cursor position
+    const sel = window.getSelection();
+    const raw = pollInput.innerText || '';
+    const lines = raw.split('\n');
+
+    let html = '';
+    let questionDone = false;
+    let blankSeen = false;
+    for (const line of lines) {
+      const t = line.trim();
+      if (!questionDone) {
+        html += `<span class="q-line">${escHtml(line) || '\u200b'}</span>`;
+        if (t) questionDone = true;
+      } else if (!blankSeen) {
+        html += `<span class="sep-line">${escHtml(line) || '\u200b'}</span>`;
+        if (!t) blankSeen = true;
+      } else {
+        html += `<span class="opt-line">${escHtml(line) || '\u200b'}</span>`;
+      }
+    }
+
+    // Only update DOM if content actually changed (avoids cursor jump)
+    if (pollInput.innerHTML !== html) {
+      // Save and restore cursor
+      const range = sel && sel.rangeCount ? sel.getRangeAt(0) : null;
+      const offset = range ? getTextOffset(pollInput, range.startContainer, range.startOffset) : null;
+      pollInput.innerHTML = html;
+      if (offset !== null) restoreCursor(pollInput, offset);
+    }
+  }
+
+  function escHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function getTextOffset(root, node, offset) {
+    const iter = document.createNodeIterator(root, NodeFilter.SHOW_TEXT);
+    let total = 0, n;
+    while ((n = iter.nextNode())) {
+      if (n === node) return total + offset;
+      total += n.textContent.length;
+    }
+    return total;
+  }
+
+  function restoreCursor(root, offset) {
+    const iter = document.createNodeIterator(root, NodeFilter.SHOW_TEXT);
+    let total = 0, n;
+    while ((n = iter.nextNode())) {
+      if (total + n.textContent.length >= offset) {
+        const range = document.createRange();
+        range.setStart(n, offset - total);
+        range.collapse(true);
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+        return;
+      }
+      total += n.textContent.length;
+    }
+  }
+
+  // Init with default content
+  pollInput.innerText = 'How are you feeling today?\n\nEnergized\nGood enough\nA bit tired\nNeed coffee';
+  renderComposer();
+
+  pollInput.addEventListener('input', renderComposer);
+  pollInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      document.getElementById('create-btn').click();
+    }
+    // Prevent Enter from inserting <div> — use \n instead
+    if (e.key === 'Enter' && !e.ctrlKey && !e.metaKey) {
+      e.preventDefault();
+      document.execCommand('insertText', false, '\n');
+    }
+  });
+
   // ── Create poll ──
   document.getElementById('create-btn').addEventListener('click', async () => {
-    const question = document.getElementById('q-input').value.trim();
-    const options = document.getElementById('opts-input').value
-      .split('\n').map(s => s.trim()).filter(Boolean);
+    const { question, options } = parsePollInput();
 
     if (!question) { toast('Enter a question'); return; }
     if (options.length < 2) { toast('Add at least 2 options'); return; }
@@ -180,10 +277,9 @@
     if (res.ok) {
       await setPollStatus(true);
       toast('Poll created & opened ✓');
-      document.getElementById('q-input').value = '';
-      document.getElementById('opts-input').value = '';
+      pollInput.innerText = '';
+      renderComposer();
       document.getElementById('multi-check').checked = false;
-      autoResize();
     } else {
       const err = await res.json();
       toast(err.detail || 'Error');
@@ -298,19 +394,5 @@
     setTimeout(() => el.classList.remove('show'), 2500);
   }
 
-  // ── Auto-resize options textarea ──
-  const optsInput = document.getElementById('opts-input');
-  function autoResize() {
-    optsInput.style.height = 'auto';
-    optsInput.style.height = optsInput.scrollHeight + 'px';
-  }
-  optsInput.addEventListener('input', autoResize);
-  optsInput.addEventListener('keydown', e => {
-    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-      e.preventDefault();
-      document.getElementById('create-btn').click();
-    }
-  });
-  autoResize();
 
   connectWS();

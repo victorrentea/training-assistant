@@ -73,6 +73,66 @@ input[type=text], textarea {
 input[type=text]:focus, textarea:focus { border-color: var(--accent); }
 textarea { resize: none; min-height: 80px; overflow: hidden; }
 
+/* ── Poll composer — contenteditable div replacing question + options inputs ── */
+.poll-composer {
+  width: 100%;
+  padding: .9rem 1rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  outline: none;
+  transition: border-color .2s;
+  font-family: inherit;
+  min-height: 130px;
+  cursor: text;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.poll-composer:focus { border-color: var(--accent); }
+
+/* Placeholder when empty */
+.poll-composer:empty::before {
+  content: attr(data-placeholder);
+  color: var(--muted);
+  pointer-events: none;
+  white-space: pre;
+}
+
+/* First line = question: larger, bold */
+.poll-composer .q-line {
+  display: block;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.4;
+}
+
+/* Blank separator line */
+.poll-composer .sep-line {
+  display: block;
+  height: .6em;
+}
+
+/* Option lines: smaller, muted */
+.poll-composer .opt-line {
+  display: block;
+  font-size: .88rem;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+/* ── Quiz gen row inside Create Poll card ── */
+.quiz-gen-row {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+
 /* ── Buttons ── */
 .btn {
   padding: .7rem 1.3rem;

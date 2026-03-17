@@ -44,13 +44,8 @@
     <!-- Create poll -->
     <div class="card">
       <h2>Create Poll</h2>
-      <label>Question</label>
-      <input type="text" id="q-input" placeholder="What is your question?" maxlength="200" value="How are you feeling today?" />
-      <label>Options <span style="font-weight:400">(one per line, 2–8)</span></label>
-      <textarea id="opts-input" placeholder="Option A&#10;Option B&#10;Option C">Energized
-Good enough
-A bit tired
-Need coffee</textarea>
+      <div id="poll-input" class="poll-composer" contenteditable="true" spellcheck="false"
+           data-placeholder="Question title&#10;&#10;Option A&#10;Option B&#10;Option C"></div>
       <div class="btn-row" style="align-items:center;">
         <button class="btn btn-primary" id="create-btn">Create poll</button>
         <label style="display:flex; align-items:center; gap:.4rem; font-size:.9rem; color:var(--text); cursor:pointer; margin:0;">
@@ -58,19 +53,8 @@ Need coffee</textarea>
           Multi-select
         </label>
       </div>
-    </div>
-
-    <!-- Poll controls -->
-    <div class="card" style="grid-column: 1 / -1;">
-      <h2>Current Poll</h2>
-      <div id="poll-display"></div>
-    </div>
-
-    <!-- Quiz generator -->
-    <div class="card" style="grid-column: 1 / -1;">
-      <h2>Generate Quiz from Transcript</h2>
-      <div class="btn-row" style="align-items:center;">
-        <button class="btn btn-primary" id="gen-quiz-btn" onclick="requestQuiz()">🤖 Generate Quiz</button>
+      <div class="quiz-gen-row">
+        <button class="btn btn-warn" id="gen-quiz-btn" onclick="requestQuiz()">🤖 Generate Quiz</button>
         <label style="display:flex;align-items:center;gap:.4rem;font-size:.9rem;color:var(--text);cursor:pointer;margin:0;">
           Scan last
           <select id="quiz-minutes" style="background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:.3rem .5rem;font-size:.9rem;cursor:pointer;">
@@ -82,7 +66,13 @@ Need coffee</textarea>
           of transcript
         </label>
       </div>
-      <div id="quiz-status" style="margin-top:.75rem;font-size:.85rem;color:var(--muted);min-height:1.2em;"></div>
+      <div id="quiz-status" style="margin-top:.5rem;font-size:.85rem;color:var(--muted);min-height:1.2em;"></div>
+    </div>
+
+    <!-- Poll controls -->
+    <div class="card" style="grid-column: 1 / -1;">
+      <h2>Current Poll</h2>
+      <div id="poll-display"></div>
     </div>
 
   </div>
