@@ -384,8 +384,10 @@
     });
     const data = await res.json().catch(() => ({}));
     if (res.ok) {
-      // Erase any LLM hints for this question so manual polls never show suggestions
+      // Erase stale correct-opts and LLM hints for this question
+      localStorage.removeItem('host_correct_' + question);
       localStorage.removeItem('host_llm_hints_' + question);
+      correctOptIds = new Set();
       await setPollStatus(true);
       toast('Poll created & opened ✓');
       pollInput.innerHTML = '<div><br></div>';
