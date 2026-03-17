@@ -496,7 +496,12 @@
       const correct = correctOptIds.has(opt.id);
       row.className = `result-row${correct ? ' correct' : ''}${!pollActive && totalVotes > 0 ? ' markable' : ''}`;
       const labelSpan = row.querySelector('.result-label span:first-child');
-      if (labelSpan) labelSpan.textContent = opt.text + (correct ? ' ✅' : '');
+      if (labelSpan) {
+        const hints = (!pollActive && totalVotes > 0) ? getLlmHints(currentPoll.question) : null;
+        const llmHint = hints && hints.includes(currentPoll.options.indexOf(opt)) && !correct;
+        labelSpan.innerHTML = escHtml(opt.text) + (correct ? ' ✅' : '') +
+          (llmHint ? ' <span class="llm-hint" title="LLM suggestion">☑</span>' : '');
+      }
       if (fill) {
         fill.style.width = `${pct}%`;
         fill.className = `bar-fill ${count === maxCount && count > 0 ? 'leading' : ''}`;
