@@ -38,6 +38,7 @@
   const nameInput = document.getElementById('name-input');
   const clearBtn = document.getElementById('clear-name');
   let suggestedName = '';
+  let _joinedWithSuggestion = false;
   const savedName = localStorage.getItem(LS_KEY);
   if (savedName) {
     nameInput.value = savedName;
@@ -73,8 +74,6 @@
   // ── Join ──
   document.getElementById('join-btn').addEventListener('click', join);
   nameInput.addEventListener('keydown', e => { if (e.key === 'Enter') join(); });
-
-  let _joinedWithSuggestion = false;
 
   function join() {
     const input = document.getElementById('name-input');

@@ -292,6 +292,63 @@ class TestMultiSelect:
         browser.close()
 
 
+class TestNameUniqueness:
+
+    def test_duplicate_name_rejected_and_error_shown(self, server_url, playwright):
+        """
+        When a participant tries to join with a name already taken,
+        they should stay on the join screen and see an error message.
+        """
+        browser = playwright.chromium.launch()
+        ctx1 = browser.new_context(base_url=server_url)
+        ctx2 = browser.new_context(base_url=server_url)
+
+        pax1 = ctx1.new_page()
+        pax2 = ctx2.new_page()
+
+        pax1.goto("/")
+        join_as(pax1, "Frodo")
+
+        pax2.goto("/")
+        pax2.fill("#name-input", "frodo")  # same name, different case
+        pax2.click("#join-btn")
+
+        # pax2 should remain on join screen
+        expect(pax2.locator("#join-screen")).to_be_visible(timeout=5000)
+        expect(pax2.locator("#main-screen")).not_to_be_visible()
+        # Error message shown
+        expect(pax2.locator("#join-error")).to_be_visible(timeout=3000)
+        expect(pax2.locator("#join-error")).to_contain_text("already taken")
+
+        ctx1.close()
+        ctx2.close()
+        browser.close()
+
+    def test_autojoin_with_saved_name_no_js_error(self, server_url, playwright):
+        """
+        Regression: _joinedWithSuggestion declared after join() is called on
+        page load when localStorage has a saved name → TDZ ReferenceError.
+        """
+        browser = playwright.chromium.launch()
+        ctx = browser.new_context(base_url=server_url)
+        page = ctx.new_page()
+
+        js_errors = []
+        page.on("pageerror", lambda e: js_errors.append(str(e)))
+
+        # Pre-set localStorage so the page auto-joins on load
+        page.goto("/")
+        page.evaluate("localStorage.setItem('workshop_participant_name', 'AutoJoiner')")
+        page.reload()
+
+        # Should reach main screen without JS errors
+        expect(page.locator("#main-screen")).to_be_visible(timeout=5000)
+        assert js_errors == [], f"JS errors on auto-join: {js_errors}"
+
+        ctx.close()
+        browser.close()
+
+
 class TestRegressions:
 
     def test_participant_page_loads_with_zero_votes(self, server_url, playwright):
