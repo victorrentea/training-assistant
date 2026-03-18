@@ -1,0 +1,9 @@
+The Transactional Outbox pattern is a design pattern used to ensure atomicity in systems that use both a database and a message broker. 
+Instead of sending a message directly to the broker during a database transaction, the application stores the message in a special "outbox" table within the same database.
+A separate process (relay) polls the outbox table and sends the messages to the broker, ensuring that messages are only sent if the database transaction succeeded.
+
+This pattern prevents "dual-writes" issues where the database is updated but the message fails to send, or vice versa.
+It is commonly used in Microservices architectures for reliable communication between services.
+
+Source: Microservices Patterns, Chapter 3.
+Page: 85

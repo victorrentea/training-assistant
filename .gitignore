@@ -25,3 +25,9 @@ __pycache__/
 /.superpowers/brainstorm/62291-1773815780/three-column-layout.html
 /.superpowers/brainstorm/62291-1773815780/three-column-v2.html
 /.superpowers/brainstorm/62291-1773815780/wordcloud-placement.html
+
+/materials/
+/faiss_index/
+.env
+/materials/*.txt
+!/materials/placeholder.txt

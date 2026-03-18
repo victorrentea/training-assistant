@@ -42,6 +42,7 @@ class Config:
     dry_run: bool
     host_username: str
     host_password: str
+    topic: Optional[str] = None
 
 
 def load_secrets_env() -> None:
@@ -203,31 +204,29 @@ def extract_last_n_minutes(entries: list, minutes: int) -> str:
 
 _SYSTEM_PROMPT = """\
 You are a quiz generator for technical training sessions.
-You receive a transcript excerpt from a live workshop and you produce
-exactly ONE poll question designed to spark discussion among participants.
+You receive EITHER a transcript excerpt from a live workshop OR a specific topic/concept.
+Your goal is to produce exactly ONE poll question designed to spark discussion among participants.
 The question may have one OR multiple expected answers — choose whichever fits best.
+
+You have access to a tool `search_materials` that allows you to search through technical materials (books, articles, courses).
+If you receive a topic or if the transcript mentions a complex pattern (like Outbox, Circuit Breaker, Resilience), 
+USE THE TOOL to find more details, nuances, and real-world examples to craft a better question.
 
 Respond with ONLY a valid JSON object in this exact schema:
 {
   "question": "<the question text>",
   "options": ["<option A>", "<option B>", "<option C>", "<option D>"],
-  "correct_indices": [<zero-based index>, ...]
+  "correct_indices": [<zero-based index>, ...],
+  "source": "<Document Name, e.g. Microservices Patterns>",
+  "page": "<Page number or reference, e.g. 85>"
 }
 
 Rules:
-- The question must probe understanding of a CONCEPT from the transcript,
-  not trivial recall of a specific phrase.
-- Prefer questions where the answer is not obvious at first glance — the goal is
-  to reveal disagreement and trigger debate, not to test rote memory.
-- Draw on your broad knowledge of the field (books, research papers, industry
-  best practices, well-known experts) to craft richer, more nuanced options —
-  not just options derived directly from the transcript text.
-- Include at least one option that references a real-world pattern, anti-pattern,
-  or expert opinion that extends beyond what was explicitly said in the transcript.
-- If multiple answers are expected, start the question with "Which of the following..."
-  and list all expected indices in correct_indices.
-- All options must be plausible; distractors should reflect common misconceptions
-  or subtly wrong interpretations from real-world practice.
+- If you used the tool, you MUST fill in the "source" and "page" fields based on the tool's output.
+- The question must probe understanding of a CONCEPT, not trivial recall.
+- Prefer questions where the answer is not obvious at first glance — the goal is to trigger debate.
+- Draw on your broad knowledge AND the retrieved materials to craft richer, more nuanced options.
+- Include at least one option that references a real-world pattern, anti-pattern, or expert opinion.
 - Each option must be concise enough for a poll display (max 80 characters).
 - Do not add any explanation, markdown code fences, or text outside the JSON object.
 """
@@ -255,25 +254,105 @@ def _parse_raw_response(raw: str) -> dict:
         raw = re.sub(r"^```[a-z]*\n?", "", raw)
         raw = re.sub(r"\n?```$", "", raw)
         raw = raw.strip()
-    return json.loads(raw)
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError:
+        # Try to find JSON block
+        match = re.search(r"(\{.*\})", raw, re.DOTALL)
+        if match:
+            return json.loads(match.group(1))
+        raise
 
+def search_materials(query: str) -> list:
+    """Search for relevant technical materials using the local FAISS index."""
+    try:
+        from langchain_community.vectorstores import FAISS
+        from langchain_community.embeddings import HuggingFaceEmbeddings
+        
+        index_path = Path("faiss_index")
+        if not index_path.exists():
+            return [{"content": "No materials indexed yet.", "source": "N/A", "page": "N/A"}]
+            
+        embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+        vectorstore = FAISS.load_local(index_path, embeddings, allow_dangerous_deserialization=True)
+        
+        docs = vectorstore.similarity_search(query, k=3)
+        results = []
+        for d in docs:
+            results.append({
+                "content": d.page_content,
+                "source": d.metadata.get("source", "Unknown"),
+                "page": d.metadata.get("page", "N/A")
+            })
+        return results
+    except Exception as e:
+        print(f"[error] search_materials failed: {e}", file=sys.stderr)
+        return [{"content": f"Search failed: {e}", "source": "Error", "page": "N/A"}]
 
 def generate_quiz(text: str, config: Config) -> dict:
     client = anthropic.Anthropic(api_key=config.api_key)
-    line_count = len([l for l in text.splitlines() if l.strip()])
-    print(f"[info] Sending {len(text):,} chars ({line_count} lines) to {config.model}...")
+    
+    prompt_content = text
+    if config.topic:
+        prompt_content = f"TOPIC: {config.topic}\n\nTRANSCRIPT CONTEXT (if any):\n{text}"
+    
+    print(f"[info] Requesting quiz for: {config.topic or 'Transcript (last ' + str(config.minutes) + ' min)'}...")
+    
+    tools = [
+        {
+            "name": "search_materials",
+            "description": "Search through technical materials (books, articles) for concepts like Outbox, Circuit Breaker, Resilience, etc.",
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "query": {"type": "string", "description": "The search query (e.g. 'Transactional Outbox pattern details')"}
+                },
+                "required": ["query"]
+            }
+        }
+    ]
+
+    messages = [{"role": "user", "content": prompt_content}]
+    
     try:
-        response = client.messages.create(
-            model=config.model, max_tokens=600,
-            system=_SYSTEM_PROMPT,
-            messages=[{"role": "user", "content": text}],
-        )
-    except anthropic.APIStatusError as e:
-        hint = _ANTHROPIC_ERROR_HINTS.get(e.status_code, "unexpected error")
-        raise RuntimeError(f"Claude API {e.status_code} — {hint}") from e
+        while True:
+            response = client.messages.create(
+                model=config.model, max_tokens=1000,
+                system=_SYSTEM_PROMPT,
+                messages=messages,
+                tools=tools
+            )
+            
+            # Append assistant's response to conversation
+            messages.append({"role": "assistant", "content": response.content})
+            
+            if response.stop_reason == "tool_use":
+                tool_use_blocks = [c for c in response.content if c.type == "tool_use"]
+                
+                tool_results = []
+                for tool_call in tool_use_blocks:
+                    print(f"[info] Claude is searching for: {tool_call.input['query']}...")
+                    search_results = search_materials(tool_call.input["query"])
+                    
+                    tool_results.append({
+                        "type": "tool_result",
+                        "tool_use_id": tool_call.id,
+                        "content": json.dumps(search_results)
+                    })
+                
+                # Append ALL tool results as a single user message
+                messages.append({
+                    "role": "user",
+                    "content": tool_results
+                })
+                # Continue the loop
+            else:
+                raw = response.content[0].text
+                break
+                
     except anthropic.APIError as e:
         raise RuntimeError(f"Claude API error — {e}") from e
-    raw = response.content[0].text
+    
     try:
         quiz = _parse_raw_response(raw)
     except json.JSONDecodeError as e:
@@ -341,6 +420,12 @@ def print_quiz(quiz: dict) -> None:
         print(f"  {chr(65 + i)}. {opt}{' ✅' if i in correct else ''}")
     if len(correct) > 1:
         print(f"\n  (multiple expected: {', '.join(chr(65+i) for i in sorted(correct))})")
+    
+    if quiz.get("source"):
+        source = quiz["source"]
+        page = quiz.get("page", "N/A")
+        print(f"\n[Source: {source}, Page: {page}]")
+        
     print("=" * 60)
     print()
 
@@ -416,11 +501,15 @@ def _get_json(url: str, username: str = "", password: str = "") -> dict:
 
 
 def post_poll(quiz: dict, config: Config) -> None:
-    _post_json(f"{config.server_url}/api/poll", {
+    payload = {
         "question": quiz["question"],
         "options": quiz["options"],
         "multi": len(quiz.get("correct_indices", [])) > 1,
-    }, config.host_username, config.host_password)
+    }
+    if quiz.get("source"):
+        payload["question"] += f"\n\n(Source: {quiz['source']}, p. {quiz.get('page', 'N/A')})"
+        
+    _post_json(f"{config.server_url}/api/poll", payload, config.host_username, config.host_password)
 
 
 def open_poll(config: Config) -> None:
