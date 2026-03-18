@@ -238,7 +238,7 @@ python3 -m uvicorn main:app --reload --port 8000
 
 - [ ] Register OCI API key in console to enable `oci` CLI instance reboots
 - [ ] Implement Q&A feature with upvoting (Phase 2)
-- [ ] Implement word cloud feature (Phase 2)
+- [x] Implement word cloud feature (Phase 2)
 - [ ] Add session history / export (optional)
 - [ ] Claude API integration for AI-assisted Q&A summarisation (Phase 3)
 

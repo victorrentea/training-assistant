@@ -78,11 +78,12 @@
     renderBars();
     recordPollInHistory(currentPoll, correctOptIds);
     // Post to backend to award points
-    await fetch('/api/poll/correct', {
+    const resp = await fetch('/api/poll/correct', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ correct_ids: [...correctOptIds] }),
     });
+    if (!resp.ok) toast('Failed to save correct options');
   }
 
   // Set participant link
@@ -142,7 +143,7 @@
   }
 
   function escHtml(s) {
-    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   }
 
   function setBadge(ok) {
@@ -187,7 +188,7 @@
       const pts = scores[n];
       const scoreTag = pts ? `<span class="pax-score">⭐ ${pts}</span>` : '';
       const locLabel = loc ? resolvedCities[loc] || loc : null;
-      return `<li>${n}${scoreTag}${locLabel ? `<span class="pax-location" onclick="openMap()" title="View all on map">📍 ${locLabel}</span>` : ''}</li>`;
+      return `<li>${escHtml(n)}${scoreTag}${locLabel ? `<span class="pax-location" onclick="openMap()" title="View all on map">📍 ${escHtml(locLabel)}</span>` : ''}</li>`;
     }).join('');
 
     // Lazily resolve any raw "lat, lon" strings to city names
