@@ -60,7 +60,7 @@
   right: .4rem;
   font-size: .7rem;
   color: var(--muted);
-  opacity: .3;
+  opacity: .45;
   pointer-events: none;
   z-index: 1;
   letter-spacing: .02em;

@@ -97,7 +97,7 @@
   <div class="host-col host-col-center">
     <!-- QR idle state -->
     <div id="center-qr" class="center-panel">
-      <div id="qr-code" class="qr-code" title="Click to enlarge" style="cursor:pointer;"></div>
+      <div id="qr-code" class="qr-code" title="Click to brighten"></div>
     </div>
     <!-- Poll results panel -->
     <div id="center-poll" class="center-panel" style="display:none;">
@@ -124,7 +124,10 @@
     </div>
     <ul id="pax-list" class="pax-list" title="Click a location to view map"></ul>
     <div class="right-footer">
-      <span>Join: <a id="participant-link" style="color:var(--accent); word-break:break-all; font-size:.8rem;" href="/" target="_blank"></a></span>
+      <span style="display:flex; align-items:center; gap:.5rem;">
+        <span>Join: <a id="participant-link" style="color:var(--accent); word-break:break-all; font-size:.8rem;" href="/" target="_blank"></a></span>
+        <div id="qr-icon" title="Show QR code" style="cursor:pointer; opacity:.5; flex-shrink:0;"></div>
+      </span>
       <div style="display:flex; gap:.5rem; margin-top:.4rem; flex-wrap:wrap;">
         <button class="btn btn-danger" onclick="resetScores()" title="Reset all scores to zero">↺ Reset scores</button>
         <button class="btn btn-primary" onclick="downloadPollHistory()" title="Download today's polls">⬇ Quiz Q&amp;A</button>
