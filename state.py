@@ -1,7 +1,14 @@
 from typing import Optional
 from datetime import datetime
 from fastapi import WebSocket
+from enum import Enum
 import random
+
+
+class ActivityType(str, Enum):
+    NONE = "none"
+    POLL = "poll"
+    WORDCLOUD = "wordcloud"
 
 LOTR_NAMES = [
     "Frodo", "Samwise", "Gandalf", "Aragorn", "Legolas", "Gimli", "Boromir",
@@ -32,6 +39,8 @@ class AppState:
         self.base_scores: dict[str, int] = {}
         self.poll_opened_at: Optional[datetime] = None
         self.vote_times: dict[str, datetime] = {}
+        self.current_activity: ActivityType = ActivityType.NONE
+        self.wordcloud_words: dict[str, int] = {}
 
     def suggest_name(self) -> str:
         # Purge stale suggestions older than connected participants set (keep set bounded)
