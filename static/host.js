@@ -169,7 +169,7 @@
     const el = document.getElementById('daemon-badge');
     if (!el) return;
     if (!lastSeenIso) {
-      el.textContent = 'Agent';
+      el.textContent = '🎛️';
       el.className = 'badge disconnected';
       el.style.cssText = '';
       el.title = 'Agent: never connected';
@@ -178,14 +178,14 @@
     const ago = Math.round((Date.now() - new Date(lastSeenIso)) / 1000);
     const agoText = ago < 60 ? `${ago}s` : `${Math.round(ago/60)}m`;
     if (connected) {
-      el.textContent = `● Agent ${agoText}`;
+      el.textContent = `● 🎛️`;
       el.className = 'badge connected';
       el.style.cssText = '';
       el.title = `Agent active (last seen ${agoText} ago)`;
     } else {
-      el.textContent = `Agent ${agoText}`;
+      el.textContent = `🎛️`;
       el.className = 'badge';
-      el.style.cssText = 'background:#ffaa0022;color:var(--warn);border:1px solid var(--warn);';
+      el.style.cssText = 'color:var(--warn);border:1px solid var(--warn);';
       el.title = `Agent idle (last seen ${agoText} ago)`;
     }
   }
@@ -557,7 +557,7 @@
           ? `<button class="btn btn-success" onclick="setPollStatus(true)">${totalVotes > 0 ? '↺ Re-open' : '▶ Open voting'}</button>`
           : `<button class="btn btn-warn"    onclick="setPollStatus(false)">⏹ Close voting</button>`}
         ${timerBtns}
-        <button class="btn btn-danger" onclick="clearPoll()">🗑 Remove poll</button>
+        <button class="btn btn-danger" onclick="clearPoll()">✕ Close poll</button>
       </div>`;
 
     if (pollActive && activeTimer) _startHostCountdown();
@@ -774,12 +774,15 @@
   }
 
   async function openWordCloud() {
+    if (currentPoll) {
+      await fetch('/api/poll', { method: 'DELETE' });
+    }
     const resp = await fetch('/api/wordcloud/status', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ active: true }),
     });
-    if (!resp.ok) toast('Cannot open: remove current poll first');
+    if (!resp.ok) toast('Failed to open word cloud');
   }
 
   async function closeWordCloud() {
