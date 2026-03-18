@@ -106,11 +106,25 @@
       if (msg.type === 'kicked') {
         _kicked = true;
         document.body.insertAdjacentHTML('beforeend', `
-          <div style="position:fixed;inset:0;background:rgba(0,0,0,.85);display:flex;align-items:center;
-            justify-content:center;z-index:9999;font-size:1.4rem;color:#fff;text-align:center;padding:2rem;">
-            This session is being taken over by another tab.<br>This tab will close shortly.
+          <div id="kicked-overlay" style="position:fixed;inset:0;background:rgba(0,0,0,.92);display:flex;
+            align-items:center;justify-content:center;z-index:9999;font-size:1.4rem;color:#fff;
+            text-align:center;padding:2rem;flex-direction:column;gap:1rem;">
+            <div>This session is being taken over by another tab.</div>
+            <div style="font-size:1rem;color:#aaa;">This tab will close in <span id="kicked-count">5</span>s…</div>
           </div>`);
-        setTimeout(() => window.close(), 3000);
+        let n = 5;
+        const tick = setInterval(() => {
+          n--;
+          const el = document.getElementById('kicked-count');
+          if (el) el.textContent = n;
+          if (n <= 0) {
+            clearInterval(tick);
+            try { window.close(); } catch(e) {}
+            // fallback: navigate away if window.close() was blocked
+            document.getElementById('kicked-overlay').innerHTML =
+              '<div>Session taken over.<br>You may close this tab.</div>';
+          }
+        }, 1000);
         return;
       }
       if (msg.type === 'state') {
