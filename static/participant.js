@@ -20,7 +20,7 @@
     const remainder = 100 - floors.reduce((a, b) => a + b, 0);
     const order = floats.map((v, i) => [v - Math.floor(v), i])
       .sort((a, b) => b[0] - a[0]);
-    for (let i = 0; i < remainder; i++) floors[order[i][1]]++;
+    for (let i = 0; i < Math.min(remainder, order.length); i++) floors[order[i][1]]++;
     return floors;
   }
 
