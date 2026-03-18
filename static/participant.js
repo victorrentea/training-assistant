@@ -430,7 +430,7 @@
             ? `✅ ${selCount} of ${correctCount} selected — click to deselect.`
             : `✅ ${selCount} of ${correctCount ?? '?'} selected — click to toggle.`)
         : `<span class="multi-hint">⚠️ ${multiHint}.</span>`;
-      footer = `<div class="vote-msg">${selMsg}</div>${warning}`;
+      footer = `<div class="vote-msg">${selMsg}</div>${atLimit ? '' : warning}`;
     } else if (hasVoted) {
       footer = `<div class="vote-msg">✅ Vote registered! Click another option to change it.</div>`;
     } else {
