@@ -15,61 +15,10 @@ The file contains `HOST_USERNAME` and `HOST_PASSWORD` for accessing `/host` and 
 ## Production Deployment
 
 - **URL**: https://interact.victorrentea.ro
-- **Server**: Oracle Cloud Infrastructure (OCI) Free Tier VM
-  - IP: `141.148.230.245`
-  - OS: Oracle Linux 9 (x86_64) — **not** Ubuntu/ARM as originally planned
-  - RAM: ~500 MB — `dnf` gets OOM-killed; avoid installing packages with dnf
-  - SSH: `ssh -i '/Users/victorrentea/My Drive/Clients/oracle-cloud-ssh-key-2026-03-17.key' opc@141.148.230.245`
-  - Username: `opc` (not `ubuntu`)
-- **App location on server**: `/home/opc/workshop/`
-- **Process manager**: systemd — `workshop.service` runs uvicorn, `caddy.service` runs the reverse proxy
-- **Reverse proxy**: **Caddy** (not nginx — nginx couldn't be installed due to OOM kills)
-  - Binary: `/usr/local/bin/caddy`
-  - Config: `/etc/caddy/Caddyfile`
-  - SELinux label required: `sudo chcon -t bin_t /usr/local/bin/caddy`
-  - Handles HTTPS automatically via Let's Encrypt (cert already issued)
-- **Firewall**: both `firewalld` (on VM) and OCI Security List must allow ports 80 and 443
-- **Auth**: Caddy `basic_auth` on `/host`, `/api/poll`, `/api/poll/status` — participants access `/`, `/api/suggest-name`, `/api/status` freely
-
-### Deploying code changes
-
-Files are deployed via `scp` (no git on server):
-```bash
-scp -i '/Users/victorrentea/My Drive/Clients/oracle-cloud-ssh-key-2026-03-17.key' \
-  -r main.py static \
-  opc@141.148.230.245:~/workshop/
-ssh -i '/Users/victorrentea/My Drive/Clients/oracle-cloud-ssh-key-2026-03-17.key' opc@141.148.230.245 \
-  "sudo systemctl restart workshop"
-```
-
-### Updating the Caddyfile
-
-Always write it via `scp` from a local `/tmp/Caddyfile` — never try to write it inline over SSH
-(shell variable interpolation corrupts the `$` signs in bcrypt hashes). Steps:
-1. Edit `/tmp/Caddyfile` locally
-2. `scp` it to `/tmp/Caddyfile` on server
-3. `sudo cp /tmp/Caddyfile /etc/caddy/Caddyfile && sudo systemctl restart caddy`
-
-To regenerate the host password hash on the server:
-```bash
-caddy hash-password --plaintext 'yourpassword'
-```
-
-### Rebooting the instance
-
-OCI CLI is configured on the Mac (`~/.oci/config`). Once the API key is registered in the OCI console:
-```bash
-oci compute instance action \
-  --instance-id ocid1.instance.oc1.eu-amsterdam-1.anqw2ljrf5jnacqcydannxrcq2vd4jdzqoekp2774ynooiz4sf2n4tvgopoq \
-  --action RESET
-```
-
-OCI credentials:
-- Tenancy OCID: `ocid1.tenancy.oc1..aaaaaaaafl5vpencs3pjnq4rchplo6xeawi4dduveayvbfeoh4qpftkvqo3q`
-- User OCID: `ocid1.user.oc1..aaaaaaaamtnxcgmlffo7d35kxmzkrhi25qpwrhy4nhjvgn56wg2xin47ksea`
-- Region: `eu-amsterdam-1`
-- API key: `~/.oci/oci_api_key.pem` (public key must be registered in OCI Console → My Profile → API Keys)
-- Instance OCID: `ocid1.instance.oc1.eu-amsterdam-1.anqw2ljrf5jnacqcydannxrcq2vd4jdzqoekp2774ynooiz4sf2n4tvgopoq`
+- **Platform**: [Railway](https://railway.app) — auto-deploys on every push to `master`
+- **Deploy**: `git push` to `master` → Railway builds and deploys in ~40-50 seconds. No manual steps.
+- **Auth**: HTTP Basic Auth on `/host`, `/api/poll`, `/api/poll/status` — participants access `/`, `/api/suggest-name`, `/api/status` freely
+- **Versioning**: a pre-commit git hook stamps `static/version.js` with the current timestamp; both host and participant pages display it in the bottom-right corner
 
 ---
 
@@ -130,7 +79,7 @@ Build a **self-hosted, real-time audience interaction tool** for use during onli
 ### Backend
 | Concern | Choice | Notes |
 |---|---|---|
-| Language | **Python 3.9** | Server runs Python 3.9 (Oracle Linux default); local dev uses Python 3.12 |
+| Language | **Python 3.12** | Local dev and Railway both use Python 3.12 |
 | Framework | **FastAPI** | Async, WebSocket support native, auto Swagger UI at `/docs` |
 | Real-time transport | **WebSockets** (native FastAPI) | One persistent WS connection per participant; server broadcasts state changes |
 | State storage | **In-memory Python dict** | Sufficient for single-room, short-duration live sessions |
@@ -149,12 +98,9 @@ Build a **self-hosted, real-time audience interaction tool** for use during onli
 ### Infrastructure
 | Concern | Choice | Notes |
 |---|---|---|
-| Hosting | **Oracle Cloud Infrastructure (OCI) Free Tier** | x86_64 VM, always-on, permanently free |
-| OS | **Oracle Linux 9** (x86_64) | Note: original plan said Ubuntu/ARM — actual VM is different |
-| Reverse proxy | **Caddy** | Single binary, auto HTTPS via Let's Encrypt, replaces nginx (couldn't install due to OOM) |
-| Process management | **systemd** | `workshop.service` + `caddy.service`; both enabled and auto-restart |
-| HTTPS | **Caddy + Let's Encrypt** | Configured and live; cert auto-renews |
-| Auth | **Caddy `basic_auth`** | Protects `/host`, `/api/poll`, `/api/poll/status` only |
+| Hosting | **Railway** | Auto-deploys on `git push` to master, ~40-50s build time |
+| HTTPS | **Railway** | Handles TLS automatically |
+| Auth | **HTTP Basic Auth** (FastAPI middleware) | Protects `/host`, `/api/poll`, `/api/poll/status` only |
 
 ---
 
@@ -175,8 +121,7 @@ training-assistant/
 │   ├── host.js              ← Host logic (WS, poll management, participant list)
 │   ├── host.css
 │   └── common.css           ← Shared CSS variables
-├── workshop.service         ← systemd unit file
-└── nginx.conf               ← (unused — replaced by Caddy)
+└── pyproject.toml           ← Python dependencies (used by Railway via uv)
 ```
 
 ---
@@ -197,10 +142,7 @@ class AppState:
 
 ## Key Design Decisions
 
-- **Caddy instead of nginx**: nginx OOM-killed during dnf install on 500MB RAM VM; Caddy is a single static binary downloaded via curl
-- **SELinux**: Oracle Linux 9 runs SELinux in enforcing mode; Caddy binary needs `chcon -t bin_t` to run under systemd
 - **No venv**: dependencies installed globally into system Python 3.12 on Mac; `python3 quiz_generator.py` runs directly
-- **Caddyfile written via scp**: never write Caddyfile inline over SSH — shell interpolation corrupts bcrypt `$` signs
 - **Host auth scope**: only `/host`, `/api/poll`, `/api/poll/status` are protected; `/api/suggest-name` and `/api/status` are public (used by participants)
 - **Votes are final**: once a participant votes, they cannot change their vote. This is intentional.
 - **No persistence between sessions**: restarting the server clears all state. Acceptable because sessions are live events.
@@ -236,7 +178,6 @@ python3 -m uvicorn main:app --reload --port 8000
 
 ## Backlog / Next Steps
 
-- [ ] Register OCI API key in console to enable `oci` CLI instance reboots
 - [ ] Implement Q&A feature with upvoting (Phase 2)
 - [x] Implement word cloud feature (Phase 2)
 - [ ] Add session history / export (optional)
