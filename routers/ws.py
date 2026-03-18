@@ -18,6 +18,13 @@ async def websocket_endpoint(websocket: WebSocket, participant_name: str):
         await websocket.close(code=1008)
         return
 
+    name_lower = name.lower()
+    if any(k.lower() == name_lower for k in state.participants):
+        await websocket.accept()
+        await websocket.send_text(json.dumps({"type": "name_taken"}))
+        await websocket.close(code=1008)
+        return
+
     await websocket.accept()
     state.participants[name] = websocket
     state.suggested_names.discard(name)
