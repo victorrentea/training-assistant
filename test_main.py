@@ -477,16 +477,59 @@ class TestScoring:
         assert pts_after_poll2 > pts_after_poll1, "Points from poll 2 should be added to poll 1"
         assert pts_after_poll2 <= pts_after_poll1 + 1000
 
-    def test_multi_poll_partial_correct_awards_points(self, session):
-        """In a multi-select poll, selecting at least one correct option earns points."""
-        session.create_poll("Which?", ["A", "B", "C"], multi=True)
+    # ── Multi-select scoring scenarios (Gherkin-style parametrize) ──────────
+    #
+    # Formula: ratio = max(0, (R - W) / C)
+    #   R = correct options the participant selected
+    #   W = wrong options the participant selected
+    #   C = total correct options (as marked by host)
+    # Points = round(speed_adjusted_max * ratio), speed_adjusted_max in [500..1000]
+    #
+    # Options: A, B, C, D  (4 options total)
+    #
+    # | voted   | correct | R | W | C | ratio | expect_points |
+    # |---------|---------|---|---|---|-------|---------------|
+    # | A B     | A       | 1 | 1 | 1 | 0.0   | 0             |  voted wrong too
+    # | A B     | A B     | 2 | 0 | 2 | 1.0   | full          |  perfect
+    # | A B     | B       | 1 | 1 | 1 | 0.0   | 0             |  voted wrong too
+    # | A B     | A B C   | 2 | 0 | 3 | 0.67  | partial       |  missed C
+    # | A B C   | A B     | 2 | 1 | 2 | 0.5   | partial       |  extra wrong
+    # | A       | A B     | 1 | 0 | 2 | 0.5   | partial       |  missed B
+    # | A B C D | A B     | 2 | 2 | 2 | 0.0   | 0             |  negated by wrongs
+    # | C D     | A B     | 0 | 2 | 2 | 0.0   | 0             |  all wrong
+    # | A B     | C D     | 0 | 2 | 2 | 0.0   | 0             |  voted both wrong
+    @pytest.mark.parametrize("voted,correct_marked,expect_nonzero,description", [
+        # voted=A+B, only A correct → R=1,W=1,C=1 → ratio=0 → no points
+        (["A","B"],  ["A"],       False, "voted A+B, only A correct: penalised by wrong B"),
+        # voted=A+B, both correct → R=2,W=0,C=2 → ratio=1 → full points
+        (["A","B"],  ["A","B"],   True,  "voted A+B, both correct: full score"),
+        # voted=A+B, only B correct → R=1,W=1,C=1 → ratio=0 → no points
+        (["A","B"],  ["B"],       False, "voted A+B, only B correct: penalised by wrong A"),
+        # voted=A+B, correct=A+B+C → R=2,W=0,C=3 → ratio=0.67 → partial
+        (["A","B"],  ["A","B","C"], True,  "voted A+B, correct=A+B+C: partial (missed C)"),
+        # voted=A+B+C, correct=A+B → R=2,W=1,C=2 → ratio=0.5 → partial
+        (["A","B","C"], ["A","B"], True,  "voted A+B+C, correct=A+B: partial (extra wrong C)"),
+        # voted=A only, correct=A+B → R=1,W=0,C=2 → ratio=0.5 → partial
+        (["A"],      ["A","B"],   True,  "voted A only, correct=A+B: partial (missed B)"),
+        # voted=A+B+C+D, correct=A+B → R=2,W=2,C=2 → ratio=0 → no points
+        (["A","B","C","D"], ["A","B"], False, "voted all 4, only A+B correct: wrongs cancel"),
+        # voted=C+D, correct=A+B → R=0,W=2 → ratio=0 → no points
+        (["C","D"],  ["A","B"],   False, "voted C+D, correct=A+B: entirely wrong"),
+        # voted=A+B, correct=C+D → R=0,W=2 → ratio=0 → no points
+        (["A","B"],  ["C","D"],   False, "voted A+B, correct=C+D: entirely wrong"),
+    ])
+    def test_multi_select_scoring(self, session, voted, correct_marked, expect_nonzero, description):
+        session.create_poll("Multi Q", ["A","B","C","D"], multi=True)
         session.open_poll()
         with session.participant("Alice") as alice:
-            alice.multi_vote("A", "B")
+            alice.multi_vote(*voted)
         session.close_poll()
-        session.mark_correct("A")   # A is correct, B is not; Alice selected both
+        session.mark_correct(*correct_marked)
         pts = session.get_scores().get("Alice", 0)
-        assert pts >= 500, "Partial match should still earn points"
+        if expect_nonzero:
+            assert pts > 0, f"FAIL [{description}]: expected points > 0, got {pts}"
+        else:
+            assert pts == 0, f"FAIL [{description}]: expected 0 points, got {pts}"
 
     def test_reset_scores_clears_all(self, session):
         session.create_poll("Q?", ["A", "B"])
