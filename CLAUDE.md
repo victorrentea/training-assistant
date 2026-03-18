@@ -3,6 +3,8 @@
 This document captures all requirements, decisions, and context for the project.
 It is intended as the primary reference for any AI coding assistant working on this codebase.
 
+**Core product goal:** Maximize audience engagement during live workshops and webinars. The target audience is tired, bored, and distracted. Every feature should serve this goal — competition, real-time feedback, and interactivity are not nice-to-haves, they are the point.
+
 ---
 
 ## Secrets
@@ -201,4 +203,5 @@ The user frequently uses a dictation tool. Messages may contain misheard or mist
 ## Workflow
 
 - **After completing each backlog item**: create a git commit.
+- **After every `git push`**: immediately run `bash wait-for-deploy.sh &` in the background. The post-push git hook does NOT fire when Claude Code runs git — so always run it explicitly. It polls until Railway serves the new version, then plays a sound and shows a macOS notification.
 - **After any significant architectural change**: update the C4 diagrams in `adoc/` (c4_c1_context.puml, c4_c2_containers.puml, c4_c3_components.puml) to reflect the new structure.
