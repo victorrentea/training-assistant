@@ -301,15 +301,6 @@
     colorLight: 'transparent',
   });
 
-  // Small QR icon in bottom-right footer
-  new QRCode(document.getElementById('qr-icon'), {
-    text: link,
-    width: 48,
-    height: 48,
-    colorDark: '#888888',
-    colorLight: 'transparent',
-  });
-
   // Fullscreen QR overlay (opened from bottom-right icon)
   const qrFullSize = Math.min(window.innerWidth, window.innerHeight) * 0.8;
   new QRCode(document.getElementById('qr-fullscreen'), {
