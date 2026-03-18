@@ -144,9 +144,11 @@
         renderPollDisplay();
         const currentActivity = msg.current_activity || 'none';
         updateCenterPanel(currentActivity);
-        updateWordCloudTab(currentActivity);
         if (currentActivity === 'wordcloud') {
           renderHostWordCloud(msg.wordcloud_words || {});
+        }
+        if (currentActivity === 'qa') {
+          renderQAList(msg.qa_questions || []);
         }
       } else if (msg.type === 'vote_update') {
         voteCounts = msg.vote_counts || {};
@@ -774,47 +776,27 @@
   }
 
 
-  function switchTab(tab) {
+  async function switchTab(tab) {
     document.getElementById('tab-poll').classList.toggle('active', tab === 'poll');
     document.getElementById('tab-wordcloud').classList.toggle('active', tab === 'wordcloud');
+    document.getElementById('tab-qa').classList.toggle('active', tab === 'qa');
     document.getElementById('tab-content-poll').style.display = tab === 'poll' ? '' : 'none';
     document.getElementById('tab-content-wordcloud').style.display = tab === 'wordcloud' ? '' : 'none';
+    document.getElementById('tab-content-qa').style.display = tab === 'qa' ? '' : 'none';
+
+    // Tell server — participants follow the active tab
+    await fetch('/api/activity', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ activity: tab }),
+    });
   }
 
   function updateCenterPanel(currentActivity) {
     document.getElementById('center-qr').style.display = currentActivity === 'none' ? '' : 'none';
     document.getElementById('center-poll').style.display = currentActivity === 'poll' ? '' : 'none';
     document.getElementById('center-wordcloud').style.display = currentActivity === 'wordcloud' ? '' : 'none';
-  }
-
-  async function openWordCloud() {
-    if (currentPoll) {
-      await fetch('/api/poll', { method: 'DELETE' });
-    }
-    const resp = await fetch('/api/wordcloud/status', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ active: true }),
-    });
-    if (!resp.ok) toast('Failed to open word cloud');
-  }
-
-  async function closeWordCloud() {
-    const canvas = document.getElementById('host-wc-canvas');
-    if (canvas && canvas.width > 0) {
-      canvas.toBlob(blob => {
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = `wordcloud-${new Date().toISOString().slice(0,10)}.png`;
-        a.click();
-        URL.revokeObjectURL(a.href);
-      });
-    }
-    await fetch('/api/wordcloud/status', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ active: false }),
-    });
+    document.getElementById('center-qa').style.display = currentActivity === 'qa' ? '' : 'none';
   }
 
   function hostSubmitWord() {
@@ -832,29 +814,6 @@
     const ul = document.getElementById('wc-host-words');
     if (!ul) return;
     ul.innerHTML = hostWords.map(w => `<li>${escHtml(w)}</li>`).join('');
-  }
-
-  function updateWordCloudTab(currentActivity) {
-    const inactive = document.getElementById('wc-inactive');
-    const active = document.getElementById('wc-active');
-    const blockedMsg = document.getElementById('wc-blocked-msg');
-    const openBtn = document.getElementById('wc-open-btn');
-    if (!inactive || !active) return;
-
-    const isWordCloudActive = currentActivity === 'wordcloud';
-    const isPollActive = currentActivity === 'poll';
-
-    inactive.style.display = isWordCloudActive ? 'none' : '';
-    active.style.display = isWordCloudActive ? '' : 'none';
-
-    if (openBtn) {
-      openBtn.disabled = isPollActive;
-      openBtn.style.opacity = isPollActive ? '.4' : '';
-      openBtn.style.cursor = isPollActive ? 'not-allowed' : '';
-    }
-    if (blockedMsg) {
-      blockedMsg.style.display = isPollActive ? '' : 'none';
-    }
   }
 
   function renderHostWordCloud(wordsMap) {
@@ -901,6 +860,64 @@
         });
       })
       .start();
+  }
+
+  async function clearQA() {
+    await fetch('/api/qa/clear', { method: 'POST' });
+  }
+
+  async function toggleAnswered(qid, current) {
+    await fetch(`/api/qa/answer/${qid}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ answered: !current }),
+    });
+  }
+
+  async function deleteQuestion(qid) {
+    await fetch(`/api/qa/question/${qid}`, { method: 'DELETE' });
+  }
+
+  async function editQuestion(qid, currentText) {
+    const newText = prompt('Edit question:', currentText);
+    if (!newText || newText.trim() === currentText) return;
+    await fetch(`/api/qa/question/${qid}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: newText.trim() }),
+    });
+  }
+
+  function renderQAList(questions) {
+    const list = document.getElementById('qa-list');
+    const countEl = document.getElementById('qa-count');
+    if (!list) return;
+    if (countEl) countEl.textContent = questions.length;
+
+    if (!questions.length) {
+      list.innerHTML = '<p style="color:var(--muted);font-size:.9rem;text-align:center;margin-top:2rem;">No questions yet.</p>';
+      return;
+    }
+
+    list.innerHTML = questions.map(q => `
+      <div class="qa-card${q.answered ? ' qa-answered' : ''}" data-id="${escHtml(q.id)}">
+        <div class="qa-text">${escHtml(q.text)}</div>
+        <div class="qa-meta">
+          <span class="qa-author">${escHtml(q.author)}</span>
+          <span class="qa-upvotes">▲ ${q.upvote_count}</span>
+        </div>
+        <div class="qa-actions">
+          <button class="btn btn-sm ${q.answered ? 'btn-success' : ''}"
+                  onclick="toggleAnswered('${escHtml(q.id)}', ${q.answered})">
+            ✓ ${q.answered ? 'Answered' : 'Answer'}
+          </button>
+          <button class="btn btn-sm btn-primary"
+                  onclick="editQuestion('${escHtml(q.id)}', ${JSON.stringify(q.text)})">✎ Edit</button>
+          <button class="btn btn-sm btn-danger"
+                  onclick="deleteQuestion('${escHtml(q.id)}')">✕</button>
+        </div>
+      </div>
+    `).join('');
   }
 
   connectWS();

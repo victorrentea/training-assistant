@@ -23,6 +23,7 @@
     <div class="tab-bar">
       <button class="tab-btn active" id="tab-poll" onclick="switchTab('poll')">Poll</button>
       <button class="tab-btn" id="tab-wordcloud" onclick="switchTab('wordcloud')">☁ Word Cloud</button>
+      <button class="tab-btn" id="tab-qa" onclick="switchTab('qa')">❓ Q&A</button>
     </div>
 
     <!-- Poll tab content -->
@@ -86,6 +87,13 @@
       </div>
     </div>
 
+    <!-- Q&A tab content -->
+    <div id="tab-content-qa" class="tab-content" style="display:none;">
+      <div class="left-status-bar" style="margin-top:auto;">
+        <button class="btn btn-danger" onclick="clearQA()">✕ Clear Q&A</button>
+      </div>
+    </div>
+
     <!-- Status badges — pinned to bottom of left column -->
     <div class="left-status-bar">
       <span id="ws-badge" class="badge disconnected">● Server</span>
@@ -113,6 +121,13 @@
     <!-- Word cloud panel -->
     <div id="center-wordcloud" class="center-panel" style="display:none;">
       <canvas id="host-wc-canvas"></canvas>
+    </div>
+    <!-- Q&A results panel -->
+    <div id="center-qa" class="center-panel" style="display:none;">
+      <h2 style="margin:0 0 .9rem; font-size:.95rem; color:var(--muted); text-transform:uppercase; letter-spacing:.08em;">
+        ❓ Questions — <span id="qa-count">0</span>
+      </h2>
+      <div id="qa-list"></div>
     </div>
   </div>
 
