@@ -81,6 +81,15 @@ async def websocket_endpoint(websocket: WebSocket, participant_name: str):
                         "total_votes": len(state.votes),
                     })
 
+            elif data.get("type") == "wordcloud_word":
+                from state import ActivityType
+                word = str(data.get("word", "")).strip().lower()
+                if state.current_activity == ActivityType.WORDCLOUD and word:
+                    state.wordcloud_words[word] = state.wordcloud_words.get(word, 0) + 1
+                    if name != "__host__":
+                        state.scores[name] = state.scores.get(name, 0) + 200
+                    await broadcast(build_state_message())
+
     except WebSocketDisconnect:
         state.participants.pop(name, None)
         state.locations.pop(name, None)
