@@ -1,3 +1,5 @@
+# Tasks
+
 - [x] The participants should auto-join any open session when they loaded the page in their browsers and they've previously logged in.
 - [x] The application should allow them to log out, though, in which case, with a button, they need to re-choose a name or pick the randomly generated one.
 - [x] Make sure the application is mobile friendly also.
@@ -55,3 +57,39 @@
 - [x] Make the launch and generate a bit less high, and make the question text box half the size. At its minimum, it still would increase in height as I type more text in it. Also, make sure that when the messages from the demo arrive, they are shorter and displayed under the generate button.
 - [x] The three open four options to end the poll should be displayed between the open voting and remove poll, and have the same size and look and feel as the other buttons in yellow.
 - [x] align the height of the connected divs, the reset scores, launch generate, open voting, remove poll, quiz Q&A. All the buttons should have the same height.
+
+---
+
+# Future Ideas
+
+Ideas for increasing engagement in debate-style workshops with mid-senior developers and architects.
+
+## Confidence Voting
+After a poll closes, ask each participant to rate their confidence (1–3 stars). Host sees a 2D scatter of opinion × confidence. Surfaces "strongly wrong" answers (high confidence, wrong option) — the richest material for debate.
+
+## Word Cloud
+Participants type one or more words in response to an open prompt (e.g. "What does 'clean code' mean to you?"). A live animated word cloud forms on the host screen. Great for priming a discussion before challenging assumptions. *(Already in Phase 2 backlog)*
+
+## Estimation Challenge (Planning Poker-style)
+Host poses a scenario: "How long would this refactoring take on a real codebase?" Participants pick from a scale (1h / 1d / 1w / 1 month). Host reveals the distribution and asks outliers to defend their estimate. No coding required — creates cognitive tension that drives good debate.
+
+## Code Snippet Voting (read-only)
+Host pastes a short snippet (10–20 lines) into the host panel; it is broadcast read-only to all participants with syntax highlighting. Host then launches a poll: "What's wrong here?" or "Rate this 1–5". Participants read and react but never write. Fills the "playing around" gap without requiring any coding from participants.
+
+## Live Q&A with Upvoting
+Participants submit anonymous questions; others upvote. Host sees a ranked list and picks what to address. Upvoting surfaces the question the room actually wants answered, not just the loudest voice. Anonymous submission creates psychological safety for junior participants. *(Already in Phase 2 backlog)*
+
+## Agree-Disagree Slider
+Host posts a provocative statement (e.g. "Microservices are always a mistake for teams under 20 people"). Participants drag a slider from Strongly Disagree to Strongly Agree. Host sees the full distribution as a histogram. Sliders capture *degree* of opinion — richer than binary polls for an audience that hates false dichotomies.
+
+## Concept Ranking / Ordering
+Host presents 4–6 items (patterns, approaches, technologies). Participants drag them into an order (e.g. safest → most dangerous, simplest → most complex). Host aggregates the median ranking and highlights disagreements. Pure conceptual reasoning, no coding.
+
+## "Whose Side Are You On?" Debate Mode
+Host splits the room into two positions (randomly or by choice). Each side votes/argues from their assigned position. Then sides are flipped. Forces participants to articulate the opposing argument — powerful for trade-off discussions with architects.
+
+## Anonymous Reaction / Confession Box
+Host broadcasts a statement: "Have you ever shipped code that violated what we just discussed?" Participants react with a single emoji or yes/no. Aggregated reactions are shown live. Creates psychological safety and honest discussion starters.
+
+## Session Closing Word Cloud
+End-of-session ritual: "One word that changed how you think today." A word cloud closes the session. Gives the host real-time feedback and participants a moment of reflection.
