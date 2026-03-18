@@ -18,6 +18,15 @@ async def websocket_endpoint(websocket: WebSocket, participant_name: str):
         await websocket.close(code=1008)
         return
 
+    if name == "__host__" and "__host__" in state.participants:
+        old_ws = state.participants["__host__"]
+        try:
+            await old_ws.send_text(json.dumps({"type": "kicked"}))
+            await old_ws.close(code=1001)
+        except Exception:
+            pass  # old socket may already be dead
+        del state.participants["__host__"]
+
     name_lower = name.lower()
     if any(k.lower() == name_lower for k in state.participants):
         await websocket.accept()
