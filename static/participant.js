@@ -317,14 +317,13 @@
             <canvas id="wc-canvas"></canvas>
           </div>
           <div class="wc-input-panel">
-            <p class="wc-prompt">What word comes to mind?</p>
+            <p class="wc-prompt">⭐++ What comes to mind?</p>
             <div class="wc-input-row">
               <input id="wc-input" type="text" maxlength="40" autocomplete="off" placeholder="Type a word…" list="wc-suggestions" />
               <datalist id="wc-suggestions"></datalist>
               <button id="wc-go" class="btn btn-primary">Go</button>
             </div>
-            <p class="wc-hint">Each word you contribute earns you points!</p>
-            <ul id="wc-my-words"></ul>
+            <div id="wc-my-words"></div>
           </div>
         </div>`;
       document.getElementById('wc-go').onclick = submitWord;
@@ -350,9 +349,9 @@
   }
 
   function renderMyWords() {
-    const ul = document.getElementById('wc-my-words');
-    if (!ul) return;
-    ul.innerHTML = myWords.map(w => `<li>${escHtml(w)}</li>`).join('');
+    const el = document.getElementById('wc-my-words');
+    if (!el) return;
+    el.innerHTML = myWords.map(w => `<div class="wc-my-word">${escHtml(w)}</div>`).join('');
   }
 
   function updateWordSuggestions(wordcloudWords) {
