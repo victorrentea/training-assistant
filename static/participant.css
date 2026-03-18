@@ -247,9 +247,8 @@ h1 { font-size: 1.4rem; color: var(--accent); letter-spacing: .05em; margin-bott
   flex: 0 1 300px;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: flex-start;
   gap: .75rem;
-  text-align: center;
 }
 
 .wc-prompt {
@@ -263,6 +262,7 @@ h1 { font-size: 1.4rem; color: var(--accent); letter-spacing: .05em; margin-bott
   display: flex;
   gap: .5rem;
   width: 100%;
+  align-items: stretch;
 }
 
 .wc-input-row input {
@@ -276,24 +276,24 @@ h1 { font-size: 1.4rem; color: var(--accent); letter-spacing: .05em; margin-bott
 }
 
 .wc-input-row #wc-go {
-  padding: .75rem 1.25rem;
+  padding: 0 1.25rem;
   font-size: 1.2rem;
-}
-
-.wc-hint {
-  font-size: .8rem;
-  color: var(--accent);
-  margin: 0;
-  opacity: .85;
+  align-self: stretch;
 }
 
 #wc-my-words {
-  list-style: disc;
-  padding-left: 1.25rem;
-  color: var(--muted);
-  font-size: .9rem;
+  display: flex;
+  flex-direction: column;
+  gap: .25rem;
   max-height: 200px;
   overflow-y: auto;
+  width: 100%;
+}
+
+.wc-my-word {
+  font-size: 1.2rem;
+  color: var(--text);
+  padding: .1rem 0;
 }
 
 /* Mobile: stack cloud on top */
