@@ -7,7 +7,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from messaging import broadcast, build_state_message
-from state import state
+from state import state, ActivityType
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -43,6 +43,8 @@ async def create_poll(poll: PollCreate):
         raise HTTPException(400, "Need at least 2 options")
     if len(poll.options) > 8:
         raise HTTPException(400, "Maximum 8 options")
+    if state.current_activity not in (ActivityType.NONE, ActivityType.POLL):
+        raise HTTPException(409, "Another activity is already active")
 
     state.poll = {
         "question": poll.question.strip(),
@@ -54,6 +56,7 @@ async def create_poll(poll: PollCreate):
             if opt.strip()
         ],
     }
+    state.current_activity = ActivityType.POLL
     state.poll_active = False
     state.votes = {}
 
@@ -151,6 +154,7 @@ async def clear_poll():
     state.votes = {}
     state.base_scores = dict(state.scores)
     state.vote_times = {}
+    state.current_activity = ActivityType.NONE
     await broadcast(build_state_message())
     return {"ok": True}
 

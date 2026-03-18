@@ -215,6 +215,20 @@ class WorkshopSession:
     def suggest_name(self) -> str:
         return self._client.get("/api/suggest-name").json()["name"]
 
+    def open_wordcloud(self):
+        resp = self._client.post("/api/wordcloud/status", json={"active": True})
+        assert resp.status_code == 200, f"open_wordcloud failed: {resp.text}"
+
+    def close_wordcloud(self):
+        resp = self._client.post("/api/wordcloud/status", json={"active": False})
+        assert resp.status_code == 200, f"close_wordcloud failed: {resp.text}"
+
+    def assert_activity(self, expected: str):
+        from state import state
+        assert state.current_activity == expected, (
+            f"current_activity={state.current_activity!r}, expected {expected!r}"
+        )
+
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -564,3 +578,46 @@ class TestScoring:
         assert scores.get("Fast", 0) >= scores.get("Slow", 0), (
             f"Fast={scores.get('Fast')}, Slow={scores.get('Slow')} — faster voter should score >= slower"
         )
+
+
+# ---------------------------------------------------------------------------
+# Word Cloud Tests
+# ---------------------------------------------------------------------------
+
+def test_open_wordcloud_sets_activity():
+    state.reset()
+    session = WorkshopSession()
+    session.open_wordcloud()
+    session.assert_activity("wordcloud")
+
+
+def test_close_wordcloud_sets_activity_none():
+    state.reset()
+    session = WorkshopSession()
+    session.open_wordcloud()
+    session.close_wordcloud()
+    session.assert_activity("none")
+
+
+def test_open_wordcloud_clears_previous_words():
+    state.reset()
+    state.wordcloud_words = {"hello": 3}
+    session = WorkshopSession()
+    session.open_wordcloud()
+    assert state.wordcloud_words == {}
+
+
+def test_open_wordcloud_blocked_when_poll_active():
+    state.reset()
+    session = WorkshopSession()
+    session.create_poll("Q?", ["A", "B"])
+    resp = session._client.post("/api/wordcloud/status", json={"active": True})
+    assert resp.status_code == 409
+
+
+def test_create_poll_blocked_when_wordcloud_active():
+    state.reset()
+    session = WorkshopSession()
+    session.open_wordcloud()
+    resp = session._client.post("/api/poll", json={"question": "Q?", "options": ["A", "B"]})
+    assert resp.status_code == 409
