@@ -290,6 +290,7 @@
               <datalist id="wc-suggestions"></datalist>
               <button id="wc-go" class="btn btn-primary">Go</button>
             </div>
+            <p class="wc-hint">Each word you contribute earns you points!</p>
             <ul id="wc-my-words"></ul>
           </div>
         </div>`;

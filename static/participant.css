@@ -244,14 +244,17 @@ h1 { font-size: 1.4rem; color: var(--accent); letter-spacing: .05em; margin-bott
 }
 
 .wc-input-panel {
-  flex: 0 1 260px;
+  flex: 0 1 300px;
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: .75rem;
+  text-align: center;
 }
 
 .wc-prompt {
-  font-size: 1rem;
+  font-size: 1.2rem;
+  font-weight: 600;
   color: var(--text);
   margin: 0;
 }
@@ -259,16 +262,29 @@ h1 { font-size: 1.4rem; color: var(--accent); letter-spacing: .05em; margin-bott
 .wc-input-row {
   display: flex;
   gap: .5rem;
+  width: 100%;
 }
 
 .wc-input-row input {
   flex: 1;
-  padding: .5rem .75rem;
-  border-radius: 6px;
+  padding: .75rem 1rem;
+  border-radius: 8px;
   border: 1px solid var(--border);
   background: var(--surface2);
   color: var(--text);
-  font-size: 1rem;
+  font-size: 1.2rem;
+}
+
+.wc-input-row #wc-go {
+  padding: .75rem 1.25rem;
+  font-size: 1.2rem;
+}
+
+.wc-hint {
+  font-size: .8rem;
+  color: var(--accent);
+  margin: 0;
+  opacity: .85;
 }
 
 #wc-my-words {
