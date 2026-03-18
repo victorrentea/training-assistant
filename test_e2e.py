@@ -16,6 +16,8 @@ import subprocess
 import sys
 import time
 
+import requests
+
 import pytest
 from playwright.sync_api import Page, expect, sync_playwright
 
@@ -331,7 +333,6 @@ class TestWordCloud:
     def test_host_opens_wordcloud_participant_sees_screen(
         self, server_url, playwright
     ):
-        import requests
         browser = playwright.chromium.launch()
         pax_ctx = browser.new_context(base_url=server_url)
         pax = pax_ctx.new_page()
@@ -339,7 +340,8 @@ class TestWordCloud:
         join_as(pax, "WcTester1")
 
         # Clear any leftover poll state so word cloud is not blocked
-        requests.delete(f"{server_url}/api/poll")
+        resp = requests.delete(f"{server_url}/api/poll")
+        assert resp.status_code == 200
 
         # Host opens word cloud via direct API call
         resp = requests.post(f"{server_url}/api/wordcloud/status", json={"active": True})
@@ -348,13 +350,16 @@ class TestWordCloud:
         # Participant sees word cloud canvas
         expect(pax.locator("#wc-canvas")).to_be_visible(timeout=5000)
 
+        # Cleanup: close word cloud after test
+        resp = requests.post(f"{server_url}/api/wordcloud/status", json={"active": False})
+        assert resp.status_code == 200
+
         pax_ctx.close()
         browser.close()
 
     def test_participant_submits_word_appears_in_my_words(
         self, server_url, playwright
     ):
-        import requests
         browser = playwright.chromium.launch()
         pax_ctx = browser.new_context(base_url=server_url)
         pax = pax_ctx.new_page()
@@ -362,8 +367,10 @@ class TestWordCloud:
         join_as(pax, "WcTester2")
 
         # Ensure wordcloud is active (may still be active from previous test)
-        requests.post(f"{server_url}/api/wordcloud/status", json={"active": False})
-        requests.post(f"{server_url}/api/wordcloud/status", json={"active": True})
+        resp = requests.post(f"{server_url}/api/wordcloud/status", json={"active": False})
+        assert resp.status_code == 200
+        resp = requests.post(f"{server_url}/api/wordcloud/status", json={"active": True})
+        assert resp.status_code == 200
 
         expect(pax.locator("#wc-canvas")).to_be_visible(timeout=5000)
 
@@ -374,13 +381,16 @@ class TestWordCloud:
         expect(pax.locator("#wc-my-words li")).to_have_count(1, timeout=3000)
         expect(pax.locator("#wc-my-words li").first).to_have_text("microservices")
 
+        # Cleanup: close word cloud after test
+        resp = requests.post(f"{server_url}/api/wordcloud/status", json={"active": False})
+        assert resp.status_code == 200
+
         pax_ctx.close()
         browser.close()
 
     def test_close_wordcloud_participant_returns_to_idle(
         self, server_url, playwright
     ):
-        import requests
         browser = playwright.chromium.launch()
         pax_ctx = browser.new_context(base_url=server_url)
         pax = pax_ctx.new_page()
@@ -388,13 +398,16 @@ class TestWordCloud:
         join_as(pax, "WcTester3")
 
         # Ensure wordcloud is active
-        requests.post(f"{server_url}/api/wordcloud/status", json={"active": False})
-        requests.post(f"{server_url}/api/wordcloud/status", json={"active": True})
+        resp = requests.post(f"{server_url}/api/wordcloud/status", json={"active": False})
+        assert resp.status_code == 200
+        resp = requests.post(f"{server_url}/api/wordcloud/status", json={"active": True})
+        assert resp.status_code == 200
 
         expect(pax.locator("#wc-canvas")).to_be_visible(timeout=5000)
 
         # Host closes word cloud
-        requests.post(f"{server_url}/api/wordcloud/status", json={"active": False})
+        resp = requests.post(f"{server_url}/api/wordcloud/status", json={"active": False})
+        assert resp.status_code == 200
 
         # Participant no longer sees word cloud canvas
         expect(pax.locator("#wc-canvas")).not_to_be_visible(timeout=5000)
