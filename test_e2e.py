@@ -21,6 +21,10 @@ import requests
 import pytest
 from playwright.sync_api import Page, expect, sync_playwright
 
+PROD_URL = "https://interact.victorrentea.ro"
+PROD_HOST_USER = os.environ.get("HOST_USERNAME", "host")
+PROD_HOST_PASS = os.environ.get("HOST_PASSWORD", "host")
+
 
 # ---------------------------------------------------------------------------
 # Server fixture
@@ -494,3 +498,42 @@ class TestWordCloud:
 
         pax_ctx.close()
         browser.close()
+
+
+# ---------------------------------------------------------------------------
+# Production smoke tests (run against live deployed instance)
+# ---------------------------------------------------------------------------
+
+@pytest.mark.prod
+class TestProductionSmoke:
+    """
+    Smoke tests against the live Railway deployment.
+    Run with: pytest test_e2e.py -m prod -v
+    Requires HOST_USERNAME / HOST_PASSWORD env vars to match Railway config.
+    """
+
+    def test_prod_participant_page_accessible(self):
+        resp = requests.get(f"{PROD_URL}/", timeout=10)
+        assert resp.status_code == 200, f"Participant page returned {resp.status_code}"
+        assert "html" in resp.headers.get("content-type", "")
+
+    def test_prod_host_page_requires_auth(self):
+        resp = requests.get(f"{PROD_URL}/host", timeout=10)
+        assert resp.status_code == 401, f"Expected 401 without auth, got {resp.status_code}"
+
+    def test_prod_host_page_accessible_with_credentials(self):
+        resp = requests.get(f"{PROD_URL}/host", auth=(PROD_HOST_USER, PROD_HOST_PASS), timeout=10)
+        assert resp.status_code == 200, (
+            f"Host page returned {resp.status_code} with {PROD_HOST_USER!r} — "
+            "check HOST_USERNAME / HOST_PASSWORD env vars on Railway"
+        )
+
+    def test_prod_api_status_public(self):
+        resp = requests.get(f"{PROD_URL}/api/status", timeout=10)
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "participants" in data
+
+    def test_prod_api_poll_requires_auth(self):
+        resp = requests.post(f"{PROD_URL}/api/poll", json={}, timeout=10)
+        assert resp.status_code == 401, f"Expected 401 without auth, got {resp.status_code}"
