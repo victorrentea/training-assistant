@@ -7,7 +7,7 @@ URL="https://interact.victorrentea.ro/static/version.js"
 
 echo "Waiting for deploy: $EXPECTED"
 
-for i in $(seq 1 40); do
+for i in $(seq 1 200); do
   LIVE=$(curl -s "$URL" | grep -o "'.*'" | tr -d "'")
   if [ "$LIVE" = "$EXPECTED" ]; then
     echo "Deployed! ($LIVE)"
@@ -19,8 +19,8 @@ for i in $(seq 1 40); do
     afplay /System/Library/Sounds/Glass.aiff
     exit 0
   fi
-  echo "  [$i] live=$LIVE — retrying in 5s…"
-  sleep 5
+  echo "  [$i] live=$LIVE — retrying in 1s…"
+  sleep 1
 done
 
 echo "Timed out waiting for deploy."
