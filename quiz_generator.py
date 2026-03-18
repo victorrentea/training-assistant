@@ -20,7 +20,7 @@ from quiz_core import (
     DEFAULT_MINUTES, DEFAULT_MODEL, DEFAULT_SERVER_URL,
     Config, load_secrets_env,
     load_transcription_files, extract_last_n_minutes,
-    generate_quiz, refine_option,
+    generate_quiz, refine_quiz,
     print_quiz, post_poll, open_poll,
 )
 from pathlib import Path
@@ -40,6 +40,7 @@ def parse_args() -> Config:
     parser.add_argument("--api-key", default=os.environ.get("ANTHROPIC_API_KEY"))
     parser.add_argument("--model", default=os.environ.get("CLAUDE_MODEL", DEFAULT_MODEL))
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--topic", help="A specific topic or concept to generate a quiz for (RAG mode)")
     parser.add_argument("--host-username", default=os.environ.get("HOST_USERNAME", "host"))
     parser.add_argument("--host-password", default=os.environ.get("HOST_PASSWORD", ""))
     args = parser.parse_args()
@@ -59,6 +60,7 @@ def parse_args() -> Config:
         dry_run=args.dry_run,
         host_username=args.host_username,
         host_password=args.host_password,
+        topic=args.topic,
     )
 
 
@@ -66,17 +68,21 @@ def main() -> None:
     config = parse_args()
 
     # 1. Load transcription
-    entries = load_transcription_files(config.folder)
-    if not entries:
-        print("[error] No transcription content found.", file=sys.stderr)
-        sys.exit(1)
+    text = ""
+    if not config.topic:
+        entries = load_transcription_files(config.folder)
+        if not entries:
+            print("[error] No transcription content found.", file=sys.stderr)
+            sys.exit(1)
 
-    # 2. Extract last N minutes
-    text = extract_last_n_minutes(entries, config.minutes)
-    if not text:
-        print("[error] Extracted text is empty.", file=sys.stderr)
-        sys.exit(1)
-    print(f"[info] Extracted {len(text):,} characters covering the last {config.minutes} minutes")
+        # 2. Extract last N minutes
+        text = extract_last_n_minutes(entries, config.minutes)
+        if not text:
+            print("[error] Extracted text is empty.", file=sys.stderr)
+            sys.exit(1)
+        print(f"[info] Extracted {len(text):,} characters covering the last {config.minutes} minutes")
+    else:
+        print(f"[info] Topic mode: generating quiz for '{config.topic}'")
 
     # 3. Generate quiz via Claude
     quiz = generate_quiz(text, config)
@@ -112,7 +118,7 @@ def main() -> None:
                 return
             if feedback:
                 print("[info] Asking Claude to refine...")
-                quiz = refine_option(quiz, f"replace option {opt_label} with: {feedback}", config)
+                quiz = refine_quiz(quiz, f"opt{idx}", text, config)
         elif answer == "r":
             try:
                 feedback = input("Describe the change: ").strip()
@@ -121,7 +127,7 @@ def main() -> None:
                 return
             if feedback:
                 print("[info] Asking Claude to refine...")
-                quiz = refine_option(quiz, feedback, config)
+                quiz = refine_quiz(quiz, "question", text, config)
 
     # 5. Post and open
     try:
