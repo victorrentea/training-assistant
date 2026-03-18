@@ -126,7 +126,26 @@
     <div class="right-footer">
       <span style="display:flex; align-items:center; gap:.5rem;">
         <span>Join: <a id="participant-link" style="color:var(--accent); word-break:break-all; font-size:.8rem;" href="/" target="_blank"></a></span>
-        <div id="qr-icon" title="Show QR code" style="cursor:pointer; opacity:.5; flex-shrink:0;"></div>
+        <div id="qr-icon" title="Show QR code" style="cursor:pointer; opacity:.5; flex-shrink:0; width:22px; height:22px;">
+          <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" fill="currentColor" width="22" height="22">
+            <rect x="5" y="5" width="35" height="35" rx="4"/>
+            <rect x="13" y="13" width="19" height="19" rx="2" fill="var(--bg,#1a1a2e)"/>
+            <rect x="18" y="18" width="9" height="9" rx="1"/>
+            <rect x="60" y="5" width="35" height="35" rx="4"/>
+            <rect x="68" y="13" width="19" height="19" rx="2" fill="var(--bg,#1a1a2e)"/>
+            <rect x="73" y="18" width="9" height="9" rx="1"/>
+            <rect x="5" y="60" width="35" height="35" rx="4"/>
+            <rect x="13" y="68" width="19" height="19" rx="2" fill="var(--bg,#1a1a2e)"/>
+            <rect x="18" y="73" width="9" height="9" rx="1"/>
+            <rect x="60" y="60" width="9" height="9" rx="1"/>
+            <rect x="73" y="60" width="9" height="9" rx="1"/>
+            <rect x="86" y="60" width="9" height="9" rx="1"/>
+            <rect x="60" y="73" width="9" height="9" rx="1"/>
+            <rect x="86" y="73" width="9" height="9" rx="1"/>
+            <rect x="60" y="86" width="9" height="9" rx="1"/>
+            <rect x="73" y="86" width="9" height="9" rx="1"/>
+          </svg>
+        </div>
       </span>
       <div style="display:flex; gap:.5rem; margin-top:.4rem; flex-wrap:wrap;">
         <button class="btn btn-danger" onclick="resetScores()" title="Reset all scores to zero">↺ Reset scores</button>
