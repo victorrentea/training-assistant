@@ -36,12 +36,14 @@
   // ── Restore name from localStorage ──
   const nameInput = document.getElementById('name-input');
   const clearBtn = document.getElementById('clear-name');
+  let suggestedName = '';
   const savedName = localStorage.getItem(LS_KEY);
   if (savedName) {
     nameInput.value = savedName;
     join();   // auto-join
   } else {
     fetchSuggestedName().then(name => {
+      suggestedName = name;
       nameInput.placeholder = name;
       nameInput.focus();
     });
@@ -57,7 +59,8 @@
   clearBtn.addEventListener('click', async () => {
     localStorage.removeItem(LS_KEY);
     nameInput.value = '';
-    nameInput.placeholder = await fetchSuggestedName();
+    suggestedName = await fetchSuggestedName();
+    nameInput.placeholder = suggestedName;
     updateClearBtn();
     nameInput.focus();
   });
@@ -68,7 +71,7 @@
 
   function join() {
     const input = document.getElementById('name-input');
-    const name = input.value.trim() || input.placeholder;
+    const name = input.value.trim() || suggestedName;
     if (!name) { input.focus(); return; }
     myName = name;
     localStorage.setItem(LS_KEY, name);
