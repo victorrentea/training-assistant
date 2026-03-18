@@ -291,7 +291,7 @@
 
   // ── QR code ──
   const centerPanel = document.getElementById('center-qr');
-  const qrSize = Math.min(centerPanel.offsetWidth, centerPanel.offsetHeight) || 400;
+  const qrSize = (Math.min(centerPanel.offsetWidth, centerPanel.offsetHeight) || 400) * 0.8;
   // Center QR: light gray (muted), click to brighten for 5s
   new QRCode(document.getElementById('qr-code'), {
     text: link,
