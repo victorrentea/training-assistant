@@ -56,11 +56,12 @@
 
 .version-tag {
   position: fixed;
-  bottom: .4rem;
-  right: .6rem;
-  font-size: .65rem;
+  bottom: .3rem;
+  right: .4rem;
+  font-size: .55rem;
   color: var(--muted);
-  opacity: .45;
+  opacity: .2;
   pointer-events: none;
   z-index: 1;
+  letter-spacing: .02em;
 }
