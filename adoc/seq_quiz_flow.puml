@@ -1,0 +1,67 @@
+@startuml seq_quiz_flow
+title Workshop Quiz Flow — End-to-End Sequence
+
+actor       "Host"          as Host
+participant "Host UI\n(host.js)" as HostUI
+participant "Backend\n(FastAPI)" as Backend
+participant "Local Agent\n(quiz_core.py)" as Agent
+participant "Claude API\n(Anthropic)" as Claude
+participant "Participant UI\n(participant.js)" as PaxUI
+actor       "Participant"   as Pax
+
+== Quiz Generation ==
+
+Host -> HostUI : Click "Generate Quiz"\n(select N minutes)
+HostUI -> Backend : POST /api/quiz-request\n{minutes: N}
+Backend --> HostUI : 200 OK\nbroadcast: quiz_status{requested}
+HostUI -> Host : show "Waiting…"
+
+Agent -> Backend : GET /api/quiz-request (poll loop)
+Backend --> Agent : {minutes: N}
+Agent -> Agent : read last N min\nof transcription
+Agent -> Claude : messages API\n(transcript excerpt)
+Claude --> Agent : quiz JSON\n{question, options, correct_indices}
+Agent -> Backend : POST /api/quiz-preview\n{question, options, multi, correct_indices}
+Backend --> HostUI : WS broadcast: quiz_preview
+HostUI -> Host : show preview card\n(question + options + AI hints)
+
+== Poll Launch ==
+
+Host -> HostUI : Click "Fire" (optionally after refining)
+HostUI -> Backend : POST /api/poll\n{question, options, multi, correct_count}
+Backend -> Backend : store poll in state\nclear votes
+Backend --> HostUI : WS broadcast: state{poll, poll_active=false}
+HostUI -> Backend : POST /api/poll/status {open: true}
+Backend -> Backend : snapshot base_scores\nrecord poll_opened_at
+Backend --> HostUI : WS broadcast: state{poll_active=true}
+Backend --> PaxUI : WS broadcast: state{poll, poll_active=true}
+PaxUI -> Pax : render poll options\n"Select exactly N answers"
+
+== Voting ==
+
+Pax -> PaxUI : click option(s)
+PaxUI -> Backend : WS: {type: vote / multi_vote,\noption_id(s)}
+Backend -> Backend : store vote + timestamp
+Backend --> HostUI : WS broadcast: vote_update\n{vote_counts, total_votes}
+HostUI -> Host : update live bar chart
+
+== Close Poll ==
+
+Host -> HostUI : Click "Close voting"
+HostUI -> Backend : POST /api/poll/status {open: false}
+Backend --> HostUI : WS broadcast: state{poll_active=false}
+Backend --> PaxUI : WS broadcast: state{poll_active=false}
+PaxUI -> Pax : show final vote bars\n(% per option)
+HostUI -> Host : show final results\n+ "Mark correct" buttons
+
+== Results ==
+
+Host -> HostUI : click correct option(s)\nto mark answers
+HostUI -> Backend : POST /api/poll/correct\n{correct_ids}
+Backend -> Backend : compute scores\n(R−W)/C × speed bonus\nper participant
+Backend --> HostUI : WS broadcast: scores{name→pts}
+Backend --> PaxUI : WS: result{correct_ids,\nvoted_ids, score}\n(per participant)
+HostUI -> Host : highlight correct bars\n+ participant scores
+PaxUI -> Pax : show ✅/❌ per option\n+ personal score
+
+@enduml
