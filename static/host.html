@@ -56,6 +56,11 @@
           <input type="checkbox" id="multi-check" style="width:1rem; height:1rem; cursor:pointer;" />
           Multi-select
         </label>
+        <label id="correct-count-label" style="display:none; align-items:center; gap:.4rem; font-size:.9rem; color:var(--text); margin:0;">
+          <input type="number" id="correct-count" min="1" max="8" value="2"
+                 style="width:3.2rem; height:34px; box-sizing:border-box; text-align:center; background:var(--surface2); color:var(--text); border:1px solid var(--border); border-radius:6px; font-size:.9rem;" />
+          correct
+        </label>
       </div>
       <div class="or-divider"><span>or</span></div>
       <div class="quiz-gen-row">
@@ -67,6 +72,7 @@
               <option value="15">15 min</option>
               <option value="30" selected>30 min</option>
               <option value="60">1 hour</option>
+              <option value="90">1.5 hours</option>
               <option value="480">whole day</option>
             </select>
           </div>
