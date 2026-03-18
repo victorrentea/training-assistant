@@ -9,6 +9,9 @@
   let activeTimer = null; // {seconds, startedAt (ms)} or null
   let _timerInterval = null;
   let _multiWarnShown = false; // true once warning has been shown for current poll
+  let myWords = [];  // participant's own submitted words (session-only, clears on reconnect)
+  const WC_COLORS = ['#7ecef4','#a78bfa','#34d399','#fbbf24','#f472b6','#60a5fa','#fb923c'];
+  let _wcDebounceTimer = null;
 
   function escHtml(s) {
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -172,7 +175,15 @@
         pollActive = msg.poll_active;
         updateParticipantCount(msg.participant_count);
         updateScore((msg.scores || {})[myName]);
-        renderContent(msg.vote_counts);
+        if (msg.current_activity === 'wordcloud') {
+          renderWordCloudScreen(msg.wordcloud_words || {});
+        } else {
+          // Clear wordcloud screen state when leaving
+          const content = document.getElementById('content');
+          if (content) content.dataset.screen = '';
+          myWords = [];
+          renderContent(msg.vote_counts);
+        }
         break;
       case 'vote_update':
         renderOptions(msg.vote_counts, msg.total_votes);
@@ -250,6 +261,101 @@
       else if (wasVoted) icon.textContent = '❌';
       else icon.textContent = '';
     });
+  }
+
+  // ── Word Cloud ──
+  function renderWordCloudScreen(wordcloudWords) {
+    const content = document.getElementById('content');
+    if (content.dataset.screen !== 'wordcloud') {
+      myWords = [];  // reset on fresh entry
+      content.dataset.screen = 'wordcloud';
+      content.innerHTML = `
+        <div class="wc-layout">
+          <div class="wc-cloud-panel">
+            <canvas id="wc-canvas"></canvas>
+          </div>
+          <div class="wc-input-panel">
+            <p class="wc-prompt">What word comes to mind?</p>
+            <div class="wc-input-row">
+              <input id="wc-input" type="text" maxlength="40" autocomplete="off" placeholder="Type a word…" />
+              <button id="wc-go" class="btn btn-primary">Go</button>
+            </div>
+            <ul id="wc-my-words"></ul>
+          </div>
+        </div>`;
+      document.getElementById('wc-go').onclick = submitWord;
+      document.getElementById('wc-input').addEventListener('keydown', e => {
+        if (e.key === 'Enter') submitWord();
+      });
+    }
+    renderWordCloud(wordcloudWords);
+    renderMyWords();
+  }
+
+  function submitWord() {
+    const input = document.getElementById('wc-input');
+    if (!input) return;
+    const word = input.value.trim();
+    if (!word) return;
+    ws.send(JSON.stringify({ type: 'wordcloud_word', word }));
+    myWords.unshift(word);
+    input.value = '';
+    renderMyWords();
+  }
+
+  function renderMyWords() {
+    const ul = document.getElementById('wc-my-words');
+    if (!ul) return;
+    ul.innerHTML = myWords.map(w => `<li>${escHtml(w)}</li>`).join('');
+  }
+
+  function renderWordCloud(words) {
+    const canvas = document.getElementById('wc-canvas');
+    if (!canvas) return;
+    clearTimeout(_wcDebounceTimer);
+    _wcDebounceTimer = setTimeout(() => _drawCloud(canvas, words), 300);
+  }
+
+  function _drawCloud(canvas, wordsMap) {
+    const entries = Object.entries(wordsMap);
+    if (!entries.length) {
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      return;
+    }
+    const W = canvas.parentElement.clientWidth || 400;
+    const H = canvas.parentElement.clientHeight || 300;
+    canvas.width = W;
+    canvas.height = H;
+
+    const maxCount = Math.max(...entries.map(([,c]) => c));
+    const minCount = Math.min(...entries.map(([,c]) => c));
+    const sizeScale = d3.scaleLinear()
+      .domain([minCount, maxCount])
+      .range([14, 60]);
+
+    d3.layout.cloud()
+      .size([W, H])
+      .words(entries.map(([text, count]) => ({ text, size: sizeScale(count) })))
+      .padding(4)
+      .rotate(() => (Math.random() > 0.5 ? 90 : 0))
+      .font('sans-serif')
+      .fontSize(d => d.size)
+      .on('end', (placed) => {
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, W, H);
+        ctx.textAlign = 'center';
+        placed.forEach((w, i) => {
+          ctx.save();
+          ctx.translate(W / 2 + w.x, H / 2 + w.y);
+          ctx.rotate((w.rotate * Math.PI) / 180);
+          ctx.font = `bold ${w.size}px sans-serif`;
+          ctx.fillStyle = WC_COLORS[i % WC_COLORS.length];
+          ctx.fillText(w.text, 0, 0);
+          ctx.restore();
+        });
+      })
+      .start();
   }
 
   // ── Render ──

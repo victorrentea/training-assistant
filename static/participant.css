@@ -217,3 +217,94 @@ h1 { font-size: 1.4rem; color: var(--accent); letter-spacing: .05em; margin-bott
   font-size: .85rem;
   color: var(--danger);
 }
+
+/* Word Cloud screen */
+.wc-layout {
+  display: flex;
+  gap: 1.5rem;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.wc-cloud-panel {
+  flex: 1 1 300px;
+  min-height: 260px;
+  background: var(--surface2);
+  border-radius: 10px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.wc-cloud-panel canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.wc-input-panel {
+  flex: 0 1 260px;
+  display: flex;
+  flex-direction: column;
+  gap: .75rem;
+}
+
+.wc-prompt {
+  font-size: 1rem;
+  color: var(--text);
+  margin: 0;
+}
+
+.wc-input-row {
+  display: flex;
+  gap: .5rem;
+}
+
+.wc-input-row input {
+  flex: 1;
+  padding: .5rem .75rem;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text);
+  font-size: 1rem;
+}
+
+.btn {
+  padding: .5rem 1rem;
+  border: none;
+  border-radius: 6px;
+  font-size: .95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity .2s, transform .1s;
+  min-height: 38px;
+}
+.btn:hover { opacity: .85; }
+.btn:active { transform: scale(.97); }
+.btn-primary { background: var(--accent); color: #fff; }
+
+#wc-my-words {
+  list-style: disc;
+  padding-left: 1.25rem;
+  color: var(--muted);
+  font-size: .9rem;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+/* Mobile: stack cloud on top */
+@media (max-width: 600px) {
+  .wc-layout {
+    flex-direction: column-reverse;
+  }
+  .wc-cloud-panel {
+    width: 100%;
+    min-height: 220px;
+    order: -1;
+  }
+  .wc-input-panel {
+    width: 100%;
+  }
+}
