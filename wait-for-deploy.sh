@@ -24,4 +24,8 @@ for i in $(seq 1 200); do
 done
 
 echo "Timed out waiting for deploy."
+terminal-notifier -title "❌ Deploy Timeout!" -message "Version $EXPECTED never went live" -timeout 10 &
+afplay /System/Library/Sounds/Basso.aiff &
+sleep 0.4
+afplay /System/Library/Sounds/Basso.aiff
 exit 1
