@@ -1,4 +1,6 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
+
+from auth import require_host_auth
 from pydantic import BaseModel
 
 from messaging import broadcast, build_state_message
@@ -11,7 +13,7 @@ class WordCloudStatus(BaseModel):
     active: bool
 
 
-@router.post("/api/wordcloud/status")
+@router.post("/api/wordcloud/status", dependencies=[Depends(require_host_auth)])
 async def set_wordcloud_status(body: WordCloudStatus):
     if body.active:
         if state.current_activity != ActivityType.NONE:

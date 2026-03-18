@@ -67,13 +67,36 @@ def server_url():
 
 
 # ---------------------------------------------------------------------------
+# Auth helpers
+# ---------------------------------------------------------------------------
+
+HOST_USER = "host"
+HOST_PASS = "hostvibe!"
+HOST_AUTH = (HOST_USER, HOST_PASS)
+
+
+def host_context(server_url, playwright):
+    """Create a browser context pre-configured with host Basic Auth credentials."""
+    browser = playwright.chromium.launch()
+    ctx = browser.new_context(
+        base_url=server_url,
+        http_credentials={"username": HOST_USER, "password": HOST_PASS},
+    )
+    return browser, ctx
+
+
+def api(server_url, method, path, **kwargs):
+    """Make an authenticated API call to a host-only endpoint."""
+    return getattr(requests, method)(f"{server_url}{path}", auth=HOST_AUTH, **kwargs)
+
+
+# ---------------------------------------------------------------------------
 # Page helpers
 # ---------------------------------------------------------------------------
 
 @pytest.fixture()
 def host_page(server_url, playwright):
-    browser = playwright.chromium.launch()
-    ctx = browser.new_context(base_url=server_url)
+    browser, ctx = host_context(server_url, playwright)
     page = ctx.new_page()
     page.goto("/host")
     yield page
@@ -127,7 +150,7 @@ class TestPollLifecycle:
         self, server_url, playwright
     ):
         browser = playwright.chromium.launch()
-        host_ctx = browser.new_context(base_url=server_url)
+        _, host_ctx = host_context(server_url, playwright)
         pax_ctx = browser.new_context(base_url=server_url)
 
         host = host_ctx.new_page()
@@ -150,7 +173,7 @@ class TestPollLifecycle:
 
     def test_vote_registers_and_host_sees_count(self, server_url, playwright):
         browser = playwright.chromium.launch()
-        host_ctx = browser.new_context(base_url=server_url)
+        _, host_ctx = host_context(server_url, playwright)
         pax_ctx = browser.new_context(base_url=server_url)
 
         host = host_ctx.new_page()
@@ -175,7 +198,7 @@ class TestPollLifecycle:
 
     def test_results_shown_after_poll_closed(self, server_url, playwright):
         browser = playwright.chromium.launch()
-        host_ctx = browser.new_context(base_url=server_url)
+        _, host_ctx = host_context(server_url, playwright)
         pax_ctx = browser.new_context(base_url=server_url)
 
         host = host_ctx.new_page()
@@ -205,7 +228,7 @@ class TestPollLifecycle:
 
     def test_correct_answer_feedback_shown_to_participant(self, server_url, playwright):
         browser = playwright.chromium.launch()
-        host_ctx = browser.new_context(base_url=server_url)
+        _, host_ctx = host_context(server_url, playwright)
         pax_ctx = browser.new_context(base_url=server_url)
 
         host = host_ctx.new_page()
@@ -239,7 +262,7 @@ class TestMultiSelect:
 
     def test_correct_count_hint_shown_to_participant(self, server_url, playwright):
         browser = playwright.chromium.launch()
-        host_ctx = browser.new_context(base_url=server_url)
+        _, host_ctx = host_context(server_url, playwright)
         pax_ctx = browser.new_context(base_url=server_url)
 
         host = host_ctx.new_page()
@@ -266,7 +289,7 @@ class TestMultiSelect:
         self, server_url, playwright
     ):
         browser = playwright.chromium.launch()
-        host_ctx = browser.new_context(base_url=server_url)
+        _, host_ctx = host_context(server_url, playwright)
         pax_ctx = browser.new_context(base_url=server_url)
 
         host = host_ctx.new_page()
@@ -357,7 +380,7 @@ class TestRegressions:
         no votes yet. Participant joining an open poll must render without error.
         """
         browser = playwright.chromium.launch()
-        host_ctx = browser.new_context(base_url=server_url)
+        _, host_ctx = host_context(server_url, playwright)
         pax_ctx = browser.new_context(base_url=server_url)
 
         host = host_ctx.new_page()
@@ -397,18 +420,18 @@ class TestWordCloud:
         join_as(pax, "WcTester1")
 
         # Clear any leftover poll state so word cloud is not blocked
-        resp = requests.delete(f"{server_url}/api/poll")
+        resp = api(server_url, "delete", "/api/poll")
         assert resp.status_code == 200
 
         # Host opens word cloud via direct API call
-        resp = requests.post(f"{server_url}/api/wordcloud/status", json={"active": True})
+        resp = api(server_url, "post", "/api/wordcloud/status", json={"active": True})
         assert resp.status_code == 200
 
         # Participant sees word cloud canvas
         expect(pax.locator("#wc-canvas")).to_be_visible(timeout=5000)
 
         # Cleanup: close word cloud after test
-        resp = requests.post(f"{server_url}/api/wordcloud/status", json={"active": False})
+        resp = api(server_url, "post", "/api/wordcloud/status", json={"active": False})
         assert resp.status_code == 200
 
         pax_ctx.close()
@@ -424,9 +447,9 @@ class TestWordCloud:
         join_as(pax, "WcTester2")
 
         # Ensure wordcloud is active (may still be active from previous test)
-        resp = requests.post(f"{server_url}/api/wordcloud/status", json={"active": False})
+        resp = api(server_url, "post", "/api/wordcloud/status", json={"active": False})
         assert resp.status_code == 200
-        resp = requests.post(f"{server_url}/api/wordcloud/status", json={"active": True})
+        resp = api(server_url, "post", "/api/wordcloud/status", json={"active": True})
         assert resp.status_code == 200
 
         expect(pax.locator("#wc-canvas")).to_be_visible(timeout=5000)
@@ -439,7 +462,7 @@ class TestWordCloud:
         expect(pax.locator("#wc-my-words li").first).to_have_text("microservices")
 
         # Cleanup: close word cloud after test
-        resp = requests.post(f"{server_url}/api/wordcloud/status", json={"active": False})
+        resp = api(server_url, "post", "/api/wordcloud/status", json={"active": False})
         assert resp.status_code == 200
 
         pax_ctx.close()
@@ -455,15 +478,15 @@ class TestWordCloud:
         join_as(pax, "WcTester3")
 
         # Ensure wordcloud is active
-        resp = requests.post(f"{server_url}/api/wordcloud/status", json={"active": False})
+        resp = api(server_url, "post", "/api/wordcloud/status", json={"active": False})
         assert resp.status_code == 200
-        resp = requests.post(f"{server_url}/api/wordcloud/status", json={"active": True})
+        resp = api(server_url, "post", "/api/wordcloud/status", json={"active": True})
         assert resp.status_code == 200
 
         expect(pax.locator("#wc-canvas")).to_be_visible(timeout=5000)
 
         # Host closes word cloud
-        resp = requests.post(f"{server_url}/api/wordcloud/status", json={"active": False})
+        resp = api(server_url, "post", "/api/wordcloud/status", json={"active": False})
         assert resp.status_code == 200
 
         # Participant no longer sees word cloud canvas
