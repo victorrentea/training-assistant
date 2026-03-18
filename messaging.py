@@ -29,6 +29,21 @@ def build_state_message() -> dict:
         "scores": state.scores,
         "current_activity": state.current_activity,
         "wordcloud_words": state.wordcloud_words,
+        "qa_questions": [
+            {
+                "id": qid,
+                "text": q["text"],
+                "author": q["author"],
+                "upvote_count": len(q["upvoters"]),
+                "upvoters": list(q["upvoters"]),
+                "answered": q["answered"],
+                "timestamp": q["timestamp"],
+            }
+            for qid, q in sorted(
+                state.qa_questions.items(),
+                key=lambda item: (-len(item[1]["upvoters"]), item[1]["timestamp"])
+            )
+        ],
     }
 
 
