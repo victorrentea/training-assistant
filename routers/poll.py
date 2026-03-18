@@ -3,7 +3,9 @@ import logging
 from datetime import datetime, timezone
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
+
+from auth import require_host_auth
 from pydantic import BaseModel
 
 from messaging import broadcast, build_state_message
@@ -35,7 +37,7 @@ class PollCorrect(BaseModel):
     correct_ids: list[str]
 
 
-@router.post("/api/poll")
+@router.post("/api/poll", dependencies=[Depends(require_host_auth)])
 async def create_poll(poll: PollCreate):
     if not poll.question.strip():
         raise HTTPException(400, "Question cannot be empty")
@@ -64,7 +66,7 @@ async def create_poll(poll: PollCreate):
     return {"ok": True, "poll": state.poll}
 
 
-@router.post("/api/poll/status")
+@router.post("/api/poll/status", dependencies=[Depends(require_host_auth)])
 async def set_poll_status(body: PollOpen):
     if not state.poll:
         raise HTTPException(400, "No poll created yet")
@@ -77,7 +79,7 @@ async def set_poll_status(body: PollOpen):
     return {"ok": True, "poll_active": state.poll_active}
 
 
-@router.post("/api/poll/correct")
+@router.post("/api/poll/correct", dependencies=[Depends(require_host_auth)])
 async def set_correct_options(body: PollCorrect):
     if not state.poll:
         raise HTTPException(400, "No active poll")
@@ -135,7 +137,7 @@ async def set_correct_options(body: PollCorrect):
     return {"ok": True}
 
 
-@router.post("/api/poll/timer")
+@router.post("/api/poll/timer", dependencies=[Depends(require_host_auth)])
 async def start_poll_timer(body: PollTimer):
     """Host starts a countdown; broadcasts timer to all clients."""
     if not state.poll_active:
@@ -147,7 +149,7 @@ async def start_poll_timer(body: PollTimer):
     return {"ok": True}
 
 
-@router.delete("/api/poll")
+@router.delete("/api/poll", dependencies=[Depends(require_host_auth)])
 async def clear_poll():
     state.poll = None
     state.poll_active = False
