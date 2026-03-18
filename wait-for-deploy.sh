@@ -11,6 +11,8 @@ for i in $(seq 1 40); do
   LIVE=$(curl -s "$URL" | grep -o "'.*'" | tr -d "'")
   if [ "$LIVE" = "$EXPECTED" ]; then
     echo "Deployed! ($LIVE)"
+    # macOS notification (auto-dismisses after 5s)
+    osascript -e "display notification \"Version $LIVE is live on interact.victorrentea.ro\" with title \"🚀 Deployed!\"" &
     # YouTube-style notification ding (two quick tones)
     afplay /System/Library/Sounds/Glass.aiff &
     sleep 0.4
