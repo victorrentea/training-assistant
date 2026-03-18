@@ -87,7 +87,6 @@ async def set_correct_options(body: PollCorrect):
     new_scores = dict(state.base_scores)
     for name, selection in state.votes.items():
         voted = set(selection) if isinstance(selection, list) else {selection}
-        logger.info(f"Scoring {name}: voted={voted}, correct={correct_set}, wrong={wrong_set}, multi={multi}, type={type(selection)}")
         if multi and correct_set:
             # Proportional (R - W) / C, floored at 0
             R = len(voted & correct_set)   # correct options selected
