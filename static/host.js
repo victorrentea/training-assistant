@@ -288,18 +288,27 @@
   });
 
   // ── QR code ──
-  const style = getComputedStyle(document.documentElement);
   const centerPanel = document.getElementById('center-qr');
   const qrSize = Math.min(centerPanel.offsetWidth, centerPanel.offsetHeight) || 400;
+  // Center QR: light gray (muted), click to brighten for 5s
   new QRCode(document.getElementById('qr-code'), {
     text: link,
     width: qrSize,
     height: qrSize,
-    colorDark: style.getPropertyValue('--text').trim(),
-    colorLight: style.getPropertyValue('--surface').trim(),
+    colorDark: '#888888',
+    colorLight: 'transparent',
   });
 
-  // Fullscreen QR overlay
+  // Small QR icon in bottom-right footer
+  new QRCode(document.getElementById('qr-icon'), {
+    text: link,
+    width: 48,
+    height: 48,
+    colorDark: '#888888',
+    colorLight: 'transparent',
+  });
+
+  // Fullscreen QR overlay (opened from bottom-right icon)
   const qrFullSize = Math.min(window.innerWidth, window.innerHeight) * 0.8;
   new QRCode(document.getElementById('qr-fullscreen'), {
     text: link,
@@ -310,7 +319,17 @@
   });
   document.getElementById('qr-overlay-url').textContent = link;
 
+  // Center QR: click to brighten for 5s then fade back
+  let _qrBrightenTimer = null;
   document.getElementById('qr-code').addEventListener('click', () => {
+    const el = document.getElementById('qr-code');
+    el.classList.add('qr-bright');
+    clearTimeout(_qrBrightenTimer);
+    _qrBrightenTimer = setTimeout(() => el.classList.remove('qr-bright'), 5000);
+  });
+
+  // Bottom-right icon: click to open fullscreen overlay
+  document.getElementById('qr-icon').addEventListener('click', () => {
     document.getElementById('qr-overlay').classList.add('open');
   });
 

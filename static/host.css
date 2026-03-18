@@ -89,12 +89,29 @@ body {
   justify-content: center;
 }
 
+#center-qr .qr-code {
+  opacity: .18;
+  transition: opacity .4s ease;
+  cursor: pointer;
+}
+#center-qr .qr-code.qr-bright {
+  opacity: .85;
+}
 #center-qr .qr-code img,
 #center-qr .qr-code canvas {
   width: 100% !important;
   height: 100% !important;
   max-width: 100%;
   display: block;
+}
+
+#qr-icon {
+  line-height: 0;
+}
+#qr-icon img, #qr-icon canvas {
+  display: block;
+  width: 48px !important;
+  height: 48px !important;
 }
 
 #center-poll {
