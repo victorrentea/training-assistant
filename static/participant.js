@@ -51,7 +51,11 @@
   }
   updateClearBtn();
 
-  nameInput.addEventListener('input', updateClearBtn);
+  nameInput.addEventListener('input', () => {
+    updateClearBtn();
+    const errEl = document.getElementById('join-error');
+    if (errEl) errEl.style.display = 'none';
+  });
 
   function updateClearBtn() {
     clearBtn.style.display = nameInput.value ? 'block' : 'none';
@@ -70,13 +74,37 @@
   document.getElementById('join-btn').addEventListener('click', join);
   nameInput.addEventListener('keydown', e => { if (e.key === 'Enter') join(); });
 
+  let _joinedWithSuggestion = false;
+
   function join() {
     const input = document.getElementById('name-input');
     const name = input.value.trim() || suggestedName;
     if (!name) { input.focus(); return; }
+    _joinedWithSuggestion = !input.value.trim();
     myName = name;
     localStorage.setItem(LS_KEY, name);
     connectWS(name);
+  }
+
+  async function handleNameTaken() {
+    localStorage.removeItem(LS_KEY);
+    myName = '';
+    ws = null;
+    document.getElementById('main-screen').style.display = 'none';
+    document.getElementById('join-screen').style.display = 'block';
+    const errEl = document.getElementById('join-error');
+    errEl.textContent = 'That name is already taken. Please choose another.';
+    errEl.style.display = 'block';
+    const nameInput = document.getElementById('name-input');
+    if (_joinedWithSuggestion) {
+      nameInput.value = '';
+      suggestedName = await fetchSuggestedName();
+      nameInput.placeholder = suggestedName;
+    } else {
+      nameInput.select();
+    }
+    updateClearBtn();
+    nameInput.focus();
   }
 
   // ── Leave ──
@@ -130,12 +158,18 @@
       ws.send(JSON.stringify({ type: 'location', location: locationStr }));
     };
 
+    let _nameTaken = false;
     ws.onmessage = (event) => {
       const msg = JSON.parse(event.data);
+      if (msg.type === 'name_taken') { _nameTaken = true; return; }
       handleMessage(msg);
     };
 
     ws.onclose = () => {
+      if (_nameTaken) {
+        handleNameTaken();
+        return;
+      }
       setTimeout(() => connectWS(myName), 3000);   // auto-reconnect
     };
   }
