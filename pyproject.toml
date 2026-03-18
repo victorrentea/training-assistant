@@ -17,3 +17,6 @@ dev = [
 
 [tool.pytest.ini_options]
 testpaths = ["."]
+markers = [
+    "prod: smoke tests against the live Railway deployment",
+]

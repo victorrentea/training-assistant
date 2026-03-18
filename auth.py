@@ -19,8 +19,13 @@ _security = HTTPBasic()
 
 
 def require_host_auth(credentials: HTTPBasicCredentials = Depends(_security)):
-    expected_user = os.environ.get("HOST_USERNAME", "host")
-    expected_pass = os.environ.get("HOST_PASSWORD", "host")
+    expected_user = os.environ.get("HOST_USERNAME") or "host"
+    expected_pass = os.environ.get("HOST_PASSWORD") or "host"
+    if expected_pass == "host":
+        import logging
+        logging.getLogger(__name__).warning(
+            "HOST_PASSWORD not set — using insecure default. Set HOST_PASSWORD env var."
+        )
     ok = (
         secrets.compare_digest(credentials.username.encode(), expected_user.encode())
         and secrets.compare_digest(credentials.password.encode(), expected_pass.encode())
