@@ -1,0 +1,18 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "async": true,
+            "statusMessage": "Running tests...",
+            "timeout": 120,
+            "command": "FILE=$(jq -r '.tool_input.file_path // .tool_response.filePath'); echo \"$FILE\" | grep -qE '\\.(py|js)$' || exit 0; cd /Users/victorrentea/PycharmProjects/training-assistant && python3 -m pytest test_main.py -q 2>&1 | tail -5 && node test_participant_js.js 2>&1 | tail -2 && python3 -m pytest test_e2e.py -q 2>&1 | tail -5"
+          }
+        ]
+      }
+    ]
+  }
+}
