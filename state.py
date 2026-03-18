@@ -9,6 +9,7 @@ class ActivityType(str, Enum):
     NONE = "none"
     POLL = "poll"
     WORDCLOUD = "wordcloud"
+    QA = "qa"
 
 LOTR_NAMES = [
     "Frodo", "Samwise", "Gandalf", "Aragorn", "Legolas", "Gimli", "Boromir",
@@ -41,6 +42,8 @@ class AppState:
         self.vote_times: dict[str, datetime] = {}
         self.current_activity: ActivityType = ActivityType.NONE
         self.wordcloud_words: dict[str, int] = {}
+        self.qa_questions: dict[str, dict] = {}
+        # Each value: { id, text, author, upvoters: set[str], answered: bool, timestamp: float }
 
     def suggest_name(self) -> str:
         # Purge stale suggestions older than connected participants set (keep set bounded)
