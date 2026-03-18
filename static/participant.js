@@ -10,6 +10,7 @@
   let _timerInterval = null;
   let _multiWarnShown = false; // true once warning has been shown for current poll
   let myWords = [];  // participant's own submitted words (session-only, clears on reconnect)
+  let _lastWordcloudWords = {};
   const WC_COLORS = ['#7ecef4','#a78bfa','#34d399','#fbbf24','#f472b6','#60a5fa','#fb923c'];
   let _wcDebounceTimer = null;
 
@@ -272,6 +273,7 @@
 
   // ── Word Cloud ──
   function renderWordCloudScreen(wordcloudWords) {
+    _lastWordcloudWords = wordcloudWords;
     const content = document.getElementById('content');
     if (content.dataset.screen !== 'wordcloud') {
       myWords = [];  // reset on fresh entry
@@ -284,7 +286,8 @@
           <div class="wc-input-panel">
             <p class="wc-prompt">What word comes to mind?</p>
             <div class="wc-input-row">
-              <input id="wc-input" type="text" maxlength="40" autocomplete="off" placeholder="Type a word…" />
+              <input id="wc-input" type="text" maxlength="40" autocomplete="off" placeholder="Type a word…" list="wc-suggestions" />
+              <datalist id="wc-suggestions"></datalist>
               <button id="wc-go" class="btn btn-primary">Go</button>
             </div>
             <ul id="wc-my-words"></ul>
@@ -297,6 +300,7 @@
     }
     renderWordCloud(wordcloudWords);
     renderMyWords();
+    updateWordSuggestions(wordcloudWords);
   }
 
   function submitWord() {
@@ -308,12 +312,23 @@
     myWords.unshift(word);
     input.value = '';
     renderMyWords();
+    updateWordSuggestions(_lastWordcloudWords || {});
   }
 
   function renderMyWords() {
     const ul = document.getElementById('wc-my-words');
     if (!ul) return;
     ul.innerHTML = myWords.map(w => `<li>${escHtml(w)}</li>`).join('');
+  }
+
+  function updateWordSuggestions(wordcloudWords) {
+    const dl = document.getElementById('wc-suggestions');
+    if (!dl) return;
+    const mySet = new Set(myWords.map(w => w.toLowerCase()));
+    dl.innerHTML = Object.keys(wordcloudWords)
+      .filter(w => !mySet.has(w.toLowerCase()))
+      .map(w => `<option value="${escHtml(w)}">`)
+      .join('');
   }
 
   function renderWordCloud(words) {
