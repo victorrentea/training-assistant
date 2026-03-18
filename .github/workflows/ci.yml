@@ -1,0 +1,34 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          pip install fastapi "uvicorn[standard]" websockets python-multipart httpx \
+                      pytest pytest-anyio pytest-playwright
+
+      - name: Install Playwright browsers
+        run: python -m playwright install --with-deps chromium
+
+      - name: Unit tests (API + scoring)
+        run: pytest test_main.py -v
+
+      - name: JS unit tests
+        run: node test_participant_js.js
+
+      - name: E2E browser tests
+        run: pytest test_e2e.py -v
