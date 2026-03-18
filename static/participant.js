@@ -41,7 +41,10 @@
     nameInput.value = savedName;
     join();   // auto-join
   } else {
-    fetchSuggestedName().then(name => nameInput.placeholder = name);
+    fetchSuggestedName().then(name => {
+      nameInput.placeholder = name;
+      nameInput.focus();
+    });
   }
   updateClearBtn();
 
