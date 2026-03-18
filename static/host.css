@@ -83,6 +83,20 @@ body {
   overflow: hidden;
 }
 
+#center-qr {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#center-qr .qr-code img,
+#center-qr .qr-code canvas {
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100%;
+  display: block;
+}
+
 #center-poll {
   overflow-y: auto;
 }

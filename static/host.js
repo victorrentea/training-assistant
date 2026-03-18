@@ -289,10 +289,12 @@
 
   // ── QR code ──
   const style = getComputedStyle(document.documentElement);
+  const centerPanel = document.getElementById('center-qr');
+  const qrSize = Math.min(centerPanel.offsetWidth, centerPanel.offsetHeight) || 400;
   new QRCode(document.getElementById('qr-code'), {
     text: link,
-    width: 120,
-    height: 120,
+    width: qrSize,
+    height: qrSize,
     colorDark: style.getPropertyValue('--text').trim(),
     colorLight: style.getPropertyValue('--surface').trim(),
   });
