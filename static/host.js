@@ -98,10 +98,21 @@
     const proto = location.protocol === 'https:' ? 'wss' : 'ws';
     ws = new WebSocket(`${proto}://${location.host}/ws/__host__`);
 
+    let _kicked = false;
     ws.onopen = () => setBadge(true);
-    ws.onclose = () => { setBadge(false); setTimeout(connectWS, 3000); };
+    ws.onclose = () => { setBadge(false); if (!_kicked) setTimeout(connectWS, 3000); };
     ws.onmessage = (e) => {
       const msg = JSON.parse(e.data);
+      if (msg.type === 'kicked') {
+        _kicked = true;
+        document.body.insertAdjacentHTML('beforeend', `
+          <div style="position:fixed;inset:0;background:rgba(0,0,0,.85);display:flex;align-items:center;
+            justify-content:center;z-index:9999;font-size:1.4rem;color:#fff;text-align:center;padding:2rem;">
+            This session is being taken over by another tab.<br>This tab will close shortly.
+          </div>`);
+        setTimeout(() => window.close(), 3000);
+        return;
+      }
       if (msg.type === 'state') {
         const prevQuestion = currentPoll?.question;
         currentPoll = msg.poll;
