@@ -27,6 +27,8 @@ def build_state_message() -> dict:
         "daemon_connected": daemon_connected,
         "quiz_preview": state.quiz_preview,
         "scores": state.scores,
+        "current_activity": state.current_activity,
+        "wordcloud_words": state.wordcloud_words,
     }
 
 
