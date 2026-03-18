@@ -122,7 +122,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--surface2);
+  background: #000;
   border-radius: 10px;
   overflow: hidden;
 }
