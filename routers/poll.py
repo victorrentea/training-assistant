@@ -1,6 +1,7 @@
 import json
 import logging
 from datetime import datetime, timezone
+from typing import Optional
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
@@ -20,6 +21,7 @@ class PollCreate(BaseModel):
     question: str
     options: list[str]
     multi: bool = False
+    correct_count: Optional[int] = None
 
 class PollTimer(BaseModel):
     seconds: int
@@ -45,6 +47,7 @@ async def create_poll(poll: PollCreate):
     state.poll = {
         "question": poll.question.strip(),
         "multi": poll.multi,
+        "correct_count": poll.correct_count if poll.multi else None,
         "options": [
             {"id": f"opt{i}", "text": opt.strip()}
             for i, opt in enumerate(poll.options)
@@ -146,6 +149,8 @@ async def clear_poll():
     state.poll = None
     state.poll_active = False
     state.votes = {}
+    state.base_scores = dict(state.scores)
+    state.vote_times = {}
     await broadcast(build_state_message())
     return {"ok": True}
 

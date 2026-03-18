@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 @router.websocket("/ws/{participant_name}")
 async def websocket_endpoint(websocket: WebSocket, participant_name: str):
-    name = participant_name.strip()
+    name = participant_name.strip()[:32]
     if not name:
         await websocket.close(code=1008)
         return
@@ -61,11 +61,15 @@ async def websocket_endpoint(websocket: WebSocket, participant_name: str):
             elif data.get("type") == "multi_vote":
                 option_ids = data.get("option_ids", [])
                 valid_ids = [o["id"] for o in state.poll["options"]] if state.poll else []
+                correct_count = state.poll.get("correct_count") if state.poll else None
+                max_allowed = correct_count if correct_count else len(valid_ids)
                 if (
                     state.poll_active
                     and state.poll
                     and state.poll.get("multi")
                     and isinstance(option_ids, list)
+                    and len(option_ids) <= max_allowed
+                    and len(set(option_ids)) == len(option_ids)  # no duplicates
                     and all(oid in valid_ids for oid in option_ids)
                 ):
                     state.votes[name] = option_ids
@@ -80,6 +84,7 @@ async def websocket_endpoint(websocket: WebSocket, participant_name: str):
     except WebSocketDisconnect:
         state.participants.pop(name, None)
         state.locations.pop(name, None)
+        state.vote_times.pop(name, None)
         logger.info(f"Disconnected: {name} ({len(state.participants)} remaining)")
         names = participant_names()
         await broadcast({
