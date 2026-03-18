@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Workshop — Host Panel</title>
+  <title>host</title>
   <link rel="icon" type="image/svg+xml" href="/static/favicon-host.svg" />
   <link rel="stylesheet" href="/static/common.css" />
   <link rel="stylesheet" href="/static/host.css" />
@@ -72,7 +72,7 @@
     <div id="tab-content-wordcloud" class="tab-content" style="display:none;">
       <div id="wc-inactive">
         <button class="btn btn-primary wc-open-btn" id="wc-open-btn" onclick="openWordCloud()">☁ Open Word Cloud</button>
-        <p id="wc-blocked-msg" style="display:none; font-size:.85rem; color:var(--warn); margin-top:.5rem;">Remove the current poll first.</p>
+        <p id="wc-blocked-msg" style="display:none; font-size:.85rem; color:var(--warn); margin-top:.5rem;">Opening word cloud will close the current poll.</p>
       </div>
       <div id="wc-active" style="display:none;">
         <button class="btn btn-danger" onclick="closeWordCloud()">✕ Close Word Cloud</button>
@@ -89,7 +89,7 @@
     <!-- Status badges — pinned to bottom of left column -->
     <div class="left-status-bar">
       <span id="ws-badge" class="badge disconnected">● Server</span>
-      <span id="daemon-badge" class="badge disconnected" title="">Agent</span>
+      <span id="daemon-badge" class="badge disconnected" title="">🎛️</span>
     </div>
   </div>
 
@@ -106,7 +106,7 @@
           <h2 style="margin:0; font-size:.95rem; color:var(--muted); text-transform:uppercase; letter-spacing:.08em;">Current Poll</h2>
           <span id="poll-pills"></span>
         </div>
-        <button class="btn btn-primary" onclick="downloadPollHistory()" title="Download today's polls">⬇ Quiz Q&amp;A</button>
+        <button class="btn btn-primary" onclick="downloadPollHistory()" title="Download today's polls">⬇ Download questions</button>
       </div>
       <div id="poll-display"></div>
     </div>
@@ -125,9 +125,9 @@
     <ul id="pax-list" class="pax-list" title="Click a location to view map"></ul>
     <div class="right-footer">
       <span style="display:flex; align-items:center; gap:.5rem;">
-        <span>Join: <a id="participant-link" style="color:var(--accent); word-break:break-all; font-size:.8rem;" href="/" target="_blank"></a></span>
-        <div id="qr-icon" title="Show QR code" style="cursor:pointer; opacity:.5; flex-shrink:0; width:22px; height:22px;">
-          <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" fill="currentColor" width="22" height="22">
+        <span>Join at: <a id="participant-link" style="color:var(--accent); word-break:break-all; font-size:.8rem;" href="/" target="_blank"></a></span>
+        <div id="qr-icon" title="Show QR code" style="cursor:pointer; opacity:.5; flex-shrink:0; width:28px; height:28px;">
+          <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" fill="currentColor" width="28" height="28">
             <rect x="5" y="5" width="35" height="35" rx="4"/>
             <rect x="13" y="13" width="19" height="19" rx="2" fill="var(--bg,#1a1a2e)"/>
             <rect x="18" y="18" width="9" height="9" rx="1"/>
@@ -149,7 +149,7 @@
       </span>
       <div style="display:flex; gap:.5rem; margin-top:.4rem; flex-wrap:wrap;">
         <button class="btn btn-danger" onclick="resetScores()" title="Reset all scores to zero">↺ Reset scores</button>
-        <button class="btn btn-primary" onclick="downloadPollHistory()" title="Download today's polls">⬇ Quiz Q&amp;A</button>
+        <button class="btn btn-primary" onclick="downloadPollHistory()" title="Download today's polls">⬇ Download questions</button>
       </div>
     </div>
   </div>
