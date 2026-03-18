@@ -369,6 +369,11 @@
     }
   });
 
+  // ── Multi-check: show/hide correct-count spinner ──
+  document.getElementById('multi-check').addEventListener('change', function () {
+    document.getElementById('correct-count-label').style.display = this.checked ? 'flex' : 'none';
+  });
+
   // ── Create poll ──
   document.getElementById('create-btn').addEventListener('click', async () => {
     const { question, options } = parsePollInput();
@@ -377,10 +382,12 @@
     if (options.length < 2) { toast('Add at least 2 options'); return; }
 
     const multi = document.getElementById('multi-check').checked;
+    const correctCountEl = document.getElementById('correct-count');
+    const correct_count = multi ? (parseInt(correctCountEl.value) || null) : null;
     const res = await fetch('/api/poll', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ question, options, multi }),
+      body: JSON.stringify({ question, options, multi, correct_count }),
     });
     const data = await res.json().catch(() => ({}));
     if (res.ok) {
@@ -392,6 +399,7 @@
       toast('Poll created & opened ✓');
       pollInput.innerHTML = '<div><br></div>';
       document.getElementById('multi-check').checked = false;
+      document.getElementById('correct-count-label').style.display = 'none';
       // Record poll in history (correct answers will be updated later via toggleCorrect)
       if (data.poll) recordPollInHistory(data.poll, new Set());
     } else {
@@ -478,7 +486,7 @@
       return `
         <div class="result-row ${correct} ${canMark ? 'markable' : ''}" data-id="${opt.id}" ${clickable}>
           <div class="result-label">
-            <span>${opt.text}${isCorrect ? ' ✅' : ''}${llmHint ? ' <span class="llm-hint" title="AI suggestion">✅ 🤔</span>' : ''}</span>
+            <span>${escHtml(opt.text)}${isCorrect ? ' ✅' : ''}${llmHint ? ' <span class="llm-hint" title="AI suggestion">✅ 🤔</span>' : ''}</span>
             <span class="pct">${count} vote${count!==1?'s':''} · ${pct}%</span>
           </div>
           <div class="bar-track">
@@ -495,11 +503,15 @@
         ).join('') : '';
 
     const pillsEl = document.getElementById('poll-pills');
-    if (pillsEl) pillsEl.innerHTML =
-      `<span class="mode-pill">${currentPoll.multi ? '☑ Multi-select' : '◉ Single-select'}</span>`;
+    if (pillsEl) {
+      const countHint = currentPoll.multi && currentPoll.correct_count
+        ? ` · ${currentPoll.correct_count} correct` : '';
+      pillsEl.innerHTML =
+        `<span class="mode-pill">${currentPoll.multi ? '☑ Multi-select' : '◉ Single-select'}${countHint}</span>`;
+    }
 
     el.innerHTML = `
-      <p class="poll-question">${currentPoll.question}</p>
+      <p class="poll-question">${escHtml(currentPoll.question)}</p>
       ${bars}
       <p style="font-size:.8rem; color:var(--muted); margin-top:.5rem;">${totalVotes} total vote${totalVotes!==1?'s':''}</p>
       ${countdownEl}
@@ -652,10 +664,14 @@
 
   async function firePreview() {
     if (!pendingPreview) return;
+    const payload = { ...pendingPreview };
+    if (payload.multi && payload.correct_indices?.length) {
+      payload.correct_count = payload.correct_indices.length;
+    }
     const res = await fetch('/api/poll', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(pendingPreview),
+      body: JSON.stringify(payload),
     });
     if (res.ok) {
       // Store LLM's correct_indices hint keyed by question for post-close display

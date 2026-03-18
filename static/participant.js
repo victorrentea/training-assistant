@@ -10,6 +10,20 @@
   let _timerInterval = null;
   let _multiWarnShown = false; // true once warning has been shown for current poll
 
+  function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // Largest-remainder rounding: ensures integer percentages sum to exactly 100
+  function largestRemainder(floats) {
+    const floors = floats.map(Math.floor);
+    const remainder = 100 - floors.reduce((a, b) => a + b, 0);
+    const order = floats.map((v, i) => [v - Math.floor(v), i])
+      .sort((a, b) => b[0] - a[0]);
+    for (let i = 0; i < remainder; i++) floors[order[i][1]]++;
+    return floors;
+  }
+
   async function fetchSuggestedName() {
     const res = await fetch('/api/suggest-name');
     const data = await res.json();
@@ -255,12 +269,17 @@
     const hasVoted = multi ? myVote instanceof Set && myVote.size > 0 : myVote !== null;
     const showResults = !pollActive;
 
-    let optionsHTML = currentPoll.options.map(opt => {
-      const count = (voteCounts || {})[opt.id] || 0;
-      const pct = totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
-      const selected = multi ? (myVote instanceof Set && myVote.has(opt.id) ? 'selected' : '')
-                              : (myVote === opt.id ? 'selected' : '');
-      const disabled = !pollActive ? 'disabled' : '';
+    // Largest-remainder rounding so percentages always sum to exactly 100
+    const pcts = largestRemainder(currentPoll.options.map(opt =>
+      totalVotes > 0 ? ((voteCounts || {})[opt.id] || 0) / totalVotes * 100 : 0
+    ));
+
+    let optionsHTML = currentPoll.options.map((opt, idx) => {
+      const pct = pcts[idx];
+      const isSelected = multi ? (myVote instanceof Set && myVote.has(opt.id)) : (myVote === opt.id);
+      const selected = isSelected ? 'selected' : '';
+      const atLimit = multi && currentPoll.correct_count && myVote instanceof Set && myVote.size >= currentPoll.correct_count;
+      const disabled = !pollActive || (atLimit && !isSelected) ? 'disabled' : '';
       let resultIcon = '';
       if (pollResult) {
         const wasVoted = pollResult.voted_ids.has(opt.id);
@@ -271,7 +290,7 @@
       return `
         <button class="option-btn ${selected}" ${disabled} onclick="castVote('${opt.id}')">
           <div class="bar" style="width:${showResults ? pct : 0}%"></div>
-          <span>${opt.text}</span>
+          <span>${escHtml(opt.text)}</span>
           ${resultIcon}
           ${showResults ? `<span class="pct">${pct}%</span>` : ''}
         </button>`;
@@ -283,14 +302,22 @@
     } else if (multi) {
       const selCount = myVote instanceof Set ? myVote.size : 0;
       let warning = '';
+      const correctCount = currentPoll.correct_count;
+      const multiHint = correctCount
+        ? `Select exactly ${correctCount} answer${correctCount > 1 ? 's' : ''}`
+        : 'Multiple answers may be correct';
       if (selCount > 0) {
         const blink = !_multiWarnShown ? ' blink' : '';
         if (!_multiWarnShown) _multiWarnShown = true;
-        warning = `<div class="multi-warning${blink}">⚠️ Multiple answers may be correct!</div>`;
+        warning = `<div class="multi-warning${blink}">⚠️ ${multiHint}!</div>`;
       }
-      footer = `<div class="vote-msg">${selCount > 0
-        ? `✅ ${selCount} option${selCount > 1 ? 's' : ''} selected — click to toggle.`
-        : 'Select one or more options.'}</div>${warning}`;
+      const atLimit = correctCount && selCount >= correctCount;
+      const selMsg = selCount > 0
+        ? (atLimit
+            ? `✅ ${selCount} of ${correctCount} selected — click to deselect.`
+            : `✅ ${selCount} of ${correctCount ?? '?'} selected — click to toggle.`)
+        : `<span class="multi-hint">⚠️ ${multiHint}.</span>`;
+      footer = `<div class="vote-msg">${selMsg}</div>${warning}`;
     } else if (hasVoted) {
       footer = `<div class="vote-msg">✅ Vote registered! Click another option to change it.</div>`;
     } else {
@@ -303,7 +330,7 @@
 
     container.innerHTML = `
       <div class="poll-card">
-        <h2>${currentPoll.question}</h2>
+        <h2>${escHtml(currentPoll.question)}</h2>
         ${optionsHTML}
         ${countdownEl}
         ${footer}
@@ -338,8 +365,13 @@
 
     if (currentPoll.multi) {
       if (!(myVote instanceof Set)) myVote = new Set();
-      if (myVote.has(optionId)) myVote.delete(optionId);
-      else myVote.add(optionId);
+      if (myVote.has(optionId)) {
+        myVote.delete(optionId);
+      } else {
+        const limit = currentPoll.correct_count;
+        if (limit && myVote.size >= limit) return; // cap at correct_count
+        myVote.add(optionId);
+      }
       ws.send(JSON.stringify({ type: 'multi_vote', option_ids: [...myVote] }));
     } else {
       if (myVote === optionId) return;
@@ -353,6 +385,7 @@
   // Update only selected state and footer after casting a vote — no bar animation flicker
   function updateSelectionUI() {
     const multi = !!currentPoll.multi;
+    const atLimit = multi && currentPoll.correct_count && myVote instanceof Set && myVote.size >= currentPoll.correct_count;
     document.querySelectorAll('.option-btn').forEach((btn, i) => {
       const opt = currentPoll.options[i];
       if (!opt) return;
@@ -360,21 +393,30 @@
         ? (myVote instanceof Set && myVote.has(opt.id))
         : (myVote === opt.id);
       btn.classList.toggle('selected', selected);
+      if (multi) btn.disabled = atLimit && !selected;
     });
 
     const hasVoted = multi ? myVote instanceof Set && myVote.size > 0 : myVote !== null;
     let footerHTML = '';
     if (multi) {
       const selCount = myVote instanceof Set ? myVote.size : 0;
+      const correctCount = currentPoll.correct_count;
+      const multiHint = correctCount
+        ? `Select exactly ${correctCount} answer${correctCount > 1 ? 's' : ''}`
+        : 'Multiple answers may be correct';
       let warning = '';
       if (selCount > 0) {
         const blink = !_multiWarnShown ? ' blink' : '';
         if (!_multiWarnShown) _multiWarnShown = true;
-        warning = `<div class="multi-warning${blink}">⚠️ Multiple answers may be correct!</div>`;
+        warning = `<div class="multi-warning${blink}">⚠️ ${multiHint}!</div>`;
       }
-      footerHTML = `<div class="vote-msg">${selCount > 0
-        ? `✅ ${selCount} option${selCount > 1 ? 's' : ''} selected — click to toggle.`
-        : 'Select one or more options.'}</div>${warning}`;
+      const atLimit = correctCount && selCount >= correctCount;
+      const selMsg = selCount > 0
+        ? (atLimit
+            ? `✅ ${selCount} of ${correctCount} selected — click to deselect.`
+            : `✅ ${selCount} of ${correctCount ?? '?'} selected — click to toggle.`)
+        : `<span class="multi-hint">⚠️ ${multiHint}.</span>`;
+      footerHTML = `<div class="vote-msg">${selMsg}</div>${warning}`;
     } else {
       footerHTML = `<div class="vote-msg">✅ Vote registered! Click another option to change it.</div>`;
     }

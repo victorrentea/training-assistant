@@ -34,6 +34,9 @@ class AppState:
         self.vote_times: dict[str, datetime] = {}
 
     def suggest_name(self) -> str:
+        # Purge stale suggestions older than connected participants set (keep set bounded)
+        if len(self.suggested_names) > 50:
+            self.suggested_names.clear()
         taken = set(self.participants.keys()) | self.suggested_names
         available = [n for n in LOTR_NAMES if n not in taken]
         name = available[0] if available else f"Guest{random.randint(100, 999)}"
