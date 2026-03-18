@@ -10,6 +10,7 @@ Run:
 """
 
 import os
+import re
 import socket
 import subprocess
 import sys
@@ -23,33 +24,39 @@ from playwright.sync_api import Page, expect, sync_playwright
 # Server fixture
 # ---------------------------------------------------------------------------
 
-def _free_port() -> int:
-    with socket.socket() as s:
-        s.bind(("127.0.0.1", 0))
-        return s.getsockname()[1]
-
-
 @pytest.fixture(scope="session")
 def server_url():
-    port = _free_port()
+    """
+    Spin up uvicorn on port 0 (OS picks a free port atomically).
+    Parse the actual bound port from uvicorn's stderr output.
+    This avoids the TOCTOU race of pick-port-then-bind.
+    """
     proc = subprocess.Popen(
         [sys.executable, "-m", "uvicorn", "main:app",
-         "--host", "127.0.0.1", "--port", str(port)],
+         "--host", "127.0.0.1", "--port", "0"],
         stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-        cwd=os.path.dirname(__file__) or ".",
+        stderr=subprocess.PIPE,   # capture to read bound port
+        cwd=os.path.dirname(os.path.abspath(__file__)),
     )
-    # Wait until the server accepts connections
+
+    # uvicorn logs: "Uvicorn running on http://127.0.0.1:<PORT>"
+    port = None
     deadline = time.time() + 15
     while time.time() < deadline:
-        try:
-            with socket.create_connection(("127.0.0.1", port), timeout=0.5):
-                break
-        except OSError:
-            time.sleep(0.2)
+        line = proc.stderr.readline().decode("utf-8", errors="replace")
+        m = re.search(r"127\.0\.0\.1:(\d+)", line)
+        if m:
+            port = int(m.group(1))
+            break
+        if proc.poll() is not None:
+            raise RuntimeError("uvicorn exited unexpectedly during startup")
     else:
         proc.terminate()
-        raise RuntimeError("uvicorn did not start in time")
+        raise RuntimeError("uvicorn did not log a bound port within 15s")
+
+    # Drain stderr in background so the pipe doesn't block
+    import threading
+    threading.Thread(target=proc.stderr.read, daemon=True).start()
 
     yield f"http://127.0.0.1:{port}"
 
