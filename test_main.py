@@ -69,6 +69,11 @@ class ParticipantSession:
     def send_location(self, location: str):
         self.send({"type": "location", "location": location})
 
+    def submit_word(self, word: str):
+        """Submit a word to the word cloud."""
+        self.send({"type": "wordcloud_word", "word": word})
+        self._last_state = self._recv("state")
+
     # ── Assertions ──
 
     def assert_poll(self, question: str):
@@ -122,6 +127,14 @@ class ParticipantSession:
     def assert_no_score(self):
         assert self.name not in state.scores or state.scores[self.name] == 0, (
             f"{self.name}: expected no score but got {state.scores.get(self.name)}"
+        )
+
+    def assert_wordcloud_word(self, word: str, expected_count: int):
+        """Assert a word's count in the word cloud state."""
+        words = self._last_state.get("wordcloud_words", {})
+        actual = words.get(word, 0)
+        assert actual == expected_count, (
+            f"{self.name}: wordcloud_words[{word!r}]={actual}, expected {expected_count}"
         )
 
     # ── Internal helpers ──
@@ -621,3 +634,61 @@ def test_create_poll_blocked_when_wordcloud_active():
     session.open_wordcloud()
     resp = session._client.post("/api/poll", json={"question": "Q?", "options": ["A", "B"]})
     assert resp.status_code == 409
+
+
+def test_wordcloud_word_increments_count():
+    state.reset()
+    session = WorkshopSession()
+    session.open_wordcloud()
+    client = TestClient(app)
+    with client.websocket_connect("/ws/Alice") as ws_alice:
+        alice = ParticipantSession(ws_alice, "Alice")
+        alice.submit_word("microservices")
+        alice.assert_wordcloud_word("microservices", 1)
+        alice.submit_word("microservices")
+        alice.assert_wordcloud_word("microservices", 2)
+
+
+def test_wordcloud_word_normalizes():
+    state.reset()
+    session = WorkshopSession()
+    session.open_wordcloud()
+    client = TestClient(app)
+    with client.websocket_connect("/ws/Alice") as ws_alice:
+        alice = ParticipantSession(ws_alice, "Alice")
+        alice.submit_word("  Microservices  ")
+        alice.assert_wordcloud_word("microservices", 1)
+
+
+def test_wordcloud_word_awards_200_pts():
+    state.reset()
+    session = WorkshopSession()
+    session.open_wordcloud()
+    client = TestClient(app)
+    with client.websocket_connect("/ws/Alice") as ws_alice:
+        alice = ParticipantSession(ws_alice, "Alice")
+        alice.submit_word("complexity")
+        alice.assert_score(200)
+
+
+def test_wordcloud_word_host_gets_no_pts():
+    state.reset()
+    session = WorkshopSession()
+    session.open_wordcloud()
+    client = TestClient(app)
+    with client.websocket_connect("/ws/__host__") as ws_host:
+        host = ParticipantSession(ws_host, "__host__")
+        host.submit_word("complexity")
+        assert state.scores.get("__host__", 0) == 0
+
+
+def test_wordcloud_word_rejected_when_not_active():
+    state.reset()
+    session = WorkshopSession()
+    # wordcloud NOT opened
+    client = TestClient(app)
+    with client.websocket_connect("/ws/Alice") as ws_alice:
+        alice = ParticipantSession(ws_alice, "Alice")
+        alice.send({"type": "wordcloud_word", "word": "test"})
+        # No state update — word should be silently dropped
+        assert state.wordcloud_words == {}
