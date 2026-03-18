@@ -418,7 +418,7 @@
   function renderContent(voteCounts) {
     const el = document.getElementById('content');
     if (!currentPoll) {
-      el.innerHTML = `<div class="waiting"><div class="icon">⏳</div><p>Waiting for the host to start a poll…</p></div>`;
+      el.innerHTML = `<div class="waiting"><div class="icon">⏳</div><p>Waiting for host…</p></div>`;
       return;
     }
     renderPollCard(el, voteCounts);
