@@ -229,7 +229,7 @@ h1 { font-size: 1.4rem; color: var(--accent); letter-spacing: .05em; margin-bott
 .wc-cloud-panel {
   flex: 1 1 300px;
   min-height: 260px;
-  background: var(--surface2);
+  background: #000;
   border-radius: 10px;
   overflow: hidden;
   display: flex;
