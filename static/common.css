@@ -53,3 +53,14 @@
 .btn-danger  { background: var(--danger);  color: #fff; }
 .btn-warn    { background: var(--warn);    color: var(--bg); }
 .btn:disabled { opacity: .35; cursor: default; }
+
+.version-tag {
+  position: fixed;
+  bottom: .4rem;
+  right: .6rem;
+  font-size: .65rem;
+  color: var(--muted);
+  opacity: .45;
+  pointer-events: none;
+  z-index: 1;
+}

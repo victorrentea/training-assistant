@@ -88,8 +88,9 @@
     document.getElementById('main-screen').style.display = 'none';
     document.getElementById('join-screen').style.display = 'block';
     nameInput.value = '';
-    fetchSuggestedName().then(name => nameInput.placeholder = name);
+    fetchSuggestedName().then(name => { suggestedName = name; nameInput.placeholder = name; });
     updateClearBtn();
+    nameInput.focus();
   });
 
   // ── Location ──
