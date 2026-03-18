@@ -300,11 +300,11 @@
   });
 
   // Fullscreen QR overlay
-  const qrSize = Math.min(window.innerWidth, window.innerHeight) * 0.8;
+  const qrFullSize = Math.min(window.innerWidth, window.innerHeight) * 0.8;
   new QRCode(document.getElementById('qr-fullscreen'), {
     text: link,
-    width: qrSize,
-    height: qrSize,
+    width: qrFullSize,
+    height: qrFullSize,
     colorDark: '#000000',
     colorLight: '#ffffff',
   });
