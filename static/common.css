@@ -58,9 +58,9 @@
   position: fixed;
   bottom: .3rem;
   right: .4rem;
-  font-size: .55rem;
+  font-size: .7rem;
   color: var(--muted);
-  opacity: .2;
+  opacity: .3;
   pointer-events: none;
   z-index: 1;
   letter-spacing: .02em;
