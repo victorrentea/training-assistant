@@ -9,6 +9,10 @@
   let scores = {};               // participant_name -> score
   let cachedNames = [];          // last known participant names
 
+  let hostWords = [];
+  let _hostWcDebounceTimer = null;
+  const WC_COLORS = ['#7ecef4','#a78bfa','#34d399','#fbbf24','#f472b6','#60a5fa','#fb923c'];
+
   // ── Poll history (persisted in localStorage, keyed by today's date) ──
   const TODAY_KEY = `host_polls_${new Date().toISOString().slice(0, 10)}`;
 
@@ -110,6 +114,12 @@
         renderDaemonStatus(msg.daemon_connected, msg.daemon_last_seen);
         renderPreview(msg.quiz_preview || null);
         renderPollDisplay();
+        const currentActivity = msg.current_activity || 'none';
+        updateCenterPanel(currentActivity);
+        updateWordCloudTab(currentActivity);
+        if (currentActivity === 'wordcloud') {
+          renderHostWordCloud(msg.wordcloud_words || {});
+        }
       } else if (msg.type === 'vote_update') {
         voteCounts = msg.vote_counts || {};
         totalVotes = msg.total_votes || 0;
@@ -724,4 +734,134 @@
   }
 
 
+  function switchTab(tab) {
+    document.getElementById('tab-poll').classList.toggle('active', tab === 'poll');
+    document.getElementById('tab-wordcloud').classList.toggle('active', tab === 'wordcloud');
+    document.getElementById('tab-content-poll').style.display = tab === 'poll' ? '' : 'none';
+    document.getElementById('tab-content-wordcloud').style.display = tab === 'wordcloud' ? '' : 'none';
+  }
+
+  function updateCenterPanel(currentActivity) {
+    document.getElementById('center-qr').style.display = currentActivity === 'none' ? '' : 'none';
+    document.getElementById('center-poll').style.display = currentActivity === 'poll' ? '' : 'none';
+    document.getElementById('center-wordcloud').style.display = currentActivity === 'wordcloud' ? '' : 'none';
+  }
+
+  async function openWordCloud() {
+    const resp = await fetch('/api/wordcloud/status', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ active: true }),
+    });
+    if (!resp.ok) toast('Cannot open: remove current poll first');
+  }
+
+  async function closeWordCloud() {
+    const canvas = document.getElementById('host-wc-canvas');
+    if (canvas && canvas.width > 0) {
+      canvas.toBlob(blob => {
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `wordcloud-${new Date().toISOString().slice(0,10)}.png`;
+        a.click();
+        URL.revokeObjectURL(a.href);
+      });
+    }
+    await fetch('/api/wordcloud/status', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ active: false }),
+    });
+  }
+
+  function hostSubmitWord() {
+    const input = document.getElementById('wc-host-input');
+    if (!input) return;
+    const word = input.value.trim();
+    if (!word || !ws) return;
+    ws.send(JSON.stringify({ type: 'wordcloud_word', word }));
+    hostWords.unshift(word);
+    input.value = '';
+    renderHostWordList();
+  }
+
+  function renderHostWordList() {
+    const ul = document.getElementById('wc-host-words');
+    if (!ul) return;
+    ul.innerHTML = hostWords.map(w => `<li>${escHtml(w)}</li>`).join('');
+  }
+
+  function updateWordCloudTab(currentActivity) {
+    const inactive = document.getElementById('wc-inactive');
+    const active = document.getElementById('wc-active');
+    const blockedMsg = document.getElementById('wc-blocked-msg');
+    const openBtn = document.getElementById('wc-open-btn');
+    if (!inactive || !active) return;
+
+    const isWordCloudActive = currentActivity === 'wordcloud';
+    const isPollActive = currentActivity === 'poll';
+
+    inactive.style.display = isWordCloudActive ? 'none' : '';
+    active.style.display = isWordCloudActive ? '' : 'none';
+
+    if (openBtn) {
+      openBtn.disabled = isPollActive;
+      openBtn.style.opacity = isPollActive ? '.4' : '';
+      openBtn.style.cursor = isPollActive ? 'not-allowed' : '';
+    }
+    if (blockedMsg) {
+      blockedMsg.style.display = isPollActive ? '' : 'none';
+    }
+  }
+
+  function renderHostWordCloud(wordsMap) {
+    const canvas = document.getElementById('host-wc-canvas');
+    if (!canvas) return;
+    clearTimeout(_hostWcDebounceTimer);
+    _hostWcDebounceTimer = setTimeout(() => _drawHostCloud(canvas, wordsMap), 300);
+  }
+
+  function _drawHostCloud(canvas, wordsMap) {
+    const entries = Object.entries(wordsMap);
+    const container = canvas.parentElement;
+    const W = container.clientWidth || 500;
+    const H = container.clientHeight || 400;
+    canvas.width = W;
+    canvas.height = H;
+    if (!entries.length) {
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, W, H);
+      return;
+    }
+    const maxCount = Math.max(...entries.map(([,c]) => c));
+    const minCount = Math.min(...entries.map(([,c]) => c));
+    const sizeScale = d3.scaleLinear().domain([minCount, maxCount]).range([16, 72]);
+    d3.layout.cloud()
+      .size([W, H])
+      .words(entries.map(([text, count]) => ({ text, size: sizeScale(count) })))
+      .padding(4)
+      .rotate(() => (Math.random() > 0.5 ? 90 : 0))
+      .font('sans-serif')
+      .fontSize(d => d.size)
+      .on('end', (placed) => {
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, W, H);
+        ctx.textAlign = 'center';
+        placed.forEach((w, i) => {
+          ctx.save();
+          ctx.translate(W/2 + w.x, H/2 + w.y);
+          ctx.rotate((w.rotate * Math.PI) / 180);
+          ctx.font = `bold ${w.size}px sans-serif`;
+          ctx.fillStyle = WC_COLORS[i % WC_COLORS.length];
+          ctx.fillText(w.text, 0, 0);
+          ctx.restore();
+        });
+      })
+      .start();
+  }
+
   connectWS();
+
+  document.getElementById('wc-host-input')?.addEventListener('keydown', e => {
+    if (e.key === 'Enter') hostSubmitWord();
+  });
