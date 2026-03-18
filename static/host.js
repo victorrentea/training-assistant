@@ -72,6 +72,8 @@
       correctOptIds.delete(optId);
     } else {
       if (!currentPoll.multi && correctOptIds.size > 0) correctOptIds.clear(); // single-select: only one correct
+      const cap = currentPoll.correct_count;
+      if (cap && correctOptIds.size >= cap) return; // multi-select: cap at correct_count
       correctOptIds.add(optId);
     }
     saveCorrectOpts(currentPoll.question);
@@ -382,7 +384,7 @@
     reclassifyLines();
   }
 
-  initComposer('How are you feeling today?\nEnergized\nGood enough\nA bit tired\nNeed coffee');
+  initComposer('');
 
   pollInput.addEventListener('input', reclassifyLines);
 
