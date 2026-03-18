@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 from messaging import broadcast, build_state_message, send_state_to, participant_names
-from state import state
+from state import state, ActivityType
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -82,7 +82,6 @@ async def websocket_endpoint(websocket: WebSocket, participant_name: str):
                     })
 
             elif data.get("type") == "wordcloud_word":
-                from state import ActivityType
                 word = str(data.get("word", "")).strip().lower()
                 if state.current_activity == ActivityType.WORDCLOUD and word:
                     state.wordcloud_words[word] = state.wordcloud_words.get(word, 0) + 1
