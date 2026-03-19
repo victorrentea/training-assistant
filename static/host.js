@@ -547,8 +547,6 @@
         </div>`;
     }).join('');
 
-    const countdownEl = pollActive && activeTimer
-      ? `<div class="countdown-display" id="host-countdown"></div>` : '';
     const timerBtns = pollActive && !activeTimer
       ? `<span class="timer-slider-wrap">
            <span id="timer-val" class="timer-val">15s</span>
@@ -575,12 +573,12 @@
         ${pollActive ? `<div class="voting-dots"><div class="voting-dots-row"><span></span><span></span><span></span></div><div class="voting-dots-label">voting in progress</div></div>` : ''}
       </div>
       <p style="font-size:.8rem; color:var(--muted); margin-top:.5rem;">${totalVotes} total vote${totalVotes!==1?'s':''}</p>
-      ${countdownEl}
       <div class="btn-row">
         <span class="status-pill ${statusLabel}">${statusText}</span>
         ${!pollActive
           ? `<button class="btn btn-success" onclick="setPollStatus(true)">${totalVotes > 0 ? '↺ Re-open' : '▶ Open voting'}</button>`
-          : `<button class="btn btn-warn"    onclick="setPollStatus(false)">⏹ Close voting</button>`}
+          : !activeTimer ? `<button class="btn btn-warn" onclick="setPollStatus(false)">⏹ Close voting</button>` : ''}
+        ${pollActive && activeTimer ? `<div class="countdown-display" id="host-countdown"></div>` : ''}
         ${timerBtns}
         <button class="btn btn-danger" onclick="clearPoll()">✕ Close poll</button>
       </div>`;
