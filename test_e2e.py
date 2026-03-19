@@ -89,6 +89,7 @@ def _host_browser_ctx(server_url, playwright):
     ctx = browser.new_context(
         base_url=server_url,
         http_credentials={"username": HOST_USER, "password": HOST_PASS},
+        viewport={"width": 1440, "height": 900},
     )
     return browser, ctx
 
@@ -101,7 +102,18 @@ def _pax_browser_ctx(server_url, playwright):
 
 @pytest.fixture()
 def host(server_url, playwright) -> HostPage:
+    import base64
     browser, ctx = _host_browser_ctx(server_url, playwright)
+    # Inject Basic Auth header for all JS fetch() calls BEFORE creating the page
+    # (Playwright http_credentials only applies to navigation, not JS-initiated fetch)
+    auth_header = base64.b64encode(f"{HOST_USER}:{HOST_PASS}".encode()).decode()
+    ctx.add_init_script(f"""
+        const _origFetch = window.fetch;
+        window.fetch = (input, init = {{}}) => {{
+            init.headers = Object.assign({{'Authorization': 'Basic {auth_header}'}}, init.headers || {{}});
+            return _origFetch(input, init);
+        }};
+    """)
     page = ctx.new_page()
     page.goto("/host")
     yield HostPage(page)
