@@ -157,8 +157,13 @@ def index_file(path: Path) -> None:
 
     ids, documents, metadatas = [], [], []
     for page_num, text in pages:
+        if not isinstance(text, str):
+            text = str(text) if text else ""
+        # Strip null bytes — tokenizers reject them
+        text = text.replace("\x00", " ")
         for chunk_idx, chunk in enumerate(chunk_text(text)):
-            if not chunk.strip():
+            chunk = chunk.strip()
+            if not chunk:
                 continue
             ids.append(f"{filename}::{page_num}::{chunk_idx}")
             documents.append(chunk)
