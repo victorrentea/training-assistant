@@ -618,10 +618,13 @@
   }
 
   // ── Quiz generator ──
+  const GEN_LABEL_TRANSCRIPT = 'Generate from transcript';
+  const GEN_LABEL_TOPIC = 'Generate on topic';
+
   function updateGenBtn() {
     const topic = document.getElementById('quiz-topic').value.trim();
     const btn = document.getElementById('gen-quiz-btn');
-    btn.textContent = topic ? '🔍 Generate from topic' : '💬 Generate from transcript';
+    btn.textContent = topic ? GEN_LABEL_TOPIC : GEN_LABEL_TRANSCRIPT;
   }
 
   async function requestQuiz() {
@@ -1034,6 +1037,7 @@
     `).join('');
   }
 
+  updateGenBtn();
   connectWS();
 
   document.getElementById('wc-host-input')?.addEventListener('keydown', e => {

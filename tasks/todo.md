@@ -59,6 +59,33 @@
 - [x] Track follow-up as done in `backlog.md`
 - [x] Run targeted tests
 
+## Backlog item: poll generate button has inconsistent labels
+
+- [x] Ensure only two labels are ever used for `#gen-quiz-btn`
+- [x] Align initial HTML label with JS label logic
+- [x] Initialize label state on page load
+- [x] Add e2e regression for transcript/topic label switching
+- [x] Mark item done in `backlog.md`
+- [x] Run targeted tests
+
+## Follow-up request: merge `scripts/` timestamp code into daemon module
+
+- [x] Move timestamp helpers from `scripts/` to `daemon/transcript_timestamps.py`
+- [x] Switch `quiz_daemon.py` imports to daemon module
+- [x] Update timestamp tests to import daemon module
+- [x] Remove obsolete `scripts/` files
+- [x] Track follow-up as done in `backlog.md`
+- [x] Run targeted tests
+
+## Backlog item: Q&A input/button heights must match
+
+- [x] Align host Q&A input height with submit button height
+- [x] Align participant Q&A input height with submit button height
+- [x] Add focused e2e regression for control-height alignment
+- [x] Capture screenshot proof for host and participant Q&A rows
+- [x] Mark item done in `backlog.md`
+- [x] Run targeted tests
+
 ## Review
 
 - Added `scripts/append_transcription_timestamps.py` with 3s default interval and parser-compatible format.
@@ -76,3 +103,10 @@
 - Verified with `python3 -m pytest -q test_append_transcription_timestamps.py test_quiz_daemon_timestamp.py` (8 passed).
 - Follow-up applied: injected line now contains only the timestamp (no speaker) and uses single-newline separation.
 - Verified with `python3 -m pytest -q test_append_transcription_timestamps.py test_quiz_daemon_timestamp.py` (8 passed).
+- Backlog item fixed: host generate button labels are restricted to `Generate from transcript` and `Generate on topic`.
+- Verified with `python3 -m pytest -q test_e2e.py -k generate_button_uses_only_transcript_or_topic_labels` (1 passed).
+- Follow-up applied: timestamp helpers are now daemon-owned in `daemon/transcript_timestamps.py`; `scripts/` helper files removed.
+- Verified with `python3 -m pytest -q test_append_transcription_timestamps.py test_quiz_daemon_timestamp.py` (8 passed).
+- Backlog item fixed: Q&A input/button heights now match in host and participant views.
+- Verified with `python3 -m pytest -q test_e2e.py -k qa_input_and_button_heights_are_aligned_with_screenshots` (1 passed).
+- Proof screenshots: `docs/superpowers/specs/qa-height-host.png`, `docs/superpowers/specs/qa-height-participant.png`.

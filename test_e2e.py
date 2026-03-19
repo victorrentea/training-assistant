@@ -15,6 +15,7 @@ import subprocess
 import sys
 import time
 import threading
+from pathlib import Path
 
 import requests
 import pytest
@@ -251,6 +252,35 @@ class TestRegressions:
 
         expect(pax._page.locator("#content h2")).to_have_text("Zero votes test?", timeout=5000)
         assert js_errors == [], f"JS errors on participant page: {js_errors}"
+
+    def test_generate_button_uses_only_transcript_or_topic_labels(self, host: HostPage):
+        host.expect_generate_button_label("Generate from transcript")
+        host.set_quiz_topic("resilience")
+        host.expect_generate_button_label("Generate on topic")
+        host.set_quiz_topic("")
+        host.expect_generate_button_label("Generate from transcript")
+
+    def test_qa_input_and_button_heights_are_aligned_with_screenshots(self, host: HostPage, pax: ParticipantPage):
+        pax.join("QaHeightUser")
+        host.open_qa_tab()
+
+        expect(host._page.locator("#host-qa-input")).to_be_visible(timeout=5000)
+        expect(host._page.locator("#host-qa-submit-btn")).to_be_visible(timeout=5000)
+        expect(pax._page.locator("#qa-input")).to_be_visible(timeout=5000)
+        expect(pax._page.locator("#qa-submit-btn")).to_be_visible(timeout=5000)
+
+        host_input_h = host._page.locator("#host-qa-input").bounding_box()["height"]
+        host_btn_h = host._page.locator("#host-qa-submit-btn").bounding_box()["height"]
+        pax_input_h = pax._page.locator("#qa-input").bounding_box()["height"]
+        pax_btn_h = pax._page.locator("#qa-submit-btn").bounding_box()["height"]
+
+        assert abs(host_input_h - host_btn_h) <= 1.0
+        assert abs(pax_input_h - pax_btn_h) <= 1.0
+
+        proof_dir = Path(__file__).parent / "docs" / "superpowers" / "specs"
+        proof_dir.mkdir(parents=True, exist_ok=True)
+        host._page.locator("#tab-content-qa").screenshot(path=str(proof_dir / "qa-height-host.png"))
+        pax._page.locator(".qa-screen").screenshot(path=str(proof_dir / "qa-height-participant.png"))
 
 
 # ---------------------------------------------------------------------------

@@ -63,7 +63,7 @@
               <option value="480">whole day</option>
             </select>
           </div>
-          <button class="btn btn-warn" id="gen-quiz-btn" onclick="requestQuiz()" style="align-self:flex-start;">🤖 Generate</button>
+          <button class="btn btn-warn" id="gen-quiz-btn" onclick="requestQuiz()" style="align-self:flex-start;">Generate from transcript</button>
         </div>
         <span id="quiz-status"></span>
       </div>
@@ -98,12 +98,11 @@
 
     <!-- Q&A tab content -->
     <div id="tab-content-qa" class="tab-content" style="display:none;">
-      <div style="display:flex;gap:.4rem;margin-top:.5rem;">
+      <div class="qa-input-row" style="margin-top:.5rem;">
         <input id="host-qa-input" type="text" maxlength="280" autocomplete="off"
                placeholder="Ask a question as host…"
-               style="flex:1;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:.3rem .6rem;font-size:.9rem;"
                onkeydown="if(event.key==='Enter')hostSubmitQA()" />
-        <button class="btn btn-primary" onclick="hostSubmitQA()">↵</button>
+        <button id="host-qa-submit-btn" class="btn btn-primary" onclick="hostSubmitQA()">↵</button>
       </div>
       <div style="margin-top:.5rem;">
         <button class="btn btn-danger" onclick="clearQA()">✕ Clear Q&A</button>
