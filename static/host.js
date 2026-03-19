@@ -581,7 +581,7 @@
           : !activeTimer ? `<button class="btn btn-warn" onclick="setPollStatus(false)">⏹ Close voting</button>` : ''}
         ${pollActive && activeTimer ? `<div class="countdown-display" id="host-countdown"></div>` : ''}
         ${timerBtns}
-        <button class="btn btn-danger" onclick="clearPoll()">✕ Close poll</button>
+        <button class="btn btn-danger" onclick="clearPoll()">✕ Remove question</button>
       </div>`;
 
     if (pollActive && activeTimer) _startHostCountdown();
