@@ -208,9 +208,16 @@ You receive EITHER a transcript excerpt from a live workshop OR a specific topic
 Your goal is to produce exactly ONE poll question designed to spark discussion among participants.
 The question may have one OR multiple expected answers — choose whichever fits best.
 
-You have access to a tool `search_materials` that allows you to search through technical materials (books, articles, courses).
+You have access to a tool `search_materials` that searches through technical materials.
+Each result includes a `source_type` field: "slides" (workshop slides) or "book" (books/articles).
 If you receive a topic or if the transcript mentions a complex pattern (like Outbox, Circuit Breaker, Resilience),
 USE THE TOOL to find more details, nuances, and real-world examples to craft a better question.
+
+IMPORTANT — source priority:
+- PREFER slides over books: slides reflect exactly what the audience has seen and discussed.
+  Use book content to add depth or nuance only when slides don't cover the concept.
+- In the "source" field of your JSON response, mention the source type explicitly,
+  e.g. "Circuit Breaker Slides, p. 12" or "Microservices Patterns (book), p. 85".
 
 Also consult https://martinfowler.com/ for authoritative articles on patterns, architecture, and software design —
 it is an excellent reference for grounding questions in well-known expert opinions and named concepts.
@@ -225,7 +232,7 @@ Respond with ONLY a valid JSON object in this exact schema:
 }
 
 Rules:
-- If you used the tool, you MUST fill in the "source" and "page" fields based on the tool's output.
+- If you used the tool, you MUST fill in the "source" and "page" fields based on the tool's output. Include source_type in the source name (e.g. "Circuit Breaker Slides, p. 12" or "Microservices Patterns (book), p. 85"). Prefer slide sources; use book sources only for depth.
 - The question must probe understanding of a CONCEPT, not trivial recall.
 - Prefer questions where the answer is not obvious at first glance — the goal is to trigger debate.
 - Draw on your broad knowledge AND the retrieved materials to craft richer, more nuanced options.
@@ -286,7 +293,7 @@ def generate_quiz(text: str, config: Config) -> dict:
     tools = [
         {
             "name": "search_materials",
-            "description": "Search through technical materials (books, articles) for concepts like Outbox, Circuit Breaker, Resilience, etc.",
+            "description": "Search through technical materials (slides and books) for concepts like Outbox, Circuit Breaker, Resilience, etc. Each result includes source_type ('slides' or 'book'). Prefer slides results as the audience has seen them.",
             "input_schema": {
                 "type": "object",
                 "properties": {

@@ -85,10 +85,10 @@
 - [x] UX show-off: Replace the 4 timer buttons with a slider (5–30s). On mouse release, push the selected time to participants. Show current value to the left of the slider. Implement in a separate .js if > 50 lines.
 - [x] When generating questions from a topic, instruct the AI to also search https://martinfowler.com/ as a reference.
 - [x] daemon: Indexer supports files in subfolders of the materials folder (e.g. materials/books) — uses rglob + recursive watchdog.
-- [ ] e2e test the download questions button after asking 2 questions. it should capture also the correct answers marked by host.
+- [x] Claude agents, when using the RAG tool, should explicitly prefer slides over books, and mention which source type it's drawing from. Slides = audience-familiar; books = complementary depth.
 - [ ] When generating a poll from a topic, the agent should communicate to the host UI the source reference for where the question comes from. Display it in the host UI only (bottom of main div, near close poll button).
 - [ ] Adjust the prompt for generating a poll question from the transcript to focus on topics from the transcription first, then consult reference materials for depth.
-- [ ] Claude agents, when using the RAG tool, should explicitly prefer slides over books, and mention which source type it's drawing from. Slides = audience-familiar; books = complementary depth.
+- [ ] e2e test the download questions button after asking 2 questions. it should capture also the correct answers marked by host.
 - [ ] allow participants to vote at polls using keyboard up+down in single select; enter submit vote. in multi-select, display a checkbox on each option line and allow selecting it using SPACE.
 - [ ] load test: 30 participants connected simultaneously, host fires a poll, all vote randomly, host sorts by points. Run against local instance first, then deployed.
 - [ ] gamify Q&A screen: Intermittently display prompts encouraging participants to ask questions and upvote to earn points.
