@@ -108,11 +108,20 @@
 
   // ── Leave ──
   document.getElementById('leave-btn').addEventListener('click', () => {
+    const hasActivity = ws && ((window._qaQuestions || []).length > 0
+      || (window._myScore || 0) > 0);
+    const confirmed = !hasActivity || confirm(
+      'If you leave, you will lose your points, your questions, and all upvotes. Are you sure?'
+    );
+    if (!confirmed) return;
+
     if (ws) { ws.onclose = null; ws.close(); ws = null; }
     localStorage.removeItem(LS_KEY);
     clearVote();
     myName = '';
     myVote = null;
+    window._myScore = 0;
+    window._qaQuestions = [];
     document.getElementById('main-screen').style.display = 'none';
     document.getElementById('join-screen').style.display = 'block';
     nameInput.value = '';
@@ -216,13 +225,17 @@
         pollActive = msg.poll_active;
         updateParticipantCount(msg.participant_count);
         updateScore((msg.scores || {})[myName]);
+        window._myScore = (msg.scores || {})[myName] || 0;
+        window._qaQuestions = msg.qa_questions || [];
         if (msg.current_activity === 'wordcloud') {
           renderWordCloudScreen(msg.wordcloud_words || {});
+        } else if (msg.current_activity === 'qa') {
+          renderQAScreen(msg.qa_questions || [], myName);
         } else {
-          // Clear wordcloud screen state when leaving
           const content = document.getElementById('content');
           if (content) content.dataset.screen = '';
           myWords = [];
+          renderQACleanup();
           renderContent(msg.vote_counts);
         }
         break;
@@ -411,6 +424,96 @@
         });
       })
       .start();
+  }
+
+  // ── Q&A ──
+  function renderQAScreen(questions, myName) {
+    const content = document.getElementById('content');
+    if (!content) return;
+    if (content.dataset.screen === 'qa') {
+      // Already on Q&A screen — just refresh the list
+      updateQAList(questions, myName);
+      return;
+    }
+    content.dataset.screen = 'qa';
+    content.innerHTML = `
+      <div class="qa-screen">
+        <div class="qa-input-row">
+          <input id="qa-input" type="text" maxlength="280" autocomplete="off"
+                 placeholder="Ask a question…" />
+          <button id="qa-submit-btn" class="btn btn-primary" onclick="submitQuestion()">Send</button>
+        </div>
+        <div id="qa-question-list"></div>
+      </div>
+    `;
+    const input = document.getElementById('qa-input');
+    if (input) {
+      input.addEventListener('keydown', e => { if (e.key === 'Enter') submitQuestion(); });
+    }
+    updateQAList(questions, myName);
+  }
+
+  function updateQAList(questions, name) {
+    const list = document.getElementById('qa-question-list');
+    if (!list) return;
+    const condensed = questions.length >= 6;
+
+    if (!questions.length) {
+      list.innerHTML = '<p style="text-align:center;color:var(--muted);margin-top:1.5rem;font-size:.9rem;">No questions yet. Be the first!</p>';
+      return;
+    }
+
+    list.innerHTML = questions.map(q => {
+      const isOwn = q.author === name;
+      const hasUpvoted = (q.upvoters || []).includes(name);
+      const canUpvote = !isOwn && !hasUpvoted;
+      return `
+        <div class="qa-card-p${q.answered ? ' qa-answered-p' : ''}${condensed ? ' qa-condensed' : ''}">
+          <div class="qa-text-p">${escHtml(q.text)}</div>
+          <div class="qa-footer-p">
+            <span class="qa-author-p">${escHtml(q.author)}${isOwn ? ' (you)' : ''}</span>
+            <button class="qa-upvote-btn${hasUpvoted ? ' qa-upvoted' : ''}"
+                    ${canUpvote ? `onclick="upvoteQuestion('${escHtml(q.id)}')"` : 'disabled'}
+                    title="${canUpvote ? 'Upvote' : (isOwn ? 'Your question' : 'Already upvoted')}">
+              ▲ ${q.upvote_count}
+            </button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  async function submitQuestion() {
+    const input = document.getElementById('qa-input');
+    if (!input) return;
+    const text = input.value.trim();
+    if (!text || !myName) return;
+    input.disabled = true;
+    const resp = await fetch('/api/qa/question', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: myName, text }),
+    });
+    input.disabled = false;
+    if (resp.ok) {
+      input.value = '';
+    } else {
+      const err = await resp.json().catch(() => ({}));
+      alert(err.detail || 'Failed to submit question');
+    }
+  }
+
+  async function upvoteQuestion(questionId) {
+    if (!myName) return;
+    await fetch('/api/qa/upvote', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: myName, question_id: questionId }),
+    });
+  }
+
+  function renderQACleanup() {
+    // Q&A DOM is inside #content which gets replaced when switching activities
   }
 
   // ── Render ──
