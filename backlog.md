@@ -113,7 +113,7 @@
 - [ ] allow participants to vote at polls using keyboard up+down in single select; enter submit vote. in multi-select, display a checkbox on each option line and allow selecting it using SPACE.
 - [ ] The indexer should report a percentage done when it sees a bunch of work ahead. In terms of files left. then, it should index documents on max 4 threads
 - [ ] load test: 30 participants connected simultaneously, host fires a poll, all vote randomly, host sorts by points. Run against local instance first, then deployed.
-- [ ] The local agent re-indexes the files upon restart. Prevent that redundant effort by, for example, hashing the content of the files and storing the hash in the root folder of the materials. Upon restart, if the hash is the same, it means the resources weren't updated. Even better, that hash should be per file. Upon restart, each file name should be associated with the hash, and if that file hash is different, it should be re-indexed. If a file thing should be added, and if a file is extra, it should be removed from the hash, so the hash should be updated at startup after re-indexing of the resources. 
+- [x] Local agent restart now avoids redundant re-indexing by storing per-file hashes in `materials/.index-manifest.json`; startup only reindexes changed/new files and removes deleted files from both index and manifest.
 - [ ] The local agent should try to reconnect to the server if disconnected. It usually happens when I do a redeploy. I don't have to restart the agent.
 ---
 

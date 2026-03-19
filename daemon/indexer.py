@@ -3,6 +3,8 @@ Material indexer — watches MATERIALS_FOLDER for PDF/epub/mobi/txt/md/html chan
 and keeps the ChromaDB collection up to date.
 """
 
+import hashlib
+import json
 import sys
 import time
 import threading
@@ -14,6 +16,7 @@ SUPPORTED_EXTENSIONS = {".pdf", ".epub", ".mobi", ".txt", ".md", ".html"}
 CHUNK_SIZE = 2000        # ~500 tokens at ~4 chars/token
 CHUNK_OVERLAP = 200      # ~50 tokens overlap
 DEBOUNCE_SECONDS = 2.0
+MANIFEST_NAME = ".index-manifest.json"
 
 
 # ---------------------------------------------------------------------------
@@ -143,14 +146,14 @@ def chunk_text(text: str, chunk_size: int = CHUNK_SIZE, overlap: int = CHUNK_OVE
 # Index / deindex
 # ---------------------------------------------------------------------------
 
-def index_file(path: Path, base_folder: Path) -> None:
+def index_file(path: Path, base_folder: Path) -> bool:
     source_key = str(path.relative_to(base_folder))
     print(f"[indexer] Indexing {source_key}…", flush=True)
     try:
         pages = extract_pages(path)
     except Exception as e:
         print(f"[indexer] Failed to parse {source_key}: {e}", file=sys.stderr)
-        return
+        return False
 
     collection = _get_collection()
     embedder = _get_embedder()
@@ -181,10 +184,11 @@ def index_file(path: Path, base_folder: Path) -> None:
 
     if not ids:
         print(f"[indexer] No content extracted from {source_key}", file=sys.stderr)
-        return
+        return False
 
     collection.upsert(ids=ids, documents=documents, metadatas=metadatas, embeddings=embeddings)
     print(f"[indexer] Indexed {len(ids)} chunks from {source_key}", flush=True)
+    return True
 
 
 def deindex_file(source_key: str) -> None:
@@ -200,12 +204,93 @@ def deindex_file(source_key: str) -> None:
 # Initial full index
 # ---------------------------------------------------------------------------
 
+def _manifest_path(folder: Path) -> Path:
+    return folder / MANIFEST_NAME
+
+
+def _load_manifest(folder: Path) -> dict[str, str]:
+    path = _manifest_path(folder)
+    if not path.exists():
+        return {}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        files = data.get("files", {})
+        return files if isinstance(files, dict) else {}
+    except Exception as e:
+        print(f"[indexer] Failed to read manifest {path.name}: {e}", file=sys.stderr)
+        return {}
+
+
+def _save_manifest(folder: Path, files: dict[str, str]) -> None:
+    path = _manifest_path(folder)
+    payload = {"version": 1, "files": dict(sorted(files.items()))}
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    tmp.write_text(json.dumps(payload, indent=2, ensure_ascii=True) + "\n", encoding="utf-8")
+    tmp.replace(path)
+
+
+def _hash_file(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as f:
+        for chunk in iter(lambda: f.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def _iter_supported_files(folder: Path) -> list[Path]:
+    return sorted(
+        [f for f in folder.rglob("*") if f.is_file() and f.suffix.lower() in SUPPORTED_EXTENSIONS],
+        key=lambda p: str(p.relative_to(folder)),
+    )
+
+
+def _upsert_file_if_needed(path: Path, folder: Path, manifest_files: dict[str, str]) -> bool:
+    source_key = str(path.relative_to(folder))
+    new_hash = _hash_file(path)
+    old_hash = manifest_files.get(source_key)
+    if old_hash == new_hash:
+        return False
+
+    if old_hash is not None:
+        deindex_file(source_key)
+
+    ok = index_file(path, folder)
+    if ok:
+        manifest_files[source_key] = new_hash
+        return True
+
+    if old_hash is None:
+        manifest_files.pop(source_key, None)
+    return False
+
+
 def index_all(folder: Path) -> None:
-    files = [f for f in folder.rglob("*") if f.is_file() and f.suffix.lower() in SUPPORTED_EXTENSIONS]
-    print(f"[indexer] Initial indexing of {len(files)} files in {folder} (recursive)…", flush=True)
+    files = _iter_supported_files(folder)
+    manifest_files = _load_manifest(folder)
+
+    print(f"[indexer] Startup sync of {len(files)} files in {folder} (recursive)…", flush=True)
+
+    current_keys = {str(f.relative_to(folder)) for f in files}
+    stale_keys = sorted(set(manifest_files) - current_keys)
+    for source_key in stale_keys:
+        deindex_file(source_key)
+        manifest_files.pop(source_key, None)
+
+    indexed_count = 0
+    skipped_count = 0
     for f in files:
-        index_file(f, folder)
-    print("[indexer] Initial indexing complete.", flush=True)
+        changed = _upsert_file_if_needed(f, folder, manifest_files)
+        if changed:
+            indexed_count += 1
+        else:
+            skipped_count += 1
+
+    _save_manifest(folder, manifest_files)
+    print(
+        "[indexer] Startup sync complete "
+        f"(indexed/updated={indexed_count}, unchanged={skipped_count}, removed={len(stale_keys)}).",
+        flush=True,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -219,6 +304,7 @@ def _make_handler(folder: Path):
         def __init__(self):
             self._pending: dict[str, float] = {}
             self._lock = threading.Lock()
+            self._manifest_files = _load_manifest(folder)
             # Start debounce worker
             t = threading.Thread(target=self._debounce_worker, daemon=True)
             t.start()
@@ -246,9 +332,13 @@ def _make_handler(folder: Path):
                         except ValueError:
                             source_key = p.name
                         deindex_file(source_key)
+                        self._manifest_files.pop(source_key, None)
+                        _save_manifest(folder, self._manifest_files)
                     else:
                         if p.exists():
-                            index_file(p, folder)
+                            changed = _upsert_file_if_needed(p, folder, self._manifest_files)
+                            if changed:
+                                _save_manifest(folder, self._manifest_files)
 
         def on_created(self, event):
             if not event.is_directory:
