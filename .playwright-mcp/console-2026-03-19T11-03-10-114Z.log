@@ -1,0 +1,23 @@
+[   75273ms] [ERROR] WebSocket connection to 'ws://localhost:8000/ws/__host__' failed:  @ http://localhost:8000/static/host.js:98
+[   78289ms] [ERROR] WebSocket connection to 'ws://localhost:8000/ws/__host__' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:8000/static/host.js:98
+[   81291ms] [ERROR] WebSocket connection to 'ws://localhost:8000/ws/__host__' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:8000/static/host.js:98
+[   84293ms] [ERROR] WebSocket connection to 'ws://localhost:8000/ws/__host__' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:8000/static/host.js:98
+[   87295ms] [ERROR] WebSocket connection to 'ws://localhost:8000/ws/__host__' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:8000/static/host.js:98
+[   90300ms] [ERROR] WebSocket connection to 'ws://localhost:8000/ws/__host__' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:8000/static/host.js:98
+[   93305ms] [ERROR] WebSocket connection to 'ws://localhost:8000/ws/__host__' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:8000/static/host.js:98
+[   96312ms] [ERROR] WebSocket connection to 'ws://localhost:8000/ws/__host__' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:8000/static/host.js:98
+[   99331ms] [ERROR] WebSocket connection to 'ws://localhost:8000/ws/__host__' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:8000/static/host.js:98
+[  102364ms] [ERROR] WebSocket connection to 'ws://localhost:8000/ws/__host__' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:8000/static/host.js:98
+[  105412ms] [ERROR] WebSocket connection to 'ws://localhost:8000/ws/__host__' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:8000/static/host.js:98
+[  108555ms] [ERROR] WebSocket connection to 'ws://localhost:8000/ws/__host__' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:8000/static/host.js:98
+[  111805ms] [ERROR] WebSocket connection to 'ws://localhost:8000/ws/__host__' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:8000/static/host.js:98
+[  115114ms] [ERROR] WebSocket connection to 'ws://localhost:8000/ws/__host__' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:8000/static/host.js:98
+[  119208ms] [ERROR] WebSocket connection to 'ws://localhost:8000/ws/__host__' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:8000/static/host.js:98
+[  123851ms] [ERROR] WebSocket connection to 'ws://localhost:8000/ws/__host__' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:8000/static/host.js:98
+[  128104ms] [ERROR] WebSocket connection to 'ws://localhost:8000/ws/__host__' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:8000/static/host.js:98
+[  132267ms] [ERROR] WebSocket connection to 'ws://localhost:8000/ws/__host__' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:8000/static/host.js:98
+[  138710ms] [ERROR] WebSocket connection to 'ws://localhost:8000/ws/__host__' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:8000/static/host.js:98
+[  145821ms] [ERROR] WebSocket connection to 'ws://localhost:8000/ws/__host__' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:8000/static/host.js:98
+[  152472ms] [ERROR] WebSocket connection to 'ws://localhost:8000/ws/__host__' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:8000/static/host.js:98
+[  158410ms] [ERROR] WebSocket connection to 'ws://localhost:8000/ws/__host__' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:8000/static/host.js:98
+[  165838ms] [ERROR] WebSocket connection to 'ws://localhost:8000/ws/__host__' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:8000/static/host.js:98

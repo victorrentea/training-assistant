@@ -1,0 +1,1 @@
+[   73606ms] [ERROR] WebSocket connection to 'ws://localhost:8000/ws/TestUser' failed:  @ http://localhost:8000/static/participant.js:156
