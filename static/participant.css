@@ -352,8 +352,8 @@ h1 { display: none; }
   font-size: .95rem;
 }
 .qa-input-row button {
-  height: auto;
   align-self: stretch;
+  padding: 0 1rem;
 }
 
 .qa-card-p {

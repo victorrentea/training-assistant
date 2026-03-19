@@ -228,7 +228,7 @@
         window._myScore = (msg.scores || {})[myName] || 0;
         window._qaQuestions = msg.qa_questions || [];
         if (msg.current_activity === 'wordcloud') {
-          renderWordCloudScreen(msg.wordcloud_words || {});
+          renderWordCloudScreen(msg.wordcloud_words || {}, msg.wordcloud_topic || '');
         } else if (msg.current_activity === 'qa') {
           renderQAScreen(msg.qa_questions || [], myName);
         } else {
@@ -285,7 +285,7 @@
     const el = document.getElementById('my-score');
     if (!el) return;
     if (pts) {
-      el.textContent = `⭐ ${pts} pt${pts !== 1 ? 's' : ''}`;
+      el.textContent = `⭐ ${pts} pts`;
       el.style.display = '';
     } else {
       el.style.display = 'none';
@@ -318,7 +318,7 @@
   }
 
   // ── Word Cloud ──
-  function renderWordCloudScreen(wordcloudWords) {
+  function renderWordCloudScreen(wordcloudWords, topic) {
     _lastWordcloudWords = wordcloudWords;
     const content = document.getElementById('content');
     // If server word cloud is empty, host cleared it — wipe local words too
@@ -336,7 +336,7 @@
             <canvas id="wc-canvas"></canvas>
           </div>
           <div class="wc-input-panel">
-            <p class="wc-prompt">What comes to mind? <span style="font-size:.9em; opacity:.75">(⭐++)</span></p>
+            <p class="wc-prompt" id="wc-prompt-text">What comes to mind? <span style="font-size:.9em; opacity:.75; font-weight:normal">(pts++)</span></p>
             <div class="wc-input-row">
               <input id="wc-input" type="text" maxlength="40" autocomplete="off" placeholder="Type a word…" list="wc-suggestions" />
               <datalist id="wc-suggestions"></datalist>
@@ -349,6 +349,12 @@
       document.getElementById('wc-input').addEventListener('keydown', e => {
         if (e.key === 'Enter') submitWord();
       });
+    }
+    // Update prompt with topic (may change after screen is shown)
+    const promptEl = document.getElementById('wc-prompt-text');
+    if (promptEl) {
+      const topicSuffix = topic ? ` about <strong>${escHtml(topic)}</strong>` : '';
+      promptEl.innerHTML = `What comes to mind${topicSuffix}? <span style="font-size:.9em; opacity:.75; font-weight:normal">(pts++)</span>`;
     }
     renderWordCloud(wordcloudWords);
     renderMyWords();
@@ -677,13 +683,13 @@
       const multiHint = correctCount
         ? `Select exactly ${correctCount} answer${correctCount > 1 ? 's' : ''}`
         : 'Multiple answers may be correct';
+      const atLimit = correctCount && selCount >= correctCount;
       let warning = '';
-      if (selCount > 0) {
+      if (selCount > 0 && !atLimit) {
         const blink = !_multiWarnShown ? ' blink' : '';
         if (!_multiWarnShown) _multiWarnShown = true;
         warning = `<div class="multi-warning${blink}">⚠️ ${multiHint}!</div>`;
       }
-      const atLimit = correctCount && selCount >= correctCount;
       const selMsg = selCount > 0
         ? (atLimit
             ? `✅ ${selCount} of ${correctCount} selected — click to deselect.`
