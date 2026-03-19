@@ -1,0 +1,13 @@
+[project]
+name = "workshop-daemon"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    "anthropic>=0.85.0",
+    "chromadb>=0.5.0",
+    "sentence-transformers>=3.0.0",
+    "pypdf>=4.0.0",
+    "ebooklib>=0.18",
+    "mobi>=0.3.3",
+    "watchdog>=4.0.0",
+]
