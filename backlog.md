@@ -64,10 +64,10 @@
 - [x] bug: upon participant ui refresh, the past submitted words in cloud are lost They should be stored in local storage, but cleared at the moment the host opens a new word cloud.
 - [x] bug: The background of the word cloud in dark mode in participant is blue rather than black. Make it black.
 - [ ] feat: The word cloud experience can be a bit vague for the participants. To fix this, allow the host to push a topic name via a new input text in the host view, which will be displayed in the participant view in the prompt in the label sitting right on top of the input text. What comes to mind and then about <topic-from-host>. Also preserve the possibility of the host to submit a word themselves. 
-- [ ] Change the button name in the word cloud on host UI  from "Clear" to "Download and Close word cloud".And make that button download a picture of the current word cloud to the host machine automatically.
+- [x] Change the button name in the word cloud on host UI  from "Clear" to "Download and Close word cloud".And make that button download a picture of the current word cloud to the host machine automatically.
 - [x] bug: Remove the download questions button that's from the bottom right corner in the host UI. Keep the buttons from the poll content, which is already there. Shorten the text in that bottom right corner to one: say "join" and then the URL without HTTPS, and place the "reset scores" button to the right of the QR icon.
 - [x] tweak: In the participant UI, after submitting a question in the Q&A activity, the cursor should remain in the input text to allow submission of another Q&A fast.
-- [ ] feat: The host should also be able to submit a Q&A question.
+- [x] feat: The host should also be able to submit a Q&A question.
 - [x] tweak: The badge for the agent status displays the controls emoji. I want to display it similar to how server is displayed, with the text saying agent and a dot,
 - [x] the fav icon of the host page shouldn't have a red background. change its emoji to a cog.
 - [ ] load test: add a single test case, having 30 participants connected simultaneously. In the poll activity, the host fires a question with a single option, and all the participants vote on a random option. The list of participants is then sorted by the host according to the points earned. This should be an end-to-end test. After you run this test, try to execute it once against the deployed application, but then switch to using a local running instance.
