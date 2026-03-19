@@ -797,6 +797,15 @@
     document.getElementById('center-poll').style.display = currentActivity === 'poll' ? '' : 'none';
     document.getElementById('center-wordcloud').style.display = currentActivity === 'wordcloud' ? '' : 'none';
     document.getElementById('center-qa').style.display = currentActivity === 'qa' ? '' : 'none';
+    // Sync left-column tab buttons to match server-side active activity
+    if (currentActivity && currentActivity !== 'none') {
+      document.getElementById('tab-poll').classList.toggle('active', currentActivity === 'poll');
+      document.getElementById('tab-wordcloud').classList.toggle('active', currentActivity === 'wordcloud');
+      document.getElementById('tab-qa').classList.toggle('active', currentActivity === 'qa');
+      document.getElementById('tab-content-poll').style.display = currentActivity === 'poll' ? '' : 'none';
+      document.getElementById('tab-content-wordcloud').style.display = currentActivity === 'wordcloud' ? '' : 'none';
+      document.getElementById('tab-content-qa').style.display = currentActivity === 'qa' ? '' : 'none';
+    }
   }
 
   function hostSubmitWord() {
@@ -929,6 +938,9 @@
       list.innerHTML = '<p style="color:var(--muted);font-size:.9rem;text-align:center;margin-top:2rem;">No questions yet.</p>';
       return;
     }
+
+    // If any card is currently being edited, skip re-render to avoid losing the edit input
+    if (list.querySelector('.qa-edit-input')) return;
 
     list.innerHTML = questions.map(q => `
       <div class="qa-card${q.answered ? ' qa-answered' : ''}" data-id="${escHtml(q.id)}">

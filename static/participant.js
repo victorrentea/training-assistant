@@ -9,7 +9,9 @@
   let activeTimer = null; // {seconds, startedAt (ms)} or null
   let _timerInterval = null;
   let _multiWarnShown = false; // true once warning has been shown for current poll
-  let myWords = [];  // participant's own submitted words (session-only, clears on reconnect)
+  let myWords = [];  // participant's own submitted words (persisted in localStorage per word cloud session)
+  const LS_WC_KEY = 'workshop_wc_words';
+  const LS_WC_SESSION_KEY = 'workshop_wc_session';
   let _lastWordcloudWords = {};
   const WC_COLORS = ['#7ecef4','#a78bfa','#34d399','#fbbf24','#f472b6','#60a5fa','#fb923c'];
   let _wcDebounceTimer = null;
@@ -321,8 +323,14 @@
   function renderWordCloudScreen(wordcloudWords) {
     _lastWordcloudWords = wordcloudWords;
     const content = document.getElementById('content');
+    // If server word cloud is empty, host cleared it — wipe local words too
+    if (Object.keys(wordcloudWords).length === 0) {
+      myWords = [];
+      localStorage.removeItem(LS_WC_KEY);
+    }
     if (content.dataset.screen !== 'wordcloud') {
-      myWords = [];  // reset on fresh entry
+      // Restore words from localStorage on screen entry (e.g. page refresh)
+      try { myWords = JSON.parse(localStorage.getItem(LS_WC_KEY) || '[]'); } catch { myWords = []; }
       content.dataset.screen = 'wordcloud';
       content.innerHTML = `
         <div class="wc-layout">
@@ -356,6 +364,7 @@
     if (!word) return;
     ws.send(JSON.stringify({ type: 'wordcloud_word', word }));
     myWords.unshift(word);
+    localStorage.setItem(LS_WC_KEY, JSON.stringify(myWords));
     input.value = '';
     renderMyWords();
     updateWordSuggestions(_lastWordcloudWords || {});

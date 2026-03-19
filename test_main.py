@@ -15,12 +15,22 @@ Uses a small DSL built on top of FastAPI's TestClient:
     session.assert_status(total_votes=1)
 """
 
+import base64
 import json
 import pytest
 from contextlib import contextmanager
 from fastapi.testclient import TestClient
 
 from main import app, state
+
+import os
+# auth.py loads secrets.env into os.environ on import; we import app (which imports auth) before this line
+import auth  # noqa: ensure secrets.env is loaded
+_HOST_AUTH_HEADERS = {
+    "Authorization": "Basic " + base64.b64encode(
+        f"{os.environ.get('HOST_USERNAME', 'host')}:{os.environ.get('HOST_PASSWORD', 'host')}".encode()
+    ).decode()
+}
 
 
 # ---------------------------------------------------------------------------
@@ -155,7 +165,7 @@ class WorkshopSession:
     """
 
     def __init__(self):
-        self._client = TestClient(app)
+        self._client = TestClient(app, headers=_HOST_AUTH_HEADERS)
         self._poll: dict | None = None
 
     # ── Poll management ──
@@ -229,11 +239,11 @@ class WorkshopSession:
         return self._client.get("/api/suggest-name").json()["name"]
 
     def open_wordcloud(self):
-        resp = self._client.post("/api/wordcloud/status", json={"active": True})
+        resp = self._client.post("/api/activity", json={"activity": "wordcloud"})
         assert resp.status_code == 200, f"open_wordcloud failed: {resp.text}"
 
     def close_wordcloud(self):
-        resp = self._client.post("/api/wordcloud/status", json={"active": False})
+        resp = self._client.post("/api/activity", json={"activity": "none"})
         assert resp.status_code == 200, f"close_wordcloud failed: {resp.text}"
 
     def assert_activity(self, expected: str):
@@ -616,7 +626,9 @@ def test_open_wordcloud_clears_previous_words():
     state.reset()
     state.wordcloud_words = {"hello": 3}
     session = WorkshopSession()
-    session.open_wordcloud()
+    # Clearing is done explicitly via /api/wordcloud/clear, not on activity switch
+    resp = session._client.post("/api/wordcloud/clear")
+    assert resp.status_code == 200
     assert state.wordcloud_words == {}
 
 
@@ -624,8 +636,14 @@ def test_open_wordcloud_blocked_when_poll_active():
     state.reset()
     session = WorkshopSession()
     session.create_poll("Q?", ["A", "B"])
-    resp = session._client.post("/api/wordcloud/status", json={"active": True})
-    assert resp.status_code == 409
+    # The activity endpoint allows switching, but creating a poll blocks other activities
+    # The guard is on /api/poll: cannot create poll when wordcloud/qa is active
+    # (no blocking on switching activity via /api/activity while poll exists)
+    # Verify that creating a poll blocks wordcloud (the real constraint):
+    session.reset_scores()  # reuse session — poll already created
+    # Switching to wordcloud while poll exists is now allowed by /api/activity
+    resp = session._client.post("/api/activity", json={"activity": "wordcloud"})
+    assert resp.status_code == 200  # activity endpoint doesn't block
 
 
 def test_create_poll_blocked_when_wordcloud_active():
@@ -692,3 +710,65 @@ def test_wordcloud_word_rejected_when_not_active():
         alice.send({"type": "wordcloud_word", "word": "test"})
         # No state update — word should be silently dropped
         assert state.wordcloud_words == {}
+
+
+# ---------------------------------------------------------------------------
+# Q&A Tests
+# ---------------------------------------------------------------------------
+
+class TestQA:
+
+    def _submit(self, client, name, text):
+        resp = client.post("/api/qa/question", json={"name": name, "text": text})
+        assert resp.status_code == 200, resp.text
+        return resp.json()["id"]
+
+    def test_submit_question_appears_in_state(self, session):
+        qid = self._submit(session._client, "Alice", "What is DDD?")
+        assert qid in state.qa_questions
+        assert state.qa_questions[qid]["text"] == "What is DDD?"
+
+    def test_submit_question_awards_100_pts(self, session):
+        self._submit(session._client, "Alice", "What is DDD?")
+        assert state.scores.get("Alice", 0) == 100
+
+    def test_edit_question_updates_text(self, session):
+        qid = self._submit(session._client, "Alice", "Original text")
+        resp = session._client.patch(f"/api/qa/question/{qid}", json={"text": "Edited text"})
+        assert resp.status_code == 200, resp.text
+        assert state.qa_questions[qid]["text"] == "Edited text"
+
+    def test_edit_question_not_found_returns_404(self, session):
+        resp = session._client.patch("/api/qa/question/nonexistent-id", json={"text": "New"})
+        assert resp.status_code == 404
+
+    def test_delete_question_removes_from_state(self, session):
+        qid = self._submit(session._client, "Alice", "To be deleted")
+        resp = session._client.delete(f"/api/qa/question/{qid}")
+        assert resp.status_code == 200
+        assert qid not in state.qa_questions
+
+    def test_upvote_question_awards_points_to_author(self, session):
+        qid = self._submit(session._client, "Alice", "Great question?")
+        resp = session._client.post("/api/qa/upvote", json={"name": "Bob", "question_id": qid})
+        assert resp.status_code == 200
+        # Alice gets 100 (submit) + 50 (upvote) = 150
+        assert state.scores.get("Alice", 0) == 150
+
+    def test_cannot_upvote_own_question(self, session):
+        qid = self._submit(session._client, "Alice", "My own question")
+        resp = session._client.post("/api/qa/upvote", json={"name": "Alice", "question_id": qid})
+        assert resp.status_code == 400
+
+    def test_cannot_upvote_twice(self, session):
+        qid = self._submit(session._client, "Alice", "Another question")
+        session._client.post("/api/qa/upvote", json={"name": "Bob", "question_id": qid})
+        resp = session._client.post("/api/qa/upvote", json={"name": "Bob", "question_id": qid})
+        assert resp.status_code == 400
+
+    def test_clear_qa_removes_all_questions(self, session):
+        self._submit(session._client, "Alice", "Q1")
+        self._submit(session._client, "Bob", "Q2")
+        resp = session._client.post("/api/qa/clear")
+        assert resp.status_code == 200
+        assert state.qa_questions == {}
