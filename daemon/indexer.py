@@ -173,7 +173,10 @@ def index_file(path: Path, base_folder: Path) -> None:
                 continue
             ids.append(f"{source_key}::{page_num}::{chunk_idx}")
             documents.append(chunk)
-            metadatas.append({"source": source_key, "page": page_num})
+            # Classify as slides if the path contains a 'slides' folder segment
+            parts = Path(source_key).parts
+            source_type = "slides" if any(p.lower() == "slides" for p in parts) else "book"
+            metadatas.append({"source": source_key, "page": page_num, "source_type": source_type})
             embeddings.append(emb)
 
     if not ids:

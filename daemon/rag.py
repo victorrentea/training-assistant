@@ -51,6 +51,7 @@ def search_materials(query: str) -> list[dict]:
                 "content": doc,
                 "source": meta.get("source", "Unknown"),
                 "page": str(meta.get("page", "N/A")),
+                "source_type": meta.get("source_type", "book"),
             })
         return chunks
     except Exception as e:
