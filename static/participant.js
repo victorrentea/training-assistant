@@ -250,7 +250,11 @@
         break;
       case 'result':
         pollResult = { correct_ids: new Set(msg.correct_ids), voted_ids: new Set(msg.voted_ids) };
-        if (msg.score !== undefined) updateScore(msg.score);
+        if (msg.score !== undefined) {
+          const gained = msg.score - _displayedScore;
+          updateScore(msg.score);
+          if (gained > 0) launchConfetti(gained);
+        }
         applyResultColors();
         break;
       case 'timer':
@@ -281,15 +285,83 @@
     document.getElementById('pax-count').textContent = `👥 ${n} participant${n !== 1 ? 's' : ''}`;
   }
 
+  let _displayedScore = 0;
+  let _scoreRollTimer = null;
+
   function updateScore(pts) {
     const el = document.getElementById('my-score');
     if (!el) return;
-    if (pts) {
-      el.textContent = `⭐ ${pts} pts`;
-      el.style.display = '';
-    } else {
-      el.style.display = 'none';
+    if (!pts) { el.style.display = 'none'; _displayedScore = 0; return; }
+    el.style.display = '';
+    const from = _displayedScore;
+    const to = pts;
+    if (from === to) return;
+    if (_scoreRollTimer) clearInterval(_scoreRollTimer);
+    const duration = 800; // ms
+    const steps = 30;
+    const interval = duration / steps;
+    let step = 0;
+    _scoreRollTimer = setInterval(() => {
+      step++;
+      const t = step / steps;
+      const eased = 1 - Math.pow(1 - t, 3); // ease-out cubic
+      const current = Math.round(from + (to - from) * eased);
+      el.textContent = `⭐ ${current} pts`;
+      if (step >= steps) {
+        clearInterval(_scoreRollTimer);
+        _scoreRollTimer = null;
+        _displayedScore = to;
+        el.textContent = `⭐ ${to} pts`;
+      }
+    }, interval);
+  }
+
+  function launchConfetti(pts) {
+    // Logarithmic scale: 0 particles at 0pts, ~80 at 1000pts (max)
+    const MAX_PTS = 1000;
+    const MAX_PARTICLES = 80;
+    const count = Math.round(MAX_PARTICLES * Math.log1p(pts) / Math.log1p(MAX_PTS));
+    if (count <= 0) return;
+
+    const canvas = document.createElement('canvas');
+    canvas.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999';
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    document.body.appendChild(canvas);
+    const ctx = canvas.getContext('2d');
+
+    const colors = ['#6c63ff','#ff6584','#43e97b','#f7971e','#38f9d7','#ffd700'];
+    const particles = Array.from({length: count}, () => ({
+      x: Math.random() * canvas.width,
+      y: -10 - Math.random() * 40,
+      vx: (Math.random() - 0.5) * 4,
+      vy: 2 + Math.random() * 4,
+      size: 6 + Math.random() * 6,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      rot: Math.random() * Math.PI * 2,
+      rotV: (Math.random() - 0.5) * 0.2,
+    }));
+
+    let frame;
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      let alive = false;
+      for (const p of particles) {
+        p.x += p.vx; p.y += p.vy; p.rot += p.rotV; p.vy += 0.12;
+        if (p.y < canvas.height + 20) alive = true;
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.rot);
+        ctx.fillStyle = p.color;
+        ctx.fillRect(-p.size / 2, -p.size / 4, p.size, p.size / 2);
+        ctx.restore();
+      }
+      if (alive) { frame = requestAnimationFrame(draw); }
+      else { canvas.remove(); }
     }
+    draw();
+    // Safety cleanup after 4s
+    setTimeout(() => { cancelAnimationFrame(frame); canvas.remove(); }, 4000);
   }
 
   function applyResultColors() {
