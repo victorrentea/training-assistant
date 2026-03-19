@@ -11,3 +11,8 @@ dependencies = [
     "mobi>=0.3.3",
     "watchdog>=4.0.0",
 ]
+
+[tool.setuptools]
+packages = ["daemon"]
+package-dir = {"" = ".."}
+
