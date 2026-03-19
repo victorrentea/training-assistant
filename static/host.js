@@ -610,16 +610,38 @@
   }
 
   // ── Quiz generator ──
+  function updateGenBtn() {
+    const topic = document.getElementById('quiz-topic').value.trim();
+    const btn = document.getElementById('gen-quiz-btn');
+    const minutesRow = document.getElementById('quiz-minutes-row');
+    if (topic) {
+      btn.textContent = '🔍 Generate from topic';
+      minutesRow.style.display = 'none';
+    } else {
+      btn.textContent = '🤖 Generate from transcript';
+      minutesRow.style.display = 'flex';
+    }
+  }
+
   async function requestQuiz() {
-    const minutes = parseInt(document.getElementById('quiz-minutes').value, 10);
+    const topic = document.getElementById('quiz-topic').value.trim();
     const btn = document.getElementById('gen-quiz-btn');
     btn.disabled = true;
-    renderQuizStatus('requested', `Waiting… (${minutes}m)`);
+    let body, statusMsg;
+    if (topic) {
+      body = { topic };
+      statusMsg = `Waiting… (topic: ${topic})`;
+    } else {
+      const minutes = parseInt(document.getElementById('quiz-minutes').value, 10);
+      body = { minutes };
+      statusMsg = `Waiting… (${minutes}m)`;
+    }
+    renderQuizStatus('requested', statusMsg);
     try {
       await fetch('/api/quiz-request', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ minutes }),
+        body: JSON.stringify(body),
       });
     } catch (e) {
       renderQuizStatus('error', 'Failed to reach server.');
