@@ -388,6 +388,11 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
 
 
 .btn-row { display: flex; gap: .75rem; flex-wrap: wrap; margin-top: 1rem; align-items: center; }
+.timer-slider-wrap { display: flex; align-items: center; gap: .5rem; }
+.timer-val { font-size: .95rem; font-weight: 600; color: var(--accent); min-width: 2.5rem; text-align: right; }
+.timer-slider { -webkit-appearance: none; appearance: none; width: 120px; height: 6px; border-radius: 3px; background: var(--surface2); outline: none; cursor: pointer; }
+.timer-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%; background: var(--accent); cursor: pointer; }
+.timer-slider::-moz-range-thumb { width: 18px; height: 18px; border-radius: 50%; background: var(--accent); cursor: pointer; border: none; }
 
 @media (max-width: 480px) {
   .btn-row { gap: .5rem; }
