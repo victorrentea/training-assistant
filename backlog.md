@@ -108,11 +108,13 @@
 - [x] follow-up: avoid double newline insertion and append timestamp-only lines (no speaker label)
 - [x] follow-up: merge the old `scripts/` timestamp helper folder into daemon-owned module code
 - [x] bug: edit button in QA host ui doesnt work 
-- [ ] The label displayed in both the participant and the host should display the difference in time since now. It should display how many seconds ago, minutes ago, or hours ago the deploy was, or if this version is from. I don't need to live update now; actually, I do want you to live update the time elapsed since the moment of the release of this application if it's under a day 
+- [x] The version label in both participant and host now shows elapsed deploy age (seconds/minutes/hours ago), and live-updates while age is under one day.
 - [ ] e2e test the download questions button after asking 2 questions. it should capture also the correct answers marked by host.
 - [ ] allow participants to vote at polls using keyboard up+down in single select; enter submit vote. in multi-select, display a checkbox on each option line and allow selecting it using SPACE.
 - [ ] The indexer should report a percentage done when it sees a bunch of work ahead. In terms of files left. then, it should index documents on max 4 threads
 - [ ] load test: 30 participants connected simultaneously, host fires a poll, all vote randomly, host sorts by points. Run against local instance first, then deployed.
+- [ ] The local agent re-indexes the files upon restart. Prevent that redundant effort by, for example, hashing the content of the files and storing the hash in the root folder of the materials. Upon restart, if the hash is the same, it means the resources weren't updated. Even better, that hash should be per file. Upon restart, each file name should be associated with the hash, and if that file hash is different, it should be re-indexed. If a file thing should be added, and if a file is extra, it should be removed from the hash, so the hash should be updated at startup after re-indexing of the resources. 
+- [ ] The local agent should try to reconnect to the server if disconnected. It usually happens when I do a redeploy. I don't have to restart the agent.
 ---
 
 ## Understanding design
