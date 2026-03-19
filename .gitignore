@@ -31,3 +31,6 @@ __pycache__/
 .env
 /materials/*.txt
 !/materials/placeholder.txt
+
+daemon/__pycache__/
+daemon/.venv/
