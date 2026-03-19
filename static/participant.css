@@ -6,18 +6,14 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 2rem 1rem;
+  padding: 1rem 1rem;
 }
 
 @media (max-width: 480px) {
   body { padding: 1rem .75rem; }
 }
 
-h1 { font-size: 1.4rem; color: var(--accent); letter-spacing: .05em; margin-bottom: 2rem; }
-
-@media (max-width: 480px) {
-  h1 { font-size: 1.2rem; margin-bottom: 1.25rem; }
-}
+h1 { display: none; }
 
 /* ── Join screen ── */
 #join-screen {
@@ -88,17 +84,38 @@ h1 { font-size: 1.4rem; color: var(--accent); letter-spacing: .05em; margin-bott
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: .5rem 0 1.5rem;
+  padding: .6rem .9rem;
+  margin-bottom: 1rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
   font-size: .85rem;
   color: var(--muted);
-  flex-wrap: wrap;
-  gap: .4rem;
+  gap: .5rem;
+}
+
+.status-left {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+}
+
+.status-right {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+}
+
+.mic-icon {
+  font-size: 1.1rem;
+  line-height: 1;
+  opacity: .85;
 }
 
 @media (max-width: 480px) {
-  .status-bar { font-size: .8rem; padding: .4rem 0 1rem; }
+  .status-bar { font-size: .8rem; padding: .5rem .75rem; margin-bottom: .75rem; }
 }
-.dot { width:8px; height:8px; border-radius:50%; background: var(--accent2); display:inline-block; margin-right:.4rem; animation: pulse 2s infinite; }
+.dot { width:8px; height:8px; border-radius:50%; background: var(--accent2); display:inline-block; margin-right:.2rem; animation: pulse 2s infinite; }
 #leave-btn { background:none; border:1px solid var(--border); color:var(--muted); border-radius:6px; padding:.2rem .6rem; font-size:.78rem; cursor:pointer; }
 #leave-btn:hover { border-color:var(--danger); color:var(--danger); }
 @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
@@ -244,7 +261,7 @@ h1 { font-size: 1.4rem; color: var(--accent); letter-spacing: .05em; margin-bott
 }
 
 .wc-input-panel {
-  flex: 0 1 300px;
+  flex: 0 1 360px;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -277,23 +294,33 @@ h1 { font-size: 1.4rem; color: var(--accent); letter-spacing: .05em; margin-bott
 
 .wc-input-row #wc-go {
   padding: 0 1.25rem;
-  font-size: 1.2rem;
+  font-size: 1.4rem;
+  height: auto;
   align-self: stretch;
 }
 
 #wc-my-words {
   display: flex;
   flex-direction: column;
-  gap: .25rem;
+  gap: .3rem;
   max-height: 200px;
   overflow-y: auto;
   width: 100%;
 }
 
+@keyframes wc-drop {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
 .wc-my-word {
-  font-size: 1.2rem;
-  color: var(--text);
-  padding: .1rem 0;
+  font-size: 1rem;
+  color: var(--muted);
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: .3rem .7rem;
+  animation: wc-drop .2s ease-out;
 }
 
 /* Mobile: stack cloud on top */
@@ -314,7 +341,7 @@ h1 { font-size: 1.4rem; color: var(--accent); letter-spacing: .05em; margin-bott
 /* ── Q&A screen ── */
 .qa-screen { display: flex; flex-direction: column; gap: .75rem; }
 
-.qa-input-row { display: flex; gap: .5rem; }
+.qa-input-row { display: flex; gap: .5rem; align-items: stretch; }
 .qa-input-row input {
   flex: 1;
   background: var(--surface2);
@@ -323,6 +350,10 @@ h1 { font-size: 1.4rem; color: var(--accent); letter-spacing: .05em; margin-bott
   padding: .6rem .8rem;
   color: var(--text);
   font-size: .95rem;
+}
+.qa-input-row button {
+  height: auto;
+  align-self: stretch;
 }
 
 .qa-card-p {

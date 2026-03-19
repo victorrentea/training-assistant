@@ -330,11 +330,11 @@
             <canvas id="wc-canvas"></canvas>
           </div>
           <div class="wc-input-panel">
-            <p class="wc-prompt">⭐++ What comes to mind?</p>
+            <p class="wc-prompt">What comes to mind? <span style="font-size:.9em; opacity:.75">(⭐++)</span></p>
             <div class="wc-input-row">
               <input id="wc-input" type="text" maxlength="40" autocomplete="off" placeholder="Type a word…" list="wc-suggestions" />
               <datalist id="wc-suggestions"></datalist>
-              <button id="wc-go" class="btn btn-primary">Go</button>
+              <button id="wc-go" class="btn btn-primary">↵</button>
             </div>
             <div id="wc-my-words"></div>
           </div>
@@ -441,7 +441,7 @@
         <div class="qa-input-row">
           <input id="qa-input" type="text" maxlength="280" autocomplete="off"
                  placeholder="Ask a question…" />
-          <button id="qa-submit-btn" class="btn btn-primary" onclick="submitQuestion()">Send</button>
+          <button id="qa-submit-btn" class="btn btn-primary" onclick="submitQuestion()">↵</button>
         </div>
         <div id="qa-question-list"></div>
       </div>

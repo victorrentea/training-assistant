@@ -173,6 +173,7 @@ body {
 .wc-input-row {
   display: flex;
   gap: .5rem;
+  align-items: stretch;
 }
 
 .wc-input-row input {
@@ -183,6 +184,11 @@ body {
   background: var(--surface2);
   color: var(--text);
   font-size: .9rem;
+}
+
+.wc-input-row button {
+  height: auto;
+  align-self: stretch;
 }
 
 /* Status badges pinned to bottom of left column */
