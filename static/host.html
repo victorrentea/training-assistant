@@ -45,8 +45,12 @@
       <div class="or-divider"><span>or</span></div>
       <div class="quiz-gen-row">
         <div class="quiz-gen-controls">
-          <button class="btn btn-warn" id="gen-quiz-btn" onclick="requestQuiz()">🤖 Generate</button>
-          <div style="display:flex;align-items:center;gap:.4rem;font-size:.9rem;color:var(--text);">
+          <input id="quiz-topic" type="text" maxlength="60" autocomplete="off"
+                 placeholder="topic (optional)"
+                 oninput="updateGenBtn()"
+                 style="background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:.3rem .6rem;font-size:.9rem;width:10rem;" />
+          <button class="btn btn-warn" id="gen-quiz-btn" onclick="requestQuiz()">🤖 Generate from transcript</button>
+          <div id="quiz-minutes-row" style="display:flex;align-items:center;gap:.4rem;font-size:.9rem;color:var(--text);">
             from last
             <select id="quiz-minutes" style="background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:.3rem .5rem;font-size:.9rem;cursor:pointer;">
               <option value="15">15 min</option>
@@ -157,11 +161,8 @@
             <rect x="73" y="86" width="9" height="9" rx="1"/>
           </svg>
         </div>
-      </span>
-      <div style="display:flex; gap:.5rem; margin-top:.4rem; flex-wrap:wrap;">
         <button class="btn btn-danger" onclick="resetScores()" title="Reset all scores to zero">↺ Reset scores</button>
-        <button class="btn btn-primary" onclick="downloadPollHistory()" title="Download today's polls">⬇ Download questions</button>
-      </div>
+      </span>
     </div>
   </div>
 
