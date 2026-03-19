@@ -7,7 +7,7 @@ Exposes search_materials(query) — called by quiz_core.py via dynamic import.
 from pathlib import Path
 
 CHROMA_PATH = Path.home() / ".workshop-rag" / "chroma"
-COLLECTION_NAME = "workshop_materials"
+COLLECTION_NAME = "materials"
 EMBED_MODEL = "all-mpnet-base-v2"
 TOP_K = 5
 
