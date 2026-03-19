@@ -816,6 +816,12 @@
     ul.innerHTML = hostWords.map(w => `<li>${escHtml(w)}</li>`).join('');
   }
 
+  async function clearWordCloud() {
+    hostWords = [];
+    renderHostWordList();
+    await fetch('/api/wordcloud/clear', { method: 'POST' });
+  }
+
   function renderHostWordCloud(wordsMap) {
     const canvas = document.getElementById('host-wc-canvas');
     if (!canvas) return;
