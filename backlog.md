@@ -114,7 +114,8 @@
 - [ ] The indexer should report a percentage done when it sees a bunch of work ahead. In terms of files left. then, it should index documents on max 4 threads
 - [ ] load test: 30 participants connected simultaneously, host fires a poll, all vote randomly, host sorts by points. Run against local instance first, then deployed.
 - [x] Local agent restart now avoids redundant re-indexing by storing per-file hashes in `materials/.index-manifest.json`; startup only reindexes changed/new files and removes deleted files from both index and manifest.
-- [ ] The local agent should try to reconnect to the server if disconnected. It usually happens when I do a redeploy. I don't have to restart the agent.
+- [x] The local agent now reconnects automatically to the server after disconnects/redeploys; no manual agent restart is needed.
+- [ ] The front end of both participant hosts should detect whether the version of the deployed backend is different than the one of them and suggest a page reload in the browser. This page reload should happen automatically within 5 seconds or 10 seconds unless the user presses stop.
 ---
 
 ## Understanding design

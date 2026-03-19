@@ -117,6 +117,16 @@
 - [x] Capture non-visual proof via test logs
 - [x] Run targeted tests
 
+## Backlog item: daemon reconnects automatically after server disconnect
+
+- [x] Add bounded server HTTP timeout to avoid daemon hangs during disconnects
+- [x] Normalize invalid JSON/timeout transport failures to retryable `RuntimeError`
+- [x] Add reconnect state transitions in daemon loop (disconnect once, reconnect once)
+- [x] Add focused tests for HTTP helper wrapping and daemon disconnect/reconnect flow
+- [x] Mark item done in `backlog.md`
+- [x] Capture non-visual proof via test logs
+- [x] Run targeted tests
+
 ## Review
 
 - Added `scripts/append_transcription_timestamps.py` with 3s default interval and parser-compatible format.
@@ -151,3 +161,6 @@
 - Backlog item fixed: local agent startup indexing now skips unchanged files using per-file SHA-256 manifest and only reindexes changed/new files.
 - Verified with `python3 -m pytest -q test_daemon_indexer_incremental.py` (2 passed).
 - Proof logs: `/tmp/indexer_incremental_tests.log`.
+- Backlog item fixed: daemon now survives transient server disconnects/redeploys and reconnects automatically without restart.
+- Verified with `python3 -m pytest -q test_quiz_core_http_helpers.py test_quiz_daemon_reconnect.py` (4 passed).
+- Proof logs: `/tmp/reconnect_item_tests.log`.
