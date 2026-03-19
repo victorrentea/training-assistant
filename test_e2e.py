@@ -115,7 +115,10 @@ def host(server_url, playwright) -> HostPage:
         }};
     """)
     page = ctx.new_page()
+    page.on("console", lambda msg: print(f"[browser:{msg.type}] {msg.text}"))
+    page.on("response", lambda r: print(f"[network] {r.request.method} {r.url} -> {r.status}") if "/api/" in r.url else None)
     page.goto("/host")
+    print(f"[host-fixture] page title after goto: {page.title()!r}, url: {page.url!r}")
     yield HostPage(page)
     ctx.close()
     browser.close()
