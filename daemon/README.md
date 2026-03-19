@@ -24,7 +24,7 @@ and polls the server every second for quiz generation requests from the host pan
 ## Configuration (in secrets.env)
 
 ```
-MATERIALS_FOLDER=/Users/yourname/Documents/workshop-materials
+MATERIALS_FOLDER=/Users/yourname/Documents/materials
 TRANSCRIPTION_FOLDER=/Users/yourname/Documents/transcriptions  # must exist, can be empty
 ANTHROPIC_API_KEY=sk-ant-...
 WORKSHOP_SERVER_URL=https://interact.victorrentea.ro
