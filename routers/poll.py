@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 _MAX_POINTS = 1000
 _MIN_POINTS = 500
-_SPEED_WINDOW = 30  # seconds over which speed bonus applies
+_SLOWEST_MULTIPLIER = 3  # participant taking 3× the fastest time gets _MIN_POINTS
 
 
 class PollCreate(BaseModel):
@@ -93,6 +93,25 @@ async def set_correct_options(body: PollCorrect):
     all_option_ids = {opt["id"] for opt in state.poll.get("options", [])}
     wrong_set = all_option_ids - correct_set
 
+    # Compute min elapsed time among correct voters for Kahoot-style speed bonus
+    correct_voters = set()
+    for name, selection in state.votes.items():
+        voted = set(selection) if isinstance(selection, list) else {selection}
+        if multi and correct_set:
+            R = len(voted & correct_set)
+            W = len(voted & wrong_set)
+            if max(0.0, (R - W) / len(correct_set)) > 0:
+                correct_voters.add(name)
+        else:
+            if voted & correct_set:
+                correct_voters.add(name)
+
+    elapsed_times = [
+        max(0.0, (state.vote_times.get(n, now) - opened_at).total_seconds())
+        for n in correct_voters
+    ]
+    min_time = min(elapsed_times) if elapsed_times else 0.0
+
     new_scores = dict(state.base_scores)
     for name, selection in state.votes.items():
         voted = set(selection) if isinstance(selection, list) else {selection}
@@ -110,11 +129,15 @@ async def set_correct_options(body: PollCorrect):
                 continue
             ratio = 1.0
 
-        elapsed = (state.vote_times.get(name, now) - opened_at).total_seconds()
-        elapsed = max(0, min(elapsed, _SPEED_WINDOW))
-        max_pts = round(_MAX_POINTS * (1 - 0.5 * elapsed / _SPEED_WINDOW))
-        max_pts = max(max_pts, _MIN_POINTS)
-        pts = round(max_pts * ratio)
+        elapsed = max(0.0, (state.vote_times.get(name, now) - opened_at).total_seconds())
+        # Linear from _MAX_POINTS (at min_time) to _MIN_POINTS (at _SLOWEST_MULTIPLIER × min_time)
+        speed_window = min_time * (_SLOWEST_MULTIPLIER - 1)  # range over which decay applies
+        if speed_window > 0:
+            decay = min(1.0, (elapsed - min_time) / speed_window)
+        else:
+            decay = 0.0
+        speed_pts = round(_MAX_POINTS - (_MAX_POINTS - _MIN_POINTS) * decay)
+        pts = round(speed_pts * ratio)
         if pts > 0:
             new_scores[name] = new_scores.get(name, 0) + pts
 
