@@ -45,16 +45,14 @@
       <div class="or-divider"><span>or</span></div>
       <div class="quiz-gen-row">
         <div class="quiz-gen-controls" style="display:flex;flex-direction:column;gap:.35rem;">
-          <label style="font-size:.85rem;color:var(--muted);display:flex;align-items:center;gap:.4rem;">
-            <input type="radio" name="quiz-mode" value="topic" id="mode-topic" onchange="updateGenBtn()" style="cursor:pointer;" />
+          <div style="font-size:.85rem;color:var(--muted);display:flex;align-items:center;gap:.4rem;">
             from topic:
             <input id="quiz-topic" type="text" maxlength="60" autocomplete="off"
                    placeholder="e.g. circuit breaker"
-                   oninput="selectTopicMode()"
+                   oninput="updateGenBtn()"
                    style="background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:.2rem .5rem;font-size:.85rem;width:10rem;" />
-          </label>
-          <label style="font-size:.85rem;color:var(--muted);display:flex;align-items:center;gap:.4rem;">
-            <input type="radio" name="quiz-mode" value="transcript" id="mode-transcript" checked onchange="updateGenBtn()" style="cursor:pointer;" />
+          </div>
+          <div style="font-size:.85rem;color:var(--muted);display:flex;align-items:center;gap:.4rem;">
             from transcript of last
             <select id="quiz-minutes" style="background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:.2rem .4rem;font-size:.85rem;cursor:pointer;">
               <option value="15">15 min</option>
@@ -63,7 +61,7 @@
               <option value="90">1.5 hours</option>
               <option value="480">whole day</option>
             </select>
-          </label>
+          </div>
           <button class="btn btn-warn" id="gen-quiz-btn" onclick="requestQuiz()" style="align-self:flex-start;">🤖 Generate</button>
         </div>
         <span id="quiz-status"></span>

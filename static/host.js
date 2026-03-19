@@ -610,25 +610,18 @@
   }
 
   // ── Quiz generator ──
-  function selectTopicMode() {
-    document.getElementById('mode-topic').checked = true;
-    updateGenBtn();
-  }
-
   function updateGenBtn() {
-    const mode = document.querySelector('input[name="quiz-mode"]:checked').value;
+    const topic = document.getElementById('quiz-topic').value.trim();
     const btn = document.getElementById('gen-quiz-btn');
-    btn.textContent = mode === 'topic' ? '🔍 Generate' : '🤖 Generate';
+    btn.textContent = topic ? '🔍 Generate from topic' : '🤖 Generate from transcript';
   }
 
   async function requestQuiz() {
-    const mode = document.querySelector('input[name="quiz-mode"]:checked').value;
+    const topic = document.getElementById('quiz-topic').value.trim();
     const btn = document.getElementById('gen-quiz-btn');
     btn.disabled = true;
     let body, statusMsg;
-    if (mode === 'topic') {
-      const topic = document.getElementById('quiz-topic').value.trim();
-      if (!topic) { renderQuizStatus('error', 'Enter a topic first.'); btn.disabled = false; return; }
+    if (topic) {
       body = { topic };
       statusMsg = `Waiting… (topic: ${topic})`;
     } else {
