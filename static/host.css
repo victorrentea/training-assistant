@@ -119,25 +119,32 @@ body {
 }
 
 /* Voting-in-progress overlay */
-#poll-display {
-  position: relative;
-}
 #poll-display.voting-active .poll-question {
   opacity: .35;
 }
+.bars-container {
+  position: relative;
+}
+.voting-active .bars-wrapper {
+  opacity: .4;
+}
 .voting-dots {
+  position: absolute;
+  inset: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: .5rem;
-  margin: .4rem 0 .6rem;
   pointer-events: none;
+  z-index: 1;
 }
 .voting-dots-label {
-  font-size: .8rem;
-  color: var(--muted);
-  letter-spacing: .06em;
+  font-size: .85rem;
+  color: var(--accent);
+  letter-spacing: .08em;
   text-transform: uppercase;
+  font-weight: 600;
 }
 .voting-dots-row {
   display: flex;

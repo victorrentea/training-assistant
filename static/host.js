@@ -565,8 +565,10 @@
     el.className = pollActive ? 'voting-active' : '';
     el.innerHTML = `
       <p class="poll-question">${escHtml(currentPoll.question)}</p>
-      ${pollActive ? `<div class="voting-dots"><div class="voting-dots-row"><span></span><span></span><span></span></div><div class="voting-dots-label">voting in progress</div></div>` : ''}
-      ${bars}
+      <div class="bars-container">
+        <div class="bars-wrapper">${bars}</div>
+        ${pollActive ? `<div class="voting-dots"><div class="voting-dots-row"><span></span><span></span><span></span></div><div class="voting-dots-label">voting in progress</div></div>` : ''}
+      </div>
       <p style="font-size:.8rem; color:var(--muted); margin-top:.5rem;">${totalVotes} total vote${totalVotes!==1?'s':''}</p>
       ${countdownEl}
       <div class="btn-row">
