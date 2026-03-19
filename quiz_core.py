@@ -209,8 +209,11 @@ Your goal is to produce exactly ONE poll question designed to spark discussion a
 The question may have one OR multiple expected answers — choose whichever fits best.
 
 You have access to a tool `search_materials` that allows you to search through technical materials (books, articles, courses).
-If you receive a topic or if the transcript mentions a complex pattern (like Outbox, Circuit Breaker, Resilience), 
+If you receive a topic or if the transcript mentions a complex pattern (like Outbox, Circuit Breaker, Resilience),
 USE THE TOOL to find more details, nuances, and real-world examples to craft a better question.
+
+Also consult https://martinfowler.com/ for authoritative articles on patterns, architecture, and software design —
+it is an excellent reference for grounding questions in well-known expert opinions and named concepts.
 
 Respond with ONLY a valid JSON object in this exact schema:
 {
