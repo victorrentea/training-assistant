@@ -298,6 +298,13 @@ h1 { display: none; }
   height: auto;
   align-self: stretch;
 }
+.wc-input-row #wc-download {
+  align-self: stretch;
+  height: auto;
+  padding: 0 .9rem;
+  font-size: .85rem;
+  white-space: nowrap;
+}
 
 #wc-my-words {
   display: flex;

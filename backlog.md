@@ -98,8 +98,9 @@
 - [ ] ux: In the Q&A section, the button is again of a different height than the input text height. Align them to be the same size. 
 - [ ] bug: In the Q&A host view, instead of "Answer", the button should be called "Answered". The Edit button still doesn't work. The X button should be replaced by a trash bin icon. Same icon for clear Q&A, which should be renamed to remove all questions or clear all. 
 - [ ] Adjust the prompt for generating a poll question from the transcript to focus on topics from the transcription first, then consult reference materials for depth.
-- [ ] feat:  an example transcription file is at '/Users/victorrentea/Documents/transcriptions/20260319 0748 Transcription.txt'
-- [ ] bug: edit button in QA host ui doesnt work
+- [ ] feat: to compensate for the lack of time stamps in the transcription file in case there is a single person speaking, I want to add every minute a timestamp stating the current time to the transcription file. Read the file, understand the format, and suggest and write a little Python script that, when started, every three seconds for testing first, is going to add a timestamp label and append it to that file to test if it works   an example transcription file is at '/Users/victorrentea/Documents/transcriptions/20260319 0748 Transcription.txt'
+- [ ] bug: edit button in QA host ui doesnt work 
+- [ ] The label displayed in both the participant and the host should display the difference in time since now. It should display how many seconds ago, minutes ago, or hours ago the deploy was, or if this version is from. I don't need to live update now; actually, I do want you to live update the time elapsed since the moment of the release of this application if it's under a day 
 - [ ] e2e test the download questions button after asking 2 questions. it should capture also the correct answers marked by host.
 - [ ] allow participants to vote at polls using keyboard up+down in single select; enter submit vote. in multi-select, display a checkbox on each option line and allow selecting it using SPACE.
 - [ ] load test: 30 participants connected simultaneously, host fires a poll, all vote randomly, host sorts by points. Run against local instance first, then deployed.
