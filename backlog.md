@@ -75,7 +75,7 @@
 - [x] In the participant word cloud view, add an explicit "Download image" button next to the Enter button.
 - [x] ui: In the participant host asking a question, the Enter button to the right of this input text is too small compared to the height of the input text.
 - [x] In the participant quiz view, you are correctly warned for a multi-option question that you should select to. But once you do select to, the warning stays in the screen. It should disappear and reappear if you de-select, or if you select less than the number of correct answers.
-- [ ] ui: Add a radioactive emoji to the Leave button of the Participant view
+- [x] ui: Add a radioactive emoji to the Leave button of the Participant view
 - [x] ui: What comes to mind? The text after that button currently displays a star++. Change that to display pts++. And not in bold.
 - [x] ui: Strip the trailing slash in the join URL in the host view, and make the font for that line slightly larger, let's say 20-30% larger, so that the reset score still fits on the same screen when the application is full screen.
 - [x] ui glitch: There is a tiny horizontal line above the buttons to download and close and to clear the Q&A in the word cloud in the Q&A tabs in the host view.
