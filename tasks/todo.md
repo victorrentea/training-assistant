@@ -97,6 +97,15 @@
 - [x] Mark all three backlog items done in `backlog.md`
 - [x] Run targeted tests
 
+## Backlog item: live deploy-age version label on host and participant
+
+- [x] Implement shared elapsed-time formatter/updater in `static/version-age.js`
+- [x] Wire both `static/host.html` and `static/participant.html` to use shared renderer
+- [x] Add focused e2e regression for elapsed label + under-day live update
+- [x] Capture host and participant screenshot proof
+- [x] Mark item done in `backlog.md`
+- [x] Run targeted tests
+
 ## Review
 
 - Added `scripts/append_transcription_timestamps.py` with 3s default interval and parser-compatible format.
@@ -125,3 +134,6 @@
 - Verified with `python3 -m pytest -q test_e2e.py -k "host_edits_question_participant_sees_update or host_qa_action_labels_icons_and_edit_with_quotes"` (2 passed, 27 deselected).
 - Verified with `python3 -m pytest -q test_quiz_core_prompt.py` (2 passed).
 - Proof screenshot: `docs/superpowers/specs/qa-host-actions.png`.
+- Backlog item fixed: deploy version label now shows elapsed age and updates live under one day in both host and participant UIs.
+- Verified with `python3 -m pytest -q test_e2e.py -k version_tag_shows_elapsed_time_and_updates_under_day` (1 passed, 27 deselected).
+- Proof screenshots: `docs/superpowers/specs/version-age-host.png`, `docs/superpowers/specs/version-age-participant.png`.

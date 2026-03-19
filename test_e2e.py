@@ -282,6 +282,50 @@ class TestRegressions:
         host._page.locator("#tab-content-qa").screenshot(path=str(proof_dir / "qa-height-host.png"))
         pax._page.locator(".qa-screen").screenshot(path=str(proof_dir / "qa-height-participant.png"))
 
+    def test_version_tag_shows_elapsed_time_and_updates_under_day(self, host: HostPage, pax: ParticipantPage):
+        # Host and participant should display relative elapsed labels by default.
+        expect(host._page.locator("#version-tag")).to_contain_text(re.compile(r"(s|m|h) ago|from "))
+        expect(pax._page.locator("#version-tag")).to_contain_text(re.compile(r"(s|m|h) ago|from "))
+
+        # Force a fresh timestamp to verify live-update behavior under one day.
+        host._page.evaluate(
+            """
+            () => {
+              const d = new Date();
+              const pad = n => String(n).padStart(2, '0');
+              window.APP_VERSION = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+              window.renderDeployAge('version-tag');
+            }
+            """
+        )
+        pax._page.evaluate(
+            """
+            () => {
+              const d = new Date();
+              const pad = n => String(n).padStart(2, '0');
+              window.APP_VERSION = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+              window.renderDeployAge('version-tag');
+            }
+            """
+        )
+
+        host_before = host._page.locator("#version-tag").inner_text().strip()
+        pax_before = pax._page.locator("#version-tag").inner_text().strip()
+
+        host._page.wait_for_timeout(1300)
+        pax._page.wait_for_timeout(1300)
+
+        host_after = host._page.locator("#version-tag").inner_text().strip()
+        pax_after = pax._page.locator("#version-tag").inner_text().strip()
+
+        assert host_before != host_after, f"Host version label did not live-update: {host_before}"
+        assert pax_before != pax_after, f"Participant version label did not live-update: {pax_before}"
+
+        proof_dir = Path(__file__).parent / "docs" / "superpowers" / "specs"
+        proof_dir.mkdir(parents=True, exist_ok=True)
+        host._page.screenshot(path=str(proof_dir / "version-age-host.png"), full_page=True)
+        pax._page.screenshot(path=str(proof_dir / "version-age-participant.png"), full_page=True)
+
 
 # ---------------------------------------------------------------------------
 # TestWordCloud
