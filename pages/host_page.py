@@ -16,6 +16,7 @@ class HostPage:
     def create_poll(self, question: str, options: list[str], multi: bool = False) -> None:
         """Type a poll into the composer and launch it (poll opens automatically)."""
         composer = self._page.locator("#poll-input")
+        composer.scroll_into_view_if_needed(timeout=10000)
         composer.click()
         composer.evaluate("el => { el.focus(); document.execCommand('selectAll'); }")
         self._page.keyboard.type("\n".join([question] + options))
@@ -67,12 +68,7 @@ class HostPage:
         return result
 
     def edit_question(self, question_id: str, new_text: str) -> None:
-        """
-        Trigger inline edit on a Q&A card and type new text.
-        Uses JS evaluate to open the inline input (avoids WS re-render race),
-        then fills and confirms with Enter via Playwright.
-        """
-        import json
+        """Trigger inline edit on a Q&A card and submit via Enter."""
         import json as _json
         current_text = self._page.locator(
             f'.qa-card[data-id="{question_id}"] .qa-text'

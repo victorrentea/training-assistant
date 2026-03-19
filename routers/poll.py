@@ -49,6 +49,7 @@ async def create_poll(poll: PollCreate):
         raise HTTPException(409, "Another activity is already active")
 
     state.poll = {
+        "id": int(datetime.now(timezone.utc).timestamp() * 1000),
         "question": poll.question.strip(),
         "multi": poll.multi,
         "correct_count": poll.correct_count if poll.multi else None,
