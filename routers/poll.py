@@ -24,6 +24,8 @@ class PollCreate(BaseModel):
     options: list[str]
     multi: bool = False
     correct_count: Optional[int] = None
+    source: Optional[str] = None
+    page: Optional[str] = None
 
 class PollTimer(BaseModel):
     seconds: int
@@ -58,6 +60,8 @@ async def create_poll(poll: PollCreate):
             for i, opt in enumerate(poll.options)
             if opt.strip()
         ],
+        "source": poll.source or None,
+        "page": poll.page or None,
     }
     state.current_activity = ActivityType.POLL
     state.poll_active = False

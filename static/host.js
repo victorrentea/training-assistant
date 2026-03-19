@@ -573,6 +573,7 @@
         ${pollActive ? `<div class="voting-dots"><div class="voting-dots-row"><span></span><span></span><span></span></div><div class="voting-dots-label">voting in progress</div></div>` : ''}
       </div>
       <p style="font-size:.8rem; color:var(--muted); margin-top:.5rem;">${totalVotes} total vote${totalVotes!==1?'s':''}</p>
+      ${currentPoll.source ? `<p class="poll-source-ref">📖 ${escHtml(currentPoll.source)}${currentPoll.page ? `, p. ${escHtml(currentPoll.page)}` : ''}</p>` : ''}
       <div class="btn-row">
         <span class="status-pill ${statusLabel}">${statusText}</span>
         ${!pollActive
@@ -659,6 +660,9 @@
     const el = document.getElementById('preview-display');
     if (!quiz) { card.style.display = 'none'; refiningTarget = null; return; }
     card.style.display = '';
+    const sourceRef = quiz.source
+      ? `<p class="poll-source-ref">📖 ${escHtml(quiz.source)}${quiz.page ? `, p. ${escHtml(quiz.page)}` : ''}</p>`
+      : '';
     el.innerHTML =
       `<div class="preview-question-row">` +
       `<p class="poll-question" style="margin:0; flex:1;">${escHtml(quiz.question)}</p>` +
@@ -670,7 +674,8 @@
         `<span>${escHtml(o)}</span>` +
         `<button class="refresh-btn" title="Regenerate this option" onclick="refinePreview('opt${i}')">↻</button>` +
         `</div>`
-      ).join('');
+      ).join('') +
+      sourceRef;
 
     // Flash changed element after DOM update
     if (oldPreview && refiningTarget) {
