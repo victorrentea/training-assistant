@@ -7,6 +7,7 @@ import base64
 import json
 import os
 import re
+import socket
 import ssl
 import sys
 import urllib.error
@@ -468,6 +469,8 @@ _ANTHROPIC_ERROR_HINTS = {
     529: "Anthropic overloaded — try again in a few minutes",
 }
 
+_HTTP_TIMEOUT_SECONDS = float(os.environ.get("WORKSHOP_HTTP_TIMEOUT_SECONDS", "8"))
+
 
 def _http_error_message(code: int, url: str) -> str:
     hint = _HTTP_ERROR_HINTS.get(code, "unexpected server response")
@@ -481,12 +484,19 @@ def _post_json(url: str, payload: dict, username: str = "", password: str = "") 
         headers["Authorization"] = "Basic " + base64.b64encode(f"{username}:{password}".encode()).decode()
     req = urllib.request.Request(url, data=data, headers=headers, method="POST")
     try:
-        with urllib.request.urlopen(req, context=_ssl_context()) as resp:
-            return json.loads(resp.read())
+        with urllib.request.urlopen(req, timeout=_HTTP_TIMEOUT_SECONDS, context=_ssl_context()) as resp:
+            try:
+                return json.loads(resp.read())
+            except json.JSONDecodeError as e:
+                raise RuntimeError(f"Invalid JSON response from server [{url}]") from e
     except urllib.error.HTTPError as e:
         raise RuntimeError(_http_error_message(e.code, url)) from e
+    except (TimeoutError, socket.timeout) as e:
+        raise RuntimeError(f"Server request timed out after {_HTTP_TIMEOUT_SECONDS:.1f}s [{url}]") from e
     except urllib.error.URLError as e:
         raise RuntimeError(f"Cannot reach server: {e.reason} [{url}]") from e
+    except OSError as e:
+        raise RuntimeError(f"Cannot reach server: {e} [{url}]") from e
 
 
 def _get_json(url: str, username: str = "", password: str = "") -> dict:
@@ -495,12 +505,19 @@ def _get_json(url: str, username: str = "", password: str = "") -> dict:
         headers["Authorization"] = "Basic " + base64.b64encode(f"{username}:{password}".encode()).decode()
     req = urllib.request.Request(url, headers=headers)
     try:
-        with urllib.request.urlopen(req, context=_ssl_context()) as resp:
-            return json.loads(resp.read())
+        with urllib.request.urlopen(req, timeout=_HTTP_TIMEOUT_SECONDS, context=_ssl_context()) as resp:
+            try:
+                return json.loads(resp.read())
+            except json.JSONDecodeError as e:
+                raise RuntimeError(f"Invalid JSON response from server [{url}]") from e
     except urllib.error.HTTPError as e:
         raise RuntimeError(_http_error_message(e.code, url)) from e
+    except (TimeoutError, socket.timeout) as e:
+        raise RuntimeError(f"Server request timed out after {_HTTP_TIMEOUT_SECONDS:.1f}s [{url}]") from e
     except urllib.error.URLError as e:
         raise RuntimeError(f"Cannot reach server: {e.reason} [{url}]") from e
+    except OSError as e:
+        raise RuntimeError(f"Cannot reach server: {e} [{url}]") from e
 
 
 def post_poll(quiz: dict, config: Config) -> None:

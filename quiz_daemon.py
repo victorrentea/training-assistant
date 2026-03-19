@@ -152,6 +152,7 @@ def run() -> None:
     # Session state: the transcript text used to generate the current preview
     last_text: str | None = None
     last_quiz: dict | None = None
+    server_disconnected = False
 
     while True:
         try:
@@ -162,6 +163,9 @@ def run() -> None:
                 f"{config.server_url}/api/quiz-request",
                 config.host_username, config.host_password,
             )
+            if server_disconnected:
+                print("[daemon] Reconnected to server.")
+                server_disconnected = False
             req = data.get("request")
             if req:
                 topic = req.get("topic")
@@ -198,11 +202,16 @@ def run() -> None:
                     post_status("error", "No conversation context — please generate a question first.", config)
 
         except RuntimeError as e:
-            print(f"[daemon] Server unreachable: {e}", file=sys.stderr)
+            if not server_disconnected:
+                print(f"[daemon] Server unreachable: {e}", file=sys.stderr)
+                server_disconnected = True
         except KeyboardInterrupt:
             _PID_FILE.unlink(missing_ok=True)
             print("\n[daemon] Stopped.")
             return
+        except Exception as e:
+            # Keep daemon alive for unexpected transient errors; loop retries.
+            print(f"[daemon] Unexpected error (will retry): {e}", file=sys.stderr)
         time.sleep(DAEMON_POLL_INTERVAL)
 
 
