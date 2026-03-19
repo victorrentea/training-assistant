@@ -884,14 +884,39 @@
     await fetch(`/api/qa/question/${qid}`, { method: 'DELETE' });
   }
 
-  async function editQuestion(qid, currentText) {
-    const newText = prompt('Edit question:', currentText);
-    if (!newText || newText.trim() === currentText) return;
-    await fetch(`/api/qa/question/${qid}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: newText.trim() }),
+  function editQuestion(qid, currentText) {
+    const card = document.querySelector(`.qa-card[data-id="${qid}"]`);
+    if (!card) return;
+    const textEl = card.querySelector('.qa-text');
+    if (textEl.querySelector('input')) return; // already editing
+
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.value = currentText;
+    input.className = 'qa-edit-input';
+    textEl.innerHTML = '';
+    textEl.appendChild(input);
+    input.focus();
+    input.select();
+
+    async function commit() {
+      const newText = input.value.trim();
+      if (newText && newText !== currentText) {
+        await fetch(`/api/qa/question/${qid}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: newText }),
+        });
+      } else {
+        textEl.textContent = currentText; // restore on cancel
+      }
+    }
+
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+      if (e.key === 'Escape') { input.value = currentText; input.blur(); }
     });
+    input.addEventListener('blur', commit, { once: true });
   }
 
   function renderQAList(questions) {

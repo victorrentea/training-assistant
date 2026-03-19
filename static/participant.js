@@ -468,11 +468,12 @@
       const hasUpvoted = (q.upvoters || []).includes(name);
       const canUpvote = !isOwn && !hasUpvoted;
       return `
-        <div class="qa-card-p${q.answered ? ' qa-answered-p' : ''}${condensed ? ' qa-condensed' : ''}">
+        <div class="qa-card-p${q.answered ? ' qa-answered-p' : ''}${condensed ? ' qa-condensed' : ''}" data-id="${escHtml(q.id)}">
           <div class="qa-text-p">${escHtml(q.text)}</div>
           <div class="qa-footer-p">
             <span class="qa-author-p">${escHtml(q.author)}${isOwn ? ' (you)' : ''}</span>
             <button class="qa-upvote-btn${hasUpvoted ? ' qa-upvoted' : ''}"
+                    data-qid="${escHtml(q.id)}"
                     ${canUpvote ? `onclick="upvoteQuestion('${escHtml(q.id)}')"` : 'disabled'}
                     title="${canUpvote ? 'Upvote' : (isOwn ? 'Your question' : 'Already upvoted')}">
               ▲ ${q.upvote_count}
