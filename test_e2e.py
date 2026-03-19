@@ -93,12 +93,14 @@ def _host_browser_ctx(server_url, playwright):
     return browser, ctx
 
 
-def _host_goto(page, server_url: str) -> None:
-    """Navigate to /host with auth. First visit seeds the browser auth cache,
-    second visit uses clean URL so relative fetch() calls work."""
-    auth_url = server_url.replace("://", f"://{HOST_USER}:{HOST_PASS}@")
-    page.goto(f"{auth_url}/host")
-    page.goto("/host")
+def _add_host_auth(ctx) -> None:
+    """Intercept all requests and inject Basic Auth header, covering both
+    navigation and JS fetch() calls regardless of Chromium's auth-cache behavior."""
+    import base64
+    auth_header = base64.b64encode(f"{HOST_USER}:{HOST_PASS}".encode()).decode()
+    ctx.route("**", lambda route: route.continue_(
+        headers={**route.request.headers, "Authorization": f"Basic {auth_header}"}
+    ))
 
 
 def _pax_browser_ctx(server_url, playwright):
@@ -109,22 +111,12 @@ def _pax_browser_ctx(server_url, playwright):
 
 @pytest.fixture()
 def host(server_url, playwright) -> HostPage:
-    import base64
     browser, ctx = _host_browser_ctx(server_url, playwright)
-    # Inject Basic Auth header for all JS fetch() calls BEFORE creating the page
-    # (Playwright http_credentials only applies to navigation, not JS-initiated fetch)
-    auth_header = base64.b64encode(f"{HOST_USER}:{HOST_PASS}".encode()).decode()
-    ctx.add_init_script(f"""
-        const _origFetch = window.fetch;
-        window.fetch = (input, init = {{}}) => {{
-            init.headers = Object.assign({{'Authorization': 'Basic {auth_header}'}}, init.headers || {{}});
-            return _origFetch(input, init);
-        }};
-    """)
+    _add_host_auth(ctx)
     page = ctx.new_page()
     page.on("console", lambda msg: print(f"[browser:{msg.type}] {msg.text}"))
     page.on("response", lambda r: print(f"[network] {r.request.method} {r.url} -> {r.status}") if "/api/" in r.url else None)
-    _host_goto(page, server_url)
+    page.goto("/host")
     print(f"[host-fixture] page title after goto: {page.title()!r}, url: {page.url!r}")
     yield HostPage(page)
     ctx.close()
@@ -383,12 +375,13 @@ class TestQA:
         b2, ctx2 = _pax_browser_ctx(server_url, playwright)
         b3, ctx3 = _pax_browser_ctx(server_url, playwright)
 
+        _add_host_auth(ctx_host)
         host = HostPage(ctx_host.new_page())
         p1   = ParticipantPage(ctx1.new_page())
         p2   = ParticipantPage(ctx2.new_page())
         p3   = ParticipantPage(ctx3.new_page())
 
-        _host_goto(host._page, server_url)
+        host._page.goto("/host")
         p1._page.goto("/")
         p2._page.goto("/")
         p3._page.goto("/")
@@ -459,11 +452,12 @@ class TestQA:
         b1, ctx1 = _pax_browser_ctx(server_url, playwright)
         b2, ctx2 = _pax_browser_ctx(server_url, playwright)
 
+        _add_host_auth(ctx_host)
         host = HostPage(ctx_host.new_page())
         p1   = ParticipantPage(ctx1.new_page())
         p2   = ParticipantPage(ctx2.new_page())
 
-        _host_goto(host._page, server_url)
+        host._page.goto("/host")
         p1._page.goto("/")
         p2._page.goto("/")
 
