@@ -13,6 +13,7 @@ import sys
 import urllib.error
 import urllib.request
 from dataclasses import dataclass, replace
+from datetime import date
 from pathlib import Path
 from typing import Optional
 
@@ -44,6 +45,8 @@ class Config:
     host_username: str
     host_password: str
     topic: Optional[str] = None
+    session_folder: Optional[Path] = None
+    session_notes: Optional[Path] = None
 
 
 def load_secrets_env() -> None:
@@ -80,6 +83,73 @@ def config_from_env(minutes: int = DEFAULT_MINUTES) -> Config:
         host_username=os.environ.get("HOST_USERNAME", "host"),
         host_password=os.environ.get("HOST_PASSWORD", ""),
     )
+
+
+_SESSION_FOLDER_RE = re.compile(
+    r"^(\d{4}-\d{2}-\d{2})(?:\.\.(\d{2}(?:-\d{2})?))?[\s_]"
+)
+
+MAX_SESSION_NOTES_CHARS = 20_000
+
+
+def find_session_folder(today: date) -> tuple[Optional[Path], Optional[Path]]:
+    """Returns (session_folder, session_notes). Both None if not found."""
+    sessions_root_str = os.environ.get(
+        "SESSIONS_FOLDER",
+        str(Path.home() / "My Drive" / "Cursuri" / "###sesiuni"),
+    )
+    sessions_root = Path(sessions_root_str).expanduser()
+    if not sessions_root.exists() or not sessions_root.is_dir():
+        print(f"[session] SESSIONS_FOLDER not found or not a dir: {sessions_root}", file=sys.stderr)
+        return None, None
+
+    matches: list[tuple[date, str, Path]] = []
+    for entry in sessions_root.iterdir():
+        if not entry.is_dir():
+            continue
+        m = _SESSION_FOLDER_RE.match(entry.name)
+        if not m:
+            continue
+        try:
+            start = date.fromisoformat(m.group(1))
+        except ValueError:
+            continue
+        g2 = m.group(2)
+        try:
+            if g2 is None:
+                end = start
+            elif "-" in g2:
+                mm, dd = g2.split("-")
+                end = date(start.year, int(mm), int(dd))
+            else:
+                end = date(start.year, start.month, int(g2))
+        except ValueError:
+            print(f"[session] Skipping folder with invalid end date: {entry.name}", file=sys.stderr)
+            continue
+        if end < start:
+            print(f"[session] Skipping folder where end < start: {entry.name}", file=sys.stderr)
+            continue
+        if start <= today <= end:
+            matches.append((start, entry.name, entry))
+
+    if not matches:
+        return None, None
+
+    if len(matches) > 1:
+        print(f"[session] Multiple session folders match today: {[m[1] for m in matches]}", file=sys.stderr)
+
+    # Latest start_date; tie-break: alphabetically last name
+    matches.sort(key=lambda x: (x[0], x[1]))
+    _, _, session_folder = matches[-1]
+
+    # Find most recently modified .txt file
+    txt_files = sorted(
+        [f for f in session_folder.iterdir() if f.suffix.lower() == ".txt"],
+        key=lambda f: f.stat().st_mtime,
+    )
+    session_notes = txt_files[-1] if txt_files else None
+
+    return session_folder, session_notes
 
 
 # ---------------------------------------------------------------------------
