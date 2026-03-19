@@ -27,8 +27,8 @@ PROD_URL = "https://interact.victorrentea.ro"
 PROD_HOST_USER = os.environ.get("HOST_USERNAME", "host")
 PROD_HOST_PASS = os.environ.get("HOST_PASSWORD", "host")
 
-HOST_USER = "host"
-HOST_PASS = "hostvibe!"
+HOST_USER = os.environ.get("HOST_USERNAME", "host")
+HOST_PASS = os.environ.get("HOST_PASSWORD", "testpass")
 
 
 # ---------------------------------------------------------------------------
@@ -41,12 +41,16 @@ def server_url():
     Spin up uvicorn on port 0 (OS picks a free port atomically).
     Parse the actual bound port from uvicorn's stderr output.
     """
+    server_env = os.environ.copy()
+    server_env["HOST_USERNAME"] = HOST_USER
+    server_env["HOST_PASSWORD"] = HOST_PASS
     proc = subprocess.Popen(
         [sys.executable, "-m", "uvicorn", "main:app",
          "--host", "127.0.0.1", "--port", "0"],
         stdout=subprocess.DEVNULL,
         stderr=subprocess.PIPE,
         cwd=os.path.dirname(os.path.abspath(__file__)),
+        env=server_env,
     )
 
     port = None
@@ -88,19 +92,10 @@ def _host_browser_ctx(server_url, playwright):
     browser = playwright.chromium.launch()
     ctx = browser.new_context(
         base_url=server_url,
+        http_credentials={"username": HOST_USER, "password": HOST_PASS},
         viewport={"width": 1440, "height": 900},
     )
     return browser, ctx
-
-
-def _add_host_auth(ctx) -> None:
-    """Intercept all requests and inject Basic Auth header, covering both
-    navigation and JS fetch() calls regardless of Chromium's auth-cache behavior."""
-    import base64
-    auth_header = base64.b64encode(f"{HOST_USER}:{HOST_PASS}".encode()).decode()
-    ctx.route("**", lambda route: route.continue_(
-        headers={**route.request.headers, "Authorization": f"Basic {auth_header}"}
-    ))
 
 
 def _pax_browser_ctx(server_url, playwright):
@@ -112,12 +107,8 @@ def _pax_browser_ctx(server_url, playwright):
 @pytest.fixture()
 def host(server_url, playwright) -> HostPage:
     browser, ctx = _host_browser_ctx(server_url, playwright)
-    _add_host_auth(ctx)
     page = ctx.new_page()
-    page.on("console", lambda msg: print(f"[browser:{msg.type}] {msg.text}"))
-    page.on("response", lambda r: print(f"[network] {r.request.method} {r.url} -> {r.status}") if "/api/" in r.url else None)
     page.goto("/host")
-    print(f"[host-fixture] page title after goto: {page.title()!r}, url: {page.url!r}")
     yield HostPage(page)
     ctx.close()
     browser.close()
@@ -375,7 +366,6 @@ class TestQA:
         b2, ctx2 = _pax_browser_ctx(server_url, playwright)
         b3, ctx3 = _pax_browser_ctx(server_url, playwright)
 
-        _add_host_auth(ctx_host)
         host = HostPage(ctx_host.new_page())
         p1   = ParticipantPage(ctx1.new_page())
         p2   = ParticipantPage(ctx2.new_page())
@@ -452,7 +442,6 @@ class TestQA:
         b1, ctx1 = _pax_browser_ctx(server_url, playwright)
         b2, ctx2 = _pax_browser_ctx(server_url, playwright)
 
-        _add_host_auth(ctx_host)
         host = HostPage(ctx_host.new_page())
         p1   = ParticipantPage(ctx1.new_page())
         p2   = ParticipantPage(ctx2.new_page())

@@ -33,5 +33,5 @@ jobs:
       - name: E2E browser tests
         env:
           HOST_USERNAME: host
-          HOST_PASSWORD: hostvibe!
+          HOST_PASSWORD: testpass
         run: pytest test_e2e.py -v -s --tb=short
