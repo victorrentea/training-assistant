@@ -45,13 +45,17 @@
       <div class="or-divider"><span>or</span></div>
       <div class="quiz-gen-row">
         <div class="quiz-gen-controls">
+          <label style="font-size:.85rem;color:var(--muted);display:flex;align-items:center;gap:.4rem;">
+            <input type="radio" name="quiz-mode" value="topic" id="mode-topic" onchange="updateGenBtn()" style="cursor:pointer;" />
+            from topic
+          </label>
           <input id="quiz-topic" type="text" maxlength="60" autocomplete="off"
-                 placeholder="topic (optional)"
-                 oninput="updateGenBtn()"
-                 style="background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:.3rem .6rem;font-size:.9rem;width:10rem;" />
-          <button class="btn btn-warn" id="gen-quiz-btn" onclick="requestQuiz()">🤖 Generate from transcript</button>
-          <div id="quiz-minutes-row" style="display:flex;align-items:center;gap:.4rem;font-size:.9rem;color:var(--text);">
-            from last
+                 placeholder="e.g. circuit breaker"
+                 oninput="selectTopicMode()"
+                 style="background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:.3rem .6rem;font-size:.9rem;width:12rem;" />
+          <label style="font-size:.85rem;color:var(--muted);display:flex;align-items:center;gap:.4rem;margin-top:.25rem;">
+            <input type="radio" name="quiz-mode" value="transcript" id="mode-transcript" checked onchange="updateGenBtn()" style="cursor:pointer;" />
+            from transcript of last
             <select id="quiz-minutes" style="background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:.3rem .5rem;font-size:.9rem;cursor:pointer;">
               <option value="15">15 min</option>
               <option value="30" selected>30 min</option>
@@ -59,7 +63,8 @@
               <option value="90">1.5 hours</option>
               <option value="480">whole day</option>
             </select>
-          </div>
+          </label>
+          <button class="btn btn-warn" id="gen-quiz-btn" onclick="requestQuiz()" style="margin-top:.25rem;">🤖 Generate</button>
         </div>
         <span id="quiz-status"></span>
       </div>
