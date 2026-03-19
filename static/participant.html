@@ -12,8 +12,6 @@
 </head>
 <body>
 
-  <h1>🎙 Workshop</h1>
-
   <!-- Join screen -->
   <div id="join-screen">
     <h2>Your name</h2>
@@ -28,10 +26,13 @@
   <!-- Main screen (shown after joining) -->
   <div id="main-screen">
     <div class="status-bar">
-      <span><span class="dot"></span> Connected as <strong id="display-name"></strong></span>
-      <span style="display:flex;align-items:center;gap:1rem;">
+      <span class="status-left">
+        <span class="mic-icon">🎙</span>
+        <span><span class="dot"></span> <strong id="display-name"></strong></span>
+        <span id="my-score" style="display:none; color:var(--accent2); font-weight:700; font-size:.85rem;"></span>
+      </span>
+      <span class="status-right">
         <span id="pax-count"></span>
-        <span id="my-score" style="display:none; color:var(--accent2); font-weight:700; font-size:.9rem;"></span>
         <button id="leave-btn" title="Change name">✕ Leave</button>
       </span>
     </div>
