@@ -21,7 +21,7 @@
   <div class="host-col host-col-left">
     <!-- Tab switcher -->
     <div class="tab-bar">
-      <button class="tab-btn active" id="tab-poll" onclick="switchTab('poll')">Poll</button>
+      <button class="tab-btn active" id="tab-poll" onclick="switchTab('poll')">📊 Poll</button>
       <button class="tab-btn" id="tab-wordcloud" onclick="switchTab('wordcloud')">☁ Word Cloud</button>
       <button class="tab-btn" id="tab-qa" onclick="switchTab('qa')">❓ Q&A</button>
     </div>
@@ -44,12 +44,13 @@
       </div>
       <div class="or-divider"><span>or</span></div>
       <div class="quiz-gen-row">
-        <div class="quiz-gen-controls" style="display:flex;flex-direction:column;gap:.35rem;">
+        <div class="quiz-gen-controls" style="display:flex;flex-direction:column;gap:.35rem;align-items:flex-start;">
           <div style="font-size:.85rem;color:var(--muted);display:flex;align-items:center;gap:.4rem;">
             from topic:
             <input id="quiz-topic" type="text" maxlength="60" autocomplete="off"
                    placeholder="e.g. circuit breaker"
                    oninput="updateGenBtn()"
+                   onkeydown="if(event.key==='Enter')requestQuiz()"
                    style="background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:.2rem .5rem;font-size:.85rem;width:10rem;" />
           </div>
           <div style="font-size:.85rem;color:var(--muted);display:flex;align-items:center;gap:.4rem;">
