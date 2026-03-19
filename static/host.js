@@ -91,7 +91,7 @@
   // Set participant link
   const link = `${location.protocol}//${location.host}/`;
   document.getElementById('participant-link').href = link;
-  document.getElementById('participant-link').textContent = location.host + '/';
+  document.getElementById('participant-link').textContent = location.host;
 
   // ── WebSocket (host monitors state too) ──
   function connectWS() {
@@ -215,7 +215,7 @@
     ul.innerHTML = sorted.map(n => {
       const loc = participantLocations[n];
       const pts = scores[n];
-      const scoreTag = pts ? `<span class="pax-score">⭐ ${pts}</span>` : '';
+      const scoreTag = pts ? `<span class="pax-score">⭐ ${pts} pts</span>` : '';
       const locLabel = loc ? resolvedCities[loc] || loc : null;
       return `<li>${escHtml(n)}${scoreTag}${locLabel ? `<span class="pax-location" onclick="openMap()" title="View all on map">📍 ${escHtml(locLabel)}</span>` : ''}</li>`;
     }).join('');
@@ -823,6 +823,17 @@
     }
   }
 
+  async function pushWordCloudTopic() {
+    const input = document.getElementById('wc-topic-input');
+    if (!input) return;
+    const topic = input.value.trim();
+    await fetch('/api/wordcloud/topic', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ topic }),
+    });
+  }
+
   function hostSubmitWord() {
     const input = document.getElementById('wc-host-input');
     if (!input) return;
@@ -1006,4 +1017,7 @@
 
   document.getElementById('wc-host-input')?.addEventListener('keydown', e => {
     if (e.key === 'Enter') hostSubmitWord();
+  });
+  document.getElementById('wc-topic-input')?.addEventListener('keydown', e => {
+    if (e.key === 'Enter') pushWordCloudTopic();
   });

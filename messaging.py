@@ -29,6 +29,7 @@ def build_state_message() -> dict:
         "scores": state.scores,
         "current_activity": state.current_activity,
         "wordcloud_words": state.wordcloud_words,
+        "wordcloud_topic": state.wordcloud_topic,
         "qa_questions": [
             {
                 "id": qid,

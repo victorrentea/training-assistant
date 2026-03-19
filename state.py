@@ -42,6 +42,7 @@ class AppState:
         self.vote_times: dict[str, datetime] = {}
         self.current_activity: ActivityType = ActivityType.NONE
         self.wordcloud_words: dict[str, int] = {}
+        self.wordcloud_topic: str = ""
         self.qa_questions: dict[str, dict] = {}
         # Each value: { id, text, author, upvoters: set[str], answered: bool, timestamp: float }
 
