@@ -57,27 +57,42 @@
 - [x] Make the launch and generate a bit less high, and make the question text box half the size. At its minimum, it still would increase in height as I type more text in it. Also, make sure that when the messages from the demo arrive, they are shorter and displayed under the generate button.
 - [x] The three open four options to end the poll should be displayed between the open voting and remove poll, and have the same size and look and feel as the other buttons in yellow.
 - [x] align the height of the connected divs, the reset scores, launch generate, open voting, remove poll, quiz Q&A. All the buttons should have the same height.
+- [ ] gamify Q&A screen: Suggest to ask questions to gain points and to upload to gain additional points. Have this text be displayed intermittently to increase the engagement; that's the ultimate goal 
+- [ ] increase the gamify effect: Come up with an animation, for example rolling up the number live whenever you gain points, maybe even some visual effect at the entire web page, like confetti, proportional to the amount of points you've earned logarithmically, with a maximum to a poll question correctly answered. That would be the max.  
+- [x] bug: edit button in host Q&A doesnt work
+- [x] bug: upon refresh of the host ui, the correct active activity is lost - It always goes back to poll, leaving the center div displaying the correct activity, but the left div in host is always reset.
+- [x] bug: upon participant ui refresh, the past submitted words in cloud are lost They should be stored in local storage, but cleared at the moment the host opens a new word cloud.
+- [ ] bug: The background of the word cloud in dark mode in participant is blue rather than black. Make it black.
+- [ ] feat: The word cloud experience can be a bit vague for the participants. To fix this, allow the host to push a topic name via a new input text in the host view, which will be displayed in the participant view in the prompt in the label sitting right on top of the input text. What comes to mind and then about <topic-from-host>. Also preserve the possibility of the host to submit a word themselves. 
+- [ ] Change the button name in the word cloud on host UI  from "Clear" to "Download and Close word cloud".And make that button download a picture of the current word cloud to the host machine automatically.
+- [ ] bug: Remove the download questions button that's from the bottom right corner in the host UI. Keep the buttons from the poll content, which is already there. Shorten the text in that bottom right corner to one: say "join" and then the URL without HTTPS, and place the "reset scores" button to the right of the QR icon.
+- [ ] tweak: In the participant UI, after submitting a question in the Q&A activity, the cursor should remain in the input text to allow submission of another Q&A fast. 
+- [ ] feat: The host should also be able to submit a Q&A question.
+- [ ] tweak: The badge for the agent status displays the controls emoji. I want to display it similar to how server is displayed, with the text saying agent and a dot,
+- [ ]  the fav icon of the host page shouldn't have a red background. change its emoji to a cog.
+- [ ] load test: add a single test case, having 30 participants connected simultaneously. In the poll activity, the host fires a question with a single option, and all the participants vote on a random option. The list of participants is then sorted by the host according to the points earned. This should be an end-to-end test. After you run this test, try to execute it once against the deployed application, but then switch to using a local running instance.
+- [x] feat: topic-based poll generation — host types a topic (e.g. "circuit breaker") in the host UI next to the Generate button; daemon uses ChromaDB RAG over local materials (pdf/epub/mobi/txt/md/html) to retrieve relevant content and Claude crafts a grounded question; daemon/ sub-project isolates heavy ML deps from Railway deployment
 
 ---
 
-# Future Ideas
+## Generate quiz on topic from material
+The host enters a concept several words and the LLM, connected to by the agent, asks Claude to generate a poll on that topic, but offers Claude a RAG tool to access the materials in a vectorized data store kept local on the host machine. So the AI can now semantically search and retrieve whatever it needs from the materials. The material should include not only the PDFs from https://victorrentea.ro/slides/ but also reference books.
 
-Ideas for increasing engagement in debate-style workshops with mid-senior developers and architects.
-
-## Confidence Voting
-After a poll closes, ask each participant to rate their confidence (1–3 stars). Host sees a 2D scatter of opinion × confidence. Surfaces "strongly wrong" answers (high confidence, wrong option) — the richest material for debate.
-
-## Word Cloud
-Participants type one or more words in response to an open prompt (e.g. "What does 'clean code' mean to you?"). A live animated word cloud forms on the host screen. Great for priming a discussion before challenging assumptions. *(Already in Phase 2 backlog)*
-
-## Estimation Challenge (Planning Poker-style)
-Host poses a scenario: "How long would this refactoring take on a real codebase?" Participants pick from a scale (1h / 1d / 1w / 1 month). Host reveals the distribution and asks outliers to defend their estimate. No coding required — creates cognitive tension that drives good debate.
+## Convert catalog.gdoc to html (auto-updated) 
+Creative script which generates navigable HTML page from the catalog Google Doc as a prototype. How to trigger this script at any change in the Google Doc? Or by pulling? 
 
 ## Code Snippet Voting (read-only)
 Host pastes a short snippet (10–20 lines) into the host panel; it is broadcast read-only to all participants with syntax highlighting. Host then launches a poll: "What's wrong here?" or "Rate this 1–5". Participants read and react but never write. Fills the "playing around" gap without requiring any coding from participants.
 
-## Live Q&A with Upvoting
-Participants submit anonymous questions; others upvote. Host sees a ranked list and picks what to address. Upvoting surfaces the question the room actually wants answered, not just the loudest voice. Anonymous submission creates psychological safety for junior participants. *(Already in Phase 2 backlog)*
+## "Whose Side Are You On?" Debate Mode
+Host splits the room into two positions (randomly or by choice). Each side votes/argues from their assigned position. Then sides are flipped. Forces participants to articulate the opposing argument — powerful for trade-off discussions with architects.
+
+
+## Confidence Voting
+After a poll closes, ask each participant to rate their confidence (1–3 stars). Host sees a 2D scatter of opinion × confidence. Surfaces "strongly wrong" answers (high confidence, wrong option) — the richest material for debate.
+
+## Estimation Challenge (Planning Poker-style)
+Host poses a scenario: "How long would this refactoring take on a real codebase?" Participants pick from a scale (1h / 1d / 1w / 1 month). Host reveals the distribution and asks outliers to defend their estimate. No coding required — creates cognitive tension that drives good debate.
 
 ## Agree-Disagree Slider
 Host posts a provocative statement (e.g. "Microservices are always a mistake for teams under 20 people"). Participants drag a slider from Strongly Disagree to Strongly Agree. Host sees the full distribution as a histogram. Sliders capture *degree* of opinion — richer than binary polls for an audience that hates false dichotomies.
@@ -85,11 +100,5 @@ Host posts a provocative statement (e.g. "Microservices are always a mistake for
 ## Concept Ranking / Ordering
 Host presents 4–6 items (patterns, approaches, technologies). Participants drag them into an order (e.g. safest → most dangerous, simplest → most complex). Host aggregates the median ranking and highlights disagreements. Pure conceptual reasoning, no coding.
 
-## "Whose Side Are You On?" Debate Mode
-Host splits the room into two positions (randomly or by choice). Each side votes/argues from their assigned position. Then sides are flipped. Forces participants to articulate the opposing argument — powerful for trade-off discussions with architects.
-
 ## Anonymous Reaction / Confession Box
 Host broadcasts a statement: "Have you ever shipped code that violated what we just discussed?" Participants react with a single emoji or yes/no. Aggregated reactions are shown live. Creates psychological safety and honest discussion starters.
-
-## Session Closing Word Cloud
-End-of-session ritual: "One word that changed how you think today." A word cloud closes the session. Gives the host real-time feedback and participants a moment of reflection.
