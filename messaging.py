@@ -3,6 +3,7 @@ from typing import Optional
 from datetime import datetime, timezone
 from fastapi import WebSocket
 
+from backend_version import get_backend_version
 from state import state
 
 
@@ -17,6 +18,7 @@ def build_state_message() -> dict:
     daemon_connected = last_seen is not None and (now - last_seen).total_seconds() < 5
     return {
         "type": "state",
+        "backend_version": get_backend_version(),
         "poll": state.poll,
         "poll_active": state.poll_active,
         "vote_counts": state.vote_counts(),

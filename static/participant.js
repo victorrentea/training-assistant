@@ -15,6 +15,10 @@
   let _lastWordcloudWords = {};
   const WC_COLORS = ['#7ecef4','#a78bfa','#34d399','#fbbf24','#f472b6','#60a5fa','#fb923c'];
   let _wcDebounceTimer = null;
+  const versionReloadGuard = window.createVersionReloadGuard
+    ? window.createVersionReloadGuard({ countdownSeconds: 10 })
+    : null;
+  window.__versionReloadGuard = versionReloadGuard;
   const _QA_TOASTS = [
     "💬 Ask a question — earn points!",
     "👍 Upvote a great question — both you and the author earn points!",
@@ -224,6 +228,7 @@
   function handleMessage(msg) {
     switch (msg.type) {
       case 'state':
+        versionReloadGuard && versionReloadGuard.check(msg.backend_version);
         if (msg.poll?.id !== currentPoll?.id) {
           myVote = msg.poll?.multi ? new Set() : null;
           pollResult = null;
