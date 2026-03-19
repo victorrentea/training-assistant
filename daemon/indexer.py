@@ -143,13 +143,13 @@ def chunk_text(text: str, chunk_size: int = CHUNK_SIZE, overlap: int = CHUNK_OVE
 # Index / deindex
 # ---------------------------------------------------------------------------
 
-def index_file(path: Path) -> None:
-    filename = path.name
-    print(f"[indexer] Indexing {filename}…", flush=True)
+def index_file(path: Path, base_folder: Path) -> None:
+    source_key = str(path.relative_to(base_folder))
+    print(f"[indexer] Indexing {source_key}…", flush=True)
     try:
         pages = extract_pages(path)
     except Exception as e:
-        print(f"[indexer] Failed to parse {filename}: {e}", file=sys.stderr)
+        print(f"[indexer] Failed to parse {source_key}: {e}", file=sys.stderr)
         return
 
     collection = _get_collection()
@@ -169,28 +169,28 @@ def index_file(path: Path) -> None:
             try:
                 emb = embedder.encode(chunk).tolist()
             except Exception as e:
-                print(f"[indexer] Skipping chunk {page_num}::{chunk_idx} of {filename}: {e}", file=sys.stderr)
+                print(f"[indexer] Skipping chunk {page_num}::{chunk_idx} of {source_key}: {e}", file=sys.stderr)
                 continue
-            ids.append(f"{filename}::{page_num}::{chunk_idx}")
+            ids.append(f"{source_key}::{page_num}::{chunk_idx}")
             documents.append(chunk)
-            metadatas.append({"source": filename, "page": page_num})
+            metadatas.append({"source": source_key, "page": page_num})
             embeddings.append(emb)
 
     if not ids:
-        print(f"[indexer] No content extracted from {filename}", file=sys.stderr)
+        print(f"[indexer] No content extracted from {source_key}", file=sys.stderr)
         return
 
     collection.upsert(ids=ids, documents=documents, metadatas=metadatas, embeddings=embeddings)
-    print(f"[indexer] Indexed {len(ids)} chunks from {filename}", flush=True)
+    print(f"[indexer] Indexed {len(ids)} chunks from {source_key}", flush=True)
 
 
-def deindex_file(filename: str) -> None:
+def deindex_file(source_key: str) -> None:
     try:
         collection = _get_collection()
-        collection.delete(where={"source": filename})
-        print(f"[indexer] Removed {filename} from index", flush=True)
+        collection.delete(where={"source": source_key})
+        print(f"[indexer] Removed {source_key} from index", flush=True)
     except Exception as e:
-        print(f"[indexer] Failed to deindex {filename}: {e}", file=sys.stderr)
+        print(f"[indexer] Failed to deindex {source_key}: {e}", file=sys.stderr)
 
 
 # ---------------------------------------------------------------------------
@@ -198,10 +198,10 @@ def deindex_file(filename: str) -> None:
 # ---------------------------------------------------------------------------
 
 def index_all(folder: Path) -> None:
-    files = [f for f in folder.iterdir() if f.suffix.lower() in SUPPORTED_EXTENSIONS]
-    print(f"[indexer] Initial indexing of {len(files)} files in {folder}…", flush=True)
+    files = [f for f in folder.rglob("*") if f.is_file() and f.suffix.lower() in SUPPORTED_EXTENSIONS]
+    print(f"[indexer] Initial indexing of {len(files)} files in {folder} (recursive)…", flush=True)
     for f in files:
-        index_file(f)
+        index_file(f, folder)
     print("[indexer] Initial indexing complete.", flush=True)
 
 
@@ -238,10 +238,14 @@ def _make_handler(folder: Path):
                     if p.suffix.lower() not in SUPPORTED_EXTENSIONS:
                         continue
                     if action == "delete":
-                        deindex_file(p.name)
+                        try:
+                            source_key = str(p.relative_to(folder))
+                        except ValueError:
+                            source_key = p.name
+                        deindex_file(source_key)
                     else:
                         if p.exists():
-                            index_file(p)
+                            index_file(p, folder)
 
         def on_created(self, event):
             if not event.is_directory:
@@ -274,7 +278,7 @@ def start_indexer(folder: Path) -> None:
         from watchdog.observers import Observer
         handler = _make_handler(folder)
         observer = Observer()
-        observer.schedule(handler, str(folder), recursive=False)
+        observer.schedule(handler, str(folder), recursive=True)
         observer.start()
         print(f"[indexer] Watching {folder} for changes…", flush=True)
         try:
