@@ -86,13 +86,13 @@
 - [x] When generating questions from a topic, instruct the AI to also search https://martinfowler.com/ as a reference.
 - [x] daemon: Indexer supports files in subfolders of the materials folder (e.g. materials/books) — uses rglob + recursive watchdog.
 - [x] Claude agents, when using the RAG tool, should explicitly prefer slides over books, and mention which source type it's drawing from. Slides = audience-familiar; books = complementary depth.
+- [x] Some questions are intense and people earn fewer points despite answering correctly (more reading time). Research Kahoot scoring. Proposal: score = max_pts × (min_time / your_time), capped at max. Fastest correct answer gets full points.
 - [ ] When generating a poll from a topic, the agent should communicate to the host UI the source reference for where the question comes from. Display it in the host UI only (bottom of main div, near close poll button).
 - [ ] Adjust the prompt for generating a poll question from the transcript to focus on topics from the transcription first, then consult reference materials for depth.
 - [ ] e2e test the download questions button after asking 2 questions. it should capture also the correct answers marked by host.
 - [ ] allow participants to vote at polls using keyboard up+down in single select; enter submit vote. in multi-select, display a checkbox on each option line and allow selecting it using SPACE.
 - [ ] load test: 30 participants connected simultaneously, host fires a poll, all vote randomly, host sorts by points. Run against local instance first, then deployed.
 - [ ] gamify Q&A screen: Intermittently display prompts encouraging participants to ask questions and upvote to earn points.
-- [ ] Some questions are intense and people earn fewer points despite answering correctly (more reading time). Research Kahoot scoring. Proposal: score = max_pts × (min_time / your_time), capped at max. Fastest correct answer gets full points.
 - [ ] increase the gamify effect: Animate score counter rolling up on point gain; confetti effect proportional to points earned (logarithmic scale, capped at max poll award).
 ---
 
