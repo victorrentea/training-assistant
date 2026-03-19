@@ -155,25 +155,31 @@ def index_file(path: Path) -> None:
     collection = _get_collection()
     embedder = _get_embedder()
 
-    ids, documents, metadatas = [], [], []
+    ids, documents, metadatas, embeddings = [], [], [], []
     for page_num, text in pages:
         if not isinstance(text, str):
             text = str(text) if text else ""
-        # Strip null bytes — tokenizers reject them
+        # Remove null bytes and lone surrogates that break tokenizers
         text = text.replace("\x00", " ")
+        text = text.encode("utf-8", errors="replace").decode("utf-8")
         for chunk_idx, chunk in enumerate(chunk_text(text)):
             chunk = chunk.strip()
             if not chunk:
                 continue
+            try:
+                emb = embedder.encode(chunk).tolist()
+            except Exception as e:
+                print(f"[indexer] Skipping chunk {page_num}::{chunk_idx} of {filename}: {e}", file=sys.stderr)
+                continue
             ids.append(f"{filename}::{page_num}::{chunk_idx}")
             documents.append(chunk)
             metadatas.append({"source": filename, "page": page_num})
+            embeddings.append(emb)
 
     if not ids:
         print(f"[indexer] No content extracted from {filename}", file=sys.stderr)
         return
 
-    embeddings = embedder.encode(documents).tolist()
     collection.upsert(ids=ids, documents=documents, metadatas=metadatas, embeddings=embeddings)
     print(f"[indexer] Indexed {len(ids)} chunks from {filename}", flush=True)
 
