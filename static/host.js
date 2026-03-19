@@ -613,7 +613,7 @@
   function updateGenBtn() {
     const topic = document.getElementById('quiz-topic').value.trim();
     const btn = document.getElementById('gen-quiz-btn');
-    btn.textContent = topic ? '🔍 Generate from topic' : '🤖 Generate from transcript';
+    btn.textContent = topic ? '🔍 Generate from topic' : '💬 Generate from transcript';
   }
 
   async function requestQuiz() {
@@ -873,6 +873,11 @@
     if (!canvas) return;
     clearTimeout(_hostWcDebounceTimer);
     _hostWcDebounceTimer = setTimeout(() => _drawHostCloud(canvas, wordsMap), 300);
+    const dl = document.getElementById('wc-host-suggestions');
+    if (dl) {
+      dl.innerHTML = Object.keys(wordsMap).sort()
+        .map(w => `<option value="${escHtml(w)}"></option>`).join('');
+    }
   }
 
   function _drawHostCloud(canvas, wordsMap) {
@@ -958,9 +963,13 @@
     input.focus();
     input.select();
 
+    let _committed = false;
     async function commit() {
+      if (_committed) return;
+      _committed = true;
       const newText = input.value.trim();
       if (newText && newText !== currentText) {
+        textEl.textContent = newText; // optimistic update (WS will confirm)
         await fetch(`/api/qa/question/${qid}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
@@ -972,8 +981,8 @@
     }
 
     input.addEventListener('keydown', e => {
-      if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
-      if (e.key === 'Escape') { input.value = currentText; input.blur(); }
+      if (e.key === 'Enter') { e.preventDefault(); commit(); }
+      if (e.key === 'Escape') { input.value = currentText; commit(); }
     });
     input.addEventListener('blur', commit, { once: true });
   }
