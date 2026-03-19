@@ -550,9 +550,13 @@
     const countdownEl = pollActive && activeTimer
       ? `<div class="countdown-display" id="host-countdown"></div>` : '';
     const timerBtns = pollActive && !activeTimer
-      ? [5,10,15,20].map(s =>
-          `<button class="btn btn-warn" onclick="startTimer(${s})">${s}s</button>`
-        ).join('') : '';
+      ? `<span class="timer-slider-wrap">
+           <span id="timer-val" class="timer-val">15s</span>
+           <input type="range" id="timer-slider" class="timer-slider" min="5" max="30" value="15"
+             oninput="document.getElementById('timer-val').textContent=this.value+'s'"
+             onmouseup="startTimer(+this.value)" ontouchend="startTimer(+this.value)" />
+         </span>`
+      : '';
 
     const pillsEl = document.getElementById('poll-pills');
     if (pillsEl) {
