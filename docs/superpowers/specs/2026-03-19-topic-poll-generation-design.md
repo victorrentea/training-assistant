@@ -27,7 +27,7 @@ training-assistant/
 └── daemon/                  ← NEW — local Mac only, never deployed
     ├── __init__.py          ← Empty; makes daemon/ a Python package
     ├── pyproject.toml       ← Heavy deps: chromadb, sentence-transformers, pypdf, watchdog
-    ├── indexer.py           ← PDF watcher + ChromaDB indexing
+    ├── indexer.py           ← Material watcher + ChromaDB indexing (PDF, epub, mobi)
     ├── rag.py               ← search_materials() implementation
     └── README.md            ← Setup instructions
 ```
@@ -50,6 +50,8 @@ dependencies = [
     "chromadb",
     "sentence-transformers",
     "pypdf",
+    "ebooklib",
+    "mobi",
     "watchdog",
 ]
 ```
@@ -78,7 +80,7 @@ The ChromaDB index lives at `~/.workshop-rag/chroma/` — local only, not in the
 **ChromaDB collection name:** `"workshop_materials"` — shared constant between `indexer.py` and `rag.py`.
 
 **Flow (add/modify):**
-1. Extract text page-by-page using `pypdf`
+1. Extract text by page/chapter using the appropriate parser: `pypdf` for `.pdf`, `ebooklib` for `.epub`, `mobi` (or kindleunpack) for `.mobi`
 2. Split each page into ~500-token chunks with 50-token overlap (character-based splitter, no heavy framework)
 3. Embed chunks with `sentence-transformers` model `all-mpnet-base-v2`
 4. Upsert into ChromaDB at `~/.workshop-rag/chroma/` — document ID = `"{filename}::{page}::{chunk_idx}"`; also store `source=filename` and `page` as metadata fields
@@ -89,6 +91,15 @@ The ChromaDB index lives at `~/.workshop-rag/chroma/` — local only, not in the
 **First run:** All PDFs indexed. With `all-mpnet-base-v2` on CPU, expect 15–30 min for 150MB of PDFs. During this window `rag.py` returns the "No materials indexed yet" fallback — Claude's general knowledge fills the gap and the host is informed via `source: "N/A"` in the result.
 
 **Materials folder:** Flat — all PDFs directly in the folder, no subfolders. `TRANSCRIPTION_FOLDER` must also exist (even if empty) because `config_from_env()` validates it on startup — create an empty directory if you only use topic mode.
+
+**Supported formats:**
+- `.pdf` — `pypdf`, page by page
+- `.epub` — `ebooklib`, chapter by chapter
+- `.mobi` — `mobi` library (or kindleunpack), chapter by chapter
+- `.txt`, `.md` — read directly, split into chunks (no external parser)
+- `.html` — strip tags with stdlib `html.parser`, then chunk as plain text (no extra dep)
+
+All formats follow the same chunk → embed → upsert pipeline. Add `ebooklib` and `mobi` to `daemon/pyproject.toml` deps. Watchdog watches for all six extensions.
 
 **Watchdog debounce:** Wait 2 seconds after the last modify event before starting indexing, to avoid parsing partially-written files during copy operations.
 
