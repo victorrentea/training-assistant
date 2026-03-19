@@ -76,12 +76,7 @@ class HostPage:
     def edit_question(self, question_id: str, new_text: str) -> None:
         """Trigger inline edit on a Q&A card and submit via Enter."""
         import json as _json
-        current_text = self._page.locator(
-            f'.qa-card[data-id="{question_id}"] .qa-text'
-        ).inner_text().strip()
-        self._page.evaluate(
-            f"() => editQuestion({_json.dumps(question_id)}, {_json.dumps(current_text)})"
-        )
+        self._page.evaluate(f"() => editQuestion({_json.dumps(question_id)})")
         input_el = self._page.locator(f'.qa-card[data-id="{question_id}"] .qa-edit-input')
         expect(input_el).to_be_visible(timeout=3000)
         input_el.fill(new_text)

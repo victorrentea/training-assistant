@@ -86,6 +86,17 @@
 - [x] Mark item done in `backlog.md`
 - [x] Run targeted tests
 
+## Backlog items: Q&A host actions + transcript-prompt hardening
+
+- [x] Host Q&A actions: `Answered` label, trash icon for delete, renamed clear-all action
+- [x] Host Q&A edit flow: remove brittle inline text serialization and read current text from DOM
+- [x] Prompt hardening: warn about transcript gibberish/repetition/nonsense
+- [x] Prompt behavior: enforce transcript-topics-first, then references for depth
+- [x] Add focused tests for Q&A host actions and prompt wording
+- [x] Capture screenshot proof for host Q&A action labels/icons
+- [x] Mark all three backlog items done in `backlog.md`
+- [x] Run targeted tests
+
 ## Review
 
 - Added `scripts/append_transcription_timestamps.py` with 3s default interval and parser-compatible format.
@@ -110,3 +121,7 @@
 - Backlog item fixed: Q&A input/button heights now match in host and participant views.
 - Verified with `python3 -m pytest -q test_e2e.py -k qa_input_and_button_heights_are_aligned_with_screenshots` (1 passed).
 - Proof screenshots: `docs/superpowers/specs/qa-height-host.png`, `docs/superpowers/specs/qa-height-participant.png`.
+- Backlog items fixed: Q&A host actions (`Answered`, trash icons, reliable edit) and transcript-first/noisy-transcript prompt guidance.
+- Verified with `python3 -m pytest -q test_e2e.py -k "host_edits_question_participant_sees_update or host_qa_action_labels_icons_and_edit_with_quotes"` (2 passed, 27 deselected).
+- Verified with `python3 -m pytest -q test_quiz_core_prompt.py` (2 passed).
+- Proof screenshot: `docs/superpowers/specs/qa-host-actions.png`.

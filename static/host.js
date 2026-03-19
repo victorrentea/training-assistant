@@ -963,11 +963,13 @@
     await fetch(`/api/qa/question/${qid}`, { method: 'DELETE' });
   }
 
-  function editQuestion(qid, currentText) {
+  function editQuestion(qid) {
     const card = document.querySelector(`.qa-card[data-id="${qid}"]`);
     if (!card) return;
     const textEl = card.querySelector('.qa-text');
     if (textEl.querySelector('input')) return; // already editing
+
+    const currentText = textEl.textContent.trim();
 
     const input = document.createElement('input');
     input.type = 'text';
@@ -1026,12 +1028,12 @@
         <div class="qa-actions">
           <button class="btn btn-sm ${q.answered ? 'btn-success' : ''}"
                   onclick="toggleAnswered('${escHtml(q.id)}', ${q.answered})">
-            ✓ ${q.answered ? 'Answered' : 'Answer'}
+            ✓ Answered
           </button>
           <button class="btn btn-sm btn-primary"
-                  onclick="editQuestion('${escHtml(q.id)}', ${JSON.stringify(q.text)})">✎ Edit</button>
+                  onclick="editQuestion('${escHtml(q.id)}')">✎ Edit</button>
           <button class="btn btn-sm btn-danger"
-                  onclick="deleteQuestion('${escHtml(q.id)}')">✕</button>
+                  onclick="deleteQuestion('${escHtml(q.id)}')">🗑</button>
         </div>
       </div>
     `).join('');

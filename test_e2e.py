@@ -385,6 +385,26 @@ class TestQA:
             re.compile(r"qa-answered-p"), timeout=4000
         )
 
+    def test_host_qa_action_labels_icons_and_edit_with_quotes(self, host: HostPage, pax: ParticipantPage):
+        pax.join("Elena")
+        host.open_qa_tab()
+        pax.submit_question('Could "quoted" text break edit?')
+        q_id = host.get_qa_questions()[0]["id"]
+
+        first_card = host._page.locator(".qa-card").first
+        expect(first_card.locator(".qa-actions button").nth(0)).to_contain_text("Answered")
+        expect(first_card.locator(".qa-actions button").nth(2)).to_have_text("🗑")
+        expect(host._page.locator("#clear-qa-btn")).to_have_text("🗑 Clear all")
+
+        host.edit_question(q_id, "Edit works with quotes: \"alpha\" and apostrophe's")
+        expect(host._page.locator(f'.qa-card[data-id="{q_id}"] .qa-text')).to_have_text(
+            "Edit works with quotes: \"alpha\" and apostrophe's", timeout=5000
+        )
+
+        proof_dir = Path(__file__).parent / "docs" / "superpowers" / "specs"
+        proof_dir.mkdir(parents=True, exist_ok=True)
+        host._page.locator("#tab-content-qa").screenshot(path=str(proof_dir / "qa-host-actions.png"))
+
     def test_upvoting_and_sorted_order(self, server_url, playwright):
         """
         3 participants: P1 submits 3 questions, P2 upvotes 1, P3 upvotes 2.

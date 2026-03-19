@@ -96,9 +96,9 @@
 - [ ] ux: In the participant screen, the download button for the word cloud has a height that is too low. It should be taller, and it should write the label "Download Image".  Also, the word cloud image should have a fixed title on top, which is the topic pushed by the host if any. If the title is displayed on the word cloud image generated, it need not be displayed in the label above the input text and button. The push button label should be changed to a rocket icon to have the same spirit as the enter icon in the button below/. In the host UX/UI of the word cloud, the ghost text for the topic should be just "topic" and then optional in parentheses. And the button label should be "Download image and close".
 - [x] ux: poll host generate button now uses only two labels and toggles correctly: "Generate from transcript" and "Generate on topic".
 - [x] ux: Q&A input and submit button heights are aligned in both host and participant views; proof screenshots captured.
-- [ ] bug: In the Q&A host view, instead of "Answer", the button should be called "Answered". The Edit button still doesn't work. The X button should be replaced by a trash bin icon. Same icon for clear Q&A, which should be renamed to remove all questions or clear all.
-- [ ] Tell the model that the transcription sometimes contains gibberish, repeated words, or nonsense words because the transcription model is not very smart. Warn the Claude LLM about this.
-- [ ] Adjust the prompt for generating a poll question from the transcript to focus on topics from the transcription first, then consult reference materials for depth.
+- [x] bug: Q&A host actions updated — button label is now "Answered", edit works reliably, delete uses trash icon, and clear action is renamed to "Clear all" with the same icon.
+- [x] Prompt hardening: quiz generation now warns Claude that transcripts may include gibberish, repeated words, and nonsense fragments.
+- [x] Prompt tuning: generation now focuses on transcript topics first, then uses reference materials for depth.
 - [x] feat: to compensate for the lack of time stamps in the transcription file in case there is a single person speaking, I want to add every minute a timestamp stating the current time to the transcription file. Read the file, understand the format, and suggest and write a little Python script that, when started, every three seconds for testing first, is going to add a timestamp label and append it to that file to test if it works   an example transcription file is at '/Users/victorrentea/Documents/transcriptions/20260319 0748 Transcription.txt'
 - [x] follow-up: timestamp appender should stop by elapsed time (3 minutes default) rather than after a fixed number of markers
 - [x] follow-up: for tests it is enough to append an empty line every 3 seconds (no marker text)
@@ -107,7 +107,7 @@
 - [x] follow-up: merge transcript timestamp appender into `quiz_daemon.py` and log missing transcript file only once at startup
 - [x] follow-up: avoid double newline insertion and append timestamp-only lines (no speaker label)
 - [x] follow-up: merge the old `scripts/` timestamp helper folder into daemon-owned module code
-- [ ] bug: edit button in QA host ui doesnt work 
+- [x] bug: edit button in QA host ui doesnt work 
 - [ ] The label displayed in both the participant and the host should display the difference in time since now. It should display how many seconds ago, minutes ago, or hours ago the deploy was, or if this version is from. I don't need to live update now; actually, I do want you to live update the time elapsed since the moment of the release of this application if it's under a day 
 - [ ] e2e test the download questions button after asking 2 questions. it should capture also the correct answers marked by host.
 - [ ] allow participants to vote at polls using keyboard up+down in single select; enter submit vote. in multi-select, display a checkbox on each option line and allow selecting it using SPACE.
