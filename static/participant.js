@@ -497,6 +497,7 @@
 
   function _drawCloud(canvas, wordsMap) {
     const entries = Object.entries(wordsMap);
+    const TITLE_H = _lastWordcloudTopic ? 40 : 0;
     if (!entries.length) {
       const ctx = canvas.getContext('2d');
       ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -513,8 +514,9 @@
       .domain([minCount, maxCount])
       .range([14, 60]);
 
+    const cloudH = H - TITLE_H;
     d3.layout.cloud()
-      .size([W, H])
+      .size([W, cloudH])
       .words(entries.map(([text, count]) => ({ text, size: sizeScale(count) })))
       .padding(4)
       .rotate(() => (Math.random() > 0.5 ? 90 : 0))
@@ -523,10 +525,18 @@
       .on('end', (placed) => {
         const ctx = canvas.getContext('2d');
         ctx.clearRect(0, 0, W, H);
+        // Draw topic title
+        if (_lastWordcloudTopic) {
+          ctx.textAlign = 'center';
+          ctx.font = 'bold 20px sans-serif';
+          ctx.fillStyle = 'rgba(255,255,255,0.75)';
+          ctx.fillText(_lastWordcloudTopic, W / 2, 28);
+        }
+        // Draw words offset below the title
         ctx.textAlign = 'center';
         placed.forEach((w, i) => {
           ctx.save();
-          ctx.translate(W / 2 + w.x, H / 2 + w.y);
+          ctx.translate(W / 2 + w.x, TITLE_H + cloudH / 2 + w.y);
           ctx.rotate((w.rotate * Math.PI) / 180);
           ctx.font = `bold ${w.size}px sans-serif`;
           ctx.fillStyle = WC_COLORS[i % WC_COLORS.length];
