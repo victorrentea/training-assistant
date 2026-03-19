@@ -553,8 +553,9 @@
       ? `<span class="timer-slider-wrap">
            <span id="timer-val" class="timer-val">15s</span>
            <input type="range" id="timer-slider" class="timer-slider" min="5" max="30" value="15"
-             oninput="document.getElementById('timer-val').textContent=this.value+'s'"
+             oninput="document.getElementById('timer-val').textContent=this.value+'s'; document.getElementById('timer-tip').style.opacity='1'"
              onmouseup="startTimer(+this.value)" ontouchend="startTimer(+this.value)" />
+           <span id="timer-tip" class="timer-tip">Drop to set the time left</span>
          </span>`
       : '';
 

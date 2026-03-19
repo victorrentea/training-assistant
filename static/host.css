@@ -393,6 +393,7 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
 .timer-slider { -webkit-appearance: none; appearance: none; width: 120px; height: 6px; border-radius: 3px; background: var(--surface2); outline: none; cursor: pointer; }
 .timer-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%; background: var(--accent); cursor: pointer; }
 .timer-slider::-moz-range-thumb { width: 18px; height: 18px; border-radius: 50%; background: var(--accent); cursor: pointer; border: none; }
+.timer-tip { font-size: .8rem; color: var(--muted); opacity: 0; transition: opacity .2s; white-space: nowrap; }
 
 @media (max-width: 480px) {
   .btn-row { gap: .5rem; }
