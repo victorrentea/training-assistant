@@ -490,7 +490,7 @@
       if (!el || !activeTimer) { clearInterval(_timerInterval); return; }
       const elapsed = (Date.now() - activeTimer.startedAt) / 1000;
       const remaining = Math.max(0, activeTimer.seconds - elapsed);
-      el.textContent = `⏱ ${Math.ceil(remaining)}s`;
+      el.textContent = `⏱ Closing in ${Math.ceil(remaining)}s`;
       if (remaining <= 0) {
         _clearTimer();
         setPollStatus(false);

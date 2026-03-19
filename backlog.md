@@ -83,12 +83,13 @@
 - [x] ui: In the word clouds, the host is able to submit a word. I should see the same auto-completion as they see to allow me to select options of the participants that any particle has entered already.
 - [x] UXshow off: In the host's UI, while the participants are voting, the list of questions should be overlaid by some sort of loading or three dots animated to show that the work is in progress somehow, but I should still be able to read the text under the overlay.
 - [x] UX show-off: Replace the 4 timer buttons with a slider (5–30s). On mouse release, push the selected time to participants. Show current value to the left of the slider. Implement in a separate .js if > 50 lines.
+- [x] When generating questions from a topic, instruct the AI to also search https://martinfowler.com/ as a reference.
+- [x] daemon: Indexer supports files in subfolders of the materials folder (e.g. materials/books) — uses rglob + recursive watchdog.
 - [ ] e2e test the download questions button after asking 2 questions. it should capture also the correct answers marked by host.
-- [ ] when generating questions from a topic, tell AI to also search for articles on https://martinfowler.com/ — excellent reference material.
-- [ ] daemon: The indexer and the rag tool should support dropping files in different subfolders of the materials folder (e.g. materials/books). Currently only the root is detected.
 - [ ] When generating a poll from a topic, the agent should communicate to the host UI the source reference for where the question comes from. Display it in the host UI only (bottom of main div, near close poll button).
 - [ ] Adjust the prompt for generating a poll question from the transcript to focus on topics from the transcription first, then consult reference materials for depth.
 - [ ] Claude agents, when using the RAG tool, should explicitly prefer slides over books, and mention which source type it's drawing from. Slides = audience-familiar; books = complementary depth.
+- [ ] allow participants to vote at polls using keyboard up+down in single select; enter submit vote. in multi-select, display a checkbox on each option line and allow selecting it using SPACE.
 - [ ] load test: 30 participants connected simultaneously, host fires a poll, all vote randomly, host sorts by points. Run against local instance first, then deployed.
 - [ ] gamify Q&A screen: Intermittently display prompts encouraging participants to ask questions and upvote to earn points.
 - [ ] Some questions are intense and people earn fewer points despite answering correctly (more reading time). Research Kahoot scoring. Proposal: score = max_pts × (min_time / your_time), capped at max. Fastest correct answer gets full points.

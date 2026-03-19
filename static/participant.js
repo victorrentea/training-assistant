@@ -186,7 +186,7 @@
   function saveVote() {
     if (!currentPoll) return;
     const stored = {
-      question: currentPoll.question,
+      pollId: currentPoll.id,
       vote: currentPoll.multi ? [...myVote] : myVote,
     };
     localStorage.setItem(LS_VOTE_KEY, JSON.stringify(stored));
@@ -196,7 +196,7 @@
     if (!poll) return;
     try {
       const stored = JSON.parse(localStorage.getItem(LS_VOTE_KEY) || 'null');
-      if (!stored || stored.question !== poll.question) return;
+      if (!stored || stored.pollId !== poll.id) return;
       if (poll.multi) {
         myVote = new Set(Array.isArray(stored.vote) ? stored.vote : []);
       } else {
@@ -213,7 +213,7 @@
   function handleMessage(msg) {
     switch (msg.type) {
       case 'state':
-        if (msg.poll?.question !== currentPoll?.question) {
+        if (msg.poll?.id !== currentPoll?.id) {
           myVote = msg.poll?.multi ? new Set() : null;
           pollResult = null;
           activeTimer = null;
