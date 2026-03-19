@@ -59,7 +59,7 @@ def run() -> None:
 
     # Start background material indexer
     materials_folder_str = os.environ.get("MATERIALS_FOLDER",
-        str(Path.home() / "Documents" / "materials"))
+        str(Path(__file__).parent / "materials"))
     materials_folder = Path(materials_folder_str).expanduser()
     if materials_folder.exists():
         from daemon.indexer import start_indexer
