@@ -85,12 +85,13 @@
           <button class="btn btn-secondary" onclick="pushWordCloudTopic()">Push</button>
         </div>
         <div class="wc-input-row">
-          <input id="wc-host-input" type="text" maxlength="40" autocomplete="off" placeholder="Submit a word…" />
+          <input id="wc-host-input" type="text" maxlength="40" autocomplete="on" placeholder="Submit a word…" list="wc-host-suggestions" />
+          <datalist id="wc-host-suggestions"></datalist>
           <button class="btn btn-primary" onclick="hostSubmitWord()">↵</button>
         </div>
       </div>
       <ul id="wc-host-words" style="margin-top:.5rem; list-style:disc; padding-left:1.25rem; color:var(--muted); font-size:.85rem; max-height:180px; overflow-y:auto;"></ul>
-      <div style="margin-top:auto; padding-top:.5rem;">
+      <div style="margin-top:.5rem;">
         <button class="btn btn-danger" onclick="downloadAndClearWordCloud()">⬇ Download &amp; Close</button>
       </div>
     </div>
@@ -104,7 +105,7 @@
                onkeydown="if(event.key==='Enter')hostSubmitQA()" />
         <button class="btn btn-primary" onclick="hostSubmitQA()">↵</button>
       </div>
-      <div style="margin-top:auto; padding-top:.5rem;">
+      <div style="margin-top:.5rem;">
         <button class="btn btn-danger" onclick="clearQA()">✕ Clear Q&A</button>
       </div>
     </div>
@@ -152,7 +153,7 @@
     <ul id="pax-list" class="pax-list" title="Click a location to view map"></ul>
     <div class="right-footer">
       <span style="display:flex; align-items:center; gap:.5rem; flex-wrap:wrap;">
-        <span style="font-size:1rem;">Join: <a id="participant-link" style="color:var(--accent); word-break:break-all; font-size:1rem;" href="/" target="_blank"></a></span>
+        <span style="font-size:1.25rem;">Join: <a id="participant-link" style="color:var(--accent); word-break:break-all; font-size:1.25rem;" href="/" target="_blank"></a></span>
         <div id="qr-icon" title="Show QR code" style="cursor:pointer; opacity:.5; flex-shrink:0; width:28px; height:28px;">
           <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" fill="currentColor" width="28" height="28">
             <rect x="5" y="5" width="35" height="35" rx="4"/>

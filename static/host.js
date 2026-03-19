@@ -402,7 +402,7 @@
     reclassifyLines();
   }
 
-  initComposer('');
+  initComposer('Which is the primary benefit of the Circuit Breaker pattern?\n\nPrevents cascading failures across services\nImproves response time under normal load\nReduces the number of network calls\nEnables automatic service discovery');
 
   pollInput.addEventListener('input', reclassifyLines);
 
