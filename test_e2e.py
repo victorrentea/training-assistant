@@ -88,10 +88,17 @@ def _host_browser_ctx(server_url, playwright):
     browser = playwright.chromium.launch()
     ctx = browser.new_context(
         base_url=server_url,
-        http_credentials={"username": HOST_USER, "password": HOST_PASS},
         viewport={"width": 1440, "height": 900},
     )
     return browser, ctx
+
+
+def _host_goto(page, server_url: str) -> None:
+    """Navigate to /host with auth. First visit seeds the browser auth cache,
+    second visit uses clean URL so relative fetch() calls work."""
+    auth_url = server_url.replace("://", f"://{HOST_USER}:{HOST_PASS}@")
+    page.goto(f"{auth_url}/host")
+    page.goto("/host")
 
 
 def _pax_browser_ctx(server_url, playwright):
@@ -117,7 +124,7 @@ def host(server_url, playwright) -> HostPage:
     page = ctx.new_page()
     page.on("console", lambda msg: print(f"[browser:{msg.type}] {msg.text}"))
     page.on("response", lambda r: print(f"[network] {r.request.method} {r.url} -> {r.status}") if "/api/" in r.url else None)
-    page.goto("/host")
+    _host_goto(page, server_url)
     print(f"[host-fixture] page title after goto: {page.title()!r}, url: {page.url!r}")
     yield HostPage(page)
     ctx.close()
@@ -381,7 +388,7 @@ class TestQA:
         p2   = ParticipantPage(ctx2.new_page())
         p3   = ParticipantPage(ctx3.new_page())
 
-        host._page.goto("/host")
+        _host_goto(host._page, server_url)
         p1._page.goto("/")
         p2._page.goto("/")
         p3._page.goto("/")
@@ -456,7 +463,7 @@ class TestQA:
         p1   = ParticipantPage(ctx1.new_page())
         p2   = ParticipantPage(ctx2.new_page())
 
-        host._page.goto("/host")
+        _host_goto(host._page, server_url)
         p1._page.goto("/")
         p2._page.goto("/")
 
