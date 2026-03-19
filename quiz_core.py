@@ -11,7 +11,7 @@ import ssl
 import sys
 import urllib.error
 import urllib.request
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Optional
 
@@ -550,6 +550,31 @@ def auto_generate(minutes: int, config: Config) -> Optional[tuple]:
 
     post_status("done", "✅ Question ready — review and fire from host panel.", config)
     return quiz, text
+
+
+def auto_generate_topic(topic: str, config: Config) -> Optional[tuple]:
+    """Generate a quiz from a topic using RAG. Returns (quiz, topic_context) or None."""
+    post_status("generating", f"Generating question about '{topic}'…", config)
+    topic_config = replace(config, topic=topic)
+    try:
+        quiz = generate_quiz("", topic_config)
+    except RuntimeError as e:
+        post_status("error", str(e), topic_config)
+        return None
+    print_quiz(quiz)
+    topic_context = f"TOPIC: {topic}"
+    try:
+        _post_json(f"{config.server_url}/api/quiz-preview", {
+            "question": quiz["question"],
+            "options": quiz["options"],
+            "multi": len(quiz.get("correct_indices", [])) > 1,
+            "correct_indices": quiz.get("correct_indices", []),
+        }, config.host_username, config.host_password)
+    except RuntimeError as e:
+        post_status("error", f"Failed to post preview: {e}", config)
+        return None
+    post_status("done", "✅ Question ready — review and fire from host panel.", config)
+    return quiz, topic_context
 
 
 def auto_refine(target: str, current_quiz: dict, original_text: str, config: Config) -> Optional[dict]:
