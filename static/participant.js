@@ -15,6 +15,16 @@
   let _lastWordcloudWords = {};
   const WC_COLORS = ['#7ecef4','#a78bfa','#34d399','#fbbf24','#f472b6','#60a5fa','#fb923c'];
   let _wcDebounceTimer = null;
+  const _QA_TOASTS = [
+    "💬 Ask a question — earn points!",
+    "👍 Upvote a great question — both you and the author earn points!",
+    "🏆 The more you engage, the higher you rank!",
+    "🤔 Got a burning question? Type it in!",
+    "⬆️ See a question you like? Give it an upvote!",
+  ];
+  let _qaToastIndex = 0;
+  let _qaToastInterval = null;
+  let _qaToastTimeout = null;
 
   function escHtml(s) {
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -108,6 +118,7 @@
 
   // ── Leave ──
   document.getElementById('leave-btn').addEventListener('click', () => {
+    _stopQAToasts();
     const hasActivity = ws && ((window._qaQuestions || []).length > 0
       || (window._myScore || 0) > 0);
     const confirmed = !hasActivity || confirm(
@@ -521,6 +532,30 @@
   }
 
   // ── Q&A ──
+  function _showQAToast() {
+    const el = document.getElementById('qa-toast');
+    if (!el) return;
+    el.textContent = _QA_TOASTS[_qaToastIndex % _QA_TOASTS.length];
+    _qaToastIndex++;
+    el.classList.add('visible');
+    clearTimeout(_qaToastTimeout);
+    _qaToastTimeout = setTimeout(() => el.classList.remove('visible'), 4400);
+  }
+
+  function _startQAToasts(questions) {
+    _stopQAToasts();
+    if (!questions || questions.length === 0) _showQAToast();
+    _qaToastInterval = setInterval(_showQAToast, 15000);
+  }
+
+  function _stopQAToasts() {
+    clearInterval(_qaToastInterval);
+    clearTimeout(_qaToastTimeout);
+    _qaToastInterval = null;
+    const el = document.getElementById('qa-toast');
+    if (el) el.classList.remove('visible');
+  }
+
   function renderQAScreen(questions, myName) {
     const content = document.getElementById('content');
     if (!content) return;
@@ -545,6 +580,7 @@
       input.addEventListener('keydown', e => { if (e.key === 'Enter') submitQuestion(); });
     }
     updateQAList(questions, myName);
+    _startQAToasts(questions);
   }
 
   function updateQAList(questions, name) {
@@ -609,6 +645,7 @@
   }
 
   function renderQACleanup() {
+    _stopQAToasts();
     // Q&A DOM is inside #content which gets replaced when switching activities
   }
 
