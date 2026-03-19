@@ -122,38 +122,42 @@ body {
 #poll-display {
   position: relative;
 }
-#poll-display.voting-active::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: rgba(0,0,0,.18);
-  border-radius: 6px;
-  pointer-events: none;
+#poll-display.voting-active .poll-question {
+  opacity: .35;
 }
 .voting-dots {
-  position: absolute;
-  top: .45rem;
-  right: .6rem;
   display: flex;
-  gap: .3rem;
+  flex-direction: column;
   align-items: center;
+  gap: .5rem;
+  margin: .4rem 0 .6rem;
   pointer-events: none;
-  z-index: 1;
 }
-.voting-dots span {
+.voting-dots-label {
+  font-size: .8rem;
+  color: var(--muted);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.voting-dots-row {
+  display: flex;
+  gap: .5rem;
+  align-items: center;
+}
+.voting-dots-row span {
   display: inline-block;
-  width: 7px;
-  height: 7px;
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
   background: var(--accent);
-  opacity: .25;
+  opacity: .2;
   animation: dot-pulse 1.2s ease-in-out infinite;
 }
-.voting-dots span:nth-child(2) { animation-delay: .2s; }
-.voting-dots span:nth-child(3) { animation-delay: .4s; }
+.voting-dots-row span:nth-child(2) { animation-delay: .25s; }
+.voting-dots-row span:nth-child(3) { animation-delay: .5s; }
 @keyframes dot-pulse {
-  0%, 100% { opacity: .25; transform: scale(.85); }
-  50%       { opacity: 1;   transform: scale(1.15); }
+  0%, 100% { opacity: .2;  transform: scale(.8); }
+  50%       { opacity: 1;  transform: scale(1.2); }
 }
 
 #center-wordcloud {
