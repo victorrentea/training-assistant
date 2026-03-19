@@ -44,19 +44,19 @@
       </div>
       <div class="or-divider"><span>or</span></div>
       <div class="quiz-gen-row">
-        <div class="quiz-gen-controls">
+        <div class="quiz-gen-controls" style="display:flex;flex-direction:column;gap:.35rem;">
           <label style="font-size:.85rem;color:var(--muted);display:flex;align-items:center;gap:.4rem;">
             <input type="radio" name="quiz-mode" value="topic" id="mode-topic" onchange="updateGenBtn()" style="cursor:pointer;" />
-            from topic
+            from topic:
+            <input id="quiz-topic" type="text" maxlength="60" autocomplete="off"
+                   placeholder="e.g. circuit breaker"
+                   oninput="selectTopicMode()"
+                   style="background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:.2rem .5rem;font-size:.85rem;width:10rem;" />
           </label>
-          <input id="quiz-topic" type="text" maxlength="60" autocomplete="off"
-                 placeholder="e.g. circuit breaker"
-                 oninput="selectTopicMode()"
-                 style="background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:.3rem .6rem;font-size:.9rem;width:12rem;" />
-          <label style="font-size:.85rem;color:var(--muted);display:flex;align-items:center;gap:.4rem;margin-top:.25rem;">
+          <label style="font-size:.85rem;color:var(--muted);display:flex;align-items:center;gap:.4rem;">
             <input type="radio" name="quiz-mode" value="transcript" id="mode-transcript" checked onchange="updateGenBtn()" style="cursor:pointer;" />
             from transcript of last
-            <select id="quiz-minutes" style="background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:.3rem .5rem;font-size:.9rem;cursor:pointer;">
+            <select id="quiz-minutes" style="background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:.2rem .4rem;font-size:.85rem;cursor:pointer;">
               <option value="15">15 min</option>
               <option value="30" selected>30 min</option>
               <option value="60">1 hour</option>
@@ -64,7 +64,7 @@
               <option value="480">whole day</option>
             </select>
           </label>
-          <button class="btn btn-warn" id="gen-quiz-btn" onclick="requestQuiz()" style="margin-top:.25rem;">🤖 Generate</button>
+          <button class="btn btn-warn" id="gen-quiz-btn" onclick="requestQuiz()" style="align-self:flex-start;">🤖 Generate</button>
         </div>
         <span id="quiz-status"></span>
       </div>
@@ -114,12 +114,9 @@
     </div>
     <!-- Poll results panel -->
     <div id="center-poll" class="center-panel" style="display:none;">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:.9rem; gap:.5rem; flex-wrap:wrap;">
-        <div style="display:flex; align-items:center; gap:.5rem; flex-wrap:wrap;">
-          <h2 style="margin:0; font-size:.95rem; color:var(--muted); text-transform:uppercase; letter-spacing:.08em;">Current Poll</h2>
-          <span id="poll-pills"></span>
-        </div>
-        <button class="btn btn-primary" onclick="downloadPollHistory()" title="Download today's polls">⬇ Download questions</button>
+      <div style="display:flex; align-items:center; gap:.5rem; flex-wrap:wrap; margin-bottom:.9rem;">
+        <h2 style="margin:0; font-size:.95rem; color:var(--muted); text-transform:uppercase; letter-spacing:.08em;">Current Poll</h2>
+        <span id="poll-pills"></span>
       </div>
       <div id="poll-display"></div>
     </div>
@@ -144,8 +141,8 @@
     </div>
     <ul id="pax-list" class="pax-list" title="Click a location to view map"></ul>
     <div class="right-footer">
-      <span style="display:flex; align-items:center; gap:.5rem;">
-        <span>Join at: <a id="participant-link" style="color:var(--accent); word-break:break-all; font-size:.8rem;" href="/" target="_blank"></a></span>
+      <span style="display:flex; align-items:center; gap:.5rem; flex-wrap:wrap;">
+        <span style="font-size:.8rem;">Join: <a id="participant-link" style="color:var(--accent); word-break:break-all; font-size:.8rem;" href="/" target="_blank"></a></span>
         <div id="qr-icon" title="Show QR code" style="cursor:pointer; opacity:.5; flex-shrink:0; width:28px; height:28px;">
           <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" fill="currentColor" width="28" height="28">
             <rect x="5" y="5" width="35" height="35" rx="4"/>
