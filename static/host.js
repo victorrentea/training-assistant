@@ -610,25 +610,25 @@
   }
 
   // ── Quiz generator ──
+  function selectTopicMode() {
+    document.getElementById('mode-topic').checked = true;
+    updateGenBtn();
+  }
+
   function updateGenBtn() {
-    const topic = document.getElementById('quiz-topic').value.trim();
+    const mode = document.querySelector('input[name="quiz-mode"]:checked').value;
     const btn = document.getElementById('gen-quiz-btn');
-    const minutesRow = document.getElementById('quiz-minutes-row');
-    if (topic) {
-      btn.textContent = '🔍 Generate from topic';
-      minutesRow.style.display = 'none';
-    } else {
-      btn.textContent = '🤖 Generate from transcript';
-      minutesRow.style.display = 'flex';
-    }
+    btn.textContent = mode === 'topic' ? '🔍 Generate' : '🤖 Generate';
   }
 
   async function requestQuiz() {
-    const topic = document.getElementById('quiz-topic').value.trim();
+    const mode = document.querySelector('input[name="quiz-mode"]:checked').value;
     const btn = document.getElementById('gen-quiz-btn');
     btn.disabled = true;
     let body, statusMsg;
-    if (topic) {
+    if (mode === 'topic') {
+      const topic = document.getElementById('quiz-topic').value.trim();
+      if (!topic) { renderQuizStatus('error', 'Enter a topic first.'); btn.disabled = false; return; }
       body = { topic };
       statusMsg = `Waiting… (topic: ${topic})`;
     } else {
