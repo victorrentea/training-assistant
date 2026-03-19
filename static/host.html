@@ -71,19 +71,15 @@
 
     <!-- Word Cloud tab content -->
     <div id="tab-content-wordcloud" class="tab-content" style="display:none;">
-      <div id="wc-inactive">
-        <button class="btn btn-primary wc-open-btn" id="wc-open-btn" onclick="openWordCloud()">☁ Open Word Cloud</button>
-        <p id="wc-blocked-msg" style="display:none; font-size:.85rem; color:var(--warn); margin-top:.5rem;">Opening word cloud will close the current poll.</p>
-      </div>
-      <div id="wc-active" style="display:none;">
-        <button class="btn btn-danger" onclick="closeWordCloud()">✕ Close Word Cloud</button>
-        <div style="margin-top:.75rem;">
-          <div class="wc-input-row">
-            <input id="wc-host-input" type="text" maxlength="40" autocomplete="off" placeholder="Submit a word…" />
-            <button class="btn btn-primary" onclick="hostSubmitWord()">Go</button>
-          </div>
+      <div style="margin-top:.75rem;">
+        <div class="wc-input-row">
+          <input id="wc-host-input" type="text" maxlength="40" autocomplete="off" placeholder="Submit a word…" />
+          <button class="btn btn-primary" onclick="hostSubmitWord()">Go</button>
         </div>
-        <ul id="wc-host-words" style="margin-top:.5rem; list-style:disc; padding-left:1.25rem; color:var(--muted); font-size:.85rem; max-height:180px; overflow-y:auto;"></ul>
+      </div>
+      <ul id="wc-host-words" style="margin-top:.5rem; list-style:disc; padding-left:1.25rem; color:var(--muted); font-size:.85rem; max-height:180px; overflow-y:auto;"></ul>
+      <div class="left-status-bar" style="margin-top:auto;">
+        <button class="btn btn-danger" onclick="clearWordCloud()">✕ Clear</button>
       </div>
     </div>
 
