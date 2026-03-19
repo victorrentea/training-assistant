@@ -88,24 +88,22 @@
   }
 
   async function handleNameTaken() {
+    const rejectedName = myName;
     localStorage.removeItem(LS_KEY);
     myName = '';
     ws = null;
     document.getElementById('main-screen').style.display = 'none';
     document.getElementById('join-screen').style.display = 'block';
     const errEl = document.getElementById('join-error');
-    errEl.textContent = 'That name is already taken. Please choose another.';
+    errEl.textContent = `"${rejectedName}" is already taken. Please choose another name.`;
     errEl.style.display = 'block';
     const nameInput = document.getElementById('name-input');
-    if (_joinedWithSuggestion) {
-      nameInput.value = '';
-      suggestedName = await fetchSuggestedName();
-      nameInput.placeholder = suggestedName;
-    } else {
-      nameInput.select();
-    }
+    suggestedName = await fetchSuggestedName();
+    nameInput.value = suggestedName;
+    nameInput.placeholder = suggestedName;
     updateClearBtn();
     nameInput.focus();
+    nameInput.select();
   }
 
   // ── Leave ──
@@ -507,6 +505,7 @@
     input.disabled = false;
     if (resp.ok) {
       input.value = '';
+      input.focus();
     } else {
       const err = await resp.json().catch(() => ({}));
       alert(err.detail || 'Failed to submit question');

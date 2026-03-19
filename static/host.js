@@ -91,7 +91,7 @@
   // Set participant link
   const link = `${location.protocol}//${location.host}/`;
   document.getElementById('participant-link').href = link;
-  document.getElementById('participant-link').textContent = link;
+  document.getElementById('participant-link').textContent = location.host + '/';
 
   // ── WebSocket (host monitors state too) ──
   function connectWS() {
@@ -185,7 +185,7 @@
     const el = document.getElementById('daemon-badge');
     if (!el) return;
     if (!lastSeenIso) {
-      el.textContent = '🎛️';
+      el.textContent = '● Agent';
       el.className = 'badge disconnected';
       el.style.cssText = '';
       el.title = 'Agent: never connected';
@@ -194,12 +194,12 @@
     const ago = Math.round((Date.now() - new Date(lastSeenIso)) / 1000);
     const agoText = ago < 60 ? `${ago}s` : `${Math.round(ago/60)}m`;
     if (connected) {
-      el.textContent = `● 🎛️`;
+      el.textContent = '● Agent';
       el.className = 'badge connected';
       el.style.cssText = '';
       el.title = `Agent active (last seen ${agoText} ago)`;
     } else {
-      el.textContent = `🎛️`;
+      el.textContent = '● Agent';
       el.className = 'badge';
       el.style.cssText = 'color:var(--warn);border:1px solid var(--warn);';
       el.title = `Agent idle (last seen ${agoText} ago)`;
