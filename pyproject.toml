@@ -5,12 +5,7 @@ description = "Add your description here"
 requires-python = ">=3.9"
 dependencies = [
     "anthropic>=0.85.0",
-    "faiss-cpu>=1.13.0",
     "fastapi>=0.128.8",
-    "langchain-community>=0.3.30",
-    "langchain-text-splitters>=0.3.11",
-    "pypdf>=6.9.1",
-    "sentence-transformers>=5.1.2",
     "uvicorn[standard]>=0.39.0",
     "websockets>=12.0",
 ]
