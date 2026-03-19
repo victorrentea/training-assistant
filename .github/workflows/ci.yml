@@ -31,4 +31,7 @@ jobs:
         run: node test_participant_js.js
 
       - name: E2E browser tests
+        env:
+          HOST_USERNAME: host
+          HOST_PASSWORD: hostvibe!
         run: pytest test_e2e.py -v -s --tb=short
