@@ -421,3 +421,17 @@ h1 { display: none; }
 #qa-toast.visible {
   opacity: 1;
 }
+
+/* ── Score highlight flash ── */
+@keyframes score-highlight {
+  0%   { background: rgba(255, 230, 80, 0.55); }
+  100% { background: transparent; }
+}
+#my-score {
+  border-radius: 4px;
+  padding: 1px 4px;
+  transition: background 0.1s;
+}
+#my-score.score-flash {
+  animation: score-highlight 1.4s ease-out forwards;
+}

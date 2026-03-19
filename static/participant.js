@@ -308,6 +308,12 @@
     const to = pts;
     if (from === to) return;
     if (_scoreRollTimer) clearInterval(_scoreRollTimer);
+    if (to > from) {
+      // Re-trigger flash animation by removing and re-adding the class
+      el.classList.remove('score-flash');
+      void el.offsetWidth; // force reflow
+      el.classList.add('score-flash');
+    }
     const duration = 800; // ms
     const steps = 30;
     const interval = duration / steps;
