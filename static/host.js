@@ -840,6 +840,17 @@
     ul.innerHTML = hostWords.map(w => `<li>${escHtml(w)}</li>`).join('');
   }
 
+  async function downloadAndClearWordCloud() {
+    const canvas = document.getElementById('host-wc-canvas');
+    if (canvas) {
+      const a = document.createElement('a');
+      a.href = canvas.toDataURL('image/png');
+      a.download = `wordcloud-${new Date().toISOString().slice(0,19).replace(/:/g,'-')}.png`;
+      a.click();
+    }
+    await clearWordCloud();
+  }
+
   async function clearWordCloud() {
     hostWords = [];
     renderHostWordList();
@@ -890,6 +901,19 @@
         });
       })
       .start();
+  }
+
+  async function hostSubmitQA() {
+    const input = document.getElementById('host-qa-input');
+    if (!input) return;
+    const text = input.value.trim();
+    if (!text) return;
+    const resp = await fetch('/api/qa/question', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'Host', text }),
+    });
+    if (resp.ok) { input.value = ''; input.focus(); }
   }
 
   async function clearQA() {
