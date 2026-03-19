@@ -1,0 +1,23 @@
+[    9393ms] [ERROR] WebSocket connection to 'ws://localhost:8000/ws/__host__' failed:  @ http://host:hostvibe!@localhost:8000/static/host.js:98
+[   12396ms] [ERROR] WebSocket connection to 'ws://localhost:8000/ws/__host__' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://host:hostvibe!@localhost:8000/static/host.js:98
+[   15398ms] [ERROR] WebSocket connection to 'ws://localhost:8000/ws/__host__' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://host:hostvibe!@localhost:8000/static/host.js:98
+[   18400ms] [ERROR] WebSocket connection to 'ws://localhost:8000/ws/__host__' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://host:hostvibe!@localhost:8000/static/host.js:98
+[   21403ms] [ERROR] WebSocket connection to 'ws://localhost:8000/ws/__host__' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://host:hostvibe!@localhost:8000/static/host.js:98
+[   24407ms] [ERROR] WebSocket connection to 'ws://localhost:8000/ws/__host__' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://host:hostvibe!@localhost:8000/static/host.js:98
+[   27415ms] [ERROR] WebSocket connection to 'ws://localhost:8000/ws/__host__' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://host:hostvibe!@localhost:8000/static/host.js:98
+[   30421ms] [ERROR] WebSocket connection to 'ws://localhost:8000/ws/__host__' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://host:hostvibe!@localhost:8000/static/host.js:98
+[   33441ms] [ERROR] WebSocket connection to 'ws://localhost:8000/ws/__host__' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://host:hostvibe!@localhost:8000/static/host.js:98
+[   36471ms] [ERROR] WebSocket connection to 'ws://localhost:8000/ws/__host__' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://host:hostvibe!@localhost:8000/static/host.js:98
+[   39510ms] [ERROR] WebSocket connection to 'ws://localhost:8000/ws/__host__' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://host:hostvibe!@localhost:8000/static/host.js:98
+[   42566ms] [ERROR] WebSocket connection to 'ws://localhost:8000/ws/__host__' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://host:hostvibe!@localhost:8000/static/host.js:98
+[   45663ms] [ERROR] WebSocket connection to 'ws://localhost:8000/ws/__host__' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://host:hostvibe!@localhost:8000/static/host.js:98
+[   49139ms] [ERROR] WebSocket connection to 'ws://localhost:8000/ws/__host__' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://host:hostvibe!@localhost:8000/static/host.js:98
+[   53367ms] [ERROR] WebSocket connection to 'ws://localhost:8000/ws/__host__' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://host:hostvibe!@localhost:8000/static/host.js:98
+[   57259ms] [ERROR] WebSocket connection to 'ws://localhost:8000/ws/__host__' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://host:hostvibe!@localhost:8000/static/host.js:98
+[   63091ms] [ERROR] WebSocket connection to 'ws://localhost:8000/ws/__host__' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://host:hostvibe!@localhost:8000/static/host.js:98
+[   70929ms] [ERROR] WebSocket connection to 'ws://localhost:8000/ws/__host__' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://host:hostvibe!@localhost:8000/static/host.js:98
+[   77048ms] [ERROR] WebSocket connection to 'ws://localhost:8000/ws/__host__' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://host:hostvibe!@localhost:8000/static/host.js:98
+[   83265ms] [ERROR] WebSocket connection to 'ws://localhost:8000/ws/__host__' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://host:hostvibe!@localhost:8000/static/host.js:98
+[   90566ms] [ERROR] WebSocket connection to 'ws://localhost:8000/ws/__host__' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://host:hostvibe!@localhost:8000/static/host.js:98
+[   96864ms] [ERROR] WebSocket connection to 'ws://localhost:8000/ws/__host__' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://host:hostvibe!@localhost:8000/static/host.js:98
+[  101454ms] [ERROR] WebSocket connection to 'ws://localhost:8000/ws/__host__' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://host:hostvibe!@localhost:8000/static/host.js:98

@@ -1,0 +1,3 @@
+[   17797ms] TypeError: Failed to execute 'fetch' on 'Window': Request cannot be constructed from a URL that includes credentials: /api/poll/status
+    at setPollStatus (http://host:hostvibe!@localhost:8000/static/host.js:503:11)
+    at HTMLButtonElement.onclick (http://host:hostvibe!@localhost:8000/host:1:1)

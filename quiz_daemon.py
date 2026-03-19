@@ -21,12 +21,88 @@ import sys
 import time
 from pathlib import Path
 
+from scripts.append_transcription_timestamps import (
+    append_empty_line_then_timestamp,
+    infer_template_from_first_line,
+)
 from quiz_core import (
     config_from_env, auto_generate, auto_generate_topic, auto_refine,
     _get_json, DAEMON_POLL_INTERVAL,
 )
 
 _PID_FILE = Path("/tmp/quiz_daemon.pid")
+_TIMESTAMP_INTERVAL_SECONDS = float(os.environ.get("TRANSCRIPT_TIMESTAMP_INTERVAL_SECONDS", "3"))
+
+
+class TranscriptTimestampAppender:
+    """Append heartbeat timestamp lines to the latest transcript text file."""
+
+    def __init__(self, folder: Path, interval_seconds: float = _TIMESTAMP_INTERVAL_SECONDS):
+        self.folder = folder
+        self.interval_seconds = interval_seconds
+        self.enabled = False
+        self._next_append_at = 0.0
+        self._target_file: Path | None = None
+        self._template = None
+        self._startup_error_logged = False
+
+    def _resolve_target_file(self) -> Path | None:
+        if not self.folder.exists() or not self.folder.is_dir():
+            return None
+        txt_files = sorted(
+            [f for f in self.folder.iterdir() if f.suffix.lower() == ".txt"],
+            key=lambda f: f.stat().st_mtime,
+        )
+        return txt_files[-1] if txt_files else None
+
+    def _log_startup_error_once(self, message: str) -> None:
+        if self._startup_error_logged:
+            return
+        print(message, file=sys.stderr)
+        self._startup_error_logged = True
+
+    def start(self) -> None:
+        if self.interval_seconds <= 0:
+            self._log_startup_error_once(
+                "[daemon] Transcript timestamp appender disabled: "
+                "TRANSCRIPT_TIMESTAMP_INTERVAL_SECONDS must be > 0"
+            )
+            return
+
+        self._target_file = self._resolve_target_file()
+        if self._target_file is None:
+            self._log_startup_error_once(
+                f"[daemon] Transcript timestamp appender disabled: no .txt transcript found in {self.folder}"
+            )
+            return
+
+        self._template = infer_template_from_first_line(self._target_file)
+        self._next_append_at = time.monotonic()
+        self.enabled = True
+        print(
+            "[daemon] Transcript timestamp appender enabled "
+            f"({self.interval_seconds:.1f}s) on {self._target_file.name}"
+        )
+
+    def tick(self) -> None:
+        if not self.enabled:
+            return
+
+        now = time.monotonic()
+        if now < self._next_append_at:
+            return
+
+        try:
+            append_empty_line_then_timestamp(self._target_file, self._template)
+        except OSError as exc:
+            self.enabled = False
+            print(
+                f"[daemon] Transcript timestamp appender stopped: {exc}",
+                file=sys.stderr,
+            )
+            return
+
+        self._next_append_at = now + self.interval_seconds
 
 
 def _kill_previous() -> None:
@@ -70,12 +146,17 @@ def run() -> None:
     print(f"[daemon] Started — polling {config.server_url} every {DAEMON_POLL_INTERVAL}s")
     print("[daemon] Press Ctrl+C to stop.\n")
 
+    timestamp_appender = TranscriptTimestampAppender(config.folder)
+    timestamp_appender.start()
+
     # Session state: the transcript text used to generate the current preview
     last_text: str | None = None
     last_quiz: dict | None = None
 
     while True:
         try:
+            timestamp_appender.tick()
+
             # ── Check for new quiz generation request ──
             data = _get_json(
                 f"{config.server_url}/api/quiz-request",

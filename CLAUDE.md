@@ -197,4 +197,55 @@ The user frequently uses a dictation tool. Messages may contain misheard or mist
 - **After every `git push`**: immediately run `bash wait-for-deploy.sh &` in the background. The post-push git hook does NOT fire when Claude Code runs git — so always run it explicitly. It polls until Railway serves the new version, then plays a sound and shows a macOS notification.
 - **After any significant architectural change**: update the C4 diagrams in `adoc/` (c4_c1_context.puml, c4_c2_containers.puml, c4_c3_components.puml) to reflect the new structure.
 - **Test-Drive-Fix any human-reported bug**: start by reproducing the bug yourself manually, then write an automated test for the bug, see it failing, then passing after you fixed the bug.
-- **Document direct request**: Every time the human requests a feature change or bug fix after you do it, keep track of it in backlog.md in a concise way as being done. 
+- **Document direct request**: Every time the human requests a feature change or bug fix after you do it, keep track of it in backlog.md in a concise way as being done.
+
+
+## Workflow Orchestration
+### 1. Plan Mode Default
+- Enter plan mode for ANY non-trivial task (3+ steps or architectural decisions)
+- If something goes sideways, STOP and re-plan immediately
+- Use plan mode for verification steps, not just building
+- Write detailed specs upfront to reduce ambiguity
+
+### 2. Subagent Strategy
+- Use subagents liberally to keep main context window clean
+- Offload research, exploration, and parallel analysis to subagents
+- For complex problems, throw more compute at it via subagents
+- One task per subagent for focused execution
+
+### 3. Self-Improvement Loop
+- After ANY correction from the user: update tasks/lessons.md with the pattern
+- Write rules for yourself that prevent the same mistake
+- Ruthlessly iterate on these lessons until mistake rate drops
+- Review lessons at session start for relevant project
+
+### 4. Verification Before Done
+- Never mark a task complete without proving it works
+- Diff behavior between main and your changes when relevant
+- Ask yourself: “Would a staff engineer approve this?”
+- Run tests, check logs, demonstrate correctness
+
+### 5. Demand Elegance (Balanced)
+- For non-trivial changes: pause and ask “is there a more elegant way?”
+- If a fix feels hacky: “Knowing everything I know now, implement the elegant solution”
+- Skip this for simple, obvious fixes – don’t over-engineer
+- Challenge your own work before presenting it
+
+### 6. Autonomous Bug Fixing
+- When given a bug report: just fix it. Don’t ask for hand-holding
+- Point at logs, errors, failing tests – then resolve them
+- Zero context switching required from the user
+- Go fix failing CI tests without being told how
+
+## Task Management
+1.	Plan First: Write plan to tasks/todo.md with checkable items
+2.	Verify Plan: Check in before starting implementation
+3.	Track Progress: Mark items complete as you go
+4.	Explain Changes: High-level summary at each step
+5.	Document Results: Add review section to tasks/todo.md
+6.	Capture Lessons: Update tasks/lessons.md after corrections
+
+## Core Principles
+- Simplicity First: Make every change as simple as possible. Impact minimal code.
+- No Laziness: Find root causes. No temporary fixes. Senior developer standards.
+- Minimal Impact: Only touch what’s necessary. No side effects with new bugs.
