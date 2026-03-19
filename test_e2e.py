@@ -326,6 +326,27 @@ class TestRegressions:
         host._page.screenshot(path=str(proof_dir / "version-age-host.png"), full_page=True)
         pax._page.screenshot(path=str(proof_dir / "version-age-participant.png"), full_page=True)
 
+    def test_version_mismatch_shows_reload_prompt_and_stop_prevents_auto_reload(self, host: HostPage, pax: ParticipantPage):
+        host._page.evaluate("window.APP_VERSION = '2000-01-01 00:00'; window.__versionReloadGuard && window.__versionReloadGuard.check('2099-01-01 00:00')")
+        pax._page.evaluate("window.APP_VERSION = '2000-01-01 00:00'; window.__versionReloadGuard && window.__versionReloadGuard.check('2099-01-01 00:00')")
+
+        expect(host._page.locator("#version-reload-banner")).to_be_visible(timeout=5000)
+        expect(pax._page.locator("#version-reload-banner")).to_be_visible(timeout=5000)
+
+        expect(host._page.locator("#version-reload-message")).to_contain_text("Reloading in")
+        expect(pax._page.locator("#version-reload-message")).to_contain_text("Reloading in")
+
+        host._page.click("#version-reload-stop")
+        pax._page.click("#version-reload-stop")
+
+        expect(host._page.locator("#version-reload-message")).to_contain_text("Auto-reload paused")
+        expect(pax._page.locator("#version-reload-message")).to_contain_text("Auto-reload paused")
+
+        proof_dir = Path(__file__).parent / "docs" / "superpowers" / "specs"
+        proof_dir.mkdir(parents=True, exist_ok=True)
+        host._page.screenshot(path=str(proof_dir / "version-mismatch-host.png"), full_page=True)
+        pax._page.screenshot(path=str(proof_dir / "version-mismatch-participant.png"), full_page=True)
+
 
 # ---------------------------------------------------------------------------
 # TestWordCloud

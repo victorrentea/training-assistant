@@ -6,6 +6,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
 
 from auth import require_host_auth
+from backend_version import get_backend_version
 from pydantic import BaseModel
 
 from messaging import broadcast, build_state_message
@@ -197,6 +198,7 @@ async def suggest_name():
 @router.get("/api/status")
 async def status():
     return {
+        "backend_version": get_backend_version(),
         "participants": len(state.participants),
         "poll": state.poll,
         "poll_active": state.poll_active,

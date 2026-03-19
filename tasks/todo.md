@@ -127,6 +127,14 @@
 - [x] Capture non-visual proof via test logs
 - [x] Run targeted tests
 
+## Backlog item: frontend detects backend deploy-version mismatch and prompts reload
+
+- [x] Verify host and participant both initialize shared reload guard (`static/version-reload.js`)
+- [x] Verify mismatch check is executed from websocket `state` updates in both UIs
+- [x] Run focused e2e regression for mismatch banner + stop action
+- [x] Mark item done in `backlog.md`
+- [x] Capture non-visual proof via test output
+
 ## Review
 
 - Added `scripts/append_transcription_timestamps.py` with 3s default interval and parser-compatible format.
@@ -164,3 +172,5 @@
 - Backlog item fixed: daemon now survives transient server disconnects/redeploys and reconnects automatically without restart.
 - Verified with `python3 -m pytest -q test_quiz_core_http_helpers.py test_quiz_daemon_reconnect.py` (4 passed).
 - Proof logs: `/tmp/reconnect_item_tests.log`.
+- Backlog item fixed: host and participant detect backend/frontend version mismatch and show a stop-capable auto-reload prompt.
+- Verified with `python3 -m pytest -q test_e2e.py -k version_mismatch_shows_reload_prompt_and_stop_prevents_auto_reload` (1 passed, 28 deselected).
