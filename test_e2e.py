@@ -24,8 +24,8 @@ from pages.host_page import HostPage
 from pages.participant_page import ParticipantPage
 
 PROD_URL = "https://interact.victorrentea.ro"
-PROD_HOST_USER = os.environ.get("HOST_USERNAME", "host")
-PROD_HOST_PASS = os.environ.get("HOST_PASSWORD", "host")
+PROD_HOST_USER = os.environ.get("PROD_HOST_USERNAME", "host")
+PROD_HOST_PASS = os.environ.get("PROD_HOST_PASSWORD", "host")
 
 HOST_USER = os.environ.get("HOST_USERNAME", "host")
 HOST_PASS = os.environ.get("HOST_PASSWORD", "testpass")
@@ -491,6 +491,10 @@ class TestProductionSmoke:
         resp = requests.get(f"{PROD_URL}/host", timeout=10)
         assert resp.status_code == 401
 
+    @pytest.mark.skipif(
+        not os.environ.get("PROD_HOST_PASSWORD"),
+        reason="PROD_HOST_PASSWORD not set"
+    )
     def test_prod_host_page_accessible_with_credentials(self):
         resp = requests.get(f"{PROD_URL}/host", auth=(PROD_HOST_USER, PROD_HOST_PASS), timeout=10)
         assert resp.status_code == 200
