@@ -106,6 +106,17 @@
 - [x] Mark item done in `backlog.md`
 - [x] Run targeted tests
 
+## Backlog item: avoid redundant reindexing on local-agent restart
+
+- [x] Add per-file hash manifest (`.index-manifest.json`) in materials root
+- [x] Replace full startup indexing with incremental startup sync
+- [x] Reindex only changed/new files and remove deleted files from index
+- [x] Update manifest after startup sync and file-watcher updates
+- [x] Add focused tests for unchanged-skip and changed/new/removed flows
+- [x] Mark item done in `backlog.md`
+- [x] Capture non-visual proof via test logs
+- [x] Run targeted tests
+
 ## Review
 
 - Added `scripts/append_transcription_timestamps.py` with 3s default interval and parser-compatible format.
@@ -137,3 +148,6 @@
 - Backlog item fixed: deploy version label now shows elapsed age and updates live under one day in both host and participant UIs.
 - Verified with `python3 -m pytest -q test_e2e.py -k version_tag_shows_elapsed_time_and_updates_under_day` (1 passed, 27 deselected).
 - Proof screenshots: `docs/superpowers/specs/version-age-host.png`, `docs/superpowers/specs/version-age-participant.png`.
+- Backlog item fixed: local agent startup indexing now skips unchanged files using per-file SHA-256 manifest and only reindexes changed/new files.
+- Verified with `python3 -m pytest -q test_daemon_indexer_incremental.py` (2 passed).
+- Proof logs: `/tmp/indexer_incremental_tests.log`.
