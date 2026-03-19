@@ -264,30 +264,12 @@ def _parse_raw_response(raw: str) -> dict:
         raise
 
 def search_materials(query: str) -> list:
-    """Search for relevant technical materials using the local FAISS index."""
+    """Delegate to daemon/rag.py if available; graceful fallback otherwise."""
     try:
-        from langchain_community.vectorstores import FAISS
-        from langchain_community.embeddings import HuggingFaceEmbeddings
-        
-        index_path = Path("faiss_index")
-        if not index_path.exists():
-            return [{"content": "No materials indexed yet.", "source": "N/A", "page": "N/A"}]
-            
-        embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
-        vectorstore = FAISS.load_local(index_path, embeddings, allow_dangerous_deserialization=True)
-        
-        docs = vectorstore.similarity_search(query, k=3)
-        results = []
-        for d in docs:
-            results.append({
-                "content": d.page_content,
-                "source": d.metadata.get("source", "Unknown"),
-                "page": d.metadata.get("page", "N/A")
-            })
-        return results
-    except Exception as e:
-        print(f"[error] search_materials failed: {e}", file=sys.stderr)
-        return [{"content": f"Search failed: {e}", "source": "Error", "page": "N/A"}]
+        from daemon.rag import search_materials as _search
+        return _search(query)
+    except ImportError:
+        return [{"content": "RAG not available (run: pip install -e daemon/).", "source": "N/A", "page": "N/A"}]
 
 def generate_quiz(text: str, config: Config) -> dict:
     client = anthropic.Anthropic(api_key=config.api_key)

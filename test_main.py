@@ -772,3 +772,13 @@ class TestQA:
         resp = session._client.post("/api/qa/clear")
         assert resp.status_code == 200
         assert state.qa_questions == {}
+
+
+def test_search_materials_fallback_without_daemon(monkeypatch):
+    """search_materials returns a safe fallback when daemon deps are not installed."""
+    import sys, quiz_core
+    # Setting daemon.rag to None in sys.modules causes ImportError on "from daemon.rag import ..."
+    monkeypatch.setitem(sys.modules, "daemon.rag", None)
+    results = quiz_core.search_materials("circuit breaker")
+    assert len(results) == 1
+    assert results[0]["source"] == "N/A"
