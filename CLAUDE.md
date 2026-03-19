@@ -10,7 +10,7 @@ It is intended as the primary reference for any AI coding assistant working on t
 ## Secrets
 
 Host panel credentials are stored in `secrets.env` (gitignored — never commit this file).
-The file contains `HOST_USERNAME` and `HOST_PASSWORD` for accessing `/host` and `/api/poll`, `/api/poll/status`.
+The file contains `HOST_USERNAME` and `HOST_PASSWORD` for accessing `/host` and `/api/poll`, `/api/poll/status`, `/api/qa/question/{id}` (PATCH, DELETE), `/api/qa/answer/{id}`, `/api/qa/clear`, `/api/activity`, `/api/wordcloud/clear`.
 
 ---
 
@@ -19,7 +19,7 @@ The file contains `HOST_USERNAME` and `HOST_PASSWORD` for accessing `/host` and 
 - **URL**: https://interact.victorrentea.ro
 - **Platform**: [Railway](https://railway.app) — auto-deploys on every push to `master`
 - **Deploy**: `git push` to `master` → Railway builds and deploys in ~40-50 seconds. No manual steps.
-- **Auth**: HTTP Basic Auth on `/host`, `/api/poll`, `/api/poll/status` — participants access `/`, `/api/suggest-name`, `/api/status` freely
+- **Auth**: HTTP Basic Auth on `/host`, `/api/poll`, `/api/poll/status`, `/api/qa/question/{id}` (PATCH, DELETE), `/api/qa/answer/{id}`, `/api/qa/clear`, `/api/activity`, `/api/wordcloud/clear` — participants access `/`, `/api/suggest-name`, `/api/status`, `/api/qa/question` (POST), `/api/qa/upvote` freely
 - **Versioning**: a pre-commit git hook stamps `static/version.js` with the current timestamp; both host and participant pages display it in the bottom-right corner
 
 ---
@@ -102,7 +102,7 @@ Build a **self-hosted, real-time audience interaction tool** for use during onli
 |---|---|---|
 | Hosting | **Railway** | Auto-deploys on `git push` to master, ~40-50s build time |
 | HTTPS | **Railway** | Handles TLS automatically |
-| Auth | **HTTP Basic Auth** (FastAPI middleware) | Protects `/host`, `/api/poll`, `/api/poll/status` only |
+| Auth | **HTTP Basic Auth** (FastAPI middleware) | Protects `/host`, `/api/poll`, `/api/poll/status`, host-only Q&A and activity endpoints |
 
 ---
 
@@ -145,7 +145,7 @@ class AppState:
 ## Key Design Decisions
 
 - **No venv**: dependencies installed globally into system Python 3.12 on Mac; `python3 quiz_generator.py` runs directly
-- **Host auth scope**: only `/host`, `/api/poll`, `/api/poll/status` are protected; `/api/suggest-name` and `/api/status` are public (used by participants)
+- **Host auth scope**: protected endpoints: `/host`, `/api/poll`, `/api/poll/status`, `/api/qa/question/{id}` (PATCH, DELETE), `/api/qa/answer/{id}`, `/api/qa/clear`, `/api/activity`, `/api/wordcloud/clear`; public endpoints: `/api/suggest-name`, `/api/status`, `/api/qa/question` (POST), `/api/qa/upvote`
 - **Votes are final**: once a participant votes, they cannot change their vote. This is intentional.
 - **No persistence between sessions**: restarting the server clears all state. Acceptable because sessions are live events.
 - **Quiz correct_indices**: stored in the quiz JSON for trainer preview only — never sent to the poll server
@@ -180,7 +180,7 @@ python3 -m uvicorn main:app --reload --port 8000
 
 ## Backlog / Next Steps
 
-- [ ] Implement Q&A feature with upvoting (Phase 2)
+- [x] Implement Q&A feature with upvoting (Phase 2)
 - [x] Implement word cloud feature (Phase 2)
 - [ ] Add session history / export (optional)
 - [ ] Claude API integration for AI-assisted Q&A summarisation (Phase 3)
