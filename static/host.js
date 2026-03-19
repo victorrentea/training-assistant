@@ -562,7 +562,9 @@
         `<span class="mode-pill">${currentPoll.multi ? '☑ Multi-select' : '◉ Single-select'}${countHint}</span>`;
     }
 
+    el.className = pollActive ? 'voting-active' : '';
     el.innerHTML = `
+      ${pollActive ? '<span class="voting-dots"><span></span><span></span><span></span></span>' : ''}
       <p class="poll-question">${escHtml(currentPoll.question)}</p>
       ${bars}
       <p style="font-size:.8rem; color:var(--muted); margin-top:.5rem;">${totalVotes} total vote${totalVotes!==1?'s':''}</p>
