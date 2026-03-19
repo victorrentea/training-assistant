@@ -341,6 +341,7 @@
               <input id="wc-input" type="text" maxlength="40" autocomplete="off" placeholder="Type a word…" list="wc-suggestions" />
               <datalist id="wc-suggestions"></datalist>
               <button id="wc-go" class="btn btn-primary">↵</button>
+              <button id="wc-download" class="btn btn-secondary" title="Download image">⬇</button>
             </div>
             <div id="wc-my-words"></div>
           </div>
@@ -349,6 +350,14 @@
       document.getElementById('wc-input').addEventListener('keydown', e => {
         if (e.key === 'Enter') submitWord();
       });
+      document.getElementById('wc-download').onclick = () => {
+        const canvas = document.getElementById('wc-canvas');
+        if (!canvas) return;
+        const a = document.createElement('a');
+        a.href = canvas.toDataURL('image/png');
+        a.download = `wordcloud-${new Date().toISOString().slice(0,19).replace(/:/g,'-')}.png`;
+        a.click();
+      };
     }
     // Update prompt with topic (may change after screen is shown)
     const promptEl = document.getElementById('wc-prompt-text');
@@ -585,12 +594,12 @@
       const multiHint = correctCount
         ? `Select exactly ${correctCount} answer${correctCount > 1 ? 's' : ''}`
         : 'Multiple answers may be correct';
-      if (selCount > 0) {
+      const atLimit = correctCount && selCount >= correctCount;
+      if (selCount > 0 && !atLimit) {
         const blink = !_multiWarnShown ? ' blink' : '';
         if (!_multiWarnShown) _multiWarnShown = true;
         warning = `<div class="multi-warning${blink}">⚠️ ${multiHint}!</div>`;
       }
-      const atLimit = correctCount && selCount >= correctCount;
       const selMsg = selCount > 0
         ? (atLimit
             ? `✅ ${selCount} of ${correctCount} selected — click to deselect.`
