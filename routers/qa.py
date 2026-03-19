@@ -72,6 +72,8 @@ async def upvote_question(body: QuestionUpvote):
     # Award +50 points to the question author
     author = q["author"]
     state.scores[author] = state.scores.get(author, 0) + 50
+    # Award +25 points to the upvoter
+    state.scores[name] = state.scores.get(name, 0) + 25
     await broadcast(build_state_message())
     return {"ok": True}
 

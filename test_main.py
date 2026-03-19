@@ -749,11 +749,13 @@ class TestQA:
         assert qid not in state.qa_questions
 
     def test_upvote_question_awards_points_to_author(self, session):
-        qid = self._submit(session._client, "Alice", "Great question?")
+        qid = self._submit(session._client, "Alice", "What is DDD?")
         resp = session._client.post("/api/qa/upvote", json={"name": "Bob", "question_id": qid})
         assert resp.status_code == 200
         # Alice gets 100 (submit) + 50 (upvote) = 150
-        assert state.scores.get("Alice", 0) == 150
+        assert state.scores.get("Alice") == 150
+        # Bob gets 25 for upvoting
+        assert state.scores.get("Bob") == 25
 
     def test_cannot_upvote_own_question(self, session):
         qid = self._submit(session._client, "Alice", "My own question")
