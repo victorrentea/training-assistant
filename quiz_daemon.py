@@ -22,7 +22,7 @@ import time
 from pathlib import Path
 
 from quiz_core import (
-    config_from_env, auto_generate, auto_refine,
+    config_from_env, auto_generate, auto_generate_topic, auto_refine,
     _get_json, DAEMON_POLL_INTERVAL,
 )
 
@@ -56,6 +56,17 @@ def run() -> None:
     signal.signal(signal.SIGINT, _cleanup)
 
     config = config_from_env()
+
+    # Start background material indexer
+    materials_folder_str = os.environ.get("MATERIALS_FOLDER",
+        str(Path.home() / "Documents" / "workshop-materials"))
+    materials_folder = Path(materials_folder_str).expanduser()
+    if materials_folder.exists():
+        from daemon.indexer import start_indexer
+        start_indexer(materials_folder)
+    else:
+        print(f"[daemon] MATERIALS_FOLDER not found: {materials_folder} — indexer disabled", file=sys.stderr)
+
     print(f"[daemon] Started — polling {config.server_url} every {DAEMON_POLL_INTERVAL}s")
     print("[daemon] Press Ctrl+C to stop.\n")
 
@@ -72,9 +83,15 @@ def run() -> None:
             )
             req = data.get("request")
             if req:
-                minutes = req.get("minutes", config.minutes)
-                print(f"\n[daemon] Received quiz request: last {minutes} min")
-                result = auto_generate(minutes, config)
+                topic = req.get("topic")
+                minutes = req.get("minutes")
+                if topic:
+                    print(f"\n[daemon] Topic request: '{topic}'")
+                    result = auto_generate_topic(topic, config)
+                else:
+                    minutes = minutes or config.minutes
+                    print(f"\n[daemon] Transcript request: last {minutes} min")
+                    result = auto_generate(minutes, config)
                 if result:
                     last_quiz, last_text = result
                 else:
