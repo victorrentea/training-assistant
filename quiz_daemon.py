@@ -21,7 +21,7 @@ import sys
 import time
 from pathlib import Path
 
-from scripts.append_transcription_timestamps import (
+from daemon.transcript_timestamps import (
     append_empty_line_then_timestamp,
     infer_template_from_first_line,
 )

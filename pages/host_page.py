@@ -25,6 +25,12 @@ class HostPage:
         self._page.click("#create-btn")
         expect(self._page.locator("text=Close voting")).to_be_visible(timeout=5000)
 
+    def expect_generate_button_label(self, label: str) -> None:
+        expect(self._page.locator("#gen-quiz-btn")).to_have_text(label, timeout=3000)
+
+    def set_quiz_topic(self, text: str) -> None:
+        self._page.fill("#quiz-topic", text)
+
     def close_poll(self) -> None:
         self._page.click("text=Close voting")
         expect(self._page.locator("text=Re-open")).to_be_visible(timeout=5000)

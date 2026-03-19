@@ -240,6 +240,26 @@ body {
   align-self: stretch;
 }
 
+
+/* Host Q&A composer: keep input and submit button at identical height */
+#tab-content-qa .qa-input-row {
+  display: flex;
+  gap: .4rem;
+  align-items: stretch;
+}
+
+#host-qa-input {
+  flex: 1;
+  background: var(--surface2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0 .6rem;
+  font-size: .9rem;
+  height: 34px;
+  min-height: 34px;
+}
+
 /* Status badges pinned to bottom of left column */
 .left-status-bar {
   margin-top: auto;
