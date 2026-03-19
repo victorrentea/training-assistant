@@ -782,3 +782,43 @@ def test_search_materials_fallback_without_daemon(monkeypatch):
     results = quiz_core.search_materials("circuit breaker")
     assert len(results) == 1
     assert results[0]["source"] == "N/A"
+
+
+def test_quiz_request_transcript_mode():
+    state.reset()
+    client = TestClient(app)
+    resp = client.post("/api/quiz-request",
+        json={"minutes": 30},
+        headers=_HOST_AUTH_HEADERS)
+    assert resp.status_code == 200
+    data = client.get("/api/quiz-request", headers=_HOST_AUTH_HEADERS).json()
+    assert data["request"]["minutes"] == 30
+    assert data["request"]["topic"] is None
+
+
+def test_quiz_request_topic_mode():
+    state.reset()
+    client = TestClient(app)
+    resp = client.post("/api/quiz-request",
+        json={"topic": "circuit breaker"},
+        headers=_HOST_AUTH_HEADERS)
+    assert resp.status_code == 200
+    data = client.get("/api/quiz-request", headers=_HOST_AUTH_HEADERS).json()
+    assert data["request"]["topic"] == "circuit breaker"
+    assert data["request"]["minutes"] is None
+
+
+def test_quiz_request_rejects_both_fields():
+    client = TestClient(app)
+    resp = client.post("/api/quiz-request",
+        json={"minutes": 30, "topic": "circuit breaker"},
+        headers=_HOST_AUTH_HEADERS)
+    assert resp.status_code == 422
+
+
+def test_quiz_request_rejects_neither_field():
+    client = TestClient(app)
+    resp = client.post("/api/quiz-request",
+        json={},
+        headers=_HOST_AUTH_HEADERS)
+    assert resp.status_code == 422

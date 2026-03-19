@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 
 from messaging import broadcast
 from state import state
@@ -10,7 +10,16 @@ router = APIRouter()
 
 
 class QuizRequest(BaseModel):
-    minutes: int = 30
+    minutes: int | None = None   # transcript mode
+    topic: str | None = None     # topic mode
+
+    @model_validator(mode="after")
+    def exactly_one_mode(self):
+        has_minutes = self.minutes is not None and self.minutes > 0
+        has_topic = bool(self.topic and self.topic.strip())
+        if has_minutes == has_topic:
+            raise ValueError("Provide either 'minutes' (transcript mode) or 'topic' (topic mode), not both or neither.")
+        return self
 
 
 class QuizStatus(BaseModel):
@@ -31,8 +40,14 @@ class QuizRefineRequest(BaseModel):
 
 @router.post("/api/quiz-request")
 async def request_quiz(body: QuizRequest):
-    state.quiz_request = {"minutes": body.minutes}
-    state.quiz_status = {"status": "requested", "message": f"Waiting for daemon (last {body.minutes} min)…"}
+    if body.topic:
+        state.quiz_request = {"minutes": None, "topic": body.topic}
+        msg = f"Waiting for daemon (topic: {body.topic})…"
+    else:
+        minutes = body.minutes or 30
+        state.quiz_request = {"minutes": minutes, "topic": None}
+        msg = f"Waiting for daemon (last {minutes} min)…"
+    state.quiz_status = {"status": "requested", "message": msg}
     await broadcast({"type": "quiz_status", **state.quiz_status})
     return {"ok": True}
 
