@@ -124,6 +124,21 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     }
   }
 
+  function downloadKeyPoints() {
+    if (!summaryPoints.length) return;
+    const lines = summaryPoints.map(p => {
+      const text = typeof p === 'string' ? p : p.text;
+      return '• ' + text;
+    });
+    const content = 'Key Points\n' + '='.repeat(10) + '\n\n' + lines.join('\n');
+    const blob = new Blob([content], { type: 'text/plain' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `key-points-${new Date().toISOString().slice(0, 10)}.txt`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
   function toggleSummaryModal() {
     const overlay = document.getElementById('summary-overlay');
     if (overlay) overlay.classList.toggle('open');
