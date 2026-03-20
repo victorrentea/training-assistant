@@ -73,6 +73,22 @@ async def launch_debate(body: DebateLaunch):
     return {"ok": True}
 
 
+@router.post("/api/debate/reset", dependencies=[Depends(require_host_auth)])
+async def reset_debate():
+    """Reset all debate state back to scratch."""
+    state.debate_statement = None
+    state.debate_phase = None
+    state.debate_sides = {}
+    state.debate_arguments = []
+    state.debate_champions = {}
+    state.debate_auto_assigned = set()
+    state.current_activity = ActivityType.NONE
+
+    logger.info("Debate reset")
+    await broadcast_state()
+    return {"ok": True}
+
+
 @router.post("/api/debate/close-selection", dependencies=[Depends(require_host_auth)])
 async def close_selection():
     if state.debate_phase != "side_selection":
