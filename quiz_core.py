@@ -562,12 +562,12 @@ def _http_error_message(code: int, url: str) -> str:
     return f"HTTP {code} — {hint} [{url}]"
 
 
-def _post_json(url: str, payload: dict, username: str = "", password: str = "") -> dict:
+def _request_json(url: str, payload: dict, method: str = "POST", username: str = "", password: str = "") -> dict:
     data = json.dumps(payload).encode("utf-8")
     headers = {"Content-Type": "application/json"}
     if username:
         headers["Authorization"] = "Basic " + base64.b64encode(f"{username}:{password}".encode()).decode()
-    req = urllib.request.Request(url, data=data, headers=headers, method="POST")
+    req = urllib.request.Request(url, data=data, headers=headers, method=method)
     try:
         with urllib.request.urlopen(req, timeout=_HTTP_TIMEOUT_SECONDS, context=_ssl_context()) as resp:
             try:
@@ -582,6 +582,14 @@ def _post_json(url: str, payload: dict, username: str = "", password: str = "") 
         raise RuntimeError(f"Cannot reach server: {e.reason} [{url}]") from e
     except OSError as e:
         raise RuntimeError(f"Cannot reach server: {e} [{url}]") from e
+
+
+def _post_json(url: str, payload: dict, username: str = "", password: str = "") -> dict:
+    return _request_json(url, payload, method="POST", username=username, password=password)
+
+
+def _put_json(url: str, payload: dict, username: str = "", password: str = "") -> dict:
+    return _request_json(url, payload, method="PUT", username=username, password=password)
 
 
 def _get_json(url: str, username: str = "", password: str = "") -> dict:
@@ -618,7 +626,7 @@ def post_poll(quiz: dict, config: Config) -> None:
 
 
 def open_poll(config: Config) -> None:
-    _post_json(f"{config.server_url}/api/poll/status", {"open": True}, config.host_username, config.host_password)
+    _put_json(f"{config.server_url}/api/poll/status", {"open": True}, config.host_username, config.host_password)
 
 
 def post_status(status: str, message: str, config: Config,
