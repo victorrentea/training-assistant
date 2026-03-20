@@ -306,9 +306,22 @@ def run() -> None:
                 else:
                     post_status("error", "No conversation context — please generate a question first.", config)
 
-            # ── Periodic summary generation ──
+            # ── Check for forced summary request ──
+            force_summary = False
+            try:
+                force_data = _get_json(
+                    f"{config.server_url}/api/summary/force",
+                    config.host_username, config.host_password,
+                )
+                force_summary = force_data.get("requested", False)
+            except Exception:
+                pass
+
+            # ── Periodic or forced summary generation ──
             now_mono = time.monotonic()
-            if now_mono - last_summary_at >= SUMMARY_INTERVAL_SECONDS:
+            if force_summary or now_mono - last_summary_at >= SUMMARY_INTERVAL_SECONDS:
+                if force_summary:
+                    print("[summarizer] Force-generating summary (host requested)")
                 last_summary_at = now_mono
                 try:
                     new_points = generate_summary(config, summary_points)

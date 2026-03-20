@@ -19,3 +19,16 @@ async def update_summary(body: SummaryUpdate):
     state.summary_updated_at = datetime.now(timezone.utc)
     await broadcast_state()
     return {"ok": True}
+
+
+@router.post("/api/summary/force")
+async def force_summary():
+    state.summary_force_requested = True
+    return {"ok": True}
+
+
+@router.get("/api/summary/force")
+async def poll_summary_force():
+    requested = state.summary_force_requested
+    state.summary_force_requested = False
+    return {"requested": requested}
