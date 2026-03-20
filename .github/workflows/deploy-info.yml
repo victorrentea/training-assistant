@@ -26,7 +26,7 @@ jobs:
           fi
 
           if [ -n "$PREV_SHA" ] && git cat-file -e "$PREV_SHA" 2>/dev/null; then
-            CHANGELOG=$(git log --oneline "$PREV_SHA"..HEAD \
+            CHANGELOG=$(git log "$PREV_SHA"..HEAD \
               --no-merges \
               --author-date-order \
               --invert-grep --grep="chore: update deploy-info" \
