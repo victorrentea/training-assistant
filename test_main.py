@@ -936,7 +936,10 @@ def test_post_summary_updates_state():
     # POST summary first (before connecting participant)
     resp = session._client.post(
         "/api/summary",
-        json={"points": ["Discussed TDD basics", "Covered mocking patterns"]},
+        json={"points": [
+            {"text": "Discussed TDD basics", "source": "discussion"},
+            {"text": "Covered mocking patterns", "source": "notes"},
+        ]},
     )
     assert resp.status_code == 200
     assert resp.json()["ok"] is True
@@ -945,7 +948,9 @@ def test_post_summary_updates_state():
     with session.participant("Alice") as alice:
         assert "summary_points" in alice._last_state
         assert len(alice._last_state["summary_points"]) == 2
-        assert alice._last_state["summary_points"][0] == "Discussed TDD basics"
+        assert alice._last_state["summary_points"][0]["text"] == "Discussed TDD basics"
+        assert alice._last_state["summary_points"][0]["source"] == "discussion"
+        assert alice._last_state["summary_points"][1]["source"] == "notes"
 
 
 def test_post_summary_requires_auth():
@@ -953,6 +958,6 @@ def test_post_summary_requires_auth():
     client = TestClient(app)  # no auth headers
     resp = client.post(
         "/api/summary",
-        json={"points": ["Should fail"]},
+        json={"points": [{"text": "Should fail", "source": "discussion"}]},
     )
     assert resp.status_code == 401

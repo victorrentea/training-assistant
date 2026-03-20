@@ -58,7 +58,7 @@ class AppState:
         self.codereview_phase: str = "idle"  # "idle" | "selecting" | "reviewing"
         self.codereview_selections: dict[str, set[int]] = {}  # uuid → set of line numbers
         self.codereview_confirmed: set[int] = set()  # lines host confirmed
-        self.summary_points: list[str] = []
+        self.summary_points: list[dict] = []
         self.summary_updated_at: Optional[datetime] = None
         self.summary_force_requested: bool = False
         # Debate state

@@ -219,7 +219,7 @@ def run() -> None:
     last_heartbeat_at = 0.0
     last_session_check_at = 0.0
     # Summary state
-    summary_points: list[str] = []
+    summary_points: list[dict] = []
     last_summary_at = 0.0  # monotonic time of last summary run
 
     while True:
