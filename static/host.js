@@ -161,6 +161,13 @@
         renderPollDisplay();
         const currentActivity = msg.current_activity || 'none';
         updateCenterPanel(currentActivity);
+        if (msg.current_activity === 'debate') {
+          renderDebateHost(msg);
+        } else {
+          // Hide debate controls when not in debate
+          const dc = document.getElementById('debate-host-controls');
+          if (dc) dc.style.display = 'none';
+        }
         if (currentActivity === 'wordcloud') {
           renderHostWordCloud(msg.wordcloud_words || {});
         }
@@ -888,14 +895,10 @@
 
 
   async function switchTab(tab) {
-    document.getElementById('tab-poll').classList.toggle('active', tab === 'poll');
-    document.getElementById('tab-wordcloud').classList.toggle('active', tab === 'wordcloud');
-    document.getElementById('tab-qa').classList.toggle('active', tab === 'qa');
-    document.getElementById('tab-content-poll').style.display = tab === 'poll' ? '' : 'none';
-    document.getElementById('tab-content-wordcloud').style.display = tab === 'wordcloud' ? '' : 'none';
-    document.getElementById('tab-content-qa').style.display = tab === 'qa' ? '' : 'none';
-
-    // Tell server — participants follow the active tab
+    ['poll', 'wordcloud', 'qa', 'debate'].forEach(t => {
+      document.getElementById('tab-' + t).classList.toggle('active', tab === t);
+      document.getElementById('tab-content-' + t).style.display = tab === t ? '' : 'none';
+    });
     await fetch('/api/activity', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -904,18 +907,19 @@
   }
 
   function updateCenterPanel(currentActivity) {
-    document.getElementById('center-qr').style.display = currentActivity === 'none' ? '' : 'none';
-    document.getElementById('center-poll').style.display = currentActivity === 'poll' ? '' : 'none';
-    document.getElementById('center-wordcloud').style.display = currentActivity === 'wordcloud' ? '' : 'none';
-    document.getElementById('center-qa').style.display = currentActivity === 'qa' ? '' : 'none';
-    // Sync left-column tab buttons to match server-side active activity
+    ['qr', 'poll', 'wordcloud', 'qa', 'debate'].forEach(id => {
+      const el = document.getElementById('center-' + id);
+      if (id === 'qr') {
+        el.style.display = currentActivity === 'none' ? '' : 'none';
+      } else {
+        el.style.display = currentActivity === id ? '' : 'none';
+      }
+    });
     if (currentActivity && currentActivity !== 'none') {
-      document.getElementById('tab-poll').classList.toggle('active', currentActivity === 'poll');
-      document.getElementById('tab-wordcloud').classList.toggle('active', currentActivity === 'wordcloud');
-      document.getElementById('tab-qa').classList.toggle('active', currentActivity === 'qa');
-      document.getElementById('tab-content-poll').style.display = currentActivity === 'poll' ? '' : 'none';
-      document.getElementById('tab-content-wordcloud').style.display = currentActivity === 'wordcloud' ? '' : 'none';
-      document.getElementById('tab-content-qa').style.display = currentActivity === 'qa' ? '' : 'none';
+      ['poll', 'wordcloud', 'qa', 'debate'].forEach(t => {
+        document.getElementById('tab-' + t).classList.toggle('active', currentActivity === t);
+        document.getElementById('tab-content-' + t).style.display = currentActivity === t ? '' : 'none';
+      });
     }
   }
 
@@ -1130,3 +1134,159 @@
   document.getElementById('wc-topic-input')?.addEventListener('keydown', e => {
     if (e.key === 'Enter') pushWordCloudTopic();
   });
+
+  // ── HTML escaping utility ──
+  function escDebate(str) {
+    const d = document.createElement('div');
+    d.textContent = str;
+    return d.innerHTML;
+  }
+
+  // ── Debate Host Functions ──
+
+  async function launchDebate() {
+    const input = document.getElementById('debate-statement-input');
+    const statement = input.value.trim();
+    if (!statement) return;
+    await fetch('/api/debate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ statement }),
+    });
+  }
+
+  async function debateCloseSelection() {
+    await fetch('/api/debate/close-selection', { method: 'POST' });
+  }
+
+  async function debateNextPhase(phase) {
+    await fetch('/api/debate/phase', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phase }),
+    });
+  }
+
+  async function debateRunAI() {
+    const btn = document.querySelector('#debate-host-actions .btn-ai');
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ Running AI…'; }
+    try {
+      await fetch('/api/debate/ai-cleanup', { method: 'POST' });
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = '✨ Run AI Cleanup'; }
+    }
+  }
+
+  function renderDebateHost(msg) {
+    if (!msg.debate_statement) return;
+
+    const controls = document.getElementById('debate-host-controls');
+    const phaseLabel = document.getElementById('debate-phase-label');
+    const actions = document.getElementById('debate-host-actions');
+    const title = document.getElementById('debate-statement-display');
+    const content = document.getElementById('debate-center-content');
+
+    controls.style.display = '';
+    title.textContent = '"' + msg.debate_statement + '"';
+
+    const phase = msg.debate_phase;
+    const sideCounts = msg.debate_side_counts || { for: 0, against: 0 };
+
+    // Phase label
+    const phaseNames = {
+      side_selection: 'Phase 1: Side Selection',
+      arguments: 'Phase 2: Arguments',
+      ai_cleanup: 'Phase 3: AI Cleanup',
+      prep: 'Phase 4: Preparation',
+      live_debate: 'Phase 5: Live Debate',
+      ended: 'Debate Ended',
+    };
+    phaseLabel.textContent = (phaseNames[phase] || phase) +
+      ` — FOR: ${sideCounts.for} | AGAINST: ${sideCounts.against}`;
+
+    // Host action buttons per phase
+    actions.innerHTML = '';
+    if (phase === 'side_selection') {
+      actions.innerHTML = '<button class="btn btn-primary" onclick="debateCloseSelection()">🔒 Close Selection → Arguments</button>';
+    } else if (phase === 'arguments') {
+      actions.innerHTML = '<button class="btn btn-primary" onclick="debateNextPhase(\'ai_cleanup\')">Next → AI Cleanup</button>';
+    } else if (phase === 'ai_cleanup') {
+      actions.innerHTML = '<button class="btn btn-warn btn-ai" onclick="debateRunAI()">✨ Run AI Cleanup</button>' +
+        ' <button class="btn btn-primary" onclick="debateNextPhase(\'prep\')">Next → Preparation</button>';
+    } else if (phase === 'prep') {
+      const champions = msg.debate_champions || {};
+      const champInfo = Object.entries(champions).map(([s, n]) => `${s}: ${escDebate(n)}`).join(', ');
+      actions.innerHTML = (champInfo ? `<span style="color:var(--accent);font-size:.85rem;">🏆 ${champInfo}</span> ` : '') +
+        '<button class="btn btn-primary" onclick="debateNextPhase(\'live_debate\')">▶ Start Live Debate</button>';
+    } else if (phase === 'live_debate') {
+      actions.innerHTML = '<button class="btn btn-danger" onclick="debateNextPhase(\'ended\')">⏹ End Debate</button>';
+    }
+
+    // Center panel: dual-column arguments
+    const args = (msg.debate_arguments || []).filter(a => !a.merged_into);
+    const forArgs = args.filter(a => a.side === 'for');
+    const againstArgs = args.filter(a => a.side === 'against');
+    const mergedArgs = (msg.debate_arguments || []).filter(a => a.merged_into);
+
+    if (phase === 'side_selection') {
+      content.innerHTML = `<div style="text-align:center; padding:2rem; color:var(--muted);">
+        Waiting for participants to choose sides…<br>
+        <span style="font-size:1.5rem; margin-top:.5rem; display:block;">
+          👍 FOR: ${sideCounts.for} &nbsp;|&nbsp; 👎 AGAINST: ${sideCounts.against}
+        </span>
+      </div>`;
+    } else {
+      content.innerHTML = renderDebateDualColumn(againstArgs, forArgs, mergedArgs, msg.debate_champions, phase);
+    }
+  }
+
+  function renderDebateDualColumn(againstArgs, forArgs, mergedArgs, champions, phase) {
+    const renderArg = (a) => {
+      const aiClass = a.ai_generated ? ' debate-arg-ai' : '';
+      return `<div class="debate-arg${aiClass}" data-id="${a.id}">
+        <div class="debate-arg-header">
+          ${a.author_avatar ? `<img src="/static/avatars/${a.author_avatar}" class="debate-arg-avatar">` : ''}
+          <span class="debate-arg-author">${escDebate(a.author)}</span>
+          <span class="debate-arg-votes">▲ ${a.upvote_count}</span>
+        </div>
+        <div class="debate-arg-text">${escDebate(a.text)}</div>
+      </div>`;
+    };
+
+    const renderMerged = () => `<div class="debate-arg debate-arg-merged">
+      <span style="color:var(--muted);font-size:.8rem;">✨ duplicate, merged above</span>
+    </div>`;
+
+    const champFor = champions?.for ? `<div class="debate-champion">🏆 ${escDebate(champions.for)}</div>` : '';
+    const champAgainst = champions?.against ? `<div class="debate-champion">🏆 ${escDebate(champions.against)}</div>` : '';
+
+    // Show hints in prep/live_debate
+    let hints = '';
+    if (phase === 'prep' || phase === 'live_debate') {
+      hints = `<div class="debate-hints">
+        <div class="debate-hint">💡 In what context does this trade-off matter most?</div>
+        <div class="debate-hint">💡 What's the strongest counterargument?</div>
+        <div class="debate-hint">💡 Give specific examples from real projects</div>
+        <div class="debate-hint">💡 Present your strongest argument first</div>
+      </div>`;
+    }
+
+    // Count merged args per side
+    const mergedForCount = mergedArgs.filter(a => a.side === 'for').length;
+    const mergedAgainstCount = mergedArgs.filter(a => a.side === 'against').length;
+
+    return `<div class="debate-columns">
+      <div class="debate-col debate-col-against">
+        <h3 class="debate-col-header">👎 AGAINST</h3>
+        ${champAgainst}
+        ${againstArgs.map(renderArg).join('')}
+        ${Array(mergedAgainstCount).fill('').map(renderMerged).join('')}
+      </div>
+      <div class="debate-col debate-col-for">
+        <h3 class="debate-col-header">👍 FOR</h3>
+        ${champFor}
+        ${forArgs.map(renderArg).join('')}
+        ${Array(mergedForCount).fill('').map(renderMerged).join('')}
+      </div>
+    </div>${hints}`;
+  }
