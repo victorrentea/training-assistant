@@ -100,7 +100,7 @@ async def create_codereview(body: CodeReviewCreate):
 
     state.codereview_snippet = snippet
     # Use detected language only if host chose "Auto-detect" (null)
-    state.codereview_language = body.language if body.language else detected_language
+    state.codereview_language = body.language if body.language is not None else detected_language
     state.codereview_phase = "selecting"
     state.codereview_selections = {}
     state.codereview_confirmed = set()
