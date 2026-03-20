@@ -383,7 +383,7 @@
         el.style.cssText = '';
       } else {
         el.textContent = 'No notes available yet.';
-        el.style.cssText = 'color:var(--text-muted); font-style:italic;';
+        el.style.cssText = 'color:var(--text-muted);';
       }
     }
   }
@@ -1010,7 +1010,8 @@
   async function switchTab(tab) {
     ['poll', 'wordcloud', 'qa', 'debate', 'codereview'].forEach(t => {
       document.getElementById('tab-' + t).classList.toggle('active', tab === t);
-      document.getElementById('tab-content-' + t).style.display = tab === t ? '' : 'none';
+      const contentEl = document.getElementById('tab-content-' + t);
+      contentEl.style.display = tab === t ? (t === 'codereview' ? 'flex' : '') : 'none';
     });
     await fetch('/api/activity', {
       method: 'POST',
@@ -1396,12 +1397,24 @@
     const snippet = document.getElementById('codereview-snippet').value;
     const langSelect = document.getElementById('codereview-language');
     const language = langSelect.value || null;
+    const smartPaste = document.getElementById('codereview-smart-paste').checked;
     if (!snippet.trim()) return alert('Please paste a code snippet');
-    await fetch('/api/codereview', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ snippet, language }),
-    });
+
+    const btn = document.querySelector('#codereview-create .btn-success');
+    const origText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = smartPaste ? 'Extracting code...' : 'Starting...';
+
+    try {
+      await fetch('/api/codereview', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ snippet, language, smart_paste: smartPaste }),
+      });
+    } finally {
+      btn.disabled = false;
+      btn.textContent = origText;
+    }
   }
 
   async function closeCodeReviewSelection() {
@@ -1633,17 +1646,15 @@
     const resetWrapper = document.getElementById('debate-reset-wrapper');
     if (stmtWrapper) {
       if (debateActive) {
-        stmtWrapper.style.transform = 'scaleY(0)';
-        stmtWrapper.style.opacity = '0';
-        stmtWrapper.style.height = '0';
+        stmtWrapper.style.transition = 'max-height 1.2s linear, margin 1.2s linear, padding 1.2s linear';
+        stmtWrapper.style.maxHeight = '0';
         stmtWrapper.style.marginTop = '0';
-        stmtWrapper.style.overflow = 'hidden';
+        stmtWrapper.style.padding = '0';
       } else {
-        stmtWrapper.style.transform = 'scaleY(1)';
-        stmtWrapper.style.opacity = '1';
-        stmtWrapper.style.height = '';
+        stmtWrapper.style.transition = 'none';
+        stmtWrapper.style.maxHeight = '200px';
         stmtWrapper.style.marginTop = '.75rem';
-        stmtWrapper.style.overflow = '';
+        stmtWrapper.style.padding = '';
       }
     }
     if (resetWrapper) resetWrapper.style.display = debateActive ? '' : 'none';

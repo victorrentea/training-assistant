@@ -41,8 +41,15 @@ body {
 }
 
 .host-col-left {
-  overflow-y: auto;
+  overflow: hidden;
   position: relative;
+  display: flex;
+  flex-direction: column;
+}
+.host-col-left .tab-content {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .host-col-center {
@@ -494,7 +501,6 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
   font-size: .75rem;
   color: var(--muted);
   margin: .25rem 0 .5rem;
-  font-style: italic;
 }
 
 @keyframes preview-flash {

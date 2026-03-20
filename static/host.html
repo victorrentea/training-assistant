@@ -113,7 +113,7 @@
 
     <!-- Debate tab content -->
     <div id="tab-content-debate" class="tab-content" style="display:none;">
-      <div id="debate-statement-wrapper" style="margin-top:.75rem; transition: transform .8s ease, opacity .6s ease, height .8s ease, margin .8s ease; transform-origin: top center;">
+      <div id="debate-statement-wrapper" style="margin-top:.75rem; overflow: hidden; max-height: 200px;">
         <textarea id="debate-statement-input" rows="2" maxlength="200" placeholder="Enter debate statement…"
           style="width:100%;padding:.5rem .75rem;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:.9rem;resize:vertical;font-family:inherit;">Microservices > Monoliths</textarea>
       </div>
@@ -124,8 +124,8 @@
     </div>
 
     <!-- Code Review tab content -->
-    <div id="tab-content-codereview" style="display:none" class="tab-content">
-      <div id="codereview-create">
+    <div id="tab-content-codereview" style="display:none; flex-direction:column;" class="tab-content">
+      <div id="codereview-create" style="display:flex; flex-direction:column; flex:1; min-height:0;">
         <div style="display:flex; gap:8px; align-items:center; margin-bottom:8px;">
           <span style="font-weight:600;">Code Review</span>
           <select id="codereview-language">
@@ -141,7 +141,11 @@
             <option value="bash">Bash</option>
           </select>
         </div>
-        <textarea id="codereview-snippet" placeholder="Paste your code snippet here (10-50 lines)..." rows="12" style="width:100%; font-family:monospace; font-size:13px;">public List&lt;String&gt; getActiveUserEmails(List&lt;User&gt; users) {
+        <label style="display:flex; align-items:center; gap:6px; margin-bottom:8px; font-size:.9rem; cursor:pointer;">
+          <input type="checkbox" id="codereview-smart-paste" checked>
+          Smart paste ✨
+        </label>
+        <textarea id="codereview-snippet" placeholder="Paste your code snippet here (10-50 lines)..." style="flex:1; width:100%; font-family:monospace; font-size:12px; resize:none; overflow:auto; white-space:pre; word-wrap:normal;">public List&lt;String&gt; getActiveUserEmails(List&lt;User&gt; users) {
     List&lt;String&gt; emails = new ArrayList&lt;&gt;();
     for (int i = 0; i &lt; users.size(); i++) {
         User user = users.get(i);
@@ -154,7 +158,7 @@
     }
     return emails;
 }</textarea>
-        <div style="display:flex; justify-content:flex-end; margin-top:8px;">
+        <div style="display:flex; justify-content:flex-end; margin-top:8px; flex-shrink:0;">
           <button class="btn btn-success" onclick="startCodeReview()">Start Code Review</button>
         </div>
       </div>
@@ -207,7 +211,7 @@
     <!-- Debate center panel -->
     <div id="center-debate" class="center-panel" style="display:none;">
       <h2 style="margin:0 0 .25rem; font-size:.95rem; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; text-align:center;">⚔️ Debate</h2>
-      <div id="debate-statement-display" style="font-size:1.8rem; color:var(--text); font-style:italic; text-align:center; margin-bottom:1rem; line-height:1.3;"></div>
+      <div id="debate-statement-display" style="font-size:1.8rem; color:var(--text); text-align:center; margin-bottom:1rem; line-height:1.3;"></div>
       <div id="debate-center-content"></div>
     </div>
     <!-- Code Review center panel -->
@@ -292,7 +296,7 @@
       <span>📝 Session Notes</span>
       <button class="summary-close" onclick="closeHostNotesModal()">✕</button>
     </div>
-    <pre id="host-notes-content" class="notes-content" style="color:var(--text-muted); font-style:italic;">No notes available yet.</pre>
+    <pre id="host-notes-content" class="notes-content" style="color:var(--text-muted);">No notes available yet.</pre>
   </div>
 </div>
 
