@@ -887,6 +887,27 @@ class TestAvatarAssignment:
         assert get_avatar_filename("The One Ring") == "the-one-ring.png"
         assert get_avatar_filename("Grima Wormtongue") == "grima-wormtongue.png"
 
+    def test_no_duplicate_avatars(self):
+        """Different participants get different avatars (up to 30)."""
+        from state import AppState, assign_avatar, LOTR_NAMES
+        import uuid as uuid_mod
+        s = AppState()
+        avatars = []
+        for i in range(len(LOTR_NAMES)):
+            a = assign_avatar(s, str(uuid_mod.uuid4()), f"CustomName{i}")
+            avatars.append(a)
+        assert len(set(avatars)) == len(LOTR_NAMES)  # all unique
+
+    def test_lotr_name_collision_avoided(self):
+        """If gandalf.png is taken, a second 'Gandalf' gets a different avatar."""
+        from state import AppState, assign_avatar
+        s = AppState()
+        a1 = assign_avatar(s, "uuid-1", "Gandalf")
+        a2 = assign_avatar(s, "uuid-2", "Gandalf")
+        assert a1 == "gandalf.png"
+        assert a2 != a1  # different avatar
+        assert a2.endswith(".png")
+
     def test_avatar_in_participant_state_on_connect(self, session):
         """Participant state includes my_avatar after set_name."""
         with session.participant("Legolas") as p:
