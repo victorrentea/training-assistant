@@ -1001,7 +1001,8 @@
   async function switchTab(tab) {
     ['poll', 'wordcloud', 'qa', 'debate', 'codereview'].forEach(t => {
       document.getElementById('tab-' + t).classList.toggle('active', tab === t);
-      document.getElementById('tab-content-' + t).style.display = tab === t ? '' : 'none';
+      const contentEl = document.getElementById('tab-content-' + t);
+      contentEl.style.display = tab === t ? (t === 'codereview' ? 'flex' : '') : 'none';
     });
     await fetch('/api/activity', {
       method: 'POST',

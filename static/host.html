@@ -124,8 +124,8 @@
     </div>
 
     <!-- Code Review tab content -->
-    <div id="tab-content-codereview" style="display:none" class="tab-content">
-      <div id="codereview-create">
+    <div id="tab-content-codereview" style="display:none; flex-direction:column;" class="tab-content">
+      <div id="codereview-create" style="display:flex; flex-direction:column; flex:1; min-height:0;">
         <div style="display:flex; gap:8px; align-items:center; margin-bottom:8px;">
           <span style="font-weight:600;">Code Review</span>
           <select id="codereview-language">
@@ -141,7 +141,7 @@
             <option value="bash">Bash</option>
           </select>
         </div>
-        <textarea id="codereview-snippet" placeholder="Paste your code snippet here (10-50 lines)..." rows="12" style="width:100%; font-family:monospace; font-size:13px;">public List&lt;String&gt; getActiveUserEmails(List&lt;User&gt; users) {
+        <textarea id="codereview-snippet" placeholder="Paste your code snippet here (10-50 lines)..." style="flex:1; width:100%; font-family:monospace; font-size:13px; resize:none; overflow:auto; white-space:pre; word-wrap:normal;">public List&lt;String&gt; getActiveUserEmails(List&lt;User&gt; users) {
     List&lt;String&gt; emails = new ArrayList&lt;&gt;();
     for (int i = 0; i &lt; users.size(); i++) {
         User user = users.get(i);
@@ -154,7 +154,7 @@
     }
     return emails;
 }</textarea>
-        <div style="display:flex; justify-content:flex-end; margin-top:8px;">
+        <div style="display:flex; justify-content:flex-end; margin-top:8px; flex-shrink:0;">
           <button class="btn btn-success" onclick="startCodeReview()">Start Code Review</button>
         </div>
       </div>
