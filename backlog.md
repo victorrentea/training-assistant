@@ -110,7 +110,7 @@
 - [x] bug: edit button in QA host ui doesnt work 
 - [x] The version label in both participant and host now shows elapsed deploy age (seconds/minutes/hours ago), and live-updates while age is under one day.
 - [ ] e2e test the download questions button after asking 2 questions. it should capture also the correct answers marked by host.
-- [ ] allow participants to vote at polls using keyboard up+down in single select; enter submit vote. in multi-select, display a checkbox on each option line and allow selecting it using SPACE.
+- [x] allow participants to vote at polls using keyboard up+down in single select; enter submit vote. in multi-select, display a checkbox on each option line and allow selecting it using SPACE.
 - [ ] The indexer should report a percentage done when it sees a bunch of work ahead. In terms of files left. then, it should index documents on max 4 threads
 - [ ] load test: 30 participants connected simultaneously, host fires a poll, all vote randomly, host sorts by points. Run against local instance first, then deployed.
 - [x] Local agent restart now avoids redundant re-indexing by storing per-file hashes in `materials/.index-manifest.json`; startup only reindexes changed/new files and removes deleted files from both index and manifest.
