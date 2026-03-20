@@ -10,8 +10,10 @@
 #   - Appends heartbeat timestamps to the active transcript
 #   - Auto-detects today's session folder for notes
 #
-# The daemon self-deduplicates: if a previous instance is running,
-# it kills it automatically (via /tmp/quiz_daemon.pid).
+# The daemon self-deduplicates via /tmp/quiz_daemon.lock (PID + heartbeat).
+# If a previous instance is healthy (PID alive + recent heartbeat), it exits.
+# If the previous instance crashed (PID dead), it cleans up and starts.
+# If the PID is alive but heartbeat is stale, it kills and replaces it.
 #
 # PREREQUISITES
 #   - Python 3.12+

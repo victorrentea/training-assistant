@@ -15,6 +15,7 @@ All configuration is read from secrets.env and environment variables:
     TRANSCRIPTION_FOLDER    path to transcription files
 """
 
+import json
 import os
 import signal
 import sys
@@ -32,7 +33,9 @@ from quiz_core import (
     post_status, _get_json, DAEMON_POLL_INTERVAL,
 )
 
-_PID_FILE = Path("/tmp/quiz_daemon.pid")
+_LOCK_FILE = Path("/tmp/quiz_daemon.lock")
+_HEARTBEAT_INTERVAL = 1.0  # seconds between heartbeat writes
+_HEARTBEAT_STALE_THRESHOLD = 10.0  # seconds before heartbeat is considered stale
 _TIMESTAMP_INTERVAL_SECONDS = float(os.environ.get("TRANSCRIPT_TIMESTAMP_INTERVAL_SECONDS", "3"))
 
 
@@ -107,27 +110,74 @@ class TranscriptTimestampAppender:
         self._next_append_at = now + self.interval_seconds
 
 
-def _kill_previous() -> None:
-    if not _PID_FILE.exists():
-        return
+def _read_lock() -> tuple[int | None, float | None]:
+    """Read PID and last heartbeat from lock file. Returns (None, None) if missing/corrupt."""
+    if not _LOCK_FILE.exists():
+        return None, None
     try:
-        pid = int(_PID_FILE.read_text().strip())
-        if pid == os.getpid():
-            return
-        os.kill(pid, signal.SIGTERM)
-        print(f"[daemon] Killed previous instance (PID {pid})")
-        time.sleep(0.5)
-    except (ValueError, ProcessLookupError, PermissionError):
-        pass  # stale or already gone
-    _PID_FILE.unlink(missing_ok=True)
+        data = json.loads(_LOCK_FILE.read_text())
+        return int(data["pid"]), float(data["heartbeat"])
+    except (json.JSONDecodeError, KeyError, ValueError):
+        return None, None
+
+
+def _write_lock() -> None:
+    """Write current PID and heartbeat timestamp to lock file."""
+    _LOCK_FILE.write_text(json.dumps({"pid": os.getpid(), "heartbeat": time.time()}))
+
+
+def _is_process_alive(pid: int) -> bool:
+    """Check if a process with the given PID is running."""
+    try:
+        os.kill(pid, 0)  # signal 0 = check existence only
+        return True
+    except (ProcessLookupError, PermissionError):
+        return False
+
+
+def _check_and_acquire_lock() -> None:
+    """Check lock file and decide whether to start, kill previous, or abort."""
+    pid, heartbeat = _read_lock()
+
+    if pid is None:
+        # No lock file or corrupt — safe to start
+        return
+
+    if pid == os.getpid():
+        return
+
+    alive = _is_process_alive(pid)
+    heartbeat_age = time.time() - heartbeat if heartbeat else float("inf")
+
+    if alive and heartbeat_age <= _HEARTBEAT_STALE_THRESHOLD:
+        # Previous instance is healthy — abort
+        print(f"[daemon] Another instance is already running (PID {pid}, "
+              f"heartbeat {heartbeat_age:.1f}s ago). Exiting.")
+        sys.exit(0)
+
+    if alive and heartbeat_age > _HEARTBEAT_STALE_THRESHOLD:
+        # Process exists but heartbeat is stale — something is wrong
+        print(f"⚠️  [daemon] Previous instance (PID {pid}) is alive but heartbeat "
+              f"is stale ({heartbeat_age:.0f}s ago). Killing it.")
+        try:
+            os.kill(pid, signal.SIGTERM)
+            time.sleep(0.5)
+        except (ProcessLookupError, PermissionError):
+            pass
+
+    if not alive:
+        # Process is dead — stale lock file from a crash
+        print(f"[daemon] Previous instance (PID {pid}) is dead (crashed?). Cleaning up lock file.")
+
+    _LOCK_FILE.unlink(missing_ok=True)
 
 
 def run() -> None:
-    _kill_previous()
-    _PID_FILE.write_text(str(os.getpid()))
+    _check_and_acquire_lock()
+    _write_lock()
 
     def _cleanup(*_):
-        _PID_FILE.unlink(missing_ok=True)
+        _LOCK_FILE.unlink(missing_ok=True)
         sys.exit(0)
 
     signal.signal(signal.SIGTERM, _cleanup)
@@ -165,9 +215,16 @@ def run() -> None:
     last_quiz: dict | None = None
     server_disconnected = False
     last_detected_date: date | None = None
+    last_heartbeat_at = 0.0
 
     while True:
         try:
+            # ── Heartbeat: update lock file so other instances know we're alive ──
+            now = time.monotonic()
+            if now - last_heartbeat_at >= _HEARTBEAT_INTERVAL:
+                _write_lock()
+                last_heartbeat_at = now
+
             timestamp_appender.tick()
 
             # ── Re-detect session folder on date change ──
@@ -242,7 +299,7 @@ def run() -> None:
                 print(f"[daemon] Server unreachable: {e}", file=sys.stderr)
                 server_disconnected = True
         except KeyboardInterrupt:
-            _PID_FILE.unlink(missing_ok=True)
+            _LOCK_FILE.unlink(missing_ok=True)
             print("\n[daemon] Stopped.")
             return
         except Exception as e:
