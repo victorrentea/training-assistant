@@ -41,6 +41,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 HISTORY_FILE="$SCRIPT_DIR/deploy-history.txt"
 DEFAULT_ESTIMATE=45
 ESTIMATED=""
+COMMIT_MSG=""
 
 get_prod_version() {
   curl -s "$PROD_URL" | grep -o "'.*'" | tr -d "'"
@@ -48,6 +49,11 @@ get_prod_version() {
 
 get_master_head() {
   gh api "repos/$REPO/commits/master" --jq '.sha' 2>/dev/null
+}
+
+get_commit_message() {
+  local sha="$1"
+  gh api "repos/$REPO/commits/$sha" --jq '.commit.message' 2>/dev/null | head -1
 }
 
 get_estimated_duration() {
@@ -80,23 +86,33 @@ record_deploy() {
   fi
 }
 
+NOTIFY_INTERVAL=5  # minimum seconds between countdown notifications
+LAST_NOTIFY_TIME=0
+
 notify_countdown() {
   local remaining="$1"
-  local msg
-  if [ "$remaining" -le 0 ]; then
-    msg="Should be live... still checking"
-  elif [ "$remaining" -le 5 ]; then
-    msg="Deploying — any moment now..."
-  else
-    msg="Deploying — ~${remaining}s remaining"
+  local now
+  now=$(date +%s)
+  # Throttle: skip if less than NOTIFY_INTERVAL since last notification
+  if [ $((now - LAST_NOTIFY_TIME)) -lt "$NOTIFY_INTERVAL" ]; then
+    return
   fi
-  terminal-notifier -title "🚀 Deploy" -message "$msg" -group deploy &>/dev/null &
+  LAST_NOTIFY_TIME="$now"
+  local title
+  if [ "$remaining" -le 0 ]; then
+    title="🚀 Deploying any moment..."
+  elif [ "$remaining" -le 5 ]; then
+    title="🚀 Deploying any moment..."
+  else
+    title="🚀 Deploying in about ${remaining}s"
+  fi
+  terminal-notifier -title "$title" -message "$COMMIT_MSG" -group deploy &>/dev/null &
 }
 
 notify_success() {
   local version="$1"
   echo "$(date '+%H:%M:%S') ✅ Deployed! Version: $version"
-  terminal-notifier -title "🚀 Deployed!" -message "Version $version is live" -group deploy -timeout 5 &
+  terminal-notifier -title "🚀 Deployed!" -message "$COMMIT_MSG" -group deploy -timeout 5 &
   afplay /System/Library/Sounds/Glass.aiff &
   sleep 0.4
   afplay /System/Library/Sounds/Glass.aiff
@@ -181,13 +197,15 @@ while true; do
 
     # We're waiting for a deploy — check if production updated
     if [ "$CURRENT_PROD" != "$LAST_PROD_VERSION" ]; then
+      # Version changed — a deploy landed. Record and restart.
+      # If pushes overlapped, the exec restart will pick up the next deploy.
       record_deploy "$ELAPSED"
       notify_success "$CURRENT_PROD"
-      LAST_PROD_VERSION="$CURRENT_PROD"
-      WAITING_SINCE=""
-      MERGE_SHA=""
-      ESTIMATED=""
-      continue
+      # Pull latest code and self-restart with new version
+      echo "$(date '+%H:%M:%S') 🔄 Pulling latest code..."
+      git -C "$SCRIPT_DIR" pull --ff-only origin master 2>&1 | sed 's/^/  /'
+      echo "$(date '+%H:%M:%S') 🔁 Restarting watcher with new version..."
+      exec "$0" "$@"
     fi
 
     # Check timeout
@@ -197,10 +215,11 @@ while true; do
       WAITING_SINCE=""
       MERGE_SHA=""
       ESTIMATED=""
+      COMMIT_MSG=""
       continue
     fi
 
-    # Send countdown notification
+    # Send countdown notification (throttled to every 5s)
     REMAINING=$((ESTIMATED - ELAPSED))
     notify_countdown "$REMAINING"
   else
@@ -215,14 +234,26 @@ while true; do
   if [ $((POLL_COUNTER % 5)) -eq 0 ]; then
     CURRENT_HEAD=$(get_master_head)
     if [ -n "$CURRENT_HEAD" ] && [ "$CURRENT_HEAD" != "$LAST_MASTER_HEAD" ]; then
-      ESTIMATED=$(get_estimated_duration)
-      echo "$(date '+%H:%M:%S') 🔀 Merge detected! Master HEAD: ${CURRENT_HEAD:0:8} (was ${LAST_MASTER_HEAD:0:8})"
-      echo "  Waiting up to ${DEPLOY_TIMEOUT}s for production to update..."
+      COMMIT_MSG=$(get_commit_message "$CURRENT_HEAD")
       LAST_MASTER_HEAD="$CURRENT_HEAD"
-      WAITING_SINCE=$(date +%s)
       MERGE_SHA="$CURRENT_HEAD"
-      # Initial countdown notification
-      terminal-notifier -title "🚀 Deploy" -message "Deploy detected — estimated ~${ESTIMATED}s" -group deploy &>/dev/null &
+      if [ -z "$WAITING_SINCE" ]; then
+        # First push — start fresh countdown
+        ESTIMATED=$(get_estimated_duration)
+        WAITING_SINCE=$(date +%s)
+        echo "$(date '+%H:%M:%S') 🔀 Merge detected! Master HEAD: ${CURRENT_HEAD:0:8}"
+        echo "  Commit: $COMMIT_MSG"
+        echo "  Estimated deploy time: ~${ESTIMATED}s"
+      else
+        # Overlapping push — update target but keep original WAITING_SINCE
+        # so elapsed time and recorded duration stay accurate
+        echo "$(date '+%H:%M:%S') 🔀 New push while waiting! HEAD: ${CURRENT_HEAD:0:8}"
+        echo "  Commit: $COMMIT_MSG"
+        echo "  Keeping original countdown (${ESTIMATED}s estimate)"
+      fi
+      # Send initial countdown notification (resets throttle)
+      LAST_NOTIFY_TIME=0
+      notify_countdown "$ESTIMATED"
     elif [ -n "$CURRENT_HEAD" ]; then
       LAST_MASTER_HEAD="$CURRENT_HEAD"
     fi

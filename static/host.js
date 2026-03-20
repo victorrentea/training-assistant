@@ -162,20 +162,14 @@
         document.getElementById('pax-count').textContent = msg.participant_count;
         renderParticipantList(names);
         renderDaemonStatus(msg.daemon_connected, msg.daemon_last_seen);
-        renderTranscriptStatus(msg.transcript_line_count, msg.transcript_latest_ts);
+        renderTranscriptStatus(msg.transcript_line_count, msg.transcript_total_lines, msg.transcript_latest_ts);
         renderNotesStatus(msg.daemon_session_folder, msg.daemon_session_notes);
         updateHostNotes(msg.notes_content);
         renderPreview(msg.quiz_preview || null);
         renderPollDisplay();
         const currentActivity = msg.current_activity || 'none';
         updateCenterPanel(currentActivity);
-        if (msg.current_activity === 'debate') {
-          renderDebateHost(msg);
-        } else {
-          // Hide debate controls when not in debate
-          const dc = document.getElementById('debate-host-controls');
-          if (dc) dc.style.display = 'none';
-        }
+        renderDebateHost(msg);
         if (currentActivity === 'wordcloud') {
           renderHostWordCloud(msg.wordcloud_words || {});
         }
@@ -246,16 +240,16 @@
     if (!badge) return;
     badge.style.cssText = 'cursor:pointer;';
     if (summaryPoints.length) {
-      badge.textContent = `● Key Points (${summaryPoints.length})`;
+      badge.textContent = `Points (${summaryPoints.length})`;
       badge.className = 'badge connected';
       badge.title = `${summaryPoints.length} key points — click to view`;
     } else if (_summaryGenerating) {
-      badge.textContent = '● Generating...';
+      badge.textContent = 'Generating...';
       badge.className = 'badge';
       badge.style.cssText = 'cursor:wait; color:var(--warn); border:1px solid var(--warn);';
       badge.title = 'Generating key points from transcript...';
     } else {
-      badge.textContent = '● Key Points';
+      badge.textContent = 'Points';
       badge.className = 'badge disconnected';
       badge.title = 'No key points yet — click to generate now';
     }
@@ -300,7 +294,7 @@
 
   function setBadge(ok) {
     const b = document.getElementById('ws-badge');
-    b.textContent = ok ? '● Server' : '● Server';
+    b.textContent = ok ? 'Server' : 'Server';
     b.className = `badge ${ok ? 'connected' : 'disconnected'}`;
   }
 
@@ -309,7 +303,7 @@
     if (!el) return;
 
     if (!lastSeenIso) {
-      el.textContent = '● Agent';
+      el.textContent = 'Agent';
       el.className = 'badge disconnected';
       el.title = 'Never connected — start with ./start-daemon.sh';
       return;
@@ -319,30 +313,30 @@
     const agoText = ago < 60 ? `${ago}s ago` : `${Math.round(ago/60)}m ago`;
 
     if (connected) {
-      el.textContent = '● Agent';
+      el.textContent = 'Agent';
       el.className = 'badge connected';
       el.title = `Connected (last seen ${agoText})`;
     } else {
-      el.textContent = '● Agent';
+      el.textContent = 'Agent';
       el.className = 'badge';
       el.style.cssText = 'color:var(--warn);border:1px solid var(--warn);';
       el.title = `Connection lost (last seen ${agoText})`;
     }
   }
 
-  function renderTranscriptStatus(lineCount, latestTs) {
+  function renderTranscriptStatus(lineCount, totalLines, latestTs) {
     const el = document.getElementById('transcript-badge');
     if (!el) return;
 
     if (lineCount > 0) {
-      el.textContent = '● 💬';
+      el.textContent = '💬';
       el.className = 'badge connected';
-      el.title = `${lineCount} lines in last 30 min\nLatest at ${latestTs}`;
+      el.title = `${lineCount} lines in last 30 min / ${totalLines} today\nLatest at ${latestTs}`;
     } else {
-      el.textContent = '● 💬';
+      el.textContent = '💬';
       el.className = 'badge disconnected';
       el.title = latestTs
-        ? `No transcription since ${latestTs}`
+        ? `No transcription since ${latestTs}\n${totalLines} lines today`
         : 'No transcription data';
     }
   }
@@ -355,16 +349,16 @@
 
     el.style.cssText = 'cursor:pointer;';
     if (sessionFolder && sessionNotes) {
-      el.textContent = '● Notes';
+      el.textContent = '.txt';
       el.className = 'badge connected';
       el.title = `${sessionFolder}/${sessionNotes}\nClick to view`;
     } else if (sessionFolder) {
-      el.textContent = '● Notes';
+      el.textContent = '.txt';
       el.className = 'badge';
       el.style.cssText = 'cursor:pointer; color:var(--warn); border:1px solid var(--warn);';
       el.title = 'Session folder found but no notes file inside';
     } else {
-      el.textContent = '● Notes';
+      el.textContent = '.txt';
       el.className = 'badge disconnected';
       el.title = 'No session folder found for today';
     }
@@ -1441,6 +1435,26 @@
     return d.innerHTML;
   }
 
+  // ── Debate Phase Stepper ──
+
+  const DEBATE_PHASES = [
+    { key: 'side_selection', num: 1, label: 'Pick Sides' },
+    { key: 'arguments',      num: 2, label: 'Arguments' },
+    { key: 'prep',           num: 3, label: 'Preparation' },
+    { key: 'live_debate',    num: 4, label: 'Live Debate' },
+    { key: 'ended',          num: 5, label: 'Ended' },
+  ];
+
+  function renderDebatePhaseStepper(currentPhase) {
+    const currentIdx = DEBATE_PHASES.findIndex(p => p.key === currentPhase);
+    return '<div class="debate-stepper">' + DEBATE_PHASES.map((p, i) => {
+      let cls = 'debate-step';
+      if (i < currentIdx) cls += ' debate-step-done';
+      else if (i === currentIdx) cls += ' debate-step-active';
+      return `<div class="${cls}"><span class="debate-step-num">${p.num}</span><span class="debate-step-label">${p.label}</span></div>`;
+    }).join('<span class="debate-step-sep">›</span>') + '</div>';
+  }
+
   // ── Debate Host Functions ──
 
   async function launchDebate() {
@@ -1458,8 +1472,16 @@
     await fetch('/api/debate/close-selection', { method: 'POST' });
   }
 
+  async function debateEndArguments() {
+    await fetch('/api/debate/end-arguments', { method: 'POST' });
+  }
+
   async function debateForceAssign() {
     await fetch('/api/debate/force-assign', { method: 'POST' });
+  }
+
+  async function debateReset() {
+    await fetch('/api/debate/reset', { method: 'POST' });
   }
 
   async function debateNextPhase(phase) {
@@ -1481,50 +1503,101 @@
   }
 
   function renderDebateHost(msg) {
-    if (!msg.debate_statement) return;
-
-    const controls = document.getElementById('debate-host-controls');
-    const phaseLabel = document.getElementById('debate-phase-label');
-    const actions = document.getElementById('debate-host-actions');
+    const chapters = document.getElementById('debate-phase-chapters');
     const title = document.getElementById('debate-statement-display');
     const content = document.getElementById('debate-center-content');
 
-    controls.style.display = '';
-    title.innerHTML = `<span style="color:#e74c3c;font-weight:700;">👎 ${sideCounts.against}</span> <span style="font-style:italic;">"${escDebate(msg.debate_statement)}"</span> <span style="color:#2ecc71;font-weight:700;">${sideCounts.for} 👍</span>`;
-
-    const phase = msg.debate_phase;
+    const debateActive = msg.current_activity === 'debate' && !!msg.debate_phase;
+    const phase = msg.debate_phase || null;
     const sideCounts = msg.debate_side_counts || { for: 0, against: 0 };
+    const champions = msg.debate_champions || {};
 
-    // Phase label
-    const phaseNames = {
-      side_selection: 'Phase 1: Side Selection',
-      arguments: 'Phase 2: Arguments',
-      ai_cleanup: 'Phase 3: AI Cleanup',
-      prep: 'Phase 4: Preparation',
-      live_debate: 'Phase 5: Live Debate',
-      ended: 'Debate Ended',
-    };
-    phaseLabel.textContent = (phaseNames[phase] || phase) +
-      ` — 👎 ${sideCounts.against} | ${sideCounts.for} 👍`;
-
-    // Host action buttons per phase
-    actions.innerHTML = '';
-    if (phase === 'side_selection') {
-      actions.innerHTML = '<button class="btn btn-warn" onclick="debateForceAssign()">🎲 Force Random Assign</button> ' +
-        '<button class="btn btn-primary" onclick="debateCloseSelection()">🔒 Close Selection → Arguments</button>';
-    } else if (phase === 'arguments') {
-      actions.innerHTML = '<button class="btn btn-primary" onclick="debateNextPhase(\'ai_cleanup\')">Next → AI Cleanup</button>';
-    } else if (phase === 'ai_cleanup') {
-      actions.innerHTML = '<button class="btn btn-warn btn-ai" onclick="debateRunAI()">✨ Run AI Cleanup</button>' +
-        ' <button class="btn btn-primary" onclick="debateNextPhase(\'prep\')">Next → Preparation</button>';
-    } else if (phase === 'prep') {
-      const champions = msg.debate_champions || {};
-      const champInfo = Object.entries(champions).map(([s, n]) => `${s === 'for' ? '👍' : '👎'} ${escDebate(n)}`).join(', ');
-      actions.innerHTML = (champInfo ? `<span style="color:var(--accent);font-size:.85rem;">🏆 ${champInfo}</span> ` : '') +
-        '<button class="btn btn-primary" onclick="debateNextPhase(\'live_debate\')">▶ Start Live Debate</button>';
-    } else if (phase === 'live_debate') {
-      actions.innerHTML = '<button class="btn btn-danger" onclick="debateNextPhase(\'ended\')">⏹ End Debate</button>';
+    // Update center panel title if debate is active
+    if (title && debateActive) {
+      title.innerHTML = escDebate(msg.debate_statement);
     }
+
+    // Hide statement input once launched (scale out horizontally), show reset button
+    const stmtWrapper = document.getElementById('debate-statement-wrapper');
+    const resetWrapper = document.getElementById('debate-reset-wrapper');
+    if (stmtWrapper) {
+      if (debateActive) {
+        stmtWrapper.style.transform = 'scaleX(0)';
+        stmtWrapper.style.opacity = '0';
+        stmtWrapper.style.height = '0';
+        stmtWrapper.style.marginTop = '0';
+        stmtWrapper.style.overflow = 'hidden';
+      } else {
+        stmtWrapper.style.transform = 'scaleX(1)';
+        stmtWrapper.style.opacity = '1';
+        stmtWrapper.style.height = '';
+        stmtWrapper.style.marginTop = '.75rem';
+        stmtWrapper.style.overflow = '';
+      }
+    }
+    if (resetWrapper) resetWrapper.style.display = debateActive ? '' : 'none';
+
+    // Phase chapters — always visible
+    // ai_cleanup is implicit (not in visible list) — treat it as "between arguments and prep"
+    const displayPhase = phase === 'ai_cleanup' ? 'prep' : phase;
+    const currentIdx = debateActive ? DEBATE_PHASES.findIndex(p => p.key === displayPhase) : -1;
+    const phaseActions = {
+      side_selection: `<div style="display:flex; align-items:center; justify-content:space-between;">
+        <span style="font-size:1.1rem;">👎 ${sideCounts.against} &nbsp;|&nbsp; ${sideCounts.for} 👍</span>
+        <button class="btn btn-warn btn-sm" onclick="debateForceAssign()">🎲 Assign randomly</button>
+      </div>`,
+      prep: champions.for || champions.against
+        ? `<span style="color:var(--accent);font-size:.8rem;">🏆 ${Object.entries(champions).map(([s,n]) => `${s==='for'?'👍':'👎'} ${escDebate(n)}`).join(', ')}</span>`
+        : '',
+    };
+
+    chapters.innerHTML = DEBATE_PHASES.map((p, i) => {
+      const isDone = i < currentIdx;
+      const isActive = i === currentIdx;
+      const isFuture = currentIdx === -1 ? (i > 0) : (i > currentIdx + 1);
+      const isReady = currentIdx === -1 && i === 0; // pre-launch: phase 1 is ready
+
+      let cls = 'debate-chapter';
+      if (isDone) cls += ' debate-chapter-done';
+      else if (isActive) cls += ' debate-chapter-active';
+      else if (isReady) cls += ' debate-chapter-ready';
+      else if (isFuture) cls += ' debate-chapter-future';
+
+      let actionHtml = '';
+      if (isActive && phase === 'ai_cleanup' && p.key === 'prep') {
+        actionHtml = `<div class="debate-chapter-extra"><span style="color:var(--accent);font-size:.8rem;">✨ AI enriching arguments…</span></div>`;
+      } else if (isActive && phaseActions[p.key]) {
+        actionHtml = `<div class="debate-chapter-extra">${phaseActions[p.key]}</div>`;
+      }
+
+      let launchBtn = '';
+      if (isReady) {
+        // Pre-launch: phase 1 gets a Launch button that starts the debate
+        launchBtn = `<button class="btn btn-primary btn-sm" onclick="launchDebate()">Launch ⚔️</button>`;
+      } else if (isActive && p.key === 'live_debate') {
+        launchBtn = `<button class="btn btn-danger btn-sm" onclick="debateNextPhase('ended')">⏹ End</button>`;
+      } else if (isActive && p.key === 'side_selection') {
+        // No Next button — phase ends via Force Assign or auto-advance
+      } else if (isActive && p.key === 'arguments') {
+        launchBtn = `<button class="btn btn-primary btn-sm" onclick="debateEndArguments()">End Phase 🌟🌟</button>`;
+      } else if (isActive && p.key !== 'ended') {
+        const nextPhase = DEBATE_PHASES[i + 1];
+        if (nextPhase) {
+          launchBtn = `<button class="btn btn-primary btn-sm" onclick="debateNextPhase('${nextPhase.key}')">Next →</button>`;
+        }
+      } else if (isDone) {
+        launchBtn = `<span class="debate-chapter-check">✓</span>`;
+      }
+
+      return `<div class="${cls}">
+        <div class="debate-chapter-row">
+          <span class="debate-chapter-num">${p.num}</span>
+          <span class="debate-chapter-label">${p.label}</span>
+          <span class="debate-chapter-action">${launchBtn}</span>
+        </div>
+        ${actionHtml}
+      </div>`;
+    }).join('');
 
     // Center panel: dual-column arguments
     const args = (msg.debate_arguments || []).filter(a => !a.merged_into);
@@ -1533,11 +1606,11 @@
     const mergedArgs = (msg.debate_arguments || []).filter(a => a.merged_into);
 
     if (phase === 'side_selection') {
-      content.innerHTML = `<div style="text-align:center; padding:2rem; color:var(--muted);">
-        Waiting for participants to choose sides…<br>
-        <span style="font-size:1.5rem; margin-top:.5rem; display:block;">
+      content.innerHTML = `<div style="text-align:center; padding:3rem 2rem; color:var(--muted);">
+        <div style="font-size:1.2rem;">Waiting for participants to choose sides…</div>
+        <div style="font-size:4.5rem; margin-top:1rem; font-weight:700;">
           👎 ${sideCounts.against} &nbsp;|&nbsp; ${sideCounts.for} 👍
-        </span>
+        </div>
       </div>`;
     } else {
       content.innerHTML = renderDebateDualColumn(againstArgs, forArgs, mergedArgs, msg.debate_champions, phase);

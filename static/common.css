@@ -7,6 +7,7 @@
   --border:    #2e3250;
   --accent:    #6c63ff;
   --accent2:   #48cfad;
+  --action:    #4a9eff;
   --text:      #e8eaf0;
   --muted:     #7b80a0;
   --danger:    #ff6b6b;
@@ -22,6 +23,7 @@
     --border:    #d0d4e8;
     --accent:    #5a52e0;
     --accent2:   #2daa8a;
+    --action:    #2d7fd4;
     --text:      #1a1d2e;
     --muted:     #6b7094;
     --danger:    #d94f4f;
@@ -49,7 +51,7 @@
 .btn:hover { opacity: .85; }
 .btn:active { transform: scale(.97); }
 .btn-primary { background: var(--accent); color: #fff; }
-.btn-success { background: var(--accent2); color: var(--bg); }
+.btn-success { background: var(--action); color: #fff; }
 .btn-danger  { background: var(--danger);  color: #fff; }
 .btn-warn    { background: var(--warn);    color: var(--bg); }
 .btn:disabled { opacity: .35; cursor: default; }
@@ -152,8 +154,8 @@
   cursor: pointer;
 }
 .summary-list {
-  list-style: disc;
-  padding-left: 1.2rem;
+  list-style: none;
+  padding-left: 0;
   overflow-y: auto;
   flex: 1;
   margin: 0;
@@ -162,6 +164,8 @@
   margin-bottom: .5rem;
   line-height: 1.4;
   color: var(--text);
+  padding-left: 1.6em;
+  text-indent: -1.6em;
 }
 .summary-list .summary-empty {
   list-style: none;
@@ -204,4 +208,139 @@
   flex: 1;
   margin: 0;
   padding: .5rem 0;
+}
+
+/* ── Debate Phase Stepper ── */
+.debate-stepper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: .25rem;
+  padding: .5rem 0;
+  flex-wrap: wrap;
+}
+.debate-step {
+  display: flex;
+  align-items: center;
+  gap: .3rem;
+  padding: .2rem .5rem;
+  border-radius: 999px;
+  font-size: .75rem;
+  color: var(--muted);
+  background: var(--surface);
+  opacity: .5;
+  transition: all .3s;
+}
+.debate-step-done {
+  opacity: .7;
+  color: var(--accent2);
+}
+.debate-step-active {
+  opacity: 1;
+  color: #fff;
+  background: var(--accent);
+  font-weight: 700;
+}
+.debate-step-num {
+  font-weight: 700;
+  font-size: .7rem;
+}
+.debate-step-sep {
+  color: var(--muted);
+  opacity: .4;
+  font-size: .7rem;
+}
+
+/* ── Debate Host Phase Chapters ── */
+.debate-chapter {
+  padding: .75rem 1rem;
+  margin-bottom: .5rem;
+  border-radius: 8px;
+  border-left: 3px solid transparent;
+  opacity: .45;
+  transition: all .2s;
+}
+.debate-chapter-done {
+  opacity: .65;
+  border-left-color: var(--accent2);
+}
+.debate-chapter-active {
+  opacity: 1;
+  border-left-color: var(--accent);
+  background: var(--surface2);
+}
+.debate-chapter-ready {
+  opacity: 1;
+  border-left-color: var(--accent);
+}
+.debate-chapter-future {
+  opacity: .35;
+}
+.debate-chapter-row {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+}
+.debate-chapter-num {
+  font-weight: 700;
+  font-size: .95rem;
+  color: var(--muted);
+  min-width: 1.4rem;
+}
+.debate-chapter-active .debate-chapter-num {
+  color: var(--accent);
+}
+.debate-chapter-done .debate-chapter-num {
+  color: var(--accent2);
+}
+.debate-chapter-label {
+  font-size: 1rem;
+  color: var(--text);
+  flex: 1;
+}
+.debate-chapter-count {
+  font-size: .9rem;
+  color: var(--muted);
+}
+.debate-chapter-action {
+  margin-left: auto;
+}
+.debate-chapter-check {
+  color: var(--accent2);
+  font-size: 1rem;
+  font-weight: 700;
+}
+.debate-chapter-extra {
+  margin-top: .3rem;
+  padding-left: 1.6rem;
+}
+.btn-sm {
+  padding: .2rem .6rem;
+  font-size: .75rem;
+}
+
+/* ── Participant Debate Header ── */
+.debate-header {
+  text-align: center;
+  margin-bottom: .5rem;
+}
+.debate-title {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--text);
+}
+.debate-phase-badge {
+  display: inline-block;
+  margin-top: .3rem;
+  padding: .15rem .7rem;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-size: .8rem;
+  font-weight: 600;
+}
+.debate-phase-desc {
+  margin-top: .35rem;
+  font-size: .85rem;
+  color: var(--muted);
 }
