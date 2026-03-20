@@ -505,7 +505,9 @@ h1 { display: none; }
 .debate-col-header { margin: 0 0 .4rem; font-size: .9rem; color: var(--muted); text-transform: uppercase; text-align: center; }
 .debate-col-against { border-right: 1px solid var(--border); padding-right: .75rem; }
 .debate-col-mine { background: rgba(108, 99, 255, .08); border-radius: 8px; padding: .5rem; }
-.debate-arg { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: .6rem .8rem; cursor: pointer; transition: border-color .15s; }
+.debate-arg { border: 1px solid var(--border); border-radius: 8px; padding: .6rem .8rem; cursor: pointer; transition: border-color .15s; }
+.debate-col-for .debate-arg { background: rgba(46, 204, 113, .12); }
+.debate-col-against .debate-arg { background: rgba(231, 76, 60, .12); }
 .debate-arg:hover { border-color: var(--accent); }
 .debate-arg-upvoted { border-color: var(--accent); }
 .debate-arg-own { border-left: 3px solid var(--accent); }
@@ -517,6 +519,8 @@ h1 { display: none; }
 .debate-arg-merged { opacity: .5; font-size: .8rem; color: var(--muted); }
 .debate-input-row { display: flex; gap: .5rem; margin-top: .75rem; }
 .debate-input-row input { flex: 1; padding: .5rem .75rem; border-radius: 8px; border: 1px solid var(--border); background: var(--surface2); color: var(--text); font-size: .9rem; }
+.debate-input-for { background: rgba(46, 204, 113, .15) !important; }
+.debate-input-against { background: rgba(231, 76, 60, .15) !important; }
 .debate-phase-info { text-align: center; color: var(--muted); font-size: .9rem; margin: .5rem 0; }
 .debate-volunteer-btn { display: block; margin: 1rem auto; padding: .75rem 1.5rem; font-size: 1rem; }
 .debate-champion-info { text-align: center; color: var(--accent); font-size: 1rem; margin: 1rem 0; }
