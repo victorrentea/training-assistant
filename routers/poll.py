@@ -100,16 +100,16 @@ async def set_correct_options(body: PollCorrect):
 
     # Compute min elapsed time among correct voters for Kahoot-style speed bonus
     correct_voters = set()
-    for name, selection in state.votes.items():
+    for pid, selection in state.votes.items():
         voted = set(selection) if isinstance(selection, list) else {selection}
         if multi and correct_set:
             R = len(voted & correct_set)
             W = len(voted & wrong_set)
             if max(0.0, (R - W) / len(correct_set)) > 0:
-                correct_voters.add(name)
+                correct_voters.add(pid)
         else:
             if voted & correct_set:
-                correct_voters.add(name)
+                correct_voters.add(pid)
 
     elapsed_times = [
         max(0.0, (state.vote_times.get(n, now) - opened_at).total_seconds())
@@ -118,7 +118,7 @@ async def set_correct_options(body: PollCorrect):
     min_time = min(elapsed_times) if elapsed_times else 0.0
 
     new_scores = dict(state.base_scores)
-    for name, selection in state.votes.items():
+    for pid, selection in state.votes.items():
         voted = set(selection) if isinstance(selection, list) else {selection}
         if multi and correct_set:
             # Proportional (R - W) / C, floored at 0
@@ -134,7 +134,7 @@ async def set_correct_options(body: PollCorrect):
                 continue
             ratio = 1.0
 
-        elapsed = max(0.0, (state.vote_times.get(name, now) - opened_at).total_seconds())
+        elapsed = max(0.0, (state.vote_times.get(pid, now) - opened_at).total_seconds())
         # Linear from _MAX_POINTS (at min_time) to _MIN_POINTS (at _SLOWEST_MULTIPLIER × min_time)
         speed_window = min_time * (_SLOWEST_MULTIPLIER - 1)  # range over which decay applies
         if speed_window > 0:
@@ -144,7 +144,7 @@ async def set_correct_options(body: PollCorrect):
         speed_pts = round(_MAX_POINTS - (_MAX_POINTS - _MIN_POINTS) * decay)
         pts = round(speed_pts * ratio)
         if pts > 0:
-            new_scores[name] = new_scores.get(name, 0) + pts
+            new_scores[pid] = new_scores.get(pid, 0) + pts
 
     state.scores = new_scores
     await broadcast_state()

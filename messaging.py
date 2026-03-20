@@ -79,16 +79,11 @@ def build_host_state() -> dict:
     last_seen = state.daemon_last_seen
     daemon_connected = last_seen is not None and (now - last_seen).total_seconds() < 5
 
-    # Build name-keyed dicts for backward compat with host frontend
-    name_keyed_locations = {}
-    name_keyed_scores = {}
     participants_list = []
     for pid in pids:
         name = state.participant_names.get(pid, "Unknown")
         loc = state.locations.get(pid, "")
         score = state.scores.get(pid, 0)
-        name_keyed_locations[name] = loc
-        name_keyed_scores[name] = score
         participants_list.append({
             "uuid": pid,
             "name": name,
@@ -103,32 +98,17 @@ def build_host_state() -> dict:
         "poll_active": state.poll_active,
         "vote_counts": state.vote_counts(),
         "participant_count": len(pids),
-        "participant_names": [state.participant_names.get(pid, "Unknown") for pid in pids],
-        "participant_locations": name_keyed_locations,
         "participants": participants_list,
         "daemon_last_seen": last_seen.isoformat() if last_seen else None,
         "daemon_connected": daemon_connected,
         "daemon_session_folder": state.daemon_session_folder,
         "daemon_session_notes": state.daemon_session_notes,
         "quiz_preview": state.quiz_preview,
-        "scores": name_keyed_scores,
         "current_activity": state.current_activity,
         "wordcloud_words": state.wordcloud_words,
         "wordcloud_topic": state.wordcloud_topic,
         "qa_questions": _build_qa_for_host(),
     }
-
-
-def build_state_message() -> dict:
-    """Backward compat alias — returns host state (used by REST endpoints)."""
-    return build_host_state()
-
-
-# Legacy helper kept for any imports
-def participant_names() -> list[str]:
-    """Return sorted display names of connected participants (backward compat)."""
-    pids = participant_ids()
-    return [state.participant_names.get(pid, "Unknown") for pid in pids]
 
 
 async def broadcast_state():
@@ -181,8 +161,6 @@ async def broadcast_participant_update():
     host_msg = json.dumps({
         "type": "participant_count",
         "count": count,
-        "names": [state.participant_names.get(pid, "Unknown") for pid in pids],
-        "locations": {state.participant_names.get(pid, "Unknown"): state.locations.get(pid, "") for pid in pids},
         "participants": participants_list,
     })
 
@@ -206,9 +184,4 @@ async def send_state_to_participant(ws: WebSocket, pid: str):
 
 async def send_state_to_host(ws: WebSocket):
     """Send host state to the host websocket."""
-    await ws.send_text(json.dumps(build_host_state()))
-
-
-async def send_state_to(ws: WebSocket):
-    """Backward compat — sends host state (used before UUID migration)."""
     await ws.send_text(json.dumps(build_host_state()))
