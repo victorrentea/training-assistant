@@ -253,8 +253,8 @@
 
 /* ── Debate Host Phase Chapters ── */
 .debate-chapter {
-  padding: .4rem .6rem;
-  margin-bottom: .25rem;
+  padding: .75rem 1rem;
+  margin-bottom: .5rem;
   border-radius: 8px;
   border-left: 3px solid transparent;
   opacity: .45;
@@ -279,13 +279,13 @@
 .debate-chapter-row {
   display: flex;
   align-items: center;
-  gap: .4rem;
+  gap: .6rem;
 }
 .debate-chapter-num {
   font-weight: 700;
-  font-size: .75rem;
+  font-size: .95rem;
   color: var(--muted);
-  min-width: 1.2rem;
+  min-width: 1.4rem;
 }
 .debate-chapter-active .debate-chapter-num {
   color: var(--accent);
@@ -294,12 +294,12 @@
   color: var(--accent2);
 }
 .debate-chapter-label {
-  font-size: .85rem;
+  font-size: 1rem;
   color: var(--text);
   flex: 1;
 }
 .debate-chapter-count {
-  font-size: .75rem;
+  font-size: .9rem;
   color: var(--muted);
 }
 .debate-chapter-action {
@@ -307,7 +307,7 @@
 }
 .debate-chapter-check {
   color: var(--accent2);
-  font-size: .8rem;
+  font-size: 1rem;
   font-weight: 700;
 }
 .debate-chapter-extra {
