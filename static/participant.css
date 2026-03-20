@@ -357,18 +357,19 @@ h1 { display: none; }
 
 .wc-input-row input {
   flex: 1;
-  padding: .75rem 1rem;
+  padding: 0 .8rem;
   border-radius: 8px;
   border: 1px solid var(--border);
   background: var(--surface2);
   color: var(--text);
-  font-size: 1.2rem;
+  font-size: .95rem;
+  height: 40px;
+  min-height: 40px;
 }
 
 .wc-input-row #wc-go {
-  padding: 0 1.25rem;
-  font-size: 1.4rem;
-  height: auto;
+  padding: 0 1rem;
+  height: 40px;
   align-self: stretch;
 }
 .wc-download-overlay {
@@ -438,13 +439,13 @@ h1 { display: none; }
   padding: 0 .8rem;
   color: var(--text);
   font-size: .95rem;
-  height: 34px;
-  min-height: 34px;
+  height: 40px;
+  min-height: 40px;
 }
 .qa-input-row button {
   align-self: stretch;
   padding: 0 1rem;
-  height: 34px;
+  height: 40px;
 }
 
 .qa-card-p {

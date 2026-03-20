@@ -622,9 +622,11 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
           </div>
         </div>`;
       document.getElementById('wc-go').onclick = submitWord;
-      document.getElementById('wc-input').addEventListener('keydown', e => {
+      const wcInput = document.getElementById('wc-input');
+      wcInput.addEventListener('keydown', e => {
         if (e.key === 'Enter') submitWord();
       });
+      wcInput.focus();
       document.getElementById('wc-download').onclick = () => {
         const canvas = document.getElementById('wc-canvas');
         if (!canvas) return;
@@ -811,6 +813,7 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     const input = document.getElementById('qa-input');
     if (input) {
       input.addEventListener('keydown', e => { if (e.key === 'Enter') submitQuestion(); });
+      input.focus();
     }
     updateQAList(questions);
     _startQAToasts(questions);
