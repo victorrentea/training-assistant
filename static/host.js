@@ -219,7 +219,11 @@
         _debateSubTimer = null;
         clearInterval(_debateTimerInterval);
         _playDebateChime();
-        if (_lastDebateMsg) renderDebateHost(_lastDebateMsg);
+        if (_lastDebateMsg) {
+          _lastDebateMsg.debate_sub_timer_started_at = null;
+          _lastDebateMsg.debate_sub_timer_seconds = null;
+          renderDebateHost(_lastDebateMsg);
+        }
       } else if (msg.type === 'quiz_status') {
         renderQuizStatus(msg.status, msg.message);
       } else if (msg.type === 'quiz_preview') {
@@ -1739,16 +1743,12 @@
             const durVal = mins > 0 && secs > 0 ? `${mins}:${String(secs).padStart(2,'0')}` : mins > 0 ? `${mins}:00` : `0:${String(secs).padStart(2,'0')}`;
 
             let statusHtml = '';
-            let controlsHtml = '';
             if (spDone) {
               statusHtml = '<span class="debate-sub-check">✓</span>';
             } else if (spActive) {
               statusHtml = `<button class="btn btn-warn btn-sm" id="debate-sub-end-btn-${si}" onclick="endDebateSubPhase()">End</button>`;
             } else if (spNext) {
-              controlsHtml = `<div class="debate-sub-controls">
-                <input type="text" class="debate-sub-duration" id="debate-sub-dur-${si}" value="${durVal}" title="Duration (m:ss)" />
-                <button class="btn btn-primary" style="padding:.1rem .35rem;font-size:.65rem;line-height:1;height:1.4rem;" onclick="startDebateSubPhase(${si})">▶</button>
-              </div>`;
+              statusHtml = `<input type="text" class="debate-sub-duration" id="debate-sub-dur-${si}" value="${durVal}" title="Duration (m:ss)" /><button class="btn btn-primary" style="padding:.1rem .35rem;font-size:.65rem;line-height:1;height:1.4rem;" onclick="startDebateSubPhase(${si})">▶</button>`;
             }
 
             return `<div class="${spCls}">
@@ -1756,7 +1756,6 @@
                 <span class="debate-sub-phase-label ${sideClass}">${sideIcon} ${sp.label}</span>
                 ${statusHtml}
               </div>
-              ${controlsHtml}
             </div>`;
           }).join('');
           actionHtml += '</div>';
