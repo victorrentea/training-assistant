@@ -34,6 +34,7 @@ from quiz_core import (
     read_session_notes, load_transcription_files, extract_last_n_minutes,
 )
 from daemon.debate_ai import run_debate_ai_cleanup
+from daemon.llm_adapter import get_usage
 from daemon.summarizer import generate_summary, SUMMARY_INTERVAL_SECONDS
 
 _LOCK_FILE = Path("/tmp/training_daemon.lock")
@@ -424,6 +425,16 @@ def run() -> None:
                     pass
                 except Exception as e:
                     print(f"[transcript] Error: {e}", file=sys.stderr)
+
+                # ── Push token usage alongside transcript stats ──
+                try:
+                    _post_json(
+                        f"{config.server_url}/api/token-usage",
+                        get_usage().to_dict(),
+                        config.host_username, config.host_password,
+                    )
+                except Exception as e:
+                    print(f"[daemon] Token usage POST failed: {e}", file=sys.stderr)
 
             # ── Check for forced summary request ──
             force_summary = False
