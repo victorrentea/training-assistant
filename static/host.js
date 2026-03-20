@@ -1870,7 +1870,8 @@
   function renderDebateDualColumn(againstArgs, forArgs, mergedArgs, champions, phase) {
     const renderArg = (a) => {
       const aiClass = a.ai_generated ? ' debate-arg-ai' : '';
-      return `<div class="debate-arg${aiClass}" data-id="${a.id}">
+      const sideClass = a.side === 'for' ? ' debate-arg-for' : ' debate-arg-against';
+      return `<div class="debate-arg${aiClass}${sideClass}" data-id="${a.id}">
         <div class="debate-arg-header">
           ${a.author_avatar ? `<img src="/static/avatars/${a.author_avatar}" class="debate-arg-avatar">` : ''}
           <span class="debate-arg-author">${escDebate(a.author)}</span>
