@@ -50,7 +50,7 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
   function notifyIfHidden(title, body) {
     if (!document.hidden) return;
     if (Notification.permission !== 'granted') return;
-    new Notification(title, { body });
+    try { new Notification(title, { body }); } catch (_) {}
   }
 
   // Largest-remainder rounding: ensures integer percentages sum to exactly 100
