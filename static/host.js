@@ -1480,6 +1480,10 @@
     await fetch('/api/debate/force-assign', { method: 'POST' });
   }
 
+  async function debateReset() {
+    await fetch('/api/debate/reset', { method: 'POST' });
+  }
+
   async function debateNextPhase(phase) {
     await fetch('/api/debate/phase', {
       method: 'POST',
@@ -1512,6 +1516,12 @@
     if (title && debateActive) {
       title.innerHTML = escDebate(msg.debate_statement);
     }
+
+    // Hide statement input once launched, show reset button
+    const stmtWrapper = document.getElementById('debate-statement-wrapper');
+    const resetWrapper = document.getElementById('debate-reset-wrapper');
+    if (stmtWrapper) stmtWrapper.style.display = debateActive ? 'none' : '';
+    if (resetWrapper) resetWrapper.style.display = debateActive ? '' : 'none';
 
     // Phase chapters — always visible
     // ai_cleanup is implicit (not in visible list) — treat it as "between arguments and prep"

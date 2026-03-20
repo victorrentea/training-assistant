@@ -113,11 +113,14 @@
 
     <!-- Debate tab content -->
     <div id="tab-content-debate" class="tab-content" style="display:none;">
-      <div style="margin-top:.75rem;">
+      <div id="debate-statement-wrapper" style="margin-top:.75rem;">
         <textarea id="debate-statement-input" rows="2" maxlength="200" placeholder="Enter debate statement…"
           style="width:100%;padding:.5rem .75rem;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:.9rem;resize:vertical;font-family:inherit;">Microservices > Monoliths</textarea>
       </div>
       <div id="debate-phase-chapters" style="margin-top:.75rem;"></div>
+      <div id="debate-reset-wrapper" style="margin-top:.75rem; display:none;">
+        <button class="btn btn-danger btn-sm" onclick="debateReset()">🗑️ Reset Debate</button>
+      </div>
     </div>
 
     <!-- Code Review tab content -->
