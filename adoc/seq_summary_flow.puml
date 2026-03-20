@@ -1,0 +1,23 @@
+@startuml seq_summary_flow
+title Live Summary Flow — Periodic Key Point Synthesis
+
+participant "Local Agent\n(quiz_daemon.py)" as Agent
+participant "Claude API\n(Anthropic)" as Claude
+participant "Backend\n(FastAPI)" as Backend
+participant "Host UI\n(host.js)" as HostUI
+participant "Participant UI\n(participant.js)" as PaxUI
+
+== Every 5 Minutes ==
+
+Agent -> Agent : Load last 30 min\nof transcript
+Agent -> Agent : Assemble existing bullets\n+ transcript excerpt
+Agent -> Claude : messages API\n(summary prompt)
+Claude --> Agent : JSON array of\nkey point strings
+Agent -> Backend : POST /api/summary\n{points: [...]}
+Backend -> Backend : Store in AppState
+Backend --> HostUI : WS broadcast: state
+Backend --> PaxUI : WS broadcast: state
+HostUI -> HostUI : Update badge +\nmodal content
+PaxUI -> PaxUI : Update button +\nmodal content
+
+@enduml

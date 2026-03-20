@@ -185,7 +185,7 @@ class WorkshopSession:
         assert self._poll, "No current poll"
         text_to_id = {o["text"]: o["id"] for o in self._poll["options"]}
         ids = [text_to_id[t] for t in option_texts]
-        resp = self._client.post("/api/poll/correct", json={"correct_ids": ids})
+        resp = self._client.put("/api/poll/correct", json={"correct_ids": ids})
         assert resp.status_code == 200, f"mark_correct failed: {resp.text}"
 
     def get_scores(self) -> dict:
@@ -201,12 +201,12 @@ class WorkshopSession:
         assert resp.status_code == 200
 
     def open_poll(self):
-        resp = self._client.post("/api/poll/status", json={"open": True})
+        resp = self._client.put("/api/poll/status", json={"open": True})
         assert resp.status_code == 200
         assert resp.json()["poll_active"] is True
 
     def close_poll(self):
-        resp = self._client.post("/api/poll/status", json={"open": False})
+        resp = self._client.put("/api/poll/status", json={"open": False})
         assert resp.status_code == 200
         assert resp.json()["poll_active"] is False
 
@@ -753,12 +753,12 @@ class TestQA:
 
     def test_edit_question_updates_text(self, session):
         qid = self._submit_ws(session, "Alice", "Original text")
-        resp = session._client.patch(f"/api/qa/question/{qid}", json={"text": "Edited text"})
+        resp = session._client.put(f"/api/qa/question/{qid}/text", json={"text": "Edited text"})
         assert resp.status_code == 200, resp.text
         assert state.qa_questions[qid]["text"] == "Edited text"
 
     def test_edit_question_not_found_returns_404(self, session):
-        resp = session._client.patch("/api/qa/question/nonexistent-id", json={"text": "New"})
+        resp = session._client.put("/api/qa/question/nonexistent-id/text", json={"text": "New"})
         assert resp.status_code == 404
 
     def test_delete_question_removes_from_state(self, session):
@@ -902,3 +902,35 @@ class TestAvatarAssignment:
             questions = msg.get("qa_questions", [])
             assert len(questions) == 1
             assert questions[0].get("author_avatar") == "gimli.png"
+
+
+# ---------------------------------------------------------------------------
+# Summary Tests
+# ---------------------------------------------------------------------------
+
+def test_post_summary_updates_state():
+    """POST /api/summary stores bullets and broadcasts via full state."""
+    session = WorkshopSession()
+    # POST summary first (before connecting participant)
+    resp = session._client.post(
+        "/api/summary",
+        json={"points": ["Discussed TDD basics", "Covered mocking patterns"]},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["ok"] is True
+
+    # Participant connects and receives initial state with summary included
+    with session.participant("Alice") as alice:
+        assert "summary_points" in alice._last_state
+        assert len(alice._last_state["summary_points"]) == 2
+        assert alice._last_state["summary_points"][0] == "Discussed TDD basics"
+
+
+def test_post_summary_requires_auth():
+    """POST /api/summary without auth returns 401."""
+    client = TestClient(app)  # no auth headers
+    resp = client.post(
+        "/api/summary",
+        json={"points": ["Should fail"]},
+    )
+    assert resp.status_code == 401

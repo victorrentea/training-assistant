@@ -71,6 +71,8 @@ def build_participant_state(pid: str) -> dict:
         "current_activity": state.current_activity,
         "wordcloud_words": state.wordcloud_words,
         "wordcloud_topic": state.wordcloud_topic,
+        "summary_points": state.summary_points,
+        "summary_updated_at": state.summary_updated_at.isoformat() if state.summary_updated_at else None,
         "qa_questions": _build_qa_for_participant(pid),
     }
 
@@ -111,6 +113,8 @@ def build_host_state() -> dict:
         "current_activity": state.current_activity,
         "wordcloud_words": state.wordcloud_words,
         "wordcloud_topic": state.wordcloud_topic,
+        "summary_points": state.summary_points,
+        "summary_updated_at": state.summary_updated_at.isoformat() if state.summary_updated_at else None,
         "qa_questions": _build_qa_for_host(),
     }
 

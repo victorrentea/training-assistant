@@ -72,7 +72,7 @@ async def create_poll(poll: PollCreate):
     return {"ok": True, "poll": state.poll}
 
 
-@router.post("/api/poll/status", dependencies=[Depends(require_host_auth)])
+@router.put("/api/poll/status", dependencies=[Depends(require_host_auth)])
 async def set_poll_status(body: PollOpen):
     if not state.poll:
         raise HTTPException(400, "No poll created yet")
@@ -85,7 +85,7 @@ async def set_poll_status(body: PollOpen):
     return {"ok": True, "poll_active": state.poll_active}
 
 
-@router.post("/api/poll/correct", dependencies=[Depends(require_host_auth)])
+@router.put("/api/poll/correct", dependencies=[Depends(require_host_auth)])
 async def set_correct_options(body: PollCorrect):
     if not state.poll:
         raise HTTPException(400, "No active poll")

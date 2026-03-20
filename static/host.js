@@ -9,6 +9,8 @@
   let correctOptIds = new Set(); // host-marked correct options for current poll
   let scores = {};               // participant_name -> score
   let cachedNames = [];          // last known participant names
+  let summaryPoints = [];
+  let summaryUpdatedAt = null;
 
   let hostWords = [];
   let _hostWcDebounceTimer = null;
@@ -86,7 +88,7 @@
     recordPollInHistory(currentPoll, correctOptIds);
     // Post to backend to award points
     const resp = await fetch('/api/poll/correct', {
-      method: 'POST',
+      method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ correct_ids: [...correctOptIds] }),
     });
@@ -165,6 +167,7 @@
         if (currentActivity === 'qa') {
           renderQAList(msg.qa_questions || []);
         }
+        updateSummary(msg.summary_points, msg.summary_updated_at);
       } else if (msg.type === 'vote_update') {
         voteCounts = msg.vote_counts || {};
         totalVotes = msg.total_votes || 0;
@@ -189,12 +192,53 @@
         renderQuizStatus(msg.status, msg.message);
       } else if (msg.type === 'quiz_preview') {
         renderPreview(msg.quiz || null);
+      } else if (msg.type === 'summary') {
+        updateSummary(msg.points, msg.updated_at);
       }
     };
   }
 
   function escHtml(s) {
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function updateSummary(points, updatedAt) {
+    summaryPoints = points || [];
+    summaryUpdatedAt = updatedAt;
+    const badge = document.getElementById('summary-badge');
+    if (badge) {
+      badge.style.display = summaryPoints.length ? '' : 'none';
+      badge.classList.toggle('connected', summaryPoints.length > 0);
+      badge.classList.toggle('disconnected', !summaryPoints.length);
+      badge.title = summaryPoints.length ? `${summaryPoints.length} key points` : 'No summary yet';
+    }
+    renderSummaryList();
+  }
+
+  function renderSummaryList() {
+    const list = document.getElementById('summary-list');
+    const timeEl = document.getElementById('summary-time');
+    if (!list) return;
+    if (!summaryPoints.length) {
+      list.innerHTML = '<li class="summary-empty">No key points yet — check back soon.</li>';
+      if (timeEl) timeEl.textContent = '';
+      return;
+    }
+    list.innerHTML = summaryPoints.map(p => `<li>${escHtml(p)}</li>`).join('');
+    if (timeEl && summaryUpdatedAt) {
+      const d = new Date(summaryUpdatedAt);
+      timeEl.textContent = 'Updated ' + d.toLocaleTimeString();
+    }
+  }
+
+  function toggleSummaryModal() {
+    const overlay = document.getElementById('summary-overlay');
+    if (overlay) overlay.classList.toggle('open');
+  }
+
+  function closeSummaryModal() {
+    const overlay = document.getElementById('summary-overlay');
+    if (overlay) overlay.classList.remove('open');
   }
 
   function setBadge(ok) {
@@ -349,6 +393,7 @@
     if (e.key === 'Escape') {
       closeMap();
       closeQR();
+      closeSummaryModal();
     }
   });
 
@@ -537,7 +582,7 @@
   // ── Open / close / clear ──
   async function setPollStatus(open) {
     await fetch('/api/poll/status', {
-      method: 'POST',
+      method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ open }),
     });
@@ -985,8 +1030,8 @@
   }
 
   async function toggleAnswered(qid, current) {
-    await fetch(`/api/qa/answer/${qid}`, {
-      method: 'POST',
+    await fetch(`/api/qa/question/${qid}/answered`, {
+      method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ answered: !current }),
     });
@@ -1020,8 +1065,8 @@
       const newText = input.value.trim();
       if (newText && newText !== currentText) {
         textEl.textContent = newText; // optimistic update (WS will confirm)
-        await fetch(`/api/qa/question/${qid}`, {
-          method: 'PATCH',
+        await fetch(`/api/qa/question/${qid}/text`, {
+          method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ text: newText }),
         });
