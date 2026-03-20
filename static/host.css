@@ -494,7 +494,6 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
   font-size: .75rem;
   color: var(--muted);
   margin: .25rem 0 .5rem;
-  font-style: italic;
 }
 
 @keyframes preview-flash {
