@@ -1152,8 +1152,8 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
   }
 
   function renderDebateArgColumns(args, mySide, msg, readOnly) {
-    const forArgs = args.filter(a => a.side === 'for');
-    const againstArgs = args.filter(a => a.side === 'against');
+    const forArgs = args.filter(a => a.side === 'for').sort((a, b) => (b.upvote_count || 0) - (a.upvote_count || 0));
+    const againstArgs = args.filter(a => a.side === 'against').sort((a, b) => (b.upvote_count || 0) - (a.upvote_count || 0));
     const mergedArgs = (msg.debate_arguments || []).filter(a => a.merged_into);
     const mergedForCount = mergedArgs.filter(a => a.side === 'for').length;
     const mergedAgainstCount = mergedArgs.filter(a => a.side === 'against').length;
@@ -1162,12 +1162,14 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
       const aiClass = a.ai_generated ? ' debate-arg-ai' : '';
       const ownClass = a.is_own ? ' debate-arg-own' : '';
       const upvotedClass = a.has_upvoted ? ' debate-arg-upvoted' : '';
-      const canUpvote = !readOnly && !a.is_own && !a.has_upvoted;
+      const isOtherSide = mySide && a.side !== mySide;
+      const canUpvote = !readOnly && isOtherSide && !a.has_upvoted;
+      const showVotes = isOtherSide;
       return `<div class="debate-arg${aiClass}${ownClass}${upvotedClass}" ${canUpvote ? `onclick="debateUpvote('${a.id}')"` : ''}>
         <div class="debate-arg-header">
           ${a.author_avatar ? `<img src="/static/avatars/${a.author_avatar}" class="debate-arg-avatar">` : ''}
           <span class="debate-arg-author">${escDebate(a.author)}</span>
-          <span class="debate-arg-votes">▲ ${a.upvote_count}</span>
+          ${showVotes ? `<span class="debate-arg-votes">▲ ${a.upvote_count}</span>` : ''}
         </div>
         <div class="debate-arg-text">${escDebate(a.text)}</div>
       </div>`;
