@@ -1,7 +1,7 @@
 {
-  "sha": "9fd452c3a68f3722230179ba03c97ff66357069e",
-  "timestamp": "2026-03-20 22:55",
+  "sha": "5d027e4ea09c2cf787aa4438f362e33ebccdc228",
+  "timestamp": "2026-03-20 23:09",
   "changelog": [
-    "fix: add Code Review title to center panel in host UI"
+    "feat: add thumbs up/down, thinking, and party emoji reactions"
   ]
 }
