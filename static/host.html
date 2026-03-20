@@ -174,7 +174,7 @@
     <div class="left-status-bar">
       <span id="ws-badge" class="badge disconnected">● Server</span>
       <span id="daemon-badge" class="badge disconnected" title="">● Agent</span>
-      <span id="notes-badge" class="badge disconnected" title="">● Notes</span>
+      <span id="notes-badge" class="badge disconnected" title="" onclick="toggleHostNotesModal()" style="cursor:pointer">● Notes</span>
       <span id="summary-badge" class="badge disconnected" title="No key points yet — click to generate now" onclick="toggleSummaryModal()" style="cursor:pointer">● Key Points</span>
     </div>
   </div>
@@ -286,10 +286,20 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 
+<div id="host-notes-overlay" class="summary-overlay" onclick="closeHostNotesModal()">
+  <div class="summary-dialog" onclick="event.stopPropagation()">
+    <div class="summary-header">
+      <span>📝 Session Notes</span>
+      <button class="summary-close" onclick="closeHostNotesModal()">✕</button>
+    </div>
+    <pre id="host-notes-content" class="notes-content" style="color:var(--text-muted); font-style:italic;">No notes available yet.</pre>
+  </div>
+</div>
+
 <div id="summary-overlay" class="summary-overlay" onclick="closeSummaryModal()">
   <div class="summary-dialog" onclick="event.stopPropagation()">
     <div class="summary-header">
-      <span>📋 Key Points</span>
+      <span>🧠 Key Points</span>
       <button class="summary-close" onclick="closeSummaryModal()">✕</button>
     </div>
     <ul id="summary-list" class="summary-list"></ul>

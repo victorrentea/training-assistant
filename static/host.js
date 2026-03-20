@@ -158,6 +158,7 @@
         renderParticipantList(names);
         renderDaemonStatus(msg.daemon_connected, msg.daemon_last_seen);
         renderNotesStatus(msg.daemon_session_folder, msg.daemon_session_notes);
+        updateHostNotes(msg.notes_content);
         renderPreview(msg.quiz_preview || null);
         renderPollDisplay();
         const currentActivity = msg.current_activity || 'none';
@@ -323,24 +324,51 @@
     }
   }
 
+  let hostNotesContent = '';
+
   function renderNotesStatus(sessionFolder, sessionNotes) {
     const el = document.getElementById('notes-badge');
     if (!el) return;
 
+    el.style.cssText = 'cursor:pointer;';
     if (sessionFolder && sessionNotes) {
       el.textContent = '● Notes';
       el.className = 'badge connected';
-      el.title = `Session notes found\n${sessionFolder}`;
+      el.title = `Click to view session notes\n${sessionFolder}`;
     } else if (sessionFolder) {
       el.textContent = '● Notes';
       el.className = 'badge';
-      el.style.cssText = 'color:var(--warn);border:1px solid var(--warn);';
+      el.style.cssText = 'cursor:pointer; color:var(--warn); border:1px solid var(--warn);';
       el.title = 'Session folder found but no notes file inside';
     } else {
       el.textContent = '● Notes';
       el.className = 'badge disconnected';
       el.title = 'No session folder found for today';
     }
+  }
+
+  function updateHostNotes(content) {
+    hostNotesContent = content || '';
+    const el = document.getElementById('host-notes-content');
+    if (el) {
+      if (hostNotesContent) {
+        el.textContent = hostNotesContent;
+        el.style.cssText = '';
+      } else {
+        el.textContent = 'No notes available yet.';
+        el.style.cssText = 'color:var(--text-muted); font-style:italic;';
+      }
+    }
+  }
+
+  function toggleHostNotesModal() {
+    const overlay = document.getElementById('host-notes-overlay');
+    if (overlay) overlay.classList.toggle('open');
+  }
+
+  function closeHostNotesModal() {
+    const overlay = document.getElementById('host-notes-overlay');
+    if (overlay) overlay.classList.remove('open');
   }
 
   function renderParticipantList(names) {
