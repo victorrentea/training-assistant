@@ -912,6 +912,25 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
   }
 
   // ── Debate rendering ──
+  const DEBATE_PHASES = [
+    { key: 'side_selection', num: 1, label: 'Pick Sides' },
+    { key: 'arguments',      num: 2, label: 'Arguments' },
+    { key: 'ai_cleanup',     num: 3, label: 'AI Cleanup' },
+    { key: 'prep',           num: 4, label: 'Preparation' },
+    { key: 'live_debate',    num: 5, label: 'Live Debate' },
+    { key: 'ended',          num: 6, label: 'Ended' },
+  ];
+
+  function renderDebatePhaseStepper(currentPhase) {
+    const currentIdx = DEBATE_PHASES.findIndex(p => p.key === currentPhase);
+    return '<div class="debate-stepper">' + DEBATE_PHASES.map((p, i) => {
+      let cls = 'debate-step';
+      if (i < currentIdx) cls += ' debate-step-done';
+      else if (i === currentIdx) cls += ' debate-step-active';
+      return `<div class="${cls}"><span class="debate-step-num">${p.num}</span><span class="debate-step-label">${p.label}</span></div>`;
+    }).join('<span class="debate-step-sep">›</span>') + '</div>';
+  }
+
   function renderDebateScreen(msg) {
     const content = document.getElementById('content');
     if (!content) return;
@@ -930,7 +949,8 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     }
 
     const sideIcon = mySide === 'for' ? '👍' : mySide === 'against' ? '👎' : '';
-    let html = `<div class="debate-statement-row">
+    let html = renderDebatePhaseStepper(phase);
+    html += `<div class="debate-statement-row">
       <span class="debate-side-count debate-side-against">👎 ${sideCounts.against}</span>
       <span class="debate-statement-text">"${escDebate(statement)}"</span>
       <span class="debate-side-count debate-side-for">${sideCounts.for} 👍</span>

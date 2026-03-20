@@ -205,3 +205,44 @@
   margin: 0;
   padding: .5rem 0;
 }
+
+/* ── Debate Phase Stepper ── */
+.debate-stepper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: .25rem;
+  padding: .5rem 0;
+  flex-wrap: wrap;
+}
+.debate-step {
+  display: flex;
+  align-items: center;
+  gap: .3rem;
+  padding: .2rem .5rem;
+  border-radius: 999px;
+  font-size: .75rem;
+  color: var(--muted);
+  background: var(--surface);
+  opacity: .5;
+  transition: all .3s;
+}
+.debate-step-done {
+  opacity: .7;
+  color: var(--accent2);
+}
+.debate-step-active {
+  opacity: 1;
+  color: #fff;
+  background: var(--accent);
+  font-weight: 700;
+}
+.debate-step-num {
+  font-weight: 700;
+  font-size: .7rem;
+}
+.debate-step-sep {
+  color: var(--muted);
+  opacity: .4;
+  font-size: .7rem;
+}

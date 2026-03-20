@@ -1441,6 +1441,27 @@
     return d.innerHTML;
   }
 
+  // ── Debate Phase Stepper ──
+
+  const DEBATE_PHASES = [
+    { key: 'side_selection', num: 1, label: 'Pick Sides' },
+    { key: 'arguments',      num: 2, label: 'Arguments' },
+    { key: 'ai_cleanup',     num: 3, label: 'AI Cleanup' },
+    { key: 'prep',           num: 4, label: 'Preparation' },
+    { key: 'live_debate',    num: 5, label: 'Live Debate' },
+    { key: 'ended',          num: 6, label: 'Ended' },
+  ];
+
+  function renderDebatePhaseStepper(currentPhase) {
+    const currentIdx = DEBATE_PHASES.findIndex(p => p.key === currentPhase);
+    return '<div class="debate-stepper">' + DEBATE_PHASES.map((p, i) => {
+      let cls = 'debate-step';
+      if (i < currentIdx) cls += ' debate-step-done';
+      else if (i === currentIdx) cls += ' debate-step-active';
+      return `<div class="${cls}"><span class="debate-step-num">${p.num}</span><span class="debate-step-label">${p.label}</span></div>`;
+    }).join('<span class="debate-step-sep">›</span>') + '</div>';
+  }
+
   // ── Debate Host Functions ──
 
   async function launchDebate() {
@@ -1495,17 +1516,8 @@
 
     title.innerHTML = `<span style="color:#e74c3c;font-weight:700;">👎 ${sideCounts.against}</span> <span style="font-style:italic;">"${escDebate(msg.debate_statement)}"</span> <span style="color:#2ecc71;font-weight:700;">${sideCounts.for} 👍</span>`;
 
-    // Phase label
-    const phaseNames = {
-      side_selection: 'Phase 1: Side Selection',
-      arguments: 'Phase 2: Arguments',
-      ai_cleanup: 'Phase 3: AI Cleanup',
-      prep: 'Phase 4: Preparation',
-      live_debate: 'Phase 5: Live Debate',
-      ended: 'Debate Ended',
-    };
-    phaseLabel.textContent = (phaseNames[phase] || phase) +
-      ` — 👎 ${sideCounts.against} | ${sideCounts.for} 👍`;
+    // Phase stepper
+    phaseLabel.innerHTML = renderDebatePhaseStepper(phase);
 
     // Host action buttons per phase
     actions.innerHTML = '';
