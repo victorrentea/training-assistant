@@ -32,7 +32,7 @@
       <div id="poll-input" class="poll-composer" contenteditable="true" spellcheck="false"
            data-placeholder="Question title&#10;&#10;Option A&#10;Option B&#10;Option C"></div>
       <div class="btn-row" style="align-items:center;">
-        <button class="btn btn-primary" id="create-btn">🚀 Launch</button>
+        <button class="btn btn-success" id="create-btn">🚀 Launch</button>
         <label style="display:flex; align-items:center; gap:.4rem; font-size:.9rem; color:var(--text); cursor:pointer; margin:0;">
           <input type="checkbox" id="multi-check" style="width:1rem; height:1rem; cursor:pointer;" />
           Multi-select
@@ -64,7 +64,7 @@
               <option value="480">whole day</option>
             </select>
           </div>
-          <button class="btn btn-warn" id="gen-quiz-btn" onclick="requestQuiz()" style="align-self:flex-start;">Generate from transcript</button>
+          <button class="btn btn-success" id="gen-quiz-btn" onclick="requestQuiz()" style="align-self:flex-start;">✨ Generate from transcript</button>
         </div>
         <span id="quiz-status"></span>
       </div>
@@ -83,12 +83,12 @@
       <div style="margin-top:.75rem;">
         <div class="wc-input-row" style="margin-bottom:.5rem;">
           <input id="wc-topic-input" type="text" maxlength="80" autocomplete="off" placeholder="topic (optional)" style="flex:1;padding:.5rem .75rem;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:.9rem;" />
-          <button class="btn btn-secondary" onclick="pushWordCloudTopic()">Push</button>
+          <button class="btn btn-success" onclick="pushWordCloudTopic()">🚀 Push</button>
         </div>
         <div class="wc-input-row">
           <input id="wc-host-input" type="text" maxlength="40" autocomplete="on" placeholder="Submit a word…" list="wc-host-suggestions" />
           <datalist id="wc-host-suggestions"></datalist>
-          <button class="btn btn-primary" onclick="hostSubmitWord()">↵</button>
+          <button class="btn btn-warn" onclick="hostSubmitWord()">↵</button>
         </div>
       </div>
       <ul id="wc-host-words" style="margin-top:.5rem; list-style:disc; padding-left:1.25rem; color:var(--muted); font-size:.85rem; max-height:180px; overflow-y:auto;"></ul>
@@ -103,7 +103,7 @@
         <input id="host-qa-input" type="text" maxlength="280" autocomplete="off"
                placeholder="Ask a question as host…"
                onkeydown="if(event.key==='Enter')hostSubmitQA()" />
-        <button id="host-qa-submit-btn" class="btn btn-primary" onclick="hostSubmitQA()">↵</button>
+        <button id="host-qa-submit-btn" class="btn btn-success" onclick="hostSubmitQA()">↵</button>
       </div>
       <div style="margin-top:.5rem;">
         <button id="clear-qa-btn" class="btn btn-danger" onclick="clearQA()">🗑 Clear all</button>
@@ -142,15 +142,15 @@
     return emails;
 }</textarea>
         <div style="display:flex; justify-content:flex-end; margin-top:8px;">
-          <button class="btn btn-accent" onclick="startCodeReview()">Start Code Review</button>
+          <button class="btn btn-success" onclick="startCodeReview()">Start Code Review</button>
         </div>
       </div>
       <div id="codereview-active" style="display:none;">
         <div id="codereview-status-bar" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
           <span id="codereview-phase-label"></span>
           <div>
-            <button id="codereview-close-btn" class="btn btn-danger" onclick="closeCodeReviewSelection()" style="display:none;">End</button>
-            <button id="codereview-clear-btn" class="btn btn-muted" onclick="clearCodeReview()">🗑️</button>
+            <button id="codereview-close-btn" class="btn btn-success" onclick="closeCodeReviewSelection()" style="display:none;">End</button>
+            <button id="codereview-clear-btn" class="btn btn-danger" onclick="clearCodeReview()">🗑️</button>
           </div>
         </div>
       </div>
