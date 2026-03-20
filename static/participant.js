@@ -927,7 +927,11 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
 
     if (phase === 'side_selection') {
       if (mySide) {
-        html += `<div class="debate-chosen">You chose: <strong>${mySide.toUpperCase()}</strong> ✓</div>`;
+        if (msg.debate_auto_assigned) {
+          html += `<div class="debate-auto-assigned">You were automatically assigned to team <strong>${mySide.toUpperCase()}</strong></div>`;
+        } else {
+          html += `<div class="debate-chosen">You chose: <strong>${mySide.toUpperCase()}</strong> ✓</div>`;
+        }
         html += `<div class="debate-waiting">Waiting for others… FOR: ${sideCounts.for} | AGAINST: ${sideCounts.against}</div>`;
       } else {
         html += `<div class="debate-pick">

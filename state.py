@@ -68,6 +68,7 @@ class AppState:
         self.debate_sides: dict[str, str] = {}  # uuid → "for"|"against"
         self.debate_arguments: list[dict] = []  # [{id, author_uuid, side, text, upvoters: set, ai_generated: bool, merged_into: str|None}]
         self.debate_champions: dict[str, str] = {}  # "for" → uuid, "against" → uuid
+        self.debate_auto_assigned: set[str] = set()  # uuids that were auto-assigned a side
 
     def suggest_name(self) -> str:
         """Return the next available LOTR name (by popularity order).
