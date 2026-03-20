@@ -116,6 +116,14 @@
 - [x] feat: assign random LOTR-themed avatar to each participant, displayed in top bar, host participant list, and Q&A (#12, #13)
 - [ ] load test: 30 participants connected simultaneously, host fires a poll, all vote randomly, host sorts by points. Run against local instance first, then deployed.
 - [x] feat: daemon auto-update — daemon detects server version change, exits with code 42, start-daemon.sh loops with git pull and restart.
+- [x] ui: Code Review host — remove arrow on confirmed lines; just highlight the line background instead. Saves horizontal space. Line numbers should fit in 2-digit width max.
+- [x] ui: Code Review host — add a centered title to the central pane header, matching the look and feel of other activities (Poll, Q&A, Word Cloud). No emoji in the title.
+- [x] ui: Word Cloud host — title is not displayed in the central pane header. Add it, matching other activities.
+- [x] bug: Word Cloud host — the display continuously changes/re-renders even when no user interaction is happening. Investigate if this also affects the participant view.
+- [x] ui: Debate host — show the same phase indicator list that the participant UI has, right below the debate title, highlighting the current phase as it progresses.
+- [x] bug: Debate host — when forcing the end of a round, the timer keeps ticking in the host UI. Check if this also affects the participant view.
+- [x] ui: Debate host+participant — display pros with a green background and cons with a red background. Must look good in both dark and light modes.
+- [x] refactor: Review project structure (backend, host JS, participant JS). If complexity has grown too much, group concerns into folders, keep files under 200-250 lines, split by responsibility, avoid code duplication. All tests must pass afterward.
 - [ ] fix: daemon doesn't find today's transcription correctly — investigate transcript file detection at startup. Print which transcription file is being read and how many lines are in the last 30 minutes.
 - [ ] refactor: extract "last 30 minutes" constant (DEFAULT_MINUTES) to a single place, referenced everywhere (DRY).
 - [x] Local agent restart now avoids redundant re-indexing by storing per-file hashes in `materials/.index-manifest.json`; startup only reindexes changed/new files and removes deleted files from both index and manifest.
