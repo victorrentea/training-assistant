@@ -1,7 +1,7 @@
 {
-  "sha": "283f24707368901ea4fd5427d8da8894ef2b43e2",
-  "timestamp": "2026-03-20 22:41",
+  "sha": "d1bb47c8081054b8c19f6b30dad21abe6b0d4f54",
+  "timestamp": "2026-03-20 22:42",
   "changelog": [
-    "fix: remove word history list from host word cloud panel"
+    "SCRUM-1: improve code review host line confirmation UX (#48)"
   ]
 }
