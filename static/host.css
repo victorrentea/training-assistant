@@ -734,6 +734,10 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
     cursor: pointer;
 }
 
+.codereview-line:hover {
+    background: rgba(108,99,255,0.12) !important;
+}
+
 .codereview-line-clickable:hover {
     filter: brightness(1.2);
 }

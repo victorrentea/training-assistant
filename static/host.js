@@ -190,7 +190,7 @@
         cachedNames = names;
         renderParticipantList(names);
         // Re-render code review side panel with fresh scores
-        if (currentActivity === 'codereview' && window._lastCodereviewState) {
+        if (window._lastCodereviewState && window._lastCodereviewState.phase !== 'idle') {
           // Update scores in cached line_participants
           const cr = window._lastCodereviewState;
           for (const key in cr.line_participants) {

@@ -734,17 +734,25 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
   function _showCRToast() {
     const el = document.getElementById('cr-toast');
     if (!el) return;
-    el.textContent = _CR_TOASTS[_crToastIndex % _CR_TOASTS.length];
-    _crToastIndex++;
+    const idx = Math.floor(Math.random() * _CR_TOASTS.length);
+    el.textContent = _CR_TOASTS[idx];
     el.classList.add('visible');
     clearTimeout(_crToastTimeout);
-    _crToastTimeout = setTimeout(() => el.classList.remove('visible'), 4400);
+    _crToastTimeout = setTimeout(() => el.classList.remove('visible'), 3500);
+  }
+
+  function _scheduleCRToast() {
+    const delay = 5000 + Math.random() * 2000; // 5-7 seconds
+    _crToastInterval = setTimeout(() => {
+      _showCRToast();
+      _scheduleCRToast();
+    }, delay);
   }
 
   function _startCRToasts() {
     _stopCRToasts();
     _showCRToast();
-    _crToastInterval = setInterval(_showCRToast, 15000);
+    _scheduleCRToast();
   }
 
   function _stopCRToasts() {
@@ -1077,9 +1085,10 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     const percentages = cr.line_percentages || {};
 
     let html = '<div class="codereview-screen">';
-    html += '<div class="codereview-header">📝 Code Review</div>';
-    html += `<div class="codereview-subtitle">${isSelecting ? 'Spot bugs, edge cases & security issues' : 'Selection closed — reviewing results'}</div>`;
-    if (isSelecting) {
+    html += '<div class="codereview-header" style="font-size:1.3rem;">Code Review</div>';
+    if (!isSelecting) {
+      html += '<div class="codereview-subtitle">Selection closed — reviewing results</div>';
+    } else {
       html += '<div id="cr-toast" class="qa-toast"></div>';
     }
 
