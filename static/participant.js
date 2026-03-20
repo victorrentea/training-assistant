@@ -33,6 +33,7 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
   let _lastWordcloudTopic = '';
   const WC_COLORS = ['#7ecef4','#a78bfa','#34d399','#fbbf24','#f472b6','#60a5fa','#fb923c'];
   let _wcDebounceTimer = null;
+  let _lastPaxWcWordsJson = null;
   const versionReloadGuard = window.createVersionReloadGuard
     ? window.createVersionReloadGuard({ countdownSeconds: 5 })
     : null;
@@ -759,8 +760,12 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
   function renderWordCloud(words) {
     const canvas = document.getElementById('wc-canvas');
     if (!canvas) return;
-    clearTimeout(_wcDebounceTimer);
-    _wcDebounceTimer = setTimeout(() => _drawCloud(canvas, words), 300);
+    const wordsJson = JSON.stringify(words);
+    if (wordsJson !== _lastPaxWcWordsJson) {
+      _lastPaxWcWordsJson = wordsJson;
+      clearTimeout(_wcDebounceTimer);
+      _wcDebounceTimer = setTimeout(() => _drawCloud(canvas, words), 300);
+    }
   }
 
   function _drawCloud(canvas, wordsMap) {

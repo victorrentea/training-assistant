@@ -16,6 +16,7 @@
 
   let hostWords = [];
   let _hostWcDebounceTimer = null;
+  let _lastWcWordsJson = null;
   const versionReloadGuard = window.createVersionReloadGuard
     ? window.createVersionReloadGuard({ countdownSeconds: 5 })
     : null;
@@ -1093,8 +1094,13 @@
   function renderHostWordCloud(wordsMap) {
     const canvas = document.getElementById('host-wc-canvas');
     if (!canvas) return;
-    clearTimeout(_hostWcDebounceTimer);
-    _hostWcDebounceTimer = setTimeout(() => _drawHostCloud(canvas, wordsMap), 300);
+    const wordsJson = JSON.stringify(wordsMap);
+    // Only re-draw when word data actually changes to avoid random layout shifts
+    if (wordsJson !== _lastWcWordsJson) {
+      _lastWcWordsJson = wordsJson;
+      clearTimeout(_hostWcDebounceTimer);
+      _hostWcDebounceTimer = setTimeout(() => _drawHostCloud(canvas, wordsMap), 300);
+    }
     const dl = document.getElementById('wc-host-suggestions');
     if (dl) {
       dl.innerHTML = Object.keys(wordsMap).sort()
