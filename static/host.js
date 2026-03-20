@@ -1535,7 +1535,7 @@
     const resetWrapper = document.getElementById('debate-reset-wrapper');
     if (stmtWrapper) {
       if (debateActive) {
-        stmtWrapper.style.transition = 'max-height 2s ease-in-out, margin 2s ease-in-out, padding 2s ease-in-out';
+        stmtWrapper.style.transition = 'max-height 1.2s linear, margin 1.2s linear, padding 1.2s linear';
         stmtWrapper.style.maxHeight = '0';
         stmtWrapper.style.marginTop = '0';
         stmtWrapper.style.padding = '0';
