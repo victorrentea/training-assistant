@@ -114,9 +114,9 @@
     <div id="tab-content-codereview" style="display:none" class="tab-content">
       <div id="codereview-create">
         <div style="display:flex; gap:8px; align-items:center; margin-bottom:8px;">
-          <span style="font-weight:600;">New Code Review</span>
+          <span style="font-weight:600;">Code Review</span>
           <select id="codereview-language">
-            <option value="">Auto-detect</option>
+            <option value="">Auto-detect language</option>
             <option value="java">Java</option>
             <option value="python">Python</option>
             <option value="javascript">JavaScript</option>
@@ -128,7 +128,19 @@
             <option value="bash">Bash</option>
           </select>
         </div>
-        <textarea id="codereview-snippet" placeholder="Paste your code snippet here (10-50 lines)..." rows="12" style="width:100%; font-family:monospace; font-size:13px;"></textarea>
+        <textarea id="codereview-snippet" placeholder="Paste your code snippet here (10-50 lines)..." rows="12" style="width:100%; font-family:monospace; font-size:13px;">public List&lt;String&gt; getActiveUserEmails(List&lt;User&gt; users) {
+    List&lt;String&gt; emails = new ArrayList&lt;&gt;();
+    for (int i = 0; i &lt; users.size(); i++) {
+        User user = users.get(i);
+        if (user.isActive() == true) {
+            String email = user.getEmail();
+            if (email != null) {
+                emails.add(email);
+            }
+        }
+    }
+    return emails;
+}</textarea>
         <div style="display:flex; justify-content:flex-end; margin-top:8px;">
           <button class="btn btn-accent" onclick="startCodeReview()">Start Code Review</button>
         </div>
