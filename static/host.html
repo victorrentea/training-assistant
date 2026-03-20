@@ -22,7 +22,7 @@
     <!-- Tab switcher -->
     <div class="tab-bar">
       <button class="tab-btn active" id="tab-poll" onclick="switchTab('poll')">📊 Poll</button>
-      <button class="tab-btn" id="tab-wordcloud" onclick="switchTab('wordcloud')">☁ Word Cloud</button>
+      <button class="tab-btn" id="tab-wordcloud" onclick="switchTab('wordcloud')">☁ Words</button>
       <button class="tab-btn" id="tab-qa" onclick="switchTab('qa')">❓ Q&A</button>
       <button class="tab-btn" id="tab-codereview" onclick="switchTab('codereview')">🔍 Code Review</button>
     </div>
@@ -148,6 +148,7 @@
     <div class="left-status-bar">
       <span id="ws-badge" class="badge disconnected">● Server</span>
       <span id="daemon-badge" class="badge disconnected" title="">Agent</span>
+      <span id="summary-badge" class="badge disconnected" title="Key points" onclick="toggleSummaryModal()" style="cursor:pointer; display:none">📋 Summary</span>
     </div>
   </div>
 
@@ -172,7 +173,7 @@
     <!-- Q&A results panel -->
     <div id="center-qa" class="center-panel" style="display:none;">
       <h2 style="margin:0 0 .9rem; font-size:.95rem; color:var(--muted); text-transform:uppercase; letter-spacing:.08em;">
-        ❓ Questions — <span id="qa-count">0</span>
+        ❓ Questions
       </h2>
       <div id="qa-list"></div>
     </div>
@@ -197,8 +198,7 @@
     <ul id="pax-list" class="pax-list" title="Click a location to view map"></ul>
     <div class="right-footer">
       <span style="display:flex; align-items:center; gap:.5rem; flex-wrap:nowrap; min-width:0;">
-        <span style="font-size:1.25rem; white-space:nowrap; flex-shrink:0;">Join:</span>
-        <a id="participant-link" style="color:var(--accent); font-size:1.25rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; flex-shrink:1; direction:rtl; text-align:left;" href="/" target="_blank"></a>
+        <a id="participant-link" style="color:#fff; font-size:1.25rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; flex-shrink:1; direction:rtl; text-align:left;" href="/" target="_blank"></a>
         <div id="qr-icon" title="Show QR code" style="cursor:pointer; opacity:.5; flex-shrink:0; width:28px; height:28px;">
           <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" fill="currentColor" width="28" height="28">
             <rect x="5" y="5" width="35" height="35" rx="4"/>
@@ -252,6 +252,18 @@
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+
+<div id="summary-overlay" class="summary-overlay" onclick="closeSummaryModal()">
+  <div class="summary-dialog" onclick="event.stopPropagation()">
+    <div class="summary-header">
+      <span>📋 Key Points</span>
+      <button class="summary-close" onclick="closeSummaryModal()">✕</button>
+    </div>
+    <ul id="summary-list" class="summary-list"></ul>
+    <div id="summary-time" class="summary-time"></div>
+  </div>
+</div>
+
 <script src="/static/version.js"></script>
 <script src="/static/version-age.js"></script>
 <script src="/static/version-reload.js"></script>

@@ -31,6 +31,7 @@ class AppState:
         self.votes: dict[str, str] = {}
         self.participants: dict[str, WebSocket] = {}
         self.participant_names: dict[str, str] = {}  # uuid -> display_name
+        self.participant_avatars: dict[str, str] = {}
         self.locations: dict[str, str] = {}
         self.quiz_request: Optional[dict] = None
         self.quiz_refine_request: Optional[dict] = None
@@ -54,6 +55,8 @@ class AppState:
         self.codereview_phase: str = "idle"  # "idle" | "selecting" | "reviewing"
         self.codereview_selections: dict[str, set[int]] = {}  # uuid → set of line numbers
         self.codereview_confirmed: set[int] = set()  # lines host confirmed
+        self.summary_points: list[str] = []
+        self.summary_updated_at: Optional[datetime] = None
 
     def suggest_name(self) -> str:
         taken = set(self.participant_names.values())
@@ -73,3 +76,30 @@ class AppState:
 
 
 state = AppState()
+
+
+def get_avatar_filename(name: str) -> str:
+    """Convert a LOTR name to its avatar filename slug."""
+    return name.lower().replace(' ', '-') + '.png'
+
+
+def assign_avatar(app_state: AppState, uuid: str, name: str) -> str:
+    """Assign avatar to UUID. Returns existing avatar if already assigned (assign-once).
+    Avoids duplicates: if the preferred avatar is taken, picks the next available one."""
+    if uuid in app_state.participant_avatars:
+        return app_state.participant_avatars[uuid]
+    taken = set(app_state.participant_avatars.values())
+    if name in LOTR_NAMES:
+        preferred_index = LOTR_NAMES.index(name)
+    else:
+        preferred_index = int(uuid.replace('-', ''), 16) % len(LOTR_NAMES)
+    # Try preferred first, then cycle through all 30 to find an unused one
+    for offset in range(len(LOTR_NAMES)):
+        avatar = get_avatar_filename(LOTR_NAMES[(preferred_index + offset) % len(LOTR_NAMES)])
+        if avatar not in taken:
+            app_state.participant_avatars[uuid] = avatar
+            return avatar
+    # All 30 taken — fall back to preferred (allows duplicates beyond 30 participants)
+    avatar = get_avatar_filename(LOTR_NAMES[preferred_index])
+    app_state.participant_avatars[uuid] = avatar
+    return avatar

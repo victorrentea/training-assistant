@@ -113,6 +113,7 @@
 - [x] allow participants to vote at polls using keyboard up+down in single select; enter submit vote. in multi-select, display a checkbox on each option line and allow selecting it using SPACE.
 - [x] The indexer should report a percentage done when it sees a bunch of work ahead. In terms of files left. then, it should index documents on max 4 threads
 - [x] Add map icon button next to QR in host footer for quick access to participant locations map (item #6)
+- [x] feat: assign random LOTR-themed avatar to each participant, displayed in top bar, host participant list, and Q&A (#12, #13)
 - [ ] load test: 30 participants connected simultaneously, host fires a poll, all vote randomly, host sorts by points. Run against local instance first, then deployed.
 - [x] Local agent restart now avoids redundant re-indexing by storing per-file hashes in `materials/.index-manifest.json`; startup only reindexes changed/new files and removes deleted files from both index and manifest.
 - [x] The local agent now reconnects automatically to the server after disconnects/redeploys; no manual agent restart is needed.
