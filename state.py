@@ -48,6 +48,8 @@ class AppState:
         self.wordcloud_topic: str = ""
         self.qa_questions: dict[str, dict] = {}
         # Each value: { id, text, author, upvoters: set[str], answered: bool, timestamp: float }
+        self.summary_points: list[str] = []
+        self.summary_updated_at: Optional[datetime] = None
 
     def suggest_name(self) -> str:
         taken = set(self.participant_names.values())

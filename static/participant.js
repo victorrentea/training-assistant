@@ -50,6 +50,8 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
   let _prevActivity = null;
   let _stateInitialised = false;   // skip notifications on first state (join mid-session)
   let _notifBtnBound = false;      // prevent re-binding on reconnect
+  let summaryPoints = [];
+  let summaryUpdatedAt = null;
 
   function escHtml(s) {
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -59,6 +61,40 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     const hash = parseInt((uuid || '').replace(/-/g, '').slice(0, 8), 16);
     const hue = hash % 360;
     return `hsl(${hue}, 60%, 40%)`;
+  }
+
+  function updateSummary(points, updatedAt) {
+    summaryPoints = points || [];
+    summaryUpdatedAt = updatedAt;
+    const btn = document.getElementById('summary-btn');
+    if (btn) btn.style.display = summaryPoints.length ? '' : 'none';
+    renderSummaryList();
+  }
+
+  function renderSummaryList() {
+    const list = document.getElementById('summary-list');
+    const timeEl = document.getElementById('summary-time');
+    if (!list) return;
+    if (!summaryPoints.length) {
+      list.innerHTML = '<li class="summary-empty">No key points yet — check back soon.</li>';
+      if (timeEl) timeEl.textContent = '';
+      return;
+    }
+    list.innerHTML = summaryPoints.map(p => `<li>${escHtml(p)}</li>`).join('');
+    if (timeEl && summaryUpdatedAt) {
+      const d = new Date(summaryUpdatedAt);
+      timeEl.textContent = 'Updated ' + d.toLocaleTimeString();
+    }
+  }
+
+  function toggleSummaryModal() {
+    const overlay = document.getElementById('summary-overlay');
+    if (overlay) overlay.classList.toggle('open');
+  }
+
+  function closeSummaryModal() {
+    const overlay = document.getElementById('summary-overlay');
+    if (overlay) overlay.classList.remove('open');
   }
 
   async function requestNotificationPermission() {
@@ -345,6 +381,7 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
           renderQACleanup();
           renderContent(msg.vote_counts);
         }
+        updateSummary(msg.summary_points, msg.summary_updated_at);
         break;
       case 'vote_update':
         renderOptions(msg.vote_counts, msg.total_votes);
@@ -366,6 +403,9 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
       case 'timer':
         activeTimer = { seconds: msg.seconds, startedAt: new Date(msg.started_at).getTime() };
         _startParticipantCountdown();
+        break;
+      case 'summary':
+        updateSummary(msg.points, msg.updated_at);
         break;
     }
   }
