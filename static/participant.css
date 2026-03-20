@@ -134,6 +134,20 @@ h1 { display: none; }
 }
 .edit-name-btn:hover { opacity: 1; }
 
+#name-edit-input {
+  background: var(--surface2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: .15rem .4rem;
+  font-size: .95rem;
+  font-family: inherit;
+  outline: none;
+}
+#name-edit-input:focus {
+  border-color: var(--accent);
+}
+
 /* ── Location prompt ── */
 .location-prompt {
   cursor: pointer;
