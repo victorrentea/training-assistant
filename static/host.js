@@ -158,10 +158,18 @@
         renderParticipantList(names);
         renderDaemonStatus(msg.daemon_connected, msg.daemon_last_seen);
         renderNotesStatus(msg.daemon_session_folder, msg.daemon_session_notes);
+        updateHostNotes(msg.notes_content);
         renderPreview(msg.quiz_preview || null);
         renderPollDisplay();
         const currentActivity = msg.current_activity || 'none';
         updateCenterPanel(currentActivity);
+        if (msg.current_activity === 'debate') {
+          renderDebateHost(msg);
+        } else {
+          // Hide debate controls when not in debate
+          const dc = document.getElementById('debate-host-controls');
+          if (dc) dc.style.display = 'none';
+        }
         if (currentActivity === 'wordcloud') {
           renderHostWordCloud(msg.wordcloud_words || {});
         }
@@ -217,22 +225,34 @@
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   }
 
+  let _summaryGenerating = false;
+
   function updateSummary(points, updatedAt) {
     summaryPoints = points || [];
     summaryUpdatedAt = updatedAt;
-    const badge = document.getElementById('summary-badge');
-    if (badge) {
-      if (summaryPoints.length) {
-        badge.textContent = `🧠 Key Points (${summaryPoints.length})`;
-        badge.className = 'badge connected';
-        badge.title = `${summaryPoints.length} key points — click to view`;
-      } else {
-        badge.textContent = '🧠 No key points yet';
-        badge.className = 'badge disabled';
-        badge.title = 'Summary generated every 5 minutes from transcript';
-      }
-    }
+    if (summaryPoints.length) _summaryGenerating = false;
+    renderSummaryBadge();
     renderSummaryList();
+  }
+
+  function renderSummaryBadge() {
+    const badge = document.getElementById('summary-badge');
+    if (!badge) return;
+    badge.style.cssText = 'cursor:pointer;';
+    if (summaryPoints.length) {
+      badge.textContent = `● Key Points (${summaryPoints.length})`;
+      badge.className = 'badge connected';
+      badge.title = `${summaryPoints.length} key points — click to view`;
+    } else if (_summaryGenerating) {
+      badge.textContent = '● Generating...';
+      badge.className = 'badge';
+      badge.style.cssText = 'cursor:wait; color:var(--warn); border:1px solid var(--warn);';
+      badge.title = 'Generating key points from transcript...';
+    } else {
+      badge.textContent = '● Key Points';
+      badge.className = 'badge disconnected';
+      badge.title = 'No key points yet — click to generate now';
+    }
   }
 
   function renderSummaryList() {
@@ -244,7 +264,12 @@
       if (timeEl) timeEl.textContent = '';
       return;
     }
-    list.innerHTML = summaryPoints.map(p => `<li>${escHtml(p)}</li>`).join('');
+    list.innerHTML = summaryPoints.map(p => {
+      const text = typeof p === 'string' ? p : p.text;
+      const source = typeof p === 'string' ? 'discussion' : (p.source || 'discussion');
+      const icon = source === 'notes' ? '✏️' : '💬';
+      return `<li>${icon} ${escHtml(text)}</li>`;
+    }).join('');
     if (timeEl && summaryUpdatedAt) {
       const d = new Date(summaryUpdatedAt);
       timeEl.textContent = 'Updated ' + d.toLocaleTimeString();
@@ -256,13 +281,8 @@
       const overlay = document.getElementById('summary-overlay');
       if (overlay) overlay.classList.toggle('open');
     } else {
-      // No key points yet — force the daemon to generate now
-      const badge = document.getElementById('summary-badge');
-      if (badge) {
-        badge.textContent = '🧠 Generating...';
-        badge.className = 'badge';
-        badge.style.cssText = 'color:var(--warn);border:1px solid var(--warn);cursor:wait;';
-      }
+      _summaryGenerating = true;
+      renderSummaryBadge();
       fetch('/api/summary/force', { method: 'POST' });
     }
   }
@@ -304,24 +324,51 @@
     }
   }
 
+  let hostNotesContent = '';
+
   function renderNotesStatus(sessionFolder, sessionNotes) {
     const el = document.getElementById('notes-badge');
     if (!el) return;
 
+    el.style.cssText = 'cursor:pointer;';
     if (sessionFolder && sessionNotes) {
       el.textContent = '● Notes';
       el.className = 'badge connected';
-      el.title = `Session notes found\n${sessionFolder}`;
+      el.title = `Click to view session notes\n${sessionFolder}`;
     } else if (sessionFolder) {
       el.textContent = '● Notes';
       el.className = 'badge';
-      el.style.cssText = 'color:var(--warn);border:1px solid var(--warn);';
+      el.style.cssText = 'cursor:pointer; color:var(--warn); border:1px solid var(--warn);';
       el.title = 'Session folder found but no notes file inside';
     } else {
       el.textContent = '● Notes';
       el.className = 'badge disconnected';
       el.title = 'No session folder found for today';
     }
+  }
+
+  function updateHostNotes(content) {
+    hostNotesContent = content || '';
+    const el = document.getElementById('host-notes-content');
+    if (el) {
+      if (hostNotesContent) {
+        el.textContent = hostNotesContent;
+        el.style.cssText = '';
+      } else {
+        el.textContent = 'No notes available yet.';
+        el.style.cssText = 'color:var(--text-muted); font-style:italic;';
+      }
+    }
+  }
+
+  function toggleHostNotesModal() {
+    const overlay = document.getElementById('host-notes-overlay');
+    if (overlay) overlay.classList.toggle('open');
+  }
+
+  function closeHostNotesModal() {
+    const overlay = document.getElementById('host-notes-overlay');
+    if (overlay) overlay.classList.remove('open');
   }
 
   function renderParticipantList(names) {
@@ -930,16 +977,10 @@
 
 
   async function switchTab(tab) {
-    document.getElementById('tab-poll').classList.toggle('active', tab === 'poll');
-    document.getElementById('tab-wordcloud').classList.toggle('active', tab === 'wordcloud');
-    document.getElementById('tab-qa').classList.toggle('active', tab === 'qa');
-    document.getElementById('tab-codereview').classList.toggle('active', tab === 'codereview');
-    document.getElementById('tab-content-poll').style.display = tab === 'poll' ? '' : 'none';
-    document.getElementById('tab-content-wordcloud').style.display = tab === 'wordcloud' ? '' : 'none';
-    document.getElementById('tab-content-qa').style.display = tab === 'qa' ? '' : 'none';
-    document.getElementById('tab-content-codereview').style.display = tab === 'codereview' ? '' : 'none';
-
-    // Tell server — participants follow the active tab
+    ['poll', 'wordcloud', 'qa', 'debate', 'codereview'].forEach(t => {
+      document.getElementById('tab-' + t).classList.toggle('active', tab === t);
+      document.getElementById('tab-content-' + t).style.display = tab === t ? '' : 'none';
+    });
     await fetch('/api/activity', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -948,21 +989,19 @@
   }
 
   function updateCenterPanel(currentActivity) {
-    document.getElementById('center-qr').style.display = currentActivity === 'none' ? '' : 'none';
-    document.getElementById('center-poll').style.display = currentActivity === 'poll' ? '' : 'none';
-    document.getElementById('center-wordcloud').style.display = currentActivity === 'wordcloud' ? '' : 'none';
-    document.getElementById('center-qa').style.display = currentActivity === 'qa' ? '' : 'none';
-    document.getElementById('center-codereview').style.display = currentActivity === 'codereview' ? '' : 'none';
-    // Sync left-column tab buttons to match server-side active activity
+    ['qr', 'poll', 'wordcloud', 'qa', 'debate', 'codereview'].forEach(id => {
+      const el = document.getElementById('center-' + id);
+      if (id === 'qr') {
+        el.style.display = currentActivity === 'none' ? '' : 'none';
+      } else {
+        el.style.display = currentActivity === id ? '' : 'none';
+      }
+    });
     if (currentActivity && currentActivity !== 'none') {
-      document.getElementById('tab-poll').classList.toggle('active', currentActivity === 'poll');
-      document.getElementById('tab-wordcloud').classList.toggle('active', currentActivity === 'wordcloud');
-      document.getElementById('tab-qa').classList.toggle('active', currentActivity === 'qa');
-      document.getElementById('tab-codereview').classList.toggle('active', currentActivity === 'codereview');
-      document.getElementById('tab-content-poll').style.display = currentActivity === 'poll' ? '' : 'none';
-      document.getElementById('tab-content-wordcloud').style.display = currentActivity === 'wordcloud' ? '' : 'none';
-      document.getElementById('tab-content-qa').style.display = currentActivity === 'qa' ? '' : 'none';
-      document.getElementById('tab-content-codereview').style.display = currentActivity === 'codereview' ? '' : 'none';
+      ['poll', 'wordcloud', 'qa', 'debate', 'codereview'].forEach(t => {
+        document.getElementById('tab-' + t).classList.toggle('active', currentActivity === t);
+        document.getElementById('tab-content-' + t).style.display = currentActivity === t ? '' : 'none';
+      });
     }
   }
 
@@ -1367,3 +1406,159 @@
   document.getElementById('wc-topic-input')?.addEventListener('keydown', e => {
     if (e.key === 'Enter') pushWordCloudTopic();
   });
+
+  // ── HTML escaping utility ──
+  function escDebate(str) {
+    const d = document.createElement('div');
+    d.textContent = str;
+    return d.innerHTML;
+  }
+
+  // ── Debate Host Functions ──
+
+  async function launchDebate() {
+    const input = document.getElementById('debate-statement-input');
+    const statement = input.value.trim();
+    if (!statement) return;
+    await fetch('/api/debate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ statement }),
+    });
+  }
+
+  async function debateCloseSelection() {
+    await fetch('/api/debate/close-selection', { method: 'POST' });
+  }
+
+  async function debateNextPhase(phase) {
+    await fetch('/api/debate/phase', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phase }),
+    });
+  }
+
+  async function debateRunAI() {
+    const btn = document.querySelector('#debate-host-actions .btn-ai');
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ Running AI…'; }
+    try {
+      await fetch('/api/debate/ai-cleanup', { method: 'POST' });
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = '✨ Run AI Cleanup'; }
+    }
+  }
+
+  function renderDebateHost(msg) {
+    if (!msg.debate_statement) return;
+
+    const controls = document.getElementById('debate-host-controls');
+    const phaseLabel = document.getElementById('debate-phase-label');
+    const actions = document.getElementById('debate-host-actions');
+    const title = document.getElementById('debate-statement-display');
+    const content = document.getElementById('debate-center-content');
+
+    controls.style.display = '';
+    title.textContent = '"' + msg.debate_statement + '"';
+
+    const phase = msg.debate_phase;
+    const sideCounts = msg.debate_side_counts || { for: 0, against: 0 };
+
+    // Phase label
+    const phaseNames = {
+      side_selection: 'Phase 1: Side Selection',
+      arguments: 'Phase 2: Arguments',
+      ai_cleanup: 'Phase 3: AI Cleanup',
+      prep: 'Phase 4: Preparation',
+      live_debate: 'Phase 5: Live Debate',
+      ended: 'Debate Ended',
+    };
+    phaseLabel.textContent = (phaseNames[phase] || phase) +
+      ` — FOR: ${sideCounts.for} | AGAINST: ${sideCounts.against}`;
+
+    // Host action buttons per phase
+    actions.innerHTML = '';
+    if (phase === 'side_selection') {
+      actions.innerHTML = '<button class="btn btn-primary" onclick="debateCloseSelection()">🔒 Close Selection → Arguments</button>';
+    } else if (phase === 'arguments') {
+      actions.innerHTML = '<button class="btn btn-primary" onclick="debateNextPhase(\'ai_cleanup\')">Next → AI Cleanup</button>';
+    } else if (phase === 'ai_cleanup') {
+      actions.innerHTML = '<button class="btn btn-warn btn-ai" onclick="debateRunAI()">✨ Run AI Cleanup</button>' +
+        ' <button class="btn btn-primary" onclick="debateNextPhase(\'prep\')">Next → Preparation</button>';
+    } else if (phase === 'prep') {
+      const champions = msg.debate_champions || {};
+      const champInfo = Object.entries(champions).map(([s, n]) => `${s}: ${escDebate(n)}`).join(', ');
+      actions.innerHTML = (champInfo ? `<span style="color:var(--accent);font-size:.85rem;">🏆 ${champInfo}</span> ` : '') +
+        '<button class="btn btn-primary" onclick="debateNextPhase(\'live_debate\')">▶ Start Live Debate</button>';
+    } else if (phase === 'live_debate') {
+      actions.innerHTML = '<button class="btn btn-danger" onclick="debateNextPhase(\'ended\')">⏹ End Debate</button>';
+    }
+
+    // Center panel: dual-column arguments
+    const args = (msg.debate_arguments || []).filter(a => !a.merged_into);
+    const forArgs = args.filter(a => a.side === 'for');
+    const againstArgs = args.filter(a => a.side === 'against');
+    const mergedArgs = (msg.debate_arguments || []).filter(a => a.merged_into);
+
+    if (phase === 'side_selection') {
+      content.innerHTML = `<div style="text-align:center; padding:2rem; color:var(--muted);">
+        Waiting for participants to choose sides…<br>
+        <span style="font-size:1.5rem; margin-top:.5rem; display:block;">
+          👍 FOR: ${sideCounts.for} &nbsp;|&nbsp; 👎 AGAINST: ${sideCounts.against}
+        </span>
+      </div>`;
+    } else {
+      content.innerHTML = renderDebateDualColumn(againstArgs, forArgs, mergedArgs, msg.debate_champions, phase);
+    }
+  }
+
+  function renderDebateDualColumn(againstArgs, forArgs, mergedArgs, champions, phase) {
+    const renderArg = (a) => {
+      const aiClass = a.ai_generated ? ' debate-arg-ai' : '';
+      return `<div class="debate-arg${aiClass}" data-id="${a.id}">
+        <div class="debate-arg-header">
+          ${a.author_avatar ? `<img src="/static/avatars/${a.author_avatar}" class="debate-arg-avatar">` : ''}
+          <span class="debate-arg-author">${escDebate(a.author)}</span>
+          <span class="debate-arg-votes">▲ ${a.upvote_count}</span>
+        </div>
+        <div class="debate-arg-text">${escDebate(a.text)}</div>
+      </div>`;
+    };
+
+    const renderMerged = () => `<div class="debate-arg debate-arg-merged">
+      <span style="color:var(--muted);font-size:.8rem;">✨ duplicate, merged above</span>
+    </div>`;
+
+    const champFor = champions?.for ? `<div class="debate-champion">🏆 ${escDebate(champions.for)}</div>` : '';
+    const champAgainst = champions?.against ? `<div class="debate-champion">🏆 ${escDebate(champions.against)}</div>` : '';
+
+    // Show hints in prep/live_debate
+    let hints = '';
+    if (phase === 'prep' || phase === 'live_debate') {
+      hints = `<div class="debate-hints">
+        <div class="debate-hint">💡 In what context does this trade-off matter most?</div>
+        <div class="debate-hint">💡 What's the strongest counterargument?</div>
+        <div class="debate-hint">💡 Give specific examples from real projects</div>
+        <div class="debate-hint">💡 Present your strongest argument first</div>
+      </div>`;
+    }
+
+    // Count merged args per side
+    const mergedForCount = mergedArgs.filter(a => a.side === 'for').length;
+    const mergedAgainstCount = mergedArgs.filter(a => a.side === 'against').length;
+
+    return `<div class="debate-columns">
+      <div class="debate-col debate-col-against">
+        <h3 class="debate-col-header">👎 AGAINST</h3>
+        ${champAgainst}
+        ${againstArgs.map(renderArg).join('')}
+        ${Array(mergedAgainstCount).fill('').map(renderMerged).join('')}
+      </div>
+      <div class="debate-col debate-col-for">
+        <h3 class="debate-col-header">👍 FOR</h3>
+        ${champFor}
+        ${forArgs.map(renderArg).join('')}
+        ${Array(mergedForCount).fill('').map(renderMerged).join('')}
+      </div>
+    </div>${hints}`;
+  }

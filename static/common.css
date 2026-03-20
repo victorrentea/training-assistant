@@ -174,3 +174,33 @@
   color: var(--text-muted);
   text-align: right;
 }
+.header-link-btn {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 12px;
+  padding: .15rem .5rem;
+  font-size: .75rem;
+  cursor: pointer;
+}
+.header-link-btn:hover { border-color: var(--accent); color: var(--accent); }
+.modal-newtab-btn {
+  color: var(--text-muted);
+  text-decoration: none;
+  font-size: 1.1rem;
+  padding: 0 .3rem;
+  cursor: pointer;
+}
+.modal-newtab-btn:hover { color: var(--accent); }
+.notes-content {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  font-family: inherit;
+  font-size: .9rem;
+  line-height: 1.5;
+  color: var(--text);
+  overflow-y: auto;
+  flex: 1;
+  margin: 0;
+  padding: .5rem 0;
+}

@@ -74,6 +74,26 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
   }
 
 
+  let notesContent = '';
+
+  function updateNotes(content) {
+    notesContent = content || '';
+    const btn = document.getElementById('notes-btn');
+    if (btn) btn.style.display = notesContent ? '' : 'none';
+    const el = document.getElementById('notes-content');
+    if (el) el.textContent = notesContent;
+  }
+
+  function toggleNotesModal() {
+    const overlay = document.getElementById('notes-overlay');
+    if (overlay) overlay.classList.toggle('open');
+  }
+
+  function closeNotesModal() {
+    const overlay = document.getElementById('notes-overlay');
+    if (overlay) overlay.classList.remove('open');
+  }
+
   function updateSummary(points, updatedAt) {
     summaryPoints = points || [];
     summaryUpdatedAt = updatedAt;
@@ -91,7 +111,12 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
       if (timeEl) timeEl.textContent = '';
       return;
     }
-    list.innerHTML = summaryPoints.map(p => `<li>${escHtml(p)}</li>`).join('');
+    list.innerHTML = summaryPoints.map(p => {
+      const text = typeof p === 'string' ? p : p.text;
+      const source = typeof p === 'string' ? 'discussion' : (p.source || 'discussion');
+      const icon = source === 'notes' ? '✏️' : '💬';
+      return `<li>${icon} ${escHtml(text)}</li>`;
+    }).join('');
     if (timeEl && summaryUpdatedAt) {
       const d = new Date(summaryUpdatedAt);
       timeEl.textContent = 'Updated ' + d.toLocaleTimeString();
@@ -219,20 +244,20 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     const notifEl = document.getElementById('onboard-notif');
     if (nameEl && !nameEl.classList.contains('done') && (_suggestedName === null || myName !== _suggestedName)) {
       nameEl.classList.add('done');
-      nameEl.innerHTML = '☑ Click on your name to set it';
+      nameEl.querySelector('input[type=checkbox]').checked = true;
       nameEl.style.cursor = 'default';
       nameEl.onclick = null;
     }
     if (locEl && !locEl.classList.contains('done') && localStorage.getItem(LS_LOCATION_KEY)) {
       locEl.classList.add('done');
-      locEl.innerHTML = '☑ Share your location';
+      locEl.querySelector('input[type=checkbox]').checked = true;
       locEl.style.cursor = 'default';
       locEl.onclick = null;
     }
     const notifGranted = 'Notification' in window && Notification.permission === 'granted';
     if (notifEl && !notifEl.classList.contains('done') && notifGranted) {
       notifEl.classList.add('done');
-      notifEl.innerHTML = '☑ Enable notifications';
+      notifEl.querySelector('input[type=checkbox]').checked = true;
       notifEl.style.cursor = 'default';
       notifEl.onclick = null;
     }
@@ -346,6 +371,9 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
           if (_prevActivity !== 'wordcloud' && msg.current_activity === 'wordcloud') {
             notifyIfHidden('☁️ Word cloud is open', 'Tap to share your thoughts');
           }
+          if (_prevActivity !== 'debate' && msg.current_activity === 'debate') {
+            notifyIfHidden('⚔️ Debate started', 'Choose your side!');
+          }
           if (_prevActivity !== 'codereview' && msg.current_activity === 'codereview') {
             notifyIfHidden('📝 Code Review', 'Spot bugs and earn points!');
           }
@@ -409,6 +437,8 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
           renderWordCloudScreen(msg.wordcloud_words || {}, msg.wordcloud_topic || '');
         } else if (msg.current_activity === 'qa') {
           renderQAScreen(msg.qa_questions || []);
+        } else if (msg.current_activity === 'debate') {
+          renderDebateScreen(msg);
         } else if (msg.current_activity === 'codereview') {
           renderCodeReviewScreen(msg.codereview);
         } else {
@@ -420,6 +450,7 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
           renderContent(msg.vote_counts);
         }
         updateSummary(msg.summary_points, msg.summary_updated_at);
+        updateNotes(msg.notes_content);
         break;
       case 'vote_update':
         renderOptions(msg.vote_counts, msg.total_votes);
@@ -867,6 +898,149 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     // Q&A DOM is inside #content which gets replaced when switching activities
   }
 
+  // ── HTML escaping utility ──
+  function escDebate(str) {
+    const d = document.createElement('div');
+    d.textContent = str;
+    return d.innerHTML;
+  }
+
+  // ── Debate rendering ──
+  function renderDebateScreen(msg) {
+    const content = document.getElementById('content');
+    if (!content) return;
+    content.dataset.screen = 'debate';
+
+    const phase = msg.debate_phase;
+    const mySide = msg.debate_my_side;
+    const statement = msg.debate_statement || '';
+    const sideCounts = msg.debate_side_counts || { for: 0, against: 0 };
+    const args = (msg.debate_arguments || []).filter(a => !a.merged_into);
+    const champions = msg.debate_champions || {};
+
+    if (!statement) {
+      content.innerHTML = '<div class="debate-waiting">Waiting for debate to start…</div>';
+      return;
+    }
+
+    let html = `<div class="debate-statement">"${escDebate(statement)}"</div>`;
+
+    if (phase === 'side_selection') {
+      if (mySide) {
+        html += `<div class="debate-chosen">You chose: <strong>${mySide.toUpperCase()}</strong> ✓</div>`;
+        html += `<div class="debate-waiting">Waiting for others… FOR: ${sideCounts.for} | AGAINST: ${sideCounts.against}</div>`;
+      } else {
+        html += `<div class="debate-pick">
+          <button class="btn debate-btn-for" onclick="debatePickSide('for')">👍 FOR</button>
+          <button class="btn debate-btn-against" onclick="debatePickSide('against')">👎 AGAINST</button>
+        </div>`;
+      }
+    } else if (phase === 'arguments') {
+      html += renderDebateArgColumns(args, mySide, msg, false);
+      if (mySide) {
+        html += `<div class="debate-input-row">
+          <input id="debate-arg-input" type="text" maxlength="280" placeholder="Add an argument for your side…"
+            onkeydown="if(event.key==='Enter')debateSubmitArg()" />
+          <button class="btn btn-primary" onclick="debateSubmitArg()">↵</button>
+        </div>`;
+      }
+    } else if (phase === 'ai_cleanup') {
+      html += `<div class="debate-phase-info">AI is reviewing arguments…</div>`;
+      html += renderDebateArgColumns(args, mySide, msg, true);  // read-only
+    } else if (phase === 'prep') {
+      html += renderDebateArgColumns(args, mySide, msg, false);
+      html += renderDebateHints();
+      if (mySide && !champions[mySide]) {
+        html += `<button class="btn btn-warn debate-volunteer-btn" onclick="debateVolunteer()">🏆 I'll be our champion!</button>`;
+      } else if (mySide && champions[mySide]) {
+        const isMe = msg.debate_my_is_champion;
+        html += `<div class="debate-champion-info">${isMe ? '🏆 You are your team\'s champion!' : '🏆 Champion: ' + escDebate(champions[mySide])}</div>`;
+      }
+    } else if (phase === 'live_debate') {
+      html += renderDebateArgColumns(args, mySide, msg, true);  // read-only during live debate
+      html += renderDebateHints();
+      const champNames = Object.entries(champions).map(([s, n]) => `${s.toUpperCase()}: ${escDebate(n)}`).join(' vs ');
+      html += `<div class="debate-live-info">🎤 ${champNames}</div>`;
+    } else if (phase === 'ended') {
+      html += `<div class="debate-ended">Debate ended!</div>`;
+      html += renderDebateArgColumns(args, mySide, msg, true);
+    }
+
+    content.innerHTML = html;
+  }
+
+  function renderDebateArgColumns(args, mySide, msg, readOnly) {
+    const forArgs = args.filter(a => a.side === 'for');
+    const againstArgs = args.filter(a => a.side === 'against');
+    const mergedArgs = (msg.debate_arguments || []).filter(a => a.merged_into);
+    const mergedForCount = mergedArgs.filter(a => a.side === 'for').length;
+    const mergedAgainstCount = mergedArgs.filter(a => a.side === 'against').length;
+
+    const renderArg = (a) => {
+      const aiClass = a.ai_generated ? ' debate-arg-ai' : '';
+      const ownClass = a.is_own ? ' debate-arg-own' : '';
+      const upvotedClass = a.has_upvoted ? ' debate-arg-upvoted' : '';
+      const canUpvote = !readOnly && !a.is_own && !a.has_upvoted;
+      return `<div class="debate-arg${aiClass}${ownClass}${upvotedClass}" ${canUpvote ? `onclick="debateUpvote('${a.id}')"` : ''}>
+        <div class="debate-arg-header">
+          ${a.author_avatar ? `<img src="/static/avatars/${a.author_avatar}" class="debate-arg-avatar">` : ''}
+          <span class="debate-arg-author">${escDebate(a.author)}</span>
+          <span class="debate-arg-votes">▲ ${a.upvote_count}</span>
+        </div>
+        <div class="debate-arg-text">${escDebate(a.text)}</div>
+      </div>`;
+    };
+
+    const renderMerged = () => `<div class="debate-arg debate-arg-merged">
+      <span>✨ duplicate, merged above</span>
+    </div>`;
+
+    return `<div class="debate-columns">
+      <div class="debate-col debate-col-against">
+        <h3 class="debate-col-header">👎 AGAINST</h3>
+        ${againstArgs.map(renderArg).join('')}
+        ${Array(mergedAgainstCount).fill('').map(renderMerged).join('')}
+      </div>
+      <div class="debate-col debate-col-for">
+        <h3 class="debate-col-header">👍 FOR</h3>
+        ${forArgs.map(renderArg).join('')}
+        ${Array(mergedForCount).fill('').map(renderMerged).join('')}
+      </div>
+    </div>`;
+  }
+
+  function renderDebateHints() {
+    return `<div class="debate-hints">
+      <div class="debate-rules-title">📋 Debate Rules</div>
+      <div class="debate-hint">• Present your strongest argument first</div>
+      <div class="debate-hint">• Address the opposing argument directly</div>
+      <div class="debate-hint">• Give specific examples from real projects</div>
+      <div class="debate-hint">• In what context does this trade-off matter most?</div>
+    </div>`;
+  }
+
+  // ── Debate WS senders ──
+  function debatePickSide(side) {
+    if (ws) ws.send(JSON.stringify({ type: 'debate_pick_side', side }));
+  }
+
+  function debateSubmitArg() {
+    const input = document.getElementById('debate-arg-input');
+    if (!input) return;
+    const text = input.value.trim();
+    if (!text || !ws) return;
+    ws.send(JSON.stringify({ type: 'debate_argument', text }));
+    input.value = '';
+  }
+
+  function debateUpvote(argId) {
+    if (ws) ws.send(JSON.stringify({ type: 'debate_upvote', argument_id: argId }));
+  }
+
+  function debateVolunteer() {
+    if (ws) ws.send(JSON.stringify({ type: 'debate_volunteer' }));
+  }
+
   // ── Render ──
   function renderContent(voteCounts) {
     const el = document.getElementById('content');
@@ -882,13 +1056,13 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
         <p style="margin-top:.5rem;">Your answers and ideas will shape this session!</p>
         <ul id="onboarding-list" class="onboarding-checklist"${allDone ? ' style="opacity:1"' : ''}>
           <li id="onboard-name" class="onboarding-item${nameSet ? ' done' : ''}" onclick="${nameSet ? '' : 'startNameEdit()'}" style="cursor:${nameSet ? 'default' : 'pointer'}">
-            ${nameSet ? '☑' : '☐'} Click on your name to set it
+            <input type="checkbox" disabled ${nameSet ? 'checked' : ''}> Click on your name to set it
           </li>
           <li id="onboard-location" class="onboarding-item${locationSet ? ' done' : ''}" onclick="${locationSet ? '' : 'requestLocation()'}" style="cursor:${locationSet ? 'default' : 'pointer'}">
-            ${locationSet ? '☑' : '☐'} Share your location
+            <input type="checkbox" disabled ${locationSet ? 'checked' : ''}> Share your location
           </li>
           <li id="onboard-notif" class="onboarding-item${notifGranted ? ' done' : ''}" onclick="${notifGranted ? '' : 'requestNotificationPermission()'}" style="cursor:${notifGranted ? 'default' : 'pointer'}">
-            ${notifGranted ? '☑' : '☐'} Enable notifications
+            <input type="checkbox" disabled ${notifGranted ? 'checked' : ''}> Enable notifications
           </li>
         </ul>
       </div>`;
