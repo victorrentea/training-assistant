@@ -812,3 +812,10 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
   justify-content: center;
   align-items: center;
 }
+/* Conference mode: bright white center QR */
+.conference-center-qr {
+  background: #fff !important;
+}
+.conference-center-qr .qr-code {
+  opacity: 1 !important;
+}
