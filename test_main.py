@@ -898,15 +898,14 @@ class TestAvatarAssignment:
             avatars.append(a)
         assert len(set(avatars)) == len(LOTR_NAMES)  # all unique
 
-    def test_lotr_name_collision_avoided(self):
-        """If gandalf.png is taken, a second 'Gandalf' gets a different avatar."""
+    def test_lotr_name_always_gets_matching_avatar(self):
+        """LOTR names always get their character's avatar, even if duplicated."""
         from state import AppState, assign_avatar
         s = AppState()
         a1 = assign_avatar(s, "uuid-1", "Gandalf")
         a2 = assign_avatar(s, "uuid-2", "Gandalf")
         assert a1 == "gandalf.png"
-        assert a2 != a1  # different avatar
-        assert a2.endswith(".png")
+        assert a2 == "gandalf.png"  # same avatar — matches name
 
     def test_avatar_in_participant_state_on_connect(self, session):
         """Participant state includes my_avatar after set_name."""
