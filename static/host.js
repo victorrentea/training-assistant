@@ -1519,7 +1519,7 @@
     // Phase chapters (vertical list with launch buttons)
     const currentIdx = DEBATE_PHASES.findIndex(p => p.key === phase);
     const phaseActions = {
-      side_selection: `<button class="btn btn-warn btn-sm" onclick="debateForceAssign()">🎲 Force Assign</button>`,
+      side_selection: `<button class="btn btn-warn btn-sm" onclick="debateForceAssign()">🎲 Assign randomly</button>`,
       ai_cleanup: `<button class="btn btn-warn btn-sm btn-ai" onclick="debateRunAI()">✨ Run AI</button>`,
       prep: champions.for || champions.against
         ? `<span style="color:var(--accent);font-size:.8rem;">🏆 ${Object.entries(champions).map(([s,n]) => `${s==='for'?'👍':'👎'} ${escDebate(n)}`).join(', ')}</span>`
