@@ -109,11 +109,18 @@ h1 { display: none; }
   font-size: .95rem;
   padding: .3rem 0;
   transition: opacity .5s, color .3s;
+  color: var(--accent);
+  text-decoration: underline;
+  cursor: pointer;
+}
+.onboarding-item:hover:not(.done) {
+  opacity: .8;
 }
 .onboarding-item.done {
   color: var(--accent2);
   text-decoration: line-through;
   opacity: .5;
+  cursor: default;
 }
 .onboarding-item.hiding {
   opacity: 0;
