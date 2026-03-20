@@ -211,6 +211,10 @@
         }
       } else if (msg.type === 'timer') {
         _applyTimer(msg.seconds, msg.started_at);
+      } else if (msg.type === 'debate_timer') {
+        _debateSubTimer = { subPhaseIndex: msg.sub_phase_index, seconds: msg.seconds, startedAt: new Date(msg.started_at).getTime() };
+        if (_lastDebateMsg) renderDebateHost(_lastDebateMsg);
+        _startDebateCountdown();
       } else if (msg.type === 'quiz_status') {
         renderQuizStatus(msg.status, msg.message);
       } else if (msg.type === 'quiz_preview') {
@@ -1445,6 +1449,55 @@
     { key: 'ended',          num: 5, label: 'Ended' },
   ];
 
+  const DEBATE_SUB_PHASES = [
+    {key: 'opening_for',      label: 'Opening — FOR',      side: 'for',     defaultSeconds: 120},
+    {key: 'opening_against',  label: 'Opening — AGAINST',  side: 'against', defaultSeconds: 120},
+    {key: 'rebuttal_for',     label: 'Rebuttal — FOR',     side: 'for',     defaultSeconds: 90},
+    {key: 'rebuttal_against', label: 'Rebuttal — AGAINST', side: 'against', defaultSeconds: 90},
+    {key: 'free_discussion',  label: 'Free Discussion',    side: 'both',    defaultSeconds: 180},
+    {key: 'closing_for',      label: 'Closing — FOR',      side: 'for',     defaultSeconds: 60},
+    {key: 'closing_against',  label: 'Closing — AGAINST',  side: 'against', defaultSeconds: 60},
+  ];
+
+  let _debateSubTimer = null; // {subPhaseIndex, seconds, startedAt (ms)}
+  let _debateTimerInterval = null;
+  let _lastDebateMsg = null;
+
+  function _startDebateCountdown() {
+    clearInterval(_debateTimerInterval);
+    _debateTimerInterval = setInterval(() => {
+      const el = document.getElementById('debate-sub-countdown');
+      if (!el || !_debateSubTimer) { clearInterval(_debateTimerInterval); return; }
+      const elapsed = (Date.now() - _debateSubTimer.startedAt) / 1000;
+      const remaining = Math.max(0, _debateSubTimer.seconds - elapsed);
+      const mins = Math.floor(remaining / 60);
+      const secs = Math.ceil(remaining % 60);
+      if (remaining <= 0) {
+        el.textContent = "TIME'S UP";
+        el.className = 'debate-countdown-large debate-countdown-expired';
+        clearInterval(_debateTimerInterval);
+      } else {
+        el.textContent = mins > 0 ? `${mins}:${String(secs).padStart(2, '0')}` : `${secs}s`;
+        el.className = 'debate-countdown-large';
+        el.style.color = remaining <= 10 ? 'var(--danger)' : remaining <= 30 ? 'var(--warn)' : 'var(--accent)';
+      }
+    }, 200);
+  }
+
+  async function startDebateSubPhase(index) {
+    const input = document.getElementById(`debate-sub-dur-${index}`);
+    let seconds = DEBATE_SUB_PHASES[index].defaultSeconds;
+    if (input) {
+      const parts = input.value.split(':');
+      seconds = parts.length === 2 ? parseInt(parts[0],10) * 60 + parseInt(parts[1],10) : parseInt(parts[0],10);
+    }
+    await fetch('/api/debate/sub-phase-timer', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({sub_phase_index: index, seconds}),
+    });
+  }
+
   function renderDebatePhaseStepper(currentPhase) {
     const currentIdx = DEBATE_PHASES.findIndex(p => p.key === currentPhase);
     return '<div class="debate-stepper">' + DEBATE_PHASES.map((p, i) => {
@@ -1503,6 +1556,7 @@
   }
 
   function renderDebateHost(msg) {
+    _lastDebateMsg = msg;
     const chapters = document.getElementById('debate-phase-chapters');
     const title = document.getElementById('debate-statement-display');
     const content = document.getElementById('debate-center-content');
@@ -1511,6 +1565,18 @@
     const phase = msg.debate_phase || null;
     const sideCounts = msg.debate_side_counts || { for: 0, against: 0 };
     const champions = msg.debate_champions || {};
+    const subPhaseIdx = msg.debate_sub_phase_index;
+
+    // Reconstruct timer from state on reconnect
+    if (phase === 'live_debate' && msg.debate_sub_timer_started_at && !_debateSubTimer) {
+      _debateSubTimer = {
+        subPhaseIndex: subPhaseIdx,
+        seconds: msg.debate_sub_timer_seconds,
+        startedAt: new Date(msg.debate_sub_timer_started_at).getTime(),
+      };
+      const remaining = _debateSubTimer.seconds - (Date.now() - _debateSubTimer.startedAt) / 1000;
+      if (remaining > 0) _startDebateCountdown();
+    }
 
     // Update center panel title if debate is active
     if (title && debateActive) {
@@ -1567,6 +1633,42 @@
         actionHtml = `<div class="debate-chapter-extra">${phaseActions[p.key]}</div>`;
       }
 
+      // Render sub-phases for live_debate
+      if (isActive && p.key === 'live_debate') {
+        actionHtml += '<div class="debate-sub-phases">';
+        actionHtml += DEBATE_SUB_PHASES.map((sp, si) => {
+          const spDone = subPhaseIdx !== null && si < subPhaseIdx;
+          const spActive = subPhaseIdx !== null && si === subPhaseIdx;
+          const spNext = (subPhaseIdx === null && si === 0) || (subPhaseIdx !== null && si === subPhaseIdx + 1);
+
+          let spCls = 'debate-sub-phase';
+          if (spDone) spCls += ' debate-sub-phase-done';
+          else if (spActive) spCls += ' debate-sub-phase-active';
+          else if (spNext) spCls += ' debate-sub-phase-next';
+
+          const sideClass = `debate-sub-phase-side-${sp.side}`;
+          const mins = Math.floor(sp.defaultSeconds / 60);
+          const secs = sp.defaultSeconds % 60;
+          const durVal = mins > 0 && secs > 0 ? `${mins}:${String(secs).padStart(2,'0')}` : mins > 0 ? `${mins}:00` : `0:${String(secs).padStart(2,'0')}`;
+
+          let right = '';
+          if (spDone) {
+            right = '<span class="debate-sub-check">✓</span>';
+          } else if (spActive) {
+            right = '<span id="debate-sub-countdown-mini" style="font-weight:700;color:var(--accent);font-size:.8rem;"></span>';
+          } else if (spNext) {
+            right = `<input type="text" class="debate-sub-duration" id="debate-sub-dur-${si}" value="${durVal}" title="Duration (m:ss)" />` +
+              `<button class="btn btn-primary btn-sm" onclick="startDebateSubPhase(${si})" style="margin-left:.3rem;">▶</button>`;
+          }
+
+          return `<div class="${spCls}">
+            <span class="debate-sub-phase-label ${sideClass}">${sp.label}</span>
+            ${right}
+          </div>`;
+        }).join('');
+        actionHtml += '</div>';
+      }
+
       let launchBtn = '';
       if (isReady) {
         // Pre-launch: phase 1 gets a Launch button that starts the debate
@@ -1611,8 +1713,23 @@
       </div>`;
     } else {
       const phaseLabel = (DEBATE_PHASES.find(p => p.key === displayPhase) || {}).label || '';
-      content.innerHTML = `<div style="text-align:center; margin-bottom:.75rem; font-size:.95rem; color:var(--muted); text-transform:uppercase; letter-spacing:.08em;">${phaseLabel}</div>` +
+      let centerHeader = `<div style="text-align:center; margin-bottom:.75rem; font-size:.95rem; color:var(--muted); text-transform:uppercase; letter-spacing:.08em;">${phaseLabel}</div>`;
+
+      // Add sub-phase info + countdown for live_debate
+      if (phase === 'live_debate' && subPhaseIdx !== null) {
+        const sp = DEBATE_SUB_PHASES[subPhaseIdx];
+        const sideColor = sp.side === 'for' ? '#2ecc71' : sp.side === 'against' ? '#e74c3c' : 'var(--warn)';
+        centerHeader += `<div style="text-align:center; margin-bottom:.5rem;">
+          <div style="font-size:1.1rem; color:${sideColor}; font-weight:600;">${sp.label}</div>
+          <div id="debate-sub-countdown" class="debate-countdown-large"></div>
+        </div>`;
+      }
+
+      content.innerHTML = centerHeader +
         renderDebateDualColumn(againstArgs, forArgs, mergedArgs, msg.debate_champions, phase);
+
+      // Restart countdown rendering if timer is active
+      if (phase === 'live_debate' && _debateSubTimer) _startDebateCountdown();
     }
   }
 
