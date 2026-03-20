@@ -1590,9 +1590,9 @@
         <div class="debate-chapter-row">
           <span class="debate-chapter-num">${p.num}</span>
           <span class="debate-chapter-label">${p.label}</span>
+          ${actionHtml ? `<span class="debate-chapter-extra-inline">${actionHtml.replace(/<\/?div[^>]*>/g, '')}</span>` : ''}
           <span class="debate-chapter-action">${launchBtn}</span>
         </div>
-        ${actionHtml}
       </div>`;
     }).join('');
 
