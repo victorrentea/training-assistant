@@ -194,7 +194,7 @@ def test_load(server_url):
         assert poll_resp.status_code == 200, f"create_poll failed: {poll_resp.text}"
         correct_id = poll_resp.json()["poll"]["options"][0]["id"]  # opt0 is the "correct" answer
 
-        await asyncio.to_thread(lambda: _host(server_url, "post", "/api/poll/status", json={"open": True}))
+        await asyncio.to_thread(lambda: _host(server_url, "put", "/api/poll/status", json={"open": True}))
         poll_ready_event.set()
         print(f"✓ Poll opened — {n} participants voting...")
 
@@ -212,8 +212,8 @@ def test_load(server_url):
         print(f"✓ All {n} votes cast")
 
         # Phase 4: close poll and post correct answer → triggers scores broadcast
-        await asyncio.to_thread(lambda: _host(server_url, "post", "/api/poll/status", json={"open": False}))
-        await asyncio.to_thread(lambda: _host(server_url, "post", "/api/poll/correct", json={"correct_ids": [correct_id]}))
+        await asyncio.to_thread(lambda: _host(server_url, "put", "/api/poll/status", json={"open": False}))
+        await asyncio.to_thread(lambda: _host(server_url, "put", "/api/poll/correct", json={"correct_ids": [correct_id]}))
         print("✓ Poll closed, correct answer posted")
 
         # Phase 5: wait for all scores received
