@@ -253,7 +253,7 @@
     if (!badge) return;
     badge.style.cssText = 'cursor:pointer;';
     if (summaryPoints.length) {
-      badge.textContent = `Points (${summaryPoints.length})`;
+      badge.textContent = `Lessons (${summaryPoints.length})`;
       badge.className = 'badge connected';
       badge.title = `${summaryPoints.length} key points — click to view`;
     } else if (_summaryGenerating) {

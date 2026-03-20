@@ -154,6 +154,10 @@ async def force_assign():
 
     logger.info(f"Force-assigned {len(unassigned)} participants: {for_count} FOR, {against_count} AGAINST")
 
+    # Require at least 1 on each side
+    if for_count == 0 or against_count == 0:
+        raise HTTPException(400, "Need at least 1 participant on each side")
+
     # Auto-advance: all participants now have sides
     state.debate_phase = "arguments"
     logger.info("All participants assigned — auto-advancing to arguments phase")
