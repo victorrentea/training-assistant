@@ -1637,8 +1637,8 @@
     }
 
     // Update center panel title if debate is active
-    if (title && debateActive) {
-      title.innerHTML = escDebate(msg.debate_statement);
+    if (title) {
+      title.innerHTML = debateActive ? escDebate(msg.debate_statement) : '';
     }
 
     // Hide statement input once launched (shrink vertically upward), show reset button
@@ -1655,6 +1655,9 @@
         stmtWrapper.style.maxHeight = '200px';
         stmtWrapper.style.marginTop = '.75rem';
         stmtWrapper.style.padding = '';
+        // Clear the input so a new title can be entered
+        const input = document.getElementById('debate-statement-input');
+        if (input) input.value = '';
       }
     }
     if (resetWrapper) resetWrapper.style.display = debateActive ? '' : 'none';
@@ -1701,12 +1704,13 @@
           const subPhases = getDebateSubPhases(msg.debate_first_side);
           actionHtml += '<div class="debate-sub-phases">';
           // Determine which sub-phases are done/active/next
+          const anyTimerActive = !!msg.debate_sub_timer_started_at;
           let foundNext = false;
           actionHtml += subPhases.map((sp, si) => {
             const spDone = (subPhaseIdx !== null && si < subPhaseIdx) || (si === subPhaseIdx && !msg.debate_sub_timer_started_at);
             const spActive = subPhaseIdx !== null && si === subPhaseIdx && !!msg.debate_sub_timer_started_at;
             let spNext = false;
-            if (!foundNext && !spDone && !spActive) { spNext = true; foundNext = true; }
+            if (!foundNext && !spDone && !spActive && !anyTimerActive) { spNext = true; foundNext = true; }
 
             let spCls = 'debate-sub-phase';
             if (spDone) spCls += ' debate-sub-phase-done';
@@ -1714,6 +1718,7 @@
             else if (spNext) spCls += ' debate-sub-phase-next';
 
             const sideClass = `debate-sub-phase-side-${sp.side}`;
+            const sideIcon = sp.side === 'for' ? '👍' : '👎';
             const mins = Math.floor(sp.defaultSeconds / 60);
             const secs = sp.defaultSeconds % 60;
             const durVal = mins > 0 && secs > 0 ? `${mins}:${String(secs).padStart(2,'0')}` : mins > 0 ? `${mins}:00` : `0:${String(secs).padStart(2,'0')}`;
@@ -1729,7 +1734,7 @@
             }
 
             return `<div class="${spCls}">
-              <span class="debate-sub-phase-label ${sideClass}">${sp.label}</span>
+              <span class="debate-sub-phase-label ${sideClass}">${sideIcon} ${sp.label}</span>
               ${right}
             </div>`;
           }).join('');
@@ -1760,9 +1765,9 @@
         <div class="debate-chapter-row">
           <span class="debate-chapter-num">${p.num}</span>
           <span class="debate-chapter-label">${p.label}</span>
-          ${actionHtml ? `<span class="debate-chapter-extra-inline">${actionHtml.replace(/<\/?div[^>]*>/g, '')}</span>` : ''}
           <span class="debate-chapter-action">${launchBtn}</span>
         </div>
+        ${actionHtml}
       </div>`;
     }).join('');
 
@@ -1794,8 +1799,9 @@
           const sp = subPhases[subPhaseIdx];
           if (sp) {
             const sideColor = sp.side === 'for' ? '#2ecc71' : sp.side === 'against' ? '#e74c3c' : 'var(--warn)';
+            const sideIcon = sp.side === 'for' ? '👍' : '👎';
             centerHeader += `<div style="text-align:center; margin-bottom:.5rem;">
-              <div style="font-size:1.1rem; color:${sideColor}; font-weight:600;">${sp.label}</div>
+              <div style="font-size:1.1rem; color:${sideColor}; font-weight:600;">${sideIcon} ${sp.label}</div>
               <div id="debate-sub-countdown" class="debate-countdown-large"></div>
             </div>`;
           }

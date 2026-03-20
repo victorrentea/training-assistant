@@ -1097,8 +1097,9 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
       } else if (subIdx != null && subIdx >= 0 && subIdx < subPhases.length) {
         const sub = subPhases[subIdx];
         const sideClass = sub.side === 'for' ? 'debate-sub-phase-side-for' : sub.side === 'against' ? 'debate-sub-phase-side-against' : 'debate-sub-phase-side-both';
+        const sideIcon = sub.side === 'for' ? '👍' : '👎';
         html += `<div style="text-align:center; margin:.5rem 0;">
-          <span class="${sideClass}" style="font-weight:700; font-size:1.1rem;">${escDebate(sub.label)}</span>
+          <span class="${sideClass}" style="font-weight:700; font-size:1.1rem;">${sideIcon} ${escDebate(sub.label)}</span>
         </div>`;
         if (timerActive) {
           html += `<div id="debate-pax-countdown" class="debate-countdown-large"></div>`;
