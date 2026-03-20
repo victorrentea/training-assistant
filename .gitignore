@@ -20,6 +20,14 @@ daemon/.venv/
 /workshop_daemon.egg-info/top_level.txt
 /.deploy.log
 deploy-history.txt
+
+
+# Documentation build artifacts
+docs/**/*.png
+
+# Coverage data
+.coverage*
+
 static/version.js
 static/deploy-info.json
 

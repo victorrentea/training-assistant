@@ -113,6 +113,73 @@ class HostPage:
             }).join('\\n\\n');
         }""")
 
+    # ── Code Review ────────────────────────────────────────────────────────
+
+    def open_codereview_tab(self) -> None:
+        self._page.click("#tab-codereview")
+        expect(self._page.locator("#tab-content-codereview")).to_be_visible(timeout=5000)
+
+    def create_codereview(self, snippet: str, language: str | None = None) -> None:
+        """Fill code snippet, optionally set language, and start code review."""
+        self._page.fill("#codereview-snippet", snippet)
+        if language:
+            self._page.select_option("#codereview-language", label=language)
+        self._page.locator("#codereview-create .btn-success").click()
+        expect(self._page.locator("#codereview-active")).to_be_visible(timeout=5000)
+
+    def close_codereview_selection(self) -> None:
+        """End the selecting phase → transition to reviewing."""
+        self._page.click("#codereview-close-btn")
+        expect(self._page.locator("#codereview-phase-label")).to_contain_text("Review", timeout=5000)
+
+    def confirm_codereview_line(self, line_num: int) -> None:
+        """Select a line in the host code panel, then click the confirm button."""
+        # Use JS function to select the line (triggers side panel)
+        self._page.evaluate(f"selectCodeReviewLine({line_num})")
+        # Click the confirm button rendered in the side panel
+        confirm_btn = self._page.locator("#codereview-side-panel .btn-success")
+        expect(confirm_btn).to_be_visible(timeout=3000)
+        confirm_btn.click()
+
+    def clear_codereview(self) -> None:
+        self._page.click("#codereview-clear-btn")
+
+    def get_codereview_line_counts(self) -> dict[int, int]:
+        """Return {line_num: selection_count} from host code panel percentage badges."""
+        lines = self._page.locator("#codereview-code-panel .codereview-line").all()
+        result = {}
+        for i, line in enumerate(lines):
+            count_el = line.locator(".codereview-count")
+            if count_el.is_visible():
+                pct_text = count_el.inner_text().strip().replace("%", "")
+                if pct_text and int(pct_text) > 0:
+                    result[i + 1] = int(pct_text)
+        return result
+
+    def get_participant_scores(self) -> dict[str, int]:
+        """Return {name: score} from the participant list."""
+        rows = self._page.locator("#pax-list li").all()
+        result = {}
+        for row in rows:
+            name_el = row.locator(".pax-name")
+            name_text = name_el.inner_text().strip()
+            score_el = row.locator(".pax-score")
+            score = 0
+            if score_el.count() > 0 and score_el.is_visible():
+                score_text = score_el.inner_text().strip()
+                # Format: "⭐ X pts"
+                import re
+                m = re.search(r"(\d+)", score_text)
+                if m:
+                    score = int(m.group(1))
+            # Strip score text and emoji from name
+            name_clean = name_text.replace(score_el.inner_text().strip(), "").strip() if score_el.count() > 0 and score_el.is_visible() else name_text
+            # Remove avatar/emoji prefixes - just get the text content
+            result[name_clean] = score
+        return result
+
+    # ── Assertions ────────────────────────────────────────────────────────
+
     def expect_question_answered(self, question_id: str, answered: bool = True) -> None:
         card = self._page.locator(f'.qa-card[data-id="{question_id}"]')
         if answered:
