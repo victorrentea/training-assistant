@@ -16,6 +16,7 @@ body {
   display: inline-flex;
   align-items: center;
   box-sizing: border-box;
+  cursor: default;
 }
 .badge.connected { background: #48cfad22; color: var(--accent2); border: 1px solid var(--accent2); }
 .badge.disconnected { background: #ff6b6b22; color: var(--danger); border: 1px solid var(--danger); }
