@@ -79,7 +79,7 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
   const savedName = localStorage.getItem(LS_KEY);
   if (savedName) {
     nameInput.value = savedName;
-    join();   // auto-join
+    join();   // auto-join — permission requested via 🔔 button in ws.onopen (no user gesture here)
   } else {
     fetchSuggestedName().then(name => {
       suggestedName = name;
