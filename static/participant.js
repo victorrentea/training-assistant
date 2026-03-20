@@ -930,10 +930,9 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
   const DEBATE_PHASES = [
     { key: 'side_selection', num: 1, label: 'Pick Sides',   desc: 'Choose which side you want to defend.' },
     { key: 'arguments',      num: 2, label: 'Arguments',    desc: 'Submit arguments to support your side.' },
-    { key: 'ai_cleanup',     num: 3, label: 'AI Cleanup',   desc: 'AI is reviewing and merging duplicate arguments.' },
-    { key: 'prep',           num: 4, label: 'Preparation',  desc: 'Review arguments and volunteer as champion.' },
-    { key: 'live_debate',    num: 5, label: 'Live Debate',  desc: 'Champions are debating live!' },
-    { key: 'ended',          num: 6, label: 'Ended',        desc: 'The debate is over. Thanks for participating!' },
+    { key: 'prep',           num: 3, label: 'Preparation',  desc: 'Review arguments and volunteer as champion.' },
+    { key: 'live_debate',    num: 4, label: 'Live Debate',  desc: 'Champions are debating live!' },
+    { key: 'ended',          num: 5, label: 'Ended',        desc: 'The debate is over. Thanks for participating!' },
   ];
 
   function renderDebatePhaseStepper(currentPhase) {
@@ -952,6 +951,7 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     content.dataset.screen = 'debate';
 
     const phase = msg.debate_phase;
+    const displayPhase = phase === 'ai_cleanup' ? 'prep' : phase;
     const mySide = msg.debate_my_side;
     const statement = msg.debate_statement || '';
     const sideCounts = msg.debate_side_counts || { for: 0, against: 0 };
@@ -964,14 +964,15 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     }
 
     const sideIcon = mySide === 'for' ? '👍' : mySide === 'against' ? '👎' : '';
-    const phaseInfo = DEBATE_PHASES.find(p => p.key === phase) || { num: '?', label: phase, desc: '' };
+    const phaseInfo = DEBATE_PHASES.find(p => p.key === displayPhase) || { num: '?', label: displayPhase, desc: '' };
+    const phaseDesc = phase === 'ai_cleanup' ? '✨ AI is enriching arguments…' : phaseInfo.desc;
 
     let html = `<div class="debate-header">
       <div class="debate-title">⚔️ Debate</div>
       <div class="debate-phase-badge">Phase ${phaseInfo.num}: ${phaseInfo.label}</div>
-      <div class="debate-phase-desc">${phaseInfo.desc}</div>
+      <div class="debate-phase-desc">${phaseDesc}</div>
     </div>`;
-    html += renderDebatePhaseStepper(phase);
+    html += renderDebatePhaseStepper(displayPhase);
     html += `<div class="debate-statement-row">
       <span class="debate-side-count debate-side-against">👎 ${sideCounts.against}</span>
       <span class="debate-statement-text">"${escDebate(statement)}"</span>

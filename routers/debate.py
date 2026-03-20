@@ -143,19 +143,42 @@ async def advance_phase(body: PhaseAdvance):
     return {"ok": True, "phase": body.phase}
 
 
-@router.post("/api/debate/ai-cleanup", dependencies=[Depends(require_host_auth)])
-async def ai_cleanup():
-    if state.debate_phase != "ai_cleanup":
-        raise HTTPException(400, "Not in ai_cleanup phase")
+@router.post("/api/debate/end-arguments", dependencies=[Depends(require_host_auth)])
+async def end_arguments():
+    """End arguments phase, run AI cleanup, then advance to prep."""
+    if state.debate_phase != "arguments":
+        raise HTTPException(400, "Not in arguments phase")
+
+    # Transition to ai_cleanup (visible to participants as "AI is reviewing…")
+    state.debate_phase = "ai_cleanup"
+    logger.info("Arguments ended — running AI cleanup")
+    await broadcast_state()
+
+    # Run AI cleanup
+    try:
+        await _run_ai_cleanup()
+    except Exception as e:
+        logger.error(f"AI cleanup failed: {e}")
+        # Still advance to prep even if AI fails
+
+    # Advance to prep
+    state.debate_phase = "prep"
+    logger.info("AI cleanup done — advancing to prep")
+    await broadcast_state()
+    return {"ok": True}
+
+
+async def _run_ai_cleanup():
+    """Run AI cleanup on debate arguments. Raises on failure."""
     if not state.debate_arguments:
-        raise HTTPException(400, "No arguments to clean up")
+        return
 
     import os
     from anthropic import Anthropic
 
     api_key = os.environ.get("ANTHROPIC_API_KEY")
     if not api_key:
-        raise HTTPException(500, "ANTHROPIC_API_KEY not set")
+        raise RuntimeError("ANTHROPIC_API_KEY not set")
 
     # Build prompt
     for_args = [a for a in state.debate_arguments if a["side"] == "for" and not a.get("merged_into")]
@@ -224,5 +247,13 @@ Return JSON (no markdown fences):
         })
 
     logger.info(f"AI cleanup done: {len(result.get('merges', []))} merges, {len(result.get('new_arguments', []))} new args")
+
+
+@router.post("/api/debate/ai-cleanup", dependencies=[Depends(require_host_auth)])
+async def ai_cleanup():
+    """Legacy endpoint — runs AI cleanup standalone."""
+    if state.debate_phase != "ai_cleanup":
+        raise HTTPException(400, "Not in ai_cleanup phase")
+    await _run_ai_cleanup()
     await broadcast_state()
     return {"ok": True}
