@@ -334,7 +334,7 @@
     if (sessionFolder && sessionNotes) {
       el.textContent = '● Notes';
       el.className = 'badge connected';
-      el.title = `Click to view session notes\n${sessionFolder}`;
+      el.title = `${sessionFolder}/${sessionNotes}\nClick to view`;
     } else if (sessionFolder) {
       el.textContent = '● Notes';
       el.className = 'badge';
