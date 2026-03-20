@@ -173,6 +173,12 @@
       </div>
     </div>
 
+    <!-- Conference mode: QR code shown in left column -->
+    <div id="conference-qr" class="conference-qr-container">
+      <div id="conference-qr-code" style="background:#fff; padding:12px; border-radius:12px; display:inline-block;"></div>
+      <div style="margin-top:.5rem; font-size:.75rem; color:var(--text-muted);">Scan to join</div>
+    </div>
+
     <!-- Status badges — pinned to bottom of left column -->
     <div class="left-status-bar">
       <span id="ws-badge" class="badge disconnected">Server</span>
@@ -182,6 +188,8 @@
       <span id="summary-badge" class="badge disconnected" title="No key points yet — click to generate now" onclick="toggleSummaryModal()" style="cursor:pointer">Lessons</span>
       <span id="overlay-badge" class="badge disconnected" title="Emoji overlay app">❤️</span>
       <span id="token-badge" class="badge" title="No token data yet">$0.00</span>
+      <span id="conference-pax-count" class="badge connected" style="display:none" title="Connected participants">👥 0</span>
+      <span id="mode-badge" class="badge connected" title="Workshop mode — click to switch to Conference" onclick="toggleMode()" style="cursor:pointer">🎓</span>
     </div>
   </div>
 
