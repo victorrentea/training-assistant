@@ -13,6 +13,7 @@ public_router = APIRouter()
 class SummaryPoint(BaseModel):
     text: str
     source: str = "discussion"  # "notes" or "discussion"
+    time: str | None = None  # approximate HH:MM timestamp from transcript
 
 
 class SummaryUpdate(BaseModel):

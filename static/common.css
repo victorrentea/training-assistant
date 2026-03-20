@@ -178,6 +178,13 @@
   color: var(--text-muted);
   text-align: right;
 }
+.summary-ts {
+  font-size: .7rem;
+  color: var(--accent);
+  opacity: .7;
+  font-family: monospace;
+  margin-right: .3em;
+}
 .header-link-btn {
   background: none;
   border: 1px solid var(--border);
