@@ -854,3 +854,35 @@ def test_quiz_request_rejects_neither_field():
         json={},
         headers=_HOST_AUTH_HEADERS)
     assert resp.status_code == 422
+
+
+# ---------------------------------------------------------------------------
+# Summary Tests
+# ---------------------------------------------------------------------------
+
+def test_post_summary_updates_state():
+    """POST /api/summary stores bullets and broadcasts via full state."""
+    session = WorkshopSession()
+    # POST summary first (before connecting participant)
+    resp = session._client.post(
+        "/api/summary",
+        json={"points": ["Discussed TDD basics", "Covered mocking patterns"]},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["ok"] is True
+
+    # Participant connects and receives initial state with summary included
+    with session.participant("Alice") as alice:
+        assert "summary_points" in alice._last_state
+        assert len(alice._last_state["summary_points"]) == 2
+        assert alice._last_state["summary_points"][0] == "Discussed TDD basics"
+
+
+def test_post_summary_requires_auth():
+    """POST /api/summary without auth returns 401."""
+    client = TestClient(app)  # no auth headers
+    resp = client.post(
+        "/api/summary",
+        json={"points": ["Should fail"]},
+    )
+    assert resp.status_code == 401

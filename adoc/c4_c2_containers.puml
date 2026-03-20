@@ -19,7 +19,7 @@ System_Boundary(workshop, "Workshop Tool", $link="c4_c3_components.puml") {
 
     Container(host_spa, "Host SPA", "Vanilla JS (host's browser)", "Poll management, participant list,\nmap view (Leaflet), quiz preview.")
 
-    Container(quiz_daemon, "Quiz Daemon", "Python 3.12 CLI (host's machine)", "Long-polls backend for quiz requests.\nPosts AI-generated preview to backend.")
+    Container(quiz_daemon, "Quiz Daemon", "Python 3.12 CLI (host's machine)", "Long-polls backend for quiz requests.\nPosts AI-generated preview to backend.\nPeriodically synthesizes session key points.")
 }
 
 ' ── right: host + external AI ────────────────────────────────────
@@ -46,6 +46,6 @@ Rel(host_spa, nominatim, "Resolves GPS to city and map coordinates", "HTTPS REST
 Rel(host, quiz_daemon, "Starts/stops", "Local terminal")
 Rel(audio_hijack, quiz_daemon, "Transcript file", "Local file")
 Rel(quiz_daemon, caddy, "Polls for requests, posts preview", "HTTPS REST")
-Rel(quiz_daemon, claude_api, "Generates quiz from transcript", "HTTPS REST")
+Rel(quiz_daemon, claude_api, "Generates quiz + summary from transcript", "HTTPS REST")
 
 @enduml
