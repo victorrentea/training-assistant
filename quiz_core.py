@@ -152,6 +152,21 @@ def find_session_folder(today: date) -> tuple[Optional[Path], Optional[Path]]:
     return session_folder, session_notes
 
 
+def read_session_notes(config: Config) -> str:
+    """Read session notes file from config.session_notes. Returns '' on missing/failure."""
+    if not config.session_notes:
+        return ""
+    try:
+        raw = config.session_notes.read_text(encoding="utf-8", errors="replace")
+        if len(raw) > MAX_SESSION_NOTES_CHARS:
+            print(f"[session] Notes truncated from {len(raw):,} to {MAX_SESSION_NOTES_CHARS:,} chars", file=sys.stderr)
+            raw = raw[-MAX_SESSION_NOTES_CHARS:]
+        return raw.strip()
+    except OSError as exc:
+        print(f"[session] Could not read notes file {config.session_notes}: {exc}", file=sys.stderr)
+        return ""
+
+
 # ---------------------------------------------------------------------------
 # Transcription parsing
 # ---------------------------------------------------------------------------
@@ -368,7 +383,7 @@ def generate_quiz(text: str, config: Config) -> dict:
     
     prompt_content = text
     if config.topic:
-        prompt_content = f"TOPIC: {config.topic}\n\nTRANSCRIPT CONTEXT (if any):\n{text}"
+        prompt_content = f"TOPIC: {config.topic}\n\n{text}" if text else f"TOPIC: {config.topic}"
     
     print(f"[info] Requesting quiz for: {config.topic or 'Transcript (last ' + str(config.minutes) + ' min)'}...")
     
@@ -606,10 +621,16 @@ def open_poll(config: Config) -> None:
     _post_json(f"{config.server_url}/api/poll/status", {"open": True}, config.host_username, config.host_password)
 
 
-def post_status(status: str, message: str, config: Config) -> None:
+def post_status(status: str, message: str, config: Config,
+                session_folder: Optional[str] = None,
+                session_notes: Optional[str] = None) -> None:
+    payload: dict = {"status": status, "message": message}
+    if session_folder is not None or session_notes is not None:
+        payload["session_folder"] = session_folder
+        payload["session_notes"] = session_notes
     try:
         _post_json(f"{config.server_url}/api/quiz-status",
-                   {"status": status, "message": message},
+                   payload,
                    config.host_username, config.host_password)
     except RuntimeError as e:
         print(f"[warn] Could not post status: {e}", file=sys.stderr)
@@ -630,15 +651,30 @@ def auto_generate(minutes: int, config: Config) -> Optional[tuple]:
         return None
 
     text = extract_last_n_minutes(entries, minutes)
-    if not text:
-        post_status("error", "Extracted text is empty.", config)
+    notes = read_session_notes(config)
+
+    if not text and not notes:
+        post_status("error", "No transcript or session notes available.", config)
         return None
 
+    # Assemble combined prompt
+    parts = []
+    if notes:
+        parts.append(
+            "SESSION NOTES (trainer's written agenda/key points — treat as primary source):\n" + notes
+        )
+    if text:
+        parts.append(
+            f"TRANSCRIPT EXCERPT (last {minutes} min of live audio — use for context and recent topics):\n" + text
+        )
+    combined = "\n\n".join(parts)
+
     line_count = len([l for l in text.splitlines() if l.strip()])
-    post_status("generating", f"Sending {len(text):,} chars ({line_count} lines, last {minutes} min) to Claude…", config)
+    notes_info = f" + {len(notes):,} chars notes" if notes else ""
+    post_status("generating", f"Sending {len(text):,} chars ({line_count} lines, last {minutes} min){notes_info} to Claude…", config)
 
     try:
-        quiz = generate_quiz(text, config)
+        quiz = generate_quiz(combined, config)
     except RuntimeError as e:
         post_status("error", str(e), config)
         return None
@@ -657,15 +693,20 @@ def auto_generate(minutes: int, config: Config) -> Optional[tuple]:
         return None
 
     post_status("done", "✅ Question ready — review and fire from host panel.", config)
-    return quiz, text
+    return quiz, combined
 
 
 def auto_generate_topic(topic: str, config: Config) -> Optional[tuple]:
     """Generate a quiz from a topic using RAG. Returns (quiz, topic_context) or None."""
     post_status("generating", f"Generating question about '{topic}'…", config)
+    notes = read_session_notes(config)
+    notes_text = (
+        "SESSION NOTES (trainer's written agenda/key points — treat as primary source):\n" + notes
+        if notes else ""
+    )
     topic_config = replace(config, topic=topic)
     try:
-        quiz = generate_quiz("", topic_config)
+        quiz = generate_quiz(notes_text, topic_config)
     except RuntimeError as e:
         post_status("error", str(e), topic_config)
         return None
