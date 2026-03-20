@@ -43,6 +43,16 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     "🤔 Got a burning question? Type it in!",
     "⬆️ See a question you like? Give it an upvote!",
   ];
+  const _CR_TOASTS = [
+    "🐛 Hunt for bugs — spot an issue, earn points!",
+    "⚠️ Check edge cases — what happens with null, empty, or zero?",
+    "🔒 Think security — could this be exploited?",
+    "🧠 Sharpen your critical thinking — don't trust the happy path!",
+    "🎯 The more real issues you spot, the higher you score!",
+  ];
+  let _crToastIndex = 0;
+  let _crToastInterval = null;
+  let _crToastTimeout = null;
   let _qaToastIndex = 0;
   let _qaToastInterval = null;
   let _qaToastTimeout = null;
@@ -337,6 +347,9 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
           if (_prevActivity !== 'wordcloud' && msg.current_activity === 'wordcloud') {
             notifyIfHidden('☁️ Word cloud is open', 'Tap to share your thoughts');
           }
+          if (_prevActivity !== 'codereview' && msg.current_activity === 'codereview') {
+            notifyIfHidden('📝 Code Review', 'Spot bugs and earn points!');
+          }
           _prevPollActive = msg.poll_active;
           _prevActivity   = msg.current_activity;
         }
@@ -381,6 +394,7 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
           if (content) content.dataset.screen = '';
           myWords = [];
           renderQACleanup();
+          _stopCRToasts();
           renderContent(msg.vote_counts);
         }
         updateSummary(msg.summary_points, msg.summary_updated_at);
@@ -716,6 +730,31 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     if (el) el.classList.remove('visible');
   }
 
+  // ── Code Review toasts ──
+  function _showCRToast() {
+    const el = document.getElementById('cr-toast');
+    if (!el) return;
+    el.textContent = _CR_TOASTS[_crToastIndex % _CR_TOASTS.length];
+    _crToastIndex++;
+    el.classList.add('visible');
+    clearTimeout(_crToastTimeout);
+    _crToastTimeout = setTimeout(() => el.classList.remove('visible'), 4400);
+  }
+
+  function _startCRToasts() {
+    _stopCRToasts();
+    _showCRToast();
+    _crToastInterval = setInterval(_showCRToast, 15000);
+  }
+
+  function _stopCRToasts() {
+    clearInterval(_crToastInterval);
+    clearTimeout(_crToastTimeout);
+    _crToastInterval = null;
+    const el = document.getElementById('cr-toast');
+    if (el) el.classList.remove('visible');
+  }
+
   function renderQAScreen(questions) {
     const content = document.getElementById('content');
     if (!content) return;
@@ -1039,7 +1078,10 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
 
     let html = '<div class="codereview-screen">';
     html += '<div class="codereview-header">📝 Code Review</div>';
-    html += `<div class="codereview-subtitle">${isSelecting ? 'Click on lines that contain issues' : 'Selection closed — reviewing results'}</div>`;
+    html += `<div class="codereview-subtitle">${isSelecting ? 'Spot bugs, edge cases & security issues' : 'Selection closed — reviewing results'}</div>`;
+    if (isSelecting) {
+      html += '<div id="cr-toast" class="qa-toast"></div>';
+    }
 
     html += '<div class="codereview-viewer">';
     lines.forEach((lineText, i) => {
@@ -1108,6 +1150,12 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
           el.innerHTML = highlightedLines[i] || ' ';
         }
       });
+    }
+
+    if (isSelecting) {
+      _startCRToasts();
+    } else {
+      _stopCRToasts();
     }
   }
 
