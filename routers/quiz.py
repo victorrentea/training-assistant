@@ -4,6 +4,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, model_validator
 
 from messaging import broadcast
+from quiz_core import DEFAULT_TRANSCRIPT_MINUTES
 from state import state
 
 router = APIRouter()
@@ -46,7 +47,7 @@ async def request_quiz(body: QuizRequest):
         state.quiz_request = {"minutes": None, "topic": body.topic}
         msg = f"Waiting for daemon (topic: {body.topic})…"
     else:
-        minutes = body.minutes or 30
+        minutes = body.minutes or DEFAULT_TRANSCRIPT_MINUTES
         state.quiz_request = {"minutes": minutes, "topic": None}
         msg = f"Waiting for daemon (last {minutes} min)…"
     state.quiz_status = {"status": "requested", "message": msg}

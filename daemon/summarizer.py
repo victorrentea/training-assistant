@@ -15,37 +15,38 @@ import anthropic
 
 from quiz_core import (
     Config,
+    DEFAULT_TRANSCRIPT_MINUTES,
     load_transcription_files,
     extract_last_n_minutes,
     read_session_notes,
 )
 
 SUMMARY_INTERVAL_SECONDS = 5 * 60  # 5 minutes
-SUMMARY_TRANSCRIPT_MINUTES = 30
 
 _SUMMARY_SYSTEM_PROMPT = """\
-You are a workshop summarizer. You receive the transcript of the last portion of a live technical workshop, \
-optionally session notes (trainer's written agenda), and optionally a list of key points previously identified.
+You are a technical workshop summarizer. You extract high-density takeaways from a live session.
 
-Your job is to produce an updated list of key discussion points — concise bullets that capture \
-what was discussed, decided, or demonstrated.
+Input: transcript excerpt, optionally trainer's session notes, optionally previous key points.
 
-Rules:
-- Each bullet should be ONE concise sentence (max 15 words).
-- Keep bullets in chronological order of when the topic was discussed.
-- If existing bullets are provided, preserve ones that are still relevant, update ones that evolved, \
-and add new ones for newly discussed topics.
-- Remove bullets that are no longer relevant (e.g., a topic that was briefly mentioned but moved on from).
-- Aim for 5-15 bullets total. Fewer is better if the session is short.
-- Ignore transcription noise, filler words, and off-topic chatter.
-- Focus on technical content, decisions, and key takeaways.
-- For each bullet, indicate the source:
-  - "notes" if the point comes primarily from the SESSION NOTES (trainer's agenda/material)
-  - "discussion" if the point comes primarily from the TRANSCRIPT (what was actually said)
+Output rules:
+- Each bullet: ONE actionable or factual technical statement (max 15 words).
+- Write like a cheat-sheet: name patterns, tools, trade-offs, rules-of-thumb, commands, gotchas.
+- GOOD: "Extract Method refactoring reduces cyclomatic complexity per function"
+- GOOD: "@Transactional on private methods is silently ignored by Spring AOP"
+- BAD: "Participants shared experiences about refactoring" (vague, no knowledge)
+- BAD: "Session ended with informal discussion" (filler, no takeaway)
+- BAD: "The trainer demonstrated an interesting approach" (meta-commentary)
+- Never describe what happened socially — only capture WHAT was taught or concluded.
+- Chronological order. 5-15 bullets. Fewer is better if session is short.
+- Preserve still-relevant existing bullets, update evolved ones, drop stale ones.
+- Ignore transcription noise, filler, off-topic chatter.
+- For each bullet, indicate source:
+  - "notes" if it comes primarily from SESSION NOTES (trainer's agenda/material)
+  - "discussion" if it comes primarily from TRANSCRIPT (what was actually said)
 
 Return ONLY a JSON array of objects. No markdown, no explanation.
-Example: [{"text": "Introduced TDD red-green-refactor cycle", "source": "discussion"}, \
-{"text": "Planned exercise on mocking patterns", "source": "notes"}]
+Example: [{"text": "Outbox pattern decouples DB writes from message publishing", "source": "discussion"}, \
+{"text": "Hands-on: implement Circuit Breaker with Resilience4j", "source": "notes"}]
 """
 
 
@@ -66,7 +67,7 @@ def generate_summary(
     if not entries:
         return None
 
-    text = extract_last_n_minutes(entries, SUMMARY_TRANSCRIPT_MINUTES)
+    text = extract_last_n_minutes(entries, DEFAULT_TRANSCRIPT_MINUTES)
     if not text:
         return None
 
@@ -79,7 +80,7 @@ def generate_summary(
         parts.append(f"SESSION NOTES (trainer's agenda):\n{notes}\n")
     if existing_points:
         parts.append(f"EXISTING KEY POINTS:\n{json.dumps(existing_points, indent=2)}\n")
-    parts.append(f"TRANSCRIPT (last {SUMMARY_TRANSCRIPT_MINUTES} minutes):\n{text}")
+    parts.append(f"TRANSCRIPT (last {DEFAULT_TRANSCRIPT_MINUTES} minutes):\n{text}")
 
     user_message = "\n---\n".join(parts)
 

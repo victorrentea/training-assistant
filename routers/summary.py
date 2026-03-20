@@ -50,12 +50,14 @@ async def get_notes():
 
 class TranscriptStatus(BaseModel):
     line_count: int
+    total_lines: int = 0
     latest_ts: str | None = None
 
 
 @router.post("/api/transcript-status")
 async def update_transcript_status(body: TranscriptStatus):
     state.transcript_line_count = body.line_count
+    state.transcript_total_lines = body.total_lines
     state.transcript_latest_ts = body.latest_ts
     await broadcast_state()
     return {"ok": True}

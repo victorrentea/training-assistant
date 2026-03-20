@@ -124,6 +124,21 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     }
   }
 
+  function downloadKeyPoints() {
+    if (!summaryPoints.length) return;
+    const lines = summaryPoints.map(p => {
+      const text = typeof p === 'string' ? p : p.text;
+      return '• ' + text;
+    });
+    const content = 'Key Points\n' + '='.repeat(10) + '\n\n' + lines.join('\n');
+    const blob = new Blob([content], { type: 'text/plain' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `key-points-${new Date().toISOString().slice(0, 10)}.txt`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
   function toggleSummaryModal() {
     const overlay = document.getElementById('summary-overlay');
     if (overlay) overlay.classList.toggle('open');
@@ -504,7 +519,7 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
   }
 
   function updateParticipantCount(n) {
-    document.getElementById('pax-count').textContent = `👥 ${n} participant${n !== 1 ? 's' : ''}`;
+    document.getElementById('pax-count').textContent = `👥 ${n}`;
   }
 
   function updateHostDot(connected) {
@@ -912,12 +927,31 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
   }
 
   // ── Debate rendering ──
+  const DEBATE_PHASES = [
+    { key: 'side_selection', num: 1, label: 'Pick Sides',   desc: 'Choose which side you want to defend.' },
+    { key: 'arguments',      num: 2, label: 'Arguments',    desc: 'Submit arguments to support your side.' },
+    { key: 'prep',           num: 3, label: 'Preparation',  desc: 'Review arguments and volunteer as champion.' },
+    { key: 'live_debate',    num: 4, label: 'Live Debate',  desc: 'Champions are debating live!' },
+    { key: 'ended',          num: 5, label: 'Ended',        desc: 'The debate is over. Thanks for participating!' },
+  ];
+
+  function renderDebatePhaseStepper(currentPhase) {
+    const currentIdx = DEBATE_PHASES.findIndex(p => p.key === currentPhase);
+    return '<div class="debate-stepper">' + DEBATE_PHASES.map((p, i) => {
+      let cls = 'debate-step';
+      if (i < currentIdx) cls += ' debate-step-done';
+      else if (i === currentIdx) cls += ' debate-step-active';
+      return `<div class="${cls}"><span class="debate-step-num">${p.num}</span><span class="debate-step-label">${p.label}</span></div>`;
+    }).join('<span class="debate-step-sep">›</span>') + '</div>';
+  }
+
   function renderDebateScreen(msg) {
     const content = document.getElementById('content');
     if (!content) return;
     content.dataset.screen = 'debate';
 
     const phase = msg.debate_phase;
+    const displayPhase = phase === 'ai_cleanup' ? 'prep' : phase;
     const mySide = msg.debate_my_side;
     const statement = msg.debate_statement || '';
     const sideCounts = msg.debate_side_counts || { for: 0, against: 0 };
@@ -930,7 +964,16 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     }
 
     const sideIcon = mySide === 'for' ? '👍' : mySide === 'against' ? '👎' : '';
-    let html = `<div class="debate-statement-row">
+    const phaseInfo = DEBATE_PHASES.find(p => p.key === displayPhase) || { num: '?', label: displayPhase, desc: '' };
+    const phaseDesc = phase === 'ai_cleanup' ? '✨ AI is enriching arguments…' : phaseInfo.desc;
+
+    let html = `<div class="debate-header">
+      <div class="debate-title">⚔️ Debate</div>
+      <div class="debate-phase-badge">Phase ${phaseInfo.num}: ${phaseInfo.label}</div>
+      <div class="debate-phase-desc">${phaseDesc}</div>
+    </div>`;
+    html += renderDebatePhaseStepper(displayPhase);
+    html += `<div class="debate-statement-row">
       <span class="debate-side-count debate-side-against">👎 ${sideCounts.against}</span>
       <span class="debate-statement-text">"${escDebate(statement)}"</span>
       <span class="debate-side-count debate-side-for">${sideCounts.for} 👍</span>
@@ -953,16 +996,16 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     } else if (phase === 'arguments') {
       html += renderDebateArgColumns(args, mySide, msg, false);
       if (mySide) {
+        const placeholder = mySide === 'for'
+          ? 'Add an argument for 👍…'
+          : 'Add an argument against 👎…';
         html += `<div class="debate-input-row">
-          <input id="debate-arg-input" type="text" maxlength="280" placeholder="Add an argument for your side…"
+          <input id="debate-arg-input" type="text" maxlength="280" placeholder="${placeholder}"
             onkeydown="if(event.key==='Enter')debateSubmitArg()" />
           <button class="btn btn-primary" onclick="debateSubmitArg()">↵</button>
         </div>`;
       }
-    } else if (phase === 'ai_cleanup') {
-      html += `<div class="debate-phase-info">AI is reviewing arguments…</div>`;
-      html += renderDebateArgColumns(args, mySide, msg, true);  // read-only
-    } else if (phase === 'prep') {
+    } else if (phase === 'ai_cleanup' || phase === 'prep') {
       html += renderDebateArgColumns(args, mySide, msg, false);
       html += renderDebateHints();
       if (mySide && !champions[mySide]) {
@@ -1010,14 +1053,15 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
       <span>✨ duplicate, merged above</span>
     </div>`;
 
+    const forHighlight = mySide === 'for' ? ' debate-col-mine' : '';
+    const againstHighlight = mySide === 'against' ? ' debate-col-mine' : '';
+
     return `<div class="debate-columns">
-      <div class="debate-col debate-col-against">
-        <h3 class="debate-col-header">👎</h3>
+      <div class="debate-col debate-col-against${againstHighlight}">
         ${againstArgs.map(renderArg).join('')}
         ${Array(mergedAgainstCount).fill('').map(renderMerged).join('')}
       </div>
-      <div class="debate-col debate-col-for">
-        <h3 class="debate-col-header">👍</h3>
+      <div class="debate-col debate-col-for${forHighlight}">
         ${forArgs.map(renderArg).join('')}
         ${Array(mergedForCount).fill('').map(renderMerged).join('')}
       </div>

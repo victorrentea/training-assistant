@@ -183,6 +183,11 @@ async def websocket_endpoint(websocket: WebSocket, participant_id: str):
                         state.debate_auto_assigned.update(newly)
                         logger.info(f"Auto-assigned {len(newly)} participants (≥50% picked)")
 
+                    # Auto-advance if all participants now have sides
+                    if all(p in state.debate_sides for p in all_pids):
+                        state.debate_phase = "arguments"
+                        logger.info("All participants assigned — auto-advancing to arguments phase")
+
                     await broadcast_state()
 
             elif msg_type == "debate_argument":
