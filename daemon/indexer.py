@@ -8,6 +8,7 @@ import json
 import sys
 import time
 import threading
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 from daemon.rag import _get_collection, _get_embedder, COLLECTION_NAME
@@ -264,6 +265,9 @@ def _upsert_file_if_needed(path: Path, folder: Path, manifest_files: dict[str, s
     return False
 
 
+MAX_INDEX_THREADS = 4
+
+
 def index_all(folder: Path) -> None:
     files = _iter_supported_files(folder)
     manifest_files = _load_manifest(folder)
@@ -276,14 +280,51 @@ def index_all(folder: Path) -> None:
         deindex_file(source_key)
         manifest_files.pop(source_key, None)
 
-    indexed_count = 0
-    skipped_count = 0
+    # Determine which files actually need indexing (hash differs or missing)
+    files_to_index = []
+    files_unchanged = []
     for f in files:
-        changed = _upsert_file_if_needed(f, folder, manifest_files)
-        if changed:
-            indexed_count += 1
+        source_key = str(f.relative_to(folder))
+        new_hash = _hash_file(f)
+        old_hash = manifest_files.get(source_key)
+        if old_hash == new_hash:
+            files_unchanged.append(f)
         else:
-            skipped_count += 1
+            files_to_index.append((f, source_key, new_hash, old_hash))
+
+    skipped_count = len(files_unchanged)
+    total_to_index = len(files_to_index)
+
+    if total_to_index > 0:
+        print(f"[indexer] {total_to_index} files to index, {skipped_count} unchanged", flush=True)
+
+    indexed_count = 0
+    manifest_lock = threading.Lock()
+
+    def _index_one(item):
+        """Index a single file. Returns (source_key, new_hash, success)."""
+        f, source_key, new_hash, old_hash = item
+        if old_hash is not None:
+            deindex_file(source_key)
+        ok = index_file(f, folder)
+        return source_key, new_hash, old_hash, ok
+
+    if total_to_index > 0:
+        workers = min(MAX_INDEX_THREADS, total_to_index)
+        with ThreadPoolExecutor(max_workers=workers, thread_name_prefix="idx") as pool:
+            futures = {pool.submit(_index_one, item): item for item in files_to_index}
+            done_count = 0
+            for future in as_completed(futures):
+                source_key, new_hash, old_hash, ok = future.result()
+                done_count += 1
+                with manifest_lock:
+                    if ok:
+                        manifest_files[source_key] = new_hash
+                        indexed_count += 1
+                    elif old_hash is None:
+                        manifest_files.pop(source_key, None)
+                pct = done_count * 100 // total_to_index
+                print(f"[indexer] Progress: {done_count}/{total_to_index} files ({pct}%)", flush=True)
 
     _save_manifest(folder, manifest_files)
     print(
