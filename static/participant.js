@@ -209,13 +209,12 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     document.getElementById('name-edit-wrap').style.display = 'none';
   }
 
-  document.getElementById('name-edit-ok').addEventListener('click', confirmNameEdit);
+  document.getElementById('name-edit-input').addEventListener('blur', confirmNameEdit);
   document.getElementById('name-edit-input').addEventListener('keydown', e => {
-    if (e.key === 'Enter') confirmNameEdit();
+    if (e.key === 'Enter') document.getElementById('name-edit-input').blur();
     if (e.key === 'Escape') {
-        document.getElementById('display-name').style.display = '';
-        document.getElementById('edit-name-btn').style.display = '';
-        document.getElementById('name-edit-wrap').style.display = 'none';
+        document.getElementById('name-edit-input').value = myName; // revert
+        document.getElementById('name-edit-input').blur();
     }
   });
 
