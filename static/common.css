@@ -325,8 +325,9 @@
   margin-right: .4rem;
 }
 .btn-sm {
-  padding: .2rem .6rem;
+  padding: 0 .6rem;
   font-size: .75rem;
+  height: 26px;
 }
 
 /* ── Debate Sub-Phases ── */
@@ -384,8 +385,8 @@ input[type=text].debate-sub-duration {
   border-radius: 4px;
   text-align: center;
   font-size: .75rem;
-  padding: .15rem .2rem;
-  height: 1.4rem;
+  padding: 0 .2rem;
+  height: 26px;
   flex: none;
   box-sizing: content-box;
 }
