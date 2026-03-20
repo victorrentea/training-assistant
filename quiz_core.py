@@ -464,9 +464,17 @@ def refine_quiz(quiz: dict, target: str, original_text: str, config: Config) -> 
         letter = chr(65 + idx)
         refine_prompt = _REFINE_OPTION_PROMPT.format(letter=letter, old_text=old_text)
 
+    # Truncate transcript to save tokens — the quiz JSON already captures the key context
+    REFINE_CONTEXT_CHARS = 5_000
+    if len(original_text) > REFINE_CONTEXT_CHARS:
+        truncated = original_text[-REFINE_CONTEXT_CHARS:]
+        context_note = f"[Transcript context — last {len(truncated)} chars of {len(original_text)} total]\n{truncated}"
+    else:
+        context_note = original_text
+
     # Multi-turn: transcript → first generation → refine request
     messages = [
-        {"role": "user", "content": original_text},
+        {"role": "user", "content": context_note},
         {"role": "assistant", "content": json.dumps(quiz)},
         {"role": "user", "content": refine_prompt},
     ]
