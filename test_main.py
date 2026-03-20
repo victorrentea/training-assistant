@@ -952,6 +952,24 @@ def test_post_summary_updates_state():
         assert alice._last_state["summary_points"][1]["source"] == "notes"
 
 
+def test_post_summary_with_timestamps():
+    """POST /api/summary with time fields stores and broadcasts them."""
+    session = WorkshopSession()
+    resp = session._client.post(
+        "/api/summary",
+        json={"points": [
+            {"text": "TDD basics", "source": "discussion", "time": "10:15"},
+            {"text": "Mocking patterns", "source": "notes"},
+        ]},
+    )
+    assert resp.status_code == 200
+
+    with session.participant("Alice") as alice:
+        pts = alice._last_state["summary_points"]
+        assert pts[0]["time"] == "10:15"
+        assert pts[1].get("time") is None
+
+
 def test_post_summary_requires_auth():
     """POST /api/summary without auth returns 401."""
     client = TestClient(app)  # no auth headers
