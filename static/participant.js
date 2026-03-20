@@ -504,7 +504,7 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
   }
 
   function updateParticipantCount(n) {
-    document.getElementById('pax-count').textContent = `👥 ${n} participant${n !== 1 ? 's' : ''}`;
+    document.getElementById('pax-count').textContent = `👥 ${n}`;
   }
 
   function updateHostDot(connected) {
