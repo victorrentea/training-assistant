@@ -707,7 +707,7 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
         if (isCorrect) resultIcon = `<span class="result-icon">✅</span>`;
         else if (wasVoted) resultIcon = `<span class="result-icon">❌</span>`;
       }
-      const focused = i === focusedOptionIndex ? 'focused' : '';
+      const focused = idx === focusedOptionIndex ? 'focused' : '';
       const checkbox = multi ? `<span class="multi-check">${isSelected ? '☑' : '☐'}</span> ` : '';
       return `
         <button class="option-btn ${selected} ${focused}" ${disabled} onclick="castVote('${opt.id}')">
