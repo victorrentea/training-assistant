@@ -116,7 +116,6 @@
       <div style="margin-top:.75rem;">
         <textarea id="debate-statement-input" rows="2" maxlength="200" placeholder="Enter debate statement…"
           style="width:100%;padding:.5rem .75rem;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:.9rem;resize:vertical;font-family:inherit;">Microservices > Monoliths</textarea>
-        <button id="debate-launch-btn" class="btn btn-primary" onclick="launchDebate()" style="margin-top:.35rem; background:var(--action);">⚔️ Launch Debate</button>
       </div>
       <div id="debate-phase-chapters" style="margin-top:.75rem;"></div>
     </div>
@@ -204,8 +203,10 @@
     </div>
     <!-- Debate center panel -->
     <div id="center-debate" class="center-panel" style="display:none;">
-      <h2 id="debate-center-title" style="margin:0 0 .5rem; font-size:.95rem; color:var(--muted); text-transform:uppercase; letter-spacing:.08em;">⚔️ Debate</h2>
-      <div id="debate-statement-display" style="font-size:1.1rem; color:var(--text); margin-bottom:.75rem; font-style:italic;"></div>
+      <h2 id="debate-center-title" style="margin:0 0 .75rem; font-size:.95rem; color:var(--muted); letter-spacing:.08em;">
+        <span style="text-transform:uppercase;">⚔️ Debate</span>
+        <span id="debate-statement-display" style="font-size:1.05rem; color:var(--text); font-style:italic; margin-left:.5rem;"></span>
+      </h2>
       <div id="debate-center-content"></div>
     </div>
     <!-- Code Review center panel -->
