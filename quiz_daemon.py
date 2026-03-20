@@ -31,6 +31,7 @@ from daemon.transcript_timestamps import (
 from quiz_core import (
     config_from_env, find_session_folder, auto_generate, auto_generate_topic, auto_refine,
     post_status, _get_json, _post_json, DAEMON_POLL_INTERVAL, read_session_notes,
+    load_transcription_files,
 )
 from daemon.summarizer import generate_summary, SUMMARY_INTERVAL_SECONDS
 
@@ -218,6 +219,7 @@ def run() -> None:
     last_detected_date: date | None = None
     last_heartbeat_at = 0.0
     last_session_check_at = 0.0
+    last_transcript_stats_at = 0.0
     # Summary state
     summary_points: list[dict] = []
     last_summary_at = 0.0  # monotonic time of last summary run
@@ -316,6 +318,34 @@ def run() -> None:
                         last_quiz = updated
                 else:
                     post_status("error", "No conversation context — please generate a question first.", config)
+
+            # ── Push transcript stats every 10s ──
+            if now - last_transcript_stats_at >= 10.0:
+                last_transcript_stats_at = now
+                try:
+                    entries = load_transcription_files(config.folder)
+                    timed = [(ts, txt) for ts, txt in entries if ts is not None]
+                    if timed:
+                        max_ts = max(ts for ts, _ in timed)
+                        cutoff = max_ts - 30 * 60
+                        recent = [(ts, txt) for ts, txt in timed if ts >= cutoff and txt.strip()]
+                        line_count = len(recent)
+                        # Convert max_ts (seconds from midnight) to today's ISO time
+                        h, rem = divmod(int(max_ts), 3600)
+                        m, s = divmod(rem, 60)
+                        latest_time = f"{h:02d}:{m:02d}:{s:02d}"
+                    else:
+                        line_count = 0
+                        latest_time = None
+                    _post_json(
+                        f"{config.server_url}/api/transcript-status",
+                        {"line_count": line_count, "latest_ts": latest_time},
+                        config.host_username, config.host_password,
+                    )
+                except SystemExit:
+                    pass
+                except Exception:
+                    pass
 
             # ── Check for forced summary request ──
             force_summary = False

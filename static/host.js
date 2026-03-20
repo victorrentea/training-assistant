@@ -162,6 +162,7 @@
         document.getElementById('pax-count').textContent = msg.participant_count;
         renderParticipantList(names);
         renderDaemonStatus(msg.daemon_connected, msg.daemon_last_seen);
+        renderTranscriptStatus(msg.transcript_line_count, msg.transcript_latest_ts);
         renderNotesStatus(msg.daemon_session_folder, msg.daemon_session_notes);
         updateHostNotes(msg.notes_content);
         renderPreview(msg.quiz_preview || null);
@@ -326,6 +327,23 @@
       el.className = 'badge';
       el.style.cssText = 'color:var(--warn);border:1px solid var(--warn);';
       el.title = `Connection lost (last seen ${agoText})`;
+    }
+  }
+
+  function renderTranscriptStatus(lineCount, latestTs) {
+    const el = document.getElementById('transcript-badge');
+    if (!el) return;
+
+    if (lineCount > 0) {
+      el.textContent = '● 💬';
+      el.className = 'badge connected';
+      el.title = `${lineCount} lines in last 30 min\nLatest at ${latestTs}`;
+    } else {
+      el.textContent = '● 💬';
+      el.className = 'badge disconnected';
+      el.title = latestTs
+        ? `No transcription since ${latestTs}`
+        : 'No transcription data';
     }
   }
 

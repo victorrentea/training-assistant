@@ -48,6 +48,19 @@ async def get_notes():
     }
 
 
+class TranscriptStatus(BaseModel):
+    line_count: int
+    latest_ts: str | None = None
+
+
+@router.post("/api/transcript-status")
+async def update_transcript_status(body: TranscriptStatus):
+    state.transcript_line_count = body.line_count
+    state.transcript_latest_ts = body.latest_ts
+    await broadcast_state()
+    return {"ok": True}
+
+
 @router.post("/api/summary/force")
 async def force_summary():
     state.summary_force_requested = True
