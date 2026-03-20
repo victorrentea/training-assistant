@@ -1535,10 +1535,12 @@
     const resetWrapper = document.getElementById('debate-reset-wrapper');
     if (stmtWrapper) {
       if (debateActive) {
+        stmtWrapper.style.transition = 'max-height 2s ease-in-out, margin 2s ease-in-out, padding 2s ease-in-out';
         stmtWrapper.style.maxHeight = '0';
         stmtWrapper.style.marginTop = '0';
         stmtWrapper.style.padding = '0';
       } else {
+        stmtWrapper.style.transition = 'none';
         stmtWrapper.style.maxHeight = '200px';
         stmtWrapper.style.marginTop = '.75rem';
         stmtWrapper.style.padding = '';
