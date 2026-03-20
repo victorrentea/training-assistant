@@ -10,6 +10,7 @@ class ActivityType(str, Enum):
     POLL = "poll"
     WORDCLOUD = "wordcloud"
     QA = "qa"
+    CODEREVIEW = "codereview"
 
 LOTR_NAMES = [
     "Frodo", "Samwise", "Gandalf", "Aragorn", "Legolas", "Gimli", "Boromir",
@@ -47,6 +48,12 @@ class AppState:
         self.wordcloud_topic: str = ""
         self.qa_questions: dict[str, dict] = {}
         # Each value: { id, text, author, upvoters: set[str], answered: bool, timestamp: float }
+        # Code Review state
+        self.codereview_snippet: str | None = None
+        self.codereview_language: str | None = None
+        self.codereview_phase: str = "idle"  # "idle" | "selecting" | "reviewing"
+        self.codereview_selections: dict[str, set[int]] = {}  # uuid → set of line numbers
+        self.codereview_confirmed: set[int] = set()  # lines host confirmed
 
     def suggest_name(self) -> str:
         taken = set(self.participant_names.values())
