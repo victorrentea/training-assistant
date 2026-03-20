@@ -1,14 +1,12 @@
 """
 Summarizer — generates key discussion points from live transcript.
 
-Called periodically by the daemon. Reads last 30 min of transcript +
-existing bullet list, calls Claude to synthesize updated key points.
+Called periodically by the daemon. Reads last 30 min of transcript,
+receives locked (read-only) bullets as context, returns only new bullets.
 """
 
 import json
 import sys
-from datetime import date
-from pathlib import Path
 from typing import Optional
 
 import anthropic
@@ -26,7 +24,7 @@ SUMMARY_INTERVAL_SECONDS = 5 * 60  # 5 minutes
 _SUMMARY_SYSTEM_PROMPT = """\
 You are a technical workshop summarizer. You extract high-density takeaways from a live session.
 
-Input: transcript excerpt, optionally trainer's session notes, optionally previous key points.
+Input: transcript excerpt, optionally trainer's session notes, optionally established key points from earlier in the session.
 
 Output rules:
 - Each bullet: ONE actionable or factual technical statement (max 15 words).
@@ -37,8 +35,8 @@ Output rules:
 - BAD: "Session ended with informal discussion" (filler, no takeaway)
 - BAD: "The trainer demonstrated an interesting approach" (meta-commentary)
 - Never describe what happened socially — only capture WHAT was taught or concluded.
-- Chronological order. 5-15 bullets. Fewer is better if session is short.
-- Preserve still-relevant existing bullets, update evolved ones, drop stale ones.
+- Output 1-7 NEW bullets covering genuinely new takeaways not already in the established list.
+- Do NOT repeat, rephrase, or contradict established key points — they are already captured.
 - Ignore transcription noise, filler, off-topic chatter.
 - For each bullet, indicate source:
   - "notes" if it comes primarily from SESSION NOTES (trainer's agenda/material)
@@ -53,12 +51,9 @@ Example: [{"text": "Outbox pattern decouples DB writes from message publishing",
 
 def generate_summary(
     config: Config,
-    existing_points: list[dict],
+    locked_points: list[dict],
 ) -> Optional[list[dict]]:
-    """Generate updated summary points from transcript + existing bullets.
-
-    Returns updated list of bullet strings, or None on failure.
-    """
+    """Generate new summary points from transcript, given locked (read-only) context. Returns list of new bullets only, or None on failure."""
     try:
         entries = load_transcription_files(config.folder)
     except SystemExit:
@@ -79,8 +74,9 @@ def generate_summary(
     parts = []
     if notes:
         parts.append(f"SESSION NOTES (trainer's agenda):\n{notes}\n")
-    if existing_points:
-        parts.append(f"EXISTING KEY POINTS:\n{json.dumps(existing_points, indent=2)}\n")
+    if locked_points:
+        locked_texts = "\n".join(f"- {p['text']}" for p in locked_points)
+        parts.append(f"ESTABLISHED KEY POINTS (read-only reference — do NOT repeat or rephrase these):\n{locked_texts}\n")
     parts.append(f"TRANSCRIPT (last {DEFAULT_TRANSCRIPT_MINUTES} minutes):\n{text}")
 
     user_message = "\n---\n".join(parts)
@@ -135,11 +131,6 @@ def generate_summary(
                 points.append({"text": item, "source": "discussion"})
             else:
                 print(f"[summarizer] Skipping invalid item: {item}", file=sys.stderr)
-
-        # Prepend today's date as the first bullet
-        date_text = f"Session date: {date.today().isoformat()}"
-        points = [p for p in points if not p["text"].startswith("Session date:")]
-        points.insert(0, {"text": date_text, "source": "notes"})
 
         print(f"[summarizer] Generated {len(points)} key points")
         return points
