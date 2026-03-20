@@ -1584,7 +1584,20 @@
   }
 
   async function debateEndArguments() {
-    await fetch('/api/debate/end-arguments', { method: 'POST' });
+    const btn = document.getElementById('debate-end-args-btn');
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<span style="animation:spin .8s linear infinite;display:inline-block;">⏳</span> AI…';
+    }
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 20000);
+    try {
+      await fetch('/api/debate/end-arguments', { method: 'POST', signal: controller.signal });
+    } catch(e) {
+      // timeout or network error — state will update via WS anyway
+    } finally {
+      clearTimeout(timeout);
+    }
   }
 
   async function debateForceAssign() {
@@ -1646,7 +1659,9 @@
     const resetWrapper = document.getElementById('debate-reset-wrapper');
     if (stmtWrapper) {
       if (debateActive) {
-        stmtWrapper.style.transition = 'max-height 1.2s linear, margin 1.2s linear, padding 1.2s linear';
+        // Animate collapse only if wrapper is currently expanded (user just launched)
+        const isExpanded = parseInt(stmtWrapper.style.maxHeight) > 0;
+        stmtWrapper.style.transition = isExpanded ? 'max-height 1.2s linear, margin 1.2s linear, padding 1.2s linear' : 'none';
         stmtWrapper.style.maxHeight = '0';
         stmtWrapper.style.marginTop = '0';
         stmtWrapper.style.padding = '0';
@@ -1723,19 +1738,25 @@
             const secs = sp.defaultSeconds % 60;
             const durVal = mins > 0 && secs > 0 ? `${mins}:${String(secs).padStart(2,'0')}` : mins > 0 ? `${mins}:00` : `0:${String(secs).padStart(2,'0')}`;
 
-            let right = '';
+            let statusHtml = '';
+            let controlsHtml = '';
             if (spDone) {
-              right = '<span class="debate-sub-check">✓</span>';
+              statusHtml = '<span class="debate-sub-check">✓</span>';
             } else if (spActive) {
-              right = `<button class="btn btn-warn btn-sm" id="debate-sub-end-btn-${si}" onclick="endDebateSubPhase()" style="margin-left:.3rem;">End</button>`;
+              statusHtml = `<button class="btn btn-warn btn-sm" id="debate-sub-end-btn-${si}" onclick="endDebateSubPhase()">End</button>`;
             } else if (spNext) {
-              right = `<input type="text" class="debate-sub-duration" id="debate-sub-dur-${si}" value="${durVal}" title="Duration (m:ss)" />` +
-                `<button class="btn btn-primary btn-sm" onclick="startDebateSubPhase(${si})" style="margin-left:.3rem;">▶</button>`;
+              controlsHtml = `<div class="debate-sub-controls">
+                <input type="text" class="debate-sub-duration" id="debate-sub-dur-${si}" value="${durVal}" title="Duration (m:ss)" />
+                <button class="btn btn-primary btn-sm" onclick="startDebateSubPhase(${si})">▶</button>
+              </div>`;
             }
 
             return `<div class="${spCls}">
-              <span class="debate-sub-phase-label ${sideClass}">${sideIcon} ${sp.label}</span>
-              ${right}
+              <div class="debate-sub-phase-row">
+                <span class="debate-sub-phase-label ${sideClass}">${sideIcon} ${sp.label}</span>
+                ${statusHtml}
+              </div>
+              ${controlsHtml}
             </div>`;
           }).join('');
           actionHtml += '</div>';
@@ -1751,7 +1772,7 @@
       } else if (isActive && p.key === 'side_selection') {
         // No Next button — phase ends via Force Assign or auto-advance
       } else if (isActive && p.key === 'arguments') {
-        launchBtn = `<button class="btn btn-primary btn-sm" onclick="debateEndArguments()">End Phase ✨</button>`;
+        launchBtn = `<button class="btn btn-primary btn-sm" id="debate-end-args-btn" onclick="debateEndArguments()">End</button>`;
       } else if (isActive) {
         const nextPhase = DEBATE_PHASES[i + 1];
         if (nextPhase) {
