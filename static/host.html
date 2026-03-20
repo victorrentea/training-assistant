@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Workshop - Host</title>
+  <title>Workshop - Host Panel</title>
   <link rel="icon" type="image/svg+xml" href="/static/favicon-host.svg" />
   <link rel="stylesheet" href="/static/common.css" />
   <link rel="stylesheet" href="/static/host.css" />
@@ -228,6 +228,7 @@
     <div class="right-header">
       <div class="stat" id="pax-count">0</div>
       <div class="stat-label">participants connected</div>
+      <button class="btn btn-danger" onclick="resetScores()" title="Reset all scores to zero" style="margin-top:.35rem; font-size:.8rem;">Reset scores</button>
     </div>
     <ul id="pax-list" class="pax-list" title="Click a location to view map"></ul>
     <div class="right-footer">
@@ -258,7 +259,6 @@
             <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5S13.38 11.5 12 11.5z"/>
           </svg>
         </div>
-        <button class="btn btn-danger" onclick="resetScores()" title="Reset all scores to zero" style="white-space:nowrap; flex-shrink:1; overflow:hidden; text-overflow:ellipsis; min-width:0;">Reset scores</button>
       </span>
     </div>
   </div>
