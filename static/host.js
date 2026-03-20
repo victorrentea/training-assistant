@@ -4,6 +4,7 @@
   let voteCounts = {};
   let totalVotes = 0;
   let participantLocations = {};
+  let participantAvatars = {};
   const resolvedCities = {};   // raw "lat, lon" -> resolved city string cache
   let correctOptIds = new Set(); // host-marked correct options for current poll
   let scores = {};               // participant_name -> score
@@ -141,11 +142,13 @@
         voteCounts = msg.vote_counts || {};
         totalVotes = Object.values(voteCounts).reduce((a,b)=>a+b,0);
         participantLocations = {};
+        participantAvatars = {};
         scores = {};
         const names = [];
         msg.participants.forEach(p => {
             names.push(p.name);
             participantLocations[p.name] = p.location;
+            participantAvatars[p.name] = p.avatar;
             scores[p.name] = p.score;
         });
         cachedNames = names;
@@ -169,11 +172,13 @@
       } else if (msg.type === 'participant_count') {
         document.getElementById('pax-count').textContent = msg.count;
         participantLocations = {};
+        participantAvatars = {};
         scores = {};
         const names = [];
         msg.participants.forEach(p => {
             names.push(p.name);
             participantLocations[p.name] = p.location;
+            participantAvatars[p.name] = p.avatar;
             scores[p.name] = p.score;
         });
         cachedNames = names;
@@ -244,7 +249,11 @@
       const pts = scores[n];
       const scoreTag = pts ? `<span class="pax-score">⭐ ${pts} pts</span>` : '';
       const locLabel = loc ? resolvedCities[loc] || loc : null;
-      return `<li>${escHtml(n)}${scoreTag}${locLabel ? `<span class="pax-location" onclick="openMap()" title="View all on map">📍 ${escHtml(locLabel)}</span>` : ''}</li>`;
+      const avatar = participantAvatars[n];
+      const avatarHtml = avatar
+          ? `<img src="/static/avatars/${escHtml(avatar)}" class="avatar" style="width:28px;height:28px" onerror="this.style.display='none'">`
+          : '';
+      return `<li>${avatarHtml}${escHtml(n)}${scoreTag}${locLabel ? `<span class="pax-location" onclick="openMap()" title="View all on map">📍 ${escHtml(locLabel)}</span>` : ''}</li>`;
     }).join('');
 
     // Lazily resolve any raw "lat, lon" strings to city names
@@ -1042,11 +1051,15 @@
     // If any card is currently being edited, skip re-render to avoid losing the edit input
     if (list.querySelector('.qa-edit-input')) return;
 
-    list.innerHTML = questions.map(q => `
+    list.innerHTML = questions.map(q => {
+      const avatarHtml = q.author_avatar
+          ? `<img src="/static/avatars/${escHtml(q.author_avatar)}" class="avatar" style="width:24px;height:24px" onerror="this.style.display='none'">`
+          : '';
+      return `
       <div class="qa-card${q.answered ? ' qa-answered' : ''}" data-id="${escHtml(q.id)}">
         <div class="qa-text">${escHtml(q.text)}</div>
         <div class="qa-meta">
-          <span class="qa-author">${escHtml(q.author)}</span>
+          ${avatarHtml}<span class="qa-author">${escHtml(q.author)}</span>
           <span class="qa-upvotes">▲ ${q.upvote_count}</span>
         </div>
         <div class="qa-actions">
@@ -1060,7 +1073,7 @@
                   onclick="deleteQuestion('${escHtml(q.id)}')">🗑</button>
         </div>
       </div>
-    `).join('');
+    `; }).join('');
   }
 
   updateGenBtn();

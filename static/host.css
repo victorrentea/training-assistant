@@ -693,6 +693,8 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
 }
 .qa-meta {
   display: flex;
+  align-items: center;
+  gap: 6px;
   justify-content: space-between;
   font-size: .8rem;
   color: var(--muted);
