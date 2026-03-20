@@ -19,7 +19,7 @@ class AppState:
     mode: str = "workshop"  # "workshop" | "conference"
 ```
 
-The mode is included in every `state` broadcast to participants and host. Switching mode mid-session resets scores (but this scenario is not expected in practice).
+The mode is included in every `state` broadcast to participants and host. Switching mode mid-session resets all session state (scores, votes, Q&A, word cloud, code review), but this scenario is not expected in practice — mode is set at session start.
 
 ## 2. Host Panel Changes
 
@@ -48,7 +48,7 @@ All badges retain their existing tooltip text for discoverability.
 ### 2.3 Conference Mode Layout
 
 - **Right column** (participant list, join link, QR, map, reset scores) hidden entirely
-- **QR code** shown permanently in the lower half of the left column, below the tab controls
+- **QR code** shown permanently in the lower half of the left column, below the active tab content and above the status badges
 - **Participant count** (`👥 N connected`) displayed in the status bar, next to the badges
 - **Grid changes** from `grid-template-columns: 25% 1fr 25%` to `25% 1fr` (2 columns)
 
@@ -89,7 +89,7 @@ Debate activities are not available in conference mode.
 
 ### 3.4 UUID Identity
 
-Participants still get a UUID (same mechanism). No name is assigned or prompted. The `set_name` WebSocket message is skipped in conference mode. Server assigns a default anonymous identifier internally.
+Participants still get a UUID (same mechanism). No name is assigned or prompted. The `set_name` WebSocket message is skipped in conference mode. Server stores the display name as an empty string — participants appear anonymous in any host-facing lists (Q&A questions show no author name, code review selections are aggregated without names).
 
 ## 4. WebSocket Protocol Changes
 
