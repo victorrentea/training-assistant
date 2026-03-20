@@ -1,23 +1,71 @@
 @startuml seq_summary_flow
-title Live Summary Flow — Periodic Key Point Synthesis
+title Live Summary Flow — Transcript → Key Points → Clients
 
+skinparam sequenceArrowThickness 1.5
+skinparam sequenceMessageAlign center
+
+actor "Transcriber\n(Audio Hijack)" as Transcriber
+participant "Transcript\nFile (.txt)" as File
 participant "Local Agent\n(quiz_daemon.py)" as Agent
 participant "Claude API\n(Anthropic)" as Claude
 participant "Backend\n(FastAPI)" as Backend
 participant "Host UI\n(host.js)" as HostUI
 participant "Participant UI\n(participant.js)" as PaxUI
 
-== Every 5 Minutes ==
+== 1. Transcription (continuous) ==
 
-Agent -> Agent : Load last 30 min\nof transcript
-Agent -> Agent : Assemble existing bullets\n+ transcript excerpt
-Agent -> Claude : messages API\n(summary prompt)
-Claude --> Agent : JSON array of\nkey point strings
+Transcriber -> File : Appends speech segments\n(timestamped lines)
+note right of File
+  Format: [HH:MM:SS.xx] Speaker:\ttext
+  Agent also appends heartbeat
+  timestamps every 3s
+end note
+
+== 2. Periodic Summary Generation (every 5 min) ==
+
+Agent -> File : Read last 30 min\nof transcript
+Agent -> Agent : Build prompt:\nsession notes +\nexisting bullets +\ntranscript excerpt
+
+Agent -> Claude : messages.create(\n  model="claude-sonnet-4-6",\n  max_tokens=1024,\n  system=SUMMARY_PROMPT\n)
+Claude --> Agent : JSON array of\n5–15 bullet strings
+
+Agent -> Agent : Prepend "Session date: YYYY-MM-DD"\nParse & validate response
+
+== 3. Push to Server ==
+
+Agent -> Backend : POST /api/summary\n{points: ["...", "..."]}\n(HTTP Basic Auth)
+Backend -> Backend : state.summary_points = points\nstate.summary_updated_at = now()
+
+== 4. Broadcast to Clients (WebSocket) ==
+
+Backend --> HostUI : WS message type="state"\n{summary_points: [...],\nsummary_updated_at: "ISO8601"}
+Backend --> PaxUI : WS message type="state"\n{summary_points: [...],\nsummary_updated_at: "ISO8601"}
+
+HostUI -> HostUI : Badge → "🧠 Key Points (N)"\n(green, clickable → modal)
+PaxUI -> PaxUI : Show 📋 button\n(click → modal with bullets)
+
+== 5. Force Generation (host-initiated) ==
+
+HostUI -> HostUI : Host clicks\n"🧠 No key points yet"
+note right of HostUI
+  Badge changes to
+  "🧠 Generating..." (yellow)
+end note
+
+HostUI -> Backend : POST /api/summary/force
+Backend -> Backend : state.summary_force_requested = true
+
+Agent -> Backend : GET /api/summary/force\n(polled every ~1s)
+Backend --> Agent : {requested: true}\n(flag reset to false)
+
+Agent -> File : Read last 30 min\nof transcript
+Agent -> Claude : messages.create()\n(same as periodic flow)
+Claude --> Agent : JSON bullet array
+
 Agent -> Backend : POST /api/summary\n{points: [...]}
-Backend -> Backend : Store in AppState
 Backend --> HostUI : WS broadcast: state
 Backend --> PaxUI : WS broadcast: state
-HostUI -> HostUI : Update badge +\nmodal content
-PaxUI -> PaxUI : Update button +\nmodal content
+
+HostUI -> HostUI : Badge → "🧠 Key Points (N)"\n(green)
 
 @enduml

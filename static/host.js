@@ -162,6 +162,7 @@
         document.getElementById('pax-count').textContent = msg.participant_count;
         renderParticipantList(names);
         renderDaemonStatus(msg.daemon_connected, msg.daemon_last_seen);
+        renderTranscriptStatus(msg.transcript_line_count, msg.transcript_latest_ts);
         renderNotesStatus(msg.daemon_session_folder, msg.daemon_session_notes);
         updateHostNotes(msg.notes_content);
         renderPreview(msg.quiz_preview || null);
@@ -326,6 +327,23 @@
       el.className = 'badge';
       el.style.cssText = 'color:var(--warn);border:1px solid var(--warn);';
       el.title = `Connection lost (last seen ${agoText})`;
+    }
+  }
+
+  function renderTranscriptStatus(lineCount, latestTs) {
+    const el = document.getElementById('transcript-badge');
+    if (!el) return;
+
+    if (lineCount > 0) {
+      el.textContent = '● 💬';
+      el.className = 'badge connected';
+      el.title = `${lineCount} lines in last 30 min\nLatest at ${latestTs}`;
+    } else {
+      el.textContent = '● 💬';
+      el.className = 'badge disconnected';
+      el.title = latestTs
+        ? `No transcription since ${latestTs}`
+        : 'No transcription data';
     }
   }
 
@@ -1468,7 +1486,7 @@
     const content = document.getElementById('debate-center-content');
 
     controls.style.display = '';
-    title.textContent = '"' + msg.debate_statement + '"';
+    title.innerHTML = `<span style="color:#e74c3c;font-weight:700;">👎 ${sideCounts.against}</span> <span style="font-style:italic;">"${escDebate(msg.debate_statement)}"</span> <span style="color:#2ecc71;font-weight:700;">${sideCounts.for} 👍</span>`;
 
     const phase = msg.debate_phase;
     const sideCounts = msg.debate_side_counts || { for: 0, against: 0 };
@@ -1483,7 +1501,7 @@
       ended: 'Debate Ended',
     };
     phaseLabel.textContent = (phaseNames[phase] || phase) +
-      ` — FOR: ${sideCounts.for} | AGAINST: ${sideCounts.against}`;
+      ` — 👎 ${sideCounts.against} | ${sideCounts.for} 👍`;
 
     // Host action buttons per phase
     actions.innerHTML = '';
@@ -1496,7 +1514,7 @@
         ' <button class="btn btn-primary" onclick="debateNextPhase(\'prep\')">Next → Preparation</button>';
     } else if (phase === 'prep') {
       const champions = msg.debate_champions || {};
-      const champInfo = Object.entries(champions).map(([s, n]) => `${s}: ${escDebate(n)}`).join(', ');
+      const champInfo = Object.entries(champions).map(([s, n]) => `${s === 'for' ? '👍' : '👎'} ${escDebate(n)}`).join(', ');
       actions.innerHTML = (champInfo ? `<span style="color:var(--accent);font-size:.85rem;">🏆 ${champInfo}</span> ` : '') +
         '<button class="btn btn-primary" onclick="debateNextPhase(\'live_debate\')">▶ Start Live Debate</button>';
     } else if (phase === 'live_debate') {
@@ -1513,7 +1531,7 @@
       content.innerHTML = `<div style="text-align:center; padding:2rem; color:var(--muted);">
         Waiting for participants to choose sides…<br>
         <span style="font-size:1.5rem; margin-top:.5rem; display:block;">
-          👍 FOR: ${sideCounts.for} &nbsp;|&nbsp; 👎 AGAINST: ${sideCounts.against}
+          👎 ${sideCounts.against} &nbsp;|&nbsp; ${sideCounts.for} 👍
         </span>
       </div>`;
     } else {
@@ -1558,13 +1576,13 @@
 
     return `<div class="debate-columns">
       <div class="debate-col debate-col-against">
-        <h3 class="debate-col-header">👎 AGAINST</h3>
+        <h3 class="debate-col-header">👎</h3>
         ${champAgainst}
         ${againstArgs.map(renderArg).join('')}
         ${Array(mergedAgainstCount).fill('').map(renderMerged).join('')}
       </div>
       <div class="debate-col debate-col-for">
-        <h3 class="debate-col-header">👍 FOR</h3>
+        <h3 class="debate-col-header">👍</h3>
         ${champFor}
         ${forArgs.map(renderArg).join('')}
         ${Array(mergedForCount).fill('').map(renderMerged).join('')}
