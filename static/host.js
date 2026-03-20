@@ -1678,9 +1678,9 @@
         stmtWrapper.style.maxHeight = '200px';
         stmtWrapper.style.marginTop = '.75rem';
         stmtWrapper.style.padding = '';
-        // Clear the input so a new title can be entered
+        // Restore default topic
         const input = document.getElementById('debate-statement-input');
-        if (input) input.value = '';
+        if (input) input.value = input.defaultValue;
       }
     }
     if (resetWrapper) resetWrapper.style.display = debateActive ? '' : 'none';
