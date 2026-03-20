@@ -9,7 +9,7 @@ router = APIRouter()
 
 
 class ActivitySwitch(BaseModel):
-    activity: str  # "poll" | "wordcloud" | "qa" | "none"
+    activity: str  # "poll" | "wordcloud" | "qa" | "debate" | "none"
 
 
 @router.post("/api/activity", dependencies=[Depends(require_host_auth)])
