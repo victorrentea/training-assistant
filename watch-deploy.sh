@@ -98,25 +98,21 @@ notify_countdown() {
     return
   fi
   LAST_NOTIFY_TIME="$now"
-  local title="🚀 Deploying"
-  if [ -n "$COMMIT_MSG" ]; then
-    title="🚀 Deploying: $COMMIT_MSG"
-  fi
-  local msg
+  local title
   if [ "$remaining" -le 0 ]; then
-    msg="Should be live... still checking"
+    title="🚀 Deploying any moment..."
   elif [ "$remaining" -le 5 ]; then
-    msg="Any moment now..."
+    title="🚀 Deploying any moment..."
   else
-    msg="~${remaining}s remaining"
+    title="🚀 Deploying in about ${remaining}s"
   fi
-  terminal-notifier -title "$title" -message "$msg" -group deploy &>/dev/null &
+  terminal-notifier -title "$title" -message "$COMMIT_MSG" -group deploy &>/dev/null &
 }
 
 notify_success() {
   local version="$1"
   echo "$(date '+%H:%M:%S') ✅ Deployed! Version: $version"
-  terminal-notifier -title "🚀 Deployed!" -message "Version $version is live" -group deploy -timeout 5 &
+  terminal-notifier -title "🚀 Deployed!" -message "$COMMIT_MSG" -group deploy -timeout 5 &
   afplay /System/Library/Sounds/Glass.aiff &
   sleep 0.4
   afplay /System/Library/Sounds/Glass.aiff
