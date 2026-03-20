@@ -152,8 +152,8 @@
   cursor: pointer;
 }
 .summary-list {
-  list-style: disc;
-  padding-left: 1.2rem;
+  list-style: none;
+  padding-left: 0;
   overflow-y: auto;
   flex: 1;
   margin: 0;
@@ -162,6 +162,8 @@
   margin-bottom: .5rem;
   line-height: 1.4;
   color: var(--text);
+  padding-left: 1.6em;
+  text-indent: -1.6em;
 }
 .summary-list .summary-empty {
   list-style: none;
