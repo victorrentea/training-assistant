@@ -325,6 +325,7 @@
     if (connected) {
       el.textContent = 'Agent';
       el.className = 'badge connected';
+      el.style.cssText = '';
       el.title = `Connected (last seen ${agoText})`;
     } else {
       el.textContent = 'Agent';
