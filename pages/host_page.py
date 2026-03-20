@@ -56,7 +56,7 @@ class HostPage:
     # ── Q&A ─────────────────────────────────────────────────────────────────
 
     def open_qa_tab(self) -> None:
-        self._page.click("text=Q&A")
+        self._page.click("#tab-qa")
         expect(self._page.locator("#tab-content-qa")).to_be_visible(timeout=5000)
         expect(self._page.locator("#qa-list")).to_be_visible(timeout=5000)
 
