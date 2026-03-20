@@ -176,6 +176,7 @@ _VTT_TS  = re.compile(r"(?:(\d+):)?(\d{2}):(\d{2})\.(\d{3})\s+-->")
 _SRT_TS  = re.compile(r"(\d{2}):(\d{2}):(\d{2}),(\d{3})\s+-->")
 _SRT_SEQ = re.compile(r"^\d+$")
 _TXT_TS  = re.compile(r"^\[(\d{2}):(\d{2}):(\d{2})\.\d+\]\s+[^:]+:\t(.*)")
+_TXT_TS2 = re.compile(r"^\[\s*(\d{2}):(\d{2}):(\d{2})\.\d+\s*\]\s+(.*)")
 
 
 def _ts_to_seconds(h, m, s) -> float:
@@ -226,9 +227,11 @@ def _parse_txt(text: str) -> list:
         line = line.strip()
         if not line:
             continue
-        m = _TXT_TS.match(line)
+        m = _TXT_TS.match(line) or _TXT_TS2.match(line)
         if m:
-            entries.append((_ts_to_seconds(m.group(1), m.group(2), m.group(3)), m.group(4).strip()))
+            txt = m.group(4).strip() if m.group(4) else ""
+            if txt:
+                entries.append((_ts_to_seconds(m.group(1), m.group(2), m.group(3)), txt))
         else:
             entries.append((None, line))
     return entries
