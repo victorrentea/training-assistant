@@ -728,3 +728,70 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
 .debate-champion { font-size: .85rem; color: var(--accent); margin-bottom: .25rem; }
 .debate-hints { margin-top: 1rem; padding: .75rem; background: var(--surface2); border-radius: 8px; border: 1px solid var(--border); }
 .debate-hint { font-size: .85rem; color: var(--muted); margin: .25rem 0; }
+
+/* Code Review */
+.codereview-lines {
+    font-family: monospace;
+    font-size: 13px;
+    line-height: 2;
+    background: var(--surface);
+    border-radius: var(--radius);
+    overflow-x: auto;
+}
+
+.codereview-line {
+    display: flex;
+    padding: 2px 12px;
+    transition: background 0.15s;
+    cursor: pointer;
+}
+
+.codereview-line-clickable {
+    cursor: pointer;
+}
+
+.codereview-line:hover {
+    background: rgba(108,99,255,0.12) !important;
+}
+
+.codereview-line-clickable:hover {
+    filter: brightness(1.2);
+}
+
+.codereview-gutter {
+    width: 32px;
+    text-align: right;
+    margin-right: 12px;
+    color: var(--muted);
+    user-select: none;
+    flex-shrink: 0;
+}
+
+.codereview-code {
+    flex: 1;
+    white-space: pre;
+}
+
+.codereview-count {
+    margin-left: 8px;
+    font-size: 11px;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.codereview-participant-list {
+    font-size: 13px;
+    line-height: 2;
+}
+
+.codereview-participant-row {
+    display: flex;
+    gap: 8px;
+    padding: 4px 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.codereview-participant-score {
+    color: var(--warn);
+    min-width: 48px;
+}

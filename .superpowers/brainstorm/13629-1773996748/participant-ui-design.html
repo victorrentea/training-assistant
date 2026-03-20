@@ -1,0 +1,118 @@
+<h2>Participant UI — Code Review Activity</h2>
+<p class="subtitle">Two phases from the participant's perspective</p>
+
+<div class="section">
+  <h3>1. Selecting Phase — Click lines to flag issues</h3>
+  <div class="mockup">
+    <div class="mockup-header" style="display:flex; justify-content:space-between;">
+      <span>Participant View — Selection Open</span>
+      <span style="color:#f9e2af;">Score: 850</span>
+    </div>
+    <div class="mockup-body" style="padding:16px;">
+      <div style="color:#cdd6f4; font-size:15px; font-weight:600; margin-bottom:4px;">📝 Code Review</div>
+      <div style="color:#a0a0b0; font-size:13px; margin-bottom:16px;">Click on lines that contain issues</div>
+      <div style="font-family:monospace; font-size:13px; line-height:2.2; background:#1e1e2e; border-radius:8px; overflow:hidden;">
+        <div style="display:flex; padding:3px 12px; cursor:pointer; transition:background 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.03)'" onmouseout="this.style.background=''">
+          <span style="color:#585b70; width:28px; text-align:right; margin-right:14px; user-select:none;">1</span>
+          <span style="color:#cdd6f4;"><span style="color:#89b4fa">public</span> <span style="color:#a6e3a1">String</span> process(<span style="color:#a6e3a1">String</span> input) {</span>
+        </div>
+        <div style="display:flex; padding:3px 12px; cursor:pointer; background:rgba(137,180,250,0.15); border-left:3px solid #89b4fa;">
+          <span style="color:#89b4fa; width:28px; text-align:right; margin-right:14px; user-select:none;">2 ●</span>
+          <span style="color:#cdd6f4;"><span style="color:#a6e3a1">String</span> result = input.<span style="color:#89b4fa">trim</span>().<span style="color:#89b4fa">toLowerCase</span>();</span>
+        </div>
+        <div style="display:flex; padding:3px 12px; cursor:pointer;" onmouseover="this.style.background='rgba(255,255,255,0.03)'" onmouseout="this.style.background=''">
+          <span style="color:#585b70; width:28px; text-align:right; margin-right:14px; user-select:none;">3</span>
+          <span style="color:#cdd6f4;"><span style="color:#89b4fa">if</span> (result.isEmpty()) {</span>
+        </div>
+        <div style="display:flex; padding:3px 12px; cursor:pointer; background:rgba(137,180,250,0.15); border-left:3px solid #89b4fa;">
+          <span style="color:#89b4fa; width:28px; text-align:right; margin-right:14px; user-select:none;">4 ●</span>
+          <span style="color:#cdd6f4;"><span style="color:#89b4fa">return</span> <span style="color:#fab387">null</span>;</span>
+        </div>
+        <div style="display:flex; padding:3px 12px; cursor:pointer;" onmouseover="this.style.background='rgba(255,255,255,0.03)'" onmouseout="this.style.background=''">
+          <span style="color:#585b70; width:28px; text-align:right; margin-right:14px; user-select:none;">5</span>
+          <span style="color:#cdd6f4;">}</span>
+        </div>
+        <div style="display:flex; padding:3px 12px; cursor:pointer;" onmouseover="this.style.background='rgba(255,255,255,0.03)'" onmouseout="this.style.background=''">
+          <span style="color:#585b70; width:28px; text-align:right; margin-right:14px; user-select:none;">6</span>
+          <span style="color:#cdd6f4;"><span style="color:#a6e3a1">List</span>&lt;<span style="color:#a6e3a1">String</span>&gt; parts = result.<span style="color:#89b4fa">split</span>(<span style="color:#a6e3a1">","</span>);</span>
+        </div>
+        <div style="display:flex; padding:3px 12px; cursor:pointer;" onmouseover="this.style.background='rgba(255,255,255,0.03)'" onmouseout="this.style.background=''">
+          <span style="color:#585b70; width:28px; text-align:right; margin-right:14px; user-select:none;">7</span>
+          <span style="color:#cdd6f4;"><span style="color:#89b4fa">for</span> (<span style="color:#89b4fa">int</span> i = 0; i &lt;= parts.<span style="color:#89b4fa">size</span>(); i++) {</span>
+        </div>
+        <div style="display:flex; padding:3px 12px; cursor:pointer;" onmouseover="this.style.background='rgba(255,255,255,0.03)'" onmouseout="this.style.background=''">
+          <span style="color:#585b70; width:28px; text-align:right; margin-right:14px; user-select:none;">8</span>
+          <span style="color:#cdd6f4;">    System.out.<span style="color:#89b4fa">println</span>(parts.<span style="color:#89b4fa">get</span>(i));</span>
+        </div>
+        <div style="display:flex; padding:3px 12px; cursor:pointer;" onmouseover="this.style.background='rgba(255,255,255,0.03)'" onmouseout="this.style.background=''">
+          <span style="color:#585b70; width:28px; text-align:right; margin-right:14px; user-select:none;">9</span>
+          <span style="color:#cdd6f4;">}</span>
+        </div>
+        <div style="display:flex; padding:3px 12px; cursor:pointer;" onmouseover="this.style.background='rgba(255,255,255,0.03)'" onmouseout="this.style.background=''">
+          <span style="color:#585b70; width:28px; text-align:right; margin-right:14px; user-select:none;">10</span>
+          <span style="color:#cdd6f4;"><span style="color:#89b4fa">return</span> result + result;</span>
+        </div>
+        <div style="display:flex; padding:3px 12px; cursor:pointer;" onmouseover="this.style.background='rgba(255,255,255,0.03)'" onmouseout="this.style.background=''">
+          <span style="color:#585b70; width:28px; text-align:right; margin-right:14px; user-select:none;">11</span>
+          <span style="color:#cdd6f4;">}</span>
+        </div>
+      </div>
+      <div style="margin-top:12px; color:#a0a0b0; font-size:12px; text-align:center;">You selected 2 lines</div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>2. Review Phase — Host reveals correct lines</h3>
+  <div class="mockup">
+    <div class="mockup-header" style="display:flex; justify-content:space-between;">
+      <span>Participant View — Review in Progress</span>
+      <span style="color:#f9e2af;">Score: 1250 <span style="color:#a6e3a1; font-size:11px;">+200</span></span>
+    </div>
+    <div class="mockup-body" style="padding:16px;">
+      <div style="color:#cdd6f4; font-size:15px; font-weight:600; margin-bottom:4px;">📝 Code Review</div>
+      <div style="color:#a0a0b0; font-size:13px; margin-bottom:16px;">Selection closed — reviewing results</div>
+      <div style="font-family:monospace; font-size:13px; line-height:2.2; background:#1e1e2e; border-radius:8px; overflow:hidden;">
+        <div style="display:flex; padding:3px 12px;">
+          <span style="color:#585b70; width:28px; text-align:right; margin-right:14px;">1</span>
+          <span style="color:#cdd6f4;"><span style="color:#89b4fa">public</span> <span style="color:#a6e3a1">String</span> process(...</span>
+        </div>
+        <div style="display:flex; padding:3px 12px; background:rgba(137,180,250,0.1); border-left:3px solid #585b70;">
+          <span style="color:#585b70; width:28px; text-align:right; margin-right:14px;">2 ●</span>
+          <span style="color:#cdd6f4;">String result = input.trim()...</span>
+          <span style="margin-left:auto; color:#585b70; font-size:11px;">your pick</span>
+        </div>
+        <div style="display:flex; padding:3px 12px;">
+          <span style="color:#585b70; width:28px; text-align:right; margin-right:14px;">3</span>
+          <span style="color:#cdd6f4;">if (result.isEmpty()) {</span>
+        </div>
+        <div style="display:flex; padding:3px 12px; background:rgba(166,227,161,0.2); border-left:3px solid #a6e3a1;">
+          <span style="color:#a6e3a1; width:28px; text-align:right; margin-right:14px;">4 ✓</span>
+          <span style="color:#cdd6f4;"><span style="color:#89b4fa">return</span> <span style="color:#fab387">null</span>;</span>
+          <span style="margin-left:auto; color:#a6e3a1; font-size:11px;">+200 pts ✓</span>
+        </div>
+        <div style="display:flex; padding:3px 12px;">
+          <span style="color:#585b70; width:28px; text-align:right; margin-right:14px;">5</span>
+          <span style="color:#cdd6f4;">}</span>
+        </div>
+        <div style="display:flex; padding:3px 12px;">
+          <span style="color:#585b70; width:28px; text-align:right; margin-right:14px;">6</span>
+          <span style="color:#cdd6f4;">List&lt;String&gt; parts = ...</span>
+        </div>
+        <div style="display:flex; padding:3px 12px;">
+          <span style="color:#585b70; width:28px; text-align:right; margin-right:14px;">7</span>
+          <span style="color:#cdd6f4;"><span style="color:#89b4fa">for</span> (int i = 0; i &lt;= parts.size()...</span>
+          <span style="margin-left:auto; color:#585b70; font-size:11px;">not yet reviewed</span>
+        </div>
+        <div style="display:flex; padding:3px 12px;">
+          <span style="color:#585b70; width:28px; text-align:right; margin-right:14px;">8-11</span>
+          <span style="color:#585b70;">...</span>
+        </div>
+      </div>
+      <div style="margin-top:12px; padding:10px; background:#313244; border-radius:8px; text-align:center;">
+        <span style="color:#a6e3a1; font-size:14px; font-weight:600;">+200</span>
+        <span style="color:#a0a0b0; font-size:13px;"> points earned so far</span>
+      </div>
+    </div>
+  </div>
+</div>
