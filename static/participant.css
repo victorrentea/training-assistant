@@ -501,18 +501,18 @@ h1 { display: none; }
 @keyframes debateFadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 .debate-waiting { text-align: center; font-size: .9rem; color: var(--muted); }
 .debate-columns { display: flex; gap: .75rem; margin: .75rem 0; }
-.debate-col { flex: 1; display: flex; flex-direction: column; gap: .4rem; }
-.debate-col-header { margin: 0 0 .4rem; font-size: .8rem; color: var(--muted); text-transform: uppercase; text-align: center; }
+.debate-col { flex: 1; display: flex; flex-direction: column; gap: .8rem; }
+.debate-col-header { margin: 0 0 .4rem; font-size: .9rem; color: var(--muted); text-transform: uppercase; text-align: center; }
 .debate-col-against { border-right: 1px solid var(--border); padding-right: .75rem; }
-.debate-arg { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: .4rem .6rem; cursor: pointer; transition: border-color .15s; }
+.debate-arg { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: .6rem .8rem; cursor: pointer; transition: border-color .15s; }
 .debate-arg:hover { border-color: var(--accent); }
 .debate-arg-upvoted { border-color: var(--accent); }
 .debate-arg-own { border-left: 3px solid var(--accent); }
-.debate-arg-header { display: flex; align-items: center; gap: .3rem; margin-bottom: .15rem; }
-.debate-arg-avatar { width: 18px; height: 18px; border-radius: 50%; }
-.debate-arg-author { font-size: .75rem; color: var(--muted); }
-.debate-arg-votes { margin-left: auto; font-size: .75rem; color: var(--accent); }
-.debate-arg-text { font-size: .85rem; color: var(--text); }
+.debate-arg-header { display: flex; align-items: center; gap: .4rem; margin-bottom: .25rem; }
+.debate-arg-avatar { width: 32px; height: 32px; border-radius: 50%; }
+.debate-arg-author { font-size: .85rem; color: var(--muted); }
+.debate-arg-votes { margin-left: auto; font-size: .85rem; color: var(--accent); }
+.debate-arg-text { font-size: .95rem; color: var(--text); }
 .debate-arg-merged { opacity: .5; font-style: italic; font-size: .8rem; color: var(--muted); }
 .debate-input-row { display: flex; gap: .5rem; margin-top: .75rem; }
 .debate-input-row input { flex: 1; padding: .5rem .75rem; border-radius: 8px; border: 1px solid var(--border); background: var(--surface2); color: var(--text); font-size: .9rem; }
