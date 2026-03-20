@@ -28,12 +28,14 @@
         </span>
         <span id="my-score" style="display:none; color:var(--accent2); font-weight:700; font-size:.85rem;"></span>
       </span>
+      <span class="status-center">
+        <button id="notes-btn" class="header-link-btn" title="Session notes" style="display:none" onclick="toggleNotesModal()">📝 Notes</button>
+        <button id="summary-btn" class="header-link-btn" title="Key points discussed" style="display:none" onclick="toggleSummaryModal()">🧠 Key Points</button>
+      </span>
       <span class="status-right">
         <span id="location-prompt" class="location-prompt" onclick="requestLocation()" title="Share your location">📍 Where are you?</span>
         <span id="host-dot" title="Host connected" style="display:none;"><span class="dot"></span>Host</span>
         <span id="pax-count"></span>
-        <button id="notes-btn" class="header-link-btn" title="Session notes" style="display:none" onclick="toggleNotesModal()">📝 Notes</button>
-        <button id="summary-btn" class="header-link-btn" title="Key points discussed" style="display:none" onclick="toggleSummaryModal()">🧠 Points</button>
         <button id="notif-btn" title="Enable notifications" style="display:none">🔔</button>
       </span>
     </div>

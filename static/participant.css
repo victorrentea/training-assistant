@@ -57,6 +57,12 @@ h1 { display: none; }
   gap: .5rem;
 }
 
+.status-center {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+}
+
 .status-right {
   display: flex;
   align-items: center;
