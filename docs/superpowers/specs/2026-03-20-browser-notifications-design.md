@@ -65,6 +65,8 @@ Add the button inside the `.status-bar` `.status-right` span, initially hidden:
 ```js
 let _prevPollActive = false;
 let _prevActivity = null;
+let _stateInitialised = false;   // suppresses false-positive on first state message
+let _notifBtnBound = false;      // prevents re-binding on reconnect
 ```
 
 ### Permission helper
@@ -74,53 +76,73 @@ async function requestNotificationPermission() {
   if (!('Notification' in window)) return;
   if (Notification.permission !== 'default') return;
   await Notification.requestPermission();
-  document.getElementById('notif-btn').style.display = 'none';
+  const btn = document.getElementById('notif-btn');
+  if (btn) btn.style.display = 'none';
 }
 ```
 
 Called from:
-- `join()` — for new joiners
-- `notif-btn` onclick — for auto-joiners
+- `join-btn` click handler and Enter key in `nameInput` — for new joiners (user gesture ✓)
+- `notif-btn` onclick — for auto-joiners (user gesture ✓)
+- **Not** called from the programmatic `join()` body itself, because `join()` is also invoked at page load for auto-joiners (not a user gesture).
 
 ### Notification helper
+
+SVG icons are silently dropped by most OS-level notification systems (Chrome, Windows, macOS). To keep things simple and avoid a 404 or blank icon, the `icon` field is omitted:
 
 ```js
 function notifyIfHidden(title, body) {
   if (!document.hidden) return;
   if (Notification.permission !== 'granted') return;
-  new Notification(title, { body, icon: '/static/favicon-participant.svg' });
+  new Notification(title, { body });
 }
 ```
 
 ### Button visibility after auto-join (`ws.onopen`)
 
+Only shown once per page load. The `_notifBtnBound` flag prevents re-binding on reconnects (ws.onopen fires again on each auto-reconnect):
+
 ```js
-if ('Notification' in window && Notification.permission === 'default') {
+if ('Notification' in window && Notification.permission === 'default' && !_notifBtnBound) {
+  _notifBtnBound = true;
   const btn = document.getElementById('notif-btn');
   btn.style.display = '';
   btn.onclick = requestNotificationPermission;
 }
 ```
 
-### Transition detection in `handleMessage()` — `case 'state':`
+### Reset `_stateInitialised` on new connection
 
-Before updating module-level state variables, compare old vs new:
+At the top of `connectWS()`, reset the initialisation guard so reconnects don't fire spurious notifications:
 
 ```js
-// Detect transitions
-if (!_prevPollActive && msg.poll_active && msg.poll) {
-  notifyIfHidden('🗳️ New poll!', msg.poll.question);
-}
-if (_prevActivity !== 'qa' && msg.current_activity === 'qa') {
-  notifyIfHidden('❓ Q&A is open', 'Tap to ask or upvote questions');
-}
-if (_prevActivity !== 'wordcloud' && msg.current_activity === 'wordcloud') {
-  notifyIfHidden('☁️ Word cloud is open', 'Tap to share your thoughts');
-}
+_stateInitialised = false;
+```
 
-// Update tracking state
-_prevPollActive = msg.poll_active;
-_prevActivity = msg.current_activity;
+### Transition detection in `handleMessage()` — `case 'state':`
+
+The first `state` message after connecting initialises the tracking variables without firing any notification. This prevents a false-positive when a participant joins a session mid-activity. The flag is reset in `connectWS()` so reconnects behave the same way.
+
+```js
+if (!_stateInitialised) {
+  // Seed tracking state from current server state — no notification
+  _prevPollActive = msg.poll_active;
+  _prevActivity = msg.current_activity;
+  _stateInitialised = true;
+} else {
+  // Detect transitions
+  if (!_prevPollActive && msg.poll_active && msg.poll) {
+    notifyIfHidden('🗳️ New poll!', msg.poll.question);
+  }
+  if (_prevActivity !== 'qa' && msg.current_activity === 'qa') {
+    notifyIfHidden('❓ Q&A is open', 'Tap to ask or upvote questions');
+  }
+  if (_prevActivity !== 'wordcloud' && msg.current_activity === 'wordcloud') {
+    notifyIfHidden('☁️ Word cloud is open', 'Tap to share your thoughts');
+  }
+  _prevPollActive = msg.poll_active;
+  _prevActivity = msg.current_activity;
+}
 ```
 
 ---
