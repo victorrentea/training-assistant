@@ -684,15 +684,19 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
             <div class="activity-input-row wc-input-row">
               <input id="wc-input" type="text" maxlength="40" autocomplete="off" placeholder="Type a word…" list="wc-suggestions" />
               <datalist id="wc-suggestions"></datalist>
-              <button id="wc-go" class="btn btn-primary">↵</button>
+              <button id="wc-go" class="btn btn-primary" disabled>↵</button>
             </div>
             <div id="wc-my-words"></div>
           </div>
         </div>`;
-      document.getElementById('wc-go').onclick = submitWord;
+      const wcGoBtn = document.getElementById('wc-go');
+      wcGoBtn.onclick = submitWord;
       const wcInput = document.getElementById('wc-input');
       wcInput.addEventListener('keydown', e => {
         if (e.key === 'Enter') submitWord();
+      });
+      wcInput.addEventListener('input', () => {
+        wcGoBtn.disabled = !wcInput.value.trim();
       });
       wcInput.focus();
       document.getElementById('wc-download').onclick = () => {
@@ -730,6 +734,8 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     myWords.unshift(word);
     localStorage.setItem(LS_WC_KEY, JSON.stringify(myWords));
     input.value = '';
+    const goBtn = document.getElementById('wc-go');
+    if (goBtn) goBtn.disabled = true;
     renderMyWords();
     updateWordSuggestions(_lastWordcloudWords || {});
   }
@@ -873,14 +879,16 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
         <div class="activity-input-row qa-input-row">
           <input id="qa-input" type="text" maxlength="280" autocomplete="off"
                  placeholder="Ask a question…" />
-          <button id="qa-submit-btn" class="btn btn-primary" onclick="submitQuestion()">↵</button>
+          <button id="qa-submit-btn" class="btn btn-primary" onclick="submitQuestion()" disabled>↵</button>
         </div>
         <div id="qa-question-list"></div>
       </div>
     `;
     const input = document.getElementById('qa-input');
     if (input) {
+      const qaBtn = document.getElementById('qa-submit-btn');
       input.addEventListener('keydown', e => { if (e.key === 'Enter') submitQuestion(); });
+      input.addEventListener('input', () => { if (qaBtn) qaBtn.disabled = !input.value.trim(); });
       input.focus();
     }
     updateQAList(questions);
@@ -928,6 +936,8 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     if (!text || !ws) return;
     ws.send(JSON.stringify({ type: 'qa_submit', text }));
     input.value = '';
+    const qaBtn = document.getElementById('qa-submit-btn');
+    if (qaBtn) qaBtn.disabled = true;
     input.focus();
   }
 
@@ -1075,8 +1085,9 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
           : 'Add an argument against 👎…';
         html += `<div class="debate-input-row">
           <input id="debate-arg-input" type="text" maxlength="280" placeholder="${placeholder}"
-            onkeydown="if(event.key==='Enter')debateSubmitArg()" />
-          <button class="btn btn-primary" onclick="debateSubmitArg()">↵</button>
+            onkeydown="if(event.key==='Enter')debateSubmitArg()"
+            oninput="document.getElementById('debate-arg-submit').disabled=!this.value.trim()" />
+          <button id="debate-arg-submit" class="btn btn-primary" onclick="debateSubmitArg()" disabled>↵</button>
         </div>`;
       }
     } else if (phase === 'prep') {
@@ -1199,6 +1210,8 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     if (!text || !ws) return;
     ws.send(JSON.stringify({ type: 'debate_argument', text }));
     input.value = '';
+    const btn = document.getElementById('debate-arg-submit');
+    if (btn) btn.disabled = true;
   }
 
   function debateUpvote(argId) {
