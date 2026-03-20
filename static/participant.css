@@ -504,6 +504,7 @@ h1 { display: none; }
 .debate-col { flex: 1; display: flex; flex-direction: column; gap: .8rem; }
 .debate-col-header { margin: 0 0 .4rem; font-size: .9rem; color: var(--muted); text-transform: uppercase; text-align: center; }
 .debate-col-against { border-right: 1px solid var(--border); padding-right: .75rem; }
+.debate-col-mine { background: rgba(108, 99, 255, .08); border-radius: 8px; padding: .5rem; }
 .debate-arg { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: .6rem .8rem; cursor: pointer; transition: border-color .15s; }
 .debate-arg:hover { border-color: var(--accent); }
 .debate-arg-upvoted { border-color: var(--accent); }
