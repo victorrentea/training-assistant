@@ -198,14 +198,22 @@ body {
 }
 
 .tab-btn {
-  padding: .4rem .9rem;
+  padding: .3rem .9rem .4rem;
   border: none;
   background: transparent;
   color: var(--muted);
   cursor: pointer;
-  font-size: .9rem;
+  font-size: .85rem;
   border-bottom: 2px solid transparent;
   transition: color .15s, border-color .15s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .1rem;
+}
+.tab-icon {
+  font-size: 1.5rem;
+  line-height: 1;
 }
 
 .tab-btn.active {
