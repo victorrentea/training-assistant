@@ -28,20 +28,43 @@ HOST_PASS = os.environ.get("HOST_PASSWORD", "testpass")
 # ---------------------------------------------------------------------------
 
 @pytest.fixture(scope="session")
-def server_url():
+def server_url(tmp_path_factory):
     """
     Spin up uvicorn on port 0 (OS picks a free port atomically).
     Parse the actual bound port from uvicorn's stderr output.
+
+    When --cov is active, the server runs under ``coverage run`` so that
+    backend line coverage is collected and combined automatically.
     """
+    project_dir = os.path.dirname(os.path.abspath(__file__))
     server_env = os.environ.copy()
     server_env["HOST_USERNAME"] = HOST_USER
     server_env["HOST_PASSWORD"] = HOST_PASS
+
+    # Detect whether pytest-cov is active
+    use_coverage = os.environ.get("_E2E_COVERAGE") == "1"
+    cov_data_file = None
+
+    if use_coverage:
+        cov_data_file = os.path.join(project_dir, ".coverage.server")
+        cmd = [
+            sys.executable, "-m", "coverage", "run",
+            "--source=.,routers",
+            f"--data-file={cov_data_file}",
+            "-m", "uvicorn", "main:app",
+            "--host", "127.0.0.1", "--port", "0",
+        ]
+    else:
+        cmd = [
+            sys.executable, "-m", "uvicorn", "main:app",
+            "--host", "127.0.0.1", "--port", "0",
+        ]
+
     proc = subprocess.Popen(
-        [sys.executable, "-m", "uvicorn", "main:app",
-         "--host", "127.0.0.1", "--port", "0"],
+        cmd,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.PIPE,
-        cwd=os.path.dirname(os.path.abspath(__file__)),
+        cwd=project_dir,
         env=server_env,
     )
 
@@ -63,8 +86,14 @@ def server_url():
 
     yield f"http://127.0.0.1:{port}"
 
-    proc.terminate()
-    proc.wait(timeout=5)
+    # Send SIGINT (KeyboardInterrupt) so coverage.py gets to flush data
+    import signal
+    proc.send_signal(signal.SIGINT)
+    try:
+        proc.wait(timeout=10)
+    except subprocess.TimeoutExpired:
+        proc.kill()
+        proc.wait(timeout=5)
 
 
 # ---------------------------------------------------------------------------
