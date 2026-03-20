@@ -170,6 +170,7 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
   // localStorage only stores names the user explicitly chose (via pencil edit).
   // Auto-suggested LOTR names are never persisted — each tab gets a fresh one.
   const LS_CUSTOM_NAME_KEY = 'workshop_custom_name'; // true if user explicitly renamed
+  let _suggestedName = null; // tracks the auto-suggested name (for onboarding checklist)
 
   (async function autoJoin() {
     const isCustom = localStorage.getItem(LS_CUSTOM_NAME_KEY);
@@ -177,7 +178,8 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     if (isCustom && savedName) {
       myName = savedName;
     } else {
-      myName = await fetchSuggestedName();
+      _suggestedName = await fetchSuggestedName();
+      myName = _suggestedName;
     }
     connectWS(myName);
   })();
