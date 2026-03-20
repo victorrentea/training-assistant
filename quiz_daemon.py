@@ -367,7 +367,7 @@ def run() -> None:
                 try:
                     entries = load_transcription_files(config.folder)
                     timed = [(ts, txt) for ts, txt in entries if ts is not None]
-                    total_lines = len([txt for _, txt in entries if txt.strip()])
+                    total_lines = len(entries)
                     if timed:
                         max_ts = max(ts for ts, _ in timed)
                         cutoff = max_ts - DEFAULT_TRANSCRIPT_MINUTES * 60
