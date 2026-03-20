@@ -31,9 +31,27 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
   let _qaToastIndex = 0;
   let _qaToastInterval = null;
   let _qaToastTimeout = null;
+  let _prevPollActive = false;
+  let _prevActivity = null;
+  let _stateInitialised = false;   // skip notifications on first state (join mid-session)
+  let _notifBtnBound = false;      // prevent re-binding on reconnect
 
   function escHtml(s) {
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  async function requestNotificationPermission() {
+    if (!('Notification' in window)) return;
+    if (Notification.permission !== 'default') return;
+    await Notification.requestPermission();
+    const btn = document.getElementById('notif-btn');
+    if (btn) btn.style.display = 'none';
+  }
+
+  function notifyIfHidden(title, body) {
+    if (!document.hidden) return;
+    if (Notification.permission !== 'granted') return;
+    try { new Notification(title, { body }); } catch (_) {}
   }
 
   // Largest-remainder rounding: ensures integer percentages sum to exactly 100
@@ -62,7 +80,7 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
   const savedName = localStorage.getItem(LS_KEY);
   if (savedName) {
     nameInput.value = savedName;
-    join();   // auto-join
+    join();   // auto-join — permission requested via 🔔 button in ws.onopen (no user gesture here)
   } else {
     fetchSuggestedName().then(name => {
       suggestedName = name;
@@ -92,8 +110,8 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
   });
 
   // ── Join ──
-  document.getElementById('join-btn').addEventListener('click', join);
-  nameInput.addEventListener('keydown', e => { if (e.key === 'Enter') join(); });
+  document.getElementById('join-btn').addEventListener('click', () => { join(); requestNotificationPermission(); });
+  nameInput.addEventListener('keydown', e => { if (e.key === 'Enter') { join(); requestNotificationPermission(); } });
 
   function join() {
     const input = document.getElementById('name-input');
@@ -141,6 +159,7 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     myVote = null;
     window._myScore = 0;
     window._qaQuestions = [];
+    _notifBtnBound = false;
     document.getElementById('main-screen').style.display = 'none';
     document.getElementById('join-screen').style.display = 'block';
     nameInput.value = '';
@@ -185,6 +204,7 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
 
   // ── WebSocket ──
   function connectWS(name) {
+    _stateInitialised = false;
     const proto = location.protocol === 'https:' ? 'wss' : 'ws';
     const url = `${proto}://${location.host}/ws/${encodeURIComponent(name)}`;
     ws = new WebSocket(url);
@@ -193,6 +213,13 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
       document.getElementById('join-screen').style.display = 'none';
       document.getElementById('main-screen').style.display = 'block';
       document.getElementById('display-name').textContent = myName;
+
+      // Show 🔔 button for auto-joiners who haven't been asked for permission yet
+      if ('Notification' in window && Notification.permission === 'default' && !_notifBtnBound) {
+        _notifBtnBound = true;
+        const btn = document.getElementById('notif-btn');
+        if (btn) { btn.style.display = ''; btn.onclick = requestNotificationPermission; }
+      }
 
       // Send stored GPS location if available, otherwise silent timezone fallback
       const storedLocation = localStorage.getItem(LS_LOCATION_KEY);
@@ -248,6 +275,24 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     switch (msg.type) {
       case 'state':
         versionReloadGuard && versionReloadGuard.check(msg.backend_version);
+        if (!_stateInitialised) {
+          // First message after connect: seed tracking state, fire no notification
+          _prevPollActive = msg.poll_active;
+          _prevActivity   = msg.current_activity;
+          _stateInitialised = true;
+        } else {
+          if (!_prevPollActive && msg.poll_active && msg.poll) {
+            notifyIfHidden('🗳️ New poll!', msg.poll.question);
+          }
+          if (_prevActivity !== 'qa' && msg.current_activity === 'qa') {
+            notifyIfHidden('❓ Q&A is open', 'Tap to ask or upvote questions');
+          }
+          if (_prevActivity !== 'wordcloud' && msg.current_activity === 'wordcloud') {
+            notifyIfHidden('☁️ Word cloud is open', 'Tap to share your thoughts');
+          }
+          _prevPollActive = msg.poll_active;
+          _prevActivity   = msg.current_activity;
+        }
         if (msg.poll?.id !== currentPoll?.id) {
           myVote = msg.poll?.multi ? new Set() : null;
           pollResult = null;
