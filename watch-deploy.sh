@@ -80,27 +80,27 @@ record_deploy() {
   fi
 }
 
-STATUS_FILE="/tmp/deploy_status.txt"
-JXA_PID=""
+NOTIFY_INTERVAL=5  # minimum seconds between countdown notifications
+LAST_NOTIFY_TIME=0
 
-start_status_bar() {
-  osascript -l JavaScript "$SCRIPT_DIR/deploy-status-bar.js" &
-  JXA_PID=$!
-}
-
-stop_status_bar() {
-  if [ -n "$JXA_PID" ] && kill -0 "$JXA_PID" 2>/dev/null; then
-    kill "$JXA_PID" 2>/dev/null
+notify_countdown() {
+  local remaining="$1"
+  local now
+  now=$(date +%s)
+  # Throttle: skip if less than NOTIFY_INTERVAL since last notification
+  if [ $((now - LAST_NOTIFY_TIME)) -lt "$NOTIFY_INTERVAL" ]; then
+    return
   fi
-  clear_status_bar
-}
-
-update_status_bar() {
-  echo "$1" > "$STATUS_FILE"
-}
-
-clear_status_bar() {
-  : > "$STATUS_FILE"
+  LAST_NOTIFY_TIME="$now"
+  local msg
+  if [ "$remaining" -le 0 ]; then
+    msg="Should be live... still checking"
+  elif [ "$remaining" -le 5 ]; then
+    msg="Deploying — any moment now..."
+  else
+    msg="Deploying — ~${remaining}s remaining"
+  fi
+  terminal-notifier -title "🚀 Deploy" -message "$msg" -group deploy &>/dev/null &
 }
 
 notify_success() {
@@ -153,7 +153,6 @@ check_existing() {
 }
 
 cleanup() {
-  stop_status_bar
   rm -f "$LOCK_FILE"
   exit 0
 }
@@ -161,7 +160,6 @@ trap cleanup INT TERM
 
 check_existing
 write_heartbeat
-start_status_bar
 
 # Initialize state
 LAST_MASTER_HEAD=$(get_master_head)
@@ -196,7 +194,6 @@ while true; do
       if [ "$MERGE_SHA" = "$LAST_MASTER_HEAD" ]; then
         # This deploy matches the push we're tracking — real success
         record_deploy "$ELAPSED"
-        clear_status_bar
         notify_success "$CURRENT_PROD"
         LAST_PROD_VERSION="$CURRENT_PROD"
         WAITING_SINCE=""
@@ -212,7 +209,6 @@ while true; do
 
     # Check timeout
     if [ "$ELAPSED" -ge "$DEPLOY_TIMEOUT" ]; then
-      clear_status_bar
       notify_failure "$MERGE_SHA"
       LAST_PROD_VERSION="$CURRENT_PROD"
       WAITING_SINCE=""
@@ -221,15 +217,9 @@ while true; do
       continue
     fi
 
-    # Update menu bar countdown
+    # Send countdown notification (throttled to every 5s)
     REMAINING=$((ESTIMATED - ELAPSED))
-    if [ "$REMAINING" -le 0 ]; then
-      update_status_bar "🚀 ..."
-    elif [ "$REMAINING" -le 5 ]; then
-      update_status_bar "🚀 soon..."
-    else
-      update_status_bar "🚀 ~${REMAINING}s"
-    fi
+    notify_countdown "$REMAINING"
   else
     # Not waiting — track production version silently
     if [ "$CURRENT_PROD" != "$LAST_PROD_VERSION" ]; then
@@ -248,8 +238,9 @@ while true; do
       LAST_MASTER_HEAD="$CURRENT_HEAD"
       WAITING_SINCE=$(date +%s)
       MERGE_SHA="$CURRENT_HEAD"
-      # Show initial countdown in menu bar
-      update_status_bar "🚀 ~${ESTIMATED}s"
+      # Send initial countdown notification (resets throttle)
+      LAST_NOTIFY_TIME=0
+      notify_countdown "$ESTIMATED"
     elif [ -n "$CURRENT_HEAD" ]; then
       LAST_MASTER_HEAD="$CURRENT_HEAD"
     fi
