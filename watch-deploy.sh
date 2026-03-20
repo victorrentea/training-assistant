@@ -1,8 +1,37 @@
 #!/bin/bash
-# Continuous deploy watcher — detects merges to master and verifies production deploys.
-# Polls production every 2s, GitHub master HEAD every 10s.
-# When master HEAD changes, waits up to 2 minutes for production to reflect the new version.
-# Usage: ./watch-deploy.sh   (run once, runs indefinitely)
+# ═══════════════════════════════════════════════════════════════════
+# watch-deploy.sh — Continuous deploy watcher
+# ═══════════════════════════════════════════════════════════════════
+#
+# DESIGN GOALS
+#
+#   1. Detect new production deploys fast.
+#      Production version is polled every 2s — a cheap GET to a
+#      static file. Deploy detection latency is at most 2 seconds.
+#
+#   2. Detect merges to master with acceptable delay.
+#      GitHub master HEAD is polled every 10s (well within the
+#      5000 req/hour API rate limit at ~360 req/hour). This adds
+#      at most 10s of detection lag — acceptable because the real
+#      bottleneck is Railway's ~40-50s build time, and the deploy
+#      timeout is 2 minutes.
+#
+#   3. Alert on deploy failures, not just successes.
+#      When a merge is detected, a 2-minute countdown starts.
+#      If production doesn't reflect a new version within that
+#      window, a failure notification fires. This catches Railway
+#      build errors, configuration issues, or stuck deploys.
+#
+#   4. Run-and-forget: start once per work session, runs forever.
+#      Merges happen from the GitHub web UI, not from the CLI,
+#      so the watcher cannot be triggered by a git hook. Instead
+#      it runs as a background process, watching autonomously.
+#
+# USAGE
+#   ./watch-deploy.sh        # foreground
+#   ./watch-deploy.sh &      # background (typical)
+#
+# ═══════════════════════════════════════════════════════════════════
 
 REPO="victorrentea/training-assistant"
 PROD_URL="https://interact.victorrentea.ro/static/version.js"
