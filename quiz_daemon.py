@@ -249,8 +249,11 @@ def run() -> None:
     last_heartbeat_at = 0.0
     last_session_check_at = 0.0
     last_transcript_stats_at = 0.0
-    # Summary state
-    summary_points: list[dict] = []
+    # Summary state — two-tier: locked (preserved) + draft (reshapeable)
+    locked_points: list[dict] = [
+        {"text": f"Session date: {date.today().isoformat()}", "source": "notes"}
+    ]
+    draft_points: list[dict] = []
     last_summary_at = 0.0  # monotonic time of last summary run
 
     while True:
@@ -409,14 +412,19 @@ def run() -> None:
                     print("[summarizer] Force-generating summary (host requested)")
                 last_summary_at = now_mono
                 try:
-                    new_points = generate_summary(config, summary_points)
+                    # Promote draft → locked before generating
+                    locked_points.extend(draft_points)
+                    draft_points = []
+                    new_points = generate_summary(config, locked_points)
                     if new_points is not None:
-                        summary_points = new_points
+                        draft_points = new_points
+                        all_points = locked_points + draft_points
                         _post_json(
                             f"{config.server_url}/api/summary",
-                            {"points": summary_points},
+                            {"points": all_points},
                             config.host_username, config.host_password,
                         )
+                        print(f"[summarizer] {len(locked_points)} locked + {len(draft_points)} draft = {len(all_points)} total points")
                 except Exception as e:
                     print(f"[summarizer] Error during summary generation: {e}", file=sys.stderr)
 

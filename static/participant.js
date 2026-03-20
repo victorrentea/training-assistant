@@ -950,10 +950,10 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
 
   // ── Debate rendering ──
   const DEBATE_PHASES = [
-    { key: 'side_selection', num: 1, label: 'Pick Sides',   desc: 'Choose which side you want to defend.' },
-    { key: 'arguments',      num: 2, label: 'Arguments',    desc: 'Submit arguments to support your side.' },
-    { key: 'prep',           num: 3, label: 'Preparation',  desc: 'Review arguments and volunteer as champion.' },
-    { key: 'live_debate',    num: 4, label: 'Live Debate',  desc: 'Champions are debating live!' },
+    { key: 'side_selection', num: 1, label: 'Pick Sides' },
+    { key: 'arguments',      num: 2, label: 'Arguments' },
+    { key: 'prep',           num: 3, label: 'Preparation' },
+    { key: 'live_debate',    num: 4, label: 'Live Debate' },
   ];
 
   function getDebateSubPhases(firstSide) {
@@ -1042,7 +1042,7 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     }
 
     const sideIcon = mySide === 'for' ? '👍' : mySide === 'against' ? '👎' : '';
-    const phaseInfo = DEBATE_PHASES.find(p => p.key === displayPhase) || { num: '?', label: displayPhase, desc: '' };
+
     let html = `<div class="debate-header">
       <div class="debate-title">⚔️ Debate</div>
     </div>`;
