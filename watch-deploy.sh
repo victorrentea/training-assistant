@@ -205,12 +205,11 @@ while true; do
         # This deploy matches the push we're tracking — real success
         record_deploy "$ELAPSED"
         notify_success "$CURRENT_PROD"
-        LAST_PROD_VERSION="$CURRENT_PROD"
-        WAITING_SINCE=""
-        MERGE_SHA=""
-        ESTIMATED=""
-        COMMIT_MSG=""
-        continue
+        # Pull latest code and self-restart with new version
+        echo "$(date '+%H:%M:%S') 🔄 Pulling latest code..."
+        git -C "$SCRIPT_DIR" pull --ff-only origin master 2>&1 | sed 's/^/  /'
+        echo "$(date '+%H:%M:%S') 🔁 Restarting watcher with new version..."
+        exec "$0" "$@"
       else
         # Stale deploy from an older push — keep waiting for the newer one
         echo "$(date '+%H:%M:%S') 🔄 Stale deploy landed ($CURRENT_PROD), still waiting for ${MERGE_SHA:0:8}"
