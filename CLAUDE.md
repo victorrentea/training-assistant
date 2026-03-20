@@ -195,7 +195,7 @@ The user frequently uses a dictation tool. Messages may contain misheard or mist
 
 - **After completing each backlog item**: create a git commit.
 - **After completing each backlog item**: attach proof before marking it done (screenshot evidence by default; for non-visual tasks, include equivalent captured proof such as test output/logs).
-- **Deploy monitoring**: `./watch-deploy.sh` runs continuously in the background (started once per session). It polls GitHub master HEAD every 10s and production version every 2s. When it detects a merge to master, it waits up to 2 minutes for production to update, then fires a macOS notification (success or timeout). No need to manually trigger after push — it watches automatically.
+- **Deploy monitoring**: `./watch-deploy.sh` runs continuously in the background (started once per work session). It polls GitHub master HEAD every 10s and production every 2s. On merge detection, it waits up to 2 min for deploy, then fires a macOS notification (success or timeout). **After creating a PR**, remind the user to start the watcher if not already running: `./watch-deploy.sh &`
 - **After any significant architectural change**: update the C4 diagrams in `adoc/` (c4_c1_context.puml, c4_c2_containers.puml, c4_c3_components.puml) to reflect the new structure.
 - **Test-Drive-Fix any human-reported bug**: start by reproducing the bug yourself manually, then write an automated test for the bug, see it failing, then passing after you fixed the bug.
 - **Document direct request**: Every time the human requests a feature change or bug fix after you do it, keep track of it in backlog.md in a concise way as being done.
