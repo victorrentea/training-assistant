@@ -1,0 +1,7 @@
+{
+  "sha": "e30898c9d0fab2a16d0eadd460cc8c72d5172a6d",
+  "timestamp": "2026-03-20 21:56",
+  "changelog": [
+    "fix: rename \"Pick Sides\" phase to \"Pick a Side\""
+  ]
+}

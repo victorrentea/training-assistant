@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from quiz_daemon import TranscriptTimestampAppender
+from training_daemon import TranscriptTimestampAppender
 
 
 def test_timestamp_appender_logs_missing_transcript_once(tmp_path: Path, capsys):

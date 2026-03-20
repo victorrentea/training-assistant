@@ -166,6 +166,7 @@
         renderParticipantList(names);
         renderDaemonStatus(msg.daemon_connected, msg.daemon_last_seen);
         renderTranscriptStatus(msg.transcript_line_count, msg.transcript_total_lines, msg.transcript_latest_ts);
+        renderOverlayStatus(msg.overlay_connected);
         renderNotesStatus(msg.daemon_session_folder, msg.daemon_session_notes);
         updateHostNotes(msg.notes_content);
         renderPreview(msg.quiz_preview || null);
@@ -322,7 +323,7 @@
     if (!lastSeenIso) {
       el.textContent = 'Agent';
       el.className = 'badge disconnected';
-      el.title = 'Never connected — start with ./start-daemon.sh';
+      el.title = 'Never connected — start with ./start.sh';
       return;
     }
 
@@ -357,6 +358,13 @@
         ? `No transcription since ${latestTs}\n${totalLines} lines today`
         : 'No transcription data';
     }
+  }
+
+  function renderOverlayStatus(connected) {
+    const el = document.getElementById('overlay-badge');
+    if (!el) return;
+    el.className = `badge ${connected ? 'connected' : 'disconnected'}`;
+    el.title = connected ? 'Emoji overlay connected' : 'Emoji overlay not connected';
   }
 
   let hostNotesContent = '';
@@ -1479,7 +1487,7 @@
   // ── Debate Phase Stepper ──
 
   const DEBATE_PHASES = [
-    { key: 'side_selection', num: 1, label: 'Pick Sides' },
+    { key: 'side_selection', num: 1, label: 'Pick a Side' },
     { key: 'arguments',      num: 2, label: 'Arguments' },
     { key: 'prep',           num: 3, label: 'Preparation' },
     { key: 'live_debate',    num: 4, label: 'Live Debate' },
@@ -1781,7 +1789,7 @@
       } else if (isActive && p.key === 'live_debate') {
         // No end button — debate stays in live_debate; use Reset to clear
       } else if (isActive && p.key === 'side_selection') {
-        launchBtn = `<button class="btn btn-warn btn-sm" onclick="debateForceAssign()">🎲 Assign</button>`;
+        launchBtn = `<button class="btn btn-warn btn-sm" onclick="debateForceAssign()">🎲 Random Assign</button>`;
       } else if (isActive && p.key === 'arguments') {
         launchBtn = `<button class="btn btn-primary btn-sm" id="debate-end-args-btn" onclick="debateEndArguments()">End</button>`;
       } else if (isActive) {

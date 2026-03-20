@@ -10,11 +10,14 @@ from state import state, ActivityType
 logger = logging.getLogger(__name__)
 
 
+SPECIAL_PIDS = {"__host__", "__overlay__"}
+
+
 def participant_ids() -> list[str]:
-    """Return sorted UUIDs of named participants, excluding __host__."""
+    """Return sorted UUIDs of named participants, excluding special clients."""
     return sorted(
         pid for pid in state.participants
-        if pid != "__host__" and pid in state.participant_names
+        if pid not in SPECIAL_PIDS and pid in state.participant_names
     )
 
 
@@ -271,6 +274,7 @@ def build_host_state() -> dict:
         "qa_questions": _build_qa_for_host(),
         **_build_debate_for_host(),
         "codereview": _build_codereview_for_host(),
+        "overlay_connected": "__overlay__" in state.participants,
     }
 
 
@@ -278,6 +282,8 @@ async def broadcast_state():
     """Send personalized state to each connected client."""
     dead = []
     for pid, ws in state.participants.items():
+        if pid == "__overlay__":
+            continue
         try:
             if pid == "__host__":
                 await ws.send_text(json.dumps(build_host_state()))
@@ -349,3 +355,14 @@ async def send_state_to_participant(ws: WebSocket, pid: str):
 async def send_state_to_host(ws: WebSocket):
     """Send host state to the host websocket."""
     await ws.send_text(json.dumps(build_host_state()))
+
+
+async def send_emoji_to_overlay(emoji: str):
+    """Forward an emoji reaction to the overlay client if connected."""
+    ws = state.participants.get("__overlay__")
+    if ws is None:
+        return
+    try:
+        await ws.send_text(json.dumps({"type": "emoji_reaction", "emoji": emoji}))
+    except Exception:
+        state.participants.pop("__overlay__", None)

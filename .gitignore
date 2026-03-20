@@ -20,3 +20,8 @@ daemon/.venv/
 /workshop_daemon.egg-info/top_level.txt
 /.deploy.log
 deploy-history.txt
+static/version.js
+static/deploy-info.json
+
+# Swift Package Manager
+emoji-overlay/.build/
