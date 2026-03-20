@@ -117,6 +117,7 @@ def build_participant_state(pid: str) -> dict:
         "poll_active": state.poll_active,
         "vote_counts": state.vote_counts(),
         "participant_count": len(pids),
+        "host_connected": "__host__" in state.participants,
         "my_score": state.scores.get(pid, 0),
         "my_avatar": state.participant_avatars.get(pid, ""),
         "current_activity": state.current_activity,
@@ -207,7 +208,7 @@ async def broadcast_participant_update():
     count = len(pids)
 
     # Simple message for participants
-    participant_msg = json.dumps({"type": "participant_count", "count": count})
+    participant_msg = json.dumps({"type": "participant_count", "count": count, "host_connected": "__host__" in state.participants})
 
     # Detailed message for host
     participants_list = []

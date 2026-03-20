@@ -352,6 +352,7 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
         currentPoll = msg.poll;
         pollActive = msg.poll_active;
         updateParticipantCount(msg.participant_count);
+        updateHostDot(msg.host_connected);
         updateScore(msg.my_score);
         window._myScore = msg.my_score || 0;
         window._myUuid = myUUID;
@@ -389,6 +390,7 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
         break;
       case 'participant_count':
         updateParticipantCount(msg.count);
+        updateHostDot(msg.host_connected);
         break;
       case 'scores':
         break;
@@ -430,6 +432,11 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
 
   function updateParticipantCount(n) {
     document.getElementById('pax-count').textContent = `👥 ${n} participant${n !== 1 ? 's' : ''}`;
+  }
+
+  function updateHostDot(connected) {
+    const dot = document.getElementById('host-dot');
+    if (dot) dot.style.display = connected ? 'inline' : 'none';
   }
 
   let _displayedScore = 0;
