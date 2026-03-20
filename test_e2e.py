@@ -749,3 +749,56 @@ class TestNotifications:
             # After auto-join ws.onopen fires and sees permission === 'default' → show button
             expect(page.locator("#notif-btn")).to_be_visible(timeout=5000)
             browser.close()
+
+    def test_no_spurious_notification_on_join_mid_poll(self, server_url):
+        """Joining while a poll is already active must NOT fire a notification
+        (first state message seeds tracking state, doesn't trigger)."""
+        import json, urllib.request, base64
+        creds = base64.b64encode(b"host:testpass").decode()
+        host_headers = {"Authorization": f"Basic {creds}", "Content-Type": "application/json"}
+
+        # Create and open a poll via API before participant joins
+        req = urllib.request.Request(
+            f"{server_url}/api/poll",
+            data=json.dumps({"question": "Notif test Q", "options": ["A", "B"]}).encode(),
+            headers=host_headers, method="POST",
+        )
+        urllib.request.urlopen(req)
+        req2 = urllib.request.Request(
+            f"{server_url}/api/poll/status",
+            data=json.dumps({"open": True}).encode(),
+            headers=host_headers, method="POST",
+        )
+        urllib.request.urlopen(req2)
+
+        with sync_playwright() as p:
+            browser = p.chromium.launch()
+            ctx = browser.new_context(permissions=["notifications"])
+
+            # Inject Notification mock BEFORE page load using add_init_script.
+            # Also force document.hidden=true so notifyIfHidden() doesn't suppress
+            # the notification before it reaches new Notification() — this is what
+            # makes the test actually fail without the _stateInitialised guard.
+            ctx.add_init_script("""
+              window._notifFired = false;
+              const _OrigNotif = window.Notification;
+              window.Notification = function(t, o) {
+                window._notifFired = true;
+                return new _OrigNotif(t, o);
+              };
+              Object.defineProperty(window.Notification, 'permission', {
+                get: () => _OrigNotif.permission
+              });
+              window.Notification.requestPermission = _OrigNotif.requestPermission.bind(_OrigNotif);
+              // Force tab to appear hidden so notifyIfHidden() doesn't bail early
+              Object.defineProperty(document, 'hidden', { get: () => true, configurable: true });
+            """)
+
+            page = ctx.new_page()
+            page.goto(server_url)
+            ParticipantPage(page).join("NotifJoinMid")
+            page.wait_for_timeout(1000)  # let state message arrive
+
+            notif_fired = page.evaluate("window._notifFired")
+            assert not notif_fired, "No notification should fire when joining mid-poll"
+            browser.close()
