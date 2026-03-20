@@ -14,6 +14,7 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
   const LS_WC_KEY = 'workshop_wc_words';
   const LS_WC_SESSION_KEY = 'workshop_wc_session';
   let _lastWordcloudWords = {};
+  let _lastWordcloudTopic = '';
   const WC_COLORS = ['#7ecef4','#a78bfa','#34d399','#fbbf24','#f472b6','#60a5fa','#fb923c'];
   let _wcDebounceTimer = null;
   const versionReloadGuard = window.createVersionReloadGuard
@@ -149,23 +150,37 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
   });
 
   // ── Location ──
-  async function resolveLocation() {
-    return new Promise((resolve) => {
-      if (!navigator.geolocation) {
-        resolve({ timezone: Intl.DateTimeFormat().resolvedOptions().timeZone });
-        return;
-      }
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const { latitude: lat, longitude: lon } = pos.coords;
-          resolve({ location: `${lat.toFixed(5)}, ${lon.toFixed(5)}` });
-        },
-        () => {
-          resolve({ timezone: Intl.DateTimeFormat().resolvedOptions().timeZone });
-        },
-        { timeout: 15000, maximumAge: 60000 }
-      );
-    });
+  const LS_LOCATION_KEY = 'workshop_participant_location';
+
+  function getTimezoneLocation() {
+    return `🕐 ${Intl.DateTimeFormat().resolvedOptions().timeZone}`;
+  }
+
+  function sendLocation(locationStr) {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type: 'location', location: locationStr }));
+    }
+  }
+
+  function updateLocationPrompt() {
+    const el = document.getElementById('location-prompt');
+    if (!el) return;
+    el.style.display = localStorage.getItem(LS_LOCATION_KEY) ? 'none' : '';
+  }
+
+  function requestLocation() {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const { latitude: lat, longitude: lon } = pos.coords;
+        const locationStr = `${lat.toFixed(5)}, ${lon.toFixed(5)}`;
+        localStorage.setItem(LS_LOCATION_KEY, locationStr);
+        sendLocation(locationStr);
+        updateLocationPrompt();
+      },
+      () => { /* user denied — prompt stays visible, they can retry */ },
+      { timeout: 15000, maximumAge: 60000 }
+    );
   }
 
   // ── WebSocket ──
@@ -174,14 +189,15 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     const url = `${proto}://${location.host}/ws/${encodeURIComponent(name)}`;
     ws = new WebSocket(url);
 
-    ws.onopen = async () => {
+    ws.onopen = () => {
       document.getElementById('join-screen').style.display = 'none';
       document.getElementById('main-screen').style.display = 'block';
       document.getElementById('display-name').textContent = myName;
 
-      const loc = await resolveLocation();
-      const locationStr = loc.location || `🕐 ${loc.timezone}`;
-      ws.send(JSON.stringify({ type: 'location', location: locationStr }));
+      // Send stored GPS location if available, otherwise silent timezone fallback
+      const storedLocation = localStorage.getItem(LS_LOCATION_KEY);
+      sendLocation(storedLocation || getTimezoneLocation());
+      updateLocationPrompt();
     };
 
     let _nameTaken = false;
@@ -418,6 +434,7 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
   // ── Word Cloud ──
   function renderWordCloudScreen(wordcloudWords, topic) {
     _lastWordcloudWords = wordcloudWords;
+    _lastWordcloudTopic = topic || '';
     const content = document.getElementById('content');
     // If server word cloud is empty, host cleared it — wipe local words too
     if (Object.keys(wordcloudWords).length === 0) {
@@ -438,9 +455,9 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
             <div class="wc-input-row">
               <input id="wc-input" type="text" maxlength="40" autocomplete="off" placeholder="Type a word…" list="wc-suggestions" />
               <datalist id="wc-suggestions"></datalist>
-              <button id="wc-go" class="btn btn-primary">↵</button>
-              <button id="wc-download" class="btn btn-secondary" title="Download image">⬇</button>
+              <button id="wc-go" class="btn btn-primary">🚀</button>
             </div>
+            <button id="wc-download" class="btn btn-secondary wc-download-btn">⬇ Download Image</button>
             <div id="wc-my-words"></div>
           </div>
         </div>`;
@@ -460,8 +477,8 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     // Update prompt with topic (may change after screen is shown)
     const promptEl = document.getElementById('wc-prompt-text');
     if (promptEl) {
-      const topicSuffix = topic ? ` about <strong>${escHtml(topic)}</strong>` : '';
-      promptEl.innerHTML = `What comes to mind${topicSuffix}? <span style="font-size:.9em; opacity:.75; font-weight:normal">(pts++)</span>`;
+      // Topic is shown on the canvas image, so keep prompt simple
+      promptEl.innerHTML = `What comes to mind? <span style="font-size:.9em; opacity:.75; font-weight:normal">(pts++)</span>`;
     }
     renderWordCloud(wordcloudWords);
     renderMyWords();

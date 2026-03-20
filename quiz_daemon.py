@@ -19,6 +19,8 @@ import os
 import signal
 import sys
 import time
+from dataclasses import replace as dc_replace
+from datetime import date
 from pathlib import Path
 
 from daemon.transcript_timestamps import (
@@ -26,8 +28,8 @@ from daemon.transcript_timestamps import (
     infer_template_from_first_line,
 )
 from quiz_core import (
-    config_from_env, auto_generate, auto_generate_topic, auto_refine,
-    _get_json, DAEMON_POLL_INTERVAL,
+    config_from_env, find_session_folder, auto_generate, auto_generate_topic, auto_refine,
+    post_status, _get_json, DAEMON_POLL_INTERVAL,
 )
 
 _PID_FILE = Path("/tmp/quiz_daemon.pid")
@@ -133,6 +135,15 @@ def run() -> None:
 
     config = config_from_env()
 
+    # Detect today's session folder
+    sf, sn = find_session_folder(date.today())
+    config = dc_replace(config, session_folder=sf, session_notes=sn)
+    if sf:
+        print(f"[session] Session folder: {sf.name}")
+        print(f"[session] Notes file: {sn.name if sn else 'NOT FOUND'}")
+    else:
+        print("[session] No session folder found for today", file=sys.stderr)
+
     # Start background material indexer
     materials_folder_str = os.environ.get("MATERIALS_FOLDER",
         str(Path(__file__).parent / "materials"))
@@ -153,10 +164,34 @@ def run() -> None:
     last_text: str | None = None
     last_quiz: dict | None = None
     server_disconnected = False
+    last_detected_date: date | None = None
 
     while True:
         try:
             timestamp_appender.tick()
+
+            # ── Re-detect session folder on date change ──
+            today = date.today()
+            if today != last_detected_date:
+                sf, sn = find_session_folder(today)
+                config = dc_replace(config, session_folder=sf, session_notes=sn)
+                last_detected_date = today
+                if sf:
+                    print(f"[session] Detected: {sf.name} / notes: {sn.name if sn else 'none'}")
+                else:
+                    print("[session] No session folder for today", file=sys.stderr)
+                # Push session status to server so host UI updates immediately
+                _session_status_pending = True
+            else:
+                _session_status_pending = False
+
+            sf_name = config.session_folder.name if config.session_folder else None
+            sn_name = config.session_notes.name if config.session_notes else None
+
+            # ── Push session info when detected or on reconnect ──
+            if _session_status_pending:
+                post_status("ready", "Agent ready.", config,
+                            session_folder=sf_name, session_notes=sn_name)
 
             # ── Check for new quiz generation request ──
             data = _get_json(
@@ -166,6 +201,8 @@ def run() -> None:
             if server_disconnected:
                 print("[daemon] Reconnected to server.")
                 server_disconnected = False
+                post_status("ready", "Agent reconnected.", config,
+                            session_folder=sf_name, session_notes=sn_name)
             req = data.get("request")
             if req:
                 topic = req.get("topic")
@@ -198,7 +235,6 @@ def run() -> None:
                     if updated:
                         last_quiz = updated
                 else:
-                    from quiz_core import post_status
                     post_status("error", "No conversation context — please generate a question first.", config)
 
         except RuntimeError as e:
