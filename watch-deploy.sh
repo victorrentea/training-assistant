@@ -88,6 +88,7 @@ record_deploy() {
 
 NOTIFY_INTERVAL=5  # minimum seconds between countdown notifications
 LAST_NOTIFY_TIME=0
+LAST_NOTIFY_TITLE=""
 
 notify_countdown() {
   local remaining="$1"
@@ -97,15 +98,21 @@ notify_countdown() {
   if [ $((now - LAST_NOTIFY_TIME)) -lt "$NOTIFY_INTERVAL" ]; then
     return
   fi
-  LAST_NOTIFY_TIME="$now"
   local title
   if [ "$remaining" -le 0 ]; then
-    title="🚀 Deploying any moment..."
+    local overdue=$(( -remaining ))
+    title="🚀 Deploy delayed by ${overdue}s..."
   elif [ "$remaining" -le 5 ]; then
     title="🚀 Deploying any moment..."
   else
     title="🚀 Deploying in about ${remaining}s"
   fi
+  # Debounce: skip if title is identical to previous notification
+  if [ "$title" = "$LAST_NOTIFY_TITLE" ]; then
+    return
+  fi
+  LAST_NOTIFY_TIME="$now"
+  LAST_NOTIFY_TITLE="$title"
   terminal-notifier -title "$title" -message "$COMMIT_MSG" -group deploy &>/dev/null &
 }
 
@@ -251,8 +258,9 @@ while true; do
         echo "  Commit: $COMMIT_MSG"
         echo "  Keeping original countdown (${ESTIMATED}s estimate)"
       fi
-      # Send initial countdown notification (resets throttle)
+      # Send initial countdown notification (resets throttle and debounce)
       LAST_NOTIFY_TIME=0
+      LAST_NOTIFY_TITLE=""
       notify_countdown "$ESTIMATED"
     elif [ -n "$CURRENT_HEAD" ]; then
       LAST_MASTER_HEAD="$CURRENT_HEAD"
