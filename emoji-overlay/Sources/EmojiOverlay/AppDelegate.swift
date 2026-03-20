@@ -14,9 +14,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
         animator = EmojiAnimator(hostLayer: hostLayer)
 
-        // Auto-demo: spawn one ❤️ every second
+        // Auto-demo: spawn a random emoji every second
         demoTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
-            self?.animator.spawnEmoji()
+            self?.animator.spawnRandomEmoji()
         }
     }
 
