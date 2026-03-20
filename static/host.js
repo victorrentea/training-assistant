@@ -85,7 +85,7 @@
     recordPollInHistory(currentPoll, correctOptIds);
     // Post to backend to award points
     const resp = await fetch('/api/poll/correct', {
-      method: 'POST',
+      method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ correct_ids: [...correctOptIds] }),
     });
@@ -528,7 +528,7 @@
   // ── Open / close / clear ──
   async function setPollStatus(open) {
     await fetch('/api/poll/status', {
-      method: 'POST',
+      method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ open }),
     });
@@ -976,8 +976,8 @@
   }
 
   async function toggleAnswered(qid, current) {
-    await fetch(`/api/qa/answer/${qid}`, {
-      method: 'POST',
+    await fetch(`/api/qa/question/${qid}/answered`, {
+      method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ answered: !current }),
     });
@@ -1011,8 +1011,8 @@
       const newText = input.value.trim();
       if (newText && newText !== currentText) {
         textEl.textContent = newText; // optimistic update (WS will confirm)
-        await fetch(`/api/qa/question/${qid}`, {
-          method: 'PATCH',
+        await fetch(`/api/qa/question/${qid}/text`, {
+          method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ text: newText }),
         });

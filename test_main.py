@@ -185,7 +185,7 @@ class WorkshopSession:
         assert self._poll, "No current poll"
         text_to_id = {o["text"]: o["id"] for o in self._poll["options"]}
         ids = [text_to_id[t] for t in option_texts]
-        resp = self._client.post("/api/poll/correct", json={"correct_ids": ids})
+        resp = self._client.put("/api/poll/correct", json={"correct_ids": ids})
         assert resp.status_code == 200, f"mark_correct failed: {resp.text}"
 
     def get_scores(self) -> dict:
@@ -201,12 +201,12 @@ class WorkshopSession:
         assert resp.status_code == 200
 
     def open_poll(self):
-        resp = self._client.post("/api/poll/status", json={"open": True})
+        resp = self._client.put("/api/poll/status", json={"open": True})
         assert resp.status_code == 200
         assert resp.json()["poll_active"] is True
 
     def close_poll(self):
-        resp = self._client.post("/api/poll/status", json={"open": False})
+        resp = self._client.put("/api/poll/status", json={"open": False})
         assert resp.status_code == 200
         assert resp.json()["poll_active"] is False
 
@@ -753,12 +753,12 @@ class TestQA:
 
     def test_edit_question_updates_text(self, session):
         qid = self._submit_ws(session, "Alice", "Original text")
-        resp = session._client.patch(f"/api/qa/question/{qid}", json={"text": "Edited text"})
+        resp = session._client.put(f"/api/qa/question/{qid}/text", json={"text": "Edited text"})
         assert resp.status_code == 200, resp.text
         assert state.qa_questions[qid]["text"] == "Edited text"
 
     def test_edit_question_not_found_returns_404(self, session):
-        resp = session._client.patch("/api/qa/question/nonexistent-id", json={"text": "New"})
+        resp = session._client.put("/api/qa/question/nonexistent-id/text", json={"text": "New"})
         assert resp.status_code == 404
 
     def test_delete_question_removes_from_state(self, session):
