@@ -326,7 +326,7 @@
       const locLabel = loc ? resolvedCities[loc] || loc : null;
       const avatar = participantAvatars[n];
       const avatarHtml = avatar
-          ? `<img src="/static/avatars/${escHtml(avatar)}" class="avatar" style="width:28px;height:28px" onerror="this.style.display='none'">`
+          ? `<span class="avatar-wrap"><img src="/static/avatars/${escHtml(avatar)}" class="avatar" style="width:28px;height:28px" onerror="this.style.display='none'"><img src="/static/avatars/${escHtml(avatar)}" class="avatar-preview"></span>`
           : '';
       return `<li><span class="pax-name">${avatarHtml}${escHtml(n)}${scoreTag}</span>${locLabel ? `<span class="pax-location" onclick="openMap()" title="View all on map">📍 ${escHtml(locLabel)}</span>` : ''}</li>`;
     }).join('');

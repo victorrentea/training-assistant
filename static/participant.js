@@ -363,14 +363,18 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
         window._myName = myName;
         if (msg.my_avatar) {
             const avatarEl = document.getElementById('my-avatar');
-            avatarEl.src = '/static/avatars/' + msg.my_avatar;
+            const previewEl = document.getElementById('my-avatar-preview');
+            const avatarSrc = '/static/avatars/' + msg.my_avatar;
+            avatarEl.src = avatarSrc;
             avatarEl.style.display = '';
+            if (previewEl) { previewEl.src = avatarSrc; previewEl.style.display = ''; }
             avatarEl.onerror = function() {
                 const fallback = document.createElement('span');
                 fallback.className = 'avatar-fallback';
                 fallback.textContent = (window._myName || '?')[0].toUpperCase();
                 fallback.style.background = avatarColorFromUuid(window._myUuid);
                 this.replaceWith(fallback);
+                if (previewEl) previewEl.style.display = 'none';
             };
         }
         window._qaQuestions = msg.qa_questions || [];
