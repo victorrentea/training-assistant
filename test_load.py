@@ -86,24 +86,33 @@ async def _recv_until(ws, predicate, timeout=20.0):
             return msg
 
 
-async def participant_task(ws_base, name, counter, n, connected_event, poll_ready_event, results):
+async def participant_task(ws_base, name, idx, counter, n, connected_event, poll_ready_event, results):
     """
     Lifecycle for one load-test participant:
-    1. Connect via real WebSocket
-    2. Receive initial state (fail fast on name_taken)
-    3. Wait for poll_ready_event
-    4. Drain until poll_active == True
-    5. Vote randomly
-    6. Drain until vote_update (confirmation)
-    7. Drain until scores broadcast
+    1. Stagger connect (idx * 50ms) to avoid broadcast storm on simultaneous connections
+    2. Connect via real WebSocket
+    3. Receive initial state (fail fast on name_taken)
+    4. Wait for poll_ready_event
+    5. Drain until poll_active == True
+    6. Vote randomly
+    7. Drain until vote_update (confirmation)
+    8. Drain until scores broadcast
     """
+    await asyncio.sleep(idx * 0.05)  # stagger: spread connections over n*50ms to avoid write-buffer overflow
     try:
-        async with websockets.connect(f"{ws_base}/ws/{name}") as ws:
-            # Receive initial message
-            first = json.loads(await asyncio.wait_for(ws.recv(), timeout=15.0))
-            if first.get("type") == "name_taken":
-                raise RuntimeError(f"Name '{name}' already taken on server")
-            assert first.get("type") == "state", f"Unexpected first message type: {first.get('type')}"
+        async with websockets.connect(f"{ws_base}/ws/{name}", ping_interval=None) as ws:
+            # Drain messages until we get state (participant_count broadcasts from concurrent
+            # connections may arrive before our own state message)
+            initial_state = None
+            for _ in range(50):
+                msg = json.loads(await asyncio.wait_for(ws.recv(), timeout=15.0))
+                if msg.get("type") == "name_taken":
+                    raise RuntimeError(f"Name '{name}' already taken on server")
+                if msg.get("type") == "state":
+                    initial_state = msg
+                    break
+            if initial_state is None:
+                raise RuntimeError(f"{name}: never received initial state message")
 
             # Signal: I'm connected
             counter["count"] += 1
@@ -142,4 +151,117 @@ async def participant_task(ws_base, name, counter, n, connected_event, poll_read
 
 @pytest.mark.load
 def test_load(server_url):
-    assert requests.get(f"{server_url}/api/status").status_code == 200
+    n = LOAD_TEST_COUNT
+    ws_base = server_url.replace("http://", "ws://").replace("https://", "wss://")
+
+    # Pre-condition: no active poll (avoids disrupting a live session on prod)
+    status = requests.get(f"{server_url}/api/status").json()
+    if status.get("poll") is not None:
+        pytest.skip("Server already has an active poll — skipping load test")
+
+    results = {
+        f"LBT{i:03d}": {"voted": False, "voted_id": None, "score": None, "done": False, "error": None}
+        for i in range(n)
+    }
+
+    async def _run():
+        connected_event = asyncio.Event()
+        poll_ready_event = asyncio.Event()
+        counter = {"count": 0}
+
+        tasks = [
+            asyncio.create_task(
+                participant_task(ws_base, f"LBT{i:03d}", i, counter, n, connected_event, poll_ready_event, results)
+            )
+            for i in range(n)
+        ]
+
+        # Phase 1: wait for all participants to connect (allow extra time for stagger: n*50ms)
+        await asyncio.wait_for(connected_event.wait(), timeout=max(15.0, n * 0.05 + 10.0))
+        print(f"\n✓ All {n} participants connected")
+
+        # Phase 2: host creates and opens poll
+        # Use asyncio.to_thread so requests don't block the event loop (participant ping/pong)
+        poll_resp = await asyncio.to_thread(
+            lambda: _host(server_url, "post", "/api/poll", json={
+                "question": "Load test poll — pick any option",
+                "options": ["Option A", "Option B", "Option C", "Option D"],
+            })
+        )
+        assert poll_resp.status_code == 200, f"create_poll failed: {poll_resp.text}"
+        correct_id = poll_resp.json()["poll"]["options"][0]["id"]  # opt0 is the "correct" answer
+
+        await asyncio.to_thread(lambda: _host(server_url, "post", "/api/poll/status", json={"open": True}))
+        poll_ready_event.set()
+        print(f"✓ Poll opened — {n} participants voting...")
+
+        loop = asyncio.get_running_loop()
+
+        # Phase 3: wait for all votes
+        deadline = loop.time() + 30.0
+        while True:
+            voted_count = sum(1 for r in results.values() if r["voted"])
+            if voted_count == n:
+                break
+            if loop.time() > deadline:
+                raise TimeoutError(f"Only {voted_count}/{n} voted within 30s")
+            await asyncio.sleep(0.1)
+        print(f"✓ All {n} votes cast")
+
+        # Phase 4: close poll and post correct answer → triggers scores broadcast
+        await asyncio.to_thread(lambda: _host(server_url, "post", "/api/poll/status", json={"open": False}))
+        await asyncio.to_thread(lambda: _host(server_url, "post", "/api/poll/correct", json={"correct_ids": [correct_id]}))
+        print("✓ Poll closed, correct answer posted")
+
+        # Phase 5: wait for all scores received
+        deadline = loop.time() + 15.0
+        while True:
+            done_count = sum(1 for r in results.values() if r["done"])
+            if done_count == n:
+                break
+            if loop.time() > deadline:
+                raise TimeoutError(f"Only {done_count}/{n} received scores within 15s")
+            await asyncio.sleep(0.1)
+
+        await asyncio.gather(*tasks)
+        return correct_id
+
+    try:
+        correct_id = asyncio.run(_run())
+    finally:
+        # Teardown: always clean up server state (essential for prod)
+        try:
+            _host(server_url, "delete", "/api/poll")
+        except Exception as exc:
+            print(f"  [warn] DELETE /api/poll failed during teardown: {exc}")
+        try:
+            _host(server_url, "delete", "/api/scores")
+        except Exception as exc:
+            print(f"  [warn] DELETE /api/scores failed during teardown: {exc}")
+
+    # ── Assertions ──────────────────────────────────────────────────────────
+
+    errors = [(pname, r["error"]) for pname, r in results.items() if r.get("error")]
+    assert not errors, "Participant errors:\n" + "\n".join(f"  {pname}: {err}" for pname, err in errors)
+
+    assert all(r["voted"] for r in results.values()), "Not all participants cast a vote"
+    assert all(r["done"] for r in results.values()), "Not all participants received scores"
+
+    for name, r in results.items():
+        if r["voted_id"] == correct_id:
+            assert r["score"] >= 500, (
+                f"{name} voted correctly (opt0) but score={r['score']} — expected >= 500 (_MIN_POINTS)"
+            )
+        else:
+            assert r["score"] == 0, (
+                f"{name} voted wrong but score={r['score']} — expected 0"
+            )
+
+    assert requests.get(f"{server_url}/api/status").status_code == 200, "Server unresponsive after load test"
+
+    # ── Leaderboard ─────────────────────────────────────────────────────────
+    sorted_results = sorted(results.items(), key=lambda x: x[1].get("score") or 0, reverse=True)
+    print(f"\n=== Leaderboard ({n} participants) ===")
+    for rank, (name, r) in enumerate(sorted_results, 1):
+        mark = "✓" if r["voted_id"] == correct_id else "✗"
+        print(f"  {rank:3}. {name:10} {r.get('score', 0):5} pts  {mark}")
