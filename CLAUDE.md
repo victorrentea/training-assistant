@@ -10,7 +10,7 @@ It is intended as the primary reference for any AI coding assistant working on t
 ## Secrets
 
 Host panel credentials are stored in `secrets.env` (gitignored — never commit this file).
-The file contains `HOST_USERNAME` and `HOST_PASSWORD` for accessing `/host` and `/api/poll`, `/api/poll/status`, `/api/qa/question/{id}` (PATCH, DELETE), `/api/qa/answer/{id}`, `/api/qa/clear`, `/api/activity`, `/api/wordcloud/clear`.
+The file contains `HOST_USERNAME` and `HOST_PASSWORD` for accessing `/host` and `/api/poll`, `/api/poll/status`, `/api/qa/question/{id}` (PATCH, DELETE), `/api/qa/answer/{id}`, `/api/qa/clear`, `/api/activity`, `/api/wordcloud/clear`, `/api/codereview`, `/api/codereview/status`, `/api/codereview/confirm-line`.
 
 ---
 
@@ -19,7 +19,7 @@ The file contains `HOST_USERNAME` and `HOST_PASSWORD` for accessing `/host` and 
 - **URL**: https://interact.victorrentea.ro
 - **Platform**: [Railway](https://railway.app) — auto-deploys on every push to `master`
 - **Deploy**: `git push` to `master` → Railway builds and deploys in ~40-50 seconds. No manual steps.
-- **Auth**: HTTP Basic Auth on `/host`, `/api/poll`, `/api/poll/status`, `/api/qa/question/{id}` (PATCH, DELETE), `/api/qa/answer/{id}`, `/api/qa/clear`, `/api/activity`, `/api/wordcloud/clear` — participants access `/`, `/api/suggest-name`, `/api/status` freely; Q&A submit and upvote go through WebSocket (no REST endpoints)
+- **Auth**: HTTP Basic Auth on `/host`, `/api/poll`, `/api/poll/status`, `/api/qa/question/{id}` (PATCH, DELETE), `/api/qa/answer/{id}`, `/api/qa/clear`, `/api/activity`, `/api/wordcloud/clear`, `/api/codereview`, `/api/codereview/status`, `/api/codereview/confirm-line` — participants access `/`, `/api/suggest-name`, `/api/status` freely; Q&A submit and upvote go through WebSocket (no REST endpoints)
 - **Versioning**: a pre-commit git hook stamps `static/version.js` with the current timestamp; both host and participant pages display it in the bottom-right corner
 
 ---
@@ -60,6 +60,7 @@ Build a **self-hosted, real-time audience interaction tool** for use during onli
 ### Phase 2 — implemented
 - **Q&A with upvoting**: participants submit questions via WebSocket; others can upvote; host sees ranked list; gamified with points
 - **Word cloud**: participants submit words; host displays an animated word cloud with topic prompt
+- **Code Review**: host pastes a code snippet, participants flag problematic lines, host confirms correct lines one by one — awarding points and sparking discussion
 
 ### Phase 3 — future AI integration
 - Claude API integration for Q&A summarisation, automated responses, or word cloud insights
@@ -111,7 +112,9 @@ Build a **self-hosted, real-time audience interaction tool** for use during onli
 
 ```
 training-assistant/
-├── main.py                  ← FastAPI application (all backend logic)
+├── main.py                  ← FastAPI application (entry point, mounts routers)
+├── routers/
+│   ├── codereview.py        ← Code Review activity (snippet broadcast, line selection, confirm)
 ├── dependencies.txt         ← Python dependencies
 ├── quiz_generator.py        ← Companion CLI: reads transcription, generates quiz via Claude API
 ├── quiz_config.example.env  ← Template for quiz generator env vars
@@ -143,6 +146,11 @@ class AppState:
     base_scores: dict[str, int]                 # uuid → base score (speed calculations)
     vote_times: dict[str, datetime]             # uuid → vote timestamp (speed-based scoring)
     qa_questions: dict[str, dict]               # question_id → {author: uuid, upvoters: set[uuid], ...}
+    codereview_snippet: str | None              # current code snippet
+    codereview_language: str | None             # auto-detected or overridden language
+    codereview_phase: str                       # "idle" | "selecting" | "reviewing"
+    codereview_selections: dict[str, set[int]]  # uuid → set of selected line numbers
+    codereview_confirmed: set[int]              # lines host confirmed as correct
 ```
 
 All state dicts are keyed by **UUID**, not display name. Duplicate display names are allowed.
@@ -152,7 +160,7 @@ All state dicts are keyed by **UUID**, not display name. Duplicate display names
 ## Key Design Decisions
 
 - **No venv**: dependencies installed globally into system Python 3.12 on Mac; `python3 quiz_generator.py` runs directly
-- **Host auth scope**: protected endpoints: `/host`, `/api/poll`, `/api/poll/status`, `/api/qa/question/{id}` (PATCH, DELETE), `/api/qa/answer/{id}`, `/api/qa/clear`, `/api/activity`, `/api/wordcloud/clear`; public endpoints: `/api/suggest-name`, `/api/status`; Q&A submit/upvote via WebSocket only
+- **Host auth scope**: protected endpoints: `/host`, `/api/poll`, `/api/poll/status`, `/api/qa/question/{id}` (PATCH, DELETE), `/api/qa/answer/{id}`, `/api/qa/clear`, `/api/activity`, `/api/wordcloud/clear`, `/api/codereview`, `/api/codereview/status`, `/api/codereview/confirm-line`; public endpoints: `/api/suggest-name`, `/api/status`; Q&A submit/upvote via WebSocket only
 - **UUID-based identity**: participants identified by UUID (not name). WebSocket route: `/ws/{uuid}`. First WS message must be `set_name`. Host cookie (`is_host=1`) switches UUID storage to `sessionStorage` for multi-tab testing. Duplicate display names allowed.
 - **Personalized broadcasts**: each participant receives `my_score`, `is_own`, `has_upvoted` fields. Host receives `participants` as a list of `{uuid, name, score, location}` objects.
 - **Votes are final**: once a participant votes, they cannot change their vote. This is intentional.
