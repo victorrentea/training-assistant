@@ -113,6 +113,7 @@
     <div class="left-status-bar">
       <span id="ws-badge" class="badge disconnected">● Server</span>
       <span id="daemon-badge" class="badge disconnected" title="">Agent</span>
+      <span id="summary-badge" class="badge disconnected" title="Key points" onclick="toggleSummaryModal()" style="cursor:pointer; display:none">📋 Summary</span>
     </div>
   </div>
 
@@ -202,6 +203,17 @@
       <button id="map-close" onclick="closeMap()" title="Close">✕</button>
     </div>
     <div id="map-container"></div>
+  </div>
+</div>
+
+<div id="summary-overlay" class="summary-overlay" onclick="closeSummaryModal()">
+  <div class="summary-dialog" onclick="event.stopPropagation()">
+    <div class="summary-header">
+      <span>📋 Key Points</span>
+      <button class="summary-close" onclick="closeSummaryModal()">✕</button>
+    </div>
+    <ul id="summary-list" class="summary-list"></ul>
+    <div id="summary-time" class="summary-time"></div>
   </div>
 </div>
 
