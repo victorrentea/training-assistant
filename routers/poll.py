@@ -9,7 +9,7 @@ from auth import require_host_auth
 from backend_version import get_backend_version
 from pydantic import BaseModel
 
-from messaging import broadcast, build_state_message
+from messaging import broadcast, broadcast_state, participant_ids
 from state import state, ActivityType
 
 router = APIRouter()
@@ -68,7 +68,7 @@ async def create_poll(poll: PollCreate):
     state.poll_active = False
     state.votes = {}
 
-    await broadcast(build_state_message())
+    await broadcast_state()
     return {"ok": True, "poll": state.poll}
 
 
@@ -81,7 +81,7 @@ async def set_poll_status(body: PollOpen):
         state.poll_opened_at = datetime.now(timezone.utc)
         state.vote_times = {}
         state.base_scores = dict(state.scores)
-    await broadcast(build_state_message())
+    await broadcast_state()
     return {"ok": True, "poll_active": state.poll_active}
 
 
@@ -147,12 +147,12 @@ async def set_correct_options(body: PollCorrect):
             new_scores[name] = new_scores.get(name, 0) + pts
 
     state.scores = new_scores
-    await broadcast({"type": "scores", "scores": state.scores})
+    await broadcast_state()
 
-    for name, ws in list(state.participants.items()):
-        if name == "__host__":
+    for pid, ws in list(state.participants.items()):
+        if pid == "__host__":
             continue
-        selection = state.votes.get(name)
+        selection = state.votes.get(pid)
         if selection is None:
             continue
         voted = set(selection) if isinstance(selection, list) else {selection}
@@ -160,7 +160,7 @@ async def set_correct_options(body: PollCorrect):
             "type": "result",
             "correct_ids": list(correct_set),
             "voted_ids": list(voted),
-            "score": state.scores.get(name, 0),
+            "score": state.scores.get(pid, 0),
         }))
 
     return {"ok": True}
@@ -186,7 +186,7 @@ async def clear_poll():
     state.base_scores = dict(state.scores)
     state.vote_times = {}
     state.current_activity = ActivityType.NONE
-    await broadcast(build_state_message())
+    await broadcast_state()
     return {"ok": True}
 
 
@@ -199,7 +199,7 @@ async def suggest_name():
 async def status():
     return {
         "backend_version": get_backend_version(),
-        "participants": len(state.participants),
+        "participants": len(participant_ids()),
         "poll": state.poll,
         "poll_active": state.poll_active,
         "vote_counts": state.vote_counts(),
