@@ -353,7 +353,7 @@
     if (!badge) return;
     badge.textContent = mode === 'conference' ? '🎤' : '🎓';
     badge.title = mode === 'conference' ? 'Conference mode — click to switch to Workshop' : 'Workshop mode — click to switch to Conference';
-    badge.className = 'badge ' + (mode === 'conference' ? 'error' : 'connected');
+    badge.className = 'badge ' + (mode === 'conference' ? 'mode-badge-conference' : 'mode-badge-workshop');
     applyConferenceLayout(mode === 'conference');
   }
 
