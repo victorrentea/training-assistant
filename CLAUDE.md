@@ -19,7 +19,7 @@ The file contains `HOST_USERNAME` and `HOST_PASSWORD` for accessing `/host` and 
 - **URL**: https://interact.victorrentea.ro
 - **Platform**: [Railway](https://railway.app) — auto-deploys on every push to `master`
 - **Deploy**: `git push` to `master` → Railway builds and deploys in ~40-50 seconds. No manual steps.
-- **Auth**: HTTP Basic Auth on `/host`, `/api/poll`, `/api/poll/status`, `/api/qa/question/{id}` (PATCH, DELETE), `/api/qa/answer/{id}`, `/api/qa/clear`, `/api/activity`, `/api/wordcloud/clear` — participants access `/`, `/api/suggest-name`, `/api/status`, `/api/qa/question` (POST), `/api/qa/upvote` freely
+- **Auth**: HTTP Basic Auth on `/host`, `/api/poll`, `/api/poll/status`, `/api/qa/question/{id}` (PATCH, DELETE), `/api/qa/answer/{id}`, `/api/qa/clear`, `/api/activity`, `/api/wordcloud/clear` — participants access `/`, `/api/suggest-name`, `/api/status` freely; Q&A submit and upvote go through WebSocket (no REST endpoints)
 - **Versioning**: a pre-commit git hook stamps `static/version.js` with the current timestamp; both host and participant pages display it in the bottom-right corner
 
 ---
@@ -57,9 +57,9 @@ Build a **self-hosted, real-time audience interaction tool** for use during onli
 ### Phase 1 — implemented
 - **Live Poll**: host creates a question with 2–8 options; participants vote once; results shown as animated bar charts updating in real time for everyone
 
-### Phase 2 — planned, not yet implemented
-- **Q&A with upvoting**: participants submit questions; others can upvote; host sees ranked list
-- **Word cloud**: participants submit one or more words; host displays an animated word cloud
+### Phase 2 — implemented
+- **Q&A with upvoting**: participants submit questions via WebSocket; others can upvote; host sees ranked list; gamified with points
+- **Word cloud**: participants submit words; host displays an animated word cloud with topic prompt
 
 ### Phase 3 — future AI integration
 - Claude API integration for Q&A summarisation, automated responses, or word cloud insights
@@ -93,7 +93,8 @@ Build a **self-hosted, real-time audience interaction tool** for use during onli
 | Language | **Vanilla JavaScript (ES6+)** | No framework, no build step |
 | Markup | **Plain HTML5** | Single-file pages per role |
 | Styling | **Inline CSS** (per file) | Dark theme, CSS variables, no external CSS framework |
-| Participant name persistence | **`localStorage`** | Key: `workshop_participant_name` |
+| Participant identity | **UUID (`crypto.randomUUID()`)** | `sessionStorage` if host cookie present (per-tab), else `localStorage` (per-browser). Key: `workshop_participant_uuid` |
+| Participant name persistence | **`localStorage`** | Key: `workshop_participant_name` (pre-fill convenience) |
 | WebSocket client | **Native browser WebSocket API** | Auto-reconnect on disconnect (3s retry) |
 | Geolocation | **Browser Geolocation API** + Nominatim reverse geocoding | Falls back to `Intl.DateTimeFormat` timezone if denied |
 
@@ -132,20 +133,28 @@ training-assistant/
 
 ```python
 class AppState:
-    poll: dict | None          # current poll definition
-    poll_active: bool          # is voting open?
-    votes: dict[str, str]      # participant_name -> option_id
-    participants: dict[str, WebSocket]  # name -> ws
-    suggested_names: set[str]  # names handed out but not yet connected
-    locations: dict[str, str]  # participant_name -> location string (city/country or timezone)
+    poll: dict | None                           # current poll definition
+    poll_active: bool                           # is voting open?
+    participants: dict[str, WebSocket]          # uuid → ws connection
+    participant_names: dict[str, str]           # uuid → display_name (mutable via set_name)
+    votes: dict[str, str]                       # uuid → option_id (or list for multi-select)
+    locations: dict[str, str]                   # uuid → location string (city/country or timezone)
+    scores: dict[str, int]                      # uuid → score
+    base_scores: dict[str, int]                 # uuid → base score (speed calculations)
+    vote_times: dict[str, datetime]             # uuid → vote timestamp (speed-based scoring)
+    qa_questions: dict[str, dict]               # question_id → {author: uuid, upvoters: set[uuid], ...}
 ```
+
+All state dicts are keyed by **UUID**, not display name. Duplicate display names are allowed.
 
 ---
 
 ## Key Design Decisions
 
 - **No venv**: dependencies installed globally into system Python 3.12 on Mac; `python3 quiz_generator.py` runs directly
-- **Host auth scope**: protected endpoints: `/host`, `/api/poll`, `/api/poll/status`, `/api/qa/question/{id}` (PATCH, DELETE), `/api/qa/answer/{id}`, `/api/qa/clear`, `/api/activity`, `/api/wordcloud/clear`; public endpoints: `/api/suggest-name`, `/api/status`, `/api/qa/question` (POST), `/api/qa/upvote`
+- **Host auth scope**: protected endpoints: `/host`, `/api/poll`, `/api/poll/status`, `/api/qa/question/{id}` (PATCH, DELETE), `/api/qa/answer/{id}`, `/api/qa/clear`, `/api/activity`, `/api/wordcloud/clear`; public endpoints: `/api/suggest-name`, `/api/status`; Q&A submit/upvote via WebSocket only
+- **UUID-based identity**: participants identified by UUID (not name). WebSocket route: `/ws/{uuid}`. First WS message must be `set_name`. Host cookie (`is_host=1`) switches UUID storage to `sessionStorage` for multi-tab testing. Duplicate display names allowed.
+- **Personalized broadcasts**: each participant receives `my_score`, `is_own`, `has_upvoted` fields. Host receives `participants` as a list of `{uuid, name, score, location}` objects.
 - **Votes are final**: once a participant votes, they cannot change their vote. This is intentional.
 - **No persistence between sessions**: restarting the server clears all state. Acceptable because sessions are live events.
 - **Quiz correct_indices**: stored in the quiz JSON for trainer preview only — never sent to the poll server
