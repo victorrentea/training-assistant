@@ -32,18 +32,35 @@
         <span id="location-prompt" class="location-prompt" onclick="requestLocation()" title="Share your location">📍 Where are you?</span>
         <span id="host-dot" title="Host connected" style="display:none;"><span class="dot"></span>Host</span>
         <span id="pax-count"></span>
-        <button id="summary-btn" title="Key points discussed" style="display:none" onclick="toggleSummaryModal()">📋</button>
+        <button id="notes-btn" class="header-link-btn" title="Session notes" style="display:none" onclick="toggleNotesModal()">📝 Notes</button>
+        <button id="summary-btn" class="header-link-btn" title="Key points discussed" style="display:none" onclick="toggleSummaryModal()">🧠 Key Points</button>
         <button id="notif-btn" title="Enable notifications" style="display:none">🔔</button>
       </span>
     </div>
     <div id="content"></div>
   </div>
 
+<div id="notes-overlay" class="summary-overlay" onclick="closeNotesModal()">
+  <div class="summary-dialog" onclick="event.stopPropagation()">
+    <div class="summary-header">
+      <span>📝 Session Notes</span>
+      <span>
+        <a id="notes-newtab" href="/notes" target="_blank" class="modal-newtab-btn" title="Open in new tab">↗</a>
+        <button class="summary-close" onclick="closeNotesModal()">✕</button>
+      </span>
+    </div>
+    <pre id="notes-content" class="notes-content"></pre>
+  </div>
+</div>
+
 <div id="summary-overlay" class="summary-overlay" onclick="closeSummaryModal()">
   <div class="summary-dialog" onclick="event.stopPropagation()">
     <div class="summary-header">
-      <span>📋 Key Points</span>
-      <button class="summary-close" onclick="closeSummaryModal()">✕</button>
+      <span>🧠 Key Points</span>
+      <span>
+        <a href="/notes" target="_blank" class="modal-newtab-btn" title="Open in new tab">↗</a>
+        <button class="summary-close" onclick="closeSummaryModal()">✕</button>
+      </span>
     </div>
     <ul id="summary-list" class="summary-list"></ul>
     <div id="summary-time" class="summary-time"></div>

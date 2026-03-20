@@ -26,6 +26,7 @@ app.include_router(activity.router)
 app.include_router(qa.router)
 app.include_router(codereview.router)
 app.include_router(summary.router, dependencies=[Depends(require_host_auth)])
+app.include_router(summary.public_router)
 app.include_router(debate.router)
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
