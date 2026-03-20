@@ -44,11 +44,11 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     "⬆️ See a question you like? Give it an upvote!",
   ];
   const _CR_TOASTS = [
-    "🐛 Hunt for bugs — spot an issue, earn points!",
-    "⚠️ Check edge cases — what happens with null, empty, or zero?",
-    "🔒 Think security — could this be exploited?",
-    "🧠 Sharpen your critical thinking — don't trust the happy path!",
-    "🎯 The more real issues you spot, the higher you score!",
+    "🐛 You got this!",
+    "👀 Look closer...",
+    "🔥 Keep going!",
+    "💪 Trust your instincts!",
+    "🎯 Nice eye!",
   ];
   let _crToastIndex = 0;
   let _crToastInterval = null;
@@ -152,7 +152,7 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     fetchSuggestedName().then(name => {
       suggestedName = name;
       nameInput.placeholder = name;
-      nameInput.focus();
+      join();  // auto-join with suggested LotR name
     });
   }
   updateClearBtn();
@@ -191,23 +191,25 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
   }
 
   // ── Inline name editing ──
-  document.getElementById('edit-name-btn').addEventListener('click', () => {
+  function startNameEdit() {
     const display = document.getElementById('display-name');
     const editWrap = document.getElementById('name-edit-wrap');
     const editInput = document.getElementById('name-edit-input');
-    const editBtn = document.getElementById('edit-name-btn');
     editInput.value = myName;
     display.style.display = 'none';
-    editBtn.style.display = 'none';
     editWrap.style.display = '';
     editInput.focus();
     editInput.select();
-  });
+  }
+
+  document.getElementById('edit-name-btn').addEventListener('click', startNameEdit);
+  document.getElementById('display-name').addEventListener('click', startNameEdit);
 
   function confirmNameEdit() {
     const newName = document.getElementById('name-edit-input').value.trim();
     if (newName && newName !== myName) {
         myName = newName;
+        _joinedWithSuggestion = false;
         localStorage.setItem(LS_KEY, myName);
         document.getElementById('display-name').textContent = myName;
         if (ws && ws.readyState === WebSocket.OPEN) {
@@ -215,8 +217,8 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
         }
     }
     document.getElementById('display-name').style.display = '';
-    document.getElementById('edit-name-btn').style.display = '';
     document.getElementById('name-edit-wrap').style.display = 'none';
+    updateOnboardingChecklist();
   }
 
   document.getElementById('name-edit-input').addEventListener('blur', confirmNameEdit);
@@ -247,6 +249,25 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     el.style.display = localStorage.getItem(LS_LOCATION_KEY) ? 'none' : '';
   }
 
+  function updateOnboardingChecklist() {
+    const nameEl = document.getElementById('onboard-name');
+    const locEl = document.getElementById('onboard-location');
+    if (nameEl && !nameEl.classList.contains('done') && !_joinedWithSuggestion) {
+      nameEl.classList.add('done');
+      nameEl.innerHTML = '☑ Set your name';
+      nameEl.style.cursor = 'default';
+      nameEl.onclick = null;
+      setTimeout(() => nameEl.classList.add('hiding'), 1500);
+    }
+    if (locEl && !locEl.classList.contains('done') && localStorage.getItem(LS_LOCATION_KEY)) {
+      locEl.classList.add('done');
+      locEl.innerHTML = '☑ Share your location';
+      locEl.style.cursor = 'default';
+      locEl.onclick = null;
+      setTimeout(() => locEl.classList.add('hiding'), 1500);
+    }
+  }
+
   function requestLocation() {
     if (!navigator.geolocation) return;
     navigator.geolocation.getCurrentPosition(
@@ -256,6 +277,7 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
         localStorage.setItem(LS_LOCATION_KEY, locationStr);
         sendLocation(locationStr);
         updateLocationPrompt();
+        updateOnboardingChecklist();
       },
       () => { /* user denied — prompt stays visible, they can retry */ },
       { timeout: 15000, maximumAge: 60000 }
@@ -743,11 +765,11 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     el.textContent = _CR_TOASTS[idx];
     el.classList.add('visible');
     clearTimeout(_crToastTimeout);
-    _crToastTimeout = setTimeout(() => el.classList.remove('visible'), 3500);
+    _crToastTimeout = setTimeout(() => el.classList.remove('visible'), 5000);
   }
 
   function _scheduleCRToast() {
-    const delay = 5000 + Math.random() * 2000; // 5-7 seconds
+    const delay = 10000 + Math.random() * 4000; // 10-14 seconds
     _crToastInterval = setTimeout(() => {
       _showCRToast();
       _scheduleCRToast();
@@ -755,7 +777,7 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
   }
 
   function _startCRToasts() {
-    _stopCRToasts();
+    if (_crToastInterval) return; // already running, don't restart
     _showCRToast();
     _scheduleCRToast();
   }
@@ -996,7 +1018,21 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
   function renderContent(voteCounts) {
     const el = document.getElementById('content');
     if (!currentPoll) {
-      el.innerHTML = `<div class="waiting"><div class="icon">👋</div><p>Welcome! Get ready to participate — your answers and ideas will shape this session!</p></div>`;
+      const nameSet = !_joinedWithSuggestion;
+      const locationSet = !!localStorage.getItem(LS_LOCATION_KEY);
+      el.innerHTML = `<div class="waiting">
+        <div class="icon">👋</div>
+        <p>Welcome!</p>
+        <p style="margin-top:.75rem;">Get ready to participate — your answers and ideas will shape this session!</p>
+        <ul class="onboarding-checklist">
+          <li id="onboard-name" class="onboarding-item${nameSet ? ' done' : ''}" onclick="${nameSet ? '' : 'startNameEdit()'}" style="cursor:${nameSet ? 'default' : 'pointer'}">
+            ${nameSet ? '☑' : '☐'} Set your name <span style="color:var(--muted);font-size:.85rem;">(click on your name above)</span>
+          </li>
+          <li id="onboard-location" class="onboarding-item${locationSet ? ' done' : ''}" onclick="${locationSet ? '' : 'requestLocation()'}" style="cursor:${locationSet ? 'default' : 'pointer'}">
+            ${locationSet ? '☑' : '☐'} Share your location
+          </li>
+        </ul>
+      </div>`;
       return;
     }
     renderPollCard(el, voteCounts);
@@ -1234,10 +1270,11 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
 
     let html = '<div class="codereview-screen">';
     html += '<div class="codereview-header" style="font-size:1.3rem;">Code Review</div>';
-    if (!isSelecting) {
-      html += '<div class="codereview-subtitle">Selection closed — reviewing results</div>';
-    } else {
+    if (isSelecting) {
+      html += '<div class="codereview-subtitle">Tap every line that has a bug, smell, or risk</div>';
       html += '<div id="cr-toast" class="qa-toast"></div>';
+    } else {
+      html += '<div class="codereview-subtitle">Selection closed — reviewing results</div>';
     }
 
     html += '<div class="codereview-viewer">';
