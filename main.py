@@ -5,10 +5,12 @@ FastAPI + WebSocket backend
 
 import logging
 
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, HTTPException
 from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
 
 from auth import require_host_auth
+from messaging import broadcast_state
 from state import state  # re-exported for test_main.py: from main import app, state
 from routers import ws, poll, scores, quiz, pages, wordcloud, activity, qa, codereview, summary, debate
 
@@ -28,5 +30,16 @@ app.include_router(codereview.router)
 app.include_router(summary.router, dependencies=[Depends(require_host_auth)])
 app.include_router(summary.public_router)
 app.include_router(debate.router)
+
+class ModeRequest(BaseModel):
+    mode: str
+
+@app.post("/api/mode", dependencies=[Depends(require_host_auth)])
+async def set_mode(req: ModeRequest):
+    if req.mode not in ("workshop", "conference"):
+        raise HTTPException(400, "mode must be 'workshop' or 'conference'")
+    state.mode = req.mode
+    await broadcast_state()
+    return {"mode": state.mode}
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
