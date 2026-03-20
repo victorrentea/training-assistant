@@ -81,11 +81,11 @@
     <!-- Word Cloud tab content -->
     <div id="tab-content-wordcloud" class="tab-content" style="display:none;">
       <div style="margin-top:.75rem;">
-        <div class="wc-input-row" style="margin-bottom:.5rem;">
+        <div class="activity-input-row wc-input-row" style="margin-bottom:.5rem;">
           <input id="wc-topic-input" type="text" maxlength="80" autocomplete="off" placeholder="Topic (optional)" style="flex:1;padding:.5rem .75rem;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:.9rem;" />
           <button class="btn btn-success" onclick="pushWordCloudTopic()" style="min-width:4rem;">Set</button>
         </div>
-        <div class="wc-input-row">
+        <div class="activity-input-row wc-input-row">
           <input id="wc-host-input" type="text" maxlength="40" autocomplete="on" placeholder="Submit a word…" list="wc-host-suggestions" />
           <datalist id="wc-host-suggestions"></datalist>
           <button class="btn btn-warn" onclick="hostSubmitWord()" style="min-width:4rem;">↵</button>
@@ -99,7 +99,7 @@
 
     <!-- Q&A tab content -->
     <div id="tab-content-qa" class="tab-content" style="display:none;">
-      <div class="qa-input-row" style="margin-top:.5rem;">
+      <div class="activity-input-row qa-input-row" style="margin-top:.5rem;">
         <input id="host-qa-input" type="text" maxlength="280" autocomplete="off"
                placeholder="Ask a question as host…"
                onkeydown="if(event.key==='Enter')hostSubmitQA()" />
