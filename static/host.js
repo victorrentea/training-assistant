@@ -169,13 +169,7 @@
         renderPollDisplay();
         const currentActivity = msg.current_activity || 'none';
         updateCenterPanel(currentActivity);
-        if (msg.current_activity === 'debate') {
-          renderDebateHost(msg);
-        } else {
-          // Hide debate controls when not in debate
-          const dc = document.getElementById('debate-host-controls');
-          if (dc) dc.style.display = 'none';
-        }
+        renderDebateHost(msg);
         if (currentActivity === 'wordcloud') {
           renderHostWordCloud(msg.wordcloud_words || {});
         }
@@ -1502,22 +1496,22 @@
   }
 
   function renderDebateHost(msg) {
-    if (!msg.debate_statement) return;
-
-    const controls = document.getElementById('debate-host-controls');
     const chapters = document.getElementById('debate-phase-chapters');
     const title = document.getElementById('debate-statement-display');
     const content = document.getElementById('debate-center-content');
 
-    controls.style.display = '';
-    const phase = msg.debate_phase;
+    const debateActive = msg.current_activity === 'debate' && !!msg.debate_phase;
+    const phase = msg.debate_phase || null;
     const sideCounts = msg.debate_side_counts || { for: 0, against: 0 };
     const champions = msg.debate_champions || {};
 
-    title.innerHTML = `<span style="color:#e74c3c;font-weight:700;">👎 ${sideCounts.against}</span> <span style="font-style:italic;">"${escDebate(msg.debate_statement)}"</span> <span style="color:#2ecc71;font-weight:700;">${sideCounts.for} 👍</span>`;
+    // Update center panel title if debate is active
+    if (title && debateActive) {
+      title.innerHTML = `<span style="color:#e74c3c;font-weight:700;">👎 ${sideCounts.against}</span> <span style="font-style:italic;">"${escDebate(msg.debate_statement)}"</span> <span style="color:#2ecc71;font-weight:700;">${sideCounts.for} 👍</span>`;
+    }
 
-    // Phase chapters (vertical list with launch buttons)
-    const currentIdx = DEBATE_PHASES.findIndex(p => p.key === phase);
+    // Phase chapters — always visible
+    const currentIdx = debateActive ? DEBATE_PHASES.findIndex(p => p.key === phase) : -1;
     const phaseActions = {
       side_selection: `<button class="btn btn-warn btn-sm" onclick="debateForceAssign()">🎲 Assign randomly</button>`,
       ai_cleanup: `<button class="btn btn-warn btn-sm btn-ai" onclick="debateRunAI()">✨ Run AI</button>`,
@@ -1529,13 +1523,14 @@
     chapters.innerHTML = DEBATE_PHASES.map((p, i) => {
       const isDone = i < currentIdx;
       const isActive = i === currentIdx;
-      const isNext = i === currentIdx + 1;
-      const isFuture = i > currentIdx + 1;
+      const isFuture = currentIdx === -1 ? (i > 0) : (i > currentIdx + 1);
+      const isReady = currentIdx === -1 && i === 0; // pre-launch: phase 1 is ready
 
       let cls = 'debate-chapter';
       if (isDone) cls += ' debate-chapter-done';
-      if (isActive) cls += ' debate-chapter-active';
-      if (isFuture) cls += ' debate-chapter-future';
+      else if (isActive) cls += ' debate-chapter-active';
+      else if (isReady) cls += ' debate-chapter-ready';
+      else if (isFuture) cls += ' debate-chapter-future';
 
       let actionHtml = '';
       if (isActive && phaseActions[p.key]) {
@@ -1543,15 +1538,18 @@
       }
 
       let launchBtn = '';
-      if (isActive && p.key === 'live_debate') {
+      if (isReady) {
+        // Pre-launch: phase 1 gets a Launch button that starts the debate
+        launchBtn = `<button class="btn btn-primary btn-sm" onclick="launchDebate()">Launch ⚔️</button>`;
+      } else if (isActive && p.key === 'live_debate') {
         launchBtn = `<button class="btn btn-danger btn-sm" onclick="debateNextPhase('ended')">⏹ End</button>`;
       } else if (isActive && p.key !== 'ended') {
         const nextPhase = DEBATE_PHASES[i + 1];
         if (nextPhase) {
           if (p.key === 'side_selection') {
-            launchBtn = `<button class="btn btn-primary btn-sm" onclick="debateCloseSelection()">Launch →</button>`;
+            launchBtn = `<button class="btn btn-primary btn-sm" onclick="debateCloseSelection()">Next →</button>`;
           } else {
-            launchBtn = `<button class="btn btn-primary btn-sm" onclick="debateNextPhase('${nextPhase.key}')">Launch →</button>`;
+            launchBtn = `<button class="btn btn-primary btn-sm" onclick="debateNextPhase('${nextPhase.key}')">Next →</button>`;
           }
         }
       } else if (isDone) {

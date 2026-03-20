@@ -267,6 +267,10 @@
   border-left-color: var(--accent);
   background: var(--surface2);
 }
+.debate-chapter-ready {
+  opacity: 1;
+  border-left-color: var(--accent);
+}
 .debate-chapter-future {
   opacity: .35;
 }
