@@ -24,6 +24,7 @@
       <button class="tab-btn active" id="tab-poll" onclick="switchTab('poll')">📊 Poll</button>
       <button class="tab-btn" id="tab-wordcloud" onclick="switchTab('wordcloud')">☁ Words</button>
       <button class="tab-btn" id="tab-qa" onclick="switchTab('qa')">❓ Q&A</button>
+      <button class="tab-btn" id="tab-debate" onclick="switchTab('debate')">⚔️ Debate</button>
       <button class="tab-btn" id="tab-codereview" onclick="switchTab('codereview')">🔍 Code</button>
     </div>
 
@@ -110,6 +111,19 @@
       </div>
     </div>
 
+    <!-- Debate tab content -->
+    <div id="tab-content-debate" class="tab-content" style="display:none;">
+      <div style="margin-top:.75rem;">
+        <textarea id="debate-statement-input" rows="2" maxlength="200" placeholder="Enter debate statement…"
+          style="width:100%;padding:.5rem .75rem;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:.9rem;resize:vertical;font-family:inherit;"></textarea>
+        <button id="debate-launch-btn" class="btn btn-primary" onclick="launchDebate()" style="margin-top:.35rem;">⚔️ Launch Debate</button>
+      </div>
+      <div id="debate-host-controls" style="display:none; margin-top:.75rem;">
+        <div id="debate-phase-label" style="font-size:.85rem; color:var(--muted); margin-bottom:.35rem;"></div>
+        <div id="debate-host-actions" class="btn-row"></div>
+      </div>
+    </div>
+
     <!-- Code Review tab content -->
     <div id="tab-content-codereview" style="display:none" class="tab-content">
       <div id="codereview-create">
@@ -189,6 +203,12 @@
         ❓ Questions
       </h2>
       <div id="qa-list"></div>
+    </div>
+    <!-- Debate center panel -->
+    <div id="center-debate" class="center-panel" style="display:none;">
+      <h2 id="debate-center-title" style="margin:0 0 .5rem; font-size:.95rem; color:var(--muted); text-transform:uppercase; letter-spacing:.08em;">⚔️ Debate</h2>
+      <div id="debate-statement-display" style="font-size:1.1rem; color:var(--text); margin-bottom:.75rem; font-style:italic;"></div>
+      <div id="debate-center-content"></div>
     </div>
     <!-- Code Review center panel -->
     <div id="center-codereview" style="display:none" class="center-panel">

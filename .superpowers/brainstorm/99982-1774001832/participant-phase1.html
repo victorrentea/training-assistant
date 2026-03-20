@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #1a1a2e;
+    color: #eee;
+    font-family: system-ui, -apple-system, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 30px 20px;
+  }
+  h2 { color: #e0e0ff; margin-bottom: 6px; font-size: 14px; letter-spacing: 2px; text-transform: uppercase; }
+  .label { color: #888; font-size: 12px; margin-bottom: 30px; }
+
+  .statement-card {
+    background: #16213e;
+    border: 1px solid #0f3460;
+    border-radius: 16px;
+    padding: 28px 32px;
+    max-width: 500px;
+    width: 100%;
+    text-align: center;
+    margin-bottom: 40px;
+  }
+  .statement-card .icon { font-size: 32px; margin-bottom: 12px; }
+  .statement-card h3 {
+    font-size: 22px;
+    color: #fff;
+    line-height: 1.4;
+    font-weight: 600;
+  }
+  .statement-card .prompt {
+    color: #aaa;
+    font-size: 14px;
+    margin-top: 14px;
+  }
+
+  .sides {
+    display: flex;
+    gap: 20px;
+    max-width: 500px;
+    width: 100%;
+  }
+  .side-btn {
+    flex: 1;
+    padding: 28px 16px;
+    border-radius: 16px;
+    border: 2px solid transparent;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.2s;
+    font-family: inherit;
+  }
+  .side-btn:hover { transform: translateY(-2px); }
+
+  .side-for {
+    background: linear-gradient(135deg, #0a3d0a, #1a5c1a);
+    border-color: #2d8a2d;
+    color: #b5ffb5;
+  }
+  .side-for:hover { border-color: #4caf50; box-shadow: 0 4px 20px rgba(76, 175, 80, 0.3); }
+
+  .side-against {
+    background: linear-gradient(135deg, #3d0a0a, #5c1a1a);
+    border-color: #8a2d2d;
+    color: #ffb5b5;
+  }
+  .side-against:hover { border-color: #ef5350; box-shadow: 0 4px 20px rgba(239, 83, 80, 0.3); }
+
+  .side-btn .emoji { font-size: 36px; margin-bottom: 10px; }
+  .side-btn .text { font-size: 18px; font-weight: 700; }
+  .side-btn .sub { font-size: 12px; margin-top: 6px; opacity: 0.7; }
+
+  .spots {
+    color: #888;
+    font-size: 13px;
+    margin-top: 20px;
+    text-align: center;
+  }
+  .spots strong { color: #ccc; }
+
+  /* After selection state */
+  .selected-state {
+    max-width: 500px;
+    width: 100%;
+    text-align: center;
+    margin-top: 20px;
+  }
+  .selected-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 28px;
+    border-radius: 12px;
+    font-size: 18px;
+    font-weight: 600;
+  }
+  .selected-badge.for { background: #1a5c1a; color: #b5ffb5; }
+  .selected-badge.against { background: #5c1a1a; color: #ffb5b5; }
+  .waiting { color: #888; font-size: 14px; margin-top: 16px; }
+
+  .mockup-label {
+    position: fixed;
+    top: 10px;
+    right: 14px;
+    background: #0f3460;
+    color: #5588cc;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    letter-spacing: 1px;
+  }
+
+  .divider {
+    width: 100%;
+    max-width: 500px;
+    border: none;
+    border-top: 1px dashed #333;
+    margin: 40px 0 20px;
+  }
+  .variant-title {
+    color: #5588cc;
+    font-size: 13px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+  }
+</style>
+</head>
+<body>
+
+<span class="mockup-label">PARTICIPANT VIEW</span>
+
+<h2>Whose Side Are You On?</h2>
+<p class="label">Phase 1 — Side Selection</p>
+
+<div class="statement-card">
+  <div class="icon">⚔️</div>
+  <h3>"Microservices are superior to monoliths for enterprise applications"</h3>
+  <p class="prompt">Pick your side — trust your gut!</p>
+</div>
+
+<div class="sides">
+  <button class="side-btn side-for">
+    <div class="emoji">👍</div>
+    <div class="text">FOR</div>
+    <div class="sub">I agree</div>
+  </button>
+  <button class="side-btn side-against">
+    <div class="emoji">👎</div>
+    <div class="text">AGAINST</div>
+    <div class="sub">I disagree</div>
+  </button>
+</div>
+
+<p class="spots"><strong>7</strong> / 15 spots remaining — choose now or get assigned!</p>
+
+<hr class="divider">
+
+<p class="variant-title">After choosing:</p>
+
+<div class="selected-state">
+  <div class="selected-badge for">👍 You're on team FOR</div>
+  <p class="waiting">⏳ Waiting for host to close selection...</p>
+</div>
+
+<hr class="divider">
+
+<p class="variant-title">Auto-assigned (late joiner):</p>
+
+<div class="selected-state">
+  <div class="selected-badge against">👎 You've been assigned to team AGAINST</div>
+  <p class="waiting">⏳ Waiting for host to start arguments phase...</p>
+</div>
+
+</body>
+</html>

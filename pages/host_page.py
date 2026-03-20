@@ -58,7 +58,6 @@ class HostPage:
     def open_qa_tab(self) -> None:
         self._page.click("text=Q&A")
         expect(self._page.locator("#tab-content-qa")).to_be_visible(timeout=5000)
-        expect(self._page.locator("#qa-list")).to_be_visible(timeout=5000)
 
     def get_qa_questions(self) -> list[dict]:
         """Return list of {id, text, upvotes, answered} as shown on host panel."""

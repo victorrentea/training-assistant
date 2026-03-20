@@ -10,7 +10,7 @@ from fastapi.staticfiles import StaticFiles
 
 from auth import require_host_auth
 from state import state  # re-exported for test_main.py: from main import app, state
-from routers import ws, poll, scores, quiz, pages, wordcloud, activity, qa, codereview, summary
+from routers import ws, poll, scores, quiz, pages, wordcloud, activity, qa, codereview, summary, debate
 
 logging.basicConfig(level=logging.INFO)
 
@@ -26,5 +26,6 @@ app.include_router(activity.router)
 app.include_router(qa.router)
 app.include_router(codereview.router)
 app.include_router(summary.router, dependencies=[Depends(require_host_auth)])
+app.include_router(debate.router)
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
