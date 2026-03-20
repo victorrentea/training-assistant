@@ -371,12 +371,20 @@ h1 { display: none; }
   height: auto;
   align-self: stretch;
 }
-.wc-download-btn {
-  width: 100%;
-  padding: .65rem 1rem;
-  font-size: 1rem;
-  margin-top: .25rem;
-  white-space: nowrap;
+.wc-download-overlay {
+  position: absolute;
+  bottom: 5px;
+  right: 5px;
+  padding: .4rem .6rem;
+  font-size: .85rem;
+  opacity: .7;
+  transition: opacity .2s;
+}
+.wc-download-overlay:hover { opacity: 1; }
+
+.wc-topic-highlight {
+  color: var(--warn);
+  font-weight: 700;
 }
 
 #wc-my-words {
