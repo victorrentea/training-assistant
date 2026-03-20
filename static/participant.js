@@ -801,7 +801,7 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
   function renderContent(voteCounts) {
     const el = document.getElementById('content');
     if (!currentPoll) {
-      el.innerHTML = `<div class="waiting"><div class="icon">⏳</div><p>Waiting for host…</p></div>`;
+      el.innerHTML = `<div class="waiting"><div class="icon">👋</div><p>Welcome! Get ready to participate — your answers and ideas will shape this session!</p></div>`;
       return;
     }
     renderPollCard(el, voteCounts);
