@@ -1815,9 +1815,7 @@
       // Add sub-phase info + countdown for live_debate
       if (phase === 'live_debate') {
         if (!msg.debate_first_side) {
-          centerHeader += `<div style="text-align:center; margin-bottom:.5rem;">
-            <div style="font-size:1.1rem; color:var(--muted); font-weight:600;">Pick who speaks first...</div>
-          </div>`;
+          // "Who speaks first?" controls are in the left pane
         } else if (subPhaseIdx !== null) {
           const subPhases = getDebateSubPhases(msg.debate_first_side);
           const sp = subPhases[subPhaseIdx];
