@@ -697,3 +697,55 @@ class TestProductionSmoke:
     def test_prod_api_poll_requires_auth(self):
         resp = requests.post(f"{PROD_URL}/api/poll", json={}, timeout=10)
         assert resp.status_code == 401
+
+
+# ---------------------------------------------------------------------------
+# TestNotifications
+# ---------------------------------------------------------------------------
+
+class TestNotifications:
+    """Browser notification button behaviour."""
+
+    def test_notif_btn_hidden_on_load(self, server_url):
+        """The 🔔 button is hidden before any join."""
+        with sync_playwright() as p:
+            browser = p.chromium.launch()
+            page = browser.new_page()
+            page.goto(server_url)
+            expect(page.locator("#notif-btn")).to_be_hidden()
+            browser.close()
+
+    def test_notif_btn_hidden_after_fresh_join(self, server_url):
+        """After a fresh join (user gesture), no 🔔 button shown —
+        permission was requested inline via the join gesture, so
+        Notification.permission is already 'granted' when ws.onopen runs."""
+        with sync_playwright() as p:
+            browser = p.chromium.launch()
+            # Grant notifications so requestPermission() resolves immediately
+            ctx = browser.new_context(permissions=["notifications"])
+            page = ctx.new_page()
+            page.goto(server_url)
+            ParticipantPage(page).join("NotifFreshJoiner")
+            # ws.onopen sees permission !== 'default' → button stays hidden
+            expect(page.locator("#notif-btn")).to_be_hidden()
+            browser.close()
+
+    def test_notif_btn_visible_for_returning_participant(self, server_url):
+        """Auto-joining participant (saved name in localStorage) sees the 🔔
+        button when notification permission has not yet been decided."""
+        with sync_playwright() as p:
+            browser = p.chromium.launch()
+            ctx = browser.new_context()
+            page = ctx.new_page()
+            # Headless Chromium always reports 'denied'; mock it to 'default'
+            # so the ws.onopen guard (=== 'default') fires as it would in a real browser.
+            page.add_init_script(
+                "Object.defineProperty(Notification, 'permission', { get: () => 'default', configurable: true });"
+            )
+            page.goto(server_url)
+            # Simulate returning participant by seeding localStorage, then reload
+            page.evaluate("localStorage.setItem('workshop_participant_name', 'ReturningUser')")
+            page.reload()
+            # After auto-join ws.onopen fires and sees permission === 'default' → show button
+            expect(page.locator("#notif-btn")).to_be_visible(timeout=5000)
+            browser.close()
