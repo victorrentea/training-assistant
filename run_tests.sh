@@ -13,4 +13,8 @@ echo "=== E2E browser tests ==="
 pytest test_e2e.py -v
 
 echo ""
+echo "=== Load test (${LOAD_TEST_COUNT:-30} participants) ==="
+pytest test_load.py -v -s
+
+echo ""
 echo "All tests passed."
