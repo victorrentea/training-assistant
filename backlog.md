@@ -118,7 +118,7 @@
 - [x] The front end of both participant hosts should detect whether the version of the deployed backend is different than the one of them and suggest a page reload in the browser. This page reload should happen automatically within 5 seconds or 10 seconds unless the user presses stop.
 - [ ] Change the label in the host UI that says "From transcript of last" to something more humane and less creepy, for example "From what we discussed the last...".
 - [ ] To respect the privacy of the participants, the participant UI shouldn't push the location automatically. It requires the browser that might scare the people. Instead, once logged in, in the top bar there should be an inviting text saying "Where are you?" which, when clicked, gets the location from the browser and pushes it to the server. If after approve, the user refreshes the page, ideally even if it closes the browser and opens again, the location should be pushed up automatically.
-- [ ] Bug! If there is no vote for any participants and I close the voting, each option gets 1% displayed in the participant view, which makes no sense. It should be 0% for all.
+- [x] Bug! If there is no vote for any participants and I close the voting, each option gets 1% displayed in the participant view, which makes no sense. It should be 0% for all.
 ---
 
 ## Understanding design

@@ -158,6 +158,16 @@ class TestPollLifecycle:
         expect(pax._page.locator(".pct").first).to_be_visible(timeout=5000)
         expect(pax._page.locator(".closed-banner")).to_be_visible(timeout=5000)
 
+    def test_zero_votes_shows_zero_percent(self, host: HostPage, pax: ParticipantPage):
+        pax.join("Zara")
+        host.create_poll("No votes poll?", ["A", "B", "C"])
+        # Close poll without anyone voting
+        host._page.click("text=Close voting")
+        expect(host._page.locator("text=Open voting")).to_be_visible(timeout=5000)
+        expect(pax._page.locator(".pct").first).to_be_visible(timeout=5000)
+        pcts = pax.get_percentages()
+        assert pcts == [0, 0, 0], f"Expected all 0% but got {pcts}"
+
     def test_correct_answer_feedback_shown_to_participant(self, host: HostPage, pax: ParticipantPage):
         pax.join("Dave")
         host.create_poll("Capital of France?", ["Berlin", "Paris", "Rome"])
