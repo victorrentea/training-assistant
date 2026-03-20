@@ -962,6 +962,39 @@ def test_post_summary_requires_auth():
     assert resp.status_code == 401
 
 
+def test_get_summary_returns_points():
+    """GET /api/summary returns current bullets (public, no auth)."""
+    session = WorkshopSession()
+    # POST summary as host
+    session._client.post(
+        "/api/summary",
+        json={"points": [
+            {"text": "TDD is great", "source": "discussion"},
+            {"text": "Use mocks sparingly", "source": "notes"},
+        ]},
+    )
+    # GET without auth — should work (public endpoint)
+    client = TestClient(app)
+    resp = client.get("/api/summary")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert len(data["points"]) == 2
+    assert data["points"][0]["text"] == "TDD is great"
+    assert data["points"][1]["source"] == "notes"
+    assert data["updated_at"] is not None
+
+
+def test_get_summary_empty():
+    """GET /api/summary returns empty list when no summary posted."""
+    state.reset()
+    client = TestClient(app)
+    resp = client.get("/api/summary")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["points"] == []
+    assert data["updated_at"] is None
+
+
 # ---------------------------------------------------------------------------
 # Unit tests for auto_assign_remaining (debate side auto-assignment)
 # ---------------------------------------------------------------------------
