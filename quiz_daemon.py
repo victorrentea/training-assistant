@@ -39,6 +39,7 @@ _LOCK_FILE = Path("/tmp/quiz_daemon.lock")
 _HEARTBEAT_INTERVAL = 1.0  # seconds between heartbeat writes
 _HEARTBEAT_STALE_THRESHOLD = 10.0  # seconds before heartbeat is considered stale
 _TIMESTAMP_INTERVAL_SECONDS = float(os.environ.get("TRANSCRIPT_TIMESTAMP_INTERVAL_SECONDS", "3"))
+EXIT_CODE_UPDATE = 42  # signals start-daemon.sh to git pull and restart
 
 
 class TranscriptTimestampAppender:
@@ -187,6 +188,18 @@ def run() -> None:
 
     config = config_from_env()
 
+    # ── Fetch server version at startup for auto-update detection ──
+    _startup_version = None
+    try:
+        status = _get_json(f"{config.server_url}/api/status")
+        _startup_version = status.get("backend_version")
+        if _startup_version:
+            print(f"[daemon] Server version at startup: {_startup_version}")
+        else:
+            print("[daemon] Warning: server /api/status did not return backend_version", file=sys.stderr)
+    except RuntimeError as e:
+        print(f"[daemon] Warning: could not fetch server version at startup: {e}", file=sys.stderr)
+
     # Detect today's session folder
     sf, sn = find_session_folder(date.today())
     config = dc_replace(config, session_folder=sf, session_notes=sn)
@@ -258,6 +271,19 @@ def run() -> None:
 
             sf_name = config.session_folder.name if config.session_folder else None
             sn_name = config.session_notes.name if config.session_notes else None
+
+            # ── Auto-update: check if server version changed ──
+            if _startup_version:
+                try:
+                    status = _get_json(f"{config.server_url}/api/status")
+                    current_version = status.get("backend_version")
+                    if current_version and current_version != _startup_version:
+                        print(f"\n[daemon] Server version changed: {_startup_version} → {current_version}")
+                        print("[daemon] Exiting for auto-update (exit code 42)...")
+                        _LOCK_FILE.unlink(missing_ok=True)
+                        sys.exit(EXIT_CODE_UPDATE)
+                except RuntimeError:
+                    pass  # server unreachable — skip version check this cycle
 
             # ── Check for new quiz generation request ──
             data = _get_json(

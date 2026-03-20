@@ -960,3 +960,70 @@ def test_post_summary_requires_auth():
         json={"points": [{"text": "Should fail", "source": "discussion"}]},
     )
     assert resp.status_code == 401
+
+
+# ---------------------------------------------------------------------------
+# Unit tests for auto_assign_remaining (debate side auto-assignment)
+# ---------------------------------------------------------------------------
+from routers.debate import auto_assign_remaining
+
+
+@pytest.mark.parametrize(
+    "total, pre_assigned,          expect_trigger, expect_balanced",
+    [
+        # fmt: off
+        # total | pre-assigned sides dict        | triggers? | balanced after?
+        (2,      {"p1": "for"},                    True,       True),   # 1/2 picked → ≥50% → assign p2 to "against"
+        (3,      {"p1": "for"},                    False,      None),   # 1/3 picked → <50% → no trigger
+        (3,      {"p1": "for", "p2": "against"},   True,       True),   # 2/3 picked → ≥50% → assign p3
+        (4,      {"p1": "for"},                    False,      None),   # 1/4 → <50%
+        (4,      {"p1": "for", "p2": "for"},       True,       True),   # 2/4 → ≥50% → assign 2 to "against"
+        (4,      {"p1": "for", "p2": "against"},   True,       True),   # 2/4 → ≥50% → 1 each side remaining
+        (5,      {"p1": "for", "p2": "against"},   False,      None),   # 2/5 → <50%
+        (5,      {"p1": "for", "p2": "for", "p3": "against"}, True, True),  # 3/5 → ≥50%
+        (6,      {"p1": "for", "p2": "for", "p3": "for"},     True, True),  # 3/6 → ≥50% → 3 go "against"
+        (1,      {},                               False,      None),   # 0 assigned → never triggers
+        (4,      {},                               False,      None),   # 0 assigned → never triggers
+        (2,      {"p1": "for", "p2": "against"},   True,       True),   # all already assigned → returns []
+        (10,     {f"p{i}": "for" for i in range(1, 6)}, True, True),   # 5/10 → ≥50%, 5 unassigned → all "against"
+        # fmt: on
+    ],
+    ids=[
+        "2p_1for",
+        "3p_1for_no_trigger",
+        "3p_2picked",
+        "4p_1for_no_trigger",
+        "4p_2for",
+        "4p_1each",
+        "5p_2picked_no_trigger",
+        "5p_3picked",
+        "6p_3for",
+        "1p_none_assigned",
+        "4p_none_assigned",
+        "2p_all_assigned",
+        "10p_5for",
+    ],
+)
+def test_auto_assign_remaining(total, pre_assigned, expect_trigger, expect_balanced):
+    """Tabular Gherkin: GIVEN total participants with pre_assigned sides,
+    WHEN auto_assign_remaining runs,
+    THEN it triggers (or not) and teams are balanced."""
+    all_pids = [f"p{i}" for i in range(1, total + 1)]
+    sides = dict(pre_assigned)  # copy to avoid mutating parametrize data
+
+    newly = auto_assign_remaining(all_pids, sides)
+
+    if not expect_trigger:
+        assert newly == [], f"Expected no trigger, but got {newly}"
+        return
+
+    # When triggered: every participant must have a side
+    for pid in all_pids:
+        assert pid in sides, f"{pid} was not assigned a side"
+
+    # Teams must be balanced (differ by at most 1)
+    for_count = sum(1 for s in sides.values() if s == "for")
+    against_count = sum(1 for s in sides.values() if s == "against")
+    assert abs(for_count - against_count) <= 1, (
+        f"Unbalanced: {for_count} for vs {against_count} against"
+    )

@@ -33,5 +33,26 @@ if [ ! -f secrets.env ]; then
   exit 1
 fi
 
-echo "🚀 Starting quiz daemon..."
-python3 quiz_daemon.py
+while true; do
+  echo "🚀 Starting quiz daemon..."
+  python3 quiz_daemon.py
+  exit_code=$?
+
+  if [ $exit_code -eq 42 ]; then
+    echo ""
+    echo "🔄 Server version changed — pulling latest code..."
+    if ! git pull; then
+      echo "❌ git pull failed. Please resolve manually."
+      exit 1
+    fi
+    echo "✅ Code updated. Restarting daemon..."
+    echo ""
+    continue
+  elif [ $exit_code -eq 0 ]; then
+    echo "👋 Daemon stopped normally."
+    exit 0
+  else
+    echo "❌ Daemon exited with error code $exit_code."
+    exit $exit_code
+  fi
+done
