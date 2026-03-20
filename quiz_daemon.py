@@ -217,6 +217,7 @@ def run() -> None:
     server_disconnected = False
     last_detected_date: date | None = None
     last_heartbeat_at = 0.0
+    last_session_check_at = 0.0
     # Summary state
     summary_points: list[str] = []
     last_summary_at = 0.0  # monotonic time of last summary run
@@ -231,18 +232,25 @@ def run() -> None:
 
             timestamp_appender.tick()
 
-            # ── Re-detect session folder on date change ──
+            # ── Re-detect session folder on date change or if notes not yet found (every 5s) ──
             today = date.today()
-            if today != last_detected_date:
+            notes_missing = config.session_notes is None
+            date_changed = today != last_detected_date
+            session_recheck_due = notes_missing and (now - last_session_check_at >= 5.0)
+            if date_changed or session_recheck_due:
+                last_session_check_at = now
                 sf, sn = find_session_folder(today)
-                config = dc_replace(config, session_folder=sf, session_notes=sn)
-                last_detected_date = today
-                if sf:
-                    print(f"[session] Detected: {sf.name} / notes: {sn.name if sn else 'none'}")
+                changed = (sf != config.session_folder or sn != config.session_notes)
+                if changed or date_changed:
+                    config = dc_replace(config, session_folder=sf, session_notes=sn)
+                    last_detected_date = today
+                    if sf:
+                        print(f"[session] Detected: {sf.name} / notes: {sn.name if sn else 'none'}")
+                    else:
+                        print("[session] No session folder for today", file=sys.stderr)
+                    _session_status_pending = True
                 else:
-                    print("[session] No session folder for today", file=sys.stderr)
-                # Push session status to server so host UI updates immediately
-                _session_status_pending = True
+                    _session_status_pending = False
             else:
                 _session_status_pending = False
 
@@ -298,9 +306,22 @@ def run() -> None:
                 else:
                     post_status("error", "No conversation context — please generate a question first.", config)
 
-            # ── Periodic summary generation ──
+            # ── Check for forced summary request ──
+            force_summary = False
+            try:
+                force_data = _get_json(
+                    f"{config.server_url}/api/summary/force",
+                    config.host_username, config.host_password,
+                )
+                force_summary = force_data.get("requested", False)
+            except Exception:
+                pass
+
+            # ── Periodic or forced summary generation ──
             now_mono = time.monotonic()
-            if now_mono - last_summary_at >= SUMMARY_INTERVAL_SECONDS:
+            if force_summary or now_mono - last_summary_at >= SUMMARY_INTERVAL_SECONDS:
+                if force_summary:
+                    print("[summarizer] Force-generating summary (host requested)")
                 last_summary_at = now_mono
                 try:
                     new_points = generate_summary(config, summary_points)

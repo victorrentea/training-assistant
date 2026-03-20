@@ -259,8 +259,19 @@
   }
 
   function toggleSummaryModal() {
-    const overlay = document.getElementById('summary-overlay');
-    if (overlay) overlay.classList.toggle('open');
+    if (summaryPoints.length) {
+      const overlay = document.getElementById('summary-overlay');
+      if (overlay) overlay.classList.toggle('open');
+    } else {
+      // No key points yet — force the daemon to generate now
+      const badge = document.getElementById('summary-badge');
+      if (badge) {
+        badge.textContent = '🧠 Generating...';
+        badge.className = 'badge';
+        badge.style.cssText = 'color:var(--warn);border:1px solid var(--warn);cursor:wait;';
+      }
+      fetch('/api/summary/force', { method: 'POST' });
+    }
   }
 
   function closeSummaryModal() {
