@@ -167,6 +167,7 @@ All state dicts are keyed by **UUID**, not display name. Duplicate display names
 - **Votes are final**: once a participant votes, they cannot change their vote. This is intentional.
 - **No persistence between sessions**: restarting the server clears all state. Acceptable because sessions are live events.
 - **Quiz correct_indices**: stored in the quiz JSON for trainer preview only — never sent to the poll server
+- **Disabled buttons on empty input**: whenever a text input is paired with a submit button, the button must be `disabled` when the input is empty/whitespace-only. Use `oninput` to toggle `disabled`, and re-disable after programmatic `input.value = ''` in the submit function. This applies to all input+button pairs across host and participant (Q&A, word cloud, debate arguments, etc.).
 
 ---
 

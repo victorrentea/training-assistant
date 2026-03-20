@@ -87,9 +87,9 @@
           <button class="btn btn-success" onclick="pushWordCloudTopic()" style="min-width:4rem;">Set</button>
         </div>
         <div class="activity-input-row wc-input-row">
-          <input id="wc-host-input" type="text" maxlength="40" autocomplete="on" placeholder="Submit a word…" list="wc-host-suggestions" />
+          <input id="wc-host-input" type="text" maxlength="40" autocomplete="on" placeholder="Submit a word…" list="wc-host-suggestions" oninput="document.getElementById('wc-host-submit').disabled=!this.value.trim()" />
           <datalist id="wc-host-suggestions"></datalist>
-          <button class="btn btn-warn" onclick="hostSubmitWord()" style="min-width:4rem;">↵</button>
+          <button id="wc-host-submit" class="btn btn-warn" onclick="hostSubmitWord()" style="min-width:4rem;" disabled>↵</button>
         </div>
       </div>
       <ul id="wc-host-words" style="margin-top:.5rem; list-style:disc; padding-left:1.25rem; color:var(--muted); font-size:.85rem; max-height:180px; overflow-y:auto;"></ul>
@@ -103,8 +103,9 @@
       <div class="activity-input-row qa-input-row" style="margin-top:.5rem;">
         <input id="host-qa-input" type="text" maxlength="280" autocomplete="off"
                placeholder="Ask a question as host…"
-               onkeydown="if(event.key==='Enter')hostSubmitQA()" />
-        <button id="host-qa-submit-btn" class="btn btn-success" onclick="hostSubmitQA()">↵</button>
+               onkeydown="if(event.key==='Enter')hostSubmitQA()"
+               oninput="document.getElementById('host-qa-submit-btn').disabled=!this.value.trim()" />
+        <button id="host-qa-submit-btn" class="btn btn-success" onclick="hostSubmitQA()" disabled>↵</button>
       </div>
       <div style="margin-top:.5rem;">
         <button id="clear-qa-btn" class="btn btn-danger" onclick="clearQA()">🗑 Delete all</button>
