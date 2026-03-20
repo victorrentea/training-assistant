@@ -60,6 +60,7 @@ class AppState:
         self.codereview_confirmed: set[int] = set()  # lines host confirmed
         self.summary_points: list[str] = []
         self.summary_updated_at: Optional[datetime] = None
+        self.summary_force_requested: bool = False
         # Debate state
         self.debate_statement: Optional[str] = None
         self.debate_phase: Optional[str] = None  # "side_selection"|"arguments"|"ai_cleanup"|"prep"|"live_debate"|"ended"

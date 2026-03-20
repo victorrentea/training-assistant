@@ -142,15 +142,15 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
   }
 
   // ── Auto-join: no join screen, connect immediately ──
-  let _joinedWithSuggestion = false;
+  let _suggestedName = null; // the random name assigned at join
 
   (async function autoJoin() {
     const savedName = localStorage.getItem(LS_KEY);
     if (savedName) {
       myName = savedName;
     } else {
-      myName = await fetchSuggestedName();
-      _joinedWithSuggestion = true;
+      _suggestedName = await fetchSuggestedName();
+      myName = _suggestedName;
     }
     connectWS(myName);
   })();
@@ -174,7 +174,6 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     const newName = document.getElementById('name-edit-input').value.trim();
     if (newName && newName !== myName) {
         myName = newName;
-        _joinedWithSuggestion = false;
         localStorage.setItem(LS_KEY, myName);
         document.getElementById('display-name').textContent = myName;
         if (ws && ws.readyState === WebSocket.OPEN) {
@@ -218,7 +217,7 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     const nameEl = document.getElementById('onboard-name');
     const locEl = document.getElementById('onboard-location');
     const notifEl = document.getElementById('onboard-notif');
-    if (nameEl && !nameEl.classList.contains('done') && !_joinedWithSuggestion) {
+    if (nameEl && !nameEl.classList.contains('done') && (_suggestedName === null || myName !== _suggestedName)) {
       nameEl.classList.add('done');
       nameEl.innerHTML = '☑ Click on your name to set it';
       nameEl.style.cursor = 'default';
@@ -233,7 +232,7 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     const notifGranted = 'Notification' in window && Notification.permission === 'granted';
     if (notifEl && !notifEl.classList.contains('done') && notifGranted) {
       notifEl.classList.add('done');
-      notifEl.innerHTML = '☑ Enable browser notifications';
+      notifEl.innerHTML = '☑ Enable notifications';
       notifEl.style.cursor = 'default';
       notifEl.onclick = null;
     }
@@ -1020,7 +1019,7 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
   function renderContent(voteCounts) {
     const el = document.getElementById('content');
     if (!currentPoll) {
-      const nameSet = !_joinedWithSuggestion;
+      const nameSet = (_suggestedName === null || myName !== _suggestedName);
       const locationSet = !!localStorage.getItem(LS_LOCATION_KEY);
       const notifGranted = 'Notification' in window && Notification.permission === 'granted';
       const allDone = nameSet && locationSet && notifGranted;
@@ -1037,7 +1036,7 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
             ${locationSet ? '☑' : '☐'} Share your location
           </li>
           <li id="onboard-notif" class="onboarding-item${notifGranted ? ' done' : ''}" onclick="${notifGranted ? '' : 'requestNotificationPermission()'}" style="cursor:${notifGranted ? 'default' : 'pointer'}">
-            ${notifGranted ? '☑' : '☐'} Enable browser notifications
+            ${notifGranted ? '☑' : '☐'} Enable notifications
           </li>
         </ul>
       </div>`;

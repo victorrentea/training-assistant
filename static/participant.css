@@ -24,12 +24,12 @@ body {
   z-index: 9999;
   box-shadow: 0 4px 16px rgba(0,0,0,.5);
   border: 2px solid var(--accent);
-  transform: translate(-50%, -110%);
+  transform: translate(-50%, 20%);
   animation: avatar-pop .2s ease-out;
 }
 @keyframes avatar-pop {
-  from { transform: translate(-50%, -110%) scale(0); opacity: 0; }
-  to   { transform: translate(-50%, -110%) scale(1); opacity: 1; }
+  from { transform: translate(-50%, 20%) scale(0); opacity: 0; }
+  to   { transform: translate(-50%, 20%) scale(1); opacity: 1; }
 }
 
 h1 { display: none; }
