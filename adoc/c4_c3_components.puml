@@ -20,11 +20,13 @@ Container_Boundary(fastapi, "FastAPI Backend") {
 
     Component(wordcloud_router, "routers/wordcloud.py", "FastAPI APIRouter", "POST /api/wordcloud\nPOST /api/wordcloud/status\nDELETE /api/wordcloud")
 
+    Component(codereview_router, "routers/codereview.py", "FastAPI APIRouter", "PUT /api/codereview\nPUT /api/codereview/status\nPUT /api/codereview/confirm-line\nDELETE /api/codereview")
+
     Component(scores_router, "routers/scores.py", "FastAPI APIRouter", "DELETE /api/scores")
 
     Component(quiz_router, "routers/quiz.py", "FastAPI APIRouter", "POST/GET /api/quiz-request\nPOST /api/quiz-status\nPOST/DELETE /api/quiz-preview\nPOST/GET /api/quiz-refine")
 
-    Component(state_module, "state.py", "AppState singleton", "All dicts UUID-keyed.\nparticipants, participant_names,\nvotes, locations, scores,\nbase_scores, vote_times,\ncurrent_activity, wordcloud_words,\nquiz_request, quiz_preview,\ndaemon_last_seen.")
+    Component(state_module, "state.py", "AppState singleton", "All dicts UUID-keyed.\nparticipants, participant_names,\nvotes, locations, scores,\nbase_scores, vote_times,\ncurrent_activity, wordcloud_words,\nquiz_request, quiz_preview,\ndaemon_last_seen,\ncodereview_snippet, codereview_language,\ncodereview_phase, codereview_selections,\ncodereview_confirmed.")
 
     Component(messaging_module, "messaging.py", "Async helpers", "broadcast_state()\nbuild_participant_state(pid)\nbuild_host_state()\nbroadcast_participant_update()")
 }
@@ -35,6 +37,7 @@ Rel(caddy, poll_router, "/api/poll*, /api/suggest-name", "HTTP")
 Rel(caddy, scores_router, "DELETE /api/scores", "HTTP (Basic Auth)")
 Rel(caddy, quiz_router, "/api/quiz-*", "HTTP (Basic Auth)")
 Rel(caddy, wordcloud_router, "/api/wordcloud/status", "HTTP (Basic Auth)")
+Rel(caddy, codereview_router, "/api/codereview*", "HTTP (Basic Auth)")
 
 Rel(ws_router, state_module, "Participants, votes, locations")
 Rel(ws_router, messaging_module, "broadcast_state(), broadcast_participant_update()")
@@ -46,6 +49,8 @@ Rel(quiz_router, state_module, "Quiz pipeline state")
 Rel(quiz_router, messaging_module, "broadcast()")
 Rel(wordcloud_router, state_module, "Word cloud lifecycle")
 Rel(wordcloud_router, messaging_module, "broadcast()")
+Rel(codereview_router, state_module, "Code review lifecycle, selections, confirmed lines")
+Rel(codereview_router, messaging_module, "broadcast()")
 
 Rel(participant_spa, caddy, "Vote, connect WS, send location", "WSS / HTTPS")
 Rel(host_spa, caddy, "Manage polls, mark correct, reset scores", "HTTPS / WSS (Basic Auth)")
