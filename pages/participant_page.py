@@ -105,6 +105,54 @@ class ParticipantPage:
     def expect_question_gone(self, text: str, timeout: int = 5000) -> None:
         expect(self._page.locator(f".qa-text-p:has-text('{text}')")).not_to_be_visible(timeout=timeout)
 
+    # ── Code Review ──────────────────────────────────────────────────────
+
+    def select_codereview_line(self, line_num: int) -> None:
+        """Click a line to select it during the selecting phase (1-indexed)."""
+        self._page.locator(".codereview-pline").nth(line_num - 1).click()
+        # Wait for server round-trip and re-render
+        expect(self._page.locator(".codereview-pline-selected")).to_have_count(
+            len(self.get_codereview_selections()) + 1, timeout=3000
+        ) if False else self._page.wait_for_timeout(800)
+
+    def deselect_codereview_line(self, line_num: int) -> None:
+        """Click a selected line to deselect it (1-indexed)."""
+        self._page.locator(".codereview-pline").nth(line_num - 1).click()
+        self._page.wait_for_timeout(800)
+
+    def get_codereview_selections(self) -> set[int]:
+        """Return set of currently selected line numbers (1-indexed)."""
+        lines = self._page.locator(".codereview-pline").all()
+        result = set()
+        for i, el in enumerate(lines):
+            cls = el.get_attribute("class") or ""
+            if "codereview-pline-selected" in cls:
+                result.add(i + 1)
+        return result
+
+    # ── Score ──────────────────────────────────────────────────────────────
+
+    def get_score(self) -> int:
+        """Read displayed score, return 0 if hidden. Format: '⭐ X pts'."""
+        el = self._page.locator("#my-score")
+        if not el.is_visible():
+            return 0
+        text = el.inner_text().strip()
+        import re
+        m = re.search(r"(\d+)", text)
+        return int(m.group(1)) if m else 0
+
+    # ── Word Cloud ─────────────────────────────────────────────────────────
+
+    def get_wordcloud_my_words(self) -> list[str]:
+        """Return list of words the participant has submitted."""
+        return [
+            el.inner_text().strip()
+            for el in self._page.locator("#wc-my-words .wc-my-word").all()
+        ]
+
+    # ── Assertions ─────────────────────────────────────────────────────────
+
     def expect_question_answered(self, question_id: str, timeout: int = 5000) -> None:
         expect(
             self._page.locator(f'.qa-card-p[data-id="{question_id}"]')
