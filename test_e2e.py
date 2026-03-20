@@ -735,7 +735,7 @@ class TestNotifications:
         (first state message seeds tracking state, doesn't trigger)."""
         _api(server_url, "post", "/api/poll",
              json={"question": "Notif test Q", "options": ["A", "B"]})
-        _api(server_url, "post", "/api/poll/status", json={"open": True})
+        _api(server_url, "put", "/api/poll/status", json={"open": True})
 
         try:
             browser = playwright.chromium.launch()
@@ -770,5 +770,5 @@ class TestNotifications:
             assert not notif_fired, "No notification should fire when joining mid-poll"
             browser.close()
         finally:
-            _api(server_url, "post", "/api/poll/status", json={"open": False})
+            _api(server_url, "put", "/api/poll/status", json={"open": False})
             _api(server_url, "delete", "/api/poll")
