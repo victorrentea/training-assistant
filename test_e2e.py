@@ -379,6 +379,19 @@ class TestWordCloud:
         expect(pax._page.locator("#wc-my-words .wc-my-word")).to_have_count(1, timeout=3000)
         expect(pax._page.locator("#wc-my-words .wc-my-word").first).to_have_text("microservices")
 
+    def test_wordcloud_no_js_errors_on_submit(self, host: HostPage, pax: ParticipantPage):
+        """Regression: _lastWordcloudTopic was never declared, causing ReferenceError in _drawCloud."""
+        js_errors = []
+        pax._page.on("pageerror", lambda e: js_errors.append(str(e)))
+
+        pax.join("WcNoErr")
+        host.open_wordcloud_tab()
+        expect(pax._page.locator("#wc-canvas")).to_be_visible(timeout=5000)
+
+        pax.submit_word("resilience")
+        pax._page.wait_for_timeout(1000)
+        assert js_errors == [], f"JS errors during word cloud: {js_errors}"
+
     def test_close_wordcloud_participant_returns_to_idle(self, host: HostPage, pax: ParticipantPage):
         pax.join("WcTester3")
         host.open_wordcloud_tab()
