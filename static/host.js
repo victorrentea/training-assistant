@@ -144,7 +144,7 @@
         scores = msg.scores || {};
         document.getElementById('pax-count').textContent = msg.participant_count;
         renderParticipantList(msg.participant_names || []);
-        renderDaemonStatus(msg.daemon_connected, msg.daemon_last_seen);
+        renderDaemonStatus(msg.daemon_connected, msg.daemon_last_seen, msg.daemon_session_folder, msg.daemon_session_notes);
         renderPreview(msg.quiz_preview || null);
         renderPollDisplay();
         const currentActivity = msg.current_activity || 'none';
@@ -186,7 +186,7 @@
     b.className = `badge ${ok ? 'connected' : 'disconnected'}`;
   }
 
-  function renderDaemonStatus(connected, lastSeenIso) {
+  function renderDaemonStatus(connected, lastSeenIso, sessionFolder, sessionNotes) {
     const el = document.getElementById('daemon-badge');
     if (!el) return;
     if (!lastSeenIso) {
@@ -200,9 +200,19 @@
     const agoText = ago < 60 ? `${ago}s` : `${Math.round(ago/60)}m`;
     if (connected) {
       el.textContent = '● Agent';
-      el.className = 'badge connected';
-      el.style.cssText = '';
-      el.title = `Agent active (last seen ${agoText} ago)`;
+      if (sessionFolder && sessionNotes) {
+        el.className = 'badge connected';
+        el.style.cssText = '';
+        el.title = sessionFolder;
+      } else if (sessionFolder) {
+        el.className = 'badge';
+        el.style.cssText = 'color:var(--warn);border:1px solid var(--warn);';
+        el.title = 'Session folder found but no notes file';
+      } else {
+        el.className = 'badge';
+        el.style.cssText = 'color:var(--warn);border:1px solid var(--warn);';
+        el.title = 'No session folder found for today';
+      }
     } else {
       el.textContent = '● Agent';
       el.className = 'badge';
