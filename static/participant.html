@@ -9,6 +9,8 @@
   <link rel="stylesheet" href="/static/participant.css" />
   <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/d3-cloud@1/build/d3.layout.cloud.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 </head>
 <body>
 
@@ -40,6 +42,7 @@
       </span>
       <span class="status-right">
         <span id="location-prompt" class="location-prompt" onclick="requestLocation()" title="Share your location">📍 Where are you?</span>
+        <span id="host-dot" title="Host connected" style="display:none;"><span class="dot"></span>Host</span>
         <span id="pax-count"></span>
         <button id="summary-btn" title="Key points discussed" style="display:none" onclick="toggleSummaryModal()">📋</button>
         <button id="notif-btn" title="Enable notifications" style="display:none">🔔</button>
@@ -65,6 +68,6 @@
 <script src="/static/participant.js"></script>
 <div class="version-tag" id="version-tag"></div>
 <script>window.renderDeployAge && window.renderDeployAge('version-tag');</script>
-<div id="qa-toast"></div>
+<div id="qa-toast" class="qa-toast"></div>
 </body>
 </html>

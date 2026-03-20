@@ -33,7 +33,7 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
   const WC_COLORS = ['#7ecef4','#a78bfa','#34d399','#fbbf24','#f472b6','#60a5fa','#fb923c'];
   let _wcDebounceTimer = null;
   const versionReloadGuard = window.createVersionReloadGuard
-    ? window.createVersionReloadGuard({ countdownSeconds: 10 })
+    ? window.createVersionReloadGuard({ countdownSeconds: 5 })
     : null;
   window.__versionReloadGuard = versionReloadGuard;
   const _QA_TOASTS = [
@@ -43,6 +43,16 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     "🤔 Got a burning question? Type it in!",
     "⬆️ See a question you like? Give it an upvote!",
   ];
+  const _CR_TOASTS = [
+    "🐛 Hunt for bugs — spot an issue, earn points!",
+    "⚠️ Check edge cases — what happens with null, empty, or zero?",
+    "🔒 Think security — could this be exploited?",
+    "🧠 Sharpen your critical thinking — don't trust the happy path!",
+    "🎯 The more real issues you spot, the higher you score!",
+  ];
+  let _crToastIndex = 0;
+  let _crToastInterval = null;
+  let _crToastTimeout = null;
   let _qaToastIndex = 0;
   let _qaToastInterval = null;
   let _qaToastTimeout = null;
@@ -340,6 +350,9 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
           if (_prevActivity !== 'debate' && msg.current_activity === 'debate') {
             notifyIfHidden('⚔️ Debate started', 'Choose your side!');
           }
+          if (_prevActivity !== 'codereview' && msg.current_activity === 'codereview') {
+            notifyIfHidden('📝 Code Review', 'Spot bugs and earn points!');
+          }
           _prevPollActive = msg.poll_active;
           _prevActivity   = msg.current_activity;
         }
@@ -355,6 +368,7 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
         currentPoll = msg.poll;
         pollActive = msg.poll_active;
         updateParticipantCount(msg.participant_count);
+        updateHostDot(msg.host_connected);
         updateScore(msg.my_score);
         window._myScore = msg.my_score || 0;
         window._myUuid = myUUID;
@@ -378,11 +392,14 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
           renderQAScreen(msg.qa_questions || []);
         } else if (msg.current_activity === 'debate') {
           renderDebateScreen(msg);
+        } else if (msg.current_activity === 'codereview') {
+          renderCodeReviewScreen(msg.codereview);
         } else {
           const content = document.getElementById('content');
           if (content) content.dataset.screen = '';
           myWords = [];
           renderQACleanup();
+          _stopCRToasts();
           renderContent(msg.vote_counts);
         }
         updateSummary(msg.summary_points, msg.summary_updated_at);
@@ -392,6 +409,7 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
         break;
       case 'participant_count':
         updateParticipantCount(msg.count);
+        updateHostDot(msg.host_connected);
         break;
       case 'scores':
         break;
@@ -433,6 +451,11 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
 
   function updateParticipantCount(n) {
     document.getElementById('pax-count').textContent = `👥 ${n} participant${n !== 1 ? 's' : ''}`;
+  }
+
+  function updateHostDot(connected) {
+    const dot = document.getElementById('host-dot');
+    if (dot) dot.style.display = connected ? 'inline' : 'none';
   }
 
   let _displayedScore = 0;
@@ -712,6 +735,39 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     if (el) el.classList.remove('visible');
   }
 
+  // ── Code Review toasts ──
+  function _showCRToast() {
+    const el = document.getElementById('cr-toast');
+    if (!el) return;
+    const idx = Math.floor(Math.random() * _CR_TOASTS.length);
+    el.textContent = _CR_TOASTS[idx];
+    el.classList.add('visible');
+    clearTimeout(_crToastTimeout);
+    _crToastTimeout = setTimeout(() => el.classList.remove('visible'), 3500);
+  }
+
+  function _scheduleCRToast() {
+    const delay = 5000 + Math.random() * 2000; // 5-7 seconds
+    _crToastInterval = setTimeout(() => {
+      _showCRToast();
+      _scheduleCRToast();
+    }, delay);
+  }
+
+  function _startCRToasts() {
+    _stopCRToasts();
+    _showCRToast();
+    _scheduleCRToast();
+  }
+
+  function _stopCRToasts() {
+    clearInterval(_crToastInterval);
+    clearTimeout(_crToastTimeout);
+    _crToastInterval = null;
+    const el = document.getElementById('cr-toast');
+    if (el) el.classList.remove('visible');
+  }
+
   function renderQAScreen(questions) {
     const content = document.getElementById('content');
     if (!content) return;
@@ -940,7 +996,7 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
   function renderContent(voteCounts) {
     const el = document.getElementById('content');
     if (!currentPoll) {
-      el.innerHTML = `<div class="waiting"><div class="icon">⏳</div><p>Waiting for host…</p></div>`;
+      el.innerHTML = `<div class="waiting"><div class="icon">👋</div><p>Welcome! Get ready to participate — your answers and ideas will shape this session!</p></div>`;
       return;
     }
     renderPollCard(el, voteCounts);
@@ -1160,5 +1216,111 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
       if (existing) existing.outerHTML = footerHTML;
       else card.insertAdjacentHTML('beforeend', footerHTML);
       if (existingWarn) existingWarn.remove();
+    }
+  }
+
+  let codereviewMySelections = new Set();
+
+  function renderCodeReviewScreen(cr) {
+    if (!cr) return;
+
+    const content = document.getElementById('content');
+    codereviewMySelections = new Set(cr.my_selections || []);
+    const confirmed = new Set(cr.confirmed_lines || []);
+    const isSelecting = cr.phase === 'selecting';
+    const isReviewing = cr.phase === 'reviewing';
+    const lines = cr.snippet.split('\n');
+    const percentages = cr.line_percentages || {};
+
+    let html = '<div class="codereview-screen">';
+    html += '<div class="codereview-header" style="font-size:1.3rem;">Code Review</div>';
+    if (!isSelecting) {
+      html += '<div class="codereview-subtitle">Selection closed — reviewing results</div>';
+    } else {
+      html += '<div id="cr-toast" class="qa-toast"></div>';
+    }
+
+    html += '<div class="codereview-viewer">';
+    lines.forEach((lineText, i) => {
+      const lineNum = i + 1;
+      const isMine = codereviewMySelections.has(lineNum);
+      const isConfirmed = confirmed.has(lineNum);
+      const pct = percentages[String(lineNum)];
+
+      let lineClass = 'codereview-pline';
+      let gutterContent = String(lineNum);
+      let badge = '';
+
+      if (isConfirmed && isMine) {
+        lineClass += ' codereview-pline-correct';
+        gutterContent = `${lineNum} ✓`;
+        badge = '<span class="codereview-badge codereview-badge-correct">+200</span>';
+      } else if (isConfirmed && !isMine) {
+        lineClass += ' codereview-pline-confirmed';
+        gutterContent = `${lineNum} ✓`;
+      } else if (isMine) {
+        lineClass += ' codereview-pline-selected';
+        gutterContent = `${lineNum} ●`;
+      }
+
+      if (isSelecting) {
+        lineClass += ' codereview-pline-clickable';
+      }
+
+      const pctBadge = isReviewing && pct !== undefined ? `<span class="codereview-pct">${pct}%</span>` : '';
+
+      html += `<div class="${lineClass}" onclick="toggleCodeReviewLine(${lineNum})">`;
+      html += `<span class="codereview-pgutter">${gutterContent}</span>`;
+      html += `<span class="codereview-pcode">${escHtml(lineText) || ' '}</span>`;
+      html += badge;
+      html += pctBadge;
+      html += '</div>';
+    });
+    html += '</div>';
+
+    if (isSelecting) {
+      html += `<div class="codereview-footer">You selected ${codereviewMySelections.size} line(s)</div>`;
+    } else if (isReviewing) {
+      const pointsEarned = [...confirmed].filter(l => codereviewMySelections.has(l)).length * 200;
+      if (pointsEarned > 0) {
+        html += `<div class="codereview-footer codereview-footer-points"><span class="codereview-points-earned">+${pointsEarned}</span> points earned</div>`;
+      }
+    }
+
+    html += '</div>';
+    content.innerHTML = html;
+
+    // Apply syntax highlighting as a single block for consistent tokens
+    if (typeof hljs !== 'undefined') {
+      const codeBlock = document.createElement('code');
+      codeBlock.textContent = cr.snippet;
+      if (cr.language) {
+        codeBlock.className = `language-${cr.language}`;
+      }
+      const pre = document.createElement('pre');
+      pre.appendChild(codeBlock);
+      hljs.highlightElement(codeBlock);
+
+      const highlightedLines = codeBlock.innerHTML.split('\n');
+      content.querySelectorAll('.codereview-pcode').forEach((el, i) => {
+        if (highlightedLines[i] !== undefined) {
+          el.innerHTML = highlightedLines[i] || ' ';
+        }
+      });
+    }
+
+    if (isSelecting) {
+      _startCRToasts();
+    } else {
+      _stopCRToasts();
+    }
+  }
+
+  function toggleCodeReviewLine(lineNum) {
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    if (codereviewMySelections.has(lineNum)) {
+      ws.send(JSON.stringify({ type: 'codereview_deselect', line: lineNum }));
+    } else {
+      ws.send(JSON.stringify({ type: 'codereview_select', line: lineNum }));
     }
   }

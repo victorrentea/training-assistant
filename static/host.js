@@ -15,7 +15,7 @@
   let hostWords = [];
   let _hostWcDebounceTimer = null;
   const versionReloadGuard = window.createVersionReloadGuard
-    ? window.createVersionReloadGuard({ countdownSeconds: 10 })
+    ? window.createVersionReloadGuard({ countdownSeconds: 5 })
     : null;
   window.__versionReloadGuard = versionReloadGuard;
   const WC_COLORS = ['#7ecef4','#a78bfa','#34d399','#fbbf24','#f472b6','#60a5fa','#fb923c'];
@@ -174,6 +174,9 @@
         if (currentActivity === 'qa') {
           renderQAList(msg.qa_questions || []);
         }
+        if (currentActivity === 'codereview' && msg.codereview) {
+          renderHostCodeReview(msg.codereview);
+        }
         updateSummary(msg.summary_points, msg.summary_updated_at);
       } else if (msg.type === 'vote_update') {
         voteCounts = msg.vote_counts || {};
@@ -193,6 +196,17 @@
         });
         cachedNames = names;
         renderParticipantList(names);
+        // Re-render code review side panel with fresh scores
+        if (window._lastCodereviewState && window._lastCodereviewState.phase !== 'idle') {
+          // Update scores in cached line_participants
+          const cr = window._lastCodereviewState;
+          for (const key in cr.line_participants) {
+            cr.line_participants[key].forEach(p => {
+              if (scores[p.name] !== undefined) p.score = scores[p.name];
+            });
+          }
+          renderHostSidePanel(cr);
+        }
       } else if (msg.type === 'timer') {
         _applyTimer(msg.seconds, msg.started_at);
       } else if (msg.type === 'quiz_status') {
@@ -706,8 +720,8 @@
   }
 
   // ── Quiz generator ──
-  const GEN_LABEL_TRANSCRIPT = 'Generate from transcript';
-  const GEN_LABEL_TOPIC = 'Generate on topic';
+  const GEN_LABEL_TRANSCRIPT = '✨ Generate from transcript';
+  const GEN_LABEL_TOPIC = '✨ Generate on topic';
 
   function updateGenBtn() {
     const topic = document.getElementById('quiz-topic').value.trim();
@@ -895,7 +909,7 @@
 
 
   async function switchTab(tab) {
-    ['poll', 'wordcloud', 'qa', 'debate'].forEach(t => {
+    ['poll', 'wordcloud', 'qa', 'debate', 'codereview'].forEach(t => {
       document.getElementById('tab-' + t).classList.toggle('active', tab === t);
       document.getElementById('tab-content-' + t).style.display = tab === t ? '' : 'none';
     });
@@ -907,7 +921,7 @@
   }
 
   function updateCenterPanel(currentActivity) {
-    ['qr', 'poll', 'wordcloud', 'qa', 'debate'].forEach(id => {
+    ['qr', 'poll', 'wordcloud', 'qa', 'debate', 'codereview'].forEach(id => {
       const el = document.getElementById('center-' + id);
       if (id === 'qr') {
         el.style.display = currentActivity === 'none' ? '' : 'none';
@@ -916,7 +930,7 @@
       }
     });
     if (currentActivity && currentActivity !== 'none') {
-      ['poll', 'wordcloud', 'qa', 'debate'].forEach(t => {
+      ['poll', 'wordcloud', 'qa', 'debate', 'codereview'].forEach(t => {
         document.getElementById('tab-' + t).classList.toggle('active', currentActivity === t);
         document.getElementById('tab-content-' + t).style.display = currentActivity === t ? '' : 'none';
       });
@@ -1123,6 +1137,178 @@
         </div>
       </div>
     `; }).join('');
+  }
+
+  // ── Code Review ──
+  let codereviewSelectedLine = null;
+  window._lastCodereviewState = null;
+
+  function renderHostCodeReview(cr) {
+    window._lastCodereviewState = cr;
+    const createDiv = document.getElementById('codereview-create');
+    const activeDiv = document.getElementById('codereview-active');
+
+    if (cr.phase === 'idle') {
+      createDiv.style.display = '';
+      activeDiv.style.display = 'none';
+      document.getElementById('codereview-code-panel').innerHTML = '';
+      document.getElementById('codereview-side-panel').innerHTML =
+        '<div class="muted" style="text-align:center;margin-top:40px;">Click a line to see details</div>';
+      return;
+    }
+
+    createDiv.style.display = 'none';
+    activeDiv.style.display = '';
+
+    const closeBtn = document.getElementById('codereview-close-btn');
+    const phaseLabel = document.getElementById('codereview-phase-label');
+
+    if (cr.phase === 'selecting') {
+      closeBtn.style.display = '';
+      phaseLabel.innerHTML = '<span style="color:var(--accent2);">🐛 Bug Hunt Open</span>';
+    } else {
+      closeBtn.style.display = 'none';
+      const confirmedCount = cr.confirmed_lines ? cr.confirmed_lines.length : 0;
+      phaseLabel.innerHTML = `<span style="color:var(--warn);">Review mode — ${confirmedCount} line(s) confirmed</span>`;
+    }
+
+    renderHostCodePanel(cr);
+    renderHostSidePanel(cr);
+  }
+
+  function renderHostCodePanel(cr) {
+    const panel = document.getElementById('codereview-code-panel');
+    const lines = cr.snippet.split('\n');
+    const lineCounts = cr.line_counts || {};
+    const confirmed = new Set(cr.confirmed_lines || []);
+    const totalPax = cr.participant_count || 1;
+
+    let html = '<div class="codereview-lines">';
+    lines.forEach((lineText, i) => {
+      const lineNum = i + 1;
+      const count = lineCounts[String(lineNum)] || 0;
+      const pct = Math.round(count * 100 / totalPax);
+      const intensity = count / totalPax;
+      const isConfirmed = confirmed.has(lineNum);
+      const isSelected = codereviewSelectedLine === lineNum;
+
+      let bgColor, borderColor, gutterText;
+      if (isConfirmed) {
+        bgColor = 'rgba(166,227,161,0.2)';
+        borderColor = 'var(--accent2)';
+        gutterText = `${lineNum} ✓`;
+      } else if (isSelected) {
+        bgColor = 'rgba(108,99,255,0.25)';
+        borderColor = 'var(--accent)';
+        gutterText = `${lineNum} ▶`;
+      } else {
+        bgColor = `rgba(108,99,255,${intensity * 0.5})`;
+        borderColor = 'transparent';
+        gutterText = String(lineNum);
+      }
+
+      const clickable = cr.phase === 'reviewing' && !isConfirmed ? 'codereview-line-clickable' : '';
+      html += `<div class="codereview-line ${clickable}" style="background:${bgColor};border-left:3px solid ${borderColor};" onclick="selectCodeReviewLine(${lineNum})">`;
+      html += `<span class="codereview-gutter">${gutterText}</span>`;
+      html += `<span class="codereview-code">${escHtml(lineText) || ' '}</span>`;
+      if (count > 0) {
+        const countColor = isConfirmed ? 'var(--accent2)' : 'var(--accent)';
+        html += `<span class="codereview-count" style="color:${countColor}">${pct}%</span>`;
+      }
+      html += '</div>';
+    });
+    html += '</div>';
+    panel.innerHTML = html;
+  }
+
+  function selectCodeReviewLine(lineNum) {
+    codereviewSelectedLine = lineNum;
+    const lastState = window._lastCodereviewState;
+    if (lastState) {
+      renderHostCodePanel(lastState);
+      renderHostSidePanel(lastState);
+    }
+  }
+
+  function renderHostSidePanel(cr) {
+    const panel = document.getElementById('codereview-side-panel');
+    const confirmed = new Set(cr.confirmed_lines || []);
+
+    if (codereviewSelectedLine === null) {
+      panel.innerHTML = '<div class="muted" style="text-align:center;margin-top:40px;">Click a line to see details</div>';
+      return;
+    }
+
+    const lineNum = codereviewSelectedLine;
+    const lineParticipants = (cr.line_participants || {})[String(lineNum)] || [];
+    const isConfirmed = confirmed.has(lineNum);
+    const count = (cr.line_counts || {})[String(lineNum)] || 0;
+
+    let html = '';
+
+    if (lineParticipants.length > 0) {
+      const sorted = [...lineParticipants].sort((a, b) => {
+        if (a.score !== b.score) return b.score - a.score;
+        return a.name.localeCompare(b.name);
+      });
+      html += '<div class="codereview-participant-list">';
+      sorted.forEach(p => {
+        html += '<div class="codereview-participant-row">';
+        html += `<span>${escHtml(p.name)}</span>`;
+        if (p.score > 0) {
+          html += `<span class="codereview-participant-score">⭐ ${p.score} pts</span>`;
+        }
+        html += '</div>';
+      });
+      html += '</div>';
+    } else {
+      html += '<div class="muted">No participants selected this line</div>';
+    }
+
+    if (cr.phase === 'reviewing' && !isConfirmed && count > 0) {
+      html += `<button class="btn btn-success" style="width:100%;margin-top:12px;" onclick="confirmCodeReviewLine(${lineNum})">✓ Confirm Line (award 200 pts)</button>`;
+    }
+    if (isConfirmed) {
+      html += '<div style="text-align:center;margin-top:12px;color:var(--accent2);font-weight:600;">✓ Confirmed</div>';
+    }
+
+    panel.innerHTML = html;
+  }
+
+  async function startCodeReview() {
+    const snippet = document.getElementById('codereview-snippet').value;
+    const langSelect = document.getElementById('codereview-language');
+    const language = langSelect.value || null;
+    if (!snippet.trim()) return alert('Please paste a code snippet');
+    await fetch('/api/codereview', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ snippet, language }),
+    });
+  }
+
+  async function closeCodeReviewSelection() {
+    await fetch('/api/codereview/status', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ open: false }),
+    });
+  }
+
+  async function confirmCodeReviewLine(line) {
+    await fetch('/api/codereview/confirm-line', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ line }),
+    });
+  }
+
+  async function clearCodeReview() {
+    codereviewSelectedLine = null;
+    await fetch('/api/codereview', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 
   updateGenBtn();

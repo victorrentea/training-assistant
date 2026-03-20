@@ -22,9 +22,10 @@
     <!-- Tab switcher -->
     <div class="tab-bar">
       <button class="tab-btn active" id="tab-poll" onclick="switchTab('poll')">📊 Poll</button>
-      <button class="tab-btn" id="tab-wordcloud" onclick="switchTab('wordcloud')">☁ Word Cloud</button>
+      <button class="tab-btn" id="tab-wordcloud" onclick="switchTab('wordcloud')">☁ Words</button>
       <button class="tab-btn" id="tab-qa" onclick="switchTab('qa')">❓ Q&A</button>
       <button class="tab-btn" id="tab-debate" onclick="switchTab('debate')">⚔️ Debate</button>
+      <button class="tab-btn" id="tab-codereview" onclick="switchTab('codereview')">🔍 Code</button>
     </div>
 
     <!-- Poll tab content -->
@@ -32,7 +33,7 @@
       <div id="poll-input" class="poll-composer" contenteditable="true" spellcheck="false"
            data-placeholder="Question title&#10;&#10;Option A&#10;Option B&#10;Option C"></div>
       <div class="btn-row" style="align-items:center;">
-        <button class="btn btn-primary" id="create-btn">🚀 Launch</button>
+        <button class="btn btn-success" id="create-btn">🚀 Launch</button>
         <label style="display:flex; align-items:center; gap:.4rem; font-size:.9rem; color:var(--text); cursor:pointer; margin:0;">
           <input type="checkbox" id="multi-check" style="width:1rem; height:1rem; cursor:pointer;" />
           Multi-select
@@ -64,7 +65,7 @@
               <option value="480">whole day</option>
             </select>
           </div>
-          <button class="btn btn-warn" id="gen-quiz-btn" onclick="requestQuiz()" style="align-self:flex-start;">Generate from transcript</button>
+          <button class="btn btn-success" id="gen-quiz-btn" onclick="requestQuiz()" style="align-self:flex-start;">✨ Generate from transcript</button>
         </div>
         <span id="quiz-status"></span>
       </div>
@@ -83,12 +84,12 @@
       <div style="margin-top:.75rem;">
         <div class="wc-input-row" style="margin-bottom:.5rem;">
           <input id="wc-topic-input" type="text" maxlength="80" autocomplete="off" placeholder="topic (optional)" style="flex:1;padding:.5rem .75rem;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:.9rem;" />
-          <button class="btn btn-secondary" onclick="pushWordCloudTopic()">Push</button>
+          <button class="btn btn-success" onclick="pushWordCloudTopic()">🚀 Push</button>
         </div>
         <div class="wc-input-row">
           <input id="wc-host-input" type="text" maxlength="40" autocomplete="on" placeholder="Submit a word…" list="wc-host-suggestions" />
           <datalist id="wc-host-suggestions"></datalist>
-          <button class="btn btn-primary" onclick="hostSubmitWord()">↵</button>
+          <button class="btn btn-warn" onclick="hostSubmitWord()">↵</button>
         </div>
       </div>
       <ul id="wc-host-words" style="margin-top:.5rem; list-style:disc; padding-left:1.25rem; color:var(--muted); font-size:.85rem; max-height:180px; overflow-y:auto;"></ul>
@@ -103,7 +104,7 @@
         <input id="host-qa-input" type="text" maxlength="280" autocomplete="off"
                placeholder="Ask a question as host…"
                onkeydown="if(event.key==='Enter')hostSubmitQA()" />
-        <button id="host-qa-submit-btn" class="btn btn-primary" onclick="hostSubmitQA()">↵</button>
+        <button id="host-qa-submit-btn" class="btn btn-success" onclick="hostSubmitQA()">↵</button>
       </div>
       <div style="margin-top:.5rem;">
         <button id="clear-qa-btn" class="btn btn-danger" onclick="clearQA()">🗑 Clear all</button>
@@ -120,6 +121,52 @@
       <div id="debate-host-controls" style="display:none; margin-top:.75rem;">
         <div id="debate-phase-label" style="font-size:.85rem; color:var(--muted); margin-bottom:.35rem;"></div>
         <div id="debate-host-actions" class="btn-row"></div>
+      </div>
+    </div>
+
+    <!-- Code Review tab content -->
+    <div id="tab-content-codereview" style="display:none" class="tab-content">
+      <div id="codereview-create">
+        <div style="display:flex; gap:8px; align-items:center; margin-bottom:8px;">
+          <span style="font-weight:600;">Code Review</span>
+          <select id="codereview-language">
+            <option value="">Auto-detect language</option>
+            <option value="java">Java</option>
+            <option value="python">Python</option>
+            <option value="javascript">JavaScript</option>
+            <option value="typescript">TypeScript</option>
+            <option value="sql">SQL</option>
+            <option value="go">Go</option>
+            <option value="csharp">C#</option>
+            <option value="kotlin">Kotlin</option>
+            <option value="bash">Bash</option>
+          </select>
+        </div>
+        <textarea id="codereview-snippet" placeholder="Paste your code snippet here (10-50 lines)..." rows="12" style="width:100%; font-family:monospace; font-size:13px;">public List&lt;String&gt; getActiveUserEmails(List&lt;User&gt; users) {
+    List&lt;String&gt; emails = new ArrayList&lt;&gt;();
+    for (int i = 0; i &lt; users.size(); i++) {
+        User user = users.get(i);
+        if (user.isActive() == true) {
+            String email = user.getEmail();
+            if (email != null) {
+                emails.add(email);
+            }
+        }
+    }
+    return emails;
+}</textarea>
+        <div style="display:flex; justify-content:flex-end; margin-top:8px;">
+          <button class="btn btn-success" onclick="startCodeReview()">Start Code Review</button>
+        </div>
+      </div>
+      <div id="codereview-active" style="display:none;">
+        <div id="codereview-status-bar" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <span id="codereview-phase-label"></span>
+          <div>
+            <button id="codereview-close-btn" class="btn btn-success" onclick="closeCodeReviewSelection()" style="display:none;">End</button>
+            <button id="codereview-clear-btn" class="btn btn-danger" onclick="clearCodeReview()">🗑️</button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -152,7 +199,7 @@
     <!-- Q&A results panel -->
     <div id="center-qa" class="center-panel" style="display:none;">
       <h2 style="margin:0 0 .9rem; font-size:.95rem; color:var(--muted); text-transform:uppercase; letter-spacing:.08em;">
-        ❓ Questions — <span id="qa-count">0</span>
+        ❓ Questions
       </h2>
       <div id="qa-list"></div>
     </div>
@@ -161,6 +208,16 @@
       <h2 id="debate-center-title" style="margin:0 0 .5rem; font-size:.95rem; color:var(--muted); text-transform:uppercase; letter-spacing:.08em;">⚔️ Debate</h2>
       <div id="debate-statement-display" style="font-size:1.1rem; color:var(--text); margin-bottom:.75rem; font-style:italic;"></div>
       <div id="debate-center-content"></div>
+    </div>
+    <!-- Code Review center panel -->
+    <div id="center-codereview" style="display:none" class="center-panel">
+      <div style="display:flex; height:100%;">
+        <div id="codereview-code-panel" style="flex:2; overflow:auto; padding:12px;"></div>
+        <div style="flex:0 0 1px; background:var(--border);"></div>
+        <div id="codereview-side-panel" style="flex:1; overflow:auto; padding:12px;">
+          <div class="muted" style="text-align:center; margin-top:40px;">Click a line to see details</div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -173,7 +230,7 @@
     <ul id="pax-list" class="pax-list" title="Click a location to view map"></ul>
     <div class="right-footer">
       <span style="display:flex; align-items:center; gap:.5rem; flex-wrap:nowrap; min-width:0;">
-        <a id="participant-link" style="color:var(--accent); font-size:1.25rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; flex-shrink:1; direction:rtl; text-align:left;" href="/" target="_blank"></a>
+        <a id="participant-link" style="color:#fff; font-size:1.25rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; flex-shrink:1; direction:rtl; text-align:left;" href="/" target="_blank"></a>
         <div id="qr-icon" title="Show QR code" style="cursor:pointer; opacity:.5; flex-shrink:0; width:28px; height:28px;">
           <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" fill="currentColor" width="28" height="28">
             <rect x="5" y="5" width="35" height="35" rx="4"/>
@@ -224,6 +281,9 @@
     <div id="map-container"></div>
   </div>
 </div>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 
 <div id="summary-overlay" class="summary-overlay" onclick="closeSummaryModal()">
   <div class="summary-dialog" onclick="event.stopPropagation()">
