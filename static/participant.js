@@ -1167,8 +1167,9 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
       const aiClass = a.ai_generated ? ' debate-arg-ai' : '';
       const ownClass = a.is_own ? ' debate-arg-own' : '';
       const upvotedClass = a.has_upvoted ? ' debate-arg-upvoted' : '';
+      const sideClass = a.side === 'for' ? ' debate-arg-for' : ' debate-arg-against';
       const canUpvote = !readOnly && !a.is_own && !a.has_upvoted;
-      return `<div class="debate-arg${aiClass}${ownClass}${upvotedClass}" ${canUpvote ? `onclick="debateUpvote('${a.id}')"` : ''}>
+      return `<div class="debate-arg${aiClass}${ownClass}${upvotedClass}${sideClass}" ${canUpvote ? `onclick="debateUpvote('${a.id}')"` : ''}>
         <div class="debate-arg-header">
           ${a.author_avatar ? `<img src="/static/avatars/${a.author_avatar}" class="debate-arg-avatar">` : ''}
           <span class="debate-arg-author">${escDebate(a.author)}</span>

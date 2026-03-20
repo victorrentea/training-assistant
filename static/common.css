@@ -457,3 +457,23 @@ input[type=text].debate-sub-duration {
   animation: debate-spin 0.8s linear infinite;
 }
 @keyframes debate-spin { to { transform: rotate(360deg); } }
+
+/* ── Debate Argument Side Colors ── */
+.debate-arg-for {
+  background: rgba(46, 204, 113, 0.12);
+  border-color: rgba(46, 204, 113, 0.3);
+}
+.debate-arg-against {
+  background: rgba(231, 76, 60, 0.12);
+  border-color: rgba(231, 76, 60, 0.3);
+}
+@media (prefers-color-scheme: light) {
+  .debate-arg-for {
+    background: rgba(46, 204, 113, 0.1);
+    border-color: rgba(46, 204, 113, 0.35);
+  }
+  .debate-arg-against {
+    background: rgba(231, 76, 60, 0.1);
+    border-color: rgba(231, 76, 60, 0.35);
+  }
+}
