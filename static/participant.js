@@ -74,6 +74,26 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
   }
 
 
+  let notesContent = '';
+
+  function updateNotes(content) {
+    notesContent = content || '';
+    const btn = document.getElementById('notes-btn');
+    if (btn) btn.style.display = notesContent ? '' : 'none';
+    const el = document.getElementById('notes-content');
+    if (el) el.textContent = notesContent;
+  }
+
+  function toggleNotesModal() {
+    const overlay = document.getElementById('notes-overlay');
+    if (overlay) overlay.classList.toggle('open');
+  }
+
+  function closeNotesModal() {
+    const overlay = document.getElementById('notes-overlay');
+    if (overlay) overlay.classList.remove('open');
+  }
+
   function updateSummary(points, updatedAt) {
     summaryPoints = points || [];
     summaryUpdatedAt = updatedAt;
@@ -430,6 +450,7 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
           renderContent(msg.vote_counts);
         }
         updateSummary(msg.summary_points, msg.summary_updated_at);
+        updateNotes(msg.notes_content);
         break;
       case 'vote_update':
         renderOptions(msg.vote_counts, msg.total_votes);

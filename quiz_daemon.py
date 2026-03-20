@@ -30,7 +30,7 @@ from daemon.transcript_timestamps import (
 )
 from quiz_core import (
     config_from_env, find_session_folder, auto_generate, auto_generate_topic, auto_refine,
-    post_status, _get_json, _post_json, DAEMON_POLL_INTERVAL,
+    post_status, _get_json, _post_json, DAEMON_POLL_INTERVAL, read_session_notes,
 )
 from daemon.summarizer import generate_summary, SUMMARY_INTERVAL_SECONDS
 
@@ -272,6 +272,15 @@ def run() -> None:
             if _session_status_pending or (sf_name and not server_has_session):
                 post_status("ready", "Agent ready.", config,
                             session_folder=sf_name, session_notes=sn_name)
+                # Push notes content so participants can view them
+                if config.session_notes:
+                    notes_text = read_session_notes(config)
+                    if notes_text:
+                        _post_json(
+                            f"{config.server_url}/api/notes",
+                            {"content": notes_text},
+                            config.host_username, config.host_password,
+                        )
             req = data.get("request")
             if req:
                 topic = req.get("topic")

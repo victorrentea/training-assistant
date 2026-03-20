@@ -7,6 +7,7 @@ from messaging import broadcast_state
 from state import state
 
 router = APIRouter()
+public_router = APIRouter()
 
 
 class SummaryPoint(BaseModel):
@@ -24,6 +25,27 @@ async def update_summary(body: SummaryUpdate):
     state.summary_updated_at = datetime.now(timezone.utc)
     await broadcast_state()
     return {"ok": True}
+
+
+class NotesUpdate(BaseModel):
+    content: str
+
+
+@router.post("/api/notes")
+async def update_notes(body: NotesUpdate):
+    state.notes_content = body.content
+    await broadcast_state()
+    return {"ok": True}
+
+
+# Public endpoint — no auth required
+@public_router.get("/api/notes")
+async def get_notes():
+    return {
+        "content": state.notes_content,
+        "summary_points": state.summary_points,
+        "summary_updated_at": state.summary_updated_at.isoformat() if state.summary_updated_at else None,
+    }
 
 
 @router.post("/api/summary/force")

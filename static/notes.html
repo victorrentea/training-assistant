@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Session Notes</title>
+  <link rel="stylesheet" href="/static/common.css">
+  <style>
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      max-width: 700px;
+      margin: 0 auto;
+      padding: 1.5rem 1rem;
+    }
+    h1 { font-size: 1.3rem; margin: 0 0 .3rem; }
+    h2 { font-size: 1.1rem; margin: 1.5rem 0 .5rem; color: var(--accent); }
+    .notes-pre {
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      font-family: inherit;
+      font-size: .9rem;
+      line-height: 1.5;
+      color: var(--text);
+      background: var(--surface);
+      border-radius: 8px;
+      padding: 1rem;
+      margin: 0;
+    }
+    .summary-list { padding-left: 1.2rem; }
+    .summary-list li { margin-bottom: .5rem; line-height: 1.4; }
+    .empty { color: var(--text-muted); font-style: italic; }
+    .updated { font-size: .75rem; color: var(--text-muted); text-align: right; margin-top: .5rem; }
+  </style>
+</head>
+<body>
+  <h1>Session Notes & Key Points</h1>
+  <p style="font-size:.8rem; color:var(--text-muted);">Refresh this page to get the latest data.</p>
+
+  <h2>Session Notes</h2>
+  <pre id="notes" class="notes-pre empty">Loading...</pre>
+
+  <h2>Key Points</h2>
+  <ul id="points" class="summary-list"><li class="empty">Loading...</li></ul>
+  <div id="updated" class="updated"></div>
+
+  <script>
+    function escHtml(s) {
+      const d = document.createElement('div');
+      d.textContent = s;
+      return d.innerHTML;
+    }
+
+    fetch('/api/notes')
+      .then(r => r.json())
+      .then(data => {
+        const notesEl = document.getElementById('notes');
+        if (data.content) {
+          notesEl.textContent = data.content;
+          notesEl.classList.remove('empty');
+        } else {
+          notesEl.textContent = 'No session notes available yet.';
+        }
+
+        const pointsEl = document.getElementById('points');
+        const points = data.summary_points || [];
+        if (points.length) {
+          pointsEl.innerHTML = points.map(p => {
+            const text = typeof p === 'string' ? p : p.text;
+            const source = typeof p === 'string' ? 'discussion' : (p.source || 'discussion');
+            const icon = source === 'notes' ? '&#9999;&#65039;' : '&#128172;';
+            return `<li>${icon} ${escHtml(text)}</li>`;
+          }).join('');
+        } else {
+          pointsEl.innerHTML = '<li class="empty">No key points yet.</li>';
+        }
+
+        if (data.summary_updated_at) {
+          const d = new Date(data.summary_updated_at);
+          document.getElementById('updated').textContent = 'Updated ' + d.toLocaleTimeString();
+        }
+      })
+      .catch(() => {
+        document.getElementById('notes').textContent = 'Failed to load notes.';
+        document.getElementById('points').innerHTML = '<li class="empty">Failed to load.</li>';
+      });
+  </script>
+</body>
+</html>
