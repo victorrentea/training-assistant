@@ -79,6 +79,7 @@ class AppState:
         self.debate_sub_timer_seconds: Optional[int] = None
         self.debate_sub_timer_started_at: Optional[datetime] = None
         self.debate_ai_request: Optional[dict] = None  # pending AI cleanup payload for daemon
+        self.token_usage: dict = {"input_tokens": 0, "output_tokens": 0, "estimated_cost_usd": 0.0}
 
     def suggest_name(self) -> str:
         """Return the next available LOTR name (by popularity order).

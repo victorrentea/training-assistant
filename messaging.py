@@ -275,6 +275,7 @@ def build_host_state() -> dict:
         **_build_debate_for_host(),
         "codereview": _build_codereview_for_host(),
         "overlay_connected": "__overlay__" in state.participants,
+        "token_usage": state.token_usage,
     }
 
 
