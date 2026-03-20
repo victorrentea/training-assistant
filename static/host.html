@@ -33,7 +33,7 @@
       <div id="poll-input" class="poll-composer" contenteditable="true" spellcheck="false"
            data-placeholder="Question title&#10;&#10;Option A&#10;Option B&#10;Option C"></div>
       <div class="btn-row" style="align-items:center;">
-        <button class="btn btn-success" id="create-btn">🚀 Launch</button>
+        <button class="btn btn-success" id="create-btn">Send</button>
         <label style="display:flex; align-items:center; gap:.4rem; font-size:.9rem; color:var(--text); cursor:pointer; margin:0;">
           <input type="checkbox" id="multi-check" style="width:1rem; height:1rem; cursor:pointer;" />
           Multi-select
@@ -65,7 +65,7 @@
               <option value="480">whole day</option>
             </select>
           </div>
-          <button class="btn btn-success" id="gen-quiz-btn" onclick="requestQuiz()" style="align-self:flex-start;">✨ Generate from transcript</button>
+          <button class="btn btn-warn" id="gen-quiz-btn" onclick="requestQuiz()" style="align-self:flex-start;">Generate from transcript ✨</button>
         </div>
         <span id="quiz-status"></span>
       </div>
@@ -74,7 +74,7 @@
         <h3 style="margin:0 0 .5rem; font-size:.95rem; color:var(--accent);">🤖 Generated Question</h3>
         <div id="preview-display"></div>
         <div class="btn-row" style="margin-top:.5rem;">
-          <button class="btn btn-success" onclick="firePreview()">🚀 Launch</button>
+          <button class="btn btn-success" onclick="firePreview()">Send</button>
         </div>
       </div>
     </div>
@@ -82,14 +82,14 @@
     <!-- Word Cloud tab content -->
     <div id="tab-content-wordcloud" class="tab-content" style="display:none;">
       <div style="margin-top:.75rem;">
-        <div class="wc-input-row" style="margin-bottom:.5rem;">
-          <input id="wc-topic-input" type="text" maxlength="80" autocomplete="off" placeholder="topic (optional)" style="flex:1;padding:.5rem .75rem;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:.9rem;" />
-          <button class="btn btn-success" onclick="pushWordCloudTopic()">🚀 Push</button>
+        <div class="activity-input-row wc-input-row" style="margin-bottom:.5rem;">
+          <input id="wc-topic-input" type="text" maxlength="80" autocomplete="off" placeholder="Topic (optional)" style="flex:1;padding:.5rem .75rem;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:.9rem;" />
+          <button class="btn btn-success" onclick="pushWordCloudTopic()" style="min-width:4rem;">Set</button>
         </div>
-        <div class="wc-input-row">
+        <div class="activity-input-row wc-input-row">
           <input id="wc-host-input" type="text" maxlength="40" autocomplete="on" placeholder="Submit a word…" list="wc-host-suggestions" />
           <datalist id="wc-host-suggestions"></datalist>
-          <button class="btn btn-warn" onclick="hostSubmitWord()">↵</button>
+          <button class="btn btn-warn" onclick="hostSubmitWord()" style="min-width:4rem;">↵</button>
         </div>
       </div>
       <ul id="wc-host-words" style="margin-top:.5rem; list-style:disc; padding-left:1.25rem; color:var(--muted); font-size:.85rem; max-height:180px; overflow-y:auto;"></ul>
@@ -100,14 +100,14 @@
 
     <!-- Q&A tab content -->
     <div id="tab-content-qa" class="tab-content" style="display:none;">
-      <div class="qa-input-row" style="margin-top:.5rem;">
+      <div class="activity-input-row qa-input-row" style="margin-top:.5rem;">
         <input id="host-qa-input" type="text" maxlength="280" autocomplete="off"
                placeholder="Ask a question as host…"
                onkeydown="if(event.key==='Enter')hostSubmitQA()" />
         <button id="host-qa-submit-btn" class="btn btn-success" onclick="hostSubmitQA()">↵</button>
       </div>
       <div style="margin-top:.5rem;">
-        <button id="clear-qa-btn" class="btn btn-danger" onclick="clearQA()">🗑 Clear all</button>
+        <button id="clear-qa-btn" class="btn btn-danger" onclick="clearQA()">🗑 Delete all</button>
       </div>
     </div>
 
@@ -162,9 +162,9 @@
       <div id="codereview-active" style="display:none;">
         <div id="codereview-status-bar" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
           <span id="codereview-phase-label"></span>
-          <div>
+          <div style="display:flex; align-items:center; gap:6px;">
             <button id="codereview-close-btn" class="btn btn-success" onclick="closeCodeReviewSelection()" style="display:none;">End</button>
-            <button id="codereview-clear-btn" class="btn btn-danger" onclick="clearCodeReview()">🗑️</button>
+            <button id="codereview-clear-btn" class="btn btn-danger" onclick="clearCodeReview()" style="font-size:.9rem; line-height:1;">🗑️</button>
           </div>
         </div>
       </div>
@@ -173,8 +173,9 @@
     <!-- Status badges — pinned to bottom of left column -->
     <div class="left-status-bar">
       <span id="ws-badge" class="badge disconnected">● Server</span>
-      <span id="daemon-badge" class="badge disconnected" title="">Agent</span>
-      <span id="summary-badge" class="badge disconnected" title="Key points" onclick="toggleSummaryModal()" style="cursor:pointer; display:none">📋 Summary</span>
+      <span id="daemon-badge" class="badge disconnected" title="">● Agent</span>
+      <span id="notes-badge" class="badge disconnected" title="">● Notes</span>
+      <span id="summary-badge" class="badge disabled" title="No key points yet" onclick="toggleSummaryModal()" style="cursor:pointer">🧠 No key points yet</span>
     </div>
   </div>
 
@@ -230,7 +231,7 @@
     <ul id="pax-list" class="pax-list" title="Click a location to view map"></ul>
     <div class="right-footer">
       <span style="display:flex; align-items:center; gap:.5rem; flex-wrap:nowrap; min-width:0;">
-        <a id="participant-link" style="color:#fff; font-size:1.25rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; flex-shrink:1; direction:rtl; text-align:left;" href="/" target="_blank"></a>
+        <span style="flex-shrink:0;">👉</span><a id="participant-link" style="color:#fff; font-size:1.25rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; flex-shrink:1; direction:rtl; text-align:left;" href="/" target="_blank"></a>
         <div id="qr-icon" title="Show QR code" style="cursor:pointer; opacity:.5; flex-shrink:0; width:28px; height:28px;">
           <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" fill="currentColor" width="28" height="28">
             <rect x="5" y="5" width="35" height="35" rx="4"/>
@@ -256,7 +257,7 @@
             <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5S13.38 11.5 12 11.5z"/>
           </svg>
         </div>
-        <button class="btn btn-danger" onclick="resetScores()" title="Reset all scores to zero" style="white-space:nowrap; flex-shrink:1; overflow:hidden; text-overflow:ellipsis; min-width:0;">↺ Reset scores</button>
+        <button class="btn btn-danger" onclick="resetScores()" title="Reset all scores to zero" style="white-space:nowrap; flex-shrink:1; overflow:hidden; text-overflow:ellipsis; min-width:0;">🔄 Reset scores</button>
       </span>
     </div>
   </div>

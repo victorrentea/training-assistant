@@ -19,6 +19,7 @@ body {
 }
 .badge.connected { background: #48cfad22; color: var(--accent2); border: 1px solid var(--accent2); }
 .badge.disconnected { background: #ff6b6b22; color: var(--danger); border: 1px solid var(--danger); }
+.badge.disabled { background: #88888822; color: var(--text-muted); border: 1px solid var(--text-muted); opacity: 0.6; }
 
 /* 3-column host layout */
 .host-columns {
@@ -223,46 +224,7 @@ body {
   height: auto;
 }
 
-.wc-input-row {
-  display: flex;
-  gap: .5rem;
-  align-items: stretch;
-}
-
-.wc-input-row input {
-  flex: 1;
-  padding: .4rem .6rem;
-  border-radius: 6px;
-  border: 1px solid var(--border);
-  background: var(--surface2);
-  color: var(--text);
-  font-size: .9rem;
-}
-
-.wc-input-row button {
-  height: auto;
-  align-self: stretch;
-}
-
-
-/* Host Q&A composer: keep input and submit button at identical height */
-#tab-content-qa .qa-input-row {
-  display: flex;
-  gap: .4rem;
-  align-items: stretch;
-}
-
-#host-qa-input {
-  flex: 1;
-  background: var(--surface2);
-  color: var(--text);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 0 .6rem;
-  font-size: .9rem;
-  height: 34px;
-  min-height: 34px;
-}
+/* Host Q&A: no extra overrides needed — uses activity-input-row from common.css */
 
 /* Status badges pinned to bottom of left column */
 .left-status-bar {

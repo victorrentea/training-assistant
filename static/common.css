@@ -54,6 +54,29 @@
 .btn-warn    { background: var(--warn);    color: var(--bg); }
 .btn:disabled { opacity: .35; cursor: default; }
 
+/* ── Shared input rows (used by both host and participant) ── */
+.activity-input-row {
+  display: flex;
+  gap: .5rem;
+  align-items: stretch;
+}
+.activity-input-row input[type=text] {
+  flex: 1;
+  background: var(--surface2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0 .8rem;
+  font-size: .9rem;
+  height: 34px;
+  min-height: 34px;
+}
+.activity-input-row button {
+  align-self: stretch;
+  padding: 0 1rem;
+  height: 34px;
+}
+
 .version-tag {
   position: fixed;
   bottom: .3rem;
@@ -86,6 +109,7 @@
     color: var(--text);
     flex-shrink: 0;
 }
+
 
 /* Summary modal */
 .summary-overlay {

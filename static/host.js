@@ -156,7 +156,8 @@
         cachedNames = names;
         document.getElementById('pax-count').textContent = msg.participant_count;
         renderParticipantList(names);
-        renderDaemonStatus(msg.daemon_connected, msg.daemon_last_seen, msg.daemon_session_folder, msg.daemon_session_notes);
+        renderDaemonStatus(msg.daemon_connected, msg.daemon_last_seen);
+        renderNotesStatus(msg.daemon_session_folder, msg.daemon_session_notes);
         renderPreview(msg.quiz_preview || null);
         renderPollDisplay();
         const currentActivity = msg.current_activity || 'none';
@@ -205,7 +206,7 @@
               if (scores[p.name] !== undefined) p.score = scores[p.name];
             });
           }
-          renderHostSidePanel(cr);
+          _updateCodeReviewLayout(cr);
         }
       } else if (msg.type === 'timer') {
         _applyTimer(msg.seconds, msg.started_at);
@@ -228,10 +229,15 @@
     summaryUpdatedAt = updatedAt;
     const badge = document.getElementById('summary-badge');
     if (badge) {
-      badge.style.display = summaryPoints.length ? '' : 'none';
-      badge.classList.toggle('connected', summaryPoints.length > 0);
-      badge.classList.toggle('disconnected', !summaryPoints.length);
-      badge.title = summaryPoints.length ? `${summaryPoints.length} key points` : 'No summary yet';
+      if (summaryPoints.length) {
+        badge.textContent = `🧠 Key Points (${summaryPoints.length})`;
+        badge.className = 'badge connected';
+        badge.title = `${summaryPoints.length} key points — click to view`;
+      } else {
+        badge.textContent = '🧠 No key points yet';
+        badge.className = 'badge disabled';
+        badge.title = 'Summary generated every 5 minutes from transcript';
+      }
     }
     renderSummaryList();
   }
@@ -268,38 +274,49 @@
     b.className = `badge ${ok ? 'connected' : 'disconnected'}`;
   }
 
-  function renderDaemonStatus(connected, lastSeenIso, sessionFolder, sessionNotes) {
+  function renderDaemonStatus(connected, lastSeenIso) {
     const el = document.getElementById('daemon-badge');
     if (!el) return;
+
     if (!lastSeenIso) {
       el.textContent = '● Agent';
       el.className = 'badge disconnected';
-      el.style.cssText = '';
-      el.title = 'Agent: never connected';
+      el.title = 'Never connected — start with ./start-daemon.sh';
       return;
     }
+
     const ago = Math.round((Date.now() - new Date(lastSeenIso)) / 1000);
-    const agoText = ago < 60 ? `${ago}s` : `${Math.round(ago/60)}m`;
+    const agoText = ago < 60 ? `${ago}s ago` : `${Math.round(ago/60)}m ago`;
+
     if (connected) {
       el.textContent = '● Agent';
-      if (sessionFolder && sessionNotes) {
-        el.className = 'badge connected';
-        el.style.cssText = '';
-        el.title = sessionFolder;
-      } else if (sessionFolder) {
-        el.className = 'badge';
-        el.style.cssText = 'color:var(--warn);border:1px solid var(--warn);';
-        el.title = 'Session folder found but no notes file';
-      } else {
-        el.className = 'badge';
-        el.style.cssText = 'color:var(--warn);border:1px solid var(--warn);';
-        el.title = 'No session folder found for today';
-      }
+      el.className = 'badge connected';
+      el.title = `Connected (last seen ${agoText})`;
     } else {
       el.textContent = '● Agent';
       el.className = 'badge';
       el.style.cssText = 'color:var(--warn);border:1px solid var(--warn);';
-      el.title = `Agent idle (last seen ${agoText} ago)`;
+      el.title = `Connection lost (last seen ${agoText})`;
+    }
+  }
+
+  function renderNotesStatus(sessionFolder, sessionNotes) {
+    const el = document.getElementById('notes-badge');
+    if (!el) return;
+
+    if (sessionFolder && sessionNotes) {
+      el.textContent = '● Notes';
+      el.className = 'badge connected';
+      el.title = `Session notes found\n${sessionFolder}`;
+    } else if (sessionFolder) {
+      el.textContent = '● Notes';
+      el.className = 'badge';
+      el.style.cssText = 'color:var(--warn);border:1px solid var(--warn);';
+      el.title = 'Session folder found but no notes file inside';
+    } else {
+      el.textContent = '● Notes';
+      el.className = 'badge disconnected';
+      el.title = 'No session folder found for today';
     }
   }
 
@@ -720,8 +737,8 @@
   }
 
   // ── Quiz generator ──
-  const GEN_LABEL_TRANSCRIPT = '✨ Generate from transcript';
-  const GEN_LABEL_TOPIC = '✨ Generate on topic';
+  const GEN_LABEL_TRANSCRIPT = 'Generate from transcript ✨';
+  const GEN_LABEL_TOPIC = 'Generate on topic ✨';
 
   function updateGenBtn() {
     const topic = document.getElementById('quiz-topic').value.trim();
@@ -1152,8 +1169,9 @@
       createDiv.style.display = '';
       activeDiv.style.display = 'none';
       document.getElementById('codereview-code-panel').innerHTML = '';
-      document.getElementById('codereview-side-panel').innerHTML =
-        '<div class="muted" style="text-align:center;margin-top:40px;">Click a line to see details</div>';
+      document.getElementById('codereview-side-panel').style.display = 'none';
+      document.getElementById('codereview-side-panel').previousElementSibling.style.display = 'none';
+      document.getElementById('codereview-code-panel').style.flex = '1';
       return;
     }
 
@@ -1166,6 +1184,7 @@
     if (cr.phase === 'selecting') {
       closeBtn.style.display = '';
       phaseLabel.innerHTML = '<span style="color:var(--accent2);">🐛 Bug Hunt Open</span>';
+      codereviewSelectedLine = null;
     } else {
       closeBtn.style.display = 'none';
       const confirmedCount = cr.confirmed_lines ? cr.confirmed_lines.length : 0;
@@ -1173,7 +1192,7 @@
     }
 
     renderHostCodePanel(cr);
-    renderHostSidePanel(cr);
+    _updateCodeReviewLayout(cr);
   }
 
   function renderHostCodePanel(cr) {
@@ -1226,7 +1245,22 @@
     const lastState = window._lastCodereviewState;
     if (lastState) {
       renderHostCodePanel(lastState);
-      renderHostSidePanel(lastState);
+      _updateCodeReviewLayout(lastState);
+    }
+  }
+
+  function _updateCodeReviewLayout(cr) {
+    const codePanel = document.getElementById('codereview-code-panel');
+    const sidePanel = document.getElementById('codereview-side-panel');
+    const divider = sidePanel.previousElementSibling; // the 1px divider
+
+    const showSide = cr.phase === 'reviewing' && codereviewSelectedLine !== null;
+    sidePanel.style.display = showSide ? '' : 'none';
+    divider.style.display = showSide ? '' : 'none';
+    codePanel.style.flex = showSide ? '2' : '1';
+
+    if (showSide) {
+      renderHostSidePanel(cr);
     }
   }
 
