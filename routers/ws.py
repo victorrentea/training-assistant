@@ -13,7 +13,9 @@ from messaging import (
     send_state_to_participant,
     send_state_to_host,
 )
+import random
 from state import state, ActivityType, assign_avatar
+from messaging import participant_ids
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -173,6 +175,26 @@ async def websocket_endpoint(websocket: WebSocket, participant_id: str):
                     and not is_host
                 ):
                     state.debate_sides[pid] = side
+
+                    # Auto-assign remaining when >50% have picked
+                    all_pids = [p for p in participant_ids() if p != "__host__"]
+                    assigned_count = sum(1 for p in all_pids if p in state.debate_sides)
+                    if assigned_count > len(all_pids) / 2:
+                        unassigned = [p for p in all_pids if p not in state.debate_sides]
+                        if unassigned:
+                            for_count = sum(1 for s in state.debate_sides.values() if s == "for")
+                            against_count = sum(1 for s in state.debate_sides.values() if s == "against")
+                            random.shuffle(unassigned)
+                            for p in unassigned:
+                                if for_count <= against_count:
+                                    state.debate_sides[p] = "for"
+                                    for_count += 1
+                                else:
+                                    state.debate_sides[p] = "against"
+                                    against_count += 1
+                                state.debate_auto_assigned.add(p)
+                            logger.info(f"Auto-assigned {len(unassigned)} participants (>50% picked)")
+
                     await broadcast_state()
 
             elif msg_type == "debate_argument":

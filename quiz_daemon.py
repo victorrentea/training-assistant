@@ -269,18 +269,20 @@ def run() -> None:
 
             # ── Push session info when changed, on reconnect, or if server lost it ──
             server_has_session = data.get("session_folder") is not None
+            server_has_notes = data.get("has_notes_content", False)
             if _session_status_pending or (sf_name and not server_has_session):
                 post_status("ready", "Agent ready.", config,
                             session_folder=sf_name, session_notes=sn_name)
-                # Push notes content so participants can view them
-                if config.session_notes:
-                    notes_text = read_session_notes(config)
-                    if notes_text:
-                        _post_json(
-                            f"{config.server_url}/api/notes",
-                            {"content": notes_text},
-                            config.host_username, config.host_password,
-                        )
+
+            # Push notes content if server doesn't have it yet
+            if config.session_notes and not server_has_notes:
+                notes_text = read_session_notes(config)
+                if notes_text:
+                    _post_json(
+                        f"{config.server_url}/api/notes",
+                        {"content": notes_text},
+                        config.host_username, config.host_password,
+                    )
             req = data.get("request")
             if req:
                 topic = req.get("topic")

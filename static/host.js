@@ -5,6 +5,8 @@
   let totalVotes = 0;
   let participantLocations = {};
   let participantAvatars = {};
+  let participantDebateSides = {};  // participant_name -> "for"|"against"|undefined
+  let _debateActive = false;
   const resolvedCities = {};   // raw "lat, lon" -> resolved city string cache
   let correctOptIds = new Set(); // host-marked correct options for current poll
   let scores = {};               // participant_name -> score
@@ -145,13 +147,16 @@
         totalVotes = Object.values(voteCounts).reduce((a,b)=>a+b,0);
         participantLocations = {};
         participantAvatars = {};
+        participantDebateSides = {};
         scores = {};
+        _debateActive = msg.current_activity === 'debate' && !!msg.debate_phase;
         const names = [];
         msg.participants.forEach(p => {
             names.push(p.name);
             participantLocations[p.name] = p.location;
             participantAvatars[p.name] = p.avatar;
             scores[p.name] = p.score;
+            if (p.debate_side) participantDebateSides[p.name] = p.debate_side;
         });
         cachedNames = names;
         document.getElementById('pax-count').textContent = msg.participant_count;
@@ -334,7 +339,7 @@
     if (sessionFolder && sessionNotes) {
       el.textContent = '● Notes';
       el.className = 'badge connected';
-      el.title = `Click to view session notes\n${sessionFolder}`;
+      el.title = `${sessionFolder}/${sessionNotes}\nClick to view`;
     } else if (sessionFolder) {
       el.textContent = '● Notes';
       el.className = 'badge';
@@ -386,7 +391,11 @@
       const avatarHtml = avatar
           ? `<img src="/static/avatars/${escHtml(avatar)}" class="avatar" style="width:28px;height:28px" onerror="this.style.display='none'">`
           : '';
-      return `<li><span class="pax-name">${avatarHtml}${escHtml(n)}${scoreTag}</span>${locLabel ? `<span class="pax-location" onclick="openMap()" title="View all on map">📍 ${escHtml(locLabel)}</span>` : ''}</li>`;
+      const debateSide = participantDebateSides[n];
+      const debateIcon = _debateActive
+          ? (debateSide === 'for' ? '<span title="FOR">👍</span> ' : debateSide === 'against' ? '<span title="AGAINST">👎</span> ' : '<span title="Undecided">⏳</span> ')
+          : '';
+      return `<li><span class="pax-name">${debateIcon}${avatarHtml}${escHtml(n)}${scoreTag}</span>${locLabel ? `<span class="pax-location" onclick="openMap()" title="View all on map">📍 ${escHtml(locLabel)}</span>` : ''}</li>`;
     }).join('');
 
     // Lazily resolve any raw "lat, lon" strings to city names
