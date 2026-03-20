@@ -579,6 +579,37 @@ class TestQA:
 
 
 # ---------------------------------------------------------------------------
+# TestTabPersistence
+# ---------------------------------------------------------------------------
+
+class TestTabPersistence:
+
+    def test_host_tab_survives_reload(self, server_url, playwright):
+        """Switching to Q&A tab, reloading the page, should keep Q&A active."""
+        b, ctx = _host_browser_ctx(server_url, playwright)
+        page = ctx.new_page()
+        page.goto("/host")
+
+        host = HostPage(page)
+        host.open_qa_tab()
+
+        # Verify Q&A tab is active before reload
+        expect(page.locator("#tab-qa.active")).to_be_visible(timeout=3000)
+        expect(page.locator("#tab-content-qa")).to_be_visible()
+
+        # Reload the page
+        page.reload()
+
+        # After reload, Q&A tab should still be active
+        expect(page.locator("#tab-qa.active")).to_be_visible(timeout=5000)
+        expect(page.locator("#tab-content-qa")).to_be_visible(timeout=5000)
+        expect(page.locator("#tab-content-poll")).to_be_hidden()
+
+        ctx.close()
+        b.close()
+
+
+# ---------------------------------------------------------------------------
 # TestPollDownload
 # ---------------------------------------------------------------------------
 
