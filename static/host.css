@@ -31,6 +31,8 @@ body {
 .badge.connected { background: #48cfad22; color: var(--accent2); border: 1px solid var(--accent2); }
 .badge.disconnected { background: #ff6b6b22; color: var(--danger); border: 1px solid var(--danger); }
 .badge.disabled { background: #88888822; color: var(--text-muted); border: 1px solid var(--text-muted); opacity: 0.6; }
+.badge.warning { background: #ffd16622; color: var(--warn); border: 1px solid var(--warn); }
+.badge.error { background: #ff6b6b22; color: var(--danger); border: 1px solid var(--danger); }
 
 /* 3-column host layout */
 .host-columns {

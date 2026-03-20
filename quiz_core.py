@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import Optional
 
 import anthropic
+from daemon.llm_adapter import create_message
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -383,8 +384,6 @@ def search_materials(query: str) -> list:
         return [{"content": "RAG not available (run: pip install -e daemon/).", "source": "N/A", "page": "N/A"}]
 
 def generate_quiz(text: str, config: Config) -> dict:
-    client = anthropic.Anthropic(api_key=config.api_key)
-    
     prompt_content = text
     if config.topic:
         prompt_content = f"TOPIC: {config.topic}\n\n{text}" if text else f"TOPIC: {config.topic}"
@@ -409,7 +408,8 @@ def generate_quiz(text: str, config: Config) -> dict:
     
     try:
         while True:
-            response = client.messages.create(
+            response = create_message(
+                api_key=config.api_key,
                 model=config.model, max_tokens=1000,
                 system=_SYSTEM_PROMPT,
                 messages=messages,
@@ -456,8 +456,6 @@ def generate_quiz(text: str, config: Config) -> dict:
 
 def refine_quiz(quiz: dict, target: str, original_text: str, config: Config) -> dict:
     """Refine quiz using multi-turn conversation. target='question' or 'opt0'..'opt7'."""
-    client = anthropic.Anthropic(api_key=config.api_key)
-
     if target == "question":
         refine_prompt = _REFINE_QUESTION_PROMPT
     else:
@@ -466,14 +464,23 @@ def refine_quiz(quiz: dict, target: str, original_text: str, config: Config) -> 
         letter = chr(65 + idx)
         refine_prompt = _REFINE_OPTION_PROMPT.format(letter=letter, old_text=old_text)
 
+    # Truncate transcript to save tokens — the quiz JSON already captures the key context
+    REFINE_CONTEXT_CHARS = 5_000
+    if len(original_text) > REFINE_CONTEXT_CHARS:
+        truncated = original_text[-REFINE_CONTEXT_CHARS:]
+        context_note = f"[Transcript context — last {len(truncated)} chars of {len(original_text)} total]\n{truncated}"
+    else:
+        context_note = original_text
+
     # Multi-turn: transcript → first generation → refine request
     messages = [
-        {"role": "user", "content": original_text},
+        {"role": "user", "content": context_note},
         {"role": "assistant", "content": json.dumps(quiz)},
         {"role": "user", "content": refine_prompt},
     ]
     try:
-        response = client.messages.create(
+        response = create_message(
+            api_key=config.api_key,
             model=config.model, max_tokens=600,
             system=_SYSTEM_PROMPT,
             messages=messages,

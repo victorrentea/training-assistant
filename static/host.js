@@ -165,6 +165,7 @@
         document.getElementById('pax-count').textContent = msg.participant_count;
         renderParticipantList(names);
         renderDaemonStatus(msg.daemon_connected, msg.daemon_last_seen);
+        updateTokenBadge(msg.token_usage);
         renderTranscriptStatus(msg.transcript_line_count, msg.transcript_total_lines, msg.transcript_latest_ts);
         renderOverlayStatus(msg.overlay_connected);
         renderNotesStatus(msg.daemon_session_folder, msg.daemon_session_notes);
@@ -314,6 +315,17 @@
     const b = document.getElementById('ws-badge');
     b.textContent = ok ? 'Server' : 'Server';
     b.className = `badge ${ok ? 'connected' : 'disconnected'}`;
+  }
+
+  function updateTokenBadge(usage) {
+    const badge = document.getElementById('token-badge');
+    if (!badge || !usage) return;
+    const cost = usage.estimated_cost_usd || 0;
+    badge.textContent = '$' + cost.toFixed(2);
+    const inp = (usage.input_tokens || 0).toLocaleString();
+    const out = (usage.output_tokens || 0).toLocaleString();
+    badge.title = 'Tokens: ' + inp + ' in / ' + out + ' out';
+    badge.className = 'badge ' + (cost > 5 ? 'error' : cost > 1 ? 'warning' : 'connected');
   }
 
   function renderDaemonStatus(connected, lastSeenIso) {

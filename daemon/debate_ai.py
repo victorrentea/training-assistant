@@ -1,7 +1,7 @@
 """Debate AI cleanup — called by the daemon when backend requests it."""
 import json
 
-import anthropic
+from daemon.llm_adapter import create_message
 
 
 def run_debate_ai_cleanup(request: dict, api_key: str, model: str) -> dict:
@@ -39,8 +39,8 @@ Return JSON (no markdown fences):
   "new_arguments": [{{"side": "for"|"against", "text": "..."}}]
 }}"""
 
-    client = anthropic.Anthropic(api_key=api_key)
-    response = client.messages.create(
+    response = create_message(
+        api_key=api_key,
         model=model,
         max_tokens=2048,
         messages=[{"role": "user", "content": prompt}],
