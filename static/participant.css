@@ -28,8 +28,8 @@ body {
   animation: avatar-pop .2s ease-out;
 }
 @keyframes avatar-pop {
-  from { transform: translate(-50%, -110%) scale(0); opacity: 0; }
-  to   { transform: translate(-50%, -110%) scale(1); opacity: 1; }
+  from { transform: translate(-50%, 20%) scale(0); opacity: 0; }
+  to   { transform: translate(-50%, 20%) scale(1); opacity: 1; }
 }
 
 h1 { display: none; }
