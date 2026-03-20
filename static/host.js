@@ -225,7 +225,12 @@
         _debateSubTimer = null;
         clearInterval(_debateTimerInterval);
         _playDebateChime();
-        if (_lastDebateMsg) renderDebateHost(_lastDebateMsg);
+        // Clear timer fields from cached state so renderDebateHost doesn't reconstruct the timer
+        if (_lastDebateMsg) {
+          _lastDebateMsg.debate_sub_timer_started_at = null;
+          _lastDebateMsg.debate_sub_timer_seconds = null;
+          renderDebateHost(_lastDebateMsg);
+        }
       } else if (msg.type === 'quiz_status') {
         renderQuizStatus(msg.status, msg.message);
       } else if (msg.type === 'quiz_preview') {
