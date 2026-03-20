@@ -47,7 +47,7 @@ class HostPage:
     # ── Word Cloud ──────────────────────────────────────────────────────────
 
     def open_wordcloud_tab(self) -> None:
-        self._page.click("text=Word Cloud")
+        self._page.click("#tab-wordcloud")
 
     def submit_word(self, word: str) -> None:
         self._page.fill("#wc-host-input", word)
