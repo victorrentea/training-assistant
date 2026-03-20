@@ -33,7 +33,7 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
   const WC_COLORS = ['#7ecef4','#a78bfa','#34d399','#fbbf24','#f472b6','#60a5fa','#fb923c'];
   let _wcDebounceTimer = null;
   const versionReloadGuard = window.createVersionReloadGuard
-    ? window.createVersionReloadGuard({ countdownSeconds: 10 })
+    ? window.createVersionReloadGuard({ countdownSeconds: 5 })
     : null;
   window.__versionReloadGuard = versionReloadGuard;
   const _QA_TOASTS = [
