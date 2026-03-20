@@ -10,7 +10,7 @@ It is intended as the primary reference for any AI coding assistant working on t
 ## Secrets
 
 Host panel credentials are stored in `secrets.env` (gitignored — never commit this file).
-The file contains `HOST_USERNAME` and `HOST_PASSWORD` for accessing `/host` and `/api/poll`, `/api/poll/status`, `/api/qa/question/{id}` (PATCH, DELETE), `/api/qa/answer/{id}`, `/api/qa/clear`, `/api/activity`, `/api/wordcloud/clear`, `/api/codereview`, `/api/codereview/status`, `/api/codereview/confirm-line`.
+The file contains `HOST_USERNAME` and `HOST_PASSWORD` for accessing `/host` and `/api/poll`, `/api/poll/status`, `/api/qa/question/{id}` (PATCH, DELETE), `/api/qa/answer/{id}`, `/api/qa/clear`, `/api/activity`, `/api/wordcloud/clear`, `/api/codereview`, `/api/codereview/status`, `/api/codereview/confirm-line`, `/api/mode`.
 
 ---
 
@@ -19,7 +19,7 @@ The file contains `HOST_USERNAME` and `HOST_PASSWORD` for accessing `/host` and 
 - **URL**: https://interact.victorrentea.ro
 - **Platform**: [Railway](https://railway.app) — auto-deploys on every push to `master`
 - **Deploy**: `git push` to `master` → Railway builds and deploys in ~40-50 seconds. No manual steps.
-- **Auth**: HTTP Basic Auth on `/host`, `/api/poll`, `/api/poll/status`, `/api/qa/question/{id}` (PATCH, DELETE), `/api/qa/answer/{id}`, `/api/qa/clear`, `/api/activity`, `/api/wordcloud/clear`, `/api/codereview`, `/api/codereview/status`, `/api/codereview/confirm-line` — participants access `/`, `/api/suggest-name`, `/api/status` freely; Q&A submit and upvote go through WebSocket (no REST endpoints)
+- **Auth**: HTTP Basic Auth on `/host`, `/api/poll`, `/api/poll/status`, `/api/qa/question/{id}` (PATCH, DELETE), `/api/qa/answer/{id}`, `/api/qa/clear`, `/api/activity`, `/api/wordcloud/clear`, `/api/codereview`, `/api/codereview/status`, `/api/codereview/confirm-line`, `/api/mode` — participants access `/`, `/api/suggest-name`, `/api/status` freely; Q&A submit and upvote go through WebSocket (no REST endpoints)
 - **Versioning**: `static/version.js` is generated at Railway deploy time (not committed to git); a GitHub Action generates `static/deploy-info.json` with changelog on each push to master; both host and participant pages display the version age in the bottom-right corner
 
 ---
@@ -161,7 +161,7 @@ All state dicts are keyed by **UUID**, not display name. Duplicate display names
 ## Key Design Decisions
 
 - **No venv**: dependencies installed globally into system Python 3.12 on Mac; `python3 quiz_generator.py` runs directly
-- **Host auth scope**: protected endpoints: `/host`, `/api/poll`, `/api/poll/status`, `/api/qa/question/{id}` (PATCH, DELETE), `/api/qa/answer/{id}`, `/api/qa/clear`, `/api/activity`, `/api/wordcloud/clear`, `/api/codereview`, `/api/codereview/status`, `/api/codereview/confirm-line`; public endpoints: `/api/suggest-name`, `/api/status`; Q&A submit/upvote via WebSocket only
+- **Host auth scope**: protected endpoints: `/host`, `/api/poll`, `/api/poll/status`, `/api/qa/question/{id}` (PATCH, DELETE), `/api/qa/answer/{id}`, `/api/qa/clear`, `/api/activity`, `/api/wordcloud/clear`, `/api/codereview`, `/api/codereview/status`, `/api/codereview/confirm-line`, `/api/mode`; public endpoints: `/api/suggest-name`, `/api/status`; Q&A submit/upvote via WebSocket only
 - **UUID-based identity**: participants identified by UUID (not name). WebSocket route: `/ws/{uuid}`. First WS message must be `set_name`. Host cookie (`is_host=1`) switches UUID storage to `sessionStorage` for multi-tab testing. Duplicate display names allowed.
 - **Personalized broadcasts**: each participant receives `my_score`, `is_own`, `has_upvoted` fields. Host receives `participants` as a list of `{uuid, name, score, location}` objects.
 - **Votes are final**: once a participant votes, they cannot change their vote. This is intentional.
