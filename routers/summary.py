@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter
 from pydantic import BaseModel
 
-from messaging import broadcast, build_state_message
+from messaging import broadcast_state
 from state import state
 
 router = APIRouter()
@@ -17,5 +17,5 @@ class SummaryUpdate(BaseModel):
 async def update_summary(body: SummaryUpdate):
     state.summary_points = body.points
     state.summary_updated_at = datetime.now(timezone.utc)
-    await broadcast(build_state_message())
+    await broadcast_state()
     return {"ok": True}

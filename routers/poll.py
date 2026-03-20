@@ -9,7 +9,7 @@ from auth import require_host_auth
 from backend_version import get_backend_version
 from pydantic import BaseModel
 
-from messaging import broadcast, build_state_message
+from messaging import broadcast, broadcast_state, participant_ids
 from state import state, ActivityType
 
 router = APIRouter()
@@ -68,11 +68,11 @@ async def create_poll(poll: PollCreate):
     state.poll_active = False
     state.votes = {}
 
-    await broadcast(build_state_message())
+    await broadcast_state()
     return {"ok": True, "poll": state.poll}
 
 
-@router.post("/api/poll/status", dependencies=[Depends(require_host_auth)])
+@router.put("/api/poll/status", dependencies=[Depends(require_host_auth)])
 async def set_poll_status(body: PollOpen):
     if not state.poll:
         raise HTTPException(400, "No poll created yet")
@@ -81,11 +81,11 @@ async def set_poll_status(body: PollOpen):
         state.poll_opened_at = datetime.now(timezone.utc)
         state.vote_times = {}
         state.base_scores = dict(state.scores)
-    await broadcast(build_state_message())
+    await broadcast_state()
     return {"ok": True, "poll_active": state.poll_active}
 
 
-@router.post("/api/poll/correct", dependencies=[Depends(require_host_auth)])
+@router.put("/api/poll/correct", dependencies=[Depends(require_host_auth)])
 async def set_correct_options(body: PollCorrect):
     if not state.poll:
         raise HTTPException(400, "No active poll")
@@ -100,16 +100,16 @@ async def set_correct_options(body: PollCorrect):
 
     # Compute min elapsed time among correct voters for Kahoot-style speed bonus
     correct_voters = set()
-    for name, selection in state.votes.items():
+    for pid, selection in state.votes.items():
         voted = set(selection) if isinstance(selection, list) else {selection}
         if multi and correct_set:
             R = len(voted & correct_set)
             W = len(voted & wrong_set)
             if max(0.0, (R - W) / len(correct_set)) > 0:
-                correct_voters.add(name)
+                correct_voters.add(pid)
         else:
             if voted & correct_set:
-                correct_voters.add(name)
+                correct_voters.add(pid)
 
     elapsed_times = [
         max(0.0, (state.vote_times.get(n, now) - opened_at).total_seconds())
@@ -118,7 +118,7 @@ async def set_correct_options(body: PollCorrect):
     min_time = min(elapsed_times) if elapsed_times else 0.0
 
     new_scores = dict(state.base_scores)
-    for name, selection in state.votes.items():
+    for pid, selection in state.votes.items():
         voted = set(selection) if isinstance(selection, list) else {selection}
         if multi and correct_set:
             # Proportional (R - W) / C, floored at 0
@@ -134,7 +134,7 @@ async def set_correct_options(body: PollCorrect):
                 continue
             ratio = 1.0
 
-        elapsed = max(0.0, (state.vote_times.get(name, now) - opened_at).total_seconds())
+        elapsed = max(0.0, (state.vote_times.get(pid, now) - opened_at).total_seconds())
         # Linear from _MAX_POINTS (at min_time) to _MIN_POINTS (at _SLOWEST_MULTIPLIER × min_time)
         speed_window = min_time * (_SLOWEST_MULTIPLIER - 1)  # range over which decay applies
         if speed_window > 0:
@@ -144,15 +144,15 @@ async def set_correct_options(body: PollCorrect):
         speed_pts = round(_MAX_POINTS - (_MAX_POINTS - _MIN_POINTS) * decay)
         pts = round(speed_pts * ratio)
         if pts > 0:
-            new_scores[name] = new_scores.get(name, 0) + pts
+            new_scores[pid] = new_scores.get(pid, 0) + pts
 
     state.scores = new_scores
-    await broadcast({"type": "scores", "scores": state.scores})
+    await broadcast_state()
 
-    for name, ws in list(state.participants.items()):
-        if name == "__host__":
+    for pid, ws in list(state.participants.items()):
+        if pid == "__host__":
             continue
-        selection = state.votes.get(name)
+        selection = state.votes.get(pid)
         if selection is None:
             continue
         voted = set(selection) if isinstance(selection, list) else {selection}
@@ -160,7 +160,7 @@ async def set_correct_options(body: PollCorrect):
             "type": "result",
             "correct_ids": list(correct_set),
             "voted_ids": list(voted),
-            "score": state.scores.get(name, 0),
+            "score": state.scores.get(pid, 0),
         }))
 
     return {"ok": True}
@@ -186,7 +186,7 @@ async def clear_poll():
     state.base_scores = dict(state.scores)
     state.vote_times = {}
     state.current_activity = ActivityType.NONE
-    await broadcast(build_state_message())
+    await broadcast_state()
     return {"ok": True}
 
 
@@ -199,7 +199,7 @@ async def suggest_name():
 async def status():
     return {
         "backend_version": get_backend_version(),
-        "participants": len(state.participants),
+        "participants": len(participant_ids()),
         "poll": state.poll,
         "poll_active": state.poll_active,
         "vote_counts": state.vote_counts(),

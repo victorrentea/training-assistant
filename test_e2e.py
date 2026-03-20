@@ -198,34 +198,10 @@ class TestMultiSelect:
 
 
 # ---------------------------------------------------------------------------
-# TestNameUniqueness
+# TestRegressions
 # ---------------------------------------------------------------------------
 
-class TestNameUniqueness:
-
-    def test_duplicate_name_rejected_and_error_shown(self, server_url, playwright):
-        browser = playwright.chromium.launch()
-        ctx1 = browser.new_context(base_url=server_url)
-        ctx2 = browser.new_context(base_url=server_url)
-
-        p1 = ParticipantPage(ctx1.new_page())
-        p2 = ParticipantPage(ctx2.new_page())
-
-        p1._page.goto("/")
-        p1.join("Frodo")
-
-        p2._page.goto("/")
-        p2._page.fill("#name-input", "frodo")  # same name, different case
-        p2._page.click("#join-btn")
-
-        expect(p2._page.locator("#join-screen")).to_be_visible(timeout=5000)
-        expect(p2._page.locator("#main-screen")).not_to_be_visible()
-        expect(p2._page.locator("#join-error")).to_be_visible(timeout=3000)
-        expect(p2._page.locator("#join-error")).to_contain_text("already taken")
-
-        ctx1.close()
-        ctx2.close()
-        browser.close()
+class TestRegressions:
 
     def test_autojoin_with_saved_name_no_js_error(self, server_url, playwright):
         browser = playwright.chromium.launch()
@@ -237,6 +213,7 @@ class TestNameUniqueness:
 
         page.goto("/")
         page.evaluate("localStorage.setItem('workshop_participant_name', 'AutoJoiner')")
+        page.evaluate("localStorage.setItem('workshop_participant_uuid', crypto.randomUUID())")
         page.reload()
 
         expect(page.locator("#main-screen")).to_be_visible(timeout=5000)
@@ -244,13 +221,6 @@ class TestNameUniqueness:
 
         ctx.close()
         browser.close()
-
-
-# ---------------------------------------------------------------------------
-# TestRegressions
-# ---------------------------------------------------------------------------
-
-class TestRegressions:
 
     def test_participant_page_loads_with_zero_votes(self, host: HostPage, pax: ParticipantPage):
         """Regression: largestRemainder([0,0,...]) threw TypeError when poll had no votes."""
@@ -765,7 +735,7 @@ class TestNotifications:
         (first state message seeds tracking state, doesn't trigger)."""
         _api(server_url, "post", "/api/poll",
              json={"question": "Notif test Q", "options": ["A", "B"]})
-        _api(server_url, "post", "/api/poll/status", json={"open": True})
+        _api(server_url, "put", "/api/poll/status", json={"open": True})
 
         try:
             browser = playwright.chromium.launch()
@@ -800,5 +770,5 @@ class TestNotifications:
             assert not notif_fired, "No notification should fire when joining mid-poll"
             browser.close()
         finally:
-            _api(server_url, "post", "/api/poll/status", json={"open": False})
+            _api(server_url, "put", "/api/poll/status", json={"open": False})
             _api(server_url, "delete", "/api/poll")
