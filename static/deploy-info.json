@@ -1,7 +1,7 @@
 {
-  "sha": "74c263090844c2a495c53a9a0511d3b512a5d174",
-  "timestamp": "2026-03-20 23:39",
+  "sha": "6856d5aa46e6195c3061a68e7d6ac297eabb7a3a",
+  "timestamp": "2026-03-20 23:49",
   "changelog": [
-    "feat: conference mode for large audiences (100-350 participants) (#51)"
+    "fix: move language select and smart paste below code textarea"
   ]
 }
