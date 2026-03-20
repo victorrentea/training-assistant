@@ -76,7 +76,6 @@ record_deploy() {
   local line_count
   line_count=$(wc -l < "$HISTORY_FILE" | tr -d ' ')
   if [ "$line_count" -gt 20 ]; then
-    local excess=$((line_count - 20))
     tail -n 20 "$HISTORY_FILE" > "$HISTORY_FILE.tmp" && mv "$HISTORY_FILE.tmp" "$HISTORY_FILE"
   fi
 }
