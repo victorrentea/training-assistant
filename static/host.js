@@ -1061,6 +1061,8 @@
     ws.send(JSON.stringify({ type: 'wordcloud_word', word }));
     hostWords.unshift(word);
     input.value = '';
+    const btn = document.getElementById('wc-host-submit');
+    if (btn) btn.disabled = true;
     renderHostWordList();
   }
 
@@ -1145,6 +1147,8 @@
     if (!text || !ws) return;
     ws.send(JSON.stringify({ type: 'qa_submit', text }));
     input.value = '';
+    const btn = document.getElementById('host-qa-submit-btn');
+    if (btn) btn.disabled = true;
     input.focus();
   }
 

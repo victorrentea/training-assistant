@@ -48,13 +48,13 @@
   justify-content: center;
   white-space: nowrap;
 }
-.btn:hover { opacity: .85; }
-.btn:active { transform: scale(.97); }
+.btn:hover:not(:disabled) { opacity: .85; }
+.btn:active:not(:disabled) { transform: scale(.97); }
 .btn-primary { background: var(--accent); color: #fff; }
 .btn-success { background: var(--action); color: #fff; }
 .btn-danger  { background: var(--danger);  color: #fff; }
 .btn-warn    { background: var(--warn);    color: var(--bg); }
-.btn:disabled { opacity: .35; cursor: default; }
+.btn:disabled { opacity: .35; cursor: default; pointer-events: none; }
 
 /* ── Shared input rows (used by both host and participant) ── */
 .activity-input-row {
