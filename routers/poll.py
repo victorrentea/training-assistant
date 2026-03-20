@@ -67,6 +67,7 @@ async def create_poll(poll: PollCreate):
     state.current_activity = ActivityType.POLL
     state.poll_active = False
     state.votes = {}
+    state.poll_correct_ids = None
 
     await broadcast_state()
     return {"ok": True, "poll": state.poll}
@@ -147,6 +148,7 @@ async def set_correct_options(body: PollCorrect):
             new_scores[pid] = new_scores.get(pid, 0) + pts
 
     state.scores = new_scores
+    state.poll_correct_ids = list(correct_set)
     await broadcast_state()
 
     for pid, ws in list(state.participants.items()):
@@ -183,6 +185,7 @@ async def clear_poll():
     state.poll = None
     state.poll_active = False
     state.votes = {}
+    state.poll_correct_ids = None
     state.base_scores = dict(state.scores)
     state.vote_times = {}
     state.current_activity = ActivityType.NONE
