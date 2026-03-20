@@ -37,6 +37,8 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
 
   // Largest-remainder rounding: ensures integer percentages sum to exactly 100
   function largestRemainder(floats) {
+    const total = floats.reduce((a, b) => a + b, 0);
+    if (total === 0) return floats.map(() => 0);
     const floors = floats.map(Math.floor);
     const remainder = 100 - floors.reduce((a, b) => a + b, 0);
     const order = floats.map((v, i) => [v - Math.floor(v), i])

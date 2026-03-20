@@ -38,6 +38,13 @@ class ParticipantPage:
         for text in option_texts:
             self._page.locator(f".option-btn:has-text('{text}')").click()
 
+    def get_percentages(self) -> list[int]:
+        """Return displayed percentage values for each poll option."""
+        return [
+            int(el.inner_text().replace("%", "").strip())
+            for el in self._page.locator(".pct").all()
+        ]
+
     # ── Word Cloud ────────────────────────────────────────────────────────────
 
     def submit_word(self, word: str) -> None:
