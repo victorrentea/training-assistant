@@ -854,3 +854,35 @@ def test_quiz_request_rejects_neither_field():
         json={},
         headers=_HOST_AUTH_HEADERS)
     assert resp.status_code == 422
+
+
+class TestAvatarAssignment:
+
+    def test_lotr_name_gets_matching_avatar(self):
+        from state import AppState, assign_avatar, get_avatar_filename
+        s = AppState()
+        avatar = assign_avatar(s, "test-uuid-1", "Gandalf")
+        assert avatar == "gandalf.png"
+        assert s.participant_avatars["test-uuid-1"] == "gandalf.png"
+
+    def test_custom_name_gets_deterministic_avatar(self):
+        from state import AppState, assign_avatar
+        s = AppState()
+        a1 = assign_avatar(s, "550e8400-e29b-41d4-a716-446655440000", "Bob")
+        a2 = assign_avatar(s, "550e8400-e29b-41d4-a716-446655440000", "Bob")
+        assert a1 == a2
+        assert a1.endswith(".png")
+
+    def test_assign_once_rename_keeps_avatar(self):
+        from state import AppState, assign_avatar
+        s = AppState()
+        a1 = assign_avatar(s, "test-uuid-1", "Gandalf")
+        a2 = assign_avatar(s, "test-uuid-1", "Bob")
+        assert a1 == a2 == "gandalf.png"
+
+    def test_get_avatar_filename_slugs(self):
+        from state import get_avatar_filename
+        assert get_avatar_filename("Gandalf") == "gandalf.png"
+        assert get_avatar_filename("Tom Bombadil") == "tom-bombadil.png"
+        assert get_avatar_filename("The One Ring") == "the-one-ring.png"
+        assert get_avatar_filename("Grima Wormtongue") == "grima-wormtongue.png"
