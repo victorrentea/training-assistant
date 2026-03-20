@@ -2,14 +2,25 @@ import json
 import logging
 import random
 import uuid as uuid_mod
+from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from auth import require_host_auth
-from messaging import broadcast_state, participant_ids
+from messaging import broadcast, broadcast_state, participant_ids
 from state import state, ActivityType
+
+DEBATE_SUB_PHASES = [
+    {"key": "opening_for",      "label": "Opening — FOR",      "side": "for",     "default_seconds": 120},
+    {"key": "opening_against",  "label": "Opening — AGAINST",  "side": "against", "default_seconds": 120},
+    {"key": "rebuttal_for",     "label": "Rebuttal — FOR",     "side": "for",     "default_seconds": 90},
+    {"key": "rebuttal_against", "label": "Rebuttal — AGAINST", "side": "against", "default_seconds": 90},
+    {"key": "free_discussion",  "label": "Free Discussion",    "side": "both",    "default_seconds": 180},
+    {"key": "closing_for",      "label": "Closing — FOR",      "side": "for",     "default_seconds": 60},
+    {"key": "closing_against",  "label": "Closing — AGAINST",  "side": "against", "default_seconds": 60},
+]
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -66,6 +77,9 @@ async def launch_debate(body: DebateLaunch):
     state.debate_arguments = []
     state.debate_champions = {}
     state.debate_auto_assigned = set()
+    state.debate_sub_phase_index = None
+    state.debate_sub_timer_seconds = None
+    state.debate_sub_timer_started_at = None
     state.current_activity = ActivityType.DEBATE
 
     logger.info(f"Debate launched: {statement}")
@@ -82,6 +96,9 @@ async def reset_debate():
     state.debate_arguments = []
     state.debate_champions = {}
     state.debate_auto_assigned = set()
+    state.debate_sub_phase_index = None
+    state.debate_sub_timer_seconds = None
+    state.debate_sub_timer_started_at = None
     state.current_activity = ActivityType.NONE
 
     logger.info("Debate reset")
@@ -153,10 +170,41 @@ async def advance_phase(body: PhaseAdvance):
     if not state.debate_statement:
         raise HTTPException(400, "No debate active")
 
+    if body.phase == "live_debate":
+        state.debate_sub_phase_index = None
+        state.debate_sub_timer_seconds = None
+        state.debate_sub_timer_started_at = None
     state.debate_phase = body.phase
     logger.info(f"Debate phase → {body.phase}")
     await broadcast_state()
     return {"ok": True, "phase": body.phase}
+
+
+class SubPhaseTimer(BaseModel):
+    sub_phase_index: int
+    seconds: int
+
+
+@router.post("/api/debate/sub-phase-timer", dependencies=[Depends(require_host_auth)])
+async def start_sub_phase_timer(body: SubPhaseTimer):
+    if state.debate_phase != "live_debate":
+        raise HTTPException(400, "Not in live_debate phase")
+    if not 0 <= body.sub_phase_index < len(DEBATE_SUB_PHASES):
+        raise HTTPException(400, f"Invalid sub-phase index: {body.sub_phase_index}")
+    if body.seconds < 1:
+        raise HTTPException(400, "Duration must be at least 1 second")
+
+    started_at = datetime.now(timezone.utc)
+    state.debate_sub_phase_index = body.sub_phase_index
+    state.debate_sub_timer_seconds = body.seconds
+    state.debate_sub_timer_started_at = started_at
+
+    sub = DEBATE_SUB_PHASES[body.sub_phase_index]
+    logger.info(f"Sub-phase timer started: {sub['label']} ({body.seconds}s)")
+
+    await broadcast({"type": "debate_timer", "sub_phase_index": body.sub_phase_index, "seconds": body.seconds, "started_at": started_at.isoformat()})
+    await broadcast_state()
+    return {"ok": True}
 
 
 @router.post("/api/debate/end-arguments", dependencies=[Depends(require_host_auth)])

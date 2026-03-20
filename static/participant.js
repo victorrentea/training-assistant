@@ -495,6 +495,12 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
         activeTimer = { seconds: msg.seconds, startedAt: new Date(msg.started_at).getTime() };
         _startParticipantCountdown();
         break;
+      case 'debate_timer':
+        _debateSubTimer = { subPhaseIndex: msg.sub_phase_index, seconds: msg.seconds, startedAt: new Date(msg.started_at).getTime() };
+        // Re-render debate screen to show sub-phase + countdown
+        if (_lastDebateMsg) renderDebateScreen(_lastDebateMsg);
+        _startDebateParticipantCountdown();
+        break;
       case 'summary':
         updateSummary(msg.points, msg.updated_at);
         break;
@@ -935,6 +941,41 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     { key: 'ended',          num: 5, label: 'Ended',        desc: 'The debate is over. Thanks for participating!' },
   ];
 
+  const DEBATE_SUB_PHASES = [
+    {key: 'opening_for',      label: 'Opening — FOR',      side: 'for',     defaultSeconds: 120},
+    {key: 'opening_against',  label: 'Opening — AGAINST',  side: 'against', defaultSeconds: 120},
+    {key: 'rebuttal_for',     label: 'Rebuttal — FOR',     side: 'for',     defaultSeconds: 90},
+    {key: 'rebuttal_against', label: 'Rebuttal — AGAINST', side: 'against', defaultSeconds: 90},
+    {key: 'free_discussion',  label: 'Free Discussion',    side: 'both',    defaultSeconds: 180},
+    {key: 'closing_for',      label: 'Closing — FOR',      side: 'for',     defaultSeconds: 60},
+    {key: 'closing_against',  label: 'Closing — AGAINST',  side: 'against', defaultSeconds: 60},
+  ];
+
+  let _debateSubTimer = null;
+  let _debateTimerInterval = null;
+  let _lastDebateMsg = null;
+
+  function _startDebateParticipantCountdown() {
+    clearInterval(_debateTimerInterval);
+    _debateTimerInterval = setInterval(() => {
+      const el = document.getElementById('debate-pax-countdown');
+      if (!el || !_debateSubTimer) { clearInterval(_debateTimerInterval); return; }
+      const elapsed = (Date.now() - _debateSubTimer.startedAt) / 1000;
+      const remaining = Math.max(0, _debateSubTimer.seconds - elapsed);
+      const mins = Math.floor(remaining / 60);
+      const secs = Math.ceil(remaining % 60);
+      if (remaining <= 0) {
+        el.textContent = "TIME'S UP";
+        el.className = 'debate-countdown-large debate-countdown-expired';
+        clearInterval(_debateTimerInterval);
+      } else {
+        el.textContent = mins > 0 ? `${mins}:${String(secs).padStart(2, '0')}` : `${secs}s`;
+        el.className = 'debate-countdown-large';
+        el.style.color = remaining <= 10 ? 'var(--danger)' : remaining <= 30 ? 'var(--warn)' : 'var(--accent)';
+      }
+    }, 200);
+  }
+
   function renderDebatePhaseStepper(currentPhase) {
     const currentIdx = DEBATE_PHASES.findIndex(p => p.key === currentPhase);
     return '<div class="debate-stepper">' + DEBATE_PHASES.map((p, i) => {
@@ -946,6 +987,7 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
   }
 
   function renderDebateScreen(msg) {
+    _lastDebateMsg = msg;
     const content = document.getElementById('content');
     if (!content) return;
     content.dataset.screen = 'debate';
@@ -1015,16 +1057,40 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
         html += `<div class="debate-champion-info">${isMe ? '🏆 You are your team\'s champion!' : '🏆 Champion: ' + escDebate(champions[mySide])}</div>`;
       }
     } else if (phase === 'live_debate') {
-      html += renderDebateArgColumns(args, mySide, msg, true);  // read-only during live debate
-      html += renderDebateHints();
+      // Sub-phase label + countdown
+      const subIdx = msg.debate_sub_phase_index;
+      if (subIdx != null && subIdx >= 0 && subIdx < DEBATE_SUB_PHASES.length) {
+        const sub = DEBATE_SUB_PHASES[subIdx];
+        const sideClass = sub.side === 'for' ? 'debate-sub-phase-side-for' : sub.side === 'against' ? 'debate-sub-phase-side-against' : 'debate-sub-phase-side-both';
+        html += `<div style="text-align:center; margin:.5rem 0;">
+          <span class="${sideClass}" style="font-weight:700; font-size:1.1rem;">${escDebate(sub.label)}</span>
+        </div>`;
+        html += `<div id="debate-pax-countdown" class="debate-countdown-large"></div>`;
+      } else {
+        html += `<div style="text-align:center; margin:.5rem 0; color:var(--muted);">Waiting for host to start…</div>`;
+      }
       const champNames = Object.entries(champions).map(([s, n]) => `${s === 'for' ? '👍' : '👎'} ${escDebate(n)}`).join(' vs ');
-      html += `<div class="debate-live-info">🎤 ${champNames}</div>`;
+      if (champNames) html += `<div class="debate-live-info">🎤 ${champNames}</div>`;
+      html += renderDebateArgColumns(args, mySide, msg, true);
+      html += renderDebateHints();
     } else if (phase === 'ended') {
       html += `<div class="debate-ended">Debate ended!</div>`;
       html += renderDebateArgColumns(args, mySide, msg, true);
     }
 
     content.innerHTML = html;
+
+    // Reconstruct timer on reconnect from state
+    if (phase === 'live_debate' && msg.debate_sub_timer_started_at && msg.debate_sub_phase_index != null) {
+      if (!_debateSubTimer || _debateSubTimer.subPhaseIndex !== msg.debate_sub_phase_index) {
+        _debateSubTimer = {
+          subPhaseIndex: msg.debate_sub_phase_index,
+          seconds: msg.debate_sub_timer_seconds,
+          startedAt: new Date(msg.debate_sub_timer_started_at).getTime()
+        };
+      }
+      _startDebateParticipantCountdown();
+    }
   }
 
   function renderDebateArgColumns(args, mySide, msg, readOnly) {
