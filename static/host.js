@@ -1747,7 +1747,7 @@
             } else if (spNext) {
               controlsHtml = `<div class="debate-sub-controls">
                 <input type="text" class="debate-sub-duration" id="debate-sub-dur-${si}" value="${durVal}" title="Duration (m:ss)" />
-                <button class="btn btn-primary btn-sm" onclick="startDebateSubPhase(${si})">▶</button>
+                <button class="btn btn-primary" style="padding:.1rem .35rem;font-size:.65rem;line-height:1;height:1.4rem;" onclick="startDebateSubPhase(${si})">▶</button>
               </div>`;
             }
 

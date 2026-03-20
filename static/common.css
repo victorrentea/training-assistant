@@ -374,18 +374,20 @@
 .debate-sub-phase-side-for { color: #2ecc71; }
 .debate-sub-phase-side-against { color: #e74c3c; }
 .debate-sub-phase-side-both { color: var(--warn); }
-.debate-sub-duration {
-  width: 2.5rem;
-  max-width: 2.5rem;
+input[type=text].debate-sub-duration {
+  width: 3.2rem;
+  max-width: 3.2rem;
+  min-width: 3.2rem;
   background: var(--surface2);
   border: 1px solid var(--border);
   color: var(--text);
   border-radius: 4px;
   text-align: center;
-  font-size: .7rem;
-  padding: .1rem .1rem;
-  height: 1.3rem;
+  font-size: .75rem;
+  padding: .15rem .2rem;
+  height: 1.4rem;
   flex: none;
+  box-sizing: content-box;
 }
 .debate-sub-check {
   color: var(--accent2);
