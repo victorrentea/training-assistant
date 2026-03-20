@@ -29,6 +29,7 @@ def _build_qa_for_participant(pid: str) -> list[dict]:
             "upvote_count": len(q["upvoters"]),
             "answered": q["answered"],
             "timestamp": q["timestamp"],
+            "author_avatar": state.participant_avatars.get(q["author"], ""),
         }
         for qid, q in sorted(
             state.qa_questions.items(),
@@ -46,6 +47,7 @@ def _build_qa_for_host() -> list[dict]:
             "upvote_count": len(q["upvoters"]),
             "answered": q["answered"],
             "timestamp": q["timestamp"],
+            "author_avatar": state.participant_avatars.get(q["author"], ""),
         }
         for qid, q in sorted(
             state.qa_questions.items(),
@@ -65,6 +67,7 @@ def build_participant_state(pid: str) -> dict:
         "vote_counts": state.vote_counts(),
         "participant_count": len(pids),
         "my_score": state.scores.get(pid, 0),
+        "my_avatar": state.participant_avatars.get(pid, ""),
         "current_activity": state.current_activity,
         "wordcloud_words": state.wordcloud_words,
         "wordcloud_topic": state.wordcloud_topic,
@@ -89,6 +92,7 @@ def build_host_state() -> dict:
             "name": name,
             "score": score,
             "location": loc,
+            "avatar": state.participant_avatars.get(pid, ""),
         })
 
     return {
@@ -157,6 +161,7 @@ async def broadcast_participant_update():
             "name": name,
             "score": state.scores.get(pid, 0),
             "location": state.locations.get(pid, ""),
+            "avatar": state.participant_avatars.get(pid, ""),
         })
     host_msg = json.dumps({
         "type": "participant_count",
