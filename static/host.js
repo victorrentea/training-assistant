@@ -172,6 +172,11 @@
         renderDebateHost(msg);
         if (currentActivity === 'wordcloud') {
           renderHostWordCloud(msg.wordcloud_words || {});
+          const wcTitle = document.getElementById('wc-center-title');
+          if (wcTitle) {
+            const topic = msg.wordcloud_topic || '';
+            wcTitle.textContent = topic ? `Word Cloud: ${topic}` : 'Word Cloud';
+          }
         }
         if (currentActivity === 'qa') {
           renderQAList(msg.qa_questions || []);

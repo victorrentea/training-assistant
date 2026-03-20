@@ -182,11 +182,13 @@ body {
 
 #center-wordcloud {
   display: flex;
-  align-items: center;
-  justify-content: center;
+  flex-direction: column;
   background: #000;
   border-radius: 10px;
   overflow: hidden;
+}
+#center-wordcloud h2 {
+  padding-top: .5rem;
 }
 
 #host-wc-canvas {
