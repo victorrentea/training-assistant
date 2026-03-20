@@ -94,7 +94,7 @@ def _build_debate_for_participant(pid: str) -> dict:
                 "upvote_count": len(a["upvoters"]),
                 "merged_into": a.get("merged_into"),
             }
-            for a in state.debate_arguments
+            for a in sorted(state.debate_arguments, key=lambda a: len(a["upvoters"]), reverse=True)
         ],
         "debate_champions": {
             side: state.participant_names.get(uuid, "")
@@ -130,7 +130,7 @@ def _build_debate_for_host() -> dict:
                 "upvote_count": len(a["upvoters"]),
                 "merged_into": a.get("merged_into"),
             }
-            for a in state.debate_arguments
+            for a in sorted(state.debate_arguments, key=lambda a: len(a["upvoters"]), reverse=True)
         ],
         "debate_champions": {
             side: state.participant_names.get(uuid, "")
