@@ -170,7 +170,6 @@
 .summary-list .summary-empty {
   list-style: none;
   color: var(--text-muted);
-  font-style: italic;
 }
 .summary-time {
   margin-top: .8rem;

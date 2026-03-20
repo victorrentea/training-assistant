@@ -374,7 +374,7 @@
         el.style.cssText = '';
       } else {
         el.textContent = 'No notes available yet.';
-        el.style.cssText = 'color:var(--text-muted); font-style:italic;';
+        el.style.cssText = 'color:var(--text-muted);';
       }
     }
   }
