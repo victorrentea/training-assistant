@@ -14,7 +14,7 @@ from auth import require_host_auth
 from messaging import broadcast_state
 from state import state  # re-exported for test_main.py: from main import app, state
 import metrics  # noqa: registers custom Prometheus metrics
-from routers import ws, poll, scores, quiz, pages, wordcloud, activity, qa, codereview, summary, debate, leaderboard
+from routers import ws, poll, scores, quiz, pages, wordcloud, activity, qa, codereview, summary, debate
 
 logging.basicConfig(level=logging.INFO)
 
@@ -36,7 +36,6 @@ app.include_router(codereview.router)
 app.include_router(summary.router, dependencies=[Depends(require_host_auth)])
 app.include_router(summary.public_router)
 app.include_router(debate.router)
-app.include_router(leaderboard.router)
 
 class ModeRequest(BaseModel):
     mode: str
