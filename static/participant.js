@@ -607,17 +607,17 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
       content.dataset.screen = 'wordcloud';
       content.innerHTML = `
         <div class="wc-layout">
-          <div class="wc-cloud-panel">
+          <div class="wc-cloud-panel" style="position:relative;">
             <canvas id="wc-canvas"></canvas>
+            <button id="wc-download" class="btn btn-secondary wc-download-overlay" style="display:none;">⬇</button>
           </div>
           <div class="wc-input-panel">
-            <p class="wc-prompt" id="wc-prompt-text">What comes to mind? <span style="font-size:.9em; opacity:.75; font-weight:normal">(pts++)</span></p>
+            <p class="wc-prompt" id="wc-prompt-text">What comes to mind?</p>
             <div class="wc-input-row">
               <input id="wc-input" type="text" maxlength="40" autocomplete="off" placeholder="Type a word…" list="wc-suggestions" />
               <datalist id="wc-suggestions"></datalist>
-              <button id="wc-go" class="btn btn-primary">🚀</button>
+              <button id="wc-go" class="btn btn-primary">↵</button>
             </div>
-            <button id="wc-download" class="btn btn-secondary wc-download-btn">⬇ Download Image</button>
             <div id="wc-my-words"></div>
           </div>
         </div>`;
@@ -637,9 +637,15 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     // Update prompt with topic (may change after screen is shown)
     const promptEl = document.getElementById('wc-prompt-text');
     if (promptEl) {
-      // Topic is shown on the canvas image, so keep prompt simple
-      promptEl.innerHTML = `What comes to mind? <span style="font-size:.9em; opacity:.75; font-weight:normal">(pts++)</span>`;
+      if (topic) {
+        promptEl.innerHTML = `What comes to mind about <span class="wc-topic-highlight">${escHtml(topic)}</span>?`;
+      } else {
+        promptEl.textContent = 'What comes to mind?';
+      }
     }
+    // Show/hide download button based on word count
+    const dlBtn = document.getElementById('wc-download');
+    if (dlBtn) dlBtn.style.display = Object.keys(wordcloudWords).length > 0 ? '' : 'none';
     renderWordCloud(wordcloudWords);
     renderMyWords();
     updateWordSuggestions(wordcloudWords);
@@ -683,7 +689,7 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
 
   function _drawCloud(canvas, wordsMap) {
     const entries = Object.entries(wordsMap);
-    const TITLE_H = _lastWordcloudTopic ? 40 : 0;
+    const TITLE_H = 0;
     if (!entries.length) {
       const ctx = canvas.getContext('2d');
       ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -711,14 +717,6 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
       .on('end', (placed) => {
         const ctx = canvas.getContext('2d');
         ctx.clearRect(0, 0, W, H);
-        // Draw topic title
-        if (_lastWordcloudTopic) {
-          ctx.textAlign = 'center';
-          ctx.font = 'bold 20px sans-serif';
-          ctx.fillStyle = 'rgba(255,255,255,0.75)';
-          ctx.fillText(_lastWordcloudTopic, W / 2, 28);
-        }
-        // Draw words offset below the title
         ctx.textAlign = 'center';
         placed.forEach((w, i) => {
           ctx.save();
