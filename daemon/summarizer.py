@@ -7,6 +7,7 @@ existing bullet list, calls Claude to synthesize updated key points.
 
 import json
 import sys
+from datetime import date
 from pathlib import Path
 from typing import Optional
 
@@ -87,10 +88,33 @@ def generate_summary(
             messages=[{"role": "user", "content": user_message}],
         )
 
-        response_text = response.content[0].text.strip()
+        if not response.content:
+            print(f"[summarizer] Empty response from Claude (stop_reason={response.stop_reason})", file=sys.stderr)
+            return None
+
+        block = response.content[0]
+        if block.type != "text":
+            print(f"[summarizer] Unexpected content block type: {block.type}", file=sys.stderr)
+            return None
+
+        response_text = block.text.strip()
+        if not response_text:
+            print(f"[summarizer] Claude returned empty text (stop_reason={response.stop_reason})", file=sys.stderr)
+            return None
+
+        # Strip markdown code fences if Claude wraps JSON in them
+        if response_text.startswith("```"):
+            lines = response_text.split("\n")
+            lines = [l for l in lines if not l.strip().startswith("```")]
+            response_text = "\n".join(lines).strip()
+
         # Parse JSON array from response
         points = json.loads(response_text)
         if isinstance(points, list) and all(isinstance(p, str) for p in points):
+            # Always prepend today's date as the first bullet
+            date_line = f"Session date: {date.today().isoformat()}"
+            if not points or points[0] != date_line:
+                points = [date_line] + [p for p in points if not p.startswith("Session date:")]
             print(f"[summarizer] Generated {len(points)} key points")
             return points
         else:
@@ -99,6 +123,7 @@ def generate_summary(
 
     except json.JSONDecodeError as e:
         print(f"[summarizer] Failed to parse Claude response as JSON: {e}", file=sys.stderr)
+        print(f"[summarizer] Raw response: {response_text[:500]}", file=sys.stderr)
         return None
     except anthropic.APIError as e:
         print(f"[summarizer] Claude API error: {e}", file=sys.stderr)

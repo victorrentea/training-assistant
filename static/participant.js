@@ -73,6 +73,7 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     return `hsl(${hue}, 60%, 40%)`;
   }
 
+
   function updateSummary(points, updatedAt) {
     summaryPoints = points || [];
     summaryUpdatedAt = updatedAt;
