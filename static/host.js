@@ -1171,13 +1171,14 @@
     const lines = cr.snippet.split('\n');
     const lineCounts = cr.line_counts || {};
     const confirmed = new Set(cr.confirmed_lines || []);
-    const maxCount = Math.max(1, ...Object.values(lineCounts));
+    const totalPax = cr.participant_count || 1;
 
     let html = '<div class="codereview-lines">';
     lines.forEach((lineText, i) => {
       const lineNum = i + 1;
       const count = lineCounts[String(lineNum)] || 0;
-      const intensity = count / maxCount;
+      const pct = Math.round(count * 100 / totalPax);
+      const intensity = count / totalPax;
       const isConfirmed = confirmed.has(lineNum);
       const isSelected = codereviewSelectedLine === lineNum;
 
@@ -1202,7 +1203,7 @@
       html += `<span class="codereview-code">${escHtml(lineText) || ' '}</span>`;
       if (count > 0) {
         const countColor = isConfirmed ? 'var(--accent2)' : 'var(--danger)';
-        html += `<span class="codereview-count" style="color:${countColor}">${count}</span>`;
+        html += `<span class="codereview-count" style="color:${countColor}">${pct}%</span>`;
       }
       html += '</div>';
     });
