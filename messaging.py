@@ -101,6 +101,10 @@ def _build_debate_for_participant(pid: str) -> dict:
             for side, uuid in state.debate_champions.items()
         },
         "debate_my_is_champion": state.debate_champions.get(my_side) == pid if my_side else False,
+        "debate_first_side": state.debate_first_side,
+        "debate_sub_phase_index": state.debate_sub_phase_index,
+        "debate_sub_timer_seconds": state.debate_sub_timer_seconds,
+        "debate_sub_timer_started_at": state.debate_sub_timer_started_at.isoformat() if state.debate_sub_timer_started_at else None,
     }
 
 
@@ -132,6 +136,10 @@ def _build_debate_for_host() -> dict:
             side: state.participant_names.get(uuid, "")
             for side, uuid in state.debate_champions.items()
         },
+        "debate_first_side": state.debate_first_side,
+        "debate_sub_phase_index": state.debate_sub_phase_index,
+        "debate_sub_timer_seconds": state.debate_sub_timer_seconds,
+        "debate_sub_timer_started_at": state.debate_sub_timer_started_at.isoformat() if state.debate_sub_timer_started_at else None,
     }
 
 
