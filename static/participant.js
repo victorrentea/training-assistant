@@ -244,20 +244,20 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     const notifEl = document.getElementById('onboard-notif');
     if (nameEl && !nameEl.classList.contains('done') && (_suggestedName === null || myName !== _suggestedName)) {
       nameEl.classList.add('done');
-      nameEl.innerHTML = '☑ Click on your name to set it';
+      nameEl.querySelector('input[type=checkbox]').checked = true;
       nameEl.style.cursor = 'default';
       nameEl.onclick = null;
     }
     if (locEl && !locEl.classList.contains('done') && localStorage.getItem(LS_LOCATION_KEY)) {
       locEl.classList.add('done');
-      locEl.innerHTML = '☑ Share your location';
+      locEl.querySelector('input[type=checkbox]').checked = true;
       locEl.style.cursor = 'default';
       locEl.onclick = null;
     }
     const notifGranted = 'Notification' in window && Notification.permission === 'granted';
     if (notifEl && !notifEl.classList.contains('done') && notifGranted) {
       notifEl.classList.add('done');
-      notifEl.innerHTML = '☑ Enable notifications';
+      notifEl.querySelector('input[type=checkbox]').checked = true;
       notifEl.style.cursor = 'default';
       notifEl.onclick = null;
     }
@@ -1056,13 +1056,13 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
         <p style="margin-top:.5rem;">Your answers and ideas will shape this session!</p>
         <ul id="onboarding-list" class="onboarding-checklist"${allDone ? ' style="opacity:1"' : ''}>
           <li id="onboard-name" class="onboarding-item${nameSet ? ' done' : ''}" onclick="${nameSet ? '' : 'startNameEdit()'}" style="cursor:${nameSet ? 'default' : 'pointer'}">
-            ${nameSet ? '☑' : '☐'} Click on your name to set it
+            <input type="checkbox" disabled ${nameSet ? 'checked' : ''}> Click on your name to set it
           </li>
           <li id="onboard-location" class="onboarding-item${locationSet ? ' done' : ''}" onclick="${locationSet ? '' : 'requestLocation()'}" style="cursor:${locationSet ? 'default' : 'pointer'}">
-            ${locationSet ? '☑' : '☐'} Share your location
+            <input type="checkbox" disabled ${locationSet ? 'checked' : ''}> Share your location
           </li>
           <li id="onboard-notif" class="onboarding-item${notifGranted ? ' done' : ''}" onclick="${notifGranted ? '' : 'requestNotificationPermission()'}" style="cursor:${notifGranted ? 'default' : 'pointer'}">
-            ${notifGranted ? '☑' : '☐'} Enable notifications
+            <input type="checkbox" disabled ${notifGranted ? 'checked' : ''}> Enable notifications
           </li>
         </ul>
       </div>`;
