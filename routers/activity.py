@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from auth import require_host_auth
-from messaging import broadcast, build_state_message
+from messaging import broadcast_state
 from state import state, ActivityType
 
 router = APIRouter()
@@ -19,5 +19,5 @@ async def set_activity(body: ActivitySwitch):
     except ValueError:
         raise HTTPException(400, f"Unknown activity: {body.activity}")
     state.current_activity = new_activity
-    await broadcast(build_state_message())
+    await broadcast_state()
     return {"ok": True, "current_activity": new_activity}

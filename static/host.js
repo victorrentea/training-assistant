@@ -953,13 +953,10 @@
     const input = document.getElementById('host-qa-input');
     if (!input) return;
     const text = input.value.trim();
-    if (!text) return;
-    const resp = await fetch('/api/qa/question', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: 'Host', text }),
-    });
-    if (resp.ok) { input.value = ''; input.focus(); }
+    if (!text || !ws) return;
+    ws.send(JSON.stringify({ type: 'qa_submit', text }));
+    input.value = '';
+    input.focus();
   }
 
   async function clearQA() {
