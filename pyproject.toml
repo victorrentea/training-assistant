@@ -20,4 +20,5 @@ dev = [
 testpaths = ["."]
 markers = [
     "prod: smoke tests against the live Railway deployment",
+    "load: load tests — connect many participants simultaneously",
 ]
