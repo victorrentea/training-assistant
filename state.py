@@ -59,6 +59,7 @@ class AppState:
         self.codereview_confirmed: set[int] = set()  # lines host confirmed
         self.summary_points: list[str] = []
         self.summary_updated_at: Optional[datetime] = None
+        self.summary_force_requested: bool = False
 
     def suggest_name(self) -> str:
         """Return the next available LOTR name (by popularity order).

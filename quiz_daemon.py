@@ -257,11 +257,6 @@ def run() -> None:
             sf_name = config.session_folder.name if config.session_folder else None
             sn_name = config.session_notes.name if config.session_notes else None
 
-            # ── Push session info when detected or on reconnect ──
-            if _session_status_pending:
-                post_status("ready", "Agent ready.", config,
-                            session_folder=sf_name, session_notes=sn_name)
-
             # ── Check for new quiz generation request ──
             data = _get_json(
                 f"{config.server_url}/api/quiz-request",
@@ -270,7 +265,12 @@ def run() -> None:
             if server_disconnected:
                 print("[daemon] Reconnected to server.")
                 server_disconnected = False
-                post_status("ready", "Agent reconnected.", config,
+                _session_status_pending = True
+
+            # ── Push session info when changed, on reconnect, or if server lost it ──
+            server_has_session = data.get("session_folder") is not None
+            if _session_status_pending or (sf_name and not server_has_session):
+                post_status("ready", "Agent ready.", config,
                             session_folder=sf_name, session_notes=sn_name)
             req = data.get("request")
             if req:
@@ -306,9 +306,22 @@ def run() -> None:
                 else:
                     post_status("error", "No conversation context — please generate a question first.", config)
 
-            # ── Periodic summary generation ──
+            # ── Check for forced summary request ──
+            force_summary = False
+            try:
+                force_data = _get_json(
+                    f"{config.server_url}/api/summary/force",
+                    config.host_username, config.host_password,
+                )
+                force_summary = force_data.get("requested", False)
+            except Exception:
+                pass
+
+            # ── Periodic or forced summary generation ──
             now_mono = time.monotonic()
-            if now_mono - last_summary_at >= SUMMARY_INTERVAL_SECONDS:
+            if force_summary or now_mono - last_summary_at >= SUMMARY_INTERVAL_SECONDS:
+                if force_summary:
+                    print("[summarizer] Force-generating summary (host requested)")
                 last_summary_at = now_mono
                 try:
                     new_points = generate_summary(config, summary_points)
