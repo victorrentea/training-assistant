@@ -1193,3 +1193,91 @@ class TestVoteRestoreOnRefresh:
         with session.participant_with_uuid("Alice", uid) as alice2:
             alice2.assert_no_result_in_state()
             alice2.assert_no_my_vote()
+
+
+# ---------------------------------------------------------------------------
+# Debate AI poll/result endpoint tests
+# ---------------------------------------------------------------------------
+
+
+def test_debate_ai_request_returns_and_clears():
+    """GET /api/debate/ai-request returns pending request then clears it."""
+    state.reset()
+    client = TestClient(app)
+
+    # Setup: launch debate, add argument, end arguments
+    client.post("/api/debate", json={"statement": "Tabs vs spaces"}, headers=_HOST_AUTH_HEADERS)
+    state.debate_phase = "arguments"
+    state.debate_arguments = [{
+        "id": "a1", "author_uuid": "u1", "side": "for",
+        "text": "Tabs are better", "upvoters": set(),
+        "ai_generated": False, "merged_into": None,
+    }]
+    client.post("/api/debate/end-arguments", headers=_HOST_AUTH_HEADERS)
+
+    # First poll: should return the request
+    resp = client.get("/api/debate/ai-request", headers=_HOST_AUTH_HEADERS)
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["request"] is not None
+    assert data["request"]["statement"] == "Tabs vs spaces"
+    assert len(data["request"]["for_args"]) == 1
+
+    # Second poll: consumed (None)
+    resp2 = client.get("/api/debate/ai-request", headers=_HOST_AUTH_HEADERS)
+    assert resp2.json()["request"] is None
+
+
+def test_debate_ai_result_applies_and_advances():
+    """POST /api/debate/ai-result applies merges/new args, advances to prep."""
+    state.reset()
+    client = TestClient(app)
+    state.debate_statement = "Tabs vs spaces"
+    state.debate_phase = "ai_cleanup"
+    state.debate_arguments = [
+        {"id": "a1", "author_uuid": "u1", "side": "for",
+         "text": "Tabs are beter", "upvoters": set(),
+         "ai_generated": False, "merged_into": None},
+    ]
+
+    resp = client.post("/api/debate/ai-result", json={
+        "merges": [],
+        "cleaned": [{"id": "a1", "text": "Tabs are better"}],
+        "new_arguments": [
+            {"side": "against", "text": "Spaces ensure consistent rendering"},
+        ],
+    }, headers=_HOST_AUTH_HEADERS)
+
+    assert resp.status_code == 200
+    assert state.debate_phase == "prep"
+    assert state.debate_arguments[0]["text"] == "Tabs are better"
+    ai_args = [a for a in state.debate_arguments if a["ai_generated"]]
+    assert len(ai_args) == 1
+    assert ai_args[0]["side"] == "against"
+
+
+def test_debate_ai_result_rejects_wrong_phase():
+    """POST /api/debate/ai-result returns 400 if not in ai_cleanup phase."""
+    state.reset()
+    client = TestClient(app)
+    state.debate_statement = "Test"
+    state.debate_phase = "prep"
+
+    resp = client.post("/api/debate/ai-result", json={
+        "merges": [], "cleaned": [], "new_arguments": [],
+    }, headers=_HOST_AUTH_HEADERS)
+    assert resp.status_code == 400
+
+
+def test_debate_end_arguments_skips_ai_when_no_args():
+    """End arguments with no arguments should skip ai_cleanup, go to prep."""
+    state.reset()
+    client = TestClient(app)
+    client.post("/api/debate", json={"statement": "Test"}, headers=_HOST_AUTH_HEADERS)
+    state.debate_phase = "arguments"
+    state.debate_arguments = []
+
+    resp = client.post("/api/debate/end-arguments", headers=_HOST_AUTH_HEADERS)
+    assert resp.status_code == 200
+    assert state.debate_phase == "prep"
+    assert state.debate_ai_request is None

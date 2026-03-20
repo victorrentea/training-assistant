@@ -1081,6 +1081,12 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
       }
     } else if (phase === 'prep') {
       html += renderDebateArgColumns(args, mySide, msg, false);
+      if (phase === 'ai_cleanup') {
+        html += `<div class="debate-ai-loading">
+          <div class="debate-ai-spinner"></div>
+          <div>AI is enriching arguments…</div>
+        </div>`;
+      }
       html += renderDebateHints();
       if (mySide && !champions[mySide]) {
         html += `<button class="btn btn-warn debate-volunteer-btn" onclick="debateVolunteer()">🏆 I'll be our champion!</button>`;

@@ -1603,14 +1603,13 @@
     });
   }
 
-  async function debateRunAI() {
-    const btn = document.querySelector('#debate-host-actions .btn-ai');
-    if (btn) { btn.disabled = true; btn.textContent = '⏳ Running AI…'; }
-    try {
-      await fetch('/api/debate/ai-cleanup', { method: 'POST' });
-    } finally {
-      if (btn) { btn.disabled = false; btn.textContent = '✨ Run AI Cleanup'; }
-    }
+  async function debateSkipAI() {
+    // Post empty result to advance past ai_cleanup if daemon is unavailable
+    await fetch('/api/debate/ai-result', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ merges: [], cleaned: [], new_arguments: [] }),
+    });
   }
 
   function renderDebateHost(msg) {
@@ -1684,7 +1683,7 @@
 
       let actionHtml = '';
       if (isActive && phase === 'ai_cleanup' && p.key === 'prep') {
-        actionHtml = `<div class="debate-chapter-extra"><span style="color:var(--accent);font-size:.8rem;">✨ AI enriching arguments…</span></div>`;
+        actionHtml = `<div class="debate-chapter-extra"><span style="color:var(--accent);font-size:.8rem;">✨ AI enriching arguments…</span> <button class="btn btn-sm" onclick="debateSkipAI()" style="margin-left:.5rem;font-size:.7rem;">Skip AI</button></div>`;
       } else if (isActive && phaseActions[p.key]) {
         actionHtml = `<div class="debate-chapter-extra">${phaseActions[p.key]}</div>`;
       }
@@ -1807,6 +1806,12 @@
 
       // Restart countdown rendering if timer is active
       if (phase === 'live_debate' && _debateSubTimer) _startDebateCountdown();
+      if (phase === 'ai_cleanup') {
+        content.innerHTML += `<div class="debate-ai-loading">
+          <div class="debate-ai-spinner"></div>
+          <div>AI is enriching arguments…</div>
+        </div>`;
+      }
     }
   }
 
