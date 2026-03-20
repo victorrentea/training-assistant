@@ -34,12 +34,24 @@
       <span class="status-right">
         <span id="location-prompt" class="location-prompt" onclick="requestLocation()" title="Share your location">📍 Where are you?</span>
         <span id="pax-count"></span>
+        <button id="summary-btn" title="Key points discussed" style="display:none" onclick="toggleSummaryModal()">📋</button>
         <button id="notif-btn" title="Enable notifications" style="display:none">🔔</button>
         <button id="leave-btn" title="Change name">☢️ Leave</button>
       </span>
     </div>
     <div id="content"></div>
   </div>
+
+<div id="summary-overlay" class="summary-overlay" onclick="closeSummaryModal()">
+  <div class="summary-dialog" onclick="event.stopPropagation()">
+    <div class="summary-header">
+      <span>📋 Key Points</span>
+      <button class="summary-close" onclick="closeSummaryModal()">✕</button>
+    </div>
+    <ul id="summary-list" class="summary-list"></ul>
+    <div id="summary-time" class="summary-time"></div>
+  </div>
+</div>
 
 <script src="/static/version.js"></script>
 <script src="/static/version-age.js"></script>
