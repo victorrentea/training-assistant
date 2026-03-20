@@ -182,6 +182,7 @@
   padding: .15rem .5rem;
   font-size: .75rem;
   cursor: pointer;
+  white-space: nowrap;
 }
 .header-link-btn:hover { border-color: var(--accent); color: var(--accent); }
 .modal-newtab-btn {
