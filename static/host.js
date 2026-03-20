@@ -156,7 +156,8 @@
         cachedNames = names;
         document.getElementById('pax-count').textContent = msg.participant_count;
         renderParticipantList(names);
-        renderDaemonStatus(msg.daemon_connected, msg.daemon_last_seen, msg.daemon_session_folder, msg.daemon_session_notes);
+        renderDaemonStatus(msg.daemon_connected, msg.daemon_last_seen);
+        renderNotesStatus(msg.daemon_session_folder, msg.daemon_session_notes);
         renderPreview(msg.quiz_preview || null);
         renderPollDisplay();
         const currentActivity = msg.current_activity || 'none';
@@ -221,10 +222,15 @@
     summaryUpdatedAt = updatedAt;
     const badge = document.getElementById('summary-badge');
     if (badge) {
-      badge.style.display = summaryPoints.length ? '' : 'none';
-      badge.classList.toggle('connected', summaryPoints.length > 0);
-      badge.classList.toggle('disconnected', !summaryPoints.length);
-      badge.title = summaryPoints.length ? `${summaryPoints.length} key points` : 'No summary yet';
+      if (summaryPoints.length) {
+        badge.textContent = `🧠 Key Points (${summaryPoints.length})`;
+        badge.className = 'badge connected';
+        badge.title = `${summaryPoints.length} key points — click to view`;
+      } else {
+        badge.textContent = '🧠 No key points yet';
+        badge.className = 'badge disabled';
+        badge.title = 'Summary generated every 5 minutes from transcript';
+      }
     }
     renderSummaryList();
   }
@@ -261,38 +267,49 @@
     b.className = `badge ${ok ? 'connected' : 'disconnected'}`;
   }
 
-  function renderDaemonStatus(connected, lastSeenIso, sessionFolder, sessionNotes) {
+  function renderDaemonStatus(connected, lastSeenIso) {
     const el = document.getElementById('daemon-badge');
     if (!el) return;
+
     if (!lastSeenIso) {
       el.textContent = '● Agent';
       el.className = 'badge disconnected';
-      el.style.cssText = '';
-      el.title = 'Agent: never connected';
+      el.title = 'Never connected — start with ./start-daemon.sh';
       return;
     }
+
     const ago = Math.round((Date.now() - new Date(lastSeenIso)) / 1000);
-    const agoText = ago < 60 ? `${ago}s` : `${Math.round(ago/60)}m`;
+    const agoText = ago < 60 ? `${ago}s ago` : `${Math.round(ago/60)}m ago`;
+
     if (connected) {
       el.textContent = '● Agent';
-      if (sessionFolder && sessionNotes) {
-        el.className = 'badge connected';
-        el.style.cssText = '';
-        el.title = sessionFolder;
-      } else if (sessionFolder) {
-        el.className = 'badge';
-        el.style.cssText = 'color:var(--warn);border:1px solid var(--warn);';
-        el.title = 'Session folder found but no notes file';
-      } else {
-        el.className = 'badge';
-        el.style.cssText = 'color:var(--warn);border:1px solid var(--warn);';
-        el.title = 'No session folder found for today';
-      }
+      el.className = 'badge connected';
+      el.title = `Connected (last seen ${agoText})`;
     } else {
       el.textContent = '● Agent';
       el.className = 'badge';
       el.style.cssText = 'color:var(--warn);border:1px solid var(--warn);';
-      el.title = `Agent idle (last seen ${agoText} ago)`;
+      el.title = `Connection lost (last seen ${agoText})`;
+    }
+  }
+
+  function renderNotesStatus(sessionFolder, sessionNotes) {
+    const el = document.getElementById('notes-badge');
+    if (!el) return;
+
+    if (sessionFolder && sessionNotes) {
+      el.textContent = '● Notes';
+      el.className = 'badge connected';
+      el.title = `Session notes found\n${sessionFolder}`;
+    } else if (sessionFolder) {
+      el.textContent = '● Notes';
+      el.className = 'badge';
+      el.style.cssText = 'color:var(--warn);border:1px solid var(--warn);';
+      el.title = 'Session folder found but no notes file inside';
+    } else {
+      el.textContent = '● Notes';
+      el.className = 'badge disconnected';
+      el.title = 'No session folder found for today';
     }
   }
 
