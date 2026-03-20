@@ -120,6 +120,16 @@ h1 { display: none; }
 #leave-btn:hover { border-color:var(--danger); color:var(--danger); }
 @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
 
+/* ── Location prompt ── */
+.location-prompt {
+  cursor: pointer;
+  color: var(--accent2);
+  font-size: .8rem;
+  opacity: .85;
+  transition: opacity .2s;
+}
+.location-prompt:hover { opacity: 1; }
+
 /* ── Poll card ── */
 .poll-card {
   background: var(--surface);

@@ -35,7 +35,7 @@ None. The host already handles both GPS coordinates (lazy-resolved via Nominatim
 
 ### localStorage Key
 
-- `workshop_participant_location` — stores the raw `"lat, lon"` string once collected
+- `workshop_participant_location` — stores the formatted `"lat.toFixed(5), lon.toFixed(5)"` string (matches existing wire format)
 - Persists indefinitely (across browser restarts, sessions, days)
 
 ### Edge Cases
