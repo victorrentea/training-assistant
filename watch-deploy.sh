@@ -41,6 +41,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 HISTORY_FILE="$SCRIPT_DIR/deploy-history.txt"
 DEFAULT_ESTIMATE=45
 ESTIMATED=""
+COMMIT_MSG=""
 
 get_prod_version() {
   curl -s "$PROD_URL" | grep -o "'.*'" | tr -d "'"
@@ -48,6 +49,11 @@ get_prod_version() {
 
 get_master_head() {
   gh api "repos/$REPO/commits/master" --jq '.sha' 2>/dev/null
+}
+
+get_commit_message() {
+  local sha="$1"
+  gh api "repos/$REPO/commits/$sha" --jq '.commit.message' 2>/dev/null | head -1
 }
 
 get_estimated_duration() {
@@ -92,15 +98,19 @@ notify_countdown() {
     return
   fi
   LAST_NOTIFY_TIME="$now"
+  local title="🚀 Deploying"
+  if [ -n "$COMMIT_MSG" ]; then
+    title="🚀 Deploying: $COMMIT_MSG"
+  fi
   local msg
   if [ "$remaining" -le 0 ]; then
     msg="Should be live... still checking"
   elif [ "$remaining" -le 5 ]; then
-    msg="Deploying — any moment now..."
+    msg="Any moment now..."
   else
-    msg="Deploying — ~${remaining}s remaining"
+    msg="~${remaining}s remaining"
   fi
-  terminal-notifier -title "🚀 Deploy" -message "$msg" -group deploy &>/dev/null &
+  terminal-notifier -title "$title" -message "$msg" -group deploy &>/dev/null &
 }
 
 notify_success() {
@@ -199,6 +209,7 @@ while true; do
         WAITING_SINCE=""
         MERGE_SHA=""
         ESTIMATED=""
+        COMMIT_MSG=""
         continue
       else
         # Stale deploy from an older push — keep waiting for the newer one
@@ -214,6 +225,7 @@ while true; do
       WAITING_SINCE=""
       MERGE_SHA=""
       ESTIMATED=""
+      COMMIT_MSG=""
       continue
     fi
 
@@ -233,7 +245,9 @@ while true; do
     CURRENT_HEAD=$(get_master_head)
     if [ -n "$CURRENT_HEAD" ] && [ "$CURRENT_HEAD" != "$LAST_MASTER_HEAD" ]; then
       ESTIMATED=$(get_estimated_duration)
+      COMMIT_MSG=$(get_commit_message "$CURRENT_HEAD")
       echo "$(date '+%H:%M:%S') 🔀 Merge detected! Master HEAD: ${CURRENT_HEAD:0:8} (was ${LAST_MASTER_HEAD:0:8})"
+      echo "  Commit: $COMMIT_MSG"
       echo "  Waiting up to ${DEPLOY_TIMEOUT}s for production to update..."
       LAST_MASTER_HEAD="$CURRENT_HEAD"
       WAITING_SINCE=$(date +%s)
