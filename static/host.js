@@ -1458,6 +1458,10 @@
     await fetch('/api/debate/close-selection', { method: 'POST' });
   }
 
+  async function debateForceAssign() {
+    await fetch('/api/debate/force-assign', { method: 'POST' });
+  }
+
   async function debateNextPhase(phase) {
     await fetch('/api/debate/phase', {
       method: 'POST',
@@ -1506,7 +1510,8 @@
     // Host action buttons per phase
     actions.innerHTML = '';
     if (phase === 'side_selection') {
-      actions.innerHTML = '<button class="btn btn-primary" onclick="debateCloseSelection()">🔒 Close Selection → Arguments</button>';
+      actions.innerHTML = '<button class="btn btn-warn" onclick="debateForceAssign()">🎲 Force Random Assign</button> ' +
+        '<button class="btn btn-primary" onclick="debateCloseSelection()">🔒 Close Selection → Arguments</button>';
     } else if (phase === 'arguments') {
       actions.innerHTML = '<button class="btn btn-primary" onclick="debateNextPhase(\'ai_cleanup\')">Next → AI Cleanup</button>';
     } else if (phase === 'ai_cleanup') {
