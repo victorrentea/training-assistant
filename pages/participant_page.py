@@ -14,9 +14,12 @@ class ParticipantPage:
     # ── Session ──────────────────────────────────────────────────────────────
 
     def join(self, name: str) -> None:
-        self._page.fill("#name-input", name)
-        self._page.click("#join-btn")
-        expect(self._page.locator("#main-screen")).to_be_visible(timeout=5000)
+        # The participant page auto-joins with a suggested LotR name,
+        # so wait for main-screen then change the name via inline edit.
+        expect(self._page.locator("#main-screen")).to_be_visible(timeout=10000)
+        self._page.locator("#display-name").click()
+        self._page.fill("#name-edit-input", name)
+        self._page.press("#name-edit-input", "Enter")
 
     # ── Poll ─────────────────────────────────────────────────────────────────
 
