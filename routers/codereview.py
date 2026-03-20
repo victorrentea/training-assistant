@@ -38,17 +38,18 @@ def _extract_code_with_ai(raw_snippet: str) -> tuple[str, str | None] | None:
     """Call Claude Haiku to extract code from LLM output.
     Returns (code, language) or None on any failure."""
     try:
-        from anthropic import Anthropic
+        from daemon.llm_adapter import create_message
         api_key = os.environ.get("ANTHROPIC_API_KEY")
         if not api_key:
             return None
 
         truncated = raw_snippet[:_SMART_PASTE_INPUT_LIMIT]
-        client = Anthropic(api_key=api_key, timeout=5.0)
-        response = client.messages.create(
+        response = create_message(
+            api_key=api_key,
             model="claude-haiku-4-5-20251001",
             max_tokens=4096,
             messages=[{"role": "user", "content": f"{_EXTRACT_PROMPT}\n\n---\n\n{truncated}"}],
+            timeout=5.0,
         )
 
         text = response.content[0].text.strip()

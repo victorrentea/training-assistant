@@ -51,6 +51,21 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     "💪 Trust your instincts!",
     "🎯 Nice eye!",
   ];
+  const _DEBATE_TOASTS = [
+    "⚔️ Defend your position — back it up with evidence!",
+    "🎯 Focus on the strongest counterargument",
+    "💡 Real-world examples win debates",
+    "🧠 Listen to the other side — find the weak spot",
+    "🗣️ Be persuasive, not aggressive",
+    "🔍 What trade-off are they ignoring?",
+    "💪 Stand your ground — your experience matters",
+    "🤝 Acknowledge the valid points, then counter",
+    "📊 Data beats opinions — use concrete examples",
+    "🏆 The best argument wins, not the loudest voice",
+  ];
+  let _debateToastIndex = 0;
+  let _debateToastInterval = null;
+  let _debateToastTimeout = null;
   let _crToastIndex = 0;
   let _crToastInterval = null;
   let _crToastTimeout = null;
@@ -479,6 +494,7 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
           myWords = [];
           renderQACleanup();
           _stopCRToasts();
+          _stopDebateToasts();
           renderContent(msg.vote_counts);
         }
         updateSummary(msg.summary_points, msg.summary_updated_at);
@@ -836,6 +852,32 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     if (el) el.classList.remove('visible');
   }
 
+  // ── Debate toasts ──
+  function _showDebateToast() {
+    const el = document.getElementById('qa-toast');
+    if (!el) return;
+    el.textContent = _DEBATE_TOASTS[_debateToastIndex % _DEBATE_TOASTS.length];
+    _debateToastIndex++;
+    el.classList.add('visible');
+    clearTimeout(_debateToastTimeout);
+    _debateToastTimeout = setTimeout(() => el.classList.remove('visible'), 4400);
+  }
+
+  function _startDebateToasts() {
+    _stopDebateToasts();
+    _stopQAToasts();
+    _showDebateToast();
+    _debateToastInterval = setInterval(_showDebateToast, 15000);
+  }
+
+  function _stopDebateToasts() {
+    clearInterval(_debateToastInterval);
+    clearTimeout(_debateToastTimeout);
+    _debateToastInterval = null;
+    const el = document.getElementById('qa-toast');
+    if (el) el.classList.remove('visible');
+  }
+
   // ── Code Review toasts ──
   function _showCRToast() {
     const el = document.getElementById('cr-toast');
@@ -933,6 +975,11 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     }).join('');
   }
 
+  function sendEmoji(emoji) {
+    if (!ws) return;
+    ws.send(JSON.stringify({ type: 'emoji_reaction', emoji }));
+  }
+
   function submitQuestion() {
     const input = document.getElementById('qa-input');
     if (!input) return;
@@ -964,7 +1011,7 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
 
   // ── Debate rendering ──
   const DEBATE_PHASES = [
-    { key: 'side_selection', num: 1, label: 'Pick Sides' },
+    { key: 'side_selection', num: 1, label: 'Pick a Side' },
     { key: 'arguments',      num: 2, label: 'Arguments' },
     { key: 'prep',           num: 3, label: 'Preparation' },
     { key: 'live_debate',    num: 4, label: 'Live Debate' },
@@ -1041,6 +1088,7 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     const content = document.getElementById('content');
     if (!content) return;
     content.dataset.screen = 'debate';
+    _stopQAToasts();
 
     const phase = msg.debate_phase;
     const displayPhase = phase;
@@ -1077,8 +1125,8 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
         html += `<div class="debate-waiting">Waiting for others…</div>`;
       } else {
         html += `<div class="debate-pick">
-          <button class="btn debate-btn-for" onclick="debatePickSide('for')">👍</button>
           <button class="btn debate-btn-against" onclick="debatePickSide('against')">👎</button>
+          <button class="btn debate-btn-for" onclick="debatePickSide('for')">👍</button>
         </div>`;
       }
     } else if (phase === 'arguments') {
@@ -1139,6 +1187,13 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
 
     content.innerHTML = html;
 
+    // Debate toasts — show during arguments/prep/live phases
+    if (phase === 'arguments' || phase === 'prep' || phase === 'live_debate') {
+      _startDebateToasts();
+    } else {
+      _stopDebateToasts();
+    }
+
     // Reconstruct timer on reconnect from state
     if (phase === 'live_debate' && msg.debate_sub_timer_started_at && msg.debate_sub_phase_index != null) {
       if (!_debateSubTimer || _debateSubTimer.subPhaseIndex !== msg.debate_sub_phase_index) {
@@ -1163,9 +1218,9 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
       const aiClass = a.ai_generated ? ' debate-arg-ai' : '';
       const ownClass = '';
       const upvotedClass = a.has_upvoted ? ' debate-arg-upvoted' : '';
-      const isOtherSide = mySide && a.side !== mySide;
-      const canUpvote = !readOnly && isOtherSide && !a.has_upvoted;
-      const showVotes = isOtherSide;
+      const isOwnSide = mySide && a.side === mySide;
+      const canUpvote = !readOnly && isOwnSide && !a.is_own && !a.has_upvoted;
+      const showVotes = isOwnSide;
       return `<div class="debate-arg${aiClass}${ownClass}${upvotedClass}" ${canUpvote ? `onclick="debateUpvote('${a.id}')"` : ''}>
         <div class="debate-arg-header">
           ${a.author_avatar ? `<img src="/static/avatars/${a.author_avatar}" class="debate-arg-avatar">` : ''}
@@ -1180,15 +1235,12 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
       <span>✨ duplicate, merged above</span>
     </div>`;
 
-    const forHighlight = mySide === 'for' ? ' debate-col-mine' : '';
-    const againstHighlight = mySide === 'against' ? ' debate-col-mine' : '';
-
     return `<div class="debate-columns">
-      <div class="debate-col debate-col-against${againstHighlight}">
+      <div class="debate-col debate-col-against">
         ${againstArgs.map(renderArg).join('')}
         ${Array(mergedAgainstCount).fill('').map(renderMerged).join('')}
       </div>
-      <div class="debate-col debate-col-for${forHighlight}">
+      <div class="debate-col debate-col-for">
         ${forArgs.map(renderArg).join('')}
         ${Array(mergedForCount).fill('').map(renderMerged).join('')}
       </div>

@@ -1281,3 +1281,80 @@ def test_debate_end_arguments_skips_ai_when_no_args():
     assert resp.status_code == 200
     assert state.debate_phase == "prep"
     assert state.debate_ai_request is None
+
+
+def test_debate_arguments_sorted_by_upvotes():
+    """Arguments are broadcast sorted by upvote count descending (3, 1, 0)."""
+    session = WorkshopSession()
+
+    # Host launches debate
+    session._client.post("/api/debate", json={"statement": "Microservices > Monoliths"}, headers=_HOST_AUTH_HEADERS)
+    session._client.post("/api/activity", json={"activity": "debate"}, headers=_HOST_AUTH_HEADERS)
+
+    uid_alice = str(uuid_mod.uuid4())
+    uid_bob = str(uuid_mod.uuid4())
+    uid_carol = str(uuid_mod.uuid4())
+    uid_dave = str(uuid_mod.uuid4())
+    client = TestClient(app)
+
+    with (
+        client.websocket_connect(f"/ws/{uid_alice}") as ws_a,
+        client.websocket_connect(f"/ws/{uid_bob}") as ws_b,
+        client.websocket_connect(f"/ws/{uid_carol}") as ws_c,
+        client.websocket_connect(f"/ws/{uid_dave}") as ws_d,
+    ):
+        alice = ParticipantSession(ws_a, "Alice", uid_alice)
+        bob = ParticipantSession(ws_b, "Bob", uid_bob)
+        carol = ParticipantSession(ws_c, "Carol", uid_carol)
+        dave = ParticipantSession(ws_d, "Dave", uid_dave)
+
+        # All pick "for" side
+        for p in [alice, bob, carol, dave]:
+            p.send({"type": "debate_pick_side", "side": "for"})
+            p._recv("state")
+
+        # Phase auto-advances to "arguments" since all picked
+        assert state.debate_phase == "arguments"
+
+        # Alice submits arg_A, Bob submits arg_B, Carol submits arg_C
+        alice.send({"type": "debate_argument", "text": "Arg A - most popular"})
+        alice._recv("state")
+        arg_a_id = state.debate_arguments[-1]["id"]
+
+        bob.send({"type": "debate_argument", "text": "Arg B - one vote"})
+        bob._recv("state")
+        arg_b_id = state.debate_arguments[-1]["id"]
+
+        carol.send({"type": "debate_argument", "text": "Arg C - zero votes"})
+        carol._recv("state")
+
+        # Upvote arg_A 3 times (Bob, Carol, Dave)
+        bob.send({"type": "debate_upvote", "argument_id": arg_a_id})
+        bob._recv("state")
+        carol.send({"type": "debate_upvote", "argument_id": arg_a_id})
+        carol._recv("state")
+        dave.send({"type": "debate_upvote", "argument_id": arg_a_id})
+        dave._recv("state")
+
+        # Upvote arg_B 1 time (Alice)
+        alice.send({"type": "debate_upvote", "argument_id": arg_b_id})
+        alice._recv("state")
+
+        # Verify upvote counts in state
+        assert len(state.debate_arguments[0]["upvoters"]) == 3  # arg_A
+        assert len(state.debate_arguments[1]["upvoters"]) == 1  # arg_B
+        assert len(state.debate_arguments[2]["upvoters"]) == 0  # arg_C
+
+        # Verify broadcast sends arguments sorted by upvote_count desc
+        # Use the build function directly to get the freshest state
+        from messaging import _build_debate_for_participant
+        fresh = _build_debate_for_participant(uid_alice)
+        debate_args = fresh["debate_arguments"]
+        visible = [a for a in debate_args if not a.get("merged_into")]
+        assert len(visible) == 3
+        assert visible[0]["text"] == "Arg A - most popular"
+        assert visible[0]["upvote_count"] == 3
+        assert visible[1]["text"] == "Arg B - one vote"
+        assert visible[1]["upvote_count"] == 1
+        assert visible[2]["text"] == "Arg C - zero votes"
+        assert visible[2]["upvote_count"] == 0

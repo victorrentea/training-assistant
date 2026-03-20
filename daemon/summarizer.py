@@ -10,6 +10,7 @@ import sys
 from typing import Optional
 
 import anthropic
+from daemon.llm_adapter import create_message
 
 from quiz_core import (
     Config,
@@ -52,20 +53,31 @@ Example: [{"text": "Outbox pattern decouples DB writes from message publishing",
 def generate_summary(
     config: Config,
     locked_points: list[dict],
+    delta_text: str | None = None,
 ) -> Optional[list[dict]]:
-    """Generate new summary points from transcript, given locked (read-only) context. Returns list of new bullets only, or None on failure."""
-    try:
-        entries = load_transcription_files(config.folder)
-    except SystemExit:
-        print("[summarizer] No transcription files found — skipping", file=sys.stderr)
-        return None
+    """Generate new summary points from transcript, given locked (read-only) context. Returns list of new bullets only, or None on failure.
 
-    if not entries:
-        return None
+    When delta_text is provided and non-empty, it is used instead of loading
+    the full transcript — this sends only incremental content to the LLM.
+    """
+    if delta_text:
+        text = delta_text
+        transcript_label = "INCREMENTAL TRANSCRIPT (new content since last summary)"
+    else:
+        # Fall back to loading full transcript
+        try:
+            entries = load_transcription_files(config.folder)
+        except SystemExit:
+            print("[summarizer] No transcription files found — skipping", file=sys.stderr)
+            return None
 
-    text = extract_last_n_minutes(entries, DEFAULT_TRANSCRIPT_MINUTES)
-    if not text:
-        return None
+        if not entries:
+            return None
+
+        text = extract_last_n_minutes(entries, DEFAULT_TRANSCRIPT_MINUTES)
+        if not text:
+            return None
+        transcript_label = f"TRANSCRIPT (last {DEFAULT_TRANSCRIPT_MINUTES} minutes)"
 
     # Include session notes if available
     notes = read_session_notes(config)
@@ -77,13 +89,13 @@ def generate_summary(
     if locked_points:
         locked_texts = "\n".join(f"- {p['text']}" for p in locked_points)
         parts.append(f"ESTABLISHED KEY POINTS (read-only reference — do NOT repeat or rephrase these):\n{locked_texts}\n")
-    parts.append(f"TRANSCRIPT (last {DEFAULT_TRANSCRIPT_MINUTES} minutes):\n{text}")
+    parts.append(f"{transcript_label}:\n{text}")
 
     user_message = "\n---\n".join(parts)
 
     try:
-        client = anthropic.Anthropic(api_key=config.api_key)
-        response = client.messages.create(
+        response = create_message(
+            api_key=config.api_key,
             model=config.model,
             max_tokens=1024,
             system=_SUMMARY_SYSTEM_PROMPT,
