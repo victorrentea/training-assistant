@@ -13,69 +13,26 @@ body {
   body { padding: 1rem .75rem; }
 }
 
+/* Avatar hover preview (3x size tooltip) */
+.avatar-preview {
+  position: fixed;
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  object-fit: cover;
+  pointer-events: none;
+  z-index: 9999;
+  box-shadow: 0 4px 16px rgba(0,0,0,.5);
+  border: 2px solid var(--accent);
+  transform: translate(-50%, -110%);
+  animation: avatar-pop .2s ease-out;
+}
+@keyframes avatar-pop {
+  from { transform: translate(-50%, -110%) scale(0); opacity: 0; }
+  to   { transform: translate(-50%, -110%) scale(1); opacity: 1; }
+}
+
 h1 { display: none; }
-
-/* ── Join screen ── */
-#join-screen {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 2rem;
-  width: 100%;
-  max-width: 400px;
-  text-align: center;
-}
-
-@media (max-width: 480px) {
-  #join-screen { padding: 1.5rem 1rem; }
-}
-#join-screen h2 { margin-bottom: 1rem; font-size: 1.1rem; }
-.name-input-wrap {
-  display: flex;
-  align-items: center;
-  gap: .4rem;
-  margin-bottom: 1rem;
-}
-#join-screen input {
-  flex: 1;
-  padding: .75rem 1rem;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  color: var(--text);
-  font-size: 1rem;
-  min-height: 44px;
-  outline: none;
-  transition: border-color .2s;
-}
-#join-screen input:focus { border-color: var(--accent); }
-#clear-name {
-  background: none;
-  border: none;
-  color: var(--muted);
-  font-size: 1rem;
-  line-height: 1;
-  cursor: pointer;
-  padding: 0;
-  display: none;
-  width: auto;
-  flex-shrink: 0;
-}
-#clear-name:hover { color: var(--text); }
-#join-btn {
-  width: 100%;
-  padding: .8rem;
-  background: var(--accent);
-  color: #fff;
-  border: none;
-  border-radius: 8px;
-  font-size: 1rem;
-  cursor: pointer;
-  font-weight: 600;
-  transition: opacity .2s;
-  min-height: 48px;
-}
-#join-btn:hover { opacity: .85; }
 
 /* ── Main screen ── */
 #main-screen { width: 100%; max-width: 560px; display: none; }
@@ -294,7 +251,23 @@ h1 { display: none; }
   text-align: center;
   color: var(--muted);
 }
-.waiting .icon { font-size: 2.5rem; margin-bottom: 1rem; }
+.waiting .icon {
+  font-size: 5rem;
+  margin-bottom: 1rem;
+  display: inline-block;
+  animation: wave 2s ease-in-out;
+  transform-origin: 70% 70%;
+}
+@keyframes wave {
+  0%  { transform: rotate(0deg); }
+  10% { transform: rotate(14deg); }
+  20% { transform: rotate(-8deg); }
+  30% { transform: rotate(14deg); }
+  40% { transform: rotate(-4deg); }
+  50% { transform: rotate(10deg); }
+  60% { transform: rotate(0deg); }
+  100%{ transform: rotate(0deg); }
+}
 
 /* ── Poll closed banner ── */
 .closed-banner {
@@ -348,35 +321,25 @@ h1 { display: none; }
   margin: 0;
 }
 
-.wc-input-row {
-  display: flex;
-  gap: .5rem;
-  width: 100%;
-  align-items: stretch;
+/* Participant overrides: taller inputs (40px) */
+.wc-input-row input[type=text],
+.qa-input-row input[type=text] { height: 40px; min-height: 40px; }
+.wc-input-row button,
+.qa-input-row button { height: 40px; }
+.wc-download-overlay {
+  position: absolute;
+  bottom: 5px;
+  right: 5px;
+  padding: .4rem .6rem;
+  font-size: .85rem;
+  opacity: .7;
+  transition: opacity .2s;
 }
+.wc-download-overlay:hover { opacity: 1; }
 
-.wc-input-row input {
-  flex: 1;
-  padding: .75rem 1rem;
-  border-radius: 8px;
-  border: 1px solid var(--border);
-  background: var(--surface2);
-  color: var(--text);
-  font-size: 1.2rem;
-}
-
-.wc-input-row #wc-go {
-  padding: 0 1.25rem;
-  font-size: 1.4rem;
-  height: auto;
-  align-self: stretch;
-}
-.wc-download-btn {
-  width: 100%;
-  padding: .65rem 1rem;
-  font-size: 1rem;
-  margin-top: .25rem;
-  white-space: nowrap;
+.wc-topic-highlight {
+  color: var(--warn);
+  font-weight: 700;
 }
 
 #wc-my-words {
@@ -420,24 +383,6 @@ h1 { display: none; }
 
 /* ── Q&A screen ── */
 .qa-screen { display: flex; flex-direction: column; gap: .75rem; }
-
-.qa-input-row { display: flex; gap: .5rem; align-items: stretch; }
-.qa-input-row input {
-  flex: 1;
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 0 .8rem;
-  color: var(--text);
-  font-size: .95rem;
-  height: 34px;
-  min-height: 34px;
-}
-.qa-input-row button {
-  align-self: stretch;
-  padding: 0 1rem;
-  height: 34px;
-}
 
 .qa-card-p {
   background: var(--surface2);

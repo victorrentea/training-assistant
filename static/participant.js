@@ -73,6 +73,7 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     return `hsl(${hue}, 60%, 40%)`;
   }
 
+
   function updateSummary(points, updatedAt) {
     summaryPoints = points || [];
     summaryUpdatedAt = updatedAt;
@@ -113,6 +114,7 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     await Notification.requestPermission();
     const btn = document.getElementById('notif-btn');
     if (btn) btn.style.display = 'none';
+    updateOnboardingChecklist();
   }
 
   function notifyIfHidden(title, body) {
@@ -139,56 +141,19 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     return data.name;
   }
 
-  // ── Restore name from localStorage ──
-  const nameInput = document.getElementById('name-input');
-  const clearBtn = document.getElementById('clear-name');
-  let suggestedName = '';
+  // ── Auto-join: no join screen, connect immediately ──
   let _joinedWithSuggestion = false;
-  const savedName = localStorage.getItem(LS_KEY);
-  if (savedName) {
-    nameInput.value = savedName;
-    join();   // auto-join — permission requested via 🔔 button in ws.onopen (no user gesture here)
-  } else {
-    fetchSuggestedName().then(name => {
-      suggestedName = name;
-      nameInput.placeholder = name;
-      join();  // auto-join with suggested LotR name
-    });
-  }
-  updateClearBtn();
 
-  nameInput.addEventListener('input', () => {
-    updateClearBtn();
-    const errEl = document.getElementById('join-error');
-    if (errEl) errEl.style.display = 'none';
-  });
-
-  function updateClearBtn() {
-    clearBtn.style.display = nameInput.value ? 'block' : 'none';
-  }
-
-  clearBtn.addEventListener('click', async () => {
-    localStorage.removeItem(LS_KEY);
-    nameInput.value = '';
-    suggestedName = await fetchSuggestedName();
-    nameInput.placeholder = suggestedName;
-    updateClearBtn();
-    nameInput.focus();
-  });
-
-  // ── Join ──
-  document.getElementById('join-btn').addEventListener('click', () => { join(); requestNotificationPermission(); });
-  nameInput.addEventListener('keydown', e => { if (e.key === 'Enter') { join(); requestNotificationPermission(); } });
-
-  function join() {
-    const input = document.getElementById('name-input');
-    const name = input.value.trim() || suggestedName;
-    if (!name) { input.focus(); return; }
-    _joinedWithSuggestion = !input.value.trim();
-    myName = name;
-    localStorage.setItem(LS_KEY, name);
-    connectWS(name);
-  }
+  (async function autoJoin() {
+    const savedName = localStorage.getItem(LS_KEY);
+    if (savedName) {
+      myName = savedName;
+    } else {
+      myName = await fetchSuggestedName();
+      _joinedWithSuggestion = true;
+    }
+    connectWS(myName);
+  })();
 
   // ── Inline name editing ──
   function startNameEdit() {
@@ -252,19 +217,33 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
   function updateOnboardingChecklist() {
     const nameEl = document.getElementById('onboard-name');
     const locEl = document.getElementById('onboard-location');
+    const notifEl = document.getElementById('onboard-notif');
     if (nameEl && !nameEl.classList.contains('done') && !_joinedWithSuggestion) {
       nameEl.classList.add('done');
-      nameEl.innerHTML = '☑ Set your name';
+      nameEl.innerHTML = '☑ Click on your name to set it';
       nameEl.style.cursor = 'default';
       nameEl.onclick = null;
-      setTimeout(() => nameEl.classList.add('hiding'), 1500);
     }
     if (locEl && !locEl.classList.contains('done') && localStorage.getItem(LS_LOCATION_KEY)) {
       locEl.classList.add('done');
       locEl.innerHTML = '☑ Share your location';
       locEl.style.cursor = 'default';
       locEl.onclick = null;
-      setTimeout(() => locEl.classList.add('hiding'), 1500);
+    }
+    const notifGranted = 'Notification' in window && Notification.permission === 'granted';
+    if (notifEl && !notifEl.classList.contains('done') && notifGranted) {
+      notifEl.classList.add('done');
+      notifEl.innerHTML = '☑ Enable browser notifications';
+      notifEl.style.cursor = 'default';
+      notifEl.onclick = null;
+    }
+    // Fade out entire checklist when all tasks are done
+    const allDone = nameEl?.classList.contains('done') && locEl?.classList.contains('done') && notifEl?.classList.contains('done');
+    if (allDone) {
+      setTimeout(() => {
+        const list = document.getElementById('onboarding-list');
+        if (list) { list.style.transition = 'opacity 3s'; list.style.opacity = '0'; }
+      }, 1500);
     }
   }
 
@@ -292,7 +271,6 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     ws = new WebSocket(url);
 
     ws.onopen = () => {
-      document.getElementById('join-screen').style.display = 'none';
       document.getElementById('main-screen').style.display = 'block';
       document.getElementById('display-name').textContent = myName;
 
@@ -406,6 +384,29 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
                 fallback.style.background = avatarColorFromUuid(window._myUuid);
                 this.replaceWith(fallback);
             };
+            // Hover preview: show 3x avatar near cursor
+            if (!avatarEl._hoverBound) {
+                avatarEl._hoverBound = true;
+                avatarEl.style.cursor = 'pointer';
+                let preview = null;
+                avatarEl.addEventListener('mouseenter', function(e) {
+                    preview = document.createElement('img');
+                    preview.className = 'avatar-preview';
+                    preview.src = this.src;
+                    preview.style.left = e.clientX + 'px';
+                    preview.style.top = e.clientY + 'px';
+                    document.body.appendChild(preview);
+                });
+                avatarEl.addEventListener('mousemove', function(e) {
+                    if (preview) {
+                        preview.style.left = e.clientX + 'px';
+                        preview.style.top = e.clientY + 'px';
+                    }
+                });
+                avatarEl.addEventListener('mouseleave', function() {
+                    if (preview) { preview.remove(); preview = null; }
+                });
+            }
         }
         window._qaQuestions = msg.qa_questions || [];
         if (msg.current_activity === 'wordcloud') {
@@ -606,24 +607,26 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
       content.dataset.screen = 'wordcloud';
       content.innerHTML = `
         <div class="wc-layout">
-          <div class="wc-cloud-panel">
+          <div class="wc-cloud-panel" style="position:relative;">
             <canvas id="wc-canvas"></canvas>
+            <button id="wc-download" class="btn btn-secondary wc-download-overlay" style="display:none;">⬇</button>
           </div>
           <div class="wc-input-panel">
-            <p class="wc-prompt" id="wc-prompt-text">What comes to mind? <span style="font-size:.9em; opacity:.75; font-weight:normal">(pts++)</span></p>
-            <div class="wc-input-row">
+            <p class="wc-prompt" id="wc-prompt-text">What comes to mind?</p>
+            <div class="activity-input-row wc-input-row">
               <input id="wc-input" type="text" maxlength="40" autocomplete="off" placeholder="Type a word…" list="wc-suggestions" />
               <datalist id="wc-suggestions"></datalist>
-              <button id="wc-go" class="btn btn-primary">🚀</button>
+              <button id="wc-go" class="btn btn-primary">↵</button>
             </div>
-            <button id="wc-download" class="btn btn-secondary wc-download-btn">⬇ Download Image</button>
             <div id="wc-my-words"></div>
           </div>
         </div>`;
       document.getElementById('wc-go').onclick = submitWord;
-      document.getElementById('wc-input').addEventListener('keydown', e => {
+      const wcInput = document.getElementById('wc-input');
+      wcInput.addEventListener('keydown', e => {
         if (e.key === 'Enter') submitWord();
       });
+      wcInput.focus();
       document.getElementById('wc-download').onclick = () => {
         const canvas = document.getElementById('wc-canvas');
         if (!canvas) return;
@@ -636,9 +639,15 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     // Update prompt with topic (may change after screen is shown)
     const promptEl = document.getElementById('wc-prompt-text');
     if (promptEl) {
-      // Topic is shown on the canvas image, so keep prompt simple
-      promptEl.innerHTML = `What comes to mind? <span style="font-size:.9em; opacity:.75; font-weight:normal">(pts++)</span>`;
+      if (topic) {
+        promptEl.innerHTML = `What comes to mind about <span class="wc-topic-highlight">${escHtml(topic)}</span>?`;
+      } else {
+        promptEl.textContent = 'What comes to mind?';
+      }
     }
+    // Show/hide download button based on word count
+    const dlBtn = document.getElementById('wc-download');
+    if (dlBtn) dlBtn.style.display = Object.keys(wordcloudWords).length > 0 ? '' : 'none';
     renderWordCloud(wordcloudWords);
     renderMyWords();
     updateWordSuggestions(wordcloudWords);
@@ -682,7 +691,7 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
 
   function _drawCloud(canvas, wordsMap) {
     const entries = Object.entries(wordsMap);
-    const TITLE_H = _lastWordcloudTopic ? 40 : 0;
+    const TITLE_H = 0;
     if (!entries.length) {
       const ctx = canvas.getContext('2d');
       ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -710,14 +719,6 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
       .on('end', (placed) => {
         const ctx = canvas.getContext('2d');
         ctx.clearRect(0, 0, W, H);
-        // Draw topic title
-        if (_lastWordcloudTopic) {
-          ctx.textAlign = 'center';
-          ctx.font = 'bold 20px sans-serif';
-          ctx.fillStyle = 'rgba(255,255,255,0.75)';
-          ctx.fillText(_lastWordcloudTopic, W / 2, 28);
-        }
-        // Draw words offset below the title
         ctx.textAlign = 'center';
         placed.forEach((w, i) => {
           ctx.save();
@@ -801,7 +802,7 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     content.dataset.screen = 'qa';
     content.innerHTML = `
       <div class="qa-screen">
-        <div class="qa-input-row">
+        <div class="activity-input-row qa-input-row">
           <input id="qa-input" type="text" maxlength="280" autocomplete="off"
                  placeholder="Ask a question…" />
           <button id="qa-submit-btn" class="btn btn-primary" onclick="submitQuestion()">↵</button>
@@ -812,6 +813,7 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     const input = document.getElementById('qa-input');
     if (input) {
       input.addEventListener('keydown', e => { if (e.key === 'Enter') submitQuestion(); });
+      input.focus();
     }
     updateQAList(questions);
     _startQAToasts(questions);
@@ -1020,19 +1022,31 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     if (!currentPoll) {
       const nameSet = !_joinedWithSuggestion;
       const locationSet = !!localStorage.getItem(LS_LOCATION_KEY);
+      const notifGranted = 'Notification' in window && Notification.permission === 'granted';
+      const allDone = nameSet && locationSet && notifGranted;
       el.innerHTML = `<div class="waiting">
         <div class="icon">👋</div>
         <p>Welcome!</p>
-        <p style="margin-top:.75rem;">Get ready to participate — your answers and ideas will shape this session!</p>
-        <ul class="onboarding-checklist">
+        <p style="margin-top:.75rem;">Get ready to participate.</p>
+        <p style="margin-top:.5rem;">Your answers and ideas will shape this session!</p>
+        <ul id="onboarding-list" class="onboarding-checklist"${allDone ? ' style="opacity:1"' : ''}>
           <li id="onboard-name" class="onboarding-item${nameSet ? ' done' : ''}" onclick="${nameSet ? '' : 'startNameEdit()'}" style="cursor:${nameSet ? 'default' : 'pointer'}">
-            ${nameSet ? '☑' : '☐'} Set your name <span style="color:var(--muted);font-size:.85rem;">(click on your name above)</span>
+            ${nameSet ? '☑' : '☐'} Click on your name to set it
           </li>
           <li id="onboard-location" class="onboarding-item${locationSet ? ' done' : ''}" onclick="${locationSet ? '' : 'requestLocation()'}" style="cursor:${locationSet ? 'default' : 'pointer'}">
             ${locationSet ? '☑' : '☐'} Share your location
           </li>
+          <li id="onboard-notif" class="onboarding-item${notifGranted ? ' done' : ''}" onclick="${notifGranted ? '' : 'requestNotificationPermission()'}" style="cursor:${notifGranted ? 'default' : 'pointer'}">
+            ${notifGranted ? '☑' : '☐'} Enable browser notifications
+          </li>
         </ul>
       </div>`;
+      if (allDone) {
+        setTimeout(() => {
+          const list = document.getElementById('onboarding-list');
+          if (list) { list.style.transition = 'opacity 3s'; list.style.opacity = '0'; }
+        }, 1500);
+      }
       return;
     }
     renderPollCard(el, voteCounts);
@@ -1290,14 +1304,13 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
 
       if (isConfirmed && isMine) {
         lineClass += ' codereview-pline-correct';
-        gutterContent = `${lineNum} ✓`;
+        gutterContent = `✓ ${lineNum}`;
         badge = '<span class="codereview-badge codereview-badge-correct">+200</span>';
       } else if (isConfirmed && !isMine) {
         lineClass += ' codereview-pline-confirmed';
-        gutterContent = `${lineNum} ✓`;
+        gutterContent = `✓ ${lineNum}`;
       } else if (isMine) {
         lineClass += ' codereview-pline-selected';
-        gutterContent = `${lineNum} ●`;
       }
 
       if (isSelecting) {

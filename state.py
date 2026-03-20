@@ -14,11 +14,13 @@ class ActivityType(str, Enum):
     CODEREVIEW = "codereview"
 
 LOTR_NAMES = [
-    "Frodo", "Samwise", "Gandalf", "Aragorn", "Legolas", "Gimli", "Boromir",
-    "Merry", "Pippin", "Galadriel", "Elrond", "Saruman", "Faramir",
-    "Eowyn", "Theoden", "Treebeard", "Bilbo", "Thorin", "Smaug", "Gollum",
-    "Radagast", "Tom Bombadil", "Glorfindel", "Celeborn", "Arwen", "Eomer",
-    "Haldir", "Shadowfax", "Grima Wormtongue", "The One Ring"
+    # Ordered by cultural popularity: most recognizable → least
+    "Gandalf", "Frodo", "Aragorn", "Legolas", "Gollum",
+    "Samwise", "Gimli", "Smaug", "Bilbo", "Saruman",
+    "Galadriel", "Boromir", "Arwen", "Eowyn", "Merry",
+    "Pippin", "Elrond", "Thorin", "Theoden", "Faramir",
+    "Treebeard", "Shadowfax", "Radagast", "Tom Bombadil", "Eomer",
+    "Haldir", "Glorfindel", "Celeborn", "Grima Wormtongue", "The One Ring"
 ]
 
 
@@ -66,8 +68,10 @@ class AppState:
         self.debate_champions: dict[str, str] = {}  # "for" → uuid, "against" → uuid
 
     def suggest_name(self) -> str:
-        taken = set(self.participant_names.values())
-        available = [n for n in LOTR_NAMES if n not in taken]
+        """Return the next available LOTR name (by popularity order).
+        A name is 'taken' if any currently connected participant has it."""
+        connected_names = {self.participant_names[uid] for uid in self.participants if uid in self.participant_names and uid != "__host__"}
+        available = [n for n in LOTR_NAMES if n not in connected_names]
         return available[0] if available else f"Guest{random.randint(100, 999)}"
 
     def vote_counts(self) -> dict:
