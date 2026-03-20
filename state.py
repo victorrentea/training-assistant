@@ -44,6 +44,7 @@ class AppState:
         self.daemon_session_notes: Optional[str] = None
         self.notes_content: Optional[str] = None
         self.transcript_line_count: int = 0
+        self.transcript_total_lines: int = 0
         self.transcript_latest_ts: Optional[str] = None
         self.quiz_preview: Optional[dict] = None
         self.scores: dict[str, int] = {}
