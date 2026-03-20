@@ -15,6 +15,7 @@
   let summaryUpdatedAt = null;
 
   let _hostWcDebounceTimer = null;
+  let currentMode = 'workshop';
   const versionReloadGuard = window.createVersionReloadGuard
     ? window.createVersionReloadGuard({ countdownSeconds: 5 })
     : null;
@@ -184,6 +185,14 @@
           renderHostCodeReview(msg.codereview);
         }
         updateSummary(msg.summary_points, msg.summary_updated_at);
+        if (msg.mode) {
+          currentMode = msg.mode;
+          renderMode(msg.mode);
+        }
+        const confPax = document.getElementById('conference-pax-count');
+        if (confPax && currentMode === 'conference') {
+          confPax.textContent = '👥 ' + (names ? names.length : 0);
+        }
       } else if (msg.type === 'vote_update') {
         voteCounts = msg.vote_counts || {};
         totalVotes = msg.total_votes || 0;
@@ -257,7 +266,7 @@
     if (!badge) return;
     badge.style.cssText = 'cursor:pointer;';
     if (summaryPoints.length) {
-      badge.textContent = `Lessons (${summaryPoints.length})`;
+      badge.textContent = summaryPoints.length > 0 ? `🧠 ${summaryPoints.length}` : '🧠';
       badge.className = 'badge connected';
       badge.title = `${summaryPoints.length} key points — click to view`;
     } else if (_summaryGenerating) {
@@ -266,7 +275,7 @@
       badge.style.cssText = 'cursor:wait; color:var(--warn); border:1px solid var(--warn);';
       badge.title = 'Generating key points from transcript...';
     } else {
-      badge.textContent = 'Points';
+      badge.textContent = '🧠';
       badge.className = 'badge disconnected';
       badge.title = 'No key points yet — click to generate now';
     }
@@ -312,7 +321,7 @@
 
   function setBadge(ok) {
     const b = document.getElementById('ws-badge');
-    b.textContent = ok ? 'Server' : 'Server';
+    b.textContent = ok ? '🟢' : '🟢';
     b.className = `badge ${ok ? 'connected' : 'disconnected'}`;
   }
 
@@ -327,12 +336,59 @@
     badge.className = 'badge ' + (cost > 5 ? 'error' : cost > 1 ? 'warning' : 'connected');
   }
 
+  async function toggleMode() {
+    const newMode = (currentMode === 'workshop') ? 'conference' : 'workshop';
+    await fetch('/api/mode', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mode: newMode }),
+    });
+  }
+
+  function renderMode(mode) {
+    const badge = document.getElementById('mode-badge');
+    if (!badge) return;
+    badge.textContent = mode === 'conference' ? '🎤' : '🎓';
+    badge.title = mode === 'conference' ? 'Conference mode — click to switch to Workshop' : 'Workshop mode — click to switch to Conference';
+    badge.className = 'badge ' + (mode === 'conference' ? 'error' : 'connected');
+    applyConferenceLayout(mode === 'conference');
+  }
+
+  function applyConferenceLayout(isConference) {
+    const rightCol = document.querySelector('.host-col-right');
+    const grid = document.querySelector('.host-columns');
+    const confQR = document.getElementById('conference-qr');
+    const confPax = document.getElementById('conference-pax-count');
+    const debateTab = document.getElementById('tab-debate');
+
+    if (isConference) {
+      rightCol.style.display = 'none';
+      grid.style.gridTemplateColumns = '25% 1fr';
+      confQR.style.display = 'flex';
+      confPax.style.display = '';
+      if (debateTab) debateTab.style.display = 'none';
+      // Generate QR in left panel
+      const qrContainer = document.getElementById('conference-qr-code');
+      qrContainer.innerHTML = '';
+      const link = document.getElementById('participant-link');
+      if (link && link.href && typeof QRCode !== 'undefined') {
+        new QRCode(qrContainer, { text: link.href, width: 160, height: 160, colorDark: '#000', colorLight: '#fff' });
+      }
+    } else {
+      rightCol.style.display = '';
+      grid.style.gridTemplateColumns = '25% 1fr 25%';
+      confQR.style.display = 'none';
+      confPax.style.display = 'none';
+      if (debateTab) debateTab.style.display = '';
+    }
+  }
+
   function renderDaemonStatus(connected, lastSeenIso) {
     const el = document.getElementById('daemon-badge');
     if (!el) return;
 
     if (!lastSeenIso) {
-      el.textContent = 'Agent';
+      el.textContent = '🤖';
       el.className = 'badge disconnected';
       el.title = 'Never connected — start with ./start.sh';
       return;
@@ -342,12 +398,12 @@
     const agoText = ago < 60 ? `${ago}s ago` : `${Math.round(ago/60)}m ago`;
 
     if (connected) {
-      el.textContent = 'Agent';
+      el.textContent = '🤖';
       el.className = 'badge connected';
       el.style.cssText = '';
       el.title = `Connected (last seen ${agoText})`;
     } else {
-      el.textContent = 'Agent';
+      el.textContent = '🤖';
       el.className = 'badge';
       el.style.cssText = 'color:var(--warn);border:1px solid var(--warn);';
       el.title = `Connection lost (last seen ${agoText})`;
@@ -386,16 +442,16 @@
 
     el.style.cssText = 'cursor:pointer;';
     if (sessionFolder && sessionNotes) {
-      el.textContent = '.txt';
+      el.textContent = '📝';
       el.className = 'badge connected';
       el.title = `${sessionFolder}/${sessionNotes}\nClick to view`;
     } else if (sessionFolder) {
-      el.textContent = '.txt';
+      el.textContent = '📝';
       el.className = 'badge';
       el.style.cssText = 'cursor:pointer; color:var(--warn); border:1px solid var(--warn);';
       el.title = 'Session folder found but no notes file inside';
     } else {
-      el.textContent = '.txt';
+      el.textContent = '📝';
       el.className = 'badge disconnected';
       el.title = 'No session folder found for today';
     }
@@ -1035,7 +1091,7 @@
 
 
   async function switchTab(tab) {
-    ['poll', 'wordcloud', 'qa', 'debate', 'codereview'].forEach(t => {
+    ['poll', 'wordcloud', 'qa', 'codereview', 'debate'].forEach(t => {
       document.getElementById('tab-' + t).classList.toggle('active', tab === t);
       const contentEl = document.getElementById('tab-content-' + t);
       contentEl.style.display = tab === t ? (t === 'codereview' ? 'flex' : '') : 'none';
@@ -1057,7 +1113,7 @@
       }
     });
     if (currentActivity && currentActivity !== 'none') {
-      ['poll', 'wordcloud', 'qa', 'debate', 'codereview'].forEach(t => {
+      ['poll', 'wordcloud', 'qa', 'codereview', 'debate'].forEach(t => {
         document.getElementById('tab-' + t).classList.toggle('active', currentActivity === t);
         document.getElementById('tab-content-' + t).style.display = currentActivity === t ? (t === 'codereview' ? 'flex' : '') : 'none';
       });

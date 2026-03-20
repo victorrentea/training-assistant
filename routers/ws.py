@@ -10,6 +10,7 @@ from messaging import (
     broadcast,
     broadcast_state,
     broadcast_participant_update,
+    build_participant_state,
     send_state_to_participant,
     send_state_to_host,
     send_emoji_to_overlay,
@@ -69,6 +70,12 @@ async def websocket_endpoint(websocket: WebSocket, participant_id: str):
         logger.info(f"WS connected: {pid} (awaiting set_name)")
 
     named = is_host or is_overlay  # host and overlay are always "named"
+
+    # In conference mode, auto-name and mark as named immediately
+    if state.mode == "conference" and not named:
+        state.participant_names[pid] = ""
+        named = True
+        await websocket.send_text(json.dumps(build_participant_state(pid)))
 
     try:
         while True:
