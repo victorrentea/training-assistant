@@ -10,6 +10,7 @@ class ActivityType(str, Enum):
     POLL = "poll"
     WORDCLOUD = "wordcloud"
     QA = "qa"
+    DEBATE = "debate"
 
 LOTR_NAMES = [
     "Frodo", "Samwise", "Gandalf", "Aragorn", "Legolas", "Gimli", "Boromir",
@@ -50,6 +51,12 @@ class AppState:
         # Each value: { id, text, author, upvoters: set[str], answered: bool, timestamp: float }
         self.summary_points: list[str] = []
         self.summary_updated_at: Optional[datetime] = None
+        # Debate state
+        self.debate_statement: Optional[str] = None
+        self.debate_phase: Optional[str] = None  # "side_selection"|"arguments"|"ai_cleanup"|"prep"|"live_debate"|"ended"
+        self.debate_sides: dict[str, str] = {}  # uuid → "for"|"against"
+        self.debate_arguments: list[dict] = []  # [{id, author_uuid, side, text, upvoters: set, ai_generated: bool, merged_into: str|None}]
+        self.debate_champions: dict[str, str] = {}  # "for" → uuid, "against" → uuid
 
     def suggest_name(self) -> str:
         taken = set(self.participant_names.values())
