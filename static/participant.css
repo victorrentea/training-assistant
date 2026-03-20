@@ -120,6 +120,16 @@ h1 { display: none; }
 #leave-btn:hover { border-color:var(--danger); color:var(--danger); }
 @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
 
+/* ── Location prompt ── */
+.location-prompt {
+  cursor: pointer;
+  color: var(--accent2);
+  font-size: .8rem;
+  opacity: .85;
+  transition: opacity .2s;
+}
+.location-prompt:hover { opacity: 1; }
+
 /* ── Poll card ── */
 .poll-card {
   background: var(--surface);
@@ -301,11 +311,11 @@ h1 { display: none; }
   height: auto;
   align-self: stretch;
 }
-.wc-input-row #wc-download {
-  align-self: stretch;
-  height: auto;
-  padding: 0 .9rem;
-  font-size: .85rem;
+.wc-download-btn {
+  width: 100%;
+  padding: .65rem 1rem;
+  font-size: 1rem;
+  margin-top: .25rem;
   white-space: nowrap;
 }
 
