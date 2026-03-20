@@ -9,7 +9,8 @@
   let activeTimer = null; // {seconds, startedAt (ms)} or null
   let _timerInterval = null;
   let _multiWarnShown = false; // true once warning has been shown for current poll
-  let myWords = [];  // participant's own submitted words (persisted in localStorage per word cloud session)
+  let focusedOptionIndex = -1;  // keyboard navigation index for poll options
+let myWords = [];  // participant's own submitted words (persisted in localStorage per word cloud session)
   const LS_WC_KEY = 'workshop_wc_words';
   const LS_WC_SESSION_KEY = 'workshop_wc_session';
   let _lastWordcloudWords = {};
@@ -234,6 +235,7 @@
           pollResult = null;
           activeTimer = null;
           _multiWarnShown = false;
+          focusedOptionIndex = -1;
           clearInterval(_timerInterval);
           restoreVote(msg.poll);
         }
@@ -705,10 +707,12 @@
         if (isCorrect) resultIcon = `<span class="result-icon">✅</span>`;
         else if (wasVoted) resultIcon = `<span class="result-icon">❌</span>`;
       }
+      const focused = i === focusedOptionIndex ? 'focused' : '';
+      const checkbox = multi ? `<span class="multi-check">${isSelected ? '☑' : '☐'}</span> ` : '';
       return `
-        <button class="option-btn ${selected}" ${disabled} onclick="castVote('${opt.id}')">
+        <button class="option-btn ${selected} ${focused}" ${disabled} onclick="castVote('${opt.id}')">
           <div class="bar" style="width:${showResults ? pct : 0}%"></div>
-          <span>${escHtml(opt.text)}</span>
+          <span>${checkbox}${escHtml(opt.text)}</span>
           ${resultIcon}
           ${showResults ? `<span class="pct">${pct}%</span>` : ''}
         </button>`;
@@ -800,6 +804,48 @@
     updateSelectionUI();
   }
 
+  // ── Keyboard navigation for polls ──
+  document.addEventListener('keydown', (e) => {
+    if (!currentPoll || !pollActive) return;
+    // Don't capture keys if user is typing in an input/textarea
+    const tag = document.activeElement?.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+
+    const options = document.querySelectorAll('.option-btn');
+    if (!options.length) return;
+
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (e.key === 'ArrowDown') {
+        focusedOptionIndex = focusedOptionIndex < options.length - 1 ? focusedOptionIndex + 1 : 0;
+      } else {
+        focusedOptionIndex = focusedOptionIndex > 0 ? focusedOptionIndex - 1 : options.length - 1;
+      }
+      updateFocusedOption(options);
+    } else if (e.key === 'Enter' && !currentPoll.multi) {
+      // Single-select: Enter submits the focused option
+      if (focusedOptionIndex >= 0 && focusedOptionIndex < currentPoll.options.length) {
+        e.preventDefault();
+        castVote(currentPoll.options[focusedOptionIndex].id);
+      }
+    } else if (e.key === ' ' && currentPoll.multi) {
+      // Multi-select: Space toggles the focused option
+      if (focusedOptionIndex >= 0 && focusedOptionIndex < currentPoll.options.length) {
+        e.preventDefault();
+        castVote(currentPoll.options[focusedOptionIndex].id);
+      }
+    }
+  });
+
+  function updateFocusedOption(options) {
+    options.forEach((btn, i) => {
+      btn.classList.toggle('focused', i === focusedOptionIndex);
+    });
+    if (focusedOptionIndex >= 0 && options[focusedOptionIndex]) {
+      options[focusedOptionIndex].scrollIntoView({ block: 'nearest' });
+    }
+  }
+
   // Update only selected state and footer after casting a vote — no bar animation flicker
   function updateSelectionUI() {
     const multi = !!currentPoll.multi;
@@ -811,7 +857,11 @@
         ? (myVote instanceof Set && myVote.has(opt.id))
         : (myVote === opt.id);
       btn.classList.toggle('selected', selected);
-      if (multi) btn.disabled = atLimit && !selected;
+      if (multi) {
+        btn.disabled = atLimit && !selected;
+        const checkEl = btn.querySelector('.multi-check');
+        if (checkEl) checkEl.textContent = selected ? '☑' : '☐';
+      }
     });
 
     const hasVoted = multi ? myVote instanceof Set && myVote.size > 0 : myVote !== null;
