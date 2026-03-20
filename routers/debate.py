@@ -15,6 +15,36 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
+def auto_assign_remaining(all_pids: list[str], sides: dict[str, str]) -> list[str]:
+    """Auto-assign unassigned participants to balance teams.
+
+    Triggers when at least half have picked (assigned * 2 >= total).
+    Returns list of newly-assigned participant IDs, or [] if not triggered.
+    """
+    assigned_count = sum(1 for p in all_pids if p in sides)
+    if assigned_count * 2 < len(all_pids) or assigned_count == 0:
+        return []
+
+    unassigned = [p for p in all_pids if p not in sides]
+    if not unassigned:
+        return []
+
+    for_count = sum(1 for s in sides.values() if s == "for")
+    against_count = sum(1 for s in sides.values() if s == "against")
+
+    random.shuffle(unassigned)
+    newly_assigned = []
+    for p in unassigned:
+        if for_count <= against_count:
+            sides[p] = "for"
+            for_count += 1
+        else:
+            sides[p] = "against"
+            against_count += 1
+        newly_assigned.append(p)
+    return newly_assigned
+
+
 class DebateLaunch(BaseModel):
     statement: str
 
@@ -48,22 +78,14 @@ async def close_selection():
     if state.debate_phase != "side_selection":
         raise HTTPException(400, "Not in side_selection phase")
 
-    # Auto-assign remaining participants to balance sides
+    # Auto-assign any remaining participants to balance sides
     all_pids = participant_ids()
-    assigned = set(state.debate_sides.keys())
-    unassigned = [pid for pid in all_pids if pid not in assigned]
+    newly = auto_assign_remaining(all_pids, state.debate_sides)
+    if newly:
+        state.debate_auto_assigned.update(newly)
 
     for_count = sum(1 for s in state.debate_sides.values() if s == "for")
     against_count = sum(1 for s in state.debate_sides.values() if s == "against")
-
-    random.shuffle(unassigned)
-    for pid in unassigned:
-        if for_count <= against_count:
-            state.debate_sides[pid] = "for"
-            for_count += 1
-        else:
-            state.debate_sides[pid] = "against"
-            against_count += 1
 
     # Advance to arguments phase (atomic)
     state.debate_phase = "arguments"
