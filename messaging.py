@@ -104,6 +104,7 @@ def _build_codereview_for_host() -> dict | None:
         "line_counts": line_counts,
         "confirmed_lines": sorted(state.codereview_confirmed),
         "line_participants": line_participants,
+        "participant_count": len(pids),
     }
 
 
