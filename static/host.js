@@ -1510,7 +1510,7 @@
 
     // Update center panel title if debate is active
     if (title && debateActive) {
-      title.innerHTML = `<span style="color:#e74c3c;font-weight:700;">👎 ${sideCounts.against}</span> <span style="font-style:italic;">"${escDebate(msg.debate_statement)}"</span> <span style="color:#2ecc71;font-weight:700;">${sideCounts.for} 👍</span>`;
+      title.innerHTML = escDebate(msg.debate_statement);
     }
 
     // Phase chapters — always visible
