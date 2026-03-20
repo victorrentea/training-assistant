@@ -51,7 +51,12 @@
     const countdownStart = Number(options.countdownSeconds || 10);
     const doReload = typeof options.onReload === 'function'
       ? options.onReload
-      : function () { window.location.reload(); };
+      : function () {
+          // Force cache-busting so version.js is re-fetched
+          var url = new URL(window.location.href);
+          url.searchParams.set('_v', Date.now());
+          window.location.replace(url.toString());
+        };
 
     let active = false;
     let stopped = false;
