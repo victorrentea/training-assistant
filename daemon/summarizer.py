@@ -7,6 +7,7 @@ existing bullet list, calls Claude to synthesize updated key points.
 
 import json
 import sys
+from datetime import date
 from pathlib import Path
 from typing import Optional
 
@@ -91,6 +92,10 @@ def generate_summary(
         # Parse JSON array from response
         points = json.loads(response_text)
         if isinstance(points, list) and all(isinstance(p, str) for p in points):
+            # Always prepend today's date as the first bullet
+            date_line = f"Session date: {date.today().isoformat()}"
+            if not points or points[0] != date_line:
+                points = [date_line] + [p for p in points if not p.startswith("Session date:")]
             print(f"[summarizer] Generated {len(points)} key points")
             return points
         else:
