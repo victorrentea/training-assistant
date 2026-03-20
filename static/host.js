@@ -1192,7 +1192,7 @@
         borderColor = 'var(--accent)';
         gutterText = `${lineNum} ▶`;
       } else {
-        bgColor = `rgba(255,80,80,${intensity * 0.7})`;
+        bgColor = `rgba(108,99,255,${intensity * 0.5})`;
         borderColor = 'transparent';
         gutterText = String(lineNum);
       }
@@ -1202,7 +1202,7 @@
       html += `<span class="codereview-gutter">${gutterText}</span>`;
       html += `<span class="codereview-code">${escHtml(lineText) || ' '}</span>`;
       if (count > 0) {
-        const countColor = isConfirmed ? 'var(--accent2)' : 'var(--danger)';
+        const countColor = isConfirmed ? 'var(--accent2)' : 'var(--accent)';
         html += `<span class="codereview-count" style="color:${countColor}">${pct}%</span>`;
       }
       html += '</div>';
