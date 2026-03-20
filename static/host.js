@@ -713,8 +713,8 @@
   }
 
   // ── Quiz generator ──
-  const GEN_LABEL_TRANSCRIPT = 'Generate from transcript';
-  const GEN_LABEL_TOPIC = 'Generate on topic';
+  const GEN_LABEL_TRANSCRIPT = '✨ Generate from transcript';
+  const GEN_LABEL_TOPIC = '✨ Generate on topic';
 
   function updateGenBtn() {
     const topic = document.getElementById('quiz-topic').value.trim();
