@@ -11,10 +11,7 @@ Run:
 
 import os
 import re
-import subprocess
-import sys
 import time
-import threading
 from pathlib import Path
 
 import requests
@@ -23,6 +20,7 @@ from playwright.sync_api import Page, expect, sync_playwright
 
 from pages.host_page import HostPage
 from pages.participant_page import ParticipantPage
+from conftest import api as _api, host_browser_ctx as _host_browser_ctx, pax_browser_ctx as _pax_browser_ctx
 
 PROD_URL = "https://interact.victorrentea.ro"
 PROD_HOST_USER = os.environ.get("PROD_HOST_USERNAME", "host")
@@ -30,106 +28,6 @@ PROD_HOST_PASS = os.environ.get("PROD_HOST_PASSWORD", "host")
 
 HOST_USER = os.environ.get("HOST_USERNAME", "host")
 HOST_PASS = os.environ.get("HOST_PASSWORD", "testpass")
-
-
-# ---------------------------------------------------------------------------
-# Server fixture
-# ---------------------------------------------------------------------------
-
-@pytest.fixture(scope="session")
-def server_url():
-    """
-    Spin up uvicorn on port 0 (OS picks a free port atomically).
-    Parse the actual bound port from uvicorn's stderr output.
-    """
-    server_env = os.environ.copy()
-    server_env["HOST_USERNAME"] = HOST_USER
-    server_env["HOST_PASSWORD"] = HOST_PASS
-    proc = subprocess.Popen(
-        [sys.executable, "-m", "uvicorn", "main:app",
-         "--host", "127.0.0.1", "--port", "0"],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.PIPE,
-        cwd=os.path.dirname(os.path.abspath(__file__)),
-        env=server_env,
-    )
-
-    port = None
-    deadline = time.time() + 15
-    while time.time() < deadline:
-        line = proc.stderr.readline().decode("utf-8", errors="replace")
-        m = re.search(r"127\.0\.0\.1:(\d+)", line)
-        if m:
-            port = int(m.group(1))
-            break
-        if proc.poll() is not None:
-            raise RuntimeError("uvicorn exited unexpectedly during startup")
-    else:
-        proc.terminate()
-        raise RuntimeError("uvicorn did not log a bound port within 15s")
-
-    threading.Thread(target=proc.stderr.read, daemon=True).start()
-
-    yield f"http://127.0.0.1:{port}"
-
-    proc.terminate()
-    proc.wait(timeout=5)
-
-
-# ---------------------------------------------------------------------------
-# Browser / page fixtures
-# ---------------------------------------------------------------------------
-
-def _api(server_url, method, path, **kwargs):
-    """Authenticated API call to a host-only endpoint."""
-    return getattr(requests, method)(
-        f"{server_url}{path}",
-        auth=(HOST_USER, HOST_PASS),
-        **kwargs,
-    )
-
-
-def _host_browser_ctx(server_url, playwright):
-    browser = playwright.chromium.launch()
-    ctx = browser.new_context(
-        base_url=server_url,
-        http_credentials={"username": HOST_USER, "password": HOST_PASS},
-        viewport={"width": 1440, "height": 900},
-    )
-    return browser, ctx
-
-
-def _pax_browser_ctx(server_url, playwright):
-    browser = playwright.chromium.launch()
-    ctx = browser.new_context(base_url=server_url)
-    return browser, ctx
-
-
-@pytest.fixture()
-def host(server_url, playwright) -> HostPage:
-    browser, ctx = _host_browser_ctx(server_url, playwright)
-    page = ctx.new_page()
-    page.goto("/host")
-    yield HostPage(page)
-    ctx.close()
-    browser.close()
-
-
-def _make_pax_fixture():
-    @pytest.fixture()
-    def pax(server_url, playwright) -> ParticipantPage:
-        browser, ctx = _pax_browser_ctx(server_url, playwright)
-        page = ctx.new_page()
-        page.goto("/")
-        yield ParticipantPage(page)
-        ctx.close()
-        browser.close()
-    return pax
-
-
-pax  = _make_pax_fixture()
-pax2 = _make_pax_fixture()
-pax3 = _make_pax_fixture()
 
 
 # ---------------------------------------------------------------------------
@@ -375,14 +273,6 @@ class TestWordCloud:
 # ---------------------------------------------------------------------------
 # TestQA
 # ---------------------------------------------------------------------------
-
-@pytest.fixture(autouse=False)
-def clean_qa(server_url):
-    """Clear Q&A state before each test that uses it."""
-    _api(server_url, "post", "/api/qa/clear")
-    yield
-    _api(server_url, "post", "/api/qa/clear")
-
 
 @pytest.mark.usefixtures("clean_qa")
 class TestQA:
