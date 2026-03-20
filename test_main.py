@@ -143,6 +143,42 @@ class ParticipantSession:
             f"{self.name}: expected no score but got {state.scores.get(self.uuid)}"
         )
 
+    def assert_my_vote(self, expected_option_text: str):
+        """Assert that my_vote in state matches an option by text."""
+        my_vote = self._last_state.get("my_vote")
+        poll = self._last_state.get("poll") or state.poll
+        text_to_id = {o["text"]: o["id"] for o in poll["options"]}
+        expected_id = text_to_id[expected_option_text]
+        assert my_vote == expected_id, (
+            f"{self.name}: my_vote={my_vote!r}, expected {expected_id!r} ({expected_option_text!r})"
+        )
+
+    def assert_no_my_vote(self):
+        """Assert that my_vote is None (not voted)."""
+        my_vote = self._last_state.get("my_vote")
+        assert my_vote is None, f"{self.name}: expected my_vote=None, got {my_vote!r}"
+
+    def assert_result_in_state(self, correct_texts: list[str], voted_texts: list[str]):
+        """Assert that poll result (correct_ids, voted_ids) is in the state broadcast."""
+        poll = self._last_state.get("poll") or state.poll
+        text_to_id = {o["text"]: o["id"] for o in poll["options"]}
+        expected_correct = set(text_to_id[t] for t in correct_texts)
+        expected_voted = set(text_to_id[t] for t in voted_texts)
+        actual_correct = set(self._last_state.get("poll_correct_ids") or [])
+        actual_voted = set(self._last_state.get("my_voted_ids") or [])
+        assert actual_correct == expected_correct, (
+            f"{self.name}: poll_correct_ids={actual_correct}, expected {expected_correct}"
+        )
+        assert actual_voted == expected_voted, (
+            f"{self.name}: my_voted_ids={actual_voted}, expected {expected_voted}"
+        )
+
+    def assert_no_result_in_state(self):
+        """Assert no poll result in state."""
+        assert self._last_state.get("poll_correct_ids") is None, (
+            f"{self.name}: expected no poll_correct_ids, got {self._last_state.get('poll_correct_ids')}"
+        )
+
     def assert_wordcloud_word(self, word: str, expected_count: int):
         """Assert a word's count in the word cloud state."""
         words = self._last_state.get("wordcloud_words", {})
@@ -242,6 +278,12 @@ class WorkshopSession:
     @contextmanager
     def participant(self, name: str):
         uid = str(uuid_mod.uuid4())
+        with self._client.websocket_connect(f"/ws/{uid}") as ws:
+            yield ParticipantSession(ws, name, uid)
+
+    @contextmanager
+    def participant_with_uuid(self, name: str, uid: str):
+        """Connect a participant with a specific UUID (for reconnect tests)."""
         with self._client.websocket_connect(f"/ws/{uid}") as ws:
             yield ParticipantSession(ws, name, uid)
 
@@ -952,6 +994,24 @@ def test_post_summary_updates_state():
         assert alice._last_state["summary_points"][1]["source"] == "notes"
 
 
+def test_post_summary_with_timestamps():
+    """POST /api/summary with time fields stores and broadcasts them."""
+    session = WorkshopSession()
+    resp = session._client.post(
+        "/api/summary",
+        json={"points": [
+            {"text": "TDD basics", "source": "discussion", "time": "10:15"},
+            {"text": "Mocking patterns", "source": "notes"},
+        ]},
+    )
+    assert resp.status_code == 200
+
+    with session.participant("Alice") as alice:
+        pts = alice._last_state["summary_points"]
+        assert pts[0]["time"] == "10:15"
+        assert pts[1].get("time") is None
+
+
 def test_post_summary_requires_auth():
     """POST /api/summary without auth returns 401."""
     client = TestClient(app)  # no auth headers
@@ -960,6 +1020,39 @@ def test_post_summary_requires_auth():
         json={"points": [{"text": "Should fail", "source": "discussion"}]},
     )
     assert resp.status_code == 401
+
+
+def test_get_summary_returns_points():
+    """GET /api/summary returns current bullets (public, no auth)."""
+    session = WorkshopSession()
+    # POST summary as host
+    session._client.post(
+        "/api/summary",
+        json={"points": [
+            {"text": "TDD is great", "source": "discussion"},
+            {"text": "Use mocks sparingly", "source": "notes"},
+        ]},
+    )
+    # GET without auth — should work (public endpoint)
+    client = TestClient(app)
+    resp = client.get("/api/summary")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert len(data["points"]) == 2
+    assert data["points"][0]["text"] == "TDD is great"
+    assert data["points"][1]["source"] == "notes"
+    assert data["updated_at"] is not None
+
+
+def test_get_summary_empty():
+    """GET /api/summary returns empty list when no summary posted."""
+    state.reset()
+    client = TestClient(app)
+    resp = client.get("/api/summary")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["points"] == []
+    assert data["updated_at"] is None
 
 
 # ---------------------------------------------------------------------------
@@ -1027,3 +1120,76 @@ def test_auto_assign_remaining(total, pre_assigned, expect_trigger, expect_balan
     assert abs(for_count - against_count) <= 1, (
         f"Unbalanced: {for_count} for vs {against_count} against"
     )
+
+
+# ---------------------------------------------------------------------------
+# Vote & Result Restore on Refresh (GH #33)
+# ---------------------------------------------------------------------------
+
+class TestVoteRestoreOnRefresh:
+    """Verify that my_vote and poll results survive participant reconnect."""
+
+    def test_my_vote_included_in_state_after_voting(self, session):
+        """After voting, participant state should include my_vote."""
+        session.create_poll("Pick one", ["A", "B"])
+        session.open_poll()
+        uid = str(uuid_mod.uuid4())
+        with session.participant_with_uuid("Alice", uid) as alice:
+            alice.vote_for("A")
+            # Reconnect — simulates browser refresh
+        with session.participant_with_uuid("Alice", uid) as alice2:
+            alice2.assert_my_vote("A")
+
+    def test_my_vote_none_when_not_voted(self, session):
+        """Participant who hasn't voted should get my_vote=None."""
+        session.create_poll("Pick one", ["A", "B"])
+        session.open_poll()
+        with session.participant("Alice") as alice:
+            alice.assert_no_my_vote()
+
+    def test_my_vote_multi_included_in_state(self, session):
+        """Multi-select vote should be restored on reconnect."""
+        session.create_poll("Pick many", ["A", "B", "C"], multi=True)
+        session.open_poll()
+        uid = str(uuid_mod.uuid4())
+        with session.participant_with_uuid("Alice", uid) as alice:
+            alice.multi_vote("A", "C")
+        with session.participant_with_uuid("Alice", uid) as alice2:
+            my_vote = alice2._last_state.get("my_vote")
+            assert set(my_vote) == {"opt0", "opt2"}, f"my_vote={my_vote}"
+
+    def test_poll_result_included_in_state_after_correct_marked(self, session):
+        """After host marks correct, reconnecting participant sees result in state."""
+        session.create_poll("Q?", ["A", "B"])
+        session.open_poll()
+        uid = str(uuid_mod.uuid4())
+        with session.participant_with_uuid("Alice", uid) as alice:
+            alice.vote_for("A")
+        session.close_poll()
+        session.mark_correct("A")
+        # Reconnect
+        with session.participant_with_uuid("Alice", uid) as alice2:
+            alice2.assert_result_in_state(correct_texts=["A"], voted_texts=["A"])
+
+    def test_no_result_before_correct_marked(self, session):
+        """Before host marks correct, no result in state."""
+        session.create_poll("Q?", ["A", "B"])
+        session.open_poll()
+        with session.participant("Alice") as alice:
+            alice.vote_for("A")
+            alice.assert_no_result_in_state()
+
+    def test_result_cleared_on_new_poll(self, session):
+        """Creating a new poll should clear previous result."""
+        session.create_poll("Q1", ["A", "B"])
+        session.open_poll()
+        uid = str(uuid_mod.uuid4())
+        with session.participant_with_uuid("Alice", uid) as alice:
+            alice.vote_for("A")
+        session.close_poll()
+        session.mark_correct("A")
+        # New poll
+        session.create_poll("Q2", ["X", "Y"])
+        with session.participant_with_uuid("Alice", uid) as alice2:
+            alice2.assert_no_result_in_state()
+            alice2.assert_no_my_vote()

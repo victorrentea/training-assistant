@@ -272,7 +272,8 @@
       const text = typeof p === 'string' ? p : p.text;
       const source = typeof p === 'string' ? 'discussion' : (p.source || 'discussion');
       const icon = source === 'notes' ? '✏️' : '💬';
-      return `<li>${icon} ${escHtml(text)}</li>`;
+      const time = (typeof p === 'object' && p.time) ? `<span class="summary-ts">${escHtml(p.time)}</span>` : '';
+      return `<li>${icon} ${time}${escHtml(text)}</li>`;
     }).join('');
     if (timeEl && summaryUpdatedAt) {
       const d = new Date(summaryUpdatedAt);
@@ -1583,18 +1584,18 @@
       title.innerHTML = escDebate(msg.debate_statement);
     }
 
-    // Hide statement input once launched (scale out horizontally), show reset button
+    // Hide statement input once launched (shrink vertically upward), show reset button
     const stmtWrapper = document.getElementById('debate-statement-wrapper');
     const resetWrapper = document.getElementById('debate-reset-wrapper');
     if (stmtWrapper) {
       if (debateActive) {
-        stmtWrapper.style.transform = 'scaleX(0)';
+        stmtWrapper.style.transform = 'scaleY(0)';
         stmtWrapper.style.opacity = '0';
         stmtWrapper.style.height = '0';
         stmtWrapper.style.marginTop = '0';
         stmtWrapper.style.overflow = 'hidden';
       } else {
-        stmtWrapper.style.transform = 'scaleX(1)';
+        stmtWrapper.style.transform = 'scaleY(1)';
         stmtWrapper.style.opacity = '1';
         stmtWrapper.style.height = '';
         stmtWrapper.style.marginTop = '.75rem';
@@ -1692,9 +1693,9 @@
         <div class="debate-chapter-row">
           <span class="debate-chapter-num">${p.num}</span>
           <span class="debate-chapter-label">${p.label}</span>
+          ${actionHtml ? `<span class="debate-chapter-extra-inline">${actionHtml.replace(/<\/?div[^>]*>/g, '')}</span>` : ''}
           <span class="debate-chapter-action">${launchBtn}</span>
         </div>
-        ${actionHtml}
       </div>`;
     }).join('');
 

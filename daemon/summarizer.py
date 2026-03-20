@@ -43,9 +43,10 @@ Output rules:
 - For each bullet, indicate source:
   - "notes" if it comes primarily from SESSION NOTES (trainer's agenda/material)
   - "discussion" if it comes primarily from TRANSCRIPT (what was actually said)
+- For each bullet, include "time": the approximate timestamp (HH:MM format, 24h) when the topic was discussed, based on the transcript timestamps. Use the earliest relevant timestamp for the topic. Omit "time" for bullets derived solely from session notes with no transcript match.
 
 Return ONLY a JSON array of objects. No markdown, no explanation.
-Example: [{"text": "Outbox pattern decouples DB writes from message publishing", "source": "discussion"}, \
+Example: [{"text": "Outbox pattern decouples DB writes from message publishing", "source": "discussion", "time": "10:15"}, \
 {"text": "Hands-on: implement Circuit Breaker with Resilience4j", "source": "notes"}]
 """
 
@@ -126,7 +127,10 @@ def generate_summary(
                 source = item.get("source", "discussion")
                 if source not in ("notes", "discussion"):
                     source = "discussion"
-                points.append({"text": item["text"], "source": source})
+                point = {"text": item["text"], "source": source}
+                if item.get("time"):
+                    point["time"] = item["time"]
+                points.append(point)
             elif isinstance(item, str):
                 points.append({"text": item, "source": "discussion"})
             else:

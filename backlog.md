@@ -126,6 +126,7 @@
 - [x] Bug! If there is no vote for any participants and I close the voting, each option gets 1% displayed in the participant view, which makes no sense. It should be 0% for all.
 - [x] feat: browser push notifications — participant UI requests permission on Join; 🔔 button for auto-joiners; notifies on new poll/Q&A/word cloud when tab is hidden
 - [x] feat: Code Review activity — host pastes a code snippet (with auto-detected language and syntax highlighting), participants click line numbers to flag problematic lines, host sees live heat-map of selections, confirms correct lines one by one to award points and spark discussion; phase transitions: idle → selecting → reviewing
+- [x] fix: participant vote and poll results lost on browser refresh — server now sends `my_vote` and `poll_correct_ids`/`my_voted_ids` in state broadcasts so vote + correct/incorrect feedback survive reconnect (GH #33)
 ---
 
 ## Understanding design
@@ -147,6 +148,8 @@ Script which generates navigable HTML page from the catalog Google Doc as a prot
 
 ## Agree-Disagree Slider
 Host posts a provocative statement (e.g. "Microservices are always a mistake for teams under 20 people"). Participants drag a slider from Strongly Disagree to Strongly Agree. Host sees the full distribution as a histogram. Sliders capture *degree* of opinion — richer than binary polls for an audience that hates false dichotomies.
+
+- [x] GH#29: Summary bullets now include approximate timestamps (HH:MM) derived from transcript timing data, displayed as subtle prefixes in the UI
 
 ## Concept Ranking / Ordering
 Host presents 4–6 items (patterns, approaches, technologies). Participants drag them into an order (e.g. safest → most dangerous, simplest → most complex). Host aggregates the median ranking and highlights disagreements. Pure conceptual reasoning, no coding.

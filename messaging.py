@@ -18,6 +18,17 @@ def participant_ids() -> list[str]:
     )
 
 
+def _voted_ids_for(pid: str) -> list[str] | None:
+    """Return the participant's voted option IDs as a list, or None if not voted."""
+    if state.poll_correct_ids is None:
+        return None
+    selection = state.votes.get(pid)
+    if selection is None:
+        return None
+    ids = selection if isinstance(selection, list) else [selection]
+    return list(ids)
+
+
 def _build_qa_for_participant(pid: str) -> list[dict]:
     return [
         {
@@ -193,6 +204,9 @@ def build_participant_state(pid: str) -> dict:
         "vote_counts": state.vote_counts(),
         "participant_count": len(pids),
         "host_connected": "__host__" in state.participants,
+        "my_vote": state.votes.get(pid),
+        "poll_correct_ids": state.poll_correct_ids,
+        "my_voted_ids": _voted_ids_for(pid),
         "my_score": state.scores.get(pid, 0),
         "my_avatar": state.participant_avatars.get(pid, ""),
         "current_activity": state.current_activity,

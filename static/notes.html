@@ -76,7 +76,8 @@
             const text = typeof p === 'string' ? p : p.text;
             const source = typeof p === 'string' ? 'discussion' : (p.source || 'discussion');
             const icon = source === 'notes' ? '&#9999;&#65039;' : '&#128172;';
-            return `<li>${icon} ${linkify(escHtml(text))}</li>`;
+            const time = (typeof p === 'object' && p.time) ? `<span class="summary-ts">${escHtml(p.time)}</span>` : '';
+            return `<li>${icon} ${time}${linkify(escHtml(text))}</li>`;
           }).join('');
         } else {
           pointsEl.innerHTML = '<li class="empty">No key points yet.</li>';

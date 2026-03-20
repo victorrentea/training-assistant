@@ -13,6 +13,7 @@ public_router = APIRouter()
 class SummaryPoint(BaseModel):
     text: str
     source: str = "discussion"  # "notes" or "discussion"
+    time: str | None = None  # approximate HH:MM timestamp from transcript
 
 
 class SummaryUpdate(BaseModel):
@@ -38,7 +39,15 @@ async def update_notes(body: NotesUpdate):
     return {"ok": True}
 
 
-# Public endpoint — no auth required
+# Public endpoints — no auth required
+@public_router.get("/api/summary")
+async def get_summary():
+    return {
+        "points": state.summary_points,
+        "updated_at": state.summary_updated_at.isoformat() if state.summary_updated_at else None,
+    }
+
+
 @public_router.get("/api/notes")
 async def get_notes():
     return {
