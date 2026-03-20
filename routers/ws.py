@@ -72,8 +72,20 @@ async def websocket_endpoint(websocket: WebSocket, participant_id: str):
                     assign_avatar(state, pid, name)
                 named = True
                 logger.info(f"Named: {pid} -> {name} ({len(state.participants)} total)")
+                # Auto-assign late joiner to debate if past side_selection
+                if (not is_host
+                    and state.debate_phase
+                    and state.debate_phase != "side_selection"
+                    and pid not in state.debate_sides):
+                    for_count = sum(1 for s in state.debate_sides.values() if s == "for")
+                    against_count = sum(1 for s in state.debate_sides.values() if s == "against")
+                    state.debate_sides[pid] = "for" if for_count <= against_count else "against"
+                    state.debate_auto_assigned.add(pid)
+                    logger.info(f"Late joiner {name} auto-assigned to {state.debate_sides[pid]}")
                 await send_state_to_participant(websocket, pid)
                 await broadcast_participant_update()
+                if not is_host and state.debate_phase:
+                    await broadcast_state()
                 continue
 
             if msg_type == "set_name":
@@ -183,10 +195,13 @@ async def websocket_endpoint(websocket: WebSocket, participant_id: str):
                         state.debate_auto_assigned.update(newly)
                         logger.info(f"Auto-assigned {len(newly)} participants (≥50% picked)")
 
-                    # Auto-advance if all participants now have sides
+                    # Auto-advance if all participants now have sides and both sides have members
                     if all(p in state.debate_sides for p in all_pids):
-                        state.debate_phase = "arguments"
-                        logger.info("All participants assigned — auto-advancing to arguments phase")
+                        fc = sum(1 for s in state.debate_sides.values() if s == "for")
+                        ac = sum(1 for s in state.debate_sides.values() if s == "against")
+                        if fc > 0 and ac > 0:
+                            state.debate_phase = "arguments"
+                            logger.info("All participants assigned — auto-advancing to arguments phase")
 
                     await broadcast_state()
 
