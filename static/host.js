@@ -266,7 +266,7 @@
     if (!badge) return;
     badge.style.cssText = 'cursor:pointer;';
     if (summaryPoints.length) {
-      badge.textContent = `Lessons (${summaryPoints.length})`;
+      badge.textContent = summaryPoints.length > 0 ? `🧠 ${summaryPoints.length}` : '🧠';
       badge.className = 'badge connected';
       badge.title = `${summaryPoints.length} key points — click to view`;
     } else if (_summaryGenerating) {
@@ -275,7 +275,7 @@
       badge.style.cssText = 'cursor:wait; color:var(--warn); border:1px solid var(--warn);';
       badge.title = 'Generating key points from transcript...';
     } else {
-      badge.textContent = 'Points';
+      badge.textContent = '🧠';
       badge.className = 'badge disconnected';
       badge.title = 'No key points yet — click to generate now';
     }
@@ -321,7 +321,7 @@
 
   function setBadge(ok) {
     const b = document.getElementById('ws-badge');
-    b.textContent = ok ? 'Server' : 'Server';
+    b.textContent = ok ? '🟢' : '🟢';
     b.className = `badge ${ok ? 'connected' : 'disconnected'}`;
   }
 
@@ -388,7 +388,7 @@
     if (!el) return;
 
     if (!lastSeenIso) {
-      el.textContent = 'Agent';
+      el.textContent = '🤖';
       el.className = 'badge disconnected';
       el.title = 'Never connected — start with ./start.sh';
       return;
@@ -398,12 +398,12 @@
     const agoText = ago < 60 ? `${ago}s ago` : `${Math.round(ago/60)}m ago`;
 
     if (connected) {
-      el.textContent = 'Agent';
+      el.textContent = '🤖';
       el.className = 'badge connected';
       el.style.cssText = '';
       el.title = `Connected (last seen ${agoText})`;
     } else {
-      el.textContent = 'Agent';
+      el.textContent = '🤖';
       el.className = 'badge';
       el.style.cssText = 'color:var(--warn);border:1px solid var(--warn);';
       el.title = `Connection lost (last seen ${agoText})`;
@@ -442,16 +442,16 @@
 
     el.style.cssText = 'cursor:pointer;';
     if (sessionFolder && sessionNotes) {
-      el.textContent = '.txt';
+      el.textContent = '📝';
       el.className = 'badge connected';
       el.title = `${sessionFolder}/${sessionNotes}\nClick to view`;
     } else if (sessionFolder) {
-      el.textContent = '.txt';
+      el.textContent = '📝';
       el.className = 'badge';
       el.style.cssText = 'cursor:pointer; color:var(--warn); border:1px solid var(--warn);';
       el.title = 'Session folder found but no notes file inside';
     } else {
-      el.textContent = '.txt';
+      el.textContent = '📝';
       el.className = 'badge disconnected';
       el.title = 'No session folder found for today';
     }
@@ -1091,7 +1091,7 @@
 
 
   async function switchTab(tab) {
-    ['poll', 'wordcloud', 'qa', 'debate', 'codereview'].forEach(t => {
+    ['poll', 'wordcloud', 'qa', 'codereview', 'debate'].forEach(t => {
       document.getElementById('tab-' + t).classList.toggle('active', tab === t);
       const contentEl = document.getElementById('tab-content-' + t);
       contentEl.style.display = tab === t ? (t === 'codereview' ? 'flex' : '') : 'none';
@@ -1113,7 +1113,7 @@
       }
     });
     if (currentActivity && currentActivity !== 'none') {
-      ['poll', 'wordcloud', 'qa', 'debate', 'codereview'].forEach(t => {
+      ['poll', 'wordcloud', 'qa', 'codereview', 'debate'].forEach(t => {
         document.getElementById('tab-' + t).classList.toggle('active', currentActivity === t);
         document.getElementById('tab-content-' + t).style.display = currentActivity === t ? (t === 'codereview' ? 'flex' : '') : 'none';
       });

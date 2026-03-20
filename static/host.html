@@ -112,18 +112,6 @@
       </div>
     </div>
 
-    <!-- Debate tab content -->
-    <div id="tab-content-debate" class="tab-content" style="display:none;">
-      <div id="debate-statement-wrapper" style="margin-top:0; overflow: hidden; max-height: 0; padding: 0;">
-        <textarea id="debate-statement-input" rows="2" maxlength="200" placeholder="Enter debate statement…"
-          style="width:100%;padding:.5rem .75rem;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:.9rem;resize:vertical;font-family:inherit;">Microservices > Monoliths</textarea>
-      </div>
-      <div id="debate-phase-chapters" style="margin-top:.75rem;"></div>
-      <div id="debate-reset-wrapper" style="margin-top:.75rem; display:none;">
-        <button class="btn btn-danger btn-sm" onclick="debateReset()">🗑️ Reset Debate</button>
-      </div>
-    </div>
-
     <!-- Code Review tab content -->
     <div id="tab-content-codereview" style="display:none; flex-direction:column;" class="tab-content">
       <div id="codereview-create" style="display:flex; flex-direction:column; flex:1; min-height:0;">
@@ -173,6 +161,18 @@
       </div>
     </div>
 
+    <!-- Debate tab content -->
+    <div id="tab-content-debate" class="tab-content" style="display:none;">
+      <div id="debate-statement-wrapper" style="margin-top:0; overflow: hidden; max-height: 0; padding: 0;">
+        <textarea id="debate-statement-input" rows="2" maxlength="200" placeholder="Enter debate statement…"
+          style="width:100%;padding:.5rem .75rem;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:.9rem;resize:vertical;font-family:inherit;">Microservices > Monoliths</textarea>
+      </div>
+      <div id="debate-phase-chapters" style="margin-top:.75rem;"></div>
+      <div id="debate-reset-wrapper" style="margin-top:.75rem; display:none;">
+        <button class="btn btn-danger btn-sm" onclick="debateReset()">🗑️ Reset Debate</button>
+      </div>
+    </div>
+
     <!-- Conference mode: QR code shown in left column -->
     <div id="conference-qr" class="conference-qr-container">
       <div id="conference-qr-code" style="background:#fff; padding:12px; border-radius:12px; display:inline-block;"></div>
@@ -181,11 +181,11 @@
 
     <!-- Status badges — pinned to bottom of left column -->
     <div class="left-status-bar">
-      <span id="ws-badge" class="badge disconnected">Server</span>
-      <span id="daemon-badge" class="badge disconnected" title="">Agent</span>
+      <span id="ws-badge" class="badge disconnected">🟢</span>
+      <span id="daemon-badge" class="badge disconnected" title="">🤖</span>
       <span id="transcript-badge" class="badge disconnected" title="No transcription data">💬</span>
-      <span id="notes-badge" class="badge disconnected" title="" onclick="toggleHostNotesModal()" style="cursor:pointer">.txt</span>
-      <span id="summary-badge" class="badge disconnected" title="No key points yet — click to generate now" onclick="toggleSummaryModal()" style="cursor:pointer">Lessons</span>
+      <span id="notes-badge" class="badge disconnected" title="" onclick="toggleHostNotesModal()" style="cursor:pointer">📝</span>
+      <span id="summary-badge" class="badge disconnected" title="No key points yet — click to generate now" onclick="toggleSummaryModal()" style="cursor:pointer">🧠</span>
       <span id="overlay-badge" class="badge disconnected" title="Emoji overlay app">❤️</span>
       <span id="token-badge" class="badge" title="No token data yet">$0.00</span>
       <span id="conference-pax-count" class="badge connected" style="display:none" title="Connected participants">👥 0</span>
