@@ -140,10 +140,17 @@
         if (currentPoll && currentPoll.question !== prevQuestion) loadCorrectOpts(currentPoll.question);
         voteCounts = msg.vote_counts || {};
         totalVotes = Object.values(voteCounts).reduce((a,b)=>a+b,0);
-        participantLocations = msg.participant_locations || {};
-        scores = msg.scores || {};
+        participantLocations = {};
+        scores = {};
+        const names = [];
+        msg.participants.forEach(p => {
+            names.push(p.name);
+            participantLocations[p.name] = p.location;
+            scores[p.name] = p.score;
+        });
+        cachedNames = names;
         document.getElementById('pax-count').textContent = msg.participant_count;
-        renderParticipantList(msg.participant_names || []);
+        renderParticipantList(names);
         renderDaemonStatus(msg.daemon_connected, msg.daemon_last_seen, msg.daemon_session_folder, msg.daemon_session_notes);
         renderPreview(msg.quiz_preview || null);
         renderPollDisplay();
@@ -161,11 +168,16 @@
         renderBars();
       } else if (msg.type === 'participant_count') {
         document.getElementById('pax-count').textContent = msg.count;
-        participantLocations = msg.locations || participantLocations;
-        renderParticipantList(msg.names || []);
-      } else if (msg.type === 'scores') {
-        scores = msg.scores || {};
-        renderParticipantList(cachedNames);
+        participantLocations = {};
+        scores = {};
+        const names = [];
+        msg.participants.forEach(p => {
+            names.push(p.name);
+            participantLocations[p.name] = p.location;
+            scores[p.name] = p.score;
+        });
+        cachedNames = names;
+        renderParticipantList(names);
       } else if (msg.type === 'timer') {
         _applyTimer(msg.seconds, msg.started_at);
       } else if (msg.type === 'quiz_status') {
@@ -953,13 +965,10 @@
     const input = document.getElementById('host-qa-input');
     if (!input) return;
     const text = input.value.trim();
-    if (!text) return;
-    const resp = await fetch('/api/qa/question', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: 'Host', text }),
-    });
-    if (resp.ok) { input.value = ''; input.focus(); }
+    if (!text || !ws) return;
+    ws.send(JSON.stringify({ type: 'qa_submit', text }));
+    input.value = '';
+    input.focus();
   }
 
   async function clearQA() {

@@ -1,4 +1,5 @@
 import json
+import logging
 from typing import Optional
 from datetime import datetime, timezone
 from fastapi import WebSocket
@@ -6,64 +7,181 @@ from fastapi import WebSocket
 from backend_version import get_backend_version
 from state import state
 
-
-def participant_names() -> list[str]:
-    return sorted(n for n in state.participants if n != "__host__")
+logger = logging.getLogger(__name__)
 
 
-def build_state_message() -> dict:
-    names = participant_names()
-    now = datetime.now(timezone.utc)
-    last_seen = state.daemon_last_seen
-    daemon_connected = last_seen is not None and (now - last_seen).total_seconds() < 5
+def participant_ids() -> list[str]:
+    """Return sorted UUIDs of named participants, excluding __host__."""
+    return sorted(
+        pid for pid in state.participants
+        if pid != "__host__" and pid in state.participant_names
+    )
+
+
+def _build_qa_for_participant(pid: str) -> list[dict]:
+    return [
+        {
+            "id": qid,
+            "text": q["text"],
+            "author": state.participant_names.get(q["author"], "Unknown"),
+            "is_own": q["author"] == pid,
+            "has_upvoted": pid in q["upvoters"],
+            "upvote_count": len(q["upvoters"]),
+            "answered": q["answered"],
+            "timestamp": q["timestamp"],
+        }
+        for qid, q in sorted(
+            state.qa_questions.items(),
+            key=lambda item: (-len(item[1]["upvoters"]), item[1]["timestamp"]),
+        )
+    ]
+
+
+def _build_qa_for_host() -> list[dict]:
+    return [
+        {
+            "id": qid,
+            "text": q["text"],
+            "author": state.participant_names.get(q["author"], "Unknown"),
+            "upvote_count": len(q["upvoters"]),
+            "answered": q["answered"],
+            "timestamp": q["timestamp"],
+        }
+        for qid, q in sorted(
+            state.qa_questions.items(),
+            key=lambda item: (-len(item[1]["upvoters"]), item[1]["timestamp"]),
+        )
+    ]
+
+
+def build_participant_state(pid: str) -> dict:
+    """Build personalized state for a participant."""
+    pids = participant_ids()
     return {
         "type": "state",
         "backend_version": get_backend_version(),
         "poll": state.poll,
         "poll_active": state.poll_active,
         "vote_counts": state.vote_counts(),
-        "participant_count": len(names),
-        "participant_names": names,
-        "participant_locations": {n: state.locations.get(n, "") for n in names},
+        "participant_count": len(pids),
+        "my_score": state.scores.get(pid, 0),
+        "current_activity": state.current_activity,
+        "wordcloud_words": state.wordcloud_words,
+        "wordcloud_topic": state.wordcloud_topic,
+        "qa_questions": _build_qa_for_participant(pid),
+    }
+
+
+def build_host_state() -> dict:
+    """Build full state for the host panel."""
+    pids = participant_ids()
+    now = datetime.now(timezone.utc)
+    last_seen = state.daemon_last_seen
+    daemon_connected = last_seen is not None and (now - last_seen).total_seconds() < 5
+
+    participants_list = []
+    for pid in pids:
+        name = state.participant_names.get(pid, "Unknown")
+        loc = state.locations.get(pid, "")
+        score = state.scores.get(pid, 0)
+        participants_list.append({
+            "uuid": pid,
+            "name": name,
+            "score": score,
+            "location": loc,
+        })
+
+    return {
+        "type": "state",
+        "backend_version": get_backend_version(),
+        "poll": state.poll,
+        "poll_active": state.poll_active,
+        "vote_counts": state.vote_counts(),
+        "participant_count": len(pids),
+        "participants": participants_list,
         "daemon_last_seen": last_seen.isoformat() if last_seen else None,
         "daemon_connected": daemon_connected,
         "daemon_session_folder": state.daemon_session_folder,
         "daemon_session_notes": state.daemon_session_notes,
         "quiz_preview": state.quiz_preview,
-        "scores": state.scores,
         "current_activity": state.current_activity,
         "wordcloud_words": state.wordcloud_words,
         "wordcloud_topic": state.wordcloud_topic,
-        "qa_questions": [
-            {
-                "id": qid,
-                "text": q["text"],
-                "author": q["author"],
-                "upvote_count": len(q["upvoters"]),
-                "upvoters": list(q["upvoters"]),
-                "answered": q["answered"],
-                "timestamp": q["timestamp"],
-            }
-            for qid, q in sorted(
-                state.qa_questions.items(),
-                key=lambda item: (-len(item[1]["upvoters"]), item[1]["timestamp"])
-            )
-        ],
+        "qa_questions": _build_qa_for_host(),
     }
 
 
-async def broadcast(message: dict, exclude: Optional[str] = None):
+async def broadcast_state():
+    """Send personalized state to each connected client."""
     dead = []
-    for name, ws in state.participants.items():
-        if name == exclude:
+    for pid, ws in state.participants.items():
+        try:
+            if pid == "__host__":
+                await ws.send_text(json.dumps(build_host_state()))
+            else:
+                await ws.send_text(json.dumps(build_participant_state(pid)))
+        except Exception:
+            dead.append(pid)
+    for pid in dead:
+        state.participants.pop(pid, None)
+
+
+async def broadcast(message: dict, exclude: Optional[str] = None):
+    """Send identical message to all connected clients."""
+    dead = []
+    for pid, ws in state.participants.items():
+        if pid == exclude:
             continue
         try:
             await ws.send_text(json.dumps(message))
         except Exception:
-            dead.append(name)
-    for name in dead:
-        state.participants.pop(name, None)
+            dead.append(pid)
+    for pid in dead:
+        state.participants.pop(pid, None)
 
 
-async def send_state_to(ws: WebSocket):
-    await ws.send_text(json.dumps(build_state_message()))
+async def broadcast_participant_update():
+    """Send participant update: simple count to participants, full details to host."""
+    pids = participant_ids()
+    count = len(pids)
+
+    # Simple message for participants
+    participant_msg = json.dumps({"type": "participant_count", "count": count})
+
+    # Detailed message for host
+    participants_list = []
+    for pid in pids:
+        name = state.participant_names.get(pid, "Unknown")
+        participants_list.append({
+            "uuid": pid,
+            "name": name,
+            "score": state.scores.get(pid, 0),
+            "location": state.locations.get(pid, ""),
+        })
+    host_msg = json.dumps({
+        "type": "participant_count",
+        "count": count,
+        "participants": participants_list,
+    })
+
+    dead = []
+    for pid, ws in state.participants.items():
+        try:
+            if pid == "__host__":
+                await ws.send_text(host_msg)
+            else:
+                await ws.send_text(participant_msg)
+        except Exception:
+            dead.append(pid)
+    for pid in dead:
+        state.participants.pop(pid, None)
+
+
+async def send_state_to_participant(ws: WebSocket, pid: str):
+    """Send personalized state to a specific participant."""
+    await ws.send_text(json.dumps(build_participant_state(pid)))
+
+
+async def send_state_to_host(ws: WebSocket):
+    """Send host state to the host websocket."""
+    await ws.send_text(json.dumps(build_host_state()))
