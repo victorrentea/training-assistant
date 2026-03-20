@@ -51,6 +51,21 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     "💪 Trust your instincts!",
     "🎯 Nice eye!",
   ];
+  const _DEBATE_TOASTS = [
+    "⚔️ Defend your position — back it up with evidence!",
+    "🎯 Focus on the strongest counterargument",
+    "💡 Real-world examples win debates",
+    "🧠 Listen to the other side — find the weak spot",
+    "🗣️ Be persuasive, not aggressive",
+    "🔍 What trade-off are they ignoring?",
+    "💪 Stand your ground — your experience matters",
+    "🤝 Acknowledge the valid points, then counter",
+    "📊 Data beats opinions — use concrete examples",
+    "🏆 The best argument wins, not the loudest voice",
+  ];
+  let _debateToastIndex = 0;
+  let _debateToastInterval = null;
+  let _debateToastTimeout = null;
   let _crToastIndex = 0;
   let _crToastInterval = null;
   let _crToastTimeout = null;
@@ -479,6 +494,7 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
           myWords = [];
           renderQACleanup();
           _stopCRToasts();
+          _stopDebateToasts();
           renderContent(msg.vote_counts);
         }
         updateSummary(msg.summary_points, msg.summary_updated_at);
@@ -836,6 +852,32 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     if (el) el.classList.remove('visible');
   }
 
+  // ── Debate toasts ──
+  function _showDebateToast() {
+    const el = document.getElementById('qa-toast');
+    if (!el) return;
+    el.textContent = _DEBATE_TOASTS[_debateToastIndex % _DEBATE_TOASTS.length];
+    _debateToastIndex++;
+    el.classList.add('visible');
+    clearTimeout(_debateToastTimeout);
+    _debateToastTimeout = setTimeout(() => el.classList.remove('visible'), 4400);
+  }
+
+  function _startDebateToasts() {
+    _stopDebateToasts();
+    _stopQAToasts();
+    _showDebateToast();
+    _debateToastInterval = setInterval(_showDebateToast, 15000);
+  }
+
+  function _stopDebateToasts() {
+    clearInterval(_debateToastInterval);
+    clearTimeout(_debateToastTimeout);
+    _debateToastInterval = null;
+    const el = document.getElementById('qa-toast');
+    if (el) el.classList.remove('visible');
+  }
+
   // ── Code Review toasts ──
   function _showCRToast() {
     const el = document.getElementById('cr-toast');
@@ -1046,6 +1088,7 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     const content = document.getElementById('content');
     if (!content) return;
     content.dataset.screen = 'debate';
+    _stopQAToasts();
 
     const phase = msg.debate_phase;
     const displayPhase = phase;
@@ -1143,6 +1186,13 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     }
 
     content.innerHTML = html;
+
+    // Debate toasts — show during arguments/prep/live phases
+    if (phase === 'arguments' || phase === 'prep' || phase === 'live_debate') {
+      _startDebateToasts();
+    } else {
+      _stopDebateToasts();
+    }
 
     // Reconstruct timer on reconnect from state
     if (phase === 'live_debate' && msg.debate_sub_timer_started_at && msg.debate_sub_phase_index != null) {

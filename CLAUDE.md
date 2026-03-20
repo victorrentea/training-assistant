@@ -20,7 +20,7 @@ The file contains `HOST_USERNAME` and `HOST_PASSWORD` for accessing `/host` and 
 - **Platform**: [Railway](https://railway.app) — auto-deploys on every push to `master`
 - **Deploy**: `git push` to `master` → Railway builds and deploys in ~40-50 seconds. No manual steps.
 - **Auth**: HTTP Basic Auth on `/host`, `/api/poll`, `/api/poll/status`, `/api/qa/question/{id}` (PATCH, DELETE), `/api/qa/answer/{id}`, `/api/qa/clear`, `/api/activity`, `/api/wordcloud/clear`, `/api/codereview`, `/api/codereview/status`, `/api/codereview/confirm-line` — participants access `/`, `/api/suggest-name`, `/api/status` freely; Q&A submit and upvote go through WebSocket (no REST endpoints)
-- **Versioning**: a pre-commit git hook stamps `static/version.js` with the current timestamp; both host and participant pages display it in the bottom-right corner
+- **Versioning**: `static/version.js` is generated at Railway deploy time (not committed to git); a GitHub Action generates `static/deploy-info.json` with changelog on each push to master; both host and participant pages display the version age in the bottom-right corner
 
 ---
 
