@@ -75,6 +75,7 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
   let _prevPollActive = false;
   let _prevActivity = null;
   let _stateInitialised = false;   // skip notifications on first state (join mid-session)
+  let currentMode = 'workshop';
   let _notifBtnBound = false;      // prevent re-binding on reconnect
   let summaryPoints = [];
   let summaryUpdatedAt = null;
@@ -418,6 +419,11 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
           _prevPollActive = msg.poll_active;
           _prevActivity   = msg.current_activity;
         }
+        if (msg.mode && msg.mode !== currentMode) {
+          currentMode = msg.mode;
+          applyParticipantMode(msg.mode);
+        }
+        if (msg.mode) currentMode = msg.mode;
         if (msg.poll?.id !== currentPoll?.id) {
           myVote = msg.poll?.multi ? new Set() : null;
           pollResult = null;
@@ -481,12 +487,20 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
         }
         window._qaQuestions = msg.qa_questions || [];
         if (msg.current_activity === 'wordcloud') {
+          const confGrid = document.getElementById('conference-emoji-grid');
+          if (confGrid) confGrid.style.display = 'none';
           renderWordCloudScreen(msg.wordcloud_words || {}, msg.wordcloud_topic || '');
         } else if (msg.current_activity === 'qa') {
+          const confGrid = document.getElementById('conference-emoji-grid');
+          if (confGrid) confGrid.style.display = 'none';
           renderQAScreen(msg.qa_questions || []);
         } else if (msg.current_activity === 'debate') {
+          const confGrid = document.getElementById('conference-emoji-grid');
+          if (confGrid) confGrid.style.display = 'none';
           renderDebateScreen(msg);
         } else if (msg.current_activity === 'codereview') {
+          const confGrid = document.getElementById('conference-emoji-grid');
+          if (confGrid) confGrid.style.display = 'none';
           renderCodeReviewScreen(msg.codereview);
         } else {
           const content = document.getElementById('content');
@@ -1282,8 +1296,38 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
   }
 
   // ── Render ──
+  function applyParticipantMode(mode) {
+    const isConference = mode === 'conference';
+    // Hide/show status bar elements
+    const statusLeft = document.querySelector('.status-left');
+    if (statusLeft) statusLeft.style.display = isConference ? 'none' : '';
+    const myScore = document.getElementById('my-score');
+    if (myScore) myScore.style.display = isConference ? 'none' : '';
+    const locPrompt = document.getElementById('location-prompt');
+    if (locPrompt) locPrompt.style.display = isConference ? 'none' : '';
+    const notifBtn = document.getElementById('notif-btn');
+    if (notifBtn) notifBtn.style.display = isConference ? 'none' : '';
+
+    // Toggle emoji displays
+    const emojiBar = document.getElementById('emoji-bar');
+    if (emojiBar) emojiBar.style.display = isConference ? 'none' : '';
+    const confGrid = document.getElementById('conference-emoji-grid');
+    if (confGrid) confGrid.style.display = isConference ? '' : 'none';
+  }
+
   function renderContent(voteCounts) {
     const el = document.getElementById('content');
+    const confGrid = document.getElementById('conference-emoji-grid');
+    // Conference mode: show emoji grid when idle, hide when activity (poll) is active
+    if (currentMode === 'conference') {
+      if (!currentPoll) {
+        el.innerHTML = '';
+        if (confGrid) confGrid.style.display = '';
+        return;
+      } else {
+        if (confGrid) confGrid.style.display = 'none';
+      }
+    }
     if (!currentPoll) {
       const nameSet = (_suggestedName === null || myName !== _suggestedName);
       const locationSet = !!localStorage.getItem(LS_LOCATION_KEY);

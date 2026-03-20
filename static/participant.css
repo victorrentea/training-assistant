@@ -680,3 +680,38 @@ h1 { display: none; }
 }
 .emoji-btn:hover { background: var(--surface2); }
 .emoji-btn:active { transform: scale(0.85); }
+
+/* Conference mode emoji grid */
+#conference-emoji-grid {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  padding: 1rem;
+}
+.emoji-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  max-width: 320px;
+  width: 100%;
+}
+.emoji-grid-btn {
+  font-size: 3rem;
+  padding: 1.2rem;
+  border: 2px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+  cursor: pointer;
+  transition: transform 0.1s, background 0.15s;
+  user-select: none;
+  -webkit-user-select: none;
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.emoji-grid-btn:active {
+  transform: scale(0.9);
+  background: var(--border);
+}
