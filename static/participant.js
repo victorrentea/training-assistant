@@ -613,7 +613,7 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
           </div>
           <div class="wc-input-panel">
             <p class="wc-prompt" id="wc-prompt-text">What comes to mind?</p>
-            <div class="wc-input-row">
+            <div class="activity-input-row wc-input-row">
               <input id="wc-input" type="text" maxlength="40" autocomplete="off" placeholder="Type a word…" list="wc-suggestions" />
               <datalist id="wc-suggestions"></datalist>
               <button id="wc-go" class="btn btn-primary">↵</button>
@@ -802,7 +802,7 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     content.dataset.screen = 'qa';
     content.innerHTML = `
       <div class="qa-screen">
-        <div class="qa-input-row">
+        <div class="activity-input-row qa-input-row">
           <input id="qa-input" type="text" maxlength="280" autocomplete="off"
                  placeholder="Ask a question…" />
           <button id="qa-submit-btn" class="btn btn-primary" onclick="submitQuestion()">↵</button>
