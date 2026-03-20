@@ -223,46 +223,7 @@ body {
   height: auto;
 }
 
-.wc-input-row {
-  display: flex;
-  gap: .5rem;
-  align-items: stretch;
-}
-
-.wc-input-row input {
-  flex: 1;
-  padding: .4rem .6rem;
-  border-radius: 6px;
-  border: 1px solid var(--border);
-  background: var(--surface2);
-  color: var(--text);
-  font-size: .9rem;
-}
-
-.wc-input-row button {
-  height: auto;
-  align-self: stretch;
-}
-
-
-/* Host Q&A composer: keep input and submit button at identical height */
-#tab-content-qa .qa-input-row {
-  display: flex;
-  gap: .4rem;
-  align-items: stretch;
-}
-
-#host-qa-input {
-  flex: 1;
-  background: var(--surface2);
-  color: var(--text);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 0 .6rem;
-  font-size: .9rem;
-  height: 34px;
-  min-height: 34px;
-}
+/* Host Q&A: no extra overrides needed — uses activity-input-row from common.css */
 
 /* Status badges pinned to bottom of left column */
 .left-status-bar {
@@ -547,6 +508,15 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
   display: flex; justify-content: space-between; align-items: center; gap: .5rem;
 }
 .pax-list li:last-child { border-bottom: none; }
+.pax-name {
+  display: flex;
+  align-items: center;
+  gap: .35rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+}
 .pax-score {
   font-size: .78rem;
   color: var(--accent2);
@@ -703,3 +673,70 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
 .qa-upvotes { color: var(--accent); font-weight: 600; }
 .qa-actions { display: flex; gap: .4rem; flex-wrap: wrap; }
 .btn-sm { padding: .25rem .6rem; font-size: .8rem; }
+
+/* Code Review */
+.codereview-lines {
+    font-family: monospace;
+    font-size: 13px;
+    line-height: 2;
+    background: var(--surface);
+    border-radius: var(--radius);
+    overflow-x: auto;
+}
+
+.codereview-line {
+    display: flex;
+    padding: 2px 12px;
+    transition: background 0.15s;
+    cursor: pointer;
+}
+
+.codereview-line-clickable {
+    cursor: pointer;
+}
+
+.codereview-line:hover {
+    background: rgba(108,99,255,0.12) !important;
+}
+
+.codereview-line-clickable:hover {
+    filter: brightness(1.2);
+}
+
+.codereview-gutter {
+    width: 32px;
+    text-align: right;
+    margin-right: 12px;
+    color: var(--muted);
+    user-select: none;
+    flex-shrink: 0;
+}
+
+.codereview-code {
+    flex: 1;
+    white-space: pre;
+}
+
+.codereview-count {
+    margin-left: 8px;
+    font-size: 11px;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.codereview-participant-list {
+    font-size: 13px;
+    line-height: 2;
+}
+
+.codereview-participant-row {
+    display: flex;
+    gap: 8px;
+    padding: 4px 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.codereview-participant-score {
+    color: var(--warn);
+    min-width: 48px;
+}

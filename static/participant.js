@@ -33,7 +33,7 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
   const WC_COLORS = ['#7ecef4','#a78bfa','#34d399','#fbbf24','#f472b6','#60a5fa','#fb923c'];
   let _wcDebounceTimer = null;
   const versionReloadGuard = window.createVersionReloadGuard
-    ? window.createVersionReloadGuard({ countdownSeconds: 10 })
+    ? window.createVersionReloadGuard({ countdownSeconds: 5 })
     : null;
   window.__versionReloadGuard = versionReloadGuard;
   const _QA_TOASTS = [
@@ -43,6 +43,16 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     "🤔 Got a burning question? Type it in!",
     "⬆️ See a question you like? Give it an upvote!",
   ];
+  const _CR_TOASTS = [
+    "🐛 You got this!",
+    "👀 Look closer...",
+    "🔥 Keep going!",
+    "💪 Trust your instincts!",
+    "🎯 Nice eye!",
+  ];
+  let _crToastIndex = 0;
+  let _crToastInterval = null;
+  let _crToastTimeout = null;
   let _qaToastIndex = 0;
   let _qaToastInterval = null;
   let _qaToastTimeout = null;
@@ -143,7 +153,7 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     fetchSuggestedName().then(name => {
       suggestedName = name;
       nameInput.placeholder = name;
-      nameInput.focus();
+      join();  // auto-join with suggested LotR name
     });
   }
   updateClearBtn();
@@ -182,23 +192,25 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
   }
 
   // ── Inline name editing ──
-  document.getElementById('edit-name-btn').addEventListener('click', () => {
+  function startNameEdit() {
     const display = document.getElementById('display-name');
     const editWrap = document.getElementById('name-edit-wrap');
     const editInput = document.getElementById('name-edit-input');
-    const editBtn = document.getElementById('edit-name-btn');
     editInput.value = myName;
     display.style.display = 'none';
-    editBtn.style.display = 'none';
     editWrap.style.display = '';
     editInput.focus();
     editInput.select();
-  });
+  }
+
+  document.getElementById('edit-name-btn').addEventListener('click', startNameEdit);
+  document.getElementById('display-name').addEventListener('click', startNameEdit);
 
   function confirmNameEdit() {
     const newName = document.getElementById('name-edit-input').value.trim();
     if (newName && newName !== myName) {
         myName = newName;
+        _joinedWithSuggestion = false;
         localStorage.setItem(LS_KEY, myName);
         document.getElementById('display-name').textContent = myName;
         if (ws && ws.readyState === WebSocket.OPEN) {
@@ -206,8 +218,8 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
         }
     }
     document.getElementById('display-name').style.display = '';
-    document.getElementById('edit-name-btn').style.display = '';
     document.getElementById('name-edit-wrap').style.display = 'none';
+    updateOnboardingChecklist();
   }
 
   document.getElementById('name-edit-input').addEventListener('blur', confirmNameEdit);
@@ -238,6 +250,31 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     el.style.display = localStorage.getItem(LS_LOCATION_KEY) ? 'none' : '';
   }
 
+  function updateOnboardingChecklist() {
+    const nameEl = document.getElementById('onboard-name');
+    const locEl = document.getElementById('onboard-location');
+    if (nameEl && !nameEl.classList.contains('done') && !_joinedWithSuggestion) {
+      nameEl.classList.add('done');
+      nameEl.innerHTML = '☑ Click on your name to set it';
+      nameEl.style.cursor = 'default';
+      nameEl.onclick = null;
+    }
+    if (locEl && !locEl.classList.contains('done') && localStorage.getItem(LS_LOCATION_KEY)) {
+      locEl.classList.add('done');
+      locEl.innerHTML = '☑ Share your location';
+      locEl.style.cursor = 'default';
+      locEl.onclick = null;
+    }
+    // Fade out entire checklist when both tasks are done
+    const bothDone = nameEl?.classList.contains('done') && locEl?.classList.contains('done');
+    if (bothDone) {
+      setTimeout(() => {
+        const list = document.getElementById('onboarding-list');
+        if (list) { list.style.transition = 'opacity 3s'; list.style.opacity = '0'; }
+      }, 1500);
+    }
+  }
+
   function requestLocation() {
     if (!navigator.geolocation) return;
     navigator.geolocation.getCurrentPosition(
@@ -247,6 +284,7 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
         localStorage.setItem(LS_LOCATION_KEY, locationStr);
         sendLocation(locationStr);
         updateLocationPrompt();
+        updateOnboardingChecklist();
       },
       () => { /* user denied — prompt stays visible, they can retry */ },
       { timeout: 15000, maximumAge: 60000 }
@@ -338,6 +376,9 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
           if (_prevActivity !== 'wordcloud' && msg.current_activity === 'wordcloud') {
             notifyIfHidden('☁️ Word cloud is open', 'Tap to share your thoughts');
           }
+          if (_prevActivity !== 'codereview' && msg.current_activity === 'codereview') {
+            notifyIfHidden('📝 Code Review', 'Spot bugs and earn points!');
+          }
           _prevPollActive = msg.poll_active;
           _prevActivity   = msg.current_activity;
         }
@@ -353,6 +394,7 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
         currentPoll = msg.poll;
         pollActive = msg.poll_active;
         updateParticipantCount(msg.participant_count);
+        updateHostDot(msg.host_connected);
         updateScore(msg.my_score);
         window._myScore = msg.my_score || 0;
         window._myUuid = myUUID;
@@ -374,11 +416,14 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
           renderWordCloudScreen(msg.wordcloud_words || {}, msg.wordcloud_topic || '');
         } else if (msg.current_activity === 'qa') {
           renderQAScreen(msg.qa_questions || []);
+        } else if (msg.current_activity === 'codereview') {
+          renderCodeReviewScreen(msg.codereview);
         } else {
           const content = document.getElementById('content');
           if (content) content.dataset.screen = '';
           myWords = [];
           renderQACleanup();
+          _stopCRToasts();
           renderContent(msg.vote_counts);
         }
         updateSummary(msg.summary_points, msg.summary_updated_at);
@@ -388,6 +433,7 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
         break;
       case 'participant_count':
         updateParticipantCount(msg.count);
+        updateHostDot(msg.host_connected);
         break;
       case 'scores':
         break;
@@ -429,6 +475,11 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
 
   function updateParticipantCount(n) {
     document.getElementById('pax-count').textContent = `👥 ${n} participant${n !== 1 ? 's' : ''}`;
+  }
+
+  function updateHostDot(connected) {
+    const dot = document.getElementById('host-dot');
+    if (dot) dot.style.display = connected ? 'inline' : 'none';
   }
 
   let _displayedScore = 0;
@@ -557,24 +608,26 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
       content.dataset.screen = 'wordcloud';
       content.innerHTML = `
         <div class="wc-layout">
-          <div class="wc-cloud-panel">
+          <div class="wc-cloud-panel" style="position:relative;">
             <canvas id="wc-canvas"></canvas>
+            <button id="wc-download" class="btn btn-secondary wc-download-overlay" style="display:none;">⬇</button>
           </div>
           <div class="wc-input-panel">
-            <p class="wc-prompt" id="wc-prompt-text">What comes to mind? <span style="font-size:.9em; opacity:.75; font-weight:normal">(pts++)</span></p>
-            <div class="wc-input-row">
+            <p class="wc-prompt" id="wc-prompt-text">What comes to mind?</p>
+            <div class="activity-input-row wc-input-row">
               <input id="wc-input" type="text" maxlength="40" autocomplete="off" placeholder="Type a word…" list="wc-suggestions" />
               <datalist id="wc-suggestions"></datalist>
-              <button id="wc-go" class="btn btn-primary">🚀</button>
+              <button id="wc-go" class="btn btn-primary">↵</button>
             </div>
-            <button id="wc-download" class="btn btn-secondary wc-download-btn">⬇ Download Image</button>
             <div id="wc-my-words"></div>
           </div>
         </div>`;
       document.getElementById('wc-go').onclick = submitWord;
-      document.getElementById('wc-input').addEventListener('keydown', e => {
+      const wcInput = document.getElementById('wc-input');
+      wcInput.addEventListener('keydown', e => {
         if (e.key === 'Enter') submitWord();
       });
+      wcInput.focus();
       document.getElementById('wc-download').onclick = () => {
         const canvas = document.getElementById('wc-canvas');
         if (!canvas) return;
@@ -587,9 +640,15 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     // Update prompt with topic (may change after screen is shown)
     const promptEl = document.getElementById('wc-prompt-text');
     if (promptEl) {
-      // Topic is shown on the canvas image, so keep prompt simple
-      promptEl.innerHTML = `What comes to mind? <span style="font-size:.9em; opacity:.75; font-weight:normal">(pts++)</span>`;
+      if (topic) {
+        promptEl.innerHTML = `What comes to mind about <span class="wc-topic-highlight">${escHtml(topic)}</span>?`;
+      } else {
+        promptEl.textContent = 'What comes to mind?';
+      }
     }
+    // Show/hide download button based on word count
+    const dlBtn = document.getElementById('wc-download');
+    if (dlBtn) dlBtn.style.display = Object.keys(wordcloudWords).length > 0 ? '' : 'none';
     renderWordCloud(wordcloudWords);
     renderMyWords();
     updateWordSuggestions(wordcloudWords);
@@ -633,7 +692,7 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
 
   function _drawCloud(canvas, wordsMap) {
     const entries = Object.entries(wordsMap);
-    const TITLE_H = _lastWordcloudTopic ? 40 : 0;
+    const TITLE_H = 0;
     if (!entries.length) {
       const ctx = canvas.getContext('2d');
       ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -661,14 +720,6 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
       .on('end', (placed) => {
         const ctx = canvas.getContext('2d');
         ctx.clearRect(0, 0, W, H);
-        // Draw topic title
-        if (_lastWordcloudTopic) {
-          ctx.textAlign = 'center';
-          ctx.font = 'bold 20px sans-serif';
-          ctx.fillStyle = 'rgba(255,255,255,0.75)';
-          ctx.fillText(_lastWordcloudTopic, W / 2, 28);
-        }
-        // Draw words offset below the title
         ctx.textAlign = 'center';
         placed.forEach((w, i) => {
           ctx.save();
@@ -708,6 +759,39 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     if (el) el.classList.remove('visible');
   }
 
+  // ── Code Review toasts ──
+  function _showCRToast() {
+    const el = document.getElementById('cr-toast');
+    if (!el) return;
+    const idx = Math.floor(Math.random() * _CR_TOASTS.length);
+    el.textContent = _CR_TOASTS[idx];
+    el.classList.add('visible');
+    clearTimeout(_crToastTimeout);
+    _crToastTimeout = setTimeout(() => el.classList.remove('visible'), 5000);
+  }
+
+  function _scheduleCRToast() {
+    const delay = 10000 + Math.random() * 4000; // 10-14 seconds
+    _crToastInterval = setTimeout(() => {
+      _showCRToast();
+      _scheduleCRToast();
+    }, delay);
+  }
+
+  function _startCRToasts() {
+    if (_crToastInterval) return; // already running, don't restart
+    _showCRToast();
+    _scheduleCRToast();
+  }
+
+  function _stopCRToasts() {
+    clearInterval(_crToastInterval);
+    clearTimeout(_crToastTimeout);
+    _crToastInterval = null;
+    const el = document.getElementById('cr-toast');
+    if (el) el.classList.remove('visible');
+  }
+
   function renderQAScreen(questions) {
     const content = document.getElementById('content');
     if (!content) return;
@@ -719,7 +803,7 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     content.dataset.screen = 'qa';
     content.innerHTML = `
       <div class="qa-screen">
-        <div class="qa-input-row">
+        <div class="activity-input-row qa-input-row">
           <input id="qa-input" type="text" maxlength="280" autocomplete="off"
                  placeholder="Ask a question…" />
           <button id="qa-submit-btn" class="btn btn-primary" onclick="submitQuestion()">↵</button>
@@ -730,6 +814,7 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     const input = document.getElementById('qa-input');
     if (input) {
       input.addEventListener('keydown', e => { if (e.key === 'Enter') submitQuestion(); });
+      input.focus();
     }
     updateQAList(questions);
     _startQAToasts(questions);
@@ -793,7 +878,29 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
   function renderContent(voteCounts) {
     const el = document.getElementById('content');
     if (!currentPoll) {
-      el.innerHTML = `<div class="waiting"><div class="icon">⏳</div><p>Waiting for host…</p></div>`;
+      const nameSet = !_joinedWithSuggestion;
+      const locationSet = !!localStorage.getItem(LS_LOCATION_KEY);
+      const allDone = nameSet && locationSet;
+      el.innerHTML = `<div class="waiting">
+        <div class="icon">👋</div>
+        <p>Welcome!</p>
+        <p style="margin-top:.75rem;">Get ready to participate.</p>
+        <p style="margin-top:.5rem;">Your answers and ideas will shape this session!</p>
+        <ul id="onboarding-list" class="onboarding-checklist"${allDone ? ' style="opacity:1"' : ''}>
+          <li id="onboard-name" class="onboarding-item${nameSet ? ' done' : ''}" onclick="${nameSet ? '' : 'startNameEdit()'}" style="cursor:${nameSet ? 'default' : 'pointer'}">
+            ${nameSet ? '☑' : '☐'} Click on your name to set it
+          </li>
+          <li id="onboard-location" class="onboarding-item${locationSet ? ' done' : ''}" onclick="${locationSet ? '' : 'requestLocation()'}" style="cursor:${locationSet ? 'default' : 'pointer'}">
+            ${locationSet ? '☑' : '☐'} Share your location
+          </li>
+        </ul>
+      </div>`;
+      if (allDone) {
+        setTimeout(() => {
+          const list = document.getElementById('onboarding-list');
+          if (list) { list.style.transition = 'opacity 3s'; list.style.opacity = '0'; }
+        }, 1500);
+      }
       return;
     }
     renderPollCard(el, voteCounts);
@@ -1013,5 +1120,111 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
       if (existing) existing.outerHTML = footerHTML;
       else card.insertAdjacentHTML('beforeend', footerHTML);
       if (existingWarn) existingWarn.remove();
+    }
+  }
+
+  let codereviewMySelections = new Set();
+
+  function renderCodeReviewScreen(cr) {
+    if (!cr) return;
+
+    const content = document.getElementById('content');
+    codereviewMySelections = new Set(cr.my_selections || []);
+    const confirmed = new Set(cr.confirmed_lines || []);
+    const isSelecting = cr.phase === 'selecting';
+    const isReviewing = cr.phase === 'reviewing';
+    const lines = cr.snippet.split('\n');
+    const percentages = cr.line_percentages || {};
+
+    let html = '<div class="codereview-screen">';
+    html += '<div class="codereview-header" style="font-size:1.3rem;">Code Review</div>';
+    if (isSelecting) {
+      html += '<div class="codereview-subtitle">Tap every line that has a bug, smell, or risk</div>';
+      html += '<div id="cr-toast" class="qa-toast"></div>';
+    } else {
+      html += '<div class="codereview-subtitle">Selection closed — reviewing results</div>';
+    }
+
+    html += '<div class="codereview-viewer">';
+    lines.forEach((lineText, i) => {
+      const lineNum = i + 1;
+      const isMine = codereviewMySelections.has(lineNum);
+      const isConfirmed = confirmed.has(lineNum);
+      const pct = percentages[String(lineNum)];
+
+      let lineClass = 'codereview-pline';
+      let gutterContent = String(lineNum);
+      let badge = '';
+
+      if (isConfirmed && isMine) {
+        lineClass += ' codereview-pline-correct';
+        gutterContent = `✓ ${lineNum}`;
+        badge = '<span class="codereview-badge codereview-badge-correct">+200</span>';
+      } else if (isConfirmed && !isMine) {
+        lineClass += ' codereview-pline-confirmed';
+        gutterContent = `✓ ${lineNum}`;
+      } else if (isMine) {
+        lineClass += ' codereview-pline-selected';
+      }
+
+      if (isSelecting) {
+        lineClass += ' codereview-pline-clickable';
+      }
+
+      const pctBadge = isReviewing && pct !== undefined ? `<span class="codereview-pct">${pct}%</span>` : '';
+
+      html += `<div class="${lineClass}" onclick="toggleCodeReviewLine(${lineNum})">`;
+      html += `<span class="codereview-pgutter">${gutterContent}</span>`;
+      html += `<span class="codereview-pcode">${escHtml(lineText) || ' '}</span>`;
+      html += badge;
+      html += pctBadge;
+      html += '</div>';
+    });
+    html += '</div>';
+
+    if (isSelecting) {
+      html += `<div class="codereview-footer">You selected ${codereviewMySelections.size} line(s)</div>`;
+    } else if (isReviewing) {
+      const pointsEarned = [...confirmed].filter(l => codereviewMySelections.has(l)).length * 200;
+      if (pointsEarned > 0) {
+        html += `<div class="codereview-footer codereview-footer-points"><span class="codereview-points-earned">+${pointsEarned}</span> points earned</div>`;
+      }
+    }
+
+    html += '</div>';
+    content.innerHTML = html;
+
+    // Apply syntax highlighting as a single block for consistent tokens
+    if (typeof hljs !== 'undefined') {
+      const codeBlock = document.createElement('code');
+      codeBlock.textContent = cr.snippet;
+      if (cr.language) {
+        codeBlock.className = `language-${cr.language}`;
+      }
+      const pre = document.createElement('pre');
+      pre.appendChild(codeBlock);
+      hljs.highlightElement(codeBlock);
+
+      const highlightedLines = codeBlock.innerHTML.split('\n');
+      content.querySelectorAll('.codereview-pcode').forEach((el, i) => {
+        if (highlightedLines[i] !== undefined) {
+          el.innerHTML = highlightedLines[i] || ' ';
+        }
+      });
+    }
+
+    if (isSelecting) {
+      _startCRToasts();
+    } else {
+      _stopCRToasts();
+    }
+  }
+
+  function toggleCodeReviewLine(lineNum) {
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    if (codereviewMySelections.has(lineNum)) {
+      ws.send(JSON.stringify({ type: 'codereview_deselect', line: lineNum }));
+    } else {
+      ws.send(JSON.stringify({ type: 'codereview_select', line: lineNum }));
     }
   }
