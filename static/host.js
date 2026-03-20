@@ -1610,7 +1610,9 @@
         </div>
       </div>`;
     } else {
-      content.innerHTML = renderDebateDualColumn(againstArgs, forArgs, mergedArgs, msg.debate_champions, phase);
+      const phaseLabel = (DEBATE_PHASES.find(p => p.key === displayPhase) || {}).label || '';
+      content.innerHTML = `<div style="text-align:center; margin-bottom:.75rem; font-size:.95rem; color:var(--muted); text-transform:uppercase; letter-spacing:.08em;">${phaseLabel}</div>` +
+        renderDebateDualColumn(againstArgs, forArgs, mergedArgs, msg.debate_champions, phase);
     }
   }
 
