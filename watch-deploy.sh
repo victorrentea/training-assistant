@@ -37,6 +37,11 @@ REPO="victorrentea/training-assistant"
 PROD_URL="https://interact.victorrentea.ro/static/version.js"
 DEPLOY_TIMEOUT=120  # seconds to wait for production after a merge
 
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+HISTORY_FILE="$SCRIPT_DIR/deploy-history.txt"
+DEFAULT_ESTIMATE=45
+ESTIMATED=""
+
 get_prod_version() {
   curl -s "$PROD_URL" | grep -o "'.*'" | tr -d "'"
 }
@@ -45,10 +50,54 @@ get_master_head() {
   gh api "repos/$REPO/commits/master" --jq '.sha' 2>/dev/null
 }
 
+get_estimated_duration() {
+  if [ ! -f "$HISTORY_FILE" ] || [ ! -s "$HISTORY_FILE" ]; then
+    echo "$DEFAULT_ESTIMATE"
+    return
+  fi
+  local sum=0 count=0 dur
+  while read -r _ts dur; do
+    if [ -n "$dur" ]; then
+      sum=$((sum + dur))
+      count=$((count + 1))
+    fi
+  done < "$HISTORY_FILE"
+  if [ "$count" -eq 0 ]; then
+    echo "$DEFAULT_ESTIMATE"
+  else
+    echo $((sum / count))
+  fi
+}
+
+record_deploy() {
+  local duration="$1"
+  echo "$(date +%s) $duration" >> "$HISTORY_FILE"
+  # Trim to last 20 entries
+  local line_count
+  line_count=$(wc -l < "$HISTORY_FILE" | tr -d ' ')
+  if [ "$line_count" -gt 20 ]; then
+    local excess=$((line_count - 20))
+    tail -n 20 "$HISTORY_FILE" > "$HISTORY_FILE.tmp" && mv "$HISTORY_FILE.tmp" "$HISTORY_FILE"
+  fi
+}
+
+notify_countdown() {
+  local remaining="$1"
+  local msg
+  if [ "$remaining" -le 0 ]; then
+    msg="Should be live... still checking"
+  elif [ "$remaining" -le 5 ]; then
+    msg="Deploying — any moment now..."
+  else
+    msg="Deploying — ~${remaining}s remaining"
+  fi
+  terminal-notifier -title "🚀 Deploy" -message "$msg" -group deploy &>/dev/null &
+}
+
 notify_success() {
   local version="$1"
   echo "$(date '+%H:%M:%S') ✅ Deployed! Version: $version"
-  terminal-notifier -title "🚀 Deployed!" -message "Version $version is live" -timeout 5 &
+  terminal-notifier -title "🚀 Deployed!" -message "Version $version is live" -group deploy -timeout 5 &
   afplay /System/Library/Sounds/Glass.aiff &
   sleep 0.4
   afplay /System/Library/Sounds/Glass.aiff
@@ -57,7 +106,7 @@ notify_success() {
 notify_failure() {
   local sha="$1"
   echo "$(date '+%H:%M:%S') ❌ Deploy timeout! Master moved to ${sha:0:8} but production didn't update within ${DEPLOY_TIMEOUT}s"
-  terminal-notifier -title "❌ Deploy Timeout!" -message "Merge ${sha:0:8} not deployed after ${DEPLOY_TIMEOUT}s" -timeout 10 &
+  terminal-notifier -title "❌ Deploy Timeout!" -message "Merge ${sha:0:8} not deployed after ${DEPLOY_TIMEOUT}s" -group deploy -timeout 10 &
   afplay /System/Library/Sounds/Basso.aiff &
   sleep 0.4
   afplay /System/Library/Sounds/Basso.aiff
@@ -128,25 +177,33 @@ while true; do
   CURRENT_PROD=$(get_prod_version)
 
   if [ -n "$WAITING_SINCE" ]; then
+    NOW=$(date +%s)
+    ELAPSED=$((NOW - WAITING_SINCE))
+
     # We're waiting for a deploy — check if production updated
     if [ "$CURRENT_PROD" != "$LAST_PROD_VERSION" ]; then
+      record_deploy "$ELAPSED"
       notify_success "$CURRENT_PROD"
       LAST_PROD_VERSION="$CURRENT_PROD"
       WAITING_SINCE=""
       MERGE_SHA=""
+      ESTIMATED=""
       continue
     fi
 
     # Check timeout
-    NOW=$(date +%s)
-    ELAPSED=$((NOW - WAITING_SINCE))
     if [ "$ELAPSED" -ge "$DEPLOY_TIMEOUT" ]; then
       notify_failure "$MERGE_SHA"
       LAST_PROD_VERSION="$CURRENT_PROD"
       WAITING_SINCE=""
       MERGE_SHA=""
+      ESTIMATED=""
       continue
     fi
+
+    # Send countdown notification
+    REMAINING=$((ESTIMATED - ELAPSED))
+    notify_countdown "$REMAINING"
   else
     # Not waiting — track production version silently
     if [ "$CURRENT_PROD" != "$LAST_PROD_VERSION" ]; then
@@ -159,11 +216,14 @@ while true; do
   if [ $((POLL_COUNTER % 5)) -eq 0 ]; then
     CURRENT_HEAD=$(get_master_head)
     if [ -n "$CURRENT_HEAD" ] && [ "$CURRENT_HEAD" != "$LAST_MASTER_HEAD" ]; then
+      ESTIMATED=$(get_estimated_duration)
       echo "$(date '+%H:%M:%S') 🔀 Merge detected! Master HEAD: ${CURRENT_HEAD:0:8} (was ${LAST_MASTER_HEAD:0:8})"
       echo "  Waiting up to ${DEPLOY_TIMEOUT}s for production to update..."
       LAST_MASTER_HEAD="$CURRENT_HEAD"
       WAITING_SINCE=$(date +%s)
       MERGE_SHA="$CURRENT_HEAD"
+      # Initial countdown notification
+      terminal-notifier -title "🚀 Deploy" -message "Deploy detected — estimated ~${ESTIMATED}s" -group deploy &>/dev/null &
     elif [ -n "$CURRENT_HEAD" ]; then
       LAST_MASTER_HEAD="$CURRENT_HEAD"
     fi
