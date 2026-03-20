@@ -926,20 +926,25 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
       return;
     }
 
-    let html = `<div class="debate-statement">"${escDebate(statement)}"</div>`;
+    const sideIcon = mySide === 'for' ? '👍' : mySide === 'against' ? '👎' : '';
+    let html = `<div class="debate-statement-row">
+      <span class="debate-side-count debate-side-against">👎 ${sideCounts.against}</span>
+      <span class="debate-statement-text">"${escDebate(statement)}"</span>
+      <span class="debate-side-count debate-side-for">${sideCounts.for} 👍</span>
+    </div>`;
 
     if (phase === 'side_selection') {
       if (mySide) {
         if (msg.debate_auto_assigned) {
-          html += `<div class="debate-auto-assigned">You were automatically assigned to team <strong>${mySide.toUpperCase()}</strong></div>`;
+          html += `<div class="debate-auto-assigned">You were automatically assigned to ${sideIcon}</div>`;
         } else {
-          html += `<div class="debate-chosen">You chose: <strong>${mySide.toUpperCase()}</strong> ✓</div>`;
+          html += `<div class="debate-chosen">You chose ${sideIcon} ✓</div>`;
         }
-        html += `<div class="debate-waiting">Waiting for others… FOR: ${sideCounts.for} | AGAINST: ${sideCounts.against}</div>`;
+        html += `<div class="debate-waiting">Waiting for others…</div>`;
       } else {
         html += `<div class="debate-pick">
-          <button class="btn debate-btn-for" onclick="debatePickSide('for')">👍 FOR</button>
-          <button class="btn debate-btn-against" onclick="debatePickSide('against')">👎 AGAINST</button>
+          <button class="btn debate-btn-for" onclick="debatePickSide('for')">👍</button>
+          <button class="btn debate-btn-against" onclick="debatePickSide('against')">👎</button>
         </div>`;
       }
     } else if (phase === 'arguments') {
@@ -966,7 +971,7 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     } else if (phase === 'live_debate') {
       html += renderDebateArgColumns(args, mySide, msg, true);  // read-only during live debate
       html += renderDebateHints();
-      const champNames = Object.entries(champions).map(([s, n]) => `${s.toUpperCase()}: ${escDebate(n)}`).join(' vs ');
+      const champNames = Object.entries(champions).map(([s, n]) => `${s === 'for' ? '👍' : '👎'} ${escDebate(n)}`).join(' vs ');
       html += `<div class="debate-live-info">🎤 ${champNames}</div>`;
     } else if (phase === 'ended') {
       html += `<div class="debate-ended">Debate ended!</div>`;
@@ -1004,12 +1009,12 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
 
     return `<div class="debate-columns">
       <div class="debate-col debate-col-against">
-        <h3 class="debate-col-header">👎 AGAINST</h3>
+        <h3 class="debate-col-header">👎</h3>
         ${againstArgs.map(renderArg).join('')}
         ${Array(mergedAgainstCount).fill('').map(renderMerged).join('')}
       </div>
       <div class="debate-col debate-col-for">
-        <h3 class="debate-col-header">👍 FOR</h3>
+        <h3 class="debate-col-header">👍</h3>
         ${forArgs.map(renderArg).join('')}
         ${Array(mergedForCount).fill('').map(renderMerged).join('')}
       </div>
