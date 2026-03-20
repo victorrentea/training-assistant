@@ -99,8 +99,11 @@
 
   // Set participant link
   const link = `${location.protocol}//${location.host}/`;
-  document.getElementById('participant-link').href = link;
-  document.getElementById('participant-link').textContent = location.host;
+  const pLink = document.getElementById('participant-link');
+  pLink.href = link;
+  pLink.innerHTML = location.host.split('').map((ch, i) =>
+    `<span class="wave-char" style="animation-delay:${(i * 0.12).toFixed(2)}s">${ch}</span>`
+  ).join('');
 
   // ── WebSocket (host monitors state too) ──
   function connectWS() {
