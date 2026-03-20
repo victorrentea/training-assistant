@@ -379,6 +379,7 @@ def run() -> None:
                     else:
                         line_count = 0
                         latest_time = None
+                    print(f"[transcript] {line_count} lines in last {DEFAULT_TRANSCRIPT_MINUTES}min (total: {len(entries)} segments, {len(timed)} timed, latest: {latest_time})")
                     _post_json(
                         f"{config.server_url}/api/transcript-status",
                         {"line_count": line_count, "latest_ts": latest_time},
@@ -386,8 +387,8 @@ def run() -> None:
                     )
                 except SystemExit:
                     pass
-                except Exception:
-                    pass
+                except Exception as e:
+                    print(f"[transcript] Error: {e}", file=sys.stderr)
 
             # ── Check for forced summary request ──
             force_summary = False
