@@ -2,8 +2,9 @@
   const LS_UUID_KEY = 'workshop_participant_uuid';
   const LS_VOTE_KEY = 'workshop_vote';
 
-  // Each tab gets its own UUID (sessionStorage) so multiple tabs = multiple participants
-  const uuidStorage = sessionStorage;
+  // Host cookie (is_host=1) → sessionStorage (per-tab UUID for multi-tab testing)
+  // Normal participants → localStorage (same UUID across tabs/reloads)
+  const uuidStorage = document.cookie.includes('is_host=1') ? sessionStorage : localStorage;
 
   function getOrCreateUUID() {
       let uid = uuidStorage.getItem(LS_UUID_KEY);
