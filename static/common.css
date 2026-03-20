@@ -96,31 +96,6 @@
     object-fit: cover;
     vertical-align: middle;
     flex-shrink: 0;
-    position: relative;
-}
-.avatar-wrap {
-    position: relative;
-    display: inline-block;
-    vertical-align: middle;
-}
-.avatar-wrap .avatar-preview {
-    display: none;
-    position: absolute;
-    top: 100%;
-    left: 50%;
-    transform: translateX(-50%);
-    margin-top: 6px;
-    width: 128px;
-    height: 128px;
-    border-radius: 12px;
-    object-fit: cover;
-    box-shadow: 0 4px 16px rgba(0,0,0,.3);
-    border: 2px solid var(--border);
-    z-index: 100;
-    pointer-events: none;
-}
-.avatar-wrap:hover .avatar-preview {
-    display: block;
 }
 .avatar-fallback {
     width: 32px;

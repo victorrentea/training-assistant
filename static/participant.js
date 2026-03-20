@@ -114,6 +114,7 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     await Notification.requestPermission();
     const btn = document.getElementById('notif-btn');
     if (btn) btn.style.display = 'none';
+    updateOnboardingChecklist();
   }
 
   function notifyIfHidden(title, body) {
@@ -216,6 +217,7 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
   function updateOnboardingChecklist() {
     const nameEl = document.getElementById('onboard-name');
     const locEl = document.getElementById('onboard-location');
+    const notifEl = document.getElementById('onboard-notif');
     if (nameEl && !nameEl.classList.contains('done') && !_joinedWithSuggestion) {
       nameEl.classList.add('done');
       nameEl.innerHTML = '☑ Click on your name to set it';
@@ -228,9 +230,16 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
       locEl.style.cursor = 'default';
       locEl.onclick = null;
     }
-    // Fade out entire checklist when both tasks are done
-    const bothDone = nameEl?.classList.contains('done') && locEl?.classList.contains('done');
-    if (bothDone) {
+    const notifGranted = 'Notification' in window && Notification.permission === 'granted';
+    if (notifEl && !notifEl.classList.contains('done') && notifGranted) {
+      notifEl.classList.add('done');
+      notifEl.innerHTML = '☑ Enable browser notifications';
+      notifEl.style.cursor = 'default';
+      notifEl.onclick = null;
+    }
+    // Fade out entire checklist when all tasks are done
+    const allDone = nameEl?.classList.contains('done') && locEl?.classList.contains('done') && notifEl?.classList.contains('done');
+    if (allDone) {
       setTimeout(() => {
         const list = document.getElementById('onboarding-list');
         if (list) { list.style.transition = 'opacity 3s'; list.style.opacity = '0'; }
@@ -363,19 +372,38 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
         window._myName = myName;
         if (msg.my_avatar) {
             const avatarEl = document.getElementById('my-avatar');
-            const previewEl = document.getElementById('my-avatar-preview');
-            const avatarSrc = '/static/avatars/' + msg.my_avatar;
-            avatarEl.src = avatarSrc;
+            avatarEl.src = '/static/avatars/' + msg.my_avatar;
             avatarEl.style.display = '';
-            if (previewEl) { previewEl.src = avatarSrc; previewEl.style.display = ''; }
             avatarEl.onerror = function() {
                 const fallback = document.createElement('span');
                 fallback.className = 'avatar-fallback';
                 fallback.textContent = (window._myName || '?')[0].toUpperCase();
                 fallback.style.background = avatarColorFromUuid(window._myUuid);
                 this.replaceWith(fallback);
-                if (previewEl) previewEl.style.display = 'none';
             };
+            // Hover preview: show 3x avatar near cursor
+            if (!avatarEl._hoverBound) {
+                avatarEl._hoverBound = true;
+                avatarEl.style.cursor = 'pointer';
+                let preview = null;
+                avatarEl.addEventListener('mouseenter', function(e) {
+                    preview = document.createElement('img');
+                    preview.className = 'avatar-preview';
+                    preview.src = this.src;
+                    preview.style.left = e.clientX + 'px';
+                    preview.style.top = e.clientY + 'px';
+                    document.body.appendChild(preview);
+                });
+                avatarEl.addEventListener('mousemove', function(e) {
+                    if (preview) {
+                        preview.style.left = e.clientX + 'px';
+                        preview.style.top = e.clientY + 'px';
+                    }
+                });
+                avatarEl.addEventListener('mouseleave', function() {
+                    if (preview) { preview.remove(); preview = null; }
+                });
+            }
         }
         window._qaQuestions = msg.qa_questions || [];
         if (msg.current_activity === 'wordcloud') {
@@ -846,7 +874,8 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     if (!currentPoll) {
       const nameSet = !_joinedWithSuggestion;
       const locationSet = !!localStorage.getItem(LS_LOCATION_KEY);
-      const allDone = nameSet && locationSet;
+      const notifGranted = 'Notification' in window && Notification.permission === 'granted';
+      const allDone = nameSet && locationSet && notifGranted;
       el.innerHTML = `<div class="waiting">
         <div class="icon">👋</div>
         <p>Welcome!</p>
@@ -858,6 +887,9 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
           </li>
           <li id="onboard-location" class="onboarding-item${locationSet ? ' done' : ''}" onclick="${locationSet ? '' : 'requestLocation()'}" style="cursor:${locationSet ? 'default' : 'pointer'}">
             ${locationSet ? '☑' : '☐'} Share your location
+          </li>
+          <li id="onboard-notif" class="onboarding-item${notifGranted ? ' done' : ''}" onclick="${notifGranted ? '' : 'requestNotificationPermission()'}" style="cursor:${notifGranted ? 'default' : 'pointer'}">
+            ${notifGranted ? '☑' : '☐'} Enable browser notifications
           </li>
         </ul>
       </div>`;
