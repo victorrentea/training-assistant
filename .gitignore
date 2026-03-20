@@ -19,3 +19,4 @@ daemon/.venv/
 /workshop_daemon.egg-info/SOURCES.txt
 /workshop_daemon.egg-info/top_level.txt
 /.deploy.log
+deploy-history.txt
