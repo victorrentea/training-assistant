@@ -1,7 +1,7 @@
 {
-  "sha": "d9ec3628fff86b737df96019bfb8233ca4563015",
-  "timestamp": "2026-03-20 21:48",
+  "sha": "318dba0cbda30658ddb97cb60499a03476804c88",
+  "timestamp": "2026-03-20 21:57",
   "changelog": [
-    "Auto-generate version.js at deploy time, add changelog to notifications (#46)"
+    "test: prove debate arguments sorted by upvotes (3, 1, 0)"
   ]
 }
