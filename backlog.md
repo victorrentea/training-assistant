@@ -127,6 +127,7 @@
 - [x] feat: browser push notifications — participant UI requests permission on Join; 🔔 button for auto-joiners; notifies on new poll/Q&A/word cloud when tab is hidden
 - [x] feat: Code Review activity — host pastes a code snippet (with auto-detected language and syntax highlighting), participants click line numbers to flag problematic lines, host sees live heat-map of selections, confirms correct lines one by one to award points and spark discussion; phase transitions: idle → selecting → reviewing
 - [x] fix: participant vote and poll results lost on browser refresh — server now sends `my_vote` and `poll_correct_ids`/`my_voted_ids` in state broadcasts so vote + correct/incorrect feedback survive reconnect (GH #33)
+- [x] feat: Smart paste — when pasting code into code review, Claude API auto-extracts clean code from LLM responses (strips markdown, explanations) and detects programming language; toggleable via checkbox, silent fallback on API failure (gh#23)
 ---
 
 ## Understanding design
