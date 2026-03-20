@@ -44,11 +44,11 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     "⬆️ See a question you like? Give it an upvote!",
   ];
   const _CR_TOASTS = [
-    "🐛 Hunt for bugs — spot an issue, earn points!",
-    "⚠️ Check edge cases — what happens with null, empty, or zero?",
-    "🔒 Think security — could this be exploited?",
-    "🧠 Sharpen your critical thinking — don't trust the happy path!",
-    "🎯 The more real issues you spot, the higher you score!",
+    "🐛 You got this!",
+    "👀 Look closer...",
+    "🔥 Keep going!",
+    "💪 Trust your instincts!",
+    "🎯 Nice eye!",
   ];
   let _crToastIndex = 0;
   let _crToastInterval = null;
@@ -1122,10 +1122,11 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
 
     let html = '<div class="codereview-screen">';
     html += '<div class="codereview-header" style="font-size:1.3rem;">Code Review</div>';
-    if (!isSelecting) {
-      html += '<div class="codereview-subtitle">Selection closed — reviewing results</div>';
-    } else {
+    if (isSelecting) {
+      html += '<div class="codereview-subtitle">Tap every line that has a bug, smell, or risk</div>';
       html += '<div id="cr-toast" class="qa-toast"></div>';
+    } else {
+      html += '<div class="codereview-subtitle">Selection closed — reviewing results</div>';
     }
 
     html += '<div class="codereview-viewer">';
