@@ -1267,7 +1267,7 @@
     }
 
     if (cr.phase === 'reviewing' && !isConfirmed && count > 0) {
-      html += `<button class="btn btn-accent" style="width:100%;margin-top:12px;" onclick="confirmCodeReviewLine(${lineNum})">✓ Confirm Line (award 200 pts)</button>`;
+      html += `<button class="btn btn-success" style="width:100%;margin-top:12px;" onclick="confirmCodeReviewLine(${lineNum})">✓ Confirm Line (award 200 pts)</button>`;
     }
     if (isConfirmed) {
       html += '<div style="text-align:center;margin-top:12px;color:var(--accent2);font-weight:600;">✓ Confirmed</div>';
