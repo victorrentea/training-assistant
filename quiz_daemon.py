@@ -33,6 +33,7 @@ from quiz_core import (
     post_status, _get_json, _post_json, DAEMON_POLL_INTERVAL, DEFAULT_TRANSCRIPT_MINUTES,
     read_session_notes, load_transcription_files, extract_last_n_minutes,
 )
+from daemon.debate_ai import run_debate_ai_cleanup
 from daemon.summarizer import generate_summary, SUMMARY_INTERVAL_SECONDS
 
 _LOCK_FILE = Path("/tmp/quiz_daemon.lock")
@@ -363,6 +364,36 @@ def run() -> None:
                         last_quiz = updated
                 else:
                     post_status("error", "No conversation context — please generate a question first.", config)
+
+            # ── Check for debate AI cleanup request ──
+            try:
+                debate_data = _get_json(
+                    f"{config.server_url}/api/debate/ai-request",
+                    config.host_username, config.host_password,
+                )
+                debate_req = debate_data.get("request")
+                if debate_req:
+                    print(f"\n[daemon] Debate AI cleanup requested: '{debate_req['statement'][:60]}'")
+                    try:
+                        result = run_debate_ai_cleanup(debate_req, config.api_key, config.model)
+                        _post_json(
+                            f"{config.server_url}/api/debate/ai-result",
+                            result,
+                            config.host_username, config.host_password,
+                        )
+                        n_new = len(result.get("new_arguments", []))
+                        n_merges = len(result.get("merges", []))
+                        print(f"[daemon] Debate AI done: {n_merges} merges, {n_new} new args")
+                    except Exception as e:
+                        print(f"[daemon] Debate AI cleanup failed: {e}", file=sys.stderr)
+                        # Post empty result so backend advances to prep anyway
+                        _post_json(
+                            f"{config.server_url}/api/debate/ai-result",
+                            {"merges": [], "cleaned": [], "new_arguments": []},
+                            config.host_username, config.host_password,
+                        )
+            except RuntimeError:
+                pass  # server unreachable — skip this cycle
 
             # ── Push transcript stats every 10s ──
             if now - last_transcript_stats_at >= 10.0:
