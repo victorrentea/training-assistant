@@ -52,11 +52,14 @@ jobs:
           print(json.dumps(data, indent=2))
           PYEOF
 
+      - name: Generate version.js
+        run: echo "window.APP_VERSION = '$(date -u '+%Y-%m-%d %H:%M')';" > static/version.js
+
       - name: Commit and push
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add -f static/deploy-info.json
+          git add -f static/deploy-info.json static/version.js
           if git diff --cached --quiet; then
             echo "No changes to deploy-info.json"
             exit 0
