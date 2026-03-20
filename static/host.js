@@ -1535,17 +1535,13 @@
     const resetWrapper = document.getElementById('debate-reset-wrapper');
     if (stmtWrapper) {
       if (debateActive) {
-        stmtWrapper.style.transform = 'scaleY(0)';
-        stmtWrapper.style.opacity = '0';
-        stmtWrapper.style.height = '0';
+        stmtWrapper.style.maxHeight = '0';
         stmtWrapper.style.marginTop = '0';
-        stmtWrapper.style.overflow = 'hidden';
+        stmtWrapper.style.padding = '0';
       } else {
-        stmtWrapper.style.transform = 'scaleY(1)';
-        stmtWrapper.style.opacity = '1';
-        stmtWrapper.style.height = '';
+        stmtWrapper.style.maxHeight = '200px';
         stmtWrapper.style.marginTop = '.75rem';
-        stmtWrapper.style.overflow = '';
+        stmtWrapper.style.padding = '';
       }
     }
     if (resetWrapper) resetWrapper.style.display = debateActive ? '' : 'none';
