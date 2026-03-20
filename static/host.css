@@ -41,7 +41,7 @@ body {
 }
 
 .host-col-left {
-  overflow-y: auto;
+  overflow: hidden;
   position: relative;
   display: flex;
   flex-direction: column;
@@ -49,6 +49,7 @@ body {
 .host-col-left .tab-content {
   flex: 1;
   min-height: 0;
+  overflow-y: auto;
 }
 
 .host-col-center {
