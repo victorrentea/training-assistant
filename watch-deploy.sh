@@ -51,9 +51,32 @@ get_master_head() {
   gh api "repos/$REPO/commits/master" --jq '.sha' 2>/dev/null
 }
 
-get_commit_message() {
-  local sha="$1"
-  gh api "repos/$REPO/commits/$sha" --jq '.commit.message' 2>/dev/null | head -1
+get_changelog() {
+  local old_sha="$1"
+  local new_sha="$2"
+  local raw
+  raw=$(gh api "repos/$REPO/compare/${old_sha}...${new_sha}" \
+    --jq '[.commits[].commit.message | split("\n")[0]] | reverse | join("\n")' 2>/dev/null)
+  if [ -z "$raw" ]; then
+    # Fallback: single commit message
+    gh api "repos/$REPO/commits/$new_sha" --jq '.commit.message' 2>/dev/null | head -1
+    return
+  fi
+  # Filter out bot commits
+  echo "$raw" | grep -v "^chore: update deploy-info"
+}
+
+truncate_changelog() {
+  local changelog="$1"
+  local max_lines="${2:-3}"
+  local total
+  total=$(echo "$changelog" | wc -l | tr -d ' ')
+  if [ "$total" -le "$max_lines" ]; then
+    echo "$changelog"
+  else
+    echo "$changelog" | head -n "$max_lines"
+    echo "... +$((total - max_lines)) more"
+  fi
 }
 
 get_estimated_duration() {
@@ -110,13 +133,13 @@ notify_countdown() {
   fi
   LAST_NOTIFY_TIME="$now"
   LAST_NOTIFY_TITLE="$title"
-  terminal-notifier -title "$title" -message "$COMMIT_MSG" -group deploy &>/dev/null &
+  terminal-notifier -title "$title" -message "$(truncate_changelog "$COMMIT_MSG" 3)" -group deploy &>/dev/null &
 }
 
 notify_success() {
   local version="$1"
   echo "$(date '+%H:%M:%S') ✅ Deployed! Version: $version"
-  terminal-notifier -title "🚀 Deployed!" -message "$COMMIT_MSG" -group deploy -timeout 5 &
+  terminal-notifier -title "🚀 Deployed!" -message "$(truncate_changelog "$COMMIT_MSG" 5)" -group deploy -timeout 5 &
   afplay /System/Library/Sounds/Glass.aiff &
   sleep 0.4
   afplay /System/Library/Sounds/Glass.aiff
@@ -238,7 +261,13 @@ while true; do
   if [ $((POLL_COUNTER % 5)) -eq 0 ]; then
     CURRENT_HEAD=$(get_master_head)
     if [ -n "$CURRENT_HEAD" ] && [ "$CURRENT_HEAD" != "$LAST_MASTER_HEAD" ]; then
-      COMMIT_MSG=$(get_commit_message "$CURRENT_HEAD")
+      COMMIT_MSG=$(get_changelog "$LAST_MASTER_HEAD" "$CURRENT_HEAD")
+      # Skip if changelog is empty (only bot commits)
+      if [ -z "$(echo "$COMMIT_MSG" | tr -d '[:space:]')" ]; then
+        echo "$(date '+%H:%M:%S') ⏭️  Skipping bot-only deploy (no human commits)"
+        LAST_MASTER_HEAD="$CURRENT_HEAD"
+        continue
+      fi
       LAST_MASTER_HEAD="$CURRENT_HEAD"
       MERGE_SHA="$CURRENT_HEAD"
       if [ -z "$WAITING_SINCE" ]; then
