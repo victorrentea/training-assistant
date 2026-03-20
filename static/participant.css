@@ -450,12 +450,12 @@ h1 { display: none; }
 .qa-upvote-btn:disabled { opacity: .45; cursor: not-allowed; border-color: var(--muted); color: var(--muted); }
 .qa-upvote-btn.qa-upvoted { background: var(--accent); color: #fff; }
 
-/* Q&A engagement toast */
-#qa-toast {
+/* Engagement toasts (Q&A + Code Review) */
+.qa-toast {
   position: fixed;
   bottom: 70px;
   left: 50%;
-  transform: translateX(-50%);
+  transform: translateX(-50%) translateY(30px);
   background: rgba(30, 30, 50, 0.92);
   color: var(--text);
   border: 1px solid var(--accent2);
@@ -466,11 +466,12 @@ h1 { display: none; }
   text-align: center;
   pointer-events: none;
   opacity: 0;
-  transition: opacity 0.4s ease;
+  transition: opacity 0.4s ease, transform 0.4s ease;
   z-index: 1000;
 }
-#qa-toast.visible {
+.qa-toast.visible {
   opacity: 1;
+  transform: translateX(-50%) translateY(0);
 }
 
 /* ── Score highlight flash ── */
@@ -525,7 +526,7 @@ h1 { display: none; }
 }
 
 .codereview-pline-clickable:hover {
-    background: rgba(255, 255, 255, 0.03);
+    background: rgba(108, 99, 255, 0.12);
 }
 
 .codereview-pline-selected {
