@@ -212,8 +212,9 @@ def build_participant_state(pid: str) -> dict:
         "my_vote": state.votes.get(pid),
         "poll_correct_ids": state.poll_correct_ids,
         "my_voted_ids": _voted_ids_for(pid),
-        "my_score": state.scores.get(pid, 0),
-        "my_avatar": state.participant_avatars.get(pid, ""),
+        "mode": state.mode,
+        "my_score": 0 if state.mode == "conference" else state.scores.get(pid, 0),
+        "my_avatar": "" if state.mode == "conference" else state.participant_avatars.get(pid, ""),
         "current_activity": state.current_activity,
         "wordcloud_words": state.wordcloud_words,
         "wordcloud_topic": state.wordcloud_topic,
@@ -276,6 +277,7 @@ def build_host_state() -> dict:
         "codereview": _build_codereview_for_host(),
         "overlay_connected": "__overlay__" in state.participants,
         "token_usage": state.token_usage,
+        "mode": state.mode,
     }
 
 
