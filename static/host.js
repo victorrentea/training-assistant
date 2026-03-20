@@ -1542,10 +1542,7 @@
     const displayPhase = phase === 'ai_cleanup' ? 'prep' : phase;
     const currentIdx = debateActive ? DEBATE_PHASES.findIndex(p => p.key === displayPhase) : -1;
     const phaseActions = {
-      side_selection: `<div style="display:flex; align-items:center; justify-content:space-between;">
-        <span style="font-size:1.1rem;">👎 ${sideCounts.against} &nbsp;|&nbsp; ${sideCounts.for} 👍</span>
-        <button class="btn btn-warn btn-sm" onclick="debateForceAssign()">🎲 Assign randomly</button>
-      </div>`,
+      side_selection: `<button class="btn btn-warn btn-sm" onclick="debateForceAssign()">🎲 Assign randomly</button>`,
       prep: champions.for || champions.against
         ? `<span style="color:var(--accent);font-size:.8rem;">🏆 ${Object.entries(champions).map(([s,n]) => `${s==='for'?'👍':'👎'} ${escDebate(n)}`).join(', ')}</span>`
         : '',
