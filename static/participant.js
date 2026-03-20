@@ -373,6 +373,8 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
           renderWordCloudScreen(msg.wordcloud_words || {}, msg.wordcloud_topic || '');
         } else if (msg.current_activity === 'qa') {
           renderQAScreen(msg.qa_questions || []);
+        } else if (msg.current_activity === 'codereview') {
+          renderCodeReviewScreen(msg.codereview);
         } else {
           const content = document.getElementById('content');
           if (content) content.dataset.screen = '';
@@ -1012,5 +1014,101 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
       if (existing) existing.outerHTML = footerHTML;
       else card.insertAdjacentHTML('beforeend', footerHTML);
       if (existingWarn) existingWarn.remove();
+    }
+  }
+
+  let codereviewMySelections = new Set();
+
+  function renderCodeReviewScreen(cr) {
+    if (!cr) return;
+
+    const content = document.getElementById('content');
+    codereviewMySelections = new Set(cr.my_selections || []);
+    const confirmed = new Set(cr.confirmed_lines || []);
+    const isSelecting = cr.phase === 'selecting';
+    const isReviewing = cr.phase === 'reviewing';
+    const lines = cr.snippet.split('\n');
+    const percentages = cr.line_percentages || {};
+
+    let html = '<div class="codereview-screen">';
+    html += '<div class="codereview-header">📝 Code Review</div>';
+    html += `<div class="codereview-subtitle">${isSelecting ? 'Click on lines that contain issues' : 'Selection closed — reviewing results'}</div>`;
+
+    html += '<div class="codereview-viewer">';
+    lines.forEach((lineText, i) => {
+      const lineNum = i + 1;
+      const isMine = codereviewMySelections.has(lineNum);
+      const isConfirmed = confirmed.has(lineNum);
+      const pct = percentages[String(lineNum)];
+
+      let lineClass = 'codereview-pline';
+      let gutterContent = String(lineNum);
+      let badge = '';
+
+      if (isConfirmed && isMine) {
+        lineClass += ' codereview-pline-correct';
+        gutterContent = `${lineNum} ✓`;
+        badge = '<span class="codereview-badge codereview-badge-correct">+200</span>';
+      } else if (isConfirmed && !isMine) {
+        lineClass += ' codereview-pline-confirmed';
+        gutterContent = `${lineNum} ✓`;
+      } else if (isMine) {
+        lineClass += ' codereview-pline-selected';
+        gutterContent = `${lineNum} ●`;
+      }
+
+      if (isSelecting) {
+        lineClass += ' codereview-pline-clickable';
+      }
+
+      const pctBadge = isReviewing && pct !== undefined ? `<span class="codereview-pct">${pct}%</span>` : '';
+
+      html += `<div class="${lineClass}" onclick="toggleCodeReviewLine(${lineNum})">`;
+      html += `<span class="codereview-pgutter">${gutterContent}</span>`;
+      html += `<span class="codereview-pcode">${escHtml(lineText) || ' '}</span>`;
+      html += badge;
+      html += pctBadge;
+      html += '</div>';
+    });
+    html += '</div>';
+
+    if (isSelecting) {
+      html += `<div class="codereview-footer">You selected ${codereviewMySelections.size} line(s)</div>`;
+    } else if (isReviewing) {
+      const pointsEarned = [...confirmed].filter(l => codereviewMySelections.has(l)).length * 200;
+      if (pointsEarned > 0) {
+        html += `<div class="codereview-footer codereview-footer-points"><span class="codereview-points-earned">+${pointsEarned}</span> points earned</div>`;
+      }
+    }
+
+    html += '</div>';
+    content.innerHTML = html;
+
+    // Apply syntax highlighting as a single block for consistent tokens
+    if (typeof hljs !== 'undefined') {
+      const codeBlock = document.createElement('code');
+      codeBlock.textContent = cr.snippet;
+      if (cr.language) {
+        codeBlock.className = `language-${cr.language}`;
+      }
+      const pre = document.createElement('pre');
+      pre.appendChild(codeBlock);
+      hljs.highlightElement(codeBlock);
+
+      const highlightedLines = codeBlock.innerHTML.split('\n');
+      content.querySelectorAll('.codereview-pcode').forEach((el, i) => {
+        if (highlightedLines[i] !== undefined) {
+          el.innerHTML = highlightedLines[i] || ' ';
+        }
+      });
+    }
+  }
+
+  function toggleCodeReviewLine(lineNum) {
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    if (codereviewMySelections.has(lineNum)) {
+      ws.send(JSON.stringify({ type: 'codereview_deselect', line: lineNum }));
+    } else {
+      ws.send(JSON.stringify({ type: 'codereview_select', line: lineNum }));
     }
   }

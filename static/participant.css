@@ -486,3 +486,122 @@ h1 { display: none; }
 #my-score.score-flash {
   animation: score-highlight 1.4s ease-out forwards;
 }
+
+/* Code Review */
+.codereview-screen {
+    padding: 16px;
+}
+
+.codereview-header {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 4px;
+}
+
+.codereview-subtitle {
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 16px;
+}
+
+.codereview-viewer {
+    font-family: monospace;
+    font-size: 13px;
+    line-height: 2.2;
+    background: var(--surface);
+    border-radius: var(--radius);
+    overflow: hidden;
+}
+
+.codereview-pline {
+    display: flex;
+    padding: 3px 12px;
+    transition: background 0.15s;
+}
+
+.codereview-pline-clickable {
+    cursor: pointer;
+}
+
+.codereview-pline-clickable:hover {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.codereview-pline-selected {
+    background: rgba(108, 99, 255, 0.15);
+    border-left: 3px solid var(--accent);
+}
+
+.codereview-pline-correct {
+    background: rgba(166, 227, 161, 0.2);
+    border-left: 3px solid #a6e3a1;
+}
+
+.codereview-pline-confirmed {
+    background: rgba(166, 227, 161, 0.1);
+    border-left: 3px solid #a6e3a1;
+}
+
+.codereview-pgutter {
+    width: 32px;
+    text-align: right;
+    margin-right: 14px;
+    color: var(--muted);
+    user-select: none;
+    flex-shrink: 0;
+}
+
+.codereview-pline-selected .codereview-pgutter {
+    color: var(--accent);
+}
+
+.codereview-pline-correct .codereview-pgutter,
+.codereview-pline-confirmed .codereview-pgutter {
+    color: #a6e3a1;
+}
+
+.codereview-pcode {
+    flex: 1;
+    white-space: pre;
+    overflow-x: auto;
+}
+
+.codereview-badge {
+    margin-left: 8px;
+    font-size: 11px;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.codereview-badge-correct {
+    color: #a6e3a1;
+    font-weight: 600;
+}
+
+.codereview-pct {
+    margin-left: 8px;
+    font-size: 11px;
+    color: var(--muted);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.codereview-footer {
+    margin-top: 12px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 13px;
+}
+
+.codereview-footer-points {
+    padding: 10px;
+    background: var(--surface);
+    border-radius: var(--radius);
+}
+
+.codereview-points-earned {
+    color: #a6e3a1;
+    font-size: 14px;
+    font-weight: 600;
+}

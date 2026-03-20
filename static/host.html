@@ -24,6 +24,7 @@
       <button class="tab-btn active" id="tab-poll" onclick="switchTab('poll')">📊 Poll</button>
       <button class="tab-btn" id="tab-wordcloud" onclick="switchTab('wordcloud')">☁ Words</button>
       <button class="tab-btn" id="tab-qa" onclick="switchTab('qa')">❓ Q&A</button>
+      <button class="tab-btn" id="tab-codereview" onclick="switchTab('codereview')">🔍 Code Review</button>
     </div>
 
     <!-- Poll tab content -->
@@ -109,6 +110,40 @@
       </div>
     </div>
 
+    <!-- Code Review tab content -->
+    <div id="tab-content-codereview" style="display:none" class="tab-content">
+      <div id="codereview-create">
+        <div style="display:flex; gap:8px; align-items:center; margin-bottom:8px;">
+          <span style="font-weight:600;">New Code Review</span>
+          <select id="codereview-language">
+            <option value="">Auto-detect</option>
+            <option value="java">Java</option>
+            <option value="python">Python</option>
+            <option value="javascript">JavaScript</option>
+            <option value="typescript">TypeScript</option>
+            <option value="sql">SQL</option>
+            <option value="go">Go</option>
+            <option value="csharp">C#</option>
+            <option value="kotlin">Kotlin</option>
+            <option value="bash">Bash</option>
+          </select>
+        </div>
+        <textarea id="codereview-snippet" placeholder="Paste your code snippet here (10-50 lines)..." rows="12" style="width:100%; font-family:monospace; font-size:13px;"></textarea>
+        <div style="display:flex; justify-content:flex-end; margin-top:8px;">
+          <button class="btn btn-accent" onclick="startCodeReview()">Start Code Review</button>
+        </div>
+      </div>
+      <div id="codereview-active" style="display:none;">
+        <div id="codereview-status-bar" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <span id="codereview-phase-label"></span>
+          <div>
+            <button id="codereview-close-btn" class="btn btn-danger" onclick="closeCodeReviewSelection()" style="display:none;">Close Selection</button>
+            <button id="codereview-clear-btn" class="btn btn-muted" onclick="clearCodeReview()">Clear</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Status badges — pinned to bottom of left column -->
     <div class="left-status-bar">
       <span id="ws-badge" class="badge disconnected">● Server</span>
@@ -141,6 +176,16 @@
         ❓ Questions
       </h2>
       <div id="qa-list"></div>
+    </div>
+    <!-- Code Review center panel -->
+    <div id="center-codereview" style="display:none" class="center-panel">
+      <div style="display:flex; height:100%;">
+        <div id="codereview-code-panel" style="flex:2; overflow:auto; padding:12px;"></div>
+        <div style="flex:0 0 1px; background:var(--border);"></div>
+        <div id="codereview-side-panel" style="flex:1; overflow:auto; padding:12px;">
+          <div class="muted" style="text-align:center; margin-top:40px;">Click a line to see details</div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -204,6 +249,9 @@
     <div id="map-container"></div>
   </div>
 </div>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 
 <div id="summary-overlay" class="summary-overlay" onclick="closeSummaryModal()">
   <div class="summary-dialog" onclick="event.stopPropagation()">
