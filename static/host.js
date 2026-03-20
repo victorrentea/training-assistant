@@ -198,7 +198,7 @@
               if (scores[p.name] !== undefined) p.score = scores[p.name];
             });
           }
-          renderHostSidePanel(cr);
+          _updateCodeReviewLayout(cr);
         }
       } else if (msg.type === 'timer') {
         _applyTimer(msg.seconds, msg.started_at);
@@ -1153,8 +1153,9 @@
       createDiv.style.display = '';
       activeDiv.style.display = 'none';
       document.getElementById('codereview-code-panel').innerHTML = '';
-      document.getElementById('codereview-side-panel').innerHTML =
-        '<div class="muted" style="text-align:center;margin-top:40px;">Click a line to see details</div>';
+      document.getElementById('codereview-side-panel').style.display = 'none';
+      document.getElementById('codereview-side-panel').previousElementSibling.style.display = 'none';
+      document.getElementById('codereview-code-panel').style.flex = '1';
       return;
     }
 
@@ -1167,6 +1168,7 @@
     if (cr.phase === 'selecting') {
       closeBtn.style.display = '';
       phaseLabel.innerHTML = '<span style="color:var(--accent2);">🐛 Bug Hunt Open</span>';
+      codereviewSelectedLine = null;
     } else {
       closeBtn.style.display = 'none';
       const confirmedCount = cr.confirmed_lines ? cr.confirmed_lines.length : 0;
@@ -1174,7 +1176,7 @@
     }
 
     renderHostCodePanel(cr);
-    renderHostSidePanel(cr);
+    _updateCodeReviewLayout(cr);
   }
 
   function renderHostCodePanel(cr) {
@@ -1227,7 +1229,22 @@
     const lastState = window._lastCodereviewState;
     if (lastState) {
       renderHostCodePanel(lastState);
-      renderHostSidePanel(lastState);
+      _updateCodeReviewLayout(lastState);
+    }
+  }
+
+  function _updateCodeReviewLayout(cr) {
+    const codePanel = document.getElementById('codereview-code-panel');
+    const sidePanel = document.getElementById('codereview-side-panel');
+    const divider = sidePanel.previousElementSibling; // the 1px divider
+
+    const showSide = cr.phase === 'reviewing' && codereviewSelectedLine !== null;
+    sidePanel.style.display = showSide ? '' : 'none';
+    divider.style.display = showSide ? '' : 'none';
+    codePanel.style.flex = showSide ? '2' : '1';
+
+    if (showSide) {
+      renderHostSidePanel(cr);
     }
   }
 
