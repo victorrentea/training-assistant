@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 import os
@@ -88,7 +89,7 @@ async def create_codereview(body: CodeReviewCreate):
 
     detected_language = None
     if body.smart_paste:
-        result = _extract_code_with_ai(snippet)
+        result = await asyncio.to_thread(_extract_code_with_ai, snippet)
         if result:
             snippet, detected_language = result
 
