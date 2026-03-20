@@ -738,11 +738,11 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     el.textContent = _CR_TOASTS[idx];
     el.classList.add('visible');
     clearTimeout(_crToastTimeout);
-    _crToastTimeout = setTimeout(() => el.classList.remove('visible'), 3500);
+    _crToastTimeout = setTimeout(() => el.classList.remove('visible'), 5000);
   }
 
   function _scheduleCRToast() {
-    const delay = 5000 + Math.random() * 2000; // 5-7 seconds
+    const delay = 10000 + Math.random() * 4000; // 10-14 seconds
     _crToastInterval = setTimeout(() => {
       _showCRToast();
       _scheduleCRToast();
@@ -750,7 +750,7 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
   }
 
   function _startCRToasts() {
-    _stopCRToasts();
+    if (_crToastInterval) return; // already running, don't restart
     _showCRToast();
     _scheduleCRToast();
   }
