@@ -996,16 +996,16 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     } else if (phase === 'arguments') {
       html += renderDebateArgColumns(args, mySide, msg, false);
       if (mySide) {
+        const placeholder = mySide === 'for'
+          ? 'Add an argument for 👍…'
+          : 'Add an argument against 👎…';
         html += `<div class="debate-input-row">
-          <input id="debate-arg-input" type="text" maxlength="280" placeholder="Add an argument for your side…"
+          <input id="debate-arg-input" type="text" maxlength="280" placeholder="${placeholder}"
             onkeydown="if(event.key==='Enter')debateSubmitArg()" />
           <button class="btn btn-primary" onclick="debateSubmitArg()">↵</button>
         </div>`;
       }
-    } else if (phase === 'ai_cleanup') {
-      html += `<div class="debate-phase-info">AI is reviewing arguments…</div>`;
-      html += renderDebateArgColumns(args, mySide, msg, true);  // read-only
-    } else if (phase === 'prep') {
+    } else if (phase === 'ai_cleanup' || phase === 'prep') {
       html += renderDebateArgColumns(args, mySide, msg, false);
       html += renderDebateHints();
       if (mySide && !champions[mySide]) {
@@ -1053,14 +1053,15 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
       <span>✨ duplicate, merged above</span>
     </div>`;
 
+    const forHighlight = mySide === 'for' ? ' debate-col-mine' : '';
+    const againstHighlight = mySide === 'against' ? ' debate-col-mine' : '';
+
     return `<div class="debate-columns">
-      <div class="debate-col debate-col-against">
-        <h3 class="debate-col-header">👎</h3>
+      <div class="debate-col debate-col-against${againstHighlight}">
         ${againstArgs.map(renderArg).join('')}
         ${Array(mergedAgainstCount).fill('').map(renderMerged).join('')}
       </div>
-      <div class="debate-col debate-col-for">
-        <h3 class="debate-col-header">👍</h3>
+      <div class="debate-col debate-col-for${forHighlight}">
         ${forArgs.map(renderArg).join('')}
         ${Array(mergedForCount).fill('').map(renderMerged).join('')}
       </div>
