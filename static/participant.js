@@ -2,8 +2,8 @@
   const LS_UUID_KEY = 'workshop_participant_uuid';
   const LS_VOTE_KEY = 'workshop_vote';
 
-  const isHost = document.cookie.includes('is_host=1');
-  const uuidStorage = isHost ? sessionStorage : localStorage;
+  // Each tab gets its own UUID (sessionStorage) so multiple tabs = multiple participants
+  const uuidStorage = sessionStorage;
 
   function getOrCreateUUID() {
       let uid = uuidStorage.getItem(LS_UUID_KEY);
@@ -166,16 +166,18 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     return data.name;
   }
 
-  // ── Auto-join: no join screen, connect immediately ──
-  let _suggestedName = null; // the random name assigned at join
+  // ── Auto-join: always get fresh name from server ──
+  // localStorage only stores names the user explicitly chose (via pencil edit).
+  // Auto-suggested LOTR names are never persisted — each tab gets a fresh one.
+  const LS_CUSTOM_NAME_KEY = 'workshop_custom_name'; // true if user explicitly renamed
 
   (async function autoJoin() {
+    const isCustom = localStorage.getItem(LS_CUSTOM_NAME_KEY);
     const savedName = localStorage.getItem(LS_KEY);
-    if (savedName) {
+    if (isCustom && savedName) {
       myName = savedName;
     } else {
-      _suggestedName = await fetchSuggestedName();
-      myName = _suggestedName;
+      myName = await fetchSuggestedName();
     }
     connectWS(myName);
   })();
@@ -200,6 +202,7 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     if (newName && newName !== myName) {
         myName = newName;
         localStorage.setItem(LS_KEY, myName);
+        localStorage.setItem(LS_CUSTOM_NAME_KEY, '1');
         document.getElementById('display-name').textContent = myName;
         if (ws && ws.readyState === WebSocket.OPEN) {
             ws.send(JSON.stringify({ type: 'set_name', name: myName }));
