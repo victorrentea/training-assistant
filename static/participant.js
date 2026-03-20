@@ -258,6 +258,24 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     switch (msg.type) {
       case 'state':
         versionReloadGuard && versionReloadGuard.check(msg.backend_version);
+        if (!_stateInitialised) {
+          // First message after connect: seed tracking state, fire no notification
+          _prevPollActive = msg.poll_active;
+          _prevActivity   = msg.current_activity;
+          _stateInitialised = true;
+        } else {
+          if (!_prevPollActive && msg.poll_active && msg.poll) {
+            notifyIfHidden('🗳️ New poll!', msg.poll.question);
+          }
+          if (_prevActivity !== 'qa' && msg.current_activity === 'qa') {
+            notifyIfHidden('❓ Q&A is open', 'Tap to ask or upvote questions');
+          }
+          if (_prevActivity !== 'wordcloud' && msg.current_activity === 'wordcloud') {
+            notifyIfHidden('☁️ Word cloud is open', 'Tap to share your thoughts');
+          }
+          _prevPollActive = msg.poll_active;
+          _prevActivity   = msg.current_activity;
+        }
         if (msg.poll?.id !== currentPoll?.id) {
           myVote = msg.poll?.multi ? new Set() : null;
           pollResult = null;
