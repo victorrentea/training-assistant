@@ -35,6 +35,7 @@ async def launch_debate(body: DebateLaunch):
     state.debate_sides = {}
     state.debate_arguments = []
     state.debate_champions = {}
+    state.debate_auto_assigned = set()
     state.current_activity = ActivityType.DEBATE
 
     logger.info(f"Debate launched: {statement}")

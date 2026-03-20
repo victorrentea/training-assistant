@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from fastapi import WebSocket
 
 from backend_version import get_backend_version
-from state import state
+from state import state, ActivityType
 
 logger = logging.getLogger(__name__)
 
@@ -65,6 +65,7 @@ def _build_debate_for_participant(pid: str) -> dict:
         "debate_statement": state.debate_statement,
         "debate_phase": state.debate_phase,
         "debate_my_side": my_side,
+        "debate_auto_assigned": pid in state.debate_auto_assigned,
         "debate_side_counts": {
             "for": sum(1 for s in state.debate_sides.values() if s == "for"),
             "against": sum(1 for s in state.debate_sides.values() if s == "against"),
@@ -212,13 +213,16 @@ def build_host_state() -> dict:
         name = state.participant_names.get(pid, "Unknown")
         loc = state.locations.get(pid, "")
         score = state.scores.get(pid, 0)
-        participants_list.append({
+        p = {
             "uuid": pid,
             "name": name,
             "score": score,
             "location": loc,
             "avatar": state.participant_avatars.get(pid, ""),
-        })
+        }
+        if state.current_activity == ActivityType.DEBATE and state.debate_phase:
+            p["debate_side"] = state.debate_sides.get(pid)  # "for", "against", or None
+        participants_list.append(p)
 
     return {
         "type": "state",
