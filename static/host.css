@@ -743,19 +743,26 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
     display: flex;
     padding: 2px 12px;
     transition: background 0.15s;
-    cursor: pointer;
+    cursor: default;
+    border: 2px solid transparent;
+    border-radius: 4px;
+    margin: 1px 0;
 }
 
 .codereview-line-clickable {
     cursor: pointer;
 }
 
-.codereview-line:hover {
-    background: rgba(108,99,255,0.12) !important;
+.codereview-line-clickable:hover {
+    border-color: var(--accent);
 }
 
-.codereview-line-clickable:hover {
-    filter: brightness(1.2);
+.codereview-line-confirmed {
+    border-color: var(--accent2);
+}
+
+.codereview-line-selected {
+    border-color: var(--accent);
 }
 
 .codereview-gutter {

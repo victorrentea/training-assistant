@@ -1332,24 +1332,13 @@
       const isConfirmed = confirmed.has(lineNum);
       const isSelected = codereviewSelectedLine === lineNum;
 
-      let bgColor, borderColor, gutterText;
-      if (isConfirmed) {
-        bgColor = 'rgba(166,227,161,0.2)';
-        borderColor = 'var(--accent2)';
-        gutterText = `${lineNum} ✓`;
-      } else if (isSelected) {
-        bgColor = 'rgba(108,99,255,0.25)';
-        borderColor = 'var(--accent)';
-        gutterText = `${lineNum} ▶`;
-      } else {
-        bgColor = `rgba(108,99,255,${intensity * 0.5})`;
-        borderColor = 'transparent';
-        gutterText = String(lineNum);
-      }
-
+      // Background = participant heatmap only; border = host confirmation
+      const bgColor = `rgba(108,99,255,${intensity * 0.5})`;
+      const confirmedClass = isConfirmed ? 'codereview-line-confirmed' : '';
+      const selectedClass = isSelected ? 'codereview-line-selected' : '';
       const clickable = cr.phase === 'reviewing' && !isConfirmed ? 'codereview-line-clickable' : '';
-      html += `<div class="codereview-line ${clickable}" style="background:${bgColor};border-left:3px solid ${borderColor};" onclick="selectCodeReviewLine(${lineNum})">`;
-      html += `<span class="codereview-gutter">${gutterText}</span>`;
+      html += `<div class="codereview-line ${clickable} ${confirmedClass} ${selectedClass}" style="background:${bgColor};" onclick="selectCodeReviewLine(${lineNum})">`;
+      html += `<span class="codereview-gutter">${lineNum}</span>`;
       html += `<span class="codereview-code">${escHtml(lineText) || ' '}</span>`;
       if (count > 0) {
         const countColor = isConfirmed ? 'var(--accent2)' : 'var(--accent)';
@@ -1362,12 +1351,11 @@
   }
 
   function selectCodeReviewLine(lineNum) {
-    codereviewSelectedLine = lineNum;
     const lastState = window._lastCodereviewState;
-    if (lastState) {
-      renderHostCodePanel(lastState);
-      _updateCodeReviewLayout(lastState);
-    }
+    if (!lastState || lastState.phase !== 'reviewing') return; // no-op during selecting
+    codereviewSelectedLine = lineNum;
+    renderHostCodePanel(lastState);
+    _updateCodeReviewLayout(lastState);
   }
 
   function _updateCodeReviewLayout(cr) {
@@ -1421,8 +1409,9 @@
       html += '<div class="muted">No participants selected this line</div>';
     }
 
-    if (cr.phase === 'reviewing' && !isConfirmed && count > 0) {
-      html += `<button class="btn btn-success" style="width:100%;margin-top:12px;" onclick="confirmCodeReviewLine(${lineNum})">✓ Confirm Line (award 200 pts)</button>`;
+    if (cr.phase === 'reviewing' && !isConfirmed) {
+      const label = count > 0 ? '✓ Confirm Line (award 200 pts)' : '✓ Mark as problematic';
+      html += `<button class="btn btn-success" style="width:100%;margin-top:12px;" onclick="confirmCodeReviewLine(${lineNum})">${label}</button>`;
     }
     if (isConfirmed) {
       html += '<div style="text-align:center;margin-top:12px;color:var(--accent2);font-weight:600;">✓ Confirmed</div>';
