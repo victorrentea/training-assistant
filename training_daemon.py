@@ -36,6 +36,7 @@ from quiz_core import (
 from daemon.debate_ai import run_debate_ai_cleanup
 from daemon.llm_adapter import get_usage
 from daemon.summarizer import generate_summary, SUMMARY_INTERVAL_SECONDS
+from daemon.transcript_state import TranscriptStateManager
 
 _LOCK_FILE = Path("/tmp/training_daemon.lock")
 _HEARTBEAT_INTERVAL = 1.0  # seconds between heartbeat writes
@@ -257,6 +258,7 @@ def run() -> None:
     ]
     draft_points: list[dict] = []
     last_summary_at = 0.0  # monotonic time of last summary run
+    transcript_state = TranscriptStateManager()
 
     while True:
         try:
@@ -457,7 +459,24 @@ def run() -> None:
                     # Promote draft → locked before generating
                     locked_points.extend(draft_points)
                     draft_points = []
-                    new_points = generate_summary(config, locked_points)
+
+                    # Compute delta: only send new transcript text to the LLM
+                    delta_text = None
+                    try:
+                        entries = load_transcription_files(config.folder)
+                        if entries:
+                            full_text = extract_last_n_minutes(entries, DEFAULT_TRANSCRIPT_MINUTES)
+                            if full_text:
+                                delta_text, _ = transcript_state.compute_delta(full_text)
+                                if delta_text:
+                                    print(f"[summarizer] Delta: {len(delta_text)} chars (full: {len(full_text)} chars)")
+                                else:
+                                    print("[summarizer] No new transcript content — skipping summary")
+                                    continue
+                    except SystemExit:
+                        pass  # no transcription files — let summarizer handle it
+
+                    new_points = generate_summary(config, locked_points, delta_text=delta_text)
                     if new_points is not None:
                         draft_points = new_points
                         all_points = locked_points + draft_points
