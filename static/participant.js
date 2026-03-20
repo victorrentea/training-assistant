@@ -158,6 +158,7 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     myVote = null;
     window._myScore = 0;
     window._qaQuestions = [];
+    _notifBtnBound = false;
     document.getElementById('main-screen').style.display = 'none';
     document.getElementById('join-screen').style.display = 'block';
     nameInput.value = '';
