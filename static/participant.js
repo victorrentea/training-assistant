@@ -254,17 +254,23 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     const locEl = document.getElementById('onboard-location');
     if (nameEl && !nameEl.classList.contains('done') && !_joinedWithSuggestion) {
       nameEl.classList.add('done');
-      nameEl.innerHTML = '☑ Set your name';
+      nameEl.innerHTML = '☑ Click on your name to set it';
       nameEl.style.cursor = 'default';
       nameEl.onclick = null;
-      setTimeout(() => nameEl.classList.add('hiding'), 1500);
     }
     if (locEl && !locEl.classList.contains('done') && localStorage.getItem(LS_LOCATION_KEY)) {
       locEl.classList.add('done');
       locEl.innerHTML = '☑ Share your location';
       locEl.style.cursor = 'default';
       locEl.onclick = null;
-      setTimeout(() => locEl.classList.add('hiding'), 1500);
+    }
+    // Fade out entire checklist when both tasks are done
+    const bothDone = nameEl?.classList.contains('done') && locEl?.classList.contains('done');
+    if (bothDone) {
+      setTimeout(() => {
+        const list = document.getElementById('onboarding-list');
+        if (list) { list.style.transition = 'opacity 3s'; list.style.opacity = '0'; }
+      }, 1500);
     }
   }
 
@@ -872,19 +878,27 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     if (!currentPoll) {
       const nameSet = !_joinedWithSuggestion;
       const locationSet = !!localStorage.getItem(LS_LOCATION_KEY);
+      const allDone = nameSet && locationSet;
       el.innerHTML = `<div class="waiting">
         <div class="icon">👋</div>
         <p>Welcome!</p>
-        <p style="margin-top:.75rem;">Get ready to participate — your answers and ideas will shape this session!</p>
-        <ul class="onboarding-checklist">
+        <p style="margin-top:.75rem;">Get ready to participate.</p>
+        <p style="margin-top:.5rem;">Your answers and ideas will shape this session!</p>
+        <ul id="onboarding-list" class="onboarding-checklist"${allDone ? ' style="opacity:1"' : ''}>
           <li id="onboard-name" class="onboarding-item${nameSet ? ' done' : ''}" onclick="${nameSet ? '' : 'startNameEdit()'}" style="cursor:${nameSet ? 'default' : 'pointer'}">
-            ${nameSet ? '☑' : '☐'} Set your name <span style="color:var(--muted);font-size:.85rem;">(click on your name above)</span>
+            ${nameSet ? '☑' : '☐'} Click on your name to set it
           </li>
           <li id="onboard-location" class="onboarding-item${locationSet ? ' done' : ''}" onclick="${locationSet ? '' : 'requestLocation()'}" style="cursor:${locationSet ? 'default' : 'pointer'}">
             ${locationSet ? '☑' : '☐'} Share your location
           </li>
         </ul>
       </div>`;
+      if (allDone) {
+        setTimeout(() => {
+          const list = document.getElementById('onboarding-list');
+          if (list) { list.style.transition = 'opacity 3s'; list.style.opacity = '0'; }
+        }, 1500);
+      }
       return;
     }
     renderPollCard(el, voteCounts);
