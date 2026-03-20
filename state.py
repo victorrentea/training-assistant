@@ -107,11 +107,13 @@ def assign_avatar(app_state: AppState, uuid: str, name: str) -> str:
         avatar = get_avatar_filename(name)
         app_state.participant_avatars[uuid] = avatar
         return avatar
-    # Custom name: assign-once, deduplicated
+    # Custom name: derive avatar from name hash (consistent across tabs/UUIDs)
     if uuid in app_state.participant_avatars:
         return app_state.participant_avatars[uuid]
     taken = set(app_state.participant_avatars.values())
-    preferred_index = int(uuid.replace('-', ''), 16) % len(LOTR_NAMES)
+    # Hash the name, not UUID, so same custom name → same avatar across tabs
+    name_hash = sum(ord(c) for c in name) * 2654435761  # simple but deterministic
+    preferred_index = name_hash % len(LOTR_NAMES)
     for offset in range(len(LOTR_NAMES)):
         avatar = get_avatar_filename(LOTR_NAMES[(preferred_index + offset) % len(LOTR_NAMES)])
         if avatar not in taken:
