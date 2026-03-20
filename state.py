@@ -74,7 +74,8 @@ class AppState:
         self.debate_champions: dict[str, str] = {}  # "for" → uuid, "against" → uuid
         self.debate_auto_assigned: set[str] = set()  # uuids that were auto-assigned a side
         # Debate live sub-phases
-        self.debate_sub_phase_index: Optional[int] = None  # 0-6 index, None = not started
+        self.debate_first_side: Optional[str] = None  # "for"|"against" — which side speaks first
+        self.debate_sub_phase_index: Optional[int] = None  # 0-3 index, None = not started
         self.debate_sub_timer_seconds: Optional[int] = None
         self.debate_sub_timer_started_at: Optional[datetime] = None
 
