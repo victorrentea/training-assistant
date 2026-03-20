@@ -112,6 +112,7 @@
 - [x] e2e test the download questions button after asking 2 questions. it should capture also the correct answers marked by host.
 - [x] allow participants to vote at polls using keyboard up+down in single select; enter submit vote. in multi-select, display a checkbox on each option line and allow selecting it using SPACE.
 - [x] The indexer should report a percentage done when it sees a bunch of work ahead. In terms of files left. then, it should index documents on max 4 threads
+- [x] Add map icon button next to QR in host footer for quick access to participant locations map (item #6)
 - [ ] load test: 30 participants connected simultaneously, host fires a poll, all vote randomly, host sorts by points. Run against local instance first, then deployed.
 - [x] Local agent restart now avoids redundant re-indexing by storing per-file hashes in `materials/.index-manifest.json`; startup only reindexes changed/new files and removes deleted files from both index and manifest.
 - [x] The local agent now reconnects automatically to the server after disconnects/redeploys; no manual agent restart is needed.
@@ -119,6 +120,7 @@
 - [x] Change the label in the host UI that says "From transcript of last" to something more humane and less creepy, for example "From what we discussed the last...".
 - [x] To respect the privacy of the participants, the participant UI shouldn't push the location automatically. It requires the browser that might scare the people. Instead, once logged in, in the top bar there should be an inviting text saying "Where are you?" which, when clicked, gets the location from the browser and pushes it to the server. If after approve, the user refreshes the page, ideally even if it closes the browser and opens again, the location should be pushed up automatically.
 - [x] Bug! If there is no vote for any participants and I close the voting, each option gets 1% displayed in the participant view, which makes no sense. It should be 0% for all.
+- [x] feat: browser push notifications — participant UI requests permission on Join; 🔔 button for auto-joiners; notifies on new poll/Q&A/word cloud when tab is hidden
 ---
 
 ## Understanding design
