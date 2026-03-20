@@ -140,56 +140,19 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     return data.name;
   }
 
-  // ── Restore name from localStorage ──
-  const nameInput = document.getElementById('name-input');
-  const clearBtn = document.getElementById('clear-name');
-  let suggestedName = '';
+  // ── Auto-join: no join screen, connect immediately ──
   let _joinedWithSuggestion = false;
-  const savedName = localStorage.getItem(LS_KEY);
-  if (savedName) {
-    nameInput.value = savedName;
-    join();   // auto-join — permission requested via 🔔 button in ws.onopen (no user gesture here)
-  } else {
-    fetchSuggestedName().then(name => {
-      suggestedName = name;
-      nameInput.placeholder = name;
-      join();  // auto-join with suggested LotR name
-    });
-  }
-  updateClearBtn();
 
-  nameInput.addEventListener('input', () => {
-    updateClearBtn();
-    const errEl = document.getElementById('join-error');
-    if (errEl) errEl.style.display = 'none';
-  });
-
-  function updateClearBtn() {
-    clearBtn.style.display = nameInput.value ? 'block' : 'none';
-  }
-
-  clearBtn.addEventListener('click', async () => {
-    localStorage.removeItem(LS_KEY);
-    nameInput.value = '';
-    suggestedName = await fetchSuggestedName();
-    nameInput.placeholder = suggestedName;
-    updateClearBtn();
-    nameInput.focus();
-  });
-
-  // ── Join ──
-  document.getElementById('join-btn').addEventListener('click', () => { join(); requestNotificationPermission(); });
-  nameInput.addEventListener('keydown', e => { if (e.key === 'Enter') { join(); requestNotificationPermission(); } });
-
-  function join() {
-    const input = document.getElementById('name-input');
-    const name = input.value.trim() || suggestedName;
-    if (!name) { input.focus(); return; }
-    _joinedWithSuggestion = !input.value.trim();
-    myName = name;
-    localStorage.setItem(LS_KEY, name);
-    connectWS(name);
-  }
+  (async function autoJoin() {
+    const savedName = localStorage.getItem(LS_KEY);
+    if (savedName) {
+      myName = savedName;
+    } else {
+      myName = await fetchSuggestedName();
+      _joinedWithSuggestion = true;
+    }
+    connectWS(myName);
+  })();
 
   // ── Inline name editing ──
   function startNameEdit() {
@@ -299,7 +262,6 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     ws = new WebSocket(url);
 
     ws.onopen = () => {
-      document.getElementById('join-screen').style.display = 'none';
       document.getElementById('main-screen').style.display = 'block';
       document.getElementById('display-name').textContent = myName;
 

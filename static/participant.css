@@ -15,68 +15,6 @@ body {
 
 h1 { display: none; }
 
-/* ── Join screen ── */
-#join-screen {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 2rem;
-  width: 100%;
-  max-width: 400px;
-  text-align: center;
-}
-
-@media (max-width: 480px) {
-  #join-screen { padding: 1.5rem 1rem; }
-}
-#join-screen h2 { margin-bottom: 1rem; font-size: 1.1rem; }
-.name-input-wrap {
-  display: flex;
-  align-items: center;
-  gap: .4rem;
-  margin-bottom: 1rem;
-}
-#join-screen input {
-  flex: 1;
-  padding: .75rem 1rem;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  color: var(--text);
-  font-size: 1rem;
-  min-height: 44px;
-  outline: none;
-  transition: border-color .2s;
-}
-#join-screen input:focus { border-color: var(--accent); }
-#clear-name {
-  background: none;
-  border: none;
-  color: var(--muted);
-  font-size: 1rem;
-  line-height: 1;
-  cursor: pointer;
-  padding: 0;
-  display: none;
-  width: auto;
-  flex-shrink: 0;
-}
-#clear-name:hover { color: var(--text); }
-#join-btn {
-  width: 100%;
-  padding: .8rem;
-  background: var(--accent);
-  color: #fff;
-  border: none;
-  border-radius: 8px;
-  font-size: 1rem;
-  cursor: pointer;
-  font-weight: 600;
-  transition: opacity .2s;
-  min-height: 48px;
-}
-#join-btn:hover { opacity: .85; }
-
 /* ── Main screen ── */
 #main-screen { width: 100%; max-width: 560px; display: none; }
 
