@@ -1247,6 +1247,7 @@
 
     let html = '';
 
+    html += `<div style="font-size:.85rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.5rem;">Line ${lineNum} — Users that selected this line</div>`;
     if (lineParticipants.length > 0) {
       const sorted = [...lineParticipants].sort((a, b) => {
         if (a.score !== b.score) return b.score - a.score;
@@ -1255,7 +1256,7 @@
       html += '<div class="codereview-participant-list">';
       sorted.forEach(p => {
         html += '<div class="codereview-participant-row">';
-        html += `<span>${escHtml(p.name)}</span>`;
+        html += `<span>• ${escHtml(p.name)}</span>`;
         if (p.score > 0) {
           html += `<span class="codereview-participant-score">⭐ ${p.score} pts</span>`;
         }
