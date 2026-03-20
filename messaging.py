@@ -27,6 +27,8 @@ def build_state_message() -> dict:
         "participant_locations": {n: state.locations.get(n, "") for n in names},
         "daemon_last_seen": last_seen.isoformat() if last_seen else None,
         "daemon_connected": daemon_connected,
+        "daemon_session_folder": state.daemon_session_folder,
+        "daemon_session_notes": state.daemon_session_notes,
         "quiz_preview": state.quiz_preview,
         "scores": state.scores,
         "current_activity": state.current_activity,
