@@ -706,6 +706,11 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
 .debate-hints { margin-top: 1rem; padding: .75rem; background: var(--surface2); border-radius: 8px; border: 1px solid var(--border); }
 .debate-hint { font-size: .85rem; color: var(--muted); margin: .25rem 0; }
 
+#center-codereview {
+    display: flex;
+    flex-direction: column;
+}
+
 /* Code Review */
 .codereview-lines {
     font-family: monospace;
