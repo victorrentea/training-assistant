@@ -150,23 +150,37 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
   });
 
   // ── Location ──
-  async function resolveLocation() {
-    return new Promise((resolve) => {
-      if (!navigator.geolocation) {
-        resolve({ timezone: Intl.DateTimeFormat().resolvedOptions().timeZone });
-        return;
-      }
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const { latitude: lat, longitude: lon } = pos.coords;
-          resolve({ location: `${lat.toFixed(5)}, ${lon.toFixed(5)}` });
-        },
-        () => {
-          resolve({ timezone: Intl.DateTimeFormat().resolvedOptions().timeZone });
-        },
-        { timeout: 15000, maximumAge: 60000 }
-      );
-    });
+  const LS_LOCATION_KEY = 'workshop_participant_location';
+
+  function getTimezoneLocation() {
+    return `🕐 ${Intl.DateTimeFormat().resolvedOptions().timeZone}`;
+  }
+
+  function sendLocation(locationStr) {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type: 'location', location: locationStr }));
+    }
+  }
+
+  function updateLocationPrompt() {
+    const el = document.getElementById('location-prompt');
+    if (!el) return;
+    el.style.display = localStorage.getItem(LS_LOCATION_KEY) ? 'none' : '';
+  }
+
+  function requestLocation() {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const { latitude: lat, longitude: lon } = pos.coords;
+        const locationStr = `${lat.toFixed(5)}, ${lon.toFixed(5)}`;
+        localStorage.setItem(LS_LOCATION_KEY, locationStr);
+        sendLocation(locationStr);
+        updateLocationPrompt();
+      },
+      () => { /* user denied — prompt stays visible, they can retry */ },
+      { timeout: 15000, maximumAge: 60000 }
+    );
   }
 
   // ── WebSocket ──
@@ -175,14 +189,15 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     const url = `${proto}://${location.host}/ws/${encodeURIComponent(name)}`;
     ws = new WebSocket(url);
 
-    ws.onopen = async () => {
+    ws.onopen = () => {
       document.getElementById('join-screen').style.display = 'none';
       document.getElementById('main-screen').style.display = 'block';
       document.getElementById('display-name').textContent = myName;
 
-      const loc = await resolveLocation();
-      const locationStr = loc.location || `🕐 ${loc.timezone}`;
-      ws.send(JSON.stringify({ type: 'location', location: locationStr }));
+      // Send stored GPS location if available, otherwise silent timezone fallback
+      const storedLocation = localStorage.getItem(LS_LOCATION_KEY);
+      sendLocation(storedLocation || getTimezoneLocation());
+      updateLocationPrompt();
     };
 
     let _nameTaken = false;
