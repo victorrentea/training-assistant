@@ -166,6 +166,7 @@
         renderParticipantList(names);
         renderDaemonStatus(msg.daemon_connected, msg.daemon_last_seen);
         renderTranscriptStatus(msg.transcript_line_count, msg.transcript_total_lines, msg.transcript_latest_ts);
+        renderOverlayStatus(msg.overlay_connected);
         renderNotesStatus(msg.daemon_session_folder, msg.daemon_session_notes);
         updateHostNotes(msg.notes_content);
         renderPreview(msg.quiz_preview || null);
@@ -357,6 +358,13 @@
         ? `No transcription since ${latestTs}\n${totalLines} lines today`
         : 'No transcription data';
     }
+  }
+
+  function renderOverlayStatus(connected) {
+    const el = document.getElementById('overlay-badge');
+    if (!el) return;
+    el.className = `badge ${connected ? 'connected' : 'disconnected'}`;
+    el.title = connected ? 'Emoji overlay connected' : 'Emoji overlay not connected';
   }
 
   let hostNotesContent = '';

@@ -4,7 +4,7 @@ import QuartzCore
 class EmojiAnimator {
     private let hostLayer: CALayer
 
-    static let emojiSet = ["❤️", "🔥", "👏", "🎉", "😂", "🤯", "💡", "👍", "🚀", "⭐"]
+    static let emojiSet = ["❤️", "🔥", "👏", "😂", "🤯", "💡", "☕"]
 
     init(hostLayer: CALayer) {
         self.hostLayer = hostLayer

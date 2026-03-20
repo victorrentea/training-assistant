@@ -933,6 +933,11 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     }).join('');
   }
 
+  function sendEmoji(emoji) {
+    if (!ws) return;
+    ws.send(JSON.stringify({ type: 'emoji_reaction', emoji }));
+  }
+
   function submitQuestion() {
     const input = document.getElementById('qa-input');
     if (!input) return;
