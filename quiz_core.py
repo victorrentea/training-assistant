@@ -27,7 +27,7 @@ DEFAULT_SERVER_URL = "http://localhost:8000"
 DEFAULT_MODEL      = "claude-sonnet-4-6"
 DEFAULT_MINUTES    = 60
 MAX_CHARS_TO_CLAUDE = 60_000
-DAEMON_POLL_INTERVAL = 1  # seconds
+DAEMON_POLL_INTERVAL = 3  # seconds
 
 
 # ---------------------------------------------------------------------------
