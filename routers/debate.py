@@ -163,7 +163,7 @@ async def force_assign():
     return {"ok": True, "assigned": len(unassigned)}
 
 
-VALID_PHASES = {"arguments", "ai_cleanup", "prep", "live_debate", "ended"}
+VALID_PHASES = {"arguments", "ai_cleanup", "prep", "live_debate"}
 
 
 @router.post("/api/debate/phase", dependencies=[Depends(require_host_auth)])

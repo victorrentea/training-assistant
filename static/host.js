@@ -1452,7 +1452,6 @@
     { key: 'arguments',      num: 2, label: 'Arguments' },
     { key: 'prep',           num: 3, label: 'Preparation' },
     { key: 'live_debate',    num: 4, label: 'Live Debate' },
-    { key: 'ended',          num: 5, label: 'Ended' },
   ];
 
   function getDebateSubPhases(firstSide) {
@@ -1732,12 +1731,12 @@
         // Pre-launch: phase 1 gets a Launch button that starts the debate
         launchBtn = `<button class="btn btn-primary btn-sm" onclick="launchDebate()">Launch ⚔️</button>`;
       } else if (isActive && p.key === 'live_debate') {
-        launchBtn = `<button class="btn btn-danger btn-sm" onclick="debateNextPhase('ended')">⏹ End</button>`;
+        // No end button — debate stays in live_debate; use Reset to clear
       } else if (isActive && p.key === 'side_selection') {
         // No Next button — phase ends via Force Assign or auto-advance
       } else if (isActive && p.key === 'arguments') {
         launchBtn = `<button class="btn btn-primary btn-sm" onclick="debateEndArguments()">End Phase ✨</button>`;
-      } else if (isActive && p.key !== 'ended') {
+      } else if (isActive) {
         const nextPhase = DEBATE_PHASES[i + 1];
         if (nextPhase) {
           launchBtn = `<button class="btn btn-primary btn-sm" onclick="debateNextPhase('${nextPhase.key}')">Next →</button>`;
