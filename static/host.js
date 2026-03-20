@@ -1690,7 +1690,6 @@
     const displayPhase = phase === 'ai_cleanup' ? 'prep' : phase;
     const currentIdx = debateActive ? DEBATE_PHASES.findIndex(p => p.key === displayPhase) : -1;
     const phaseActions = {
-      side_selection: `<button class="btn btn-warn btn-sm" onclick="debateForceAssign()">🎲 Assign randomly</button>`,
       prep: champions.for || champions.against
         ? `<span style="color:var(--accent);font-size:.8rem;">🏆 ${Object.entries(champions).map(([s,n]) => `${s==='for'?'👍':'👎'} ${escDebate(n)}`).join(', ')}</span>`
         : '',
@@ -1773,7 +1772,7 @@
       } else if (isActive && p.key === 'live_debate') {
         // No end button — debate stays in live_debate; use Reset to clear
       } else if (isActive && p.key === 'side_selection') {
-        // No Next button — phase ends via Force Assign or auto-advance
+        launchBtn = `<button class="btn btn-warn btn-sm" onclick="debateForceAssign()">🎲 Assign</button>`;
       } else if (isActive && p.key === 'arguments') {
         launchBtn = `<button class="btn btn-primary btn-sm" id="debate-end-args-btn" onclick="debateEndArguments()">End</button>`;
       } else if (isActive) {
