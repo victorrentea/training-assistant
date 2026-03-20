@@ -1543,14 +1543,12 @@
         launchBtn = `<button class="btn btn-primary btn-sm" onclick="launchDebate()">Launch ⚔️</button>`;
       } else if (isActive && p.key === 'live_debate') {
         launchBtn = `<button class="btn btn-danger btn-sm" onclick="debateNextPhase('ended')">⏹ End</button>`;
+      } else if (isActive && p.key === 'side_selection') {
+        // No Next button — phase ends via Force Assign or auto-advance
       } else if (isActive && p.key !== 'ended') {
         const nextPhase = DEBATE_PHASES[i + 1];
         if (nextPhase) {
-          if (p.key === 'side_selection') {
-            launchBtn = `<button class="btn btn-primary btn-sm" onclick="debateCloseSelection()">Next →</button>`;
-          } else {
-            launchBtn = `<button class="btn btn-primary btn-sm" onclick="debateNextPhase('${nextPhase.key}')">Next →</button>`;
-          }
+          launchBtn = `<button class="btn btn-primary btn-sm" onclick="debateNextPhase('${nextPhase.key}')">Next →</button>`;
         }
       } else if (isDone) {
         launchBtn = `<span class="debate-chapter-check">✓</span>`;
