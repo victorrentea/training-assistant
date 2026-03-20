@@ -56,6 +56,73 @@ def _build_qa_for_host() -> list[dict]:
     ]
 
 
+def _build_debate_for_participant(pid: str) -> dict:
+    """Build debate state personalized for a participant."""
+    if not state.debate_statement:
+        return {}
+    my_side = state.debate_sides.get(pid)
+    return {
+        "debate_statement": state.debate_statement,
+        "debate_phase": state.debate_phase,
+        "debate_my_side": my_side,
+        "debate_side_counts": {
+            "for": sum(1 for s in state.debate_sides.values() if s == "for"),
+            "against": sum(1 for s in state.debate_sides.values() if s == "against"),
+        },
+        "debate_arguments": [
+            {
+                "id": a["id"],
+                "text": a["text"],
+                "side": a["side"],
+                "author": "✨ AI" if a["ai_generated"] else state.participant_names.get(a["author_uuid"], "Unknown"),
+                "author_avatar": "" if a["ai_generated"] else state.participant_avatars.get(a["author_uuid"], ""),
+                "ai_generated": a["ai_generated"],
+                "is_own": a["author_uuid"] == pid,
+                "has_upvoted": pid in a["upvoters"],
+                "upvote_count": len(a["upvoters"]),
+                "merged_into": a.get("merged_into"),
+            }
+            for a in state.debate_arguments
+        ],
+        "debate_champions": {
+            side: state.participant_names.get(uuid, "")
+            for side, uuid in state.debate_champions.items()
+        },
+        "debate_my_is_champion": state.debate_champions.get(my_side) == pid if my_side else False,
+    }
+
+
+def _build_debate_for_host() -> dict:
+    """Build debate state for host."""
+    if not state.debate_statement:
+        return {}
+    return {
+        "debate_statement": state.debate_statement,
+        "debate_phase": state.debate_phase,
+        "debate_side_counts": {
+            "for": sum(1 for s in state.debate_sides.values() if s == "for"),
+            "against": sum(1 for s in state.debate_sides.values() if s == "against"),
+        },
+        "debate_arguments": [
+            {
+                "id": a["id"],
+                "text": a["text"],
+                "side": a["side"],
+                "author": "✨ AI" if a["ai_generated"] else state.participant_names.get(a["author_uuid"], "Unknown"),
+                "author_avatar": "" if a["ai_generated"] else state.participant_avatars.get(a["author_uuid"], ""),
+                "ai_generated": a["ai_generated"],
+                "upvote_count": len(a["upvoters"]),
+                "merged_into": a.get("merged_into"),
+            }
+            for a in state.debate_arguments
+        ],
+        "debate_champions": {
+            side: state.participant_names.get(uuid, "")
+            for side, uuid in state.debate_champions.items()
+        },
+    }
+
+
 def build_participant_state(pid: str) -> dict:
     """Build personalized state for a participant."""
     pids = participant_ids()
@@ -74,6 +141,7 @@ def build_participant_state(pid: str) -> dict:
         "summary_points": state.summary_points,
         "summary_updated_at": state.summary_updated_at.isoformat() if state.summary_updated_at else None,
         "qa_questions": _build_qa_for_participant(pid),
+        **_build_debate_for_participant(pid),
     }
 
 
@@ -116,6 +184,7 @@ def build_host_state() -> dict:
         "summary_points": state.summary_points,
         "summary_updated_at": state.summary_updated_at.isoformat() if state.summary_updated_at else None,
         "qa_questions": _build_qa_for_host(),
+        **_build_debate_for_host(),
     }
 
 
