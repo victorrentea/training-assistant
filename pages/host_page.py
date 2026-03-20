@@ -91,6 +91,29 @@ class HostPage:
             f'.qa-card[data-id="{question_id}"] .qa-actions button:first-child'
         ).click()
 
+    # ── Poll History / Download ────────────────────────────────────────────
+
+    def get_poll_history(self) -> list[dict]:
+        """Return the poll history stored in host localStorage."""
+        return self._page.evaluate("""() => {
+            const key = `host_polls_${new Date().toISOString().slice(0, 10)}`;
+            try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch { return []; }
+        }""")
+
+    def get_download_text(self) -> str:
+        """Return the text that downloadPollHistory() would produce."""
+        return self._page.evaluate("""() => {
+            const key = `host_polls_${new Date().toISOString().slice(0, 10)}`;
+            const history = JSON.parse(localStorage.getItem(key) || '[]');
+            if (!history.length) return '';
+            return history.map((e, n) => {
+                const opts = e.options.map((o, i) =>
+                    `  ${String.fromCharCode(65+i)}. ${o.text}${o.correct ? ' ✅' : ''}`
+                ).join('\\n');
+                return `${n+1}. ${e.question}\\n${opts}`;
+            }).join('\\n\\n');
+        }""")
+
     def expect_question_answered(self, question_id: str, answered: bool = True) -> None:
         card = self._page.locator(f'.qa-card[data-id="{question_id}"]')
         if answered:
