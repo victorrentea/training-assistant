@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
-Quiz Daemon — runs in the background on the trainer's Mac.
+Training Daemon — runs in the background on the trainer's Mac.
 
 Polls the workshop server for quiz generation requests triggered from the
 host panel, then runs the full generate → post → open flow automatically.
 
 Usage:
-    python3 quiz_daemon.py
+    python3 training_daemon.py
 
 All configuration is read from secrets.env and environment variables:
     ANTHROPIC_API_KEY       Claude API key (required)
@@ -36,11 +36,11 @@ from quiz_core import (
 from daemon.debate_ai import run_debate_ai_cleanup
 from daemon.summarizer import generate_summary, SUMMARY_INTERVAL_SECONDS
 
-_LOCK_FILE = Path("/tmp/quiz_daemon.lock")
+_LOCK_FILE = Path("/tmp/training_daemon.lock")
 _HEARTBEAT_INTERVAL = 1.0  # seconds between heartbeat writes
 _HEARTBEAT_STALE_THRESHOLD = 10.0  # seconds before heartbeat is considered stale
 _TIMESTAMP_INTERVAL_SECONDS = float(os.environ.get("TRANSCRIPT_TIMESTAMP_INTERVAL_SECONDS", "3"))
-EXIT_CODE_UPDATE = 42  # signals start-daemon.sh to git pull and restart
+EXIT_CODE_UPDATE = 42  # signals start.sh to git pull and restart
 
 
 class TranscriptTimestampAppender:

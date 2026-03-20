@@ -323,7 +323,7 @@
     if (!lastSeenIso) {
       el.textContent = 'Agent';
       el.className = 'badge disconnected';
-      el.title = 'Never connected — start with ./start-daemon.sh';
+      el.title = 'Never connected — start with ./start.sh';
       return;
     }
 
