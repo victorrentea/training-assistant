@@ -32,7 +32,7 @@
       <div id="poll-input" class="poll-composer" contenteditable="true" spellcheck="false"
            data-placeholder="Question title&#10;&#10;Option A&#10;Option B&#10;Option C"></div>
       <div class="btn-row" style="align-items:center;">
-        <button class="btn btn-success" id="create-btn">🚀 Launch</button>
+        <button class="btn btn-success" id="create-btn">Send</button>
         <label style="display:flex; align-items:center; gap:.4rem; font-size:.9rem; color:var(--text); cursor:pointer; margin:0;">
           <input type="checkbox" id="multi-check" style="width:1rem; height:1rem; cursor:pointer;" />
           Multi-select
@@ -64,7 +64,7 @@
               <option value="480">whole day</option>
             </select>
           </div>
-          <button class="btn btn-success" id="gen-quiz-btn" onclick="requestQuiz()" style="align-self:flex-start;">✨ Generate from transcript</button>
+          <button class="btn btn-warn" id="gen-quiz-btn" onclick="requestQuiz()" style="align-self:flex-start;">Generate from transcript ✨</button>
         </div>
         <span id="quiz-status"></span>
       </div>
@@ -73,7 +73,7 @@
         <h3 style="margin:0 0 .5rem; font-size:.95rem; color:var(--accent);">🤖 Generated Question</h3>
         <div id="preview-display"></div>
         <div class="btn-row" style="margin-top:.5rem;">
-          <button class="btn btn-success" onclick="firePreview()">🚀 Launch</button>
+          <button class="btn btn-success" onclick="firePreview()">Send</button>
         </div>
       </div>
     </div>
@@ -82,7 +82,7 @@
     <div id="tab-content-wordcloud" class="tab-content" style="display:none;">
       <div style="margin-top:.75rem;">
         <div class="wc-input-row" style="margin-bottom:.5rem;">
-          <input id="wc-topic-input" type="text" maxlength="80" autocomplete="off" placeholder="topic (optional)" style="flex:1;padding:.5rem .75rem;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:.9rem;" />
+          <input id="wc-topic-input" type="text" maxlength="80" autocomplete="off" placeholder="Topic (optional)" style="flex:1;padding:.5rem .75rem;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:.9rem;" />
           <button class="btn btn-success" onclick="pushWordCloudTopic()">🚀 Push</button>
         </div>
         <div class="wc-input-row">
