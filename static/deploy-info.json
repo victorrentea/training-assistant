@@ -1,0 +1,7 @@
+{
+  "sha": "d9ec3628fff86b737df96019bfb8233ca4563015",
+  "timestamp": "2026-03-20 21:48",
+  "changelog": [
+    "Auto-generate version.js at deploy time, add changelog to notifications (#46)"
+  ]
+}
