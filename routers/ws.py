@@ -159,6 +159,31 @@ async def websocket_endpoint(websocket: WebSocket, participant_id: str):
                     state.scores[pid] = state.scores.get(pid, 0) + 25
                     await broadcast_state()
 
+            elif msg_type == "codereview_select":
+                line = data.get("line")
+                if (
+                    state.current_activity == ActivityType.CODEREVIEW
+                    and state.codereview_phase == "selecting"
+                    and state.codereview_snippet is not None
+                    and isinstance(line, int)
+                    and 0 <= line < len(state.codereview_snippet.splitlines())
+                ):
+                    if pid not in state.codereview_selections:
+                        state.codereview_selections[pid] = set()
+                    state.codereview_selections[pid].add(line)
+                    await broadcast_state()
+
+            elif msg_type == "codereview_deselect":
+                line = data.get("line")
+                if (
+                    state.current_activity == ActivityType.CODEREVIEW
+                    and state.codereview_phase == "selecting"
+                    and isinstance(line, int)
+                ):
+                    if pid in state.codereview_selections:
+                        state.codereview_selections[pid].discard(line)
+                    await broadcast_state()
+
     except WebSocketDisconnect:
         state.participants.pop(pid, None)
         state.locations.pop(pid, None)
