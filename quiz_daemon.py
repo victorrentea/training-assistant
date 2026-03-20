@@ -367,6 +367,7 @@ def run() -> None:
                 try:
                     entries = load_transcription_files(config.folder)
                     timed = [(ts, txt) for ts, txt in entries if ts is not None]
+                    total_lines = len([txt for _, txt in entries if txt.strip()])
                     if timed:
                         max_ts = max(ts for ts, _ in timed)
                         cutoff = max_ts - DEFAULT_TRANSCRIPT_MINUTES * 60
@@ -382,7 +383,7 @@ def run() -> None:
                     print(f"[transcript] {line_count} lines in last {DEFAULT_TRANSCRIPT_MINUTES}min (total: {len(entries)} segments, {len(timed)} timed, latest: {latest_time})")
                     _post_json(
                         f"{config.server_url}/api/transcript-status",
-                        {"line_count": line_count, "latest_ts": latest_time},
+                        {"line_count": line_count, "total_lines": total_lines, "latest_ts": latest_time},
                         config.host_username, config.host_password,
                     )
                 except SystemExit:
