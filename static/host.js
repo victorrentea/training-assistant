@@ -1487,7 +1487,7 @@
   // ── Debate Phase Stepper ──
 
   const DEBATE_PHASES = [
-    { key: 'side_selection', num: 1, label: 'Pick Sides' },
+    { key: 'side_selection', num: 1, label: 'Pick a Side' },
     { key: 'arguments',      num: 2, label: 'Arguments' },
     { key: 'prep',           num: 3, label: 'Preparation' },
     { key: 'live_debate',    num: 4, label: 'Live Debate' },
@@ -1789,7 +1789,7 @@
       } else if (isActive && p.key === 'live_debate') {
         // No end button — debate stays in live_debate; use Reset to clear
       } else if (isActive && p.key === 'side_selection') {
-        launchBtn = `<button class="btn btn-warn btn-sm" onclick="debateForceAssign()">🎲 Assign</button>`;
+        launchBtn = `<button class="btn btn-warn btn-sm" onclick="debateForceAssign()">🎲 Random Assign</button>`;
       } else if (isActive && p.key === 'arguments') {
         launchBtn = `<button class="btn btn-primary btn-sm" id="debate-end-args-btn" onclick="debateEndArguments()">End</button>`;
       } else if (isActive) {
