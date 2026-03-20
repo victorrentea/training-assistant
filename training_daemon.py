@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
-Quiz Daemon — runs in the background on the trainer's Mac.
+Training Daemon — runs in the background on the trainer's Mac.
 
 Polls the workshop server for quiz generation requests triggered from the
 host panel, then runs the full generate → post → open flow automatically.
 
 Usage:
-    python3 quiz_daemon.py
+    python3 training_daemon.py
 
 All configuration is read from secrets.env and environment variables:
     ANTHROPIC_API_KEY       Claude API key (required)
@@ -34,13 +34,15 @@ from quiz_core import (
     read_session_notes, load_transcription_files, extract_last_n_minutes,
 )
 from daemon.debate_ai import run_debate_ai_cleanup
+from daemon.llm_adapter import get_usage
 from daemon.summarizer import generate_summary, SUMMARY_INTERVAL_SECONDS
+from daemon.transcript_state import TranscriptStateManager
 
-_LOCK_FILE = Path("/tmp/quiz_daemon.lock")
+_LOCK_FILE = Path("/tmp/training_daemon.lock")
 _HEARTBEAT_INTERVAL = 1.0  # seconds between heartbeat writes
 _HEARTBEAT_STALE_THRESHOLD = 10.0  # seconds before heartbeat is considered stale
 _TIMESTAMP_INTERVAL_SECONDS = float(os.environ.get("TRANSCRIPT_TIMESTAMP_INTERVAL_SECONDS", "3"))
-EXIT_CODE_UPDATE = 42  # signals start-daemon.sh to git pull and restart
+EXIT_CODE_UPDATE = 42  # signals start.sh to git pull and restart
 
 
 class TranscriptTimestampAppender:
@@ -256,6 +258,7 @@ def run() -> None:
     ]
     draft_points: list[dict] = []
     last_summary_at = 0.0  # monotonic time of last summary run
+    transcript_state = TranscriptStateManager()
 
     while True:
         try:
@@ -425,6 +428,16 @@ def run() -> None:
                 except Exception as e:
                     print(f"[transcript] Error: {e}", file=sys.stderr)
 
+                # ── Push token usage alongside transcript stats ──
+                try:
+                    _post_json(
+                        f"{config.server_url}/api/token-usage",
+                        get_usage().to_dict(),
+                        config.host_username, config.host_password,
+                    )
+                except Exception as e:
+                    print(f"[daemon] Token usage POST failed: {e}", file=sys.stderr)
+
             # ── Check for forced summary request ──
             force_summary = False
             try:
@@ -446,7 +459,24 @@ def run() -> None:
                     # Promote draft → locked before generating
                     locked_points.extend(draft_points)
                     draft_points = []
-                    new_points = generate_summary(config, locked_points)
+
+                    # Compute delta: only send new transcript text to the LLM
+                    delta_text = None
+                    try:
+                        entries = load_transcription_files(config.folder)
+                        if entries:
+                            full_text = extract_last_n_minutes(entries, DEFAULT_TRANSCRIPT_MINUTES)
+                            if full_text:
+                                delta_text, _ = transcript_state.compute_delta(full_text)
+                                if delta_text:
+                                    print(f"[summarizer] Delta: {len(delta_text)} chars (full: {len(full_text)} chars)")
+                                else:
+                                    print("[summarizer] No new transcript content — skipping summary")
+                                    continue
+                    except SystemExit:
+                        pass  # no transcription files — let summarizer handle it
+
+                    new_points = generate_summary(config, locked_points, delta_text=delta_text)
                     if new_points is not None:
                         draft_points = new_points
                         all_points = locked_points + draft_points

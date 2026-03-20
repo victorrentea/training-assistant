@@ -83,3 +83,10 @@ async def poll_summary_force():
     requested = state.summary_force_requested
     state.summary_force_requested = False
     return {"requested": requested}
+
+
+@router.post("/api/token-usage")
+async def update_token_usage(data: dict):
+    state.token_usage = data
+    await broadcast_state()
+    return {"ok": True}

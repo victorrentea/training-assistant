@@ -99,8 +99,11 @@
 
   // Set participant link
   const link = `${location.protocol}//${location.host}/`;
-  document.getElementById('participant-link').href = link;
-  document.getElementById('participant-link').textContent = location.host;
+  const pLink = document.getElementById('participant-link');
+  pLink.href = link;
+  pLink.innerHTML = location.host.split('').map((ch, i) =>
+    `<span class="wave-char" style="animation-delay:${(i * 0.12).toFixed(2)}s">${ch}</span>`
+  ).join('');
 
   // ── WebSocket (host monitors state too) ──
   function connectWS() {
@@ -162,7 +165,9 @@
         document.getElementById('pax-count').textContent = msg.participant_count;
         renderParticipantList(names);
         renderDaemonStatus(msg.daemon_connected, msg.daemon_last_seen);
+        updateTokenBadge(msg.token_usage);
         renderTranscriptStatus(msg.transcript_line_count, msg.transcript_total_lines, msg.transcript_latest_ts);
+        renderOverlayStatus(msg.overlay_connected);
         renderNotesStatus(msg.daemon_session_folder, msg.daemon_session_notes);
         updateHostNotes(msg.notes_content);
         renderPreview(msg.quiz_preview || null);
@@ -312,6 +317,17 @@
     b.className = `badge ${ok ? 'connected' : 'disconnected'}`;
   }
 
+  function updateTokenBadge(usage) {
+    const badge = document.getElementById('token-badge');
+    if (!badge || !usage) return;
+    const cost = usage.estimated_cost_usd || 0;
+    badge.textContent = '$' + cost.toFixed(2);
+    const inp = (usage.input_tokens || 0).toLocaleString();
+    const out = (usage.output_tokens || 0).toLocaleString();
+    badge.title = 'Tokens: ' + inp + ' in / ' + out + ' out';
+    badge.className = 'badge ' + (cost > 5 ? 'error' : cost > 1 ? 'warning' : 'connected');
+  }
+
   function renderDaemonStatus(connected, lastSeenIso) {
     const el = document.getElementById('daemon-badge');
     if (!el) return;
@@ -319,7 +335,7 @@
     if (!lastSeenIso) {
       el.textContent = 'Agent';
       el.className = 'badge disconnected';
-      el.title = 'Never connected — start with ./start-daemon.sh';
+      el.title = 'Never connected — start with ./start.sh';
       return;
     }
 
@@ -354,6 +370,13 @@
         ? `No transcription since ${latestTs}\n${totalLines} lines today`
         : 'No transcription data';
     }
+  }
+
+  function renderOverlayStatus(connected) {
+    const el = document.getElementById('overlay-badge');
+    if (!el) return;
+    el.className = `badge ${connected ? 'connected' : 'disconnected'}`;
+    el.title = connected ? 'Emoji overlay connected' : 'Emoji overlay not connected';
   }
 
   let hostNotesContent = '';
@@ -1064,6 +1087,8 @@
     const btn = document.getElementById('wc-host-submit');
     if (btn) btn.disabled = true;
     renderHostWordList();
+    const dlWrap = document.getElementById('wc-download-wrap');
+    if (dlWrap) dlWrap.style.display = '';
   }
 
   function renderHostWordList() {
@@ -1086,6 +1111,8 @@
   async function clearWordCloud() {
     hostWords = [];
     renderHostWordList();
+    const dlWrap = document.getElementById('wc-download-wrap');
+    if (dlWrap) dlWrap.style.display = 'none';
     await fetch('/api/wordcloud/clear', { method: 'POST' });
   }
 
@@ -1099,6 +1126,8 @@
       dl.innerHTML = Object.keys(wordsMap).sort()
         .map(w => `<option value="${escHtml(w)}"></option>`).join('');
     }
+    const dlWrap = document.getElementById('wc-download-wrap');
+    if (dlWrap) dlWrap.style.display = Object.keys(wordsMap).length ? '' : 'none';
   }
 
   function _drawHostCloud(canvas, wordsMap) {
@@ -1470,7 +1499,7 @@
   // ── Debate Phase Stepper ──
 
   const DEBATE_PHASES = [
-    { key: 'side_selection', num: 1, label: 'Pick Sides' },
+    { key: 'side_selection', num: 1, label: 'Pick a Side' },
     { key: 'arguments',      num: 2, label: 'Arguments' },
     { key: 'prep',           num: 3, label: 'Preparation' },
     { key: 'live_debate',    num: 4, label: 'Live Debate' },
@@ -1690,7 +1719,6 @@
     const displayPhase = phase === 'ai_cleanup' ? 'prep' : phase;
     const currentIdx = debateActive ? DEBATE_PHASES.findIndex(p => p.key === displayPhase) : -1;
     const phaseActions = {
-      side_selection: `<button class="btn btn-warn btn-sm" onclick="debateForceAssign()">🎲 Assign randomly</button>`,
       prep: champions.for || champions.against
         ? `<span style="color:var(--accent);font-size:.8rem;">🏆 ${Object.entries(champions).map(([s,n]) => `${s==='for'?'👍':'👎'} ${escDebate(n)}`).join(', ')}</span>`
         : '',
@@ -1773,7 +1801,7 @@
       } else if (isActive && p.key === 'live_debate') {
         // No end button — debate stays in live_debate; use Reset to clear
       } else if (isActive && p.key === 'side_selection') {
-        // No Next button — phase ends via Force Assign or auto-advance
+        launchBtn = `<button class="btn btn-warn btn-sm" onclick="debateForceAssign()">🎲 Random Assign</button>`;
       } else if (isActive && p.key === 'arguments') {
         launchBtn = `<button class="btn btn-primary btn-sm" id="debate-end-args-btn" onclick="debateEndArguments()">End</button>`;
       } else if (isActive) {
@@ -1881,13 +1909,11 @@
 
     return `<div class="debate-columns">
       <div class="debate-col debate-col-against">
-        <h3 class="debate-col-header">👎</h3>
         ${champAgainst}
         ${againstArgs.map(renderArg).join('')}
         ${Array(mergedAgainstCount).fill('').map(renderMerged).join('')}
       </div>
       <div class="debate-col debate-col-for">
-        <h3 class="debate-col-header">👍</h3>
         ${champFor}
         ${forArgs.map(renderArg).join('')}
         ${Array(mergedForCount).fill('').map(renderMerged).join('')}
