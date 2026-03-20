@@ -701,3 +701,66 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
 .qa-upvotes { color: var(--accent); font-weight: 600; }
 .qa-actions { display: flex; gap: .4rem; flex-wrap: wrap; }
 .btn-sm { padding: .25rem .6rem; font-size: .8rem; }
+
+/* Code Review */
+.codereview-lines {
+    font-family: monospace;
+    font-size: 13px;
+    line-height: 2;
+    background: var(--surface);
+    border-radius: var(--radius);
+    overflow: hidden;
+}
+
+.codereview-line {
+    display: flex;
+    padding: 2px 12px;
+    transition: background 0.15s;
+}
+
+.codereview-line-clickable {
+    cursor: pointer;
+}
+
+.codereview-line-clickable:hover {
+    filter: brightness(1.2);
+}
+
+.codereview-gutter {
+    width: 32px;
+    text-align: right;
+    margin-right: 12px;
+    color: var(--muted);
+    user-select: none;
+    flex-shrink: 0;
+}
+
+.codereview-code {
+    flex: 1;
+    white-space: pre;
+    overflow-x: auto;
+}
+
+.codereview-count {
+    margin-left: 8px;
+    font-size: 11px;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.codereview-participant-list {
+    font-size: 13px;
+    line-height: 2;
+}
+
+.codereview-participant-row {
+    display: flex;
+    gap: 8px;
+    padding: 4px 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.codereview-participant-score {
+    color: var(--warn);
+    min-width: 48px;
+}
