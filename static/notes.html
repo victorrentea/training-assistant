@@ -52,12 +52,18 @@
       return d.innerHTML;
     }
 
+    function linkify(html) {
+      return html.replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener" style="color:var(--accent)">$1</a>');
+    }
+
+    const savedY = sessionStorage.getItem('notes_scrollY');
+
     fetch('/api/notes')
       .then(r => r.json())
       .then(data => {
         const notesEl = document.getElementById('notes');
         if (data.content) {
-          notesEl.textContent = data.content;
+          notesEl.innerHTML = linkify(escHtml(data.content));
           notesEl.classList.remove('empty');
         } else {
           notesEl.textContent = 'No session notes available yet.';
@@ -70,7 +76,7 @@
             const text = typeof p === 'string' ? p : p.text;
             const source = typeof p === 'string' ? 'discussion' : (p.source || 'discussion');
             const icon = source === 'notes' ? '&#9999;&#65039;' : '&#128172;';
-            return `<li>${icon} ${escHtml(text)}</li>`;
+            return `<li>${icon} ${linkify(escHtml(text))}</li>`;
           }).join('');
         } else {
           pointsEl.innerHTML = '<li class="empty">No key points yet.</li>';
@@ -80,11 +86,17 @@
           const d = new Date(data.summary_updated_at);
           document.getElementById('updated').textContent = 'Updated ' + d.toLocaleTimeString();
         }
+
+        if (savedY) requestAnimationFrame(() => window.scrollTo(0, parseInt(savedY)));
       })
       .catch(() => {
         document.getElementById('notes').textContent = 'Failed to load notes.';
         document.getElementById('points').innerHTML = '<li class="empty">Failed to load.</li>';
       });
+
+    window.addEventListener('beforeunload', () => {
+      sessionStorage.setItem('notes_scrollY', String(window.scrollY));
+    });
   </script>
 </body>
 </html>
