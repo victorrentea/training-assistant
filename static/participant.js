@@ -1087,8 +1087,9 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
         const placeholder = mySide === 'for'
           ? 'Add an argument for 👍…'
           : 'Add an argument against 👎…';
+        const inputSideClass = mySide === 'for' ? 'debate-input-for' : 'debate-input-against';
         html += `<div class="debate-input-row">
-          <input id="debate-arg-input" type="text" maxlength="280" placeholder="${placeholder}"
+          <input id="debate-arg-input" class="${inputSideClass}" type="text" maxlength="280" placeholder="${placeholder}"
             onkeydown="if(event.key==='Enter')debateSubmitArg()"
             oninput="document.getElementById('debate-arg-submit').disabled=!this.value.trim()" />
           <button id="debate-arg-submit" class="btn btn-primary" onclick="debateSubmitArg()" disabled>↵</button>
@@ -1160,7 +1161,7 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
 
     const renderArg = (a) => {
       const aiClass = a.ai_generated ? ' debate-arg-ai' : '';
-      const ownClass = a.is_own ? ' debate-arg-own' : '';
+      const ownClass = '';
       const upvotedClass = a.has_upvoted ? ' debate-arg-upvoted' : '';
       const isOtherSide = mySide && a.side !== mySide;
       const canUpvote = !readOnly && isOtherSide && !a.has_upvoted;
