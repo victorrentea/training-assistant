@@ -30,9 +30,27 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
   let _qaToastIndex = 0;
   let _qaToastInterval = null;
   let _qaToastTimeout = null;
+  let _prevPollActive = false;
+  let _prevActivity = null;
+  let _stateInitialised = false;   // skip notifications on first state (join mid-session)
+  let _notifBtnBound = false;      // prevent re-binding on reconnect
 
   function escHtml(s) {
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  async function requestNotificationPermission() {
+    if (!('Notification' in window)) return;
+    if (Notification.permission !== 'default') return;
+    await Notification.requestPermission();
+    const btn = document.getElementById('notif-btn');
+    if (btn) btn.style.display = 'none';
+  }
+
+  function notifyIfHidden(title, body) {
+    if (!document.hidden) return;
+    if (Notification.permission !== 'granted') return;
+    new Notification(title, { body });
   }
 
   // Largest-remainder rounding: ensures integer percentages sum to exactly 100
