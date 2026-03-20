@@ -13,11 +13,11 @@ body {
   body { padding: 1rem .75rem; }
 }
 
-/* Avatar hover preview (3x size tooltip) */
+/* Avatar hover preview (5x size tooltip) */
 .avatar-preview {
   position: fixed;
-  width: 96px;
-  height: 96px;
+  width: 160px;
+  height: 160px;
   border-radius: 50%;
   object-fit: cover;
   pointer-events: none;
