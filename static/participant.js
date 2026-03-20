@@ -57,6 +57,13 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   }
 
+  function avatarColorFromUuid(uuid) {
+    const hash = parseInt((uuid || '').replace(/-/g, '').slice(0, 8), 16);
+    const hue = hash % 360;
+    return `hsl(${hue}, 60%, 40%)`;
+  }
+
+
   function updateSummary(points, updatedAt) {
     summaryPoints = points || [];
     summaryUpdatedAt = updatedAt;
@@ -203,13 +210,12 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     document.getElementById('name-edit-wrap').style.display = 'none';
   }
 
-  document.getElementById('name-edit-ok').addEventListener('click', confirmNameEdit);
+  document.getElementById('name-edit-input').addEventListener('blur', confirmNameEdit);
   document.getElementById('name-edit-input').addEventListener('keydown', e => {
-    if (e.key === 'Enter') confirmNameEdit();
+    if (e.key === 'Enter') document.getElementById('name-edit-input').blur();
     if (e.key === 'Escape') {
-        document.getElementById('display-name').style.display = '';
-        document.getElementById('edit-name-btn').style.display = '';
-        document.getElementById('name-edit-wrap').style.display = 'none';
+        document.getElementById('name-edit-input').value = myName; // revert
+        document.getElementById('name-edit-input').blur();
     }
   });
 
@@ -349,6 +355,20 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
         updateParticipantCount(msg.participant_count);
         updateScore(msg.my_score);
         window._myScore = msg.my_score || 0;
+        window._myUuid = myUUID;
+        window._myName = myName;
+        if (msg.my_avatar) {
+            const avatarEl = document.getElementById('my-avatar');
+            avatarEl.src = '/static/avatars/' + msg.my_avatar;
+            avatarEl.style.display = '';
+            avatarEl.onerror = function() {
+                const fallback = document.createElement('span');
+                fallback.className = 'avatar-fallback';
+                fallback.textContent = (window._myName || '?')[0].toUpperCase();
+                fallback.style.background = avatarColorFromUuid(window._myUuid);
+                this.replaceWith(fallback);
+            };
+        }
         window._qaQuestions = msg.qa_questions || [];
         if (msg.current_activity === 'wordcloud') {
           renderWordCloudScreen(msg.wordcloud_words || {}, msg.wordcloud_topic || '');
@@ -729,11 +749,14 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
       const isOwn = q.is_own;
       const hasUpvoted = q.has_upvoted;
       const canUpvote = !isOwn && !hasUpvoted;
+      const avatarHtml = q.author_avatar
+          ? `<img src="/static/avatars/${escHtml(q.author_avatar)}" class="avatar" style="width:24px;height:24px" onerror="this.style.display='none'">`
+          : '';
       return `
         <div class="qa-card-p${q.answered ? ' qa-answered-p' : ''}${condensed ? ' qa-condensed' : ''}" data-id="${escHtml(q.id)}">
           <div class="qa-text-p">${escHtml(q.text)}</div>
           <div class="qa-footer-p">
-            <span class="qa-author-p">${escHtml(q.author)}${isOwn ? ' (you)' : ''}</span>
+            ${avatarHtml}<span class="qa-author-p">${escHtml(q.author)}${isOwn ? ' (you)' : ''}</span>
             <button class="qa-upvote-btn${hasUpvoted ? ' qa-upvoted' : ''}"
                     data-qid="${escHtml(q.id)}"
                     ${canUpvote ? `onclick="upvoteQuestion('${escHtml(q.id)}')"` : 'disabled'}
