@@ -26,7 +26,7 @@
 
     const parsed = parseVersionTimestamp(window.APP_VERSION);
     if (!parsed) {
-      el.textContent = window.APP_VERSION || '';
+      el.textContent = window.APP_VERSION || 'dev';
       return;
     }
 
