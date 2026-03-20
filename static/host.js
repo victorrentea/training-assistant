@@ -189,6 +189,17 @@
         });
         cachedNames = names;
         renderParticipantList(names);
+        // Re-render code review side panel with fresh scores
+        if (currentActivity === 'codereview' && window._lastCodereviewState) {
+          // Update scores in cached line_participants
+          const cr = window._lastCodereviewState;
+          for (const key in cr.line_participants) {
+            cr.line_participants[key].forEach(p => {
+              if (scores[p.name] !== undefined) p.score = scores[p.name];
+            });
+          }
+          renderHostSidePanel(cr);
+        }
       } else if (msg.type === 'timer') {
         _applyTimer(msg.seconds, msg.started_at);
       } else if (msg.type === 'quiz_status') {
