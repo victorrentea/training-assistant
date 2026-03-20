@@ -238,6 +238,7 @@ def build_host_state() -> dict:
         "wordcloud_topic": state.wordcloud_topic,
         "summary_points": state.summary_points,
         "summary_updated_at": state.summary_updated_at.isoformat() if state.summary_updated_at else None,
+        "notes_content": state.notes_content,
         "qa_questions": _build_qa_for_host(),
         **_build_debate_for_host(),
         "codereview": _build_codereview_for_host(),
