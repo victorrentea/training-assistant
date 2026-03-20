@@ -372,6 +372,29 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
                 fallback.style.background = avatarColorFromUuid(window._myUuid);
                 this.replaceWith(fallback);
             };
+            // Hover preview: show 3x avatar near cursor
+            if (!avatarEl._hoverBound) {
+                avatarEl._hoverBound = true;
+                avatarEl.style.cursor = 'pointer';
+                let preview = null;
+                avatarEl.addEventListener('mouseenter', function(e) {
+                    preview = document.createElement('img');
+                    preview.className = 'avatar-preview';
+                    preview.src = this.src;
+                    preview.style.left = e.clientX + 'px';
+                    preview.style.top = e.clientY + 'px';
+                    document.body.appendChild(preview);
+                });
+                avatarEl.addEventListener('mousemove', function(e) {
+                    if (preview) {
+                        preview.style.left = e.clientX + 'px';
+                        preview.style.top = e.clientY + 'px';
+                    }
+                });
+                avatarEl.addEventListener('mouseleave', function() {
+                    if (preview) { preview.remove(); preview = null; }
+                });
+            }
         }
         window._qaQuestions = msg.qa_questions || [];
         if (msg.current_activity === 'wordcloud') {
