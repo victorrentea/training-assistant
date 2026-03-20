@@ -190,7 +190,7 @@ body {
 /* Tabs */
 .tab-bar {
   display: flex;
-  gap: .25rem;
+  justify-content: space-evenly;
   border-bottom: 1px solid var(--border);
   padding-bottom: .25rem;
   margin-bottom: .5rem;
