@@ -511,7 +511,7 @@ h1 { display: none; }
     line-height: 2.2;
     background: var(--surface);
     border-radius: var(--radius);
-    overflow: hidden;
+    overflow-x: auto;
 }
 
 .codereview-pline {
@@ -564,7 +564,6 @@ h1 { display: none; }
 .codereview-pcode {
     flex: 1;
     white-space: pre;
-    overflow-x: auto;
 }
 
 .codereview-badge {
