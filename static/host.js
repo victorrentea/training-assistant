@@ -14,7 +14,6 @@
   let summaryPoints = [];
   let summaryUpdatedAt = null;
 
-  let hostWords = [];
   let _hostWcDebounceTimer = null;
   const versionReloadGuard = window.createVersionReloadGuard
     ? window.createVersionReloadGuard({ countdownSeconds: 5 })
@@ -1082,20 +1081,13 @@
     const word = input.value.trim();
     if (!word || !ws) return;
     ws.send(JSON.stringify({ type: 'wordcloud_word', word }));
-    hostWords.unshift(word);
     input.value = '';
     const btn = document.getElementById('wc-host-submit');
     if (btn) btn.disabled = true;
-    renderHostWordList();
     const dlWrap = document.getElementById('wc-download-wrap');
     if (dlWrap) dlWrap.style.display = '';
   }
 
-  function renderHostWordList() {
-    const ul = document.getElementById('wc-host-words');
-    if (!ul) return;
-    ul.innerHTML = hostWords.map(w => `<li>${escHtml(w)}</li>`).join('');
-  }
 
   async function downloadAndClearWordCloud() {
     const canvas = document.getElementById('host-wc-canvas');
@@ -1109,8 +1101,6 @@
   }
 
   async function clearWordCloud() {
-    hostWords = [];
-    renderHostWordList();
     const dlWrap = document.getElementById('wc-download-wrap');
     if (dlWrap) dlWrap.style.display = 'none';
     await fetch('/api/wordcloud/clear', { method: 'POST' });
