@@ -1032,7 +1032,7 @@
     if (currentActivity && currentActivity !== 'none') {
       ['poll', 'wordcloud', 'qa', 'debate', 'codereview'].forEach(t => {
         document.getElementById('tab-' + t).classList.toggle('active', currentActivity === t);
-        document.getElementById('tab-content-' + t).style.display = currentActivity === t ? '' : 'none';
+        document.getElementById('tab-content-' + t).style.display = currentActivity === t ? (t === 'codereview' ? 'flex' : '') : 'none';
       });
     }
   }
