@@ -1303,11 +1303,11 @@
       if (isConfirmed) {
         bgColor = 'rgba(166,227,161,0.2)';
         borderColor = 'var(--accent2)';
-        gutterText = `${lineNum} ✓`;
+        gutterText = String(lineNum);
       } else if (isSelected) {
         bgColor = 'rgba(108,99,255,0.25)';
         borderColor = 'var(--accent)';
-        gutterText = `${lineNum} ▶`;
+        gutterText = String(lineNum);
       } else {
         bgColor = `rgba(108,99,255,${intensity * 0.5})`;
         borderColor = 'transparent';

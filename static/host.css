@@ -736,9 +736,9 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
 }
 
 .codereview-gutter {
-    width: 32px;
+    width: 22px;
     text-align: right;
-    margin-right: 12px;
+    margin-right: 8px;
     color: var(--muted);
     user-select: none;
     flex-shrink: 0;
