@@ -63,13 +63,53 @@ notify_failure() {
   afplay /System/Library/Sounds/Basso.aiff
 }
 
+# ── Lock file with heartbeat ──
+LOCK_FILE="/tmp/watch_deploy.lock"
+
+write_heartbeat() {
+  echo "{\"pid\": $$, \"heartbeat\": $(date +%s)}" > "$LOCK_FILE"
+}
+
+check_existing() {
+  if [ ! -f "$LOCK_FILE" ]; then return; fi
+  local prev_pid prev_hb now age
+  prev_pid=$(python3 -c "import json,sys; print(json.load(open('$LOCK_FILE'))['pid'])" 2>/dev/null)
+  prev_hb=$(python3 -c "import json,sys; print(json.load(open('$LOCK_FILE'))['heartbeat'])" 2>/dev/null)
+  if [ -z "$prev_pid" ]; then rm -f "$LOCK_FILE"; return; fi
+  if [ "$prev_pid" = "$$" ]; then return; fi
+  if kill -0 "$prev_pid" 2>/dev/null; then
+    now=$(date +%s)
+    age=$((now - prev_hb))
+    if [ "$age" -le 10 ]; then
+      echo "$(date '+%H:%M:%S') 👀 Deploy watcher already running (PID $prev_pid, heartbeat ${age}s ago). Exiting."
+      exit 0
+    else
+      echo "$(date '+%H:%M:%S') ⚠️  Previous watcher (PID $prev_pid) alive but stale (${age}s). Killing it."
+      kill "$prev_pid" 2>/dev/null
+      sleep 0.5
+    fi
+  else
+    echo "$(date '+%H:%M:%S') 🧹 Previous watcher (PID $prev_pid) is dead. Cleaning up."
+  fi
+  rm -f "$LOCK_FILE"
+}
+
+cleanup() {
+  rm -f "$LOCK_FILE"
+  exit 0
+}
+trap cleanup INT TERM
+
+check_existing
+write_heartbeat
+
 # Initialize state
 LAST_MASTER_HEAD=$(get_master_head)
 LAST_PROD_VERSION=$(get_prod_version)
 WAITING_SINCE=""  # empty = idle, timestamp = waiting for deploy
 MERGE_SHA=""
 
-echo "$(date '+%H:%M:%S') 👀 Watching deploys..."
+echo "$(date '+%H:%M:%S') 👀 Watching deploys... (PID $$)"
 echo "  Master HEAD: ${LAST_MASTER_HEAD:0:8}"
 echo "  Production:  $LAST_PROD_VERSION"
 
@@ -78,6 +118,11 @@ POLL_COUNTER=0
 while true; do
   sleep 2
   POLL_COUNTER=$((POLL_COUNTER + 1))
+
+  # Update heartbeat every ~10s (every 5th iteration)
+  if [ $((POLL_COUNTER % 5)) -eq 0 ]; then
+    write_heartbeat
+  fi
 
   # Poll production every 2s
   CURRENT_PROD=$(get_prod_version)
