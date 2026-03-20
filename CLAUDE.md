@@ -137,6 +137,7 @@ class AppState:
     poll_active: bool                           # is voting open?
     participants: dict[str, WebSocket]          # uuid → ws connection
     participant_names: dict[str, str]           # uuid → display_name (mutable via set_name)
+    participant_avatars: dict[str, str]          # uuid → avatar filename (assign-once)
     votes: dict[str, str]                       # uuid → option_id (or list for multi-select)
     locations: dict[str, str]                   # uuid → location string (city/country or timezone)
     scores: dict[str, int]                      # uuid → score

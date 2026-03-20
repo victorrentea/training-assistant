@@ -13,7 +13,7 @@ from messaging import (
     send_state_to_participant,
     send_state_to_host,
 )
-from state import state, ActivityType
+from state import state, ActivityType, assign_avatar
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -66,6 +66,8 @@ async def websocket_endpoint(websocket: WebSocket, participant_id: str):
                 if not name:
                     continue
                 state.participant_names[pid] = name
+                if not is_host:
+                    assign_avatar(state, pid, name)
                 named = True
                 logger.info(f"Named: {pid} -> {name} ({len(state.participants)} total)")
                 await send_state_to_participant(websocket, pid)
@@ -77,6 +79,8 @@ async def websocket_endpoint(websocket: WebSocket, participant_id: str):
                 name = str(data.get("name", "")).strip()[:32]
                 if name:
                     state.participant_names[pid] = name
+                    if not is_host:
+                        assign_avatar(state, pid, name)  # no-op if already assigned
                     await broadcast_participant_update()
 
             elif msg_type == "location":

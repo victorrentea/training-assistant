@@ -66,6 +66,28 @@
   letter-spacing: .02em;
 }
 
+.avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+    vertical-align: middle;
+    flex-shrink: 0;
+}
+.avatar-fallback {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 14px;
+    color: var(--text);
+    flex-shrink: 0;
+}
+
+
 /* Summary modal */
 .summary-overlay {
   display: none;

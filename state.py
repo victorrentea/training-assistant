@@ -30,6 +30,7 @@ class AppState:
         self.votes: dict[str, str] = {}
         self.participants: dict[str, WebSocket] = {}
         self.participant_names: dict[str, str] = {}  # uuid -> display_name
+        self.participant_avatars: dict[str, str] = {}
         self.locations: dict[str, str] = {}
         self.quiz_request: Optional[dict] = None
         self.quiz_refine_request: Optional[dict] = None
@@ -68,3 +69,21 @@ class AppState:
 
 
 state = AppState()
+
+
+def get_avatar_filename(name: str) -> str:
+    """Convert a LOTR name to its avatar filename slug."""
+    return name.lower().replace(' ', '-') + '.png'
+
+
+def assign_avatar(app_state: AppState, uuid: str, name: str) -> str:
+    """Assign avatar to UUID. Returns existing avatar if already assigned (assign-once)."""
+    if uuid in app_state.participant_avatars:
+        return app_state.participant_avatars[uuid]
+    if name in LOTR_NAMES:
+        avatar = get_avatar_filename(name)
+    else:
+        index = int(uuid.replace('-', ''), 16) % len(LOTR_NAMES)
+        avatar = get_avatar_filename(LOTR_NAMES[index])
+    app_state.participant_avatars[uuid] = avatar
+    return avatar
