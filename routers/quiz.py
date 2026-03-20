@@ -25,6 +25,8 @@ class QuizRequest(BaseModel):
 class QuizStatus(BaseModel):
     status: str
     message: str = ""
+    session_folder: str | None = None
+    session_notes: str | None = None
 
 
 class QuizPreview(BaseModel):
@@ -63,6 +65,9 @@ async def poll_quiz_request():
 @router.post("/api/quiz-status")
 async def update_quiz_status(body: QuizStatus):
     state.quiz_status = {"status": body.status, "message": body.message}
+    if body.session_folder is not None or body.session_notes is not None:
+        state.daemon_session_folder = body.session_folder
+        state.daemon_session_notes = body.session_notes
     await broadcast({"type": "quiz_status", **state.quiz_status})
     return {"ok": True}
 
