@@ -80,17 +80,27 @@ record_deploy() {
   fi
 }
 
-notify_countdown() {
-  local remaining="$1"
-  local msg
-  if [ "$remaining" -le 0 ]; then
-    msg="Should be live... still checking"
-  elif [ "$remaining" -le 5 ]; then
-    msg="Deploying — any moment now..."
-  else
-    msg="Deploying — ~${remaining}s remaining"
+STATUS_FILE="/tmp/deploy_status.txt"
+JXA_PID=""
+
+start_status_bar() {
+  osascript -l JavaScript "$SCRIPT_DIR/deploy-status-bar.js" &
+  JXA_PID=$!
+}
+
+stop_status_bar() {
+  if [ -n "$JXA_PID" ] && kill -0 "$JXA_PID" 2>/dev/null; then
+    kill "$JXA_PID" 2>/dev/null
   fi
-  terminal-notifier -title "🚀 Deploy" -message "$msg" -group deploy &>/dev/null &
+  clear_status_bar
+}
+
+update_status_bar() {
+  echo "$1" > "$STATUS_FILE"
+}
+
+clear_status_bar() {
+  : > "$STATUS_FILE"
 }
 
 notify_success() {
@@ -143,6 +153,7 @@ check_existing() {
 }
 
 cleanup() {
+  stop_status_bar
   rm -f "$LOCK_FILE"
   exit 0
 }
@@ -150,6 +161,7 @@ trap cleanup INT TERM
 
 check_existing
 write_heartbeat
+start_status_bar
 
 # Initialize state
 LAST_MASTER_HEAD=$(get_master_head)
@@ -181,17 +193,26 @@ while true; do
 
     # We're waiting for a deploy — check if production updated
     if [ "$CURRENT_PROD" != "$LAST_PROD_VERSION" ]; then
-      record_deploy "$ELAPSED"
-      notify_success "$CURRENT_PROD"
-      LAST_PROD_VERSION="$CURRENT_PROD"
-      WAITING_SINCE=""
-      MERGE_SHA=""
-      ESTIMATED=""
-      continue
+      if [ "$MERGE_SHA" = "$LAST_MASTER_HEAD" ]; then
+        # This deploy matches the push we're tracking — real success
+        record_deploy "$ELAPSED"
+        clear_status_bar
+        notify_success "$CURRENT_PROD"
+        LAST_PROD_VERSION="$CURRENT_PROD"
+        WAITING_SINCE=""
+        MERGE_SHA=""
+        ESTIMATED=""
+        continue
+      else
+        # Stale deploy from an older push — keep waiting for the newer one
+        echo "$(date '+%H:%M:%S') 🔄 Stale deploy landed ($CURRENT_PROD), still waiting for ${MERGE_SHA:0:8}"
+        LAST_PROD_VERSION="$CURRENT_PROD"
+      fi
     fi
 
     # Check timeout
     if [ "$ELAPSED" -ge "$DEPLOY_TIMEOUT" ]; then
+      clear_status_bar
       notify_failure "$MERGE_SHA"
       LAST_PROD_VERSION="$CURRENT_PROD"
       WAITING_SINCE=""
@@ -200,9 +221,15 @@ while true; do
       continue
     fi
 
-    # Send countdown notification
+    # Update menu bar countdown
     REMAINING=$((ESTIMATED - ELAPSED))
-    notify_countdown "$REMAINING"
+    if [ "$REMAINING" -le 0 ]; then
+      update_status_bar "🚀 ..."
+    elif [ "$REMAINING" -le 5 ]; then
+      update_status_bar "🚀 soon..."
+    else
+      update_status_bar "🚀 ~${REMAINING}s"
+    fi
   else
     # Not waiting — track production version silently
     if [ "$CURRENT_PROD" != "$LAST_PROD_VERSION" ]; then
@@ -221,8 +248,8 @@ while true; do
       LAST_MASTER_HEAD="$CURRENT_HEAD"
       WAITING_SINCE=$(date +%s)
       MERGE_SHA="$CURRENT_HEAD"
-      # Initial countdown notification
-      terminal-notifier -title "🚀 Deploy" -message "Deploy detected — estimated ~${ESTIMATED}s" -group deploy &>/dev/null &
+      # Show initial countdown in menu bar
+      update_status_bar "🚀 ~${ESTIMATED}s"
     elif [ -n "$CURRENT_HEAD" ]; then
       LAST_MASTER_HEAD="$CURRENT_HEAD"
     fi
