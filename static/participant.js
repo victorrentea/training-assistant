@@ -1161,7 +1161,7 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
 
     const renderArg = (a) => {
       const aiClass = a.ai_generated ? ' debate-arg-ai' : '';
-      const ownClass = a.is_own ? ' debate-arg-own' : '';
+      const ownClass = '';
       const upvotedClass = a.has_upvoted ? ' debate-arg-upvoted' : '';
       const isOtherSide = mySide && a.side !== mySide;
       const canUpvote = !readOnly && isOtherSide && !a.has_upvoted;
