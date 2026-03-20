@@ -14,4 +14,6 @@ async def participant_page():
 
 @router.get("/host", response_class=HTMLResponse, dependencies=[Depends(require_host_auth)])
 async def host_page():
-    return FileResponse("static/host.html")
+    response = FileResponse("static/host.html")
+    response.set_cookie("is_host", "1", path="/", samesite="strict")
+    return response

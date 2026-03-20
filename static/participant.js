@@ -1,5 +1,20 @@
   const LS_KEY = 'workshop_participant_name';
+  const LS_UUID_KEY = 'workshop_participant_uuid';
   const LS_VOTE_KEY = 'workshop_vote';
+
+  const isHost = document.cookie.includes('is_host=1');
+  const uuidStorage = isHost ? sessionStorage : localStorage;
+
+  function getOrCreateUUID() {
+      let uid = uuidStorage.getItem(LS_UUID_KEY);
+      if (!uid) {
+          uid = crypto.randomUUID();
+          uuidStorage.setItem(LS_UUID_KEY, uid);
+      }
+      return uid;
+  }
+
+  let myUUID = getOrCreateUUID();
   let ws = null;
   let myName = '';
   let myVote = null;      // string (single) or Set of option_ids (multi)
@@ -159,49 +174,43 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     connectWS(name);
   }
 
-  async function handleNameTaken() {
-    const rejectedName = myName;
-    localStorage.removeItem(LS_KEY);
-    myName = '';
-    ws = null;
-    document.getElementById('main-screen').style.display = 'none';
-    document.getElementById('join-screen').style.display = 'block';
-    const errEl = document.getElementById('join-error');
-    errEl.textContent = `"${rejectedName}" is already taken. Please choose another name.`;
-    errEl.style.display = 'block';
-    const nameInput = document.getElementById('name-input');
-    suggestedName = await fetchSuggestedName();
-    nameInput.value = suggestedName;
-    nameInput.placeholder = suggestedName;
-    updateClearBtn();
-    nameInput.focus();
-    nameInput.select();
+  // ── Inline name editing ──
+  document.getElementById('edit-name-btn').addEventListener('click', () => {
+    const display = document.getElementById('display-name');
+    const editWrap = document.getElementById('name-edit-wrap');
+    const editInput = document.getElementById('name-edit-input');
+    const editBtn = document.getElementById('edit-name-btn');
+    editInput.value = myName;
+    display.style.display = 'none';
+    editBtn.style.display = 'none';
+    editWrap.style.display = '';
+    editInput.focus();
+    editInput.select();
+  });
+
+  function confirmNameEdit() {
+    const newName = document.getElementById('name-edit-input').value.trim();
+    if (newName && newName !== myName) {
+        myName = newName;
+        localStorage.setItem(LS_KEY, myName);
+        document.getElementById('display-name').textContent = myName;
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type: 'set_name', name: myName }));
+        }
+    }
+    document.getElementById('display-name').style.display = '';
+    document.getElementById('edit-name-btn').style.display = '';
+    document.getElementById('name-edit-wrap').style.display = 'none';
   }
 
-  // ── Leave ──
-  document.getElementById('leave-btn').addEventListener('click', () => {
-    _stopQAToasts();
-    const hasActivity = ws && ((window._qaQuestions || []).length > 0
-      || (window._myScore || 0) > 0);
-    const confirmed = !hasActivity || confirm(
-      'If you leave, you will lose your points, your questions, and all upvotes. Are you sure?'
-    );
-    if (!confirmed) return;
-
-    if (ws) { ws.onclose = null; ws.close(); ws = null; }
-    localStorage.removeItem(LS_KEY);
-    clearVote();
-    myName = '';
-    myVote = null;
-    window._myScore = 0;
-    window._qaQuestions = [];
-    _notifBtnBound = false;
-    document.getElementById('main-screen').style.display = 'none';
-    document.getElementById('join-screen').style.display = 'block';
-    nameInput.value = '';
-    fetchSuggestedName().then(name => { suggestedName = name; nameInput.placeholder = name; });
-    updateClearBtn();
-    nameInput.focus();
+  document.getElementById('name-edit-ok').addEventListener('click', confirmNameEdit);
+  document.getElementById('name-edit-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') confirmNameEdit();
+    if (e.key === 'Escape') {
+        document.getElementById('display-name').style.display = '';
+        document.getElementById('edit-name-btn').style.display = '';
+        document.getElementById('name-edit-wrap').style.display = 'none';
+    }
   });
 
   // ── Location ──
@@ -242,13 +251,16 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
   function connectWS(name) {
     _stateInitialised = false;
     const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-    const url = `${proto}://${location.host}/ws/${encodeURIComponent(name)}`;
+    const url = `${proto}://${location.host}/ws/${encodeURIComponent(myUUID)}`;
     ws = new WebSocket(url);
 
     ws.onopen = () => {
       document.getElementById('join-screen').style.display = 'none';
       document.getElementById('main-screen').style.display = 'block';
       document.getElementById('display-name').textContent = myName;
+
+      // Send name as first message
+      ws.send(JSON.stringify({ type: 'set_name', name: myName }));
 
       // Show 🔔 button for auto-joiners who haven't been asked for permission yet
       if ('Notification' in window && Notification.permission === 'default' && !_notifBtnBound) {
@@ -263,19 +275,13 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
       updateLocationPrompt();
     };
 
-    let _nameTaken = false;
     ws.onmessage = (event) => {
       const msg = JSON.parse(event.data);
-      if (msg.type === 'name_taken') { _nameTaken = true; return; }
       handleMessage(msg);
     };
 
     ws.onclose = () => {
-      if (_nameTaken) {
-        handleNameTaken();
-        return;
-      }
-      setTimeout(() => connectWS(myName), 3000);   // auto-reconnect
+      setTimeout(() => connectWS(myName), 3000);
     };
   }
 
@@ -341,13 +347,13 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
         currentPoll = msg.poll;
         pollActive = msg.poll_active;
         updateParticipantCount(msg.participant_count);
-        updateScore((msg.scores || {})[myName]);
-        window._myScore = (msg.scores || {})[myName] || 0;
+        updateScore(msg.my_score);
+        window._myScore = msg.my_score || 0;
         window._qaQuestions = msg.qa_questions || [];
         if (msg.current_activity === 'wordcloud') {
           renderWordCloudScreen(msg.wordcloud_words || {}, msg.wordcloud_topic || '');
         } else if (msg.current_activity === 'qa') {
-          renderQAScreen(msg.qa_questions || [], myName);
+          renderQAScreen(msg.qa_questions || []);
         } else {
           const content = document.getElementById('content');
           if (content) content.dataset.screen = '';
@@ -364,7 +370,6 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
         updateParticipantCount(msg.count);
         break;
       case 'scores':
-        updateScore((msg.scores || {})[myName]);
         break;
       case 'result':
         pollResult = { correct_ids: new Set(msg.correct_ids), voted_ids: new Set(msg.voted_ids) };
@@ -683,12 +688,12 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     if (el) el.classList.remove('visible');
   }
 
-  function renderQAScreen(questions, myName) {
+  function renderQAScreen(questions) {
     const content = document.getElementById('content');
     if (!content) return;
     if (content.dataset.screen === 'qa') {
       // Already on Q&A screen — just refresh the list
-      updateQAList(questions, myName);
+      updateQAList(questions);
       return;
     }
     content.dataset.screen = 'qa';
@@ -706,11 +711,11 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     if (input) {
       input.addEventListener('keydown', e => { if (e.key === 'Enter') submitQuestion(); });
     }
-    updateQAList(questions, myName);
+    updateQAList(questions);
     _startQAToasts(questions);
   }
 
-  function updateQAList(questions, name) {
+  function updateQAList(questions) {
     const list = document.getElementById('qa-question-list');
     if (!list) return;
     const condensed = questions.length >= 6;
@@ -721,8 +726,8 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     }
 
     list.innerHTML = questions.map(q => {
-      const isOwn = q.author === name;
-      const hasUpvoted = (q.upvoters || []).includes(name);
+      const isOwn = q.is_own;
+      const hasUpvoted = q.has_upvoted;
       const canUpvote = !isOwn && !hasUpvoted;
       return `
         <div class="qa-card-p${q.answered ? ' qa-answered-p' : ''}${condensed ? ' qa-condensed' : ''}" data-id="${escHtml(q.id)}">
@@ -741,34 +746,19 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     }).join('');
   }
 
-  async function submitQuestion() {
+  function submitQuestion() {
     const input = document.getElementById('qa-input');
     if (!input) return;
     const text = input.value.trim();
-    if (!text || !myName) return;
-    input.disabled = true;
-    const resp = await fetch('/api/qa/question', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: myName, text }),
-    });
-    input.disabled = false;
-    if (resp.ok) {
-      input.value = '';
-      input.focus();
-    } else {
-      const err = await resp.json().catch(() => ({}));
-      alert(err.detail || 'Failed to submit question');
-    }
+    if (!text || !ws) return;
+    ws.send(JSON.stringify({ type: 'qa_submit', text }));
+    input.value = '';
+    input.focus();
   }
 
-  async function upvoteQuestion(questionId) {
-    if (!myName) return;
-    await fetch('/api/qa/upvote', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: myName, question_id: questionId }),
-    });
+  function upvoteQuestion(questionId) {
+    if (!ws) return;
+    ws.send(JSON.stringify({ type: 'qa_upvote', question_id: questionId }));
   }
 
   function renderQACleanup() {

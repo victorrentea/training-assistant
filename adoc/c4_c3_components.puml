@@ -14,7 +14,7 @@ Container_Boundary(fastapi, "FastAPI Backend") {
 
     Component(pages_router, "pages.py", "FastAPI APIRouter", "GET / → participant.html\nGET /host → host.html")
 
-    Component(ws_router, "routers/ws.py", "FastAPI APIRouter", "WS /ws/{participant_name}\nHandles connect, vote, multi_vote,\nlocation, wordcloud_word.\nBroadcasts state updates to all peers.")
+    Component(ws_router, "routers/ws.py", "FastAPI APIRouter", "WS /ws/{uuid}\nHandles set_name, vote, multi_vote,\nlocation, wordcloud_word, qa_submit, qa_upvote.\nPersonalized state broadcast per client.")
 
     Component(poll_router, "routers/poll.py", "FastAPI APIRouter", "POST /api/poll\nPOST /api/poll/status\nPOST /api/poll/correct\nPOST /api/poll/timer\nDELETE /api/poll\nGET /api/suggest-name\nGET /api/status")
 
@@ -26,20 +26,20 @@ Container_Boundary(fastapi, "FastAPI Backend") {
 
     Component(summary_router, "routers/summary.py", "FastAPI APIRouter", "POST /api/summary\nStores key points, broadcasts to all.")
 
-    Component(state_module, "state.py", "AppState singleton", "poll, poll_active, votes,\nparticipants, locations, scores,\nbase_scores, vote_times,\ncurrent_activity, wordcloud_words,\nquiz_request, quiz_preview,\ndaemon_last_seen, summary_points.")
+    Component(state_module, "state.py", "AppState singleton", "All dicts UUID-keyed.\nparticipants, participant_names,\nvotes, locations, scores,\nbase_scores, vote_times,\ncurrent_activity, wordcloud_words,\nquiz_request, quiz_preview,\ndaemon_last_seen, summary_points.")
 
-    Component(messaging_module, "messaging.py", "Async helpers", "build_state_message()\nbroadcast(msg, exclude)\nsend_state_to(ws)")
+    Component(messaging_module, "messaging.py", "Async helpers", "broadcast_state()\nbuild_participant_state(pid)\nbuild_host_state()\nbroadcast_participant_update()")
 }
 
 Rel(caddy, pages_router, "GET /, GET /host", "HTTP")
-Rel(caddy, ws_router, "WS /ws/{name}", "WebSocket")
+Rel(caddy, ws_router, "WS /ws/{uuid}", "WebSocket")
 Rel(caddy, poll_router, "/api/poll*, /api/suggest-name", "HTTP")
 Rel(caddy, scores_router, "DELETE /api/scores", "HTTP (Basic Auth)")
 Rel(caddy, quiz_router, "/api/quiz-*", "HTTP (Basic Auth)")
 Rel(caddy, wordcloud_router, "/api/wordcloud/status", "HTTP (Basic Auth)")
 
 Rel(ws_router, state_module, "Participants, votes, locations")
-Rel(ws_router, messaging_module, "broadcast(), send_state_to()")
+Rel(ws_router, messaging_module, "broadcast_state(), broadcast_participant_update()")
 Rel(poll_router, state_module, "Poll lifecycle, scoring")
 Rel(poll_router, messaging_module, "broadcast()")
 Rel(scores_router, state_module, "Reset scores")

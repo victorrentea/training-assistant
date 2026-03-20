@@ -17,6 +17,7 @@ Uses a small DSL built on top of FastAPI's TestClient:
 
 import base64
 import json
+import uuid as uuid_mod
 import pytest
 from contextlib import contextmanager
 from fastapi.testclient import TestClient
@@ -43,10 +44,13 @@ class ParticipantSession:
     Provides readable assertion helpers.
     """
 
-    def __init__(self, ws, name: str):
+    def __init__(self, ws, name: str, uuid: str):
         self._ws = ws
         self.name = name
+        self.uuid = uuid
         self._last_state: dict = {}
+        # Send set_name as first message
+        self._ws.send_text(json.dumps({"type": "set_name", "name": name}))
         self._receive_initial_state()
 
     def _receive_initial_state(self):
@@ -131,12 +135,12 @@ class ParticipantSession:
 
     def assert_score(self, expected_pts: int):
         """Assert this participant's score in server state."""
-        actual = state.scores.get(self.name, 0)
+        actual = state.scores.get(self.uuid, 0)
         assert actual == expected_pts, f"{self.name}: score={actual}, expected {expected_pts}"
 
     def assert_no_score(self):
-        assert self.name not in state.scores or state.scores[self.name] == 0, (
-            f"{self.name}: expected no score but got {state.scores.get(self.name)}"
+        assert self.uuid not in state.scores or state.scores[self.uuid] == 0, (
+            f"{self.name}: expected no score but got {state.scores.get(self.uuid)}"
         )
 
     def assert_wordcloud_word(self, word: str, expected_count: int):
@@ -181,23 +185,28 @@ class WorkshopSession:
         assert self._poll, "No current poll"
         text_to_id = {o["text"]: o["id"] for o in self._poll["options"]}
         ids = [text_to_id[t] for t in option_texts]
-        resp = self._client.post("/api/poll/correct", json={"correct_ids": ids})
+        resp = self._client.put("/api/poll/correct", json={"correct_ids": ids})
         assert resp.status_code == 200, f"mark_correct failed: {resp.text}"
 
     def get_scores(self) -> dict:
-        return dict(state.scores)
+        """Return scores keyed by display name. Sums scores if multiple UUIDs share a name."""
+        result: dict[str, int] = {}
+        for uid, pts in state.scores.items():
+            name = state.participant_names.get(uid, uid)
+            result[name] = result.get(name, 0) + pts
+        return result
 
     def reset_scores(self):
         resp = self._client.delete("/api/scores")
         assert resp.status_code == 200
 
     def open_poll(self):
-        resp = self._client.post("/api/poll/status", json={"open": True})
+        resp = self._client.put("/api/poll/status", json={"open": True})
         assert resp.status_code == 200
         assert resp.json()["poll_active"] is True
 
     def close_poll(self):
-        resp = self._client.post("/api/poll/status", json={"open": False})
+        resp = self._client.put("/api/poll/status", json={"open": False})
         assert resp.status_code == 200
         assert resp.json()["poll_active"] is False
 
@@ -232,8 +241,9 @@ class WorkshopSession:
 
     @contextmanager
     def participant(self, name: str):
-        with self._client.websocket_connect(f"/ws/{name}") as ws:
-            yield ParticipantSession(ws, name)
+        uid = str(uuid_mod.uuid4())
+        with self._client.websocket_connect(f"/ws/{uid}") as ws:
+            yield ParticipantSession(ws, name, uid)
 
     def suggest_name(self) -> str:
         return self._client.get("/api/suggest-name").json()["name"]
@@ -409,7 +419,7 @@ class TestParticipantPresence:
             # wait for the server's broadcast confirming the location was processed
             alice._recv("participant_count")
             # assert while still connected (disconnect clears locations)
-            assert state.locations.get("Alice") == "Bucharest, Romania"
+            assert state.locations.get(alice.uuid) == "Bucharest, Romania"
 
 
 class TestPollLifecycle:
@@ -593,7 +603,7 @@ class TestScoring:
         with session.participant("Slow") as slow:
             slow.vote_for("A")
             # backdate slow's vote by 20 seconds
-            state.vote_times["Slow"] = state.vote_times.get("Slow", datetime.now(timezone.utc)) - timedelta(seconds=20)
+            state.vote_times[slow.uuid] = state.vote_times.get(slow.uuid, datetime.now(timezone.utc)) - timedelta(seconds=20)
 
         session.close_poll()
         session.mark_correct("A")
@@ -659,8 +669,9 @@ def test_wordcloud_word_increments_count():
     session = WorkshopSession()
     session.open_wordcloud()
     client = TestClient(app)
-    with client.websocket_connect("/ws/Alice") as ws_alice:
-        alice = ParticipantSession(ws_alice, "Alice")
+    uid = str(uuid_mod.uuid4())
+    with client.websocket_connect(f"/ws/{uid}") as ws_alice:
+        alice = ParticipantSession(ws_alice, "Alice", uid)
         alice.submit_word("microservices")
         alice.assert_wordcloud_word("microservices", 1)
         alice.submit_word("microservices")
@@ -672,8 +683,9 @@ def test_wordcloud_word_normalizes():
     session = WorkshopSession()
     session.open_wordcloud()
     client = TestClient(app)
-    with client.websocket_connect("/ws/Alice") as ws_alice:
-        alice = ParticipantSession(ws_alice, "Alice")
+    uid = str(uuid_mod.uuid4())
+    with client.websocket_connect(f"/ws/{uid}") as ws_alice:
+        alice = ParticipantSession(ws_alice, "Alice", uid)
         alice.submit_word("  Microservices  ")
         alice.assert_wordcloud_word("microservices", 1)
 
@@ -683,8 +695,9 @@ def test_wordcloud_word_awards_200_pts():
     session = WorkshopSession()
     session.open_wordcloud()
     client = TestClient(app)
-    with client.websocket_connect("/ws/Alice") as ws_alice:
-        alice = ParticipantSession(ws_alice, "Alice")
+    uid = str(uuid_mod.uuid4())
+    with client.websocket_connect(f"/ws/{uid}") as ws_alice:
+        alice = ParticipantSession(ws_alice, "Alice", uid)
         alice.submit_word("complexity")
         alice.assert_score(200)
 
@@ -695,7 +708,7 @@ def test_wordcloud_word_host_gets_no_pts():
     session.open_wordcloud()
     client = TestClient(app)
     with client.websocket_connect("/ws/__host__") as ws_host:
-        host = ParticipantSession(ws_host, "__host__")
+        host = ParticipantSession(ws_host, "__host__", "__host__")
         host.submit_word("complexity")
         assert state.scores.get("__host__", 0) == 0
 
@@ -705,8 +718,9 @@ def test_wordcloud_word_rejected_when_not_active():
     session = WorkshopSession()
     # wordcloud NOT opened
     client = TestClient(app)
-    with client.websocket_connect("/ws/Alice") as ws_alice:
-        alice = ParticipantSession(ws_alice, "Alice")
+    uid = str(uuid_mod.uuid4())
+    with client.websocket_connect(f"/ws/{uid}") as ws_alice:
+        alice = ParticipantSession(ws_alice, "Alice", uid)
         alice.send({"type": "wordcloud_word", "word": "test"})
         # No state update — word should be silently dropped
         assert state.wordcloud_words == {}
@@ -718,59 +732,75 @@ def test_wordcloud_word_rejected_when_not_active():
 
 class TestQA:
 
-    def _submit(self, client, name, text):
-        resp = client.post("/api/qa/question", json={"name": name, "text": text})
-        assert resp.status_code == 200, resp.text
-        return resp.json()["id"]
+    def _submit_ws(self, session, name, text):
+        """Submit a Q&A question via WebSocket and return the question ID."""
+        with session.participant(name) as p:
+            p.send({"type": "qa_submit", "text": text})
+            # Wait for state broadcast confirming the question
+            p._recv("state")
+        # Return the last-added question ID
+        return list(state.qa_questions.keys())[-1]
 
     def test_submit_question_appears_in_state(self, session):
-        qid = self._submit(session._client, "Alice", "What is DDD?")
+        qid = self._submit_ws(session, "Alice", "What is DDD?")
         assert qid in state.qa_questions
         assert state.qa_questions[qid]["text"] == "What is DDD?"
 
     def test_submit_question_awards_100_pts(self, session):
-        self._submit(session._client, "Alice", "What is DDD?")
-        assert state.scores.get("Alice", 0) == 100
+        self._submit_ws(session, "Alice", "What is DDD?")
+        scores = session.get_scores()
+        assert scores.get("Alice", 0) == 100
 
     def test_edit_question_updates_text(self, session):
-        qid = self._submit(session._client, "Alice", "Original text")
-        resp = session._client.patch(f"/api/qa/question/{qid}", json={"text": "Edited text"})
+        qid = self._submit_ws(session, "Alice", "Original text")
+        resp = session._client.put(f"/api/qa/question/{qid}/text", json={"text": "Edited text"})
         assert resp.status_code == 200, resp.text
         assert state.qa_questions[qid]["text"] == "Edited text"
 
     def test_edit_question_not_found_returns_404(self, session):
-        resp = session._client.patch("/api/qa/question/nonexistent-id", json={"text": "New"})
+        resp = session._client.put("/api/qa/question/nonexistent-id/text", json={"text": "New"})
         assert resp.status_code == 404
 
     def test_delete_question_removes_from_state(self, session):
-        qid = self._submit(session._client, "Alice", "To be deleted")
+        qid = self._submit_ws(session, "Alice", "To be deleted")
         resp = session._client.delete(f"/api/qa/question/{qid}")
         assert resp.status_code == 200
         assert qid not in state.qa_questions
 
     def test_upvote_question_awards_points_to_author(self, session):
-        qid = self._submit(session._client, "Alice", "What is DDD?")
-        resp = session._client.post("/api/qa/upvote", json={"name": "Bob", "question_id": qid})
-        assert resp.status_code == 200
+        qid = self._submit_ws(session, "Alice", "What is DDD?")
+        with session.participant("Bob") as bob:
+            bob.send({"type": "qa_upvote", "question_id": qid})
+            bob._recv("state")
+        scores = session.get_scores()
         # Alice gets 100 (submit) + 50 (upvote) = 150
-        assert state.scores.get("Alice") == 150
+        assert scores.get("Alice") == 150
         # Bob gets 25 for upvoting
-        assert state.scores.get("Bob") == 25
+        assert scores.get("Bob") == 25
 
     def test_cannot_upvote_own_question(self, session):
-        qid = self._submit(session._client, "Alice", "My own question")
-        resp = session._client.post("/api/qa/upvote", json={"name": "Alice", "question_id": qid})
-        assert resp.status_code == 400
+        # Author tries to upvote their own question via WS
+        with session.participant("Alice") as alice:
+            alice.send({"type": "qa_submit", "text": "My own question"})
+            alice._recv("state")
+            qid = list(state.qa_questions.keys())[-1]
+            alice.send({"type": "qa_upvote", "question_id": qid})
+            # Server should silently ignore (no error, no state change)
+        # Verify upvoter count is still 0
+        assert len(state.qa_questions[qid]["upvoters"]) == 0
 
     def test_cannot_upvote_twice(self, session):
-        qid = self._submit(session._client, "Alice", "Another question")
-        session._client.post("/api/qa/upvote", json={"name": "Bob", "question_id": qid})
-        resp = session._client.post("/api/qa/upvote", json={"name": "Bob", "question_id": qid})
-        assert resp.status_code == 400
+        qid = self._submit_ws(session, "Alice", "Another question")
+        with session.participant("Bob") as bob:
+            bob.send({"type": "qa_upvote", "question_id": qid})
+            bob._recv("state")
+            bob.send({"type": "qa_upvote", "question_id": qid})
+            # Second upvote silently ignored
+        assert len(state.qa_questions[qid]["upvoters"]) == 1
 
     def test_clear_qa_removes_all_questions(self, session):
-        self._submit(session._client, "Alice", "Q1")
-        self._submit(session._client, "Bob", "Q2")
+        self._submit_ws(session, "Alice", "Q1")
+        self._submit_ws(session, "Bob", "Q2")
         resp = session._client.post("/api/qa/clear")
         assert resp.status_code == 200
         assert state.qa_questions == {}
