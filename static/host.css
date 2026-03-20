@@ -749,7 +749,6 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
 .codereview-code {
     flex: 1;
     white-space: pre;
-    overflow-x: auto;
 }
 
 .codereview-count {
