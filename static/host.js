@@ -1664,9 +1664,13 @@
       if (remaining > 0) _startDebateCountdown();
     }
 
-    // Update center panel title if debate is active
+    // Update center panel title and phase stepper if debate is active
     if (title) {
       title.innerHTML = debateActive ? escDebate(msg.debate_statement) : '';
+    }
+    const stepperEl = document.getElementById('debate-center-stepper');
+    if (stepperEl) {
+      stepperEl.innerHTML = debateActive ? renderDebatePhaseStepper(displayPhase) : '';
     }
 
     // Hide statement input once launched (shrink vertically upward), show reset button
