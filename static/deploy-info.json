@@ -1,16 +1,8 @@
 {
-  "sha": "148e21adb08b5371a8a45d2002c0f4e7c965cafb",
-  "timestamp": "2026-03-20 21:49",
+  "sha": "4fa2cf5ad213c633d35bf9ef58027dce9339475d",
+  "timestamp": "2026-03-20 21:55",
   "changelog": [
-    "refactor: unified start.sh, rename quiz_daemon to training_daemon",
-    "fix: make Claude PR review non-blocking on API errors",
-    "feat: emoji reactions \u2014 participant emoji bar, server relay, overlay WebSocket client",
-    "chore: gitignore Swift Package Manager build artifacts",
-    "feat: improved emoji animations \u2014 curved paths, random emoji types, larger size",
-    "feat: wire AppDelegate with demo timer \u2014 app is runnable",
-    "feat: add EmojiAnimator \u2014 float-up-and-fade emoji layers",
-    "feat: add OverlayPanel \u2014 transparent click-through NSPanel",
-    "feat: scaffold SPM package for emoji overlay app",
-    "docs: add design spec and implementation plan for macOS emoji overlay"
+    "fix: rename debate assign button to \"Random Assign\"",
+    "fix: compact debate arguments layout \u2014 reduce padding, gaps, avatar size, font sizes"
   ]
 }
