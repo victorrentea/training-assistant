@@ -232,7 +232,7 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     const notifGranted = 'Notification' in window && Notification.permission === 'granted';
     if (notifEl && !notifEl.classList.contains('done') && notifGranted) {
       notifEl.classList.add('done');
-      notifEl.innerHTML = '☑ Enable browser notifications';
+      notifEl.innerHTML = '☑ Enable notifications';
       notifEl.style.cursor = 'default';
       notifEl.onclick = null;
     }
@@ -888,7 +888,7 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
             ${locationSet ? '☑' : '☐'} Share your location
           </li>
           <li id="onboard-notif" class="onboarding-item${notifGranted ? ' done' : ''}" onclick="${notifGranted ? '' : 'requestNotificationPermission()'}" style="cursor:${notifGranted ? 'default' : 'pointer'}">
-            ${notifGranted ? '☑' : '☐'} Enable browser notifications
+            ${notifGranted ? '☑' : '☐'} Enable notifications
           </li>
         </ul>
       </div>`;
