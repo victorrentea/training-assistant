@@ -17,8 +17,10 @@ import sys
 import threading
 import time
 
+import certifi
 import pytest
 import requests
+import ssl
 import websockets
 
 LOAD_TEST_URL = os.environ.get("LOAD_TEST_URL")
@@ -86,7 +88,7 @@ async def _recv_until(ws, predicate, timeout=20.0):
             return msg
 
 
-async def participant_task(ws_base, name, idx, counter, n, connected_event, poll_ready_event, results):
+async def participant_task(ws_base, name, idx, counter, n, connected_event, poll_ready_event, results, ssl_ctx=None):
     """
     Lifecycle for one load-test participant:
     1. Stagger connect (idx * 50ms) to avoid broadcast storm on simultaneous connections
@@ -100,7 +102,7 @@ async def participant_task(ws_base, name, idx, counter, n, connected_event, poll
     """
     await asyncio.sleep(idx * 0.05)  # stagger: spread connections over n*50ms to avoid write-buffer overflow
     try:
-        async with websockets.connect(f"{ws_base}/ws/{name}", ping_interval=None) as ws:
+        async with websockets.connect(f"{ws_base}/ws/{name}", ping_interval=None, ssl=ssl_ctx) as ws:
             # Drain messages until we get state (participant_count broadcasts from concurrent
             # connections may arrive before our own state message)
             initial_state = None
@@ -153,6 +155,7 @@ async def participant_task(ws_base, name, idx, counter, n, connected_event, poll
 def test_load(server_url):
     n = LOAD_TEST_COUNT
     ws_base = server_url.replace("http://", "ws://").replace("https://", "wss://")
+    ssl_ctx = ssl.create_default_context(cafile=certifi.where()) if ws_base.startswith("wss://") else None
 
     # Pre-condition: no active poll (avoids disrupting a live session on prod)
     status = requests.get(f"{server_url}/api/status").json()
@@ -171,13 +174,13 @@ def test_load(server_url):
 
         tasks = [
             asyncio.create_task(
-                participant_task(ws_base, f"LBT{i:03d}", i, counter, n, connected_event, poll_ready_event, results)
+                participant_task(ws_base, f"LBT{i:03d}", i, counter, n, connected_event, poll_ready_event, results, ssl_ctx)
             )
             for i in range(n)
         ]
 
-        # Phase 1: wait for all participants to connect (allow extra time for stagger: n*50ms)
-        await asyncio.wait_for(connected_event.wait(), timeout=max(15.0, n * 0.05 + 10.0))
+        # Phase 1: wait for all participants to connect (allow extra time for stagger + TLS on prod)
+        await asyncio.wait_for(connected_event.wait(), timeout=max(30.0, n * 0.1 + 20.0))
         print(f"\n✓ All {n} participants connected")
 
         # Phase 2: host creates and opens poll
