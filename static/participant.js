@@ -1163,9 +1163,9 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
       const aiClass = a.ai_generated ? ' debate-arg-ai' : '';
       const ownClass = '';
       const upvotedClass = a.has_upvoted ? ' debate-arg-upvoted' : '';
-      const isOtherSide = mySide && a.side !== mySide;
-      const canUpvote = !readOnly && isOtherSide && !a.has_upvoted;
-      const showVotes = isOtherSide;
+      const isOwnSide = mySide && a.side === mySide;
+      const canUpvote = !readOnly && isOwnSide && !a.is_own && !a.has_upvoted;
+      const showVotes = isOwnSide;
       return `<div class="debate-arg${aiClass}${ownClass}${upvotedClass}" ${canUpvote ? `onclick="debateUpvote('${a.id}')"` : ''}>
         <div class="debate-arg-header">
           ${a.author_avatar ? `<img src="/static/avatars/${a.author_avatar}" class="debate-arg-avatar">` : ''}
@@ -1180,15 +1180,12 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
       <span>✨ duplicate, merged above</span>
     </div>`;
 
-    const forHighlight = mySide === 'for' ? ' debate-col-mine' : '';
-    const againstHighlight = mySide === 'against' ? ' debate-col-mine' : '';
-
     return `<div class="debate-columns">
-      <div class="debate-col debate-col-against${againstHighlight}">
+      <div class="debate-col debate-col-against">
         ${againstArgs.map(renderArg).join('')}
         ${Array(mergedAgainstCount).fill('').map(renderMerged).join('')}
       </div>
-      <div class="debate-col debate-col-for${forHighlight}">
+      <div class="debate-col debate-col-for">
         ${forArgs.map(renderArg).join('')}
         ${Array(mergedForCount).fill('').map(renderMerged).join('')}
       </div>
