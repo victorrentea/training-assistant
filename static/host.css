@@ -390,6 +390,13 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
   align-items: center;
   gap: .75rem;
 }
+.quiz-gen-controls input,
+.quiz-gen-controls select,
+.quiz-gen-controls .btn {
+  height: 34px;
+  min-height: 34px;
+  box-sizing: border-box;
+}
 #quiz-status {
   font-size: .82rem;
   color: var(--muted);

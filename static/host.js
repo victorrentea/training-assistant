@@ -1067,6 +1067,8 @@
     const btn = document.getElementById('wc-host-submit');
     if (btn) btn.disabled = true;
     renderHostWordList();
+    const dlWrap = document.getElementById('wc-download-wrap');
+    if (dlWrap) dlWrap.style.display = '';
   }
 
   function renderHostWordList() {
@@ -1089,6 +1091,8 @@
   async function clearWordCloud() {
     hostWords = [];
     renderHostWordList();
+    const dlWrap = document.getElementById('wc-download-wrap');
+    if (dlWrap) dlWrap.style.display = 'none';
     await fetch('/api/wordcloud/clear', { method: 'POST' });
   }
 
@@ -1102,6 +1106,8 @@
       dl.innerHTML = Object.keys(wordsMap).sort()
         .map(w => `<option value="${escHtml(w)}"></option>`).join('');
     }
+    const dlWrap = document.getElementById('wc-download-wrap');
+    if (dlWrap) dlWrap.style.display = Object.keys(wordsMap).length ? '' : 'none';
   }
 
   function _drawHostCloud(canvas, wordsMap) {
