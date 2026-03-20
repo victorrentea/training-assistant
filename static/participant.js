@@ -954,7 +954,6 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     { key: 'arguments',      num: 2, label: 'Arguments',    desc: 'Submit arguments to support your side.' },
     { key: 'prep',           num: 3, label: 'Preparation',  desc: 'Review arguments and volunteer as champion.' },
     { key: 'live_debate',    num: 4, label: 'Live Debate',  desc: 'Champions are debating live!' },
-    { key: 'ended',          num: 5, label: 'Ended',        desc: 'The debate is over. Thanks for participating!' },
   ];
 
   function getDebateSubPhases(firstSide) {
@@ -1030,7 +1029,7 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     content.dataset.screen = 'debate';
 
     const phase = msg.debate_phase;
-    const displayPhase = phase === 'ai_cleanup' ? 'prep' : phase;
+    const displayPhase = phase;
     const mySide = msg.debate_my_side;
     const statement = msg.debate_statement || '';
     const sideCounts = msg.debate_side_counts || { for: 0, against: 0 };
@@ -1044,12 +1043,8 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
 
     const sideIcon = mySide === 'for' ? '👍' : mySide === 'against' ? '👎' : '';
     const phaseInfo = DEBATE_PHASES.find(p => p.key === displayPhase) || { num: '?', label: displayPhase, desc: '' };
-    const phaseDesc = phase === 'ai_cleanup' ? '✨ AI is enriching arguments…' : phaseInfo.desc;
-
     let html = `<div class="debate-header">
       <div class="debate-title">⚔️ Debate</div>
-      <div class="debate-phase-badge">Phase ${phaseInfo.num}: ${phaseInfo.label}</div>
-      <div class="debate-phase-desc">${phaseDesc}</div>
     </div>`;
     html += renderDebatePhaseStepper(displayPhase);
     html += `<div class="debate-statement-row">
@@ -1084,7 +1079,7 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
           <button class="btn btn-primary" onclick="debateSubmitArg()">↵</button>
         </div>`;
       }
-    } else if (phase === 'ai_cleanup' || phase === 'prep') {
+    } else if (phase === 'prep') {
       html += renderDebateArgColumns(args, mySide, msg, false);
       html += renderDebateHints();
       if (mySide && !champions[mySide]) {
@@ -1117,9 +1112,6 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
       if (champNames) html += `<div class="debate-live-info">🎤 ${champNames}</div>`;
       html += renderDebateArgColumns(args, mySide, msg, true);
       html += renderDebateHints();
-    } else if (phase === 'ended') {
-      html += `<div class="debate-ended">Debate ended!</div>`;
-      html += renderDebateArgColumns(args, mySide, msg, true);
     }
 
     content.innerHTML = html;
