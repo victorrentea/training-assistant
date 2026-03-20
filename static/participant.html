@@ -28,14 +28,20 @@
     <div class="status-bar">
       <span class="status-left">
         <span class="mic-icon">🎙</span>
-        <span><span class="dot"></span> <strong id="display-name"></strong></span>
+        <span><span class="dot"></span>
+            <strong id="display-name"></strong>
+            <button id="edit-name-btn" class="edit-name-btn" title="Change name">✏️</button>
+            <span id="name-edit-wrap" style="display:none;">
+                <input id="name-edit-input" type="text" maxlength="32" />
+                <button id="name-edit-ok" class="edit-name-ok" title="Confirm">✓</button>
+            </span>
+        </span>
         <span id="my-score" style="display:none; color:var(--accent2); font-weight:700; font-size:.85rem;"></span>
       </span>
       <span class="status-right">
         <span id="location-prompt" class="location-prompt" onclick="requestLocation()" title="Share your location">📍 Where are you?</span>
         <span id="pax-count"></span>
         <button id="notif-btn" title="Enable notifications" style="display:none">🔔</button>
-        <button id="leave-btn" title="Change name">☢️ Leave</button>
       </span>
     </div>
     <div id="content"></div>

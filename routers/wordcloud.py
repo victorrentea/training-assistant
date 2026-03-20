@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
 from auth import require_host_auth
-from messaging import broadcast, build_state_message
+from messaging import broadcast_state
 from state import state
 
 router = APIRouter()
@@ -15,7 +15,7 @@ class WordcloudTopic(BaseModel):
 @router.post("/api/wordcloud/topic", dependencies=[Depends(require_host_auth)])
 async def set_wordcloud_topic(body: WordcloudTopic):
     state.wordcloud_topic = body.topic.strip()
-    await broadcast(build_state_message())
+    await broadcast_state()
     return {"ok": True}
 
 
@@ -23,5 +23,5 @@ async def set_wordcloud_topic(body: WordcloudTopic):
 async def clear_wordcloud():
     state.wordcloud_words = {}
     state.wordcloud_topic = ""
-    await broadcast(build_state_message())
+    await broadcast_state()
     return {"ok": True}

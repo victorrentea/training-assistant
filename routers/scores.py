@@ -1,8 +1,7 @@
 from fastapi import APIRouter, Depends
 
 from auth import require_host_auth
-
-from messaging import broadcast
+from messaging import broadcast_state
 from state import state
 
 router = APIRouter()
@@ -12,5 +11,5 @@ router = APIRouter()
 async def reset_scores():
     state.scores = {}
     state.base_scores = {}
-    await broadcast({"type": "scores", "scores": state.scores})
+    await broadcast_state()
     return {"ok": True}

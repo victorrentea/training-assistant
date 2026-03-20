@@ -10,7 +10,7 @@
 
 ## Major Bugs
 
-- [ ] **Duplicate name collision** — two browser tabs with the same name both enter `state.participants`; closing one tab may drop both. Assign a UUID at first contact with the browser, which remains and is used as a primary key for the participant. The display name should just be used for rendering. In other words, the application should tolerate having duplicated user names, although it should avoid assigning the same name as previously explained in the requirements. 
+- [x] **Duplicate name collision** — RESOLVED: all state dicts now keyed by UUID, not name. Duplicate display names are allowed. Each WS connection uses `/ws/{uuid}` and sends `set_name` as first message.
 
 - [x] **Stale vote_times on reconnect** — `vote_times` entry cleared on WebSocket disconnect.
 
@@ -40,7 +40,7 @@
 
 - [ ] **LLM hints cache key uses raw question string** — special characters could cause localStorage key collisions. > assign uuids to options
 
-- [x] **`suggested_names` set grows unbounded** — set cleared when it exceeds 50 entries.
+- [x] **`suggested_names` set grows unbounded** — RESOLVED: `suggested_names` removed entirely with UUID migration. `suggest_name()` now checks connected `participant_names.values()` instead.
 
 - [ ] **No fetch request timeouts** — slow network can hang the UI indefinitely with no user feedback.
 
