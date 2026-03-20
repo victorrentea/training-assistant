@@ -163,6 +163,69 @@ async def websocket_endpoint(websocket: WebSocket, participant_id: str):
                     state.scores[pid] = state.scores.get(pid, 0) + 25
                     await broadcast_state()
 
+            elif msg_type == "debate_pick_side":
+                side = data.get("side")
+                if (
+                    state.current_activity == ActivityType.DEBATE
+                    and state.debate_phase == "side_selection"
+                    and side in ("for", "against")
+                    and pid not in state.debate_sides
+                    and not is_host
+                ):
+                    state.debate_sides[pid] = side
+                    await broadcast_state()
+
+            elif msg_type == "debate_argument":
+                text = str(data.get("text", "")).strip()
+                if (
+                    state.current_activity == ActivityType.DEBATE
+                    and state.debate_phase == "arguments"
+                    and text
+                    and len(text) <= 280
+                    and pid in state.debate_sides
+                    and not is_host
+                ):
+                    arg_id = str(uuid_mod.uuid4())
+                    state.debate_arguments.append({
+                        "id": arg_id,
+                        "author_uuid": pid,
+                        "side": state.debate_sides[pid],
+                        "text": text,
+                        "upvoters": set(),
+                        "ai_generated": False,
+                        "merged_into": None,
+                    })
+                    state.scores[pid] = state.scores.get(pid, 0) + 100
+                    await broadcast_state()
+
+            elif msg_type == "debate_upvote":
+                arg_id = data.get("argument_id")
+                if (
+                    state.current_activity == ActivityType.DEBATE
+                    and state.debate_phase in ("arguments", "ai_cleanup", "prep")
+                    and not is_host
+                ):
+                    arg = next((a for a in state.debate_arguments if a["id"] == arg_id), None)
+                    if arg and pid not in arg["upvoters"] and arg["author_uuid"] != pid:
+                        arg["upvoters"].add(pid)
+                        if arg["author_uuid"] != "__ai__":
+                            state.scores[arg["author_uuid"]] = state.scores.get(arg["author_uuid"], 0) + 50
+                        state.scores[pid] = state.scores.get(pid, 0) + 25
+                        await broadcast_state()
+
+            elif msg_type == "debate_volunteer":
+                if (
+                    state.current_activity == ActivityType.DEBATE
+                    and state.debate_phase == "prep"
+                    and pid in state.debate_sides
+                    and not is_host
+                ):
+                    my_side = state.debate_sides[pid]
+                    if my_side not in state.debate_champions:
+                        state.debate_champions[my_side] = pid
+                        state.scores[pid] = state.scores.get(pid, 0) + 2500
+                        await broadcast_state()
+
     except WebSocketDisconnect:
         state.participants.pop(pid, None)
         state.locations.pop(pid, None)
