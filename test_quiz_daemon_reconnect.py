@@ -16,15 +16,16 @@ class _NoopTimestampAppender:
 
 
 def test_daemon_logs_disconnect_once_then_reconnect(tmp_path: Path, monkeypatch, capsys):
-    monkeypatch.setattr(quiz_daemon, "_kill_previous", lambda: None)
+    monkeypatch.setattr(quiz_daemon, "_check_and_acquire_lock", lambda: None)
+    monkeypatch.setattr(quiz_daemon, "_write_lock", lambda: None)
     monkeypatch.setattr(quiz_daemon, "TranscriptTimestampAppender", _NoopTimestampAppender)
     monkeypatch.setattr(quiz_daemon.signal, "signal", lambda *args, **kwargs: None)
     monkeypatch.setattr(quiz_daemon, "DAEMON_POLL_INTERVAL", 0)
     monkeypatch.setattr(quiz_daemon.time, "sleep", lambda *_: None)
     monkeypatch.setenv("MATERIALS_FOLDER", str(tmp_path / "missing-materials"))
 
-    pid_file = tmp_path / "daemon.pid"
-    monkeypatch.setattr(quiz_daemon, "_PID_FILE", pid_file)
+    lock_file = tmp_path / "daemon.lock"
+    monkeypatch.setattr(quiz_daemon, "_LOCK_FILE", lock_file)
 
     config = SimpleNamespace(
         server_url="http://example.test",
