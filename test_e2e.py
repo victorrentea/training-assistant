@@ -234,11 +234,11 @@ class TestRegressions:
         assert js_errors == [], f"JS errors on participant page: {js_errors}"
 
     def test_generate_button_uses_only_transcript_or_topic_labels(self, host: HostPage):
-        host.expect_generate_button_label("Generate from transcript")
+        host.expect_generate_button_label("Generate from transcript ✨")
         host.set_quiz_topic("resilience")
-        host.expect_generate_button_label("Generate on topic")
+        host.expect_generate_button_label("Generate on topic ✨")
         host.set_quiz_topic("")
-        host.expect_generate_button_label("Generate from transcript")
+        host.expect_generate_button_label("Generate from transcript ✨")
 
     def test_qa_input_and_button_heights_are_aligned_with_screenshots(self, host: HostPage, pax: ParticipantPage):
         pax.join("QaHeightUser")
@@ -452,7 +452,7 @@ class TestQA:
         first_card = host._page.locator(".qa-card").first
         expect(first_card.locator(".qa-actions button").nth(0)).to_contain_text("Answered")
         expect(first_card.locator(".qa-actions button").nth(2)).to_have_text("🗑")
-        expect(host._page.locator("#clear-qa-btn")).to_have_text("🗑 Clear all")
+        expect(host._page.locator("#clear-qa-btn")).to_have_text("🗑 Delete all")
 
         host.edit_question(q_id, "Edit works with quotes: \"alpha\" and apostrophe's")
         expect(host._page.locator(f'.qa-card[data-id="{q_id}"] .qa-text')).to_have_text(
@@ -576,6 +576,37 @@ class TestQA:
             ctx.close()
         for b in (b_host, b1, b2):
             b.close()
+
+
+# ---------------------------------------------------------------------------
+# TestTabPersistence
+# ---------------------------------------------------------------------------
+
+class TestTabPersistence:
+
+    def test_host_tab_survives_reload(self, server_url, playwright):
+        """Switching to Q&A tab, reloading the page, should keep Q&A active."""
+        b, ctx = _host_browser_ctx(server_url, playwright)
+        page = ctx.new_page()
+        page.goto("/host")
+
+        host = HostPage(page)
+        host.open_qa_tab()
+
+        # Verify Q&A tab is active before reload
+        expect(page.locator("#tab-qa.active")).to_be_visible(timeout=3000)
+        expect(page.locator("#tab-content-qa")).to_be_visible()
+
+        # Reload the page
+        page.reload()
+
+        # After reload, Q&A tab should still be active
+        expect(page.locator("#tab-qa.active")).to_be_visible(timeout=5000)
+        expect(page.locator("#tab-content-qa")).to_be_visible(timeout=5000)
+        expect(page.locator("#tab-content-poll")).to_be_hidden()
+
+        ctx.close()
+        b.close()
 
 
 # ---------------------------------------------------------------------------

@@ -106,12 +106,6 @@ h1 { display: none; }
   gap: .75rem;
 }
 
-.mic-icon {
-  font-size: 1.1rem;
-  line-height: 1;
-  opacity: .85;
-}
-
 @media (max-width: 480px) {
   .status-bar { font-size: .8rem; padding: .5rem .75rem; margin-bottom: .75rem; }
 }
@@ -133,6 +127,58 @@ h1 { display: none; }
   transition: opacity .2s;
 }
 .edit-name-btn:hover { opacity: 1; }
+
+/* ── Editable name (click to edit) ── */
+.editable-name {
+  cursor: pointer;
+  text-decoration: none;
+  transition: text-decoration .2s;
+}
+.editable-name:hover {
+  text-decoration: underline;
+  text-decoration-color: var(--muted);
+  text-underline-offset: 3px;
+}
+
+/* ── Onboarding checklist ── */
+.onboarding-checklist {
+  list-style: none;
+  padding: 0;
+  margin: .75rem 0 0;
+  text-align: left;
+  display: inline-block;
+}
+.onboarding-item {
+  font-size: .95rem;
+  padding: .3rem 0;
+  transition: opacity .5s, color .3s;
+}
+.onboarding-item.done {
+  color: var(--accent2);
+  text-decoration: line-through;
+  opacity: .5;
+}
+.onboarding-item.hiding {
+  opacity: 0;
+  height: 0;
+  padding: 0;
+  overflow: hidden;
+  transition: opacity .4s, height .4s, padding .4s;
+}
+
+#name-edit-input {
+  background: var(--surface2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: .15rem .4rem;
+  font-size: .95rem;
+  font-family: inherit;
+  outline: none;
+}
+#name-edit-input:focus {
+  border-color: var(--accent);
+}
 
 /* ── Location prompt ── */
 .location-prompt {
@@ -302,35 +348,25 @@ h1 { display: none; }
   margin: 0;
 }
 
-.wc-input-row {
-  display: flex;
-  gap: .5rem;
-  width: 100%;
-  align-items: stretch;
+/* Participant overrides: taller inputs (40px) */
+.wc-input-row input[type=text],
+.qa-input-row input[type=text] { height: 40px; min-height: 40px; }
+.wc-input-row button,
+.qa-input-row button { height: 40px; }
+.wc-download-overlay {
+  position: absolute;
+  bottom: 5px;
+  right: 5px;
+  padding: .4rem .6rem;
+  font-size: .85rem;
+  opacity: .7;
+  transition: opacity .2s;
 }
+.wc-download-overlay:hover { opacity: 1; }
 
-.wc-input-row input {
-  flex: 1;
-  padding: .75rem 1rem;
-  border-radius: 8px;
-  border: 1px solid var(--border);
-  background: var(--surface2);
-  color: var(--text);
-  font-size: 1.2rem;
-}
-
-.wc-input-row #wc-go {
-  padding: 0 1.25rem;
-  font-size: 1.4rem;
-  height: auto;
-  align-self: stretch;
-}
-.wc-download-btn {
-  width: 100%;
-  padding: .65rem 1rem;
-  font-size: 1rem;
-  margin-top: .25rem;
-  white-space: nowrap;
+.wc-topic-highlight {
+  color: var(--warn);
+  font-weight: 700;
 }
 
 #wc-my-words {
@@ -375,24 +411,6 @@ h1 { display: none; }
 /* ── Q&A screen ── */
 .qa-screen { display: flex; flex-direction: column; gap: .75rem; }
 
-.qa-input-row { display: flex; gap: .5rem; align-items: stretch; }
-.qa-input-row input {
-  flex: 1;
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 0 .8rem;
-  color: var(--text);
-  font-size: .95rem;
-  height: 34px;
-  min-height: 34px;
-}
-.qa-input-row button {
-  align-self: stretch;
-  padding: 0 1rem;
-  height: 34px;
-}
-
 .qa-card-p {
   background: var(--surface2);
   border-radius: 8px;
@@ -436,12 +454,12 @@ h1 { display: none; }
 .qa-upvote-btn:disabled { opacity: .45; cursor: not-allowed; border-color: var(--muted); color: var(--muted); }
 .qa-upvote-btn.qa-upvoted { background: var(--accent); color: #fff; }
 
-/* Q&A engagement toast */
-#qa-toast {
+/* Engagement toasts (Q&A + Code Review) */
+.qa-toast {
   position: fixed;
   bottom: 70px;
   left: 50%;
-  transform: translateX(-50%);
+  transform: translateX(-50%) translateY(30px);
   background: rgba(30, 30, 50, 0.92);
   color: var(--text);
   border: 1px solid var(--accent2);
@@ -452,11 +470,12 @@ h1 { display: none; }
   text-align: center;
   pointer-events: none;
   opacity: 0;
-  transition: opacity 0.4s ease;
+  transition: opacity 0.4s ease, transform 0.4s ease;
   z-index: 1000;
 }
-#qa-toast.visible {
+.qa-toast.visible {
   opacity: 1;
+  transform: translateX(-50%) translateY(0);
 }
 
 /* ── Score highlight flash ── */
@@ -471,4 +490,122 @@ h1 { display: none; }
 }
 #my-score.score-flash {
   animation: score-highlight 1.4s ease-out forwards;
+}
+
+/* Code Review */
+.codereview-screen {
+    padding: 16px;
+}
+
+.codereview-header {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 4px;
+}
+
+.codereview-subtitle {
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 16px;
+}
+
+.codereview-viewer {
+    font-family: monospace;
+    font-size: 13px;
+    line-height: 2.2;
+    background: var(--surface);
+    border-radius: var(--radius);
+    overflow-x: auto;
+}
+
+.codereview-pline {
+    display: flex;
+    padding: 3px 12px;
+    transition: background 0.15s;
+}
+
+.codereview-pline-clickable {
+    cursor: pointer;
+}
+
+.codereview-pline-clickable:hover {
+    background: rgba(108, 99, 255, 0.12);
+}
+
+.codereview-pline-selected {
+    background: rgba(108, 99, 255, 0.15);
+    border-left: 3px solid var(--accent);
+}
+
+.codereview-pline-correct {
+    background: rgba(166, 227, 161, 0.2);
+    border-left: 3px solid #a6e3a1;
+}
+
+.codereview-pline-confirmed {
+    background: rgba(166, 227, 161, 0.1);
+    border-left: 3px solid #a6e3a1;
+}
+
+.codereview-pgutter {
+    width: 32px;
+    text-align: right;
+    margin-right: 14px;
+    color: var(--muted);
+    user-select: none;
+    flex-shrink: 0;
+}
+
+.codereview-pline-selected .codereview-pgutter {
+    color: var(--accent);
+}
+
+.codereview-pline-correct .codereview-pgutter,
+.codereview-pline-confirmed .codereview-pgutter {
+    color: #a6e3a1;
+}
+
+.codereview-pcode {
+    flex: 1;
+    white-space: pre;
+}
+
+.codereview-badge {
+    margin-left: 8px;
+    font-size: 11px;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.codereview-badge-correct {
+    color: #a6e3a1;
+    font-weight: 600;
+}
+
+.codereview-pct {
+    margin-left: 8px;
+    font-size: 11px;
+    color: var(--muted);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.codereview-footer {
+    margin-top: 12px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 13px;
+}
+
+.codereview-footer-points {
+    padding: 10px;
+    background: var(--surface);
+    border-radius: var(--radius);
+}
+
+.codereview-points-earned {
+    color: #a6e3a1;
+    font-size: 14px;
+    font-weight: 600;
 }
