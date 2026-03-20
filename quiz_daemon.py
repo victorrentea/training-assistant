@@ -30,8 +30,8 @@ from daemon.transcript_timestamps import (
 )
 from quiz_core import (
     config_from_env, find_session_folder, auto_generate, auto_generate_topic, auto_refine,
-    post_status, _get_json, _post_json, DAEMON_POLL_INTERVAL, read_session_notes,
-    load_transcription_files,
+    post_status, _get_json, _post_json, DAEMON_POLL_INTERVAL, DEFAULT_TRANSCRIPT_MINUTES,
+    read_session_notes, load_transcription_files, extract_last_n_minutes,
 )
 from daemon.summarizer import generate_summary, SUMMARY_INTERVAL_SECONDS
 
@@ -219,6 +219,22 @@ def run() -> None:
     else:
         print(f"[daemon] MATERIALS_FOLDER not found: {materials_folder} — indexer disabled", file=sys.stderr)
 
+    # ── Log transcription file info at startup ──
+    try:
+        entries = load_transcription_files(config.folder)
+        timed = [(ts, txt) for ts, txt in entries if ts is not None]
+        if timed:
+            max_ts = max(ts for ts, _ in timed)
+            cutoff = max_ts - DEFAULT_TRANSCRIPT_MINUTES * 60
+            recent = [(ts, txt) for ts, txt in timed if ts >= cutoff and txt.strip()]
+            print(f"[transcript] Lines in last {DEFAULT_TRANSCRIPT_MINUTES} min: {len(recent)} (total segments: {len(entries)})")
+        else:
+            print(f"[transcript] Total segments: {len(entries)} (no timestamps found)")
+    except SystemExit:
+        print("[transcript] No transcription file found", file=sys.stderr)
+    except Exception as e:
+        print(f"[transcript] Could not read transcription: {e}", file=sys.stderr)
+
     print(f"[daemon] Started — polling {config.server_url} every {DAEMON_POLL_INTERVAL}s")
     print("[daemon] Press Ctrl+C to stop.\n")
 
@@ -353,7 +369,7 @@ def run() -> None:
                     timed = [(ts, txt) for ts, txt in entries if ts is not None]
                     if timed:
                         max_ts = max(ts for ts, _ in timed)
-                        cutoff = max_ts - 30 * 60
+                        cutoff = max_ts - DEFAULT_TRANSCRIPT_MINUTES * 60
                         recent = [(ts, txt) for ts, txt in timed if ts >= cutoff and txt.strip()]
                         line_count = len(recent)
                         # Convert max_ts (seconds from midnight) to today's ISO time
