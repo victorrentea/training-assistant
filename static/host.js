@@ -1517,18 +1517,18 @@
       title.innerHTML = escDebate(msg.debate_statement);
     }
 
-    // Hide statement input once launched (scale out horizontally), show reset button
+    // Hide statement input once launched (shrink vertically upward), show reset button
     const stmtWrapper = document.getElementById('debate-statement-wrapper');
     const resetWrapper = document.getElementById('debate-reset-wrapper');
     if (stmtWrapper) {
       if (debateActive) {
-        stmtWrapper.style.transform = 'scaleX(0)';
+        stmtWrapper.style.transform = 'scaleY(0)';
         stmtWrapper.style.opacity = '0';
         stmtWrapper.style.height = '0';
         stmtWrapper.style.marginTop = '0';
         stmtWrapper.style.overflow = 'hidden';
       } else {
-        stmtWrapper.style.transform = 'scaleX(1)';
+        stmtWrapper.style.transform = 'scaleY(1)';
         stmtWrapper.style.opacity = '1';
         stmtWrapper.style.height = '';
         stmtWrapper.style.marginTop = '.75rem';
