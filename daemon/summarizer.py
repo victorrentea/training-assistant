@@ -10,6 +10,7 @@ import sys
 from typing import Optional
 
 import anthropic
+from daemon.llm_adapter import create_message
 
 from quiz_core import (
     Config,
@@ -82,8 +83,8 @@ def generate_summary(
     user_message = "\n---\n".join(parts)
 
     try:
-        client = anthropic.Anthropic(api_key=config.api_key)
-        response = client.messages.create(
+        response = create_message(
+            api_key=config.api_key,
             model=config.model,
             max_tokens=1024,
             system=_SUMMARY_SYSTEM_PROMPT,
