@@ -1517,10 +1517,24 @@
       title.innerHTML = escDebate(msg.debate_statement);
     }
 
-    // Hide statement input once launched, show reset button
+    // Hide statement input once launched (scale out horizontally), show reset button
     const stmtWrapper = document.getElementById('debate-statement-wrapper');
     const resetWrapper = document.getElementById('debate-reset-wrapper');
-    if (stmtWrapper) stmtWrapper.style.display = debateActive ? 'none' : '';
+    if (stmtWrapper) {
+      if (debateActive) {
+        stmtWrapper.style.transform = 'scaleX(0)';
+        stmtWrapper.style.opacity = '0';
+        stmtWrapper.style.height = '0';
+        stmtWrapper.style.marginTop = '0';
+        stmtWrapper.style.overflow = 'hidden';
+      } else {
+        stmtWrapper.style.transform = 'scaleX(1)';
+        stmtWrapper.style.opacity = '1';
+        stmtWrapper.style.height = '';
+        stmtWrapper.style.marginTop = '.75rem';
+        stmtWrapper.style.overflow = '';
+      }
+    }
     if (resetWrapper) resetWrapper.style.display = debateActive ? '' : 'none';
 
     // Phase chapters — always visible
@@ -1528,7 +1542,10 @@
     const displayPhase = phase === 'ai_cleanup' ? 'prep' : phase;
     const currentIdx = debateActive ? DEBATE_PHASES.findIndex(p => p.key === displayPhase) : -1;
     const phaseActions = {
-      side_selection: `<button class="btn btn-warn btn-sm" onclick="debateForceAssign()">🎲 Assign randomly</button>`,
+      side_selection: `<div style="display:flex; align-items:center; justify-content:space-between;">
+        <span style="font-size:1.1rem;">👎 ${sideCounts.against} &nbsp;|&nbsp; ${sideCounts.for} 👍</span>
+        <button class="btn btn-warn btn-sm" onclick="debateForceAssign()">🎲 Assign randomly</button>
+      </div>`,
       prep: champions.for || champions.against
         ? `<span style="color:var(--accent);font-size:.8rem;">🏆 ${Object.entries(champions).map(([s,n]) => `${s==='for'?'👍':'👎'} ${escDebate(n)}`).join(', ')}</span>`
         : '',
@@ -1572,15 +1589,10 @@
         launchBtn = `<span class="debate-chapter-check">✓</span>`;
       }
 
-      const countInfo = isActive && (p.key === 'side_selection')
-        ? `<span class="debate-chapter-count">👎 ${sideCounts.against} | ${sideCounts.for} 👍</span>`
-        : '';
-
       return `<div class="${cls}">
         <div class="debate-chapter-row">
           <span class="debate-chapter-num">${p.num}</span>
           <span class="debate-chapter-label">${p.label}</span>
-          ${countInfo}
           <span class="debate-chapter-action">${launchBtn}</span>
         </div>
         ${actionHtml}
@@ -1594,11 +1606,11 @@
     const mergedArgs = (msg.debate_arguments || []).filter(a => a.merged_into);
 
     if (phase === 'side_selection') {
-      content.innerHTML = `<div style="text-align:center; padding:2rem; color:var(--muted);">
-        Waiting for participants to choose sides…<br>
-        <span style="font-size:1.5rem; margin-top:.5rem; display:block;">
+      content.innerHTML = `<div style="text-align:center; padding:3rem 2rem; color:var(--muted);">
+        <div style="font-size:1.2rem;">Waiting for participants to choose sides…</div>
+        <div style="font-size:4.5rem; margin-top:1rem; font-weight:700;">
           👎 ${sideCounts.against} &nbsp;|&nbsp; ${sideCounts.for} 👍
-        </span>
+        </div>
       </div>`;
     } else {
       content.innerHTML = renderDebateDualColumn(againstArgs, forArgs, mergedArgs, msg.debate_champions, phase);
