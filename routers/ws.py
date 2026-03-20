@@ -12,6 +12,7 @@ from messaging import (
     broadcast_participant_update,
     send_state_to_participant,
     send_state_to_host,
+    send_emoji_to_overlay,
 )
 from state import state, ActivityType, assign_avatar
 from messaging import participant_ids
@@ -29,6 +30,17 @@ async def websocket_endpoint(websocket: WebSocket, participant_id: str):
         return
 
     is_host = pid == "__host__"
+    is_overlay = pid == "__overlay__"
+
+    # Overlay reconnect: kick old overlay connection
+    if is_overlay and "__overlay__" in state.participants:
+        old_ws = state.participants["__overlay__"]
+        try:
+            await old_ws.send_text(json.dumps({"type": "kicked"}))
+            await old_ws.close(code=1001)
+        except Exception:
+            pass
+        del state.participants["__overlay__"]
 
     # Host reconnect: kick old host connection
     if is_host and "__host__" in state.participants:
@@ -43,7 +55,11 @@ async def websocket_endpoint(websocket: WebSocket, participant_id: str):
     await websocket.accept()
     state.participants[pid] = websocket
 
-    if is_host:
+    if is_overlay:
+        state.participant_names["__overlay__"] = "Overlay"
+        logger.info(f"Overlay connected ({len(state.participants)} total)")
+        await broadcast_participant_update()
+    elif is_host:
         state.participant_names["__host__"] = "Host"
         logger.info(f"Host connected ({len(state.participants)} total)")
         await send_state_to_host(websocket)
@@ -52,7 +68,7 @@ async def websocket_endpoint(websocket: WebSocket, participant_id: str):
         # Participant: wait for set_name before sending state
         logger.info(f"WS connected: {pid} (awaiting set_name)")
 
-    named = is_host  # host is always "named"
+    named = is_host or is_overlay  # host and overlay are always "named"
 
     try:
         while True:
@@ -269,6 +285,11 @@ async def websocket_endpoint(websocket: WebSocket, participant_id: str):
                         state.codereview_selections[pid] = set()
                     state.codereview_selections[pid].add(line)
                     await broadcast_state()
+
+            elif msg_type == "emoji_reaction":
+                emoji = str(data.get("emoji", "")).strip()
+                if emoji and len(emoji) <= 4:
+                    await send_emoji_to_overlay(emoji)
 
             elif msg_type == "codereview_deselect":
                 line = data.get("line")

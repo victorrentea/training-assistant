@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Shared core library for quiz_generator.py and quiz_daemon.py.
+Shared core library for the training daemon and server.
 """
 
 import base64

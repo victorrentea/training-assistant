@@ -975,6 +975,11 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     }).join('');
   }
 
+  function sendEmoji(emoji) {
+    if (!ws) return;
+    ws.send(JSON.stringify({ type: 'emoji_reaction', emoji }));
+  }
+
   function submitQuestion() {
     const input = document.getElementById('qa-input');
     if (!input) return;
@@ -1006,7 +1011,7 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
 
   // ── Debate rendering ──
   const DEBATE_PHASES = [
-    { key: 'side_selection', num: 1, label: 'Pick Sides' },
+    { key: 'side_selection', num: 1, label: 'Pick a Side' },
     { key: 'arguments',      num: 2, label: 'Arguments' },
     { key: 'prep',           num: 3, label: 'Preparation' },
     { key: 'live_debate',    num: 4, label: 'Live Debate' },

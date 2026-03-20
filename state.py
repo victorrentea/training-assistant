@@ -83,7 +83,7 @@ class AppState:
     def suggest_name(self) -> str:
         """Return the next available LOTR name (by popularity order).
         A name is 'taken' if any currently connected participant has it."""
-        connected_names = {self.participant_names[uid] for uid in self.participants if uid in self.participant_names and uid != "__host__"}
+        connected_names = {self.participant_names[uid] for uid in self.participants if uid in self.participant_names and not uid.startswith("__")}
         available = [n for n in LOTR_NAMES if n not in connected_names]
         return available[0] if available else f"Guest{random.randint(100, 999)}"
 
