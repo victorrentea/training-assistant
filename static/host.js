@@ -1440,10 +1440,9 @@
   const DEBATE_PHASES = [
     { key: 'side_selection', num: 1, label: 'Pick Sides' },
     { key: 'arguments',      num: 2, label: 'Arguments' },
-    { key: 'ai_cleanup',     num: 3, label: 'AI Cleanup' },
-    { key: 'prep',           num: 4, label: 'Preparation' },
-    { key: 'live_debate',    num: 5, label: 'Live Debate' },
-    { key: 'ended',          num: 6, label: 'Ended' },
+    { key: 'prep',           num: 3, label: 'Preparation' },
+    { key: 'live_debate',    num: 4, label: 'Live Debate' },
+    { key: 'ended',          num: 5, label: 'Ended' },
   ];
 
   function renderDebatePhaseStepper(currentPhase) {
@@ -1471,6 +1470,10 @@
 
   async function debateCloseSelection() {
     await fetch('/api/debate/close-selection', { method: 'POST' });
+  }
+
+  async function debateEndArguments() {
+    await fetch('/api/debate/end-arguments', { method: 'POST' });
   }
 
   async function debateForceAssign() {
@@ -1511,10 +1514,11 @@
     }
 
     // Phase chapters — always visible
-    const currentIdx = debateActive ? DEBATE_PHASES.findIndex(p => p.key === phase) : -1;
+    // ai_cleanup is implicit (not in visible list) — treat it as "between arguments and prep"
+    const displayPhase = phase === 'ai_cleanup' ? 'prep' : phase;
+    const currentIdx = debateActive ? DEBATE_PHASES.findIndex(p => p.key === displayPhase) : -1;
     const phaseActions = {
       side_selection: `<button class="btn btn-warn btn-sm" onclick="debateForceAssign()">🎲 Assign randomly</button>`,
-      ai_cleanup: `<button class="btn btn-warn btn-sm btn-ai" onclick="debateRunAI()">✨ Run AI</button>`,
       prep: champions.for || champions.against
         ? `<span style="color:var(--accent);font-size:.8rem;">🏆 ${Object.entries(champions).map(([s,n]) => `${s==='for'?'👍':'👎'} ${escDebate(n)}`).join(', ')}</span>`
         : '',
@@ -1533,7 +1537,9 @@
       else if (isFuture) cls += ' debate-chapter-future';
 
       let actionHtml = '';
-      if (isActive && phaseActions[p.key]) {
+      if (isActive && phase === 'ai_cleanup' && p.key === 'prep') {
+        actionHtml = `<div class="debate-chapter-extra"><span style="color:var(--accent);font-size:.8rem;">✨ AI enriching arguments…</span></div>`;
+      } else if (isActive && phaseActions[p.key]) {
         actionHtml = `<div class="debate-chapter-extra">${phaseActions[p.key]}</div>`;
       }
 
@@ -1545,6 +1551,8 @@
         launchBtn = `<button class="btn btn-danger btn-sm" onclick="debateNextPhase('ended')">⏹ End</button>`;
       } else if (isActive && p.key === 'side_selection') {
         // No Next button — phase ends via Force Assign or auto-advance
+      } else if (isActive && p.key === 'arguments') {
+        launchBtn = `<button class="btn btn-primary btn-sm" onclick="debateEndArguments()">End & Enrich ✨</button>`;
       } else if (isActive && p.key !== 'ended') {
         const nextPhase = DEBATE_PHASES[i + 1];
         if (nextPhase) {
