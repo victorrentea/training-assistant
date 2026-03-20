@@ -1752,7 +1752,7 @@
             } else if (spActive) {
               statusHtml = `<button class="btn btn-warn btn-sm" id="debate-sub-end-btn-${si}" onclick="endDebateSubPhase()">End</button>`;
             } else if (spNext) {
-              statusHtml = `<input type="text" class="debate-sub-duration" id="debate-sub-dur-${si}" value="${durVal}" title="Duration (m:ss)" /><button class="btn btn-primary" style="padding:.1rem .35rem;font-size:.65rem;line-height:1;height:1.4rem;" onclick="startDebateSubPhase(${si})">▶</button>`;
+              statusHtml = `<input type="text" class="debate-sub-duration" id="debate-sub-dur-${si}" value="${durVal}" title="Duration (m:ss)" /><button class="btn btn-primary btn-sm" onclick="startDebateSubPhase(${si})">▶ Start</button>`;
             }
 
             return `<div class="${spCls}">
