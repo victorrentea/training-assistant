@@ -99,8 +99,11 @@
 
   // Set participant link
   const link = `${location.protocol}//${location.host}/`;
-  document.getElementById('participant-link').href = link;
-  document.getElementById('participant-link').textContent = location.host;
+  const pLink = document.getElementById('participant-link');
+  pLink.href = link;
+  pLink.innerHTML = location.host.split('').map((ch, i) =>
+    `<span class="wave-char" style="animation-delay:${(i * 0.12).toFixed(2)}s">${ch}</span>`
+  ).join('');
 
   // ── WebSocket (host monitors state too) ──
   function connectWS() {
@@ -1064,6 +1067,8 @@
     const btn = document.getElementById('wc-host-submit');
     if (btn) btn.disabled = true;
     renderHostWordList();
+    const dlWrap = document.getElementById('wc-download-wrap');
+    if (dlWrap) dlWrap.style.display = '';
   }
 
   function renderHostWordList() {
@@ -1086,6 +1091,8 @@
   async function clearWordCloud() {
     hostWords = [];
     renderHostWordList();
+    const dlWrap = document.getElementById('wc-download-wrap');
+    if (dlWrap) dlWrap.style.display = 'none';
     await fetch('/api/wordcloud/clear', { method: 'POST' });
   }
 
@@ -1099,6 +1106,8 @@
       dl.innerHTML = Object.keys(wordsMap).sort()
         .map(w => `<option value="${escHtml(w)}"></option>`).join('');
     }
+    const dlWrap = document.getElementById('wc-download-wrap');
+    if (dlWrap) dlWrap.style.display = Object.keys(wordsMap).length ? '' : 'none';
   }
 
   function _drawHostCloud(canvas, wordsMap) {
@@ -1690,7 +1699,6 @@
     const displayPhase = phase === 'ai_cleanup' ? 'prep' : phase;
     const currentIdx = debateActive ? DEBATE_PHASES.findIndex(p => p.key === displayPhase) : -1;
     const phaseActions = {
-      side_selection: `<button class="btn btn-warn btn-sm" onclick="debateForceAssign()">🎲 Assign randomly</button>`,
       prep: champions.for || champions.against
         ? `<span style="color:var(--accent);font-size:.8rem;">🏆 ${Object.entries(champions).map(([s,n]) => `${s==='for'?'👍':'👎'} ${escDebate(n)}`).join(', ')}</span>`
         : '',
@@ -1773,7 +1781,7 @@
       } else if (isActive && p.key === 'live_debate') {
         // No end button — debate stays in live_debate; use Reset to clear
       } else if (isActive && p.key === 'side_selection') {
-        // No Next button — phase ends via Force Assign or auto-advance
+        launchBtn = `<button class="btn btn-warn btn-sm" onclick="debateForceAssign()">🎲 Assign</button>`;
       } else if (isActive && p.key === 'arguments') {
         launchBtn = `<button class="btn btn-primary btn-sm" id="debate-end-args-btn" onclick="debateEndArguments()">End</button>`;
       } else if (isActive) {
@@ -1881,13 +1889,11 @@
 
     return `<div class="debate-columns">
       <div class="debate-col debate-col-against">
-        <h3 class="debate-col-header">👎</h3>
         ${champAgainst}
         ${againstArgs.map(renderArg).join('')}
         ${Array(mergedAgainstCount).fill('').map(renderMerged).join('')}
       </div>
       <div class="debate-col debate-col-for">
-        <h3 class="debate-col-header">👍</h3>
         ${champFor}
         ${forArgs.map(renderArg).join('')}
         ${Array(mergedForCount).fill('').map(renderMerged).join('')}
