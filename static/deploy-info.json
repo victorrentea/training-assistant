@@ -1,8 +1,7 @@
 {
-  "sha": "4fa2cf5ad213c633d35bf9ef58027dce9339475d",
-  "timestamp": "2026-03-20 21:55",
+  "sha": "e30898c9d0fab2a16d0eadd460cc8c72d5172a6d",
+  "timestamp": "2026-03-20 21:56",
   "changelog": [
-    "fix: rename debate assign button to \"Random Assign\"",
-    "fix: compact debate arguments layout \u2014 reduce padding, gaps, avatar size, font sizes"
+    "fix: rename \"Pick Sides\" phase to \"Pick a Side\""
   ]
 }
