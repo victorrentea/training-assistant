@@ -1155,7 +1155,7 @@
 
     if (cr.phase === 'selecting') {
       closeBtn.style.display = '';
-      phaseLabel.innerHTML = '<span style="color:var(--accent2);">● Selection open</span>';
+      phaseLabel.innerHTML = '<span style="color:var(--accent2);">🐛 Bug Hunt Open</span>';
     } else {
       closeBtn.style.display = 'none';
       const confirmedCount = cr.confirmed_lines ? cr.confirmed_lines.length : 0;
@@ -1231,22 +1231,23 @@
 
     const lineNum = codereviewSelectedLine;
     const lineParticipants = (cr.line_participants || {})[String(lineNum)] || [];
-    const count = (cr.line_counts || {})[String(lineNum)] || 0;
     const isConfirmed = confirmed.has(lineNum);
-    const snippetLines = cr.snippet.split('\n');
-    const lineText = snippetLines[lineNum - 1] || '';
+    const count = (cr.line_counts || {})[String(lineNum)] || 0;
 
-    let html = '<div style="margin-bottom:12px;">';
-    html += `<div style="font-weight:600;color:${isConfirmed ? 'var(--accent2)' : 'var(--danger)'};">Line ${lineNum} — ${count} selection(s)</div>`;
-    html += `<div class="muted" style="font-size:11px;font-family:monospace;margin-top:4px;">${escHtml(lineText.trim())}</div>`;
-    html += '</div>';
+    let html = '';
 
     if (lineParticipants.length > 0) {
+      const sorted = [...lineParticipants].sort((a, b) => {
+        if (a.score !== b.score) return b.score - a.score;
+        return a.name.localeCompare(b.name);
+      });
       html += '<div class="codereview-participant-list">';
-      lineParticipants.forEach(p => {
+      sorted.forEach(p => {
         html += '<div class="codereview-participant-row">';
-        html += `<span class="codereview-participant-score">${p.score}</span>`;
         html += `<span>${escHtml(p.name)}</span>`;
+        if (p.score > 0) {
+          html += `<span class="codereview-participant-score">⭐ ${p.score} pts</span>`;
+        }
         html += '</div>';
       });
       html += '</div>';
