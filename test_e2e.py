@@ -452,7 +452,7 @@ class TestQA:
         first_card = host._page.locator(".qa-card").first
         expect(first_card.locator(".qa-actions button").nth(0)).to_contain_text("Answered")
         expect(first_card.locator(".qa-actions button").nth(2)).to_have_text("🗑")
-        expect(host._page.locator("#clear-qa-btn")).to_have_text("🗑 Clear all")
+        expect(host._page.locator("#clear-qa-btn")).to_have_text("🗑 Delete all")
 
         host.edit_question(q_id, "Edit works with quotes: \"alpha\" and apostrophe's")
         expect(host._page.locator(f'.qa-card[data-id="{q_id}"] .qa-text')).to_have_text(
