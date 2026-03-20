@@ -516,7 +516,11 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
         _debateSubTimer = null;
         clearInterval(_debateTimerInterval);
         _playDebateChime();
-        if (_lastDebateMsg) renderDebateScreen(_lastDebateMsg);
+        if (_lastDebateMsg) {
+          _lastDebateMsg.debate_sub_timer_started_at = null;
+          _lastDebateMsg.debate_sub_timer_seconds = null;
+          renderDebateScreen(_lastDebateMsg);
+        }
         break;
       case 'summary':
         updateSummary(msg.points, msg.updated_at);
