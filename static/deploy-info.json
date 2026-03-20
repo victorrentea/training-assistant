@@ -1,7 +1,7 @@
 {
-  "sha": "2ca082a3de54c3697922972c16a7013c93cf476b",
-  "timestamp": "2026-03-20 22:46",
+  "sha": "9fd452c3a68f3722230179ba03c97ff66357069e",
+  "timestamp": "2026-03-20 22:55",
   "changelog": [
-    "fix: reorder host tabs \u2014 move Debate to last position"
+    "fix: add Code Review title to center panel in host UI"
   ]
 }
