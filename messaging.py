@@ -34,6 +34,8 @@ def build_state_message() -> dict:
         "current_activity": state.current_activity,
         "wordcloud_words": state.wordcloud_words,
         "wordcloud_topic": state.wordcloud_topic,
+        "summary_points": state.summary_points,
+        "summary_updated_at": state.summary_updated_at.isoformat() if state.summary_updated_at else None,
         "qa_questions": [
             {
                 "id": qid,
