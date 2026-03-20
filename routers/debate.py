@@ -94,6 +94,34 @@ async def close_selection():
     return {"ok": True, "for": for_count, "against": against_count}
 
 
+@router.post("/api/debate/force-assign", dependencies=[Depends(require_host_auth)])
+async def force_assign():
+    if state.debate_phase != "side_selection":
+        raise HTTPException(400, "Not in side_selection phase")
+
+    all_pids = participant_ids()
+    unassigned = [p for p in all_pids if p not in state.debate_sides]
+    if not unassigned:
+        raise HTTPException(400, "No unassigned participants")
+
+    for_count = sum(1 for s in state.debate_sides.values() if s == "for")
+    against_count = sum(1 for s in state.debate_sides.values() if s == "against")
+
+    random.shuffle(unassigned)
+    for p in unassigned:
+        if for_count <= against_count:
+            state.debate_sides[p] = "for"
+            for_count += 1
+        else:
+            state.debate_sides[p] = "against"
+            against_count += 1
+        state.debate_auto_assigned.add(p)
+
+    logger.info(f"Force-assigned {len(unassigned)} participants: {for_count} FOR, {against_count} AGAINST")
+    await broadcast_state()
+    return {"ok": True, "assigned": len(unassigned)}
+
+
 VALID_PHASES = {"arguments", "ai_cleanup", "prep", "live_debate", "ended"}
 
 
