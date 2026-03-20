@@ -410,7 +410,16 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
           _multiWarnShown = false;
           focusedOptionIndex = -1;
           clearInterval(_timerInterval);
+        }
+        // Restore vote from server state (authoritative), falling back to localStorage
+        if (msg.my_vote != null) {
+          myVote = msg.poll?.multi ? new Set(msg.my_vote) : msg.my_vote;
+        } else if (msg.poll?.id !== currentPoll?.id) {
           restoreVote(msg.poll);
+        }
+        // Restore poll result from server state (survives refresh)
+        if (msg.poll_correct_ids != null && msg.my_voted_ids != null) {
+          pollResult = { correct_ids: new Set(msg.poll_correct_ids), voted_ids: new Set(msg.my_voted_ids) };
         }
         currentPoll = msg.poll;
         pollActive = msg.poll_active;
