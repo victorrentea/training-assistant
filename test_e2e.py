@@ -679,6 +679,18 @@ class TestPollDownload:
 # ---------------------------------------------------------------------------
 
 @pytest.mark.prod
+def _prod_request(method, path, retries=3, **kwargs):
+    """Make a request to PROD_URL with retries for transient DNS/network errors."""
+    kwargs.setdefault("timeout", 10)
+    for attempt in range(retries):
+        try:
+            return requests.request(method, f"{PROD_URL}{path}", **kwargs)
+        except requests.exceptions.ConnectionError:
+            if attempt == retries - 1:
+                raise
+            time.sleep(2)
+
+
 class TestProductionSmoke:
     """
     Smoke tests against the live Railway deployment.
@@ -687,12 +699,12 @@ class TestProductionSmoke:
     """
 
     def test_prod_participant_page_accessible(self):
-        resp = requests.get(f"{PROD_URL}/", timeout=10)
+        resp = _prod_request("GET", "/")
         assert resp.status_code == 200
         assert "html" in resp.headers.get("content-type", "")
 
     def test_prod_host_page_requires_auth(self):
-        resp = requests.get(f"{PROD_URL}/host", timeout=10)
+        resp = _prod_request("GET", "/host")
         assert resp.status_code == 401
 
     @pytest.mark.skipif(
@@ -700,16 +712,16 @@ class TestProductionSmoke:
         reason="PROD_HOST_PASSWORD not set"
     )
     def test_prod_host_page_accessible_with_credentials(self):
-        resp = requests.get(f"{PROD_URL}/host", auth=(PROD_HOST_USER, PROD_HOST_PASS), timeout=10)
+        resp = _prod_request("GET", "/host", auth=(PROD_HOST_USER, PROD_HOST_PASS))
         assert resp.status_code == 200
 
     def test_prod_api_status_public(self):
-        resp = requests.get(f"{PROD_URL}/api/status", timeout=10)
+        resp = _prod_request("GET", "/api/status")
         assert resp.status_code == 200
         assert "participants" in resp.json()
 
     def test_prod_api_poll_requires_auth(self):
-        resp = requests.post(f"{PROD_URL}/api/poll", json={}, timeout=10)
+        resp = _prod_request("POST", "/api/poll", json={})
         assert resp.status_code == 401
 
 

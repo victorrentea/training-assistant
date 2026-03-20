@@ -1,0 +1,116 @@
+@startuml seq_debate_flow
+title "Whose Side Are You On?" — Debate Mode Sequence
+
+actor       "Host"          as Host
+participant "Host UI\n(host.js)" as HostUI
+participant "Backend\n(FastAPI)" as Backend
+participant "Claude API\n(Anthropic)" as Claude
+participant "Participant UI\n(participant.js)" as PaxUI
+actor       "Participant"   as Pax
+
+== Launch Debate ==
+
+Host -> HostUI : Type statement\n+ click "Launch Debate"
+HostUI -> Backend : POST /api/debate\n{statement: "Microservices > Monolith"}
+Backend -> Backend : store statement\nset phase = side_selection
+Backend --> HostUI : WS broadcast: state\n{debate, phase=side_selection}
+Backend --> PaxUI : WS broadcast: state\n{debate, phase=side_selection}
+PaxUI -> Pax : show FOR / AGAINST buttons\n(blind choice — no arguments yet)
+
+== Phase 1 — Side Selection ==
+
+Pax -> PaxUI : click FOR or AGAINST
+PaxUI -> Backend : WS: {type: debate_pick_side,\nside: "for"|"against"}
+Backend -> Backend : record side choice\n(all participants can pick freely)
+Backend --> HostUI : WS broadcast: side counts update
+Backend --> PaxUI : WS: confirmation\n"You chose FOR ✓"
+
+Host -> HostUI : Click "Close Selection"
+HostUI -> Backend : POST /api/debate/close-selection
+Backend -> Backend : auto-assign remaining\nparticipants to balance sides
+Backend --> HostUI : WS broadcast: state\n{phase=arguments, all sides assigned}
+Backend --> PaxUI : WS broadcast: state\n{your_side, phase=arguments}
+PaxUI -> Pax : show assigned side\n(may differ from preference\nfor late joiners)
+
+== Phase 2 — Arguments ==
+
+HostUI -> Host : show dual-column layout\n(LEFT=AGAINST, RIGHT=FOR)
+PaxUI -> Pax : show dual-column +\ntext input for own side
+
+Pax -> PaxUI : type argument + submit
+PaxUI -> Backend : WS: {type: debate_argument,\ntext: "Easier to scale independently"}
+Backend -> Backend : store argument\n(author, side, timestamp)\naward points to author
+Backend --> HostUI : WS broadcast: new argument\n(appears in correct column)
+Backend --> PaxUI : WS broadcast: new argument\n(all participants see it)
+
+Pax -> PaxUI : click existing argument\nto upvote
+PaxUI -> Backend : WS: {type: debate_upvote,\nargument_id: "arg_123"}
+Backend -> Backend : record upvote\n+25 pts upvoter\n+50 pts author
+Backend --> HostUI : WS broadcast: upvote count update
+Backend --> PaxUI : WS broadcast: upvote count update
+
+Host -> HostUI : Click "Next Phase"
+HostUI -> Backend : POST /api/debate/phase\n{phase: "ai_cleanup"}
+
+== Phase 3 — AI Cleanup & Augmentation ==
+
+Backend --> HostUI : WS broadcast: state\n{phase=ai_cleanup}
+Backend --> PaxUI : WS broadcast: state\n{phase=ai_cleanup, read-only}
+HostUI -> Host : show arguments read-only\n+ "Run AI" button
+
+Host -> HostUI : Click "✨ Run AI Cleanup"
+HostUI -> Backend : POST /api/debate/ai-cleanup
+Backend -> Claude : Send all arguments\n+ statement for cleanup
+Claude --> Backend : deduplicated + cleaned args\n+ new suggestions
+Backend -> Backend : update existing args\n(fix typos, deduplicate)\nadd AI args marked with ✨
+Backend --> HostUI : WS broadcast: state\n{updated arguments}
+Backend --> PaxUI : WS broadcast: state\n{updated arguments}
+HostUI -> Host : show cleaned arguments\n+ ✨ AI additions in both columns
+PaxUI -> Pax : show cleaned arguments\n+ ✨ AI additions (read-only)
+
+Host -> HostUI : Click "Next Phase"
+HostUI -> Backend : POST /api/debate/phase\n{phase: "prep"}
+
+== Phase 4 — Preparation ==
+
+note over HostUI, PaxUI
+  Host chooses: breakout rooms (external tool)
+  OR in-app thinking pause with hints
+end note
+
+Backend --> HostUI : WS broadcast: state\n{phase=prep}
+Backend --> PaxUI : WS broadcast: state\n{phase=prep}
+HostUI -> Host : show all arguments\n+ debate rules\n+ attack/defense hints
+PaxUI -> Pax : show own side's arguments\n+ debate rules + hints\n+ "Volunteer as Champion" button
+
+Pax -> PaxUI : click "Volunteer as Champion"
+PaxUI -> Backend : WS: {type: debate_volunteer}
+Backend -> Backend : first-come wins\naward 2500 pts
+Backend --> HostUI : WS broadcast:\nchampion assigned {side, name}
+Backend --> PaxUI : WS broadcast:\nchampion assigned
+PaxUI -> Pax : "🏆 You are your team's champion!"\nor "Champion: [Name]"
+
+Host -> HostUI : Click "Start Debate"
+HostUI -> Backend : POST /api/debate/phase\n{phase: "live_debate"}
+
+== Phase 5 — Live Debate ==
+
+Backend --> HostUI : WS broadcast: state\n{phase=live_debate}
+Backend --> PaxUI : WS broadcast: state\n{phase=live_debate}
+HostUI -> Host : show champions' names\n+ arguments summary\n+ debate rules on screen
+PaxUI -> Pax : show champions' names\n+ key arguments\n+ debate hints
+
+note over Host, Pax
+  Champions debate live (voice/video).
+  Host manually manages speaking turns.
+  Rules and hints remain visible on screen.
+  No countdown timer — host advances manually.
+end note
+
+Host -> HostUI : Click "End Debate"
+HostUI -> Backend : POST /api/debate/phase\n{phase: "ended"}
+Backend -> Backend : finalize scores
+Backend --> HostUI : WS broadcast: state\n{phase=ended, final scores}
+Backend --> PaxUI : WS broadcast: state\n{phase=ended, final scores}
+
+@enduml

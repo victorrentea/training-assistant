@@ -1,0 +1,7 @@
+{"type":"server-started","port":62128,"host":"127.0.0.1","url_host":"localhost","url":"http://localhost:62128","screen_dir":"/Users/victorrentea/conductor/workspaces/training-assistant/dublin/.superpowers/brainstorm/99982-1774001832"}
+{"type":"screen-added","file":"/Users/victorrentea/conductor/workspaces/training-assistant/dublin/.superpowers/brainstorm/99982-1774001832/debate-sequence-diagram.html"}
+{"type":"screen-added","file":"/Users/victorrentea/conductor/workspaces/training-assistant/dublin/.superpowers/brainstorm/99982-1774001832/debate-sequence.html"}
+{"type":"screen-added","file":"/Users/victorrentea/conductor/workspaces/training-assistant/dublin/.superpowers/brainstorm/99982-1774001832/participant-phase1.html"}
+{"type":"screen-added","file":"/Users/victorrentea/conductor/workspaces/training-assistant/dublin/.superpowers/brainstorm/99982-1774001832/participant-phase2.html"}
+{"type":"screen-added","file":"/Users/victorrentea/conductor/workspaces/training-assistant/dublin/.superpowers/brainstorm/99982-1774001832/phase3-ai-cleanup.html"}
+{"type":"server-stopped","reason":"owner process exited"}

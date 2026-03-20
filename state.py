@@ -10,6 +10,7 @@ class ActivityType(str, Enum):
     POLL = "poll"
     WORDCLOUD = "wordcloud"
     QA = "qa"
+    DEBATE = "debate"
     CODEREVIEW = "codereview"
 
 LOTR_NAMES = [
@@ -41,6 +42,7 @@ class AppState:
         self.daemon_last_seen: Optional[datetime] = None
         self.daemon_session_folder: Optional[str] = None
         self.daemon_session_notes: Optional[str] = None
+        self.notes_content: Optional[str] = None
         self.quiz_preview: Optional[dict] = None
         self.scores: dict[str, int] = {}
         self.base_scores: dict[str, int] = {}
@@ -57,9 +59,15 @@ class AppState:
         self.codereview_phase: str = "idle"  # "idle" | "selecting" | "reviewing"
         self.codereview_selections: dict[str, set[int]] = {}  # uuid → set of line numbers
         self.codereview_confirmed: set[int] = set()  # lines host confirmed
-        self.summary_points: list[str] = []
+        self.summary_points: list[dict] = []
         self.summary_updated_at: Optional[datetime] = None
         self.summary_force_requested: bool = False
+        # Debate state
+        self.debate_statement: Optional[str] = None
+        self.debate_phase: Optional[str] = None  # "side_selection"|"arguments"|"ai_cleanup"|"prep"|"live_debate"|"ended"
+        self.debate_sides: dict[str, str] = {}  # uuid → "for"|"against"
+        self.debate_arguments: list[dict] = []  # [{id, author_uuid, side, text, upvoters: set, ai_generated: bool, merged_into: str|None}]
+        self.debate_champions: dict[str, str] = {}  # "for" → uuid, "against" → uuid
 
     def suggest_name(self) -> str:
         """Return the next available LOTR name (by popularity order).

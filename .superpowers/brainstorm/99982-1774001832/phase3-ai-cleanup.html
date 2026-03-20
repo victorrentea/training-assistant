@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #1a1a2e;
+    color: #eee;
+    font-family: system-ui, -apple-system, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    padding: 16px;
+  }
+
+  .header {
+    text-align: center;
+    margin-bottom: 16px;
+  }
+  .header h2 { color: #e0e0ff; font-size: 13px; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 4px; }
+  .header .statement { color: #aaa; font-size: 14px; font-style: italic; }
+  .phase-badge {
+    display: inline-block;
+    margin-top: 8px;
+    padding: 4px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    background: #3d2e0a;
+    color: #ffd700;
+  }
+
+  .columns {
+    display: flex;
+    gap: 12px;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .column {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  .col-header {
+    padding: 10px 14px;
+    font-weight: 700;
+    font-size: 14px;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+  .col-for .col-header { background: #1a3d1a; color: #8fdf8f; border-bottom: 2px solid #2d8a2d; }
+  .col-against .col-header { background: #3d1a1a; color: #df8f8f; border-bottom: 2px solid #8a2d2d; }
+
+  .col-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .col-for .col-body { background: #0d1f0d; }
+  .col-against .col-body { background: #1f0d0d; }
+
+  .argument {
+    padding: 10px 12px;
+    border-radius: 10px;
+    font-size: 13px;
+    line-height: 1.4;
+    position: relative;
+  }
+  .col-for .argument { background: #16301a; border: 1px solid #2a5a2a; color: #c8e8c8; }
+  .col-against .argument { background: #301616; border: 1px solid #5a2a2a; color: #e8c8c8; }
+
+  .argument .author {
+    font-size: 11px;
+    opacity: 0.6;
+    margin-bottom: 4px;
+  }
+  .argument .upvote {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    margin-top: 6px;
+    padding: 3px 8px;
+    border-radius: 6px;
+    background: rgba(255,255,255,0.06);
+  }
+
+  /* AI-generated arguments */
+  .argument.ai {
+    border-style: dashed;
+    position: relative;
+  }
+  .col-for .argument.ai { border-color: #4caf50; background: #1a3d20; }
+  .col-against .argument.ai { border-color: #ef5350; background: #3d1a1d; }
+  .ai-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    color: #ffd700;
+    margin-bottom: 4px;
+  }
+
+  /* Cleaned/deduped indicator */
+  .cleaned {
+    position: relative;
+  }
+  .cleaned::after {
+    content: "cleaned";
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    font-size: 9px;
+    color: #888;
+    background: rgba(255,255,255,0.06);
+    padding: 1px 6px;
+    border-radius: 4px;
+  }
+
+  .merged-note {
+    font-size: 11px;
+    color: #666;
+    font-style: italic;
+    padding: 6px 12px;
+    text-align: center;
+  }
+
+  .mockup-label {
+    position: fixed;
+    top: 10px;
+    right: 14px;
+    background: #0f3460;
+    color: #5588cc;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    letter-spacing: 1px;
+    z-index: 10;
+  }
+
+  .note-box {
+    margin-top: 12px;
+    padding: 12px 16px;
+    background: #16213e;
+    border: 1px solid #0f3460;
+    border-radius: 10px;
+    font-size: 13px;
+    color: #aaa;
+    text-align: center;
+  }
+  .note-box strong { color: #ffd700; }
+</style>
+</head>
+<body>
+
+<span class="mockup-label">BOTH VIEWS — Phase 3</span>
+
+<div class="header">
+  <h2>⚔️ Debate: AI-Enhanced Arguments</h2>
+  <div class="statement">"Microservices are superior to monoliths for enterprise applications"</div>
+  <span class="phase-badge">✨ AI Cleanup & Augmentation</span>
+</div>
+
+<div class="columns">
+  <div class="column col-for">
+    <div class="col-header">👍 FOR</div>
+    <div class="col-body">
+      <!-- Human arguments (cleaned by AI) -->
+      <div class="argument cleaned">
+        <div class="author">Ana M.</div>
+        Independent deployment — ship faster without cross-team coordination
+        <div class="upvote">▲ 4</div>
+      </div>
+      <div class="argument cleaned">
+        <div class="author">Radu P.</div>
+        Scale only the services that need it, reducing infrastructure costs
+        <div class="upvote">▲ 2</div>
+      </div>
+      <div class="argument cleaned">
+        <div class="author">Elena D.</div>
+        Clear team ownership per service — fewer blame games, stronger accountability
+        <div class="upvote">▲ 3</div>
+      </div>
+      <div class="merged-note">↕ 2 duplicates merged above</div>
+
+      <!-- AI-generated additions -->
+      <div class="argument ai">
+        <div class="ai-badge">✨ AI suggestion</div>
+        Fault isolation — one service crashing doesn't bring down the entire system
+      </div>
+      <div class="argument ai">
+        <div class="ai-badge">✨ AI suggestion</div>
+        Enables polyglot persistence — each service picks the best database for its needs
+      </div>
+    </div>
+  </div>
+
+  <div class="column col-against">
+    <div class="col-header">👎 AGAINST</div>
+    <div class="col-body">
+      <!-- Human arguments (cleaned by AI) -->
+      <div class="argument cleaned">
+        <div class="author">Dan S.</div>
+        Distributed systems are inherently complex — network failures, eventual consistency
+        <div class="upvote">▲ 5</div>
+      </div>
+      <div class="argument cleaned">
+        <div class="author">Maria V.</div>
+        Cross-service debugging is painful without mature observability tooling
+        <div class="upvote">▲ 3</div>
+      </div>
+      <div class="argument cleaned">
+        <div class="author">Alex I.</div>
+        Most teams don't actually need independent scaling — premature optimization
+        <div class="upvote">▲ 2</div>
+      </div>
+
+      <!-- AI-generated additions -->
+      <div class="argument ai">
+        <div class="ai-badge">✨ AI suggestion</div>
+        Data consistency across services requires sagas or 2PC — significant complexity tax
+      </div>
+      <div class="argument ai">
+        <div class="ai-badge">✨ AI suggestion</div>
+        Integration testing becomes exponentially harder with more services
+      </div>
+      <div class="argument ai">
+        <div class="ai-badge">✨ AI suggestion</div>
+        Operational overhead — each service needs its own CI/CD, monitoring, and on-call
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="note-box">
+  <strong>✨ AI</strong> cleaned typos, merged duplicates, and added missing perspectives to both sides.
+  <br>Input is now read-only — review the enhanced arguments before the debate.
+</div>
+
+</body>
+</html>
