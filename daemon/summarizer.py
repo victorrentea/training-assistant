@@ -25,7 +25,7 @@ SUMMARY_TRANSCRIPT_MINUTES = 30
 
 _SUMMARY_SYSTEM_PROMPT = """\
 You are a workshop summarizer. You receive the transcript of the last portion of a live technical workshop, \
-and optionally a list of key points that were previously identified.
+optionally session notes (trainer's written agenda), and optionally a list of key points previously identified.
 
 Your job is to produce an updated list of key discussion points — concise bullets that capture \
 what was discussed, decided, or demonstrated.
@@ -39,16 +39,20 @@ and add new ones for newly discussed topics.
 - Aim for 5-15 bullets total. Fewer is better if the session is short.
 - Ignore transcription noise, filler words, and off-topic chatter.
 - Focus on technical content, decisions, and key takeaways.
+- For each bullet, indicate the source:
+  - "notes" if the point comes primarily from the SESSION NOTES (trainer's agenda/material)
+  - "discussion" if the point comes primarily from the TRANSCRIPT (what was actually said)
 
-Return ONLY a JSON array of strings. No markdown, no explanation.
-Example: ["Introduced TDD red-green-refactor cycle", "Compared mockist vs classicist testing styles"]
+Return ONLY a JSON array of objects. No markdown, no explanation.
+Example: [{"text": "Introduced TDD red-green-refactor cycle", "source": "discussion"}, \
+{"text": "Planned exercise on mocking patterns", "source": "notes"}]
 """
 
 
 def generate_summary(
     config: Config,
-    existing_points: list[str],
-) -> Optional[list[str]]:
+    existing_points: list[dict],
+) -> Optional[list[dict]]:
     """Generate updated summary points from transcript + existing bullets.
 
     Returns updated list of bullet strings, or None on failure.
@@ -109,17 +113,31 @@ def generate_summary(
             response_text = "\n".join(lines).strip()
 
         # Parse JSON array from response
-        points = json.loads(response_text)
-        if isinstance(points, list) and all(isinstance(p, str) for p in points):
-            # Always prepend today's date as the first bullet
-            date_line = f"Session date: {date.today().isoformat()}"
-            if not points or points[0] != date_line:
-                points = [date_line] + [p for p in points if not p.startswith("Session date:")]
-            print(f"[summarizer] Generated {len(points)} key points")
-            return points
-        else:
+        parsed = json.loads(response_text)
+        if not isinstance(parsed, list):
             print(f"[summarizer] Unexpected response format: {response_text[:200]}", file=sys.stderr)
             return None
+
+        # Normalize: accept both object format and legacy plain strings
+        points = []
+        for item in parsed:
+            if isinstance(item, dict) and "text" in item:
+                source = item.get("source", "discussion")
+                if source not in ("notes", "discussion"):
+                    source = "discussion"
+                points.append({"text": item["text"], "source": source})
+            elif isinstance(item, str):
+                points.append({"text": item, "source": "discussion"})
+            else:
+                print(f"[summarizer] Skipping invalid item: {item}", file=sys.stderr)
+
+        # Prepend today's date as the first bullet
+        date_text = f"Session date: {date.today().isoformat()}"
+        points = [p for p in points if not p["text"].startswith("Session date:")]
+        points.insert(0, {"text": date_text, "source": "notes"})
+
+        print(f"[summarizer] Generated {len(points)} key points")
+        return points
 
     except json.JSONDecodeError as e:
         print(f"[summarizer] Failed to parse Claude response as JSON: {e}", file=sys.stderr)

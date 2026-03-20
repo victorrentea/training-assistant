@@ -251,7 +251,12 @@
       if (timeEl) timeEl.textContent = '';
       return;
     }
-    list.innerHTML = summaryPoints.map(p => `<li>${escHtml(p)}</li>`).join('');
+    list.innerHTML = summaryPoints.map(p => {
+      const text = typeof p === 'string' ? p : p.text;
+      const source = typeof p === 'string' ? 'discussion' : (p.source || 'discussion');
+      const icon = source === 'notes' ? '✏️' : '💬';
+      return `<li>${icon} ${escHtml(text)}</li>`;
+    }).join('');
     if (timeEl && summaryUpdatedAt) {
       const d = new Date(summaryUpdatedAt);
       timeEl.textContent = 'Updated ' + d.toLocaleTimeString();

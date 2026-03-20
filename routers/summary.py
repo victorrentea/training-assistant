@@ -9,13 +9,18 @@ from state import state
 router = APIRouter()
 
 
+class SummaryPoint(BaseModel):
+    text: str
+    source: str = "discussion"  # "notes" or "discussion"
+
+
 class SummaryUpdate(BaseModel):
-    points: list[str]
+    points: list[SummaryPoint]
 
 
 @router.post("/api/summary")
 async def update_summary(body: SummaryUpdate):
-    state.summary_points = body.points
+    state.summary_points = [p.model_dump() for p in body.points]
     state.summary_updated_at = datetime.now(timezone.utc)
     await broadcast_state()
     return {"ok": True}
