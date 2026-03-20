@@ -886,3 +886,19 @@ class TestAvatarAssignment:
         assert get_avatar_filename("Tom Bombadil") == "tom-bombadil.png"
         assert get_avatar_filename("The One Ring") == "the-one-ring.png"
         assert get_avatar_filename("Grima Wormtongue") == "grima-wormtongue.png"
+
+    def test_avatar_in_participant_state_on_connect(self, session):
+        """Participant state includes my_avatar after set_name."""
+        with session.participant("Legolas") as p:
+            assert p._last_state.get("my_avatar") == "legolas.png"
+
+    def test_avatar_in_qa_question(self, session):
+        """Q&A questions include author_avatar."""
+        session._client.post("/api/activity", json={"activity": "qa"},
+                             headers=_HOST_AUTH_HEADERS)
+        with session.participant("Gimli") as p:
+            p.send({"type": "qa_submit", "text": "Test question?"})
+            msg = p._recv("state")
+            questions = msg.get("qa_questions", [])
+            assert len(questions) == 1
+            assert questions[0].get("author_avatar") == "gimli.png"
