@@ -13,6 +13,25 @@ body {
   body { padding: 1rem .75rem; }
 }
 
+/* Avatar hover preview (3x size tooltip) */
+.avatar-preview {
+  position: fixed;
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  object-fit: cover;
+  pointer-events: none;
+  z-index: 9999;
+  box-shadow: 0 4px 16px rgba(0,0,0,.5);
+  border: 2px solid var(--accent);
+  transform: translate(-50%, 20%);
+  animation: avatar-pop .2s ease-out;
+}
+@keyframes avatar-pop {
+  from { transform: translate(-50%, -110%) scale(0); opacity: 0; }
+  to   { transform: translate(-50%, -110%) scale(1); opacity: 1; }
+}
+
 h1 { display: none; }
 
 /* ── Main screen ── */
