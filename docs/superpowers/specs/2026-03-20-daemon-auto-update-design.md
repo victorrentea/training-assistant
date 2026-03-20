@@ -25,7 +25,7 @@ The daemon detects server version changes and exits with a special code. The sta
 
 - Wrap `python3 quiz_daemon.py` in a loop.
 - After daemon exits:
-  - Exit code `42`: run `git pull origin master`, then restart the loop.
+  - Exit code `42`: run `git pull`, then restart the loop. If `git pull` fails (any reason), log error and exit.
   - Exit code `0`: normal shutdown, exit the script.
   - Any other code: log error, exit the script (don't restart on crashes).
 
@@ -38,7 +38,7 @@ start-daemon.sh
        │    ├─ startup: GET /api/status → save backend_version
        │    ├─ every 3s: GET /api/status → compare
        │    └─ version changed? → cleanup → sys.exit(42)
-       ├─ exit 42? → git pull origin master → continue loop
+       ├─ exit 42? → git pull → continue loop (or exit if pull fails)
        ├─ exit 0?  → break (normal stop)
        └─ other?   → break (error)
 ```
@@ -47,4 +47,7 @@ start-daemon.sh
 
 - Server unreachable at startup: daemon starts anyway, skips version check until server is reachable.
 - Server unreachable during loop: existing error handling catches it; version check skipped that cycle.
-- `git pull` conflicts: script logs the error and exits (manual intervention needed).
+- `git pull` failure (conflicts, network, dirty working tree): script logs the error and exits (manual intervention needed).
+- Daemon always runs on `master` branch.
+- Version check is a new `/api/status` call per cycle (lightweight, public endpoint, no auth).
+- In-flight work is safe: version check runs between loop iterations, after `time.sleep`.
