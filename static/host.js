@@ -246,7 +246,7 @@
     if (!badge) return;
     badge.style.cssText = 'cursor:pointer;';
     if (summaryPoints.length) {
-      badge.textContent = `● Key Points (${summaryPoints.length})`;
+      badge.textContent = `● Points (${summaryPoints.length})`;
       badge.className = 'badge connected';
       badge.title = `${summaryPoints.length} key points — click to view`;
     } else if (_summaryGenerating) {
@@ -255,7 +255,7 @@
       badge.style.cssText = 'cursor:wait; color:var(--warn); border:1px solid var(--warn);';
       badge.title = 'Generating key points from transcript...';
     } else {
-      badge.textContent = '● Key Points';
+      badge.textContent = '● Points';
       badge.className = 'badge disconnected';
       badge.title = 'No key points yet — click to generate now';
     }
@@ -355,16 +355,16 @@
 
     el.style.cssText = 'cursor:pointer;';
     if (sessionFolder && sessionNotes) {
-      el.textContent = '● Notes';
+      el.textContent = '● .txt';
       el.className = 'badge connected';
       el.title = `${sessionFolder}/${sessionNotes}\nClick to view`;
     } else if (sessionFolder) {
-      el.textContent = '● Notes';
+      el.textContent = '● .txt';
       el.className = 'badge';
       el.style.cssText = 'cursor:pointer; color:var(--warn); border:1px solid var(--warn);';
       el.title = 'Session folder found but no notes file inside';
     } else {
-      el.textContent = '● Notes';
+      el.textContent = '● .txt';
       el.className = 'badge disconnected';
       el.title = 'No session folder found for today';
     }
