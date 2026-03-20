@@ -19,15 +19,15 @@ class EmojiAnimator {
 
         let layer = CATextLayer()
         layer.string = emoji
-        layer.fontSize = 60
+        layer.fontSize = 78
         layer.alignmentMode = .center
-        layer.frame = CGRect(x: spawnX - 35, y: spawnY, width: 70, height: 70)
+        layer.frame = CGRect(x: spawnX - 45, y: spawnY, width: 91, height: 91)
         layer.contentsScale = NSScreen.screens.first?.backingScaleFactor ?? 2.0
         hostLayer.addSublayer(layer)
 
         // Randomize duration: 2.5–4 seconds
         let duration = Double.random(in: 2.5...4.0)
-        let riseHeight: CGFloat = 450
+        let riseHeight: CGFloat = 540
 
         // Randomly pick animation style
         let style = Int.random(in: 0...2)
