@@ -1388,12 +1388,24 @@
     const snippet = document.getElementById('codereview-snippet').value;
     const langSelect = document.getElementById('codereview-language');
     const language = langSelect.value || null;
+    const smartPaste = document.getElementById('codereview-smart-paste').checked;
     if (!snippet.trim()) return alert('Please paste a code snippet');
-    await fetch('/api/codereview', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ snippet, language }),
-    });
+
+    const btn = document.querySelector('#codereview-create .btn-success');
+    const origText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = smartPaste ? 'Extracting code...' : 'Starting...';
+
+    try {
+      await fetch('/api/codereview', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ snippet, language, smart_paste: smartPaste }),
+      });
+    } finally {
+      btn.disabled = false;
+      btn.textContent = origText;
+    }
   }
 
   async function closeCodeReviewSelection() {

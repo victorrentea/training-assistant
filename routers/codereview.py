@@ -1,4 +1,7 @@
+import asyncio
+import json
 import logging
+import os
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
@@ -17,6 +20,57 @@ _CONFIRM_LINE_POINTS = 200
 class CodeReviewCreate(BaseModel):
     snippet: str
     language: str | None = None
+    smart_paste: bool = True
+
+
+_EXTRACT_PROMPT = """Extract only the code snippet from the following text.
+Remove any markdown formatting, explanations, comments about the code, or surrounding text.
+Return ONLY a JSON object with two fields:
+- "code": the extracted code (preserve original indentation, no markdown fences)
+- "language": the programming language as lowercase identifier (one of: java, python, javascript, typescript, sql, go, csharp, kotlin, bash, or null if unknown)
+
+If the input is already clean code with no surrounding text, return it as-is in the JSON format."""
+
+_SMART_PASTE_INPUT_LIMIT = 10000
+
+
+def _extract_code_with_ai(raw_snippet: str) -> tuple[str, str | None] | None:
+    """Call Claude Haiku to extract code from LLM output.
+    Returns (code, language) or None on any failure."""
+    try:
+        from anthropic import Anthropic
+        api_key = os.environ.get("ANTHROPIC_API_KEY")
+        if not api_key:
+            return None
+
+        truncated = raw_snippet[:_SMART_PASTE_INPUT_LIMIT]
+        client = Anthropic(api_key=api_key, timeout=5.0)
+        response = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=4096,
+            messages=[{"role": "user", "content": f"{_EXTRACT_PROMPT}\n\n---\n\n{truncated}"}],
+        )
+
+        text = response.content[0].text.strip()
+        # Strip markdown fences if Claude wrapped the JSON
+        if text.startswith("```"):
+            text = text.split("\n", 1)[1] if "\n" in text else text[3:]
+        if text.endswith("```"):
+            text = text[:text.rfind("```")]
+        text = text.strip()
+
+        result = json.loads(text)
+        code = result.get("code", "").strip()
+        if not code:
+            return None
+        language = result.get("language")
+        if isinstance(language, str):
+            language = language.lower()
+        logger.info("Smart paste extracted %d lines, language=%s", len(code.splitlines()), language)
+        return (code, language)
+    except Exception:
+        logger.debug("Smart paste extraction failed", exc_info=True)
+        return None
 
 
 class CodeReviewStatus(BaseModel):
@@ -32,6 +86,13 @@ async def create_codereview(body: CodeReviewCreate):
     snippet = body.snippet.strip()
     if not snippet:
         raise HTTPException(400, "Snippet cannot be empty")
+
+    detected_language = None
+    if body.smart_paste:
+        result = await asyncio.to_thread(_extract_code_with_ai, snippet)
+        if result:
+            snippet, detected_language = result
+
     lines = snippet.splitlines()
     if len(lines) > _MAX_LINES:
         raise HTTPException(400, f"Snippet cannot exceed {_MAX_LINES} lines")
@@ -39,7 +100,8 @@ async def create_codereview(body: CodeReviewCreate):
         raise HTTPException(409, "Another activity is already active")
 
     state.codereview_snippet = snippet
-    state.codereview_language = body.language
+    # Use detected language only if host chose "Auto-detect" (null)
+    state.codereview_language = body.language if body.language is not None else detected_language
     state.codereview_phase = "selecting"
     state.codereview_selections = {}
     state.codereview_confirmed = set()
