@@ -1,4 +1,3 @@
-import json
 import logging
 import random
 import uuid as uuid_mod
@@ -163,7 +162,7 @@ async def force_assign():
     return {"ok": True, "assigned": len(unassigned)}
 
 
-VALID_PHASES = {"arguments", "ai_cleanup", "prep", "live_debate"}
+VALID_PHASES = {"arguments", "ai_cleanup", "prep", "live_debate", "ended"}
 
 
 @router.post("/api/debate/phase", dependencies=[Depends(require_host_auth)])
@@ -251,98 +250,73 @@ async def end_sub_phase():
 
 @router.post("/api/debate/end-arguments", dependencies=[Depends(require_host_auth)])
 async def end_arguments():
-    """End arguments phase, run AI cleanup, then advance to prep."""
+    """End arguments phase — store AI request for daemon pickup."""
     if state.debate_phase != "arguments":
         raise HTTPException(400, "Not in arguments phase")
 
-    # Transition to ai_cleanup (visible to participants as "AI is reviewing…")
+    # Build the payload the daemon will consume
+    for_args = [{"id": a["id"], "text": a["text"]} for a in state.debate_arguments
+                if a["side"] == "for" and not a.get("merged_into")]
+    against_args = [{"id": a["id"], "text": a["text"]} for a in state.debate_arguments
+                    if a["side"] == "against" and not a.get("merged_into")]
+
+    if not for_args and not against_args:
+        # No arguments submitted — skip AI cleanup, go straight to prep
+        state.debate_phase = "prep"
+        logger.info("Arguments ended (none submitted) — skipping AI, advancing to prep")
+        await broadcast_state()
+        return {"ok": True}
+
+    state.debate_ai_request = {
+        "statement": state.debate_statement,
+        "for_args": for_args,
+        "against_args": against_args,
+    }
     state.debate_phase = "ai_cleanup"
-    logger.info("Arguments ended — running AI cleanup")
-    await broadcast_state()
-
-    # Run AI cleanup
-    try:
-        await _run_ai_cleanup()
-    except Exception as e:
-        logger.error(f"AI cleanup failed: {e}")
-        # Still advance to prep even if AI fails
-
-    # Advance to prep
-    state.debate_phase = "prep"
-    logger.info("AI cleanup done — advancing to prep")
+    logger.info("Arguments ended — waiting for daemon AI cleanup")
     await broadcast_state()
     return {"ok": True}
 
 
-async def _run_ai_cleanup():
-    """Run AI cleanup on debate arguments. Raises on failure."""
-    import os
-    from anthropic import Anthropic
+@router.get("/api/debate/ai-request", dependencies=[Depends(require_host_auth)])
+async def poll_debate_ai_request():
+    """Daemon polls this. Returns pending AI request or null, then clears it."""
+    req = state.debate_ai_request
+    state.debate_ai_request = None
+    return {"request": req}
 
-    api_key = os.environ.get("ANTHROPIC_API_KEY")
-    if not api_key:
-        raise RuntimeError("ANTHROPIC_API_KEY not set")
 
-    # Build prompt
-    for_args = [a for a in state.debate_arguments if a["side"] == "for" and not a.get("merged_into")]
-    against_args = [a for a in state.debate_arguments if a["side"] == "against" and not a.get("merged_into")]
+class DebateAiResult(BaseModel):
+    merges: list[dict] = []
+    cleaned: list[dict] = []
+    new_arguments: list[dict] = []
 
-    has_args = for_args or against_args
-    for_list = chr(10).join(f'- [{a["id"]}] {a["text"]}' for a in for_args) if for_args else "(none submitted)"
-    against_list = chr(10).join(f'- [{a["id"]}] {a["text"]}' for a in against_args) if against_args else "(none submitted)"
 
-    prompt = f"""You are helping clean up debate arguments about: "{state.debate_statement}"
-
-FOR arguments:
-{for_list}
-
-AGAINST arguments:
-{against_list}
-
-Tasks:
-1. Identify duplicates — return which argument IDs should be merged (keep the better-worded one)
-2. For each surviving argument, return a cleaned version (fix typos, make concise, preserve intent)
-3. Add 3-5 NEW arguments that participants missed (mark side as "for" or "against"), ensuring both sides are well represented{'' if has_args else ' — since no arguments were submitted, generate a balanced set of strong arguments for both sides'}
-
-Return JSON (no markdown fences):
-{{
-  "merges": [{{"keep_id": "...", "remove_ids": ["..."]}}],
-  "cleaned": [{{"id": "...", "text": "cleaned text"}}],
-  "new_arguments": [{{"side": "for"|"against", "text": "..."}}]
-}}"""
-
-    client = Anthropic(api_key=api_key)
-    response = client.messages.create(
-        model="claude-sonnet-4-20250514",
-        max_tokens=2048,
-        messages=[{"role": "user", "content": prompt}],
-    )
-
-    try:
-        result = json.loads(response.content[0].text)
-    except (json.JSONDecodeError, IndexError):
-        raise HTTPException(500, "AI returned invalid JSON")
+@router.post("/api/debate/ai-result", dependencies=[Depends(require_host_auth)])
+async def receive_ai_result(body: DebateAiResult):
+    """Daemon posts AI cleanup results. Apply and advance to prep."""
+    if state.debate_phase != "ai_cleanup":
+        raise HTTPException(400, "Not in ai_cleanup phase")
 
     # Apply merges
-    for merge in result.get("merges", []):
-        keep_id = merge["keep_id"]
+    for merge in body.merges:
+        keep_id = merge.get("keep_id")
         for remove_id in merge.get("remove_ids", []):
             for arg in state.debate_arguments:
                 if arg["id"] == remove_id:
                     arg["merged_into"] = keep_id
-                    # Transfer upvotes to kept argument
                     kept = next((a for a in state.debate_arguments if a["id"] == keep_id), None)
                     if kept:
                         kept["upvoters"] = kept["upvoters"] | arg["upvoters"]
 
     # Apply cleaned text
-    for cleaned in result.get("cleaned", []):
+    for cleaned in body.cleaned:
         for arg in state.debate_arguments:
-            if arg["id"] == cleaned["id"]:
+            if arg["id"] == cleaned.get("id"):
                 arg["text"] = cleaned["text"]
 
     # Add new AI arguments
-    for new_arg in result.get("new_arguments", []):
+    for new_arg in body.new_arguments:
         state.debate_arguments.append({
             "id": str(uuid_mod.uuid4()),
             "author_uuid": "__ai__",
@@ -353,14 +327,8 @@ Return JSON (no markdown fences):
             "merged_into": None,
         })
 
-    logger.info(f"AI cleanup done: {len(result.get('merges', []))} merges, {len(result.get('new_arguments', []))} new args")
+    logger.info(f"AI result received: {len(body.merges)} merges, {len(body.new_arguments)} new args")
 
-
-@router.post("/api/debate/ai-cleanup", dependencies=[Depends(require_host_auth)])
-async def ai_cleanup():
-    """Legacy endpoint — runs AI cleanup standalone."""
-    if state.debate_phase != "ai_cleanup":
-        raise HTTPException(400, "Not in ai_cleanup phase")
-    await _run_ai_cleanup()
+    state.debate_phase = "prep"
     await broadcast_state()
     return {"ok": True}
