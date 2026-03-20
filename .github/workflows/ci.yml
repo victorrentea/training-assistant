@@ -30,6 +30,9 @@ jobs:
       - name: JS unit tests
         run: node test_participant_js.js
 
+      - name: Generate version.js for tests
+        run: echo "window.APP_VERSION = '$(date -u '+%Y-%m-%d %H:%M')';" > static/version.js
+
       - name: E2E browser tests
         env:
           HOST_USERNAME: host
