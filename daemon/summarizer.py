@@ -15,13 +15,13 @@ import anthropic
 
 from quiz_core import (
     Config,
+    DEFAULT_TRANSCRIPT_MINUTES,
     load_transcription_files,
     extract_last_n_minutes,
     read_session_notes,
 )
 
 SUMMARY_INTERVAL_SECONDS = 5 * 60  # 5 minutes
-SUMMARY_TRANSCRIPT_MINUTES = 30
 
 _SUMMARY_SYSTEM_PROMPT = """\
 You are a workshop summarizer. You receive the transcript of the last portion of a live technical workshop, \
@@ -66,7 +66,7 @@ def generate_summary(
     if not entries:
         return None
 
-    text = extract_last_n_minutes(entries, SUMMARY_TRANSCRIPT_MINUTES)
+    text = extract_last_n_minutes(entries, DEFAULT_TRANSCRIPT_MINUTES)
     if not text:
         return None
 
@@ -79,7 +79,7 @@ def generate_summary(
         parts.append(f"SESSION NOTES (trainer's agenda):\n{notes}\n")
     if existing_points:
         parts.append(f"EXISTING KEY POINTS:\n{json.dumps(existing_points, indent=2)}\n")
-    parts.append(f"TRANSCRIPT (last {SUMMARY_TRANSCRIPT_MINUTES} minutes):\n{text}")
+    parts.append(f"TRANSCRIPT (last {DEFAULT_TRANSCRIPT_MINUTES} minutes):\n{text}")
 
     user_message = "\n---\n".join(parts)
 
