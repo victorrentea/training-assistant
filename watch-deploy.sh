@@ -99,10 +99,7 @@ notify_countdown() {
     return
   fi
   local title
-  if [ "$remaining" -le 0 ]; then
-    local overdue=$(( -remaining ))
-    title="🚀 Deploy delayed by ${overdue}s..."
-  elif [ "$remaining" -le 5 ]; then
+  if [ "$remaining" -le 5 ]; then
     title="🚀 Deploying any moment..."
   else
     title="🚀 Deploying in about ${remaining}s"
