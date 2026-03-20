@@ -7,6 +7,16 @@ body {
   margin: 0;
 }
 
+/* ── Wave shimmer on participant link ── */
+.wave-char {
+  display: inline-block;
+  animation: wave-shimmer 2.5s ease-in-out infinite;
+}
+@keyframes wave-shimmer {
+  0%, 100% { color: rgba(255,255,255,.45); }
+  40% { color: #fff; text-shadow: 0 0 6px rgba(108,99,255,.5); }
+}
+
 .badge {
   padding: 0 .85rem;
   border-radius: 20px;
@@ -45,6 +55,10 @@ body {
   position: relative;
   display: flex;
   flex-direction: column;
+}
+.host-col-left select {
+  height: 34px;
+  box-sizing: border-box;
 }
 .host-col-left .tab-content {
   flex: 1;
@@ -379,6 +393,11 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
   display: flex;
   align-items: center;
   gap: .75rem;
+}
+.quiz-gen-controls input {
+  height: 34px;
+  min-height: 34px;
+  box-sizing: border-box;
 }
 #quiz-status {
   font-size: .82rem;
