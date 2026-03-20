@@ -1142,14 +1142,13 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
 
       if (isConfirmed && isMine) {
         lineClass += ' codereview-pline-correct';
-        gutterContent = `${lineNum} ✓`;
+        gutterContent = `✓ ${lineNum}`;
         badge = '<span class="codereview-badge codereview-badge-correct">+200</span>';
       } else if (isConfirmed && !isMine) {
         lineClass += ' codereview-pline-confirmed';
-        gutterContent = `${lineNum} ✓`;
+        gutterContent = `✓ ${lineNum}`;
       } else if (isMine) {
         lineClass += ' codereview-pline-selected';
-        gutterContent = `${lineNum} ●`;
       }
 
       if (isSelecting) {
