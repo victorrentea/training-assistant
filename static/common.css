@@ -366,14 +366,15 @@
 .debate-sub-phase-side-against { color: #e74c3c; }
 .debate-sub-phase-side-both { color: var(--warn); }
 .debate-sub-duration {
-  width: 3.2rem;
+  width: 2.8rem;
   background: var(--surface2);
   border: 1px solid var(--border);
   color: var(--text);
   border-radius: 4px;
   text-align: center;
-  font-size: .75rem;
-  padding: .1rem .2rem;
+  font-size: .7rem;
+  padding: .1rem .15rem;
+  height: 1.4rem;
 }
 .debate-sub-check {
   color: var(--accent2);
