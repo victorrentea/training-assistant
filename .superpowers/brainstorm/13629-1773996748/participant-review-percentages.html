@@ -1,0 +1,176 @@
+<h2>How to show others' selections during review?</h2>
+<p class="subtitle">Review phase — participant sees their picks + aggregate data</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Percentage badges on the right</h3>
+      <p>Small percentage on the right edge of each line — how many participants selected it. Only shown for lines that got at least 1 selection.</p>
+      <div style="margin-top:12px; font-family:monospace; font-size:13px; line-height:2.2; background:#1e1e2e; border-radius:8px; overflow:hidden; padding:8px 0;">
+        <div style="display:flex; padding:2px 12px;">
+          <span style="color:#585b70; width:24px; text-align:right; margin-right:12px;">1</span>
+          <span style="color:#cdd6f4; flex:1;"><span style="color:#89b4fa">public</span> <span style="color:#a6e3a1">String</span> process(<span style="color:#a6e3a1">String</span> input) {</span>
+        </div>
+        <div style="display:flex; padding:2px 12px; background:rgba(137,180,250,0.1); border-left:3px solid #585b70;">
+          <span style="color:#585b70; width:24px; text-align:right; margin-right:12px;">2●</span>
+          <span style="color:#cdd6f4; flex:1;">String result = input.trim().toLowerCase();</span>
+          <span style="color:#7f849c; font-size:11px; margin-left:8px; white-space:nowrap;">44%</span>
+        </div>
+        <div style="display:flex; padding:2px 12px;">
+          <span style="color:#585b70; width:24px; text-align:right; margin-right:12px;">3</span>
+          <span style="color:#cdd6f4; flex:1;"><span style="color:#89b4fa">if</span> (result.isEmpty()) {</span>
+        </div>
+        <div style="display:flex; padding:2px 12px; background:rgba(166,227,161,0.2); border-left:3px solid #a6e3a1;">
+          <span style="color:#a6e3a1; width:24px; text-align:right; margin-right:12px;">4✓</span>
+          <span style="color:#cdd6f4; flex:1;"><span style="color:#89b4fa">return</span> <span style="color:#fab387">null</span>;</span>
+          <span style="color:#a6e3a1; font-size:11px; margin-left:8px; white-space:nowrap;">69%</span>
+        </div>
+        <div style="display:flex; padding:2px 12px;">
+          <span style="color:#585b70; width:24px; text-align:right; margin-right:12px;">5</span>
+          <span style="color:#cdd6f4; flex:1;">}</span>
+        </div>
+        <div style="display:flex; padding:2px 12px;">
+          <span style="color:#585b70; width:24px; text-align:right; margin-right:12px;">6</span>
+          <span style="color:#cdd6f4; flex:1;">List&lt;String&gt; parts = result.split(",");</span>
+          <span style="color:#7f849c; font-size:11px; margin-left:8px; white-space:nowrap;">6%</span>
+        </div>
+        <div style="display:flex; padding:2px 12px;">
+          <span style="color:#585b70; width:24px; text-align:right; margin-right:12px;">7</span>
+          <span style="color:#cdd6f4; flex:1;"><span style="color:#89b4fa">for</span> (int i = 0; i &lt;= parts.size(); i++) {</span>
+          <span style="color:#7f849c; font-size:11px; margin-left:8px; white-space:nowrap;">88%</span>
+        </div>
+        <div style="display:flex; padding:2px 12px;">
+          <span style="color:#585b70; width:24px; text-align:right; margin-right:12px;">8</span>
+          <span style="color:#cdd6f4; flex:1;">    System.out.println(parts.get(i));</span>
+        </div>
+        <div style="display:flex; padding:2px 12px;">
+          <span style="color:#585b70; width:24px; text-align:right; margin-right:12px;">9</span>
+          <span style="color:#cdd6f4; flex:1;">}</span>
+        </div>
+        <div style="display:flex; padding:2px 12px;">
+          <span style="color:#585b70; width:24px; text-align:right; margin-right:12px;">10</span>
+          <span style="color:#cdd6f4; flex:1;"><span style="color:#89b4fa">return</span> result + result;</span>
+          <span style="color:#7f849c; font-size:11px; margin-left:8px; white-space:nowrap;">28%</span>
+        </div>
+        <div style="display:flex; padding:2px 12px;">
+          <span style="color:#585b70; width:24px; text-align:right; margin-right:12px;">11</span>
+          <span style="color:#cdd6f4; flex:1;">}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Thin horizontal bar behind each line</h3>
+      <p>A subtle background bar whose width represents the percentage. No extra text — the visual weight speaks for itself. Like a mini bar chart embedded in the code.</p>
+      <div style="margin-top:12px; font-family:monospace; font-size:13px; line-height:2.2; background:#1e1e2e; border-radius:8px; overflow:hidden; padding:8px 0;">
+        <div style="display:flex; padding:2px 12px; position:relative;">
+          <span style="color:#585b70; width:24px; text-align:right; margin-right:12px;">1</span>
+          <span style="color:#cdd6f4;"><span style="color:#89b4fa">public</span> <span style="color:#a6e3a1">String</span> process(<span style="color:#a6e3a1">String</span> input) {</span>
+        </div>
+        <div style="display:flex; padding:2px 12px; position:relative; border-left:3px solid #585b70;">
+          <div style="position:absolute; left:0; top:0; bottom:0; width:44%; background:rgba(148,130,196,0.10);"></div>
+          <span style="color:#585b70; width:24px; text-align:right; margin-right:12px; position:relative;">2●</span>
+          <span style="color:#cdd6f4; position:relative;">String result = input.trim().toLowerCase();</span>
+        </div>
+        <div style="display:flex; padding:2px 12px; position:relative;">
+          <span style="color:#585b70; width:24px; text-align:right; margin-right:12px;">3</span>
+          <span style="color:#cdd6f4;"><span style="color:#89b4fa">if</span> (result.isEmpty()) {</span>
+        </div>
+        <div style="display:flex; padding:2px 12px; position:relative; border-left:3px solid #a6e3a1;">
+          <div style="position:absolute; left:0; top:0; bottom:0; width:69%; background:rgba(148,130,196,0.10);"></div>
+          <span style="color:#a6e3a1; width:24px; text-align:right; margin-right:12px; position:relative;">4✓</span>
+          <span style="color:#cdd6f4; position:relative;"><span style="color:#89b4fa">return</span> <span style="color:#fab387">null</span>;</span>
+        </div>
+        <div style="display:flex; padding:2px 12px;">
+          <span style="color:#585b70; width:24px; text-align:right; margin-right:12px;">5</span>
+          <span style="color:#cdd6f4;">}</span>
+        </div>
+        <div style="display:flex; padding:2px 12px; position:relative;">
+          <div style="position:absolute; left:0; top:0; bottom:0; width:6%; background:rgba(148,130,196,0.10);"></div>
+          <span style="color:#585b70; width:24px; text-align:right; margin-right:12px; position:relative;">6</span>
+          <span style="color:#cdd6f4; position:relative;">List&lt;String&gt; parts = result.split(",");</span>
+        </div>
+        <div style="display:flex; padding:2px 12px; position:relative;">
+          <div style="position:absolute; left:0; top:0; bottom:0; width:88%; background:rgba(148,130,196,0.10);"></div>
+          <span style="color:#585b70; width:24px; text-align:right; margin-right:12px; position:relative;">7</span>
+          <span style="color:#cdd6f4; position:relative;"><span style="color:#89b4fa">for</span> (int i = 0; i &lt;= parts.size(); i++) {</span>
+        </div>
+        <div style="display:flex; padding:2px 12px;">
+          <span style="color:#585b70; width:24px; text-align:right; margin-right:12px;">8</span>
+          <span style="color:#cdd6f4;">    System.out.println(parts.get(i));</span>
+        </div>
+        <div style="display:flex; padding:2px 12px;">
+          <span style="color:#585b70; width:24px; text-align:right; margin-right:12px;">9</span>
+          <span style="color:#cdd6f4;">}</span>
+        </div>
+        <div style="display:flex; padding:2px 12px; position:relative;">
+          <div style="position:absolute; left:0; top:0; bottom:0; width:28%; background:rgba(148,130,196,0.10);"></div>
+          <span style="color:#585b70; width:24px; text-align:right; margin-right:12px; position:relative;">10</span>
+          <span style="color:#cdd6f4; position:relative;"><span style="color:#89b4fa">return</span> result + result;</span>
+        </div>
+        <div style="display:flex; padding:2px 12px;">
+          <span style="color:#585b70; width:24px; text-align:right; margin-right:12px;">11</span>
+          <span style="color:#cdd6f4;">}</span>
+        </div>
+      </div>
+      <p style="color:#a0a0b0; font-size:12px; margin-top:8px;">Purple bar = % of participants who selected this line</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Both — bar + percentage</h3>
+      <p>Combine the subtle background bar with the percentage number. Maximum clarity.</p>
+      <div style="margin-top:12px; font-family:monospace; font-size:13px; line-height:2.2; background:#1e1e2e; border-radius:8px; overflow:hidden; padding:8px 0;">
+        <div style="display:flex; padding:2px 12px; position:relative;">
+          <span style="color:#585b70; width:24px; text-align:right; margin-right:12px;">1</span>
+          <span style="color:#cdd6f4; flex:1;"><span style="color:#89b4fa">public</span> <span style="color:#a6e3a1">String</span> process(<span style="color:#a6e3a1">String</span> input) {</span>
+        </div>
+        <div style="display:flex; padding:2px 12px; position:relative; border-left:3px solid #585b70;">
+          <div style="position:absolute; left:0; top:0; bottom:0; width:44%; background:rgba(148,130,196,0.10);"></div>
+          <span style="color:#585b70; width:24px; text-align:right; margin-right:12px; position:relative;">2●</span>
+          <span style="color:#cdd6f4; flex:1; position:relative;">String result = input.trim().toLowerCase();</span>
+          <span style="color:#7f849c; font-size:11px; margin-left:8px; white-space:nowrap; position:relative;">44%</span>
+        </div>
+        <div style="display:flex; padding:2px 12px;">
+          <span style="color:#585b70; width:24px; text-align:right; margin-right:12px;">3</span>
+          <span style="color:#cdd6f4; flex:1;"><span style="color:#89b4fa">if</span> (result.isEmpty()) {</span>
+        </div>
+        <div style="display:flex; padding:2px 12px; position:relative; border-left:3px solid #a6e3a1;">
+          <div style="position:absolute; left:0; top:0; bottom:0; width:69%; background:rgba(148,130,196,0.10);"></div>
+          <span style="color:#a6e3a1; width:24px; text-align:right; margin-right:12px; position:relative;">4✓</span>
+          <span style="color:#cdd6f4; flex:1; position:relative;"><span style="color:#89b4fa">return</span> <span style="color:#fab387">null</span>;</span>
+          <span style="color:#a6e3a1; font-size:11px; margin-left:8px; white-space:nowrap; position:relative;">69%</span>
+        </div>
+        <div style="display:flex; padding:2px 12px;">
+          <span style="color:#585b70; width:24px; text-align:right; margin-right:12px;">5</span>
+          <span style="color:#cdd6f4; flex:1;">}</span>
+        </div>
+        <div style="display:flex; padding:2px 12px; position:relative;">
+          <div style="position:absolute; left:0; top:0; bottom:0; width:6%; background:rgba(148,130,196,0.10);"></div>
+          <span style="color:#585b70; width:24px; text-align:right; margin-right:12px; position:relative;">6</span>
+          <span style="color:#cdd6f4; flex:1; position:relative;">List&lt;String&gt; parts = result.split(",");</span>
+          <span style="color:#7f849c; font-size:11px; margin-left:8px; white-space:nowrap; position:relative;">6%</span>
+        </div>
+        <div style="display:flex; padding:2px 12px; position:relative;">
+          <div style="position:absolute; left:0; top:0; bottom:0; width:88%; background:rgba(148,130,196,0.10);"></div>
+          <span style="color:#585b70; width:24px; text-align:right; margin-right:12px; position:relative;">7</span>
+          <span style="color:#cdd6f4; flex:1; position:relative;"><span style="color:#89b4fa">for</span> (int i = 0; i &lt;= parts.size(); i++) {</span>
+          <span style="color:#7f849c; font-size:11px; margin-left:8px; white-space:nowrap; position:relative;">88%</span>
+        </div>
+        <div style="display:flex; padding:2px 12px;">
+          <span style="color:#585b70; width:24px; text-align:right; margin-right:12px;">8-11</span>
+          <span style="color:#585b70;">...</span>
+        </div>
+      </div>
+      <p style="color:#a0a0b0; font-size:12px; margin-top:8px;">Bar shows relative weight, number gives precision</p>
+    </div>
+  </div>
+</div>
+
+<p class="subtitle" style="margin-top:24px;">Note: percentages are only revealed during the review phase, not while selecting</p>
