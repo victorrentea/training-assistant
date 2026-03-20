@@ -1443,7 +1443,6 @@
     { key: 'arguments',      num: 2, label: 'Arguments' },
     { key: 'prep',           num: 3, label: 'Preparation' },
     { key: 'live_debate',    num: 4, label: 'Live Debate' },
-    { key: 'ended',          num: 5, label: 'Ended' },
   ];
 
   function renderDebatePhaseStepper(currentPhase) {

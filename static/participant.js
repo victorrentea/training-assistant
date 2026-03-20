@@ -939,11 +939,10 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
 
   // ── Debate rendering ──
   const DEBATE_PHASES = [
-    { key: 'side_selection', num: 1, label: 'Pick Sides',   desc: 'Choose which side you want to defend.' },
-    { key: 'arguments',      num: 2, label: 'Arguments',    desc: 'Submit arguments to support your side.' },
-    { key: 'prep',           num: 3, label: 'Preparation',  desc: 'Review arguments and volunteer as champion.' },
-    { key: 'live_debate',    num: 4, label: 'Live Debate',  desc: 'Champions are debating live!' },
-    { key: 'ended',          num: 5, label: 'Ended',        desc: 'The debate is over. Thanks for participating!' },
+    { key: 'side_selection', num: 1, label: 'Pick Sides' },
+    { key: 'arguments',      num: 2, label: 'Arguments' },
+    { key: 'prep',           num: 3, label: 'Preparation' },
+    { key: 'live_debate',    num: 4, label: 'Live Debate' },
   ];
 
   function renderDebatePhaseStepper(currentPhase) {
@@ -975,13 +974,9 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     }
 
     const sideIcon = mySide === 'for' ? '👍' : mySide === 'against' ? '👎' : '';
-    const phaseInfo = DEBATE_PHASES.find(p => p.key === displayPhase) || { num: '?', label: displayPhase, desc: '' };
-    const phaseDesc = phase === 'ai_cleanup' ? '✨ AI is enriching arguments…' : phaseInfo.desc;
 
     let html = `<div class="debate-header">
       <div class="debate-title">⚔️ Debate</div>
-      <div class="debate-phase-badge">Phase ${phaseInfo.num}: ${phaseInfo.label}</div>
-      <div class="debate-phase-desc">${phaseDesc}</div>
     </div>`;
     html += renderDebatePhaseStepper(displayPhase);
     html += `<div class="debate-statement-row">
