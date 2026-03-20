@@ -596,6 +596,71 @@ class TestQA:
 
 
 # ---------------------------------------------------------------------------
+# TestPollDownload
+# ---------------------------------------------------------------------------
+
+class TestPollDownload:
+
+    def test_download_captures_two_polls_with_correct_answers(self, host: HostPage, pax: ParticipantPage):
+        """
+        Create 2 polls, vote, close, mark correct answers.
+        Verify the download text includes both questions with ✅ on correct options.
+        """
+        pax.join("Zara")
+
+        # Ensure poll tab is active (previous tests may have switched to Q&A)
+        host._page.click("text=Poll")
+
+        # --- Poll 1: single-select ---
+        host.create_poll("What is 2+2?", ["Three", "Four", "Five"])
+        expect(pax._page.locator(".option-btn")).to_have_count(3, timeout=5000)
+        pax.vote_for("Four")
+        host.close_poll()
+        host.mark_correct("Four")
+
+        # Wait for poll history to be recorded in localStorage
+        host._page.wait_for_timeout(500)
+        history = host.get_poll_history()
+        assert len(history) >= 1, f"Expected at least 1 poll in history, got {len(history)}"
+
+        # Remove poll to make room for the next one
+        host._page.click("text=Remove question")
+        host._page.wait_for_timeout(500)
+
+        # --- Poll 2: single-select ---
+        host.create_poll("Capital of France?", ["Berlin", "Paris", "Rome", "Madrid"])
+        expect(pax._page.locator(".option-btn")).to_have_count(4, timeout=5000)
+        pax.vote_for("Paris")
+        host.close_poll()
+        host.mark_correct("Paris")
+
+        host._page.wait_for_timeout(500)
+        history = host.get_poll_history()
+        assert len(history) >= 2, f"Expected at least 2 polls in history, got {len(history)}"
+
+        # Verify download text content
+        text = host.get_download_text()
+        assert "What is 2+2?" in text
+        assert "Capital of France?" in text
+
+        # Check correct answers are marked with ✅
+        lines = text.split("\n")
+        # Poll 1: option B (Four) should have ✅
+        b_line_poll1 = [l for l in lines if l.strip().startswith("B.") and "Four" in l]
+        assert any("✅" in l for l in b_line_poll1), f"Option 'Four' should be marked correct: {b_line_poll1}"
+        # Poll 1: options A (Three), C (Five) should NOT have ✅
+        a_line_poll1 = [l for l in lines if l.strip().startswith("A.") and "Three" in l]
+        assert all("✅" not in l for l in a_line_poll1), f"Option 'Three' should not be marked correct"
+
+        # Poll 2: option B (Paris) should have ✅
+        b_line_poll2 = [l for l in lines if l.strip().startswith("B.") and "Paris" in l]
+        assert any("✅" in l for l in b_line_poll2), f"Option 'Paris' should be marked correct: {b_line_poll2}"
+        # Poll 2: options A, C, D should NOT have ✅
+        non_correct = [l for l in lines if any(c in l for c in ["Berlin", "Rome", "Madrid"]) and l.strip().startswith(("A.", "C.", "D."))]
+        assert all("✅" not in l for l in non_correct), f"Non-correct options should not be marked: {non_correct}"
+
+
+# ---------------------------------------------------------------------------
 # Production smoke tests
 # ---------------------------------------------------------------------------
 

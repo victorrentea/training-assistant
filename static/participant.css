@@ -152,7 +152,10 @@ h1 { display: none; }
   transition: border-color .2s, transform .1s;
 }
 .option-btn:hover:not(:disabled) { border-color: var(--accent); transform: translateX(3px); }
+.option-btn.focused { border-color: var(--accent); outline: 2px solid var(--accent); outline-offset: -2px; }
 .option-btn:disabled { cursor: default; }
+
+.multi-check { font-size: 1.05em; margin-right: .15em; }
 
 @media (max-width: 480px) {
   .option-btn { font-size: .9rem; padding: .75rem .9rem; }
