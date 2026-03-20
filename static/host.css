@@ -727,6 +727,7 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
     display: flex;
     padding: 2px 12px;
     transition: background 0.15s;
+    cursor: pointer;
 }
 
 .codereview-line-clickable {
