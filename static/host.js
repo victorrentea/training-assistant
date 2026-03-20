@@ -1880,13 +1880,11 @@
 
     return `<div class="debate-columns">
       <div class="debate-col debate-col-against">
-        <h3 class="debate-col-header">👎</h3>
         ${champAgainst}
         ${againstArgs.map(renderArg).join('')}
         ${Array(mergedAgainstCount).fill('').map(renderMerged).join('')}
       </div>
       <div class="debate-col debate-col-for">
-        <h3 class="debate-col-header">👍</h3>
         ${champFor}
         ${forArgs.map(renderArg).join('')}
         ${Array(mergedForCount).fill('').map(renderMerged).join('')}
