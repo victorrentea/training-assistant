@@ -110,11 +110,16 @@ h1 { display: none; }
   padding: .3rem 0;
   transition: opacity .5s, color .3s;
   color: var(--accent);
-  text-decoration: underline;
   cursor: pointer;
 }
 .onboarding-item:hover:not(.done) {
   opacity: .8;
+}
+.onboarding-item input[type=checkbox] {
+  pointer-events: none;
+  vertical-align: middle;
+  margin-right: .3rem;
+  accent-color: var(--accent2);
 }
 .onboarding-item.done {
   color: var(--accent2);
