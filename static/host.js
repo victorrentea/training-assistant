@@ -246,16 +246,16 @@
     if (!badge) return;
     badge.style.cssText = 'cursor:pointer;';
     if (summaryPoints.length) {
-      badge.textContent = `● Points (${summaryPoints.length})`;
+      badge.textContent = `Points (${summaryPoints.length})`;
       badge.className = 'badge connected';
       badge.title = `${summaryPoints.length} key points — click to view`;
     } else if (_summaryGenerating) {
-      badge.textContent = '● Generating...';
+      badge.textContent = 'Generating...';
       badge.className = 'badge';
       badge.style.cssText = 'cursor:wait; color:var(--warn); border:1px solid var(--warn);';
       badge.title = 'Generating key points from transcript...';
     } else {
-      badge.textContent = '● Points';
+      badge.textContent = 'Points';
       badge.className = 'badge disconnected';
       badge.title = 'No key points yet — click to generate now';
     }
@@ -300,7 +300,7 @@
 
   function setBadge(ok) {
     const b = document.getElementById('ws-badge');
-    b.textContent = ok ? '● Server' : '● Server';
+    b.textContent = ok ? 'Server' : 'Server';
     b.className = `badge ${ok ? 'connected' : 'disconnected'}`;
   }
 
@@ -309,7 +309,7 @@
     if (!el) return;
 
     if (!lastSeenIso) {
-      el.textContent = '● Agent';
+      el.textContent = 'Agent';
       el.className = 'badge disconnected';
       el.title = 'Never connected — start with ./start-daemon.sh';
       return;
@@ -319,11 +319,11 @@
     const agoText = ago < 60 ? `${ago}s ago` : `${Math.round(ago/60)}m ago`;
 
     if (connected) {
-      el.textContent = '● Agent';
+      el.textContent = 'Agent';
       el.className = 'badge connected';
       el.title = `Connected (last seen ${agoText})`;
     } else {
-      el.textContent = '● Agent';
+      el.textContent = 'Agent';
       el.className = 'badge';
       el.style.cssText = 'color:var(--warn);border:1px solid var(--warn);';
       el.title = `Connection lost (last seen ${agoText})`;
@@ -335,11 +335,11 @@
     if (!el) return;
 
     if (lineCount > 0) {
-      el.textContent = '● 💬';
+      el.textContent = '💬';
       el.className = 'badge connected';
       el.title = `${lineCount} lines in last 30 min / ${totalLines} today\nLatest at ${latestTs}`;
     } else {
-      el.textContent = '● 💬';
+      el.textContent = '💬';
       el.className = 'badge disconnected';
       el.title = latestTs
         ? `No transcription since ${latestTs}\n${totalLines} lines today`
@@ -355,16 +355,16 @@
 
     el.style.cssText = 'cursor:pointer;';
     if (sessionFolder && sessionNotes) {
-      el.textContent = '● .txt';
+      el.textContent = '.txt';
       el.className = 'badge connected';
       el.title = `${sessionFolder}/${sessionNotes}\nClick to view`;
     } else if (sessionFolder) {
-      el.textContent = '● .txt';
+      el.textContent = '.txt';
       el.className = 'badge';
       el.style.cssText = 'cursor:pointer; color:var(--warn); border:1px solid var(--warn);';
       el.title = 'Session folder found but no notes file inside';
     } else {
-      el.textContent = '● .txt';
+      el.textContent = '.txt';
       el.className = 'badge disconnected';
       el.title = 'No session folder found for today';
     }
