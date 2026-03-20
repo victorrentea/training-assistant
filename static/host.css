@@ -802,3 +802,13 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
     color: var(--warn);
     min-width: 48px;
 }
+
+.conference-qr-container {
+  display: none;
+  text-align: center;
+  padding: 1rem 0;
+  flex: 1;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}

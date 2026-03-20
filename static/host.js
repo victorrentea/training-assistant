@@ -15,6 +15,7 @@
   let summaryUpdatedAt = null;
 
   let _hostWcDebounceTimer = null;
+  let currentMode = 'workshop';
   const versionReloadGuard = window.createVersionReloadGuard
     ? window.createVersionReloadGuard({ countdownSeconds: 5 })
     : null;
@@ -184,6 +185,14 @@
           renderHostCodeReview(msg.codereview);
         }
         updateSummary(msg.summary_points, msg.summary_updated_at);
+        if (msg.mode) {
+          currentMode = msg.mode;
+          renderMode(msg.mode);
+        }
+        const confPax = document.getElementById('conference-pax-count');
+        if (confPax && currentMode === 'conference') {
+          confPax.textContent = '👥 ' + (names ? names.length : 0);
+        }
       } else if (msg.type === 'vote_update') {
         voteCounts = msg.vote_counts || {};
         totalVotes = msg.total_votes || 0;
@@ -325,6 +334,53 @@
     const out = (usage.output_tokens || 0).toLocaleString();
     badge.title = 'Tokens: ' + inp + ' in / ' + out + ' out';
     badge.className = 'badge ' + (cost > 5 ? 'error' : cost > 1 ? 'warning' : 'connected');
+  }
+
+  async function toggleMode() {
+    const newMode = (currentMode === 'workshop') ? 'conference' : 'workshop';
+    await fetch('/api/mode', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mode: newMode }),
+    });
+  }
+
+  function renderMode(mode) {
+    const badge = document.getElementById('mode-badge');
+    if (!badge) return;
+    badge.textContent = mode === 'conference' ? '🎤' : '🎓';
+    badge.title = mode === 'conference' ? 'Conference mode — click to switch to Workshop' : 'Workshop mode — click to switch to Conference';
+    badge.className = 'badge ' + (mode === 'conference' ? 'error' : 'connected');
+    applyConferenceLayout(mode === 'conference');
+  }
+
+  function applyConferenceLayout(isConference) {
+    const rightCol = document.querySelector('.host-col-right');
+    const grid = document.querySelector('.host-columns');
+    const confQR = document.getElementById('conference-qr');
+    const confPax = document.getElementById('conference-pax-count');
+    const debateTab = document.getElementById('tab-debate');
+
+    if (isConference) {
+      rightCol.style.display = 'none';
+      grid.style.gridTemplateColumns = '25% 1fr';
+      confQR.style.display = 'flex';
+      confPax.style.display = '';
+      if (debateTab) debateTab.style.display = 'none';
+      // Generate QR in left panel
+      const qrContainer = document.getElementById('conference-qr-code');
+      qrContainer.innerHTML = '';
+      const link = document.getElementById('participant-link');
+      if (link && link.href && typeof QRCode !== 'undefined') {
+        new QRCode(qrContainer, { text: link.href, width: 160, height: 160, colorDark: '#000', colorLight: '#fff' });
+      }
+    } else {
+      rightCol.style.display = '';
+      grid.style.gridTemplateColumns = '25% 1fr 25%';
+      confQR.style.display = 'none';
+      confPax.style.display = 'none';
+      if (debateTab) debateTab.style.display = '';
+    }
   }
 
   function renderDaemonStatus(connected, lastSeenIso) {
