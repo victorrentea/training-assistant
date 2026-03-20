@@ -14,7 +14,6 @@ from messaging import (
     send_state_to_participant,
     send_state_to_host,
     send_emoji_to_overlay,
-    send_emoji_to_host,
 )
 from metrics import (
     ws_connections_active,
@@ -24,7 +23,7 @@ from metrics import (
     qa_questions_total,
     qa_upvotes_total,
 )
-from state import state, ActivityType, assign_avatar, refresh_avatar
+from state import state, ActivityType, assign_avatar
 from messaging import participant_ids
 from routers.debate import auto_assign_remaining
 
@@ -84,17 +83,9 @@ async def websocket_endpoint(websocket: WebSocket, participant_id: str):
 
     # In conference mode, auto-name and mark as named immediately
     if state.mode == "conference" and not named:
-        from names import assign_conference_name, compute_letter_avatar
-        char_name, universe = assign_conference_name(state)
-        state.participant_names[pid] = char_name
-        state.participant_universes[pid] = universe
-        letters, color = compute_letter_avatar(char_name)
-        state.participant_avatars[pid] = f"letter:{letters}:{color}"
+        state.participant_names[pid] = ""
         named = True
         await websocket.send_text(json.dumps(build_participant_state(pid)))
-        if state.leaderboard_active:
-            from messaging import broadcast_leaderboard
-            await broadcast_leaderboard()
 
     try:
         while True:
@@ -127,9 +118,6 @@ async def websocket_endpoint(websocket: WebSocket, participant_id: str):
                     state.debate_auto_assigned.add(pid)
                     logger.info(f"Late joiner {name} auto-assigned to {state.debate_sides[pid]}")
                 await send_state_to_participant(websocket, pid)
-                if state.leaderboard_active:
-                    from messaging import broadcast_leaderboard
-                    await broadcast_leaderboard()
                 await broadcast_participant_update()
                 if not is_host and state.debate_phase:
                     await broadcast_state()
@@ -139,17 +127,9 @@ async def websocket_endpoint(websocket: WebSocket, participant_id: str):
                 # Allow rename
                 name = str(data.get("name", "")).strip()[:32]
                 if name:
-                    if state.mode == "conference":
-                        # In conference mode, update name + letter avatar (no image avatars)
-                        from names import compute_letter_avatar
-                        state.participant_names[pid] = name
-                        state.participant_universes[pid] = ""
-                        letters, color = compute_letter_avatar(name)
-                        state.participant_avatars[pid] = f"letter:{letters}:{color}"
-                    else:
-                        state.participant_names[pid] = name
-                        if not is_host:
-                            assign_avatar(state, pid, name)  # no-op if already assigned
+                    state.participant_names[pid] = name
+                    if not is_host:
+                        assign_avatar(state, pid, name)  # no-op if already assigned
                     await broadcast_participant_update()
 
             elif msg_type == "location":
@@ -339,12 +319,6 @@ async def websocket_endpoint(websocket: WebSocket, participant_id: str):
                 emoji = str(data.get("emoji", "")).strip()
                 if emoji and len(emoji) <= 4:
                     await send_emoji_to_overlay(emoji)
-                    await send_emoji_to_host(emoji)
-
-            elif msg_type == "refresh_avatar":
-                new_avatar = refresh_avatar(state, pid)
-                if new_avatar:
-                    await broadcast_state()
 
             elif msg_type == "codereview_deselect":
                 line = data.get("line")
@@ -359,9 +333,7 @@ async def websocket_endpoint(websocket: WebSocket, participant_id: str):
 
 
     except WebSocketDisconnect:
-        # Only remove if the stored WS is still ours (avoids race on reconnect-kick)
-        if state.participants.get(pid) is websocket:
-            state.participants.pop(pid, None)
+        state.participants.pop(pid, None)
         state.locations.pop(pid, None)
         state.vote_times.pop(pid, None)
         ws_connections_active.labels(role=role).dec()
