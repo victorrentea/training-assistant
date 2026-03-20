@@ -1576,7 +1576,7 @@
       } else if (isActive && p.key === 'side_selection') {
         // No Next button — phase ends via Force Assign or auto-advance
       } else if (isActive && p.key === 'arguments') {
-        launchBtn = `<button class="btn btn-primary btn-sm" onclick="debateEndArguments()">End Phase 🌟🌟</button>`;
+        launchBtn = `<button class="btn btn-primary btn-sm" onclick="debateEndArguments()">End Phase ✨</button>`;
       } else if (isActive && p.key !== 'ended') {
         const nextPhase = DEBATE_PHASES[i + 1];
         if (nextPhase) {
