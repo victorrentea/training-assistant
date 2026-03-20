@@ -48,9 +48,13 @@ def create_message(
     messages: list,
     system: str = "",
     tools: list | None = None,
+    timeout: float | None = None,
 ) -> anthropic.types.Message:
     """Thin wrapper around anthropic.Anthropic().messages.create that tracks tokens."""
-    client = anthropic.Anthropic(api_key=api_key)
+    client_kwargs = {"api_key": api_key}
+    if timeout is not None:
+        client_kwargs["timeout"] = timeout
+    client = anthropic.Anthropic(**client_kwargs)
     kwargs = dict(model=model, max_tokens=max_tokens, messages=messages)
     if system:
         kwargs["system"] = system
