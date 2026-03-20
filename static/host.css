@@ -56,6 +56,10 @@ body {
   display: flex;
   flex-direction: column;
 }
+.host-col-left select {
+  height: 34px;
+  box-sizing: border-box;
+}
 .host-col-left .tab-content {
   flex: 1;
   min-height: 0;
@@ -390,9 +394,7 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
   align-items: center;
   gap: .75rem;
 }
-.quiz-gen-controls input,
-.quiz-gen-controls select,
-.quiz-gen-controls .btn {
+.quiz-gen-controls input {
   height: 34px;
   min-height: 34px;
   box-sizing: border-box;
