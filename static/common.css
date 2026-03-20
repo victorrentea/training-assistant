@@ -246,3 +246,93 @@
   opacity: .4;
   font-size: .7rem;
 }
+
+/* ── Debate Host Phase Chapters ── */
+.debate-chapter {
+  padding: .4rem .6rem;
+  margin-bottom: .25rem;
+  border-radius: 8px;
+  border-left: 3px solid transparent;
+  opacity: .45;
+  transition: all .2s;
+}
+.debate-chapter-done {
+  opacity: .65;
+  border-left-color: var(--accent2);
+}
+.debate-chapter-active {
+  opacity: 1;
+  border-left-color: var(--accent);
+  background: var(--surface2);
+}
+.debate-chapter-future {
+  opacity: .35;
+}
+.debate-chapter-row {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+}
+.debate-chapter-num {
+  font-weight: 700;
+  font-size: .75rem;
+  color: var(--muted);
+  min-width: 1.2rem;
+}
+.debate-chapter-active .debate-chapter-num {
+  color: var(--accent);
+}
+.debate-chapter-done .debate-chapter-num {
+  color: var(--accent2);
+}
+.debate-chapter-label {
+  font-size: .85rem;
+  color: var(--text);
+  flex: 1;
+}
+.debate-chapter-count {
+  font-size: .75rem;
+  color: var(--muted);
+}
+.debate-chapter-action {
+  margin-left: auto;
+}
+.debate-chapter-check {
+  color: var(--accent2);
+  font-size: .8rem;
+  font-weight: 700;
+}
+.debate-chapter-extra {
+  margin-top: .3rem;
+  padding-left: 1.6rem;
+}
+.btn-sm {
+  padding: .2rem .6rem;
+  font-size: .75rem;
+}
+
+/* ── Participant Debate Header ── */
+.debate-header {
+  text-align: center;
+  margin-bottom: .5rem;
+}
+.debate-title {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--text);
+}
+.debate-phase-badge {
+  display: inline-block;
+  margin-top: .3rem;
+  padding: .15rem .7rem;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-size: .8rem;
+  font-weight: 600;
+}
+.debate-phase-desc {
+  margin-top: .35rem;
+  font-size: .85rem;
+  color: var(--muted);
+}

@@ -913,12 +913,12 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
 
   // ── Debate rendering ──
   const DEBATE_PHASES = [
-    { key: 'side_selection', num: 1, label: 'Pick Sides' },
-    { key: 'arguments',      num: 2, label: 'Arguments' },
-    { key: 'ai_cleanup',     num: 3, label: 'AI Cleanup' },
-    { key: 'prep',           num: 4, label: 'Preparation' },
-    { key: 'live_debate',    num: 5, label: 'Live Debate' },
-    { key: 'ended',          num: 6, label: 'Ended' },
+    { key: 'side_selection', num: 1, label: 'Pick Sides',   desc: 'Choose which side you want to defend.' },
+    { key: 'arguments',      num: 2, label: 'Arguments',    desc: 'Submit arguments to support your side.' },
+    { key: 'ai_cleanup',     num: 3, label: 'AI Cleanup',   desc: 'AI is reviewing and merging duplicate arguments.' },
+    { key: 'prep',           num: 4, label: 'Preparation',  desc: 'Review arguments and volunteer as champion.' },
+    { key: 'live_debate',    num: 5, label: 'Live Debate',  desc: 'Champions are debating live!' },
+    { key: 'ended',          num: 6, label: 'Ended',        desc: 'The debate is over. Thanks for participating!' },
   ];
 
   function renderDebatePhaseStepper(currentPhase) {
@@ -949,7 +949,14 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     }
 
     const sideIcon = mySide === 'for' ? '👍' : mySide === 'against' ? '👎' : '';
-    let html = renderDebatePhaseStepper(phase);
+    const phaseInfo = DEBATE_PHASES.find(p => p.key === phase) || { num: '?', label: phase, desc: '' };
+
+    let html = `<div class="debate-header">
+      <div class="debate-title">⚔️ Debate</div>
+      <div class="debate-phase-badge">Phase ${phaseInfo.num}: ${phaseInfo.label}</div>
+      <div class="debate-phase-desc">${phaseInfo.desc}</div>
+    </div>`;
+    html += renderDebatePhaseStepper(phase);
     html += `<div class="debate-statement-row">
       <span class="debate-side-count debate-side-against">👎 ${sideCounts.against}</span>
       <span class="debate-statement-text">"${escDebate(statement)}"</span>

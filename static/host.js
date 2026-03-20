@@ -1505,38 +1505,73 @@
     if (!msg.debate_statement) return;
 
     const controls = document.getElementById('debate-host-controls');
-    const phaseLabel = document.getElementById('debate-phase-label');
-    const actions = document.getElementById('debate-host-actions');
+    const chapters = document.getElementById('debate-phase-chapters');
     const title = document.getElementById('debate-statement-display');
     const content = document.getElementById('debate-center-content');
 
     controls.style.display = '';
     const phase = msg.debate_phase;
     const sideCounts = msg.debate_side_counts || { for: 0, against: 0 };
+    const champions = msg.debate_champions || {};
 
     title.innerHTML = `<span style="color:#e74c3c;font-weight:700;">👎 ${sideCounts.against}</span> <span style="font-style:italic;">"${escDebate(msg.debate_statement)}"</span> <span style="color:#2ecc71;font-weight:700;">${sideCounts.for} 👍</span>`;
 
-    // Phase stepper
-    phaseLabel.innerHTML = renderDebatePhaseStepper(phase);
+    // Phase chapters (vertical list with launch buttons)
+    const currentIdx = DEBATE_PHASES.findIndex(p => p.key === phase);
+    const phaseActions = {
+      side_selection: `<button class="btn btn-warn btn-sm" onclick="debateForceAssign()">🎲 Force Assign</button>`,
+      ai_cleanup: `<button class="btn btn-warn btn-sm btn-ai" onclick="debateRunAI()">✨ Run AI</button>`,
+      prep: champions.for || champions.against
+        ? `<span style="color:var(--accent);font-size:.8rem;">🏆 ${Object.entries(champions).map(([s,n]) => `${s==='for'?'👍':'👎'} ${escDebate(n)}`).join(', ')}</span>`
+        : '',
+    };
 
-    // Host action buttons per phase
-    actions.innerHTML = '';
-    if (phase === 'side_selection') {
-      actions.innerHTML = '<button class="btn btn-warn" onclick="debateForceAssign()">🎲 Force Random Assign</button> ' +
-        '<button class="btn btn-primary" onclick="debateCloseSelection()">🔒 Close Selection → Arguments</button>';
-    } else if (phase === 'arguments') {
-      actions.innerHTML = '<button class="btn btn-primary" onclick="debateNextPhase(\'ai_cleanup\')">Next → AI Cleanup</button>';
-    } else if (phase === 'ai_cleanup') {
-      actions.innerHTML = '<button class="btn btn-warn btn-ai" onclick="debateRunAI()">✨ Run AI Cleanup</button>' +
-        ' <button class="btn btn-primary" onclick="debateNextPhase(\'prep\')">Next → Preparation</button>';
-    } else if (phase === 'prep') {
-      const champions = msg.debate_champions || {};
-      const champInfo = Object.entries(champions).map(([s, n]) => `${s === 'for' ? '👍' : '👎'} ${escDebate(n)}`).join(', ');
-      actions.innerHTML = (champInfo ? `<span style="color:var(--accent);font-size:.85rem;">🏆 ${champInfo}</span> ` : '') +
-        '<button class="btn btn-primary" onclick="debateNextPhase(\'live_debate\')">▶ Start Live Debate</button>';
-    } else if (phase === 'live_debate') {
-      actions.innerHTML = '<button class="btn btn-danger" onclick="debateNextPhase(\'ended\')">⏹ End Debate</button>';
-    }
+    chapters.innerHTML = DEBATE_PHASES.map((p, i) => {
+      const isDone = i < currentIdx;
+      const isActive = i === currentIdx;
+      const isNext = i === currentIdx + 1;
+      const isFuture = i > currentIdx + 1;
+
+      let cls = 'debate-chapter';
+      if (isDone) cls += ' debate-chapter-done';
+      if (isActive) cls += ' debate-chapter-active';
+      if (isFuture) cls += ' debate-chapter-future';
+
+      let actionHtml = '';
+      if (isActive && phaseActions[p.key]) {
+        actionHtml = `<div class="debate-chapter-extra">${phaseActions[p.key]}</div>`;
+      }
+
+      let launchBtn = '';
+      if (isActive && p.key === 'live_debate') {
+        launchBtn = `<button class="btn btn-danger btn-sm" onclick="debateNextPhase('ended')">⏹ End</button>`;
+      } else if (isActive && p.key !== 'ended') {
+        const nextPhase = DEBATE_PHASES[i + 1];
+        if (nextPhase) {
+          if (p.key === 'side_selection') {
+            launchBtn = `<button class="btn btn-primary btn-sm" onclick="debateCloseSelection()">Launch →</button>`;
+          } else {
+            launchBtn = `<button class="btn btn-primary btn-sm" onclick="debateNextPhase('${nextPhase.key}')">Launch →</button>`;
+          }
+        }
+      } else if (isDone) {
+        launchBtn = `<span class="debate-chapter-check">✓</span>`;
+      }
+
+      const countInfo = isActive && (p.key === 'side_selection')
+        ? `<span class="debate-chapter-count">👎 ${sideCounts.against} | ${sideCounts.for} 👍</span>`
+        : '';
+
+      return `<div class="${cls}">
+        <div class="debate-chapter-row">
+          <span class="debate-chapter-num">${p.num}</span>
+          <span class="debate-chapter-label">${p.label}</span>
+          ${countInfo}
+          <span class="debate-chapter-action">${launchBtn}</span>
+        </div>
+        ${actionHtml}
+      </div>`;
+    }).join('');
 
     // Center panel: dual-column arguments
     const args = (msg.debate_arguments || []).filter(a => !a.merged_into);
