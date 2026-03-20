@@ -224,22 +224,34 @@
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   }
 
+  let _summaryGenerating = false;
+
   function updateSummary(points, updatedAt) {
     summaryPoints = points || [];
     summaryUpdatedAt = updatedAt;
-    const badge = document.getElementById('summary-badge');
-    if (badge) {
-      if (summaryPoints.length) {
-        badge.textContent = `🧠 Key Points (${summaryPoints.length})`;
-        badge.className = 'badge connected';
-        badge.title = `${summaryPoints.length} key points — click to view`;
-      } else {
-        badge.textContent = '🧠 No key points yet';
-        badge.className = 'badge disabled';
-        badge.title = 'Summary generated every 5 minutes from transcript';
-      }
-    }
+    if (summaryPoints.length) _summaryGenerating = false;
+    renderSummaryBadge();
     renderSummaryList();
+  }
+
+  function renderSummaryBadge() {
+    const badge = document.getElementById('summary-badge');
+    if (!badge) return;
+    badge.style.cssText = 'cursor:pointer;';
+    if (summaryPoints.length) {
+      badge.textContent = `● Key Points (${summaryPoints.length})`;
+      badge.className = 'badge connected';
+      badge.title = `${summaryPoints.length} key points — click to view`;
+    } else if (_summaryGenerating) {
+      badge.textContent = '● Generating...';
+      badge.className = 'badge';
+      badge.style.cssText = 'cursor:wait; color:var(--warn); border:1px solid var(--warn);';
+      badge.title = 'Generating key points from transcript...';
+    } else {
+      badge.textContent = '● Key Points';
+      badge.className = 'badge disconnected';
+      badge.title = 'No key points yet — click to generate now';
+    }
   }
 
   function renderSummaryList() {
@@ -268,13 +280,8 @@
       const overlay = document.getElementById('summary-overlay');
       if (overlay) overlay.classList.toggle('open');
     } else {
-      // No key points yet — force the daemon to generate now
-      const badge = document.getElementById('summary-badge');
-      if (badge) {
-        badge.textContent = '🧠 Generating...';
-        badge.className = 'badge';
-        badge.style.cssText = 'color:var(--warn);border:1px solid var(--warn);cursor:wait;';
-      }
+      _summaryGenerating = true;
+      renderSummaryBadge();
       fetch('/api/summary/force', { method: 'POST' });
     }
   }
