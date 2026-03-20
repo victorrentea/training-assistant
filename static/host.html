@@ -126,10 +126,9 @@
     <!-- Code Review tab content -->
     <div id="tab-content-codereview" style="display:none; flex-direction:column;" class="tab-content">
       <div id="codereview-create" style="display:flex; flex-direction:column; flex:1; min-height:0;">
-        <div style="display:flex; gap:8px; align-items:center; margin-bottom:8px;">
-          <span style="font-weight:600;">Code Review</span>
-          <select id="codereview-language">
-            <option value="">Auto-detect language</option>
+        <div style="display:flex; gap:6px; align-items:center; margin-bottom:6px; flex-shrink:0; flex-wrap:nowrap;">
+          <select id="codereview-language" style="flex-shrink:0; min-width:90px;">
+            <option value="">Language</option>
             <option value="java">Java</option>
             <option value="python">Python</option>
             <option value="javascript">JavaScript</option>
@@ -140,11 +139,11 @@
             <option value="kotlin">Kotlin</option>
             <option value="bash">Bash</option>
           </select>
+          <label style="display:flex; align-items:center; gap:4px; font-size:.8rem; cursor:pointer; margin-left:auto; white-space:nowrap; flex-shrink:0;">
+            <input type="checkbox" id="codereview-smart-paste" checked>
+            Smart paste ✨
+          </label>
         </div>
-        <label style="display:flex; align-items:center; gap:6px; margin-bottom:8px; font-size:.9rem; cursor:pointer;">
-          <input type="checkbox" id="codereview-smart-paste" checked>
-          Smart paste ✨
-        </label>
         <textarea id="codereview-snippet" placeholder="Paste your code snippet here (10-50 lines)..." style="flex:1; width:100%; font-family:monospace; font-size:12px; resize:none; overflow:auto; white-space:pre; word-wrap:normal;">public List&lt;String&gt; getActiveUserEmails(List&lt;User&gt; users) {
     List&lt;String&gt; emails = new ArrayList&lt;&gt;();
     for (int i = 0; i &lt; users.size(); i++) {
