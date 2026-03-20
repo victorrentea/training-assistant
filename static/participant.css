@@ -479,6 +479,11 @@ h1 { display: none; }
 
 /* Debate styles */
 .debate-statement { font-size: 1.1rem; color: var(--text); font-style: italic; text-align: center; margin-bottom: 1rem; padding: .75rem; background: var(--surface2); border-radius: 8px; }
+.debate-statement-row { display: flex; align-items: center; justify-content: center; gap: .75rem; margin-bottom: 1rem; padding: .75rem; background: var(--surface2); border-radius: 8px; }
+.debate-statement-text { font-size: 1.1rem; color: var(--text); font-style: italic; flex: 1; text-align: center; }
+.debate-side-count { font-size: 1.3rem; font-weight: 700; min-width: 3rem; }
+.debate-side-count.debate-side-against { text-align: left; color: #e74c3c; }
+.debate-side-count.debate-side-for { text-align: right; color: #2ecc71; }
 .debate-pick { display: flex; gap: 1rem; justify-content: center; margin: 1.5rem 0; }
 .debate-btn-for, .debate-btn-against { flex: 1; max-width: 200px; padding: 1.5rem 1rem; font-size: 1.2rem; border-radius: 12px; border: 2px solid var(--border); cursor: pointer; }
 .debate-btn-for { background: rgba(46, 204, 113, .15); color: #2ecc71; }
