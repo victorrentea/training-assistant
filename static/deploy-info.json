@@ -1,7 +1,7 @@
 {
-  "sha": "d1bb47c8081054b8c19f6b30dad21abe6b0d4f54",
-  "timestamp": "2026-03-20 22:42",
+  "sha": "2ca082a3de54c3697922972c16a7013c93cf476b",
+  "timestamp": "2026-03-20 22:46",
   "changelog": [
-    "SCRUM-1: improve code review host line confirmation UX (#48)"
+    "fix: reorder host tabs \u2014 move Debate to last position"
   ]
 }
