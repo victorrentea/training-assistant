@@ -14,25 +14,14 @@
 </head>
 <body>
 
-  <!-- Join screen -->
-  <div id="join-screen">
-    <h2>Your name</h2>
-    <div class="name-input-wrap">
-      <input id="name-input" type="text" maxlength="32" autocomplete="off" />
-      <button id="clear-name" title="Clear name">✕</button>
-    </div>
-    <button id="join-btn">Join session</button>
-    <p id="join-error" style="color:var(--danger); font-size:.9rem; margin:.5rem 0 0; display:none;"></p>
-  </div>
-
-  <!-- Main screen (shown after joining) -->
+  <!-- Main screen (auto-join, no join screen) -->
   <div id="main-screen">
     <div class="status-bar">
       <span class="status-left">
         <img id="my-avatar" class="avatar" style="display:none" alt="">
         <span><span class="dot"></span>
             <strong id="display-name" class="editable-name" title="Click to change name"></strong>
-            <button id="edit-name-btn" class="edit-name-btn" title="Change name" style="display:none;">✏️</button>
+            <button id="edit-name-btn" class="edit-name-btn" title="Change name">✏️</button>
             <span id="name-edit-wrap" style="display:none;">
                 <input id="name-edit-input" type="text" maxlength="32" />
             </span>
