@@ -346,6 +346,9 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
           if (_prevActivity !== 'wordcloud' && msg.current_activity === 'wordcloud') {
             notifyIfHidden('☁️ Word cloud is open', 'Tap to share your thoughts');
           }
+          if (_prevActivity !== 'debate' && msg.current_activity === 'debate') {
+            notifyIfHidden('⚔️ Debate started', 'Choose your side!');
+          }
           if (_prevActivity !== 'codereview' && msg.current_activity === 'codereview') {
             notifyIfHidden('📝 Code Review', 'Spot bugs and earn points!');
           }
@@ -409,6 +412,8 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
           renderWordCloudScreen(msg.wordcloud_words || {}, msg.wordcloud_topic || '');
         } else if (msg.current_activity === 'qa') {
           renderQAScreen(msg.qa_questions || []);
+        } else if (msg.current_activity === 'debate') {
+          renderDebateScreen(msg);
         } else if (msg.current_activity === 'codereview') {
           renderCodeReviewScreen(msg.codereview);
         } else {
@@ -865,6 +870,149 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
   function renderQACleanup() {
     _stopQAToasts();
     // Q&A DOM is inside #content which gets replaced when switching activities
+  }
+
+  // ── HTML escaping utility ──
+  function escDebate(str) {
+    const d = document.createElement('div');
+    d.textContent = str;
+    return d.innerHTML;
+  }
+
+  // ── Debate rendering ──
+  function renderDebateScreen(msg) {
+    const content = document.getElementById('content');
+    if (!content) return;
+    content.dataset.screen = 'debate';
+
+    const phase = msg.debate_phase;
+    const mySide = msg.debate_my_side;
+    const statement = msg.debate_statement || '';
+    const sideCounts = msg.debate_side_counts || { for: 0, against: 0 };
+    const args = (msg.debate_arguments || []).filter(a => !a.merged_into);
+    const champions = msg.debate_champions || {};
+
+    if (!statement) {
+      content.innerHTML = '<div class="debate-waiting">Waiting for debate to start…</div>';
+      return;
+    }
+
+    let html = `<div class="debate-statement">"${escDebate(statement)}"</div>`;
+
+    if (phase === 'side_selection') {
+      if (mySide) {
+        html += `<div class="debate-chosen">You chose: <strong>${mySide.toUpperCase()}</strong> ✓</div>`;
+        html += `<div class="debate-waiting">Waiting for others… FOR: ${sideCounts.for} | AGAINST: ${sideCounts.against}</div>`;
+      } else {
+        html += `<div class="debate-pick">
+          <button class="btn debate-btn-for" onclick="debatePickSide('for')">👍 FOR</button>
+          <button class="btn debate-btn-against" onclick="debatePickSide('against')">👎 AGAINST</button>
+        </div>`;
+      }
+    } else if (phase === 'arguments') {
+      html += renderDebateArgColumns(args, mySide, msg, false);
+      if (mySide) {
+        html += `<div class="debate-input-row">
+          <input id="debate-arg-input" type="text" maxlength="280" placeholder="Add an argument for your side…"
+            onkeydown="if(event.key==='Enter')debateSubmitArg()" />
+          <button class="btn btn-primary" onclick="debateSubmitArg()">↵</button>
+        </div>`;
+      }
+    } else if (phase === 'ai_cleanup') {
+      html += `<div class="debate-phase-info">AI is reviewing arguments…</div>`;
+      html += renderDebateArgColumns(args, mySide, msg, true);  // read-only
+    } else if (phase === 'prep') {
+      html += renderDebateArgColumns(args, mySide, msg, false);
+      html += renderDebateHints();
+      if (mySide && !champions[mySide]) {
+        html += `<button class="btn btn-warn debate-volunteer-btn" onclick="debateVolunteer()">🏆 I'll be our champion!</button>`;
+      } else if (mySide && champions[mySide]) {
+        const isMe = msg.debate_my_is_champion;
+        html += `<div class="debate-champion-info">${isMe ? '🏆 You are your team\'s champion!' : '🏆 Champion: ' + escDebate(champions[mySide])}</div>`;
+      }
+    } else if (phase === 'live_debate') {
+      html += renderDebateArgColumns(args, mySide, msg, true);  // read-only during live debate
+      html += renderDebateHints();
+      const champNames = Object.entries(champions).map(([s, n]) => `${s.toUpperCase()}: ${escDebate(n)}`).join(' vs ');
+      html += `<div class="debate-live-info">🎤 ${champNames}</div>`;
+    } else if (phase === 'ended') {
+      html += `<div class="debate-ended">Debate ended!</div>`;
+      html += renderDebateArgColumns(args, mySide, msg, true);
+    }
+
+    content.innerHTML = html;
+  }
+
+  function renderDebateArgColumns(args, mySide, msg, readOnly) {
+    const forArgs = args.filter(a => a.side === 'for');
+    const againstArgs = args.filter(a => a.side === 'against');
+    const mergedArgs = (msg.debate_arguments || []).filter(a => a.merged_into);
+    const mergedForCount = mergedArgs.filter(a => a.side === 'for').length;
+    const mergedAgainstCount = mergedArgs.filter(a => a.side === 'against').length;
+
+    const renderArg = (a) => {
+      const aiClass = a.ai_generated ? ' debate-arg-ai' : '';
+      const ownClass = a.is_own ? ' debate-arg-own' : '';
+      const upvotedClass = a.has_upvoted ? ' debate-arg-upvoted' : '';
+      const canUpvote = !readOnly && !a.is_own && !a.has_upvoted;
+      return `<div class="debate-arg${aiClass}${ownClass}${upvotedClass}" ${canUpvote ? `onclick="debateUpvote('${a.id}')"` : ''}>
+        <div class="debate-arg-header">
+          ${a.author_avatar ? `<img src="/static/avatars/${a.author_avatar}" class="debate-arg-avatar">` : ''}
+          <span class="debate-arg-author">${escDebate(a.author)}</span>
+          <span class="debate-arg-votes">▲ ${a.upvote_count}</span>
+        </div>
+        <div class="debate-arg-text">${escDebate(a.text)}</div>
+      </div>`;
+    };
+
+    const renderMerged = () => `<div class="debate-arg debate-arg-merged">
+      <span>✨ duplicate, merged above</span>
+    </div>`;
+
+    return `<div class="debate-columns">
+      <div class="debate-col debate-col-against">
+        <h3 class="debate-col-header">👎 AGAINST</h3>
+        ${againstArgs.map(renderArg).join('')}
+        ${Array(mergedAgainstCount).fill('').map(renderMerged).join('')}
+      </div>
+      <div class="debate-col debate-col-for">
+        <h3 class="debate-col-header">👍 FOR</h3>
+        ${forArgs.map(renderArg).join('')}
+        ${Array(mergedForCount).fill('').map(renderMerged).join('')}
+      </div>
+    </div>`;
+  }
+
+  function renderDebateHints() {
+    return `<div class="debate-hints">
+      <div class="debate-rules-title">📋 Debate Rules</div>
+      <div class="debate-hint">• Present your strongest argument first</div>
+      <div class="debate-hint">• Address the opposing argument directly</div>
+      <div class="debate-hint">• Give specific examples from real projects</div>
+      <div class="debate-hint">• In what context does this trade-off matter most?</div>
+    </div>`;
+  }
+
+  // ── Debate WS senders ──
+  function debatePickSide(side) {
+    if (ws) ws.send(JSON.stringify({ type: 'debate_pick_side', side }));
+  }
+
+  function debateSubmitArg() {
+    const input = document.getElementById('debate-arg-input');
+    if (!input) return;
+    const text = input.value.trim();
+    if (!text || !ws) return;
+    ws.send(JSON.stringify({ type: 'debate_argument', text }));
+    input.value = '';
+  }
+
+  function debateUpvote(argId) {
+    if (ws) ws.send(JSON.stringify({ type: 'debate_upvote', argument_id: argId }));
+  }
+
+  function debateVolunteer() {
+    if (ws) ws.send(JSON.stringify({ type: 'debate_volunteer' }));
   }
 
   // ── Render ──
