@@ -118,6 +118,11 @@ async def force_assign():
         state.debate_auto_assigned.add(p)
 
     logger.info(f"Force-assigned {len(unassigned)} participants: {for_count} FOR, {against_count} AGAINST")
+
+    # Auto-advance: all participants now have sides
+    state.debate_phase = "arguments"
+    logger.info("All participants assigned — auto-advancing to arguments phase")
+
     await broadcast_state()
     return {"ok": True, "assigned": len(unassigned)}
 
