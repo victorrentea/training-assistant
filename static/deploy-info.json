@@ -1,7 +1,7 @@
 {
-  "sha": "e30898c9d0fab2a16d0eadd460cc8c72d5172a6d",
-  "timestamp": "2026-03-20 21:56",
+  "sha": "318dba0cbda30658ddb97cb60499a03476804c88",
+  "timestamp": "2026-03-20 21:57",
   "changelog": [
-    "fix: rename \"Pick Sides\" phase to \"Pick a Side\""
+    "test: prove debate arguments sorted by upvotes (3, 1, 0)"
   ]
 }
