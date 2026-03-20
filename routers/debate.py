@@ -2,14 +2,26 @@ import json
 import logging
 import random
 import uuid as uuid_mod
+from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from auth import require_host_auth
-from messaging import broadcast_state, participant_ids
+from messaging import broadcast, broadcast_state, participant_ids
 from state import state, ActivityType
+
+def get_debate_sub_phases(first_side: str) -> list[dict]:
+    """Generate 4 timed sub-phases based on which side speaks first."""
+    other = "against" if first_side == "for" else "for"
+    fl, ol = first_side.upper(), other.upper()
+    return [
+        {"key": f"opening_{first_side}",  "label": f"Opening — {fl}",  "side": first_side, "default_seconds": 120},
+        {"key": f"opening_{other}",       "label": f"Opening — {ol}",  "side": other,      "default_seconds": 120},
+        {"key": f"rebuttal_{first_side}", "label": f"Rebuttal — {fl}", "side": first_side, "default_seconds": 90},
+        {"key": f"rebuttal_{other}",      "label": f"Rebuttal — {ol}", "side": other,      "default_seconds": 90},
+    ]
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -66,6 +78,10 @@ async def launch_debate(body: DebateLaunch):
     state.debate_arguments = []
     state.debate_champions = {}
     state.debate_auto_assigned = set()
+    state.debate_first_side = None
+    state.debate_sub_phase_index = None
+    state.debate_sub_timer_seconds = None
+    state.debate_sub_timer_started_at = None
     state.current_activity = ActivityType.DEBATE
 
     logger.info(f"Debate launched: {statement}")
@@ -82,6 +98,10 @@ async def reset_debate():
     state.debate_arguments = []
     state.debate_champions = {}
     state.debate_auto_assigned = set()
+    state.debate_first_side = None
+    state.debate_sub_phase_index = None
+    state.debate_sub_timer_seconds = None
+    state.debate_sub_timer_started_at = None
     state.current_activity = ActivityType.NONE
 
     logger.info("Debate reset")
@@ -143,7 +163,7 @@ async def force_assign():
     return {"ok": True, "assigned": len(unassigned)}
 
 
-VALID_PHASES = {"arguments", "ai_cleanup", "prep", "live_debate", "ended"}
+VALID_PHASES = {"arguments", "ai_cleanup", "prep", "live_debate"}
 
 
 @router.post("/api/debate/phase", dependencies=[Depends(require_host_auth)])
@@ -153,10 +173,80 @@ async def advance_phase(body: PhaseAdvance):
     if not state.debate_statement:
         raise HTTPException(400, "No debate active")
 
+    if body.phase == "live_debate":
+        state.debate_first_side = None
+        state.debate_sub_phase_index = None
+        state.debate_sub_timer_seconds = None
+        state.debate_sub_timer_started_at = None
     state.debate_phase = body.phase
     logger.info(f"Debate phase → {body.phase}")
     await broadcast_state()
     return {"ok": True, "phase": body.phase}
+
+
+class FirstSide(BaseModel):
+    side: str  # "for" or "against"
+
+
+@router.post("/api/debate/first-side", dependencies=[Depends(require_host_auth)])
+async def set_first_side(body: FirstSide):
+    if state.debate_phase != "live_debate":
+        raise HTTPException(400, "Not in live_debate phase")
+    if body.side not in ("for", "against"):
+        raise HTTPException(400, "Side must be 'for' or 'against'")
+    state.debate_first_side = body.side
+    state.debate_sub_phase_index = None
+    logger.info(f"Live debate: {body.side.upper()} goes first")
+    await broadcast_state()
+    return {"ok": True}
+
+
+class SubPhaseTimer(BaseModel):
+    sub_phase_index: int
+    seconds: int
+
+
+@router.post("/api/debate/sub-phase-timer", dependencies=[Depends(require_host_auth)])
+async def start_sub_phase_timer(body: SubPhaseTimer):
+    if state.debate_phase != "live_debate":
+        raise HTTPException(400, "Not in live_debate phase")
+    if not state.debate_first_side:
+        raise HTTPException(400, "First side not picked yet")
+    sub_phases = get_debate_sub_phases(state.debate_first_side)
+    if not 0 <= body.sub_phase_index < len(sub_phases):
+        raise HTTPException(400, f"Invalid sub-phase index: {body.sub_phase_index}")
+    if body.seconds < 1:
+        raise HTTPException(400, "Duration must be at least 1 second")
+
+    started_at = datetime.now(timezone.utc)
+    state.debate_sub_phase_index = body.sub_phase_index
+    state.debate_sub_timer_seconds = body.seconds
+    state.debate_sub_timer_started_at = started_at
+
+    sub = sub_phases[body.sub_phase_index]
+    logger.info(f"Sub-phase timer started: {sub['label']} ({body.seconds}s)")
+
+    await broadcast({"type": "debate_timer", "sub_phase_index": body.sub_phase_index, "seconds": body.seconds, "started_at": started_at.isoformat()})
+    await broadcast_state()
+    return {"ok": True}
+
+
+@router.post("/api/debate/end-sub-phase", dependencies=[Depends(require_host_auth)])
+async def end_sub_phase():
+    """End the current sub-phase early."""
+    if state.debate_phase != "live_debate":
+        raise HTTPException(400, "Not in live_debate phase")
+    if state.debate_sub_phase_index is None or state.debate_sub_timer_started_at is None:
+        raise HTTPException(400, "No sub-phase timer active")
+
+    ended_index = state.debate_sub_phase_index
+    state.debate_sub_timer_seconds = None
+    state.debate_sub_timer_started_at = None
+
+    logger.info(f"Sub-phase {ended_index} ended early by host")
+    await broadcast({"type": "debate_phase_ended", "sub_phase_index": ended_index})
+    await broadcast_state()
+    return {"ok": True}
 
 
 @router.post("/api/debate/end-arguments", dependencies=[Depends(require_host_auth)])
@@ -186,9 +276,6 @@ async def end_arguments():
 
 async def _run_ai_cleanup():
     """Run AI cleanup on debate arguments. Raises on failure."""
-    if not state.debate_arguments:
-        return
-
     import os
     from anthropic import Anthropic
 
@@ -200,18 +287,22 @@ async def _run_ai_cleanup():
     for_args = [a for a in state.debate_arguments if a["side"] == "for" and not a.get("merged_into")]
     against_args = [a for a in state.debate_arguments if a["side"] == "against" and not a.get("merged_into")]
 
+    has_args = for_args or against_args
+    for_list = chr(10).join(f'- [{a["id"]}] {a["text"]}' for a in for_args) if for_args else "(none submitted)"
+    against_list = chr(10).join(f'- [{a["id"]}] {a["text"]}' for a in against_args) if against_args else "(none submitted)"
+
     prompt = f"""You are helping clean up debate arguments about: "{state.debate_statement}"
 
 FOR arguments:
-{chr(10).join(f'- [{a["id"]}] {a["text"]}' for a in for_args)}
+{for_list}
 
 AGAINST arguments:
-{chr(10).join(f'- [{a["id"]}] {a["text"]}' for a in against_args)}
+{against_list}
 
 Tasks:
 1. Identify duplicates — return which argument IDs should be merged (keep the better-worded one)
 2. For each surviving argument, return a cleaned version (fix typos, make concise, preserve intent)
-3. Add 2-4 NEW arguments that participants missed (mark side as "for" or "against")
+3. Add 3-5 NEW arguments that participants missed (mark side as "for" or "against"), ensuring both sides are well represented{'' if has_args else ' — since no arguments were submitted, generate a balanced set of strong arguments for both sides'}
 
 Return JSON (no markdown fences):
 {{
