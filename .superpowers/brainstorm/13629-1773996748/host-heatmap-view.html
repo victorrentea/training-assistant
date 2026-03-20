@@ -1,0 +1,61 @@
+<h2>How should the host see participant line selections?</h2>
+<p class="subtitle">The host needs to see which lines participants are clicking, in real-time</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Heatmap Overlay</h3>
+      <p>Each line gets a colored background whose intensity reflects how many participants selected it. Darker = more selections. The host sees the code with a gradient overlay — instant visual signal of "hot" lines.</p>
+      <div style="margin-top:12px; font-family:monospace; font-size:13px; line-height:1.8; background:#1e1e2e; padding:16px; border-radius:8px;">
+        <div style="background:rgba(255,80,80,0.05); padding:2px 8px;">1  <span style="color:#89b4fa">public</span> <span style="color:#a6e3a1">String</span> process(<span style="color:#a6e3a1">String</span> input) {</div>
+        <div style="background:rgba(255,80,80,0.45); padding:2px 8px;">2    <span style="color:#a6e3a1">String</span> result = input.<span style="color:#89b4fa">trim</span>().<span style="color:#89b4fa">toLowerCase</span>();  <span style="color:#f38ba8; font-size:11px; float:right;">● 18 selections</span></div>
+        <div style="background:rgba(255,80,80,0.08); padding:2px 8px;">3    <span style="color:#89b4fa">if</span> (result.isEmpty()) {</div>
+        <div style="background:rgba(255,80,80,0.65); padding:2px 8px;">4      <span style="color:#89b4fa">return</span> <span style="color:#fab387">null</span>;  <span style="color:#f38ba8; font-size:11px; float:right;">● 27 selections</span></div>
+        <div style="background:rgba(255,80,80,0.05); padding:2px 8px;">5    }</div>
+        <div style="background:rgba(255,80,80,0.25); padding:2px 8px;">6    <span style="color:#89b4fa">return</span> result + result;  <span style="color:#f38ba8; font-size:11px; float:right;">● 9 selections</span></div>
+        <div style="background:rgba(255,80,80,0.02); padding:2px 8px;">7  }</div>
+      </div>
+      <p style="margin-top:8px; color:#a0a0b0; font-size:13px;">Host clicks a line → expands participant list sorted by score (ascending)</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Heatmap + Side Panel</h3>
+      <p>Same heatmap overlay, but clicking a line opens a side panel showing the full list of participants who selected it. Two-pane layout: code left, participant list right.</p>
+      <div style="margin-top:12px; display:flex; gap:12px;">
+        <div style="flex:2; font-family:monospace; font-size:12px; line-height:1.8; background:#1e1e2e; padding:12px; border-radius:8px;">
+          <div style="background:rgba(255,80,80,0.45); padding:2px 6px; border-left:3px solid #f38ba8;">2  result = input.trim()…</div>
+          <div style="padding:2px 6px;">3  if (result.isEmpty())</div>
+          <div style="background:rgba(255,80,80,0.65); padding:2px 6px; border-left:3px solid #f38ba8;">4    return null; ← selected</div>
+        </div>
+        <div style="flex:1; background:#2a2a3e; padding:12px; border-radius:8px; font-size:12px;">
+          <div style="color:#f38ba8; font-weight:bold; margin-bottom:8px;">Line 4 — 27 selections</div>
+          <div style="color:#cdd6f4;">1. Alex (120 pts)</div>
+          <div style="color:#cdd6f4;">2. Jamie (340 pts)</div>
+          <div style="color:#cdd6f4;">3. Sam (580 pts)</div>
+          <div style="color:#a0a0b0; font-size:11px; margin-top:4px;">↑ sorted by score ascending</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Inline Expansion</h3>
+      <p>No side panel. Clicking a hot line expands it inline to reveal the participant list directly below that line in the code view. Compact, no layout shift.</p>
+      <div style="margin-top:12px; font-family:monospace; font-size:12px; line-height:1.8; background:#1e1e2e; padding:12px; border-radius:8px;">
+        <div style="background:rgba(255,80,80,0.45); padding:2px 6px;">2  result = input.trim().toLowerCase();</div>
+        <div style="background:rgba(255,80,80,0.65); padding:2px 6px;">4  return null;</div>
+        <div style="background:#2a2a3e; padding:8px 12px; border-left:3px solid #f38ba8; margin:4px 0;">
+          <span style="color:#f38ba8;">27 selected this line:</span><br>
+          <span style="color:#cdd6f4;">Alex (120) · Jamie (340) · Sam (580) · ...</span>
+        </div>
+        <div style="background:rgba(255,80,80,0.25); padding:2px 6px;">6  return result + result;</div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -26,7 +26,9 @@ Container_Boundary(fastapi, "FastAPI Backend") {
 
     Component(quiz_router, "routers/quiz.py", "FastAPI APIRouter", "POST/GET /api/quiz-request\nPOST /api/quiz-status\nPOST/DELETE /api/quiz-preview\nPOST/GET /api/quiz-refine")
 
-    Component(state_module, "state.py", "AppState singleton", "All dicts UUID-keyed.\nparticipants, participant_names,\nvotes, locations, scores,\nbase_scores, vote_times,\ncurrent_activity, wordcloud_words,\nquiz_request, quiz_preview,\ndaemon_last_seen,\ncodereview_snippet, codereview_language,\ncodereview_phase, codereview_selections,\ncodereview_confirmed.")
+    Component(summary_router, "routers/summary.py", "FastAPI APIRouter", "POST /api/summary\nStores key points, broadcasts to all.")
+
+    Component(state_module, "state.py", "AppState singleton", "All dicts UUID-keyed.\nparticipants, participant_names,\nvotes, locations, scores,\nbase_scores, vote_times,\ncurrent_activity, wordcloud_words,\nquiz_request, quiz_preview,\ndaemon_last_seen,\ncodereview_snippet, codereview_language,\ncodereview_phase, codereview_selections,\ncodereview_confirmed, summary_points.")
 
     Component(messaging_module, "messaging.py", "Async helpers", "broadcast_state()\nbuild_participant_state(pid)\nbuild_host_state()\nbroadcast_participant_update()")
 }
@@ -54,6 +56,10 @@ Rel(codereview_router, messaging_module, "broadcast()")
 
 Rel(participant_spa, caddy, "Vote, connect WS, send location", "WSS / HTTPS")
 Rel(host_spa, caddy, "Manage polls, mark correct, reset scores", "HTTPS / WSS (Basic Auth)")
-Rel(quiz_daemon, caddy, "Poll requests, post preview and status", "HTTPS (Basic Auth)")
+Rel(caddy, summary_router, "/api/summary", "HTTP (Basic Auth)")
+Rel(summary_router, state_module, "Summary points")
+Rel(summary_router, messaging_module, "broadcast()")
+
+Rel(quiz_daemon, caddy, "Poll requests, post preview, status, summary", "HTTPS (Basic Auth)")
 
 @enduml

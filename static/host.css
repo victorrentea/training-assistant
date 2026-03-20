@@ -547,6 +547,15 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
   display: flex; justify-content: space-between; align-items: center; gap: .5rem;
 }
 .pax-list li:last-child { border-bottom: none; }
+.pax-name {
+  display: flex;
+  align-items: center;
+  gap: .35rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+}
 .pax-score {
   font-size: .78rem;
   color: var(--accent2);
@@ -693,6 +702,8 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
 }
 .qa-meta {
   display: flex;
+  align-items: center;
+  gap: 6px;
   justify-content: space-between;
   font-size: .8rem;
   color: var(--muted);

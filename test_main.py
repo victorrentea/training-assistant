@@ -854,3 +854,104 @@ def test_quiz_request_rejects_neither_field():
         json={},
         headers=_HOST_AUTH_HEADERS)
     assert resp.status_code == 422
+
+
+class TestAvatarAssignment:
+
+    def test_lotr_name_gets_matching_avatar(self):
+        from state import AppState, assign_avatar, get_avatar_filename
+        s = AppState()
+        avatar = assign_avatar(s, "test-uuid-1", "Gandalf")
+        assert avatar == "gandalf.png"
+        assert s.participant_avatars["test-uuid-1"] == "gandalf.png"
+
+    def test_custom_name_gets_deterministic_avatar(self):
+        from state import AppState, assign_avatar
+        s = AppState()
+        a1 = assign_avatar(s, "550e8400-e29b-41d4-a716-446655440000", "Bob")
+        a2 = assign_avatar(s, "550e8400-e29b-41d4-a716-446655440000", "Bob")
+        assert a1 == a2
+        assert a1.endswith(".png")
+
+    def test_assign_once_rename_keeps_avatar(self):
+        from state import AppState, assign_avatar
+        s = AppState()
+        a1 = assign_avatar(s, "test-uuid-1", "Gandalf")
+        a2 = assign_avatar(s, "test-uuid-1", "Bob")
+        assert a1 == a2 == "gandalf.png"
+
+    def test_get_avatar_filename_slugs(self):
+        from state import get_avatar_filename
+        assert get_avatar_filename("Gandalf") == "gandalf.png"
+        assert get_avatar_filename("Tom Bombadil") == "tom-bombadil.png"
+        assert get_avatar_filename("The One Ring") == "the-one-ring.png"
+        assert get_avatar_filename("Grima Wormtongue") == "grima-wormtongue.png"
+
+    def test_no_duplicate_avatars(self):
+        """Different participants get different avatars (up to 30)."""
+        from state import AppState, assign_avatar, LOTR_NAMES
+        import uuid as uuid_mod
+        s = AppState()
+        avatars = []
+        for i in range(len(LOTR_NAMES)):
+            a = assign_avatar(s, str(uuid_mod.uuid4()), f"CustomName{i}")
+            avatars.append(a)
+        assert len(set(avatars)) == len(LOTR_NAMES)  # all unique
+
+    def test_lotr_name_collision_avoided(self):
+        """If gandalf.png is taken, a second 'Gandalf' gets a different avatar."""
+        from state import AppState, assign_avatar
+        s = AppState()
+        a1 = assign_avatar(s, "uuid-1", "Gandalf")
+        a2 = assign_avatar(s, "uuid-2", "Gandalf")
+        assert a1 == "gandalf.png"
+        assert a2 != a1  # different avatar
+        assert a2.endswith(".png")
+
+    def test_avatar_in_participant_state_on_connect(self, session):
+        """Participant state includes my_avatar after set_name."""
+        with session.participant("Legolas") as p:
+            assert p._last_state.get("my_avatar") == "legolas.png"
+
+    def test_avatar_in_qa_question(self, session):
+        """Q&A questions include author_avatar."""
+        session._client.post("/api/activity", json={"activity": "qa"},
+                             headers=_HOST_AUTH_HEADERS)
+        with session.participant("Gimli") as p:
+            p.send({"type": "qa_submit", "text": "Test question?"})
+            msg = p._recv("state")
+            questions = msg.get("qa_questions", [])
+            assert len(questions) == 1
+            assert questions[0].get("author_avatar") == "gimli.png"
+
+
+# ---------------------------------------------------------------------------
+# Summary Tests
+# ---------------------------------------------------------------------------
+
+def test_post_summary_updates_state():
+    """POST /api/summary stores bullets and broadcasts via full state."""
+    session = WorkshopSession()
+    # POST summary first (before connecting participant)
+    resp = session._client.post(
+        "/api/summary",
+        json={"points": ["Discussed TDD basics", "Covered mocking patterns"]},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["ok"] is True
+
+    # Participant connects and receives initial state with summary included
+    with session.participant("Alice") as alice:
+        assert "summary_points" in alice._last_state
+        assert len(alice._last_state["summary_points"]) == 2
+        assert alice._last_state["summary_points"][0] == "Discussed TDD basics"
+
+
+def test_post_summary_requires_auth():
+    """POST /api/summary without auth returns 401."""
+    client = TestClient(app)  # no auth headers
+    resp = client.post(
+        "/api/summary",
+        json={"points": ["Should fail"]},
+    )
+    assert resp.status_code == 401

@@ -1,0 +1,65 @@
+<h2>How should participants select lines?</h2>
+<p class="subtitle">Participants see a read-only code snippet and click lines to flag them</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Gutter Click (like an IDE)</h3>
+      <p>Clicking the line number area (left gutter) toggles selection. The line highlights. Clicking the code itself does nothing — prevents accidental selections. Familiar to developers.</p>
+      <div style="margin-top:12px; font-family:monospace; font-size:13px; line-height:1.9; background:#1e1e2e; padding:16px; border-radius:8px;">
+        <div style="display:flex;">
+          <span style="color:#585b70; width:32px; text-align:right; padding-right:12px; cursor:pointer; user-select:none;">1</span>
+          <span><span style="color:#89b4fa">public</span> <span style="color:#a6e3a1">String</span> process(<span style="color:#a6e3a1">String</span> input) {</span>
+        </div>
+        <div style="display:flex; background:rgba(137,180,250,0.15); border-left:3px solid #89b4fa;">
+          <span style="color:#89b4fa; width:32px; text-align:right; padding-right:12px; cursor:pointer; user-select:none;">2 ●</span>
+          <span><span style="color:#a6e3a1">String</span> result = input.<span style="color:#89b4fa">trim</span>().<span style="color:#89b4fa">toLowerCase</span>();</span>
+        </div>
+        <div style="display:flex;">
+          <span style="color:#585b70; width:32px; text-align:right; padding-right:12px; cursor:pointer; user-select:none;">3</span>
+          <span><span style="color:#89b4fa">if</span> (result.isEmpty()) {</span>
+        </div>
+        <div style="display:flex; background:rgba(137,180,250,0.15); border-left:3px solid #89b4fa;">
+          <span style="color:#89b4fa; width:32px; text-align:right; padding-right:12px; cursor:pointer; user-select:none;">4 ●</span>
+          <span><span style="color:#89b4fa">return</span> <span style="color:#fab387">null</span>;</span>
+        </div>
+        <div style="display:flex;">
+          <span style="color:#585b70; width:32px; text-align:right; padding-right:12px; cursor:pointer; user-select:none;">5</span>
+          <span>}</span>
+        </div>
+        <div style="display:flex;">
+          <span style="color:#585b70; width:32px; text-align:right; padding-right:12px; cursor:pointer; user-select:none;">6</span>
+          <span><span style="color:#89b4fa">return</span> result + result;</span>
+        </div>
+      </div>
+      <p style="margin-top:8px; color:#a0a0b0; font-size:13px;">● appears in gutter for selected lines. Click again to deselect.</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Full Row Click</h3>
+      <p>Clicking anywhere on a line toggles selection. Simpler, more forgiving touch targets — works better on mobile. Entire row lights up.</p>
+      <div style="margin-top:12px; font-family:monospace; font-size:13px; line-height:1.9; background:#1e1e2e; padding:16px; border-radius:8px;">
+        <div style="padding:2px 8px; cursor:pointer;">
+          <span style="color:#585b70;">1</span>  <span style="color:#89b4fa">public</span> <span style="color:#a6e3a1">String</span> process(<span style="color:#a6e3a1">String</span> input) {
+        </div>
+        <div style="padding:2px 8px; cursor:pointer; background:rgba(137,180,250,0.2); border-radius:4px;">
+          <span style="color:#89b4fa;">2</span>  <span style="color:#a6e3a1">String</span> result = input.<span style="color:#89b4fa">trim</span>().<span style="color:#89b4fa">toLowerCase</span>(); <span style="float:right; color:#89b4fa;">✓</span>
+        </div>
+        <div style="padding:2px 8px; cursor:pointer;">
+          <span style="color:#585b70;">3</span>  <span style="color:#89b4fa">if</span> (result.isEmpty()) {
+        </div>
+        <div style="padding:2px 8px; cursor:pointer; background:rgba(137,180,250,0.2); border-radius:4px;">
+          <span style="color:#585b70;">4</span>  <span style="color:#89b4fa">return</span> <span style="color:#fab387">null</span>; <span style="float:right; color:#89b4fa;">✓</span>
+        </div>
+        <div style="padding:2px 8px; cursor:pointer;">
+          <span style="color:#585b70;">5</span>  }
+        </div>
+      </div>
+      <p style="margin-top:8px; color:#a0a0b0; font-size:13px;">Tap/click anywhere on the row. ✓ appears on selected lines.</p>
+    </div>
+  </div>
+</div>
