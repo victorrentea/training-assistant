@@ -438,9 +438,9 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
             <div class="wc-input-row">
               <input id="wc-input" type="text" maxlength="40" autocomplete="off" placeholder="Type a word…" list="wc-suggestions" />
               <datalist id="wc-suggestions"></datalist>
-              <button id="wc-go" class="btn btn-primary">↵</button>
-              <button id="wc-download" class="btn btn-secondary" title="Download image">⬇</button>
+              <button id="wc-go" class="btn btn-primary">🚀</button>
             </div>
+            <button id="wc-download" class="btn btn-secondary wc-download-btn">⬇ Download Image</button>
             <div id="wc-my-words"></div>
           </div>
         </div>`;
@@ -460,8 +460,8 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     // Update prompt with topic (may change after screen is shown)
     const promptEl = document.getElementById('wc-prompt-text');
     if (promptEl) {
-      const topicSuffix = topic ? ` about <strong>${escHtml(topic)}</strong>` : '';
-      promptEl.innerHTML = `What comes to mind${topicSuffix}? <span style="font-size:.9em; opacity:.75; font-weight:normal">(pts++)</span>`;
+      // Topic is shown on the canvas image, so keep prompt simple
+      promptEl.innerHTML = `What comes to mind? <span style="font-size:.9em; opacity:.75; font-weight:normal">(pts++)</span>`;
     }
     renderWordCloud(wordcloudWords);
     renderMyWords();
