@@ -18,7 +18,7 @@ class AnswerToggle(BaseModel):
     answered: bool
 
 
-@router.patch("/api/qa/question/{question_id}", dependencies=[Depends(require_host_auth)])
+@router.put("/api/qa/question/{question_id}/text", dependencies=[Depends(require_host_auth)])
 async def edit_question(question_id: str, body: QuestionEdit):
     q = state.qa_questions.get(question_id)
     if not q:
@@ -42,7 +42,7 @@ async def delete_question(question_id: str):
     return {"ok": True}
 
 
-@router.post("/api/qa/answer/{question_id}", dependencies=[Depends(require_host_auth)])
+@router.put("/api/qa/question/{question_id}/answered", dependencies=[Depends(require_host_auth)])
 async def toggle_answered(question_id: str, body: AnswerToggle):
     q = state.qa_questions.get(question_id)
     if not q:
