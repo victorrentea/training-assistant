@@ -18,12 +18,6 @@ class ParticipantPage:
         self._page.click("#join-btn")
         expect(self._page.locator("#main-screen")).to_be_visible(timeout=5000)
 
-    def leave(self) -> None:
-        """Click Leave; accepts confirmation dialog if it appears."""
-        self._page.on("dialog", lambda d: d.accept())
-        self._page.click("#leave-btn")
-        expect(self._page.locator("#join-screen")).to_be_visible(timeout=5000)
-
     # ── Poll ─────────────────────────────────────────────────────────────────
 
     def vote_for(self, option_text: str) -> None:

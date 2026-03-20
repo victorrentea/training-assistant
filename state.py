@@ -29,7 +29,7 @@ class AppState:
         self.poll_active: bool = False
         self.votes: dict[str, str] = {}
         self.participants: dict[str, WebSocket] = {}
-        self.suggested_names: set[str] = set()
+        self.participant_names: dict[str, str] = {}  # uuid -> display_name
         self.locations: dict[str, str] = {}
         self.quiz_request: Optional[dict] = None
         self.quiz_refine_request: Optional[dict] = None
@@ -49,14 +49,9 @@ class AppState:
         # Each value: { id, text, author, upvoters: set[str], answered: bool, timestamp: float }
 
     def suggest_name(self) -> str:
-        # Purge stale suggestions older than connected participants set (keep set bounded)
-        if len(self.suggested_names) > 50:
-            self.suggested_names.clear()
-        taken = set(self.participants.keys()) | self.suggested_names
+        taken = set(self.participant_names.values())
         available = [n for n in LOTR_NAMES if n not in taken]
-        name = available[0] if available else f"Guest{random.randint(100, 999)}"
-        self.suggested_names.add(name)
-        return name
+        return available[0] if available else f"Guest{random.randint(100, 999)}"
 
     def vote_counts(self) -> dict:
         if not self.poll:
