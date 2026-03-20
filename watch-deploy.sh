@@ -197,20 +197,15 @@ while true; do
 
     # We're waiting for a deploy — check if production updated
     if [ "$CURRENT_PROD" != "$LAST_PROD_VERSION" ]; then
-      if [ "$MERGE_SHA" = "$LAST_MASTER_HEAD" ]; then
-        # This deploy matches the push we're tracking — real success
-        record_deploy "$ELAPSED"
-        notify_success "$CURRENT_PROD"
-        # Pull latest code and self-restart with new version
-        echo "$(date '+%H:%M:%S') 🔄 Pulling latest code..."
-        git -C "$SCRIPT_DIR" pull --ff-only origin master 2>&1 | sed 's/^/  /'
-        echo "$(date '+%H:%M:%S') 🔁 Restarting watcher with new version..."
-        exec "$0" "$@"
-      else
-        # Stale deploy from an older push — keep waiting for the newer one
-        echo "$(date '+%H:%M:%S') 🔄 Stale deploy landed ($CURRENT_PROD), still waiting for ${MERGE_SHA:0:8}"
-        LAST_PROD_VERSION="$CURRENT_PROD"
-      fi
+      # Version changed — a deploy landed. Record and restart.
+      # If pushes overlapped, the exec restart will pick up the next deploy.
+      record_deploy "$ELAPSED"
+      notify_success "$CURRENT_PROD"
+      # Pull latest code and self-restart with new version
+      echo "$(date '+%H:%M:%S') 🔄 Pulling latest code..."
+      git -C "$SCRIPT_DIR" pull --ff-only origin master 2>&1 | sed 's/^/  /'
+      echo "$(date '+%H:%M:%S') 🔁 Restarting watcher with new version..."
+      exec "$0" "$@"
     fi
 
     # Check timeout
@@ -239,14 +234,23 @@ while true; do
   if [ $((POLL_COUNTER % 5)) -eq 0 ]; then
     CURRENT_HEAD=$(get_master_head)
     if [ -n "$CURRENT_HEAD" ] && [ "$CURRENT_HEAD" != "$LAST_MASTER_HEAD" ]; then
-      ESTIMATED=$(get_estimated_duration)
       COMMIT_MSG=$(get_commit_message "$CURRENT_HEAD")
-      echo "$(date '+%H:%M:%S') 🔀 Merge detected! Master HEAD: ${CURRENT_HEAD:0:8} (was ${LAST_MASTER_HEAD:0:8})"
-      echo "  Commit: $COMMIT_MSG"
-      echo "  Waiting up to ${DEPLOY_TIMEOUT}s for production to update..."
       LAST_MASTER_HEAD="$CURRENT_HEAD"
-      WAITING_SINCE=$(date +%s)
       MERGE_SHA="$CURRENT_HEAD"
+      if [ -z "$WAITING_SINCE" ]; then
+        # First push — start fresh countdown
+        ESTIMATED=$(get_estimated_duration)
+        WAITING_SINCE=$(date +%s)
+        echo "$(date '+%H:%M:%S') 🔀 Merge detected! Master HEAD: ${CURRENT_HEAD:0:8}"
+        echo "  Commit: $COMMIT_MSG"
+        echo "  Estimated deploy time: ~${ESTIMATED}s"
+      else
+        # Overlapping push — update target but keep original WAITING_SINCE
+        # so elapsed time and recorded duration stay accurate
+        echo "$(date '+%H:%M:%S') 🔀 New push while waiting! HEAD: ${CURRENT_HEAD:0:8}"
+        echo "  Commit: $COMMIT_MSG"
+        echo "  Keeping original countdown (${ESTIMATED}s estimate)"
+      fi
       # Send initial countdown notification (resets throttle)
       LAST_NOTIFY_TIME=0
       notify_countdown "$ESTIMATED"
