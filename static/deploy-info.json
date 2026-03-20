@@ -1,7 +1,7 @@
 {
-  "sha": "12d70dcacbaef5fdf6c284de4eecc1b1770e64d7",
-  "timestamp": "2026-03-20 22:02",
+  "sha": "283f24707368901ea4fd5427d8da8894ef2b43e2",
+  "timestamp": "2026-03-20 22:41",
   "changelog": [
-    "Reduce LLM costs: adapter, token tracking, delta summaries (#43) (#47)"
+    "fix: remove word history list from host word cloud panel"
   ]
 }
