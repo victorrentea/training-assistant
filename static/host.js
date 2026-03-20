@@ -140,24 +140,17 @@
         if (currentPoll && currentPoll.question !== prevQuestion) loadCorrectOpts(currentPoll.question);
         voteCounts = msg.vote_counts || {};
         totalVotes = Object.values(voteCounts).reduce((a,b)=>a+b,0);
-        if (msg.participants) {
-            participantLocations = {};
-            scores = {};
-            const names = [];
-            msg.participants.forEach(p => {
-                names.push(p.name);
-                participantLocations[p.name] = p.location;
-                scores[p.name] = p.score;
-            });
-            cachedNames = names;
-            document.getElementById('pax-count').textContent = msg.participant_count;
-            renderParticipantList(names);
-        } else {
-            participantLocations = msg.participant_locations || {};
-            scores = msg.scores || {};
-            document.getElementById('pax-count').textContent = msg.participant_count;
-            renderParticipantList(msg.participant_names || []);
-        }
+        participantLocations = {};
+        scores = {};
+        const names = [];
+        msg.participants.forEach(p => {
+            names.push(p.name);
+            participantLocations[p.name] = p.location;
+            scores[p.name] = p.score;
+        });
+        cachedNames = names;
+        document.getElementById('pax-count').textContent = msg.participant_count;
+        renderParticipantList(names);
         renderDaemonStatus(msg.daemon_connected, msg.daemon_last_seen, msg.daemon_session_folder, msg.daemon_session_notes);
         renderPreview(msg.quiz_preview || null);
         renderPollDisplay();
@@ -175,21 +168,16 @@
         renderBars();
       } else if (msg.type === 'participant_count') {
         document.getElementById('pax-count').textContent = msg.count;
-        if (msg.participants) {
-            participantLocations = {};
-            scores = {};
-            const names = [];
-            msg.participants.forEach(p => {
-                names.push(p.name);
-                participantLocations[p.name] = p.location;
-                scores[p.name] = p.score;
-            });
-            cachedNames = names;
-            renderParticipantList(names);
-        } else {
-            participantLocations = msg.locations || participantLocations;
-            renderParticipantList(msg.names || cachedNames);
-        }
+        participantLocations = {};
+        scores = {};
+        const names = [];
+        msg.participants.forEach(p => {
+            names.push(p.name);
+            participantLocations[p.name] = p.location;
+            scores[p.name] = p.score;
+        });
+        cachedNames = names;
+        renderParticipantList(names);
       } else if (msg.type === 'timer') {
         _applyTimer(msg.seconds, msg.started_at);
       } else if (msg.type === 'quiz_status') {
