@@ -109,8 +109,8 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
   });
 
   // ── Join ──
-  document.getElementById('join-btn').addEventListener('click', join);
-  nameInput.addEventListener('keydown', e => { if (e.key === 'Enter') join(); });
+  document.getElementById('join-btn').addEventListener('click', () => { join(); requestNotificationPermission(); });
+  nameInput.addEventListener('keydown', e => { if (e.key === 'Enter') { join(); requestNotificationPermission(); } });
 
   function join() {
     const input = document.getElementById('name-input');
@@ -188,6 +188,7 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
 
   // ── WebSocket ──
   function connectWS(name) {
+    _stateInitialised = false;
     const proto = location.protocol === 'https:' ? 'wss' : 'ws';
     const url = `${proto}://${location.host}/ws/${encodeURIComponent(name)}`;
     ws = new WebSocket(url);
@@ -196,6 +197,13 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
       document.getElementById('join-screen').style.display = 'none';
       document.getElementById('main-screen').style.display = 'block';
       document.getElementById('display-name').textContent = myName;
+
+      // Show 🔔 button for auto-joiners who haven't been asked for permission yet
+      if ('Notification' in window && Notification.permission === 'default' && !_notifBtnBound) {
+        _notifBtnBound = true;
+        const btn = document.getElementById('notif-btn');
+        if (btn) { btn.style.display = ''; btn.onclick = requestNotificationPermission; }
+      }
 
       const loc = await resolveLocation();
       const locationStr = loc.location || `🕐 ${loc.timezone}`;
