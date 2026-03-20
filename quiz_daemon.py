@@ -30,8 +30,9 @@ from daemon.transcript_timestamps import (
 )
 from quiz_core import (
     config_from_env, find_session_folder, auto_generate, auto_generate_topic, auto_refine,
-    post_status, _get_json, DAEMON_POLL_INTERVAL,
+    post_status, _get_json, _post_json, DAEMON_POLL_INTERVAL,
 )
+from daemon.summarizer import generate_summary, SUMMARY_INTERVAL_SECONDS
 
 _LOCK_FILE = Path("/tmp/quiz_daemon.lock")
 _HEARTBEAT_INTERVAL = 1.0  # seconds between heartbeat writes
@@ -216,6 +217,9 @@ def run() -> None:
     server_disconnected = False
     last_detected_date: date | None = None
     last_heartbeat_at = 0.0
+    # Summary state
+    summary_points: list[str] = []
+    last_summary_at = 0.0  # monotonic time of last summary run
 
     while True:
         try:
@@ -293,6 +297,22 @@ def run() -> None:
                         last_quiz = updated
                 else:
                     post_status("error", "No conversation context — please generate a question first.", config)
+
+            # ── Periodic summary generation ──
+            now_mono = time.monotonic()
+            if now_mono - last_summary_at >= SUMMARY_INTERVAL_SECONDS:
+                last_summary_at = now_mono
+                try:
+                    new_points = generate_summary(config, summary_points)
+                    if new_points is not None:
+                        summary_points = new_points
+                        _post_json(
+                            f"{config.server_url}/api/summary",
+                            {"points": summary_points},
+                            config.host_username, config.host_password,
+                        )
+                except Exception as e:
+                    print(f"[summarizer] Error during summary generation: {e}", file=sys.stderr)
 
         except RuntimeError as e:
             if not server_disconnected:
