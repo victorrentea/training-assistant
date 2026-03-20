@@ -59,7 +59,7 @@ async def poll_quiz_request():
     state.daemon_last_seen = datetime.now(timezone.utc)
     req = state.quiz_request
     state.quiz_request = None
-    return {"request": req}
+    return {"request": req, "session_folder": state.daemon_session_folder}
 
 
 @router.post("/api/quiz-status")
