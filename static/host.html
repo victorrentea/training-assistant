@@ -65,7 +65,7 @@
               <option value="480">whole day</option>
             </select>
           </div>
-          <button class="btn btn-warn" id="gen-quiz-btn" onclick="requestQuiz()" style="align-self:flex-start;">Generate from transcript ✨</button>
+          <button class="btn btn-warn" id="gen-quiz-btn" onclick="requestQuiz()" style="align-self:flex-start;">Generate from transcript 🤖</button>
         </div>
         <span id="quiz-status"></span>
       </div>
@@ -143,7 +143,7 @@
           </select>
           <label style="display:flex; align-items:center; gap:4px; font-size:.8rem; cursor:pointer; white-space:nowrap; flex-shrink:0;">
             <input type="checkbox" id="codereview-smart-paste" checked>
-            Smart paste ✨
+            Smart paste 🤖
           </label>
           <button class="btn btn-success" onclick="startCodeReview()" style="margin-left:auto;">Start Code Review</button>
         </div>
@@ -224,9 +224,11 @@
     </div>
     <!-- Code Review center panel -->
     <div id="center-codereview" style="display:none" class="center-panel">
-      <div style="text-align:center; padding:.5rem 0 .25rem; font-size:1.1rem; color:var(--muted); text-transform:uppercase; letter-spacing:.08em;">Code Review</div>
       <div style="display:flex; flex:1; min-height:0;">
-        <div id="codereview-code-panel" style="flex:2; overflow:auto; padding:12px;"></div>
+        <div style="flex:2; display:flex; flex-direction:column; min-height:0;">
+          <div style="text-align:center; padding:.5rem 0 .25rem; font-size:1.1rem; color:var(--muted); text-transform:uppercase; letter-spacing:.08em;">Code Review</div>
+          <div id="codereview-code-panel" style="flex:1; overflow:auto; padding:12px;"></div>
+        </div>
         <div style="flex:0 0 1px; background:var(--border);"></div>
         <div id="codereview-side-panel" style="flex:1; overflow:auto; padding:12px;">
           <div class="muted" style="text-align:center; margin-top:40px;">Click a line to see details</div>

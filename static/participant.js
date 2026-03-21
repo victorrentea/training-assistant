@@ -1268,7 +1268,7 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     };
 
     const renderMerged = () => `<div class="debate-arg debate-arg-merged">
-      <span>✨ duplicate, merged above</span>
+      <span>🤖 duplicate, merged above</span>
     </div>`;
 
     return `<div class="debate-columns">

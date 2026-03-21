@@ -872,7 +872,7 @@
            <input type="range" id="timer-slider" class="timer-slider" min="5" max="30" value="15"
              oninput="document.getElementById('timer-val').textContent=this.value+'s'; document.getElementById('timer-tip').style.opacity='1'"
              onmouseup="startTimer(+this.value)" ontouchend="startTimer(+this.value)" />
-           <span id="timer-tip" class="timer-tip">Drop to set the time left</span>
+           <span id="timer-tip" class="timer-tip">Release to start countdown</span>
          </span>`
       : '';
 
@@ -900,6 +900,7 @@
           : !activeTimer ? `<button class="btn btn-warn" onclick="setPollStatus(false)">⏹ Close voting</button>` : ''}
         ${pollActive && activeTimer ? `<div class="countdown-display" id="host-countdown"></div>` : ''}
         ${timerBtns}
+        <span style="flex:1"></span>
         <button class="btn btn-danger" onclick="clearPoll()">✕ Remove question</button>
       </div>`;
 
@@ -937,8 +938,8 @@
   }
 
   // ── Quiz generator ──
-  const GEN_LABEL_TRANSCRIPT = 'Generate from transcript ✨';
-  const GEN_LABEL_TOPIC = 'Generate on topic ✨';
+  const GEN_LABEL_TRANSCRIPT = 'Generate from transcript 🤖';
+  const GEN_LABEL_TOPIC = 'Generate on topic 🤖';
 
   function updateGenBtn() {
     const topic = document.getElementById('quiz-topic').value.trim();
@@ -1477,24 +1478,28 @@
 
     let html = '';
 
-    html += `<div style="font-size:.85rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.5rem;">Line ${lineNum} — Users that selected this line</div>`;
+    html += `<div style="font-size:.85rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.5rem;">Users that selected this line</div>`;
     if (lineParticipants.length > 0) {
-      const sorted = [...lineParticipants].sort((a, b) => {
-        if (a.score !== b.score) return b.score - a.score;
-        return a.name.localeCompare(b.name);
-      });
-      html += '<div class="codereview-participant-list">';
-      sorted.forEach(p => {
-        html += '<div class="codereview-participant-row">';
-        html += `<span>• ${escHtml(p.name)}</span>`;
-        if (p.score > 0) {
-          html += `<span class="codereview-participant-score">⭐ ${p.score} pts</span>`;
-        }
+      if (currentMode === 'conference') {
+        html += `<div style="font-size:2rem;font-weight:700;color:var(--accent);text-align:center;margin:.5rem 0;">${lineParticipants.length}</div>`;
+      } else {
+        const sorted = [...lineParticipants].sort((a, b) => {
+          if (a.score !== b.score) return b.score - a.score;
+          return a.name.localeCompare(b.name);
+        });
+        html += '<div class="codereview-participant-list">';
+        sorted.forEach(p => {
+          html += '<div class="codereview-participant-row">';
+          html += `<span>• ${escHtml(p.name)}</span>`;
+          if (p.score > 0) {
+            html += `<span class="codereview-participant-score">⭐ ${p.score} pts</span>`;
+          }
+          html += '</div>';
+        });
         html += '</div>';
-      });
-      html += '</div>';
+      }
     } else {
-      html += '<div class="muted">No participants selected this line</div>';
+      html += '<div style="color:var(--muted);font-size:.85rem;">no one</div>';
     }
 
     if (cr.phase === 'reviewing' && !isConfirmed) {
@@ -1838,7 +1843,7 @@
 
       let actionHtml = '';
       if (isActive && phase === 'ai_cleanup' && p.key === 'prep') {
-        actionHtml = `<div class="debate-chapter-extra"><span style="color:var(--accent);font-size:.8rem;">✨ AI enriching arguments…</span> <button class="btn btn-sm" onclick="debateSkipAI()" style="margin-left:.5rem;font-size:.7rem;">Skip AI</button></div>`;
+        actionHtml = `<div class="debate-chapter-extra"><span style="color:var(--accent);font-size:.8rem;">🤖 AI enriching arguments…</span> <button class="btn btn-sm" onclick="debateSkipAI()" style="margin-left:.5rem;font-size:.7rem;">Skip AI</button></div>`;
       } else if (isActive && phaseActions[p.key]) {
         actionHtml = `<div class="debate-chapter-extra">${phaseActions[p.key]}</div>`;
       }
@@ -1986,7 +1991,7 @@
     };
 
     const renderMerged = () => `<div class="debate-arg debate-arg-merged">
-      <span style="color:var(--muted);font-size:.8rem;">✨ duplicate, merged above</span>
+      <span style="color:var(--muted);font-size:.8rem;">🤖 duplicate, merged above</span>
     </div>`;
 
     const champFor = champions?.for ? `<div class="debate-champion">🏆 ${escDebate(champions.for)}</div>` : '';
