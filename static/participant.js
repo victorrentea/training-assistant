@@ -537,17 +537,18 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
         _startParticipantCountdown();
         break;
       case 'debate_timer':
-        _debateSubTimer = { subPhaseIndex: msg.sub_phase_index, seconds: msg.seconds, startedAt: new Date(msg.started_at).getTime() };
+        _stopBeeping();
+        _debateRoundTimer = { roundIndex: msg.round_index, seconds: msg.seconds, startedAt: new Date(msg.started_at).getTime() };
         if (_lastDebateMsg) renderDebateScreen(_lastDebateMsg);
         _startDebateParticipantCountdown();
         break;
-      case 'debate_phase_ended':
-        _debateSubTimer = null;
+      case 'debate_round_ended':
+        _debateRoundTimer = null;
         clearInterval(_debateTimerInterval);
-        _playDebateChime();
+        _stopBeeping();
         if (_lastDebateMsg) {
-          _lastDebateMsg.debate_sub_timer_started_at = null;
-          _lastDebateMsg.debate_sub_timer_seconds = null;
+          _lastDebateMsg.debate_round_timer_started_at = null;
+          _lastDebateMsg.debate_round_timer_seconds = null;
           renderDebateScreen(_lastDebateMsg);
         }
         break;
@@ -1031,7 +1032,7 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     { key: 'live_debate',    num: 4, label: 'Live Debate' },
   ];
 
-  function getDebateSubPhases(firstSide) {
+  function getDebateRounds(firstSide) {
     if (!firstSide) return [];
     const other = firstSide === 'for' ? 'against' : 'for';
     const fl = firstSide.toUpperCase(), ol = other.toUpperCase();
@@ -1043,12 +1044,14 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     ];
   }
 
-  let _debateSubTimer = null;
+  let _debateRoundTimer = null;
   let _debateTimerInterval = null;
   let _lastDebateMsg = null;
   let _debateChimePlayed = false;
 
-  function _playDebateChime() {
+  let _debateBeepTimeouts = [];
+
+  function _playBeep() {
     try {
       const ctx = new (window.AudioContext || window.webkitAudioContext)();
       const osc = ctx.createOscillator();
@@ -1059,9 +1062,28 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
       osc.frequency.value = 880;
       gain.gain.value = 0.3;
       osc.start();
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.8);
-      osc.stop(ctx.currentTime + 0.8);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+      osc.stop(ctx.currentTime + 0.4);
     } catch(e) {}
+  }
+
+  function _playEscalatingBeeps() {
+    _stopBeeping();
+    const pattern = [
+      { delay: 0, count: 1 },
+      { delay: 3000, count: 2 },
+      { delay: 6000, count: 3 },
+    ];
+    for (const step of pattern) {
+      for (let i = 0; i < step.count; i++) {
+        _debateBeepTimeouts.push(setTimeout(_playBeep, step.delay + i * 300));
+      }
+    }
+  }
+
+  function _stopBeeping() {
+    _debateBeepTimeouts.forEach(t => clearTimeout(t));
+    _debateBeepTimeouts = [];
   }
 
   function _startDebateParticipantCountdown() {
@@ -1069,15 +1091,15 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     _debateChimePlayed = false;
     _debateTimerInterval = setInterval(() => {
       const el = document.getElementById('debate-pax-countdown');
-      if (!el || !_debateSubTimer) { clearInterval(_debateTimerInterval); return; }
-      const elapsed = (Date.now() - _debateSubTimer.startedAt) / 1000;
-      const remaining = Math.max(0, _debateSubTimer.seconds - elapsed);
+      if (!el || !_debateRoundTimer) { clearInterval(_debateTimerInterval); return; }
+      const elapsed = (Date.now() - _debateRoundTimer.startedAt) / 1000;
+      const remaining = Math.max(0, _debateRoundTimer.seconds - elapsed);
       const mins = Math.floor(remaining / 60);
       const secs = Math.ceil(remaining % 60);
       if (remaining <= 0) {
         el.textContent = "TIME'S UP";
         el.className = 'debate-countdown-large debate-countdown-expired';
-        if (!_debateChimePlayed) { _debateChimePlayed = true; _playDebateChime(); }
+        if (!_debateChimePlayed) { _debateChimePlayed = true; _playEscalatingBeeps(); }
         clearInterval(_debateTimerInterval);
       } else {
         el.textContent = mins > 0 ? `${mins}:${String(secs).padStart(2, '0')}` : `${secs}s`;
@@ -1173,14 +1195,14 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
         html += `<div class="debate-champion-info">${isMe ? '🏆 You are your team\'s champion!' : '🏆 Champion: ' + escDebate(champions[mySide])}</div>`;
       }
     } else if (phase === 'live_debate') {
-      const subPhases = getDebateSubPhases(msg.debate_first_side);
-      const subIdx = msg.debate_sub_phase_index;
-      const timerActive = !!msg.debate_sub_timer_started_at;
+      const rounds = getDebateRounds(msg.debate_first_side);
+      const roundIdx = msg.debate_round_index;
+      const timerActive = !!msg.debate_round_timer_started_at;
       if (!msg.debate_first_side) {
         html += `<div style="text-align:center; margin:.5rem 0; color:var(--muted);">Host is picking who speaks first…</div>`;
-      } else if (subIdx != null && subIdx >= 0 && subIdx < subPhases.length) {
-        const sub = subPhases[subIdx];
-        const sideClass = sub.side === 'for' ? 'debate-sub-phase-side-for' : sub.side === 'against' ? 'debate-sub-phase-side-against' : 'debate-sub-phase-side-both';
+      } else if (roundIdx != null && roundIdx >= 0 && roundIdx < rounds.length) {
+        const sub = rounds[roundIdx];
+        const sideClass = sub.side === 'for' ? 'debate-round-side-for' : sub.side === 'against' ? 'debate-round-side-against' : 'debate-round-side-both';
         const sideIcon = sub.side === 'for' ? '👍' : '👎';
         html += `<div style="text-align:center; margin:.5rem 0;">
           <span class="${sideClass}" style="font-weight:700; font-size:1.1rem;">${sideIcon} ${escDebate(sub.label)}</span>
@@ -1209,12 +1231,12 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     }
 
     // Reconstruct timer on reconnect from state
-    if (phase === 'live_debate' && msg.debate_sub_timer_started_at && msg.debate_sub_phase_index != null) {
-      if (!_debateSubTimer || _debateSubTimer.subPhaseIndex !== msg.debate_sub_phase_index) {
-        _debateSubTimer = {
-          subPhaseIndex: msg.debate_sub_phase_index,
-          seconds: msg.debate_sub_timer_seconds,
-          startedAt: new Date(msg.debate_sub_timer_started_at).getTime()
+    if (phase === 'live_debate' && msg.debate_round_timer_started_at && msg.debate_round_index != null) {
+      if (!_debateRoundTimer || _debateRoundTimer.roundIndex !== msg.debate_round_index) {
+        _debateRoundTimer = {
+          roundIndex: msg.debate_round_index,
+          seconds: msg.debate_round_timer_seconds,
+          startedAt: new Date(msg.debate_round_timer_started_at).getTime()
         };
       }
       _startDebateParticipantCountdown();

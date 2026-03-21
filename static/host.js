@@ -228,16 +228,17 @@
       } else if (msg.type === 'timer') {
         _applyTimer(msg.seconds, msg.started_at);
       } else if (msg.type === 'debate_timer') {
-        _debateSubTimer = { subPhaseIndex: msg.sub_phase_index, seconds: msg.seconds, startedAt: new Date(msg.started_at).getTime() };
+        _stopBeeping();
+        _debateRoundTimer = { roundIndex: msg.round_index, seconds: msg.seconds, startedAt: new Date(msg.started_at).getTime() };
         if (_lastDebateMsg) renderDebateHost(_lastDebateMsg);
         _startDebateCountdown();
-      } else if (msg.type === 'debate_phase_ended') {
-        _debateSubTimer = null;
+      } else if (msg.type === 'debate_round_ended') {
+        _debateRoundTimer = null;
         clearInterval(_debateTimerInterval);
-        _playDebateChime();
+        _stopBeeping();
         if (_lastDebateMsg) {
-          _lastDebateMsg.debate_sub_timer_started_at = null;
-          _lastDebateMsg.debate_sub_timer_seconds = null;
+          _lastDebateMsg.debate_round_timer_started_at = null;
+          _lastDebateMsg.debate_round_timer_seconds = null;
           renderDebateHost(_lastDebateMsg);
         }
       } else if (msg.type === 'quiz_status') {
@@ -1581,7 +1582,7 @@
     { key: 'live_debate',    num: 4, label: 'Live Debate' },
   ];
 
-  function getDebateSubPhases(firstSide) {
+  function getDebateRounds(firstSide) {
     if (!firstSide) return [];
     const other = firstSide === 'for' ? 'against' : 'for';
     const fl = firstSide.toUpperCase(), ol = other.toUpperCase();
@@ -1593,45 +1594,67 @@
     ];
   }
 
-  let _debateSubTimer = null; // {subPhaseIndex, seconds, startedAt (ms)}
+  let _debateRoundTimer = null; // {roundIndex, seconds, startedAt (ms)}
   let _debateTimerInterval = null;
   let _lastDebateMsg = null;
   let _debateChimePlayed = false;
 
-  function _playDebateChime() {
+  let _debateBeepTimeouts = [];
+
+  function _playBeep() {
     try {
-        const ctx = new (window.AudioContext || window.webkitAudioContext)();
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.type = 'sine';
-        osc.frequency.value = 880;
-        gain.gain.value = 0.3;
-        osc.start();
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.8);
-        osc.stop(ctx.currentTime + 0.8);
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.value = 880;
+      gain.gain.value = 0.3;
+      osc.start();
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+      osc.stop(ctx.currentTime + 0.4);
     } catch(e) {}
+  }
+
+  function _playEscalatingBeeps() {
+    _stopBeeping();
+    // 1 beep now, 2 beeps after 3s, 3 beeps after 6s
+    const pattern = [
+      { delay: 0, count: 1 },
+      { delay: 3000, count: 2 },
+      { delay: 6000, count: 3 },
+    ];
+    for (const step of pattern) {
+      for (let i = 0; i < step.count; i++) {
+        _debateBeepTimeouts.push(setTimeout(_playBeep, step.delay + i * 300));
+      }
+    }
+  }
+
+  function _stopBeeping() {
+    _debateBeepTimeouts.forEach(t => clearTimeout(t));
+    _debateBeepTimeouts = [];
   }
 
   function _startDebateCountdown() {
     clearInterval(_debateTimerInterval);
     _debateChimePlayed = false;
     _debateTimerInterval = setInterval(() => {
-      const el = document.getElementById('debate-sub-countdown');
-      if (!el || !_debateSubTimer) { clearInterval(_debateTimerInterval); return; }
-      const elapsed = (Date.now() - _debateSubTimer.startedAt) / 1000;
-      const remaining = Math.max(0, _debateSubTimer.seconds - elapsed);
+      const el = document.getElementById('debate-round-countdown');
+      if (!el || !_debateRoundTimer) { clearInterval(_debateTimerInterval); return; }
+      const elapsed = (Date.now() - _debateRoundTimer.startedAt) / 1000;
+      const remaining = Math.max(0, _debateRoundTimer.seconds - elapsed);
       const mins = Math.floor(remaining / 60);
       const secs = Math.ceil(remaining % 60);
       const timeText = mins > 0 ? `${mins}:${String(secs).padStart(2, '0')}` : `${secs}s`;
       // Update end button countdown if present
-      const endBtn = document.querySelector('[id^="debate-sub-end-btn-"]');
+      const endBtn = document.querySelector('[id^="debate-round-end-btn-"]');
       if (endBtn && remaining > 0) endBtn.textContent = `End (${timeText})`;
       if (remaining <= 0) {
         el.textContent = "TIME'S UP";
         el.className = 'debate-countdown-large debate-countdown-expired';
-        if (!_debateChimePlayed) { _playDebateChime(); _debateChimePlayed = true; }
+        if (!_debateChimePlayed) { _playEscalatingBeeps(); _debateChimePlayed = true; }
         clearInterval(_debateTimerInterval);
         if (endBtn) endBtn.textContent = 'End';
       } else {
@@ -1642,24 +1665,25 @@
     }, 200);
   }
 
-  async function startDebateSubPhase(index) {
-    const phases = getDebateSubPhases(_lastDebateMsg?.debate_first_side);
-    const input = document.getElementById(`debate-sub-dur-${index}`);
+  async function startDebateRound(index) {
+    const phases = getDebateRounds(_lastDebateMsg?.debate_first_side);
+    const input = document.getElementById(`debate-round-dur-${index}`);
     let seconds = phases[index]?.defaultSeconds || 120;
     if (input) {
       const parts = input.value.split(':');
       seconds = parts.length === 2 ? parseInt(parts[0],10) * 60 + parseInt(parts[1],10) : parseInt(parts[0],10);
     }
     _debateChimePlayed = false;
-    await fetch('/api/debate/sub-phase-timer', {
+    _stopBeeping();
+    await fetch('/api/debate/round-timer', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({sub_phase_index: index, seconds}),
+      body: JSON.stringify({round_index: index, seconds}),
     });
   }
 
-  async function endDebateSubPhase() {
-    await fetch('/api/debate/end-sub-phase', { method: 'POST' });
+  async function endDebateRound() {
+    await fetch('/api/debate/end-round', { method: 'POST' });
   }
 
   async function setDebateFirstSide(side) {
@@ -1749,16 +1773,16 @@
     const phase = msg.debate_phase || null;
     const sideCounts = msg.debate_side_counts || { for: 0, against: 0 };
     const champions = msg.debate_champions || {};
-    const subPhaseIdx = msg.debate_sub_phase_index;
+    const roundIdx = msg.debate_round_index;
 
     // Reconstruct timer from state on reconnect
-    if (phase === 'live_debate' && msg.debate_sub_timer_started_at && !_debateSubTimer) {
-      _debateSubTimer = {
-        subPhaseIndex: subPhaseIdx,
-        seconds: msg.debate_sub_timer_seconds,
-        startedAt: new Date(msg.debate_sub_timer_started_at).getTime(),
+    if (phase === 'live_debate' && msg.debate_round_timer_started_at && !_debateRoundTimer) {
+      _debateRoundTimer = {
+        roundIndex: roundIdx,
+        seconds: msg.debate_round_timer_seconds,
+        startedAt: new Date(msg.debate_round_timer_started_at).getTime(),
       };
-      const remaining = _debateSubTimer.seconds - (Date.now() - _debateSubTimer.startedAt) / 1000;
+      const remaining = _debateRoundTimer.seconds - (Date.now() - _debateRoundTimer.startedAt) / 1000;
       if (remaining > 0) _startDebateCountdown();
     }
 
@@ -1819,7 +1843,7 @@
         actionHtml = `<div class="debate-chapter-extra">${phaseActions[p.key]}</div>`;
       }
 
-      // Render sub-phases for live_debate
+      // Render rounds for live_debate
       if (isActive && p.key === 'live_debate') {
         if (!msg.debate_first_side) {
           actionHtml += `<div style="text-align:center; padding:.5rem;">
@@ -1828,23 +1852,23 @@
             <button class="btn btn-sm" style="background:#e74c3c;color:#fff;" onclick="setDebateFirstSide('against')">👎</button>
           </div>`;
         } else {
-          const subPhases = getDebateSubPhases(msg.debate_first_side);
-          actionHtml += '<div class="debate-sub-phases">';
-          // Determine which sub-phases are done/active/next
-          const anyTimerActive = !!msg.debate_sub_timer_started_at;
+          const rounds = getDebateRounds(msg.debate_first_side);
+          actionHtml += '<div class="debate-rounds">';
+          // Determine which rounds are done/active/next
+          const anyTimerActive = !!msg.debate_round_timer_started_at;
           let foundNext = false;
-          actionHtml += subPhases.map((sp, si) => {
-            const spDone = (subPhaseIdx !== null && si < subPhaseIdx) || (si === subPhaseIdx && !msg.debate_sub_timer_started_at);
-            const spActive = subPhaseIdx !== null && si === subPhaseIdx && !!msg.debate_sub_timer_started_at;
+          actionHtml += rounds.map((sp, si) => {
+            const spDone = (roundIdx !== null && si < roundIdx) || (si === roundIdx && !msg.debate_round_timer_started_at);
+            const spActive = roundIdx !== null && si === roundIdx && !!msg.debate_round_timer_started_at;
             let spNext = false;
             if (!foundNext && !spDone && !spActive && !anyTimerActive) { spNext = true; foundNext = true; }
 
-            let spCls = 'debate-sub-phase';
-            if (spDone) spCls += ' debate-sub-phase-done';
-            else if (spActive) spCls += ' debate-sub-phase-active';
-            else if (spNext) spCls += ' debate-sub-phase-next';
+            let spCls = 'debate-round';
+            if (spDone) spCls += ' debate-round-done';
+            else if (spActive) spCls += ' debate-round-active';
+            else if (spNext) spCls += ' debate-round-next';
 
-            const sideClass = `debate-sub-phase-side-${sp.side}`;
+            const sideClass = `debate-round-side-${sp.side}`;
             const sideIcon = sp.side === 'for' ? '👍' : '👎';
             const mins = Math.floor(sp.defaultSeconds / 60);
             const secs = sp.defaultSeconds % 60;
@@ -1852,16 +1876,16 @@
 
             let statusHtml = '';
             if (spDone) {
-              statusHtml = '<span class="debate-sub-check">✓</span>';
+              statusHtml = '<span class="debate-round-check">✓</span>';
             } else if (spActive) {
-              statusHtml = `<button class="btn btn-warn btn-sm" id="debate-sub-end-btn-${si}" onclick="endDebateSubPhase()">End</button>`;
+              statusHtml = `<button class="btn btn-warn btn-sm" id="debate-round-end-btn-${si}" onclick="endDebateRound()">End</button>`;
             } else if (spNext) {
-              statusHtml = `<input type="text" class="debate-sub-duration" id="debate-sub-dur-${si}" value="${durVal}" title="Duration (m:ss)" /><button class="btn btn-primary btn-sm" onclick="startDebateSubPhase(${si})">▶ Start</button>`;
+              statusHtml = `<input type="text" class="debate-round-duration" id="debate-round-dur-${si}" value="${durVal}" title="Duration (m:ss)" /><button class="btn btn-primary btn-sm" onclick="startDebateRound(${si})">▶ Start</button>`;
             }
 
             return `<div class="${spCls}">
-              <div class="debate-sub-phase-row">
-                <span class="debate-sub-phase-label ${sideClass}">${sideIcon} ${sp.label}</span>
+              <div class="debate-round-row">
+                <span class="debate-round-label ${sideClass}">${sideIcon} ${sp.label}</span>
                 ${statusHtml}
               </div>
             </div>`;
@@ -1916,19 +1940,19 @@
       const phaseLabel = (DEBATE_PHASES.find(p => p.key === displayPhase) || {}).label || '';
       let centerHeader = `<div style="text-align:center; margin-bottom:.75rem; font-size:.95rem; color:var(--muted); text-transform:uppercase; letter-spacing:.08em;">${phaseLabel}</div>`;
 
-      // Add sub-phase info + countdown for live_debate
+      // Add round info + countdown for live_debate
       if (phase === 'live_debate') {
         if (!msg.debate_first_side) {
           // "Who speaks first?" controls are in the left pane
-        } else if (subPhaseIdx !== null) {
-          const subPhases = getDebateSubPhases(msg.debate_first_side);
-          const sp = subPhases[subPhaseIdx];
+        } else if (roundIdx !== null) {
+          const rounds = getDebateRounds(msg.debate_first_side);
+          const sp = rounds[roundIdx];
           if (sp) {
             const sideColor = sp.side === 'for' ? '#2ecc71' : sp.side === 'against' ? '#e74c3c' : 'var(--warn)';
             const sideIcon = sp.side === 'for' ? '👍' : '👎';
             centerHeader += `<div style="text-align:center; margin-bottom:.5rem;">
               <div style="font-size:1.1rem; color:${sideColor}; font-weight:600;">${sideIcon} ${sp.label}</div>
-              <div id="debate-sub-countdown" class="debate-countdown-large"></div>
+              <div id="debate-round-countdown" class="debate-countdown-large"></div>
             </div>`;
           }
         }
@@ -1938,7 +1962,7 @@
         renderDebateDualColumn(againstArgs, forArgs, mergedArgs, msg.debate_champions, phase);
 
       // Restart countdown rendering if timer is active
-      if (phase === 'live_debate' && _debateSubTimer) _startDebateCountdown();
+      if (phase === 'live_debate' && _debateRoundTimer) _startDebateCountdown();
       if (phase === 'ai_cleanup') {
         content.innerHTML += `<div class="debate-ai-loading">
           <div class="debate-ai-spinner"></div>

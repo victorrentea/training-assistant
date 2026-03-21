@@ -1312,15 +1312,15 @@
         ]
       }
     },
-    "/api/debate/sub-phase-timer": {
+    "/api/debate/round-timer": {
       "post": {
-        "summary": "Start Sub Phase Timer",
-        "operationId": "start_sub_phase_timer_api_debate_sub_phase_timer_post",
+        "summary": "Start Round Timer",
+        "operationId": "start_round_timer_api_debate_round_timer_post",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/SubPhaseTimer"
+                "$ref": "#/components/schemas/RoundTimer"
               }
             }
           },
@@ -1353,11 +1353,11 @@
         ]
       }
     },
-    "/api/debate/end-sub-phase": {
+    "/api/debate/end-round": {
       "post": {
-        "summary": "End Sub Phase",
-        "description": "End the current sub-phase early.",
-        "operationId": "end_sub_phase_api_debate_end_sub_phase_post",
+        "summary": "End Round",
+        "description": "End the current round early.",
+        "operationId": "end_round_api_debate_end_round_post",
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -1378,7 +1378,7 @@
     "/api/debate/end-arguments": {
       "post": {
         "summary": "End Arguments",
-        "description": "End arguments phase, run AI cleanup, then advance to prep.",
+        "description": "End arguments phase \u2014 store AI request for daemon pickup.",
         "operationId": "end_arguments_api_debate_end_arguments_post",
         "responses": {
           "200": {
@@ -1397,17 +1397,59 @@
         ]
       }
     },
-    "/api/debate/ai-cleanup": {
-      "post": {
-        "summary": "Ai Cleanup",
-        "description": "Legacy endpoint \u2014 runs AI cleanup standalone.",
-        "operationId": "ai_cleanup_api_debate_ai_cleanup_post",
+    "/api/debate/ai-request": {
+      "get": {
+        "summary": "Poll Debate Ai Request",
+        "description": "Daemon polls this. Returns pending AI request or null, then clears it.",
+        "operationId": "poll_debate_ai_request_api_debate_ai_request_get",
         "responses": {
           "200": {
             "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {}
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBasic": []
+          }
+        ]
+      }
+    },
+    "/api/debate/ai-result": {
+      "post": {
+        "summary": "Receive Ai Result",
+        "description": "Daemon posts AI cleanup results. Apply and advance to prep.",
+        "operationId": "receive_ai_result_api_debate_ai_result_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DebateAiResult"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
               }
             }
           }
@@ -1477,6 +1519,11 @@
               }
             ],
             "title": "Language"
+          },
+          "smart_paste": {
+            "type": "boolean",
+            "title": "Smart Paste",
+            "default": true
           }
         },
         "type": "object",
@@ -1497,6 +1544,39 @@
           "open"
         ],
         "title": "CodeReviewStatus"
+      },
+      "DebateAiResult": {
+        "properties": {
+          "merges": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Merges",
+            "default": []
+          },
+          "cleaned": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Cleaned",
+            "default": []
+          },
+          "new_arguments": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "New Arguments",
+            "default": []
+          }
+        },
+        "type": "object",
+        "title": "DebateAiResult"
       },
       "DebateLaunch": {
         "properties": {
@@ -1792,11 +1872,11 @@
         ],
         "title": "QuizStatus"
       },
-      "SubPhaseTimer": {
+      "RoundTimer": {
         "properties": {
-          "sub_phase_index": {
+          "round_index": {
             "type": "integer",
-            "title": "Sub Phase Index"
+            "title": "Round Index"
           },
           "seconds": {
             "type": "integer",
@@ -1805,10 +1885,10 @@
         },
         "type": "object",
         "required": [
-          "sub_phase_index",
+          "round_index",
           "seconds"
         ],
-        "title": "SubPhaseTimer"
+        "title": "RoundTimer"
       },
       "SummaryPoint": {
         "properties": {
