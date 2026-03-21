@@ -1,10 +1,7 @@
 {
-  "sha": "46ebf1da5a86cb576439078cc7c410bb18faf1ef",
-  "timestamp": "2026-03-21 21:34",
+  "sha": "ab931a1337dfca462f7344767a56725f5e380770",
+  "timestamp": "2026-03-21 21:59",
   "changelog": [
-    "docs(clean-clipboard): add README with setup and usage instructions",
-    "fix(clean-clipboard): measure elapsed time after full operation completes",
-    "feat: add clipboard cleanup daemon with Claude Haiku integration",
-    "feat(clean-clipboard): add project scaffold with dependencies"
+    "refactor(clean-clipboard): use CGEventTap instead of pynput for reliable paste interception"
   ]
 }
