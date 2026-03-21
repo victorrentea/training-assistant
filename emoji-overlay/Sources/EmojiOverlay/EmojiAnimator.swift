@@ -13,8 +13,8 @@ class EmojiAnimator {
     func spawnEmoji(_ emoji: String = "❤️") {
         let bounds = hostLayer.bounds
 
-        // Fixed spawn point: 200pt from left edge, near bottom
-        let spawnX: CGFloat = 200
+        // Fixed spawn point: left-bottom corner
+        let spawnX: CGFloat = 100
         let spawnY: CGFloat = 80
 
         let layer = CATextLayer()

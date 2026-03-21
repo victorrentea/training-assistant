@@ -5,7 +5,22 @@ import Foundation
 let lockFilePath = "/tmp/EmojiOverlay.pid"
 let myPid = getpid()
 
-// Write our PID immediately (supersedes any previous instance)
+// Kill any previous instance before we start
+if let oldPidStr = try? String(contentsOfFile: lockFilePath, encoding: .utf8)
+        .trimmingCharacters(in: .whitespacesAndNewlines),
+   let oldPid = Int32(oldPidStr),
+   oldPid != myPid {
+    NSLog("EmojiOverlay: killing previous instance PID %d", oldPid)
+    kill(oldPid, SIGTERM)
+    // Give it a moment, then force-kill if still alive
+    usleep(200_000) // 200ms
+    if kill(oldPid, 0) == 0 {
+        NSLog("EmojiOverlay: PID %d still alive, sending SIGKILL", oldPid)
+        kill(oldPid, SIGKILL)
+    }
+}
+
+// Write our PID (supersedes any previous instance)
 try? "\(myPid)".write(toFile: lockFilePath, atomically: true, encoding: .utf8)
 NSLog("EmojiOverlay: started with PID %d, wrote lock file", myPid)
 
@@ -19,9 +34,15 @@ func cleanupLockFile() {
 }
 atexit { cleanupLockFile() }
 
+// Handle SIGTERM gracefully so kill() from a new instance works
+signal(SIGTERM) { _ in
+    cleanupLockFile()
+    exit(0)
+}
+
 // --- Normal startup ---
 let app = NSApplication.shared
-app.setActivationPolicy(.regular)
+app.setActivationPolicy(.accessory) // no dock icon
 
 // Write PID lock file — newest instance always wins
 let pidFilePath = "/tmp/emoji-overlay.pid"
@@ -50,7 +71,7 @@ Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { _ in
     if filePid != myPid {
         NSLog("EmojiOverlay: PID %d superseded by PID %d — exiting", myPid, filePid)
         cleanupLockFile()
-        NSApplication.shared.terminate(nil)
+        exit(0)
     }
 }
 
