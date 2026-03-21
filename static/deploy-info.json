@@ -1,7 +1,7 @@
 {
-  "sha": "85d9330255be060bb941d4bd5b80de81eda3347d",
-  "timestamp": "2026-03-21 05:33",
+  "sha": "64ab649e8e0891d57bc5da844fe0cfda89dbebfe",
+  "timestamp": "2026-03-21 05:36",
   "changelog": [
-    "feat: batch UI improvements across host and participant"
+    "fix: emoji overlay daemon reconnects reliably on backend restart"
   ]
 }
