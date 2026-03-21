@@ -83,7 +83,12 @@ async def websocket_endpoint(websocket: WebSocket, participant_id: str):
 
     # In conference mode, auto-name and mark as named immediately
     if state.mode == "conference" and not named:
-        state.participant_names[pid] = ""
+        from names import assign_conference_name, compute_letter_avatar
+        char_name, universe = assign_conference_name(state)
+        state.participant_names[pid] = char_name
+        state.participant_universes[pid] = universe
+        letters, color = compute_letter_avatar(char_name)
+        state.participant_avatars[pid] = f"letter:{letters}:{color}"
         named = True
         await websocket.send_text(json.dumps(build_participant_state(pid)))
 
@@ -130,6 +135,11 @@ async def websocket_endpoint(websocket: WebSocket, participant_id: str):
                     state.participant_names[pid] = name
                     if not is_host:
                         assign_avatar(state, pid, name)  # no-op if already assigned
+                    if state.mode == "conference":
+                        from names import compute_letter_avatar
+                        state.participant_universes[pid] = ""
+                        letters, color = compute_letter_avatar(name)
+                        state.participant_avatars[pid] = f"letter:{letters}:{color}"
                     await broadcast_participant_update()
 
             elif msg_type == "location":
