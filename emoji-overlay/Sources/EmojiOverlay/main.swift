@@ -3,37 +3,21 @@ import Foundation
 
 // --- PID lock file: ensure only one instance runs at a time ---
 let lockFilePath = "/tmp/EmojiOverlay.pid"
+let myPid = getpid()
 
-// Kill any previous instance
-if let existingPidStr = try? String(contentsOfFile: lockFilePath, encoding: .utf8).trimmingCharacters(in: .whitespacesAndNewlines),
-   let existingPid = Int32(existingPidStr),
-   existingPid != getpid() {
-    if kill(existingPid, 0) == 0 {
-        NSLog("EmojiOverlay: killing previous instance (PID %d)", existingPid)
-        kill(existingPid, SIGTERM)
-        // Brief wait for it to exit
-        usleep(200_000) // 200ms
-        // Force kill if still alive
-        if kill(existingPid, 0) == 0 {
-            kill(existingPid, SIGKILL)
-        }
-    }
-}
+// Write our PID immediately (supersedes any previous instance)
+try? "\(myPid)".write(toFile: lockFilePath, atomically: true, encoding: .utf8)
+NSLog("EmojiOverlay: started with PID %d, wrote lock file", myPid)
 
-// Write our PID
-try? "\(getpid())".write(toFile: lockFilePath, atomically: true, encoding: .utf8)
-
-// Clean up lock file on exit
+// Clean up lock file on exit (only if we still own it)
 func cleanupLockFile() {
     if let pidStr = try? String(contentsOfFile: lockFilePath, encoding: .utf8).trimmingCharacters(in: .whitespacesAndNewlines),
        let pid = Int32(pidStr),
-       pid == getpid() {
+       pid == myPid {
         try? FileManager.default.removeItem(atPath: lockFilePath)
     }
 }
 atexit { cleanupLockFile() }
-signal(SIGTERM) { _ in cleanupLockFile(); exit(0) }
-signal(SIGINT) { _ in cleanupLockFile(); exit(0) }
 
 // --- Normal startup ---
 let app = NSApplication.shared
@@ -55,4 +39,19 @@ if CommandLine.arguments.count > 1 {
 
 let delegate = AppDelegate(serverURL: serverURL, pidFilePath: pidFilePath, myPID: myPID)
 app.delegate = delegate
+
+// Periodic self-check: exit if another instance has taken over the lock file
+Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { _ in
+    guard let pidStr = try? String(contentsOfFile: lockFilePath, encoding: .utf8)
+            .trimmingCharacters(in: .whitespacesAndNewlines),
+          let filePid = Int32(pidStr) else {
+        return // lock file missing or unreadable — keep running
+    }
+    if filePid != myPid {
+        NSLog("EmojiOverlay: PID %d superseded by PID %d — exiting", myPid, filePid)
+        cleanupLockFile()
+        NSApplication.shared.terminate(nil)
+    }
+}
+
 app.run()
