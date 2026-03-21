@@ -16,10 +16,17 @@ All configuration is read from secrets.env and environment variables:
 """
 
 import json
+import logging
 import os
 import signal
 import sys
 import time
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(name)s] %(message)s",
+    datefmt="%H:%M:%S",
+)
 from dataclasses import replace as dc_replace
 from datetime import date
 from pathlib import Path
