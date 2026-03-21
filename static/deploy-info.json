@@ -1,7 +1,7 @@
 {
-  "sha": "c1c6c7dab13444d30e7e855d383935baf31d18f8",
-  "timestamp": "2026-03-21 07:34",
+  "sha": "78148209dff5a13400beba3971c4970764f10382",
+  "timestamp": "2026-03-21 07:50",
   "changelog": [
-    "feat: give LLM access to training project source files (#54)"
+    "feat: emoji reaction feedback animations on participant screen"
   ]
 }
