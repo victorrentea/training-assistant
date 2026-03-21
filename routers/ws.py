@@ -91,6 +91,9 @@ async def websocket_endpoint(websocket: WebSocket, participant_id: str):
         state.participant_avatars[pid] = f"letter:{letters}:{color}"
         named = True
         await websocket.send_text(json.dumps(build_participant_state(pid)))
+        if state.leaderboard_active:
+            from messaging import broadcast_leaderboard
+            await broadcast_leaderboard()
 
     try:
         while True:
@@ -123,6 +126,9 @@ async def websocket_endpoint(websocket: WebSocket, participant_id: str):
                     state.debate_auto_assigned.add(pid)
                     logger.info(f"Late joiner {name} auto-assigned to {state.debate_sides[pid]}")
                 await send_state_to_participant(websocket, pid)
+                if state.leaderboard_active:
+                    from messaging import broadcast_leaderboard
+                    await broadcast_leaderboard()
                 await broadcast_participant_update()
                 if not is_host and state.debate_phase:
                     await broadcast_state()
