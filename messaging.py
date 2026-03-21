@@ -214,7 +214,7 @@ def build_participant_state(pid: str) -> dict:
         "my_voted_ids": _voted_ids_for(pid),
         "mode": state.mode,
         "my_score": 0 if state.mode == "conference" else state.scores.get(pid, 0),
-        "my_avatar": "" if state.mode == "conference" else state.participant_avatars.get(pid, ""),
+        "my_avatar": state.participant_avatars.get(pid, ""),
         "current_activity": state.current_activity,
         "wordcloud_words": state.wordcloud_words,
         "wordcloud_topic": state.wordcloud_topic,
@@ -224,6 +224,8 @@ def build_participant_state(pid: str) -> dict:
         "qa_questions": _build_qa_for_participant(pid),
         **_build_debate_for_participant(pid),
         "codereview": _build_codereview_for_participant(pid),
+        "leaderboard_active": state.leaderboard_active,
+        "my_name": state.participant_names.get(pid, ""),
     }
 
 
@@ -292,6 +294,67 @@ async def broadcast_state():
                 await ws.send_text(json.dumps(build_host_state()))
             else:
                 await ws.send_text(json.dumps(build_participant_state(pid)))
+        except Exception:
+            dead.append(pid)
+    for pid in dead:
+        state.participants.pop(pid, None)
+
+
+async def broadcast_leaderboard():
+    """Send personalized leaderboard to each connected participant."""
+    from names import compute_letter_avatar
+
+    # Build top 5 by score
+    scored = [(uid, state.scores.get(uid, 0)) for uid in state.participants
+              if not uid.startswith("__") and state.scores.get(uid, 0) > 0]
+    scored.sort(key=lambda x: (-x[1], state.participant_names.get(x[0], "")))
+    top5 = scored[:5]
+
+    entries = []
+    for rank_idx, (uid, score) in enumerate(top5):
+        name = state.participant_names.get(uid, "Unknown")
+        universe = state.participant_universes.get(uid, "")
+        avatar = state.participant_avatars.get(uid, "")
+        if avatar.startswith("letter:"):
+            parts = avatar.split(":", 2)
+            letter = parts[1] if len(parts) > 1 else "??"
+            color = parts[2] if len(parts) > 2 else "hsl(0,60%,50%)"
+        else:
+            letter, color = compute_letter_avatar(name)
+        entries.append({
+            "rank": rank_idx + 1,
+            "name": name,
+            "universe": universe,
+            "score": score,
+            "letter": letter,
+            "color": color,
+            "avatar": avatar,
+        })
+
+    total = len([uid for uid in state.participants if not uid.startswith("__")])
+
+    # Build full ranking for personal rank lookup
+    all_scored = [(uid, state.scores.get(uid, 0)) for uid in state.participants
+                  if not uid.startswith("__")]
+    all_scored.sort(key=lambda x: (-x[1], state.participant_names.get(x[0], "")))
+    rank_map = {uid: idx + 1 for idx, (uid, _) in enumerate(all_scored)}
+
+    # Send personalized message to each participant
+    dead = []
+    for pid, ws in state.participants.items():
+        if pid == "__overlay__":
+            continue
+        try:
+            is_participant = not pid.startswith("__")
+            msg = {
+                "type": "leaderboard",
+                "entries": entries,
+                "total_participants": total,
+                "your_rank": rank_map.get(pid) if is_participant else None,
+                "your_score": state.scores.get(pid, 0) if is_participant else None,
+                "your_name": state.participant_names.get(pid, "") if is_participant else None,
+            }
+            await ws.send_text(json.dumps(msg))
         except Exception:
             dead.append(pid)
     for pid in dead:

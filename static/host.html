@@ -26,6 +26,9 @@
       <button class="tab-btn" id="tab-qa" onclick="switchTab('qa')"><span class="tab-icon">❓</span>Q&A</button>
       <button class="tab-btn" id="tab-codereview" onclick="switchTab('codereview')"><span class="tab-icon">🕵️</span>Code</button>
       <button class="tab-btn" id="tab-debate" onclick="switchTab('debate')"><span class="tab-icon">⚔️</span>Debate</button>
+      <button class="tab-btn leaderboard-btn" id="btn-leaderboard" onclick="toggleLeaderboard()" title="Show Leaderboard" disabled>
+        <span class="tab-icon">🏆</span>Board
+      </button>
     </div>
 
     <!-- Poll tab content -->
@@ -240,6 +243,13 @@
         <div id="codereview-side-panel" style="flex:1; overflow:auto; padding:12px;">
           <div class="muted" style="text-align:center; margin-top:40px;">Click a line to see details</div>
         </div>
+      </div>
+    </div>
+    <div id="leaderboard-overlay" class="leaderboard-overlay" style="display:none;">
+      <div class="leaderboard-content">
+        <button class="leaderboard-close" onclick="toggleLeaderboard()">&times;</button>
+        <h1 class="leaderboard-title">LEADERBOARD</h1>
+        <div id="leaderboard-entries" class="leaderboard-entries"></div>
       </div>
     </div>
   </div>
