@@ -432,3 +432,14 @@ async def send_emoji_to_overlay(emoji: str):
         await ws.send_text(json.dumps({"type": "emoji_reaction", "emoji": emoji}))
     except Exception:
         state.participants.pop("__overlay__", None)
+
+
+async def send_emoji_to_host(emoji: str):
+    """Forward an emoji reaction to the host client if connected."""
+    ws = state.participants.get("__host__")
+    if ws is None:
+        return
+    try:
+        await ws.send_text(json.dumps({"type": "emoji_reaction", "emoji": emoji}))
+    except Exception:
+        state.participants.pop("__host__", None)

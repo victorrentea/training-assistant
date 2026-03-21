@@ -90,6 +90,69 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     return `hsl(${hue}, 60%, 40%)`;
   }
 
+  function showAvatarModal(src) {
+    // Remove existing modal if any
+    const existing = document.getElementById('avatar-modal');
+    if (existing) existing.remove();
+
+    const modal = document.createElement('div');
+    modal.id = 'avatar-modal';
+    modal.className = 'avatar-modal-overlay';
+
+    const container = document.createElement('div');
+    container.className = 'avatar-modal-container';
+
+    const img = document.createElement('img');
+    img.src = src;
+    img.className = 'avatar-modal-img';
+
+    const refreshBtn = document.createElement('button');
+    refreshBtn.className = 'avatar-refresh-btn';
+    refreshBtn.innerHTML = '\u{1F504}';
+    refreshBtn.title = 'Get a new avatar';
+    refreshBtn.onclick = function(e) {
+        e.stopPropagation();
+        if (ws) ws.send(JSON.stringify({ type: 'refresh_avatar' }));
+        // Close modal - new avatar will appear on next state broadcast
+        modal.remove();
+    };
+
+    container.appendChild(img);
+    container.appendChild(refreshBtn);
+    modal.appendChild(container);
+
+    modal.addEventListener('click', function() { modal.remove(); });
+    container.addEventListener('click', function(e) { e.stopPropagation(); });
+
+    document.body.appendChild(modal);
+  }
+
+  function showLetterAvatarModal(letters, bgColor) {
+    const existing = document.getElementById('avatar-modal');
+    if (existing) existing.remove();
+
+    const modal = document.createElement('div');
+    modal.id = 'avatar-modal';
+    modal.className = 'avatar-modal-overlay';
+
+    const container = document.createElement('div');
+    container.className = 'avatar-modal-container';
+
+    const avatar = document.createElement('span');
+    avatar.className = 'avatar-modal-letter';
+    avatar.style.background = bgColor;
+    avatar.textContent = letters;
+
+    // No refresh button for letter avatars (conference mode)
+
+    container.appendChild(avatar);
+    modal.appendChild(container);
+
+    modal.addEventListener('click', function() { modal.remove(); });
+
+    document.body.appendChild(modal);
+  }
+
 
   let notesContent = '';
 
@@ -473,6 +536,15 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
                 existing.textContent = lt;
                 existing.style.display = '';
             }
+            // Also bind click-to-enlarge for letter avatars
+            const letterEl = document.getElementById('my-avatar');
+            if (letterEl && !letterEl._clickBound) {
+                letterEl._clickBound = true;
+                letterEl.style.cursor = 'pointer';
+                letterEl.addEventListener('click', function() {
+                    showLetterAvatarModal(this.textContent, this.style.background);
+                });
+            }
         } else if (msg.my_avatar) {
             const avatarEl = document.getElementById('my-avatar');
             avatarEl.src = '/static/avatars/' + msg.my_avatar;
@@ -484,27 +556,12 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
                 fallback.style.background = avatarColorFromUuid(window._myUuid);
                 this.replaceWith(fallback);
             };
-            // Hover preview: show 3x avatar near cursor
-            if (!avatarEl._hoverBound) {
-                avatarEl._hoverBound = true;
+            // Click to enlarge avatar + optional refresh
+            if (!avatarEl._clickBound) {
+                avatarEl._clickBound = true;
                 avatarEl.style.cursor = 'pointer';
-                let preview = null;
-                avatarEl.addEventListener('mouseenter', function(e) {
-                    preview = document.createElement('img');
-                    preview.className = 'avatar-preview';
-                    preview.src = this.src;
-                    preview.style.left = e.clientX + 'px';
-                    preview.style.top = e.clientY + 'px';
-                    document.body.appendChild(preview);
-                });
-                avatarEl.addEventListener('mousemove', function(e) {
-                    if (preview) {
-                        preview.style.left = e.clientX + 'px';
-                        preview.style.top = e.clientY + 'px';
-                    }
-                });
-                avatarEl.addEventListener('mouseleave', function() {
-                    if (preview) { preview.remove(); preview = null; }
+                avatarEl.addEventListener('click', function() {
+                    showAvatarModal(this.src);
                 });
             }
         }
@@ -1039,8 +1096,8 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     requestAnimationFrame(() => el.classList.add('emoji-shake-active'));
     setTimeout(() => {
       el.classList.add('emoji-shake-fade');
-      setTimeout(() => el.remove(), 400);
-    }, 800);
+      setTimeout(() => el.remove(), 600);
+    }, 1400);
   }
 
   function showDesktopEmojiFloat(emoji, btn) {
