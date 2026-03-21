@@ -114,10 +114,10 @@
 - [x] The indexer should report a percentage done when it sees a bunch of work ahead. In terms of files left. then, it should index documents on max 4 threads
 - [x] Add map icon button next to QR in host footer for quick access to participant locations map (item #6)
 - [x] feat: assign random LOTR-themed avatar to each participant, displayed in top bar, host participant list, and Q&A (#12, #13)
-- [ ] load test: 30 participants connected simultaneously, host fires a poll, all vote randomly, host sorts by points. Run against local instance first, then deployed.
+- [x] load test: 30 participants connected simultaneously, host fires a poll, all vote randomly, host sorts by points. Run against local instance first, then deployed.
 - [x] feat: daemon auto-update — daemon detects server version change, exits with code 42, start-daemon.sh loops with git pull and restart.
-- [ ] fix: daemon doesn't find today's transcription correctly — investigate transcript file detection at startup. Print which transcription file is being read and how many lines are in the last 30 minutes.
-- [ ] refactor: extract "last 30 minutes" constant (DEFAULT_MINUTES) to a single place, referenced everywhere (DRY).
+- [x] fix: daemon doesn't find today's transcription correctly — investigate transcript file detection at startup. Print which transcription file is being read and how many lines are in the last 30 minutes.
+- [x] refactor: extract "last 30 minutes" constant (DEFAULT_MINUTES) to a single place, referenced everywhere (DRY).
 - [x] Local agent restart now avoids redundant re-indexing by storing per-file hashes in `materials/.index-manifest.json`; startup only reindexes changed/new files and removes deleted files from both index and manifest.
 - [x] The local agent now reconnects automatically to the server after disconnects/redeploys; no manual agent restart is needed.
 - [x] The front end of both participant hosts should detect whether the version of the deployed backend is different than the one of them and suggest a page reload in the browser. This page reload should happen automatically within 5 seconds or 10 seconds unless the user presses stop.
