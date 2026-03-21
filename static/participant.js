@@ -1638,7 +1638,7 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     html += '</div>';
 
     if (isSelecting) {
-      html += `<div class="codereview-footer">You selected ${codereviewMySelections.size} line(s)</div>`;
+      // no footer text needed
     } else if (isReviewing) {
       const pointsEarned = [...confirmed].filter(l => codereviewMySelections.has(l)).length * 200;
       if (pointsEarned > 0) {
