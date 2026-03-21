@@ -450,7 +450,24 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
         window._myScore = msg.my_score || 0;
         window._myUuid = myUUID;
         window._myName = myName;
-        if (msg.my_avatar) {
+        if (msg.my_avatar && msg.my_avatar.startsWith('letter:')) {
+            const parts = msg.my_avatar.split(':');
+            const lt = parts[1] || '??';
+            const clr = parts.slice(2).join(':') || 'var(--muted)';
+            const existing = document.getElementById('my-avatar');
+            if (existing && existing.tagName === 'IMG') {
+                const span = document.createElement('span');
+                span.id = 'my-avatar';
+                span.className = 'avatar letter-avatar';
+                span.style.cssText = 'display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;font-weight:800;font-size:.65rem;color:#fff;background:' + clr;
+                span.textContent = lt;
+                existing.replaceWith(span);
+            } else if (existing) {
+                existing.style.background = clr;
+                existing.textContent = lt;
+                existing.style.display = '';
+            }
+        } else if (msg.my_avatar) {
             const avatarEl = document.getElementById('my-avatar');
             avatarEl.src = '/static/avatars/' + msg.my_avatar;
             avatarEl.style.display = '';

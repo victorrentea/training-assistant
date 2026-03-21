@@ -545,9 +545,15 @@
       const scoreTag = pts ? `<span class="pax-score">⭐ ${pts} pts</span>` : '';
       const locLabel = loc ? resolvedCities[loc] || loc : null;
       const avatar = participantAvatars[n];
-      const avatarHtml = avatar
-          ? `<img src="/static/avatars/${escHtml(avatar)}" class="avatar" style="width:28px;height:28px" onerror="this.style.display='none'">`
-          : '';
+      let avatarHtml = '';
+      if (avatar && avatar.startsWith('letter:')) {
+          const parts = avatar.split(':');
+          const lt = parts[1] || '??';
+          const clr = parts.slice(2).join(':') || 'var(--muted)';
+          avatarHtml = `<span class="avatar letter-avatar" style="width:28px;height:28px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-weight:800;font-size:.65rem;color:#fff;background:${clr}">${lt}</span>`;
+      } else if (avatar) {
+          avatarHtml = `<img src="/static/avatars/${escHtml(avatar)}" class="avatar" style="width:28px;height:28px" onerror="this.style.display='none'">`;
+      }
       const debateSide = participantDebateSides[n];
       const debateIcon = _debateActive
           ? (debateSide === 'for' ? '<span title="FOR">👍</span> ' : debateSide === 'against' ? '<span title="AGAINST">👎</span> ' : '<span title="Undecided">⏳</span> ')
