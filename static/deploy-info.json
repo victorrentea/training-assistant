@@ -1,7 +1,7 @@
 {
-  "sha": "e4a3a470d9ed8714355ac9b0ead8830734465ff0",
+  "sha": "75540c0b96c36ae6f0b887969e24f8e275ceb1fb",
   "timestamp": "2026-03-21 15:27",
   "changelog": [
-    "fix: prevent overlay WS reconnect race from dropping new connection (#57)"
+    "feat: emoji on host browser, bigger mobile emoji, avatar click-to-enlarge with refresh (#58)"
   ]
 }
