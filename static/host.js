@@ -1145,7 +1145,8 @@
       if (id === 'qr') {
         el.style.display = currentActivity === 'none' ? '' : 'none';
       } else {
-        el.style.display = currentActivity === id ? '' : 'none';
+        const showVal = id === 'poll' ? 'flex' : '';
+        el.style.display = currentActivity === id ? showVal : 'none';
       }
     });
     if (currentActivity && currentActivity !== 'none') {
