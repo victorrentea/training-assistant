@@ -2,6 +2,7 @@
 import os
 import pytest
 from pathlib import Path
+from unittest.mock import patch, MagicMock
 
 from daemon.project_files import get_project_tree, read_project_file, get_project_tools, handle_project_tool_call, PROJECT_TOOL_NAMES
 
@@ -193,3 +194,53 @@ def test_handle_tool_call_read_file(sample_project):
 def test_handle_tool_call_unknown_tool(sample_project):
     result = handle_project_tool_call("unknown_tool", {}, str(sample_project))
     assert "Error" in result
+
+
+# --- integration test: generate_quiz includes project tools ---
+
+from quiz_core import Config, generate_quiz
+
+
+def _make_config_with_project(tmp_path):
+    """Create a Config with project_folder set."""
+    src = tmp_path / "src"
+    src.mkdir()
+    (src / "App.java").write_text("public class App {}\n")
+
+    return Config(
+        folder=tmp_path,
+        minutes=30,
+        server_url="http://localhost:8000",
+        api_key="test-key",
+        model="test-model",
+        dry_run=False,
+        host_username="host",
+        host_password="pass",
+        project_folder=str(tmp_path),
+    )
+
+
+def test_generate_quiz_includes_project_tools(tmp_path):
+    """Verify that generate_quiz registers project tools when project_folder is set."""
+    config = _make_config_with_project(tmp_path)
+
+    mock_response = MagicMock()
+    mock_response.stop_reason = "end_turn"
+    mock_response.content = [MagicMock(type="text", text='{"question":"test?","options":["a","b"],"correct_indices":[0]}')]
+    mock_response.usage = MagicMock(input_tokens=100, output_tokens=50)
+
+    captured_kwargs = {}
+
+    def capture_create_message(**kwargs):
+        captured_kwargs.update(kwargs)
+        return mock_response
+
+    with patch("quiz_core.create_message", side_effect=capture_create_message):
+        with patch("quiz_core.search_materials", return_value=[]):
+            generate_quiz("some transcript text", config)
+
+    tools = captured_kwargs.get("tools", [])
+    tool_names = {t["name"] for t in tools}
+    assert "list_project_tree" in tool_names
+    assert "read_project_file" in tool_names
+    assert "search_materials" in tool_names
