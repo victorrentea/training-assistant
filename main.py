@@ -8,15 +8,21 @@ import logging
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
+from prometheus_fastapi_instrumentator import Instrumentator
 
 from auth import require_host_auth
 from messaging import broadcast_state
 from state import state  # re-exported for test_main.py: from main import app, state
+import metrics  # noqa: registers custom Prometheus metrics
 from routers import ws, poll, scores, quiz, pages, wordcloud, activity, qa, codereview, summary, debate
 
 logging.basicConfig(level=logging.INFO)
 
 app = FastAPI(title="Workshop Tool")
+
+Instrumentator().instrument(app).expose(
+    app, endpoint="/metrics", dependencies=[Depends(require_host_auth)]
+)
 
 app.include_router(ws.router)
 app.include_router(poll.router)

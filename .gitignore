@@ -33,3 +33,6 @@ static/deploy-info.json
 
 # Swift Package Manager
 emoji-overlay/.build/
+
+# Monitoring runtime data
+monitoring/data/
