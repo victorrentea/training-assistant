@@ -141,3 +141,68 @@ def read_project_file(base_path: str, relative_path: str) -> str:
 
     numbered = "".join(f"{i + 1}: {line}" for i, line in enumerate(raw_lines))
     return numbered
+
+
+PROJECT_TOOL_NAMES = {"list_project_tree", "read_project_file"}
+
+
+def get_project_tools(project_folder: str | None) -> list[dict]:
+    """Return Anthropic-format tool definitions for project file access.
+
+    Returns an empty list if project_folder is None (feature disabled).
+    """
+    if project_folder is None:
+        return []
+    return [
+        {
+            "name": "list_project_tree",
+            "description": "List the file tree of the training project's source code. Use this to discover what classes, config files, and packages exist in the project participants are working with.",
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "path": {
+                        "type": "string",
+                        "description": "Optional subdirectory path relative to project root. Omit to list the entire project.",
+                    }
+                },
+                "required": [],
+            },
+        },
+        {
+            "name": "read_project_file",
+            "description": "Read the contents of a source file from the training project. Returns file content with line numbers. Use this to reference actual code in quiz questions or summaries.",
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "path": {
+                        "type": "string",
+                        "description": "File path relative to project root (e.g., 'src/main/java/com/example/OrderService.java')",
+                    }
+                },
+                "required": ["path"],
+            },
+        },
+    ]
+
+
+def handle_project_tool_call(tool_name: str, tool_input: dict, base_path: str) -> str:
+    """Dispatch a project tool call to the appropriate handler.
+
+    Args:
+        tool_name: Name of the tool to invoke.
+        tool_input: Tool input dict from the LLM.
+        base_path: Absolute path to the project root.
+
+    Returns:
+        String result to pass back to the LLM as tool output.
+    """
+    if tool_name == "list_project_tree":
+        path = tool_input.get("path")
+        print(f"[info] Claude is browsing project tree: {path or '(root)'}...")
+        return get_project_tree(base_path, relative_path=path)
+    elif tool_name == "read_project_file":
+        path = tool_input["path"]
+        print(f"[info] Claude is reading project file: {path}...")
+        return read_project_file(base_path, path)
+    else:
+        return f"Error: unknown project tool '{tool_name}'"
