@@ -138,14 +138,17 @@ async def websocket_endpoint(websocket: WebSocket, participant_id: str):
                 # Allow rename
                 name = str(data.get("name", "")).strip()[:32]
                 if name:
-                    state.participant_names[pid] = name
-                    if not is_host:
-                        assign_avatar(state, pid, name)  # no-op if already assigned
                     if state.mode == "conference":
+                        # In conference mode, update name + letter avatar (no image avatars)
                         from names import compute_letter_avatar
+                        state.participant_names[pid] = name
                         state.participant_universes[pid] = ""
                         letters, color = compute_letter_avatar(name)
                         state.participant_avatars[pid] = f"letter:{letters}:{color}"
+                    else:
+                        state.participant_names[pid] = name
+                        if not is_host:
+                            assign_avatar(state, pid, name)  # no-op if already assigned
                     await broadcast_participant_update()
 
             elif msg_type == "location":

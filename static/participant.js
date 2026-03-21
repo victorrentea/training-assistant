@@ -424,6 +424,12 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
           applyParticipantMode(msg.mode);
         }
         if (msg.mode) currentMode = msg.mode;
+        // In conference mode, use the server-assigned name
+        if (msg.my_name && currentMode === 'conference') {
+          myName = msg.my_name;
+          document.getElementById('display-name').textContent = myName;
+          window._myName = myName;
+        }
         if (msg.poll?.id !== currentPoll?.id) {
           myVote = msg.poll?.multi ? new Set() : null;
           pollResult = null;
