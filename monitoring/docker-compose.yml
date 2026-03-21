@@ -1,0 +1,26 @@
+services:
+  prometheus:
+    image: prom/prometheus:latest
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - "envsubst < /etc/prometheus/prometheus.yml.tmpl > /tmp/prometheus.yml && /bin/prometheus --config.file=/tmp/prometheus.yml --web.listen-address=:9090"
+    environment:
+      - HOST_USERNAME=${HOST_USERNAME}
+      - HOST_PASSWORD=${HOST_PASSWORD}
+    volumes:
+      - ./prometheus.yml.tmpl:/etc/prometheus/prometheus.yml.tmpl:ro
+    ports:
+      - "9090:9090"
+
+  grafana:
+    image: grafana/grafana:latest
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
