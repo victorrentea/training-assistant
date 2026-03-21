@@ -329,14 +329,14 @@
   }
 
   function updateTokenBadge(usage) {
-    const badge = document.getElementById('token-badge');
-    if (!badge || !usage) return;
+    const el = document.getElementById('token-cost');
+    if (!el || !usage) return;
     const cost = usage.estimated_cost_usd || 0;
-    badge.textContent = '$' + cost.toFixed(2);
+    el.textContent = '$' + cost.toFixed(2);
     const inp = (usage.input_tokens || 0).toLocaleString();
     const out = (usage.output_tokens || 0).toLocaleString();
-    badge.title = 'Tokens: ' + inp + ' in / ' + out + ' out';
-    badge.className = 'badge ' + (cost > 5 ? 'error' : cost > 1 ? 'warning' : 'connected');
+    el.title = 'Tokens: ' + inp + ' in / ' + out + ' out';
+    el.style.color = cost > 3 ? 'var(--danger)' : cost > 1 ? 'var(--warn)' : 'var(--muted)';
   }
 
   async function toggleMode() {
@@ -363,7 +363,7 @@
     const confQR = document.getElementById('conference-qr');
     const confPax = document.getElementById('conference-pax-count');
     const debateTab = document.getElementById('tab-debate');
-    const tokenBadge = document.getElementById('token-badge');
+    const tokenCost = document.getElementById('token-cost');
     const notesBadge = document.getElementById('notes-badge');
     const centerQR = document.getElementById('center-qr');
 
@@ -374,7 +374,7 @@
       confQR.style.display = 'none';
       confPax.style.display = '';
       if (debateTab) debateTab.style.display = 'none';
-      if (tokenBadge) tokenBadge.style.display = 'none';
+      if (tokenCost) tokenCost.style.display = 'none';
       if (notesBadge) notesBadge.style.display = 'none';
       // Generate left QR (hidden until needed)
       const qrContainer = document.getElementById('conference-qr-code');
@@ -404,7 +404,7 @@
       confQR.style.display = 'none';
       confPax.style.display = 'none';
       if (debateTab) debateTab.style.display = '';
-      if (tokenBadge) tokenBadge.style.display = '';
+      if (tokenCost) tokenCost.style.display = '';
       if (notesBadge) notesBadge.style.display = '';
       // Restore muted center QR
       if (centerQR) centerQR.classList.remove('conference-center-qr');
