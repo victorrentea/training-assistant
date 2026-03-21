@@ -965,3 +965,17 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
   from { opacity: 0; transform: translateY(40px); }
   to   { opacity: 1; transform: translateY(0); }
 }
+
+/* ── Floating emoji reactions ── */
+.host-emoji-float {
+  position: fixed;
+  bottom: 10%;
+  font-size: 2.5rem;
+  z-index: 10000;
+  pointer-events: none;
+  animation: host-emoji-rise 1.5s ease-out forwards;
+}
+@keyframes host-emoji-rise {
+  0%   { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(-200px); }
+}
