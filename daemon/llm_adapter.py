@@ -1,6 +1,10 @@
 from dataclasses import dataclass, field
 from typing import Optional
 import anthropic
+import logging
+import time
+
+logger = logging.getLogger(__name__)
 
 # Pricing per 1M tokens (USD)
 PRICING = {
@@ -60,6 +64,16 @@ def create_message(
         kwargs["system"] = system
     if tools:
         kwargs["tools"] = tools
+    t0 = time.monotonic()
     response = client.messages.create(**kwargs)
-    _usage.add(response.usage.input_tokens, response.usage.output_tokens, model)
+    duration_ms = int((time.monotonic() - t0) * 1000)
+    in_tok = response.usage.input_tokens
+    out_tok = response.usage.output_tokens
+    _usage.add(in_tok, out_tok, model)
+    pricing = PRICING.get(model, PRICING["claude-sonnet-4-6"])
+    cost = (in_tok * pricing["input"] + out_tok * pricing["output"]) / 1_000_000
+    logger.info(
+        "LLM call: model=%s in=%d out=%d cost=$%.4f duration=%dms",
+        model, in_tok, out_tok, cost, duration_ms,
+    )
     return response
