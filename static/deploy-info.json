@@ -1,7 +1,7 @@
 {
-  "sha": "90fa3a4ea9e7d252b2462ba59e369a9de732f164",
-  "timestamp": "2026-03-21 05:40",
+  "sha": "ba68b90d2e769049160c79d2f9100df05e18271d",
+  "timestamp": "2026-03-21 05:44",
   "changelog": [
-    "move quiz generation section from left panel to center poll panel"
+    "fix: load test uses individual result messages, passes at 300 on prod"
   ]
 }
