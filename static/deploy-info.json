@@ -1,7 +1,7 @@
 {
-  "sha": "64ab649e8e0891d57bc5da844fe0cfda89dbebfe",
+  "sha": "81e2f63f62014e5b757428326f514d699f554c62",
   "timestamp": "2026-03-21 05:36",
   "changelog": [
-    "fix: emoji overlay daemon reconnects reliably on backend restart"
+    "feat: add tracked pre-commit hook for work hours stamping"
   ]
 }
