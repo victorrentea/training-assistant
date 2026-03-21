@@ -103,6 +103,9 @@ async def participant_task(ws_base, name, idx, counter, n, connected_event, poll
     await asyncio.sleep(idx * 0.05)  # stagger: spread connections over n*50ms to avoid write-buffer overflow
     try:
         async with websockets.connect(f"{ws_base}/ws/{name}", ping_interval=None, ssl=ssl_ctx) as ws:
+            # Send set_name as required by the WS handler before state is sent
+            await ws.send(json.dumps({"type": "set_name", "name": name}))
+
             # Drain messages until we get state (participant_count broadcasts from concurrent
             # connections may arrive before our own state message)
             initial_state = None
@@ -142,9 +145,13 @@ async def participant_task(ws_base, name, idx, counter, n, connected_event, poll
             results[name]["voted"] = True
             results[name]["voted_id"] = voted_id
 
-            # Drain until scores broadcast (type == "scores", NOT vote_update)
-            scores_msg = await _recv_until(ws, lambda m: m.get("type") == "scores", timeout=30.0)
-            results[name]["score"] = scores_msg["scores"].get(name, 0)
+            # Drain until state broadcast with poll_correct_ids (scores have been awarded)
+            scores_msg = await _recv_until(
+                ws,
+                lambda m: m.get("type") == "state" and m.get("poll_correct_ids") is not None,
+                timeout=30.0,
+            )
+            results[name]["score"] = scores_msg.get("my_score", 0)
             results[name]["done"] = True
 
     except Exception as exc:
@@ -252,11 +259,11 @@ def test_load(server_url):
 
     for name, r in results.items():
         if r["voted_id"] == correct_id:
-            assert r["score"] >= 500, (
+            assert r["score"] is not None and r["score"] >= 500, (
                 f"{name} voted correctly (opt0) but score={r['score']} — expected >= 500 (_MIN_POINTS)"
             )
         else:
-            assert r["score"] == 0, (
+            assert r["score"] is not None and r["score"] == 0, (
                 f"{name} voted wrong but score={r['score']} — expected 0"
             )
 
