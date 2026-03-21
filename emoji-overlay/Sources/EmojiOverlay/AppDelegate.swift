@@ -7,6 +7,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, URLSessionWebSocketDelegate 
     private let serverURL: String
     private var wsTask: URLSessionWebSocketTask?
     private var session: URLSession!
+    private var reconnecting = false
 
     init(serverURL: String) {
         self.serverURL = serverURL
@@ -33,6 +34,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, URLSessionWebSocketDelegate 
     // MARK: - WebSocket
 
     private func connectWebSocket() {
+        reconnecting = false
+        wsTask?.cancel(with: .goingAway, reason: nil)
         let wsURL = serverURL.replacingOccurrences(of: "http://", with: "ws://")
                              .replacingOccurrences(of: "https://", with: "wss://")
         guard let url = URL(string: "\(wsURL)/ws/__overlay__") else {
@@ -59,8 +62,15 @@ class AppDelegate: NSObject, NSApplicationDelegate, URLSessionWebSocketDelegate 
 
     func urlSession(_ session: URLSession, webSocketTask: URLSessionWebSocketTask,
                     didCloseWith closeCode: URLSessionWebSocketTask.CloseCode, reason: Data?) {
-        NSLog("WebSocket closed, reconnecting in 3s...")
+        NSLog("WebSocket closed (code: \(closeCode.rawValue)), reconnecting in 3s...")
         scheduleReconnect()
+    }
+
+    func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
+        if let error = error {
+            NSLog("WebSocket transport error: \(error.localizedDescription), reconnecting in 3s...")
+            scheduleReconnect()
+        }
     }
 
     private func receiveMessage() {
@@ -96,6 +106,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, URLSessionWebSocketDelegate 
     }
 
     private func scheduleReconnect() {
+        guard !reconnecting else { return }
+        reconnecting = true
+        wsTask?.cancel(with: .goingAway, reason: nil)
+        wsTask = nil
         DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in
             self?.connectWebSocket()
         }
