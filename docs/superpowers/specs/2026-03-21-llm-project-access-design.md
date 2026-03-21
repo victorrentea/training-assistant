@@ -38,9 +38,9 @@ When unset, project file tools are not registered — existing behavior unchange
   - File size cap: returns error if file exceeds 500 lines
   - Returns error for binary/non-text files
 
-- `get_project_tools(config: dict) -> list[dict]`
+- `get_project_tools(project_folder: str | None) -> list[dict]`
   - Returns Claude API tool definitions for `list_project_tree` and `read_project_file`
-  - Returns empty list if `PROJECT_FOLDER` not configured
+  - Returns empty list if `project_folder` is None
 
 - `handle_project_tool_call(tool_name: str, tool_input: dict, base_path: str) -> str`
   - Dispatches tool calls to the appropriate function
