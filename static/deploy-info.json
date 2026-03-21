@@ -1,7 +1,7 @@
 {
-  "sha": "7ed74658a4f7c51d8b033daede25607581a90d76",
-  "timestamp": "2026-03-21 00:22",
+  "sha": "95f7f5aa5b24a53e19b540136b7fde793b7f609f",
+  "timestamp": "2026-03-21 00:49",
   "changelog": [
-    "fix: move token cost to footer, gray by default, yellow >$1, red >$3"
+    "items"
   ]
 }
