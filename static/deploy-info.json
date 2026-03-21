@@ -1,7 +1,7 @@
 {
-  "sha": "3df40b2e0dde0569a17e89375d6257a8b50f8677",
-  "timestamp": "2026-03-21 14:36",
+  "sha": "e4a3a470d9ed8714355ac9b0ead8830734465ff0",
+  "timestamp": "2026-03-21 15:27",
   "changelog": [
-    "feat: log LLM calls in training daemon (#56)"
+    "fix: prevent overlay WS reconnect race from dropping new connection (#57)"
   ]
 }
