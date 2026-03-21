@@ -1381,7 +1381,7 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     const isConference = mode === 'conference';
     // Hide/show status bar elements
     const statusLeft = document.querySelector('.status-left');
-    if (statusLeft) statusLeft.style.display = isConference ? 'none' : '';
+    if (statusLeft) statusLeft.style.display = '';
     const myScore = document.getElementById('my-score');
     if (myScore) myScore.style.display = isConference ? 'none' : '';
     const locPrompt = document.getElementById('location-prompt');
