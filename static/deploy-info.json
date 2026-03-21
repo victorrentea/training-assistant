@@ -1,7 +1,7 @@
 {
-  "sha": "b3c3a4fa5733ffd8a4853e207162e374d6e30475",
-  "timestamp": "2026-03-21 12:52",
+  "sha": "1346b3917640a5fcd161c669daeec4ae089892ab",
+  "timestamp": "2026-03-21 13:15",
   "changelog": [
-    "feat: Kahoot-style leaderboard + conference mode identity (#49) (#55)"
+    "fix: pin Python 3.12 for Railway build (3.13.12 freethreaded broken on Linux)"
   ]
 }
