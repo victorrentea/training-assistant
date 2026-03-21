@@ -30,9 +30,12 @@
       return;
     }
 
+    const workHours = window.WORK_HOURS;
+    const workSuffix = workHours ? ' | ' + workHours + 'h built' : '';
+
     function update() {
       const now = new Date();
-      el.textContent = formatElapsed(parsed, now);
+      el.textContent = formatElapsed(parsed, now) + workSuffix;
       const ageSec = Math.floor((now.getTime() - parsed.getTime()) / 1000);
       if (ageSec >= 86400 && timer) {
         clearInterval(timer);
