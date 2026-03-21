@@ -555,6 +555,12 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
       case 'summary':
         updateSummary(msg.points, msg.updated_at);
         break;
+      case 'leaderboard':
+        showParticipantLeaderboard(msg);
+        break;
+      case 'leaderboard_hide':
+        hideParticipantLeaderboard();
+        break;
     }
   }
 
@@ -1740,4 +1746,44 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     } else {
       ws.send(JSON.stringify({ type: 'codereview_select', line: lineNum }));
     }
+  }
+
+  // ── Leaderboard ──────────────────────────────────────
+  function showParticipantLeaderboard(data) {
+    const overlay = document.getElementById('leaderboard-overlay');
+    const myRankEl = document.getElementById('leaderboard-my-rank');
+    const top5El = document.getElementById('leaderboard-top5');
+    overlay.style.display = 'flex';
+
+    myRankEl.innerHTML = `
+        <div class="rank-number">#${data.your_rank || '?'}</div>
+        <div class="rank-total">out of ${data.total_participants}</div>
+        <div class="rank-score">${data.your_score || 0} pts</div>
+    `;
+
+    top5El.innerHTML = (data.entries || []).map(e => {
+        const isMe = data.your_name && data.your_name === e.name;
+        const isFirst = e.rank === 1;
+        const cls = 'lb-entry' + (isMe ? ' is-me' : '') + (isFirst ? ' first-place' : '');
+
+        const avatarStyle = e.avatar && e.avatar.startsWith('letter:')
+            ? `background:${e.color}` : `background:var(--surface2)`;
+        const avatarContent = e.avatar && e.avatar.startsWith('letter:')
+            ? e.letter : '';
+        const avatarImg = e.avatar && !e.avatar.startsWith('letter:')
+            ? `<img src="/static/avatars/${e.avatar}" style="width:32px;height:32px;border-radius:50%" onerror="this.style.display='none'">`
+            : '';
+        const universe = e.universe ? ` <span class="lb-universe">(${e.universe})</span>` : '';
+
+        return `<div class="${cls}">
+            <span class="lb-rank">#${e.rank}</span>
+            ${avatarImg || `<span class="lb-avatar" style="${avatarStyle}">${avatarContent}</span>`}
+            <span class="lb-name">${e.name}${universe}</span>
+            <span class="lb-score">${e.score} pts</span>
+        </div>`;
+    }).join('');
+  }
+
+  function hideParticipantLeaderboard() {
+    document.getElementById('leaderboard-overlay').style.display = 'none';
   }
