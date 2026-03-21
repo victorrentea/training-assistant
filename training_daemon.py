@@ -191,6 +191,13 @@ def run() -> None:
 
     config = config_from_env()
 
+    if config.project_folder:
+        print(f"[info] Project folder configured: {config.project_folder}")
+        if not os.path.isdir(config.project_folder):
+            print(f"[warn] PROJECT_FOLDER does not exist: {config.project_folder}")
+    else:
+        print("[info] PROJECT_FOLDER not set — project file tools disabled")
+
     # ── Fetch server version at startup for auto-update detection ──
     _startup_version = None
     try:

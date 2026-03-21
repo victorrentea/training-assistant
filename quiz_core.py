@@ -49,6 +49,7 @@ class Config:
     topic: Optional[str] = None
     session_folder: Optional[Path] = None
     session_notes: Optional[Path] = None
+    project_folder: Optional[str] = None
 
 
 def load_secrets_env() -> None:
@@ -75,6 +76,7 @@ def config_from_env(minutes: int = DEFAULT_MINUTES) -> Config:
     if not folder.exists() or not folder.is_dir():
         print(f"[error] Transcription folder not found: {folder}", file=sys.stderr)
         sys.exit(1)
+    project_folder = os.environ.get("PROJECT_FOLDER")
     return Config(
         folder=folder,
         minutes=minutes,
@@ -84,6 +86,7 @@ def config_from_env(minutes: int = DEFAULT_MINUTES) -> Config:
         dry_run=False,
         host_username=os.environ.get("HOST_USERNAME", "host"),
         host_password=os.environ.get("HOST_PASSWORD", ""),
+        project_folder=project_folder,
     )
 
 
@@ -341,6 +344,9 @@ Rules:
 - Include at least one option that references a real-world pattern, anti-pattern, or expert opinion.
 - Each option must be concise enough for a poll display (max 80 characters).
 - Do not add any explanation, markdown code fences, or text outside the JSON object.
+
+## Project Source Code
+If `list_project_tree` and `read_project_file` tools are available, you have access to the training project's source code. When the transcript discusses specific classes, patterns, or configurations, use these tools to find the actual code and reference real class names, method signatures, and line numbers in your quiz questions. Start with `list_project_tree` to discover the project structure, then `read_project_file` for specific files mentioned in the transcript.
 """
 
 
@@ -403,6 +409,8 @@ def generate_quiz(text: str, config: Config) -> dict:
             }
         }
     ]
+    from daemon.project_files import get_project_tools, handle_project_tool_call, PROJECT_TOOL_NAMES
+    tools.extend(get_project_tools(config.project_folder))
 
     messages = [{"role": "user", "content": prompt_content}]
     
@@ -424,14 +432,29 @@ def generate_quiz(text: str, config: Config) -> dict:
                 
                 tool_results = []
                 for tool_call in tool_use_blocks:
-                    print(f"[info] Claude is searching for: {tool_call.input['query']}...")
-                    search_results = search_materials(tool_call.input["query"])
-                    
-                    tool_results.append({
-                        "type": "tool_result",
-                        "tool_use_id": tool_call.id,
-                        "content": json.dumps(search_results)
-                    })
+                    if tool_call.name == "search_materials":
+                        print(f"[info] Claude is searching for: {tool_call.input['query']}...")
+                        search_results = search_materials(tool_call.input["query"])
+                        tool_results.append({
+                            "type": "tool_result",
+                            "tool_use_id": tool_call.id,
+                            "content": json.dumps(search_results)
+                        })
+                    elif tool_call.name in PROJECT_TOOL_NAMES:
+                        result = handle_project_tool_call(
+                            tool_call.name, tool_call.input, config.project_folder
+                        )
+                        tool_results.append({
+                            "type": "tool_result",
+                            "tool_use_id": tool_call.id,
+                            "content": result
+                        })
+                    else:
+                        tool_results.append({
+                            "type": "tool_result",
+                            "tool_use_id": tool_call.id,
+                            "content": f"Error: unknown tool '{tool_call.name}'"
+                        })
                 
                 # Append ALL tool results as a single user message
                 messages.append({
