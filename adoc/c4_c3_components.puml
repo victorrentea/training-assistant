@@ -8,6 +8,7 @@ LAYOUT_WITH_LEGEND()
 Container_Ext(participant_spa, "Participant SPA", "Vanilla JS in trainee's browser.")
 Container_Ext(host_spa, "Host SPA", "Vanilla JS in host's browser.")
 Container_Ext(training_daemon, "Training Daemon", "Python CLI on host's Mac.")
+Container_Ext(emoji_overlay, "Emoji Overlay", "Swift app on host's Mac.")
 
 Container_Boundary(fastapi, "FastAPI Backend") {
 
@@ -74,6 +75,8 @@ Rel(host_spa, summary_router, "Summary, notes, transcript", "HTTPS (Basic Auth)"
 Rel(training_daemon, quiz_router, "Quiz pipeline", "HTTPS (Basic Auth)")
 Rel(training_daemon, summary_router, "Summary, transcript status", "HTTPS (Basic Auth)")
 Rel(training_daemon, poll_router, "Post polls", "HTTPS (Basic Auth)")
+
+Rel(emoji_overlay, ws_router, "WS /ws/__overlay__ (emoji reactions)", "WSS")
 
 ' --- Internal component relationships ---
 Rel(ws_router, state_module, "Participants, votes, locations, debate, codereview")
