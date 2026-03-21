@@ -1,7 +1,7 @@
 {
-  "sha": "36c0bccdb4b54368921e369efcf6c31b118b227b",
-  "timestamp": "2026-03-21 05:53",
+  "sha": "c1c6c7dab13444d30e7e855d383935baf31d18f8",
+  "timestamp": "2026-03-21 07:34",
   "changelog": [
-    "feat: conference mode \u2014 theme-aware QR codes + participant count in left pane"
+    "feat: give LLM access to training project source files (#54)"
   ]
 }
