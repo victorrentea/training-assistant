@@ -1,7 +1,7 @@
 {
-  "sha": "81e2f63f62014e5b757428326f514d699f554c62",
-  "timestamp": "2026-03-21 05:36",
+  "sha": "90fa3a4ea9e7d252b2462ba59e369a9de732f164",
+  "timestamp": "2026-03-21 05:40",
   "changelog": [
-    "feat: add tracked pre-commit hook for work hours stamping"
+    "move quiz generation section from left panel to center poll panel"
   ]
 }
