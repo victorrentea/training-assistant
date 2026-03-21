@@ -29,6 +29,7 @@ docs/**/*.png
 .coverage*
 
 static/version.js
+static/work-hours.js
 static/deploy-info.json
 
 # Swift Package Manager
