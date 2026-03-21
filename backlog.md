@@ -114,6 +114,7 @@
 - [x] The indexer should report a percentage done when it sees a bunch of work ahead. In terms of files left. then, it should index documents on max 4 threads
 - [x] Add map icon button next to QR in host footer for quick access to participant locations map (item #6)
 - [x] feat: assign random LOTR-themed avatar to each participant, displayed in top bar, host participant list, and Q&A (#12, #13)
+- [x] GH#49: Kahoot-style leaderboard — top-5 dramatic reveal triggered by host, sequential position animation, personalized rank on participant phones; conference mode auto-assigns character names (251 pool) with 2-letter colored avatars; works in both workshop and conference modes
 - [x] load test: 30 participants connected simultaneously, host fires a poll, all vote randomly, host sorts by points. Run against local instance first, then deployed.
 - [x] feat: daemon auto-update — daemon detects server version change, exits with code 42, start-daemon.sh loops with git pull and restart.
 - [x] fix: daemon doesn't find today's transcription correctly — investigate transcript file detection at startup. Print which transcription file is being read and how many lines are in the last 30 minutes.
