@@ -1,7 +1,7 @@
 {
-  "sha": "2363e4747e1efed6e3e75711f3f4700da35a864c",
-  "timestamp": "2026-03-21 05:31",
+  "sha": "85d9330255be060bb941d4bd5b80de81eda3347d",
+  "timestamp": "2026-03-21 05:33",
   "changelog": [
-    "feat: show total work hours next to deploy age"
+    "feat: batch UI improvements across host and participant"
   ]
 }
