@@ -352,7 +352,9 @@ async def websocket_endpoint(websocket: WebSocket, participant_id: str):
 
 
     except WebSocketDisconnect:
-        state.participants.pop(pid, None)
+        # Only remove if the stored WS is still ours (avoids race on reconnect-kick)
+        if state.participants.get(pid) is websocket:
+            state.participants.pop(pid, None)
         state.locations.pop(pid, None)
         state.vote_times.pop(pid, None)
         ws_connections_active.labels(role=role).dec()
