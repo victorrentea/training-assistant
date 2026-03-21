@@ -412,11 +412,11 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
 
 .btn-row { display: flex; gap: .75rem; flex-wrap: wrap; margin-top: 1rem; align-items: center; }
 .timer-slider-wrap { display: flex; align-items: center; gap: .5rem; }
-.timer-val { font-size: .95rem; font-weight: 600; color: var(--accent); min-width: 2.5rem; text-align: right; }
+.timer-val { font-size: .95rem; font-weight: 600; color: var(--warn); min-width: 2.5rem; text-align: right; }
 .timer-slider { -webkit-appearance: none; appearance: none; width: 120px; height: 6px; border-radius: 3px; background: var(--surface2); outline: none; cursor: pointer; }
-.timer-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%; background: var(--accent); cursor: pointer; }
-.timer-slider::-moz-range-thumb { width: 18px; height: 18px; border-radius: 50%; background: var(--accent); cursor: pointer; border: none; }
-.timer-tip { font-size: .8rem; color: var(--muted); opacity: 0; transition: opacity .2s; white-space: nowrap; }
+.timer-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%; background: var(--warn); cursor: pointer; }
+.timer-slider::-moz-range-thumb { width: 18px; height: 18px; border-radius: 50%; background: var(--warn); cursor: pointer; border: none; }
+.timer-tip { font-size: .8rem; color: var(--warn); opacity: 0; transition: opacity .2s; white-space: nowrap; }
 
 @media (max-width: 480px) {
   .btn-row { gap: .5rem; }
@@ -424,7 +424,7 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
 }
 
 /* ── Current poll display ── */
-.poll-question { font-size: 1.05rem; font-weight: 600; margin-bottom: 1rem; line-height: 1.4; }
+.poll-question { font-size: 2rem; font-weight: 600; margin-bottom: 1rem; line-height: 1.4; word-wrap: break-word; overflow-wrap: break-word; }
 .result-row { margin-bottom: .75rem; border-radius: 6px; padding: .1rem .3rem; }
 .result-row.markable { cursor: pointer; }
 .result-row.markable:hover { background: var(--surface2); }
@@ -432,7 +432,7 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
 .result-row.correct .result-label span:first-child { color: var(--accent2); font-weight: 600; }
 .result-label {
   display: flex; justify-content: space-between;
-  font-size: .85rem; margin-bottom: .3rem;
+  font-size: 1.5rem; margin-bottom: .3rem;
 }
 .result-label .pct { color: var(--accent2); font-weight: 700; }
 .bar-track {
@@ -763,6 +763,10 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
 
 .codereview-line-selected {
     border-color: var(--accent);
+}
+
+.codereview-line-confirmed.codereview-line-selected {
+    border-color: var(--accent2);
 }
 
 .codereview-gutter {
