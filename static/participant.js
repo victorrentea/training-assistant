@@ -424,6 +424,12 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
           applyParticipantMode(msg.mode);
         }
         if (msg.mode) currentMode = msg.mode;
+        // In conference mode, use the server-assigned name
+        if (msg.my_name && currentMode === 'conference') {
+          myName = msg.my_name;
+          document.getElementById('display-name').textContent = myName;
+          window._myName = myName;
+        }
         if (msg.poll?.id !== currentPoll?.id) {
           myVote = msg.poll?.multi ? new Set() : null;
           pollResult = null;
@@ -450,7 +456,24 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
         window._myScore = msg.my_score || 0;
         window._myUuid = myUUID;
         window._myName = myName;
-        if (msg.my_avatar) {
+        if (msg.my_avatar && msg.my_avatar.startsWith('letter:')) {
+            const parts = msg.my_avatar.split(':');
+            const lt = parts[1] || '??';
+            const clr = parts.slice(2).join(':') || 'var(--muted)';
+            const existing = document.getElementById('my-avatar');
+            if (existing && existing.tagName === 'IMG') {
+                const span = document.createElement('span');
+                span.id = 'my-avatar';
+                span.className = 'avatar letter-avatar';
+                span.style.cssText = 'display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;font-weight:800;font-size:.65rem;color:#fff;background:' + clr;
+                span.textContent = lt;
+                existing.replaceWith(span);
+            } else if (existing) {
+                existing.style.background = clr;
+                existing.textContent = lt;
+                existing.style.display = '';
+            }
+        } else if (msg.my_avatar) {
             const avatarEl = document.getElementById('my-avatar');
             avatarEl.src = '/static/avatars/' + msg.my_avatar;
             avatarEl.style.display = '';
@@ -554,6 +577,12 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
         break;
       case 'summary':
         updateSummary(msg.points, msg.updated_at);
+        break;
+      case 'leaderboard':
+        showParticipantLeaderboard(msg);
+        break;
+      case 'leaderboard_hide':
+        hideParticipantLeaderboard();
         break;
     }
   }
@@ -1358,7 +1387,7 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     const isConference = mode === 'conference';
     // Hide/show status bar elements
     const statusLeft = document.querySelector('.status-left');
-    if (statusLeft) statusLeft.style.display = isConference ? 'none' : '';
+    if (statusLeft) statusLeft.style.display = '';
     const myScore = document.getElementById('my-score');
     if (myScore) myScore.style.display = isConference ? 'none' : '';
     const locPrompt = document.getElementById('location-prompt');
@@ -1740,4 +1769,44 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     } else {
       ws.send(JSON.stringify({ type: 'codereview_select', line: lineNum }));
     }
+  }
+
+  // ── Leaderboard ──────────────────────────────────────
+  function showParticipantLeaderboard(data) {
+    const overlay = document.getElementById('leaderboard-overlay');
+    const myRankEl = document.getElementById('leaderboard-my-rank');
+    const top5El = document.getElementById('leaderboard-top5');
+    overlay.style.display = 'flex';
+
+    myRankEl.innerHTML = `
+        <div class="rank-number">#${data.your_rank || '?'}</div>
+        <div class="rank-total">out of ${data.total_participants}</div>
+        <div class="rank-score">${data.your_score || 0} pts</div>
+    `;
+
+    top5El.innerHTML = (data.entries || []).map(e => {
+        const isMe = data.your_name && data.your_name === e.name;
+        const isFirst = e.rank === 1;
+        const cls = 'lb-entry' + (isMe ? ' is-me' : '') + (isFirst ? ' first-place' : '');
+
+        const avatarStyle = e.avatar && e.avatar.startsWith('letter:')
+            ? `background:${e.color}` : `background:var(--surface2)`;
+        const avatarContent = e.avatar && e.avatar.startsWith('letter:')
+            ? e.letter : '';
+        const avatarImg = e.avatar && !e.avatar.startsWith('letter:')
+            ? `<img src="/static/avatars/${e.avatar}" style="width:32px;height:32px;border-radius:50%" onerror="this.style.display='none'">`
+            : '';
+        const universe = e.universe ? ` <span class="lb-universe">(${e.universe})</span>` : '';
+
+        return `<div class="${cls}">
+            <span class="lb-rank">#${e.rank}</span>
+            ${avatarImg || `<span class="lb-avatar" style="${avatarStyle}">${avatarContent}</span>`}
+            <span class="lb-name">${e.name}${universe}</span>
+            <span class="lb-score">${e.score} pts</span>
+        </div>`;
+    }).join('');
+  }
+
+  function hideParticipantLeaderboard() {
+    document.getElementById('leaderboard-overlay').style.display = 'none';
   }
