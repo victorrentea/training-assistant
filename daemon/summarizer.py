@@ -11,6 +11,7 @@ from typing import Optional
 
 import anthropic
 from daemon.llm_adapter import create_message
+from daemon.project_files import get_project_tools, handle_project_tool_call, PROJECT_TOOL_NAMES
 
 from quiz_core import (
     Config,
@@ -47,6 +48,9 @@ Output rules:
 Return ONLY a JSON array of objects. No markdown, no explanation.
 Example: [{"text": "Outbox pattern decouples DB writes from message publishing", "source": "discussion", "time": "10:15"}, \
 {"text": "Hands-on: implement Circuit Breaker with Resilience4j", "source": "notes"}]
+
+## Project Source Code
+If `list_project_tree` and `read_project_file` tools are available, use them to find relevant source files when the transcript mentions specific classes, patterns, or configurations. Include specific class/method references in your key points (e.g., 'the @Transactional annotation in PaymentService.java:34').
 """
 
 
@@ -94,13 +98,45 @@ def generate_summary(
     user_message = "\n---\n".join(parts)
 
     try:
-        response = create_message(
+        # Build tools list (project file tools if configured)
+        tools = get_project_tools(config.project_folder)
+
+        messages = [{"role": "user", "content": user_message}]
+
+        # max_tokens bumped from 1024 to 2048 to accommodate tool-use round-trips
+        create_kwargs = dict(
             api_key=config.api_key,
             model=config.model,
-            max_tokens=1024,
+            max_tokens=2048,
             system=_SUMMARY_SYSTEM_PROMPT,
-            messages=[{"role": "user", "content": user_message}],
+            messages=messages,
         )
+        if tools:
+            create_kwargs["tools"] = tools
+
+        while True:
+            response = create_message(**create_kwargs)
+            messages.append({"role": "assistant", "content": response.content})
+
+            if response.stop_reason == "tool_use":
+                tool_use_blocks = [c for c in response.content if c.type == "tool_use"]
+                tool_results = []
+                for tool_call in tool_use_blocks:
+                    if tool_call.name in PROJECT_TOOL_NAMES:
+                        result = handle_project_tool_call(
+                            tool_call.name, tool_call.input, config.project_folder
+                        )
+                    else:
+                        result = f"Error: unknown tool '{tool_call.name}'"
+                    tool_results.append({
+                        "type": "tool_result",
+                        "tool_use_id": tool_call.id,
+                        "content": result,
+                    })
+                messages.append({"role": "user", "content": tool_results})
+                continue
+            else:
+                break
 
         if not response.content:
             print(f"[summarizer] Empty response from Claude (stop_reason={response.stop_reason})", file=sys.stderr)
