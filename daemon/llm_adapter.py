@@ -73,7 +73,7 @@ def create_message(
     pricing = PRICING.get(model, PRICING["claude-sonnet-4-6"])
     cost = (in_tok * pricing["input"] + out_tok * pricing["output"]) / 1_000_000
     logger.info(
-        "LLM call: model=%s in=%d out=%d cost=$%.4f duration=%dms",
+        "💸 LLM call: model=%s in=%d out=%d cost=$%.4f duration=%dms",
         model, in_tok, out_tok, cost, duration_ms,
     )
     return response
