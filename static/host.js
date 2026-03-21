@@ -190,9 +190,9 @@
           renderMode(msg.mode);
         }
         if (currentMode === 'conference') {
-          const confPax = document.getElementById('conference-pax-count');
           const paxCount = names ? names.length : 0;
-          if (confPax) confPax.textContent = '👥 ' + paxCount;
+          const confPaxNum = document.getElementById('conference-pax-number');
+          if (confPaxNum) confPaxNum.textContent = paxCount;
           const joinedEl = document.getElementById('conference-qr-joined');
           if (joinedEl) joinedEl.textContent = paxCount + ' Joined';
         }
@@ -362,24 +362,28 @@
     const rightCol = document.querySelector('.host-col-right');
     const grid = document.querySelector('.host-columns');
     const confQR = document.getElementById('conference-qr');
-    const confPax = document.getElementById('conference-pax-count');
+    const confPaxDisplay = document.getElementById('conference-pax-display');
     const debateTab = document.getElementById('tab-debate');
     const tokenCost = document.getElementById('token-cost');
     const notesBadge = document.getElementById('notes-badge');
     const centerQR = document.getElementById('center-qr');
+
+    // Detect light/dark mode for QR color adaptation
+    const isLight = window.matchMedia('(prefers-color-scheme: light)').matches;
 
     if (isConference) {
       rightCol.style.display = 'none';
       grid.style.gridTemplateColumns = '25% 1fr';
       // Left QR hidden by default — shown only when an activity is active (see updateCenterPanel)
       confQR.style.display = 'none';
-      confPax.style.display = '';
+      if (confPaxDisplay) confPaxDisplay.style.display = '';
       if (debateTab) debateTab.style.display = 'none';
       if (tokenCost) tokenCost.style.display = 'none';
       if (notesBadge) notesBadge.style.display = 'none';
-      // Generate left QR (hidden until needed)
+      // Generate left QR (hidden until needed) — adapts to color scheme
       const qrContainer = document.getElementById('conference-qr-code');
       qrContainer.innerHTML = '';
+      qrContainer.style.background = isLight ? '#fff' : '#fff';
       const pLink = document.getElementById('participant-link');
       if (pLink && pLink.href && typeof QRCode !== 'undefined') {
         new QRCode(qrContainer, { text: pLink.href, width: 200, height: 200, colorDark: '#000', colorLight: '#fff' });
@@ -391,19 +395,21 @@
           `<span class="wave-char" style="animation-delay:${(i * 0.12).toFixed(2)}s">${ch}</span>`
         ).join('');
       }
-      // Make center QR bright white for conference
+      // Make center QR bright for conference — color adapts to theme
       if (centerQR) centerQR.classList.add('conference-center-qr');
       const centerQRDiv = document.getElementById('qr-code');
       if (centerQRDiv) {
         centerQRDiv.innerHTML = '';
         const sz = (Math.min(centerQR.offsetWidth, centerQR.offsetHeight) || 400) * 0.85;
-        new QRCode(centerQRDiv, { text: pLink.href, width: sz, height: sz, colorDark: '#000000', colorLight: '#ffffff' });
+        const qrDark = isLight ? '#1a1d2e' : '#ffffff';
+        const qrLight = isLight ? '#f4f5f9' : '#0f1117';
+        new QRCode(centerQRDiv, { text: pLink.href, width: sz, height: sz, colorDark: qrDark, colorLight: qrLight });
       }
     } else {
       rightCol.style.display = '';
       grid.style.gridTemplateColumns = '25% 1fr 25%';
       confQR.style.display = 'none';
-      confPax.style.display = 'none';
+      if (confPaxDisplay) confPaxDisplay.style.display = 'none';
       if (debateTab) debateTab.style.display = '';
       if (tokenCost) tokenCost.style.display = '';
       if (notesBadge) notesBadge.style.display = '';
@@ -413,7 +419,8 @@
       if (centerQRDiv) {
         centerQRDiv.innerHTML = '';
         const sz = (Math.min(centerQR.offsetWidth, centerQR.offsetHeight) || 400) * 0.8;
-        new QRCode(centerQRDiv, { text: link, width: sz, height: sz, colorDark: '#888888', colorLight: 'transparent' });
+        const mutedColor = isLight ? '#aaaaaa' : '#888888';
+        new QRCode(centerQRDiv, { text: link, width: sz, height: sz, colorDark: mutedColor, colorLight: 'transparent' });
       }
     }
   }
