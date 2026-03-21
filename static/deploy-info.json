@@ -1,7 +1,7 @@
 {
-  "sha": "40b26f684fa1ca5d7c99c20360b44902712d9c11",
-  "timestamp": "2026-03-21 05:25",
+  "sha": "c58e2bebe73c9799a90abc8688fde8049046e60a",
+  "timestamp": "2026-03-21 05:26",
   "changelog": [
-    "fix: restore version.js + white version tag text"
+    "fix(#42): escalating beeps on timer expiry, rename sub-phase to round"
   ]
 }
