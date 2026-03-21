@@ -1,7 +1,7 @@
 {
-  "sha": "f117ea3eb1234752df1bbda4e55d0dbec7c00465",
-  "timestamp": "2026-03-21 05:22",
+  "sha": "c7175a4cf3b7ac1f548a66348dd9d83b8c7bb6ce",
+  "timestamp": "2026-03-21 05:24",
   "changelog": [
-    "fix: load test now sends set_name and waits for correct state message"
+    "fix: restore version.js to master + white version tag text"
   ]
 }
