@@ -19,7 +19,8 @@ jobs:
       - name: Install dependencies
         run: |
           pip install fastapi "uvicorn[standard]" websockets python-multipart httpx \
-                      pytest pytest-anyio pytest-playwright anthropic
+                      pytest pytest-anyio pytest-playwright anthropic \
+                      prometheus-fastapi-instrumentator
 
       - name: Install Playwright browsers
         run: python -m playwright install --with-deps chromium
