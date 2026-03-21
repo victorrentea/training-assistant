@@ -1,7 +1,7 @@
 {
-  "sha": "6856d5aa46e6195c3061a68e7d6ac297eabb7a3a",
-  "timestamp": "2026-03-20 23:49",
+  "sha": "e9876b42ddd2fe547580ffd4fa26c37ab5068b46",
+  "timestamp": "2026-03-21 00:16",
   "changelog": [
-    "fix: move language select and smart paste below code textarea"
+    "feat: polish conference mode QR and badge layout (#53)"
   ]
 }
