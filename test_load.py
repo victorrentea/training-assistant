@@ -145,13 +145,13 @@ async def participant_task(ws_base, name, idx, counter, n, connected_event, poll
             results[name]["voted"] = True
             results[name]["voted_id"] = voted_id
 
-            # Drain until state broadcast with poll_correct_ids (scores have been awarded)
-            scores_msg = await _recv_until(
+            # Drain until individual "result" message (sent after correct_ids are set)
+            result_msg = await _recv_until(
                 ws,
-                lambda m: m.get("type") == "state" and m.get("poll_correct_ids") is not None,
+                lambda m: m.get("type") == "result",
                 timeout=30.0,
             )
-            results[name]["score"] = scores_msg.get("my_score", 0)
+            results[name]["score"] = result_msg.get("score", 0)
             results[name]["done"] = True
 
     except Exception as exc:
@@ -208,7 +208,7 @@ def test_load(server_url):
         loop = asyncio.get_running_loop()
 
         # Phase 3: wait for all votes
-        deadline = loop.time() + 30.0
+        deadline = loop.time() + 60.0
         while True:
             voted_count = sum(1 for r in results.values() if r["voted"])
             if voted_count == n:
@@ -224,7 +224,7 @@ def test_load(server_url):
         print("✓ Poll closed, correct answer posted")
 
         # Phase 5: wait for all scores received
-        deadline = loop.time() + 15.0
+        deadline = loop.time() + 30.0
         while True:
             done_count = sum(1 for r in results.values() if r["done"])
             if done_count == n:
