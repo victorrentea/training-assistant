@@ -1,7 +1,7 @@
 {
-  "sha": "f80cc35e2a3d97ac443a1e425ca47ed5592dca6e",
-  "timestamp": "2026-03-21 13:18",
+  "sha": "3df40b2e0dde0569a17e89375d6257a8b50f8677",
+  "timestamp": "2026-03-21 14:36",
   "changelog": [
-    "fix: update uv.lock to match pyproject.toml dependencies"
+    "feat: log LLM calls in training daemon (#56)"
   ]
 }
