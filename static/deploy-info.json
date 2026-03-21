@@ -1,7 +1,7 @@
 {
-  "sha": "e9876b42ddd2fe547580ffd4fa26c37ab5068b46",
-  "timestamp": "2026-03-21 00:16",
+  "sha": "a015b89d13fcef390788698a60dc4cc45e1ee8ae",
+  "timestamp": "2026-03-21 00:17",
   "changelog": [
-    "feat: polish conference mode QR and badge layout (#53)"
+    "feat: Prometheus metrics endpoint + local Grafana monitoring stack (#52)"
   ]
 }
