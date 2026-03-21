@@ -139,6 +139,14 @@
         }, 1000);
         return;
       }
+      if (msg.type === 'leaderboard') {
+        renderLeaderboard(msg);
+        return;
+      }
+      if (msg.type === 'leaderboard_hide') {
+        hideLeaderboard();
+        return;
+      }
       if (msg.type === 'state') {
         versionReloadGuard && versionReloadGuard.check(msg.backend_version);
         const prevQuestion = currentPoll?.question;
@@ -164,6 +172,7 @@
         cachedNames = names;
         document.getElementById('pax-count').textContent = msg.participant_count;
         renderParticipantList(names);
+        updateLeaderboardButton();
         renderDaemonStatus(msg.daemon_connected, msg.daemon_last_seen);
         updateTokenBadge(msg.token_usage);
         renderTranscriptStatus(msg.transcript_line_count, msg.transcript_total_lines, msg.transcript_latest_ts);
@@ -214,6 +223,7 @@
         });
         cachedNames = names;
         renderParticipantList(names);
+        updateLeaderboardButton();
         // Re-render code review side panel with fresh scores
         if (window._lastCodereviewState && window._lastCodereviewState.phase !== 'idle') {
           // Update scores in cached line_participants
@@ -2051,3 +2061,81 @@
       </div>
     </div>${hints}`;
   }
+
+// ── Leaderboard ──────────────────────────────────────
+let _leaderboardActive = false;
+
+async function toggleLeaderboard() {
+    if (_leaderboardActive) {
+        await fetch('/api/leaderboard/hide', { method: 'POST' });
+    } else {
+        await fetch('/api/leaderboard/show', { method: 'POST' });
+    }
+}
+
+function renderLeaderboard(data) {
+    _leaderboardActive = true;
+    const overlay = document.getElementById('leaderboard-overlay');
+    const entriesEl = document.getElementById('leaderboard-entries');
+    overlay.style.display = 'flex';
+    entriesEl.innerHTML = '';
+
+    const btn = document.getElementById('btn-leaderboard');
+    if (btn) btn.classList.add('active');
+
+    // Render entries bottom-to-top with sequential animation
+    const entries = data.entries || [];
+    entries.forEach((entry, i) => {
+        const div = document.createElement('div');
+        div.className = 'leaderboard-entry' + (entry.rank === 1 ? ' first-place' : '');
+
+        const avatarStyle = entry.avatar && entry.avatar.startsWith('letter:')
+            ? `background:${entry.color}`
+            : `background:var(--surface2)`;
+        const avatarContent = entry.avatar && entry.avatar.startsWith('letter:')
+            ? entry.letter
+            : '';
+        const avatarImg = entry.avatar && !entry.avatar.startsWith('letter:')
+            ? `<img src="/static/avatars/${entry.avatar}" style="width:48px;height:48px;border-radius:50%" onerror="this.style.display='none'">`
+            : '';
+
+        const universeTag = entry.universe
+            ? ` <span class="leaderboard-universe">(${entry.universe})</span>`
+            : '';
+
+        div.innerHTML = `
+            <span class="leaderboard-rank">#${entry.rank}</span>
+            ${avatarImg || `<span class="leaderboard-avatar" style="${avatarStyle}">${escHtml(entry.name)}${universeTag}</span>`}
+            <span class="leaderboard-name">${escHtml(entry.name)}${universeTag}</span>
+            <span class="leaderboard-score">${entry.score} pts</span>
+        `;
+
+        // IMPORTANT: Fix the avatar — if using letter avatar, show letters not name
+        if (!avatarImg) {
+            const avatarSpan = div.querySelector('.leaderboard-avatar');
+            if (avatarSpan) avatarSpan.textContent = entry.letter || '??';
+        }
+
+        entriesEl.appendChild(div);
+
+        // Sequential reveal: 5th first (bottom), 1st last (top)
+        const revealDelay = (entries.length - 1 - i) * 800;
+        setTimeout(() => div.classList.add('visible'), 500 + revealDelay);
+    });
+}
+
+function hideLeaderboard() {
+    _leaderboardActive = false;
+    const overlay = document.getElementById('leaderboard-overlay');
+    overlay.style.display = 'none';
+    const btn = document.getElementById('btn-leaderboard');
+    if (btn) btn.classList.remove('active');
+}
+
+function updateLeaderboardButton() {
+    const btn = document.getElementById('btn-leaderboard');
+    if (!btn) return;
+    // Enable when we have scores data with 5+ scored participants
+    const scoredCount = Object.values(scores || {}).filter(s => s > 0).length;
+    btn.disabled = scoredCount < 5;
+}
