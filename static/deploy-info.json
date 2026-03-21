@@ -1,7 +1,7 @@
 {
-  "sha": "a015b89d13fcef390788698a60dc4cc45e1ee8ae",
-  "timestamp": "2026-03-21 00:17",
+  "sha": "e0a768a7248aabf14e9d43f35966c611384a62ac",
+  "timestamp": "2026-03-21 00:18",
   "changelog": [
-    "feat: Prometheus metrics endpoint + local Grafana monitoring stack (#52)"
+    "fix: remove \"You selected X line(s)\" footer from participant code review"
   ]
 }
