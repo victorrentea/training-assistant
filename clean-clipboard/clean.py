@@ -76,8 +76,6 @@ def handle_hotkey() -> None:
             log("Failed: no response from API")
             return
 
-        elapsed_ms = int((time.time() - start) * 1000)
-
         # Undo the original paste
         keyboard_controller.press(Key.cmd)
         keyboard_controller.press('z')
@@ -94,6 +92,7 @@ def handle_hotkey() -> None:
         keyboard_controller.release('v')
         keyboard_controller.release(Key.cmd)
 
+        elapsed_ms = int((time.time() - start) * 1000)
         log(f"Done ({len(text)} -> {len(cleaned)} chars, {elapsed_ms}ms)")
     except Exception as e:
         log(f"Failed: {e}")
