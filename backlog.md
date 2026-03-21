@@ -142,6 +142,10 @@
 - [x] In the code review for host, the title of code review doesn't stay on top of the code section; it stays somehow on top of the entire panel, which is asymmetric based on the compared with the line that delimits that take the code from the list of users. So center the code review title above the code div.
 - [x] In the poll view for the host, increase the name of the size of the font of the options and the question. Make it double and make sure that if the question is longer, it falls onto the second line cleanly.
 - [x] In the poll screen for a host, the slider color and text ("15 seconds default") should be in the same color as the button to close voting, to suggest it's closing the voting. As well as the text which gets displayed when you drag the slider. Also try to put the button to remove the question aligned to the right. Replace all the trash bins and all the other buttons with the same emoji that stays in front of the remove question label. I like it.
+- [x] Show emoji reactions on host browser page (floating animation like participant page) — currently only forwarded to native overlay app
+- [x] Make mobile emoji reactions bigger (~8rem) and longer (~1.8s) — currently 5rem / 0.8s
+- [x] Click avatar to enlarge: mobile = almost full screen (~90vh/90vw), desktop = large overlay; show refresh 🔄 icon in bottom-right of enlarged view to re-roll avatar
+- [x] Avatar refresh via WebSocket: `refresh_avatar` message reassigns avatar ensuring no duplicates among currently connected participants
  ---
 
 ## Understanding design

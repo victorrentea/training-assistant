@@ -14,6 +14,7 @@ from messaging import (
     send_state_to_participant,
     send_state_to_host,
     send_emoji_to_overlay,
+    send_emoji_to_host,
 )
 from metrics import (
     ws_connections_active,
@@ -23,7 +24,7 @@ from metrics import (
     qa_questions_total,
     qa_upvotes_total,
 )
-from state import state, ActivityType, assign_avatar
+from state import state, ActivityType, assign_avatar, refresh_avatar
 from messaging import participant_ids
 from routers.debate import auto_assign_remaining
 
@@ -338,6 +339,12 @@ async def websocket_endpoint(websocket: WebSocket, participant_id: str):
                 emoji = str(data.get("emoji", "")).strip()
                 if emoji and len(emoji) <= 4:
                     await send_emoji_to_overlay(emoji)
+                    await send_emoji_to_host(emoji)
+
+            elif msg_type == "refresh_avatar":
+                new_avatar = refresh_avatar(state, pid)
+                if new_avatar:
+                    await broadcast_state()
 
             elif msg_type == "codereview_deselect":
                 line = data.get("line")
