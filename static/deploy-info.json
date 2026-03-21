@@ -1,7 +1,7 @@
 {
-  "sha": "e0a768a7248aabf14e9d43f35966c611384a62ac",
-  "timestamp": "2026-03-21 00:18",
+  "sha": "7ed74658a4f7c51d8b033daede25607581a90d76",
+  "timestamp": "2026-03-21 00:22",
   "changelog": [
-    "fix: remove \"You selected X line(s)\" footer from participant code review"
+    "fix: move token cost to footer, gray by default, yellow >$1, red >$3"
   ]
 }
