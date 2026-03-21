@@ -15,6 +15,14 @@ from messaging import (
     send_state_to_host,
     send_emoji_to_overlay,
 )
+from metrics import (
+    ws_connections_active,
+    ws_messages_total,
+    poll_votes_total,
+    poll_vote_duration_seconds,
+    qa_questions_total,
+    qa_upvotes_total,
+)
 from state import state, ActivityType, assign_avatar
 from messaging import participant_ids
 from routers.debate import auto_assign_remaining
@@ -32,6 +40,7 @@ async def websocket_endpoint(websocket: WebSocket, participant_id: str):
 
     is_host = pid == "__host__"
     is_overlay = pid == "__overlay__"
+    role = "host" if is_host else ("overlay" if is_overlay else "participant")
 
     # Overlay reconnect: kick old overlay connection
     if is_overlay and "__overlay__" in state.participants:
@@ -55,6 +64,7 @@ async def websocket_endpoint(websocket: WebSocket, participant_id: str):
 
     await websocket.accept()
     state.participants[pid] = websocket
+    ws_connections_active.labels(role=role).inc()
 
     if is_overlay:
         state.participant_names["__overlay__"] = "Overlay"
@@ -82,6 +92,8 @@ async def websocket_endpoint(websocket: WebSocket, participant_id: str):
             raw = await websocket.receive_text()
             data = json.loads(raw)
             msg_type = data.get("type")
+            if msg_type:
+                ws_messages_total.labels(type=msg_type).inc()
 
             # Before named, only accept set_name
             if not named:
@@ -138,6 +150,10 @@ async def websocket_endpoint(websocket: WebSocket, participant_id: str):
                     state.votes[pid] = option_id
                     if pid not in state.vote_times:
                         state.vote_times[pid] = datetime.now(timezone.utc)
+                        poll_votes_total.inc()
+                        if state.poll_opened_at:
+                            duration = (datetime.now(timezone.utc) - state.poll_opened_at).total_seconds()
+                            poll_vote_duration_seconds.observe(duration)
                     await broadcast({
                         "type": "vote_update",
                         "vote_counts": state.vote_counts(),
@@ -161,6 +177,10 @@ async def websocket_endpoint(websocket: WebSocket, participant_id: str):
                     state.votes[pid] = option_ids
                     if pid not in state.vote_times:
                         state.vote_times[pid] = datetime.now(timezone.utc)
+                        poll_votes_total.inc()
+                        if state.poll_opened_at:
+                            duration = (datetime.now(timezone.utc) - state.poll_opened_at).total_seconds()
+                            poll_vote_duration_seconds.observe(duration)
                     await broadcast({
                         "type": "vote_update",
                         "vote_counts": state.vote_counts(),
@@ -188,6 +208,7 @@ async def websocket_endpoint(websocket: WebSocket, participant_id: str):
                         "timestamp": time.time(),
                     }
                     state.scores[pid] = state.scores.get(pid, 0) + 100
+                    qa_questions_total.inc()
                     await broadcast_state()
 
             elif msg_type == "qa_upvote":
@@ -198,6 +219,7 @@ async def websocket_endpoint(websocket: WebSocket, participant_id: str):
                     author_pid = q["author"]
                     state.scores[author_pid] = state.scores.get(author_pid, 0) + 50
                     state.scores[pid] = state.scores.get(pid, 0) + 25
+                    qa_upvotes_total.inc()
                     await broadcast_state()
 
             elif msg_type == "debate_pick_side":
@@ -314,6 +336,7 @@ async def websocket_endpoint(websocket: WebSocket, participant_id: str):
         state.participants.pop(pid, None)
         state.locations.pop(pid, None)
         state.vote_times.pop(pid, None)
+        ws_connections_active.labels(role=role).dec()
         # Keep participant_names and scores (persist for session)
         logger.info(f"Disconnected: {pid} ({len(state.participants)} remaining)")
         await broadcast_participant_update()
