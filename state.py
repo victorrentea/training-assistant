@@ -35,6 +35,8 @@ class AppState:
         self.participants: dict[str, WebSocket] = {}
         self.participant_names: dict[str, str] = {}  # uuid -> display_name
         self.participant_avatars: dict[str, str] = {}
+        self.participant_universes: dict[str, str] = {}  # uuid → universe string
+        self.leaderboard_active: bool = False
         self.locations: dict[str, str] = {}
         self.quiz_request: Optional[dict] = None
         self.quiz_refine_request: Optional[dict] = None
