@@ -1,7 +1,10 @@
 {
-  "sha": "75540c0b96c36ae6f0b887969e24f8e275ceb1fb",
-  "timestamp": "2026-03-21 15:27",
+  "sha": "46ebf1da5a86cb576439078cc7c410bb18faf1ef",
+  "timestamp": "2026-03-21 21:34",
   "changelog": [
-    "feat: emoji on host browser, bigger mobile emoji, avatar click-to-enlarge with refresh (#58)"
+    "docs(clean-clipboard): add README with setup and usage instructions",
+    "fix(clean-clipboard): measure elapsed time after full operation completes",
+    "feat: add clipboard cleanup daemon with Claude Haiku integration",
+    "feat(clean-clipboard): add project scaffold with dependencies"
   ]
 }
