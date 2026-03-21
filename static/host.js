@@ -189,9 +189,12 @@
           currentMode = msg.mode;
           renderMode(msg.mode);
         }
-        const confPax = document.getElementById('conference-pax-count');
-        if (confPax && currentMode === 'conference') {
-          confPax.textContent = '👥 ' + (names ? names.length : 0);
+        if (currentMode === 'conference') {
+          const confPax = document.getElementById('conference-pax-count');
+          const paxCount = names ? names.length : 0;
+          if (confPax) confPax.textContent = '👥 ' + paxCount;
+          const joinedEl = document.getElementById('conference-qr-joined');
+          if (joinedEl) joinedEl.textContent = paxCount + ' Joined';
         }
       } else if (msg.type === 'vote_update') {
         voteCounts = msg.vote_counts || {};
@@ -350,7 +353,7 @@
     if (!badge) return;
     badge.textContent = mode === 'conference' ? '🎤' : '🎓';
     badge.title = mode === 'conference' ? 'Conference mode — click to switch to Workshop' : 'Workshop mode — click to switch to Conference';
-    badge.className = 'badge ' + (mode === 'conference' ? 'error' : 'connected');
+    badge.className = 'badge ' + (mode === 'conference' ? 'mode-badge-conference' : 'mode-badge-workshop');
     applyConferenceLayout(mode === 'conference');
   }
 
@@ -360,19 +363,40 @@
     const confQR = document.getElementById('conference-qr');
     const confPax = document.getElementById('conference-pax-count');
     const debateTab = document.getElementById('tab-debate');
+    const tokenBadge = document.getElementById('token-badge');
+    const notesBadge = document.getElementById('notes-badge');
+    const centerQR = document.getElementById('center-qr');
 
     if (isConference) {
       rightCol.style.display = 'none';
       grid.style.gridTemplateColumns = '25% 1fr';
-      confQR.style.display = 'flex';
+      // Left QR hidden by default — shown only when an activity is active (see updateCenterPanel)
+      confQR.style.display = 'none';
       confPax.style.display = '';
       if (debateTab) debateTab.style.display = 'none';
-      // Generate QR in left panel
+      if (tokenBadge) tokenBadge.style.display = 'none';
+      if (notesBadge) notesBadge.style.display = 'none';
+      // Generate left QR (hidden until needed)
       const qrContainer = document.getElementById('conference-qr-code');
       qrContainer.innerHTML = '';
-      const link = document.getElementById('participant-link');
-      if (link && link.href && typeof QRCode !== 'undefined') {
-        new QRCode(qrContainer, { text: link.href, width: 160, height: 160, colorDark: '#000', colorLight: '#fff' });
+      const pLink = document.getElementById('participant-link');
+      if (pLink && pLink.href && typeof QRCode !== 'undefined') {
+        new QRCode(qrContainer, { text: pLink.href, width: 200, height: 200, colorDark: '#000', colorLight: '#fff' });
+      }
+      // URL with wave animation in left QR panel
+      const urlEl = document.getElementById('conference-qr-url');
+      if (urlEl) {
+        urlEl.innerHTML = location.host.split('').map((ch, i) =>
+          `<span class="wave-char" style="animation-delay:${(i * 0.12).toFixed(2)}s">${ch}</span>`
+        ).join('');
+      }
+      // Make center QR bright white for conference
+      if (centerQR) centerQR.classList.add('conference-center-qr');
+      const centerQRDiv = document.getElementById('qr-code');
+      if (centerQRDiv) {
+        centerQRDiv.innerHTML = '';
+        const sz = (Math.min(centerQR.offsetWidth, centerQR.offsetHeight) || 400) * 0.85;
+        new QRCode(centerQRDiv, { text: pLink.href, width: sz, height: sz, colorDark: '#000000', colorLight: '#ffffff' });
       }
     } else {
       rightCol.style.display = '';
@@ -380,6 +404,16 @@
       confQR.style.display = 'none';
       confPax.style.display = 'none';
       if (debateTab) debateTab.style.display = '';
+      if (tokenBadge) tokenBadge.style.display = '';
+      if (notesBadge) notesBadge.style.display = '';
+      // Restore muted center QR
+      if (centerQR) centerQR.classList.remove('conference-center-qr');
+      const centerQRDiv = document.getElementById('qr-code');
+      if (centerQRDiv) {
+        centerQRDiv.innerHTML = '';
+        const sz = (Math.min(centerQR.offsetWidth, centerQR.offsetHeight) || 400) * 0.8;
+        new QRCode(centerQRDiv, { text: link, width: sz, height: sz, colorDark: '#888888', colorLight: 'transparent' });
+      }
     }
   }
 
@@ -1117,6 +1151,13 @@
         document.getElementById('tab-' + t).classList.toggle('active', currentActivity === t);
         document.getElementById('tab-content-' + t).style.display = currentActivity === t ? (t === 'codereview' ? 'flex' : '') : 'none';
       });
+    }
+    // Conference mode: show left QR only when an activity is active (center QR hidden)
+    if (currentMode === 'conference') {
+      const confQR = document.getElementById('conference-qr');
+      if (confQR) {
+        confQR.style.display = (currentActivity && currentActivity !== 'none') ? 'flex' : 'none';
+      }
     }
   }
 

@@ -812,3 +812,22 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
   justify-content: center;
   align-items: center;
 }
+/* Mode badge — white background for visibility */
+.mode-badge-workshop {
+  background: #fff !important;
+  color: #333 !important;
+  border: 2px solid var(--accent) !important;
+}
+.mode-badge-conference {
+  background: #fff !important;
+  color: #333 !important;
+  border: 2px solid #e74c3c !important;
+}
+
+/* Conference mode: bright white center QR */
+.conference-center-qr {
+  background: #fff !important;
+}
+.conference-center-qr .qr-code {
+  opacity: 1 !important;
+}
