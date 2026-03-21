@@ -1,7 +1,7 @@
 {
-  "sha": "78afa97b086164fa494ae16b9ba4e620d4d0033c",
-  "timestamp": "2026-03-21 05:49",
+  "sha": "36c0bccdb4b54368921e369efcf6c31b118b227b",
+  "timestamp": "2026-03-21 05:53",
   "changelog": [
-    "feat: syntax highlighting for code review + Java as default language"
+    "feat: conference mode \u2014 theme-aware QR codes + participant count in left pane"
   ]
 }
