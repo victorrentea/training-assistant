@@ -1402,19 +1402,38 @@
       phaseLabel.innerHTML = `<span style="color:var(--warn);">Review mode — ${confirmedCount} line(s) confirmed</span>`;
     }
 
+    // Update language dropdown when server detects language via smart paste
+    if (cr.language) {
+      const langSelect = document.getElementById('codereview-language');
+      if (langSelect) langSelect.value = cr.language;
+    }
+
     renderHostCodePanel(cr);
     _updateCodeReviewLayout(cr);
   }
 
   function renderHostCodePanel(cr) {
     const panel = document.getElementById('codereview-code-panel');
-    const lines = cr.snippet.split('\n');
+    const rawLines = cr.snippet.split('\n');
     const lineCounts = cr.line_counts || {};
     const confirmed = new Set(cr.confirmed_lines || []);
     const totalPax = cr.participant_count || 1;
 
+    // Syntax highlight the entire snippet, then split into lines
+    let highlightedLines;
+    const lang = cr.language || '';
+    if (typeof hljs !== 'undefined' && lang && hljs.getLanguage(lang)) {
+      const result = hljs.highlight(cr.snippet, { language: lang });
+      highlightedLines = result.value.split('\n');
+    } else if (typeof hljs !== 'undefined') {
+      const result = hljs.highlightAuto(cr.snippet);
+      highlightedLines = result.value.split('\n');
+    } else {
+      highlightedLines = rawLines.map(l => escHtml(l));
+    }
+
     let html = '<div class="codereview-lines">';
-    lines.forEach((lineText, i) => {
+    rawLines.forEach((lineText, i) => {
       const lineNum = i + 1;
       const count = lineCounts[String(lineNum)] || 0;
       const pct = Math.round(count * 100 / totalPax);
@@ -1422,14 +1441,13 @@
       const isConfirmed = confirmed.has(lineNum);
       const isSelected = codereviewSelectedLine === lineNum;
 
-      // Background = participant heatmap only; border = host confirmation
       const bgColor = `rgba(108,99,255,${intensity * 0.5})`;
       const confirmedClass = isConfirmed ? 'codereview-line-confirmed' : '';
       const selectedClass = isSelected ? 'codereview-line-selected' : '';
       const clickable = cr.phase === 'reviewing' && !isConfirmed ? 'codereview-line-clickable' : '';
       html += `<div class="codereview-line ${clickable} ${confirmedClass} ${selectedClass}" style="background:${bgColor};" onclick="selectCodeReviewLine(${lineNum})">`;
       html += `<span class="codereview-gutter">${lineNum}</span>`;
-      html += `<span class="codereview-code">${escHtml(lineText) || ' '}</span>`;
+      html += `<span class="codereview-code">${highlightedLines[i] || ' '}</span>`;
       if (count > 0) {
         const countColor = isConfirmed ? 'var(--accent2)' : 'var(--accent)';
         html += `<span class="codereview-count" style="color:${countColor}">${pct}%</span>`;
