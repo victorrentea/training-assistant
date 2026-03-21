@@ -257,8 +257,19 @@
         renderPreview(msg.quiz || null);
       } else if (msg.type === 'summary') {
         updateSummary(msg.points, msg.updated_at);
+      } else if (msg.type === 'emoji_reaction') {
+        showHostEmoji(msg.emoji);
       }
     };
+  }
+
+  function showHostEmoji(emoji) {
+    const el = document.createElement('div');
+    el.className = 'host-emoji-float';
+    el.textContent = emoji;
+    el.style.right = (5 + Math.random() * 20) + '%';
+    document.body.appendChild(el);
+    el.addEventListener('animationend', () => el.remove());
   }
 
   function escHtml(s) {

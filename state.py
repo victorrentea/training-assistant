@@ -135,3 +135,23 @@ def assign_avatar(app_state: AppState, uuid: str, name: str) -> str:
     avatar = get_avatar_filename(LOTR_NAMES[preferred_index])
     app_state.participant_avatars[uuid] = avatar
     return avatar
+
+
+def refresh_avatar(app_state: AppState, uuid: str) -> str | None:
+    """Reassign a random avatar different from current, ensuring uniqueness among connected participants."""
+    current = app_state.participant_avatars.get(uuid)
+    # Get avatars used by OTHER currently connected participants
+    connected_uuids = set(app_state.participants.keys()) - {"__host__", "__overlay__"}
+    taken = {app_state.participant_avatars[u] for u in connected_uuids
+             if u in app_state.participant_avatars and u != uuid}
+
+    available = [get_avatar_filename(n) for n in LOTR_NAMES
+                 if get_avatar_filename(n) not in taken and get_avatar_filename(n) != current]
+    if not available:
+        # All taken, at least pick something different from current
+        available = [get_avatar_filename(n) for n in LOTR_NAMES if get_avatar_filename(n) != current]
+    if not available:
+        return None
+    new_avatar = random.choice(available)
+    app_state.participant_avatars[uuid] = new_avatar
+    return new_avatar
