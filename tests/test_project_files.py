@@ -3,7 +3,7 @@ import os
 import pytest
 from pathlib import Path
 
-from daemon.project_files import get_project_tree, read_project_file
+from daemon.project_files import get_project_tree, read_project_file, get_project_tools, handle_project_tool_call, PROJECT_TOOL_NAMES
 
 
 @pytest.fixture
@@ -156,3 +156,40 @@ def test_read_file_rejects_large_files(sample_project):
 def test_read_file_nonexistent(sample_project):
     result = read_project_file(str(sample_project), "src/main/java/com/example/Ghost.java")
     assert result.lower().startswith("error")
+
+
+# --- get_project_tools tests ---
+
+def test_get_project_tools_returns_empty_when_no_folder():
+    tools = get_project_tools(None)
+    assert tools == []
+
+def test_get_project_tools_returns_two_tools():
+    tools = get_project_tools("/some/path")
+    assert len(tools) == 2
+    names = {t["name"] for t in tools}
+    assert names == {"list_project_tree", "read_project_file"}
+    for tool in tools:
+        assert "input_schema" in tool
+        assert tool["input_schema"]["type"] == "object"
+
+
+# --- handle_project_tool_call tests ---
+
+def test_handle_tool_call_list_tree_root(sample_project):
+    """Most common invocation: no path argument (empty dict)."""
+    result = handle_project_tool_call("list_project_tree", {}, str(sample_project))
+    assert "OrderService.java" in result
+    assert "pom.xml" in result
+
+def test_handle_tool_call_list_tree_subdir(sample_project):
+    result = handle_project_tool_call("list_project_tree", {"path": "src/main/java/com/example"}, str(sample_project))
+    assert "OrderService.java" in result
+
+def test_handle_tool_call_read_file(sample_project):
+    result = handle_project_tool_call("read_project_file", {"path": "src/main/java/com/example/OrderService.java"}, str(sample_project))
+    assert "public class OrderService" in result
+
+def test_handle_tool_call_unknown_tool(sample_project):
+    result = handle_project_tool_call("unknown_tool", {}, str(sample_project))
+    assert "Error" in result
