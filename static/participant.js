@@ -990,9 +990,45 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     }).join('');
   }
 
-  function sendEmoji(emoji) {
+  function sendEmoji(emoji, ev) {
     if (!ws) return;
     ws.send(JSON.stringify({ type: 'emoji_reaction', emoji }));
+    const btn = ev && ev.currentTarget;
+    const isMobile = window.innerWidth <= 600;
+    if (isMobile) {
+      showMobileEmojiShake(emoji);
+    } else {
+      showDesktopEmojiFloat(emoji, btn);
+    }
+  }
+
+  function showMobileEmojiShake(emoji) {
+    const el = document.createElement('div');
+    el.textContent = emoji;
+    el.className = 'emoji-shake-overlay';
+    document.body.appendChild(el);
+    requestAnimationFrame(() => el.classList.add('emoji-shake-active'));
+    setTimeout(() => {
+      el.classList.add('emoji-shake-fade');
+      setTimeout(() => el.remove(), 400);
+    }, 800);
+  }
+
+  function showDesktopEmojiFloat(emoji, btn) {
+    const el = document.createElement('div');
+    el.textContent = emoji;
+    el.className = 'emoji-float';
+    if (btn) {
+      const rect = btn.getBoundingClientRect();
+      el.style.left = (rect.left + rect.width / 2 - 20) + 'px';
+      el.style.top = (rect.top - 10) + 'px';
+    } else {
+      el.style.left = (window.innerWidth / 2 - 20) + 'px';
+      el.style.top = (window.innerHeight - 120) + 'px';
+    }
+    document.body.appendChild(el);
+    requestAnimationFrame(() => el.classList.add('emoji-float-active'));
+    setTimeout(() => el.remove(), 1200);
   }
 
   function submitQuestion() {
