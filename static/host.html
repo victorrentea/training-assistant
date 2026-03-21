@@ -145,10 +145,14 @@
       <div id="conference-qr-joined" style="margin-top:.25rem; font-size:1.1rem; font-weight:600; color:var(--accent);">0 Joined</div>
     </div>
 
+    <!-- Conference mode: participant count always visible at bottom of left pane -->
+    <div id="conference-pax-display" style="display:none; text-align:center; padding:.5rem 0; font-size:1.3rem; font-weight:600; color:var(--accent2);">
+      👥 <span id="conference-pax-number">0</span> connected
+    </div>
+
     <!-- Status badges — pinned to bottom of left column -->
     <div class="left-status-bar">
       <span id="mode-badge" class="badge mode-badge-workshop" title="Workshop mode — click to switch to Conference" onclick="toggleMode()" style="cursor:pointer; font-size:1.2rem;">🎓</span>
-      <span id="conference-pax-count" class="badge connected" style="display:none" title="Connected participants">👥 0</span>
       <span id="ws-badge" class="badge disconnected">🟢</span>
       <span id="daemon-badge" class="badge disconnected" title="">🤖</span>
       <span id="transcript-badge" class="badge disconnected" title="No transcription data">💬</span>
