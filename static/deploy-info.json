@@ -1,7 +1,7 @@
 {
-  "sha": "a54ef1c037594251ba0bc6deddbdd3bf149633e9",
-  "timestamp": "2026-03-22 00:40",
+  "sha": "7d05b19ff5b27976c3f25f4e1dd3388d490cdd7e",
+  "timestamp": "2026-03-22 00:43",
   "changelog": [
-    "Remove pencil icon & widen debate buttons (#59)"
+    "feat: QR code always visible in conference mode (#60)"
   ]
 }
