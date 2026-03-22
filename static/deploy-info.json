@@ -1,7 +1,7 @@
 {
-  "sha": "786dfc26e1639a46d56bee64d04fb5639054b273",
-  "timestamp": "2026-03-22 18:08",
+  "sha": "a28940d59e829790caa05c0b41245dcbeb600e93",
+  "timestamp": "2026-03-22 18:11",
   "changelog": [
-    "fix: prevent word cloud from re-rendering when data hasn't changed"
+    "feat: add random trivia poll button for demo purposes"
   ]
 }
