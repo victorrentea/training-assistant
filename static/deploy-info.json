@@ -1,7 +1,7 @@
 {
-  "sha": "c0ea5eb0177e381a8ffe417c2a1202312a90139f",
-  "timestamp": "2026-03-22 01:05",
+  "sha": "9903b25ce50bd400623ebf2fb770523ceecd3265",
+  "timestamp": "2026-03-22 01:08",
   "changelog": [
-    "feat: emoji start corners, state persistence on refresh, cloud-like animations"
+    "fix: version tag sticks to bottom in conference mode"
   ]
 }
