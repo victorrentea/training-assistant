@@ -92,10 +92,12 @@ _kScopeOutput = 1869968496   # 'outp'
 _kElementMain = 0
 _kDevices = 1684370979       # 'dev#'
 _kName = 1819173229          # 'lnam'
-_kMute = 1836414053          # 'mute'
+_kVolume = 1986885219        # 'volm'
 
+DICTATION_VOLUME_LOW = 0.01  # ~silent during dictation
 # Resolved at startup
 _mute_device_id: int | None = None
+_mute_device_original_volume: float = 1.0
 
 
 def _find_audio_device_id(name: str) -> int | None:
@@ -118,21 +120,21 @@ def _find_audio_device_id(name: str) -> int | None:
     return None
 
 
-def _set_device_mute(device_id: int, mute: bool) -> bool:
-    """Mute or unmute a specific audio device. Returns True on success."""
-    addr = _AudioPropAddr(_kMute, _kScopeOutput, _kElementMain)
-    val = ctypes.c_uint32(1 if mute else 0)
-    return _ca.AudioObjectSetPropertyData(device_id, ctypes.byref(addr), 0, None, 4, ctypes.byref(val)) == 0
-
-
-def _is_device_muted(device_id: int) -> bool:
-    """Check if a specific audio device is muted."""
-    addr = _AudioPropAddr(_kMute, _kScopeOutput, _kElementMain)
-    val = ctypes.c_uint32(0)
+def _get_device_volume(device_id: int) -> float:
+    """Get the current volume (0.0–1.0) of a specific audio device."""
+    addr = _AudioPropAddr(_kVolume, _kScopeOutput, _kElementMain)
+    val = ctypes.c_float(0)
     size = ctypes.c_uint32(4)
     if _ca.AudioObjectGetPropertyData(device_id, ctypes.byref(addr), 0, None, ctypes.byref(size), ctypes.byref(val)) == 0:
-        return val.value != 0
-    return False
+        return val.value
+    return 1.0
+
+
+def _set_device_volume(device_id: int, volume: float) -> bool:
+    """Set the volume (0.0–1.0) of a specific audio device. Returns True on success."""
+    addr = _AudioPropAddr(_kVolume, _kScopeOutput, _kElementMain)
+    val = ctypes.c_float(volume)
+    return _ca.AudioObjectSetPropertyData(device_id, ctypes.byref(addr), 0, None, 4, ctypes.byref(val)) == 0
 
 
 client = anthropic.Anthropic(max_retries=0)
@@ -263,16 +265,20 @@ def handle_clean_hotkey(with_emoji: bool = False) -> None:
 
 
 def handle_dictation_mute() -> None:
-    """Handle Mouse Button 5: toggle OS Output device mute for dictation."""
+    """Handle Mouse Button 5: toggle OS Output volume between normal and ~silent."""
+    global _mute_device_original_volume
     if _mute_device_id is None:
         return
-    currently_muted = _is_device_muted(_mute_device_id)
-    if currently_muted:
-        log("Dictation stopped — unmuting OS Output")
-        _set_device_mute(_mute_device_id, False)
+    current_vol = _get_device_volume(_mute_device_id)
+    if current_vol <= DICTATION_VOLUME_LOW:
+        # Restore original volume
+        log(f"Dictation stopped — restoring OS Output volume to {_mute_device_original_volume:.0%}")
+        _set_device_volume(_mute_device_id, _mute_device_original_volume)
     else:
-        log("Dictation started — muting OS Output")
-        _set_device_mute(_mute_device_id, True)
+        # Save current volume and drop to near-silent
+        _mute_device_original_volume = current_vol
+        log(f"Dictation started — lowering OS Output volume ({current_vol:.0%} → {DICTATION_VOLUME_LOW:.0%})")
+        _set_device_volume(_mute_device_id, DICTATION_VOLUME_LOW)
 
 
 def event_tap_callback(proxy, event_type, event, refcon):
