@@ -1,7 +1,7 @@
 {
-  "sha": "5035d35a905f09ba69003b76db187003b26d7ce6",
-  "timestamp": "2026-03-22 19:09",
+  "sha": "a0e750bada7c1315520e215f7b9fe41924d6ca3e",
+  "timestamp": "2026-03-22 19:17",
   "changelog": [
-    "fix: use volume control instead of mute on OS Output device"
+    "feat: add production health check and firefighter agent setup"
   ]
 }
