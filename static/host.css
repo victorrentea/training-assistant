@@ -979,7 +979,7 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
 /* ── Floating emoji reactions ── */
 .host-emoji-float {
   position: fixed;
-  font-size: 2.5rem;
+  font-size: 8rem;
   z-index: 10000;
   pointer-events: none;
 }

@@ -277,43 +277,34 @@
     el.textContent = emoji;
     document.body.appendChild(el);
 
-    const startX = window.innerWidth - 200;
-    const startY = window.innerHeight - 80;
-    el.style.left = (startX - 45) + 'px';
+    // Spawn from center of the left column
+    const leftCol = document.querySelector('.host-col-left');
+    const rect = leftCol ? leftCol.getBoundingClientRect() : { left: 0, width: 300, bottom: window.innerHeight };
+    const startX = rect.left + rect.width / 2;
+    const startY = rect.bottom - 80;
+    el.style.left = startX + 'px';
     el.style.top = startY + 'px';
+    el.style.transform = 'translate(-50%, -50%)';
 
-    const duration = 2500 + Math.random() * 1500; // 2.5–4s like Swift
-    const riseHeight = 540;
-    const style = Math.floor(Math.random() * 3);
+    const duration = 2500 + Math.random() * 1500;
+    const riseHeight = 500;
 
-    // Build keyframes based on trajectory style (mirrored from Swift's left-side paths)
-    let keyframes;
-    if (style === 0) {
-      // S-curve (mirrored: drift right instead of random)
-      const driftX = (Math.random() - 0.5) * 120;
-      const cp1X = (Math.random() - 0.5) * 160;
-      const cp2X = driftX + (Math.random() - 0.5) * 160;
-      keyframes = [
-        { transform: 'translate(0, 0)', opacity: 1 },
-        { transform: `translate(${cp1X * 0.33}px, ${-riseHeight * 0.33}px)`, opacity: 1, offset: 0.33 },
-        { transform: `translate(${(cp2X + driftX) * 0.5}px, ${-riseHeight * 0.73}px)`, opacity: 0.6, offset: 0.73 },
-        { transform: `translate(${driftX}px, ${-riseHeight}px)`, opacity: 0 }
-      ];
-    } else if (style === 1) {
-      // Straight rise
-      keyframes = [
-        { transform: 'translate(0, 0)', opacity: 1 },
-        { transform: `translate(0, ${-riseHeight}px)`, opacity: 0 }
-      ];
-    } else {
-      // Quad curve
-      const driftX = (Math.random() - 0.5) * 80;
-      const cpX = (Math.random() - 0.5) * 200;
-      keyframes = [
-        { transform: 'translate(0, 0)', opacity: 1 },
-        { transform: `translate(${cpX}px, ${-riseHeight * 0.5}px)`, opacity: 0.8, offset: 0.5 },
-        { transform: `translate(${driftX}px, ${-riseHeight}px)`, opacity: 0 }
-      ];
+    // Rise up with wobble (fâțâială)
+    const wobbleAmp = 15 + Math.random() * 10; // px wobble amplitude
+    const wobbleFreq = 3 + Math.random() * 2; // number of wobbles during rise
+    const steps = 20;
+    const keyframes = [];
+    for (let i = 0; i <= steps; i++) {
+      const t = i / steps;
+      const y = -riseHeight * t;
+      const wobble = Math.sin(t * wobbleFreq * Math.PI * 2) * wobbleAmp * (1 - t * 0.5);
+      const scale = 1 + t * 0.3; // slight grow
+      const opacity = t < 0.4 ? 1 : 1 - (t - 0.4) / 0.6;
+      keyframes.push({
+        transform: `translate(calc(-50% + ${wobble}px), calc(-50% + ${y}px)) scale(${scale})`,
+        opacity: opacity,
+        offset: t
+      });
     }
 
     const anim = el.animate(keyframes, {
