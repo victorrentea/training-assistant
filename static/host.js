@@ -1674,6 +1674,29 @@
     panel.innerHTML = html;
   }
 
+  function updateCodeHighlight() {
+    const textarea = document.getElementById('codereview-snippet');
+    const codeEl = document.getElementById('codereview-highlight-code');
+    if (!textarea || !codeEl || typeof hljs === 'undefined') return;
+    const text = textarea.value;
+    const lang = document.getElementById('codereview-language').value;
+    if (lang && hljs.getLanguage(lang)) {
+      codeEl.innerHTML = hljs.highlight(text, { language: lang }).value + '\n';
+    } else {
+      codeEl.innerHTML = hljs.highlightAuto(text).value + '\n';
+    }
+  }
+  function syncCodeScroll() {
+    const textarea = document.getElementById('codereview-snippet');
+    const pre = document.getElementById('codereview-highlight');
+    if (textarea && pre) {
+      pre.scrollTop = textarea.scrollTop;
+      pre.scrollLeft = textarea.scrollLeft;
+    }
+  }
+  // Initial highlight on page load
+  window.addEventListener('DOMContentLoaded', () => { updateCodeHighlight(); });
+
   async function startCodeReview() {
     const snippet = document.getElementById('codereview-snippet').value;
     const langSelect = document.getElementById('codereview-language');
