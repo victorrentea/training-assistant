@@ -1,7 +1,8 @@
 {
-  "sha": "7d05b19ff5b27976c3f25f4e1dd3388d490cdd7e",
-  "timestamp": "2026-03-22 00:43",
+  "sha": "aae8f7a29b6eb31eda46bb952d2b52828988ab62",
+  "timestamp": "2026-03-22 01:02",
   "changelog": [
-    "feat: QR code always visible in conference mode (#60)"
+    "feat: show QR code permanently in conference mode left panel",
+    "docs: add design spec for conference QR always visible in left panel"
   ]
 }
