@@ -1,7 +1,7 @@
 {
-  "sha": "d2af201aea168e746001ba57f740a3626f2f3c50",
-  "timestamp": "2026-03-22 00:36",
+  "sha": "a54ef1c037594251ba0bc6deddbdd3bf149633e9",
+  "timestamp": "2026-03-22 00:40",
   "changelog": [
-    "fix: position version tag above emoji bar on participant page"
+    "Remove pencil icon & widen debate buttons (#59)"
   ]
 }
