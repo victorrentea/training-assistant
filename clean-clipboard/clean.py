@@ -23,6 +23,7 @@ from datetime import datetime
 import anthropic
 import objc
 from pathlib import Path
+import Quartz
 from Quartz import (
     CGEventGetFlags,
     CGEventGetIntegerValueField,
