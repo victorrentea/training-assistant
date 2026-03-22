@@ -1,7 +1,7 @@
 {
-  "sha": "428a1b603106584d0e0ad80130b266e7e4e28848",
-  "timestamp": "2026-03-22 01:14",
+  "sha": "7cf0fb8ad72501d37775226a0a234d46a17c9144",
+  "timestamp": "2026-03-22 01:18",
   "changelog": [
-    "fix: conference QR improvements - hide left QR when center visible, black bg"
+    "feat: single-instance enforcement via PID lock file for emoji-overlay (#63)"
   ]
 }
