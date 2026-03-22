@@ -1,7 +1,7 @@
 {
-  "sha": "89a988af273eb80213d10c3a3f7241104fdfbca5",
-  "timestamp": "2026-03-22 01:25",
+  "sha": "3a2054a2855247fb0bf6b6aaabbd56f0bc62d763",
+  "timestamp": "2026-03-22 01:27",
   "changelog": [
-    "feat: enlarge conference QR in host left panel with side-by-side layout"
+    "feat: show transcript line count in host badge"
   ]
 }
