@@ -959,3 +959,17 @@ h1 { display: none; }
     right: 5%;
   }
 }
+
+.conference-url-display {
+  font-size: 1.6rem;
+  font-weight: 700;
+  text-align: center;
+  padding: .5rem 0;
+  letter-spacing: .03em;
+  animation: url-color-cycle 4s ease-in-out infinite;
+}
+@keyframes url-color-cycle {
+  0%, 100% { color: var(--accent); }
+  33% { color: var(--accent2); }
+  66% { color: var(--warn); }
+}

@@ -91,6 +91,12 @@
   letter-spacing: .02em;
 }
 
+@media (prefers-color-scheme: light) {
+  .version-tag {
+    color: #333;
+  }
+}
+
 .avatar {
     width: 32px;
     height: 32px;
