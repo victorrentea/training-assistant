@@ -1,7 +1,8 @@
 {
-  "sha": "f276043c3bc5587fbcfcc01cb4dfcce844b63831",
-  "timestamp": "2026-03-22 01:34",
+  "sha": "c40ab5c418390c2ebf9e8aa6b9f4b541e3413030",
+  "timestamp": "2026-03-22 01:36",
   "changelog": [
-    "feat: add participant count badge with join flash effect"
+    "refactor: remove duplicate conference-pax-badge",
+    "feat: syntax highlighting in code review textarea via highlight.js overlay"
   ]
 }
