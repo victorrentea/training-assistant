@@ -561,7 +561,7 @@
           const parts = avatar.split(':');
           const lt = parts[1] || '??';
           const clr = parts.slice(2).join(':') || 'var(--muted)';
-          avatarHtml = `<span class="avatar letter-avatar" style="width:28px;height:28px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-weight:800;font-size:.65rem;color:#fff;background:${clr}">${lt}</span>`;
+          avatarHtml = `<span class="avatar letter-avatar" style="width:28px;height:28px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-weight:800;font-size:.65rem;line-height:1;color:#fff;background:${clr}">${lt}</span>`;
       } else if (avatar) {
           avatarHtml = `<img src="/static/avatars/${escHtml(avatar)}" class="avatar" style="width:28px;height:28px" onerror="this.style.display='none'">`;
       }

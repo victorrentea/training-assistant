@@ -827,6 +827,7 @@ h1 { display: none; }
   justify-content: center;
   font-weight: 800;
   font-size: .75rem;
+  line-height: 1;
   color: #fff;
   flex-shrink: 0;
 }
@@ -878,6 +879,7 @@ h1 { display: none; }
   border-radius: 50%;
   font-weight: 800;
   font-size: 6rem;
+  line-height: 1;
   color: #fff;
   box-shadow: 0 8px 32px rgba(0,0,0,.6);
 }
