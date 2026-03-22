@@ -311,10 +311,10 @@ def _build_leaderboard_data() -> tuple[list[dict], int, dict[str, int]]:
     """Build leaderboard entries, total count, and rank map."""
     from names import compute_letter_avatar
 
-    scored = [(uid, state.scores.get(uid, 0)) for uid in state.participants
-              if not uid.startswith("__") and state.scores.get(uid, 0) > 0]
-    scored.sort(key=lambda x: (-x[1], state.participant_names.get(x[0], "")))
-    top5 = scored[:5]
+    all_participants = [(uid, state.scores.get(uid, 0)) for uid in state.participants
+                        if not uid.startswith("__")]
+    all_participants.sort(key=lambda x: (-x[1], state.participant_names.get(x[0], "")))
+    top5 = all_participants[:5]
 
     entries = []
     for rank_idx, (uid, score) in enumerate(top5):
