@@ -272,12 +272,12 @@ def handle_dictation_mute() -> None:
     current_vol = _get_device_volume(_mute_device_id)
     if current_vol <= DICTATION_VOLUME_LOW:
         # Restore original volume
-        log(f"Dictation stopped — restoring OS Output volume to {_mute_device_original_volume:.0%}")
+        log(f"\U0001f534 Dictation stopped — restoring OS Output volume to {_mute_device_original_volume:.0%}")
         _set_device_volume(_mute_device_id, _mute_device_original_volume)
     else:
         # Save current volume and drop to near-silent
         _mute_device_original_volume = current_vol
-        log(f"Dictation started — lowering OS Output volume ({current_vol:.0%} → {DICTATION_VOLUME_LOW:.0%})")
+        log(f"\U0001f7e2 Dictation started — lowering OS Output volume ({current_vol:.0%} → {DICTATION_VOLUME_LOW:.0%})")
         _set_device_volume(_mute_device_id, DICTATION_VOLUME_LOW)
 
 
