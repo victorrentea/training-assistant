@@ -1,7 +1,7 @@
 {
-  "sha": "83712cf6c3282902426284298bc44742dda7b5f1",
-  "timestamp": "2026-03-22 01:11",
+  "sha": "428a1b603106584d0e0ad80130b266e7e4e28848",
+  "timestamp": "2026-03-22 01:14",
   "changelog": [
-    "fix: make code review textarea fill top half in conference mode"
+    "fix: conference QR improvements - hide left QR when center visible, black bg"
   ]
 }
