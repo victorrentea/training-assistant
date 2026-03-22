@@ -1,7 +1,7 @@
 {
-  "sha": "56a7f4aeb3dd739b1b08d2d72ac6f50f6e9f8dd7",
-  "timestamp": "2026-03-22 19:28",
+  "sha": "97b8d24f2d9cb38a5bb2ca6f9d17af7b7dab5646",
+  "timestamp": "2026-03-22 19:36",
   "changelog": [
-    "refactor: move all tests to tests/ folder, remove tracked PNGs"
+    "feat: load Anthropic API key from clean-clipboard/secrets.env"
   ]
 }
