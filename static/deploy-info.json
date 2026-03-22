@@ -1,7 +1,7 @@
 {
-  "sha": "1c06e3b8603b1aca8646ab497aa52f74f9278334",
+  "sha": "32c4bb0b7f07dbc2c517ad4c78f402085e4bda6e",
   "timestamp": "2026-03-22 02:04",
   "changelog": [
-    "fix: version tag shows deploy timestamp instead of relative age"
+    "fix: remove red pin emoji from participant location in host list"
   ]
 }
