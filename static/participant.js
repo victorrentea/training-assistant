@@ -1848,17 +1848,23 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     const myRankEl = document.getElementById('leaderboard-my-rank');
     const top5El = document.getElementById('leaderboard-top5');
     overlay.style.display = 'flex';
+    top5El.innerHTML = '';
 
+    // Show personal rank immediately
     myRankEl.innerHTML = `
         <div class="rank-number">#${data.your_rank || '?'}</div>
         <div class="rank-total">out of ${data.total_participants}</div>
         <div class="rank-score">${data.your_score || 0} pts</div>
     `;
 
-    top5El.innerHTML = (data.entries || []).map(e => {
+    // Sequential reveal: 5th first (bottom), 1st last (top)
+    const entries = data.entries || [];
+    entries.forEach((e, i) => {
         const isMe = data.your_name && data.your_name === e.name;
         const isFirst = e.rank === 1;
-        const cls = 'lb-entry' + (isMe ? ' is-me' : '') + (isFirst ? ' first-place' : '');
+
+        const div = document.createElement('div');
+        div.className = 'lb-entry' + (isMe ? ' is-me' : '') + (isFirst ? ' first-place' : '');
 
         const avatarStyle = e.avatar && e.avatar.startsWith('letter:')
             ? `background:${e.color}` : `background:var(--surface2)`;
@@ -1869,13 +1875,23 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
             : '';
         const universe = e.universe ? ` <span class="lb-universe">(${e.universe})</span>` : '';
 
-        return `<div class="${cls}">
+        div.innerHTML = `
             <span class="lb-rank">#${e.rank}</span>
             ${avatarImg || `<span class="lb-avatar" style="${avatarStyle}">${avatarContent}</span>`}
-            <span class="lb-name">${e.name}${universe}</span>
+            <span class="lb-name">${escHtml(e.name)}${universe}</span>
             <span class="lb-score">${e.score} pts</span>
-        </div>`;
-    }).join('');
+        `;
+
+        if (!avatarImg) {
+            const avatarSpan = div.querySelector('.lb-avatar');
+            if (avatarSpan) avatarSpan.textContent = e.letter || '??';
+        }
+
+        top5El.appendChild(div);
+
+        const revealDelay = (entries.length - 1 - i) * 800;
+        setTimeout(() => div.classList.add('visible'), 500 + revealDelay);
+    });
   }
 
   function hideParticipantLeaderboard() {
