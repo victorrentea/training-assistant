@@ -1,7 +1,10 @@
 {
-  "sha": "eed489d50720e405840a5f50ae23b3ca08777ebb",
-  "timestamp": "2026-03-22 01:49",
+  "sha": "3ef51f2180b0d8698dcf59766fdc64d0875afaa6",
+  "timestamp": "2026-03-22 01:51",
   "changelog": [
-    "fix: align badge row between workshop and conference modes"
+    "feat: instrument WebSocket handlers with custom Prometheus metrics",
+    "feat: expose /metrics endpoint with Prometheus auto-instrumentation",
+    "docs: address spec review feedback for prod metrics",
+    "docs: add production metrics design spec"
   ]
 }
