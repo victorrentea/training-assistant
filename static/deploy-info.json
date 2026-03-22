@@ -1,7 +1,7 @@
 {
-  "sha": "02251fbfcc2906df0c9a40e7949808e426dfaa84",
-  "timestamp": "2026-03-22 19:46",
+  "sha": "d9f11ede2e5540fd590d1ef49c7d6d56b386f47a",
+  "timestamp": "2026-03-22 19:52",
   "changelog": [
-    "feat: add avatar refresh animations and fix ring image background"
+    "feat: add media pause/play on dictation toggle in clean-clipboard"
   ]
 }
