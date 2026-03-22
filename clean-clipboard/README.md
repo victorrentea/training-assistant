@@ -51,6 +51,18 @@ Edit constants at the top of `clean.py`:
 | `TIMEOUT_MAX` | `15` | Hard cap on timeout |
 | `MAX_INPUT_CHARS` | `5000` | Skip cleanup for text longer than this |
 
+## Dictation Mode (Mouse Button 5)
+
+When dictation starts (Mouse Button 5 / Wispr Flow toggle):
+- **Pauses** media playback via macOS media key simulation
+- **Lowers** the "OS Output" loopback device volume to ~silent
+
+When dictation stops (Mouse Button 5 again, or Escape):
+- **Resumes** media playback
+- **Restores** the original volume level
+
+This ensures meeting/stream audio doesn't leak into dictation, even for apps that ignore volume changes.
+
 ## Stop
 
 Press **Ctrl+C** in the terminal.

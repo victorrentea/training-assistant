@@ -27,6 +27,7 @@ from Quartz import (
     CGEventGetFlags,
     CGEventGetIntegerValueField,
     CGEventMaskBit,
+    CGEventPost,
     CGEventTapCreate,
     CFMachPortCreateRunLoopSource,
     CFRunLoopAddSource,
@@ -44,6 +45,7 @@ from Quartz import (
     kCGEventFlagMaskAlternate,
     kCGMouseEventButtonNumber,
 )
+from AppKit import NSEvent
 
 MODEL = "claude-haiku-4-5-20251001"
 TIMEOUT_BASE = 2       # seconds for short text (< 200 chars)
@@ -100,6 +102,28 @@ DICTATION_VOLUME_LOW = 0.01  # ~silent during dictation
 DICTATION_MUTE_DELAY = 0.05  # 50ms delay before lowering volume
 _mute_device_original_volume: float = 1.0
 _dictation_active: bool = False
+
+# Media key type for play/pause (NX_KEYTYPE_PLAY)
+_NX_KEYTYPE_PLAY = 16
+
+
+def _send_media_play_pause() -> None:
+    """Simulate pressing the media play/pause key via NSSystemDefined event."""
+    for key_down in (True, False):
+        flags = 0xa00 if key_down else 0xb00
+        data1 = (_NX_KEYTYPE_PLAY << 16) | flags
+        event = NSEvent.otherEventWithType_location_modifierFlags_timestamp_windowNumber_context_subtype_data1_data2_(
+            14,  # NSEventTypeSystemDefined
+            (0, 0),
+            0,
+            0,
+            0,
+            None,
+            8,  # NX_SUBTYPE_AUX_CONTROL_BUTTONS
+            data1,
+            -1,
+        )
+        CGEventPost(0, event.CGEvent())
 
 
 def _find_audio_device_id(name: str) -> int | None:
@@ -284,8 +308,9 @@ def handle_dictation_toggle() -> None:
         _mute_device_original_volume = current_vol
         time.sleep(DICTATION_MUTE_DELAY)
         _set_device_volume(device_id, DICTATION_VOLUME_LOW)
+        _send_media_play_pause()
         _dictation_active = True
-        log(f"\U0001f7e2 Dictation started — lowering OS Output volume ({current_vol:.0%} → {DICTATION_VOLUME_LOW:.0%})")
+        log(f"\U0001f7e2 Dictation started — paused media & lowered OS Output volume ({current_vol:.0%} → {DICTATION_VOLUME_LOW:.0%})")
 
 
 def _restore_dictation_volume() -> None:
@@ -299,8 +324,9 @@ def _restore_dictation_volume() -> None:
         _dictation_active = False
         return
     _set_device_volume(device_id, _mute_device_original_volume)
+    _send_media_play_pause()
     _dictation_active = False
-    log(f"\U0001f534 Dictation stopped — restoring OS Output volume to {_mute_device_original_volume:.0%}")
+    log(f"\U0001f534 Dictation stopped — resumed media & restored OS Output volume to {_mute_device_original_volume:.0%}")
 
 
 def event_tap_callback(proxy, event_type, event, refcon):
