@@ -1,7 +1,7 @@
 {
-  "sha": "52062ee8807f386c6a5e7a1d106b0f4944f8f309",
+  "sha": "d6c9392b1d6c80e21c0fecae67d05fa5f9985b74",
   "timestamp": "2026-03-22 01:23",
   "changelog": [
-    "fix: code review center panel not stretching full height in workshop mode"
+    "feat: add Hello tab with auto-return in conference mode"
   ]
 }
