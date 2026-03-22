@@ -1,7 +1,7 @@
 {
-  "sha": "b3bd63832fa4e1f75aa4b0b3bc45772913c8a548",
-  "timestamp": "2026-03-22 01:30",
+  "sha": "d01a991be36305699fdd820da4fc5e80ecae56bc",
+  "timestamp": "2026-03-22 01:31",
   "changelog": [
-    "feat: move participant count to status badge, center QR with URL below"
+    "feat: auto-focus wordcloud inputs when switching to tab"
   ]
 }
