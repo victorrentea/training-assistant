@@ -1,7 +1,7 @@
 {
-  "sha": "2757157faeb641e2119a547a5ae58e111d2e12f3",
+  "sha": "06956e5ee369369db25b97bbd491154c4fda24c5",
   "timestamp": "2026-03-22 18:12",
   "changelog": [
-    "fix: avatar refresh now works and avoids repeating previously seen avatars"
+    "fix: forward emoji reactions to host panel"
   ]
 }
