@@ -1,7 +1,7 @@
 {
-  "sha": "aca7f982a601203c6d23aa76c21683c4ec3ca5bf",
-  "timestamp": "2026-03-22 01:31",
+  "sha": "7353b2c22eb46548d4b97f69ded93915d85821c9",
+  "timestamp": "2026-03-22 01:33",
   "changelog": [
-    "feat: auto-focus primary input when switching host tabs"
+    "fix: code review textarea fills full left column height"
   ]
 }
