@@ -949,7 +949,7 @@
   function renderPollDisplay() {
     const el = document.getElementById('poll-display');
     if (!currentPoll) {
-      el.innerHTML = `<p class="no-poll">No poll yet — create one above.</p>`;
+      el.innerHTML = `<p class="no-poll">No poll yet.</p>`;
       const pillsEl = document.getElementById('poll-pills');
       if (pillsEl) pillsEl.innerHTML = '';
       return;
