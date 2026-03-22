@@ -11,18 +11,18 @@ body {
 .wave-char {
   display: inline-block;
   animation: wave-shimmer 2.5s ease-in-out infinite;
-  --wave-dim: rgba(255,255,255,.45);
+  --wave-dim: rgba(255,255,255,.15);
   --wave-bright: #fff;
 }
 @media (prefers-color-scheme: light) {
   .wave-char {
-    --wave-dim: rgba(0,0,0,.3);
+    --wave-dim: rgba(0,0,0,.15);
     --wave-bright: #1a1d2e;
   }
 }
 @keyframes wave-shimmer {
   0%, 100% { color: var(--wave-dim); }
-  40% { color: var(--wave-bright); text-shadow: 0 0 6px rgba(108,99,255,.5); }
+  40% { color: var(--wave-bright); }
 }
 
 .badge {
@@ -83,6 +83,10 @@ body {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+}
+
+#tab-content-codereview {
+  overflow-y: hidden;
 }
 
 .host-col-center {
@@ -227,7 +231,6 @@ body {
   align-items: center;
   justify-content: center;
   background: #fff;
-  background: #000;
   border-radius: 10px;
   overflow: hidden;
 }
@@ -902,6 +905,9 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
   display: grid;
   grid-template-rows: 1fr 1fr auto;
   gap: 0;
+}
+.host-col-left.conference-layout .left-status-bar {
+  align-self: end;
 }
 .left-tabs-wrapper {
   display: flex;
