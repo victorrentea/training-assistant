@@ -1318,6 +1318,8 @@
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ topic }),
     });
+    const wordInput = document.getElementById('wc-host-input');
+    if (wordInput) wordInput.focus();
   }
 
   function hostSubmitWord() {

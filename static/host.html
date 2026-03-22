@@ -56,7 +56,8 @@
       <div style="margin-top:.75rem;">
         <div class="activity-input-row wc-input-row" style="margin-bottom:.5rem;">
           <input id="wc-topic-input" type="text" maxlength="80" autocomplete="off" placeholder="Topic (optional)" style="flex:1;padding:.5rem .75rem;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:.9rem;"
-                 oninput="document.getElementById('wc-topic-set-btn').disabled=!this.value.trim()" />
+                 oninput="document.getElementById('wc-topic-set-btn').disabled=!this.value.trim()"
+                 onkeydown="if(event.key==='Enter'&&this.value.trim()){event.preventDefault();pushWordCloudTopic()}" />
           <button id="wc-topic-set-btn" class="btn btn-success" onclick="pushWordCloudTopic()" style="min-width:4rem;" disabled>Set</button>
         </div>
         <div class="activity-input-row wc-input-row">
