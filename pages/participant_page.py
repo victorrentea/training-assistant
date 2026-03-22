@@ -40,6 +40,7 @@ class ParticipantPage:
     def multi_vote(self, *option_texts: str) -> None:
         for text in option_texts:
             self._page.locator(f".option-btn:has-text('{text}')").click()
+            self._page.wait_for_timeout(300)  # wait for WS round-trip
 
     def get_percentages(self) -> list[int]:
         """Return displayed percentage values for each poll option."""

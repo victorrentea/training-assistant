@@ -572,3 +572,93 @@
 - [H] Mark correct answers (participant sees green/red result).
 - [P] Refresh page.
 - [V] **Expected bug:** Poll is visible but no green/red result feedback (one-time `result` message was missed).
+
+---
+
+## 17. Conference Mode
+
+### 17.1 Toggle conference/workshop mode
+- [H] POST `/api/mode` with `{"mode": "conference"}`.
+- [V] Host panel switches to conference layout (wider center, hidden right column).
+- [H] POST `/api/mode` with `{"mode": "workshop"}`.
+- [V] Host panel returns to workshop layout.
+
+### 17.2 Auto-assigned character names
+- [H] Switch to conference mode.
+- [P] Open `/` in a fresh browser.
+- [V] Participant auto-joins with a character name from the pool (e.g., "Yoda", "Neo").
+- [V] Participant gets a letter-based avatar (2-letter code with deterministic color).
+
+### 17.3 Score hidden in conference mode
+- [H] Switch to conference mode.
+- [P] Open `/`.
+- [V] `#my-score` element is hidden.
+- [V] Location prompt and notification button are also hidden.
+
+### 17.4 Conference mode rename
+- [P] In conference mode, click on name to rename.
+- [V] Rename works but avatar stays as letter-based.
+
+---
+
+## 18. Leaderboard
+
+### 18.1 Leaderboard show
+- [H] Ensure at least one participant has points. POST `/api/leaderboard/show`.
+- [V] Participant sees full-screen leaderboard overlay with dramatic reveal.
+- [V] Entries appear sequentially (5th to 1st) with 800ms stagger.
+- [V] Personal rank (`#leaderboard-my-rank`) shows participant's position.
+
+### 18.2 Leaderboard hide
+- [H] POST `/api/leaderboard/hide`.
+- [V] Overlay disappears on all participant screens.
+
+### 18.3 Leaderboard with multiple participants
+- [P1] Earn 200 pts. [P2] Earn 100 pts.
+- [H] Show leaderboard.
+- [V] P1 is ranked #1, P2 is ranked #2.
+- [V] Each participant sees their own rank highlighted.
+
+---
+
+## 19. Poll Timer
+
+### 19.1 Start timer
+- [H] Create and open a poll. POST `/api/poll/timer` with `{"seconds": 10}`.
+- [V] Participant sees countdown timer (`#pax-countdown`) showing remaining seconds.
+- [V] Timer color changes to red when <= 5 seconds.
+
+### 19.2 Timer cleared on poll close
+- [H] Start a 30-second timer. Close voting.
+- [V] Timer stops and clears on participant screen.
+
+---
+
+## 20. Host Panel Elements
+
+### 20.1 QR code rendering
+- [H] Open host panel in idle state.
+- [V] At least one QR code (`#qr-code` or `#center-qr`) contains a canvas or img element.
+
+### 20.2 Participant link
+- [H] Open host panel.
+- [V] `#participant-link` is visible with a valid href pointing to the participant URL.
+
+### 20.3 QR fullscreen overlay
+- [H] Click `#qr-icon` (or center QR area).
+- [V] Fullscreen QR overlay (`#qr-overlay`) appears.
+- [V] Click overlay to dismiss.
+
+### 20.4 WebSocket connection badge
+- [H] Open host panel, wait for WS connection.
+- [V] `#ws-badge` has class `connected`.
+
+---
+
+## 21. Full Lifecycle Integration
+
+### 21.1 Full session lifecycle with no JS errors
+- [P] Join session. Monitor browser console for errors.
+- [H] Cycle through Q&A → Word Cloud → Poll (vote, close, mark correct) → Leaderboard.
+- [V] No JavaScript errors in participant console throughout entire lifecycle.
+- [V] Score accumulates correctly across all activities.

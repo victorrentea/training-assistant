@@ -13,7 +13,8 @@ class HostPage:
 
     # ── Poll ────────────────────────────────────────────────────────────────
 
-    def create_poll(self, question: str, options: list[str], multi: bool = False) -> None:
+    def create_poll(self, question: str, options: list[str], multi: bool = False,
+                    correct_count: int | None = None) -> None:
         """Type a poll into the composer and launch it (poll opens automatically)."""
         composer = self._page.locator("#poll-input")
         composer.scroll_into_view_if_needed(timeout=10000)
@@ -22,6 +23,8 @@ class HostPage:
         self._page.keyboard.type("\n".join([question] + options))
         if multi:
             self._page.check("#multi-check")
+            if correct_count is not None:
+                self._page.fill("#correct-count", str(correct_count))
         self._page.click("#create-btn")
         expect(self._page.locator("text=Close voting")).to_be_visible(timeout=5000)
 

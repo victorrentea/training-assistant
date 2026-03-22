@@ -529,6 +529,10 @@
         if (msg.poll_timer_seconds && msg.poll_timer_started_at) {
           activeTimer = { seconds: msg.poll_timer_seconds, startedAt: new Date(msg.poll_timer_started_at).getTime() };
           _startParticipantCountdown();
+        } else {
+          // Timer cleared on server (e.g. poll closed) — stop client countdown
+          activeTimer = null;
+          clearInterval(_timerInterval);
         }
         // Restore vote from server state (authoritative), falling back to localStorage
         if (msg.my_vote != null) {
