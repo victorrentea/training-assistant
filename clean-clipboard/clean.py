@@ -68,6 +68,7 @@ CLEANUP_PROMPT_EMOJI = (
 # macOS virtual key codes
 VK_V = 0x09
 VK_Z = 0x06
+VK_ESCAPE = 0x35
 
 # Mouse button 5 = button index 4 (0=left, 1=right, 2=middle, 3=button4, 4=button5)
 MOUSE_BUTTON_5 = 4
@@ -97,6 +98,7 @@ _kVolume = 1986885219        # 'volm'
 DICTATION_VOLUME_LOW = 0.01  # ~silent during dictation
 DICTATION_MUTE_DELAY = 0.05  # 50ms delay before lowering volume
 _mute_device_original_volume: float = 1.0
+_dictation_active: bool = False
 
 
 def _find_audio_device_id(name: str) -> int | None:
@@ -263,28 +265,41 @@ def handle_clean_hotkey(with_emoji: bool = False) -> None:
         lock.release()
 
 
-def handle_dictation_mute() -> None:
+def handle_dictation_toggle() -> None:
     """Handle Mouse Button 5: toggle OS Output volume between normal and ~silent.
 
     Resolves the device ID by name each time because CoreAudio IDs change
     when AudioHijack or Loopback restarts.
     """
-    global _mute_device_original_volume
-    device_id = _find_audio_device_id(DICTATION_MUTE_DEVICE)
-    if device_id is None:
-        log(f"WARNING: Device '{DICTATION_MUTE_DEVICE}' not found — skipping")
-        return
-    current_vol = _get_device_volume(device_id)
-    if current_vol <= DICTATION_VOLUME_LOW:
-        # Restore original volume
-        _set_device_volume(device_id, _mute_device_original_volume)
-        log(f"\U0001f534 Dictation stopped — restoring OS Output volume to {_mute_device_original_volume:.0%}")
+    global _mute_device_original_volume, _dictation_active
+    if _dictation_active:
+        _restore_dictation_volume()
     else:
-        # Save current volume, wait 50ms, then drop to near-silent
+        device_id = _find_audio_device_id(DICTATION_MUTE_DEVICE)
+        if device_id is None:
+            log(f"WARNING: Device '{DICTATION_MUTE_DEVICE}' not found — skipping")
+            return
+        current_vol = _get_device_volume(device_id)
         _mute_device_original_volume = current_vol
         time.sleep(DICTATION_MUTE_DELAY)
         _set_device_volume(device_id, DICTATION_VOLUME_LOW)
+        _dictation_active = True
         log(f"\U0001f7e2 Dictation started — lowering OS Output volume ({current_vol:.0%} → {DICTATION_VOLUME_LOW:.0%})")
+
+
+def _restore_dictation_volume() -> None:
+    """Restore OS Output volume after dictation ends."""
+    global _dictation_active
+    if not _dictation_active:
+        return
+    device_id = _find_audio_device_id(DICTATION_MUTE_DEVICE)
+    if device_id is None:
+        log(f"WARNING: Device '{DICTATION_MUTE_DEVICE}' not found — skipping")
+        _dictation_active = False
+        return
+    _set_device_volume(device_id, _mute_device_original_volume)
+    _dictation_active = False
+    log(f"\U0001f534 Dictation stopped — restoring OS Output volume to {_mute_device_original_volume:.0%}")
 
 
 def event_tap_callback(proxy, event_type, event, refcon):
@@ -294,12 +309,17 @@ def event_tap_callback(proxy, event_type, event, refcon):
     if event_type == kCGEventOtherMouseDown:
         button = CGEventGetIntegerValueField(event, kCGMouseEventButtonNumber)
         if button == MOUSE_BUTTON_5:
-            threading.Thread(target=handle_dictation_mute, daemon=True).start()
+            threading.Thread(target=handle_dictation_toggle, daemon=True).start()
         return event
 
-    # Key events — only care about V key
+    # Key events
     keycode = CGEventGetIntegerValueField(event, kCGKeyboardEventKeycode)
     flags = CGEventGetFlags(event)
+
+    # Escape while dictating → restore volume
+    if keycode == VK_ESCAPE and _dictation_active:
+        threading.Thread(target=_restore_dictation_volume, daemon=True).start()
+        return event
 
     if keycode != VK_V:
         return event
