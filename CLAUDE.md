@@ -153,6 +153,11 @@ training-assistant/
 │   ├── test_e2e*.py         ← E2E browser tests (Playwright)
 │   ├── test_load.py         ← Load tests
 │   └── ...                  ← All other test files
+├── clean-clipboard/
+│   ├── clean.py             ← macOS clipboard cleanup daemon (CGEventTap, Claude Haiku AI cleanup, dictation mute + media pause/play)
+│   ├── secrets.env          ← (gitignored) ANTHROPIC_API_KEY for Haiku calls
+│   ├── requirements.txt     ← Python deps (anthropic, pyobjc)
+│   └── README.md            ← Usage & configuration docs
 ├── dependencies.txt         ← Python dependencies
 ├── pyproject.toml           ← Python dependencies (used by Railway via uv)
 ├── secrets.env              ← (gitignored) Host panel credentials
@@ -277,6 +282,20 @@ Orchestration daemon running on the trainer's Mac:
 - `ANTHROPIC_API_KEY` is set in the environment
 - Run: `python3 training_daemon.py`
 - Uses `daemon/` subpackage: `llm_adapter.py`, `summarizer.py`, `debate_ai.py`, `transcript_state.py`, `transcript_timestamps.py`, `indexer.py`, `rag.py`, `project_files.py`
+
+---
+
+## Clean Clipboard (`clean-clipboard/clean.py`)
+
+macOS daemon that runs on the trainer's Mac alongside the workshop:
+- **CGEventTap** intercepts all key and mouse events system-wide
+- **Cmd+V capture**: stores clipboard content at each paste for later cleanup
+- **Cmd+Ctrl+V**: sends captured text to Claude Haiku for grammar/filler cleanup, undoes original paste, re-pastes cleaned version
+- **Cmd+Ctrl+Opt+V**: same as above but adds contextual emojis
+- **Mouse Button 5** (Wispr Flow dictation toggle): pauses media playback and lowers "OS Output" loopback device volume to ~silent; pressing again resumes media and restores volume
+- **Escape while dictating**: also restores volume and resumes media
+- Requires macOS Accessibility permission and `ANTHROPIC_API_KEY` in `clean-clipboard/secrets.env`
+- Run: `python3 clean-clipboard/clean.py`
 
 ---
 
