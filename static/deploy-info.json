@@ -1,7 +1,7 @@
 {
-  "sha": "ef19505fb8dac1cb12edc48a885899c6fe4e6992",
-  "timestamp": "2026-03-22 01:55",
+  "sha": "63012c2cb6391ad402dc38f937861bc6b9cb4cf2",
+  "timestamp": "2026-03-22 01:57",
   "changelog": [
-    "fix: align Board tab styling with other host tabs, update CLAUDE.md"
+    "fix: wave animation colors adapt to light/dark mode"
   ]
 }
