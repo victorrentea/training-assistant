@@ -1,10 +1,7 @@
 {
-  "sha": "3ef51f2180b0d8698dcf59766fdc64d0875afaa6",
+  "sha": "32f6666dd53f8720e6daa828568ab117e5756ba5",
   "timestamp": "2026-03-22 01:51",
   "changelog": [
-    "feat: instrument WebSocket handlers with custom Prometheus metrics",
-    "feat: expose /metrics endpoint with Prometheus auto-instrumentation",
-    "docs: address spec review feedback for prod metrics",
-    "docs: add production metrics design spec"
+    "feat: switch summary generation from periodic to on-demand only"
   ]
 }
