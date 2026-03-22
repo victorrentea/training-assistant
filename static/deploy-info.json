@@ -1,7 +1,7 @@
 {
-  "sha": "ab931a1337dfca462f7344767a56725f5e380770",
-  "timestamp": "2026-03-21 21:59",
+  "sha": "3ddd8a32b3558faf2da2574df0d126aad3be2ba0",
+  "timestamp": "2026-03-22 00:24",
   "changelog": [
-    "refactor(clean-clipboard): use CGEventTap instead of pynput for reliable paste interception"
+    "fix: match desktop emoji float animation to Swift EmojiAnimator algorithm"
   ]
 }
