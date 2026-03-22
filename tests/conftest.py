@@ -13,6 +13,13 @@ import sys
 import time
 import threading
 
+# Ensure project root and tests dir are on sys.path
+_project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+_tests_dir = os.path.dirname(os.path.abspath(__file__))
+for _p in (_project_root, _tests_dir):
+    if _p not in sys.path:
+        sys.path.insert(0, _p)
+
 import requests
 import pytest
 
@@ -36,7 +43,7 @@ def server_url(tmp_path_factory):
     When --cov is active, the server runs under ``coverage run`` so that
     backend line coverage is collected and combined automatically.
     """
-    project_dir = os.path.dirname(os.path.abspath(__file__))
+    project_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     server_env = os.environ.copy()
     server_env["HOST_USERNAME"] = HOST_USER
     server_env["HOST_PASSWORD"] = HOST_PASS

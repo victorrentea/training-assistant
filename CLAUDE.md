@@ -124,7 +124,6 @@ training-assistant/
 ├── quiz_core.py             ← Quiz generation core logic (used by training_daemon)
 ├── index_materials.py       ← Project file indexing for RAG
 ├── training_daemon.py       ← Daemon orchestration on trainer's Mac (quiz, debate AI, summary, timestamps)
-├── conftest.py              ← Pytest fixtures
 ├── routers/
 │   ├── ws.py                ← WebSocket endpoint /ws/{uuid} (all real-time messages)
 │   ├── poll.py              ← Poll lifecycle (create, open/close, correct, timer)
@@ -147,6 +146,13 @@ training-assistant/
 │   ├── indexer.py            ← Project file indexing for RAG
 │   ├── rag.py                ← Retrieve project context for quiz generation
 │   └── project_files.py     ← Scan & list project files; handle Claude tool calls
+├── tests/
+│   ├── conftest.py          ← Pytest fixtures (e2e server, browser helpers, cleanup)
+│   ├── pages/               ← Page object models (host_page.py, participant_page.py)
+│   ├── test_main.py         ← API & unit tests
+│   ├── test_e2e*.py         ← E2E browser tests (Playwright)
+│   ├── test_load.py         ← Load tests
+│   └── ...                  ← All other test files
 ├── dependencies.txt         ← Python dependencies
 ├── pyproject.toml           ← Python dependencies (used by Railway via uv)
 ├── secrets.env              ← (gitignored) Host panel credentials

@@ -155,7 +155,7 @@ class TestRegressions:
         assert abs(host_input_h - host_btn_h) <= 1.0
         assert abs(pax_input_h - pax_btn_h) <= 1.0
 
-        proof_dir = Path(__file__).parent / "docs" / "superpowers" / "specs"
+        proof_dir = Path(__file__).parent.parent / "docs" / "superpowers" / "specs"
         proof_dir.mkdir(parents=True, exist_ok=True)
         host._page.locator("#tab-content-qa").screenshot(path=str(proof_dir / "qa-height-host.png"))
         pax._page.locator(".qa-screen").screenshot(path=str(proof_dir / "qa-height-participant.png"))
@@ -193,7 +193,7 @@ class TestRegressions:
         assert re.search(r"\ds ago", host_text), f"Host should show seconds-ago format: {host_text}"
         assert re.search(r"\ds ago", pax_text), f"Participant should show seconds-ago format: {pax_text}"
 
-        proof_dir = Path(__file__).parent / "docs" / "superpowers" / "specs"
+        proof_dir = Path(__file__).parent.parent / "docs" / "superpowers" / "specs"
         proof_dir.mkdir(parents=True, exist_ok=True)
         host._page.screenshot(path=str(proof_dir / "version-age-host.png"), full_page=True)
         pax._page.screenshot(path=str(proof_dir / "version-age-participant.png"), full_page=True)
@@ -214,7 +214,7 @@ class TestRegressions:
         expect(host._page.locator("#version-reload-message")).to_contain_text("Auto-reload paused")
         expect(pax._page.locator("#version-reload-message")).to_contain_text("Auto-reload paused")
 
-        proof_dir = Path(__file__).parent / "docs" / "superpowers" / "specs"
+        proof_dir = Path(__file__).parent.parent / "docs" / "superpowers" / "specs"
         proof_dir.mkdir(parents=True, exist_ok=True)
         host._page.screenshot(path=str(proof_dir / "version-mismatch-host.png"), full_page=True)
         pax._page.screenshot(path=str(proof_dir / "version-mismatch-participant.png"), full_page=True)
@@ -343,7 +343,7 @@ class TestQA:
             "Edit works with quotes: \"alpha\" and apostrophe's", timeout=5000
         )
 
-        proof_dir = Path(__file__).parent / "docs" / "superpowers" / "specs"
+        proof_dir = Path(__file__).parent.parent / "docs" / "superpowers" / "specs"
         proof_dir.mkdir(parents=True, exist_ok=True)
         host._page.locator("#tab-content-qa").screenshot(path=str(proof_dir / "qa-host-actions.png"))
 

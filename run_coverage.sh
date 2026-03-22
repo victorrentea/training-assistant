@@ -23,7 +23,7 @@ if [ -f .coverage.server ]; then
     echo ""
     echo "=== Backend (server-side) coverage ==="
     python3 -m coverage report --data-file=.coverage.server \
-        --omit="test_*,conftest.py,pages/*,quiz_generator.py" \
+        --omit="tests/*,quiz_generator.py" \
         --show-missing
 else
     echo "WARNING: .coverage.server not found — server may not have exited cleanly"
