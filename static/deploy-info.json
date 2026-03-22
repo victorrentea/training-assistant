@@ -1,7 +1,8 @@
 {
-  "sha": "00035a732914658dda092d9d0554dfbee2cd98f6",
-  "timestamp": "2026-03-22 18:13",
+  "sha": "ca96cd658ea46d564b15d89a781257e25633651f",
+  "timestamp": "2026-03-22 18:17",
   "changelog": [
-    "feat: batch UI improvements for conference and workshop modes"
+    "feat: sort wordcloud buttons by count then newest-first on ties",
+    "feat: show all participants' words as clickable buttons in wordcloud"
   ]
 }
