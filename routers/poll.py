@@ -82,6 +82,9 @@ async def set_poll_status(body: PollOpen):
         state.poll_opened_at = datetime.now(timezone.utc)
         state.vote_times = {}
         state.base_scores = dict(state.scores)
+    else:
+        state.poll_timer_seconds = None
+        state.poll_timer_started_at = None
     await broadcast_state()
     return {"ok": True, "poll_active": state.poll_active}
 
@@ -176,6 +179,8 @@ async def start_poll_timer(body: PollTimer):
     if not (1 <= body.seconds <= 120):
         raise HTTPException(400, "seconds must be 1–120")
     started_at = datetime.now(timezone.utc)
+    state.poll_timer_seconds = body.seconds
+    state.poll_timer_started_at = started_at
     await broadcast({"type": "timer", "seconds": body.seconds, "started_at": started_at.isoformat()})
     return {"ok": True}
 
