@@ -2163,8 +2163,12 @@ async function toggleLeaderboard() {
     }
 }
 
+let _leaderboardAutoHideTimer = null;
+
 function renderLeaderboard(data) {
     _leaderboardActive = true;
+    clearTimeout(_leaderboardAutoHideTimer);
+    _leaderboardAutoHideTimer = setTimeout(() => { if (_leaderboardActive) toggleLeaderboard(); }, 7000);
     const overlay = document.getElementById('leaderboard-overlay');
     const entriesEl = document.getElementById('leaderboard-entries');
     overlay.style.display = 'flex';
@@ -2216,6 +2220,7 @@ function renderLeaderboard(data) {
 
 function hideLeaderboard() {
     _leaderboardActive = false;
+    clearTimeout(_leaderboardAutoHideTimer);
     const overlay = document.getElementById('leaderboard-overlay');
     overlay.style.display = 'none';
     const btn = document.getElementById('btn-leaderboard');
