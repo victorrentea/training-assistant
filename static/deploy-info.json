@@ -1,7 +1,7 @@
 {
-  "sha": "79958b49365d4b44d104a30b064b5f3312563d97",
-  "timestamp": "2026-03-22 18:24",
+  "sha": "a7c2b11304d918ab606f23d755522d0c28e3b5c1",
+  "timestamp": "2026-03-22 18:41",
   "changelog": [
-    "feat: keep avatar modal open 1.5s after refresh to show new avatar"
+    "feat: add sound on clean hotkey, emoji mode, and auto-mute on dictation"
   ]
 }
