@@ -29,6 +29,7 @@
   let focusedOptionIndex = -1;  // keyboard navigation index for poll options
   const LS_WC_SESSION_KEY = 'workshop_wc_session';
   let _lastWordcloudWords = {};
+  let _lastWordcloudWordOrder = [];
   let _lastWordcloudTopic = '';
   const WC_COLORS = ['#7ecef4','#a78bfa','#34d399','#fbbf24','#f472b6','#60a5fa','#fb923c'];
   let _wcDebounceTimer = null;
@@ -588,7 +589,7 @@
         if (msg.current_activity === 'wordcloud') {
           const confGrid = document.getElementById('conference-emoji-grid');
           if (confGrid) confGrid.style.display = 'none';
-          renderWordCloudScreen(msg.wordcloud_words || {}, msg.wordcloud_topic || '');
+          renderWordCloudScreen(msg.wordcloud_words || {}, msg.wordcloud_word_order || [], msg.wordcloud_topic || '');
         } else if (msg.current_activity === 'qa') {
           const confGrid = document.getElementById('conference-emoji-grid');
           if (confGrid) confGrid.style.display = 'none';
@@ -803,8 +804,9 @@
   }
 
   // ── Word Cloud ──
-  function renderWordCloudScreen(wordcloudWords, topic) {
+  function renderWordCloudScreen(wordcloudWords, wordOrder, topic) {
     _lastWordcloudWords = wordcloudWords;
+    _lastWordcloudWordOrder = wordOrder;
     _lastWordcloudTopic = topic || '';
     const content = document.getElementById('content');
     if (content.dataset.screen !== 'wordcloud') {
@@ -878,7 +880,12 @@
     const el = document.getElementById('wc-my-words');
     if (!el) return;
     const words = _lastWordcloudWords || {};
-    const sorted = Object.entries(words).sort((a, b) => b[1] - a[1]);
+    const order = _lastWordcloudWordOrder || [];
+    const sorted = Object.entries(words).sort((a, b) => {
+      if (b[1] !== a[1]) return b[1] - a[1]; // higher count first
+      const ai = order.indexOf(a[0]), bi = order.indexOf(b[0]);
+      return (ai === -1 ? Infinity : ai) - (bi === -1 ? Infinity : bi); // newer first (lower index)
+    });
     el.innerHTML = sorted.map(([w, count]) =>
       `<button class="wc-my-word" data-word="${escHtml(w)}">${escHtml(w)}<span class="wc-word-count">${count}</span></button>`
     ).join('');
