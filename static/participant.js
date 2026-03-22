@@ -293,7 +293,6 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     editInput.select();
   }
 
-  document.getElementById('edit-name-btn').addEventListener('click', startNameEdit);
   document.getElementById('display-name').addEventListener('click', startNameEdit);
 
   function confirmNameEdit() {
