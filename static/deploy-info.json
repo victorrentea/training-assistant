@@ -1,7 +1,7 @@
 {
-  "sha": "16b90b9b57eaf6b88850b80e41bc9d9ebfc82228",
+  "sha": "85349a5554f5a24bb8dc5c863be48480ff503074",
   "timestamp": "2026-03-22 01:59",
   "changelog": [
-    "fix: remove margin-left:auto from Board tab for even spacing"
+    "fix: make disabled tab buttons visually grayed out with grayscale filter"
   ]
 }
