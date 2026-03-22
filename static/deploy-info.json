@@ -1,7 +1,7 @@
 {
-  "sha": "4aad62b9a499c04f3b38aa7a509b3ae196e560b6",
+  "sha": "4acc03e3a055c0098bcdd2c9869a5320f3fd413f",
   "timestamp": "2026-03-22 01:39",
   "changelog": [
-    "fix: remove redundant pax-badge from workshop mode status bar"
+    "feat: show URL with wave animation above center QR in conference mode"
   ]
 }
