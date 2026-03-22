@@ -1,7 +1,7 @@
 {
-  "sha": "a51ed70e06c7ebf7793c8b2f6dd8192cbe85e5c7",
-  "timestamp": "2026-03-22 00:34",
+  "sha": "d2af201aea168e746001ba57f740a3626f2f3c50",
+  "timestamp": "2026-03-22 00:36",
   "changelog": [
-    "fix: center text in letter avatar circles (conference mode)"
+    "fix: position version tag above emoji bar on participant page"
   ]
 }
