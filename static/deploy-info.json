@@ -1,7 +1,7 @@
 {
-  "sha": "4acc03e3a055c0098bcdd2c9869a5320f3fd413f",
-  "timestamp": "2026-03-22 01:39",
+  "sha": "b14d60f720c021116e276bced3ff908159688af6",
+  "timestamp": "2026-03-22 01:40",
   "changelog": [
-    "feat: show URL with wave animation above center QR in conference mode"
+    "fix: increase conference QR URL font size by 30% (0.85rem -> 1.1rem)"
   ]
 }
