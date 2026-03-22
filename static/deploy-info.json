@@ -1,7 +1,7 @@
 {
-  "sha": "ddc0171a308480172488606cbff4bd2850f5d14a",
-  "timestamp": "2026-03-22 01:57",
+  "sha": "1db4761f27b42737acc1f12ed8b40c0ea85aa141",
+  "timestamp": "2026-03-22 01:58",
   "changelog": [
-    "feat: Enter on word cloud topic input sets topic and focuses word input"
+    "fix: light mode adjustments for conference QR and word cloud"
   ]
 }
