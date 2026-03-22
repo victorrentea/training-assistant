@@ -1236,6 +1236,15 @@
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ activity: tab }),
     });
+    if (tab === 'wordcloud') {
+      const topicInput = document.getElementById('wc-topic-input');
+      const wordInput = document.getElementById('wc-host-input');
+      if (topicInput && topicInput.value.trim()) {
+        if (wordInput) wordInput.focus();
+      } else if (topicInput) {
+        topicInput.focus();
+      }
+    }
   }
 
   function updateCenterPanel(currentActivity) {
