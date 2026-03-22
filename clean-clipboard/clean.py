@@ -6,11 +6,12 @@ Intercepts every Cmd+V at the system level to capture clipboard contents
 When the user presses Cmd+Ctrl+V, the last captured paste is cleaned via AI,
 the original paste is undone, and the cleaned version is pasted in its place.
 
-Also intercepts Mouse Button 4 (Wispr Flow dictation toggle) to auto-mute
-system output while recording. Uses Elgato Wave XLR mic running state as
-ground truth to avoid toggle sync issues.
+Also intercepts Mouse Button 5 (Wispr Flow dictation toggle) to mute/unmute
+the "OS Output" loopback device so meeting participants don't hear system audio.
 """
 
+import ctypes
+import ctypes.util
 import os
 import signal
 import subprocess
@@ -20,6 +21,7 @@ import time
 from datetime import datetime
 
 import anthropic
+import objc
 from Quartz import (
     CGEventGetFlags,
     CGEventGetIntegerValueField,
@@ -70,26 +72,68 @@ VK_Z = 0x06
 # Mouse button 5 = button index 4 (0=left, 1=right, 2=middle, 3=button4, 4=button5)
 MOUSE_BUTTON_5 = 4
 
-def set_system_mute(mute: bool) -> None:
-    """Mute or unmute macOS system audio output."""
-    flag = "with" if mute else "without"
-    subprocess.run(
-        ["osascript", "-e", f"set volume {flag} output muted"],
-        timeout=2,
-        capture_output=True,
-    )
+# The loopback device to mute during dictation
+DICTATION_MUTE_DEVICE = "\U0001f50aOS Output"  # 🔊OS Output
+
+# --- CoreAudio helpers for per-device mute ---
+_ca = ctypes.cdll.LoadLibrary(ctypes.util.find_library("CoreAudio"))
 
 
-def is_system_muted() -> bool:
-    """Check if macOS system audio output is currently muted."""
-    try:
-        result = subprocess.run(
-            ["osascript", "-e", "output muted of (get volume settings)"],
-            capture_output=True, text=True, timeout=2,
-        )
-        return result.stdout.strip() == "true"
-    except Exception:
-        return False
+class _AudioPropAddr(ctypes.Structure):
+    _fields_ = [
+        ("mSelector", ctypes.c_uint32),
+        ("mScope", ctypes.c_uint32),
+        ("mElement", ctypes.c_uint32),
+    ]
+
+
+_kScopeGlobal = 1735159650   # 'glob'
+_kScopeOutput = 1869968496   # 'outp'
+_kElementMain = 0
+_kDevices = 1684370979       # 'dev#'
+_kName = 1819173229          # 'lnam'
+_kMute = 1836414053          # 'mute'
+
+# Resolved at startup
+_mute_device_id: int | None = None
+
+
+def _find_audio_device_id(name: str) -> int | None:
+    """Find an audio output device ID by name."""
+    addr = _AudioPropAddr(_kDevices, _kScopeGlobal, _kElementMain)
+    size = ctypes.c_uint32(0)
+    _ca.AudioObjectGetPropertyDataSize(1, ctypes.byref(addr), 0, None, ctypes.byref(size))
+    n = size.value // 4
+    ids = (ctypes.c_uint32 * n)()
+    _ca.AudioObjectGetPropertyData(1, ctypes.byref(addr), 0, None, ctypes.byref(size), ids)
+    for i in range(n):
+        dev_id = ids[i]
+        na = _AudioPropAddr(_kName, _kScopeGlobal, _kElementMain)
+        ref = ctypes.c_void_p()
+        ns = ctypes.c_uint32(ctypes.sizeof(ctypes.c_void_p))
+        if _ca.AudioObjectGetPropertyData(dev_id, ctypes.byref(na), 0, None, ctypes.byref(ns), ctypes.byref(ref)) != 0:
+            continue
+        if str(objc.objc_object(c_void_p=ref)) == name:
+            return dev_id
+    return None
+
+
+def _set_device_mute(device_id: int, mute: bool) -> bool:
+    """Mute or unmute a specific audio device. Returns True on success."""
+    addr = _AudioPropAddr(_kMute, _kScopeOutput, _kElementMain)
+    val = ctypes.c_uint32(1 if mute else 0)
+    return _ca.AudioObjectSetPropertyData(device_id, ctypes.byref(addr), 0, None, 4, ctypes.byref(val)) == 0
+
+
+def _is_device_muted(device_id: int) -> bool:
+    """Check if a specific audio device is muted."""
+    addr = _AudioPropAddr(_kMute, _kScopeOutput, _kElementMain)
+    val = ctypes.c_uint32(0)
+    size = ctypes.c_uint32(4)
+    if _ca.AudioObjectGetPropertyData(device_id, ctypes.byref(addr), 0, None, ctypes.byref(size), ctypes.byref(val)) == 0:
+        return val.value != 0
+    return False
+
 
 client = anthropic.Anthropic(max_retries=0)
 lock = threading.Lock()
@@ -219,14 +263,16 @@ def handle_clean_hotkey(with_emoji: bool = False) -> None:
 
 
 def handle_dictation_mute() -> None:
-    """Handle Mouse Button 5: toggle system mute (mute while dictating, unmute when done)."""
-    currently_muted = is_system_muted()
+    """Handle Mouse Button 5: toggle OS Output device mute for dictation."""
+    if _mute_device_id is None:
+        return
+    currently_muted = _is_device_muted(_mute_device_id)
     if currently_muted:
-        log("Dictation stopped — unmuting system output")
-        set_system_mute(False)
+        log("Dictation stopped — unmuting OS Output")
+        _set_device_mute(_mute_device_id, False)
     else:
-        log("Dictation started — muting system output")
-        set_system_mute(True)
+        log("Dictation started — muting OS Output")
+        _set_device_mute(_mute_device_id, True)
 
 
 def event_tap_callback(proxy, event_type, event, refcon):
@@ -269,11 +315,18 @@ _run_loop_ref = None
 
 
 def main() -> None:
-    global _run_loop_ref
+    global _run_loop_ref, _mute_device_id
 
     if not os.environ.get("ANTHROPIC_API_KEY"):
         print("Error: ANTHROPIC_API_KEY environment variable is not set")
         sys.exit(1)
+
+    # Resolve the loopback device to mute during dictation
+    _mute_device_id = _find_audio_device_id(DICTATION_MUTE_DEVICE)
+    if _mute_device_id:
+        log(f"Dictation mute device: {DICTATION_MUTE_DEVICE} (ID {_mute_device_id})")
+    else:
+        log(f"WARNING: Device '{DICTATION_MUTE_DEVICE}' not found — dictation mute disabled")
 
     # Create event tap for key down + mouse button events
     tap = CGEventTapCreate(
@@ -308,7 +361,8 @@ def main() -> None:
     log("Clipboard cleaner started (CGEventTap).")
     log("Every Cmd+V is captured. Press Cmd+Ctrl+V to clean the last paste.")
     log("Hold Option (Cmd+Ctrl+Opt+V) to clean with contextual emojis.")
-    log("Mouse Button 5 toggles system mute for dictation.")
+    if _mute_device_id:
+        log(f"Mouse Button 5 toggles mute on '{DICTATION_MUTE_DEVICE}'.")
 
     CFRunLoopRun()
 
