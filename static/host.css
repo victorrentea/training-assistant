@@ -820,10 +820,19 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
   display: none;
   text-align: center;
   padding: 1rem 0;
-  flex: 1;
   flex-direction: column;
   justify-content: center;
   align-items: center;
+}
+
+/* Conference mode: left column splits into tabs (top) + QR (bottom) + status bar */
+.host-col-left.conference-layout {
+  display: grid;
+  grid-template-rows: 1fr 1fr auto;
+}
+.host-col-left.conference-layout .left-tabs-wrapper {
+  overflow-y: auto;
+  min-height: 0;
 }
 /* Mode badge — white background for visibility */
 .mode-badge-workshop {
