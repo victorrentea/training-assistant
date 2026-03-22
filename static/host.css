@@ -279,7 +279,7 @@ body {
 /* Status badges pinned to bottom of left column */
 .left-status-bar {
   margin-top: auto;
-  padding: .5rem 0;
+  padding: .5rem 0 0;
   border-top: 1px solid var(--border);
   display: flex;
   gap: .5rem;
@@ -866,6 +866,7 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
 .host-col-left.conference-layout {
   display: grid;
   grid-template-rows: 1fr 1fr auto;
+  gap: 0;
 }
 .left-tabs-wrapper {
   display: flex;
