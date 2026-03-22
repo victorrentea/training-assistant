@@ -226,6 +226,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  background: #fff;
   background: #000;
   border-radius: 10px;
   overflow: hidden;
@@ -898,13 +899,18 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
   border: 2px solid #e74c3c !important;
 }
 
-/* Conference mode: center QR — black background with white-bordered QR */
+/* Conference mode: center QR — themed background with bordered QR */
 .conference-center-qr {
   background: #000 !important;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
+}
+@media (prefers-color-scheme: light) {
+  .conference-center-qr {
+    background: #f4f5f9 !important;
+  }
 }
 .conference-center-qr .qr-code {
   opacity: 1 !important;
