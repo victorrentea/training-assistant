@@ -177,6 +177,7 @@
         });
         cachedNames = names;
         document.getElementById('pax-count').textContent = msg.participant_count;
+        updatePaxBadge(msg.participant_count);
         renderParticipantList(names);
         updateLeaderboardButton();
         renderDaemonStatus(msg.daemon_connected, msg.daemon_last_seen);
@@ -219,6 +220,7 @@
         renderBars();
       } else if (msg.type === 'participant_count') {
         document.getElementById('pax-count').textContent = msg.count;
+        updatePaxBadge(msg.count);
         participantLocations = {};
         participantAvatars = {};
         scores = {};
@@ -557,6 +559,20 @@
     if (!el) return;
     el.className = `badge ${connected ? 'connected' : 'disconnected'}`;
     el.title = connected ? 'Emoji overlay connected' : 'Emoji overlay not connected';
+  }
+
+  let _prevPaxCount = 0;
+  function updatePaxBadge(count) {
+    const el = document.getElementById('pax-badge');
+    if (!el) return;
+    el.textContent = `👥 ${count}`;
+    el.className = count > 0 ? 'badge connected' : 'badge disconnected';
+    el.title = `${count} participant${count !== 1 ? 's' : ''} connected`;
+    if (count > _prevPaxCount && _prevPaxCount >= 0) {
+      el.classList.add('flash');
+      requestAnimationFrame(() => requestAnimationFrame(() => el.classList.remove('flash')));
+    }
+    _prevPaxCount = count;
   }
 
   let hostNotesContent = '';
