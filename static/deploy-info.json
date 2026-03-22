@@ -1,7 +1,7 @@
 {
-  "sha": "1db4761f27b42737acc1f12ed8b40c0ea85aa141",
-  "timestamp": "2026-03-22 01:58",
+  "sha": "16b90b9b57eaf6b88850b80e41bc9d9ebfc82228",
+  "timestamp": "2026-03-22 01:59",
   "changelog": [
-    "fix: light mode adjustments for conference QR and word cloud"
+    "fix: remove margin-left:auto from Board tab for even spacing"
   ]
 }
