@@ -11,15 +11,13 @@ Person(participant, "Participant", "Trainee.")
 ' ── centre: the system ───────────────────────────────────────────
 System_Boundary(workshop, "Workshop Tool", $link="c4_c3_components.puml") {
 
-    Container(participant_spa, "Participant SPA", "Vanilla JS (trainee's browser)", "Voting UI, live results,\ngeolocation, WebSocket client.")
+    Container(participant_spa, "Participant SPA", "Vanilla JS (trainee's browser)", "Voting, Q&A, word cloud,\ndebate, code review,\ngeolocation, emoji reactions.")
 
-    Container(caddy, "Caddy Reverse Proxy", "Caddy (single binary)", "TLS termination.\nAuth for host endpoints.\nForwards to FastAPI on :8000.")
+    Container(fastapi, "FastAPI Backend", "Python 3.12 / FastAPI / Uvicorn", "REST endpoints + WebSocket.\nHTTP Basic Auth via middleware.\nTLS handled by Railway.", $link="c4_c3_components.puml")
 
-    Container(fastapi, "FastAPI Backend", "Python 3.12 / FastAPI / Uvicorn", "REST endpoints + WebSocket.\nDeployed on Railway.", $link="c4_c3_components.puml")
+    Container(host_spa, "Host SPA", "Vanilla JS (host's browser)", "Poll/activity management,\nparticipant list, map view (Leaflet),\nquiz preview, debate control.")
 
-    Container(host_spa, "Host SPA", "Vanilla JS (host's browser)", "Poll management, participant list,\nmap view (Leaflet), quiz preview.")
-
-    Container(quiz_daemon, "Quiz Daemon", "Python 3.12 CLI (host's machine)", "Long-polls backend for quiz requests\nand debate AI cleanup.\nPosts AI-generated content to backend.\nPeriodically synthesizes session key points.")
+    Container(training_daemon, "Training Daemon", "Python 3.12 CLI (host's machine)", "Long-polls backend for quiz requests\nand debate AI cleanup.\nPosts AI-generated content to backend.\nPeriodically synthesizes session key points.")
 }
 
 ' ── right: host + external AI ────────────────────────────────────
@@ -32,20 +30,19 @@ System_Ext(nominatim, "Nominatim", "GPS coords → city + country.")
 Lay_L(participant, participant_spa)
 Lay_R(host, host_spa)
 Lay_D(host, audio_hijack)
-Lay_D(audio_hijack, quiz_daemon)
-Lay_R(claude_api, quiz_daemon)
+Lay_D(audio_hijack, training_daemon)
+Lay_R(claude_api, training_daemon)
 Lay_D(nominatim, host_spa)
 
 ' relationships
 Rel(participant, participant_spa, "Votes, sees live results", "Browser")
-Rel(participant_spa, caddy, "Vote API, WebSocket", "HTTPS / WSS")
-Rel(caddy, fastapi, "Proxies API and WebSocket", "HTTP :8000")
+Rel(participant_spa, fastapi, "Vote API, WebSocket", "HTTPS / WSS")
 Rel(host, host_spa, "Manages polls, views results", "Browser")
-Rel(host_spa, caddy, "Poll API, WebSocket", "HTTPS / WSS")
+Rel(host_spa, fastapi, "Poll API, WebSocket", "HTTPS / WSS")
 Rel(host_spa, nominatim, "Resolves GPS to city and map coordinates", "HTTPS REST")
-Rel(host, quiz_daemon, "Starts/stops", "Local terminal")
-Rel(audio_hijack, quiz_daemon, "Transcript file", "Local file")
-Rel(quiz_daemon, caddy, "Polls for requests, posts preview", "HTTPS REST")
-Rel(quiz_daemon, claude_api, "Generates quiz, debate AI cleanup, summary", "HTTPS REST")
+Rel(host, training_daemon, "Starts/stops", "Local terminal")
+Rel(audio_hijack, training_daemon, "Transcript file", "Local file")
+Rel(training_daemon, fastapi, "Polls for requests, posts preview", "HTTPS REST")
+Rel(training_daemon, claude_api, "Generates quiz, debate AI cleanup, summary", "HTTPS REST")
 
 @enduml

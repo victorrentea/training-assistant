@@ -6,7 +6,7 @@ skinparam sequenceMessageAlign center
 
 actor "Transcriber\n(Audio Hijack)" as Transcriber
 participant "Transcript\nFile (.txt)" as File
-participant "Local Agent\n(quiz_daemon.py)" as Agent
+participant "Training Daemon\n(training_daemon.py +\ndaemon/summarizer.py)" as Agent
 participant "Claude API\n(Anthropic)" as Claude
 participant "Backend\n(FastAPI)" as Backend
 participant "Host UI\n(host.js)" as HostUI
@@ -21,20 +21,32 @@ note right of File
   timestamps every 3s
 end note
 
-== 2. Periodic Summary Generation (every 5 min) ==
+== 2. Periodic Summary Generation (periodically) ==
 
 Agent -> File : Read last 30 min\nof transcript
 Agent -> Agent : Build prompt:\nsession notes +\nexisting bullets +\ntranscript excerpt
 
 Agent -> Claude : messages.create(\n  model="claude-sonnet-4-6",\n  max_tokens=1024,\n  system=SUMMARY_PROMPT\n)
-Claude --> Agent : JSON array of\n5–15 bullet strings
+Claude --> Agent : JSON array of\n5–15 summary point objects\n[{text, source, time}, ...]
+
+note right of Claude
+  Each point:
+  {text: "...",
+   source: "notes"|"discussion",
+   time: "HH:MM"}
+end note
 
 Agent -> Agent : Prepend "Session date: YYYY-MM-DD"\nParse & validate response
 
 == 3. Push to Server ==
 
-Agent -> Backend : POST /api/summary\n{points: ["...", "..."]}\n(HTTP Basic Auth)
+Agent -> Backend : POST /api/summary\n{points: [{text, source, time}, ...]}\n(HTTP Basic Auth)
 Backend -> Backend : state.summary_points = points\nstate.summary_updated_at = now()
+
+note over Agent, Backend
+  Daemon also posts transcript progress
+  via POST /api/transcript-status
+end note
 
 == 4. Broadcast to Clients (WebSocket) ==
 
@@ -60,9 +72,9 @@ Backend --> Agent : {requested: true}\n(flag reset to false)
 
 Agent -> File : Read last 30 min\nof transcript
 Agent -> Claude : messages.create()\n(same as periodic flow)
-Claude --> Agent : JSON bullet array
+Claude --> Agent : JSON array of\n[{text, source, time}, ...]
 
-Agent -> Backend : POST /api/summary\n{points: [...]}
+Agent -> Backend : POST /api/summary\n{points: [{text, source, time}, ...]}
 Backend --> HostUI : WS broadcast: state
 Backend --> PaxUI : WS broadcast: state
 
