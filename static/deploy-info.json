@@ -1,7 +1,7 @@
 {
-  "sha": "06956e5ee369369db25b97bbd491154c4fda24c5",
-  "timestamp": "2026-03-22 18:12",
+  "sha": "00035a732914658dda092d9d0554dfbee2cd98f6",
+  "timestamp": "2026-03-22 18:13",
   "changelog": [
-    "fix: forward emoji reactions to host panel"
+    "feat: batch UI improvements for conference and workshop modes"
   ]
 }
