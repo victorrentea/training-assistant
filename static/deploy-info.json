@@ -1,7 +1,7 @@
 {
-  "sha": "2848a297420025fa11c12f39b7127a617edc3fcf",
-  "timestamp": "2026-03-22 01:21",
+  "sha": "52062ee8807f386c6a5e7a1d106b0f4944f8f309",
+  "timestamp": "2026-03-22 01:23",
   "changelog": [
-    "fix: leaderboard button now enables with 1+ scored participants"
+    "fix: code review center panel not stretching full height in workshop mode"
   ]
 }
