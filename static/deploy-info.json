@@ -1,7 +1,7 @@
 {
-  "sha": "e5fe770da3263f5bf4a283deff1394a1da627cad",
-  "timestamp": "2026-03-22 01:40",
+  "sha": "b9fa17bb0d362ac491567859d952c153e37f6fa2",
+  "timestamp": "2026-03-22 01:45",
   "changelog": [
-    "feat: add dramatic sequential reveal to participant leaderboard"
+    "fix: move version tag to top-right and align badge spacing"
   ]
 }
