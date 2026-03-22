@@ -1,7 +1,7 @@
 {
-  "sha": "fdf526a60c9cead899cb7fd4ae8e52a0f4e66d1d",
-  "timestamp": "2026-03-22 01:10",
+  "sha": "83712cf6c3282902426284298bc44742dda7b5f1",
+  "timestamp": "2026-03-22 01:11",
   "changelog": [
-    "docs: sync architecture diagrams and CLAUDE.md with actual codebase"
+    "fix: make code review textarea fill top half in conference mode"
   ]
 }
