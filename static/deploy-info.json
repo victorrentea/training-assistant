@@ -1,7 +1,7 @@
 {
-  "sha": "7353b2c22eb46548d4b97f69ded93915d85821c9",
-  "timestamp": "2026-03-22 01:33",
+  "sha": "fe0b7c6238546135fc615b14cc2f56bdef32128c",
+  "timestamp": "2026-03-22 01:34",
   "changelog": [
-    "fix: code review textarea fills full left column height"
+    "feat: show all participants in leaderboard, not just scored ones"
   ]
 }
