@@ -120,6 +120,9 @@
             rejectedAvatars.push(filename);
         }
         if (ws) ws.send(JSON.stringify({ type: 'refresh_avatar', rejected: rejectedAvatars }));
+        // Spin the refresh button
+        refreshBtn.classList.add('spinning');
+        setTimeout(function() { refreshBtn.classList.remove('spinning'); }, 600);
         // Keep modal open; timer starts when new avatar arrives via state broadcast
         window._avatarModalImg = img;
         window._avatarModal = modal;
@@ -582,9 +585,17 @@
             const avatarEl = document.getElementById('my-avatar');
             avatarEl.src = '/static/avatars/' + msg.my_avatar;
             avatarEl.style.display = '';
+            // Animate small avatar change
+            avatarEl.classList.remove('avatar-changed');
+            void avatarEl.offsetWidth; // force reflow to restart animation
+            avatarEl.classList.add('avatar-changed');
             // Update avatar modal image if open (after refresh), then auto-close after 1.5s
             if (window._avatarModalImg) {
                 window._avatarModalImg.src = '/static/avatars/' + msg.my_avatar;
+                // Trigger swap animation on modal image
+                window._avatarModalImg.classList.remove('avatar-swap');
+                void window._avatarModalImg.offsetWidth;
+                window._avatarModalImg.classList.add('avatar-swap');
                 const modalRef = window._avatarModal;
                 if (window._avatarModalCloseTimer) clearTimeout(window._avatarModalCloseTimer);
                 window._avatarModalCloseTimer = setTimeout(function() {
