@@ -35,9 +35,9 @@ python3 clean.py
 
 1. Paste text normally (Cmd+V or via Whispr Flow)
 2. Immediately press **Cmd+Ctrl+V**
-3. The daemon undoes the paste, cleans the text via AI, and re-pastes the cleaned version (~0.5-1s)
+3. The daemon undoes the paste, cleans the text via AI, and re-pastes the cleaned version
 
-If the AI call fails or times out (>2s), the original text stays untouched.
+Timeout scales with text length: ~2s for short text, up to 15s for very long dictations. If the AI call fails or times out, the original text stays untouched.
 
 ## Configuration
 
@@ -46,7 +46,9 @@ Edit constants at the top of `clean.py`:
 | Constant | Default | Description |
 |---|---|---|
 | `MODEL` | `claude-haiku-4-5-20251001` | Claude model for cleanup |
-| `TIMEOUT` | `2` | API timeout in seconds |
+| `TIMEOUT_BASE` | `2` | Base timeout in seconds (for short text) |
+| `TIMEOUT_PER_1K` | `1.5` | Extra seconds per 1000 characters |
+| `TIMEOUT_MAX` | `15` | Hard cap on timeout |
 | `MAX_INPUT_CHARS` | `5000` | Skip cleanup for text longer than this |
 
 ## Stop

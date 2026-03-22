@@ -36,7 +36,9 @@ from Quartz import (
 )
 
 MODEL = "claude-haiku-4-5-20251001"
-TIMEOUT = 2
+TIMEOUT_BASE = 2       # seconds for short text (< 200 chars)
+TIMEOUT_PER_1K = 1.5   # extra seconds per 1000 chars
+TIMEOUT_MAX = 15       # hard cap
 MAX_INPUT_CHARS = 5000
 CLEANUP_PROMPT = (
     "Fix grammar, punctuation, and spelling errors.\n"
@@ -98,15 +100,21 @@ def simulate_keystroke(keycode: int, flags: int = 0) -> None:
         )
 
 
+def compute_timeout(text: str) -> float:
+    """Variable timeout: 2s base + 1.5s per 1000 chars, capped at 15s."""
+    return min(TIMEOUT_BASE + (len(text) / 1000) * TIMEOUT_PER_1K, TIMEOUT_MAX)
+
+
 def clean_text(text: str) -> str | None:
     """Send text to Claude Haiku for cleanup. Returns cleaned text or None on failure."""
+    timeout = compute_timeout(text)
     try:
         response = client.messages.create(
             model=MODEL,
             max_tokens=4096,
             messages=[{"role": "user", "content": text}],
             system=CLEANUP_PROMPT,
-            timeout=TIMEOUT,
+            timeout=timeout,
         )
         return response.content[0].text
     except Exception as e:
@@ -132,7 +140,8 @@ def handle_clean_hotkey() -> None:
             return
 
         start = time.time()
-        log(f"Cleaning {len(text)} chars...")
+        timeout = compute_timeout(text)
+        log(f"Cleaning {len(text)} chars (timeout {timeout:.1f}s)...")
 
         cleaned = clean_text(text)
 
