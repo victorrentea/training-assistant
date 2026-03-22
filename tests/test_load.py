@@ -43,7 +43,7 @@ def server_url():
         [sys.executable, "-m", "uvicorn", "main:app", "--host", "127.0.0.1", "--port", "0"],
         stdout=subprocess.DEVNULL,
         stderr=subprocess.PIPE,
-        cwd=os.path.dirname(os.path.abspath(__file__)),
+        cwd=os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
         env=server_env,
     )
     port = None

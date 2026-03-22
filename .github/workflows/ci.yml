@@ -26,10 +26,10 @@ jobs:
         run: python -m playwright install --with-deps chromium
 
       - name: Unit tests (API + scoring)
-        run: pytest test_main.py -v
+        run: pytest tests/test_main.py -v
 
       - name: JS unit tests
-        run: node test_participant_js.js
+        run: node tests/test_participant_js.js
 
       - name: Generate version.js for tests
         run: echo "window.APP_VERSION = '$(date -u '+%Y-%m-%d %H:%M')';" > static/version.js
@@ -38,4 +38,4 @@ jobs:
         env:
           HOST_USERNAME: host
           HOST_PASSWORD: testpass
-        run: pytest test_e2e.py -v -s --tb=short
+        run: pytest tests/test_e2e.py -v -s --tb=short

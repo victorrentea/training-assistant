@@ -22,8 +22,9 @@ daemon/.venv/
 deploy-history.txt
 
 
-# Documentation build artifacts
-docs/**/*.png
+# Screenshots and documentation build artifacts
+*.png
+!static/avatars/*.png
 
 # Coverage data
 .coverage*
