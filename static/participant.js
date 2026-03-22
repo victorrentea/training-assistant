@@ -177,8 +177,6 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
   function updateSummary(points, updatedAt) {
     summaryPoints = points || [];
     summaryUpdatedAt = updatedAt;
-    const btn = document.getElementById('summary-btn');
-    if (btn) btn.style.display = summaryPoints.length ? '' : 'none';
     renderSummaryList();
   }
 
@@ -223,6 +221,10 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
   function toggleSummaryModal() {
     const overlay = document.getElementById('summary-overlay');
     if (overlay) overlay.classList.toggle('open');
+    // Request generation if no points yet
+    if (!summaryPoints.length) {
+      fetch('/api/summary/force', { method: 'POST' }).catch(() => {});
+    }
   }
 
   function closeSummaryModal() {

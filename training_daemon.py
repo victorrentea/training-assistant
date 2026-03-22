@@ -42,7 +42,7 @@ from quiz_core import (
 )
 from daemon.debate_ai import run_debate_ai_cleanup
 from daemon.llm_adapter import get_usage
-from daemon.summarizer import generate_summary, SUMMARY_INTERVAL_SECONDS
+from daemon.summarizer import generate_summary
 from daemon.transcript_state import TranscriptStateManager
 
 _LOCK_FILE = Path("/tmp/training_daemon.lock")
@@ -463,11 +463,10 @@ def run() -> None:
             except Exception:
                 pass
 
-            # ── Periodic or forced summary generation ──
+            # ── On-demand summary generation (no periodic timer) ──
             now_mono = time.monotonic()
-            if force_summary or now_mono - last_summary_at >= SUMMARY_INTERVAL_SECONDS:
-                if force_summary:
-                    print("[summarizer] Force-generating summary (host requested)")
+            if force_summary:
+                print("[summarizer] Generating summary (requested)")
                 last_summary_at = now_mono
                 try:
                     # Promote draft → locked before generating

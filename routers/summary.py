@@ -72,8 +72,17 @@ async def update_transcript_status(body: TranscriptStatus):
     return {"ok": True}
 
 
-@router.post("/api/summary/force")
+_last_force_at: float = 0.0
+_FORCE_COOLDOWN = 30.0  # seconds — ignore rapid requests
+
+@public_router.post("/api/summary/force")
 async def force_summary():
+    import time
+    global _last_force_at
+    now = time.monotonic()
+    if now - _last_force_at < _FORCE_COOLDOWN:
+        return {"ok": True, "cooldown": True}
+    _last_force_at = now
     state.summary_force_requested = True
     return {"ok": True}
 
