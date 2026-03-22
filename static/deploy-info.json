@@ -1,7 +1,7 @@
 {
-  "sha": "a28940d59e829790caa05c0b41245dcbeb600e93",
-  "timestamp": "2026-03-22 18:11",
+  "sha": "2757157faeb641e2119a547a5ae58e111d2e12f3",
+  "timestamp": "2026-03-22 18:12",
   "changelog": [
-    "feat: add random trivia poll button for demo purposes"
+    "fix: avatar refresh now works and avoids repeating previously seen avatars"
   ]
 }
