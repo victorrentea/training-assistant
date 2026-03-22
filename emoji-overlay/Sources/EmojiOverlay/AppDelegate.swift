@@ -8,9 +8,14 @@ class AppDelegate: NSObject, NSApplicationDelegate, URLSessionWebSocketDelegate 
     private var wsTask: URLSessionWebSocketTask?
     private var session: URLSession!
     private var reconnecting = false
+    private let pidFilePath: String
+    private let myPID: Int32
+    private var pidCheckTimer: Timer?
 
-    init(serverURL: String) {
+    init(serverURL: String, pidFilePath: String, myPID: Int32) {
         self.serverURL = serverURL
+        self.pidFilePath = pidFilePath
+        self.myPID = myPID
         super.init()
     }
 
@@ -25,6 +30,24 @@ class AppDelegate: NSObject, NSApplicationDelegate, URLSessionWebSocketDelegate 
 
         session = URLSession(configuration: .default, delegate: self, delegateQueue: .main)
         connectWebSocket()
+
+        // Check every 2s if another instance took over the PID file
+        pidCheckTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
+            self?.checkPIDFile()
+        }
+    }
+
+    private func checkPIDFile() {
+        guard let content = try? String(contentsOfFile: pidFilePath, encoding: .utf8).trimmingCharacters(in: .whitespacesAndNewlines),
+              let filePID = Int32(content) else {
+            return
+        }
+        if filePID != myPID {
+            NSLog("Another instance (PID \(filePID)) took over — shutting down (my PID: \(myPID))")
+            pidCheckTimer?.invalidate()
+            wsTask?.cancel(with: .goingAway, reason: nil)
+            NSApplication.shared.terminate(nil)
+        }
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
