@@ -1,7 +1,7 @@
 {
-  "sha": "97b8d24f2d9cb38a5bb2ca6f9d17af7b7dab5646",
-  "timestamp": "2026-03-22 19:36",
+  "sha": "7c4446dc231aabef16c0febedfc82c928fb6c20b",
+  "timestamp": "2026-03-22 19:37",
   "changelog": [
-    "feat: load Anthropic API key from clean-clipboard/secrets.env"
+    "fix: healthcheck finds secrets.env and uses http_credentials for auth"
   ]
 }
