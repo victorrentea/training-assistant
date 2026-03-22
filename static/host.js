@@ -2275,8 +2275,9 @@ function hideLeaderboard() {
 function updateLeaderboardButton() {
     const btn = document.getElementById('btn-leaderboard');
     if (!btn) return;
-    // Enable when at least 1 participant is connected
-    btn.disabled = !cachedNames || cachedNames.length < 1;
+    // Enable only when there are participants with scores
+    const scoredCount = Object.values(scores || {}).filter(s => s > 0).length;
+    btn.disabled = scoredCount < 1;
 }
 
 // ── Auto-return to Hello tab (conference mode only) ──
