@@ -1,7 +1,7 @@
 {
-  "sha": "85349a5554f5a24bb8dc5c863be48480ff503074",
-  "timestamp": "2026-03-22 01:59",
+  "sha": "c1d159e71f492efd2d2e7627e2ea3f891e195b96",
+  "timestamp": "2026-03-22 02:01",
   "changelog": [
-    "fix: make disabled tab buttons visually grayed out with grayscale filter"
+    "fix: simplify empty poll message to \"No poll yet.\""
   ]
 }
