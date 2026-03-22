@@ -11,10 +11,18 @@ body {
 .wave-char {
   display: inline-block;
   animation: wave-shimmer 2.5s ease-in-out infinite;
+  --wave-dim: rgba(255,255,255,.45);
+  --wave-bright: #fff;
+}
+@media (prefers-color-scheme: light) {
+  .wave-char {
+    --wave-dim: rgba(0,0,0,.3);
+    --wave-bright: #1a1d2e;
+  }
 }
 @keyframes wave-shimmer {
-  0%, 100% { color: rgba(255,255,255,.45); }
-  40% { color: #fff; text-shadow: 0 0 6px rgba(108,99,255,.5); }
+  0%, 100% { color: var(--wave-dim); }
+  40% { color: var(--wave-bright); text-shadow: 0 0 6px rgba(108,99,255,.5); }
 }
 
 .badge {
