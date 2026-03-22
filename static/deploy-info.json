@@ -1,7 +1,7 @@
 {
-  "sha": "7cf0fb8ad72501d37775226a0a234d46a17c9144",
-  "timestamp": "2026-03-22 01:18",
+  "sha": "2848a297420025fa11c12f39b7127a617edc3fcf",
+  "timestamp": "2026-03-22 01:21",
   "changelog": [
-    "feat: single-instance enforcement via PID lock file for emoji-overlay (#63)"
+    "fix: leaderboard button now enables with 1+ scored participants"
   ]
 }
