@@ -440,8 +440,9 @@
       rightCol.style.display = 'none';
       grid.style.gridTemplateColumns = '25% 1fr';
       leftCol.classList.add('conference-layout');
-      // QR always visible in conference mode
-      confQR.style.display = 'flex';
+      // Show left QR only when an activity is active (center QR not visible)
+      const centerQRVisible = document.getElementById('center-qr').style.display !== 'none';
+      confQR.style.display = centerQRVisible ? 'none' : 'flex';
       if (confPaxDisplay) confPaxDisplay.style.display = 'none';
       if (debateTab) debateTab.style.display = 'none';
       if (tokenCost) tokenCost.style.display = 'none';
@@ -1229,6 +1230,12 @@
         el.style.display = currentActivity === id ? showVal : 'none';
       }
     });
+    // In conference mode: hide left QR when center QR is visible (no activity)
+    const leftCol = document.querySelector('.host-col-left');
+    if (leftCol && leftCol.classList.contains('conference-layout')) {
+      const confQR = document.getElementById('conference-qr');
+      confQR.style.display = currentActivity === 'none' ? 'none' : 'flex';
+    }
     if (currentActivity && currentActivity !== 'none') {
       ['poll', 'wordcloud', 'qa', 'codereview', 'debate'].forEach(t => {
         document.getElementById('tab-' + t).classList.toggle('active', currentActivity === t);
