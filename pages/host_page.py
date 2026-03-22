@@ -16,6 +16,8 @@ class HostPage:
     def create_poll(self, question: str, options: list[str], multi: bool = False,
                     correct_count: int | None = None) -> None:
         """Type a poll into the composer and launch it (poll opens automatically)."""
+        # Ensure Poll tab is active (may be on Q&A/Wordcloud/Code tab)
+        self._page.click("#tab-poll")
         composer = self._page.locator("#poll-input")
         composer.scroll_into_view_if_needed(timeout=10000)
         composer.click()
