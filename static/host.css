@@ -938,6 +938,7 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
   justify-content: center;
   font-weight: 800;
   font-size: 1rem;
+  line-height: 1;
   color: #fff;
   flex-shrink: 0;
 }

@@ -99,6 +99,15 @@
     vertical-align: middle;
     flex-shrink: 0;
 }
+.avatar.letter-avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    color: #fff;
+    line-height: 1;
+    text-align: center;
+}
 .avatar-fallback {
     width: 32px;
     height: 32px;

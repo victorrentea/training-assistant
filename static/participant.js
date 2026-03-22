@@ -528,7 +528,7 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
                 const span = document.createElement('span');
                 span.id = 'my-avatar';
                 span.className = 'avatar letter-avatar';
-                span.style.cssText = 'display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;font-weight:800;font-size:.65rem;color:#fff;background:' + clr;
+                span.style.cssText = 'display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;font-weight:800;font-size:.65rem;line-height:1;color:#fff;background:' + clr;
                 span.textContent = lt;
                 existing.replaceWith(span);
             } else if (existing) {
