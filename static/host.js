@@ -1236,6 +1236,12 @@
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ activity: tab }),
     });
+    const focusTargets = {
+      poll: 'poll-input',
+      qa: 'host-qa-input',
+      codereview: 'codereview-snippet',
+      debate: 'debate-statement-input',
+    };
     if (tab === 'wordcloud') {
       const topicInput = document.getElementById('wc-topic-input');
       const wordInput = document.getElementById('wc-host-input');
@@ -1244,6 +1250,9 @@
       } else if (topicInput) {
         topicInput.focus();
       }
+    } else if (focusTargets[tab]) {
+      const el = document.getElementById(focusTargets[tab]);
+      if (el) el.focus();
     }
   }
 
