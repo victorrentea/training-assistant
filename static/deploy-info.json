@@ -1,7 +1,7 @@
 {
-  "sha": "7c4446dc231aabef16c0febedfc82c928fb6c20b",
-  "timestamp": "2026-03-22 19:37",
+  "sha": "02251fbfcc2906df0c9a40e7949808e426dfaa84",
+  "timestamp": "2026-03-22 19:46",
   "changelog": [
-    "fix: healthcheck finds secrets.env and uses http_credentials for auth"
+    "feat: add avatar refresh animations and fix ring image background"
   ]
 }
