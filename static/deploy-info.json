@@ -1,7 +1,7 @@
 {
-  "sha": "86b95d8887ce4ed0267a62ee49b31a70b96ad7ff",
-  "timestamp": "2026-03-22 19:27",
+  "sha": "56a7f4aeb3dd739b1b08d2d72ac6f50f6e9f8dd7",
+  "timestamp": "2026-03-22 19:28",
   "changelog": [
-    "fix: restore OS Output volume on Escape key during dictation"
+    "refactor: move all tests to tests/ folder, remove tracked PNGs"
   ]
 }
