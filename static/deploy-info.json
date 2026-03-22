@@ -1,7 +1,7 @@
 {
-  "sha": "63012c2cb6391ad402dc38f937861bc6b9cb4cf2",
+  "sha": "ddc0171a308480172488606cbff4bd2850f5d14a",
   "timestamp": "2026-03-22 01:57",
   "changelog": [
-    "fix: wave animation colors adapt to light/dark mode"
+    "feat: Enter on word cloud topic input sets topic and focuses word input"
   ]
 }
