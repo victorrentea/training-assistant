@@ -1,7 +1,7 @@
 {
-  "sha": "aadc9bfc99d2ba7c39e04cbf87fce8ae9aa426b0",
-  "timestamp": "2026-03-22 01:27",
+  "sha": "b3bd63832fa4e1f75aa4b0b3bc45772913c8a548",
+  "timestamp": "2026-03-22 01:30",
   "changelog": [
-    "feat: auto-dismiss leaderboard overlay on host"
+    "feat: move participant count to status badge, center QR with URL below"
   ]
 }
