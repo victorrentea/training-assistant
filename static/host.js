@@ -15,6 +15,7 @@
   let summaryUpdatedAt = null;
 
   let _hostWcDebounceTimer = null;
+  let _hostWcLastDataKey = null;
   let currentMode = 'workshop';
   let _autoReturnTimer = null;
   const AUTO_RETURN_DELAY = 30000; // 30 seconds
@@ -1356,6 +1357,9 @@
   function renderHostWordCloud(wordsMap) {
     const canvas = document.getElementById('host-wc-canvas');
     if (!canvas) return;
+    const key = JSON.stringify(wordsMap);
+    if (key === _hostWcLastDataKey) return;
+    _hostWcLastDataKey = key;
     clearTimeout(_hostWcDebounceTimer);
     _hostWcDebounceTimer = setTimeout(() => _drawHostCloud(canvas, wordsMap), 300);
     const dl = document.getElementById('wc-host-suggestions');
