@@ -1,7 +1,7 @@
 {
-  "sha": "f1804bcbb859b712587b1e608faf4758eb2aa5cc",
-  "timestamp": "2026-03-22 19:20",
+  "sha": "86b95d8887ce4ed0267a62ee49b31a70b96ad7ff",
+  "timestamp": "2026-03-22 19:27",
   "changelog": [
-    "feat: rewrite healthcheck as Playwright-based UI verification"
+    "fix: restore OS Output volume on Escape key during dictation"
   ]
 }
