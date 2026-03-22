@@ -13,10 +13,7 @@ body {
   body { padding: 1rem .75rem; }
 }
 
-/* Position version tag above the emoji bar */
-.version-tag {
-  bottom: 3.5rem;
-}
+
 
 /* Avatar hover preview (5x size tooltip) */
 .avatar-preview {
