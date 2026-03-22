@@ -1,7 +1,7 @@
 {
-  "sha": "c1d159e71f492efd2d2e7627e2ea3f891e195b96",
-  "timestamp": "2026-03-22 02:01",
+  "sha": "dc04659c66747d119a3ccae9ecf40d735f518d28",
+  "timestamp": "2026-03-22 02:02",
   "changelog": [
-    "fix: simplify empty poll message to \"No poll yet.\""
+    "fix: show generating feedback when participant requests key points"
   ]
 }
