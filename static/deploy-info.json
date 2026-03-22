@@ -1,8 +1,7 @@
 {
-  "sha": "ca96cd658ea46d564b15d89a781257e25633651f",
-  "timestamp": "2026-03-22 18:17",
+  "sha": "79958b49365d4b44d104a30b064b5f3312563d97",
+  "timestamp": "2026-03-22 18:24",
   "changelog": [
-    "feat: sort wordcloud buttons by count then newest-first on ties",
-    "feat: show all participants' words as clickable buttons in wordcloud"
+    "feat: keep avatar modal open 1.5s after refresh to show new avatar"
   ]
 }
