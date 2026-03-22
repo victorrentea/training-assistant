@@ -248,6 +248,32 @@ body {
   flex-shrink: 0;
 }
 
+@media (max-width: 640px) {
+  .tab-bar {
+    justify-content: flex-start;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: var(--muted) transparent;
+    transform: scaleY(-1);
+  }
+  .tab-bar::-webkit-scrollbar {
+    height: 4px;
+  }
+  .tab-bar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .tab-bar::-webkit-scrollbar-thumb {
+    background: var(--muted);
+    border-radius: 2px;
+  }
+  .tab-bar > * {
+    transform: scaleY(-1);
+    flex-shrink: 0;
+  }
+}
+
 .tab-btn {
   padding: .3rem .9rem .4rem;
   border: none;
