@@ -535,9 +535,9 @@
     if (!el) return;
 
     if (lineCount > 0) {
-      el.textContent = '💬';
+      el.textContent = `💬 ${lineCount}`;
       el.className = 'badge connected';
-      el.title = `${lineCount} lines in last 30 min / ${totalLines} today\nLatest at ${latestTs}`;
+      el.title = `${lineCount} non-empty lines in last 30 min / ${totalLines} today\nLatest at ${latestTs}`;
     } else {
       el.textContent = '💬';
       el.className = 'badge disconnected';
