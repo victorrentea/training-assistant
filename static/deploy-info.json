@@ -1,7 +1,7 @@
 {
-  "sha": "f1755b33a934c8daa68ff86968a5c15e2f94b502",
-  "timestamp": "2026-03-22 20:55",
+  "sha": "813016946e1d1b4870c4f87999089fd3e654fbec",
+  "timestamp": "2026-03-22 20:56",
   "changelog": [
-    "feat: pause/resume media on dictation toggle, fix stale device ID"
+    "style: use emoji shorthand in dictation log messages"
   ]
 }
