@@ -70,8 +70,8 @@ CLEANUP_PROMPT_EMOJI = (
 VK_V = 0x09
 VK_Z = 0x06
 
-# Mouse button 4 = button index 3 (0=left, 1=right, 2=middle, 3=button4)
-MOUSE_BUTTON_4 = 3
+# Mouse button 5 = button index 4 (0=left, 1=right, 2=middle, 3=button4, 4=button5)
+MOUSE_BUTTON_5 = 4
 
 # Dictation mute: mic device to check and delay before muting
 DICTATION_MIC_NAME = "Elgato Wave XLR"
@@ -313,7 +313,7 @@ def event_tap_callback(proxy, event_type, event, refcon):
 
     if event_type == kCGEventOtherMouseDown:
         button = CGEventGetIntegerValueField(event, kCGMouseEventButtonNumber)
-        if button == MOUSE_BUTTON_4:
+        if button == MOUSE_BUTTON_5:
             threading.Thread(target=handle_dictation_mute, daemon=True).start()
         return event
 
