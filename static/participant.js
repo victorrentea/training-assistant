@@ -1335,8 +1335,8 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
         html += `<div class="debate-waiting">Waiting for others…</div>`;
       } else {
         html += `<div class="debate-pick">
-          <button class="btn debate-btn-against" onclick="debatePickSide('against')">👎</button>
-          <button class="btn debate-btn-for" onclick="debatePickSide('for')">👍</button>
+          <button class="btn debate-btn-against" onclick="debatePickSide('against')">👎 ${sideCounts.against}</button>
+          <button class="btn debate-btn-for" onclick="debatePickSide('for')">${sideCounts.for} 👍</button>
         </div>`;
       }
     } else if (phase === 'arguments') {
