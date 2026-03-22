@@ -1,7 +1,7 @@
 {
-  "sha": "2d3e583ad3e58f1053eafc2518a242fed15664c0",
-  "timestamp": "2026-03-22 18:57",
+  "sha": "f6e78baf00f70bb49a749352a127e0b06e4ca4cb",
+  "timestamp": "2026-03-22 19:08",
   "changelog": [
-    "feat: add 21 e2e tests, fix timer bug and register leaderboard router"
+    "fix: stabilize flaky e2e tests in CI"
   ]
 }
