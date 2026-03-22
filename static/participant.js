@@ -177,6 +177,7 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
   function updateSummary(points, updatedAt) {
     summaryPoints = points || [];
     summaryUpdatedAt = updatedAt;
+    if (summaryPoints.length) _summaryRequested = false;
     renderSummaryList();
   }
 
@@ -185,7 +186,9 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     const timeEl = document.getElementById('summary-time');
     if (!list) return;
     if (!summaryPoints.length) {
-      list.innerHTML = '<li class="summary-empty">No key points yet — check back soon.</li>';
+      list.innerHTML = _summaryRequested
+        ? '<li class="summary-empty">Generating key points… please wait.</li>'
+        : '<li class="summary-empty">No key points yet. Tap to request.</li>';
       if (timeEl) timeEl.textContent = '';
       return;
     }
@@ -218,11 +221,15 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     URL.revokeObjectURL(a.href);
   }
 
+  let _summaryRequested = false;
   function toggleSummaryModal() {
     const overlay = document.getElementById('summary-overlay');
     if (overlay) overlay.classList.toggle('open');
     // Request generation if no points yet
-    if (!summaryPoints.length) {
+    if (!summaryPoints.length && !_summaryRequested) {
+      _summaryRequested = true;
+      const list = document.getElementById('summary-list');
+      if (list) list.innerHTML = '<li class="summary-empty">Generating key points… please wait.</li>';
       fetch('/api/summary/force', { method: 'POST' }).catch(() => {});
     }
   }
