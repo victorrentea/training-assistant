@@ -31,7 +31,7 @@
     }
 
     const workHours = window.WORK_HOURS;
-    const workSuffix = workHours ? ' | ' + workHours + 'h built' : '';
+    const workSuffix = workHours ? ' | built in ' + workHours + ' hours' : '';
 
     function update() {
       const now = new Date();
