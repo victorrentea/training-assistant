@@ -1,7 +1,7 @@
 {
-  "sha": "5dd1ca720b7df672023c14010619c6cce823b7d9",
-  "timestamp": "2026-03-22 18:48",
+  "sha": "2882f5ab7af3dde1aab1ef5d6ac00bfe1627e472",
+  "timestamp": "2026-03-22 18:50",
   "changelog": [
-    "fix: use simple mute toggle instead of unreliable mic detection"
+    "fix: mute OS Output loopback device instead of system speakers"
   ]
 }
