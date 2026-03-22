@@ -1,7 +1,7 @@
 {
-  "sha": "36d0857f4355176d0f47cb0dddb3b824a1da1984",
-  "timestamp": "2026-03-22 18:42",
+  "sha": "b60fb50693d23d1c32a579c84a943ce60013dd4e",
+  "timestamp": "2026-03-22 18:44",
   "changelog": [
-    "fix: kill old emoji overlay process before starting new one"
+    "fix: use mouse button 5 instead of 4 for dictation mute toggle"
   ]
 }
