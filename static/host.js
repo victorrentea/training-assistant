@@ -206,8 +206,6 @@
         }
         if (currentMode === 'conference') {
           const paxCount = names ? names.length : 0;
-          const confPaxNum = document.getElementById('conference-pax-number');
-          if (confPaxNum) confPaxNum.textContent = paxCount;
           const joinedEl = document.getElementById('conference-qr-joined');
           if (joinedEl) joinedEl.textContent = paxCount + ' Joined';
         }
@@ -428,7 +426,6 @@
     const rightCol = document.querySelector('.host-col-right');
     const grid = document.querySelector('.host-columns');
     const confQR = document.getElementById('conference-qr');
-    const confPaxDisplay = document.getElementById('conference-pax-display');
     const debateTab = document.getElementById('tab-debate');
     const helloTab = document.getElementById('tab-hello');
     const tokenCost = document.getElementById('token-cost');
@@ -446,24 +443,31 @@
       // Show left QR only when an activity is active (center QR not visible)
       const centerQRVisible = document.getElementById('center-qr').style.display !== 'none';
       confQR.style.display = centerQRVisible ? 'none' : 'flex';
-      if (confPaxDisplay) confPaxDisplay.style.display = 'none';
       if (debateTab) debateTab.style.display = 'none';
       if (helloTab) helloTab.style.display = '';
       startAutoReturnTimer();
       if (tokenCost) tokenCost.style.display = 'none';
       if (notesBadge) notesBadge.style.display = 'none';
-      // Generate left QR (hidden until needed) — adapts to color scheme
+      // Generate left QR (hidden until needed) — sized to fill container height
       const qrContainer = document.getElementById('conference-qr-code');
       qrContainer.innerHTML = '';
-      qrContainer.style.background = isLight ? '#fff' : '#fff';
       const pLink = document.getElementById('participant-link');
       if (pLink && pLink.href && typeof QRCode !== 'undefined') {
-        new QRCode(qrContainer, { text: pLink.href, width: 200, height: 200, colorDark: '#000', colorLight: '#fff' });
+        // Defer QR generation to let grid layout settle
+        requestAnimationFrame(() => {
+          const confQREl = document.getElementById('conference-qr');
+          const availH = confQREl ? confQREl.clientHeight - 16 : 200; // subtract padding
+          const qrSize = Math.max(120, Math.min(availH, 400));
+          qrContainer.style.width = qrSize + 'px';
+          qrContainer.style.height = qrSize + 'px';
+          new QRCode(qrContainer, { text: pLink.href, width: qrSize, height: qrSize, colorDark: '#000', colorLight: '#fff' });
+        });
       }
-      // URL with wave animation in left QR panel
+      // URL with https:// prefix and wave animation in left QR panel
       const urlEl = document.getElementById('conference-qr-url');
       if (urlEl) {
-        urlEl.innerHTML = location.host.split('').map((ch, i) =>
+        const fullUrl = 'https://' + location.host;
+        urlEl.innerHTML = fullUrl.split('').map((ch, i) =>
           `<span class="wave-char" style="animation-delay:${(i * 0.12).toFixed(2)}s">${ch}</span>`
         ).join('');
       }
@@ -482,7 +486,6 @@
       grid.style.gridTemplateColumns = '25% 1fr 25%';
       leftCol.classList.remove('conference-layout');
       confQR.style.display = 'none';
-      if (confPaxDisplay) confPaxDisplay.style.display = 'none';
       if (debateTab) debateTab.style.display = '';
       if (helloTab) helloTab.style.display = 'none';
       if (tokenCost) tokenCost.style.display = '';
