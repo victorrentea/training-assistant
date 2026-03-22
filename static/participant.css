@@ -82,19 +82,6 @@ h1 { display: none; }
 #leave-btn:hover { border-color:var(--danger); color:var(--danger); }
 @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
 
-/* ── Edit name button ── */
-.edit-name-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: .85rem;
-  padding: 0 .15rem;
-  line-height: 1;
-  filter: grayscale(1) brightness(1.5);
-  opacity: .7;
-  transition: opacity .2s;
-}
-.edit-name-btn:hover { opacity: 1; }
 
 /* ── Editable name (click to edit) ── */
 .editable-name {
@@ -495,8 +482,8 @@ h1 { display: none; }
 .debate-side-count { font-size: 1.3rem; font-weight: 700; min-width: 3rem; }
 .debate-side-count.debate-side-against { text-align: left; color: #e74c3c; }
 .debate-side-count.debate-side-for { text-align: right; color: #2ecc71; }
-.debate-pick { display: flex; gap: 1rem; justify-content: center; margin: 1.5rem 0; }
-.debate-btn-for, .debate-btn-against { flex: 1; max-width: 200px; padding: 1.5rem 1rem; font-size: 1.2rem; border-radius: 12px; border: 2px solid var(--border); cursor: pointer; }
+.debate-pick { display: flex; gap: 1rem; justify-content: space-between; margin: 1.5rem 0; }
+.debate-btn-for, .debate-btn-against { flex: 1; padding: 1.5rem 1rem; font-size: 1.2rem; border-radius: 12px; border: 2px solid var(--border); cursor: pointer; }
 .debate-btn-for { background: rgba(46, 204, 113, .15); color: #2ecc71; }
 .debate-btn-for:hover { background: rgba(46, 204, 113, .3); }
 .debate-btn-against { background: rgba(231, 76, 60, .15); color: #e74c3c; }
