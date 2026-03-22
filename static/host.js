@@ -392,12 +392,14 @@
     // Detect light/dark mode for QR color adaptation
     const isLight = window.matchMedia('(prefers-color-scheme: light)').matches;
 
+    const leftCol = document.querySelector('.host-col-left');
     if (isConference) {
       rightCol.style.display = 'none';
       grid.style.gridTemplateColumns = '25% 1fr';
-      // Left QR hidden by default — shown only when an activity is active (see updateCenterPanel)
-      confQR.style.display = 'none';
-      if (confPaxDisplay) confPaxDisplay.style.display = '';
+      leftCol.classList.add('conference-layout');
+      // QR always visible in conference mode
+      confQR.style.display = 'flex';
+      if (confPaxDisplay) confPaxDisplay.style.display = 'none';
       if (debateTab) debateTab.style.display = 'none';
       if (tokenCost) tokenCost.style.display = 'none';
       if (notesBadge) notesBadge.style.display = 'none';
@@ -429,6 +431,7 @@
     } else {
       rightCol.style.display = '';
       grid.style.gridTemplateColumns = '25% 1fr 25%';
+      leftCol.classList.remove('conference-layout');
       confQR.style.display = 'none';
       if (confPaxDisplay) confPaxDisplay.style.display = 'none';
       if (debateTab) debateTab.style.display = '';
@@ -1188,13 +1191,6 @@
         document.getElementById('tab-' + t).classList.toggle('active', currentActivity === t);
         document.getElementById('tab-content-' + t).style.display = currentActivity === t ? (t === 'codereview' ? 'flex' : '') : 'none';
       });
-    }
-    // Conference mode: show left QR only when an activity is active (center QR hidden)
-    if (currentMode === 'conference') {
-      const confQR = document.getElementById('conference-qr');
-      if (confQR) {
-        confQR.style.display = (currentActivity && currentActivity !== 'none') ? 'flex' : 'none';
-      }
     }
   }
 

@@ -19,6 +19,7 @@
 
   <!-- LEFT COLUMN: controls -->
   <div class="host-col host-col-left">
+    <div class="left-tabs-wrapper">
     <!-- Tab switcher -->
     <div class="tab-bar">
       <button class="tab-btn active" id="tab-poll" onclick="switchTab('poll')"><span class="tab-icon">📊</span>Poll</button>
@@ -140,8 +141,9 @@
         <button class="btn btn-danger btn-sm" onclick="debateReset()">🗑️ Reset Debate</button>
       </div>
     </div>
+    </div><!-- /left-tabs-wrapper -->
 
-    <!-- Conference mode: QR code shown in left column (only when activity is active) -->
+    <!-- Conference mode: QR code shown in left column -->
     <div id="conference-qr" class="conference-qr-container">
       <div id="conference-qr-code" style="background:#fff; padding:12px; border-radius:12px; display:inline-block;"></div>
       <div id="conference-qr-url" style="margin-top:.5rem; font-size:.85rem;"></div>
