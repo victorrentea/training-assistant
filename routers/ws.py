@@ -199,6 +199,8 @@ async def websocket_endpoint(websocket: WebSocket, participant_id: str):
             elif msg_type == "wordcloud_word":
                 word = str(data.get("word", "")).strip().lower()
                 if state.current_activity == ActivityType.WORDCLOUD and word:
+                    if word not in state.wordcloud_words:
+                        state.wordcloud_word_order.insert(0, word)
                     state.wordcloud_words[word] = state.wordcloud_words.get(word, 0) + 1
                     if not is_host:
                         state.scores[pid] = state.scores.get(pid, 0) + 200

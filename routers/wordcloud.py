@@ -22,6 +22,7 @@ async def set_wordcloud_topic(body: WordcloudTopic):
 @router.post("/api/wordcloud/clear", dependencies=[Depends(require_host_auth)])
 async def clear_wordcloud():
     state.wordcloud_words = {}
+    state.wordcloud_word_order = []
     state.wordcloud_topic = ""
     await broadcast_state()
     return {"ok": True}
