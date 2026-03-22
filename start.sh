@@ -182,8 +182,29 @@ start_watcher() {
   WATCHER_PID=$!
 }
 
+kill_old_overlay() {
+  local pid_file="/tmp/emoji-overlay.pid"
+  if [ -f "$pid_file" ]; then
+    local old_pid
+    old_pid=$(cat "$pid_file" 2>/dev/null)
+    if [ -n "$old_pid" ] && kill -0 "$old_pid" 2>/dev/null; then
+      echo "$(date '+%H:%M:%S') 🔪 Killing old emoji overlay (PID $old_pid)..."
+      kill "$old_pid" 2>/dev/null
+      # Wait up to 3s for it to exit
+      for i in 1 2 3; do
+        kill -0 "$old_pid" 2>/dev/null || break
+        sleep 1
+      done
+      # Force kill if still alive
+      kill -0 "$old_pid" 2>/dev/null && kill -9 "$old_pid" 2>/dev/null
+    fi
+    rm -f "$pid_file"
+  fi
+}
+
 start_overlay() {
   if [ -n "$NO_OVERLAY" ]; then return; fi
+  kill_old_overlay
   echo "$(date '+%H:%M:%S') 🎨 Starting emoji overlay (server: $OVERLAY_SERVER)..."
   (cd emoji-overlay && .build/arm64-apple-macosx/debug/EmojiOverlay "$OVERLAY_SERVER") &
   OVERLAY_PID=$!
