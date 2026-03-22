@@ -95,8 +95,7 @@ _kName = 1819173229          # 'lnam'
 _kVolume = 1986885219        # 'volm'
 
 DICTATION_VOLUME_LOW = 0.01  # ~silent during dictation
-# Resolved at startup
-_mute_device_id: int | None = None
+DICTATION_MUTE_DELAY = 0.05  # 50ms delay before lowering volume
 _mute_device_original_volume: float = 1.0
 
 
@@ -265,20 +264,27 @@ def handle_clean_hotkey(with_emoji: bool = False) -> None:
 
 
 def handle_dictation_mute() -> None:
-    """Handle Mouse Button 5: toggle OS Output volume between normal and ~silent."""
+    """Handle Mouse Button 5: toggle OS Output volume between normal and ~silent.
+
+    Resolves the device ID by name each time because CoreAudio IDs change
+    when AudioHijack or Loopback restarts.
+    """
     global _mute_device_original_volume
-    if _mute_device_id is None:
+    device_id = _find_audio_device_id(DICTATION_MUTE_DEVICE)
+    if device_id is None:
+        log(f"WARNING: Device '{DICTATION_MUTE_DEVICE}' not found — skipping")
         return
-    current_vol = _get_device_volume(_mute_device_id)
+    current_vol = _get_device_volume(device_id)
     if current_vol <= DICTATION_VOLUME_LOW:
         # Restore original volume
+        _set_device_volume(device_id, _mute_device_original_volume)
         log(f"\U0001f534 Dictation stopped — restoring OS Output volume to {_mute_device_original_volume:.0%}")
-        _set_device_volume(_mute_device_id, _mute_device_original_volume)
     else:
-        # Save current volume and drop to near-silent
+        # Save current volume, wait 50ms, then drop to near-silent
         _mute_device_original_volume = current_vol
+        time.sleep(DICTATION_MUTE_DELAY)
+        _set_device_volume(device_id, DICTATION_VOLUME_LOW)
         log(f"\U0001f7e2 Dictation started — lowering OS Output volume ({current_vol:.0%} → {DICTATION_VOLUME_LOW:.0%})")
-        _set_device_volume(_mute_device_id, DICTATION_VOLUME_LOW)
 
 
 def event_tap_callback(proxy, event_type, event, refcon):
@@ -321,18 +327,18 @@ _run_loop_ref = None
 
 
 def main() -> None:
-    global _run_loop_ref, _mute_device_id
+    global _run_loop_ref
 
     if not os.environ.get("ANTHROPIC_API_KEY"):
         print("Error: ANTHROPIC_API_KEY environment variable is not set")
         sys.exit(1)
 
-    # Resolve the loopback device to mute during dictation
-    _mute_device_id = _find_audio_device_id(DICTATION_MUTE_DEVICE)
-    if _mute_device_id:
-        log(f"Dictation mute device: {DICTATION_MUTE_DEVICE} (ID {_mute_device_id})")
+    # Verify the loopback device exists at startup (ID resolved fresh each toggle)
+    device_id = _find_audio_device_id(DICTATION_MUTE_DEVICE)
+    if device_id:
+        log(f"Dictation mute device: {DICTATION_MUTE_DEVICE} (ID {device_id})")
     else:
-        log(f"WARNING: Device '{DICTATION_MUTE_DEVICE}' not found — dictation mute disabled")
+        log(f"WARNING: Device '{DICTATION_MUTE_DEVICE}' not found — dictation mute may not work")
 
     # Create event tap for key down + mouse button events
     tap = CGEventTapCreate(
@@ -367,8 +373,8 @@ def main() -> None:
     log("Clipboard cleaner started (CGEventTap).")
     log("Every Cmd+V is captured. Press Cmd+Ctrl+V to clean the last paste.")
     log("Hold Option (Cmd+Ctrl+Opt+V) to clean with contextual emojis.")
-    if _mute_device_id:
-        log(f"Mouse Button 5 toggles mute on '{DICTATION_MUTE_DEVICE}'.")
+    if device_id:
+        log(f"Mouse Button 5 toggles volume on '{DICTATION_MUTE_DEVICE}'.")
 
     CFRunLoopRun()
 
