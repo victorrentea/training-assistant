@@ -1,7 +1,7 @@
 {
-  "sha": "741348b6c29a36a08a681f41838c1e4b81437332",
-  "timestamp": "2026-03-22 18:55",
+  "sha": "62e4a40493431336fafcc8a2eeee69ff2360860e",
+  "timestamp": "2026-03-22 18:56",
   "changelog": [
-    "fix: use volume control instead of mute on OS Output device"
+    "style: add green/red dot indicators to dictation log messages"
   ]
 }
