@@ -1,7 +1,7 @@
 {
-  "sha": "bf19d53b76b4599be147a478b086e8935ce3c1f1",
+  "sha": "fdf526a60c9cead899cb7fd4ae8e52a0f4e66d1d",
   "timestamp": "2026-03-22 01:10",
   "changelog": [
-    "feat(host): larger emoji rising from left column center with wobble"
+    "docs: sync architecture diagrams and CLAUDE.md with actual codebase"
   ]
 }
