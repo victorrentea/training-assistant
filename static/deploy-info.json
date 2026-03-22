@@ -1,7 +1,7 @@
 {
-  "sha": "dbf05d161b72361dd3aed5d3b3b23c2f40fd3050",
-  "timestamp": "2026-03-22 02:05",
+  "sha": "d99a024f7995ec982322e373e1ebde4d8eb9cdae",
+  "timestamp": "2026-03-22 18:07",
   "changelog": [
-    "fix: version tag shows relative time <24h, absolute date otherwise"
+    "feat: make host tab bar horizontally scrollable on mobile"
   ]
 }
