@@ -837,7 +837,43 @@
     reclassifyLines();
   }
 
+  const RANDOM_POLLS = [
+    'What is the largest planet in our solar system?\n\nJupiter\nSaturn\nNeptune\nUranus',
+    'Which element has the chemical symbol "Au"?\n\nGold\nSilver\nAluminum\nArgon',
+    'How many bones does an adult human body have?\n\n206\n198\n212\n256',
+    'What is the speed of light in km/s (approximately)?\n\n300,000\n150,000\n600,000\n1,000,000',
+    'Which country has the most time zones?\n\nFrance\nRussia\nUSA\nChina',
+    'What year was the first email sent?\n\n1971\n1965\n1980\n1989',
+    'How many hearts does an octopus have?\n\n3\n1\n2\n5',
+    'What is the smallest country in the world by area?\n\nVatican City\nMonaco\nSan Marino\nLiechtenstein',
+    'Which planet has the most moons?\n\nSaturn\nJupiter\nUranus\nNeptune',
+    'What percentage of the Earth\'s surface is covered by water?\n\n71%\n60%\n80%\n55%',
+    'In what year did the Berlin Wall fall?\n\n1989\n1991\n1987\n1985',
+    'What is the most spoken native language in the world?\n\nMandarin Chinese\nEnglish\nSpanish\nHindi',
+    'How long is a marathon in kilometers?\n\n42.195\n40.000\n45.000\n38.500',
+    'Which animal can sleep for up to 3 years?\n\nSnail\nSloth\nKoala\nCat',
+    'What is the hardest natural substance on Earth?\n\nDiamond\nQuartz\nTopaz\nRuby',
+    'How many strings does a standard guitar have?\n\n6\n4\n8\n5',
+    'Which ocean is the deepest?\n\nPacific\nAtlantic\nIndian\nArctic',
+    'What is the boiling point of water in Fahrenheit?\n\n212°F\n200°F\n220°F\n100°F',
+    'How many players are on a soccer team on the field?\n\n11\n9\n10\n12',
+    'What is the rarest blood type?\n\nAB negative\nO negative\nB negative\nA negative',
+    'Which planet is known as the "Red Planet"?\n\nMars\nVenus\nMercury\nJupiter',
+    'How many teeth does an adult human typically have?\n\n32\n28\n30\n36',
+    'What is the longest river in the world?\n\nNile\nAmazon\nYangtze\nMississippi',
+    'Which gas makes up most of Earth\'s atmosphere?\n\nNitrogen\nOxygen\nCarbon dioxide\nArgon',
+    'In what year was the first iPhone released?\n\n2007\n2005\n2008\n2010',
+  ];
+  let _lastRandomIndex = -1;
+
   initComposer('Which is the primary benefit of the Circuit Breaker pattern?\n\nPrevents cascading failures across services\nImproves response time under normal load\nReduces the number of network calls\nEnables automatic service discovery');
+
+  document.getElementById('random-poll-btn').addEventListener('click', () => {
+    let idx;
+    do { idx = Math.floor(Math.random() * RANDOM_POLLS.length); } while (idx === _lastRandomIndex && RANDOM_POLLS.length > 1);
+    _lastRandomIndex = idx;
+    initComposer(RANDOM_POLLS[idx]);
+  });
 
   pollInput.addEventListener('input', reclassifyLines);
 
