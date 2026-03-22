@@ -818,17 +818,17 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
 
 .conference-qr-container {
   display: none;
-  padding: .5rem;
-  flex-direction: row;
+  flex-direction: column;
   align-items: center;
-  gap: .75rem;
+  justify-content: center;
+  gap: .4rem;
   overflow: hidden;
+  padding: .5rem;
 }
 .conference-qr-container #conference-qr-code {
   background: #fff;
   padding: 8px;
   border-radius: 12px;
-  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -837,13 +837,6 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
 .conference-qr-container #conference-qr-code canvas {
   width: 100% !important;
   height: 100% !important;
-}
-.conference-qr-info {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: .5rem;
-  min-width: 0;
 }
 
 /* Conference mode: left column splits into tabs (top) + QR (bottom) + status bar */

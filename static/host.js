@@ -206,8 +206,8 @@
         }
         if (currentMode === 'conference') {
           const paxCount = names ? names.length : 0;
-          const joinedEl = document.getElementById('conference-qr-joined');
-          if (joinedEl) joinedEl.textContent = paxCount + ' Joined';
+          const paxBadge = document.getElementById('conference-pax-badge');
+          if (paxBadge) paxBadge.textContent = '👥 ' + paxCount;
         }
         // Restore leaderboard overlay if it was active
         if (msg.leaderboard_active && msg.leaderboard_data) {
@@ -443,6 +443,8 @@
       // Show left QR only when an activity is active (center QR not visible)
       const centerQRVisible = document.getElementById('center-qr').style.display !== 'none';
       confQR.style.display = centerQRVisible ? 'none' : 'flex';
+      const paxBadge = document.getElementById('conference-pax-badge');
+      if (paxBadge) paxBadge.style.display = '';
       if (debateTab) debateTab.style.display = 'none';
       if (helloTab) helloTab.style.display = '';
       startAutoReturnTimer();
@@ -456,8 +458,9 @@
         // Defer QR generation to let grid layout settle
         requestAnimationFrame(() => {
           const confQREl = document.getElementById('conference-qr');
-          const availH = confQREl ? confQREl.clientHeight - 16 : 200; // subtract padding
-          const qrSize = Math.max(120, Math.min(availH, 400));
+          const availH = confQREl ? confQREl.clientHeight - 40 : 200; // subtract padding + URL label
+          const availW = confQREl ? confQREl.clientWidth - 20 : 200; // subtract horizontal padding
+          const qrSize = Math.max(120, Math.min(availH, availW, 400));
           qrContainer.style.width = qrSize + 'px';
           qrContainer.style.height = qrSize + 'px';
           new QRCode(qrContainer, { text: pLink.href, width: qrSize, height: qrSize, colorDark: '#000', colorLight: '#fff' });
@@ -486,6 +489,8 @@
       grid.style.gridTemplateColumns = '25% 1fr 25%';
       leftCol.classList.remove('conference-layout');
       confQR.style.display = 'none';
+      const paxBadgeOff = document.getElementById('conference-pax-badge');
+      if (paxBadgeOff) paxBadgeOff.style.display = 'none';
       if (debateTab) debateTab.style.display = '';
       if (helloTab) helloTab.style.display = 'none';
       if (tokenCost) tokenCost.style.display = '';
