@@ -4,6 +4,7 @@ title "Whose Side Are You On?" — Debate Mode Sequence
 actor       "Host"          as Host
 participant "Host UI\n(host.js)" as HostUI
 participant "Backend\n(FastAPI)" as Backend
+participant "Training Daemon\n(training_daemon.py)" as Daemon
 participant "Claude API\n(Anthropic)" as Claude
 participant "Participant UI\n(participant.js)" as PaxUI
 actor       "Participant"   as Pax
@@ -49,19 +50,21 @@ Backend -> Backend : record upvote\n+25 pts upvoter\n+50 pts author
 Backend --> HostUI : WS broadcast: upvote count update
 Backend --> PaxUI : WS broadcast: upvote count update
 
-Host -> HostUI : Click "Next Phase"
-HostUI -> Backend : POST /api/debate/phase\n{phase: "ai_cleanup"}
+Host -> HostUI : Click "End Arguments"
+HostUI -> Backend : POST /api/debate/end-arguments
+Backend -> Backend : queue AI cleanup request\nin state
 
 == Phase 3 — AI Cleanup & Augmentation ==
 
 Backend --> HostUI : WS broadcast: state\n{phase=ai_cleanup}
 Backend --> PaxUI : WS broadcast: state\n{phase=ai_cleanup, read-only}
-HostUI -> Host : show arguments read-only\n+ "Run AI" button
+HostUI -> Host : show arguments read-only\n+ "Waiting for AI..." indicator
 
-Host -> HostUI : Click "✨ Run AI Cleanup"
-HostUI -> Backend : POST /api/debate/ai-cleanup
-Backend -> Claude : Send all arguments\n+ statement for cleanup
-Claude --> Backend : deduplicated + cleaned args\n+ new suggestions
+Daemon -> Backend : GET /api/debate/ai-request\n(poll loop)
+Backend --> Daemon : {arguments, statement}
+Daemon -> Claude : Send all arguments\n+ statement for cleanup
+Claude --> Daemon : deduplicated + cleaned args\n+ new suggestions
+Daemon -> Backend : POST /api/debate/ai-result\n{cleaned arguments + AI additions}
 Backend -> Backend : update existing args\n(fix typos, deduplicate)\nadd AI args marked with ✨
 Backend --> HostUI : WS broadcast: state\n{updated arguments}
 Backend --> PaxUI : WS broadcast: state\n{updated arguments}
@@ -98,14 +101,30 @@ HostUI -> Backend : POST /api/debate/phase\n{phase: "live_debate"}
 Backend --> HostUI : WS broadcast: state\n{phase=live_debate}
 Backend --> PaxUI : WS broadcast: state\n{phase=live_debate}
 HostUI -> Host : show champions' names\n+ arguments summary\n+ debate rules on screen
-PaxUI -> Pax : show champions' names\n+ key arguments\n+ debate hints
 
 note over Host, Pax
   Champions debate live (voice/video).
-  Host manually manages speaking turns.
+  Host picks which side speaks first,
+  starts a timer per round, and can end rounds early.
   Rules and hints remain visible on screen.
-  No countdown timer — host advances manually.
 end note
+
+Host -> HostUI : Pick first side to speak
+HostUI -> Backend : POST /api/debate/first-side\n{side: "for"|"against"}
+Backend --> HostUI : WS broadcast: state\n{first_side}
+Backend --> PaxUI : WS broadcast: state\n{first_side}
+
+Host -> HostUI : Click "Start Round Timer"
+HostUI -> Backend : POST /api/debate/round-timer
+Backend --> HostUI : WS broadcast: state\n{round timer started}
+Backend --> PaxUI : WS broadcast: state\n{round timer started}
+
+Host -> HostUI : Click "End Round" (optional, early)
+HostUI -> Backend : POST /api/debate/end-round
+Backend --> HostUI : WS broadcast: state\n{round ended}
+Backend --> PaxUI : WS broadcast: state\n{round ended}
+
+PaxUI -> Pax : show champions' names\n+ key arguments\n+ debate hints
 
 Host -> HostUI : Click "End Debate"
 HostUI -> Backend : POST /api/debate/phase\n{phase: "ended"}

@@ -114,24 +114,56 @@ Build a **self-hosted, real-time audience interaction tool** for use during onli
 
 ```
 training-assistant/
-├── main.py                  ← FastAPI application (entry point, mounts routers)
+├── main.py                  ← FastAPI application (entry point, mounts routers, POST /api/mode)
+├── state.py                 ← AppState singleton (all dicts UUID-keyed)
+├── messaging.py             ← WebSocket broadcast & personalized state serialization
+├── auth.py                  ← HTTP Basic Auth middleware (secrets.env or env vars)
 ├── names.py                 ← Character name pool for conference mode (251 names from movies/games)
+├── metrics.py               ← Prometheus custom metrics (connections, votes, Q&A)
+├── backend_version.py       ← Version detection from static/version.js (cached by mtime)
+├── quiz_core.py             ← Quiz generation core logic (used by training_daemon)
+├── index_materials.py       ← Project file indexing for RAG
+├── training_daemon.py       ← Daemon orchestration on trainer's Mac (quiz, debate AI, summary, timestamps)
+├── conftest.py              ← Pytest fixtures
 ├── routers/
-│   ├── codereview.py        ← Code Review activity (snippet broadcast, line selection, confirm)
-│   ├── leaderboard.py       ← Leaderboard show/hide endpoints (host-only)
+│   ├── ws.py                ← WebSocket endpoint /ws/{uuid} (all real-time messages)
+│   ├── poll.py              ← Poll lifecycle (create, open/close, correct, timer)
+│   ├── scores.py            ← Score reset endpoint
+│   ├── quiz.py              ← Quiz request/status/preview/refine (daemon integration)
+│   ├── summary.py           ← Summary, notes, transcript-status, token-usage endpoints
+│   ├── pages.py             ← HTML page serving (/, /host, /notes)
+│   ├── wordcloud.py         ← Word cloud topic/clear endpoints
+│   ├── qa.py                ← Q&A question editing (text, delete, answered, clear)
+│   ├── activity.py          ← Activity type switching (none|poll|wordcloud|qa|debate|codereview)
+│   ├── codereview.py        ← Code review with smart paste (snippet, line selection, confirm)
+│   ├── debate.py            ← Debate lifecycle (10 endpoints, AI cleanup via daemon)
+│   └── leaderboard.py       ← Leaderboard show/hide
+├── daemon/
+│   ├── llm_adapter.py       ← Claude API wrapper with token counting & cost tracking
+│   ├── summarizer.py        ← Live transcript summarization
+│   ├── debate_ai.py         ← AI cleanup of debate arguments
+│   ├── transcript_state.py  ← Transcript line counter for progress tracking
+│   ├── transcript_timestamps.py ← Auto-append timestamps to transcript (~3s interval)
+│   ├── indexer.py            ← Project file indexing for RAG
+│   ├── rag.py                ← Retrieve project context for quiz generation
+│   └── project_files.py     ← Scan & list project files; handle Claude tool calls
 ├── dependencies.txt         ← Python dependencies
-├── quiz_generator.py        ← Companion CLI: reads transcription, generates quiz via Claude API
-├── quiz_config.example.env  ← Template for quiz generator env vars
+├── pyproject.toml           ← Python dependencies (used by Railway via uv)
 ├── secrets.env              ← (gitignored) Host panel credentials
 ├── static/
-│   ├── participant.html     ← Participant-facing page (join + vote)
-│   ├── participant.js       ← Participant logic (WS, voting, geolocation)
+│   ├── participant.html     ← Participant-facing page
+│   ├── participant.js       ← Participant logic (WS, voting, Q&A, debate, codereview, emoji)
 │   ├── participant.css
 │   ├── host.html            ← Host control panel
-│   ├── host.js              ← Host logic (WS, poll management, participant list)
+│   ├── host.js              ← Host logic (WS, poll/activity management, debate control)
 │   ├── host.css
-│   └── common.css           ← Shared CSS variables
-└── pyproject.toml           ← Python dependencies (used by Railway via uv)
+│   ├── common.css           ← Shared CSS variables
+│   ├── notes.html           ← Read-only notes & summary display page
+│   ├── version.js           ← Generated at deploy time (not committed)
+│   ├── version-age.js       ← Version age display in corner
+│   ├── version-reload.js    ← Auto-reload on version change
+│   └── work-hours.js        ← Work hours utility
+└── adoc/                    ← Architecture diagrams (PlantUML C4 + sequence)
 ```
 - For further architectural details, see the adoc folder. 
 ---
@@ -140,24 +172,70 @@ training-assistant/
 
 ```python
 class AppState:
-    poll: dict | None                           # current poll definition
-    poll_active: bool                           # is voting open?
+    # Poll
+    poll: dict | None                           # {id, question, multi, correct_count, options[], source, page}
+    poll_active: bool
+    votes: dict[str, str | list]                # uuid → option_id or [option_ids] (multi-select)
+    poll_opened_at: datetime | None
+    poll_correct_ids: list[str] | None
+    vote_times: dict[str, datetime]             # uuid → vote timestamp (speed-based scoring)
+    # Participants
     participants: dict[str, WebSocket]          # uuid → ws connection
     participant_names: dict[str, str]           # uuid → display_name (mutable via set_name)
-    participant_avatars: dict[str, str]          # uuid → avatar filename (assign-once)
-    votes: dict[str, str]                       # uuid → option_id (or list for multi-select)
+    participant_avatars: dict[str, str]          # uuid → avatar filename or "letter:XX:color"
+    participant_universes: dict[str, str]        # uuid → universe string (conference mode)
     locations: dict[str, str]                   # uuid → location string (city/country or timezone)
-    scores: dict[str, int]                      # uuid → score
-    base_scores: dict[str, int]                 # uuid → base score (speed calculations)
-    vote_times: dict[str, datetime]             # uuid → vote timestamp (speed-based scoring)
-    qa_questions: dict[str, dict]               # question_id → {author: uuid, upvoters: set[uuid], ...}
-    codereview_snippet: str | None              # current code snippet
-    codereview_language: str | None             # auto-detected or overridden language
-    codereview_phase: str                       # "idle" | "selecting" | "reviewing"
+    # Scores
+    scores: dict[str, int]                      # uuid → total score
+    base_scores: dict[str, int]                 # uuid → score at poll open (for speed calculation)
+    # Activity tracking
+    current_activity: ActivityType              # NONE|POLL|WORDCLOUD|QA|DEBATE|CODEREVIEW
+    # Word Cloud
+    wordcloud_words: dict[str, int]             # word → count
+    wordcloud_topic: str
+    # Q&A
+    qa_questions: dict[str, dict]               # qid → {id, text, author, upvoters: set, answered, timestamp}
+    # Code Review
+    codereview_snippet: str | None
+    codereview_language: str | None
+    codereview_phase: str                       # "idle"|"selecting"|"reviewing"
     codereview_selections: dict[str, set[int]]  # uuid → set of selected line numbers
     codereview_confirmed: set[int]              # lines host confirmed as correct
+    # Debate
+    debate_statement: str | None
+    debate_phase: str | None                    # "side_selection"|"arguments"|"ai_cleanup"|"prep"|"live_debate"|"ended"
+    debate_sides: dict[str, str]                # uuid → "for"|"against"
+    debate_arguments: list[dict]                # [{id, author_uuid, side, text, upvoters: set, ai_generated, merged_into}]
+    debate_champions: dict[str, str]            # "for"|"against" → uuid
+    debate_auto_assigned: set[str]              # uuids auto-assigned to balance sides
+    debate_first_side: str | None               # "for"|"against" — which speaks first
+    debate_round_index: int | None              # 0-3 for live rounds
+    debate_round_timer_seconds: int | None
+    debate_round_timer_started_at: datetime | None
+    debate_ai_request: dict | None              # pending AI cleanup payload for daemon
+    # Leaderboard
     leaderboard_active: bool                    # is leaderboard overlay visible?
-    participant_universes: dict[str, str]        # uuid → universe string (conference mode)
+    # Quiz (daemon integration)
+    quiz_request: dict | None                   # {minutes: int|None, topic: str|None}
+    quiz_refine_request: dict | None            # {target: "question"|"optN"}
+    quiz_status: dict | None                    # {status, message}
+    quiz_preview: dict | None                   # {question, options[], multi, correct_indices[]}
+    daemon_last_seen: datetime | None
+    daemon_session_folder: str | None
+    daemon_session_notes: str | None
+    # Summary & Notes
+    summary_points: list[dict]                  # [{text, source: "notes"|"discussion", time: "HH:MM"}]
+    summary_updated_at: datetime | None
+    summary_force_requested: bool
+    notes_content: str | None
+    # Transcript tracking
+    transcript_line_count: int                  # lines processed
+    transcript_total_lines: int                 # total lines in file
+    transcript_latest_ts: str | None            # latest timestamp
+    # Token usage (LLM cost tracking)
+    token_usage: dict                           # {input_tokens, output_tokens, estimated_cost_usd}
+    # Mode
+    mode: str                                   # "workshop"|"conference"
 ```
 
 All state dicts are keyed by **UUID**, not display name. Duplicate display names are allowed.
@@ -167,7 +245,7 @@ All state dicts are keyed by **UUID**, not display name. Duplicate display names
 ## Key Design Decisions
 
 - **No venv**: dependencies installed globally into system Python 3.12 on Mac; `python3 quiz_generator.py` runs directly
-- **Host auth scope**: protected endpoints: `/host`, `/api/poll`, `/api/poll/status`, `/api/qa/question/{id}` (PATCH, DELETE), `/api/qa/answer/{id}`, `/api/qa/clear`, `/api/activity`, `/api/wordcloud/clear`, `/api/codereview`, `/api/codereview/status`, `/api/codereview/confirm-line`, `/api/mode`, `/api/leaderboard/show`, `/api/leaderboard/hide`; public endpoints: `/api/suggest-name`, `/api/status`; Q&A submit/upvote via WebSocket only
+- **Host auth scope**: protected endpoints: `/host`, `/api/poll`, `/api/poll/status`, `/api/poll/correct`, `/api/poll/timer`, `/api/scores`, `/api/quiz-*`, `/api/summary`, `/api/notes`, `/api/transcript-status`, `/api/summary/force`, `/api/token-usage`, `/api/codereview`, `/api/codereview/status`, `/api/codereview/confirm-line`, `/api/wordcloud/topic`, `/api/wordcloud/clear`, `/api/activity`, `/api/qa/*`, `/api/debate/*`, `/api/leaderboard/*`, `/api/mode`, `/metrics`; public endpoints: `/`, `/notes`, `/api/suggest-name`, `/api/status`, `/api/summary` (GET), `/api/notes` (GET); Q&A submit/upvote and debate interactions via WebSocket only
 - **UUID-based identity**: participants identified by UUID (not name). WebSocket route: `/ws/{uuid}`. First WS message must be `set_name`. Host cookie (`is_host=1`) switches UUID storage to `sessionStorage` for multi-tab testing. Duplicate display names allowed.
 - **Personalized broadcasts**: each participant receives `my_score`, `is_own`, `has_upvoted` fields. Host receives `participants` as a list of `{uuid, name, score, location}` objects.
 - **Votes are final**: once a participant votes, they cannot change their vote. This is intentional.
@@ -177,16 +255,20 @@ All state dicts are keyed by **UUID**, not display name. Duplicate display names
 
 ---
 
-## Quiz Generator (`quiz_generator.py`)
+## Training Daemon (`training_daemon.py`)
 
-Companion CLI that runs on the trainer's Mac:
-- Reads transcription files from `/Users/victorrentea/Documents/transcriptions/`
-- Format: `[HH:MM:SS.xx] Speaker:\ttext` (also supports .vtt and .srt)
-- Extracts last N minutes (default 30), sends to Claude API
-- Generates a debate-triggering poll question with `correct_indices` for trainer reference only
-- Interactive feedback loop: preview → refine option → post to server
+Orchestration daemon running on the trainer's Mac:
+- Long-polls the backend for quiz requests, debate AI cleanup, and summary force requests
+- Reads transcription files from local disk (supports `.txt`, `.vtt`, `.srt` formats)
+- Quiz generation: reads last N minutes of transcript, sends to Claude API, posts preview to backend
+- Quiz refinement: regenerates specific question/option on host request
+- Debate AI cleanup: deduplicates, fixes typos, suggests new arguments via Claude
+- Live summary: periodically reads transcript, generates key points via Claude, posts to backend
+- Transcript timestamps: auto-appends `[HH:MM:SS]` markers every ~3 seconds
+- Auto-update: exit code 42 signals wrapper script to git pull + restart
 - `ANTHROPIC_API_KEY` is set in the environment
-- Run: `python3 quiz_generator.py [--minutes 30] [--dry-run]`
+- Run: `python3 training_daemon.py`
+- Uses `daemon/` subpackage: `llm_adapter.py`, `summarizer.py`, `debate_ai.py`, `transcript_state.py`, `transcript_timestamps.py`, `indexer.py`, `rag.py`, `project_files.py`
 
 ---
 
