@@ -1,7 +1,7 @@
 {
-  "sha": "dc04659c66747d119a3ccae9ecf40d735f518d28",
+  "sha": "1f69a29bc53619e1a5da92a32ac51acbf945d0ba",
   "timestamp": "2026-03-22 02:02",
   "changelog": [
-    "fix: show generating feedback when participant requests key points"
+    "fix: gray out Board tab until participants have scores"
   ]
 }
