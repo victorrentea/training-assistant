@@ -1,7 +1,7 @@
 {
-  "sha": "3ddd8a32b3558faf2da2574df0d126aad3be2ba0",
-  "timestamp": "2026-03-22 00:24",
+  "sha": "be25e6ae2d66e56809dbe3c56f133546c37571ef",
+  "timestamp": "2026-03-22 00:25",
   "changelog": [
-    "fix: match desktop emoji float animation to Swift EmojiAnimator algorithm"
+    "fix: change version label to \"built in X hours\" format"
   ]
 }
