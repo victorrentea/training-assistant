@@ -1,7 +1,7 @@
 {
-  "sha": "9903b25ce50bd400623ebf2fb770523ceecd3265",
-  "timestamp": "2026-03-22 01:08",
+  "sha": "bf19d53b76b4599be147a478b086e8935ce3c1f1",
+  "timestamp": "2026-03-22 01:10",
   "changelog": [
-    "fix: version tag sticks to bottom in conference mode"
+    "feat(host): larger emoji rising from left column center with wobble"
   ]
 }
