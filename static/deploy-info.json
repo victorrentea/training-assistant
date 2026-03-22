@@ -1,8 +1,7 @@
 {
-  "sha": "aae8f7a29b6eb31eda46bb952d2b52828988ab62",
-  "timestamp": "2026-03-22 01:02",
+  "sha": "9cac66e54c0a784e8a779e868dc529e3a31923e0",
+  "timestamp": "2026-03-22 01:03",
   "changelog": [
-    "feat: show QR code permanently in conference mode left panel",
-    "docs: add design spec for conference QR always visible in left panel"
+    "feat(clean-clipboard): scale API timeout with text length"
   ]
 }
