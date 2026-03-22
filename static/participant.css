@@ -716,36 +716,13 @@ h1 { display: none; }
   background: var(--border);
 }
 
-/* Desktop: emoji floats up in a bezier arc, grows then fades */
+/* Desktop: emoji floats up matching Swift EmojiAnimator algorithm */
 .emoji-float {
   position: fixed;
   font-size: 2.5rem;
   z-index: 10000;
   pointer-events: none;
-  opacity: 1;
-  transform: scale(1);
-  transition: none;
-}
-.emoji-float-active {
-  animation: emoji-arc 1.2s cubic-bezier(.25,.1,.25,1) forwards;
-}
-@keyframes emoji-arc {
-  0% {
-    opacity: 1;
-    transform: scale(1) translate(0, 0);
-  }
-  30% {
-    opacity: 1;
-    transform: scale(1.8) translate(40px, -80px);
-  }
-  60% {
-    opacity: .8;
-    transform: scale(1.4) translate(20px, -200px);
-  }
-  100% {
-    opacity: 0;
-    transform: scale(.8) translate(-10px, -320px);
-  }
+  transform: translate(-50%, -100%);
 }
 
 /* Mobile: big shaking emoji in center */

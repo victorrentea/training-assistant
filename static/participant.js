@@ -1104,17 +1104,70 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     const el = document.createElement('div');
     el.textContent = emoji;
     el.className = 'emoji-float';
+    let startX, startY;
     if (btn) {
       const rect = btn.getBoundingClientRect();
-      el.style.left = (rect.left + rect.width / 2 - 20) + 'px';
-      el.style.top = (rect.top - 10) + 'px';
+      startX = rect.left + rect.width / 2;
+      startY = rect.top;
     } else {
-      el.style.left = (window.innerWidth / 2 - 20) + 'px';
-      el.style.top = (window.innerHeight - 120) + 'px';
+      startX = window.innerWidth / 2;
+      startY = window.innerHeight - 100;
     }
+    el.style.left = startX + 'px';
+    el.style.top = startY + 'px';
     document.body.appendChild(el);
-    requestAnimationFrame(() => el.classList.add('emoji-float-active'));
-    setTimeout(() => el.remove(), 1200);
+
+    // Match Swift EmojiAnimator algorithm
+    const duration = 2500 + Math.random() * 1500; // 2.5-4s
+    const riseHeight = 540;
+    const style = Math.floor(Math.random() * 3);
+    const rand = (min, max) => min + Math.random() * (max - min);
+
+    let keyframes;
+    if (style === 0) {
+      // Bezier S-curve: two control points for organic path
+      const endDx = rand(-60, 60);
+      const cp1Dx = rand(-80, 80);
+      const cp2Dx = endDx + rand(-80, 80);
+      keyframes = [];
+      for (let t = 0; t <= 1; t += 0.05) {
+        const u = 1 - t;
+        const px = u*u*u*0 + 3*u*u*t*cp1Dx + 3*u*t*t*cp2Dx + t*t*t*endDx;
+        const py = t * riseHeight;
+        keyframes.push({ transform: `translate(${px}px, ${-py}px)`, offset: t });
+      }
+    } else if (style === 1) {
+      // Straight rise
+      keyframes = [
+        { transform: 'translate(0, 0)', offset: 0 },
+        { transform: `translate(0, ${-riseHeight}px)`, offset: 1 }
+      ];
+    } else {
+      // Quadratic curve: one control point
+      const endDx = rand(-40, 40);
+      const cpDx = rand(-100, 100);
+      keyframes = [];
+      for (let t = 0; t <= 1; t += 0.05) {
+        const u = 1 - t;
+        const px = u*u*0 + 2*u*t*cpDx + t*t*endDx;
+        const py = t * riseHeight;
+        keyframes.push({ transform: `translate(${px}px, ${-py}px)`, offset: t });
+      }
+    }
+
+    // Position animation (ease-out like Swift)
+    const moveAnim = el.animate(keyframes, {
+      duration, easing: 'ease-out', fill: 'forwards'
+    });
+
+    // Fade out: starts at 40%, lasts 60% (matching Swift)
+    el.animate([
+      { opacity: 1, offset: 0 },
+      { opacity: 1, offset: 0.4 },
+      { opacity: 0, offset: 1 }
+    ], { duration, fill: 'forwards' });
+
+    moveAnim.onfinish = () => el.remove();
   }
 
   function submitQuestion() {
