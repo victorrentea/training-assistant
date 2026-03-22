@@ -1,7 +1,7 @@
 {
-  "sha": "b14d60f720c021116e276bced3ff908159688af6",
+  "sha": "e5fe770da3263f5bf4a283deff1394a1da627cad",
   "timestamp": "2026-03-22 01:40",
   "changelog": [
-    "fix: increase conference QR URL font size by 30% (0.85rem -> 1.1rem)"
+    "feat: add dramatic sequential reveal to participant leaderboard"
   ]
 }
