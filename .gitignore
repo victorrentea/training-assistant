@@ -1,5 +1,6 @@
 /.claude/settings.local.json
 /secrets.env
+/clean-clipboard/secrets.env
 __pycache__/
 *.pyc
 .playwright-mcp/

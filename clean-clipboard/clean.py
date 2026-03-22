@@ -22,6 +22,7 @@ from datetime import datetime
 
 import anthropic
 import objc
+from pathlib import Path
 from Quartz import (
     CGEventGetFlags,
     CGEventGetIntegerValueField,
@@ -349,8 +350,16 @@ _run_loop_ref = None
 def main() -> None:
     global _run_loop_ref
 
+    # Load API key from clean-clipboard/secrets.env
+    secrets_path = Path(__file__).parent / "secrets.env"
+    if secrets_path.exists():
+        for line in secrets_path.read_text().splitlines():
+            line = line.strip()
+            if line and not line.startswith("#") and "=" in line:
+                key, _, value = line.partition("=")
+                os.environ[key.strip()] = value.strip()
     if not os.environ.get("ANTHROPIC_API_KEY"):
-        print("Error: ANTHROPIC_API_KEY environment variable is not set")
+        print(f"Error: ANTHROPIC_API_KEY not set. Add it to {secrets_path}")
         sys.exit(1)
 
     # Verify the loopback device exists at startup (ID resolved fresh each toggle)
