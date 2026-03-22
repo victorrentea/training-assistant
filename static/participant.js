@@ -1467,6 +1467,10 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     if (emojiBar) emojiBar.style.display = isConference ? 'none' : '';
     const confGrid = document.getElementById('conference-emoji-grid');
     if (confGrid) confGrid.style.display = isConference ? '' : 'none';
+
+    // Version tag: sit above emoji bar in workshop mode, at bottom in conference mode
+    const versionTag = document.getElementById('version-tag');
+    if (versionTag) versionTag.style.bottom = isConference ? '.3rem' : '';
   }
 
   function renderContent(voteCounts) {
