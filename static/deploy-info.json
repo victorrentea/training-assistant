@@ -1,7 +1,7 @@
 {
-  "sha": "62e4a40493431336fafcc8a2eeee69ff2360860e",
-  "timestamp": "2026-03-22 18:56",
+  "sha": "2d3e583ad3e58f1053eafc2518a242fed15664c0",
+  "timestamp": "2026-03-22 18:57",
   "changelog": [
-    "style: add green/red dot indicators to dictation log messages"
+    "feat: add 21 e2e tests, fix timer bug and register leaderboard router"
   ]
 }
