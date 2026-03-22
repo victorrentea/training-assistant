@@ -6,28 +6,39 @@ In conference mode, the `conference-qr` container (QR code + URL + participant c
 
 ## Design
 
-In conference mode, the left column (`host-col-left`) splits into a CSS grid with two equal rows:
+In conference mode, the left column (`host-col-left`) splits into a CSS grid with three rows:
 
-1. **Top half (1fr)**: Tab bar + tab content area with internal scroll (`overflow-y: auto`)
+1. **Top half (1fr)**: New wrapper div around tab bar + all tab content panels, with internal scroll
 2. **Bottom half (1fr)**: `conference-qr` container, always visible
+3. **Auto row**: `.left-status-bar` pinned at the bottom
+
+### HTML Changes (host.html)
+
+Add a wrapper `<div class="left-tabs-wrapper">` around the tab bar (`.tab-bar`) and all tab content panels (`#tab-content-poll` through `#tab-content-debate`). This gives the grid exactly two meaningful content rows plus the status bar.
 
 ### CSS Changes (host.css)
 
-Add a class or conference-mode rule for `.host-col-left`:
-- `display: grid; grid-template-rows: 1fr 1fr`
-- Tab content wrapper gets `overflow-y: auto; min-height: 0` to scroll within its half
-- `conference-qr` takes the bottom half with `display: flex` (already styled)
+Add conference-mode class `.conference-layout` on `.host-col-left`:
+- `display: grid; grid-template-rows: 1fr 1fr auto`
+- `.left-tabs-wrapper` gets `overflow-y: auto; min-height: 0` to scroll within its half
+- `conference-qr` takes the second row
+- `.left-status-bar` takes the auto row
 
 ### JS Changes (host.js)
 
-- `applyConferenceLayout(true)`: Set `conference-qr` to `display: flex` unconditionally (always visible)
-- `applyConferenceLayout(false)`: Set `conference-qr` to `display: none`
-- `updateCenterPanel`: Remove the conditional logic (lines ~1192-1196) that toggles `conference-qr` visibility based on activity state
+- `applyConferenceLayout(true)`: Add `conference-layout` class to `.host-col-left`; set `conference-qr` to `display: flex` unconditionally; hide `#conference-pax-display` (redundant — QR container already shows "N Joined")
+- `applyConferenceLayout(false)`: Remove `conference-layout` class; set `conference-qr` to `display: none`
+- `updateCenterPanel` function: Remove the conditional logic that toggles `conference-qr` visibility based on activity state
+
+### Elements addressed
+
+- `#conference-pax-display`: Hidden when QR is always visible (its "N connected" is redundant with QR's "N Joined" counter)
+- `.left-status-bar`: Placed in a third `auto`-sized grid row, stays pinned at bottom
+- `.conference-qr-container` `flex: 1`: Dead CSS in grid mode, can be cleaned up
 
 ### No Changes
 
 - QR code generation (already works: 200x200, black on white)
 - Animated URL display
-- Participant counter
 - Center and right column behavior
 - Workshop mode behavior
