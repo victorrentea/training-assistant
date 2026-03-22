@@ -13,9 +13,10 @@ body {
   body { padding: 1rem .75rem; }
 }
 
-/* Position version tag above the emoji bar */
+/* Version tag over the emoji bar, pinned to bottom */
 .version-tag {
-  bottom: 3.5rem;
+  bottom: .3rem;
+  z-index: 901;
 }
 
 /* Avatar hover preview (5x size tooltip) */
