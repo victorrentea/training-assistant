@@ -1226,7 +1226,7 @@
       if (id === 'qr') {
         el.style.display = currentActivity === 'none' ? '' : 'none';
       } else {
-        const showVal = id === 'poll' ? 'flex' : '';
+        const showVal = (id === 'poll' || id === 'codereview') ? 'flex' : '';
         el.style.display = currentActivity === id ? showVal : 'none';
       }
     });
