@@ -958,6 +958,37 @@ h1 { display: none; }
   transform: scale(1.1);
 }
 
+.avatar-refresh-btn.spinning {
+  animation: refresh-spin .6s ease-in-out;
+  pointer-events: none;
+}
+
+@keyframes refresh-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.avatar-modal-img.avatar-swap {
+  animation: avatar-swap-in .4s ease-out;
+}
+
+@keyframes avatar-swap-in {
+  0% { transform: scale(0.7); opacity: 0; }
+  60% { transform: scale(1.05); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* Small avatar in header - pop animation on change */
+.avatar.avatar-changed {
+  animation: avatar-pop .4s ease-out;
+}
+
+@keyframes avatar-pop {
+  0% { transform: scale(0.5); opacity: 0.3; }
+  60% { transform: scale(1.15); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
 /* Mobile: almost full screen avatar */
 @media (max-width: 600px) {
   .avatar-modal-img {
