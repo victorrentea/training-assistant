@@ -52,6 +52,8 @@ class AppState:
         self.scores: dict[str, int] = {}
         self.base_scores: dict[str, int] = {}
         self.poll_opened_at: Optional[datetime] = None
+        self.poll_timer_seconds: Optional[int] = None
+        self.poll_timer_started_at: Optional[datetime] = None
         self.poll_correct_ids: Optional[list[str]] = None
         self.vote_times: dict[str, datetime] = {}
         self.current_activity: ActivityType = ActivityType.NONE

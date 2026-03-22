@@ -500,6 +500,11 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
           focusedOptionIndex = -1;
           clearInterval(_timerInterval);
         }
+        // Restore poll timer from server state (survives refresh)
+        if (msg.poll_timer_seconds && msg.poll_timer_started_at) {
+          activeTimer = { seconds: msg.poll_timer_seconds, startedAt: new Date(msg.poll_timer_started_at).getTime() };
+          _startParticipantCountdown();
+        }
         // Restore vote from server state (authoritative), falling back to localStorage
         if (msg.my_vote != null) {
           myVote = msg.poll?.multi ? new Set(msg.my_vote) : msg.my_vote;
@@ -592,6 +597,10 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
         }
         updateSummary(msg.summary_points, msg.summary_updated_at);
         updateNotes(msg.notes_content);
+        // Restore leaderboard overlay if it was active
+        if (msg.leaderboard_active && msg.leaderboard_data) {
+          showParticipantLeaderboard(msg.leaderboard_data);
+        }
         break;
       case 'vote_update':
         renderOptions(msg.vote_counts, msg.total_votes);
@@ -1079,8 +1088,7 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     if (!ws) return;
     ws.send(JSON.stringify({ type: 'emoji_reaction', emoji }));
     const btn = ev && ev.currentTarget;
-    const isMobile = window.innerWidth <= 600;
-    if (isMobile) {
+    if (currentMode === 'conference' || window.innerWidth <= 600) {
       showMobileEmojiShake(emoji);
     } else {
       showDesktopEmojiFloat(emoji, btn);
@@ -1115,58 +1123,8 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     el.style.left = startX + 'px';
     el.style.top = startY + 'px';
     document.body.appendChild(el);
-
-    // Match Swift EmojiAnimator algorithm
-    const duration = 2500 + Math.random() * 1500; // 2.5-4s
-    const riseHeight = 540;
-    const style = Math.floor(Math.random() * 3);
-    const rand = (min, max) => min + Math.random() * (max - min);
-
-    let keyframes;
-    if (style === 0) {
-      // Bezier S-curve: two control points for organic path
-      const endDx = rand(-60, 60);
-      const cp1Dx = rand(-80, 80);
-      const cp2Dx = endDx + rand(-80, 80);
-      keyframes = [];
-      for (let t = 0; t <= 1; t += 0.05) {
-        const u = 1 - t;
-        const px = u*u*u*0 + 3*u*u*t*cp1Dx + 3*u*t*t*cp2Dx + t*t*t*endDx;
-        const py = t * riseHeight;
-        keyframes.push({ transform: `translate(${px}px, ${-py}px)`, offset: t });
-      }
-    } else if (style === 1) {
-      // Straight rise
-      keyframes = [
-        { transform: 'translate(0, 0)', offset: 0 },
-        { transform: `translate(0, ${-riseHeight}px)`, offset: 1 }
-      ];
-    } else {
-      // Quadratic curve: one control point
-      const endDx = rand(-40, 40);
-      const cpDx = rand(-100, 100);
-      keyframes = [];
-      for (let t = 0; t <= 1; t += 0.05) {
-        const u = 1 - t;
-        const px = u*u*0 + 2*u*t*cpDx + t*t*endDx;
-        const py = t * riseHeight;
-        keyframes.push({ transform: `translate(${px}px, ${-py}px)`, offset: t });
-      }
-    }
-
-    // Position animation (ease-out like Swift)
-    const moveAnim = el.animate(keyframes, {
-      duration, easing: 'ease-out', fill: 'forwards'
-    });
-
-    // Fade out: starts at 40%, lasts 60% (matching Swift)
-    el.animate([
-      { opacity: 1, offset: 0 },
-      { opacity: 1, offset: 0.4 },
-      { opacity: 0, offset: 1 }
-    ], { duration, fill: 'forwards' });
-
-    moveAnim.onfinish = () => el.remove();
+    requestAnimationFrame(() => el.classList.add('emoji-float-active'));
+    setTimeout(() => el.remove(), 2600);
   }
 
   function submitQuestion() {

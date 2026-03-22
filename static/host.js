@@ -153,6 +153,10 @@
         currentPoll = msg.poll;
         if (!msg.poll_active && pollActive) _clearTimer(); // poll just closed
         pollActive = msg.poll_active;
+        // Restore poll timer from server state (survives refresh)
+        if (msg.poll_timer_seconds && msg.poll_timer_started_at) {
+          _applyTimer(msg.poll_timer_seconds, msg.poll_timer_started_at);
+        }
         if (currentPoll && currentPoll.question !== prevQuestion) loadCorrectOpts(currentPoll.question);
         voteCounts = msg.vote_counts || {};
         totalVotes = Object.values(voteCounts).reduce((a,b)=>a+b,0);
@@ -204,6 +208,10 @@
           if (confPaxNum) confPaxNum.textContent = paxCount;
           const joinedEl = document.getElementById('conference-qr-joined');
           if (joinedEl) joinedEl.textContent = paxCount + ' Joined';
+        }
+        // Restore leaderboard overlay if it was active
+        if (msg.leaderboard_active && msg.leaderboard_data) {
+          renderLeaderboard(msg.leaderboard_data);
         }
       } else if (msg.type === 'vote_update') {
         voteCounts = msg.vote_counts || {};
@@ -267,9 +275,53 @@
     const el = document.createElement('div');
     el.className = 'host-emoji-float';
     el.textContent = emoji;
-    el.style.right = (5 + Math.random() * 20) + '%';
     document.body.appendChild(el);
-    el.addEventListener('animationend', () => el.remove());
+
+    const startX = window.innerWidth - 200;
+    const startY = window.innerHeight - 80;
+    el.style.left = (startX - 45) + 'px';
+    el.style.top = startY + 'px';
+
+    const duration = 2500 + Math.random() * 1500; // 2.5–4s like Swift
+    const riseHeight = 540;
+    const style = Math.floor(Math.random() * 3);
+
+    // Build keyframes based on trajectory style (mirrored from Swift's left-side paths)
+    let keyframes;
+    if (style === 0) {
+      // S-curve (mirrored: drift right instead of random)
+      const driftX = (Math.random() - 0.5) * 120;
+      const cp1X = (Math.random() - 0.5) * 160;
+      const cp2X = driftX + (Math.random() - 0.5) * 160;
+      keyframes = [
+        { transform: 'translate(0, 0)', opacity: 1 },
+        { transform: `translate(${cp1X * 0.33}px, ${-riseHeight * 0.33}px)`, opacity: 1, offset: 0.33 },
+        { transform: `translate(${(cp2X + driftX) * 0.5}px, ${-riseHeight * 0.73}px)`, opacity: 0.6, offset: 0.73 },
+        { transform: `translate(${driftX}px, ${-riseHeight}px)`, opacity: 0 }
+      ];
+    } else if (style === 1) {
+      // Straight rise
+      keyframes = [
+        { transform: 'translate(0, 0)', opacity: 1 },
+        { transform: `translate(0, ${-riseHeight}px)`, opacity: 0 }
+      ];
+    } else {
+      // Quad curve
+      const driftX = (Math.random() - 0.5) * 80;
+      const cpX = (Math.random() - 0.5) * 200;
+      keyframes = [
+        { transform: 'translate(0, 0)', opacity: 1 },
+        { transform: `translate(${cpX}px, ${-riseHeight * 0.5}px)`, opacity: 0.8, offset: 0.5 },
+        { transform: `translate(${driftX}px, ${-riseHeight}px)`, opacity: 0 }
+      ];
+    }
+
+    const anim = el.animate(keyframes, {
+      duration: duration,
+      easing: 'ease-out',
+      fill: 'forwards'
+    });
+    anim.onfinish = () => el.remove();
   }
 
   function escHtml(s) {

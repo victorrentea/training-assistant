@@ -206,6 +206,8 @@ def build_participant_state(pid: str) -> dict:
         "backend_version": get_backend_version(),
         "poll": state.poll,
         "poll_active": state.poll_active,
+        "poll_timer_seconds": state.poll_timer_seconds,
+        "poll_timer_started_at": state.poll_timer_started_at.isoformat() if state.poll_timer_started_at else None,
         "vote_counts": state.vote_counts(),
         "participant_count": len(pids),
         "host_connected": "__host__" in state.participants,
@@ -225,6 +227,7 @@ def build_participant_state(pid: str) -> dict:
         **_build_debate_for_participant(pid),
         "codereview": _build_codereview_for_participant(pid),
         "leaderboard_active": state.leaderboard_active,
+        "leaderboard_data": _build_leaderboard_for_participant(pid),
         "my_name": state.participant_names.get(pid, ""),
     }
 
@@ -257,6 +260,8 @@ def build_host_state() -> dict:
         "backend_version": get_backend_version(),
         "poll": state.poll,
         "poll_active": state.poll_active,
+        "poll_timer_seconds": state.poll_timer_seconds,
+        "poll_timer_started_at": state.poll_timer_started_at.isoformat() if state.poll_timer_started_at else None,
         "vote_counts": state.vote_counts(),
         "participant_count": len(pids),
         "participants": participants_list,
@@ -280,6 +285,8 @@ def build_host_state() -> dict:
         "overlay_connected": "__overlay__" in state.participants,
         "token_usage": state.token_usage,
         "mode": state.mode,
+        "leaderboard_active": state.leaderboard_active,
+        "leaderboard_data": _build_leaderboard_for_host(),
     }
 
 
@@ -300,11 +307,10 @@ async def broadcast_state():
         state.participants.pop(pid, None)
 
 
-async def broadcast_leaderboard():
-    """Send personalized leaderboard to each connected participant."""
+def _build_leaderboard_data() -> tuple[list[dict], int, dict[str, int]]:
+    """Build leaderboard entries, total count, and rank map."""
     from names import compute_letter_avatar
 
-    # Build top 5 by score
     scored = [(uid, state.scores.get(uid, 0)) for uid in state.participants
               if not uid.startswith("__") and state.scores.get(uid, 0) > 0]
     scored.sort(key=lambda x: (-x[1], state.participant_names.get(x[0], "")))
@@ -332,12 +338,42 @@ async def broadcast_leaderboard():
         })
 
     total = len([uid for uid in state.participants if not uid.startswith("__")])
-
-    # Build full ranking for personal rank lookup
     all_scored = [(uid, state.scores.get(uid, 0)) for uid in state.participants
                   if not uid.startswith("__")]
     all_scored.sort(key=lambda x: (-x[1], state.participant_names.get(x[0], "")))
     rank_map = {uid: idx + 1 for idx, (uid, _) in enumerate(all_scored)}
+
+    return entries, total, rank_map
+
+
+def _build_leaderboard_for_participant(pid: str) -> dict | None:
+    """Build leaderboard state for a participant (used on reconnect when active)."""
+    if not state.leaderboard_active:
+        return None
+    entries, total, rank_map = _build_leaderboard_data()
+    return {
+        "entries": entries,
+        "total_participants": total,
+        "your_rank": rank_map.get(pid),
+        "your_score": state.scores.get(pid, 0),
+        "your_name": state.participant_names.get(pid, ""),
+    }
+
+
+def _build_leaderboard_for_host() -> dict | None:
+    """Build leaderboard state for host (used on reconnect when active)."""
+    if not state.leaderboard_active:
+        return None
+    entries, total, rank_map = _build_leaderboard_data()
+    return {
+        "entries": entries,
+        "total_participants": total,
+    }
+
+
+async def broadcast_leaderboard():
+    """Send personalized leaderboard to each connected participant."""
+    entries, total, rank_map = _build_leaderboard_data()
 
     # Send personalized message to each participant
     dead = []
