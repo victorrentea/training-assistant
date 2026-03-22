@@ -1,7 +1,7 @@
 {
-  "sha": "32f6666dd53f8720e6daa828568ab117e5756ba5",
-  "timestamp": "2026-03-22 01:51",
+  "sha": "ef19505fb8dac1cb12edc48a885899c6fe4e6992",
+  "timestamp": "2026-03-22 01:55",
   "changelog": [
-    "feat: switch summary generation from periodic to on-demand only"
+    "fix: align Board tab styling with other host tabs, update CLAUDE.md"
   ]
 }
