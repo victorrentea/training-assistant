@@ -905,14 +905,9 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
   border-radius: 12px;
 }
 
-/* Leaderboard button */
+/* Leaderboard button — styled like other tabs */
 .leaderboard-btn {
   margin-left: auto;
-  background: var(--surface2) !important;
-  border: 1px solid var(--accent) !important;
-}
-.leaderboard-btn:not(:disabled):hover {
-  background: var(--accent) !important;
 }
 .leaderboard-btn:disabled {
   opacity: .4;
