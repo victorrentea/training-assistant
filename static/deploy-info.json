@@ -1,7 +1,7 @@
 {
-  "sha": "acdd250aefabf576858889198b2d788687de3dad",
-  "timestamp": "2026-03-22 01:45",
+  "sha": "eed489d50720e405840a5f50ae23b3ca08777ebb",
+  "timestamp": "2026-03-22 01:49",
   "changelog": [
-    "fix: remove syntax highlight overlay from codereview editor"
+    "fix: align badge row between workshop and conference modes"
   ]
 }
