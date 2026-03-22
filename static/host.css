@@ -919,10 +919,11 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
   border-radius: 12px;
 }
 
-/* Leaderboard button — styled like other tabs */
-.leaderboard-btn:disabled {
-  opacity: .4;
+/* Any disabled tab button should look grayed out */
+.tab-btn:disabled {
+  opacity: .35;
   cursor: not-allowed;
+  filter: grayscale(1);
 }
 
 /* Leaderboard overlay */
