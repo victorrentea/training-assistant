@@ -1,7 +1,7 @@
 {
-  "sha": "d9f11ede2e5540fd590d1ef49c7d6d56b386f47a",
-  "timestamp": "2026-03-22 19:52",
+  "sha": "f1755b33a934c8daa68ff86968a5c15e2f94b502",
+  "timestamp": "2026-03-22 20:55",
   "changelog": [
-    "feat: add media pause/play on dictation toggle in clean-clipboard"
+    "feat: pause/resume media on dictation toggle, fix stale device ID"
   ]
 }
