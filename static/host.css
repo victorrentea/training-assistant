@@ -819,20 +819,34 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
 .conference-qr-container {
   display: none;
   text-align: center;
-  padding: 1rem 0;
+  padding: .5rem 0;
   flex-direction: column;
   justify-content: center;
   align-items: center;
+  overflow: hidden;
+}
+.conference-qr-container #conference-qr-code {
+  padding: 6px;
+}
+.conference-qr-container #conference-qr-code img,
+.conference-qr-container #conference-qr-code canvas {
+  width: 120px !important;
+  height: 120px !important;
 }
 
 /* Conference mode: left column splits into tabs (top) + QR (bottom) + status bar */
 .host-col-left.conference-layout {
   display: grid;
-  grid-template-rows: 1fr 1fr auto;
+  grid-template-rows: 1fr auto auto;
 }
 .host-col-left.conference-layout .left-tabs-wrapper {
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   min-height: 0;
+}
+.host-col-left.conference-layout .tab-content {
+  overflow-y: auto;
 }
 /* Mode badge — white background for visibility */
 .mode-badge-workshop {
