@@ -87,7 +87,8 @@
     <!-- Code Review tab content -->
     <div id="tab-content-codereview" style="display:none; flex-direction:column;" class="tab-content">
       <div id="codereview-create" style="display:flex; flex-direction:column; flex:1; min-height:0;">
-        <textarea id="codereview-snippet" placeholder="Paste your code snippet here (10-50 lines)..." style="flex:1; width:100%; font-family:monospace; font-size:12px; resize:none; overflow:auto; white-space:pre; word-wrap:normal;">public List&lt;String&gt; getActiveUserEmails(List&lt;User&gt; users) {
+        <div id="codereview-editor-wrap" style="position:relative; flex:1; min-height:0;">
+        <textarea id="codereview-snippet" placeholder="Paste your code snippet here (10-50 lines)..." style="position:relative; z-index:1; width:100%; height:100%; font-family:monospace; font-size:12px; resize:none; overflow:auto; white-space:pre; word-wrap:normal; color:transparent; caret-color:var(--text); background:transparent;" oninput="updateCodeHighlight()" onscroll="syncCodeScroll()">public List&lt;String&gt; getActiveUserEmails(List&lt;User&gt; users) {
     List&lt;String&gt; emails = new ArrayList&lt;&gt;();
     for (int i = 0; i &lt; users.size(); i++) {
         User user = users.get(i);
@@ -100,8 +101,10 @@
     }
     return emails;
 }</textarea>
+        <pre id="codereview-highlight" style="position:absolute; inset:0; margin:0; padding:0; font-family:monospace; font-size:12px; overflow:auto; white-space:pre; word-wrap:normal; pointer-events:none; z-index:0; border:1px solid transparent;"><code id="codereview-highlight-code" class="hljs"></code></pre>
+        </div><!-- /codereview-editor-wrap -->
         <div style="display:flex; gap:6px; align-items:center; margin-top:8px; flex-shrink:0; flex-wrap:nowrap;">
-          <select id="codereview-language" style="flex-shrink:0; min-width:90px;">
+          <select id="codereview-language" style="flex-shrink:0; min-width:90px;" onchange="updateCodeHighlight()">
             <option value="">Auto-detect</option>
             <option value="java" selected>Java</option>
             <option value="python">Python</option>

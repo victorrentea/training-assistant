@@ -334,6 +334,20 @@ input[type=text], textarea {
 input[type=text]:focus, textarea:focus { border-color: var(--accent); }
 textarea { resize: none; min-height: 80px; overflow: hidden; }
 
+/* Code review editor: syntax-highlighted overlay */
+#codereview-highlight {
+  padding: .7rem .9rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+#codereview-highlight code {
+  font-family: monospace;
+  font-size: 12px;
+  background: transparent;
+  padding: 0;
+}
+
 /* ── Poll composer (contenteditable) ── */
 .poll-composer {
   width: 100%;
@@ -853,11 +867,12 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
   display: grid;
   grid-template-rows: 1fr 1fr auto;
 }
-.host-col-left.conference-layout .left-tabs-wrapper {
+.left-tabs-wrapper {
   display: flex;
   flex-direction: column;
   overflow: hidden;
   min-height: 0;
+  flex: 1;
 }
 .host-col-left.conference-layout .tab-content {
   overflow-y: auto;
