@@ -205,11 +205,6 @@
           currentMode = msg.mode;
           renderMode(msg.mode);
         }
-        if (currentMode === 'conference') {
-          const paxCount = names ? names.length : 0;
-          const paxBadge = document.getElementById('conference-pax-badge');
-          if (paxBadge) paxBadge.textContent = '👥 ' + paxCount;
-        }
         // Restore leaderboard overlay if it was active
         if (msg.leaderboard_active && msg.leaderboard_data) {
           renderLeaderboard(msg.leaderboard_data);
@@ -445,8 +440,6 @@
       // Show left QR only when an activity is active (center QR not visible)
       const centerQRVisible = document.getElementById('center-qr').style.display !== 'none';
       confQR.style.display = centerQRVisible ? 'none' : 'flex';
-      const paxBadge = document.getElementById('conference-pax-badge');
-      if (paxBadge) paxBadge.style.display = '';
       if (debateTab) debateTab.style.display = 'none';
       if (helloTab) helloTab.style.display = '';
       startAutoReturnTimer();
@@ -491,8 +484,6 @@
       grid.style.gridTemplateColumns = '25% 1fr 25%';
       leftCol.classList.remove('conference-layout');
       confQR.style.display = 'none';
-      const paxBadgeOff = document.getElementById('conference-pax-badge');
-      if (paxBadgeOff) paxBadgeOff.style.display = 'none';
       if (debateTab) debateTab.style.display = '';
       if (helloTab) helloTab.style.display = 'none';
       if (tokenCost) tokenCost.style.display = '';
