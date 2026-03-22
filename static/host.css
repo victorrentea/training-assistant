@@ -818,28 +818,38 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
 
 .conference-qr-container {
   display: none;
-  text-align: center;
-  padding: .5rem 0;
-  flex-direction: column;
-  justify-content: center;
+  padding: .5rem;
+  flex-direction: row;
   align-items: center;
+  gap: .75rem;
   overflow: hidden;
 }
 .conference-qr-container #conference-qr-code {
+  background: #fff;
   padding: 8px;
+  border-radius: 12px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .conference-qr-container #conference-qr-code img,
 .conference-qr-container #conference-qr-code canvas {
   width: 100% !important;
   height: 100% !important;
-  max-width: 180px;
-  max-height: 180px;
+}
+.conference-qr-info {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: .5rem;
+  min-width: 0;
 }
 
 /* Conference mode: left column splits into tabs (top) + QR (bottom) + status bar */
 .host-col-left.conference-layout {
   display: grid;
-  grid-template-rows: 1fr auto auto;
+  grid-template-rows: 1fr 1fr auto;
 }
 .host-col-left.conference-layout .left-tabs-wrapper {
   display: flex;
