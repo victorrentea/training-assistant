@@ -1,8 +1,7 @@
 {
-  "sha": "c40ab5c418390c2ebf9e8aa6b9f4b541e3413030",
-  "timestamp": "2026-03-22 01:36",
+  "sha": "4aad62b9a499c04f3b38aa7a509b3ae196e560b6",
+  "timestamp": "2026-03-22 01:39",
   "changelog": [
-    "refactor: remove duplicate conference-pax-badge",
-    "feat: syntax highlighting in code review textarea via highlight.js overlay"
+    "fix: remove redundant pax-badge from workshop mode status bar"
   ]
 }
