@@ -13,15 +13,20 @@ from playwright.sync_api import sync_playwright
 
 BASE_URL = sys.argv[1] if len(sys.argv) > 1 else "https://interact.victorrentea.ro"
 
-# Load credentials
+# Load credentials from secrets.env (check script dir and common workspace locations)
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-secrets_path = os.path.join(SCRIPT_DIR, "secrets.env")
-if os.path.exists(secrets_path):
-    for line in open(secrets_path):
-        line = line.strip()
-        if "=" in line and not line.startswith("#"):
-            k, v = line.split("=", 1)
-            os.environ.setdefault(k.strip(), v.strip())
+_candidates = [
+    os.path.join(SCRIPT_DIR, "secrets.env"),
+    os.path.expanduser("~/workspace/training-assistant/secrets.env"),
+]
+for secrets_path in _candidates:
+    if os.path.exists(secrets_path):
+        for line in open(secrets_path):
+            line = line.strip()
+            if "=" in line and not line.startswith("#"):
+                k, v = line.split("=", 1)
+                os.environ.setdefault(k.strip(), v.strip())
+        break
 
 HOST_USER = os.environ.get("HOST_USERNAME", "host")
 HOST_PASS = os.environ.get("HOST_PASSWORD", "host")
@@ -37,9 +42,7 @@ def check_page(browser, name, url, elements, auth=None):
 
     context_opts = {}
     if auth:
-        import base64
-        creds = base64.b64encode(f"{auth[0]}:{auth[1]}".encode()).decode()
-        context_opts["extra_http_headers"] = {"Authorization": f"Basic {creds}"}
+        context_opts["http_credentials"] = {"username": auth[0], "password": auth[1]}
 
     context = browser.new_context(**context_opts)
     page = context.new_page()
