@@ -2129,10 +2129,14 @@
 let _leaderboardActive = false;
 
 async function toggleLeaderboard() {
-    if (_leaderboardActive) {
-        await fetch('/api/leaderboard/hide', { method: 'POST' });
-    } else {
-        await fetch('/api/leaderboard/show', { method: 'POST' });
+    try {
+        if (_leaderboardActive) {
+            await fetch('/api/leaderboard/hide', { method: 'POST' });
+        } else {
+            await fetch('/api/leaderboard/show', { method: 'POST' });
+        }
+    } catch (e) {
+        console.error('Leaderboard toggle failed:', e);
     }
 }
 
@@ -2198,7 +2202,7 @@ function hideLeaderboard() {
 function updateLeaderboardButton() {
     const btn = document.getElementById('btn-leaderboard');
     if (!btn) return;
-    // Enable when we have scores data with 5+ scored participants
+    // Enable when at least 1 participant has a score
     const scoredCount = Object.values(scores || {}).filter(s => s > 0).length;
-    btn.disabled = scoredCount < 5;
+    btn.disabled = scoredCount < 1;
 }
