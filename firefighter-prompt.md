@@ -9,12 +9,14 @@ Use this prompt when setting up a scheduled task in Claude Desktop (via `/schedu
 ## Prompt
 
 ```
-Run the health check script for the production deployment of the Workshop Live Interaction Tool.
+Run the production health check for the Workshop Live Interaction Tool.
+The health check uses Playwright to load both pages in a headless browser,
+verify key UI elements render, and catch any JavaScript errors.
 
 1. Execute: cd /Users/victorrentea/conductor/workspaces/training-assistant/lansing-v1 && ./healthcheck.sh
 2. If the health check PASSES (exit 0): reply with a one-line "Production healthy" and stop.
 3. If the health check FAILS (exit 1):
-   a. Note which endpoints failed and their HTTP status codes
+   a. Note which checks failed (missing elements, JS errors, HTTP errors)
    b. Check Railway deployment logs: run `railway logs --latest` or check https://railway.app dashboard
    c. Check recent git commits: `git log --oneline -5` to see if a recent push broke things
    d. Check GitHub CI status: `gh run list --branch master -L 3`
