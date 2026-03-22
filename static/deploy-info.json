@@ -1,7 +1,7 @@
 {
-  "sha": "32c4bb0b7f07dbc2c517ad4c78f402085e4bda6e",
-  "timestamp": "2026-03-22 02:04",
+  "sha": "dbf05d161b72361dd3aed5d3b3b23c2f40fd3050",
+  "timestamp": "2026-03-22 02:05",
   "changelog": [
-    "fix: remove red pin emoji from participant location in host list"
+    "fix: version tag shows relative time <24h, absolute date otherwise"
   ]
 }
