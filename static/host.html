@@ -147,14 +147,12 @@
     <!-- Conference mode: QR code shown in left column -->
     <div id="conference-qr" class="conference-qr-container">
       <div id="conference-qr-code"></div>
-      <div class="conference-qr-info">
-        <div id="conference-qr-joined" style="font-size:1.3rem; font-weight:600; color:var(--accent);">0 Joined</div>
-        <div id="conference-qr-url" style="font-size:.85rem; word-break:break-all;"></div>
-      </div>
+      <div id="conference-qr-url" style="font-size:.85rem; text-align:center;"></div>
     </div>
 
     <!-- Status badges — pinned to bottom of left column -->
     <div class="left-status-bar">
+      <span id="conference-pax-badge" class="badge" style="display:none; font-weight:600; color:var(--accent);">👥 0</span>
       <span id="mode-badge" class="badge mode-badge-workshop" title="Workshop mode — click to switch to Conference" onclick="toggleMode()" style="cursor:pointer; font-size:1.2rem;">🎓</span>
       <span id="ws-badge" class="badge disconnected">🟢</span>
       <span id="daemon-badge" class="badge disconnected" title="">🤖</span>
