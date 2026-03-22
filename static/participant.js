@@ -18,6 +18,7 @@
   let myUUID = getOrCreateUUID();
   let ws = null;
   let myName = '';
+  let rejectedAvatars = []; // avatars the participant has seen and didn't want
   let myVote = null;      // string (single) or Set of option_ids (multi)
   let currentPoll = null;
   let pollActive = false;
@@ -113,7 +114,13 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     refreshBtn.title = 'Get a new avatar';
     refreshBtn.onclick = function(e) {
         e.stopPropagation();
-        if (ws) ws.send(JSON.stringify({ type: 'refresh_avatar' }));
+        // Track the current avatar as rejected
+        const currentSrc = img.src;
+        const filename = currentSrc.split('/').pop();
+        if (filename && !rejectedAvatars.includes(filename)) {
+            rejectedAvatars.push(filename);
+        }
+        if (ws) ws.send(JSON.stringify({ type: 'refresh_avatar', rejected: rejectedAvatars }));
         // Close modal - new avatar will appear on next state broadcast
         modal.remove();
     };
