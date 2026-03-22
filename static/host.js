@@ -16,6 +16,8 @@
 
   let _hostWcDebounceTimer = null;
   let currentMode = 'workshop';
+  let _autoReturnTimer = null;
+  const AUTO_RETURN_DELAY = 30000; // 30 seconds
   const versionReloadGuard = window.createVersionReloadGuard
     ? window.createVersionReloadGuard({ countdownSeconds: 5 })
     : null;
@@ -428,6 +430,7 @@
     const confQR = document.getElementById('conference-qr');
     const confPaxDisplay = document.getElementById('conference-pax-display');
     const debateTab = document.getElementById('tab-debate');
+    const helloTab = document.getElementById('tab-hello');
     const tokenCost = document.getElementById('token-cost');
     const notesBadge = document.getElementById('notes-badge');
     const centerQR = document.getElementById('center-qr');
@@ -445,6 +448,8 @@
       confQR.style.display = centerQRVisible ? 'none' : 'flex';
       if (confPaxDisplay) confPaxDisplay.style.display = 'none';
       if (debateTab) debateTab.style.display = 'none';
+      if (helloTab) helloTab.style.display = '';
+      startAutoReturnTimer();
       if (tokenCost) tokenCost.style.display = 'none';
       if (notesBadge) notesBadge.style.display = 'none';
       // Generate left QR (hidden until needed) — adapts to color scheme
@@ -479,8 +484,10 @@
       confQR.style.display = 'none';
       if (confPaxDisplay) confPaxDisplay.style.display = 'none';
       if (debateTab) debateTab.style.display = '';
+      if (helloTab) helloTab.style.display = 'none';
       if (tokenCost) tokenCost.style.display = '';
       if (notesBadge) notesBadge.style.display = '';
+      stopAutoReturnTimer();
       // Restore muted center QR
       if (centerQR) centerQR.classList.remove('conference-center-qr');
       const centerQRDiv = document.getElementById('qr-code');
@@ -1208,6 +1215,9 @@
 
 
   async function switchTab(tab) {
+    _currentActivity = tab;
+    const helloTab = document.getElementById('tab-hello');
+    if (helloTab) helloTab.classList.toggle('active', tab === 'none');
     ['poll', 'wordcloud', 'qa', 'codereview', 'debate'].forEach(t => {
       document.getElementById('tab-' + t).classList.toggle('active', tab === t);
       const contentEl = document.getElementById('tab-content-' + t);
@@ -1221,6 +1231,7 @@
   }
 
   function updateCenterPanel(currentActivity) {
+    _currentActivity = currentActivity;
     ['qr', 'poll', 'wordcloud', 'qa', 'debate', 'codereview'].forEach(id => {
       const el = document.getElementById('center-' + id);
       if (id === 'qr') {
@@ -1236,10 +1247,19 @@
       const confQR = document.getElementById('conference-qr');
       confQR.style.display = currentActivity === 'none' ? 'none' : 'flex';
     }
+    // Sync hello tab active state
+    const helloTab = document.getElementById('tab-hello');
+    if (helloTab) helloTab.classList.toggle('active', currentActivity === 'none');
     if (currentActivity && currentActivity !== 'none') {
       ['poll', 'wordcloud', 'qa', 'codereview', 'debate'].forEach(t => {
         document.getElementById('tab-' + t).classList.toggle('active', currentActivity === t);
         document.getElementById('tab-content-' + t).style.display = currentActivity === t ? (t === 'codereview' ? 'flex' : '') : 'none';
+      });
+    } else {
+      // When activity is 'none', deactivate all other tabs
+      ['poll', 'wordcloud', 'qa', 'codereview', 'debate'].forEach(t => {
+        document.getElementById('tab-' + t).classList.remove('active');
+        document.getElementById('tab-content-' + t).style.display = 'none';
       });
     }
   }
@@ -2205,4 +2225,31 @@ function updateLeaderboardButton() {
     // Enable when at least 1 participant has a score
     const scoredCount = Object.values(scores || {}).filter(s => s > 0).length;
     btn.disabled = scoredCount < 1;
+}
+
+// ── Auto-return to Hello tab (conference mode only) ──
+
+let _currentActivity = 'none';
+
+function _resetAutoReturn() {
+  if (currentMode !== 'conference') return;
+  clearTimeout(_autoReturnTimer);
+  if (_currentActivity !== 'none') {
+    _autoReturnTimer = setTimeout(() => switchTab('none'), AUTO_RETURN_DELAY);
+  }
+}
+
+function startAutoReturnTimer() {
+  ['click', 'keypress', 'mousemove'].forEach(evt =>
+    document.addEventListener(evt, _resetAutoReturn, { passive: true })
+  );
+  _resetAutoReturn();
+}
+
+function stopAutoReturnTimer() {
+  clearTimeout(_autoReturnTimer);
+  _autoReturnTimer = null;
+  ['click', 'keypress', 'mousemove'].forEach(evt =>
+    document.removeEventListener(evt, _resetAutoReturn)
+  );
 }
