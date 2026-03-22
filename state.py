@@ -114,16 +114,17 @@ def get_avatar_filename(name: str) -> str:
 
 
 def assign_avatar(app_state: AppState, uuid: str, name: str) -> str:
-    """Assign avatar based on name. LOTR names always get their matching avatar
-    (even if duplicated). Custom names get a unique avatar based on UUID hash."""
-    # LOTR name → always match character avatar (no dedup, avoids name/avatar mismatch)
+    """Assign avatar based on name. LOTR names get their matching avatar on first
+    assignment. Custom names get a unique avatar based on UUID hash.
+    Never overwrites an existing avatar (preserves refresh_avatar choices)."""
+    # If already assigned (initial or refreshed), keep it
+    if uuid in app_state.participant_avatars:
+        return app_state.participant_avatars[uuid]
+    # LOTR name → match character avatar on first assignment
     if name in LOTR_NAMES:
         avatar = get_avatar_filename(name)
         app_state.participant_avatars[uuid] = avatar
         return avatar
-    # Custom name: derive avatar from name hash (consistent across tabs/UUIDs)
-    if uuid in app_state.participant_avatars:
-        return app_state.participant_avatars[uuid]
     taken = set(app_state.participant_avatars.values())
     # Hash the name, not UUID, so same custom name → same avatar across tabs
     name_hash = sum(ord(c) for c in name) * 2654435761  # simple but deterministic
@@ -139,19 +140,29 @@ def assign_avatar(app_state: AppState, uuid: str, name: str) -> str:
     return avatar
 
 
-def refresh_avatar(app_state: AppState, uuid: str) -> str | None:
-    """Reassign a random avatar different from current, ensuring uniqueness among connected participants."""
+def refresh_avatar(app_state: AppState, uuid: str, rejected: set[str] | None = None) -> str | None:
+    """Reassign a random avatar different from current and any previously rejected,
+    ensuring uniqueness among connected participants."""
     current = app_state.participant_avatars.get(uuid)
+    rejected = rejected or set()
+    if current:
+        rejected.add(current)
+
     # Get avatars used by OTHER currently connected participants
     connected_uuids = set(app_state.participants.keys()) - {"__host__", "__overlay__"}
-    taken = {app_state.participant_avatars[u] for u in connected_uuids
-             if u in app_state.participant_avatars and u != uuid}
+    taken_by_others = {app_state.participant_avatars[u] for u in connected_uuids
+                       if u in app_state.participant_avatars and u != uuid}
 
-    available = [get_avatar_filename(n) for n in LOTR_NAMES
-                 if get_avatar_filename(n) not in taken and get_avatar_filename(n) != current]
+    all_avatars = [get_avatar_filename(n) for n in LOTR_NAMES]
+
+    # Best case: not taken by others AND not previously rejected
+    available = [a for a in all_avatars if a not in taken_by_others and a not in rejected]
     if not available:
-        # All taken, at least pick something different from current
-        available = [get_avatar_filename(n) for n in LOTR_NAMES if get_avatar_filename(n) != current]
+        # Fallback: allow previously rejected but still avoid other participants' avatars
+        available = [a for a in all_avatars if a not in taken_by_others and a != current]
+    if not available:
+        # Last resort: anything different from current
+        available = [a for a in all_avatars if a != current]
     if not available:
         return None
     new_avatar = random.choice(available)

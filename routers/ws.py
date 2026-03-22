@@ -23,7 +23,7 @@ from metrics import (
     qa_questions_total,
     qa_upvotes_total,
 )
-from state import state, ActivityType, assign_avatar
+from state import state, ActivityType, assign_avatar, refresh_avatar
 from messaging import participant_ids
 from routers.debate import auto_assign_remaining
 
@@ -131,6 +131,14 @@ async def websocket_endpoint(websocket: WebSocket, participant_id: str):
                     if not is_host:
                         assign_avatar(state, pid, name)  # no-op if already assigned
                     await broadcast_participant_update()
+
+            elif msg_type == "refresh_avatar":
+                if not is_host:
+                    rejected = set(data.get("rejected", []))
+                    new_avatar = refresh_avatar(state, pid, rejected)
+                    if new_avatar:
+                        await send_state_to_participant(websocket, pid)
+                        await broadcast_participant_update()
 
             elif msg_type == "location":
                 loc = str(data.get("location", "")).strip()[:80]
