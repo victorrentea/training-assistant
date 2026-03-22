@@ -1,7 +1,7 @@
 {
-  "sha": "a7c2b11304d918ab606f23d755522d0c28e3b5c1",
-  "timestamp": "2026-03-22 18:41",
+  "sha": "36d0857f4355176d0f47cb0dddb3b824a1da1984",
+  "timestamp": "2026-03-22 18:42",
   "changelog": [
-    "feat: add sound on clean hotkey, emoji mode, and auto-mute on dictation"
+    "fix: kill old emoji overlay process before starting new one"
   ]
 }
