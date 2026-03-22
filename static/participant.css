@@ -351,11 +351,12 @@ h1 { display: none; }
 
 #wc-my-words {
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
   gap: .3rem;
   max-height: 200px;
   overflow-y: auto;
   width: 100%;
+  margin-top: .3rem;
 }
 
 @keyframes wc-drop {
@@ -364,13 +365,32 @@ h1 { display: none; }
 }
 
 .wc-my-word {
-  font-size: 1rem;
-  color: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .5rem;
+  font-size: .85rem;
+  font-family: inherit;
+  color: var(--text);
   background: var(--surface2);
   border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: .3rem .7rem;
+  border-radius: 8px;
+  padding: .25rem .8rem;
+  cursor: pointer;
+  transition: border-color .15s, background .15s;
   animation: wc-drop .2s ease-out;
+}
+.wc-my-word:hover {
+  border-color: var(--accent);
+  background: var(--surface);
+}
+.wc-my-word:active {
+  transform: scale(.97);
+}
+.wc-word-count {
+  font-size: .75rem;
+  color: var(--muted);
+  opacity: .7;
 }
 
 /* Mobile: stack cloud on top */

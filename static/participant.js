@@ -27,8 +27,6 @@
   let _timerInterval = null;
   let _multiWarnShown = false; // true once warning has been shown for current poll
   let focusedOptionIndex = -1;  // keyboard navigation index for poll options
-let myWords = [];  // participant's own submitted words (persisted in localStorage per word cloud session)
-  const LS_WC_KEY = 'workshop_wc_words';
   const LS_WC_SESSION_KEY = 'workshop_wc_session';
   let _lastWordcloudWords = {};
   let _lastWordcloudTopic = '';
@@ -606,7 +604,6 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
         } else {
           const content = document.getElementById('content');
           if (content) content.dataset.screen = '';
-          myWords = [];
           renderQACleanup();
           _stopCRToasts();
           _stopDebateToasts();
@@ -810,14 +807,7 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     _lastWordcloudWords = wordcloudWords;
     _lastWordcloudTopic = topic || '';
     const content = document.getElementById('content');
-    // If server word cloud is empty, host cleared it — wipe local words too
-    if (Object.keys(wordcloudWords).length === 0) {
-      myWords = [];
-      localStorage.removeItem(LS_WC_KEY);
-    }
     if (content.dataset.screen !== 'wordcloud') {
-      // Restore words from localStorage on screen entry (e.g. page refresh)
-      try { myWords = JSON.parse(localStorage.getItem(LS_WC_KEY) || '[]'); } catch { myWords = []; }
       content.dataset.screen = 'wordcloud';
       content.innerHTML = `
         <div class="wc-layout">
@@ -871,33 +861,36 @@ let myWords = [];  // participant's own submitted words (persisted in localStora
     updateWordSuggestions(wordcloudWords);
   }
 
-  function submitWord() {
+  function submitWord(existingWord) {
     const input = document.getElementById('wc-input');
-    if (!input) return;
-    const word = input.value.trim();
+    // When called from onclick, existingWord is an Event — ignore it
+    const word = (typeof existingWord === 'string' && existingWord) || (input && input.value.trim());
     if (!word) return;
     ws.send(JSON.stringify({ type: 'wordcloud_word', word }));
-    myWords.unshift(word);
-    localStorage.setItem(LS_WC_KEY, JSON.stringify(myWords));
-    input.value = '';
-    const goBtn = document.getElementById('wc-go');
-    if (goBtn) goBtn.disabled = true;
-    renderMyWords();
-    updateWordSuggestions(_lastWordcloudWords || {});
+    if (input && typeof existingWord !== 'string') {
+      input.value = '';
+      const goBtn = document.getElementById('wc-go');
+      if (goBtn) goBtn.disabled = true;
+    }
   }
 
   function renderMyWords() {
     const el = document.getElementById('wc-my-words');
     if (!el) return;
-    el.innerHTML = myWords.map(w => `<div class="wc-my-word">${escHtml(w)}</div>`).join('');
+    const words = _lastWordcloudWords || {};
+    const sorted = Object.entries(words).sort((a, b) => b[1] - a[1]);
+    el.innerHTML = sorted.map(([w, count]) =>
+      `<button class="wc-my-word" data-word="${escHtml(w)}">${escHtml(w)}<span class="wc-word-count">${count}</span></button>`
+    ).join('');
+    el.querySelectorAll('.wc-my-word').forEach(btn => {
+      btn.addEventListener('click', () => submitWord(btn.dataset.word));
+    });
   }
 
   function updateWordSuggestions(wordcloudWords) {
     const dl = document.getElementById('wc-suggestions');
     if (!dl) return;
-    const mySet = new Set(myWords.map(w => w.toLowerCase()));
     dl.innerHTML = Object.keys(wordcloudWords)
-      .filter(w => !mySet.has(w.toLowerCase()))
       .map(w => `<option value="${escHtml(w)}">`)
       .join('');
   }
