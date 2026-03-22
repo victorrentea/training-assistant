@@ -1,7 +1,7 @@
 {
-  "sha": "2882f5ab7af3dde1aab1ef5d6ac00bfe1627e472",
-  "timestamp": "2026-03-22 18:50",
+  "sha": "741348b6c29a36a08a681f41838c1e4b81437332",
+  "timestamp": "2026-03-22 18:55",
   "changelog": [
-    "fix: mute OS Output loopback device instead of system speakers"
+    "fix: use volume control instead of mute on OS Output device"
   ]
 }
