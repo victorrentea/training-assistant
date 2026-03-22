@@ -469,6 +469,15 @@
           `<span class="wave-char" style="animation-delay:${(i * 0.12).toFixed(2)}s">${ch}</span>`
         ).join('');
       }
+      // Show URL above center QR in conference mode
+      const centerQRUrl = document.getElementById('center-qr-url');
+      if (centerQRUrl) {
+        const fullUrl = 'https://' + location.host;
+        centerQRUrl.innerHTML = fullUrl.split('').map((ch, i) =>
+          `<span class="wave-char" style="animation-delay:${(i * 0.12).toFixed(2)}s">${ch}</span>`
+        ).join('');
+        centerQRUrl.style.display = '';
+      }
       // Make center QR bright for conference — color adapts to theme
       if (centerQR) centerQR.classList.add('conference-center-qr');
       const centerQRDiv = document.getElementById('qr-code');
@@ -489,6 +498,9 @@
       if (tokenCost) tokenCost.style.display = '';
       if (notesBadge) notesBadge.style.display = '';
       stopAutoReturnTimer();
+      // Hide center QR URL
+      const centerQRUrl = document.getElementById('center-qr-url');
+      if (centerQRUrl) centerQRUrl.style.display = 'none';
       // Restore muted center QR
       if (centerQR) centerQR.classList.remove('conference-center-qr');
       const centerQRDiv = document.getElementById('qr-code');

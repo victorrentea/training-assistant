@@ -892,6 +892,10 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
 /* Conference mode: center QR — black background with white-bordered QR */
 .conference-center-qr {
   background: #000 !important;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
 .conference-center-qr .qr-code {
   opacity: 1 !important;
