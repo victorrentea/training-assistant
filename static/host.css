@@ -920,9 +920,6 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
 }
 
 /* Leaderboard button — styled like other tabs */
-.leaderboard-btn {
-  margin-left: auto;
-}
 .leaderboard-btn:disabled {
   opacity: .4;
   cursor: not-allowed;
