@@ -120,15 +120,24 @@
             rejectedAvatars.push(filename);
         }
         if (ws) ws.send(JSON.stringify({ type: 'refresh_avatar', rejected: rejectedAvatars }));
-        // Close modal - new avatar will appear on next state broadcast
-        modal.remove();
+        // Keep modal open; timer starts when new avatar arrives via state broadcast
+        window._avatarModalImg = img;
+        window._avatarModal = modal;
     };
 
     container.appendChild(img);
     container.appendChild(refreshBtn);
     modal.appendChild(container);
 
-    modal.addEventListener('click', function() { modal.remove(); });
+    modal.addEventListener('click', function() {
+        if (window._avatarModalCloseTimer) {
+            clearTimeout(window._avatarModalCloseTimer);
+            window._avatarModalCloseTimer = null;
+        }
+        window._avatarModalImg = null;
+        window._avatarModal = null;
+        modal.remove();
+    });
     container.addEventListener('click', function(e) { e.stopPropagation(); });
 
     document.body.appendChild(modal);
@@ -569,6 +578,17 @@
             const avatarEl = document.getElementById('my-avatar');
             avatarEl.src = '/static/avatars/' + msg.my_avatar;
             avatarEl.style.display = '';
+            // Update avatar modal image if open (after refresh), then auto-close after 1.5s
+            if (window._avatarModalImg) {
+                window._avatarModalImg.src = '/static/avatars/' + msg.my_avatar;
+                const modalRef = window._avatarModal;
+                if (window._avatarModalCloseTimer) clearTimeout(window._avatarModalCloseTimer);
+                window._avatarModalCloseTimer = setTimeout(function() {
+                    if (modalRef) modalRef.remove();
+                    window._avatarModalImg = null;
+                    window._avatarModal = null;
+                }, 1500);
+            }
             avatarEl.onerror = function() {
                 const fallback = document.createElement('span');
                 fallback.className = 'avatar-fallback';
