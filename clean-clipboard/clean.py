@@ -309,9 +309,8 @@ def handle_dictation_toggle() -> None:
         _mute_device_original_volume = current_vol
         time.sleep(DICTATION_MUTE_DELAY)
         _set_device_volume(device_id, DICTATION_VOLUME_LOW)
-        _send_media_play_pause()
         _dictation_active = True
-        log(f"\U0001f7e2 Dictation: \u23f8\ufe0f media, \U0001f507 OS Output ({current_vol:.0%}\u2192{DICTATION_VOLUME_LOW:.0%})")
+        log(f"\U0001f7e2 Dictation: \U0001f507 OS Output ({current_vol:.0%}\u2192{DICTATION_VOLUME_LOW:.0%})")
 
 
 def _restore_dictation_volume() -> None:
@@ -325,9 +324,8 @@ def _restore_dictation_volume() -> None:
         _dictation_active = False
         return
     _set_device_volume(device_id, _mute_device_original_volume)
-    _send_media_play_pause()
     _dictation_active = False
-    log(f"\U0001f534 Dictation: \u25b6\ufe0f media, \U0001f50a OS Output ({_mute_device_original_volume:.0%})")
+    log(f"\U0001f534 Dictation: \U0001f50a OS Output ({_mute_device_original_volume:.0%})")
 
 
 def event_tap_callback(proxy, event_type, event, refcon):
