@@ -240,8 +240,9 @@ class TestGenerateSummary:
         MockClient.return_value.messages.create.return_value = mock_resp
 
         result = generate_summary(self._cfg(MagicMock()), [])
-        assert len(result) == 1
-        assert result[0]["time"] == "10:15"
+        assert result is not None
+        assert len(result["new"]) == 1
+        assert result["new"][0]["time"] == "10:15"
 
     @patch("daemon.summarizer.read_session_notes", return_value="")
     @patch("daemon.summarizer.extract_last_n_minutes", return_value="text")
@@ -265,8 +266,9 @@ class TestGenerateSummary:
         mock_resp.content = [mock_block]
         MockClient.return_value.messages.create.return_value = mock_resp
         result = generate_summary(self._cfg(MagicMock()), [])
-        assert len(result) == 2
-        assert all(p["source"] == "discussion" for p in result)
+        assert result is not None
+        assert len(result["new"]) == 2
+        assert all(p["source"] == "discussion" for p in result["new"])
 
     @patch("daemon.summarizer.read_session_notes", return_value="")
     @patch("daemon.summarizer.extract_last_n_minutes", return_value="text")
@@ -333,7 +335,57 @@ class TestGenerateSummary:
         mock_resp.content = [mock_block]
         MockClient.return_value.messages.create.return_value = mock_resp
         result = generate_summary(self._cfg(MagicMock()), [])
-        assert result[0]["source"] == "discussion"
+        assert result is not None
+        assert result["new"][0]["source"] == "discussion"
+
+
+class TestSummarizerUpdatedFormat:
+    def _cfg(self, tmp_path):
+        from quiz_core import Config
+        return Config(
+            folder=tmp_path, minutes=30, server_url="http://localhost",
+            api_key="key", model="model", dry_run=False,
+            host_username="h", host_password="p",
+        )
+
+    @patch("daemon.summarizer.read_session_notes", return_value="")
+    @patch("daemon.summarizer.create_message")
+    def test_updated_and_new_format(self, mock_create, *_mocks):
+        resp_text = json.dumps({
+            "updated": [{"index": 0, "text": "Revised point", "source": "discussion", "time": "14:30"}],
+            "new": [{"text": "Brand new point", "source": "discussion", "time": "15:10"}],
+        })
+        mock_resp = MagicMock()
+        mock_resp.content = [MagicMock(type="text", text=resp_text)]
+        mock_resp.stop_reason = "end_turn"
+        mock_create.return_value = mock_resp
+
+        existing = [{"text": "Old point", "source": "discussion", "time": "10:00"}]
+        result = generate_summary(self._cfg(MagicMock()), existing, delta_text="new transcript")
+        assert result is not None
+        assert len(result["updated"]) == 1
+        assert result["updated"][0]["index"] == 0
+        assert result["updated"][0]["text"] == "Revised point"
+        assert len(result["new"]) == 1
+        assert result["new"][0]["text"] == "Brand new point"
+
+    @patch("daemon.summarizer.read_session_notes", return_value="")
+    @patch("daemon.summarizer.create_message")
+    def test_new_only_no_updates(self, mock_create, *_mocks):
+        resp_text = json.dumps({
+            "updated": [],
+            "new": [{"text": "Fresh point", "source": "notes"}],
+        })
+        mock_resp = MagicMock()
+        mock_resp.content = [MagicMock(type="text", text=resp_text)]
+        mock_resp.stop_reason = "end_turn"
+        mock_create.return_value = mock_resp
+
+        result = generate_summary(self._cfg(MagicMock()), [], delta_text="some text")
+        assert result is not None
+        assert len(result["updated"]) == 0
+        assert len(result["new"]) == 1
+        assert result["new"][0]["source"] == "notes"
 
 
 # ═══════════════════════════════════════════════════════════════════════
