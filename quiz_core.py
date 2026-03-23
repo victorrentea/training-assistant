@@ -729,20 +729,40 @@ def post_status(status: str, message: str, config: Config,
 # Auto-generate (non-interactive, used by daemon)
 # ---------------------------------------------------------------------------
 
+def _fetch_summary_points(config: Config) -> list[dict]:
+    """Fetch existing summary key points from the server. Returns [] on failure."""
+    try:
+        data = _get_json(f"{config.server_url}/api/summary")
+        return data.get("points", [])
+    except RuntimeError:
+        return []
+
+
 def auto_generate(minutes: int, config: Config) -> Optional[tuple]:
     """Load transcript → generate quiz → post preview. Returns (quiz, text) or None on failure."""
-    post_status("generating", f"Loading transcript (last {minutes} min)…", config)
+    post_status("generating", "Loading context…", config)
 
-    entries = load_transcription_files(config.folder)
-    if not entries:
-        post_status("error", "No transcription files found.", config)
-        return None
-
-    text = extract_last_n_minutes(entries, minutes)
     notes = read_session_notes(config)
 
-    if not text and not notes:
-        post_status("error", "No transcript or session notes available.", config)
+    # Prefer key points over raw transcript (saves tokens)
+    summary_points = _fetch_summary_points(config)
+    key_points_text = ""
+    if summary_points:
+        key_points_text = "\n".join(f"- [{p.get('time','')}] {p['text']}" for p in summary_points)
+
+    text = ""
+    if not key_points_text:
+        # Fall back to raw transcript when no key points available
+        entries = load_transcription_files(config.folder)
+        if not entries:
+            if not notes:
+                post_status("error", "No transcription files or session notes found.", config)
+                return None
+        else:
+            text = extract_last_n_minutes(entries, minutes)
+
+    if not text and not key_points_text and not notes:
+        post_status("error", "No content available for quiz generation.", config)
         return None
 
     # Assemble combined prompt
@@ -751,15 +771,23 @@ def auto_generate(minutes: int, config: Config) -> Optional[tuple]:
         parts.append(
             "SESSION NOTES (trainer's written agenda/key points — treat as primary source):\n" + notes
         )
-    if text:
+    if key_points_text:
+        parts.append(
+            "KEY POINTS DISCUSSED (AI-extracted from live session — use as primary context):\n" + key_points_text
+        )
+    elif text:
         parts.append(
             f"TRANSCRIPT EXCERPT (last {minutes} min of live audio — use for context and recent topics):\n" + text
         )
     combined = "\n\n".join(parts)
 
-    line_count = len([l for l in text.splitlines() if l.strip()])
+    if key_points_text:
+        status_detail = f"{len(summary_points)} key points"
+    else:
+        line_count = len([l for l in text.splitlines() if l.strip()])
+        status_detail = f"{len(text):,} chars ({line_count} lines, last {minutes} min)"
     notes_info = f" + {len(notes):,} chars notes" if notes else ""
-    post_status("generating", f"Sending {len(text):,} chars ({line_count} lines, last {minutes} min){notes_info} to Claude…", config)
+    post_status("generating", f"Sending {status_detail}{notes_info} to Claude…", config)
 
     try:
         quiz = generate_quiz(combined, config)
