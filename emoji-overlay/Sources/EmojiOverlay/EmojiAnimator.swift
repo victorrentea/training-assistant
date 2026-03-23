@@ -4,7 +4,7 @@ import QuartzCore
 class EmojiAnimator {
     private let hostLayer: CALayer
 
-    static let emojiSet = ["❤️", "🔥", "👏", "😂", "🤯", "💡", "☕"]
+    static let emojiSet = ["❤️", "🔥", "👏", "😂", "🤯", "💡", "☕", "✅", "❌"]
 
     init(hostLayer: CALayer) {
         self.hostLayer = hostLayer
@@ -25,59 +25,40 @@ class EmojiAnimator {
         layer.contentsScale = NSScreen.screens.first?.backingScaleFactor ?? 2.0
         hostLayer.addSublayer(layer)
 
-        // Randomize duration: 2.5–4 seconds
+        // Randomize duration: 2.5–4 seconds (matches browser host.js)
         let duration = Double.random(in: 2.5...4.0)
         let riseHeight: CGFloat = 540
 
-        // Randomly pick animation style
-        let style = Int.random(in: 0...2)
-
         var animations: [CAAnimation] = []
 
-        switch style {
-        case 0:
-            // Curved path (bezier S-shape)
-            let path = CGMutablePath()
-            let startPoint = layer.position
-            let endPoint = CGPoint(x: startPoint.x + CGFloat.random(in: -60...60),
-                                   y: startPoint.y + riseHeight)
-            let cp1 = CGPoint(x: startPoint.x + CGFloat.random(in: -80...80),
-                              y: startPoint.y + riseHeight * 0.33)
-            let cp2 = CGPoint(x: endPoint.x + CGFloat.random(in: -80...80),
-                              y: startPoint.y + riseHeight * 0.73)
-            path.move(to: startPoint)
-            path.addCurve(to: endPoint, control1: cp1, control2: cp2)
+        // Rise with wobble (matches browser's sinusoidal wobble)
+        let wobbleAmp = CGFloat.random(in: 15...25)
+        let wobbleFreq = CGFloat.random(in: 3...5)
+        let steps = 20
+        let startPoint = layer.position
 
-            let pathAnim = CAKeyframeAnimation(keyPath: "position")
-            pathAnim.path = path
-            pathAnim.timingFunction = CAMediaTimingFunction(name: .easeOut)
-            animations.append(pathAnim)
-
-        case 1:
-            // Ease-out straight rise
-            let moveUp = CABasicAnimation(keyPath: "position.y")
-            moveUp.toValue = layer.position.y + riseHeight
-            moveUp.timingFunction = CAMediaTimingFunction(name: .easeOut)
-            animations.append(moveUp)
-
-        default:
-            // Curved path + ease-out combined
-            let path = CGMutablePath()
-            let startPoint = layer.position
-            let endPoint = CGPoint(x: startPoint.x + CGFloat.random(in: -40...40),
-                                   y: startPoint.y + riseHeight)
-            let cp1 = CGPoint(x: startPoint.x + CGFloat.random(in: -100...100),
-                              y: startPoint.y + riseHeight * 0.5)
-            path.move(to: startPoint)
-            path.addQuadCurve(to: endPoint, control: cp1)
-
-            let pathAnim = CAKeyframeAnimation(keyPath: "position")
-            pathAnim.path = path
-            pathAnim.timingFunction = CAMediaTimingFunction(name: .easeOut)
-            animations.append(pathAnim)
+        let path = CGMutablePath()
+        path.move(to: startPoint)
+        for i in 1...steps {
+            let t = CGFloat(i) / CGFloat(steps)
+            let y = startPoint.y + riseHeight * t
+            let wobble = sin(t * wobbleFreq * .pi * 2) * wobbleAmp * (1 - t * 0.5)
+            path.addLine(to: CGPoint(x: startPoint.x + wobble, y: y))
         }
 
-        // Fade out (start fading at 60% of duration)
+        let pathAnim = CAKeyframeAnimation(keyPath: "position")
+        pathAnim.path = path
+        pathAnim.timingFunction = CAMediaTimingFunction(name: .easeOut)
+        animations.append(pathAnim)
+
+        // Scale growth (1.0 → 1.3, matches browser)
+        let scaleAnim = CABasicAnimation(keyPath: "transform.scale")
+        scaleAnim.fromValue = 1.0
+        scaleAnim.toValue = 1.3
+        scaleAnim.timingFunction = CAMediaTimingFunction(name: .easeOut)
+        animations.append(scaleAnim)
+
+        // Fade out (start fading at 40% of duration, matches browser)
         let fadeOut = CABasicAnimation(keyPath: "opacity")
         fadeOut.fromValue = 1.0
         fadeOut.toValue = 0.0
