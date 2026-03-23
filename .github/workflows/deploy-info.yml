@@ -36,7 +36,7 @@ jobs:
           fi
 
           SHA=$(git rev-parse HEAD)
-          TIMESTAMP=$(date -u '+%Y-%m-%d %H:%M')
+          TIMESTAMP=$(TZ=Europe/Bucharest date '+%Y-%m-%d %H:%M')
 
           export CHANGELOG SHA TIMESTAMP
           python3 << 'PYEOF'
