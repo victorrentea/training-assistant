@@ -1,7 +1,7 @@
 {
-  "sha": "6bfca32408f6329b04e50ab4cf81b6e8bab344a8",
-  "timestamp": "2026-03-23 07:13",
+  "sha": "82bc6f3ed96d1b0bdf9343dd4610e5ff3e2e1e33",
+  "timestamp": "2026-03-23 07:54",
   "changelog": [
-    "feat: log cleaned text output in clipboard cleaner"
+    "feat: add SQLite persistence with incremental migrations"
   ]
 }
