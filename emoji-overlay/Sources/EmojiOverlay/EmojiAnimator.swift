@@ -327,118 +327,6 @@ class EmojiAnimator {
         }
     }
 
-    // MARK: - Film burn (burning edges spreading across screen)
-
-    func showFilmBurn() {
-        let bounds = hostLayer.bounds
-        let totalDuration = 4.5
-
-        let container = CALayer()
-        container.frame = bounds
-        hostLayer.addSublayer(container)
-
-        // Burn starts from edges/corners — like a real film melting
-        // Use non-overlapping rectangular burn zones that tile the screen
-        let cols = 3
-        let rows = 2
-        let cellW = bounds.width / CGFloat(cols)
-        let cellH = bounds.height / CGFloat(rows)
-
-        // Stagger order: corners first, then edges, then center
-        let order: [(Int, Int)] = [(0,0), (2,1), (2,0), (0,1), (1,0), (1,1)]
-
-        for (idx, (col, row)) in order.enumerated() {
-            let startDelay = Double(idx) * 0.45
-            let cellRect = CGRect(x: CGFloat(col) * cellW, y: CGFloat(row) * cellH,
-                                  width: cellW, height: cellH)
-            let center = CGPoint(x: cellRect.midX, y: cellRect.midY)
-
-            // Burn edge — glowing ring that appears and flickers
-            let edgePath = CGPath(ellipseIn: cellRect.insetBy(dx: -20, dy: -20), transform: nil)
-            let ringLayer = CAShapeLayer()
-            ringLayer.path = edgePath
-            ringLayer.fillColor = nil
-            ringLayer.strokeColor = NSColor(red: 1.0, green: 0.35, blue: 0.0, alpha: 0.9).cgColor
-            ringLayer.lineWidth = 30
-            ringLayer.shadowColor = NSColor(red: 1.0, green: 0.6, blue: 0.0, alpha: 1.0).cgColor
-            ringLayer.shadowOffset = .zero
-            ringLayer.shadowRadius = 20
-            ringLayer.shadowOpacity = 1.0
-            ringLayer.opacity = 0
-            container.addSublayer(ringLayer)
-
-            // Ring appears, flickers, shrinks to nothing
-            let ringAppear = CABasicAnimation(keyPath: "opacity")
-            ringAppear.fromValue = 0
-            ringAppear.toValue = 1
-            ringAppear.beginTime = startDelay
-            ringAppear.duration = 0.15
-            ringAppear.fillMode = .both
-            ringAppear.isRemovedOnCompletion = false
-
-            let smallPath = CGPath(ellipseIn: CGRect(x: center.x - 5, y: center.y - 5,
-                                                      width: 10, height: 10), transform: nil)
-            let ringShrink = CABasicAnimation(keyPath: "path")
-            ringShrink.fromValue = edgePath
-            ringShrink.toValue = smallPath
-            ringShrink.beginTime = startDelay + 0.1
-            ringShrink.duration = 1.5
-            ringShrink.timingFunction = CAMediaTimingFunction(name: .easeIn)
-            ringShrink.fillMode = .both
-            ringShrink.isRemovedOnCompletion = false
-
-            let flicker = CAKeyframeAnimation(keyPath: "lineWidth")
-            flicker.values = [30, 40, 20, 45, 25, 35, 28]
-            flicker.duration = 0.25
-            flicker.repeatCount = .infinity
-
-            let ringFade = CABasicAnimation(keyPath: "opacity")
-            ringFade.fromValue = 1
-            ringFade.toValue = 0
-            ringFade.beginTime = startDelay + 1.2
-            ringFade.duration = 0.5
-            ringFade.fillMode = .both
-            ringFade.isRemovedOnCompletion = false
-
-            let ringGroup = CAAnimationGroup()
-            ringGroup.animations = [ringAppear, ringShrink, flicker, ringFade]
-            ringGroup.duration = totalDuration
-            ringGroup.fillMode = .forwards
-            ringGroup.isRemovedOnCompletion = false
-            ringLayer.add(ringGroup, forKey: "ring")
-
-            // Darkening layer — semi-transparent brown/dark that intensifies
-            let darkLayer = CALayer()
-            darkLayer.frame = cellRect
-            darkLayer.backgroundColor = NSColor(red: 0.15, green: 0.05, blue: 0.0, alpha: 0.85).cgColor
-            darkLayer.opacity = 0
-            container.addSublayer(darkLayer)
-
-            let darkAppear = CAKeyframeAnimation(keyPath: "opacity")
-            darkAppear.values = [0, 0, 0.4, 0.7, 0.85, 0.85, 0]
-            darkAppear.keyTimes = [0,
-                                   NSNumber(value: startDelay / totalDuration),
-                                   NSNumber(value: (startDelay + 0.5) / totalDuration),
-                                   NSNumber(value: (startDelay + 1.0) / totalDuration),
-                                   NSNumber(value: (startDelay + 1.5) / totalDuration),
-                                   NSNumber(value: (totalDuration - 1.0) / totalDuration),
-                                   1.0]
-            darkAppear.duration = totalDuration
-            darkAppear.fillMode = .forwards
-            darkAppear.isRemovedOnCompletion = false
-            darkLayer.add(darkAppear, forKey: "dark")
-
-            // Fire sparks at ignition point
-            DispatchQueue.main.asyncAfter(deadline: .now() + startDelay) { [weak self] in
-                self?.spawnFireSparks(at: center, in: container)
-            }
-        }
-
-        DispatchQueue.main.asyncAfter(deadline: .now() + totalDuration + 0.2) { [weak container] in
-            container?.removeFromSuperlayer()
-        }
-    }
-
     private func spawnFireSparks(at point: CGPoint, in container: CALayer, count: Int = 15) {
         let scale = NSScreen.screens.first?.backingScaleFactor ?? 2.0
         for _ in 0..<count {
@@ -451,8 +339,7 @@ class EmojiAnimator {
             spark.contentsScale = scale
             container.addSublayer(spark)
 
-            // Rise upward like embers
-            let angle = CGFloat.random(in: CGFloat.pi * 0.15 ... CGFloat.pi * 0.85) // mostly upward
+            let angle = CGFloat.random(in: CGFloat.pi * 0.15 ... CGFloat.pi * 0.85)
             let dist = CGFloat.random(in: 50...200)
             let endPoint = CGPoint(x: point.x + cos(angle) * dist * 0.4,
                                    y: point.y + sin(angle) * dist)
