@@ -9,18 +9,33 @@
     body {
       background: var(--bg);
       color: var(--text);
-      font-family: 'Segoe UI', system-ui, sans-serif;
-      max-width: 700px;
-      margin: 0 auto;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 1.3rem;
+      max-width: 100%;
+      margin: 0;
       padding: 1.5rem 1rem;
     }
-    h1 { font-size: 1.3rem; margin: 0 0 .3rem; }
-    h2 { font-size: 1.1rem; margin: 1.5rem 0 .5rem; color: var(--accent); }
+    h1 { font-size: 1.6rem; margin: 0 0 .3rem; }
+    h2 { font-size: 1.4rem; margin: 1.5rem 0 .5rem; color: var(--accent); }
+    .download-btn {
+      display: inline-block;
+      margin-left: 1rem;
+      padding: .3rem .8rem;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      font-size: .9rem;
+      cursor: pointer;
+      text-decoration: none;
+      vertical-align: middle;
+    }
+    .download-btn:hover { opacity: .85; }
     .notes-pre {
       white-space: pre-wrap;
       word-wrap: break-word;
-      font-family: inherit;
-      font-size: .9rem;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 1.17rem;
       line-height: 1.5;
       color: var(--text);
       background: var(--surface);
@@ -38,7 +53,7 @@
   <h1>Session Notes & Key Points</h1>
   <p style="font-size:.8rem; color:var(--text-muted);">Refresh this page to get the latest data.</p>
 
-  <h2>Session Notes</h2>
+  <h2>Session Notes <button id="downloadBtn" class="download-btn" style="display:none" onclick="downloadNotes()">Download .txt</button></h2>
   <pre id="notes" class="notes-pre empty">Loading...</pre>
 
   <h2>Key Points</h2>
@@ -56,6 +71,18 @@
       return html.replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener" style="color:var(--accent)">$1</a>');
     }
 
+    let notesText = '';
+    function downloadNotes() {
+      if (!notesText) return;
+      const blob = new Blob([notesText], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'session-notes.txt';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
     const savedY = sessionStorage.getItem('notes_scrollY');
 
     fetch('/api/notes')
@@ -63,8 +90,10 @@
       .then(data => {
         const notesEl = document.getElementById('notes');
         if (data.content) {
+          notesText = data.content;
           notesEl.innerHTML = linkify(escHtml(data.content));
           notesEl.classList.remove('empty');
+          document.getElementById('downloadBtn').style.display = '';
         } else {
           notesEl.textContent = 'No session notes available yet.';
         }

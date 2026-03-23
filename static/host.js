@@ -612,11 +612,26 @@
       if (hostNotesContent) {
         el.textContent = hostNotesContent;
         el.style.cssText = '';
+        const dlBtn = document.getElementById('host-notes-download');
+        if (dlBtn) dlBtn.style.display = '';
       } else {
         el.textContent = 'No notes available yet.';
         el.style.cssText = 'color:var(--text-muted);';
+        const dlBtn = document.getElementById('host-notes-download');
+        if (dlBtn) dlBtn.style.display = 'none';
       }
     }
+  }
+
+  function downloadHostNotes() {
+    if (!hostNotesContent) return;
+    const blob = new Blob([hostNotesContent], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'session-notes.txt';
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   function toggleHostNotesModal() {
