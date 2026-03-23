@@ -54,9 +54,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, URLSessionWebSocketDelegate 
             .init(label: "💥", tooltip: "Earthquake") { [weak self] in
                 self?.animator.showEarthquake()
             },
-            .init(label: "🎞️", tooltip: "Film burn") { [weak self] in
-                self?.animator.showFilmBurn()
-            },
             .init(label: "⚔️", tooltip: "Zorro") { [weak self] in
                 self?.animator.showZorro()
             },
