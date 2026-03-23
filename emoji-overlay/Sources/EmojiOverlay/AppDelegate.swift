@@ -48,33 +48,14 @@ class AppDelegate: NSObject, NSApplicationDelegate, URLSessionWebSocketDelegate 
             .init(label: "🎊", tooltip: "Confetti") { [weak self] in
                 self?.animator.spawnConfetti()
             },
-            .init(label: "❤️", tooltip: "Hearts") { [weak self] in
-                for i in 0..<8 {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + Double(i) * 0.15) {
-                        self?.animator.spawnEmoji("❤️")
-                    }
-                }
+            .init(label: "🚨", tooltip: "Danger") { [weak self] in
+                self?.animator.showDanger()
             },
-            .init(label: "🔥", tooltip: "Fire") { [weak self] in
-                for i in 0..<8 {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + Double(i) * 0.15) {
-                        self?.animator.spawnEmoji("🔥")
-                    }
-                }
+            .init(label: "💥", tooltip: "Earthquake") { [weak self] in
+                self?.animator.showEarthquake()
             },
-            .init(label: "👏", tooltip: "Applause") { [weak self] in
-                for i in 0..<8 {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + Double(i) * 0.15) {
-                        self?.animator.spawnEmoji("👏")
-                    }
-                }
-            },
-            .init(label: "🤯", tooltip: "Mind blown") { [weak self] in
-                for i in 0..<8 {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + Double(i) * 0.15) {
-                        self?.animator.spawnEmoji("🤯")
-                    }
-                }
+            .init(label: "🎞️", tooltip: "Film burn") { [weak self] in
+                self?.animator.showFilmBurn()
             },
         ]
 
