@@ -1,7 +1,7 @@
 {
-  "sha": "83aae9e29c3b67606c8de8c4ecc0d50597ca19a1",
-  "timestamp": "2026-03-23 12:04",
+  "sha": "7b405625e5a98680d75800f4501de22d79bcfbef",
+  "timestamp": "2026-03-23 12:06",
   "changelog": [
-    "fix: transcript extraction sends empty timestamps to Claude"
+    "fix: replace 'Generating...' text with pulsing brain emoji on summary badge"
   ]
 }
