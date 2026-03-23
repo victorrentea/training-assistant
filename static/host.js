@@ -275,11 +275,9 @@
     el.textContent = emoji;
     document.body.appendChild(el);
 
-    // Spawn from center of the left column
-    const leftCol = document.querySelector('.host-col-left');
-    const rect = leftCol ? leftCol.getBoundingClientRect() : { left: 0, width: 300, bottom: window.innerHeight };
-    const startX = rect.left + rect.width / 2;
-    const startY = rect.bottom - 80;
+    // Spawn from bottom-right corner
+    const startX = window.innerWidth - 120;
+    const startY = window.innerHeight - 80;
     el.style.left = startX + 'px';
     el.style.top = startY + 'px';
     el.style.transform = 'translate(-50%, -50%)';
