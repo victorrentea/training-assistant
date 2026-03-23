@@ -1,13 +1,7 @@
 {
-  "sha": "c488764220e772023a8e2a46219dead1ef16ed23",
-  "timestamp": "2026-03-23 12:01",
+  "sha": "83aae9e29c3b67606c8de8c4ecc0d50597ca19a1",
+  "timestamp": "2026-03-23 12:04",
   "changelog": [
-    "feat: overlay effects \u2014 danger vignette, earthquake, film burn + fix button clicks",
-    "feat: floating button bar with confetti and emoji burst effects",
-    "fix: force-summary no longer skipped when transcript has no new delta",
-    "fix: emoji overlay self-terminates when superseded by new instance",
-    "docs: add Emoji Overlay to C4 container and component diagrams",
-    "fix: emoji overlay self-terminates when superseded by new instance",
-    "feat: emoji overlay kills previous instance via PID lock file"
+    "fix: transcript extraction sends empty timestamps to Claude"
   ]
 }
