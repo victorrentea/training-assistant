@@ -37,6 +37,7 @@ Output rules:
 - BAD: "Session ended with informal discussion" (filler, no takeaway)
 - BAD: "The trainer demonstrated an interesting approach" (meta-commentary)
 - Never describe what happened socially — only capture WHAT was taught or concluded.
+- Do NOT number the bullets (no "1.", "2.", etc.) — just plain text statements.
 - Output 1-7 NEW bullets covering genuinely new takeaways not already in the established list.
 - Do NOT repeat, rephrase, or contradict established key points — they are already captured.
 - Ignore transcription noise, filler, off-topic chatter.
