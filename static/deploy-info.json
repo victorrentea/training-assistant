@@ -1,7 +1,7 @@
 {
-  "sha": "a1f3d3fd4c24276187e28ca8b476446f13415d8c",
-  "timestamp": "2026-03-23 11:15",
+  "sha": "52ae48c806fecb0705c6325a481e7881d42efa93",
+  "timestamp": "2026-03-23 11:23",
   "changelog": [
-    "fix: spawn host floating emojis from bottom-right corner"
+    "feat: show AI quiz generation controls on initial host view"
   ]
 }
