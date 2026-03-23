@@ -580,6 +580,312 @@ class EmojiAnimator {
         }
     }
 
+    // MARK: - Fireworks
+
+    private static let fireworkPalettes: [[NSColor]] = [
+        [NSColor(red: 1, green: 0.2, blue: 0.2, alpha: 1),
+         NSColor(red: 1, green: 0.5, blue: 0.1, alpha: 1),
+         NSColor(red: 1, green: 0.85, blue: 0.2, alpha: 1)],
+        [NSColor(red: 0.2, green: 0.6, blue: 1, alpha: 1),
+         NSColor(red: 0.4, green: 0.9, blue: 1, alpha: 1),
+         .white],
+        [NSColor(red: 1, green: 0.2, blue: 0.6, alpha: 1),
+         NSColor(red: 0.8, green: 0.3, blue: 1, alpha: 1),
+         NSColor(red: 1, green: 0.6, blue: 0.9, alpha: 1)],
+        [NSColor(red: 1, green: 0.85, blue: 0.1, alpha: 1),
+         .white,
+         NSColor(red: 1, green: 0.95, blue: 0.6, alpha: 1)],
+        [NSColor(red: 0.1, green: 1, blue: 0.4, alpha: 1),
+         NSColor(red: 0.3, green: 1, blue: 0.8, alpha: 1),
+         .white],
+    ]
+
+    func showFireworks() {
+        let bounds = hostLayer.bounds
+        let scale = NSScreen.screens.first?.backingScaleFactor ?? 2.0
+
+        // Wave 1: 3 big ones
+        for r in 0..<3 {
+            let delay = Double(r) * 0.4
+            let x = bounds.width * (0.2 + CGFloat(r) * 0.3) + CGFloat.random(in: -60...60)
+            let y = CGFloat.random(in: bounds.height * 0.50...bounds.height * 0.80)
+            let palette = EmojiAnimator.fireworkPalettes.randomElement()!
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
+                self?.launchRocket(from: CGPoint(x: x, y: -10), to: CGPoint(x: x + CGFloat.random(in: -30...30), y: y),
+                                   palette: palette, scale: scale, big: true)
+            }
+        }
+        // Wave 2: 3-4 more, staggered
+        for r in 0..<Int.random(in: 3...4) {
+            let delay = 1.0 + Double(r) * 0.35
+            let x = CGFloat.random(in: bounds.width * 0.1...bounds.width * 0.9)
+            let y = CGFloat.random(in: bounds.height * 0.40...bounds.height * 0.75)
+            let palette = EmojiAnimator.fireworkPalettes.randomElement()!
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
+                self?.launchRocket(from: CGPoint(x: x, y: -10), to: CGPoint(x: x + CGFloat.random(in: -20...20), y: y),
+                                   palette: palette, scale: scale, big: Bool.random())
+            }
+        }
+        // Wave 3: grand finale — rapid burst of 4
+        for r in 0..<4 {
+            let delay = 2.5 + Double(r) * 0.15
+            let x = CGFloat.random(in: bounds.width * 0.15...bounds.width * 0.85)
+            let y = CGFloat.random(in: bounds.height * 0.45...bounds.height * 0.80)
+            let palette = EmojiAnimator.fireworkPalettes.randomElement()!
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
+                self?.launchRocket(from: CGPoint(x: x, y: -10), to: CGPoint(x: x, y: y),
+                                   palette: palette, scale: scale, big: true)
+            }
+        }
+    }
+
+    private func launchRocket(from start: CGPoint, to burst: CGPoint,
+                              palette: [NSColor], scale: CGFloat, big: Bool) {
+        let riseDuration = Double.random(in: 0.4...0.7)
+
+        // Rocket — bright streak rising up
+        let rocket = CAShapeLayer()
+        let trailPath = CGMutablePath()
+        trailPath.move(to: start)
+        trailPath.addLine(to: CGPoint(x: start.x, y: start.y + 40))
+        rocket.path = trailPath
+        rocket.strokeColor = NSColor.white.cgColor
+        rocket.lineWidth = 3
+        rocket.lineCap = .round
+        rocket.fillColor = nil
+        rocket.shadowColor = palette[0].cgColor
+        rocket.shadowOffset = .zero
+        rocket.shadowRadius = 12
+        rocket.shadowOpacity = 1.0
+        hostLayer.addSublayer(rocket)
+
+        // Rise animation
+        let risePath = CGMutablePath()
+        risePath.move(to: start)
+        // Slight wobble on the way up
+        let midX = (start.x + burst.x) / 2 + CGFloat.random(in: -15...15)
+        let midY = (start.y + burst.y) / 2
+        risePath.addQuadCurve(to: burst, control: CGPoint(x: midX, y: midY))
+
+        let riseAnim = CAKeyframeAnimation(keyPath: "position")
+        riseAnim.path = risePath
+        riseAnim.duration = riseDuration
+        riseAnim.timingFunction = CAMediaTimingFunction(name: .easeOut)
+        riseAnim.fillMode = .forwards
+        riseAnim.isRemovedOnCompletion = false
+
+        CATransaction.begin()
+        CATransaction.setCompletionBlock { [weak self, weak rocket] in
+            rocket?.removeFromSuperlayer()
+            self?.explodeFirework(at: burst, palette: palette, scale: scale, big: big)
+        }
+        rocket.add(riseAnim, forKey: "rise")
+        CATransaction.commit()
+    }
+
+    private func explodeFirework(at center: CGPoint, palette: [NSColor], scale: CGFloat, big: Bool) {
+        let streakCount = big ? Int.random(in: 40...55) : Int.random(in: 24...32)
+        let burstRadius = big ? CGFloat.random(in: 250...400) : CGFloat.random(in: 140...220)
+        let duration = big ? Double.random(in: 1.8...2.5) : Double.random(in: 1.2...1.8)
+
+        // Massive flash
+        let flash = CALayer()
+        let flashSize: CGFloat = big ? 120 : 60
+        flash.frame = CGRect(x: center.x - flashSize/2, y: center.y - flashSize/2,
+                              width: flashSize, height: flashSize)
+        flash.cornerRadius = flashSize / 2
+        flash.backgroundColor = NSColor.white.cgColor
+        flash.shadowColor = palette[0].cgColor
+        flash.shadowOffset = .zero
+        flash.shadowRadius = big ? 80 : 40
+        flash.shadowOpacity = 1.0
+        flash.contentsScale = scale
+        hostLayer.addSublayer(flash)
+
+        let flashScale = CABasicAnimation(keyPath: "transform.scale")
+        flashScale.fromValue = 0.5
+        flashScale.toValue = big ? 3.0 : 2.0
+
+        let flashFade = CABasicAnimation(keyPath: "opacity")
+        flashFade.fromValue = 1.0
+        flashFade.toValue = 0.0
+
+        let flashGroup = CAAnimationGroup()
+        flashGroup.animations = [flashScale, flashFade]
+        flashGroup.duration = 0.3
+        flashGroup.fillMode = .forwards
+        flashGroup.isRemovedOnCompletion = false
+        CATransaction.begin()
+        CATransaction.setCompletionBlock { [weak flash] in flash?.removeFromSuperlayer() }
+        flash.add(flashGroup, forKey: "flash")
+        CATransaction.commit()
+
+        // Streaking lines — the real firework effect
+        for i in 0..<streakCount {
+            let baseAngle = (CGFloat(i) / CGFloat(streakCount)) * 2 * .pi
+            let angle = baseAngle + CGFloat.random(in: -0.12...0.12)
+            let dist = burstRadius * CGFloat.random(in: 0.6...1.0)
+            let color = palette.randomElement()!
+
+            // Each streak is a line (CAShapeLayer) that extends outward
+            let endPoint = CGPoint(
+                x: center.x + cos(angle) * dist,
+                y: center.y + sin(angle) * dist
+            )
+            // Gravity droop at the end
+            let droopEnd = CGPoint(x: endPoint.x, y: endPoint.y - dist * 0.25)
+
+            let streakPath = CGMutablePath()
+            streakPath.move(to: center)
+            streakPath.addQuadCurve(to: droopEnd,
+                                     control: endPoint)
+
+            let streak = CAShapeLayer()
+            streak.path = streakPath
+            streak.strokeColor = color.cgColor
+            streak.lineWidth = big ? CGFloat.random(in: 2.5...4.5) : CGFloat.random(in: 1.5...3.0)
+            streak.lineCap = .round
+            streak.fillColor = nil
+            streak.shadowColor = color.cgColor
+            streak.shadowOffset = .zero
+            streak.shadowRadius = big ? 8 : 4
+            streak.shadowOpacity = 1.0
+            streak.strokeEnd = 0
+            hostLayer.addSublayer(streak)
+
+            // Draw the streak outward rapidly
+            let drawDuration = duration * 0.35
+            let draw = CABasicAnimation(keyPath: "strokeEnd")
+            draw.fromValue = 0
+            draw.toValue = 1
+            draw.duration = drawDuration
+            draw.timingFunction = CAMediaTimingFunction(name: .easeOut)
+            draw.fillMode = .forwards
+            draw.isRemovedOnCompletion = false
+
+            // Then the tail follows (strokeStart catches up)
+            let tail = CABasicAnimation(keyPath: "strokeStart")
+            tail.fromValue = 0
+            tail.toValue = 1
+            tail.beginTime = drawDuration * 0.4
+            tail.duration = duration - drawDuration * 0.4
+            tail.timingFunction = CAMediaTimingFunction(name: .easeIn)
+            tail.fillMode = .forwards
+            tail.isRemovedOnCompletion = false
+
+            // Fade at the end
+            let fade = CABasicAnimation(keyPath: "opacity")
+            fade.fromValue = 1.0
+            fade.toValue = 0.0
+            fade.beginTime = duration * 0.5
+            fade.duration = duration * 0.5
+            fade.fillMode = .forwards
+            fade.isRemovedOnCompletion = false
+
+            let group = CAAnimationGroup()
+            group.animations = [draw, tail, fade]
+            group.duration = duration
+            group.fillMode = .forwards
+            group.isRemovedOnCompletion = false
+
+            CATransaction.begin()
+            CATransaction.setCompletionBlock { [weak streak] in streak?.removeFromSuperlayer() }
+            streak.add(group, forKey: "burst")
+            CATransaction.commit()
+
+            // Glowing dot at the tip of each streak
+            if i % 2 == 0 {
+                let dot = CALayer()
+                let dotSize: CGFloat = big ? 6 : 4
+                dot.frame = CGRect(x: center.x - dotSize/2, y: center.y - dotSize/2,
+                                    width: dotSize, height: dotSize)
+                dot.cornerRadius = dotSize / 2
+                dot.backgroundColor = NSColor.white.cgColor
+                dot.shadowColor = color.cgColor
+                dot.shadowOffset = .zero
+                dot.shadowRadius = 6
+                dot.shadowOpacity = 1.0
+                dot.contentsScale = scale
+                hostLayer.addSublayer(dot)
+
+                let dotPath = CGMutablePath()
+                dotPath.move(to: center)
+                dotPath.addQuadCurve(to: droopEnd, control: endPoint)
+
+                let dotMove = CAKeyframeAnimation(keyPath: "position")
+                dotMove.path = dotPath
+                dotMove.timingFunction = CAMediaTimingFunction(name: .easeOut)
+
+                let dotFade = CABasicAnimation(keyPath: "opacity")
+                dotFade.fromValue = 1.0
+                dotFade.toValue = 0.0
+                dotFade.beginTime = duration * 0.4
+                dotFade.duration = duration * 0.6
+                dotFade.fillMode = .forwards
+
+                let dotShrink = CABasicAnimation(keyPath: "transform.scale")
+                dotShrink.fromValue = 1.5
+                dotShrink.toValue = 0.2
+                dotShrink.timingFunction = CAMediaTimingFunction(name: .easeIn)
+
+                let dotGroup = CAAnimationGroup()
+                dotGroup.animations = [dotMove, dotFade, dotShrink]
+                dotGroup.duration = duration
+                dotGroup.fillMode = .forwards
+                dotGroup.isRemovedOnCompletion = false
+
+                CATransaction.begin()
+                CATransaction.setCompletionBlock { [weak dot] in dot?.removeFromSuperlayer() }
+                dot.add(dotGroup, forKey: "tip")
+                CATransaction.commit()
+            }
+        }
+
+        // Secondary crackle sparks — tiny pops after main burst
+        if big {
+            for j in 0..<8 {
+                let sparkDelay = Double.random(in: 0.3...1.0)
+                let sparkCenter = CGPoint(
+                    x: center.x + CGFloat.random(in: -burstRadius * 0.5...burstRadius * 0.5),
+                    y: center.y + CGFloat.random(in: -burstRadius * 0.3...burstRadius * 0.5)
+                )
+                DispatchQueue.main.asyncAfter(deadline: .now() + sparkDelay) { [weak self] in
+                    guard let self = self else { return }
+                    let color = palette.randomElement()!
+                    for _ in 0..<6 {
+                        let spark = CALayer()
+                        let sz: CGFloat = CGFloat.random(in: 2...4)
+                        spark.frame = CGRect(x: sparkCenter.x, y: sparkCenter.y, width: sz, height: sz)
+                        spark.cornerRadius = sz / 2
+                        spark.backgroundColor = color.cgColor
+                        spark.contentsScale = scale
+                        self.hostLayer.addSublayer(spark)
+
+                        let ang = CGFloat.random(in: 0...(2 * .pi))
+                        let d = CGFloat.random(in: 20...50)
+                        let end = CGPoint(x: sparkCenter.x + cos(ang) * d,
+                                          y: sparkCenter.y + sin(ang) * d - 15)
+                        let move = CABasicAnimation(keyPath: "position")
+                        move.toValue = NSValue(point: end)
+                        let fade = CABasicAnimation(keyPath: "opacity")
+                        fade.fromValue = 1.0
+                        fade.toValue = 0.0
+                        let g = CAAnimationGroup()
+                        g.animations = [move, fade]
+                        g.duration = Double.random(in: 0.3...0.6)
+                        g.fillMode = .forwards
+                        g.isRemovedOnCompletion = false
+                        CATransaction.begin()
+                        CATransaction.setCompletionBlock { [weak spark] in spark?.removeFromSuperlayer() }
+                        spark.add(g, forKey: "crackle")
+                        CATransaction.commit()
+                    }
+                    _ = j // suppress warning
+                }
+            }
+        }
+    }
+
     // MARK: - Confetti burst
 
     func spawnConfetti(count: Int = 80) {
