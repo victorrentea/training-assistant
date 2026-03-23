@@ -24,8 +24,8 @@ class ButtonBar: NSPanel {
         let barWidth = count * buttonSize + (count + 1) * padding
         let barHeight = buttonSize + padding * 2
 
-        // Position: flush with bottom edge, ~20% from right edge
-        let x = screen.frame.width * 0.80 - barWidth / 2
+        // Position: flush with bottom edge, centered horizontally
+        let x = (screen.frame.width - barWidth) / 2
         let y: CGFloat = 0
 
         let frame = NSRect(x: x, y: y, width: barWidth, height: barHeight)
