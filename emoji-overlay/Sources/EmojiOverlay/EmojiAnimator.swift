@@ -444,7 +444,7 @@ class EmojiAnimator {
         let container = CALayer()
         container.frame = bounds
         // Tilt the whole Z ~8 degrees
-        container.setAffineTransform(CGAffineTransform(rotationAngle: -0.14))
+        container.setAffineTransform(CGAffineTransform(rotationAngle: 0.14))
         hostLayer.addSublayer(container)
 
         let cx = bounds.midX
