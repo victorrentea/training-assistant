@@ -143,7 +143,7 @@ start_watcher() {
         if [ "$ELAPSED" -ge "$DEPLOY_TIMEOUT" ]; then
           echo "$(date '"'"'+%H:%M:%S'"'"') ❌ Deploy timeout! ${MERGE_SHA:0:8} not deployed after ${DEPLOY_TIMEOUT}s"
           terminal-notifier -title "❌ Deploy Timeout!" -message "Merge ${MERGE_SHA:0:8} not deployed after ${DEPLOY_TIMEOUT}s" -group deploy -timeout 10 &>/dev/null &
-          afplay /System/Library/Sounds/Basso.aiff & sleep 0.4; afplay /System/Library/Sounds/Basso.aiff
+          # sound removed — only success deploy gets audio
           LAST_PROD_VERSION="$CURRENT_PROD"; WAITING_SINCE=""; MERGE_SHA=""; ESTIMATED=""; COMMIT_MSG=""
           continue
         fi
