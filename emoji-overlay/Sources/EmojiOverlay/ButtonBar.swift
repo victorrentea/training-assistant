@@ -1,6 +1,6 @@
 import AppKit
 
-/// Floating bar of round emoji buttons — always on top, draggable, click-through safe.
+/// Floating bar of round emoji buttons — always on top, draggable, clickable.
 class ButtonBar: NSPanel {
 
     struct ButtonDef {
@@ -11,7 +11,6 @@ class ButtonBar: NSPanel {
 
     private let buttonSize: CGFloat = 40
     private let padding: CGFloat = 6
-    private var trackingArea: NSTrackingArea?
     private var fadeTimer: Timer?
     private let idleOpacity: CGFloat = 0.35
     private let hoverOpacity: CGFloat = 1.0
@@ -25,9 +24,9 @@ class ButtonBar: NSPanel {
         let barWidth = count * buttonSize + (count + 1) * padding
         let barHeight = buttonSize + padding * 2
 
-        // Position: bottom area, ~20% from right edge
+        // Position: flush with bottom edge, ~20% from right edge
         let x = screen.frame.width * 0.80 - barWidth / 2
-        let y: CGFloat = 80
+        let y: CGFloat = 0
 
         let frame = NSRect(x: x, y: y, width: barWidth, height: barHeight)
 
@@ -42,10 +41,12 @@ class ButtonBar: NSPanel {
         backgroundColor = .clear
         hasShadow = true
         level = .statusBar + 1  // above the overlay panel
-        isMovableByWindowBackground = true
+        // NOT using isMovableByWindowBackground — it steals button clicks
         collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
+        acceptsMouseMovedEvents = true
+        becomesKeyOnlyIfNeeded = true
 
-        let container = NSView(frame: NSRect(x: 0, y: 0, width: barWidth, height: barHeight))
+        let container = ButtonBarContainer(frame: NSRect(x: 0, y: 0, width: barWidth, height: barHeight))
         container.wantsLayer = true
         container.layer?.backgroundColor = NSColor(white: 0.15, alpha: 0.85).cgColor
         container.layer?.cornerRadius = barHeight / 2
@@ -69,12 +70,15 @@ class ButtonBar: NSPanel {
         // Tracking area for hover on the container view
         let ta = NSTrackingArea(
             rect: container.bounds,
-            options: [.mouseEnteredAndExited, .activeAlways],
+            options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect],
             owner: self,
             userInfo: nil
         )
         container.addTrackingArea(ta)
     }
+
+    // Accept first click without requiring activation
+    override var canBecomeKey: Bool { true }
 
     override func mouseEntered(with event: NSEvent) {
         fadeTimer?.invalidate()
@@ -96,17 +100,21 @@ class ButtonBar: NSPanel {
     }
 }
 
+// MARK: - Container view (accepts first mouse)
+
+private class ButtonBarContainer: NSView {
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+    override var mouseDownCanMoveWindow: Bool { false }
+}
+
 // MARK: - Round emoji button
 
 private class RoundEmojiButton: NSView {
-    private let label: String
     private let action: () -> Void
     private var isPressed = false
-    private var textLayer: CATextLayer!
     private var bgLayer: CALayer!
 
     init(frame: NSRect, label: String, tooltip: String, action: @escaping () -> Void) {
-        self.label = label
         self.action = action
         super.init(frame: frame)
         self.toolTip = tooltip
@@ -118,7 +126,7 @@ private class RoundEmojiButton: NSView {
         bgLayer.backgroundColor = NSColor(white: 0.3, alpha: 0.8).cgColor
         layer?.addSublayer(bgLayer)
 
-        textLayer = CATextLayer()
+        let textLayer = CATextLayer()
         textLayer.string = label
         textLayer.fontSize = 22
         textLayer.alignmentMode = .center
@@ -128,6 +136,10 @@ private class RoundEmojiButton: NSView {
     }
 
     required init?(coder: NSCoder) { fatalError() }
+
+    // Critical: prevent window dragging from stealing our clicks
+    override var mouseDownCanMoveWindow: Bool { false }
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 
     override func mouseDown(with event: NSEvent) {
         isPressed = true
@@ -149,6 +161,7 @@ private class RoundEmojiButton: NSView {
             isPressed = false
             let loc = convert(event.locationInWindow, from: nil)
             if bounds.contains(loc) {
+                NSLog("Button tapped: \(toolTip ?? "?")")
                 action()
             }
         }
