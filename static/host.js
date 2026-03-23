@@ -1315,17 +1315,27 @@
     ['qr', 'poll', 'wordcloud', 'qa', 'debate', 'codereview'].forEach(id => {
       const el = document.getElementById('center-' + id);
       if (id === 'qr') {
-        el.style.display = currentActivity === 'none' ? '' : 'none';
+        el.style.display = 'none';
+      } else if (id === 'poll') {
+        // Show poll panel when activity is 'poll' OR 'none' (for quiz gen controls)
+        const show = currentActivity === 'poll' || currentActivity === 'none';
+        el.style.display = show ? 'flex' : 'none';
+        // Hide the poll results section when no poll is active
+        const pollResults = el.querySelector(':scope > div:first-child');
+        if (pollResults) pollResults.style.display = currentActivity === 'poll' ? '' : 'none';
+        // Change divider text based on whether a poll exists
+        const divider = el.querySelector('.or-divider span');
+        if (divider) divider.textContent = currentActivity === 'poll' ? 'generate next' : 'generate question';
       } else {
-        const showVal = (id === 'poll' || id === 'codereview') ? 'flex' : '';
+        const showVal = id === 'codereview' ? 'flex' : '';
         el.style.display = currentActivity === id ? showVal : 'none';
       }
     });
-    // In conference mode: hide left QR when center QR is visible (no activity)
+    // In conference mode: always show the left QR
     const leftCol = document.querySelector('.host-col-left');
     if (leftCol && leftCol.classList.contains('conference-layout')) {
       const confQR = document.getElementById('conference-qr');
-      confQR.style.display = currentActivity === 'none' ? 'none' : 'flex';
+      confQR.style.display = 'flex';
     }
     // Sync hello tab active state
     const helloTab = document.getElementById('tab-hello');
