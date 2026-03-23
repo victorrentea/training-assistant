@@ -39,11 +39,19 @@ class SoundManager {
         }
     }
 
-    /// Stop a currently playing sound.
+    /// Stop a currently playing sound with a 300ms fade-out.
     func stop(_ filename: String) {
         queue.async { [weak self] in
-            self?.players[filename]?.stop()
-            self?.players[filename] = nil
+            guard let self = self, let player = self.players[filename], player.isPlaying else {
+                self?.players[filename] = nil
+                return
+            }
+            player.setVolume(0, fadeDuration: 0.3)
+            // Remove after fade completes
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { [weak self] in
+                player.stop()
+                self?.players[filename] = nil
+            }
         }
     }
 
