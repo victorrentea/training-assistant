@@ -1,7 +1,7 @@
 {
-  "sha": "8f546c194dfc22ba625d013b8a4df9c0517da53b",
-  "timestamp": "2026-03-23 15:37",
+  "sha": "a82632556bdcc2edc88b1be8d0e5c4a06bf07374",
+  "timestamp": "2026-03-23 15:39",
   "changelog": [
-    "fix: use Bucharest local time for deploy timestamps instead of UTC"
+    "feat: start.sh auto-pulls on new master commits + rework Zorro/film burn"
   ]
 }
