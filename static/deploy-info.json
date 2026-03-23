@@ -1,7 +1,7 @@
 {
-  "sha": "41af1cad09f01fe30b2af73fc3765f2a0b0c7f11",
-  "timestamp": "2026-03-23 05:45",
+  "sha": "bd7fbf737754ef53779a9dd9a7f89fdbdcf0008c",
+  "timestamp": "2026-03-23 06:40",
   "changelog": [
-    "style: update Q&A copy icon to SVG squares and rename label to Answer"
+    "fix: remove media play/pause from dictation toggle, volume-only"
   ]
 }
