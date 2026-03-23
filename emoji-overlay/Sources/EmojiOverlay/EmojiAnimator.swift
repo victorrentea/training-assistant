@@ -403,6 +403,162 @@ class EmojiAnimator {
         }
     }
 
+    // MARK: - Zorro Z slash
+
+    func showZorro() {
+        let bounds = hostLayer.bounds
+        let totalDuration = 2.8
+
+        let container = CALayer()
+        container.frame = bounds
+        hostLayer.addSublayer(container)
+
+        // Z shape: three strokes centered on screen
+        let margin: CGFloat = bounds.width * 0.25
+        let topY = bounds.height * 0.75
+        let bottomY = bounds.height * 0.25
+
+        let topLeft = CGPoint(x: margin, y: topY)
+        let topRight = CGPoint(x: bounds.width - margin, y: topY)
+        let bottomLeft = CGPoint(x: margin, y: bottomY)
+        let bottomRight = CGPoint(x: bounds.width - margin, y: bottomY)
+
+        // Full Z path: top-left → top-right → bottom-left → bottom-right
+        let zPath = CGMutablePath()
+        zPath.move(to: topLeft)
+        zPath.addLine(to: topRight)
+        zPath.addLine(to: bottomLeft)
+        zPath.addLine(to: bottomRight)
+
+        // Glow layer (wide, soft)
+        let glowLayer = CAShapeLayer()
+        glowLayer.path = zPath
+        glowLayer.strokeColor = NSColor(red: 0.9, green: 0.85, blue: 0.5, alpha: 0.6).cgColor
+        glowLayer.lineWidth = 18
+        glowLayer.fillColor = nil
+        glowLayer.lineCap = .round
+        glowLayer.lineJoin = .round
+        glowLayer.strokeEnd = 0
+        glowLayer.shadowColor = NSColor(red: 1.0, green: 0.9, blue: 0.3, alpha: 1.0).cgColor
+        glowLayer.shadowOffset = .zero
+        glowLayer.shadowRadius = 25
+        glowLayer.shadowOpacity = 1.0
+        container.addSublayer(glowLayer)
+
+        // Main slash layer (bright, sharp)
+        let slashLayer = CAShapeLayer()
+        slashLayer.path = zPath
+        slashLayer.strokeColor = NSColor.white.cgColor
+        slashLayer.lineWidth = 5
+        slashLayer.fillColor = nil
+        slashLayer.lineCap = .round
+        slashLayer.lineJoin = .round
+        slashLayer.strokeEnd = 0
+        slashLayer.shadowColor = NSColor.white.cgColor
+        slashLayer.shadowOffset = .zero
+        slashLayer.shadowRadius = 8
+        slashLayer.shadowOpacity = 1.0
+        container.addSublayer(slashLayer)
+
+        // Animate the Z being drawn
+        let drawDuration = 1.2
+        for layer in [glowLayer, slashLayer] {
+            let draw = CABasicAnimation(keyPath: "strokeEnd")
+            draw.fromValue = 0
+            draw.toValue = 1
+            draw.duration = drawDuration
+            draw.timingFunction = CAMediaTimingFunction(controlPoints: 0.2, 0.0, 0.4, 1.0)
+            draw.fillMode = .forwards
+            draw.isRemovedOnCompletion = false
+            layer.add(draw, forKey: "draw")
+        }
+
+        // Sparks along the slash path at corners
+        let sparkPoints = [topLeft, topRight, bottomLeft, bottomRight]
+        let sparkDelays = [0.0, 0.35, 0.7, 1.1]
+        for (point, delay) in zip(sparkPoints, sparkDelays) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
+                self?.spawnSparks(at: point, in: container)
+            }
+        }
+
+        // Flash at the end of the slash
+        let flash = CALayer()
+        flash.frame = bounds
+        flash.backgroundColor = NSColor(red: 1.0, green: 0.95, blue: 0.7, alpha: 1.0).cgColor
+        flash.opacity = 0
+        container.addSublayer(flash)
+
+        let flashAnim = CAKeyframeAnimation(keyPath: "opacity")
+        flashAnim.values = [0.0, 0.0, 0.25, 0.0]
+        flashAnim.keyTimes = [0.0, NSNumber(value: drawDuration / totalDuration),
+                              NSNumber(value: (drawDuration + 0.08) / totalDuration), 1.0]
+        flashAnim.duration = totalDuration
+        flashAnim.fillMode = .forwards
+        flashAnim.isRemovedOnCompletion = false
+        flash.add(flashAnim, forKey: "flash")
+
+        // Fade out everything after the Z is drawn
+        let fadeOut = CABasicAnimation(keyPath: "opacity")
+        fadeOut.fromValue = 1.0
+        fadeOut.toValue = 0.0
+        fadeOut.beginTime = drawDuration + 0.5
+        fadeOut.duration = totalDuration - drawDuration - 0.5
+        fadeOut.fillMode = .forwards
+        fadeOut.isRemovedOnCompletion = false
+        container.add(fadeOut, forKey: "fadeAll")
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + totalDuration + 0.2) { [weak container] in
+            container?.removeFromSuperlayer()
+        }
+    }
+
+    private func spawnSparks(at point: CGPoint, in container: CALayer, count: Int = 12) {
+        let scale = NSScreen.screens.first?.backingScaleFactor ?? 2.0
+        for _ in 0..<count {
+            let spark = CALayer()
+            let size: CGFloat = CGFloat.random(in: 2...5)
+            spark.frame = CGRect(x: point.x - size/2, y: point.y - size/2, width: size, height: size)
+            spark.cornerRadius = size / 2
+            spark.backgroundColor = NSColor(red: 1.0, green: CGFloat.random(in: 0.7...1.0),
+                                            blue: CGFloat.random(in: 0.2...0.5), alpha: 1.0).cgColor
+            spark.contentsScale = scale
+            container.addSublayer(spark)
+
+            let angle = CGFloat.random(in: 0...(2 * .pi))
+            let dist = CGFloat.random(in: 40...140)
+            let endPoint = CGPoint(x: point.x + cos(angle) * dist,
+                                   y: point.y + sin(angle) * dist)
+
+            let move = CABasicAnimation(keyPath: "position")
+            move.fromValue = NSValue(point: point)
+            move.toValue = NSValue(point: endPoint)
+            move.timingFunction = CAMediaTimingFunction(name: .easeOut)
+
+            let fade = CABasicAnimation(keyPath: "opacity")
+            fade.fromValue = 1.0
+            fade.toValue = 0.0
+
+            let shrink = CABasicAnimation(keyPath: "transform.scale")
+            shrink.fromValue = 1.0
+            shrink.toValue = 0.1
+
+            let duration = Double.random(in: 0.3...0.7)
+            let group = CAAnimationGroup()
+            group.animations = [move, fade, shrink]
+            group.duration = duration
+            group.fillMode = .forwards
+            group.isRemovedOnCompletion = false
+
+            CATransaction.begin()
+            CATransaction.setCompletionBlock { [weak spark] in
+                spark?.removeFromSuperlayer()
+            }
+            spark.add(group, forKey: "spark")
+            CATransaction.commit()
+        }
+    }
+
     // MARK: - Confetti burst
 
     func spawnConfetti(count: Int = 80) {
