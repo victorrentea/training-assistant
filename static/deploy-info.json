@@ -1,7 +1,7 @@
 {
-  "sha": "c557f2fda2ba654b6ea9903d1197371cfc5fe47f",
-  "timestamp": "2026-03-23 16:21",
+  "sha": "6c975ed2f2fcbb9cb66141b82e08d142fd7e74fb",
+  "timestamp": "2026-03-23 16:47",
   "changelog": [
-    "feat: epic fireworks effect with streaking lines and 3-wave grand finale"
+    "feat: sepia old-film overlay effect with grain, scratches, and jitter"
   ]
 }
