@@ -13,6 +13,8 @@
   let cachedNames = [];          // last known participant names
   let summaryPoints = [];
   let summaryUpdatedAt = null;
+  let sessionStack = [];
+  let sessionName = null;
 
   let _hostWcDebounceTimer = null;
   let _hostWcLastDataKey = null;
@@ -202,6 +204,11 @@
           renderHostCodeReview(msg.codereview);
         }
         updateSummary(msg.summary_points, msg.summary_updated_at);
+        if (msg.session_stack !== undefined) {
+          sessionStack = msg.session_stack || [];
+          sessionName = msg.session_name || null;
+          if (typeof renderSessionPanel === 'function') renderSessionPanel();
+        }
         if (msg.mode) {
           currentMode = msg.mode;
           renderMode(msg.mode);
