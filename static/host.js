@@ -1515,6 +1515,16 @@
     input.addEventListener('blur', commit, { once: true });
   }
 
+  window.copyQuestionText = function(btn, qid) {
+    const card = btn.closest('.qa-card');
+    const text = card.querySelector('.qa-text').textContent;
+    navigator.clipboard.writeText(text).then(() => {
+      const orig = btn.textContent;
+      btn.textContent = '✓';
+      setTimeout(() => { btn.textContent = orig; }, 1200);
+    });
+  };
+
   function renderQAList(questions) {
     const list = document.getElementById('qa-list');
     const countEl = document.getElementById('qa-count');
@@ -1541,6 +1551,8 @@
           <span class="qa-upvotes">▲ ${q.upvote_count}</span>
         </div>
         <div class="qa-actions">
+          <button class="btn btn-sm"
+                  onclick="copyQuestionText(this, '${escHtml(q.id)}')" title="Copy text">📋</button>
           <button class="btn btn-sm ${q.answered ? 'btn-success' : ''}"
                   onclick="toggleAnswered('${escHtml(q.id)}', ${q.answered})">
             ✓ Answered
