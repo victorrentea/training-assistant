@@ -6,8 +6,41 @@ class EmojiAnimator {
 
     static let emojiSet = ["❤️", "🔥", "👏", "😂", "🤯", "💡", "☕", "✅", "❌"]
 
+    // Track active toggleable effects (danger, sepia, zorro) so clicking again cancels them
+    private var activeEffects: [String: CALayer] = [:]
+
     init(hostLayer: CALayer) {
         self.hostLayer = hostLayer
+    }
+
+    /// Cancel a running toggleable effect. Returns true if it was running (and got cancelled).
+    private func cancelIfRunning(_ key: String, sound: String? = nil) -> Bool {
+        if let layer = activeEffects[key] {
+            layer.removeAllAnimations()
+            layer.removeFromSuperlayer()
+            activeEffects.removeValue(forKey: key)
+            if let sound = sound {
+                SoundManager.shared.stop(sound)
+            }
+            return true
+        }
+        return false
+    }
+
+    /// Register a layer as an active toggleable effect, with auto-cleanup after duration.
+    private func trackEffect(_ key: String, layer: CALayer, duration: Double, sound: String? = nil) {
+        activeEffects[key] = layer
+        DispatchQueue.main.asyncAfter(deadline: .now() + duration) { [weak self, weak layer] in
+            guard let self = self, let layer = layer else { return }
+            // Only clean up if this layer is still the active one for this key
+            if self.activeEffects[key] === layer {
+                self.activeEffects.removeValue(forKey: key)
+            }
+            layer.removeFromSuperlayer()
+            if let sound = sound {
+                SoundManager.shared.stop(sound)
+            }
+        }
     }
 
     func spawnEmoji(_ emoji: String = "❤️") {
@@ -95,7 +128,7 @@ class EmojiAnimator {
     // MARK: - Screen vignette effects
 
     /// Radial gradient vignette that pulses then fades — used for danger/success moods.
-    func showVignette(color: NSColor, duration: Double = 2.5, pulses: Int = 2, soundToStop: String? = nil) {
+    func showVignette(key: String? = nil, color: NSColor, duration: Double = 2.5, pulses: Int = 2, soundToStop: String? = nil) {
         let bounds = hostLayer.bounds
 
         let vignetteLayer = CALayer()
@@ -142,8 +175,15 @@ class EmojiAnimator {
         group.fillMode = .forwards
         group.isRemovedOnCompletion = false
 
+        if let key = key {
+            activeEffects[key] = vignetteLayer
+        }
+
         CATransaction.begin()
-        CATransaction.setCompletionBlock { [weak vignetteLayer] in
+        CATransaction.setCompletionBlock { [weak self, weak vignetteLayer] in
+            if let key = key, let self = self, self.activeEffects[key] === vignetteLayer {
+                self.activeEffects.removeValue(forKey: key)
+            }
             vignetteLayer?.removeFromSuperlayer()
             if let sound = soundToStop {
                 SoundManager.shared.stop(sound)
@@ -154,8 +194,9 @@ class EmojiAnimator {
     }
 
     func showDanger() {
+        if cancelIfRunning("danger", sound: "alarm.mp3") { return }
         SoundManager.shared.play("alarm.mp3")
-        showVignette(color: .systemRed, duration: 3.0, pulses: 3, soundToStop: "alarm.mp3")
+        showVignette(key: "danger", color: .systemRed, duration: 3.0, pulses: 3, soundToStop: "alarm.mp3")
     }
 
     // MARK: - Earthquake (screen shake + cracks + blackout)
@@ -442,6 +483,7 @@ class EmojiAnimator {
     // MARK: - Zorro Z slash (fiery sword marks)
 
     func showZorro() {
+        if cancelIfRunning("zorro") { return }
         let bounds = hostLayer.bounds
         let totalDuration = 3.5
 
@@ -579,9 +621,7 @@ class EmojiAnimator {
         fadeOut.isRemovedOnCompletion = false
         container.add(fadeOut, forKey: "fadeAll")
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + totalDuration + 0.2) { [weak container] in
-            container?.removeFromSuperlayer()
-        }
+        trackEffect("zorro", layer: container, duration: totalDuration + 0.2)
     }
 
     // MARK: - Fireworks
@@ -901,6 +941,7 @@ class EmojiAnimator {
     // MARK: - Sepia / old film overlay
 
     func showSepia() {
+        if cancelIfRunning("sepia", sound: "projector.mp3") { return }
         let bounds = hostLayer.bounds
         let totalDuration = 7.0
 
@@ -982,14 +1023,14 @@ class EmojiAnimator {
             scratch.add(sf, forKey: "scratch")
         }
 
-        // Single keyframe: fade in → hold at full opacity → fade out
-        let fadeInFrac = 1.2 / totalDuration
-        let fadeOutStart = 1.0 - (1.5 / totalDuration)
+        // Fade in over 1s, hold throughout, fade out in last 1s
+        let fadeInEnd = 1.0 / totalDuration
+        let fadeOutStart = 1.0 - (1.0 / totalDuration)
 
         for layer in [sepiaLayer, vignette, grainLayer] {
             let anim = CAKeyframeAnimation(keyPath: "opacity")
             anim.values = [0.0, 1.0, 1.0, 0.0]
-            anim.keyTimes = [0.0, NSNumber(value: fadeInFrac),
+            anim.keyTimes = [0.0, NSNumber(value: fadeInEnd),
                              NSNumber(value: fadeOutStart), 1.0]
             anim.duration = totalDuration
             anim.fillMode = .forwards
@@ -1011,19 +1052,22 @@ class EmojiAnimator {
         jitter.duration = totalDuration
         container.add(jitter, forKey: "jitter")
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + totalDuration + 0.2) { [weak container] in
-            container?.removeFromSuperlayer()
-            SoundManager.shared.stop("projector.mp3")
-        }
+        trackEffect("sepia", layer: container, duration: totalDuration + 0.2, sound: "projector.mp3")
     }
 
     // MARK: - Confetti burst
 
     func spawnConfetti(count: Int = 80) {
+        SoundManager.shared.play("confetti.mp3")
         let bounds = hostLayer.bounds
         let screenW = bounds.width
         let screenH = bounds.height
         let scale = NSScreen.screens.first?.backingScaleFactor ?? 2.0
+
+        // Stop sound after confetti falls (~5s)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 5.0) {
+            SoundManager.shared.stop("confetti.mp3")
+        }
 
         for i in 0..<count {
             let delay = Double(i) * 0.012 // stagger over ~1s
