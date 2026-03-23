@@ -72,6 +72,9 @@ class AppState:
         self.summary_updated_at: Optional[datetime] = None
         self.summary_force_requested: bool = False
         self.summary_force_full_day: bool = False
+        # Session stack
+        self.session_stack: list[dict] = []
+        self.session_request: dict | None = None
         # Debate state
         self.debate_statement: Optional[str] = None
         self.debate_phase: Optional[str] = None  # "side_selection"|"arguments"|"ai_cleanup"|"prep"|"live_debate"|"ended"
