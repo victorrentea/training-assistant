@@ -1,7 +1,7 @@
 {
-  "sha": "6b6b6091d68d11568bff9f63140169fe0deef7a1",
-  "timestamp": "2026-03-23 19:26",
+  "sha": "98e1d7a17af282d790a30ea8462c26cb434d5102",
+  "timestamp": "2026-03-23 19:59",
   "changelog": [
-    "fix: sound fade-out runs on main thread for reliable AVAudioPlayer behavior"
+    "fix: remove bullet numbering from summary key points"
   ]
 }
