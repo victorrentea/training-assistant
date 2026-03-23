@@ -8,9 +8,9 @@
 #   2. Deploy watcher   — monitors production deploys, notifies on success/failure
 #   3. Emoji overlay    — macOS overlay app rendering participant emoji reactions
 #
-# When the training daemon detects a server version change (exit code 42),
-# ALL processes are stopped, code is pulled, overlay is rebuilt, and
-# everything restarts automatically.
+# Auto-updates: every 10s, `git fetch` checks for new commits on master.
+# When new code is detected (or daemon exits with code 42), ALL processes
+# are stopped, code is pulled, overlay is rebuilt, and everything restarts.
 #
 # PREREQUISITES
 #   - Python 3.12+ with project dependencies installed
@@ -210,6 +210,48 @@ start_overlay() {
   OVERLAY_PID=$!
 }
 
+# ── Git auto-update ──
+
+GIT_POLL_INTERVAL=10  # seconds between git fetch checks
+LOCAL_HEAD=""
+
+check_git_updates() {
+  # Fetch quietly, compare local master vs origin/master
+  git fetch origin master --quiet 2>/dev/null || return 1
+  local remote_head
+  remote_head=$(git rev-parse origin/master 2>/dev/null)
+  local local_head
+  local_head=$(git rev-parse HEAD 2>/dev/null)
+
+  if [ -n "$remote_head" ] && [ "$remote_head" != "$local_head" ]; then
+    local msg
+    msg=$(git log --oneline "$local_head".."$remote_head" 2>/dev/null | head -3)
+    echo ""
+    echo "$(date '+%H:%M:%S') 🔀 New commits on master detected!"
+    echo "$msg"
+    return 0  # update available
+  fi
+  return 1  # no update
+}
+
+stop_all_processes() {
+  echo "$(date '+%H:%M:%S') 🛑 Stopping all processes..."
+  [ -n "$DAEMON_PID" ]  && kill "$DAEMON_PID"  2>/dev/null && DAEMON_PID=""
+  [ -n "$WATCHER_PID" ] && kill "$WATCHER_PID" 2>/dev/null && WATCHER_PID=""
+  [ -n "$OVERLAY_PID" ] && kill "$OVERLAY_PID" 2>/dev/null && OVERLAY_PID=""
+  wait 2>/dev/null
+}
+
+pull_and_rebuild() {
+  echo "$(date '+%H:%M:%S') 📥 Pulling latest code..."
+  if ! git pull; then
+    echo "❌ git pull failed. Please resolve manually."
+    exit 1
+  fi
+  echo "$(date '+%H:%M:%S') 🔨 Rebuilding..."
+  build_overlay
+}
+
 # ── Main loop ──
 
 build_overlay
@@ -226,41 +268,41 @@ while true; do
   [ -n "$OVERLAY_PID" ] && echo "  Emoji overlay:   PID $OVERLAY_PID"
   echo ""
 
-  # Wait for daemon — it's the one that detects version changes
-  wait "$DAEMON_PID" 2>/dev/null
-  DAEMON_EXIT=$?
-  DAEMON_PID=""
+  # Poll loop: check daemon health + git updates
+  RESTART_REASON=""
+  while true; do
+    sleep "$GIT_POLL_INTERVAL"
 
-  if [ $DAEMON_EXIT -eq 42 ]; then
-    echo ""
-    echo "$(date '+%H:%M:%S') 🔄 Server version changed — stopping all processes..."
-    [ -n "$WATCHER_PID" ] && kill "$WATCHER_PID" 2>/dev/null && WATCHER_PID=""
-    [ -n "$OVERLAY_PID" ] && kill "$OVERLAY_PID" 2>/dev/null && OVERLAY_PID=""
-    wait 2>/dev/null
-
-    echo "$(date '+%H:%M:%S') 📥 Pulling latest code..."
-    if ! git pull; then
-      echo "❌ git pull failed. Please resolve manually."
-      exit 1
+    # Check if daemon exited
+    if [ -n "$DAEMON_PID" ] && ! kill -0 "$DAEMON_PID" 2>/dev/null; then
+      wait "$DAEMON_PID" 2>/dev/null
+      DAEMON_EXIT=$?
+      DAEMON_PID=""
+      if [ $DAEMON_EXIT -eq 0 ]; then
+        echo "$(date '+%H:%M:%S') 👋 Daemon stopped normally. Shutting down."
+        stop_all_processes
+        exit 0
+      elif [ $DAEMON_EXIT -eq 42 ]; then
+        RESTART_REASON="daemon-version-change"
+        break
+      else
+        echo "$(date '+%H:%M:%S') ⚠️  Daemon crashed (exit $DAEMON_EXIT) — will restart after pull check"
+        RESTART_REASON="daemon-crash"
+        break
+      fi
     fi
 
-    echo "$(date '+%H:%M:%S') 🔨 Rebuilding..."
-    build_overlay
+    # Check for new commits on origin/master
+    if check_git_updates; then
+      RESTART_REASON="git-update"
+      break
+    fi
+  done
 
-    echo "$(date '+%H:%M:%S') 🔁 Restarting all processes..."
-    echo ""
-    continue
-  elif [ $DAEMON_EXIT -eq 0 ]; then
-    echo "$(date '+%H:%M:%S') 👋 Daemon stopped normally. Shutting down."
-    [ -n "$WATCHER_PID" ] && kill "$WATCHER_PID" 2>/dev/null
-    [ -n "$OVERLAY_PID" ] && kill "$OVERLAY_PID" 2>/dev/null
-    wait 2>/dev/null
-    exit 0
-  else
-    echo "$(date '+%H:%M:%S') ❌ Daemon exited with error code $DAEMON_EXIT. Shutting down."
-    [ -n "$WATCHER_PID" ] && kill "$WATCHER_PID" 2>/dev/null
-    [ -n "$OVERLAY_PID" ] && kill "$OVERLAY_PID" 2>/dev/null
-    wait 2>/dev/null
-    exit $DAEMON_EXIT
-  fi
+  # Stop everything and update
+  stop_all_processes
+  pull_and_rebuild
+
+  echo "$(date '+%H:%M:%S') 🔁 Restarting all processes (reason: $RESTART_REASON)..."
+  echo ""
 done
