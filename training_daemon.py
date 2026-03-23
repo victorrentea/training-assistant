@@ -18,6 +18,7 @@ All configuration is read from secrets.env and environment variables:
 import json
 import logging
 import os
+import re
 import signal
 import sys
 import time
