@@ -1,7 +1,7 @@
 {
-  "sha": "a82632556bdcc2edc88b1be8d0e5c4a06bf07374",
-  "timestamp": "2026-03-23 15:39",
+  "sha": "50217670c5f156074fb5a3fe1b766f67fcd26c33",
+  "timestamp": "2026-03-23 15:40",
   "changelog": [
-    "feat: start.sh auto-pulls on new master commits + rework Zorro/film burn"
+    "fix: center emoji button bar horizontally on screen"
   ]
 }
