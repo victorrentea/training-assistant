@@ -1,7 +1,7 @@
 {
-  "sha": "b2b55918b0c60aaaea3f59b33c4ad19ed2d22ecc",
+  "sha": "c9151bc7c72e95588582d4bcb0dcd29edaf60614",
   "timestamp": "2026-03-23 13:32",
   "changelog": [
-    "fix: Zorro and film burn effects invisible due to beginTime bug"
+    "fix: add missing `import re` in training_daemon.py"
   ]
 }
