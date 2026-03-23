@@ -63,6 +63,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, URLSessionWebSocketDelegate 
             .init(label: "🎆", tooltip: "Fireworks") { [weak self] in
                 self?.animator.showFireworks()
             },
+            .init(label: "📽️", tooltip: "Sepia") { [weak self] in
+                self?.animator.showSepia()
+            },
         ]
 
         buttonBar = ButtonBar(buttons: buttons)
