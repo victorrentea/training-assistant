@@ -1,7 +1,7 @@
 {
-  "sha": "a45f24fdd396d0a43fe2b1dff4534ea93f2b586c",
-  "timestamp": "2026-03-23 05:32",
+  "sha": "41af1cad09f01fe30b2af73fc3765f2a0b0c7f11",
+  "timestamp": "2026-03-23 05:45",
   "changelog": [
-    "feat: add copy button to Q&A cards in host panel"
+    "style: update Q&A copy icon to SVG squares and rename label to Answer"
   ]
 }
