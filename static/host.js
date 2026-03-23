@@ -1519,9 +1519,9 @@
     const card = btn.closest('.qa-card');
     const text = card.querySelector('.qa-text').textContent;
     navigator.clipboard.writeText(text).then(() => {
-      const orig = btn.textContent;
+      const orig = btn.innerHTML;
       btn.textContent = '✓';
-      setTimeout(() => { btn.textContent = orig; }, 1200);
+      setTimeout(() => { btn.innerHTML = orig; }, 1200);
     });
   };
 
@@ -1552,10 +1552,10 @@
         </div>
         <div class="qa-actions">
           <button class="btn btn-sm"
-                  onclick="copyQuestionText(this, '${escHtml(q.id)}')" title="Copy text">📋</button>
+                  onclick="copyQuestionText(this, '${escHtml(q.id)}')" title="Copy text"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5.5" y="5.5" width="9" height="9" rx="1.5"/><path d="M10.5 5.5V3a1.5 1.5 0 0 0-1.5-1.5H3A1.5 1.5 0 0 0 1.5 3v6A1.5 1.5 0 0 0 3 10.5h2.5"/></svg></button>
           <button class="btn btn-sm ${q.answered ? 'btn-success' : ''}"
                   onclick="toggleAnswered('${escHtml(q.id)}', ${q.answered})">
-            ✓ Answered
+            ✓ Answer
           </button>
           <button class="btn btn-sm btn-primary"
                   onclick="editQuestion('${escHtml(q.id)}')">✎ Edit</button>
