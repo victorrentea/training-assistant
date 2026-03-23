@@ -5,6 +5,9 @@ let package = Package(
     name: "EmojiOverlay",
     platforms: [.macOS(.v13)],
     targets: [
-        .executableTarget(name: "EmojiOverlay")
+        .executableTarget(
+            name: "EmojiOverlay",
+            resources: [.copy("Resources")]
+        )
     ]
 )

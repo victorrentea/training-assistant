@@ -151,6 +151,7 @@ class EmojiAnimator {
     }
 
     func showDanger() {
+        SoundManager.shared.play("alarm.mp3")
         showVignette(color: .systemRed, duration: 3.0, pulses: 3)
     }
 
@@ -601,6 +602,9 @@ class EmojiAnimator {
     ]
 
     func showFireworks() {
+        // Only play sound if not already playing (repeated clicks don't restart)
+        SoundManager.shared.play("fireworks.mp3")
+
         let bounds = hostLayer.bounds
         let scale = NSScreen.screens.first?.backingScaleFactor ?? 2.0
 
@@ -890,30 +894,32 @@ class EmojiAnimator {
 
     func showSepia() {
         let bounds = hostLayer.bounds
-        let totalDuration = 5.0
+        let totalDuration = 7.0
+
+        SoundManager.shared.play("projector.mp3")
 
         let container = CALayer()
         container.frame = bounds
         hostLayer.addSublayer(container)
 
-        // Warm sepia wash
+        // Warm sepia wash — visible yellowed center
         let sepiaLayer = CALayer()
         sepiaLayer.frame = bounds
-        sepiaLayer.backgroundColor = NSColor(red: 0.45, green: 0.32, blue: 0.18, alpha: 0.55).cgColor
+        sepiaLayer.backgroundColor = NSColor(red: 0.50, green: 0.38, blue: 0.15, alpha: 0.45).cgColor
         sepiaLayer.opacity = 0
         container.addSublayer(sepiaLayer)
 
-        // Vignette darkening at edges
+        // Vignette darkening at edges (keeps center visible/yellowed)
         let vignette = CAGradientLayer()
         vignette.type = .radial
         vignette.frame = bounds
         vignette.colors = [
             NSColor.clear.cgColor,
             NSColor.clear.cgColor,
-            NSColor(white: 0, alpha: 0.5).cgColor,
-            NSColor(white: 0, alpha: 0.8).cgColor,
+            NSColor(white: 0, alpha: 0.45).cgColor,
+            NSColor(white: 0, alpha: 0.75).cgColor,
         ]
-        vignette.locations = [0.0, 0.4, 0.75, 1.0]
+        vignette.locations = [0.0, 0.35, 0.70, 1.0]
         vignette.startPoint = CGPoint(x: 0.5, y: 0.5)
         vignette.endPoint = CGPoint(x: 1.0, y: 1.0)
         vignette.opacity = 0
@@ -947,43 +953,46 @@ class EmojiAnimator {
             speck.add(flicker, forKey: "flicker")
         }
 
-        // Vertical scratches
-        for _ in 0..<5 {
+        // Vertical scratches — thick and visible
+        for _ in 0..<8 {
             let scratch = CAShapeLayer()
             let sp = CGMutablePath()
-            let x = CGFloat.random(in: bounds.width * 0.1...bounds.width * 0.9)
-            sp.move(to: CGPoint(x: x + CGFloat.random(in: -2...2), y: 0))
-            sp.addLine(to: CGPoint(x: x + CGFloat.random(in: -5...5), y: bounds.height))
+            let x = CGFloat.random(in: bounds.width * 0.05...bounds.width * 0.95)
+            sp.move(to: CGPoint(x: x + CGFloat.random(in: -3...3), y: 0))
+            sp.addLine(to: CGPoint(x: x + CGFloat.random(in: -8...8), y: bounds.height))
             scratch.path = sp
-            scratch.strokeColor = NSColor(white: 0.9, alpha: 0.4).cgColor
-            scratch.lineWidth = CGFloat.random(in: 0.5...1.5)
+            scratch.strokeColor = NSColor(white: 0.95, alpha: 0.6).cgColor
+            scratch.lineWidth = CGFloat.random(in: 1.5...4.0)
             scratch.fillColor = nil
             scratch.opacity = 0
             container.addSublayer(scratch)
 
             let sf = CAKeyframeAnimation(keyPath: "opacity")
-            sf.values = [0, 0, 0.6, 0, 0, 0.4, 0, 0]
-            sf.duration = Double.random(in: 0.3...0.8)
+            sf.values = [0, 0, 0.8, 0, 0, 0.6, 0, 0]
+            sf.duration = Double.random(in: 0.2...0.5)
             sf.repeatCount = .infinity
             scratch.add(sf, forKey: "scratch")
         }
 
-        // Fade in, hold, fade out
-        let fadeInDur = 0.8
-        let holdDur = totalDuration - fadeInDur - 1.0
+        // Gentle fade in, long hold, gentle fade out
+        let fadeInDur = 1.2
+        let fadeOutDur = 1.5
+        let holdDur = totalDuration - fadeInDur - fadeOutDur
 
         for layer in [sepiaLayer, vignette, grainLayer] {
             let fadeIn = CABasicAnimation(keyPath: "opacity")
             fadeIn.fromValue = 0
             fadeIn.toValue = 1.0
             fadeIn.duration = fadeInDur
+            fadeIn.timingFunction = CAMediaTimingFunction(name: .easeIn)
 
             let fadeOut = CABasicAnimation(keyPath: "opacity")
             fadeOut.fromValue = 1.0
             fadeOut.toValue = 0.0
             fadeOut.beginTime = fadeInDur + holdDur
-            fadeOut.duration = 1.0
+            fadeOut.duration = fadeOutDur
             fadeOut.fillMode = .forwards
+            fadeOut.timingFunction = CAMediaTimingFunction(name: .easeOut)
 
             let group = CAAnimationGroup()
             group.animations = [fadeIn, fadeOut]
@@ -993,11 +1002,11 @@ class EmojiAnimator {
             layer.add(group, forKey: "sepia")
         }
 
-        // Projector jitter
+        // Projector jitter — gentle throughout
         let jitter = CAKeyframeAnimation(keyPath: "position")
         let c = CGPoint(x: bounds.midX, y: bounds.midY)
         var jitterValues: [NSValue] = []
-        for _ in 0..<60 {
+        for _ in 0..<100 {
             jitterValues.append(NSValue(point: CGPoint(
                 x: c.x + CGFloat.random(in: -1.5...1.5),
                 y: c.y + CGFloat.random(in: -1.5...1.5)
