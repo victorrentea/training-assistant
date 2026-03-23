@@ -67,9 +67,15 @@ class TranscriptTimestampAppender:
     def _resolve_target_file(self) -> Path | None:
         if not self.folder.exists() or not self.folder.is_dir():
             return None
+        _date_re = re.compile(r"^(\d{8})\s+(\d{4})\b")
+
+        def _sort_key(f: Path):
+            m = _date_re.match(f.name)
+            return m.group(1) + m.group(2) if m else ""
+
         txt_files = sorted(
             [f for f in self.folder.iterdir() if f.suffix.lower() == ".txt"],
-            key=lambda f: f.stat().st_mtime,
+            key=_sort_key,
         )
         return txt_files[-1] if txt_files else None
 
@@ -266,6 +272,7 @@ def run() -> None:
     last_heartbeat_at = 0.0
     last_session_check_at = 0.0
     last_transcript_stats_at = 0.0
+    last_notes_mtime: float = 0.0  # track notes file mtime for re-push on change
     # Summary state — two-tier: locked (preserved) + draft (reshapeable)
     locked_points: list[dict] = [
         {"text": f"Session date: {date.today().isoformat()}", "source": "notes"}
@@ -339,15 +346,22 @@ def run() -> None:
                 post_status("ready", "Agent ready.", config,
                             session_folder=sf_name, session_notes=sn_name)
 
-            # Push notes content if server doesn't have it yet
-            if config.session_notes and not server_has_notes:
-                notes_text = read_session_notes(config)
-                if notes_text:
-                    _post_json(
-                        f"{config.server_url}/api/notes",
-                        {"content": notes_text},
-                        config.host_username, config.host_password,
-                    )
+            # Push notes content when file is new or modified
+            if config.session_notes:
+                try:
+                    current_mtime = config.session_notes.stat().st_mtime
+                except OSError:
+                    current_mtime = 0.0
+                notes_changed = current_mtime != last_notes_mtime and current_mtime > 0
+                if notes_changed or not server_has_notes:
+                    notes_text = read_session_notes(config)
+                    if notes_text:
+                        _post_json(
+                            f"{config.server_url}/api/notes",
+                            {"content": notes_text},
+                            config.host_username, config.host_password,
+                        )
+                        last_notes_mtime = current_mtime
             req = data.get("request")
             if req:
                 topic = req.get("topic")

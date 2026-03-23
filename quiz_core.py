@@ -179,8 +179,7 @@ def read_session_notes(config: Config) -> str:
 _VTT_TS  = re.compile(r"(?:(\d+):)?(\d{2}):(\d{2})\.(\d{3})\s+-->")
 _SRT_TS  = re.compile(r"(\d{2}):(\d{2}):(\d{2}),(\d{3})\s+-->")
 _SRT_SEQ = re.compile(r"^\d+$")
-_TXT_TS  = re.compile(r"^\[(\d{2}):(\d{2}):(\d{2})\.\d+\]\s+[^:]+:\t(.*)")
-_TXT_TS2 = re.compile(r"^\[\s*(\d{2}):(\d{2}):(\d{2})\.\d+\s*\]\s+(.*)")
+_TXT_TS_RE = re.compile(r"^\[\s*(\d{2}):(\d{2}):(\d{2})\.\d+\s*\]\s*(.*)")
 
 
 def _ts_to_seconds(h, m, s) -> float:
@@ -231,21 +230,34 @@ def _parse_txt(text: str) -> list:
         line = line.strip()
         if not line:
             continue
-        m = _TXT_TS.match(line) or _TXT_TS2.match(line)
+        m = _TXT_TS_RE.match(line)
         if m:
             txt = m.group(4).strip() if m.group(4) else ""
             if txt:
+                # Normalize "Speaker:\ttext" → "Speaker: text"
+                txt = txt.replace("\t", " ")
                 entries.append((_ts_to_seconds(m.group(1), m.group(2), m.group(3)), txt))
         else:
             entries.append((None, line))
     return entries
 
 
+_FILENAME_DATE_RE = re.compile(r"^(\d{8})\s+(\d{4})\b")
+
+
 def load_transcription_files(folder: Path) -> list:
-    """Load the most recently modified transcription file from folder."""
+    """Load the transcription file with the latest date in its filename."""
+
+    def _sort_key(f: Path):
+        """Prefer filename-embedded date; fall back to mtime."""
+        m = _FILENAME_DATE_RE.match(f.name)
+        if m:
+            return m.group(1) + m.group(2)  # e.g. "202603222100"
+        return f.stat().st_mtime
+
     files = sorted(
         [f for f in folder.iterdir() if f.suffix.lower() in {".txt", ".vtt", ".srt"}],
-        key=lambda f: f.stat().st_mtime,
+        key=_sort_key,
     )
     if not files:
         print(f"[error] No .txt, .vtt, or .srt files found in {folder}", file=sys.stderr)
@@ -279,12 +291,28 @@ def extract_last_n_minutes(entries: list, minutes: int) -> str:
     if timed:
         max_ts = max(ts for ts, _ in timed)
         cutoff = max_ts - minutes * 60
-        text = " ".join(txt for ts, txt in entries if ts is None or ts >= cutoff)
+        selected = [(ts, txt) for ts, txt in entries if ts is not None and ts >= cutoff]
         print(f"[info] Timestamp-based extraction (last {minutes} min, cutoff at {max(0, cutoff/60):.1f} min mark)")
     else:
         budget = minutes * _CHARS_PER_MINUTE
         text = " ".join(txt for _, txt in entries)[-budget:]
         print(f"[info] No timestamps — using last ~{budget:,} chars (≈{minutes} min at 130 wpm)")
+        if len(text) > MAX_CHARS_TO_CLAUDE:
+            text = text[-MAX_CHARS_TO_CLAUDE:]
+            print(f"[info] Text capped at {MAX_CHARS_TO_CLAUDE:,} chars")
+        return text.strip()
+
+    # Build clean text: add [HH:MM] markers only at ~1 min intervals
+    parts: list[str] = []
+    last_marker_ts: float = -120.0  # force first marker
+    for ts, txt in selected:
+        if ts - last_marker_ts >= 60:
+            h, remainder = divmod(int(ts), 3600)
+            m, _ = divmod(remainder, 60)
+            parts.append(f"\n[{h:02d}:{m:02d}]")
+            last_marker_ts = ts
+        parts.append(txt)
+    text = " ".join(parts)
 
     if len(text) > MAX_CHARS_TO_CLAUDE:
         text = text[-MAX_CHARS_TO_CLAUDE:]
