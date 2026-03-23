@@ -1,7 +1,7 @@
 {
-  "sha": "4d0beefaf0e97faf433503459dff6f3b93dcd0de",
-  "timestamp": "2026-03-23 20:04",
+  "sha": "ca098106c591870db8c9598e28f002e3d601a689",
+  "timestamp": "2026-03-23 20:23",
   "changelog": [
-    "fix: remove error sound from deploy watcher, keep success only"
+    "feat: remove timestamps from key points display"
   ]
 }
