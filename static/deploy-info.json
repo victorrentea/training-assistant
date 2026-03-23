@@ -1,7 +1,7 @@
 {
-  "sha": "96c8ddf1f97a6f72bd772bfe0ca4b8866d070602",
-  "timestamp": "2026-03-23 15:41",
+  "sha": "f60ebad32e59dadb506eadc046b9644f7e5a1704",
+  "timestamp": "2026-03-23 15:44",
   "changelog": [
-    "fix: tilt Zorro Z counter-clockwise to match reference image"
+    "feat: date-stamped transcript lines + full-day summary with disk cache"
   ]
 }
