@@ -1,7 +1,7 @@
 {
-  "sha": "86ec4a8667ca4cd485015a825eebc44e122e09d9",
+  "sha": "ae8496906f6b26a26bc060bed4918a98a41ec5c0",
   "timestamp": "2026-03-23 19:11",
   "changelog": [
-    "feat: improve notes view with monospace, full width, download button"
+    "fix: sepia stays visible (no blink), sounds stop when effects end"
   ]
 }
