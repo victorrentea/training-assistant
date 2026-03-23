@@ -320,6 +320,50 @@ def extract_last_n_minutes(entries: list, minutes: int) -> str:
     return text.strip()
 
 
+def extract_text_for_time_window(
+    entries: list,
+    start_ts: float,
+    end_ts: float | None = None,
+    exclude_ranges: list[tuple[float, float]] | None = None,
+) -> str:
+    """Extract transcript text within a time window, excluding nested session ranges.
+    Timestamps are seconds-from-midnight. HH:MM markers added at ~1 min intervals."""
+    exclude_ranges = exclude_ranges or []
+
+    def _in_excluded(ts: float) -> bool:
+        return any(lo <= ts < hi for lo, hi in exclude_ranges)
+
+    selected = []
+    for ts, txt in entries:
+        if ts is None:
+            continue
+        if ts < start_ts:
+            continue
+        if end_ts is not None and ts >= end_ts:
+            continue
+        if _in_excluded(ts):
+            continue
+        selected.append((ts, txt))
+
+    if not selected:
+        return ""
+
+    parts: list[str] = []
+    last_marker_ts: float = -120.0
+    for ts, txt in selected:
+        if ts - last_marker_ts >= 60:
+            h, remainder = divmod(int(ts), 3600)
+            m, _ = divmod(remainder, 60)
+            parts.append(f"\n[{h:02d}:{m:02d}]")
+            last_marker_ts = ts
+        parts.append(txt)
+
+    text = " ".join(parts)
+    if len(text) > MAX_CHARS_TO_CLAUDE:
+        text = text[-MAX_CHARS_TO_CLAUDE:]
+    return text.strip()
+
+
 def extract_all_text(entries: list) -> str:
     """Extract all transcript text with [HH:MM] markers at ~1 min intervals."""
     timed = [(ts, txt) for ts, txt in entries if ts is not None]
