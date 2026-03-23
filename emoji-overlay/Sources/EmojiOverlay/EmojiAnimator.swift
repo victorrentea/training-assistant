@@ -95,7 +95,7 @@ class EmojiAnimator {
     // MARK: - Screen vignette effects
 
     /// Radial gradient vignette that pulses then fades — used for danger/success moods.
-    func showVignette(color: NSColor, duration: Double = 2.5, pulses: Int = 2) {
+    func showVignette(color: NSColor, duration: Double = 2.5, pulses: Int = 2, soundToStop: String? = nil) {
         let bounds = hostLayer.bounds
 
         let vignetteLayer = CALayer()
@@ -145,6 +145,9 @@ class EmojiAnimator {
         CATransaction.begin()
         CATransaction.setCompletionBlock { [weak vignetteLayer] in
             vignetteLayer?.removeFromSuperlayer()
+            if let sound = soundToStop {
+                SoundManager.shared.stop(sound)
+            }
         }
         vignetteLayer.add(group, forKey: "vignette")
         CATransaction.commit()
@@ -152,7 +155,7 @@ class EmojiAnimator {
 
     func showDanger() {
         SoundManager.shared.play("alarm.mp3")
-        showVignette(color: .systemRed, duration: 3.0, pulses: 3)
+        showVignette(color: .systemRed, duration: 3.0, pulses: 3, soundToStop: "alarm.mp3")
     }
 
     // MARK: - Earthquake (screen shake + cracks + blackout)
@@ -641,6 +644,11 @@ class EmojiAnimator {
                                    palette: palette, scale: scale, big: true)
             }
         }
+
+        // Stop sound after last firework fades (~7s total)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 7.0) {
+            SoundManager.shared.stop("fireworks.mp3")
+        }
     }
 
     private func launchRocket(from start: CGPoint, to burst: CGPoint,
@@ -974,32 +982,19 @@ class EmojiAnimator {
             scratch.add(sf, forKey: "scratch")
         }
 
-        // Gentle fade in, long hold, gentle fade out
-        let fadeInDur = 1.2
-        let fadeOutDur = 1.5
-        let holdDur = totalDuration - fadeInDur - fadeOutDur
+        // Single keyframe: fade in → hold at full opacity → fade out
+        let fadeInFrac = 1.2 / totalDuration
+        let fadeOutStart = 1.0 - (1.5 / totalDuration)
 
         for layer in [sepiaLayer, vignette, grainLayer] {
-            let fadeIn = CABasicAnimation(keyPath: "opacity")
-            fadeIn.fromValue = 0
-            fadeIn.toValue = 1.0
-            fadeIn.duration = fadeInDur
-            fadeIn.timingFunction = CAMediaTimingFunction(name: .easeIn)
-
-            let fadeOut = CABasicAnimation(keyPath: "opacity")
-            fadeOut.fromValue = 1.0
-            fadeOut.toValue = 0.0
-            fadeOut.beginTime = fadeInDur + holdDur
-            fadeOut.duration = fadeOutDur
-            fadeOut.fillMode = .forwards
-            fadeOut.timingFunction = CAMediaTimingFunction(name: .easeOut)
-
-            let group = CAAnimationGroup()
-            group.animations = [fadeIn, fadeOut]
-            group.duration = totalDuration
-            group.fillMode = .forwards
-            group.isRemovedOnCompletion = false
-            layer.add(group, forKey: "sepia")
+            let anim = CAKeyframeAnimation(keyPath: "opacity")
+            anim.values = [0.0, 1.0, 1.0, 0.0]
+            anim.keyTimes = [0.0, NSNumber(value: fadeInFrac),
+                             NSNumber(value: fadeOutStart), 1.0]
+            anim.duration = totalDuration
+            anim.fillMode = .forwards
+            anim.isRemovedOnCompletion = false
+            layer.add(anim, forKey: "sepia")
         }
 
         // Projector jitter — gentle throughout
@@ -1018,6 +1013,7 @@ class EmojiAnimator {
 
         DispatchQueue.main.asyncAfter(deadline: .now() + totalDuration + 0.2) { [weak container] in
             container?.removeFromSuperlayer()
+            SoundManager.shared.stop("projector.mp3")
         }
     }
 
