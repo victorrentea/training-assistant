@@ -886,6 +886,132 @@ class EmojiAnimator {
         }
     }
 
+    // MARK: - Sepia / old film overlay
+
+    func showSepia() {
+        let bounds = hostLayer.bounds
+        let totalDuration = 4.0
+
+        let container = CALayer()
+        container.frame = bounds
+        hostLayer.addSublayer(container)
+
+        // Warm sepia wash
+        let sepiaLayer = CALayer()
+        sepiaLayer.frame = bounds
+        sepiaLayer.backgroundColor = NSColor(red: 0.45, green: 0.32, blue: 0.18, alpha: 0.55).cgColor
+        sepiaLayer.opacity = 0
+        container.addSublayer(sepiaLayer)
+
+        // Vignette darkening at edges
+        let vignette = CAGradientLayer()
+        vignette.type = .radial
+        vignette.frame = bounds
+        vignette.colors = [
+            NSColor.clear.cgColor,
+            NSColor.clear.cgColor,
+            NSColor(white: 0, alpha: 0.5).cgColor,
+            NSColor(white: 0, alpha: 0.8).cgColor,
+        ]
+        vignette.locations = [0.0, 0.4, 0.75, 1.0]
+        vignette.startPoint = CGPoint(x: 0.5, y: 0.5)
+        vignette.endPoint = CGPoint(x: 1.0, y: 1.0)
+        vignette.opacity = 0
+        container.addSublayer(vignette)
+
+        // Film grain — flickering specks
+        let grainLayer = CALayer()
+        grainLayer.frame = bounds
+        grainLayer.opacity = 0
+        container.addSublayer(grainLayer)
+
+        let scale = NSScreen.screens.first?.backingScaleFactor ?? 2.0
+        for _ in 0..<60 {
+            let speck = CALayer()
+            let sz = CGFloat.random(in: 1.5...4)
+            speck.frame = CGRect(
+                x: CGFloat.random(in: 0...bounds.width),
+                y: CGFloat.random(in: 0...bounds.height),
+                width: sz, height: sz
+            )
+            speck.cornerRadius = sz / 2
+            let bright = Bool.random() ? CGFloat.random(in: 0.8...1.0) : CGFloat.random(in: 0...0.15)
+            speck.backgroundColor = NSColor(white: bright, alpha: CGFloat.random(in: 0.3...0.7)).cgColor
+            speck.contentsScale = scale
+            grainLayer.addSublayer(speck)
+
+            let flicker = CAKeyframeAnimation(keyPath: "opacity")
+            flicker.values = [1.0, 0.0, 1.0, 0.0, 0.7, 0.0, 1.0]
+            flicker.duration = Double.random(in: 0.15...0.4)
+            flicker.repeatCount = .infinity
+            speck.add(flicker, forKey: "flicker")
+        }
+
+        // Vertical scratches
+        for _ in 0..<5 {
+            let scratch = CAShapeLayer()
+            let sp = CGMutablePath()
+            let x = CGFloat.random(in: bounds.width * 0.1...bounds.width * 0.9)
+            sp.move(to: CGPoint(x: x + CGFloat.random(in: -2...2), y: 0))
+            sp.addLine(to: CGPoint(x: x + CGFloat.random(in: -5...5), y: bounds.height))
+            scratch.path = sp
+            scratch.strokeColor = NSColor(white: 0.9, alpha: 0.4).cgColor
+            scratch.lineWidth = CGFloat.random(in: 0.5...1.5)
+            scratch.fillColor = nil
+            scratch.opacity = 0
+            container.addSublayer(scratch)
+
+            let sf = CAKeyframeAnimation(keyPath: "opacity")
+            sf.values = [0, 0, 0.6, 0, 0, 0.4, 0, 0]
+            sf.duration = Double.random(in: 0.3...0.8)
+            sf.repeatCount = .infinity
+            scratch.add(sf, forKey: "scratch")
+        }
+
+        // Fade in, hold, fade out
+        let fadeInDur = 0.6
+        let holdDur = totalDuration - fadeInDur - 0.8
+
+        for layer in [sepiaLayer, vignette, grainLayer] {
+            let fadeIn = CABasicAnimation(keyPath: "opacity")
+            fadeIn.fromValue = 0
+            fadeIn.toValue = 1.0
+            fadeIn.duration = fadeInDur
+
+            let fadeOut = CABasicAnimation(keyPath: "opacity")
+            fadeOut.fromValue = 1.0
+            fadeOut.toValue = 0.0
+            fadeOut.beginTime = fadeInDur + holdDur
+            fadeOut.duration = 0.8
+            fadeOut.fillMode = .forwards
+
+            let group = CAAnimationGroup()
+            group.animations = [fadeIn, fadeOut]
+            group.duration = totalDuration
+            group.fillMode = .forwards
+            group.isRemovedOnCompletion = false
+            layer.add(group, forKey: "sepia")
+        }
+
+        // Projector jitter
+        let jitter = CAKeyframeAnimation(keyPath: "position")
+        let c = CGPoint(x: bounds.midX, y: bounds.midY)
+        var jitterValues: [NSValue] = []
+        for _ in 0..<60 {
+            jitterValues.append(NSValue(point: CGPoint(
+                x: c.x + CGFloat.random(in: -1.5...1.5),
+                y: c.y + CGFloat.random(in: -1.5...1.5)
+            )))
+        }
+        jitter.values = jitterValues
+        jitter.duration = totalDuration
+        container.add(jitter, forKey: "jitter")
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + totalDuration + 0.2) { [weak container] in
+            container?.removeFromSuperlayer()
+        }
+    }
+
     // MARK: - Confetti burst
 
     func spawnConfetti(count: Int = 80) {
