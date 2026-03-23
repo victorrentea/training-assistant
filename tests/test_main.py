@@ -1358,3 +1358,54 @@ def test_debate_arguments_sorted_by_upvotes():
         assert visible[1]["upvote_count"] == 1
         assert visible[2]["text"] == "Arg C - zero votes"
         assert visible[2]["upvote_count"] == 0
+
+
+# ---------------------------------------------------------------------------
+# Session stack endpoints
+# ---------------------------------------------------------------------------
+
+def test_start_session_stores_request():
+    state.reset()
+    client = TestClient(app)
+    resp = client.post("/api/session/start", json={"name": "2026-03-23 Workshop"}, headers=_HOST_AUTH_HEADERS)
+    assert resp.status_code == 200
+    assert resp.json()["ok"]
+
+def test_start_session_requires_auth():
+    state.reset()
+    client = TestClient(app)
+    resp = client.post("/api/session/start", json={"name": "Test"})
+    assert resp.status_code == 401
+
+def test_end_session_stores_request():
+    state.reset()
+    client = TestClient(app)
+    resp = client.post("/api/session/end", headers=_HOST_AUTH_HEADERS)
+    assert resp.status_code == 200
+
+def test_rename_session_stores_request():
+    state.reset()
+    client = TestClient(app)
+    resp = client.patch("/api/session/rename", json={"name": "New Name"}, headers=_HOST_AUTH_HEADERS)
+    assert resp.status_code == 200
+
+def test_poll_session_request_returns_and_clears():
+    state.reset()
+    client = TestClient(app)
+    client.post("/api/session/start", json={"name": "Test"}, headers=_HOST_AUTH_HEADERS)
+    resp = client.get("/api/session/request", headers=_HOST_AUTH_HEADERS)
+    assert resp.json()["action"] == "start"
+    assert resp.json()["name"] == "Test"
+    resp2 = client.get("/api/session/request", headers=_HOST_AUTH_HEADERS)
+    assert resp2.json()["action"] is None
+
+def test_sync_session_updates_state():
+    state.reset()
+    client = TestClient(app)
+    resp = client.post("/api/session/sync", json={
+        "stack": [{"name": "Workshop", "started_at": "2026-03-23T09:00:00", "ended_at": None}],
+        "key_points": [{"text": "Point 1", "source": "discussion"}],
+    }, headers=_HOST_AUTH_HEADERS)
+    assert resp.status_code == 200
+    assert len(state.session_stack) == 1
+    assert len(state.summary_points) == 1
