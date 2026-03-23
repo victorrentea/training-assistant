@@ -1,7 +1,7 @@
 {
-  "sha": "6477ac57233f55a9f5dc1150eefdb05753f760b9",
-  "timestamp": "2026-03-23 11:13",
+  "sha": "66661d0927a815cfcf786d159182063dd92e4b88",
+  "timestamp": "2026-03-23 11:14",
   "changelog": [
-    "feat: add green check and red X to workshop emoji bar"
+    "feat: add check/X emojis to conference grid, wobble+scale to overlay"
   ]
 }
