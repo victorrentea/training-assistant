@@ -1,7 +1,7 @@
 {
-  "sha": "a54a3c176c4eadb4987ab5c548619af6c6b1c249",
-  "timestamp": "2026-03-23 19:16",
+  "sha": "e87edf6f869a9b7a8dcaeba57efbdc6533f8a431",
+  "timestamp": "2026-03-23 19:23",
   "changelog": [
-    "fix: fade out sounds over 300ms instead of abrupt stop"
+    "feat: drag button bar from anywhere including buttons"
   ]
 }
