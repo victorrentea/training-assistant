@@ -4,6 +4,7 @@ import Foundation
 class AppDelegate: NSObject, NSApplicationDelegate, URLSessionWebSocketDelegate {
     private var overlayPanel: OverlayPanel!
     private var animator: EmojiAnimator!
+    private var buttonBar: ButtonBar!
     private let serverURL: String
     private var wsTask: URLSessionWebSocketTask?
     private var session: URLSession!
@@ -30,11 +31,78 @@ class AppDelegate: NSObject, NSApplicationDelegate, URLSessionWebSocketDelegate 
 
         session = URLSession(configuration: .default, delegate: self, delegateQueue: .main)
         connectWebSocket()
+        registerGlobalHotkeys()
+        setupButtonBar()
+
 
         // Check every 2s if another instance took over the PID file
         pidCheckTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
             self?.checkPIDFile()
         }
+    }
+
+    // MARK: - Button bar
+
+    private func setupButtonBar() {
+        let buttons: [ButtonBar.ButtonDef] = [
+            .init(label: "🎊", tooltip: "Confetti") { [weak self] in
+                self?.animator.spawnConfetti()
+            },
+            .init(label: "❤️", tooltip: "Hearts") { [weak self] in
+                for i in 0..<8 {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + Double(i) * 0.15) {
+                        self?.animator.spawnEmoji("❤️")
+                    }
+                }
+            },
+            .init(label: "🔥", tooltip: "Fire") { [weak self] in
+                for i in 0..<8 {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + Double(i) * 0.15) {
+                        self?.animator.spawnEmoji("🔥")
+                    }
+                }
+            },
+            .init(label: "👏", tooltip: "Applause") { [weak self] in
+                for i in 0..<8 {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + Double(i) * 0.15) {
+                        self?.animator.spawnEmoji("👏")
+                    }
+                }
+            },
+            .init(label: "🤯", tooltip: "Mind blown") { [weak self] in
+                for i in 0..<8 {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + Double(i) * 0.15) {
+                        self?.animator.spawnEmoji("🤯")
+                    }
+                }
+            },
+        ]
+
+        buttonBar = ButtonBar(buttons: buttons)
+        buttonBar.orderFrontRegardless()
+    }
+
+    // MARK: - Global hotkeys
+
+    private func registerGlobalHotkeys() {
+        // Cmd+Shift+K → confetti burst
+        NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+            // Cmd+Shift+K (keyCode 40 = K)
+            if flags == [.command, .shift] && event.keyCode == 40 {
+                self?.animator.spawnConfetti()
+            }
+        }
+        // Also catch when our app is focused (unlikely but safe)
+        NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+            if flags == [.command, .shift] && event.keyCode == 40 {
+                self?.animator.spawnConfetti()
+                return nil
+            }
+            return event
+        }
+        NSLog("Global hotkey registered: Cmd+Shift+K → confetti")
     }
 
     private func checkPIDFile() {
@@ -124,6 +192,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, URLSessionWebSocketDelegate 
         if type == "emoji_reaction", let emoji = json["emoji"] as? String {
             DispatchQueue.main.async { [weak self] in
                 self?.animator.spawnEmoji(emoji)
+            }
+        } else if type == "confetti" {
+            DispatchQueue.main.async { [weak self] in
+                self?.animator.spawnConfetti()
             }
         }
     }
