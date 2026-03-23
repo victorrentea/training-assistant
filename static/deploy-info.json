@@ -1,7 +1,7 @@
 {
-  "sha": "82bc6f3ed96d1b0bdf9343dd4610e5ff3e2e1e33",
-  "timestamp": "2026-03-23 07:54",
+  "sha": "6477ac57233f55a9f5dc1150eefdb05753f760b9",
+  "timestamp": "2026-03-23 11:13",
   "changelog": [
-    "feat: add SQLite persistence with incremental migrations"
+    "feat: add green check and red X to workshop emoji bar"
   ]
 }
