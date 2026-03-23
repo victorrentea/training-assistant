@@ -83,6 +83,61 @@ def _save_summary_cache(session_folder: Path | None, locked: list[dict], draft: 
         print(f"[summarizer] Failed to save summary cache: {e}", file=sys.stderr)
 
 
+_KEY_POINTS_FILENAME = "key_points.json"
+_DAEMON_STATE_FILENAME = "daemon_state.json"
+
+
+def _load_key_points(session_folder: Path) -> list[dict]:
+    """Load key points from session folder. Supports old locked/draft format for migration."""
+    cache_file = session_folder / _KEY_POINTS_FILENAME
+    if not cache_file.exists():
+        return []
+    try:
+        data = json.loads(cache_file.read_text(encoding="utf-8"))
+        # Support new format {"points": [...]} and old format {"locked": [...], "draft": [...]}
+        points = data.get("points", data.get("locked", []) + data.get("draft", []))
+        print(f"[session] Loaded {len(points)} key points from {session_folder.name}")
+        return points
+    except Exception as e:
+        print(f"[session] Failed to load key points: {e}", file=sys.stderr)
+        return []
+
+
+def _save_key_points(session_folder: Path, points: list[dict]) -> None:
+    """Save key points to session folder."""
+    try:
+        session_folder.mkdir(parents=True, exist_ok=True)
+        (session_folder / _KEY_POINTS_FILENAME).write_text(
+            json.dumps({"points": points}, indent=2), encoding="utf-8"
+        )
+    except Exception as e:
+        print(f"[session] Failed to save key points: {e}", file=sys.stderr)
+
+
+def _load_daemon_state(sessions_root: Path) -> list[dict]:
+    """Load session stack from daemon state file."""
+    state_file = sessions_root / _DAEMON_STATE_FILENAME
+    if not state_file.exists():
+        return []
+    try:
+        data = json.loads(state_file.read_text(encoding="utf-8"))
+        return data.get("stack", [])
+    except Exception as e:
+        print(f"[session] Failed to load daemon state: {e}", file=sys.stderr)
+        return []
+
+
+def _save_daemon_state(sessions_root: Path, stack: list[dict]) -> None:
+    """Persist session stack to daemon state file."""
+    try:
+        sessions_root.mkdir(parents=True, exist_ok=True)
+        (sessions_root / _DAEMON_STATE_FILENAME).write_text(
+            json.dumps({"stack": stack}, indent=2), encoding="utf-8"
+        )
+    except Exception as e:
+        print(f"[session] Failed to save daemon state: {e}", file=sys.stderr)
+
+
 class TranscriptTimestampAppender:
     """Append heartbeat timestamp lines to the latest transcript text file."""
 

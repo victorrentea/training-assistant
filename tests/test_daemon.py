@@ -410,6 +410,46 @@ class TestManifest:
         assert _load_manifest(tmp_path) == {}
 
 
+# ═══════════════════════════════════════════════════════════════════════
+# training_daemon.py — session persistence functions
+# ═══════════════════════════════════════════════════════════════════════
+from training_daemon import _load_key_points, _save_key_points, _load_daemon_state, _save_daemon_state
+
+
+class TestSessionKeyPoints:
+    def test_load_from_empty_folder(self, tmp_path):
+        assert _load_key_points(tmp_path) == []
+
+    def test_save_and_load_roundtrip(self, tmp_path):
+        points = [{"text": "P1", "source": "discussion", "time": "10:15"}]
+        _save_key_points(tmp_path, points)
+        loaded = _load_key_points(tmp_path)
+        assert loaded == points
+
+    def test_backward_compat_loads_locked_draft(self, tmp_path):
+        """Test migration from old summary_cache.json format."""
+        cache = tmp_path / "key_points.json"
+        cache.write_text('{"locked": [{"text": "L1"}], "draft": [{"text": "D1"}]}')
+        loaded = _load_key_points(tmp_path)
+        assert len(loaded) == 2
+
+    def test_load_daemon_state(self, tmp_path):
+        state_file = tmp_path / "daemon_state.json"
+        state_file.write_text('{"stack": [{"name": "Test", "started_at": "2026-03-23T09:00:00", "ended_at": null, "summary_watermark": 0}]}')
+        stack = _load_daemon_state(tmp_path)
+        assert len(stack) == 1
+        assert stack[0]["name"] == "Test"
+
+    def test_load_daemon_state_missing(self, tmp_path):
+        assert _load_daemon_state(tmp_path) == []
+
+    def test_save_daemon_state_roundtrip(self, tmp_path):
+        stack = [{"name": "W", "started_at": "2026-03-23T09:00:00", "ended_at": None, "summary_watermark": 42}]
+        _save_daemon_state(tmp_path, stack)
+        loaded = _load_daemon_state(tmp_path)
+        assert loaded == stack
+
+
 class TestExtractors:
     def test_text(self, tmp_path):
         f = tmp_path / "test.txt"
