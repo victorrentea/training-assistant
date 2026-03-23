@@ -1,7 +1,7 @@
 {
-  "sha": "98e1d7a17af282d790a30ea8462c26cb434d5102",
-  "timestamp": "2026-03-23 19:59",
+  "sha": "ff6ce8ecb69c0523d10c4214778fe35931bed877",
+  "timestamp": "2026-03-23 20:03",
   "changelog": [
-    "fix: remove bullet numbering from summary key points"
+    "feat: confetti sound + toggle cancel for danger/sepia/zorro effects"
   ]
 }
