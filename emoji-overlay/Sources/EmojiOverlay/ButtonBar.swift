@@ -100,11 +100,44 @@ class ButtonBar: NSPanel {
     }
 }
 
-// MARK: - Container view (accepts first mouse)
+// MARK: - Container view (accepts first mouse, draggable by background)
 
 private class ButtonBarContainer: NSView {
+    private var dragOrigin: NSPoint?
+
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
     override var mouseDownCanMoveWindow: Bool { false }
+
+    override func mouseDown(with event: NSEvent) {
+        let loc = convert(event.locationInWindow, from: nil)
+        // Only start drag if clicking on background (not on a button)
+        let hitView = hitTest(convert(loc, to: superview))
+        if hitView === self {
+            dragOrigin = event.locationInWindow
+        } else {
+            super.mouseDown(with: event)
+        }
+    }
+
+    override func mouseDragged(with event: NSEvent) {
+        guard let origin = dragOrigin, let window = self.window else {
+            super.mouseDragged(with: event)
+            return
+        }
+        let current = event.locationInWindow
+        let dx = current.x - origin.x
+        let dy = current.y - origin.y
+        var frame = window.frame
+        frame.origin.x += dx
+        frame.origin.y += dy
+        window.setFrame(frame, display: true)
+        // Don't update dragOrigin — locationInWindow is relative to the window
+    }
+
+    override func mouseUp(with event: NSEvent) {
+        dragOrigin = nil
+        super.mouseUp(with: event)
+    }
 }
 
 // MARK: - Round emoji button
