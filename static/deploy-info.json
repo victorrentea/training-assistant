@@ -1,7 +1,7 @@
 {
-  "sha": "c9151bc7c72e95588582d4bcb0dcd29edaf60614",
-  "timestamp": "2026-03-23 13:32",
+  "sha": "8f546c194dfc22ba625d013b8a4df9c0517da53b",
+  "timestamp": "2026-03-23 15:37",
   "changelog": [
-    "fix: add missing `import re` in training_daemon.py"
+    "fix: use Bucharest local time for deploy timestamps instead of UTC"
   ]
 }
