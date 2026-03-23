@@ -21,6 +21,7 @@ from quiz_core import (
     _ts_to_seconds,
     load_transcription_files,
     extract_last_n_minutes,
+    extract_text_for_time_window,
     read_session_notes,
     _request_json,
     _get_json,
@@ -633,3 +634,43 @@ class TestServerHelpers:
         cfg = _make_config(tmp_path)
         mock_post.side_effect = RuntimeError("connection refused")
         post_status("idle", "msg", cfg)  # should not raise
+
+
+# ── extract_text_for_time_window ──────────────────────────────────────
+
+class TestTimeWindowExtraction:
+    def test_basic_window(self):
+        entries = [
+            (3600 * 9, "morning talk"),       # 09:00
+            (3600 * 12, "lunch topic"),        # 12:00
+            (3600 * 13, "afternoon talk"),     # 13:00
+        ]
+        text = extract_text_for_time_window(
+            entries,
+            start_ts=3600 * 9,
+            end_ts=3600 * 17,
+            exclude_ranges=[(3600 * 12, 3600 * 13)],
+        )
+        assert "morning talk" in text
+        assert "afternoon talk" in text
+        assert "lunch topic" not in text
+
+    def test_no_exclusions(self):
+        entries = [(3600 * 10, "hello"), (3600 * 11, "world")]
+        text = extract_text_for_time_window(entries, start_ts=3600 * 9, end_ts=3600 * 12)
+        assert "hello" in text
+        assert "world" in text
+
+    def test_empty_when_all_excluded(self):
+        entries = [(3600 * 12, "lunch only")]
+        text = extract_text_for_time_window(
+            entries, start_ts=3600 * 9, end_ts=3600 * 17,
+            exclude_ranges=[(3600 * 11, 3600 * 13)],
+        )
+        assert text == ""
+
+    def test_none_timestamps_skipped(self):
+        entries = [(None, "no ts"), (3600 * 10, "has ts")]
+        text = extract_text_for_time_window(entries, start_ts=3600 * 9)
+        assert "has ts" in text
+        assert "no ts" not in text

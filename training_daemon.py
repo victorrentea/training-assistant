@@ -40,6 +40,7 @@ from quiz_core import (
     config_from_env, find_session_folder, auto_generate, auto_generate_topic, auto_refine,
     post_status, _get_json, _post_json, DAEMON_POLL_INTERVAL, DEFAULT_TRANSCRIPT_MINUTES,
     read_session_notes, load_transcription_files, extract_last_n_minutes, extract_all_text,
+    extract_text_for_time_window,
 )
 from daemon.debate_ai import run_debate_ai_cleanup
 from daemon.llm_adapter import get_usage
@@ -680,8 +681,13 @@ def run() -> None:
                 try:
                     entries = load_transcription_files(config.folder)
                     if entries:
-                        # TODO Task 7: use extract_text_for_time_window with session time windows
-                        full_text = extract_all_text(entries)
+                        if current_session.get("started_at"):
+                            from datetime import datetime
+                            session_start = datetime.fromisoformat(current_session["started_at"])
+                            start_secs = session_start.hour * 3600 + session_start.minute * 60 + session_start.second
+                            full_text = extract_text_for_time_window(entries, start_ts=start_secs)
+                        else:
+                            full_text = extract_all_text(entries)
                         if full_text:
                             # Use watermark to compute delta
                             delta_text = full_text[watermark:] if watermark < len(full_text) else None
