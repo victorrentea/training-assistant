@@ -392,7 +392,7 @@ class EmojiAnimator {
         let fadeOut = CABasicAnimation(keyPath: "opacity")
         fadeOut.fromValue = 1.0
         fadeOut.toValue = 0.0
-        fadeOut.beginTime = totalDuration - 0.8
+        fadeOut.beginTime = CACurrentMediaTime() + totalDuration - 0.8
         fadeOut.duration = 0.8
         fadeOut.fillMode = .forwards
         fadeOut.isRemovedOnCompletion = false
@@ -502,7 +502,7 @@ class EmojiAnimator {
         let fadeOut = CABasicAnimation(keyPath: "opacity")
         fadeOut.fromValue = 1.0
         fadeOut.toValue = 0.0
-        fadeOut.beginTime = drawDuration + 0.5
+        fadeOut.beginTime = CACurrentMediaTime() + drawDuration + 0.5
         fadeOut.duration = totalDuration - drawDuration - 0.5
         fadeOut.fillMode = .forwards
         fadeOut.isRemovedOnCompletion = false
