@@ -29,7 +29,7 @@ logging.basicConfig(
     datefmt="%H:%M:%S",
 )
 from dataclasses import replace as dc_replace
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 
 from daemon.transcript_timestamps import (
@@ -136,6 +136,26 @@ def _save_daemon_state(sessions_root: Path, stack: list[dict]) -> None:
         )
     except Exception as e:
         print(f"[session] Failed to save daemon state: {e}", file=sys.stderr)
+
+
+def _find_notes_in_folder(folder: Path) -> Path | None:
+    """Find the most recently modified .txt notes file in a session folder."""
+    if not folder.exists():
+        return None
+    txt_files = sorted(
+        [f for f in folder.iterdir() if f.suffix.lower() == ".txt"],
+        key=lambda f: f.stat().st_mtime,
+    )
+    return txt_files[-1] if txt_files else None
+
+
+def _sync_session_to_server(config, stack: list[dict], key_points: list[dict]) -> None:
+    """Push session stack and key points to server."""
+    _post_json(
+        f"{config.server_url}/api/session/sync",
+        {"stack": stack, "key_points": key_points},
+        config.host_username, config.host_password,
+    )
 
 
 class TranscriptTimestampAppender:
@@ -359,27 +379,34 @@ def run() -> None:
     last_session_check_at = 0.0
     last_transcript_stats_at = 0.0
     last_notes_mtime: float = 0.0  # track notes file mtime for re-push on change
-    # Summary state — two-tier: locked (preserved) + draft (reshapeable)
-    cached_locked, cached_draft = _load_summary_cache(config.session_folder)
-    if cached_locked or cached_draft:
-        locked_points = cached_locked
-        draft_points = cached_draft
-        # Push cached summary to server so host sees it immediately
-        all_cached = locked_points + draft_points
-        try:
-            _post_json(
-                f"{config.server_url}/api/summary",
-                {"points": all_cached},
-                config.host_username, config.host_password,
-            )
-            print(f"[summarizer] Pushed {len(all_cached)} cached points to server")
-        except Exception as e:
-            print(f"[summarizer] Failed to push cached summary: {e}", file=sys.stderr)
-    else:
-        locked_points = [
-            {"text": f"Session date: {date.today().isoformat()}", "source": "notes"}
-        ]
-        draft_points = []
+    # ── Session stack initialization ──
+    sessions_root = config.session_folder.parent if config.session_folder else Path.cwd()
+    session_stack = _load_daemon_state(sessions_root)
+    current_key_points: list[dict] = []
+
+    if session_stack:
+        # Restore from persisted stack
+        current_folder = sessions_root / session_stack[-1]["name"]
+        current_key_points = _load_key_points(current_folder)
+        print(f"[session] Restored stack ({len(session_stack)} sessions), {len(current_key_points)} key points")
+    elif config.session_folder:
+        # Auto-start from today's detected session folder
+        session_stack = [{
+            "name": config.session_folder.name,
+            "started_at": datetime.now().isoformat(),
+            "ended_at": None,
+            "summary_watermark": 0,
+        }]
+        current_key_points = _load_key_points(config.session_folder)
+        _save_daemon_state(sessions_root, session_stack)
+        print(f"[session] Auto-started: {config.session_folder.name}")
+
+    # Sync initial state to server
+    try:
+        _sync_session_to_server(config, session_stack, current_key_points)
+    except Exception as e:
+        print(f"[session] Failed to sync initial state: {e}", file=sys.stderr)
+
     last_summary_at = 0.0  # monotonic time of last summary run
     transcript_state = TranscriptStateManager()
 
@@ -392,6 +419,69 @@ def run() -> None:
                 last_heartbeat_at = now
 
             timestamp_appender.tick()
+
+            # ── Check for session management requests ──
+            try:
+                session_req = _get_json(
+                    f"{config.server_url}/api/session/request",
+                    config.host_username, config.host_password,
+                )
+                action = session_req.get("action")
+                if action == "start":
+                    name = session_req["name"]
+                    folder = sessions_root / name
+                    folder.mkdir(parents=True, exist_ok=True)
+                    new_session = {
+                        "name": name,
+                        "started_at": datetime.now().isoformat(),
+                        "ended_at": None,
+                        "summary_watermark": 0,
+                    }
+                    session_stack.append(new_session)
+                    current_key_points = _load_key_points(folder)
+                    _save_daemon_state(sessions_root, session_stack)
+                    notes_file = _find_notes_in_folder(folder)
+                    config = dc_replace(config, session_folder=folder, session_notes=notes_file)
+                    _sync_session_to_server(config, session_stack, current_key_points)
+                    transcript_state.reset()
+                    print(f"[session] Started: {name}")
+
+                elif action == "end" and len(session_stack) > 1:
+                    ended = session_stack.pop()
+                    ended["ended_at"] = datetime.now().isoformat()
+                    ended_folder = sessions_root / ended["name"]
+                    _save_key_points(ended_folder, current_key_points)
+                    # Restore parent session
+                    parent = session_stack[-1]
+                    parent_folder = sessions_root / parent["name"]
+                    current_key_points = _load_key_points(parent_folder)
+                    _save_daemon_state(sessions_root, session_stack)
+                    notes_file = _find_notes_in_folder(parent_folder)
+                    config = dc_replace(config, session_folder=parent_folder, session_notes=notes_file)
+                    _sync_session_to_server(config, session_stack, current_key_points)
+                    transcript_state.reset()
+                    print(f"[session] Ended: {ended['name']}, restored: {parent['name']}")
+
+                elif action == "rename":
+                    new_name = session_req["name"]
+                    if session_stack:
+                        old_name = session_stack[-1]["name"]
+                        new_folder = sessions_root / new_name
+                        # Load existing points from new folder FIRST (before overwriting)
+                        existing = _load_key_points(new_folder) if new_folder.exists() else []
+                        new_folder.mkdir(parents=True, exist_ok=True)
+                        if existing:
+                            current_key_points = existing
+                        else:
+                            _save_key_points(new_folder, current_key_points)
+                        session_stack[-1]["name"] = new_name
+                        _save_daemon_state(sessions_root, session_stack)
+                        notes_file = _find_notes_in_folder(new_folder)
+                        config = dc_replace(config, session_folder=new_folder, session_notes=notes_file)
+                        _sync_session_to_server(config, session_stack, current_key_points)
+                        print(f"[session] Renamed: {old_name} → {new_name}")
+            except Exception as e:
+                print(f"[session] Request error: {e}", file=sys.stderr)
 
             # ── Re-detect session folder on date change or if notes not yet found (every 5s) ──
             today = date.today()
@@ -570,66 +660,70 @@ def run() -> None:
 
             # ── Check for forced summary request ──
             force_summary = False
-            force_full_day = False
             try:
                 force_data = _get_json(
                     f"{config.server_url}/api/summary/force",
                     config.host_username, config.host_password,
                 )
                 force_summary = force_data.get("requested", False)
-                force_full_day = force_data.get("full_day", False)
             except Exception:
                 pass
 
-            # ── On-demand summary generation (no periodic timer) ──
+            # ── On-demand summary generation (session-aware) ──
             now_mono = time.monotonic()
-            if force_summary:
-                mode_label = "full-day" if force_full_day else "incremental"
-                print(f"[summarizer] Generating summary ({mode_label}, requested)")
+            if force_summary and session_stack:
+                current_session = session_stack[-1]
+                session_folder = sessions_root / current_session["name"]
+                watermark = current_session.get("summary_watermark", 0)
+                print(f"[summarizer] Generating summary (on-demand, watermark={watermark})")
                 last_summary_at = now_mono
                 try:
-                    # Promote draft → locked before generating
-                    locked_points.extend(draft_points)
-                    draft_points = []
+                    entries = load_transcription_files(config.folder)
+                    if entries:
+                        # TODO Task 7: use extract_text_for_time_window with session time windows
+                        full_text = extract_all_text(entries)
+                        if full_text:
+                            # Use watermark to compute delta
+                            delta_text = full_text[watermark:] if watermark < len(full_text) else None
+                            if not delta_text:
+                                print("[summarizer] No new transcript content — skipping")
+                                continue
+                            print(f"[summarizer] Delta: {len(delta_text)} chars (full: {len(full_text)} chars)")
 
-                    # Compute text to send to LLM
-                    delta_text = None
-                    try:
-                        entries = load_transcription_files(config.folder)
-                        if entries:
-                            if force_full_day:
-                                # Full-day mode: send entire transcript
-                                delta_text = extract_all_text(entries)
-                                if delta_text:
-                                    print(f"[summarizer] Full-day transcript: {len(delta_text)} chars")
-                                else:
-                                    print("[summarizer] Empty transcript — skipping summary")
-                                    continue
-                            else:
-                                full_text = extract_last_n_minutes(entries, DEFAULT_TRANSCRIPT_MINUTES)
-                                if full_text:
-                                    delta_text, _ = transcript_state.compute_delta(full_text)
-                                    if delta_text:
-                                        print(f"[summarizer] Delta: {len(delta_text)} chars (full: {len(full_text)} chars)")
-                                    else:
-                                        print("[summarizer] No new transcript content — skipping summary")
-                                        continue
-                    except SystemExit:
-                        pass  # no transcription files — let summarizer handle it
+                            last_5 = current_key_points[-5:] if current_key_points else []
+                            result = generate_summary(config, last_5, delta_text=delta_text)
+                            if result is not None:
+                                # Compatibility shim: if generate_summary returns a list, wrap it
+                                if isinstance(result, list):
+                                    result = {"updated": [], "new": [{"text": p["text"], "source": p.get("source", "discussion"), "time": p.get("time")} for p in result]}
 
-                    new_points = generate_summary(config, locked_points, delta_text=delta_text)
-                    if new_points is not None:
-                        draft_points = new_points
-                        all_points = locked_points + draft_points
-                        _post_json(
-                            f"{config.server_url}/api/summary",
-                            {"points": all_points},
-                            config.host_username, config.host_password,
-                        )
-                        _save_summary_cache(config.session_folder, locked_points, draft_points)
-                        print(f"[summarizer] {len(locked_points)} locked + {len(draft_points)} draft = {len(all_points)} total points")
+                                # Apply updates
+                                for upd in result.get("updated", []):
+                                    idx = upd.get("index")
+                                    if idx is not None and 0 <= idx < len(current_key_points):
+                                        current_key_points[idx] = {
+                                            "text": upd["text"],
+                                            "source": upd.get("source", "discussion"),
+                                            "time": upd.get("time"),
+                                        }
+                                # Append new points
+                                for new_pt in result.get("new", []):
+                                    current_key_points.append({
+                                        "text": new_pt["text"],
+                                        "source": new_pt.get("source", "discussion"),
+                                        "time": new_pt.get("time"),
+                                    })
+
+                                # Update watermark
+                                current_session["summary_watermark"] = len(full_text)
+
+                                # Persist and sync
+                                _save_key_points(session_folder, current_key_points)
+                                _save_daemon_state(sessions_root, session_stack)
+                                _sync_session_to_server(config, session_stack, current_key_points)
+                                print(f"[summarizer] {len(current_key_points)} total key points")
                 except Exception as e:
-                    print(f"[summarizer] Error during summary generation: {e}", file=sys.stderr)
+                    print(f"[summarizer] Error: {e}", file=sys.stderr)
 
         except RuntimeError as e:
             if not server_disconnected:
