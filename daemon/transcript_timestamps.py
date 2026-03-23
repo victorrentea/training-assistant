@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
-_FIRST_LINE_PATTERN = re.compile(r"^(\[\s*)\d{2}:\d{2}:\d{2}\.\d+(\s*\]\s*).*$")
+_FIRST_LINE_PATTERN = re.compile(r"^(\[\s*)(?:\d{4}-\d{2}-\d{2}\s+)?\d{2}:\d{2}:\d{2}\.\d+(\s*\]\s*).*$")
 
 
 @dataclass(frozen=True)
@@ -42,7 +42,7 @@ def infer_template_from_first_line(file_path: Path) -> TimestampLineTemplate:
 
 
 def build_timestamp_line(now: datetime, template: TimestampLineTemplate) -> str:
-    line = f"{template.open_prefix}{now.strftime('%H:%M:%S')}.00{template.close_prefix}"
+    line = f"{template.open_prefix}{now.strftime('%Y-%m-%d %H:%M:%S')}.00{template.close_prefix}"
     return line if line.endswith(" ") else f"{line} "
 
 

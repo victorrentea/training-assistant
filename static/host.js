@@ -372,9 +372,14 @@
       const overlay = document.getElementById('summary-overlay');
       if (overlay) overlay.classList.toggle('open');
     } else {
+      if (!confirm('No summary cached for today.\nFeed the entire day\'s transcript to AI for summarization?')) return;
       _summaryGenerating = true;
       renderSummaryBadge();
-      fetch('/api/summary/force', { method: 'POST' });
+      fetch('/api/summary/force', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ full_day: true }),
+      });
     }
   }
 

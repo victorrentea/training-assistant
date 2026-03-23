@@ -75,8 +75,12 @@ async def update_transcript_status(body: TranscriptStatus):
 _last_force_at: float = 0.0
 _FORCE_COOLDOWN = 30.0  # seconds — ignore rapid requests
 
+class ForceRequest(BaseModel):
+    full_day: bool = False
+
+
 @public_router.post("/api/summary/force")
-async def force_summary():
+async def force_summary(body: ForceRequest = ForceRequest()):
     import time
     global _last_force_at
     now = time.monotonic()
@@ -84,14 +88,17 @@ async def force_summary():
         return {"ok": True, "cooldown": True}
     _last_force_at = now
     state.summary_force_requested = True
+    state.summary_force_full_day = body.full_day
     return {"ok": True}
 
 
 @router.get("/api/summary/force")
 async def poll_summary_force():
     requested = state.summary_force_requested
+    full_day = state.summary_force_full_day
     state.summary_force_requested = False
-    return {"requested": requested}
+    state.summary_force_full_day = False
+    return {"requested": requested, "full_day": full_day}
 
 
 @router.post("/api/token-usage")

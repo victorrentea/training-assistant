@@ -39,7 +39,7 @@ from daemon.transcript_timestamps import (
 from quiz_core import (
     config_from_env, find_session_folder, auto_generate, auto_generate_topic, auto_refine,
     post_status, _get_json, _post_json, DAEMON_POLL_INTERVAL, DEFAULT_TRANSCRIPT_MINUTES,
-    read_session_notes, load_transcription_files, extract_last_n_minutes,
+    read_session_notes, load_transcription_files, extract_last_n_minutes, extract_all_text,
 )
 from daemon.debate_ai import run_debate_ai_cleanup
 from daemon.llm_adapter import get_usage
@@ -51,6 +51,36 @@ _HEARTBEAT_INTERVAL = 1.0  # seconds between heartbeat writes
 _HEARTBEAT_STALE_THRESHOLD = 10.0  # seconds before heartbeat is considered stale
 _TIMESTAMP_INTERVAL_SECONDS = float(os.environ.get("TRANSCRIPT_TIMESTAMP_INTERVAL_SECONDS", "3"))
 EXIT_CODE_UPDATE = 42  # signals start.sh to git pull and restart
+_SUMMARY_CACHE_FILENAME = "summary_cache.json"
+
+
+def _load_summary_cache(session_folder: Path | None) -> tuple[list[dict], list[dict]]:
+    """Load cached summary points from session folder. Returns (locked, draft)."""
+    if not session_folder:
+        return [], []
+    cache_file = session_folder / _SUMMARY_CACHE_FILENAME
+    if not cache_file.exists():
+        return [], []
+    try:
+        data = json.loads(cache_file.read_text(encoding="utf-8"))
+        locked = data.get("locked", [])
+        draft = data.get("draft", [])
+        print(f"[summarizer] Loaded cached summary: {len(locked)} locked + {len(draft)} draft points")
+        return locked, draft
+    except Exception as e:
+        print(f"[summarizer] Failed to load summary cache: {e}", file=sys.stderr)
+        return [], []
+
+
+def _save_summary_cache(session_folder: Path | None, locked: list[dict], draft: list[dict]) -> None:
+    """Save summary points to session folder for persistence across restarts."""
+    if not session_folder:
+        return
+    cache_file = session_folder / _SUMMARY_CACHE_FILENAME
+    try:
+        cache_file.write_text(json.dumps({"locked": locked, "draft": draft}, indent=2), encoding="utf-8")
+    except Exception as e:
+        print(f"[summarizer] Failed to save summary cache: {e}", file=sys.stderr)
 
 
 class TranscriptTimestampAppender:
@@ -275,10 +305,26 @@ def run() -> None:
     last_transcript_stats_at = 0.0
     last_notes_mtime: float = 0.0  # track notes file mtime for re-push on change
     # Summary state — two-tier: locked (preserved) + draft (reshapeable)
-    locked_points: list[dict] = [
-        {"text": f"Session date: {date.today().isoformat()}", "source": "notes"}
-    ]
-    draft_points: list[dict] = []
+    cached_locked, cached_draft = _load_summary_cache(config.session_folder)
+    if cached_locked or cached_draft:
+        locked_points = cached_locked
+        draft_points = cached_draft
+        # Push cached summary to server so host sees it immediately
+        all_cached = locked_points + draft_points
+        try:
+            _post_json(
+                f"{config.server_url}/api/summary",
+                {"points": all_cached},
+                config.host_username, config.host_password,
+            )
+            print(f"[summarizer] Pushed {len(all_cached)} cached points to server")
+        except Exception as e:
+            print(f"[summarizer] Failed to push cached summary: {e}", file=sys.stderr)
+    else:
+        locked_points = [
+            {"text": f"Session date: {date.today().isoformat()}", "source": "notes"}
+        ]
+        draft_points = []
     last_summary_at = 0.0  # monotonic time of last summary run
     transcript_state = TranscriptStateManager()
 
@@ -469,38 +515,50 @@ def run() -> None:
 
             # ── Check for forced summary request ──
             force_summary = False
+            force_full_day = False
             try:
                 force_data = _get_json(
                     f"{config.server_url}/api/summary/force",
                     config.host_username, config.host_password,
                 )
                 force_summary = force_data.get("requested", False)
+                force_full_day = force_data.get("full_day", False)
             except Exception:
                 pass
 
             # ── On-demand summary generation (no periodic timer) ──
             now_mono = time.monotonic()
             if force_summary:
-                print("[summarizer] Generating summary (requested)")
+                mode_label = "full-day" if force_full_day else "incremental"
+                print(f"[summarizer] Generating summary ({mode_label}, requested)")
                 last_summary_at = now_mono
                 try:
                     # Promote draft → locked before generating
                     locked_points.extend(draft_points)
                     draft_points = []
 
-                    # Compute delta: only send new transcript text to the LLM
+                    # Compute text to send to LLM
                     delta_text = None
                     try:
                         entries = load_transcription_files(config.folder)
                         if entries:
-                            full_text = extract_last_n_minutes(entries, DEFAULT_TRANSCRIPT_MINUTES)
-                            if full_text:
-                                delta_text, _ = transcript_state.compute_delta(full_text)
+                            if force_full_day:
+                                # Full-day mode: send entire transcript
+                                delta_text = extract_all_text(entries)
                                 if delta_text:
-                                    print(f"[summarizer] Delta: {len(delta_text)} chars (full: {len(full_text)} chars)")
+                                    print(f"[summarizer] Full-day transcript: {len(delta_text)} chars")
                                 else:
-                                    print("[summarizer] No new transcript content — skipping summary")
+                                    print("[summarizer] Empty transcript — skipping summary")
                                     continue
+                            else:
+                                full_text = extract_last_n_minutes(entries, DEFAULT_TRANSCRIPT_MINUTES)
+                                if full_text:
+                                    delta_text, _ = transcript_state.compute_delta(full_text)
+                                    if delta_text:
+                                        print(f"[summarizer] Delta: {len(delta_text)} chars (full: {len(full_text)} chars)")
+                                    else:
+                                        print("[summarizer] No new transcript content — skipping summary")
+                                        continue
                     except SystemExit:
                         pass  # no transcription files — let summarizer handle it
 
@@ -513,6 +571,7 @@ def run() -> None:
                             {"points": all_points},
                             config.host_username, config.host_password,
                         )
+                        _save_summary_cache(config.session_folder, locked_points, draft_points)
                         print(f"[summarizer] {len(locked_points)} locked + {len(draft_points)} draft = {len(all_points)} total points")
                 except Exception as e:
                     print(f"[summarizer] Error during summary generation: {e}", file=sys.stderr)

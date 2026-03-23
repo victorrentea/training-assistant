@@ -179,7 +179,7 @@ def read_session_notes(config: Config) -> str:
 _VTT_TS  = re.compile(r"(?:(\d+):)?(\d{2}):(\d{2})\.(\d{3})\s+-->")
 _SRT_TS  = re.compile(r"(\d{2}):(\d{2}):(\d{2}),(\d{3})\s+-->")
 _SRT_SEQ = re.compile(r"^\d+$")
-_TXT_TS_RE = re.compile(r"^\[\s*(\d{2}):(\d{2}):(\d{2})\.\d+\s*\]\s*(.*)")
+_TXT_TS_RE = re.compile(r"^\[\s*(?:\d{4}-\d{2}-\d{2}\s+)?(\d{2}):(\d{2}):(\d{2})\.\d+\s*\]\s*(.*)")
 
 
 def _ts_to_seconds(h, m, s) -> float:
@@ -318,6 +318,24 @@ def extract_last_n_minutes(entries: list, minutes: int) -> str:
         text = text[-MAX_CHARS_TO_CLAUDE:]
         print(f"[info] Text capped at {MAX_CHARS_TO_CLAUDE:,} chars")
     return text.strip()
+
+
+def extract_all_text(entries: list) -> str:
+    """Extract all transcript text with [HH:MM] markers at ~1 min intervals."""
+    timed = [(ts, txt) for ts, txt in entries if ts is not None]
+    if not timed:
+        return " ".join(txt for _, txt in entries).strip()
+
+    parts: list[str] = []
+    last_marker_ts: float = -120.0
+    for ts, txt in timed:
+        if ts - last_marker_ts >= 60:
+            h, remainder = divmod(int(ts), 3600)
+            m, _ = divmod(remainder, 60)
+            parts.append(f"\n[{h:02d}:{m:02d}]")
+            last_marker_ts = ts
+        parts.append(txt)
+    return " ".join(parts).strip()
 
 
 # ---------------------------------------------------------------------------

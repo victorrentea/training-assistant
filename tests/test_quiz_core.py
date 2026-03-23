@@ -211,6 +211,12 @@ class TestTranscriptionParsing:
         assert entries[0][0] == 65.0
         assert "alternate" in entries[0][1]
 
+    def test_parse_txt_with_date_prefix(self):
+        entries = _parse_txt("[2026-03-23 14:30:45.00] Speaker:\tHello with date.")
+        assert len(entries) == 1
+        assert entries[0][0] == 14 * 3600 + 30 * 60 + 45
+        assert "Hello with date" in entries[0][1]
+
     def test_parse_txt_empty(self):
         assert _parse_txt("") == []
         assert _parse_txt("\n\n") == []
