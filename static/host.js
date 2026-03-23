@@ -334,9 +334,9 @@
       badge.className = 'badge connected';
       badge.title = `${summaryPoints.length} key points — click to view`;
     } else if (_summaryGenerating) {
-      badge.textContent = 'Generating...';
+      badge.textContent = '🧠';
       badge.className = 'badge';
-      badge.style.cssText = 'cursor:wait; color:var(--warn); border:1px solid var(--warn);';
+      badge.style.cssText = 'cursor:wait; color:var(--warn); border:1px solid var(--warn); animation: pulse 1.2s ease-in-out infinite;';
       badge.title = 'Generating key points from transcript...';
     } else {
       badge.textContent = '🧠';
