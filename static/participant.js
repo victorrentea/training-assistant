@@ -181,6 +181,19 @@
     if (btn) btn.style.display = notesContent ? '' : 'none';
     const el = document.getElementById('notes-content');
     if (el) el.textContent = notesContent;
+    const dlBtn = document.getElementById('participant-notes-download');
+    if (dlBtn) dlBtn.style.display = notesContent ? '' : 'none';
+  }
+
+  function downloadParticipantNotes() {
+    if (!notesContent) return;
+    const blob = new Blob([notesContent], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'session-notes.txt';
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   function toggleNotesModal() {

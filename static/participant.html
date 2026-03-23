@@ -45,7 +45,7 @@
 <div id="notes-overlay" class="summary-overlay" onclick="closeNotesModal()">
   <div class="summary-dialog" onclick="event.stopPropagation()">
     <div class="summary-header">
-      <span>📝 Session Notes</span>
+      <span>📝 Session Notes <button id="participant-notes-download" class="notes-download-btn" style="display:none" onclick="downloadParticipantNotes()">Download .txt</button></span>
       <span>
         <a id="notes-newtab" href="/notes" target="_blank" class="modal-newtab-btn" title="Open in new tab">↗</a>
         <button class="summary-close" onclick="closeNotesModal()">✕</button>

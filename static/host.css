@@ -282,7 +282,7 @@ body {
 }
 
 .tab-btn {
-  padding: .3rem .9rem .4rem;
+  padding: .3rem .4rem .4rem;
   border: none;
   background: transparent;
   color: var(--muted);
@@ -296,7 +296,7 @@ body {
   gap: .1rem;
 }
 .tab-icon {
-  font-size: 2.5rem;
+  font-size: 1.8rem;
   line-height: 1;
 }
 
