@@ -1,7 +1,7 @@
 {
-  "sha": "fec82e19d949fcfd31324b4388c0aff32f345239",
-  "timestamp": "2026-03-23 12:07",
+  "sha": "42db1cf7d0fd9bb8b24383f3ebc74e863c69fe14",
+  "timestamp": "2026-03-23 13:18",
   "changelog": [
-    "fix: don't re-process already-seen transcript on force summary"
+    "feat: Zorro Z slash effect \u2014 glowing sword trail with sparks"
   ]
 }
