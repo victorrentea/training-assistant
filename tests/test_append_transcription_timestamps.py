@@ -18,7 +18,7 @@ def test_infer_template_from_first_line_preserves_shape(tmp_path: Path):
     template = infer_template_from_first_line(transcript_file)
     line = build_timestamp_line(datetime(2026, 3, 19, 14, 50, 1), template)
 
-    assert line == "[ 14:50:01.00 ] "
+    assert line == "[ 2026-03-19 14:50:01.00 ] "
 
 
 def test_append_empty_line_then_timestamp(tmp_path: Path):
@@ -34,7 +34,7 @@ def test_append_empty_line_then_timestamp(tmp_path: Path):
 
     assert (
         transcript_file.read_text(encoding="utf-8")
-        == "[ 00:00:22.50 ] Victor:\tHello\n[ 14:50:01.00 ] "
+        == "[ 00:00:22.50 ] Victor:\tHello\n[ 2026-03-19 14:50:01.00 ] "
     )
 
 

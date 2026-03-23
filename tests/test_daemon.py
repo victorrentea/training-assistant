@@ -46,12 +46,19 @@ class TestInferTemplate:
         assert t.open_prefix == "[ "
         assert " ] " in t.close_prefix
 
+    def test_date_prefixed_format(self, tmp_path):
+        f = tmp_path / "test.txt"
+        f.write_text("[2026-03-23 14:30:45.00] Hello")
+        t = infer_template_from_first_line(f)
+        assert t.open_prefix == "["
+        assert "]" in t.close_prefix
+
 
 class TestBuildTimestampLine:
     def test_basic(self):
         now = datetime(2026, 3, 20, 14, 30, 45)
         line = build_timestamp_line(now, _DEFAULT_TEMPLATE)
-        assert "14:30:45" in line
+        assert "2026-03-20 14:30:45" in line
         assert line.endswith(" ")
 
     def test_custom_template(self):
@@ -59,7 +66,7 @@ class TestBuildTimestampLine:
         now = datetime(2026, 1, 1, 0, 0, 0)
         line = build_timestamp_line(now, tmpl)
         assert line.startswith("[ ")
-        assert "00:00:00" in line
+        assert "2026-01-01 00:00:00" in line
 
 
 class TestAppendTimestamp:
