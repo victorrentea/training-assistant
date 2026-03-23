@@ -1,7 +1,7 @@
 {
-  "sha": "ff6ce8ecb69c0523d10c4214778fe35931bed877",
-  "timestamp": "2026-03-23 20:03",
+  "sha": "4d0beefaf0e97faf433503459dff6f3b93dcd0de",
+  "timestamp": "2026-03-23 20:04",
   "changelog": [
-    "feat: confetti sound + toggle cancel for danger/sepia/zorro effects"
+    "fix: remove error sound from deploy watcher, keep success only"
   ]
 }
