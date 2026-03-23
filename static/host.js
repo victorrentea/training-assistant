@@ -2392,3 +2392,68 @@ function stopAutoReturnTimer() {
     document.removeEventListener(evt, _resetAutoReturn)
   );
 }
+
+// ── Session management panel ──
+
+function renderSessionPanel() {
+  const label = document.getElementById('session-name-label');
+  const editIcon = document.getElementById('session-edit-icon');
+  const breadcrumb = document.getElementById('session-breadcrumb');
+  const btnStart = document.getElementById('btn-start-session');
+  const btnEnd = document.getElementById('btn-end-session');
+  if (!label) return;
+
+  if (sessionStack.length === 0) {
+    label.textContent = 'No active session';
+    editIcon.style.display = 'none';
+    breadcrumb.textContent = '';
+    btnEnd.style.display = 'none';
+    btnStart.disabled = false;
+  } else {
+    label.textContent = sessionName || 'Unnamed';
+    editIcon.style.display = '';
+    btnEnd.style.display = sessionStack.length > 1 ? '' : 'none';
+    btnStart.disabled = sessionStack.length >= 3;
+
+    if (sessionStack.length > 1) {
+      breadcrumb.textContent = sessionStack.slice(0, -1).map(s => s.name).join(' > ');
+    } else {
+      breadcrumb.textContent = '';
+    }
+  }
+}
+
+async function startNewSession() {
+  // Fetch folder suggestions for autocomplete
+  let suggestions = [];
+  try {
+    const resp = await fetch('/api/session/folders');
+    if (resp.ok) suggestions = (await resp.json()).folders || [];
+  } catch (_) {}
+
+  const defaultName = new Date().toISOString().slice(0, 10);
+  const hint = suggestions.length ? '\n\nExisting folders:\n' + suggestions.slice(0, 10).join('\n') : '';
+  const name = prompt('Session name (must match folder for notes):' + hint, defaultName);
+  if (!name || !name.trim()) return;
+  fetch('/api/session/start', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: name.trim() }),
+  });
+}
+
+function endCurrentSession() {
+  if (!confirm('End current session and return to previous?')) return;
+  fetch('/api/session/end', { method: 'POST' });
+}
+
+function renameSession() {
+  const current = sessionName || '';
+  const name = prompt('Rename session:', current);
+  if (!name || !name.trim() || name.trim() === current) return;
+  fetch('/api/session/rename', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: name.trim() }),
+  });
+}

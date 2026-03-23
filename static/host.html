@@ -298,6 +298,17 @@
         <span id="token-cost" style="font-size:.75rem; color:var(--muted); flex-shrink:0;">$0.00</span>
       </span>
     </div>
+    <div class="session-panel" id="session-panel">
+      <div class="session-breadcrumb" id="session-breadcrumb"></div>
+      <div class="session-current">
+        <span class="session-label" id="session-name-label">No active session</span>
+        <span class="session-edit-icon" id="session-edit-icon" onclick="renameSession()" title="Rename session" style="display:none;">✏️</span>
+      </div>
+      <div class="session-actions">
+        <button class="btn btn-sm" id="btn-start-session" onclick="startNewSession()">▶ Start Session</button>
+        <button class="btn btn-sm btn-danger" id="btn-end-session" onclick="endCurrentSession()" style="display:none;">■ End Session</button>
+      </div>
+    </div>
   </div>
 
 </div>

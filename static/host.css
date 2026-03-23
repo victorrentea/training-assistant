@@ -1081,6 +1081,49 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
   to   { opacity: 1; transform: translateY(0); }
 }
 
+.session-panel {
+  padding: .75rem 1rem;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: .4rem;
+}
+.session-breadcrumb {
+  font-size: .7rem;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.session-current {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+}
+.session-label {
+  font-size: .85rem;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+.session-edit-icon {
+  cursor: pointer;
+  font-size: .75rem;
+  opacity: .6;
+  flex-shrink: 0;
+}
+.session-edit-icon:hover { opacity: 1; }
+.session-actions {
+  display: flex;
+  gap: .5rem;
+}
+.btn-sm {
+  font-size: .7rem;
+  padding: .2rem .6rem;
+}
+
 /* ── Floating emoji reactions ── */
 .host-emoji-float {
   position: fixed;
