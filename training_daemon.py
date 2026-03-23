@@ -497,13 +497,9 @@ def run() -> None:
                                 delta_text, _ = transcript_state.compute_delta(full_text)
                                 if delta_text:
                                     print(f"[summarizer] Delta: {len(delta_text)} chars (full: {len(full_text)} chars)")
-                                elif not force_summary:
+                                else:
                                     print("[summarizer] No new transcript content — skipping summary")
                                     continue
-                                else:
-                                    # Force request with no delta — use full transcript
-                                    delta_text = None
-                                    print("[summarizer] No delta but force-requested — using full transcript")
                     except SystemExit:
                         pass  # no transcription files — let summarizer handle it
 
