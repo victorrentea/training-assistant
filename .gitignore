@@ -39,3 +39,6 @@ emoji-overlay/.build/
 
 # Monitoring runtime data
 monitoring/data/
+
+# Persistence snapshots
+data/

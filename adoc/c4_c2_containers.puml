@@ -18,6 +18,8 @@ System_Boundary(workshop, "Workshop Tool", $link="c4_c3_components.puml") {
     Container(host_spa, "Host SPA", "Vanilla JS (host's browser)", "Poll/activity management,\nparticipant list, map view (Leaflet),\nquiz preview, debate control.")
 
     Container(training_daemon, "Training Daemon", "Python 3.12 CLI (host's machine)", "Long-polls backend for quiz requests\nand debate AI cleanup.\nPosts AI-generated content to backend.\nPeriodically synthesizes session key points.")
+
+    ContainerDb(sqlite_db, "SQLite Database", "SQLite 3 (WAL mode)", "Persists participant data, scores,\napp settings, and activity state\nacross server restarts.\nFile: data/state.db")
 }
 
 ' ── right: host + external AI ────────────────────────────────────
@@ -44,5 +46,6 @@ Rel(host, training_daemon, "Starts/stops", "Local terminal")
 Rel(audio_hijack, training_daemon, "Transcript file", "Local file")
 Rel(training_daemon, fastapi, "Polls for requests, posts preview", "HTTPS REST")
 Rel(training_daemon, claude_api, "Generates quiz, debate AI cleanup, summary", "HTTPS REST")
+Rel(fastapi, sqlite_db, "Snapshots state every 2s,\nrestores on startup,\nruns migrations", "SQLite3 (file I/O)")
 
 @enduml
