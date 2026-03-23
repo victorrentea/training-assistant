@@ -1,7 +1,7 @@
 {
-  "sha": "50217670c5f156074fb5a3fe1b766f67fcd26c33",
-  "timestamp": "2026-03-23 15:40",
+  "sha": "96c8ddf1f97a6f72bd772bfe0ca4b8866d070602",
+  "timestamp": "2026-03-23 15:41",
   "changelog": [
-    "fix: center emoji button bar horizontally on screen"
+    "fix: tilt Zorro Z counter-clockwise to match reference image"
   ]
 }
