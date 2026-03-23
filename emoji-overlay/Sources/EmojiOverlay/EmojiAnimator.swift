@@ -890,7 +890,7 @@ class EmojiAnimator {
 
     func showSepia() {
         let bounds = hostLayer.bounds
-        let totalDuration = 4.0
+        let totalDuration = 5.0
 
         let container = CALayer()
         container.frame = bounds
@@ -969,8 +969,8 @@ class EmojiAnimator {
         }
 
         // Fade in, hold, fade out
-        let fadeInDur = 0.6
-        let holdDur = totalDuration - fadeInDur - 0.8
+        let fadeInDur = 0.8
+        let holdDur = totalDuration - fadeInDur - 1.0
 
         for layer in [sepiaLayer, vignette, grainLayer] {
             let fadeIn = CABasicAnimation(keyPath: "opacity")
@@ -982,7 +982,7 @@ class EmojiAnimator {
             fadeOut.fromValue = 1.0
             fadeOut.toValue = 0.0
             fadeOut.beginTime = fadeInDur + holdDur
-            fadeOut.duration = 0.8
+            fadeOut.duration = 1.0
             fadeOut.fillMode = .forwards
 
             let group = CAAnimationGroup()
