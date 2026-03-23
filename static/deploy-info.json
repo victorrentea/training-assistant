@@ -1,7 +1,7 @@
 {
-  "sha": "42db1cf7d0fd9bb8b24383f3ebc74e863c69fe14",
-  "timestamp": "2026-03-23 13:18",
+  "sha": "b2b55918b0c60aaaea3f59b33c4ad19ed2d22ecc",
+  "timestamp": "2026-03-23 13:32",
   "changelog": [
-    "feat: Zorro Z slash effect \u2014 glowing sword trail with sparks"
+    "fix: Zorro and film burn effects invisible due to beginTime bug"
   ]
 }
