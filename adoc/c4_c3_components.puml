@@ -40,7 +40,19 @@ Container_Boundary(fastapi, "FastAPI Backend") {
     Component(state_module, "state.py", "AppState singleton", "All dicts UUID-keyed.\nPoll: poll, votes, poll_opened_at, poll_correct_ids\nParticipants: names, avatars, locations, scores\nActivities: current_activity, wordcloud, qa, codereview\nDebate: statement, phase, sides, arguments,\nchampions, auto_assigned, rounds, ai_request\nDaemon: quiz_request/status/preview, daemon_last_seen\nSummary: summary_points, notes_content\nTranscript: line_count, total_lines, latest_ts\nOther: mode, token_usage, leaderboard_active")
 
     Component(messaging_module, "messaging.py", "Async helpers", "broadcast_state()\nsend_state_to_participant()\nsend_state_to_host()\nbroadcast_leaderboard()\nsend_emoji_to_overlay()\nsend_emoji_to_host()\n_build_debate_for_participant()\n_build_debate_for_host()")
+
+    Component(persist_db, "persistence/db.py", "DB connection", "get_connection()\nSQLite3 WAL mode,\nRow factory.")
+
+    Component(persist_migrate, "persistence/migrate.py", "Schema migrations", "run_migrations()\nApplies SQL files from migrations/\nin version order.")
+
+    Component(persist_snapshot, "persistence/snapshot.py", "Periodic snapshots", "write_snapshot()\nstart_snapshot_loop()\nWrites participants, scores,\nactivity state every 2s.")
+
+    Component(persist_restore, "persistence/restore.py", "State restore", "restore_state()\nLoads participants, scores, mode,\nand activity state from SQLite\non startup.")
+
+    Component(persist_serializers, "persistence/serializers.py", "Serialization helpers", "serialize_activity_state()\nrestore_activity_state()\nConverts sets, datetimes, enums\nto/from JSON strings.")
 }
+
+ContainerDb_Ext(sqlite_db, "SQLite Database", "data/state.db")
 
 ' --- External → FastAPI relationships ---
 Rel(participant_spa, ws_router, "Connect WS, vote, location, debate, codereview", "WSS")
@@ -86,5 +98,18 @@ Rel(quiz_router, state_module, "Quiz pipeline state")
 Rel(quiz_router, messaging_module, "broadcast_state()")
 Rel(summary_router, state_module, "Summary points, notes, transcript, token usage")
 Rel(summary_router, messaging_module, "broadcast_state()")
+
+' --- Persistence relationships ---
+Rel(main_module, persist_migrate, "run_migrations() on startup")
+Rel(main_module, persist_restore, "restore_state() on startup")
+Rel(main_module, persist_snapshot, "start_snapshot_loop() on startup")
+Rel(persist_snapshot, state_module, "Reads AppState for snapshotting")
+Rel(persist_snapshot, persist_serializers, "serialize_activity_state()")
+Rel(persist_snapshot, persist_db, "get_connection()")
+Rel(persist_restore, state_module, "Writes to AppState on restore")
+Rel(persist_restore, persist_serializers, "restore_activity_state()")
+Rel(persist_restore, persist_db, "get_connection()")
+Rel(persist_migrate, persist_db, "get_connection()")
+Rel(persist_db, sqlite_db, "File I/O", "SQLite3")
 
 @enduml
