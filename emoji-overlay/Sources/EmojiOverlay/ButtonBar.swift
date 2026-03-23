@@ -140,12 +140,15 @@ private class ButtonBarContainer: NSView {
     }
 }
 
-// MARK: - Round emoji button
+// MARK: - Round emoji button (click fires action, drag moves window)
 
 private class RoundEmojiButton: NSView {
     private let action: () -> Void
     private var isPressed = false
+    private var isDragging = false
+    private var dragOrigin: NSPoint = .zero
     private var bgLayer: CALayer!
+    private let dragThreshold: CGFloat = 3
 
     init(frame: NSRect, label: String, tooltip: String, action: @escaping () -> Void) {
         self.action = action
@@ -170,17 +173,45 @@ private class RoundEmojiButton: NSView {
 
     required init?(coder: NSCoder) { fatalError() }
 
-    // Critical: prevent window dragging from stealing our clicks
     override var mouseDownCanMoveWindow: Bool { false }
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 
     override func mouseDown(with event: NSEvent) {
         isPressed = true
+        isDragging = false
+        dragOrigin = event.locationInWindow
         CATransaction.begin()
         CATransaction.setAnimationDuration(0.08)
         bgLayer.backgroundColor = NSColor(white: 0.5, alpha: 0.9).cgColor
         layer?.setAffineTransform(CGAffineTransform(scaleX: 0.9, y: 0.9))
         CATransaction.commit()
+    }
+
+    override func mouseDragged(with event: NSEvent) {
+        let current = event.locationInWindow
+        let dx = current.x - dragOrigin.x
+        let dy = current.y - dragOrigin.y
+
+        if !isDragging {
+            // Check if we've moved past the drag threshold
+            if abs(dx) > dragThreshold || abs(dy) > dragThreshold {
+                isDragging = true
+                isPressed = false
+                // Reset button visual
+                CATransaction.begin()
+                CATransaction.setAnimationDuration(0.08)
+                bgLayer.backgroundColor = NSColor(white: 0.3, alpha: 0.8).cgColor
+                layer?.setAffineTransform(.identity)
+                CATransaction.commit()
+            }
+        }
+
+        if isDragging, let window = self.window {
+            var frame = window.frame
+            frame.origin.x += dx
+            frame.origin.y += dy
+            window.setFrame(frame, display: true)
+        }
     }
 
     override func mouseUp(with event: NSEvent) {
@@ -190,13 +221,14 @@ private class RoundEmojiButton: NSView {
         layer?.setAffineTransform(.identity)
         CATransaction.commit()
 
-        if isPressed {
-            isPressed = false
+        if isPressed && !isDragging {
             let loc = convert(event.locationInWindow, from: nil)
             if bounds.contains(loc) {
                 NSLog("Button tapped: \(toolTip ?? "?")")
                 action()
             }
         }
+        isPressed = false
+        isDragging = false
     }
 }
