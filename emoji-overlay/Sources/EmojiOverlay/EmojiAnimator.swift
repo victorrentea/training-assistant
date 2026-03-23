@@ -84,4 +84,87 @@ class EmojiAnimator {
     func spawnRandomEmoji() {
         spawnEmoji(EmojiAnimator.emojiSet.randomElement()!)
     }
+
+    // MARK: - Confetti burst
+
+    private static let confettiColors: [NSColor] = [
+        .systemRed, .systemOrange, .systemYellow, .systemGreen,
+        .systemBlue, .systemPurple, .systemPink, .systemTeal,
+    ]
+
+    func spawnConfetti(count: Int = 80) {
+        let bounds = hostLayer.bounds
+        let screenW = bounds.width
+        let screenH = bounds.height
+        let scale = NSScreen.screens.first?.backingScaleFactor ?? 2.0
+
+        for i in 0..<count {
+            let delay = Double(i) * 0.012 // stagger over ~1s
+
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
+                guard let self = self else { return }
+
+                let color = EmojiAnimator.confettiColors.randomElement()!
+                let layer = CALayer()
+
+                // Random shape: rectangle or square (confetti piece)
+                let w = CGFloat.random(in: 8...16)
+                let h = CGFloat.random(in: 4...16)
+                let startX = CGFloat.random(in: 0...screenW)
+                let startY = screenH + 20 // start above top edge
+
+                layer.frame = CGRect(x: startX, y: startY, width: w, height: h)
+                layer.backgroundColor = color.cgColor
+                layer.cornerRadius = Bool.random() ? w / 2 : 1 // round or rectangular
+                layer.contentsScale = scale
+                self.hostLayer.addSublayer(layer)
+
+                let duration = Double.random(in: 2.5...4.5)
+
+                // Fall down with horizontal drift
+                let endY: CGFloat = -30
+                let drift = CGFloat.random(in: -200...200)
+
+                let path = CGMutablePath()
+                let start = layer.position
+                let end = CGPoint(x: start.x + drift, y: endY)
+                let cp1 = CGPoint(x: start.x + drift * 0.3 + CGFloat.random(in: -80...80),
+                                  y: start.y - (start.y - endY) * 0.3)
+                let cp2 = CGPoint(x: end.x + CGFloat.random(in: -60...60),
+                                  y: start.y - (start.y - endY) * 0.7)
+                path.move(to: start)
+                path.addCurve(to: end, control1: cp1, control2: cp2)
+
+                let pathAnim = CAKeyframeAnimation(keyPath: "position")
+                pathAnim.path = path
+                pathAnim.timingFunction = CAMediaTimingFunction(name: .easeIn)
+
+                // Spin
+                let spin = CABasicAnimation(keyPath: "transform.rotation.z")
+                spin.fromValue = 0
+                spin.toValue = Double.random(in: -6...6) * .pi
+
+                // Fade near end
+                let fade = CABasicAnimation(keyPath: "opacity")
+                fade.fromValue = 1.0
+                fade.toValue = 0.0
+                fade.beginTime = duration * 0.6
+                fade.duration = duration * 0.4
+                fade.fillMode = .forwards
+
+                let group = CAAnimationGroup()
+                group.animations = [pathAnim, spin, fade]
+                group.duration = duration
+                group.fillMode = .forwards
+                group.isRemovedOnCompletion = false
+
+                CATransaction.begin()
+                CATransaction.setCompletionBlock { [weak layer] in
+                    layer?.removeFromSuperlayer()
+                }
+                layer.add(group, forKey: "confetti")
+                CATransaction.commit()
+            }
+        }
+    }
 }
