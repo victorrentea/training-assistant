@@ -1,7 +1,7 @@
 {
-  "sha": "813016946e1d1b4870c4f87999089fd3e654fbec",
-  "timestamp": "2026-03-22 20:56",
+  "sha": "a45f24fdd396d0a43fe2b1dff4534ea93f2b586c",
+  "timestamp": "2026-03-23 05:32",
   "changelog": [
-    "style: use emoji shorthand in dictation log messages"
+    "feat: add copy button to Q&A cards in host panel"
   ]
 }
