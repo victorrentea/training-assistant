@@ -1,7 +1,7 @@
 {
-  "sha": "66661d0927a815cfcf786d159182063dd92e4b88",
-  "timestamp": "2026-03-23 11:14",
+  "sha": "a1f3d3fd4c24276187e28ca8b476446f13415d8c",
+  "timestamp": "2026-03-23 11:15",
   "changelog": [
-    "feat: add check/X emojis to conference grid, wobble+scale to overlay"
+    "fix: spawn host floating emojis from bottom-right corner"
   ]
 }
