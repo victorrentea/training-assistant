@@ -284,7 +284,7 @@ def handle_clean_hotkey(with_emoji: bool = False) -> None:
         simulate_keystroke(VK_V, kCGEventFlagMaskCommand)
 
         elapsed_ms = int((time.time() - start) * 1000)
-        log(f"Done ({len(text)} -> {len(cleaned)} chars, {elapsed_ms}ms)")
+        log(f"Done ({len(text)} -> {len(cleaned)} chars, {elapsed_ms}ms):\n  {cleaned[:200]}")
     except Exception as e:
         log(f"Failed: {e}")
     finally:
