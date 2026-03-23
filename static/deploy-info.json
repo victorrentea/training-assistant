@@ -1,7 +1,8 @@
 {
-  "sha": "cb98e4d50facb49fc03bf0e853945c1be7ff4c65",
-  "timestamp": "2026-03-23 16:50",
+  "sha": "22073a85fb41603c6fc47a1abbdebbf30982a35a",
+  "timestamp": "2026-03-23 19:07",
   "changelog": [
-    "fix: sepia effect longer (5s) with gentler fade transitions"
+    "feat: quiz generation uses key points instead of raw transcript",
+    "feat: sound effects, draggable button bar, improved sepia effect"
   ]
 }
