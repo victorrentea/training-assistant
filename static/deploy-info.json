@@ -1,7 +1,7 @@
 {
-  "sha": "ae8496906f6b26a26bc060bed4918a98a41ec5c0",
-  "timestamp": "2026-03-23 19:11",
+  "sha": "a54a3c176c4eadb4987ab5c548619af6c6b1c249",
+  "timestamp": "2026-03-23 19:16",
   "changelog": [
-    "fix: sepia stays visible (no blink), sounds stop when effects end"
+    "fix: fade out sounds over 300ms instead of abrupt stop"
   ]
 }
