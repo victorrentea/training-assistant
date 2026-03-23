@@ -1,7 +1,13 @@
 {
-  "sha": "52ae48c806fecb0705c6325a481e7881d42efa93",
-  "timestamp": "2026-03-23 11:23",
+  "sha": "c488764220e772023a8e2a46219dead1ef16ed23",
+  "timestamp": "2026-03-23 12:01",
   "changelog": [
-    "feat: show AI quiz generation controls on initial host view"
+    "feat: overlay effects \u2014 danger vignette, earthquake, film burn + fix button clicks",
+    "feat: floating button bar with confetti and emoji burst effects",
+    "fix: force-summary no longer skipped when transcript has no new delta",
+    "fix: emoji overlay self-terminates when superseded by new instance",
+    "docs: add Emoji Overlay to C4 container and component diagrams",
+    "fix: emoji overlay self-terminates when superseded by new instance",
+    "feat: emoji overlay kills previous instance via PID lock file"
   ]
 }
