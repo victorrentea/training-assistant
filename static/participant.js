@@ -228,8 +228,7 @@
       const text = typeof p === 'string' ? p : p.text;
       const source = typeof p === 'string' ? 'discussion' : (p.source || 'discussion');
       const icon = source === 'notes' ? '✏️' : '💬';
-      const time = (typeof p === 'object' && p.time) ? `<span class="summary-ts">${escHtml(p.time)}</span>` : '';
-      return `<li>${icon} ${time}${escHtml(text)}</li>`;
+      return `<li>${icon} ${escHtml(text)}</li>`;
     }).join('');
     if (timeEl && summaryUpdatedAt) {
       const d = new Date(summaryUpdatedAt);
@@ -241,8 +240,7 @@
     if (!summaryPoints.length) return;
     const lines = summaryPoints.map(p => {
       const text = typeof p === 'string' ? p : p.text;
-      const time = (typeof p === 'object' && p.time) ? `[${p.time}] ` : '';
-      return '• ' + time + text;
+      return '• ' + text;
     });
     const content = 'Key Points\n' + '='.repeat(10) + '\n\n' + lines.join('\n');
     const blob = new Blob([content], { type: 'text/plain' });

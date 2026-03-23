@@ -358,8 +358,7 @@
       const text = typeof p === 'string' ? p : p.text;
       const source = typeof p === 'string' ? 'discussion' : (p.source || 'discussion');
       const icon = source === 'notes' ? '✏️' : '💬';
-      const time = (typeof p === 'object' && p.time) ? `<span class="summary-ts">${escHtml(p.time)}</span>` : '';
-      return `<li>${icon} ${time}${escHtml(text)}</li>`;
+      return `<li>${icon} ${escHtml(text)}</li>`;
     }).join('');
     if (timeEl && summaryUpdatedAt) {
       const d = new Date(summaryUpdatedAt);
