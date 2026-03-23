@@ -1,8 +1,7 @@
 {
-  "sha": "22073a85fb41603c6fc47a1abbdebbf30982a35a",
-  "timestamp": "2026-03-23 19:07",
+  "sha": "86ec4a8667ca4cd485015a825eebc44e122e09d9",
+  "timestamp": "2026-03-23 19:11",
   "changelog": [
-    "feat: quiz generation uses key points instead of raw transcript",
-    "feat: sound effects, draggable button bar, improved sepia effect"
+    "feat: improve notes view with monospace, full width, download button"
   ]
 }
