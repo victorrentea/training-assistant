@@ -1144,21 +1144,22 @@ class EmojiAnimator {
     // MARK: - Applause (toggleable: click to start, click again to stop)
 
     func showApplause() {
-        if applauseTimer != nil {
-            // Stop: cancel timer + fade out sound
-            applauseTimer?.invalidate()
-            applauseTimer = nil
-            SoundManager.shared.stop("applause.mp3")
-            return
-        }
+        guard applauseTimer == nil else { return }   // already running — ignore
 
-        // Start looping sound
+        let duration = 6.0
         SoundManager.shared.playLooping("applause.mp3")
 
-        // Spawn 👏 burst immediately then keep a steady stream
+        // Initial burst, then steady stream
         for i in 0..<10 { DispatchQueue.main.asyncAfter(deadline: .now() + Double(i) * 0.05) { [weak self] in self?.spawnApplauseClap() } }
         applauseTimer = Timer.scheduledTimer(withTimeInterval: 0.15, repeats: true) { [weak self] _ in
             self?.spawnApplauseClap()
+        }
+
+        // Auto-stop after duration
+        DispatchQueue.main.asyncAfter(deadline: .now() + duration) { [weak self] in
+            self?.applauseTimer?.invalidate()
+            self?.applauseTimer = nil
+            SoundManager.shared.stop("applause.mp3")
         }
     }
 
