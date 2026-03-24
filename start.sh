@@ -87,6 +87,7 @@ start_daemon() {
 
 start_watcher() {
   if [ -n "$NO_WATCHER" ]; then return; fi
+  kill_old_watcher
   echo "$(date '+%H:%M:%S') 👀 Starting deploy watcher..."
   bash -c '
     REPO="victorrentea/training-assistant"
@@ -180,6 +181,24 @@ start_watcher() {
     done
   ' &
   WATCHER_PID=$!
+}
+
+kill_old_watcher() {
+  local lock_file="/tmp/watch_deploy.lock"
+  if [ -f "$lock_file" ]; then
+    local old_pid
+    old_pid=$(python3 -c "import json,sys; print(json.load(sys.stdin).get('pid',''))" < "$lock_file" 2>/dev/null)
+    if [ -n "$old_pid" ] && kill -0 "$old_pid" 2>/dev/null; then
+      echo "$(date '+%H:%M:%S') 🔪 Killing old deploy watcher (PID $old_pid)..."
+      kill "$old_pid" 2>/dev/null
+      for i in 1 2 3; do
+        kill -0 "$old_pid" 2>/dev/null || break
+        sleep 1
+      done
+      kill -0 "$old_pid" 2>/dev/null && kill -9 "$old_pid" 2>/dev/null
+    fi
+    rm -f "$lock_file"
+  fi
 }
 
 kill_old_overlay() {
