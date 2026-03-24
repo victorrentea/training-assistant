@@ -1,7 +1,7 @@
 {
-  "sha": "174666dc441faa24b62d87c150415cc23542fd9b",
-  "timestamp": "2026-03-24 17:59",
+  "sha": "b1bcc42fbeda5bda467379658c779b4deeb7a43e",
+  "timestamp": "2026-03-24 18:00",
   "changelog": [
-    "fix(start): red dots on process stop/kill events"
+    "fix: replace broken-screen SVGs with plain \ud83d\udda5\ufe0f emoji everywhere"
   ]
 }
