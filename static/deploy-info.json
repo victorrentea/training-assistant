@@ -1,7 +1,7 @@
 {
-  "sha": "cd5422f5ea93930b5b64f758eb87a8b84660a9b3",
-  "timestamp": "2026-03-24 12:50",
+  "sha": "1041164cbaf8f9f897eb29036403d69863102230",
+  "timestamp": "2026-03-24 12:51",
   "changelog": [
-    "feat(overlay): sync ECG animation with dying.mp3 timing"
+    "feat(host): merge transcript lines into brain badge, add notes line count"
   ]
 }
