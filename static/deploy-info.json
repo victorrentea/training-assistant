@@ -1,7 +1,7 @@
 {
-  "sha": "66f2f552648177ad3eaf92d83a5ecdf3edebeede",
-  "timestamp": "2026-03-24 18:04",
+  "sha": "9722f4881556a8658e0f0a526f765191bfd779fb",
+  "timestamp": "2026-03-24 18:05",
   "changelog": [
-    "yolo"
+    "feat(participant): first-visit onboarding tour + \u2694\ufe0f emoji + dev-reset"
   ]
 }
