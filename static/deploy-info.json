@@ -1,7 +1,7 @@
 {
-  "sha": "bac14bf3014946532ced7c30859ecb9c535c28b9",
-  "timestamp": "2026-03-24 09:16",
+  "sha": "d715d5173e773c899c00410ab7072af9a04e1238",
+  "timestamp": "2026-03-24 09:19",
   "changelog": [
-    "fix: pre-fill detected session folder name in new-session prompt"
+    "fix: remove redundant in-function datetime import causing UnboundLocalError"
   ]
 }
