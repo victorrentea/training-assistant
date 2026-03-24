@@ -1,1 +1,0 @@
-window.APP_VERSION = '2026-03-21 07:24';
