@@ -1,7 +1,7 @@
 {
-  "sha": "ca098106c591870db8c9598e28f002e3d601a689",
-  "timestamp": "2026-03-23 20:23",
+  "sha": "7d35f212b6835531b4d39b83183ff5f01c07bc3f",
+  "timestamp": "2026-03-24 07:15",
   "changelog": [
-    "feat: remove timestamps from key points display"
+    "feat: move quiz gen to top of poll left pane, collapse manual entry"
   ]
 }
