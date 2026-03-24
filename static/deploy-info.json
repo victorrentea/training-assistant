@@ -1,7 +1,7 @@
 {
-  "sha": "5d123b0c22e43814bc9b73ce56f399511c2125bc",
-  "timestamp": "2026-03-24 18:56",
+  "sha": "acd23081b9e5b41db1b2212ac2de4be595d1010c",
+  "timestamp": "2026-03-24 18:58",
   "changelog": [
-    "feat(participant): prominent emoji hover bubbles (tour-bubble style)"
+    "feat(version): deploy-incoming prefix and yellow blink on version tag"
   ]
 }
