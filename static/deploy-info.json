@@ -1,7 +1,7 @@
 {
-  "sha": "4c0adb73b8dcda193dd9e4b9f3750630b324fe59",
-  "timestamp": "2026-03-24 22:04",
+  "sha": "2d684160fdbef6737a8c70f4c0038bf34fed0c76",
+  "timestamp": "2026-03-24 22:18",
   "changelog": [
-    "feat(transcript): show session time ranges in startup log + pause/resume support"
+    "feat(debate): fade out beep sounds in 300ms when animation stops on button click"
   ]
 }
