@@ -1,7 +1,7 @@
 {
-  "sha": "cbb6711109997728b21a40ea33fc6c0915071b08",
-  "timestamp": "2026-03-24 18:38",
+  "sha": "f60cd0a377e30b4c121b8f9b10c3817f69d6e98d",
+  "timestamp": "2026-03-24 18:40",
   "changelog": [
-    "fix(participant): restore confirm dialog on dev-reset with correct text"
+    "feat(summarizer): multi-day sessions, MD key points format, DOW timestamps"
   ]
 }
