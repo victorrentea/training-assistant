@@ -7,20 +7,19 @@
     banner.id = 'version-reload-banner';
     banner.style.cssText = [
       'position:fixed',
-      'left:50%',
-      'bottom:1.25rem',
-      'transform:translateX(-50%)',
+      'top:1.4rem',
+      'right:.4rem',
       'z-index:10000',
       'background:#1f2338',
       'color:#e8eaf0',
-      'border:1px solid #6c63ff',
-      'border-radius:10px',
-      'padding:.7rem .8rem',
-      'box-shadow:0 8px 20px rgba(0,0,0,.35)',
+      'border:1px solid #ffd166',
+      'border-radius:8px',
+      'padding:.45rem .65rem',
+      'box-shadow:0 4px 14px rgba(0,0,0,.4)',
       'display:flex',
       'align-items:center',
-      'gap:.6rem',
-      'font:500 .86rem/1.2 Segoe UI, system-ui, sans-serif',
+      'gap:.5rem',
+      'font:500 .78rem/1.2 Segoe UI, system-ui, sans-serif',
     ].join(';');
 
     const msg = document.createElement('span');
