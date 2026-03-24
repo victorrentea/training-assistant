@@ -1058,16 +1058,11 @@ class EmojiAnimator {
     // MARK: - Confetti burst
 
     func spawnConfetti(count: Int = 80) {
-        SoundManager.shared.play("confetti.mp3")
+        SoundManager.shared.playOverlapping("confetti.mp3")
         let bounds = hostLayer.bounds
         let screenW = bounds.width
         let screenH = bounds.height
         let scale = NSScreen.screens.first?.backingScaleFactor ?? 2.0
-
-        // Stop sound after confetti falls (~5s)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 5.0) {
-            SoundManager.shared.stop("confetti.mp3")
-        }
 
         for i in 0..<count {
             let delay = Double(i) * 0.012 // stagger over ~1s
