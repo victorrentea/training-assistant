@@ -1,7 +1,7 @@
 {
-  "sha": "c75178b9d644fd7dc91e7d26a99e23c17725b9f0",
-  "timestamp": "2026-03-24 18:35",
+  "sha": "cbb6711109997728b21a40ea33fc6c0915071b08",
+  "timestamp": "2026-03-24 18:38",
   "changelog": [
-    "fix(participant): enable pointer-events on version-tag so dev-reset click works"
+    "fix(participant): restore confirm dialog on dev-reset with correct text"
   ]
 }
