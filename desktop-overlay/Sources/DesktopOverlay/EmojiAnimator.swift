@@ -1254,13 +1254,13 @@ class EmojiAnimator {
         pulseRunning = true
 
         let bounds = hostLayer.bounds
-        // Timing: dying.mp3 R-spikes at 0.105s and 1.507s. New image peaks at 20.4% and 44.5% of width.
-        // totalDuration derived so peak interval (24.03%) matches audio interval (1.402s): 1.402/0.2403=5.834s
-        // soundDelay=1.086s: audio starts 1.086s after reveal begins →
-        //   beat1 visual at 0.2042*5.834=1.191s = audio beat1 at 1.086+0.105=1.191s ✓
-        //   beat2 visual at 0.4445*5.834=2.593s = audio beat2 at 1.086+1.507=2.593s ✓ (0ms error)
-        let totalDuration: Double = 5.834
-        let soundDelay:    Double = 1.086
+        // Timing: dying.mp3 R-spikes at 0.105s and 1.507s. Image peaks at 22% and 48% of width.
+        // totalDuration: interval 26% of width must match audio interval 1.402s → 1.402/0.26=5.392s
+        // soundDelay=1.081s: audio starts 1.081s after reveal →
+        //   beat1 visual at 0.22*5.392=1.186s = audio beat1 at 1.081+0.105=1.186s ✓
+        //   beat2 visual at 0.48*5.392=2.588s = audio beat2 at 1.081+1.507=2.588s ✓ (0ms error)
+        let totalDuration: Double = 5.392
+        let soundDelay:    Double = 1.081
 
         // Dark overlay
         let dimLayer = CALayer()
@@ -1291,12 +1291,8 @@ class EmojiAnimator {
         let ecgLayer = CALayer()
         _pulseEcgLayer = ecgLayer
         ecgLayer.contents = cgImage
-        ecgLayer.contentsGravity = .resize
-        // Stretch full screen width, scale height proportionally, center vertically
-        let imgAspect = CGFloat(cgImage.width) / CGFloat(cgImage.height)
-        let imgHeight = bounds.width / imgAspect
-        ecgLayer.frame = CGRect(x: 0, y: (bounds.height - imgHeight) / 2,
-                                width: bounds.width, height: imgHeight)
+        ecgLayer.contentsGravity = .resize   // stretch to fill frame completely
+        ecgLayer.frame = bounds               // full screen — guaranteed to reach right edge
         ecgLayer.opacity = 0
         hostLayer.addSublayer(ecgLayer)
 
@@ -1313,8 +1309,8 @@ class EmojiAnimator {
         let maskLayer = CALayer()
         maskLayer.backgroundColor = NSColor.white.cgColor
         maskLayer.anchorPoint = CGPoint(x: 0, y: 0.5)
-        maskLayer.position = CGPoint(x: 0, y: ecgLayer.bounds.height / 2)
-        maskLayer.bounds = CGRect(x: 0, y: 0, width: 0, height: ecgLayer.bounds.height)
+        maskLayer.position = CGPoint(x: 0, y: bounds.height / 2)
+        maskLayer.bounds = CGRect(x: 0, y: 0, width: 0, height: bounds.height)
         ecgLayer.mask = maskLayer
 
         let reveal = CABasicAnimation(keyPath: "bounds.size.width")
