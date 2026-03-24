@@ -242,19 +242,26 @@ start_overlay() {
 # ── Git auto-update ──
 
 GIT_POLL_INTERVAL=2  # seconds between git fetch checks
-LOCAL_HEAD=""
+LAST_KNOWN_REMOTE_HEAD=""
 
 check_git_updates() {
-  # Fetch quietly, compare local master vs origin/master (branch-independent)
+  # Fetch quietly, compare origin/master before vs after fetch (branch-independent)
   git fetch origin master --quiet 2>/dev/null || return 1
-  local remote_head local_head
-  remote_head=$(git rev-parse origin/master 2>/dev/null)
-  local_head=$(git rev-parse master 2>/dev/null)
+  local new_remote_head
+  new_remote_head=$(git rev-parse origin/master 2>/dev/null)
+  [ -z "$new_remote_head" ] && return 1
 
-  if [ -n "$remote_head" ] && [ "$remote_head" != "$local_head" ]; then
+  # Initialize on first call
+  if [ -z "$LAST_KNOWN_REMOTE_HEAD" ]; then
+    LAST_KNOWN_REMOTE_HEAD="$new_remote_head"
+    return 1
+  fi
+
+  if [ "$new_remote_head" != "$LAST_KNOWN_REMOTE_HEAD" ]; then
     local msg
-    msg=$(git log --oneline "$local_head".."$remote_head" 2>/dev/null | head -3)
+    msg=$(git log --oneline "$LAST_KNOWN_REMOTE_HEAD".."$new_remote_head" 2>/dev/null | head -3)
     _log "start" "info" "New commits: $msg"
+    LAST_KNOWN_REMOTE_HEAD="$new_remote_head"
     return 0  # update available
   fi
   return 1  # no update
