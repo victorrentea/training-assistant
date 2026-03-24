@@ -136,14 +136,13 @@ class AppDelegate: NSObject, NSApplicationDelegate, URLSessionWebSocketDelegate 
             overlayError("Invalid server URL: \(serverURL)")
             return
         }
-        overlayInfo("Connecting to server...")
         wsTask = session.webSocketTask(with: url)
         wsTask?.resume()
     }
 
     func urlSession(_ session: URLSession, webSocketTask: URLSessionWebSocketTask,
                     didOpenWithProtocol protocol: String?) {
-        overlayInfo("Connected")
+        overlayInfo("WebSocket connected")
         // Send set_name as required by protocol
         let msg = "{\"type\":\"set_name\",\"name\":\"Overlay\"}"
         wsTask?.send(.string(msg)) { error in
@@ -156,13 +155,13 @@ class AppDelegate: NSObject, NSApplicationDelegate, URLSessionWebSocketDelegate 
 
     func urlSession(_ session: URLSession, webSocketTask: URLSessionWebSocketTask,
                     didCloseWith closeCode: URLSessionWebSocketTask.CloseCode, reason: Data?) {
-        overlayInfo("Server closed connection, retrying...")
+        overlayError("WebSocket not connected")
         scheduleReconnect()
     }
 
     func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
         if let error = error {
-            overlayError("Connection lost, retrying...")
+            overlayError("WebSocket not connected")
             scheduleReconnect()
         }
     }
@@ -179,7 +178,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, URLSessionWebSocketDelegate 
                 }
                 self?.receiveMessage()
             case .failure(let error):
-                overlayError("Connection lost, retrying...")
+                overlayError("WebSocket not connected")
                 self?.scheduleReconnect()
             }
         }
