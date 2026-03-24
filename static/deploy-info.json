@@ -1,7 +1,10 @@
 {
-  "sha": "3c0d391f7e88abb5b58ac5011d0aca83e954e174",
-  "timestamp": "2026-03-24 18:45",
+  "sha": "cb8d7beb8b1fd39aaf815223b9eaaa063c5ed672",
+  "timestamp": "2026-03-24 18:46",
   "changelog": [
-    "feat(session): auto-close at 20:00 and auto-start at 09:00"
+    "feat(deploy): show blinking deploy-pending warning for participants",
+    "feat(deploy): notify server on push via GitHub Actions",
+    "feat(deploy): skip pending-deploy broadcast when SHA matches current deploy",
+    "docs: add deploy-pending-alert implementation plan"
   ]
 }
