@@ -1,7 +1,7 @@
 {
-  "sha": "350386a0addf642767af960ca51cdc597e7bab4d",
-  "timestamp": "2026-03-24 17:47",
+  "sha": "d3f2b2405f73791fc409efee1281d2623f9d0f98",
+  "timestamp": "2026-03-24 17:49",
   "changelog": [
-    "fix: make broken-screen SVG visible by setting color on emoji-btn"
+    "fix(daemon): normalize remaining raw print() calls in quiz_core.py"
   ]
 }
