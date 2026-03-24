@@ -1,7 +1,7 @@
 {
-  "sha": "9189c441540facbfc7ba405431290d6e0b51f932",
-  "timestamp": "2026-03-24 19:25",
+  "sha": "829c30dab9fcdb118fd6f29d3f71eabdf5a758c0",
+  "timestamp": "2026-03-24 19:35",
   "changelog": [
-    "docs: add participant onboarding tour implementation plan"
+    "chore(start): remove deploy watcher, git-pull check every 2s"
   ]
 }
