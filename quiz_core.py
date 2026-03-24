@@ -863,6 +863,8 @@ def auto_generate(minutes: int, config: Config) -> Optional[tuple]:
             "options": quiz["options"],
             "multi": len(quiz.get("correct_indices", [])) > 1,
             "correct_indices": quiz.get("correct_indices", []),
+            "source": quiz.get("source"),
+            "page": quiz.get("page"),
         }, config.host_username, config.host_password)
     except RuntimeError as e:
         post_status("error", f"Failed to post preview: {e}", config)
@@ -894,6 +896,8 @@ def auto_generate_topic(topic: str, config: Config) -> Optional[tuple]:
             "options": quiz["options"],
             "multi": len(quiz.get("correct_indices", [])) > 1,
             "correct_indices": quiz.get("correct_indices", []),
+            "source": quiz.get("source"),
+            "page": quiz.get("page"),
         }, config.host_username, config.host_password)
     except RuntimeError as e:
         post_status("error", f"Failed to post preview: {e}", config)
@@ -919,6 +923,8 @@ def auto_refine(target: str, current_quiz: dict, original_text: str, config: Con
             "options": updated["options"],
             "multi": len(updated.get("correct_indices", [])) > 1,
             "correct_indices": updated.get("correct_indices", []),
+            "source": updated.get("source"),
+            "page": updated.get("page"),
         }, config.host_username, config.host_password)
     except RuntimeError as e:
         post_status("error", f"Failed to post updated preview: {e}", config)
