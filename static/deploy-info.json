@@ -1,7 +1,7 @@
 {
-  "sha": "0e7419621379895ce1aaf0a347864712b90f00b9",
-  "timestamp": "2026-03-25 01:23",
+  "sha": "a265ca793f97d9d86ea3ca56185bc3a6637ad517",
+  "timestamp": "2026-03-25 01:37",
   "changelog": [
-    "fix: auto re-enable CGEventTap when disabled by timeout"
+    "chore(bmad): add BMAD agent config for Copilot Chat"
   ]
 }
