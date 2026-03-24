@@ -1,7 +1,7 @@
 {
-  "sha": "95fe7040ef4df891616957eddea34b0a0adf62c5",
-  "timestamp": "2026-03-24 19:22",
+  "sha": "1b52586bac71fc26a6fdefa6e780dda75e364849",
+  "timestamp": "2026-03-24 19:24",
   "changelog": [
-    "feat(participant): summary count before label, no parens \u2014 \"\ud83e\udde0 38 Key Points\""
+    "fix(host): remove rocket badge from left pane, keep version-tag blink only"
   ]
 }
