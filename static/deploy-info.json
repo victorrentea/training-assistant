@@ -1,7 +1,7 @@
 {
-  "sha": "829c30dab9fcdb118fd6f29d3f71eabdf5a758c0",
-  "timestamp": "2026-03-24 19:35",
+  "sha": "eca5c2247a1ee8b10711da78cb6716d7b47bd4e7",
+  "timestamp": "2026-03-24 19:38",
   "changelog": [
-    "chore(start): remove deploy watcher, git-pull check every 2s"
+    "fix(host): make server-restart banner a floating overlay, not full-width"
   ]
 }
