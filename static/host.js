@@ -723,7 +723,7 @@
           ? (debateSide === 'for' ? '<span title="FOR">👍</span> ' : debateSide === 'against' ? '<span title="AGAINST">👎</span> ' : '<span title="Undecided">⏳</span> ')
           : '';
       const ip = participantIps[n] || '';
-      return `<li><span class="pax-name" title="${ip ? 'IP: ' + ip : ''}">${debateIcon}${avatarHtml}${escHtml(n)}${scoreTag}</span>${locLabel ? `<span class="pax-location" onclick="openMap()" title="View all on map">${escHtml(locLabel)}</span>` : ''}</li>`;
+      return `<li><span class="pax-name" title="${ip ? 'IP: ' + ip : ''}">${debateIcon}${avatarHtml}<span class="pax-name-text">${escHtml(n)}</span></span>${scoreTag}${locLabel ? `<span class="pax-location" onclick="openMap()" title="View all on map">${escHtml(locLabel)}</span>` : ''}</li>`;
     }).join('');
 
     // Lazily resolve any raw "lat, lon" strings to city names
