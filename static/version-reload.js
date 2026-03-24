@@ -104,6 +104,10 @@
       if (active) return;
 
       active = true;
+      window.__deployIncoming = true;
+      window.__updateDeployAge && window.__updateDeployAge();
+      var vt = document.getElementById('version-tag');
+      if (vt) vt.classList.add('deploy-incoming');
       createBanner(countdownStart, stopAutoReload, doReload);
       startCountdown();
     }

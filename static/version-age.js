@@ -42,8 +42,10 @@
     const builtAt = ' | ' + formatBuiltAt(parsed);
 
     function update() {
-      el.textContent = formatElapsed(parsed, new Date()) + builtAt + workSuffix;
+      const prefix = window.__deployIncoming ? '\u26a0\ufe0f \uD83D\uDE80 | ' : '';
+      el.textContent = prefix + formatElapsed(parsed, new Date()) + builtAt + workSuffix;
     }
+    window.__updateDeployAge = update;
     update();
     const ageSec = Math.floor((Date.now() - parsed.getTime()) / 1000);
     if (ageSec < 86400) setInterval(update, 60000);
