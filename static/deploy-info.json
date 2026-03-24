@@ -1,7 +1,7 @@
 {
-  "sha": "190494a14f5c2a318169b2c026d82fce35b22160",
-  "timestamp": "2026-03-24 18:32",
+  "sha": "c75178b9d644fd7dc91e7d26a99e23c17725b9f0",
+  "timestamp": "2026-03-24 18:35",
   "changelog": [
-    "feat(summarizer): incremental mode with watermark for resilience"
+    "fix(participant): enable pointer-events on version-tag so dev-reset click works"
   ]
 }
