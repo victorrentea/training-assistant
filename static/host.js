@@ -15,6 +15,7 @@
   let summaryUpdatedAt = null;
   let sessionStack = [];
   let sessionName = null;
+  let daemonSessionFolder = null;
 
   let _hostWcDebounceTimer = null;
   let _hostWcLastDataKey = null;
@@ -189,6 +190,7 @@
         updateTokenBadge(msg.token_usage);
         renderTranscriptStatus(msg.transcript_line_count, msg.transcript_total_lines, msg.transcript_latest_ts);
         renderOverlayStatus(msg.overlay_connected);
+        daemonSessionFolder = msg.daemon_session_folder || null;
         renderNotesStatus(msg.daemon_session_folder, msg.daemon_session_notes);
         updateHostNotes(msg.notes_content);
         renderPreview(msg.quiz_preview || null);
@@ -2433,7 +2435,10 @@ async function startNewSession() {
     if (resp.ok) suggestions = (await resp.json()).folders || [];
   } catch (_) {}
 
-  const defaultName = new Date().toISOString().slice(0, 10);
+  const detectedFolder = daemonSessionFolder
+    ? daemonSessionFolder.replace(/\\/g, '/').split('/').pop()
+    : null;
+  const defaultName = detectedFolder || new Date().toISOString().slice(0, 10);
   const hint = suggestions.length ? '\n\nExisting folders:\n' + suggestions.slice(0, 10).join('\n') : '';
   const name = prompt('Session name (must match folder for notes):' + hint, defaultName);
   if (!name || !name.trim()) return;
