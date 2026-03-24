@@ -35,21 +35,60 @@
 
     <!-- Poll tab content -->
     <div id="tab-content-poll" class="tab-content">
-      <div id="poll-input" class="poll-composer" contenteditable="true" spellcheck="false"
-           data-placeholder="Question title&#10;&#10;Option A&#10;Option B&#10;Option C"></div>
-      <div class="btn-row" style="align-items:center;">
-        <button class="btn btn-success" id="create-btn">Send</button>
-        <button class="btn" id="random-poll-btn" title="Generate random trivia question" style="font-size:.9rem;">🎲 Random</button>
-        <label style="display:flex; align-items:center; gap:.4rem; font-size:.9rem; color:var(--text); cursor:pointer; margin:0;">
-          <input type="checkbox" id="multi-check" style="width:1rem; height:1rem; cursor:pointer;" />
-          Multi-select
-        </label>
-        <label id="correct-count-label" style="display:none; align-items:center; gap:.4rem; font-size:.9rem; color:var(--text); margin:0;">
-          <input type="number" id="correct-count" min="1" max="8" value="2"
-                 style="width:3.2rem; height:34px; box-sizing:border-box; text-align:center; background:var(--surface2); color:var(--text); border:1px solid var(--border); border-radius:6px; font-size:.9rem;" />
-          correct
-        </label>
+      <!-- Generate question (primary) -->
+      <div class="quiz-gen-row">
+        <div class="quiz-gen-controls" style="display:flex;flex-direction:column;gap:.35rem;align-items:flex-start;">
+          <div style="font-size:.85rem;color:var(--muted);display:flex;align-items:center;gap:.4rem;">
+            from topic:
+            <input id="quiz-topic" type="text" maxlength="60" autocomplete="off"
+                   placeholder="e.g. circuit breaker"
+                   oninput="updateGenBtn()"
+                   onkeydown="if(event.key==='Enter')requestQuiz()"
+                   style="background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:0 .5rem;font-size:.85rem;width:10rem;" />
+          </div>
+          <div style="font-size:.85rem;color:var(--muted);display:flex;align-items:center;gap:.4rem;">
+            from what we discussed the last
+            <select id="quiz-minutes" style="background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:0 .4rem;font-size:.85rem;cursor:pointer;">
+              <option value="15">15 min</option>
+              <option value="30" selected>30 min</option>
+              <option value="60">1 hour</option>
+              <option value="90">1.5 hours</option>
+              <option value="480">whole day</option>
+            </select>
+          </div>
+          <button class="btn btn-warn" id="gen-quiz-btn" onclick="requestQuiz()" style="align-self:flex-start;">Generate from transcript 🤖</button>
+        </div>
+        <span id="quiz-status"></span>
       </div>
+      <div id="preview-card" style="display:none; margin-top:.75rem;">
+        <h3 style="margin:0 0 .5rem; font-size:.95rem; color:var(--accent);">🤖 Generated Question</h3>
+        <div id="preview-display"></div>
+        <div class="btn-row" style="margin-top:.5rem;">
+          <button class="btn btn-success" onclick="firePreview()">Send</button>
+        </div>
+      </div>
+
+      <!-- Manual entry (collapsible) -->
+      <details id="manual-poll-details" style="margin-top:.75rem;">
+        <summary style="cursor:pointer; font-size:.85rem; color:var(--muted); user-select:none; padding:.3rem 0;">or enter manually</summary>
+        <div style="margin-top:.5rem;">
+          <div id="poll-input" class="poll-composer" contenteditable="true" spellcheck="false"
+               data-placeholder="Question title&#10;&#10;Option A&#10;Option B&#10;Option C"></div>
+          <div class="btn-row" style="align-items:center;">
+            <button class="btn btn-success" id="create-btn">Send</button>
+            <button class="btn" id="random-poll-btn" title="Generate random trivia question" style="font-size:.9rem;">🎲 Random</button>
+            <label style="display:flex; align-items:center; gap:.4rem; font-size:.9rem; color:var(--text); cursor:pointer; margin:0;">
+              <input type="checkbox" id="multi-check" style="width:1rem; height:1rem; cursor:pointer;" />
+              Multi-select
+            </label>
+            <label id="correct-count-label" style="display:none; align-items:center; gap:.4rem; font-size:.9rem; color:var(--text); margin:0;">
+              <input type="number" id="correct-count" min="1" max="8" value="2"
+                     style="width:3.2rem; height:34px; box-sizing:border-box; text-align:center; background:var(--surface2); color:var(--text); border:1px solid var(--border); border-radius:6px; font-size:.9rem;" />
+              correct
+            </label>
+          </div>
+        </div>
+      </details>
     </div>
 
     <!-- Word Cloud tab content -->
@@ -179,40 +218,6 @@
           <span id="poll-pills"></span>
         </div>
         <div id="poll-display"></div>
-      </div>
-      <div class="center-poll-gen-section">
-        <div class="or-divider"><span>generate next</span></div>
-        <div class="quiz-gen-row">
-          <div class="quiz-gen-controls" style="display:flex;flex-direction:column;gap:.35rem;align-items:flex-start;">
-            <div style="font-size:.85rem;color:var(--muted);display:flex;align-items:center;gap:.4rem;">
-              from topic:
-              <input id="quiz-topic" type="text" maxlength="60" autocomplete="off"
-                     placeholder="e.g. circuit breaker"
-                     oninput="updateGenBtn()"
-                     onkeydown="if(event.key==='Enter')requestQuiz()"
-                     style="background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:0 .5rem;font-size:.85rem;width:10rem;" />
-            </div>
-            <div style="font-size:.85rem;color:var(--muted);display:flex;align-items:center;gap:.4rem;">
-              from what we discussed the last
-              <select id="quiz-minutes" style="background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:0 .4rem;font-size:.85rem;cursor:pointer;">
-                <option value="15">15 min</option>
-                <option value="30" selected>30 min</option>
-                <option value="60">1 hour</option>
-                <option value="90">1.5 hours</option>
-                <option value="480">whole day</option>
-              </select>
-            </div>
-            <button class="btn btn-warn" id="gen-quiz-btn" onclick="requestQuiz()" style="align-self:flex-start;">Generate from transcript 🤖</button>
-          </div>
-          <span id="quiz-status"></span>
-        </div>
-        <div id="preview-card" style="display:none; margin-top:.75rem;">
-          <h3 style="margin:0 0 .5rem; font-size:.95rem; color:var(--accent);">🤖 Generated Question</h3>
-          <div id="preview-display"></div>
-          <div class="btn-row" style="margin-top:.5rem;">
-            <button class="btn btn-success" onclick="firePreview()">Send</button>
-          </div>
-        </div>
       </div>
     </div>
     <!-- Word cloud panel -->

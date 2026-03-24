@@ -170,12 +170,6 @@ body {
   flex-direction: column;
 }
 
-.center-poll-gen-section {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  padding-top: .25rem;
-}
 
 /* Voting-in-progress overlay */
 #poll-display.voting-active .poll-question {
@@ -459,7 +453,28 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
   background: var(--border);
 }
 
-/* ── Quiz gen row inside Create Poll card ── */
+/* ── Manual poll entry collapsible ── */
+#manual-poll-details > summary {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  color: var(--muted);
+  font-size: .85rem;
+  padding: .3rem 0;
+  border-top: 1px solid var(--border);
+}
+#manual-poll-details > summary::before {
+  content: '▶';
+  font-size: .65rem;
+  transition: transform .15s;
+}
+#manual-poll-details[open] > summary::before {
+  transform: rotate(90deg);
+}
+#manual-poll-details > summary::-webkit-details-marker { display: none; }
+
+/* ── Quiz gen row inside Poll tab ── */
 .quiz-gen-row {
   display: flex;
   flex-direction: column;
