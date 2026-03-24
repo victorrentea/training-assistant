@@ -27,6 +27,7 @@ deploy-history.txt
 *.png
 !static/avatars/*.png
 !emoji-overlay/Sources/EmojiOverlay/Resources/*.png
+!desktop-overlay/Sources/DesktopOverlay/Resources/*.png
 
 # Coverage data
 .coverage*
@@ -37,6 +38,7 @@ static/deploy-info.json
 
 # Swift Package Manager
 emoji-overlay/.build/
+desktop-overlay/.build/
 
 # Monitoring runtime data
 monitoring/data/
