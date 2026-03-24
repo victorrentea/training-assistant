@@ -338,7 +338,11 @@
   function updateSummary(points, updatedAt) {
     summaryPoints = points || [];
     summaryUpdatedAt = updatedAt;
-    if (summaryPoints.length) _summaryGenerating = false;
+    if (summaryPoints.length) {
+      _summaryGenerating = false;
+      const btn = document.getElementById('summary-refresh-btn');
+      if (btn) { btn.disabled = false; btn.style.opacity = ''; }
+    }
     renderSummaryBadge();
     renderSummaryList();
   }
@@ -406,6 +410,14 @@
   function closeSummaryModal() {
     const overlay = document.getElementById('summary-overlay');
     if (overlay) overlay.classList.remove('open');
+  }
+
+  function requestSummaryRefresh() {
+    _summaryGenerating = true;
+    renderSummaryBadge();
+    const btn = document.getElementById('summary-refresh-btn');
+    if (btn) { btn.disabled = true; btn.style.opacity = '0.4'; }
+    fetch('/api/summary/force', { method: 'POST' }).catch(() => {});
   }
 
   function setKickedFavicon() {

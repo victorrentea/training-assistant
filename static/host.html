@@ -347,7 +347,10 @@
   <div class="summary-dialog" onclick="event.stopPropagation()">
     <div class="summary-header">
       <span>🧠 Key Points</span>
-      <button class="summary-close" onclick="closeSummaryModal()">✕</button>
+      <span>
+        <button id="summary-refresh-btn" class="modal-newtab-btn" onclick="requestSummaryRefresh()" title="Generate new key points from recent transcript">🔄</button>
+        <button class="summary-close" onclick="closeSummaryModal()">✕</button>
+      </span>
     </div>
     <ul id="summary-list" class="summary-list"></ul>
     <div id="summary-time" class="summary-time"></div>

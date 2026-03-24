@@ -209,7 +209,11 @@
   function updateSummary(points, updatedAt) {
     summaryPoints = points || [];
     summaryUpdatedAt = updatedAt;
-    if (summaryPoints.length) _summaryRequested = false;
+    if (summaryPoints.length) {
+      _summaryRequested = false;
+      const btn = document.getElementById('summary-refresh-btn');
+      if (btn) { btn.disabled = false; btn.style.opacity = ''; }
+    }
     renderSummaryList();
   }
 
@@ -267,6 +271,17 @@
   function closeSummaryModal() {
     const overlay = document.getElementById('summary-overlay');
     if (overlay) overlay.classList.remove('open');
+  }
+
+  function requestSummaryRefresh() {
+    _summaryRequested = true;
+    if (summaryPoints.length === 0) {
+      const list = document.getElementById('summary-list');
+      if (list) list.innerHTML = '<li class="summary-empty">Generating key points… please wait.</li>';
+    }
+    const btn = document.getElementById('summary-refresh-btn');
+    if (btn) { btn.disabled = true; btn.style.opacity = '0.4'; }
+    fetch('/api/summary/force', { method: 'POST' }).catch(() => {});
   }
 
   async function requestNotificationPermission() {
