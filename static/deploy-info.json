@@ -1,7 +1,7 @@
 {
-  "sha": "9f05e2aceeec1dcef1fa8c3c8d737b84aba222f1",
-  "timestamp": "2026-03-24 12:47",
+  "sha": "95c3740696afa0225f3f28a3828ac83de53233f5",
+  "timestamp": "2026-03-24 12:49",
   "changelog": [
-    "chore: always push directly to master after completing tasks"
+    "fix(session): 5 dots, more visible (opacity floor 0.45)"
   ]
 }
