@@ -92,6 +92,7 @@ class AppState:
         self.token_usage: dict = {"input_tokens": 0, "output_tokens": 0, "estimated_cost_usd": 0.0}
         self.mode: str = "workshop"  # "workshop" | "conference"
         self.needs_restore: bool = True
+        self.pending_deploy: dict | None = None  # {sha, message} set by watcher when push detected
 
     def suggest_name(self) -> str:
         """Return the next available LOTR name (by popularity order).

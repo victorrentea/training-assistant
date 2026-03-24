@@ -214,3 +214,11 @@ async def status():
         "total_votes": len(state.votes),
         "needs_restore": state.needs_restore,
     }
+
+
+@router.post("/api/pending-deploy")
+async def set_pending_deploy(payload: dict):
+    """Called by deploy watcher when a new push is detected on master."""
+    state.pending_deploy = payload if payload.get("sha") else None
+    await broadcast_state()
+    return {"status": "ok"}
