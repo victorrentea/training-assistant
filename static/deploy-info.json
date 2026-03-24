@@ -1,8 +1,7 @@
 {
-  "sha": "e93d62958e883d968d1773a36392ce434a21ca61",
+  "sha": "9f05e2aceeec1dcef1fa8c3c8d737b84aba222f1",
   "timestamp": "2026-03-24 12:47",
   "changelog": [
-    "feat(overlay): replace synthesized pulse sounds with dying.mp3",
-    "fix(session): re-sync key points after backend restart"
+    "chore: always push directly to master after completing tasks"
   ]
 }
