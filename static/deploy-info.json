@@ -1,7 +1,8 @@
 {
-  "sha": "3c080eb01fd45d432fad60260b427231da836718",
-  "timestamp": "2026-03-24 17:08",
+  "sha": "150a08e94181339b0f03d19536599153ec953071",
+  "timestamp": "2026-03-24 17:13",
   "changelog": [
-    "feat: add broken-screen indicator for interrupted screen share"
+    "feat: custom speech-bubble tooltips throughout participant view",
+    "revert(overlay): restore image-based ECG pulse (state from 5a9f610)"
   ]
 }
