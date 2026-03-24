@@ -2157,6 +2157,59 @@
     document.getElementById('leaderboard-overlay').style.display = 'none';
   }
 
+  // ── Emoji bar hover bubbles (reuse tour-bubble style) ──
+  (function setupEmojiBubbles() {
+    let activeBubble = null;
+    let showTimer = null;
+
+    function removeBubble() {
+      if (activeBubble) { activeBubble.remove(); activeBubble = null; }
+      if (showTimer) { clearTimeout(showTimer); showTimer = null; }
+    }
+
+    function showBubble(btn) {
+      removeBubble();
+      const text = btn.dataset.tooltip;
+      const emoji = btn.textContent.trim();
+      if (!text) return;
+
+      const bub = document.createElement('div');
+      bub.className = 'tour-bubble emoji-hover-bubble';
+
+      const emojiSpan = document.createElement('span');
+      emojiSpan.className = 'tour-bubble-emoji';
+      emojiSpan.textContent = emoji;
+
+      const textSpan = document.createElement('span');
+      textSpan.className = 'tour-bubble-text';
+      textSpan.textContent = text;
+
+      bub.appendChild(emojiSpan);
+      bub.appendChild(textSpan);
+      document.body.appendChild(bub);
+      activeBubble = bub;
+
+      // Position above the button
+      const rect = btn.getBoundingClientRect();
+      const bubW = 180;
+      bub.style.width = bubW + 'px';
+      bub.style.left = Math.max(8, Math.min(window.innerWidth - bubW - 8, rect.left + rect.width / 2 - bubW / 2)) + 'px';
+      bub.style.top = '0px';
+      requestAnimationFrame(() => {
+        const bh = bub.getBoundingClientRect().height;
+        bub.style.top = Math.max(8, rect.top - bh - 12) + 'px';
+      });
+    }
+
+    document.querySelectorAll('#emoji-bar .emoji-btn[data-tooltip]').forEach(btn => {
+      btn.addEventListener('mouseenter', () => {
+        showTimer = setTimeout(() => showBubble(btn), 100);
+      });
+      btn.addEventListener('mouseleave', removeBubble);
+      btn.addEventListener('click', removeBubble);
+    });
+  })();
+
   // ── Hidden dev-reset: click version tag to wipe all local state ──
   (function setupDevReset() {
     const vt = document.getElementById('version-tag');

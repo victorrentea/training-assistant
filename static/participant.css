@@ -1149,3 +1149,13 @@ h1 { display: none; }
   cursor: pointer;
   opacity: 1;
 }
+
+/* Emoji hover bubble — compact, no footer */
+.emoji-hover-bubble {
+  text-align: center;
+  padding: 10px 14px;
+}
+.emoji-hover-bubble .tour-bubble-text {
+  margin-bottom: 0;
+  font-size: .85rem;
+}
