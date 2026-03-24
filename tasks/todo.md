@@ -151,6 +151,15 @@
 - [x] Restore the original owner value after verification
 - [x] Update `/.github/petclinic-instructions.md` with confirmed edit-flow behavior
 
+## Direct request: Pet Clinic add, edit, and delete a pet
+
+- [x] Reuse the verified `George Franklin` owner flow
+- [x] Open `Add New Pet` and inspect the pet form
+- [x] Create a disposable pet and confirm it appears for the owner
+- [x] Edit the created pet and confirm the update appears
+- [x] Delete the created pet and confirm it disappears
+- [x] Update `/.github/petclinic-instructions.md` with confirmed pet lifecycle behavior
+
 ## Review
 
 - Added `scripts/append_transcription_timestamps.py` with 3s default interval and parser-compatible format.
@@ -196,3 +205,6 @@
 - Pet Clinic edit exploration complete: opened `Edit Owner` for `George Franklin`, changed `City` from `Madison` to `Madison Test`, saved successfully, then restored `City` back to `Madison`.
 - Proof screenshots: `docs/superpowers/specs/petclinic-owner-edit-form.png`, `docs/superpowers/specs/petclinic-owner-edit-after-save.png`.
 - Updated `/.github/petclinic-instructions.md` with verified owner edit route, form fields, save behavior, and post-save navigation observations.
+- Pet Clinic pet lifecycle exploration complete: added `Copilot Temp Pet`, renamed it to `Copilot Temp Pet Updated`, then deleted it from `George Franklin`.
+- Proof screenshots: `docs/superpowers/specs/petclinic-add-pet-form.png`, `docs/superpowers/specs/petclinic-pet-after-add.png`, `docs/superpowers/specs/petclinic-edit-pet-form.png`, `docs/superpowers/specs/petclinic-pet-after-edit.png`, `docs/superpowers/specs/petclinic-pet-after-delete.png`.
+- Updated `/.github/petclinic-instructions.md` with verified add-pet route, edit-pet route, button-state behavior, and immediate-delete behavior.
