@@ -35,7 +35,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, URLSessionWebSocketDelegate 
 
         session = URLSession(configuration: .default, delegate: self, delegateQueue: .main)
         connectWebSocket()
-        registerGlobalHotkeys()
         setupButtonBar(screen: buttonScreen, singleScreen: singleScreen)
 
 
@@ -101,29 +100,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, URLSessionWebSocketDelegate 
 
         buttonBar = ButtonBar(buttons: buttons, screen: screen, singleScreen: singleScreen)
         buttonBar.orderFrontRegardless()
-    }
-
-    // MARK: - Global hotkeys
-
-    private func registerGlobalHotkeys() {
-        // Cmd+Shift+K → confetti burst
-        NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
-            // Cmd+Shift+K (keyCode 40 = K)
-            if flags == [.command, .shift] && event.keyCode == 40 {
-                self?.animator.spawnConfetti()
-            }
-        }
-        // Also catch when our app is focused (unlikely but safe)
-        NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
-            if flags == [.command, .shift] && event.keyCode == 40 {
-                self?.animator.spawnConfetti()
-                return nil
-            }
-            return event
-        }
-        NSLog("Global hotkey registered: Cmd+Shift+K → confetti")
     }
 
     private func checkPIDFile() {
