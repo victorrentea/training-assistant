@@ -30,6 +30,7 @@ from Quartz import (
     CGEventMaskBit,
     CGEventPost,
     CGEventTapCreate,
+    CGEventTapEnable,
     CFMachPortCreateRunLoopSource,
     CFRunLoopAddSource,
     CFRunLoopGetCurrent,
@@ -37,6 +38,7 @@ from Quartz import (
     CFRunLoopStop,
     kCGEventKeyDown,
     kCGEventOtherMouseDown,
+    kCGEventTapDisabledByTimeout,
     kCGHeadInsertEventTap,
     kCGKeyboardEventKeycode,
     kCGSessionEventTap,
@@ -332,6 +334,13 @@ def event_tap_callback(proxy, event_type, event, refcon):
     """CGEventTap callback — intercepts key + mouse events."""
     global last_paste_text
 
+    # macOS disables the tap if the callback is too slow — re-enable it
+    if event_type == kCGEventTapDisabledByTimeout:
+        log("⚠️ Event tap disabled by timeout — re-enabling")
+        if _tap_ref is not None:
+            CGEventTapEnable(_tap_ref, True)
+        return event
+
     if event_type == kCGEventOtherMouseDown:
         button = CGEventGetIntegerValueField(event, kCGMouseEventButtonNumber)
         if button == MOUSE_BUTTON_5:
@@ -370,10 +379,11 @@ def event_tap_callback(proxy, event_type, event, refcon):
 
 
 _run_loop_ref = None
+_tap_ref = None
 
 
 def main() -> None:
-    global _run_loop_ref
+    global _run_loop_ref, _tap_ref
 
     # Load API key from clean-clipboard/secrets.env
     secrets_path = Path(__file__).parent / "secrets.env"
@@ -404,6 +414,7 @@ def main() -> None:
         None,
     )
 
+    _tap_ref = tap
     if tap is None:
         print(
             "Error: Could not create event tap.\n"
