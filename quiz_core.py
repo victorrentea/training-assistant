@@ -246,15 +246,30 @@ def _parse_txt(text: str) -> list:
 _FILENAME_DATE_RE = re.compile(r"^(\d{8})\s+(\d{4})\b")
 
 
-def load_transcription_files(folder: Path) -> list:
-    """Load the transcription file with the latest date in its filename."""
+def load_transcription_files(folder: Path, since_date: date | None = None) -> list:
+    """Load transcription files from folder.
+
+    If since_date is given, loads all files with a filename-embedded date >= since_date
+    and concatenates their entries in chronological order (for multi-day sessions).
+    If since_date is None, loads only the latest file (default behaviour).
+    """
 
     def _sort_key(f: Path):
         """Prefer filename-embedded date; fall back to mtime."""
         m = _FILENAME_DATE_RE.match(f.name)
         if m:
             return m.group(1) + m.group(2)  # e.g. "202603222100"
-        return f.stat().st_mtime
+        return str(f.stat().st_mtime)
+
+    def _file_date(f: Path) -> date | None:
+        m = _FILENAME_DATE_RE.match(f.name)
+        if not m:
+            return None
+        ds = m.group(1)  # "YYYYMMDD"
+        try:
+            return date(int(ds[:4]), int(ds[4:6]), int(ds[6:8]))
+        except ValueError:
+            return None
 
     files = sorted(
         [f for f in folder.iterdir() if f.suffix.lower() in {".txt", ".vtt", ".srt"}],
@@ -264,18 +279,26 @@ def load_transcription_files(folder: Path) -> list:
         log.error("transcript", f"No transcription files in {folder}")
         sys.exit(1)
 
-    latest = files[-1]
-    raw = latest.read_text(encoding="utf-8", errors="replace")
-    ext = latest.suffix.lower()
-
-    if ext == ".vtt":
-        entries = _parse_vtt(raw)
-    elif ext == ".srt":
-        entries = _parse_srt(raw)
+    if since_date is not None:
+        qualifying = [f for f in files if (_file_date(f) or date.min) >= since_date]
+        if not qualifying:
+            qualifying = [files[-1]]  # fallback: at least load latest
     else:
-        entries = _parse_txt(raw)
+        qualifying = [files[-1]]
 
-    return entries
+    all_entries: list = []
+    for f in qualifying:
+        raw = f.read_text(encoding="utf-8", errors="replace")
+        ext = f.suffix.lower()
+        if ext == ".vtt":
+            entries = _parse_vtt(raw)
+        elif ext == ".srt":
+            entries = _parse_srt(raw)
+        else:
+            entries = _parse_txt(raw)
+        all_entries.extend(entries)
+
+    return all_entries
 
 
 # ---------------------------------------------------------------------------

@@ -8,6 +8,7 @@ Supports two modes:
 """
 
 import json
+from datetime import date
 from typing import Optional
 
 import anthropic
@@ -81,17 +82,19 @@ def generate_summary(
     config: Config,
     existing_points: list[dict] | None = None,
     since_entry: int = 0,
+    session_start_date: date | None = None,
 ) -> Optional[dict]:
     """Generate key points from transcript.
 
     Incremental mode (since_entry > 0): processes only new entries, returns new points to append.
     Full mode (since_entry == 0): processes full transcript, returns all points.
+    session_start_date: when set, loads all transcript files from that date onwards (multi-day).
 
     Returns {"new": [...], "watermark": N} or None on failure.
     Watermark = total entry count — safe to use as since_entry on next call.
     """
     try:
-        entries = load_transcription_files(config.folder)
+        entries = load_transcription_files(config.folder, since_date=session_start_date)
     except SystemExit:
         log.error("summarizer", "No transcription files found — skipping")
         return None
