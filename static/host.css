@@ -133,6 +133,22 @@ body {
   color: var(--muted);
 }
 
+.btn-scores-reset {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: .85rem;
+  padding: .1rem .2rem;
+  line-height: 1;
+  flex-shrink: 0;
+  color: var(--muted);
+  opacity: .35;
+  transition: opacity .15s, color .15s;
+  border-radius: 4px;
+}
+.btn-scores-reset:hover { opacity: .7; color: var(--muted); }
+.btn-scores-reset:active { opacity: 1; color: #e74c3c; }
+
 /* Center activity panel */
 .center-panel {
   flex: 1;
@@ -642,23 +658,31 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
 .pax-list li {
   padding: .2rem 0;
   border-bottom: 1px solid var(--border);
-  display: flex; justify-content: space-between; align-items: center; gap: .5rem;
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: .3rem;
+  min-width: 0;
 }
 .pax-list li:last-child { border-bottom: none; }
 .pax-name {
   display: flex;
   align-items: center;
   gap: .35rem;
+  min-width: 0;
+  overflow: hidden;
+}
+.pax-name-text {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  text-align: left;
+  min-width: 0;
 }
 .pax-score {
   font-size: .78rem;
   color: var(--accent2);
   font-weight: 700;
-  margin-left: .4rem;
+  white-space: nowrap;
 }
 .pax-location {
   color: var(--muted);
@@ -666,7 +690,7 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 55%;
+  max-width: 6rem;
   text-align: right;
 }
 
