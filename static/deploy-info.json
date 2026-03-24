@@ -1,7 +1,7 @@
 {
-  "sha": "532b7cc6067af3cf10a7ba569e604d451f378c21",
-  "timestamp": "2026-03-24 12:03",
+  "sha": "045d8cdfd1c59a743fe04cc84677ca85359abdf3",
+  "timestamp": "2026-03-24 12:06",
   "changelog": [
-    "feat(overlay): add \ud83d\udc4f Applause and \ud83d\udc9a Pulse screen effects"
+    "feat(overlay): ~25% of applause claps are 3x larger for visual impact"
   ]
 }
