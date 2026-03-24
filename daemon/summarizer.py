@@ -1,8 +1,10 @@
 """
 Summarizer — generates key discussion points from live transcript.
 
-Called on-demand by the daemon. Reads the full transcript and session notes,
-returns {"points": [...]} with a fresh complete list of all key points.
+Supports two modes:
+- Full (since_entry=0, existing_points=[]): reads entire transcript, returns all points.
+- Incremental (since_entry=N, existing_points=[...]): reads only new entries since N,
+  returns only NEW points to append. Watermark is updated only on success.
 """
 
 import json
@@ -22,7 +24,7 @@ from quiz_core import (
 
 SUMMARY_INTERVAL_SECONDS = 5 * 60  # 5 minutes
 
-_SUMMARY_SYSTEM_PROMPT = """\
+_SYSTEM_PROMPT_FULL = """\
 You are a technical workshop summarizer. You extract high-density takeaways from a live session.
 
 Input: full session transcript and/or trainer's session notes.
@@ -43,8 +45,8 @@ Output rules:
   - "discussion" if it comes primarily from TRANSCRIPT (what was actually said)
 - For each bullet, include "time": the approximate timestamp (HH:MM format, 24h) when the topic was discussed. Omit "time" for bullets derived solely from session notes with no transcript match.
 
-Response format — return ONLY a JSON object:
-{"points": [{"text": "...", "source": "discussion"|"notes", "time": "HH:MM"}, ...]}
+Response format — return ONLY a JSON array:
+[{"text": "...", "source": "discussion"|"notes", "time": "HH:MM"}, ...]
 
 Omit "time" for notes-only bullets.
 
@@ -52,25 +54,55 @@ Omit "time" for notes-only bullets.
 If `list_project_tree` and `read_project_file` tools are available, use them to find relevant source files when the transcript mentions specific classes, patterns, or configurations. Include specific class/method references in your key points.
 """
 
+_SYSTEM_PROMPT_INCREMENTAL = """\
+You are a technical workshop summarizer adding to an existing set of key points.
+
+You will receive:
+1. EXISTING KEY POINTS already captured from earlier in the session.
+2. NEW TRANSCRIPT — only the portion not yet summarized.
+
+Your task: extract NEW key points from the new transcript that are NOT already covered.
+
+Output rules:
+- Each bullet: ONE actionable or factual technical statement (max 15 words).
+- Write like a cheat-sheet: name patterns, tools, trade-offs, rules-of-thumb, commands, gotchas.
+- Do NOT repeat or rephrase anything already in the existing key points.
+- If the new transcript adds nothing new, return an empty array [].
+- Ignore transcription noise, filler, off-topic chatter, and garbled dictation.
+- For each bullet, indicate source: "discussion" (from transcript) or "notes" (from session notes).
+- Include "time": approximate HH:MM timestamp from the transcript when the topic was discussed.
+
+Response format — return ONLY a JSON array (may be empty):
+[{"text": "...", "source": "discussion"|"notes", "time": "HH:MM"}, ...]
+"""
+
 
 def generate_summary(
     config: Config,
+    existing_points: list[dict] | None = None,
+    since_entry: int = 0,
 ) -> Optional[dict]:
-    """Generate a fresh complete list of key points from the full transcript and session notes.
-    Returns {"points": [...]} or None on failure.
+    """Generate key points from transcript.
+
+    Incremental mode (since_entry > 0): processes only new entries, returns new points to append.
+    Full mode (since_entry == 0): processes full transcript, returns all points.
+
+    Returns {"new": [...], "watermark": N} or None on failure.
+    Watermark = total entry count — safe to use as since_entry on next call.
     """
-    # Load full transcript
     try:
         entries = load_transcription_files(config.folder)
     except SystemExit:
         log.error("summarizer", "No transcription files found — skipping")
         return None
 
-    text = None
-    if entries:
-        text = extract_all_text(entries)
+    total_entries = len(entries)
+    incremental = since_entry > 0 and existing_points
 
-    # Include session notes if available
+    # Select which entries to send
+    new_entries = entries[since_entry:] if incremental else entries
+    text = extract_all_text(new_entries) if new_entries else None
+
     notes = read_session_notes(config)
 
     if not text and not notes:
@@ -79,31 +111,34 @@ def generate_summary(
 
     # Build user message
     parts = []
-    if notes:
+    if incremental and existing_points:
+        existing_bullets = "\n".join(f"- {p['text']}" for p in existing_points)
+        parts.append(f"EXISTING KEY POINTS:\n{existing_bullets}")
+    if notes and not incremental:
         parts.append(f"SESSION NOTES (trainer's agenda/material):\n{notes}\n")
     if text:
-        parts.append(f"FULL SESSION TRANSCRIPT:\n{text}")
+        label = "NEW TRANSCRIPT" if incremental else "FULL SESSION TRANSCRIPT"
+        parts.append(f"{label}:\n{text}")
 
     user_message = "\n---\n".join(parts)
+    system_prompt = _SYSTEM_PROMPT_INCREMENTAL if incremental else _SYSTEM_PROMPT_FULL
+
+    mode_label = f"incremental ({since_entry}→{total_entries})" if incremental else "full"
+    log.info("summarizer", f"Summarizing {len(user_message):,} chars [{mode_label}]")
 
     try:
-        # Build tools list (project file tools if configured)
         tools = get_project_tools(config.project_folder)
-
         messages = [{"role": "user", "content": user_message}]
-
-        # max_tokens bumped from 1024 to 2048 to accommodate tool-use round-trips
         create_kwargs = dict(
             api_key=config.api_key,
             model=config.model,
             max_tokens=2048,
-            system=_SUMMARY_SYSTEM_PROMPT,
+            system=system_prompt,
             messages=messages,
         )
         if tools:
             create_kwargs["tools"] = tools
 
-        log.info("summarizer", f"Summarizing {len(user_message):,} chars")
         while True:
             response = create_message(**create_kwargs)
             messages.append({"role": "assistant", "content": response.content})
@@ -142,17 +177,15 @@ def generate_summary(
             log.error("summarizer", f"Empty text (stop_reason={response.stop_reason})")
             return None
 
-        # Strip markdown code fences if Claude wraps JSON in them
+        # Strip markdown code fences
         if response_text.startswith("```"):
             lines = response_text.split("\n")
             lines = [l for l in lines if not l.strip().startswith("```")]
             response_text = "\n".join(lines).strip()
 
-        # Parse JSON from response
         parsed = json.loads(response_text)
 
-        # Accept both {"points": [...]} and flat array formats
-        raw_list = None
+        # Accept both flat array and {"points": [...]} formats
         if isinstance(parsed, list):
             raw_list = parsed
         elif isinstance(parsed, dict) and "points" in parsed:
@@ -161,7 +194,7 @@ def generate_summary(
             log.error("summarizer", f"Unexpected format: {response_text[:60]}")
             return None
 
-        points = []
+        new_points = []
         for item in raw_list:
             if isinstance(item, dict) and "text" in item:
                 source = item.get("source", "discussion")
@@ -170,17 +203,16 @@ def generate_summary(
                 point = {"text": item["text"], "source": source}
                 if item.get("time"):
                     point["time"] = item["time"]
-                points.append(point)
+                new_points.append(point)
             elif isinstance(item, str):
-                points.append({"text": item, "source": "discussion"})
+                new_points.append({"text": item, "source": "discussion"})
 
-        result = {"points": points}
-        log.info("summarizer", f"✨ {len(points)} key points")
-        return result
+        log.info("summarizer", f"✨ {len(new_points)} new key points")
+        return {"new": new_points, "watermark": total_entries}
 
     except json.JSONDecodeError as e:
         log.error("summarizer", f"Failed to parse JSON: {e}")
-        log.error("summarizer", f"Raw response: {response_text[:60]}")
+        log.error("summarizer", f"Raw: {response_text[:80]}")
         return None
     except anthropic.APIError as e:
         log.error("summarizer", f"Claude API error: {e}")

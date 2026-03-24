@@ -53,28 +53,30 @@ _BACKUP_DIR = Path.home() / ".training-assistant"
 _BACKUP_FILE = _BACKUP_DIR / "state-backup.json"
 
 
-def _load_key_points(session_folder: Path) -> list[dict]:
-    """Load key points from session folder. Supports old locked/draft format for migration."""
+def _load_key_points(session_folder: Path) -> tuple[list[dict], int]:
+    """Load key points from session folder. Returns (points, watermark).
+    Supports old locked/draft format for migration."""
     cache_file = session_folder / _KEY_POINTS_FILENAME
     if not cache_file.exists():
-        return []
+        return [], 0
     try:
         data = json.loads(cache_file.read_text(encoding="utf-8"))
         # Support new format {"points": [...]} and old format {"locked": [...], "draft": [...]}
         points = data.get("points", data.get("locked", []) + data.get("draft", []))
+        watermark = data.get("watermark", 0)
         log.info("session", f"Loaded {len(points)} key points from {session_folder.name}")
-        return points
+        return points, watermark
     except Exception as e:
         log.error("session", f"Failed to load key points: {e}")
-        return []
+        return [], 0
 
 
-def _save_key_points(session_folder: Path, points: list[dict]) -> None:
+def _save_key_points(session_folder: Path, points: list[dict], watermark: int = 0) -> None:
     """Save key points to session folder."""
     try:
         session_folder.mkdir(parents=True, exist_ok=True)
         (session_folder / _KEY_POINTS_FILENAME).write_text(
-            json.dumps({"points": points}, indent=2), encoding="utf-8"
+            json.dumps({"points": points, "watermark": watermark}, indent=2), encoding="utf-8"
         )
     except Exception as e:
         log.error("session", f"Failed to save key points: {e}")
@@ -362,11 +364,12 @@ def run() -> None:
     sessions_root = config.session_folder.parent if config.session_folder else Path.cwd()
     session_stack = _load_daemon_state(sessions_root)
     current_key_points: list[dict] = []
+    summary_watermark: int = 0
 
     if session_stack:
         # Restore from persisted stack
         current_folder = sessions_root / session_stack[-1]["name"]
-        current_key_points = _load_key_points(current_folder)
+        current_key_points, summary_watermark = _load_key_points(current_folder)
         log.info("session", f"Restored stack ({len(session_stack)} sessions), {len(current_key_points)} key points")
     elif config.session_folder:
         # Auto-start from today's detected session folder
@@ -375,7 +378,7 @@ def run() -> None:
             "started_at": datetime.now().isoformat(),
             "ended_at": None,
         }]
-        current_key_points = _load_key_points(config.session_folder)
+        current_key_points, summary_watermark = _load_key_points(config.session_folder)
         _save_daemon_state(sessions_root, session_stack)
         log.info("session", f"Auto-started: {config.session_folder.name}")
 
@@ -416,7 +419,7 @@ def run() -> None:
                         "ended_at": None,
                     }
                     session_stack.append(new_session)
-                    current_key_points = _load_key_points(folder)
+                    current_key_points, summary_watermark = _load_key_points(folder)
                     _save_daemon_state(sessions_root, session_stack)
                     notes_file = _find_notes_in_folder(folder)
                     config = dc_replace(config, session_folder=folder, session_notes=notes_file)
@@ -428,11 +431,11 @@ def run() -> None:
                     ended = session_stack.pop()
                     ended["ended_at"] = datetime.now().isoformat()
                     ended_folder = sessions_root / ended["name"]
-                    _save_key_points(ended_folder, current_key_points)
+                    _save_key_points(ended_folder, current_key_points, summary_watermark)
                     # Restore parent session
                     parent = session_stack[-1]
                     parent_folder = sessions_root / parent["name"]
-                    current_key_points = _load_key_points(parent_folder)
+                    current_key_points, summary_watermark = _load_key_points(parent_folder)
                     _save_daemon_state(sessions_root, session_stack)
                     notes_file = _find_notes_in_folder(parent_folder)
                     config = dc_replace(config, session_folder=parent_folder, session_notes=notes_file)
@@ -446,12 +449,12 @@ def run() -> None:
                         old_name = session_stack[-1]["name"]
                         new_folder = sessions_root / new_name
                         # Load existing points from new folder FIRST (before overwriting)
-                        existing = _load_key_points(new_folder) if new_folder.exists() else []
+                        existing_pts, existing_wm = _load_key_points(new_folder) if new_folder.exists() else ([], 0)
                         new_folder.mkdir(parents=True, exist_ok=True)
-                        if existing:
-                            current_key_points = existing
+                        if existing_pts:
+                            current_key_points, summary_watermark = existing_pts, existing_wm
                         else:
-                            _save_key_points(new_folder, current_key_points)
+                            _save_key_points(new_folder, current_key_points, summary_watermark)
                         session_stack[-1]["name"] = new_name
                         _save_daemon_state(sessions_root, session_stack)
                         notes_file = _find_notes_in_folder(new_folder)
@@ -699,24 +702,30 @@ def run() -> None:
             except Exception:
                 pass
 
-            # ── On-demand summary generation (full regeneration) ──
+            # ── On-demand summary generation (incremental when possible) ──
             now_mono = time.monotonic()
             if force_summary and session_stack:
                 current_session = session_stack[-1]
                 session_folder = sessions_root / current_session["name"]
-                log.info("summarizer", "Generating summary (full regeneration)")
+                incremental = summary_watermark > 0 and bool(current_key_points)
                 last_summary_at = now_mono
                 try:
-                    result = generate_summary(config)
+                    result = generate_summary(
+                        config,
+                        existing_points=current_key_points if incremental else None,
+                        since_entry=summary_watermark if incremental else 0,
+                    )
                     if result is not None:
-                        # Full replacement — discard old points
-                        current_key_points = result.get("points", [])
-
-                        # Persist and sync
-                        _save_key_points(session_folder, current_key_points)
+                        new_pts = result["new"]
+                        summary_watermark = result["watermark"]
+                        if incremental:
+                            current_key_points = current_key_points + new_pts
+                        else:
+                            current_key_points = new_pts
+                        _save_key_points(session_folder, current_key_points, summary_watermark)
                         _save_daemon_state(sessions_root, session_stack)
                         _sync_session_to_server(config, session_stack, current_key_points)
-                        log.info("summarizer", f"Key points updated: {len(current_key_points)} total")
+                        log.info("summarizer", f"Key points: {len(current_key_points)} total (+{len(new_pts)} new)")
                 except Exception as e:
                     log.error("summarizer", f"Error: {e}")
 
