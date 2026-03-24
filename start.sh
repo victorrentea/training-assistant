@@ -262,10 +262,9 @@ check_git_updates() {
 
 stop_all_processes() {
   _log "start" "info" "🔴 daemon  🔴 watcher  🔴 overlay"
-  [ -n "$DAEMON_PID" ]  && kill "$DAEMON_PID"  2>/dev/null && DAEMON_PID=""
-  [ -n "$WATCHER_PID" ] && kill "$WATCHER_PID" 2>/dev/null && WATCHER_PID=""
-  [ -n "$OVERLAY_PID" ] && kill "$OVERLAY_PID" 2>/dev/null && OVERLAY_PID=""
-  wait 2>/dev/null
+  [ -n "$DAEMON_PID" ]  && kill -9 "$DAEMON_PID"  2>/dev/null; DAEMON_PID=""
+  [ -n "$WATCHER_PID" ] && kill -9 "$WATCHER_PID" 2>/dev/null; WATCHER_PID=""
+  [ -n "$OVERLAY_PID" ] && kill -9 "$OVERLAY_PID" 2>/dev/null; OVERLAY_PID=""
 }
 
 pull_and_rebuild() {
