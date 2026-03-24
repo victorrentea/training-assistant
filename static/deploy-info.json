@@ -1,7 +1,7 @@
 {
-  "sha": "ceed63c9d8dc5ef65c4b46ff2c7c803826628652",
-  "timestamp": "2026-03-24 17:43",
+  "sha": "8bebe41226ff9dc7fcb4233497453280756dbc1e",
+  "timestamp": "2026-03-24 17:46",
   "changelog": [
-    "feat: add broken-screen button to participant emoji bar"
+    "feat(overlay): normalize logs to match daemon format; drop button-tap noise"
   ]
 }
