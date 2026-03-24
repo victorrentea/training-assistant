@@ -1150,10 +1150,11 @@ h1 { display: none; }
   opacity: 1;
 }
 
-/* Emoji hover bubble — compact, no footer */
+/* Emoji hover bubble — compact, no footer, instant show/hide */
 .emoji-hover-bubble {
   text-align: center;
   padding: 10px 14px;
+  animation: none;
 }
 .emoji-hover-bubble .tour-bubble-text {
   margin-bottom: 0;
