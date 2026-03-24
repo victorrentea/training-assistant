@@ -630,10 +630,9 @@ def run() -> None:
                         cutoff = max_ts - DEFAULT_TRANSCRIPT_MINUTES * 60
                         recent = [(ts, txt) for ts, txt in timed if ts >= cutoff and txt.strip()]
                         line_count = len(recent)
-                        # Convert max_ts (seconds from midnight) to today's ISO time
                         h, rem = divmod(int(max_ts), 3600)
-                        m, s = divmod(rem, 60)
-                        latest_time = f"{h:02d}:{m:02d}:{s:02d}"
+                        m, _ = divmod(rem, 60)
+                        latest_time = f"{h}h{m:02d}m"
                     else:
                         line_count = 0
                         latest_time = None
