@@ -10,12 +10,17 @@ body {
 #restore-banner {
   background: var(--warning, #e67e22);
   color: #000;
-  text-align: center;
   font-weight: bold;
-  padding: 8px;
-  position: sticky;
-  top: 0;
+  padding: 8px 20px;
+  position: fixed;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
   z-index: 9999;
+  border-radius: 6px;
+  max-width: 50vw;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.4);
 }
 
 /* ── Wave shimmer on participant link ── */
