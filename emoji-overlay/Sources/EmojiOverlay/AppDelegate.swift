@@ -114,7 +114,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, URLSessionWebSocketDelegate 
             return
         }
         if filePID != myPID {
-            NSLog("Another instance (PID \(filePID)) took over — shutting down (my PID: \(myPID))")
+            overlayInfo("Superseded by PID \(filePID) — exiting")
             pidCheckTimer?.invalidate()
             wsTask?.cancel(with: .goingAway, reason: nil)
             NSApplication.shared.terminate(nil)
@@ -133,22 +133,22 @@ class AppDelegate: NSObject, NSApplicationDelegate, URLSessionWebSocketDelegate 
         let wsURL = serverURL.replacingOccurrences(of: "http://", with: "ws://")
                              .replacingOccurrences(of: "https://", with: "wss://")
         guard let url = URL(string: "\(wsURL)/ws/__overlay__") else {
-            NSLog("Invalid server URL: \(serverURL)")
+            overlayError("Invalid server URL: \(serverURL)")
             return
         }
-        NSLog("Connecting to \(url)...")
+        overlayInfo("Connecting to \(url)")
         wsTask = session.webSocketTask(with: url)
         wsTask?.resume()
     }
 
     func urlSession(_ session: URLSession, webSocketTask: URLSessionWebSocketTask,
                     didOpenWithProtocol protocol: String?) {
-        NSLog("WebSocket connected")
+        overlayInfo("WebSocket connected")
         // Send set_name as required by protocol
         let msg = "{\"type\":\"set_name\",\"name\":\"Overlay\"}"
         wsTask?.send(.string(msg)) { error in
             if let error = error {
-                NSLog("Failed to send set_name: \(error)")
+                overlayError("Failed to send set_name: \(error)")
             }
         }
         receiveMessage()
@@ -156,13 +156,13 @@ class AppDelegate: NSObject, NSApplicationDelegate, URLSessionWebSocketDelegate 
 
     func urlSession(_ session: URLSession, webSocketTask: URLSessionWebSocketTask,
                     didCloseWith closeCode: URLSessionWebSocketTask.CloseCode, reason: Data?) {
-        NSLog("WebSocket closed (code: \(closeCode.rawValue)), reconnecting in 3s...")
+        overlayInfo("WS closed (code \(closeCode.rawValue)), retrying...")
         scheduleReconnect()
     }
 
     func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
         if let error = error {
-            NSLog("WebSocket transport error: \(error.localizedDescription), reconnecting in 3s...")
+            overlayError("WS transport error: \(error.localizedDescription)")
             scheduleReconnect()
         }
     }
@@ -179,7 +179,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, URLSessionWebSocketDelegate 
                 }
                 self?.receiveMessage()
             case .failure(let error):
-                NSLog("WebSocket receive error: \(error), reconnecting...")
+                overlayError("WS receive error: \(error)")
                 self?.scheduleReconnect()
             }
         }
