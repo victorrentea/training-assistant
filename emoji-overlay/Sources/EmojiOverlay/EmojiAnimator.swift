@@ -1254,10 +1254,12 @@ class EmojiAnimator {
         pulseRunning = true
 
         let bounds = hostLayer.bounds
-        // Timing: dying.mp3 total duration 4.598s; delay sound 0.172s so the first
-        // audio R-spike (0.105s) coincides with the visual peak in the image (~23% through reveal).
+        // Timing: dying.mp3 R-spikes at 0.105s and 1.507s. Image peaks at 22% and 52.5% of width.
+        // soundDelay=0.906s: audio starts 0.906s after reveal begins →
+        //   beat1 visual at 1.011s = audio beat1 at 0.906+0.105=1.011s ✓
+        //   beat2 visual at 2.415s ≈ audio beat2 at 0.906+1.507=2.413s ✓ (<2ms error)
         let totalDuration: Double = 4.598
-        let soundDelay:    Double = 0.172
+        let soundDelay:    Double = 0.906
 
         // Dark overlay
         let dimLayer = CALayer()
