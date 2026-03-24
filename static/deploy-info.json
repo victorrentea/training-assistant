@@ -1,7 +1,7 @@
 {
-  "sha": "b1bcc42fbeda5bda467379658c779b4deeb7a43e",
-  "timestamp": "2026-03-24 18:00",
+  "sha": "383bbfbb0057b057f2c3986bbd3486d1c07b841f",
+  "timestamp": "2026-03-24 18:01",
   "changelog": [
-    "fix: replace broken-screen SVGs with plain \ud83d\udda5\ufe0f emoji everywhere"
+    "feat(daemon): make LLM interactions prominent in logs"
   ]
 }
