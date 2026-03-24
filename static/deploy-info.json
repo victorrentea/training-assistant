@@ -1,7 +1,9 @@
 {
-  "sha": "c6c0bf4795ff9c7c2d9d7a6aee7e4adebd7344a1",
-  "timestamp": "2026-03-24 13:10",
+  "sha": "0b2c7649fdaeb26cc41222eca7724f4babb9334d",
+  "timestamp": "2026-03-24 13:13",
   "changelog": [
-    "feat(host): subtle score-reset button and participant list columns"
+    "feat(overlay): sync ECG pulse shape from image + align audio timing",
+    "fix: remove default button background from modal-newtab-btn",
+    "fix(daemon): restore state automatically after server reconnect"
   ]
 }
