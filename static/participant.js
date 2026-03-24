@@ -1439,6 +1439,7 @@
   let _debateChimePlayed = false;
 
   let _debateBeepTimeouts = [];
+  let _activeBeepContexts = [];
 
   function _playBeep() {
     try {
@@ -1453,6 +1454,8 @@
       osc.start();
       gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
       osc.stop(ctx.currentTime + 0.4);
+      _activeBeepContexts.push({ ctx, gain });
+      setTimeout(() => { _activeBeepContexts = _activeBeepContexts.filter(a => a.ctx !== ctx); }, 500);
     } catch(e) {}
   }
 
@@ -1473,6 +1476,15 @@
   function _stopBeeping() {
     _debateBeepTimeouts.forEach(t => clearTimeout(t));
     _debateBeepTimeouts = [];
+    const active = _activeBeepContexts.splice(0);
+    for (const { ctx, gain } of active) {
+      try {
+        gain.gain.cancelScheduledValues(ctx.currentTime);
+        gain.gain.setValueAtTime(gain.gain.value, ctx.currentTime);
+        gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.3);
+        setTimeout(() => { try { ctx.close(); } catch(e) {} }, 350);
+      } catch(e) {}
+    }
   }
 
   function _startDebateParticipantCountdown() {
