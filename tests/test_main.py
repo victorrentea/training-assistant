@@ -1409,3 +1409,41 @@ def test_sync_session_updates_state():
     assert resp.status_code == 200
     assert len(state.session_stack) == 1
     assert len(state.summary_points) == 1
+
+def test_session_lifecycle_via_endpoints():
+    state.reset()
+    client = TestClient(app)
+
+    # Start session
+    client.post("/api/session/start", json={"name": "Workshop"}, headers=_HOST_AUTH_HEADERS)
+    req = client.get("/api/session/request", headers=_HOST_AUTH_HEADERS).json()
+    assert req["action"] == "start"
+    assert req["name"] == "Workshop"
+
+    # Simulate daemon sync
+    resp = client.post("/api/session/sync", json={
+        "stack": [{"name": "Workshop", "started_at": "2026-03-23T09:00:00", "ended_at": None}],
+        "key_points": [{"text": "Point 1", "source": "discussion"}],
+    }, headers=_HOST_AUTH_HEADERS)
+    assert resp.status_code == 200
+
+    # Verify summary points updated via sync
+    summary = client.get("/api/summary").json()
+    assert len(summary["points"]) == 1
+    assert state.session_stack[0]["name"] == "Workshop"
+
+    # Start nested session
+    client.post("/api/session/start", json={"name": "Lunch Talk"}, headers=_HOST_AUTH_HEADERS)
+    req2 = client.get("/api/session/request", headers=_HOST_AUTH_HEADERS).json()
+    assert req2["action"] == "start"
+
+    # End session
+    client.post("/api/session/end", headers=_HOST_AUTH_HEADERS)
+    req3 = client.get("/api/session/request", headers=_HOST_AUTH_HEADERS).json()
+    assert req3["action"] == "end"
+
+    # Rename
+    client.patch("/api/session/rename", json={"name": "New Name"}, headers=_HOST_AUTH_HEADERS)
+    req4 = client.get("/api/session/request", headers=_HOST_AUTH_HEADERS).json()
+    assert req4["action"] == "rename"
+    assert req4["name"] == "New Name"
