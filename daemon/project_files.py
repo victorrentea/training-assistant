@@ -1,6 +1,7 @@
 """Utilities for exposing project source files to LLM tool-use loops."""
 import os
 from pathlib import Path
+from daemon import log
 
 INCLUDED_EXTENSIONS = frozenset({
     ".java", ".kt", ".py", ".xml", ".properties",
@@ -198,11 +199,11 @@ def handle_project_tool_call(tool_name: str, tool_input: dict, base_path: str) -
     """
     if tool_name == "list_project_tree":
         path = tool_input.get("path")
-        print(f"[info] Claude is browsing project tree: {path or '(root)'}...")
+        log.info("indexer", f"Claude browsing tree: {path or '(root)'}")
         return get_project_tree(base_path, relative_path=path)
     elif tool_name == "read_project_file":
         path = tool_input["path"]
-        print(f"[info] Claude is reading project file: {path}...")
+        log.info("indexer", f"Claude reading file: {path}")
         return read_project_file(base_path, path)
     else:
         return f"Error: unknown project tool '{tool_name}'"
