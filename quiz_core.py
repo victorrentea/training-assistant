@@ -265,7 +265,6 @@ def load_transcription_files(folder: Path) -> list:
         sys.exit(1)
 
     latest = files[-1]
-    log.info("transcript", f"Using: {latest.name}")
     raw = latest.read_text(encoding="utf-8", errors="replace")
     ext = latest.suffix.lower()
 
@@ -276,7 +275,17 @@ def load_transcription_files(folder: Path) -> list:
     else:
         entries = _parse_txt(raw)
 
-    log.info("transcript", f"{len(entries)} segments")
+    # Parse date from filename prefix YYYYMMDD, format as "Mar 22"
+    try:
+        from datetime import date as _date
+        import calendar
+        stem = latest.stem[:8]
+        d = _date(int(stem[:4]), int(stem[4:6]), int(stem[6:8]))
+        date_str = f"{calendar.month_abbr[d.month]} {d.day}"
+    except Exception:
+        date_str = latest.stem[:8]
+    non_empty = sum(1 for _, txt in entries if txt.strip())
+    log.info("transcript", f"{date_str} · {non_empty} lines")
     return entries
 
 
