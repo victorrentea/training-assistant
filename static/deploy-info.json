@@ -1,7 +1,7 @@
 {
-  "sha": "cafe84289a7086743f133ba645d998ca3aeb3a78",
-  "timestamp": "2026-03-24 12:54",
+  "sha": "a922cb2511f5c9f900cc7be3268da171d96e79da",
+  "timestamp": "2026-03-24 12:55",
   "changelog": [
-    "feat(host): show grayed gear + red X favicon when session is kicked"
+    "fix(session): dots bold, full opacity, scale-pulse animation"
   ]
 }
