@@ -1227,10 +1227,13 @@ class EmojiAnimator {
         pulseRunning = true
 
         let bounds = hostLayer.bounds
-        let totalDuration: Double = 7.0
-        let cycleDuration: Double = 1.8      // duration of one heartbeat cycle
-        let pulseCount = 2                    // number of QRS complexes
-        let flatlineStart = Double(pulseCount) * cycleDuration  // 3.6s
+        // Timing derived from dying.mp3 analysis:
+        // beat 1 R-spike ≈ 0.20s, beat 2 R-spike ≈ 1.60s, flatline ≈ 2.74s, total 4.60s
+        let totalDuration: Double = 4.598    // matches dying.mp3 duration exactly
+        let beatDuration: Double = 0.86      // one QRS cycle (R-spike at 0.233*0.86 ≈ 0.20s in)
+        let beat1Start: Double = 0.0
+        let beat2Start: Double = 1.40
+        let flatlineStart: Double = 2.74
 
         // Dark overlay
         let dimLayer = CALayer()
@@ -1282,19 +1285,20 @@ class EmojiAnimator {
             return CGFloat(y)
         }
 
+        let amp: CGFloat = bounds.height * 0.40   // 80% total height (40% above + below center)
         let steps = 800
         var firstPoint = true
         for i in 0...steps {
             let xFrac = Double(i) / Double(steps)
             let x = CGFloat(xFrac) * W
-            let elapsedSec = xFrac * totalDuration
+            let t = xFrac * totalDuration
             let y: CGFloat
-            if elapsedSec < flatlineStart {
-                let cycleFrac = (elapsedSec / cycleDuration).truncatingRemainder(dividingBy: 1.0)
-                let amp: CGFloat = bounds.height * 0.40  // 80% total height (40% above + below center)
-                y = mid - ecgOffset(cycleFrac) * amp
+            if t >= beat1Start && t < beat1Start + beatDuration {
+                y = mid - ecgOffset((t - beat1Start) / beatDuration) * amp
+            } else if t >= beat2Start && t < beat2Start + beatDuration {
+                y = mid - ecgOffset((t - beat2Start) / beatDuration) * amp
             } else {
-                y = mid   // flatline
+                y = mid   // baseline or flatline
             }
             if firstPoint { path.move(to: CGPoint(x: x, y: y)); firstPoint = false }
             else { path.addLine(to: CGPoint(x: x, y: y)) }
@@ -1327,10 +1331,7 @@ class EmojiAnimator {
         ecgLayer.add(draw, forKey: "draw")
         CATransaction.commit()
 
-        // Sound: play dying.mp3 (contains heartbeat + flatline), fade out near end
+        // Sound: play dying.mp3 — duration matches animation, fades naturally at end
         SoundManager.shared.play("dying.mp3")
-        DispatchQueue.main.asyncAfter(deadline: .now() + totalDuration - 0.3) {
-            SoundManager.shared.stop("dying.mp3")
-        }
     }
 }
