@@ -524,6 +524,23 @@ def run() -> None:
                 print("[daemon] Reconnected to server.")
                 server_disconnected = False
                 _session_status_pending = True
+                # Check if server needs state restore after restart (e.g. Railway deploy)
+                try:
+                    status = _get_json(f"{config.server_url}/api/status")
+                    if status.get("needs_restore"):
+                        if _BACKUP_FILE.exists():
+                            print("[daemon] Server needs state restore after reconnect — sending backup...")
+                            backup_data = json.loads(_BACKUP_FILE.read_text(encoding="utf-8"))
+                            result = _post_json(
+                                f"{config.server_url}/api/state-restore",
+                                backup_data,
+                                config.host_username, config.host_password,
+                            )
+                            print(f"[daemon] State restore result: {result.get('status', 'ok')}")
+                        else:
+                            print("[daemon] Server needs state restore but no backup file found", file=sys.stderr)
+                except Exception as e:
+                    print(f"[daemon] State restore check on reconnect failed: {e}", file=sys.stderr)
 
             # ── Push session info when changed, on reconnect, or if server lost it ──
             server_has_session = data.get("session_folder") is not None
