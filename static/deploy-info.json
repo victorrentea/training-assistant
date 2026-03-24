@@ -1,7 +1,7 @@
 {
-  "sha": "f88c902d87729196a8e8ba85cae624ca756c986d",
+  "sha": "5d123b0c22e43814bc9b73ce56f399511c2125bc",
   "timestamp": "2026-03-24 18:56",
   "changelog": [
-    "fix(log): remove error emoji, align level to 8 chars, fix raw prints"
+    "feat(participant): prominent emoji hover bubbles (tour-bubble style)"
   ]
 }
