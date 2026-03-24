@@ -143,6 +143,14 @@
 - [x] Search owner by last name and capture the visible result
 - [x] Update `/.github/petclinic-instructions.md` with newly confirmed behaviors
 
+## Direct request: Pet Clinic try editing an owner
+
+- [x] Reuse the verified `George Franklin` owner flow
+- [x] Open `Edit Owner` and inspect the form fields/buttons
+- [x] Change an owner field and save successfully
+- [x] Restore the original owner value after verification
+- [x] Update `/.github/petclinic-instructions.md` with confirmed edit-flow behavior
+
 ## Review
 
 - Added `scripts/append_transcription_timestamps.py` with 3s default interval and parser-compatible format.
@@ -185,3 +193,6 @@
 - Pet Clinic exploration complete: searched `Franklin` on `http://localhost:4200/petclinic/owners` and confirmed result `George Franklin`.
 - Proof screenshots: `docs/superpowers/specs/petclinic-owner-search-franklin.png`, `docs/superpowers/specs/petclinic-owner-george-franklin-detail.png`.
 - Updated `/.github/petclinic-instructions.md` with verified navbar, owner search, routing, selectors, and detail-page observations.
+- Pet Clinic edit exploration complete: opened `Edit Owner` for `George Franklin`, changed `City` from `Madison` to `Madison Test`, saved successfully, then restored `City` back to `Madison`.
+- Proof screenshots: `docs/superpowers/specs/petclinic-owner-edit-form.png`, `docs/superpowers/specs/petclinic-owner-edit-after-save.png`.
+- Updated `/.github/petclinic-instructions.md` with verified owner edit route, form fields, save behavior, and post-save navigation observations.

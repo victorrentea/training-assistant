@@ -37,6 +37,10 @@ This section documents features and capabilities discovered during exploration.
   - Search example confirmed: entering `Franklin` returns a single matching row for `George Franklin`
   - Result row columns observed: `Name`, `Address`, `City`, `Telephone`, `Pets`
   - Owner names in results are links to owner detail pages such as `/petclinic/owners/1`
+- [x] Owner edit flow → from owner detail, `Edit Owner` opens `/petclinic/owners/1/edit`
+  - Edit form fields confirmed: `First Name`, `Last Name`, `Address`, `City`, `Telephone`
+  - Save action confirmed: changing `City` from `Madison` to `Madison Test` and pressing `Update Owner` returned to `/petclinic/owners/1` showing the updated city value
+  - Cleanup confirmed: editing the same owner again and restoring `City` to `Madison` also saved successfully
 
 ### Supporting Features
 - [x] Owner detail page → clicking `George Franklin` opens `/petclinic/owners/1` with `Owner Information` and `Pets and Visits`
@@ -49,10 +53,10 @@ This section documents features and capabilities discovered during exploration.
 Document consistent patterns discovered in the application.
 
 ### Forms & Input
-- [x] Form submission patterns → owner search is a simple text input + `Find Owner` button flow on `/petclinic/owners`
+- [x] Form submission patterns → owner search is a simple text input + `Find Owner` button flow on `/petclinic/owners`; owner edit is a multi-field form with `Back` and `Update Owner` buttons on `/petclinic/owners/{id}/edit`
 - [ ] Validation feedback display
-- [ ] Success/error message display
-- [ ] Required vs optional fields
+- [x] Success/error message display → after saving owner edits, no visible success banner/toast was shown; the UI navigated back to the owner detail page and reflected the updated data
+- [x] Required vs optional fields → the edit form exposed `First Name`, `Last Name`, `Address`, `City`, and `Telephone` inputs as required in the accessibility tree
 - [x] Button states (enabled/disabled) → `Find Owner` was enabled both before typing and after entering `Franklin`
 
 ### Tables & Lists
@@ -65,7 +69,7 @@ Document consistent patterns discovered in the application.
 ### Navigation Flows
 - [x] Menu structure and routing → top navigation contains `HOME`, `OWNERS`, `VETERINARIANS`, `PET TYPES`, `SPECIALTIES`; owner routes observed under `/petclinic/owners` and `/petclinic/owners/{id}`
 - [ ] Breadcrumb patterns (if present)
-- [x] Back button behavior → owner detail page exposes a visible `Back` button
+- [x] Back button behavior → both owner detail and owner edit pages expose a visible `Back` button
 - [x] Link navigation patterns → owner names in search results are clickable links to owner detail pages
 
 ### Modal/Dialog Patterns
@@ -99,11 +103,13 @@ Document consistent selectors for test automation and interaction.
 ```
 - `button:has-text("Find Owner")` on `/petclinic/owners`
 - `button:has-text("Back")`, `button:has-text("Edit Owner")`, `button:has-text("Add New Pet")` on owner detail pages
+- `button:has-text("Update Owner")` on `/petclinic/owners/{id}/edit`
 ```
 
 ### Common Input Selectors
 ```
 - Owners search textbox: unlabeled DOM textbox paired with visible label text `Last name` on `/petclinic/owners`
+- Owner edit inputs expose accessible names matching visible labels: `First Name`, `Last Name`, `Address`, `City`, `Telephone`
 ```
 
 ### Navigation Elements
@@ -115,6 +121,7 @@ Document consistent selectors for test automation and interaction.
 ### Form Patterns
 ```
 - Owner search form = `Last name` textbox + `Find Owner` submit button + results table rendered below on the same page
+- Owner edit form = five labeled textboxes (`First Name`, `Last Name`, `Address`, `City`, `Telephone`) + `Back` and `Update Owner`; successful save returns to the owner detail route
 ```
 
 ---
@@ -122,19 +129,20 @@ Document consistent selectors for test automation and interaction.
 ## Known Limitations & Behaviors
 
 - Owner search field is by last name, not full name
-- [To be discovered]
+- Owner updates are reflected through navigation back to the detail page rather than a visible success notification
 
 ---
 
 ## Testing Strategy Notes
 
 - For owner lookup smoke tests, start from `/petclinic/owners`, search `Franklin`, and assert the result link `George Franklin` is shown
+- For owner edit smoke tests, open `George Franklin`, change `City`, save with `Update Owner`, assert the detail page reflects the new city, then restore the original value
 
 ---
 
 ## Last Updated
 - Initial creation: 2026-03-25
-- Last modification: 2026-03-25 (owner search flow explored manually)
+- Last modification: 2026-03-25 (owner search and owner edit flows explored manually)
 
 ---
 
