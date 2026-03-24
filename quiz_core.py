@@ -647,22 +647,16 @@ def _validate_quiz(quiz: dict, raw: str) -> None:
 
 def print_quiz(quiz: dict) -> None:
     correct = set(quiz.get("correct_indices", []))
-    print()
-    print("=" * 60)
-    print(f"Q: {quiz['question']}")
-    print()
+    log.info("quiz", "=" * 50)
+    log.info("quiz", f"Q: {quiz['question']}")
     for i, opt in enumerate(quiz["options"]):
-        print(f"  {chr(65 + i)}. {opt}{' ✅' if i in correct else ''}")
+        marker = " <--" if i in correct else ""
+        log.info("quiz", f"  {chr(65 + i)}. {opt}{marker}")
     if len(correct) > 1:
-        print(f"\n  (multiple expected: {', '.join(chr(65+i) for i in sorted(correct))})")
-    
+        log.info("quiz", f"  (multiple: {', '.join(chr(65+i) for i in sorted(correct))})")
     if quiz.get("source"):
-        source = quiz["source"]
-        page = quiz.get("page", "N/A")
-        print(f"\n[Source: {source}, Page: {page}]")
-        
-    print("=" * 60)
-    print()
+        log.info("quiz", f"  source={quiz['source']} page={quiz.get('page', 'N/A')}")
+    log.info("quiz", "=" * 50)
 
 
 def _quiz_error(msg: str, raw: str) -> None:

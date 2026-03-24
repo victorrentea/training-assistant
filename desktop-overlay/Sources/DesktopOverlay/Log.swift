@@ -2,7 +2,11 @@ import Foundation
 
 // Shared log formatter — matches daemon/log.py format:
 //   [overlay-74738   ] HH:MM:SS.f info    message
-//   [overlay-74738   ] HH:MM:SS.f error❌ message
+//   [overlay-74738   ] HH:MM:SS.f error   message
+//
+// Example:
+//   [overlay-66445   ] 18:49:42.1 info    WebSocket connected
+//   [overlay-66445   ] 18:49:55.3 error   WebSocket not connected
 
 private let _pid = Int(ProcessInfo.processInfo.processIdentifier)
 private let _label: String = {
@@ -21,7 +25,8 @@ private func _overlayLog(_ level: String, _ msg: String) {
     let s = c.component(.second, from: now)
     let f = c.component(.nanosecond, from: now) / 100_000_000
     let ts = String(format: "%02d:%02d:%02d.%d", h, m, s, f)
-    let lvl = level == "error" ? "error❌" : "info   "
+    // "info    " and "error   " both = 8 display cols → message column always aligned
+    let lvl = level == "error" ? "error   " : "info    "
     let line = "[\(_label)] \(ts) \(lvl) \(msg)"
     if level == "error" {
         let stderr = FileHandle.standardError

@@ -34,17 +34,17 @@ OVERLAY_SERVER="${1:-wss://interact.victorrentea.ro}"
 # ── Preflight checks ──
 
 if [ ! -f secrets.env ]; then
-  echo "❌ secrets.env not found. Create it with at least ANTHROPIC_API_KEY and TRANSCRIPTION_FOLDER."
+  _log "start" "error" "secrets.env not found — create with ANTHROPIC_API_KEY and TRANSCRIPTION_FOLDER"
   exit 1
 fi
 
 if ! command -v swift &>/dev/null; then
-  echo "⚠️  Swift not found — desktop overlay will not start."
+  _log "start" "info" "Swift not found — desktop overlay will not start"
   NO_OVERLAY=1
 fi
 
 if ! command -v gh &>/dev/null; then
-  echo "⚠️  gh CLI not found — deploy watcher will not start."
+  _log "start" "info" "gh CLI not found — deploy watcher will not start"
   NO_WATCHER=1
 fi
 
@@ -277,7 +277,7 @@ stop_all_processes() {
 pull_and_rebuild() {
   _log "start" "info" "Pulling latest code..."
   if ! git pull; then
-    echo "❌ git pull failed. Please resolve manually."
+    _log "start" "error" "git pull failed — resolve manually"
     exit 1
   fi
   _log "start" "info" "Rebuilding..."
