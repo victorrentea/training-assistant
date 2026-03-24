@@ -21,10 +21,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, URLSessionWebSocketDelegate 
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        let screen = preferredScreen()
         let singleScreen = NSScreen.screens.count == 1
+        let effectScreen = primaryScreen()   // built-in Mac display — effects always here
+        let buttonScreen = preferredScreen() // external monitor above Mac (or primary if single)
 
-        overlayPanel = OverlayPanel(screen: screen)
+        overlayPanel = OverlayPanel(screen: effectScreen)
         overlayPanel.orderFrontRegardless()
 
         guard let hostLayer = overlayPanel.contentView?.layer else {
@@ -35,7 +36,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, URLSessionWebSocketDelegate 
         session = URLSession(configuration: .default, delegate: self, delegateQueue: .main)
         connectWebSocket()
         registerGlobalHotkeys()
-        setupButtonBar(screen: screen, singleScreen: singleScreen)
+        setupButtonBar(screen: buttonScreen, singleScreen: singleScreen)
 
 
         // Check every 2s if another instance took over the PID file
@@ -46,7 +47,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, URLSessionWebSocketDelegate 
 
     // MARK: - Screen selection
 
-    /// Returns the preferred screen for overlays.
+    /// Returns the primary/built-in screen (lowest Y origin — the MacBook display).
+    private func primaryScreen() -> NSScreen {
+        return NSScreen.screens.min(by: { $0.frame.minY < $1.frame.minY }) ?? NSScreen.screens[0]
+    }
+
+    /// Returns the preferred screen for the button bar.
     /// With multiple screens, prefers an external screen positioned above the primary (built-in).
     /// Falls back to any non-primary screen, then the primary.
     private func preferredScreen() -> NSScreen {
