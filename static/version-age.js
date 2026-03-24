@@ -14,15 +14,17 @@
 
   function formatElapsed(deployDate, now) {
     const deltaSec = Math.max(0, Math.floor((now.getTime() - deployDate.getTime()) / 1000));
-    if (deltaSec < 86400) {
-      if (deltaSec < 60) return 'deployed ' + deltaSec + 's ago';
-      if (deltaSec < 3600) return 'deployed ' + Math.floor(deltaSec / 60) + 'm ago';
-      return 'deployed ' + Math.floor(deltaSec / 3600) + 'h ago';
-    }
+    if (deltaSec < 60) return 'deployed ' + deltaSec + 's ago';
+    if (deltaSec < 3600) return 'deployed ' + Math.floor(deltaSec / 60) + 'm ago';
+    if (deltaSec < 86400) return 'deployed ' + Math.floor(deltaSec / 3600) + 'h ago';
+    return 'deployed ' + Math.floor(deltaSec / 86400) + 'd ago';
+  }
+
+  function formatBuiltAt(deployDate) {
     const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
     const hh = String(deployDate.getHours()).padStart(2, '0');
     const mm = String(deployDate.getMinutes()).padStart(2, '0');
-    return 'deployed on ' + deployDate.getDate() + ' ' + months[deployDate.getMonth()] + ' ' + hh + ':' + mm;
+    return 'built at ' + deployDate.getDate() + ' ' + months[deployDate.getMonth()] + ' ' + hh + ':' + mm;
   }
 
   function renderDeployAge(tagId) {
@@ -36,10 +38,11 @@
     }
 
     const workHours = window.WORK_HOURS;
-    const workSuffix = workHours ? ' | built in ' + workHours + ' hours with Santa \uD83C\uDF85' : '';
+    const workSuffix = workHours ? ' | total: ' + workHours + 'h with Santa \uD83C\uDF85' : '';
+    const builtAt = ' | ' + formatBuiltAt(parsed);
 
     function update() {
-      el.textContent = formatElapsed(parsed, new Date()) + workSuffix;
+      el.textContent = formatElapsed(parsed, new Date()) + builtAt + workSuffix;
     }
     update();
     const ageSec = Math.floor((Date.now() - parsed.getTime()) / 1000);
