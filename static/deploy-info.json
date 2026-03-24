@@ -1,7 +1,7 @@
 {
-  "sha": "10821538b89a236965eec371557dd9ede434c43b",
-  "timestamp": "2026-03-24 18:51",
+  "sha": "616818ad537923467085bc8f2adb826f1b6dd58f",
+  "timestamp": "2026-03-24 18:54",
   "changelog": [
-    "feat(participant): emoji tooltips, tour reorder, notif-btn fix, \ud83d\udd14 in checklist"
+    "feat(participant): location label, notif-btn cleanup, checklist emojis"
   ]
 }
