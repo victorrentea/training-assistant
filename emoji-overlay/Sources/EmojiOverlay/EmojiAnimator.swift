@@ -1371,9 +1371,9 @@ class EmojiAnimator {
     private func _playTone(frequency: Double, duration: Double, volume: Float) {
         let engine = AVAudioEngine()
         let player = AVAudioPlayerNode()
-        engine.attach(player)
-        engine.connect(player, to: engine.mainMixerNode, format: nil)
         guard let format = AVAudioFormat(standardFormatWithSampleRate: 44100, channels: 1) else { return }
+        engine.attach(player)
+        engine.connect(player, to: engine.mainMixerNode, format: format)
         let frameCount = AVAudioFrameCount(44100 * duration)
         guard let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: frameCount) else { return }
         buffer.frameLength = frameCount
@@ -1396,9 +1396,9 @@ class EmojiAnimator {
     private func _startFlatlineBeep() {
         let engine = AVAudioEngine()
         let player = AVAudioPlayerNode()
-        engine.attach(player)
-        engine.connect(player, to: engine.mainMixerNode, format: nil)
         guard let format = AVAudioFormat(standardFormatWithSampleRate: 44100, channels: 1) else { return }
+        engine.attach(player)
+        engine.connect(player, to: engine.mainMixerNode, format: format)
         // Create a looping 880Hz buffer (0.5s chunk)
         let chunkFrames = AVAudioFrameCount(44100 / 2)
         guard let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: chunkFrames) else { return }
