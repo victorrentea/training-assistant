@@ -21,7 +21,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, URLSessionWebSocketDelegate 
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        overlayPanel = OverlayPanel()
+        let screen = preferredScreen()
+        let singleScreen = NSScreen.screens.count == 1
+
+        overlayPanel = OverlayPanel(screen: screen)
         overlayPanel.orderFrontRegardless()
 
         guard let hostLayer = overlayPanel.contentView?.layer else {
@@ -32,7 +35,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, URLSessionWebSocketDelegate 
         session = URLSession(configuration: .default, delegate: self, delegateQueue: .main)
         connectWebSocket()
         registerGlobalHotkeys()
-        setupButtonBar()
+        setupButtonBar(screen: screen, singleScreen: singleScreen)
 
 
         // Check every 2s if another instance took over the PID file
@@ -41,9 +44,31 @@ class AppDelegate: NSObject, NSApplicationDelegate, URLSessionWebSocketDelegate 
         }
     }
 
+    // MARK: - Screen selection
+
+    /// Returns the preferred screen for overlays.
+    /// With multiple screens, prefers an external screen positioned above the primary (built-in).
+    /// Falls back to any non-primary screen, then the primary.
+    private func preferredScreen() -> NSScreen {
+        let screens = NSScreen.screens
+        guard screens.count > 1 else { return screens[0] }
+
+        // Primary screen: lowest Y origin (typically the built-in MacBook display)
+        guard let primary = screens.min(by: { $0.frame.minY < $1.frame.minY }) else {
+            return screens[0]
+        }
+
+        // Prefer a screen whose bottom edge aligns with the top of the primary (positioned above)
+        let aboveScreens = screens.filter { $0 !== primary && $0.frame.minY >= primary.frame.maxY - 50 }
+        if let above = aboveScreens.first { return above }
+
+        // Fallback: any non-primary screen
+        return screens.first(where: { $0 !== primary }) ?? screens[0]
+    }
+
     // MARK: - Button bar
 
-    private func setupButtonBar() {
+    private func setupButtonBar(screen: NSScreen, singleScreen: Bool) {
         let buttons: [ButtonBar.ButtonDef] = [
             .init(label: "🎊", tooltip: "Confetti") { [weak self] in
                 self?.animator.spawnConfetti()
@@ -68,7 +93,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, URLSessionWebSocketDelegate 
             },
         ]
 
-        buttonBar = ButtonBar(buttons: buttons)
+        buttonBar = ButtonBar(buttons: buttons, screen: screen, singleScreen: singleScreen)
         buttonBar.orderFrontRegardless()
     }
 
