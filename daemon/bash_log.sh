@@ -3,7 +3,11 @@
 # Source this file to get _log():  source "$SCRIPT_DIR/daemon/bash_log.sh"
 #
 # Format: [name-PID        ] HH:MM:SS.f info    message
-#         [name-PID        ] HH:MM:SS.f error❌ message
+#         [name-PID        ] HH:MM:SS.f error   message
+#
+# Example:
+#   [start-66211     ] 18:49:40.0 info    Rebuilding...
+#   [watcher-66412   ] 18:49:41.0 error   Deploy timeout 941c3cca after 120s
 
 _log_ts() {
   # macOS date has no %N; use perl (available by default) for sub-second precision
@@ -16,10 +20,10 @@ _log() {
   label=$(printf "%-16.16s" "${name}-$$")
   ts=$(_log_ts)
   if [ "$level" = "error" ]; then
-    lvl="error❌"
+    lvl="error   "
     printf "[%s] %s %s %s\n" "$label" "$ts" "$lvl" "$msg" >&2
   else
-    lvl="info   "
+    lvl="info    "
     printf "[%s] %s %s %s\n" "$label" "$ts" "$lvl" "$msg"
   fi
 }
