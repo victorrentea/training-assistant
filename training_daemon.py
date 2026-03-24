@@ -344,7 +344,6 @@ def run() -> None:
         log.error("transcript", f"Could not read transcription: {e}")
 
     log.info("daemon", f"Started — polling {config.server_url} every {DAEMON_POLL_INTERVAL}s")
-    log.info("daemon", "Press Ctrl+C to stop.")
 
     timestamp_appender = TranscriptTimestampAppender(config.folder)
     timestamp_appender.start()
