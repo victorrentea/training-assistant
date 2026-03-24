@@ -5,9 +5,9 @@ and keeps the ChromaDB collection up to date.
 
 import hashlib
 import json
-import sys
 import time
 import threading
+from daemon import log
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
@@ -72,8 +72,8 @@ def _extract_mobi(path: Path) -> list[tuple[int, str]]:
         if isinstance(html_content, bytes):
             html_content = html_content.decode("utf-8", errors="replace")
     except Exception as e:
-        print(f"[indexer] mobi extraction failed for {path.name}: {e} — skipping", file=sys.stderr)
-        print(f"[indexer] Hint: ensure 'mobi' package is installed: pip install mobi", file=sys.stderr)
+        log.error("indexer", f"mobi extraction failed for {path.name}: {e}")
+        log.error("indexer", "Hint: pip install mobi")
         return []
 
     class _TextExtractor(HTMLParser):
@@ -149,11 +149,11 @@ def chunk_text(text: str, chunk_size: int = CHUNK_SIZE, overlap: int = CHUNK_OVE
 
 def index_file(path: Path, base_folder: Path) -> bool:
     source_key = str(path.relative_to(base_folder))
-    print(f"[indexer] Indexing {source_key}…", flush=True)
+    log.info("indexer", f"Indexing {source_key}")
     try:
         pages = extract_pages(path)
     except Exception as e:
-        print(f"[indexer] Failed to parse {source_key}: {e}", file=sys.stderr)
+        log.error("indexer", f"Failed to parse {source_key}: {e}")
         return False
 
     collection = _get_collection()
@@ -173,7 +173,7 @@ def index_file(path: Path, base_folder: Path) -> bool:
             try:
                 emb = embedder.encode(chunk).tolist()
             except Exception as e:
-                print(f"[indexer] Skipping chunk {page_num}::{chunk_idx} of {source_key}: {e}", file=sys.stderr)
+                log.error("indexer", f"Skip chunk {page_num}::{chunk_idx} of {source_key}: {e}")
                 continue
             ids.append(f"{source_key}::{page_num}::{chunk_idx}")
             documents.append(chunk)
@@ -184,11 +184,11 @@ def index_file(path: Path, base_folder: Path) -> bool:
             embeddings.append(emb)
 
     if not ids:
-        print(f"[indexer] No content extracted from {source_key}", file=sys.stderr)
+        log.error("indexer", f"No content extracted from {source_key}")
         return False
 
     collection.upsert(ids=ids, documents=documents, metadatas=metadatas, embeddings=embeddings)
-    print(f"[indexer] Indexed {len(ids)} chunks from {source_key}", flush=True)
+    log.info("indexer", f"Indexed {len(ids)} chunks from {source_key}")
     return True
 
 
@@ -196,9 +196,9 @@ def deindex_file(source_key: str) -> None:
     try:
         collection = _get_collection()
         collection.delete(where={"source": source_key})
-        print(f"[indexer] Removed {source_key} from index", flush=True)
+        log.info("indexer", f"Removed {source_key} from index")
     except Exception as e:
-        print(f"[indexer] Failed to deindex {source_key}: {e}", file=sys.stderr)
+        log.error("indexer", f"Failed to deindex {source_key}: {e}")
 
 
 # ---------------------------------------------------------------------------
@@ -218,7 +218,7 @@ def _load_manifest(folder: Path) -> dict[str, str]:
         files = data.get("files", {})
         return files if isinstance(files, dict) else {}
     except Exception as e:
-        print(f"[indexer] Failed to read manifest {path.name}: {e}", file=sys.stderr)
+        log.error("indexer", f"Failed to read manifest {path.name}: {e}")
         return {}
 
 
@@ -272,7 +272,7 @@ def index_all(folder: Path) -> None:
     files = _iter_supported_files(folder)
     manifest_files = _load_manifest(folder)
 
-    print(f"[indexer] Startup sync of {len(files)} files in {folder} (recursive)…", flush=True)
+    log.info("indexer", f"Startup sync of {len(files)} files in {folder.name}")
 
     current_keys = {str(f.relative_to(folder)) for f in files}
     stale_keys = sorted(set(manifest_files) - current_keys)
@@ -296,7 +296,7 @@ def index_all(folder: Path) -> None:
     total_to_index = len(files_to_index)
 
     if total_to_index > 0:
-        print(f"[indexer] {total_to_index} files to index, {skipped_count} unchanged", flush=True)
+        log.info("indexer", f"{total_to_index} to index, {skipped_count} unchanged")
 
     indexed_count = 0
     manifest_lock = threading.Lock()
@@ -324,14 +324,10 @@ def index_all(folder: Path) -> None:
                     elif old_hash is None:
                         manifest_files.pop(source_key, None)
                 pct = done_count * 100 // total_to_index
-                print(f"[indexer] Progress: {done_count}/{total_to_index} files ({pct}%)", flush=True)
+                log.info("indexer", f"Progress: {done_count}/{total_to_index} ({pct}%)")
 
     _save_manifest(folder, manifest_files)
-    print(
-        "[indexer] Startup sync complete "
-        f"(indexed/updated={indexed_count}, unchanged={skipped_count}, removed={len(stale_keys)}).",
-        flush=True,
-    )
+    log.info("indexer", f"Sync done: indexed={indexed_count}, unchanged={skipped_count}, removed={len(stale_keys)}")
 
 
 # ---------------------------------------------------------------------------
@@ -414,7 +410,7 @@ def start_indexer(folder: Path) -> None:
         observer = Observer()
         observer.schedule(handler, str(folder), recursive=True)
         observer.start()
-        print(f"[indexer] Watching {folder} for changes…", flush=True)
+        log.info("indexer", f"Watching {folder.name} for changes")
         try:
             while True:
                 time.sleep(1)

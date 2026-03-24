@@ -27,6 +27,7 @@
 set -e
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$SCRIPT_DIR"
+source "$SCRIPT_DIR/daemon/bash_log.sh"
 
 OVERLAY_SERVER="${1:-wss://interact.victorrentea.ro}"
 
@@ -55,7 +56,7 @@ OVERLAY_PID=""
 
 cleanup() {
   echo ""
-  echo "$(date '+%H:%M:%S') 🛑 Shutting down all processes..."
+  _log "start" "info" "Shutting down all processes..."
   [ -n "$DAEMON_PID" ]  && kill "$DAEMON_PID"  2>/dev/null
   [ -n "$WATCHER_PID" ] && kill "$WATCHER_PID" 2>/dev/null
   [ -n "$OVERLAY_PID" ] && kill "$OVERLAY_PID" 2>/dev/null
@@ -68,11 +69,11 @@ trap cleanup INT TERM
 
 build_overlay() {
   if [ -n "$NO_OVERLAY" ]; then return; fi
-  echo "$(date '+%H:%M:%S') 🔨 Building emoji overlay..."
+  _log "start" "info" "Building emoji overlay..."
   if (cd emoji-overlay && swift build 2>&1 | tail -1); then
-    echo "$(date '+%H:%M:%S') ✅ Overlay built."
+    _log "start" "info" "Overlay built"
   else
-    echo "$(date '+%H:%M:%S') ⚠️  Overlay build failed — skipping."
+    _log "start" "error" "Overlay build failed — skipping"
     NO_OVERLAY=1
   fi
 }
@@ -80,7 +81,7 @@ build_overlay() {
 # ── Process launchers ──
 
 start_daemon() {
-  echo "$(date '+%H:%M:%S') 🚀 Starting training daemon..."
+  _log "start" "info" "Starting training daemon..."
   python3 training_daemon.py &
   DAEMON_PID=$!
 }
@@ -88,8 +89,9 @@ start_daemon() {
 start_watcher() {
   if [ -n "$NO_WATCHER" ]; then return; fi
   kill_old_watcher
-  echo "$(date '+%H:%M:%S') 👀 Starting deploy watcher..."
+  _log "start" "info" "Starting deploy watcher..."
   bash -c '
+    source "'"$SCRIPT_DIR"'/daemon/bash_log.sh"
     REPO="victorrentea/training-assistant"
     PROD_URL="https://interact.victorrentea.ro/static/version.js"
     API_BASE_URL="https://interact.victorrentea.ro"
@@ -104,7 +106,7 @@ start_watcher() {
     notify_pending_deploy() {
       local sha="${1:0:8}" msg="$2"
       local json
-      json=$(python3 -c "import json,sys; print(json.dumps({'sha':sys.argv[1],'message':sys.argv[2]}))" "$sha" "$msg" 2>/dev/null) || return
+      json=$(python3 -c "import json,sys; print(json.dumps({'"'"'sha'"'"':sys.argv[1],'"'"'message'"'"':sys.argv[2]}))" "$sha" "$msg" 2>/dev/null) || return
       curl -sS -X POST "$API_BASE_URL/api/pending-deploy" -H "Content-Type: application/json" -d "$json" &>/dev/null &
     }
 
@@ -127,9 +129,9 @@ start_watcher() {
     NOTIFY_INTERVAL=5 LAST_NOTIFY_TIME=0 LAST_NOTIFY_TITLE=""
     POLL_COUNTER=0
 
-    echo "$(date '"'"'+%H:%M:%S'"'"') 👀 Watching deploys... (PID $$)"
-    echo "  Master HEAD: ${LAST_MASTER_HEAD:0:8}"
-    echo "  Production:  $LAST_PROD_VERSION"
+    _log "watcher" "info" "Watching deploys (PID $$)"
+    _log "watcher" "info" "Master HEAD: ${LAST_MASTER_HEAD:0:8}"
+    _log "watcher" "info" "Production: $LAST_PROD_VERSION"
 
     while true; do
       sleep 2
@@ -143,16 +145,15 @@ start_watcher() {
         if [ "$CURRENT_PROD" != "$LAST_PROD_VERSION" ]; then
           record_deploy "$ELAPSED"
           notify_pending_deploy "" ""
-          echo "$(date '"'"'+%H:%M:%S'"'"') ✅ Deployed! Version: $CURRENT_PROD"
+          _log "watcher" "info" "Deployed! Version: $CURRENT_PROD"
           terminal-notifier -title "🚀 Deployed!" -message "$COMMIT_MSG" -group deploy -timeout 5 &>/dev/null &
           afplay /System/Library/Sounds/Glass.aiff & sleep 0.4; afplay /System/Library/Sounds/Glass.aiff
           LAST_PROD_VERSION="$CURRENT_PROD"; WAITING_SINCE=""; MERGE_SHA=""; ESTIMATED=""; COMMIT_MSG=""
           continue
         fi
         if [ "$ELAPSED" -ge "$DEPLOY_TIMEOUT" ]; then
-          echo "$(date '"'"'+%H:%M:%S'"'"') ❌ Deploy timeout! ${MERGE_SHA:0:8} not deployed after ${DEPLOY_TIMEOUT}s"
+          _log "watcher" "error" "Deploy timeout ${MERGE_SHA:0:8} after ${DEPLOY_TIMEOUT}s"
           terminal-notifier -title "❌ Deploy Timeout!" -message "Merge ${MERGE_SHA:0:8} not deployed after ${DEPLOY_TIMEOUT}s" -group deploy -timeout 10 &>/dev/null &
-          # sound removed — only success deploy gets audio
           LAST_PROD_VERSION="$CURRENT_PROD"; WAITING_SINCE=""; MERGE_SHA=""; ESTIMATED=""; COMMIT_MSG=""
           continue
         fi
@@ -167,7 +168,7 @@ start_watcher() {
           fi
         fi
       else
-        [ "$CURRENT_PROD" != "$LAST_PROD_VERSION" ] && echo "$(date '"'"'+%H:%M:%S'"'"') 🔄 Production version changed: $CURRENT_PROD" && LAST_PROD_VERSION="$CURRENT_PROD"
+        [ "$CURRENT_PROD" != "$LAST_PROD_VERSION" ] && _log "watcher" "info" "Prod version: $CURRENT_PROD" && LAST_PROD_VERSION="$CURRENT_PROD"
       fi
 
       if [ $((POLL_COUNTER % 5)) -eq 0 ]; then
@@ -178,9 +179,9 @@ start_watcher() {
           notify_pending_deploy "$CURRENT_HEAD" "$COMMIT_MSG"
           if [ -z "$WAITING_SINCE" ]; then
             ESTIMATED=$(get_estimated_duration); WAITING_SINCE=$(date +%s)
-            echo "$(date '"'"'+%H:%M:%S'"'"') 🔀 Merge detected! HEAD: ${CURRENT_HEAD:0:8} — $COMMIT_MSG (~${ESTIMATED}s)"
+            _log "watcher" "info" "Merge: ${CURRENT_HEAD:0:8} ~${ESTIMATED}s $COMMIT_MSG"
           else
-            echo "$(date '"'"'+%H:%M:%S'"'"') 🔀 New push while waiting! HEAD: ${CURRENT_HEAD:0:8} — $COMMIT_MSG"
+            _log "watcher" "info" "New push: ${CURRENT_HEAD:0:8} $COMMIT_MSG"
           fi
           LAST_NOTIFY_TIME=0; LAST_NOTIFY_TITLE=""
         elif [ -n "$CURRENT_HEAD" ]; then
@@ -198,7 +199,7 @@ kill_old_watcher() {
     local old_pid
     old_pid=$(python3 -c "import json,sys; print(json.load(sys.stdin).get('pid',''))" < "$lock_file" 2>/dev/null)
     if [ -n "$old_pid" ] && kill -0 "$old_pid" 2>/dev/null; then
-      echo "$(date '+%H:%M:%S') 🔪 Killing old deploy watcher (PID $old_pid)..."
+      _log "start" "info" "Killing old watcher (PID $old_pid)..."
       kill "$old_pid" 2>/dev/null
       for i in 1 2 3; do
         kill -0 "$old_pid" 2>/dev/null || break
@@ -216,7 +217,7 @@ kill_old_overlay() {
     local old_pid
     old_pid=$(cat "$pid_file" 2>/dev/null)
     if [ -n "$old_pid" ] && kill -0 "$old_pid" 2>/dev/null; then
-      echo "$(date '+%H:%M:%S') 🔪 Killing old emoji overlay (PID $old_pid)..."
+      _log "start" "info" "Killing old overlay (PID $old_pid)..."
       kill "$old_pid" 2>/dev/null
       # Wait up to 3s for it to exit
       for i in 1 2 3; do
@@ -233,7 +234,7 @@ kill_old_overlay() {
 start_overlay() {
   if [ -n "$NO_OVERLAY" ]; then return; fi
   kill_old_overlay
-  echo "$(date '+%H:%M:%S') 🎨 Starting emoji overlay (server: $OVERLAY_SERVER)..."
+  _log "start" "info" "Starting emoji overlay ($OVERLAY_SERVER)..."
   (cd emoji-overlay && .build/arm64-apple-macosx/debug/EmojiOverlay "$OVERLAY_SERVER") &
   OVERLAY_PID=$!
 }
@@ -254,16 +255,14 @@ check_git_updates() {
   if [ -n "$remote_head" ] && [ "$remote_head" != "$local_head" ]; then
     local msg
     msg=$(git log --oneline "$local_head".."$remote_head" 2>/dev/null | head -3)
-    echo ""
-    echo "$(date '+%H:%M:%S') 🔀 New commits on master detected!"
-    echo "$msg"
+    _log "start" "info" "New commits: $msg"
     return 0  # update available
   fi
   return 1  # no update
 }
 
 stop_all_processes() {
-  echo "$(date '+%H:%M:%S') 🛑 Stopping all processes..."
+  _log "start" "info" "Stopping all processes..."
   [ -n "$DAEMON_PID" ]  && kill "$DAEMON_PID"  2>/dev/null && DAEMON_PID=""
   [ -n "$WATCHER_PID" ] && kill "$WATCHER_PID" 2>/dev/null && WATCHER_PID=""
   [ -n "$OVERLAY_PID" ] && kill "$OVERLAY_PID" 2>/dev/null && OVERLAY_PID=""
@@ -271,12 +270,12 @@ stop_all_processes() {
 }
 
 pull_and_rebuild() {
-  echo "$(date '+%H:%M:%S') 📥 Pulling latest code..."
+  _log "start" "info" "Pulling latest code..."
   if ! git pull; then
     echo "❌ git pull failed. Please resolve manually."
     exit 1
   fi
-  echo "$(date '+%H:%M:%S') 🔨 Rebuilding..."
+  _log "start" "info" "Rebuilding..."
   build_overlay
 }
 
@@ -290,10 +289,10 @@ while true; do
   start_overlay
 
   echo ""
-  echo "$(date '+%H:%M:%S') ✅ All processes running."
-  echo "  Training daemon: PID $DAEMON_PID"
-  [ -n "$WATCHER_PID" ] && echo "  Deploy watcher:  PID $WATCHER_PID"
-  [ -n "$OVERLAY_PID" ] && echo "  Emoji overlay:   PID $OVERLAY_PID"
+  _log "start" "info" "All processes running"
+  _log "start" "info" "Training daemon: PID $DAEMON_PID"
+  [ -n "$WATCHER_PID" ] && _log "start" "info" "Deploy watcher: PID $WATCHER_PID"
+  [ -n "$OVERLAY_PID" ] && _log "start" "info" "Emoji overlay: PID $OVERLAY_PID"
   echo ""
 
   # Poll loop: check daemon health + git updates
@@ -307,14 +306,14 @@ while true; do
       DAEMON_EXIT=$?
       DAEMON_PID=""
       if [ $DAEMON_EXIT -eq 0 ]; then
-        echo "$(date '+%H:%M:%S') 👋 Daemon stopped normally. Shutting down."
+        _log "start" "info" "Daemon stopped normally. Shutting down."
         stop_all_processes
         exit 0
       elif [ $DAEMON_EXIT -eq 42 ]; then
         RESTART_REASON="daemon-version-change"
         break
       else
-        echo "$(date '+%H:%M:%S') ⚠️  Daemon crashed (exit $DAEMON_EXIT) — will restart after pull check"
+        _log "start" "error" "Daemon crashed (exit $DAEMON_EXIT)"
         RESTART_REASON="daemon-crash"
         break
       fi
@@ -331,6 +330,6 @@ while true; do
   stop_all_processes
   pull_and_rebuild
 
-  echo "$(date '+%H:%M:%S') 🔁 Restarting all processes (reason: $RESTART_REASON)..."
+  _log "start" "info" "Restarting (reason: $RESTART_REASON)..."
   echo ""
 done

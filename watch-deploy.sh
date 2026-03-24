@@ -9,10 +9,13 @@
 #   ./watch-deploy.sh        # foreground
 #   ./watch-deploy.sh &      # background (typical)
 
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+source "$SCRIPT_DIR/daemon/bash_log.sh"
+
 REPO="victorrentea/training-assistant"
 PROD_URL="https://interact.victorrentea.ro/static/version.js"
 DEPLOY_TIMEOUT=120  # seconds to wait for production after a merge
-HISTORY_FILE="$(dirname "$0")/deploy-history.txt"
+HISTORY_FILE="$SCRIPT_DIR/deploy-history.txt"
 
 get_prod_version() {
   curl -s "$PROD_URL" | grep -o "'.*'" | tr -d "'"
@@ -24,7 +27,7 @@ get_master_head() {
 
 notify_success() {
   local version="$1"
-  echo "$(date '+%H:%M:%S') ✅ Deployed! Version: $version"
+  _log "watcher" "info" "Deployed! Version: $version"
   echo "$(date '+%Y-%m-%d %H:%M:%S') ✅ $version" >> "$HISTORY_FILE"
   terminal-notifier -title "🚀 Deployed!" -message "Version $version is live" -timeout 5 &
   afplay /System/Library/Sounds/Glass.aiff &
@@ -34,7 +37,7 @@ notify_success() {
 
 notify_failure() {
   local sha="$1"
-  echo "$(date '+%H:%M:%S') ❌ Deploy timeout! Master moved to ${sha:0:8} but production didn't update within ${DEPLOY_TIMEOUT}s"
+  _log "watcher" "error" "Deploy timeout ${sha:0:8} after ${DEPLOY_TIMEOUT}s"
   terminal-notifier -title "❌ Deploy Timeout!" -message "Merge ${sha:0:8} not deployed after ${DEPLOY_TIMEOUT}s" -timeout 10 &
   afplay /System/Library/Sounds/Basso.aiff &
   sleep 0.4
@@ -58,14 +61,14 @@ check_existing() {
   if kill -0 "$prev_pid" 2>/dev/null; then
     age=$(($(date +%s) - ${prev_hb:-0}))
     if [ "$age" -le 10 ]; then
-      echo "$(date '+%H:%M:%S') ⚠️  Another watcher is already running (PID $prev_pid, heartbeat ${age}s ago). Exiting."
+      _log "watcher" "error" "Already running (PID $prev_pid, ${age}s ago). Exiting."
       exit 0
     fi
-    echo "$(date '+%H:%M:%S') 🧹 Stale watcher (PID $prev_pid, ${age}s ago). Replacing it."
+    _log "watcher" "info" "Stale watcher (PID $prev_pid, ${age}s). Replacing."
     kill "$prev_pid" 2>/dev/null
     sleep 0.5
   else
-    echo "$(date '+%H:%M:%S') 🧹 Previous watcher (PID $prev_pid) is dead. Cleaning up."
+    _log "watcher" "info" "Dead watcher (PID $prev_pid). Cleaning up."
   fi
   rm -f "$LOCK_FILE"
 }
@@ -86,9 +89,9 @@ WAITING_SINCE=""   # empty = idle, epoch = waiting for deploy
 MERGE_SHA=""
 LAST_WAITING_SHA="" # track last printed "new push while waiting" SHA
 
-echo "$(date '+%H:%M:%S') 👀 Watching deploys... (PID $$)"
-echo "  Master HEAD: ${LAST_MASTER_HEAD:0:8}"
-echo "  Production:  $LAST_PROD_VERSION"
+_log "watcher" "info" "Watching deploys (PID $$)"
+_log "watcher" "info" "Master HEAD: ${LAST_MASTER_HEAD:0:8}"
+_log "watcher" "info" "Production: $LAST_PROD_VERSION"
 
 POLL_COUNTER=0
 
@@ -129,7 +132,7 @@ while true; do
   else
     # Not waiting — track production version silently
     if [ -n "$CURRENT_PROD" ] && [ "$CURRENT_PROD" != "$LAST_PROD_VERSION" ]; then
-      echo "$(date '+%H:%M:%S') 🔄 Production version changed: $CURRENT_PROD"
+      _log "watcher" "info" "Prod version: $CURRENT_PROD"
       LAST_PROD_VERSION="$CURRENT_PROD"
     fi
   fi
@@ -141,12 +144,12 @@ while true; do
       if [ -n "$WAITING_SINCE" ]; then
         # New push arrived while already waiting — print only once per unique SHA
         if [ "$CURRENT_HEAD" != "$LAST_WAITING_SHA" ]; then
-          echo "$(date '+%H:%M:%S') 🔀 New push while waiting! HEAD: ${CURRENT_HEAD:0:8}"
+          _log "watcher" "info" "New push: ${CURRENT_HEAD:0:8}"
           LAST_WAITING_SHA="$CURRENT_HEAD"
         fi
       else
-        echo "$(date '+%H:%M:%S') 🔀 Merge detected! HEAD: ${CURRENT_HEAD:0:8} (was ${LAST_MASTER_HEAD:0:8})"
-        echo "  Waiting up to ${DEPLOY_TIMEOUT}s for production to update..."
+        _log "watcher" "info" "Merge: ${CURRENT_HEAD:0:8} (was ${LAST_MASTER_HEAD:0:8})"
+        _log "watcher" "info" "Waiting up to ${DEPLOY_TIMEOUT}s for production..."
         WAITING_SINCE=$(date +%s)
         MERGE_SHA="$CURRENT_HEAD"
       fi
