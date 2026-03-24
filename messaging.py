@@ -232,6 +232,7 @@ def build_participant_state(pid: str) -> dict:
         "leaderboard_active": state.leaderboard_active,
         "leaderboard_data": _build_leaderboard_for_participant(pid),
         "my_name": state.participant_names.get(pid, ""),
+        "screen_share_active": state.screen_share_active,
     }
 
 
@@ -290,6 +291,7 @@ def build_host_state() -> dict:
         **_build_debate_for_host(),
         "codereview": _build_codereview_for_host(),
         "overlay_connected": "__overlay__" in state.participants,
+        "screen_share_active": state.screen_share_active,
         "token_usage": state.token_usage,
         "mode": state.mode,
         "leaderboard_active": state.leaderboard_active,

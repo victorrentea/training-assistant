@@ -671,6 +671,7 @@
           _stopDebateToasts();
           renderContent(msg.vote_counts);
         }
+        updateScreenShareWarning(msg.screen_share_active);
         updateSummary(msg.summary_points, msg.summary_updated_at);
         updateNotes(msg.notes_content);
         // Restore leaderboard overlay if it was active
@@ -755,6 +756,12 @@
   function updateHostDot(connected) {
     const dot = document.getElementById('host-dot');
     if (dot) dot.style.display = connected ? 'inline' : 'none';
+  }
+
+  function updateScreenShareWarning(active) {
+    const el = document.getElementById('screen-share-warning');
+    if (!el) return;
+    el.style.display = (active === false) ? 'flex' : 'none';
   }
 
   let _displayedScore = 0;

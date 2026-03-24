@@ -15,6 +15,29 @@ body {
 
 
 
+#screen-share-warning {
+  background: #c0392b;
+  color: white;
+  text-align: center;
+  padding: 7px 16px;
+  border-radius: 8px;
+  margin-bottom: .5rem;
+  font-weight: 600;
+  font-size: .9rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  box-sizing: border-box;
+  animation: screen-share-pulse 2s ease-in-out infinite;
+}
+
+@keyframes screen-share-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.65; }
+}
+
 /* Avatar hover preview (5x size tooltip) */
 .avatar-preview {
   position: fixed;

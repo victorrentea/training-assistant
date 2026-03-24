@@ -194,6 +194,7 @@
         updateTokenBadge(msg.token_usage);
         renderTranscriptStatus(msg.transcript_line_count, msg.transcript_total_lines, msg.transcript_latest_ts);
         renderOverlayStatus(msg.overlay_connected);
+        renderScreenShareBadge(msg.screen_share_active);
         renderPendingDeploy(msg.pending_deploy);
         daemonSessionFolder = msg.daemon_session_folder || null;
         renderNotesStatus(msg.daemon_session_folder, msg.daemon_session_notes);
@@ -611,6 +612,19 @@
   function renderTranscriptStatus(lineCount, totalLines, latestTs) {
     _transcriptLineCount = lineCount || 0;
     renderSummaryBadge();
+  }
+
+  async function toggleScreenShare() {
+    await fetch('/api/screen-share', { method: 'POST' });
+  }
+
+  function renderScreenShareBadge(active) {
+    const el = document.getElementById('screen-share-badge');
+    if (!el) return;
+    el.className = `badge ${active !== false ? 'connected' : 'disconnected'}`;
+    el.title = active !== false
+      ? 'Screen sharing active — click to signal interruption'
+      : 'Screen sharing INTERRUPTED — click to clear';
   }
 
   function renderOverlayStatus(connected) {
