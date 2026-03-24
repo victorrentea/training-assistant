@@ -701,6 +701,7 @@ h1 { display: none; }
   border-radius: 50%;
   border: 1px solid var(--border);
   background: var(--bg);
+  color: var(--text);
   font-size: 1.3rem;
   cursor: pointer;
   display: flex;
