@@ -1,10 +1,8 @@
 from dataclasses import dataclass, field
 from typing import Optional
 import anthropic
-import logging
 import time
-
-logger = logging.getLogger(__name__)
+from daemon import log
 
 # Pricing per 1M tokens (USD)
 PRICING = {
@@ -72,8 +70,5 @@ def create_message(
     _usage.add(in_tok, out_tok, model)
     pricing = PRICING.get(model, PRICING["claude-sonnet-4-6"])
     cost = (in_tok * pricing["input"] + out_tok * pricing["output"]) / 1_000_000
-    logger.info(
-        "💸 LLM call: model=%s in=%d out=%d cost=$%.4f duration=%dms",
-        model, in_tok, out_tok, cost, duration_ms,
-    )
+    log.info("llm", f"model={model} in={in_tok} out={out_tok} cost=${cost:.4f} {duration_ms}ms")
     return response

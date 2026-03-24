@@ -6,12 +6,12 @@ returns {"points": [...]} with a fresh complete list of all key points.
 """
 
 import json
-import sys
 from typing import Optional
 
 import anthropic
 from daemon.llm_adapter import create_message
 from daemon.project_files import get_project_tools, handle_project_tool_call, PROJECT_TOOL_NAMES
+from daemon import log
 
 from quiz_core import (
     Config,
@@ -63,7 +63,7 @@ def generate_summary(
     try:
         entries = load_transcription_files(config.folder)
     except SystemExit:
-        print("[summarizer] No transcription files found — skipping", file=sys.stderr)
+        log.error("summarizer", "No transcription files found — skipping")
         return None
 
     text = None
@@ -74,7 +74,7 @@ def generate_summary(
     notes = read_session_notes(config)
 
     if not text and not notes:
-        print("[summarizer] No transcript or notes available — skipping", file=sys.stderr)
+        log.error("summarizer", "No transcript or notes available")
         return None
 
     # Build user message
@@ -103,7 +103,7 @@ def generate_summary(
         if tools:
             create_kwargs["tools"] = tools
 
-        print(f"🟢🟢🟢 Sending to Claude ({len(user_message)} chars)…")
+        log.info("summarizer", f"Sending to Claude ({len(user_message)} chars)")
         while True:
             response = create_message(**create_kwargs)
             messages.append({"role": "assistant", "content": response.content})
@@ -128,19 +128,19 @@ def generate_summary(
             else:
                 break
 
-        print(f"⭐⭐⭐ Response received from Claude")
+        log.info("summarizer", "Response received from Claude")
         if not response.content:
-            print(f"[summarizer] Empty response from Claude (stop_reason={response.stop_reason})", file=sys.stderr)
+            log.error("summarizer", f"Empty response (stop_reason={response.stop_reason})")
             return None
 
         block = response.content[0]
         if block.type != "text":
-            print(f"[summarizer] Unexpected content block type: {block.type}", file=sys.stderr)
+            log.error("summarizer", f"Unexpected content type: {block.type}")
             return None
 
         response_text = block.text.strip()
         if not response_text:
-            print(f"[summarizer] Claude returned empty text (stop_reason={response.stop_reason})", file=sys.stderr)
+            log.error("summarizer", f"Empty text (stop_reason={response.stop_reason})")
             return None
 
         # Strip markdown code fences if Claude wraps JSON in them
@@ -159,7 +159,7 @@ def generate_summary(
         elif isinstance(parsed, dict) and "points" in parsed:
             raw_list = parsed["points"]
         else:
-            print(f"[summarizer] Unexpected response format: {response_text[:200]}", file=sys.stderr)
+            log.error("summarizer", f"Unexpected format: {response_text[:60]}")
             return None
 
         points = []
@@ -176,16 +176,16 @@ def generate_summary(
                 points.append({"text": item, "source": "discussion"})
 
         result = {"points": points}
-        print(f"[summarizer] Generated {len(points)} key points")
+        log.info("summarizer", f"Generated {len(points)} key points")
         return result
 
     except json.JSONDecodeError as e:
-        print(f"[summarizer] Failed to parse Claude response as JSON: {e}", file=sys.stderr)
-        print(f"[summarizer] Raw response: {response_text[:500]}", file=sys.stderr)
+        log.error("summarizer", f"Failed to parse JSON: {e}")
+        log.error("summarizer", f"Raw response: {response_text[:60]}")
         return None
     except anthropic.APIError as e:
-        print(f"[summarizer] Claude API error: {e}", file=sys.stderr)
+        log.error("summarizer", f"Claude API error: {e}")
         return None
     except Exception as e:
-        print(f"[summarizer] Unexpected error: {e}", file=sys.stderr)
+        log.error("summarizer", f"Unexpected error: {e}")
         return None

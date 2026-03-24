@@ -83,12 +83,13 @@ def run_loop(
     count = 0
     template = infer_template_from_first_line(file_path)
     deadline = time.monotonic() + run_seconds if run_seconds is not None else None
-    print(f"[info] Appending lines to: {file_path}")
-    print(f"[info] Interval: {interval_seconds:.2f}s")
+    from daemon import log
+    log.info("timestamps", f"Appending to: {file_path.name}")
+    log.info("timestamps", f"Interval: {interval_seconds:.2f}s")
     if run_seconds is None:
-        print("[info] Press Ctrl+C to stop")
+        log.info("timestamps", "Press Ctrl+C to stop")
     else:
-        print(f"[info] Run duration: {run_seconds:.1f}s")
+        log.info("timestamps", f"Run duration: {run_seconds:.1f}s")
 
     while not stop:
         append_empty_line_then_timestamp(file_path, template)
@@ -105,6 +106,6 @@ def run_loop(
             break
         time.sleep(sleep_for)
 
-    print(f"[info] Stopped after {count} insert(s).")
+    log.info("timestamps", f"Stopped after {count} insert(s).")
     return count
 

@@ -17,18 +17,12 @@ All configuration is read from secrets.env and environment variables:
 
 import hashlib
 import json
-import logging
 import os
 import re
 import signal
 import sys
 import time
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(name)s] %(message)s",
-    datefmt="%H:%M:%S",
-)
 from dataclasses import replace as dc_replace
 from datetime import date, datetime
 from pathlib import Path
@@ -46,6 +40,7 @@ from daemon.debate_ai import run_debate_ai_cleanup
 from daemon.llm_adapter import get_usage
 from daemon.summarizer import generate_summary
 from daemon.transcript_state import TranscriptStateManager
+from daemon import log
 
 _LOCK_FILE = Path("/tmp/training_daemon.lock")
 _HEARTBEAT_INTERVAL = 1.0  # seconds between heartbeat writes
@@ -67,10 +62,10 @@ def _load_key_points(session_folder: Path) -> list[dict]:
         data = json.loads(cache_file.read_text(encoding="utf-8"))
         # Support new format {"points": [...]} and old format {"locked": [...], "draft": [...]}
         points = data.get("points", data.get("locked", []) + data.get("draft", []))
-        print(f"[session] Loaded {len(points)} key points from {session_folder.name}")
+        log.info("session", f"Loaded {len(points)} key points from {session_folder.name}")
         return points
     except Exception as e:
-        print(f"[session] Failed to load key points: {e}", file=sys.stderr)
+        log.error("session", f"Failed to load key points: {e}")
         return []
 
 
@@ -82,7 +77,7 @@ def _save_key_points(session_folder: Path, points: list[dict]) -> None:
             json.dumps({"points": points}, indent=2), encoding="utf-8"
         )
     except Exception as e:
-        print(f"[session] Failed to save key points: {e}", file=sys.stderr)
+        log.error("session", f"Failed to save key points: {e}")
 
 
 def _load_daemon_state(sessions_root: Path) -> list[dict]:
@@ -94,7 +89,7 @@ def _load_daemon_state(sessions_root: Path) -> list[dict]:
         data = json.loads(state_file.read_text(encoding="utf-8"))
         return data.get("stack", [])
     except Exception as e:
-        print(f"[session] Failed to load daemon state: {e}", file=sys.stderr)
+        log.error("session", f"Failed to load daemon state: {e}")
         return []
 
 
@@ -106,7 +101,7 @@ def _save_daemon_state(sessions_root: Path, stack: list[dict]) -> None:
             json.dumps({"stack": stack}, indent=2), encoding="utf-8"
         )
     except Exception as e:
-        print(f"[session] Failed to save daemon state: {e}", file=sys.stderr)
+        log.error("session", f"Failed to save daemon state: {e}")
 
 
 def _find_notes_in_folder(folder: Path) -> Path | None:
@@ -159,31 +154,27 @@ class TranscriptTimestampAppender:
     def _log_startup_error_once(self, message: str) -> None:
         if self._startup_error_logged:
             return
-        print(message, file=sys.stderr)
+        log.error("daemon", message)
         self._startup_error_logged = True
 
     def start(self) -> None:
         if self.interval_seconds <= 0:
             self._log_startup_error_once(
-                "[daemon] Transcript timestamp appender disabled: "
-                "TRANSCRIPT_TIMESTAMP_INTERVAL_SECONDS must be > 0"
+                "Timestamp appender disabled: INTERVAL_SECONDS must be > 0"
             )
             return
 
         self._target_file = self._resolve_target_file()
         if self._target_file is None:
             self._log_startup_error_once(
-                f"[daemon] Transcript timestamp appender disabled: no .txt transcript found in {self.folder}"
+                f"Timestamp appender disabled: no .txt in {self.folder}"
             )
             return
 
         self._template = infer_template_from_first_line(self._target_file)
         self._next_append_at = time.monotonic()
         self.enabled = True
-        print(
-            "[daemon] Transcript timestamp appender enabled "
-            f"({self.interval_seconds:.1f}s) on {self._target_file.name}"
-        )
+        log.info("daemon", f"Transcript timestamp appender enabled ({self.interval_seconds:.1f}s) on {self._target_file.name}")
 
     def tick(self) -> None:
         if not self.enabled:
@@ -197,10 +188,7 @@ class TranscriptTimestampAppender:
             append_empty_line_then_timestamp(self._target_file, self._template)
         except OSError as exc:
             self.enabled = False
-            print(
-                f"[daemon] Transcript timestamp appender stopped: {exc}",
-                file=sys.stderr,
-            )
+            log.error("daemon", f"Timestamp appender stopped: {exc}")
             return
 
         self._next_append_at = now + self.interval_seconds
@@ -247,14 +235,12 @@ def _check_and_acquire_lock() -> None:
 
     if alive and heartbeat_age <= _HEARTBEAT_STALE_THRESHOLD:
         # Previous instance is healthy — abort
-        print(f"[daemon] Another instance is already running (PID {pid}, "
-              f"heartbeat {heartbeat_age:.1f}s ago). Exiting.")
+        log.info("daemon", f"Another instance is already running (PID {pid}, heartbeat {heartbeat_age:.1f}s ago). Exiting.")
         sys.exit(0)
 
     if alive and heartbeat_age > _HEARTBEAT_STALE_THRESHOLD:
         # Process exists but heartbeat is stale — something is wrong
-        print(f"⚠️  [daemon] Previous instance (PID {pid}) is alive but heartbeat "
-              f"is stale ({heartbeat_age:.0f}s ago). Killing it.")
+        log.error("daemon", f"Previous instance (PID {pid}) is alive but heartbeat is stale ({heartbeat_age:.0f}s ago). Killing it.")
         try:
             os.kill(pid, signal.SIGTERM)
             time.sleep(0.5)
@@ -263,7 +249,7 @@ def _check_and_acquire_lock() -> None:
 
     if not alive:
         # Process is dead — stale lock file from a crash
-        print(f"[daemon] Previous instance (PID {pid}) is dead (crashed?). Cleaning up lock file.")
+        log.info("daemon", f"Previous instance (PID {pid}) is dead (crashed?). Cleaning up lock file.")
 
     _LOCK_FILE.unlink(missing_ok=True)
 
@@ -282,11 +268,11 @@ def run() -> None:
     config = config_from_env()
 
     if config.project_folder:
-        print(f"[info] Project folder configured: {config.project_folder}")
+        log.info("daemon", f"Project folder configured: {config.project_folder}")
         if not os.path.isdir(config.project_folder):
-            print(f"[warn] PROJECT_FOLDER does not exist: {config.project_folder}")
+            log.error("daemon", f"PROJECT_FOLDER does not exist: {config.project_folder}")
     else:
-        print("[info] PROJECT_FOLDER not set — project file tools disabled")
+        log.info("daemon", "PROJECT_FOLDER not set — project file tools disabled")
 
     # ── Fetch server version at startup for auto-update detection ──
     _startup_version = None
@@ -294,41 +280,40 @@ def run() -> None:
         status = _get_json(f"{config.server_url}/api/status")
         _startup_version = status.get("backend_version")
         if _startup_version:
-            print(f"[daemon] Server version at startup: {_startup_version}")
+            log.info("daemon", f"Server version at startup: {_startup_version}")
         else:
-            print("[daemon] Warning: server /api/status did not return backend_version", file=sys.stderr)
+            log.error("daemon", "Server /api/status did not return backend_version")
     except RuntimeError as e:
-        print(f"[daemon] Warning: could not fetch server version at startup: {e}", file=sys.stderr)
+        log.error("daemon", f"Could not fetch server version at startup: {e}")
 
     # ── Restore state from backup if server needs it ──
     try:
         status = _get_json(f"{config.server_url}/api/status")
         if status.get("needs_restore"):
             if _BACKUP_FILE.exists():
-                print("[daemon] Server needs state restore — sending backup...")
+                log.info("daemon", "Server needs state restore — sending backup...")
                 backup_data = json.loads(_BACKUP_FILE.read_text(encoding="utf-8"))
                 result = _post_json(
                     f"{config.server_url}/api/state-restore",
                     backup_data,
                     config.host_username, config.host_password,
                 )
-                print(f"[daemon] State restore result: {result.get('status', 'ok')}")
+                log.info("daemon", f"State restore result: {result.get('status', 'ok')}")
             else:
-                print("[daemon] Server needs state restore but no backup file found at "
-                      f"{_BACKUP_FILE}", file=sys.stderr)
+                log.error("daemon", f"Server needs state restore but no backup file found at {_BACKUP_FILE}")
         else:
-            print("[daemon] Server does not need state restore")
+            log.info("daemon", "Server does not need state restore")
     except Exception as e:
-        print(f"[daemon] State restore check failed: {e}", file=sys.stderr)
+        log.error("daemon", f"State restore check failed: {e}")
 
     # Detect today's session folder
     sf, sn = find_session_folder(date.today())
     config = dc_replace(config, session_folder=sf, session_notes=sn)
     if sf:
-        print(f"[session] Session folder: {sf.name}")
-        print(f"[session] Notes file: {sn.name if sn else 'NOT FOUND'}")
+        log.info("session", f"Session folder: {sf.name}")
+        log.info("session", f"Notes file: {sn.name if sn else 'NOT FOUND'}")
     else:
-        print("[session] No session folder found for today", file=sys.stderr)
+        log.error("session", "No session folder found for today")
 
     # Start background material indexer
     materials_folder_str = os.environ.get("MATERIALS_FOLDER",
@@ -338,7 +323,7 @@ def run() -> None:
         from daemon.indexer import start_indexer
         start_indexer(materials_folder)
     else:
-        print(f"[daemon] MATERIALS_FOLDER not found: {materials_folder} — indexer disabled", file=sys.stderr)
+        log.error("daemon", f"MATERIALS_FOLDER not found: {materials_folder} — indexer disabled")
 
     # ── Log transcription file info at startup ──
     try:
@@ -348,16 +333,19 @@ def run() -> None:
             max_ts = max(ts for ts, _ in timed)
             cutoff = max_ts - DEFAULT_TRANSCRIPT_MINUTES * 60
             recent = [(ts, txt) for ts, txt in timed if ts >= cutoff and txt.strip()]
-            print(f"[transcript] Lines in last {DEFAULT_TRANSCRIPT_MINUTES} min: {len(recent)} (total segments: {len(entries)})")
+            h, rem = divmod(int(max_ts), 3600)
+            m_val, s_val = divmod(rem, 60)
+            latest_time = f"{h:02d}:{m_val:02d}:{s_val:02d}"
+            log.info("transcript", f"{len(recent)}/{len(entries)} segs, latest={latest_time}")
         else:
-            print(f"[transcript] Total segments: {len(entries)} (no timestamps found)")
+            log.info("transcript", f"Total segments: {len(entries)} (no timestamps found)")
     except SystemExit:
-        print("[transcript] No transcription file found", file=sys.stderr)
+        log.error("transcript", "No transcription file found")
     except Exception as e:
-        print(f"[transcript] Could not read transcription: {e}", file=sys.stderr)
+        log.error("transcript", f"Could not read transcription: {e}")
 
-    print(f"[daemon] Started — polling {config.server_url} every {DAEMON_POLL_INTERVAL}s")
-    print("[daemon] Press Ctrl+C to stop.\n")
+    log.info("daemon", f"Started — polling {config.server_url} every {DAEMON_POLL_INTERVAL}s")
+    log.info("daemon", "Press Ctrl+C to stop.")
 
     timestamp_appender = TranscriptTimestampAppender(config.folder)
     timestamp_appender.start()
@@ -380,7 +368,7 @@ def run() -> None:
         # Restore from persisted stack
         current_folder = sessions_root / session_stack[-1]["name"]
         current_key_points = _load_key_points(current_folder)
-        print(f"[session] Restored stack ({len(session_stack)} sessions), {len(current_key_points)} key points")
+        log.info("session", f"Restored stack ({len(session_stack)} sessions), {len(current_key_points)} key points")
     elif config.session_folder:
         # Auto-start from today's detected session folder
         session_stack = [{
@@ -390,13 +378,13 @@ def run() -> None:
         }]
         current_key_points = _load_key_points(config.session_folder)
         _save_daemon_state(sessions_root, session_stack)
-        print(f"[session] Auto-started: {config.session_folder.name}")
+        log.info("session", f"Auto-started: {config.session_folder.name}")
 
     # Sync initial state to server
     try:
         _sync_session_to_server(config, session_stack, current_key_points)
     except Exception as e:
-        print(f"[session] Failed to sync initial state: {e}", file=sys.stderr)
+        log.error("session", f"Failed to sync initial state: {e}")
 
     last_summary_at = 0.0  # monotonic time of last summary run
     last_snapshot_hash: str | None = None  # hash of last saved state snapshot
@@ -435,7 +423,7 @@ def run() -> None:
                     config = dc_replace(config, session_folder=folder, session_notes=notes_file)
                     _sync_session_to_server(config, session_stack, current_key_points)
                     transcript_state.reset()
-                    print(f"[session] Started: {name}")
+                    log.info("session", f"Started: {name}")
 
                 elif action == "end" and len(session_stack) > 1:
                     ended = session_stack.pop()
@@ -451,7 +439,7 @@ def run() -> None:
                     config = dc_replace(config, session_folder=parent_folder, session_notes=notes_file)
                     _sync_session_to_server(config, session_stack, current_key_points)
                     transcript_state.reset()
-                    print(f"[session] Ended: {ended['name']}, restored: {parent['name']}")
+                    log.info("session", f"Ended: {ended['name']}, restored: {parent['name']}")
 
                 elif action == "rename":
                     new_name = session_req["name"]
@@ -470,9 +458,9 @@ def run() -> None:
                         notes_file = _find_notes_in_folder(new_folder)
                         config = dc_replace(config, session_folder=new_folder, session_notes=notes_file)
                         _sync_session_to_server(config, session_stack, current_key_points)
-                        print(f"[session] Renamed: {old_name} → {new_name}")
+                        log.info("session", f"Renamed: {old_name} → {new_name}")
             except Exception as e:
-                print(f"[session] Request error: {e}", file=sys.stderr)
+                log.error("session", f"Request error: {e}")
 
             # ── Re-detect session folder on date change or if notes not yet found (every 5s) ──
             today = date.today()
@@ -487,9 +475,9 @@ def run() -> None:
                     config = dc_replace(config, session_folder=sf, session_notes=sn)
                     last_detected_date = today
                     if sf:
-                        print(f"[session] Detected: {sf.name} / notes: {sn.name if sn else 'none'}")
+                        log.info("session", f"Detected: {sf.name} / notes: {sn.name if sn else 'none'}")
                     else:
-                        print("[session] No session folder for today", file=sys.stderr)
+                        log.error("session", "No session folder for today")
                     _session_status_pending = True
                 else:
                     _session_status_pending = False
@@ -505,8 +493,8 @@ def run() -> None:
                     status = _get_json(f"{config.server_url}/api/status")
                     current_version = status.get("backend_version")
                     if current_version and current_version != _startup_version:
-                        print(f"\n[daemon] Server version changed: {_startup_version} → {current_version}")
-                        print("[daemon] Exiting for auto-update (exit code 42)...")
+                        log.info("daemon", f"Server version changed: {_startup_version} → {current_version}")
+                        log.info("daemon", "Exiting for auto-update (exit code 42)...")
                         _LOCK_FILE.unlink(missing_ok=True)
                         sys.exit(EXIT_CODE_UPDATE)
                 except RuntimeError:
@@ -518,23 +506,23 @@ def run() -> None:
                 config.host_username, config.host_password,
             )
             if server_disconnected:
-                print("[daemon] Reconnected to server.")
+                log.info("daemon", "Reconnected to server.")
                 server_disconnected = False
                 _session_status_pending = True
 
             # ── Restore state if server lost it (e.g. after Railway redeploy) ──
             if data.get("needs_restore"):
                 if _BACKUP_FILE.exists():
-                    print("[daemon] Server needs state restore — sending backup...")
+                    log.info("daemon", "Server needs state restore — sending backup...")
                     backup_data = json.loads(_BACKUP_FILE.read_text(encoding="utf-8"))
                     result = _post_json(
                         f"{config.server_url}/api/state-restore",
                         backup_data,
                         config.host_username, config.host_password,
                     )
-                    print(f"[daemon] State restore result: {result.get('status', 'ok')}")
+                    log.info("daemon", f"State restore result: {result.get('status', 'ok')}")
                 else:
-                    print("[daemon] Server needs state restore but no backup file found", file=sys.stderr)
+                    log.error("daemon", "Server needs state restore but no backup file found")
 
             # ── Push session info when changed, on reconnect, or if server lost it ──
             server_has_session = data.get("session_folder") is not None
@@ -549,7 +537,7 @@ def run() -> None:
                 try:
                     _sync_session_to_server(config, session_stack, current_key_points)
                 except Exception as e:
-                    print(f"[session] Failed to re-sync key points: {e}", file=sys.stderr)
+                    log.error("session", f"Failed to re-sync key points: {e}")
 
             # Push notes content when file is new or modified
             if config.session_notes:
@@ -572,11 +560,11 @@ def run() -> None:
                 topic = req.get("topic")
                 minutes = req.get("minutes")
                 if topic:
-                    print(f"\n[daemon] Topic request: '{topic}'")
+                    log.info("daemon", f"Topic request: '{topic}'")
                     result = auto_generate_topic(topic, config)
                 else:
                     minutes = minutes or config.minutes
-                    print(f"\n[daemon] Transcript request: last {minutes} min")
+                    log.info("daemon", f"Transcript request: last {minutes} min")
                     result = auto_generate(minutes, config)
                 if result:
                     last_quiz, last_text = result
@@ -594,7 +582,7 @@ def run() -> None:
                 # Use server-side preview as current quiz (in case host re-opened page)
                 current_quiz = refine_data.get("preview") or last_quiz
                 if current_quiz and last_text:
-                    print(f"\n[daemon] Refine request: target={target}")
+                    log.info("daemon", f"Refine request: target={target}")
                     updated = auto_refine(target, current_quiz, last_text, config)
                     if updated:
                         last_quiz = updated
@@ -609,7 +597,7 @@ def run() -> None:
                 )
                 debate_req = debate_data.get("request")
                 if debate_req:
-                    print(f"\n[daemon] Debate AI cleanup requested: '{debate_req['statement'][:60]}'")
+                    log.info("daemon", f"Debate AI cleanup requested: '{debate_req['statement'][:60]}'")
                     try:
                         result = run_debate_ai_cleanup(debate_req, config.api_key, config.model)
                         _post_json(
@@ -619,9 +607,9 @@ def run() -> None:
                         )
                         n_new = len(result.get("new_arguments", []))
                         n_merges = len(result.get("merges", []))
-                        print(f"[daemon] Debate AI done: {n_merges} merges, {n_new} new args")
+                        log.info("daemon", f"Debate AI done: {n_merges} merges, {n_new} new args")
                     except Exception as e:
-                        print(f"[daemon] Debate AI cleanup failed: {e}", file=sys.stderr)
+                        log.error("daemon", f"Debate AI cleanup failed: {e}")
                         # Post empty result so backend advances to prep anyway
                         _post_json(
                             f"{config.server_url}/api/debate/ai-result",
@@ -650,7 +638,7 @@ def run() -> None:
                     else:
                         line_count = 0
                         latest_time = None
-                    print(f"[transcript] {line_count} lines in last {DEFAULT_TRANSCRIPT_MINUTES}min (total: {len(entries)} segments, {len(timed)} timed, latest: {latest_time})")
+                    log.info("transcript", f"{line_count}/{len(entries)} segs, latest={latest_time}")
                     _post_json(
                         f"{config.server_url}/api/transcript-status",
                         {"line_count": line_count, "total_lines": total_lines, "latest_ts": latest_time},
@@ -659,7 +647,7 @@ def run() -> None:
                 except SystemExit:
                     pass
                 except Exception as e:
-                    print(f"[transcript] Error: {e}", file=sys.stderr)
+                    log.error("transcript", f"Error: {e}")
 
                 # ── Push token usage alongside transcript stats ──
                 try:
@@ -669,7 +657,7 @@ def run() -> None:
                         config.host_username, config.host_password,
                     )
                 except Exception as e:
-                    print(f"[daemon] Token usage POST failed: {e}", file=sys.stderr)
+                    log.error("daemon", f"Token usage POST failed: {e}")
 
             # ── Snapshot state for backup ──
             try:
@@ -685,9 +673,9 @@ def run() -> None:
                     tmp_file.write_text(snapshot_json, encoding="utf-8")
                     os.rename(str(tmp_file), str(_BACKUP_FILE))
                     last_snapshot_hash = snapshot_hash
-                    print(f"[daemon] State backup saved ({len(snapshot_json)} bytes)")
+                    log.info("daemon", f"State backup: {len(snapshot_json)} bytes")
             except Exception as e:
-                print(f"[daemon] State snapshot failed: {e}", file=sys.stderr)
+                log.error("daemon", f"State snapshot failed: {e}")
 
             # ── Check for full-reset / forced summary request ──
             # (full-reset now behaves the same as force — always full regeneration)
@@ -697,7 +685,7 @@ def run() -> None:
                     config.host_username, config.host_password,
                 )
                 if reset_data.get("requested"):
-                    print("[summarizer] Full reset requested — triggering regeneration")
+                    log.info("summarizer", "Full reset — triggering regeneration")
             except Exception:
                 pass
 
@@ -716,7 +704,7 @@ def run() -> None:
             if force_summary and session_stack:
                 current_session = session_stack[-1]
                 session_folder = sessions_root / current_session["name"]
-                print(f"[summarizer] Generating summary (full regeneration)")
+                log.info("summarizer", "Generating summary (full regeneration)")
                 last_summary_at = now_mono
                 try:
                     result = generate_summary(config)
@@ -728,24 +716,21 @@ def run() -> None:
                         _save_key_points(session_folder, current_key_points)
                         _save_daemon_state(sessions_root, session_stack)
                         _sync_session_to_server(config, session_stack, current_key_points)
-                        print(f"\n⭐⭐⭐  Key Points Generated  ⭐⭐⭐")
-                        for pt in current_key_points:
-                            print(f"  • {pt.get('text')}")
-                        print(f"⭐⭐⭐ {len(current_key_points)} total key points ⭐⭐⭐\n")
+                        log.info("summarizer", f"Key points updated: {len(current_key_points)} total")
                 except Exception as e:
-                    print(f"[summarizer] Error: {e}", file=sys.stderr)
+                    log.error("summarizer", f"Error: {e}")
 
         except RuntimeError as e:
             if not server_disconnected:
-                print(f"[daemon] Server unreachable: {e}", file=sys.stderr)
+                log.error("daemon", f"Server unreachable: {e}")
                 server_disconnected = True
         except KeyboardInterrupt:
             _LOCK_FILE.unlink(missing_ok=True)
-            print("\n[daemon] Stopped.")
+            log.info("daemon", "Stopped.")
             return
         except Exception as e:
             # Keep daemon alive for unexpected transient errors; loop retries.
-            print(f"[daemon] Unexpected error (will retry): {e}", file=sys.stderr)
+            log.error("daemon", f"Unexpected error (will retry): {e}")
         time.sleep(DAEMON_POLL_INTERVAL)
 
 
