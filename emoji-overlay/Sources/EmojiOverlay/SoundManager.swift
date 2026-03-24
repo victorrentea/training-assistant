@@ -11,6 +11,29 @@ class SoundManager {
 
     private init() {}
 
+    /// Play a sound from the bundle Resources folder, looping indefinitely.
+    /// If the same sound is already playing, does nothing.
+    func playLooping(_ filename: String) {
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            if let existing = self.players[filename], existing.isPlaying { return }
+            guard let url = Bundle.module.url(forResource: filename, withExtension: nil, subdirectory: "Resources") else {
+                NSLog("SoundManager: file not found: \(filename)")
+                return
+            }
+            do {
+                let player = try AVAudioPlayer(contentsOf: url)
+                player.numberOfLoops = -1
+                player.volume = 1.0
+                player.prepareToPlay()
+                self.players[filename] = player
+                player.play()
+            } catch {
+                NSLog("SoundManager: failed to play \(filename): \(error)")
+            }
+        }
+    }
+
     /// Play a sound from the bundle Resources folder.
     /// If the same sound is already playing, does nothing (no restart).
     func play(_ filename: String) {
