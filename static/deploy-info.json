@@ -1,7 +1,7 @@
 {
-  "sha": "977232eef7a143dc4b7e8468a43a440c4b49edc2",
-  "timestamp": "2026-03-24 12:42",
+  "sha": "a5b38ffd801095e125389a906fd002e29a3e8ab8",
+  "timestamp": "2026-03-24 12:46",
   "changelog": [
-    "fix(overlay): pulse \u2014 bigger ECG amplitude (80% screen height) + louder lub-dub"
+    "feat(session): animated live dots + always-show End Session button"
   ]
 }
