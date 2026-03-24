@@ -1,7 +1,7 @@
 {
-  "sha": "15bc3499311b65a64e98da7f8ce45a0f4b2c21a0",
-  "timestamp": "2026-03-24 18:06",
+  "sha": "1fb750cdd1c347f4d145331175cc825a4f716428",
+  "timestamp": "2026-03-24 18:09",
   "changelog": [
-    "fix(overlay): sync pulse timing with new ECG image peaks (20.4%, 44.5%)"
+    "chore: gitignore desktop-overlay/.build/ and allow its PNG resources"
   ]
 }
