@@ -1,7 +1,7 @@
 {
-  "sha": "7d35f212b6835531b4d39b83183ff5f01c07bc3f",
-  "timestamp": "2026-03-24 07:15",
+  "sha": "6f4d40b6126368f94728ccaee39856d5b7e2d8fa",
+  "timestamp": "2026-03-24 07:25",
   "changelog": [
-    "feat: move quiz gen to top of poll left pane, collapse manual entry"
+    "feat(emoji-overlay): multi-screen preference + single-screen right-edge hide"
   ]
 }
