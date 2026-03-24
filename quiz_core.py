@@ -8,6 +8,7 @@ import json
 import os
 import re
 import socket
+from daemon import log
 import ssl
 import sys
 import urllib.error
@@ -71,10 +72,10 @@ def config_from_env(minutes: int = DEFAULT_MINUTES) -> Config:
     folder = Path(os.environ.get("TRANSCRIPTION_FOLDER", "/Users/victorrentea/Documents/transcriptions"))
     api_key = os.environ.get("ANTHROPIC_API_KEY", "")
     if not api_key:
-        print("[error] ANTHROPIC_API_KEY is not set.", file=sys.stderr)
+        log.error("daemon", "ANTHROPIC_API_KEY is not set")
         sys.exit(1)
     if not folder.exists() or not folder.is_dir():
-        print(f"[error] Transcription folder not found: {folder}", file=sys.stderr)
+        log.error("transcript", f"Folder not found: {folder}")
         sys.exit(1)
     project_folder = os.environ.get("PROJECT_FOLDER")
     return Config(
@@ -105,7 +106,7 @@ def find_session_folder(today: date) -> tuple[Optional[Path], Optional[Path]]:
     )
     sessions_root = Path(sessions_root_str).expanduser()
     if not sessions_root.exists() or not sessions_root.is_dir():
-        print(f"[session] SESSIONS_FOLDER not found or not a dir: {sessions_root}", file=sys.stderr)
+        log.error("session", f"SESSIONS_FOLDER not found: {sessions_root}")
         return None, None
 
     matches: list[tuple[date, str, Path]] = []
@@ -129,10 +130,10 @@ def find_session_folder(today: date) -> tuple[Optional[Path], Optional[Path]]:
             else:
                 end = date(start.year, start.month, int(g2))
         except ValueError:
-            print(f"[session] Skipping folder with invalid end date: {entry.name}", file=sys.stderr)
+            log.error("session", f"Invalid end date in: {entry.name}")
             continue
         if end < start:
-            print(f"[session] Skipping folder where end < start: {entry.name}", file=sys.stderr)
+            log.error("session", f"End < start in: {entry.name}")
             continue
         if start <= today <= end:
             matches.append((start, entry.name, entry))
@@ -141,7 +142,7 @@ def find_session_folder(today: date) -> tuple[Optional[Path], Optional[Path]]:
         return None, None
 
     if len(matches) > 1:
-        print(f"[session] Multiple session folders match today: {[m[1] for m in matches]}", file=sys.stderr)
+        log.error("session", f"Multiple folders match today: {[m[1] for m in matches]}")
 
     # Latest start_date; tie-break: alphabetically last name
     matches.sort(key=lambda x: (x[0], x[1]))
@@ -164,11 +165,11 @@ def read_session_notes(config: Config) -> str:
     try:
         raw = config.session_notes.read_text(encoding="utf-8", errors="replace")
         if len(raw) > MAX_SESSION_NOTES_CHARS:
-            print(f"[session] Notes truncated from {len(raw):,} to {MAX_SESSION_NOTES_CHARS:,} chars", file=sys.stderr)
+            log.error("session", f"Notes truncated to {MAX_SESSION_NOTES_CHARS:,} chars")
             raw = raw[-MAX_SESSION_NOTES_CHARS:]
         return raw.strip()
     except OSError as exc:
-        print(f"[session] Could not read notes file {config.session_notes}: {exc}", file=sys.stderr)
+        log.error("session", f"Could not read notes: {exc}")
         return ""
 
 
@@ -260,11 +261,11 @@ def load_transcription_files(folder: Path) -> list:
         key=_sort_key,
     )
     if not files:
-        print(f"[error] No .txt, .vtt, or .srt files found in {folder}", file=sys.stderr)
+        log.error("transcript", f"No transcription files in {folder}")
         sys.exit(1)
 
     latest = files[-1]
-    print(f"[info] Using latest transcription: {latest.name}")
+    log.info("transcript", f"Using: {latest.name}")
     raw = latest.read_text(encoding="utf-8", errors="replace")
     ext = latest.suffix.lower()
 
@@ -275,7 +276,7 @@ def load_transcription_files(folder: Path) -> list:
     else:
         entries = _parse_txt(raw)
 
-    print(f"[info]   {latest.name}: {len(entries)} segments")
+    log.info("transcript", f"{len(entries)} segments")
     return entries
 
 
@@ -292,14 +293,14 @@ def extract_last_n_minutes(entries: list, minutes: int) -> str:
         max_ts = max(ts for ts, _ in timed)
         cutoff = max_ts - minutes * 60
         selected = [(ts, txt) for ts, txt in entries if ts is not None and ts >= cutoff]
-        print(f"[info] Timestamp-based extraction (last {minutes} min, cutoff at {max(0, cutoff/60):.1f} min mark)")
+        log.info("transcript", f"Last {minutes} min (cutoff {max(0, cutoff/60):.1f} min mark)")
     else:
         budget = minutes * _CHARS_PER_MINUTE
         text = " ".join(txt for _, txt in entries)[-budget:]
-        print(f"[info] No timestamps — using last ~{budget:,} chars (≈{minutes} min at 130 wpm)")
+        log.info("transcript", f"No timestamps — last ~{budget:,} chars")
         if len(text) > MAX_CHARS_TO_CLAUDE:
             text = text[-MAX_CHARS_TO_CLAUDE:]
-            print(f"[info] Text capped at {MAX_CHARS_TO_CLAUDE:,} chars")
+            log.info("transcript", f"Text capped at {MAX_CHARS_TO_CLAUDE:,} chars")
         return text.strip()
 
     # Build clean text: add [HH:MM] markers only at ~1 min intervals
@@ -316,7 +317,7 @@ def extract_last_n_minutes(entries: list, minutes: int) -> str:
 
     if len(text) > MAX_CHARS_TO_CLAUDE:
         text = text[-MAX_CHARS_TO_CLAUDE:]
-        print(f"[info] Text capped at {MAX_CHARS_TO_CLAUDE:,} chars")
+        log.info("transcript", f"Text capped at {MAX_CHARS_TO_CLAUDE:,} chars")
     return text.strip()
 
 
@@ -484,7 +485,7 @@ def generate_quiz(text: str, config: Config) -> dict:
     if config.topic:
         prompt_content = f"TOPIC: {config.topic}\n\n{text}" if text else f"TOPIC: {config.topic}"
     
-    print(f"[info] Requesting quiz for: {config.topic or 'Transcript (last ' + str(config.minutes) + ' min)'}...")
+    log.info("quiz", f"Requesting: {config.topic or f'last {config.minutes} min'}")
     
     tools = [
         {
@@ -523,7 +524,7 @@ def generate_quiz(text: str, config: Config) -> dict:
                 tool_results = []
                 for tool_call in tool_use_blocks:
                     if tool_call.name == "search_materials":
-                        print(f"[info] Claude is searching for: {tool_call.input['query']}...")
+                        log.info("quiz", f"Claude searching: {tool_call.input['query']}")
                         search_results = search_materials(tool_call.input["query"])
                         tool_results.append({
                             "type": "tool_result",
@@ -644,7 +645,7 @@ def print_quiz(quiz: dict) -> None:
 
 
 def _quiz_error(msg: str, raw: str) -> None:
-    print(f"[error] Invalid quiz format: {msg}\n{raw}", file=sys.stderr)
+    log.error("quiz", f"Invalid format: {msg}")
     raise RuntimeError(f"Invalid quiz format: {msg}")
 
 
@@ -765,7 +766,7 @@ def post_status(status: str, message: str, config: Config,
                    payload,
                    config.host_username, config.host_password)
     except RuntimeError as e:
-        print(f"[warn] Could not post status: {e}", file=sys.stderr)
+        log.error("daemon", f"Could not post status: {e}")
 
 
 
