@@ -270,6 +270,12 @@
       <div class="stat-label">participants connected</div>
     </div>
     <ul id="pax-list" class="pax-list" title="Click a location to view map"></ul>
+    <div class="session-panel" id="session-panel">
+      <div class="session-top-bar">
+        <button class="btn btn-sm" id="btn-start-session" onclick="startNewSession()">▶ Start Session</button>
+      </div>
+      <div id="session-stack-list"></div>
+    </div>
     <div class="right-footer">
       <span style="display:flex; align-items:center; gap:.5rem; flex-wrap:nowrap; min-width:0;">
         <span style="flex-shrink:0;">👉</span><a id="participant-link" style="color:#fff; font-size:1.25rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; flex-shrink:1;" href="/" target="_blank"></a>
@@ -301,17 +307,6 @@
         <button class="btn btn-danger" onclick="resetScores()" title="Reset all scores to zero" style="font-size:.75rem; padding:.2rem .5rem; flex-shrink:0;">✖ Scores</button>
         <span id="token-cost" style="font-size:.75rem; color:var(--muted); flex-shrink:0;">$0.00</span>
       </span>
-    </div>
-    <div class="session-panel" id="session-panel">
-      <div class="session-breadcrumb" id="session-breadcrumb"></div>
-      <div class="session-current">
-        <span class="session-label" id="session-name-label">No active session</span>
-        <span class="session-edit-icon" id="session-edit-icon" onclick="renameSession()" title="Rename session" style="display:none;">✏️</span>
-      </div>
-      <div class="session-actions">
-        <button class="btn btn-sm" id="btn-start-session" onclick="startNewSession()">▶ Start Session</button>
-        <button class="btn btn-sm btn-danger" id="btn-end-session" onclick="endCurrentSession()" style="display:none;">■ End Session</button>
-      </div>
     </div>
   </div>
 
