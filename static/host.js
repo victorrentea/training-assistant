@@ -123,6 +123,7 @@
       const msg = JSON.parse(e.data);
       if (msg.type === 'kicked') {
         _kicked = true;
+        setKickedFavicon();
         document.body.insertAdjacentHTML('beforeend', `
           <div id="kicked-overlay" style="position:fixed;inset:0;background:rgba(0,0,0,.92);display:flex;
             align-items:center;justify-content:center;z-index:9999;font-size:1.4rem;color:#fff;
@@ -400,6 +401,27 @@
   function closeSummaryModal() {
     const overlay = document.getElementById('summary-overlay');
     if (overlay) overlay.classList.remove('open');
+  }
+
+  function setKickedFavicon() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 32;
+    canvas.height = 32;
+    const ctx = canvas.getContext('2d');
+    ctx.filter = 'grayscale(1) opacity(0.45)';
+    ctx.font = '24px serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('⚙️', 16, 17);
+    ctx.filter = 'none';
+    ctx.strokeStyle = '#e03030';
+    ctx.lineWidth = 5;
+    ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(5, 5);  ctx.lineTo(27, 27); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(27, 5); ctx.lineTo(5, 27);  ctx.stroke();
+    const link = document.querySelector("link[rel='icon']");
+    link.type = 'image/png';
+    link.href = canvas.toDataURL();
   }
 
   function setBadge(ok) {
