@@ -53,6 +53,7 @@ fi
 DAEMON_PID=""
 WATCHER_PID=""
 OVERLAY_PID=""
+RESTART_FLAG="/tmp/start_restart.flag"
 
 cleanup() {
   echo ""
@@ -171,12 +172,13 @@ start_watcher() {
         [ "$CURRENT_PROD" != "$LAST_PROD_VERSION" ] && _log "watcher" "info" "Prod version: $CURRENT_PROD" && LAST_PROD_VERSION="$CURRENT_PROD"
       fi
 
-      if [ $((POLL_COUNTER % 5)) -eq 0 ]; then
+      if [ $((POLL_COUNTER % 2)) -eq 0 ]; then
         CURRENT_HEAD=$(get_master_head)
         if [ -n "$CURRENT_HEAD" ] && [ "$CURRENT_HEAD" != "$LAST_MASTER_HEAD" ]; then
           COMMIT_MSG=$(get_commit_message "$CURRENT_HEAD")
           LAST_MASTER_HEAD="$CURRENT_HEAD"; MERGE_SHA="$CURRENT_HEAD"
           notify_pending_deploy "$CURRENT_HEAD" "$COMMIT_MSG"
+          touch /tmp/start_restart.flag
           if [ -z "$WAITING_SINCE" ]; then
             ESTIMATED=$(get_estimated_duration); WAITING_SINCE=$(date +%s)
             _log "watcher" "info" "Merge: ${CURRENT_HEAD:0:8} ~${ESTIMATED}s $COMMIT_MSG"
@@ -239,9 +241,8 @@ start_overlay() {
   OVERLAY_PID=$!
 }
 
-# ── Git auto-update ──
+# ── Git auto-update (fallback when watcher unavailable) ──
 
-GIT_POLL_INTERVAL=2  # seconds between git fetch checks
 LAST_KNOWN_REMOTE_HEAD=""
 
 check_git_updates() {
@@ -286,6 +287,7 @@ pull_and_rebuild() {
 
 # ── Main loop ──
 
+rm -f "$RESTART_FLAG"
 build_overlay
 
 while true; do
@@ -297,10 +299,12 @@ while true; do
   _log "start" "info" "🟢 daemon  🟢 watcher  🟢 overlay"
   echo ""
 
-  # Poll loop: check daemon health + git updates
+  # Poll loop: check daemon health + restart flag
   RESTART_REASON=""
+  GIT_FALLBACK_COUNTER=0
   while true; do
-    sleep "$GIT_POLL_INTERVAL"
+    sleep 0.5
+    GIT_FALLBACK_COUNTER=$((GIT_FALLBACK_COUNTER + 1))
 
     # Check if daemon exited
     if [ -n "$DAEMON_PID" ] && ! kill -0 "$DAEMON_PID" 2>/dev/null; then
@@ -321,17 +325,27 @@ while true; do
       fi
     fi
 
-    # Check for new commits on origin/master
-    if check_git_updates; then
-      RESTART_REASON="git-update"
+    # Restart flag written by watcher when new commit is detected
+    if [ -f "$RESTART_FLAG" ]; then
+      rm -f "$RESTART_FLAG"
+      RESTART_REASON="new-push"
       break
+    fi
+
+    # Fallback: git-based detection when watcher is unavailable (every 10s)
+    if [ -n "$NO_WATCHER" ] && [ $((GIT_FALLBACK_COUNTER % 20)) -eq 0 ]; then
+      if check_git_updates; then
+        RESTART_REASON="git-update"
+        break
+      fi
     fi
   done
 
-  # Stop everything and update
+  # Stop everything, update, and re-exec with fresh code
   stop_all_processes
   pull_and_rebuild
 
   _log "start" "info" "Restarting (reason: $RESTART_REASON)..."
   echo ""
+  exec bash "$SCRIPT_DIR/start.sh" "$OVERLAY_SERVER"
 done
