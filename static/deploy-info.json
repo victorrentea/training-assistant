@@ -1,7 +1,8 @@
 {
-  "sha": "f60cd0a377e30b4c121b8f9b10c3817f69d6e98d",
-  "timestamp": "2026-03-24 18:40",
+  "sha": "4b5f5f52396db60393004534403c6a03bfd32dda",
+  "timestamp": "2026-03-24 18:45",
   "changelog": [
-    "feat(summarizer): multi-day sessions, MD key points format, DOW timestamps"
+    "fix(start): detect new remote commits by tracking origin/master delta",
+    "feat(version): show build datetime and total hours in status tag"
   ]
 }
