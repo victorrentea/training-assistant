@@ -1447,3 +1447,51 @@ def test_session_lifecycle_via_endpoints():
     req4 = client.get("/api/session/request", headers=_HOST_AUTH_HEADERS).json()
     assert req4["action"] == "rename"
     assert req4["name"] == "New Name"
+
+
+def test_pending_deploy_broadcasts_to_participants(monkeypatch):
+    """POST /api/pending-deploy with a new SHA broadcasts deploy_pending WS message."""
+    import json
+    from pathlib import Path
+    deploy_info = Path(__file__).parent.parent / "static" / "deploy-info.json"
+    original = deploy_info.read_text() if deploy_info.exists() else None
+    try:
+        deploy_info.write_text(json.dumps({"sha": "aaa111bbb222ccc333", "timestamp": "x", "changelog": []}))
+
+        broadcast_calls = []
+        async def fake_broadcast(msg, exclude=None):
+            broadcast_calls.append(msg)
+        monkeypatch.setattr("routers.poll.broadcast", fake_broadcast)
+
+        client = TestClient(app)
+        response = client.post("/api/pending-deploy",
+                               json={"sha": "ddd444eee555fff666", "message": "feat: new thing"})
+        assert response.status_code == 200
+        assert any(c.get("type") == "deploy_pending" for c in broadcast_calls)
+    finally:
+        if original is not None:
+            deploy_info.write_text(original)
+
+
+def test_pending_deploy_same_sha_no_broadcast(monkeypatch):
+    """POST /api/pending-deploy with same full SHA does NOT broadcast deploy_pending."""
+    import json
+    from pathlib import Path
+    deploy_info = Path(__file__).parent.parent / "static" / "deploy-info.json"
+    original = deploy_info.read_text() if deploy_info.exists() else None
+    try:
+        deploy_info.write_text(json.dumps({"sha": "aaa111bbb222ccc333", "timestamp": "x", "changelog": []}))
+
+        broadcast_calls = []
+        async def fake_broadcast(msg, exclude=None):
+            broadcast_calls.append(msg)
+        monkeypatch.setattr("routers.poll.broadcast", fake_broadcast)
+
+        client = TestClient(app)
+        response = client.post("/api/pending-deploy",
+                               json={"sha": "aaa111bbb222ccc333", "message": "same commit"})
+        assert response.status_code == 200
+        assert not any(c.get("type") == "deploy_pending" for c in broadcast_calls)
+    finally:
+        if original is not None:
+            deploy_info.write_text(original)
