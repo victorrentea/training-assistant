@@ -1150,21 +1150,23 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
 }
 .session-live-dots {
   display: inline-block;
-  letter-spacing: .05em;
+  letter-spacing: .1em;
   color: var(--accent, #4fc3f7);
-  font-weight: 400;
+  font-weight: 700;
+  font-size: .6em;
+  vertical-align: middle;
 }
 .session-live-dots span {
   display: inline-block;
-  animation: session-dot-blink 1.4s infinite;
+  animation: session-dot-pulse 1.4s infinite;
 }
 .session-live-dots span:nth-child(2) { animation-delay: .18s; }
 .session-live-dots span:nth-child(3) { animation-delay: .36s; }
 .session-live-dots span:nth-child(4) { animation-delay: .54s; }
 .session-live-dots span:nth-child(5) { animation-delay: .72s; }
-@keyframes session-dot-blink {
-  0%, 80%, 100% { opacity: .45; }
-  40%           { opacity: 1; }
+@keyframes session-dot-pulse {
+  0%, 80%, 100% { transform: scale(1); }
+  40%           { transform: scale(1.6); }
 }
 .btn-sm {
   font-size: .7rem;
