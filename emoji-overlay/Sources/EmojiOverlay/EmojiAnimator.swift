@@ -6,6 +6,26 @@ class EmojiAnimator {
 
     static let emojiSet = ["❤️", "🔥", "👏", "😂", "🤯", "💡", "☕", "✅", "❌"]
 
+    // Image-extracted ECG beat curve (64 points, normalized x∈[0,1], y∈[-1,1], R-spike at x≈0.3465)
+    private static let beatCurve: [(Double, Double)] = [
+        (0.0000,0.0000), (0.0157,0.0054), (0.0315,0.0291), (0.0472,0.0560),
+        (0.0630,0.0891), (0.0787,0.1258), (0.0945,0.2001), (0.1102,0.2375),
+        (0.1260,0.2755), (0.1417,0.2809), (0.1575,0.2320), (0.1732,0.1614),
+        (0.1890,0.0915), (0.2047,0.0496), (0.2205,-0.0438), (0.2362,-0.1079),
+        (0.2520,-0.1122), (0.2677,-0.1312), (0.2835,-0.1176), (0.2992,0.0083),
+        (0.3150,0.3795), (0.3307,0.7897), (0.3465,0.9132), (0.3622,0.9064),
+        (0.3780,0.6096), (0.3937,0.4664), (0.4094,0.1651), (0.4252,-0.2663),
+        (0.4409,-0.3111), (0.4567,-0.2185), (0.4724,-0.0557), (0.4882,-0.0400),
+        (0.5039,-0.0197), (0.5197,-0.0020), (0.5354,0.0116), (0.5512,0.0062),
+        (0.5669,0.0112), (0.5827,0.0196), (0.5984,0.0198), (0.6142,0.0171),
+        (0.6299,0.0115), (0.6457,0.0059), (0.6614,0.0090), (0.6772,0.0005),
+        (0.6929,-0.0087), (0.7087,0.0039), (0.7244,0.0185), (0.7402,0.0268),
+        (0.7559,0.1190), (0.7717,0.1651), (0.7874,0.1964), (0.8031,0.2486),
+        (0.8189,0.3517), (0.8346,0.3388), (0.8504,0.3551), (0.8661,0.3484),
+        (0.8819,0.3192), (0.9055,0.3217), (0.9213,0.1663), (0.9370,0.1384),
+        (0.9528,0.0871), (0.9685,0.0368), (0.9843,0.0190), (1.0000,-0.0000)
+    ]
+
     // Track active toggleable effects (danger, sepia, zorro) so clicking again cancels them
     private var activeEffects: [String: CALayer] = [:]
 
@@ -15,7 +35,7 @@ class EmojiAnimator {
     // Pulse: layers stored so clicking again can stop it
     private var pulseRunning = false
     private var _pulseDimLayer: CALayer?
-    private var _pulseEcgLayer: CAShapeLayer?
+    private var _pulseEcgLayer: CALayer?
 
     init(hostLayer: CALayer) {
         self.hostLayer = hostLayer
@@ -1234,13 +1254,12 @@ class EmojiAnimator {
         pulseRunning = true
 
         let bounds = hostLayer.bounds
-        // Timing derived from dying.mp3 analysis:
-        // beat 1 R-spike ≈ 0.20s, beat 2 R-spike ≈ 1.60s, flatline ≈ 2.74s, total 4.60s
-        let totalDuration: Double = 4.598    // matches dying.mp3 duration exactly
-        let beatDuration: Double = 0.86      // one QRS cycle (R-spike at 0.233*0.86 ≈ 0.20s in)
-        let beat1Start: Double = 0.0
-        let beat2Start: Double = 1.40
-        let flatlineStart: Double = 2.74
+        // Timing: dying.mp3 R-spikes at 0.105s and 1.507s. Image peaks at 22% and 52.5% of width.
+        // soundDelay=0.906s: audio starts 0.906s after reveal begins →
+        //   beat1 visual at 1.011s = audio beat1 at 0.906+0.105=1.011s ✓
+        //   beat2 visual at 2.415s ≈ audio beat2 at 0.906+1.507=2.413s ✓ (<2ms error)
+        let totalDuration: Double = 4.598
+        let soundDelay:    Double = 0.906
 
         // Dark overlay
         let dimLayer = CALayer()
@@ -1260,73 +1279,49 @@ class EmojiAnimator {
         dimLayer.add(dimIn, forKey: "dimIn")
 
         // ECG canvas — full screen (amplitude needs full height)
-        let ecgLayer = CAShapeLayer()
+        // Load the extracted ECG image (green line, transparent background)
+        guard let url = Bundle.module.url(forResource: "ecg_line", withExtension: "png", subdirectory: "Resources"),
+              let nsImage = NSImage(contentsOf: url),
+              let cgImage = nsImage.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
+            pulseRunning = false
+            return
+        }
+
+        let ecgLayer = CALayer()
         _pulseEcgLayer = ecgLayer
-        ecgLayer.frame = CGRect(x: 0, y: 0, width: bounds.width, height: bounds.height)
-        ecgLayer.fillColor = nil
-        ecgLayer.strokeColor = NSColor(red: 0, green: 1, blue: 0.27, alpha: 1).cgColor
-        ecgLayer.lineWidth = 3
-        ecgLayer.lineCap = .round
-        ecgLayer.lineJoin = .round
-        ecgLayer.shadowColor = NSColor(red: 0, green: 1, blue: 0.27, alpha: 1).cgColor
-        ecgLayer.shadowOffset = .zero
-        ecgLayer.shadowRadius = 6
-        ecgLayer.shadowOpacity = 0.9
+        ecgLayer.contents = cgImage
+        ecgLayer.contentsGravity = .resize   // stretch to fill — line spans full screen
+        ecgLayer.frame = bounds
+        ecgLayer.opacity = 0
         hostLayer.addSublayer(ecgLayer)
 
-        // Build the full ECG path (2 QRS cycles + flatline) across the full width
-        let path = CGMutablePath()
-        let W = bounds.width
-        let mid: CGFloat = bounds.height / 2
+        // Fade in image
+        let ecgFadeIn = CABasicAnimation(keyPath: "opacity")
+        ecgFadeIn.fromValue = 0
+        ecgFadeIn.toValue = 1
+        ecgFadeIn.duration = 0.35
+        ecgFadeIn.fillMode = .forwards
+        ecgFadeIn.isRemovedOnCompletion = false
+        ecgLayer.add(ecgFadeIn, forKey: "ecgFadeIn")
 
-        // ECG waveform: maps t ∈ [0,1] within a cycle to y offset (normalised −1..+1)
-        func ecgOffset(_ t: Double) -> CGFloat {
-            func gauss(_ t: Double, _ center: Double, _ width: Double, _ amp: Double) -> Double {
-                let d = (t - center) / width
-                return amp * exp(-d * d * 2)
-            }
-            var y = 0.0
-            y += gauss(t, 0.09, 0.040, 0.15)   // P wave (small positive)
-            y -= gauss(t, 0.200, 0.016, 0.30)   // Q dip
-            y += gauss(t, 0.233, 0.018, 1.00)   // R spike (tall positive)
-            y -= gauss(t, 0.270, 0.018, 0.60)   // S dip
-            y += gauss(t, 0.400, 0.055, 0.38)   // T wave (positive bump)
-            return CGFloat(y)
-        }
+        // Left-to-right reveal mask (white rect grows from left edge)
+        let maskLayer = CALayer()
+        maskLayer.backgroundColor = NSColor.white.cgColor
+        maskLayer.anchorPoint = CGPoint(x: 0, y: 0.5)
+        maskLayer.position = CGPoint(x: 0, y: bounds.height / 2)
+        maskLayer.bounds = CGRect(x: 0, y: 0, width: 0, height: bounds.height)
+        ecgLayer.mask = maskLayer
 
-        let amp: CGFloat = bounds.height * 0.40   // 80% total height (40% above + below center)
-        let steps = 800
-        var firstPoint = true
-        for i in 0...steps {
-            let xFrac = Double(i) / Double(steps)
-            let x = CGFloat(xFrac) * W
-            let t = xFrac * totalDuration
-            let y: CGFloat
-            if t >= beat1Start && t < beat1Start + beatDuration {
-                y = mid - ecgOffset((t - beat1Start) / beatDuration) * amp
-            } else if t >= beat2Start && t < beat2Start + beatDuration {
-                y = mid - ecgOffset((t - beat2Start) / beatDuration) * amp
-            } else {
-                y = mid   // baseline or flatline
-            }
-            if firstPoint { path.move(to: CGPoint(x: x, y: y)); firstPoint = false }
-            else { path.addLine(to: CGPoint(x: x, y: y)) }
-        }
-        ecgLayer.path = path
-
-        // Animate drawing left-to-right via strokeEnd
-        let draw = CABasicAnimation(keyPath: "strokeEnd")
-        draw.fromValue = 0
-        draw.toValue = 1
-        draw.duration = totalDuration
-        draw.timingFunction = CAMediaTimingFunction(name: .linear)
-        draw.fillMode = .forwards
-        draw.isRemovedOnCompletion = false
-        ecgLayer.strokeEnd = 0
+        let reveal = CABasicAnimation(keyPath: "bounds.size.width")
+        reveal.fromValue = 0
+        reveal.toValue = bounds.width
+        reveal.duration = totalDuration
+        reveal.timingFunction = CAMediaTimingFunction(name: .linear)
+        reveal.fillMode = .forwards
+        reveal.isRemovedOnCompletion = false
 
         CATransaction.begin()
         CATransaction.setCompletionBlock { [weak self, weak dimLayer, weak ecgLayer] in
-            // Fade out everything
             NSAnimationContext.runAnimationGroup({ ctx in
                 ctx.duration = 0.45
                 dimLayer?.opacity = 0
@@ -1339,11 +1334,13 @@ class EmojiAnimator {
                 self?._pulseEcgLayer = nil
             })
         }
-        ecgLayer.add(draw, forKey: "draw")
+        maskLayer.add(reveal, forKey: "reveal")
         CATransaction.commit()
 
-        // Sound: play dying.mp3 — duration matches animation, fades naturally at end
-        SoundManager.shared.play("dying.mp3")
+        // Sound: delayed so visual R-spike (at 0.3465*0.8=0.277s) coincides with audio R-spike (0.172+0.105=0.277s)
+        DispatchQueue.main.asyncAfter(deadline: .now() + soundDelay) {
+            SoundManager.shared.play("dying.mp3")
+        }
     }
 
     // MARK: - Pulse stop (called when button pressed while running)
