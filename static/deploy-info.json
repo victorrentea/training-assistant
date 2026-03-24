@@ -1,7 +1,7 @@
 {
-  "sha": "345fb5ce7a8df34d0f302f93ce7dcc783fd69cf2",
-  "timestamp": "2026-03-24 11:06",
+  "sha": "532b7cc6067af3cf10a7ba569e604d451f378c21",
+  "timestamp": "2026-03-24 12:03",
   "changelog": [
-    "feat: session panel above footer with stack layout and inline end button"
+    "feat(overlay): add \ud83d\udc4f Applause and \ud83d\udc9a Pulse screen effects"
   ]
 }
