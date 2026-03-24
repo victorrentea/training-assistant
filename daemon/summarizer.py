@@ -1,9 +1,8 @@
 """
 Summarizer — generates key discussion points from live transcript.
 
-Called periodically by the daemon. Reads last 30 min of transcript,
-receives existing points as context, returns {"updated": [...], "new": [...]}
-with in-place updates and new takeaways.
+Called on-demand by the daemon. Reads the full transcript and session notes,
+returns {"points": [...]} with a fresh complete list of all key points.
 """
 
 import json
@@ -16,9 +15,8 @@ from daemon.project_files import get_project_tools, handle_project_tool_call, PR
 
 from quiz_core import (
     Config,
-    DEFAULT_TRANSCRIPT_MINUTES,
     load_transcription_files,
-    extract_last_n_minutes,
+    extract_all_text,
     read_session_notes,
 )
 
@@ -27,7 +25,7 @@ SUMMARY_INTERVAL_SECONDS = 5 * 60  # 5 minutes
 _SUMMARY_SYSTEM_PROMPT = """\
 You are a technical workshop summarizer. You extract high-density takeaways from a live session.
 
-Input: transcript excerpt, optionally trainer's session notes, optionally recent key points with indices that you may update.
+Input: full session transcript and/or trainer's session notes.
 
 Output rules:
 - Each bullet: ONE actionable or factual technical statement (max 15 words).
@@ -38,21 +36,17 @@ Output rules:
 - BAD: "Session ended with informal discussion" (filler, no takeaway)
 - BAD: "The trainer demonstrated an interesting approach" (meta-commentary)
 - Never describe what happened socially — only capture WHAT was taught or concluded.
-- Ignore transcription noise, filler, off-topic chatter.
+- Capture every important detail — aim for high density, don't leave out valuable ideas.
+- Ignore transcription noise, filler, off-topic chatter, and garbled dictation.
 - For each bullet, indicate source:
   - "notes" if it comes primarily from SESSION NOTES (trainer's agenda/material)
   - "discussion" if it comes primarily from TRANSCRIPT (what was actually said)
 - For each bullet, include "time": the approximate timestamp (HH:MM format, 24h) when the topic was discussed. Omit "time" for bullets derived solely from session notes with no transcript match.
 
-Response format — return ONLY a JSON object with two arrays:
-- "updated": points that REVISE an existing key point (include "index" matching the provided index). Use when new discussion adds to, corrects, or refines an existing point.
-- "new": entirely new takeaways not covered by existing points.
+Response format — return ONLY a JSON object:
+{"points": [{"text": "...", "source": "discussion"|"notes", "time": "HH:MM"}, ...]}
 
-Example:
-{"updated": [{"index": 2, "text": "Revised point with new info", "source": "discussion", "time": "14:30"}], "new": [{"text": "Brand new takeaway", "source": "discussion", "time": "15:10"}]}
-
-If nothing to update, return {"updated": [], "new": [...]}.
-If nothing new, return {"updated": [...], "new": []}.
+Omit "time" for notes-only bullets.
 
 ## Project Source Code
 If `list_project_tree` and `read_project_file` tools are available, use them to find relevant source files when the transcript mentions specific classes, patterns, or configurations. Include specific class/method references in your key points.
@@ -61,44 +55,34 @@ If `list_project_tree` and `read_project_file` tools are available, use them to 
 
 def generate_summary(
     config: Config,
-    existing_points: list[dict],
-    delta_text: str | None = None,
 ) -> Optional[dict]:
-    """Generate summary updates from transcript, given existing points as context. Returns {"updated": [...], "new": [...]} or None on failure.
-
-    When delta_text is provided and non-empty, it is used instead of loading
-    the full transcript — this sends only incremental content to the LLM.
+    """Generate a fresh complete list of key points from the full transcript and session notes.
+    Returns {"points": [...]} or None on failure.
     """
-    if delta_text:
-        text = delta_text
-        transcript_label = "INCREMENTAL TRANSCRIPT (new content since last summary)"
-    else:
-        # Fall back to loading full transcript
-        try:
-            entries = load_transcription_files(config.folder)
-        except SystemExit:
-            print("[summarizer] No transcription files found — skipping", file=sys.stderr)
-            return None
+    # Load full transcript
+    try:
+        entries = load_transcription_files(config.folder)
+    except SystemExit:
+        print("[summarizer] No transcription files found — skipping", file=sys.stderr)
+        return None
 
-        if not entries:
-            return None
-
-        text = extract_last_n_minutes(entries, DEFAULT_TRANSCRIPT_MINUTES)
-        if not text:
-            return None
-        transcript_label = f"TRANSCRIPT (last {DEFAULT_TRANSCRIPT_MINUTES} minutes)"
+    text = None
+    if entries:
+        text = extract_all_text(entries)
 
     # Include session notes if available
     notes = read_session_notes(config)
 
+    if not text and not notes:
+        print("[summarizer] No transcript or notes available — skipping", file=sys.stderr)
+        return None
+
     # Build user message
     parts = []
     if notes:
-        parts.append(f"SESSION NOTES (trainer's agenda):\n{notes}\n")
-    if existing_points:
-        indexed_texts = "\n".join(f"  [{i}] {p['text']}" for i, p in enumerate(existing_points))
-        parts.append(f"RECENT KEY POINTS (you may update by index, or add new):\n{indexed_texts}\n")
-    parts.append(f"{transcript_label}:\n{text}")
+        parts.append(f"SESSION NOTES (trainer's agenda/material):\n{notes}\n")
+    if text:
+        parts.append(f"FULL SESSION TRANSCRIPT:\n{text}")
 
     user_message = "\n---\n".join(parts)
 
@@ -168,41 +152,18 @@ def generate_summary(
         # Parse JSON from response
         parsed = json.loads(response_text)
 
-        # Backward compat: if LLM returns a flat array, wrap as all-new
+        # Accept both {"points": [...]} and flat array formats
+        raw_list = None
         if isinstance(parsed, list):
-            new_points = []
-            for item in parsed:
-                if isinstance(item, dict) and "text" in item:
-                    source = item.get("source", "discussion")
-                    if source not in ("notes", "discussion"):
-                        source = "discussion"
-                    point = {"text": item["text"], "source": source}
-                    if item.get("time"):
-                        point["time"] = item["time"]
-                    new_points.append(point)
-                elif isinstance(item, str):
-                    new_points.append({"text": item, "source": "discussion"})
-            parsed = {"updated": [], "new": new_points}
-
-        if not isinstance(parsed, dict) or "new" not in parsed:
+            raw_list = parsed
+        elif isinstance(parsed, dict) and "points" in parsed:
+            raw_list = parsed["points"]
+        else:
             print(f"[summarizer] Unexpected response format: {response_text[:200]}", file=sys.stderr)
             return None
 
-        # Normalize updated entries
-        updated = []
-        for item in parsed.get("updated", []):
-            if isinstance(item, dict) and "text" in item and "index" in item:
-                source = item.get("source", "discussion")
-                if source not in ("notes", "discussion"):
-                    source = "discussion"
-                entry = {"index": item["index"], "text": item["text"], "source": source}
-                if item.get("time"):
-                    entry["time"] = item["time"]
-                updated.append(entry)
-
-        # Normalize new entries
-        new_pts = []
-        for item in parsed.get("new", []):
+        points = []
+        for item in raw_list:
             if isinstance(item, dict) and "text" in item:
                 source = item.get("source", "discussion")
                 if source not in ("notes", "discussion"):
@@ -210,12 +171,12 @@ def generate_summary(
                 point = {"text": item["text"], "source": source}
                 if item.get("time"):
                     point["time"] = item["time"]
-                new_pts.append(point)
+                points.append(point)
             elif isinstance(item, str):
-                new_pts.append({"text": item, "source": "discussion"})
+                points.append({"text": item, "source": "discussion"})
 
-        result = {"updated": updated, "new": new_pts}
-        print(f"[summarizer] Generated {len(updated)} updates + {len(new_pts)} new points")
+        result = {"points": points}
+        print(f"[summarizer] Generated {len(points)} key points")
         return result
 
     except json.JSONDecodeError as e:
