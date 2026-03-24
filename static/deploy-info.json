@@ -1,17 +1,7 @@
 {
-  "sha": "1b63e9d037a1629e77d6167999114799779ff307",
-  "timestamp": "2026-03-24 07:27",
+  "sha": "e4d036872a3a475a991189681f4a57f525a8c7e1",
+  "timestamp": "2026-03-24 07:44",
   "changelog": [
-    "feat: session stack complete \u2014 cleanup old summary model",
-    "feat: transcript time-windowing with nested session exclusion",
-    "feat: summarizer returns {updated, new} format with index-based point patching",
-    "feat: daemon session stack management with polling and summary generation",
-    "feat: session key points & daemon state persistence",
-    "feat: host UI session management panel",
-    "feat: broadcast session stack to clients",
-    "fix: align session router auth pattern with codebase convention",
-    "feat: session stack endpoints (start/end/rename/sync/poll)",
-    "docs: session stack implementation plan",
-    "docs: session stack & progressive summarization design spec"
+    "fix(emoji-overlay): fireworks sound ends 300ms before animation"
   ]
 }
