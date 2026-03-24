@@ -1,7 +1,7 @@
 {
-  "sha": "979b1bb2b57a675d1915422b8780a1fd8b420ab0",
-  "timestamp": "2026-03-24 13:09",
+  "sha": "c6c0bf4795ff9c7c2d9d7a6aee7e4adebd7344a1",
+  "timestamp": "2026-03-24 13:10",
   "changelog": [
-    "feat: add \ud83d\udd04 refresh button in Key Points overlay (host + participant)"
+    "feat(host): subtle score-reset button and participant list columns"
   ]
 }
