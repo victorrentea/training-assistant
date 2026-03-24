@@ -63,3 +63,13 @@ jobs:
           fi
           git commit -m "chore: update deploy-info [skip ci]"
           git push
+
+      - name: Notify server of incoming deploy
+        env:
+          SERVER_URL: https://interact.victorrentea.ro
+        run: |
+          curl -sf -X POST "$SERVER_URL/api/pending-deploy" \
+            -H "Content-Type: application/json" \
+            -d "{\"sha\": \"$GITHUB_SHA\", \"message\": \"CI push\"}" \
+            --max-time 10 \
+          || echo "Server notify failed (non-fatal)"
