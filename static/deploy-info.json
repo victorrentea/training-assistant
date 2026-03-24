@@ -1,7 +1,7 @@
 {
-  "sha": "3f13f7bc700aed5940c3fdd9c7901a672db2c260",
-  "timestamp": "2026-03-24 18:25",
+  "sha": "048b16cf6c4d7cc51e8ddd793eac5edaddefdb76",
+  "timestamp": "2026-03-24 18:26",
   "changelog": [
-    "fix(start): SIGKILL all processes on stop \u2014 no grace period"
+    "feat(participant): show key points count on button with yellow flash on update"
   ]
 }
