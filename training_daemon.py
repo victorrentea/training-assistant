@@ -693,7 +693,6 @@ def run() -> None:
                     entries = load_transcription_files(config.folder)
                     if entries:
                         if current_session.get("started_at"):
-                            from datetime import datetime
                             session_start = datetime.fromisoformat(current_session["started_at"])
                             start_secs = session_start.hour * 3600 + session_start.minute * 60 + session_start.second
                             full_text = extract_text_for_time_window(entries, start_ts=start_secs)
