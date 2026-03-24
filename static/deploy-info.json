@@ -1,8 +1,7 @@
 {
-  "sha": "150a08e94181339b0f03d19536599153ec953071",
-  "timestamp": "2026-03-24 17:13",
+  "sha": "dcd07578cfdfc54f22c342b38c54f734cc24def8",
+  "timestamp": "2026-03-24 17:17",
   "changelog": [
-    "feat: custom speech-bubble tooltips throughout participant view",
-    "revert(overlay): restore image-based ECG pulse (state from 5a9f610)"
+    "fix(daemon): replace raw print() calls in project_files with log utility"
   ]
 }
