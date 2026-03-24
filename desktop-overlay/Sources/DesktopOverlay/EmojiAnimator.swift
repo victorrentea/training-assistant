@@ -1291,8 +1291,12 @@ class EmojiAnimator {
         let ecgLayer = CALayer()
         _pulseEcgLayer = ecgLayer
         ecgLayer.contents = cgImage
-        ecgLayer.contentsGravity = .resize   // stretch to fill — line spans full screen
-        ecgLayer.frame = bounds
+        ecgLayer.contentsGravity = .resize
+        // Stretch full screen width, scale height proportionally, center vertically
+        let imgAspect = CGFloat(cgImage.width) / CGFloat(cgImage.height)
+        let imgHeight = bounds.width / imgAspect
+        ecgLayer.frame = CGRect(x: 0, y: (bounds.height - imgHeight) / 2,
+                                width: bounds.width, height: imgHeight)
         ecgLayer.opacity = 0
         hostLayer.addSublayer(ecgLayer)
 
@@ -1309,8 +1313,8 @@ class EmojiAnimator {
         let maskLayer = CALayer()
         maskLayer.backgroundColor = NSColor.white.cgColor
         maskLayer.anchorPoint = CGPoint(x: 0, y: 0.5)
-        maskLayer.position = CGPoint(x: 0, y: bounds.height / 2)
-        maskLayer.bounds = CGRect(x: 0, y: 0, width: 0, height: bounds.height)
+        maskLayer.position = CGPoint(x: 0, y: ecgLayer.bounds.height / 2)
+        maskLayer.bounds = CGRect(x: 0, y: 0, width: 0, height: ecgLayer.bounds.height)
         ecgLayer.mask = maskLayer
 
         let reveal = CABasicAnimation(keyPath: "bounds.size.width")
