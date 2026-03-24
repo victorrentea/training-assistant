@@ -1,7 +1,7 @@
 {
-  "sha": "1ec44ebbb8eb02aba3a201a8a5007dd8d4da66c8",
-  "timestamp": "2026-03-24 17:50",
+  "sha": "e1f704009421879638f16069f5a4c1807fabb2ea",
+  "timestamp": "2026-03-24 17:53",
   "changelog": [
-    "fix(transcript): merge file+count into one log line with short date"
+    "fix(overlay): human-readable log messages, no raw NSError dumps"
   ]
 }
