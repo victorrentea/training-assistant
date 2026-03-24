@@ -65,6 +65,7 @@ async def poll_quiz_request():
         "session_folder": state.daemon_session_folder,
         "has_notes_content": state.notes_content is not None,
         "has_key_points": len(state.summary_points) > 0,
+        "needs_restore": state.needs_restore,
     }
 
 
