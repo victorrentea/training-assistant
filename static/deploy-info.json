@@ -1,7 +1,7 @@
 {
-  "sha": "e9fd6b7bc0fb37e92acb51caeff9b54dfa01a837",
-  "timestamp": "2026-03-24 13:19",
+  "sha": "d36b00be09497a36483b5c87c765465892f4f699",
+  "timestamp": "2026-03-24 13:21",
   "changelog": [
-    "feat(overlay): use extracted ECG image for pulse effect"
+    "feat: full regenerate entire day \u2014 resets watermark + triggers summary"
   ]
 }
