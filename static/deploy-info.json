@@ -1,7 +1,7 @@
 {
-  "sha": "616818ad537923467085bc8f2adb826f1b6dd58f",
-  "timestamp": "2026-03-24 18:54",
+  "sha": "f88c902d87729196a8e8ba85cae624ca756c986d",
+  "timestamp": "2026-03-24 18:56",
   "changelog": [
-    "feat(participant): location label, notif-btn cleanup, checklist emojis"
+    "fix(log): remove error emoji, align level to 8 chars, fix raw prints"
   ]
 }
