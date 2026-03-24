@@ -1757,13 +1757,13 @@
         <p style="margin-top:.5rem;">Your answers and ideas will shape this session!</p>
         <ul id="onboarding-list" class="onboarding-checklist"${allDone ? ' style="opacity:1"' : ''}>
           <li id="onboard-name" class="onboarding-item${nameSet ? ' done' : ''}" onclick="${nameSet ? '' : 'startNameEdit()'}" style="cursor:${nameSet ? 'default' : 'pointer'}">
-            <input type="checkbox" disabled ${nameSet ? 'checked' : ''}> Click on your name to set it
+            <input type="checkbox" disabled ${nameSet ? 'checked' : ''}> ✏️ Click on your name to set it
           </li>
           <li id="onboard-location" class="onboarding-item${locationSet ? ' done' : ''}" onclick="${locationSet ? '' : 'requestLocation()'}" style="cursor:${locationSet ? 'default' : 'pointer'}">
-            <input type="checkbox" disabled ${locationSet ? 'checked' : ''}> Share your location
+            <input type="checkbox" disabled ${locationSet ? 'checked' : ''}> 📍 Share your location
           </li>
           <li id="onboard-notif" class="onboarding-item${notifGranted ? ' done' : ''}" onclick="${notifGranted ? '' : 'requestNotificationPermission()'}" style="cursor:${notifGranted ? 'default' : 'pointer'}">
-            <input type="checkbox" disabled ${notifGranted ? 'checked' : ''}> 🔔 Enable notifications
+            <input type="checkbox" disabled ${notifGranted ? 'checked' : ''}> 🔔 Enable browser notifications
           </li>
         </ul>
       </div>`;
