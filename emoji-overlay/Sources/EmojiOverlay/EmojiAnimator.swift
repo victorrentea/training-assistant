@@ -1334,4 +1334,21 @@ class EmojiAnimator {
         // Sound: play dying.mp3 — duration matches animation, fades naturally at end
         SoundManager.shared.play("dying.mp3")
     }
+
+    // MARK: - Stop all
+
+    func stopAll() {
+        // Cancel applause if running
+        if applauseTimer != nil {
+            applauseTimer?.invalidate()
+            applauseTimer = nil
+            SoundManager.shared.stop("applause.mp3")
+        }
+        // Cancel any toggleable effects (danger, zorro, sepia, fireworks...)
+        for (key, layer) in activeEffects {
+            layer.removeAllAnimations()
+            layer.removeFromSuperlayer()
+            activeEffects.removeValue(forKey: key)
+        }
+    }
 }
