@@ -762,7 +762,12 @@ def run() -> None:
                                 _save_key_points(session_folder, current_key_points)
                                 _save_daemon_state(sessions_root, session_stack)
                                 _sync_session_to_server(config, session_stack, current_key_points)
-                                print(f"[summarizer] {len(current_key_points)} total key points")
+                                print(f"\n***  Key Points Update  ***")
+                                for upd in result.get("updated", []):
+                                    print(f"  ~ [{upd.get('index')}] {upd.get('text')}")
+                                for new_pt in result.get("new", []):
+                                    print(f"  + {new_pt.get('text')}")
+                                print(f"*** {len(current_key_points)} total key points ***\n")
                 except Exception as e:
                     print(f"[summarizer] Error: {e}", file=sys.stderr)
 
