@@ -371,7 +371,6 @@ private class RoundEmojiButton: NSView {
         if isPressed && !isDragging {
             let loc = convert(event.locationInWindow, from: nil)
             if bounds.contains(loc) {
-                NSLog("Button tapped: \(toolTip ?? "?")")
                 action()
             }
         }

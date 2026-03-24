@@ -10,19 +10,19 @@ if let oldPidStr = try? String(contentsOfFile: lockFilePath, encoding: .utf8)
         .trimmingCharacters(in: .whitespacesAndNewlines),
    let oldPid = Int32(oldPidStr),
    oldPid != myPid {
-    NSLog("EmojiOverlay: killing previous instance PID %d", oldPid)
+    overlayInfo("Killing prev instance PID \(oldPid)")
     kill(oldPid, SIGTERM)
     // Give it a moment, then force-kill if still alive
     usleep(200_000) // 200ms
     if kill(oldPid, 0) == 0 {
-        NSLog("EmojiOverlay: PID %d still alive, sending SIGKILL", oldPid)
+        overlayInfo("PID \(oldPid) still alive, sending SIGKILL")
         kill(oldPid, SIGKILL)
     }
 }
 
 // Write our PID (supersedes any previous instance)
 try? "\(myPid)".write(toFile: lockFilePath, atomically: true, encoding: .utf8)
-NSLog("EmojiOverlay: started with PID %d, wrote lock file", myPid)
+overlayInfo("Started PID \(myPid)")
 
 // Clean up lock file on exit (only if we still own it)
 func cleanupLockFile() {
@@ -48,7 +48,7 @@ app.setActivationPolicy(.accessory) // no dock icon
 let pidFilePath = "/tmp/emoji-overlay.pid"
 let myPID = ProcessInfo.processInfo.processIdentifier
 try? "\(myPID)".write(toFile: pidFilePath, atomically: true, encoding: .utf8)
-NSLog("Started with PID \(myPID), wrote lock file")
+overlayInfo("Started PID \(myPID)")
 
 // Server URL from command line or default
 let serverURL: String
@@ -69,7 +69,7 @@ Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { _ in
         return // lock file missing or unreadable — keep running
     }
     if filePid != myPid {
-        NSLog("EmojiOverlay: PID %d superseded by PID %d — exiting", myPid, filePid)
+        overlayInfo("Superseded by PID \(filePid) — exiting")
         cleanupLockFile()
         exit(0)
     }

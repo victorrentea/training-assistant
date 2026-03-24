@@ -18,7 +18,7 @@ class SoundManager {
             guard let self = self else { return }
             if let existing = self.players[filename], existing.isPlaying { return }
             guard let url = Bundle.module.url(forResource: filename, withExtension: nil, subdirectory: "Resources") else {
-                NSLog("SoundManager: file not found: \(filename)")
+                overlayError("Sound file not found: \(filename)")
                 return
             }
             do {
@@ -29,7 +29,7 @@ class SoundManager {
                 self.players[filename] = player
                 player.play()
             } catch {
-                NSLog("SoundManager: failed to play \(filename): \(error)")
+                overlayError("Sound play failed \(filename): \(error)")
             }
         }
     }
@@ -46,7 +46,7 @@ class SoundManager {
             }
 
             guard let url = Bundle.module.url(forResource: filename, withExtension: nil, subdirectory: "Resources") else {
-                NSLog("SoundManager: file not found: \(filename)")
+                overlayError("Sound file not found: \(filename)")
                 return
             }
 
@@ -57,7 +57,7 @@ class SoundManager {
                 self.players[filename] = player
                 player.play()
             } catch {
-                NSLog("SoundManager: failed to play \(filename): \(error)")
+                overlayError("Sound play failed \(filename): \(error)")
             }
         }
     }
@@ -68,7 +68,7 @@ class SoundManager {
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
             guard let url = Bundle.module.url(forResource: filename, withExtension: nil, subdirectory: "Resources") else {
-                NSLog("SoundManager: file not found: \(filename)")
+                overlayError("Sound file not found: \(filename)")
                 return
             }
             do {
@@ -82,7 +82,7 @@ class SoundManager {
                     self?.overlappingPlayers.removeAll { !$0.isPlaying }
                 }
             } catch {
-                NSLog("SoundManager: failed to play \(filename): \(error)")
+                overlayError("Sound play failed \(filename): \(error)")
             }
         }
     }
