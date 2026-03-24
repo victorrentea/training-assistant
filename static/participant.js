@@ -720,9 +720,6 @@
       case 'summary':
         updateSummary(msg.points, msg.updated_at);
         break;
-      case 'keynotes_updated':
-        _showKeynotesUpdatedToast();
-        break;
       case 'leaderboard':
         showParticipantLeaderboard(msg);
         break;
@@ -1025,17 +1022,6 @@
         });
       })
       .start();
-  }
-
-  // ── Keynotes updated ──
-  let _keynotesUpdatedTimeout = null;
-  function _showKeynotesUpdatedToast() {
-    const el = document.getElementById('qa-toast');
-    if (!el) return;
-    el.textContent = '📝 Key points updated!';
-    el.classList.add('visible');
-    clearTimeout(_keynotesUpdatedTimeout);
-    _keynotesUpdatedTimeout = setTimeout(() => el.classList.remove('visible'), 4000);
   }
 
   // ── Q&A ──
