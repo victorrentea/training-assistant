@@ -235,6 +235,8 @@
 }
 .header-link-btn:hover { border-color: var(--accent); color: var(--accent); }
 .modal-newtab-btn {
+  background: none;
+  border: none;
   color: var(--text-muted);
   text-decoration: none;
   font-size: 1.1rem;
