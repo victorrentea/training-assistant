@@ -184,6 +184,8 @@
         renderParticipantList(names);
         updateLeaderboardButton();
         renderDaemonStatus(msg.daemon_connected, msg.daemon_last_seen);
+        document.getElementById('restore-banner').style.display =
+          (msg.needs_restore && !msg.daemon_connected) ? '' : 'none';
         updateTokenBadge(msg.token_usage);
         renderTranscriptStatus(msg.transcript_line_count, msg.transcript_total_lines, msg.transcript_latest_ts);
         renderOverlayStatus(msg.overlay_connected);

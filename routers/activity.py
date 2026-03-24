@@ -19,5 +19,6 @@ async def set_activity(body: ActivitySwitch):
     except ValueError:
         raise HTTPException(400, f"Unknown activity: {body.activity}")
     state.current_activity = new_activity
+    state.needs_restore = False
     await broadcast_state()
     return {"ok": True, "current_activity": new_activity}

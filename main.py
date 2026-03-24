@@ -4,7 +4,6 @@ FastAPI + WebSocket backend
 """
 
 import logging
-from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.staticfiles import StaticFiles
@@ -15,24 +14,11 @@ from auth import require_host_auth
 from messaging import broadcast_state
 from state import state  # re-exported for test_main.py: from main import app, state
 import metrics  # noqa: registers custom Prometheus metrics
-from routers import ws, poll, scores, quiz, pages, wordcloud, activity, qa, codereview, summary, debate, leaderboard, session
-from persistence.migrate import run_migrations
-from persistence.restore import restore_state
-from persistence.snapshot import start_snapshot_task, stop_snapshot_task, write_snapshot
+from routers import ws, poll, scores, quiz, pages, wordcloud, activity, qa, codereview, summary, debate, leaderboard, session, state_snapshot
 
 logging.basicConfig(level=logging.INFO)
 
-
-@asynccontextmanager
-async def lifespan(app):
-    run_migrations()
-    restore_state()
-    start_snapshot_task()
-    yield
-    write_snapshot()
-    stop_snapshot_task()
-
-app = FastAPI(title="Workshop Tool", lifespan=lifespan)
+app = FastAPI(title="Workshop Tool")
 
 Instrumentator().instrument(app).expose(
     app, endpoint="/metrics", dependencies=[Depends(require_host_auth)]
@@ -52,6 +38,7 @@ app.include_router(summary.public_router)
 app.include_router(debate.router)
 app.include_router(leaderboard.router)
 app.include_router(session.router)
+app.include_router(state_snapshot.router, dependencies=[Depends(require_host_auth)])
 
 class ModeRequest(BaseModel):
     mode: str
