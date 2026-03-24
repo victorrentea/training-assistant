@@ -1,7 +1,7 @@
 {
-  "sha": "8eab7e4756540518921ea011f4509de7ead403a3",
-  "timestamp": "2026-03-24 18:59",
+  "sha": "ca46e489063927bd58004996aaae9a1ba3bc2477",
+  "timestamp": "2026-03-24 19:03",
   "changelog": [
-    "fix(version): move reload banner to top-right under version tag"
+    "fix(start): instant restart via watcher flag file + re-exec with new code"
   ]
 }
