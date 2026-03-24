@@ -20,26 +20,26 @@
       <span class="status-left">
         <img id="my-avatar" class="avatar" style="display:none" alt="">
         <span><span class="dot"></span>
-            <strong id="display-name" class="editable-name" title="Click to change name"></strong>
+            <strong id="display-name" class="editable-name has-tooltip" data-tooltip="Click to change your name"></strong>
 
             <span id="name-edit-wrap" style="display:none;">
                 <input id="name-edit-input" type="text" maxlength="32" />
             </span>
         </span>
-        <span id="my-score" style="display:none; color:var(--accent2); font-weight:700; font-size:.85rem;"></span>
+        <span id="my-score" class="has-tooltip" data-tooltip="Your score" style="display:none; color:var(--accent2); font-weight:700; font-size:.85rem;"></span>
       </span>
       <span class="status-center">
-        <button id="notes-btn" class="header-link-btn" title="Session notes" style="display:none" onclick="toggleNotesModal()">📝 Notes</button>
-        <button id="summary-btn" class="header-link-btn" title="Key points discussed" onclick="toggleSummaryModal()">🧠 Key Points</button>
+        <button id="notes-btn" class="header-link-btn has-tooltip" data-tooltip="Session notes" style="display:none" onclick="toggleNotesModal()">📝 Notes</button>
+        <button id="summary-btn" class="header-link-btn has-tooltip" data-tooltip="Key points discussed so far" onclick="toggleSummaryModal()">🧠 Key Points</button>
       </span>
       <span class="status-right">
-        <span id="location-prompt" class="location-prompt" onclick="requestLocation()" title="Share your location">📍 Where are you?</span>
-        <span id="host-dot" title="Host connected" style="display:none;"><span class="dot"></span>Host</span>
-        <span id="pax-count"></span>
-        <button id="notif-btn" title="Enable notifications" style="display:none">🔔</button>
+        <span id="location-prompt" class="location-prompt has-tooltip" onclick="requestLocation()" data-tooltip="Share your location">📍 Where are you?</span>
+        <span id="host-dot" class="has-tooltip" data-tooltip="Host is live" style="display:none;"><span class="dot"></span>Host</span>
+        <span id="pax-count" class="has-tooltip" data-tooltip="Participants connected"></span>
+        <button id="notif-btn" class="has-tooltip" data-tooltip="Get notified when polls open" style="display:none">🔔</button>
       </span>
     </div>
-    <div id="screen-share-warning" style="display:none" title="Partajarea ecranului a fost întreruptă — host-ul nu mai poate fi văzut">
+    <div id="screen-share-warning" class="has-tooltip" style="display:none" data-tooltip="Host's screen sharing was interrupted">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0">
         <rect x="2" y="2" width="20" height="15" rx="2"/>
         <line x1="12" y1="17" x2="12" y2="22"/>
