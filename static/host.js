@@ -2490,7 +2490,7 @@ function renderSessionPanel() {
       <div class="session-row${isCurrent ? ' session-row-current' : ''}" style="margin-left:${depth * 12}px">
         <span class="session-row-name">${_esc(s.name || 'Unnamed')}${isCurrent ? '<span class="session-live-dots"><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span></span>' : ''}</span>
         ${isCurrent ? `<span class="session-edit-icon" onclick="renameSession()" title="Rename session">✏️</span>` : ''}
-        ${isCurrent ? `<button class="btn btn-xs btn-danger session-end-btn" onclick="endCurrentSession()" title="End session">■</button>` : ''}
+        ${isCurrent ? `<button class="session-end-btn" onclick="endCurrentSession()" title="End session">■</button>` : ''}
       </div>`);
   }
   stackList.innerHTML = rows.join('');

@@ -1167,11 +1167,17 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
 }
 .session-edit-icon:hover { opacity: 1; }
 .session-end-btn {
-  font-size: .65rem;
-  padding: .1rem .35rem;
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: .6rem;
+  padding: 0;
+  cursor: pointer;
+  opacity: .45;
   flex-shrink: 0;
-  line-height: 1.2;
+  line-height: 1;
 }
+.session-end-btn:hover { opacity: 1; }
 .session-live-dots {
   display: inline-block;
   letter-spacing: .1em;
