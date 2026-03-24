@@ -94,14 +94,27 @@
     if (localStorage.getItem(LS_TOUR_KEY)) return;
     localStorage.setItem(LS_TOUR_KEY, '1');
 
+    const _ALL_EMOJI_STEPS = [
+      { selector: '#emoji-bar button[onclick*="👍"]',  emoji: '👍', text: "Tap when the speaker nails it. Their ego needs the fuel." },
+      { selector: '#emoji-bar button[onclick*="⚔️"]',  emoji: '⚔️', text: "Fight me on this. Intellectually." },
+      { selector: '#emoji-bar button[onclick*="🤔"]',  emoji: '🤔', text: "Hmm... I'm not convinced yet." },
+      { selector: '#emoji-bar button[onclick*="🎉"]',  emoji: '🎉', text: "THIS IS AMAZING!" },
+      { selector: '#emoji-bar button[onclick*="❤️"]',  emoji: '❤️', text: "Genuinely love this." },
+      { selector: '#emoji-bar button[onclick*="🔥"]',  emoji: '🔥', text: "This is absolute fire." },
+      { selector: '#emoji-bar button[onclick*="👏"]',  emoji: '👏', text: "Standing ovation!" },
+      { selector: '#emoji-bar button[onclick*="😂"]',  emoji: '😂', text: "I'm dead 💀" },
+      { selector: '#emoji-bar button[onclick*="🤯"]',  emoji: '🤯', text: "My brain just exploded." },
+      { selector: '#emoji-bar button[onclick*="💡"]',  emoji: '💡', text: "Wait, I have an idea!" },
+      { selector: '#emoji-bar button[onclick*="☕"]',  emoji: '☕', text: "I need a break. Now." },
+      { selector: '#emoji-bar button[onclick*="✅"]',  emoji: '✅', text: "Agreed. 100%." },
+      { selector: '#emoji-bar button[onclick*="❌"]',  emoji: '❌', text: "Nope. Hard disagree." },
+    ];
+    const _shuffled = _ALL_EMOJI_STEPS.slice().sort(() => Math.random() - .5).slice(0, 4);
     const STEPS = [
-      { selector: '#emoji-bar button[onclick*="☕"]', emoji: '☕', text: "God, I need a coffee — tap this when you're running on fumes and need a break. No shame." },
-      { selector: '#emoji-bar button[onclick*="👍"]', emoji: '👍', text: 'Tap when the speaker says something brilliant. Their ego needs the fuel.' },
-      { selector: '#emoji-bar button[onclick*="⚔️"]', emoji: '⚔️', text: 'Disagreement battle mode! Fight me on this — intellectually. Tap when you strongly disagree.' },
-      { selector: '#emoji-bar button[onclick*="🔥"]', emoji: '🔥', text: 'This. Is. Fire. Tap when the content is genuinely mind-blowing.' },
-      { selector: '#location-prompt', emoji: '📍', text: "Tell us where you're joining from — for the world map. Totally optional." },
+      { selector: '#display-name',    emoji: '✏️', text: "That's your name. Tap it to rename yourself. Be creative." },
       { selector: '#summary-btn',     emoji: '🧠', text: 'AI recaps what you missed. Tap any time. Zero FOMO.' },
-      { selector: '#display-name',   emoji: '✏️', text: "That's your name up there. Tap it to rename yourself. Be creative." },
+      { selector: '#location-prompt', emoji: '📍', text: "Tell us where you're from — for the world map. Totally optional." },
+      ..._shuffled,
     ];
 
     const TOTAL = STEPS.length;
@@ -1750,7 +1763,7 @@
             <input type="checkbox" disabled ${locationSet ? 'checked' : ''}> Share your location
           </li>
           <li id="onboard-notif" class="onboarding-item${notifGranted ? ' done' : ''}" onclick="${notifGranted ? '' : 'requestNotificationPermission()'}" style="cursor:${notifGranted ? 'default' : 'pointer'}">
-            <input type="checkbox" disabled ${notifGranted ? 'checked' : ''}> Enable notifications
+            <input type="checkbox" disabled ${notifGranted ? 'checked' : ''}> 🔔 Enable notifications
           </li>
         </ul>
       </div>`;
