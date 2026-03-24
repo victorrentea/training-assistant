@@ -52,38 +52,6 @@ _HEARTBEAT_INTERVAL = 1.0  # seconds between heartbeat writes
 _HEARTBEAT_STALE_THRESHOLD = 10.0  # seconds before heartbeat is considered stale
 _TIMESTAMP_INTERVAL_SECONDS = float(os.environ.get("TRANSCRIPT_TIMESTAMP_INTERVAL_SECONDS", "3"))
 EXIT_CODE_UPDATE = 42  # signals start.sh to git pull and restart
-_SUMMARY_CACHE_FILENAME = "summary_cache.json"
-
-
-def _load_summary_cache(session_folder: Path | None) -> tuple[list[dict], list[dict]]:
-    """Load cached summary points from session folder. Returns (locked, draft)."""
-    if not session_folder:
-        return [], []
-    cache_file = session_folder / _SUMMARY_CACHE_FILENAME
-    if not cache_file.exists():
-        return [], []
-    try:
-        data = json.loads(cache_file.read_text(encoding="utf-8"))
-        locked = data.get("locked", [])
-        draft = data.get("draft", [])
-        print(f"[summarizer] Loaded cached summary: {len(locked)} locked + {len(draft)} draft points")
-        return locked, draft
-    except Exception as e:
-        print(f"[summarizer] Failed to load summary cache: {e}", file=sys.stderr)
-        return [], []
-
-
-def _save_summary_cache(session_folder: Path | None, locked: list[dict], draft: list[dict]) -> None:
-    """Save summary points to session folder for persistence across restarts."""
-    if not session_folder:
-        return
-    cache_file = session_folder / _SUMMARY_CACHE_FILENAME
-    try:
-        cache_file.write_text(json.dumps({"locked": locked, "draft": draft}, indent=2), encoding="utf-8")
-    except Exception as e:
-        print(f"[summarizer] Failed to save summary cache: {e}", file=sys.stderr)
-
-
 _KEY_POINTS_FILENAME = "key_points.json"
 _DAEMON_STATE_FILENAME = "daemon_state.json"
 

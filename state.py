@@ -71,7 +71,6 @@ class AppState:
         self.summary_points: list[dict] = []
         self.summary_updated_at: Optional[datetime] = None
         self.summary_force_requested: bool = False
-        self.summary_force_full_day: bool = False
         # Session stack
         self.session_stack: list[dict] = []
         self.session_request: dict | None = None
