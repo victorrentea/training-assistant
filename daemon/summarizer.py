@@ -119,6 +119,7 @@ def generate_summary(
         if tools:
             create_kwargs["tools"] = tools
 
+        print(f"🟢🟢🟢 Sending to Claude ({len(user_message)} chars)…")
         while True:
             response = create_message(**create_kwargs)
             messages.append({"role": "assistant", "content": response.content})
@@ -143,6 +144,7 @@ def generate_summary(
             else:
                 break
 
+        print(f"⭐⭐⭐ Response received from Claude")
         if not response.content:
             print(f"[summarizer] Empty response from Claude (stop_reason={response.stop_reason})", file=sys.stderr)
             return None
