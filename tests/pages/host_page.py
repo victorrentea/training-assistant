@@ -18,6 +18,8 @@ class HostPage:
         """Type a poll into the composer and launch it (poll opens automatically)."""
         # Ensure Poll tab is active (may be on Q&A/Wordcloud/Code tab)
         self._page.click("#tab-poll")
+        # Manual entry is inside a collapsible <details> — open it
+        self._page.evaluate("document.getElementById('manual-poll-details').open = true")
         composer = self._page.locator("#poll-input")
         composer.scroll_into_view_if_needed(timeout=10000)
         composer.click()
@@ -92,7 +94,7 @@ class HostPage:
     def toggle_answered(self, question_id: str) -> None:
         """Click the Answer/Answered toggle button on a question card."""
         self._page.locator(
-            f'.qa-card[data-id="{question_id}"] .qa-actions button:first-child'
+            f'.qa-card[data-id="{question_id}"] .qa-actions button[onclick^="toggleAnswered"]'
         ).click()
 
     # ── Poll History / Download ────────────────────────────────────────────
