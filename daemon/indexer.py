@@ -268,7 +268,7 @@ def _upsert_file_if_needed(path: Path, folder: Path, manifest_files: dict[str, s
 MAX_INDEX_THREADS = 4
 
 
-def index_all(folder: Path) -> None:
+def index_all(folder: Path) -> tuple:
     files = _iter_supported_files(folder)
     manifest_files = _load_manifest(folder)
 
@@ -327,7 +327,7 @@ def index_all(folder: Path) -> None:
                 log.info("indexer", f"Progress: {done_count}/{total_to_index} ({pct}%)")
 
     _save_manifest(folder, manifest_files)
-    log.info("indexer", f"Sync done: indexed={indexed_count}, unchanged={skipped_count}, removed={len(stale_keys)}")
+    return indexed_count, skipped_count, len(stale_keys)
 
 
 # ---------------------------------------------------------------------------
@@ -404,13 +404,13 @@ def _make_handler(folder: Path):
 def start_indexer(folder: Path) -> None:
     """Start background thread: initial full index + watchdog for changes."""
     def _run():
-        index_all(folder)
+        indexed, unchanged, removed = index_all(folder)
         from watchdog.observers import Observer
         handler = _make_handler(folder)
         observer = Observer()
         observer.schedule(handler, str(folder), recursive=True)
         observer.start()
-        log.info("indexer", f"Watching {folder.name} for changes")
+        log.info("indexer", f"Watching {folder.name} · {indexed} new, {unchanged} unchanged")
         try:
             while True:
                 time.sleep(1)
