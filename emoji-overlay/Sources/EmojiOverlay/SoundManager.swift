@@ -7,6 +7,7 @@ class SoundManager {
     static let shared = SoundManager()
 
     private var players: [String: AVAudioPlayer] = [:]
+    private var overlappingPlayers: [AVAudioPlayer] = []
 
     private init() {}
 
@@ -32,6 +33,31 @@ class SoundManager {
                 player.prepareToPlay()
                 self.players[filename] = player
                 player.play()
+            } catch {
+                NSLog("SoundManager: failed to play \(filename): \(error)")
+            }
+        }
+    }
+
+    /// Play a new instance of the sound every time, layering over any already-playing copies.
+    /// The player is released automatically when playback finishes.
+    func playOverlapping(_ filename: String) {
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            guard let url = Bundle.module.url(forResource: filename, withExtension: nil, subdirectory: "Resources") else {
+                NSLog("SoundManager: file not found: \(filename)")
+                return
+            }
+            do {
+                let player = try AVAudioPlayer(contentsOf: url)
+                player.volume = 1.0
+                player.prepareToPlay()
+                self.overlappingPlayers.append(player)
+                player.play()
+                // Clean up finished players after this one ends
+                DispatchQueue.main.asyncAfter(deadline: .now() + player.duration + 0.1) { [weak self] in
+                    self?.overlappingPlayers.removeAll { !$0.isPlaying }
+                }
             } catch {
                 NSLog("SoundManager: failed to play \(filename): \(error)")
             }
