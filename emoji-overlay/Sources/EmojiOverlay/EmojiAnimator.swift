@@ -6,6 +6,26 @@ class EmojiAnimator {
 
     static let emojiSet = ["❤️", "🔥", "👏", "😂", "🤯", "💡", "☕", "✅", "❌"]
 
+    // Image-extracted ECG beat curve (64 points, normalized x∈[0,1], y∈[-1,1], R-spike at x≈0.3465)
+    private static let beatCurve: [(Double, Double)] = [
+        (0.0000,0.0000), (0.0157,0.0054), (0.0315,0.0291), (0.0472,0.0560),
+        (0.0630,0.0891), (0.0787,0.1258), (0.0945,0.2001), (0.1102,0.2375),
+        (0.1260,0.2755), (0.1417,0.2809), (0.1575,0.2320), (0.1732,0.1614),
+        (0.1890,0.0915), (0.2047,0.0496), (0.2205,-0.0438), (0.2362,-0.1079),
+        (0.2520,-0.1122), (0.2677,-0.1312), (0.2835,-0.1176), (0.2992,0.0083),
+        (0.3150,0.3795), (0.3307,0.7897), (0.3465,0.9132), (0.3622,0.9064),
+        (0.3780,0.6096), (0.3937,0.4664), (0.4094,0.1651), (0.4252,-0.2663),
+        (0.4409,-0.3111), (0.4567,-0.2185), (0.4724,-0.0557), (0.4882,-0.0400),
+        (0.5039,-0.0197), (0.5197,-0.0020), (0.5354,0.0116), (0.5512,0.0062),
+        (0.5669,0.0112), (0.5827,0.0196), (0.5984,0.0198), (0.6142,0.0171),
+        (0.6299,0.0115), (0.6457,0.0059), (0.6614,0.0090), (0.6772,0.0005),
+        (0.6929,-0.0087), (0.7087,0.0039), (0.7244,0.0185), (0.7402,0.0268),
+        (0.7559,0.1190), (0.7717,0.1651), (0.7874,0.1964), (0.8031,0.2486),
+        (0.8189,0.3517), (0.8346,0.3388), (0.8504,0.3551), (0.8661,0.3484),
+        (0.8819,0.3192), (0.9055,0.3217), (0.9213,0.1663), (0.9370,0.1384),
+        (0.9528,0.0871), (0.9685,0.0368), (0.9843,0.0190), (1.0000,-0.0000)
+    ]
+
     // Track active toggleable effects (danger, sepia, zorro) so clicking again cancels them
     private var activeEffects: [String: CALayer] = [:]
 
@@ -1234,13 +1254,15 @@ class EmojiAnimator {
         pulseRunning = true
 
         let bounds = hostLayer.bounds
-        // Timing derived from dying.mp3 analysis:
-        // beat 1 R-spike ≈ 0.20s, beat 2 R-spike ≈ 1.60s, flatline ≈ 2.74s, total 4.60s
-        let totalDuration: Double = 4.598    // matches dying.mp3 duration exactly
-        let beatDuration: Double = 0.86      // one QRS cycle (R-spike at 0.233*0.86 ≈ 0.20s in)
-        let beat1Start: Double = 0.0
-        let beat2Start: Double = 1.40
-        let flatlineStart: Double = 2.74
+        // Timing: audio analysis of dying.mp3 (R-spikes at 0.105s and 1.507s, flatline at 2.706s).
+        // beatCurve R-spike is at x_frac=0.3465 of the beat.
+        // soundDelay=0.172s aligns visual R-spike (0.3465*0.8=0.277s) with audio (0.172+0.105=0.277s).
+        let totalDuration: Double = 4.598
+        let soundDelay:    Double = 0.172   // delay sound so R-spike visual and audio coincide
+        let beatDuration:  Double = 0.8     // one full cycle (P+QRS+T), wide enough to read
+        let beat1Start:    Double = 0.0
+        let beat2Start:    Double = 1.402   // 1.507 - 0.3465*0.8 + soundDelay
+        let flatlineStart: Double = 2.878   // 2.706 + soundDelay
 
         // Dark overlay
         let dimLayer = CALayer()
@@ -1274,27 +1296,26 @@ class EmojiAnimator {
         ecgLayer.shadowOpacity = 0.9
         hostLayer.addSublayer(ecgLayer)
 
-        // Build the full ECG path (2 QRS cycles + flatline) across the full width
+        // Build the full ECG path (2 identical QRS cycles + flatline) across the full width
         let path = CGMutablePath()
         let W = bounds.width
         let mid: CGFloat = bounds.height / 2
+        let amp: CGFloat = bounds.height * 0.40   // 80% total height (40% above + below center)
 
-        // ECG waveform: maps t ∈ [0,1] within a cycle to y offset (normalised −1..+1)
-        func ecgOffset(_ t: Double) -> CGFloat {
-            func gauss(_ t: Double, _ center: Double, _ width: Double, _ amp: Double) -> Double {
-                let d = (t - center) / width
-                return amp * exp(-d * d * 2)
+        // Interpolate within the image-extracted beat curve
+        func beatY(_ frac: Double) -> CGFloat {
+            let curve = EmojiAnimator.beatCurve
+            let frac = max(0, min(1, frac))
+            var lo = 0, hi = curve.count - 1
+            while lo < hi - 1 {
+                let mid = (lo + hi) / 2
+                if curve[mid].0 <= frac { lo = mid } else { hi = mid }
             }
-            var y = 0.0
-            y += gauss(t, 0.09, 0.040, 0.15)   // P wave (small positive)
-            y -= gauss(t, 0.200, 0.016, 0.30)   // Q dip
-            y += gauss(t, 0.233, 0.018, 1.00)   // R spike (tall positive)
-            y -= gauss(t, 0.270, 0.018, 0.60)   // S dip
-            y += gauss(t, 0.400, 0.055, 0.38)   // T wave (positive bump)
+            let t = (frac - curve[lo].0) / (curve[hi].0 - curve[lo].0)
+            let y = curve[lo].1 + t * (curve[hi].1 - curve[lo].1)
             return CGFloat(y)
         }
 
-        let amp: CGFloat = bounds.height * 0.40   // 80% total height (40% above + below center)
         let steps = 800
         var firstPoint = true
         for i in 0...steps {
@@ -1303,9 +1324,9 @@ class EmojiAnimator {
             let t = xFrac * totalDuration
             let y: CGFloat
             if t >= beat1Start && t < beat1Start + beatDuration {
-                y = mid - ecgOffset((t - beat1Start) / beatDuration) * amp
+                y = mid - beatY((t - beat1Start) / beatDuration) * amp
             } else if t >= beat2Start && t < beat2Start + beatDuration {
-                y = mid - ecgOffset((t - beat2Start) / beatDuration) * amp
+                y = mid - beatY((t - beat2Start) / beatDuration) * amp
             } else {
                 y = mid   // baseline or flatline
             }
@@ -1342,8 +1363,10 @@ class EmojiAnimator {
         ecgLayer.add(draw, forKey: "draw")
         CATransaction.commit()
 
-        // Sound: play dying.mp3 — duration matches animation, fades naturally at end
-        SoundManager.shared.play("dying.mp3")
+        // Sound: delayed so visual R-spike (at 0.3465*0.8=0.277s) coincides with audio R-spike (0.172+0.105=0.277s)
+        DispatchQueue.main.asyncAfter(deadline: .now() + soundDelay) {
+            SoundManager.shared.play("dying.mp3")
+        }
     }
 
     // MARK: - Pulse stop (called when button pressed while running)
