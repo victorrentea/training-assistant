@@ -1,4 +1,5 @@
 import AppKit
+import AVFoundation
 import QuartzCore
 
 class EmojiAnimator {
@@ -8,6 +9,12 @@ class EmojiAnimator {
 
     // Track active toggleable effects (danger, sepia, zorro) so clicking again cancels them
     private var activeEffects: [String: CALayer] = [:]
+
+    // Applause: persistent timer for emoji spawning
+    private var applauseTimer: Timer?
+
+    // Pulse: guard against re-entry
+    private var pulseRunning = false
 
     init(hostLayer: CALayer) {
         self.hostLayer = hostLayer
@@ -1131,6 +1138,300 @@ class EmojiAnimator {
                 layer.add(group, forKey: "confetti")
                 CATransaction.commit()
             }
+        }
+    }
+
+    // MARK: - Applause (toggleable: click to start, click again to stop)
+
+    func showApplause() {
+        if applauseTimer != nil {
+            // Stop: cancel timer + fade out sound
+            applauseTimer?.invalidate()
+            applauseTimer = nil
+            SoundManager.shared.stop("applause.mp3")
+            return
+        }
+
+        // Start looping sound
+        SoundManager.shared.playLooping("applause.mp3")
+
+        // Spawn 👏 burst immediately then keep a steady stream
+        for i in 0..<10 { DispatchQueue.main.asyncAfter(deadline: .now() + Double(i) * 0.05) { [weak self] in self?.spawnApplauseClap() } }
+        applauseTimer = Timer.scheduledTimer(withTimeInterval: 0.15, repeats: true) { [weak self] _ in
+            self?.spawnApplauseClap()
+        }
+    }
+
+    private func spawnApplauseClap() {
+        let bounds = hostLayer.bounds
+        let size: CGFloat = CGFloat.random(in: 36...72)
+        // Spawn from random position across the bottom third, fly upward
+        let spawnX = CGFloat.random(in: size ... bounds.width - size)
+        let spawnY = CGFloat.random(in: 0 ... bounds.height * 0.35)
+
+        let layer = CATextLayer()
+        layer.string = "👏"
+        layer.fontSize = size * 0.8
+        layer.alignmentMode = .center
+        layer.frame = CGRect(x: spawnX - size / 2, y: spawnY, width: size, height: size)
+        layer.contentsScale = NSScreen.screens.first?.backingScaleFactor ?? 2.0
+        hostLayer.addSublayer(layer)
+
+        let duration = Double.random(in: 1.8...2.8)
+        let riseHeight = bounds.height * CGFloat.random(in: 0.55...0.85)
+        let drift = CGFloat.random(in: -80...80)
+
+        // Rise path with wobble
+        let path = CGMutablePath()
+        let steps = 12
+        let start = CGPoint(x: spawnX, y: spawnY + size / 2)
+        path.move(to: start)
+        for i in 1...steps {
+            let t = CGFloat(i) / CGFloat(steps)
+            let wobble = sin(t * 3 * .pi) * 20 * (1 - t)
+            path.addLine(to: CGPoint(x: start.x + drift * t + wobble, y: start.y + riseHeight * t))
+        }
+
+        let pathAnim = CAKeyframeAnimation(keyPath: "position")
+        pathAnim.path = path
+        pathAnim.timingFunction = CAMediaTimingFunction(name: .easeOut)
+
+        let scaleAnim = CABasicAnimation(keyPath: "transform.scale")
+        scaleAnim.fromValue = 0.6
+        scaleAnim.toValue = 1.1
+
+        let fadeOut = CABasicAnimation(keyPath: "opacity")
+        fadeOut.fromValue = 1.0
+        fadeOut.toValue = 0.0
+        fadeOut.beginTime = duration * 0.45
+        fadeOut.duration = duration * 0.55
+        fadeOut.fillMode = .forwards
+
+        let group = CAAnimationGroup()
+        group.animations = [pathAnim, scaleAnim, fadeOut]
+        group.duration = duration
+        group.fillMode = .forwards
+        group.isRemovedOnCompletion = false
+
+        CATransaction.begin()
+        CATransaction.setCompletionBlock { [weak layer] in layer?.removeFromSuperlayer() }
+        layer.add(group, forKey: "applauseClap")
+        CATransaction.commit()
+    }
+
+    // MARK: - Pulse / heartbeat (one-shot: 2 QRS cycles then flatline)
+
+    func showPulse() {
+        guard !pulseRunning else { return }
+        pulseRunning = true
+
+        let bounds = hostLayer.bounds
+        let totalDuration: Double = 7.0
+        let cycleDuration: Double = 1.8      // duration of one heartbeat cycle
+        let pulseCount = 2                    // number of QRS complexes
+        let flatlineStart = Double(pulseCount) * cycleDuration  // 3.6s
+
+        // Dark overlay
+        let dimLayer = CALayer()
+        dimLayer.frame = bounds
+        dimLayer.backgroundColor = NSColor(white: 0, alpha: 0.75).cgColor
+        dimLayer.opacity = 0
+        hostLayer.addSublayer(dimLayer)
+
+        // Fade in overlay
+        let dimIn = CABasicAnimation(keyPath: "opacity")
+        dimIn.fromValue = 0
+        dimIn.toValue = 1
+        dimIn.duration = 0.35
+        dimIn.fillMode = .forwards
+        dimIn.isRemovedOnCompletion = false
+        dimLayer.add(dimIn, forKey: "dimIn")
+
+        // ECG canvas — full width, centered vertically
+        let lineH: CGFloat = 160
+        let lineY = bounds.midY - lineH / 2
+        let ecgLayer = CAShapeLayer()
+        ecgLayer.frame = CGRect(x: 0, y: lineY, width: bounds.width, height: lineH)
+        ecgLayer.fillColor = nil
+        ecgLayer.strokeColor = NSColor(red: 0, green: 1, blue: 0.27, alpha: 1).cgColor
+        ecgLayer.lineWidth = 3
+        ecgLayer.lineCap = .round
+        ecgLayer.lineJoin = .round
+        ecgLayer.shadowColor = NSColor(red: 0, green: 1, blue: 0.27, alpha: 1).cgColor
+        ecgLayer.shadowOffset = .zero
+        ecgLayer.shadowRadius = 6
+        ecgLayer.shadowOpacity = 0.9
+        hostLayer.addSublayer(ecgLayer)
+
+        // Build the full ECG path (2 QRS cycles + flatline) across the full width
+        let path = CGMutablePath()
+        let W = bounds.width
+        let mid: CGFloat = lineH / 2
+
+        // ECG waveform: maps t ∈ [0,1] within a cycle to y offset (normalised −1..+1)
+        func ecgOffset(_ t: Double) -> CGFloat {
+            func gauss(_ t: Double, _ center: Double, _ width: Double, _ amp: Double) -> Double {
+                let d = (t - center) / width
+                return amp * exp(-d * d * 2)
+            }
+            var y = 0.0
+            y += gauss(t, 0.09, 0.040, 0.15)   // P wave (small positive)
+            y -= gauss(t, 0.200, 0.016, 0.30)   // Q dip
+            y += gauss(t, 0.233, 0.018, 1.00)   // R spike (tall positive)
+            y -= gauss(t, 0.270, 0.018, 0.60)   // S dip
+            y += gauss(t, 0.400, 0.055, 0.38)   // T wave (positive bump)
+            return CGFloat(y)
+        }
+
+        let steps = 800
+        var firstPoint = true
+        for i in 0...steps {
+            let xFrac = Double(i) / Double(steps)
+            let x = CGFloat(xFrac) * W
+            let elapsedSec = xFrac * totalDuration
+            let y: CGFloat
+            if elapsedSec < flatlineStart {
+                let cycleFrac = (elapsedSec / cycleDuration).truncatingRemainder(dividingBy: 1.0)
+                let amp: CGFloat = mid * 0.80
+                y = mid - ecgOffset(cycleFrac) * amp
+            } else {
+                y = mid   // flatline
+            }
+            if firstPoint { path.move(to: CGPoint(x: x, y: y)); firstPoint = false }
+            else { path.addLine(to: CGPoint(x: x, y: y)) }
+        }
+        ecgLayer.path = path
+
+        // Animate drawing left-to-right via strokeEnd
+        let draw = CABasicAnimation(keyPath: "strokeEnd")
+        draw.fromValue = 0
+        draw.toValue = 1
+        draw.duration = totalDuration
+        draw.timingFunction = CAMediaTimingFunction(name: .linear)
+        draw.fillMode = .forwards
+        draw.isRemovedOnCompletion = false
+        ecgLayer.strokeEnd = 0
+
+        CATransaction.begin()
+        CATransaction.setCompletionBlock { [weak self, weak dimLayer, weak ecgLayer] in
+            // Fade out everything
+            NSAnimationContext.runAnimationGroup({ ctx in
+                ctx.duration = 0.45
+                dimLayer?.opacity = 0
+                ecgLayer?.opacity = 0
+            }, completionHandler: {
+                dimLayer?.removeFromSuperlayer()
+                ecgLayer?.removeFromSuperlayer()
+                self?.pulseRunning = false
+            })
+        }
+        ecgLayer.add(draw, forKey: "draw")
+        CATransaction.commit()
+
+        // Sound: heartbeat sounds during QRS cycles, flatline beep after
+        _schedulePulseSound(cycleDuration: cycleDuration, pulseCount: pulseCount,
+                            flatlineStart: flatlineStart, totalDuration: totalDuration)
+    }
+
+    private func _schedulePulseSound(cycleDuration: Double, pulseCount: Int,
+                                     flatlineStart: Double, totalDuration: Double) {
+        // Lub-dub at each heartbeat (slightly before the R spike for realism)
+        for i in 0..<pulseCount {
+            let t = Double(i) * cycleDuration + cycleDuration * 0.18
+            DispatchQueue.main.asyncAfter(deadline: .now() + t) { [weak self] in
+                self?._playLubDub()
+            }
+        }
+
+        // Start continuous flatline beep when the flatline begins
+        DispatchQueue.main.asyncAfter(deadline: .now() + flatlineStart) { [weak self] in
+            self?._startFlatlineBeep()
+        }
+
+        // Fade out sound 300ms before the visual overlay disappears
+        let soundStopAt = totalDuration - 0.3
+        DispatchQueue.main.asyncAfter(deadline: .now() + soundStopAt) { [weak self] in
+            self?._stopFlatlineBeep()
+        }
+    }
+
+    // AVAudioEngine for generated heartbeat + flatline tones
+    private var _pulseEngine: AVAudioEngine?
+    private var _flatlinePlayer: AVAudioPlayerNode?
+
+    private func _playLubDub() {
+        _playTone(frequency: 80, duration: 0.07, volume: 0.6)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.09) { [weak self] in
+            self?._playTone(frequency: 60, duration: 0.06, volume: 0.5)
+        }
+    }
+
+    private func _playTone(frequency: Double, duration: Double, volume: Float) {
+        let engine = AVAudioEngine()
+        let player = AVAudioPlayerNode()
+        engine.attach(player)
+        engine.connect(player, to: engine.mainMixerNode, format: nil)
+        guard let format = AVAudioFormat(standardFormatWithSampleRate: 44100, channels: 1) else { return }
+        let frameCount = AVAudioFrameCount(44100 * duration)
+        guard let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: frameCount) else { return }
+        buffer.frameLength = frameCount
+        let data = buffer.floatChannelData![0]
+        let sampleRate = 44100.0
+        for i in 0..<Int(frameCount) {
+            let t = Double(i) / sampleRate
+            let fade = min(t / 0.005, 1.0) * max(0, 1.0 - t / duration)
+            data[i] = Float(sin(2 * .pi * frequency * t) * Double(volume) * fade)
+        }
+        try? engine.start()
+        player.play()
+        player.scheduleBuffer(buffer, completionHandler: nil)
+        // Keep engine alive until done, then release
+        DispatchQueue.main.asyncAfter(deadline: .now() + duration + 0.1) {
+            engine.stop()
+        }
+    }
+
+    private func _startFlatlineBeep() {
+        let engine = AVAudioEngine()
+        let player = AVAudioPlayerNode()
+        engine.attach(player)
+        engine.connect(player, to: engine.mainMixerNode, format: nil)
+        guard let format = AVAudioFormat(standardFormatWithSampleRate: 44100, channels: 1) else { return }
+        // Create a looping 880Hz buffer (0.5s chunk)
+        let chunkFrames = AVAudioFrameCount(44100 / 2)
+        guard let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: chunkFrames) else { return }
+        buffer.frameLength = chunkFrames
+        let data = buffer.floatChannelData![0]
+        for i in 0..<Int(chunkFrames) {
+            data[i] = Float(sin(2 * .pi * 880.0 * Double(i) / 44100.0) * 0.35)
+        }
+        try? engine.start()
+        player.play()
+        // Schedule looping
+        func scheduleNext() {
+            player.scheduleBuffer(buffer, at: nil, options: .loops, completionHandler: nil)
+        }
+        scheduleNext()
+        _pulseEngine = engine
+        _flatlinePlayer = player
+    }
+
+    private func _stopFlatlineBeep() {
+        guard let engine = _pulseEngine, let player = _flatlinePlayer else { return }
+        // Fade out over 300ms via main mixer volume
+        let mixer = engine.mainMixerNode
+        let steps = 15
+        let stepTime = 0.3 / Double(steps)
+        for i in 0...steps {
+            DispatchQueue.main.asyncAfter(deadline: .now() + Double(i) * stepTime) {
+                mixer.outputVolume = Float(1.0 - Double(i) / Double(steps))
+            }
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { [weak self] in
+            player.stop()
+            engine.stop()
+            self?._pulseEngine = nil
+            self?._flatlinePlayer = nil
         }
     }
 }
