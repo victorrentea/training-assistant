@@ -1,10 +1,7 @@
 import AppKit
 
 class OverlayPanel: NSPanel {
-    init() {
-        guard let screen = NSScreen.screens.first else {
-            fatalError("No screen available")
-        }
+    init(screen: NSScreen) {
         super.init(
             contentRect: screen.frame,
             styleMask: [.borderless, .nonactivatingPanel],
@@ -22,7 +19,7 @@ class OverlayPanel: NSPanel {
             .stationary,
             .ignoresCycle
         ]
-        let view = NSView(frame: screen.frame)
+        let view = NSView(frame: NSRect(origin: .zero, size: screen.frame.size))
         view.wantsLayer = true
         contentView = view
     }
