@@ -8,7 +8,15 @@ class ButtonBar: NSPanel {
     struct ButtonDef {
         let label: String
         let tooltip: String
+        let labelColor: CGColor?
         let action: () -> Void
+
+        init(label: String, tooltip: String, labelColor: CGColor? = nil, action: @escaping () -> Void) {
+            self.label = label
+            self.tooltip = tooltip
+            self.labelColor = labelColor
+            self.action = action
+        }
     }
 
     private let buttonSize: CGFloat = 40
@@ -75,6 +83,7 @@ class ButtonBar: NSPanel {
                 frame: NSRect(x: bx, y: padding, width: buttonSize, height: buttonSize),
                 label: def.label,
                 tooltip: def.tooltip,
+                labelColor: def.labelColor,
                 action: def.action
             )
             container.addSubview(btn)
@@ -239,27 +248,54 @@ private class RoundEmojiButton: NSView {
     private var isDragging = false
     private var dragOrigin: NSPoint = .zero
     private var bgLayer: CALayer!
+    private var underlineLayer: CALayer!
     private let dragThreshold: CGFloat = 3
+    private let hoverBgColor = NSColor(white: 0.75, alpha: 0.45).cgColor
+    private let pressBgColor = NSColor(white: 0.75, alpha: 0.75).cgColor
 
-    init(frame: NSRect, label: String, tooltip: String, action: @escaping () -> Void) {
+    init(frame: NSRect, label: String, tooltip: String, labelColor: CGColor? = nil, action: @escaping () -> Void) {
         self.action = action
         super.init(frame: frame)
         self.toolTip = tooltip
         wantsLayer = true
 
+        // Background: invisible by default, shows light gray on hover
         bgLayer = CALayer()
         bgLayer.frame = bounds
         bgLayer.cornerRadius = bounds.width / 2
-        bgLayer.backgroundColor = NSColor(white: 0.3, alpha: 0.8).cgColor
+        bgLayer.backgroundColor = hoverBgColor
+        bgLayer.opacity = 0
         layer?.addSublayer(bgLayer)
 
         let textLayer = CATextLayer()
-        textLayer.string = label
-        textLayer.fontSize = 22
+        if let color = labelColor {
+            let attr = NSAttributedString(string: label, attributes: [
+                .foregroundColor: NSColor(cgColor: color) ?? .white,
+                .font: NSFont.systemFont(ofSize: 20)
+            ])
+            textLayer.string = attr
+        } else {
+            textLayer.string = label
+            textLayer.fontSize = 22
+        }
         textLayer.alignmentMode = .center
         textLayer.frame = CGRect(x: 0, y: (bounds.height - 28) / 2, width: bounds.width, height: 28)
         textLayer.contentsScale = NSScreen.screens.first?.backingScaleFactor ?? 2.0
         layer?.addSublayer(textLayer)
+
+        // Underline: thin line at bottom, hidden by default
+        underlineLayer = CALayer()
+        let ulColor = labelColor ?? NSColor(white: 0.85, alpha: 0.9).cgColor
+        underlineLayer.backgroundColor = ulColor
+        underlineLayer.frame = CGRect(x: 5, y: 1, width: bounds.width - 10, height: 2)
+        underlineLayer.cornerRadius = 1
+        underlineLayer.opacity = 0
+        layer?.addSublayer(underlineLayer)
+
+        let ta = NSTrackingArea(rect: bounds,
+                                options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect],
+                                owner: self, userInfo: nil)
+        addTrackingArea(ta)
     }
 
     required init?(coder: NSCoder) { fatalError() }
@@ -267,13 +303,33 @@ private class RoundEmojiButton: NSView {
     override var mouseDownCanMoveWindow: Bool { false }
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 
+    override func mouseEntered(with event: NSEvent) {
+        guard !isPressed else { return }
+        CATransaction.begin()
+        CATransaction.setAnimationDuration(0.12)
+        bgLayer.opacity = 1
+        underlineLayer.opacity = 1
+        CATransaction.commit()
+    }
+
+    override func mouseExited(with event: NSEvent) {
+        guard !isPressed else { return }
+        CATransaction.begin()
+        CATransaction.setAnimationDuration(0.2)
+        bgLayer.opacity = 0
+        underlineLayer.opacity = 0
+        CATransaction.commit()
+    }
+
     override func mouseDown(with event: NSEvent) {
         isPressed = true
         isDragging = false
         dragOrigin = event.locationInWindow
         CATransaction.begin()
         CATransaction.setAnimationDuration(0.08)
-        bgLayer.backgroundColor = NSColor(white: 0.5, alpha: 0.9).cgColor
+        bgLayer.backgroundColor = pressBgColor
+        bgLayer.opacity = 1
+        underlineLayer.opacity = 1
         layer?.setAffineTransform(CGAffineTransform(scaleX: 0.9, y: 0.9))
         CATransaction.commit()
     }
@@ -288,7 +344,9 @@ private class RoundEmojiButton: NSView {
             isPressed = false
             CATransaction.begin()
             CATransaction.setAnimationDuration(0.08)
-            bgLayer.backgroundColor = NSColor(white: 0.3, alpha: 0.8).cgColor
+            bgLayer.backgroundColor = hoverBgColor
+            bgLayer.opacity = 0
+            underlineLayer.opacity = 0
             layer?.setAffineTransform(.identity)
             CATransaction.commit()
         }
@@ -304,7 +362,9 @@ private class RoundEmojiButton: NSView {
     override func mouseUp(with event: NSEvent) {
         CATransaction.begin()
         CATransaction.setAnimationDuration(0.08)
-        bgLayer.backgroundColor = NSColor(white: 0.3, alpha: 0.8).cgColor
+        bgLayer.backgroundColor = hoverBgColor
+        bgLayer.opacity = 0
+        underlineLayer.opacity = 0
         layer?.setAffineTransform(.identity)
         CATransaction.commit()
 
