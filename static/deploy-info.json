@@ -1,7 +1,7 @@
 {
-  "sha": "85c7a198a0e38df9e16633b35aab3fe25bdeca9e",
-  "timestamp": "2026-03-24 12:39",
+  "sha": "977232eef7a143dc4b7e8468a43a440c4b49edc2",
+  "timestamp": "2026-03-24 12:42",
   "changelog": [
-    "fix(overlay): fix Pulse crash \u2014 pass mono format to AVAudioEngine connect"
+    "fix(overlay): pulse \u2014 bigger ECG amplitude (80% screen height) + louder lub-dub"
   ]
 }
