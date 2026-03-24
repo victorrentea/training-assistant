@@ -1,7 +1,7 @@
 {
-  "sha": "59fa99f041b9d6960a45feb5b0ddd01a9c8905a4",
-  "timestamp": "2026-03-24 13:17",
+  "sha": "e9fd6b7bc0fb37e92acb51caeff9b54dfa01a837",
+  "timestamp": "2026-03-24 13:19",
   "changelog": [
-    "style(daemon): use \u2b50\u2b50\u2b50 emoji separator for key points update"
+    "feat(overlay): use extracted ECG image for pulse effect"
   ]
 }
