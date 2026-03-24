@@ -2157,7 +2157,10 @@
     document.getElementById('leaderboard-overlay').style.display = 'none';
   }
 
-  // ── Emoji bar hover bubbles (reuse tour-bubble style) ──
+  // ── Emoji bar hover bubbles + dev-reset: need full DOM ──
+  document.addEventListener('DOMContentLoaded', () => {
+
+  // Emoji hover bubbles (reuse tour-bubble style)
   (function setupEmojiBubbles() {
     let activeBubble = null;
     let showTimer = null;
@@ -2210,7 +2213,7 @@
     });
   })();
 
-  // ── Hidden dev-reset: click version tag to wipe all local state ──
+  // Hidden dev-reset: click version tag to wipe all local state
   (function setupDevReset() {
     const vt = document.getElementById('version-tag');
     if (!vt) return;
@@ -2226,3 +2229,5 @@
       location.reload();
     });
   })();
+
+  }); // DOMContentLoaded
