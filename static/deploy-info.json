@@ -1,7 +1,7 @@
 {
-  "sha": "048b16cf6c4d7cc51e8ddd793eac5edaddefdb76",
-  "timestamp": "2026-03-24 18:26",
+  "sha": "2791063d15bafa74f4b13df370690e860cc91ec3",
+  "timestamp": "2026-03-24 18:27",
   "changelog": [
-    "feat(participant): show key points count on button with yellow flash on update"
+    "fix(overlay): ECG full screen stretch + resync timing for updated image peaks (22%, 48%)"
   ]
 }
