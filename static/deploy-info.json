@@ -1,7 +1,7 @@
 {
-  "sha": "40fd6c4548ab3e090e178096d22b2a906f4f90e9",
-  "timestamp": "2026-03-24 18:12",
+  "sha": "a6cb39462dd137a30c83f6f94815af1124bd027f",
+  "timestamp": "2026-03-24 18:15",
   "changelog": [
-    "fix(log): remove redundant PID from messages \u2014 it's in the label now"
+    "fix(transcript): show recording offset as duration not fake clock time"
   ]
 }
