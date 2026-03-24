@@ -1206,11 +1206,3 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
   font-size: .65rem;
   padding: .1rem .4rem;
 }
-
-/* ── Floating emoji reactions ── */
-.host-emoji-float {
-  position: fixed;
-  font-size: 8rem;
-  z-index: 10000;
-  pointer-events: none;
-}
