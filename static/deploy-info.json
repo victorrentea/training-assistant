@@ -1,8 +1,7 @@
 {
-  "sha": "b407ef08e79e92576c0708853e1237c60c56bb3f",
-  "timestamp": "2026-03-24 13:33",
+  "sha": "d69758b67c2023743740bef0f56cf9444c0340e7",
+  "timestamp": "2026-03-24 13:34",
   "changelog": [
-    "fix(daemon): retry state restore on every poll until server confirms",
-    "Revert \"feat(overlay): extend ECG flatline past screen right edge\""
+    "fix(watch-deploy): deduplicate log lines \u2014 one msg per SHA, strict lock"
   ]
 }
