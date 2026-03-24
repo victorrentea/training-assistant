@@ -327,6 +327,7 @@
   }
 
   let _summaryGenerating = false;
+  let _transcriptLineCount = 0;
 
   function updateSummary(points, updatedAt) {
     summaryPoints = points || [];
@@ -339,20 +340,23 @@
   function renderSummaryBadge() {
     const badge = document.getElementById('summary-badge');
     if (!badge) return;
+    const transcriptPart = _transcriptLineCount > 0 ? ` · 💬 ${_transcriptLineCount}` : '';
     badge.style.cssText = 'cursor:pointer;';
     if (summaryPoints.length) {
-      badge.textContent = summaryPoints.length > 0 ? `🧠 ${summaryPoints.length}` : '🧠';
+      badge.textContent = `🧠 ${summaryPoints.length}${transcriptPart}`;
       badge.className = 'badge connected';
-      badge.title = `${summaryPoints.length} key points — click to view`;
+      badge.title = `${summaryPoints.length} key points · ${_transcriptLineCount} transcript lines (last 30 min) — click to view`;
     } else if (_summaryGenerating) {
-      badge.textContent = '🧠';
+      badge.textContent = `🧠${transcriptPart}`;
       badge.className = 'badge';
       badge.style.cssText = 'cursor:wait; color:var(--warn); border:1px solid var(--warn); animation: pulse 1.2s ease-in-out infinite;';
-      badge.title = 'Generating key points from transcript...';
+      badge.title = `Generating key points from transcript… (${_transcriptLineCount} lines)`;
     } else {
-      badge.textContent = '🧠';
-      badge.className = 'badge disconnected';
-      badge.title = 'No key points yet — click to generate now';
+      badge.textContent = `🧠${transcriptPart}`;
+      badge.className = _transcriptLineCount > 0 ? 'badge' : 'badge disconnected';
+      badge.title = _transcriptLineCount > 0
+        ? `${_transcriptLineCount} transcript lines ready — click to generate key points`
+        : 'No key points yet — click to generate now';
     }
   }
 
@@ -555,20 +559,8 @@
   }
 
   function renderTranscriptStatus(lineCount, totalLines, latestTs) {
-    const el = document.getElementById('transcript-badge');
-    if (!el) return;
-
-    if (lineCount > 0) {
-      el.textContent = `💬 ${lineCount}`;
-      el.className = 'badge connected';
-      el.title = `${lineCount} non-empty lines in last 30 min / ${totalLines} today\nLatest at ${latestTs}`;
-    } else {
-      el.textContent = '💬';
-      el.className = 'badge disconnected';
-      el.title = latestTs
-        ? `No transcription since ${latestTs}\n${totalLines} lines today`
-        : 'No transcription data';
-    }
+    _transcriptLineCount = lineCount || 0;
+    renderSummaryBadge();
   }
 
   function renderOverlayStatus(connected) {
@@ -593,18 +585,29 @@
   }
 
   let hostNotesContent = '';
+  let _notesSessionFolder = null;
+  let _notesSessionNotes = null;
 
   function renderNotesStatus(sessionFolder, sessionNotes) {
+    _notesSessionFolder = sessionFolder;
+    _notesSessionNotes = sessionNotes;
+    _renderNotesBadge();
+  }
+
+  function _renderNotesBadge() {
     const el = document.getElementById('notes-badge');
     if (!el) return;
-
+    const nonEmptyLines = hostNotesContent
+      ? hostNotesContent.split('\n').filter(l => l.trim()).length
+      : 0;
+    const lineLabel = nonEmptyLines > 0 ? ` ${nonEmptyLines}` : '';
     el.style.cssText = 'cursor:pointer;';
-    if (sessionFolder && sessionNotes) {
-      el.textContent = '📝';
+    if (_notesSessionFolder && _notesSessionNotes) {
+      el.textContent = `📝${lineLabel}`;
       el.className = 'badge connected';
-      el.title = `${sessionFolder}/${sessionNotes}\nClick to view`;
-    } else if (sessionFolder) {
-      el.textContent = '📝';
+      el.title = `${_notesSessionFolder}/${_notesSessionNotes}${nonEmptyLines > 0 ? `\n${nonEmptyLines} non-empty lines` : ''}\nClick to view`;
+    } else if (_notesSessionFolder) {
+      el.textContent = `📝${lineLabel}`;
       el.className = 'badge';
       el.style.cssText = 'cursor:pointer; color:var(--warn); border:1px solid var(--warn);';
       el.title = 'Session folder found but no notes file inside';
@@ -631,6 +634,7 @@
         if (dlBtn) dlBtn.style.display = 'none';
       }
     }
+    _renderNotesBadge();
   }
 
   function downloadHostNotes() {
