@@ -1,7 +1,7 @@
 {
-  "sha": "5f41073344ec6c0b4bbacad6153ec61dac5efc83",
-  "timestamp": "2026-03-24 19:03",
+  "sha": "bdfbc3a5d5d07be824bfa33e1f98967a70efa85d",
+  "timestamp": "2026-03-24 19:05",
   "changelog": [
-    "fix(participant): wrap emoji bubbles + dev-reset in DOMContentLoaded"
+    "fix(log): reorder to timestamp-first format"
   ]
 }
