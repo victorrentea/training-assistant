@@ -114,7 +114,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, URLSessionWebSocketDelegate 
             return
         }
         if filePID != myPID {
-            overlayInfo("Superseded by PID \(filePID) — exiting")
+            overlayInfo("Replaced by newer instance — exiting")
             pidCheckTimer?.invalidate()
             wsTask?.cancel(with: .goingAway, reason: nil)
             NSApplication.shared.terminate(nil)
@@ -136,19 +136,19 @@ class AppDelegate: NSObject, NSApplicationDelegate, URLSessionWebSocketDelegate 
             overlayError("Invalid server URL: \(serverURL)")
             return
         }
-        overlayInfo("Connecting to \(url)")
+        overlayInfo("Connecting to server...")
         wsTask = session.webSocketTask(with: url)
         wsTask?.resume()
     }
 
     func urlSession(_ session: URLSession, webSocketTask: URLSessionWebSocketTask,
                     didOpenWithProtocol protocol: String?) {
-        overlayInfo("WebSocket connected")
+        overlayInfo("Connected")
         // Send set_name as required by protocol
         let msg = "{\"type\":\"set_name\",\"name\":\"Overlay\"}"
         wsTask?.send(.string(msg)) { error in
             if let error = error {
-                overlayError("Failed to send set_name: \(error)")
+                overlayError("Handshake failed, retrying...")
             }
         }
         receiveMessage()
@@ -156,13 +156,13 @@ class AppDelegate: NSObject, NSApplicationDelegate, URLSessionWebSocketDelegate 
 
     func urlSession(_ session: URLSession, webSocketTask: URLSessionWebSocketTask,
                     didCloseWith closeCode: URLSessionWebSocketTask.CloseCode, reason: Data?) {
-        overlayInfo("WS closed (code \(closeCode.rawValue)), retrying...")
+        overlayInfo("Server closed connection, retrying...")
         scheduleReconnect()
     }
 
     func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
         if let error = error {
-            overlayError("WS transport error: \(error.localizedDescription)")
+            overlayError("Connection lost, retrying...")
             scheduleReconnect()
         }
     }
@@ -179,7 +179,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, URLSessionWebSocketDelegate 
                 }
                 self?.receiveMessage()
             case .failure(let error):
-                overlayError("WS receive error: \(error)")
+                overlayError("Connection lost, retrying...")
                 self?.scheduleReconnect()
             }
         }

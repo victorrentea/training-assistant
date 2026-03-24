@@ -10,19 +10,19 @@ if let oldPidStr = try? String(contentsOfFile: lockFilePath, encoding: .utf8)
         .trimmingCharacters(in: .whitespacesAndNewlines),
    let oldPid = Int32(oldPidStr),
    oldPid != myPid {
-    overlayInfo("Killing prev instance PID \(oldPid)")
+    overlayInfo("Stopping previous instance...")
     kill(oldPid, SIGTERM)
     // Give it a moment, then force-kill if still alive
     usleep(200_000) // 200ms
     if kill(oldPid, 0) == 0 {
-        overlayInfo("PID \(oldPid) still alive, sending SIGKILL")
+        overlayInfo("Previous instance stuck — force killing")
         kill(oldPid, SIGKILL)
     }
 }
 
 // Write our PID (supersedes any previous instance)
 try? "\(myPid)".write(toFile: lockFilePath, atomically: true, encoding: .utf8)
-overlayInfo("Started PID \(myPid)")
+overlayInfo("Started")
 
 // Clean up lock file on exit (only if we still own it)
 func cleanupLockFile() {
@@ -69,7 +69,7 @@ Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { _ in
         return // lock file missing or unreadable — keep running
     }
     if filePid != myPid {
-        overlayInfo("Superseded by PID \(filePid) — exiting")
+        overlayInfo("Replaced by newer instance — exiting")
         cleanupLockFile()
         exit(0)
     }
