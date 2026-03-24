@@ -24,7 +24,7 @@ import sys
 import time
 
 from dataclasses import replace as dc_replace
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
 
 from daemon.transcript_timestamps import (
@@ -47,37 +47,116 @@ _HEARTBEAT_INTERVAL = 1.0  # seconds between heartbeat writes
 _HEARTBEAT_STALE_THRESHOLD = 10.0  # seconds before heartbeat is considered stale
 _TIMESTAMP_INTERVAL_SECONDS = float(os.environ.get("TRANSCRIPT_TIMESTAMP_INTERVAL_SECONDS", "3"))
 EXIT_CODE_UPDATE = 42  # signals start.sh to git pull and restart
-_KEY_POINTS_FILENAME = "key_points.json"
+_KEY_POINTS_FILE = "transcript_keypoints.md"
+_KEY_POINTS_FILE_LEGACY = "key_points.json"
 _DAEMON_STATE_FILENAME = "daemon_state.json"
 _BACKUP_DIR = Path.home() / ".training-assistant"
 _BACKUP_FILE = _BACKUP_DIR / "state-backup.json"
 
 
+_DOW_RE = re.compile(r"^([A-Z][a-z]{2})\s+(\d{2}:\d{2})\s+(.+)$")
+_FRONTMATTER_WATERMARK_RE = re.compile(r"^watermark:\s*(\d+)")
+
+
 def _load_key_points(session_folder: Path) -> tuple[list[dict], int]:
     """Load key points from session folder. Returns (points, watermark).
-    Supports old locked/draft format for migration."""
-    cache_file = session_folder / _KEY_POINTS_FILENAME
-    if not cache_file.exists():
-        return [], 0
+    Reads transcript_keypoints.md (new) or falls back to key_points.json (legacy)."""
+    md_file = session_folder / _KEY_POINTS_FILE
+    json_file = session_folder / _KEY_POINTS_FILE_LEGACY
+
+    if md_file.exists():
+        try:
+            lines = md_file.read_text(encoding="utf-8").splitlines()
+            watermark = 0
+            points = []
+            in_frontmatter = False
+            seen_open = False
+            for line in lines:
+                stripped = line.strip()
+                if not seen_open and stripped == "---":
+                    in_frontmatter = True
+                    seen_open = True
+                    continue
+                if in_frontmatter:
+                    if stripped == "---":
+                        in_frontmatter = False
+                        continue
+                    m = _FRONTMATTER_WATERMARK_RE.match(stripped)
+                    if m:
+                        watermark = int(m.group(1))
+                    continue
+                if not stripped:
+                    continue
+                m = _DOW_RE.match(stripped)
+                if m:
+                    points.append({"text": m.group(3), "time": m.group(2), "source": "discussion"})
+                else:
+                    points.append({"text": stripped, "source": "discussion"})
+            log.info("session", f"Loaded {len(points)} key points from {session_folder.name}")
+            return points, watermark
+        except Exception as e:
+            log.error("session", f"Failed to load key points: {e}")
+            return [], 0
+
+    if json_file.exists():
+        try:
+            data = json.loads(json_file.read_text(encoding="utf-8"))
+            points = data.get("points", data.get("locked", []) + data.get("draft", []))
+            watermark = data.get("watermark", 0)
+            log.info("session", f"Loaded {len(points)} key points (legacy) from {session_folder.name}")
+            return points, watermark
+        except Exception as e:
+            log.error("session", f"Failed to load key points: {e}")
+            return [], 0
+
+    return [], 0
+
+
+def _session_start_date(session_entry: dict) -> date | None:
+    """Extract the session start date from a session stack entry."""
     try:
-        data = json.loads(cache_file.read_text(encoding="utf-8"))
-        # Support new format {"points": [...]} and old format {"locked": [...], "draft": [...]}
-        points = data.get("points", data.get("locked", []) + data.get("draft", []))
-        watermark = data.get("watermark", 0)
-        log.info("session", f"Loaded {len(points)} key points from {session_folder.name}")
-        return points, watermark
-    except Exception as e:
-        log.error("session", f"Failed to load key points: {e}")
-        return [], 0
+        return datetime.fromisoformat(session_entry["started_at"]).date()
+    except Exception:
+        return None
 
 
-def _save_key_points(session_folder: Path, points: list[dict], watermark: int = 0) -> None:
-    """Save key points to session folder."""
+def _save_key_points(
+    session_folder: Path,
+    points: list[dict],
+    watermark: int = 0,
+    session_date: date | None = None,
+) -> None:
+    """Save key points to transcript_keypoints.md with DOW HH:MM prefix per line."""
     try:
         session_folder.mkdir(parents=True, exist_ok=True)
-        (session_folder / _KEY_POINTS_FILENAME).write_text(
-            json.dumps({"points": points, "watermark": watermark}, indent=2), encoding="utf-8"
-        )
+
+        # Only timed discussion points go to disk; notes-only bullets are ephemeral
+        timed = [(p, p["time"]) for p in points if p.get("time")]
+
+        # Sort by time and detect midnight crossings for DOW assignment
+        def _mins(t: str) -> int:
+            try:
+                return int(t[:2]) * 60 + int(t[3:5])
+            except Exception:
+                return 0
+
+        timed.sort(key=lambda x: _mins(x[1]))
+
+        base_date = session_date or date.today()
+        current_date = base_date
+        prev_mins: int | None = None
+        lines = ["---", f"watermark: {watermark}", "---", ""]
+
+        for point, time_str in timed:
+            mins = _mins(time_str)
+            # Crossed midnight: new time is significantly smaller than previous
+            if prev_mins is not None and mins < prev_mins - 30:
+                current_date += timedelta(days=1)
+            prev_mins = mins
+            dow = current_date.strftime("%a")
+            lines.append(f"{dow} {time_str} {point['text']}")
+
+        (session_folder / _KEY_POINTS_FILE).write_text("\n".join(lines) + "\n", encoding="utf-8")
     except Exception as e:
         log.error("session", f"Failed to save key points: {e}")
 
@@ -431,7 +510,7 @@ def run() -> None:
                     ended = session_stack.pop()
                     ended["ended_at"] = datetime.now().isoformat()
                     ended_folder = sessions_root / ended["name"]
-                    _save_key_points(ended_folder, current_key_points, summary_watermark)
+                    _save_key_points(ended_folder, current_key_points, summary_watermark, _session_start_date(ended))
                     # Restore parent session
                     parent = session_stack[-1]
                     parent_folder = sessions_root / parent["name"]
@@ -454,7 +533,7 @@ def run() -> None:
                         if existing_pts:
                             current_key_points, summary_watermark = existing_pts, existing_wm
                         else:
-                            _save_key_points(new_folder, current_key_points, summary_watermark)
+                            _save_key_points(new_folder, current_key_points, summary_watermark, _session_start_date(session_stack[-1]))
                         session_stack[-1]["name"] = new_name
                         _save_daemon_state(sessions_root, session_stack)
                         notes_file = _find_notes_in_folder(new_folder)
@@ -707,6 +786,7 @@ def run() -> None:
             if force_summary and session_stack:
                 current_session = session_stack[-1]
                 session_folder = sessions_root / current_session["name"]
+                session_date = _session_start_date(current_session)
                 incremental = summary_watermark > 0 and bool(current_key_points)
                 last_summary_at = now_mono
                 try:
@@ -714,6 +794,7 @@ def run() -> None:
                         config,
                         existing_points=current_key_points if incremental else None,
                         since_entry=summary_watermark if incremental else 0,
+                        session_start_date=session_date,
                     )
                     if result is not None:
                         new_pts = result["new"]
@@ -722,7 +803,7 @@ def run() -> None:
                             current_key_points = current_key_points + new_pts
                         else:
                             current_key_points = new_pts
-                        _save_key_points(session_folder, current_key_points, summary_watermark)
+                        _save_key_points(session_folder, current_key_points, summary_watermark, session_date)
                         _save_daemon_state(sessions_root, session_stack)
                         _sync_session_to_server(config, session_stack, current_key_points)
                         log.info("summarizer", f"Key points: {len(current_key_points)} total (+{len(new_pts)} new)")
