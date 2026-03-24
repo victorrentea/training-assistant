@@ -40,8 +40,7 @@ from daemon.transcript_timestamps import (
 from quiz_core import (
     config_from_env, find_session_folder, auto_generate, auto_generate_topic, auto_refine,
     post_status, _get_json, _post_json, DAEMON_POLL_INTERVAL, DEFAULT_TRANSCRIPT_MINUTES,
-    read_session_notes, load_transcription_files, extract_last_n_minutes, extract_all_text,
-    extract_text_for_time_window,
+    read_session_notes, load_transcription_files,
 )
 from daemon.debate_ai import run_debate_ai_cleanup
 from daemon.llm_adapter import get_usage
@@ -388,7 +387,6 @@ def run() -> None:
             "name": config.session_folder.name,
             "started_at": datetime.now().isoformat(),
             "ended_at": None,
-            "summary_watermark": 0,
         }]
         current_key_points = _load_key_points(config.session_folder)
         _save_daemon_state(sessions_root, session_stack)
@@ -429,7 +427,6 @@ def run() -> None:
                         "name": name,
                         "started_at": datetime.now().isoformat(),
                         "ended_at": None,
-                        "summary_watermark": 0,
                     }
                     session_stack.append(new_session)
                     current_key_points = _load_key_points(folder)
@@ -692,20 +689,18 @@ def run() -> None:
             except Exception as e:
                 print(f"[daemon] State snapshot failed: {e}", file=sys.stderr)
 
-            # ── Check for full-reset summary request (resets watermark to 0) ──
+            # ── Check for full-reset / forced summary request ──
+            # (full-reset now behaves the same as force — always full regeneration)
             try:
                 reset_data = _get_json(
                     f"{config.server_url}/api/summary/full-reset",
                     config.host_username, config.host_password,
                 )
-                if reset_data.get("requested") and session_stack:
-                    session_stack[-1]["summary_watermark"] = 0
-                    _save_daemon_state(sessions_root, session_stack)
-                    print("[summarizer] Watermark reset to 0 — full day regeneration requested")
+                if reset_data.get("requested"):
+                    print("[summarizer] Full reset requested — triggering regeneration")
             except Exception:
                 pass
 
-            # ── Check for forced summary request ──
             force_summary = False
             try:
                 force_data = _get_json(
@@ -716,68 +711,27 @@ def run() -> None:
             except Exception:
                 pass
 
-            # ── On-demand summary generation (session-aware) ──
+            # ── On-demand summary generation (full regeneration) ──
             now_mono = time.monotonic()
             if force_summary and session_stack:
                 current_session = session_stack[-1]
                 session_folder = sessions_root / current_session["name"]
-                watermark = current_session.get("summary_watermark", 0)
-                print(f"[summarizer] Generating summary (on-demand, watermark={watermark})")
+                print(f"[summarizer] Generating summary (full regeneration)")
                 last_summary_at = now_mono
                 try:
-                    entries = load_transcription_files(config.folder)
-                    if entries:
-                        if current_session.get("started_at"):
-                            session_start = datetime.fromisoformat(current_session["started_at"])
-                            start_secs = session_start.hour * 3600 + session_start.minute * 60 + session_start.second
-                            full_text = extract_text_for_time_window(entries, start_ts=start_secs)
-                        else:
-                            full_text = extract_all_text(entries)
-                        if full_text:
-                            # Use watermark to compute delta
-                            delta_text = full_text[watermark:] if watermark < len(full_text) else None
-                            if not delta_text:
-                                print("[summarizer] No new transcript content — skipping")
-                                continue
-                            print(f"[summarizer] Delta: {len(delta_text)} chars (full: {len(full_text)} chars)")
+                    result = generate_summary(config)
+                    if result is not None:
+                        # Full replacement — discard old points
+                        current_key_points = result.get("points", [])
 
-                            last_5 = current_key_points[-5:] if current_key_points else []
-                            result = generate_summary(config, last_5, delta_text=delta_text)
-                            if result is not None:
-                                # Compatibility shim: if generate_summary returns a list, wrap it
-                                if isinstance(result, list):
-                                    result = {"updated": [], "new": [{"text": p["text"], "source": p.get("source", "discussion"), "time": p.get("time")} for p in result]}
-
-                                # Apply updates
-                                for upd in result.get("updated", []):
-                                    idx = upd.get("index")
-                                    if idx is not None and 0 <= idx < len(current_key_points):
-                                        current_key_points[idx] = {
-                                            "text": upd["text"],
-                                            "source": upd.get("source", "discussion"),
-                                            "time": upd.get("time"),
-                                        }
-                                # Append new points
-                                for new_pt in result.get("new", []):
-                                    current_key_points.append({
-                                        "text": new_pt["text"],
-                                        "source": new_pt.get("source", "discussion"),
-                                        "time": new_pt.get("time"),
-                                    })
-
-                                # Update watermark
-                                current_session["summary_watermark"] = len(full_text)
-
-                                # Persist and sync
-                                _save_key_points(session_folder, current_key_points)
-                                _save_daemon_state(sessions_root, session_stack)
-                                _sync_session_to_server(config, session_stack, current_key_points)
-                                print(f"\n⭐⭐⭐  Key Points Update  ⭐⭐⭐")
-                                for upd in result.get("updated", []):
-                                    print(f"  ~ [{upd.get('index')}] {upd.get('text')}")
-                                for new_pt in result.get("new", []):
-                                    print(f"  + {new_pt.get('text')}")
-                                print(f"⭐⭐⭐ {len(current_key_points)} total key points ⭐⭐⭐\n")
+                        # Persist and sync
+                        _save_key_points(session_folder, current_key_points)
+                        _save_daemon_state(sessions_root, session_stack)
+                        _sync_session_to_server(config, session_stack, current_key_points)
+                        print(f"\n⭐⭐⭐  Key Points Generated  ⭐⭐⭐")
+                        for pt in current_key_points:
+                            print(f"  • {pt.get('text')}")
+                        print(f"⭐⭐⭐ {len(current_key_points)} total key points ⭐⭐⭐\n")
                 except Exception as e:
                     print(f"[summarizer] Error: {e}", file=sys.stderr)
 
