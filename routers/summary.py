@@ -95,6 +95,20 @@ async def poll_summary_force():
     return {"requested": requested}
 
 
+@router.post("/api/summary/full-reset")
+async def full_reset_summary():
+    state.summary_reset_requested = True
+    state.summary_force_requested = True
+    return {"ok": True}
+
+
+@router.get("/api/summary/full-reset")
+async def poll_summary_full_reset():
+    requested = state.summary_reset_requested
+    state.summary_reset_requested = False
+    return {"requested": requested}
+
+
 @router.post("/api/token-usage")
 async def update_token_usage(data: dict):
     state.token_usage = data

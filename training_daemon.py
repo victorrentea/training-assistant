@@ -695,6 +695,19 @@ def run() -> None:
             except Exception as e:
                 print(f"[daemon] State snapshot failed: {e}", file=sys.stderr)
 
+            # ── Check for full-reset summary request (resets watermark to 0) ──
+            try:
+                reset_data = _get_json(
+                    f"{config.server_url}/api/summary/full-reset",
+                    config.host_username, config.host_password,
+                )
+                if reset_data.get("requested") and session_stack:
+                    session_stack[-1]["summary_watermark"] = 0
+                    _save_daemon_state(sessions_root, session_stack)
+                    print("[summarizer] Watermark reset to 0 — full day regeneration requested")
+            except Exception:
+                pass
+
             # ── Check for forced summary request ──
             force_summary = False
             try:

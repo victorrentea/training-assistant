@@ -420,6 +420,14 @@
     fetch('/api/summary/force', { method: 'POST' }).catch(() => {});
   }
 
+  function requestFullDayRegenerate() {
+    _summaryGenerating = true;
+    renderSummaryBadge();
+    const btn = document.getElementById('summary-refresh-btn');
+    if (btn) { btn.disabled = true; btn.style.opacity = '0.4'; }
+    fetch('/api/summary/full-reset', { method: 'POST' }).catch(() => {});
+  }
+
   function setKickedFavicon() {
     const canvas = document.createElement('canvas');
     canvas.width = 32;
