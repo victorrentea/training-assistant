@@ -135,6 +135,14 @@
 - [x] Mark item done in `backlog.md`
 - [x] Capture non-visual proof via test output
 
+## Direct request: Pet Clinic owner search by name
+
+- [x] Review existing `/.github/petclinic-instructions.md` discovery baseline
+- [x] Open Pet Clinic at `http://localhost:4200/petclinic/`
+- [x] Navigate through `OWNERS` → `SEARCH`
+- [x] Search owner by last name and capture the visible result
+- [x] Update `/.github/petclinic-instructions.md` with newly confirmed behaviors
+
 ## Review
 
 - Added `scripts/append_transcription_timestamps.py` with 3s default interval and parser-compatible format.
@@ -174,3 +182,6 @@
 - Proof logs: `/tmp/reconnect_item_tests.log`.
 - Backlog item fixed: host and participant detect backend/frontend version mismatch and show a stop-capable auto-reload prompt.
 - Verified with `python3 -m pytest -q test_e2e.py -k version_mismatch_shows_reload_prompt_and_stop_prevents_auto_reload` (1 passed, 28 deselected).
+- Pet Clinic exploration complete: searched `Franklin` on `http://localhost:4200/petclinic/owners` and confirmed result `George Franklin`.
+- Proof screenshots: `docs/superpowers/specs/petclinic-owner-search-franklin.png`, `docs/superpowers/specs/petclinic-owner-george-franklin-detail.png`.
+- Updated `/.github/petclinic-instructions.md` with verified navbar, owner search, routing, selectors, and detail-page observations.
