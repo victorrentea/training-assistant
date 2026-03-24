@@ -528,9 +528,17 @@ def run() -> None:
             # ── Push session info when changed, on reconnect, or if server lost it ──
             server_has_session = data.get("session_folder") is not None
             server_has_notes = data.get("has_notes_content", False)
+            server_has_key_points = data.get("has_key_points", False)
             if _session_status_pending or (sf_name and not server_has_session):
                 post_status("ready", "Agent ready.", config,
                             session_folder=sf_name, session_notes=sn_name)
+
+            # Re-sync key points when server lost them (e.g. after backend restart)
+            if current_key_points and not server_has_key_points:
+                try:
+                    _sync_session_to_server(config, session_stack, current_key_points)
+                except Exception as e:
+                    print(f"[session] Failed to re-sync key points: {e}", file=sys.stderr)
 
             # Push notes content when file is new or modified
             if config.session_notes:
