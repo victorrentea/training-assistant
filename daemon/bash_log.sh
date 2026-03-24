@@ -2,12 +2,12 @@
 # Shared log helper for shell scripts.
 # Source this file to get _log():  source "$SCRIPT_DIR/daemon/bash_log.sh"
 #
-# Format: [name-PID        ] HH:MM:SS.f info    message
-#         [name-PID        ] HH:MM:SS.f error   message
+# Format: HH:MM:SS.f  PID  [name      ] info    message
+#         HH:MM:SS.f  PID  [name      ] error   message
 #
 # Example:
-#   [start-66211     ] 18:49:40.0 info    Rebuilding...
-#   [watcher-66412   ] 18:49:41.0 error   Deploy timeout 941c3cca after 120s
+#   18:49:40.0 66211  [start     ] info    Rebuilding...
+#   18:49:41.0 66412  [watcher   ] error   Deploy timeout 941c3cca after 120s
 
 _log_ts() {
   # macOS date has no %N; use perl (available by default) for sub-second precision
@@ -16,14 +16,14 @@ _log_ts() {
 
 _log() {
   local name="$1" level="$2" msg="$3"
-  local label ts lvl
-  label=$(printf "%-16.16s" "${name}-$$")
+  local nm ts lvl
+  nm=$(printf "%-10.10s" "$name")
   ts=$(_log_ts)
   if [ "$level" = "error" ]; then
     lvl="error   "
-    printf "[%s] %s %s %s\n" "$label" "$ts" "$lvl" "$msg" >&2
+    printf "%s %5d  [%s] %s%s\n" "$ts" "$$" "$nm" "$lvl" "$msg" >&2
   else
     lvl="info    "
-    printf "[%s] %s %s %s\n" "$label" "$ts" "$lvl" "$msg"
+    printf "%s %5d  [%s] %s%s\n" "$ts" "$$" "$nm" "$lvl" "$msg"
   fi
 }
