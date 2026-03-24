@@ -253,6 +253,7 @@ def build_host_state() -> dict:
             "score": score,
             "location": loc,
             "avatar": state.participant_avatars.get(pid, ""),
+            "ip": state.participant_ips.get(pid, ""),
         }
         if state.current_activity == ActivityType.DEBATE and state.debate_phase:
             p["debate_side"] = state.debate_sides.get(pid)  # "for", "against", or None
@@ -436,6 +437,7 @@ async def broadcast_participant_update():
             "score": state.scores.get(pid, 0),
             "location": state.locations.get(pid, ""),
             "avatar": state.participant_avatars.get(pid, ""),
+            "ip": state.participant_ips.get(pid, ""),
         })
     host_msg = json.dumps({
         "type": "participant_count",

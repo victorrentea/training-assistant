@@ -5,6 +5,7 @@
   let totalVotes = 0;
   let participantLocations = {};
   let participantAvatars = {};
+  let participantIps = {};          // participant_name -> IP address
   let participantDebateSides = {};  // participant_name -> "for"|"against"|undefined
   let _debateActive = false;
   const resolvedCities = {};   // raw "lat, lon" -> resolved city string cache
@@ -169,6 +170,7 @@
         totalVotes = Object.values(voteCounts).reduce((a,b)=>a+b,0);
         participantLocations = {};
         participantAvatars = {};
+        participantIps = {};
         participantDebateSides = {};
         scores = {};
         _debateActive = msg.current_activity === 'debate' && !!msg.debate_phase;
@@ -177,6 +179,7 @@
             names.push(p.name);
             participantLocations[p.name] = p.location;
             participantAvatars[p.name] = p.avatar;
+            participantIps[p.name] = p.ip || '';
             scores[p.name] = p.score;
             if (p.debate_side) participantDebateSides[p.name] = p.debate_side;
         });
@@ -231,12 +234,14 @@
         updatePaxBadge(msg.count);
         participantLocations = {};
         participantAvatars = {};
+        participantIps = {};
         scores = {};
         const names = [];
         msg.participants.forEach(p => {
             names.push(p.name);
             participantLocations[p.name] = p.location;
             participantAvatars[p.name] = p.avatar;
+            participantIps[p.name] = p.ip || '';
             scores[p.name] = p.score;
         });
         cachedNames = names;
@@ -705,7 +710,8 @@
       const debateIcon = _debateActive
           ? (debateSide === 'for' ? '<span title="FOR">👍</span> ' : debateSide === 'against' ? '<span title="AGAINST">👎</span> ' : '<span title="Undecided">⏳</span> ')
           : '';
-      return `<li><span class="pax-name">${debateIcon}${avatarHtml}${escHtml(n)}${scoreTag}</span>${locLabel ? `<span class="pax-location" onclick="openMap()" title="View all on map">${escHtml(locLabel)}</span>` : ''}</li>`;
+      const ip = participantIps[n] || '';
+      return `<li><span class="pax-name" title="${ip ? 'IP: ' + ip : ''}">${debateIcon}${avatarHtml}${escHtml(n)}${scoreTag}</span>${locLabel ? `<span class="pax-location" onclick="openMap()" title="View all on map">${escHtml(locLabel)}</span>` : ''}</li>`;
     }).join('');
 
     // Lazily resolve any raw "lat, lon" strings to city names
