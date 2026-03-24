@@ -1,7 +1,7 @@
 {
-  "sha": "a922cb2511f5c9f900cc7be3268da171d96e79da",
-  "timestamp": "2026-03-24 12:55",
+  "sha": "8e25a7ff965b2d2f4675857217d494fb64cc08e5",
+  "timestamp": "2026-03-24 12:56",
   "changelog": [
-    "fix(session): dots bold, full opacity, scale-pulse animation"
+    "fix(host): remove \ud83d\udc49 emoji from join link"
   ]
 }
