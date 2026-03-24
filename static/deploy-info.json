@@ -1,8 +1,7 @@
 {
-  "sha": "16bb91e3b08c7300735d9df7de9ea2bb621fc70d",
-  "timestamp": "2026-03-24 18:17",
+  "sha": "f9d186b3eae22b9be683b156262394a6c77ebf29",
+  "timestamp": "2026-03-24 18:18",
   "changelog": [
-    "fix(host): remove floating emoji reactions from host screen",
-    "fix(indexer): merge sync-done + watching into one log line"
+    "yolo"
   ]
 }
