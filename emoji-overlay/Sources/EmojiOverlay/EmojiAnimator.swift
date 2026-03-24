@@ -1164,7 +1164,8 @@ class EmojiAnimator {
 
     private func spawnApplauseClap() {
         let bounds = hostLayer.bounds
-        let size: CGFloat = CGFloat.random(in: 36...72)
+        let isBig = Int.random(in: 0..<4) == 0   // ~25% chance of giant clap
+        let size: CGFloat = isBig ? CGFloat.random(in: 108...216) : CGFloat.random(in: 36...72)
         // Spawn from random position across the bottom third, fly upward
         let spawnX = CGFloat.random(in: size ... bounds.width - size)
         let spawnY = CGFloat.random(in: 0 ... bounds.height * 0.35)
