@@ -334,8 +334,8 @@ class TestQA:
         q_id = host.get_qa_questions()[0]["id"]
 
         first_card = host._page.locator(".qa-card").first
-        expect(first_card.locator(".qa-actions button").nth(0)).to_contain_text("Answered")
-        expect(first_card.locator(".qa-actions button").nth(2)).to_have_text("🗑")
+        expect(first_card.locator(".qa-actions button[onclick^='toggleAnswered']")).to_contain_text("Answer")
+        expect(first_card.locator(".qa-actions button[onclick^='deleteQuestion']")).to_have_text("🗑")
         expect(host._page.locator("#clear-qa-btn")).to_have_text("🗑 Delete all")
 
         host.edit_question(q_id, "Edit works with quotes: \"alpha\" and apostrophe's")
