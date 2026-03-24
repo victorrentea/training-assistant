@@ -1,8 +1,8 @@
 {
-  "sha": "c1bb52839ef01b39ca6d338be2c6c471f7fb5bca",
-  "timestamp": "2026-03-24 13:31",
+  "sha": "b407ef08e79e92576c0708853e1237c60c56bb3f",
+  "timestamp": "2026-03-24 13:33",
   "changelog": [
-    "feat(overlay): extend ECG flatline past screen right edge",
-    "feat(host): show pending deploy badge when push is detected"
+    "fix(daemon): retry state restore on every poll until server confirms",
+    "Revert \"feat(overlay): extend ECG flatline past screen right edge\""
   ]
 }
