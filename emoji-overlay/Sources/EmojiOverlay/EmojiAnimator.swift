@@ -1249,11 +1249,9 @@ class EmojiAnimator {
         dimIn.isRemovedOnCompletion = false
         dimLayer.add(dimIn, forKey: "dimIn")
 
-        // ECG canvas — full width, centered vertically
-        let lineH: CGFloat = 160
-        let lineY = bounds.midY - lineH / 2
+        // ECG canvas — full screen (amplitude needs full height)
         let ecgLayer = CAShapeLayer()
-        ecgLayer.frame = CGRect(x: 0, y: lineY, width: bounds.width, height: lineH)
+        ecgLayer.frame = CGRect(x: 0, y: 0, width: bounds.width, height: bounds.height)
         ecgLayer.fillColor = nil
         ecgLayer.strokeColor = NSColor(red: 0, green: 1, blue: 0.27, alpha: 1).cgColor
         ecgLayer.lineWidth = 3
@@ -1268,7 +1266,7 @@ class EmojiAnimator {
         // Build the full ECG path (2 QRS cycles + flatline) across the full width
         let path = CGMutablePath()
         let W = bounds.width
-        let mid: CGFloat = lineH / 2
+        let mid: CGFloat = bounds.height / 2
 
         // ECG waveform: maps t ∈ [0,1] within a cycle to y offset (normalised −1..+1)
         func ecgOffset(_ t: Double) -> CGFloat {
@@ -1294,7 +1292,7 @@ class EmojiAnimator {
             let y: CGFloat
             if elapsedSec < flatlineStart {
                 let cycleFrac = (elapsedSec / cycleDuration).truncatingRemainder(dividingBy: 1.0)
-                let amp: CGFloat = mid * 0.80
+                let amp: CGFloat = bounds.height * 0.40  // 80% total height (40% above + below center)
                 y = mid - ecgOffset(cycleFrac) * amp
             } else {
                 y = mid   // flatline
@@ -1362,9 +1360,9 @@ class EmojiAnimator {
     private var _flatlinePlayer: AVAudioPlayerNode?
 
     private func _playLubDub() {
-        _playTone(frequency: 80, duration: 0.07, volume: 0.6)
+        _playTone(frequency: 80, duration: 0.07, volume: 1.0)
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.09) { [weak self] in
-            self?._playTone(frequency: 60, duration: 0.06, volume: 0.5)
+            self?._playTone(frequency: 60, duration: 0.06, volume: 0.85)
         }
     }
 
