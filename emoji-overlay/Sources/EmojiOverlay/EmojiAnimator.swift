@@ -685,8 +685,8 @@ class EmojiAnimator {
             }
         }
 
-        // Stop sound after last firework fades (~7s total)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 7.0) {
+        // Fade starts at 6.4s so sound ends completely at 6.7s — 300ms before animation ends (~7s)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 6.4) {
             SoundManager.shared.stop("fireworks.mp3")
         }
     }
