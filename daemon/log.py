@@ -1,7 +1,7 @@
 """Shared log formatter for all training-assistant daemons.
 
-Format: [name      ] HH:MM:SS.f info    message
-        [name      ] HH:MM:SS.f error❌ message
+Format: [name-PID        ] HH:MM:SS.f info    message
+        [name-PID        ] HH:MM:SS.f error❌ message
 
 Usage:
     from daemon import log
@@ -9,11 +9,14 @@ Usage:
     log.error("session", f"Failed to load: {e}")
 """
 
+import os
 import sys
 from datetime import datetime
 
-# Name is padded to this width inside brackets → [name      ] = 12 chars total
-_MAX_NAME = 10
+# label = "name-PID", padded to this width inside brackets
+# max: "summarizer-99999" = 16 chars
+_LABEL_WIDTH = 16
+_PID = os.getpid()
 
 
 def _ts() -> str:
@@ -22,10 +25,10 @@ def _ts() -> str:
 
 
 def _fmt(name: str, level: str, msg: str) -> str:
-    pad = name[:_MAX_NAME].ljust(_MAX_NAME)
+    label = f"{name[:10]}-{_PID}".ljust(_LABEL_WIDTH)
     # "info   " = 7 display cols; "error❌" = 5 + 2-wide emoji = 7 display cols
     lvl = "error❌" if level == "error" else "info   "
-    return f"[{pad}] {_ts()} {lvl} {msg}"
+    return f"[{label}] {_ts()} {lvl} {msg}"
 
 
 def info(name: str, msg: str) -> None:
