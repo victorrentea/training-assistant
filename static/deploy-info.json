@@ -1,7 +1,7 @@
 {
-  "sha": "d36b00be09497a36483b5c87c765465892f4f699",
-  "timestamp": "2026-03-24 13:21",
+  "sha": "2b84de63eb6dba1833e18a109945369cbcd96a6f",
+  "timestamp": "2026-03-24 13:24",
   "changelog": [
-    "feat: full regenerate entire day \u2014 resets watermark + triggers summary"
+    "chore(start): reduce git poll interval from 10s to 2s"
   ]
 }
