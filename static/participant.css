@@ -1135,7 +1135,7 @@ h1 { display: none; }
 }
 /* Dev-reset: brighten + pointer on version tag hover */
 #version-tag:hover {
-  color: var(--text) !important;
+  color: #fff !important;
   cursor: pointer;
   opacity: 1;
 }
