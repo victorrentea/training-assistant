@@ -2133,6 +2133,7 @@
     const vt = document.getElementById('version-tag');
     if (!vt) return;
     vt.addEventListener('click', () => {
+      if (!confirm('Are you sure you want to reset your identity?')) return;
       ['workshop_participant_uuid', 'workshop_participant_name', 'workshop_custom_name',
        'workshop_vote', 'workshop_participant_location', 'workshop_tour_shown', 'workshop_wc_session']
         .forEach(k => localStorage.removeItem(k));
