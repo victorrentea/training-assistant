@@ -1,7 +1,7 @@
 {
-  "sha": "1041164cbaf8f9f897eb29036403d69863102230",
-  "timestamp": "2026-03-24 12:51",
+  "sha": "5c992a4c5fba6401f3b1c7de84312ad64bbc77bd",
+  "timestamp": "2026-03-24 12:53",
   "changelog": [
-    "feat(host): merge transcript lines into brain badge, add notes line count"
+    "feat(overlay): subtle buttons \u2014 invisible bg until hover + red stop button"
   ]
 }
