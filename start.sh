@@ -56,7 +56,7 @@ OVERLAY_PID=""
 
 cleanup() {
   echo ""
-  _log "start" "info" "Shutting down all processes..."
+  _log "start" "info" "🔴 daemon  🔴 watcher  🔴 overlay"
   [ -n "$DAEMON_PID" ]  && kill "$DAEMON_PID"  2>/dev/null
   [ -n "$WATCHER_PID" ] && kill "$WATCHER_PID" 2>/dev/null
   [ -n "$OVERLAY_PID" ] && kill "$OVERLAY_PID" 2>/dev/null
@@ -199,7 +199,7 @@ kill_old_watcher() {
     local old_pid
     old_pid=$(python3 -c "import json,sys; print(json.load(sys.stdin).get('pid',''))" < "$lock_file" 2>/dev/null)
     if [ -n "$old_pid" ] && kill -0 "$old_pid" 2>/dev/null; then
-      _log "start" "info" "Killing old watcher (PID $old_pid)..."
+      _log "start" "info" "🔴 watcher (prev instance)"
       kill "$old_pid" 2>/dev/null
       for i in 1 2 3; do
         kill -0 "$old_pid" 2>/dev/null || break
@@ -217,7 +217,7 @@ kill_old_overlay() {
     local old_pid
     old_pid=$(cat "$pid_file" 2>/dev/null)
     if [ -n "$old_pid" ] && kill -0 "$old_pid" 2>/dev/null; then
-      _log "start" "info" "Killing old overlay (PID $old_pid)..."
+      _log "start" "info" "🔴 overlay (prev instance)"
       kill "$old_pid" 2>/dev/null
       # Wait up to 3s for it to exit
       for i in 1 2 3; do
@@ -262,7 +262,7 @@ check_git_updates() {
 }
 
 stop_all_processes() {
-  _log "start" "info" "Stopping all processes..."
+  _log "start" "info" "🔴 daemon  🔴 watcher  🔴 overlay"
   [ -n "$DAEMON_PID" ]  && kill "$DAEMON_PID"  2>/dev/null && DAEMON_PID=""
   [ -n "$WATCHER_PID" ] && kill "$WATCHER_PID" 2>/dev/null && WATCHER_PID=""
   [ -n "$OVERLAY_PID" ] && kill "$OVERLAY_PID" 2>/dev/null && OVERLAY_PID=""
@@ -303,14 +303,14 @@ while true; do
       DAEMON_EXIT=$?
       DAEMON_PID=""
       if [ $DAEMON_EXIT -eq 0 ]; then
-        _log "start" "info" "Daemon stopped normally. Shutting down."
+        _log "start" "info" "🔴 daemon (clean exit)"
         stop_all_processes
         exit 0
       elif [ $DAEMON_EXIT -eq 42 ]; then
         RESTART_REASON="daemon-version-change"
         break
       else
-        _log "start" "error" "Daemon crashed (exit $DAEMON_EXIT)"
+        _log "start" "error" "🔴 daemon crashed (exit $DAEMON_EXIT)"
         RESTART_REASON="daemon-crash"
         break
       fi
