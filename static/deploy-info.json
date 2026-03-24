@@ -1,7 +1,7 @@
 {
-  "sha": "c6dd262314b6d9677268fd7686025694ad0b3034",
-  "timestamp": "2026-03-24 13:14",
+  "sha": "256b91a475b343371db53f9dbae1c81e69899104",
+  "timestamp": "2026-03-24 13:15",
   "changelog": [
-    "feat(daemon): print *** separator + new/updated key points on summary"
+    "fix(start): kill stale deploy watcher before starting new one"
   ]
 }
