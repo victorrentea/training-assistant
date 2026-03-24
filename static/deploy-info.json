@@ -1,7 +1,7 @@
 {
-  "sha": "56df3c87e8fc1df80044f7e24226f958d3bf95d3",
-  "timestamp": "2026-03-24 17:54",
+  "sha": "1002d96e3f7546549985cf1f4f32bcf57dbfbccd",
+  "timestamp": "2026-03-24 17:55",
   "changelog": [
-    "fix(overlay): log results not intent \u2014 connected/not connected only"
+    "refactor: rename Emoji Overlay \u2192 Desktop Overlay throughout project"
   ]
 }
