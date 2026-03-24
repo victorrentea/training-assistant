@@ -1,10 +1,7 @@
 {
-  "sha": "cb8d7beb8b1fd39aaf815223b9eaaa063c5ed672",
-  "timestamp": "2026-03-24 18:46",
+  "sha": "10821538b89a236965eec371557dd9ede434c43b",
+  "timestamp": "2026-03-24 18:51",
   "changelog": [
-    "feat(deploy): show blinking deploy-pending warning for participants",
-    "feat(deploy): notify server on push via GitHub Actions",
-    "feat(deploy): skip pending-deploy broadcast when SHA matches current deploy",
-    "docs: add deploy-pending-alert implementation plan"
+    "feat(participant): emoji tooltips, tour reorder, notif-btn fix, \ud83d\udd14 in checklist"
   ]
 }
