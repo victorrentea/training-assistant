@@ -1,6 +1,7 @@
 import json
 import logging
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -14,6 +15,15 @@ from state import state, ActivityType
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
+
+_DEPLOY_INFO = Path(__file__).parent.parent / "static" / "deploy-info.json"
+
+
+def _read_deploy_sha() -> str:
+    try:
+        return str(json.loads(_DEPLOY_INFO.read_text(encoding="utf-8")).get("sha", ""))
+    except Exception:
+        return ""
 
 _MAX_POINTS = 1000
 _MIN_POINTS = 500
@@ -218,7 +228,14 @@ async def status():
 
 @router.post("/api/pending-deploy")
 async def set_pending_deploy(payload: dict):
-    """Called by deploy watcher when a new push is detected on master."""
-    state.pending_deploy = payload if payload.get("sha") else None
+    """Called by deploy watcher or GitHub Actions when a new push is detected on master."""
+    incoming_sha = (payload.get("sha") or "").strip()
+    current_sha = _read_deploy_sha()
+    if incoming_sha and current_sha and incoming_sha == current_sha:
+        logger.info("pending-deploy: same SHA %s — skipping", incoming_sha[:8])
+        return {"status": "ok", "action": "ignored"}
+    state.pending_deploy = payload if incoming_sha else None
     await broadcast_state()
-    return {"status": "ok"}
+    if incoming_sha:
+        await broadcast({"type": "deploy_pending"})
+    return {"status": "ok", "action": "broadcast"}
