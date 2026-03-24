@@ -48,7 +48,7 @@ app.setActivationPolicy(.accessory) // no dock icon
 let pidFilePath = "/tmp/desktop-overlay.pid"
 let myPID = ProcessInfo.processInfo.processIdentifier
 try? "\(myPID)".write(toFile: pidFilePath, atomically: true, encoding: .utf8)
-overlayInfo("Started PID \(myPID)")
+// PID is visible in every log line label — no need to repeat it here
 
 // Server URL from command line or default
 let serverURL: String

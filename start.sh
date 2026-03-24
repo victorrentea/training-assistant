@@ -129,7 +129,7 @@ start_watcher() {
     NOTIFY_INTERVAL=5 LAST_NOTIFY_TIME=0 LAST_NOTIFY_TITLE=""
     POLL_COUNTER=0
 
-    _log "watcher" "info" "Watching deploys (PID $$)"
+    _log "watcher" "info" "Watching deploys"
     _log "watcher" "info" "Master HEAD: ${LAST_MASTER_HEAD:0:8}"
     _log "watcher" "info" "Production: $LAST_PROD_VERSION"
 
