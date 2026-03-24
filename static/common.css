@@ -244,6 +244,7 @@
   cursor: pointer;
 }
 .modal-newtab-btn:hover { color: var(--accent); }
+.summary-fullregen-btn:hover { color: var(--danger) !important; }
 .notes-content {
   white-space: pre-wrap;
   word-wrap: break-word;

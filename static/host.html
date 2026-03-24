@@ -349,14 +349,12 @@
       <span>🧠 Key Points</span>
       <span>
         <button id="summary-refresh-btn" class="modal-newtab-btn" onclick="requestSummaryRefresh()" title="Generate new key points from recent transcript">🔄</button>
+        <button class="modal-newtab-btn summary-fullregen-btn" onclick="requestFullDayRegenerate()" title="Reset watermark and regenerate key points from entire day's transcript">↺</button>
         <button class="summary-close" onclick="closeSummaryModal()">✕</button>
       </span>
     </div>
     <ul id="summary-list" class="summary-list"></ul>
     <div id="summary-time" class="summary-time"></div>
-    <div style="text-align:center; padding:.5rem 0 .25rem;">
-      <button class="modal-newtab-btn" style="font-size:.8rem; opacity:.5;" onclick="requestFullDayRegenerate()" title="Reset watermark and regenerate key points from entire day's transcript">↺ full regenerate entire day</button>
-    </div>
   </div>
 </div>
 
