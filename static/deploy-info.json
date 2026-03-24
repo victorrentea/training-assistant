@@ -1,7 +1,8 @@
 {
-  "sha": "a6cb39462dd137a30c83f6f94815af1124bd027f",
-  "timestamp": "2026-03-24 18:15",
+  "sha": "16bb91e3b08c7300735d9df7de9ea2bb621fc70d",
+  "timestamp": "2026-03-24 18:17",
   "changelog": [
-    "fix(transcript): show recording offset as duration not fake clock time"
+    "fix(host): remove floating emoji reactions from host screen",
+    "fix(indexer): merge sync-done + watching into one log line"
   ]
 }
