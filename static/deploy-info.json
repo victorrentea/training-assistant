@@ -1,7 +1,7 @@
 {
-  "sha": "6c668a96958063f1b775d7858c6cb95bebad63cf",
+  "sha": "2a0e8b65acbd95bf6818262d81a7010db0dd93b7",
   "timestamp": "2026-03-24 17:58",
   "changelog": [
-    "fix(daemon): compact process status line; transcript only on change"
+    "fix(start): compact process status line with green dots"
   ]
 }
