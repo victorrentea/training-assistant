@@ -1,7 +1,7 @@
 {
-  "sha": "e1f704009421879638f16069f5a4c1807fabb2ea",
-  "timestamp": "2026-03-24 17:53",
+  "sha": "56df3c87e8fc1df80044f7e24226f958d3bf95d3",
+  "timestamp": "2026-03-24 17:54",
   "changelog": [
-    "fix(overlay): human-readable log messages, no raw NSError dumps"
+    "fix(overlay): log results not intent \u2014 connected/not connected only"
   ]
 }
