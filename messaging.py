@@ -293,6 +293,7 @@ def build_host_state() -> dict:
         "mode": state.mode,
         "leaderboard_active": state.leaderboard_active,
         "leaderboard_data": _build_leaderboard_for_host(),
+        "needs_restore": state.needs_restore,
     }
 
 

@@ -15,6 +15,7 @@ All configuration is read from secrets.env and environment variables:
     TRANSCRIPTION_FOLDER    path to transcription files
 """
 
+import hashlib
 import json
 import logging
 import os
@@ -54,6 +55,8 @@ _TIMESTAMP_INTERVAL_SECONDS = float(os.environ.get("TRANSCRIPT_TIMESTAMP_INTERVA
 EXIT_CODE_UPDATE = 42  # signals start.sh to git pull and restart
 _KEY_POINTS_FILENAME = "key_points.json"
 _DAEMON_STATE_FILENAME = "daemon_state.json"
+_BACKUP_DIR = Path.home() / ".training-assistant"
+_BACKUP_FILE = _BACKUP_DIR / "state-backup.json"
 
 
 def _load_key_points(session_folder: Path) -> list[dict]:
@@ -298,6 +301,27 @@ def run() -> None:
     except RuntimeError as e:
         print(f"[daemon] Warning: could not fetch server version at startup: {e}", file=sys.stderr)
 
+    # ── Restore state from backup if server needs it ──
+    try:
+        status = _get_json(f"{config.server_url}/api/status")
+        if status.get("needs_restore"):
+            if _BACKUP_FILE.exists():
+                print("[daemon] Server needs state restore — sending backup...")
+                backup_data = json.loads(_BACKUP_FILE.read_text(encoding="utf-8"))
+                result = _post_json(
+                    f"{config.server_url}/api/state-restore",
+                    backup_data,
+                    config.host_username, config.host_password,
+                )
+                print(f"[daemon] State restore result: {result.get('status', 'ok')}")
+            else:
+                print("[daemon] Server needs state restore but no backup file found at "
+                      f"{_BACKUP_FILE}", file=sys.stderr)
+        else:
+            print("[daemon] Server does not need state restore")
+    except Exception as e:
+        print(f"[daemon] State restore check failed: {e}", file=sys.stderr)
+
     # Detect today's session folder
     sf, sn = find_session_folder(date.today())
     config = dc_replace(config, session_folder=sf, session_notes=sn)
@@ -377,6 +401,7 @@ def run() -> None:
         print(f"[session] Failed to sync initial state: {e}", file=sys.stderr)
 
     last_summary_at = 0.0  # monotonic time of last summary run
+    last_snapshot_hash: str | None = None  # hash of last saved state snapshot
     transcript_state = TranscriptStateManager()
 
     while True:
@@ -626,6 +651,24 @@ def run() -> None:
                     )
                 except Exception as e:
                     print(f"[daemon] Token usage POST failed: {e}", file=sys.stderr)
+
+            # ── Snapshot state for backup ──
+            try:
+                snapshot = _get_json(
+                    f"{config.server_url}/api/state-snapshot",
+                    config.host_username, config.host_password,
+                )
+                snapshot_json = json.dumps(snapshot, sort_keys=True)
+                snapshot_hash = hashlib.sha256(snapshot_json.encode("utf-8")).hexdigest()
+                if snapshot_hash != last_snapshot_hash:
+                    _BACKUP_DIR.mkdir(parents=True, exist_ok=True)
+                    tmp_file = _BACKUP_FILE.with_suffix(".tmp")
+                    tmp_file.write_text(snapshot_json, encoding="utf-8")
+                    os.rename(str(tmp_file), str(_BACKUP_FILE))
+                    last_snapshot_hash = snapshot_hash
+                    print(f"[daemon] State backup saved ({len(snapshot_json)} bytes)")
+            except Exception as e:
+                print(f"[daemon] State snapshot failed: {e}", file=sys.stderr)
 
             # ── Check for forced summary request ──
             force_summary = False
