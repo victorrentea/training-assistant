@@ -62,6 +62,13 @@ app.include_router(state_snapshot.router, dependencies=[Depends(require_host_aut
 class ModeRequest(BaseModel):
     mode: str
 
+@app.post("/api/screen-share", dependencies=[Depends(require_host_auth)])
+async def toggle_screen_share():
+    state.screen_share_active = not state.screen_share_active
+    await broadcast_state()
+    return {"screen_share_active": state.screen_share_active}
+
+
 @app.post("/api/mode", dependencies=[Depends(require_host_auth)])
 async def set_mode(req: ModeRequest):
     if req.mode not in ("workshop", "conference"):
