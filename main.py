@@ -4,6 +4,10 @@ FastAPI + WebSocket backend
 """
 
 import logging
+from contextlib import asynccontextmanager
+from datetime import datetime
+from pathlib import Path
+from zoneinfo import ZoneInfo
 
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.staticfiles import StaticFiles
@@ -18,7 +22,22 @@ from routers import ws, poll, scores, quiz, pages, wordcloud, activity, qa, code
 
 logging.basicConfig(level=logging.INFO)
 
-app = FastAPI(title="Workshop Tool")
+
+def _stamp_version_js():
+    """Generate static/version.js with the current Bucharest timestamp at startup."""
+    ts = datetime.now(ZoneInfo("Europe/Bucharest")).strftime("%Y-%m-%d %H:%M")
+    version_js = Path(__file__).parent / "static" / "version.js"
+    version_js.write_text(f"window.APP_VERSION = '{ts}';\n", encoding="utf-8")
+    logging.getLogger(__name__).info("version.js stamped: %s", ts)
+
+
+@asynccontextmanager
+async def lifespan(app_: FastAPI):
+    _stamp_version_js()
+    yield
+
+
+app = FastAPI(title="Workshop Tool", lifespan=lifespan)
 
 Instrumentator().instrument(app).expose(
     app, endpoint="/metrics", dependencies=[Depends(require_host_auth)]

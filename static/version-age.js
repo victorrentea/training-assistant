@@ -36,7 +36,7 @@
     }
 
     const workHours = window.WORK_HOURS;
-    const workSuffix = workHours ? ' | built in ' + workHours + ' hours' : '';
+    const workSuffix = workHours ? ' | built in ' + workHours + ' hours with Santa \uD83C\uDF85' : '';
 
     function update() {
       el.textContent = formatElapsed(parsed, new Date()) + workSuffix;
