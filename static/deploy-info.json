@@ -1,7 +1,7 @@
 {
-  "sha": "e283ecb5cd1e24d40a57f6ce00d566345f4cd8b5",
-  "timestamp": "2026-03-24 07:45",
+  "sha": "cf00957293593e3f3cb0c80669f02e8942e5301b",
+  "timestamp": "2026-03-24 07:46",
   "changelog": [
-    "feat(emoji-overlay): confetti sound layers on repeated clicks"
+    "feat: daemon-based state persistence, replacing SQLite"
   ]
 }
