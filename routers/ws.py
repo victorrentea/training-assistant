@@ -65,6 +65,10 @@ async def websocket_endpoint(websocket: WebSocket, participant_id: str):
 
     await websocket.accept()
     state.participants[pid] = websocket
+    if not is_host and not is_overlay:
+        forwarded = websocket.headers.get("x-forwarded-for", "")
+        ip = forwarded.split(",")[0].strip() if forwarded else (websocket.client.host if websocket.client else "")
+        state.participant_ips[pid] = ip
     ws_connections_active.labels(role=role).inc()
 
     if is_overlay:
@@ -348,6 +352,7 @@ async def websocket_endpoint(websocket: WebSocket, participant_id: str):
         state.participants.pop(pid, None)
         state.locations.pop(pid, None)
         state.vote_times.pop(pid, None)
+        state.participant_ips.pop(pid, None)
         ws_connections_active.labels(role=role).dec()
         # Keep participant_names and scores (persist for session)
         logger.info(f"Disconnected: {pid} ({len(state.participants)} remaining)")
