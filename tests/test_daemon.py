@@ -217,65 +217,61 @@ class TestGenerateSummary:
     @patch("daemon.summarizer.load_transcription_files")
     def test_no_files(self, mock_load, tmp_path):
         mock_load.side_effect = SystemExit(1)
-        assert generate_summary(self._cfg(tmp_path)) is None
+        assert generate_summary(self._cfg(tmp_path), []) is None
 
-    @patch("daemon.summarizer.read_session_notes", return_value="")
-    @patch("daemon.summarizer.extract_all_text", return_value="")
     @patch("daemon.summarizer.load_transcription_files", return_value=[])
-    def test_empty_entries_no_notes(self, mock_load, mock_extract, mock_notes, tmp_path):
-        assert generate_summary(self._cfg(tmp_path)) is None
+    def test_empty_entries(self, mock_load, tmp_path):
+        assert generate_summary(self._cfg(tmp_path), []) is None
 
-    @patch("daemon.summarizer.read_session_notes", return_value="")
-    @patch("daemon.summarizer.extract_all_text", return_value="")
+    @patch("daemon.summarizer.extract_last_n_minutes", return_value="")
     @patch("daemon.summarizer.load_transcription_files", return_value=[(0, "t")])
-    @patch("daemon.summarizer.anthropic.Anthropic")
-    def test_empty_text_no_notes(self, MockClient, mock_extract, mock_load, mock_notes, tmp_path):
-        assert generate_summary(self._cfg(tmp_path)) is None
+    def test_empty_text(self, mock_load, mock_extract, tmp_path):
+        assert generate_summary(self._cfg(tmp_path), []) is None
 
     @patch("daemon.summarizer.read_session_notes", return_value="")
-    @patch("daemon.summarizer.extract_all_text", return_value="transcript")
+    @patch("daemon.summarizer.extract_last_n_minutes", return_value="transcript")
     @patch("daemon.summarizer.load_transcription_files", return_value=[(0, "t")])
     @patch("daemon.summarizer.anthropic.Anthropic")
     def test_success(self, MockClient, *_mocks):
-        resp_text = json.dumps({"points": [{"text": "Point 1", "source": "discussion", "time": "10:15"}]})
+        resp_text = json.dumps([{"text": "Point 1", "source": "discussion", "time": "10:15"}])
         mock_resp = MagicMock()
         mock_block = MagicMock(type="text", text=resp_text)
         mock_resp.content = [mock_block]
         MockClient.return_value.messages.create.return_value = mock_resp
 
-        result = generate_summary(self._cfg(MagicMock()))
+        result = generate_summary(self._cfg(MagicMock()), [])
         assert result is not None
-        assert len(result["points"]) == 1
-        assert result["points"][0]["time"] == "10:15"
+        assert len(result["new"]) == 1
+        assert result["new"][0]["time"] == "10:15"
 
     @patch("daemon.summarizer.read_session_notes", return_value="")
-    @patch("daemon.summarizer.extract_all_text", return_value="text")
+    @patch("daemon.summarizer.extract_last_n_minutes", return_value="text")
     @patch("daemon.summarizer.load_transcription_files", return_value=[(0, "t")])
     @patch("daemon.summarizer.anthropic.Anthropic")
     def test_fence_stripping(self, MockClient, *_mocks):
         mock_resp = MagicMock()
-        mock_block = MagicMock(type="text", text='```json\n{"points": [{"text": "P", "source": "notes"}]}\n```')
+        mock_block = MagicMock(type="text", text='```json\n[{"text": "P", "source": "notes"}]\n```')
         mock_resp.content = [mock_block]
         MockClient.return_value.messages.create.return_value = mock_resp
-        result = generate_summary(self._cfg(MagicMock()))
+        result = generate_summary(self._cfg(MagicMock()), [])
         assert result is not None
 
     @patch("daemon.summarizer.read_session_notes", return_value="")
-    @patch("daemon.summarizer.extract_all_text", return_value="text")
+    @patch("daemon.summarizer.extract_last_n_minutes", return_value="text")
     @patch("daemon.summarizer.load_transcription_files", return_value=[(0, "t")])
     @patch("daemon.summarizer.anthropic.Anthropic")
-    def test_legacy_flat_array(self, MockClient, *_mocks):
+    def test_legacy_strings(self, MockClient, *_mocks):
         mock_resp = MagicMock()
         mock_block = MagicMock(type="text", text='["Point one", "Point two"]')
         mock_resp.content = [mock_block]
         MockClient.return_value.messages.create.return_value = mock_resp
-        result = generate_summary(self._cfg(MagicMock()))
+        result = generate_summary(self._cfg(MagicMock()), [])
         assert result is not None
-        assert len(result["points"]) == 2
-        assert all(p["source"] == "discussion" for p in result["points"])
+        assert len(result["new"]) == 2
+        assert all(p["source"] == "discussion" for p in result["new"])
 
     @patch("daemon.summarizer.read_session_notes", return_value="")
-    @patch("daemon.summarizer.extract_all_text", return_value="text")
+    @patch("daemon.summarizer.extract_last_n_minutes", return_value="text")
     @patch("daemon.summarizer.load_transcription_files", return_value=[(0, "t")])
     @patch("daemon.summarizer.anthropic.Anthropic")
     def test_api_error(self, MockClient, *_mocks):
@@ -283,10 +279,10 @@ class TestGenerateSummary:
         MockClient.return_value.messages.create.side_effect = anthropic.APIError(
             message="err", request=MagicMock(), body=None
         )
-        assert generate_summary(self._cfg(MagicMock())) is None
+        assert generate_summary(self._cfg(MagicMock()), []) is None
 
     @patch("daemon.summarizer.read_session_notes", return_value="")
-    @patch("daemon.summarizer.extract_all_text", return_value="text")
+    @patch("daemon.summarizer.extract_last_n_minutes", return_value="text")
     @patch("daemon.summarizer.load_transcription_files", return_value=[(0, "t")])
     @patch("daemon.summarizer.anthropic.Anthropic")
     def test_invalid_json(self, MockClient, *_mocks):
@@ -294,21 +290,21 @@ class TestGenerateSummary:
         mock_block = MagicMock(type="text", text="not json")
         mock_resp.content = [mock_block]
         MockClient.return_value.messages.create.return_value = mock_resp
-        assert generate_summary(self._cfg(MagicMock())) is None
+        assert generate_summary(self._cfg(MagicMock()), []) is None
 
     @patch("daemon.summarizer.read_session_notes", return_value="")
-    @patch("daemon.summarizer.extract_all_text", return_value="text")
+    @patch("daemon.summarizer.extract_last_n_minutes", return_value="text")
     @patch("daemon.summarizer.load_transcription_files", return_value=[(0, "t")])
     @patch("daemon.summarizer.anthropic.Anthropic")
-    def test_not_list_or_points(self, MockClient, *_mocks):
+    def test_not_list(self, MockClient, *_mocks):
         mock_resp = MagicMock()
         mock_block = MagicMock(type="text", text='{"not": "list"}')
         mock_resp.content = [mock_block]
         MockClient.return_value.messages.create.return_value = mock_resp
-        assert generate_summary(self._cfg(MagicMock())) is None
+        assert generate_summary(self._cfg(MagicMock()), []) is None
 
     @patch("daemon.summarizer.read_session_notes", return_value="")
-    @patch("daemon.summarizer.extract_all_text", return_value="text")
+    @patch("daemon.summarizer.extract_last_n_minutes", return_value="text")
     @patch("daemon.summarizer.load_transcription_files", return_value=[(0, "t")])
     @patch("daemon.summarizer.anthropic.Anthropic")
     def test_empty_response(self, MockClient, *_mocks):
@@ -316,10 +312,10 @@ class TestGenerateSummary:
         mock_resp.content = []
         mock_resp.stop_reason = "end_turn"
         MockClient.return_value.messages.create.return_value = mock_resp
-        assert generate_summary(self._cfg(MagicMock())) is None
+        assert generate_summary(self._cfg(MagicMock()), []) is None
 
     @patch("daemon.summarizer.read_session_notes", return_value="")
-    @patch("daemon.summarizer.extract_all_text", return_value="text")
+    @patch("daemon.summarizer.extract_last_n_minutes", return_value="text")
     @patch("daemon.summarizer.load_transcription_files", return_value=[(0, "t")])
     @patch("daemon.summarizer.anthropic.Anthropic")
     def test_bad_block_type(self, MockClient, *_mocks):
@@ -327,10 +323,10 @@ class TestGenerateSummary:
         mock_block = MagicMock(type="image")
         mock_resp.content = [mock_block]
         MockClient.return_value.messages.create.return_value = mock_resp
-        assert generate_summary(self._cfg(MagicMock())) is None
+        assert generate_summary(self._cfg(MagicMock()), []) is None
 
     @patch("daemon.summarizer.read_session_notes", return_value="")
-    @patch("daemon.summarizer.extract_all_text", return_value="text")
+    @patch("daemon.summarizer.extract_last_n_minutes", return_value="text")
     @patch("daemon.summarizer.load_transcription_files", return_value=[(0, "t")])
     @patch("daemon.summarizer.anthropic.Anthropic")
     def test_invalid_source_normalized(self, MockClient, *_mocks):
@@ -338,33 +334,58 @@ class TestGenerateSummary:
         mock_block = MagicMock(type="text", text='[{"text": "P", "source": "xyz"}]')
         mock_resp.content = [mock_block]
         MockClient.return_value.messages.create.return_value = mock_resp
-        result = generate_summary(self._cfg(MagicMock()))
+        result = generate_summary(self._cfg(MagicMock()), [])
         assert result is not None
-        assert result["points"][0]["source"] == "discussion"
+        assert result["new"][0]["source"] == "discussion"
+
+
+class TestSummarizerUpdatedFormat:
+    def _cfg(self, tmp_path):
+        from quiz_core import Config
+        return Config(
+            folder=tmp_path, minutes=30, server_url="http://localhost",
+            api_key="key", model="model", dry_run=False,
+            host_username="h", host_password="p",
+        )
 
     @patch("daemon.summarizer.read_session_notes", return_value="")
     @patch("daemon.summarizer.create_message")
-    @patch("daemon.summarizer.extract_all_text", return_value="transcript")
-    @patch("daemon.summarizer.load_transcription_files", return_value=[(0, "t")])
-    def test_points_format(self, mock_load, mock_extract, mock_create, *_mocks):
+    def test_updated_and_new_format(self, mock_create, *_mocks):
         resp_text = json.dumps({
-            "points": [
-                {"text": "Point A", "source": "discussion", "time": "14:30"},
-                {"text": "Point B", "source": "notes"},
-            ],
+            "updated": [{"index": 0, "text": "Revised point", "source": "discussion", "time": "14:30"}],
+            "new": [{"text": "Brand new point", "source": "discussion", "time": "15:10"}],
         })
         mock_resp = MagicMock()
         mock_resp.content = [MagicMock(type="text", text=resp_text)]
         mock_resp.stop_reason = "end_turn"
         mock_create.return_value = mock_resp
 
-        result = generate_summary(self._cfg(MagicMock()))
+        existing = [{"text": "Old point", "source": "discussion", "time": "10:00"}]
+        result = generate_summary(self._cfg(MagicMock()), existing, delta_text="new transcript")
         assert result is not None
-        assert len(result["points"]) == 2
-        assert result["points"][0]["text"] == "Point A"
-        assert result["points"][0]["time"] == "14:30"
-        assert result["points"][1]["source"] == "notes"
-        assert "time" not in result["points"][1]
+        assert len(result["updated"]) == 1
+        assert result["updated"][0]["index"] == 0
+        assert result["updated"][0]["text"] == "Revised point"
+        assert len(result["new"]) == 1
+        assert result["new"][0]["text"] == "Brand new point"
+
+    @patch("daemon.summarizer.read_session_notes", return_value="")
+    @patch("daemon.summarizer.create_message")
+    def test_new_only_no_updates(self, mock_create, *_mocks):
+        resp_text = json.dumps({
+            "updated": [],
+            "new": [{"text": "Fresh point", "source": "notes"}],
+        })
+        mock_resp = MagicMock()
+        mock_resp.content = [MagicMock(type="text", text=resp_text)]
+        mock_resp.stop_reason = "end_turn"
+        mock_create.return_value = mock_resp
+
+        result = generate_summary(self._cfg(MagicMock()), [], delta_text="some text")
+        assert result is not None
+        assert len(result["updated"]) == 0
+        assert len(result["new"]) == 1
+        assert result["new"][0]["source"] == "notes"
 
 
 # ═══════════════════════════════════════════════════════════════════════

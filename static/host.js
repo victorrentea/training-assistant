@@ -282,8 +282,6 @@
         renderPreview(msg.quiz || null);
       } else if (msg.type === 'summary') {
         updateSummary(msg.points, msg.updated_at);
-      } else if (msg.type === 'keynotes_updated') {
-        toast('📝 Key points updated!');
       } else if (msg.type === 'emoji_reaction') {
         showHostEmoji(msg.emoji);
       }
