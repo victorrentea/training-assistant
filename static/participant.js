@@ -5,6 +5,7 @@
   // Host cookie (is_host=1) → sessionStorage (per-tab UUID for multi-tab testing)
   // Normal participants → localStorage (same UUID across tabs/reloads)
   const uuidStorage = document.cookie.includes('is_host=1') ? sessionStorage : localStorage;
+  const _isFirstVisit = !uuidStorage.getItem(LS_UUID_KEY);
 
   function getOrCreateUUID() {
       let uid = uuidStorage.getItem(LS_UUID_KEY);
@@ -83,6 +84,133 @@
 
   function escHtml(s) {
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // ── Onboarding tour ──
+  const LS_TOUR_KEY = 'workshop_tour_shown';
+
+  function runOnboardingTourIfNeeded() {
+    if (!_isFirstVisit) return;
+    if (localStorage.getItem(LS_TOUR_KEY)) return;
+    localStorage.setItem(LS_TOUR_KEY, '1');
+
+    const STEPS = [
+      { selector: '#emoji-bar button[onclick*="☕"]', emoji: '☕', text: "God, I need a coffee — tap this when you're running on fumes and need a break. No shame." },
+      { selector: '#emoji-bar button[onclick*="👍"]', emoji: '👍', text: 'Tap when the speaker says something brilliant. Their ego needs the fuel.' },
+      { selector: '#emoji-bar button[onclick*="⚔️"]', emoji: '⚔️', text: 'Disagreement battle mode! Fight me on this — intellectually. Tap when you strongly disagree.' },
+      { selector: '#emoji-bar button[onclick*="🔥"]', emoji: '🔥', text: 'This. Is. Fire. Tap when the content is genuinely mind-blowing.' },
+      { selector: '#location-prompt', emoji: '📍', text: "Tell us where you're joining from — for the world map. Totally optional." },
+      { selector: '#summary-btn',     emoji: '🧠', text: 'AI recaps what you missed. Tap any time. Zero FOMO.' },
+      { selector: '#display-name',   emoji: '✏️', text: "That's your name up there. Tap it to rename yourself. Be creative." },
+    ];
+
+    const TOTAL = STEPS.length;
+    let current = 0;
+    let bubble = null;
+    let glowEl = null;
+    let autoTimer = null;
+
+    function clearGlow() {
+      if (glowEl) { glowEl.classList.remove('tour-glow'); glowEl = null; }
+    }
+    function removeBubble() {
+      if (bubble) { bubble.remove(); bubble = null; }
+    }
+    function clearAutoTimer() {
+      if (autoTimer) { clearTimeout(autoTimer); autoTimer = null; }
+    }
+    function finish() {
+      clearAutoTimer();
+      clearGlow();
+      removeBubble();
+    }
+
+    function showStep(index) {
+      clearAutoTimer();
+      clearGlow();
+      removeBubble();
+      if (index >= TOTAL) { finish(); return; }
+
+      const step = STEPS[index];
+      const anchor = document.querySelector(step.selector);
+      if (!anchor) { showStep(index + 1); return; }
+
+      glowEl = anchor;
+      glowEl.classList.add('tour-glow');
+
+      bubble = document.createElement('div');
+      bubble.className = 'tour-bubble';
+
+      const emojiSpan = document.createElement('span');
+      emojiSpan.className = 'tour-bubble-emoji';
+      emojiSpan.textContent = step.emoji;
+
+      const textSpan = document.createElement('span');
+      textSpan.className = 'tour-bubble-text';
+      textSpan.textContent = step.text;
+
+      const footer = document.createElement('div');
+      footer.className = 'tour-bubble-footer';
+
+      const dots = document.createElement('div');
+      dots.className = 'tour-dots';
+      for (let i = 0; i < TOTAL; i++) {
+        const dot = document.createElement('div');
+        dot.className = 'tour-dot' + (i === index ? ' active' : '');
+        dots.appendChild(dot);
+      }
+
+      const skipBtn = document.createElement('button');
+      skipBtn.className = 'tour-skip';
+      skipBtn.textContent = 'Skip';
+      skipBtn.onclick = (e) => { e.stopPropagation(); finish(); };
+
+      footer.appendChild(dots);
+      footer.appendChild(skipBtn);
+      bubble.appendChild(emojiSpan);
+      bubble.appendChild(textSpan);
+      bubble.appendChild(footer);
+      document.body.appendChild(bubble);
+
+      positionBubble(bubble, anchor);
+
+      let advanced = false;
+      function advance() {
+        if (advanced) return;
+        advanced = true;
+        clearAutoTimer();
+        document.removeEventListener('click', onTap, true);
+        current++;
+        showStep(current);
+      }
+      function onTap(e) {
+        if (e.target === skipBtn || skipBtn.contains(e.target)) return;
+        advance();
+      }
+      setTimeout(() => document.addEventListener('click', onTap, true), 200);
+      autoTimer = setTimeout(advance, 3500);
+    }
+
+    function positionBubble(bub, anchor) {
+      const rect = anchor.getBoundingClientRect();
+      const bubW = 240;
+      const spaceAbove = rect.top;
+      const spaceBelow = window.innerHeight - rect.bottom;
+      bub.style.left = Math.max(8, Math.min(window.innerWidth - bubW - 8, rect.left + rect.width / 2 - bubW / 2)) + 'px';
+      if (spaceAbove > 140 || spaceAbove > spaceBelow) {
+        bub.classList.remove('arrow-top');
+        bub.style.top = '0px';
+        requestAnimationFrame(() => {
+          const bh = bub.getBoundingClientRect().height;
+          bub.style.top = Math.max(8, rect.top - bh - 12) + 'px';
+        });
+      } else {
+        bub.classList.add('arrow-top');
+        bub.style.top = (rect.bottom + 12) + 'px';
+      }
+    }
+
+    setTimeout(() => showStep(0), 800);
   }
 
   function avatarColorFromUuid(uuid) {
@@ -451,6 +579,7 @@
 
     ws.onopen = () => {
       document.getElementById('main-screen').style.display = 'block';
+      runOnboardingTourIfNeeded();
       document.getElementById('display-name').textContent = myName;
 
       // Send name as first message
@@ -1987,3 +2116,20 @@
   function hideParticipantLeaderboard() {
     document.getElementById('leaderboard-overlay').style.display = 'none';
   }
+
+  // ── Hidden dev-reset: click version tag to wipe all local state ──
+  (function setupDevReset() {
+    const vt = document.getElementById('version-tag');
+    if (!vt) return;
+    vt.addEventListener('click', () => {
+      if (!confirm('Reset everything? Clears all local state and reloads the page fresh.')) return;
+      ['workshop_participant_uuid', 'workshop_participant_name', 'workshop_custom_name',
+       'workshop_vote', 'workshop_participant_location', 'workshop_tour_shown', 'workshop_wc_session']
+        .forEach(k => localStorage.removeItem(k));
+      sessionStorage.clear();
+      document.cookie.split(';').forEach(c => {
+        document.cookie = c.replace(/^ +/, '').replace(/=.*/, '=;expires=' + new Date(0).toUTCString() + ';path=/');
+      });
+      location.reload();
+    });
+  })();
