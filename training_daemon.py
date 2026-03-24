@@ -327,18 +327,17 @@ def run() -> None:
 
     # ── Log transcription file info at startup ──
     try:
+        import calendar
         entries = load_transcription_files(config.folder)
-        timed = [(ts, txt) for ts, txt in entries if ts is not None]
-        if timed:
-            max_ts = max(ts for ts, _ in timed)
-            cutoff = max_ts - DEFAULT_TRANSCRIPT_MINUTES * 60
-            recent = [(ts, txt) for ts, txt in timed if ts >= cutoff and txt.strip()]
-            h, rem = divmod(int(max_ts), 3600)
-            m_val, s_val = divmod(rem, 60)
-            latest_time = f"{h:02d}:{m_val:02d}:{s_val:02d}"
-            log.info("transcript", f"{len(recent)}/{len(entries)} segs, latest={latest_time}")
+        files = sorted(config.folder.glob("*.txt"), key=lambda f: f.stat().st_mtime)
+        if files:
+            stem = files[-1].stem[:8]
+            d = __import__('datetime').date(int(stem[:4]), int(stem[4:6]), int(stem[6:8]))
+            date_str = f"{calendar.month_abbr[d.month]} {d.day}"
         else:
-            log.info("transcript", f"Total segments: {len(entries)} (no timestamps found)")
+            date_str = "?"
+        non_empty = sum(1 for _, txt in entries if txt.strip())
+        log.info("transcript", f"{date_str} · {non_empty} lines")
     except SystemExit:
         log.error("transcript", "No transcription file found")
     except Exception as e:
@@ -358,6 +357,7 @@ def run() -> None:
     last_heartbeat_at = 0.0
     last_session_check_at = 0.0
     last_transcript_stats_at = 0.0
+    last_transcript_line_count = -1
     last_notes_mtime: float = 0.0  # track notes file mtime for re-push on change
     # ── Session stack initialization ──
     sessions_root = config.session_folder.parent if config.session_folder else Path.cwd()
@@ -638,7 +638,9 @@ def run() -> None:
                     else:
                         line_count = 0
                         latest_time = None
-                    log.info("transcript", f"{line_count}/{len(entries)} segs, latest={latest_time}")
+                    if line_count != last_transcript_line_count:
+                        log.info("transcript", f"{line_count} lines, latest={latest_time}")
+                        last_transcript_line_count = line_count
                     _post_json(
                         f"{config.server_url}/api/transcript-status",
                         {"line_count": line_count, "total_lines": total_lines, "latest_ts": latest_time},
