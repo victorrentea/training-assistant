@@ -335,12 +335,23 @@
   }
 
   function updateSummary(points, updatedAt) {
+    const prevCount = summaryPoints.length;
     summaryPoints = points || [];
     summaryUpdatedAt = updatedAt;
     if (summaryPoints.length) {
       _summaryRequested = false;
       const btn = document.getElementById('summary-refresh-btn');
       if (btn) { btn.disabled = false; btn.style.opacity = ''; }
+    }
+    const countEl = document.getElementById('summary-count');
+    if (countEl) countEl.textContent = '(' + summaryPoints.length + ')';
+    if (summaryPoints.length > prevCount) {
+      const summaryBtn = document.getElementById('summary-btn');
+      if (summaryBtn) {
+        summaryBtn.classList.remove('summary-btn-flash');
+        void summaryBtn.offsetWidth;
+        summaryBtn.classList.add('summary-btn-flash');
+      }
     }
     renderSummaryList();
   }
