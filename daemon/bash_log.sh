@@ -2,8 +2,8 @@
 # Shared log helper for shell scripts.
 # Source this file to get _log():  source "$SCRIPT_DIR/daemon/bash_log.sh"
 #
-# Format: [name      ] HH:MM:SS.f info    message
-#         [name      ] HH:MM:SS.f error❌ message
+# Format: [name-PID        ] HH:MM:SS.f info    message
+#         [name-PID        ] HH:MM:SS.f error❌ message
 
 _log_ts() {
   # macOS date has no %N; use perl (available by default) for sub-second precision
@@ -12,14 +12,14 @@ _log_ts() {
 
 _log() {
   local name="$1" level="$2" msg="$3"
-  local pad ts lvl
-  pad=$(printf "%-10.10s" "$name")
+  local label ts lvl
+  label=$(printf "%-16.16s" "${name}-$$")
   ts=$(_log_ts)
   if [ "$level" = "error" ]; then
     lvl="error❌"
-    printf "[%s] %s %s %s\n" "$pad" "$ts" "$lvl" "$msg" >&2
+    printf "[%s] %s %s %s\n" "$label" "$ts" "$lvl" "$msg" >&2
   else
     lvl="info   "
-    printf "[%s] %s %s %s\n" "$pad" "$ts" "$lvl" "$msg"
+    printf "[%s] %s %s %s\n" "$label" "$ts" "$lvl" "$msg"
   fi
 }

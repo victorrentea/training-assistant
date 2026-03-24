@@ -155,13 +155,13 @@ class AppDelegate: NSObject, NSApplicationDelegate, URLSessionWebSocketDelegate 
 
     func urlSession(_ session: URLSession, webSocketTask: URLSessionWebSocketTask,
                     didCloseWith closeCode: URLSessionWebSocketTask.CloseCode, reason: Data?) {
-        overlayError("WebSocket not connected")
+        if !reconnecting { overlayError("WebSocket not connected") }
         scheduleReconnect()
     }
 
     func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
-        if let error = error {
-            overlayError("WebSocket not connected")
+        if let _ = error {
+            if !reconnecting { overlayError("WebSocket not connected") }
             scheduleReconnect()
         }
     }
@@ -177,8 +177,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, URLSessionWebSocketDelegate 
                     break
                 }
                 self?.receiveMessage()
-            case .failure(let error):
-                overlayError("WebSocket not connected")
+            case .failure:
+                if self?.reconnecting == false { overlayError("WebSocket not connected") }
                 self?.scheduleReconnect()
             }
         }
