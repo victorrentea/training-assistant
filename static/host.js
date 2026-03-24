@@ -2423,9 +2423,9 @@ function renderSessionPanel() {
     const depth = sessionStack.length - 1 - i; // 0 = current, 1 = parent, …
     rows.push(`
       <div class="session-row${isCurrent ? ' session-row-current' : ''}" style="margin-left:${depth * 12}px">
-        <span class="session-row-name">${_esc(s.name || 'Unnamed')}</span>
+        <span class="session-row-name">${_esc(s.name || 'Unnamed')}${isCurrent ? '<span class="session-live-dots"><span>.</span><span>.</span><span>.</span></span>' : ''}</span>
         ${isCurrent ? `<span class="session-edit-icon" onclick="renameSession()" title="Rename session">✏️</span>` : ''}
-        ${isCurrent && sessionStack.length > 1 ? `<button class="btn btn-xs btn-danger session-end-btn" onclick="endCurrentSession()" title="End session">■</button>` : ''}
+        ${isCurrent ? `<button class="btn btn-xs btn-danger session-end-btn" onclick="endCurrentSession()" title="End session">■</button>` : ''}
       </div>`);
   }
   stackList.innerHTML = rows.join('');
@@ -2454,7 +2454,8 @@ async function startNewSession() {
 }
 
 function endCurrentSession() {
-  if (!confirm('End current session and return to previous?')) return;
+  const msg = sessionStack.length > 1 ? 'End current session and return to previous?' : 'End current session?';
+  if (!confirm(msg)) return;
   fetch('/api/session/end', { method: 'POST' });
 }
 
