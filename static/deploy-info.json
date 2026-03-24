@@ -1,7 +1,7 @@
 {
-  "sha": "1fb750cdd1c347f4d145331175cc825a4f716428",
-  "timestamp": "2026-03-24 18:09",
+  "sha": "c27ee8c9cb182ec17f21e1679b435275d850681b",
+  "timestamp": "2026-03-24 18:10",
   "changelog": [
-    "chore: gitignore desktop-overlay/.build/ and allow its PNG resources"
+    "feat(log): add PID to log prefix; deduplicate overlay WS errors"
   ]
 }
