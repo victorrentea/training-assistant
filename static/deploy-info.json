@@ -1,7 +1,7 @@
 {
-  "sha": "ca46e489063927bd58004996aaae9a1ba3bc2477",
+  "sha": "5f41073344ec6c0b4bbacad6153ec61dac5efc83",
   "timestamp": "2026-03-24 19:03",
   "changelog": [
-    "fix(start): instant restart via watcher flag file + re-exec with new code"
+    "fix(participant): wrap emoji bubbles + dev-reset in DOMContentLoaded"
   ]
 }
