@@ -103,7 +103,7 @@ def generate_summary(
         if tools:
             create_kwargs["tools"] = tools
 
-        log.info("summarizer", f"Sending to Claude ({len(user_message)} chars)")
+        log.info("summarizer", f"Summarizing {len(user_message):,} chars")
         while True:
             response = create_message(**create_kwargs)
             messages.append({"role": "assistant", "content": response.content})
@@ -128,7 +128,6 @@ def generate_summary(
             else:
                 break
 
-        log.info("summarizer", "Response received from Claude")
         if not response.content:
             log.error("summarizer", f"Empty response (stop_reason={response.stop_reason})")
             return None
@@ -176,7 +175,7 @@ def generate_summary(
                 points.append({"text": item, "source": "discussion"})
 
         result = {"points": points}
-        log.info("summarizer", f"Generated {len(points)} key points")
+        log.info("summarizer", f"✨ {len(points)} key points")
         return result
 
     except json.JSONDecodeError as e:

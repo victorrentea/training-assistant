@@ -70,5 +70,6 @@ def create_message(
     _usage.add(in_tok, out_tok, model)
     pricing = PRICING.get(model, PRICING["claude-sonnet-4-6"])
     cost = (in_tok * pricing["input"] + out_tok * pricing["output"]) / 1_000_000
-    log.info("llm", f"model={model} in={in_tok} out={out_tok} cost=${cost:.4f} {duration_ms}ms")
+    short_model = model.split("-")[1] if "-" in model else model  # haiku/sonnet/opus
+    log.info("llm", f"💸 {short_model:<7} in={in_tok:<5} out={out_tok:<4} ${cost:.3f}  {duration_ms}ms")
     return response
