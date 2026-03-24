@@ -1,7 +1,7 @@
 {
-  "sha": "d715d5173e773c899c00410ab7072af9a04e1238",
-  "timestamp": "2026-03-24 09:19",
+  "sha": "345fb5ce7a8df34d0f302f93ce7dcc783fd69cf2",
+  "timestamp": "2026-03-24 11:06",
   "changelog": [
-    "fix: remove redundant in-function datetime import causing UnboundLocalError"
+    "feat: session panel above footer with stack layout and inline end button"
   ]
 }
