@@ -1,7 +1,7 @@
 {
-  "sha": "954b52c0b47142a21b84084f2057cbc69c04d7d4",
-  "timestamp": "2026-03-24 15:58",
+  "sha": "07667168ddee5ae9b9af657db60ae6d1b3b57674",
+  "timestamp": "2026-03-24 16:01",
   "changelog": [
-    "revert(overlay): pulse back to CAShapeLayer ECG \u2014 remove PNG image that caused suspicious line"
+    "feat(daemon): normalize log format across all daemons"
   ]
 }
