@@ -1,9 +1,7 @@
 {
-  "sha": "0b2c7649fdaeb26cc41222eca7724f4babb9334d",
-  "timestamp": "2026-03-24 13:13",
+  "sha": "c6dd262314b6d9677268fd7686025694ad0b3034",
+  "timestamp": "2026-03-24 13:14",
   "changelog": [
-    "feat(overlay): sync ECG pulse shape from image + align audio timing",
-    "fix: remove default button background from modal-newtab-btn",
-    "fix(daemon): restore state automatically after server reconnect"
+    "feat(daemon): print *** separator + new/updated key points on summary"
   ]
 }
