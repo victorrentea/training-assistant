@@ -1,7 +1,7 @@
 {
-  "sha": "6d370d3ae0a16c9c479bfa6a6d01cf20e554588e",
-  "timestamp": "2026-03-24 20:02",
+  "sha": "4c0adb73b8dcda193dd9e4b9f3750630b324fe59",
+  "timestamp": "2026-03-24 22:04",
   "changelog": [
-    "feat(host): add labels to Key Points modal refresh buttons"
+    "feat(transcript): show session time ranges in startup log + pause/resume support"
   ]
 }
