@@ -12,8 +12,10 @@ class EmojiAnimator {
     // Applause: persistent timer for emoji spawning
     private var applauseTimer: Timer?
 
-    // Pulse: guard against re-entry
+    // Pulse: layers stored so clicking again can stop it
     private var pulseRunning = false
+    private var _pulseDimLayer: CALayer?
+    private var _pulseEcgLayer: CAShapeLayer?
 
     init(hostLayer: CALayer) {
         self.hostLayer = hostLayer
@@ -651,7 +653,9 @@ class EmojiAnimator {
     ]
 
     func showFireworks() {
-        // Only play sound if not already playing (repeated clicks don't restart)
+        guard activeEffects["fireworks"] == nil else { return }
+        let sentinel = CALayer()
+        trackEffect("fireworks", layer: sentinel, duration: 8.0)
         SoundManager.shared.play("fireworks.mp3")
 
         let bounds = hostLayer.bounds
@@ -1064,6 +1068,9 @@ class EmojiAnimator {
     // MARK: - Confetti burst
 
     func spawnConfetti(count: Int = 80) {
+        guard activeEffects["confetti"] == nil else { return }
+        let sentinel = CALayer()
+        trackEffect("confetti", layer: sentinel, duration: 6.0)
         SoundManager.shared.playOverlapping("confetti.mp3")
         let bounds = hostLayer.bounds
         let screenW = bounds.width
@@ -1223,7 +1230,7 @@ class EmojiAnimator {
     // MARK: - Pulse / heartbeat (one-shot: 2 QRS cycles then flatline)
 
     func showPulse() {
-        guard !pulseRunning else { return }
+        if pulseRunning { _stopPulse(); return }
         pulseRunning = true
 
         let bounds = hostLayer.bounds
@@ -1237,6 +1244,7 @@ class EmojiAnimator {
 
         // Dark overlay
         let dimLayer = CALayer()
+        _pulseDimLayer = dimLayer
         dimLayer.frame = bounds
         dimLayer.backgroundColor = NSColor(white: 0, alpha: 0.75).cgColor
         dimLayer.opacity = 0
@@ -1253,6 +1261,7 @@ class EmojiAnimator {
 
         // ECG canvas — full screen (amplitude needs full height)
         let ecgLayer = CAShapeLayer()
+        _pulseEcgLayer = ecgLayer
         ecgLayer.frame = CGRect(x: 0, y: 0, width: bounds.width, height: bounds.height)
         ecgLayer.fillColor = nil
         ecgLayer.strokeColor = NSColor(red: 0, green: 1, blue: 0.27, alpha: 1).cgColor
@@ -1326,6 +1335,8 @@ class EmojiAnimator {
                 dimLayer?.removeFromSuperlayer()
                 ecgLayer?.removeFromSuperlayer()
                 self?.pulseRunning = false
+                self?._pulseDimLayer = nil
+                self?._pulseEcgLayer = nil
             })
         }
         ecgLayer.add(draw, forKey: "draw")
@@ -1335,20 +1346,23 @@ class EmojiAnimator {
         SoundManager.shared.play("dying.mp3")
     }
 
-    // MARK: - Stop all
+    // MARK: - Pulse stop (called when button pressed while running)
 
-    func stopAll() {
-        // Cancel applause if running
-        if applauseTimer != nil {
-            applauseTimer?.invalidate()
-            applauseTimer = nil
-            SoundManager.shared.stop("applause.mp3")
-        }
-        // Cancel any toggleable effects (danger, zorro, sepia, fireworks...)
-        for (key, layer) in activeEffects {
-            layer.removeAllAnimations()
-            layer.removeFromSuperlayer()
-            activeEffects.removeValue(forKey: key)
-        }
+    private func _stopPulse() {
+        guard pulseRunning else { return }
+        pulseRunning = false
+        SoundManager.shared.stop("dying.mp3")
+        let dim = _pulseDimLayer
+        let ecg = _pulseEcgLayer
+        _pulseDimLayer = nil
+        _pulseEcgLayer = nil
+        NSAnimationContext.runAnimationGroup({ ctx in
+            ctx.duration = 0.3
+            dim?.opacity = 0
+            ecg?.opacity = 0
+        }, completionHandler: {
+            dim?.removeFromSuperlayer()
+            ecg?.removeFromSuperlayer()
+        })
     }
 }

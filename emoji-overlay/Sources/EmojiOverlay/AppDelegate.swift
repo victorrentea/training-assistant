@@ -102,9 +102,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, URLSessionWebSocketDelegate 
             .init(label: "💚", tooltip: "Pulse") { [weak self] in
                 self?.animator.showPulse()
             },
-            .init(label: "■", tooltip: "Stop all effects", labelColor: NSColor.red.cgColor) { [weak self] in
-                self?.animator.stopAll()
-            },
         ]
 
         buttonBar = ButtonBar(buttons: buttons, screen: screen, singleScreen: singleScreen)
