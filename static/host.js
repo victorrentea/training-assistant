@@ -629,7 +629,7 @@
     const el = document.getElementById('overlay-badge');
     if (!el) return;
     el.className = `badge ${connected ? 'connected' : 'disconnected'}`;
-    el.title = connected ? 'Emoji overlay connected' : 'Emoji overlay not connected';
+    el.title = connected ? 'Desktop Overlay connected' : 'Desktop Overlay not connected';
   }
 
   function renderPendingDeploy(pendingDeploy) {

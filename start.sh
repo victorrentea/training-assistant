@@ -6,7 +6,7 @@
 # Starts three processes:
 #   1. Training daemon  — polls server for quiz/debate/summary requests
 #   2. Deploy watcher   — monitors production deploys, notifies on success/failure
-#   3. Emoji overlay    — macOS overlay app rendering participant emoji reactions
+#   3. Desktop overlay    — macOS overlay app rendering participant emoji reactions
 #
 # Auto-updates: every 10s, `git fetch` checks for new commits on master.
 # When new code is detected (or daemon exits with code 42), ALL processes
@@ -15,7 +15,7 @@
 # PREREQUISITES
 #   - Python 3.12+ with project dependencies installed
 #   - secrets.env with ANTHROPIC_API_KEY and TRANSCRIPTION_FOLDER
-#   - Swift toolchain (for emoji overlay)
+#   - Swift toolchain (for desktop overlay)
 #   - gh CLI authenticated (for deploy watcher)
 #
 # USAGE
@@ -39,7 +39,7 @@ if [ ! -f secrets.env ]; then
 fi
 
 if ! command -v swift &>/dev/null; then
-  echo "⚠️  Swift not found — emoji overlay will not start."
+  echo "⚠️  Swift not found — desktop overlay will not start."
   NO_OVERLAY=1
 fi
 
@@ -65,12 +65,12 @@ cleanup() {
 }
 trap cleanup INT TERM
 
-# ── Build emoji overlay ──
+# ── Build desktop overlay ──
 
 build_overlay() {
   if [ -n "$NO_OVERLAY" ]; then return; fi
-  _log "start" "info" "Building emoji overlay..."
-  if (cd emoji-overlay && swift build 2>&1 | tail -1); then
+  _log "start" "info" "Building desktop overlay..."
+  if (cd desktop-overlay && swift build 2>&1 | tail -1); then
     _log "start" "info" "Overlay built"
   else
     _log "start" "error" "Overlay build failed — skipping"
@@ -212,7 +212,7 @@ kill_old_watcher() {
 }
 
 kill_old_overlay() {
-  local pid_file="/tmp/emoji-overlay.pid"
+  local pid_file="/tmp/desktop-overlay.pid"
   if [ -f "$pid_file" ]; then
     local old_pid
     old_pid=$(cat "$pid_file" 2>/dev/null)
@@ -234,8 +234,8 @@ kill_old_overlay() {
 start_overlay() {
   if [ -n "$NO_OVERLAY" ]; then return; fi
   kill_old_overlay
-  _log "start" "info" "Starting emoji overlay ($OVERLAY_SERVER)..."
-  (cd emoji-overlay && .build/arm64-apple-macosx/debug/EmojiOverlay "$OVERLAY_SERVER") &
+  _log "start" "info" "Starting desktop overlay ($OVERLAY_SERVER)..."
+  (cd desktop-overlay && .build/arm64-apple-macosx/debug/DesktopOverlay "$OVERLAY_SERVER") &
   OVERLAY_PID=$!
 }
 
@@ -292,7 +292,7 @@ while true; do
   _log "start" "info" "All processes running"
   _log "start" "info" "Training daemon: PID $DAEMON_PID"
   [ -n "$WATCHER_PID" ] && _log "start" "info" "Deploy watcher: PID $WATCHER_PID"
-  [ -n "$OVERLAY_PID" ] && _log "start" "info" "Emoji overlay: PID $OVERLAY_PID"
+  [ -n "$OVERLAY_PID" ] && _log "start" "info" "Desktop overlay: PID $OVERLAY_PID"
   echo ""
 
   # Poll loop: check daemon health + git updates

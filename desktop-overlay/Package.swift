@@ -2,11 +2,11 @@
 import PackageDescription
 
 let package = Package(
-    name: "EmojiOverlay",
+    name: "DesktopOverlay",
     platforms: [.macOS(.v13)],
     targets: [
         .executableTarget(
-            name: "EmojiOverlay",
+            name: "DesktopOverlay",
             resources: [.copy("Resources")]
         )
     ]

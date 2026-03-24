@@ -1,4 +1,4 @@
-# macOS Emoji Overlay — MVP Design Spec
+# macOS Desktop Overlay — MVP Design Spec
 
 ## Goal
 
@@ -58,10 +58,10 @@ Spawns emojis as `CATextLayer` instances on the overlay's content view layer:
 ## Project Structure
 
 ```
-emoji-overlay/
+desktop-overlay/
 ├── Package.swift
 └── Sources/
-    └── EmojiOverlay/
+    └── DesktopOverlay/
         ├── main.swift
         ├── AppDelegate.swift
         ├── OverlayPanel.swift
@@ -84,12 +84,12 @@ This replaces the `@main` / `@NSApplicationMain` pattern that requires an Xcode 
 
 ## Package.swift
 
-Minimum macOS deployment target: `.macOS(.v13)`. Single executable target `EmojiOverlay`, no external dependencies. The package depends only on system frameworks (AppKit, QuartzCore) which are available implicitly.
+Minimum macOS deployment target: `.macOS(.v13)`. Single executable target `DesktopOverlay`, no external dependencies. The package depends only on system frameworks (AppKit, QuartzCore) which are available implicitly.
 
 ## Build & Run
 
 ```bash
-cd emoji-overlay && swift run
+cd desktop-overlay && swift run
 ```
 
 Quit with Cmd+Q (app is visible in Dock).

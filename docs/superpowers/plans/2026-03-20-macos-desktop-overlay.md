@@ -1,4 +1,4 @@
-# macOS Emoji Overlay — Implementation Plan
+# macOS Desktop Overlay — Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -8,17 +8,17 @@
 
 **Tech Stack:** Swift, AppKit (NSPanel), Core Animation (CATextLayer, CABasicAnimation), Swift Package Manager
 
-**Spec:** `docs/superpowers/specs/2026-03-20-macos-emoji-overlay-design.md`
+**Spec:** `docs/superpowers/specs/2026-03-20-macos-desktop-overlay-design.md`
 
 ---
 
 ## File Structure
 
 ```
-emoji-overlay/
+desktop-overlay/
 ├── Package.swift                      ← SPM manifest, macOS 13+, single executable target
 └── Sources/
-    └── EmojiOverlay/
+    └── DesktopOverlay/
         ├── main.swift                 ← Manual NSApplication bootstrap
         ├── AppDelegate.swift          ← Creates overlay, starts demo timer
         ├── OverlayPanel.swift         ← NSPanel subclass with overlay config
@@ -30,8 +30,8 @@ emoji-overlay/
 ### Task 1: Create SPM package scaffold
 
 **Files:**
-- Create: `emoji-overlay/Package.swift`
-- Create: `emoji-overlay/Sources/EmojiOverlay/main.swift`
+- Create: `desktop-overlay/Package.swift`
+- Create: `desktop-overlay/Sources/DesktopOverlay/main.swift`
 
 - [ ] **Step 1: Create Package.swift**
 
@@ -40,10 +40,10 @@ emoji-overlay/
 import PackageDescription
 
 let package = Package(
-    name: "EmojiOverlay",
+    name: "DesktopOverlay",
     platforms: [.macOS(.v13)],
     targets: [
-        .executableTarget(name: "EmojiOverlay")
+        .executableTarget(name: "DesktopOverlay")
     ]
 )
 ```
@@ -60,14 +60,14 @@ app.run()
 
 - [ ] **Step 3: Build and verify it compiles**
 
-Run: `cd emoji-overlay && swift build 2>&1`
+Run: `cd desktop-overlay && swift build 2>&1`
 Expected: "Build complete!"
 
 - [ ] **Step 4: Commit**
 
 ```bash
-git add emoji-overlay/Package.swift emoji-overlay/Sources/EmojiOverlay/main.swift
-git commit -m "feat: scaffold SPM package for emoji overlay app"
+git add desktop-overlay/Package.swift desktop-overlay/Sources/DesktopOverlay/main.swift
+git commit -m "feat: scaffold SPM package for Desktop Overlay app"
 ```
 
 ---
@@ -75,7 +75,7 @@ git commit -m "feat: scaffold SPM package for emoji overlay app"
 ### Task 2: Create OverlayPanel
 
 **Files:**
-- Create: `emoji-overlay/Sources/EmojiOverlay/OverlayPanel.swift`
+- Create: `desktop-overlay/Sources/DesktopOverlay/OverlayPanel.swift`
 
 - [ ] **Step 1: Write OverlayPanel class**
 
@@ -113,13 +113,13 @@ class OverlayPanel: NSPanel {
 
 - [ ] **Step 2: Build and verify it compiles**
 
-Run: `cd emoji-overlay && swift build 2>&1`
+Run: `cd desktop-overlay && swift build 2>&1`
 Expected: "Build complete!" (with a warning about unused OverlayPanel — that's fine)
 
 - [ ] **Step 3: Commit**
 
 ```bash
-git add emoji-overlay/Sources/EmojiOverlay/OverlayPanel.swift
+git add desktop-overlay/Sources/DesktopOverlay/OverlayPanel.swift
 git commit -m "feat: add OverlayPanel — transparent click-through NSPanel"
 ```
 
@@ -128,7 +128,7 @@ git commit -m "feat: add OverlayPanel — transparent click-through NSPanel"
 ### Task 3: Create EmojiAnimator
 
 **Files:**
-- Create: `emoji-overlay/Sources/EmojiOverlay/EmojiAnimator.swift`
+- Create: `desktop-overlay/Sources/DesktopOverlay/EmojiAnimator.swift`
 
 - [ ] **Step 1: Write EmojiAnimator class**
 
@@ -186,13 +186,13 @@ Note on coordinate system: NSView with `wantsLayer = true` uses a flipped-from-s
 
 - [ ] **Step 2: Build and verify it compiles**
 
-Run: `cd emoji-overlay && swift build 2>&1`
+Run: `cd desktop-overlay && swift build 2>&1`
 Expected: "Build complete!"
 
 - [ ] **Step 3: Commit**
 
 ```bash
-git add emoji-overlay/Sources/EmojiOverlay/EmojiAnimator.swift
+git add desktop-overlay/Sources/DesktopOverlay/EmojiAnimator.swift
 git commit -m "feat: add EmojiAnimator — float-up-and-fade emoji layers"
 ```
 
@@ -201,8 +201,8 @@ git commit -m "feat: add EmojiAnimator — float-up-and-fade emoji layers"
 ### Task 4: Wire it all together in AppDelegate
 
 **Files:**
-- Create: `emoji-overlay/Sources/EmojiOverlay/AppDelegate.swift`
-- Modify: `emoji-overlay/Sources/EmojiOverlay/main.swift`
+- Create: `desktop-overlay/Sources/DesktopOverlay/AppDelegate.swift`
+- Modify: `desktop-overlay/Sources/DesktopOverlay/main.swift`
 
 - [ ] **Step 1: Write AppDelegate**
 
@@ -249,13 +249,13 @@ app.run()
 
 - [ ] **Step 3: Build**
 
-Run: `cd emoji-overlay && swift build 2>&1`
+Run: `cd desktop-overlay && swift build 2>&1`
 Expected: "Build complete!"
 
 - [ ] **Step 4: Commit**
 
 ```bash
-git add emoji-overlay/Sources/EmojiOverlay/AppDelegate.swift emoji-overlay/Sources/EmojiOverlay/main.swift
+git add desktop-overlay/Sources/DesktopOverlay/AppDelegate.swift desktop-overlay/Sources/DesktopOverlay/main.swift
 git commit -m "feat: wire AppDelegate with demo timer — app is runnable"
 ```
 
@@ -265,7 +265,7 @@ git commit -m "feat: wire AppDelegate with demo timer — app is runnable"
 
 - [ ] **Step 1: Run the app**
 
-Run: `cd emoji-overlay && swift run`
+Run: `cd desktop-overlay && swift run`
 
 Expected behavior:
 - App appears in Dock
@@ -282,7 +282,7 @@ If emojis appear at the top and float further up (wrong direction), the view's c
 - [ ] **Step 3: Commit any fixes**
 
 ```bash
-git add -A emoji-overlay/Sources/
+git add -A desktop-overlay/Sources/
 git commit -m "fix: adjust emoji spawn position and animation direction"
 ```
 
