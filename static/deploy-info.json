@@ -1,7 +1,7 @@
 {
-  "sha": "b777c9a3a9b96759ebaa1279540655371aaa03bc",
-  "timestamp": "2026-03-24 13:29",
+  "sha": "0c87260418675cbe34eaf0b9266866ddeecf16b5",
+  "timestamp": "2026-03-24 13:30",
   "changelog": [
-    "fix: move full-regen button to header next to refresh, red on hover"
+    "feat(daemon): log \ud83d\udfe2\ud83d\udfe2\ud83d\udfe2 on send and \u2b50\u2b50\u2b50 on response for summary"
   ]
 }
