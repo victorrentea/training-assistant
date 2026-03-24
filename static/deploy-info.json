@@ -1,7 +1,7 @@
 {
-  "sha": "5a9f610809376c2e44cabaf0919613460d91558a",
-  "timestamp": "2026-03-24 13:26",
+  "sha": "b777c9a3a9b96759ebaa1279540655371aaa03bc",
+  "timestamp": "2026-03-24 13:29",
   "changelog": [
-    "feat(overlay): 2-beat ECG from image + precise audio sync"
+    "fix: move full-regen button to header next to refresh, red on hover"
   ]
 }
