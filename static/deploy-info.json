@@ -1,7 +1,7 @@
 {
-  "sha": "f851e0d4153b41b9ea79db77b467a1a599371901",
-  "timestamp": "2026-03-24 12:56",
+  "sha": "29ff0d0db0d89608ca39dab86ab5be624a17c317",
+  "timestamp": "2026-03-24 13:02",
   "changelog": [
-    "fix(version): stamp version.js at startup and add Santa"
+    "fix(overlay): fix effect re-entrancy and pulse toggle"
   ]
 }
