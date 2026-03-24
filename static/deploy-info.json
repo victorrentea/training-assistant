@@ -1,7 +1,7 @@
 {
-  "sha": "a265ca793f97d9d86ea3ca56185bc3a6637ad517",
-  "timestamp": "2026-03-25 01:37",
+  "sha": "81e8c23804844b801be64739024e7ac8c4b76565",
+  "timestamp": "2026-03-25 01:59",
   "changelog": [
-    "chore(bmad): add BMAD agent config for Copilot Chat"
+    "chore(bmad): add native Copilot chat modes for BMAD agents"
   ]
 }
