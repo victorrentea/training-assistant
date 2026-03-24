@@ -2399,32 +2399,36 @@ function stopAutoReturnTimer() {
 
 // ── Session management panel ──
 
+function _esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
 function renderSessionPanel() {
-  const label = document.getElementById('session-name-label');
-  const editIcon = document.getElementById('session-edit-icon');
-  const breadcrumb = document.getElementById('session-breadcrumb');
   const btnStart = document.getElementById('btn-start-session');
-  const btnEnd = document.getElementById('btn-end-session');
-  if (!label) return;
+  const stackList = document.getElementById('session-stack-list');
+  if (!btnStart || !stackList) return;
+
+  btnStart.disabled = sessionStack.length >= 3;
 
   if (sessionStack.length === 0) {
-    label.textContent = 'No active session';
-    editIcon.style.display = 'none';
-    breadcrumb.textContent = '';
-    btnEnd.style.display = 'none';
-    btnStart.disabled = false;
-  } else {
-    label.textContent = sessionName || 'Unnamed';
-    editIcon.style.display = '';
-    btnEnd.style.display = sessionStack.length > 1 ? '' : 'none';
-    btnStart.disabled = sessionStack.length >= 3;
-
-    if (sessionStack.length > 1) {
-      breadcrumb.textContent = sessionStack.slice(0, -1).map(s => s.name).join(' > ');
-    } else {
-      breadcrumb.textContent = '';
-    }
+    stackList.innerHTML = '<div class="session-empty">No active session</div>';
+    return;
   }
+
+  // Render stack newest-on-top: last item in array = current (top)
+  const rows = [];
+  for (let i = sessionStack.length - 1; i >= 0; i--) {
+    const s = sessionStack[i];
+    const isCurrent = i === sessionStack.length - 1;
+    const depth = sessionStack.length - 1 - i; // 0 = current, 1 = parent, …
+    rows.push(`
+      <div class="session-row${isCurrent ? ' session-row-current' : ''}" style="margin-left:${depth * 12}px">
+        <span class="session-row-name">${_esc(s.name || 'Unnamed')}</span>
+        ${isCurrent ? `<span class="session-edit-icon" onclick="renameSession()" title="Rename session">✏️</span>` : ''}
+        ${isCurrent && sessionStack.length > 1 ? `<button class="btn btn-xs btn-danger session-end-btn" onclick="endCurrentSession()" title="End session">■</button>` : ''}
+      </div>`);
+  }
+  stackList.innerHTML = rows.join('');
 }
 
 async function startNewSession() {
