@@ -1,7 +1,8 @@
 {
-  "sha": "0c87260418675cbe34eaf0b9266866ddeecf16b5",
-  "timestamp": "2026-03-24 13:30",
+  "sha": "c1bb52839ef01b39ca6d338be2c6c471f7fb5bca",
+  "timestamp": "2026-03-24 13:31",
   "changelog": [
-    "feat(daemon): log \ud83d\udfe2\ud83d\udfe2\ud83d\udfe2 on send and \u2b50\u2b50\u2b50 on response for summary"
+    "feat(overlay): extend ECG flatline past screen right edge",
+    "feat(host): show pending deploy badge when push is detected"
   ]
 }
