@@ -2,7 +2,7 @@ import AppKit
 import Foundation
 
 // --- PID lock file: ensure only one instance runs at a time ---
-let lockFilePath = "/tmp/EmojiOverlay.pid"
+let lockFilePath = "/tmp/DesktopOverlay.pid"
 let myPid = getpid()
 
 // Kill any previous instance before we start
@@ -45,7 +45,7 @@ let app = NSApplication.shared
 app.setActivationPolicy(.accessory) // no dock icon
 
 // Write PID lock file — newest instance always wins
-let pidFilePath = "/tmp/emoji-overlay.pid"
+let pidFilePath = "/tmp/desktop-overlay.pid"
 let myPID = ProcessInfo.processInfo.processIdentifier
 try? "\(myPID)".write(toFile: pidFilePath, atomically: true, encoding: .utf8)
 overlayInfo("Started PID \(myPID)")
