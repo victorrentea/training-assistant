@@ -1,7 +1,7 @@
 {
-  "sha": "2b84de63eb6dba1833e18a109945369cbcd96a6f",
-  "timestamp": "2026-03-24 13:24",
+  "sha": "5a9f610809376c2e44cabaf0919613460d91558a",
+  "timestamp": "2026-03-24 13:26",
   "changelog": [
-    "chore(start): reduce git poll interval from 10s to 2s"
+    "feat(overlay): 2-beat ECG from image + precise audio sync"
   ]
 }
