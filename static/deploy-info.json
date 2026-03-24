@@ -1,7 +1,7 @@
 {
-  "sha": "5c992a4c5fba6401f3b1c7de84312ad64bbc77bd",
-  "timestamp": "2026-03-24 12:53",
+  "sha": "cafe84289a7086743f133ba645d998ca3aeb3a78",
+  "timestamp": "2026-03-24 12:54",
   "changelog": [
-    "feat(overlay): subtle buttons \u2014 invisible bg until hover + red stop button"
+    "feat(host): show grayed gear + red X favicon when session is kicked"
   ]
 }
