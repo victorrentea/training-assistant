@@ -231,7 +231,7 @@ start_overlay() {
 
 # ── Git auto-update ──
 
-GIT_POLL_INTERVAL=10  # seconds between git fetch checks
+GIT_POLL_INTERVAL=2  # seconds between git fetch checks
 LOCAL_HEAD=""
 
 check_git_updates() {
