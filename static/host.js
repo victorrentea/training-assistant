@@ -619,17 +619,7 @@
     el.title = connected ? 'Desktop Overlay connected' : 'Desktop Overlay not connected';
   }
 
-  function renderPendingDeploy(pendingDeploy) {
-    const el = document.getElementById('pending-deploy-badge');
-    if (!el) return;
-    if (!pendingDeploy || !pendingDeploy.sha) {
-      el.style.display = 'none';
-      return;
-    }
-    el.style.display = '';
-    el.style.cssText = 'color:#ff4444;border:1px solid #ff4444;animation:pulse 1s infinite;';
-    el.title = `Deploying: ${pendingDeploy.sha} — ${pendingDeploy.message}`;
-  }
+  function renderPendingDeploy(_pendingDeploy) {}
 
   let _prevPaxCount = 0;
   function updatePaxBadge(count) {
