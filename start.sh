@@ -48,9 +48,16 @@ OVERLAY_PID=""
 
 cleanup() {
   echo ""
-  _log "start" "info" "🔴 daemon  🔴 overlay"
-  [ -n "$DAEMON_PID" ]  && kill "$DAEMON_PID"  2>/dev/null
-  [ -n "$OVERLAY_PID" ] && kill "$OVERLAY_PID" 2>/dev/null
+  if [ -n "$DAEMON_PID" ]; then
+    _log "start" "info" "💀 daemon (pid $DAEMON_PID)"
+    kill "$DAEMON_PID" 2>/dev/null
+    DAEMON_PID=""
+  fi
+  if [ -n "$OVERLAY_PID" ]; then
+    _log "start" "info" "💀 overlay (pid $OVERLAY_PID)"
+    kill "$OVERLAY_PID" 2>/dev/null
+    OVERLAY_PID=""
+  fi
   wait 2>/dev/null
   exit 0
 }
@@ -83,7 +90,7 @@ kill_old_overlay() {
     local old_pid
     old_pid=$(cat "$pid_file" 2>/dev/null)
     if [ -n "$old_pid" ] && kill -0 "$old_pid" 2>/dev/null; then
-      _log "start" "info" "🔴 overlay (prev instance)"
+      _log "start" "info" "💀 overlay prev instance (pid $old_pid)"
       kill "$old_pid" 2>/dev/null
       # Wait up to 3s for it to exit
       for i in 1 2 3; do
@@ -91,7 +98,10 @@ kill_old_overlay() {
         sleep 1
       done
       # Force kill if still alive
-      kill -0 "$old_pid" 2>/dev/null && kill -9 "$old_pid" 2>/dev/null
+      if kill -0 "$old_pid" 2>/dev/null; then
+        _log "start" "info" "💀 overlay force-kill (pid $old_pid)"
+        kill -9 "$old_pid" 2>/dev/null
+      fi
     fi
     rm -f "$pid_file"
   fi
@@ -133,9 +143,16 @@ check_git_updates() {
 }
 
 stop_all_processes() {
-  _log "start" "info" "🔴 daemon  🔴 overlay"
-  [ -n "$DAEMON_PID" ]  && kill -9 "$DAEMON_PID"  2>/dev/null; DAEMON_PID=""
-  [ -n "$OVERLAY_PID" ] && kill -9 "$OVERLAY_PID" 2>/dev/null; OVERLAY_PID=""
+  if [ -n "$DAEMON_PID" ]; then
+    _log "start" "info" "💀 daemon (pid $DAEMON_PID)"
+    kill -9 "$DAEMON_PID" 2>/dev/null
+    DAEMON_PID=""
+  fi
+  if [ -n "$OVERLAY_PID" ]; then
+    _log "start" "info" "💀 overlay (pid $OVERLAY_PID)"
+    kill -9 "$OVERLAY_PID" 2>/dev/null
+    OVERLAY_PID=""
+  fi
 }
 
 pull_and_rebuild() {
