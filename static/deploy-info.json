@@ -1,7 +1,7 @@
 {
-  "sha": "cf00957293593e3f3cb0c80669f02e8942e5301b",
-  "timestamp": "2026-03-24 07:46",
+  "sha": "eb568d1bb187718e8dac2ed2be1dfa77e8def76c",
+  "timestamp": "2026-03-24 09:14",
   "changelog": [
-    "feat: daemon-based state persistence, replacing SQLite"
+    "remove global hotkey (Cmd+Shift+K) for confetti"
   ]
 }
