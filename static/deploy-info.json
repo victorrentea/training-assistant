@@ -1,7 +1,7 @@
 {
-  "sha": "6f4d40b6126368f94728ccaee39856d5b7e2d8fa",
-  "timestamp": "2026-03-24 07:25",
+  "sha": "03c988bf619e2e0c801496a8a0d57b0e6c6e9e06",
+  "timestamp": "2026-03-24 07:27",
   "changelog": [
-    "feat(emoji-overlay): multi-screen preference + single-screen right-edge hide"
+    "fix(emoji-overlay): effects always on primary Mac screen, buttons on external"
   ]
 }
