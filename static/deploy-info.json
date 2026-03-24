@@ -1,7 +1,7 @@
 {
-  "sha": "1c61b7bed3472fc3809d4520b6d70b34c00ef8f5",
-  "timestamp": "2026-03-24 13:35",
+  "sha": "570e5ee5b62cc98fe1c742b5e3e884a2a2af5543",
+  "timestamp": "2026-03-24 15:43",
   "changelog": [
-    "feat(host): make stop-session button icon-only, no red bg"
+    "feat(keynotes): full regen from complete notes + toast notification on update"
   ]
 }
