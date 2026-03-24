@@ -439,6 +439,8 @@ def run() -> None:
     last_transcript_stats_at = 0.0
     last_transcript_line_count = -1
     last_notes_mtime: float = 0.0  # track notes file mtime for re-push on change
+    last_auto_close_date: date | None = None   # prevent double-close on same calendar day
+    last_auto_start_date: date | None = None   # prevent double-start on same calendar day
     # ── Session stack initialization ──
     sessions_root = config.session_folder.parent if config.session_folder else Path.cwd()
     session_stack = _load_daemon_state(sessions_root)
@@ -567,6 +569,45 @@ def run() -> None:
 
             sf_name = config.session_folder.name if config.session_folder else None
             sn_name = config.session_notes.name if config.session_notes else None
+
+            # ── Working hours enforcement (09:00–20:00) ──
+            now_wall = datetime.now()
+            if session_stack and now_wall.hour >= 20 and last_auto_close_date != today:
+                last_auto_close_date = today
+                top = session_stack[-1]
+                if top.get("ended_at") is None:
+                    top_folder = sessions_root / top["name"]
+                    _save_key_points(top_folder, current_key_points, summary_watermark, _session_start_date(top))
+                now_iso = now_wall.isoformat()
+                for s in session_stack:
+                    if s.get("ended_at") is None:
+                        s["ended_at"] = now_iso
+                session_stack.clear()
+                _save_daemon_state(sessions_root, session_stack)
+                current_key_points = []
+                summary_watermark = 0
+                _sync_session_to_server(config, session_stack, current_key_points)
+                transcript_state.reset()
+                log.info("session", "Auto-closed at 20:00 (end of working hours)")
+
+            elif (not session_stack
+                    and 9 <= now_wall.hour < 20
+                    and config.session_folder
+                    and last_auto_start_date != today):
+                last_auto_start_date = today
+                new_session = {
+                    "name": config.session_folder.name,
+                    "started_at": now_wall.isoformat(),
+                    "ended_at": None,
+                }
+                session_stack.append(new_session)
+                current_key_points, summary_watermark = _load_key_points(config.session_folder)
+                _save_daemon_state(sessions_root, session_stack)
+                notes_file = _find_notes_in_folder(config.session_folder)
+                config = dc_replace(config, session_notes=notes_file)
+                _sync_session_to_server(config, session_stack, current_key_points)
+                transcript_state.reset()
+                log.info("session", f"Auto-started at 09:00: {config.session_folder.name}")
 
             # ── Auto-update: check if server version changed ──
             if _startup_version:
