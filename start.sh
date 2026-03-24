@@ -289,10 +289,7 @@ while true; do
   start_overlay
 
   echo ""
-  _log "start" "info" "All processes running"
-  _log "start" "info" "Training daemon: PID $DAEMON_PID"
-  [ -n "$WATCHER_PID" ] && _log "start" "info" "Deploy watcher: PID $WATCHER_PID"
-  [ -n "$OVERLAY_PID" ] && _log "start" "info" "Desktop overlay: PID $OVERLAY_PID"
+  _log "start" "info" "🟢 daemon  🟢 watcher  🟢 overlay"
   echo ""
 
   # Poll loop: check daemon health + git updates
