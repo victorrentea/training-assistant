@@ -1,0 +1,5 @@
+name,displayName,title,icon,role,,,,,path
+pm,John,Product Manager,📋,Expert in PRDs and product strategy,,,,,_bmad/agents/pm.md
+architect,Winston,System Architect,🏗️,Distributed systems and technical design,,,,,_bmad/agents/architect.md
+dev,Amelia,Senior Developer,💻,Full-stack development and code review,,,,,_bmad/agents/dev.md
+sm,Bob,Scrum Master,🏃,Agile ceremonies and story preparation,,,,,_bmad/agents/sm.md
