@@ -2459,8 +2459,14 @@ function _esc(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+function _sessionIsPaused(s) {
+  const pauses = s.paused_intervals || [];
+  return pauses.some(p => p.to == null);
+}
+
 function renderSessionPanel() {
   const btnStart = document.getElementById('btn-start-session');
+  const btnPause = document.getElementById('btn-pause-session');
   const stackList = document.getElementById('session-stack-list');
   if (!btnStart || !stackList) return;
 
@@ -2468,7 +2474,16 @@ function renderSessionPanel() {
 
   if (sessionStack.length === 0) {
     stackList.innerHTML = '<div class="session-empty">No active session</div>';
+    if (btnPause) btnPause.style.display = 'none';
     return;
+  }
+
+  const current = sessionStack[sessionStack.length - 1];
+  const paused = _sessionIsPaused(current);
+  if (btnPause) {
+    btnPause.style.display = '';
+    btnPause.textContent = paused ? '▶ Resume' : '⏸ Pause';
+    btnPause.title = paused ? 'Resume transcript collection' : 'Pause transcript collection';
   }
 
   // Render stack newest-on-top: last item in array = current (top)
@@ -2477,9 +2492,14 @@ function renderSessionPanel() {
     const s = sessionStack[i];
     const isCurrent = i === sessionStack.length - 1;
     const depth = sessionStack.length - 1 - i; // 0 = current, 1 = parent, …
+    const isPaused = _sessionIsPaused(s);
+    const liveDots = isCurrent && !isPaused
+      ? '<span class="session-live-dots"><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span></span>'
+      : '';
+    const pausedBadge = isCurrent && isPaused ? ' <span title="Transcript paused">⏸</span>' : '';
     rows.push(`
       <div class="session-row${isCurrent ? ' session-row-current' : ''}" style="margin-left:${depth * 12}px">
-        <span class="session-row-name">${_esc(s.name || 'Unnamed')}${isCurrent ? '<span class="session-live-dots"><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span></span>' : ''}</span>
+        <span class="session-row-name">${_esc(s.name || 'Unnamed')}${liveDots}${pausedBadge}</span>
         ${isCurrent ? `<span class="session-edit-icon" onclick="renameSession()" title="Rename session">✏️</span>` : ''}
         ${isCurrent ? `<button class="session-end-btn" onclick="endCurrentSession()" title="End session">■</button>` : ''}
       </div>`);
@@ -2513,6 +2533,13 @@ function endCurrentSession() {
   const msg = sessionStack.length > 1 ? 'End current session and return to previous?' : 'End current session?';
   if (!confirm(msg)) return;
   fetch('/api/session/end', { method: 'POST' });
+}
+
+function togglePauseSession() {
+  if (!sessionStack.length) return;
+  const current = sessionStack[sessionStack.length - 1];
+  const paused = _sessionIsPaused(current);
+  fetch(paused ? '/api/session/resume' : '/api/session/pause', { method: 'POST' });
 }
 
 function renameSession() {

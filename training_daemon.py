@@ -40,6 +40,12 @@ from daemon.debate_ai import run_debate_ai_cleanup
 from daemon.llm_adapter import get_usage
 from daemon.summarizer import generate_summary
 from daemon.transcript_state import TranscriptStateManager
+from daemon.session_transcript import (
+    parse_txt_entries_with_datetimes,
+    compute_active_windows,
+    count_lines_in_windows,
+    format_time_ranges,
+)
 from daemon import log
 
 _LOCK_FILE = Path("/tmp/training_daemon.lock")
@@ -172,6 +178,21 @@ def _load_daemon_state(sessions_root: Path) -> list[dict]:
     except Exception as e:
         log.error("session", f"Failed to load daemon state: {e}")
         return []
+
+
+def _pause_session(session: dict, now: datetime, reason: str = "explicit") -> None:
+    """Add an open pause interval to a session (no-op if already paused)."""
+    pauses = session.setdefault("paused_intervals", [])
+    if not any(p.get("to") is None for p in pauses):
+        pauses.append({"from": now.isoformat(), "to": None, "reason": reason})
+
+
+def _resume_session(session: dict, now: datetime) -> None:
+    """Close the most recent open pause interval on a session."""
+    for p in reversed(session.get("paused_intervals", [])):
+        if p.get("to") is None:
+            p["to"] = now.isoformat()
+            return
 
 
 def _save_daemon_state(sessions_root: Path, stack: list[dict]) -> None:
@@ -406,42 +427,7 @@ def run() -> None:
     else:
         log.error("daemon", f"MATERIALS_FOLDER not found: {materials_folder} — indexer disabled")
 
-    # ── Log transcription file info at startup ──
-    try:
-        import calendar
-        entries = load_transcription_files(config.folder)
-        files = sorted(config.folder.glob("*.txt"), key=lambda f: f.stat().st_mtime)
-        if files:
-            stem = files[-1].stem[:8]
-            d = __import__('datetime').date(int(stem[:4]), int(stem[4:6]), int(stem[6:8]))
-            date_str = f"{calendar.month_abbr[d.month]} {d.day}"
-        else:
-            date_str = "?"
-        non_empty = sum(1 for _, txt in entries if txt.strip())
-        log.info("transcript", f"{date_str} · {non_empty} lines")
-    except SystemExit:
-        log.error("transcript", "No transcription file found")
-    except Exception as e:
-        log.error("transcript", f"Could not read transcription: {e}")
-
-    log.info("daemon", f"Started — polling {config.server_url} every {DAEMON_POLL_INTERVAL}s")
-
-    timestamp_appender = TranscriptTimestampAppender(config.folder)
-    timestamp_appender.start()
-
-    # Session state: the transcript text used to generate the current preview
-    last_text: str | None = None
-    last_quiz: dict | None = None
-    server_disconnected = False
-    last_detected_date: date | None = None
-    last_heartbeat_at = 0.0
-    last_session_check_at = 0.0
-    last_transcript_stats_at = 0.0
-    last_transcript_line_count = -1
-    last_notes_mtime: float = 0.0  # track notes file mtime for re-push on change
-    last_auto_close_date: date | None = None   # prevent double-close on same calendar day
-    last_auto_start_date: date | None = None   # prevent double-start on same calendar day
-    # ── Session stack initialization ──
+    # ── Session stack initialization (early — needed for transcript log) ──
     sessions_root = config.session_folder.parent if config.session_folder else Path.cwd()
     session_stack = _load_daemon_state(sessions_root)
     current_key_points: list[dict] = []
@@ -462,6 +448,48 @@ def run() -> None:
         current_key_points, summary_watermark = _load_key_points(config.session_folder)
         _save_daemon_state(sessions_root, session_stack)
         log.info("session", f"Auto-started: {config.session_folder.name}")
+
+    # ── Log transcription time ranges at startup ──
+    try:
+        files = sorted(config.folder.glob("*.txt"), key=lambda f: f.stat().st_mtime)
+        if files:
+            raw = files[-1].read_text(encoding="utf-8", errors="replace")
+            stem = files[-1].stem[:8]
+            try:
+                file_date = date(int(stem[:4]), int(stem[4:6]), int(stem[6:8]))
+            except (ValueError, IndexError):
+                file_date = None
+            entries = parse_txt_entries_with_datetimes(raw, file_date)
+            if session_stack:
+                current_session = session_stack[-1]
+                windows = compute_active_windows(current_session, datetime.now())
+                line_count = count_lines_in_windows(entries, windows)
+                log.info("transcript", format_time_ranges(windows, line_count))
+            else:
+                non_empty = sum(1 for _, txt in entries if txt.strip())
+                log.info("transcript", f"{non_empty} lines (no active session)")
+        else:
+            log.error("transcript", "No transcription file found")
+    except Exception as e:
+        log.error("transcript", f"Could not read transcription: {e}")
+
+    log.info("daemon", f"Started — polling {config.server_url} every {DAEMON_POLL_INTERVAL}s")
+
+    timestamp_appender = TranscriptTimestampAppender(config.folder)
+    timestamp_appender.start()
+
+    # Session state: the transcript text used to generate the current preview
+    last_text: str | None = None
+    last_quiz: dict | None = None
+    server_disconnected = False
+    last_detected_date: date | None = None
+    last_heartbeat_at = 0.0
+    last_session_check_at = 0.0
+    last_transcript_stats_at = 0.0
+    last_transcript_line_count = -1
+    last_notes_mtime: float = 0.0  # track notes file mtime for re-push on change
+    last_auto_close_date: date | None = None   # prevent double-close on same calendar day
+    last_auto_start_date: date | None = None   # prevent double-start on same calendar day
 
     # Sync initial state to server
     try:
@@ -494,6 +522,9 @@ def run() -> None:
                     name = session_req["name"]
                     folder = sessions_root / name
                     folder.mkdir(parents=True, exist_ok=True)
+                    # Pause the current session while the nested one is active
+                    if session_stack:
+                        _pause_session(session_stack[-1], datetime.now(), reason="nested")
                     new_session = {
                         "name": name,
                         "started_at": datetime.now().isoformat(),
@@ -513,8 +544,9 @@ def run() -> None:
                     ended["ended_at"] = datetime.now().isoformat()
                     ended_folder = sessions_root / ended["name"]
                     _save_key_points(ended_folder, current_key_points, summary_watermark, _session_start_date(ended))
-                    # Restore parent session
+                    # Restore parent session and close its nested pause
                     parent = session_stack[-1]
+                    _resume_session(parent, datetime.now())
                     parent_folder = sessions_root / parent["name"]
                     current_key_points, summary_watermark = _load_key_points(parent_folder)
                     _save_daemon_state(sessions_root, session_stack)
@@ -542,6 +574,20 @@ def run() -> None:
                         config = dc_replace(config, session_folder=new_folder, session_notes=notes_file)
                         _sync_session_to_server(config, session_stack, current_key_points)
                         log.info("session", f"Renamed: {old_name} → {new_name}")
+
+                elif action == "pause" and session_stack:
+                    _pause_session(session_stack[-1], datetime.now(), reason="explicit")
+                    _save_daemon_state(sessions_root, session_stack)
+                    _sync_session_to_server(config, session_stack, current_key_points)
+                    log.info("session", f"Paused: {session_stack[-1]['name']}")
+
+                elif action == "resume" and session_stack:
+                    _resume_session(session_stack[-1], datetime.now())
+                    _save_daemon_state(sessions_root, session_stack)
+                    _sync_session_to_server(config, session_stack, current_key_points)
+                    transcript_state.reset()
+                    log.info("session", f"Resumed: {session_stack[-1]['name']}")
+
             except Exception as e:
                 log.error("session", f"Request error: {e}")
 
@@ -570,25 +616,40 @@ def run() -> None:
             sf_name = config.session_folder.name if config.session_folder else None
             sn_name = config.session_notes.name if config.session_notes else None
 
-            # ── Working hours enforcement (09:00–20:00) ──
+            # ── Working hours enforcement (day-end pause at 20:00, auto-resume at 09:30) ──
             now_wall = datetime.now()
             if session_stack and now_wall.hour >= 20 and last_auto_close_date != today:
                 last_auto_close_date = today
                 top = session_stack[-1]
-                if top.get("ended_at") is None:
-                    top_folder = sessions_root / top["name"]
-                    _save_key_points(top_folder, current_key_points, summary_watermark, _session_start_date(top))
-                now_iso = now_wall.isoformat()
+                top_folder = sessions_root / top["name"]
+                _save_key_points(top_folder, current_key_points, summary_watermark, _session_start_date(top))
+                # Pause all active sessions in the stack (day-end pause — not ended, resumes tomorrow)
                 for s in session_stack:
                     if s.get("ended_at") is None:
-                        s["ended_at"] = now_iso
-                session_stack.clear()
+                        _pause_session(s, now_wall, reason="day_end")
                 _save_daemon_state(sessions_root, session_stack)
-                current_key_points = []
-                summary_watermark = 0
                 _sync_session_to_server(config, session_stack, current_key_points)
                 transcript_state.reset()
-                log.info("session", "Auto-closed at 20:00 (end of working hours)")
+                log.info("session", "Auto-paused at 20:00 (end of working hours)")
+
+            elif (session_stack
+                    and 9 <= now_wall.hour < 20
+                    and last_auto_start_date != today):
+                # Resume any open day_end pauses from last night
+                top = session_stack[-1]
+                open_day_end = any(
+                    p.get("to") is None and p.get("reason") == "day_end"
+                    for p in top.get("paused_intervals", [])
+                )
+                if open_day_end:
+                    last_auto_start_date = today
+                    for s in session_stack:
+                        if s.get("ended_at") is None:
+                            _resume_session(s, now_wall)
+                    _save_daemon_state(sessions_root, session_stack)
+                    _sync_session_to_server(config, session_stack, current_key_points)
+                    transcript_state.reset()
+                    log.info("session", f"Auto-resumed at 09:30: {session_stack[-1]['name']}")
 
             elif (not session_stack
                     and 9 <= now_wall.hour < 20
@@ -607,7 +668,7 @@ def run() -> None:
                 config = dc_replace(config, session_notes=notes_file)
                 _sync_session_to_server(config, session_stack, current_key_points)
                 transcript_state.reset()
-                log.info("session", f"Auto-started at 09:00: {config.session_folder.name}")
+                log.info("session", f"Auto-started at 09:30: {config.session_folder.name}")
 
             # ── Auto-update: check if server version changed ──
             if _startup_version:
