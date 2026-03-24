@@ -144,6 +144,15 @@
   z-index: 1;
   letter-spacing: .02em;
 }
+.version-tag.deploy-incoming {
+  opacity: 1;
+  color: #ffd166;
+  animation: deploy-blink 1s ease-in-out infinite;
+}
+@keyframes deploy-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .35; }
+}
 
 @media (prefers-color-scheme: light) {
   .version-tag {
