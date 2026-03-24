@@ -160,6 +160,14 @@
 - [x] Delete the created pet and confirm it disappears
 - [x] Update `/.github/petclinic-instructions.md` with confirmed pet lifecycle behavior
 
+## Direct request: Pet Clinic hierarchical navigation structure
+
+- [x] Revisit the current Pet Clinic discovery baseline
+- [x] Explore all top-level navbar sections and submenu entries
+- [x] Confirm major child routes for owners, pets, visits, veterinarians, pet types, and specialties
+- [x] Capture confirmed page-level buttons and form patterns
+- [x] Update `/.github/petclinic-instructions.md` with a hierarchical page map and navigation notes
+
 ## Review
 
 - Added `scripts/append_transcription_timestamps.py` with 3s default interval and parser-compatible format.
@@ -208,3 +216,5 @@
 - Pet Clinic pet lifecycle exploration complete: added `Copilot Temp Pet`, renamed it to `Copilot Temp Pet Updated`, then deleted it from `George Franklin`.
 - Proof screenshots: `docs/superpowers/specs/petclinic-add-pet-form.png`, `docs/superpowers/specs/petclinic-pet-after-add.png`, `docs/superpowers/specs/petclinic-edit-pet-form.png`, `docs/superpowers/specs/petclinic-pet-after-edit.png`, `docs/superpowers/specs/petclinic-pet-after-delete.png`.
 - Updated `/.github/petclinic-instructions.md` with verified add-pet route, edit-pet route, button-state behavior, and immediate-delete behavior.
+- Pet Clinic navigation exploration complete: confirmed the top-level hierarchy for `HOME`, `OWNERS`, `VETERINARIANS`, `PET TYPES`, and `SPECIALTIES`, plus child flows for owner detail, owner edit, add pet, edit pet, add visit, add/edit vet, and reference-data edit states.
+- Updated `/.github/petclinic-instructions.md` with a menu-first navigation tree, page-level buttons, route inventory, and form-pattern notes for owners, pets, visits, vets, pet types, and specialties.
