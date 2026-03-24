@@ -357,7 +357,7 @@
       if (btn) { btn.disabled = false; btn.style.opacity = ''; }
     }
     const countEl = document.getElementById('summary-count');
-    if (countEl) countEl.textContent = '(' + summaryPoints.length + ')';
+    if (countEl) countEl.textContent = summaryPoints.length > 0 ? summaryPoints.length : '';
     if (summaryPoints.length > prevCount) {
       const summaryBtn = document.getElementById('summary-btn');
       if (summaryBtn) {
