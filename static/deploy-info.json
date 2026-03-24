@@ -1,7 +1,7 @@
 {
-  "sha": "045d8cdfd1c59a743fe04cc84677ca85359abdf3",
-  "timestamp": "2026-03-24 12:06",
+  "sha": "483cbdd0793600926be6beb3bd617019fb063362",
+  "timestamp": "2026-03-24 12:10",
   "changelog": [
-    "feat(overlay): ~25% of applause claps are 3x larger for visual impact"
+    "fix(overlay): applause is now one-shot (6s), ignores clicks while running"
   ]
 }
