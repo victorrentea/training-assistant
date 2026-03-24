@@ -1,7 +1,7 @@
 {
-  "sha": "570e5ee5b62cc98fe1c742b5e3e884a2a2af5543",
-  "timestamp": "2026-03-24 15:43",
+  "sha": "954b52c0b47142a21b84084f2057cbc69c04d7d4",
+  "timestamp": "2026-03-24 15:58",
   "changelog": [
-    "feat(keynotes): full regen from complete notes + toast notification on update"
+    "revert(overlay): pulse back to CAShapeLayer ECG \u2014 remove PNG image that caused suspicious line"
   ]
 }
