@@ -92,6 +92,7 @@ start_watcher() {
   bash -c '
     REPO="victorrentea/training-assistant"
     PROD_URL="https://interact.victorrentea.ro/static/version.js"
+    API_BASE_URL="https://interact.victorrentea.ro"
     DEPLOY_TIMEOUT=120
     SCRIPT_DIR="'"$SCRIPT_DIR"'"
     HISTORY_FILE="$SCRIPT_DIR/deploy-history.txt"
@@ -100,6 +101,12 @@ start_watcher() {
     get_prod_version() { curl -s "$PROD_URL" | grep -o "'"'"'.*'"'"'" | tr -d "'"'"'"; }
     get_master_head() { gh api "repos/$REPO/commits/master" --jq ".sha" 2>/dev/null; }
     get_commit_message() { gh api "repos/$REPO/commits/$1" --jq ".commit.message" 2>/dev/null | head -1; }
+    notify_pending_deploy() {
+      local sha="${1:0:8}" msg="$2"
+      local json
+      json=$(python3 -c "import json,sys; print(json.dumps({'sha':sys.argv[1],'message':sys.argv[2]}))" "$sha" "$msg" 2>/dev/null) || return
+      curl -sS -X POST "$API_BASE_URL/api/pending-deploy" -H "Content-Type: application/json" -d "$json" &>/dev/null &
+    }
 
     get_estimated_duration() {
       if [ ! -f "$HISTORY_FILE" ] || [ ! -s "$HISTORY_FILE" ]; then echo "$DEFAULT_ESTIMATE"; return; fi
@@ -135,6 +142,7 @@ start_watcher() {
         NOW=$(date +%s); ELAPSED=$((NOW - WAITING_SINCE))
         if [ "$CURRENT_PROD" != "$LAST_PROD_VERSION" ]; then
           record_deploy "$ELAPSED"
+          notify_pending_deploy "" ""
           echo "$(date '"'"'+%H:%M:%S'"'"') ✅ Deployed! Version: $CURRENT_PROD"
           terminal-notifier -title "🚀 Deployed!" -message "$COMMIT_MSG" -group deploy -timeout 5 &>/dev/null &
           afplay /System/Library/Sounds/Glass.aiff & sleep 0.4; afplay /System/Library/Sounds/Glass.aiff
@@ -167,6 +175,7 @@ start_watcher() {
         if [ -n "$CURRENT_HEAD" ] && [ "$CURRENT_HEAD" != "$LAST_MASTER_HEAD" ]; then
           COMMIT_MSG=$(get_commit_message "$CURRENT_HEAD")
           LAST_MASTER_HEAD="$CURRENT_HEAD"; MERGE_SHA="$CURRENT_HEAD"
+          notify_pending_deploy "$CURRENT_HEAD" "$COMMIT_MSG"
           if [ -z "$WAITING_SINCE" ]; then
             ESTIMATED=$(get_estimated_duration); WAITING_SINCE=$(date +%s)
             echo "$(date '"'"'+%H:%M:%S'"'"') 🔀 Merge detected! HEAD: ${CURRENT_HEAD:0:8} — $COMMIT_MSG (~${ESTIMATED}s)"

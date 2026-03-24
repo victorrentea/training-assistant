@@ -194,6 +194,7 @@
         updateTokenBadge(msg.token_usage);
         renderTranscriptStatus(msg.transcript_line_count, msg.transcript_total_lines, msg.transcript_latest_ts);
         renderOverlayStatus(msg.overlay_connected);
+        renderPendingDeploy(msg.pending_deploy);
         daemonSessionFolder = msg.daemon_session_folder || null;
         renderNotesStatus(msg.daemon_session_folder, msg.daemon_session_notes);
         updateHostNotes(msg.notes_content);
@@ -615,6 +616,18 @@
     if (!el) return;
     el.className = `badge ${connected ? 'connected' : 'disconnected'}`;
     el.title = connected ? 'Emoji overlay connected' : 'Emoji overlay not connected';
+  }
+
+  function renderPendingDeploy(pendingDeploy) {
+    const el = document.getElementById('pending-deploy-badge');
+    if (!el) return;
+    if (!pendingDeploy || !pendingDeploy.sha) {
+      el.style.display = 'none';
+      return;
+    }
+    el.style.display = '';
+    el.style.cssText = 'color:#ff4444;border:1px solid #ff4444;animation:pulse 1s infinite;';
+    el.title = `Deploying: ${pendingDeploy.sha} — ${pendingDeploy.message}`;
   }
 
   let _prevPaxCount = 0;
