@@ -1,5 +1,4 @@
 import AppKit
-import AVFoundation
 import QuartzCore
 
 class EmojiAnimator {
@@ -1328,110 +1327,10 @@ class EmojiAnimator {
         ecgLayer.add(draw, forKey: "draw")
         CATransaction.commit()
 
-        // Sound: heartbeat sounds during QRS cycles, flatline beep after
-        _schedulePulseSound(cycleDuration: cycleDuration, pulseCount: pulseCount,
-                            flatlineStart: flatlineStart, totalDuration: totalDuration)
-    }
-
-    private func _schedulePulseSound(cycleDuration: Double, pulseCount: Int,
-                                     flatlineStart: Double, totalDuration: Double) {
-        // Lub-dub at each heartbeat (slightly before the R spike for realism)
-        for i in 0..<pulseCount {
-            let t = Double(i) * cycleDuration + cycleDuration * 0.18
-            DispatchQueue.main.asyncAfter(deadline: .now() + t) { [weak self] in
-                self?._playLubDub()
-            }
-        }
-
-        // Start continuous flatline beep when the flatline begins
-        DispatchQueue.main.asyncAfter(deadline: .now() + flatlineStart) { [weak self] in
-            self?._startFlatlineBeep()
-        }
-
-        // Fade out sound 300ms before the visual overlay disappears
-        let soundStopAt = totalDuration - 0.3
-        DispatchQueue.main.asyncAfter(deadline: .now() + soundStopAt) { [weak self] in
-            self?._stopFlatlineBeep()
-        }
-    }
-
-    // AVAudioEngine for generated heartbeat + flatline tones
-    private var _pulseEngine: AVAudioEngine?
-    private var _flatlinePlayer: AVAudioPlayerNode?
-
-    private func _playLubDub() {
-        _playTone(frequency: 80, duration: 0.07, volume: 1.0)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.09) { [weak self] in
-            self?._playTone(frequency: 60, duration: 0.06, volume: 0.85)
-        }
-    }
-
-    private func _playTone(frequency: Double, duration: Double, volume: Float) {
-        let engine = AVAudioEngine()
-        let player = AVAudioPlayerNode()
-        guard let format = AVAudioFormat(standardFormatWithSampleRate: 44100, channels: 1) else { return }
-        engine.attach(player)
-        engine.connect(player, to: engine.mainMixerNode, format: format)
-        let frameCount = AVAudioFrameCount(44100 * duration)
-        guard let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: frameCount) else { return }
-        buffer.frameLength = frameCount
-        let data = buffer.floatChannelData![0]
-        let sampleRate = 44100.0
-        for i in 0..<Int(frameCount) {
-            let t = Double(i) / sampleRate
-            let fade = min(t / 0.005, 1.0) * max(0, 1.0 - t / duration)
-            data[i] = Float(sin(2 * .pi * frequency * t) * Double(volume) * fade)
-        }
-        try? engine.start()
-        player.play()
-        player.scheduleBuffer(buffer, completionHandler: nil)
-        // Keep engine alive until done, then release
-        DispatchQueue.main.asyncAfter(deadline: .now() + duration + 0.1) {
-            engine.stop()
-        }
-    }
-
-    private func _startFlatlineBeep() {
-        let engine = AVAudioEngine()
-        let player = AVAudioPlayerNode()
-        guard let format = AVAudioFormat(standardFormatWithSampleRate: 44100, channels: 1) else { return }
-        engine.attach(player)
-        engine.connect(player, to: engine.mainMixerNode, format: format)
-        // Create a looping 880Hz buffer (0.5s chunk)
-        let chunkFrames = AVAudioFrameCount(44100 / 2)
-        guard let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: chunkFrames) else { return }
-        buffer.frameLength = chunkFrames
-        let data = buffer.floatChannelData![0]
-        for i in 0..<Int(chunkFrames) {
-            data[i] = Float(sin(2 * .pi * 880.0 * Double(i) / 44100.0) * 0.35)
-        }
-        try? engine.start()
-        player.play()
-        // Schedule looping
-        func scheduleNext() {
-            player.scheduleBuffer(buffer, at: nil, options: .loops, completionHandler: nil)
-        }
-        scheduleNext()
-        _pulseEngine = engine
-        _flatlinePlayer = player
-    }
-
-    private func _stopFlatlineBeep() {
-        guard let engine = _pulseEngine, let player = _flatlinePlayer else { return }
-        // Fade out over 300ms via main mixer volume
-        let mixer = engine.mainMixerNode
-        let steps = 15
-        let stepTime = 0.3 / Double(steps)
-        for i in 0...steps {
-            DispatchQueue.main.asyncAfter(deadline: .now() + Double(i) * stepTime) {
-                mixer.outputVolume = Float(1.0 - Double(i) / Double(steps))
-            }
-        }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { [weak self] in
-            player.stop()
-            engine.stop()
-            self?._pulseEngine = nil
-            self?._flatlinePlayer = nil
+        // Sound: play dying.mp3 (contains heartbeat + flatline), fade out near end
+        SoundManager.shared.play("dying.mp3")
+        DispatchQueue.main.asyncAfter(deadline: .now() + totalDuration - 0.3) {
+            SoundManager.shared.stop("dying.mp3")
         }
     }
 }
