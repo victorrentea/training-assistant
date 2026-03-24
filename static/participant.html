@@ -103,6 +103,15 @@
   <button class="emoji-btn" onclick="sendEmoji('☕', event)">☕</button>
   <button class="emoji-btn" onclick="sendEmoji('✅', event)">✅</button>
   <button class="emoji-btn" onclick="sendEmoji('❌', event)">❌</button>
+  <button class="emoji-btn has-tooltip" data-tooltip="I can't see your screen" onclick="sendEmoji('🖥️❌', event)" style="line-height:1">
+    <svg width="22" height="18" viewBox="0 0 24 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="1" y="1" width="22" height="15" rx="2"/>
+      <line x1="12" y1="16" x2="12" y2="19"/>
+      <line x1="8" y1="19" x2="16" y2="19"/>
+      <polyline points="9,4 11,8 9,11 12,15"/>
+      <line x1="11" y1="8" x2="16" y2="5"/>
+    </svg>
+  </button>
 </div>
 <div id="conference-emoji-grid" style="display:none;">
   <div id="conference-url-display" class="conference-url-display"></div>
