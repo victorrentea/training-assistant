@@ -1,7 +1,8 @@
 {
-  "sha": "a5b38ffd801095e125389a906fd002e29a3e8ab8",
-  "timestamp": "2026-03-24 12:46",
+  "sha": "e93d62958e883d968d1773a36392ce434a21ca61",
+  "timestamp": "2026-03-24 12:47",
   "changelog": [
-    "feat(session): animated live dots + always-show End Session button"
+    "feat(overlay): replace synthesized pulse sounds with dying.mp3",
+    "fix(session): re-sync key points after backend restart"
   ]
 }
