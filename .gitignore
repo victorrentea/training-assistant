@@ -26,6 +26,7 @@ deploy-history.txt
 # Screenshots and documentation build artifacts
 *.png
 !static/avatars/*.png
+!emoji-overlay/Sources/EmojiOverlay/Resources/*.png
 
 # Coverage data
 .coverage*
