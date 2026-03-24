@@ -245,12 +245,11 @@ GIT_POLL_INTERVAL=2  # seconds between git fetch checks
 LOCAL_HEAD=""
 
 check_git_updates() {
-  # Fetch quietly, compare local master vs origin/master
+  # Fetch quietly, compare local master vs origin/master (branch-independent)
   git fetch origin master --quiet 2>/dev/null || return 1
-  local remote_head
+  local remote_head local_head
   remote_head=$(git rev-parse origin/master 2>/dev/null)
-  local local_head
-  local_head=$(git rev-parse HEAD 2>/dev/null)
+  local_head=$(git rev-parse master 2>/dev/null)
 
   if [ -n "$remote_head" ] && [ "$remote_head" != "$local_head" ]; then
     local msg
