@@ -1,7 +1,7 @@
 {
-  "sha": "483cbdd0793600926be6beb3bd617019fb063362",
-  "timestamp": "2026-03-24 12:10",
+  "sha": "85c7a198a0e38df9e16633b35aab3fe25bdeca9e",
+  "timestamp": "2026-03-24 12:39",
   "changelog": [
-    "fix(overlay): applause is now one-shot (6s), ignores clicks while running"
+    "fix(overlay): fix Pulse crash \u2014 pass mono format to AVAudioEngine connect"
   ]
 }
