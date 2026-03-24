@@ -35,6 +35,8 @@ class QuizPreview(BaseModel):
     options: list[str]
     multi: bool = False
     correct_indices: list[int] = []
+    source: str | None = None
+    page: str | None = None
 
 
 class QuizRefineRequest(BaseModel):
@@ -86,6 +88,8 @@ async def set_quiz_preview(body: QuizPreview):
         "options": body.options,
         "multi": body.multi,
         "correct_indices": body.correct_indices,
+        "source": body.source,
+        "page": body.page,
     }
     await broadcast({"type": "quiz_preview", "quiz": state.quiz_preview})
     return {"ok": True}
