@@ -3,12 +3,11 @@
 # start.sh — Unified launcher for all workshop companion processes
 # ═══════════════════════════════════════════════════════════════════
 #
-# Starts three processes:
+# Starts two processes:
 #   1. Training daemon  — polls server for quiz/debate/summary requests
-#   2. Deploy watcher   — monitors production deploys, notifies on success/failure
-#   3. Desktop overlay    — macOS overlay app rendering participant emoji reactions
+#   2. Desktop overlay  — macOS overlay app rendering participant emoji reactions
 #
-# Auto-updates: every 10s, `git fetch` checks for new commits on master.
+# Auto-updates: every 2s, `git fetch` checks for new commits on master.
 # When new code is detected (or daemon exits with code 42), ALL processes
 # are stopped, code is pulled, overlay is rebuilt, and everything restarts.
 #
@@ -16,7 +15,6 @@
 #   - Python 3.12+ with project dependencies installed
 #   - secrets.env with ANTHROPIC_API_KEY and TRANSCRIPTION_FOLDER
 #   - Swift toolchain (for desktop overlay)
-#   - gh CLI authenticated (for deploy watcher)
 #
 # USAGE
 #   ./start.sh                    # default server: https://interact.victorrentea.ro
@@ -43,23 +41,15 @@ if ! command -v swift &>/dev/null; then
   NO_OVERLAY=1
 fi
 
-if ! command -v gh &>/dev/null; then
-  _log "start" "info" "gh CLI not found — deploy watcher will not start"
-  NO_WATCHER=1
-fi
-
 # ── PID tracking ──
 
 DAEMON_PID=""
-WATCHER_PID=""
 OVERLAY_PID=""
-RESTART_FLAG="/tmp/start_restart.flag"
 
 cleanup() {
   echo ""
-  _log "start" "info" "🔴 daemon  🔴 watcher  🔴 overlay"
+  _log "start" "info" "🔴 daemon  🔴 overlay"
   [ -n "$DAEMON_PID" ]  && kill "$DAEMON_PID"  2>/dev/null
-  [ -n "$WATCHER_PID" ] && kill "$WATCHER_PID" 2>/dev/null
   [ -n "$OVERLAY_PID" ] && kill "$OVERLAY_PID" 2>/dev/null
   wait 2>/dev/null
   exit 0
@@ -85,132 +75,6 @@ start_daemon() {
   _log "start" "info" "Starting training daemon..."
   python3 training_daemon.py &
   DAEMON_PID=$!
-}
-
-start_watcher() {
-  if [ -n "$NO_WATCHER" ]; then return; fi
-  kill_old_watcher
-  _log "start" "info" "Starting deploy watcher..."
-  bash -c '
-    source "'"$SCRIPT_DIR"'/daemon/bash_log.sh"
-    REPO="victorrentea/training-assistant"
-    PROD_URL="https://interact.victorrentea.ro/static/version.js"
-    API_BASE_URL="https://interact.victorrentea.ro"
-    DEPLOY_TIMEOUT=120
-    SCRIPT_DIR="'"$SCRIPT_DIR"'"
-    HISTORY_FILE="$SCRIPT_DIR/deploy-history.txt"
-    DEFAULT_ESTIMATE=45
-
-    get_prod_version() { curl -s "$PROD_URL" | grep -o "'"'"'.*'"'"'" | tr -d "'"'"'"; }
-    get_master_head() { gh api "repos/$REPO/commits/master" --jq ".sha" 2>/dev/null; }
-    get_commit_message() { gh api "repos/$REPO/commits/$1" --jq ".commit.message" 2>/dev/null | head -1; }
-    notify_pending_deploy() {
-      local sha="${1:0:8}" msg="$2"
-      local json
-      json=$(python3 -c "import json,sys; print(json.dumps({'"'"'sha'"'"':sys.argv[1],'"'"'message'"'"':sys.argv[2]}))" "$sha" "$msg" 2>/dev/null) || return
-      curl -sS -X POST "$API_BASE_URL/api/pending-deploy" -H "Content-Type: application/json" -d "$json" &>/dev/null &
-    }
-
-    get_estimated_duration() {
-      if [ ! -f "$HISTORY_FILE" ] || [ ! -s "$HISTORY_FILE" ]; then echo "$DEFAULT_ESTIMATE"; return; fi
-      local sum=0 count=0 dur
-      while read -r _ts dur; do [ -n "$dur" ] && sum=$((sum + dur)) && count=$((count + 1)); done < "$HISTORY_FILE"
-      [ "$count" -eq 0 ] && echo "$DEFAULT_ESTIMATE" || echo $((sum / count))
-    }
-
-    record_deploy() { echo "$(date +%s) $1" >> "$HISTORY_FILE"; tail -n 20 "$HISTORY_FILE" > "$HISTORY_FILE.tmp" && mv "$HISTORY_FILE.tmp" "$HISTORY_FILE"; }
-
-    LOCK_FILE="/tmp/watch_deploy.lock"
-    echo "{\"pid\": $$, \"heartbeat\": $(date +%s)}" > "$LOCK_FILE"
-    trap "rm -f $LOCK_FILE; exit 0" INT TERM
-
-    LAST_MASTER_HEAD=$(get_master_head)
-    LAST_PROD_VERSION=$(get_prod_version)
-    WAITING_SINCE="" MERGE_SHA="" ESTIMATED="" COMMIT_MSG=""
-    NOTIFY_INTERVAL=5 LAST_NOTIFY_TIME=0 LAST_NOTIFY_TITLE=""
-    POLL_COUNTER=0
-
-    _log "watcher" "info" "Watching deploys"
-    _log "watcher" "info" "Master HEAD: ${LAST_MASTER_HEAD:0:8}"
-    _log "watcher" "info" "Production: $LAST_PROD_VERSION"
-
-    while true; do
-      sleep 2
-      POLL_COUNTER=$((POLL_COUNTER + 1))
-      [ $((POLL_COUNTER % 5)) -eq 0 ] && echo "{\"pid\": $$, \"heartbeat\": $(date +%s)}" > "$LOCK_FILE"
-
-      CURRENT_PROD=$(get_prod_version)
-
-      if [ -n "$WAITING_SINCE" ]; then
-        NOW=$(date +%s); ELAPSED=$((NOW - WAITING_SINCE))
-        if [ "$CURRENT_PROD" != "$LAST_PROD_VERSION" ]; then
-          record_deploy "$ELAPSED"
-          notify_pending_deploy "" ""
-          _log "watcher" "info" "Deployed! Version: $CURRENT_PROD"
-          terminal-notifier -title "🚀 Deployed!" -message "$COMMIT_MSG" -group deploy -timeout 5 &>/dev/null &
-          afplay /System/Library/Sounds/Glass.aiff & sleep 0.4; afplay /System/Library/Sounds/Glass.aiff
-          LAST_PROD_VERSION="$CURRENT_PROD"; WAITING_SINCE=""; MERGE_SHA=""; ESTIMATED=""; COMMIT_MSG=""
-          continue
-        fi
-        if [ "$ELAPSED" -ge "$DEPLOY_TIMEOUT" ]; then
-          _log "watcher" "error" "Deploy timeout ${MERGE_SHA:0:8} after ${DEPLOY_TIMEOUT}s"
-          terminal-notifier -title "❌ Deploy Timeout!" -message "Merge ${MERGE_SHA:0:8} not deployed after ${DEPLOY_TIMEOUT}s" -group deploy -timeout 10 &>/dev/null &
-          LAST_PROD_VERSION="$CURRENT_PROD"; WAITING_SINCE=""; MERGE_SHA=""; ESTIMATED=""; COMMIT_MSG=""
-          continue
-        fi
-        REMAINING=$((ESTIMATED - ELAPSED))
-        NOW_S=$(date +%s)
-        if [ $((NOW_S - LAST_NOTIFY_TIME)) -ge "$NOTIFY_INTERVAL" ]; then
-          TITLE="🚀 Deploying in about ${REMAINING}s"
-          [ "$REMAINING" -le 5 ] && TITLE="🚀 Deploying any moment..."
-          if [ "$TITLE" != "$LAST_NOTIFY_TITLE" ]; then
-            LAST_NOTIFY_TIME="$NOW_S"; LAST_NOTIFY_TITLE="$TITLE"
-            terminal-notifier -title "$TITLE" -message "$COMMIT_MSG" -group deploy &>/dev/null &
-          fi
-        fi
-      else
-        [ "$CURRENT_PROD" != "$LAST_PROD_VERSION" ] && _log "watcher" "info" "Prod version: $CURRENT_PROD" && LAST_PROD_VERSION="$CURRENT_PROD"
-      fi
-
-      if [ $((POLL_COUNTER % 2)) -eq 0 ]; then
-        CURRENT_HEAD=$(get_master_head)
-        if [ -n "$CURRENT_HEAD" ] && [ "$CURRENT_HEAD" != "$LAST_MASTER_HEAD" ]; then
-          COMMIT_MSG=$(get_commit_message "$CURRENT_HEAD")
-          LAST_MASTER_HEAD="$CURRENT_HEAD"; MERGE_SHA="$CURRENT_HEAD"
-          notify_pending_deploy "$CURRENT_HEAD" "$COMMIT_MSG"
-          touch /tmp/start_restart.flag
-          if [ -z "$WAITING_SINCE" ]; then
-            ESTIMATED=$(get_estimated_duration); WAITING_SINCE=$(date +%s)
-            _log "watcher" "info" "Merge: ${CURRENT_HEAD:0:8} ~${ESTIMATED}s $COMMIT_MSG"
-          else
-            _log "watcher" "info" "New push: ${CURRENT_HEAD:0:8} $COMMIT_MSG"
-          fi
-          LAST_NOTIFY_TIME=0; LAST_NOTIFY_TITLE=""
-        elif [ -n "$CURRENT_HEAD" ]; then
-          LAST_MASTER_HEAD="$CURRENT_HEAD"
-        fi
-      fi
-    done
-  ' &
-  WATCHER_PID=$!
-}
-
-kill_old_watcher() {
-  local lock_file="/tmp/watch_deploy.lock"
-  if [ -f "$lock_file" ]; then
-    local old_pid
-    old_pid=$(python3 -c "import json,sys; print(json.load(sys.stdin).get('pid',''))" < "$lock_file" 2>/dev/null)
-    if [ -n "$old_pid" ] && kill -0 "$old_pid" 2>/dev/null; then
-      _log "start" "info" "🔴 watcher (prev instance)"
-      kill "$old_pid" 2>/dev/null
-      for i in 1 2 3; do
-        kill -0 "$old_pid" 2>/dev/null || break
-        sleep 1
-      done
-      kill -0 "$old_pid" 2>/dev/null && kill -9 "$old_pid" 2>/dev/null
-    fi
-    rm -f "$lock_file"
-  fi
 }
 
 kill_old_overlay() {
@@ -269,42 +133,40 @@ check_git_updates() {
 }
 
 stop_all_processes() {
-  _log "start" "info" "🔴 daemon  🔴 watcher  🔴 overlay"
+  _log "start" "info" "🔴 daemon  🔴 overlay"
   [ -n "$DAEMON_PID" ]  && kill -9 "$DAEMON_PID"  2>/dev/null; DAEMON_PID=""
-  [ -n "$WATCHER_PID" ] && kill -9 "$WATCHER_PID" 2>/dev/null; WATCHER_PID=""
   [ -n "$OVERLAY_PID" ] && kill -9 "$OVERLAY_PID" 2>/dev/null; OVERLAY_PID=""
 }
 
 pull_and_rebuild() {
-  _log "start" "info" "Pulling latest code..."
-  if ! git pull; then
+  local new_commits
+  new_commits=$(git log --oneline HEAD..origin/master 2>/dev/null)
+  _log "start" "info" "⬇  Pulling: $new_commits"
+  if ! git pull --ff-only; then
     _log "start" "error" "git pull failed — resolve manually"
     exit 1
   fi
-  _log "start" "info" "Rebuilding..."
   build_overlay
 }
 
 # ── Main loop ──
 
-rm -f "$RESTART_FLAG"
 build_overlay
 
 while true; do
   start_daemon
-  start_watcher
   start_overlay
 
   echo ""
-  _log "start" "info" "🟢 daemon  🟢 watcher  🟢 overlay"
+  _log "start" "info" "🟢 daemon  🟢 overlay"
   echo ""
 
-  # Poll loop: check daemon health + restart flag
+  # Poll loop: check daemon health + git updates every 10s
   RESTART_REASON=""
-  GIT_FALLBACK_COUNTER=0
+  GIT_CHECK_COUNTER=0
   while true; do
     sleep 0.5
-    GIT_FALLBACK_COUNTER=$((GIT_FALLBACK_COUNTER + 1))
+    GIT_CHECK_COUNTER=$((GIT_CHECK_COUNTER + 1))
 
     # Check if daemon exited
     if [ -n "$DAEMON_PID" ] && ! kill -0 "$DAEMON_PID" 2>/dev/null; then
@@ -325,15 +187,8 @@ while true; do
       fi
     fi
 
-    # Restart flag written by watcher when new commit is detected
-    if [ -f "$RESTART_FLAG" ]; then
-      rm -f "$RESTART_FLAG"
-      RESTART_REASON="new-push"
-      break
-    fi
-
-    # Fallback: git-based detection when watcher is unavailable (every 10s)
-    if [ -n "$NO_WATCHER" ] && [ $((GIT_FALLBACK_COUNTER % 20)) -eq 0 ]; then
+    # Git-based update detection (every 2s)
+    if [ $((GIT_CHECK_COUNTER % 4)) -eq 0 ]; then
       if check_git_updates; then
         RESTART_REASON="git-update"
         break
