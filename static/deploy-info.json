@@ -1,7 +1,7 @@
 {
-  "sha": "2791063d15bafa74f4b13df370690e860cc91ec3",
-  "timestamp": "2026-03-24 18:27",
+  "sha": "190494a14f5c2a318169b2c026d82fce35b22160",
+  "timestamp": "2026-03-24 18:32",
   "changelog": [
-    "fix(overlay): ECG full screen stretch + resync timing for updated image peaks (22%, 48%)"
+    "feat(summarizer): incremental mode with watermark for resilience"
   ]
 }
