@@ -132,7 +132,6 @@
   font-size: .7rem;
   color: #fff;
   opacity: .55;
-  pointer-events: none;
   z-index: 1;
   letter-spacing: .02em;
 }
