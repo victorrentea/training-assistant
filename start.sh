@@ -9,8 +9,8 @@
 #
 # Auto-updates: every 2s, `git fetch` checks for new commits on master.
 # When new code is detected (or daemon exits with code 42), the daemon is
-# stopped, code is pulled, overlay is rebuilt, and everything restarts.
-# The overlay keeps running until the new instance self-replaces it via PID file.
+# stopped, code is pulled, overlay is rebuilt, and the outer loop restarts both.
+# The old overlay keeps running until the new instance self-replaces it via PID file.
 #
 # PREREQUISITES
 #   - Python 3.12+ with project dependencies installed
@@ -132,9 +132,8 @@ pull_and_rebuild() {
   local new_commits
   new_commits=$(git log --oneline HEAD..origin/master 2>/dev/null)
   _log "start" "info" "⬇  Pulling: $new_commits"
-  if ! git pull --ff-only; then
-    _log "start" "error" "git pull failed — resolve manually"
-    exit 1
+  if ! git pull --ff-only 2>&1; then
+    _log "start" "warn" "git pull failed — continuing with existing code"
   fi
   build_overlay
 }
@@ -186,11 +185,10 @@ while true; do
     fi
   done
 
-  # Stop everything, update, and re-exec with fresh code
+  # Stop everything, update, and loop back to restart
   stop_all_processes
   pull_and_rebuild
 
   _log "start" "info" "Restarting (reason: $RESTART_REASON)..."
   echo ""
-  exec bash "$SCRIPT_DIR/start.sh" "$OVERLAY_SERVER"
 done
