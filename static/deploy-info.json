@@ -1,7 +1,25 @@
 {
-  "sha": "f40abda888a268f3bb6903b0c971c5475df8516d",
-  "timestamp": "2026-03-25 07:37",
+  "sha": "c1784a430143c4118c614737f11e263965f8567d",
+  "timestamp": "2026-03-25 07:47",
   "changelog": [
-    "feat: track quiz history in quiz.md and feed it to LLM"
+    "fix: startup restore loads session_state.json and filters ended sessions",
+    "feat: conference mode switch auto-creates talk folder without disconnecting participants",
+    "fix: tighten auto_pause guard and add timing_event endpoint test",
+    "feat: daemon auto-pauses at 6pm with 5:30pm warning and midnight session end",
+    "feat: redesign host sessions panel with START TALK, END TALK, FRAGILE CREATE state",
+    "feat: show session-paused overlay on participant page when session switches",
+    "feat: UUID resolution on WS connect \u2014 session_paused for paused-session participants",
+    "feat: add START TALK / END TALK daemon actions with state save/restore",
+    "feat: daemon writes session_state.json every 5s via /api/session/snapshot",
+    "feat: update daemon_state.json to {main, talk} schema with migration from old stack format",
+    "fix: clear debate_round_timer_started_at before conditional restore",
+    "feat: extend /api/session/sync to restore full session state on server restart",
+    "feat: add GET /api/session/snapshot for daemon persistence",
+    "feat: replace session_stack with session_main/session_talk in AppState",
+    "feat: rename transcript_keypoints.md to transcript_discussion.md",
+    "docs: fix missing code fence in session persistence plan",
+    "docs: add session folder persistence implementation plan",
+    "docs: finalize session folder persistence design spec",
+    "docs: add session folder persistence design spec"
   ]
 }
