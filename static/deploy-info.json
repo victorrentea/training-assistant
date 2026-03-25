@@ -1,7 +1,7 @@
 {
-  "sha": "3332b8519006f1bf469b607d33025a6dfb8097f2",
-  "timestamp": "2026-03-25 07:56",
+  "sha": "c7b6303e8c8ad1a458f047480722234489dcf015",
+  "timestamp": "2026-03-25 08:15",
   "changelog": [
-    "fix: allow @-prefixed session folder names in detection regex"
+    "feat: log state backup metrics instead of byte count"
   ]
 }
