@@ -320,7 +320,8 @@ def _sync_session_to_server(
 ) -> None:
     """Push session stack and key points to server.
     If session_state is provided, it is included for a plain restore (no participant disconnect)."""
-    payload: dict = {"stack": stack, "key_points": key_points}
+    daemon_state = _stack_to_daemon_state(stack)
+    payload: dict = {"main": daemon_state["main"], "talk": daemon_state["talk"], "key_points": key_points}
     if session_state is not None:
         payload["session_state"] = session_state
     _post_json(
