@@ -1,7 +1,7 @@
 {
-  "sha": "9e000e16a41dff27d24169628d4afb78413c020c",
-  "timestamp": "2026-03-25 02:47",
+  "sha": "75c2789464065293292536318a3107fcf14b5427",
+  "timestamp": "2026-03-25 02:52",
   "changelog": [
-    "storage in folder"
+    "Revert \"storage in folder\""
   ]
 }
