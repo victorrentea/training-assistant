@@ -262,6 +262,12 @@
 - [x] Run targeted tests: `tests/test_quiz_daemon_reconnect.py`, `tests/test_slides_daemon.py`, `tests/test_slides_api.py`
 - [x] Mark direct request done in `backlog.md`
 
+## Direct request: poll slides every 2 seconds
+
+- [x] Change slides watcher default polling interval from 5s to 2s
+- [x] Keep mtime-gated regeneration logic unchanged
+- [x] Mark direct request done in `backlog.md`
+
 ## Review
 
 - Added `scripts/append_transcription_timestamps.py` with 3s default interval and parser-compatible format.

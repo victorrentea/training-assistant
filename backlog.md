@@ -162,6 +162,7 @@
 - [x] Direct request: slides daemon now checks every 5s and regenerates only when source PPTX `last modified` increased; writes per-file markers like `Bio Victor.pdf.lastmodified`.
 - [x] Direct request: daemon now logs `✏️ppt update detected => regenerating ppf` when it detects a changed PPTX before starting regeneration.
 - [x] Direct request: integrated PPTX change detection/regeneration into existing `training_daemon.py` loop (no separate auto-detection daemon), polling every 5s via the same process.
+- [x] Direct request: reduced PPTX daemon poll interval to every 2s; regeneration still happens only when source PPTX modified timestamp increases.
  ---
 
 ## Understanding design
