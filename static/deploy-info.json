@@ -1,7 +1,7 @@
 {
-  "sha": "5cf1f228abce9f0cbb9e289f9e98f80bccb1a224",
-  "timestamp": "2026-03-25 21:14",
+  "sha": "8d89b4479778ea7544baa11125af7858d7ef0edf",
+  "timestamp": "2026-03-25 21:15",
   "changelog": [
-    "fix: filter empty slides dropdown entries"
+    "desktop-overlay: remove button underline"
   ]
 }
