@@ -380,9 +380,9 @@
     return windows.map(([start, end], idx) => {
       const dayStart = new Date(start.getFullYear(), start.getMonth(), start.getDate());
       const dayNum = Math.floor((dayStart - firstDayStart) / 86400000) + 1;
-      const prefix = isMultiDay ? `D${dayNum} ` : '';
+      const prefix = isMultiDay ? `Day ${dayNum} ` : '';
       const endLabel = ongoing && idx === windows.length - 1 ? 'now' : _fmtSessionTime(end);
-      return `${prefix}${_fmtSessionTime(start)}-${endLabel}`;
+      return `${prefix}${_fmtSessionTime(start)} → ${endLabel}`;
     }).join(', ');
   }
 
@@ -399,11 +399,11 @@
     return windows.map(([start, end], idx) => {
       const dayStart = new Date(start.getFullYear(), start.getMonth(), start.getDate());
       const dayNum = Math.floor((dayStart - firstDayStart) / 86400000) + 1;
-      const prefix = isMultiDay ? `D${dayNum} ` : '';
+      const prefix = isMultiDay ? `Day ${dayNum} ` : '';
       const isOngoingWindow = ongoing && idx === windows.length - 1;
       const endLabel = isOngoingWindow ? 'now' : _fmtSessionTime(end);
       return {
-        label: `${prefix}${_fmtSessionTime(start)}-${endLabel}`,
+        label: `${prefix}${_fmtSessionTime(start)} → ${endLabel}`,
         isOngoing: isOngoingWindow
       };
     });
@@ -2692,14 +2692,11 @@ function renderSessionPanel() {
     if (intervalsEl) {
       const windows = _sessionWindowsForDisplay(main);
       if (windows.length) {
-        const parts = ['<span class="session-main-interval-label">Transcript</span>'];
-        windows.forEach((w, idx) => {
+        const parts = [];
+        windows.forEach((w) => {
           parts.push(
             `<span class="session-main-interval-chip${w.isOngoing ? ' session-main-interval-chip-live' : ''}">${_esc(w.label)}</span>`
           );
-          if (idx < windows.length - 1) {
-            parts.push('<span class="session-main-interval-sep">→</span>');
-          }
         });
         intervalsEl.innerHTML = parts.join('');
         intervalsEl.style.display = 'flex';

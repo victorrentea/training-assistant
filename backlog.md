@@ -4,6 +4,7 @@
 - [x] ui: session recording control clarified as pause/resume — `⏸️` pauses transcription but keeps session open, `▶️` resumes.
 - [x] ui: when session is paused, summary/keypoints bottom badge no longer blinks (no pulse/flash animation).
 - [x] ui: host summary badge now shows conversation count first, then `>` then keypoint count (ex: `💬 70 > 🧠 38`).
+- [x] ui: session intervals row no longer shows `Transcript`; each segment uses `start → end`, no arrows between disjoint segments, and multi-day segments are prefixed `Day 1`, `Day 2`, etc.
 - [x] The participants should auto-join any open session when they loaded the page in their browsers and they've previously logged in.
 - [x] The application should allow them to log out, though, in which case, with a button, they need to re-choose a name or pick the randomly generated one.
 - [x] Make sure the application is mobile friendly also.
