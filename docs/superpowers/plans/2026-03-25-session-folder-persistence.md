@@ -1371,6 +1371,7 @@ if (msg.type === 'timing_event' && msg.event === 'recording_warning') {
     // Auto-hide the warning banner after 6pm passes (when recording-paused state takes over)
   }
 }
+```
 
 - [ ] **Step 4: Run tests**
 
