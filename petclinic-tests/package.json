@@ -1,0 +1,18 @@
+{
+  "name": "petclinic-tests",
+  "version": "1.0.0",
+  "description": "Playwright BDD test framework for Spring Pet Clinic Angular",
+  "scripts": {
+    "test": "bddgen && playwright test",
+    "test:headed": "bddgen && playwright test --headed",
+    "test:ui": "bddgen && playwright test --ui",
+    "report": "playwright show-report",
+    "bddgen": "bddgen"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.42.0",
+    "playwright-bdd": "^7.0.0",
+    "typescript": "^5.3.0"
+  }
+}
+
