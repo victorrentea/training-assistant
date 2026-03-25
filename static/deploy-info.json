@@ -1,11 +1,7 @@
 {
-  "sha": "f288fdb5e4d8ee1c173440240a5ffac37ef927b0",
-  "timestamp": "2026-03-25 09:15",
+  "sha": "f76be6a72491d5156e52bc872f0f42f3f090b2d6",
+  "timestamp": "2026-03-25 09:18",
   "changelog": [
-    "fix: use \u23f1\ufe0f instead of \ud83d\udccd for transcript watermark",
-    "feat: rename Generate/Regenerate buttons, show watermark, hide Generate if <2min old",
-    "fix: move download buttons to right side of modal headers (next to X)",
-    "feat: add \u2b07\ufe0f Download .txt button to Key Points modal (host + participant)",
-    "feat: add \u2b07\ufe0f emoji to Download .txt button in notes"
+    "chore: remove noisy periodic transcript log line"
   ]
 }
