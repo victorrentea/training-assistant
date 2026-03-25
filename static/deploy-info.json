@@ -1,7 +1,7 @@
 {
-  "sha": "db5b366075d91b007fa328fab0739f99c53bbcbc",
-  "timestamp": "2026-03-25 08:30",
+  "sha": "6d9b827a527e325bc4a7e119584a3f48905569ca",
+  "timestamp": "2026-03-25 08:32",
   "changelog": [
-    "style: add restart/start emojis to start.sh log lines"
+    "style: log \ud83d\ude80 Starting at startup in daemon and overlay"
   ]
 }
