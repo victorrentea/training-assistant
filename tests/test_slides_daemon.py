@@ -53,7 +53,7 @@ def test_detect_changed_files_uses_last_exported_mtime(tmp_path):
     assert changed == [b]
 
 
-def test_detect_changed_files_when_target_pdf_missing(tmp_path):
+def test_detect_changed_files_does_not_trigger_when_target_pdf_missing(tmp_path):
     watch = tmp_path / "watch"
     watch.mkdir()
     publish = tmp_path / "publish"
@@ -66,6 +66,28 @@ def test_detect_changed_files_when_target_pdf_missing(tmp_path):
         }
     }
     metadata = {str(a.resolve()): {"target_pdf": "A.pdf"}}
+    changed = slides_daemon.detect_changed_files([a], state, metadata=metadata, publish_dir=publish)
+    assert changed == []
+
+
+def test_detect_changed_files_uses_lastmodified_marker(tmp_path):
+    watch = tmp_path / "watch"
+    watch.mkdir()
+    publish = tmp_path / "publish"
+    publish.mkdir()
+    a = watch / "a.pptx"
+    a.write_bytes(b"a")
+    os.utime(a, (2000, 2000))
+
+    marker = publish / "A.pdf.lastmodified"
+    marker.write_text("2000.0\n", encoding="utf-8")
+
+    state = {"files": {str(a.resolve()): {"slug": "x", "last_exported_mtime": 1000.0}}}
+    metadata = {str(a.resolve()): {"target_pdf": "A.pdf"}}
+    changed = slides_daemon.detect_changed_files([a], state, metadata=metadata, publish_dir=publish)
+    assert changed == []
+
+    marker.write_text("1500.0\n", encoding="utf-8")
     changed = slides_daemon.detect_changed_files([a], state, metadata=metadata, publish_dir=publish)
     assert changed == [a]
 
@@ -153,6 +175,30 @@ def test_process_one_file_updates_state_and_persists(tmp_path, monkeypatch):
     assert pushed["url"] == "https://slides.example.com/published.pdf"
     assert pushed["source_file"] == "deck.pptx"
     assert saved["path"] == cfg.state_file
+
+
+def test_process_one_file_writes_lastmodified_marker(tmp_path, monkeypatch):
+    watch = tmp_path / "watch"
+    watch.mkdir()
+    deck = watch / "deck.pptx"
+    deck.write_bytes(b"x")
+
+    cfg = _cfg(tmp_path)
+    cfg.sync_backend = False
+    state = {"files": {}}
+    out_pdf = tmp_path / "work" / "deck.pdf"
+    out_pdf.parent.mkdir(parents=True, exist_ok=True)
+    out_pdf.write_bytes(b"%PDF")
+
+    monkeypatch.setattr(slides_daemon, "get_cpu_free_percent", lambda sample_seconds=1.0: 80.0)
+    monkeypatch.setattr(slides_daemon, "convert_pptx_to_pdf", lambda *args, **kwargs: out_pdf)
+    monkeypatch.setattr(slides_daemon, "upload_pdf", lambda *args, **kwargs: str(cfg.publish_dir / "Deck.pdf"))
+
+    processed = slides_daemon.process_one_file(cfg, state, deck, target_pdf="Deck.pdf")
+    assert processed is True
+    marker = cfg.publish_dir / "Deck.pdf.lastmodified"
+    assert marker.exists()
+    assert float(marker.read_text(encoding="utf-8").strip()) == deck.stat().st_mtime
 
 
 def test_run_once_processes_single_oldest_changed_file(tmp_path, monkeypatch):

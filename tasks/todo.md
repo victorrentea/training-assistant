@@ -207,6 +207,16 @@
 - [x] Run targeted tests and capture non-visual proof logs
 - [x] Mark direct request done in `backlog.md`
 
+## Direct request: regenerate only on source PPTX modified date (5s poll + .lastmodified markers)
+
+- [x] Change PPTX daemon polling default to 5 seconds
+- [x] Remove trigger on missing target PDF (no regeneration unless source modified time increased)
+- [x] Persist per-material marker `*.pdf.lastmodified` in `materials/slides`
+- [x] Use max(daemon state mtime, marker mtime) as known baseline before regenerating
+- [x] Add focused tests for marker-based detection and marker write behavior
+- [x] Run targeted tests and capture non-visual proof logs
+- [x] Mark direct request done in `backlog.md`
+
 ## Review
 
 - Added `scripts/append_transcription_timestamps.py` with 3s default interval and parser-compatible format.
@@ -275,5 +285,5 @@
 - Verified with `pytest -q tests/test_main.py -k "api_slides_is_empty_by_default or quiz_status_updates_slides_and_api_returns_normalized_data or quiz_request_reports_has_slides_flag"` (3 passed, 120 deselected).
 - Added full deck catalog file `daemon/materials_slides_catalog.json` with 25 slide sources mapped to target PDFs in Materials Slides.
 - Updated `slides_daemon.py` to support catalog mode (multiple source subfolders), default local output `materials/slides`, and optional backend sync.
-- Verified with `python3 -m pytest -q tests/test_slides_daemon.py tests/test_slides_api.py` (12 passed).
+- Verified with `python3 -m pytest -q tests/test_slides_daemon.py tests/test_slides_api.py` (14 passed).
 - Proof logs: `/tmp/slides_catalog_tests.log`.

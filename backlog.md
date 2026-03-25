@@ -154,6 +154,7 @@
 - [x] Avatar refresh via WebSocket: `refresh_avatar` message reassigns avatar ensuring no duplicates among currently connected participants
 - [x] GH#66: Added slides publishing support with `slides_daemon.py` (watch `.pptx`, CPU guard, PDF export, obfuscated slug URL publish) plus backend endpoint `/api/slides/current` for sharing the current PDF URL.
 - [x] Direct request: use full slides catalog from `https://victorrentea.ro/slides/` and regenerate PDFs into project `materials/slides` whenever any mapped source PPTX changes.
+- [x] Direct request: slides daemon now checks every 5s and regenerates only when source PPTX `last modified` increased; writes per-file markers like `Bio Victor.pdf.lastmodified`.
  ---
 
 ## Understanding design
