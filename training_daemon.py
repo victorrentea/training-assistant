@@ -627,6 +627,7 @@ def run() -> None:
 
     last_summary_at = 0.0  # monotonic time of last summary run
     last_snapshot_hash: str | None = None  # hash of last saved state snapshot
+    last_state_backup_log: str | None = None  # last emitted state-backup log line (dedupe consecutive repeats)
     transcript_state = TranscriptStateManager()
     _SAVE_INTERVAL = 5
     # Trigger immediate save on first iteration if a session is already active
@@ -1175,7 +1176,10 @@ def run() -> None:
                         parts.append(f"{len(s['votes'])} votes")
                     if s.get("summary_points"):
                         parts.append(f"{len(s['summary_points'])} summary pts")
-                    log.info("daemon", f"State backup: {', '.join(parts)}")
+                    backup_log = f"State backup: {', '.join(parts)}"
+                    if backup_log != last_state_backup_log:
+                        log.info("daemon", backup_log)
+                        last_state_backup_log = backup_log
             except Exception as e:
                 log.error("daemon", f"State snapshot failed: {e}")
 

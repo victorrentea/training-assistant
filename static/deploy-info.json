@@ -1,7 +1,7 @@
 {
-  "sha": "625966ef4f567982515996c49afc8d680a22b27b",
-  "timestamp": "2026-03-25 19:31",
+  "sha": "05b95b14629d75fc9a64ef1c2db10a846dbbf439",
+  "timestamp": "2026-03-25 19:37",
   "changelog": [
-    "style: monospace font for notes and key points"
+    "fix(daemon): skip duplicate state backup logs"
   ]
 }
