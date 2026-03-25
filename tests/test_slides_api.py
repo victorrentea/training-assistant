@@ -64,6 +64,42 @@ def test_slides_current_requires_host_auth_for_write():
     assert resp.status_code in (401, 403)
 
 
+def test_slides_upload_requires_host_auth(monkeypatch, tmp_path):
+    monkeypatch.setenv("TRAINING_ASSISTANT_UPLOADED_SLIDES_DIR", str(tmp_path / "uploaded"))
+    client = TestClient(app)
+    resp = client.post(
+        "/api/slides/upload",
+        data={"slug": "demo", "name": "Demo"},
+        files={"file": ("demo.pdf", b"%PDF-1.4\n%test\n", "application/pdf")},
+    )
+    assert resp.status_code in (401, 403)
+
+
+def test_slides_upload_is_listed_and_served(monkeypatch, tmp_path):
+    monkeypatch.setenv("TRAINING_ASSISTANT_UPLOADED_SLIDES_DIR", str(tmp_path / "uploaded"))
+    client = TestClient(app, headers=_HOST_AUTH_HEADERS)
+
+    upload = client.post(
+        "/api/slides/upload",
+        data={"slug": "demo-deck", "name": "Demo Deck"},
+        files={"file": ("demo.pdf", b"%PDF-1.4\n%test\n", "application/pdf")},
+    )
+    assert upload.status_code == 200
+    body = upload.json()
+    assert body["ok"] is True
+    assert body["slide"]["slug"] == "demo-deck"
+
+    public = TestClient(app)
+    resp = public.get("/api/slides")
+    assert resp.status_code == 200
+    slides = resp.json()["slides"]
+    assert any(s["slug"] == "demo-deck" and s["name"] == "Demo Deck" for s in slides)
+
+    file_resp = public.get("/api/slides/file/demo-deck")
+    assert file_resp.status_code == 200
+    assert file_resp.content.startswith(b"%PDF-1.4")
+
+
 def test_api_slides_lists_local_materials_and_serves_pdf(monkeypatch, tmp_path):
     monkeypatch.setenv("TRAINING_ASSISTANT_SLIDES_DIR", str(tmp_path))
     pdf = tmp_path / "Architecture.pdf"
