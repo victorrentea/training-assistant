@@ -1,7 +1,7 @@
 {
-  "sha": "fa7a66ad73bed07126871f0f6b06f6210507f12f",
-  "timestamp": "2026-03-25 09:02",
+  "sha": "96b3810bce3eb0a7ccac4280f5d38ad637067622",
+  "timestamp": "2026-03-25 09:03",
   "changelog": [
-    "fix: repair pre-existing e2e test failures in debate, wordcloud, and identity tests"
+    "fix: rename now->_now in talk blocks to avoid shadowing monotonic; skip talk folders in find_session_folder"
   ]
 }
