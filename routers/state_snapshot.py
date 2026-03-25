@@ -104,6 +104,7 @@ def _serialize_state() -> dict:
         "debate_round_timer_started_at": _iso_or_none(state.debate_round_timer_started_at),
         # Summary
         "summary_points": state.summary_points,
+        "slides_current": state.slides_current,
         # Needs restore flag
         "needs_restore": state.needs_restore,
     }
@@ -222,6 +223,8 @@ async def restore_state_snapshot(body: dict):
     # Summary
     if "summary_points" in data:
         state.summary_points = data["summary_points"]
+    if "slides_current" in data:
+        state.slides_current = data["slides_current"]
 
     # Mark as restored
     state.needs_restore = False

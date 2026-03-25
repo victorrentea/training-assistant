@@ -168,6 +168,15 @@
 - [x] Capture confirmed page-level buttons and form patterns
 - [x] Update `/.github/petclinic-instructions.md` with a hierarchical page map and navigation notes
 
+## Direct request: GH66 PPTX daemon for obfuscated PDF publishing
+
+- [x] Add backend state + API endpoints for current published slides URL
+- [x] Expose slides URL in existing status/state payloads for host/participants
+- [x] Implement `slides_daemon.py` for PPTX change detection, CPU guard, export, publish, and backend sync
+- [x] Add focused tests for new API and daemon core logic
+- [x] Run targeted tests and capture non-visual proof logs
+- [x] Mark GH66 item done in `backlog.md`
+
 ## Review
 
 - Added `scripts/append_transcription_timestamps.py` with 3s default interval and parser-compatible format.
@@ -218,3 +227,8 @@
 - Updated `/.github/petclinic-instructions.md` with verified add-pet route, edit-pet route, button-state behavior, and immediate-delete behavior.
 - Pet Clinic navigation exploration complete: confirmed the top-level hierarchy for `HOME`, `OWNERS`, `VETERINARIANS`, `PET TYPES`, and `SPECIALTIES`, plus child flows for owner detail, owner edit, add pet, edit pet, add visit, add/edit vet, and reference-data edit states.
 - Updated `/.github/petclinic-instructions.md` with a menu-first navigation tree, page-level buttons, route inventory, and form-pattern notes for owners, pets, visits, vets, pet types, and specialties.
+- GH66 implemented: backend now stores and serves `slides_current` via new endpoints (`POST/DELETE /api/slides/current`, `GET /api/slides/current`), and includes this payload in WS host/participant state + `/api/status` + state snapshot restore/serialize.
+- Added `slides_daemon.py`: watches `.pptx`, processes one file per cycle, skips export under CPU pressure, converts (`google_drive` or `libreoffice`), publishes obfuscated `slug.pdf`, and pushes URL to backend.
+- Verified with `python3 -m pytest -q tests/test_slides_api.py tests/test_slides_daemon.py` (7 passed).
+- Verified with `python3 -m pytest -q tests/test_main.py -k "session_snapshot_returns_participants_and_scores or session_snapshot_requires_auth"` (2 passed, 118 deselected).
+- Proof logs: `/tmp/gh66_tests.log`.

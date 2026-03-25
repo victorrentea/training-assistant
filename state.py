@@ -46,6 +46,7 @@ class AppState:
         self.daemon_last_seen: Optional[datetime] = None
         self.daemon_session_folder: Optional[str] = None
         self.daemon_session_notes: Optional[str] = None
+        self.slides_current: Optional[dict] = None
         self.notes_content: Optional[str] = None
         self.transcript_line_count: int = 0
         self.transcript_total_lines: int = 0
