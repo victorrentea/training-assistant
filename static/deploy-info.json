@@ -1,7 +1,7 @@
 {
-  "sha": "1695cbd4e028d099179bb59f26a24c41f78d7706",
-  "timestamp": "2026-03-25 21:04",
+  "sha": "166fdc621e5978cecea07f41f99bfc128f5eb424",
+  "timestamp": "2026-03-25 21:11",
   "changelog": [
-    "apply pending local updates"
+    "fix participant key points spacing"
   ]
 }
