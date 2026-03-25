@@ -1,7 +1,7 @@
 {
-  "sha": "c2667db2bfe66e784792fb3c78de50fa7df699dd",
-  "timestamp": "2026-03-25 08:27",
+  "sha": "db5b366075d91b007fa328fab0739f99c53bbcbc",
+  "timestamp": "2026-03-25 08:30",
   "changelog": [
-    "fix: convert WisperFlow elapsed timestamps to real wall-clock times"
+    "style: add restart/start emojis to start.sh log lines"
   ]
 }
