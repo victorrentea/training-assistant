@@ -1203,6 +1203,49 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
   0%, 80%, 100% { transform: scale(1); }
   40%           { transform: scale(1.6); }
 }
+@keyframes blink-yellow {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+.session-talk-active {
+  animation: blink-yellow 1s ease-in-out infinite;
+  border: 2px solid #f5a623;
+  border-radius: 4px;
+  padding: 4px 8px;
+}
+.session-fragile-blink {
+  animation: blink-yellow 0.7s ease-in-out infinite;
+}
+.session-pause-blinking {
+  animation: blink-yellow 1s ease-in-out infinite;
+  color: #f5a623;
+}
+.session-name {
+  font-size: .82rem;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+#session-main-row,
+#session-talk-row,
+#session-start-talk-row,
+#session-fragile-row {
+  display: flex;
+  align-items: center;
+  gap: .35rem;
+  width: 100%;
+}
+#session-fragile-row input {
+  flex: 1;
+  padding: .2rem .4rem;
+  font-size: .8rem;
+  background: var(--surface2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
 .btn-sm {
   font-size: .7rem;
   padding: .2rem .6rem;
