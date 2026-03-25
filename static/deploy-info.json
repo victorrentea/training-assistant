@@ -1,7 +1,7 @@
 {
-  "sha": "8c03afd066446132efaa69d68e24048630e93efd",
-  "timestamp": "2026-03-25 08:26",
+  "sha": "c2667db2bfe66e784792fb3c78de50fa7df699dd",
+  "timestamp": "2026-03-25 08:27",
   "changelog": [
-    "fix: capture daemon exit code safely under set -e"
+    "fix: convert WisperFlow elapsed timestamps to real wall-clock times"
   ]
 }
