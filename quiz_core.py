@@ -92,7 +92,7 @@ def config_from_env(minutes: int = DEFAULT_MINUTES) -> Config:
 
 
 _SESSION_FOLDER_RE = re.compile(
-    r"^(\d{4}-\d{2}-\d{2})(?:\.\.(\d{2}(?:-\d{2})?))?[\s_]"
+    r"^[^0-9]*(\d{4}-\d{2}-\d{2})(?:\.\.(\d{2}(?:-\d{2})?))?[\s_]"
 )
 
 MAX_SESSION_NOTES_CHARS = 20_000
