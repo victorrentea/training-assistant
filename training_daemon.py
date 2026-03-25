@@ -1119,7 +1119,6 @@ def run() -> None:
                         line_count = 0
                         latest_time = None
                     if line_count != last_transcript_line_count:
-                        log.info("transcript", f"{line_count} lines, latest={latest_time}")
                         last_transcript_line_count = line_count
                     _post_json(
                         f"{config.server_url}/api/transcript-status",
