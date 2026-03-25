@@ -1,7 +1,14 @@
 {
-  "sha": "cc61b61117176718baf4901dc7add8a99ac2a695",
-  "timestamp": "2026-03-25 09:14",
+  "sha": "bcc6aca5cebbf15a4b5df292ef238f36e47a6d93",
+  "timestamp": "2026-03-25 09:15",
   "changelog": [
-    "fix: actually fade out dying pulse overlay over 500ms"
+    "docs: add transcript startup log plan and finalize spec",
+    "fix: clamp unprocessed count to 0 and remove dead format_time_ranges import",
+    "refactor: simplify is_ongoing to use all() instead of not any(not ...)",
+    "feat: replace format_time_ranges with format_startup_log at startup",
+    "fix: guard against watermark index out of bounds in format_startup_log",
+    "feat: add format_startup_log to session_transcript",
+    "test: add failing TestFormatStartupLog tests",
+    "docs: add transcript startup log design spec"
   ]
 }
