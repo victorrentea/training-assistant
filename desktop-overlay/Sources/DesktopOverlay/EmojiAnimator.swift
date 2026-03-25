@@ -1266,7 +1266,7 @@ class EmojiAnimator {
         let dimLayer = CALayer()
         _pulseDimLayer = dimLayer
         dimLayer.frame = bounds
-        dimLayer.backgroundColor = NSColor(white: 0, alpha: 0.75).cgColor
+        dimLayer.backgroundColor = NSColor(white: 0, alpha: 0.92).cgColor
         dimLayer.opacity = 0
         hostLayer.addSublayer(dimLayer)
 
@@ -1274,7 +1274,7 @@ class EmojiAnimator {
         let dimIn = CABasicAnimation(keyPath: "opacity")
         dimIn.fromValue = 0
         dimIn.toValue = 1
-        dimIn.duration = 0.35
+        dimIn.duration = 0.5
         dimIn.fillMode = .forwards
         dimIn.isRemovedOnCompletion = false
         dimLayer.add(dimIn, forKey: "dimIn")
@@ -1300,7 +1300,7 @@ class EmojiAnimator {
         let ecgFadeIn = CABasicAnimation(keyPath: "opacity")
         ecgFadeIn.fromValue = 0
         ecgFadeIn.toValue = 1
-        ecgFadeIn.duration = 0.35
+        ecgFadeIn.duration = 0.5
         ecgFadeIn.fillMode = .forwards
         ecgFadeIn.isRemovedOnCompletion = false
         ecgLayer.add(ecgFadeIn, forKey: "ecgFadeIn")
@@ -1324,7 +1324,7 @@ class EmojiAnimator {
         CATransaction.begin()
         CATransaction.setCompletionBlock { [weak self, weak dimLayer, weak ecgLayer] in
             NSAnimationContext.runAnimationGroup({ ctx in
-                ctx.duration = 0.45
+                ctx.duration = 0.5
                 dimLayer?.opacity = 0
                 ecgLayer?.opacity = 0
             }, completionHandler: {
@@ -1355,7 +1355,7 @@ class EmojiAnimator {
         _pulseDimLayer = nil
         _pulseEcgLayer = nil
         NSAnimationContext.runAnimationGroup({ ctx in
-            ctx.duration = 0.3
+            ctx.duration = 0.5
             dim?.opacity = 0
             ecg?.opacity = 0
         }, completionHandler: {
