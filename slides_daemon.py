@@ -24,7 +24,7 @@ from pathlib import Path
 
 
 DEFAULT_SERVER_URL = "http://localhost:8000"
-DEFAULT_POLL_SECONDS = 30.0
+DEFAULT_POLL_SECONDS = 5.0
 DEFAULT_MIN_CPU_FREE = 25.0
 
 
@@ -226,6 +226,30 @@ def _abs_key(path: Path) -> str:
     return str(path.expanduser().resolve())
 
 
+def _lastmodified_marker_path(publish_dir: Path, target_pdf: str) -> Path:
+    return publish_dir / f"{target_pdf}.lastmodified"
+
+
+def read_material_last_modified(publish_dir: Path | None, target_pdf: str | None) -> float:
+    if publish_dir is None or not target_pdf:
+        return 0.0
+    path = _lastmodified_marker_path(publish_dir, target_pdf)
+    if not path.exists():
+        return 0.0
+    try:
+        return float(path.read_text(encoding="utf-8").strip())
+    except Exception:
+        return 0.0
+
+
+def write_material_last_modified(publish_dir: Path | None, target_pdf: str | None, source_mtime: float) -> None:
+    if publish_dir is None or not target_pdf:
+        return
+    publish_dir.mkdir(parents=True, exist_ok=True)
+    path = _lastmodified_marker_path(publish_dir, target_pdf)
+    path.write_text(f"{source_mtime!r}\n", encoding="utf-8")
+
+
 def detect_changed_files(
     files: list[Path],
     daemon_state: dict,
@@ -239,11 +263,10 @@ def detect_changed_files(
         key = _abs_key(pptx)
         exported_mtime = float(tracked.get(key, {}).get("last_exported_mtime", 0))
         current_mtime = pptx.stat().st_mtime
-        target_missing = False
         target_pdf = metadata.get(key, {}).get("target_pdf")
-        if target_pdf and publish_dir is not None:
-            target_missing = not (publish_dir / target_pdf).exists()
-        if current_mtime > exported_mtime or target_missing:
+        marker_mtime = read_material_last_modified(publish_dir, target_pdf)
+        known_mtime = max(exported_mtime, marker_mtime)
+        if current_mtime > known_mtime + 1e-9:
             changed.append((current_mtime, pptx))
     changed.sort(key=lambda x: x[0])
     return [p for _, p in changed]
@@ -446,8 +469,10 @@ def process_one_file(
     daemon_state["files"][key]["slug"] = slug
     if target_pdf:
         daemon_state["files"][key]["target_pdf"] = target_pdf
-    daemon_state["files"][key]["last_exported_mtime"] = pptx_path.stat().st_mtime
+    source_mtime = pptx_path.stat().st_mtime
+    daemon_state["files"][key]["last_exported_mtime"] = source_mtime
     save_daemon_state(config.state_file, daemon_state)
+    write_material_last_modified(config.publish_dir, target_pdf, source_mtime)
     print(f"[pptx-daemon] Published {pptx_path.name} -> {public_ref}", flush=True)
     return True
 
