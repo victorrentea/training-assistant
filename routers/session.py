@@ -67,6 +67,28 @@ async def resume_session():
     return {"ok": True}
 
 
+@router.post("/api/session/start_talk", dependencies=[Depends(require_host_auth)])
+async def start_talk():
+    state.session_request = {"action": "start_talk"}
+    return {"ok": True}
+
+
+@router.post("/api/session/end_talk", dependencies=[Depends(require_host_auth)])
+async def end_talk():
+    state.session_request = {"action": "end_talk"}
+    return {"ok": True}
+
+
+class SessionNameBody(BaseModel):
+    name: str
+
+
+@router.post("/api/session/create", dependencies=[Depends(require_host_auth)])
+async def create_session(body: SessionNameBody):
+    state.session_request = {"action": "create", "name": body.name}
+    return {"ok": True}
+
+
 @router.patch("/api/session/rename", dependencies=[Depends(require_host_auth)])
 async def rename_session(body: RenameSessionRequest):
     state.session_request = {"action": "rename", "name": body.name}

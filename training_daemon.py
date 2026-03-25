@@ -665,6 +665,110 @@ def run() -> None:
                     transcript_state.reset()
                     log.info("session", f"Resumed: {session_stack[-1]['name']}")
 
+                elif action == "start_talk":
+                    now = datetime.now()
+                    talk_name = f"{now.strftime('%Y-%m-%d %H:%M')} talk"
+                    talk_folder = sessions_root / talk_name
+                    talk_folder.mkdir(parents=True, exist_ok=True)
+
+                    # Save current (main) session state immediately before switching
+                    current_folder = sessions_root / session_stack[-1]["name"] if session_stack else None
+                    if current_folder and current_folder.exists():
+                        try:
+                            snapshot = _get_json(
+                                f"{config.server_url}/api/session/snapshot",
+                                config.host_username, config.host_password,
+                            )
+                            _save_session_state(current_folder, snapshot)
+                        except Exception as e:
+                            log.error("daemon", f"START TALK: failed to save main snapshot: {e}")
+
+                    # Load talk's existing key points (if folder had prior data)
+                    talk_points, talk_wm = _load_key_points(talk_folder)
+
+                    # Load talk's existing session state
+                    talk_state = None
+                    talk_state_path = talk_folder / "session_state.json"
+                    if talk_state_path.exists():
+                        try:
+                            talk_state = json.loads(talk_state_path.read_text())
+                        except Exception:
+                            pass
+
+                    # Push new talk session onto stack
+                    session_stack.append({
+                        "name": talk_name,
+                        "started_at": now.isoformat(),
+                        "status": "active",
+                    })
+                    current_key_points, summary_watermark = talk_points, talk_wm
+                    _save_daemon_state(sessions_root, _stack_to_daemon_state(session_stack))
+                    notes_file = _find_notes_in_folder(talk_folder)
+                    config = dc_replace(config, session_folder=talk_folder, session_notes=notes_file)
+
+                    # Sync to server: mark current participants as paused, restore talk state
+                    _post_json(
+                        f"{config.server_url}/api/session/sync",
+                        {
+                            **_stack_to_daemon_state(session_stack),
+                            "discussion_points": talk_points,
+                            "session_state": talk_state,
+                            "action": "start_talk",
+                        },
+                        config.host_username, config.host_password,
+                    )
+                    transcript_state.reset()
+                    log.info("session", f"START TALK: {talk_name}")
+
+                elif action == "end_talk":
+                    if len(session_stack) < 2:
+                        log.warning("daemon", "END TALK requested but no talk is active")
+                    else:
+                        # Save talk state before ending
+                        talk_folder = sessions_root / session_stack[-1]["name"]
+                        if talk_folder.exists():
+                            try:
+                                snapshot = _get_json(
+                                    f"{config.server_url}/api/session/snapshot",
+                                    config.host_username, config.host_password,
+                                )
+                                _save_session_state(talk_folder, snapshot)
+                                _save_key_points(talk_folder, current_key_points, summary_watermark, _session_start_date(session_stack[-1]))
+                            except Exception as e:
+                                log.error("daemon", f"END TALK: failed to save talk state: {e}")
+
+                        # Pop talk, restore main
+                        session_stack.pop()
+                        _save_daemon_state(sessions_root, _stack_to_daemon_state(session_stack))
+
+                        main_folder = sessions_root / session_stack[0]["name"] if session_stack else None
+                        current_key_points, summary_watermark = _load_key_points(main_folder) if main_folder else ([], 0)
+
+                        # Load main's saved session state for restore
+                        main_state = None
+                        if main_folder and (main_folder / "session_state.json").exists():
+                            try:
+                                main_state = json.loads((main_folder / "session_state.json").read_text())
+                            except Exception:
+                                pass
+
+                        notes_file = _find_notes_in_folder(main_folder) if main_folder else None
+                        config = dc_replace(config, session_folder=main_folder, session_notes=notes_file)
+
+                        # Sync to server: restore main participants, clear talk
+                        _post_json(
+                            f"{config.server_url}/api/session/sync",
+                            {
+                                **_stack_to_daemon_state(session_stack),
+                                "discussion_points": current_key_points,
+                                "session_state": main_state,
+                                "action": "end_talk",
+                            },
+                            config.host_username, config.host_password,
+                        )
+                        transcript_state.reset()
+                        log.info("daemon", f"END TALK: restored main session {session_stack[0]['name'] if session_stack else 'none'}")
+
             except Exception as e:
                 log.error("session", f"Request error: {e}")
 
