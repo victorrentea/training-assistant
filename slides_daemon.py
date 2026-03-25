@@ -616,6 +616,7 @@ def run_once(config: SlidesDaemonConfig, daemon_state: dict) -> bool:
     if changed:
         # serialize: process one file per poll cycle
         next_path = changed[0]
+        print(f"✏️ppt update detected => regenerating ppf: {next_path.name}", flush=True)
         target_pdf = metadata.get(_abs_key(next_path), {}).get("target_pdf")
         updated_current = process_one_file(config, daemon_state, next_path, target_pdf=target_pdf)
     updated_list = sync_slides_list(config, daemon_state, metadata)
