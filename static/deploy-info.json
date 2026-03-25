@@ -1,7 +1,8 @@
 {
-  "sha": "949cb7a0b574e108804667e44080ffaa2eb7bc12",
-  "timestamp": "2026-03-25 18:07",
+  "sha": "c4290905c895586cb94ef0be28872584009af9f4",
+  "timestamp": "2026-03-25 18:08",
   "changelog": [
-    "fix: force exit on shutdown, restore volume on Ctrl+C/SIGTERM"
+    "chore: add start script for clean-clipboard",
+    "fix: allow overlapping confetti bursts"
   ]
 }
