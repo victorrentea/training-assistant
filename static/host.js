@@ -2677,8 +2677,8 @@ function renderSessionPanel() {
     }
     const pauseBtn = document.getElementById('btn-pause-session');
     if (pauseBtn) {
-      pauseBtn.textContent = paused ? '▶️' : '⏹️';
-      pauseBtn.title = paused ? 'Resume transcription' : 'Stop transcription (session stays open)';
+      pauseBtn.textContent = paused ? '▶️' : '⏸️';
+      pauseBtn.title = paused ? 'Resume transcription' : 'Pause transcription';
       pauseBtn.classList.toggle('session-pause-blinking', paused);
     }
 
