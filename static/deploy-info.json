@@ -1,7 +1,7 @@
 {
-  "sha": "4cd1776c6818547653fb355ef8dba87ce771e39b",
-  "timestamp": "2026-03-25 08:24",
+  "sha": "8c03afd066446132efaa69d68e24048630e93efd",
+  "timestamp": "2026-03-25 08:26",
   "changelog": [
-    "fix: change quiz.md format to list correct answers after options"
+    "fix: capture daemon exit code safely under set -e"
   ]
 }
