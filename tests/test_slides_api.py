@@ -1,4 +1,5 @@
 import base64
+import json
 import os
 
 from fastapi.testclient import TestClient
@@ -132,3 +133,39 @@ def test_api_slides_ignores_non_displayable_names(monkeypatch, tmp_path):
     assert resp.status_code == 200
     slides = resp.json()["slides"]
     assert [s["name"] for s in slides] == ["Deck 1"]
+
+
+def test_slides_catalog_map_requires_host_auth():
+    client = TestClient(app)
+    resp = client.get("/api/slides/catalog-map")
+    assert resp.status_code in (401, 403)
+
+
+def test_slides_catalog_map_returns_pdf_to_pptx_entries(monkeypatch, tmp_path):
+    source_ok = tmp_path / "Clean Code.pptx"
+    source_ok.write_bytes(b"pptx")
+    source_missing = tmp_path / "Missing.pptx"
+    catalog = tmp_path / "catalog.json"
+    catalog.write_text(json.dumps({
+        "slides": [
+            {"source": str(source_ok), "target_pdf": "Clean Code.pdf"},
+            {"source": str(source_missing), "target_pdf": "Missing.pdf"},
+        ]
+    }), encoding="utf-8")
+    monkeypatch.setenv("PPTX_CATALOG_FILE", str(catalog))
+
+    client = TestClient(app, headers=_HOST_AUTH_HEADERS)
+    resp = client.get("/api/slides/catalog-map")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["catalog_file"] == str(catalog)
+    entries = body["entries"]
+    assert len(entries) == 2
+
+    clean = next(e for e in entries if e["pdf"] == "Clean Code.pdf")
+    missing = next(e for e in entries if e["pdf"] == "Missing.pdf")
+    assert clean["pptx_path"] == str(source_ok)
+    assert clean["exists"] is True
+    assert clean["updated_at"]
+    assert missing["pptx_path"] == str(source_missing)
+    assert missing["exists"] is False
