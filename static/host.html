@@ -269,12 +269,38 @@
       <div class="stat-label">participants connected</div>
     </div>
     <ul id="pax-list" class="pax-list" title="Click a location to view map"></ul>
+    <div id="recording-warning-banner" style="display:none; background:#f5a623; color:#000; text-align:center; padding:8px; font-weight:bold;">
+      Recording pauses in <span id="recording-warning-countdown">30</span> min
+    </div>
     <div class="session-panel" id="session-panel">
-      <div class="session-top-bar">
-        <button class="btn btn-sm" id="btn-start-session" onclick="startNewSession()">▶ Start Session</button>
-        <button class="btn btn-sm" id="btn-pause-session" onclick="togglePauseSession()" title="Pause/resume transcript collection" style="display:none">⏸ Pause</button>
+      <!-- Talk session row (shown when session_talk is not null, blinks yellow) -->
+      <div id="session-talk-row" style="display:none">
+        <div class="session-row session-talk-active" id="session-talk-box">
+          <span id="session-talk-name" class="session-name"></span>
+          <button class="btn btn-sm" onclick="endTalk()">END TALK</button>
+        </div>
       </div>
-      <div id="session-stack-list"></div>
+
+      <!-- Main session row -->
+      <div id="session-main-row" style="display:none">
+        <div class="session-row">
+          <span id="session-main-name" class="session-name"></span>
+          <button class="btn btn-sm" id="btn-pause-session" onclick="togglePauseSession()">PAUSE</button>
+        </div>
+      </div>
+
+      <!-- START TALK button (shown when no talk active and main session exists) -->
+      <div id="session-start-talk-row" style="display:none">
+        <button class="btn btn-sm" id="btn-start-talk" onclick="startTalk()">START TALK</button>
+      </div>
+
+      <!-- FRAGILE state: CREATE button (shown when no folder for today) -->
+      <div id="session-fragile-row" style="display:none">
+        <input type="text" id="session-create-input" placeholder="Session name"
+               oninput="updateCreateBtn()">
+        <button class="btn btn-sm session-fragile-blink" id="btn-create-session"
+                onclick="createSession()" disabled>CREATE</button>
+      </div>
     </div>
     <div class="right-footer">
       <span style="display:flex; align-items:center; gap:.5rem; flex-wrap:nowrap; min-width:0;">

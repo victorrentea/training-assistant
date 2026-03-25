@@ -14,8 +14,9 @@
   let cachedNames = [];          // last known participant names
   let summaryPoints = [];
   let summaryUpdatedAt = null;
-  let sessionStack = [];
-  let sessionName = null;
+  let sessionMain = null;
+  let sessionTalk = null;
+  let daemonLastSeen = null;
   let daemonSessionFolder = null;
 
   let _hostWcDebounceTimer = null;
@@ -213,11 +214,10 @@
           renderHostCodeReview(msg.codereview);
         }
         updateSummary(msg.summary_points, msg.summary_updated_at);
-        if (msg.session_stack !== undefined) {
-          sessionStack = msg.session_stack || [];
-          sessionName = msg.session_name || null;
-          if (typeof renderSessionPanel === 'function') renderSessionPanel();
-        }
+        if (msg.session_main !== undefined) sessionMain = msg.session_main;
+        if (msg.session_talk !== undefined) sessionTalk = msg.session_talk;
+        if (msg.daemon_last_seen !== undefined) daemonLastSeen = msg.daemon_last_seen;
+        renderSessionPanel();
         if (msg.mode) {
           currentMode = msg.mode;
           renderMode(msg.mode);
@@ -2472,96 +2472,80 @@ function _esc(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-function _sessionIsPaused(s) {
-  const pauses = s.paused_intervals || [];
-  return pauses.some(p => p.to == null);
-}
-
 function renderSessionPanel() {
-  const btnStart = document.getElementById('btn-start-session');
-  const btnPause = document.getElementById('btn-pause-session');
-  const stackList = document.getElementById('session-stack-list');
-  if (!btnStart || !stackList) return;
+  const main = sessionMain;
+  const talk = sessionTalk;
+  const daemonOnline = daemonLastSeen && (Date.now() - new Date(daemonLastSeen).getTime() < 30000);
 
-  btnStart.disabled = sessionStack.length >= 3;
-
-  if (sessionStack.length === 0) {
-    stackList.innerHTML = '<div class="session-empty">No active session</div>';
-    if (btnPause) btnPause.style.display = 'none';
-    return;
+  // FRAGILE: daemon connected, no main session folder
+  const fragile = daemonOnline && !main;
+  document.getElementById('session-fragile-row').style.display = fragile ? 'flex' : 'none';
+  if (fragile) {
+    const input = document.getElementById('session-create-input');
+    if (input && !input.value) {
+      const today = new Date().toISOString().slice(0, 10);
+      input.value = today + ' ';
+    }
   }
 
-  const current = sessionStack[sessionStack.length - 1];
-  const paused = _sessionIsPaused(current);
-  if (btnPause) {
-    btnPause.style.display = '';
-    btnPause.textContent = paused ? '▶ Resume' : '⏸ Pause';
-    btnPause.title = paused ? 'Resume transcript collection' : 'Pause transcript collection';
+  // Main session row
+  const mainRow = document.getElementById('session-main-row');
+  if (mainRow) mainRow.style.display = main ? 'flex' : 'none';
+  if (main) {
+    const nameEl = document.getElementById('session-main-name');
+    if (nameEl) nameEl.textContent = main.name;
+    const pauseBtn = document.getElementById('btn-pause-session');
+    if (pauseBtn) {
+      const paused = main.status === 'paused';
+      pauseBtn.textContent = paused ? 'RESUME' : 'PAUSE';
+      pauseBtn.title = paused ? 'Resume recording' : 'Pause recording';
+      pauseBtn.classList.toggle('session-pause-blinking', paused);
+    }
   }
 
-  // Render stack newest-on-top: last item in array = current (top)
-  const rows = [];
-  for (let i = sessionStack.length - 1; i >= 0; i--) {
-    const s = sessionStack[i];
-    const isCurrent = i === sessionStack.length - 1;
-    const depth = sessionStack.length - 1 - i; // 0 = current, 1 = parent, …
-    const isPaused = _sessionIsPaused(s);
-    const liveDots = isCurrent && !isPaused
-      ? '<span class="session-live-dots"><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span></span>'
-      : '';
-    const pausedBadge = isCurrent && isPaused ? ' <span title="Transcript paused">⏸</span>' : '';
-    rows.push(`
-      <div class="session-row${isCurrent ? ' session-row-current' : ''}" style="margin-left:${depth * 12}px">
-        <span class="session-row-name">${_esc(s.name || 'Unnamed')}${liveDots}${pausedBadge}</span>
-        ${isCurrent ? `<span class="session-edit-icon" onclick="renameSession()" title="Rename session">✏️</span>` : ''}
-        ${isCurrent ? `<button class="session-end-btn" onclick="endCurrentSession()" title="End session">■</button>` : ''}
-      </div>`);
+  // Talk row
+  const talkRow = document.getElementById('session-talk-row');
+  if (talkRow) talkRow.style.display = talk ? 'flex' : 'none';
+  if (talk) {
+    const nameEl = document.getElementById('session-talk-name');
+    if (nameEl) nameEl.textContent = talk.name;
   }
-  stackList.innerHTML = rows.join('');
+
+  // START TALK: show only when main exists and no talk active
+  const startRow = document.getElementById('session-start-talk-row');
+  if (startRow) startRow.style.display = (main && !talk) ? 'flex' : 'none';
 }
 
-async function startNewSession() {
-  // Fetch folder suggestions for autocomplete
-  let suggestions = [];
-  try {
-    const resp = await fetch('/api/session/folders');
-    if (resp.ok) suggestions = (await resp.json()).folders || [];
-  } catch (_) {}
+function startTalk() {
+  fetch('/api/session/start_talk', {method: 'POST'})
+    .catch(e => console.error('startTalk failed:', e));
+}
 
-  const detectedFolder = daemonSessionFolder
-    ? daemonSessionFolder.replace(/\\/g, '/').split('/').pop()
-    : null;
-  const defaultName = detectedFolder || new Date().toISOString().slice(0, 10);
-  const hint = suggestions.length ? '\n\nExisting folders:\n' + suggestions.slice(0, 10).join('\n') : '';
-  const name = prompt('Session name (must match folder for notes):' + hint, defaultName);
-  if (!name || !name.trim()) return;
-  fetch('/api/session/start', {
+function endTalk() {
+  fetch('/api/session/end_talk', {method: 'POST'})
+    .catch(e => console.error('endTalk failed:', e));
+}
+
+function createSession() {
+  const name = document.getElementById('session-create-input').value.trim();
+  if (!name) return;
+  fetch('/api/session/create', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name: name.trim() }),
-  });
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({name})
+  }).catch(e => console.error('createSession failed:', e));
 }
 
-function endCurrentSession() {
-  const msg = sessionStack.length > 1 ? 'End current session and return to previous?' : 'End current session?';
-  if (!confirm(msg)) return;
-  fetch('/api/session/end', { method: 'POST' });
+function updateCreateBtn() {
+  const name = document.getElementById('session-create-input').value.trim();
+  const btn = document.getElementById('btn-create-session');
+  if (btn) btn.disabled = !name;
 }
 
 function togglePauseSession() {
-  if (!sessionStack.length) return;
-  const current = sessionStack[sessionStack.length - 1];
-  const paused = _sessionIsPaused(current);
-  fetch(paused ? '/api/session/resume' : '/api/session/pause', { method: 'POST' });
-}
-
-function renameSession() {
-  const current = sessionName || '';
-  const name = prompt('Rename session:', current);
-  if (!name || !name.trim() || name.trim() === current) return;
-  fetch('/api/session/rename', {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name: name.trim() }),
-  });
+  if (!sessionMain) return;
+  const paused = sessionMain.status === 'paused';
+  const endpoint = paused ? '/api/session/resume' : '/api/session/pause';
+  fetch(endpoint, {method: 'POST'})
+    .catch(e => console.error('togglePauseSession failed:', e));
 }
