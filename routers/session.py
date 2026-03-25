@@ -102,3 +102,74 @@ async def list_session_folders():
     if root:
         folders = sorted([f.name for f in root.iterdir() if f.is_dir()], reverse=True)
     return {"folders": folders}
+
+
+@router.get("/api/session/snapshot", dependencies=[Depends(require_host_auth)])
+async def get_session_snapshot():
+    """Returns full serializable session state for daemon to persist to disk every 5s."""
+    participants = {}
+    for uuid, name in state.participant_names.items():
+        participants[uuid] = {
+            "name": name,
+            "score": state.scores.get(uuid, 0),
+            "base_score": state.base_scores.get(uuid, 0),
+            "location": state.locations.get(uuid, ""),
+            "avatar": state.participant_avatars.get(uuid, ""),
+            "universe": state.participant_universes.get(uuid, ""),
+        }
+
+    poll_data = None
+    if state.poll:
+        poll_data = {
+            **state.poll,
+            "active": state.poll_active,
+            "votes": state.votes,
+            "vote_times": {uid: t.isoformat() for uid, t in state.vote_times.items()},
+            "correct_ids": state.poll_correct_ids or [],
+            "opened_at": state.poll_opened_at.isoformat() if state.poll_opened_at else None,
+            "timer_seconds": state.poll_timer_seconds,
+            "timer_started_at": state.poll_timer_started_at.isoformat() if state.poll_timer_started_at else None,
+        }
+
+    qa_questions = []
+    for q in state.qa_questions.values():
+        qa_questions.append({**q, "upvoters": list(q.get("upvoters", set()))})
+
+    debate_data = {
+        "statement": state.debate_statement,
+        "phase": state.debate_phase,
+        "sides": state.debate_sides,
+        "arguments": [{**a, "upvoters": list(a.get("upvoters", set()))} for a in state.debate_arguments],
+        "champions": state.debate_champions,
+        "auto_assigned": list(state.debate_auto_assigned),
+        "first_side": state.debate_first_side,
+        "round_index": state.debate_round_index,
+        "round_timer_seconds": state.debate_round_timer_seconds,
+        "round_timer_started_at": state.debate_round_timer_started_at.isoformat() if state.debate_round_timer_started_at else None,
+    }
+
+    codereview_data = {
+        "snippet": state.codereview_snippet,
+        "language": state.codereview_language,
+        "phase": state.codereview_phase,
+        "confirmed": list(state.codereview_confirmed),
+        "selections": {uid: list(lines) for uid, lines in state.codereview_selections.items()},
+    }
+
+    return {
+        "saved_at": datetime.utcnow().isoformat(),
+        "mode": state.mode,
+        "participants": participants,
+        "activity": state.current_activity.value if state.current_activity else "none",
+        "poll": poll_data,
+        "qa": {"questions": qa_questions},
+        "wordcloud": {
+            "topic": state.wordcloud_topic,
+            "words": state.wordcloud_words,
+            "word_order": getattr(state, 'wordcloud_word_order', []),
+        },
+        "debate": debate_data,
+        "codereview": codereview_data,
+        "leaderboard_active": state.leaderboard_active,
+        "token_usage": state.token_usage,
+    }
