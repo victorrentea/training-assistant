@@ -53,7 +53,8 @@ _HEARTBEAT_INTERVAL = 1.0  # seconds between heartbeat writes
 _HEARTBEAT_STALE_THRESHOLD = 10.0  # seconds before heartbeat is considered stale
 _TIMESTAMP_INTERVAL_SECONDS = float(os.environ.get("TRANSCRIPT_TIMESTAMP_INTERVAL_SECONDS", "3"))
 EXIT_CODE_UPDATE = 42  # signals start.sh to git pull and restart
-_KEY_POINTS_FILE = "transcript_keypoints.md"
+_KEY_POINTS_FILE = "transcript_discussion.md"
+_KEY_POINTS_FILE_LEGACY_MD = "transcript_keypoints.md"
 _KEY_POINTS_FILE_LEGACY = "key_points.json"
 _DAEMON_STATE_FILENAME = "daemon_state.json"
 _BACKUP_DIR = Path.home() / ".training-assistant"
@@ -66,8 +67,10 @@ _FRONTMATTER_WATERMARK_RE = re.compile(r"^watermark:\s*(\d+)")
 
 def _load_key_points(session_folder: Path) -> tuple[list[dict], int]:
     """Load key points from session folder. Returns (points, watermark).
-    Reads transcript_keypoints.md (new) or falls back to key_points.json (legacy)."""
+    Reads transcript_discussion.md (new) or falls back to transcript_keypoints.md (legacy md)
+    or key_points.json (oldest legacy)."""
     md_file = session_folder / _KEY_POINTS_FILE
+    legacy_md_file = session_folder / _KEY_POINTS_FILE_LEGACY_MD
     json_file = session_folder / _KEY_POINTS_FILE_LEGACY
 
     if md_file.exists():
@@ -104,6 +107,40 @@ def _load_key_points(session_folder: Path) -> tuple[list[dict], int]:
             log.error("session", f"Failed to load key points: {e}")
             return [], 0
 
+    if legacy_md_file.exists():
+        try:
+            lines = legacy_md_file.read_text(encoding="utf-8").splitlines()
+            watermark = 0
+            points = []
+            in_frontmatter = False
+            seen_open = False
+            for line in lines:
+                stripped = line.strip()
+                if not seen_open and stripped == "---":
+                    in_frontmatter = True
+                    seen_open = True
+                    continue
+                if in_frontmatter:
+                    if stripped == "---":
+                        in_frontmatter = False
+                        continue
+                    m = _FRONTMATTER_WATERMARK_RE.match(stripped)
+                    if m:
+                        watermark = int(m.group(1))
+                    continue
+                if not stripped:
+                    continue
+                m = _DOW_RE.match(stripped)
+                if m:
+                    points.append({"text": m.group(3), "time": m.group(2), "source": "discussion"})
+                else:
+                    points.append({"text": stripped, "source": "discussion"})
+            log.info("session", f"Loaded {len(points)} key points (legacy md) from {session_folder.name}")
+            return points, watermark
+        except Exception as e:
+            log.error("session", f"Failed to load key points: {e}")
+            return [], 0
+
     if json_file.exists():
         try:
             data = json.loads(json_file.read_text(encoding="utf-8"))
@@ -132,7 +169,7 @@ def _save_key_points(
     watermark: int = 0,
     session_date: date | None = None,
 ) -> None:
-    """Save key points to transcript_keypoints.md with DOW HH:MM prefix per line."""
+    """Save key points to transcript_discussion.md with DOW HH:MM prefix per line."""
     try:
         session_folder.mkdir(parents=True, exist_ok=True)
 
