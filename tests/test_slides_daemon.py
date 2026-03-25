@@ -201,7 +201,7 @@ def test_process_one_file_writes_lastmodified_marker(tmp_path, monkeypatch):
     assert float(marker.read_text(encoding="utf-8").strip()) == deck.stat().st_mtime
 
 
-def test_run_once_processes_single_oldest_changed_file(tmp_path, monkeypatch):
+def test_run_once_processes_single_oldest_changed_file(tmp_path, monkeypatch, capsys):
     watch = tmp_path / "watch"
     watch.mkdir()
     a = watch / "a.pptx"
@@ -227,8 +227,10 @@ def test_run_once_processes_single_oldest_changed_file(tmp_path, monkeypatch):
     monkeypatch.setattr(slides_daemon, "process_one_file", _fake_process)
     monkeypatch.setattr(slides_daemon, "sync_slides_list", lambda *_args, **_kwargs: False)
     changed = slides_daemon.run_once(cfg, state)
+    out = capsys.readouterr().out
     assert changed is True
     assert seen == ["a.pptx"]
+    assert "✏️ppt update detected => regenerating ppf: a.pptx" in out
 
 
 def test_load_catalog_entries_and_resolve_targets(tmp_path):

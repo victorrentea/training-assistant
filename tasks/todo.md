@@ -239,6 +239,13 @@
 - [x] Run targeted tests and capture non-visual proof logs
 - [x] Mark direct request done in `backlog.md`
 
+## Direct request: log PPTX update detection before regen
+
+- [x] Print `✏️ppt update detected => regenerating ppf` when `run_once()` selects a changed PPTX
+- [x] Add/adjust test to assert the new log line is emitted
+- [x] Run targeted tests
+- [x] Mark direct request done in `backlog.md`
+
 ## Review
 
 - Added `scripts/append_transcription_timestamps.py` with 3s default interval and parser-compatible format.
@@ -322,3 +329,4 @@
 - Verified with `pytest -q tests/test_slides_api.py` (5 passed).
 - Verified with `pytest -q tests/test_main.py -k "slides"` (4 passed, 120 deselected).
 - Frontend syntax check: `node --check static/participant.js`.
+- Added detection log line in daemon: `✏️ppt update detected => regenerating ppf: <file>`.
