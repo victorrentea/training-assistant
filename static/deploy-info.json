@@ -1,7 +1,13 @@
 {
-  "sha": "07f87b991576f6a85ca6bcae50e98e76ae2e8b3a",
-  "timestamp": "2026-03-25 21:20",
+  "sha": "5def1bc7748efbf78af0c3dc1c06334452722269",
+  "timestamp": "2026-03-25 21:38",
   "changelog": [
-    "chore: log pptx update detection before regeneration"
+    "chore: push workspace updates",
+    "Saving uncommitted changes before archiving",
+    "docs: add slides sequence diagram",
+    "Format work hours as days plus hours",
+    "Reduce slides polling interval to 2s",
+    "Integrate PPTX watcher into training daemon loop",
+    "feat: add host slides upload endpoint"
   ]
 }
