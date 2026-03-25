@@ -1581,6 +1581,30 @@ def test_session_sync_restores_participants_and_scores():
     assert state.mode == "workshop"
 
 
+def test_mode_switch_to_conference_queues_create_talk_folder():
+    from state import state
+    state.session_main = {"name": "2026-03-25 WS", "started_at": "2026-03-25T09:00:00", "status": "active"}
+    state.session_talk = None
+    state.session_request = None
+
+    client = TestClient(app)
+    resp = client.post("/api/mode", json={"mode": "conference"}, headers=_HOST_AUTH_HEADERS)
+    assert resp.status_code == 200
+    assert state.mode == "conference"
+    assert state.session_request == {"action": "create_talk_folder"}
+
+
+def test_mode_switch_to_conference_no_request_if_talk_exists():
+    from state import state
+    state.session_talk = {"name": "2026-03-25 12:30 talk", "started_at": "2026-03-25T12:30:00", "status": "active"}
+    state.session_request = None
+
+    client = TestClient(app)
+    resp = client.post("/api/mode", json={"mode": "conference"}, headers=_HOST_AUTH_HEADERS)
+    assert resp.status_code == 200
+    assert state.session_request is None or state.session_request.get("action") != "create_talk_folder"
+
+
 def test_pending_deploy_same_sha_no_broadcast(monkeypatch):
     """POST /api/pending-deploy with same full SHA does NOT broadcast deploy_pending."""
     import json

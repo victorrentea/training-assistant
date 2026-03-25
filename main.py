@@ -74,6 +74,8 @@ async def set_mode(req: ModeRequest):
     if req.mode not in ("workshop", "conference"):
         raise HTTPException(400, "mode must be 'workshop' or 'conference'")
     state.mode = req.mode
+    if req.mode == "conference" and state.session_talk is None:
+        state.session_request = {"action": "create_talk_folder"}
     await broadcast_state()
     return {"mode": state.mode}
 

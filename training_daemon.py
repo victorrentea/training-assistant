@@ -787,6 +787,36 @@ def run() -> None:
                         transcript_state.reset()
                         log.info("daemon", f"END TALK: restored main session {session_stack[0]['name'] if session_stack else 'none'}")
 
+                elif action == "create_talk_folder":
+                    now = datetime.now()
+                    talk_name = f"{now.strftime('%Y-%m-%d %H:%M')} talk"
+                    talk_folder = sessions_root / talk_name
+                    talk_folder.mkdir(parents=True, exist_ok=True)
+
+                    # Push talk onto stack without disconnecting participants
+                    session_stack.append({
+                        "name": talk_name,
+                        "started_at": now.isoformat(),
+                        "status": "active",
+                    })
+                    talk_points, talk_wm = _load_key_points(talk_folder)
+                    current_key_points, summary_watermark = talk_points, talk_wm
+                    _save_daemon_state(sessions_root, _stack_to_daemon_state(session_stack))
+                    notes_file = _find_notes_in_folder(talk_folder)
+                    config = dc_replace(config, session_folder=talk_folder, session_notes=notes_file)
+
+                    # Sync to server without disconnecting participants (no "action" key)
+                    _post_json(
+                        f"{config.server_url}/api/session/sync",
+                        {
+                            **_stack_to_daemon_state(session_stack),
+                            "discussion_points": talk_points,
+                            "session_state": None,
+                        },
+                        config.host_username, config.host_password,
+                    )
+                    log.info("session", f"Created talk folder: {talk_name}")
+
             except Exception as e:
                 log.error("session", f"Request error: {e}")
 
