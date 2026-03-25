@@ -49,6 +49,7 @@ class AppState:
         self.transcript_line_count: int = 0
         self.transcript_total_lines: int = 0
         self.transcript_latest_ts: Optional[str] = None
+        self.transcript_last_content_at: Optional[datetime] = None
         self.quiz_preview: Optional[dict] = None
         self.scores: dict[str, int] = {}
         self.base_scores: dict[str, int] = {}
@@ -96,6 +97,7 @@ class AppState:
         self.screen_share_active: bool = True
         self.needs_restore: bool = True
         self.pending_deploy: dict | None = None  # {sha, message} set by watcher when push detected
+        self.quiz_md_content: str = ""  # markdown log of all closed polls
 
     def suggest_name(self) -> str:
         """Return the next available LOTR name (by popularity order).

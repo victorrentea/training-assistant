@@ -16,6 +16,15 @@ from state import state, ActivityType
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
+
+def _append_poll_to_quiz_md(poll: dict, correct_set: set) -> None:
+    """Append a closed poll with correct answers marked to quiz_md_content."""
+    lines = [f"\n## {poll['question']}\n"]
+    for opt in poll.get("options", []):
+        marker = "✅" if opt["id"] in correct_set else "❌"
+        lines.append(f"- {marker} {opt['text']}")
+    state.quiz_md_content += "\n".join(lines) + "\n"
+
 _DEPLOY_INFO = Path(__file__).parent.parent / "static" / "deploy-info.json"
 
 
@@ -162,6 +171,7 @@ async def set_correct_options(body: PollCorrect):
 
     state.scores = new_scores
     state.poll_correct_ids = list(correct_set)
+    _append_poll_to_quiz_md(state.poll, correct_set)
     await broadcast_state()
 
     for pid, ws in list(state.participants.items()):
@@ -206,6 +216,12 @@ async def clear_poll():
     state.current_activity = ActivityType.NONE
     await broadcast_state()
     return {"ok": True}
+
+
+@router.get("/api/quiz-md")
+async def get_quiz_md():
+    """Returns all closed polls as markdown (public endpoint for participants and daemon)."""
+    return {"content": state.quiz_md_content}
 
 
 @router.get("/api/suggest-name")

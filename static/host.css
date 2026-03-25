@@ -27,7 +27,7 @@ body {
 .wave-char {
   display: inline-block;
   animation: wave-shimmer 2.5s ease-in-out infinite;
-  --wave-dim: rgba(255,255,255,.15);
+  --wave-dim: rgba(255,255,255,.55);
   --wave-bright: #fff;
 }
 @media (prefers-color-scheme: light) {
@@ -254,6 +254,10 @@ body {
 @keyframes pulse {
   0%, 100% { opacity: 1; }
   50%      { opacity: .4; }
+}
+@keyframes flash-bg {
+  0%, 100% { background-color: rgba(255, 209, 102, 0.4); }
+  50%      { background-color: transparent; }
 }
 
 #center-wordcloud {
