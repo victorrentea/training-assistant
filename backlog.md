@@ -4,7 +4,6 @@
 - [x] ui: session recording control clarified as pause/resume — `⏸️` pauses transcription but keeps session open, `▶️` resumes.
 - [x] ui: when session is paused, summary/keypoints bottom badge no longer blinks (no pulse/flash animation).
 - [x] ui: host summary badge now shows conversation count first, then `>` then keypoint count (ex: `💬 70 > 🧠 38`).
-- [x] ui: session intervals row no longer shows `Transcript`; each segment uses `start → end`, no arrows between disjoint segments, and multi-day segments are prefixed `Day 1`, `Day 2`, etc.
 - [x] The participants should auto-join any open session when they loaded the page in their browsers and they've previously logged in.
 - [x] The application should allow them to log out, though, in which case, with a button, they need to re-choose a name or pick the randomly generated one.
 - [x] Make sure the application is mobile friendly also.
@@ -177,7 +176,6 @@ Host posts a provocative statement (e.g. "Microservices are always a mistake for
 - [x] GH#29: Summary bullets now include approximate timestamps (HH:MM) derived from transcript timing data, displayed as subtle prefixes in the UI
 - [x] GH#67: Participant Slides viewer with PDF.js modal, `/api/slides` backend feed, per-deck page persistence, auto-refresh/reload on slide updates, and download action
 - [x] Follow-up GH#67: `/api/slides` now also includes PDFs discovered in local `training-assistant/materials/slides` (served via `/api/slides/file/{slug}`), so they appear in participant combo box.
-- [x] Follow-up GH#67 (production resilience): `/api/slides` now also includes `slides_current` as fallback entry, so daemon-published current deck appears even without full slide list payload.
 
 ## Concept Ranking / Ordering
 Host presents 4–6 items (patterns, approaches, technologies). Participants drag them into an order (e.g. safest → most dangerous, simplest → most complex). Host aggregates the median ranking and highlights disagreements. Pure conceptual reasoning, no coding.
