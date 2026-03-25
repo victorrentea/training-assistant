@@ -1,7 +1,7 @@
 {
-  "sha": "741ca66e1fca83d3e23848163bc0b4b0876abf15",
-  "timestamp": "2026-03-25 21:33",
+  "sha": "8e841431d6890526aa27241cbeecd2ab80f9fb2b",
+  "timestamp": "2026-03-25 21:35",
   "changelog": [
-    "Reduce slides polling interval to 2s"
+    "Format work hours as days plus hours"
   ]
 }
