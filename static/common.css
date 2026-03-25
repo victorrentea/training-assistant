@@ -95,15 +95,17 @@
   font-size: .9rem;
   font-weight: 600;
   cursor: pointer;
-  transition: opacity .2s, transform .1s;
+  transition: filter .15s, transform .1s;
   height: 34px;
   box-sizing: border-box;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   white-space: nowrap;
+  background: var(--surface2);
+  color: var(--text);
 }
-.btn:hover:not(:disabled) { opacity: .85; }
+.btn:hover:not(:disabled) { filter: brightness(1.35); }
 .btn:active:not(:disabled) { transform: scale(.97); }
 .btn-primary { background: var(--accent); color: #fff; }
 .btn-success { background: var(--action); color: #fff; }
