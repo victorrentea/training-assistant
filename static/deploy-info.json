@@ -1,7 +1,7 @@
 {
-  "sha": "2992fe47077ff5afedffa99880daa07ca42c8568",
-  "timestamp": "2026-03-25 08:53",
+  "sha": "163889e40285f6c21ddb5c28a9abf3095e8a24b3",
+  "timestamp": "2026-03-25 08:59",
   "changelog": [
-    "feat: session status badge (running animated/paused), emoji buttons for pause/talk"
+    "fix: pause/resume updates status immediately; derive status from paused_intervals; btn dark bg + brightness hover"
   ]
 }
