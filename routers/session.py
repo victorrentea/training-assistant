@@ -224,6 +224,27 @@ async def sync_session(body: SyncSessionRequest):
     return {"ok": True}
 
 
+class TimingEventBody(BaseModel):
+    event: str
+    minutes_remaining: int | None = None
+
+
+@router.post("/api/session/timing_event", dependencies=[Depends(require_host_auth)])
+async def timing_event(body: TimingEventBody):
+    """Daemon notifies server of a time-based event; server pushes to host WS."""
+    host_ws = state.participants.get("__host__")
+    if host_ws:
+        try:
+            await host_ws.send_json({
+                "type": "timing_event",
+                "event": body.event,
+                "minutes_remaining": body.minutes_remaining,
+            })
+        except Exception:
+            pass
+    return {"ok": True}
+
+
 @router.get("/api/session/folders", dependencies=[Depends(require_host_auth)])
 async def list_session_folders():
     root = _get_sessions_root()

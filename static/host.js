@@ -283,6 +283,13 @@
         updateSummary(msg.points, msg.updated_at);
       } else if (msg.type === 'emoji_reaction') {
         showHostEmoji(msg.emoji);
+      } else if (msg.type === 'timing_event' && msg.event === 'recording_warning') {
+        const banner = document.getElementById('recording-warning-banner');
+        const countdown = document.getElementById('recording-warning-countdown');
+        if (banner) {
+          if (countdown) countdown.textContent = msg.minutes_remaining ?? 30;
+          banner.style.display = 'block';
+        }
       }
     };
   }
