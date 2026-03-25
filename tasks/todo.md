@@ -27,6 +27,13 @@
 - [x] Add regression test asserting no `slides-refresh-btn` in participant HTML
 - [x] Run targeted slides tests
 
+## Follow-up request: production Slides dropdown shows empty entries
+
+- [x] Reproduce with automated API test for non-displayable names (`---`, blank)
+- [x] Filter non-displayable slide names in backend merge/local discovery logic
+- [x] Add frontend catalog normalization guard for malformed/empty slide entries
+- [x] Run targeted slides tests and participant JS syntax check
+
 ## Follow-up request: production slides list still empty
 
 - [x] Publish full slides list metadata from `slides_daemon.py` via `POST /api/quiz-status`
@@ -309,4 +316,9 @@
 - Follow-up implemented: removed manual `🔄` refresh button from participant Slides modal (`#slides-refresh-btn`); Slides continue auto-refreshing in background while modal is open.
 - Verified with `pytest -q tests/test_main.py -k "slides or participant_slides_modal_has_no_manual_refresh_button"` (4 passed, 120 deselected).
 - Verified with `pytest -q tests/test_slides_api.py` (4 passed).
+- Frontend syntax check: `node --check static/participant.js`.
+- Bugfix implemented: `/api/slides` now ignores non-displayable names (blank/punctuation-only), preventing empty-looking options in participant dropdown.
+- Bugfix implemented: participant-side slide catalog is normalized/filtered before rendering, with dedupe by `slug|url`.
+- Verified with `pytest -q tests/test_slides_api.py` (5 passed).
+- Verified with `pytest -q tests/test_main.py -k "slides"` (4 passed, 120 deselected).
 - Frontend syntax check: `node --check static/participant.js`.

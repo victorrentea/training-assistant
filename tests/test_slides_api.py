@@ -102,7 +102,6 @@ def test_api_slides_merges_local_and_daemon_entries(monkeypatch, tmp_path):
     assert "Local Deck" in names
     assert "Remote Deck" in names
 
-
 def test_api_slides_includes_slides_current_when_present(monkeypatch, tmp_path):
     monkeypatch.setenv("TRAINING_ASSISTANT_SLIDES_DIR", str(tmp_path))
     state.slides_current = {
@@ -111,8 +110,25 @@ def test_api_slides_includes_slides_current_when_present(monkeypatch, tmp_path):
         "source_file": "Deck Live.pdf",
         "updated_at": "2026-03-25T20:40:00+00:00",
     }
+
     client = TestClient(app)
     resp = client.get("/api/slides")
     assert resp.status_code == 200
     slides = resp.json()["slides"]
     assert any(s["slug"] == "current-123" and s["url"] == "https://slides.example.com/current.pdf" for s in slides)
+
+
+def test_api_slides_ignores_non_displayable_names(monkeypatch, tmp_path):
+    monkeypatch.setenv("TRAINING_ASSISTANT_SLIDES_DIR", str(tmp_path))
+    (tmp_path / "---.pdf").write_bytes(b"%PDF-1.4\n%local\n")
+    state.slides = [
+        {"name": "   ", "slug": "blank", "url": "https://slides.example.com/blank.pdf"},
+        {"name": "---", "slug": "dashes", "url": "https://slides.example.com/dashes.pdf"},
+        {"name": "Deck 1", "slug": "deck-1", "url": "https://slides.example.com/deck-1.pdf"},
+    ]
+
+    client = TestClient(app)
+    resp = client.get("/api/slides")
+    assert resp.status_code == 200
+    slides = resp.json()["slides"]
+    assert [s["name"] for s in slides] == ["Deck 1"]
