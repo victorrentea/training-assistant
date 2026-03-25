@@ -1,7 +1,7 @@
 {
-  "sha": "851a046fdc5117d1851a4e991422a98e7c8b17d7",
-  "timestamp": "2026-03-25 20:53",
+  "sha": "42138ca8acff9df9b7f735052ef18647efb1eb49",
+  "timestamp": "2026-03-25 20:56",
   "changelog": [
-    "fix: regenerate slides only on newer pptx mtime"
+    "fix: publish full slides catalog from daemon"
   ]
 }
