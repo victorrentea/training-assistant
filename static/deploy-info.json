@@ -1,7 +1,7 @@
 {
-  "sha": "188aa68de7644322fb974e16b62e2e0d52cc79b8",
-  "timestamp": "2026-03-25 20:21",
+  "sha": "335080ce5e75e27590b37eba4a0f3d6cbfd6a261",
+  "timestamp": "2026-03-25 20:24",
   "changelog": [
-    "feat: add GH66 slides publishing daemon and API"
+    "feat: add participant slides viewer and slides API"
   ]
 }
