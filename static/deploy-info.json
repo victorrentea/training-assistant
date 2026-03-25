@@ -1,7 +1,7 @@
 {
-  "sha": "b55ca4c35c3777ba2b8d3702f360147a1e3ef30f",
-  "timestamp": "2026-03-25 20:25",
+  "sha": "6b26f50b40043562843639520bb792aebfb0bec1",
+  "timestamp": "2026-03-25 20:27",
   "changelog": [
-    "Use pause icon for session control"
+    "Disable summary badge blink while paused"
   ]
 }
