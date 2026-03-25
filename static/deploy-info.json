@@ -1,7 +1,7 @@
 {
-  "sha": "c181e2ce06dae033ba987f7f063a05a457903430",
-  "timestamp": "2026-03-25 19:42",
+  "sha": "42610a01dfbe2d29f2fc637846f2c28e9f36dbc2",
+  "timestamp": "2026-03-25 20:06",
   "changelog": [
-    "Add AGENTS rule to use CLAUDE.md"
+    "Compact session controls and show transcript intervals"
   ]
 }
