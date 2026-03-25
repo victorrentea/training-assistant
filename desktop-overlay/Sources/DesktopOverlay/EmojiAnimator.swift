@@ -1093,9 +1093,6 @@ class EmojiAnimator {
     // MARK: - Confetti burst
 
     func spawnConfetti(count: Int = 80) {
-        guard activeEffects["confetti"] == nil else { return }
-        let sentinel = CALayer()
-        trackEffect("confetti", layer: sentinel, duration: 6.0)
         SoundManager.shared.playOverlapping("confetti.mp3")
         let bounds = hostLayer.bounds
         let screenW = bounds.width
