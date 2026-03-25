@@ -64,6 +64,16 @@ async def websocket_endpoint(websocket: WebSocket, participant_id: str):
         del state.participants["__host__"]
 
     await websocket.accept()
+
+    # UUID resolution: check if this UUID belongs to the paused session
+    if not is_host and not is_overlay and pid in state.paused_participant_uuids:
+        await websocket.send_json({
+            "type": "session_paused",
+            "message": "Session paused — you'll reconnect automatically"
+        })
+        await websocket.close()
+        return
+
     state.participants[pid] = websocket
     if not is_host and not is_overlay:
         forwarded = websocket.headers.get("x-forwarded-for", "")
