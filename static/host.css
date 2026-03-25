@@ -255,6 +255,10 @@ body {
   0%, 100% { opacity: 1; }
   50%      { opacity: .4; }
 }
+@keyframes flash-bg {
+  0%, 100% { background-color: rgba(255, 209, 102, 0.4); }
+  50%      { background-color: transparent; }
+}
 
 #center-wordcloud {
   display: flex;

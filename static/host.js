@@ -192,7 +192,7 @@
         document.getElementById('restore-banner').style.display =
           (msg.needs_restore && !msg.daemon_connected) ? '' : 'none';
         updateTokenBadge(msg.token_usage);
-        renderTranscriptStatus(msg.transcript_line_count, msg.transcript_total_lines, msg.transcript_latest_ts);
+        renderTranscriptStatus(msg.transcript_line_count, msg.transcript_total_lines, msg.transcript_latest_ts, msg.transcript_last_content_at);
         renderOverlayStatus(msg.overlay_connected);
         renderPendingDeploy(msg.pending_deploy);
         daemonSessionFolder = msg.daemon_session_folder || null;
@@ -335,6 +335,7 @@
 
   let _summaryGenerating = false;
   let _transcriptLineCount = 0;
+  let _transcriptLastContentAt = null; // Date or null
 
   function updateSummary(points, updatedAt) {
     summaryPoints = points || [];
@@ -352,24 +353,42 @@
     const badge = document.getElementById('summary-badge');
     if (!badge) return;
     const transcriptPart = _transcriptLineCount > 0 ? ` · 💬 ${_transcriptLineCount}` : '';
-    badge.style.cssText = 'cursor:pointer;';
+
+    // Transcription warning: no effective content in last 5 minutes
+    let noTranscriptWarn = false, noTranscriptTitle = '';
+    if (_transcriptLastContentAt === null) {
+      noTranscriptWarn = true;
+      noTranscriptTitle = 'No transcription today';
+    } else {
+      const minAgo = (Date.now() - _transcriptLastContentAt) / 60000;
+      if (minAgo >= 5) {
+        noTranscriptWarn = true;
+        noTranscriptTitle = `No transcription for ${Math.round(minAgo)} minutes`;
+      }
+    }
+    const flashStyle = noTranscriptWarn ? ' animation: flash-bg 1.4s ease-in-out infinite;' : '';
+
     if (summaryPoints.length) {
       badge.textContent = `🧠 ${summaryPoints.length}${transcriptPart}`;
       badge.className = 'badge connected';
-      badge.title = `${summaryPoints.length} key points · ${_transcriptLineCount} transcript lines (last 30 min) — click to view`;
+      badge.style.cssText = `cursor:pointer;${flashStyle}`;
+      badge.title = noTranscriptWarn ? noTranscriptTitle : `${summaryPoints.length} key points · ${_transcriptLineCount} transcript lines (last 30 min) — click to view`;
     } else if (_summaryGenerating) {
       badge.textContent = `🧠${transcriptPart}`;
       badge.className = 'badge';
-      badge.style.cssText = 'cursor:wait; color:var(--warn); border:1px solid var(--warn); animation: pulse 1.2s ease-in-out infinite;';
-      badge.title = `Generating key points from transcript… (${_transcriptLineCount} lines)`;
+      badge.style.cssText = `cursor:wait; color:var(--warn); border:1px solid var(--warn); animation: pulse 1.2s ease-in-out infinite${noTranscriptWarn ? ', flash-bg 1.4s ease-in-out infinite' : ''};`;
+      badge.title = noTranscriptWarn ? noTranscriptTitle : `Generating key points from transcript… (${_transcriptLineCount} lines)`;
     } else {
       badge.textContent = `🧠${transcriptPart}`;
       badge.className = _transcriptLineCount > 0 ? 'badge' : 'badge disconnected';
-      badge.title = _transcriptLineCount > 0
-        ? `${_transcriptLineCount} transcript lines ready — click to generate key points`
-        : 'No key points yet — click to generate now';
+      badge.style.cssText = `cursor:pointer;${flashStyle}`;
+      badge.title = noTranscriptWarn ? noTranscriptTitle
+        : (_transcriptLineCount > 0
+          ? `${_transcriptLineCount} transcript lines ready — click to generate key points`
+          : 'No key points yet — click to generate now');
     }
   }
+  setInterval(renderSummaryBadge, 30000); // keep "X minutes" tooltip accurate
 
   function renderSummaryList() {
     const list = document.getElementById('summary-list');
@@ -606,8 +625,9 @@
     }
   }
 
-  function renderTranscriptStatus(lineCount, totalLines, latestTs) {
+  function renderTranscriptStatus(lineCount, totalLines, latestTs, lastContentAt) {
     _transcriptLineCount = lineCount || 0;
+    _transcriptLastContentAt = lastContentAt ? new Date(lastContentAt).getTime() : null;
     renderSummaryBadge();
   }
 

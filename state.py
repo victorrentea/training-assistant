@@ -49,6 +49,7 @@ class AppState:
         self.transcript_line_count: int = 0
         self.transcript_total_lines: int = 0
         self.transcript_latest_ts: Optional[str] = None
+        self.transcript_last_content_at: Optional[datetime] = None
         self.quiz_preview: Optional[dict] = None
         self.scores: dict[str, int] = {}
         self.base_scores: dict[str, int] = {}
