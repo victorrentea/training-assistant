@@ -889,7 +889,7 @@ def run() -> None:
 
             elif timing == "auto_pause" and "auto_pause" not in _timing_fired_today:
                 _timing_fired_today.add("auto_pause")
-                if session_stack:
+                if session_stack and session_stack[-1].get("status") not in ("ended", "paused"):
                     try:
                         _post_json(
                             f"{config.server_url}/api/session/pause",
