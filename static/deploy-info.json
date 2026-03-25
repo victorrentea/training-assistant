@@ -1,7 +1,7 @@
 {
-  "sha": "e2c9b3aefd3b3a7c5db7cd6bc8bb566f79c193c8",
-  "timestamp": "2026-03-25 20:46",
+  "sha": "21e39c11b91362a5fff0907db9134bc0c92da9a2",
+  "timestamp": "2026-03-25 20:47",
   "changelog": [
-    "fix key points counter spacing"
+    "feat: track full slides catalog into materials PDFs"
   ]
 }
