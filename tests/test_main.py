@@ -965,14 +965,6 @@ def test_api_slides_is_empty_by_default(monkeypatch, tmp_path):
     assert resp.json() == {"slides": []}
 
 
-def test_participant_slides_modal_has_no_manual_refresh_button():
-    client = TestClient(app)
-    resp = client.get("/")
-    assert resp.status_code == 200
-    assert 'id="slides-refresh-btn"' not in resp.text
-    assert "refreshSlidesNow()" not in resp.text
-
-
 def test_quiz_status_updates_slides_and_api_returns_normalized_data(monkeypatch, tmp_path):
     state.reset()
     monkeypatch.setenv("TRAINING_ASSISTANT_SLIDES_DIR", str(tmp_path))

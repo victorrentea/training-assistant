@@ -2,7 +2,7 @@ import AppKit
 
 /// Floating bar of round emoji buttons — always on top, clickable.
 /// Multi-screen: centered at bottom of target screen, fades on hover.
-/// Single-screen: vertical stack at right edge (20% from bottom), slides in on hover.
+/// Single-screen: hidden at right edge (20% from bottom), slides in on hover.
 class ButtonBar: NSPanel {
 
     struct ButtonDef {
@@ -41,22 +41,14 @@ class ButtonBar: NSPanel {
         self.isSingleScreen = singleScreen
 
         let count = CGFloat(buttons.count)
-        let barWidth: CGFloat
-        let barHeight: CGFloat
-        if singleScreen {
-            barWidth = buttonSize + padding * 2
-            barHeight = count * buttonSize + (count + 1) * padding
-        } else {
-            barWidth = count * buttonSize + (count + 1) * padding
-            barHeight = buttonSize + padding * 2
-        }
+        let barWidth = count * buttonSize + (count + 1) * padding
+        let barHeight = buttonSize + padding * 2
         let sf = screen.frame
 
         let initialFrame: NSRect
         if singleScreen {
             // Start hidden: off the right edge, 20% from screen bottom
-            let preferredY = sf.minY + sf.height * 0.2
-            let barY = max(sf.minY + 12, min(preferredY, sf.maxY - barHeight - 12))
+            let barY = sf.minY + sf.height * 0.2
             initialFrame = NSRect(x: sf.maxX, y: barY, width: barWidth, height: barHeight)
         } else {
             // Centered at the bottom of the target screen
@@ -83,20 +75,12 @@ class ButtonBar: NSPanel {
                                            dragEnabled: !singleScreen)
         container.wantsLayer = true
         container.layer?.backgroundColor = NSColor(white: 0.15, alpha: 0.85).cgColor
-        container.layer?.cornerRadius = min(barWidth, barHeight) / 2
+        container.layer?.cornerRadius = barHeight / 2
 
         for (i, def) in buttons.enumerated() {
-            let bx: CGFloat
-            let by: CGFloat
-            if singleScreen {
-                bx = padding
-                by = barHeight - padding - buttonSize - CGFloat(i) * (buttonSize + padding)
-            } else {
-                bx = padding + CGFloat(i) * (buttonSize + padding)
-                by = padding
-            }
+            let bx = padding + CGFloat(i) * (buttonSize + padding)
             let btn = RoundEmojiButton(
-                frame: NSRect(x: bx, y: by, width: buttonSize, height: buttonSize),
+                frame: NSRect(x: bx, y: padding, width: buttonSize, height: buttonSize),
                 label: def.label,
                 tooltip: def.tooltip,
                 labelColor: def.labelColor,
@@ -109,8 +93,7 @@ class ButtonBar: NSPanel {
 
         if singleScreen {
             alphaValue = 0.0
-            let preferredY = sf.minY + sf.height * 0.2
-            let barY = max(sf.minY + 12, min(preferredY, sf.maxY - barHeight - 12))
+            let barY = sf.minY + sf.height * 0.2
             hiddenFrame = NSRect(x: sf.maxX, y: barY, width: barWidth, height: barHeight)
             shownFrame  = NSRect(x: sf.maxX - barWidth - 12, y: barY, width: barWidth, height: barHeight)
             setupGlobalMouseMonitor()
@@ -265,6 +248,7 @@ private class RoundEmojiButton: NSView {
     private var isDragging = false
     private var dragOrigin: NSPoint = .zero
     private var bgLayer: CALayer!
+    private var underlineLayer: CALayer!
     private let dragThreshold: CGFloat = 3
     private let hoverBgColor = NSColor(white: 0.75, alpha: 0.45).cgColor
     private let pressBgColor = NSColor(white: 0.75, alpha: 0.75).cgColor
@@ -299,6 +283,15 @@ private class RoundEmojiButton: NSView {
         textLayer.contentsScale = NSScreen.screens.first?.backingScaleFactor ?? 2.0
         layer?.addSublayer(textLayer)
 
+        // Underline: thin line at bottom, hidden by default
+        underlineLayer = CALayer()
+        let ulColor = labelColor ?? NSColor(white: 0.85, alpha: 0.9).cgColor
+        underlineLayer.backgroundColor = ulColor
+        underlineLayer.frame = CGRect(x: 5, y: 1, width: bounds.width - 10, height: 2)
+        underlineLayer.cornerRadius = 1
+        underlineLayer.opacity = 0
+        layer?.addSublayer(underlineLayer)
+
         let ta = NSTrackingArea(rect: bounds,
                                 options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect],
                                 owner: self, userInfo: nil)
@@ -315,6 +308,7 @@ private class RoundEmojiButton: NSView {
         CATransaction.begin()
         CATransaction.setAnimationDuration(0.12)
         bgLayer.opacity = 1
+        underlineLayer.opacity = 1
         CATransaction.commit()
     }
 
@@ -323,6 +317,7 @@ private class RoundEmojiButton: NSView {
         CATransaction.begin()
         CATransaction.setAnimationDuration(0.2)
         bgLayer.opacity = 0
+        underlineLayer.opacity = 0
         CATransaction.commit()
     }
 
@@ -334,6 +329,7 @@ private class RoundEmojiButton: NSView {
         CATransaction.setAnimationDuration(0.08)
         bgLayer.backgroundColor = pressBgColor
         bgLayer.opacity = 1
+        underlineLayer.opacity = 1
         layer?.setAffineTransform(CGAffineTransform(scaleX: 0.9, y: 0.9))
         CATransaction.commit()
     }
@@ -350,6 +346,7 @@ private class RoundEmojiButton: NSView {
             CATransaction.setAnimationDuration(0.08)
             bgLayer.backgroundColor = hoverBgColor
             bgLayer.opacity = 0
+            underlineLayer.opacity = 0
             layer?.setAffineTransform(.identity)
             CATransaction.commit()
         }
@@ -367,6 +364,7 @@ private class RoundEmojiButton: NSView {
         CATransaction.setAnimationDuration(0.08)
         bgLayer.backgroundColor = hoverBgColor
         bgLayer.opacity = 0
+        underlineLayer.opacity = 0
         layer?.setAffineTransform(.identity)
         CATransaction.commit()
 

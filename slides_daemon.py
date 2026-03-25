@@ -10,25 +10,21 @@ from __future__ import annotations
 
 import argparse
 import base64
-import hashlib
 import json
 import os
-import re
 import shutil
 import subprocess
 import sys
 import time
 import urllib.error
-import urllib.parse
 import urllib.request
 import uuid
 from dataclasses import dataclass
-from datetime import datetime, timezone
 from pathlib import Path
 
 
 DEFAULT_SERVER_URL = "http://localhost:8000"
-DEFAULT_POLL_SECONDS = 2.0
+DEFAULT_POLL_SECONDS = 30.0
 DEFAULT_MIN_CPU_FREE = 25.0
 
 
@@ -47,7 +43,7 @@ def load_secrets_env() -> None:
 
 @dataclass
 class SlidesDaemonConfig:
-    watch_dir: Path | None
+    watch_dir: Path
     poll_interval_seconds: float
     min_cpu_free_percent: float
     state_file: Path
@@ -60,15 +56,14 @@ class SlidesDaemonConfig:
     public_base_url: str
     publish_dir: Path
     recursive: bool
-    catalog_file: Path | None = None
-    sync_backend: bool = True
 
 
 def config_from_env() -> SlidesDaemonConfig:
     load_secrets_env()
-    watch_dir_raw = os.environ.get("PPTX_WATCH_DIR", "").strip()
-    watch_dir = Path(watch_dir_raw).expanduser() if watch_dir_raw else None
-    if watch_dir is not None and (not watch_dir.exists() or not watch_dir.is_dir()):
+    watch_dir = Path(os.environ.get("PPTX_WATCH_DIR", "")).expanduser()
+    if not watch_dir:
+        raise RuntimeError("PPTX_WATCH_DIR is required")
+    if not watch_dir.exists() or not watch_dir.is_dir():
         raise RuntimeError(f"PPTX_WATCH_DIR not found: {watch_dir}")
 
     poll_interval = float(os.environ.get("PPTX_DAEMON_POLL_SECONDS", str(DEFAULT_POLL_SECONDS)))
@@ -81,26 +76,14 @@ def config_from_env() -> SlidesDaemonConfig:
     server_url = os.environ.get("WORKSHOP_SERVER_URL", DEFAULT_SERVER_URL).rstrip("/")
     host_username = os.environ.get("HOST_USERNAME", "host")
     host_password = os.environ.get("HOST_PASSWORD", "")
-    converter = os.environ.get("PPTX_CONVERTER", "libreoffice").strip().lower()
+    converter = os.environ.get("PPTX_CONVERTER", "google_drive").strip().lower()
     upload_mode = os.environ.get("PPTX_UPLOAD_MODE", "copy").strip().lower()
     public_base_url = os.environ.get("PPTX_PUBLIC_BASE_URL", "").rstrip("/")
-    publish_dir = Path(os.environ.get("PPTX_PUBLISH_DIR", str(Path("materials") / "slides"))).expanduser()
+    publish_dir = Path(os.environ.get("PPTX_PUBLISH_DIR", str(Path(".context") / "published-slides"))).expanduser()
     recursive = os.environ.get("PPTX_RECURSIVE", "0").strip() in {"1", "true", "yes"}
-    catalog_file_str = os.environ.get(
-        "PPTX_CATALOG_FILE",
-        str(Path(__file__).parent / "daemon" / "materials_slides_catalog.json"),
-    ).strip()
-    catalog_file = Path(catalog_file_str).expanduser() if catalog_file_str else None
 
-    sync_env = os.environ.get("PPTX_SYNC_BACKEND")
-    if sync_env is None:
-        sync_backend = bool(public_base_url)
-    else:
-        sync_backend = sync_env.strip().lower() in {"1", "true", "yes"}
-    if sync_backend and not public_base_url:
-        raise RuntimeError("PPTX_PUBLIC_BASE_URL is required when PPTX_SYNC_BACKEND is enabled")
-    if watch_dir is None and (catalog_file is None or not catalog_file.exists()):
-        raise RuntimeError("Either PPTX_WATCH_DIR or a valid PPTX_CATALOG_FILE is required")
+    if not public_base_url:
+        raise RuntimeError("PPTX_PUBLIC_BASE_URL is required")
 
     return SlidesDaemonConfig(
         watch_dir=watch_dir,
@@ -116,8 +99,6 @@ def config_from_env() -> SlidesDaemonConfig:
         public_base_url=public_base_url,
         publish_dir=publish_dir,
         recursive=recursive,
-        catalog_file=catalog_file,
-        sync_backend=sync_backend,
     )
 
 
@@ -149,21 +130,16 @@ def _post_json(url: str, payload: dict, username: str, password: str, timeout: f
 
 
 def load_daemon_state(path: Path) -> dict:
-    empty = {"files": {}, "last_slides_hash": None}
     if not path.exists():
-        return empty
+        return {"files": {}}
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
         files = data.get("files", {})
-        last_slides_hash = data.get("last_slides_hash")
         if isinstance(files, dict):
-            return {
-                "files": files,
-                "last_slides_hash": last_slides_hash if isinstance(last_slides_hash, str) else None,
-            }
+            return {"files": files}
     except Exception:
         pass
-    return empty
+    return {"files": {}}
 
 
 def save_daemon_state(path: Path, data: dict) -> None:
@@ -177,198 +153,24 @@ def list_pptx_files(folder: Path, recursive: bool) -> list[Path]:
     pattern_iter = folder.rglob("*") if recursive else folder.iterdir()
     files = [
         p for p in pattern_iter
-        if p.is_file() and p.suffix.lower() == ".pptx" and not p.name.startswith("~$")
+        if p.is_file() and p.suffix.lower() == ".pptx"
     ]
     files.sort(key=lambda p: p.name.lower())
     return files
-
-
-def load_catalog_entries(path: Path | None, warn_missing: bool = True) -> list[dict]:
-    if path is None or not path.exists():
-        return []
-    raw = json.loads(path.read_text(encoding="utf-8"))
-    entries = raw.get("decks", raw if isinstance(raw, list) else [])
-    if not isinstance(entries, list):
-        raise RuntimeError(f"Invalid slides catalog format in {path}")
-
-    valid_entries: list[dict] = []
-    for idx, entry in enumerate(entries):
-        if not isinstance(entry, dict):
-            continue
-        source = Path(str(entry.get("source", "")).strip()).expanduser()
-        if not source.exists() or not source.is_file():
-            if warn_missing:
-                print(f"[pptx-daemon] WARN: Missing source in catalog #{idx + 1}: {source}", file=sys.stderr, flush=True)
-            continue
-        target_pdf = str(entry.get("target_pdf", "")).strip()
-        if not target_pdf:
-            target_pdf = f"{source.stem}.pdf"
-        if target_pdf.lower().endswith(".pdf") is False:
-            target_pdf += ".pdf"
-        target_pdf = target_pdf.replace("/", "-").replace("\\", "-")
-        valid_entries.append({
-            "title": str(entry.get("title", "")).strip(),
-            "source": source,
-            "target_pdf": target_pdf,
-        })
-    return valid_entries
-
-
-def resolve_tracked_sources(config: SlidesDaemonConfig, warn_missing: bool = True) -> tuple[list[Path], dict[str, dict]]:
-    catalog = load_catalog_entries(config.catalog_file, warn_missing=warn_missing)
-    if catalog:
-        paths = [entry["source"] for entry in catalog]
-        meta = {
-            _abs_key(entry["source"]): {
-                "title": entry["title"],
-                "target_pdf": entry["target_pdf"],
-            }
-            for entry in catalog
-        }
-        return paths, meta
-
-    if config.watch_dir is None:
-        return [], {}
-    return list_pptx_files(config.watch_dir, recursive=config.recursive), {}
 
 
 def _abs_key(path: Path) -> str:
     return str(path.expanduser().resolve())
 
 
-def _lastmodified_marker_path(publish_dir: Path, target_pdf: str) -> Path:
-    return publish_dir / f"{target_pdf}.lastmodified"
-
-
-def read_material_last_modified(publish_dir: Path | None, target_pdf: str | None) -> float:
-    if publish_dir is None or not target_pdf:
-        return 0.0
-    path = _lastmodified_marker_path(publish_dir, target_pdf)
-    if not path.exists():
-        return 0.0
-    try:
-        return float(path.read_text(encoding="utf-8").strip())
-    except Exception:
-        return 0.0
-
-
-def write_material_last_modified(publish_dir: Path | None, target_pdf: str | None, source_mtime: float) -> None:
-    if publish_dir is None or not target_pdf:
-        return
-    publish_dir.mkdir(parents=True, exist_ok=True)
-    path = _lastmodified_marker_path(publish_dir, target_pdf)
-    path.write_text(f"{source_mtime!r}\n", encoding="utf-8")
-
-_SLUG_RE = re.compile(r"[^a-z0-9]+")
-
-
-def list_pdf_files(folder: Path, recursive: bool) -> list[Path]:
-    pattern_iter = folder.rglob("*") if recursive else folder.iterdir()
-    files = [
-        p for p in pattern_iter
-        if p.is_file() and p.suffix.lower() == ".pdf"
-    ]
-    files.sort(key=lambda p: p.name.lower())
-    return files
-
-
-def _iso_utc(mtime: float | int | None) -> str | None:
-    if mtime is None:
-        return None
-    try:
-        return datetime.fromtimestamp(float(mtime), tz=timezone.utc).isoformat()
-    except Exception:
-        return None
-
-
-def _slugify(value: str) -> str:
-    slug = _SLUG_RE.sub("-", value.strip().lower()).strip("-")
-    return slug or "slide"
-
-
-def _slide_url(config: SlidesDaemonConfig, file_name: str) -> str:
-    return f"{config.public_base_url}/{urllib.parse.quote(file_name)}"
-
-
-def _slides_from_publish_dir(config: SlidesDaemonConfig) -> list[dict]:
-    if not config.publish_dir.exists() or not config.publish_dir.is_dir() or not config.public_base_url:
-        return []
-    slides: list[dict] = []
-    for idx, pdf in enumerate(list_pdf_files(config.publish_dir, recursive=False)):
-        base_slug = _slugify(pdf.stem)
-        slug = f"{base_slug}-{idx+1}" if idx > 0 else base_slug
-        slides.append({
-            "name": pdf.stem,
-            "slug": slug,
-            "url": _slide_url(config, pdf.name),
-            "updated_at": _iso_utc(pdf.stat().st_mtime),
-        })
-    return slides
-
-
-def _slides_from_state(config: SlidesDaemonConfig, daemon_state: dict, metadata: dict[str, dict]) -> list[dict]:
-    slides: list[dict] = []
-    tracked = daemon_state.get("files", {})
-    for key, entry in tracked.items():
-        if not isinstance(entry, dict):
-            continue
-        source = Path(key)
-        slug = str(entry.get("slug") or "").strip()
-        target_pdf = str(entry.get("target_pdf") or "").strip()
-        if not target_pdf:
-            if not slug:
-                continue
-            target_pdf = f"{slug}.pdf"
-        if not config.public_base_url:
-            continue
-        source_meta = metadata.get(key, {})
-        slide_name = str(source_meta.get("title") or source.stem).strip() or source.stem
-        slides.append({
-            "name": slide_name,
-            "slug": slug or _slugify(slide_name),
-            "url": _slide_url(config, target_pdf),
-            "updated_at": _iso_utc(entry.get("last_exported_mtime")),
-        })
-    slides.sort(key=lambda item: str(item["name"]).lower())
-    return slides
-
-
-def _merge_slides(primary: list[dict], secondary: list[dict]) -> list[dict]:
-    merged: list[dict] = []
-    seen_urls: set[str] = set()
-    for source in (primary, secondary):
-        for slide in source:
-            name = str(slide.get("name") or "").strip()
-            url = str(slide.get("url") or "").strip()
-            if not name or not url or url in seen_urls:
-                continue
-            seen_urls.add(url)
-            merged.append({
-                "name": name,
-                "slug": str(slide.get("slug") or _slugify(name)).strip() or _slugify(name),
-                "url": url,
-                "updated_at": slide.get("updated_at"),
-            })
-    return merged
-
-
-def detect_changed_files(
-    files: list[Path],
-    daemon_state: dict,
-    metadata: dict[str, dict] | None = None,
-    publish_dir: Path | None = None,
-) -> list[Path]:
+def detect_changed_files(files: list[Path], daemon_state: dict) -> list[Path]:
     changed: list[tuple[float, Path]] = []
     tracked = daemon_state.setdefault("files", {})
-    metadata = metadata or {}
     for pptx in files:
         key = _abs_key(pptx)
         exported_mtime = float(tracked.get(key, {}).get("last_exported_mtime", 0))
         current_mtime = pptx.stat().st_mtime
-        target_pdf = metadata.get(key, {}).get("target_pdf")
-        marker_mtime = read_material_last_modified(publish_dir, target_pdf)
-        known_mtime = max(exported_mtime, marker_mtime)
-        if current_mtime > known_mtime + 1e-9:
+        if current_mtime > exported_mtime:
             changed.append((current_mtime, pptx))
     changed.sort(key=lambda x: x[0])
     return [p for _, p in changed]
@@ -480,16 +282,14 @@ def convert_pptx_to_pdf(pptx_path: Path, config: SlidesDaemonConfig, slug: str) 
     raise RuntimeError(f"Unknown PPTX_CONVERTER: {config.converter}")
 
 
-def upload_pdf(pdf_path: Path, slug: str, config: SlidesDaemonConfig, target_name: str | None = None) -> str:
-    target_name = target_name or f"{slug}.pdf"
+def upload_pdf(pdf_path: Path, slug: str, config: SlidesDaemonConfig) -> str:
+    target_name = f"{slug}.pdf"
 
     if config.upload_mode == "copy":
         config.publish_dir.mkdir(parents=True, exist_ok=True)
         target_path = config.publish_dir / target_name
         shutil.copy2(pdf_path, target_path)
-        if config.public_base_url:
-            return f"{config.public_base_url}/{target_name}"
-        return str(target_path)
+        return f"{config.public_base_url}/{target_name}"
 
     if config.upload_mode == "scp":
         target_dir = os.environ.get("PPTX_SCP_TARGET", "").strip()
@@ -503,7 +303,7 @@ def upload_pdf(pdf_path: Path, slug: str, config: SlidesDaemonConfig, target_nam
         )
         if proc.returncode != 0:
             raise RuntimeError(f"scp upload failed: {proc.stderr.strip() or proc.stdout.strip()}")
-        return f"{config.public_base_url}/{target_name}" if config.public_base_url else remote_target
+        return f"{config.public_base_url}/{target_name}"
 
     if config.upload_mode == "http_put":
         template = os.environ.get("PPTX_UPLOAD_URL_TEMPLATE", "").strip()
@@ -525,7 +325,7 @@ def upload_pdf(pdf_path: Path, slug: str, config: SlidesDaemonConfig, target_nam
                 pass
         except urllib.error.HTTPError as exc:
             raise RuntimeError(f"HTTP PUT upload failed with status {exc.code}") from exc
-        return f"{config.public_base_url}/{target_name}" if config.public_base_url else upload_url
+        return f"{config.public_base_url}/{target_name}"
 
     raise RuntimeError(f"Unknown PPTX_UPLOAD_MODE: {config.upload_mode}")
 
@@ -545,43 +345,7 @@ def push_current_slides(config: SlidesDaemonConfig, public_url: str, slug: str, 
     )
 
 
-def push_slides_list(config: SlidesDaemonConfig, slides: list[dict]) -> None:
-    payload = {
-        "status": "ready",
-        "message": "Agent ready.",
-        "slides": slides,
-    }
-    _post_json(
-        f"{config.server_url}/api/quiz-status",
-        payload,
-        config.host_username,
-        config.host_password,
-    )
-
-
-def sync_slides_list(config: SlidesDaemonConfig, daemon_state: dict, metadata: dict[str, dict]) -> bool:
-    if not config.sync_backend:
-        return False
-    slides = _merge_slides(
-        _slides_from_publish_dir(config),
-        _slides_from_state(config, daemon_state, metadata),
-    )
-    payload_hash = hashlib.sha256(json.dumps(slides, sort_keys=True).encode("utf-8")).hexdigest()
-    if payload_hash == daemon_state.get("last_slides_hash"):
-        return False
-    push_slides_list(config, slides)
-    daemon_state["last_slides_hash"] = payload_hash
-    save_daemon_state(config.state_file, daemon_state)
-    print(f"[pptx-daemon] Published slides list ({len(slides)} entries)", flush=True)
-    return True
-
-
-def process_one_file(
-    config: SlidesDaemonConfig,
-    daemon_state: dict,
-    pptx_path: Path,
-    target_pdf: str | None = None,
-) -> bool:
+def process_one_file(config: SlidesDaemonConfig, daemon_state: dict, pptx_path: Path) -> bool:
     cpu_free = get_cpu_free_percent(sample_seconds=1.0)
     if cpu_free < config.min_cpu_free_percent:
         print(
@@ -593,43 +357,32 @@ def process_one_file(
 
     slug = ensure_slug(daemon_state, pptx_path)
     pdf_path = convert_pptx_to_pdf(pptx_path, config, slug)
-    public_ref = upload_pdf(pdf_path, slug, config, target_name=target_pdf)
-    if config.sync_backend:
-        push_current_slides(config, public_ref, slug, pptx_path.name)
+    public_url = upload_pdf(pdf_path, slug, config)
+    push_current_slides(config, public_url, slug, pptx_path.name)
 
     key = _abs_key(pptx_path)
     daemon_state.setdefault("files", {}).setdefault(key, {})
     daemon_state["files"][key]["slug"] = slug
-    if target_pdf:
-        daemon_state["files"][key]["target_pdf"] = target_pdf
-    source_mtime = pptx_path.stat().st_mtime
-    daemon_state["files"][key]["last_exported_mtime"] = source_mtime
+    daemon_state["files"][key]["last_exported_mtime"] = pptx_path.stat().st_mtime
     save_daemon_state(config.state_file, daemon_state)
-    write_material_last_modified(config.publish_dir, target_pdf, source_mtime)
-    print(f"[pptx-daemon] Published {pptx_path.name} -> {public_ref}", flush=True)
+    print(f"[pptx-daemon] Published {pptx_path.name} -> {public_url}", flush=True)
     return True
 
 
 def run_once(config: SlidesDaemonConfig, daemon_state: dict) -> bool:
-    files, metadata = resolve_tracked_sources(config)
-    changed = detect_changed_files(files, daemon_state, metadata=metadata, publish_dir=config.publish_dir)
-    updated_current = False
-    if changed:
-        # serialize: process one file per poll cycle
-        next_path = changed[0]
-        print(f"✏️ppt update detected => regenerating ppf: {next_path.name}", flush=True)
-        target_pdf = metadata.get(_abs_key(next_path), {}).get("target_pdf")
-        updated_current = process_one_file(config, daemon_state, next_path, target_pdf=target_pdf)
-    updated_list = sync_slides_list(config, daemon_state, metadata)
-    return updated_current or updated_list
+    files = list_pptx_files(config.watch_dir, recursive=config.recursive)
+    changed = detect_changed_files(files, daemon_state)
+    if not changed:
+        return False
+    # serialize: process one file per poll cycle
+    return process_one_file(config, daemon_state, changed[0])
 
 
 def run_forever(config: SlidesDaemonConfig) -> None:
     daemon_state = load_daemon_state(config.state_file)
-    source_desc = f"catalog={config.catalog_file}" if config.catalog_file and config.catalog_file.exists() else f"watch={config.watch_dir}"
     print(
-        f"[pptx-daemon] Watching {source_desc} every {config.poll_interval_seconds:.0f}s "
-        f"(converter={config.converter}, upload={config.upload_mode}, publish={config.publish_dir})",
+        f"[pptx-daemon] Watching {config.watch_dir} every {config.poll_interval_seconds:.0f}s "
+        f"(converter={config.converter}, upload={config.upload_mode})",
         flush=True,
     )
     while True:

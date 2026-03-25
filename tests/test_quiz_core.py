@@ -239,6 +239,17 @@ class TestLoadTranscriptionFiles:
         entries = load_transcription_files(tmp_path)
         assert len(entries) == 3
 
+    def test_ignores_normalized_daily_txt_files(self, tmp_path):
+        # Raw file (expected input)
+        (tmp_path / "20260325 1000 Transcription.txt").write_text("[00:00:01.00] Speaker:\tfrom raw")
+        # Normalized output file produced by transcript normalizer (must be ignored)
+        (tmp_path / "2026-03-25 transcription.txt").write_text("[10:00] Victor: normalized line")
+
+        entries = load_transcription_files(tmp_path)
+
+        assert len(entries) == 1
+        assert entries[0][1] == "Speaker: from raw"
+
     def test_picks_most_recent(self, tmp_path):
         (tmp_path / "old.txt").write_text("[00:00:01.00] Speaker:\told")
         time.sleep(0.01)

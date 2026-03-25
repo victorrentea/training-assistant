@@ -371,7 +371,7 @@
       if (btn) { btn.disabled = false; btn.style.opacity = ''; }
     }
     const countEl = document.getElementById('summary-count');
-    if (countEl) countEl.textContent = summaryPoints.length > 0 ? summaryPoints.length : '';
+    if (countEl) countEl.textContent = summaryPoints.length > 0 ? `${summaryPoints.length} ` : '';
     if (summaryPoints.length > prevCount) {
       const summaryBtn = document.getElementById('summary-btn');
       if (summaryBtn) {
@@ -584,29 +584,6 @@
     ].join('|');
   }
 
-  function _isDisplayableSlideName(name) {
-    const cleaned = (name || '').trim();
-    if (!cleaned) return false;
-    return /[\p{L}\p{N}]/u.test(cleaned);
-  }
-
-  function _normalizeSlidesCatalog(rawSlides) {
-    const normalized = [];
-    const seen = new Set();
-    for (const raw of (Array.isArray(rawSlides) ? rawSlides : [])) {
-      if (!raw || typeof raw !== 'object') continue;
-      const name = String(raw.name || '').trim();
-      const url = String(raw.url || '').trim();
-      if (!_isDisplayableSlideName(name) || !url) continue;
-      const slug = String(raw.slug || '').trim() || 'slide';
-      const key = `${slug}|${url}`;
-      if (seen.has(key)) continue;
-      seen.add(key);
-      normalized.push({ ...raw, name, url, slug });
-    }
-    return normalized;
-  }
-
   function _renderSlidesMeta(slide) {
     const meta = document.getElementById('slides-updated');
     if (!meta || !slide) {
@@ -685,7 +662,7 @@
       _setSlidesDownload(slide.url, false);
       _renderSlidesMeta({ ...slide, updated_at: effectiveUpdatedAt });
     } catch (err) {
-      _setSlidesError('Failed to load this PDF. Try download.');
+      _setSlidesError('Failed to load this PDF. Try download or refresh.');
       _setSlidesDownload('', true);
     }
   }
@@ -697,9 +674,8 @@
       const res = await fetch('/api/slides', { cache: 'no-store' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
-      slidesCatalog = _normalizeSlidesCatalog(data.slides);
+      slidesCatalog = Array.isArray(data.slides) ? data.slides : [];
       if (!slidesCatalog.length) {
-        _renderSlidesSelector(null);
         slidesSelectedSlug = null;
         slidesLastFingerprint = null;
         await _clearSlidesDocument();
@@ -756,10 +732,14 @@
     _stopSlidesRefreshLoop();
   }
 
+  function refreshSlidesNow() {
+    _refreshSlidesCatalog({ forceReloadCurrent: true }).catch(() => {});
+  }
+
   function warmSlidesCatalog() {
     fetch('/api/slides', { cache: 'no-store' })
       .then(res => (res.ok ? res.json() : { slides: [] }))
-      .then(data => { slidesCatalog = _normalizeSlidesCatalog(data.slides); })
+      .then(data => { slidesCatalog = Array.isArray(data.slides) ? data.slides : []; })
       .catch(() => {});
   }
 
