@@ -10,16 +10,20 @@ from __future__ import annotations
 
 import argparse
 import base64
+import hashlib
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 import uuid
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
 
 
@@ -145,16 +149,21 @@ def _post_json(url: str, payload: dict, username: str, password: str, timeout: f
 
 
 def load_daemon_state(path: Path) -> dict:
+    empty = {"files": {}, "last_slides_hash": None}
     if not path.exists():
-        return {"files": {}}
+        return empty
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
         files = data.get("files", {})
+        last_slides_hash = data.get("last_slides_hash")
         if isinstance(files, dict):
-            return {"files": files}
+            return {
+                "files": files,
+                "last_slides_hash": last_slides_hash if isinstance(last_slides_hash, str) else None,
+            }
     except Exception:
         pass
-    return {"files": {}}
+    return empty
 
 
 def save_daemon_state(path: Path, data: dict) -> None:
@@ -248,6 +257,98 @@ def write_material_last_modified(publish_dir: Path | None, target_pdf: str | Non
     publish_dir.mkdir(parents=True, exist_ok=True)
     path = _lastmodified_marker_path(publish_dir, target_pdf)
     path.write_text(f"{source_mtime!r}\n", encoding="utf-8")
+
+_SLUG_RE = re.compile(r"[^a-z0-9]+")
+
+
+def list_pdf_files(folder: Path, recursive: bool) -> list[Path]:
+    pattern_iter = folder.rglob("*") if recursive else folder.iterdir()
+    files = [
+        p for p in pattern_iter
+        if p.is_file() and p.suffix.lower() == ".pdf"
+    ]
+    files.sort(key=lambda p: p.name.lower())
+    return files
+
+
+def _iso_utc(mtime: float | int | None) -> str | None:
+    if mtime is None:
+        return None
+    try:
+        return datetime.fromtimestamp(float(mtime), tz=timezone.utc).isoformat()
+    except Exception:
+        return None
+
+
+def _slugify(value: str) -> str:
+    slug = _SLUG_RE.sub("-", value.strip().lower()).strip("-")
+    return slug or "slide"
+
+
+def _slide_url(config: SlidesDaemonConfig, file_name: str) -> str:
+    return f"{config.public_base_url}/{urllib.parse.quote(file_name)}"
+
+
+def _slides_from_publish_dir(config: SlidesDaemonConfig) -> list[dict]:
+    if not config.publish_dir.exists() or not config.publish_dir.is_dir() or not config.public_base_url:
+        return []
+    slides: list[dict] = []
+    for idx, pdf in enumerate(list_pdf_files(config.publish_dir, recursive=False)):
+        base_slug = _slugify(pdf.stem)
+        slug = f"{base_slug}-{idx+1}" if idx > 0 else base_slug
+        slides.append({
+            "name": pdf.stem,
+            "slug": slug,
+            "url": _slide_url(config, pdf.name),
+            "updated_at": _iso_utc(pdf.stat().st_mtime),
+        })
+    return slides
+
+
+def _slides_from_state(config: SlidesDaemonConfig, daemon_state: dict, metadata: dict[str, dict]) -> list[dict]:
+    slides: list[dict] = []
+    tracked = daemon_state.get("files", {})
+    for key, entry in tracked.items():
+        if not isinstance(entry, dict):
+            continue
+        source = Path(key)
+        slug = str(entry.get("slug") or "").strip()
+        target_pdf = str(entry.get("target_pdf") or "").strip()
+        if not target_pdf:
+            if not slug:
+                continue
+            target_pdf = f"{slug}.pdf"
+        if not config.public_base_url:
+            continue
+        source_meta = metadata.get(key, {})
+        slide_name = str(source_meta.get("title") or source.stem).strip() or source.stem
+        slides.append({
+            "name": slide_name,
+            "slug": slug or _slugify(slide_name),
+            "url": _slide_url(config, target_pdf),
+            "updated_at": _iso_utc(entry.get("last_exported_mtime")),
+        })
+    slides.sort(key=lambda item: str(item["name"]).lower())
+    return slides
+
+
+def _merge_slides(primary: list[dict], secondary: list[dict]) -> list[dict]:
+    merged: list[dict] = []
+    seen_urls: set[str] = set()
+    for source in (primary, secondary):
+        for slide in source:
+            name = str(slide.get("name") or "").strip()
+            url = str(slide.get("url") or "").strip()
+            if not name or not url or url in seen_urls:
+                continue
+            seen_urls.add(url)
+            merged.append({
+                "name": name,
+                "slug": str(slide.get("slug") or _slugify(name)).strip() or _slugify(name),
+                "url": url,
+                "updated_at": slide.get("updated_at"),
+            })
+    return merged
 
 
 def detect_changed_files(
@@ -443,6 +544,37 @@ def push_current_slides(config: SlidesDaemonConfig, public_url: str, slug: str, 
     )
 
 
+def push_slides_list(config: SlidesDaemonConfig, slides: list[dict]) -> None:
+    payload = {
+        "status": "ready",
+        "message": "Agent ready.",
+        "slides": slides,
+    }
+    _post_json(
+        f"{config.server_url}/api/quiz-status",
+        payload,
+        config.host_username,
+        config.host_password,
+    )
+
+
+def sync_slides_list(config: SlidesDaemonConfig, daemon_state: dict, metadata: dict[str, dict]) -> bool:
+    if not config.sync_backend:
+        return False
+    slides = _merge_slides(
+        _slides_from_publish_dir(config),
+        _slides_from_state(config, daemon_state, metadata),
+    )
+    payload_hash = hashlib.sha256(json.dumps(slides, sort_keys=True).encode("utf-8")).hexdigest()
+    if payload_hash == daemon_state.get("last_slides_hash"):
+        return False
+    push_slides_list(config, slides)
+    daemon_state["last_slides_hash"] = payload_hash
+    save_daemon_state(config.state_file, daemon_state)
+    print(f"[pptx-daemon] Published slides list ({len(slides)} entries)", flush=True)
+    return True
+
+
 def process_one_file(
     config: SlidesDaemonConfig,
     daemon_state: dict,
@@ -480,12 +612,14 @@ def process_one_file(
 def run_once(config: SlidesDaemonConfig, daemon_state: dict) -> bool:
     files, metadata = resolve_tracked_sources(config)
     changed = detect_changed_files(files, daemon_state, metadata=metadata, publish_dir=config.publish_dir)
-    if not changed:
-        return False
-    # serialize: process one file per poll cycle
-    next_path = changed[0]
-    target_pdf = metadata.get(_abs_key(next_path), {}).get("target_pdf")
-    return process_one_file(config, daemon_state, next_path, target_pdf=target_pdf)
+    updated_current = False
+    if changed:
+        # serialize: process one file per poll cycle
+        next_path = changed[0]
+        target_pdf = metadata.get(_abs_key(next_path), {}).get("target_pdf")
+        updated_current = process_one_file(config, daemon_state, next_path, target_pdf=target_pdf)
+    updated_list = sync_slides_list(config, daemon_state, metadata)
+    return updated_current or updated_list
 
 
 def run_forever(config: SlidesDaemonConfig) -> None:
