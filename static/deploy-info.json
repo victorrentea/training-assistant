@@ -1,7 +1,7 @@
 {
-  "sha": "653a87748dd96e93b120b72ae58f212c52da5e12",
-  "timestamp": "2026-03-25 09:12",
+  "sha": "cc61b61117176718baf4901dc7add8a99ac2a695",
+  "timestamp": "2026-03-25 09:14",
   "changelog": [
-    "fix: sort set-derived lists in state snapshot for deterministic hashing"
+    "fix: actually fade out dying pulse overlay over 500ms"
   ]
 }
