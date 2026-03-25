@@ -1,7 +1,7 @@
 {
-  "sha": "c7b6303e8c8ad1a458f047480722234489dcf015",
-  "timestamp": "2026-03-25 08:15",
+  "sha": "bf372bed9448b9905ca78ea2f5d4ace02480c89b",
+  "timestamp": "2026-03-25 08:24",
   "changelog": [
-    "feat: log state backup metrics instead of byte count"
+    "fix: keep start.sh looping on daemon exit-42 instead of dying"
   ]
 }
