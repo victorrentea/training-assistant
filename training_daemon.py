@@ -53,11 +53,9 @@ _HEARTBEAT_INTERVAL = 1.0  # seconds between heartbeat writes
 _HEARTBEAT_STALE_THRESHOLD = 10.0  # seconds before heartbeat is considered stale
 _TIMESTAMP_INTERVAL_SECONDS = float(os.environ.get("TRANSCRIPT_TIMESTAMP_INTERVAL_SECONDS", "3"))
 EXIT_CODE_UPDATE = 42  # signals start.sh to git pull and restart
-_KEY_POINTS_FILE = "discussion.md"
-_KEY_POINTS_FILE_TRANSCRIPT = "transcript_keypoints.md"  # legacy — kept for backward compat
+_KEY_POINTS_FILE = "transcript_keypoints.md"
 _KEY_POINTS_FILE_LEGACY = "key_points.json"
 _DAEMON_STATE_FILENAME = "daemon_state.json"
-_SESSION_JSON_FILENAME = "session.json"
 _BACKUP_DIR = Path.home() / ".training-assistant"
 _BACKUP_FILE = _BACKUP_DIR / "state-backup.json"
 
@@ -66,26 +64,15 @@ _DOW_RE = re.compile(r"^([A-Z][a-z]{2})\s+(\d{2}:\d{2})\s+(.+)$")
 _FRONTMATTER_WATERMARK_RE = re.compile(r"^watermark:\s*(\d+)")
 
 
-def _atomic_write(path: Path, text: str) -> None:
-    """Write text to path atomically via a temp file."""
-    tmp = path.with_suffix(".tmp")
-    tmp.write_text(text, encoding="utf-8")
-    tmp.replace(path)
-
-
 def _load_key_points(session_folder: Path) -> tuple[list[dict], int]:
     """Load key points from session folder. Returns (points, watermark).
-    Reads discussion.md (new), falls back to transcript_keypoints.md, then key_points.json (legacy)."""
+    Reads transcript_keypoints.md (new) or falls back to key_points.json (legacy)."""
     md_file = session_folder / _KEY_POINTS_FILE
-    transcript_md_file = session_folder / _KEY_POINTS_FILE_TRANSCRIPT
     json_file = session_folder / _KEY_POINTS_FILE_LEGACY
 
-    # Pick the first md file that exists: discussion.md, then transcript_keypoints.md
-    actual_md_file = md_file if md_file.exists() else (transcript_md_file if transcript_md_file.exists() else None)
-
-    if actual_md_file:
+    if md_file.exists():
         try:
-            lines = actual_md_file.read_text(encoding="utf-8").splitlines()
+            lines = md_file.read_text(encoding="utf-8").splitlines()
             watermark = 0
             points = []
             in_frontmatter = False
@@ -111,7 +98,7 @@ def _load_key_points(session_folder: Path) -> tuple[list[dict], int]:
                     points.append({"text": m.group(3), "time": m.group(2), "source": "discussion"})
                 else:
                     points.append({"text": stripped, "source": "discussion"})
-            log.info("session", f"Loaded {len(points)} key points from {actual_md_file.name}")
+            log.info("session", f"Loaded {len(points)} key points from {session_folder.name}")
             return points, watermark
         except Exception as e:
             log.error("session", f"Failed to load key points: {e}")
@@ -405,16 +392,9 @@ def run() -> None:
     try:
         status = _get_json(f"{config.server_url}/api/status")
         if status.get("needs_restore"):
-            restore_source = None
-            if config.session_folder:
-                candidate = config.session_folder / _SESSION_JSON_FILENAME
-                if candidate.exists():
-                    restore_source = candidate
-            if restore_source is None and _BACKUP_FILE.exists():
-                restore_source = _BACKUP_FILE
-            if restore_source:
-                log.info("daemon", f"Server needs state restore — sending {restore_source.name}...")
-                backup_data = json.loads(restore_source.read_text(encoding="utf-8"))
+            if _BACKUP_FILE.exists():
+                log.info("daemon", "Server needs state restore — sending backup...")
+                backup_data = json.loads(_BACKUP_FILE.read_text(encoding="utf-8"))
                 result = _post_json(
                     f"{config.server_url}/api/state-restore",
                     backup_data,
@@ -608,23 +588,6 @@ def run() -> None:
                     transcript_state.reset()
                     log.info("session", f"Resumed: {session_stack[-1]['name']}")
 
-                elif action == "set_folder":
-                    folder_name = session_req.get("name", "").strip()
-                    if folder_name:
-                        _root_str = os.environ.get(
-                            "SESSIONS_FOLDER",
-                            str(Path.home() / "My Drive" / "Cursuri" / "###sesiuni"),
-                        )
-                        _root = Path(_root_str).expanduser()
-                        if _root.exists() and _root.is_dir():
-                            new_folder = _root / folder_name
-                            new_folder.mkdir(parents=True, exist_ok=True)
-                            config = dc_replace(config, session_folder=new_folder)
-                            sessions_root = _root
-                            log.info("session", f"Session folder set to: {new_folder}")
-                        else:
-                            log.error("session", f"SESSIONS_FOLDER not found or invalid: {_root}")
-
             except Exception as e:
                 log.error("session", f"Request error: {e}")
 
@@ -732,16 +695,9 @@ def run() -> None:
 
             # ── Restore state if server lost it (e.g. after Railway redeploy) ──
             if data.get("needs_restore"):
-                restore_source = None
-                if config.session_folder:
-                    candidate = config.session_folder / _SESSION_JSON_FILENAME
-                    if candidate.exists():
-                        restore_source = candidate
-                if restore_source is None and _BACKUP_FILE.exists():
-                    restore_source = _BACKUP_FILE
-                if restore_source:
-                    log.info("daemon", f"Server needs state restore — sending {restore_source.name}...")
-                    backup_data = json.loads(restore_source.read_text(encoding="utf-8"))
+                if _BACKUP_FILE.exists():
+                    log.info("daemon", "Server needs state restore — sending backup...")
+                    backup_data = json.loads(_BACKUP_FILE.read_text(encoding="utf-8"))
                     result = _post_json(
                         f"{config.server_url}/api/state-restore",
                         backup_data,
@@ -902,33 +858,6 @@ def run() -> None:
                     os.rename(str(tmp_file), str(_BACKUP_FILE))
                     last_snapshot_hash = snapshot_hash
                     log.info("daemon", f"State backup: {len(snapshot_json)} bytes")
-                    # Also write session.json to the active session folder
-                    if config.session_folder and config.session_folder.exists():
-                        session_json_path = config.session_folder / _SESSION_JSON_FILENAME
-                        payload = dict(snapshot)
-                        payload["_meta"] = {
-                            "saved_at": datetime.now().isoformat(timespec="seconds"),
-                            "session_folder": config.session_folder.name,
-                            "schema_version": 1,
-                        }
-                        _atomic_write(session_json_path, json.dumps(payload, indent=2, default=str))
-
-                # Conference mode auto-folder (runs only once when mode=conference and no folder yet)
-                if snapshot.get("state", {}).get("mode") == "conference" and not config.session_folder:
-                    _sf_root_str = os.environ.get(
-                        "SESSIONS_FOLDER",
-                        str(Path.home() / "My Drive" / "Cursuri" / "###sesiuni"),
-                    )
-                    _sf_root = Path(_sf_root_str).expanduser()
-                    if _sf_root.exists() and _sf_root.is_dir():
-                        date_str = datetime.now().strftime("%Y-%m-%d")
-                        time_str = datetime.now().strftime("%H:%M")
-                        folder_name = f"{date_str} {time_str} talk"
-                        new_folder = _sf_root / folder_name
-                        new_folder.mkdir(parents=True, exist_ok=True)
-                        config = dc_replace(config, session_folder=new_folder)
-                        sessions_root = _sf_root
-                        log.info("session", f"Conference mode: auto-created session folder {new_folder}")
             except Exception as e:
                 log.error("daemon", f"State snapshot failed: {e}")
 

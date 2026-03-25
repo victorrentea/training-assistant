@@ -106,8 +106,6 @@ def _serialize_state() -> dict:
         "summary_points": state.summary_points,
         # Needs restore flag
         "needs_restore": state.needs_restore,
-        # Session folder name
-        "session_folder_name": state.session_folder_name,
     }
 
 
@@ -224,8 +222,6 @@ async def restore_state_snapshot(body: dict):
     # Summary
     if "summary_points" in data:
         state.summary_points = data["summary_points"]
-    if "session_folder_name" in data:
-        state.session_folder_name = data["session_folder_name"]
 
     # Mark as restored
     state.needs_restore = False

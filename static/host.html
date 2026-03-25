@@ -275,21 +275,6 @@
         <button class="btn btn-sm" id="btn-pause-session" onclick="togglePauseSession()" title="Pause/resume transcript collection" style="display:none">⏸ Pause</button>
       </div>
       <div id="session-stack-list"></div>
-      <div id="session-folder-row" style="display:none; margin-top:8px;">
-        <div style="font-size:12px; color:var(--text-muted); margin-bottom:4px;">
-          Session folder <span id="session-folder-current" style="color:var(--accent2)"></span>
-        </div>
-        <div style="display:flex; gap:6px;">
-          <input id="session-folder-input" type="text" placeholder="e.g. Spring Boot"
-                 style="flex:1; font-size:13px;"
-                 oninput="document.getElementById('session-folder-btn').disabled = !this.value.trim();"
-                 onkeydown="if(event.key==='Enter' && this.value.trim()) setSessionFolder()" />
-          <button id="session-folder-btn" class="btn btn-sm" onclick="setSessionFolder()" disabled>Set folder</button>
-        </div>
-        <div style="font-size:11px; color:var(--warn); margin-top:4px;" id="no-folder-warning">
-          ⚠ No session folder — state will be lost on server restart
-        </div>
-      </div>
     </div>
     <div class="right-footer">
       <span style="display:flex; align-items:center; gap:.5rem; flex-wrap:nowrap; min-width:0;">
