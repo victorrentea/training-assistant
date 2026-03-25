@@ -34,21 +34,27 @@ def parse_txt_entries_with_datetimes(
             continue
         m = _DATETIME_TS_RE.match(line)
         if m:
-            dt = datetime(
-                int(m.group(1)), int(m.group(2)), int(m.group(3)),
-                int(m.group(4)), int(m.group(5)), int(m.group(6)),
-            )
-            entries.append((dt, m.group(7).strip()))
-            continue
+            try:
+                dt = datetime(
+                    int(m.group(1)), int(m.group(2)), int(m.group(3)),
+                    int(m.group(4)), int(m.group(5)), int(m.group(6)),
+                )
+                entries.append((dt, m.group(7).strip()))
+                continue
+            except ValueError:
+                pass
         if file_date:
             m2 = _TIME_ONLY_TS_RE.match(line)
             if m2:
-                dt = datetime(
-                    file_date.year, file_date.month, file_date.day,
-                    int(m2.group(1)), int(m2.group(2)), int(m2.group(3)),
-                )
-                entries.append((dt, m2.group(4).strip()))
-                continue
+                try:
+                    dt = datetime(
+                        file_date.year, file_date.month, file_date.day,
+                        int(m2.group(1)), int(m2.group(2)), int(m2.group(3)),
+                    )
+                    entries.append((dt, m2.group(4).strip()))
+                    continue
+                except ValueError:
+                    pass
         entries.append((None, line))
     return entries
 
