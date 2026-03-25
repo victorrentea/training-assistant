@@ -1,7 +1,7 @@
 {
-  "sha": "8e841431d6890526aa27241cbeecd2ab80f9fb2b",
-  "timestamp": "2026-03-25 21:35",
+  "sha": "3c561f0171e74f75e86c9fad04c8dcef6ac53a11",
+  "timestamp": "2026-03-25 21:37",
   "changelog": [
-    "Format work hours as days plus hours"
+    "docs: add slides sequence diagram"
   ]
 }
