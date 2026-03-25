@@ -1,7 +1,7 @@
 {
-  "sha": "6b26f50b40043562843639520bb792aebfb0bec1",
-  "timestamp": "2026-03-25 20:27",
+  "sha": "c0ccb81ad2f19d21322e50b9c15e59093f9ee644",
+  "timestamp": "2026-03-25 20:28",
   "changelog": [
-    "Disable summary badge blink while paused"
+    "Show conversations before key points in badge"
   ]
 }
