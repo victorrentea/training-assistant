@@ -1,7 +1,7 @@
 {
-  "sha": "21c8c1b235f37b88efd8efe053dba3dbd45f6ae8",
+  "sha": "281d1fd4d7529ec989bdaef860ed98d7d0a969a3",
   "timestamp": "2026-03-25 08:40",
   "changelog": [
-    "feat: host can trigger heart on overlay by clicking the heart badge"
+    "fix: add #notif-btn to participant HTML so notification button can be shown"
   ]
 }
