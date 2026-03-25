@@ -2677,8 +2677,8 @@ function renderSessionPanel() {
     }
     const pauseBtn = document.getElementById('btn-pause-session');
     if (pauseBtn) {
-      pauseBtn.textContent = paused ? '▶️' : '⏸️';
-      pauseBtn.title = paused ? 'Resume recording' : 'Pause recording';
+      pauseBtn.textContent = paused ? '▶️' : '⏹️';
+      pauseBtn.title = paused ? 'Resume transcription' : 'Stop transcription (session stays open)';
       pauseBtn.classList.toggle('session-pause-blinking', paused);
     }
 
@@ -2735,13 +2735,6 @@ function startTalk() {
 function endTalk() {
   fetch('/api/session/end_talk', {method: 'POST'})
     .catch(e => console.error('endTalk failed:', e));
-}
-
-function endSession() {
-  if (!sessionMain) return;
-  if (!window.confirm('Stop current session and end recording?')) return;
-  fetch('/api/session/end', {method: 'POST'})
-    .catch(e => console.error('endSession failed:', e));
 }
 
 function createSession() {

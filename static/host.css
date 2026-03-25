@@ -1250,13 +1250,6 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
   outline-offset: 2px;
   border-radius: 4px;
 }
-.session-action-emoji-stop {
-  color: #ff8a80;
-  opacity: .75;
-}
-.session-action-emoji-stop:hover {
-  opacity: 1;
-}
 .session-control-separator {
   opacity: .45;
   font-size: .75rem;
