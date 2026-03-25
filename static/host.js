@@ -2526,10 +2526,15 @@ function renderSessionPanel() {
   if (main) {
     const nameEl = document.getElementById('session-main-name');
     if (nameEl) nameEl.textContent = main.name;
+    const paused = main.status === 'paused';
+    const statusEl = document.getElementById('session-status');
+    if (statusEl) {
+      statusEl.textContent = paused ? 'paused' : 'running';
+      statusEl.className = 'session-status-badge' + (paused ? ' session-status-paused' : ' wave-char');
+    }
     const pauseBtn = document.getElementById('btn-pause-session');
     if (pauseBtn) {
-      const paused = main.status === 'paused';
-      pauseBtn.textContent = paused ? 'RESUME' : 'PAUSE';
+      pauseBtn.textContent = paused ? '▶️' : '⏸️';
       pauseBtn.title = paused ? 'Resume recording' : 'Pause recording';
       pauseBtn.classList.toggle('session-pause-blinking', paused);
     }
