@@ -1,7 +1,7 @@
 {
-  "sha": "81e8c23804844b801be64739024e7ac8c4b76565",
-  "timestamp": "2026-03-25 01:59",
+  "sha": "2ce779e502106ecb895a3b80c3dad885b249fed6",
+  "timestamp": "2026-03-25 02:05",
   "changelog": [
-    "chore(bmad): add native Copilot chat modes for BMAD agents"
+    "chore(bmad): migrate to native VS Code .agent.md format"
   ]
 }
