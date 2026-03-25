@@ -35,6 +35,7 @@ class EmojiAnimator {
     // Pulse: layers stored so clicking again can stop it
     private var pulseRunning = false
     private var _pulseDimLayer: CALayer?
+    private var _pulseGridLayer: CALayer?
     private var _pulseEcgLayer: CALayer?
 
     init(hostLayer: CALayer) {
@@ -1279,6 +1280,51 @@ class EmojiAnimator {
         dimIn.isRemovedOnCompletion = false
         dimLayer.add(dimIn, forKey: "dimIn")
 
+        // EKG graph-paper grid (green, between dark overlay and ECG line)
+        let gridContainer = CALayer()
+        _pulseGridLayer = gridContainer
+        gridContainer.frame = bounds
+        gridContainer.opacity = 0
+        hostLayer.addSublayer(gridContainer)
+
+        let minorSpacing: CGFloat = 20
+        let majorEvery: Int = 5
+        let minorPath = CGMutablePath()
+        let majorPath = CGMutablePath()
+
+        var xi = 0; var x: CGFloat = 0
+        while x <= bounds.width {
+            if xi % majorEvery == 0 { majorPath.move(to: CGPoint(x: x, y: 0)); majorPath.addLine(to: CGPoint(x: x, y: bounds.height)) }
+            else                    { minorPath.move(to: CGPoint(x: x, y: 0)); minorPath.addLine(to: CGPoint(x: x, y: bounds.height)) }
+            x += minorSpacing; xi += 1
+        }
+        var yi = 0; var y: CGFloat = 0
+        while y <= bounds.height {
+            if yi % majorEvery == 0 { majorPath.move(to: CGPoint(x: 0, y: y)); majorPath.addLine(to: CGPoint(x: bounds.width, y: y)) }
+            else                    { minorPath.move(to: CGPoint(x: 0, y: y)); minorPath.addLine(to: CGPoint(x: bounds.width, y: y)) }
+            y += minorSpacing; yi += 1
+        }
+
+        let minorGrid = CAShapeLayer()
+        minorGrid.path = minorPath
+        minorGrid.strokeColor = NSColor(red: 0.0, green: 0.8, blue: 0.35, alpha: 0.18).cgColor
+        minorGrid.lineWidth = 0.5
+        minorGrid.fillColor = nil
+        gridContainer.addSublayer(minorGrid)
+
+        let majorGrid = CAShapeLayer()
+        majorGrid.path = majorPath
+        majorGrid.strokeColor = NSColor(red: 0.0, green: 0.8, blue: 0.35, alpha: 0.45).cgColor
+        majorGrid.lineWidth = 1.0
+        majorGrid.fillColor = nil
+        gridContainer.addSublayer(majorGrid)
+
+        let gridIn = CABasicAnimation(keyPath: "opacity")
+        gridIn.fromValue = 0; gridIn.toValue = 1
+        gridIn.duration = 0.5
+        gridIn.fillMode = .forwards; gridIn.isRemovedOnCompletion = false
+        gridContainer.add(gridIn, forKey: "gridIn")
+
         // ECG canvas — full screen (amplitude needs full height)
         // Load the extracted ECG image (green line, transparent background)
         guard let url = Bundle.module.url(forResource: "ecg_line", withExtension: "png", subdirectory: "Resources"),
@@ -1322,16 +1368,19 @@ class EmojiAnimator {
         reveal.isRemovedOnCompletion = false
 
         CATransaction.begin()
-        CATransaction.setCompletionBlock { [weak self, weak dimLayer, weak ecgLayer] in
+        CATransaction.setCompletionBlock { [weak self, weak dimLayer, weak gridContainer, weak ecgLayer] in
             NSAnimationContext.runAnimationGroup({ ctx in
                 ctx.duration = 0.5
                 dimLayer?.opacity = 0
+                gridContainer?.opacity = 0
                 ecgLayer?.opacity = 0
             }, completionHandler: {
                 dimLayer?.removeFromSuperlayer()
+                gridContainer?.removeFromSuperlayer()
                 ecgLayer?.removeFromSuperlayer()
                 self?.pulseRunning = false
                 self?._pulseDimLayer = nil
+                self?._pulseGridLayer = nil
                 self?._pulseEcgLayer = nil
             })
         }
@@ -1351,15 +1400,19 @@ class EmojiAnimator {
         pulseRunning = false
         SoundManager.shared.stop("dying.mp3")
         let dim = _pulseDimLayer
+        let grid = _pulseGridLayer
         let ecg = _pulseEcgLayer
         _pulseDimLayer = nil
+        _pulseGridLayer = nil
         _pulseEcgLayer = nil
         NSAnimationContext.runAnimationGroup({ ctx in
             ctx.duration = 0.5
             dim?.opacity = 0
+            grid?.opacity = 0
             ecg?.opacity = 0
         }, completionHandler: {
             dim?.removeFromSuperlayer()
+            grid?.removeFromSuperlayer()
             ecg?.removeFromSuperlayer()
         })
     }
