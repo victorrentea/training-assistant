@@ -922,6 +922,15 @@ def test_timing_event_endpoint_returns_ok():
     assert resp.json() == {"ok": True}
 
 
+def test_timing_event_endpoint_warning_event_returns_ok():
+    state.reset()
+    client = TestClient(app)
+    resp = client.post("/api/session/timing_event",
+                       json={"event": "warning"},
+                       headers=_HOST_AUTH_HEADERS)
+    assert resp.status_code == 200
+
+
 class TestAvatarAssignment:
 
     def test_lotr_name_gets_matching_avatar(self):
