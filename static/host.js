@@ -401,7 +401,7 @@
     const btn = document.getElementById('summary-refresh-btn');
     const wmEl = document.getElementById('summary-watermark');
     if (!btn) return;
-    if (wmEl) wmEl.textContent = _transcriptLatestTs ? '📍' + _transcriptLatestTs.slice(0, 5) : '';
+    if (wmEl) wmEl.textContent = _transcriptLatestTs ? '⏱️' + _transcriptLatestTs.slice(0, 5) : '';
     const twoMinAgo = Date.now() - 2 * 60 * 1000;
     const lastGen = summaryUpdatedAt ? new Date(summaryUpdatedAt).getTime() : 0;
     btn.style.display = (!summaryUpdatedAt || lastGen < twoMinAgo) ? '' : 'none';
