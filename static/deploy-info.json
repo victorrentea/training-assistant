@@ -1,7 +1,7 @@
 {
-  "sha": "1a38f5750e5236aee66ad3fbf1ca73fb6d6a12f4",
-  "timestamp": "2026-03-25 08:36",
+  "sha": "51da8325bbe1d423ef58eb45c6bd857d5840a5c7",
+  "timestamp": "2026-03-25 08:37",
   "changelog": [
-    "fix: handle invalid hours in transcript timestamps gracefully"
+    "fix: suppress onboarding tour in tests and fix join() via evaluate"
   ]
 }
