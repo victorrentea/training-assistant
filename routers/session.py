@@ -58,12 +58,18 @@ async def end_session():
 @router.post("/api/session/pause", dependencies=[Depends(require_host_auth)])
 async def pause_session():
     state.session_request = {"action": "pause"}
+    if state.session_main:
+        state.session_main = {**state.session_main, "status": "paused"}
+        await broadcast_state()
     return {"ok": True}
 
 
 @router.post("/api/session/resume", dependencies=[Depends(require_host_auth)])
 async def resume_session():
     state.session_request = {"action": "resume"}
+    if state.session_main:
+        state.session_main = {**state.session_main, "status": "active"}
+        await broadcast_state()
     return {"ok": True}
 
 

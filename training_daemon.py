@@ -270,9 +270,12 @@ def _daemon_state_to_stack(daemon_state: dict) -> list[dict]:
 
 def _stack_to_daemon_state(stack: list[dict]) -> dict:
     """Convert in-memory session stack list to {main, talk} dict for persistence."""
+    def _with_status(s: dict) -> dict:
+        paused = any(p.get("to") is None for p in s.get("paused_intervals", []))
+        return {**s, "status": "paused" if paused else "active"}
     return {
-        "main": stack[0] if len(stack) >= 1 else None,
-        "talk": stack[1] if len(stack) >= 2 else None,
+        "main": _with_status(stack[0]) if len(stack) >= 1 else None,
+        "talk": _with_status(stack[1]) if len(stack) >= 2 else None,
     }
 
 
