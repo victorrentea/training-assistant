@@ -453,6 +453,7 @@
     const badge = document.getElementById('summary-badge');
     if (!badge) return;
     const transcriptPart = _transcriptLineCount > 0 ? ` · 💬 ${_transcriptLineCount}` : '';
+    const sessionPaused = _isSessionPaused(sessionMain);
 
     // Transcription warning: no effective content in last 5 minutes
     let noTranscriptWarn = false, noTranscriptTitle = '';
@@ -466,7 +467,7 @@
         noTranscriptTitle = `No transcription for ${Math.round(minAgo)} minutes`;
       }
     }
-    const flashStyle = noTranscriptWarn ? ' animation: flash-bg 1.4s ease-in-out infinite;' : '';
+    const flashStyle = (!sessionPaused && noTranscriptWarn) ? ' animation: flash-bg 1.4s ease-in-out infinite;' : '';
 
     if (summaryPoints.length) {
       badge.textContent = `🧠 ${summaryPoints.length}${transcriptPart}`;
@@ -476,7 +477,10 @@
     } else if (_summaryGenerating) {
       badge.textContent = `🧠${transcriptPart}`;
       badge.className = 'badge';
-      badge.style.cssText = `cursor:wait; color:var(--warn); border:1px solid var(--warn); animation: pulse 1.2s ease-in-out infinite${noTranscriptWarn ? ', flash-bg 1.4s ease-in-out infinite' : ''};`;
+      const anim = sessionPaused
+        ? ''
+        : ` animation: pulse 1.2s ease-in-out infinite${noTranscriptWarn ? ', flash-bg 1.4s ease-in-out infinite' : ''};`;
+      badge.style.cssText = `cursor:wait; color:var(--warn); border:1px solid var(--warn);${anim}`;
       badge.title = noTranscriptWarn ? noTranscriptTitle : `Generating key points from transcript… (${_transcriptLineCount} lines)`;
     } else {
       badge.textContent = `🧠${transcriptPart}`;
