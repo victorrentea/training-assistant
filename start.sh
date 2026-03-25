@@ -159,8 +159,7 @@ while true; do
 
     # Check if daemon exited
     if [ -n "$DAEMON_PID" ] && ! kill -0 "$DAEMON_PID" 2>/dev/null; then
-      wait "$DAEMON_PID" 2>/dev/null
-      DAEMON_EXIT=$?
+      wait "$DAEMON_PID" 2>/dev/null && DAEMON_EXIT=0 || DAEMON_EXIT=$?
       DAEMON_PID=""
       if [ $DAEMON_EXIT -eq 0 ]; then
         _log "start" "info" "🔴 daemon (clean exit)"
