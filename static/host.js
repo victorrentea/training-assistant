@@ -452,7 +452,7 @@
   function renderSummaryBadge() {
     const badge = document.getElementById('summary-badge');
     if (!badge) return;
-    const transcriptPart = _transcriptLineCount > 0 ? ` · 💬 ${_transcriptLineCount}` : '';
+    const transcriptPart = _transcriptLineCount > 0 ? `💬 ${_transcriptLineCount}` : '';
     const sessionPaused = _isSessionPaused(sessionMain);
 
     // Transcription warning: no effective content in last 5 minutes
@@ -470,12 +470,14 @@
     const flashStyle = (!sessionPaused && noTranscriptWarn) ? ' animation: flash-bg 1.4s ease-in-out infinite;' : '';
 
     if (summaryPoints.length) {
-      badge.textContent = `🧠 ${summaryPoints.length}${transcriptPart}`;
+      badge.textContent = _transcriptLineCount > 0
+        ? `${transcriptPart} > 🧠 ${summaryPoints.length}`
+        : `🧠 ${summaryPoints.length}`;
       badge.className = 'badge connected';
       badge.style.cssText = `cursor:pointer;${flashStyle}`;
       badge.title = noTranscriptWarn ? noTranscriptTitle : `${summaryPoints.length} key points · ${_transcriptLineCount} transcript lines (last 30 min) — click to view`;
     } else if (_summaryGenerating) {
-      badge.textContent = `🧠${transcriptPart}`;
+      badge.textContent = _transcriptLineCount > 0 ? `${transcriptPart} > 🧠 …` : '🧠 …';
       badge.className = 'badge';
       const anim = sessionPaused
         ? ''
@@ -483,7 +485,7 @@
       badge.style.cssText = `cursor:wait; color:var(--warn); border:1px solid var(--warn);${anim}`;
       badge.title = noTranscriptWarn ? noTranscriptTitle : `Generating key points from transcript… (${_transcriptLineCount} lines)`;
     } else {
-      badge.textContent = `🧠${transcriptPart}`;
+      badge.textContent = _transcriptLineCount > 0 ? `${transcriptPart} > 🧠 0` : '🧠';
       badge.className = _transcriptLineCount > 0 ? 'badge' : 'badge disconnected';
       badge.style.cssText = `cursor:pointer;${flashStyle}`;
       badge.title = noTranscriptWarn ? noTranscriptTitle
