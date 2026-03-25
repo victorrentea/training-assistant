@@ -416,6 +416,8 @@
       const d = new Date(summaryUpdatedAt);
       timeEl.textContent = 'Updated ' + d.toLocaleTimeString();
     }
+    const dlBtn = document.getElementById('keypoints-download');
+    if (dlBtn) dlBtn.style.display = summaryPoints.length ? '' : 'none';
   }
 
   function toggleSummaryModal() {
@@ -718,6 +720,21 @@
       }
     }
     _renderNotesBadge();
+  }
+
+  function downloadKeyPoints() {
+    if (!summaryPoints.length) return;
+    const lines = summaryPoints.map(p => {
+      const text = typeof p === 'string' ? p : p.text;
+      return '• ' + text;
+    });
+    const content = 'Key Points\n' + '='.repeat(10) + '\n\n' + lines.join('\n');
+    const blob = new Blob([content], { type: 'text/plain' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `key-points-${new Date().toISOString().slice(0, 10)}.txt`;
+    a.click();
+    URL.revokeObjectURL(a.href);
   }
 
   function downloadHostNotes() {
