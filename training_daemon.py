@@ -27,10 +27,6 @@ from dataclasses import replace as dc_replace
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
-from daemon.transcript_timestamps import (
-    append_empty_line_then_timestamp,
-    infer_template_from_first_line,
-)
 from quiz_core import (
     config_from_env, find_session_folder, auto_generate, auto_generate_topic, auto_refine,
     post_status, _get_json, _post_json, DAEMON_POLL_INTERVAL, DEFAULT_TRANSCRIPT_MINUTES,
@@ -46,12 +42,15 @@ from daemon.session_transcript import (
     format_startup_log,
     parse_txt_entries_with_datetimes,
 )
+from daemon.transcript_normalizer import (
+    find_latest_raw_transcript_file,
+    normalize_latest_in_folder,
+)
 from daemon import log
 
 _LOCK_FILE = Path("/tmp/training_daemon.lock")
 _HEARTBEAT_INTERVAL = 1.0  # seconds between heartbeat writes
 _HEARTBEAT_STALE_THRESHOLD = 10.0  # seconds before heartbeat is considered stale
-_TIMESTAMP_INTERVAL_SECONDS = float(os.environ.get("TRANSCRIPT_TIMESTAMP_INTERVAL_SECONDS", "3"))
 EXIT_CODE_UPDATE = 42  # signals start.sh to git pull and restart
 _KEY_POINTS_FILE = "transcript_discussion.md"
 _KEY_POINTS_FILE_LEGACY_MD = "transcript_keypoints.md"
@@ -335,73 +334,26 @@ def _sync_session_to_server(
 
 
 class TranscriptTimestampAppender:
-    """Append heartbeat timestamp lines to the latest transcript text file."""
+    """Deprecated no-op kept for compatibility with older tests/hooks.
 
-    def __init__(self, folder: Path, interval_seconds: float = _TIMESTAMP_INTERVAL_SECONDS):
+    Raw transcript files must remain immutable; normalization happens in
+    separate output files via daemon.transcript_normalizer.
+    """
+
+    def __init__(self, folder: Path, interval_seconds: float = 0.0):
         self.folder = folder
         self.interval_seconds = interval_seconds
         self.enabled = False
-        self._next_append_at = 0.0
-        self._target_file: Path | None = None
-        self._template = None
-        self._startup_error_logged = False
-
-    def _resolve_target_file(self) -> Path | None:
-        if not self.folder.exists() or not self.folder.is_dir():
-            return None
-        _date_re = re.compile(r"^(\d{8})\s+(\d{4})\b")
-
-        def _sort_key(f: Path):
-            m = _date_re.match(f.name)
-            return m.group(1) + m.group(2) if m else ""
-
-        txt_files = sorted(
-            [f for f in self.folder.iterdir() if f.suffix.lower() == ".txt"],
-            key=_sort_key,
-        )
-        return txt_files[-1] if txt_files else None
-
-    def _log_startup_error_once(self, message: str) -> None:
-        if self._startup_error_logged:
-            return
-        log.error("daemon", message)
-        self._startup_error_logged = True
+        self._logged = False
 
     def start(self) -> None:
-        if self.interval_seconds <= 0:
-            self._log_startup_error_once(
-                "Timestamp appender disabled: INTERVAL_SECONDS must be > 0"
-            )
+        if self._logged:
             return
-
-        self._target_file = self._resolve_target_file()
-        if self._target_file is None:
-            self._log_startup_error_once(
-                f"Timestamp appender disabled: no .txt in {self.folder}"
-            )
-            return
-
-        self._template = infer_template_from_first_line(self._target_file)
-        self._next_append_at = time.monotonic()
-        self.enabled = True
-        log.info("daemon", f"Transcript timestamp appender enabled ({self.interval_seconds:.1f}s) on {self._target_file.name}")
+        log.info("daemon", "Transcript timestamp appender disabled (raw transcripts are read-only)")
+        self._logged = True
 
     def tick(self) -> None:
-        if not self.enabled:
-            return
-
-        now = time.monotonic()
-        if now < self._next_append_at:
-            return
-
-        try:
-            append_empty_line_then_timestamp(self._target_file, self._template)
-        except OSError as exc:
-            self.enabled = False
-            log.error("daemon", f"Timestamp appender stopped: {exc}")
-            return
-
-        self._next_append_at = now + self.interval_seconds
+        return
 
 
 def _read_lock() -> tuple[int | None, float | None]:
@@ -560,10 +512,10 @@ def run() -> None:
 
     # ── Log transcription time ranges at startup ──
     try:
-        files = sorted(config.folder.glob("*.txt"), key=lambda f: f.stat().st_mtime)
-        if files:
-            raw = files[-1].read_text(encoding="utf-8", errors="replace")
-            stem = files[-1].stem[:8]
+        raw_file = find_latest_raw_transcript_file(config.folder)
+        if raw_file:
+            raw = raw_file.read_text(encoding="utf-8", errors="replace")
+            stem = raw_file.stem[:8]
             try:
                 file_date = date(int(stem[:4]), int(stem[4:6]), int(stem[6:8]))
             except (ValueError, IndexError):
@@ -592,9 +544,6 @@ def run() -> None:
 
     log.info("daemon", f"Started — polling {config.server_url} every {DAEMON_POLL_INTERVAL}s")
 
-    timestamp_appender = TranscriptTimestampAppender(config.folder)
-    timestamp_appender.start()
-
     # Session state: the transcript text used to generate the current preview
     last_text: str | None = None
     last_quiz: dict | None = None
@@ -603,6 +552,7 @@ def run() -> None:
     last_heartbeat_at = 0.0
     last_session_check_at = 0.0
     last_transcript_stats_at = 0.0
+    last_normalize_at = 0.0
     last_transcript_line_count = -1
     last_notes_mtime: float = 0.0  # track notes file mtime for re-push on change
     last_auto_close_date: date | None = None   # prevent double-close on same calendar day
@@ -640,7 +590,13 @@ def run() -> None:
                 _write_lock()
                 last_heartbeat_at = now
 
-            timestamp_appender.tick()
+            # Keep normalized transcript files up to date without writing into raw inputs.
+            if now - last_normalize_at >= 3.0:
+                last_normalize_at = now
+                try:
+                    normalize_latest_in_folder(config.folder)
+                except Exception as e:
+                    log.error("transcript", f"Normalizer error: {e}")
 
             # ── Check for session management requests ──
             try:
