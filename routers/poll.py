@@ -18,11 +18,14 @@ logger = logging.getLogger(__name__)
 
 
 def _append_poll_to_quiz_md(poll: dict, correct_set: set) -> None:
-    """Append a closed poll with correct answers marked to quiz_md_content."""
+    """Append a closed poll with correct answers listed after options to quiz_md_content."""
     lines = [f"\n## {poll['question']}\n"]
     for opt in poll.get("options", []):
-        marker = "✅" if opt["id"] in correct_set else "❌"
-        lines.append(f"- {marker} {opt['text']}")
+        lines.append(f"- {opt['text']}")
+    correct_texts = [opt["text"] for opt in poll.get("options", []) if opt["id"] in correct_set]
+    lines.append("")
+    lines.append("Correct: " + ", ".join(correct_texts) if correct_texts else "Correct: (none marked)")
+    lines.append("\n---")
     state.quiz_md_content += "\n".join(lines) + "\n"
 
 _DEPLOY_INFO = Path(__file__).parent.parent / "static" / "deploy-info.json"
