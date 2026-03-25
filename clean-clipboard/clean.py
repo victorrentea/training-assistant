@@ -428,12 +428,17 @@ def main() -> None:
     _run_loop_ref = CFRunLoopGetCurrent()
     CFRunLoopAddSource(_run_loop_ref, source, kCFRunLoopCommonModes)
 
-    def on_sigint(signum, frame):
+    def on_shutdown(signum, frame):
         log("Shutting down...")
+        if _dictation_active:
+            _restore_dictation_volume()
         if _run_loop_ref:
             CFRunLoopStop(_run_loop_ref)
+        # Force exit if run loop doesn't stop within 2s
+        threading.Timer(2.0, lambda: os._exit(0)).start()
 
-    signal.signal(signal.SIGINT, on_sigint)
+    signal.signal(signal.SIGINT, on_shutdown)
+    signal.signal(signal.SIGTERM, on_shutdown)
 
     log("Clipboard cleaner started (CGEventTap).")
     log("Every Cmd+V is captured. Press Cmd+Ctrl+V to clean the last paste.")
