@@ -38,6 +38,23 @@ def test_extract_entries_time_only_uses_existing_elapsed_conversion(tmp_path):
     assert entries[0][1] == "[victor] hello"
 
 
+def test_extract_entries_does_not_skip_old_filename_with_new_timestamps(tmp_path):
+    transcript = tmp_path / "20260322 2100 Transcription.txt"
+    transcript.write_text(
+        "[2026-03-25 10:05:00.00] [victor] today line\n"
+        "[2026-03-22 10:05:00.00] [victor] old line\n"
+    )
+
+    start = datetime.fromisoformat("2026-03-25T10:00")
+    end = datetime.fromisoformat("2026-03-25T10:10")
+
+    entries = extract_entries(tmp_path, start, end)
+
+    assert [format_entry(dt, text) for dt, text in entries] == [
+        "2026-03-25T10:05 [victor] today line",
+    ]
+
+
 def test_summary_line_multiple_speakers():
     start = datetime.fromisoformat("2026-03-25T10:00")
     end = datetime.fromisoformat("2026-03-25T18:00")
