@@ -80,6 +80,15 @@ function formatElapsed(deployDate, now) {
   return 'from ' + _window.APP_VERSION;
 }
 
+function formatWorkHours(totalHoursRaw) {
+  const totalHours = Number(totalHoursRaw);
+  if (!Number.isFinite(totalHours) || totalHours <= 0) return '';
+  const roundedHours = Math.floor(totalHours);
+  const days = Math.floor(roundedHours / 24);
+  const hours = roundedHours % 24;
+  return days + 'd + ' + hours + 'h';
+}
+
 // --- from host.js: poll history logic ---
 function recordPollInHistory_logic(history, poll, correctIds) {
   // Extracted pure logic from recordPollInHistory (no localStorage dependency)
@@ -196,6 +205,18 @@ assertEq('1 hour ago', formatElapsed(base, new Date(base.getTime() + 3600000)), 
 assertEq('23 hours ago', formatElapsed(base, new Date(base.getTime() + 23 * 3600000)), '23h ago');
 assertEq('24+ hours shows version', formatElapsed(base, new Date(base.getTime() + 25 * 3600000)), 'from 2026-03-20 23:00');
 assertEq('future date clamps to 0s', formatElapsed(base, new Date(base.getTime() - 5000)), '0s ago');
+
+// ── formatWorkHours ──────────────────────────────────────────────────
+suite('formatWorkHours()');
+
+assertEq('74 hours -> 3d + 2h', formatWorkHours(74), '3d + 2h');
+assertEq('24 hours -> 1d + 0h', formatWorkHours(24), '1d + 0h');
+assertEq('5 hours -> 0d + 5h', formatWorkHours(5), '0d + 5h');
+assertEq('string number is supported', formatWorkHours('49'), '2d + 1h');
+assertEq('fractional values are floored', formatWorkHours(25.9), '1d + 1h');
+assertEq('zero hours -> empty', formatWorkHours(0), '');
+assertEq('negative hours -> empty', formatWorkHours(-3), '');
+assertEq('invalid value -> empty', formatWorkHours('abc'), '');
 
 // ── recordPollInHistory (pure logic) ─────────────────────────────────
 suite('recordPollInHistory() logic');
