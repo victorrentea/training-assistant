@@ -12,6 +12,14 @@
 - [x] Track request completion in `backlog.md`
 - [x] Run targeted tests and capture proof in review section
 
+## Follow-up request: include local materials/slides PDFs in Slides combo
+
+- [x] Discover PDFs from local `training-assistant/materials/slides` directory
+- [x] Expose discovered files through public slide-file endpoint
+- [x] Merge local discovered slides into `/api/slides` response
+- [x] Add tests for local discovery + file serving + merge behavior
+- [x] Run targeted tests
+
 ## Backlog item: periodic timestamps in transcription file
 
 - [x] Inspect existing transcription parser format in `quiz_core.py`
@@ -252,3 +260,6 @@
 - Verified with `pytest -q tests/test_e2e_quiz_summary.py -k "update_with_session or poll_after_request"` (2 passed).
 - Frontend syntax check: `node --check static/participant.js`.
 - Proof screenshot: `docs/superpowers/specs/gh67-slides-viewer.png`.
+- Follow-up implemented: `/api/slides` now auto-includes PDFs from local `training-assistant/materials/slides`, and serves them via `/api/slides/file/{slug}` for participant access.
+- Verified with `pytest -q tests/test_slides_api.py` (4 passed).
+- Verified with `pytest -q tests/test_main.py -k "api_slides_is_empty_by_default or quiz_status_updates_slides_and_api_returns_normalized_data or quiz_request_reports_has_slides_flag"` (3 passed, 120 deselected).
