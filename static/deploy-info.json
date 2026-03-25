@@ -1,7 +1,7 @@
 {
-  "sha": "166fdc621e5978cecea07f41f99bfc128f5eb424",
-  "timestamp": "2026-03-25 21:11",
+  "sha": "619043192c43c3ade662a1358fc7377dff359a82",
+  "timestamp": "2026-03-25 21:12",
   "changelog": [
-    "fix participant key points spacing"
+    "desktop-overlay: z icon, pulse transparency, vertical single-screen bar"
   ]
 }
