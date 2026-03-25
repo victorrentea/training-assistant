@@ -148,6 +148,7 @@
 - [x] Make mobile emoji reactions bigger (~8rem) and longer (~1.8s) — currently 5rem / 0.8s
 - [x] Click avatar to enlarge: mobile = almost full screen (~90vh/90vw), desktop = large overlay; show refresh 🔄 icon in bottom-right of enlarged view to re-roll avatar
 - [x] Avatar refresh via WebSocket: `refresh_avatar` message reassigns avatar ensuring no duplicates among currently connected participants
+- [x] GH#66: Added slides publishing support with `slides_daemon.py` (watch `.pptx`, CPU guard, PDF export, obfuscated slug URL publish) plus backend endpoint `/api/slides/current` for sharing the current PDF URL.
  ---
 
 ## Understanding design

@@ -241,6 +241,7 @@ async def status():
         "poll_active": state.poll_active,
         "vote_counts": state.vote_counts(),
         "total_votes": len(state.votes),
+        "slides_current": state.slides_current,
         "needs_restore": state.needs_restore,
     }
 
