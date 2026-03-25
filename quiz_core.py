@@ -181,10 +181,53 @@ _VTT_TS  = re.compile(r"(?:(\d+):)?(\d{2}):(\d{2})\.(\d{3})\s+-->")
 _SRT_TS  = re.compile(r"(\d{2}):(\d{2}):(\d{2}),(\d{3})\s+-->")
 _SRT_SEQ = re.compile(r"^\d+$")
 _TXT_TS_RE = re.compile(r"^\[\s*(?:\d{4}-\d{2}-\d{2}\s+)?(\d{2}):(\d{2}):(\d{2})\.\d+\s*\]\s*(.*)")
+# Matches only lines that have the full ISO date prefix — used to detect real-clock files
+_TXT_TS_ISO_RE = re.compile(r"^\[\s*\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}\.\d+\s*\]")
 
 
 def _ts_to_seconds(h, m, s) -> float:
     return int(h or 0) * 3600 + int(m) * 60 + int(s)
+
+
+def _is_elapsed_timestamps(timestamps: list[float]) -> bool:
+    """Return True if timestamps look like elapsed-from-recording-start rather than wall-clock.
+
+    WisperFlow historically used a cumulative elapsed counter that never resets,
+    so timestamps can exceed 24 h.  Even when capped at <24 h, elapsed sessions
+    start near 0 and the second meaningful cluster stays below 7 AM — a real
+    recording starting at 9 AM or later would have its first real entry ≥ 07:00.
+    Files that already contain ISO-date entries are handled separately (see _parse_txt).
+    """
+    if not timestamps:
+        return False
+    if max(timestamps) >= 86400:  # > 24 h → impossible as clock time
+        return True
+    # Look at entries that have moved past the 2-minute init window
+    second_cluster = [t for t in timestamps if t > 120]
+    if not second_cluster:
+        return True  # only init entries
+    # If the earliest meaningful entry is before 7 AM it's almost certainly elapsed
+    return min(second_cluster) < 7 * 3600
+
+
+def _find_realclock_split(timestamps: list[float]) -> float | None:
+    """Detect if a file switches from elapsed to real-clock mid-way.
+
+    Some files have a small block of elapsed entries (WisperFlow init) followed by
+    a big jump to real wall-clock entries (e.g. 00:00–00:08 elapsed, then 14:59 real).
+    Returns the secs threshold at which real-clock entries start, or None if no split.
+    """
+    sorted_ts = sorted(set(t for t in timestamps if t > 0))
+    if not sorted_ts:
+        return None
+    prev = 0.0
+    for ts in sorted_ts:
+        gap = ts - prev
+        # A gap > 1 h that lands in realistic daytime (≥ 07:00) signals a switch
+        if gap > 3600 and ts >= 7 * 3600:
+            return ts
+        prev = ts
+    return None
 
 
 def _parse_vtt(text: str) -> list:
@@ -225,14 +268,24 @@ def _parse_srt(text: str) -> list:
     return entries
 
 
-def _parse_txt(text: str) -> list:
+def _parse_txt(text: str, session_start_secs: int | None = None) -> list:
+    """Parse a WisperFlow .txt transcript.
+
+    session_start_secs: seconds-since-midnight of the recording start (from filename).
+    When provided, elapsed-style timestamps are shifted to real wall-clock values.
+    Files that already contain ISO-date-prefixed entries are left untouched because
+    their HH values already represent real wall-clock time.
+    """
     entries = []
+    has_iso = False
     for line in text.splitlines():
         line = line.strip()
         if not line:
             continue
         m = _TXT_TS_RE.match(line)
         if m:
+            if _TXT_TS_ISO_RE.match(line):
+                has_iso = True
             txt = m.group(4).strip() if m.group(4) else ""
             if txt:
                 # Normalize "Speaker:\ttext" → "Speaker: text"
@@ -240,6 +293,18 @@ def _parse_txt(text: str) -> list:
                 entries.append((_ts_to_seconds(m.group(1), m.group(2), m.group(3)), txt))
         else:
             entries.append((None, line))
+
+    # Convert elapsed → real wall-clock only for plain-timestamp files
+    if session_start_secs is not None and not has_iso:
+        all_ts = [secs for secs, _ in entries if secs is not None]
+        if _is_elapsed_timestamps(all_ts):
+            # Check if file has a mixed format: elapsed init block + real-clock main block
+            split = _find_realclock_split(all_ts)
+            entries = [
+                (secs + session_start_secs if secs is not None and (split is None or secs < split) else secs, txt)
+                for secs, txt in entries
+            ]
+
     return entries
 
 
@@ -295,7 +360,17 @@ def load_transcription_files(folder: Path, since_date: date | None = None) -> li
         elif ext == ".srt":
             entries = _parse_srt(raw)
         else:
-            entries = _parse_txt(raw)
+            # Derive session start time from filename (e.g. "20250303 1402") so that
+            # elapsed-style timestamps can be converted to real wall-clock values.
+            session_start_secs = None
+            fm = _FILENAME_DATE_RE.match(f.name)
+            if fm:
+                try:
+                    h, mi = int(fm.group(2)[:2]), int(fm.group(2)[2:4])
+                    session_start_secs = h * 3600 + mi * 60
+                except (ValueError, IndexError):
+                    pass
+            entries = _parse_txt(raw, session_start_secs=session_start_secs)
         all_entries.extend(entries)
 
     return all_entries
@@ -331,7 +406,7 @@ def extract_last_n_minutes(entries: list, minutes: int) -> str:
         if ts - last_marker_ts >= 60:
             h, remainder = divmod(int(ts), 3600)
             m, _ = divmod(remainder, 60)
-            parts.append(f"\n[{h:02d}:{m:02d}]")
+            parts.append(f"\n[{h % 24:02d}:{m:02d}]")
             last_marker_ts = ts
         parts.append(txt)
     text = " ".join(parts)
@@ -376,7 +451,7 @@ def extract_text_for_time_window(
         if ts - last_marker_ts >= 60:
             h, remainder = divmod(int(ts), 3600)
             m, _ = divmod(remainder, 60)
-            parts.append(f"\n[{h:02d}:{m:02d}]")
+            parts.append(f"\n[{h % 24:02d}:{m:02d}]")
             last_marker_ts = ts
         parts.append(txt)
 
@@ -387,7 +462,11 @@ def extract_text_for_time_window(
 
 
 def extract_all_text(entries: list) -> str:
-    """Extract all transcript text with [HH:MM] markers at ~1 min intervals."""
+    """Extract all transcript text with [HH:MM] markers at ~1 min intervals.
+
+    Timestamps may exceed 86400 s (midnight crossings after elapsed→clock conversion);
+    h % 24 keeps the displayed hour in the valid 0-23 range.
+    """
     timed = [(ts, txt) for ts, txt in entries if ts is not None]
     if not timed:
         return " ".join(txt for _, txt in entries).strip()
@@ -398,7 +477,7 @@ def extract_all_text(entries: list) -> str:
         if ts - last_marker_ts >= 60:
             h, remainder = divmod(int(ts), 3600)
             m, _ = divmod(remainder, 60)
-            parts.append(f"\n[{h:02d}:{m:02d}]")
+            parts.append(f"\n[{h % 24:02d}:{m:02d}]")
             last_marker_ts = ts
         parts.append(txt)
     return " ".join(parts).strip()
