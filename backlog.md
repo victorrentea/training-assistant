@@ -3,6 +3,7 @@
 - [x] ui: participant Key Points label now includes spacing between count and text (`🧠 38 Key Points` instead of `🧠 38Key Points`)
 - [x] ui: session panel compacted for host screen — session controls are clickable emoji-only (no button chrome), pause is followed by a vertical separator then `🎙️▶️`, and current session now shows transcript active time windows under the row.
 - [x] desktop-overlay: replaced Zorro button icon from battle swords to a little `z`, made Pulse/EKG background layers more transparent, and switched single-monitor right-edge action panel to vertical stacking.
+- [x] desktop-overlay: removed underline below selected action button; selection feedback now uses gray background only.
 - [x] ui: session recording control clarified as pause/resume — `⏸️` pauses transcription but keeps session open, `▶️` resumes.
 - [x] ui: when session is paused, summary/keypoints bottom badge no longer blinks (no pulse/flash animation).
 - [x] ui: host summary badge now shows conversation count first, then `>` then keypoint count (ex: `💬 70 > 🧠 38`).

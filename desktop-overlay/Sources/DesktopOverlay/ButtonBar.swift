@@ -265,7 +265,6 @@ private class RoundEmojiButton: NSView {
     private var isDragging = false
     private var dragOrigin: NSPoint = .zero
     private var bgLayer: CALayer!
-    private var underlineLayer: CALayer!
     private let dragThreshold: CGFloat = 3
     private let hoverBgColor = NSColor(white: 0.75, alpha: 0.45).cgColor
     private let pressBgColor = NSColor(white: 0.75, alpha: 0.75).cgColor
@@ -300,15 +299,6 @@ private class RoundEmojiButton: NSView {
         textLayer.contentsScale = NSScreen.screens.first?.backingScaleFactor ?? 2.0
         layer?.addSublayer(textLayer)
 
-        // Underline: thin line at bottom, hidden by default
-        underlineLayer = CALayer()
-        let ulColor = labelColor ?? NSColor(white: 0.85, alpha: 0.9).cgColor
-        underlineLayer.backgroundColor = ulColor
-        underlineLayer.frame = CGRect(x: 5, y: 1, width: bounds.width - 10, height: 2)
-        underlineLayer.cornerRadius = 1
-        underlineLayer.opacity = 0
-        layer?.addSublayer(underlineLayer)
-
         let ta = NSTrackingArea(rect: bounds,
                                 options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect],
                                 owner: self, userInfo: nil)
@@ -325,7 +315,6 @@ private class RoundEmojiButton: NSView {
         CATransaction.begin()
         CATransaction.setAnimationDuration(0.12)
         bgLayer.opacity = 1
-        underlineLayer.opacity = 1
         CATransaction.commit()
     }
 
@@ -334,7 +323,6 @@ private class RoundEmojiButton: NSView {
         CATransaction.begin()
         CATransaction.setAnimationDuration(0.2)
         bgLayer.opacity = 0
-        underlineLayer.opacity = 0
         CATransaction.commit()
     }
 
@@ -346,7 +334,6 @@ private class RoundEmojiButton: NSView {
         CATransaction.setAnimationDuration(0.08)
         bgLayer.backgroundColor = pressBgColor
         bgLayer.opacity = 1
-        underlineLayer.opacity = 1
         layer?.setAffineTransform(CGAffineTransform(scaleX: 0.9, y: 0.9))
         CATransaction.commit()
     }
@@ -363,7 +350,6 @@ private class RoundEmojiButton: NSView {
             CATransaction.setAnimationDuration(0.08)
             bgLayer.backgroundColor = hoverBgColor
             bgLayer.opacity = 0
-            underlineLayer.opacity = 0
             layer?.setAffineTransform(.identity)
             CATransaction.commit()
         }
@@ -381,7 +367,6 @@ private class RoundEmojiButton: NSView {
         CATransaction.setAnimationDuration(0.08)
         bgLayer.backgroundColor = hoverBgColor
         bgLayer.opacity = 0
-        underlineLayer.opacity = 0
         layer?.setAffineTransform(.identity)
         CATransaction.commit()
 
