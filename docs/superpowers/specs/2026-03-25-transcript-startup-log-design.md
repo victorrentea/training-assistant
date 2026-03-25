@@ -7,10 +7,7 @@
 
 ## Goal
 
-Replace the current minimal transcript stats line (`46 lines, latest=36h58m`) with a richer one-time startup log that shows:
-- how far the summarizer has processed (watermark)
-- how many lines are still unprocessed
-- total session lines and the active time segments the session covered
+Replace the current startup transcript log line (produced by `format_time_ranges`) with a richer format that adds the summarizer watermark, unprocessed-line count, and the active session segments shown as bracket-separated ranges.
 
 ---
 
@@ -30,90 +27,140 @@ Fresh session (nothing summarised yet):
 Watermark: —, Unprocessed: 100 lines, session: 100 lines during [9:30-now...
 ```
 
+Session already ended:
+```
+Watermark: 17:00, Unprocessed: 0 lines, session: 250 lines during [9:30-12:30] [13:30-17:30]
+```
+
+---
+
+## Entry Type
+
+All transcript entries used in this feature are `(datetime|None, str)` tuples produced by
+`parse_txt_entries_with_datetimes()` from `daemon/session_transcript.py`.
+This is what the existing startup block already uses (line ~567 of `training_daemon.py`).
+
 ---
 
 ## Fields
 
+### Non-empty timed entries (base filter)
+
+Filter the raw `entries` list once at the top of the helper:
+
+```python
+non_empty = [(dt, txt) for dt, txt in entries if dt is not None and txt.strip()]
+```
+
+All three counts below operate on `non_empty`.
+
+---
+
 ### Watermark
-The timestamp of the last transcript entry that has been processed by the summariser.
 
-- Source: `entries[summary_watermark - 1]` (the last entry included in the watermark count).
+The wall-clock time of the last transcript entry included in the summarizer watermark.
+
+- Source: `non_empty[summary_watermark - 1][0]` — a `datetime` object.
 - If `summary_watermark == 0`: display `—`.
-- **Day N rule:** compute `watermark_date` from the timestamp seconds.
-  - If `watermark_date == today` → show `HH:MM` only.
-  - If `watermark_date < today` → show `Day N HH:MM` where N = `(watermark_date − session_start_date).days + 1`.
+- **Day N rule:**
+  - `watermark_date = watermark_dt.date()`
+  - If `watermark_date == today` → `HH:MM`
+  - If `watermark_date < today` → `Day N HH:MM` where N = `(watermark_date − session_start_date).days + 1`
+  - `session_start_date` comes from `_session_start_date(session)` (existing helper, line ~174 of `training_daemon.py`)
 
-### Unprocessed
-`len(non_empty_session_entries) − summary_watermark`
+### Unprocessed lines
 
-Non-empty entries are those with a non-None timestamp and non-blank text, filtered to the current session's time window.
+```python
+unprocessed = len(non_empty) - summary_watermark
+```
 
 ### Session lines
-Count of non-empty transcript entries whose timestamp falls within `[session.started_at, session.ended_at or now]`.
+
+Count of `non_empty` entries that fall within the session's active windows:
+
+```python
+session_lines = count_lines_in_windows(non_empty, windows)
+```
+
+where `windows = compute_active_windows(session, now)` — both already exist in `daemon/session_transcript.py`.
+
+---
 
 ### Segments (the `during [...]` part)
-Computed from `session_stack[-1]` (the topmost active session — may be a talk sub-session if the daemon starts mid-talk).
 
-Algorithm:
-1. Start at `session["started_at"]`.
-2. Walk `session.get("paused_intervals", [])` in chronological order.
-3. Each interval `{from, to}` closes the current segment at `from` and opens a new one at `to` (if `to` is not None).
-4. After all intervals, close the final segment at `session["ended_at"]` if set, otherwise append `now...`.
+Use `compute_active_windows(session, now)` to get the list of `(start_dt, end_dt)` tuples.
 
-**Segment time format:**
-- Compute `segment_date` for each boundary timestamp (same seconds → date logic as watermark).
-- If `segment_date == today` → `HH:MM`.
-- If `segment_date < today` → `Day N HH:MM`.
-- Last open segment: replace closing time with `now...` (no Day N needed for the open end).
+**Open session detection** (determines whether the last segment shows `now...`):
+
+```python
+is_ongoing = (
+    session.get("ended_at") is None
+    and not any(not p.get("to") for p in session.get("paused_intervals", []))
+)
+```
+
+If `is_ongoing` is True, replace the last window's end display with `now...`.
+
+**Segment time formatting:**
+
+For each boundary `dt: datetime`:
+- `dt_date = dt.date()`
+- If `dt_date == today` → `HH:MM`
+- If `dt_date < today` → `Day N HH:MM` where N = `(dt_date − session_start_date).days + 1`
+
+The open-end `now...` has no Day N prefix.
 
 ---
 
 ## Implementation
 
-### New helper function
+### New function in `daemon/session_transcript.py`
 
 ```python
-def _format_transcript_startup_log(
-    entries: list,
-    session: dict,
+def format_startup_log(
+    entries: list[tuple[Optional[datetime], str]],
+    windows: list[tuple[datetime, datetime]],
     summary_watermark: int,
-    now: datetime,
+    is_ongoing: bool,
+    session_start_date: date,
+    today: date,
 ) -> str:
 ```
 
-Located in `training_daemon.py` (near other session helpers).
+Takes pre-computed `windows` (from `compute_active_windows`) so it does not need to know
+the session dict directly. `is_ongoing` is computed at the call site (see above).
 
-**Inputs:**
-- `entries` — full list of `(ts, txt)` tuples from `load_transcription_files()`
-- `session` — `session_stack[-1]`
-- `summary_watermark` — integer watermark loaded from `_load_key_points()`
-- `now` — `datetime.now()` at startup
+**Rationale for placing in `session_transcript.py`:** it is pure formatting over entries and
+windows, which is exactly the existing module's scope. The existing `format_time_ranges`
+remains in the module (it is tested separately); the new function replaces its call at startup.
 
-**Returns:** the formatted log string.
+### Call site changes in `training_daemon.py`
 
-### Call site
-
-Called **once at startup**, after `_load_key_points()` and the initial `load_transcription_files()` call, before the main daemon loop begins. Log via `log.info("transcript", ...)`.
-
-The existing 10-second periodic stats push (`_post_json /api/transcript-status`) is **unchanged**.
-
----
-
-## Day N Computation Helper
+Replace the block at lines ~568–572:
 
 ```python
-def _ts_to_display_time(ts_secs: float, session_start_date: date, today: date) -> str:
-    """Format a timestamp (seconds) as HH:MM or 'Day N HH:MM'."""
-    day_offset = int(ts_secs) // 86400
-    ts_date = session_start_date + timedelta(days=day_offset)
-    hh = (int(ts_secs) % 86400) // 3600
-    mm = (int(ts_secs) % 3600) // 60
-    time_str = f"{hh:02d}:{mm:02d}"
-    if ts_date == today:
-        return time_str
-    day_n = (ts_date - session_start_date).days + 1
-    return f"Day {day_n} {time_str}"
+# Before:
+windows = compute_active_windows(current_session, datetime.now())
+line_count = count_lines_in_windows(entries, windows)
+log.info("transcript", format_time_ranges(windows, line_count))
+
+# After:
+now = datetime.now()
+windows = compute_active_windows(current_session, now)
+is_ongoing = (
+    current_session.get("ended_at") is None
+    and not any(not p.get("to") for p in current_session.get("paused_intervals", []))
+)
+log.info("transcript", format_startup_log(
+    entries, windows, summary_watermark, is_ongoing,
+    _session_start_date(current_session) or now.date(),
+    now.date(),
+))
 ```
+
+`summary_watermark` is already in scope from the earlier `_load_key_points()` call.
+
+The no-session fallback path (else branch, line ~573) is unchanged.
 
 ---
 
@@ -122,16 +169,21 @@ def _ts_to_display_time(ts_secs: float, session_start_date: date, today: date) -
 | Situation | Behaviour |
 |-----------|-----------|
 | `summary_watermark == 0` | Watermark shows `—` |
-| No `paused_intervals` | Single segment: `[start-now...]` or `[start-ended_at]` |
-| Session already ended | Last segment closes at `ended_at`, no `now...` |
-| Daemon starts mid-talk | Uses talk's `started_at` and its own `paused_intervals` only |
-| Timestamp spans midnight | Day N prefix applied per boundary; `now...` has no Day N |
-| No timed entries in session window | `session: 0 lines during [...]` — segments still shown from session metadata |
+| No `paused_intervals` | Single segment: `[start-now...]` or `[start-end]` |
+| Session already ended (`ended_at` set) | Last segment closes at `ended_at`; no `now...` |
+| Session currently paused (open pause) | `is_ongoing = False`; last segment closes at pause start |
+| Daemon starts mid-talk | `session_stack[-1]` is the talk; only its time window and pauses are used |
+| Segment or watermark on today | No Day N prefix, just `HH:MM` |
+| Segment start on a previous day | `Day N HH:MM` prefix |
+| No timed entries in session window | `session: 0 lines during [...]`; segments from metadata only |
+| `session_stack` empty | Existing fallback unchanged: `"{N} lines (no active session)"` |
+| `_session_start_date` returns None | Fall back to `now.date()` as Day 1 anchor |
 
 ---
 
 ## Out of Scope
 
-- Changing the periodic 10-second transcript stats push format.
+- Changing the periodic 10-second transcript stats push (`/api/transcript-status`).
 - Showing segments from parent sessions when a talk is active.
-- Retroactively updating the log line (it is printed once and never refreshed).
+- Retroactively refreshing the log line after startup.
+- Modifying or removing `format_time_ranges` (it stays; this is an additive change).
