@@ -1,7 +1,7 @@
 {
-  "sha": "a0cde143c849d0d844f9fd305d4e857d97e9569c",
-  "timestamp": "2026-03-25 08:33",
+  "sha": "1a38f5750e5236aee66ad3fbf1ca73fb6d6a12f4",
+  "timestamp": "2026-03-25 08:36",
   "changelog": [
-    "style: name the process in startup log line"
+    "fix: handle invalid hours in transcript timestamps gracefully"
   ]
 }
