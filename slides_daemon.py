@@ -28,7 +28,7 @@ from pathlib import Path
 
 
 DEFAULT_SERVER_URL = "http://localhost:8000"
-DEFAULT_POLL_SECONDS = 5.0
+DEFAULT_POLL_SECONDS = 2.0
 DEFAULT_MIN_CPU_FREE = 25.0
 
 
