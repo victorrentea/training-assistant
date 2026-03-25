@@ -1147,7 +1147,19 @@ def run() -> None:
                     tmp_file.write_text(snapshot_json, encoding="utf-8")
                     os.rename(str(tmp_file), str(_BACKUP_FILE))
                     last_snapshot_hash = snapshot_hash
-                    log.info("daemon", f"State backup: {len(snapshot_json)} bytes")
+                    s = snapshot.get("state", snapshot)
+                    parts = [f"{len(s.get('participant_names', {}))} participants"]
+                    if s.get("qa_questions"):
+                        parts.append(f"{len(s['qa_questions'])} Q&As")
+                    if s.get("wordcloud_words"):
+                        parts.append(f"{len(s['wordcloud_words'])} words in cloud")
+                    if s.get("debate_arguments"):
+                        parts.append(f"{len(s['debate_arguments'])} debate args")
+                    if s.get("votes"):
+                        parts.append(f"{len(s['votes'])} votes")
+                    if s.get("summary_points"):
+                        parts.append(f"{len(s['summary_points'])} summary pts")
+                    log.info("daemon", f"State backup: {', '.join(parts)}")
             except Exception as e:
                 log.error("daemon", f"State snapshot failed: {e}")
 
