@@ -1,7 +1,7 @@
 {
-  "sha": "89b99bedba4f1dec405a269df414915894217d1e",
-  "timestamp": "2026-03-25 08:48",
+  "sha": "2992fe47077ff5afedffa99880daa07ca42c8568",
+  "timestamp": "2026-03-25 08:53",
   "changelog": [
-    "feat: rename talk buttons to emoji, inline start talk with session row"
+    "feat: session status badge (running animated/paused), emoji buttons for pause/talk"
   ]
 }
