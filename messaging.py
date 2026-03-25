@@ -287,6 +287,7 @@ def build_host_state() -> dict:
         "transcript_line_count": state.transcript_line_count,
         "transcript_total_lines": state.transcript_total_lines,
         "transcript_latest_ts": state.transcript_latest_ts,
+        "transcript_last_content_at": state.transcript_last_content_at.isoformat() if state.transcript_last_content_at else None,
         "qa_questions": _build_qa_for_host(),
         **_build_debate_for_host(),
         "codereview": _build_codereview_for_host(),
