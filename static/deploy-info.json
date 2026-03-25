@@ -1,7 +1,7 @@
 {
-  "sha": "bf372bed9448b9905ca78ea2f5d4ace02480c89b",
+  "sha": "4cd1776c6818547653fb355ef8dba87ce771e39b",
   "timestamp": "2026-03-25 08:24",
   "changelog": [
-    "fix: keep start.sh looping on daemon exit-42 instead of dying"
+    "fix: change quiz.md format to list correct answers after options"
   ]
 }
