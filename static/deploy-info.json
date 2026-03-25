@@ -1,8 +1,9 @@
 {
-  "sha": "89867047839a4899526cb678acc59ad9289a1861",
-  "timestamp": "2026-03-25 03:29",
+  "sha": "36f6a390f31920b8d4837a78c63eb429e30835dd",
+  "timestamp": "2026-03-25 03:59",
   "changelog": [
-    "refactor: let overlay self-replace on restart instead of being killed by start.sh",
-    "style: lighten wave-char dim color on join link"
+    "chore: add Sally (UX) and Quinn (QA) as GitHub Copilot agents",
+    "chore: add TEA (Murat) as GitHub Copilot agent",
+    "feat: flash yellow badge background when no transcription for 5+ minutes"
   ]
 }
