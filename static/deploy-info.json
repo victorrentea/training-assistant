@@ -1,7 +1,7 @@
 {
-  "sha": "625966ef4f567982515996c49afc8d680a22b27b",
-  "timestamp": "2026-03-25 19:31",
+  "sha": "d0f3932ca4eb5515bfe98b1f05d1e28215bac228",
+  "timestamp": "2026-03-25 19:33",
   "changelog": [
-    "style: monospace font for notes and key points"
+    "feat: show session frames near full regenerate"
   ]
 }
