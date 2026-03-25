@@ -161,6 +161,7 @@
 - [x] Direct request: use full slides catalog from `https://victorrentea.ro/slides/` and regenerate PDFs into project `materials/slides` whenever any mapped source PPTX changes.
 - [x] Direct request: slides daemon now checks every 5s and regenerates only when source PPTX `last modified` increased; writes per-file markers like `Bio Victor.pdf.lastmodified`.
 - [x] Direct request: daemon now logs `✏️ppt update detected => regenerating ppf` when it detects a changed PPTX before starting regeneration.
+- [x] Direct request: integrated PPTX change detection/regeneration into existing `training_daemon.py` loop (no separate auto-detection daemon), polling every 5s via the same process.
  ---
 
 ## Understanding design

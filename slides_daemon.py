@@ -183,7 +183,7 @@ def list_pptx_files(folder: Path, recursive: bool) -> list[Path]:
     return files
 
 
-def load_catalog_entries(path: Path | None) -> list[dict]:
+def load_catalog_entries(path: Path | None, warn_missing: bool = True) -> list[dict]:
     if path is None or not path.exists():
         return []
     raw = json.loads(path.read_text(encoding="utf-8"))
@@ -197,7 +197,8 @@ def load_catalog_entries(path: Path | None) -> list[dict]:
             continue
         source = Path(str(entry.get("source", "")).strip()).expanduser()
         if not source.exists() or not source.is_file():
-            print(f"[pptx-daemon] WARN: Missing source in catalog #{idx + 1}: {source}", file=sys.stderr, flush=True)
+            if warn_missing:
+                print(f"[pptx-daemon] WARN: Missing source in catalog #{idx + 1}: {source}", file=sys.stderr, flush=True)
             continue
         target_pdf = str(entry.get("target_pdf", "")).strip()
         if not target_pdf:
@@ -213,8 +214,8 @@ def load_catalog_entries(path: Path | None) -> list[dict]:
     return valid_entries
 
 
-def resolve_tracked_sources(config: SlidesDaemonConfig) -> tuple[list[Path], dict[str, dict]]:
-    catalog = load_catalog_entries(config.catalog_file)
+def resolve_tracked_sources(config: SlidesDaemonConfig, warn_missing: bool = True) -> tuple[list[Path], dict[str, dict]]:
+    catalog = load_catalog_entries(config.catalog_file, warn_missing=warn_missing)
     if catalog:
         paths = [entry["source"] for entry in catalog]
         meta = {

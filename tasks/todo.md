@@ -253,6 +253,15 @@
 - [x] Run targeted tests
 - [x] Mark direct request done in `backlog.md`
 
+## Direct request: integrate slides detection into `training_daemon.py`
+
+- [x] Embed `slides_daemon.run_once()` polling in the existing `training_daemon.run()` main loop
+- [x] Reuse host auth/server config from `training_daemon` for slides sync calls
+- [x] Keep `.pptx` source resolution quiet at startup (no missing-file spam)
+- [x] Preserve daemon reconnect test behavior for incomplete test configs
+- [x] Run targeted tests: `tests/test_quiz_daemon_reconnect.py`, `tests/test_slides_daemon.py`, `tests/test_slides_api.py`
+- [x] Mark direct request done in `backlog.md`
+
 ## Review
 
 - Added `scripts/append_transcription_timestamps.py` with 3s default interval and parser-compatible format.

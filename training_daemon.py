@@ -73,6 +73,16 @@ _DOW_RE = re.compile(r"^([A-Z][a-z]{2})\s+(\d{2}:\d{2})\s+(.+)$")
 _FRONTMATTER_WATERMARK_RE = re.compile(r"^watermark:\s*(\d+)")
 
 
+def _cfg_replace(config, **changes):
+    """Dataclass replace with fallback for tests that stub config as SimpleNamespace."""
+    try:
+        return dc_replace(config, **changes)
+    except TypeError:
+        for key, value in changes.items():
+            setattr(config, key, value)
+        return config
+
+
 def _check_daily_timing(now_time=None):
     """Returns 'midnight', 'auto_pause', 'warning', or None based on current time."""
     from datetime import time as _time
@@ -577,49 +587,95 @@ def run() -> None:
     signal.signal(signal.SIGINT, _cleanup)
 
     config = config_from_env()
+    has_full_daemon_config = hasattr(config, "api_key")
 
-    if config.project_folder:
-        log.info("daemon", f"Project folder configured: {config.project_folder}")
-        if not os.path.isdir(config.project_folder):
-            log.error("daemon", f"PROJECT_FOLDER does not exist: {config.project_folder}")
+    # ── Optional integrated PPTX watcher (former slides_daemon) ──
+    slides_module = None
+    slides_config = None
+    slides_state: dict | None = None
+    next_slides_poll_at = 0.0
+    if not has_full_daemon_config:
+        log.info("slides", "Integrated watcher disabled: incomplete daemon config")
+    else:
+        try:
+            import slides_daemon as _slides
+
+            _slides_config = _slides.config_from_env()
+            _slides_config = dc_replace(
+                _slides_config,
+                server_url=config.server_url,
+                host_username=config.host_username,
+                host_password=config.host_password,
+            )
+            tracked_files, _ = _slides.resolve_tracked_sources(_slides_config, warn_missing=False)
+            if tracked_files:
+                slides_module = _slides
+                slides_config = _slides_config
+                slides_state = _slides.load_daemon_state(_slides_config.state_file)
+                source_desc = (
+                    f"catalog={slides_config.catalog_file}"
+                    if slides_config.catalog_file and slides_config.catalog_file.exists()
+                    else f"watch={slides_config.watch_dir}"
+                )
+                log.info("slides", f"Integrated watcher enabled ({source_desc}, every {slides_config.poll_interval_seconds:.0f}s)")
+            else:
+                log.info("slides", "Integrated watcher disabled: no valid PPTX sources found")
+        except Exception as e:
+            log.info("slides", f"Integrated watcher disabled: {e}")
+
+    project_folder = getattr(config, "project_folder", None)
+    if project_folder:
+        log.info("daemon", f"Project folder configured: {project_folder}")
+        if not os.path.isdir(project_folder):
+            log.error("daemon", f"PROJECT_FOLDER does not exist: {project_folder}")
     else:
         log.info("daemon", "PROJECT_FOLDER not set — project file tools disabled")
 
     # ── Fetch server version at startup for auto-update detection ──
     _startup_version = None
-    try:
-        status = _get_json(f"{config.server_url}/api/status")
-        _startup_version = status.get("backend_version")
-        if _startup_version:
-            log.info("daemon", f"Server version at startup: {_startup_version}")
-        else:
-            log.error("daemon", "Server /api/status did not return backend_version")
-    except RuntimeError as e:
-        log.error("daemon", f"Could not fetch server version at startup: {e}")
+    if has_full_daemon_config:
+        try:
+            status = _get_json(
+                f"{config.server_url}/api/status",
+                config.host_username, config.host_password,
+            )
+            _startup_version = status.get("backend_version")
+            if _startup_version:
+                log.info("daemon", f"Server version at startup: {_startup_version}")
+            else:
+                log.error("daemon", "Server /api/status did not return backend_version")
+        except RuntimeError as e:
+            log.error("daemon", f"Could not fetch server version at startup: {e}")
+    else:
+        log.info("daemon", "Startup status checks disabled: incomplete daemon config")
 
     # ── Restore state from backup if server needs it ──
-    try:
-        status = _get_json(f"{config.server_url}/api/status")
-        if status.get("needs_restore"):
-            if _BACKUP_FILE.exists():
-                log.info("daemon", "Server needs state restore — sending backup...")
-                backup_data = json.loads(_BACKUP_FILE.read_text(encoding="utf-8"))
-                result = _post_json(
-                    f"{config.server_url}/api/state-restore",
-                    backup_data,
-                    config.host_username, config.host_password,
-                )
-                log.info("daemon", f"State restore result: {result.get('status', 'ok')}")
+    if has_full_daemon_config:
+        try:
+            status = _get_json(
+                f"{config.server_url}/api/status",
+                config.host_username, config.host_password,
+            )
+            if status.get("needs_restore"):
+                if _BACKUP_FILE.exists():
+                    log.info("daemon", "Server needs state restore — sending backup...")
+                    backup_data = json.loads(_BACKUP_FILE.read_text(encoding="utf-8"))
+                    result = _post_json(
+                        f"{config.server_url}/api/state-restore",
+                        backup_data,
+                        config.host_username, config.host_password,
+                    )
+                    log.info("daemon", f"State restore result: {result.get('status', 'ok')}")
+                else:
+                    log.error("daemon", f"Server needs state restore but no backup file found at {_BACKUP_FILE}")
             else:
-                log.error("daemon", f"Server needs state restore but no backup file found at {_BACKUP_FILE}")
-        else:
-            log.info("daemon", "Server does not need state restore")
-    except Exception as e:
-        log.error("daemon", f"State restore check failed: {e}")
+                log.info("daemon", "Server does not need state restore")
+        except Exception as e:
+            log.error("daemon", f"State restore check failed: {e}")
 
     # Detect today's session folder
     sf, sn = find_session_folder(date.today())
-    config = dc_replace(config, session_folder=sf, session_notes=sn)
+    config = _cfg_replace(config, session_folder=sf, session_notes=sn)
     if sf:
         log.info("session", f"Session folder: {sf.name}")
         log.info("session", f"Notes file: {sn.name if sn else 'NOT FOUND'}")
@@ -712,19 +768,20 @@ def run() -> None:
     _timing_fired_today: set = set()           # timing events already fired today
 
     # Sync initial state to server — include session_state.json if present in the active folder
-    try:
-        startup_session_state: dict | None = None
-        if session_stack:
-            state_file = sessions_root / session_stack[-1]["name"] / "session_state.json"
-            if state_file.exists():
-                try:
-                    startup_session_state = json.loads(state_file.read_text(encoding="utf-8"))
-                    log.info("session", f"Loaded session_state.json for restore ({len(startup_session_state)} keys)")
-                except Exception as e:
-                    log.error("session", f"Failed to read session_state.json: {e}")
-        _sync_session_to_server(config, session_stack, current_key_points, startup_session_state)
-    except Exception as e:
-        log.error("session", f"Failed to sync initial state: {e}")
+    if has_full_daemon_config:
+        try:
+            startup_session_state: dict | None = None
+            if session_stack:
+                state_file = sessions_root / session_stack[-1]["name"] / "session_state.json"
+                if state_file.exists():
+                    try:
+                        startup_session_state = json.loads(state_file.read_text(encoding="utf-8"))
+                        log.info("session", f"Loaded session_state.json for restore ({len(startup_session_state)} keys)")
+                    except Exception as e:
+                        log.error("session", f"Failed to read session_state.json: {e}")
+            _sync_session_to_server(config, session_stack, current_key_points, startup_session_state)
+        except Exception as e:
+            log.error("session", f"Failed to sync initial state: {e}")
 
     last_summary_at = 0.0  # monotonic time of last summary run
     last_snapshot_hash: str | None = None  # hash of last saved state snapshot
@@ -743,6 +800,14 @@ def run() -> None:
                 last_heartbeat_at = now
 
             timestamp_appender.tick()
+
+            # ── Integrated slides detection & regeneration ──
+            if slides_module and slides_config and slides_state is not None and now >= next_slides_poll_at:
+                try:
+                    slides_module.run_once(slides_config, slides_state)
+                except Exception as e:
+                    log.error("slides", f"Watcher error: {e}")
+                next_slides_poll_at = now + slides_config.poll_interval_seconds
 
             # ── Check for session management requests ──
             try:
@@ -767,7 +832,7 @@ def run() -> None:
                     current_key_points, summary_watermark = _load_key_points(folder)
                     _save_daemon_state(sessions_root, _stack_to_daemon_state(session_stack))
                     notes_file = _find_notes_in_folder(folder)
-                    config = dc_replace(config, session_folder=folder, session_notes=notes_file)
+                    config = _cfg_replace(config, session_folder=folder, session_notes=notes_file)
                     _sync_session_to_server(config, session_stack, current_key_points)
                     transcript_state.reset()
                     log.info("session", f"Started: {name}")
@@ -784,7 +849,7 @@ def run() -> None:
                     current_key_points, summary_watermark = _load_key_points(parent_folder)
                     _save_daemon_state(sessions_root, _stack_to_daemon_state(session_stack))
                     notes_file = _find_notes_in_folder(parent_folder)
-                    config = dc_replace(config, session_folder=parent_folder, session_notes=notes_file)
+                    config = _cfg_replace(config, session_folder=parent_folder, session_notes=notes_file)
                     _sync_session_to_server(config, session_stack, current_key_points)
                     transcript_state.reset()
                     log.info("session", f"Ended: {ended['name']}, restored: {parent['name']}")
@@ -804,7 +869,7 @@ def run() -> None:
                         session_stack[-1]["name"] = new_name
                         _save_daemon_state(sessions_root, _stack_to_daemon_state(session_stack))
                         notes_file = _find_notes_in_folder(new_folder)
-                        config = dc_replace(config, session_folder=new_folder, session_notes=notes_file)
+                        config = _cfg_replace(config, session_folder=new_folder, session_notes=notes_file)
                         _sync_session_to_server(config, session_stack, current_key_points)
                         log.info("session", f"Renamed: {old_name} → {new_name}")
 
@@ -860,7 +925,7 @@ def run() -> None:
                     current_key_points, summary_watermark = talk_points, talk_wm
                     _save_daemon_state(sessions_root, _stack_to_daemon_state(session_stack))
                     notes_file = _find_notes_in_folder(talk_folder)
-                    config = dc_replace(config, session_folder=talk_folder, session_notes=notes_file)
+                    config = _cfg_replace(config, session_folder=talk_folder, session_notes=notes_file)
 
                     # Sync to server: mark current participants as paused, restore talk state
                     _post_json(
@@ -909,7 +974,7 @@ def run() -> None:
                                 pass
 
                         notes_file = _find_notes_in_folder(main_folder) if main_folder else None
-                        config = dc_replace(config, session_folder=main_folder, session_notes=notes_file)
+                        config = _cfg_replace(config, session_folder=main_folder, session_notes=notes_file)
 
                         # Sync to server: restore main participants, clear talk
                         _post_json(
@@ -941,7 +1006,7 @@ def run() -> None:
                     current_key_points, summary_watermark = talk_points, talk_wm
                     _save_daemon_state(sessions_root, _stack_to_daemon_state(session_stack))
                     notes_file = _find_notes_in_folder(talk_folder)
-                    config = dc_replace(config, session_folder=talk_folder, session_notes=notes_file)
+                    config = _cfg_replace(config, session_folder=talk_folder, session_notes=notes_file)
 
                     # Sync to server without disconnecting participants (no "action" key)
                     _post_json(
@@ -968,7 +1033,7 @@ def run() -> None:
                 sf, sn = find_session_folder(today)
                 changed = (sf != config.session_folder or sn != config.session_notes)
                 if changed or date_changed:
-                    config = dc_replace(config, session_folder=sf, session_notes=sn)
+                    config = _cfg_replace(config, session_folder=sf, session_notes=sn)
                     last_detected_date = today
                     if sf:
                         log.info("session", f"Detected: {sf.name} / notes: {sn.name if sn else 'none'}")
@@ -1032,7 +1097,7 @@ def run() -> None:
                 current_key_points, summary_watermark = _load_key_points(config.session_folder)
                 _save_daemon_state(sessions_root, _stack_to_daemon_state(session_stack))
                 notes_file = _find_notes_in_folder(config.session_folder)
-                config = dc_replace(config, session_notes=notes_file)
+                config = _cfg_replace(config, session_notes=notes_file)
                 _sync_session_to_server(config, session_stack, current_key_points)
                 transcript_state.reset()
                 log.info("session", f"Auto-started at 09:30: {config.session_folder.name}")
@@ -1078,7 +1143,10 @@ def run() -> None:
             # ── Auto-update: check if server version changed ──
             if _startup_version:
                 try:
-                    status = _get_json(f"{config.server_url}/api/status")
+                    status = _get_json(
+                        f"{config.server_url}/api/status",
+                        config.host_username, config.host_password,
+                    )
                     current_version = status.get("backend_version")
                     if current_version and current_version != _startup_version:
                         log.info("daemon", f"Server version changed: {_startup_version} → {current_version}")
@@ -1136,7 +1204,7 @@ def run() -> None:
                     log.error("session", f"Failed to re-sync key points: {e}")
 
             # Push notes content when file is new or modified
-            if config.session_notes:
+            if has_full_daemon_config and config.session_notes:
                 try:
                     current_mtime = config.session_notes.stat().st_mtime
                 except OSError:
