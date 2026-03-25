@@ -1,7 +1,7 @@
 {
-  "sha": "d0f3932ca4eb5515bfe98b1f05d1e28215bac228",
-  "timestamp": "2026-03-25 19:33",
+  "sha": "05b95b14629d75fc9a64ef1c2db10a846dbbf439",
+  "timestamp": "2026-03-25 19:37",
   "changelog": [
-    "feat: show session frames near full regenerate"
+    "fix(daemon): skip duplicate state backup logs"
   ]
 }
