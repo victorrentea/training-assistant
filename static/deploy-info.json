@@ -1,7 +1,7 @@
 {
-  "sha": "619043192c43c3ade662a1358fc7377dff359a82",
-  "timestamp": "2026-03-25 21:12",
+  "sha": "0082cf204b10fc6e3d7e1611f42d4c68f19d974d",
+  "timestamp": "2026-03-25 21:14",
   "changelog": [
-    "desktop-overlay: z icon, pulse transparency, vertical single-screen bar"
+    "Enforce minute-level session interval rules"
   ]
 }
