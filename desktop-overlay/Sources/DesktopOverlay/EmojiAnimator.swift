@@ -1268,7 +1268,7 @@ class EmojiAnimator {
         let dimLayer = CALayer()
         _pulseDimLayer = dimLayer
         dimLayer.frame = bounds
-        dimLayer.backgroundColor = NSColor(white: 0, alpha: 0.92).cgColor
+        dimLayer.backgroundColor = NSColor(white: 0, alpha: 0.68).cgColor
         dimLayer.opacity = 0
         hostLayer.addSublayer(dimLayer)
 
@@ -1308,14 +1308,14 @@ class EmojiAnimator {
 
         let minorGrid = CAShapeLayer()
         minorGrid.path = minorPath
-        minorGrid.strokeColor = NSColor(red: 0.0, green: 0.8, blue: 0.35, alpha: 0.18).cgColor
+        minorGrid.strokeColor = NSColor(red: 0.0, green: 0.8, blue: 0.35, alpha: 0.10).cgColor
         minorGrid.lineWidth = 0.5
         minorGrid.fillColor = nil
         gridContainer.addSublayer(minorGrid)
 
         let majorGrid = CAShapeLayer()
         majorGrid.path = majorPath
-        majorGrid.strokeColor = NSColor(red: 0.0, green: 0.8, blue: 0.35, alpha: 0.45).cgColor
+        majorGrid.strokeColor = NSColor(red: 0.0, green: 0.8, blue: 0.35, alpha: 0.24).cgColor
         majorGrid.lineWidth = 1.0
         majorGrid.fillColor = nil
         gridContainer.addSublayer(majorGrid)
