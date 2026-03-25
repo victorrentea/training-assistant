@@ -226,6 +226,22 @@
   margin-bottom: .8rem;
   color: var(--accent);
 }
+.summary-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: .2rem;
+  flex-wrap: wrap;
+}
+.summary-session-windows {
+  font-size: .74rem;
+  color: var(--muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  max-width: 48vw;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .summary-close {
   background: none;
   border: none;

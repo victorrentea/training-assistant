@@ -327,6 +327,87 @@
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   }
 
+  function _fmtSessionTime(dt) {
+    return dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+  }
+
+  function _isSessionPaused(session) {
+    return Array.isArray(session?.paused_intervals) && session.paused_intervals.some(p => !p?.to);
+  }
+
+  function _computeSessionWindows(session) {
+    if (!session?.started_at) return [];
+    const startedAt = new Date(session.started_at);
+    if (Number.isNaN(startedAt.getTime())) return [];
+
+    const windows = [];
+    let cursor = startedAt;
+    const pauses = Array.isArray(session.paused_intervals)
+      ? [...session.paused_intervals].sort((a, b) => {
+          const aTs = new Date(a?.from || 0).getTime();
+          const bTs = new Date(b?.from || 0).getTime();
+          return aTs - bTs;
+        })
+      : [];
+
+    for (const pause of pauses) {
+      const pauseFrom = new Date(pause?.from || 0);
+      if (Number.isNaN(pauseFrom.getTime())) continue;
+      if (pauseFrom > cursor) windows.push([new Date(cursor), pauseFrom]);
+
+      if (!pause?.to) return windows;
+      const pauseTo = new Date(pause.to);
+      if (Number.isNaN(pauseTo.getTime())) return windows;
+      if (pauseTo > cursor) cursor = pauseTo;
+    }
+
+    let end = session.ended_at ? new Date(session.ended_at) : new Date();
+    if (Number.isNaN(end.getTime())) end = new Date();
+    if (cursor < end) windows.push([new Date(cursor), end]);
+    return windows;
+  }
+
+  function _formatSessionWindows(session) {
+    const windows = _computeSessionWindows(session);
+    if (!windows.length) return '';
+
+    const firstStart = windows[0][0];
+    const firstDayStart = new Date(firstStart.getFullYear(), firstStart.getMonth(), firstStart.getDate());
+    const dayKeys = new Set(windows.map(([start]) => `${start.getFullYear()}-${start.getMonth()}-${start.getDate()}`));
+    const isMultiDay = dayKeys.size > 1;
+    const ongoing = !session?.ended_at && !_isSessionPaused(session);
+
+    return windows.map(([start, end], idx) => {
+      const dayStart = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+      const dayNum = Math.floor((dayStart - firstDayStart) / 86400000) + 1;
+      const prefix = isMultiDay ? `D${dayNum} ` : '';
+      const endLabel = ongoing && idx === windows.length - 1 ? 'now' : _fmtSessionTime(end);
+      return `${prefix}${_fmtSessionTime(start)}-${endLabel}`;
+    }).join(', ');
+  }
+
+  function renderSummarySessionWindows() {
+    const el = document.getElementById('summary-session-windows');
+    if (!el) return;
+    const activeSession = sessionTalk || sessionMain;
+    if (!activeSession) {
+      el.textContent = '';
+      el.style.display = 'none';
+      el.title = '';
+      return;
+    }
+    const windows = _formatSessionWindows(activeSession);
+    if (!windows) {
+      el.textContent = '';
+      el.style.display = 'none';
+      el.title = '';
+      return;
+    }
+    el.textContent = `Frames: ${windows}`;
+    el.style.display = '';
+    el.title = `Transcript frames included in "Regenerate Entire Session": ${windows}`;
+  }
+
   let _summaryGenerating = false;
   let _transcriptLineCount = 0;
   let _transcriptLastContentAt = null; // Date or null
@@ -388,6 +469,7 @@
     const btn = document.getElementById('summary-refresh-btn');
     const wmEl = document.getElementById('summary-watermark');
     if (!btn) return;
+    renderSummarySessionWindows();
     if (wmEl) wmEl.textContent = _transcriptLatestTs ? '⏱️' + _transcriptLatestTs.slice(0, 5) : '';
     const twoMinAgo = Date.now() - 2 * 60 * 1000;
     const lastGen = summaryUpdatedAt ? new Date(summaryUpdatedAt).getTime() : 0;
@@ -2583,6 +2665,7 @@ function renderSessionPanel() {
   // START TALK: show inline only when main exists and no talk active
   const startTalkBtn = document.getElementById('btn-start-talk');
   if (startTalkBtn) startTalkBtn.style.display = (main && !talk) ? '' : 'none';
+  renderSummarySessionWindows();
 }
 
 function startTalk() {
