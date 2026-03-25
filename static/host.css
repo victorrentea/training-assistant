@@ -27,7 +27,7 @@ body {
 .wave-char {
   display: inline-block;
   animation: wave-shimmer 2.5s ease-in-out infinite;
-  --wave-dim: rgba(255,255,255,.15);
+  --wave-dim: rgba(255,255,255,.55);
   --wave-bright: #fff;
 }
 @media (prefers-color-scheme: light) {
