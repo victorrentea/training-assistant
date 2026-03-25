@@ -1,7 +1,7 @@
 {
-  "sha": "9b93b0c329dd724a36776ad358459d835b3cc705",
-  "timestamp": "2026-03-25 20:34",
+  "sha": "23a9d6a074dfb52c7c3251de3ecaf2b4d7c5b075",
+  "timestamp": "2026-03-25 20:39",
   "changelog": [
-    "Refine session interval formatting for multi-day"
+    "fix: include slides_current fallback in api/slides"
   ]
 }
