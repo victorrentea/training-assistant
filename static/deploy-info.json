@@ -1,7 +1,13 @@
 {
-  "sha": "73c73b8cb599c6579ffb149f1d1ff5998b10d540",
-  "timestamp": "2026-03-25 20:31",
+  "sha": "9d5d0495021b1588091bed324ea2996cb2b92abf",
+  "timestamp": "2026-03-25 20:33",
   "changelog": [
-    "feat: include local materials slides in api/slides"
+    "remove timestamp appender leftovers",
+    "feat: filter low-signal transcript noise lines",
+    "feat: align normalizer with poll-time and rollover cases",
+    "feat: add incremental transcript normalizer with offset state",
+    "fix: include active transcript files regardless of filename date",
+    "docs: default transcript debugging command",
+    "feat: add transcript range extractor script"
   ]
 }
