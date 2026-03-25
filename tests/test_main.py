@@ -1489,6 +1489,29 @@ def test_pending_deploy_broadcasts_to_participants(monkeypatch):
             deploy_info.write_text(original)
 
 
+def test_session_snapshot_returns_participants_and_scores():
+    state.reset()
+    state.participant_names["uuid-1"] = "Alice"
+    state.scores["uuid-1"] = 100
+    state.mode = "workshop"
+
+    client = TestClient(app)
+    resp = client.get("/api/session/snapshot", headers=_HOST_AUTH_HEADERS)
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["mode"] == "workshop"
+    assert "uuid-1" in data["participants"]
+    assert data["participants"]["uuid-1"]["name"] == "Alice"
+    assert data["participants"]["uuid-1"]["score"] == 100
+
+
+def test_session_snapshot_requires_auth():
+    state.reset()
+    client = TestClient(app)
+    resp = client.get("/api/session/snapshot")
+    assert resp.status_code == 401
+
+
 def test_pending_deploy_same_sha_no_broadcast(monkeypatch):
     """POST /api/pending-deploy with same full SHA does NOT broadcast deploy_pending."""
     import json
