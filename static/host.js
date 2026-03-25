@@ -386,6 +386,29 @@
     }).join(', ');
   }
 
+  function _sessionWindowsForDisplay(session) {
+    const windows = _computeSessionWindows(session);
+    if (!windows.length) return [];
+
+    const firstStart = windows[0][0];
+    const firstDayStart = new Date(firstStart.getFullYear(), firstStart.getMonth(), firstStart.getDate());
+    const dayKeys = new Set(windows.map(([start]) => `${start.getFullYear()}-${start.getMonth()}-${start.getDate()}`));
+    const isMultiDay = dayKeys.size > 1;
+    const ongoing = !session?.ended_at && !_isSessionPaused(session);
+
+    return windows.map(([start, end], idx) => {
+      const dayStart = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+      const dayNum = Math.floor((dayStart - firstDayStart) / 86400000) + 1;
+      const prefix = isMultiDay ? `D${dayNum} ` : '';
+      const isOngoingWindow = ongoing && idx === windows.length - 1;
+      const endLabel = isOngoingWindow ? 'now' : _fmtSessionTime(end);
+      return {
+        label: `${prefix}${_fmtSessionTime(start)}-${endLabel}`,
+        isOngoing: isOngoingWindow
+      };
+    });
+  }
+
   function renderSummarySessionWindows() {
     const el = document.getElementById('summary-session-windows');
     if (!el) return;
@@ -2618,6 +2641,12 @@ function _esc(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+function onSessionEmojiKey(event, action) {
+  if (event.key !== 'Enter' && event.key !== ' ') return;
+  event.preventDefault();
+  if (typeof action === 'function') action();
+}
+
 function renderSessionPanel() {
   const main = sessionMain;
   const talk = sessionTalk;
@@ -2652,6 +2681,33 @@ function renderSessionPanel() {
       pauseBtn.title = paused ? 'Resume recording' : 'Pause recording';
       pauseBtn.classList.toggle('session-pause-blinking', paused);
     }
+
+    const intervalsEl = document.getElementById('session-main-intervals');
+    if (intervalsEl) {
+      const windows = _sessionWindowsForDisplay(main);
+      if (windows.length) {
+        const parts = ['<span class="session-main-interval-label">Transcript</span>'];
+        windows.forEach((w, idx) => {
+          parts.push(
+            `<span class="session-main-interval-chip${w.isOngoing ? ' session-main-interval-chip-live' : ''}">${_esc(w.label)}</span>`
+          );
+          if (idx < windows.length - 1) {
+            parts.push('<span class="session-main-interval-sep">→</span>');
+          }
+        });
+        intervalsEl.innerHTML = parts.join('');
+        intervalsEl.style.display = 'flex';
+      } else {
+        intervalsEl.innerHTML = '';
+        intervalsEl.style.display = 'none';
+      }
+    }
+  } else {
+    const intervalsEl = document.getElementById('session-main-intervals');
+    if (intervalsEl) {
+      intervalsEl.innerHTML = '';
+      intervalsEl.style.display = 'none';
+    }
   }
 
   // Talk row
@@ -2664,7 +2720,10 @@ function renderSessionPanel() {
 
   // START TALK: show inline only when main exists and no talk active
   const startTalkBtn = document.getElementById('btn-start-talk');
-  if (startTalkBtn) startTalkBtn.style.display = (main && !talk) ? '' : 'none';
+  const controlsSeparator = document.getElementById('session-controls-separator');
+  const showStartTalk = !!(main && !talk);
+  if (startTalkBtn) startTalkBtn.style.display = showStartTalk ? '' : 'none';
+  if (controlsSeparator) controlsSeparator.style.display = showStartTalk ? '' : 'none';
   renderSummarySessionWindows();
 }
 
