@@ -662,7 +662,7 @@
       _setSlidesDownload(slide.url, false);
       _renderSlidesMeta({ ...slide, updated_at: effectiveUpdatedAt });
     } catch (err) {
-      _setSlidesError('Failed to load this PDF. Try download or refresh.');
+      _setSlidesError('Failed to load this PDF. Try download.');
       _setSlidesDownload('', true);
     }
   }
@@ -730,10 +730,6 @@
     const overlay = document.getElementById('slides-overlay');
     if (overlay) overlay.classList.remove('open');
     _stopSlidesRefreshLoop();
-  }
-
-  function refreshSlidesNow() {
-    _refreshSlidesCatalog({ forceReloadCurrent: true }).catch(() => {});
   }
 
   function warmSlidesCatalog() {
