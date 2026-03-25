@@ -1,3 +1,4 @@
+import json
 import os
 from pathlib import Path
 
@@ -50,6 +51,45 @@ def test_detect_changed_files_uses_last_exported_mtime(tmp_path):
     }
     changed = slides_daemon.detect_changed_files([a, b], state)
     assert changed == [b]
+
+
+def test_detect_changed_files_does_not_trigger_when_target_pdf_missing(tmp_path):
+    watch = tmp_path / "watch"
+    watch.mkdir()
+    publish = tmp_path / "publish"
+    publish.mkdir()
+    a = watch / "a.pptx"
+    a.write_bytes(b"a")
+    state = {
+        "files": {
+            str(a.resolve()): {"slug": "x", "last_exported_mtime": a.stat().st_mtime},
+        }
+    }
+    metadata = {str(a.resolve()): {"target_pdf": "A.pdf"}}
+    changed = slides_daemon.detect_changed_files([a], state, metadata=metadata, publish_dir=publish)
+    assert changed == []
+
+
+def test_detect_changed_files_uses_lastmodified_marker(tmp_path):
+    watch = tmp_path / "watch"
+    watch.mkdir()
+    publish = tmp_path / "publish"
+    publish.mkdir()
+    a = watch / "a.pptx"
+    a.write_bytes(b"a")
+    os.utime(a, (2000, 2000))
+
+    marker = publish / "A.pdf.lastmodified"
+    marker.write_text("2000.0\n", encoding="utf-8")
+
+    state = {"files": {str(a.resolve()): {"slug": "x", "last_exported_mtime": 1000.0}}}
+    metadata = {str(a.resolve()): {"target_pdf": "A.pdf"}}
+    changed = slides_daemon.detect_changed_files([a], state, metadata=metadata, publish_dir=publish)
+    assert changed == []
+
+    marker.write_text("1500.0\n", encoding="utf-8")
+    changed = slides_daemon.detect_changed_files([a], state, metadata=metadata, publish_dir=publish)
+    assert changed == [a]
 
 
 def test_process_one_file_skips_when_cpu_is_busy(tmp_path, monkeypatch, capsys):
@@ -137,7 +177,31 @@ def test_process_one_file_updates_state_and_persists(tmp_path, monkeypatch):
     assert saved["path"] == cfg.state_file
 
 
-def test_run_once_processes_single_oldest_changed_file(tmp_path, monkeypatch):
+def test_process_one_file_writes_lastmodified_marker(tmp_path, monkeypatch):
+    watch = tmp_path / "watch"
+    watch.mkdir()
+    deck = watch / "deck.pptx"
+    deck.write_bytes(b"x")
+
+    cfg = _cfg(tmp_path)
+    cfg.sync_backend = False
+    state = {"files": {}}
+    out_pdf = tmp_path / "work" / "deck.pdf"
+    out_pdf.parent.mkdir(parents=True, exist_ok=True)
+    out_pdf.write_bytes(b"%PDF")
+
+    monkeypatch.setattr(slides_daemon, "get_cpu_free_percent", lambda sample_seconds=1.0: 80.0)
+    monkeypatch.setattr(slides_daemon, "convert_pptx_to_pdf", lambda *args, **kwargs: out_pdf)
+    monkeypatch.setattr(slides_daemon, "upload_pdf", lambda *args, **kwargs: str(cfg.publish_dir / "Deck.pdf"))
+
+    processed = slides_daemon.process_one_file(cfg, state, deck, target_pdf="Deck.pdf")
+    assert processed is True
+    marker = cfg.publish_dir / "Deck.pdf.lastmodified"
+    assert marker.exists()
+    assert float(marker.read_text(encoding="utf-8").strip()) == deck.stat().st_mtime
+
+
+def test_run_once_processes_single_oldest_changed_file(tmp_path, monkeypatch, capsys):
     watch = tmp_path / "watch"
     watch.mkdir()
     a = watch / "a.pptx"
@@ -152,7 +216,7 @@ def test_run_once_processes_single_oldest_changed_file(tmp_path, monkeypatch):
     state = {"files": {}}
     seen = []
 
-    def _fake_process(config, daemon_state, pptx):
+    def _fake_process(config, daemon_state, pptx, target_pdf=None):
         seen.append(pptx.name)
         key = str(pptx.resolve())
         daemon_state.setdefault("files", {}).setdefault(key, {})
@@ -161,6 +225,144 @@ def test_run_once_processes_single_oldest_changed_file(tmp_path, monkeypatch):
         return True
 
     monkeypatch.setattr(slides_daemon, "process_one_file", _fake_process)
+    monkeypatch.setattr(slides_daemon, "sync_slides_list", lambda *_args, **_kwargs: False)
     changed = slides_daemon.run_once(cfg, state)
+    out = capsys.readouterr().out
     assert changed is True
     assert seen == ["a.pptx"]
+    assert "✏️ppt update detected => regenerating ppf: a.pptx" in out
+
+
+def test_load_catalog_entries_and_resolve_targets(tmp_path):
+    watch = tmp_path / "watch"
+    watch.mkdir()
+    deck = watch / "deck.pptx"
+    deck.write_bytes(b"x")
+    catalog = tmp_path / "catalog.json"
+    catalog.write_text(
+        json.dumps(
+            {
+                "decks": [
+                    {
+                        "title": "Deck",
+                        "source": str(deck),
+                        "target_pdf": "Deck Final.pdf",
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    cfg = _cfg(tmp_path)
+    cfg.catalog_file = catalog
+    files, metadata = slides_daemon.resolve_tracked_sources(cfg)
+    assert files == [deck]
+    meta = metadata[str(deck.resolve())]
+    assert meta["title"] == "Deck"
+    assert meta["target_pdf"] == "Deck Final.pdf"
+
+
+def test_run_once_uses_catalog_target_pdf(tmp_path, monkeypatch):
+    watch = tmp_path / "watch"
+    watch.mkdir()
+    deck = watch / "deck.pptx"
+    deck.write_bytes(b"x")
+    os.utime(deck, (2000, 2000))
+    catalog = tmp_path / "catalog.json"
+    catalog.write_text(
+        json.dumps(
+            {
+                "decks": [
+                    {
+                        "title": "Deck",
+                        "source": str(deck),
+                        "target_pdf": "Deck Final.pdf",
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    cfg = _cfg(tmp_path)
+    cfg.catalog_file = catalog
+    state = {"files": {}}
+    captured = {}
+
+    def _fake_process(config, daemon_state, pptx, target_pdf=None):
+        captured["source"] = pptx
+        captured["target_pdf"] = target_pdf
+        return True
+
+    monkeypatch.setattr(slides_daemon, "process_one_file", _fake_process)
+    monkeypatch.setattr(slides_daemon, "sync_slides_list", lambda *_args, **_kwargs: False)
+    changed = slides_daemon.run_once(cfg, state)
+    assert changed is True
+    assert captured["source"] == deck
+    assert captured["target_pdf"] == "Deck Final.pdf"
+
+
+def test_run_once_pushes_slides_list_only_when_payload_changes(tmp_path, monkeypatch):
+    watch = tmp_path / "watch"
+    watch.mkdir()
+    publish = tmp_path / "publish"
+    publish.mkdir()
+    intro = publish / "Intro.pdf"
+    intro.write_bytes(b"%PDF-1.4 intro")
+
+    cfg = _cfg(tmp_path)
+    state = {"files": {}}
+    posted = []
+
+    monkeypatch.setattr(
+        slides_daemon,
+        "_post_json",
+        lambda url, payload, *_args, **_kwargs: posted.append((url, payload)) or {"ok": True},
+    )
+
+    changed = slides_daemon.run_once(cfg, state)
+    assert changed is True
+    assert len(posted) == 1
+    assert posted[0][0].endswith("/api/quiz-status")
+    assert posted[0][1]["status"] == "ready"
+    assert len(posted[0][1]["slides"]) == 1
+    assert posted[0][1]["slides"][0]["name"] == "Intro"
+
+    changed = slides_daemon.run_once(cfg, state)
+    assert changed is False
+    assert len(posted) == 1
+
+    newer = intro.stat().st_mtime + 5.0
+    os.utime(intro, (newer, newer))
+    changed = slides_daemon.run_once(cfg, state)
+    assert changed is True
+    assert len(posted) == 2
+
+
+def test_run_once_republishes_list_when_pdf_deleted(tmp_path, monkeypatch):
+    watch = tmp_path / "watch"
+    watch.mkdir()
+    publish = tmp_path / "publish"
+    publish.mkdir()
+    a = publish / "A.pdf"
+    b = publish / "B.pdf"
+    a.write_bytes(b"%PDF-a")
+    b.write_bytes(b"%PDF-b")
+
+    cfg = _cfg(tmp_path)
+    state = {"files": {}}
+    posted = []
+
+    monkeypatch.setattr(
+        slides_daemon,
+        "_post_json",
+        lambda url, payload, *_args, **_kwargs: posted.append((url, payload)) or {"ok": True},
+    )
+
+    assert slides_daemon.run_once(cfg, state) is True
+    assert len(posted[-1][1]["slides"]) == 2
+
+    b.unlink()
+    assert slides_daemon.run_once(cfg, state) is True
+    assert len(posted[-1][1]["slides"]) == 1

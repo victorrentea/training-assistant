@@ -20,6 +20,28 @@
 - [x] Add tests for local discovery + file serving + merge behavior
 - [x] Run targeted tests
 
+## Follow-up request: remove Slides refresh icon in participant preview
+
+- [x] Remove manual refresh button from participant Slides modal header
+- [x] Keep auto-refresh loop behavior unchanged
+- [x] Add regression test asserting no `slides-refresh-btn` in participant HTML
+- [x] Run targeted slides tests
+
+## Follow-up request: production Slides dropdown shows empty entries
+
+- [x] Reproduce with automated API test for non-displayable names (`---`, blank)
+- [x] Filter non-displayable slide names in backend merge/local discovery logic
+- [x] Add frontend catalog normalization guard for malformed/empty slide entries
+- [x] Run targeted slides tests and participant JS syntax check
+
+## Follow-up request: production slides list still empty
+
+- [x] Publish full slides list metadata from `slides_daemon.py` via `POST /api/quiz-status`
+- [x] Build list from published PDFs and daemon tracked entries (`slug`/`target_pdf`)
+- [x] Add payload-hash dedupe to avoid redundant reposts every poll cycle
+- [x] Add focused tests for first publish, no-change skip, and delete-triggered republish
+- [x] Run targeted slides tests
+
 ## Backlog item: periodic timestamps in transcription file
 
 - [x] Inspect existing transcription parser format in `quiz_core.py`
@@ -197,6 +219,33 @@
 - [x] Run targeted tests and capture non-visual proof logs
 - [x] Mark GH66 item done in `backlog.md`
 
+## Direct request: track full slides catalog and regenerate Materials Slides PDFs
+
+- [x] Add complete tracked PPTX catalog from `https://victorrentea.ro/slides/` to repo config
+- [x] Update `slides_daemon.py` to process catalog entries from multiple subfolders
+- [x] Default copy output to `materials/slides` and regenerate target PDF on source PPTX mtime change
+- [x] Keep optional backend publish flow (sync only when configured)
+- [x] Add focused tests for catalog loading and target PDF routing
+- [x] Run targeted tests and capture non-visual proof logs
+- [x] Mark direct request done in `backlog.md`
+
+## Direct request: regenerate only on source PPTX modified date (5s poll + .lastmodified markers)
+
+- [x] Change PPTX daemon polling default to 5 seconds
+- [x] Remove trigger on missing target PDF (no regeneration unless source modified time increased)
+- [x] Persist per-material marker `*.pdf.lastmodified` in `materials/slides`
+- [x] Use max(daemon state mtime, marker mtime) as known baseline before regenerating
+- [x] Add focused tests for marker-based detection and marker write behavior
+- [x] Run targeted tests and capture non-visual proof logs
+- [x] Mark direct request done in `backlog.md`
+
+## Direct request: log PPTX update detection before regen
+
+- [x] Print `✏️ppt update detected => regenerating ppf` when `run_once()` selects a changed PPTX
+- [x] Add/adjust test to assert the new log line is emitted
+- [x] Run targeted tests
+- [x] Mark direct request done in `backlog.md`
+
 ## Review
 
 - Added `scripts/append_transcription_timestamps.py` with 3s default interval and parser-compatible format.
@@ -263,3 +312,35 @@
 - Follow-up implemented: `/api/slides` now auto-includes PDFs from local `training-assistant/materials/slides`, and serves them via `/api/slides/file/{slug}` for participant access.
 - Verified with `pytest -q tests/test_slides_api.py` (4 passed).
 - Verified with `pytest -q tests/test_main.py -k "api_slides_is_empty_by_default or quiz_status_updates_slides_and_api_returns_normalized_data or quiz_request_reports_has_slides_flag"` (3 passed, 120 deselected).
+- Added full deck catalog file `daemon/materials_slides_catalog.json` with 25 slide sources mapped to target PDFs in Materials Slides.
+- Updated `slides_daemon.py` to support catalog mode (multiple source subfolders), default local output `materials/slides`, and optional backend sync.
+- Verified with `python3 -m pytest -q tests/test_slides_daemon.py tests/test_slides_api.py` (14 passed).
+- Proof logs: `/tmp/slides_catalog_tests.log`.
+- Follow-up implemented: `slides_daemon.py` now pushes full slide list metadata (`slides`) to `/api/quiz-status`, sourced from published PDFs plus tracked daemon entries.
+- Follow-up implemented: slide-list pushes are deduplicated via `last_slides_hash` state to prevent repeated no-op posts.
+- Verified with `pytest -q tests/test_slides_daemon.py` (10 passed).
+- Verified with `pytest -q tests/test_slides_api.py` (4 passed).
+- Follow-up implemented: removed manual `🔄` refresh button from participant Slides modal (`#slides-refresh-btn`); Slides continue auto-refreshing in background while modal is open.
+- Verified with `pytest -q tests/test_main.py -k "slides or participant_slides_modal_has_no_manual_refresh_button"` (4 passed, 120 deselected).
+- Verified with `pytest -q tests/test_slides_api.py` (4 passed).
+- Frontend syntax check: `node --check static/participant.js`.
+- Bugfix implemented: `/api/slides` now ignores non-displayable names (blank/punctuation-only), preventing empty-looking options in participant dropdown.
+- Bugfix implemented: participant-side slide catalog is normalized/filtered before rendering, with dedupe by `slug|url`.
+- Verified with `pytest -q tests/test_slides_api.py` (5 passed).
+- Verified with `pytest -q tests/test_main.py -k "slides"` (4 passed, 120 deselected).
+- Frontend syntax check: `node --check static/participant.js`.
+- Added detection log line in daemon: `✏️ppt update detected => regenerating ppf: <file>`.
+- Reproduced desktop-overlay bug by code-path inspection: `🖥️` reactions only called `spawnEmoji` and had no sound trigger.
+- Desktop overlay fix: added `breaking-glass.mp3` resource and wired `spawnEmoji("🖥️")` to `SoundManager.shared.playOverlapping(...)` at animation start.
+- Added Swift regression tests in `desktop-overlay/Tests/DesktopOverlayTests/EmojiAnimatorTests.swift` for emoji→sound mapping and bundled resource presence.
+- Verified with `swift test` in `desktop-overlay` (2 passed).
+- Proof logs: `/tmp/desktop_overlay_screen_sound_tests.log`.
+
+## Direct request: desktop overlay monitor sound on 🖥️
+
+- [x] Reproduce issue by confirming 🖥️ animation path has no sound trigger
+- [x] Add trimmed `breaking-glass.mp3` to desktop overlay resources
+- [x] Trigger sound at animation start for emoji `🖥️`
+- [x] Add automated regression test for 🖥️ → sound mapping/resource availability
+- [x] Run targeted tests/build and capture proof
+- [x] Mark request done in `backlog.md`

@@ -1,9 +1,17 @@
 # Tasks
 
+- [x] ui: participant Key Points label now includes spacing between count and text (`🧠 38 Key Points` instead of `🧠 38Key Points`)
 - [x] ui: session panel compacted for host screen — session controls are clickable emoji-only (no button chrome), pause is followed by a vertical separator then `🎙️▶️`, and current session now shows transcript active time windows under the row.
+- [x] desktop-overlay: replaced Zorro button icon from battle swords to a little `z`, made Pulse/EKG background layers more transparent, and switched single-monitor right-edge action panel to vertical stacking.
+- [x] desktop-overlay: removed underline below selected action button; selection feedback now uses gray background only.
+- [x] desktop-overlay: increased EKG dark overlay transparency further (lighter black dim layer).
+- [x] desktop-overlay: `🖥️` animation now plays `breaking-glass.mp3` at animation start (resource bundled + Swift regression tests added).
 - [x] ui: session recording control clarified as pause/resume — `⏸️` pauses transcription but keeps session open, `▶️` resumes.
 - [x] ui: when session is paused, summary/keypoints bottom badge no longer blinks (no pulse/flash animation).
 - [x] ui: host summary badge now shows conversation count first, then `>` then keypoint count (ex: `💬 70 > 🧠 38`).
+- [x] ui: session intervals row no longer shows `Transcript`; each segment uses `start → end`, no arrows between disjoint segments, and multi-day segments are prefixed `Day 1`, `Day 2`, etc.
+- [x] ui: session intervals are grouped per line with gray `Day1:`, `Day2:` labels; clicking the interval area opens an editable textarea with validation, and blur recalculates + saves intervals.
+- [x] ui: session interval validation now enforces end minute strictly after start minute; same-minute segments are hidden from host interval badges.
 - [x] The participants should auto-join any open session when they loaded the page in their browsers and they've previously logged in.
 - [x] The application should allow them to log out, though, in which case, with a button, they need to re-choose a name or pick the randomly generated one.
 - [x] Make sure the application is mobile friendly also.
@@ -151,6 +159,9 @@
 - [x] Click avatar to enlarge: mobile = almost full screen (~90vh/90vw), desktop = large overlay; show refresh 🔄 icon in bottom-right of enlarged view to re-roll avatar
 - [x] Avatar refresh via WebSocket: `refresh_avatar` message reassigns avatar ensuring no duplicates among currently connected participants
 - [x] GH#66: Added slides publishing support with `slides_daemon.py` (watch `.pptx`, CPU guard, PDF export, obfuscated slug URL publish) plus backend endpoint `/api/slides/current` for sharing the current PDF URL.
+- [x] Direct request: use full slides catalog from `https://victorrentea.ro/slides/` and regenerate PDFs into project `materials/slides` whenever any mapped source PPTX changes.
+- [x] Direct request: slides daemon now checks every 5s and regenerates only when source PPTX `last modified` increased; writes per-file markers like `Bio Victor.pdf.lastmodified`.
+- [x] Direct request: daemon now logs `✏️ppt update detected => regenerating ppf` when it detects a changed PPTX before starting regeneration.
  ---
 
 ## Understanding design
@@ -176,6 +187,9 @@ Host posts a provocative statement (e.g. "Microservices are always a mistake for
 - [x] GH#29: Summary bullets now include approximate timestamps (HH:MM) derived from transcript timing data, displayed as subtle prefixes in the UI
 - [x] GH#67: Participant Slides viewer with PDF.js modal, `/api/slides` backend feed, per-deck page persistence, auto-refresh/reload on slide updates, and download action
 - [x] Follow-up GH#67: `/api/slides` now also includes PDFs discovered in local `training-assistant/materials/slides` (served via `/api/slides/file/{slug}`), so they appear in participant combo box.
+- [x] Follow-up GH#67 (production): `slides_daemon.py` now publishes full slide list metadata to `/api/quiz-status` (with hash dedupe), so `/api/slides` is populated in production too.
+- [x] Follow-up GH#67 (UX): removed manual refresh icon from participant Slides preview header; auto-refresh loop remains active while modal is open.
+- [x] Follow-up GH#67 (bugfix): filtered non-displayable slide names (blank/punctuation-only) in backend/frontend to avoid empty entries in participant Slides dropdown.
 
 ## Concept Ranking / Ordering
 Host presents 4–6 items (patterns, approaches, technologies). Participants drag them into an order (e.g. safest → most dangerous, simplest → most complex). Host aggregates the median ranking and highlights disagreements. Pure conceptual reasoning, no coding.

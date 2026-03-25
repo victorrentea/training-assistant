@@ -6,6 +6,11 @@ class EmojiAnimator {
 
     static let emojiSet = ["❤️", "🔥", "👏", "😂", "🤯", "💡", "☕", "✅", "❌"]
 
+    static func soundFilename(for emoji: String) -> String? {
+        if emoji == "🖥️" { return "breaking-glass.mp3" }
+        return nil
+    }
+
     // Image-extracted ECG beat curve (64 points, normalized x∈[0,1], y∈[-1,1], R-spike at x≈0.3465)
     private static let beatCurve: [(Double, Double)] = [
         (0.0000,0.0000), (0.0157,0.0054), (0.0315,0.0291), (0.0472,0.0560),
@@ -90,6 +95,9 @@ class EmojiAnimator {
         layer.frame = CGRect(x: spawnX - size / 2, y: spawnY, width: size, height: size)
         layer.contentsScale = NSScreen.screens.first?.backingScaleFactor ?? 2.0
         hostLayer.addSublayer(layer)
+        if let sound = EmojiAnimator.soundFilename(for: emoji) {
+            SoundManager.shared.playOverlapping(sound)
+        }
 
         // Randomize duration: 2.5–4 seconds (matches browser host.js)
         let duration = Double.random(in: 2.5...4.0)
@@ -1268,7 +1276,7 @@ class EmojiAnimator {
         let dimLayer = CALayer()
         _pulseDimLayer = dimLayer
         dimLayer.frame = bounds
-        dimLayer.backgroundColor = NSColor(white: 0, alpha: 0.92).cgColor
+        dimLayer.backgroundColor = NSColor(white: 0, alpha: 0.50).cgColor
         dimLayer.opacity = 0
         hostLayer.addSublayer(dimLayer)
 
@@ -1308,14 +1316,14 @@ class EmojiAnimator {
 
         let minorGrid = CAShapeLayer()
         minorGrid.path = minorPath
-        minorGrid.strokeColor = NSColor(red: 0.0, green: 0.8, blue: 0.35, alpha: 0.18).cgColor
+        minorGrid.strokeColor = NSColor(red: 0.0, green: 0.8, blue: 0.35, alpha: 0.10).cgColor
         minorGrid.lineWidth = 0.5
         minorGrid.fillColor = nil
         gridContainer.addSublayer(minorGrid)
 
         let majorGrid = CAShapeLayer()
         majorGrid.path = majorPath
-        majorGrid.strokeColor = NSColor(red: 0.0, green: 0.8, blue: 0.35, alpha: 0.45).cgColor
+        majorGrid.strokeColor = NSColor(red: 0.0, green: 0.8, blue: 0.35, alpha: 0.24).cgColor
         majorGrid.lineWidth = 1.0
         majorGrid.fillColor = nil
         gridContainer.addSublayer(majorGrid)
