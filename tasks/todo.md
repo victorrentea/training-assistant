@@ -34,6 +34,13 @@
 - [x] Add frontend catalog normalization guard for malformed/empty slide entries
 - [x] Run targeted slides tests and participant JS syntax check
 
+## Follow-up request: prod still says "No slides published yet"
+
+- [x] Add host-authenticated PDF upload endpoint for slides (`POST /api/slides/upload`)
+- [x] Make uploaded PDFs appear in `/api/slides` and be served by `/api/slides/file/{slug}`
+- [x] Add focused API tests for upload auth + list + file serving
+- [x] Run targeted slides tests
+
 ## Follow-up request: production slides list still empty
 
 - [x] Publish full slides list metadata from `slides_daemon.py` via `POST /api/quiz-status`
@@ -329,4 +336,8 @@
 - Verified with `pytest -q tests/test_slides_api.py` (5 passed).
 - Verified with `pytest -q tests/test_main.py -k "slides"` (4 passed, 120 deselected).
 - Frontend syntax check: `node --check static/participant.js`.
+- Follow-up implemented: added host-auth endpoint `POST /api/slides/upload` to upload PDF files into server-side slide storage.
+- Follow-up implemented: uploaded PDFs are merged into `/api/slides` and served by `/api/slides/file/{slug}` (production-safe source, independent of local trainer paths).
+- Verified with `pytest -q tests/test_slides_api.py` (8 passed).
+- Verified with `pytest -q tests/test_main.py -k "slides"` (4 passed, 120 deselected).
 - Added detection log line in daemon: `✏️ppt update detected => regenerating ppf: <file>`.
