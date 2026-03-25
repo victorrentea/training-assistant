@@ -1512,6 +1512,36 @@ def test_session_snapshot_requires_auth():
     assert resp.status_code == 401
 
 
+def test_session_sync_restores_participants_and_scores():
+    state.reset()
+    client = TestClient(app)
+    payload = {
+        "main": {"name": "2026-03-25 Test", "started_at": "2026-03-25T09:00:00", "status": "active"},
+        "talk": None,
+        "discussion_points": [],
+        "session_state": {
+            "saved_at": "2026-03-25T10:00:00",
+            "mode": "workshop",
+            "participants": {
+                "uuid-restored": {"name": "Bob", "score": 250, "base_score": 200, "location": "Cluj", "avatar": "", "universe": ""}
+            },
+            "activity": "none",
+            "poll": None,
+            "qa": {"questions": []},
+            "wordcloud": {"topic": "", "words": {}, "word_order": []},
+            "debate": {"statement": None, "phase": None, "sides": {}, "arguments": [], "champions": {}, "auto_assigned": [], "first_side": None, "round_index": None, "round_timer_seconds": None, "round_timer_started_at": None},
+            "codereview": {"snippet": None, "language": None, "phase": "idle", "confirmed": [], "selections": {}},
+            "leaderboard_active": False,
+            "token_usage": {"input_tokens": 0, "output_tokens": 0, "estimated_cost_usd": 0.0},
+        }
+    }
+    resp = client.post("/api/session/sync", json=payload, headers=_HOST_AUTH_HEADERS)
+    assert resp.status_code == 200
+    assert state.participant_names.get("uuid-restored") == "Bob"
+    assert state.scores.get("uuid-restored") == 250
+    assert state.mode == "workshop"
+
+
 def test_pending_deploy_same_sha_no_broadcast(monkeypatch):
     """POST /api/pending-deploy with same full SHA does NOT broadcast deploy_pending."""
     import json
