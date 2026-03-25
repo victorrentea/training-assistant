@@ -1,7 +1,8 @@
 {
-  "sha": "75c2789464065293292536318a3107fcf14b5427",
-  "timestamp": "2026-03-25 02:52",
+  "sha": "89867047839a4899526cb678acc59ad9289a1861",
+  "timestamp": "2026-03-25 03:29",
   "changelog": [
-    "Revert \"storage in folder\""
+    "refactor: let overlay self-replace on restart instead of being killed by start.sh",
+    "style: lighten wave-char dim color on join link"
   ]
 }
