@@ -1,7 +1,7 @@
 {
-  "sha": "c0ccb81ad2f19d21322e50b9c15e59093f9ee644",
-  "timestamp": "2026-03-25 20:28",
+  "sha": "73c73b8cb599c6579ffb149f1d1ff5998b10d540",
+  "timestamp": "2026-03-25 20:31",
   "changelog": [
-    "Show conversations before key points in badge"
+    "feat: include local materials slides in api/slides"
   ]
 }
