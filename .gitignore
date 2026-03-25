@@ -43,3 +43,5 @@ desktop-overlay/.build/
 # Monitoring runtime data
 monitoring/data/
 
+load-tests/results/*.jtl
+load-tests/results/report/

@@ -1,0 +1,781 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jmeterTestPlan version="1.2" properties="5.0" jmeter="5.6.3">
+  <hashTree>
+    <TestPlan guiclass="TestPlanGui" testclass="TestPlan"
+              testname="WordCloud Concurrent Load Test" enabled="true">
+      <stringProp name="TestPlan.comments">Load test: 300 participants + 1 host connected via WebSocket.
+All 300 participants send 1 word/second simultaneously (synchronized via SyncTimer).
+Assertions:
+  1. No WS connections or sends crash (checked via JMeter error rate)
+  2. Every participant and the host receive the same number of state-type broadcasts
+     (expected = NUM_PARTICIPANTS * NUM_ROUNDS)
+
+Required JMeter plugins (place JARs in $JMETER_HOME/lib/ext/):
+  - jmeter-websocket-samplers (https://bitbucket.org/pjtr/jmeter-websocket-samplers)
+  - jmeter-plugins-casutg (for SyncTimer, https://jmeter-plugins.org)
+
+Set AUTH_USER / AUTH_PASS to match secrets.env before running.</stringProp>
+      <boolProp name="TestPlan.functional_mode">false</boolProp>
+      <boolProp name="TestPlan.tearDown_on_shutdown">true</boolProp>
+      <!-- Host and participants run in parallel -->
+      <boolProp name="TestPlan.serialize_threadgroups">false</boolProp>
+      <elementProp name="TestPlan.user_defined_variables" elementType="Arguments"
+                   guiclass="ArgumentsPanel" testclass="Arguments"
+                   testname="User Defined Variables" enabled="true">
+        <collectionProp name="Arguments.arguments">
+          <!-- ── Connection ─────────────────────────────────── -->
+          <elementProp name="HOST" elementType="Argument">
+            <stringProp name="Argument.name">HOST</stringProp>
+            <stringProp name="Argument.value">interact.victorrentea.ro</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="WS_PORT" elementType="Argument">
+            <stringProp name="Argument.name">WS_PORT</stringProp>
+            <stringProp name="Argument.value">443</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="USE_SSL" elementType="Argument">
+            <stringProp name="Argument.name">USE_SSL</stringProp>
+            <stringProp name="Argument.value">true</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <!-- ── Auth (for REST setup/teardown only) ────────── -->
+          <elementProp name="AUTH_USER" elementType="Argument">
+            <stringProp name="Argument.name">AUTH_USER</stringProp>
+            <stringProp name="Argument.value">CHANGE_ME</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="AUTH_PASS" elementType="Argument">
+            <stringProp name="Argument.name">AUTH_PASS</stringProp>
+            <stringProp name="Argument.value">CHANGE_ME</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <!-- ── Test parameters ────────────────────────────── -->
+          <elementProp name="NUM_PARTICIPANTS" elementType="Argument">
+            <stringProp name="Argument.name">NUM_PARTICIPANTS</stringProp>
+            <!-- Number of participant threads AND the SyncTimer group size -->
+            <stringProp name="Argument.value">300</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="NUM_ROUNDS" elementType="Argument">
+            <stringProp name="Argument.name">NUM_ROUNDS</stringProp>
+            <!-- Words each participant sends (1 per second). Total broadcasts = NUM_PARTICIPANTS * NUM_ROUNDS -->
+            <stringProp name="Argument.value">5</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="RAMP_UP_SEC" elementType="Argument">
+            <stringProp name="Argument.name">RAMP_UP_SEC</stringProp>
+            <!-- Seconds to ramp up 300 participant threads -->
+            <stringProp name="Argument.value">30</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="DRAIN_TIMEOUT_MS" elementType="Argument">
+            <stringProp name="Argument.name">DRAIN_TIMEOUT_MS</stringProp>
+            <!-- Read timeout used in drain loops. Increase if seeing missed messages. -->
+            <stringProp name="Argument.value">5000</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="PRE_DRAIN_TIMEOUT_MS" elementType="Argument">
+            <stringProp name="Argument.name">PRE_DRAIN_TIMEOUT_MS</stringProp>
+            <!-- Short timeout to flush pre-sync messages (participant_count etc.) -->
+            <stringProp name="Argument.value">300</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+        </collectionProp>
+      </elementProp>
+    </TestPlan>
+    <hashTree>
+
+      <!-- ================================================================
+           1. SETUP: clear state, enable wordcloud activity
+           ================================================================ -->
+      <SetupThreadGroup guiclass="SetupThreadGroupGui" testclass="SetupThreadGroup"
+                        testname="Setup: Clear State and Enable WordCloud" enabled="true">
+        <stringProp name="ThreadGroup.on_sample_error">stoptest</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController"
+                     guiclass="LoopControlPanel" testclass="LoopController">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <stringProp name="LoopController.loops">1</stringProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">1</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">0</stringProp>
+      </SetupThreadGroup>
+      <hashTree>
+
+        <!-- Initialise shared props used for cross-thread assertions -->
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler"
+                       testname="Init Shared Props" enabled="true">
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="script"><![CDATA[
+import java.util.concurrent.ConcurrentHashMap
+
+int numP   = Integer.parseInt(vars.get("NUM_PARTICIPANTS") ?: "300")
+int numR   = Integer.parseInt(vars.get("NUM_ROUNDS")       ?: "5")
+int expect = numP * numR
+
+props.put("wc_expected",        String.valueOf(expect))
+props.put("wc_participant_counts", new ConcurrentHashMap<String, Integer>())
+props.put("wc_host_count",      "-1")    // filled by host thread when done
+
+log.info("=== WordCloud Load Test ===")
+log.info("Participants: ${numP}  |  Rounds: ${numR}  |  Expected per client: ${expect}")
+          ]]></stringProp>
+        </JSR223Sampler>
+        <hashTree/>
+
+        <!-- Basic Auth for host-protected REST endpoints -->
+        <AuthManager guiclass="AuthPanel" testclass="AuthManager"
+                     testname="HTTP Basic Auth" enabled="true">
+          <collectionProp name="AuthManager.auth_list">
+            <elementProp name="" elementType="Authorization">
+              <stringProp name="Authorization.url">https://${HOST}</stringProp>
+              <stringProp name="Authorization.username">${AUTH_USER}</stringProp>
+              <stringProp name="Authorization.password">${AUTH_PASS}</stringProp>
+              <stringProp name="Authorization.domain"></stringProp>
+              <stringProp name="Authorization.realm"></stringProp>
+              <stringProp name="Authorization.mechanism">BASIC</stringProp>
+            </elementProp>
+          </collectionProp>
+        </AuthManager>
+        <hashTree/>
+
+        <!-- Clear any leftover wordcloud data -->
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy"
+                          testname="POST /api/wordcloud/clear" enabled="true">
+          <stringProp name="HTTPSampler.domain">${HOST}</stringProp>
+          <stringProp name="HTTPSampler.port">${WS_PORT}</stringProp>
+          <stringProp name="HTTPSampler.protocol">https</stringProp>
+          <stringProp name="HTTPSampler.path">/api/wordcloud/clear</stringProp>
+          <stringProp name="HTTPSampler.method">POST</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+          <boolProp name="HTTPSampler.postBodyRaw">false</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+            <collectionProp name="Arguments.arguments"/>
+          </elementProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+          <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion"
+                             testname="Assert 200" enabled="true">
+            <collectionProp name="Asserion.test_strings">
+              <stringProp name="49586">200</stringProp>
+            </collectionProp>
+            <stringProp name="Assertion.custom_message">Failed to clear wordcloud</stringProp>
+            <stringProp name="Assertion.test_field">Assertion.response_code</stringProp>
+            <boolProp name="Assertion.assume_success">false</boolProp>
+            <intProp name="Assertion.test_type">8</intProp>
+          </ResponseAssertion>
+          <hashTree/>
+        </hashTree>
+
+        <!-- Switch activity to wordcloud -->
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy"
+                          testname="POST /api/activity (wordcloud)" enabled="true">
+          <stringProp name="HTTPSampler.domain">${HOST}</stringProp>
+          <stringProp name="HTTPSampler.port">${WS_PORT}</stringProp>
+          <stringProp name="HTTPSampler.protocol">https</stringProp>
+          <stringProp name="HTTPSampler.path">/api/activity</stringProp>
+          <stringProp name="HTTPSampler.method">POST</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+          <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+            <collectionProp name="Arguments.arguments">
+              <elementProp name="" elementType="HTTPArgument">
+                <boolProp name="HTTPArgument.always_encode">false</boolProp>
+                <stringProp name="Argument.value">{"activity":"wordcloud"}</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+              </elementProp>
+            </collectionProp>
+          </elementProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+          <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager"
+                         testname="Content-Type: application/json" enabled="true">
+            <collectionProp name="HeaderManager.headers">
+              <elementProp name="" elementType="Header">
+                <stringProp name="Header.name">Content-Type</stringProp>
+                <stringProp name="Header.value">application/json</stringProp>
+              </elementProp>
+            </collectionProp>
+          </HeaderManager>
+          <hashTree/>
+          <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion"
+                             testname="Assert 200" enabled="true">
+            <collectionProp name="Asserion.test_strings">
+              <stringProp name="49586">200</stringProp>
+            </collectionProp>
+            <stringProp name="Assertion.custom_message">Failed to set activity to wordcloud</stringProp>
+            <stringProp name="Assertion.test_field">Assertion.response_code</stringProp>
+            <boolProp name="Assertion.assume_success">false</boolProp>
+            <intProp name="Assertion.test_type">8</intProp>
+          </ResponseAssertion>
+          <hashTree/>
+        </hashTree>
+
+      </hashTree>
+
+      <!-- ================================================================
+           2. HOST: connects as __host__, reads all broadcasts, stores count
+           The host reads until DRAIN_TIMEOUT_MS of silence, then stores count.
+           Runs in parallel with the Participants thread group.
+           ================================================================ -->
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup"
+                   testname="Host Connection (1 thread)" enabled="true">
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController"
+                     guiclass="LoopControlPanel" testclass="LoopController">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <stringProp name="LoopController.loops">1</stringProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">1</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">0</stringProp>
+        <boolProp name="ThreadGroup.scheduler">false</boolProp>
+      </ThreadGroup>
+      <hashTree>
+
+        <!-- Open host WebSocket — no set_name needed for __host__ -->
+        <eu.luminis.jmeter.wssampler.WebsocketOpenConnection
+            guiclass="eu.luminis.jmeter.wssampler.WebsocketOpenConnectionGui"
+            testclass="eu.luminis.jmeter.wssampler.WebsocketOpenConnection"
+            testname="Host: Open WS /ws/__host__" enabled="true">
+          <stringProp name="WebsocketSampler.server">${HOST}</stringProp>
+          <intProp name="WebsocketSampler.port">${WS_PORT}</intProp>
+          <stringProp name="WebsocketSampler.path">/ws/__host__</stringProp>
+          <boolProp name="WebsocketSampler.ssl">${USE_SSL}</boolProp>
+          <intProp name="WebsocketSampler.connectTimeout">15000</intProp>
+          <intProp name="WebsocketSampler.readTimeout">60000</intProp>
+        </eu.luminis.jmeter.wssampler.WebsocketOpenConnection>
+        <hashTree>
+          <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion"
+                             testname="Assert WS Upgrade 101" enabled="true">
+            <collectionProp name="Asserion.test_strings">
+              <stringProp name="49586">101</stringProp>
+            </collectionProp>
+            <stringProp name="Assertion.custom_message">Host WebSocket handshake failed (expected 101)</stringProp>
+            <stringProp name="Assertion.test_field">Assertion.response_code</stringProp>
+            <boolProp name="Assertion.assume_success">false</boolProp>
+            <intProp name="Assertion.test_type">8</intProp>
+          </ResponseAssertion>
+          <hashTree/>
+        </hashTree>
+
+        <!-- Initialise per-thread counters -->
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler"
+                       testname="Host: Init Counters" enabled="true">
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="script"><![CDATA[
+vars.put("hostStateCount",  "0")
+vars.put("hostTotalCount",  "0")
+vars.put("hostDrainActive", "true")
+log.info("Host thread started — waiting for broadcasts")
+          ]]></stringProp>
+        </JSR223Sampler>
+        <hashTree/>
+
+        <!-- Read until DRAIN_TIMEOUT_MS of silence (covers full test duration + quiesce) -->
+        <WhileController guiclass="WhileControllerGui" testclass="WhileController"
+                         testname="Host: Read Loop" enabled="true">
+          <stringProp name="WhileController.condition">${hostDrainActive}</stringProp>
+        </WhileController>
+        <hashTree>
+          <eu.luminis.jmeter.wssampler.SingleReadWebSocketSampler
+              guiclass="eu.luminis.jmeter.wssampler.SingleReadWebSocketSamplerGui"
+              testclass="eu.luminis.jmeter.wssampler.SingleReadWebSocketSampler"
+              testname="Host: Read Message" enabled="true">
+            <intProp name="WebsocketSampler.readTimeout">${DRAIN_TIMEOUT_MS}</intProp>
+          </eu.luminis.jmeter.wssampler.SingleReadWebSocketSampler>
+          <hashTree>
+            <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor"
+                                 testname="Host: Count State Broadcasts" enabled="true">
+              <stringProp name="scriptLanguage">groovy</stringProp>
+              <stringProp name="script"><![CDATA[
+if (prev.isSuccessful()) {
+    try {
+        def json = new groovy.json.JsonSlurper().parseText(prev.getResponseDataAsString())
+        if (json.type == "state") {
+            int n = vars.get("hostStateCount").toInteger() + 1
+            vars.put("hostStateCount", n.toString())
+        }
+    } catch (Exception e) { /* ignore non-JSON frames */ }
+    int t = vars.get("hostTotalCount").toInteger() + 1
+    vars.put("hostTotalCount", t.toString())
+    vars.put("hostDrainActive", "true")   // got a message — keep reading
+} else {
+    // Timeout = silence = all messages received
+    vars.put("hostDrainActive", "false")
+}
+// Never let drain reads pollute error stats
+prev.setSuccessful(true)
+              ]]></stringProp>
+            </JSR223PostProcessor>
+            <hashTree/>
+          </hashTree>
+        </hashTree>
+
+        <!-- Publish host count to shared props so teardown can compare -->
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler"
+                       testname="Host: Publish Count" enabled="true">
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="script"><![CDATA[
+String stateCount = vars.get("hostStateCount")
+String totalCount = vars.get("hostTotalCount")
+props.put("wc_host_count", stateCount)
+log.info("Host done — state msgs: ${stateCount}  |  total msgs: ${totalCount}")
+          ]]></stringProp>
+        </JSR223Sampler>
+        <hashTree/>
+
+        <eu.luminis.jmeter.wssampler.CloseWebSocketSampler
+            guiclass="eu.luminis.jmeter.wssampler.CloseWebSocketSamplerGui"
+            testclass="eu.luminis.jmeter.wssampler.CloseWebSocketSampler"
+            testname="Host: Close WS" enabled="true">
+        </eu.luminis.jmeter.wssampler.CloseWebSocketSampler>
+        <hashTree/>
+
+      </hashTree>
+
+      <!-- ================================================================
+           3. PARTICIPANTS: 300 threads, ramp over RAMP_UP_SEC seconds.
+           Flow per thread:
+             a) connect  →  send set_name  →  read initial state
+             b) flush pre-sync messages (participant_count noise)
+             c) SyncTimer — wait for all 300 threads to arrive
+             d) loop NUM_ROUNDS: send wordcloud_word, sleep 1 s
+             e) drain remaining state broadcasts until DRAIN_TIMEOUT_MS silence
+             f) assert received count == NUM_PARTICIPANTS * NUM_ROUNDS
+           ================================================================ -->
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup"
+                   testname="Participants (300 threads)" enabled="true">
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController"
+                     guiclass="LoopControlPanel" testclass="LoopController">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <stringProp name="LoopController.loops">1</stringProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">${NUM_PARTICIPANTS}</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">${RAMP_UP_SEC}</stringProp>
+        <boolProp name="ThreadGroup.scheduler">false</boolProp>
+      </ThreadGroup>
+      <hashTree>
+
+        <!-- ── a) Connect ──────────────────────────────────── -->
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler"
+                       testname="Init: Generate UUID and Variables" enabled="true">
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="script"><![CDATA[
+vars.put("UUID",             java.util.UUID.randomUUID().toString())
+vars.put("PNAME",            "LoadUser_" + ctx.getThreadNum())
+vars.put("stateCount",       "0")
+vars.put("preSyncDrain",     "true")
+vars.put("postSyncDrain",    "true")
+vars.put("wordRound",        "0")
+          ]]></stringProp>
+        </JSR223Sampler>
+        <hashTree/>
+
+        <eu.luminis.jmeter.wssampler.WebsocketOpenConnection
+            guiclass="eu.luminis.jmeter.wssampler.WebsocketOpenConnectionGui"
+            testclass="eu.luminis.jmeter.wssampler.WebsocketOpenConnection"
+            testname="Participant: Open WS /ws/&lt;uuid&gt;" enabled="true">
+          <stringProp name="WebsocketSampler.server">${HOST}</stringProp>
+          <intProp name="WebsocketSampler.port">${WS_PORT}</intProp>
+          <stringProp name="WebsocketSampler.path">/ws/${UUID}</stringProp>
+          <boolProp name="WebsocketSampler.ssl">${USE_SSL}</boolProp>
+          <intProp name="WebsocketSampler.connectTimeout">15000</intProp>
+          <intProp name="WebsocketSampler.readTimeout">30000</intProp>
+        </eu.luminis.jmeter.wssampler.WebsocketOpenConnection>
+        <hashTree>
+          <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion"
+                             testname="Assert WS Upgrade 101" enabled="true">
+            <collectionProp name="Asserion.test_strings">
+              <stringProp name="49586">101</stringProp>
+            </collectionProp>
+            <stringProp name="Assertion.custom_message">Participant WS handshake failed</stringProp>
+            <stringProp name="Assertion.test_field">Assertion.response_code</stringProp>
+            <boolProp name="Assertion.assume_success">false</boolProp>
+            <intProp name="Assertion.test_type">8</intProp>
+          </ResponseAssertion>
+          <hashTree/>
+        </hashTree>
+
+        <!-- Server requires set_name before sending state -->
+        <eu.luminis.jmeter.wssampler.SingleWriteWebSocketSampler
+            guiclass="eu.luminis.jmeter.wssampler.SingleWriteWebSocketSamplerGui"
+            testclass="eu.luminis.jmeter.wssampler.SingleWriteWebSocketSampler"
+            testname="Participant: Send set_name" enabled="true">
+          <stringProp name="WebsocketSampler.requestData">{"type":"set_name","name":"${PNAME}"}</stringProp>
+          <stringProp name="WebsocketSampler.messageType">Text</stringProp>
+        </eu.luminis.jmeter.wssampler.SingleWriteWebSocketSampler>
+        <hashTree/>
+
+        <!-- Receive the initial personalized state pushed after set_name -->
+        <eu.luminis.jmeter.wssampler.SingleReadWebSocketSampler
+            guiclass="eu.luminis.jmeter.wssampler.SingleReadWebSocketSamplerGui"
+            testclass="eu.luminis.jmeter.wssampler.SingleReadWebSocketSampler"
+            testname="Participant: Read Initial State" enabled="true">
+          <intProp name="WebsocketSampler.readTimeout">10000</intProp>
+        </eu.luminis.jmeter.wssampler.SingleReadWebSocketSampler>
+        <hashTree/>
+
+        <!-- ── b) Flush pre-sync noise (participant_count messages) ─── -->
+        <!-- Each time a new participant connects, all others receive a
+             participant_count message. We discard those here so the
+             post-sync counter is clean. -->
+        <WhileController guiclass="WhileControllerGui" testclass="WhileController"
+                         testname="Pre-Sync Drain (flush participant_count noise)" enabled="true">
+          <stringProp name="WhileController.condition">${preSyncDrain}</stringProp>
+        </WhileController>
+        <hashTree>
+          <eu.luminis.jmeter.wssampler.SingleReadWebSocketSampler
+              guiclass="eu.luminis.jmeter.wssampler.SingleReadWebSocketSamplerGui"
+              testclass="eu.luminis.jmeter.wssampler.SingleReadWebSocketSampler"
+              testname="Pre-Sync: Flush Message" enabled="true">
+            <intProp name="WebsocketSampler.readTimeout">${PRE_DRAIN_TIMEOUT_MS}</intProp>
+          </eu.luminis.jmeter.wssampler.SingleReadWebSocketSampler>
+          <hashTree>
+            <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor"
+                                 testname="Pre-Sync: Stop on Silence" enabled="true">
+              <stringProp name="scriptLanguage">groovy</stringProp>
+              <stringProp name="script"><![CDATA[
+if (!prev.isSuccessful()) {
+    // Silence = buffer is empty, ready for sync
+    vars.put("preSyncDrain", "false")
+}
+prev.setSuccessful(true)   // timeout here is expected, not an error
+              ]]></stringProp>
+            </JSR223PostProcessor>
+            <hashTree/>
+          </hashTree>
+        </hashTree>
+
+        <!-- ── c) Synchronise all 300 participants ────────────────── -->
+        <!-- All threads block here until every participant has connected,
+             named, and flushed its buffer. Then all are released together. -->
+        <kg.apc.jmeter.timers.SyncTimer
+            guiclass="kg.apc.jmeter.timers.SyncTimerGui"
+            testclass="kg.apc.jmeter.timers.SyncTimer"
+            testname="SyncTimer: All Participants Ready" enabled="true">
+          <!-- Must match ThreadGroup.num_threads exactly -->
+          <stringProp name="GroupSize">${NUM_PARTICIPANTS}</stringProp>
+          <!-- Bail out after 2 minutes if not all threads arrive -->
+          <longProp name="TimeoutInMs">120000</longProp>
+        </kg.apc.jmeter.timers.SyncTimer>
+        <hashTree/>
+
+        <!-- ── d) Send NUM_ROUNDS words, 1 per second ─────────────── -->
+        <LoopController guiclass="LoopControlPanel" testclass="LoopController"
+                        testname="Word Submission: ${NUM_ROUNDS} rounds" enabled="true">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <stringProp name="LoopController.loops">${NUM_ROUNDS}</stringProp>
+        </LoopController>
+        <hashTree>
+          <!-- Compute a unique word: w_<threadNum>_<round> -->
+          <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler"
+                         testname="Build Word for This Round" enabled="true">
+            <stringProp name="scriptLanguage">groovy</stringProp>
+            <stringProp name="script"><![CDATA[
+int round = vars.get("wordRound").toInteger() + 1
+vars.put("wordRound",   round.toString())
+vars.put("currentWord", "w_" + ctx.getThreadNum() + "_" + round)
+            ]]></stringProp>
+          </JSR223Sampler>
+          <hashTree/>
+
+          <eu.luminis.jmeter.wssampler.SingleWriteWebSocketSampler
+              guiclass="eu.luminis.jmeter.wssampler.SingleWriteWebSocketSamplerGui"
+              testclass="eu.luminis.jmeter.wssampler.SingleWriteWebSocketSampler"
+              testname="Send: wordcloud_word" enabled="true">
+            <stringProp name="WebsocketSampler.requestData">{"type":"wordcloud_word","word":"${currentWord}"}</stringProp>
+            <stringProp name="WebsocketSampler.messageType">Text</stringProp>
+          </eu.luminis.jmeter.wssampler.SingleWriteWebSocketSampler>
+          <hashTree/>
+
+          <!-- Pace at 1 word per second -->
+          <ConstantTimer guiclass="ConstantTimerGui" testclass="ConstantTimer"
+                         testname="Pause 1 Second Between Words" enabled="true">
+            <stringProp name="ConstantTimer.delay">1000</stringProp>
+          </ConstantTimer>
+          <hashTree/>
+        </hashTree>
+
+        <!-- ── e) Drain: collect all buffered broadcasts ───────────── -->
+        <!-- During the send loop, state broadcasts from all 300 participants
+             accumulate in each participant's receive buffer.
+             We drain them here (rapidly, until DRAIN_TIMEOUT_MS of silence). -->
+        <WhileController guiclass="WhileControllerGui" testclass="WhileController"
+                         testname="Post-Send Drain: Collect State Broadcasts" enabled="true">
+          <stringProp name="WhileController.condition">${postSyncDrain}</stringProp>
+        </WhileController>
+        <hashTree>
+          <eu.luminis.jmeter.wssampler.SingleReadWebSocketSampler
+              guiclass="eu.luminis.jmeter.wssampler.SingleReadWebSocketSamplerGui"
+              testclass="eu.luminis.jmeter.wssampler.SingleReadWebSocketSampler"
+              testname="Drain: Read Buffered Message" enabled="true">
+            <intProp name="WebsocketSampler.readTimeout">${DRAIN_TIMEOUT_MS}</intProp>
+          </eu.luminis.jmeter.wssampler.SingleReadWebSocketSampler>
+          <hashTree>
+            <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor"
+                                 testname="Drain: Count State Messages" enabled="true">
+              <stringProp name="scriptLanguage">groovy</stringProp>
+              <stringProp name="script"><![CDATA[
+if (prev.isSuccessful()) {
+    try {
+        def json = new groovy.json.JsonSlurper().parseText(prev.getResponseDataAsString())
+        if (json.type == "state") {
+            int n = vars.get("stateCount").toInteger() + 1
+            vars.put("stateCount", n.toString())
+        }
+    } catch (Exception e) { /* ignore non-JSON frames */ }
+    vars.put("postSyncDrain", "true")   // keep draining
+} else {
+    // Silence = drain complete
+    vars.put("postSyncDrain", "false")
+}
+prev.setSuccessful(true)   // timeouts here are expected end-of-drain signals
+              ]]></stringProp>
+            </JSR223PostProcessor>
+            <hashTree/>
+          </hashTree>
+        </hashTree>
+
+        <!-- Publish this participant's count to the shared ConcurrentHashMap -->
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler"
+                       testname="Publish Participant State Count" enabled="true">
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="script"><![CDATA[
+int count    = vars.get("stateCount").toInteger()
+String tid   = String.valueOf(ctx.getThreadNum())
+def map      = props.get("wc_participant_counts")
+if (map != null) map.put(tid, count)
+log.info("Thread ${tid} (${vars.get('PNAME')}) received ${count} state messages")
+          ]]></stringProp>
+        </JSR223Sampler>
+        <hashTree/>
+
+        <!-- ── f) Per-thread assertion ─────────────────────────────── -->
+        <JSR223Assertion guiclass="TestBeanGUI" testclass="JSR223Assertion"
+                         testname="Assert: Participant Got Expected State Count" enabled="true">
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="script"><![CDATA[
+int expected = Integer.parseInt(props.get("wc_expected") ?: "1500")
+int actual   = vars.get("stateCount").toInteger()
+String tid   = String.valueOf(ctx.getThreadNum())
+
+if (actual != expected) {
+    AssertionResult.setFailure(true)
+    AssertionResult.setFailureMessage(
+        "Thread ${tid} (${vars.get('PNAME')}): expected ${expected} state msgs but got ${actual}"
+    )
+}
+          ]]></stringProp>
+        </JSR223Assertion>
+        <hashTree/>
+
+        <eu.luminis.jmeter.wssampler.CloseWebSocketSampler
+            guiclass="eu.luminis.jmeter.wssampler.CloseWebSocketSamplerGui"
+            testclass="eu.luminis.jmeter.wssampler.CloseWebSocketSampler"
+            testname="Participant: Close WS" enabled="true">
+        </eu.luminis.jmeter.wssampler.CloseWebSocketSampler>
+        <hashTree/>
+
+      </hashTree>
+
+      <!-- ================================================================
+           4. TEARDOWN: global cross-thread assertion + cleanup
+           ================================================================ -->
+      <PostThreadGroup guiclass="PostThreadGroupGui" testclass="PostThreadGroup"
+                       testname="Teardown: Global Assertion and Cleanup" enabled="true">
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController"
+                     guiclass="LoopControlPanel" testclass="LoopController">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <stringProp name="LoopController.loops">1</stringProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">1</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">0</stringProp>
+      </PostThreadGroup>
+      <hashTree>
+
+        <!-- ── Assertion 2: all clients received same count ──────────
+             Compares the host count and every participant count.
+             Fails if any value differs from the expected number. -->
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler"
+                       testname="ASSERTION: All Clients Received Same State Count" enabled="true">
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="script"><![CDATA[
+int expected        = Integer.parseInt(props.get("wc_expected") ?: "1500")
+String hostCountStr = props.get("wc_host_count") ?: "-1"
+int hostCount       = Integer.parseInt(hostCountStr)
+def countsMap       = props.get("wc_participant_counts")  // ConcurrentHashMap<String,Integer>
+
+log.info("=== GLOBAL ASSERTION ===")
+log.info("Expected per client : ${expected}")
+log.info("Host received       : ${hostCount}")
+log.info("Participants reporting: ${countsMap?.size() ?: 0}")
+
+List<String> failures = []
+
+// Check host
+if (hostCount != expected) {
+    failures.add("HOST: expected ${expected} but received ${hostCount}")
+}
+
+// Check each participant
+if (countsMap) {
+    countsMap.each { tid, count ->
+        if (count != expected) {
+            failures.add("Participant thread ${tid}: expected ${expected} but received ${count}")
+        }
+    }
+}
+
+if (failures.isEmpty()) {
+    String msg = "ALL PASS: every client (host + ${countsMap?.size()} participants) received exactly ${expected} state messages"
+    log.info(msg)
+    SampleResult.setResponseMessage(msg)
+    SampleResult.setSuccessful(true)
+} else {
+    String msg = "FAILED (${failures.size()} client(s)):\n" + failures.join("\n")
+    log.error(msg)
+    SampleResult.setResponseMessage(msg)
+    SampleResult.setResponseData(msg.getBytes("UTF-8"))
+    SampleResult.setSuccessful(false)
+}
+          ]]></stringProp>
+        </JSR223Sampler>
+        <hashTree/>
+
+        <!-- Reset server to neutral state after test -->
+        <AuthManager guiclass="AuthPanel" testclass="AuthManager"
+                     testname="HTTP Basic Auth (Cleanup)" enabled="true">
+          <collectionProp name="AuthManager.auth_list">
+            <elementProp name="" elementType="Authorization">
+              <stringProp name="Authorization.url">https://${HOST}</stringProp>
+              <stringProp name="Authorization.username">${AUTH_USER}</stringProp>
+              <stringProp name="Authorization.password">${AUTH_PASS}</stringProp>
+              <stringProp name="Authorization.domain"></stringProp>
+              <stringProp name="Authorization.realm"></stringProp>
+              <stringProp name="Authorization.mechanism">BASIC</stringProp>
+            </elementProp>
+          </collectionProp>
+        </AuthManager>
+        <hashTree/>
+
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy"
+                          testname="POST /api/activity (none) — reset" enabled="true">
+          <stringProp name="HTTPSampler.domain">${HOST}</stringProp>
+          <stringProp name="HTTPSampler.port">${WS_PORT}</stringProp>
+          <stringProp name="HTTPSampler.protocol">https</stringProp>
+          <stringProp name="HTTPSampler.path">/api/activity</stringProp>
+          <stringProp name="HTTPSampler.method">POST</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+          <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+            <collectionProp name="Arguments.arguments">
+              <elementProp name="" elementType="HTTPArgument">
+                <boolProp name="HTTPArgument.always_encode">false</boolProp>
+                <stringProp name="Argument.value">{"activity":"none"}</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+              </elementProp>
+            </collectionProp>
+          </elementProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+          <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager"
+                         testname="Content-Type: application/json" enabled="true">
+            <collectionProp name="HeaderManager.headers">
+              <elementProp name="" elementType="Header">
+                <stringProp name="Header.name">Content-Type</stringProp>
+                <stringProp name="Header.value">application/json</stringProp>
+              </elementProp>
+            </collectionProp>
+          </HeaderManager>
+          <hashTree/>
+        </hashTree>
+
+      </hashTree>
+
+      <!-- ================================================================
+           LISTENERS (disabled by default for CLI runs — enable in GUI)
+           ================================================================ -->
+      <ResultCollector guiclass="ViewResultsFullVisualizer" testclass="ResultCollector"
+                       testname="View Results Tree" enabled="false">
+        <boolProp name="ResultCollector.error_logging">false</boolProp>
+        <objProp>
+          <name>saveConfig</name>
+          <value class="SampleSaveConfiguration">
+            <time>true</time>
+            <latency>true</latency>
+            <timestamp>true</timestamp>
+            <success>true</success>
+            <label>true</label>
+            <code>true</code>
+            <message>true</message>
+            <threadName>true</threadName>
+            <dataType>true</dataType>
+            <encoding>false</encoding>
+            <assertions>true</assertions>
+            <subresults>true</subresults>
+            <responseData>false</responseData>
+            <samplerData>false</samplerData>
+            <xml>false</xml>
+            <fieldNames>true</fieldNames>
+            <responseHeaders>false</responseHeaders>
+            <requestHeaders>false</requestHeaders>
+            <responseDataOnError>true</responseDataOnError>
+            <saveAssertionResultsFailureMessage>true</saveAssertionResultsFailureMessage>
+            <bytes>true</bytes>
+            <sentBytes>true</sentBytes>
+            <url>true</url>
+            <threadCounts>true</threadCounts>
+            <idleTime>true</idleTime>
+            <connectTime>true</connectTime>
+          </value>
+        </objProp>
+        <stringProp name="filename"></stringProp>
+      </ResultCollector>
+      <hashTree/>
+
+      <ResultCollector guiclass="SummaryReport" testclass="ResultCollector"
+                       testname="Summary Report" enabled="true">
+        <boolProp name="ResultCollector.error_logging">false</boolProp>
+        <objProp>
+          <name>saveConfig</name>
+          <value class="SampleSaveConfiguration">
+            <time>true</time>
+            <latency>true</latency>
+            <timestamp>true</timestamp>
+            <success>true</success>
+            <label>true</label>
+            <code>true</code>
+            <message>true</message>
+            <threadName>true</threadName>
+            <dataType>true</dataType>
+            <encoding>false</encoding>
+            <assertions>true</assertions>
+            <subresults>true</subresults>
+            <responseData>false</responseData>
+            <samplerData>false</samplerData>
+            <xml>false</xml>
+            <fieldNames>true</fieldNames>
+            <responseHeaders>false</responseHeaders>
+            <requestHeaders>false</requestHeaders>
+            <responseDataOnError>false</responseDataOnError>
+            <saveAssertionResultsFailureMessage>true</saveAssertionResultsFailureMessage>
+            <bytes>true</bytes>
+            <sentBytes>true</sentBytes>
+            <url>true</url>
+            <threadCounts>true</threadCounts>
+            <idleTime>true</idleTime>
+            <connectTime>true</connectTime>
+          </value>
+        </objProp>
+        <stringProp name="filename">results/wordcloud-summary.csv</stringProp>
+      </ResultCollector>
+      <hashTree/>
+
+    </hashTree>
+  </hashTree>
+</jmeterTestPlan>
