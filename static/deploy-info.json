@@ -1,7 +1,7 @@
 {
-  "sha": "12a379154ad37939824d1323c1293cbfeea8d82d",
-  "timestamp": "2026-03-25 09:33",
+  "sha": "9609a1c697115fb611689d89a2fbbbef4d0b4d82",
+  "timestamp": "2026-03-25 11:16",
   "changelog": [
-    "fix: show wall-clock time in transcript watermark for elapsed VTT files"
+    "feat: screen emoji 3x larger from screen center on desktop"
   ]
 }
