@@ -244,6 +244,7 @@
   margin-bottom: .5rem;
   line-height: 1.4;
   color: var(--text);
+  font-family: 'Courier New', Courier, monospace;
   padding-left: 1.6em;
   text-indent: -1.6em;
 }
@@ -266,14 +267,15 @@
 }
 .notes-content {
   font-family: 'Courier New', Courier, monospace;
-  font-size: 1.3rem;
+  font-size: .9rem;
   line-height: 1.5;
   white-space: pre-wrap;
   word-wrap: break-word;
+  color: var(--text);
   overflow-y: auto;
   flex: 1;
   margin: 0;
-  padding: .5rem;
+  padding: .5rem 0;
 }
 .notes-download-btn {
   display: inline-block;
@@ -309,18 +311,6 @@
 }
 .modal-newtab-btn:hover { color: var(--accent); }
 .summary-fullregen-btn:hover { color: var(--danger) !important; }
-.notes-content {
-  white-space: pre-wrap;
-  word-wrap: break-word;
-  font-family: inherit;
-  font-size: .9rem;
-  line-height: 1.5;
-  color: var(--text);
-  overflow-y: auto;
-  flex: 1;
-  margin: 0;
-  padding: .5rem 0;
-}
 
 /* ── Debate Phase Stepper ── */
 .debate-stepper {
