@@ -80,14 +80,14 @@ build_overlay() {
 # ── Process launchers ──
 
 start_daemon() {
-  _log "start" "info" "Starting training daemon..."
+  _log "start" "info" "🚀 daemon starting..."
   python3 training_daemon.py &
   DAEMON_PID=$!
 }
 
 start_overlay() {
   if [ -n "$NO_OVERLAY" ]; then return; fi
-  _log "start" "info" "Starting desktop overlay ($OVERLAY_SERVER)..."
+  _log "start" "info" "🚀 overlay starting ($OVERLAY_SERVER)..."
   (cd desktop-overlay && .build/arm64-apple-macosx/debug/DesktopOverlay "$OVERLAY_SERVER") &
   OVERLAY_PID=$!
 }
@@ -112,7 +112,7 @@ check_git_updates() {
   if [ "$new_remote_head" != "$LAST_KNOWN_REMOTE_HEAD" ]; then
     local msg
     msg=$(git log --oneline "$LAST_KNOWN_REMOTE_HEAD".."$new_remote_head" 2>/dev/null | head -3)
-    _log "start" "info" "New commits: $msg"
+    _log "start" "info" "♻️  New commits — will restart: $msg"
     LAST_KNOWN_REMOTE_HEAD="$new_remote_head"
     return 0  # update available
   fi
@@ -188,6 +188,6 @@ while true; do
   stop_all_processes
   pull_and_rebuild
 
-  _log "start" "info" "Restarting (reason: $RESTART_REASON)..."
+  _log "start" "info" "♻️  Restarting (reason: $RESTART_REASON)..."
   echo ""
 done
