@@ -1369,12 +1369,10 @@ class EmojiAnimator {
 
         CATransaction.begin()
         CATransaction.setCompletionBlock { [weak self, weak dimLayer, weak gridContainer, weak ecgLayer] in
-            NSAnimationContext.runAnimationGroup({ ctx in
-                ctx.duration = 0.5
-                dimLayer?.opacity = 0
-                gridContainer?.opacity = 0
-                ecgLayer?.opacity = 0
-            }, completionHandler: {
+            // Model opacity is still 0 (forward-filled anim keeps presentation at 1).
+            // Use explicit CABasicAnimation fromValue:1 so Core Animation sees a real change.
+            CATransaction.begin()
+            CATransaction.setCompletionBlock {
                 dimLayer?.removeFromSuperlayer()
                 gridContainer?.removeFromSuperlayer()
                 ecgLayer?.removeFromSuperlayer()
@@ -1382,7 +1380,15 @@ class EmojiAnimator {
                 self?._pulseDimLayer = nil
                 self?._pulseGridLayer = nil
                 self?._pulseEcgLayer = nil
-            })
+            }
+            for layer in [dimLayer, gridContainer, ecgLayer].compactMap({ $0 }) {
+                let fadeOut = CABasicAnimation(keyPath: "opacity")
+                fadeOut.fromValue = 1; fadeOut.toValue = 0
+                fadeOut.duration = 0.5
+                fadeOut.fillMode = .forwards; fadeOut.isRemovedOnCompletion = false
+                layer.add(fadeOut, forKey: "fadeOut")
+            }
+            CATransaction.commit()
         }
         maskLayer.add(reveal, forKey: "reveal")
         CATransaction.commit()
@@ -1405,15 +1411,19 @@ class EmojiAnimator {
         _pulseDimLayer = nil
         _pulseGridLayer = nil
         _pulseEcgLayer = nil
-        NSAnimationContext.runAnimationGroup({ ctx in
-            ctx.duration = 0.5
-            dim?.opacity = 0
-            grid?.opacity = 0
-            ecg?.opacity = 0
-        }, completionHandler: {
+        CATransaction.begin()
+        CATransaction.setCompletionBlock {
             dim?.removeFromSuperlayer()
             grid?.removeFromSuperlayer()
             ecg?.removeFromSuperlayer()
-        })
+        }
+        for layer in [dim, grid, ecg].compactMap({ $0 }) {
+            let fadeOut = CABasicAnimation(keyPath: "opacity")
+            fadeOut.fromValue = 1; fadeOut.toValue = 0
+            fadeOut.duration = 0.5
+            fadeOut.fillMode = .forwards; fadeOut.isRemovedOnCompletion = false
+            layer.add(fadeOut, forKey: "fadeOut")
+        }
+        CATransaction.commit()
     }
 }
