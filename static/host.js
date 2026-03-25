@@ -17,6 +17,8 @@
   let sessionStack = [];
   let sessionName = null;
   let daemonSessionFolder = null;
+  let sessionFolderName = null;
+  let daemonSessionFolderActive = false;
 
   let _hostWcDebounceTimer = null;
   let _hostWcLastDataKey = null;
@@ -197,6 +199,9 @@
         renderPendingDeploy(msg.pending_deploy);
         daemonSessionFolder = msg.daemon_session_folder || null;
         renderNotesStatus(msg.daemon_session_folder, msg.daemon_session_notes);
+        sessionFolderName = msg.session_folder_name || null;
+        daemonSessionFolderActive = !!msg.daemon_session_folder;
+        renderSessionFolderUI();
         updateHostNotes(msg.notes_content);
         renderPreview(msg.quiz_preview || null);
         renderPollDisplay();
@@ -483,6 +488,7 @@
     badge.title = mode === 'conference' ? 'Conference mode — click to switch to Workshop' : 'Workshop mode — click to switch to Conference';
     badge.className = 'badge ' + (mode === 'conference' ? 'mode-badge-conference' : 'mode-badge-workshop');
     applyConferenceLayout(mode === 'conference');
+    renderSessionFolderUI();
   }
 
   function applyConferenceLayout(isConference) {
@@ -2475,6 +2481,54 @@ function _esc(s) {
 function _sessionIsPaused(s) {
   const pauses = s.paused_intervals || [];
   return pauses.some(p => p.to == null);
+}
+
+function renderSessionFolderUI() {
+  const row = document.getElementById('session-folder-row');
+  const current = document.getElementById('session-folder-current');
+  const warning = document.getElementById('no-folder-warning');
+  const newSessionBtn = document.getElementById('btn-start-session');
+
+  if (!row) return;
+
+  // Only show in workshop mode
+  if (currentMode !== 'workshop') {
+    row.style.display = 'none';
+    if (newSessionBtn) newSessionBtn.style.animation = '';
+    return;
+  }
+
+  row.style.display = '';
+
+  if (daemonSessionFolderActive) {
+    if (current) current.textContent = '\u2713 ' + (sessionFolderName || 'active');
+    if (warning) warning.style.display = 'none';
+    if (newSessionBtn) newSessionBtn.style.animation = '';
+  } else {
+    if (current) current.textContent = '';
+    if (warning) warning.style.display = '';
+    if (newSessionBtn) {
+      newSessionBtn.style.animation = 'blink-yellow 0.6s ease-in-out infinite';
+    }
+  }
+}
+
+async function setSessionFolder() {
+  const input = document.getElementById('session-folder-input');
+  const name = input?.value?.trim();
+  if (!name) return;
+
+  const today = new Date().toISOString().split('T')[0];
+  const fullName = `${today} ${name}`;
+
+  await fetch('/api/session/folder', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: fullName }),
+  });
+  input.value = '';
+  const btn = document.getElementById('session-folder-btn');
+  if (btn) btn.disabled = true;
 }
 
 function renderSessionPanel() {
