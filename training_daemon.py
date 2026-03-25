@@ -333,29 +333,6 @@ def _sync_session_to_server(
     )
 
 
-class TranscriptTimestampAppender:
-    """Deprecated no-op kept for compatibility with older tests/hooks.
-
-    Raw transcript files must remain immutable; normalization happens in
-    separate output files via daemon.transcript_normalizer.
-    """
-
-    def __init__(self, folder: Path, interval_seconds: float = 0.0):
-        self.folder = folder
-        self.interval_seconds = interval_seconds
-        self.enabled = False
-        self._logged = False
-
-    def start(self) -> None:
-        if self._logged:
-            return
-        log.info("daemon", "Transcript timestamp appender disabled (raw transcripts are read-only)")
-        self._logged = True
-
-    def tick(self) -> None:
-        return
-
-
 def _read_lock() -> tuple[int | None, float | None]:
     """Read PID and last heartbeat from lock file. Returns (None, None) if missing/corrupt."""
     if not _LOCK_FILE.exists():

@@ -123,7 +123,7 @@ training-assistant/
 ├── backend_version.py       ← Version detection from static/version.js (cached by mtime)
 ├── quiz_core.py             ← Quiz generation core logic (used by training_daemon)
 ├── index_materials.py       ← Project file indexing for RAG
-├── training_daemon.py       ← Daemon orchestration on trainer's Mac (quiz, debate AI, summary, timestamps)
+├── training_daemon.py       ← Daemon orchestration on trainer's Mac (quiz, debate AI, summary, transcript normalization)
 ├── routers/
 │   ├── ws.py                ← WebSocket endpoint /ws/{uuid} (all real-time messages)
 │   ├── poll.py              ← Poll lifecycle (create, open/close, correct, timer)
@@ -142,7 +142,7 @@ training-assistant/
 │   ├── summarizer.py        ← Live transcript summarization
 │   ├── debate_ai.py         ← AI cleanup of debate arguments
 │   ├── transcript_state.py  ← Transcript line counter for progress tracking
-│   ├── transcript_timestamps.py ← Auto-append timestamps to transcript (~3s interval)
+│   ├── transcript_normalizer.py ← Incremental raw transcript reader -> daily normalized files
 │   ├── indexer.py            ← Project file indexing for RAG
 │   ├── rag.py                ← Retrieve project context for quiz generation
 │   └── project_files.py     ← Scan & list project files; handle Claude tool calls
@@ -277,11 +277,11 @@ Orchestration daemon running on the trainer's Mac:
 - Quiz refinement: regenerates specific question/option on host request
 - Debate AI cleanup: deduplicates, fixes typos, suggests new arguments via Claude
 - Live summary: periodically reads transcript, generates key points via Claude, posts to backend
-- Transcript timestamps: auto-appends `[HH:MM:SS]` markers every ~3 seconds
+- Transcript normalization: incrementally reads raw transcript and writes daily normalized lines with `.txt.offset` state
 - Auto-update: exit code 42 signals wrapper script to git pull + restart
 - `ANTHROPIC_API_KEY` is set in the environment
 - Run: `python3 training_daemon.py`
-- Uses `daemon/` subpackage: `llm_adapter.py`, `summarizer.py`, `debate_ai.py`, `transcript_state.py`, `transcript_timestamps.py`, `indexer.py`, `rag.py`, `project_files.py`
+- Uses `daemon/` subpackage: `llm_adapter.py`, `summarizer.py`, `debate_ai.py`, `transcript_state.py`, `transcript_normalizer.py`, `indexer.py`, `rag.py`, `project_files.py`
 
 ---
 
