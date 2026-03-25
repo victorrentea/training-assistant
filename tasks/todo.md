@@ -20,6 +20,13 @@
 - [x] Add tests for local discovery + file serving + merge behavior
 - [x] Run targeted tests
 
+## Follow-up request: remove Slides refresh icon in participant preview
+
+- [x] Remove manual refresh button from participant Slides modal header
+- [x] Keep auto-refresh loop behavior unchanged
+- [x] Add regression test asserting no `slides-refresh-btn` in participant HTML
+- [x] Run targeted slides tests
+
 ## Follow-up request: production slides list still empty
 
 - [x] Publish full slides list metadata from `slides_daemon.py` via `POST /api/quiz-status`
@@ -299,3 +306,7 @@
 - Follow-up implemented: slide-list pushes are deduplicated via `last_slides_hash` state to prevent repeated no-op posts.
 - Verified with `pytest -q tests/test_slides_daemon.py` (10 passed).
 - Verified with `pytest -q tests/test_slides_api.py` (4 passed).
+- Follow-up implemented: removed manual `🔄` refresh button from participant Slides modal (`#slides-refresh-btn`); Slides continue auto-refreshing in background while modal is open.
+- Verified with `pytest -q tests/test_main.py -k "slides or participant_slides_modal_has_no_manual_refresh_button"` (4 passed, 120 deselected).
+- Verified with `pytest -q tests/test_slides_api.py` (4 passed).
+- Frontend syntax check: `node --check static/participant.js`.
