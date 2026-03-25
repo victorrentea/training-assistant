@@ -39,25 +39,25 @@ def _serialize_state() -> dict:
     scores = {k: v for k, v in state.scores.items() if k not in SPECIAL_PIDS}
     locations = {k: v for k, v in state.locations.items() if k not in SPECIAL_PIDS}
 
-    # Q&A — convert upvoters sets to lists
+    # Q&A — convert upvoters sets to sorted lists (sorted for deterministic hashing)
     qa_serializable = {}
     for qid, q in state.qa_questions.items():
         qa_serializable[qid] = {
             **q,
-            "upvoters": list(q.get("upvoters", set())),
+            "upvoters": sorted(q.get("upvoters", set())),
         }
 
-    # Code Review — convert sets to lists
+    # Code Review — convert sets to sorted lists
     codereview_selections = {
-        uuid: list(lines) for uuid, lines in state.codereview_selections.items()
+        uuid: sorted(lines) for uuid, lines in state.codereview_selections.items()
     }
 
-    # Debate — convert sets to lists, datetimes to ISO
+    # Debate — convert sets to sorted lists, datetimes to ISO
     debate_arguments = []
     for arg in state.debate_arguments:
         debate_arguments.append({
             **arg,
-            "upvoters": list(arg.get("upvoters", set())),
+            "upvoters": sorted(arg.get("upvoters", set())),
         })
 
     return {
@@ -90,14 +90,14 @@ def _serialize_state() -> dict:
         "codereview_language": state.codereview_language,
         "codereview_phase": state.codereview_phase,
         "codereview_selections": codereview_selections,
-        "codereview_confirmed": list(state.codereview_confirmed),
+        "codereview_confirmed": sorted(state.codereview_confirmed),
         # Debate
         "debate_statement": state.debate_statement,
         "debate_phase": state.debate_phase,
         "debate_sides": state.debate_sides,
         "debate_arguments": debate_arguments,
         "debate_champions": state.debate_champions,
-        "debate_auto_assigned": list(state.debate_auto_assigned),
+        "debate_auto_assigned": sorted(state.debate_auto_assigned),
         "debate_first_side": state.debate_first_side,
         "debate_round_index": state.debate_round_index,
         "debate_round_timer_seconds": state.debate_round_timer_seconds,
