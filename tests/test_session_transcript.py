@@ -6,6 +6,7 @@ from daemon.session_transcript import (
     compute_active_windows,
     count_lines_in_windows,
     format_time_ranges,
+    format_startup_log,
     parse_txt_entries_with_datetimes,
 )
 
@@ -255,3 +256,143 @@ class TestParseTxtEntriesWithDatetimes:
         assert entries[0][0] == datetime(2026, 3, 24, 9, 30, 0)
         assert entries[1][0] is None
         assert entries[2][0] == datetime(2026, 3, 24, 9, 31, 0)
+
+
+# ─── format_startup_log ───────────────────────────────────────────────────────
+
+TODAY = date(2026, 3, 24)
+SESSION_START_DATE = date(2026, 3, 24)
+
+
+class TestFormatStartupLog:
+    """
+    format_startup_log(entries, windows, summary_watermark, is_ongoing,
+                       session_start_date, today) -> str
+    """
+
+    def test_active_session_today_no_watermark(self):
+        """Fresh session: watermark=0, one segment ending with now..."""
+        entries = [
+            (dt(9, 30), "Hello"),
+            (dt(9, 45), "World"),
+            (dt(10, 0), "More"),
+        ]
+        windows = [(dt(9, 30), dt(10, 0))]
+        result = format_startup_log(
+            entries, windows,
+            summary_watermark=0,
+            is_ongoing=True,
+            session_start_date=SESSION_START_DATE,
+            today=TODAY,
+        )
+        assert result == "Watermark: —, Unprocessed: 3 lines, session: 3 lines during [09:30-now..."
+
+    def test_active_session_with_watermark(self):
+        """Watermark covers first 2 entries; 1 unprocessed; session ongoing."""
+        entries = [
+            (dt(9, 30), "Hello"),
+            (dt(9, 45), "World"),
+            (dt(10, 0), "New"),
+        ]
+        windows = [(dt(9, 30), dt(10, 0))]
+        result = format_startup_log(
+            entries, windows,
+            summary_watermark=2,
+            is_ongoing=True,
+            session_start_date=SESSION_START_DATE,
+            today=TODAY,
+        )
+        assert result == "Watermark: 09:45, Unprocessed: 1 lines, session: 3 lines during [09:30-now..."
+
+    def test_ended_session_today(self):
+        """Session has ended; last segment closes at ended_at, no now..."""
+        entries = [
+            (dt(9, 30), "A"),
+            (dt(11, 45), "B"),
+        ]
+        windows = [(dt(9, 30), dt(12, 0))]
+        result = format_startup_log(
+            entries, windows,
+            summary_watermark=2,
+            is_ongoing=False,
+            session_start_date=SESSION_START_DATE,
+            today=TODAY,
+        )
+        assert result == "Watermark: 11:45, Unprocessed: 0 lines, session: 2 lines during [09:30-12:00]"
+
+    def test_two_segments_with_pause(self):
+        """Session paused and resumed — two segments, ongoing."""
+        entries = [
+            (dt(9, 30), "A"),
+            (dt(11, 0), "B"),
+            (dt(13, 30), "C"),
+        ]
+        windows = [
+            (dt(9, 30), dt(12, 0)),
+            (dt(13, 30), dt(14, 0)),
+        ]
+        result = format_startup_log(
+            entries, windows,
+            summary_watermark=0,
+            is_ongoing=True,
+            session_start_date=SESSION_START_DATE,
+            today=TODAY,
+        )
+        assert result == "Watermark: —, Unprocessed: 3 lines, session: 3 lines during [09:30-12:00] [13:30-now..."
+
+    def test_previous_day_watermark_and_segment(self):
+        """Multi-day: watermark and first segment are on Day 1 (previous day)."""
+        day1 = date(2026, 3, 24)
+        day2 = date(2026, 3, 25)
+        entries = [
+            (dt(9, 30, day=24), "Day1 line"),
+            (dt(9, 0, day=25), "Day2 line"),
+        ]
+        windows = [
+            (dt(9, 30, day=24), dt(17, 0, day=24)),
+            (dt(9, 0, day=25), dt(10, 0, day=25)),
+        ]
+        result = format_startup_log(
+            entries, windows,
+            summary_watermark=1,
+            is_ongoing=True,
+            session_start_date=day1,
+            today=day2,
+        )
+        assert result == (
+            "Watermark: Day 1 09:30, Unprocessed: 1 lines, session: 2 lines during "
+            "[Day 1 09:30-Day 1 17:00] [09:00-now..."
+        )
+
+    def test_entries_with_none_timestamps_excluded_from_counts(self):
+        """Non-timed entries (dt=None) and empty-text entries don't count."""
+        entries = [
+            (dt(9, 30), "Real line"),
+            (None, "No timestamp"),        # excluded
+            (dt(9, 45), ""),              # excluded: empty text
+            (dt(10, 0), "  "),            # excluded: whitespace
+            (dt(10, 15), "Another line"),
+        ]
+        windows = [(dt(9, 0), dt(17, 0))]
+        result = format_startup_log(
+            entries, windows,
+            summary_watermark=1,
+            is_ongoing=False,
+            session_start_date=SESSION_START_DATE,
+            today=TODAY,
+        )
+        assert result == "Watermark: 09:30, Unprocessed: 1 lines, session: 2 lines during [09:00-17:00]"
+
+    def test_no_windows(self):
+        """Edge: no active windows at all."""
+        result = format_startup_log(
+            [], [],
+            summary_watermark=0,
+            is_ongoing=False,
+            session_start_date=SESSION_START_DATE,
+            today=TODAY,
+        )
+        assert "Watermark: —" in result
+        assert "Unprocessed: 0 lines" in result
+        assert "session: 0 lines" in result
+        assert "during" not in result
