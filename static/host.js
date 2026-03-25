@@ -775,7 +775,7 @@
       const name = participant.name || 'Unknown';
       const loc = participant.location || '';
       const pts = scores[pid] || 0;
-      const scoreTag = `<span class="pax-score">⭐ ${pts} pts</span>`;
+      const scoreTag = pts > 0 ? `<span class="pax-score">⭐ ${pts} pts</span>` : '';
       const locLabel = loc ? resolvedCities[loc] || loc : null;
       const avatar = participant.avatar || '';
       let avatarHtml = '';
