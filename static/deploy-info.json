@@ -1,7 +1,7 @@
 {
-  "sha": "b1ae610497344690f6effe7eef478538ab8dd75a",
-  "timestamp": "2026-03-25 21:25",
+  "sha": "a4385d6656e5760430b3208b99b3f42f8841d5ce",
+  "timestamp": "2026-03-25 21:31",
   "changelog": [
-    "feat: add host slides upload endpoint"
+    "Integrate PPTX watcher into training daemon loop"
   ]
 }
