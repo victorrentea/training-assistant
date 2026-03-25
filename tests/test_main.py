@@ -1465,6 +1465,26 @@ def test_session_lifecycle_via_endpoints():
     assert req4["name"] == "New Name"
 
 
+def test_start_talk_queues_action():
+    state.reset()
+    client = TestClient(app)
+    resp = client.post("/api/session/start_talk", headers=_HOST_AUTH_HEADERS)
+    assert resp.status_code == 200
+    from state import state as s
+    assert s.session_request is not None
+    assert s.session_request["action"] == "start_talk"
+
+
+def test_end_talk_queues_action():
+    state.reset()
+    client = TestClient(app)
+    resp = client.post("/api/session/end_talk", headers=_HOST_AUTH_HEADERS)
+    assert resp.status_code == 200
+    from state import state as s
+    assert s.session_request is not None
+    assert s.session_request["action"] == "end_talk"
+
+
 def test_pending_deploy_broadcasts_to_participants(monkeypatch):
     """POST /api/pending-deploy with a new SHA broadcasts deploy_pending WS message."""
     import json
