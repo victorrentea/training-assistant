@@ -3,15 +3,13 @@
   let pollActive = false;
   let voteCounts = {};
   let totalVotes = 0;
-  let participantLocations = {};
-  let participantAvatars = {};
-  let participantIps = {};          // participant_name -> IP address
-  let participantDebateSides = {};  // participant_name -> "for"|"against"|undefined
+  let participantDataById = {};     // uuid -> participant payload
+  let participantDebateSides = {};  // uuid -> "for"|"against"|undefined
   let _debateActive = false;
   const resolvedCities = {};   // raw "lat, lon" -> resolved city string cache
   let correctOptIds = new Set(); // host-marked correct options for current poll
-  let scores = {};               // participant_name -> score
-  let cachedNames = [];          // last known participant names
+  let scores = {};               // uuid -> score
+  let cachedParticipantIds = []; // last known participant uuids
   let summaryPoints = [];
   let summaryUpdatedAt = null;
   let sessionMain = null;
@@ -32,6 +30,20 @@
 
   // ── Poll history (persisted in localStorage, keyed by today's date) ──
   const TODAY_KEY = `host_polls_${new Date().toISOString().slice(0, 10)}`;
+
+  function ingestParticipants(participants) {
+    participantDataById = {};
+    participantDebateSides = {};
+    scores = {};
+    cachedParticipantIds = [];
+    (participants || []).forEach(p => {
+      if (!p || !p.uuid) return;
+      participantDataById[p.uuid] = p;
+      participantDebateSides[p.uuid] = p.debate_side;
+      scores[p.uuid] = p.score || 0;
+      cachedParticipantIds.push(p.uuid);
+    });
+  }
 
   function loadPollHistory() {
     try { return JSON.parse(localStorage.getItem(TODAY_KEY) || '[]'); } catch { return []; }
@@ -169,25 +181,11 @@
         if (currentPoll && currentPoll.question !== prevQuestion) loadCorrectOpts(currentPoll.question);
         voteCounts = msg.vote_counts || {};
         totalVotes = Object.values(voteCounts).reduce((a,b)=>a+b,0);
-        participantLocations = {};
-        participantAvatars = {};
-        participantIps = {};
-        participantDebateSides = {};
-        scores = {};
         _debateActive = msg.current_activity === 'debate' && !!msg.debate_phase;
-        const names = [];
-        msg.participants.forEach(p => {
-            names.push(p.name);
-            participantLocations[p.name] = p.location;
-            participantAvatars[p.name] = p.avatar;
-            participantIps[p.name] = p.ip || '';
-            scores[p.name] = p.score;
-            if (p.debate_side) participantDebateSides[p.name] = p.debate_side;
-        });
-        cachedNames = names;
+        ingestParticipants(msg.participants || []);
         document.getElementById('pax-count').textContent = msg.participant_count;
         updatePaxBadge(msg.participant_count);
-        renderParticipantList(names);
+        renderParticipantList(cachedParticipantIds);
         updateLeaderboardButton();
         renderDaemonStatus(msg.daemon_connected, msg.daemon_last_seen);
         document.getElementById('restore-banner').style.display =
@@ -233,20 +231,8 @@
       } else if (msg.type === 'participant_count') {
         document.getElementById('pax-count').textContent = msg.count;
         updatePaxBadge(msg.count);
-        participantLocations = {};
-        participantAvatars = {};
-        participantIps = {};
-        scores = {};
-        const names = [];
-        msg.participants.forEach(p => {
-            names.push(p.name);
-            participantLocations[p.name] = p.location;
-            participantAvatars[p.name] = p.avatar;
-            participantIps[p.name] = p.ip || '';
-            scores[p.name] = p.score;
-        });
-        cachedNames = names;
-        renderParticipantList(names);
+        ingestParticipants(msg.participants || []);
+        renderParticipantList(cachedParticipantIds);
         updateLeaderboardButton();
         // Re-render code review side panel with fresh scores
         if (window._lastCodereviewState && window._lastCodereviewState.phase !== 'idle') {
@@ -254,7 +240,7 @@
           const cr = window._lastCodereviewState;
           for (const key in cr.line_participants) {
             cr.line_participants[key].forEach(p => {
-              if (scores[p.name] !== undefined) p.score = scores[p.name];
+              if (scores[p.uuid] !== undefined) p.score = scores[p.uuid];
             });
           }
           _updateCodeReviewLayout(cr);
@@ -772,18 +758,26 @@
     if (overlay) overlay.classList.remove('open');
   }
 
-  function renderParticipantList(names) {
-    cachedNames = names;
+  function renderParticipantList(participantIds) {
+    cachedParticipantIds = participantIds;
     const sorted = Object.keys(scores).length > 0
-      ? [...names].sort((a, b) => (scores[b] || 0) - (scores[a] || 0))
-      : names;
+      ? [...participantIds].sort((a, b) => {
+          const scoreDiff = (scores[b] || 0) - (scores[a] || 0);
+          if (scoreDiff !== 0) return scoreDiff;
+          const nameA = (participantDataById[a]?.name || '').toLowerCase();
+          const nameB = (participantDataById[b]?.name || '').toLowerCase();
+          return nameA.localeCompare(nameB);
+        })
+      : participantIds;
     const ul = document.getElementById('pax-list');
-    ul.innerHTML = sorted.map(n => {
-      const loc = participantLocations[n];
-      const pts = scores[n];
-      const scoreTag = pts ? `<span class="pax-score">⭐ ${pts} pts</span>` : '';
+    ul.innerHTML = sorted.map(pid => {
+      const participant = participantDataById[pid] || {};
+      const name = participant.name || 'Unknown';
+      const loc = participant.location || '';
+      const pts = scores[pid] || 0;
+      const scoreTag = `<span class="pax-score">⭐ ${pts} pts</span>`;
       const locLabel = loc ? resolvedCities[loc] || loc : null;
-      const avatar = participantAvatars[n];
+      const avatar = participant.avatar || '';
       let avatarHtml = '';
       if (avatar && avatar.startsWith('letter:')) {
           const parts = avatar.split(':');
@@ -793,17 +787,18 @@
       } else if (avatar) {
           avatarHtml = `<img src="/static/avatars/${escHtml(avatar)}" class="avatar" style="width:28px;height:28px" onerror="this.style.display='none'">`;
       }
-      const debateSide = participantDebateSides[n];
+      const debateSide = participantDebateSides[pid];
       const debateIcon = _debateActive
           ? (debateSide === 'for' ? '<span title="FOR">👍</span> ' : debateSide === 'against' ? '<span title="AGAINST">👎</span> ' : '<span title="Undecided">⏳</span> ')
           : '';
-      const ip = participantIps[n] || '';
-      return `<li><span class="pax-name" title="${ip ? 'IP: ' + ip : ''}">${debateIcon}${avatarHtml}<span class="pax-name-text">${escHtml(n)}</span></span>${scoreTag}${locLabel ? `<span class="pax-location" onclick="openMap()" title="View all on map">${escHtml(locLabel)}</span>` : ''}</li>`;
+      const ip = participant.ip || '';
+      const online = participant.online !== false;
+      return `<li class="${online ? 'online' : 'offline'}"><span class="pax-name" title="${ip ? 'IP: ' + ip : ''}">${debateIcon}${avatarHtml}<span class="pax-name-text">${escHtml(name)}</span></span>${scoreTag}${locLabel ? `<span class="pax-location" onclick="openMap()" title="View all on map">${escHtml(locLabel)}</span>` : ''}</li>`;
     }).join('');
 
     // Lazily resolve any raw "lat, lon" strings to city names
-    sorted.forEach(n => {
-      const loc = participantLocations[n];
+    sorted.forEach(pid => {
+      const loc = participantDataById[pid]?.location || '';
       if (!loc || resolvedCities[loc]) return;
       const coordMatch = loc.match(/^(-?\d+\.?\d*),\s*(-?\d+\.?\d*)$/);
       if (!coordMatch) return;
@@ -815,7 +810,7 @@
           const city = data.address?.city || data.address?.town || data.address?.village || data.address?.county || '';
           const country = data.address?.country_code?.toUpperCase() || data.address?.country || '';
           resolvedCities[loc] = [city, country].filter(Boolean).join(', ') || loc;
-          renderParticipantList(cachedNames);
+          renderParticipantList(cachedParticipantIds);
         })
         .catch(() => { resolvedCities[loc] = loc; });
     });
@@ -858,7 +853,12 @@
     leafletMap.eachLayer(layer => { if (layer instanceof L.Marker) leafletMap.removeLayer(layer); });
 
     // Geocode each participant with a location and add markers
-    const entries = Object.entries(participantLocations).filter(([, loc]) => loc);
+    const entries = cachedParticipantIds
+      .map(pid => {
+        const participant = participantDataById[pid] || {};
+        return [participant.name || 'Unknown', participant.location || ''];
+      })
+      .filter(([, loc]) => !!loc);
     const points = [];
 
     await Promise.all(entries.map(async ([name, loc]) => {

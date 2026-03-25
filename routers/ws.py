@@ -76,6 +76,7 @@ async def websocket_endpoint(websocket: WebSocket, participant_id: str):
 
     state.participants[pid] = websocket
     if not is_host and not is_overlay:
+        state.participant_history.add(pid)
         forwarded = websocket.headers.get("x-forwarded-for", "")
         ip = forwarded.split(",")[0].strip() if forwarded else (websocket.client.host if websocket.client else "")
         state.participant_ips[pid] = ip

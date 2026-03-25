@@ -113,6 +113,7 @@ async def poll_session_request():
 def _restore_state_from_snapshot(snap: dict):
     """Restores AppState from a session_state.json snapshot."""
     # Participants
+    state.participant_history.clear()
     state.participant_names.clear()
     state.scores.clear()
     state.base_scores.clear()
@@ -120,6 +121,7 @@ def _restore_state_from_snapshot(snap: dict):
     state.participant_avatars.clear()
     state.participant_universes.clear()
     for uuid, p in (snap.get("participants") or {}).items():
+        state.participant_history.add(uuid)
         state.participant_names[uuid] = p["name"]
         state.scores[uuid] = p.get("score", 0)
         state.base_scores[uuid] = p.get("base_score", 0)

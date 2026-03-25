@@ -477,6 +477,50 @@ class TestParticipantPresence:
             # assert while still connected (disconnect clears locations)
             assert state.locations.get(alice.uuid) == "Bucharest, Romania"
 
+    def test_host_participant_list_keeps_offline_participants(self, session):
+        def recv_type(ws, expected_type):
+            for _ in range(30):
+                msg = json.loads(ws.receive_text())
+                if msg.get("type") == expected_type:
+                    return msg
+            raise AssertionError(f"Host did not receive message type '{expected_type}'")
+
+        with session._client.websocket_connect("/ws/__host__") as ws_host:
+            recv_type(ws_host, "state")
+            recv_type(ws_host, "participant_count")  # initial empty list after host connect
+
+            with session.participant("Alice") as alice:
+                state.scores[alice.uuid] = 120
+                joined = recv_type(ws_host, "participant_count")
+                alice_entry = next((p for p in joined["participants"] if p["uuid"] == alice.uuid), None)
+                assert alice_entry is not None
+                assert alice_entry["online"] is True
+
+            disconnected = recv_type(ws_host, "participant_count")
+            alice_entry = next((p for p in disconnected["participants"] if p["uuid"] == alice.uuid), None)
+            assert disconnected["count"] == 0
+            assert alice_entry is not None
+            assert alice_entry["online"] is False
+            assert alice_entry["score"] == 120
+
+    def test_host_initial_state_includes_historical_participants(self, session):
+        with session.participant("Bob") as bob:
+            state.scores[bob.uuid] = 75
+            historical_uuid = bob.uuid
+
+        with session._client.websocket_connect("/ws/__host__") as ws_host:
+            for _ in range(30):
+                msg = json.loads(ws_host.receive_text())
+                if msg.get("type") != "state":
+                    continue
+                bob_entry = next((p for p in msg["participants"] if p["uuid"] == historical_uuid), None)
+                assert bob_entry is not None
+                assert bob_entry["online"] is False
+                assert bob_entry["score"] == 75
+                break
+            else:
+                raise AssertionError("Host did not receive initial state payload")
+
 
 class TestPollLifecycle:
 
