@@ -1,7 +1,7 @@
 {
-  "sha": "1fb54e5a09bf5b6ae67aa6ffd6a5cc4a80e56cae",
-  "timestamp": "2026-03-25 20:52",
+  "sha": "851a046fdc5117d1851a4e991422a98e7c8b17d7",
+  "timestamp": "2026-03-25 20:53",
   "changelog": [
-    "Make session intervals editable with validation"
+    "fix: regenerate slides only on newer pptx mtime"
   ]
 }
