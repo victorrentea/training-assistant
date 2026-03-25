@@ -157,6 +157,7 @@ def _restore_state_from_snapshot(snap: dict):
     state.debate_first_side = debate.get("first_side")
     state.debate_round_index = debate.get("round_index")
     state.debate_round_timer_seconds = debate.get("round_timer_seconds")
+    state.debate_round_timer_started_at = None  # reset first
     if debate.get("round_timer_started_at"):
         state.debate_round_timer_started_at = datetime.fromisoformat(debate["round_timer_started_at"])
 
