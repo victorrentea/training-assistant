@@ -81,7 +81,7 @@ class EmojiAnimator {
 
         // Screen emoji: center of screen; others: bottom-left corner
         let spawnX: CGFloat = isScreen ? bounds.midX : 100
-        let spawnY: CGFloat = isScreen ? bounds.midY - size / 2 : 80
+        let spawnY: CGFloat = isScreen ? bounds.height * 0.15 : 80
 
         let layer = CATextLayer()
         layer.string = emoji
