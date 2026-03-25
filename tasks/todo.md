@@ -246,6 +246,29 @@
 - [x] Run targeted tests
 - [x] Mark direct request done in `backlog.md`
 
+## Direct request: integrate slides detection into `training_daemon.py`
+
+- [x] Embed `slides_daemon.run_once()` polling in the existing `training_daemon.run()` main loop
+- [x] Reuse host auth/server config from `training_daemon` for slides sync calls
+- [x] Keep `.pptx` source resolution quiet at startup (no missing-file spam)
+- [x] Preserve daemon reconnect test behavior for incomplete test configs
+- [x] Run targeted tests: `tests/test_quiz_daemon_reconnect.py`, `tests/test_slides_daemon.py`, `tests/test_slides_api.py`
+- [x] Mark direct request done in `backlog.md`
+
+## Direct request: poll slides every 2 seconds
+
+- [x] Change slides watcher default polling interval from 5s to 2s
+- [x] Keep mtime-gated regeneration logic unchanged
+- [x] Mark direct request done in `backlog.md`
+
+## Direct request: host footer hover map for PDF => PPTX
+
+- [x] Add host-auth endpoint `GET /api/slides/catalog-map` with `pdf`, `pptx_path`, `exists`, `updated_at`
+- [x] Add `📜` icon next to token cost in host right footer
+- [x] Show hover popover with PDF => PPTX mapping list (including missing-source warning)
+- [x] Add API tests for auth + payload mapping
+- [x] Run targeted tests and JS syntax check
+- [x] Mark direct request done in `backlog.md`
 ## Review
 
 - Added `scripts/append_transcription_timestamps.py` with 3s default interval and parser-compatible format.
