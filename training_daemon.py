@@ -57,6 +57,14 @@ _KEY_POINTS_FILE = "transcript_discussion.md"
 _KEY_POINTS_FILE_LEGACY_MD = "transcript_keypoints.md"
 _KEY_POINTS_FILE_LEGACY = "key_points.json"
 _DAEMON_STATE_FILENAME = "daemon_state.json"
+_SLIDES_MANIFEST_CANDIDATES = (
+    "slides_manifest.json",
+    "slides-manifest.json",
+    "slides.json",
+    "pdf_manifest.json",
+    "pdfs.json",
+)
+_SLIDES_MANIFEST_ERRORS: set[str] = set()
 _BACKUP_DIR = Path.home() / ".training-assistant"
 _BACKUP_FILE = _BACKUP_DIR / "state-backup.json"
 
@@ -226,6 +234,98 @@ def _save_session_state(session_folder: Path, snapshot: dict) -> None:
     tmp = path.with_suffix(".tmp")
     tmp.write_text(json.dumps(snapshot, default=str, indent=2))
     tmp.replace(path)
+
+
+def _slugify(value: str) -> str:
+    slug = re.sub(r"[^a-z0-9]+", "-", value.strip().lower()).strip("-")
+    return slug or "slide"
+
+
+def _iso_from_value(value) -> str | None:
+    if value is None or value == "":
+        return None
+    if isinstance(value, str):
+        return value
+    if isinstance(value, (int, float)):
+        try:
+            return datetime.fromtimestamp(float(value)).isoformat()
+        except Exception:
+            return None
+    return None
+
+
+def _normalize_slides_manifest(raw) -> list[dict]:
+    if raw is None:
+        return []
+
+    entries = raw.get("slides") if isinstance(raw, dict) and "slides" in raw else raw
+    normalized: list[dict] = []
+
+    if isinstance(entries, dict):
+        iterable = []
+        for slug, value in entries.items():
+            if isinstance(value, str):
+                iterable.append({"slug": str(slug), "name": str(slug), "url": value})
+            elif isinstance(value, dict):
+                iterable.append({"slug": str(slug), **value})
+    elif isinstance(entries, list):
+        iterable = entries
+    else:
+        return []
+
+    seen: set[str] = set()
+    for idx, item in enumerate(iterable):
+        if not isinstance(item, dict):
+            continue
+        name = str(item.get("name") or item.get("title") or item.get("slug") or f"Slide {idx + 1}").strip()
+        url = str(
+            item.get("url")
+            or item.get("pdf_url")
+            or item.get("published_url")
+            or item.get("obfuscated_url")
+            or ""
+        ).strip()
+        if not name or not url:
+            continue
+        slug = str(item.get("slug") or _slugify(name)).strip() or _slugify(name)
+        if slug in seen:
+            slug = f"{slug}-{idx+1}"
+        seen.add(slug)
+        normalized.append({
+            "name": name,
+            "slug": slug,
+            "url": url,
+            "updated_at": _iso_from_value(
+                item.get("updated_at")
+                or item.get("uploaded_at")
+                or item.get("modified_at")
+                or item.get("timestamp")
+            ),
+            "etag": item.get("etag"),
+            "last_modified": item.get("last_modified") or item.get("lastModified"),
+        })
+    return normalized
+
+
+def _load_slides_manifest(session_folder: Path | None) -> list[dict]:
+    if not session_folder:
+        return []
+    for filename in _SLIDES_MANIFEST_CANDIDATES:
+        path = session_folder / filename
+        if not path.exists():
+            continue
+        try:
+            raw = json.loads(path.read_text(encoding="utf-8"))
+            slides = _normalize_slides_manifest(raw)
+            if slides:
+                _SLIDES_MANIFEST_ERRORS.discard(str(path))
+                return slides
+        except Exception as e:
+            key = str(path)
+            if key not in _SLIDES_MANIFEST_ERRORS:
+                log.error("session", f"Failed reading {filename}: {e}")
+                _SLIDES_MANIFEST_ERRORS.add(key)
+    return []
 
 
 def _load_daemon_state(sessions_root: Path) -> dict:
@@ -605,6 +705,7 @@ def run() -> None:
     last_transcript_stats_at = 0.0
     last_transcript_line_count = -1
     last_notes_mtime: float = 0.0  # track notes file mtime for re-push on change
+    last_slides_payload_hash: str | None = None
     last_auto_close_date: date | None = None   # prevent double-close on same calendar day
     last_auto_start_date: date | None = None   # prevent double-start on same calendar day
     _timing_fired_date: date | None = None     # date for which timing events were tracked
@@ -1015,9 +1116,17 @@ def run() -> None:
             server_has_session = data.get("session_folder") is not None
             server_has_notes = data.get("has_notes_content", False)
             server_has_key_points = data.get("has_key_points", False)
-            if _session_status_pending or (sf_name and not server_has_session):
+            server_has_slides = data.get("has_slides", False)
+            current_slides = _load_slides_manifest(config.session_folder)
+            current_slides_hash = hashlib.sha256(
+                json.dumps(current_slides, sort_keys=True).encode("utf-8")
+            ).hexdigest()
+            slides_changed = current_slides_hash != last_slides_payload_hash
+
+            if _session_status_pending or (sf_name and not server_has_session) or slides_changed or (current_slides and not server_has_slides):
                 post_status("ready", "Agent ready.", config,
-                            session_folder=sf_name, session_notes=sn_name)
+                            session_folder=sf_name, session_notes=sn_name, slides=current_slides)
+                last_slides_payload_hash = current_slides_hash
 
             # Re-sync key points when server lost them (e.g. after backend restart)
             if current_key_points and not server_has_key_points:

@@ -7,6 +7,7 @@
   <link rel="icon" type="image/svg+xml" href="/static/favicon-participant.svg" />
   <link rel="stylesheet" href="/static/common.css" />
   <link rel="stylesheet" href="/static/participant.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.149/web/pdf_viewer.min.css" />
   <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/d3-cloud@1/build/d3.layout.cloud.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
@@ -30,6 +31,7 @@
       </span>
       <span class="status-center">
         <button id="notes-btn" class="header-link-btn has-tooltip" data-tooltip="Session notes" style="display:none" onclick="toggleNotesModal()">📝 Notes</button>
+        <button id="slides-btn" class="header-link-btn has-tooltip" data-tooltip="Workshop slides" onclick="toggleSlidesModal()">📑 Slides</button>
         <button id="summary-btn" class="header-link-btn has-tooltip" data-tooltip="Key points discussed so far" onclick="toggleSummaryModal()">🧠 <span id="summary-count"></span>Key Points</button>
       </span>
       <span class="status-right">
@@ -72,6 +74,30 @@
     </div>
     <ul id="summary-list" class="summary-list"></ul>
     <div id="summary-time" class="summary-time"></div>
+  </div>
+</div>
+
+<div id="slides-overlay" class="summary-overlay" onclick="closeSlidesModal()">
+  <div class="summary-dialog slides-dialog" onclick="event.stopPropagation()">
+    <div class="summary-header slides-header">
+      <span>📑 Slides</span>
+      <span class="slides-header-actions">
+        <button id="slides-refresh-btn" class="modal-newtab-btn" onclick="refreshSlidesNow()" title="Refresh slides">🔄</button>
+        <a id="slides-download-btn" class="notes-download-btn" href="#" download>⬇️ Download</a>
+        <button class="summary-close" onclick="closeSlidesModal()">✕</button>
+      </span>
+    </div>
+    <div class="slides-controls">
+      <select id="slides-select" class="slides-select" aria-label="Choose slide deck"></select>
+      <span id="slides-updated" class="slides-updated"></span>
+    </div>
+    <div id="slides-empty" class="slides-empty" style="display:none;">No slides published yet.</div>
+    <div id="slides-error" class="slides-error" style="display:none;"></div>
+    <div id="slides-viewer-shell" class="slides-viewer-shell" style="display:none;">
+      <div id="slides-pdf-container" class="pdfViewerContainer">
+        <div id="slides-pdf-viewer" class="pdfViewer"></div>
+      </div>
+    </div>
   </div>
 </div>
 
