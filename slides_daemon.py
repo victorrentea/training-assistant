@@ -226,14 +226,24 @@ def _abs_key(path: Path) -> str:
     return str(path.expanduser().resolve())
 
 
-def detect_changed_files(files: list[Path], daemon_state: dict) -> list[Path]:
+def detect_changed_files(
+    files: list[Path],
+    daemon_state: dict,
+    metadata: dict[str, dict] | None = None,
+    publish_dir: Path | None = None,
+) -> list[Path]:
     changed: list[tuple[float, Path]] = []
     tracked = daemon_state.setdefault("files", {})
+    metadata = metadata or {}
     for pptx in files:
         key = _abs_key(pptx)
         exported_mtime = float(tracked.get(key, {}).get("last_exported_mtime", 0))
         current_mtime = pptx.stat().st_mtime
-        if current_mtime > exported_mtime:
+        target_missing = False
+        target_pdf = metadata.get(key, {}).get("target_pdf")
+        if target_pdf and publish_dir is not None:
+            target_missing = not (publish_dir / target_pdf).exists()
+        if current_mtime > exported_mtime or target_missing:
             changed.append((current_mtime, pptx))
     changed.sort(key=lambda x: x[0])
     return [p for _, p in changed]
@@ -444,7 +454,7 @@ def process_one_file(
 
 def run_once(config: SlidesDaemonConfig, daemon_state: dict) -> bool:
     files, metadata = resolve_tracked_sources(config)
-    changed = detect_changed_files(files, daemon_state)
+    changed = detect_changed_files(files, daemon_state, metadata=metadata, publish_dir=config.publish_dir)
     if not changed:
         return False
     # serialize: process one file per poll cycle

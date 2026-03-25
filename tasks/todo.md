@@ -275,5 +275,5 @@
 - Verified with `pytest -q tests/test_main.py -k "api_slides_is_empty_by_default or quiz_status_updates_slides_and_api_returns_normalized_data or quiz_request_reports_has_slides_flag"` (3 passed, 120 deselected).
 - Added full deck catalog file `daemon/materials_slides_catalog.json` with 25 slide sources mapped to target PDFs in Materials Slides.
 - Updated `slides_daemon.py` to support catalog mode (multiple source subfolders), default local output `materials/slides`, and optional backend sync.
-- Verified with `python3 -m pytest -q tests/test_slides_daemon.py tests/test_slides_api.py` (9 passed).
+- Verified with `python3 -m pytest -q tests/test_slides_daemon.py tests/test_slides_api.py` (12 passed).
 - Proof logs: `/tmp/slides_catalog_tests.log`.
