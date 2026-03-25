@@ -463,6 +463,7 @@ def _check_and_acquire_lock() -> None:
 def run() -> None:
     _check_and_acquire_lock()
     _write_lock()
+    log.info("daemon", "🚀 Starting")
 
     def _cleanup(*_):
         _LOCK_FILE.unlink(missing_ok=True)
