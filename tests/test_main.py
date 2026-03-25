@@ -325,6 +325,20 @@ def session():
 # Tests
 # ---------------------------------------------------------------------------
 
+class TestAppState:
+
+    def test_appstate_has_main_talk_fields(self):
+        from state import AppState
+        s = AppState()
+        assert hasattr(s, 'session_main')
+        assert hasattr(s, 'session_talk')
+        assert hasattr(s, 'paused_participant_uuids')
+        assert s.session_main is None
+        assert s.session_talk is None
+        assert s.paused_participant_uuids == set()
+        assert not hasattr(s, 'session_stack')
+
+
 class TestPollCreation:
 
     def test_create_single_choice_poll(self, session):
@@ -1403,11 +1417,12 @@ def test_sync_session_updates_state():
     state.reset()
     client = TestClient(app)
     resp = client.post("/api/session/sync", json={
-        "stack": [{"name": "Workshop", "started_at": "2026-03-23T09:00:00", "ended_at": None}],
+        "main": {"name": "Workshop", "started_at": "2026-03-23T09:00:00", "status": "active"},
         "key_points": [{"text": "Point 1", "source": "discussion"}],
     }, headers=_HOST_AUTH_HEADERS)
     assert resp.status_code == 200
-    assert len(state.session_stack) == 1
+    assert state.session_main is not None
+    assert state.session_main["name"] == "Workshop"
     assert len(state.summary_points) == 1
 
 def test_session_lifecycle_via_endpoints():
@@ -1422,7 +1437,7 @@ def test_session_lifecycle_via_endpoints():
 
     # Simulate daemon sync
     resp = client.post("/api/session/sync", json={
-        "stack": [{"name": "Workshop", "started_at": "2026-03-23T09:00:00", "ended_at": None}],
+        "main": {"name": "Workshop", "started_at": "2026-03-23T09:00:00", "status": "active"},
         "key_points": [{"text": "Point 1", "source": "discussion"}],
     }, headers=_HOST_AUTH_HEADERS)
     assert resp.status_code == 200
@@ -1430,7 +1445,8 @@ def test_session_lifecycle_via_endpoints():
     # Verify summary points updated via sync
     summary = client.get("/api/summary").json()
     assert len(summary["points"]) == 1
-    assert state.session_stack[0]["name"] == "Workshop"
+    assert state.session_main is not None
+    assert state.session_main["name"] == "Workshop"
 
     # Start nested session
     client.post("/api/session/start", json={"name": "Lunch Talk"}, headers=_HOST_AUTH_HEADERS)
