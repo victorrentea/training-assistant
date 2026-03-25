@@ -712,8 +712,8 @@ def run() -> None:
                     log.info("session", f"Resumed: {session_stack[-1]['name']}")
 
                 elif action == "start_talk":
-                    now = datetime.now()
-                    talk_name = f"{now.strftime('%Y-%m-%d %H:%M')} talk"
+                    _now = datetime.now()
+                    talk_name = f"{_now.strftime('%Y-%m-%d %H:%M')} talk"
                     talk_folder = sessions_root / talk_name
                     talk_folder.mkdir(parents=True, exist_ok=True)
 
@@ -744,7 +744,7 @@ def run() -> None:
                     # Push new talk session onto stack
                     session_stack.append({
                         "name": talk_name,
-                        "started_at": now.isoformat(),
+                        "started_at": _now.isoformat(),
                         "status": "active",
                     })
                     current_key_points, summary_watermark = talk_points, talk_wm
@@ -816,15 +816,15 @@ def run() -> None:
                         log.info("daemon", f"END TALK: restored main session {session_stack[0]['name'] if session_stack else 'none'}")
 
                 elif action == "create_talk_folder":
-                    now = datetime.now()
-                    talk_name = f"{now.strftime('%Y-%m-%d %H:%M')} talk"
+                    _now = datetime.now()
+                    talk_name = f"{_now.strftime('%Y-%m-%d %H:%M')} talk"
                     talk_folder = sessions_root / talk_name
                     talk_folder.mkdir(parents=True, exist_ok=True)
 
                     # Push talk onto stack without disconnecting participants
                     session_stack.append({
                         "name": talk_name,
-                        "started_at": now.isoformat(),
+                        "started_at": _now.isoformat(),
                         "status": "active",
                     })
                     talk_points, talk_wm = _load_key_points(talk_folder)
