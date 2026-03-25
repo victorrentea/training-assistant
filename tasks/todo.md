@@ -20,6 +20,14 @@
 - [x] Add tests for local discovery + file serving + merge behavior
 - [x] Run targeted tests
 
+## Follow-up request: production slides list still empty
+
+- [x] Publish full slides list metadata from `slides_daemon.py` via `POST /api/quiz-status`
+- [x] Build list from published PDFs and daemon tracked entries (`slug`/`target_pdf`)
+- [x] Add payload-hash dedupe to avoid redundant reposts every poll cycle
+- [x] Add focused tests for first publish, no-change skip, and delete-triggered republish
+- [x] Run targeted slides tests
+
 ## Backlog item: periodic timestamps in transcription file
 
 - [x] Inspect existing transcription parser format in `quiz_core.py`
@@ -287,3 +295,7 @@
 - Updated `slides_daemon.py` to support catalog mode (multiple source subfolders), default local output `materials/slides`, and optional backend sync.
 - Verified with `python3 -m pytest -q tests/test_slides_daemon.py tests/test_slides_api.py` (14 passed).
 - Proof logs: `/tmp/slides_catalog_tests.log`.
+- Follow-up implemented: `slides_daemon.py` now pushes full slide list metadata (`slides`) to `/api/quiz-status`, sourced from published PDFs plus tracked daemon entries.
+- Follow-up implemented: slide-list pushes are deduplicated via `last_slides_hash` state to prevent repeated no-op posts.
+- Verified with `pytest -q tests/test_slides_daemon.py` (10 passed).
+- Verified with `pytest -q tests/test_slides_api.py` (4 passed).

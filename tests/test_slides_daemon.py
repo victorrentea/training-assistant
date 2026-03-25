@@ -225,6 +225,7 @@ def test_run_once_processes_single_oldest_changed_file(tmp_path, monkeypatch):
         return True
 
     monkeypatch.setattr(slides_daemon, "process_one_file", _fake_process)
+    monkeypatch.setattr(slides_daemon, "sync_slides_list", lambda *_args, **_kwargs: False)
     changed = slides_daemon.run_once(cfg, state)
     assert changed is True
     assert seen == ["a.pptx"]
@@ -293,7 +294,73 @@ def test_run_once_uses_catalog_target_pdf(tmp_path, monkeypatch):
         return True
 
     monkeypatch.setattr(slides_daemon, "process_one_file", _fake_process)
+    monkeypatch.setattr(slides_daemon, "sync_slides_list", lambda *_args, **_kwargs: False)
     changed = slides_daemon.run_once(cfg, state)
     assert changed is True
     assert captured["source"] == deck
     assert captured["target_pdf"] == "Deck Final.pdf"
+
+
+def test_run_once_pushes_slides_list_only_when_payload_changes(tmp_path, monkeypatch):
+    watch = tmp_path / "watch"
+    watch.mkdir()
+    publish = tmp_path / "publish"
+    publish.mkdir()
+    intro = publish / "Intro.pdf"
+    intro.write_bytes(b"%PDF-1.4 intro")
+
+    cfg = _cfg(tmp_path)
+    state = {"files": {}}
+    posted = []
+
+    monkeypatch.setattr(
+        slides_daemon,
+        "_post_json",
+        lambda url, payload, *_args, **_kwargs: posted.append((url, payload)) or {"ok": True},
+    )
+
+    changed = slides_daemon.run_once(cfg, state)
+    assert changed is True
+    assert len(posted) == 1
+    assert posted[0][0].endswith("/api/quiz-status")
+    assert posted[0][1]["status"] == "ready"
+    assert len(posted[0][1]["slides"]) == 1
+    assert posted[0][1]["slides"][0]["name"] == "Intro"
+
+    changed = slides_daemon.run_once(cfg, state)
+    assert changed is False
+    assert len(posted) == 1
+
+    newer = intro.stat().st_mtime + 5.0
+    os.utime(intro, (newer, newer))
+    changed = slides_daemon.run_once(cfg, state)
+    assert changed is True
+    assert len(posted) == 2
+
+
+def test_run_once_republishes_list_when_pdf_deleted(tmp_path, monkeypatch):
+    watch = tmp_path / "watch"
+    watch.mkdir()
+    publish = tmp_path / "publish"
+    publish.mkdir()
+    a = publish / "A.pdf"
+    b = publish / "B.pdf"
+    a.write_bytes(b"%PDF-a")
+    b.write_bytes(b"%PDF-b")
+
+    cfg = _cfg(tmp_path)
+    state = {"files": {}}
+    posted = []
+
+    monkeypatch.setattr(
+        slides_daemon,
+        "_post_json",
+        lambda url, payload, *_args, **_kwargs: posted.append((url, payload)) or {"ok": True},
+    )
+
+    assert slides_daemon.run_once(cfg, state) is True
+    assert len(posted[-1][1]["slides"]) == 2
+
+    b.unlink()
+    assert slides_daemon.run_once(cfg, state) is True
+    assert len(posted[-1][1]["slides"]) == 1
