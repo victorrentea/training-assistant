@@ -73,8 +73,10 @@ class AppState:
         self.summary_updated_at: Optional[datetime] = None
         self.summary_force_requested: bool = False
         self.summary_reset_requested: bool = False
-        # Session stack
-        self.session_stack: list[dict] = []
+        # Session state
+        self.session_main: dict | None = None   # {name, started_at, status}
+        self.session_talk: dict | None = None   # {name, started_at, status} | None
+        self.paused_participant_uuids: set[str] = set()  # UUIDs of paused session's participants
         self.session_request: dict | None = None
         # Debate state
         self.debate_statement: Optional[str] = None

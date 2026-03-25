@@ -33,8 +33,14 @@ class RenameSessionRequest(BaseModel):
 
 
 class SyncSessionRequest(BaseModel):
-    stack: list[dict]
-    key_points: list[dict]
+    main: dict | None = None
+    talk: dict | None = None
+    discussion_points: list = []
+    session_state: dict | None = None
+    action: str | None = None
+    # backward compat:
+    stack: list | None = None
+    key_points: list | None = None
 
 
 @router.post("/api/session/start", dependencies=[Depends(require_host_auth)])
@@ -78,9 +84,13 @@ async def poll_session_request():
 
 @router.post("/api/session/sync", dependencies=[Depends(require_host_auth)])
 async def sync_session(body: SyncSessionRequest):
-    state.session_stack = body.stack
-    state.summary_points = body.key_points
-    state.summary_updated_at = datetime.now()
+    if body.main is not None or body.talk is not None:
+        state.session_main = body.main
+        state.session_talk = body.talk
+    key_points = body.key_points or body.discussion_points
+    if key_points:
+        state.summary_points = key_points
+        state.summary_updated_at = datetime.now()
     await broadcast_state()
     return {"ok": True}
 
