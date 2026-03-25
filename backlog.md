@@ -1,6 +1,7 @@
 # Tasks
 
 - [x] ui: session panel compacted for host screen — session controls are clickable emoji-only (no button chrome), pause is followed by a vertical separator then `🎙️▶️`, and current session now shows transcript active time windows under the row.
+- [x] ui: add explicit stop control (`⏹️`) on current host session row to end recording at day end via `/api/session/end`.
 - [x] The participants should auto-join any open session when they loaded the page in their browsers and they've previously logged in.
 - [x] The application should allow them to log out, though, in which case, with a button, they need to re-choose a name or pick the randomly generated one.
 - [x] Make sure the application is mobile friendly also.
