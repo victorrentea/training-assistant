@@ -1,7 +1,8 @@
 {
-  "sha": "96b3810bce3eb0a7ccac4280f5d38ad637067622",
-  "timestamp": "2026-03-25 09:03",
+  "sha": "438cb62d9dfb0018e56100fa5d9085f7006b4ed3",
+  "timestamp": "2026-03-25 09:11",
   "changelog": [
-    "fix: rename now->_now in talk blocks to avoid shadowing monotonic; skip talk folders in find_session_folder"
+    "feat: add green EKG graph-paper grid to dying pulse effect",
+    "feat: darken dying pulse overlay and slow fade to 500ms"
   ]
 }
