@@ -173,7 +173,7 @@ def format_startup_log(
     non_empty = [(dt, txt) for dt, txt in entries if dt is not None and txt.strip()]
 
     # Watermark
-    if summary_watermark == 0:
+    if summary_watermark == 0 or summary_watermark > len(non_empty):
         watermark_str = "—"
     else:
         watermark_dt = non_empty[summary_watermark - 1][0]
