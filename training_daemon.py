@@ -204,6 +204,14 @@ def _save_key_points(
         log.error("session", f"Failed to save key points: {e}")
 
 
+def _save_session_state(session_folder: Path, snapshot: dict) -> None:
+    """Atomically writes session_state.json to the session folder."""
+    path = session_folder / "session_state.json"
+    tmp = path.with_suffix(".tmp")
+    tmp.write_text(json.dumps(snapshot, default=str, indent=2))
+    tmp.replace(path)
+
+
 def _load_daemon_state(sessions_root: Path) -> dict:
     """Load daemon state. Returns {main: dict|None, talk: dict|None}.
     Migrates old {stack:[...]} format transparently."""
@@ -566,6 +574,9 @@ def run() -> None:
     last_summary_at = 0.0  # monotonic time of last summary run
     last_snapshot_hash: str | None = None  # hash of last saved state snapshot
     transcript_state = TranscriptStateManager()
+    _SAVE_INTERVAL = 5
+    # Trigger immediate save on first iteration if a session is already active
+    _save_counter = _SAVE_INTERVAL if session_stack else 0
 
     while True:
         try:
@@ -977,6 +988,21 @@ def run() -> None:
                         log.info("summarizer", f"Key points: {len(current_key_points)} total (+{len(new_pts)} new)")
                 except Exception as e:
                     log.error("summarizer", f"Error: {e}")
+
+            # ── Periodic session state snapshot save ──
+            _save_counter += 1
+            if _save_counter >= _SAVE_INTERVAL:
+                _save_counter = 0
+                current_folder = sessions_root / session_stack[-1]["name"] if session_stack else None
+                if current_folder and current_folder.exists():
+                    try:
+                        resp = _get_json(
+                            f"{config.server_url}/api/session/snapshot",
+                            config.host_username, config.host_password,
+                        )
+                        _save_session_state(current_folder, resp)
+                    except Exception as e:
+                        log.error("daemon", f"Failed to save session snapshot: {e}")
 
         except RuntimeError as e:
             if not server_disconnected:
