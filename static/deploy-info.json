@@ -1,7 +1,7 @@
 {
-  "sha": "73d41527cd8b0c10bdc7fc2a5f2a669954b67d41",
-  "timestamp": "2026-03-25 20:08",
+  "sha": "01104ac22e1a8085f117a9c6c5d6e5a650df4152",
+  "timestamp": "2026-03-25 20:10",
   "changelog": [
-    "Add stop control for current session"
+    "Treat session stop as soft pause"
   ]
 }
