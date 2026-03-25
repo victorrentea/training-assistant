@@ -277,7 +277,7 @@
       <div id="session-talk-row" style="display:none">
         <div class="session-row session-talk-active" id="session-talk-box">
           <span id="session-talk-name" class="session-name"></span>
-          <button class="btn btn-sm" onclick="endTalk()">END TALK</button>
+          <button class="btn btn-sm" onclick="endTalk()">END 🎙️</button>
         </div>
       </div>
 
@@ -285,13 +285,9 @@
       <div id="session-main-row" style="display:none">
         <div class="session-row">
           <span id="session-main-name" class="session-name"></span>
+          <button class="btn btn-sm" id="btn-start-talk" style="display:none" onclick="startTalk()">Start 🎙️</button>
           <button class="btn btn-sm" id="btn-pause-session" onclick="togglePauseSession()">PAUSE</button>
         </div>
-      </div>
-
-      <!-- START TALK button (shown when no talk active and main session exists) -->
-      <div id="session-start-talk-row" style="display:none">
-        <button class="btn btn-sm" id="btn-start-talk" onclick="startTalk()">START TALK</button>
       </div>
 
       <!-- FRAGILE state: CREATE button (shown when no folder for today) -->

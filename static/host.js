@@ -2543,9 +2543,9 @@ function renderSessionPanel() {
     if (nameEl) nameEl.textContent = talk.name;
   }
 
-  // START TALK: show only when main exists and no talk active
-  const startRow = document.getElementById('session-start-talk-row');
-  if (startRow) startRow.style.display = (main && !talk) ? 'flex' : 'none';
+  // START TALK: show inline only when main exists and no talk active
+  const startTalkBtn = document.getElementById('btn-start-talk');
+  if (startTalkBtn) startTalkBtn.style.display = (main && !talk) ? '' : 'none';
 }
 
 function startTalk() {
