@@ -1,7 +1,7 @@
 {
-  "sha": "23a9d6a074dfb52c7c3251de3ecaf2b4d7c5b075",
-  "timestamp": "2026-03-25 20:39",
+  "sha": "73c73b8cb599c6579ffb149f1d1ff5998b10d540",
+  "timestamp": "2026-03-25 20:31",
   "changelog": [
-    "fix: include slides_current fallback in api/slides"
+    "feat: include local materials slides in api/slides"
   ]
 }

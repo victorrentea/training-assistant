@@ -263,5 +263,3 @@
 - Follow-up implemented: `/api/slides` now auto-includes PDFs from local `training-assistant/materials/slides`, and serves them via `/api/slides/file/{slug}` for participant access.
 - Verified with `pytest -q tests/test_slides_api.py` (4 passed).
 - Verified with `pytest -q tests/test_main.py -k "api_slides_is_empty_by_default or quiz_status_updates_slides_and_api_returns_normalized_data or quiz_request_reports_has_slides_flag"` (3 passed, 120 deselected).
-- Follow-up hardening: `/api/slides` also includes `slides_current` fallback (for GH66 daemon flow on production).
-- Verified with `pytest -q tests/test_slides_api.py` (5 passed).

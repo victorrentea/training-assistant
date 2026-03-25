@@ -154,17 +154,7 @@ async def get_current_slides():
 @public_router.get("/api/slides")
 async def get_slides():
     local_slides, _ = _build_local_slides_index()
-    state_slides = list(state.slides or [])
-    current = state.slides_current or {}
-    if current.get("url"):
-        state_slides.append({
-            "name": current.get("source_file") or "Current Slides",
-            "slug": current.get("slug") or _slugify(current.get("source_file") or "current-slides"),
-            "url": current["url"],
-            "updated_at": current.get("updated_at"),
-            "source": "slides_current",
-        })
-    slides = _merge_slide_sources(state_slides, local_slides)
+    slides = _merge_slide_sources(state.slides, local_slides)
     return {"slides": slides}
 
 
