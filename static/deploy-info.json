@@ -1,7 +1,7 @@
 {
-  "sha": "42138ca8acff9df9b7f735052ef18647efb1eb49",
-  "timestamp": "2026-03-25 20:56",
+  "sha": "ac8646365349bb2cc1d288c77697818d05ec11c7",
+  "timestamp": "2026-03-25 20:59",
   "changelog": [
-    "fix: publish full slides catalog from daemon"
+    "fix: remove participant slides refresh icon"
   ]
 }
