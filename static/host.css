@@ -1284,3 +1284,6 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
   z-index: 10000;
   pointer-events: none;
 }
+.host-emoji-float-screen {
+  font-size: 24rem;
+}

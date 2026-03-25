@@ -282,13 +282,14 @@
 
   function showHostEmoji(emoji) {
     const el = document.createElement('div');
-    el.className = 'host-emoji-float';
+    const isScreen = emoji === '🖥️';
+    el.className = 'host-emoji-float' + (isScreen ? ' host-emoji-float-screen' : '');
     el.textContent = emoji;
     document.body.appendChild(el);
 
-    // Spawn from bottom-right corner
-    const startX = window.innerWidth - 120;
-    const startY = window.innerHeight - 80;
+    // Screen emoji: spawn from center; others: spawn from bottom-right corner
+    const startX = isScreen ? window.innerWidth / 2 : window.innerWidth - 120;
+    const startY = isScreen ? window.innerHeight / 2 : window.innerHeight - 80;
     el.style.left = startX + 'px';
     el.style.top = startY + 'px';
     el.style.transform = 'translate(-50%, -50%)';
