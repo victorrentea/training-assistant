@@ -643,7 +643,12 @@
     const el = document.getElementById('overlay-badge');
     if (!el) return;
     el.className = `badge ${connected ? 'connected' : 'disconnected'}`;
-    el.title = connected ? 'Desktop Overlay connected' : 'Desktop Overlay not connected';
+    el.title = connected ? 'Desktop Overlay connected — click to fire a heart' : 'Desktop Overlay not connected — click to fire a heart';
+  }
+
+  function triggerHostHeart() {
+    if (!ws) return;
+    ws.send(JSON.stringify({ type: 'emoji_reaction', emoji: '❤️' }));
   }
 
   function renderPendingDeploy(_pendingDeploy) {}
