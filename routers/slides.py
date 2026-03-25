@@ -59,3 +59,8 @@ async def clear_current_slides():
 @public_router.get("/api/slides/current")
 async def get_current_slides():
     return {"slides_current": state.slides_current}
+
+
+@public_router.get("/api/slides")
+async def get_slides():
+    return {"slides": state.slides}

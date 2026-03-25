@@ -172,6 +172,7 @@ Script which generates navigable HTML page from the catalog Google Doc as a prot
 Host posts a provocative statement (e.g. "Microservices are always a mistake for teams under 20 people"). Participants drag a slider from Strongly Disagree to Strongly Agree. Host sees the full distribution as a histogram. Sliders capture *degree* of opinion — richer than binary polls for an audience that hates false dichotomies.
 
 - [x] GH#29: Summary bullets now include approximate timestamps (HH:MM) derived from transcript timing data, displayed as subtle prefixes in the UI
+- [x] GH#67: Participant Slides viewer with PDF.js modal, `/api/slides` backend feed, per-deck page persistence, auto-refresh/reload on slide updates, and download action
 
 ## Concept Ranking / Ordering
 Host presents 4–6 items (patterns, approaches, technologies). Participants drag them into an order (e.g. safest → most dangerous, simplest → most complex). Host aggregates the median ranking and highlights disagreements. Pure conceptual reasoning, no coding.

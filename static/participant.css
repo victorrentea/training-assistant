@@ -177,6 +177,95 @@ h1 { display: none; }
 }
 .location-prompt:hover { opacity: 1; }
 
+/* ── Slides viewer ── */
+.slides-dialog {
+  width: min(1100px, 96vw);
+  max-width: min(1100px, 96vw);
+  max-height: 92vh;
+}
+
+.slides-header-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: .25rem;
+}
+
+.slides-controls {
+  display: flex;
+  gap: .6rem;
+  align-items: center;
+  margin-bottom: .6rem;
+}
+
+.slides-select {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface2);
+  color: var(--text);
+  padding: .45rem .55rem;
+  font-size: .92rem;
+}
+
+.slides-updated {
+  color: var(--muted);
+  font-size: .78rem;
+  white-space: nowrap;
+}
+
+.slides-empty {
+  color: var(--muted);
+  padding: .5rem 0;
+}
+
+.slides-error {
+  color: var(--danger);
+  font-size: .85rem;
+  margin-bottom: .5rem;
+}
+
+.slides-viewer-shell {
+  flex: 1;
+  min-height: 0;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  background: #121212;
+}
+
+#slides-pdf-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+}
+
+#slides-pdf-viewer {
+  padding: .7rem 0;
+}
+
+#slides-download-btn[aria-disabled="true"] {
+  opacity: .45;
+  pointer-events: none;
+}
+
+@media (max-width: 640px) {
+  .slides-controls {
+    flex-direction: column;
+    align-items: stretch;
+    gap: .4rem;
+  }
+  .slides-updated {
+    white-space: normal;
+  }
+  .slides-dialog {
+    width: 98vw;
+    max-width: 98vw;
+    max-height: 95vh;
+  }
+}
+
 /* ── Poll card ── */
 .poll-card {
   background: var(--surface);

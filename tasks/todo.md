@@ -1,5 +1,17 @@
 # Todo
 
+## Backlog item: GH#67 participant slides viewer (PDF)
+
+- [x] Add backend slide metadata endpoint `GET /api/slides`
+- [x] Extend daemon→backend status payload to carry slide list metadata
+- [x] Load slide manifest from active session folder in daemon and normalize entries
+- [x] Add participant "Slides" UI with PDF.js viewer, selector, and download action
+- [x] Persist/restore current slide page per slug in `localStorage`
+- [x] Auto-refresh slide metadata and reload viewer when source changes
+- [x] Add/adjust automated tests for backend + daemon helpers
+- [x] Track request completion in `backlog.md`
+- [x] Run targeted tests and capture proof in review section
+
 ## Backlog item: periodic timestamps in transcription file
 
 - [x] Inspect existing transcription parser format in `quiz_core.py`
@@ -232,3 +244,11 @@
 - Verified with `python3 -m pytest -q tests/test_slides_api.py tests/test_slides_daemon.py` (7 passed).
 - Verified with `python3 -m pytest -q tests/test_main.py -k "session_snapshot_returns_participants_and_scores or session_snapshot_requires_auth"` (2 passed, 118 deselected).
 - Proof logs: `/tmp/gh66_tests.log`.
+- Backlog item fixed: GH#67 participant Slides viewer is now available with PDF.js, download action, page persistence, and update-aware reloads.
+- Backend/daemon wiring added: `/api/slides` endpoint, daemon slide-manifest normalization, and `quiz-status` slide metadata propagation.
+- Verified with `pytest -q tests/test_main.py -k "slides or quiz_request_reports_has_slides_flag"` (3 passed).
+- Verified with `pytest -q tests/test_quiz_core.py -k "post_status"` (4 passed).
+- Verified with `pytest -q tests/test_daemon_state.py -k "slides_manifest"` (2 passed).
+- Verified with `pytest -q tests/test_e2e_quiz_summary.py -k "update_with_session or poll_after_request"` (2 passed).
+- Frontend syntax check: `node --check static/participant.js`.
+- Proof screenshot: `docs/superpowers/specs/gh67-slides-viewer.png`.

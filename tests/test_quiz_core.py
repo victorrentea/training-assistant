@@ -630,6 +630,14 @@ class TestServerHelpers:
         assert payload["session_folder"] == "/path"
 
     @patch("quiz_core._post_json")
+    def test_post_status_with_slides(self, mock_post, tmp_path):
+        cfg = _make_config(tmp_path)
+        post_status("idle", "Ready", cfg, slides=[{"name": "Deck", "url": "https://cdn.example.com/deck.pdf"}])
+        payload = mock_post.call_args[0][1]
+        assert "slides" in payload
+        assert payload["slides"][0]["name"] == "Deck"
+
+    @patch("quiz_core._post_json")
     def test_post_status_error_swallowed(self, mock_post, tmp_path):
         cfg = _make_config(tmp_path)
         mock_post.side_effect = RuntimeError("connection refused")

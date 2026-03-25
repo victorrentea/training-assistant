@@ -165,3 +165,35 @@ def test_sync_session_no_session_state_key_when_none():
         )
 
     assert "session_state" not in captured["payload"]
+
+
+def test_normalize_slides_manifest_accepts_slug_mapping():
+    from training_daemon import _normalize_slides_manifest
+    slides = _normalize_slides_manifest({
+        "slides": {
+            "arch-deck": {
+                "url": "https://cdn.example.com/arch.pdf",
+                "name": "Architecture Deck",
+                "updated_at": "2026-03-25T11:00:00+00:00",
+            }
+        }
+    })
+    assert len(slides) == 1
+    assert slides[0]["slug"] == "arch-deck"
+    assert slides[0]["name"] == "Architecture Deck"
+    assert slides[0]["url"] == "https://cdn.example.com/arch.pdf"
+
+
+def test_load_slides_manifest_reads_candidate_file():
+    from training_daemon import _load_slides_manifest
+    with tempfile.TemporaryDirectory() as d:
+        folder = Path(d)
+        (folder / "slides_manifest.json").write_text(json.dumps({
+            "slides": [
+                {"name": "Intro", "url": "https://cdn.example.com/intro.pdf"}
+            ]
+        }), encoding="utf-8")
+        slides = _load_slides_manifest(folder)
+        assert len(slides) == 1
+        assert slides[0]["slug"] == "intro"
+        assert slides[0]["url"] == "https://cdn.example.com/intro.pdf"

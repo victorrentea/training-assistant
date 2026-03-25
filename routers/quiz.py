@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+import re
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, model_validator
@@ -23,11 +24,21 @@ class QuizRequest(BaseModel):
         return self
 
 
+class SlideStatus(BaseModel):
+    name: str
+    url: str
+    slug: str | None = None
+    updated_at: str | None = None
+    etag: str | None = None
+    last_modified: str | None = None
+
+
 class QuizStatus(BaseModel):
     status: str
     message: str = ""
     session_folder: str | None = None
     session_notes: str | None = None
+    slides: list[SlideStatus] | None = None
 
 
 class QuizPreview(BaseModel):
@@ -41,6 +52,15 @@ class QuizPreview(BaseModel):
 
 class QuizRefineRequest(BaseModel):
     target: str  # "question" | "opt0" | "opt1" | ...
+
+
+_SLUG_SANITIZER = re.compile(r"[^a-z0-9]+")
+
+
+def _slugify(value: str) -> str:
+    raw = value.strip().lower()
+    raw = _SLUG_SANITIZER.sub("-", raw).strip("-")
+    return raw or "slide"
 
 
 @router.post("/api/quiz-request")
@@ -67,6 +87,7 @@ async def poll_quiz_request():
         "session_folder": state.daemon_session_folder,
         "has_notes_content": state.notes_content is not None,
         "has_key_points": len(state.summary_points) > 0,
+        "has_slides": len(state.slides) > 0,
         "needs_restore": state.needs_restore,
     }
 
@@ -77,6 +98,27 @@ async def update_quiz_status(body: QuizStatus):
     if body.session_folder is not None or body.session_notes is not None:
         state.daemon_session_folder = body.session_folder
         state.daemon_session_notes = body.session_notes
+    if body.slides is not None:
+        normalized: list[dict] = []
+        seen: set[str] = set()
+        for idx, slide in enumerate(body.slides):
+            name = (slide.name or "").strip()
+            url = (slide.url or "").strip()
+            if not name or not url:
+                continue
+            slug = (slide.slug or "").strip() or _slugify(name)
+            if slug in seen:
+                slug = f"{slug}-{idx+1}"
+            seen.add(slug)
+            normalized.append({
+                "name": name,
+                "slug": slug,
+                "url": url,
+                "updated_at": slide.updated_at,
+                "etag": slide.etag,
+                "last_modified": slide.last_modified,
+            })
+        state.slides = normalized
     await broadcast({"type": "quiz_status", **state.quiz_status})
     return {"ok": True}
 

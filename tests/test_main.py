@@ -956,6 +956,57 @@ def test_quiz_request_rejects_neither_field():
     assert resp.status_code == 422
 
 
+def test_api_slides_is_empty_by_default():
+    state.reset()
+    client = TestClient(app)
+    resp = client.get("/api/slides")
+    assert resp.status_code == 200
+    assert resp.json() == {"slides": []}
+
+
+def test_quiz_status_updates_slides_and_api_returns_normalized_data():
+    state.reset()
+    client = TestClient(app)
+    resp = client.post("/api/quiz-status", json={
+        "status": "ready",
+        "message": "Agent ready.",
+        "slides": [
+            {
+                "name": "Architecture Deck",
+                "slug": "arch",
+                "url": "https://cdn.example.com/abc.pdf",
+                "updated_at": "2026-03-25T10:15:00+00:00",
+                "etag": "\"v1\"",
+            },
+            {
+                "name": "Intro",
+                "url": "https://cdn.example.com/intro.pdf",
+            },
+        ],
+    }, headers=_HOST_AUTH_HEADERS)
+    assert resp.status_code == 200
+
+    slides_resp = client.get("/api/slides")
+    assert slides_resp.status_code == 200
+    slides = slides_resp.json()["slides"]
+    assert len(slides) == 2
+    assert slides[0]["slug"] == "arch"
+    assert slides[0]["url"] == "https://cdn.example.com/abc.pdf"
+    assert slides[1]["slug"] == "intro"
+
+
+def test_quiz_request_reports_has_slides_flag():
+    state.reset()
+    client = TestClient(app)
+    client.post("/api/quiz-status", json={
+        "status": "ready",
+        "message": "Agent ready.",
+        "slides": [{"name": "Deck", "url": "https://cdn.example.com/deck.pdf"}],
+    }, headers=_HOST_AUTH_HEADERS)
+    data = client.get("/api/quiz-request", headers=_HOST_AUTH_HEADERS).json()
+    assert data["has_slides"] is True
+
+
 def test_timing_event_endpoint_returns_ok():
     state.reset()
     client = TestClient(app)
