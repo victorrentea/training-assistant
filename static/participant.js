@@ -675,7 +675,20 @@
   // ── Message handler ──
   function handleMessage(msg) {
     switch (msg.type) {
+      case 'session_paused':
+        const overlay = document.getElementById('session-paused-overlay');
+        const msgEl = document.getElementById('session-paused-message');
+        if (overlay) {
+          if (msgEl && msg.message) msgEl.textContent = msg.message;
+          overlay.style.display = 'flex';
+        }
+        return;
       case 'state':
+        // Hide session-paused overlay on successful reconnect
+        const pauseOverlay = document.getElementById('session-paused-overlay');
+        if (pauseOverlay && pauseOverlay.style.display !== 'none') {
+          pauseOverlay.style.display = 'none';
+        }
         versionReloadGuard && versionReloadGuard.check(msg.backend_version);
         if (!_stateInitialised) {
           // First message after connect: seed tracking state, fire no notification
