@@ -19,9 +19,12 @@ class ParticipantPage:
         then rename via inline edit."""
         # Wait for auto-join to complete
         expect(self._page.locator("#main-screen")).to_be_visible(timeout=10000)
-        # Rename via inline edit — trigger startNameEdit() directly because
-        # the inline element has zero area until a full layout pass completes
+        # Rename via inline edit
         expect(self._page.locator("#display-name")).not_to_be_empty(timeout=3000)
+        self.rename(name)
+
+    def rename(self, name: str) -> None:
+        """Trigger inline name edit and set a new name."""
         self._page.evaluate("startNameEdit()")
         edit_input = self._page.locator("#name-edit-input")
         expect(edit_input).to_be_visible(timeout=3000)
@@ -150,7 +153,7 @@ class ParticipantPage:
     def get_wordcloud_my_words(self) -> list[str]:
         """Return list of words the participant has submitted."""
         return [
-            el.inner_text().strip()
+            el.get_attribute("data-word") or ""
             for el in self._page.locator("#wc-my-words .wc-my-word").all()
         ]
 

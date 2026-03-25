@@ -27,12 +27,7 @@ class TestConnectionReconnection:
         expect(host._page.locator("#pax-list")).to_contain_text("Alice", timeout=5000)
 
         # Rename to Bob via inline edit
-        pax._page.locator("#display-name").click()
-        edit_input = pax._page.locator("#name-edit-input")
-        expect(edit_input).to_be_visible(timeout=3000)
-        edit_input.fill("Bob")
-        edit_input.press("Enter")
-        expect(pax._page.locator("#display-name")).to_have_text("Bob", timeout=3000)
+        pax.rename("Bob")
 
         # Host should see "Bob" instead of "Alice"
         expect(host._page.locator("#pax-list")).to_contain_text("Bob", timeout=5000)
@@ -268,7 +263,7 @@ class TestIdentityEdgeCases:
         """Trying to rename to empty string should keep the current name."""
         pax.join("KeepMe")
         # Try to rename to empty
-        pax._page.locator("#display-name").click()
+        pax._page.evaluate("startNameEdit()")
         edit_input = pax._page.locator("#name-edit-input")
         expect(edit_input).to_be_visible(timeout=3000)
         edit_input.fill("")
@@ -283,7 +278,7 @@ class TestIdentityEdgeCases:
         pax.join("ShortFirst")
         long_name = "A" * 40
 
-        pax._page.locator("#display-name").click()
+        pax._page.evaluate("startNameEdit()")
         edit_input = pax._page.locator("#name-edit-input")
         expect(edit_input).to_be_visible(timeout=3000)
         edit_input.fill(long_name)
@@ -337,12 +332,7 @@ class TestIdentityEdgeCases:
         original_src = avatar.get_attribute("src")
 
         # Rename
-        pax._page.locator("#display-name").click()
-        edit_input = pax._page.locator("#name-edit-input")
-        expect(edit_input).to_be_visible(timeout=3000)
-        edit_input.fill("NewName")
-        edit_input.press("Enter")
-        expect(pax._page.locator("#display-name")).to_have_text("NewName", timeout=3000)
+        pax.rename("NewName")
 
         # Avatar should be the same
         pax._page.wait_for_timeout(500)

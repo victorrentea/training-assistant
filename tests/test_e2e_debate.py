@@ -103,31 +103,31 @@ class TestSubPhaseTimer:
         api(server_url, "post", "/api/debate", json={"statement": "Test"})
         api(server_url, "post", "/api/debate/phase", json={"phase": "live_debate"})
         api(server_url, "post", "/api/debate/first-side", json={"side": "for"})
-        resp = api(server_url, "post", "/api/debate/sub-phase-timer",
-                   json={"sub_phase_index": 0, "seconds": 120})
+        resp = api(server_url, "post", "/api/debate/round-timer",
+                   json={"round_index": 0, "seconds": 120})
         assert resp.status_code == 200
 
     def test_invalid_index(self, server_url):
         api(server_url, "post", "/api/debate", json={"statement": "Test"})
         api(server_url, "post", "/api/debate/phase", json={"phase": "live_debate"})
         api(server_url, "post", "/api/debate/first-side", json={"side": "for"})
-        resp = api(server_url, "post", "/api/debate/sub-phase-timer",
-                   json={"sub_phase_index": 99, "seconds": 120})
+        resp = api(server_url, "post", "/api/debate/round-timer",
+                   json={"round_index": 99, "seconds": 120})
         assert resp.status_code == 400
 
     def test_zero_seconds(self, server_url):
         api(server_url, "post", "/api/debate", json={"statement": "Test"})
         api(server_url, "post", "/api/debate/phase", json={"phase": "live_debate"})
         api(server_url, "post", "/api/debate/first-side", json={"side": "for"})
-        resp = api(server_url, "post", "/api/debate/sub-phase-timer",
-                   json={"sub_phase_index": 0, "seconds": 0})
+        resp = api(server_url, "post", "/api/debate/round-timer",
+                   json={"round_index": 0, "seconds": 0})
         assert resp.status_code == 400
 
     def test_no_first_side(self, server_url):
         api(server_url, "post", "/api/debate", json={"statement": "Test"})
         api(server_url, "post", "/api/debate/phase", json={"phase": "live_debate"})
-        resp = api(server_url, "post", "/api/debate/sub-phase-timer",
-                   json={"sub_phase_index": 0, "seconds": 60})
+        resp = api(server_url, "post", "/api/debate/round-timer",
+                   json={"round_index": 0, "seconds": 60})
         assert resp.status_code == 400
 
 
@@ -136,15 +136,15 @@ class TestEndSubPhase:
         api(server_url, "post", "/api/debate", json={"statement": "Test"})
         api(server_url, "post", "/api/debate/phase", json={"phase": "live_debate"})
         api(server_url, "post", "/api/debate/first-side", json={"side": "for"})
-        api(server_url, "post", "/api/debate/sub-phase-timer",
-            json={"sub_phase_index": 0, "seconds": 120})
-        resp = api(server_url, "post", "/api/debate/end-sub-phase")
+        api(server_url, "post", "/api/debate/round-timer",
+            json={"round_index": 0, "seconds": 120})
+        resp = api(server_url, "post", "/api/debate/end-round")
         assert resp.status_code == 200
 
     def test_no_active_timer(self, server_url):
         api(server_url, "post", "/api/debate", json={"statement": "Test"})
         api(server_url, "post", "/api/debate/phase", json={"phase": "live_debate"})
-        resp = api(server_url, "post", "/api/debate/end-sub-phase")
+        resp = api(server_url, "post", "/api/debate/end-round")
         assert resp.status_code == 400
 
 
