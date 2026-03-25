@@ -769,31 +769,7 @@ h1 { display: none; }
   transform: scale(1);
   transition: none;
 }
-.emoji-float-screen {
-  font-size: 7.5rem;
-  transform: translate(-50%, -50%) scale(1);
-}
-.emoji-float-screen.emoji-float-active {
-  animation: emoji-rise-screen 2.5s ease-out forwards, emoji-drift 1.2s ease-in-out infinite alternate;
-}
-@keyframes emoji-rise-screen {
-  0% {
-    opacity: 1;
-    transform: translate(-50%, -50%) scale(1) translateY(0);
-  }
-  30% {
-    opacity: 0.9;
-    transform: translate(-50%, -50%) scale(1.6) translateY(-120px);
-  }
-  60% {
-    opacity: 0.5;
-    transform: translate(-50%, -50%) scale(1.9) translateY(-280px);
-  }
-  100% {
-    opacity: 0;
-    transform: translate(-50%, -50%) scale(2.1) translateY(-450px);
-  }
-}
+
 .emoji-float-active {
   animation: emoji-rise 2.5s ease-out forwards, emoji-drift 1.2s ease-in-out infinite alternate;
 }
