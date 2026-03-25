@@ -61,10 +61,9 @@
 <div id="summary-overlay" class="summary-overlay" onclick="closeSummaryModal()">
   <div class="summary-dialog" onclick="event.stopPropagation()">
     <div class="summary-header">
-      <span>🧠 Key Points</span>
+      <span>🧠 Key Points <button id="keypoints-download" class="notes-download-btn" style="display:none" onclick="downloadKeyPoints()">⬇️ Download .txt</button></span>
       <span>
         <button id="summary-refresh-btn" class="modal-newtab-btn" onclick="requestSummaryRefresh()" title="Generate new key points from recent transcript">🔄</button>
-        <button class="modal-newtab-btn" onclick="downloadKeyPoints()" title="Download as text file">⬇</button>
         <a href="/notes" target="_blank" class="modal-newtab-btn" title="Open in new tab">↗</a>
         <button class="summary-close" onclick="closeSummaryModal()">✕</button>
       </span>

@@ -390,6 +390,8 @@
       const d = new Date(summaryUpdatedAt);
       timeEl.textContent = 'Updated ' + d.toLocaleTimeString();
     }
+    const dlBtn = document.getElementById('keypoints-download');
+    if (dlBtn) dlBtn.style.display = summaryPoints.length ? '' : 'none';
   }
 
   function downloadKeyPoints() {
