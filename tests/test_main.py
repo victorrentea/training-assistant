@@ -956,16 +956,18 @@ def test_quiz_request_rejects_neither_field():
     assert resp.status_code == 422
 
 
-def test_api_slides_is_empty_by_default():
+def test_api_slides_is_empty_by_default(monkeypatch, tmp_path):
     state.reset()
+    monkeypatch.setenv("TRAINING_ASSISTANT_SLIDES_DIR", str(tmp_path))
     client = TestClient(app)
     resp = client.get("/api/slides")
     assert resp.status_code == 200
     assert resp.json() == {"slides": []}
 
 
-def test_quiz_status_updates_slides_and_api_returns_normalized_data():
+def test_quiz_status_updates_slides_and_api_returns_normalized_data(monkeypatch, tmp_path):
     state.reset()
+    monkeypatch.setenv("TRAINING_ASSISTANT_SLIDES_DIR", str(tmp_path))
     client = TestClient(app)
     resp = client.post("/api/quiz-status", json={
         "status": "ready",
@@ -995,8 +997,9 @@ def test_quiz_status_updates_slides_and_api_returns_normalized_data():
     assert slides[1]["slug"] == "intro"
 
 
-def test_quiz_request_reports_has_slides_flag():
+def test_quiz_request_reports_has_slides_flag(monkeypatch, tmp_path):
     state.reset()
+    monkeypatch.setenv("TRAINING_ASSISTANT_SLIDES_DIR", str(tmp_path))
     client = TestClient(app)
     client.post("/api/quiz-status", json={
         "status": "ready",
