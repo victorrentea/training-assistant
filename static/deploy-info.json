@@ -1,7 +1,7 @@
 {
-  "sha": "163889e40285f6c21ddb5c28a9abf3095e8a24b3",
-  "timestamp": "2026-03-25 08:59",
+  "sha": "fa7a66ad73bed07126871f0f6b06f6210507f12f",
+  "timestamp": "2026-03-25 09:02",
   "changelog": [
-    "fix: pause/resume updates status immediately; derive status from paused_intervals; btn dark bg + brightness hover"
+    "fix: repair pre-existing e2e test failures in debate, wordcloud, and identity tests"
   ]
 }
