@@ -1,8 +1,7 @@
 {
-  "sha": "438cb62d9dfb0018e56100fa5d9085f7006b4ed3",
-  "timestamp": "2026-03-25 09:11",
+  "sha": "653a87748dd96e93b120b72ae58f212c52da5e12",
+  "timestamp": "2026-03-25 09:12",
   "changelog": [
-    "feat: add green EKG graph-paper grid to dying pulse effect",
-    "feat: darken dying pulse overlay and slow fade to 500ms"
+    "fix: sort set-derived lists in state snapshot for deterministic hashing"
   ]
 }
