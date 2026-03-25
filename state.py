@@ -95,6 +95,7 @@ class AppState:
         self.screen_share_active: bool = True
         self.needs_restore: bool = True
         self.pending_deploy: dict | None = None  # {sha, message} set by watcher when push detected
+        self.quiz_md_content: str = ""  # markdown log of all closed polls
 
     def suggest_name(self) -> str:
         """Return the next available LOTR name (by popularity order).
