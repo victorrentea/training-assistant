@@ -204,17 +204,45 @@ def _save_key_points(
         log.error("session", f"Failed to save key points: {e}")
 
 
-def _load_daemon_state(sessions_root: Path) -> list[dict]:
-    """Load session stack from daemon state file."""
+def _load_daemon_state(sessions_root: Path) -> dict:
+    """Load daemon state. Returns {main: dict|None, talk: dict|None}.
+    Migrates old {stack:[...]} format transparently."""
     state_file = sessions_root / _DAEMON_STATE_FILENAME
+    empty = {"main": None, "talk": None}
     if not state_file.exists():
-        return []
+        return empty
     try:
         data = json.loads(state_file.read_text(encoding="utf-8"))
-        return data.get("stack", [])
     except Exception as e:
         log.error("session", f"Failed to load daemon state: {e}")
-        return []
+        return empty
+    # Migration: old format had {stack: [...]}
+    if "stack" in data and "main" not in data:
+        stack = data["stack"]
+        active = [s for s in stack if not s.get("ended_at")]
+        return {
+            "main": {**active[0], "status": "active"} if len(active) >= 1 else None,
+            "talk": {**active[1], "status": "active"} if len(active) >= 2 else None,
+        }
+    return data
+
+
+def _daemon_state_to_stack(daemon_state: dict) -> list[dict]:
+    """Convert {main, talk} daemon state dict to the in-memory session stack list."""
+    stack = []
+    if daemon_state.get("main"):
+        stack.append(daemon_state["main"])
+    if daemon_state.get("talk"):
+        stack.append(daemon_state["talk"])
+    return stack
+
+
+def _stack_to_daemon_state(stack: list[dict]) -> dict:
+    """Convert in-memory session stack list to {main, talk} dict for persistence."""
+    return {
+        "main": stack[0] if len(stack) >= 1 else None,
+        "talk": stack[1] if len(stack) >= 2 else None,
+    }
 
 
 def _pause_session(session: dict, now: datetime, reason: str = "explicit") -> None:
@@ -232,13 +260,14 @@ def _resume_session(session: dict, now: datetime) -> None:
             return
 
 
-def _save_daemon_state(sessions_root: Path, stack: list[dict]) -> None:
-    """Persist session stack to daemon state file."""
+def _save_daemon_state(sessions_root: Path, daemon_state: dict) -> None:
+    """Persist {main, talk} daemon state to disk atomically."""
     try:
         sessions_root.mkdir(parents=True, exist_ok=True)
-        (sessions_root / _DAEMON_STATE_FILENAME).write_text(
-            json.dumps({"stack": stack}, indent=2), encoding="utf-8"
-        )
+        path = sessions_root / _DAEMON_STATE_FILENAME
+        tmp = path.with_suffix(".tmp")
+        tmp.write_text(json.dumps(daemon_state, default=str, indent=2), encoding="utf-8")
+        tmp.replace(path)
     except Exception as e:
         log.error("session", f"Failed to save daemon state: {e}")
 
@@ -466,7 +495,7 @@ def run() -> None:
 
     # ── Session stack initialization (early — needed for transcript log) ──
     sessions_root = config.session_folder.parent if config.session_folder else Path.cwd()
-    session_stack = _load_daemon_state(sessions_root)
+    session_stack = _daemon_state_to_stack(_load_daemon_state(sessions_root))
     current_key_points: list[dict] = []
     summary_watermark: int = 0
 
@@ -483,7 +512,7 @@ def run() -> None:
             "ended_at": None,
         }]
         current_key_points, summary_watermark = _load_key_points(config.session_folder)
-        _save_daemon_state(sessions_root, session_stack)
+        _save_daemon_state(sessions_root, _stack_to_daemon_state(session_stack))
         log.info("session", f"Auto-started: {config.session_folder.name}")
 
     # ── Log transcription time ranges at startup ──
@@ -569,7 +598,7 @@ def run() -> None:
                     }
                     session_stack.append(new_session)
                     current_key_points, summary_watermark = _load_key_points(folder)
-                    _save_daemon_state(sessions_root, session_stack)
+                    _save_daemon_state(sessions_root, _stack_to_daemon_state(session_stack))
                     notes_file = _find_notes_in_folder(folder)
                     config = dc_replace(config, session_folder=folder, session_notes=notes_file)
                     _sync_session_to_server(config, session_stack, current_key_points)
@@ -586,7 +615,7 @@ def run() -> None:
                     _resume_session(parent, datetime.now())
                     parent_folder = sessions_root / parent["name"]
                     current_key_points, summary_watermark = _load_key_points(parent_folder)
-                    _save_daemon_state(sessions_root, session_stack)
+                    _save_daemon_state(sessions_root, _stack_to_daemon_state(session_stack))
                     notes_file = _find_notes_in_folder(parent_folder)
                     config = dc_replace(config, session_folder=parent_folder, session_notes=notes_file)
                     _sync_session_to_server(config, session_stack, current_key_points)
@@ -606,7 +635,7 @@ def run() -> None:
                         else:
                             _save_key_points(new_folder, current_key_points, summary_watermark, _session_start_date(session_stack[-1]))
                         session_stack[-1]["name"] = new_name
-                        _save_daemon_state(sessions_root, session_stack)
+                        _save_daemon_state(sessions_root, _stack_to_daemon_state(session_stack))
                         notes_file = _find_notes_in_folder(new_folder)
                         config = dc_replace(config, session_folder=new_folder, session_notes=notes_file)
                         _sync_session_to_server(config, session_stack, current_key_points)
@@ -614,13 +643,13 @@ def run() -> None:
 
                 elif action == "pause" and session_stack:
                     _pause_session(session_stack[-1], datetime.now(), reason="explicit")
-                    _save_daemon_state(sessions_root, session_stack)
+                    _save_daemon_state(sessions_root, _stack_to_daemon_state(session_stack))
                     _sync_session_to_server(config, session_stack, current_key_points)
                     log.info("session", f"Paused: {session_stack[-1]['name']}")
 
                 elif action == "resume" and session_stack:
                     _resume_session(session_stack[-1], datetime.now())
-                    _save_daemon_state(sessions_root, session_stack)
+                    _save_daemon_state(sessions_root, _stack_to_daemon_state(session_stack))
                     _sync_session_to_server(config, session_stack, current_key_points)
                     transcript_state.reset()
                     log.info("session", f"Resumed: {session_stack[-1]['name']}")
@@ -664,7 +693,7 @@ def run() -> None:
                 for s in session_stack:
                     if s.get("ended_at") is None:
                         _pause_session(s, now_wall, reason="day_end")
-                _save_daemon_state(sessions_root, session_stack)
+                _save_daemon_state(sessions_root, _stack_to_daemon_state(session_stack))
                 _sync_session_to_server(config, session_stack, current_key_points)
                 transcript_state.reset()
                 log.info("session", "Auto-paused at 20:00 (end of working hours)")
@@ -683,7 +712,7 @@ def run() -> None:
                     for s in session_stack:
                         if s.get("ended_at") is None:
                             _resume_session(s, now_wall)
-                    _save_daemon_state(sessions_root, session_stack)
+                    _save_daemon_state(sessions_root, _stack_to_daemon_state(session_stack))
                     _sync_session_to_server(config, session_stack, current_key_points)
                     transcript_state.reset()
                     log.info("session", f"Auto-resumed at 09:30: {session_stack[-1]['name']}")
@@ -700,7 +729,7 @@ def run() -> None:
                 }
                 session_stack.append(new_session)
                 current_key_points, summary_watermark = _load_key_points(config.session_folder)
-                _save_daemon_state(sessions_root, session_stack)
+                _save_daemon_state(sessions_root, _stack_to_daemon_state(session_stack))
                 notes_file = _find_notes_in_folder(config.session_folder)
                 config = dc_replace(config, session_notes=notes_file)
                 _sync_session_to_server(config, session_stack, current_key_points)
@@ -943,7 +972,7 @@ def run() -> None:
                         else:
                             current_key_points = new_pts
                         _save_key_points(session_folder, current_key_points, summary_watermark, session_date)
-                        _save_daemon_state(sessions_root, session_stack)
+                        _save_daemon_state(sessions_root, _stack_to_daemon_state(session_stack))
                         _sync_session_to_server(config, session_stack, current_key_points)
                         log.info("summarizer", f"Key points: {len(current_key_points)} total (+{len(new_pts)} new)")
                 except Exception as e:
