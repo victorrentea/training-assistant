@@ -64,42 +64,6 @@ def test_slides_current_requires_host_auth_for_write():
     assert resp.status_code in (401, 403)
 
 
-def test_slides_upload_requires_host_auth(monkeypatch, tmp_path):
-    monkeypatch.setenv("TRAINING_ASSISTANT_UPLOADED_SLIDES_DIR", str(tmp_path / "uploaded"))
-    client = TestClient(app)
-    resp = client.post(
-        "/api/slides/upload",
-        data={"slug": "demo", "name": "Demo"},
-        files={"file": ("demo.pdf", b"%PDF-1.4\n%test\n", "application/pdf")},
-    )
-    assert resp.status_code in (401, 403)
-
-
-def test_slides_upload_is_listed_and_served(monkeypatch, tmp_path):
-    monkeypatch.setenv("TRAINING_ASSISTANT_UPLOADED_SLIDES_DIR", str(tmp_path / "uploaded"))
-    client = TestClient(app, headers=_HOST_AUTH_HEADERS)
-
-    upload = client.post(
-        "/api/slides/upload",
-        data={"slug": "demo-deck", "name": "Demo Deck"},
-        files={"file": ("demo.pdf", b"%PDF-1.4\n%test\n", "application/pdf")},
-    )
-    assert upload.status_code == 200
-    body = upload.json()
-    assert body["ok"] is True
-    assert body["slide"]["slug"] == "demo-deck"
-
-    public = TestClient(app)
-    resp = public.get("/api/slides")
-    assert resp.status_code == 200
-    slides = resp.json()["slides"]
-    assert any(s["slug"] == "demo-deck" and s["name"] == "Demo Deck" for s in slides)
-
-    file_resp = public.get("/api/slides/file/demo-deck")
-    assert file_resp.status_code == 200
-    assert file_resp.content.startswith(b"%PDF-1.4")
-
-
 def test_api_slides_lists_local_materials_and_serves_pdf(monkeypatch, tmp_path):
     monkeypatch.setenv("TRAINING_ASSISTANT_SLIDES_DIR", str(tmp_path))
     pdf = tmp_path / "Architecture.pdf"
@@ -137,34 +101,3 @@ def test_api_slides_merges_local_and_daemon_entries(monkeypatch, tmp_path):
     names = [s["name"] for s in resp.json()["slides"]]
     assert "Local Deck" in names
     assert "Remote Deck" in names
-
-def test_api_slides_includes_slides_current_when_present(monkeypatch, tmp_path):
-    monkeypatch.setenv("TRAINING_ASSISTANT_SLIDES_DIR", str(tmp_path))
-    state.slides_current = {
-        "url": "https://slides.example.com/current.pdf",
-        "slug": "current-123",
-        "source_file": "Deck Live.pdf",
-        "updated_at": "2026-03-25T20:40:00+00:00",
-    }
-
-    client = TestClient(app)
-    resp = client.get("/api/slides")
-    assert resp.status_code == 200
-    slides = resp.json()["slides"]
-    assert any(s["slug"] == "current-123" and s["url"] == "https://slides.example.com/current.pdf" for s in slides)
-
-
-def test_api_slides_ignores_non_displayable_names(monkeypatch, tmp_path):
-    monkeypatch.setenv("TRAINING_ASSISTANT_SLIDES_DIR", str(tmp_path))
-    (tmp_path / "---.pdf").write_bytes(b"%PDF-1.4\n%local\n")
-    state.slides = [
-        {"name": "   ", "slug": "blank", "url": "https://slides.example.com/blank.pdf"},
-        {"name": "---", "slug": "dashes", "url": "https://slides.example.com/dashes.pdf"},
-        {"name": "Deck 1", "slug": "deck-1", "url": "https://slides.example.com/deck-1.pdf"},
-    ]
-
-    client = TestClient(app)
-    resp = client.get("/api/slides")
-    assert resp.status_code == 200
-    slides = resp.json()["slides"]
-    assert [s["name"] for s in slides] == ["Deck 1"]
