@@ -1,7 +1,7 @@
 {
-  "sha": "f76be6a72491d5156e52bc872f0f42f3f090b2d6",
-  "timestamp": "2026-03-25 09:18",
+  "sha": "680308801629204456982a3c1ad3a149545d5385",
+  "timestamp": "2026-03-25 09:28",
   "changelog": [
-    "chore: remove noisy periodic transcript log line"
+    "Persist host participant history with online status"
   ]
 }
