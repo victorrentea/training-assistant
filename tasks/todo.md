@@ -197,6 +197,16 @@
 - [x] Run targeted tests and capture non-visual proof logs
 - [x] Mark GH66 item done in `backlog.md`
 
+## Direct request: track full slides catalog and regenerate Materials Slides PDFs
+
+- [x] Add complete tracked PPTX catalog from `https://victorrentea.ro/slides/` to repo config
+- [x] Update `slides_daemon.py` to process catalog entries from multiple subfolders
+- [x] Default copy output to `materials/slides` and regenerate target PDF on source PPTX mtime change
+- [x] Keep optional backend publish flow (sync only when configured)
+- [x] Add focused tests for catalog loading and target PDF routing
+- [x] Run targeted tests and capture non-visual proof logs
+- [x] Mark direct request done in `backlog.md`
+
 ## Review
 
 - Added `scripts/append_transcription_timestamps.py` with 3s default interval and parser-compatible format.
@@ -263,3 +273,7 @@
 - Follow-up implemented: `/api/slides` now auto-includes PDFs from local `training-assistant/materials/slides`, and serves them via `/api/slides/file/{slug}` for participant access.
 - Verified with `pytest -q tests/test_slides_api.py` (4 passed).
 - Verified with `pytest -q tests/test_main.py -k "api_slides_is_empty_by_default or quiz_status_updates_slides_and_api_returns_normalized_data or quiz_request_reports_has_slides_flag"` (3 passed, 120 deselected).
+- Added full deck catalog file `daemon/materials_slides_catalog.json` with 25 slide sources mapped to target PDFs in Materials Slides.
+- Updated `slides_daemon.py` to support catalog mode (multiple source subfolders), default local output `materials/slides`, and optional backend sync.
+- Verified with `python3 -m pytest -q tests/test_slides_daemon.py tests/test_slides_api.py` (9 passed).
+- Proof logs: `/tmp/slides_catalog_tests.log`.

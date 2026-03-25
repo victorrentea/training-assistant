@@ -1,0 +1,129 @@
+{
+  "decks": [
+    {
+      "title": "About Victor",
+      "source": "/Users/victorrentea/My Drive/Cursuri/Bio Victor.pptx",
+      "target_pdf": "About Victor.pdf"
+    },
+    {
+      "title": "Clean Code",
+      "source": "/Users/victorrentea/My Drive/Cursuri/CleanCode/Clean Code.pptx",
+      "target_pdf": "Clean Code.pdf"
+    },
+    {
+      "title": "Code Smells",
+      "source": "/Users/victorrentea/My Drive/Cursuri/CleanCode/Code Smells.pptx",
+      "target_pdf": "Code Smells.pdf"
+    },
+    {
+      "title": "Architecture",
+      "source": "/Users/victorrentea/My Drive/Cursuri/Architecture/Architecture.pptx",
+      "target_pdf": "Architecture.pdf"
+    },
+    {
+      "title": "Design Principles",
+      "source": "/Users/victorrentea/My Drive/Cursuri/Architecture/Design Principles.pptx",
+      "target_pdf": "Design Principles.pdf"
+    },
+    {
+      "title": "REST",
+      "source": "/Users/victorrentea/My Drive/Cursuri/Architecture/REST.pptx",
+      "target_pdf": "REST.pdf"
+    },
+    {
+      "title": "Modulith",
+      "source": "/Users/victorrentea/My Drive/Cursuri/Architecture/Modulith.pptx",
+      "target_pdf": "Modulith.pdf"
+    },
+    {
+      "title": "Microservices",
+      "source": "/Users/victorrentea/My Drive/Cursuri/Architecture/Microservices.pptx",
+      "target_pdf": "Microservices.pdf"
+    },
+    {
+      "title": "Psychology",
+      "source": "/Users/victorrentea/My Drive/Cursuri/Architecture/Psychology.pptx",
+      "target_pdf": "Psychology.pdf"
+    },
+    {
+      "title": "Event-Driven Architectures",
+      "source": "/Users/victorrentea/My Drive/Cursuri/Architecture/Event-Driven Architectures (EDA).pptx",
+      "target_pdf": "Event-Driven Architectures.pdf"
+    },
+    {
+      "title": "Event-Driven Pitfalls",
+      "source": "/Users/victorrentea/My Drive/Cursuri/Architecture/Event-Driven Pitfalls.pptx",
+      "target_pdf": "Event-Driven Pitfalls.pdf"
+    },
+    {
+      "title": "Design Patterns",
+      "source": "/Users/victorrentea/My Drive/Cursuri/Architecture/Design Patterns.pptx",
+      "target_pdf": "Design Patterns.pdf"
+    },
+    {
+      "title": "Unit Testing",
+      "source": "/Users/victorrentea/My Drive/Cursuri/Unit Testing/Unit Testing.pptx",
+      "target_pdf": "Unit Testing.pdf"
+    },
+    {
+      "title": "Integration Testing",
+      "source": "/Users/victorrentea/My Drive/Cursuri/Unit Testing/Integration Testing.pptx",
+      "target_pdf": "Integration Testing.pdf"
+    },
+    {
+      "title": "Performance Intro",
+      "source": "/Users/victorrentea/My Drive/Cursuri/Performance/Introduction.pptx",
+      "target_pdf": "Performance Intro.pdf"
+    },
+    {
+      "title": "Profiling Java",
+      "source": "/Users/victorrentea/My Drive/Cursuri/Performance/Profiling.pptx",
+      "target_pdf": "Profiling Java.pdf"
+    },
+    {
+      "title": "Java Memory",
+      "source": "/Users/victorrentea/My Drive/Cursuri/Performance/Java Memory.pptx",
+      "target_pdf": "Java Memory.pdf"
+    },
+    {
+      "title": "Java Concurrency",
+      "source": "/Users/victorrentea/My Drive/Cursuri/Performance/Java Concurrency.pptx",
+      "target_pdf": "Java Concurrency.pdf"
+    },
+    {
+      "title": "Virtual Threads",
+      "source": "/Users/victorrentea/My Drive/Cursuri/Performance/Virtual Threads.pptx",
+      "target_pdf": "Virtual Threads.pdf"
+    },
+    {
+      "title": "Java JIT",
+      "source": "/Users/victorrentea/My Drive/Cursuri/Performance/Java JIT.pptx",
+      "target_pdf": "Java JIT.pdf"
+    },
+    {
+      "title": "JPA",
+      "source": "/Users/victorrentea/My Drive/Cursuri/JPA/JPA.pptx",
+      "target_pdf": "JPA.pdf"
+    },
+    {
+      "title": "Spring",
+      "source": "/Users/victorrentea/My Drive/Cursuri/Spring/Spring.pptx",
+      "target_pdf": "Spring.pdf"
+    },
+    {
+      "title": "Secure Coding",
+      "source": "/Users/victorrentea/My Drive/Cursuri/Security/Secure Coding.pptx",
+      "target_pdf": "Secure Coding.pdf"
+    },
+    {
+      "title": "AI Coding",
+      "source": "/Users/victorrentea/My Drive/Cursuri/CleanCode/AI Coding.pptx",
+      "target_pdf": "AI Coding.pdf"
+    },
+    {
+      "title": "Reactive/WebFlux",
+      "source": "/Users/victorrentea/My Drive/Cursuri/Reactive/Reactive.pptx",
+      "target_pdf": "Reactive WebFlux.pdf"
+    }
+  ]
+}
