@@ -1,7 +1,7 @@
 {
-  "sha": "ac8646365349bb2cc1d288c77697818d05ec11c7",
-  "timestamp": "2026-03-25 20:59",
+  "sha": "1695cbd4e028d099179bb59f26a24c41f78d7706",
+  "timestamp": "2026-03-25 21:04",
   "changelog": [
-    "fix: remove participant slides refresh icon"
+    "apply pending local updates"
   ]
 }
