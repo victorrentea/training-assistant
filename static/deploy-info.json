@@ -1,7 +1,7 @@
 {
-  "sha": "0082cf204b10fc6e3d7e1611f42d4c68f19d974d",
+  "sha": "5cf1f228abce9f0cbb9e289f9e98f80bccb1a224",
   "timestamp": "2026-03-25 21:14",
   "changelog": [
-    "Enforce minute-level session interval rules"
+    "fix: filter empty slides dropdown entries"
   ]
 }
