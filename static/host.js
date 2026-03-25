@@ -16,6 +16,9 @@
   let sessionTalk = null;
   let daemonLastSeen = null;
   let daemonSessionFolder = null;
+  let _sessionIntervalsEditing = false;
+  let _sessionIntervalsDraft = '';
+  let _sessionIntervalsError = '';
 
   let _hostWcDebounceTimer = null;
   let _hostWcLastDataKey = null;
@@ -367,22 +370,36 @@
     return windows;
   }
 
+  function _startOfDayLocal(dt) {
+    return new Date(dt.getFullYear(), dt.getMonth(), dt.getDate());
+  }
+
+  function _dayOffset(baseDay, dt) {
+    return Math.floor((_startOfDayLocal(dt) - baseDay) / 86400000) + 1;
+  }
+
+  function _dayBaseFromSession(session) {
+    const windows = _computeSessionWindows(session);
+    if (windows.length) return _startOfDayLocal(windows[0][0]);
+    const startedAt = new Date(session?.started_at || Date.now());
+    return Number.isNaN(startedAt.getTime()) ? _startOfDayLocal(new Date()) : _startOfDayLocal(startedAt);
+  }
+
   function _formatSessionWindows(session) {
     const windows = _computeSessionWindows(session);
     if (!windows.length) return '';
 
     const firstStart = windows[0][0];
-    const firstDayStart = new Date(firstStart.getFullYear(), firstStart.getMonth(), firstStart.getDate());
+    const firstDayStart = _startOfDayLocal(firstStart);
     const dayKeys = new Set(windows.map(([start]) => `${start.getFullYear()}-${start.getMonth()}-${start.getDate()}`));
     const isMultiDay = dayKeys.size > 1;
     const ongoing = !session?.ended_at && !_isSessionPaused(session);
 
     return windows.map(([start, end], idx) => {
-      const dayStart = new Date(start.getFullYear(), start.getMonth(), start.getDate());
-      const dayNum = Math.floor((dayStart - firstDayStart) / 86400000) + 1;
-      const prefix = isMultiDay ? `D${dayNum} ` : '';
+      const dayNum = _dayOffset(firstDayStart, start);
+      const prefix = isMultiDay ? `Day${dayNum} ` : '';
       const endLabel = ongoing && idx === windows.length - 1 ? 'now' : _fmtSessionTime(end);
-      return `${prefix}${_fmtSessionTime(start)}-${endLabel}`;
+      return `${prefix}${_fmtSessionTime(start)}→${endLabel}`;
     }).join(', ');
   }
 
@@ -391,21 +408,207 @@
     if (!windows.length) return [];
 
     const firstStart = windows[0][0];
-    const firstDayStart = new Date(firstStart.getFullYear(), firstStart.getMonth(), firstStart.getDate());
-    const dayKeys = new Set(windows.map(([start]) => `${start.getFullYear()}-${start.getMonth()}-${start.getDate()}`));
-    const isMultiDay = dayKeys.size > 1;
+    const firstDayStart = _startOfDayLocal(firstStart);
     const ongoing = !session?.ended_at && !_isSessionPaused(session);
 
     return windows.map(([start, end], idx) => {
-      const dayStart = new Date(start.getFullYear(), start.getMonth(), start.getDate());
-      const dayNum = Math.floor((dayStart - firstDayStart) / 86400000) + 1;
-      const prefix = isMultiDay ? `D${dayNum} ` : '';
+      const dayNum = _dayOffset(firstDayStart, start);
       const isOngoingWindow = ongoing && idx === windows.length - 1;
       const endLabel = isOngoingWindow ? 'now' : _fmtSessionTime(end);
       return {
-        label: `${prefix}${_fmtSessionTime(start)}-${endLabel}`,
+        dayNum,
+        label: `${_fmtSessionTime(start)}→${endLabel}`,
+        start: new Date(start),
+        end: new Date(end),
         isOngoing: isOngoingWindow
       };
+    });
+  }
+
+  function _groupSessionWindowsByDay(session) {
+    const grouped = new Map();
+    for (const w of _sessionWindowsForDisplay(session)) {
+      if (!grouped.has(w.dayNum)) grouped.set(w.dayNum, []);
+      grouped.get(w.dayNum).push(w);
+    }
+    return [...grouped.entries()]
+      .sort((a, b) => a[0] - b[0])
+      .map(([dayNum, windows]) => ({ dayNum, windows }));
+  }
+
+  function _sessionIntervalsToEditableText(session) {
+    const rows = _groupSessionWindowsByDay(session);
+    if (!rows.length) return '';
+    return rows.map((row) => `Day${row.dayNum}: ${row.windows.map(w => w.label).join(', ')}`).join('\n');
+  }
+
+  function _parseHhMm(value) {
+    const m = /^(\d{2}):(\d{2})$/.exec(value);
+    if (!m) return null;
+    const hh = Number(m[1]);
+    const mm = Number(m[2]);
+    if (hh < 0 || hh > 23 || mm < 0 || mm > 59) return null;
+    return { hh, mm };
+  }
+
+  function _addDays(baseDay, daysToAdd) {
+    const d = new Date(baseDay);
+    d.setDate(d.getDate() + daysToAdd);
+    return d;
+  }
+
+  function _atTime(baseDay, dayNum, hhmm) {
+    const t = _parseHhMm(hhmm);
+    if (!t) return null;
+    const d = _addDays(baseDay, dayNum - 1);
+    d.setHours(t.hh, t.mm, 0, 0);
+    return d;
+  }
+
+  function _buildSessionFromIntervalsText(session, text) {
+    const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+    if (!lines.length) return { ok: false, error: 'Add at least one DayN line.' };
+
+    const segments = [];
+    const dayNums = new Set();
+    const baseDay = _dayBaseFromSession(session);
+
+    for (const line of lines) {
+      const m = /^Day\s*([0-9]+)\s*:\s*(.+)$/i.exec(line);
+      if (!m) return { ok: false, error: `Invalid line: "${line}". Use "Day1: 09:30→12:40, 13:40→17:30".` };
+      const dayNum = Number(m[1]);
+      if (!Number.isInteger(dayNum) || dayNum < 1) return { ok: false, error: `Invalid day number in "${line}".` };
+      dayNums.add(dayNum);
+
+      const ranges = m[2].split(',').map(s => s.trim()).filter(Boolean);
+      if (!ranges.length) return { ok: false, error: `No time ranges on Day${dayNum}.` };
+
+      for (const range of ranges) {
+        const r = /^(\d{2}:\d{2})\s*(?:→|->|-)\s*(\d{2}:\d{2}|now)$/i.exec(range);
+        if (!r) return { ok: false, error: `Invalid range "${range}". Use HH:MM→HH:MM.` };
+        const start = _atTime(baseDay, dayNum, r[1]);
+        if (!start) return { ok: false, error: `Invalid start time "${r[1]}".` };
+
+        const endRaw = r[2].toLowerCase();
+        const end = endRaw === 'now' ? new Date() : _atTime(baseDay, dayNum, endRaw);
+        if (!end) return { ok: false, error: `Invalid end time "${r[2]}".` };
+        if (end <= start) return { ok: false, error: `End must be after start in "${range}".` };
+        segments.push({ dayNum, start, end, isNow: endRaw === 'now' });
+      }
+    }
+
+    if (!dayNums.has(1)) return { ok: false, error: 'Day1 is required.' };
+    const maxDay = Math.max(...dayNums);
+    for (let d = 1; d <= maxDay; d += 1) {
+      if (!dayNums.has(d)) return { ok: false, error: `Missing Day${d}. Use consecutive days.` };
+    }
+
+    segments.sort((a, b) => a.start - b.start);
+    for (let i = 1; i < segments.length; i += 1) {
+      if (segments[i].start < segments[i - 1].end) {
+        return { ok: false, error: `Overlapping ranges near Day${segments[i].dayNum}.` };
+      }
+    }
+
+    const nowSegments = segments.filter(s => s.isNow);
+    if (nowSegments.length > 1) return { ok: false, error: 'Use "now" only once.' };
+    if (nowSegments.length === 1 && !segments[segments.length - 1].isNow) {
+      return { ok: false, error: '"now" can appear only in the last range.' };
+    }
+
+    const pauses = [];
+    for (let i = 0; i < segments.length - 1; i += 1) {
+      if (segments[i].end < segments[i + 1].start) {
+        pauses.push({
+          from: segments[i].end.toISOString(),
+          to: segments[i + 1].start.toISOString(),
+          reason: 'explicit',
+        });
+      }
+    }
+
+    const hasNow = !!segments[segments.length - 1].isNow;
+    if (!hasNow) {
+      pauses.push({
+        from: segments[segments.length - 1].end.toISOString(),
+        to: null,
+        reason: 'explicit',
+      });
+    }
+
+    return {
+      ok: true,
+      main: {
+        ...session,
+        started_at: segments[0].start.toISOString(),
+        ended_at: null,
+        paused_intervals: pauses,
+        status: hasNow ? 'active' : 'paused',
+      },
+    };
+  }
+
+  async function _syncSessionMain(main) {
+    const resp = await fetch('/api/session/sync', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ main, talk: sessionTalk }),
+    });
+    if (!resp.ok) throw new Error(`sync failed: ${resp.status}`);
+  }
+
+  function _renderSessionIntervalsEditor(container) {
+    const val = _esc(_sessionIntervalsDraft);
+    const err = _sessionIntervalsError ? `<div class="session-main-intervals-error">${_esc(_sessionIntervalsError)}</div>` : '';
+    container.innerHTML = `<textarea id="session-intervals-editor" class="session-main-intervals-editor">${val}</textarea>${err}`;
+    container.style.display = 'block';
+
+    const input = document.getElementById('session-intervals-editor');
+    if (!input) return;
+    input.focus();
+    input.setSelectionRange(input.value.length, input.value.length);
+    input.addEventListener('input', () => {
+      _sessionIntervalsDraft = input.value;
+      if (_sessionIntervalsError) {
+        _sessionIntervalsError = '';
+        renderSessionPanel();
+      }
+    });
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        _sessionIntervalsEditing = false;
+        _sessionIntervalsError = '';
+        renderSessionPanel();
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+        e.preventDefault();
+        input.blur();
+      }
+    });
+    input.addEventListener('blur', async () => {
+      if (!sessionMain) return;
+      const parsed = _buildSessionFromIntervalsText(sessionMain, input.value);
+      if (!parsed.ok) {
+        _sessionIntervalsEditing = true;
+        _sessionIntervalsDraft = input.value;
+        _sessionIntervalsError = parsed.error;
+        renderSessionPanel();
+        return;
+      }
+      try {
+        await _syncSessionMain(parsed.main);
+        sessionMain = parsed.main;
+        _sessionIntervalsEditing = false;
+        _sessionIntervalsError = '';
+        _sessionIntervalsDraft = '';
+        renderSessionPanel();
+      } catch {
+        _sessionIntervalsEditing = true;
+        _sessionIntervalsDraft = input.value;
+        _sessionIntervalsError = 'Failed to save session intervals.';
+        renderSessionPanel();
+      }
     });
   }
 
@@ -2690,22 +2893,33 @@ function renderSessionPanel() {
 
     const intervalsEl = document.getElementById('session-main-intervals');
     if (intervalsEl) {
-      const windows = _sessionWindowsForDisplay(main);
-      if (windows.length) {
-        const parts = ['<span class="session-main-interval-label">Transcript</span>'];
-        windows.forEach((w, idx) => {
-          parts.push(
-            `<span class="session-main-interval-chip${w.isOngoing ? ' session-main-interval-chip-live' : ''}">${_esc(w.label)}</span>`
-          );
-          if (idx < windows.length - 1) {
-            parts.push('<span class="session-main-interval-sep">→</span>');
-          }
-        });
-        intervalsEl.innerHTML = parts.join('');
-        intervalsEl.style.display = 'flex';
+      if (_sessionIntervalsEditing) {
+        _renderSessionIntervalsEditor(intervalsEl);
       } else {
-        intervalsEl.innerHTML = '';
-        intervalsEl.style.display = 'none';
+        const rows = _groupSessionWindowsByDay(main);
+        if (rows.length) {
+          const parts = rows.map((row) => {
+            const chips = row.windows
+              .map((w) => `<span class="session-main-interval-chip${w.isOngoing ? ' session-main-interval-chip-live' : ''}">${_esc(w.label)}</span>`)
+              .join('');
+            return `<div class="session-main-interval-day-row"><span class="session-main-interval-day-label">Day${row.dayNum}:</span><span class="session-main-interval-day-chips">${chips}</span></div>`;
+          });
+          intervalsEl.innerHTML = parts.join('');
+          intervalsEl.style.display = 'flex';
+          intervalsEl.classList.add('session-main-intervals-editable');
+          intervalsEl.title = 'Click to edit intervals';
+          intervalsEl.onclick = () => {
+            _sessionIntervalsEditing = true;
+            _sessionIntervalsDraft = _sessionIntervalsToEditableText(main);
+            _sessionIntervalsError = '';
+            renderSessionPanel();
+          };
+        } else {
+          intervalsEl.innerHTML = '';
+          intervalsEl.style.display = 'none';
+          intervalsEl.onclick = null;
+          intervalsEl.title = '';
+        }
       }
     }
   } else {
@@ -2713,6 +2927,8 @@ function renderSessionPanel() {
     if (intervalsEl) {
       intervalsEl.innerHTML = '';
       intervalsEl.style.display = 'none';
+      intervalsEl.onclick = null;
+      intervalsEl.title = '';
     }
   }
 
