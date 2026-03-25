@@ -1268,7 +1268,7 @@ class EmojiAnimator {
         let dimLayer = CALayer()
         _pulseDimLayer = dimLayer
         dimLayer.frame = bounds
-        dimLayer.backgroundColor = NSColor(white: 0, alpha: 0.68).cgColor
+        dimLayer.backgroundColor = NSColor(white: 0, alpha: 0.50).cgColor
         dimLayer.opacity = 0
         hostLayer.addSublayer(dimLayer)
 
