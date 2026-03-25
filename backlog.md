@@ -185,6 +185,7 @@ Host posts a provocative statement (e.g. "Microservices are always a mistake for
 - [x] Follow-up GH#67: `/api/slides` now also includes PDFs discovered in local `training-assistant/materials/slides` (served via `/api/slides/file/{slug}`), so they appear in participant combo box.
 - [x] Follow-up GH#67 (production): `slides_daemon.py` now publishes full slide list metadata to `/api/quiz-status` (with hash dedupe), so `/api/slides` is populated in production too.
 - [x] Follow-up GH#67 (UX): removed manual refresh icon from participant Slides preview header; auto-refresh loop remains active while modal is open.
+- [x] Follow-up GH#67 (bugfix): filtered non-displayable slide names (blank/punctuation-only) in backend/frontend to avoid empty entries in participant Slides dropdown.
 
 ## Concept Ranking / Ordering
 Host presents 4–6 items (patterns, approaches, technologies). Participants drag them into an order (e.g. safest → most dangerous, simplest → most complex). Host aggregates the median ranking and highlights disagreements. Pure conceptual reasoning, no coding.

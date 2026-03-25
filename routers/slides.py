@@ -46,6 +46,13 @@ def _slugify(value: str) -> str:
     return slug or "slide"
 
 
+def _is_displayable_slide_name(value: str) -> bool:
+    cleaned = value.strip()
+    if not cleaned:
+        return False
+    return any(ch.isalnum() for ch in cleaned)
+
+
 def _candidate_local_slides_dirs() -> list[Path]:
     env_dir = os.environ.get("TRAINING_ASSISTANT_SLIDES_DIR")
     candidates: list[Path] = []
@@ -80,6 +87,8 @@ def _build_local_slides_index() -> tuple[list[dict], dict[str, Path]]:
     slides: list[dict] = []
     by_slug: dict[str, Path] = {}
     for idx, pdf in enumerate(files):
+        if not _is_displayable_slide_name(pdf.stem):
+            continue
         base_slug = _slugify(pdf.stem)
         slug = base_slug
         while slug in seen_slugs:
@@ -107,7 +116,7 @@ def _merge_slide_sources(state_slides: list[dict], local_slides: list[dict]) -> 
                 continue
             name = str(entry.get("name") or "").strip()
             url = str(entry.get("url") or "").strip()
-            if not name or not url:
+            if not _is_displayable_slide_name(name) or not url:
                 continue
             slug = str(entry.get("slug") or _slugify(name)).strip() or _slugify(name)
             pair = (slug, url)
