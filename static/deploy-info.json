@@ -1,7 +1,7 @@
 {
-  "sha": "8024ffe44aeab35763b021ce607e4fad60729dd4",
-  "timestamp": "2026-03-25 11:21",
+  "sha": "5d12d3d77c48201f20ebd1718dfd77b067ee9bc0",
+  "timestamp": "2026-03-25 11:27",
   "changelog": [
-    "fix: screen emoji 3x larger from center on HOST overlay only"
+    "feat: screen emoji 3x larger from screen center in Swift desktop overlay"
   ]
 }
