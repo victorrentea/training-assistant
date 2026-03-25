@@ -129,6 +129,8 @@ def host_browser_ctx(server_url, playwright):
 def pax_browser_ctx(server_url, playwright):
     browser = playwright.chromium.launch()
     ctx = browser.new_context(base_url=server_url)
+    # Suppress the onboarding tour so it doesn't intercept test clicks
+    ctx.add_init_script("localStorage.setItem('workshop_tour_shown', '1')")
     return browser, ctx
 
 
