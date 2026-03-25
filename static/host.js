@@ -378,6 +378,10 @@
     return Math.floor((_startOfDayLocal(dt) - baseDay) / 86400000) + 1;
   }
 
+  function _minuteKey(dt) {
+    return `${dt.getFullYear()}-${dt.getMonth()}-${dt.getDate()}-${dt.getHours()}-${dt.getMinutes()}`;
+  }
+
   function _dayBaseFromSession(session) {
     const windows = _computeSessionWindows(session);
     if (windows.length) return _startOfDayLocal(windows[0][0]);
@@ -396,11 +400,12 @@
     const ongoing = !session?.ended_at && !_isSessionPaused(session);
 
     return windows.map(([start, end], idx) => {
+      if (_minuteKey(start) === _minuteKey(end)) return null;
       const dayNum = _dayOffset(firstDayStart, start);
       const prefix = isMultiDay ? `Day${dayNum} ` : '';
       const endLabel = ongoing && idx === windows.length - 1 ? 'now' : _fmtSessionTime(end);
       return `${prefix}${_fmtSessionTime(start)}→${endLabel}`;
-    }).join(', ');
+    }).filter(Boolean).join(', ');
   }
 
   function _sessionWindowsForDisplay(session) {
@@ -415,6 +420,7 @@
       const dayNum = _dayOffset(firstDayStart, start);
       const isOngoingWindow = ongoing && idx === windows.length - 1;
       const endLabel = isOngoingWindow ? 'now' : _fmtSessionTime(end);
+      if (_minuteKey(start) === _minuteKey(end)) return null;
       return {
         dayNum,
         label: `${_fmtSessionTime(start)}→${endLabel}`,
@@ -422,7 +428,7 @@
         end: new Date(end),
         isOngoing: isOngoingWindow
       };
-    });
+    }).filter(Boolean);
   }
 
   function _groupSessionWindowsByDay(session) {
@@ -493,6 +499,9 @@
         const end = endRaw === 'now' ? new Date() : _atTime(baseDay, dayNum, endRaw);
         if (!end) return { ok: false, error: `Invalid end time "${r[2]}".` };
         if (end <= start) return { ok: false, error: `End must be after start in "${range}".` };
+        if (_minuteKey(start) === _minuteKey(end)) {
+          return { ok: false, error: `End minute must be after start minute in "${range}".` };
+        }
         segments.push({ dayNum, start, end, isNow: endRaw === 'now' });
       }
     }

@@ -8,6 +8,7 @@
 - [x] ui: host summary badge now shows conversation count first, then `>` then keypoint count (ex: `💬 70 > 🧠 38`).
 - [x] ui: session intervals row no longer shows `Transcript`; each segment uses `start → end`, no arrows between disjoint segments, and multi-day segments are prefixed `Day 1`, `Day 2`, etc.
 - [x] ui: session intervals are grouped per line with gray `Day1:`, `Day2:` labels; clicking the interval area opens an editable textarea with validation, and blur recalculates + saves intervals.
+- [x] ui: session interval validation now enforces end minute strictly after start minute; same-minute segments are hidden from host interval badges.
 - [x] The participants should auto-join any open session when they loaded the page in their browsers and they've previously logged in.
 - [x] The application should allow them to log out, though, in which case, with a button, they need to re-choose a name or pick the randomly generated one.
 - [x] Make sure the application is mobile friendly also.
