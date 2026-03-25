@@ -21,6 +21,47 @@ def participant_ids() -> list[str]:
     )
 
 
+def historical_participant_ids() -> list[str]:
+    """Return UUIDs seen in this session (online or offline), excluding special clients."""
+    known = (
+        set(state.participant_history)
+        | set(state.participant_names.keys())
+        | set(state.scores.keys())
+        | set(state.participant_avatars.keys())
+        | set(state.locations.keys())
+        | set(state.participant_ips.keys())
+    )
+    known = [pid for pid in known if pid not in SPECIAL_PIDS]
+    return sorted(
+        known,
+        key=lambda pid: (-state.scores.get(pid, 0), state.participant_names.get(pid, ""), pid),
+    )
+
+
+def _participant_display_name(pid: str) -> str:
+    name = state.participant_names.get(pid, "").strip()
+    return name if name else f"Guest {pid[:8]}"
+
+
+def _build_host_participants_list() -> list[dict]:
+    include_debate_side = state.current_activity == ActivityType.DEBATE and state.debate_phase
+    participants_list: list[dict] = []
+    for pid in historical_participant_ids():
+        participant = {
+            "uuid": pid,
+            "name": _participant_display_name(pid),
+            "score": state.scores.get(pid, 0),
+            "location": state.locations.get(pid, ""),
+            "avatar": state.participant_avatars.get(pid, ""),
+            "ip": state.participant_ips.get(pid, ""),
+            "online": pid in state.participants,
+        }
+        if include_debate_side:
+            participant["debate_side"] = state.debate_sides.get(pid)
+        participants_list.append(participant)
+    return participants_list
+
+
 def _voted_ids_for(pid: str) -> list[str] | None:
     """Return the participant's voted option IDs as a list, or None if not voted."""
     if state.poll_correct_ids is None:
@@ -244,23 +285,6 @@ def build_host_state() -> dict:
     last_seen = state.daemon_last_seen
     daemon_connected = last_seen is not None and (now - last_seen).total_seconds() < 5
 
-    participants_list = []
-    for pid in pids:
-        name = state.participant_names.get(pid, "Unknown")
-        loc = state.locations.get(pid, "")
-        score = state.scores.get(pid, 0)
-        p = {
-            "uuid": pid,
-            "name": name,
-            "score": score,
-            "location": loc,
-            "avatar": state.participant_avatars.get(pid, ""),
-            "ip": state.participant_ips.get(pid, ""),
-        }
-        if state.current_activity == ActivityType.DEBATE and state.debate_phase:
-            p["debate_side"] = state.debate_sides.get(pid)  # "for", "against", or None
-        participants_list.append(p)
-
     return {
         "type": "state",
         "backend_version": get_backend_version(),
@@ -270,7 +294,7 @@ def build_host_state() -> dict:
         "poll_timer_started_at": state.poll_timer_started_at.isoformat() if state.poll_timer_started_at else None,
         "vote_counts": state.vote_counts(),
         "participant_count": len(pids),
-        "participants": participants_list,
+        "participants": _build_host_participants_list(),
         "daemon_last_seen": last_seen.isoformat() if last_seen else None,
         "daemon_connected": daemon_connected,
         "daemon_session_folder": state.daemon_session_folder,
@@ -434,21 +458,10 @@ async def broadcast_participant_update():
     participant_msg = json.dumps({"type": "participant_count", "count": count, "host_connected": "__host__" in state.participants})
 
     # Detailed message for host
-    participants_list = []
-    for pid in pids:
-        name = state.participant_names.get(pid, "Unknown")
-        participants_list.append({
-            "uuid": pid,
-            "name": name,
-            "score": state.scores.get(pid, 0),
-            "location": state.locations.get(pid, ""),
-            "avatar": state.participant_avatars.get(pid, ""),
-            "ip": state.participant_ips.get(pid, ""),
-        })
     host_msg = json.dumps({
         "type": "participant_count",
         "count": count,
-        "participants": participants_list,
+        "participants": _build_host_participants_list(),
     })
 
     dead = []

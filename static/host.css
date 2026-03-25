@@ -687,6 +687,14 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
   white-space: nowrap;
   min-width: 0;
 }
+.pax-list li.online .pax-name-text,
+.pax-list li.online .pax-score {
+  color: #fff;
+}
+.pax-list li.offline .pax-name-text,
+.pax-list li.offline .pax-score {
+  color: #8f96a3;
+}
 .pax-score {
   font-size: .78rem;
   color: var(--accent2);

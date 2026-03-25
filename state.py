@@ -33,6 +33,7 @@ class AppState:
         self.poll_active: bool = False
         self.votes: dict[str, str] = {}
         self.participants: dict[str, WebSocket] = {}
+        self.participant_history: set[str] = set()  # uuids seen in this session (online or offline)
         self.participant_names: dict[str, str] = {}  # uuid -> display_name
         self.participant_avatars: dict[str, str] = {}
         self.participant_universes: dict[str, str] = {}  # uuid → universe string
