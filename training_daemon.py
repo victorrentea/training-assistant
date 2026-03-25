@@ -65,6 +65,22 @@ _DOW_RE = re.compile(r"^([A-Z][a-z]{2})\s+(\d{2}:\d{2})\s+(.+)$")
 _FRONTMATTER_WATERMARK_RE = re.compile(r"^watermark:\s*(\d+)")
 
 
+def _check_daily_timing(now_time=None):
+    """Returns 'midnight', 'auto_pause', 'warning', or None based on current time."""
+    from datetime import time as _time
+    if now_time is None:
+        now_time = datetime.now().time()
+    # Check midnight first (spans 23:59-00:01)
+    if now_time >= _time(23, 59) or now_time < _time(0, 1):
+        return "midnight"
+    # auto_pause uses threshold (>= 18:00), deduplication prevents re-firing
+    if now_time >= _time(18, 0):
+        return "auto_pause"
+    if now_time >= _time(17, 30):
+        return "warning"
+    return None
+
+
 def _load_key_points(session_folder: Path) -> tuple[list[dict], int]:
     """Load key points from session folder. Returns (points, watermark).
     Reads transcript_discussion.md (new) or falls back to transcript_keypoints.md (legacy md)
@@ -564,6 +580,8 @@ def run() -> None:
     last_notes_mtime: float = 0.0  # track notes file mtime for re-push on change
     last_auto_close_date: date | None = None   # prevent double-close on same calendar day
     last_auto_start_date: date | None = None   # prevent double-start on same calendar day
+    _timing_fired_date: date | None = None     # date for which timing events were tracked
+    _timing_fired_today: set = set()           # timing events already fired today
 
     # Sync initial state to server
     try:
@@ -850,6 +868,44 @@ def run() -> None:
                 _sync_session_to_server(config, session_stack, current_key_points)
                 transcript_state.reset()
                 log.info("session", f"Auto-started at 09:30: {config.session_folder.name}")
+
+            # ── Daily timing events (5:30pm warning, 6pm auto-pause, midnight session end) ──
+            if _timing_fired_date != today:
+                _timing_fired_date = today
+                _timing_fired_today = set()
+
+            timing = _check_daily_timing()
+            if timing == "warning" and "warning" not in _timing_fired_today:
+                _timing_fired_today.add("warning")
+                try:
+                    _post_json(
+                        f"{config.server_url}/api/session/timing_event",
+                        {"event": "recording_warning", "minutes_remaining": 30},
+                        config.host_username, config.host_password,
+                    )
+                    log.info("daemon", "Sent recording_warning event at 17:30")
+                except Exception as e:
+                    log.error("daemon", f"Failed to send warning event: {e}")
+
+            elif timing == "auto_pause" and "auto_pause" not in _timing_fired_today:
+                _timing_fired_today.add("auto_pause")
+                if session_stack:
+                    try:
+                        _post_json(
+                            f"{config.server_url}/api/session/pause",
+                            {},
+                            config.host_username, config.host_password,
+                        )
+                        log.info("daemon", "Auto-paused recording at 18:00")
+                    except Exception as e:
+                        log.error("daemon", f"Failed to auto-pause: {e}")
+
+            elif timing == "midnight" and "midnight" not in _timing_fired_today:
+                _timing_fired_today.add("midnight")
+                if session_stack:
+                    session_stack[-1]["status"] = "ended"
+                    _save_daemon_state(sessions_root, _stack_to_daemon_state(session_stack))
+                    log.info("daemon", "Session marked as ended at midnight")
 
             # ── Auto-update: check if server version changed ──
             if _startup_version:

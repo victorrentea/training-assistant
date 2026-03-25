@@ -912,6 +912,16 @@ def test_quiz_request_rejects_neither_field():
     assert resp.status_code == 422
 
 
+def test_timing_event_endpoint_returns_ok():
+    state.reset()
+    client = TestClient(app)
+    resp = client.post("/api/session/timing_event",
+                       json={"event": "recording_warning", "minutes_remaining": 30},
+                       headers=_HOST_AUTH_HEADERS)
+    assert resp.status_code == 200
+    assert resp.json() == {"ok": True}
+
+
 class TestAvatarAssignment:
 
     def test_lotr_name_gets_matching_avatar(self):
