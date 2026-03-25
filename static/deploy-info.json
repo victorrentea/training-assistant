@@ -1,7 +1,7 @@
 {
-  "sha": "680308801629204456982a3c1ad3a149545d5385",
-  "timestamp": "2026-03-25 09:28",
+  "sha": "54ec37e050c90f32c5ca4d7496ff9d3c43f8c87f",
+  "timestamp": "2026-03-25 09:29",
   "changelog": [
-    "Persist host participant history with online status"
+    "Hide zero-point scores in host participant list"
   ]
 }
