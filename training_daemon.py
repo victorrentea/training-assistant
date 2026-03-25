@@ -41,10 +41,10 @@ from daemon.llm_adapter import get_usage
 from daemon.summarizer import generate_summary
 from daemon.transcript_state import TranscriptStateManager
 from daemon.session_transcript import (
-    parse_txt_entries_with_datetimes,
     compute_active_windows,
     count_lines_in_windows,
-    format_time_ranges,
+    format_startup_log,
+    parse_txt_entries_with_datetimes,
 )
 from daemon import log
 
@@ -571,9 +571,17 @@ def run() -> None:
             entries = parse_txt_entries_with_datetimes(raw, file_date)
             if session_stack:
                 current_session = session_stack[-1]
-                windows = compute_active_windows(current_session, datetime.now())
-                line_count = count_lines_in_windows(entries, windows)
-                log.info("transcript", format_time_ranges(windows, line_count))
+                now = datetime.now()
+                windows = compute_active_windows(current_session, now)
+                is_ongoing = (
+                    current_session.get("ended_at") is None
+                    and all(p.get("to") for p in current_session.get("paused_intervals", []))
+                )
+                log.info("transcript", format_startup_log(
+                    entries, windows, summary_watermark, is_ongoing,
+                    _session_start_date(current_session) or now.date(),
+                    now.date(),
+                ))
             else:
                 non_empty = sum(1 for _, txt in entries if txt.strip())
                 log.info("transcript", f"{non_empty} lines (no active session)")

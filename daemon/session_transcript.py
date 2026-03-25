@@ -151,3 +151,57 @@ def format_time_ranges(
 
     lines_label = "line" if line_count == 1 else "lines"
     return f"{', '.join(parts)} · {line_count} {lines_label}"
+
+
+def format_startup_log(
+    entries: list[tuple[Optional[datetime], str]],
+    windows: list[tuple[datetime, datetime]],
+    summary_watermark: int,
+    is_ongoing: bool,
+    session_start_date: date,
+    today: date,
+) -> str:
+    """Format the startup transcript log line.
+
+    Example output:
+        Watermark: 12:11, Unprocessed: 74 lines, session: 100 lines during [9:30-12:30] [13:30-now...
+        Watermark: Day 1 17:00, Unprocessed: 12 lines, session: 50 lines during [Day 1 9:30-17:00] [9:00-now...
+        Watermark: —, Unprocessed: 100 lines, session: 100 lines during [9:30-now...
+    """
+    def _fmt_dt(dt: datetime) -> str:
+        d = dt.date()
+        hm = dt.strftime("%H:%M")
+        if d == today:
+            return hm
+        day_n = (d - session_start_date).days + 1
+        return f"Day {day_n} {hm}"
+
+    non_empty = [(dt, txt) for dt, txt in entries if dt is not None and txt.strip()]
+
+    # Watermark
+    if summary_watermark == 0 or summary_watermark > len(non_empty):
+        watermark_str = "—"
+    else:
+        watermark_dt = non_empty[summary_watermark - 1][0]
+        watermark_str = _fmt_dt(watermark_dt)
+
+    # Counts
+    unprocessed = max(0, len(non_empty) - summary_watermark)
+    session_lines = count_lines_in_windows(non_empty, windows)
+
+    # Segments
+    if not windows:
+        during = ""
+    else:
+        parts = []
+        for i, (start, end) in enumerate(windows):
+            start_str = _fmt_dt(start)
+            is_last = (i == len(windows) - 1)
+            if is_last and is_ongoing:
+                parts.append(f"[{start_str}-now...")
+            else:
+                end_str = _fmt_dt(end)
+                parts.append(f"[{start_str}-{end_str}]")
+        during = " during " + " ".join(parts)
+
+    return f"Watermark: {watermark_str}, Unprocessed: {unprocessed} lines, session: {session_lines} lines{during}"
