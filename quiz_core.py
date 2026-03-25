@@ -311,7 +311,6 @@ def _parse_txt(text: str, session_start_secs: int | None = None) -> list:
 
 
 _FILENAME_DATE_RE = re.compile(r"^(\d{8})\s+(\d{4})\b")
-_NORMALIZED_TRANSCRIPT_RE = re.compile(r"^\d{4}-\d{2}-\d{2}\s+transcription\.txt$", re.IGNORECASE)
 
 
 def load_transcription_files(folder: Path, since_date: date | None = None) -> list:
@@ -340,12 +339,7 @@ def load_transcription_files(folder: Path, since_date: date | None = None) -> li
             return None
 
     files = sorted(
-        [
-            f
-            for f in folder.iterdir()
-            if f.suffix.lower() in {".txt", ".vtt", ".srt"}
-            and not _NORMALIZED_TRANSCRIPT_RE.match(f.name)
-        ],
+        [f for f in folder.iterdir() if f.suffix.lower() in {".txt", ".vtt", ".srt"}],
         key=_sort_key,
     )
     if not files:

@@ -123,7 +123,7 @@ training-assistant/
 ├── backend_version.py       ← Version detection from static/version.js (cached by mtime)
 ├── quiz_core.py             ← Quiz generation core logic (used by training_daemon)
 ├── index_materials.py       ← Project file indexing for RAG
-├── training_daemon.py       ← Daemon orchestration on trainer's Mac (quiz, debate AI, summary, transcript normalization)
+├── training_daemon.py       ← Daemon orchestration on trainer's Mac (quiz, debate AI, summary, timestamps)
 ├── routers/
 │   ├── ws.py                ← WebSocket endpoint /ws/{uuid} (all real-time messages)
 │   ├── poll.py              ← Poll lifecycle (create, open/close, correct, timer)
@@ -142,7 +142,7 @@ training-assistant/
 │   ├── summarizer.py        ← Live transcript summarization
 │   ├── debate_ai.py         ← AI cleanup of debate arguments
 │   ├── transcript_state.py  ← Transcript line counter for progress tracking
-│   ├── transcript_normalizer.py ← Incremental raw transcript reader -> daily normalized files
+│   ├── transcript_timestamps.py ← Auto-append timestamps to transcript (~3s interval)
 │   ├── indexer.py            ← Project file indexing for RAG
 │   ├── rag.py                ← Retrieve project context for quiz generation
 │   └── project_files.py     ← Scan & list project files; handle Claude tool calls
@@ -277,11 +277,11 @@ Orchestration daemon running on the trainer's Mac:
 - Quiz refinement: regenerates specific question/option on host request
 - Debate AI cleanup: deduplicates, fixes typos, suggests new arguments via Claude
 - Live summary: periodically reads transcript, generates key points via Claude, posts to backend
-- Transcript normalization: incrementally reads raw transcript and writes daily normalized lines with `.txt.offset` state
+- Transcript timestamps: auto-appends `[HH:MM:SS]` markers every ~3 seconds
 - Auto-update: exit code 42 signals wrapper script to git pull + restart
 - `ANTHROPIC_API_KEY` is set in the environment
 - Run: `python3 training_daemon.py`
-- Uses `daemon/` subpackage: `llm_adapter.py`, `summarizer.py`, `debate_ai.py`, `transcript_state.py`, `transcript_normalizer.py`, `indexer.py`, `rag.py`, `project_files.py`
+- Uses `daemon/` subpackage: `llm_adapter.py`, `summarizer.py`, `debate_ai.py`, `transcript_state.py`, `transcript_timestamps.py`, `indexer.py`, `rag.py`, `project_files.py`
 
 ---
 
@@ -329,7 +329,6 @@ The user frequently uses a dictation tool. Messages may contain misheard or mist
 
 - **After completing each backlog item**: create a git commit and push directly to master (no PR needed for this project).
 - **After completing each backlog item**: attach proof before marking it done (screenshot evidence by default; for non-visual tasks, include equivalent captured proof such as test output/logs).
-- **Transcript debugging default**: for any request to inspect transcript lines in a date-time window, run `./extract-transcripts.sh START_ISO END_ISO` first (optionally pass `TRANSCRIPTION_FOLDER` as arg 3) and use its output as the source of truth.
 - **Deploy monitoring**: `./watch-deploy.sh` runs continuously in the background (started once per work session). It writes a heartbeat to `/tmp/watch_deploy.lock` (JSON with `pid` and `heartbeat` epoch). **After creating a PR**, check the lock file: read the JSON, verify the PID is alive (`kill -0`) and heartbeat is fresh (<15s). If running, praise the user ("Deploy watcher is running"). If not running or stale, warn and suggest: `./watch-deploy.sh &`
 - **After any significant architectural change**: update the C4 diagrams in `adoc/` (c4_c1_context.puml, c4_c2_containers.puml, c4_c3_components.puml) to reflect the new structure.
 - **Test-Drive-Fix any human-reported bug**: start by reproducing the bug yourself manually, then write an automated test for the bug, see it failing, then passing after you fixed the bug.
