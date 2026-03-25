@@ -1,7 +1,7 @@
 {
-  "sha": "54ec37e050c90f32c5ca4d7496ff9d3c43f8c87f",
-  "timestamp": "2026-03-25 09:29",
+  "sha": "12a379154ad37939824d1323c1293cbfeea8d82d",
+  "timestamp": "2026-03-25 09:33",
   "changelog": [
-    "Hide zero-point scores in host participant list"
+    "fix: show wall-clock time in transcript watermark for elapsed VTT files"
   ]
 }
