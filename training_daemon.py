@@ -44,7 +44,7 @@ from daemon.session_transcript import (
 )
 from daemon.transcript_normalizer import (
     find_latest_raw_transcript_file,
-    normalize_latest_in_folder,
+    normalize_folder_incremental,
 )
 from daemon import log
 
@@ -594,7 +594,7 @@ def run() -> None:
             if now - last_normalize_at >= 3.0:
                 last_normalize_at = now
                 try:
-                    normalize_latest_in_folder(config.folder)
+                    normalize_folder_incremental(config.folder)
                 except Exception as e:
                     log.error("transcript", f"Normalizer error: {e}")
 
