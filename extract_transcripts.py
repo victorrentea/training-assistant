@@ -118,16 +118,8 @@ def extract_entries(folder: Path, start: datetime, end: datetime) -> list[tuple[
         key=_sort_key,
     )
 
-    # Keep a small safety margin around the requested interval for midnight overflows.
-    min_day = start.date() - timedelta(days=1)
-    max_day = end.date() + timedelta(days=1)
-
     selected: list[tuple[datetime, str]] = []
     for path in files:
-        fd = _file_date(path)
-        if fd is not None and (fd < min_day or fd > max_day):
-            continue
-
         raw = path.read_text(encoding="utf-8", errors="replace")
         if path.suffix.lower() == ".txt":
             entries = _parse_txt_file(path, raw)
