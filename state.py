@@ -94,7 +94,6 @@ class AppState:
         self.screen_share_active: bool = True
         self.needs_restore: bool = True
         self.pending_deploy: dict | None = None  # {sha, message} set by watcher when push detected
-        self.session_folder_name: Optional[str] = None  # host-assigned short folder name (workshop mode)
 
     def suggest_name(self) -> str:
         """Return the next available LOTR name (by popularity order).

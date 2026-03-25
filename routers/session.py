@@ -85,13 +85,6 @@ async def sync_session(body: SyncSessionRequest):
     return {"ok": True}
 
 
-@router.post("/api/session/folder", dependencies=[Depends(require_host_auth)])
-async def set_session_folder(body: dict):
-    state.session_folder_name = (body.get("name") or "").strip()
-    state.session_request = {"action": "set_folder", "name": state.session_folder_name}
-    return {"ok": True}
-
-
 @router.get("/api/session/folders", dependencies=[Depends(require_host_auth)])
 async def list_session_folders():
     root = _get_sessions_root()

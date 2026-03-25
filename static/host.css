@@ -1219,8 +1219,3 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
   z-index: 10000;
   pointer-events: none;
 }
-
-@keyframes blink-yellow {
-  0%, 100% { background-color: transparent; color: inherit; border-color: var(--border); }
-  50% { background-color: #f5a623; color: #000; border-color: #f5a623; }
-}
