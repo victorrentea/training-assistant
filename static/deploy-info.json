@@ -1,7 +1,7 @@
 {
-  "sha": "ae5b4771e9549272f87f17b5974650c205deb26a",
-  "timestamp": "2026-03-25 21:17",
+  "sha": "07f87b991576f6a85ca6bcae50e98e76ae2e8b3a",
+  "timestamp": "2026-03-25 21:20",
   "changelog": [
-    "desktop-overlay: make EKG black overlay more transparent"
+    "chore: log pptx update detection before regeneration"
   ]
 }
