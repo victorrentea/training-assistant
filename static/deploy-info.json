@@ -1,7 +1,7 @@
 {
-  "sha": "5d12d3d77c48201f20ebd1718dfd77b067ee9bc0",
-  "timestamp": "2026-03-25 11:27",
+  "sha": "bea1eb4576b31ed32c8ec919dc922273fff32564",
+  "timestamp": "2026-03-25 11:30",
   "changelog": [
-    "feat: screen emoji 3x larger from screen center in Swift desktop overlay"
+    "fix: screen emoji starts lower (15% from bottom) in desktop overlay"
   ]
 }
