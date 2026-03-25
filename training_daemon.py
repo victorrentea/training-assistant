@@ -252,12 +252,19 @@ def _load_daemon_state(sessions_root: Path) -> dict:
 
 
 def _daemon_state_to_stack(daemon_state: dict) -> list[dict]:
-    """Convert {main, talk} daemon state dict to the in-memory session stack list."""
+    """Convert {main, talk} daemon state dict to the in-memory session stack list.
+    Sessions with status 'ended' are excluded — they are not restored."""
+    main = daemon_state.get("main")
+    talk = daemon_state.get("talk")
+    # If main session is ended, treat as no session at all
+    if main and main.get("status") == "ended":
+        return []
     stack = []
-    if daemon_state.get("main"):
-        stack.append(daemon_state["main"])
-    if daemon_state.get("talk"):
-        stack.append(daemon_state["talk"])
+    if main:
+        stack.append(main)
+    # If talk session is ended, keep main but discard talk
+    if talk and talk.get("status") != "ended":
+        stack.append(talk)
     return stack
 
 
@@ -307,11 +314,18 @@ def _find_notes_in_folder(folder: Path) -> Path | None:
     return txt_files[-1] if txt_files else None
 
 
-def _sync_session_to_server(config, stack: list[dict], key_points: list[dict]) -> None:
-    """Push session stack and key points to server."""
+def _sync_session_to_server(
+    config, stack: list[dict], key_points: list[dict],
+    session_state: dict | None = None,
+) -> None:
+    """Push session stack and key points to server.
+    If session_state is provided, it is included for a plain restore (no participant disconnect)."""
+    payload: dict = {"stack": stack, "key_points": key_points}
+    if session_state is not None:
+        payload["session_state"] = session_state
     _post_json(
         f"{config.server_url}/api/session/sync",
-        {"stack": stack, "key_points": key_points},
+        payload,
         config.host_username, config.host_password,
     )
 
@@ -583,9 +597,18 @@ def run() -> None:
     _timing_fired_date: date | None = None     # date for which timing events were tracked
     _timing_fired_today: set = set()           # timing events already fired today
 
-    # Sync initial state to server
+    # Sync initial state to server — include session_state.json if present in the active folder
     try:
-        _sync_session_to_server(config, session_stack, current_key_points)
+        startup_session_state: dict | None = None
+        if session_stack:
+            state_file = sessions_root / session_stack[-1]["name"] / "session_state.json"
+            if state_file.exists():
+                try:
+                    startup_session_state = json.loads(state_file.read_text(encoding="utf-8"))
+                    log.info("session", f"Loaded session_state.json for restore ({len(startup_session_state)} keys)")
+                except Exception as e:
+                    log.error("session", f"Failed to read session_state.json: {e}")
+        _sync_session_to_server(config, session_stack, current_key_points, startup_session_state)
     except Exception as e:
         log.error("session", f"Failed to sync initial state: {e}")
 

@@ -64,3 +64,104 @@ def test_save_daemon_state_writes_new_format():
         assert "main" in data
         assert "stack" not in data
         assert data["main"]["name"] == "2026-03-25 WS"
+
+
+# ── Issue 2: status "ended" filtering ────────────────────────────────────────
+
+def test_daemon_state_to_stack_filters_ended_main():
+    """Main session with status 'ended' should produce an empty stack."""
+    from training_daemon import _daemon_state_to_stack
+    result = _daemon_state_to_stack({
+        "main": {"name": "2026-03-25 WS", "started_at": "2026-03-25T09:00:00", "status": "ended"},
+        "talk": None,
+    })
+    assert result == []
+
+
+def test_daemon_state_to_stack_filters_ended_talk_keeps_main():
+    """Talk session with status 'ended' is discarded; main is kept."""
+    from training_daemon import _daemon_state_to_stack
+    result = _daemon_state_to_stack({
+        "main": {"name": "2026-03-25 WS", "started_at": "2026-03-25T09:00:00", "status": "active"},
+        "talk": {"name": "2026-03-25 12:30 talk", "started_at": "2026-03-25T12:30:00", "status": "ended"},
+    })
+    assert len(result) == 1
+    assert result[0]["name"] == "2026-03-25 WS"
+
+
+def test_daemon_state_to_stack_active_sessions_included():
+    """Active and paused sessions are included in the stack."""
+    from training_daemon import _daemon_state_to_stack
+    result = _daemon_state_to_stack({
+        "main": {"name": "2026-03-25 WS", "started_at": "2026-03-25T09:00:00", "status": "active"},
+        "talk": {"name": "2026-03-25 12:30 talk", "started_at": "2026-03-25T12:30:00", "status": "paused"},
+    })
+    assert len(result) == 2
+
+
+# ── Issue 1: startup restore includes session_state.json ─────────────────────
+
+def test_sync_session_includes_session_state_when_file_exists():
+    """When session_state.json exists in the session folder, _sync_session_to_server
+    is called with the contents in the payload."""
+    from unittest.mock import patch, call
+    import training_daemon
+
+    session_state_data = {"mode": "workshop", "activity": "poll", "token_usage": {}}
+
+    with tempfile.TemporaryDirectory() as d:
+        sessions_root = Path(d)
+        session_name = "2026-03-25 WS"
+        session_folder = sessions_root / session_name
+        session_folder.mkdir()
+        (session_folder / "session_state.json").write_text(
+            json.dumps(session_state_data), encoding="utf-8"
+        )
+
+        # Build minimal stack referencing the folder we just created
+        stack = [{"name": session_name, "started_at": "2026-03-25T09:00:00", "status": "active"}]
+
+        captured = {}
+
+        def fake_post_json(url, payload, username, password):
+            captured["payload"] = payload
+
+        with patch.object(training_daemon, "_post_json", fake_post_json):
+            training_daemon._sync_session_to_server(
+                type("C", (), {
+                    "server_url": "http://test",
+                    "host_username": "u",
+                    "host_password": "p",
+                })(),
+                stack,
+                [],
+                session_state_data,
+            )
+
+        assert "session_state" in captured["payload"]
+        assert captured["payload"]["session_state"]["mode"] == "workshop"
+
+
+def test_sync_session_no_session_state_key_when_none():
+    """When session_state is None, the payload should not include the key."""
+    from unittest.mock import patch
+    import training_daemon
+
+    captured = {}
+
+    def fake_post_json(url, payload, username, password):
+        captured["payload"] = payload
+
+    with patch.object(training_daemon, "_post_json", fake_post_json):
+        training_daemon._sync_session_to_server(
+            type("C", (), {
+                "server_url": "http://test",
+                "host_username": "u",
+                "host_password": "p",
+            })(),
+            [],
+            [],
+            None,
+        )
+
+    assert "session_state" not in captured["payload"]

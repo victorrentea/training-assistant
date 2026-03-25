@@ -1,7 +1,7 @@
 """Session stack management — host commands + daemon sync."""
 
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import APIRouter, Depends
@@ -307,7 +307,7 @@ async def get_session_snapshot():
     }
 
     return {
-        "saved_at": datetime.utcnow().isoformat(),
+        "saved_at": datetime.now(timezone.utc).isoformat(),
         "mode": state.mode,
         "participants": participants,
         "activity": state.current_activity.value if state.current_activity else "none",
