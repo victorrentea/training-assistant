@@ -450,6 +450,7 @@ Respond with ONLY a valid JSON object in this exact schema:
 
 Rules:
 - If you used the tool, you MUST fill in the "source" and "page" fields based on the tool's output. Include source_type in the source name (e.g. "Circuit Breaker Slides, p. 12" or "Microservices Patterns (book), p. 85"). Prefer slide sources; use book sources only for depth.
+- If a "QUESTIONS ALREADY ASKED THIS SESSION" section is provided, you MUST NOT generate a question that covers the same concept or tests the same knowledge — choose a clearly different topic or angle.
 - The question must probe understanding of a CONCEPT, not trivial recall.
 - Prefer questions where the answer is not obvious at first glance — the goal is to trigger debate.
 - Draw on your broad knowledge AND the retrieved materials to craft richer, more nuanced options.
@@ -728,6 +729,15 @@ def _post_json(url: str, payload: dict, username: str = "", password: str = "") 
     return _request_json(url, payload, method="POST", username=username, password=password)
 
 
+def _fetch_quiz_history(config: Config) -> str:
+    """Fetch previously asked questions from the server as markdown. Returns '' on failure."""
+    try:
+        data = _get_json(f"{config.server_url}/api/quiz-md")
+        return data.get("content", "").strip()
+    except RuntimeError:
+        return ""
+
+
 def _put_json(url: str, payload: dict, username: str = "", password: str = "") -> dict:
     return _request_json(url, payload, method="PUT", username=username, password=password)
 
@@ -839,6 +849,16 @@ def auto_generate(minutes: int, config: Config) -> Optional[tuple]:
         parts.append(
             f"TRANSCRIPT EXCERPT (last {minutes} min of live audio — use for context and recent topics):\n" + text
         )
+    quiz_history = _fetch_quiz_history(config)
+    if quiz_history:
+        parts.append(
+            "QUESTIONS ALREADY ASKED THIS SESSION (do NOT generate a similar question):\n" + quiz_history
+        )
+        if config.session_folder:
+            try:
+                (config.session_folder / "quiz.md").write_text(quiz_history, encoding="utf-8")
+            except OSError as exc:
+                log.error("quiz", f"Could not write quiz.md: {exc}")
     combined = "\n\n".join(parts)
 
     if key_points_text:
@@ -882,9 +902,14 @@ def auto_generate_topic(topic: str, config: Config) -> Optional[tuple]:
         "SESSION NOTES (trainer's written agenda/key points — treat as primary source):\n" + notes
         if notes else ""
     )
+    quiz_history = _fetch_quiz_history(config)
+    quiz_history_text = (
+        "\n\nQUESTIONS ALREADY ASKED THIS SESSION (do NOT generate a similar question):\n" + quiz_history
+        if quiz_history else ""
+    )
     topic_config = replace(config, topic=topic)
     try:
-        quiz = generate_quiz(notes_text, topic_config)
+        quiz = generate_quiz(notes_text + quiz_history_text, topic_config)
     except RuntimeError as e:
         post_status("error", str(e), topic_config)
         return None

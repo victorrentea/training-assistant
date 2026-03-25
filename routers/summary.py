@@ -65,6 +65,8 @@ class TranscriptStatus(BaseModel):
 
 @router.post("/api/transcript-status")
 async def update_transcript_status(body: TranscriptStatus):
+    if body.line_count > state.transcript_line_count:
+        state.transcript_last_content_at = datetime.now(timezone.utc)
     state.transcript_line_count = body.line_count
     state.transcript_total_lines = body.total_lines
     state.transcript_latest_ts = body.latest_ts

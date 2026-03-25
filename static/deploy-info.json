@@ -1,7 +1,7 @@
 {
-  "sha": "75c2789464065293292536318a3107fcf14b5427",
-  "timestamp": "2026-03-25 02:52",
+  "sha": "f40abda888a268f3bb6903b0c971c5475df8516d",
+  "timestamp": "2026-03-25 07:37",
   "changelog": [
-    "Revert \"storage in folder\""
+    "feat: track quiz history in quiz.md and feed it to LLM"
   ]
 }
