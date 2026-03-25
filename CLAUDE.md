@@ -329,6 +329,7 @@ The user frequently uses a dictation tool. Messages may contain misheard or mist
 
 - **After completing each backlog item**: create a git commit and push directly to master (no PR needed for this project).
 - **After completing each backlog item**: attach proof before marking it done (screenshot evidence by default; for non-visual tasks, include equivalent captured proof such as test output/logs).
+- **Transcript debugging default**: for any request to inspect transcript lines in a date-time window, run `./extract-transcripts.sh START_ISO END_ISO` first (optionally pass `TRANSCRIPTION_FOLDER` as arg 3) and use its output as the source of truth.
 - **Deploy monitoring**: `./watch-deploy.sh` runs continuously in the background (started once per work session). It writes a heartbeat to `/tmp/watch_deploy.lock` (JSON with `pid` and `heartbeat` epoch). **After creating a PR**, check the lock file: read the JSON, verify the PID is alive (`kill -0`) and heartbeat is fresh (<15s). If running, praise the user ("Deploy watcher is running"). If not running or stale, warn and suggest: `./watch-deploy.sh &`
 - **After any significant architectural change**: update the C4 diagrams in `adoc/` (c4_c1_context.puml, c4_c2_containers.puml, c4_c3_components.puml) to reflect the new structure.
 - **Test-Drive-Fix any human-reported bug**: start by reproducing the bug yourself manually, then write an automated test for the bug, see it failing, then passing after you fixed the bug.
