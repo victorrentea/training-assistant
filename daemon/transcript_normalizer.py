@@ -12,7 +12,7 @@ import os
 import re
 import time
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 
 
@@ -50,6 +50,16 @@ class NormalizeResult:
     reset_offset: bool
 
 
+def _list_raw_files_sorted(folder: Path) -> list[Path]:
+    def _sort_key(path: Path) -> tuple[str, float]:
+        match = _FILENAME_DATE_RE.match(path.name)
+        if match:
+            return (match.group(1) + match.group(2), path.stat().st_mtime)
+        return ("", path.stat().st_mtime)
+
+    return sorted([f for f in folder.iterdir() if is_raw_transcript_txt(f)], key=_sort_key)
+
+
 def is_raw_transcript_txt(path: Path) -> bool:
     return path.is_file() and path.suffix.lower() == ".txt" and _RAW_TXT_NAME_RE.match(path.name) is not None
 
@@ -57,14 +67,7 @@ def is_raw_transcript_txt(path: Path) -> bool:
 def find_latest_raw_transcript_file(folder: Path) -> Path | None:
     if not folder.exists() or not folder.is_dir():
         return None
-
-    def _sort_key(path: Path) -> tuple[str, float]:
-        match = _FILENAME_DATE_RE.match(path.name)
-        if match:
-            return (match.group(1) + match.group(2), path.stat().st_mtime)
-        return ("", path.stat().st_mtime)
-
-    files = sorted([f for f in folder.iterdir() if is_raw_transcript_txt(f)], key=_sort_key)
+    files = _list_raw_files_sorted(folder)
     return files[-1] if files else None
 
 
@@ -169,16 +172,36 @@ def _append_outputs(output_dir: Path, grouped_lines: dict[str, list[str]]) -> li
     return written_files
 
 
+def _infer_last_speaker_from_normalized(output_file: Path) -> str | None:
+    if not output_file.exists():
+        return None
+    speaker_re = re.compile(r"^\[\d{2}:\d{2}\]\s+([^:]+):\s+")
+    try:
+        with output_file.open("r", encoding="utf-8", errors="replace") as f:
+            lines = f.read().splitlines()
+    except OSError:
+        return None
+    for line in reversed(lines):
+        m = speaker_re.match(line.strip())
+        if m:
+            return m.group(1).strip()
+    return None
+
+
 def normalize_incremental(
     raw_file: Path,
     offset_file: Path | None = None,
     output_dir: Path | None = None,
+    now: datetime | None = None,
 ) -> NormalizeResult:
     if not raw_file.exists() or not raw_file.is_file():
         raise FileNotFoundError(f"Raw transcript file not found: {raw_file}")
 
     offset_file = offset_file or default_offset_file_for(raw_file)
     output_dir = output_dir or raw_file.parent
+    poll_now = now or datetime.now()
+    poll_hhmm = poll_now.strftime("%H:%M")
+    poll_day = poll_now.date().isoformat()
     state = _load_state(offset_file)
 
     stat = raw_file.stat()
@@ -235,6 +258,12 @@ def normalize_incremental(
             complete_lines = []
 
     file_day = _raw_file_date(raw_file)
+    output_day = file_day.isoformat() if file_day else (state.current_date or poll_day)
+    normalized_output_file = output_dir / f"{output_day} transcription.txt"
+    if state.current_speaker is None:
+        state.current_speaker = _infer_last_speaker_from_normalized(normalized_output_file)
+    state.current_date = output_day
+    state.current_hhmm = poll_hhmm
     grouped: dict[str, list[str]] = {}
 
     for line in complete_lines:
@@ -276,16 +305,8 @@ def normalize_incremental(
             continue
 
         speaker = state.current_speaker or "Unknown"
-
-        if state.current_date is None:
-            if file_day is None:
-                continue
-            state.current_date = file_day.isoformat()
-        if state.current_hhmm is None:
-            state.current_hhmm = "00:00"
-
-        normalized = f"[{state.current_hhmm}] {speaker}: {text_content}"
-        grouped.setdefault(state.current_date, []).append(normalized)
+        normalized = f"[{poll_hhmm}] {speaker}: {text_content}"
+        grouped.setdefault(output_day, []).append(normalized)
 
     written_files = _append_outputs(output_dir, grouped)
     total_lines = sum(len(v) for v in grouped.values())
@@ -299,6 +320,33 @@ def normalize_latest_in_folder(folder: Path) -> NormalizeResult | None:
     if raw_file is None:
         return None
     return normalize_incremental(raw_file)
+
+
+def normalize_folder_incremental(folder: Path, now: datetime | None = None) -> list[NormalizeResult]:
+    """Normalize all relevant raw files in folder.
+
+    Policy:
+    - Always process latest raw file.
+    - Also process any older raw file that already has a .offset sidecar
+      (to flush remaining lines after day/file rollover).
+    """
+    if not folder.exists() or not folder.is_dir():
+        return []
+
+    files = _list_raw_files_sorted(folder)
+    if not files:
+        return []
+
+    latest = files[-1]
+    candidates: list[Path] = []
+    for raw in files:
+        if raw == latest or default_offset_file_for(raw).exists():
+            candidates.append(raw)
+
+    results: list[NormalizeResult] = []
+    for raw in candidates:
+        results.append(normalize_incremental(raw, now=now))
+    return results
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -319,19 +367,25 @@ def _build_parser() -> argparse.ArgumentParser:
 
 def _run_once(args: argparse.Namespace) -> int:
     if args.raw_file:
-        result = normalize_incremental(args.raw_file, offset_file=args.offset_file, output_dir=args.output_dir)
+        result = normalize_incremental(
+            args.raw_file,
+            offset_file=args.offset_file,
+            output_dir=args.output_dir,
+        )
+        results = [result]
     else:
-        result = normalize_latest_in_folder(args.folder)
+        results = normalize_folder_incremental(args.folder)
 
-    if result is None:
+    if not results:
         print("No raw transcript file found.")
         return 0
 
-    outputs = ", ".join(str(p.name) for p in result.output_files) if result.output_files else "-"
-    print(
-        f"raw={result.raw_file.name} read_bytes={result.read_bytes} "
-        f"written_lines={result.written_lines} reset={str(result.reset_offset).lower()} outputs={outputs}"
-    )
+    for result in results:
+        outputs = ", ".join(str(p.name) for p in result.output_files) if result.output_files else "-"
+        print(
+            f"raw={result.raw_file.name} read_bytes={result.read_bytes} "
+            f"written_lines={result.written_lines} reset={str(result.reset_offset).lower()} outputs={outputs}"
+        )
     return 0
 
 
