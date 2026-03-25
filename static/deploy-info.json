@@ -1,7 +1,7 @@
 {
-  "sha": "42610a01dfbe2d29f2fc637846f2c28e9f36dbc2",
-  "timestamp": "2026-03-25 20:06",
+  "sha": "73d41527cd8b0c10bdc7fc2a5f2a669954b67d41",
+  "timestamp": "2026-03-25 20:08",
   "changelog": [
-    "Compact session controls and show transcript intervals"
+    "Add stop control for current session"
   ]
 }
