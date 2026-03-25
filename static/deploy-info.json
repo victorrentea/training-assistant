@@ -1,7 +1,7 @@
 {
-  "sha": "bea1eb4576b31ed32c8ec919dc922273fff32564",
-  "timestamp": "2026-03-25 11:30",
+  "sha": "949cb7a0b574e108804667e44080ffaa2eb7bc12",
+  "timestamp": "2026-03-25 18:07",
   "changelog": [
-    "fix: screen emoji starts lower (15% from bottom) in desktop overlay"
+    "fix: force exit on shutdown, restore volume on Ctrl+C/SIGTERM"
   ]
 }
