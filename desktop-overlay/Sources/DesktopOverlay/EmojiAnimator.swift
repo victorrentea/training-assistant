@@ -75,15 +75,19 @@ class EmojiAnimator {
     func spawnEmoji(_ emoji: String = "❤️") {
         let bounds = hostLayer.bounds
 
-        // Fixed spawn point: left-bottom corner
-        let spawnX: CGFloat = 100
-        let spawnY: CGFloat = 80
+        let isScreen = emoji == "🖥️"
+        let fontSize: CGFloat = isScreen ? 234 : 78
+        let size: CGFloat = isScreen ? 260 : 91
+
+        // Screen emoji: center of screen; others: bottom-left corner
+        let spawnX: CGFloat = isScreen ? bounds.midX : 100
+        let spawnY: CGFloat = isScreen ? bounds.midY - size / 2 : 80
 
         let layer = CATextLayer()
         layer.string = emoji
-        layer.fontSize = 78
+        layer.fontSize = fontSize
         layer.alignmentMode = .center
-        layer.frame = CGRect(x: spawnX - 45, y: spawnY, width: 91, height: 91)
+        layer.frame = CGRect(x: spawnX - size / 2, y: spawnY, width: size, height: size)
         layer.contentsScale = NSScreen.screens.first?.backingScaleFactor ?? 2.0
         hostLayer.addSublayer(layer)
 
