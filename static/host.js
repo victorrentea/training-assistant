@@ -2737,6 +2737,13 @@ function endTalk() {
     .catch(e => console.error('endTalk failed:', e));
 }
 
+function endSession() {
+  if (!sessionMain) return;
+  if (!window.confirm('Stop current session and end recording?')) return;
+  fetch('/api/session/end', {method: 'POST'})
+    .catch(e => console.error('endSession failed:', e));
+}
+
 function createSession() {
   const name = document.getElementById('session-create-input').value.trim();
   if (!name) return;
