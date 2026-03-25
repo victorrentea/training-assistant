@@ -571,7 +571,7 @@ def run() -> None:
                 windows = compute_active_windows(current_session, now)
                 is_ongoing = (
                     current_session.get("ended_at") is None
-                    and not any(not p.get("to") for p in current_session.get("paused_intervals", []))
+                    and all(p.get("to") for p in current_session.get("paused_intervals", []))
                 )
                 log.info("transcript", format_startup_log(
                     entries, windows, summary_watermark, is_ongoing,
