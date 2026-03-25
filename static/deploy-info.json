@@ -1,7 +1,7 @@
 {
-  "sha": "21e39c11b91362a5fff0907db9134bc0c92da9a2",
-  "timestamp": "2026-03-25 20:47",
+  "sha": "33b83955ad26312ae6e4271880fd3f4c654abce0",
+  "timestamp": "2026-03-25 20:49",
   "changelog": [
-    "feat: track full slides catalog into materials PDFs"
+    "fix: regenerate missing materials slides PDFs"
   ]
 }
