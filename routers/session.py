@@ -82,6 +82,98 @@ async def poll_session_request():
     return {"action": None}
 
 
+def _restore_state_from_snapshot(snap: dict):
+    """Restores AppState from a session_state.json snapshot."""
+    # Participants
+    state.participant_names.clear()
+    state.scores.clear()
+    state.base_scores.clear()
+    state.locations.clear()
+    state.participant_avatars.clear()
+    state.participant_universes.clear()
+    for uuid, p in (snap.get("participants") or {}).items():
+        state.participant_names[uuid] = p["name"]
+        state.scores[uuid] = p.get("score", 0)
+        state.base_scores[uuid] = p.get("base_score", 0)
+        state.locations[uuid] = p.get("location", "")
+        state.participant_avatars[uuid] = p.get("avatar", "")
+        state.participant_universes[uuid] = p.get("universe", "")
+
+    # Mode
+    if snap.get("mode"):
+        state.mode = snap["mode"]
+
+    # Activity
+    if snap.get("activity"):
+        from state import ActivityType
+        try:
+            state.current_activity = ActivityType(snap["activity"])
+        except ValueError:
+            pass
+
+    # Poll
+    state.poll = None
+    state.poll_active = False
+    state.votes = {}
+    state.vote_times = {}
+    state.poll_correct_ids = None
+    state.poll_opened_at = None
+    state.poll_timer_seconds = None
+    state.poll_timer_started_at = None
+    if snap.get("poll"):
+        p = snap["poll"]
+        exclude = {"active", "votes", "vote_times", "correct_ids", "opened_at", "timer_seconds", "timer_started_at"}
+        state.poll = {k: v for k, v in p.items() if k not in exclude}
+        state.poll_active = p.get("active", False)
+        state.votes = p.get("votes") or {}
+        state.vote_times = {uid: datetime.fromisoformat(t) for uid, t in (p.get("vote_times") or {}).items()}
+        state.poll_correct_ids = p.get("correct_ids")
+        state.poll_opened_at = datetime.fromisoformat(p["opened_at"]) if p.get("opened_at") else None
+        state.poll_timer_seconds = p.get("timer_seconds")
+        state.poll_timer_started_at = datetime.fromisoformat(p["timer_started_at"]) if p.get("timer_started_at") else None
+
+    # QA
+    state.qa_questions.clear()
+    for q in (snap.get("qa") or {}).get("questions") or []:
+        q_copy = dict(q)
+        q_copy["upvoters"] = set(q_copy.get("upvoters") or [])
+        state.qa_questions[q_copy["id"]] = q_copy
+
+    # Wordcloud
+    wc = snap.get("wordcloud") or {}
+    state.wordcloud_topic = wc.get("topic", "")
+    state.wordcloud_words = wc.get("words") or {}
+    if hasattr(state, 'wordcloud_word_order'):
+        state.wordcloud_word_order = wc.get("word_order") or []
+
+    # Debate
+    debate = snap.get("debate") or {}
+    state.debate_statement = debate.get("statement")
+    state.debate_phase = debate.get("phase")
+    state.debate_sides = debate.get("sides") or {}
+    state.debate_arguments = [{**a, "upvoters": set(a.get("upvoters") or [])} for a in (debate.get("arguments") or [])]
+    state.debate_champions = debate.get("champions") or {}
+    state.debate_auto_assigned = set(debate.get("auto_assigned") or [])
+    state.debate_first_side = debate.get("first_side")
+    state.debate_round_index = debate.get("round_index")
+    state.debate_round_timer_seconds = debate.get("round_timer_seconds")
+    if debate.get("round_timer_started_at"):
+        state.debate_round_timer_started_at = datetime.fromisoformat(debate["round_timer_started_at"])
+
+    # Codereview
+    cr = snap.get("codereview") or {}
+    state.codereview_snippet = cr.get("snippet")
+    state.codereview_language = cr.get("language")
+    state.codereview_phase = cr.get("phase", "idle")
+    state.codereview_confirmed = set(cr.get("confirmed") or [])
+    state.codereview_selections = {uid: set(lines) for uid, lines in (cr.get("selections") or {}).items()}
+
+    # Misc
+    state.leaderboard_active = snap.get("leaderboard_active", False)
+    if snap.get("token_usage"):
+        state.token_usage.update(snap["token_usage"])
+
+
 @router.post("/api/session/sync", dependencies=[Depends(require_host_auth)])
 async def sync_session(body: SyncSessionRequest):
     if body.main is not None or body.talk is not None:
@@ -91,6 +183,20 @@ async def sync_session(body: SyncSessionRequest):
     if key_points:
         state.summary_points = key_points
         state.summary_updated_at = datetime.now()
+
+    # Manage paused participants BEFORE restoring
+    if body.action == "start_talk":
+        state.paused_participant_uuids = set(state.participant_names.keys())
+    elif body.action == "end_talk":
+        state.paused_participant_uuids = set(state.participant_names.keys())
+
+    if body.session_state:
+        _restore_state_from_snapshot(body.session_state)
+
+    # Plain server-restart restore: clear paused set
+    if body.action is None and body.session_state:
+        state.paused_participant_uuids = set()
+
     await broadcast_state()
     return {"ok": True}
 
