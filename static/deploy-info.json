@@ -1,7 +1,7 @@
 {
-  "sha": "33b83955ad26312ae6e4271880fd3f4c654abce0",
-  "timestamp": "2026-03-25 20:49",
+  "sha": "1fb54e5a09bf5b6ae67aa6ffd6a5cc4a80e56cae",
+  "timestamp": "2026-03-25 20:52",
   "changelog": [
-    "fix: regenerate missing materials slides PDFs"
+    "Make session intervals editable with validation"
   ]
 }
