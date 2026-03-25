@@ -1,3 +1,4 @@
+import json
 import os
 from pathlib import Path
 
@@ -152,7 +153,7 @@ def test_run_once_processes_single_oldest_changed_file(tmp_path, monkeypatch):
     state = {"files": {}}
     seen = []
 
-    def _fake_process(config, daemon_state, pptx):
+    def _fake_process(config, daemon_state, pptx, target_pdf=None):
         seen.append(pptx.name)
         key = str(pptx.resolve())
         daemon_state.setdefault("files", {}).setdefault(key, {})
@@ -164,3 +165,72 @@ def test_run_once_processes_single_oldest_changed_file(tmp_path, monkeypatch):
     changed = slides_daemon.run_once(cfg, state)
     assert changed is True
     assert seen == ["a.pptx"]
+
+
+def test_load_catalog_entries_and_resolve_targets(tmp_path):
+    watch = tmp_path / "watch"
+    watch.mkdir()
+    deck = watch / "deck.pptx"
+    deck.write_bytes(b"x")
+    catalog = tmp_path / "catalog.json"
+    catalog.write_text(
+        json.dumps(
+            {
+                "decks": [
+                    {
+                        "title": "Deck",
+                        "source": str(deck),
+                        "target_pdf": "Deck Final.pdf",
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    cfg = _cfg(tmp_path)
+    cfg.catalog_file = catalog
+    files, metadata = slides_daemon.resolve_tracked_sources(cfg)
+    assert files == [deck]
+    meta = metadata[str(deck.resolve())]
+    assert meta["title"] == "Deck"
+    assert meta["target_pdf"] == "Deck Final.pdf"
+
+
+def test_run_once_uses_catalog_target_pdf(tmp_path, monkeypatch):
+    watch = tmp_path / "watch"
+    watch.mkdir()
+    deck = watch / "deck.pptx"
+    deck.write_bytes(b"x")
+    os.utime(deck, (2000, 2000))
+    catalog = tmp_path / "catalog.json"
+    catalog.write_text(
+        json.dumps(
+            {
+                "decks": [
+                    {
+                        "title": "Deck",
+                        "source": str(deck),
+                        "target_pdf": "Deck Final.pdf",
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    cfg = _cfg(tmp_path)
+    cfg.catalog_file = catalog
+    state = {"files": {}}
+    captured = {}
+
+    def _fake_process(config, daemon_state, pptx, target_pdf=None):
+        captured["source"] = pptx
+        captured["target_pdf"] = target_pdf
+        return True
+
+    monkeypatch.setattr(slides_daemon, "process_one_file", _fake_process)
+    changed = slides_daemon.run_once(cfg, state)
+    assert changed is True
+    assert captured["source"] == deck
+    assert captured["target_pdf"] == "Deck Final.pdf"
