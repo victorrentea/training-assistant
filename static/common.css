@@ -277,7 +277,6 @@
 }
 .notes-download-btn {
   display: inline-block;
-  margin-left: .8rem;
   padding: .2rem .6rem;
   background: var(--accent);
   color: #fff;

@@ -360,8 +360,11 @@
 <div id="host-notes-overlay" class="summary-overlay" onclick="closeHostNotesModal()">
   <div class="summary-dialog" onclick="event.stopPropagation()">
     <div class="summary-header">
-      <span>📝 Session Notes <button id="host-notes-download" class="notes-download-btn" style="display:none" onclick="downloadHostNotes()">⬇️ Download .txt</button></span>
-      <button class="summary-close" onclick="closeHostNotesModal()">✕</button>
+      <span>📝 Session Notes</span>
+      <span>
+        <button id="host-notes-download" class="notes-download-btn" style="display:none" onclick="downloadHostNotes()">⬇️ Download .txt</button>
+        <button class="summary-close" onclick="closeHostNotesModal()">✕</button>
+      </span>
     </div>
     <pre id="host-notes-content" class="notes-content" style="color:var(--text-muted);">No notes available yet.</pre>
   </div>
@@ -370,10 +373,11 @@
 <div id="summary-overlay" class="summary-overlay" onclick="closeSummaryModal()">
   <div class="summary-dialog" onclick="event.stopPropagation()">
     <div class="summary-header">
-      <span>🧠 Key Points <button id="keypoints-download" class="notes-download-btn" style="display:none" onclick="downloadKeyPoints()">⬇️ Download .txt</button></span>
+      <span>🧠 Key Points</span>
       <span>
         <button id="summary-refresh-btn" class="modal-newtab-btn" onclick="requestSummaryRefresh()" title="Generate new key points from recent transcript">🔄 Recent</button>
         <button class="modal-newtab-btn summary-fullregen-btn" onclick="requestFullDayRegenerate()" title="Reset watermark and regenerate key points from entire session's transcript">☢️🔄 Session</button>
+        <button id="keypoints-download" class="notes-download-btn" style="display:none" onclick="downloadKeyPoints()">⬇️ Download .txt</button>
         <button class="summary-close" onclick="closeSummaryModal()">✕</button>
       </span>
     </div>

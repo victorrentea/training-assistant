@@ -48,8 +48,9 @@
 <div id="notes-overlay" class="summary-overlay" onclick="closeNotesModal()">
   <div class="summary-dialog" onclick="event.stopPropagation()">
     <div class="summary-header">
-      <span>📝 Session Notes <button id="participant-notes-download" class="notes-download-btn" style="display:none" onclick="downloadParticipantNotes()">⬇️ Download .txt</button></span>
+      <span>📝 Session Notes</span>
       <span>
+        <button id="participant-notes-download" class="notes-download-btn" style="display:none" onclick="downloadParticipantNotes()">⬇️ Download .txt</button>
         <a id="notes-newtab" href="/notes" target="_blank" class="modal-newtab-btn" title="Open in new tab">↗</a>
         <button class="summary-close" onclick="closeNotesModal()">✕</button>
       </span>
@@ -61,9 +62,10 @@
 <div id="summary-overlay" class="summary-overlay" onclick="closeSummaryModal()">
   <div class="summary-dialog" onclick="event.stopPropagation()">
     <div class="summary-header">
-      <span>🧠 Key Points <button id="keypoints-download" class="notes-download-btn" style="display:none" onclick="downloadKeyPoints()">⬇️ Download .txt</button></span>
+      <span>🧠 Key Points</span>
       <span>
         <button id="summary-refresh-btn" class="modal-newtab-btn" onclick="requestSummaryRefresh()" title="Generate new key points from recent transcript">🔄</button>
+        <button id="keypoints-download" class="notes-download-btn" style="display:none" onclick="downloadKeyPoints()">⬇️ Download .txt</button>
         <a href="/notes" target="_blank" class="modal-newtab-btn" title="Open in new tab">↗</a>
         <button class="summary-close" onclick="closeSummaryModal()">✕</button>
       </span>
