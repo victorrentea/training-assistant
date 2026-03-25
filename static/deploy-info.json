@@ -1,7 +1,7 @@
 {
-  "sha": "51da8325bbe1d423ef58eb45c6bd857d5840a5c7",
-  "timestamp": "2026-03-25 08:37",
+  "sha": "21c8c1b235f37b88efd8efe053dba3dbd45f6ae8",
+  "timestamp": "2026-03-25 08:40",
   "changelog": [
-    "fix: suppress onboarding tour in tests and fix join() via evaluate"
+    "feat: host can trigger heart on overlay by clicking the heart badge"
   ]
 }
