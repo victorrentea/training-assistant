@@ -44,7 +44,6 @@ from daemon.session_transcript import (
     compute_active_windows,
     count_lines_in_windows,
     format_startup_log,
-    format_time_ranges,
     parse_txt_entries_with_datetimes,
 )
 from daemon import log
