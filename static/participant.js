@@ -1382,9 +1382,13 @@
   function showDesktopEmojiFloat(emoji, btn) {
     const el = document.createElement('div');
     el.textContent = emoji;
-    el.className = 'emoji-float';
+    const isScreen = emoji === '🖥️';
+    el.className = 'emoji-float' + (isScreen ? ' emoji-float-screen' : '');
     let startX, startY;
-    if (btn) {
+    if (isScreen) {
+      startX = window.innerWidth / 2;
+      startY = window.innerHeight / 2;
+    } else if (btn) {
       const rect = btn.getBoundingClientRect();
       startX = rect.left + rect.width / 2;
       startY = rect.top;
