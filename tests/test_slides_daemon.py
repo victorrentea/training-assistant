@@ -53,6 +53,23 @@ def test_detect_changed_files_uses_last_exported_mtime(tmp_path):
     assert changed == [b]
 
 
+def test_detect_changed_files_when_target_pdf_missing(tmp_path):
+    watch = tmp_path / "watch"
+    watch.mkdir()
+    publish = tmp_path / "publish"
+    publish.mkdir()
+    a = watch / "a.pptx"
+    a.write_bytes(b"a")
+    state = {
+        "files": {
+            str(a.resolve()): {"slug": "x", "last_exported_mtime": a.stat().st_mtime},
+        }
+    }
+    metadata = {str(a.resolve()): {"target_pdf": "A.pdf"}}
+    changed = slides_daemon.detect_changed_files([a], state, metadata=metadata, publish_dir=publish)
+    assert changed == [a]
+
+
 def test_process_one_file_skips_when_cpu_is_busy(tmp_path, monkeypatch, capsys):
     watch = tmp_path / "watch"
     watch.mkdir()
