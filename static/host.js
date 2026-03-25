@@ -343,6 +343,7 @@
   let _summaryGenerating = false;
   let _transcriptLineCount = 0;
   let _transcriptLastContentAt = null; // Date or null
+  let _transcriptLatestTs = null;      // "HH:MM:SS" string or null
 
   function updateSummary(points, updatedAt) {
     summaryPoints = points || [];
@@ -354,6 +355,7 @@
     }
     renderSummaryBadge();
     renderSummaryList();
+    renderGenerateButton();
   }
 
   function renderSummaryBadge() {
@@ -395,7 +397,17 @@
           : 'No key points yet — click to generate now');
     }
   }
-  setInterval(renderSummaryBadge, 30000); // keep "X minutes" tooltip accurate
+  function renderGenerateButton() {
+    const btn = document.getElementById('summary-refresh-btn');
+    const wmEl = document.getElementById('summary-watermark');
+    if (!btn) return;
+    if (wmEl) wmEl.textContent = _transcriptLatestTs ? '📍' + _transcriptLatestTs.slice(0, 5) : '';
+    const twoMinAgo = Date.now() - 2 * 60 * 1000;
+    const lastGen = summaryUpdatedAt ? new Date(summaryUpdatedAt).getTime() : 0;
+    btn.style.display = (!summaryUpdatedAt || lastGen < twoMinAgo) ? '' : 'none';
+  }
+
+  setInterval(() => { renderSummaryBadge(); renderGenerateButton(); }, 30000); // keep tooltip + button visibility accurate
 
   function renderSummaryList() {
     const list = document.getElementById('summary-list');
@@ -636,8 +648,10 @@
 
   function renderTranscriptStatus(lineCount, totalLines, latestTs, lastContentAt) {
     _transcriptLineCount = lineCount || 0;
+    _transcriptLatestTs = latestTs || null;
     _transcriptLastContentAt = lastContentAt ? new Date(lastContentAt).getTime() : null;
     renderSummaryBadge();
+    renderGenerateButton();
   }
 
 
