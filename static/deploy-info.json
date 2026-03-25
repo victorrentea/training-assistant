@@ -1,7 +1,7 @@
 {
-  "sha": "6d9b827a527e325bc4a7e119584a3f48905569ca",
-  "timestamp": "2026-03-25 08:32",
+  "sha": "a0cde143c849d0d844f9fd305d4e857d97e9569c",
+  "timestamp": "2026-03-25 08:33",
   "changelog": [
-    "style: log \ud83d\ude80 Starting at startup in daemon and overlay"
+    "style: name the process in startup log line"
   ]
 }
