@@ -1,8 +1,7 @@
 {
-  "sha": "c4290905c895586cb94ef0be28872584009af9f4",
-  "timestamp": "2026-03-25 18:08",
+  "sha": "625966ef4f567982515996c49afc8d680a22b27b",
+  "timestamp": "2026-03-25 19:31",
   "changelog": [
-    "chore: add start script for clean-clipboard",
-    "fix: allow overlapping confetti bursts"
+    "style: monospace font for notes and key points"
   ]
 }
