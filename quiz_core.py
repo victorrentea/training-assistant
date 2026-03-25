@@ -113,6 +113,8 @@ def find_session_folder(today: date) -> tuple[Optional[Path], Optional[Path]]:
     for entry in sessions_root.iterdir():
         if not entry.is_dir():
             continue
+        if entry.name.endswith(' talk'):
+            continue
         m = _SESSION_FOLDER_RE.match(entry.name)
         if not m:
             continue
