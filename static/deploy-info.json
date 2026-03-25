@@ -1,7 +1,7 @@
 {
-  "sha": "3fc9f1f2c601e8f98145c945f0ded6190f524a35",
-  "timestamp": "2026-03-25 08:46",
+  "sha": "89b99bedba4f1dec405a269df414915894217d1e",
+  "timestamp": "2026-03-25 08:48",
   "changelog": [
-    "fix: daemon sends main/talk fields to server instead of legacy stack format"
+    "feat: rename talk buttons to emoji, inline start talk with session row"
   ]
 }
