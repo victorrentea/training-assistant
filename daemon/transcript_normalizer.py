@@ -26,6 +26,63 @@ _TIME_ONLY_TS_RE = re.compile(
     r"^\[\s*(\d{1,3}):(\d{2}):(\d{2})(?:\.\d+)?\s*\]\s*(.*)$"
 )
 _SPEAKER_RE = re.compile(r"^([^:\t\n\r]{1,40}):\s*(.*)$")
+_PARENS_ONLY_RE = re.compile(r"^(?:\([^)]*\)\s*)+$")
+
+_LOW_SIGNAL_SINGLE_WORDS = {
+    "music",
+    "silence",
+    "inaudible",
+    "blank",
+    "audio",
+    "foreign",
+    "romanian",
+    "russian",
+    "beep",
+    "beeping",
+    "homing",
+    "you",
+}
+_LOW_SIGNAL_PREFIXES = (
+    "silence from",
+    "silence for",
+    "pause for group work",
+    "speaking in foreign language",
+    "foreign language spoken",
+    "side conversation",
+    "break in audio",
+    "no speech",
+    "russian inaudible",
+)
+_LOW_SIGNAL_TOKEN_SET = {
+    "music",
+    "upbeat",
+    "soft",
+    "silence",
+    "inaudible",
+    "blank",
+    "audio",
+    "pause",
+    "group",
+    "work",
+    "keyboard",
+    "clicking",
+    "typing",
+    "beep",
+    "beeping",
+    "foreign",
+    "language",
+    "romanian",
+    "russian",
+    "speech",
+    "no",
+    "side",
+    "conversation",
+    "break",
+    "in",
+    "mouse",
+    "playing",
+    "you",
+}
 
 
 @dataclass
@@ -156,6 +213,35 @@ def _parse_speaker(text: str) -> tuple[str | None, str]:
     return speaker_candidate, content
 
 
+def _is_low_signal_noise(text: str) -> bool:
+    raw = text.strip()
+    if not raw:
+        return True
+
+    canonical = re.sub(r"[^a-z0-9]+", " ", raw.lower()).strip()
+    if not canonical:
+        return True
+
+    tokens = canonical.split()
+    if len(tokens) == 1 and tokens[0] in _LOW_SIGNAL_SINGLE_WORDS:
+        return True
+
+    if _PARENS_ONLY_RE.match(raw):
+        inner = " ".join(re.findall(r"\(([^)]*)\)", raw.lower()))
+        inner_tokens = re.sub(r"[^a-z0-9]+", " ", inner).strip().split()
+        if inner_tokens and all(tok in _LOW_SIGNAL_TOKEN_SET for tok in inner_tokens):
+            return True
+
+    for prefix in _LOW_SIGNAL_PREFIXES:
+        if canonical.startswith(prefix) and len(tokens) <= 12:
+            return True
+
+    if len(tokens) <= 6 and all(tok in _LOW_SIGNAL_TOKEN_SET for tok in tokens):
+        return True
+
+    return False
+
+
 def _append_outputs(output_dir: Path, grouped_lines: dict[str, list[str]]) -> list[Path]:
     written_files: list[Path] = []
     for day_str in sorted(grouped_lines.keys()):
@@ -258,11 +344,12 @@ def normalize_incremental(
             complete_lines = []
 
     file_day = _raw_file_date(raw_file)
-    output_day = file_day.isoformat() if file_day else (state.current_date or poll_day)
-    normalized_output_file = output_dir / f"{output_day} transcription.txt"
+    default_output_day = file_day.isoformat() if file_day else (state.current_date or poll_day)
     if state.current_speaker is None:
+        normalized_output_file = output_dir / f"{default_output_day} transcription.txt"
         state.current_speaker = _infer_last_speaker_from_normalized(normalized_output_file)
-    state.current_date = output_day
+    if state.current_date is None:
+        state.current_date = default_output_day
     state.current_hhmm = poll_hhmm
     grouped: dict[str, list[str]] = {}
 
@@ -303,10 +390,13 @@ def normalize_incremental(
 
         if not text_content:
             continue
+        if _is_low_signal_noise(text_content):
+            continue
 
         speaker = state.current_speaker or "Unknown"
+        line_day = state.current_date or default_output_day
         normalized = f"[{poll_hhmm}] {speaker}: {text_content}"
-        grouped.setdefault(output_day, []).append(normalized)
+        grouped.setdefault(line_day, []).append(normalized)
 
     written_files = _append_outputs(output_dir, grouped)
     total_lines = sum(len(v) for v in grouped.values())

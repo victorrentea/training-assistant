@@ -165,8 +165,63 @@ def test_case9_real_identified_segment_speaker_propagation(tmp_path):
     assert result.written_lines == 3
     assert _lines(tmp_path / "2026-03-22 transcription.txt") == [
         "[20:01] Audience: Orchestration, agents, but I also have a question here.",
+    ]
+    assert _lines(tmp_path / "2026-03-25 transcription.txt") == [
         "[20:01] Audience: I don't know enough information, or is it correct?",
         "[20:01] Victor: You said it, I wanted to say it.",
+    ]
+
+
+def test_case10_single_raw_with_absolute_dates_writes_yesterday_and_today(tmp_path):
+    raw = tmp_path / "20260322 2100 Transcription.txt"
+    raw.write_text(
+        "[ 2026-03-24 09:30:00.00 ] Victor:\tYesterday line\n"
+        "[ 2026-03-25 10:00:00.00 ] Audience:\tToday line\n",
+        encoding="utf-8",
+    )
+
+    result = normalize_incremental(raw, now=datetime(2026, 3, 25, 20, 15))
+
+    assert result.written_lines == 2
+    assert _lines(tmp_path / "2026-03-24 transcription.txt") == [
+        "[20:15] Victor: Yesterday line",
+    ]
+    assert _lines(tmp_path / "2026-03-25 transcription.txt") == [
+        "[20:15] Audience: Today line",
+    ]
+
+
+def test_case11_filters_suspicious_low_signal_lines(tmp_path):
+    raw = tmp_path / "20260325 1000 Transcription.txt"
+    raw.write_text(
+        "[ 2026-03-25 10:00:00.00 ] Victor:\t(upbeat music)\n"
+        "[ 2026-03-25 10:00:01.00 ] Victor:\tMUSIC\n"
+        "[ 2026-03-25 10:00:02.00 ] Victor:\tRussian inaudible.\n"
+        "[ 2026-03-25 10:00:03.00 ] Victor:\tHoming\n"
+        "[ 2026-03-25 10:00:04.00 ] Victor:\tReal sentence that should stay.\n",
+        encoding="utf-8",
+    )
+
+    result = normalize_incremental(raw, now=datetime(2026, 3, 25, 10, 30))
+
+    assert result.written_lines == 1
+    assert _lines(tmp_path / "2026-03-25 transcription.txt") == [
+        "[10:30] Victor: Real sentence that should stay.",
+    ]
+
+
+def test_case12_keeps_contentful_line_even_if_contains_noise_word(tmp_path):
+    raw = tmp_path / "20260325 1000 Transcription.txt"
+    raw.write_text(
+        "[ 2026-03-25 10:00:00.00 ] Victor:\tSilence I have a feature request for host UI.\n",
+        encoding="utf-8",
+    )
+
+    result = normalize_incremental(raw, now=datetime(2026, 3, 25, 10, 40))
+
+    assert result.written_lines == 1
+    assert _lines(tmp_path / "2026-03-25 transcription.txt") == [
+        "[10:40] Victor: Silence I have a feature request for host UI.",
     ]
 
 
