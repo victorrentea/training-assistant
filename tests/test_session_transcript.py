@@ -244,6 +244,15 @@ class TestParseTxtEntriesWithDatetimes:
         assert dt_val is None
         assert text_val == "Plain line without timestamp"
 
+    def test_invalid_hour_in_time_only_falls_back_to_plain(self):
+        """Elapsed-time timestamps (e.g. [90:15:30.00]) must not crash."""
+        text = "[90:15:30.00] elapsed time line"
+        entries = parse_txt_entries_with_datetimes(text, file_date=date(2026, 3, 24))
+        assert len(entries) == 1
+        dt_val, text_val = entries[0]
+        assert dt_val is None
+        assert text_val == "[90:15:30.00] elapsed time line"
+
     def test_mixed_content(self):
         text = (
             "[2026-03-24 09:30:00.00] First\n"
