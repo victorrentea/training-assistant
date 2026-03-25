@@ -8,8 +8,9 @@
 #   2. Desktop overlay  — macOS overlay app rendering participant emoji reactions
 #
 # Auto-updates: every 2s, `git fetch` checks for new commits on master.
-# When new code is detected (or daemon exits with code 42), ALL processes
-# are stopped, code is pulled, overlay is rebuilt, and everything restarts.
+# When new code is detected (or daemon exits with code 42), the daemon is
+# stopped, code is pulled, overlay is rebuilt, and everything restarts.
+# The overlay keeps running until the new instance self-replaces it via PID file.
 #
 # PREREQUISITES
 #   - Python 3.12+ with project dependencies installed
@@ -84,32 +85,8 @@ start_daemon() {
   DAEMON_PID=$!
 }
 
-kill_old_overlay() {
-  local pid_file="/tmp/desktop-overlay.pid"
-  if [ -f "$pid_file" ]; then
-    local old_pid
-    old_pid=$(cat "$pid_file" 2>/dev/null)
-    if [ -n "$old_pid" ] && kill -0 "$old_pid" 2>/dev/null; then
-      _log "start" "info" "💀 overlay prev instance (pid $old_pid)"
-      kill "$old_pid" 2>/dev/null
-      # Wait up to 3s for it to exit
-      for i in 1 2 3; do
-        kill -0 "$old_pid" 2>/dev/null || break
-        sleep 1
-      done
-      # Force kill if still alive
-      if kill -0 "$old_pid" 2>/dev/null; then
-        _log "start" "info" "💀 overlay force-kill (pid $old_pid)"
-        kill -9 "$old_pid" 2>/dev/null
-      fi
-    fi
-    rm -f "$pid_file"
-  fi
-}
-
 start_overlay() {
   if [ -n "$NO_OVERLAY" ]; then return; fi
-  kill_old_overlay
   _log "start" "info" "Starting desktop overlay ($OVERLAY_SERVER)..."
   (cd desktop-overlay && .build/arm64-apple-macosx/debug/DesktopOverlay "$OVERLAY_SERVER") &
   OVERLAY_PID=$!
@@ -148,11 +125,7 @@ stop_all_processes() {
     kill -9 "$DAEMON_PID" 2>/dev/null
     DAEMON_PID=""
   fi
-  if [ -n "$OVERLAY_PID" ]; then
-    _log "start" "info" "💀 overlay (pid $OVERLAY_PID)"
-    kill -9 "$OVERLAY_PID" 2>/dev/null
-    OVERLAY_PID=""
-  fi
+  # Overlay is left running — the new instance will kill it on startup
 }
 
 pull_and_rebuild() {
