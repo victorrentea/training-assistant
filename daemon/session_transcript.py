@@ -180,7 +180,7 @@ def format_startup_log(
         watermark_str = _fmt_dt(watermark_dt)
 
     # Counts
-    unprocessed = len(non_empty) - summary_watermark
+    unprocessed = max(0, len(non_empty) - summary_watermark)
     session_lines = count_lines_in_windows(non_empty, windows)
 
     # Segments
