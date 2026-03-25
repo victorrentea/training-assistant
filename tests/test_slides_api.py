@@ -101,3 +101,18 @@ def test_api_slides_merges_local_and_daemon_entries(monkeypatch, tmp_path):
     names = [s["name"] for s in resp.json()["slides"]]
     assert "Local Deck" in names
     assert "Remote Deck" in names
+
+
+def test_api_slides_includes_slides_current_when_present(monkeypatch, tmp_path):
+    monkeypatch.setenv("TRAINING_ASSISTANT_SLIDES_DIR", str(tmp_path))
+    state.slides_current = {
+        "url": "https://slides.example.com/current.pdf",
+        "slug": "current-123",
+        "source_file": "Deck Live.pdf",
+        "updated_at": "2026-03-25T20:40:00+00:00",
+    }
+    client = TestClient(app)
+    resp = client.get("/api/slides")
+    assert resp.status_code == 200
+    slides = resp.json()["slides"]
+    assert any(s["slug"] == "current-123" and s["url"] == "https://slides.example.com/current.pdf" for s in slides)
