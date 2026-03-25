@@ -1,7 +1,7 @@
 {
-  "sha": "281d1fd4d7529ec989bdaef860ed98d7d0a969a3",
-  "timestamp": "2026-03-25 08:40",
+  "sha": "3fc9f1f2c601e8f98145c945f0ded6190f524a35",
+  "timestamp": "2026-03-25 08:46",
   "changelog": [
-    "fix: add #notif-btn to participant HTML so notification button can be shown"
+    "fix: daemon sends main/talk fields to server instead of legacy stack format"
   ]
 }
