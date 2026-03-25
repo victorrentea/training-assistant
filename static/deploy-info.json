@@ -1,7 +1,7 @@
 {
-  "sha": "05b95b14629d75fc9a64ef1c2db10a846dbbf439",
-  "timestamp": "2026-03-25 19:37",
+  "sha": "c181e2ce06dae033ba987f7f063a05a457903430",
+  "timestamp": "2026-03-25 19:42",
   "changelog": [
-    "fix(daemon): skip duplicate state backup logs"
+    "Add AGENTS rule to use CLAUDE.md"
   ]
 }
