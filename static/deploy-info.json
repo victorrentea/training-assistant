@@ -1,14 +1,11 @@
 {
-  "sha": "bcc6aca5cebbf15a4b5df292ef238f36e47a6d93",
+  "sha": "f288fdb5e4d8ee1c173440240a5ffac37ef927b0",
   "timestamp": "2026-03-25 09:15",
   "changelog": [
-    "docs: add transcript startup log plan and finalize spec",
-    "fix: clamp unprocessed count to 0 and remove dead format_time_ranges import",
-    "refactor: simplify is_ongoing to use all() instead of not any(not ...)",
-    "feat: replace format_time_ranges with format_startup_log at startup",
-    "fix: guard against watermark index out of bounds in format_startup_log",
-    "feat: add format_startup_log to session_transcript",
-    "test: add failing TestFormatStartupLog tests",
-    "docs: add transcript startup log design spec"
+    "fix: use \u23f1\ufe0f instead of \ud83d\udccd for transcript watermark",
+    "feat: rename Generate/Regenerate buttons, show watermark, hide Generate if <2min old",
+    "fix: move download buttons to right side of modal headers (next to X)",
+    "feat: add \u2b07\ufe0f Download .txt button to Key Points modal (host + participant)",
+    "feat: add \u2b07\ufe0f emoji to Download .txt button in notes"
   ]
 }
