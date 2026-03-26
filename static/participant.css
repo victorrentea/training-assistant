@@ -337,7 +337,7 @@ h1 { display: none; }
 }
 
 .slides-list-item:hover {
-  border-color: var(--accent);
+  border-color: var(--accent2);
 }
 
 .slides-list-item.active {
@@ -389,7 +389,7 @@ h1 { display: none; }
 }
 
 .slides-list-download:hover {
-  border-color: var(--accent);
+  border-color: var(--accent2);
   color: var(--text);
 }
 

@@ -1,5 +1,6 @@
 # Tasks
 
+- [x] Bugfix direct request: removed forced iframe reload for test page jump (now uses in-frame hash navigation first) to avoid visible PDF refresh; aligned slide row/download hover border color to green for consistent hover/selected states.
 - [x] Direct request: removed top spacer above Slides viewer by disabling compact meta strip (`slides-meta-inline`), so PDF starts immediately at top.
 - [x] Direct request: made Slides empty-state prominent and centered with animated call-to-action (inviting click on right-side slide list), replacing plain text placeholders.
 - [x] Direct request: moved `updated` into per-slide compact gray badge next to each title in right sidebar list (`15s`, `3m`, `1h`, `3d`, `1w`, `Jan`, `2025` style), removed top updated display, and increased slide title font size.

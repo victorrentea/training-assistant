@@ -731,17 +731,18 @@
         slidesPdfViewer.currentPageNumber = targetPage;
         _setStoredSlidePage(slidesSelectedSlug, targetPage);
       } else if (slidesNativeFrame) {
-        const raw = String(slidesNativeFrame.src || '');
-        if (raw) {
-          const base = raw.replace(/#page=\d+$/, '');
-          const target = `${base}#page=${requestedPage}`;
-          // Some native PDF viewers ignore hash-only updates on an already loaded doc.
-          // Force a reload so #page is applied deterministically in fallback mode.
-          slidesNativeFrame.src = 'about:blank';
-          setTimeout(() => {
-            if (!slidesNativeFrame || slidesSelectedId !== targetId) return;
-            slidesNativeFrame.src = target;
-          }, 60);
+        // Try in-frame hash navigation first to avoid visible reload/flicker.
+        try {
+          const win = slidesNativeFrame.contentWindow;
+          if (win?.location) {
+            win.location.hash = `page=${requestedPage}`;
+          }
+        } catch (_) {
+          const raw = String(slidesNativeFrame.src || '');
+          if (raw) {
+            const base = raw.replace(/#page=\d+$/, '');
+            slidesNativeFrame.src = `${base}#page=${requestedPage}`;
+          }
         }
       }
       _renderSlidesMeta(slide);
