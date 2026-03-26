@@ -44,6 +44,25 @@ function avatarColorFromUuid(uuid) {
   return `hsl(${hue}, 60%, 40%)`;
 }
 
+const LS_ONBOARDING_HIDDEN_KEY = 'workshop_onboarding_hidden';
+const localStorage = (() => {
+  const store = new Map();
+  return {
+    getItem(key) { return store.has(key) ? store.get(key) : null; },
+    setItem(key, value) { store.set(key, String(value)); },
+    removeItem(key) { store.delete(key); },
+    clear() { store.clear(); },
+  };
+})();
+
+function isOnboardingChecklistHidden() {
+  return localStorage.getItem(LS_ONBOARDING_HIDDEN_KEY) === '1';
+}
+
+function markOnboardingChecklistHidden() {
+  localStorage.setItem(LS_ONBOARDING_HIDDEN_KEY, '1');
+}
+
 function largestRemainder(floats) {
   const total = floats.reduce((a, b) => a + b, 0);
   if (total === 0) return floats.map(() => 0);
@@ -142,6 +161,15 @@ assertEq('empty string UUID', avatarColorFromUuid(''), 'hsl(NaN, 60%, 40%)');
 
 // All-zero UUID → hue 0
 assertEq('all-zero UUID → hue 0', avatarColorFromUuid('00000000-0000-0000-0000-000000000000'), 'hsl(0, 60%, 40%)');
+
+// ── onboarding checklist persistence ─────────────────────────────────
+suite('onboarding checklist persistence');
+localStorage.clear();
+assertEq('hidden flag is false by default', isOnboardingChecklistHidden(), false);
+markOnboardingChecklistHidden();
+assertEq('hidden flag becomes true after marking hidden', isOnboardingChecklistHidden(), true);
+localStorage.removeItem(LS_ONBOARDING_HIDDEN_KEY);
+assertEq('hidden flag becomes false after reset', isOnboardingChecklistHidden(), false);
 
 // ── largestRemainder ─────────────────────────────────────────────────
 suite('largestRemainder()');

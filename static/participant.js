@@ -102,6 +102,15 @@
 
   // ── Onboarding tour ──
   const LS_TOUR_KEY = 'workshop_tour_shown';
+  const LS_ONBOARDING_HIDDEN_KEY = 'workshop_onboarding_hidden';
+
+  function isOnboardingChecklistHidden() {
+    return localStorage.getItem(LS_ONBOARDING_HIDDEN_KEY) === '1';
+  }
+
+  function markOnboardingChecklistHidden() {
+    localStorage.setItem(LS_ONBOARDING_HIDDEN_KEY, '1');
+  }
 
   function runOnboardingTourIfNeeded() {
     if (!_isFirstVisit) return;
@@ -912,6 +921,7 @@
     // Fade out entire checklist when all tasks are done
     const allDone = nameEl?.classList.contains('done') && locEl?.classList.contains('done') && notifEl?.classList.contains('done');
     if (allDone) {
+      markOnboardingChecklistHidden();
       setTimeout(() => {
         const list = document.getElementById('onboarding-list');
         if (list) { list.style.transition = 'opacity 3s'; list.style.opacity = '0'; }
@@ -2103,12 +2113,13 @@
       const locationSet = !!localStorage.getItem(LS_LOCATION_KEY);
       const notifGranted = 'Notification' in window && Notification.permission === 'granted';
       const allDone = nameSet && locationSet && notifGranted;
+      const checklistHidden = isOnboardingChecklistHidden();
       el.innerHTML = `<div class="waiting">
         <div class="icon">👋</div>
         <p>Welcome!</p>
         <p style="margin-top:.75rem;">Get ready to participate.</p>
         <p style="margin-top:.5rem;">Your answers and ideas will shape this session!</p>
-        <ul id="onboarding-list" class="onboarding-checklist"${allDone ? ' style="opacity:1"' : ''}>
+        ${checklistHidden ? '' : `<ul id="onboarding-list" class="onboarding-checklist"${allDone ? ' style="opacity:1"' : ''}>
           <li id="onboard-name" class="onboarding-item${nameSet ? ' done' : ''}" onclick="${nameSet ? '' : 'startNameEdit()'}" style="cursor:${nameSet ? 'default' : 'pointer'}">
             <input type="checkbox" disabled ${nameSet ? 'checked' : ''}> ✏️ Click on your name to set it
           </li>
@@ -2118,9 +2129,10 @@
           <li id="onboard-notif" class="onboarding-item${notifGranted ? ' done' : ''}" onclick="${notifGranted ? '' : 'requestNotificationPermission()'}" style="cursor:${notifGranted ? 'default' : 'pointer'}">
             <input type="checkbox" disabled ${notifGranted ? 'checked' : ''}> 🔔 Enable browser notifications
           </li>
-        </ul>
+        </ul>`}
       </div>`;
-      if (allDone) {
+      if (allDone && !checklistHidden) {
+        markOnboardingChecklistHidden();
         setTimeout(() => {
           const list = document.getElementById('onboarding-list');
           if (list) { list.style.transition = 'opacity 3s'; list.style.opacity = '0'; }
@@ -2573,7 +2585,7 @@
     vt.addEventListener('click', () => {
       if (!confirm('Are you sure you want to reset your identity?')) return;
       ['workshop_participant_uuid', 'workshop_participant_name', 'workshop_custom_name',
-       'workshop_vote', 'workshop_participant_location', 'workshop_tour_shown', 'workshop_wc_session']
+       'workshop_vote', 'workshop_participant_location', 'workshop_tour_shown', 'workshop_onboarding_hidden', 'workshop_wc_session']
         .forEach(k => localStorage.removeItem(k));
       sessionStorage.clear();
       document.cookie.split(';').forEach(c => {
