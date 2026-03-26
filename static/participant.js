@@ -79,6 +79,8 @@
   let _stateInitialised = false;   // skip notifications on first state (join mid-session)
   let currentMode = 'workshop';
   let _notifBtnBound = false;      // prevent re-binding on reconnect
+  let _displayedScore = 0;
+  let _scoreRollTimer = null;
   let summaryPoints = [];
   let summaryUpdatedAt = null;
   const SLIDES_REFRESH_MS = 30000;
@@ -89,6 +91,7 @@
   const LS_SLIDE_VISITED_IDS = 'workshop_slide_visited_ids';
   const LS_SLIDES_VIEW_MODE = 'workshop_slides_view_mode';
   const LS_SLIDES_FOLLOW_TRAINER = 'workshop_slides_follow_trainer';
+  const LS_LOCATION_KEY = 'workshop_participant_location';
   const SLIDES_TEST_AUTO_SCROLL_ENABLED = false;
   const SLIDES_TEST_AUTO_SCROLL_PAGE = 2;
   const SLIDES_TEST_AUTO_SCROLL_DELAY_MS = 3000;
@@ -1548,7 +1551,6 @@
   })();
   _bindSlidesFollowTrainerToggle();
   _bindSlidesViewModeToggle();
-  _bindSlidesFollowToggle();
   warmSlidesCatalog();
 
   // ── Inline name editing ──
@@ -1591,8 +1593,6 @@
   });
 
   // ── Location ──
-  const LS_LOCATION_KEY = 'workshop_participant_location';
-
   function getTimezoneLocation() {
     return `🕐 ${Intl.DateTimeFormat().resolvedOptions().timeZone}`;
   }
@@ -2016,9 +2016,6 @@
     if (!el) return;
     el.style.display = (active === false) ? 'flex' : 'none';
   }
-
-  let _displayedScore = 0;
-  let _scoreRollTimer = null;
 
   function updateScore(pts) {
     const el = document.getElementById('my-score');
