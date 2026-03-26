@@ -678,18 +678,30 @@
   }
 
   function _scheduleTestAutoScroll(slide) {
-    if (!SLIDES_TEST_AUTO_SCROLL_ENABLED || !slidesPdfDoc || !slidesPdfViewer || !slide) return;
+    if (!SLIDES_TEST_AUTO_SCROLL_ENABLED || !slide) return;
     if (slidesAutoScrollTimer) {
       clearTimeout(slidesAutoScrollTimer);
       slidesAutoScrollTimer = null;
     }
     const targetId = slide._id;
     slidesAutoScrollTimer = setTimeout(() => {
-      if (!slidesPdfDoc || !slidesPdfViewer || slidesSelectedId !== targetId) return;
-      const numPages = Math.max(1, Number(slidesPdfDoc.numPages || 1));
-      const targetPage = Math.min(numPages, Math.max(1, Number(SLIDES_TEST_AUTO_SCROLL_PAGE || 1)));
-      slidesPdfViewer.currentPageNumber = targetPage;
-      _setStoredSlidePage(slidesSelectedSlug, targetPage);
+      if (slidesSelectedId !== targetId) return;
+      const requestedPage = Math.max(1, Number(SLIDES_TEST_AUTO_SCROLL_PAGE || 1));
+      if (slidesPdfDoc && slidesPdfViewer) {
+        const numPages = Math.max(1, Number(slidesPdfDoc.numPages || 1));
+        const targetPage = Math.min(numPages, requestedPage);
+        try {
+          if (slidesPdfLinkService?.goToPage) slidesPdfLinkService.goToPage(targetPage);
+        } catch (_) {}
+        slidesPdfViewer.currentPageNumber = targetPage;
+        _setStoredSlidePage(slidesSelectedSlug, targetPage);
+      } else if (slidesNativeFrame) {
+        const raw = String(slidesNativeFrame.src || '');
+        if (raw) {
+          const base = raw.replace(/#page=\d+$/, '');
+          slidesNativeFrame.src = `${base}#page=${requestedPage}`;
+        }
+      }
       _renderSlidesMeta(slide);
     }, SLIDES_TEST_AUTO_SCROLL_DELAY_MS);
   }
@@ -920,6 +932,7 @@
       _renderSlidesMeta({ ...slide, updated_at: effectiveUpdatedAt });
       _setSlidesError('');
       _setSlidesLoading({ visible: false });
+      _scheduleTestAutoScroll(slide);
     }
   }
 

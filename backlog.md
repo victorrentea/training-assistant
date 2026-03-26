@@ -1,5 +1,6 @@
 # Tasks
 
+- [x] Bugfix direct request: test auto-scroll to page 2 now runs after 3s for both PDF.js rendering and native iframe fallback (so page jump testing works regardless of render path).
 - [x] Direct request: removed Slides top bar and replaced with compact inline meta row (`slide title + updated + page`), added per-slide row-level download button in right sidebar list, and increased vertical viewer space to start higher.
 - [x] Direct request: redesigned participant Slides UX with right-side slide list (~10% width), moved `📑 Slides` title next to Download in right header actions, and maximized PDF viewer vertical space while preserving minimal emoji-bar click area.
 - [x] Bugfix direct request: participant Slides overlay no longer covers bottom emoji bar area; emoji buttons remain clickable while PDF preview is open and no longer trigger modal close.
