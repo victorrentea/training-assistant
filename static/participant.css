@@ -583,6 +583,7 @@ h1 { display: none; }
   border-radius: 6px;
   background: #1a1a1a;
   padding: .14rem 0 .14rem .2rem;
+  margin-left: 5%;
 }
 
 .slides-list-item:hover {
@@ -600,8 +601,8 @@ h1 { display: none; }
 }
 
 .slides-list-open {
-  flex: 0 0 70%;
-  max-width: 70%;
+  flex: 1;
+  max-width: none;
   display: flex;
   align-items: center;
   gap: .08rem;
@@ -612,7 +613,7 @@ h1 { display: none; }
   cursor: pointer;
   font-size: .83rem;
   line-height: 1.05;
-  padding: .06rem 0 .06rem 5%;
+  padding: .06rem 0 .06rem .2rem;
   min-width: 0;
 }
 
