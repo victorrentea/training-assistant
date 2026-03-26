@@ -385,8 +385,11 @@ _tap_ref = None
 def main() -> None:
     global _run_loop_ref, _tap_ref
 
-    # Load API key from clean-clipboard/secrets.env
-    secrets_path = Path(__file__).parent / "secrets.env"
+    # Load API key from shared secrets file
+    default_secrets_path = Path.home() / ".training-assistants-secrets.env"
+    secrets_path = Path(
+        os.environ.get("TRAINING_ASSISTANTS_SECRETS_FILE", str(default_secrets_path))
+    ).expanduser()
     if secrets_path.exists():
         for line in secrets_path.read_text().splitlines():
             line = line.strip()

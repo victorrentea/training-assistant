@@ -127,17 +127,17 @@ class TestFindSessionFolder:
 
 class TestLoadSecretsEnv:
     def test_loads_env(self, tmp_path, monkeypatch):
-        secrets = tmp_path / "secrets.env"
+        secrets = tmp_path / ".training-assistants-secrets.env"
         secrets.write_text("TEST_KEY_ABC=hello\n# comment\n\nTEST_KEY_DEF=world\n")
-        monkeypatch.setattr(quiz_core, "__file__", str(tmp_path / "quiz_core.py"))
+        monkeypatch.setenv("TRAINING_ASSISTANTS_SECRETS_FILE", str(secrets))
         monkeypatch.delenv("TEST_KEY_ABC", raising=False)
         monkeypatch.delenv("TEST_KEY_DEF", raising=False)
         load_secrets_env()
         assert os.environ.get("TEST_KEY_ABC") == "hello"
         assert os.environ.get("TEST_KEY_DEF") == "world"
 
-    def test_missing_file(self, tmp_path, monkeypatch):
-        monkeypatch.setattr(quiz_core, "__file__", str(tmp_path / "quiz_core.py"))
+    def test_missing_file(self, monkeypatch):
+        monkeypatch.setenv("TRAINING_ASSISTANTS_SECRETS_FILE", "/tmp/does-not-exist.env")
         load_secrets_env()  # should not raise
 
 

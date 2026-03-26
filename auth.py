@@ -6,8 +6,11 @@ from pathlib import Path
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 
-# Load secrets.env into os.environ if not already set
-_secrets_file = Path(__file__).parent / "secrets.env"
+# Load shared secrets file into os.environ if not already set
+_default_secrets_file = Path.home() / ".training-assistants-secrets.env"
+_secrets_file = Path(
+    os.environ.get("TRAINING_ASSISTANTS_SECRETS_FILE", str(_default_secrets_file))
+).expanduser()
 if _secrets_file.exists():
     for line in _secrets_file.read_text().splitlines():
         line = line.strip()

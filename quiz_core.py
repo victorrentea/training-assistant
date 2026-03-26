@@ -54,8 +54,11 @@ class Config:
 
 
 def load_secrets_env() -> None:
-    """Load key=value pairs from secrets.env in the project directory into os.environ."""
-    secrets_file = Path(__file__).parent / "secrets.env"
+    """Load key=value pairs from the shared secrets file into os.environ."""
+    default_path = Path.home() / ".training-assistants-secrets.env"
+    secrets_file = Path(
+        os.environ.get("TRAINING_ASSISTANTS_SECRETS_FILE", str(default_path))
+    ).expanduser()
     if not secrets_file.exists():
         return
     for line in secrets_file.read_text().splitlines():
@@ -67,7 +70,7 @@ def load_secrets_env() -> None:
 
 
 def config_from_env(minutes: int = DEFAULT_MINUTES) -> Config:
-    """Build a Config from environment variables (after loading secrets.env)."""
+    """Build a Config from environment variables (after loading shared secrets)."""
     load_secrets_env()
     folder = Path(os.environ.get("TRANSCRIPTION_FOLDER", "/Users/victorrentea/Documents/transcriptions"))
     api_key = os.environ.get("ANTHROPIC_API_KEY", "")

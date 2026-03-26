@@ -14,7 +14,7 @@
 #
 # PREREQUISITES
 #   - Python 3.12+ with project dependencies installed
-#   - secrets.env with ANTHROPIC_API_KEY and TRANSCRIPTION_FOLDER
+#   - ~/.training-assistants-secrets.env with ANTHROPIC_API_KEY and TRANSCRIPTION_FOLDER
 #   - Swift toolchain (for desktop overlay)
 #
 # USAGE
@@ -29,11 +29,12 @@ cd "$SCRIPT_DIR"
 source "$SCRIPT_DIR/daemon/bash_log.sh"
 
 OVERLAY_SERVER="${1:-wss://interact.victorrentea.ro}"
+SECRETS_FILE="${TRAINING_ASSISTANTS_SECRETS_FILE:-$HOME/.training-assistants-secrets.env}"
 
 # ── Preflight checks ──
 
-if [ ! -f secrets.env ]; then
-  _log "start" "error" "secrets.env not found — create with ANTHROPIC_API_KEY and TRANSCRIPTION_FOLDER"
+if [ ! -f "$SECRETS_FILE" ]; then
+  _log "start" "error" "$SECRETS_FILE not found — create with ANTHROPIC_API_KEY and TRANSCRIPTION_FOLDER"
   exit 1
 fi
 

@@ -26,7 +26,7 @@ import websockets
 LOAD_TEST_URL = os.environ.get("LOAD_TEST_URL")
 LOAD_TEST_COUNT = int(os.environ.get("LOAD_TEST_COUNT", "30"))
 
-import auth  # noqa: loads secrets.env into os.environ
+import auth  # noqa: loads shared secrets into os.environ
 HOST_USER = os.environ.get("HOST_USERNAME", "host")
 HOST_PASS = os.environ.get("HOST_PASSWORD", "testpass")
 

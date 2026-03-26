@@ -13,14 +13,15 @@ from playwright.sync_api import sync_playwright
 
 BASE_URL = sys.argv[1] if len(sys.argv) > 1 else "https://interact.victorrentea.ro"
 
-# Load credentials from secrets.env (check script dir and common workspace locations)
+# Load credentials from the shared secrets file (fallback to legacy local paths)
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 _candidates = [
+    os.environ.get("TRAINING_ASSISTANTS_SECRETS_FILE", ""),
+    os.path.expanduser("~/.training-assistants-secrets.env"),
     os.path.join(SCRIPT_DIR, "secrets.env"),
-    os.path.expanduser("~/workspace/training-assistant/secrets.env"),
 ]
 for secrets_path in _candidates:
-    if os.path.exists(secrets_path):
+    if secrets_path and os.path.exists(secrets_path):
         for line in open(secrets_path):
             line = line.strip()
             if "=" in line and not line.startswith("#"):

@@ -8,7 +8,7 @@ host panel, then runs the full generate → post → open flow automatically.
 Usage:
     python3 training_daemon.py
 
-All configuration is read from secrets.env and environment variables:
+All configuration is read from ~/.training-assistants-secrets.env and environment variables:
     ANTHROPIC_API_KEY       Claude API key (required)
     WORKSHOP_SERVER_URL     e.g. https://interact.victorrentea.ro
     HOST_USERNAME / HOST_PASSWORD
