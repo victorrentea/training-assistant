@@ -360,10 +360,8 @@ def _collect_participant_slides(*, include_unavailable_when_daemon_offline: bool
     merged = _merge_slide_sources(state_slides, local_slides, uploaded_slides, catalog_slides)
     if include_unavailable_when_daemon_offline:
         return merged
-    if state.daemon_ws is not None or not _on_demand_enabled():
-        return merged
-
-    # If daemon is offline, hide local slide endpoints that don't exist on server yet.
+    # Participant dropdown must contain only currently servable local slide URLs.
+    # Full visibility (including missing files) is provided in host diagnostics hover.
     filtered: list[dict] = []
     for slide in merged:
         url = str(slide.get("url") or "").strip()
