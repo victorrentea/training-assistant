@@ -8,6 +8,14 @@
 - [x] Set single-monitor auto-hide delay to 1 second after slide-in.
 - [x] Run `swift test` in `desktop-overlay` and capture proof logs.
 
+## Direct request: detect PowerPoint presentation + slide in training daemon (AppleScript)
+
+- [x] Add AppleScript polling helper in `training_daemon.py` for active presentation and current slide number
+- [x] Log updates only when presentation or slide changes (including clear state when PowerPoint is not active)
+- [x] Add focused unit tests for parser/error handling without requiring local PowerPoint
+- [x] Run targeted tests
+- [x] Mark direct request done in `backlog.md`
+
 ## Backlog item: GH#67 participant slides viewer (PDF)
 
 - [x] Add backend slide metadata endpoint `GET /api/slides`
@@ -530,3 +538,5 @@
 - Participant dropdown now only lists slide entries that can actually be served from server storage for local `/api/slides/file/{slug}` URLs.
 - This removes catalog-only placeholders from participant UI when files are absent, eliminating `503` from normal dropdown selections.
 - Host diagnostics (`/api/slides/participant-availability`) still shows full deck list + availability status for operations.
+- Direct request implemented: `training_daemon.py` now probes PowerPoint via AppleScript and logs `presentation + slide #` only when they change (including transition to no active presentation).
+- Verified with `pytest -q tests/test_daemon_state.py` (16 passed).

@@ -21,6 +21,7 @@
 - [x] Add and run a direct utility to reset normalization offsets and rebuild normalized transcripts from raw files (`python3 -m daemon.rebuild_normalized_transcripts --from-iso ...`).
 - [x] Migrate quiz/summarizer + transcript-status input to normalized transcripts (`YYYY-MM-DD transcription.txt`) instead of raw transcriber files.
 - [x] Migrate transcript normalization to `training_daemon.py` (desktop) and add on-demand normalized transcript range query CLI (`python3 -m daemon.transcript_query`).
+- [x] Direct request: training daemon now detects active PowerPoint presentation and current slide via AppleScript, logging updates only on change.
 - [x] ui: session panel compacted for host screen — session controls are clickable emoji-only (no button chrome), pause is followed by a vertical separator then `🎙️▶️`, and current session now shows transcript active time windows under the row.
 - [x] desktop-overlay: replaced Zorro button icon from battle swords to a little `z`, made Pulse/EKG background layers more transparent, and switched single-monitor right-edge action panel to vertical stacking.
 - [x] desktop-overlay: removed underline below selected action button; selection feedback now uses gray background only.
