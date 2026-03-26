@@ -895,7 +895,7 @@ def run() -> None:
     signal.signal(signal.SIGINT, _cleanup)
 
     config = config_from_env()
-    log.info("daemon", f"Starting — connecting to {config.server_url}")
+    log.info("daemon", f"🚀 Starting — connecting to {config.server_url}")
 
     if config.project_folder:
         log.info("daemon", f"Project folder configured: {config.project_folder}")
