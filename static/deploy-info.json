@@ -1,7 +1,7 @@
 {
-  "sha": "d3ca35bb820ae592fb805c8bf47cc94380074eed",
-  "timestamp": "2026-03-26 23:32",
+  "sha": "43eb14d93859a8dec6b35e31a6ad6faeffc29801",
+  "timestamp": "2026-03-26 23:35",
   "changelog": [
-    "style: log slide changes as \ud83d\udcfd\ufe0f <name> : <slide>, print same slide for debug"
+    "style: simplify slides upload log messages"
   ]
 }
