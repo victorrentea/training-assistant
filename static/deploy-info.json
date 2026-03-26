@@ -1,7 +1,7 @@
 {
-  "sha": "aea8014d0d649ad7e25fb4b2489e41a286e158e4",
-  "timestamp": "2026-03-26 19:39",
+  "sha": "2976c739e388bbc9c0dbddb3778e4c3c075b6682",
+  "timestamp": "2026-03-26 19:41",
   "changelog": [
-    "Make participant PDF viewer full viewport height"
+    "Lock scrolling in participant waiting screen"
   ]
 }
