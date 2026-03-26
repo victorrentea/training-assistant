@@ -56,7 +56,7 @@ if CommandLine.arguments.count > 1 {
 } else {
     serverURL = "ws://localhost:8000"
 }
-overlayInfo("Connecting to \(serverURL)")
+overlayInfo("🚀 Connecting to \(serverURL)")
 
 let delegate = AppDelegate(serverURL: serverURL, pidFilePath: pidFilePath, myPID: myPID)
 app.delegate = delegate
