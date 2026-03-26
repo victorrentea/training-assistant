@@ -538,7 +538,15 @@ class TranscriptNormalizerRunner:
             log.error("transcript", f"Normalizer disabled: folder not found: {self.folder}")
             return
         self._next_run_at = time.monotonic()
-        log.info("transcript", f"Normalizer enabled ({self.interval_seconds:.1f}s)")
+        offset_file = self.folder / "normalization.offset.txt"
+        if offset_file.exists():
+            last_offset = datetime.fromtimestamp(offset_file.stat().st_mtime).strftime("%Y-%m-%d %H:%M:%S")
+        else:
+            last_offset = "none"
+        log.info(
+            "transcript",
+            f"Normalizer enabled ({self.interval_seconds:.1f}s) — last offset: {last_offset}",
+        )
 
     def tick(self) -> None:
         if not self.enabled:
