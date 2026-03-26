@@ -1,5 +1,6 @@
 # Tasks
 
+- [x] Direct request: moved `updated` into per-slide compact gray badge next to each title in right sidebar list (`15s`, `3m`, `1h`, `3d`, `1w`, `Jan`, `2025` style), removed top updated display, and increased slide title font size.
 - [x] Bugfix direct request: strengthened fallback auto-scroll test behavior by forcing iframe reload to URL with `#page=2` after 3s, so native PDF viewer path applies programmatic page jump more reliably.
 - [x] Direct request: reduced participant Slides deck-row height in right sidebar and forced single-line deck titles with ellipsis to prevent wrapping (e.g., "event driven architectures").
 - [x] Direct request: styled Slides close `✕` as a visible button, aligned `updated` to left in right sidebar header, and reduced top paddings so PDF viewer starts as close to window top as possible.
