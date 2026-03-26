@@ -1,7 +1,7 @@
 {
-  "sha": "cf0a0a9977376220f363e333edabf295e71a5ecf",
-  "timestamp": "2026-03-26 22:55",
+  "sha": "02e6146f64a64a4f13d7794f1afa3a2af394f4ff",
+  "timestamp": "2026-03-26 23:03",
   "changelog": [
-    "style: keep follow separate from mode toggle"
+    "chore: add start_wispr_hacks.sh launcher script"
   ]
 }
