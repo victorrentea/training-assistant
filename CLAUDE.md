@@ -341,6 +341,8 @@ python3 -m uvicorn main:app --reload --port 8000
 Whenever the user says "remember" or asks you to remember something, add it to this file (CLAUDE.md).
 Only add memories when explicitly asked, or after the user has confirmed the information is correct (human-in-the-loop). Do not proactively save assumptions or inferences.
 
+- User has Railway CLI installed and available in terminal.
+
 ---
 
 ## Communication Notes
