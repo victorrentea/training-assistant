@@ -453,3 +453,10 @@
 - This prevents silent on-demand WS failure on environments where header kwarg differs by version.
 - Verified with `pytest -q tests/test_quiz_daemon_reconnect.py` (3 passed).
 - Verified with `python3 -m py_compile training_daemon.py tests/test_quiz_daemon_reconnect.py`.
+- [x] Keep daemon WS on-demand runner active even when one expected slides directory is missing; search multiple candidate slide dirs at runtime
+- [x] Add regression test for candidate slide-dir discovery (env + materials)
+
+### Review (continued)
+- `SlidesOnDemandWsRunner` no longer disables itself just because a single `materials/slides` path is absent at startup.
+- It now discovers slide PDFs from multiple candidate directories (`TRAINING_ASSISTANT_SLIDES_DIR`, `PPTX_PUBLISH_DIR`, `MATERIALS_FOLDER/slides`, resolved materials, repo/workspace defaults) and keeps WS reconnect loop alive regardless.
+- Verified with `pytest -q tests/test_quiz_daemon_reconnect.py` (4 passed).
