@@ -1,5 +1,6 @@
 # Tasks
 
+- [x] Direct request: styled Slides close `✕` as a visible button, aligned `updated` to left in right sidebar header, and reduced top paddings so PDF viewer starts as close to window top as possible.
 - [x] Direct request: increased participant Slides right sidebar width from 10% to 13%.
 - [x] Direct request: removed current slide title from participant Slides viewer; moved `updated ...` and close `✕` to sidebar top-right above the trainings list.
 - [x] Direct request: participant emoji bar is now transparent and layered above slides/PDF (`z-index` raised), with PDF overlay allowed to extend to full screen height underneath.
