@@ -1,7 +1,7 @@
 {
-  "sha": "7f0507b4bf66b104fd51b0358d9c4a72525b522b",
+  "sha": "bfc5ce7f307bba98f5cb883c9368e592d986ff65",
   "timestamp": "2026-03-26 08:44",
   "changelog": [
-    "refactor: use normalized transcripts outside normalizer"
+    "chore: shorten normalizer log in common 1-to-1 case"
   ]
 }
