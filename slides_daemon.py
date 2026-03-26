@@ -30,6 +30,7 @@ from pathlib import Path
 DEFAULT_SERVER_URL = "http://localhost:8000"
 DEFAULT_POLL_SECONDS = 5.0
 DEFAULT_MIN_CPU_FREE = 25.0
+DEFAULT_POST_EXPORT_COOLDOWN_SECONDS = 5.0
 
 
 def load_secrets_env() -> None:
@@ -60,6 +61,7 @@ class SlidesDaemonConfig:
     public_base_url: str
     publish_dir: Path
     recursive: bool
+    post_export_cooldown_seconds: float
     catalog_file: Path | None = None
     sync_backend: bool = True
 
@@ -93,6 +95,8 @@ def config_from_env() -> SlidesDaemonConfig:
         os.environ.get("PPTX_PUBLISH_DIR", str(default_materials_root / "slides"))
     ).expanduser()
     recursive = os.environ.get("PPTX_RECURSIVE", "0").strip() in {"1", "true", "yes"}
+    cooldown_raw = os.environ.get("PPTX_POST_EXPORT_COOLDOWN_SECONDS", str(DEFAULT_POST_EXPORT_COOLDOWN_SECONDS))
+    post_export_cooldown = max(DEFAULT_POST_EXPORT_COOLDOWN_SECONDS, float(cooldown_raw))
     catalog_file_str = os.environ.get(
         "PPTX_CATALOG_FILE",
         str(Path(__file__).parent / "daemon" / "materials_slides_catalog.json"),
@@ -123,6 +127,7 @@ def config_from_env() -> SlidesDaemonConfig:
         public_base_url=public_base_url,
         publish_dir=publish_dir,
         recursive=recursive,
+        post_export_cooldown_seconds=post_export_cooldown,
         catalog_file=catalog_file,
         sync_backend=sync_backend,
     )
@@ -653,11 +658,25 @@ def run_once(config: SlidesDaemonConfig, daemon_state: dict) -> bool:
     changed = detect_changed_files(files, daemon_state, metadata=metadata, publish_dir=config.publish_dir)
     updated_current = False
     if changed:
-        # serialize: process one file per poll cycle
-        next_path = changed[0]
-        print(f"✏️ppt update detected => regenerating ppf: {next_path.name}", flush=True)
-        target_pdf = metadata.get(_abs_key(next_path), {}).get("target_pdf")
-        updated_current = process_one_file(config, daemon_state, next_path, target_pdf=target_pdf)
+        cooldown = max(DEFAULT_POST_EXPORT_COOLDOWN_SECONDS, float(config.post_export_cooldown_seconds))
+        last_finished_at = float(daemon_state.get("last_export_finished_at", 0.0))
+        now_epoch = time.time()
+        next_allowed_at = last_finished_at + cooldown
+        if now_epoch < next_allowed_at:
+            wait_s = next_allowed_at - now_epoch
+            print(
+                f"[pptx-daemon] Cooldown active ({wait_s:.1f}s remaining) -- delaying next export",
+                flush=True,
+            )
+        else:
+            # serialize: process one file per poll cycle
+            next_path = changed[0]
+            print(f"✏️ppt update detected => regenerating ppf: {next_path.name}", flush=True)
+            target_pdf = metadata.get(_abs_key(next_path), {}).get("target_pdf")
+            updated_current = process_one_file(config, daemon_state, next_path, target_pdf=target_pdf)
+            if updated_current:
+                daemon_state["last_export_finished_at"] = time.time()
+                save_daemon_state(config.state_file, daemon_state)
     updated_list = sync_slides_list(config, daemon_state, metadata)
     return updated_current or updated_list
 

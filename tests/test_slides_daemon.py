@@ -20,6 +20,7 @@ def _cfg(tmp_path: Path) -> slides_daemon.SlidesDaemonConfig:
         public_base_url="https://slides.example.com",
         publish_dir=tmp_path / "publish",
         recursive=False,
+        post_export_cooldown_seconds=5.0,
     )
 
 
@@ -231,6 +232,28 @@ def test_run_once_processes_single_oldest_changed_file(tmp_path, monkeypatch, ca
     assert changed is True
     assert seen == ["a.pptx"]
     assert "✏️ppt update detected => regenerating ppf: a.pptx" in out
+
+
+def test_run_once_respects_post_export_cooldown(tmp_path, monkeypatch, capsys):
+    watch = tmp_path / "watch"
+    watch.mkdir()
+    deck = watch / "deck.pptx"
+    deck.write_bytes(b"x")
+    os.utime(deck, (2000, 2000))
+
+    cfg = _cfg(tmp_path)
+    cfg.post_export_cooldown_seconds = 5.0
+    state = {"files": {}, "last_export_finished_at": 100.0}
+
+    monkeypatch.setattr(slides_daemon.time, "time", lambda: 103.0)
+    monkeypatch.setattr(slides_daemon, "process_one_file", lambda *args, **kwargs: True)
+    monkeypatch.setattr(slides_daemon, "sync_slides_list", lambda *_args, **_kwargs: False)
+
+    changed = slides_daemon.run_once(cfg, state)
+    out = capsys.readouterr().out
+
+    assert changed is False
+    assert "Cooldown active (2.0s remaining)" in out
 
 
 def test_load_catalog_entries_and_resolve_targets(tmp_path):
