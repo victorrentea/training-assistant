@@ -1,7 +1,9 @@
 {
-  "sha": "1304a451aee804d7cbb283c6a670a85a17fa39f6",
-  "timestamp": "2026-03-26 08:18",
+  "sha": "8e3d8990be464ad9ddf77ad1a3f094920ab90e7e",
+  "timestamp": "2026-03-26 08:29",
   "changelog": [
-    "Move runtime data to .server-data and fix Railway startup"
+    "chore: enrich transcript normalizer debug log",
+    "feat: accept positional ISO from/to in transcript query",
+    "feat: run transcript normalization in daemon and add range query cli"
   ]
 }
