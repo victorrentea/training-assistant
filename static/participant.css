@@ -279,6 +279,13 @@ h1 { display: none; }
   padding: .7rem 0;
 }
 
+.slides-native-frame {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: #fff;
+}
+
 #slides-download-btn[aria-disabled="true"] {
   opacity: .45;
   pointer-events: none;

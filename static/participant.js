@@ -96,6 +96,7 @@
   let slidesPdfEventBus = null;
   let slidesPdfDoc = null;
   let slidesPdfLoadingTask = null;
+  let slidesNativeFrame = null;
 
   function escHtml(s) {
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -570,6 +571,30 @@
       try { await slidesPdfDoc.destroy(); } catch (_) {}
       slidesPdfDoc = null;
     }
+    if (slidesNativeFrame) {
+      slidesNativeFrame.src = 'about:blank';
+      slidesNativeFrame.remove();
+      slidesNativeFrame = null;
+    }
+    const viewer = document.getElementById('slides-pdf-viewer');
+    if (viewer) viewer.innerHTML = '';
+  }
+
+  function _showSlideInNativeFrame(url) {
+    const container = document.getElementById('slides-pdf-container');
+    const viewer = document.getElementById('slides-pdf-viewer');
+    if (!container || !viewer) return false;
+    viewer.innerHTML = '';
+    if (!slidesNativeFrame) {
+      slidesNativeFrame = document.createElement('iframe');
+      slidesNativeFrame.className = 'slides-native-frame';
+      slidesNativeFrame.setAttribute('title', 'Slides preview');
+      slidesNativeFrame.setAttribute('loading', 'eager');
+    }
+    const joiner = url.includes('?') ? '&' : '?';
+    slidesNativeFrame.src = `${url}${joiner}inline=1`;
+    container.appendChild(slidesNativeFrame);
+    return true;
   }
 
   function _setSlidesLoading({ visible = false, loaded = 0, total = 0, label = '' } = {}) {
@@ -715,11 +740,11 @@
       return;
     }
 
-    await _getSlidesPdfModules();
-    await _initSlidesViewer();
     await _clearSlidesDocument();
 
     try {
+      await _getSlidesPdfModules();
+      await _initSlidesViewer();
       const loadingTask = slidesPdfLib.getDocument({ url: slide.url });
       loadingTask.onProgress = (progress) => {
         _setSlidesLoading({
@@ -749,8 +774,19 @@
       _renderSlidesMeta({ ...slide, updated_at: effectiveUpdatedAt });
       _setSlidesLoading({ visible: false });
     } catch (err) {
-      _setSlidesError('Failed to load this PDF. Try download.');
-      _setSlidesDownload('', true);
+      const fallbackOk = _showSlideInNativeFrame(slide.url);
+      if (!fallbackOk) {
+        _setSlidesError('Failed to load this PDF. Try download.');
+        _setSlidesDownload('', true);
+        _setSlidesLoading({ visible: false });
+        return;
+      }
+      slidesSelectedSlug = slide.slug;
+      slidesSelectedId = slide._id;
+      slidesLastFingerprint = fingerprint;
+      _setSlidesDownload(slide.url, false);
+      _renderSlidesMeta({ ...slide, updated_at: effectiveUpdatedAt });
+      _setSlidesError('');
       _setSlidesLoading({ visible: false });
     }
   }

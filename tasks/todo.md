@@ -503,3 +503,9 @@
 - Verified with `node --check static/participant.js`.
 - Verified with `pytest -q tests/test_main.py -k "slides"` (4 passed).
 - Verified with `pytest -q tests/test_slides_api.py` (21 passed).
+- [x] Add resilient viewer fallback in participant slides modal: if PDF.js initialization fails, render selected slide in native iframe and keep download link active
+
+### Review (continued)
+- Found production runtime issue: PDF.js viewer initialization threw an uncaught promise error and left modal stuck in loading.
+- Added fallback rendering path to native iframe preview for selected slide URLs; selection now still opens and displays the PDF even if PDF.js fails.
+- Verified with `node --check static/participant.js` and slides-focused test suites.
