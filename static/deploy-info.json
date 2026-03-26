@@ -1,7 +1,7 @@
 {
-  "sha": "1260e2b724cecaff55f46627e0cd0a5f34a21e3e",
+  "sha": "443e700b69cefdaa237e4e06b5986999bc13b380",
   "timestamp": "2026-03-26 16:55",
   "changelog": [
-    "feat: focus key points on course title"
+    "Serve slides inline by default for participant viewer"
   ]
 }
