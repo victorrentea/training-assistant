@@ -82,6 +82,7 @@ _SLIDES_MANIFEST_CANDIDATES = (
 _SLIDES_MANIFEST_ERRORS: set[str] = set()
 _BACKUP_DIR = Path.home() / ".training-assistant"
 _BACKUP_FILE = _BACKUP_DIR / "state-backup.json"
+_DEFAULT_MATERIALS_FOLDER = Path("/Users/victorrentea/Documents/workshop-materials")
 
 
 _DOW_RE = re.compile(r"^([A-Z][a-z]{2})\s+(\d{2}:\d{2})\s+(.+)$")
@@ -946,8 +947,7 @@ def run() -> None:
         log.error("session", "No session folder found for today")
 
     # Start background material indexer
-    materials_folder_str = os.environ.get("MATERIALS_FOLDER",
-        str(Path(__file__).parent / "materials"))
+    materials_folder_str = os.environ.get("MATERIALS_FOLDER", str(_DEFAULT_MATERIALS_FOLDER))
     materials_folder = Path(materials_folder_str).expanduser()
     if materials_folder.exists():
         from daemon.indexer import start_indexer

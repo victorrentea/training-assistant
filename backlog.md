@@ -1,5 +1,6 @@
 # Tasks
 
+- [x] Hard-code default `MATERIALS_FOLDER` to `/Users/victorrentea/Documents/workshop-materials` (no project-relative default).
 - [x] Disable automatic work-hours stamping in pre-commit; keep `static/work-hours.js` manual-only to avoid merge conflicts.
 - [x] Migrate project secret file location from repo `secrets.env` to `~/.training-assistants-secrets.env` and update all runtime loaders/scripts accordingly.
 - [x] TLS fix: daemon materials upload and slides-daemon HTTP calls now use explicit SSL context with `certifi` CA bundle (fallback to default context), fixing `CERTIFICATE_VERIFY_FAILED` on macOS Python.
