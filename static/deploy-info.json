@@ -1,7 +1,7 @@
 {
-  "sha": "c7a75884637458c42795b328dd2361b65d4fce87",
-  "timestamp": "2026-03-26 23:28",
+  "sha": "d3ca35bb820ae592fb805c8bf47cc94380074eed",
+  "timestamp": "2026-03-26 23:32",
   "changelog": [
-    "fix: show only slug in slides_upload_upsert_ok log"
+    "style: log slide changes as \ud83d\udcfd\ufe0f <name> : <slide>, print same slide for debug"
   ]
 }
