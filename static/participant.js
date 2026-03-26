@@ -752,6 +752,8 @@
     pdfjsBtn.classList.toggle('active', !isNative);
     nativeBtn.setAttribute('aria-pressed', isNative ? 'true' : 'false');
     pdfjsBtn.setAttribute('aria-pressed', !isNative ? 'true' : 'false');
+    const shell = document.querySelector('.slides-preview-shell');
+    if (shell) shell.classList.toggle('native-mode', isNative);
     _renderSlidesFollowTrainerToggle();
   }
 
