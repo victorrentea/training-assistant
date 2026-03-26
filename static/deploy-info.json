@@ -1,7 +1,7 @@
 {
-  "sha": "e95149df4b538672cc5fb9186f32a8343b7f8ede",
-  "timestamp": "2026-03-26 17:33",
+  "sha": "406db52fc6f8f6e96f3ba02801f2b3c3a4bd3ec9",
+  "timestamp": "2026-03-26 17:35",
   "changelog": [
-    "participant emoji bar transparent over full-height slides"
+    "participant slides move updated and close to sidebar header"
   ]
 }
