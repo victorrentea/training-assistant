@@ -1,5 +1,6 @@
 # Tasks
 
+- [x] Direct request: redesigned participant Slides UX with right-side slide list (~10% width), moved `📑 Slides` title next to Download in right header actions, and maximized PDF viewer vertical space while preserving minimal emoji-bar click area.
 - [x] Bugfix direct request: participant Slides overlay no longer covers bottom emoji bar area; emoji buttons remain clickable while PDF preview is open and no longer trigger modal close.
 - [x] Direct request (temporary test mode): participant PDF.js slides now auto-scroll to page 2 after 3s from load, while slide view persistence (`page + scrollTop`) is temporarily disabled.
 - [x] Direct request: tightened participant Slides page-nav spacing so `Go` sits immediately next to the page total text.

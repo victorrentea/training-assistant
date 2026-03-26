@@ -540,15 +540,13 @@
     return slide.name;
   }
 
-  function _syncSlidesSelectWidth() {
-    const select = document.getElementById('slides-select');
-    if (!select) return;
-    let longest = 18;
-    for (const opt of Array.from(select.options || [])) {
-      longest = Math.max(longest, String(opt.textContent || '').length);
+  function _markSelectedSlideInList() {
+    const list = document.getElementById('slides-list');
+    if (!list) return;
+    for (const btn of Array.from(list.querySelectorAll('.slides-list-item'))) {
+      const active = btn.getAttribute('data-slide-id') === slidesSelectedId;
+      btn.classList.toggle('active', active);
     }
-    const widthCh = Math.min(92, Math.max(18, longest + 2));
-    select.style.setProperty('--slides-select-width', `${widthCh}ch`);
   }
 
   function _renderSlidesUpdatedLabel(slide) {
@@ -777,6 +775,7 @@
   function _renderSlidesMeta(slide) {
     _syncSlidesPageControls(slide || null);
     _renderSlidesUpdatedLabel(slide || null);
+    _markSelectedSlideInList();
   }
 
   function _syncSlidesPageControls(slide) {
@@ -838,52 +837,26 @@
     }
   }
 
-  function _renderSlidesSelector(targetId) {
-    const select = document.getElementById('slides-select');
-    if (!select) return;
+  function _renderSlidesList(targetId) {
+    const list = document.getElementById('slides-list');
+    if (!list) return;
     _bindSlidesPageControls();
-    select.innerHTML = '';
-    const placeholder = document.createElement('option');
-    placeholder.value = '';
-    placeholder.textContent = 'Select a slide';
-    placeholder.selected = !targetId;
-    select.appendChild(placeholder);
+    list.innerHTML = '';
 
     for (const slide of slidesCatalog) {
-      const option = document.createElement('option');
-      option.value = slide._id;
-      option.textContent = _buildSlideOptionLabel(slide);
-      option.selected = slide._id === targetId;
-      select.appendChild(option);
-    }
-    _syncSlidesSelectWidth();
-    select.disabled = slidesCatalog.length === 0;
-    if (!select._bound) {
-      select._bound = true;
-      select.addEventListener('change', async (evt) => {
-        const slideId = evt.target.value;
-        const slide = slidesCatalog.find(s => s._id === slideId);
-        if (slide) {
-          await _loadSlideIntoViewer(slide, { forceReload: true });
-        } else {
-          slidesSelectedSlug = null;
-          slidesSelectedId = null;
-          slidesLastFingerprint = null;
-          await _clearSlidesDocument();
-          _renderSlidesMeta(null);
-          _setSlidesDownload('', true);
-          _setSlidesError('');
-          _setSlidesLoading({ visible: false });
-          const shell = document.getElementById('slides-viewer-shell');
-          const empty = document.getElementById('slides-empty');
-          if (shell) shell.style.display = 'none';
-          if (empty) {
-            empty.style.display = '';
-            empty.textContent = 'Select a slide to preview.';
-          }
-        }
+      const item = document.createElement('button');
+      item.type = 'button';
+      item.className = 'slides-list-item';
+      item.setAttribute('data-slide-id', slide._id);
+      item.title = slide.name;
+      item.textContent = _buildSlideOptionLabel(slide);
+      if (slide._id === targetId) item.classList.add('active');
+      item.addEventListener('click', async () => {
+        await _loadSlideIntoViewer(slide, { forceReload: true });
       });
+      list.appendChild(item);
     }
+    _markSelectedSlideInList();
   }
 
   async function _loadSlideIntoViewer(slide, { forceReload = false } = {}) {
@@ -985,7 +958,7 @@
       const data = await res.json();
       slidesCatalog = _normalizeSlidesCatalog(data.slides);
       if (!slidesCatalog.length) {
-        _renderSlidesSelector(null);
+        _renderSlidesList(null);
         slidesSelectedSlug = null;
         slidesSelectedId = null;
         slidesLastFingerprint = null;
@@ -1004,7 +977,7 @@
 
       const selectedStillExists = slidesSelectedId && slidesCatalog.some(s => s._id === slidesSelectedId);
       const targetId = selectedStillExists ? slidesSelectedId : null;
-      _renderSlidesSelector(targetId);
+      _renderSlidesList(targetId);
       if (selectedStillExists) {
         const slide = slidesCatalog.find(s => s._id === targetId);
         if (slide) {
