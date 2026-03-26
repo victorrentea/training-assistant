@@ -1,7 +1,7 @@
 {
-  "sha": "db3e076604b96df1dd246bc91492e62c046b4cab",
-  "timestamp": "2026-03-26 21:47",
+  "sha": "c1fe72d5726f7e1554f1ac0717ed549551245b7e",
+  "timestamp": "2026-03-26 21:49",
   "changelog": [
-    "fix: force inline mode for native slides preview"
+    "Reduce participant top badge width by 30%"
   ]
 }
