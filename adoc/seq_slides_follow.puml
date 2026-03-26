@@ -1,0 +1,80 @@
+@startuml seq_slides_follow
+title Participant Tracks Host Active Slide
+
+actor "Training Daemon\n(Mac)" as Daemon
+participant "Backend\n(FastAPI)" as Backend
+participant "WebSocket\nBroadcast" as WS
+participant "Participant\nBrowser" as Browser
+
+== Daemon detects slide change (every ~2s poll) ==
+
+Daemon -> Daemon: AppleScript\nget frontmost slide #\n+ presentation name
+Daemon -> Daemon: map pptx name → slug/url\nvia slides catalog
+
+alt presentation matched in catalog
+  Daemon -> Backend: PUT /api/slides/current\n{slug, url, presentation_name, current_page}
+  Backend -> Backend: store state.slides_current
+  Backend -> WS: broadcast_state() [all participants]
+  Backend -> WS: broadcast {type:"slides_current",\n slides_current: {...}}
+  Backend --> Daemon: {ok: true}
+else presentation not in catalog (first time only)
+  Daemon -> Daemon: beep + log error\n"Presentation inaccessible for participants"
+  Daemon -> Backend: DELETE /api/slides/current
+  Backend -> WS: broadcast_state() + {type:"slides_current", slides_current: null}
+end
+
+== Participant receives slide update ==
+
+WS -> Browser: WS message\n{type:"slides_current", slides_current}
+
+Browser -> Browser: handleMessage()\n→ _onIncomingHostSlidesCurrent(slides_current)
+
+Browser -> Browser: deduplicate by key\n(slug|url|page|name|ts)
+note right: skipped if same key as last
+
+Browser -> Browser: _queueHostSlideFollow(slides_current)\n[only if follow is active]
+
+== Follow logic (_applyHostSlideFollow) ==
+
+alt slidesCatalog empty
+  Browser -> Backend: GET /api/slides
+  Backend --> Browser: {slides: [...]}
+  Browser -> Browser: _normalizeSlidesCatalog()
+end
+
+Browser -> Browser: _findSlideForHostCurrent()\nmatch by slug / url / name token
+
+alt no matching slide in catalog
+  note right Browser: silently skipped
+else matching slide found
+  Browser -> Browser: _getHostCurrentPage()\nparse current_page → integer
+
+  alt slides overlay not open
+    note right Browser: store page, skip navigation
+  else PDF.js mode active
+    alt different slide or no PDF doc loaded
+      Browser -> Browser: _loadSlideIntoViewer(targetSlide)\nload PDF, wait pagesloaded\nthen navigate to stored page
+    end
+
+    Browser -> Browser: slidesPdfViewer.currentPageNumber = targetPage\n(clamped to doc page count)
+    Browser -> Browser: _setStoredSlidePage(slug, page)
+    Browser -> Browser: _renderSlidesMeta()
+  else native iframe mode
+    Browser -> Browser: reload iframe src\nwith #page=N fragment
+  end
+end
+
+== Participant initial load (page open / WS reconnect) ==
+
+Browser -> Backend: WS connect
+Backend -> Browser: {type:"state", slides_current: {...}, ...}
+Browser -> Browser: _onIncomingHostSlidesCurrent(state.slides_current)
+note right: same follow path as above
+
+== Participant manually navigates (disables follow) ==
+
+Browser -> Browser: user scrolls or changes page
+Browser -> Browser: updateviewarea / pagechanging event
+Browser -> Browser: _autoDisableSlidesFollowFromParticipantNav()\n→ Follow button deactivated + blinks
+
+@enduml

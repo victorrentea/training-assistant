@@ -1342,6 +1342,16 @@
         slidesPdfLinkService.setDocument(doc, null);
         slidesPdfViewer.currentScaleValue = 'page-width';
 
+        // Wait for PDF.js to finish setting up page views (pagesCount becomes valid)
+        await new Promise(resolve => {
+          const onLoaded = () => { slidesPdfEventBus.off('pagesloaded', onLoaded); resolve(); };
+          slidesPdfEventBus.on('pagesloaded', onLoaded);
+        });
+        if (slidesPdfLoadingTask !== loadingTask) {
+          try { await doc.destroy(); } catch (_) {}
+          return;
+        }
+
         const saved = _getStoredSlideView(slide.slug);
         const maxPages = Math.max(1, Number(doc.numPages || 1));
         const savedPage = Math.min(saved?.page || _getStoredSlidePage(slide.slug), maxPages);
