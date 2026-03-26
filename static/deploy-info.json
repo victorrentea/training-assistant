@@ -1,7 +1,7 @@
 {
-  "sha": "6c46398d72ce0c826275a9fb6faee79cdeae44ec",
-  "timestamp": "2026-03-26 21:34",
+  "sha": "b1c172729abb7f8cac2bf4b586693802c503c8de",
+  "timestamp": "2026-03-26 21:41",
   "changelog": [
-    "Polish participant PDF viewer visibility and controls"
+    "Refine slide list spacing, layout, and short-screen scroll"
   ]
 }
