@@ -1,7 +1,7 @@
 {
-  "sha": "8e191772c2440048ac8fe77f3ac753a3c1647ea6",
-  "timestamp": "2026-03-26 17:44",
+  "sha": "13d99bad7f47c8f24546e7a082380c0456c41965",
+  "timestamp": "2026-03-26 17:46",
   "changelog": [
-    "tune: reduce monitor glass sfx volume"
+    "participant slides compact per-item updated badges"
   ]
 }
