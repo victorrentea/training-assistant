@@ -1,7 +1,7 @@
 {
-  "sha": "8ba9ee84bb2a3417fdfb52dbd623060dba5f02f3",
-  "timestamp": "2026-03-26 21:22",
+  "sha": "6c46398d72ce0c826275a9fb6faee79cdeae44ec",
+  "timestamp": "2026-03-26 21:34",
   "changelog": [
-    "fix: center waiting screen on full viewport"
+    "Polish participant PDF viewer visibility and controls"
   ]
 }
