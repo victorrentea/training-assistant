@@ -310,7 +310,7 @@ def test_slides_catalog_map_returns_pdf_to_pptx_entries(monkeypatch, tmp_path):
     assert missing["exists"] is False
 
 
-def test_api_slides_includes_catalog_entries_when_pdfs_missing(monkeypatch, tmp_path):
+def test_api_slides_excludes_catalog_entries_when_pdfs_missing(monkeypatch, tmp_path):
     catalog = tmp_path / "catalog.json"
     catalog.write_text(json.dumps({
         "decks": [
@@ -320,15 +320,10 @@ def test_api_slides_includes_catalog_entries_when_pdfs_missing(monkeypatch, tmp_
     }), encoding="utf-8")
     monkeypatch.setenv("PPTX_CATALOG_FILE", str(catalog))
     monkeypatch.setenv("TRAINING_ASSISTANT_SLIDES_DIR", str(tmp_path / "missing-slides"))
-    state.daemon_ws = object()
-
     client = TestClient(app)
     resp = client.get("/api/slides")
     assert resp.status_code == 200
-    slides = resp.json()["slides"]
-    assert any(s["slug"] == "performance-introduction" and s["name"] == "Performance Intro" for s in slides)
-    assert any(s["slug"] == "testing-101" and s["name"] == "Testing" for s in slides)
-    assert all(s["url"].startswith("/api/slides/file/") for s in slides)
+    assert resp.json()["slides"] == []
 
 
 def test_api_slides_hides_missing_local_slides_when_daemon_offline(monkeypatch, tmp_path):
@@ -340,7 +335,6 @@ def test_api_slides_hides_missing_local_slides_when_daemon_offline(monkeypatch, 
     }), encoding="utf-8")
     monkeypatch.setenv("PPTX_CATALOG_FILE", str(catalog))
     monkeypatch.setenv("TRAINING_ASSISTANT_SLIDES_DIR", str(tmp_path / "missing-slides"))
-    state.daemon_ws = None
 
     client = TestClient(app)
     resp = client.get("/api/slides")

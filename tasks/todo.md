@@ -524,3 +524,9 @@
 - Host hover remains complete for observability (`/api/slides/participant-availability` still shows all deck names with availability flags).
 - Verified with `pytest -q tests/test_slides_api.py` (23 passed) and `pytest -q tests/test_main.py -k "slides"` (4 passed).
 - Verified with `node --check static/participant.js` and `python3 -m py_compile routers/slides.py`.
+- [x] Narrow public participant `/api/slides` to currently servable local slide files only (avoid offering selections that 503)
+
+### Review (final)
+- Participant dropdown now only lists slide entries that can actually be served from server storage for local `/api/slides/file/{slug}` URLs.
+- This removes catalog-only placeholders from participant UI when files are absent, eliminating `503` from normal dropdown selections.
+- Host diagnostics (`/api/slides/participant-availability`) still shows full deck list + availability status for operations.
