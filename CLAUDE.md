@@ -342,6 +342,7 @@ Whenever the user says "remember" or asks you to remember something, add it to t
 Only add memories when explicitly asked, or after the user has confirmed the information is correct (human-in-the-loop). Do not proactively save assumptions or inferences.
 
 - User has Railway CLI installed and available in terminal.
+- For any change to the training daemon ("demon"), push directly to `master` because the daemon continuously pulls from `master` and runs those changes.
 
 ---
 
