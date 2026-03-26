@@ -1,7 +1,7 @@
 {
-  "sha": "8398d41e04724252b013a2ba315de1a8e3bca6a7",
-  "timestamp": "2026-03-26 08:13",
+  "sha": "1304a451aee804d7cbb283c6a670a85a17fa39f6",
+  "timestamp": "2026-03-26 08:18",
   "changelog": [
-    "fix: keep participant onboarding checklist hidden once completed"
+    "Move runtime data to .server-data and fix Railway startup"
   ]
 }
