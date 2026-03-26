@@ -415,7 +415,7 @@ async def get_slides():
     return {"slides": slides}
 
 
-@public_router.get("/api/slides/file/{slug}")
+@public_router.api_route("/api/slides/file/{slug}", methods=["GET", "HEAD"])
 async def get_slide_file(slug: str):
     _, local_index = _build_local_slides_index()
     _, uploaded_index = _build_uploaded_slides_index()

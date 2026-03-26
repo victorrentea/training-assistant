@@ -217,6 +217,7 @@ Host posts a provocative statement (e.g. "Microservices are always a mistake for
 - [x] Direct request: compact startup logs to one line per process (`Starting/Connecting to <URL>`) by removing redundant daemon/overlay startup-connect duplicates.
 - [x] Direct request: temporarily paused automatic PPTX→PDF execution in `slides_daemon.run_once` by commenting out `process_one_file` flow (conversion code kept intact).
 - [x] Direct request: fixed materials mirror auto-detection so daemon no longer disables itself when repo-local `materials/` is missing; now falls back to known local materials locations.
+- [x] Direct request: fixed participant slides open error by allowing `HEAD` on `/api/slides/file/{slug}` (browser preflight/header checks no longer return 405).
 - [x] Follow-up GH#67 (production bootstrap): added host-auth slide PDF upload endpoint and server-backed slide storage so production can be populated without relying on local trainer filesystem paths.
 - [x] La click pe badge-urile cu intervale de timp asociate sesiunii din host UI, se deschide într-un tab nou un fișier `.txt` cu liniile normalizate din acel interval.
 
