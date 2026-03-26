@@ -312,6 +312,15 @@ h1 { display: none; }
   box-shadow: inset 0 0 0 1px rgba(72, 207, 173, 0.45);
 }
 
+#slides-follow-btn.follow-blink {
+  animation: follow-btn-blink .18s linear 4;
+}
+
+@keyframes follow-btn-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .25; }
+}
+
 .slides-dock.tour-scan::after {
   content: "";
   position: absolute;

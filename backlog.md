@@ -303,6 +303,7 @@ Host broadcasts a statement: "Have you ever shipped code that violated what we j
 - [x] Follow-up direct request: restored visible slide update badges in list (`4h ago` style) with stronger contrast + timestamp field fallback (`updated_at` / `last_modified` variants).
 - [x] Follow-up direct request: participant `📝 Notes` button is now always visible in header and included in first-run walkthrough/tour steps.
 - [x] Follow-up direct request: added `Follow Trainer` button inside slides mode bubble (`Native | PDF.js | Follow Trainer`), with active-state highlight, auto-disable on slide modal close, and one-tap reopen+follow behavior.
+- [x] Follow-up direct request: when participant navigates slides manually (scroll/page change), `Follow Trainer` auto-disables and the button blinks briefly to signal manual override.
 - [x] Direct request: participant Slides preview now uses PDF.js only (removed Chrome/native iframe fallback) so programmatic page navigation remains deterministic.
 - [x] Direct request: verified locally (E2E) that participant PDF.js stores manual/programmatic scroll offsets in localStorage and restores exact slide position after reopen/reload; fixed PDF.js loader/runtime issues uncovered during this validation.
 - [x] Direct request: participant PDF viewer UI polish — visible page separators + explicit scrollbar, deploy/version badge layered above PPT area, and close button (`X`) made ~3x larger with high-contrast non-white styling for white backgrounds.

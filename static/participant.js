@@ -702,6 +702,15 @@
     btn.setAttribute('aria-pressed', slidesFollowTrainerEnabled ? 'true' : 'false');
   }
 
+  function _blinkSlidesFollowTrainerButton() {
+    const btn = document.getElementById('slides-follow-btn');
+    if (!btn) return;
+    btn.classList.remove('follow-blink');
+    void btn.offsetWidth;
+    btn.classList.add('follow-blink');
+    setTimeout(() => btn.classList.remove('follow-blink'), 900);
+  }
+
   function _setSlidesFollowTrainerEnabled(enabled, { persist = true, applyHost = true } = {}) {
     const next = Boolean(enabled);
     slidesFollowTrainerEnabled = next;
@@ -716,6 +725,7 @@
     if (!_isSlidesFollowActive()) return;
     if (_isSlidesFollowAutoUncheckSuppressed()) return;
     _setSlidesFollowTrainerEnabled(false, { persist: true, applyHost: false });
+    _blinkSlidesFollowTrainerButton();
   }
 
   function _renderSlidesViewModeToggle() {
