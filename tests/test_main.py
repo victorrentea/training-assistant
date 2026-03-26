@@ -959,6 +959,7 @@ def test_quiz_request_rejects_neither_field():
 def test_api_slides_is_empty_by_default(monkeypatch, tmp_path):
     state.reset()
     monkeypatch.setenv("TRAINING_ASSISTANT_SLIDES_DIR", str(tmp_path))
+    monkeypatch.setenv("PPTX_CATALOG_FILE", str(tmp_path / "missing-catalog.json"))
     client = TestClient(app)
     resp = client.get("/api/slides")
     assert resp.status_code == 200
@@ -976,6 +977,7 @@ def test_participant_slides_modal_has_no_manual_refresh_button():
 def test_quiz_status_updates_slides_and_api_returns_normalized_data(monkeypatch, tmp_path):
     state.reset()
     monkeypatch.setenv("TRAINING_ASSISTANT_SLIDES_DIR", str(tmp_path))
+    monkeypatch.setenv("PPTX_CATALOG_FILE", str(tmp_path / "missing-catalog.json"))
     client = TestClient(app)
     resp = client.post("/api/quiz-status", json={
         "status": "ready",

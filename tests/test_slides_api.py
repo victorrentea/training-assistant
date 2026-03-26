@@ -120,6 +120,7 @@ def test_slides_upload_defaults_to_server_data_dir(monkeypatch, tmp_path):
 
 def test_api_slides_lists_local_materials_and_serves_pdf(monkeypatch, tmp_path):
     monkeypatch.setenv("TRAINING_ASSISTANT_SLIDES_DIR", str(tmp_path))
+    monkeypatch.setenv("PPTX_CATALOG_FILE", str(tmp_path / "missing-catalog.json"))
     pdf = tmp_path / "Architecture.pdf"
     pdf.write_bytes(b"%PDF-1.4\n%test\n")
 
@@ -228,6 +229,7 @@ def test_api_slides_includes_slides_current_when_present(monkeypatch, tmp_path):
 
 def test_api_slides_ignores_non_displayable_names(monkeypatch, tmp_path):
     monkeypatch.setenv("TRAINING_ASSISTANT_SLIDES_DIR", str(tmp_path))
+    monkeypatch.setenv("PPTX_CATALOG_FILE", str(tmp_path / "missing-catalog.json"))
     (tmp_path / "---.pdf").write_bytes(b"%PDF-1.4\n%local\n")
     state.slides = [
         {"name": "   ", "slug": "blank", "url": "https://slides.example.com/blank.pdf"},
@@ -276,6 +278,26 @@ def test_slides_catalog_map_returns_pdf_to_pptx_entries(monkeypatch, tmp_path):
     assert clean["updated_at"]
     assert missing["pptx_path"] == str(source_missing)
     assert missing["exists"] is False
+
+
+def test_api_slides_includes_catalog_entries_when_pdfs_missing(monkeypatch, tmp_path):
+    catalog = tmp_path / "catalog.json"
+    catalog.write_text(json.dumps({
+        "decks": [
+            {"title": "Performance Intro", "target_pdf": "Performance Introduction.pdf"},
+            {"title": "Testing", "slug": "testing-101", "target_pdf": "Testing 101.pdf"},
+        ]
+    }), encoding="utf-8")
+    monkeypatch.setenv("PPTX_CATALOG_FILE", str(catalog))
+    monkeypatch.setenv("TRAINING_ASSISTANT_SLIDES_DIR", str(tmp_path / "missing-slides"))
+
+    client = TestClient(app)
+    resp = client.get("/api/slides")
+    assert resp.status_code == 200
+    slides = resp.json()["slides"]
+    assert any(s["slug"] == "performance-introduction" and s["name"] == "Performance Intro" for s in slides)
+    assert any(s["slug"] == "testing-101" and s["name"] == "Testing" for s in slides)
+    assert all(s["url"].startswith("/api/slides/file/") for s in slides)
 
 
 def test_materials_upsert_and_delete_roundtrip(monkeypatch, tmp_path):
