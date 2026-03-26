@@ -1,7 +1,7 @@
 {
-  "sha": "e3450463a504cb6bb05ea5404adf52e8d309e558",
-  "timestamp": "2026-03-26 17:22",
+  "sha": "ad4072c3a1270a5879bf2ef8acb9ec044deb60ff",
+  "timestamp": "2026-03-26 17:23",
   "changelog": [
-    "participant slides test auto-scroll to page two after delay"
+    "participant slides keep emoji bar clickable"
   ]
 }
