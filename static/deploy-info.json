@@ -1,7 +1,7 @@
 {
-  "sha": "09b6194c00dcdda3f790d2c21a909dcde0d5ffa9",
+  "sha": "c0dda619a740c6a77bc0b3725c8649d1a3101748",
   "timestamp": "2026-03-26 17:25",
   "changelog": [
-    "participant slides add right-side deck list layout"
+    "fix: play glass sfx for monitor emoji"
   ]
 }
