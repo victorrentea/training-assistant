@@ -291,3 +291,4 @@ Host broadcasts a statement: "Have you ever shipped code that violated what we j
 - [x] Follow-up direct request: participant emoji buttons now change border color to match tooltip color only on hover.
 - [x] Follow-up direct request: “Deploy incoming” badge text now includes a rocket emoji (`⚠️ 🚀 Deploy incoming`).
 - [x] Direct request: participant slides sidebar now follows the order from materials slides catalog topics/decks JSON (not local alphabetical file order), with API regression test coverage.
+- [x] Direct request: fixed participant top status bar clipping so the right-side participants badge is no longer truncated (replaced horizontal `transform` with safe `margin-left` layout offset in `static/participant.css`); proof: `.context/screenshots/participant-before.png` and `.context/screenshots/participant-after-8010.png`.

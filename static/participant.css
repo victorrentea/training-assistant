@@ -100,13 +100,13 @@ h1 { display: none; }
   align-items: center;
   padding: .6rem .9rem;
   margin-bottom: .35rem;
+  margin-left: clamp(90px, 6.5vw, 170px);
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 999px;
   font-size: .85rem;
   color: var(--muted);
   gap: .5rem;
-  transform: translateX(clamp(90px, 6.5vw, 170px));
 }
 
 .status-left {
@@ -133,7 +133,7 @@ h1 { display: none; }
 
 @media (max-width: 900px) {
   .status-bar {
-    transform: none;
+    margin-left: 0;
   }
 }
 .dot { width:8px; height:8px; border-radius:50%; background: var(--accent2); display:inline-block; margin-right:.2rem; animation: pulse 2s infinite; }
