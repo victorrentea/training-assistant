@@ -1,7 +1,7 @@
 {
-  "sha": "f19a9fca951bec1873e71f1146091477d2e54ad5",
-  "timestamp": "2026-03-26 23:08",
+  "sha": "5ca021770b7fc10868ccbdb9022d90fd815da056",
+  "timestamp": "2026-03-26 23:11",
   "changelog": [
-    "Remove right gutter in slide list rows"
+    "Fix empty slide names in host tooltip"
   ]
 }
