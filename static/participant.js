@@ -85,6 +85,7 @@
   const LS_SLIDE_PAGE_PREFIX = 'workshop_slide_page:';
   const LS_SLIDE_VIEW_PREFIX = 'workshop_slide_view:';
   const LS_SLIDE_SELECTED_ID = 'workshop_slide_selected_id';
+  const LS_SLIDE_VISITED_IDS = 'workshop_slide_visited_ids';
   const SLIDES_TEST_AUTO_SCROLL_ENABLED = false;
   const SLIDES_TEST_AUTO_SCROLL_PAGE = 2;
   const SLIDES_TEST_AUTO_SCROLL_DELAY_MS = 3000;
@@ -103,6 +104,7 @@
   let slidesPdfDoc = null;
   let slidesPdfLoadingTask = null;
   let slidesNativeFrame = null;
+  let slidesNativeHashPollTimer = null;
   let slidesAutoScrollTimer = null;
 
   function escHtml(s) {
@@ -508,6 +510,38 @@
     localStorage.setItem(LS_SLIDE_SELECTED_ID, String(id));
   }
 
+  function _getStoredVisitedSlideIds() {
+    try {
+      const raw = localStorage.getItem(LS_SLIDE_VISITED_IDS);
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) return [];
+      return parsed.map((item) => String(item || '').trim()).filter(Boolean);
+    } catch (_) {
+      return [];
+    }
+  }
+
+  function _setStoredVisitedSlideIds(ids) {
+    const unique = Array.from(new Set((ids || []).map((id) => String(id || '').trim()).filter(Boolean)));
+    try {
+      localStorage.setItem(LS_SLIDE_VISITED_IDS, JSON.stringify(unique));
+    } catch (_) {}
+  }
+
+  function _isSlideVisited(id) {
+    if (!id) return false;
+    return _getStoredVisitedSlideIds().includes(id);
+  }
+
+  function _markSlideVisited(id) {
+    if (!id) return;
+    const next = _getStoredVisitedSlideIds();
+    if (next.includes(id)) return;
+    next.push(id);
+    _setStoredVisitedSlideIds(next);
+  }
+
   function _getStoredSlidePage(slug) {
     const raw = Number.parseInt(localStorage.getItem(_slidePageKey(slug)) || '1', 10);
     return Number.isFinite(raw) && raw > 0 ? raw : 1;
@@ -596,6 +630,7 @@
     for (const btn of Array.from(list.querySelectorAll('.slides-list-item'))) {
       const active = btn.getAttribute('data-slide-id') === slidesSelectedId;
       btn.classList.toggle('active', active);
+      btn.classList.toggle('visited', _isSlideVisited(btn.getAttribute('data-slide-id')));
     }
   }
 
@@ -725,6 +760,10 @@
       slidesNativeFrame.remove();
       slidesNativeFrame = null;
     }
+    if (slidesNativeHashPollTimer) {
+      clearInterval(slidesNativeHashPollTimer);
+      slidesNativeHashPollTimer = null;
+    }
     const viewer = document.getElementById('slides-pdf-viewer');
     if (viewer) viewer.innerHTML = '';
     const container = document.getElementById('slides-pdf-container');
@@ -768,7 +807,7 @@
     }, SLIDES_TEST_AUTO_SCROLL_DELAY_MS);
   }
 
-  function _showSlideInNativeFrame(url) {
+  function _showSlideInNativeFrame(url, slug) {
     const container = document.getElementById('slides-pdf-container');
     const viewer = document.getElementById('slides-pdf-viewer');
     if (!container || !viewer) return false;
@@ -779,10 +818,31 @@
       slidesNativeFrame.setAttribute('title', 'Slides preview');
       slidesNativeFrame.setAttribute('loading', 'eager');
     }
+    if (slidesNativeHashPollTimer) {
+      clearInterval(slidesNativeHashPollTimer);
+      slidesNativeHashPollTimer = null;
+    }
+    const storedPage = Math.max(1, Number(_getStoredSlidePage(slug)));
     const joiner = url.includes('?') ? '&' : '?';
-    slidesNativeFrame.src = `${url}${joiner}inline=1`;
+    slidesNativeFrame.src = `${url}${joiner}inline=1#page=${storedPage}`;
     container.classList.add('slides-iframe-mode');
     container.appendChild(slidesNativeFrame);
+    slidesNativeHashPollTimer = setInterval(() => {
+      if (!slidesNativeFrame || !slidesSelectedSlug) return;
+      try {
+        const rawHash = String(slidesNativeFrame.contentWindow?.location?.hash || '');
+        const match = rawHash.match(/(?:^|[?#&])page=(\d+)/i);
+        if (!match) return;
+        const page = Math.max(1, Number(match[1]));
+        _setStoredSlidePage(slidesSelectedSlug, page);
+        _setStoredSlideView(slidesSelectedSlug, {
+          page,
+          scrollTop: Number(container.scrollTop || 0),
+        });
+      } catch (_) {
+        // Ignore cross-origin/native viewer access failures.
+      }
+    }, 1200);
     return true;
   }
 
@@ -913,6 +973,8 @@
       openBtn.addEventListener('click', async () => {
         const overlay = document.getElementById('slides-overlay');
         if (overlay) overlay.classList.add('open');
+        _markSlideVisited(slide._id);
+        _markSelectedSlideInList();
         await _loadSlideIntoViewer(slide, { forceReload: false, withUiBlocker: true });
       });
       const dl = document.createElement('a');
@@ -939,6 +1001,10 @@
   async function _loadSlideIntoViewer(slide, { forceReload = false, withUiBlocker = false } = {}) {
     if (!slide) return;
     if (withUiBlocker) _setSlidesUiBlocker(true, 'Loading slide...');
+    slidesSelectedSlug = slide.slug;
+    slidesSelectedId = slide._id;
+    _setStoredSelectedSlideId(slidesSelectedId);
+    _markSlideVisited(slidesSelectedId);
     _setSlidesError('');
     _setSlidesLoading({ visible: true, loaded: 0, total: 0, label: 'Checking cache...' });
     try {
@@ -1002,25 +1068,19 @@
           if (container) requestAnimationFrame(() => { container.scrollTop = saved.scrollTop; });
         }
 
-        slidesSelectedSlug = slide.slug;
-        slidesSelectedId = slide._id;
-        _setStoredSelectedSlideId(slidesSelectedId);
         slidesLastFingerprint = fingerprint;
         _setSlidesDownload(slide.url, false);
         _renderSlidesMeta({ ...slide, updated_at: effectiveUpdatedAt });
         _setSlidesLoading({ visible: false });
         _scheduleTestAutoScroll(slide);
       } catch (err) {
-        const fallbackOk = _showSlideInNativeFrame(slide.url);
+        const fallbackOk = _showSlideInNativeFrame(slide.url, slide.slug);
         if (!fallbackOk) {
           _setSlidesError('Failed to load this PDF. Try download.');
           _setSlidesDownload('', true);
           _setSlidesLoading({ visible: false });
           return;
         }
-        slidesSelectedSlug = slide.slug;
-        slidesSelectedId = slide._id;
-        _setStoredSelectedSlideId(slidesSelectedId);
         slidesLastFingerprint = fingerprint;
         _setSlidesDownload(slide.url, false);
         _renderSlidesMeta({ ...slide, updated_at: effectiveUpdatedAt });

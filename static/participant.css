@@ -463,6 +463,11 @@ h1 { display: none; }
   background: rgba(72, 207, 173, 0.14);
 }
 
+.slides-list-item.visited:not(.active) {
+  border-color: rgba(72, 207, 173, 0.4);
+  background: rgba(72, 207, 173, 0.05);
+}
+
 .slides-list-open {
   flex: 1;
   display: flex;

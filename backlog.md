@@ -287,3 +287,4 @@ Host broadcasts a statement: "Have you ever shipped code that violated what we j
 - [x] Follow-up direct request: reverted tooltip border line thickness back to original while keeping the larger tooltip tip.
 - [x] Follow-up direct request: participant emoji buttons now change border color to match tooltip color only on hover.
 - [x] Follow-up direct request: “Deploy incoming” badge text now includes a rocket emoji (`⚠️ 🚀 Deploy incoming`).
+- [x] Direct request: participant slides now keep visible `visited` topic tracking in the right dock, and slide reopen/resume is hardened (including iframe fallback opening with stored `#page=<n>`).
