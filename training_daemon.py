@@ -22,6 +22,7 @@ import re
 import signal
 import sys
 import time
+from types import SimpleNamespace
 
 from dataclasses import replace as dc_replace
 from datetime import date, datetime, timedelta
@@ -48,6 +49,7 @@ from daemon.session_transcript import (
 )
 from daemon.transcript_query import load_normalized_entries
 from daemon import log
+import slides_daemon
 
 _LOCK_FILE = Path("/tmp/training_daemon.lock")
 _HEARTBEAT_INTERVAL = 1.0  # seconds between heartbeat writes
@@ -573,6 +575,52 @@ class TranscriptNormalizerRunner:
             self._next_run_at = now + self.interval_seconds
 
 
+class SlidesPollingRunner:
+    """Run PPTX change detection/export from inside the main training daemon."""
+
+    def __init__(self, main_config):
+        self.main_config = main_config
+        self.enabled = False
+        self.poll_interval_seconds = 0.0
+        self._next_run_at = 0.0
+        self._slides_config = None
+        self._slides_state: dict = {}
+
+    def start(self) -> None:
+        try:
+            cfg = slides_daemon.config_from_env()
+        except Exception as exc:
+            log.info("slides", f"Slides watcher disabled: {exc}")
+            self.enabled = False
+            return
+
+        # Keep one auth/server source of truth from training_daemon config.
+        cfg = SimpleNamespace(**vars(cfg))
+        cfg.server_url = self.main_config.server_url
+        cfg.host_username = self.main_config.host_username
+        cfg.host_password = self.main_config.host_password
+
+        self._slides_config = cfg
+        self._slides_state = slides_daemon.load_daemon_state(cfg.state_file)
+        self.poll_interval_seconds = max(1.0, float(cfg.poll_interval_seconds))
+        self._next_run_at = time.monotonic()
+        self.enabled = True
+        log.info("slides", f"Slides watcher enabled ({self.poll_interval_seconds:.0f}s)")
+
+    def tick(self) -> None:
+        if not self.enabled:
+            return
+        now = time.monotonic()
+        if now < self._next_run_at:
+            return
+        try:
+            slides_daemon.run_once(self._slides_config, self._slides_state)
+        except Exception as exc:
+            log.error("slides", f"Slides watcher error: {exc}")
+        finally:
+            self._next_run_at = now + self.poll_interval_seconds
+
+
 def _read_lock() -> tuple[int | None, float | None]:
     """Read PID and last heartbeat from lock file. Returns (None, None) if missing/corrupt."""
     if not _LOCK_FILE.exists():
@@ -760,6 +808,8 @@ def run() -> None:
     timestamp_appender.start()
     transcript_normalizer = TranscriptNormalizerRunner(config.folder)
     transcript_normalizer.start()
+    slides_runner = SlidesPollingRunner(config)
+    slides_runner.start()
 
     # Session state: the transcript text used to generate the current preview
     last_text: str | None = None
@@ -810,6 +860,7 @@ def run() -> None:
 
             timestamp_appender.tick()
             transcript_normalizer.tick()
+            slides_runner.tick()
 
             # ── Check for session management requests ──
             try:
