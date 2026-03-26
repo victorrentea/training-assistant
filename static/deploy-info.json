@@ -1,7 +1,7 @@
 {
-  "sha": "017d232a0c505a4b96509678968de3b41dab4a20",
-  "timestamp": "2026-03-26 17:42",
+  "sha": "1273eef63b00f2775a324eb6ca8ca983f488e78b",
+  "timestamp": "2026-03-26 17:44",
   "changelog": [
-    "style: change menu bar icon to technologist emoji"
+    "participant slides force iframe reload for page-two test jump"
   ]
 }
