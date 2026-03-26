@@ -355,10 +355,14 @@ def _merge_slide_sources(
             if pair in seen_pairs:
                 continue
             seen_pairs.add(pair)
+            participant_url = url
+            if participant_url.startswith(("http://", "https://")):
+                # Serve external URLs through local endpoint to enforce inline PDF rendering.
+                participant_url = f"/api/slides/file/{slug}"
             merged.append({
                 "name": name,
                 "slug": slug,
-                "url": url,
+                "url": participant_url,
                 "updated_at": entry.get("updated_at"),
                 "etag": entry.get("etag"),
                 "last_modified": entry.get("last_modified"),

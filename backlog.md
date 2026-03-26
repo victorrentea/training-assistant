@@ -1,5 +1,6 @@
 # Tasks
 
+- [x] Bugfix direct request: participant `/api/slides` feed now rewrites external slide URLs to local `/api/slides/file/{slug}` proxy so PDFs render inline in viewer (instead of browser download behavior on some external hosts).
 - [x] Direct request: maximize participant Slides viewer footprint while keeping bottom emoji bar visible by reserving bottom overlay space and stretching slides modal to full remaining viewport.
 - [x] Direct request: participant Slides PDF now persists and restores reading position (`page + scrollTop`) per slide in localStorage, so refresh or re-selecting the same PDF returns to where the participant left off.
 - [x] Direct request: for testing, participant PDF.js slides now auto-jump to page 2 whenever a slide is displayed (or refreshed from cache), clamped to available page count.

@@ -225,7 +225,7 @@ def test_api_slides_includes_slides_current_when_present(monkeypatch, tmp_path):
     resp = client.get("/api/slides")
     assert resp.status_code == 200
     slides = resp.json()["slides"]
-    assert any(s["slug"] == "current-123" and s["url"] == "https://slides.example.com/current.pdf" for s in slides)
+    assert any(s["slug"] == "current-123" and s["url"] == "/api/slides/file/current-123" for s in slides)
 
 
 def test_api_slides_ignores_non_displayable_names(monkeypatch, tmp_path):
