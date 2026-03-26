@@ -215,6 +215,7 @@ Host posts a provocative statement (e.g. "Microservices are always a mistake for
 - [x] Direct request: moved server runtime slide storage defaults to `.server-data` (`uploaded-slides`, daemon state/work/publish) and fixed Railway startup by adding missing `python-multipart` dependency.
 - [x] Direct request: backend slides default lookup now targets `/app/server_materials/slides` (with local fallback `server_materials/slides`) to match Railway runtime storage.
 - [x] Direct request: compact startup logs to one line per process (`Starting/Connecting to <URL>`) by removing redundant daemon/overlay startup-connect duplicates.
+- [x] Direct request: temporarily paused automatic PPTX→PDF execution in `slides_daemon.run_once` by commenting out `process_one_file` flow (conversion code kept intact).
 - [x] Follow-up GH#67 (production bootstrap): added host-auth slide PDF upload endpoint and server-backed slide storage so production can be populated without relying on local trainer filesystem paths.
 - [x] La click pe badge-urile cu intervale de timp asociate sesiunii din host UI, se deschide într-un tab nou un fișier `.txt` cu liniile normalizate din acel interval.
 

@@ -730,17 +730,20 @@ def run_once(config: SlidesDaemonConfig, daemon_state: dict) -> bool:
                 return updated_current or updated_list
             print(f"✏️ppt update detected => regenerating ppf: {next_path.name}", flush=True)
             target_pdf = metadata.get(_abs_key(next_path), {}).get("target_pdf")
-            try:
-                updated_current = process_one_file(config, daemon_state, next_path, target_pdf=target_pdf)
-                if updated_current:
-                    daemon_state["last_export_finished_at"] = time.time()
-                    daemon_state.setdefault("files", {}).setdefault(next_key, {}).pop("retry_after", None)
-                    save_daemon_state(config.state_file, daemon_state)
-            except Exception:
-                retry_after = time.time() + max(5.0, float(config.failure_retry_seconds))
-                daemon_state.setdefault("files", {}).setdefault(next_key, {})["retry_after"] = retry_after
-                save_daemon_state(config.state_file, daemon_state)
-                raise
+            # TEMPORARY PAUSE requested by user:
+            # keep conversion/upload code in repo, but skip executing automatic PPTX->PDF flow.
+            # try:
+            #     updated_current = process_one_file(config, daemon_state, next_path, target_pdf=target_pdf)
+            #     if updated_current:
+            #         daemon_state["last_export_finished_at"] = time.time()
+            #         daemon_state.setdefault("files", {}).setdefault(next_key, {}).pop("retry_after", None)
+            #         save_daemon_state(config.state_file, daemon_state)
+            # except Exception:
+            #     retry_after = time.time() + max(5.0, float(config.failure_retry_seconds))
+            #     daemon_state.setdefault("files", {}).setdefault(next_key, {})["retry_after"] = retry_after
+            #     save_daemon_state(config.state_file, daemon_state)
+            #     raise
+            print("[pptx-daemon] Auto PPTX->PDF conversion is temporarily paused", flush=True)
     updated_list = sync_slides_list(config, daemon_state, metadata)
     return updated_current or updated_list
 
