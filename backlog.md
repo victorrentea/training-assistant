@@ -277,3 +277,4 @@ Host broadcasts a statement: "Have you ever shipped code that violated what we j
 - [x] Direct request: lowered broken-glass sound volume by 50% for participant monitor reaction (`🖥️`) in desktop overlay.
 - [x] Direct request: removed “Get ready to participate.” from participant waiting screen and increased “Welcome!” text size by 50%.
 - [x] Direct request: pressing `Esc` on participant page now closes all participant modals in one shot (Key Points, Slides, Notes, and avatar/participant modal), with E2E regression coverage.
+- [x] Direct request: participant emoji buttons now use the tooltip-border color as background, and tooltip borders were thickened by +2px.
