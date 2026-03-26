@@ -1,5 +1,7 @@
 # Tasks
 
+- [x] materials sync: added host-auth backend endpoints to mirror `materials/` into server-side `server_materials/` (`/api/materials/upsert`, `/api/materials/delete`) and integrated `MaterialsMirrorRunner` in `training_daemon.py` for automatic create/update/delete replication.
+- [x] slides defaults: aligned PPTX publish default to `MATERIALS_FOLDER/slides` so generated PDFs are included in the mirrored materials tree.
 - [x] training-daemon: integrated PPTX polling/export directly in `training_daemon.py` via `SlidesPollingRunner` (calls `slides_daemon.run_once` on interval), so slides auto-conversion no longer requires running a separate slides daemon process.
 - [x] slides-daemon: fixed PPTX auto-conversion when `soffice` is not in PATH by adding macOS LibreOffice fallback (`/Applications/LibreOffice.app/Contents/MacOS/soffice`) plus `PPTX_SOFFICE_BIN` override; verified AI Coding `touch` triggers auto-regeneration to `materials/slides/AI Coding.pdf`.
 - [x] bug: participant onboarding checklist (the 3 checkboxes at the bottom) now stays permanently hidden after all 3 are completed; hand/welcome animation can still reappear.

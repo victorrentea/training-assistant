@@ -79,3 +79,44 @@ def test_slides_polling_runner_uses_main_daemon_auth_and_server(tmp_path: Path, 
         "host_username": "main-user",
         "host_password": "main-pass",
     }
+
+
+def test_materials_mirror_runner_detects_create_update_delete(tmp_path: Path, monkeypatch):
+    materials = tmp_path / "materials"
+    materials.mkdir()
+    sample = materials / "slides" / "deck.pdf"
+    sample.parent.mkdir(parents=True)
+    sample.write_bytes(b"v1")
+
+    monkeypatch.setenv("MATERIALS_FOLDER", str(materials))
+    monkeypatch.setenv("MATERIALS_MIRROR_ENABLED", "1")
+    monkeypatch.setenv("MATERIALS_MIRROR_INTERVAL_SECONDS", "1")
+    monkeypatch.setenv("MATERIALS_MIRROR_STATE_FILE", str(tmp_path / "mirror-state.json"))
+
+    uploaded = []
+    deleted = []
+
+    runner = training_daemon.MaterialsMirrorRunner(
+        SimpleNamespace(server_url="http://main-server", host_username="main-user", host_password="main-pass")
+    )
+    monkeypatch.setattr(
+        runner,
+        "_post_material_upsert",
+        lambda relative_path, file_path: uploaded.append((relative_path, file_path.read_bytes())),
+    )
+    monkeypatch.setattr(runner, "_post_material_delete", lambda relative_path: deleted.append(relative_path))
+
+    runner.start()
+    runner.tick()
+    assert uploaded == [("slides/deck.pdf", b"v1")]
+    assert deleted == []
+
+    sample.write_bytes(b"v2")
+    runner._next_run_at = 0
+    runner.tick()
+    assert uploaded[-1] == ("slides/deck.pdf", b"v2")
+
+    sample.unlink()
+    runner._next_run_at = 0
+    runner.tick()
+    assert deleted == ["slides/deck.pdf"]

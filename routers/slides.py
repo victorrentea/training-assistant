@@ -42,6 +42,10 @@ class SlidesUpdate(BaseModel):
         return cleaned
 
 
+class MaterialsDeleteRequest(BaseModel):
+    relative_path: str
+
+
 def _slugify(value: str) -> str:
     slug = _SLUG_RE.sub("-", value.strip().lower()).strip("-")
     return slug or "slide"
@@ -136,6 +140,43 @@ def _uploaded_slides_dir() -> Path:
 
 def _uploaded_slide_meta_path(slug: str) -> Path:
     return _uploaded_slides_dir() / f"{slug}.json"
+
+
+def _server_materials_dir() -> Path:
+    configured = os.environ.get("SERVER_MATERIALS_DIR", "").strip()
+    if configured:
+        return Path(configured).expanduser()
+    return Path("server_materials")
+
+
+def _normalize_relative_material_path(value: str) -> str:
+    raw = str(value or "").strip().replace("\\", "/")
+    if not raw:
+        raise HTTPException(status_code=400, detail="relative_path is required")
+    pure = Path(raw)
+    if pure.is_absolute():
+        raise HTTPException(status_code=400, detail="relative_path must be relative")
+    parts = [part for part in pure.parts if part not in ("", ".")]
+    if any(part == ".." for part in parts):
+        raise HTTPException(status_code=400, detail="relative_path cannot contain '..'")
+    if not parts:
+        raise HTTPException(status_code=400, detail="relative_path is required")
+    return "/".join(parts)
+
+
+def _material_target_path(relative_path: str) -> Path:
+    root = _server_materials_dir()
+    target = root / relative_path
+    try:
+        root_resolved = root.resolve()
+        target_resolved = target.resolve()
+    except FileNotFoundError:
+        # Parent may not exist yet; resolve lexical path safely.
+        root_resolved = root.resolve()
+        target_resolved = (root / relative_path).resolve(strict=False)
+    if root_resolved not in target_resolved.parents and target_resolved != root_resolved:
+        raise HTTPException(status_code=400, detail="Invalid relative_path")
+    return target
 def _build_local_slides_index() -> tuple[list[dict], dict[str, Path]]:
     slides_dir = _resolve_local_slides_dir()
     if not slides_dir:
@@ -230,6 +271,55 @@ def _merge_slide_sources(state_slides: list[dict], local_slides: list[dict], upl
                 "source": entry.get("source"),
             })
     return merged
+
+
+@router.post("/api/materials/upsert")
+async def upsert_material_file(
+    relative_path: str = Form(...),
+    file: UploadFile = File(...),
+):
+    rel = _normalize_relative_material_path(relative_path)
+    body = await file.read()
+    if not body:
+        raise HTTPException(status_code=400, detail="Empty file upload")
+
+    target = _material_target_path(rel)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_bytes(body)
+
+    return {
+        "ok": True,
+        "relative_path": rel,
+        "size": len(body),
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+
+@router.post("/api/materials/delete")
+async def delete_material_file(body: MaterialsDeleteRequest):
+    rel = _normalize_relative_material_path(body.relative_path)
+    target = _material_target_path(rel)
+    existed = target.exists()
+    if target.exists() and target.is_file():
+        target.unlink()
+
+    # Clean up empty directories up to materials root.
+    root = _server_materials_dir().resolve()
+    parent = target.parent
+    while True:
+        try:
+            parent_resolved = parent.resolve()
+        except Exception:
+            break
+        if parent_resolved == root:
+            break
+        if parent_resolved.exists() and parent_resolved.is_dir() and not any(parent_resolved.iterdir()):
+            parent_resolved.rmdir()
+            parent = parent_resolved.parent
+            continue
+        break
+
+    return {"ok": True, "relative_path": rel, "deleted": bool(existed)}
 
 
 @router.post("/api/slides/upload")
