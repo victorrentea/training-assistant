@@ -2,8 +2,9 @@ import XCTest
 @testable import DesktopOverlay
 
 final class EmojiAnimatorTests: XCTestCase {
-    func testTvEmojiUsesBreakingGlassSound() {
-        XCTAssertEqual(EmojiAnimator.soundEffect(for: "📺"), "breaking-glass.mp3")
+    func testMonitorEmojiUsesBreakingGlassSound() {
+        XCTAssertEqual(EmojiAnimator.soundEffect(for: "🖥️"), "breaking-glass.mp3")
+        XCTAssertEqual(EmojiAnimator.soundEffect(for: "🖥"), "breaking-glass.mp3")
     }
 
     func testHeartEmojiHasNoSoundEffect() {

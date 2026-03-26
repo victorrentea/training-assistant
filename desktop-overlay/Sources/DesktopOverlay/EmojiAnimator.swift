@@ -43,8 +43,12 @@ class EmojiAnimator {
     }
 
     static func soundEffect(for emoji: String) -> String? {
-        switch emoji {
-        case "📺":
+        let normalizedEmoji = emoji
+            .replacingOccurrences(of: "\u{FE0F}", with: "")
+            .replacingOccurrences(of: "\u{FE0E}", with: "")
+
+        switch normalizedEmoji {
+        case "🖥":
             return "breaking-glass.mp3"
         default:
             return nil
