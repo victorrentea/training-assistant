@@ -1,7 +1,7 @@
 {
-  "sha": "b4b9e1da33a98057101ab15fbe5e451c6884dd76",
-  "timestamp": "2026-03-26 13:37",
+  "sha": "57ee78cac7e58dc167e8c201d394b66be2e2b591",
+  "timestamp": "2026-03-26 14:11",
   "changelog": [
-    "fix overlay bar placement on mirrored displays"
+    "Point slides backend default to server_materials"
   ]
 }
