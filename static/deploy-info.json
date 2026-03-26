@@ -1,7 +1,7 @@
 {
-  "sha": "da8ca77bf0fc7f68bb4f387208caba915f60e764",
-  "timestamp": "2026-03-26 21:55",
+  "sha": "adb3750c0178d8ba8b2bfbdf4673c59b8e09dcdf",
+  "timestamp": "2026-03-26 21:57",
   "changelog": [
-    "style: reduce slides topic text width by 30%"
+    "fix: restore visible 'xh ago' slide timestamps"
   ]
 }
