@@ -989,7 +989,7 @@
     if (!container || !viewer) return;
 
     slidesPdfEventBus = new pdfjsViewer.EventBus();
-    slidesPdfLinkService = new pdfjsViewer.PDFLinkService({ eventBus: slidesPdfEventBus });
+    slidesPdfLinkService = new pdfjsViewer.PDFLinkService({ eventBus: slidesPdfEventBus, externalLinkTarget: 2 });
     slidesPdfViewer = new pdfjsViewer.PDFViewer({
       container,
       viewer,
