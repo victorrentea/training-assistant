@@ -1,7 +1,7 @@
 {
-  "sha": "d5e4e1c650b0e7dded58d25c54377de278da0bcb",
-  "timestamp": "2026-03-26 17:07",
+  "sha": "a2f74447f72092c54d8aa3ee412119f1231e3c6b",
+  "timestamp": "2026-03-26 17:10",
   "changelog": [
-    "refactor: rename clean-clipboard to wispr-addons"
+    "participant slides fullscreen and inline updated label"
   ]
 }
