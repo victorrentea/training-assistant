@@ -85,6 +85,7 @@
   const LS_SLIDE_PAGE_PREFIX = 'workshop_slide_page:';
   let slidesCatalog = [];
   let slidesSelectedSlug = null;
+  let slidesSelectedId = null;
   let slidesLastFingerprint = null;
   let slidesRefreshTimer = null;
   let slidesPdfModulesPromise = null;
@@ -633,7 +634,7 @@
       const key = `${slug}|${url}`;
       if (seen.has(key)) continue;
       seen.add(key);
-      normalized.push({ ...raw, name, url, slug });
+      normalized.push({ ...raw, name, url, slug, _id: key });
     }
     return normalized;
   }
@@ -648,25 +649,46 @@
     meta.textContent = `${_formatSlideUpdated(slide.updated_at)} • Page ${page}`;
   }
 
-  function _renderSlidesSelector(targetSlug) {
+  function _renderSlidesSelector(targetId) {
     const select = document.getElementById('slides-select');
     if (!select) return;
     select.innerHTML = '';
+    const placeholder = document.createElement('option');
+    placeholder.value = '';
+    placeholder.textContent = 'Select a slide';
+    placeholder.selected = !targetId;
+    select.appendChild(placeholder);
+
     for (const slide of slidesCatalog) {
       const option = document.createElement('option');
-      option.value = slide.slug;
+      option.value = slide._id;
       option.textContent = slide.name;
-      option.selected = slide.slug === targetSlug;
+      option.selected = slide._id === targetId;
       select.appendChild(option);
     }
     select.disabled = slidesCatalog.length === 0;
     if (!select._bound) {
       select._bound = true;
       select.addEventListener('change', async (evt) => {
-        const slug = evt.target.value;
-        const slide = slidesCatalog.find(s => s.slug === slug);
+        const slideId = evt.target.value;
+        const slide = slidesCatalog.find(s => s._id === slideId);
         if (slide) {
           await _loadSlideIntoViewer(slide, { forceReload: true });
+        } else {
+          slidesSelectedSlug = null;
+          slidesSelectedId = null;
+          slidesLastFingerprint = null;
+          await _clearSlidesDocument();
+          _setSlidesDownload('', true);
+          _setSlidesError('');
+          _setSlidesLoading({ visible: false });
+          const shell = document.getElementById('slides-viewer-shell');
+          const empty = document.getElementById('slides-empty');
+          if (shell) shell.style.display = 'none';
+          if (empty) {
+            empty.style.display = '';
+            empty.textContent = 'Select a slide to preview.';
+          }
         }
       });
     }
@@ -686,7 +708,7 @@
     const effectiveUpdatedAt = slide.updated_at || headers.lastModified || null;
     if (effectiveUpdatedAt && !slide.updated_at) slide.updated_at = effectiveUpdatedAt;
     const fingerprint = _slideFingerprint(slide, headers);
-    if (!forceReload && slidesSelectedSlug === slide.slug && slidesLastFingerprint === fingerprint && slidesPdfDoc) {
+    if (!forceReload && slidesSelectedId === slide._id && slidesLastFingerprint === fingerprint && slidesPdfDoc) {
       _renderSlidesMeta({ ...slide, updated_at: effectiveUpdatedAt });
       _setSlidesDownload(slide.url, false);
       _setSlidesLoading({ visible: false });
@@ -721,6 +743,7 @@
       slidesPdfViewer.currentPageNumber = savedPage;
 
       slidesSelectedSlug = slide.slug;
+      slidesSelectedId = slide._id;
       slidesLastFingerprint = fingerprint;
       _setSlidesDownload(slide.url, false);
       _renderSlidesMeta({ ...slide, updated_at: effectiveUpdatedAt });
@@ -743,24 +766,48 @@
       if (!slidesCatalog.length) {
         _renderSlidesSelector(null);
         slidesSelectedSlug = null;
+        slidesSelectedId = null;
         slidesLastFingerprint = null;
         await _clearSlidesDocument();
         _setSlidesDownload('', true);
         _setSlidesError('');
         _setSlidesLoading({ visible: false });
-        if (empty) empty.style.display = '';
+        if (empty) {
+          empty.style.display = '';
+          empty.textContent = 'No slides published yet.';
+        }
         if (shell) shell.style.display = 'none';
         return;
       }
 
-      const selectedStillExists = slidesSelectedSlug && slidesCatalog.some(s => s.slug === slidesSelectedSlug);
-      const targetSlug = selectedStillExists ? slidesSelectedSlug : slidesCatalog[0].slug;
-      _renderSlidesSelector(targetSlug);
-      const slide = slidesCatalog.find(s => s.slug === targetSlug) || slidesCatalog[0];
-      await _loadSlideIntoViewer(slide, { forceReload: forceReloadCurrent || !selectedStillExists });
+      const selectedStillExists = slidesSelectedId && slidesCatalog.some(s => s._id === slidesSelectedId);
+      const targetId = selectedStillExists ? slidesSelectedId : null;
+      _renderSlidesSelector(targetId);
+      if (selectedStillExists) {
+        const slide = slidesCatalog.find(s => s._id === targetId);
+        if (slide) {
+          await _loadSlideIntoViewer(slide, { forceReload: forceReloadCurrent });
+        }
+      } else {
+        slidesSelectedSlug = null;
+        slidesSelectedId = null;
+        slidesLastFingerprint = null;
+        await _clearSlidesDocument();
+        _setSlidesDownload('', true);
+        _setSlidesError('');
+        _setSlidesLoading({ visible: false });
+        if (empty) {
+          empty.style.display = '';
+          empty.textContent = 'Select a slide to preview.';
+        }
+        if (shell) shell.style.display = 'none';
+      }
     } catch (_) {
       _setSlidesError('Could not fetch slide list from server.');
-      if (empty) empty.style.display = '';
+      if (empty) {
+        empty.style.display = '';
+        empty.textContent = 'No slides published yet.';
+      }
       if (shell) shell.style.display = 'none';
       _setSlidesDownload('', true);
       _setSlidesLoading({ visible: false });

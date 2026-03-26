@@ -486,3 +486,20 @@
 - Verified with `pytest -q tests/test_slides_api.py` (21 passed).
 - Verified with `pytest -q tests/test_main.py -k "slides"` (4 passed).
 - Verified with `node --check static/host.js` and `python3 -m py_compile routers/slides.py`.
+
+## Direct request: participant slides dropdown UX + correct modal load
+
+- [x] Add placeholder first option in participant slides select: `Select a slide`
+- [x] Stop auto-loading first deck when opening modal with no prior selection
+- [x] Load selected deck by unique slide key (`slug|url`) instead of `slug` only
+- [x] Keep existing selected slide reload behavior for live catalog updates
+- [x] Show `Select a slide to preview.` when placeholder is selected
+- [x] Run frontend syntax check + targeted slides tests
+
+### Review
+- Participant slides selector now starts with a dedicated placeholder option (`Select a slide`).
+- Modal no longer auto-loads the first slide by default when no selection exists.
+- Slide switching is now resolved by unique `_id = slug|url`, fixing ambiguous selection when duplicate slugs exist across sources.
+- Verified with `node --check static/participant.js`.
+- Verified with `pytest -q tests/test_main.py -k "slides"` (4 passed).
+- Verified with `pytest -q tests/test_slides_api.py` (21 passed).
