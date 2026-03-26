@@ -1021,13 +1021,7 @@ class SlidesOnDemandWsRunner:
         headers = self._auth_headers()
         while not self._stop.is_set():
             try:
-                with ws_connect(
-                    ws_url,
-                    additional_headers=headers,
-                    open_timeout=10,
-                    ping_interval=20,
-                    ping_timeout=20,
-                ) as ws:
+                with self._connect(ws_url, headers) as ws:
                     log.info("slides", f"slides_ws_connected to {ws_url}")
                     while not self._stop.is_set():
                         try:
@@ -1045,6 +1039,30 @@ class SlidesOnDemandWsRunner:
                 if not self._stop.is_set():
                     log.error("slides", f"slides_ws_connect_failed: {exc}")
                     time.sleep(_SLIDES_ON_DEMAND_WS_RECONNECT_SECONDS)
+
+    @staticmethod
+    def _connect(ws_url: str, headers: dict[str, str]):
+        # websockets changed auth-header kwarg name across versions.
+        # Try modern API first, then fallback for older clients.
+        try:
+            return ws_connect(
+                ws_url,
+                additional_headers=headers,
+                open_timeout=10,
+                ping_interval=20,
+                ping_timeout=20,
+            )
+        except TypeError as exc:
+            message = str(exc)
+            if "additional_headers" not in message:
+                raise
+            return ws_connect(
+                ws_url,
+                extra_headers=headers,
+                open_timeout=10,
+                ping_interval=20,
+                ping_timeout=20,
+            )
 
 
 def _read_lock() -> tuple[int | None, float | None]:

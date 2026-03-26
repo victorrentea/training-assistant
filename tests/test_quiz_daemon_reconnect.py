@@ -64,3 +64,47 @@ def test_daemon_logs_disconnect_once_then_reconnect(tmp_path: Path, monkeypatch,
     out = capsys.readouterr()
     assert out.err.count("Server unreachable:") == 1
     assert "Reconnected to server." in out.out
+
+
+def test_slides_ws_connect_uses_additional_headers_when_supported(monkeypatch):
+    calls: list[dict] = []
+
+    class _DummyConn:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+    def _fake_connect(url, **kwargs):
+        calls.append({"url": url, **kwargs})
+        return _DummyConn()
+
+    monkeypatch.setattr(training_daemon, "ws_connect", _fake_connect)
+    conn = training_daemon.SlidesOnDemandWsRunner._connect("wss://example/ws/daemon", {"Authorization": "Basic abc"})
+    assert isinstance(conn, _DummyConn)
+    assert len(calls) == 1
+    assert calls[0]["additional_headers"] == {"Authorization": "Basic abc"}
+
+
+def test_slides_ws_connect_falls_back_to_extra_headers(monkeypatch):
+    calls: list[dict] = []
+
+    class _DummyConn:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+    def _fake_connect(url, **kwargs):
+        calls.append({"url": url, **kwargs})
+        if "additional_headers" in kwargs:
+            raise TypeError("connect() got an unexpected keyword argument 'additional_headers'")
+        return _DummyConn()
+
+    monkeypatch.setattr(training_daemon, "ws_connect", _fake_connect)
+    conn = training_daemon.SlidesOnDemandWsRunner._connect("wss://example/ws/daemon", {"Authorization": "Basic abc"})
+    assert isinstance(conn, _DummyConn)
+    assert len(calls) == 2
+    assert calls[1]["extra_headers"] == {"Authorization": "Basic abc"}
