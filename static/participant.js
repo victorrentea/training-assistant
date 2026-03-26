@@ -83,6 +83,7 @@
   let summaryUpdatedAt = null;
   const SLIDES_REFRESH_MS = 30000;
   const LS_SLIDE_PAGE_PREFIX = 'workshop_slide_page:';
+  const LS_SLIDE_VIEW_PREFIX = 'workshop_slide_view:';
   let slidesCatalog = [];
   let slidesSelectedSlug = null;
   let slidesSelectedId = null;
@@ -97,7 +98,6 @@
   let slidesPdfDoc = null;
   let slidesPdfLoadingTask = null;
   let slidesNativeFrame = null;
-  const SLIDES_TEST_TARGET_PAGE = 2;
 
   function escHtml(s) {
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -468,6 +468,10 @@
     return `${LS_SLIDE_PAGE_PREFIX}${slug}`;
   }
 
+  function _slideViewKey(slug) {
+    return `${LS_SLIDE_VIEW_PREFIX}${slug}`;
+  }
+
   function _getStoredSlidePage(slug) {
     const raw = Number.parseInt(localStorage.getItem(_slidePageKey(slug)) || '1', 10);
     return Number.isFinite(raw) && raw > 0 ? raw : 1;
@@ -478,9 +482,32 @@
     localStorage.setItem(_slidePageKey(slug), String(page));
   }
 
-  function _getSlidesTestingPage(numPages) {
-    const total = Math.max(1, Number(numPages || 1));
-    return Math.min(SLIDES_TEST_TARGET_PAGE, total);
+  function _getStoredSlideView(slug) {
+    if (!slug) return null;
+    try {
+      const raw = localStorage.getItem(_slideViewKey(slug));
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      const page = Number(parsed?.page || 1);
+      const scrollTop = Number(parsed?.scrollTop || 0);
+      return {
+        page: Number.isFinite(page) && page > 0 ? page : 1,
+        scrollTop: Number.isFinite(scrollTop) && scrollTop >= 0 ? scrollTop : 0,
+      };
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function _setStoredSlideView(slug, view) {
+    if (!slug || !view || typeof view !== 'object') return;
+    const payload = {
+      page: Math.max(1, Number(view.page || 1)),
+      scrollTop: Math.max(0, Number(view.scrollTop || 0)),
+    };
+    try {
+      localStorage.setItem(_slideViewKey(slug), JSON.stringify(payload));
+    } catch (_) {}
   }
 
   function _formatSlideUpdated(updatedAt) {
@@ -590,6 +617,11 @@
     slidesPdfEventBus.on('pagechanging', (evt) => {
       if (slidesSelectedSlug && evt?.pageNumber) {
         _setStoredSlidePage(slidesSelectedSlug, evt.pageNumber);
+        const container = document.getElementById('slides-pdf-container');
+        _setStoredSlideView(slidesSelectedSlug, {
+          page: evt.pageNumber,
+          scrollTop: Number(container?.scrollTop || 0),
+        });
         const slide = slidesCatalog.find(s => s.slug === slidesSelectedSlug);
         _renderSlidesMeta(slide || null);
       }
@@ -599,7 +631,12 @@
     slidesPdfEventBus.on('updateviewarea', (evt) => {
       const page = Number(evt?.location?.pageNumber || 0);
       if (!slidesSelectedSlug || !page) return;
+      const container = document.getElementById('slides-pdf-container');
       _setStoredSlidePage(slidesSelectedSlug, page);
+      _setStoredSlideView(slidesSelectedSlug, {
+        page,
+        scrollTop: Number(container?.scrollTop || 0),
+      });
       const slide = slidesCatalog.find(s => s.slug === slidesSelectedSlug);
       _syncSlidesPageControls(slide || null);
     });
@@ -836,9 +873,15 @@
     if (effectiveUpdatedAt && !slide.updated_at) slide.updated_at = effectiveUpdatedAt;
     const fingerprint = _slideFingerprint(slide, headers);
     if (!forceReload && slidesSelectedId === slide._id && slidesLastFingerprint === fingerprint && slidesPdfDoc) {
-      const testPage = _getSlidesTestingPage(slidesPdfDoc.numPages);
-      slidesPdfViewer.currentPageNumber = testPage;
-      _setStoredSlidePage(slide.slug, testPage);
+      const saved = _getStoredSlideView(slide.slug);
+      const maxPages = Math.max(1, Number(slidesPdfDoc.numPages || 1));
+      const targetPage = Math.min(saved?.page || _getStoredSlidePage(slide.slug), maxPages);
+      slidesPdfViewer.currentPageNumber = targetPage;
+      const container = document.getElementById('slides-pdf-container');
+      if (container && saved && Number.isFinite(saved.scrollTop)) {
+        requestAnimationFrame(() => { container.scrollTop = saved.scrollTop; });
+      }
+      _setStoredSlidePage(slide.slug, targetPage);
       _renderSlidesMeta({ ...slide, updated_at: effectiveUpdatedAt });
       _setSlidesDownload(slide.url, false);
       _setSlidesLoading({ visible: false });
@@ -869,9 +912,15 @@
       slidesPdfLinkService.setDocument(doc, null);
       slidesPdfViewer.currentScaleValue = 'page-width';
 
-      const testPage = _getSlidesTestingPage(doc.numPages);
-      slidesPdfViewer.currentPageNumber = testPage;
-      _setStoredSlidePage(slide.slug, testPage);
+      const saved = _getStoredSlideView(slide.slug);
+      const maxPages = Math.max(1, Number(doc.numPages || 1));
+      const savedPage = Math.min(saved?.page || _getStoredSlidePage(slide.slug), maxPages);
+      slidesPdfViewer.currentPageNumber = savedPage;
+      _setStoredSlidePage(slide.slug, savedPage);
+      if (saved && Number.isFinite(saved.scrollTop)) {
+        const container = document.getElementById('slides-pdf-container');
+        if (container) requestAnimationFrame(() => { container.scrollTop = saved.scrollTop; });
+      }
 
       slidesSelectedSlug = slide.slug;
       slidesSelectedId = slide._id;
