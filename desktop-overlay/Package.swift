@@ -8,6 +8,10 @@ let package = Package(
         .executableTarget(
             name: "DesktopOverlay",
             resources: [.copy("Resources")]
+        ),
+        .testTarget(
+            name: "DesktopOverlayTests",
+            dependencies: ["DesktopOverlay"]
         )
     ]
 )
