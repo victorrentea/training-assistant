@@ -1,7 +1,7 @@
 {
-  "sha": "368f45bc8383033e974a5506ad06c61607e39320",
-  "timestamp": "2026-03-26 15:16",
+  "sha": "d114ec71d6c45e8f56aef1564a83099d3a3df3d4",
+  "timestamp": "2026-03-26 15:40",
   "changelog": [
-    "Add on-demand slides upload via daemon WS"
+    "Include catalog slides in /api/slides list"
   ]
 }
