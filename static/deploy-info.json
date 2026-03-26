@@ -1,7 +1,7 @@
 {
-  "sha": "8e33f5c5b2db409bc70491313534c99db0fa1f6f",
-  "timestamp": "2026-03-26 19:17",
+  "sha": "a0c4bbc34ed1b136083838c4702a274fe6189ea9",
+  "timestamp": "2026-03-26 19:18",
   "changelog": [
-    "participant slides append ago to updated badge"
+    "participant slides restore reopen page persistence"
   ]
 }
