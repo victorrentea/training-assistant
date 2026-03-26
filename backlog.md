@@ -2,6 +2,7 @@
 
 - [x] direct request: participant Slides now respects selection rule (no PDF displayed => no topic highlighted), while still restoring last opened slide + position only when Slides overlay was open at refresh.
 - [x] direct request: removed unused black gutter above/left in participant PDF viewer by tightening Slides preview shell/page spacing and PDF container styling.
+- [x] Direct request: location tooltip now renders below the trigger (`📍 Location!`) so it stays visible at the top edge of the screen.
 - [x] direct request: prevent Slides topics list full-screen flash on host load by default-hiding catalog popover in HTML and toggling visibility only on hover.
 - [x] Direct request: topics list now shows hand cursor on hover and uses slightly larger topic font, with compacted row spacing/padding to keep the list on one page without scrolling.
 - [x] Direct request: replaced per-slide download emoji with clearer tray-download SVG icon (arrow + baseline), plus accessible label to reduce ambiguity with “move down”.

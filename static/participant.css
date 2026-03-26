@@ -215,6 +215,16 @@ h1 { display: none; }
   transition: opacity .2s;
 }
 .location-prompt:hover { opacity: 1; }
+.location-prompt.has-tooltip::after {
+  top: calc(100% + 8px);
+  bottom: auto;
+}
+.location-prompt.has-tooltip::before {
+  top: calc(100% + 2px);
+  bottom: auto;
+  border-top-color: transparent;
+  border-bottom: 6px solid var(--surface2);
+}
 
 /* ── Slides viewer ── */
 .slides-dock {

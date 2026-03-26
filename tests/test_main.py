@@ -974,6 +974,17 @@ def test_participant_slides_modal_has_no_manual_refresh_button():
     assert "refreshSlidesNow()" not in resp.text
 
 
+def test_location_prompt_tooltip_renders_below_trigger():
+    client = TestClient(app)
+    resp = client.get("/static/participant.css")
+    assert resp.status_code == 200
+    css = resp.text
+    assert ".location-prompt.has-tooltip::after" in css
+    assert "top: calc(100% + 8px);" in css
+    assert ".location-prompt.has-tooltip::before" in css
+    assert "border-bottom: 6px solid var(--surface2);" in css
+
+
 def test_quiz_status_updates_slides_and_api_returns_normalized_data(monkeypatch, tmp_path):
     state.reset()
     monkeypatch.setenv("TRAINING_ASSISTANT_SLIDES_DIR", str(tmp_path))
