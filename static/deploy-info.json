@@ -1,7 +1,7 @@
 {
-  "sha": "dfa8b26d571a8cf0f8ca5f62518bd2ef88241890",
-  "timestamp": "2026-03-26 21:52",
+  "sha": "da8ca77bf0fc7f68bb4f387208caba915f60e764",
+  "timestamp": "2026-03-26 21:55",
   "changelog": [
-    "feat: sync live powerpoint slide to participants"
+    "style: reduce slides topic text width by 30%"
   ]
 }
