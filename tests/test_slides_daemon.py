@@ -16,7 +16,7 @@ def _cfg(tmp_path: Path) -> slides_daemon.SlidesDaemonConfig:
         server_url="https://interact.example.com",
         host_username="host",
         host_password="secret",
-        converter="libreoffice",
+        converter="google_drive_pull",
         upload_mode="copy",
         public_base_url="https://slides.example.com",
         publish_dir=tmp_path / "publish",
@@ -99,40 +99,30 @@ def test_detect_changed_files_uses_lastmodified_marker(tmp_path):
     assert changed == [a]
 
 
-def test_process_one_file_skips_when_cpu_is_busy(tmp_path, monkeypatch, capsys):
+def test_process_one_file_google_drive_pull(tmp_path, monkeypatch):
     watch = tmp_path / "watch"
     watch.mkdir()
     deck = watch / "deck.pptx"
     deck.write_bytes(b"x")
 
     cfg = _cfg(tmp_path)
+    cfg.converter = "google_drive_pull"
+    cfg.sync_backend = False
     state = {"files": {}}
+    out_pdf = tmp_path / "work" / "deck.pdf"
+    out_pdf.parent.mkdir(parents=True, exist_ok=True)
+    out_pdf.write_bytes(b"%PDF")
 
-    monkeypatch.setattr(slides_daemon, "get_cpu_free_percent", lambda sample_seconds=1.0: 10.0)
+    monkeypatch.setattr(slides_daemon, "convert_pptx_to_pdf", lambda *args, **kwargs: out_pdf)
+    monkeypatch.setattr(slides_daemon, "upload_pdf", lambda *args, **kwargs: str(cfg.publish_dir / "Deck.pdf"))
 
-    called = {"convert": False, "upload": False, "push": False}
-
-    def _mark_convert(*args, **kwargs):
-        called["convert"] = True
-        return tmp_path / "out.pdf"
-
-    def _mark_upload(*args, **kwargs):
-        called["upload"] = True
-        return "https://slides.example.com/z.pdf"
-
-    def _mark_push(*args, **kwargs):
-        called["push"] = True
-
-    monkeypatch.setattr(slides_daemon, "convert_pptx_to_pdf", _mark_convert)
-    monkeypatch.setattr(slides_daemon, "upload_pdf", _mark_upload)
-    monkeypatch.setattr(slides_daemon, "push_current_slides", _mark_push)
-
-    processed = slides_daemon.process_one_file(cfg, state, deck)
-    captured = capsys.readouterr()
-
-    assert processed is False
-    assert "CPU overloaded" in captured.out
-    assert called == {"convert": False, "upload": False, "push": False}
+    processed = slides_daemon.process_one_file(
+        cfg,
+        state,
+        deck,
+        metadata={"drive_export_url": "https://docs.google.com/presentation/d/abc/export/pdf"},
+    )
+    assert processed is True
 
 
 def test_process_one_file_updates_state_and_persists(tmp_path, monkeypatch):
@@ -147,7 +137,6 @@ def test_process_one_file_updates_state_and_persists(tmp_path, monkeypatch):
     out_pdf.parent.mkdir(parents=True, exist_ok=True)
     out_pdf.write_bytes(b"%PDF")
 
-    monkeypatch.setattr(slides_daemon, "get_cpu_free_percent", lambda sample_seconds=1.0: 80.0)
     monkeypatch.setattr(slides_daemon, "convert_pptx_to_pdf", lambda *args, **kwargs: out_pdf)
     monkeypatch.setattr(
         slides_daemon,
@@ -197,7 +186,6 @@ def test_process_one_file_writes_lastmodified_marker(tmp_path, monkeypatch):
     out_pdf.parent.mkdir(parents=True, exist_ok=True)
     out_pdf.write_bytes(b"%PDF")
 
-    monkeypatch.setattr(slides_daemon, "get_cpu_free_percent", lambda sample_seconds=1.0: 80.0)
     monkeypatch.setattr(slides_daemon, "convert_pptx_to_pdf", lambda *args, **kwargs: out_pdf)
     monkeypatch.setattr(slides_daemon, "upload_pdf", lambda *args, **kwargs: str(cfg.publish_dir / "Deck.pdf"))
 
@@ -414,94 +402,14 @@ def test_config_defaults_publish_dir_to_materials_slides(tmp_path, monkeypatch):
     assert cfg.publish_dir == materials / "slides"
 
 
-def test_convert_with_libreoffice_falls_back_to_macos_app_binary(tmp_path, monkeypatch):
-    pptx = tmp_path / "deck.pptx"
-    pptx.write_bytes(b"x")
-    out_dir = tmp_path / "out"
-    app_bin = "/Applications/LibreOffice.app/Contents/MacOS/soffice"
-
-    monkeypatch.setattr(slides_daemon.shutil, "which", lambda _name: None)
-
-    real_exists = slides_daemon.os.path.exists
-
-    def _fake_exists(path):
-        if path == app_bin:
-            return True
-        return real_exists(path)
-
-    monkeypatch.setattr(slides_daemon.os.path, "exists", _fake_exists)
-
-    seen = {}
-
-    class _Proc:
-        returncode = 0
-        stdout = ""
-        stderr = ""
-
-    def _fake_run(cmd, capture_output=True, text=True):
-        seen["cmd"] = cmd
-        (out_dir / "deck.pdf").write_bytes(b"%PDF")
-        return _Proc()
-
-    monkeypatch.setattr(slides_daemon.subprocess, "run", _fake_run)
-
-    pdf = slides_daemon.convert_with_libreoffice(pptx, out_dir)
-    assert pdf == out_dir / "deck.pdf"
-    assert seen["cmd"][0] == app_bin
-
-
-def test_convert_with_libreoffice_accepts_stdout_reported_pdf_when_name_differs(tmp_path, monkeypatch):
-    pptx = tmp_path / "deck.pptx"
-    pptx.write_bytes(b"x")
-    out_dir = tmp_path / "out"
-    app_bin = "/Applications/LibreOffice.app/Contents/MacOS/soffice"
-
-    monkeypatch.setattr(slides_daemon.shutil, "which", lambda _name: None)
-    real_exists = slides_daemon.os.path.exists
-
-    def _fake_exists(path):
-        if path == app_bin:
-            return True
-        return real_exists(path)
-
-    monkeypatch.setattr(slides_daemon.os.path, "exists", _fake_exists)
-    monkeypatch.setattr(slides_daemon.time, "time", lambda: 1000.0)
-
-    class _Proc:
-        returncode = 0
-        stdout = "convert /tmp/deck.pptx -> /tmp/out/deck_exported.pdf using filter : writer_pdf_Export"
-        stderr = ""
-
-    def _fake_run(cmd, capture_output=True, text=True):
-        (out_dir / "deck_exported.pdf").parent.mkdir(parents=True, exist_ok=True)
-        (out_dir / "deck_exported.pdf").write_bytes(b"%PDF")
-        return _Proc()
-
-    monkeypatch.setattr(slides_daemon.subprocess, "run", _fake_run)
-
-    pdf = slides_daemon.convert_with_libreoffice(pptx, out_dir)
-    assert pdf == out_dir / "deck_exported.pdf"
-
-
-def test_convert_with_libreoffice_raises_when_source_not_loaded_even_with_exit_zero(tmp_path, monkeypatch):
-    pptx = tmp_path / "deck.pptx"
-    pptx.write_bytes(b"x")
-    out_dir = tmp_path / "out"
-    app_bin = "/Applications/LibreOffice.app/Contents/MacOS/soffice"
-
-    monkeypatch.setattr(slides_daemon.shutil, "which", lambda _name: None)
-    real_exists = slides_daemon.os.path.exists
-    monkeypatch.setattr(slides_daemon.os.path, "exists", lambda p: True if p == app_bin else real_exists(p))
-
-    class _Proc:
-        returncode = 0
-        stdout = ""
-        stderr = "Error: source file could not be loaded"
-
-    monkeypatch.setattr(slides_daemon.subprocess, "run", lambda *args, **kwargs: _Proc())
-
-    with pytest.raises(RuntimeError, match="source file could not be loaded"):
-        slides_daemon.convert_with_libreoffice(pptx, out_dir)
+def test_config_rejects_non_google_drive_pull_converter(tmp_path, monkeypatch):
+    catalog = tmp_path / "catalog.json"
+    catalog.write_text(json.dumps({"decks": []}), encoding="utf-8")
+    monkeypatch.setenv("PPTX_CATALOG_FILE", str(catalog))
+    monkeypatch.setenv("PPTX_CONVERTER", "libreoffice")
+    monkeypatch.setenv("PPTX_SYNC_BACKEND", "0")
+    with pytest.raises(RuntimeError, match="Only PPTX_CONVERTER=google_drive_pull is supported"):
+        slides_daemon.config_from_env()
 
 
 def test_extract_drive_export_links_from_html():

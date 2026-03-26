@@ -115,7 +115,7 @@ def config_from_env() -> SlidesDaemonConfig:
     server_url = os.environ.get("WORKSHOP_SERVER_URL", DEFAULT_SERVER_URL).rstrip("/")
     host_username = os.environ.get("HOST_USERNAME", "host")
     host_password = os.environ.get("HOST_PASSWORD", "")
-    converter = os.environ.get("PPTX_CONVERTER", "libreoffice").strip().lower()
+    converter = os.environ.get("PPTX_CONVERTER", "google_drive_pull").strip().lower()
     upload_mode = os.environ.get("PPTX_UPLOAD_MODE", "copy").strip().lower()
     public_base_url = os.environ.get("PPTX_PUBLIC_BASE_URL", "").rstrip("/")
     default_materials_root = Path(
@@ -154,6 +154,11 @@ def config_from_env() -> SlidesDaemonConfig:
         raise RuntimeError("PPTX_PUBLIC_BASE_URL is required when PPTX_SYNC_BACKEND is enabled")
     if watch_dir is None and (catalog_file is None or not catalog_file.exists()):
         raise RuntimeError("Either PPTX_WATCH_DIR or a valid PPTX_CATALOG_FILE is required")
+    if converter != "google_drive_pull":
+        raise RuntimeError(
+            "Only PPTX_CONVERTER=google_drive_pull is supported. "
+            "Local conversion paths (LibreOffice / upload-export) were removed."
+        )
 
     return SlidesDaemonConfig(
         watch_dir=watch_dir,
@@ -322,9 +327,6 @@ def write_material_last_modified(publish_dir: Path | None, target_pdf: str | Non
     path.write_text(f"{source_mtime!r}\n", encoding="utf-8")
 
 _SLUG_RE = re.compile(r"[^a-z0-9]+")
-_SOFFICE_STDOUT_PDF_RE = re.compile(r"->\s*(.+?\.pdf)\s+using filter", re.IGNORECASE)
-
-
 def list_pdf_files(folder: Path, recursive: bool) -> list[Path]:
     pattern_iter = folder.rglob("*") if recursive else folder.iterdir()
     files = [
@@ -449,101 +451,6 @@ def ensure_slug(daemon_state: dict, pptx_path: Path) -> str:
     slug = uuid.uuid4().hex
     entry["slug"] = slug
     return slug
-
-
-def get_cpu_free_percent(sample_seconds: float = 1.0) -> float:
-    """Returns estimated free CPU percentage."""
-    try:
-        import psutil  # type: ignore
-
-        busy = float(psutil.cpu_percent(interval=sample_seconds))
-        return max(0.0, min(100.0, 100.0 - busy))
-    except Exception:
-        if sample_seconds > 0:
-            time.sleep(sample_seconds)
-        load_1m = os.getloadavg()[0]
-        cores = max(1, os.cpu_count() or 1)
-        busy_pct = min(100.0, (load_1m / cores) * 100.0)
-        return max(0.0, 100.0 - busy_pct)
-
-
-def convert_with_libreoffice(pptx_path: Path, output_dir: Path) -> Path:
-    soffice_override = os.environ.get("PPTX_SOFFICE_BIN", "").strip()
-    soffice_candidates = []
-    if soffice_override:
-        soffice_candidates.append(soffice_override)
-    soffice_candidates.extend(
-        [
-            "soffice",
-            "/Applications/LibreOffice.app/Contents/MacOS/soffice",
-            str(Path.home() / "Applications/LibreOffice.app/Contents/MacOS/soffice"),
-        ]
-    )
-
-    soffice_cmd: str | None = None
-    for candidate in soffice_candidates:
-        if not candidate:
-            continue
-        if os.path.isabs(candidate):
-            if os.path.exists(candidate):
-                soffice_cmd = candidate
-                break
-            continue
-        resolved = shutil.which(candidate)
-        if resolved:
-            soffice_cmd = resolved
-            break
-
-    if soffice_cmd is None:
-        raise RuntimeError(
-            "LibreOffice conversion failed: 'soffice' not found. "
-            "Install LibreOffice or set PPTX_SOFFICE_BIN."
-        )
-
-    output_dir.mkdir(parents=True, exist_ok=True)
-    cmd = [
-        soffice_cmd,
-        "--headless",
-        "--convert-to",
-        "pdf",
-        "--outdir",
-        str(output_dir),
-        str(pptx_path),
-    ]
-    started_at = time.time()
-    proc = subprocess.run(cmd, capture_output=True, text=True)
-    if proc.returncode != 0:
-        raise RuntimeError(f"LibreOffice conversion failed: {proc.stderr.strip() or proc.stdout.strip()}")
-    stderr_text = (proc.stderr or "").strip()
-    if "source file could not be loaded" in stderr_text.lower():
-        raise RuntimeError(f"LibreOffice conversion failed: {stderr_text}")
-    pdf_path = output_dir / f"{pptx_path.stem}.pdf"
-    if not pdf_path.exists():
-        # LibreOffice can sometimes write a different output filename than input stem.
-        stdout = proc.stdout or ""
-        m = _SOFFICE_STDOUT_PDF_RE.search(stdout)
-        if m:
-            candidate = Path(m.group(1).strip())
-            if not candidate.is_absolute():
-                candidate = output_dir / candidate.name
-            if candidate.exists():
-                return candidate
-
-        recent_pdfs = sorted(
-            [
-                p for p in output_dir.glob("*.pdf")
-                if p.is_file() and p.stat().st_mtime >= started_at - 1.0
-            ],
-            key=lambda p: p.stat().st_mtime,
-            reverse=True,
-        )
-        if recent_pdfs:
-            return recent_pdfs[0]
-        raise RuntimeError(
-            f"Expected PDF not found: {pdf_path}. "
-            f"LibreOffice stdout: {(proc.stdout or '').strip()}"
-        )
-    return pdf_path
 
 
 class _SlidesLinksHTMLParser(html.parser.HTMLParser):
@@ -780,52 +687,6 @@ def convert_with_google_drive_pull(
     raise RuntimeError(message)
 
 
-def convert_with_google_drive(pptx_path: Path, output_pdf: Path) -> Path:
-    """Upload PPTX to Google Drive and export as PDF."""
-    credentials_path = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS", "").strip()
-    if not credentials_path:
-        raise RuntimeError("GOOGLE_APPLICATION_CREDENTIALS is required for google_drive converter")
-
-    try:
-        from google.oauth2 import service_account  # type: ignore
-        from googleapiclient.discovery import build  # type: ignore
-        from googleapiclient.http import MediaFileUpload, MediaIoBaseDownload  # type: ignore
-    except ImportError as exc:
-        raise RuntimeError(
-            "google_drive converter requires google-api-python-client and google-auth"
-        ) from exc
-
-    creds = service_account.Credentials.from_service_account_file(
-        credentials_path,
-        scopes=["https://www.googleapis.com/auth/drive"],
-    )
-    service = build("drive", "v3", credentials=creds, cache_discovery=False)
-    file_id = None
-    try:
-        meta = {"name": pptx_path.name, "mimeType": "application/vnd.openxmlformats-officedocument.presentationml.presentation"}
-        uploaded = service.files().create(
-            body=meta,
-            media_body=MediaFileUpload(str(pptx_path), mimetype=meta["mimeType"], resumable=False),
-            fields="id",
-        ).execute()
-        file_id = uploaded["id"]
-
-        request = service.files().export_media(fileId=file_id, mimeType="application/pdf")
-        output_pdf.parent.mkdir(parents=True, exist_ok=True)
-        with output_pdf.open("wb") as target:
-            downloader = MediaIoBaseDownload(target, request)
-            done = False
-            while not done:
-                _, done = downloader.next_chunk()
-    finally:
-        if file_id:
-            try:
-                service.files().delete(fileId=file_id).execute()
-            except Exception:
-                pass
-    return output_pdf
-
-
 def convert_pptx_to_pdf(
     pptx_path: Path,
     config: SlidesDaemonConfig,
@@ -835,25 +696,16 @@ def convert_pptx_to_pdf(
 ) -> Path:
     work_pdf = config.work_dir / f"{slug}.pdf"
     metadata = metadata or {}
-    if config.converter == "google_drive":
-        return convert_with_google_drive(pptx_path, work_pdf)
-    if config.converter == "google_drive_pull":
-        drive_export_url = str(metadata.get("drive_export_url") or "").strip()
-        drive_probe_url = str(metadata.get("drive_probe_url") or drive_export_url).strip()
-        return convert_with_google_drive_pull(
-            pptx_path=pptx_path,
-            output_pdf=work_pdf,
-            config=config,
-            state_entry=state_entry,
-            drive_export_url=drive_export_url,
-            drive_probe_url=drive_probe_url,
-        )
-    if config.converter == "libreoffice":
-        converted = convert_with_libreoffice(pptx_path, config.work_dir)
-        if converted != work_pdf:
-            shutil.copy2(converted, work_pdf)
-        return work_pdf
-    raise RuntimeError(f"Unknown PPTX_CONVERTER: {config.converter}")
+    drive_export_url = str(metadata.get("drive_export_url") or "").strip()
+    drive_probe_url = str(metadata.get("drive_probe_url") or drive_export_url).strip()
+    return convert_with_google_drive_pull(
+        pptx_path=pptx_path,
+        output_pdf=work_pdf,
+        config=config,
+        state_entry=state_entry,
+        drive_export_url=drive_export_url,
+        drive_probe_url=drive_probe_url,
+    )
 
 
 def upload_pdf(pdf_path: Path, slug: str, config: SlidesDaemonConfig, target_name: str | None = None) -> str:
@@ -959,15 +811,6 @@ def process_one_file(
     target_pdf: str | None = None,
     metadata: dict | None = None,
 ) -> bool:
-    cpu_free = get_cpu_free_percent(sample_seconds=1.0)
-    if cpu_free < config.min_cpu_free_percent:
-        log.info(
-            "slides",
-            f"CPU overloaded ({cpu_free:.1f}% free < "
-            f"{config.min_cpu_free_percent:.0f}% threshold) -- skipping PDF export",
-        )
-        return False
-
     key = _abs_key(pptx_path)
     state_entry = daemon_state.setdefault("files", {}).setdefault(key, {})
     slug = ensure_slug(daemon_state, pptx_path)
