@@ -1,7 +1,7 @@
 {
-  "sha": "bed3253492fc7b3d4c8ca0fe1c38512be068e980",
+  "sha": "247df8910300db887b8f6b50be45bab94ba30cb2",
   "timestamp": "2026-03-26 21:03",
   "changelog": [
-    "fix: prevent participant top badge truncation"
+    "Fix location tooltip to render below"
   ]
 }
