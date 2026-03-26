@@ -1,7 +1,7 @@
 {
-  "sha": "3f14f5e0e9ddce2e904211a1e719ea82d188444e",
-  "timestamp": "2026-03-26 17:39",
+  "sha": "017d232a0c505a4b96509678968de3b41dab4a20",
+  "timestamp": "2026-03-26 17:42",
   "changelog": [
-    "Close all participant modals on Escape"
+    "style: change menu bar icon to technologist emoji"
   ]
 }
