@@ -540,12 +540,6 @@
     return slide.name;
   }
 
-  function _renderSlidesTitleLabel(slide) {
-    const label = document.getElementById('slides-meta-title');
-    if (!label) return;
-    label.textContent = slide?.name || '';
-  }
-
   function _markSelectedSlideInList() {
     const list = document.getElementById('slides-list');
     if (!list) return;
@@ -791,7 +785,6 @@
   }
 
   function _renderSlidesMeta(slide) {
-    _renderSlidesTitleLabel(slide || null);
     _syncSlidesPageControls(slide || null);
     _renderSlidesUpdatedLabel(slide || null);
     _markSelectedSlideInList();
