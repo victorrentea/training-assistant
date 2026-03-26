@@ -31,6 +31,7 @@ DEFAULT_SERVER_URL = "http://localhost:8000"
 DEFAULT_POLL_SECONDS = 5.0
 DEFAULT_MIN_CPU_FREE = 25.0
 DEFAULT_POST_EXPORT_COOLDOWN_SECONDS = 5.0
+DEFAULT_FAILURE_RETRY_SECONDS = 60.0
 
 
 def load_secrets_env() -> None:
@@ -62,6 +63,7 @@ class SlidesDaemonConfig:
     publish_dir: Path
     recursive: bool
     post_export_cooldown_seconds: float
+    failure_retry_seconds: float
     catalog_file: Path | None = None
     sync_backend: bool = True
 
@@ -97,6 +99,8 @@ def config_from_env() -> SlidesDaemonConfig:
     recursive = os.environ.get("PPTX_RECURSIVE", "0").strip() in {"1", "true", "yes"}
     cooldown_raw = os.environ.get("PPTX_POST_EXPORT_COOLDOWN_SECONDS", str(DEFAULT_POST_EXPORT_COOLDOWN_SECONDS))
     post_export_cooldown = max(DEFAULT_POST_EXPORT_COOLDOWN_SECONDS, float(cooldown_raw))
+    failure_retry_raw = os.environ.get("PPTX_FAILURE_RETRY_SECONDS", str(DEFAULT_FAILURE_RETRY_SECONDS))
+    failure_retry_seconds = max(5.0, float(failure_retry_raw))
     catalog_file_str = os.environ.get(
         "PPTX_CATALOG_FILE",
         str(Path(__file__).parent / "daemon" / "materials_slides_catalog.json"),
@@ -128,6 +132,7 @@ def config_from_env() -> SlidesDaemonConfig:
         publish_dir=publish_dir,
         recursive=recursive,
         post_export_cooldown_seconds=post_export_cooldown,
+        failure_retry_seconds=failure_retry_seconds,
         catalog_file=catalog_file,
         sync_backend=sync_backend,
     )
@@ -461,6 +466,9 @@ def convert_with_libreoffice(pptx_path: Path, output_dir: Path) -> Path:
     proc = subprocess.run(cmd, capture_output=True, text=True)
     if proc.returncode != 0:
         raise RuntimeError(f"LibreOffice conversion failed: {proc.stderr.strip() or proc.stdout.strip()}")
+    stderr_text = (proc.stderr or "").strip()
+    if "source file could not be loaded" in stderr_text.lower():
+        raise RuntimeError(f"LibreOffice conversion failed: {stderr_text}")
     pdf_path = output_dir / f"{pptx_path.stem}.pdf"
     if not pdf_path.exists():
         # LibreOffice can sometimes write a different output filename than input stem.
@@ -696,12 +704,29 @@ def run_once(config: SlidesDaemonConfig, daemon_state: dict) -> bool:
         else:
             # serialize: process one file per poll cycle
             next_path = changed[0]
+            next_key = _abs_key(next_path)
+            failed_until = float(daemon_state.setdefault("files", {}).get(next_key, {}).get("retry_after", 0.0))
+            if now_epoch < failed_until:
+                wait_s = failed_until - now_epoch
+                print(
+                    f"[pptx-daemon] Retry backoff active for {next_path.name} ({wait_s:.1f}s remaining)",
+                    flush=True,
+                )
+                updated_list = sync_slides_list(config, daemon_state, metadata)
+                return updated_current or updated_list
             print(f"✏️ppt update detected => regenerating ppf: {next_path.name}", flush=True)
             target_pdf = metadata.get(_abs_key(next_path), {}).get("target_pdf")
-            updated_current = process_one_file(config, daemon_state, next_path, target_pdf=target_pdf)
-            if updated_current:
-                daemon_state["last_export_finished_at"] = time.time()
+            try:
+                updated_current = process_one_file(config, daemon_state, next_path, target_pdf=target_pdf)
+                if updated_current:
+                    daemon_state["last_export_finished_at"] = time.time()
+                    daemon_state.setdefault("files", {}).setdefault(next_key, {}).pop("retry_after", None)
+                    save_daemon_state(config.state_file, daemon_state)
+            except Exception:
+                retry_after = time.time() + max(5.0, float(config.failure_retry_seconds))
+                daemon_state.setdefault("files", {}).setdefault(next_key, {})["retry_after"] = retry_after
                 save_daemon_state(config.state_file, daemon_state)
+                raise
     updated_list = sync_slides_list(config, daemon_state, metadata)
     return updated_current or updated_list
 

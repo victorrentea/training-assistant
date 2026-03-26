@@ -2,6 +2,7 @@ import json
 import os
 from pathlib import Path
 
+import pytest
 import slides_daemon
 
 
@@ -21,6 +22,7 @@ def _cfg(tmp_path: Path) -> slides_daemon.SlidesDaemonConfig:
         publish_dir=tmp_path / "publish",
         recursive=False,
         post_export_cooldown_seconds=5.0,
+        failure_retry_seconds=60.0,
     )
 
 
@@ -473,3 +475,24 @@ def test_convert_with_libreoffice_accepts_stdout_reported_pdf_when_name_differs(
 
     pdf = slides_daemon.convert_with_libreoffice(pptx, out_dir)
     assert pdf == out_dir / "deck_exported.pdf"
+
+
+def test_convert_with_libreoffice_raises_when_source_not_loaded_even_with_exit_zero(tmp_path, monkeypatch):
+    pptx = tmp_path / "deck.pptx"
+    pptx.write_bytes(b"x")
+    out_dir = tmp_path / "out"
+    app_bin = "/Applications/LibreOffice.app/Contents/MacOS/soffice"
+
+    monkeypatch.setattr(slides_daemon.shutil, "which", lambda _name: None)
+    real_exists = slides_daemon.os.path.exists
+    monkeypatch.setattr(slides_daemon.os.path, "exists", lambda p: True if p == app_bin else real_exists(p))
+
+    class _Proc:
+        returncode = 0
+        stdout = ""
+        stderr = "Error: source file could not be loaded"
+
+    monkeypatch.setattr(slides_daemon.subprocess, "run", lambda *args, **kwargs: _Proc())
+
+    with pytest.raises(RuntimeError, match="source file could not be loaded"):
+        slides_daemon.convert_with_libreoffice(pptx, out_dir)

@@ -1,5 +1,7 @@
 # Tasks
 
+- [x] daemon retry control: added per-PPTX failure backoff (default 60s) in slides watcher and materials-mirror error backoff (default 60s) to prevent tight retry loops when conversion or TLS upload fails.
+- [x] slides-daemon diagnostics: detect LibreOffice `source file could not be loaded` even when exit code is 0, and report it explicitly.
 - [x] slides-daemon robustness: fixed false `Expected PDF not found` failures by accepting LibreOffice stdout-reported output PDF (or newest newly-written PDF in output dir) when filename differs from source stem.
 - [x] slides-daemon throttling: keep PPTX->PDF generation strictly serial and enforce minimum 5s cooldown after each successful export before starting the next regeneration.
 - [x] materials sync: added host-auth backend endpoints to mirror `materials/` into server-side `server_materials/` (`/api/materials/upsert`, `/api/materials/delete`) and integrated `MaterialsMirrorRunner` in `training_daemon.py` for automatic create/update/delete replication.
