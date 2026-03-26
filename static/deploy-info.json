@@ -1,7 +1,7 @@
 {
-  "sha": "bf9db1b7658d5c526f75fca017945dc5b48ba452",
-  "timestamp": "2026-03-26 19:29",
+  "sha": "5a39f1c695e55884c544cc64a7c9ef01f686496c",
+  "timestamp": "2026-03-26 19:31",
   "changelog": [
-    "Persist slides dock and refine preview UX"
+    "Add server materials files"
   ]
 }
