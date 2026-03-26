@@ -1,7 +1,7 @@
 {
-  "sha": "f298afe9c0cc17cd56c7d9772ede7aef406fc0a1",
-  "timestamp": "2026-03-26 22:15",
+  "sha": "f9053bd4730881a95c81978b1f1087ddcaeab942",
+  "timestamp": "2026-03-26 22:19",
   "changelog": [
-    "feat: blink Follow Trainer when auto-disabled"
+    "style: match slides follow control mock"
   ]
 }
