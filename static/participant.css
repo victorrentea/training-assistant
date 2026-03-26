@@ -277,8 +277,14 @@ h1 { display: none; }
   white-space: nowrap;
 }
 
-.slides-view-toggle {
+.slides-dock-controls {
   margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+}
+
+.slides-view-toggle {
   display: inline-flex;
   align-items: center;
   gap: .18rem;
