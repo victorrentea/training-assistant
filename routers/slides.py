@@ -81,6 +81,16 @@ def _is_displayable_slide_name(value: str) -> bool:
     return any(ch.isalnum() for ch in cleaned)
 
 
+def _display_name_or_slug(name: str, slug: str) -> str:
+    cleaned_name = str(name or "").strip()
+    cleaned_slug = str(slug or "").strip()
+    if _is_displayable_slide_name(cleaned_name):
+        return cleaned_name
+    if _is_displayable_slide_name(cleaned_slug):
+        return cleaned_slug
+    return "Unnamed slide"
+
+
 def _candidate_local_slides_dirs() -> list[Path]:
     env_dir = os.environ.get("TRAINING_ASSISTANT_SLIDES_DIR")
     publish_dir = os.environ.get("PPTX_PUBLISH_DIR")
@@ -804,7 +814,7 @@ async def get_participant_slides_availability():
     for slide in slides:
         slug = str(slide.get("slug") or "").strip()
         raw_name = str(slide.get("name") or "").strip()
-        display_name = raw_name or slug or "Unnamed slide"
+        display_name = _display_name_or_slug(raw_name, slug)
         path = _resolve_slide_path(slug) if slug else None
         entries.append({
             "name": display_name,

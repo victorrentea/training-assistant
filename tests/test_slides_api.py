@@ -335,6 +335,32 @@ def test_participant_availability_name_fallback_to_slug(monkeypatch, tmp_path):
     assert item["name"] == "Design Patterns"
 
 
+def test_participant_availability_invisible_name_fallbacks_to_slug(monkeypatch, tmp_path):
+    monkeypatch.setenv("TRAINING_ASSISTANT_SLIDES_DIR", str(tmp_path / "missing-slides-dir"))
+    monkeypatch.setenv("PPTX_CATALOG_FILE", str(tmp_path / "missing-catalog.json"))
+
+    from routers import slides as slides_router
+
+    monkeypatch.setattr(
+        slides_router,
+        "_collect_participant_slides",
+        lambda include_unavailable_when_daemon_offline=True: [
+            {
+                "name": "\u200b\u200d\ufeff",
+                "slug": "ai-coding",
+                "url": "https://slides.example.com/ai-coding.pdf",
+            }
+        ],
+    )
+
+    client = TestClient(app, headers=_HOST_AUTH_HEADERS)
+    resp = client.get("/api/slides/participant-availability")
+    assert resp.status_code == 200
+    entries = resp.json()["entries"]
+    item = next(e for e in entries if e["slug"] == "ai-coding")
+    assert item["name"] == "ai-coding"
+
+
 def test_slides_catalog_map_returns_pdf_to_pptx_entries(monkeypatch, tmp_path):
     source_ok = tmp_path / "Clean Code.pptx"
     source_ok.write_bytes(b"pptx")

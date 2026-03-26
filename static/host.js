@@ -25,6 +25,7 @@
   let _slidesCatalogError = '';
   let _slidesCatalogHideTimer = null;
   const _SLIDES_CATALOG_TTL_MS = 4000;
+  const _ZERO_WIDTH_RE = /[\u200B-\u200D\uFEFF]/g;
 
   let _hostWcDebounceTimer = null;
   let _hostWcLastDataKey = null;
@@ -335,6 +336,14 @@
 
   function escHtml(s) {
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function normalizeSlideDisplayName(name, slug) {
+    const cleanedName = String(name || '').replace(_ZERO_WIDTH_RE, '').trim();
+    const cleanedSlug = String(slug || '').replace(_ZERO_WIDTH_RE, '').trim();
+    if (cleanedName && /[\p{L}\p{N}]/u.test(cleanedName)) return cleanedName;
+    if (cleanedSlug && /[\p{L}\p{N}]/u.test(cleanedSlug)) return cleanedSlug;
+    return 'Unnamed slide';
   }
 
   function _fmtSessionTime(dt) {
@@ -852,9 +861,9 @@
     const outOfSync = _slidesCatalogEntries.filter((entry) => (entry.sync_status || '') === 'out_of_sync').length;
     const head = `<div class="slides-catalog-head">${_slidesCatalogEntries.length} participant slides • ${available} on server • ${outOfSync} out of sync</div>`;
     const lines = _slidesCatalogEntries.map((entry) => {
-      const rawName = String(entry.name || '').trim();
-      const rawSlug = String(entry.slug || '').trim();
-      const name = escHtml(rawName || rawSlug || 'Unnamed slide');
+      const rawName = String(entry.name || '');
+      const rawSlug = String(entry.slug || '');
+      const name = escHtml(normalizeSlideDisplayName(rawName, rawSlug));
       const slug = escHtml(rawSlug);
       const syncMessage = escHtml(entry.sync_message || '');
       const availableMark = entry.available_on_server
