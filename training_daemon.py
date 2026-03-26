@@ -113,6 +113,7 @@ _DOW_RE = re.compile(r"^([A-Z][a-z]{2})\s+(\d{2}:\d{2})\s+(.+)$")
 _FRONTMATTER_WATERMARK_RE = re.compile(r"^watermark:\s*(\d+)")
 _PPT_NO_APP = "__NO_PPT__"
 _PPT_NO_PRESENTATION = "__NO_PRESENTATION__"
+_PPT_SLIDE_UNKNOWN = "__SLIDE_UNKNOWN__"
 _PPT_APPLESCRIPT = """
 if application "Microsoft PowerPoint" is not running then
     return "__NO_PPT__"
@@ -124,20 +125,24 @@ tell application "Microsoft PowerPoint"
     end if
 
     set presentationName to name of active presentation
-    set slideNumber to 0
+    set slideNumber to 1
 
     try
         if (count of slide show windows) > 0 then
-            set slideNumber to slide index of slide of view of slide show window 1
+            set slideNumber to current show position of slide show view of slide show window 1
         else
-            set slideNumber to slide index of slide of view of active window
+            try
+                set slideNumber to slide index of slide of view of active window
+            on error
+                try
+                    set slideNumber to slide index of slide of view of document window 1
+                on error
+                    set slideNumber to "__SLIDE_UNKNOWN__"
+                end try
+            end try
         end if
     on error
-        try
-            set slideNumber to slide index of slide of view of document window 1
-        on error
-            set slideNumber to 0
-        end try
+        set slideNumber to "__SLIDE_UNKNOWN__"
     end try
 
     return presentationName & tab & (slideNumber as string)
@@ -182,12 +187,88 @@ def _parse_powerpoint_probe_output(raw: str) -> dict | None:
     if not presentation:
         return None
 
-    try:
-        slide_number = int(slide_text.strip())
-    except ValueError:
-        slide_number = 0
+    slide_number = _coerce_slide_number(slide_text.strip())
+    return {"presentation": presentation, "slide": slide_number}
 
-    return {"presentation": presentation, "slide": max(0, slide_number)}
+
+def _coerce_slide_number(value) -> int:
+    raw = str(value or "").strip()
+    if not raw or raw.lower() == "missing value" or raw == _PPT_SLIDE_UNKNOWN:
+        return 1
+    try:
+        number = int(raw)
+    except (TypeError, ValueError):
+        return 1
+    return max(1, number)
+
+
+def _normalize_slide_match_key(value: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "", Path(str(value or "")).stem.lower())
+
+
+def _iter_catalog_items(raw) -> list[dict]:
+    if isinstance(raw, dict):
+        if isinstance(raw.get("decks"), list):
+            return raw["decks"]
+        if isinstance(raw.get("slides"), list):
+            return raw["slides"]
+        return []
+    if isinstance(raw, list):
+        return [item for item in raw if isinstance(item, dict)]
+    return []
+
+
+def _resolve_presentation_slide_target(
+    presentation_name: str,
+    server_url: str,
+    catalog_file: Path | None,
+) -> dict:
+    normalized_name = _normalize_slide_match_key(presentation_name)
+    server_base = server_url.rstrip("/")
+
+    if catalog_file and catalog_file.exists():
+        try:
+            raw = json.loads(catalog_file.read_text(encoding="utf-8"))
+            seen_slugs: set[str] = set()
+            for entry in _iter_catalog_items(raw):
+                source_value = str(entry.get("source") or "").strip()
+                if not source_value:
+                    continue
+                source = Path(source_value).expanduser()
+                target_pdf = str(entry.get("target_pdf") or "").strip()
+                if not target_pdf:
+                    target_pdf = f"{source.stem}.pdf"
+                if not target_pdf.lower().endswith(".pdf"):
+                    target_pdf += ".pdf"
+                explicit_slug = str(entry.get("slug") or "").strip().lower()
+                slug = explicit_slug or _slugify(Path(target_pdf).stem)
+                if slug in seen_slugs:
+                    continue
+                seen_slugs.add(slug)
+
+                aliases = {
+                    source.name,
+                    source.stem,
+                    str(entry.get("title") or "").strip(),
+                    str(entry.get("name") or "").strip(),
+                    Path(target_pdf).stem,
+                }
+                normalized_aliases = {_normalize_slide_match_key(alias) for alias in aliases if alias}
+                if normalized_name and normalized_name in normalized_aliases:
+                    return {
+                        "slug": slug,
+                        "url": f"{server_base}/api/slides/file/{slug}",
+                        "target_pdf": target_pdf,
+                    }
+        except Exception as e:
+            log.error("ppt", f"Failed reading slides catalog map: {e}")
+
+    fallback_slug = _slugify(Path(presentation_name).stem)
+    return {
+        "slug": fallback_slug,
+        "url": f"{server_base}/api/slides/file/{fallback_slug}",
+        "target_pdf": f"{Path(presentation_name).stem}.pdf",
+    }
 
 
 def _probe_powerpoint_state(timeout_seconds: float = 1.5) -> tuple[dict | None, str | None]:
@@ -213,6 +294,51 @@ def _probe_powerpoint_state(timeout_seconds: float = 1.5) -> tuple[dict | None, 
         return None, details
 
     return _parse_powerpoint_probe_output(result.stdout), None
+
+
+def _delete_with_basic_auth(url: str, username: str, password: str, timeout: float = 10.0) -> None:
+    token = base64.b64encode(f"{username}:{password}".encode("utf-8")).decode("ascii")
+    req = urllib.request.Request(
+        url,
+        data=b"",
+        method="DELETE",
+        headers={"Authorization": f"Basic {token}"},
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=timeout, context=_ssl_context()):
+            return
+    except urllib.error.HTTPError as exc:
+        details = exc.read().decode("utf-8", errors="replace")
+        raise RuntimeError(f"HTTP {exc.code} from {url}: {details}") from exc
+    except urllib.error.URLError as exc:
+        raise RuntimeError(f"Failed to reach {url}: {exc}") from exc
+
+
+def _sync_powerpoint_slide_to_server(main_config, slides_cfg, ppt_state: dict | None) -> None:
+    endpoint = f"{main_config.server_url.rstrip('/')}/api/slides/current"
+    if ppt_state is None:
+        _delete_with_basic_auth(endpoint, main_config.host_username, main_config.host_password)
+        return
+
+    catalog_file = getattr(slides_cfg, "catalog_file", None) if slides_cfg else None
+    target = _resolve_presentation_slide_target(
+        presentation_name=ppt_state.get("presentation", ""),
+        server_url=main_config.server_url,
+        catalog_file=catalog_file,
+    )
+    payload = {
+        "url": target["url"],
+        "slug": target["slug"],
+        "source_file": ppt_state.get("presentation"),
+        "presentation_name": ppt_state.get("presentation"),
+        "current_page": _coerce_slide_number(ppt_state.get("slide")),
+    }
+    _post_json(
+        endpoint,
+        payload,
+        main_config.host_username,
+        main_config.host_password,
+    )
 
 
 def _load_key_points(session_folder: Path) -> tuple[list[dict], int]:
@@ -1470,6 +1596,10 @@ def run() -> None:
                                 "ppt",
                                 f"Active presentation: {ppt_state['presentation']} | slide #{ppt_state['slide']}",
                             )
+                        try:
+                            _sync_powerpoint_slide_to_server(config, slides_runner._slides_config, ppt_state)
+                        except Exception as e:
+                            log.error("ppt", f"Failed to sync slides current to server: {e}")
     
                 # ── Check for session management requests ──
                 try:

@@ -1,5 +1,14 @@
 # Todo
 
+## Direct request: sync live PowerPoint slide to participant PDF viewer
+
+- [x] Fix daemon AppleScript probe to read fullscreen slide reliably and enforce slide numbers starting at 1
+- [x] Map active PPTX presentation to participant slide slug/url (catalog-aware) and push live slide/page to backend
+- [x] Broadcast live slides-current update over WebSocket and include page/presentation fields in API payload
+- [x] Auto-follow host-selected deck/page in participant Slides viewer when PDF.js is active
+- [x] Add focused automated tests and run targeted verification
+- [x] Mark request done in `backlog.md`
+
 ## Direct request: desktop overlay single-monitor hover zone + 1s auto-hide
 
 - [x] Reproduce issue by code-path inspection in `ButtonBar.swift` (edge trigger active across full right edge).
@@ -540,6 +549,8 @@
 - Host diagnostics (`/api/slides/participant-availability`) still shows full deck list + availability status for operations.
 - Direct request implemented: `training_daemon.py` now probes PowerPoint via AppleScript and logs `presentation + slide #` only when they change (including transition to no active presentation).
 - Verified with `pytest -q tests/test_daemon_state.py` (16 passed).
+- Direct request implemented: daemon now resolves active fullscreen PPTX -> participant slide slug/url (catalog-aware), pushes live `current_page` via `/api/slides/current`, and backend emits `slides_current` WS notification for participant auto-follow.
+- Verified with `pytest -q tests/test_daemon_state.py` (19 passed), `pytest -q tests/test_slides_api.py` (27 passed), and `node --check static/participant.js`.
 
 ## Direct request: participant slides resume + visited topics tracking
 

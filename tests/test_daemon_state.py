@@ -215,6 +215,13 @@ def test_parse_powerpoint_probe_output_handles_no_presentation_tokens():
     assert _parse_powerpoint_probe_output("") is None
 
 
+def test_parse_powerpoint_probe_output_missing_value_defaults_to_slide_one():
+    from training_daemon import _parse_powerpoint_probe_output
+
+    parsed = _parse_powerpoint_probe_output("Deck A\tmissing value")
+    assert parsed == {"presentation": "Deck A", "slide": 1}
+
+
 def test_probe_powerpoint_state_success(monkeypatch):
     import training_daemon
 
@@ -241,3 +248,38 @@ def test_probe_powerpoint_state_returns_error_on_nonzero_exit(monkeypatch):
     state, error = training_daemon._probe_powerpoint_state()
     assert state is None
     assert error == "Execution error"
+
+
+def test_resolve_presentation_slide_target_uses_catalog_mapping(tmp_path):
+    from training_daemon import _resolve_presentation_slide_target
+
+    catalog = tmp_path / "catalog.json"
+    catalog.write_text(json.dumps({
+        "decks": [
+            {
+                "title": "About Victor",
+                "source": "/Users/victorrentea/My Drive/Cursuri/Bio Victor.pptx",
+                "target_pdf": "About Victor.pdf",
+            }
+        ]
+    }), encoding="utf-8")
+
+    target = _resolve_presentation_slide_target(
+        presentation_name="Bio Victor.pptx",
+        server_url="https://interact.victorrentea.ro",
+        catalog_file=catalog,
+    )
+    assert target["slug"] == "about-victor"
+    assert target["url"] == "https://interact.victorrentea.ro/api/slides/file/about-victor"
+
+
+def test_resolve_presentation_slide_target_fallback_when_not_mapped(tmp_path):
+    from training_daemon import _resolve_presentation_slide_target
+
+    target = _resolve_presentation_slide_target(
+        presentation_name="Unmapped Deck.pptx",
+        server_url="http://localhost:8000",
+        catalog_file=tmp_path / "missing-catalog.json",
+    )
+    assert target["slug"] == "unmapped-deck"
+    assert target["url"] == "http://localhost:8000/api/slides/file/unmapped-deck"
