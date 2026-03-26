@@ -1,7 +1,7 @@
 {
-  "sha": "5d72fb46515e3176594e5bc97f54b0497c45fa71",
-  "timestamp": "2026-03-26 19:41",
+  "sha": "12bd2ec8aef37d2c3fd5a57aa6142acd49500823",
+  "timestamp": "2026-03-26 19:43",
   "changelog": [
-    "Add rocket emoji to deploy incoming badge"
+    "Add full-screen blocker during slide load"
   ]
 }
