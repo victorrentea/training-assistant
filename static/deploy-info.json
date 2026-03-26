@@ -1,7 +1,7 @@
 {
-  "sha": "6d3411825be8422dc2b35dc8b84adca296f65b2d",
-  "timestamp": "2026-03-26 16:12",
+  "sha": "c8a2b9b1dfe08a4a01a9bc4488d4ef5bcc6df3b5",
+  "timestamp": "2026-03-26 16:15",
   "changelog": [
-    "Align slides daemon logging format"
+    "Show participant slide availability in host hover"
   ]
 }
