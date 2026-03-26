@@ -107,6 +107,10 @@
   let slidesPdfLoadingTask = null;
   let slidesAutoScrollTimer = null;
   let slidesViewMode = 'pdfjs';
+  let slidesNativeFrame = null;
+  let hostSlidesCurrent = null;
+  let lastHostSlidesCurrentKey = '';
+  let slidesFollowQueue = Promise.resolve();
 
   function escHtml(s) {
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -499,6 +503,115 @@
     const btn = document.getElementById('summary-refresh-btn');
     if (btn) { btn.disabled = true; btn.style.opacity = '0.4'; }
     fetch('/api/summary/force', { method: 'POST' }).catch(() => {});
+  }
+
+  function _normalizeSlideMatchToken(value) {
+    const stem = String(value || '').replace(/\.[^.]+$/, '').toLowerCase();
+    return stem.replace(/[^a-z0-9]+/g, '');
+  }
+
+  function _getHostCurrentPage(slidesCurrent) {
+    const raw = Number.parseInt(
+      String(
+        slidesCurrent?.current_page
+          ?? slidesCurrent?.slide
+          ?? slidesCurrent?.slide_number
+          ?? '1',
+      ),
+      10,
+    );
+    return Number.isFinite(raw) && raw > 0 ? raw : 1;
+  }
+
+  function _slidesCurrentKey(slidesCurrent) {
+    if (!slidesCurrent) return 'none';
+    return [
+      String(slidesCurrent.slug || ''),
+      String(slidesCurrent.url || ''),
+      String(_getHostCurrentPage(slidesCurrent)),
+      String(slidesCurrent.presentation_name || ''),
+      String(slidesCurrent.source_file || ''),
+      String(slidesCurrent.updated_at || ''),
+    ].join('|');
+  }
+
+  function _findSlideForHostCurrent(slidesCurrent) {
+    if (!slidesCurrent || !slidesCatalog.length) return null;
+    const targetSlug = String(slidesCurrent.slug || '').trim();
+    const targetUrl = String(slidesCurrent.url || '').trim();
+    if (targetSlug) {
+      const bySlugAndUrl = slidesCatalog.find((slide) => (
+        slide.slug === targetSlug && (!targetUrl || slide.url === targetUrl)
+      ));
+      if (bySlugAndUrl) return bySlugAndUrl;
+      const bySlug = slidesCatalog.find((slide) => slide.slug === targetSlug);
+      if (bySlug) return bySlug;
+    }
+    if (targetUrl) {
+      const byUrl = slidesCatalog.find((slide) => slide.url === targetUrl);
+      if (byUrl) return byUrl;
+    }
+
+    const hostTokens = new Set();
+    const hostNames = [slidesCurrent.presentation_name, slidesCurrent.source_file];
+    for (const value of hostNames) {
+      const token = _normalizeSlideMatchToken(value);
+      if (token) hostTokens.add(token);
+    }
+    if (!hostTokens.size) return null;
+
+    for (const slide of slidesCatalog) {
+      const candidateTokens = [
+        _normalizeSlideMatchToken(slide.name),
+        _normalizeSlideMatchToken(slide.slug),
+      ];
+      if (candidateTokens.some(token => token && hostTokens.has(token))) return slide;
+    }
+    return null;
+  }
+
+  async function _applyHostSlideFollow(slidesCurrent) {
+    hostSlidesCurrent = slidesCurrent || null;
+    if (!hostSlidesCurrent) return;
+
+    if (!slidesCatalog.length) {
+      await _refreshSlidesCatalog();
+    }
+    const targetSlide = _findSlideForHostCurrent(hostSlidesCurrent);
+    if (!targetSlide) return;
+
+    const targetPage = _getHostCurrentPage(hostSlidesCurrent);
+    _setStoredSlidePage(targetSlide.slug, targetPage);
+
+    const overlay = document.getElementById('slides-overlay');
+    const overlayOpen = overlay && overlay.classList.contains('open');
+    if (!overlayOpen) return;
+
+    if (slidesSelectedId !== targetSlide._id || !slidesPdfDoc) {
+      _renderSlidesSelector(targetSlide._id);
+      await _loadSlideIntoViewer(targetSlide, { forceReload: false });
+    }
+
+    if (slidesPdfDoc && slidesPdfViewer && slidesSelectedId === targetSlide._id) {
+      const maxPage = Math.max(1, Number(slidesPdfDoc.numPages || 1));
+      const nextPage = Math.min(maxPage, targetPage);
+      slidesPdfViewer.currentPageNumber = nextPage;
+      _setStoredSlidePage(targetSlide.slug, nextPage);
+      _renderSlidesMeta(targetSlide);
+    }
+  }
+
+  function _queueHostSlideFollow(slidesCurrent) {
+    slidesFollowQueue = slidesFollowQueue
+      .then(() => _applyHostSlideFollow(slidesCurrent))
+      .catch(() => {});
+  }
+
+  function _onIncomingHostSlidesCurrent(slidesCurrent) {
+    const key = _slidesCurrentKey(slidesCurrent);
+    if (key === lastHostSlidesCurrentKey) return;
+    lastHostSlidesCurrentKey = key;
+    _queueHostSlideFollow(slidesCurrent || null);
   }
 
   function _slidePageKey(slug) {
@@ -1236,7 +1349,12 @@
     }
     overlay.classList.add('open');
     _setSlidesOverlayOpen(true);
-    _refreshSlidesCatalog({ autoLoadSelected: true }).catch(() => {});
+    _refreshSlidesCatalog({ autoLoadSelected: true })
+      .then(() => {
+        if (hostSlidesCurrent) _queueHostSlideFollow(hostSlidesCurrent);
+      })
+      .catch(() => {});
+    _startSlidesRefreshLoop();
   }
 
   function closeSlidesModal() {
@@ -1697,6 +1815,7 @@
         updateScreenShareWarning(msg.screen_share_active);
         updateSummary(msg.summary_points, msg.summary_updated_at);
         updateNotes(msg.notes_content);
+        _onIncomingHostSlidesCurrent(msg.slides_current || null);
         // Restore leaderboard overlay if it was active
         if (msg.leaderboard_active && msg.leaderboard_data) {
           showParticipantLeaderboard(msg.leaderboard_data);
@@ -1751,6 +1870,9 @@
         break;
       case 'deploy_pending':
         showDeployPending();
+        break;
+      case 'slides_current':
+        _onIncomingHostSlidesCurrent(msg.slides_current || null);
         break;
     }
   }

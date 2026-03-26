@@ -30,6 +30,8 @@ def test_slides_current_set_and_get_publicly():
         "url": "https://slides.example.com/abc123.pdf",
         "slug": "abc123",
         "source_file": "deck.pptx",
+        "presentation_name": "deck.pptx",
+        "current_page": 3,
         "converter": "google_drive",
     }
 
@@ -40,6 +42,8 @@ def test_slides_current_set_and_get_publicly():
     assert body["slides_current"]["url"] == payload["url"]
     assert body["slides_current"]["slug"] == payload["slug"]
     assert body["slides_current"]["source_file"] == payload["source_file"]
+    assert body["slides_current"]["presentation_name"] == payload["presentation_name"]
+    assert body["slides_current"]["current_page"] == payload["current_page"]
     assert body["slides_current"]["converter"] == payload["converter"]
     assert body["slides_current"]["updated_at"]
 
@@ -65,6 +69,13 @@ def test_slides_current_requires_host_auth_for_write():
 
     resp = client.delete("/api/slides/current")
     assert resp.status_code in (401, 403)
+
+
+def test_slides_current_rejects_non_positive_current_page():
+    client = TestClient(app, headers=_HOST_AUTH_HEADERS)
+    payload = {"url": "https://slides.example.com/x.pdf", "slug": "x", "current_page": 0}
+    resp = client.post("/api/slides/current", json=payload)
+    assert resp.status_code == 422
 
 
 def test_slides_upload_requires_host_auth(monkeypatch, tmp_path):

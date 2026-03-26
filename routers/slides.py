@@ -12,7 +12,7 @@ from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel, field_validator
 
-from messaging import broadcast_state
+from messaging import broadcast, broadcast_state
 from state import state
 
 router = APIRouter()
@@ -32,6 +32,8 @@ class SlidesUpdate(BaseModel):
     url: str
     slug: str
     source_file: str | None = None
+    presentation_name: str | None = None
+    current_page: int | None = None
     converter: str | None = None
     updated_at: str | None = None
 
@@ -52,6 +54,15 @@ class SlidesUpdate(BaseModel):
         if "/" in cleaned or "\\" in cleaned:
             raise ValueError("slug cannot contain path separators")
         return cleaned
+
+    @field_validator("current_page")
+    @classmethod
+    def validate_current_page(cls, value: int | None) -> int | None:
+        if value is None:
+            return None
+        if value < 1:
+            raise ValueError("current_page must be >= 1")
+        return value
 
 
 class MaterialsDeleteRequest(BaseModel):
@@ -759,10 +770,13 @@ async def set_current_slides(body: SlidesUpdate):
         "url": body.url,
         "slug": body.slug,
         "source_file": body.source_file,
+        "presentation_name": body.presentation_name,
+        "current_page": body.current_page,
         "converter": body.converter,
         "updated_at": body.updated_at or datetime.now(timezone.utc).isoformat(),
     }
     await broadcast_state()
+    await broadcast({"type": "slides_current", "slides_current": state.slides_current})
     return {"ok": True, "slides_current": state.slides_current}
 
 
@@ -770,6 +784,7 @@ async def set_current_slides(body: SlidesUpdate):
 async def clear_current_slides():
     state.slides_current = None
     await broadcast_state()
+    await broadcast({"type": "slides_current", "slides_current": None})
     return {"ok": True}
 
 
