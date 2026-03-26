@@ -1,7 +1,7 @@
 {
-  "sha": "c22e035cb761bd28db8c4da31244938477f7334d",
-  "timestamp": "2026-03-26 14:29",
+  "sha": "3647ad607ce0b9dc353de10b5d8f184069e08026",
+  "timestamp": "2026-03-26 14:39",
   "changelog": [
-    "Temporarily pause automatic PPTX to PDF conversion"
+    "Fix materials mirror folder auto-detection"
   ]
 }
