@@ -193,6 +193,8 @@ Host posts a provocative statement (e.g. "Microservices are always a mistake for
 - [x] Follow-up GH#67 (production): `slides_daemon.py` now publishes full slide list metadata to `/api/quiz-status` (with hash dedupe), so `/api/slides` is populated in production too.
 - [x] Follow-up GH#67 (UX): removed manual refresh icon from participant Slides preview header; auto-refresh loop remains active while modal is open.
 - [x] Follow-up GH#67 (bugfix): filtered non-displayable slide names (blank/punctuation-only) in backend/frontend to avoid empty entries in participant Slides dropdown.
+- [x] Direct request: aligned local slides defaults with daemon publish flow (`.context/published-slides` / `PPTX_PUBLISH_DIR`) so local testing no longer depends on source `materials/slides`.
+- [x] Direct request: server default slides lookup now uses `.server-data` from project root (env overrides still apply: `TRAINING_ASSISTANT_SLIDES_DIR`, then `PPTX_PUBLISH_DIR`).
 - [x] Follow-up GH#67 (production bootstrap): added host-auth slide PDF upload endpoint and server-backed slide storage so production can be populated without relying on local trainer filesystem paths.
 - [x] La click pe badge-urile cu intervale de timp asociate sesiunii din host UI, se deschide într-un tab nou un fișier `.txt` cu liniile normalizate din acel interval.
 

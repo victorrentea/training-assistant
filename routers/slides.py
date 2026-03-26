@@ -56,15 +56,14 @@ def _is_displayable_slide_name(value: str) -> bool:
 
 def _candidate_local_slides_dirs() -> list[Path]:
     env_dir = os.environ.get("TRAINING_ASSISTANT_SLIDES_DIR")
+    publish_dir = os.environ.get("PPTX_PUBLISH_DIR")
     candidates: list[Path] = []
     if env_dir:
         candidates.append(Path(env_dir).expanduser())
-    # Expected local folder from request context.
-    candidates.append(Path.home() / "workspace" / "training-assistant" / "materials" / "slides")
-    # Alternate naming with spaces/casing.
-    candidates.append(Path.home() / "Training Assistant" / "Materials" / "Slides")
-    # Fallback to repo-local materials/slides when available.
-    candidates.append(Path(__file__).resolve().parent.parent / "materials" / "slides")
+    if publish_dir:
+        candidates.append(Path(publish_dir).expanduser())
+    # Default local server storage in project root.
+    candidates.append(Path(".server-data"))
     return candidates
 
 
