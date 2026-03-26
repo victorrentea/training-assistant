@@ -1634,12 +1634,12 @@ def run() -> None:
                         else:
                             ppt_stem = Path(ppt_state['presentation']).stem
                             log.info("ppt", f"📽️ {ppt_stem} : {ppt_state['slide']}")
-                    else:
-                        print("same slide")
                         try:
                             _sync_powerpoint_slide_to_server(config, slides_runner._slides_config, ppt_state)
                         except Exception as e:
                             log.error("ppt", f"Failed to sync slides current to server: {e}")
+                    else:
+                        print("same slide", flush=True)
     
                 # ── Check for session management requests ──
                 try:
