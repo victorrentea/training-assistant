@@ -1,7 +1,7 @@
 {
-  "sha": "8443cbaf1e7ebd81b9bb804bbb039d424e04bad7",
-  "timestamp": "2026-03-26 16:24",
+  "sha": "b55a39e3de10f00e00f8a40c41c200a9e8c4b798",
+  "timestamp": "2026-03-26 16:31",
   "changelog": [
-    "Add Drive pull slide pipeline and bootstrap URLs"
+    "Fix participant slide preview/download and 503 entries"
   ]
 }
