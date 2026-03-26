@@ -383,13 +383,24 @@ h1 { display: none; }
 
 .slides-list-download {
   flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   text-decoration: none;
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 6px;
-  padding: .12rem .28rem;
+  width: 1.55rem;
+  height: 1.35rem;
+  padding: 0;
   font-size: .72rem;
   color: var(--muted);
   background: #121212;
+}
+
+.slides-list-download svg {
+  width: 1rem;
+  height: 1rem;
+  fill: currentColor;
 }
 
 .slides-list-download:hover {
