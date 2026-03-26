@@ -803,9 +803,11 @@ async def get_participant_slides_availability():
     entries: list[dict] = []
     for slide in slides:
         slug = str(slide.get("slug") or "").strip()
+        raw_name = str(slide.get("name") or "").strip()
+        display_name = raw_name or slug or "Unnamed slide"
         path = _resolve_slide_path(slug) if slug else None
         entries.append({
-            "name": slide.get("name"),
+            "name": display_name,
             "slug": slug,
             "source": slide.get("source"),
             "url": slide.get("url"),

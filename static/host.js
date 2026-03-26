@@ -852,8 +852,10 @@
     const outOfSync = _slidesCatalogEntries.filter((entry) => (entry.sync_status || '') === 'out_of_sync').length;
     const head = `<div class="slides-catalog-head">${_slidesCatalogEntries.length} participant slides • ${available} on server • ${outOfSync} out of sync</div>`;
     const lines = _slidesCatalogEntries.map((entry) => {
-      const name = escHtml(entry.name || entry.slug || 'Unnamed slide');
-      const slug = escHtml(entry.slug || '');
+      const rawName = String(entry.name || '').trim();
+      const rawSlug = String(entry.slug || '').trim();
+      const name = escHtml(rawName || rawSlug || 'Unnamed slide');
+      const slug = escHtml(rawSlug);
       const syncMessage = escHtml(entry.sync_message || '');
       const availableMark = entry.available_on_server
         ? '<span class="slides-catalog-available" title="Downloaded on server">⬇️</span>'

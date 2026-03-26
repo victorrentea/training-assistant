@@ -661,6 +661,7 @@ def convert_with_google_drive_pull(
                 state_entry["last_drive_error"] = None
                 state_entry["out_of_sync"] = False
                 state_entry["out_of_sync_message"] = None
+                log.info("slides", f"⬇️ Google Drive PDF downloaded: {pptx_path.name} (attempt {attempts})")
                 return pdf_path
         except Exception as exc:
             last_error = str(exc)
@@ -886,6 +887,43 @@ def run_once(config: SlidesDaemonConfig, daemon_state: dict) -> bool:
     return updated_current or updated_list
 
 
+def _display_name_for_key(key: str, metadata: dict[str, dict], daemon_state: dict) -> str:
+    meta = metadata.get(key, {})
+    title = str(meta.get("title") or "").strip()
+    if title:
+        return title
+    entry = daemon_state.get("files", {}).get(key, {})
+    target_pdf = str(entry.get("target_pdf") or "").strip()
+    if target_pdf:
+        return Path(target_pdf).stem
+    return Path(key).name
+
+
+def log_startup_drive_sync_status(config: SlidesDaemonConfig, daemon_state: dict) -> None:
+    files, metadata = resolve_tracked_sources(config)
+    changed = detect_changed_files(files, daemon_state, metadata=metadata, publish_dir=config.publish_dir)
+    pending_names = [_display_name_for_key(_abs_key(path), metadata, daemon_state) for path in changed]
+
+    out_of_sync_names: list[str] = []
+    tracked = daemon_state.get("files", {})
+    if isinstance(tracked, dict):
+        for key, entry in tracked.items():
+            if not isinstance(entry, dict):
+                continue
+            if entry.get("out_of_sync"):
+                out_of_sync_names.append(_display_name_for_key(str(key), metadata, daemon_state))
+
+    if pending_names:
+        log.info("slides", f"Startup pending Drive downloads ({len(pending_names)}): {', '.join(pending_names)}")
+    else:
+        log.info("slides", "Startup pending Drive downloads: none")
+
+    if out_of_sync_names:
+        log.info("slides", f"Startup out-of-sync decks ({len(out_of_sync_names)}): {', '.join(out_of_sync_names)}")
+    else:
+        log.info("slides", "Startup out-of-sync decks: none")
+
+
 def bootstrap_drive_urls(catalog_path: Path, source_url: str) -> tuple[int, int]:
     raw_catalog = json.loads(catalog_path.read_text(encoding="utf-8"))
     decks = raw_catalog.get("decks", raw_catalog if isinstance(raw_catalog, list) else [])
@@ -933,6 +971,7 @@ def run_forever(config: SlidesDaemonConfig) -> None:
         f"Watching {source_desc} every {config.poll_interval_seconds:.0f}s "
         f"(converter={config.converter}, upload={config.upload_mode}, publish={config.publish_dir})",
     )
+    log_startup_drive_sync_status(config, daemon_state)
     while True:
         try:
             run_once(config, daemon_state)
