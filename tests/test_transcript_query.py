@@ -4,12 +4,21 @@ from daemon.transcript_query import QueryRange, query_lines, _resolve_query_rang
 
 
 class _Args:
-    def __init__(self, today=False, yesterday_afternoon=False, last_minutes=None, from_dt=None, to_dt=None):
+    def __init__(
+        self,
+        today=False,
+        yesterday_afternoon=False,
+        last_minutes=None,
+        from_dt=None,
+        to_dt=None,
+        iso_range=None,
+    ):
         self.today = today
         self.yesterday_afternoon = yesterday_afternoon
         self.last_minutes = last_minutes
         self.from_dt = from_dt
         self.to_dt = to_dt
+        self.iso_range = iso_range or []
 
 
 def test_query_lines_from_two_days(tmp_path):
@@ -50,3 +59,13 @@ def test_resolve_last_minutes():
     q = _resolve_query_range(_Args(last_minutes=10), now)
     assert q.start == datetime(2026, 3, 26, 10, 5)
     assert q.end == now
+
+
+def test_resolve_positional_iso_range():
+    now = datetime(2026, 3, 26, 10, 15)
+    q = _resolve_query_range(
+        _Args(iso_range=["2026-03-25T17:00:00", "2026-03-26T08:23:12"]),
+        now,
+    )
+    assert q.start == datetime(2026, 3, 25, 17, 0, 0)
+    assert q.end == datetime(2026, 3, 26, 8, 23, 12)

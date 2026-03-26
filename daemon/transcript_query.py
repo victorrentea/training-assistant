@@ -42,9 +42,11 @@ def _iter_days(start_day: date, end_day: date):
 
 
 def _resolve_query_range(args: argparse.Namespace, now: datetime) -> QueryRange:
+    positional_mode = bool(getattr(args, "iso_range", None))
     selected = sum(
         1
         for flag in (
+            positional_mode,
             bool(args.today),
             bool(args.yesterday_afternoon),
             args.last_minutes is not None,
@@ -56,6 +58,15 @@ def _resolve_query_range(args: argparse.Namespace, now: datetime) -> QueryRange:
         raise ValueError("Choose one mode: --today, --yesterday-afternoon, --last-minutes, or --from/--to.")
     if selected > 1:
         raise ValueError("Use only one mode at a time.")
+
+    if positional_mode:
+        if len(args.iso_range) != 2:
+            raise ValueError("ISO positional mode requires exactly 2 args: <from_iso> <to_iso>")
+        start = _parse_datetime(args.iso_range[0])
+        end = _parse_datetime(args.iso_range[1])
+        if end <= start:
+            raise ValueError("End must be after start")
+        return QueryRange(start=start, end=end)
 
     if args.today:
         start = datetime.combine(now.date(), time(0, 0))
@@ -115,6 +126,11 @@ def query_lines(folder: Path, query: QueryRange) -> list[str]:
 
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Query normalized transcript lines by time range")
+    parser.add_argument(
+        "iso_range",
+        nargs="*",
+        help="Optional positional range: <from_iso> <to_iso> (example: 2026-03-25T17:00:00 2026-03-26T08:23:12)",
+    )
     parser.add_argument("--folder", type=Path, default=_DEFAULT_FOLDER, help="Folder with normalized files")
 
     mode = parser.add_argument_group("Modes (pick one)")
