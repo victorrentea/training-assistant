@@ -460,3 +460,10 @@
 - `SlidesOnDemandWsRunner` no longer disables itself just because a single `materials/slides` path is absent at startup.
 - It now discovers slide PDFs from multiple candidate directories (`TRAINING_ASSISTANT_SLIDES_DIR`, `PPTX_PUBLISH_DIR`, `MATERIALS_FOLDER/slides`, resolved materials, repo/workspace defaults) and keeps WS reconnect loop alive regardless.
 - Verified with `pytest -q tests/test_quiz_daemon_reconnect.py` (4 passed).
+
+## Direct request: show ⬆️ emoji in daemon logs on on-demand PDF upload
+
+- [x] Add `⬆️` log when daemon receives on-demand upload request for a slide
+- [x] Add `⬆️` log when daemon successfully uploads requested PDF to backend
+- [x] Keep request context in logs (`slug`, `request_id`, `path`)
+- [x] Run quick compile + targeted daemon tests

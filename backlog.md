@@ -231,3 +231,4 @@ Host broadcasts a statement: "Have you ever shipped code that violated what we j
 - [x] Direct request: fixed production-empty Slides combobox by adding catalog-backed entries to `/api/slides` (slug list available even when server PDF folder is empty after restart, enabling on-demand upload trigger).
 - [x] Direct request: hardened daemon WS auth handshake for slides on-demand by adding `websockets` compatibility fallback (`additional_headers` -> `extra_headers`).
 - [x] Direct request: made daemon on-demand WS runner resilient to slide-path mismatch by discovering PDFs from multiple candidate directories instead of disabling at startup.
+- [x] Direct request: daemon now logs `⬆️` on on-demand slide PDF upload flow (`slides_upload_received` and `slides_upload_upsert_ok` with slug/request_id/path).
