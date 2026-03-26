@@ -664,22 +664,36 @@ h1 { display: none; }
 
 /* ── Waiting state ── */
 .waiting {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 3rem 2rem;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
   text-align: center;
-  color: var(--muted);
+  color: var(--text);
+  min-height: calc(100vh - 6.2rem);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: .65rem;
+  transform: translateX(clamp(90px, 6.5vw, 170px));
 }
 .waiting .icon {
-  font-size: 5rem;
-  margin-bottom: 1rem;
+  font-size: 9rem;
+  margin-bottom: .1rem;
   display: inline-block;
   animation: wave 2s ease-in-out;
   transform-origin: 70% 70%;
 }
 .waiting .welcome-text {
-  font-size: 1.5rem;
+  font-size: 2.7rem;
+  font-weight: 700;
+  margin: 0;
+}
+.waiting .welcome-subtext {
+  margin: 0;
+  font-size: 1.45rem;
+  color: var(--muted);
 }
 @keyframes wave {
   0%  { transform: rotate(0deg); }
@@ -690,6 +704,19 @@ h1 { display: none; }
   50% { transform: rotate(10deg); }
   60% { transform: rotate(0deg); }
   100%{ transform: rotate(0deg); }
+}
+
+@media (max-width: 900px) {
+  .waiting {
+    transform: none;
+  }
+}
+
+#version-tag {
+  top: auto;
+  right: .45rem;
+  bottom: .35rem;
+  z-index: 4002;
 }
 
 /* ── Poll closed banner ── */

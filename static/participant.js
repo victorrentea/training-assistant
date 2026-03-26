@@ -2436,9 +2436,13 @@
     const urlDisplay = document.getElementById('conference-url-display');
     if (urlDisplay) urlDisplay.textContent = 'https://' + location.host;
 
-    // Version tag: sit above emoji bar in workshop mode, at bottom in conference mode
+    // Version tag: always keep at bottom-right in participant view.
     const versionTag = document.getElementById('version-tag');
-    if (versionTag) versionTag.style.bottom = isConference ? '.3rem' : '';
+    if (versionTag) {
+      versionTag.style.top = '';
+      versionTag.style.right = '.45rem';
+      versionTag.style.bottom = '.35rem';
+    }
   }
 
   function renderContent(voteCounts) {
@@ -2463,7 +2467,7 @@
       el.innerHTML = `<div class="waiting">
         <div class="icon">👋</div>
         <p class="welcome-text">Welcome!</p>
-        <p style="margin-top:.5rem;">Your answers and ideas will shape this session!</p>
+        <p class="welcome-subtext">Your answers and ideas will shape this session!</p>
         ${checklistHidden ? '' : `<ul id="onboarding-list" class="onboarding-checklist"${allDone ? ' style="opacity:1"' : ''}>
           <li id="onboard-name" class="onboarding-item${nameSet ? ' done' : ''}" onclick="${nameSet ? '' : 'startNameEdit()'}" style="cursor:${nameSet ? 'default' : 'pointer'}">
             <input type="checkbox" disabled ${nameSet ? 'checked' : ''}> ✏️ Click on your name to set it
