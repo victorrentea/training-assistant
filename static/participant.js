@@ -591,6 +591,27 @@
     err.textContent = message;
   }
 
+  function _showSlidesEmpty(kind) {
+    const empty = document.getElementById('slides-empty');
+    if (!empty) return;
+    let title = 'Pick a Slide';
+    let hint = 'Tap one item from the list on the right';
+    let arrow = '👉';
+    if (kind === 'none') {
+      title = 'No Slides Yet';
+      hint = 'Slides will appear here when published';
+      arrow = '📭';
+    }
+    empty.innerHTML = (
+      `<div class="slides-empty-card">` +
+      `<div class="slides-empty-title">${escHtml(title)}</div>` +
+      `<div class="slides-empty-hint">${escHtml(hint)}</div>` +
+      `<div class="slides-empty-arrow" aria-hidden="true">${arrow}</div>` +
+      `</div>`
+    );
+    empty.style.display = '';
+  }
+
   function _setSlidesDownload(url, disabled = false) {
     const btn = document.getElementById('slides-download-btn');
     if (!btn) return;
@@ -966,7 +987,6 @@
   }
 
   async function _refreshSlidesCatalog({ forceReloadCurrent = false } = {}) {
-    const empty = document.getElementById('slides-empty');
     const shell = document.getElementById('slides-viewer-shell');
     try {
       const res = await fetch('/api/slides', { cache: 'no-store' });
@@ -983,10 +1003,7 @@
         _setSlidesDownload('', true);
         _setSlidesError('');
         _setSlidesLoading({ visible: false });
-        if (empty) {
-          empty.style.display = '';
-          empty.textContent = 'No slides published yet.';
-        }
+        _showSlidesEmpty('none');
         if (shell) shell.style.display = 'none';
         return;
       }
@@ -1007,18 +1024,12 @@
         _setSlidesDownload('', true);
         _setSlidesError('');
         _setSlidesLoading({ visible: false });
-        if (empty) {
-          empty.style.display = '';
-          empty.textContent = 'Select a slide to preview.';
-        }
+        _showSlidesEmpty('pick');
         if (shell) shell.style.display = 'none';
       }
     } catch (_) {
       _setSlidesError('Could not fetch slide list from server.');
-      if (empty) {
-        empty.style.display = '';
-        empty.textContent = 'No slides published yet.';
-      }
+      _showSlidesEmpty('none');
       if (shell) shell.style.display = 'none';
       _setSlidesDownload('', true);
       _setSlidesLoading({ visible: false });
