@@ -45,7 +45,7 @@ The command creates a backup folder in `TRANSCRIPTION_FOLDER` before deleting/re
 ## Configuration (in ~/.training-assistants-secrets.env)
 
 ```
-MATERIALS_FOLDER=/path/to/materials  # default: materials/ in repo root
+MATERIALS_FOLDER=/path/to/materials  # default: /Users/victorrentea/Documents/workshop-materials
 TRANSCRIPTION_FOLDER=/Users/yourname/Documents/transcriptions  # must exist, can be empty
 ANTHROPIC_API_KEY=sk-ant-...
 WORKSHOP_SERVER_URL=https://interact.victorrentea.ro

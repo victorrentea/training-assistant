@@ -33,6 +33,7 @@ DEFAULT_POLL_SECONDS = 5.0
 DEFAULT_MIN_CPU_FREE = 25.0
 DEFAULT_POST_EXPORT_COOLDOWN_SECONDS = 5.0
 DEFAULT_FAILURE_RETRY_SECONDS = 60.0
+DEFAULT_MATERIALS_FOLDER = Path("/Users/victorrentea/Documents/workshop-materials")
 
 
 def load_secrets_env() -> None:
@@ -104,7 +105,7 @@ def config_from_env() -> SlidesDaemonConfig:
     upload_mode = os.environ.get("PPTX_UPLOAD_MODE", "copy").strip().lower()
     public_base_url = os.environ.get("PPTX_PUBLIC_BASE_URL", "").rstrip("/")
     default_materials_root = Path(
-        os.environ.get("MATERIALS_FOLDER", str(Path(__file__).parent / "materials"))
+        os.environ.get("MATERIALS_FOLDER", str(DEFAULT_MATERIALS_FOLDER))
     ).expanduser()
     publish_dir = Path(
         os.environ.get("PPTX_PUBLISH_DIR", str(default_materials_root / "slides"))
