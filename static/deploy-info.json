@@ -1,7 +1,7 @@
 {
-  "sha": "6c1afff0fe90baa601ece7bf16d354d6c20e6270",
-  "timestamp": "2026-03-26 19:47",
+  "sha": "356aa381df076fe59e4822c18320a385342ce6e2",
+  "timestamp": "2026-03-26 19:48",
   "changelog": [
-    "Refine slide-dock tour bubble and scan path"
+    "fix: remove slides topic focus ring"
   ]
 }
