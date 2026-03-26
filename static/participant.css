@@ -226,12 +226,46 @@ h1 { display: none; }
 }
 
 .slides-viewer-shell {
+  position: relative;
   flex: 1;
   min-height: 0;
   border: 1px solid var(--border);
   border-radius: 10px;
   overflow: hidden;
   background: #121212;
+}
+
+.slides-loading {
+  position: absolute;
+  top: .7rem;
+  left: .7rem;
+  right: .7rem;
+  z-index: 4;
+  background: rgba(15, 15, 15, 0.88);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: .5rem .6rem;
+}
+
+.slides-loading-label {
+  color: #e9e9e9;
+  font-size: .82rem;
+  margin-bottom: .35rem;
+}
+
+.slides-progress-track {
+  width: 100%;
+  height: 8px;
+  border-radius: 999px;
+  background: #2a2a2a;
+  overflow: hidden;
+}
+
+.slides-progress-fill {
+  height: 100%;
+  width: 0%;
+  background: var(--accent);
+  transition: width .15s linear;
 }
 
 #slides-pdf-container {
