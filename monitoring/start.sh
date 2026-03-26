@@ -2,7 +2,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-SECRETS_FILE="$SCRIPT_DIR/../secrets.env"
+SECRETS_FILE="${TRAINING_ASSISTANTS_SECRETS_FILE:-$HOME/.training-assistants-secrets.env}"
 
 if [ ! -f "$SECRETS_FILE" ]; then
     echo "Error: $SECRETS_FILE not found. Create it with HOST_USERNAME and HOST_PASSWORD."

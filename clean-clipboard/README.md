@@ -5,7 +5,7 @@ A macOS daemon that cleans speech-to-text clipboard content via Claude Haiku. Pr
 ## Prerequisites
 
 - Python 3.12
-- `ANTHROPIC_API_KEY` environment variable set
+- `ANTHROPIC_API_KEY` in environment or in `~/.training-assistants-secrets.env`
 - macOS Accessibility permission for your terminal app
 
 ## Install
@@ -25,7 +25,7 @@ Grant Accessibility access to your terminal app:
 ANTHROPIC_API_KEY=sk-... python3 clean.py
 ```
 
-Or if the key is already in your environment:
+Or with key in `~/.training-assistants-secrets.env` (or already exported):
 
 ```bash
 python3 clean.py

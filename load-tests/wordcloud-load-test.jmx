@@ -14,7 +14,7 @@ Required JMeter plugins (place JARs in $JMETER_HOME/lib/ext/):
   - jmeter-websocket-samplers (https://bitbucket.org/pjtr/jmeter-websocket-samplers)
   - jmeter-plugins-casutg (for SyncTimer, https://jmeter-plugins.org)
 
-Set AUTH_USER / AUTH_PASS to match secrets.env before running.</stringProp>
+Set AUTH_USER / AUTH_PASS to match ~/.training-assistants-secrets.env before running.</stringProp>
       <boolProp name="TestPlan.functional_mode">false</boolProp>
       <boolProp name="TestPlan.tearDown_on_shutdown">true</boolProp>
       <!-- Host and participants run in parallel -->

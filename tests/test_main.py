@@ -25,8 +25,8 @@ from fastapi.testclient import TestClient
 from main import app, state
 
 import os
-# auth.py loads secrets.env into os.environ on import; we import app (which imports auth) before this line
-import auth  # noqa: ensure secrets.env is loaded
+# auth.py loads shared secrets into os.environ on import; we import app (which imports auth) before this line
+import auth  # noqa: ensure shared secrets are loaded
 _HOST_AUTH_HEADERS = {
     "Authorization": "Basic " + base64.b64encode(
         f"{os.environ.get('HOST_USERNAME', 'host')}:{os.environ.get('HOST_PASSWORD', 'host')}".encode()

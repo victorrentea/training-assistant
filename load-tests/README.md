@@ -38,8 +38,8 @@ Open `wordcloud-load-test.jmx` in JMeter GUI and edit **User Defined Variables**
 | `HOST` | `interact.victorrentea.ro` | Target server |
 | `WS_PORT` | `443` | 443 for production (wss) |
 | `USE_SSL` | `true` | Set `false` + port `8000` for localhost |
-| `AUTH_USER` | `CHANGE_ME` | From `secrets.env` → `HOST_USERNAME` |
-| `AUTH_PASS` | `CHANGE_ME` | From `secrets.env` → `HOST_PASSWORD` |
+| `AUTH_USER` | `CHANGE_ME` | From `~/.training-assistants-secrets.env` → `HOST_USERNAME` |
+| `AUTH_PASS` | `CHANGE_ME` | From `~/.training-assistants-secrets.env` → `HOST_PASSWORD` |
 | `NUM_PARTICIPANTS` | `300` | **Must match SyncTimer GroupSize** |
 | `NUM_ROUNDS` | `5` | Words per participant (1/sec) |
 | `RAMP_UP_SEC` | `30` | Connection ramp-up (0 = instant) |

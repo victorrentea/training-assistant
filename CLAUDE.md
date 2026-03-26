@@ -9,7 +9,7 @@ It is intended as the primary reference for any AI coding assistant working on t
 
 ## Secrets
 
-Host panel credentials are stored in `secrets.env` (gitignored — never commit this file).
+Host panel credentials are stored in `~/.training-assistants-secrets.env` (never commit secrets).
 The file contains `HOST_USERNAME` and `HOST_PASSWORD` for accessing `/host` and `/api/poll`, `/api/poll/status`, `/api/qa/question/{id}` (PATCH, DELETE), `/api/qa/answer/{id}`, `/api/qa/clear`, `/api/activity`, `/api/wordcloud/clear`, `/api/codereview`, `/api/codereview/status`, `/api/codereview/confirm-line`, `/api/mode`, `/api/leaderboard/show`, `/api/leaderboard/hide`.
 
 ---
@@ -117,7 +117,7 @@ training-assistant/
 ├── main.py                  ← FastAPI application (entry point, mounts routers, POST /api/mode)
 ├── state.py                 ← AppState singleton (all dicts UUID-keyed)
 ├── messaging.py             ← WebSocket broadcast & personalized state serialization
-├── auth.py                  ← HTTP Basic Auth middleware (secrets.env or env vars)
+├── auth.py                  ← HTTP Basic Auth middleware (~/.training-assistants-secrets.env or env vars)
 ├── names.py                 ← Character name pool for conference mode (251 names from movies/games)
 ├── metrics.py               ← Prometheus custom metrics (connections, votes, Q&A)
 ├── backend_version.py       ← Version detection from static/version.js (cached by mtime)
@@ -155,12 +155,12 @@ training-assistant/
 │   └── ...                  ← All other test files
 ├── clean-clipboard/
 │   ├── clean.py             ← macOS clipboard cleanup daemon (CGEventTap, Claude Haiku AI cleanup, dictation mute + media pause/play)
-│   ├── secrets.env          ← (gitignored) ANTHROPIC_API_KEY for Haiku calls
+│   ├── (uses ~/.training-assistants-secrets.env for ANTHROPIC_API_KEY)
 │   ├── requirements.txt     ← Python deps (anthropic, pyobjc)
 │   └── README.md            ← Usage & configuration docs
 ├── dependencies.txt         ← Python dependencies
 ├── pyproject.toml           ← Python dependencies (used by Railway via uv)
-├── secrets.env              ← (gitignored) Host panel credentials
+├── (uses ~/.training-assistants-secrets.env) ← Host panel credentials
 ├── static/
 │   ├── participant.html     ← Participant-facing page
 │   ├── participant.js       ← Participant logic (WS, voting, Q&A, debate, codereview, emoji)
@@ -317,7 +317,7 @@ macOS daemon that runs on the trainer's Mac alongside the workshop:
 - **Cmd+Ctrl+Opt+V**: same as above but adds contextual emojis
 - **Mouse Button 5** (Wispr Flow dictation toggle): pauses media playback and lowers "OS Output" loopback device volume to ~silent; pressing again resumes media and restores volume
 - **Escape while dictating**: also restores volume and resumes media
-- Requires macOS Accessibility permission and `ANTHROPIC_API_KEY` in `clean-clipboard/secrets.env`
+- Requires macOS Accessibility permission and `ANTHROPIC_API_KEY` in `~/.training-assistants-secrets.env`
 - Run: `python3 clean-clipboard/clean.py`
 
 ---

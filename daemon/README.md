@@ -42,7 +42,7 @@ python3 -m daemon.rebuild_normalized_transcripts --from-iso 2026-03-24T09:30:00
 The command creates a backup folder in `TRANSCRIPTION_FOLDER` before deleting/rebuilding:
 `.backup-normalized-YYYYMMDD-HHMMSS`.
 
-## Configuration (in secrets.env)
+## Configuration (in ~/.training-assistants-secrets.env)
 
 ```
 MATERIALS_FOLDER=/path/to/materials  # default: materials/ in repo root

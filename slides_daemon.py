@@ -36,8 +36,11 @@ DEFAULT_FAILURE_RETRY_SECONDS = 60.0
 
 
 def load_secrets_env() -> None:
-    """Load key=value pairs from secrets.env into environment once."""
-    path = Path(__file__).parent / "secrets.env"
+    """Load key=value pairs from the shared secrets file into environment once."""
+    default_path = Path.home() / ".training-assistants-secrets.env"
+    path = Path(
+        os.environ.get("TRAINING_ASSISTANTS_SECRETS_FILE", str(default_path))
+    ).expanduser()
     if not path.exists():
         return
     for line in path.read_text(encoding="utf-8").splitlines():
