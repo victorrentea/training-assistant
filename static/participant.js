@@ -540,6 +540,12 @@
     return slide.name;
   }
 
+  function _renderSlidesTitleLabel(slide) {
+    const label = document.getElementById('slides-meta-title');
+    if (!label) return;
+    label.textContent = slide?.name || '';
+  }
+
   function _markSelectedSlideInList() {
     const list = document.getElementById('slides-list');
     if (!list) return;
@@ -773,22 +779,18 @@
   }
 
   function _renderSlidesMeta(slide) {
+    _renderSlidesTitleLabel(slide || null);
     _syncSlidesPageControls(slide || null);
     _renderSlidesUpdatedLabel(slide || null);
     _markSelectedSlideInList();
   }
 
   function _syncSlidesPageControls(slide) {
-    const input = document.getElementById('slides-page-input');
-    const total = document.getElementById('slides-page-total');
-    const go = document.getElementById('slides-page-go');
-    if (!input || !total || !go) return;
+    const page = document.getElementById('slides-page-inline');
+    if (!page) return;
     const hasPdfjsDoc = Boolean(slide && slidesPdfDoc && slidesPdfViewer && slidesSelectedId === slide._id);
     if (!hasPdfjsDoc) {
-      input.value = '';
-      input.disabled = true;
-      go.disabled = true;
-      total.textContent = '';
+      page.textContent = '';
       return;
     }
     const numPages = Math.max(1, Number(slidesPdfDoc?.numPages || 1));
@@ -796,64 +798,36 @@
       1,
       Math.min(numPages, Number(slidesPdfViewer?.currentPageNumber || _getStoredSlidePage(slide.slug))),
     );
-    input.value = String(current);
-    input.disabled = false;
-    go.disabled = false;
-    total.textContent = `/ ${numPages}`;
-  }
-
-  function _jumpToSlidePage() {
-    if (!slidesPdfDoc || !slidesPdfViewer || !slidesSelectedSlug) return;
-    const input = document.getElementById('slides-page-input');
-    if (!input) return;
-    const requested = Number.parseInt(input.value.trim(), 10);
-    const numPages = Math.max(1, Number(slidesPdfDoc.numPages || 1));
-    if (!Number.isFinite(requested) || requested < 1) {
-      input.value = String(slidesPdfViewer.currentPageNumber || 1);
-      return;
-    }
-    const nextPage = Math.min(numPages, requested);
-    slidesPdfViewer.currentPageNumber = nextPage;
-    _setStoredSlidePage(slidesSelectedSlug, nextPage);
-    const slide = slidesCatalog.find(s => s._id === slidesSelectedId) || null;
-    _renderSlidesMeta(slide);
-  }
-
-  function _bindSlidesPageControls() {
-    const input = document.getElementById('slides-page-input');
-    const go = document.getElementById('slides-page-go');
-    if (!input || !go) return;
-    if (!input._bound) {
-      input._bound = true;
-      input.addEventListener('keydown', (evt) => {
-        if (evt.key !== 'Enter') return;
-        evt.preventDefault();
-        _jumpToSlidePage();
-      });
-    }
-    if (!go._bound) {
-      go._bound = true;
-      go.addEventListener('click', () => _jumpToSlidePage());
-    }
+    page.textContent = `Page ${current}/${numPages}`;
   }
 
   function _renderSlidesList(targetId) {
     const list = document.getElementById('slides-list');
     if (!list) return;
-    _bindSlidesPageControls();
     list.innerHTML = '';
 
     for (const slide of slidesCatalog) {
-      const item = document.createElement('button');
-      item.type = 'button';
+      const item = document.createElement('div');
       item.className = 'slides-list-item';
       item.setAttribute('data-slide-id', slide._id);
-      item.title = slide.name;
-      item.textContent = _buildSlideOptionLabel(slide);
-      if (slide._id === targetId) item.classList.add('active');
-      item.addEventListener('click', async () => {
+      const openBtn = document.createElement('button');
+      openBtn.type = 'button';
+      openBtn.className = 'slides-list-open';
+      openBtn.title = slide.name;
+      openBtn.textContent = _buildSlideOptionLabel(slide);
+      openBtn.addEventListener('click', async () => {
         await _loadSlideIntoViewer(slide, { forceReload: true });
       });
+      const dl = document.createElement('a');
+      dl.className = 'slides-list-download';
+      dl.href = slide.url;
+      dl.setAttribute('download', '');
+      dl.textContent = '⬇';
+      dl.title = `Download ${slide.name}`;
+      dl.addEventListener('click', (evt) => evt.stopPropagation());
+      if (slide._id === targetId) item.classList.add('active');
+      item.appendChild(openBtn);
+      item.appendChild(dl);
       list.appendChild(item);
     }
     _markSelectedSlideInList();
