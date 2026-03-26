@@ -370,6 +370,30 @@ def test_api_slides_includes_missing_local_slides_when_daemon_offline(monkeypatc
     assert slides[0]["slug"] == "performance-introduction"
 
 
+def test_api_slides_respects_catalog_order_for_topics(monkeypatch, tmp_path):
+    slides_dir = tmp_path / "slides"
+    slides_dir.mkdir(parents=True, exist_ok=True)
+    (slides_dir / "Architecture.pdf").write_bytes(b"%PDF-1.4\n%arch\n")
+    (slides_dir / "Clean Code.pdf").write_bytes(b"%PDF-1.4\n%clean\n")
+
+    catalog = tmp_path / "catalog.json"
+    catalog.write_text(json.dumps({
+        "decks": [
+            {"title": "Clean Code", "target_pdf": "Clean Code.pdf"},
+            {"title": "Architecture", "target_pdf": "Architecture.pdf"},
+        ]
+    }), encoding="utf-8")
+
+    monkeypatch.setenv("TRAINING_ASSISTANT_SLIDES_DIR", str(slides_dir))
+    monkeypatch.setenv("PPTX_CATALOG_FILE", str(catalog))
+
+    client = TestClient(app)
+    resp = client.get("/api/slides")
+    assert resp.status_code == 200
+    slides = resp.json()["slides"]
+    assert [s["slug"] for s in slides[:2]] == ["clean-code", "architecture"]
+
+
 def test_materials_upsert_and_delete_roundtrip(monkeypatch, tmp_path):
     target_dir = tmp_path / "server_materials"
     monkeypatch.setenv("SERVER_MATERIALS_DIR", str(target_dir))
