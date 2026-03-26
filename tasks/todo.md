@@ -1,5 +1,13 @@
 # Todo
 
+## Direct request: desktop overlay single-monitor hover zone + 1s auto-hide
+
+- [x] Reproduce issue by code-path inspection in `ButtonBar.swift` (edge trigger active across full right edge).
+- [x] Add failing regression tests for single-monitor trigger zone and auto-hide delay.
+- [x] Restrict single-monitor edge trigger to the vertical band where the panel actually pops in.
+- [x] Set single-monitor auto-hide delay to 1 second after slide-in.
+- [x] Run `swift test` in `desktop-overlay` and capture proof logs.
+
 ## Backlog item: GH#67 participant slides viewer (PDF)
 
 - [x] Add backend slide metadata endpoint `GET /api/slides`
