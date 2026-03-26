@@ -81,14 +81,12 @@ build_overlay() {
 # ── Process launchers ──
 
 start_daemon() {
-  _log "start" "info" "🚀 daemon starting..."
   python3 training_daemon.py &
   DAEMON_PID=$!
 }
 
 start_overlay() {
   if [ -n "$NO_OVERLAY" ]; then return; fi
-  _log "start" "info" "🚀 overlay starting ($OVERLAY_SERVER)..."
   (cd desktop-overlay && .build/arm64-apple-macosx/debug/DesktopOverlay "$OVERLAY_SERVER") &
   OVERLAY_PID=$!
 }

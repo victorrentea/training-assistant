@@ -895,6 +895,7 @@ def run() -> None:
     signal.signal(signal.SIGINT, _cleanup)
 
     config = config_from_env()
+    log.info("daemon", f"Backend target: {config.server_url}")
 
     if config.project_folder:
         log.info("daemon", f"Project folder configured: {config.project_folder}")
