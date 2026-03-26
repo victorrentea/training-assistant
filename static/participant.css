@@ -180,8 +180,9 @@ h1 { display: none; }
 /* ── Slides viewer ── */
 #slides-overlay {
   --slides-bottom-reserved: 64px; /* keep emoji bar visible */
+  inset: 0 0 var(--slides-bottom-reserved) 0;
   align-items: stretch;
-  padding: .35rem .5rem calc(var(--slides-bottom-reserved) + .35rem);
+  padding: .35rem .5rem .35rem;
   box-sizing: border-box;
 }
 
