@@ -317,3 +317,4 @@ Host broadcasts a statement: "Have you ever shipped code that violated what we j
 - [x] Follow-up direct request: restyled slides mode controls to match `Native | PDF.js | Follow` mock (Follow as dedicated pill button at right, with active blue state).
 - [x] Follow-up direct request: confirmed layout as separate controls `Native | PDF.js` (toggle) followed by standalone `Follow` button (not nested inside `PDF.js`).
 - [x] Bugfix direct request: fixed participant runtime errors from initialization order (`_bindSlidesFollowToggle` stale call removed; `LS_LOCATION_KEY` and score state moved before auto-join/ws handlers).
+- [x] Direct request: removed right-side empty strip in slides dock by expanding title area width, and shifted row content (title + download button) to the right as a block via left margin.
