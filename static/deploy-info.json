@@ -1,7 +1,8 @@
 {
-  "sha": "379b251769e28ba909c0cb17e684978f895275ed",
-  "timestamp": "2026-03-26 17:49",
+  "sha": "b79dec1faaf5e2e4d07f4433738399671b005252",
+  "timestamp": "2026-03-26 17:50",
   "changelog": [
-    "participant slides remove top strip above viewer"
+    "fix: hide wispr-addons from Cmd+Tab app switcher",
+    "participant slides avoid reload on test jump and unify green hover"
   ]
 }
