@@ -1,5 +1,6 @@
 # Tasks
 
+- [x] Direct request: removed current slide title from participant Slides viewer; moved `updated ...` and close `✕` to sidebar top-right above the trainings list.
 - [x] Direct request: participant emoji bar is now transparent and layered above slides/PDF (`z-index` raised), with PDF overlay allowed to extend to full screen height underneath.
 - [x] Bugfix direct request: test auto-scroll to page 2 now runs after 3s for both PDF.js rendering and native iframe fallback (so page jump testing works regardless of render path).
 - [x] Direct request: removed Slides top bar and replaced with compact inline meta row (`slide title + updated + page`), added per-slide row-level download button in right sidebar list, and increased vertical viewer space to start higher.

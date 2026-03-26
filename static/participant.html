@@ -82,8 +82,6 @@
     <div class="slides-layout">
       <div class="slides-viewer-area">
         <div class="slides-meta-inline">
-          <span id="slides-meta-title" class="slides-meta-title"></span>
-          <span id="slides-updated" class="slides-updated-inline"></span>
           <span id="slides-page-inline" class="slides-page-inline"></span>
         </div>
         <div id="slides-empty" class="slides-empty" style="display:none;">No slides published yet.</div>
@@ -101,6 +99,10 @@
         </div>
       </div>
       <div class="slides-sidebar">
+        <div class="slides-sidebar-head">
+          <span id="slides-updated" class="slides-updated-inline"></span>
+          <button class="summary-close" onclick="closeSlidesModal()">✕</button>
+        </div>
         <div id="slides-list" class="slides-list" aria-label="Available slides"></div>
       </div>
     </div>
