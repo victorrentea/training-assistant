@@ -120,6 +120,45 @@ def test_api_slides_lists_local_materials_and_serves_pdf(monkeypatch, tmp_path):
     assert file_resp.content.startswith(b"%PDF-1.4")
 
 
+def test_api_slides_uses_publish_dir_when_local_dir_not_set(monkeypatch, tmp_path):
+    monkeypatch.delenv("TRAINING_ASSISTANT_SLIDES_DIR", raising=False)
+    monkeypatch.setenv("PPTX_PUBLISH_DIR", str(tmp_path))
+    pdf = tmp_path / "FCA.pdf"
+    pdf.write_bytes(b"%PDF-1.4\n%test\n")
+
+    client = TestClient(app)
+    resp = client.get("/api/slides")
+    assert resp.status_code == 200
+    slides = resp.json()["slides"]
+    assert any(s["slug"] == "fca" and s["name"] == "FCA" for s in slides)
+
+    file_resp = client.get("/api/slides/file/fca")
+    assert file_resp.status_code == 200
+    assert file_resp.headers.get("content-type", "").startswith("application/pdf")
+    assert file_resp.content.startswith(b"%PDF-1.4")
+
+
+def test_api_slides_defaults_to_server_data_dir(monkeypatch, tmp_path):
+    monkeypatch.delenv("TRAINING_ASSISTANT_SLIDES_DIR", raising=False)
+    monkeypatch.delenv("PPTX_PUBLISH_DIR", raising=False)
+    monkeypatch.chdir(tmp_path)
+    server_data = tmp_path / ".server-data"
+    server_data.mkdir(parents=True, exist_ok=True)
+    pdf = server_data / "FCA.pdf"
+    pdf.write_bytes(b"%PDF-1.4\n%test\n")
+
+    client = TestClient(app)
+    resp = client.get("/api/slides")
+    assert resp.status_code == 200
+    slides = resp.json()["slides"]
+    assert any(s["slug"] == "fca" and s["name"] == "FCA" for s in slides)
+
+    file_resp = client.get("/api/slides/file/fca")
+    assert file_resp.status_code == 200
+    assert file_resp.headers.get("content-type", "").startswith("application/pdf")
+    assert file_resp.content.startswith(b"%PDF-1.4")
+
+
 def test_api_slides_merges_local_and_daemon_entries(monkeypatch, tmp_path):
     monkeypatch.setenv("TRAINING_ASSISTANT_SLIDES_DIR", str(tmp_path))
     (tmp_path / "Local Deck.pdf").write_bytes(b"%PDF-1.4\n%local\n")
