@@ -1,7 +1,7 @@
 {
-  "sha": "e80329ab10883ae1b77f42f28f6160926efbd6d2",
-  "timestamp": "2026-03-26 16:48",
+  "sha": "16340bcb1a9ddaaf6a5caa9714822a741be5f623",
+  "timestamp": "2026-03-26 16:49",
   "changelog": [
-    "Restore participant slides catalog and fix host availability text"
+    "Enforce Drive-only slide export path"
   ]
 }
