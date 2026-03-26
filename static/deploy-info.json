@@ -1,7 +1,7 @@
 {
-  "sha": "b55a39e3de10f00e00f8a40c41c200a9e8c4b798",
-  "timestamp": "2026-03-26 16:31",
+  "sha": "ea89c7e5910949ef7b1dbd547d46a4ffe4bb7121",
+  "timestamp": "2026-03-26 16:35",
   "changelog": [
-    "Fix participant slide preview/download and 503 entries"
+    "Hide non-servable slides from participant list"
   ]
 }
