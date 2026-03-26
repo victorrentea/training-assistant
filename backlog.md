@@ -214,6 +214,7 @@ Host posts a provocative statement (e.g. "Microservices are always a mistake for
 - [x] Direct request: implemented Drive-based slide PDF pipeline (`google_drive_pull`) with public-link fingerprint polling, 90s sync timeout alerts + local beep, plus catalog URL bootstrap from `https://victorrentea.ro/slides/`.
 - [x] Follow-up direct request: switched `google_drive_pull` to local-change-driven single-fetch mode (no Drive polling loop); retry cadence now follows local daemon backoff.
 - [x] Follow-up direct request: for dirty PPTX files, `google_drive_pull` now retries every 5s immediately after detection for up to 5 minutes, then marks slide as `out_of_sync` and surfaces warning in host 📜 participant-slides tooltip.
+- [x] Follow-up direct request: enforce Drive-only slide pipeline (`PPTX_CONVERTER=google_drive_pull` only); removed local conversion paths (LibreOffice / upload-export) and CPU-based conversion gating.
 - [x] Direct request: server default slides lookup now uses `.server-data` from project root (env overrides still apply: `TRAINING_ASSISTANT_SLIDES_DIR`, then `PPTX_PUBLISH_DIR`).
 - [x] Direct request: moved server runtime slide storage defaults to `.server-data` (`uploaded-slides`, daemon state/work/publish) and fixed Railway startup by adding missing `python-multipart` dependency.
 - [x] Direct request: backend slides default lookup now targets `/app/server_materials/slides` (with local fallback `server_materials/slides`) to match Railway runtime storage.
