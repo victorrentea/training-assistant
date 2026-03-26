@@ -1,7 +1,7 @@
 {
-  "sha": "1e2907cf8a80a2798e1a273a8d7e8e93b318f7d6",
-  "timestamp": "2026-03-26 14:12",
+  "sha": "5a9fe979790c2dce15d278214fa142926df59768",
+  "timestamp": "2026-03-26 14:14",
   "changelog": [
-    "Move secrets file to home path"
+    "Disable auto-updates for work-hours file"
   ]
 }
