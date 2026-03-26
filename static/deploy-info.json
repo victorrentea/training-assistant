@@ -1,7 +1,7 @@
 {
-  "sha": "f37207465d3834a6bcb6fc722ee8cf59577adaf9",
-  "timestamp": "2026-03-26 07:09",
+  "sha": "36ab0c1e1cba054049a84d93f1fcc584ff3a9a89",
+  "timestamp": "2026-03-26 07:10",
   "changelog": [
-    "fix: tighten single-screen overlay hover zone"
+    "docs: align slides sequence flow with daemon-driven source"
   ]
 }
