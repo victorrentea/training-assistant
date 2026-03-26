@@ -343,7 +343,7 @@ def _merge_slide_sources(
     return merged
 
 
-def _collect_participant_slides() -> list[dict]:
+def _collect_participant_slides(*, include_unavailable_when_daemon_offline: bool = False) -> list[dict]:
     local_slides, _ = _build_local_slides_index()
     uploaded_slides, _ = _build_uploaded_slides_index()
     catalog_slides = _build_catalog_slides_index()
@@ -357,7 +357,21 @@ def _collect_participant_slides() -> list[dict]:
             "updated_at": current.get("updated_at"),
             "source": "slides_current",
         })
-    return _merge_slide_sources(state_slides, local_slides, uploaded_slides, catalog_slides)
+    merged = _merge_slide_sources(state_slides, local_slides, uploaded_slides, catalog_slides)
+    if include_unavailable_when_daemon_offline:
+        return merged
+    if state.daemon_ws is not None or not _on_demand_enabled():
+        return merged
+
+    # If daemon is offline, hide local slide endpoints that don't exist on server yet.
+    filtered: list[dict] = []
+    for slide in merged:
+        url = str(slide.get("url") or "").strip()
+        slug = str(slide.get("slug") or "").strip()
+        if url.startswith("/api/slides/file/") and slug and _resolve_slide_path(slug) is None:
+            continue
+        filtered.append(slide)
+    return filtered
 
 
 def _on_demand_enabled() -> bool:
@@ -705,7 +719,7 @@ async def get_slides_catalog_map():
 
 @router.get("/api/slides/participant-availability")
 async def get_participant_slides_availability():
-    slides = _collect_participant_slides()
+    slides = _collect_participant_slides(include_unavailable_when_daemon_offline=True)
     entries: list[dict] = []
     for slide in slides:
         slug = str(slide.get("slug") or "").strip()
@@ -771,4 +785,7 @@ async def get_slide_file(slug: str, request: Request):
     }
     if _is_not_modified(request, etag, path):
         return Response(status_code=304, headers=headers)
+    if request.query_params.get("inline") == "1":
+        headers = {**headers, "Content-Disposition": f'inline; filename="{path.name}"'}
+        return FileResponse(path=path, media_type="application/pdf", headers=headers)
     return FileResponse(path=path, media_type="application/pdf", filename=path.name, headers=headers)

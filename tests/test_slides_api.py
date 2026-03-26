@@ -320,6 +320,7 @@ def test_api_slides_includes_catalog_entries_when_pdfs_missing(monkeypatch, tmp_
     }), encoding="utf-8")
     monkeypatch.setenv("PPTX_CATALOG_FILE", str(catalog))
     monkeypatch.setenv("TRAINING_ASSISTANT_SLIDES_DIR", str(tmp_path / "missing-slides"))
+    state.daemon_ws = object()
 
     client = TestClient(app)
     resp = client.get("/api/slides")
@@ -328,6 +329,23 @@ def test_api_slides_includes_catalog_entries_when_pdfs_missing(monkeypatch, tmp_
     assert any(s["slug"] == "performance-introduction" and s["name"] == "Performance Intro" for s in slides)
     assert any(s["slug"] == "testing-101" and s["name"] == "Testing" for s in slides)
     assert all(s["url"].startswith("/api/slides/file/") for s in slides)
+
+
+def test_api_slides_hides_missing_local_slides_when_daemon_offline(monkeypatch, tmp_path):
+    catalog = tmp_path / "catalog.json"
+    catalog.write_text(json.dumps({
+        "decks": [
+            {"title": "Performance Intro", "target_pdf": "Performance Introduction.pdf"},
+        ]
+    }), encoding="utf-8")
+    monkeypatch.setenv("PPTX_CATALOG_FILE", str(catalog))
+    monkeypatch.setenv("TRAINING_ASSISTANT_SLIDES_DIR", str(tmp_path / "missing-slides"))
+    state.daemon_ws = None
+
+    client = TestClient(app)
+    resp = client.get("/api/slides")
+    assert resp.status_code == 200
+    assert resp.json()["slides"] == []
 
 
 def test_materials_upsert_and_delete_roundtrip(monkeypatch, tmp_path):
@@ -425,6 +443,17 @@ def test_api_slides_file_can_wait_for_daemon_upload(monkeypatch, tmp_path):
     resp = result["resp"]
     assert resp.status_code == 200
     assert resp.content.startswith(b"%PDF-1.4")
+
+
+def test_api_slides_file_inline_query_sets_inline_disposition(monkeypatch, tmp_path):
+    monkeypatch.setenv("TRAINING_ASSISTANT_SLIDES_DIR", str(tmp_path))
+    pdf = tmp_path / "Inline.pdf"
+    pdf.write_bytes(b"%PDF-1.4\n%inline\n")
+
+    client = TestClient(app)
+    resp = client.get("/api/slides/file/inline?inline=1")
+    assert resp.status_code == 200
+    assert resp.headers.get("content-disposition", "").startswith('inline; filename="Inline.pdf"')
 
 
 def test_api_slides_upload_status_endpoint(monkeypatch, tmp_path):
