@@ -1,7 +1,7 @@
 {
-  "sha": "0bdb8d09174a4356c5d8192b9fcc326ad077cc5b",
-  "timestamp": "2026-03-26 19:37",
+  "sha": "f27099cbb4c7a24e1a546b3952951550416aca95",
+  "timestamp": "2026-03-26 19:38",
   "changelog": [
-    "Hide participant content scrollbars"
+    "Center participant top badge on desktop"
   ]
 }
