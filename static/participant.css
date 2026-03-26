@@ -558,6 +558,9 @@ h1 { display: none; }
   animation: wave 2s ease-in-out;
   transform-origin: 70% 70%;
 }
+.waiting .welcome-text {
+  font-size: 1.5rem;
+}
 @keyframes wave {
   0%  { transform: rotate(0deg); }
   10% { transform: rotate(14deg); }
