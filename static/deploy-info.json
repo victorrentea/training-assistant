@@ -1,7 +1,7 @@
 {
-  "sha": "6b15d4e21e3d06fc10701d16199e5b0b95cd2af1",
-  "timestamp": "2026-03-26 19:36",
+  "sha": "46f4669900cf3457ec23a550d2fed828575b88dd",
+  "timestamp": "2026-03-26 19:37",
   "changelog": [
-    "Auto-close slide preview on host activity start"
+    "Clarify location prompt as optional"
   ]
 }
