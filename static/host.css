@@ -262,7 +262,10 @@ body {
 }
 
 .slides-catalog-name {
-  color: var(--accent2);
+  color: var(--text);
+  display: inline-block;
+  flex: 1 1 auto;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
 }
