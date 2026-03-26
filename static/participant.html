@@ -80,15 +80,23 @@
 <div id="slides-overlay" class="summary-overlay" onclick="closeSlidesModal()">
   <div class="summary-dialog slides-dialog" onclick="event.stopPropagation()">
     <div class="summary-header slides-header">
-      <span>📑 Slides</span>
-      <span class="slides-header-actions">
+      <div class="slides-header-main">
+        <span>📑 Slides</span>
+        <select id="slides-select" class="slides-select" aria-label="Choose slide deck"></select>
         <a id="slides-download-btn" class="notes-download-btn" href="#" download>⬇️ Download</a>
+      </div>
+      <span class="slides-header-actions">
         <button class="summary-close" onclick="closeSlidesModal()">✕</button>
       </span>
     </div>
     <div class="slides-controls">
-      <select id="slides-select" class="slides-select" aria-label="Choose slide deck"></select>
       <span id="slides-updated" class="slides-updated"></span>
+      <div class="slides-page-nav">
+        <label for="slides-page-input">Page</label>
+        <input id="slides-page-input" class="slides-page-input" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="4" />
+        <span id="slides-page-total" class="slides-page-total">/ -</span>
+        <button id="slides-page-go" class="slides-page-go" type="button">Go</button>
+      </div>
     </div>
     <div id="slides-empty" class="slides-empty" style="display:none;">No slides published yet.</div>
     <div id="slides-error" class="slides-error" style="display:none;"></div>

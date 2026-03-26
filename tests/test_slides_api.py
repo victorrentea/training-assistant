@@ -2,6 +2,7 @@ import base64
 import json
 import os
 import threading
+from datetime import datetime, timezone
 
 from fastapi.testclient import TestClient
 
@@ -387,6 +388,37 @@ def test_materials_upsert_and_delete_roundtrip(monkeypatch, tmp_path):
     assert delete.json()["ok"] is True
     assert delete.json()["deleted"] is True
     assert not mirrored.exists()
+
+
+def test_materials_upsert_slide_uses_source_mtime_for_updated_at(monkeypatch, tmp_path):
+    target_dir = tmp_path / "server_materials"
+    monkeypatch.setenv("SERVER_MATERIALS_DIR", str(target_dir))
+    monkeypatch.setenv("TRAINING_ASSISTANT_SLIDES_DIR", str(target_dir / "slides"))
+    monkeypatch.chdir(tmp_path)
+    client = TestClient(app, headers=_HOST_AUTH_HEADERS)
+
+    source_mtime = 1700000000.0
+    upsert = client.post(
+        "/api/materials/upsert",
+        data={"relative_path": "slides/Clean Code.pdf", "source_mtime": str(source_mtime)},
+        files={"file": ("Clean Code.pdf", b"%PDF-1.4\n%mirror\n", "application/pdf")},
+    )
+    assert upsert.status_code == 200
+    body = upsert.json()
+    assert body["ok"] is True
+    expected = datetime.fromtimestamp(source_mtime, tz=timezone.utc).isoformat()
+    assert body["updated_at"] == expected
+
+    slides = client.get("/api/slides").json()["slides"]
+    clean = next(s for s in slides if s["slug"] == "clean-code")
+    assert clean["updated_at"] == expected
+
+    meta = tmp_path / ".server-data" / "local-slides-meta" / "clean-code.json"
+    assert meta.exists()
+
+    delete = client.post("/api/materials/delete", json={"relative_path": "slides/Clean Code.pdf"})
+    assert delete.status_code == 200
+    assert not meta.exists()
 
 
 def test_materials_upsert_rejects_traversal(monkeypatch, tmp_path):
