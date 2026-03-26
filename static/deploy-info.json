@@ -1,7 +1,7 @@
 {
-  "sha": "170f78323cc3306b679ad8d13e70837fc8b35814",
-  "timestamp": "2026-03-26 21:04",
+  "sha": "f653b0f2028ddbca0a13dcc1943ba5b7448e646f",
+  "timestamp": "2026-03-26 21:14",
   "changelog": [
-    "Track visited slides and resume fallback page"
+    "feat: widen participant header and overlay slides dock"
   ]
 }
