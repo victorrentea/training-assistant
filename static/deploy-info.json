@@ -1,7 +1,7 @@
 {
-  "sha": "bf88dad7b57385c6e1545429e944fc91dbb53e22",
-  "timestamp": "2026-03-26 14:42",
+  "sha": "c3009ebba5762dbd4ee00dcbaa0c81e2274b3e47",
+  "timestamp": "2026-03-26 14:44",
   "changelog": [
-    "docs: remember daemon changes must go to master"
+    "Add slide load progress and HTTP caching"
   ]
 }
