@@ -1,7 +1,7 @@
 {
-  "sha": "3647ad607ce0b9dc353de10b5d8f184069e08026",
-  "timestamp": "2026-03-26 14:39",
+  "sha": "20e0ee14b9e3cf87ca8f0b05a75f0d822166bbd3",
+  "timestamp": "2026-03-26 14:41",
   "changelog": [
-    "Fix materials mirror folder auto-detection"
+    "Allow HEAD for slide file endpoint"
   ]
 }
