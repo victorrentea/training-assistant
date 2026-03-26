@@ -1,7 +1,7 @@
 {
-  "sha": "3b17e4beb4dac1f867383561268c64264f0edd93",
-  "timestamp": "2026-03-26 07:32",
+  "sha": "6e18c0fad2c62e3cb8ca0338ae313eb013fedb0d",
+  "timestamp": "2026-03-26 08:06",
   "changelog": [
-    "Update slides sync and desktop overlay"
+    "Align slides default to .server-data"
   ]
 }
