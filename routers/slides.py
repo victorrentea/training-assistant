@@ -145,6 +145,57 @@ def _load_catalog_map_entries(path: Path) -> list[dict]:
     return entries
 
 
+def _build_catalog_slides_index() -> list[dict]:
+    path = _resolve_catalog_file()
+    if not path.exists() or not path.is_file():
+        return []
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return []
+
+    items = raw.get("decks") if isinstance(raw, dict) and "decks" in raw else raw
+    if isinstance(raw, dict) and "slides" in raw:
+        items = raw.get("slides")
+    if not isinstance(items, list):
+        return []
+
+    seen_slugs: set[str] = set()
+    slides: list[dict] = []
+    for entry in items:
+        if not isinstance(entry, dict):
+            continue
+        target_pdf = str(entry.get("target_pdf") or "").strip()
+        if not target_pdf:
+            source = str(entry.get("source") or "").strip()
+            if source:
+                target_pdf = f"{Path(source).stem}.pdf"
+        if not target_pdf:
+            continue
+        if not target_pdf.lower().endswith(".pdf"):
+            target_pdf += ".pdf"
+        name = (
+            str(entry.get("name") or "").strip()
+            or str(entry.get("title") or "").strip()
+            or Path(target_pdf).stem
+        )
+        if not _is_displayable_slide_name(name):
+            continue
+        explicit_slug = str(entry.get("slug") or "").strip().lower()
+        slug = explicit_slug or _slugify(Path(target_pdf).stem)
+        if slug in seen_slugs:
+            continue
+        seen_slugs.add(slug)
+        slides.append({
+            "name": name,
+            "slug": slug,
+            "url": f"/api/slides/file/{slug}",
+            "updated_at": None,
+            "source": "catalog",
+        })
+    return slides
+
+
 def _uploaded_slides_dir() -> Path:
     configured = os.environ.get("TRAINING_ASSISTANT_UPLOADED_SLIDES_DIR")
     if configured:
@@ -258,11 +309,16 @@ def _build_uploaded_slides_index() -> tuple[list[dict], dict[str, Path]]:
     return slides, by_slug
 
 
-def _merge_slide_sources(state_slides: list[dict], local_slides: list[dict], uploaded_slides: list[dict]) -> list[dict]:
+def _merge_slide_sources(
+    state_slides: list[dict],
+    local_slides: list[dict],
+    uploaded_slides: list[dict],
+    catalog_slides: list[dict],
+) -> list[dict]:
     merged: list[dict] = []
     seen_pairs: set[tuple[str, str]] = set()
 
-    for source in (uploaded_slides, local_slides, state_slides):
+    for source in (uploaded_slides, local_slides, state_slides, catalog_slides):
         for entry in source:
             if not isinstance(entry, dict):
                 continue
@@ -661,6 +717,7 @@ async def get_current_slides():
 async def get_slides():
     local_slides, _ = _build_local_slides_index()
     uploaded_slides, _ = _build_uploaded_slides_index()
+    catalog_slides = _build_catalog_slides_index()
     state_slides = list(state.slides or [])
     current = state.slides_current or {}
     if current.get("url"):
@@ -671,7 +728,7 @@ async def get_slides():
             "updated_at": current.get("updated_at"),
             "source": "slides_current",
         })
-    slides = _merge_slide_sources(state_slides, local_slides, uploaded_slides)
+    slides = _merge_slide_sources(state_slides, local_slides, uploaded_slides, catalog_slides)
     return {"slides": slides}
 
 

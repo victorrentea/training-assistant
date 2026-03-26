@@ -422,3 +422,22 @@
 - Verified with `python3 -m py_compile state.py routers/slides.py routers/ws.py training_daemon.py tests/test_slides_api.py`.
 - Verified with `pytest -q tests/test_slides_api.py` (18 passed).
 - Verified with `pytest -q tests/test_quiz_daemon_reconnect.py` (1 passed).
+
+## Direct request: investigate/fix empty participant slides combobox in production
+
+- [x] Reproduce production symptom (`/api/slides` empty) and confirm current runtime behavior
+- [x] Identify root cause in backend merge logic for on-demand mode (list depended on existing PDFs)
+- [x] Add catalog-backed slide listing to `/api/slides` so slug list is available even before first upload
+- [x] Add regression test for catalog-only listing when slide PDFs are missing
+- [x] Update existing tests that assert isolated local/state-only slide sources
+- [x] Run targeted backend tests and compile checks
+
+### Review
+- Root cause: after backend restart, slide storage can be empty; `/api/slides` exposed only existing files/state, so participant combobox had 0 entries and on-demand flow could not be triggered.
+- Fix: `/api/slides` now also includes entries derived from `PPTX_CATALOG_FILE` (`decks`/`slides`), producing stable `name + slug + /api/slides/file/{slug}` rows even when PDFs are not yet uploaded.
+- On first participant open, existing on-demand WS flow now has the slug list needed to request upload.
+- Added test: `test_api_slides_includes_catalog_entries_when_pdfs_missing`.
+- Updated source-isolation tests to set missing catalog explicitly where empty/strict expectations are required.
+- Verified with `pytest -q tests/test_slides_api.py` (19 passed).
+- Verified with `pytest -q tests/test_main.py -k "api_slides_is_empty_by_default or quiz_status_updates_slides_and_api_returns_normalized_data or quiz_request_reports_has_slides_flag"` (3 passed).
+- Verified with `python3 -m py_compile routers/slides.py tests/test_slides_api.py tests/test_main.py`.
