@@ -583,7 +583,11 @@ def test_google_drive_pull_single_fetch_accepts_new_fingerprint(tmp_path, monkey
 def test_google_drive_pull_unchanged_fingerprint_alerts_when_drive_not_running(tmp_path, monkeypatch):
     cfg = _cfg(tmp_path)
     cfg.converter = "google_drive_pull"
-    monkeypatch.setattr(slides_daemon.time, "time", lambda: 1000.0)
+    cfg.drive_sync_timeout_seconds = 10.0
+    cfg.drive_poll_seconds = 5.0
+    timeline = iter([1000.0, 1001.0, 1001.0, 1006.0, 1006.0, 1011.0, 1011.0])
+    monkeypatch.setattr(slides_daemon.time, "time", lambda: next(timeline))
+    monkeypatch.setattr(slides_daemon.time, "sleep", lambda _s: None)
 
     alerted = {}
     monkeypatch.setattr(slides_daemon, "_push_error_status", lambda _cfg, msg: alerted.setdefault("msg", msg))
@@ -597,18 +601,20 @@ def test_google_drive_pull_unchanged_fingerprint_alerts_when_drive_not_running(t
 
     same_payload_fp = "pdf:" + slides_daemon.hashlib.sha256(b"%PDF-1.4 SAME").hexdigest()
 
-    with pytest.raises(RuntimeError, match="drive_not_synced_yet"):
+    state_entry = {"last_drive_fingerprint": same_payload_fp}
+    with pytest.raises(RuntimeError, match="drive_sync_timeout"):
         slides_daemon.convert_with_google_drive_pull(
             pptx_path=tmp_path / "deck.pptx",
             output_pdf=tmp_path / "work" / "deck.pdf",
             config=cfg,
-            state_entry={"last_drive_fingerprint": same_payload_fp},
+            state_entry=state_entry,
             drive_export_url="https://docs.google.com/presentation/d/abc/export/pdf",
             drive_probe_url="https://docs.google.com/presentation/d/abc/export/pdf",
         )
 
     assert "Google Drive app not running" in alerted["msg"]
     assert alerted["beep"] is True
+    assert state_entry["out_of_sync"] is True
 
 
 def test_download_pdf_from_url_rejects_non_pdf(tmp_path, monkeypatch):

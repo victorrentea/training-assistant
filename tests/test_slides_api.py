@@ -280,6 +280,29 @@ def test_participant_availability_lists_slides_and_server_presence(monkeypatch, 
     assert architecture["available_on_server"] is False
 
 
+def test_participant_availability_includes_out_of_sync_status(monkeypatch, tmp_path):
+    monkeypatch.setenv("TRAINING_ASSISTANT_SLIDES_DIR", str(tmp_path / "missing-slides-dir"))
+    monkeypatch.setenv("PPTX_CATALOG_FILE", str(tmp_path / "missing-catalog.json"))
+
+    state.slides = [
+        {
+            "name": "Clean Code",
+            "slug": "clean-code",
+            "url": "https://slides.example.com/clean-code.pdf",
+            "sync_status": "out_of_sync",
+            "sync_message": "drive_sync_timeout: example",
+        }
+    ]
+
+    client = TestClient(app, headers=_HOST_AUTH_HEADERS)
+    resp = client.get("/api/slides/participant-availability")
+    assert resp.status_code == 200
+    entries = resp.json()["entries"]
+    clean = next(e for e in entries if e["slug"] == "clean-code")
+    assert clean["sync_status"] == "out_of_sync"
+    assert "drive_sync_timeout" in clean["sync_message"]
+
+
 def test_slides_catalog_map_returns_pdf_to_pptx_entries(monkeypatch, tmp_path):
     source_ok = tmp_path / "Clean Code.pptx"
     source_ok.write_bytes(b"pptx")
