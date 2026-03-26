@@ -1,7 +1,7 @@
 {
-  "sha": "356aa381df076fe59e4822c18320a385342ce6e2",
-  "timestamp": "2026-03-26 19:48",
+  "sha": "ba779ea9391bb6fad77b6ab623190c563abe51ad",
+  "timestamp": "2026-03-26 19:51",
   "changelog": [
-    "fix: remove slides topic focus ring"
+    "fix: prevent slides topics load flash"
   ]
 }
