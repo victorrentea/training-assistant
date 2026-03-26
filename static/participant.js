@@ -2480,7 +2480,7 @@
             <input type="checkbox" disabled ${nameSet ? 'checked' : ''}> ✏️ Click on your name to set it
           </li>
           <li id="onboard-location" class="onboarding-item${locationSet ? ' done' : ''}" onclick="${locationSet ? '' : 'requestLocation()'}" style="cursor:${locationSet ? 'default' : 'pointer'}">
-            <input type="checkbox" disabled ${locationSet ? 'checked' : ''}> 📍 Share your location
+            <input type="checkbox" disabled ${locationSet ? 'checked' : ''}> 📍 Share your location (optional)
           </li>
           <li id="onboard-notif" class="onboarding-item${notifGranted ? ' done' : ''}" onclick="${notifGranted ? '' : 'requestNotificationPermission()'}" style="cursor:${notifGranted ? 'default' : 'pointer'}">
             <input type="checkbox" disabled ${notifGranted ? 'checked' : ''}> 🔔 Enable browser notifications
