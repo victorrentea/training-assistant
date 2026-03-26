@@ -271,6 +271,7 @@ def write_material_last_modified(publish_dir: Path | None, target_pdf: str | Non
     path.write_text(f"{source_mtime!r}\n", encoding="utf-8")
 
 _SLUG_RE = re.compile(r"[^a-z0-9]+")
+_SOFFICE_STDOUT_PDF_RE = re.compile(r"->\s*(.+?\.pdf)\s+using filter", re.IGNORECASE)
 
 
 def list_pdf_files(folder: Path, recursive: bool) -> list[Path]:
@@ -456,12 +457,36 @@ def convert_with_libreoffice(pptx_path: Path, output_dir: Path) -> Path:
         str(output_dir),
         str(pptx_path),
     ]
+    started_at = time.time()
     proc = subprocess.run(cmd, capture_output=True, text=True)
     if proc.returncode != 0:
         raise RuntimeError(f"LibreOffice conversion failed: {proc.stderr.strip() or proc.stdout.strip()}")
     pdf_path = output_dir / f"{pptx_path.stem}.pdf"
     if not pdf_path.exists():
-        raise RuntimeError(f"Expected PDF not found: {pdf_path}")
+        # LibreOffice can sometimes write a different output filename than input stem.
+        stdout = proc.stdout or ""
+        m = _SOFFICE_STDOUT_PDF_RE.search(stdout)
+        if m:
+            candidate = Path(m.group(1).strip())
+            if not candidate.is_absolute():
+                candidate = output_dir / candidate.name
+            if candidate.exists():
+                return candidate
+
+        recent_pdfs = sorted(
+            [
+                p for p in output_dir.glob("*.pdf")
+                if p.is_file() and p.stat().st_mtime >= started_at - 1.0
+            ],
+            key=lambda p: p.stat().st_mtime,
+            reverse=True,
+        )
+        if recent_pdfs:
+            return recent_pdfs[0]
+        raise RuntimeError(
+            f"Expected PDF not found: {pdf_path}. "
+            f"LibreOffice stdout: {(proc.stdout or '').strip()}"
+        )
     return pdf_path
 
 
