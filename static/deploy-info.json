@@ -1,7 +1,7 @@
 {
-  "sha": "24cb1f2080f95f6898ec285e26e812a96c8eef9c",
-  "timestamp": "2026-03-26 19:34",
+  "sha": "078030898adf3aaea1469544ddc4150d227540b4",
+  "timestamp": "2026-03-26 19:35",
   "changelog": [
-    "Refine participant welcome and footer layout"
+    "Constrain participant column width on desktop"
   ]
 }
