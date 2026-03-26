@@ -185,6 +185,8 @@ _SRT_SEQ = re.compile(r"^\d+$")
 _TXT_TS_RE = re.compile(r"^\[\s*(?:\d{4}-\d{2}-\d{2}\s+)?(\d{2}):(\d{2}):(\d{2})\.\d+\s*\]\s*(.*)")
 # Matches only lines that have the full ISO date prefix — used to detect real-clock files
 _TXT_TS_ISO_RE = re.compile(r"^\[\s*\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}\.\d+\s*\]")
+_NORMALIZED_LINE_RE = re.compile(r"^\[\s*(\d{2}):(\d{2})\s*\]\s*(.*)$")
+_NORMALIZED_TXT_NAME_RE = re.compile(r"^(\d{4}-\d{2}-\d{2})\s+transcription\.txt$", re.IGNORECASE)
 
 
 def _ts_to_seconds(h, m, s) -> float:
@@ -313,6 +315,27 @@ def _parse_txt(text: str, session_start_secs: int | None = None) -> list:
 _FILENAME_DATE_RE = re.compile(r"^(\d{8})\s+(\d{4})\b")
 
 
+def _parse_normalized_txt(text: str, day_offset_seconds: int = 0) -> list:
+    """Parse normalized transcript lines: [HH:MM] Speaker: text.
+
+    day_offset_seconds keeps chronological ordering when loading multiple days.
+    """
+    entries = []
+    for line in text.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        m = _NORMALIZED_LINE_RE.match(line)
+        if not m:
+            continue
+        txt = m.group(3).strip()
+        if not txt:
+            continue
+        hh, mm = int(m.group(1)), int(m.group(2))
+        entries.append((day_offset_seconds + hh * 3600 + mm * 60, txt.replace("\t", " ")))
+    return entries
+
+
 def load_transcription_files(folder: Path, since_date: date | None = None) -> list:
     """Load transcription files from folder.
 
@@ -323,12 +346,21 @@ def load_transcription_files(folder: Path, since_date: date | None = None) -> li
 
     def _sort_key(f: Path):
         """Prefer filename-embedded date; fall back to mtime."""
+        nm = _NORMALIZED_TXT_NAME_RE.match(f.name)
+        if nm:
+            return nm.group(1).replace("-", "") + "9999"  # sort after raw files for same day
         m = _FILENAME_DATE_RE.match(f.name)
         if m:
             return m.group(1) + m.group(2)  # e.g. "202603222100"
         return str(f.stat().st_mtime)
 
     def _file_date(f: Path) -> date | None:
+        nm = _NORMALIZED_TXT_NAME_RE.match(f.name)
+        if nm:
+            try:
+                return date.fromisoformat(nm.group(1))
+            except ValueError:
+                return None
         m = _FILENAME_DATE_RE.match(f.name)
         if not m:
             return None
@@ -338,26 +370,36 @@ def load_transcription_files(folder: Path, since_date: date | None = None) -> li
         except ValueError:
             return None
 
-    files = sorted(
-        [f for f in folder.iterdir() if f.suffix.lower() in {".txt", ".vtt", ".srt"}],
-        key=_sort_key,
-    )
+    files = sorted([f for f in folder.iterdir() if f.suffix.lower() in {".txt", ".vtt", ".srt"}], key=_sort_key)
     if not files:
         log.error("transcript", f"No transcription files in {folder}")
         sys.exit(1)
 
-    if since_date is not None:
-        qualifying = [f for f in files if (_file_date(f) or date.min) >= since_date]
-        if not qualifying:
-            qualifying = [files[-1]]  # fallback: at least load latest
+    normalized_files = [f for f in files if _NORMALIZED_TXT_NAME_RE.match(f.name)]
+    if normalized_files:
+        base_files = normalized_files
     else:
-        qualifying = [files[-1]]
+        base_files = files
+
+    if since_date is not None:
+        qualifying = [f for f in base_files if (_file_date(f) or date.min) >= since_date]
+        if not qualifying:
+            qualifying = [base_files[-1]]  # fallback: at least load latest
+    else:
+        qualifying = [base_files[-1]]
 
     all_entries: list = []
+    base_day = _file_date(qualifying[0]) if qualifying else None
     for f in qualifying:
         raw = f.read_text(encoding="utf-8", errors="replace")
         ext = f.suffix.lower()
-        if ext == ".vtt":
+        if _NORMALIZED_TXT_NAME_RE.match(f.name):
+            file_day = _file_date(f)
+            day_offset = 0
+            if base_day and file_day:
+                day_offset = (file_day - base_day).days * 86400
+            entries = _parse_normalized_txt(raw, day_offset_seconds=day_offset)
+        elif ext == ".vtt":
             entries = _parse_vtt(raw)
         elif ext == ".srt":
             entries = _parse_srt(raw)

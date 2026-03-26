@@ -250,6 +250,22 @@ class TestLoadTranscriptionFiles:
         with pytest.raises(SystemExit):
             load_transcription_files(tmp_path)
 
+    def test_prefers_normalized_txt_when_present(self, tmp_path):
+        (tmp_path / "20260325 1000 Transcription.txt").write_text("[00:00:01.00] Speaker:\traw")
+        (tmp_path / "2026-03-25 transcription.txt").write_text("[10:05] Victor: normalized")
+        entries = load_transcription_files(tmp_path)
+        assert len(entries) == 1
+        assert entries[0][0] == 10 * 3600 + 5 * 60
+        assert entries[0][1] == "Victor: normalized"
+
+    def test_normalized_since_date_loads_multiple_days(self, tmp_path):
+        (tmp_path / "2026-03-25 transcription.txt").write_text("[23:59] A: day1")
+        (tmp_path / "2026-03-26 transcription.txt").write_text("[00:01] B: day2")
+        entries = load_transcription_files(tmp_path, since_date=date(2026, 3, 25))
+        assert len(entries) == 2
+        assert entries[0][0] == 23 * 3600 + 59 * 60
+        assert entries[1][0] == 86400 + 60
+
 
 class TestExtractLastNMinutes:
     def test_timed_extraction(self):

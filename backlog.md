@@ -3,6 +3,7 @@
 - [x] bug: participant onboarding checklist (the 3 checkboxes at the bottom) now stays permanently hidden after all 3 are completed; hand/welcome animation can still reappear.
 - [x] desktop-overlay: in single-monitor mode, right-edge panel now pops in only when mouse enters the panel's own vertical edge band (not anywhere on the full screen edge) and auto-hides after 1 second; regression tests added.
 - [x] ui: participant Key Points label now includes spacing between count and text (`🧠 38 Key Points` instead of `🧠 38Key Points`)
+- [x] Migrate quiz/summarizer + transcript-status input to normalized transcripts (`YYYY-MM-DD transcription.txt`) instead of raw transcriber files.
 - [x] Migrate transcript normalization to `training_daemon.py` (desktop) and add on-demand normalized transcript range query CLI (`python3 -m daemon.transcript_query`).
 - [x] ui: session panel compacted for host screen — session controls are clickable emoji-only (no button chrome), pause is followed by a vertical separator then `🎙️▶️`, and current session now shows transcript active time windows under the row.
 - [x] desktop-overlay: replaced Zorro button icon from battle swords to a little `z`, made Pulse/EKG background layers more transparent, and switched single-monitor right-edge action panel to vertical stacking.
