@@ -808,6 +808,18 @@
     }
   }
 
+  function _setSlidesUiBlocker(visible, label = 'Loading slide...') {
+    const blocker = document.getElementById('slides-ui-blocker');
+    const text = document.getElementById('slides-ui-blocker-label');
+    if (!blocker || !text) return;
+    if (!visible) {
+      blocker.style.display = 'none';
+      return;
+    }
+    text.textContent = label || 'Loading slide...';
+    blocker.style.display = 'flex';
+  }
+
   async function _fetchSlideHeaders(url) {
     try {
       const resp = await fetch(url, { method: 'HEAD' });
@@ -901,7 +913,7 @@
       openBtn.addEventListener('click', async () => {
         const overlay = document.getElementById('slides-overlay');
         if (overlay) overlay.classList.add('open');
-        await _loadSlideIntoViewer(slide, { forceReload: false });
+        await _loadSlideIntoViewer(slide, { forceReload: false, withUiBlocker: true });
       });
       const dl = document.createElement('a');
       dl.className = 'slides-list-download';
@@ -924,96 +936,100 @@
     _markSelectedSlideInList();
   }
 
-  async function _loadSlideIntoViewer(slide, { forceReload = false } = {}) {
+  async function _loadSlideIntoViewer(slide, { forceReload = false, withUiBlocker = false } = {}) {
     if (!slide) return;
+    if (withUiBlocker) _setSlidesUiBlocker(true, 'Loading slide...');
     _setSlidesError('');
     _setSlidesLoading({ visible: true, loaded: 0, total: 0, label: 'Checking cache...' });
-
-    const shell = document.getElementById('slides-viewer-shell');
-    const empty = document.getElementById('slides-empty');
-    if (shell) shell.style.display = '';
-    if (empty) empty.style.display = 'none';
-
-    const headers = await _fetchSlideHeaders(slide.url);
-    const effectiveUpdatedAt = slide.updated_at || headers.lastModified || null;
-    if (effectiveUpdatedAt && !slide.updated_at) slide.updated_at = effectiveUpdatedAt;
-    const fingerprint = _slideFingerprint(slide, headers);
-    if (!forceReload && slidesSelectedId === slide._id && slidesLastFingerprint === fingerprint && slidesPdfDoc) {
-      const saved = _getStoredSlideView(slide.slug);
-      const maxPages = Math.max(1, Number(slidesPdfDoc.numPages || 1));
-      const targetPage = Math.min(saved?.page || _getStoredSlidePage(slide.slug), maxPages);
-      slidesPdfViewer.currentPageNumber = targetPage;
-      const container = document.getElementById('slides-pdf-container');
-      if (container && saved && Number.isFinite(saved.scrollTop)) {
-        requestAnimationFrame(() => { container.scrollTop = saved.scrollTop; });
-      }
-      _setStoredSlidePage(slide.slug, targetPage);
-      _renderSlidesMeta({ ...slide, updated_at: effectiveUpdatedAt });
-      _setSlidesDownload(slide.url, false);
-      _setSlidesLoading({ visible: false });
-      _scheduleTestAutoScroll(slide);
-      return;
-    }
-
-    await _clearSlidesDocument();
-
     try {
-      await _getSlidesPdfModules();
-      await _initSlidesViewer();
-      const loadingTask = slidesPdfLib.getDocument({ url: slide.url });
-      loadingTask.onProgress = (progress) => {
-        _setSlidesLoading({
-          visible: true,
-          loaded: Number(progress?.loaded || 0),
-          total: Number(progress?.total || 0),
-        });
-      };
-      slidesPdfLoadingTask = loadingTask;
-      const doc = await loadingTask.promise;
-      if (slidesPdfLoadingTask !== loadingTask) {
-        try { await doc.destroy(); } catch (_) {}
-        return;
-      }
-      slidesPdfDoc = doc;
-      slidesPdfViewer.setDocument(doc);
-      slidesPdfLinkService.setDocument(doc, null);
-      slidesPdfViewer.currentScaleValue = 'page-width';
+      const shell = document.getElementById('slides-viewer-shell');
+      const empty = document.getElementById('slides-empty');
+      if (shell) shell.style.display = '';
+      if (empty) empty.style.display = 'none';
 
-      const saved = _getStoredSlideView(slide.slug);
-      const maxPages = Math.max(1, Number(doc.numPages || 1));
-      const savedPage = Math.min(saved?.page || _getStoredSlidePage(slide.slug), maxPages);
-      slidesPdfViewer.currentPageNumber = savedPage;
-      _setStoredSlidePage(slide.slug, savedPage);
-      if (saved && Number.isFinite(saved.scrollTop)) {
+      const headers = await _fetchSlideHeaders(slide.url);
+      const effectiveUpdatedAt = slide.updated_at || headers.lastModified || null;
+      if (effectiveUpdatedAt && !slide.updated_at) slide.updated_at = effectiveUpdatedAt;
+      const fingerprint = _slideFingerprint(slide, headers);
+      if (!forceReload && slidesSelectedId === slide._id && slidesLastFingerprint === fingerprint && slidesPdfDoc) {
+        const saved = _getStoredSlideView(slide.slug);
+        const maxPages = Math.max(1, Number(slidesPdfDoc.numPages || 1));
+        const targetPage = Math.min(saved?.page || _getStoredSlidePage(slide.slug), maxPages);
+        slidesPdfViewer.currentPageNumber = targetPage;
         const container = document.getElementById('slides-pdf-container');
-        if (container) requestAnimationFrame(() => { container.scrollTop = saved.scrollTop; });
-      }
-
-      slidesSelectedSlug = slide.slug;
-      slidesSelectedId = slide._id;
-      _setStoredSelectedSlideId(slidesSelectedId);
-      slidesLastFingerprint = fingerprint;
-      _setSlidesDownload(slide.url, false);
-      _renderSlidesMeta({ ...slide, updated_at: effectiveUpdatedAt });
-      _setSlidesLoading({ visible: false });
-      _scheduleTestAutoScroll(slide);
-    } catch (err) {
-      const fallbackOk = _showSlideInNativeFrame(slide.url);
-      if (!fallbackOk) {
-        _setSlidesError('Failed to load this PDF. Try download.');
-        _setSlidesDownload('', true);
+        if (container && saved && Number.isFinite(saved.scrollTop)) {
+          requestAnimationFrame(() => { container.scrollTop = saved.scrollTop; });
+        }
+        _setStoredSlidePage(slide.slug, targetPage);
+        _renderSlidesMeta({ ...slide, updated_at: effectiveUpdatedAt });
+        _setSlidesDownload(slide.url, false);
         _setSlidesLoading({ visible: false });
+        _scheduleTestAutoScroll(slide);
         return;
       }
-      slidesSelectedSlug = slide.slug;
-      slidesSelectedId = slide._id;
-      _setStoredSelectedSlideId(slidesSelectedId);
-      slidesLastFingerprint = fingerprint;
-      _setSlidesDownload(slide.url, false);
-      _renderSlidesMeta({ ...slide, updated_at: effectiveUpdatedAt });
-      _setSlidesError('');
-      _setSlidesLoading({ visible: false });
-      _scheduleTestAutoScroll(slide);
+
+      await _clearSlidesDocument();
+
+      try {
+        await _getSlidesPdfModules();
+        await _initSlidesViewer();
+        const loadingTask = slidesPdfLib.getDocument({ url: slide.url });
+        loadingTask.onProgress = (progress) => {
+          _setSlidesLoading({
+            visible: true,
+            loaded: Number(progress?.loaded || 0),
+            total: Number(progress?.total || 0),
+          });
+        };
+        slidesPdfLoadingTask = loadingTask;
+        const doc = await loadingTask.promise;
+        if (slidesPdfLoadingTask !== loadingTask) {
+          try { await doc.destroy(); } catch (_) {}
+          return;
+        }
+        slidesPdfDoc = doc;
+        slidesPdfViewer.setDocument(doc);
+        slidesPdfLinkService.setDocument(doc, null);
+        slidesPdfViewer.currentScaleValue = 'page-width';
+
+        const saved = _getStoredSlideView(slide.slug);
+        const maxPages = Math.max(1, Number(doc.numPages || 1));
+        const savedPage = Math.min(saved?.page || _getStoredSlidePage(slide.slug), maxPages);
+        slidesPdfViewer.currentPageNumber = savedPage;
+        _setStoredSlidePage(slide.slug, savedPage);
+        if (saved && Number.isFinite(saved.scrollTop)) {
+          const container = document.getElementById('slides-pdf-container');
+          if (container) requestAnimationFrame(() => { container.scrollTop = saved.scrollTop; });
+        }
+
+        slidesSelectedSlug = slide.slug;
+        slidesSelectedId = slide._id;
+        _setStoredSelectedSlideId(slidesSelectedId);
+        slidesLastFingerprint = fingerprint;
+        _setSlidesDownload(slide.url, false);
+        _renderSlidesMeta({ ...slide, updated_at: effectiveUpdatedAt });
+        _setSlidesLoading({ visible: false });
+        _scheduleTestAutoScroll(slide);
+      } catch (err) {
+        const fallbackOk = _showSlideInNativeFrame(slide.url);
+        if (!fallbackOk) {
+          _setSlidesError('Failed to load this PDF. Try download.');
+          _setSlidesDownload('', true);
+          _setSlidesLoading({ visible: false });
+          return;
+        }
+        slidesSelectedSlug = slide.slug;
+        slidesSelectedId = slide._id;
+        _setStoredSelectedSlideId(slidesSelectedId);
+        slidesLastFingerprint = fingerprint;
+        _setSlidesDownload(slide.url, false);
+        _renderSlidesMeta({ ...slide, updated_at: effectiveUpdatedAt });
+        _setSlidesError('');
+        _setSlidesLoading({ visible: false });
+        _scheduleTestAutoScroll(slide);
+      }
+    } finally {
+      if (withUiBlocker) _setSlidesUiBlocker(false);
     }
   }
 
@@ -1100,6 +1116,7 @@
     const overlay = document.getElementById('slides-overlay');
     if (overlay) overlay.classList.remove('open');
     _setSlidesLoading({ visible: false });
+    _setSlidesUiBlocker(false);
   }
 
   function warmSlidesCatalog() {
