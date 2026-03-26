@@ -546,6 +546,25 @@
     });
   }
 
+  function _formatSlideUpdatedCompact(updatedAt) {
+    if (!updatedAt) return '';
+    const dt = new Date(updatedAt);
+    if (Number.isNaN(dt.getTime())) return '';
+    const secRaw = Math.max(1, Math.floor((Date.now() - dt.getTime()) / 1000));
+    if (secRaw < 60) {
+      const sec = Math.max(15, Math.ceil(secRaw / 15) * 15);
+      return `${sec}s`;
+    }
+    if (secRaw < 3600) return `${Math.ceil(secRaw / 60)}m`;
+    if (secRaw < 86400) return `${Math.ceil(secRaw / 3600)}h`;
+    const days = Math.ceil(secRaw / 86400);
+    if (days < 7) return `${days}d`;
+    if (days < 45) return `${Math.ceil(days / 7)}w`;
+    const nowYear = new Date().getFullYear();
+    if (dt.getFullYear() !== nowYear) return String(dt.getFullYear());
+    return dt.toLocaleString(undefined, { month: 'short' });
+  }
+
   function _buildSlideOptionLabel(slide) {
     if (!slide) return 'Select a slide';
     return slide.name;
@@ -558,16 +577,6 @@
       const active = btn.getAttribute('data-slide-id') === slidesSelectedId;
       btn.classList.toggle('active', active);
     }
-  }
-
-  function _renderSlidesUpdatedLabel(slide) {
-    const label = document.getElementById('slides-updated');
-    if (!label) return;
-    if (!slide) {
-      label.textContent = '';
-      return;
-    }
-    label.textContent = `updated ${_formatSlideUpdated(slide.updated_at)}`;
   }
 
   function _setSlidesError(message) {
@@ -804,7 +813,6 @@
 
   function _renderSlidesMeta(slide) {
     _syncSlidesPageControls(slide || null);
-    _renderSlidesUpdatedLabel(slide || null);
     _markSelectedSlideInList();
   }
 
@@ -837,7 +845,17 @@
       openBtn.type = 'button';
       openBtn.className = 'slides-list-open';
       openBtn.title = slide.name;
-      openBtn.textContent = _buildSlideOptionLabel(slide);
+      const title = document.createElement('span');
+      title.className = 'slides-list-title';
+      title.textContent = _buildSlideOptionLabel(slide);
+      openBtn.appendChild(title);
+      const updated = _formatSlideUpdatedCompact(slide.updated_at);
+      if (updated) {
+        const badge = document.createElement('span');
+        badge.className = 'slides-list-updated';
+        badge.textContent = updated;
+        openBtn.appendChild(badge);
+      }
       openBtn.addEventListener('click', async () => {
         await _loadSlideIntoViewer(slide, { forceReload: true });
       });
