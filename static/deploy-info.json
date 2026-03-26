@@ -1,7 +1,7 @@
 {
-  "sha": "ba779ea9391bb6fad77b6ab623190c563abe51ad",
-  "timestamp": "2026-03-26 19:51",
+  "sha": "bc4fdb416454e48f99cd271e9d0589007a075b71",
+  "timestamp": "2026-03-26 19:56",
   "changelog": [
-    "fix: prevent slides topics load flash"
+    "fix: tighten slides restore and viewer spacing"
   ]
 }
