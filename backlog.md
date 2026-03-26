@@ -229,3 +229,4 @@ Host presents 4–6 items (patterns, approaches, technologies). Participants dra
 Host broadcasts a statement: "Have you ever shipped code that violated what we just discussed?" Participants react with a single emoji or yes/no. Aggregated reactions are shown live. Creates psychological safety and honest discussion starters.
 - [x] Direct request: implemented on-demand slide PDF delivery via daemon WebSocket (`/ws/daemon`) with per-slug deduplicated upload state, 60s waiter timeout/stale-retrigger, and host-only diagnostics endpoint (`/api/slides/upload-status/{slug}`).
 - [x] Direct request: fixed production-empty Slides combobox by adding catalog-backed entries to `/api/slides` (slug list available even when server PDF folder is empty after restart, enabling on-demand upload trigger).
+- [x] Direct request: hardened daemon WS auth handshake for slides on-demand by adding `websockets` compatibility fallback (`additional_headers` -> `extra_headers`).

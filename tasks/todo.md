@@ -441,3 +441,15 @@
 - Verified with `pytest -q tests/test_slides_api.py` (19 passed).
 - Verified with `pytest -q tests/test_main.py -k "api_slides_is_empty_by_default or quiz_status_updates_slides_and_api_returns_normalized_data or quiz_request_reports_has_slides_flag"` (3 passed).
 - Verified with `python3 -m py_compile routers/slides.py tests/test_slides_api.py tests/test_main.py`.
+
+## Direct request: fix slides loading (daemon WS compatibility)
+
+- [x] Harden daemon WS connect call for `websockets` API differences (`additional_headers` vs `extra_headers`)
+- [x] Add regression tests for both connect code paths
+- [x] Run targeted daemon reconnect tests + compile checks
+
+### Review
+- Added compatibility fallback in `SlidesOnDemandWsRunner._connect(...)`: tries `additional_headers` first, then retries with `extra_headers` for older `websockets` clients.
+- This prevents silent on-demand WS failure on environments where header kwarg differs by version.
+- Verified with `pytest -q tests/test_quiz_daemon_reconnect.py` (3 passed).
+- Verified with `python3 -m py_compile training_daemon.py tests/test_quiz_daemon_reconnect.py`.
