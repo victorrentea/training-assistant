@@ -1,7 +1,7 @@
 {
-  "sha": "f9053bd4730881a95c81978b1f1087ddcaeab942",
-  "timestamp": "2026-03-26 22:19",
+  "sha": "de79a21766b13fe1a58d21772b9db6366f9a3fcf",
+  "timestamp": "2026-03-26 22:52",
   "changelog": [
-    "style: match slides follow control mock"
+    "Fix host slides popover names and startup drive sync logs"
   ]
 }
