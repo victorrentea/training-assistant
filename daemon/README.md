@@ -31,6 +31,17 @@ Run only on demand when you need to extract normalized lines from a time range:
 python3 -m daemon.transcript_query 2026-03-25T12:00:00 2026-03-26T09:30:00
 ```
 
+## Rebuild normalized transcripts
+
+Reset offsets and rebuild normalized files from raw transcripts:
+
+```bash
+python3 -m daemon.rebuild_normalized_transcripts --from-iso 2026-03-24T09:30:00
+```
+
+The command creates a backup folder in `TRANSCRIPTION_FOLDER` before deleting/rebuilding:
+`.backup-normalized-YYYYMMDD-HHMMSS`.
+
 ## Configuration (in secrets.env)
 
 ```
