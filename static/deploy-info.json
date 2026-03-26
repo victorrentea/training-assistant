@@ -1,7 +1,7 @@
 {
-  "sha": "3a6179eb4d2d7c9b1a59a55a3c083f2279d0e547",
-  "timestamp": "2026-03-26 08:30",
+  "sha": "e89c94b2785e4bc19069fc51406661165211b2b8",
+  "timestamp": "2026-03-26 08:34",
   "changelog": [
-    "overlay: delay ws disconnect error by 3s"
+    "refactor: use normalization.offset for transcript normalizer state"
   ]
 }
