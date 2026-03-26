@@ -542,6 +542,48 @@ h1 { display: none; }
   margin-bottom: .35rem;
 }
 
+.slides-ui-blocker {
+  position: fixed;
+  inset: 0;
+  z-index: 6000;
+  background: rgba(7, 10, 18, 0.58);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: auto;
+}
+
+.slides-ui-blocker-card {
+  min-width: 200px;
+  padding: .95rem 1.1rem;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(12, 16, 28, 0.92);
+  display: flex;
+  align-items: center;
+  gap: .65rem;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.36);
+}
+
+.slides-ui-spinner {
+  width: 1.05rem;
+  height: 1.05rem;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.28);
+  border-top-color: var(--accent2);
+  animation: slides-ui-spin .65s linear infinite;
+}
+
+.slides-ui-blocker-label {
+  color: #eff3fb;
+  font-size: .92rem;
+  font-weight: 600;
+}
+
+@keyframes slides-ui-spin {
+  to { transform: rotate(360deg); }
+}
+
 .slides-progress-track {
   width: 100%;
   height: 8px;
