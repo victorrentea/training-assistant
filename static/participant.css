@@ -287,33 +287,10 @@ h1 { display: none; }
   color: #fff;
 }
 
-.slides-follow-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: .24rem;
-  color: var(--muted);
-  font-size: .62rem;
-  font-weight: 700;
-  line-height: 1;
-  user-select: none;
-  white-space: nowrap;
-}
-
-.slides-follow-toggle input {
-  margin: 0;
-  width: .78rem;
-  height: .78rem;
-  accent-color: #7ecef4;
-  cursor: pointer;
-}
-
-.slides-follow-toggle.disabled {
-  opacity: .45;
-  filter: grayscale(.35);
-}
-
-.slides-follow-toggle.disabled input {
-  cursor: not-allowed;
+#slides-follow-btn.active {
+  background: rgba(72, 207, 173, 0.22);
+  color: var(--accent2);
+  box-shadow: inset 0 0 0 1px rgba(72, 207, 173, 0.45);
 }
 
 .slides-dock.tour-scan::after {

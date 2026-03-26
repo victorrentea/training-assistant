@@ -590,8 +590,19 @@
     const overlayOpen = overlay && overlay.classList.contains('open');
     if (!overlayOpen) return;
 
+    if (slidesViewMode === 'native') {
+      const selectedMatches = slidesSelectedId === targetSlide._id;
+      const storedPage = _getStoredSlidePage(targetSlide.slug);
+      const needsReload = !selectedMatches || storedPage !== targetPage;
+      if (needsReload) {
+        _renderSlidesList(targetSlide._id);
+        await _loadSlideIntoViewer(targetSlide, { forceReload: true, withUiBlocker: false });
+      }
+      return;
+    }
+
     if (slidesSelectedId !== targetSlide._id || !slidesPdfDoc) {
-      _renderSlidesSelector(targetSlide._id);
+      _renderSlidesList(targetSlide._id);
       await _loadSlideIntoViewer(targetSlide, { forceReload: false });
     }
 
@@ -612,9 +623,11 @@
   }
 
   function _onIncomingHostSlidesCurrent(slidesCurrent) {
+    hostSlidesCurrent = slidesCurrent || null;
     const key = _slidesCurrentKey(slidesCurrent);
     if (key === lastHostSlidesCurrentKey) return;
     lastHostSlidesCurrentKey = key;
+    if (!_isSlidesFollowActive()) return;
     _queueHostSlideFollow(slidesCurrent || null);
   }
 
@@ -679,18 +692,14 @@
   }
 
   function _isSlidesFollowActive() {
-    return slidesViewMode === 'pdfjs' && slidesFollowTrainerEnabled;
+    return slidesFollowTrainerEnabled;
   }
 
   function _renderSlidesFollowTrainerToggle() {
-    const input = document.getElementById('slides-follow-trainer');
-    const wrap = document.getElementById('slides-follow-trainer-wrap');
-    if (!input || !wrap) return;
-    input.checked = slidesFollowTrainerEnabled;
-    const disabled = slidesViewMode !== 'pdfjs';
-    input.disabled = disabled;
-    wrap.classList.toggle('disabled', disabled);
-    wrap.setAttribute('aria-disabled', disabled ? 'true' : 'false');
+    const btn = document.getElementById('slides-follow-btn');
+    if (!btn) return;
+    btn.classList.toggle('active', slidesFollowTrainerEnabled);
+    btn.setAttribute('aria-pressed', slidesFollowTrainerEnabled ? 'true' : 'false');
   }
 
   function _setSlidesFollowTrainerEnabled(enabled, { persist = true, applyHost = true } = {}) {
@@ -734,7 +743,7 @@
         _loadSlideIntoViewer(slide, { forceReload: true, withUiBlocker: true }).catch(() => {});
       }
     }
-    if (nextMode === 'pdfjs' && slidesFollowTrainerEnabled && hostSlidesCurrent) {
+    if (slidesFollowTrainerEnabled && hostSlidesCurrent) {
       _queueHostSlideFollow(hostSlidesCurrent);
     }
   }
@@ -751,14 +760,24 @@
   function _bindSlidesFollowTrainerToggle() {
     slidesFollowTrainerEnabled = _getStoredSlidesFollowTrainer();
     _renderSlidesFollowTrainerToggle();
-    const input = document.getElementById('slides-follow-trainer');
-    if (input) {
-      input.addEventListener('change', () => {
-        _setSlidesFollowTrainerEnabled(Boolean(input.checked), { persist: true, applyHost: true });
-      });
-    }
+    const btn = document.getElementById('slides-follow-btn');
+    if (!btn) return;
+    btn.addEventListener('click', () => {
+      if (slidesFollowTrainerEnabled) {
+        _setSlidesFollowTrainerEnabled(false, { persist: true, applyHost: false });
+        return;
+      }
+      _setSlidesFollowTrainerEnabled(true, { persist: true, applyHost: true });
+      const overlay = document.getElementById('slides-overlay');
+      if (overlay && !overlay.classList.contains('open')) {
+        overlay.classList.add('open');
+        _setSlidesOverlayOpen(true);
+      }
+      if (hostSlidesCurrent) {
+        _queueHostSlideFollow(hostSlidesCurrent);
+      }
+    });
   }
-
   function _getStoredVisitedSlideIds() {
     try {
       const raw = localStorage.getItem(LS_SLIDE_VISITED_IDS);
@@ -1437,6 +1456,7 @@
     const overlay = document.getElementById('slides-overlay');
     if (overlay) overlay.classList.remove('open');
     _setSlidesOverlayOpen(false);
+    _setSlidesFollowTrainerEnabled(false, { persist: true, applyHost: false });
     _setSlidesLoading({ visible: false });
     _setSlidesUiBlocker(false);
     const page = document.getElementById('slides-page-inline');
@@ -1518,6 +1538,7 @@
   })();
   _bindSlidesFollowTrainerToggle();
   _bindSlidesViewModeToggle();
+  _bindSlidesFollowToggle();
   warmSlidesCatalog();
 
   // ── Inline name editing ──
