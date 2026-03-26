@@ -1,11 +1,12 @@
 from datetime import datetime, timezone
+from email.utils import formatdate, parsedate_to_datetime
 import json
 import os
 import re
 from pathlib import Path
 
-from fastapi import APIRouter, File, Form, HTTPException, UploadFile
-from fastapi.responses import FileResponse
+from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
+from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel, field_validator
 
 from messaging import broadcast_state
@@ -275,6 +276,37 @@ def _merge_slide_sources(state_slides: list[dict], local_slides: list[dict], upl
     return merged
 
 
+def _slide_etag(path: Path) -> str:
+    stat = path.stat()
+    return f'W/"{stat.st_mtime_ns:x}-{stat.st_size:x}"'
+
+
+def _slide_last_modified(path: Path) -> str:
+    return formatdate(path.stat().st_mtime, usegmt=True)
+
+
+def _is_not_modified(request: Request, etag: str, path: Path) -> bool:
+    inm = request.headers.get("if-none-match", "")
+    if inm:
+        tokens = [token.strip() for token in inm.split(",") if token.strip()]
+        if "*" in tokens or etag in tokens:
+            return True
+
+    ims = request.headers.get("if-modified-since", "").strip()
+    if ims:
+        try:
+            since_dt = parsedate_to_datetime(ims)
+            if since_dt.tzinfo is None:
+                since_dt = since_dt.replace(tzinfo=timezone.utc)
+            since_ts = int(since_dt.timestamp())
+            mtime_ts = int(path.stat().st_mtime)
+            if since_ts >= mtime_ts:
+                return True
+        except Exception:
+            pass
+    return False
+
+
 @router.post("/api/materials/upsert")
 async def upsert_material_file(
     relative_path: str = Form(...),
@@ -416,10 +448,19 @@ async def get_slides():
 
 
 @public_router.api_route("/api/slides/file/{slug}", methods=["GET", "HEAD"])
-async def get_slide_file(slug: str):
+async def get_slide_file(slug: str, request: Request):
     _, local_index = _build_local_slides_index()
     _, uploaded_index = _build_uploaded_slides_index()
     path = local_index.get(slug) or uploaded_index.get(slug)
     if path is None:
         raise HTTPException(status_code=404, detail="Slide not found")
-    return FileResponse(path=path, media_type="application/pdf", filename=path.name)
+
+    etag = _slide_etag(path)
+    headers = {
+        "ETag": etag,
+        "Last-Modified": _slide_last_modified(path),
+        "Cache-Control": "public, max-age=86400, must-revalidate",
+    }
+    if _is_not_modified(request, etag, path):
+        return Response(status_code=304, headers=headers)
+    return FileResponse(path=path, media_type="application/pdf", filename=path.name, headers=headers)

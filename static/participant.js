@@ -571,9 +571,31 @@
     }
   }
 
+  function _setSlidesLoading({ visible = false, loaded = 0, total = 0, label = '' } = {}) {
+    const box = document.getElementById('slides-loading');
+    const text = document.getElementById('slides-loading-label');
+    const fill = document.getElementById('slides-progress-fill');
+    if (!box || !text || !fill) return;
+    if (!visible) {
+      box.style.display = 'none';
+      fill.style.width = '0%';
+      return;
+    }
+    box.style.display = '';
+    const pct = total > 0 ? Math.max(2, Math.min(100, Math.round((loaded / total) * 100))) : 10;
+    fill.style.width = `${pct}%`;
+    if (label) {
+      text.textContent = label;
+    } else if (total > 0) {
+      text.textContent = `Downloading slide... ${pct}%`;
+    } else {
+      text.textContent = 'Downloading slide...';
+    }
+  }
+
   async function _fetchSlideHeaders(url) {
     try {
-      const resp = await fetch(url, { method: 'HEAD', cache: 'no-store' });
+      const resp = await fetch(url, { method: 'HEAD' });
       if (!resp.ok) return {};
       return {
         etag: resp.headers.get('ETag') || null,
@@ -653,6 +675,7 @@
   async function _loadSlideIntoViewer(slide, { forceReload = false } = {}) {
     if (!slide) return;
     _setSlidesError('');
+    _setSlidesLoading({ visible: true, loaded: 0, total: 0, label: 'Checking cache...' });
 
     const shell = document.getElementById('slides-viewer-shell');
     const empty = document.getElementById('slides-empty');
@@ -666,6 +689,7 @@
     if (!forceReload && slidesSelectedSlug === slide.slug && slidesLastFingerprint === fingerprint && slidesPdfDoc) {
       _renderSlidesMeta({ ...slide, updated_at: effectiveUpdatedAt });
       _setSlidesDownload(slide.url, false);
+      _setSlidesLoading({ visible: false });
       return;
     }
 
@@ -675,6 +699,13 @@
 
     try {
       const loadingTask = slidesPdfLib.getDocument({ url: slide.url });
+      loadingTask.onProgress = (progress) => {
+        _setSlidesLoading({
+          visible: true,
+          loaded: Number(progress?.loaded || 0),
+          total: Number(progress?.total || 0),
+        });
+      };
       slidesPdfLoadingTask = loadingTask;
       const doc = await loadingTask.promise;
       if (slidesPdfLoadingTask !== loadingTask) {
@@ -693,9 +724,11 @@
       slidesLastFingerprint = fingerprint;
       _setSlidesDownload(slide.url, false);
       _renderSlidesMeta({ ...slide, updated_at: effectiveUpdatedAt });
+      _setSlidesLoading({ visible: false });
     } catch (err) {
       _setSlidesError('Failed to load this PDF. Try download.');
       _setSlidesDownload('', true);
+      _setSlidesLoading({ visible: false });
     }
   }
 
@@ -714,6 +747,7 @@
         await _clearSlidesDocument();
         _setSlidesDownload('', true);
         _setSlidesError('');
+        _setSlidesLoading({ visible: false });
         if (empty) empty.style.display = '';
         if (shell) shell.style.display = 'none';
         return;
@@ -729,6 +763,7 @@
       if (empty) empty.style.display = '';
       if (shell) shell.style.display = 'none';
       _setSlidesDownload('', true);
+      _setSlidesLoading({ visible: false });
     }
   }
 
@@ -763,6 +798,7 @@
     const overlay = document.getElementById('slides-overlay');
     if (overlay) overlay.classList.remove('open');
     _stopSlidesRefreshLoop();
+    _setSlidesLoading({ visible: false });
   }
 
   function warmSlidesCatalog() {
