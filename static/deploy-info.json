@@ -1,7 +1,7 @@
 {
-  "sha": "5a39f1c695e55884c544cc64a7c9ef01f686496c",
-  "timestamp": "2026-03-26 19:31",
+  "sha": "24cb1f2080f95f6898ec285e26e812a96c8eef9c",
+  "timestamp": "2026-03-26 19:34",
   "changelog": [
-    "Add server materials files"
+    "Refine participant welcome and footer layout"
   ]
 }
