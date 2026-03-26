@@ -85,6 +85,25 @@ _BACKUP_FILE = _BACKUP_DIR / "state-backup.json"
 _DEFAULT_MATERIALS_FOLDER = Path("/Users/victorrentea/Documents/workshop-materials")
 
 
+def _resolve_materials_folder() -> Path | None:
+    """Resolve materials folder used by indexer and materials mirror."""
+    env_value = os.environ.get("MATERIALS_FOLDER", "").strip()
+    if env_value:
+        folder = Path(env_value).expanduser()
+        return folder if folder.exists() and folder.is_dir() else None
+
+    candidates = [
+        _DEFAULT_MATERIALS_FOLDER,
+        Path(__file__).parent / "materials",
+        Path.home() / "workspace" / "training-assistant" / "materials",
+    ]
+    for candidate in candidates:
+        folder = candidate.expanduser()
+        if folder.exists() and folder.is_dir():
+            return folder
+    return None
+
+
 _DOW_RE = re.compile(r"^([A-Z][a-z]{2})\s+(\d{2}:\d{2})\s+(.+)$")
 _FRONTMATTER_WATERMARK_RE = re.compile(r"^watermark:\s*(\d+)")
 
@@ -657,10 +676,10 @@ class MaterialsMirrorRunner:
             self.enabled = False
             return
 
-        folder_str = os.environ.get("MATERIALS_FOLDER", str(Path(__file__).parent / "materials"))
-        folder = Path(folder_str).expanduser()
-        if not folder.exists() or not folder.is_dir():
-            log.info("materials", f"Materials mirror disabled: folder not found: {folder}")
+        folder = _resolve_materials_folder()
+        if folder is None:
+            raw = os.environ.get("MATERIALS_FOLDER", "").strip() or "<auto-detect>"
+            log.info("materials", f"Materials mirror disabled: folder not found (MATERIALS_FOLDER={raw})")
             self.enabled = False
             return
 
@@ -946,13 +965,13 @@ def run() -> None:
         log.error("session", "No session folder found for today")
 
     # Start background material indexer
-    materials_folder_str = os.environ.get("MATERIALS_FOLDER", str(_DEFAULT_MATERIALS_FOLDER))
-    materials_folder = Path(materials_folder_str).expanduser()
-    if materials_folder.exists():
+    materials_folder = _resolve_materials_folder()
+    if materials_folder is not None:
         from daemon.indexer import start_indexer
         start_indexer(materials_folder)
     else:
-        log.error("daemon", f"MATERIALS_FOLDER not found: {materials_folder} — indexer disabled")
+        raw = os.environ.get("MATERIALS_FOLDER", "").strip() or "<auto-detect>"
+        log.error("daemon", f"MATERIALS_FOLDER not found (MATERIALS_FOLDER={raw}) — indexer disabled")
 
     # ── Session stack initialization (early — needed for transcript log) ──
     sessions_root = config.session_folder.parent if config.session_folder else Path.cwd()
