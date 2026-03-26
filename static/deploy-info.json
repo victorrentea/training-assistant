@@ -1,7 +1,7 @@
 {
-  "sha": "4b3789f419dfdc620a8e315a58e66fbe0636b173",
+  "sha": "18b9d82fd523e7967ddf1382df89aeda0f15a174",
   "timestamp": "2026-03-26 19:19",
   "changelog": [
-    "participant slides fill download button on hover"
+    "Style participant emoji buttons and tooltip borders"
   ]
 }
