@@ -260,3 +260,39 @@ def test_slides_catalog_map_returns_pdf_to_pptx_entries(monkeypatch, tmp_path):
     assert clean["updated_at"]
     assert missing["pptx_path"] == str(source_missing)
     assert missing["exists"] is False
+
+
+def test_materials_upsert_and_delete_roundtrip(monkeypatch, tmp_path):
+    target_dir = tmp_path / "server_materials"
+    monkeypatch.setenv("SERVER_MATERIALS_DIR", str(target_dir))
+    client = TestClient(app, headers=_HOST_AUTH_HEADERS)
+
+    upsert = client.post(
+        "/api/materials/upsert",
+        data={"relative_path": "slides/AI Coding.pdf"},
+        files={"file": ("AI Coding.pdf", b"%PDF-1.4\n%mirror\n", "application/pdf")},
+    )
+    assert upsert.status_code == 200
+    assert upsert.json()["ok"] is True
+
+    mirrored = target_dir / "slides" / "AI Coding.pdf"
+    assert mirrored.exists()
+    assert mirrored.read_bytes().startswith(b"%PDF-1.4")
+
+    delete = client.post("/api/materials/delete", json={"relative_path": "slides/AI Coding.pdf"})
+    assert delete.status_code == 200
+    assert delete.json()["ok"] is True
+    assert delete.json()["deleted"] is True
+    assert not mirrored.exists()
+
+
+def test_materials_upsert_rejects_traversal(monkeypatch, tmp_path):
+    monkeypatch.setenv("SERVER_MATERIALS_DIR", str(tmp_path / "server_materials"))
+    client = TestClient(app, headers=_HOST_AUTH_HEADERS)
+
+    resp = client.post(
+        "/api/materials/upsert",
+        data={"relative_path": "../escape.txt"},
+        files={"file": ("escape.txt", b"bad", "text/plain")},
+    )
+    assert resp.status_code == 400

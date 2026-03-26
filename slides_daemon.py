@@ -86,8 +86,11 @@ def config_from_env() -> SlidesDaemonConfig:
     converter = os.environ.get("PPTX_CONVERTER", "libreoffice").strip().lower()
     upload_mode = os.environ.get("PPTX_UPLOAD_MODE", "copy").strip().lower()
     public_base_url = os.environ.get("PPTX_PUBLIC_BASE_URL", "").rstrip("/")
+    default_materials_root = Path(
+        os.environ.get("MATERIALS_FOLDER", str(Path(__file__).parent / "materials"))
+    ).expanduser()
     publish_dir = Path(
-        os.environ.get("PPTX_PUBLISH_DIR", str(Path(".server-data") / "published-slides"))
+        os.environ.get("PPTX_PUBLISH_DIR", str(default_materials_root / "slides"))
     ).expanduser()
     recursive = os.environ.get("PPTX_RECURSIVE", "0").strip() in {"1", "true", "yes"}
     catalog_file_str = os.environ.get(

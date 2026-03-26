@@ -368,6 +368,21 @@ def test_run_once_republishes_list_when_pdf_deleted(tmp_path, monkeypatch):
     assert len(posted[-1][1]["slides"]) == 1
 
 
+def test_config_defaults_publish_dir_to_materials_slides(tmp_path, monkeypatch):
+    materials = tmp_path / "materials"
+    materials.mkdir()
+    catalog = tmp_path / "catalog.json"
+    catalog.write_text(json.dumps({"decks": []}), encoding="utf-8")
+
+    monkeypatch.setenv("MATERIALS_FOLDER", str(materials))
+    monkeypatch.setenv("PPTX_CATALOG_FILE", str(catalog))
+    monkeypatch.delenv("PPTX_PUBLISH_DIR", raising=False)
+    monkeypatch.setenv("PPTX_SYNC_BACKEND", "0")
+
+    cfg = slides_daemon.config_from_env()
+    assert cfg.publish_dir == materials / "slides"
+
+
 def test_convert_with_libreoffice_falls_back_to_macos_app_binary(tmp_path, monkeypatch):
     pptx = tmp_path / "deck.pptx"
     pptx.write_bytes(b"x")
