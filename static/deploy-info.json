@@ -1,8 +1,7 @@
 {
-  "sha": "b7070bc2fcb47203a9505f5c8cd36e91be8a8d1a",
-  "timestamp": "2026-03-26 22:12",
+  "sha": "79c511dc56b9d27a5f559a0667e2140f2aaa1c83",
+  "timestamp": "2026-03-26 22:13",
   "changelog": [
-    "Fix leftover conflict marker in backlog",
-    "Align slide page label and close icon typography"
+    "feat: add Follow Trainer button in slides mode bubble"
   ]
 }
