@@ -1,7 +1,7 @@
 {
-  "sha": "f1bbca83eb66c8f2ee2791390d9585d850a3ece3",
-  "timestamp": "2026-03-26 23:04",
+  "sha": "839931e229def6c85950a28bd3aee67ce6f3ac71",
+  "timestamp": "2026-03-26 23:07",
   "changelog": [
-    "fix: resolve participant init order runtime errors"
+    "Add Drive slides sync sequence diagram"
   ]
 }
