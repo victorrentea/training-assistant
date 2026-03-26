@@ -236,3 +236,4 @@ Host broadcasts a statement: "Have you ever shipped code that violated what we j
 - [x] Direct request: aligned PPTX daemon logs with shared daemon logger format (`daemon/log.py`) and persisted this rule in CLAUDE memory.
 - [x] Direct request: host `📜` hover now shows participant slides list with `⬇️` marker for PDFs already present on server filesystem, using new host endpoint `/api/slides/participant-availability`.
 - [x] Direct request: participant slides combo now shows `Select a slide` first and loads decks by unique key (`slug|url`) so selected slide renders correctly in modal.
+- [x] Direct request: reduced all `/static/avatars/*.png` to max 400x400 and stopped repeated self-avatar `src` reassignment in participant client to avoid unnecessary re-download attempts.
