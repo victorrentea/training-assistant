@@ -1,5 +1,6 @@
 # Tasks
 
+- [x] Direct request: converted participant Slides to full-screen sheet look (non-modal styling), kept plain top-right close `✕` (no border/chrome), and persisted selected deck id so reopening restores same deck + page context.
 - [x] Bugfix direct request: removed forced iframe reload for test page jump (now uses in-frame hash navigation first) to avoid visible PDF refresh; aligned slide row/download hover border color to green for consistent hover/selected states.
 - [x] Direct request: removed top spacer above Slides viewer by disabling compact meta strip (`slides-meta-inline`), so PDF starts immediately at top.
 - [x] Direct request: made Slides empty-state prominent and centered with animated call-to-action (inviting click on right-side slide list), replacing plain text placeholders.
