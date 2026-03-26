@@ -1,20 +1,18 @@
 body {
+  --slides-overlay-width: min(320px, 28vw);
   background: var(--bg);
   color: var(--text);
   font-family: 'Segoe UI', system-ui, sans-serif;
   height: 100vh;
   min-height: 100vh;
   margin: 0;
-  display: grid;
-  grid-template-columns: minmax(0, 87%) minmax(180px, 13%);
+  display: block;
   padding: 0;
   overflow: hidden;
 }
 
 @media (max-width: 900px) {
-  body {
-    grid-template-columns: 1fr;
-  }
+  body { display: block; }
 }
 
 
@@ -65,8 +63,8 @@ h1 { display: none; }
 
 /* ── Main screen ── */
 #main-screen {
-  width: clamp(340px, 30vw, 560px);
-  max-width: 560px;
+  width: min(900px, calc(100vw - 2rem));
+  max-width: 900px;
   display: none;
   height: 100vh;
   min-height: 0;
@@ -74,6 +72,7 @@ h1 { display: none; }
   box-sizing: border-box;
   overflow: hidden;
   margin: 0 auto;
+  transform: translateX(calc(var(--slides-overlay-width) * -0.5));
 }
 
 #content {
@@ -100,7 +99,6 @@ h1 { display: none; }
   align-items: center;
   padding: .6rem .9rem;
   margin-bottom: .35rem;
-  margin-left: clamp(90px, 6.5vw, 170px);
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 999px;
@@ -228,15 +226,19 @@ h1 { display: none; }
 
 /* ── Slides viewer ── */
 .slides-dock {
-  position: relative;
-  width: 100%;
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: var(--slides-overlay-width);
   height: 100vh;
   border-left: 1px solid rgba(255, 255, 255, 0.12);
-  background: #101010;
+  background: rgba(16, 16, 16, 0.96);
+  backdrop-filter: blur(2px);
   display: flex;
   flex-direction: column;
   min-height: 0;
   overflow: hidden;
+  z-index: 40;
 }
 
 .slides-dock-head {
@@ -274,7 +276,7 @@ h1 { display: none; }
   position: fixed;
   top: 0;
   left: 0;
-  right: 13%;
+  right: 0;
   bottom: 0;
   z-index: 2800;
   background: transparent;
@@ -757,7 +759,6 @@ h1 { display: none; }
   align-items: center;
   justify-content: center;
   gap: .65rem;
-  transform: translateX(clamp(90px, 6.5vw, 170px));
   user-select: none;
   -webkit-user-select: none;
 }
@@ -794,6 +795,10 @@ h1 { display: none; }
     width: 100%;
     max-width: none;
     margin: 0;
+    transform: none;
+  }
+  .slides-dock {
+    display: none;
   }
   .waiting {
     transform: none;
