@@ -886,7 +886,6 @@ def _check_and_acquire_lock() -> None:
 def run() -> None:
     _check_and_acquire_lock()
     _write_lock()
-    log.info("daemon", "🚀 Starting daemon")
 
     def _cleanup(*_):
         _LOCK_FILE.unlink(missing_ok=True)
@@ -896,7 +895,7 @@ def run() -> None:
     signal.signal(signal.SIGINT, _cleanup)
 
     config = config_from_env()
-    log.info("daemon", f"Backend target: {config.server_url}")
+    log.info("daemon", f"Starting — connecting to {config.server_url}")
 
     if config.project_folder:
         log.info("daemon", f"Project folder configured: {config.project_folder}")
@@ -1003,8 +1002,6 @@ def run() -> None:
             log.error("transcript", "No normalized transcription file found")
     except Exception as e:
         log.error("transcript", f"Could not read transcription: {e}")
-
-    log.info("daemon", f"Started — polling {config.server_url} every {DAEMON_POLL_INTERVAL}s")
 
     timestamp_appender = TranscriptTimestampAppender(config.folder)
     timestamp_appender.start()
