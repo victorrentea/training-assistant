@@ -704,7 +704,14 @@
         const raw = String(slidesNativeFrame.src || '');
         if (raw) {
           const base = raw.replace(/#page=\d+$/, '');
-          slidesNativeFrame.src = `${base}#page=${requestedPage}`;
+          const target = `${base}#page=${requestedPage}`;
+          // Some native PDF viewers ignore hash-only updates on an already loaded doc.
+          // Force a reload so #page is applied deterministically in fallback mode.
+          slidesNativeFrame.src = 'about:blank';
+          setTimeout(() => {
+            if (!slidesNativeFrame || slidesSelectedId !== targetId) return;
+            slidesNativeFrame.src = target;
+          }, 60);
         }
       }
       _renderSlidesMeta(slide);
