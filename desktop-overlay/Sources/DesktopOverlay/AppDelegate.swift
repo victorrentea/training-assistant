@@ -170,7 +170,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, URLSessionWebSocketDelegate 
     func urlSession(_ session: URLSession, webSocketTask: URLSessionWebSocketTask,
                     didOpenWithProtocol protocol: String?) {
         cancelPendingDisconnectError()
-        overlayInfo("WebSocket connected")
         // Send set_name as required by protocol
         let msg = "{\"type\":\"set_name\",\"name\":\"Overlay\"}"
         wsTask?.send(.string(msg)) { error in

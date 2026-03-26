@@ -22,7 +22,6 @@ if let oldPidStr = try? String(contentsOfFile: lockFilePath, encoding: .utf8)
 
 // Write our PID (supersedes any previous instance)
 try? "\(myPid)".write(toFile: lockFilePath, atomically: true, encoding: .utf8)
-overlayInfo("🚀 Starting overlay")
 
 // Clean up lock file on exit (only if we still own it)
 func cleanupLockFile() {
@@ -57,6 +56,7 @@ if CommandLine.arguments.count > 1 {
 } else {
     serverURL = "ws://localhost:8000"
 }
+overlayInfo("Connecting to \(serverURL)")
 
 let delegate = AppDelegate(serverURL: serverURL, pidFilePath: pidFilePath, myPID: myPID)
 app.delegate = delegate
