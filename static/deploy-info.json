@@ -1,7 +1,7 @@
 {
-  "sha": "56a52ccc487b1fbe925cd416728e16e577d712c1",
-  "timestamp": "2026-03-26 17:38",
+  "sha": "3f14f5e0e9ddce2e904211a1e719ea82d188444e",
+  "timestamp": "2026-03-26 17:39",
   "changelog": [
-    "participant slides tighten deck row height and one-line titles"
+    "Close all participant modals on Escape"
   ]
 }
