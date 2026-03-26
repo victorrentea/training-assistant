@@ -295,6 +295,17 @@ Manual normalized transcript query (run only on demand):
   - “today so far” -> `python3 -m daemon.transcript_query "$(date +%Y-%m-%d)T00:00:00" "$(date +%Y-%m-%dT%H:%M:%S)"`
   - “last 10 minutes” -> `python3 -m daemon.transcript_query "$(date -v-10M +%Y-%m-%dT%H:%M:%S)" "$(date +%Y-%m-%dT%H:%M:%S)"`
 
+Manual rebuild utility (run only on demand):
+- Script: `python3 -m daemon.rebuild_normalized_transcripts --from-iso <iso_datetime>`
+- Purpose: reset normalizer state and regenerate all normalized transcripts from raw transcript files.
+- Safety: creates backup folder in `TRANSCRIPTION_FOLDER` before rebuild (`.backup-normalized-YYYYMMDD-HHMMSS`).
+- Effects:
+  - removes old normalized files (`YYYY-MM-DD transcription.txt`)
+  - removes old offset files (`normalization.offset.txt`, legacy `*.txt.offset`)
+  - re-runs normalization across all raw transcript files
+- Example:
+  - `python3 -m daemon.rebuild_normalized_transcripts --from-iso 2026-03-24T09:30:00`
+
 ---
 
 ## Clean Clipboard (`clean-clipboard/clean.py`)
