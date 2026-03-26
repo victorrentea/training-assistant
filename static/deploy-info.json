@@ -1,7 +1,7 @@
 {
-  "sha": "02e6146f64a64a4f13d7794f1afa3a2af394f4ff",
-  "timestamp": "2026-03-26 23:03",
+  "sha": "f1bbca83eb66c8f2ee2791390d9585d850a3ece3",
+  "timestamp": "2026-03-26 23:04",
   "changelog": [
-    "chore: add start_wispr_hacks.sh launcher script"
+    "fix: resolve participant init order runtime errors"
   ]
 }
