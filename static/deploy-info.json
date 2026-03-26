@@ -1,7 +1,7 @@
 {
-  "sha": "39b441aba41ee88ed76a15f63fdd1590e56e8c97",
-  "timestamp": "2026-03-26 08:58",
+  "sha": "c3f79a2519566265fb7f36fd6c0c3987540182a3",
+  "timestamp": "2026-03-26 09:11",
   "changelog": [
-    "docs: add rebuild_normalized_transcripts usage to CLAUDE.md"
+    "fix: fallback to macos soffice path"
   ]
 }
