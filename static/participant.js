@@ -304,15 +304,7 @@
     container.appendChild(refreshBtn);
     modal.appendChild(container);
 
-    modal.addEventListener('click', function() {
-        if (window._avatarModalCloseTimer) {
-            clearTimeout(window._avatarModalCloseTimer);
-            window._avatarModalCloseTimer = null;
-        }
-        window._avatarModalImg = null;
-        window._avatarModal = null;
-        modal.remove();
-    });
+    modal.addEventListener('click', function() { closeAvatarModal(); });
     container.addEventListener('click', function(e) { e.stopPropagation(); });
 
     document.body.appendChild(modal);
@@ -339,9 +331,21 @@
     container.appendChild(avatar);
     modal.appendChild(container);
 
-    modal.addEventListener('click', function() { modal.remove(); });
+    modal.addEventListener('click', function() { closeAvatarModal(); });
 
     document.body.appendChild(modal);
+  }
+
+  function closeAvatarModal() {
+    const modal = document.getElementById('avatar-modal');
+    if (!modal) return;
+    if (window._avatarModalCloseTimer) {
+      clearTimeout(window._avatarModalCloseTimer);
+      window._avatarModalCloseTimer = null;
+    }
+    window._avatarModalImg = null;
+    window._avatarModal = null;
+    modal.remove();
   }
 
 
@@ -456,6 +460,13 @@
   function closeSummaryModal() {
     const overlay = document.getElementById('summary-overlay');
     if (overlay) overlay.classList.remove('open');
+  }
+
+  function closeParticipantModals() {
+    closeNotesModal();
+    closeSummaryModal();
+    closeSlidesModal();
+    closeAvatarModal();
   }
 
   function requestSummaryRefresh() {
@@ -2536,6 +2547,7 @@
 
   // ── Keyboard navigation for polls ──
   document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeParticipantModals();
     if (!currentPoll || !pollActive) return;
     // Don't capture keys if user is typing in an input/textarea
     const tag = document.activeElement?.tagName;
