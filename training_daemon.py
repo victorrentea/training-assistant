@@ -560,10 +560,13 @@ class TranscriptNormalizerRunner:
             if written > 0:
                 output_files = len({str(p) for r in results for p in r.output_files})
                 raw_sources = sum(1 for r in results if r.written_lines > 0)
-                log.info(
-                    "transcript",
-                    f"Normalizer wrote {written} lines to {output_files} normalized files (from {raw_sources} raw sources)",
-                )
+                if output_files == 1 and raw_sources == 1:
+                    log.info("transcript", f"Normalized {written} lines")
+                else:
+                    log.info(
+                        "transcript",
+                        f"Normalized {written} lines to {output_files} normalized files (from {raw_sources} raw sources)",
+                    )
         except Exception as exc:
             log.error("transcript", f"Normalizer error: {exc}")
         finally:
