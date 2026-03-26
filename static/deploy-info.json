@@ -1,7 +1,7 @@
 {
-  "sha": "a0c4bbc34ed1b136083838c4702a274fe6189ea9",
-  "timestamp": "2026-03-26 19:18",
+  "sha": "4b3789f419dfdc620a8e315a58e66fbe0636b173",
+  "timestamp": "2026-03-26 19:19",
   "changelog": [
-    "participant slides restore reopen page persistence"
+    "participant slides fill download button on hover"
   ]
 }
