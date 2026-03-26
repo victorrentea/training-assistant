@@ -1,7 +1,7 @@
 {
-  "sha": "43eb14d93859a8dec6b35e31a6ad6faeffc29801",
-  "timestamp": "2026-03-26 23:35",
+  "sha": "fbf9642cdb13695891543c0b08497388a1ad3112",
+  "timestamp": "2026-03-26 23:36",
   "changelog": [
-    "style: simplify slides upload log messages"
+    "fix: flush same-slide print and move sync back to change branch"
   ]
 }
