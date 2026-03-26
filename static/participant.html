@@ -79,24 +79,13 @@
 
 <div id="slides-overlay" class="summary-overlay" onclick="closeSlidesModal()">
   <div class="summary-dialog slides-dialog" onclick="event.stopPropagation()">
-    <div class="summary-header slides-header">
-      <div class="slides-header-main">
-        <span id="slides-updated" class="slides-updated-inline"></span>
-        <div class="slides-page-nav">
-          <label for="slides-page-input">Page</label>
-          <input id="slides-page-input" class="slides-page-input" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="4" />
-          <span id="slides-page-total" class="slides-page-total"></span>
-          <button id="slides-page-go" class="slides-page-go" type="button">Go</button>
-        </div>
-      </div>
-      <span class="slides-header-actions">
-        <span class="slides-title-inline">📑 Slides</span>
-        <a id="slides-download-btn" class="notes-download-btn" href="#" download>⬇️ Download</a>
-        <button class="summary-close" onclick="closeSlidesModal()">✕</button>
-      </span>
-    </div>
     <div class="slides-layout">
       <div class="slides-viewer-area">
+        <div class="slides-meta-inline">
+          <span id="slides-meta-title" class="slides-meta-title"></span>
+          <span id="slides-updated" class="slides-updated-inline"></span>
+          <span id="slides-page-inline" class="slides-page-inline"></span>
+        </div>
         <div id="slides-empty" class="slides-empty" style="display:none;">No slides published yet.</div>
         <div id="slides-error" class="slides-error" style="display:none;"></div>
         <div id="slides-viewer-shell" class="slides-viewer-shell" style="display:none;">
