@@ -1,7 +1,7 @@
 {
-  "sha": "ffd00c5c62868b507073665e89d9f7b543485352",
-  "timestamp": "2026-03-26 07:17",
+  "sha": "d6e51f158b1990a16d4fc8d2d04bc4908dd80356",
+  "timestamp": "2026-03-26 07:24",
   "changelog": [
-    "Host interval chips open normalized transcript txt"
+    "docs: define host-to-backend slides mirror design"
   ]
 }
