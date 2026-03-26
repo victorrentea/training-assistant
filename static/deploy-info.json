@@ -1,7 +1,7 @@
 {
-  "sha": "50a70fdb50db157a7e863344d20968e8724e1a33",
-  "timestamp": "2026-03-26 08:53",
+  "sha": "e38c8090c570c68c699dbacc3c6fa003207e842d",
+  "timestamp": "2026-03-26 08:58",
   "changelog": [
-    "docs: expand transcript_query usage in CLAUDE.md"
+    "feat: add utility to rebuild normalized transcripts from raw files"
   ]
 }
