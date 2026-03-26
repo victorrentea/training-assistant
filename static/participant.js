@@ -888,7 +888,7 @@
       if (updated) {
         const badge = document.createElement('span');
         badge.className = 'slides-list-updated';
-        badge.textContent = updated;
+        badge.textContent = `${updated} ago`;
         openBtn.appendChild(badge);
       }
       openBtn.addEventListener('click', async () => {
