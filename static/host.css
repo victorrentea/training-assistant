@@ -253,20 +253,26 @@ body {
 }
 
 .slides-catalog-line {
-  margin: 0 0 .25rem;
+  margin: 0 0 .28rem;
   white-space: nowrap;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .5rem;
 }
 
-.slides-catalog-pdf {
+.slides-catalog-name {
   color: var(--accent2);
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.slides-catalog-pptx {
-  color: var(--text);
+.slides-catalog-available {
+  color: var(--ok);
 }
 
-.slides-catalog-pptx.missing {
-  color: var(--danger);
+.slides-catalog-missing {
+  color: var(--muted);
 }
 
 #center-poll {

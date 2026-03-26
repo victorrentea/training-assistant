@@ -343,6 +343,23 @@ def _merge_slide_sources(
     return merged
 
 
+def _collect_participant_slides() -> list[dict]:
+    local_slides, _ = _build_local_slides_index()
+    uploaded_slides, _ = _build_uploaded_slides_index()
+    catalog_slides = _build_catalog_slides_index()
+    state_slides = list(state.slides or [])
+    current = state.slides_current or {}
+    if current.get("url"):
+        state_slides.append({
+            "name": current.get("source_file") or "Current Slides",
+            "slug": current.get("slug") or _slugify(current.get("source_file") or "current-slides"),
+            "url": current["url"],
+            "updated_at": current.get("updated_at"),
+            "source": "slides_current",
+        })
+    return _merge_slide_sources(state_slides, local_slides, uploaded_slides, catalog_slides)
+
+
 def _on_demand_enabled() -> bool:
     raw = os.environ.get("SLIDES_ON_DEMAND_UPLOAD_ENABLED", "1").strip().lower()
     return raw not in {"0", "false", "no", "off"}
@@ -686,6 +703,23 @@ async def get_slides_catalog_map():
     }
 
 
+@router.get("/api/slides/participant-availability")
+async def get_participant_slides_availability():
+    slides = _collect_participant_slides()
+    entries: list[dict] = []
+    for slide in slides:
+        slug = str(slide.get("slug") or "").strip()
+        path = _resolve_slide_path(slug) if slug else None
+        entries.append({
+            "name": slide.get("name"),
+            "slug": slug,
+            "source": slide.get("source"),
+            "url": slide.get("url"),
+            "available_on_server": bool(path is not None and path.exists()),
+        })
+    return {"entries": entries}
+
+
 @router.get("/api/slides/upload-status/{slug}")
 async def get_slide_upload_status(slug: str):
     now = datetime.now(timezone.utc)
@@ -715,20 +749,7 @@ async def get_current_slides():
 
 @public_router.get("/api/slides")
 async def get_slides():
-    local_slides, _ = _build_local_slides_index()
-    uploaded_slides, _ = _build_uploaded_slides_index()
-    catalog_slides = _build_catalog_slides_index()
-    state_slides = list(state.slides or [])
-    current = state.slides_current or {}
-    if current.get("url"):
-        state_slides.append({
-            "name": current.get("source_file") or "Current Slides",
-            "slug": current.get("slug") or _slugify(current.get("source_file") or "current-slides"),
-            "url": current["url"],
-            "updated_at": current.get("updated_at"),
-            "source": "slides_current",
-        })
-    slides = _merge_slide_sources(state_slides, local_slides, uploaded_slides, catalog_slides)
+    slides = _collect_participant_slides()
     return {"slides": slides}
 
 

@@ -837,7 +837,7 @@
     const contentEl = document.getElementById('slides-catalog-content');
     if (!contentEl) return;
     if (_slidesCatalogLoading) {
-      contentEl.textContent = 'Loading PDF => PPTX map...';
+      contentEl.textContent = 'Loading participant slides list...';
       return;
     }
     if (_slidesCatalogError) {
@@ -845,16 +845,18 @@
       return;
     }
     if (!_slidesCatalogEntries.length) {
-      contentEl.textContent = 'No PDF => PPTX mappings found in catalog.';
+      contentEl.textContent = 'No slides available for participants.';
       return;
     }
-    const head = `<div class="slides-catalog-head">${_slidesCatalogEntries.length} mapped decks</div>`;
+    const available = _slidesCatalogEntries.filter((entry) => !!entry.available_on_server).length;
+    const head = `<div class="slides-catalog-head">${_slidesCatalogEntries.length} participant slides • ${available} on server</div>`;
     const lines = _slidesCatalogEntries.map((entry) => {
-      const pdf = escHtml(entry.pdf || '');
-      const pptxPath = escHtml(entry.pptx_path || '');
-      const missingClass = entry.exists ? '' : ' missing';
-      const missingMark = entry.exists ? '' : ' ⚠';
-      return `<div class="slides-catalog-line"><span class="slides-catalog-pdf">${pdf}</span> => <span class="slides-catalog-pptx${missingClass}" title="${pptxPath}">${pptxPath}${missingMark}</span></div>`;
+      const name = escHtml(entry.name || entry.slug || 'Unnamed slide');
+      const slug = escHtml(entry.slug || '');
+      const availableMark = entry.available_on_server
+        ? '<span class="slides-catalog-available" title="Downloaded on server">⬇️</span>'
+        : '<span class="slides-catalog-missing" title="Not yet on server">·</span>';
+      return `<div class="slides-catalog-line"><span class="slides-catalog-name" title="${slug}">${name}</span>${availableMark}</div>`;
     }).join('');
     contentEl.innerHTML = head + lines;
   }
@@ -866,13 +868,13 @@
     _slidesCatalogError = '';
     _renderSlidesCatalogPopover();
     try {
-      const resp = await fetch('/api/slides/catalog-map');
+      const resp = await fetch('/api/slides/participant-availability');
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       const data = await resp.json();
       _slidesCatalogEntries = Array.isArray(data.entries) ? data.entries : [];
       _slidesCatalogLoadedAt = Date.now();
     } catch (e) {
-      _slidesCatalogError = `Cannot load PDF => PPTX map (${e.message || 'request failed'}).`;
+      _slidesCatalogError = `Cannot load participant slides (${e.message || 'request failed'}).`;
     } finally {
       _slidesCatalogLoading = false;
       _renderSlidesCatalogPopover();

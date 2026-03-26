@@ -250,6 +250,36 @@ def test_slides_catalog_map_requires_host_auth():
     assert resp.status_code in (401, 403)
 
 
+def test_participant_availability_requires_host_auth():
+    client = TestClient(app)
+    resp = client.get("/api/slides/participant-availability")
+    assert resp.status_code in (401, 403)
+
+
+def test_participant_availability_lists_slides_and_server_presence(monkeypatch, tmp_path):
+    slides_dir = tmp_path / "server_materials" / "slides"
+    slides_dir.mkdir(parents=True, exist_ok=True)
+    (slides_dir / "Clean Code.pdf").write_bytes(b"%PDF-1.4\n%test\n")
+    catalog = tmp_path / "catalog.json"
+    catalog.write_text(json.dumps({
+        "decks": [
+            {"title": "Clean Code", "target_pdf": "Clean Code.pdf"},
+            {"title": "Architecture", "target_pdf": "Architecture.pdf"},
+        ]
+    }), encoding="utf-8")
+    monkeypatch.setenv("TRAINING_ASSISTANT_SLIDES_DIR", str(slides_dir))
+    monkeypatch.setenv("PPTX_CATALOG_FILE", str(catalog))
+
+    client = TestClient(app, headers=_HOST_AUTH_HEADERS)
+    resp = client.get("/api/slides/participant-availability")
+    assert resp.status_code == 200
+    entries = resp.json()["entries"]
+    clean = next(e for e in entries if e["slug"] == "clean-code")
+    architecture = next(e for e in entries if e["slug"] == "architecture")
+    assert clean["available_on_server"] is True
+    assert architecture["available_on_server"] is False
+
+
 def test_slides_catalog_map_returns_pdf_to_pptx_entries(monkeypatch, tmp_path):
     source_ok = tmp_path / "Clean Code.pptx"
     source_ok.write_bytes(b"pptx")
