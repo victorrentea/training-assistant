@@ -195,14 +195,7 @@ h1 { display: none; }
 }
 
 .slides-meta-inline {
-  display: flex;
-  align-items: center;
-  min-height: 18px;
-  margin-bottom: 0;
-  font-size: .72rem;
-  color: var(--muted);
-  white-space: nowrap;
-  overflow: hidden;
+  display: none;
 }
 
 .slides-page-inline {
