@@ -1,5 +1,6 @@
 # Tasks
 
+- [x] Direct request: removed duplicate vertical scrollbar beside participant PDF viewer in iframe fallback mode by disabling outer container overflow while iframe is active.
 - [x] Direct request: on hover, participant Slides row download button now renders as fully filled (solid background) for stronger visual affordance.
 - [x] Direct request: restored Slides reopen continuity by disabling temporary auto-jump test mode and re-enabling per-slide view persistence (same deck + same page/position on reopen).
 - [x] Direct request: appended `ago` suffix to compact per-slide updated badges in participant Slides sidebar (e.g., `3m ago`, `1h ago`).
