@@ -1,7 +1,7 @@
 {
-  "sha": "bfc5ce7f307bba98f5cb883c9368e592d986ff65",
-  "timestamp": "2026-03-26 08:44",
+  "sha": "dd109039e8f71e299afecd8218d1c4699d8aef27",
+  "timestamp": "2026-03-26 08:50",
   "changelog": [
-    "chore: shorten normalizer log in common 1-to-1 case"
+    "docs: add daemon architecture and transcript dataflow"
   ]
 }
