@@ -97,6 +97,7 @@
   let slidesPdfDoc = null;
   let slidesPdfLoadingTask = null;
   let slidesNativeFrame = null;
+  const SLIDES_TEST_TARGET_PAGE = 2;
 
   function escHtml(s) {
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -477,6 +478,11 @@
     localStorage.setItem(_slidePageKey(slug), String(page));
   }
 
+  function _getSlidesTestingPage(numPages) {
+    const total = Math.max(1, Number(numPages || 1));
+    return Math.min(SLIDES_TEST_TARGET_PAGE, total);
+  }
+
   function _formatSlideUpdated(updatedAt) {
     if (!updatedAt) return 'time unavailable';
     const dt = new Date(updatedAt);
@@ -830,6 +836,9 @@
     if (effectiveUpdatedAt && !slide.updated_at) slide.updated_at = effectiveUpdatedAt;
     const fingerprint = _slideFingerprint(slide, headers);
     if (!forceReload && slidesSelectedId === slide._id && slidesLastFingerprint === fingerprint && slidesPdfDoc) {
+      const testPage = _getSlidesTestingPage(slidesPdfDoc.numPages);
+      slidesPdfViewer.currentPageNumber = testPage;
+      _setStoredSlidePage(slide.slug, testPage);
       _renderSlidesMeta({ ...slide, updated_at: effectiveUpdatedAt });
       _setSlidesDownload(slide.url, false);
       _setSlidesLoading({ visible: false });
@@ -860,8 +869,9 @@
       slidesPdfLinkService.setDocument(doc, null);
       slidesPdfViewer.currentScaleValue = 'page-width';
 
-      const savedPage = Math.min(_getStoredSlidePage(slide.slug), doc.numPages || 1);
-      slidesPdfViewer.currentPageNumber = savedPage;
+      const testPage = _getSlidesTestingPage(doc.numPages);
+      slidesPdfViewer.currentPageNumber = testPage;
+      _setStoredSlidePage(slide.slug, testPage);
 
       slidesSelectedSlug = slide.slug;
       slidesSelectedId = slide._id;
