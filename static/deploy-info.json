@@ -1,7 +1,7 @@
 {
-  "sha": "00b5d997d4542db52e145f3e9f759ac503b33cca",
-  "timestamp": "2026-03-26 14:26",
+  "sha": "45fa72e4fed9f651f76dddcbd9578440c0e05b99",
+  "timestamp": "2026-03-26 14:28",
   "changelog": [
-    "Restore rocket emoji in startup logs"
+    "Remember Railway CLI availability"
   ]
 }
