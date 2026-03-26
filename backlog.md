@@ -233,3 +233,4 @@ Host broadcasts a statement: "Have you ever shipped code that violated what we j
 - [x] Direct request: made daemon on-demand WS runner resilient to slide-path mismatch by discovering PDFs from multiple candidate directories instead of disabling at startup.
 - [x] Direct request: daemon now logs `⬆️` on on-demand slide PDF upload flow (`slides_upload_received` and `slides_upload_upsert_ok` with slug/request_id/path).
 - [x] Direct request: set long-lived browser caching for avatar PNGs via `Cache-Control: public, max-age=31536000, immutable` on `/static/avatars/*.png` responses.
+- [x] Direct request: aligned PPTX daemon logs with shared daemon logger format (`daemon/log.py`) and persisted this rule in CLAUDE memory.

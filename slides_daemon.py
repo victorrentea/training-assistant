@@ -17,7 +17,6 @@ import re
 import shutil
 import ssl
 import subprocess
-import sys
 import time
 import urllib.error
 import urllib.parse
@@ -26,6 +25,8 @@ import uuid
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
+
+from daemon import log
 
 
 DEFAULT_SERVER_URL = "http://localhost:8000"
@@ -228,7 +229,7 @@ def load_catalog_entries(path: Path | None) -> list[dict]:
             continue
         source = Path(str(entry.get("source", "")).strip()).expanduser()
         if not source.exists() or not source.is_file():
-            print(f"[pptx-daemon] WARN: Missing source in catalog #{idx + 1}: {source}", file=sys.stderr, flush=True)
+            log.error("slides", f"Missing source in catalog #{idx + 1}: {source}")
             continue
         target_pdf = str(entry.get("target_pdf", "")).strip()
         if not target_pdf:
@@ -662,7 +663,7 @@ def sync_slides_list(config: SlidesDaemonConfig, daemon_state: dict, metadata: d
     push_slides_list(config, slides)
     daemon_state["last_slides_hash"] = payload_hash
     save_daemon_state(config.state_file, daemon_state)
-    print(f"[pptx-daemon] Published slides list ({len(slides)} entries)", flush=True)
+    log.info("slides", f"Published slides list ({len(slides)} entries)")
     return True
 
 
@@ -674,10 +675,10 @@ def process_one_file(
 ) -> bool:
     cpu_free = get_cpu_free_percent(sample_seconds=1.0)
     if cpu_free < config.min_cpu_free_percent:
-        print(
-            f"[pptx-daemon] CPU overloaded ({cpu_free:.1f}% free < "
+        log.info(
+            "slides",
+            f"CPU overloaded ({cpu_free:.1f}% free < "
             f"{config.min_cpu_free_percent:.0f}% threshold) -- skipping PDF export",
-            flush=True,
         )
         return False
 
@@ -696,7 +697,7 @@ def process_one_file(
     daemon_state["files"][key]["last_exported_mtime"] = source_mtime
     save_daemon_state(config.state_file, daemon_state)
     write_material_last_modified(config.publish_dir, target_pdf, source_mtime)
-    print(f"[pptx-daemon] Published {pptx_path.name} -> {public_ref}", flush=True)
+    log.info("slides", f"Published {pptx_path.name} -> {public_ref}")
     return True
 
 
@@ -711,10 +712,7 @@ def run_once(config: SlidesDaemonConfig, daemon_state: dict) -> bool:
         next_allowed_at = last_finished_at + cooldown
         if now_epoch < next_allowed_at:
             wait_s = next_allowed_at - now_epoch
-            print(
-                f"[pptx-daemon] Cooldown active ({wait_s:.1f}s remaining) -- delaying next export",
-                flush=True,
-            )
+            log.info("slides", f"Cooldown active ({wait_s:.1f}s remaining) -- delaying next export")
         else:
             # serialize: process one file per poll cycle
             next_path = changed[0]
@@ -722,13 +720,10 @@ def run_once(config: SlidesDaemonConfig, daemon_state: dict) -> bool:
             failed_until = float(daemon_state.setdefault("files", {}).get(next_key, {}).get("retry_after", 0.0))
             if now_epoch < failed_until:
                 wait_s = failed_until - now_epoch
-                print(
-                    f"[pptx-daemon] Retry backoff active for {next_path.name} ({wait_s:.1f}s remaining)",
-                    flush=True,
-                )
+                log.info("slides", f"Retry backoff active for {next_path.name} ({wait_s:.1f}s remaining)")
                 updated_list = sync_slides_list(config, daemon_state, metadata)
                 return updated_current or updated_list
-            print(f"✏️ppt update detected => regenerating ppf: {next_path.name}", flush=True)
+            log.info("slides", f"✏️ppt update detected => regenerating ppf: {next_path.name}")
             target_pdf = metadata.get(_abs_key(next_path), {}).get("target_pdf")
             # TEMPORARY PAUSE requested by user:
             # keep conversion/upload code in repo, but skip executing automatic PPTX->PDF flow.
@@ -743,7 +738,7 @@ def run_once(config: SlidesDaemonConfig, daemon_state: dict) -> bool:
             #     daemon_state.setdefault("files", {}).setdefault(next_key, {})["retry_after"] = retry_after
             #     save_daemon_state(config.state_file, daemon_state)
             #     raise
-            print("[pptx-daemon] Auto PPTX->PDF conversion is temporarily paused", flush=True)
+            log.info("slides", "Auto PPTX->PDF conversion is temporarily paused")
     updated_list = sync_slides_list(config, daemon_state, metadata)
     return updated_current or updated_list
 
@@ -751,16 +746,16 @@ def run_once(config: SlidesDaemonConfig, daemon_state: dict) -> bool:
 def run_forever(config: SlidesDaemonConfig) -> None:
     daemon_state = load_daemon_state(config.state_file)
     source_desc = f"catalog={config.catalog_file}" if config.catalog_file and config.catalog_file.exists() else f"watch={config.watch_dir}"
-    print(
-        f"[pptx-daemon] Watching {source_desc} every {config.poll_interval_seconds:.0f}s "
+    log.info(
+        "slides",
+        f"Watching {source_desc} every {config.poll_interval_seconds:.0f}s "
         f"(converter={config.converter}, upload={config.upload_mode}, publish={config.publish_dir})",
-        flush=True,
     )
     while True:
         try:
             run_once(config, daemon_state)
         except Exception as exc:
-            print(f"[pptx-daemon] ERROR: {exc}", file=sys.stderr, flush=True)
+            log.error("slides", str(exc))
         time.sleep(config.poll_interval_seconds)
 
 
@@ -772,7 +767,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         config = config_from_env()
     except Exception as exc:
-        print(f"[pptx-daemon] Config error: {exc}", file=sys.stderr, flush=True)
+        log.error("slides", f"Config error: {exc}")
         return 1
 
     daemon_state = load_daemon_state(config.state_file)
@@ -781,7 +776,7 @@ def main(argv: list[str] | None = None) -> int:
             changed = run_once(config, daemon_state)
             return 0 if changed else 0
         except Exception as exc:
-            print(f"[pptx-daemon] ERROR: {exc}", file=sys.stderr, flush=True)
+            log.error("slides", str(exc))
             return 1
 
     run_forever(config)
