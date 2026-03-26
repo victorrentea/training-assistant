@@ -1,7 +1,7 @@
 {
-  "sha": "cc1b04f53acbf43c2db39f796a2dac2ff6dfba30",
-  "timestamp": "2026-03-26 08:40",
+  "sha": "7f0507b4bf66b104fd51b0358d9c4a72525b522b",
+  "timestamp": "2026-03-26 08:44",
   "changelog": [
-    "feat: read normalized transcripts for quiz and summary flows"
+    "refactor: use normalized transcripts outside normalizer"
   ]
 }
