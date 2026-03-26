@@ -539,7 +539,8 @@ h1 { display: none; }
 }
 
 .slides-list-open {
-  flex: 1;
+  flex: 0 0 70%;
+  max-width: 70%;
   display: flex;
   align-items: center;
   gap: .08rem;
