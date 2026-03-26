@@ -1,7 +1,7 @@
 {
-  "sha": "08d9c820f51087fae4b557cc9b709f50cbc61aaa",
-  "timestamp": "2026-03-26 17:00",
+  "sha": "a0e3e57c8fc6bfe633f285b0041495e3ce0a6cb4",
+  "timestamp": "2026-03-26 17:02",
   "changelog": [
-    "participant slides inline metadata row"
+    "feat: play glass sound for tv overlay"
   ]
 }
