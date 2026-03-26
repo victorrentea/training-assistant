@@ -1,7 +1,7 @@
 {
-  "sha": "16340bcb1a9ddaaf6a5caa9714822a741be5f623",
-  "timestamp": "2026-03-26 16:49",
+  "sha": "1260e2b724cecaff55f46627e0cd0a5f34a21e3e",
+  "timestamp": "2026-03-26 16:55",
   "changelog": [
-    "Enforce Drive-only slide export path"
+    "feat: focus key points on course title"
   ]
 }
