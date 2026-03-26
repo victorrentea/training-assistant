@@ -1,7 +1,7 @@
 {
-  "sha": "e637bca75592b8dfbc3ea53011bdba3d66aafd75",
-  "timestamp": "2026-03-26 19:43",
+  "sha": "6c1afff0fe90baa601ece7bf16d354d6c20e6270",
+  "timestamp": "2026-03-26 19:47",
   "changelog": [
-    "Order participant slides by catalog topics"
+    "Refine slide-dock tour bubble and scan path"
   ]
 }
