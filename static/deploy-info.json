@@ -1,7 +1,7 @@
 {
-  "sha": "cdec58aebf04762ca81ed8618a9981355c00205e",
-  "timestamp": "2026-03-26 09:41",
+  "sha": "b4b9e1da33a98057101ab15fbe5e451c6884dd76",
+  "timestamp": "2026-03-26 13:37",
   "changelog": [
-    "fix: use certifi ssl context for daemon http uploads"
+    "fix overlay bar placement on mirrored displays"
   ]
 }
