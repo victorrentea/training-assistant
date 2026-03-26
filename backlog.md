@@ -1,5 +1,6 @@
 # Tasks
 
+- [x] training-daemon: integrated PPTX polling/export directly in `training_daemon.py` via `SlidesPollingRunner` (calls `slides_daemon.run_once` on interval), so slides auto-conversion no longer requires running a separate slides daemon process.
 - [x] slides-daemon: fixed PPTX auto-conversion when `soffice` is not in PATH by adding macOS LibreOffice fallback (`/Applications/LibreOffice.app/Contents/MacOS/soffice`) plus `PPTX_SOFFICE_BIN` override; verified AI Coding `touch` triggers auto-regeneration to `materials/slides/AI Coding.pdf`.
 - [x] bug: participant onboarding checklist (the 3 checkboxes at the bottom) now stays permanently hidden after all 3 are completed; hand/welcome animation can still reappear.
 - [x] desktop-overlay: in single-monitor mode, right-edge panel now pops in only when mouse enters the panel's own vertical edge band (not anywhere on the full screen edge) and auto-hides after 1 second; regression tests added.
