@@ -1,7 +1,7 @@
 {
-  "sha": "080415484e7ebc1d3a3a9e117fd31a8960c42b28",
-  "timestamp": "2026-03-26 09:29",
+  "sha": "fe6a3804f2077084bf7e5abcc2d3c37b0802d051",
+  "timestamp": "2026-03-26 09:30",
   "changelog": [
-    "feat: throttle pptx regeneration with cooldown"
+    "fix: accept libreoffice output with differing filename"
   ]
 }
