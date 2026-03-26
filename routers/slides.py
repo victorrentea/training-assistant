@@ -373,6 +373,22 @@ def _merge_slide_sources(
     return merged
 
 
+def _order_participant_slides_by_catalog(slides: list[dict], catalog_slides: list[dict]) -> list[dict]:
+    catalog_order: dict[str, int] = {}
+    for idx, entry in enumerate(catalog_slides):
+        slug = str(entry.get("slug") or "").strip()
+        if slug and slug not in catalog_order:
+            catalog_order[slug] = idx
+
+    def _sort_key(entry: dict) -> tuple:
+        slug = str(entry.get("slug") or "").strip()
+        if slug in catalog_order:
+            return (0, catalog_order[slug], str(entry.get("name") or "").lower(), slug)
+        return (1, str(entry.get("name") or "").lower(), slug)
+
+    return sorted(slides, key=_sort_key)
+
+
 def _collect_participant_slides(*, include_unavailable_when_daemon_offline: bool = False) -> list[dict]:
     local_slides, _ = _build_local_slides_index()
     uploaded_slides, _ = _build_uploaded_slides_index()
@@ -388,10 +404,11 @@ def _collect_participant_slides(*, include_unavailable_when_daemon_offline: bool
             "source": "slides_current",
         })
     merged = _merge_slide_sources(state_slides, local_slides, uploaded_slides, catalog_slides)
+    ordered = _order_participant_slides_by_catalog(merged, catalog_slides)
     if include_unavailable_when_daemon_offline:
-        return merged
+        return ordered
     # Keep full catalog visibility for participants; missing files are fetched on-demand via daemon WS.
-    return merged
+    return ordered
 
 
 def _on_demand_enabled() -> bool:
