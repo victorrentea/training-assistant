@@ -1,7 +1,7 @@
 {
-  "sha": "f7101634f083eb1a6ecbf2aa5a26b119fc019ae4",
-  "timestamp": "2026-03-26 08:35",
+  "sha": "b076145fe40c712a5ae2d4af922f796ea6ece6a2",
+  "timestamp": "2026-03-26 08:37",
   "changelog": [
-    "chore: rename normalizer state file to normalization.offset.txt"
+    "chore: log last normalization offset mtime on startup"
   ]
 }
