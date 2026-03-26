@@ -1,7 +1,7 @@
 {
-  "sha": "839931e229def6c85950a28bd3aee67ce6f3ac71",
-  "timestamp": "2026-03-26 23:07",
+  "sha": "f19a9fca951bec1873e71f1146091477d2e54ad5",
+  "timestamp": "2026-03-26 23:08",
   "changelog": [
-    "Add Drive slides sync sequence diagram"
+    "Remove right gutter in slide list rows"
   ]
 }
