@@ -1,7 +1,7 @@
 {
-  "sha": "e38c8090c570c68c699dbacc3c6fa003207e842d",
+  "sha": "39b441aba41ee88ed76a15f63fdd1590e56e8c97",
   "timestamp": "2026-03-26 08:58",
   "changelog": [
-    "feat: add utility to rebuild normalized transcripts from raw files"
+    "docs: add rebuild_normalized_transcripts usage to CLAUDE.md"
   ]
 }
