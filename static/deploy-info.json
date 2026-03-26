@@ -1,7 +1,7 @@
 {
-  "sha": "ad4072c3a1270a5879bf2ef8acb9ec044deb60ff",
-  "timestamp": "2026-03-26 17:23",
+  "sha": "09b6194c00dcdda3f790d2c21a909dcde0d5ffa9",
+  "timestamp": "2026-03-26 17:25",
   "changelog": [
-    "participant slides keep emoji bar clickable"
+    "participant slides add right-side deck list layout"
   ]
 }
