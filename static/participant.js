@@ -486,9 +486,45 @@
     const min = Math.floor(sec / 60);
     if (min < 60) return `Updated ${min}m ago`;
     const hrs = Math.floor(min / 60);
-    if (hrs < 48) return `Updated ${hrs}h ago`;
-    const days = Math.floor(hrs / 24);
-    return `Updated ${days}d ago`;
+    if (hrs < 24) return `Updated ${hrs}h ago`;
+    return `Updated ${dt.toLocaleString(undefined, {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    })}`;
+  }
+
+  function _slidePagePair(slide) {
+    const current = Math.max(1, Number(
+      slide?._id === slidesSelectedId
+        ? (slidesPdfViewer?.currentPageNumber || _getStoredSlidePage(slide.slug))
+        : _getStoredSlidePage(slide?.slug),
+    ));
+    const total = (
+      slide && slide._id === slidesSelectedId && slidesPdfDoc
+        ? Math.max(1, Number(slidesPdfDoc.numPages || 1))
+        : null
+    );
+    return { current, total };
+  }
+
+  function _buildSlideOptionLabel(slide) {
+    if (!slide) return 'Select a slide';
+    const { current, total } = _slidePagePair(slide);
+    const pageInfo = total ? `Page ${current}/${total}` : `Page ${current}/-`;
+    return `${slide.name} · ${_formatSlideUpdated(slide.updated_at)} · ${pageInfo}`;
+  }
+
+  function _syncSlidesSelectWidth() {
+    const select = document.getElementById('slides-select');
+    if (!select) return;
+    let longest = 18;
+    for (const opt of Array.from(select.options || [])) {
+      longest = Math.max(longest, String(opt.textContent || '').length);
+    }
+    const widthCh = Math.min(92, Math.max(18, longest + 2));
+    select.style.setProperty('--slides-select-width', `${widthCh}ch`);
   }
 
   function _setSlidesError(message) {
@@ -665,15 +701,13 @@
   }
 
   function _renderSlidesMeta(slide) {
-    const meta = document.getElementById('slides-updated');
-    if (!meta || !slide) {
-      if (meta) meta.textContent = '';
-      _syncSlidesPageControls(null);
-      return;
+    _syncSlidesPageControls(slide || null);
+    const select = document.getElementById('slides-select');
+    if (select && slide && slidesSelectedId === slide._id) {
+      const selectedOption = Array.from(select.options || []).find((opt) => opt.value === slide._id);
+      if (selectedOption) selectedOption.textContent = _buildSlideOptionLabel(slide);
+      _syncSlidesSelectWidth();
     }
-    const page = slidesPdfViewer?.currentPageNumber || _getStoredSlidePage(slide.slug);
-    meta.textContent = `${_formatSlideUpdated(slide.updated_at)} • Page ${page}`;
-    _syncSlidesPageControls(slide);
   }
 
   function _syncSlidesPageControls(slide) {
@@ -749,10 +783,11 @@
     for (const slide of slidesCatalog) {
       const option = document.createElement('option');
       option.value = slide._id;
-      option.textContent = slide.name;
+      option.textContent = _buildSlideOptionLabel(slide);
       option.selected = slide._id === targetId;
       select.appendChild(option);
     }
+    _syncSlidesSelectWidth();
     select.disabled = slidesCatalog.length === 0;
     if (!select._bound) {
       select._bound = true;
