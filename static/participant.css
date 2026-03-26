@@ -522,7 +522,7 @@ h1 { display: none; }
   display: flex;
   flex-direction: column;
   gap: .08rem;
-  padding: .18rem .18rem 20px;
+  padding: .18rem 0 20px .18rem;
 }
 
 .slides-list.uniform-10 {
@@ -539,12 +539,12 @@ h1 { display: none; }
 .slides-list-item {
   display: flex;
   align-items: center;
-  gap: .12rem;
+  gap: .04rem;
   cursor: pointer;
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 6px;
   background: #1a1a1a;
-  padding: .14rem .2rem;
+  padding: .14rem 0 .14rem .2rem;
 }
 
 .slides-list-item:hover {
@@ -574,7 +574,7 @@ h1 { display: none; }
   cursor: pointer;
   font-size: .83rem;
   line-height: 1.05;
-  padding: .06rem .1rem;
+  padding: .06rem 0 .06rem 5%;
   min-width: 0;
 }
 
