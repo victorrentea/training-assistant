@@ -509,6 +509,21 @@ def test_api_slides_file_inline_query_sets_inline_disposition(monkeypatch, tmp_p
     assert resp.headers.get("content-disposition", "").startswith('inline; filename="Inline.pdf"')
 
 
+def test_api_slides_file_defaults_to_inline_and_supports_explicit_download(monkeypatch, tmp_path):
+    monkeypatch.setenv("TRAINING_ASSISTANT_SLIDES_DIR", str(tmp_path))
+    pdf = tmp_path / "Deck.pdf"
+    pdf.write_bytes(b"%PDF-1.4\n%deck\n")
+
+    client = TestClient(app)
+    inline_resp = client.get("/api/slides/file/deck")
+    assert inline_resp.status_code == 200
+    assert inline_resp.headers.get("content-disposition", "").startswith('inline; filename="Deck.pdf"')
+
+    download_resp = client.get("/api/slides/file/deck?download=1")
+    assert download_resp.status_code == 200
+    assert download_resp.headers.get("content-disposition", "").startswith('attachment; filename="Deck.pdf"')
+
+
 def test_api_slides_upload_status_endpoint(monkeypatch, tmp_path):
     slides_dir = tmp_path / "server_materials" / "slides"
     slides_dir.mkdir(parents=True, exist_ok=True)
