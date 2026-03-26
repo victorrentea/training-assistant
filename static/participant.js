@@ -88,6 +88,7 @@
   const LS_SLIDES_OVERLAY_OPEN = 'workshop_slides_overlay_open';
   const LS_SLIDE_VISITED_IDS = 'workshop_slide_visited_ids';
   const LS_SLIDES_VIEW_MODE = 'workshop_slides_view_mode';
+  const LS_SLIDES_FOLLOW_TRAINER = 'workshop_slides_follow_trainer';
   const SLIDES_TEST_AUTO_SCROLL_ENABLED = false;
   const SLIDES_TEST_AUTO_SCROLL_PAGE = 2;
   const SLIDES_TEST_AUTO_SCROLL_DELAY_MS = 3000;
@@ -107,6 +108,8 @@
   let slidesPdfLoadingTask = null;
   let slidesAutoScrollTimer = null;
   let slidesViewMode = 'pdfjs';
+  let slidesFollowTrainerEnabled = true;
+  let slidesFollowUncheckSuppressedUntil = 0;
   let slidesNativeFrame = null;
   let hostSlidesCurrent = null;
   let lastHostSlidesCurrentKey = '';
@@ -572,6 +575,7 @@
   async function _applyHostSlideFollow(slidesCurrent) {
     hostSlidesCurrent = slidesCurrent || null;
     if (!hostSlidesCurrent) return;
+    if (!_isSlidesFollowActive()) return;
 
     if (!slidesCatalog.length) {
       await _refreshSlidesCatalog();
@@ -594,6 +598,7 @@
     if (slidesPdfDoc && slidesPdfViewer && slidesSelectedId === targetSlide._id) {
       const maxPage = Math.max(1, Number(slidesPdfDoc.numPages || 1));
       const nextPage = Math.min(maxPage, targetPage);
+      _suppressSlidesFollowAutoUncheck(1500);
       slidesPdfViewer.currentPageNumber = nextPage;
       _setStoredSlidePage(targetSlide.slug, nextPage);
       _renderSlidesMeta(targetSlide);
@@ -654,6 +659,56 @@
     localStorage.setItem(LS_SLIDES_VIEW_MODE, mode === 'native' ? 'native' : 'pdfjs');
   }
 
+  function _getStoredSlidesFollowTrainer() {
+    const raw = localStorage.getItem(LS_SLIDES_FOLLOW_TRAINER);
+    if (raw === null) return true;
+    return String(raw) !== '0';
+  }
+
+  function _setStoredSlidesFollowTrainer(enabled) {
+    localStorage.setItem(LS_SLIDES_FOLLOW_TRAINER, enabled ? '1' : '0');
+  }
+
+  function _suppressSlidesFollowAutoUncheck(ms = 1200) {
+    const until = Date.now() + Math.max(0, Number(ms || 0));
+    slidesFollowUncheckSuppressedUntil = Math.max(slidesFollowUncheckSuppressedUntil, until);
+  }
+
+  function _isSlidesFollowAutoUncheckSuppressed() {
+    return Date.now() < slidesFollowUncheckSuppressedUntil;
+  }
+
+  function _isSlidesFollowActive() {
+    return slidesViewMode === 'pdfjs' && slidesFollowTrainerEnabled;
+  }
+
+  function _renderSlidesFollowTrainerToggle() {
+    const input = document.getElementById('slides-follow-trainer');
+    const wrap = document.getElementById('slides-follow-trainer-wrap');
+    if (!input || !wrap) return;
+    input.checked = slidesFollowTrainerEnabled;
+    const disabled = slidesViewMode !== 'pdfjs';
+    input.disabled = disabled;
+    wrap.classList.toggle('disabled', disabled);
+    wrap.setAttribute('aria-disabled', disabled ? 'true' : 'false');
+  }
+
+  function _setSlidesFollowTrainerEnabled(enabled, { persist = true, applyHost = true } = {}) {
+    const next = Boolean(enabled);
+    slidesFollowTrainerEnabled = next;
+    if (persist) _setStoredSlidesFollowTrainer(next);
+    _renderSlidesFollowTrainerToggle();
+    if (applyHost && _isSlidesFollowActive() && hostSlidesCurrent) {
+      _queueHostSlideFollow(hostSlidesCurrent);
+    }
+  }
+
+  function _autoDisableSlidesFollowFromParticipantNav() {
+    if (!_isSlidesFollowActive()) return;
+    if (_isSlidesFollowAutoUncheckSuppressed()) return;
+    _setSlidesFollowTrainerEnabled(false, { persist: true, applyHost: false });
+  }
+
   function _renderSlidesViewModeToggle() {
     const nativeBtn = document.getElementById('slides-view-native');
     const pdfjsBtn = document.getElementById('slides-view-pdfjs');
@@ -663,6 +718,7 @@
     pdfjsBtn.classList.toggle('active', !isNative);
     nativeBtn.setAttribute('aria-pressed', isNative ? 'true' : 'false');
     pdfjsBtn.setAttribute('aria-pressed', !isNative ? 'true' : 'false');
+    _renderSlidesFollowTrainerToggle();
   }
 
   function _setSlidesViewMode(mode) {
@@ -678,6 +734,9 @@
         _loadSlideIntoViewer(slide, { forceReload: true, withUiBlocker: true }).catch(() => {});
       }
     }
+    if (nextMode === 'pdfjs' && slidesFollowTrainerEnabled && hostSlidesCurrent) {
+      _queueHostSlideFollow(hostSlidesCurrent);
+    }
   }
 
   function _bindSlidesViewModeToggle() {
@@ -687,6 +746,17 @@
     const pdfjsBtn = document.getElementById('slides-view-pdfjs');
     if (nativeBtn) nativeBtn.addEventListener('click', () => _setSlidesViewMode('native'));
     if (pdfjsBtn) pdfjsBtn.addEventListener('click', () => _setSlidesViewMode('pdfjs'));
+  }
+
+  function _bindSlidesFollowTrainerToggle() {
+    slidesFollowTrainerEnabled = _getStoredSlidesFollowTrainer();
+    _renderSlidesFollowTrainerToggle();
+    const input = document.getElementById('slides-follow-trainer');
+    if (input) {
+      input.addEventListener('change', () => {
+        _setSlidesFollowTrainerEnabled(Boolean(input.checked), { persist: true, applyHost: true });
+      });
+    }
   }
 
   function _getStoredVisitedSlideIds() {
@@ -903,6 +973,7 @@
         });
         const slide = slidesCatalog.find(s => s.slug === slidesSelectedSlug);
         _renderSlidesMeta(slide || null);
+        _autoDisableSlidesFollowFromParticipantNav();
       }
     });
 
@@ -918,6 +989,7 @@
       });
       const slide = slidesCatalog.find(s => s.slug === slidesSelectedSlug);
       _syncSlidesPageControls(slide || null);
+      _autoDisableSlidesFollowFromParticipantNav();
     });
   }
 
@@ -958,6 +1030,7 @@
       if (slidesPdfDoc && slidesPdfViewer) {
         const numPages = Math.max(1, Number(slidesPdfDoc.numPages || 1));
         const targetPage = Math.min(numPages, requestedPage);
+        _suppressSlidesFollowAutoUncheck(1500);
         try {
           if (slidesPdfLinkService?.goToPage) slidesPdfLinkService.goToPage(targetPage);
         } catch (_) {}
@@ -1195,6 +1268,7 @@
         const saved = _getStoredSlideView(slide.slug);
         const maxPages = Math.max(1, Number(slidesPdfDoc.numPages || 1));
         const targetPage = Math.min(saved?.page || _getStoredSlidePage(slide.slug), maxPages);
+        _suppressSlidesFollowAutoUncheck(1500);
         try {
           slidesPdfViewer.currentPageNumber = targetPage;
         } catch (_) {
@@ -1239,6 +1313,7 @@
         const saved = _getStoredSlideView(slide.slug);
         const maxPages = Math.max(1, Number(doc.numPages || 1));
         const savedPage = Math.min(saved?.page || _getStoredSlidePage(slide.slug), maxPages);
+        _suppressSlidesFollowAutoUncheck(1500);
         try {
           slidesPdfViewer.currentPageNumber = savedPage;
         } catch (_) {
@@ -1441,6 +1516,7 @@
     }
     connectWS(myName);
   })();
+  _bindSlidesFollowTrainerToggle();
   _bindSlidesViewModeToggle();
   warmSlidesCatalog();
 
