@@ -1,6 +1,6 @@
 /.claude/settings.local.json
 /secrets.env
-/clean-clipboard/secrets.env
+/wispr-addons/secrets.env
 __pycache__/
 *.pyc
 .playwright-mcp/
