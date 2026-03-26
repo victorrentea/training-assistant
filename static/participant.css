@@ -312,7 +312,7 @@ h1 { display: none; }
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 6px;
   background: #1a1a1a;
-  padding: .22rem .25rem;
+  padding: .2rem .23rem;
 }
 
 .slides-list-item:hover {
@@ -331,11 +331,12 @@ h1 { display: none; }
   color: var(--text);
   text-align: left;
   cursor: pointer;
-  font-size: .74rem;
-  line-height: 1.2;
-  padding: .12rem .15rem;
-  white-space: normal;
-  overflow-wrap: anywhere;
+  font-size: .67rem;
+  line-height: 1.1;
+  padding: .1rem .13rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .slides-list-download {
