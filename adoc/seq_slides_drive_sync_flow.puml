@@ -1,0 +1,46 @@
+@startuml sequence
+title Slides Pipeline (Drive-only) — Sequence
+
+actor Trainer
+participant "PowerPoint (.pptx local)" as PPTX
+participant "Google Drive Sync" as GDSync
+participant "Slides Daemon\n(slides_daemon.py)" as Daemon
+participant "Google Drive PDF Export URL" as GDrive
+participant "Published Slides Folder\n(materials/slides)" as Publish
+participant "Backend API\n(FastAPI)" as API
+participant "Host UI\n(host.js)" as HostUI
+
+== Local Edit ==
+Trainer -> PPTX: Edit + Save
+PPTX -> GDSync: Local file updated
+
+== Daemon Detects Dirty ==
+Daemon -> PPTX: Poll file mtime
+Daemon -> Daemon: detect_changed_files()\nmark deck dirty
+
+== Drive Pull Retries ==
+loop Every 5s (max 5 minutes)
+  Daemon -> GDrive: GET drive_export_url (PDF)
+  alt New PDF fingerprint
+    GDrive --> Daemon: PDF bytes (%PDF-...)
+    Daemon -> Daemon: update last_drive_fingerprint\nclear out_of_sync
+    Daemon -> Publish: write target_pdf
+    Daemon -> API: POST /api/quiz-status\n(slides list updated)
+    API --> HostUI: state/availability refresh
+    break
+  else Same fingerprint / transient error
+    GDrive --> Daemon: unchanged or error
+    Daemon -> Daemon: keep retrying (5s cadence)
+  end
+end
+
+== Timeout Path ==
+alt No new fingerprint within 5 minutes
+  Daemon -> Daemon: set out_of_sync=true\nstore out_of_sync_message
+  Daemon -> API: POST /api/quiz-status (sync status)
+  HostUI -> API: GET /api/slides/participant-availability
+  API --> HostUI: entries include sync_status=out_of_sync
+  HostUI -> HostUI: Show ⚠️ in 📜 tooltip row
+end
+
+@enduml
