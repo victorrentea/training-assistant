@@ -97,7 +97,8 @@ h1 { display: none; }
   justify-content: space-between;
   align-items: center;
   padding: .6rem .9rem;
-  margin-bottom: .35rem;
+  width: 70%;
+  margin: 0 auto .35rem;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 999px;
@@ -130,7 +131,7 @@ h1 { display: none; }
 
 @media (max-width: 900px) {
   .status-bar {
-    margin-left: 0;
+    width: 100%;
   }
 }
 .dot { width:8px; height:8px; border-radius:50%; background: var(--accent2); display:inline-block; margin-right:.2rem; animation: pulse 2s infinite; }
