@@ -1,7 +1,7 @@
 {
-  "sha": "c1fe72d5726f7e1554f1ac0717ed549551245b7e",
-  "timestamp": "2026-03-26 21:49",
+  "sha": "dfa8b26d571a8cf0f8ca5f62518bd2ef88241890",
+  "timestamp": "2026-03-26 21:52",
   "changelog": [
-    "Reduce participant top badge width by 30%"
+    "feat: sync live powerpoint slide to participants"
   ]
 }
