@@ -1,7 +1,7 @@
 {
-  "sha": "f27099cbb4c7a24e1a546b3952951550416aca95",
-  "timestamp": "2026-03-26 19:38",
+  "sha": "009d75bdbb85fa7800631bb04a4b547a5d5ccea3",
+  "timestamp": "2026-03-26 19:39",
   "changelog": [
-    "Center participant top badge on desktop"
+    "Remove test auto scroll slide"
   ]
 }
