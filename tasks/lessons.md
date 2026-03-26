@@ -9,4 +9,4 @@
 - 2026-03-19: If functionality becomes daemon-owned, relocate helper modules under `daemon/` promptly and remove leftover standalone script packages.
 - 2026-03-19: After finishing any backlog item, provide proof artifacts before marking done (screenshots by default; test/log captures for non-visual work).
 - 2026-03-19: After finishing a task or when blocked and needing user attention, play a completion/attention sound automatically.
-
+- 2026-03-26: For PowerPoint automation during live sessions, avoid UI focus theft: do not use `activate` or force-open files; export only already-open presentations in background-safe mode.

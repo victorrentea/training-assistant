@@ -23,6 +23,10 @@ def _cfg(tmp_path: Path) -> slides_daemon.SlidesDaemonConfig:
         recursive=False,
         post_export_cooldown_seconds=5.0,
         failure_retry_seconds=60.0,
+        drive_sync_timeout_seconds=90.0,
+        drive_poll_seconds=5.0,
+        drive_stable_probes=2,
+        drive_bootstrap_url="https://victorrentea.ro/slides/",
     )
 
 
@@ -219,7 +223,7 @@ def test_run_once_processes_single_oldest_changed_file(tmp_path, monkeypatch, ca
     state = {"files": {}}
     seen = []
 
-    def _fake_process(config, daemon_state, pptx, target_pdf=None):
+    def _fake_process(config, daemon_state, pptx, target_pdf=None, metadata=None):
         seen.append(pptx.name)
         key = str(pptx.resolve())
         daemon_state.setdefault("files", {}).setdefault(key, {})
@@ -315,9 +319,10 @@ def test_run_once_uses_catalog_target_pdf(tmp_path, monkeypatch):
     state = {"files": {}}
     captured = {}
 
-    def _fake_process(config, daemon_state, pptx, target_pdf=None):
+    def _fake_process(config, daemon_state, pptx, target_pdf=None, metadata=None):
         captured["source"] = pptx
         captured["target_pdf"] = target_pdf
+        captured["metadata"] = metadata
         return True
 
     monkeypatch.setattr(slides_daemon, "process_one_file", _fake_process)
@@ -326,6 +331,7 @@ def test_run_once_uses_catalog_target_pdf(tmp_path, monkeypatch):
     assert changed is True
     assert captured["source"] == deck
     assert captured["target_pdf"] == "Deck Final.pdf"
+    assert captured["metadata"]["target_pdf"] == "Deck Final.pdf"
 
 
 def test_run_once_pushes_slides_list_only_when_payload_changes(tmp_path, monkeypatch):
@@ -496,3 +502,139 @@ def test_convert_with_libreoffice_raises_when_source_not_loaded_even_with_exit_z
 
     with pytest.raises(RuntimeError, match="source file could not be loaded"):
         slides_daemon.convert_with_libreoffice(pptx, out_dir)
+
+
+def test_extract_drive_export_links_from_html():
+    html = """
+    <html><body>
+      <a href="https://docs.google.com/presentation/d/abc123/edit">AI Coding</a>
+      <a href="https://docs.google.com/presentation/d/def456/preview">Reactive WebFlux</a>
+      <a href="https://example.com/nope">Other</a>
+    </body></html>
+    """
+    links = slides_daemon.extract_drive_export_links(html)
+    assert links["AI Coding"] == "https://docs.google.com/presentation/d/abc123/export/pdf"
+    assert links["Reactive WebFlux"] == "https://docs.google.com/presentation/d/def456/export/pdf"
+    assert "Other" not in links
+
+
+def test_bootstrap_drive_urls_uses_alias_map(tmp_path, monkeypatch):
+    catalog = tmp_path / "catalog.json"
+    catalog.write_text(
+        json.dumps(
+            {
+                "decks": [
+                    {
+                        "title": "Reactive/WebFlux",
+                        "source": "/tmp/reactive.pptx",
+                        "target_pdf": "Reactive WebFlux.pdf",
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    html = """
+    <a href="https://docs.google.com/presentation/d/reactive123/edit">Reactive WebFlux</a>
+    """
+    monkeypatch.setattr(slides_daemon, "_read_url_text", lambda *_args, **_kwargs: html)
+
+    updated, missing = slides_daemon.bootstrap_drive_urls(catalog, "https://victorrentea.ro/slides/")
+    assert updated == 2
+    assert missing == 0
+
+    data = json.loads(catalog.read_text(encoding="utf-8"))
+    entry = data["decks"][0]
+    assert entry["drive_export_url"] == "https://docs.google.com/presentation/d/reactive123/export/pdf"
+    assert entry["drive_probe_url"] == "https://docs.google.com/presentation/d/reactive123/export/pdf"
+
+
+def test_google_drive_pull_single_fetch_accepts_new_fingerprint(tmp_path, monkeypatch):
+    cfg = _cfg(tmp_path)
+    cfg.converter = "google_drive_pull"
+    downloaded = {"called": 0}
+    monkeypatch.setattr(slides_daemon.time, "time", lambda: 1000.0)
+
+    def _fake_download(_url, out):
+        downloaded["called"] += 1
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_bytes(b"%PDF-1.4 NEW")
+        return out
+
+    monkeypatch.setattr(slides_daemon, "_download_pdf_from_url", _fake_download)
+
+    out = tmp_path / "work" / "deck.pdf"
+    state_entry = {"last_drive_fingerprint": "pdf:old"}
+    pdf = slides_daemon.convert_with_google_drive_pull(
+        pptx_path=tmp_path / "deck.pptx",
+        output_pdf=out,
+        config=cfg,
+        state_entry=state_entry,
+        drive_export_url="https://docs.google.com/presentation/d/abc/export/pdf",
+        drive_probe_url="https://docs.google.com/presentation/d/abc/export/pdf",
+    )
+    assert pdf == out
+    assert downloaded["called"] == 1
+    assert state_entry["last_drive_fingerprint"].startswith("pdf:")
+    assert state_entry["last_drive_fingerprint"] != "pdf:old"
+
+
+def test_google_drive_pull_unchanged_fingerprint_alerts_when_drive_not_running(tmp_path, monkeypatch):
+    cfg = _cfg(tmp_path)
+    cfg.converter = "google_drive_pull"
+    monkeypatch.setattr(slides_daemon.time, "time", lambda: 1000.0)
+
+    alerted = {}
+    monkeypatch.setattr(slides_daemon, "_push_error_status", lambda _cfg, msg: alerted.setdefault("msg", msg))
+    monkeypatch.setattr(slides_daemon, "_beep_local", lambda: alerted.setdefault("beep", True))
+    monkeypatch.setattr(slides_daemon, "_is_google_drive_running", lambda: False)
+    monkeypatch.setattr(
+        slides_daemon,
+        "_download_pdf_from_url",
+        lambda _url, out: (out.parent.mkdir(parents=True, exist_ok=True), out.write_bytes(b"%PDF-1.4 SAME"), out)[2],
+    )
+
+    same_payload_fp = "pdf:" + slides_daemon.hashlib.sha256(b"%PDF-1.4 SAME").hexdigest()
+
+    with pytest.raises(RuntimeError, match="drive_not_synced_yet"):
+        slides_daemon.convert_with_google_drive_pull(
+            pptx_path=tmp_path / "deck.pptx",
+            output_pdf=tmp_path / "work" / "deck.pdf",
+            config=cfg,
+            state_entry={"last_drive_fingerprint": same_payload_fp},
+            drive_export_url="https://docs.google.com/presentation/d/abc/export/pdf",
+            drive_probe_url="https://docs.google.com/presentation/d/abc/export/pdf",
+        )
+
+    assert "Google Drive app not running" in alerted["msg"]
+    assert alerted["beep"] is True
+
+
+def test_download_pdf_from_url_rejects_non_pdf(tmp_path, monkeypatch):
+    class _Resp:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return False
+
+        def read(self):
+            return b"not a pdf"
+
+    monkeypatch.setattr(slides_daemon.urllib.request, "urlopen", lambda *args, **kwargs: _Resp())
+    with pytest.raises(RuntimeError, match="invalid_pdf_payload"):
+        slides_daemon._download_pdf_from_url("https://example.com/a.pdf", tmp_path / "a.pdf")
+
+
+def test_convert_pptx_to_pdf_google_drive_pull_requires_export_url(tmp_path):
+    cfg = _cfg(tmp_path)
+    cfg.converter = "google_drive_pull"
+    with pytest.raises(RuntimeError, match="Missing drive_export_url"):
+        slides_daemon.convert_pptx_to_pdf(
+            pptx_path=tmp_path / "deck.pptx",
+            config=cfg,
+            slug="slug",
+            state_entry={},
+            metadata={},
+        )
