@@ -901,8 +901,14 @@
       dl.className = 'slides-list-download';
       dl.href = slide.url;
       dl.setAttribute('download', '');
-      dl.textContent = '⬇';
+      dl.innerHTML = (
+        '<svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">' +
+        '<path d="M10 3.25a.75.75 0 0 1 .75.75v6.19l2.22-2.22a.75.75 0 1 1 1.06 1.06l-3.5 3.5a.75.75 0 0 1-1.06 0l-3.5-3.5a.75.75 0 1 1 1.06-1.06l2.22 2.22V4a.75.75 0 0 1 .75-.75Z"></path>' +
+        '<path d="M4.5 13.75a.75.75 0 0 1 .75.75v1h9.5v-1a.75.75 0 0 1 1.5 0V16A1.5 1.5 0 0 1 14.75 17.5h-9.5A1.5 1.5 0 0 1 3.75 16v-1.5a.75.75 0 0 1 .75-.75Z"></path>' +
+        '</svg>'
+      );
       dl.title = `Download ${slide.name}`;
+      dl.setAttribute('aria-label', `Download ${slide.name}`);
       dl.addEventListener('click', (evt) => evt.stopPropagation());
       if (slide._id === targetId) item.classList.add('active');
       item.appendChild(openBtn);
