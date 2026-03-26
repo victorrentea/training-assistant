@@ -467,3 +467,22 @@
 - [x] Add `⬆️` log when daemon successfully uploads requested PDF to backend
 - [x] Keep request context in logs (`slug`, `request_id`, `path`)
 - [x] Run quick compile + targeted daemon tests
+
+## Direct request: host hover shows participant slide availability
+
+- [x] Add host-only endpoint returning participant slide list + filesystem availability (`/api/slides/participant-availability`)
+- [x] Reuse participant slide merge logic so host sees exactly the same deck names
+- [x] Mark each entry with `available_on_server` for server filesystem presence
+- [x] Update host `📜` hover popover to show slide names and `⬇️` for available files
+- [x] Keep hover behavior and refresh TTL unchanged
+- [x] Add backend tests for auth + availability flags
+- [x] Run targeted tests and syntax checks
+
+### Review
+- Host footer paper-icon popover now shows the participant-facing slide list (same merged sources as `/api/slides`).
+- Each line displays the deck name and a trailing `⬇️` when the corresponding PDF is present on server filesystem.
+- Missing server files are shown without the download mark (muted dot placeholder).
+- Added endpoint: `GET /api/slides/participant-availability` (host-auth).
+- Verified with `pytest -q tests/test_slides_api.py` (21 passed).
+- Verified with `pytest -q tests/test_main.py -k "slides"` (4 passed).
+- Verified with `node --check static/host.js` and `python3 -m py_compile routers/slides.py`.
