@@ -278,10 +278,17 @@ Orchestration daemon running on the trainer's Mac:
 - Debate AI cleanup: deduplicates, fixes typos, suggests new arguments via Claude
 - Live summary: periodically reads transcript, generates key points via Claude, posts to backend
 - Transcript timestamps: auto-appends `[HH:MM:SS]` markers every ~3 seconds
+- Transcript normalization: incrementally normalizes raw transcript lines into daily files (`YYYY-MM-DD transcription.txt`)
 - Auto-update: exit code 42 signals wrapper script to git pull + restart
 - `ANTHROPIC_API_KEY` is set in the environment
 - Run: `python3 training_daemon.py`
-- Uses `daemon/` subpackage: `llm_adapter.py`, `summarizer.py`, `debate_ai.py`, `transcript_state.py`, `transcript_timestamps.py`, `indexer.py`, `rag.py`, `project_files.py`
+- Uses `daemon/` subpackage: `llm_adapter.py`, `summarizer.py`, `debate_ai.py`, `transcript_state.py`, `transcript_timestamps.py`, `transcript_normalizer.py`, `transcript_query.py`, `indexer.py`, `rag.py`, `project_files.py`
+
+Manual normalized transcript query (run only on demand):
+- `python3 -m daemon.transcript_query --today`
+- `python3 -m daemon.transcript_query --yesterday-afternoon`
+- `python3 -m daemon.transcript_query --last-minutes 10`
+- `python3 -m daemon.transcript_query --from \"2026-03-25 12:00\" --to \"2026-03-26 09:30\"`
 
 ---
 

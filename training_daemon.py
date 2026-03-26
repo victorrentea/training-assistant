@@ -39,6 +39,7 @@ from quiz_core import (
 from daemon.debate_ai import run_debate_ai_cleanup
 from daemon.llm_adapter import get_usage
 from daemon.summarizer import generate_summary
+from daemon.transcript_normalizer import normalize_folder_incremental
 from daemon.transcript_state import TranscriptStateManager
 from daemon.session_transcript import (
     compute_active_windows,
@@ -52,6 +53,13 @@ _LOCK_FILE = Path("/tmp/training_daemon.lock")
 _HEARTBEAT_INTERVAL = 1.0  # seconds between heartbeat writes
 _HEARTBEAT_STALE_THRESHOLD = 10.0  # seconds before heartbeat is considered stale
 _TIMESTAMP_INTERVAL_SECONDS = float(os.environ.get("TRANSCRIPT_TIMESTAMP_INTERVAL_SECONDS", "3"))
+_NORMALIZER_INTERVAL_SECONDS = float(os.environ.get("TRANSCRIPT_NORMALIZER_INTERVAL_SECONDS", "3"))
+_NORMALIZER_ENABLED = os.environ.get("TRANSCRIPT_NORMALIZER_ENABLED", "1").strip().lower() not in {
+    "0",
+    "false",
+    "no",
+    "off",
+}
 EXIT_CODE_UPDATE = 42  # signals start.sh to git pull and restart
 _KEY_POINTS_FILE = "transcript_discussion.md"
 _KEY_POINTS_FILE_LEGACY_MD = "transcript_keypoints.md"
@@ -504,6 +512,51 @@ class TranscriptTimestampAppender:
         self._next_append_at = now + self.interval_seconds
 
 
+class TranscriptNormalizerRunner:
+    """Incrementally normalize raw transcripts in TRANSCRIPTION_FOLDER."""
+
+    def __init__(
+        self,
+        folder: Path,
+        interval_seconds: float = _NORMALIZER_INTERVAL_SECONDS,
+        enabled: bool = _NORMALIZER_ENABLED,
+    ):
+        self.folder = folder
+        self.interval_seconds = interval_seconds
+        self.enabled = enabled
+        self._next_run_at = 0.0
+
+    def start(self) -> None:
+        if not self.enabled:
+            return
+        if self.interval_seconds <= 0:
+            self.enabled = False
+            log.error("transcript", "Normalizer disabled: TRANSCRIPT_NORMALIZER_INTERVAL_SECONDS must be > 0")
+            return
+        if not self.folder.exists() or not self.folder.is_dir():
+            self.enabled = False
+            log.error("transcript", f"Normalizer disabled: folder not found: {self.folder}")
+            return
+        self._next_run_at = time.monotonic()
+        log.info("transcript", f"Normalizer enabled ({self.interval_seconds:.1f}s)")
+
+    def tick(self) -> None:
+        if not self.enabled:
+            return
+        now = time.monotonic()
+        if now < self._next_run_at:
+            return
+        try:
+            results = normalize_folder_incremental(self.folder)
+            written = sum(r.written_lines for r in results)
+            if written > 0:
+                log.info("transcript", f"Normalizer wrote {written} lines")
+        except Exception as exc:
+            log.error("transcript", f"Normalizer error: {exc}")
+        finally:
+            self._next_run_at = now + self.interval_seconds
+
+
 def _read_lock() -> tuple[int | None, float | None]:
     """Read PID and last heartbeat from lock file. Returns (None, None) if missing/corrupt."""
     if not _LOCK_FILE.exists():
@@ -694,6 +747,8 @@ def run() -> None:
 
     timestamp_appender = TranscriptTimestampAppender(config.folder)
     timestamp_appender.start()
+    transcript_normalizer = TranscriptNormalizerRunner(config.folder)
+    transcript_normalizer.start()
 
     # Session state: the transcript text used to generate the current preview
     last_text: str | None = None
@@ -743,6 +798,7 @@ def run() -> None:
                 last_heartbeat_at = now
 
             timestamp_appender.tick()
+            transcript_normalizer.tick()
 
             # ── Check for session management requests ──
             try:
