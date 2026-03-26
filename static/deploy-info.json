@@ -1,7 +1,7 @@
 {
-  "sha": "de79a21766b13fe1a58d21772b9db6366f9a3fcf",
-  "timestamp": "2026-03-26 22:52",
+  "sha": "cf0a0a9977376220f363e333edabf295e71a5ecf",
+  "timestamp": "2026-03-26 22:55",
   "changelog": [
-    "Fix host slides popover names and startup drive sync logs"
+    "style: keep follow separate from mode toggle"
   ]
 }
