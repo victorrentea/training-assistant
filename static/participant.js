@@ -84,6 +84,7 @@
   const SLIDES_REFRESH_MS = 30000;
   const LS_SLIDE_PAGE_PREFIX = 'workshop_slide_page:';
   const LS_SLIDE_VIEW_PREFIX = 'workshop_slide_view:';
+  const LS_SLIDE_SELECTED_ID = 'workshop_slide_selected_id';
   const SLIDES_TEST_AUTO_SCROLL_ENABLED = true;
   const SLIDES_TEST_AUTO_SCROLL_PAGE = 2;
   const SLIDES_TEST_AUTO_SCROLL_DELAY_MS = 3000;
@@ -486,6 +487,18 @@
 
   function _slideViewKey(slug) {
     return `${LS_SLIDE_VIEW_PREFIX}${slug}`;
+  }
+
+  function _getStoredSelectedSlideId() {
+    return String(localStorage.getItem(LS_SLIDE_SELECTED_ID) || '').trim() || null;
+  }
+
+  function _setStoredSelectedSlideId(id) {
+    if (!id) {
+      localStorage.removeItem(LS_SLIDE_SELECTED_ID);
+      return;
+    }
+    localStorage.setItem(LS_SLIDE_SELECTED_ID, String(id));
   }
 
   function _getStoredSlidePage(slug) {
@@ -963,6 +976,7 @@
 
       slidesSelectedSlug = slide.slug;
       slidesSelectedId = slide._id;
+      _setStoredSelectedSlideId(slidesSelectedId);
       slidesLastFingerprint = fingerprint;
       _setSlidesDownload(slide.url, false);
       _renderSlidesMeta({ ...slide, updated_at: effectiveUpdatedAt });
@@ -978,6 +992,7 @@
       }
       slidesSelectedSlug = slide.slug;
       slidesSelectedId = slide._id;
+      _setStoredSelectedSlideId(slidesSelectedId);
       slidesLastFingerprint = fingerprint;
       _setSlidesDownload(slide.url, false);
       _renderSlidesMeta({ ...slide, updated_at: effectiveUpdatedAt });
@@ -998,6 +1013,7 @@
         _renderSlidesList(null);
         slidesSelectedSlug = null;
         slidesSelectedId = null;
+        _setStoredSelectedSlideId(null);
         slidesLastFingerprint = null;
         await _clearSlidesDocument();
         _renderSlidesMeta(null);
@@ -1009,8 +1025,10 @@
         return;
       }
 
-      const selectedStillExists = slidesSelectedId && slidesCatalog.some(s => s._id === slidesSelectedId);
-      const targetId = selectedStillExists ? slidesSelectedId : null;
+      const rememberedId = slidesSelectedId || _getStoredSelectedSlideId();
+      const selectedStillExists = rememberedId && slidesCatalog.some(s => s._id === rememberedId);
+      const targetId = selectedStillExists ? rememberedId : null;
+      if (targetId) slidesSelectedId = targetId;
       _renderSlidesList(targetId);
       if (selectedStillExists) {
         const slide = slidesCatalog.find(s => s._id === targetId);
@@ -1020,6 +1038,7 @@
       } else {
         slidesSelectedSlug = null;
         slidesSelectedId = null;
+        _setStoredSelectedSlideId(null);
         slidesLastFingerprint = null;
         await _clearSlidesDocument();
         _setSlidesDownload('', true);
