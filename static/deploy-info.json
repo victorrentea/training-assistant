@@ -1,7 +1,7 @@
 {
-  "sha": "8b971ac4d77290ac545fa5e4a3eee51cd96a5467",
-  "timestamp": "2026-03-27 00:22",
+  "sha": "e8c0b3b30d0728696261aabe35b36505fdb2ebed",
+  "timestamp": "2026-03-27 00:26",
   "changelog": [
-    "style: shrink PDF.js page badge 50%, add black bg + rounded"
+    "fix: move X button lower in native PDF viewer mode"
   ]
 }
