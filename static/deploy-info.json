@@ -1,7 +1,7 @@
 {
-  "sha": "ba93bfc67928efbba929c8421aec8bf25bf5db10",
-  "timestamp": "2026-03-26 17:48",
+  "sha": "379b251769e28ba909c0cb17e684978f895275ed",
+  "timestamp": "2026-03-26 17:49",
   "changelog": [
-    "participant slides add animated centered empty state"
+    "participant slides remove top strip above viewer"
   ]
 }
