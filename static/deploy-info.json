@@ -1,7 +1,7 @@
 {
-  "sha": "f653b0f2028ddbca0a13dcc1943ba5b7448e646f",
-  "timestamp": "2026-03-26 21:14",
+  "sha": "2c11514d04c397886ef380dae4795973f9bcc2ce",
+  "timestamp": "2026-03-26 21:19",
   "changelog": [
-    "feat: widen participant header and overlay slides dock"
+    "fix: keep slides dock visible and reserve overlay space"
   ]
 }
