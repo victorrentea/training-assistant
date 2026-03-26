@@ -45,8 +45,8 @@ from daemon.session_transcript import (
     compute_active_windows,
     count_lines_in_windows,
     format_startup_log,
-    parse_txt_entries_with_datetimes,
 )
+from daemon.transcript_query import load_normalized_entries
 from daemon import log
 
 _LOCK_FILE = Path("/tmp/training_daemon.lock")
@@ -726,15 +726,10 @@ def run() -> None:
 
     # ── Log transcription time ranges at startup ──
     try:
-        files = sorted(config.folder.glob("*.txt"), key=lambda f: f.stat().st_mtime)
-        if files:
-            raw = files[-1].read_text(encoding="utf-8", errors="replace")
-            stem = files[-1].stem[:8]
-            try:
-                file_date = date(int(stem[:4]), int(stem[4:6]), int(stem[6:8]))
-            except (ValueError, IndexError):
-                file_date = None
-            entries = parse_txt_entries_with_datetimes(raw, file_date)
+        since_date = _session_start_date(session_stack[-1]) if session_stack else None
+        entries_dt = load_normalized_entries(config.folder, since_date=since_date)
+        if entries_dt:
+            entries = [(dt, txt) for dt, txt in entries_dt]
             if session_stack:
                 current_session = session_stack[-1]
                 now = datetime.now()
@@ -752,7 +747,7 @@ def run() -> None:
                 non_empty = sum(1 for _, txt in entries if txt.strip())
                 log.info("transcript", f"{non_empty} lines (no active session)")
         else:
-            log.error("transcript", "No transcription file found")
+            log.error("transcript", "No normalized transcription file found")
     except Exception as e:
         log.error("transcript", f"Could not read transcription: {e}")
 

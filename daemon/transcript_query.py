@@ -107,20 +107,31 @@ def _parse_line(line: str, day: date) -> tuple[datetime, str] | None:
     return dt, payload
 
 
+def load_normalized_entries(folder: Path, since_date: date | None = None) -> list[tuple[datetime, str]]:
+    entries: list[tuple[datetime, str]] = []
+    files = sorted(
+        [f for f in folder.iterdir() if f.is_file() and _NORMALIZED_FILE_RE.match(f.name)],
+        key=lambda p: p.name,
+    )
+    for file_path in files:
+        m = _NORMALIZED_FILE_RE.match(file_path.name)
+        if not m:
+            continue
+        day = date.fromisoformat(m.group(1))
+        if since_date and day < since_date:
+            continue
+        for raw in file_path.read_text(encoding="utf-8", errors="replace").splitlines():
+            parsed = _parse_line(raw, day)
+            if parsed is not None:
+                entries.append(parsed)
+    return entries
+
+
 def query_lines(folder: Path, query: QueryRange) -> list[str]:
     lines: list[str] = []
-    for day in _iter_days(query.start.date(), query.end.date()):
-        file_path = _normalized_file_for_day(folder, day)
-        if not file_path.exists() or not file_path.is_file():
-            continue
-        raw_lines = file_path.read_text(encoding="utf-8", errors="replace").splitlines()
-        for raw in raw_lines:
-            parsed = _parse_line(raw, day)
-            if parsed is None:
-                continue
-            dt, payload = parsed
-            if query.start <= dt <= query.end:
-                lines.append(f"[{dt.strftime('%Y-%m-%d %H:%M')}] {payload}")
+    for dt, payload in load_normalized_entries(folder, since_date=query.start.date()):
+        if query.start <= dt <= query.end:
+            lines.append(f"[{dt.strftime('%Y-%m-%d %H:%M')}] {payload}")
     return lines
 
 
