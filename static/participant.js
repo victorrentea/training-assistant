@@ -151,6 +151,7 @@
     const _shuffled = _ALL_EMOJI_STEPS.slice().sort(() => Math.random() - .5).slice(0, 4);
     const STEPS = [
       { selector: '#display-name',    emoji: '✏️', text: "That's your name. Tap it to rename yourself. Be creative." },
+      { selector: '#notes-btn',       emoji: '📝', text: 'Notes are here. Tap to open session notes anytime.' },
       { selector: '#summary-btn',     emoji: '🧠', text: 'AI recaps what you missed. Tap any time. Zero FOMO.' },
       { selector: '#slides-dock',     emoji: '📑', text: 'Slides are always on the right. Click any topic to open it.', scanDock: true },
       { selector: '#location-prompt', emoji: '📍', text: "Tell us where you're from — for the world map. Totally optional." },
@@ -378,8 +379,6 @@
 
   function updateNotes(content) {
     notesContent = content || '';
-    const btn = document.getElementById('notes-btn');
-    if (btn) btn.style.display = notesContent ? '' : 'none';
     const el = document.getElementById('notes-content');
     if (el) el.textContent = notesContent;
     const dlBtn = document.getElementById('participant-notes-download');
