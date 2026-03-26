@@ -102,6 +102,7 @@ h1 { display: none; }
   font-size: .85rem;
   color: var(--muted);
   gap: .5rem;
+  transform: translateX(clamp(90px, 6.5vw, 170px));
 }
 
 .status-left {
@@ -124,6 +125,12 @@ h1 { display: none; }
 
 @media (max-width: 480px) {
   .status-bar { font-size: .8rem; padding: .5rem .75rem; margin-bottom: .75rem; }
+}
+
+@media (max-width: 900px) {
+  .status-bar {
+    transform: none;
+  }
 }
 .dot { width:8px; height:8px; border-radius:50%; background: var(--accent2); display:inline-block; margin-right:.2rem; animation: pulse 2s infinite; }
 #leave-btn { background:none; border:1px solid var(--border); color:var(--muted); border-radius:6px; padding:.2rem .6rem; font-size:.78rem; cursor:pointer; }
