@@ -107,6 +107,10 @@ class NormalizeResult:
     reset_offset: bool
 
 
+def _legacy_offset_file_for(raw_file: Path) -> Path:
+    return raw_file.with_suffix(raw_file.suffix + ".offset")
+
+
 def _list_raw_files_sorted(folder: Path) -> list[Path]:
     def _sort_key(path: Path) -> tuple[str, float]:
         match = _FILENAME_DATE_RE.match(path.name)
@@ -129,7 +133,7 @@ def find_latest_raw_transcript_file(folder: Path) -> Path | None:
 
 
 def default_offset_file_for(raw_file: Path) -> Path:
-    return raw_file.with_suffix(raw_file.suffix + ".offset")
+    return raw_file.parent / "normalization.offset"
 
 
 def _raw_file_date(raw_file: Path) -> date | None:
@@ -143,7 +147,7 @@ def _raw_file_date(raw_file: Path) -> date | None:
         return None
 
 
-def _load_state(offset_file: Path) -> NormalizationState:
+def _load_state(offset_file: Path, raw_key: str | None = None) -> NormalizationState:
     if not offset_file.exists():
         return NormalizationState()
 
@@ -160,6 +164,13 @@ def _load_state(offset_file: Path) -> NormalizationState:
     except json.JSONDecodeError:
         return NormalizationState()
 
+    # New format: one normalization.offset with per-raw-file state map.
+    if raw_key and isinstance(data.get("files"), dict):
+        item = data["files"].get(raw_key)
+        if not isinstance(item, dict):
+            return NormalizationState()
+        data = item
+
     return NormalizationState(
         offset=int(data.get("offset", 0) or 0),
         inode=data.get("inode"),
@@ -172,9 +183,9 @@ def _load_state(offset_file: Path) -> NormalizationState:
     )
 
 
-def _save_state(offset_file: Path, state: NormalizationState) -> None:
+def _save_state(offset_file: Path, state: NormalizationState, raw_key: str | None = None) -> None:
     offset_file.parent.mkdir(parents=True, exist_ok=True)
-    payload = {
+    state_payload = {
         "offset": state.offset,
         "inode": state.inode,
         "device": state.device,
@@ -184,9 +195,40 @@ def _save_state(offset_file: Path, state: NormalizationState) -> None:
         "current_hhmm": state.current_hhmm,
         "current_speaker": state.current_speaker,
     }
+    payload = state_payload
+    if raw_key:
+        existing: dict = {}
+        if offset_file.exists():
+            try:
+                existing = json.loads(offset_file.read_text(encoding="utf-8", errors="replace"))
+            except json.JSONDecodeError:
+                existing = {}
+        files_map = existing.get("files") if isinstance(existing, dict) else None
+        if not isinstance(files_map, dict):
+            files_map = {}
+        files_map[raw_key] = state_payload
+        payload = {"version": 1, "files": files_map}
     tmp = offset_file.with_suffix(offset_file.suffix + ".tmp")
     tmp.write_text(json.dumps(payload, ensure_ascii=True), encoding="utf-8")
     tmp.replace(offset_file)
+
+
+def _has_state_for_raw(offset_file: Path, raw_key: str) -> bool:
+    if not offset_file.exists():
+        return False
+    raw = offset_file.read_text(encoding="utf-8", errors="replace").strip()
+    if not raw:
+        return False
+    if raw.isdigit():
+        return True
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError:
+        return False
+    files_map = data.get("files") if isinstance(data, dict) else None
+    if isinstance(files_map, dict):
+        return raw_key in files_map
+    return isinstance(data, dict) and "offset" in data
 
 
 def _parse_speaker(text: str) -> tuple[str | None, str]:
@@ -283,12 +325,18 @@ def normalize_incremental(
     if not raw_file.exists() or not raw_file.is_file():
         raise FileNotFoundError(f"Raw transcript file not found: {raw_file}")
 
-    offset_file = offset_file or default_offset_file_for(raw_file)
+    if offset_file is None:
+        offset_file = default_offset_file_for(raw_file)
     output_dir = output_dir or raw_file.parent
     poll_now = now or datetime.now()
     poll_hhmm = poll_now.strftime("%H:%M")
     poll_day = poll_now.date().isoformat()
-    state = _load_state(offset_file)
+    raw_key = raw_file.name
+    state = _load_state(offset_file, raw_key=raw_key)
+    if state.offset == 0 and not offset_file.exists():
+        legacy = _legacy_offset_file_for(raw_file)
+        if legacy.exists():
+            state = _load_state(legacy)
 
     stat = raw_file.stat()
     current_inode = int(stat.st_ino)
@@ -328,7 +376,7 @@ def normalize_incremental(
     text = state.carryover + decoded_chunk
 
     if not text:
-        _save_state(offset_file, state)
+        _save_state(offset_file, state, raw_key=raw_key)
         return NormalizeResult(raw_file, offset_file, 0, 0, [], should_reset)
 
     if text.endswith("\n") or text.endswith("\r"):
@@ -401,7 +449,7 @@ def normalize_incremental(
     written_files = _append_outputs(output_dir, grouped)
     total_lines = sum(len(v) for v in grouped.values())
 
-    _save_state(offset_file, state)
+    _save_state(offset_file, state, raw_key=raw_key)
     return NormalizeResult(raw_file, offset_file, read_bytes, total_lines, written_files, should_reset)
 
 
@@ -430,7 +478,9 @@ def normalize_folder_incremental(folder: Path, now: datetime | None = None) -> l
     latest = files[-1]
     candidates: list[Path] = []
     for raw in files:
-        if raw == latest or default_offset_file_for(raw).exists():
+        shared_offset = default_offset_file_for(raw)
+        legacy_offset = _legacy_offset_file_for(raw)
+        if raw == latest or _has_state_for_raw(shared_offset, raw.name) or legacy_offset.exists():
             candidates.append(raw)
 
     results: list[NormalizeResult] = []

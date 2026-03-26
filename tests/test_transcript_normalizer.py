@@ -79,7 +79,7 @@ def test_case4_old_file_has_offset_but_newer_file_takes_over_with_own_offset(tmp
     new_offset = default_offset_file_for(new_raw)
     assert new_offset.exists()
     data = json.loads(new_offset.read_text(encoding="utf-8"))
-    assert data["offset"] > 0
+    assert data["files"][new_raw.name]["offset"] > 0
 
 
 def test_case5_offset_exists_but_no_new_non_empty_transcription(tmp_path):
