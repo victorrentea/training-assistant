@@ -84,6 +84,10 @@
   const SLIDES_REFRESH_MS = 30000;
   const LS_SLIDE_PAGE_PREFIX = 'workshop_slide_page:';
   const LS_SLIDE_VIEW_PREFIX = 'workshop_slide_view:';
+  const SLIDES_TEST_AUTO_SCROLL_ENABLED = true;
+  const SLIDES_TEST_AUTO_SCROLL_PAGE = 2;
+  const SLIDES_TEST_AUTO_SCROLL_DELAY_MS = 3000;
+  const SLIDES_DISABLE_VIEW_PERSISTENCE = true;
   let slidesCatalog = [];
   let slidesSelectedSlug = null;
   let slidesSelectedId = null;
@@ -98,6 +102,7 @@
   let slidesPdfDoc = null;
   let slidesPdfLoadingTask = null;
   let slidesNativeFrame = null;
+  let slidesAutoScrollTimer = null;
 
   function escHtml(s) {
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -483,6 +488,7 @@
   }
 
   function _getStoredSlideView(slug) {
+    if (SLIDES_DISABLE_VIEW_PERSISTENCE) return null;
     if (!slug) return null;
     try {
       const raw = localStorage.getItem(_slideViewKey(slug));
@@ -500,6 +506,7 @@
   }
 
   function _setStoredSlideView(slug, view) {
+    if (SLIDES_DISABLE_VIEW_PERSISTENCE) return;
     if (!slug || !view || typeof view !== 'object') return;
     const payload = {
       page: Math.max(1, Number(view.page || 1)),
@@ -643,6 +650,10 @@
   }
 
   async function _clearSlidesDocument() {
+    if (slidesAutoScrollTimer) {
+      clearTimeout(slidesAutoScrollTimer);
+      slidesAutoScrollTimer = null;
+    }
     if (slidesPdfLoadingTask) {
       try { slidesPdfLoadingTask.destroy(); } catch (_) {}
       slidesPdfLoadingTask = null;
@@ -660,6 +671,23 @@
     }
     const viewer = document.getElementById('slides-pdf-viewer');
     if (viewer) viewer.innerHTML = '';
+  }
+
+  function _scheduleTestAutoScroll(slide) {
+    if (!SLIDES_TEST_AUTO_SCROLL_ENABLED || !slidesPdfDoc || !slidesPdfViewer || !slide) return;
+    if (slidesAutoScrollTimer) {
+      clearTimeout(slidesAutoScrollTimer);
+      slidesAutoScrollTimer = null;
+    }
+    const targetId = slide._id;
+    slidesAutoScrollTimer = setTimeout(() => {
+      if (!slidesPdfDoc || !slidesPdfViewer || slidesSelectedId !== targetId) return;
+      const numPages = Math.max(1, Number(slidesPdfDoc.numPages || 1));
+      const targetPage = Math.min(numPages, Math.max(1, Number(SLIDES_TEST_AUTO_SCROLL_PAGE || 1)));
+      slidesPdfViewer.currentPageNumber = targetPage;
+      _setStoredSlidePage(slidesSelectedSlug, targetPage);
+      _renderSlidesMeta(slide);
+    }, SLIDES_TEST_AUTO_SCROLL_DELAY_MS);
   }
 
   function _showSlideInNativeFrame(url) {
@@ -885,6 +913,7 @@
       _renderSlidesMeta({ ...slide, updated_at: effectiveUpdatedAt });
       _setSlidesDownload(slide.url, false);
       _setSlidesLoading({ visible: false });
+      _scheduleTestAutoScroll(slide);
       return;
     }
 
@@ -928,6 +957,7 @@
       _setSlidesDownload(slide.url, false);
       _renderSlidesMeta({ ...slide, updated_at: effectiveUpdatedAt });
       _setSlidesLoading({ visible: false });
+      _scheduleTestAutoScroll(slide);
     } catch (err) {
       const fallbackOk = _showSlideInNativeFrame(slide.url);
       if (!fallbackOk) {
