@@ -15,11 +15,24 @@ This installs chromadb, sentence-transformers, and other heavy deps into system 
 
 From the repo root:
 ```bash
-python3 quiz_daemon.py
+python3 training_daemon.py
 ```
 
 The daemon starts a background indexer thread watching `MATERIALS_FOLDER` for changes,
 and polls the server every second for quiz generation requests from the host panel.
+It also incrementally normalizes raw transcript lines into daily normalized files:
+`YYYY-MM-DD transcription.txt`.
+
+## Manual transcript query
+
+Run only on demand when you need to extract normalized lines from a time range:
+
+```bash
+python3 -m daemon.transcript_query --today
+python3 -m daemon.transcript_query --yesterday-afternoon
+python3 -m daemon.transcript_query --last-minutes 10
+python3 -m daemon.transcript_query --from "2026-03-25 12:00" --to "2026-03-26 09:30"
+```
 
 ## Configuration (in secrets.env)
 
