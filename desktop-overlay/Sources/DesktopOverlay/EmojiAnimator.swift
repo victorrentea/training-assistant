@@ -42,6 +42,15 @@ class EmojiAnimator {
         self.hostLayer = hostLayer
     }
 
+    static func soundEffect(for emoji: String) -> String? {
+        switch emoji {
+        case "📺":
+            return "breaking-glass.mp3"
+        default:
+            return nil
+        }
+    }
+
     /// Cancel a running toggleable effect. Returns true if it was running (and got cancelled).
     private func cancelIfRunning(_ key: String, sound: String? = nil) -> Bool {
         if let layer = activeEffects[key] {
@@ -74,6 +83,10 @@ class EmojiAnimator {
 
     func spawnEmoji(_ emoji: String = "❤️") {
         let bounds = hostLayer.bounds
+
+        if let sound = EmojiAnimator.soundEffect(for: emoji) {
+            SoundManager.shared.playOverlapping(sound)
+        }
 
         let isScreen = emoji == "🖥️"
         let fontSize: CGFloat = isScreen ? 234 : 78
