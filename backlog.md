@@ -1,5 +1,6 @@
 # Tasks
 
+- [x] Direct request: tightened participant Slides page-nav spacing so `Go` sits immediately next to the page total text.
 - [x] Direct request: moved participant Slides `⬇️ Download` button from left controls group to right header actions, next to the close `✕` button.
 - [x] Bugfix direct request: participant `/api/slides` feed now rewrites external slide URLs to local `/api/slides/file/{slug}` proxy so PDFs render inline in viewer (instead of browser download behavior on some external hosts).
 - [x] Direct request: maximize participant Slides viewer footprint while keeping bottom emoji bar visible by reserving bottom overlay space and stretching slides modal to full remaining viewport.

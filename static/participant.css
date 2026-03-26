@@ -315,7 +315,7 @@ h1 { display: none; }
 .slides-page-nav {
   display: inline-flex;
   align-items: center;
-  gap: .35rem;
+  gap: .2rem;
   flex-shrink: 0;
 }
 
@@ -338,7 +338,8 @@ h1 { display: none; }
 .slides-page-total {
   color: var(--muted);
   font-size: .8rem;
-  min-width: 2.2rem;
+  min-width: 0;
+  margin-right: .05rem;
 }
 
 .slides-page-go {
