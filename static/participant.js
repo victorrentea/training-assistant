@@ -2406,8 +2406,7 @@
       const checklistHidden = isOnboardingChecklistHidden();
       el.innerHTML = `<div class="waiting">
         <div class="icon">👋</div>
-        <p>Welcome!</p>
-        <p style="margin-top:.75rem;">Get ready to participate.</p>
+        <p class="welcome-text">Welcome!</p>
         <p style="margin-top:.5rem;">Your answers and ideas will shape this session!</p>
         ${checklistHidden ? '' : `<ul id="onboarding-list" class="onboarding-checklist"${allDone ? ' style="opacity:1"' : ''}>
           <li id="onboard-name" class="onboarding-item${nameSet ? ' done' : ''}" onclick="${nameSet ? '' : 'startNameEdit()'}" style="cursor:${nameSet ? 'default' : 'pointer'}">
