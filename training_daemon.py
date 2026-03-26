@@ -1293,20 +1293,14 @@ class SlidesOnDemandWsRunner:
 
         relative_path = f"slides/{target_name}"
         try:
-            log.info(
-                "slides",
-                f"⬆️ slides_upload_received slug={slug} request_id={request_id} path={relative_path}",
-            )
+            log.info("slides", f"⬆️ requested: {slug}")
             _post_material_upsert_file(
                 self.main_config,
                 relative_path,
                 local_pdf,
                 source_mtime=float(local_pdf.stat().st_mtime),
             )
-            log.info(
-                "slides",
-                f"⬆️ slides_upload_upsert_ok slug={slug}",
-            )
+            log.info("slides", f"⬆️ uploaded: {slug}")
             self._send_result(ws, {
                 "type": "slides_upload_result",
                 "request_id": request_id,
