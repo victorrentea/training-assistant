@@ -1,5 +1,6 @@
 import json, tempfile
 from pathlib import Path
+from types import SimpleNamespace
 
 
 def test_load_daemon_state_new_format():
@@ -197,3 +198,46 @@ def test_load_slides_manifest_reads_candidate_file():
         assert len(slides) == 1
         assert slides[0]["slug"] == "intro"
         assert slides[0]["url"] == "https://cdn.example.com/intro.pdf"
+
+
+def test_parse_powerpoint_probe_output_active_state():
+    from training_daemon import _parse_powerpoint_probe_output
+
+    parsed = _parse_powerpoint_probe_output("Architecture deck\t12\n")
+    assert parsed == {"presentation": "Architecture deck", "slide": 12}
+
+
+def test_parse_powerpoint_probe_output_handles_no_presentation_tokens():
+    from training_daemon import _parse_powerpoint_probe_output
+
+    assert _parse_powerpoint_probe_output("__NO_PPT__") is None
+    assert _parse_powerpoint_probe_output("__NO_PRESENTATION__") is None
+    assert _parse_powerpoint_probe_output("") is None
+
+
+def test_probe_powerpoint_state_success(monkeypatch):
+    import training_daemon
+
+    monkeypatch.setattr(
+        training_daemon.subprocess,
+        "run",
+        lambda *args, **kwargs: SimpleNamespace(returncode=0, stdout="Deck A\t7\n", stderr=""),
+    )
+
+    state, error = training_daemon._probe_powerpoint_state()
+    assert error is None
+    assert state == {"presentation": "Deck A", "slide": 7}
+
+
+def test_probe_powerpoint_state_returns_error_on_nonzero_exit(monkeypatch):
+    import training_daemon
+
+    monkeypatch.setattr(
+        training_daemon.subprocess,
+        "run",
+        lambda *args, **kwargs: SimpleNamespace(returncode=1, stdout="", stderr="Execution error"),
+    )
+
+    state, error = training_daemon._probe_powerpoint_state()
+    assert state is None
+    assert error == "Execution error"

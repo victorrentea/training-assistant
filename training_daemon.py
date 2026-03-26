@@ -20,6 +20,7 @@ import json
 import os
 import re
 import signal
+import subprocess
 import sys
 import threading
 import time
@@ -110,6 +111,38 @@ def _resolve_materials_folder() -> Path | None:
 
 _DOW_RE = re.compile(r"^([A-Z][a-z]{2})\s+(\d{2}:\d{2})\s+(.+)$")
 _FRONTMATTER_WATERMARK_RE = re.compile(r"^watermark:\s*(\d+)")
+_PPT_NO_APP = "__NO_PPT__"
+_PPT_NO_PRESENTATION = "__NO_PRESENTATION__"
+_PPT_APPLESCRIPT = """
+if application "Microsoft PowerPoint" is not running then
+    return "__NO_PPT__"
+end if
+
+tell application "Microsoft PowerPoint"
+    if (count of presentations) is 0 then
+        return "__NO_PRESENTATION__"
+    end if
+
+    set presentationName to name of active presentation
+    set slideNumber to 0
+
+    try
+        if (count of slide show windows) > 0 then
+            set slideNumber to slide index of slide of view of slide show window 1
+        else
+            set slideNumber to slide index of slide of view of active window
+        end if
+    on error
+        try
+            set slideNumber to slide index of slide of view of document window 1
+        on error
+            set slideNumber to 0
+        end try
+    end try
+
+    return presentationName & tab & (slideNumber as string)
+end tell
+""".strip()
 
 
 def _ssl_context() -> ssl.SSLContext:
@@ -135,6 +168,51 @@ def _check_daily_timing(now_time=None):
     if now_time >= _time(17, 30):
         return "warning"
     return None
+
+
+def _parse_powerpoint_probe_output(raw: str) -> dict | None:
+    text = (raw or "").strip()
+    if not text or text in {_PPT_NO_APP, _PPT_NO_PRESENTATION}:
+        return None
+    if "\t" not in text:
+        return None
+
+    presentation, slide_text = text.rsplit("\t", 1)
+    presentation = presentation.strip()
+    if not presentation:
+        return None
+
+    try:
+        slide_number = int(slide_text.strip())
+    except ValueError:
+        slide_number = 0
+
+    return {"presentation": presentation, "slide": max(0, slide_number)}
+
+
+def _probe_powerpoint_state(timeout_seconds: float = 1.5) -> tuple[dict | None, str | None]:
+    try:
+        result = subprocess.run(
+            ["osascript", "-e", _PPT_APPLESCRIPT],
+            capture_output=True,
+            text=True,
+            timeout=max(0.1, timeout_seconds),
+            check=False,
+        )
+    except FileNotFoundError:
+        return None, "osascript not available on PATH"
+    except subprocess.TimeoutExpired:
+        return None, f"osascript timed out after {timeout_seconds:.1f}s"
+    except Exception as e:
+        return None, f"osascript failed: {e}"
+
+    if result.returncode != 0:
+        details = (result.stderr or result.stdout or "").strip()
+        if not details:
+            details = f"osascript exit code {result.returncode}"
+        return None, details
+
+    return _parse_powerpoint_probe_output(result.stdout), None
 
 
 def _load_key_points(session_folder: Path) -> tuple[list[dict], int]:
@@ -1329,6 +1407,8 @@ def run() -> None:
     last_transcript_line_count = -1
     last_notes_mtime: float = 0.0  # track notes file mtime for re-push on change
     last_slides_payload_hash: str | None = None
+    last_powerpoint_state: dict | None = None
+    last_powerpoint_error: str | None = None
     last_auto_close_date: date | None = None   # prevent double-close on same calendar day
     last_auto_start_date: date | None = None   # prevent double-start on same calendar day
     _timing_fired_date: date | None = None     # date for which timing events were tracked
@@ -1370,6 +1450,26 @@ def run() -> None:
                 transcript_normalizer.tick()
                 slides_runner.tick()
                 materials_mirror.tick()
+
+                # ── Detect active PowerPoint presentation/slide via AppleScript ──
+                ppt_state, ppt_error = _probe_powerpoint_state()
+                if ppt_error:
+                    if ppt_error != last_powerpoint_error:
+                        log.error("ppt", f"AppleScript probe failed: {ppt_error}")
+                        last_powerpoint_error = ppt_error
+                else:
+                    if last_powerpoint_error is not None:
+                        log.info("ppt", "AppleScript probe recovered")
+                        last_powerpoint_error = None
+                    if ppt_state != last_powerpoint_state:
+                        last_powerpoint_state = ppt_state
+                        if ppt_state is None:
+                            log.info("ppt", "No active PowerPoint presentation")
+                        else:
+                            log.info(
+                                "ppt",
+                                f"Active presentation: {ppt_state['presentation']} | slide #{ppt_state['slide']}",
+                            )
     
                 # ── Check for session management requests ──
                 try:
