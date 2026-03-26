@@ -1,7 +1,7 @@
 {
-  "sha": "7a25c3075c043d736f4899e9949c67f4d1dff014",
-  "timestamp": "2026-03-26 19:20",
+  "sha": "f12ec573a9da45edd6be20a8355bc7189ba2a8af",
+  "timestamp": "2026-03-26 19:21",
   "changelog": [
-    "participant slides hide outer scrollbar in iframe mode"
+    "participant slides use tray download svg icon"
   ]
 }
