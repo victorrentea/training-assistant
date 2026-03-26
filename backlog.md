@@ -1,5 +1,6 @@
 # Tasks
 
+- [x] Direct request: topics list now shows hand cursor on hover and uses slightly larger topic font, with compacted row spacing/padding to keep the list on one page without scrolling.
 - [x] Direct request: replaced per-slide download emoji with clearer tray-download SVG icon (arrow + baseline), plus accessible label to reduce ambiguity with “move down”.
 - [x] Direct request: removed duplicate vertical scrollbar beside participant PDF viewer in iframe fallback mode by disabling outer container overflow while iframe is active.
 - [x] Direct request: on hover, participant Slides row download button now renders as fully filled (solid background) for stronger visual affordance.

@@ -326,18 +326,19 @@ h1 { display: none; }
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: .18rem;
-  padding: .25rem;
+  gap: .08rem;
+  padding: .18rem;
 }
 
 .slides-list-item {
   display: flex;
   align-items: center;
   gap: .28rem;
+  cursor: pointer;
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 6px;
   background: #1a1a1a;
-  padding: .2rem .23rem;
+  padding: .14rem .2rem;
 }
 
 .slides-list-item:hover {
@@ -359,15 +360,16 @@ h1 { display: none; }
   color: var(--text);
   text-align: left;
   cursor: pointer;
-  font-size: .74rem;
-  line-height: 1.1;
-  padding: .1rem .13rem;
+  font-size: .78rem;
+  line-height: 1.05;
+  padding: .06rem .1rem;
   min-width: 0;
 }
 
 .slides-list-title {
   flex: 1;
   min-width: 0;
+  cursor: pointer;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
