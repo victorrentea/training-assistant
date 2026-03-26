@@ -1,72 +1,57 @@
 @startuml seq_slides_flow
-title Slides Catalog Flow - Participant View and Host Upload
+title Slides Catalog Flow - C2 Level
 
-actor       "Host" as Host
-participant "Host UI\n(host.js)" as HostUI
-participant "Backend\n(FastAPI)" as Backend
-participant "Slides Router\n(routers/slides.py)" as Slides
-participant "Uploaded Store\n(.context/uploaded-slides)" as UploadStore
-participant "Local Materials\n(materials/slides)" as LocalStore
-participant "Daemon State\n(state.slides/slides_current)" as DaemonState
-participant "Participant UI\n(participant.js)" as PaxUI
-actor       "Participant" as Pax
+actor "Trainer" as Trainer
+database "PPTX Sources\n(watch dir / catalog)" as PptxSources
+participant "Slides Daemon\n(slides_daemon.py)" as Daemon
+database "Published PDFs\n(materials/slides)" as MaterialsSlides
+participant "Workshop Backend\n(FastAPI)" as Backend
+participant "Participant Browser UI" as PaxUI
+actor "Participant" as Pax
 
-== Optional Bootstrap on Production (host-only) ==
+== Automatic Publish Pipeline ==
 
-Host -> HostUI : Select PDF file
-HostUI -> Backend : POST /api/slides/upload (multipart)
-Backend -> Slides : upload_slide_pdf(file, slug?, name?)
-Slides -> UploadStore : write <slug>.pdf + <slug>.json
-Slides --> HostUI : 200 {ok:true, slide:{slug,url,name}}
+Trainer -> PptxSources : Save/update .pptx
+Daemon -> PptxSources : Poll and detect changed files
+Daemon -> Daemon : Convert PPTX -> PDF
+Daemon -> MaterialsSlides : Copy PDF (upload_mode=copy)
+Daemon -> Backend : POST /api/slides/current
+Daemon -> Backend : POST /api/quiz-status {slides:[...]}
 
-note right of Backend
-  /api/slides/upload is protected
-  by host auth (require_host_auth)
+== Participant Opens Slides ==
+
+Pax -> PaxUI : Open Slides modal
+PaxUI -> Backend : GET /api/slides
+Backend -> MaterialsSlides : Scan local PDFs
+Backend -> Backend : Merge with state.slides\nand slides_current
+Backend --> PaxUI : slides[]
+
+alt no slides
+  PaxUI -> Pax : Show "No slides published yet"
+else slides available
+  PaxUI -> Pax : Populate combo box
+  PaxUI -> Backend : GET /api/slides/file/{slug}
+  Backend -> MaterialsSlides : Read PDF by slug
+  MaterialsSlides --> Backend : PDF bytes
+  Backend --> PaxUI : application/pdf
+  PaxUI -> Pax : Render preview
+end
+
+loop while modal is open
+  PaxUI -> Backend : GET /api/slides (no-store)
+  Backend -> MaterialsSlides : Refresh local PDFs
+  Backend -> Backend : Refresh state.slides\nand slides_current
+  Backend --> PaxUI : updated slides[]
+end
+
+note over PaxUI, Backend
+  Slide catalog is global for the session,
+  not filtered by participant UUID.
 end note
 
-== Participant Opens Slides Modal ==
-
-Pax -> PaxUI : Click "Slides"
-PaxUI -> Backend : GET /api/slides
-Backend -> Slides : get_slides()
-
-par Gather source A
-  Slides -> UploadStore : index uploaded PDFs
-  UploadStore --> Slides : uploaded_slides[]
-else Gather source B
-  Slides -> LocalStore : scan materials/slides
-  LocalStore --> Slides : local_slides[]
-else Gather source C
-  Slides -> DaemonState : read state.slides + slides_current
-  DaemonState --> Slides : state_slides[]
-end
-
-Slides -> Slides : _merge_slide_sources(uploaded, local, state)
-Slides --> PaxUI : 200 {slides:[...]}
-
-alt slides list is empty
-  PaxUI -> Pax : show "No slides published yet"
-else slides list has entries
-  PaxUI -> Pax : fill combo box with slide names
-  PaxUI -> Backend : GET /api/slides/file/{slug}
-  Backend -> Slides : get_slide_file(slug)
-  Slides -> UploadStore : lookup slug
-  Slides -> LocalStore : fallback lookup slug
-  Slides --> PaxUI : PDF bytes (application/pdf)
-  PaxUI -> Pax : render selected PDF
-end
-
-== Refresh Loop While Modal Is Open ==
-
-loop every SLIDES_REFRESH_MS
-  PaxUI -> Backend : GET /api/slides (cache: no-store)
-  Backend --> PaxUI : updated catalog
-  PaxUI -> PaxUI : keep selected slug if still present
-end
-
-note over PaxUI, Slides
-  Slide catalog is global for the session.
-  It is NOT filtered by participant UUID.
+note over Daemon, MaterialsSlides
+  Default publish directory from code:
+  PPTX_PUBLISH_DIR = materials/slides
 end note
 
 @enduml
