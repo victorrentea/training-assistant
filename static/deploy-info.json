@@ -1,7 +1,7 @@
 {
-  "sha": "b1c172729abb7f8cac2bf4b586693802c503c8de",
-  "timestamp": "2026-03-26 21:41",
+  "sha": "7905a87d44129ccb1ef2eb04679eeb0e0a80d915",
+  "timestamp": "2026-03-26 21:43",
   "changelog": [
-    "Refine slide list spacing, layout, and short-screen scroll"
+    "feat: add persistent Native/PDF.js slides toggle"
   ]
 }
