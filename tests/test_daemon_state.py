@@ -271,6 +271,7 @@ def test_resolve_presentation_slide_target_uses_catalog_mapping(tmp_path):
     )
     assert target["slug"] == "about-victor"
     assert target["url"] == "https://interact.victorrentea.ro/api/slides/file/about-victor"
+    assert target["matched"] is True
 
 
 def test_resolve_presentation_slide_target_fallback_when_not_mapped(tmp_path):
@@ -283,3 +284,52 @@ def test_resolve_presentation_slide_target_fallback_when_not_mapped(tmp_path):
     )
     assert target["slug"] == "unmapped-deck"
     assert target["url"] == "http://localhost:8000/api/slides/file/unmapped-deck"
+    assert target["matched"] is False
+
+
+def test_sync_powerpoint_slide_unknown_presentation_alerts_once(monkeypatch):
+    import training_daemon
+
+    training_daemon._PPT_UNMAPPED_PRESENTATIONS_ALERTED.clear()
+    calls = {"delete": 0, "beep": 0, "status": []}
+
+    monkeypatch.setattr(
+        training_daemon,
+        "_resolve_presentation_slide_target",
+        lambda **kwargs: {
+            "slug": "unknown-deck",
+            "url": "http://localhost:8000/api/slides/file/unknown-deck",
+            "matched": False,
+        },
+    )
+
+    def _fake_delete(*args, **kwargs):
+        calls["delete"] += 1
+
+    def _fake_beep():
+        calls["beep"] += 1
+
+    def _fake_post(url, payload, username, password):
+        calls["status"].append({"url": url, "payload": payload})
+        return {"ok": True}
+
+    monkeypatch.setattr(training_daemon, "_delete_with_basic_auth", _fake_delete)
+    monkeypatch.setattr(training_daemon, "_beep_local", _fake_beep)
+    monkeypatch.setattr(training_daemon, "_post_json", _fake_post)
+
+    cfg = SimpleNamespace(
+        server_url="http://localhost:8000",
+        host_username="host",
+        host_password="secret",
+    )
+    ppt_state = {"presentation": "Unknown Deck.pptx", "slide": 4}
+
+    training_daemon._sync_powerpoint_slide_to_server(cfg, None, ppt_state)
+    training_daemon._sync_powerpoint_slide_to_server(cfg, None, ppt_state)
+
+    assert calls["delete"] == 2
+    assert calls["beep"] == 1
+    assert len(calls["status"]) == 1
+    assert calls["status"][0]["url"].endswith("/api/quiz-status")
+    assert calls["status"][0]["payload"]["status"] == "error"
+    assert "Presentation inaccessible for participants." in calls["status"][0]["payload"]["message"]
