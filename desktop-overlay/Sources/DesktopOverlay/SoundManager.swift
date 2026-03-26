@@ -64,7 +64,7 @@ class SoundManager {
 
     /// Play a new instance of the sound every time, layering over any already-playing copies.
     /// The player is released automatically when playback finishes.
-    func playOverlapping(_ filename: String) {
+    func playOverlapping(_ filename: String, volume: Float = 1.0) {
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
             guard let url = Bundle.module.url(forResource: filename, withExtension: nil, subdirectory: "Resources") else {
@@ -73,7 +73,7 @@ class SoundManager {
             }
             do {
                 let player = try AVAudioPlayer(contentsOf: url)
-                player.volume = 1.0
+                player.volume = max(0.0, min(1.0, volume))
                 player.prepareToPlay()
                 self.overlappingPlayers.append(player)
                 player.play()

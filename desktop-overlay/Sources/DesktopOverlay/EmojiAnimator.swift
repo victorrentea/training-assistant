@@ -89,7 +89,7 @@ class EmojiAnimator {
         let bounds = hostLayer.bounds
 
         if let sound = EmojiAnimator.soundEffect(for: emoji) {
-            SoundManager.shared.playOverlapping(sound)
+            SoundManager.shared.playOverlapping(sound, volume: 0.5)
         }
 
         let isScreen = emoji == "🖥️"
