@@ -1,7 +1,7 @@
 {
-  "sha": "c8a2b9b1dfe08a4a01a9bc4488d4ef5bcc6df3b5",
-  "timestamp": "2026-03-26 16:15",
+  "sha": "c0bc1f307de228979e784fe2a826d245650b0511",
+  "timestamp": "2026-03-26 16:18",
   "changelog": [
-    "Show participant slide availability in host hover"
+    "Fix participant slides selector and modal loading"
   ]
 }
