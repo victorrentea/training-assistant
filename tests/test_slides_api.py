@@ -1,6 +1,7 @@
 import base64
 import json
 import os
+import threading
 
 from fastapi.testclient import TestClient
 
@@ -311,3 +312,77 @@ def test_materials_upsert_rejects_traversal(monkeypatch, tmp_path):
         files={"file": ("escape.txt", b"bad", "text/plain")},
     )
     assert resp.status_code == 400
+
+
+def test_api_slides_file_missing_returns_503_when_daemon_not_connected(monkeypatch, tmp_path):
+    slides_dir = tmp_path / "server_materials" / "slides"
+    slides_dir.mkdir(parents=True, exist_ok=True)
+    monkeypatch.setenv("SLIDES_ON_DEMAND_UPLOAD_ENABLED", "1")
+    monkeypatch.setenv("TRAINING_ASSISTANT_SLIDES_DIR", str(slides_dir))
+    monkeypatch.setenv("SERVER_MATERIALS_DIR", str(tmp_path / "server_materials"))
+
+    client = TestClient(app)
+    resp = client.get("/api/slides/file/fca")
+    assert resp.status_code == 503
+
+
+def test_api_slides_file_can_wait_for_daemon_upload(monkeypatch, tmp_path):
+    root = tmp_path / "server_materials"
+    slides_dir = root / "slides"
+    slides_dir.mkdir(parents=True, exist_ok=True)
+    monkeypatch.setenv("SLIDES_ON_DEMAND_UPLOAD_ENABLED", "1")
+    monkeypatch.setenv("SLIDES_ON_DEMAND_TIMEOUT_SECONDS", "5")
+    monkeypatch.setenv("TRAINING_ASSISTANT_SLIDES_DIR", str(slides_dir))
+    monkeypatch.setenv("SERVER_MATERIALS_DIR", str(root))
+
+    result: dict = {}
+
+    with TestClient(app) as client:
+        with client.websocket_connect("/ws/daemon", headers=_HOST_AUTH_HEADERS) as daemon_ws:
+            def _fetch():
+                result["resp"] = client.get("/api/slides/file/fca")
+
+            t = threading.Thread(target=_fetch)
+            t.start()
+
+            request_msg = daemon_ws.receive_json()
+            assert request_msg["type"] == "slides_upload_request"
+            assert request_msg["slug"] == "fca"
+            request_id = request_msg["request_id"]
+
+            upsert = client.post(
+                "/api/materials/upsert",
+                data={"relative_path": "slides/FCA.pdf"},
+                files={"file": ("FCA.pdf", b"%PDF-1.4\n%ondemand\n", "application/pdf")},
+                headers=_HOST_AUTH_HEADERS,
+            )
+            assert upsert.status_code == 200
+
+            daemon_ws.send_json({
+                "type": "slides_upload_result",
+                "request_id": request_id,
+                "slug": "fca",
+                "status": "uploaded",
+                "relative_path": "slides/FCA.pdf",
+                "size": len(b"%PDF-1.4\n%ondemand\n"),
+            })
+
+            t.join(timeout=5)
+            assert not t.is_alive()
+
+    resp = result["resp"]
+    assert resp.status_code == 200
+    assert resp.content.startswith(b"%PDF-1.4")
+
+
+def test_api_slides_upload_status_endpoint(monkeypatch, tmp_path):
+    slides_dir = tmp_path / "server_materials" / "slides"
+    slides_dir.mkdir(parents=True, exist_ok=True)
+    monkeypatch.setenv("SLIDES_ON_DEMAND_UPLOAD_ENABLED", "1")
+    monkeypatch.setenv("TRAINING_ASSISTANT_SLIDES_DIR", str(slides_dir))
+    monkeypatch.setenv("SERVER_MATERIALS_DIR", str(tmp_path / "server_materials"))
+
+    host = TestClient(app, headers=_HOST_AUTH_HEADERS)
+    body = host.get("/api/slides/upload-status/unknown").json()
+    assert body["slug"] == "unknown"
+    assert body["status"] == "not_uploaded"

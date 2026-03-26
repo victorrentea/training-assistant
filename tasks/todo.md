@@ -399,3 +399,26 @@
 ### Review
 - Verified with `python3 -m pytest -q tests/test_main.py -k "session_interval_lines_txt"` (2 passed, 124 deselected).
 - Verified with `node --check static/host.js`.
+
+## Direct request: on-demand slides upload via daemon WS (dedup + 60s timeout)
+
+- [x] Add backend daemon WS endpoint `WS /ws/daemon` with host-auth and single active daemon tracking
+- [x] Extend `GET/HEAD /api/slides/file/{slug}` to trigger on-demand upload when file is missing
+- [x] Implement in-memory upload state machine (`not_uploaded|uploading|uploaded|failed`) with dedup per slug
+- [x] Add stale-upload retrigger logic when `uploading` age exceeds 60s
+- [x] Add backend handling for daemon `slides_upload_result` messages
+- [x] Add host-only diagnostic endpoint `GET /api/slides/upload-status/{slug}`
+- [x] Add daemon WS client loop (persistent connect + reconnect) and `slides_upload_request` handling
+- [x] Implement daemon slug->source resolution via catalog + deterministic fallback
+- [x] Add/adjust automated tests for backend on-demand behavior and daemon reconnect regression
+- [x] Run targeted verification tests and static compile checks
+
+### Review
+- Implemented on-demand slides flow guarded by `SLIDES_ON_DEMAND_UPLOAD_ENABLED` (enabled by default).
+- Backend now requests specific missing slide slugs from connected daemon and waits up to configured timeout (`SLIDES_ON_DEMAND_TIMEOUT_SECONDS`, default 60s).
+- Concurrent requests for same slug are deduplicated via per-slug state + event signaling; stale uploads are retriggered after `SLIDES_ON_DEMAND_STALE_SECONDS` (default 60s).
+- Added daemon WS endpoint `/ws/daemon` with host-auth and single active daemon semantics.
+- Added daemon-side WS runner that listens for `slides_upload_request` and uploads `slides/<target>.pdf` via existing `/api/materials/upsert`.
+- Verified with `python3 -m py_compile state.py routers/slides.py routers/ws.py training_daemon.py tests/test_slides_api.py`.
+- Verified with `pytest -q tests/test_slides_api.py` (18 passed).
+- Verified with `pytest -q tests/test_quiz_daemon_reconnect.py` (1 passed).

@@ -227,3 +227,4 @@ Host presents 4–6 items (patterns, approaches, technologies). Participants dra
 
 ## Anonymous Reaction / Confession Box
 Host broadcasts a statement: "Have you ever shipped code that violated what we just discussed?" Participants react with a single emoji or yes/no. Aggregated reactions are shown live. Creates psychological safety and honest discussion starters.
+- [x] Direct request: implemented on-demand slide PDF delivery via daemon WebSocket (`/ws/daemon`) with per-slug deduplicated upload state, 60s waiter timeout/stale-retrigger, and host-only diagnostics endpoint (`/api/slides/upload-status/{slug}`).

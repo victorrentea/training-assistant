@@ -1,5 +1,9 @@
+import base64
+import binascii
 import json
 import logging
+import os
+import secrets
 import time
 import uuid as uuid_mod
 from datetime import datetime, timezone
@@ -30,6 +34,67 @@ from routers.debate import auto_assign_remaining
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
+
+
+def _is_host_authorized_for_ws(websocket: WebSocket) -> bool:
+    raw = websocket.headers.get("authorization", "").strip()
+    if not raw.lower().startswith("basic "):
+        return False
+    token = raw[6:].strip()
+    try:
+        decoded = base64.b64decode(token).decode("utf-8")
+    except (binascii.Error, UnicodeDecodeError):
+        return False
+    if ":" not in decoded:
+        return False
+    username, password = decoded.split(":", 1)
+    expected_user = os.environ.get("HOST_USERNAME") or "host"
+    expected_pass = os.environ.get("HOST_PASSWORD") or "host"
+    return (
+        secrets.compare_digest(username.encode(), expected_user.encode())
+        and secrets.compare_digest(password.encode(), expected_pass.encode())
+    )
+
+
+@router.websocket("/ws/daemon")
+async def daemon_websocket_endpoint(websocket: WebSocket):
+    if not _is_host_authorized_for_ws(websocket):
+        await websocket.close(code=1008)
+        return
+
+    await websocket.accept()
+
+    # Kick old daemon connection if present.
+    old_ws = state.daemon_ws
+    if old_ws is not None and old_ws is not websocket:
+        try:
+            await old_ws.send_json({"type": "kicked"})
+            await old_ws.close(code=1001)
+        except Exception:
+            pass
+
+    state.daemon_ws = websocket
+    state.daemon_last_seen = datetime.now(timezone.utc)
+    logger.info("Daemon WS connected")
+
+    try:
+        while True:
+            data = await websocket.receive_json()
+            state.daemon_last_seen = datetime.now(timezone.utc)
+            msg_type = data.get("type")
+            if msg_type == "slides_upload_result":
+                from routers.slides import register_daemon_upload_result
+
+                await register_daemon_upload_result(data)
+            elif msg_type == "daemon_ping":
+                # Heartbeat message; last_seen already updated.
+                continue
+    except WebSocketDisconnect:
+        pass
+    finally:
+        if state.daemon_ws is websocket:
+            state.daemon_ws = None
+        logger.info("Daemon WS disconnected")
 
 
 @router.websocket("/ws/{participant_id}")
