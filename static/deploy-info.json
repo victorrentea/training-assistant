@@ -1,7 +1,7 @@
 {
-  "sha": "13d99bad7f47c8f24546e7a082380c0456c41965",
-  "timestamp": "2026-03-26 17:46",
+  "sha": "ba93bfc67928efbba929c8421aec8bf25bf5db10",
+  "timestamp": "2026-03-26 17:48",
   "changelog": [
-    "participant slides compact per-item updated badges"
+    "participant slides add animated centered empty state"
   ]
 }
