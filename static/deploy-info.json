@@ -1,7 +1,7 @@
 {
-  "sha": "57ee78cac7e58dc167e8c201d394b66be2e2b591",
-  "timestamp": "2026-03-26 14:11",
+  "sha": "1e2907cf8a80a2798e1a273a8d7e8e93b318f7d6",
+  "timestamp": "2026-03-26 14:12",
   "changelog": [
-    "Point slides backend default to server_materials"
+    "Move secrets file to home path"
   ]
 }
