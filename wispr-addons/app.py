@@ -223,7 +223,7 @@ def handle_clean_hotkey(with_emoji: bool = False) -> None:
         if cleaned is None:
             log("Failed: no response from API")
             if _app_ref:
-                _app_ref.title = "\u2702\ufe0f"
+                _app_ref.title = "\U0001f9d1\u200d\U0001f4bb"
             return
 
         simulate_keystroke(VK_Z, kCGEventFlagMaskCommand)
@@ -235,7 +235,7 @@ def handle_clean_hotkey(with_emoji: bool = False) -> None:
         elapsed_ms = int((time.time() - start) * 1000)
         log(f"Done ({len(text)}\u2192{len(cleaned)} chars, {elapsed_ms}ms):\n  {cleaned[:200]}")
         if _app_ref:
-            _app_ref.title = "\u2702\ufe0f"
+            _app_ref.title = "\U0001f9d1\u200d\U0001f4bb"
     except Exception as e:
         log(f"Failed: {e}")
     finally:
@@ -274,7 +274,7 @@ def _restore_dictation_volume() -> None:
     _dictation_active = False
     log(f"\U0001f534 Dictation: \U0001f50a OS Output ({_mute_device_original_volume:.0%})")
     if _app_ref:
-        _app_ref.title = "\u2702\ufe0f"
+        _app_ref.title = "\U0001f9d1\u200d\U0001f4bb"
 
 
 # --- Event tap callback ---
@@ -357,7 +357,7 @@ def _run_event_tap():
 class WisprAddonsApp(rumps.App):
     def __init__(self):
         super().__init__(
-            "\u2702\ufe0f",  # scissors icon
+            "\U0001f9d1\u200d\U0001f4bb",  # scissors icon
             quit_button=None,
         )
         self.menu = [
