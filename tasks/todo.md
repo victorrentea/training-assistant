@@ -540,3 +540,21 @@
 - Host diagnostics (`/api/slides/participant-availability`) still shows full deck list + availability status for operations.
 - Direct request implemented: `training_daemon.py` now probes PowerPoint via AppleScript and logs `presentation + slide #` only when they change (including transition to no active presentation).
 - Verified with `pytest -q tests/test_daemon_state.py` (16 passed).
+
+## Direct request: participant slides resume + visited topics tracking
+
+- [x] Reproduce local behavior in Chrome for topic switch and modal close/reopen flows
+- [x] Add failing e2e regression test for visited-topic visual tracking persistence
+- [x] Persist visited slide topics in `localStorage` and render a distinct visited style in slide list
+- [x] Harden slide selection restore by setting selected deck early during load
+- [x] Add iframe fallback resume support by opening with stored `#page=<n>` and syncing page hash to storage
+- [x] Run targeted e2e proof test
+
+### Review
+- Targeted test: `pytest -q tests/test_e2e_slides_resume.py --maxfail=1` -> `1 passed`
+- Manual Chrome proof screenshots:
+  - `.context/screenshots/slides-visited.png`
+  - `.context/screenshots/slides-resume-reopen.png`
+- Manual state proof (from in-browser evaluate):
+  - `workshop_slide_visited_ids` contains Deck-A and Deck-B IDs after opening both topics
+  - iframe fallback opens with stored page hash (example observed: `/api/slides/file/deck-a?inline=1#page=4`)
