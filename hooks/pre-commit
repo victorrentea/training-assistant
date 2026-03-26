@@ -1,4 +1,9 @@
 #!/bin/sh
+set -e
+
 # work-hours.js is maintained manually by the project owner.
-# Intentionally no-op to avoid merge conflicts from auto-stamping.
-exit 0
+# Keep this hook focused on Python method-size enforcement only.
+python3 scripts/check_python_method_length.py \
+  --max-lines 60 \
+  --baseline scripts/python_method_length_baseline.json \
+  --staged
