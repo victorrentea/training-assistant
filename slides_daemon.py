@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import base64
 import hashlib
+import html.parser
 import json
 import os
 import re
@@ -35,6 +36,14 @@ DEFAULT_MIN_CPU_FREE = 25.0
 DEFAULT_POST_EXPORT_COOLDOWN_SECONDS = 5.0
 DEFAULT_FAILURE_RETRY_SECONDS = 60.0
 DEFAULT_MATERIALS_FOLDER = Path("/Users/victorrentea/Documents/workshop-materials")
+DEFAULT_DRIVE_SYNC_TIMEOUT_SECONDS = 90.0
+DEFAULT_DRIVE_POLL_SECONDS = 5.0
+DEFAULT_DRIVE_STABLE_PROBES = 2
+DEFAULT_DRIVE_BOOTSTRAP_URL = "https://victorrentea.ro/slides/"
+
+TITLE_ALIASES: dict[str, str] = {
+    "Reactive/WebFlux": "Reactive WebFlux",
+}
 
 
 def load_secrets_env() -> None:
@@ -79,6 +88,10 @@ class SlidesDaemonConfig:
     recursive: bool
     post_export_cooldown_seconds: float
     failure_retry_seconds: float
+    drive_sync_timeout_seconds: float
+    drive_poll_seconds: float
+    drive_stable_probes: int
+    drive_bootstrap_url: str
     catalog_file: Path | None = None
     sync_backend: bool = True
 
@@ -116,6 +129,16 @@ def config_from_env() -> SlidesDaemonConfig:
     post_export_cooldown = max(DEFAULT_POST_EXPORT_COOLDOWN_SECONDS, float(cooldown_raw))
     failure_retry_raw = os.environ.get("PPTX_FAILURE_RETRY_SECONDS", str(DEFAULT_FAILURE_RETRY_SECONDS))
     failure_retry_seconds = max(5.0, float(failure_retry_raw))
+    drive_sync_timeout_raw = os.environ.get(
+        "PPTX_DRIVE_SYNC_TIMEOUT_SECONDS",
+        str(DEFAULT_DRIVE_SYNC_TIMEOUT_SECONDS),
+    )
+    drive_sync_timeout_seconds = max(10.0, float(drive_sync_timeout_raw))
+    drive_poll_raw = os.environ.get("PPTX_DRIVE_POLL_SECONDS", str(DEFAULT_DRIVE_POLL_SECONDS))
+    drive_poll_seconds = max(1.0, float(drive_poll_raw))
+    stable_raw = os.environ.get("PPTX_DRIVE_STABLE_PROBES", str(DEFAULT_DRIVE_STABLE_PROBES))
+    drive_stable_probes = max(1, int(stable_raw))
+    drive_bootstrap_url = os.environ.get("PPTX_DRIVE_BOOTSTRAP_URL", DEFAULT_DRIVE_BOOTSTRAP_URL).strip()
     catalog_file_str = os.environ.get(
         "PPTX_CATALOG_FILE",
         str(Path(__file__).parent / "daemon" / "materials_slides_catalog.json"),
@@ -148,6 +171,10 @@ def config_from_env() -> SlidesDaemonConfig:
         recursive=recursive,
         post_export_cooldown_seconds=post_export_cooldown,
         failure_retry_seconds=failure_retry_seconds,
+        drive_sync_timeout_seconds=drive_sync_timeout_seconds,
+        drive_poll_seconds=drive_poll_seconds,
+        drive_stable_probes=drive_stable_probes,
+        drive_bootstrap_url=drive_bootstrap_url,
         catalog_file=catalog_file,
         sync_backend=sync_backend,
     )
@@ -241,6 +268,8 @@ def load_catalog_entries(path: Path | None) -> list[dict]:
             "title": str(entry.get("title", "")).strip(),
             "source": source,
             "target_pdf": target_pdf,
+            "drive_export_url": str(entry.get("drive_export_url", "")).strip(),
+            "drive_probe_url": str(entry.get("drive_probe_url", "")).strip(),
         })
     return valid_entries
 
@@ -253,6 +282,8 @@ def resolve_tracked_sources(config: SlidesDaemonConfig) -> tuple[list[Path], dic
             _abs_key(entry["source"]): {
                 "title": entry["title"],
                 "target_pdf": entry["target_pdf"],
+                "drive_export_url": entry["drive_export_url"],
+                "drive_probe_url": entry["drive_probe_url"] or entry["drive_export_url"],
             }
             for entry in catalog
         }
@@ -513,6 +544,215 @@ def convert_with_libreoffice(pptx_path: Path, output_dir: Path) -> Path:
     return pdf_path
 
 
+class _SlidesLinksHTMLParser(html.parser.HTMLParser):
+    def __init__(self) -> None:
+        super().__init__()
+        self._current_href: str | None = None
+        self._current_text_parts: list[str] = []
+        self.links: list[tuple[str, str]] = []
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag.lower() != "a":
+            return
+        href = dict(attrs).get("href")
+        if href:
+            self._current_href = href.strip()
+            self._current_text_parts = []
+
+    def handle_data(self, data: str) -> None:
+        if self._current_href is None:
+            return
+        self._current_text_parts.append(data)
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag.lower() != "a" or self._current_href is None:
+            return
+        text = "".join(self._current_text_parts).strip()
+        if text:
+            self.links.append((text, self._current_href))
+        self._current_href = None
+        self._current_text_parts = []
+
+
+def _read_url_text(url: str, timeout: float = 20.0) -> str:
+    req = urllib.request.Request(url, method="GET")
+    with urllib.request.urlopen(req, timeout=timeout, context=_ssl_context()) as response:
+        charset = response.headers.get_content_charset() or "utf-8"
+        return response.read().decode(charset, errors="replace")
+
+
+def _to_drive_export_pdf_url(href: str) -> str | None:
+    parsed = urllib.parse.urlparse(href)
+    if not parsed.scheme:
+        return None
+    host = parsed.netloc.lower()
+    path = parsed.path
+    if "docs.google.com" in host:
+        m = re.search(r"/presentation/d/([^/]+)", path)
+        if m:
+            return f"https://docs.google.com/presentation/d/{m.group(1)}/export/pdf"
+    if "drive.google.com" in host:
+        m = re.search(r"/file/d/([^/]+)", path)
+        if m:
+            return f"https://drive.google.com/uc?export=download&id={m.group(1)}"
+    return None
+
+
+def extract_drive_export_links(html_text: str) -> dict[str, str]:
+    parser = _SlidesLinksHTMLParser()
+    parser.feed(html_text)
+    links: dict[str, str] = {}
+    for title, href in parser.links:
+        export_url = _to_drive_export_pdf_url(href)
+        if export_url:
+            links[title] = export_url
+    return links
+
+
+def _beep_local() -> None:
+    try:
+        subprocess.run(
+            ["osascript", "-e", "beep"],
+            capture_output=True,
+            text=True,
+            timeout=2,
+            check=False,
+        )
+    except Exception:
+        pass
+
+
+def _is_google_drive_running() -> bool:
+    if sys.platform != "darwin":
+        return True
+    try:
+        proc = subprocess.run(
+            ["pgrep", "-x", "Google Drive"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        return proc.returncode == 0
+    except Exception:
+        return True
+
+
+def _probe_drive_fingerprint(url: str) -> tuple[str, dict[str, str]]:
+    head_req = urllib.request.Request(url, method="HEAD")
+    response_headers: dict[str, str] = {}
+    body_hash: str | None = None
+
+    try:
+        with urllib.request.urlopen(head_req, timeout=20, context=_ssl_context()) as response:
+            response_headers = {k.lower(): v for k, v in response.headers.items()}
+    except urllib.error.HTTPError as exc:
+        if exc.code != 405:
+            details = exc.read().decode("utf-8", errors="replace")
+            raise RuntimeError(f"drive_url_error: HTTP {exc.code}: {details}") from exc
+    except urllib.error.URLError as exc:
+        raise RuntimeError(f"drive_url_error: {exc}") from exc
+
+    etag = response_headers.get("etag", "").strip()
+    last_modified = response_headers.get("last-modified", "").strip()
+    content_length = response_headers.get("content-length", "").strip()
+    if etag or last_modified or content_length:
+        return f"hdr:{etag}|{last_modified}|{content_length}", response_headers
+
+    get_req = urllib.request.Request(url, method="GET")
+    try:
+        with urllib.request.urlopen(get_req, timeout=30, context=_ssl_context()) as response:
+            response_headers = {k.lower(): v for k, v in response.headers.items()}
+            payload = response.read()
+            body_hash = hashlib.sha256(payload).hexdigest()
+    except urllib.error.HTTPError as exc:
+        details = exc.read().decode("utf-8", errors="replace")
+        raise RuntimeError(f"drive_url_error: HTTP {exc.code}: {details}") from exc
+    except urllib.error.URLError as exc:
+        raise RuntimeError(f"drive_url_error: {exc}") from exc
+
+    return f"body:{body_hash}", response_headers
+
+
+def _download_pdf_from_url(url: str, output_pdf: Path) -> Path:
+    req = urllib.request.Request(url, method="GET")
+    try:
+        with urllib.request.urlopen(req, timeout=60, context=_ssl_context()) as response:
+            payload = response.read()
+    except urllib.error.HTTPError as exc:
+        details = exc.read().decode("utf-8", errors="replace")
+        raise RuntimeError(f"drive_url_error: HTTP {exc.code}: {details}") from exc
+    except urllib.error.URLError as exc:
+        raise RuntimeError(f"drive_url_error: {exc}") from exc
+
+    if not payload or not payload.startswith(b"%PDF-"):
+        raise RuntimeError("invalid_pdf_payload: Downloaded content is not a PDF file")
+
+    output_pdf.parent.mkdir(parents=True, exist_ok=True)
+    output_pdf.write_bytes(payload)
+    return output_pdf
+
+
+def _push_error_status(config: SlidesDaemonConfig, message: str) -> None:
+    if not config.sync_backend:
+        return
+    payload = {
+        "status": "error",
+        "message": message,
+        "slides": [],
+    }
+    try:
+        _post_json(
+            f"{config.server_url}/api/quiz-status",
+            payload,
+            config.host_username,
+            config.host_password,
+        )
+    except Exception:
+        pass
+
+
+def convert_with_google_drive_pull(
+    pptx_path: Path,
+    output_pdf: Path,
+    config: SlidesDaemonConfig,
+    state_entry: dict,
+    drive_export_url: str,
+    drive_probe_url: str,
+) -> Path:
+    if not drive_export_url:
+        raise RuntimeError(f"drive_url_error: Missing drive_export_url for {pptx_path.name}")
+
+    previous_fingerprint = str(state_entry.get("last_drive_fingerprint") or "").strip()
+    _ = drive_probe_url  # Reserved for future diagnostics; runtime uses one direct pull request only.
+
+    pdf_path = _download_pdf_from_url(drive_export_url, output_pdf)
+    payload = pdf_path.read_bytes()
+    fingerprint = f"pdf:{hashlib.sha256(payload).hexdigest()}"
+    state_entry["last_drive_probe_at"] = time.time()
+
+    if previous_fingerprint and fingerprint == previous_fingerprint:
+        drive_running = _is_google_drive_running()
+        health_hint = "" if drive_running else " Google Drive app not running."
+        message = (
+            f"drive_not_synced_yet: {pptx_path.name} changed locally but Drive PDF fingerprint "
+            f"is still unchanged.{health_hint}"
+        )
+        if not drive_running:
+            _push_error_status(config, message)
+            _beep_local()
+        state_entry["last_drive_error"] = message
+        try:
+            pdf_path.unlink(missing_ok=True)
+        except Exception:
+            pass
+        raise RuntimeError(message)
+
+    state_entry["last_drive_fingerprint"] = fingerprint
+    state_entry["last_drive_ready_at"] = time.time()
+    state_entry["last_drive_error"] = None
+    return pdf_path
+
+
 def convert_with_google_drive(pptx_path: Path, output_pdf: Path) -> Path:
     """Upload PPTX to Google Drive and export as PDF."""
     credentials_path = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS", "").strip()
@@ -559,10 +799,28 @@ def convert_with_google_drive(pptx_path: Path, output_pdf: Path) -> Path:
     return output_pdf
 
 
-def convert_pptx_to_pdf(pptx_path: Path, config: SlidesDaemonConfig, slug: str) -> Path:
+def convert_pptx_to_pdf(
+    pptx_path: Path,
+    config: SlidesDaemonConfig,
+    slug: str,
+    state_entry: dict,
+    metadata: dict | None = None,
+) -> Path:
     work_pdf = config.work_dir / f"{slug}.pdf"
+    metadata = metadata or {}
     if config.converter == "google_drive":
         return convert_with_google_drive(pptx_path, work_pdf)
+    if config.converter == "google_drive_pull":
+        drive_export_url = str(metadata.get("drive_export_url") or "").strip()
+        drive_probe_url = str(metadata.get("drive_probe_url") or drive_export_url).strip()
+        return convert_with_google_drive_pull(
+            pptx_path=pptx_path,
+            output_pdf=work_pdf,
+            config=config,
+            state_entry=state_entry,
+            drive_export_url=drive_export_url,
+            drive_probe_url=drive_probe_url,
+        )
     if config.converter == "libreoffice":
         converted = convert_with_libreoffice(pptx_path, config.work_dir)
         if converted != work_pdf:
@@ -672,6 +930,7 @@ def process_one_file(
     daemon_state: dict,
     pptx_path: Path,
     target_pdf: str | None = None,
+    metadata: dict | None = None,
 ) -> bool:
     cpu_free = get_cpu_free_percent(sample_seconds=1.0)
     if cpu_free < config.min_cpu_free_percent:
@@ -682,14 +941,14 @@ def process_one_file(
         )
         return False
 
+    key = _abs_key(pptx_path)
+    state_entry = daemon_state.setdefault("files", {}).setdefault(key, {})
     slug = ensure_slug(daemon_state, pptx_path)
-    pdf_path = convert_pptx_to_pdf(pptx_path, config, slug)
+    pdf_path = convert_pptx_to_pdf(pptx_path, config, slug, state_entry, metadata=metadata)
     public_ref = upload_pdf(pdf_path, slug, config, target_name=target_pdf)
     if config.sync_backend:
         push_current_slides(config, public_ref, slug, pptx_path.name)
 
-    key = _abs_key(pptx_path)
-    daemon_state.setdefault("files", {}).setdefault(key, {})
     daemon_state["files"][key]["slug"] = slug
     if target_pdf:
         daemon_state["files"][key]["target_pdf"] = target_pdf
@@ -725,22 +984,65 @@ def run_once(config: SlidesDaemonConfig, daemon_state: dict) -> bool:
                 return updated_current or updated_list
             log.info("slides", f"✏️ppt update detected => regenerating ppf: {next_path.name}")
             target_pdf = metadata.get(_abs_key(next_path), {}).get("target_pdf")
-            # TEMPORARY PAUSE requested by user:
-            # keep conversion/upload code in repo, but skip executing automatic PPTX->PDF flow.
-            # try:
-            #     updated_current = process_one_file(config, daemon_state, next_path, target_pdf=target_pdf)
-            #     if updated_current:
-            #         daemon_state["last_export_finished_at"] = time.time()
-            #         daemon_state.setdefault("files", {}).setdefault(next_key, {}).pop("retry_after", None)
-            #         save_daemon_state(config.state_file, daemon_state)
-            # except Exception:
-            #     retry_after = time.time() + max(5.0, float(config.failure_retry_seconds))
-            #     daemon_state.setdefault("files", {}).setdefault(next_key, {})["retry_after"] = retry_after
-            #     save_daemon_state(config.state_file, daemon_state)
-            #     raise
-            log.info("slides", "Auto PPTX->PDF conversion is temporarily paused")
+            file_meta = metadata.get(_abs_key(next_path), {})
+            try:
+                updated_current = process_one_file(
+                    config,
+                    daemon_state,
+                    next_path,
+                    target_pdf=target_pdf,
+                    metadata=file_meta,
+                )
+                if updated_current:
+                    daemon_state["last_export_finished_at"] = time.time()
+                    daemon_state.setdefault("files", {}).setdefault(next_key, {}).pop("retry_after", None)
+                    save_daemon_state(config.state_file, daemon_state)
+            except Exception:
+                retry_after = time.time() + max(5.0, float(config.failure_retry_seconds))
+                daemon_state.setdefault("files", {}).setdefault(next_key, {})["retry_after"] = retry_after
+                save_daemon_state(config.state_file, daemon_state)
+                raise
     updated_list = sync_slides_list(config, daemon_state, metadata)
     return updated_current or updated_list
+
+
+def bootstrap_drive_urls(catalog_path: Path, source_url: str) -> tuple[int, int]:
+    raw_catalog = json.loads(catalog_path.read_text(encoding="utf-8"))
+    decks = raw_catalog.get("decks", raw_catalog if isinstance(raw_catalog, list) else [])
+    if not isinstance(decks, list):
+        raise RuntimeError(f"Invalid slides catalog format in {catalog_path}")
+
+    page_html = _read_url_text(source_url)
+    page_links = extract_drive_export_links(page_html)
+    updated = 0
+    missing = 0
+
+    alias_to_page: dict[str, str] = {}
+    for local_title, remote_title in TITLE_ALIASES.items():
+        if remote_title in page_links:
+            alias_to_page[local_title] = remote_title
+
+    for entry in decks:
+        if not isinstance(entry, dict):
+            continue
+        title = str(entry.get("title", "")).strip()
+        if not title:
+            continue
+        lookup_title = title if title in page_links else alias_to_page.get(title)
+        export_url = page_links.get(lookup_title or "")
+        if not export_url:
+            missing += 1
+            continue
+        if str(entry.get("drive_export_url", "")).strip() != export_url:
+            entry["drive_export_url"] = export_url
+            updated += 1
+        probe = str(entry.get("drive_probe_url", "")).strip()
+        if not probe:
+            entry["drive_probe_url"] = export_url
+            updated += 1
+
+    catalog_path.write_text(json.dumps(raw_catalog, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    return updated, missing
 
 
 def run_forever(config: SlidesDaemonConfig) -> None:
@@ -762,6 +1064,16 @@ def run_forever(config: SlidesDaemonConfig) -> None:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Watch PPTX files and publish exported PDFs.")
     parser.add_argument("--once", action="store_true", help="Run one poll cycle and exit")
+    parser.add_argument(
+        "--bootstrap-drive-urls",
+        action="store_true",
+        help="Populate drive_export_url/drive_probe_url in catalog from public slides page",
+    )
+    parser.add_argument(
+        "--bootstrap-source-url",
+        default="",
+        help="Source page for bootstrap (default: PPTX_DRIVE_BOOTSTRAP_URL or built-in default)",
+    )
     args = parser.parse_args(argv)
 
     try:
@@ -771,6 +1083,22 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     daemon_state = load_daemon_state(config.state_file)
+    if args.bootstrap_drive_urls:
+        if not config.catalog_file:
+            print("[pptx-daemon] ERROR: Catalog file is required for bootstrap", file=sys.stderr, flush=True)
+            return 1
+        source_url = args.bootstrap_source_url.strip() or config.drive_bootstrap_url
+        try:
+            updated, missing = bootstrap_drive_urls(config.catalog_file, source_url)
+            print(
+                f"[pptx-daemon] Bootstrap done: updated={updated}, missing_titles={missing}, source={source_url}",
+                flush=True,
+            )
+            return 0
+        except Exception as exc:
+            print(f"[pptx-daemon] ERROR: Bootstrap failed: {exc}", file=sys.stderr, flush=True)
+            return 1
+
     if args.once:
         try:
             changed = run_once(config, daemon_state)
