@@ -1,7 +1,7 @@
 {
-  "sha": "136874aad87e775c71f87f1836baf444ee4e7130",
-  "timestamp": "2026-03-26 17:15",
+  "sha": "358f33fe446713645a72e1285ed8e822790cbe96",
+  "timestamp": "2026-03-26 17:16",
   "changelog": [
-    "participant slides auto-jump to page two for testing"
+    "participant slides persist page and scroll position"
   ]
 }
