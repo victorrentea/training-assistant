@@ -1,7 +1,7 @@
 {
-  "sha": "2f997da9202b9e615581c0d1aa2fec506874b7cb",
-  "timestamp": "2026-03-26 22:13",
+  "sha": "166ebb72c0642f05f85ffadd5c4211ab1f42dc0f",
+  "timestamp": "2026-03-26 22:14",
   "changelog": [
-    "fix: underline location prompt on hover"
+    "fix: render participant header tooltips below"
   ]
 }
