@@ -1369,6 +1369,13 @@
           _prevActivity   = msg.current_activity;
           _stateInitialised = true;
         } else {
+          const nextActivity = String(msg.current_activity || 'none');
+          const prevActivity = String(_prevActivity || 'none');
+          const activityStarted = nextActivity !== 'none' && nextActivity !== prevActivity;
+          const pollStarted = !_prevPollActive && !!msg.poll_active;
+          if (activityStarted || pollStarted) {
+            closeSlidesModal();
+          }
           if (!_prevPollActive && msg.poll_active && msg.poll) {
             notifyIfHidden('🗳️ New poll!', msg.poll.question);
           }
