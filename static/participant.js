@@ -85,10 +85,10 @@
   const LS_SLIDE_PAGE_PREFIX = 'workshop_slide_page:';
   const LS_SLIDE_VIEW_PREFIX = 'workshop_slide_view:';
   const LS_SLIDE_SELECTED_ID = 'workshop_slide_selected_id';
-  const SLIDES_TEST_AUTO_SCROLL_ENABLED = true;
+  const SLIDES_TEST_AUTO_SCROLL_ENABLED = false;
   const SLIDES_TEST_AUTO_SCROLL_PAGE = 2;
   const SLIDES_TEST_AUTO_SCROLL_DELAY_MS = 3000;
-  const SLIDES_DISABLE_VIEW_PERSISTENCE = true;
+  const SLIDES_DISABLE_VIEW_PERSISTENCE = false;
   let slidesCatalog = [];
   let slidesSelectedSlug = null;
   let slidesSelectedId = null;

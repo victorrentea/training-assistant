@@ -1,5 +1,6 @@
 # Tasks
 
+- [x] Direct request: restored Slides reopen continuity by disabling temporary auto-jump test mode and re-enabling per-slide view persistence (same deck + same page/position on reopen).
 - [x] Direct request: appended `ago` suffix to compact per-slide updated badges in participant Slides sidebar (e.g., `3m ago`, `1h ago`).
 - [x] Direct request: converted participant Slides to full-screen sheet look (non-modal styling), kept plain top-right close `✕` (no border/chrome), and persisted selected deck id so reopening restores same deck + page context.
 - [x] Bugfix direct request: removed forced iframe reload for test page jump (now uses in-frame hash navigation first) to avoid visible PDF refresh; aligned slide row/download hover border color to green for consistent hover/selected states.
