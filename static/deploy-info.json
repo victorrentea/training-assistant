@@ -1,7 +1,7 @@
 {
-  "sha": "6e188a3bd4b2a91c1ff620f95b29f41cf75b9888",
+  "sha": "f298afe9c0cc17cd56c7d9772ede7aef406fc0a1",
   "timestamp": "2026-03-26 22:15",
   "changelog": [
-    "Adjust slide list right edge and title offset"
+    "feat: blink Follow Trainer when auto-disabled"
   ]
 }
