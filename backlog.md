@@ -30,6 +30,7 @@
 - [x] Direct request: for testing, participant PDF.js slides now auto-jump to page 2 whenever a slide is displayed (or refreshed from cache), clamped to available page count.
 - [x] Direct request: participant Slides modal now uses ~90% viewport, slide dropdown shows only training names, `updated` moved to subtle inline label near selector, and page tracking stays synced while scrolling (with page jump controls kept for direct navigation).
 - [x] Direct request: participant Slides combo now keeps all metadata on one line (`name • updated • page/total`), with dropdown width sized to the longest visible entry, and removed the extra slides meta row to maximize viewer space.
+- [x] direct request: removed awkward intermittent focus rectangle from Slides topic names in host popover.
 - [x] Hard-code default `MATERIALS_FOLDER` to `/Users/victorrentea/Documents/workshop-materials` (no project-relative default).
 - [x] Disable automatic work-hours stamping in pre-commit; keep `static/work-hours.js` manual-only to avoid merge conflicts.
 - [x] Migrate project secret file location from repo `secrets.env` to `~/.training-assistants-secrets.env` and update all runtime loaders/scripts accordingly.
@@ -281,7 +282,6 @@ Host broadcasts a statement: "Have you ever shipped code that violated what we j
 - [x] Direct request: removed “Get ready to participate.” from participant waiting screen and increased “Welcome!” text size by 50%.
 - [x] Direct request: pressing `Esc` on participant page now closes all participant modals in one shot (Key Points, Slides, Notes, and avatar/participant modal), with E2E regression coverage.
 - [x] Direct request: participant emoji buttons now use the tooltip-border color as background, and tooltip borders were thickened by +2px.
-<<<<<<< HEAD
 - [x] Direct request: added Python function/method length guard at 60 LOC with baseline-aware checker, enforced in pre-commit (`hooks/pre-commit`) and CI (`.github/workflows/ci.yml`).
 - [x] Follow-up direct request: reverted emoji button default backgrounds; now only hover uses tooltip color, and tooltip arrow tip was enlarged.
 - [x] Follow-up direct request: reverted tooltip border line thickness back to original while keeping the larger tooltip tip.
