@@ -65,14 +65,15 @@ h1 { display: none; }
 
 /* ── Main screen ── */
 #main-screen {
-  width: 100%;
-  max-width: none;
+  width: clamp(340px, 30vw, 560px);
+  max-width: 560px;
   display: none;
   height: 100vh;
   min-height: 0;
   padding: .28rem .45rem 0;
   box-sizing: border-box;
   overflow: hidden;
+  margin: 0 auto;
 }
 
 #content {
@@ -707,6 +708,11 @@ h1 { display: none; }
 }
 
 @media (max-width: 900px) {
+  #main-screen {
+    width: 100%;
+    max-width: none;
+    margin: 0;
+  }
   .waiting {
     transform: none;
   }
