@@ -1,7 +1,4 @@
 #!/bin/sh
-# Stamp work hours from git history before each commit
-SCRIPT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-if [ -x "$SCRIPT_DIR/stamp-work-hours.sh" ]; then
-  "$SCRIPT_DIR/stamp-work-hours.sh" >/dev/null 2>&1
-  git add -f "$SCRIPT_DIR/static/work-hours.js" 2>/dev/null
-fi
+# work-hours.js is maintained manually by the project owner.
+# Intentionally no-op to avoid merge conflicts from auto-stamping.
+exit 0
