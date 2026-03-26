@@ -566,8 +566,8 @@ h1 { display: none; }
 
 .slides-list-updated {
   flex: 0 0 auto;
-  color: var(--muted);
-  opacity: .9;
+  color: #98a2b3;
+  opacity: 1;
   font-size: .66rem;
   white-space: nowrap;
 }

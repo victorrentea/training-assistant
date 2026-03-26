@@ -300,6 +300,7 @@ Host broadcasts a statement: "Have you ever shipped code that violated what we j
 - [x] Follow-up direct request: refined slides viewer chrome — deploy/version tag anchored bottom-right screen corner, page indicator moved to bottom-left in black badge, close `X` constrained to square button, and added persistent `Native | PDF.js` toggle in slides header (default `PDF.js`).
 - [x] Follow-up direct request: fixed Native slides toggle black-screen by forcing `inline=1` in native iframe URL and preserving `#page=<n>` navigation.
 - [x] Follow-up direct request: reduced topic text-box width in right slides list by 30% (`.slides-list-open` set to `70%` width) for denser topic rows.
+- [x] Follow-up direct request: restored visible slide update badges in list (`4h ago` style) with stronger contrast + timestamp field fallback (`updated_at` / `last_modified` variants).
 - [x] Direct request: participant Slides preview now uses PDF.js only (removed Chrome/native iframe fallback) so programmatic page navigation remains deterministic.
 - [x] Direct request: verified locally (E2E) that participant PDF.js stores manual/programmatic scroll offsets in localStorage and restores exact slide position after reopen/reload; fixed PDF.js loader/runtime issues uncovered during this validation.
 - [x] Direct request: participant PDF viewer UI polish — visible page separators + explicit scrollbar, deploy/version badge layered above PPT area, and close button (`X`) made ~3x larger with high-contrast non-white styling for white backgrounds.
