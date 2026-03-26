@@ -38,7 +38,7 @@
     }
 
     const workHours = window.WORK_HOURS;
-    const workSuffix = workHours ? ' | total: ' + workHours + 'h with Santa \uD83C\uDF85' : '';
+    const workSuffix = workHours ? ' | total: ' + workHours + 'h' : '';
     const builtAt = ' | ' + formatBuiltAt(parsed);
 
     function update() {
@@ -53,4 +53,3 @@
 
   window.renderDeployAge = renderDeployAge;
 })();
-
