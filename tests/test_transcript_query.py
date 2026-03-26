@@ -4,21 +4,9 @@ from daemon.transcript_query import QueryRange, query_lines, _resolve_query_rang
 
 
 class _Args:
-    def __init__(
-        self,
-        today=False,
-        yesterday_afternoon=False,
-        last_minutes=None,
-        from_dt=None,
-        to_dt=None,
-        iso_range=None,
-    ):
-        self.today = today
-        self.yesterday_afternoon = yesterday_afternoon
-        self.last_minutes = last_minutes
-        self.from_dt = from_dt
-        self.to_dt = to_dt
-        self.iso_range = iso_range or []
+    def __init__(self, from_iso, to_iso):
+        self.from_iso = from_iso
+        self.to_iso = to_iso
 
 
 def test_query_lines_from_two_days(tmp_path):
@@ -47,25 +35,15 @@ def test_query_lines_from_two_days(tmp_path):
     ]
 
 
-def test_resolve_today():
-    now = datetime(2026, 3, 26, 10, 15)
-    q = _resolve_query_range(_Args(today=True), now)
-    assert q.start == datetime(2026, 3, 26, 0, 0)
-    assert q.end == now
-
-
-def test_resolve_last_minutes():
-    now = datetime(2026, 3, 26, 10, 15)
-    q = _resolve_query_range(_Args(last_minutes=10), now)
-    assert q.start == datetime(2026, 3, 26, 10, 5)
-    assert q.end == now
-
-
 def test_resolve_positional_iso_range():
-    now = datetime(2026, 3, 26, 10, 15)
-    q = _resolve_query_range(
-        _Args(iso_range=["2026-03-25T17:00:00", "2026-03-26T08:23:12"]),
-        now,
-    )
+    q = _resolve_query_range(_Args("2026-03-25T17:00:00", "2026-03-26T08:23:12"))
     assert q.start == datetime(2026, 3, 25, 17, 0, 0)
     assert q.end == datetime(2026, 3, 26, 8, 23, 12)
+
+
+def test_rejects_non_iso_space_format():
+    try:
+        _resolve_query_range(_Args("2026-03-25 17:00:00", "2026-03-26T08:23:12"))
+        assert False, "Expected ValueError"
+    except ValueError as exc:
+        assert "ISO format" in str(exc)
