@@ -1,7 +1,7 @@
 {
-  "sha": "12bd2ec8aef37d2c3fd5a57aa6142acd49500823",
+  "sha": "e637bca75592b8dfbc3ea53011bdba3d66aafd75",
   "timestamp": "2026-03-26 19:43",
   "changelog": [
-    "Add full-screen blocker during slide load"
+    "Order participant slides by catalog topics"
   ]
 }
