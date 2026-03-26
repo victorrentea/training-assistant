@@ -1,7 +1,7 @@
 {
-  "sha": "e89c94b2785e4bc19069fc51406661165211b2b8",
-  "timestamp": "2026-03-26 08:34",
+  "sha": "f7101634f083eb1a6ecbf2aa5a26b119fc019ae4",
+  "timestamp": "2026-03-26 08:35",
   "changelog": [
-    "refactor: use normalization.offset for transcript normalizer state"
+    "chore: rename normalizer state file to normalization.offset.txt"
   ]
 }
