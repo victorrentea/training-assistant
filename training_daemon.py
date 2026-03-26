@@ -1640,7 +1640,7 @@ def run() -> None:
                             log.info("ppt", "No active PowerPoint presentation")
                         else:
                             ppt_stem = Path(ppt_state['presentation']).stem
-                            log.info("ppt", f"📽️ {ppt_stem} : {ppt_state['slide']}")
+                            log.info("ppt", f"📽️ Slide: {ppt_stem} : {ppt_state['slide']}")
                         try:
                             _sync_powerpoint_slide_to_server(config, slides_runner._slides_config, ppt_state)
                         except Exception as e:
