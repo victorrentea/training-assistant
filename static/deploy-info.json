@@ -1,8 +1,7 @@
 {
-  "sha": "b79dec1faaf5e2e4d07f4433738399671b005252",
-  "timestamp": "2026-03-26 17:50",
+  "sha": "defe317ab606ff945eb54087f81dfbb2d6b16c40",
+  "timestamp": "2026-03-26 19:16",
   "changelog": [
-    "fix: hide wispr-addons from Cmd+Tab app switcher",
-    "participant slides avoid reload on test jump and unify green hover"
+    "participant slides full-sheet style and remember selected deck"
   ]
 }
