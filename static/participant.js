@@ -1209,26 +1209,37 @@
             }
         } else if (msg.my_avatar) {
             const avatarEl = document.getElementById('my-avatar');
-            avatarEl.src = '/static/avatars/' + msg.my_avatar;
+            const nextAvatarSrc = '/static/avatars/' + msg.my_avatar;
+            const currentAvatarPath = avatarEl.getAttribute('src') || '';
+            const shouldUpdateAvatarSrc = !currentAvatarPath || !currentAvatarPath.endsWith('/' + msg.my_avatar);
+            if (shouldUpdateAvatarSrc) {
+                avatarEl.src = nextAvatarSrc;
+            }
             avatarEl.style.display = '';
-            // Animate small avatar change
-            avatarEl.classList.remove('avatar-changed');
-            void avatarEl.offsetWidth; // force reflow to restart animation
-            avatarEl.classList.add('avatar-changed');
+            // Animate only when the avatar actually changed
+            if (shouldUpdateAvatarSrc) {
+                avatarEl.classList.remove('avatar-changed');
+                void avatarEl.offsetWidth; // force reflow to restart animation
+                avatarEl.classList.add('avatar-changed');
+            }
             // Update avatar modal image if open (after refresh), then auto-close after 1.5s
             if (window._avatarModalImg) {
-                window._avatarModalImg.src = '/static/avatars/' + msg.my_avatar;
-                // Trigger swap animation on modal image
-                window._avatarModalImg.classList.remove('avatar-swap');
-                void window._avatarModalImg.offsetWidth;
-                window._avatarModalImg.classList.add('avatar-swap');
-                const modalRef = window._avatarModal;
-                if (window._avatarModalCloseTimer) clearTimeout(window._avatarModalCloseTimer);
-                window._avatarModalCloseTimer = setTimeout(function() {
-                    if (modalRef) modalRef.remove();
-                    window._avatarModalImg = null;
-                    window._avatarModal = null;
-                }, 1500);
+                const modalSrc = window._avatarModalImg.getAttribute('src') || '';
+                const shouldUpdateModalSrc = !modalSrc || !modalSrc.endsWith('/' + msg.my_avatar);
+                if (shouldUpdateModalSrc) {
+                    window._avatarModalImg.src = nextAvatarSrc;
+                    // Trigger swap animation on modal image
+                    window._avatarModalImg.classList.remove('avatar-swap');
+                    void window._avatarModalImg.offsetWidth;
+                    window._avatarModalImg.classList.add('avatar-swap');
+                    const modalRef = window._avatarModal;
+                    if (window._avatarModalCloseTimer) clearTimeout(window._avatarModalCloseTimer);
+                    window._avatarModalCloseTimer = setTimeout(function() {
+                        if (modalRef) modalRef.remove();
+                        window._avatarModalImg = null;
+                        window._avatarModal = null;
+                    }, 1500);
+                }
             }
             avatarEl.onerror = function() {
                 const fallback = document.createElement('span');
