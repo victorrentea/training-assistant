@@ -1,7 +1,7 @@
 {
-  "sha": "03cd5ce53f62dd1a8d07418fdb0437275ef8c1be",
-  "timestamp": "2026-03-26 14:21",
+  "sha": "67b8de6158e08394468d5eca3fdbc260eccfda12",
+  "timestamp": "2026-03-26 14:24",
   "changelog": [
-    "Hardcode default materials folder path"
+    "Compress daemon and overlay startup logs"
   ]
 }
