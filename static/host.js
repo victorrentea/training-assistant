@@ -849,14 +849,19 @@
       return;
     }
     const available = _slidesCatalogEntries.filter((entry) => !!entry.available_on_server).length;
-    const head = `<div class="slides-catalog-head">${_slidesCatalogEntries.length} participant slides • ${available} on server</div>`;
+    const outOfSync = _slidesCatalogEntries.filter((entry) => (entry.sync_status || '') === 'out_of_sync').length;
+    const head = `<div class="slides-catalog-head">${_slidesCatalogEntries.length} participant slides • ${available} on server • ${outOfSync} out of sync</div>`;
     const lines = _slidesCatalogEntries.map((entry) => {
       const name = escHtml(entry.name || entry.slug || 'Unnamed slide');
       const slug = escHtml(entry.slug || '');
+      const syncMessage = escHtml(entry.sync_message || '');
       const availableMark = entry.available_on_server
         ? '<span class="slides-catalog-available" title="Downloaded on server">⬇️</span>'
         : '<span class="slides-catalog-missing" title="Not yet on server">·</span>';
-      return `<div class="slides-catalog-line"><span class="slides-catalog-name" title="${slug}">${name}</span>${availableMark}</div>`;
+      const syncMark = (entry.sync_status || '') === 'out_of_sync'
+        ? `<span class="slides-catalog-missing" title="${syncMessage || 'Out of sync'}">⚠️</span>`
+        : '';
+      return `<div class="slides-catalog-line"><span class="slides-catalog-name" title="${slug}">${name}</span>${availableMark}${syncMark}</div>`;
     }).join('');
     contentEl.innerHTML = head + lines;
   }

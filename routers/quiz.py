@@ -31,6 +31,8 @@ class SlideStatus(BaseModel):
     updated_at: str | None = None
     etag: str | None = None
     last_modified: str | None = None
+    sync_status: str | None = None
+    sync_message: str | None = None
 
 
 class QuizStatus(BaseModel):
@@ -117,6 +119,8 @@ async def update_quiz_status(body: QuizStatus):
                 "updated_at": slide.updated_at,
                 "etag": slide.etag,
                 "last_modified": slide.last_modified,
+                "sync_status": slide.sync_status,
+                "sync_message": slide.sync_message,
             })
         state.slides = normalized
     await broadcast({"type": "quiz_status", **state.quiz_status})

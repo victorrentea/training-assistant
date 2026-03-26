@@ -338,6 +338,8 @@ def _merge_slide_sources(
                 "updated_at": entry.get("updated_at"),
                 "etag": entry.get("etag"),
                 "last_modified": entry.get("last_modified"),
+                "sync_status": entry.get("sync_status"),
+                "sync_message": entry.get("sync_message"),
                 "source": entry.get("source"),
             })
     return merged
@@ -728,6 +730,8 @@ async def get_participant_slides_availability():
             "source": slide.get("source"),
             "url": slide.get("url"),
             "available_on_server": bool(path is not None and path.exists()),
+            "sync_status": slide.get("sync_status"),
+            "sync_message": slide.get("sync_message"),
         })
     return {"entries": entries}
 

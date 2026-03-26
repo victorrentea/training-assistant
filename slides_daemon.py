@@ -36,7 +36,7 @@ DEFAULT_MIN_CPU_FREE = 25.0
 DEFAULT_POST_EXPORT_COOLDOWN_SECONDS = 5.0
 DEFAULT_FAILURE_RETRY_SECONDS = 60.0
 DEFAULT_MATERIALS_FOLDER = Path("/Users/victorrentea/Documents/workshop-materials")
-DEFAULT_DRIVE_SYNC_TIMEOUT_SECONDS = 90.0
+DEFAULT_DRIVE_SYNC_TIMEOUT_SECONDS = 300.0
 DEFAULT_DRIVE_POLL_SECONDS = 5.0
 DEFAULT_DRIVE_STABLE_PROBES = 2
 DEFAULT_DRIVE_BOOTSTRAP_URL = "https://victorrentea.ro/slides/"
@@ -391,6 +391,8 @@ def _slides_from_state(config: SlidesDaemonConfig, daemon_state: dict, metadata:
             "slug": slug or _slugify(slide_name),
             "url": _slide_url(config, target_pdf),
             "updated_at": _iso_utc(entry.get("last_exported_mtime")),
+            "sync_status": "out_of_sync" if entry.get("out_of_sync") else "ok",
+            "sync_message": entry.get("out_of_sync_message"),
         })
     slides.sort(key=lambda item: str(item["name"]).lower())
     return slides
@@ -723,34 +725,59 @@ def convert_with_google_drive_pull(
         raise RuntimeError(f"drive_url_error: Missing drive_export_url for {pptx_path.name}")
 
     previous_fingerprint = str(state_entry.get("last_drive_fingerprint") or "").strip()
-    _ = drive_probe_url  # Reserved for future diagnostics; runtime uses one direct pull request only.
+    _ = drive_probe_url  # Reserved for future diagnostics.
+    deadline = time.time() + max(10.0, float(config.drive_sync_timeout_seconds))
+    poll_interval = max(1.0, float(config.drive_poll_seconds))
+    attempts = 0
+    last_error: str | None = None
 
-    pdf_path = _download_pdf_from_url(drive_export_url, output_pdf)
-    payload = pdf_path.read_bytes()
-    fingerprint = f"pdf:{hashlib.sha256(payload).hexdigest()}"
-    state_entry["last_drive_probe_at"] = time.time()
-
-    if previous_fingerprint and fingerprint == previous_fingerprint:
-        drive_running = _is_google_drive_running()
-        health_hint = "" if drive_running else " Google Drive app not running."
-        message = (
-            f"drive_not_synced_yet: {pptx_path.name} changed locally but Drive PDF fingerprint "
-            f"is still unchanged.{health_hint}"
-        )
-        if not drive_running:
-            _push_error_status(config, message)
-            _beep_local()
-        state_entry["last_drive_error"] = message
+    while True:
+        attempts += 1
         try:
-            pdf_path.unlink(missing_ok=True)
-        except Exception:
-            pass
-        raise RuntimeError(message)
+            pdf_path = _download_pdf_from_url(drive_export_url, output_pdf)
+            payload = pdf_path.read_bytes()
+            fingerprint = f"pdf:{hashlib.sha256(payload).hexdigest()}"
+            state_entry["last_drive_probe_at"] = time.time()
+            if previous_fingerprint and fingerprint == previous_fingerprint:
+                last_error = (
+                    f"drive_not_synced_yet: {pptx_path.name} changed locally but Drive PDF fingerprint "
+                    f"is still unchanged (attempt {attempts})."
+                )
+                state_entry["last_drive_error"] = last_error
+                try:
+                    pdf_path.unlink(missing_ok=True)
+                except Exception:
+                    pass
+            else:
+                state_entry["last_drive_fingerprint"] = fingerprint
+                state_entry["last_drive_ready_at"] = time.time()
+                state_entry["last_drive_error"] = None
+                state_entry["out_of_sync"] = False
+                state_entry["out_of_sync_message"] = None
+                return pdf_path
+        except Exception as exc:
+            last_error = str(exc)
+            state_entry["last_drive_error"] = last_error
 
-    state_entry["last_drive_fingerprint"] = fingerprint
-    state_entry["last_drive_ready_at"] = time.time()
-    state_entry["last_drive_error"] = None
-    return pdf_path
+        if time.time() >= deadline:
+            break
+        time.sleep(poll_interval)
+
+    drive_running = _is_google_drive_running()
+    health_hint = "" if drive_running else " Google Drive app not running."
+    message = (
+        f"drive_sync_timeout: {pptx_path.name} not updated in Drive within "
+        f"{int(config.drive_sync_timeout_seconds)}s after local change.{health_hint}"
+    )
+    if last_error:
+        message += f" Last error: {last_error}"
+    state_entry["out_of_sync"] = True
+    state_entry["out_of_sync_message"] = message
+    state_entry["last_drive_error"] = message
+    _push_error_status(config, message)
+    if not drive_running:
+        _beep_local()
+    raise RuntimeError(message)
 
 
 def convert_with_google_drive(pptx_path: Path, output_pdf: Path) -> Path:
@@ -997,7 +1024,17 @@ def run_once(config: SlidesDaemonConfig, daemon_state: dict) -> bool:
                     daemon_state["last_export_finished_at"] = time.time()
                     daemon_state.setdefault("files", {}).setdefault(next_key, {}).pop("retry_after", None)
                     save_daemon_state(config.state_file, daemon_state)
-            except Exception:
+            except Exception as exc:
+                message = str(exc)
+                if "drive_sync_timeout:" in message:
+                    entry = daemon_state.setdefault("files", {}).setdefault(next_key, {})
+                    entry["last_exported_mtime"] = next_path.stat().st_mtime
+                    entry.pop("retry_after", None)
+                    save_daemon_state(config.state_file, daemon_state)
+                    log.error("slides", message)
+                    updated_current = False
+                    updated_list = sync_slides_list(config, daemon_state, metadata)
+                    return updated_current or updated_list
                 retry_after = time.time() + max(5.0, float(config.failure_retry_seconds))
                 daemon_state.setdefault("files", {}).setdefault(next_key, {})["retry_after"] = retry_after
                 save_daemon_state(config.state_file, daemon_state)
