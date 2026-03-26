@@ -1,5 +1,6 @@
 # Tasks
 
+- [x] Direct request: for testing, participant PDF.js slides now auto-jump to page 2 whenever a slide is displayed (or refreshed from cache), clamped to available page count.
 - [x] Direct request: participant Slides modal now uses ~90% viewport, slide dropdown shows only training names, `updated` moved to subtle inline label near selector, and page tracking stays synced while scrolling (with page jump controls kept for direct navigation).
 - [x] Direct request: participant Slides combo now keeps all metadata on one line (`name • updated • page/total`), with dropdown width sized to the longest visible entry, and removed the extra slides meta row to maximize viewer space.
 - [x] Hard-code default `MATERIALS_FOLDER` to `/Users/victorrentea/Documents/workshop-materials` (no project-relative default).
