@@ -1,7 +1,7 @@
 {
-  "sha": "c7312bd9237582418d8573a78cf5162d56ba214f",
-  "timestamp": "2026-03-26 17:19",
+  "sha": "a4b9fd5b80e76f6e4ea7fe2e802b1907e0d12edc",
+  "timestamp": "2026-03-26 17:20",
   "changelog": [
-    "slides: proxy external participant URLs via local file endpoint"
+    "participant slides move download next to close"
   ]
 }
