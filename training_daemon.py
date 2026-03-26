@@ -633,8 +633,10 @@ class MaterialsMirrorRunner:
         self.enabled = False
         self.folder: Path | None = None
         self.poll_interval_seconds = 0.0
+        self.error_backoff_seconds = 0.0
         self.state_file: Path | None = None
         self._next_run_at = 0.0
+        self._retry_after = 0.0
         self._state: dict = {"files": {}}
 
     def start(self) -> None:
@@ -656,6 +658,11 @@ class MaterialsMirrorRunner:
             poll = max(1.0, float(poll_raw))
         except ValueError:
             poll = 5.0
+        backoff_raw = os.environ.get("MATERIALS_MIRROR_ERROR_BACKOFF_SECONDS", "60").strip()
+        try:
+            backoff = max(5.0, float(backoff_raw))
+        except ValueError:
+            backoff = 60.0
 
         state_file = Path(
             os.environ.get(
@@ -666,11 +673,15 @@ class MaterialsMirrorRunner:
 
         self.folder = folder
         self.poll_interval_seconds = poll
+        self.error_backoff_seconds = backoff
         self.state_file = state_file
         self._state = self._load_state(state_file)
         self._next_run_at = time.monotonic()
         self.enabled = True
-        log.info("materials", f"Materials mirror enabled ({self.poll_interval_seconds:.0f}s): {self.folder}")
+        log.info(
+            "materials",
+            f"Materials mirror enabled ({self.poll_interval_seconds:.0f}s, error backoff {self.error_backoff_seconds:.0f}s): {self.folder}",
+        )
 
     def _load_state(self, path: Path) -> dict:
         if not path.exists():
@@ -760,6 +771,8 @@ class MaterialsMirrorRunner:
         now = time.monotonic()
         if now < self._next_run_at:
             return
+        if now < self._retry_after:
+            return
         try:
             local = self._list_local_files()
             tracked = self._state.setdefault("files", {})
@@ -794,6 +807,7 @@ class MaterialsMirrorRunner:
                 log.info("materials", f"Synced materials: {uploaded} upsert, {deleted} delete")
         except Exception as exc:
             log.error("materials", f"Materials mirror error: {exc}")
+            self._retry_after = now + self.error_backoff_seconds
         finally:
             self._next_run_at = now + self.poll_interval_seconds
 
