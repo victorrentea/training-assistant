@@ -1,7 +1,7 @@
 {
-  "sha": "6e18c0fad2c62e3cb8ca0338ae313eb013fedb0d",
-  "timestamp": "2026-03-26 08:06",
+  "sha": "8398d41e04724252b013a2ba315de1a8e3bca6a7",
+  "timestamp": "2026-03-26 08:13",
   "changelog": [
-    "Align slides default to .server-data"
+    "fix: keep participant onboarding checklist hidden once completed"
   ]
 }
