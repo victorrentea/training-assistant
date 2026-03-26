@@ -1,7 +1,7 @@
 {
-  "sha": "73969de3126c99f2a105a0454fc0665820bd22f9",
-  "timestamp": "2026-03-26 17:14",
+  "sha": "136874aad87e775c71f87f1836baf444ee4e7130",
+  "timestamp": "2026-03-26 17:15",
   "changelog": [
-    "participant slides remove empty page total placeholder"
+    "participant slides auto-jump to page two for testing"
   ]
 }
