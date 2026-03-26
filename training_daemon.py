@@ -867,8 +867,7 @@ class SlidesOnDemandWsRunner:
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
         self._slug_map: dict[str, tuple[Path, str]] = {}
-        self._materials_folder: Path | None = None
-        self._slides_folder: Path | None = None
+        self._slides_dirs: list[Path] = []
 
     def start(self) -> None:
         enabled_raw = os.environ.get("SLIDES_ON_DEMAND_UPLOAD_ENABLED", "1").strip().lower()
@@ -877,19 +876,12 @@ class SlidesOnDemandWsRunner:
             self.enabled = False
             return
 
-        folder = _resolve_materials_folder()
-        if folder is None:
-            log.info("slides", "On-demand WS disabled: materials folder not found")
-            self.enabled = False
-            return
-        slides_folder = folder / "slides"
-        if not slides_folder.exists() or not slides_folder.is_dir():
-            log.info("slides", f"On-demand WS disabled: slides folder missing: {slides_folder}")
-            self.enabled = False
-            return
-
-        self._materials_folder = folder
-        self._slides_folder = slides_folder
+        self._slides_dirs = self._candidate_slides_dirs()
+        if self._slides_dirs:
+            joined = ", ".join(str(p) for p in self._slides_dirs)
+            log.info("slides", f"On-demand WS slide dirs: {joined}")
+        else:
+            log.info("slides", "On-demand WS: no local slide dir detected at startup (will keep retrying)")
         self._rebuild_slug_map()
         self.enabled = True
         self._thread = threading.Thread(target=self._run_loop, daemon=True)
@@ -908,11 +900,43 @@ class SlidesOnDemandWsRunner:
             return Path(configured).expanduser()
         return Path(__file__).parent / "daemon" / "materials_slides_catalog.json"
 
+    def _candidate_slides_dirs(self) -> list[Path]:
+        candidates: list[Path] = []
+        env_slides = os.environ.get("TRAINING_ASSISTANT_SLIDES_DIR", "").strip()
+        env_publish = os.environ.get("PPTX_PUBLISH_DIR", "").strip()
+        env_materials = os.environ.get("MATERIALS_FOLDER", "").strip()
+        if env_slides:
+            candidates.append(Path(env_slides).expanduser())
+        if env_publish:
+            candidates.append(Path(env_publish).expanduser())
+        if env_materials:
+            candidates.append(Path(env_materials).expanduser() / "slides")
+
+        resolved_materials = _resolve_materials_folder()
+        if resolved_materials is not None:
+            candidates.append(resolved_materials / "slides")
+
+        candidates.extend([
+            Path(__file__).parent / "materials" / "slides",
+            Path.cwd() / "materials" / "slides",
+            Path.home() / "workspace" / "training-assistant" / "materials" / "slides",
+            _DEFAULT_MATERIALS_FOLDER / "slides",
+        ])
+
+        seen: set[str] = set()
+        dirs: list[Path] = []
+        for candidate in candidates:
+            key = str(candidate.resolve()) if candidate.exists() else str(candidate)
+            if key in seen:
+                continue
+            seen.add(key)
+            if candidate.exists() and candidate.is_dir():
+                dirs.append(candidate)
+        return dirs
+
     def _rebuild_slug_map(self) -> None:
         self._slug_map = {}
-        slides_folder = self._slides_folder
-        if slides_folder is None:
-            return
+        self._slides_dirs = self._candidate_slides_dirs()
 
         catalog_path = self._catalog_path()
         if catalog_path.exists():
@@ -930,16 +954,26 @@ class SlidesOnDemandWsRunner:
                             target_pdf += ".pdf"
                         explicit_slug = str(entry.get("slug") or "").strip().lower()
                         slug = explicit_slug or _slugify(Path(target_pdf).stem)
-                        local_pdf = slides_folder / target_pdf
+                        local_pdf = None
+                        for slides_dir in self._slides_dirs:
+                            candidate = slides_dir / target_pdf
+                            if candidate.exists() and candidate.is_file():
+                                local_pdf = candidate
+                                break
+                        if local_pdf is None and self._slides_dirs:
+                            local_pdf = self._slides_dirs[0] / target_pdf
+                        if local_pdf is None:
+                            continue
                         if slug in self._slug_map:
                             continue
                         self._slug_map[slug] = (local_pdf, target_pdf)
             except Exception as exc:
                 log.error("slides", f"On-demand catalog parse failed: {exc}")
 
-        for pdf in sorted(slides_folder.glob("*.pdf"), key=lambda p: p.name.lower()):
-            slug = _slugify(pdf.stem)
-            self._slug_map.setdefault(slug, (pdf, pdf.name))
+        for slides_dir in self._slides_dirs:
+            for pdf in sorted(slides_dir.glob("*.pdf"), key=lambda p: p.name.lower()):
+                slug = _slugify(pdf.stem)
+                self._slug_map.setdefault(slug, (pdf, pdf.name))
 
     def _ws_url(self) -> str:
         base = self.main_config.server_url.rstrip("/")

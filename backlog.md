@@ -230,3 +230,4 @@ Host broadcasts a statement: "Have you ever shipped code that violated what we j
 - [x] Direct request: implemented on-demand slide PDF delivery via daemon WebSocket (`/ws/daemon`) with per-slug deduplicated upload state, 60s waiter timeout/stale-retrigger, and host-only diagnostics endpoint (`/api/slides/upload-status/{slug}`).
 - [x] Direct request: fixed production-empty Slides combobox by adding catalog-backed entries to `/api/slides` (slug list available even when server PDF folder is empty after restart, enabling on-demand upload trigger).
 - [x] Direct request: hardened daemon WS auth handshake for slides on-demand by adding `websockets` compatibility fallback (`additional_headers` -> `extra_headers`).
+- [x] Direct request: made daemon on-demand WS runner resilient to slide-path mismatch by discovering PDFs from multiple candidate directories instead of disabling at startup.

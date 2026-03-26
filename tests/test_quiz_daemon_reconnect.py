@@ -108,3 +108,32 @@ def test_slides_ws_connect_falls_back_to_extra_headers(monkeypatch):
     assert isinstance(conn, _DummyConn)
     assert len(calls) == 2
     assert calls[1]["extra_headers"] == {"Authorization": "Basic abc"}
+
+
+def test_slides_runner_candidate_dirs_from_env_and_materials(tmp_path: Path, monkeypatch):
+    slides_env = tmp_path / "slides-env"
+    publish_env = tmp_path / "publish-env"
+    materials = tmp_path / "materials"
+    for d in (slides_env, publish_env, materials / "slides"):
+        d.mkdir(parents=True, exist_ok=True)
+    monkeypatch.setenv("TRAINING_ASSISTANT_SLIDES_DIR", str(slides_env))
+    monkeypatch.setenv("PPTX_PUBLISH_DIR", str(publish_env))
+    monkeypatch.setenv("MATERIALS_FOLDER", str(materials))
+    monkeypatch.setattr(training_daemon, "_resolve_materials_folder", lambda: materials)
+
+    cfg = Config(
+        server_url="http://example.test",
+        host_username="host",
+        host_password="pwd",
+        minutes=30,
+        folder=tmp_path,
+        api_key="x",
+        model="dummy",
+        dry_run=False,
+    )
+    runner = training_daemon.SlidesOnDemandWsRunner(cfg)
+    dirs = runner._candidate_slides_dirs()
+    paths = {str(p) for p in dirs}
+    assert str(slides_env) in paths
+    assert str(publish_env) in paths
+    assert str(materials / "slides") in paths
