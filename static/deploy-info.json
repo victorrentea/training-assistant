@@ -1,7 +1,7 @@
 {
-  "sha": "cad25f1c4acc2e89e5e98b57466c6d52d9bb6abb",
-  "timestamp": "2026-03-27 00:18",
+  "sha": "55b198aeee21b2751626e69ed17ed2415d09882e",
+  "timestamp": "2026-03-27 00:21",
   "changelog": [
-    "ui: reduce slide list gaps by another 5%"
+    "fix: show native PDF frame with display:block not empty string"
   ]
 }
