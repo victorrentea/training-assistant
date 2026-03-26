@@ -1,7 +1,7 @@
 {
-  "sha": "fbf9642cdb13695891543c0b08497388a1ad3112",
-  "timestamp": "2026-03-26 23:36",
+  "sha": "61d0c6bfb7c320924ac21683bcfb9bd6aec1b13d",
+  "timestamp": "2026-03-26 23:44",
   "changelog": [
-    "fix: flush same-slide print and move sync back to change branch"
+    "fix: run slides watcher in background thread to unblock main daemon loop"
   ]
 }
