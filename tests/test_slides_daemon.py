@@ -440,3 +440,36 @@ def test_convert_with_libreoffice_falls_back_to_macos_app_binary(tmp_path, monke
     pdf = slides_daemon.convert_with_libreoffice(pptx, out_dir)
     assert pdf == out_dir / "deck.pdf"
     assert seen["cmd"][0] == app_bin
+
+
+def test_convert_with_libreoffice_accepts_stdout_reported_pdf_when_name_differs(tmp_path, monkeypatch):
+    pptx = tmp_path / "deck.pptx"
+    pptx.write_bytes(b"x")
+    out_dir = tmp_path / "out"
+    app_bin = "/Applications/LibreOffice.app/Contents/MacOS/soffice"
+
+    monkeypatch.setattr(slides_daemon.shutil, "which", lambda _name: None)
+    real_exists = slides_daemon.os.path.exists
+
+    def _fake_exists(path):
+        if path == app_bin:
+            return True
+        return real_exists(path)
+
+    monkeypatch.setattr(slides_daemon.os.path, "exists", _fake_exists)
+    monkeypatch.setattr(slides_daemon.time, "time", lambda: 1000.0)
+
+    class _Proc:
+        returncode = 0
+        stdout = "convert /tmp/deck.pptx -> /tmp/out/deck_exported.pdf using filter : writer_pdf_Export"
+        stderr = ""
+
+    def _fake_run(cmd, capture_output=True, text=True):
+        (out_dir / "deck_exported.pdf").parent.mkdir(parents=True, exist_ok=True)
+        (out_dir / "deck_exported.pdf").write_bytes(b"%PDF")
+        return _Proc()
+
+    monkeypatch.setattr(slides_daemon.subprocess, "run", _fake_run)
+
+    pdf = slides_daemon.convert_with_libreoffice(pptx, out_dir)
+    assert pdf == out_dir / "deck_exported.pdf"

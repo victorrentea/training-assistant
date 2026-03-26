@@ -1,1 +1,1 @@
-window.WORK_HOURS = 76;
+window.WORK_HOURS = 77;
