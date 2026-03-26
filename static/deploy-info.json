@@ -1,7 +1,7 @@
 {
-  "sha": "79c511dc56b9d27a5f559a0667e2140f2aaa1c83",
+  "sha": "2f997da9202b9e615581c0d1aa2fec506874b7cb",
   "timestamp": "2026-03-26 22:13",
   "changelog": [
-    "feat: add Follow Trainer button in slides mode bubble"
+    "fix: underline location prompt on hover"
   ]
 }
