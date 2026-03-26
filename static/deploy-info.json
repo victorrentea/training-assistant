@@ -1,7 +1,7 @@
 {
-  "sha": "657a0bb13fbc57f8eddeaa4d5d6cf538c7f8f0c8",
-  "timestamp": "2026-03-26 16:00",
+  "sha": "4c0234a702acea3631f2f4632ee7d6ce7598eeb9",
+  "timestamp": "2026-03-26 16:06",
   "changelog": [
-    "Make daemon slide dir discovery resilient"
+    "Fix daemon WS SSL certificate verification"
   ]
 }
