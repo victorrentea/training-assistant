@@ -1,7 +1,7 @@
 {
-  "sha": "5ca021770b7fc10868ccbdb9022d90fd815da056",
-  "timestamp": "2026-03-26 23:11",
+  "sha": "2f60d0c1ba7bf6cd5a036ab91b91dd40e8441eff",
+  "timestamp": "2026-03-26 23:21",
   "changelog": [
-    "Fix empty slide names in host tooltip"
+    "ui: add gap between '7h ago' and download btn, tighten title\u2013timestamp gap"
   ]
 }
