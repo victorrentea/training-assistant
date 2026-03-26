@@ -1,7 +1,7 @@
 {
-  "sha": "700b39ab3a700492a4917c6bf8da1b22ae392b73",
-  "timestamp": "2026-03-26 16:42",
+  "sha": "03eead51b72e5fa2d7a07b23bfef2498662b26fa",
+  "timestamp": "2026-03-26 16:44",
   "changelog": [
-    "Add 5s drive retries with out-of-sync slide status"
+    "Improve participant slides UX and preserve host mtime"
   ]
 }
