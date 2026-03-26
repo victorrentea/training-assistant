@@ -577,7 +577,7 @@ h1 { display: none; }
 .slides-list-item {
   display: flex;
   align-items: center;
-  gap: .04rem;
+  gap: .42rem;
   cursor: pointer;
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 6px;
@@ -605,7 +605,7 @@ h1 { display: none; }
   max-width: none;
   display: flex;
   align-items: center;
-  gap: .08rem;
+  gap: .068rem;
   border: 0;
   background: transparent;
   color: var(--text);
