@@ -1003,8 +1003,9 @@ def test_quiz_status_updates_slides_and_api_returns_normalized_data(monkeypatch,
     slides = slides_resp.json()["slides"]
     assert len(slides) == 2
     assert slides[0]["slug"] == "arch"
-    assert slides[0]["url"] == "https://cdn.example.com/abc.pdf"
+    assert slides[0]["url"] == "/api/slides/file/arch"
     assert slides[1]["slug"] == "intro"
+    assert slides[1]["url"] == "/api/slides/file/intro"
 
 
 def test_quiz_request_reports_has_slides_flag(monkeypatch, tmp_path):
