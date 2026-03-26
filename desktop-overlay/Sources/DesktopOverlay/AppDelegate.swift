@@ -9,6 +9,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, URLSessionWebSocketDelegate 
     private var wsTask: URLSessionWebSocketTask?
     private var session: URLSession!
     private var reconnecting = false
+    private var pendingDisconnectError: DispatchWorkItem?
+    private let disconnectErrorDelay: TimeInterval = 3.0
     private let pidFilePath: String
     private let myPID: Int32
     private var pidCheckTimer: Timer?
@@ -142,6 +144,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, URLSessionWebSocketDelegate 
 
     func urlSession(_ session: URLSession, webSocketTask: URLSessionWebSocketTask,
                     didOpenWithProtocol protocol: String?) {
+        cancelPendingDisconnectError()
         overlayInfo("WebSocket connected")
         // Send set_name as required by protocol
         let msg = "{\"type\":\"set_name\",\"name\":\"Overlay\"}"
@@ -155,13 +158,13 @@ class AppDelegate: NSObject, NSApplicationDelegate, URLSessionWebSocketDelegate 
 
     func urlSession(_ session: URLSession, webSocketTask: URLSessionWebSocketTask,
                     didCloseWith closeCode: URLSessionWebSocketTask.CloseCode, reason: Data?) {
-        if !reconnecting { overlayError("WebSocket not connected") }
+        scheduleDisconnectError()
         scheduleReconnect()
     }
 
     func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
         if let _ = error {
-            if !reconnecting { overlayError("WebSocket not connected") }
+            scheduleDisconnectError()
             scheduleReconnect()
         }
     }
@@ -178,7 +181,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, URLSessionWebSocketDelegate 
                 }
                 self?.receiveMessage()
             case .failure:
-                if self?.reconnecting == false { overlayError("WebSocket not connected") }
+                self?.scheduleDisconnectError()
                 self?.scheduleReconnect()
             }
         }
@@ -210,5 +213,20 @@ class AppDelegate: NSObject, NSApplicationDelegate, URLSessionWebSocketDelegate 
         DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in
             self?.connectWebSocket()
         }
+    }
+
+    private func scheduleDisconnectError() {
+        guard pendingDisconnectError == nil else { return }
+        let work = DispatchWorkItem { [weak self] in
+            self?.pendingDisconnectError = nil
+            overlayError("WebSocket not connected")
+        }
+        pendingDisconnectError = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + disconnectErrorDelay, execute: work)
+    }
+
+    private func cancelPendingDisconnectError() {
+        pendingDisconnectError?.cancel()
+        pendingDisconnectError = nil
     }
 }
