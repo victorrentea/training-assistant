@@ -1955,6 +1955,7 @@ def run() -> None:
                             existing_points=current_key_points if incremental else None,
                             since_entry=summary_watermark if incremental else 0,
                             session_start_date=session_date,
+                            course_title=current_session.get("name"),
                         )
                         if result is not None:
                             new_pts = result["new"]

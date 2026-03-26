@@ -8,6 +8,7 @@ Supports two modes:
 """
 
 import json
+import re
 from datetime import date
 from typing import Optional
 
@@ -41,6 +42,7 @@ Output rules:
 - Never describe what happened socially — only capture WHAT was taught or concluded.
 - Capture every important detail — aim for high density, don't leave out valuable ideas.
 - Ignore transcription noise, filler, off-topic chatter, and garbled dictation.
+- If COURSE TITLE is provided, prioritize ideas directly tied to that specific course theme.
 - For each bullet, indicate source:
   - "notes" if it comes primarily from SESSION NOTES (trainer's agenda/material)
   - "discussion" if it comes primarily from TRANSCRIPT (what was actually said)
@@ -70,6 +72,7 @@ Output rules:
 - Do NOT repeat or rephrase anything already in the existing key points.
 - If the new transcript adds nothing new, return an empty array [].
 - Ignore transcription noise, filler, off-topic chatter, and garbled dictation.
+- If COURSE TITLE is provided, prioritize ideas directly tied to that specific course theme.
 - For each bullet, indicate source: "discussion" (from transcript) or "notes" (from session notes).
 - Include "time": approximate HH:MM timestamp from the transcript when the topic was discussed.
 
@@ -78,11 +81,25 @@ Response format — return ONLY a JSON array (may be empty):
 """
 
 
+_COURSE_TITLE_DATE_PREFIX_RE = re.compile(
+    r"^\s*(?:\d{4}[-./]\d{2}[-./]\d{2}|\d{8})(?:\s+\d{1,2}[:.]\d{2})?\s*[-_:|]*\s*"
+)
+
+
+def _normalize_course_title(raw_title: str | None) -> str:
+    if not raw_title:
+        return ""
+    title = raw_title.strip()
+    cleaned = _COURSE_TITLE_DATE_PREFIX_RE.sub("", title, count=1).strip()
+    return cleaned or title
+
+
 def generate_summary(
     config: Config,
     existing_points: list[dict] | None = None,
     since_entry: int = 0,
     session_start_date: date | None = None,
+    course_title: str | None = None,
 ) -> Optional[dict]:
     """Generate key points from transcript.
 
@@ -107,6 +124,7 @@ def generate_summary(
     text = extract_all_text(new_entries) if new_entries else None
 
     notes = read_session_notes(config)
+    normalized_course_title = _normalize_course_title(course_title)
 
     if not text and not notes:
         log.error("summarizer", "No transcript or notes available")
@@ -114,6 +132,12 @@ def generate_summary(
 
     # Build user message
     parts = []
+    if normalized_course_title:
+        parts.append(
+            "COURSE TITLE (without date prefix): "
+            f"{normalized_course_title}\n"
+            "Focus requirement: highlight ideas discussed in this exact course theme."
+        )
     if incremental and existing_points:
         existing_bullets = "\n".join(f"- {p['text']}" for p in existing_points)
         parts.append(f"EXISTING KEY POINTS:\n{existing_bullets}")
