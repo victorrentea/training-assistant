@@ -1,7 +1,7 @@
 {
-  "sha": "406db52fc6f8f6e96f3ba02801f2b3c3a4bd3ec9",
-  "timestamp": "2026-03-26 17:35",
+  "sha": "4f1ca695c6edc85ae9b92de41eea24a0d0778cae",
+  "timestamp": "2026-03-26 17:36",
   "changelog": [
-    "participant slides move updated and close to sidebar header"
+    "participant slides widen right sidebar to 13 percent"
   ]
 }
