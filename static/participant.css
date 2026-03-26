@@ -210,9 +210,15 @@ h1 { display: none; }
   color: var(--accent2);
   font-size: .8rem;
   opacity: .85;
-  transition: opacity .2s;
+  text-decoration: none;
+  transition: opacity .2s, text-decoration .2s;
 }
-.location-prompt:hover { opacity: 1; }
+.location-prompt:hover {
+  opacity: 1;
+  text-decoration: underline;
+  text-decoration-color: var(--muted);
+  text-underline-offset: 3px;
+}
 .location-prompt.has-tooltip::after {
   top: calc(100% + 8px);
   bottom: auto;
