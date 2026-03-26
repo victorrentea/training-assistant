@@ -1386,7 +1386,7 @@ h1 { display: none; }
 .tour-bubble {
   position: fixed;
   background: rgba(20, 20, 35, 0.97);
-  border: 3px solid var(--accent);
+  border: 1px solid var(--accent);
   border-radius: 14px;
   padding: 12px 16px;
   width: 240px;
@@ -1408,8 +1408,8 @@ h1 { display: none; }
   width: 14px;
   height: 14px;
   background: rgba(20, 20, 35, 0.97);
-  border-right: 3px solid var(--accent);
-  border-bottom: 3px solid var(--accent);
+  border-right: 1px solid var(--accent);
+  border-bottom: 1px solid var(--accent);
   transform: rotate(45deg);
   bottom: -8px;
   left: 50%;
@@ -1420,8 +1420,8 @@ h1 { display: none; }
   top: -8px;
   border-right: none;
   border-bottom: none;
-  border-left: 3px solid var(--accent);
-  border-top: 3px solid var(--accent);
+  border-left: 1px solid var(--accent);
+  border-top: 1px solid var(--accent);
 }
 .tour-bubble-emoji {
   font-size: 1.5rem;
