@@ -1,7 +1,7 @@
 {
-  "sha": "dc7f3616bed083ea181eaf004077954b5ffd1c55",
-  "timestamp": "2026-03-26 16:09",
+  "sha": "6467d59f80cfa217a102d3770aed4dcd4ecb59df",
+  "timestamp": "2026-03-26 16:10",
   "changelog": [
-    "Add \u2b06\ufe0f logs for on-demand slide uploads"
+    "Add long-lived cache headers for avatar PNGs"
   ]
 }
