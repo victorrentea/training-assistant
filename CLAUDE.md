@@ -265,6 +265,7 @@ All state dicts are keyed by **UUID**, not display name. Duplicate display names
 - **Disabled buttons on empty input**: whenever a text input is paired with a submit button, the button must be `disabled` when the input is empty/whitespace-only. Use `oninput` to toggle `disabled`, and re-disable after programmatic `input.value = ''` in the submit function. This applies to all input+button pairs across host and participant (Q&A, word cloud, debate arguments, etc.).
 - **Consistent tab button styling**: all host tab-bar buttons (Poll, Words, Q&A, Code, Debate, Board) must share the same visual treatment — transparent background, no border, same hover/active states via `.tab-btn` class. Do not add special backgrounds, borders, or colors to individual tab buttons. Layout differences (e.g. `margin-left:auto` for right-alignment) are acceptable but visual style must be uniform.
 - **Summary generation is on-demand only**: no periodic timer. Triggered by host (🧠 badge click) or participant (Key Points button). `POST /api/summary/force` is public (no auth) with 30s cooldown.
+- **`static/work-hours.js` ownership**: do not auto-update or edit this file in agent tasks; it is updated manually by the project owner.
 
 ---
 
