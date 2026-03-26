@@ -285,7 +285,15 @@ Orchestration daemon running on the trainer's Mac:
 - Uses `daemon/` subpackage: `llm_adapter.py`, `summarizer.py`, `debate_ai.py`, `transcript_state.py`, `transcript_timestamps.py`, `transcript_normalizer.py`, `transcript_query.py`, `indexer.py`, `rag.py`, `project_files.py`
 
 Manual normalized transcript query (run only on demand):
-- `python3 -m daemon.transcript_query 2026-03-25T12:00:00 2026-03-26T09:30:00`
+- Script: `python3 -m daemon.transcript_query <from_iso> <to_iso>`
+- Input format: strict ISO datetime with `T` separator (`YYYY-MM-DDTHH:MM[:SS]`)
+- Source files: normalized daily files only (`YYYY-MM-DD transcription.txt`)
+- Output: all matching lines + a final range/line-count footer
+- Example:
+  - `python3 -m daemon.transcript_query 2026-03-25T12:00:00 2026-03-26T09:30:00`
+- Common usage patterns:
+  - “today so far” -> `python3 -m daemon.transcript_query "$(date +%Y-%m-%d)T00:00:00" "$(date +%Y-%m-%dT%H:%M:%S)"`
+  - “last 10 minutes” -> `python3 -m daemon.transcript_query "$(date -v-10M +%Y-%m-%dT%H:%M:%S)" "$(date +%Y-%m-%dT%H:%M:%S)"`
 
 ---
 
