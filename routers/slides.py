@@ -1,5 +1,4 @@
 from datetime import datetime, timezone
-import json
 import os
 import re
 from pathlib import Path
@@ -75,57 +74,6 @@ def _resolve_local_slides_dir() -> Path | None:
     return None
 
 
-def _resolve_catalog_file() -> Path:
-    configured = os.environ.get("PPTX_CATALOG_FILE")
-    if configured:
-        return Path(configured).expanduser()
-    return Path(__file__).resolve().parent.parent / "daemon" / "materials_slides_catalog.json"
-
-
-def _normalize_catalog_map_entry(raw: dict) -> dict | None:
-    source_value = str(raw.get("source") or "").strip()
-    if not source_value:
-        return None
-    source = Path(source_value).expanduser()
-    target_pdf = str(raw.get("target_pdf") or "").strip()
-    if not target_pdf:
-        target_pdf = f"{source.stem}.pdf"
-    if not target_pdf.lower().endswith(".pdf"):
-        target_pdf += ".pdf"
-    target_pdf = target_pdf.replace("/", "-").replace("\\", "-")
-
-    exists = source.exists() and source.is_file()
-    updated_at = None
-    if exists:
-        updated_at = datetime.fromtimestamp(source.stat().st_mtime, tz=timezone.utc).isoformat()
-
-    return {
-        "pdf": target_pdf,
-        "pptx_path": str(source),
-        "exists": exists,
-        "updated_at": updated_at,
-    }
-
-
-def _load_catalog_map_entries(path: Path) -> list[dict]:
-    if not path.exists() or not path.is_file():
-        return []
-    try:
-        raw = json.loads(path.read_text(encoding="utf-8"))
-    except Exception:
-        return []
-    items = raw.get("slides") if isinstance(raw, dict) and "slides" in raw else raw
-    if not isinstance(items, list):
-        return []
-    entries: list[dict] = []
-    for item in items:
-        if not isinstance(item, dict):
-            continue
-        normalized = _normalize_catalog_map_entry(item)
-        if normalized:
-            entries.append(normalized)
-    entries.sort(key=lambda entry: (entry["pdf"].lower(), entry["pptx_path"].lower()))
-    return entries
 def _build_local_slides_index() -> tuple[list[dict], dict[str, Path]]:
     slides_dir = _resolve_local_slides_dir()
     if not slides_dir:
@@ -205,15 +153,6 @@ async def clear_current_slides():
     state.slides_current = None
     await broadcast_state()
     return {"ok": True}
-
-
-@router.get("/api/slides/catalog-map")
-async def get_slides_catalog_map():
-    path = _resolve_catalog_file()
-    return {
-        "catalog_file": str(path),
-        "entries": _load_catalog_map_entries(path),
-    }
 
 
 @public_router.get("/api/slides/current")

@@ -1610,51 +1610,6 @@ def test_end_talk_queues_action():
     assert s.session_request["action"] == "end_talk"
 
 
-def test_session_interval_lines_txt_filters_and_normalizes(tmp_path, monkeypatch):
-    state.reset()
-    transcript = (
-        "[09:29:59.00] Before window\n"
-        "[09:30:00.00] Alice:\t Hello   world\n"
-        "[09:31:00.00] Bob:\t  Another\tline\n"
-        "[09:32:00.00] After window\n"
-        "garbled line without timestamp\n"
-    )
-    (tmp_path / "20260326 0900 workshop.txt").write_text(transcript, encoding="utf-8")
-    monkeypatch.setenv("TRANSCRIPTION_FOLDER", str(tmp_path))
-
-    client = TestClient(app)
-    resp = client.get(
-        "/api/session/interval-lines.txt",
-        params={
-            "start": "2026-03-26T09:30:00",
-            "end": "2026-03-26T09:32:00",
-        },
-        headers=_HOST_AUTH_HEADERS,
-    )
-
-    assert resp.status_code == 200
-    assert resp.headers["content-type"].startswith("text/plain")
-    assert "filename=" in resp.headers.get("content-disposition", "")
-    assert resp.text == (
-        "[2026-03-26 09:30:00] Alice: Hello world\n"
-        "[2026-03-26 09:31:00] Bob: Another line\n"
-    )
-
-
-def test_session_interval_lines_txt_validates_range():
-    state.reset()
-    client = TestClient(app)
-    resp = client.get(
-        "/api/session/interval-lines.txt",
-        params={
-            "start": "2026-03-26T10:00:00",
-            "end": "2026-03-26T10:00:00",
-        },
-        headers=_HOST_AUTH_HEADERS,
-    )
-    assert resp.status_code == 400
-
-
 def test_pending_deploy_broadcasts_to_participants(monkeypatch):
     """POST /api/pending-deploy with a new SHA broadcasts deploy_pending WS message."""
     import json

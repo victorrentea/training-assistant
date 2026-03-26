@@ -1,21 +1,17 @@
 """Session stack management — host commands + daemon sync."""
 
 import os
-import re
 from datetime import datetime, timezone
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException, Query
-from fastapi.responses import PlainTextResponse
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
 from auth import require_host_auth
 from state import state
 from messaging import broadcast_state
-from daemon.session_transcript import parse_txt_entries_with_datetimes
 
 router = APIRouter()
-_TRANSCRIPT_NAME_RE = re.compile(r"^(\d{8})\s+(\d{4})\b")
 
 
 def _get_sessions_root() -> Path | None:
@@ -26,37 +22,6 @@ def _get_sessions_root() -> Path | None:
     )
     p = Path(sessions_root_str).expanduser()
     return p if p.exists() and p.is_dir() else None
-
-
-def _get_transcription_root() -> Path | None:
-    folder_str = os.environ.get(
-        "TRANSCRIPTION_FOLDER",
-        "/Users/victorrentea/Documents/transcriptions",
-    )
-    p = Path(folder_str).expanduser()
-    return p if p.exists() and p.is_dir() else None
-
-
-def _transcript_sort_key(path: Path) -> str:
-    m = _TRANSCRIPT_NAME_RE.match(path.name)
-    if m:
-        return m.group(1) + m.group(2)
-    return str(path.stat().st_mtime)
-
-
-def _transcript_file_date(path: Path):
-    m = _TRANSCRIPT_NAME_RE.match(path.name)
-    if not m:
-        return None
-    ds = m.group(1)
-    try:
-        return datetime(int(ds[:4]), int(ds[4:6]), int(ds[6:8])).date()
-    except ValueError:
-        return None
-
-
-def _normalize_transcript_text(text: str) -> str:
-    return re.sub(r"\s+", " ", text.replace("\t", " ")).strip()
 
 
 class StartSessionRequest(BaseModel):
@@ -286,69 +251,6 @@ async def timing_event(body: TimingEventBody):
         except Exception:
             pass
     return {"ok": True}
-
-
-@router.get(
-    "/api/session/interval-lines.txt",
-    dependencies=[Depends(require_host_auth)],
-    response_class=PlainTextResponse,
-)
-async def get_interval_lines_txt(
-    start: str = Query(..., description="Interval start in ISO format"),
-    end: str = Query(..., description="Interval end in ISO format"),
-):
-    try:
-        start_dt = datetime.fromisoformat(start)
-        end_dt = datetime.fromisoformat(end)
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail="Invalid start/end datetime format") from exc
-
-    if end_dt <= start_dt:
-        raise HTTPException(status_code=400, detail="End must be after start")
-
-    root = _get_transcription_root()
-    if root is None:
-        raise HTTPException(status_code=404, detail="Transcription folder not found")
-
-    files = sorted(
-        [f for f in root.iterdir() if f.is_file() and f.suffix.lower() == ".txt"],
-        key=_transcript_sort_key,
-    )
-    if not files:
-        raise HTTPException(status_code=404, detail="No transcript files found")
-
-    session_start_date = start_dt.date()
-    filtered_files = [f for f in files if (_transcript_file_date(f) or session_start_date) >= session_start_date]
-    if not filtered_files:
-        filtered_files = [files[-1]]
-
-    lines: list[str] = []
-    for transcript_file in filtered_files:
-        file_date = _transcript_file_date(transcript_file)
-        raw = transcript_file.read_text(encoding="utf-8", errors="replace")
-        for dt, txt in parse_txt_entries_with_datetimes(raw, file_date=file_date):
-            if dt is None or not txt.strip():
-                continue
-            if dt < start_dt or dt >= end_dt:
-                continue
-            normalized = _normalize_transcript_text(txt)
-            if not normalized:
-                continue
-            lines.append(f"[{dt.strftime('%Y-%m-%d %H:%M:%S')}] {normalized}")
-
-    payload = "\n".join(lines) + ("\n" if lines else "")
-    filename = (
-        "session-interval-"
-        + start_dt.strftime("%Y%m%d-%H%M")
-        + "-"
-        + end_dt.strftime("%Y%m%d-%H%M")
-        + ".txt"
-    )
-    headers = {
-        "Content-Disposition": f'inline; filename="{filename}"',
-        "Cache-Control": "no-store",
-    }
-    return PlainTextResponse(content=payload, headers=headers)
 
 
 @router.get("/api/session/folders", dependencies=[Depends(require_host_auth)])

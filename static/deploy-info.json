@@ -1,7 +1,7 @@
 {
-  "sha": "d6e51f158b1990a16d4fc8d2d04bc4908dd80356",
-  "timestamp": "2026-03-26 07:24",
+  "sha": "07f87b991576f6a85ca6bcae50e98e76ae2e8b3a",
+  "timestamp": "2026-03-25 21:20",
   "changelog": [
-    "docs: define host-to-backend slides mirror design"
+    "chore: log pptx update detection before regeneration"
   ]
 }
