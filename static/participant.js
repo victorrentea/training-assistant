@@ -718,7 +718,7 @@
       input.value = '';
       input.disabled = true;
       go.disabled = true;
-      total.textContent = '/ -';
+      total.textContent = '';
       return;
     }
     const numPages = Math.max(1, Number(slidesPdfDoc?.numPages || 1));
