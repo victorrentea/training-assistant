@@ -1,7 +1,7 @@
 {
-  "sha": "65c47a674f6b5955e68454f33a6a24500ac4007d",
-  "timestamp": "2026-03-26 23:22",
+  "sha": "c7a75884637458c42795b328dd2361b65d4fce87",
+  "timestamp": "2026-03-26 23:28",
   "changelog": [
-    "fix: wait for pagesloaded before setting PDF.js currentPageNumber"
+    "fix: show only slug in slides_upload_upsert_ok log"
   ]
 }
