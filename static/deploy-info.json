@@ -1,7 +1,7 @@
 {
-  "sha": "8afc529f3c84c26913053ac45eac9bad2de97a54",
-  "timestamp": "2026-03-26 15:55",
+  "sha": "657a0bb13fbc57f8eddeaa4d5d6cf538c7f8f0c8",
+  "timestamp": "2026-03-26 16:00",
   "changelog": [
-    "Harden daemon WS auth header compatibility"
+    "Make daemon slide dir discovery resilient"
   ]
 }
