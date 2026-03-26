@@ -1014,7 +1014,7 @@ h1 { display: none; }
   height: 44px;
   border-radius: 50%;
   border: 1px solid var(--border);
-  background: var(--bg);
+  background: var(--accent);
   color: var(--text);
   font-size: 1.3rem;
   cursor: pointer;
@@ -1026,7 +1026,7 @@ h1 { display: none; }
   line-height: 1;
   pointer-events: auto;
 }
-.emoji-btn:hover { background: var(--surface2); }
+.emoji-btn:hover { background: var(--accent2); }
 .emoji-btn:active { transform: scale(0.85); }
 
 /* Conference mode emoji grid */
@@ -1049,7 +1049,7 @@ h1 { display: none; }
   padding: 1.2rem;
   border: 2px solid var(--border);
   border-radius: 16px;
-  background: var(--surface);
+  background: var(--accent);
   cursor: pointer;
   transition: transform 0.1s, background 0.15s;
   user-select: none;
@@ -1061,7 +1061,7 @@ h1 { display: none; }
 }
 .emoji-grid-btn:active {
   transform: scale(0.9);
-  background: var(--border);
+  background: var(--accent2);
 }
 
 /* Desktop: emoji rises like a cloud, drifting left-right, growing and fading */
@@ -1369,7 +1369,7 @@ h1 { display: none; }
 .tour-bubble {
   position: fixed;
   background: rgba(20, 20, 35, 0.97);
-  border: 1px solid var(--accent);
+  border: 3px solid var(--accent);
   border-radius: 14px;
   padding: 12px 16px;
   width: 240px;
@@ -1391,8 +1391,8 @@ h1 { display: none; }
   width: 10px;
   height: 10px;
   background: rgba(20, 20, 35, 0.97);
-  border-right: 1px solid var(--accent);
-  border-bottom: 1px solid var(--accent);
+  border-right: 3px solid var(--accent);
+  border-bottom: 3px solid var(--accent);
   transform: rotate(45deg);
   bottom: -6px;
   left: 50%;
@@ -1403,8 +1403,8 @@ h1 { display: none; }
   top: -6px;
   border-right: none;
   border-bottom: none;
-  border-left: 1px solid var(--accent);
-  border-top: 1px solid var(--accent);
+  border-left: 3px solid var(--accent);
+  border-top: 3px solid var(--accent);
 }
 .tour-bubble-emoji {
   font-size: 1.5rem;
