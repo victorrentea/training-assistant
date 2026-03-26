@@ -1,7 +1,7 @@
 {
-  "sha": "6467d59f80cfa217a102d3770aed4dcd4ecb59df",
-  "timestamp": "2026-03-26 16:10",
+  "sha": "6d3411825be8422dc2b35dc8b84adca296f65b2d",
+  "timestamp": "2026-03-26 16:12",
   "changelog": [
-    "Add long-lived cache headers for avatar PNGs"
+    "Align slides daemon logging format"
   ]
 }
