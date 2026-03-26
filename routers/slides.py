@@ -831,7 +831,9 @@ async def get_slide_file(slug: str, request: Request):
     }
     if _is_not_modified(request, etag, path):
         return Response(status_code=304, headers=headers)
-    if request.query_params.get("inline") == "1":
-        headers = {**headers, "Content-Disposition": f'inline; filename="{path.name}"'}
-        return FileResponse(path=path, media_type="application/pdf", headers=headers)
-    return FileResponse(path=path, media_type="application/pdf", filename=path.name, headers=headers)
+    force_download = request.query_params.get("download") == "1"
+    disposition = "attachment" if force_download else "inline"
+    headers = {**headers, "Content-Disposition": f'{disposition}; filename="{path.name}"'}
+    if force_download:
+        return FileResponse(path=path, media_type="application/pdf", filename=path.name, headers=headers)
+    return FileResponse(path=path, media_type="application/pdf", headers=headers)
