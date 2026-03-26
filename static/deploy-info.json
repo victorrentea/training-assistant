@@ -1,7 +1,7 @@
 {
-  "sha": "bdf51c5e6ff8db87ac54d4c024eed3972d0ead5b",
-  "timestamp": "2026-03-26 17:02",
+  "sha": "d5e4e1c650b0e7dded58d25c54377de278da0bcb",
+  "timestamp": "2026-03-26 17:07",
   "changelog": [
-    "feat: detect active powerpoint slide in daemon"
+    "refactor: rename clean-clipboard to wispr-addons"
   ]
 }
