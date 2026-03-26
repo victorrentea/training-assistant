@@ -133,7 +133,7 @@ def find_latest_raw_transcript_file(folder: Path) -> Path | None:
 
 
 def default_offset_file_for(raw_file: Path) -> Path:
-    return raw_file.parent / "normalization.offset"
+    return raw_file.parent / "normalization.offset.txt"
 
 
 def _raw_file_date(raw_file: Path) -> date | None:
@@ -164,7 +164,7 @@ def _load_state(offset_file: Path, raw_key: str | None = None) -> NormalizationS
     except json.JSONDecodeError:
         return NormalizationState()
 
-    # New format: one normalization.offset with per-raw-file state map.
+    # New format: one normalization.offset.txt with per-raw-file state map.
     if raw_key and isinstance(data.get("files"), dict):
         item = data["files"].get(raw_key)
         if not isinstance(item, dict):
