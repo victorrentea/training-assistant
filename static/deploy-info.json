@@ -1,7 +1,7 @@
 {
-  "sha": "166ebb72c0642f05f85ffadd5c4211ab1f42dc0f",
-  "timestamp": "2026-03-26 22:14",
+  "sha": "6e188a3bd4b2a91c1ff620f95b29f41cf75b9888",
+  "timestamp": "2026-03-26 22:15",
   "changelog": [
-    "fix: render participant header tooltips below"
+    "Adjust slide list right edge and title offset"
   ]
 }
