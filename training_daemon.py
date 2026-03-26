@@ -114,6 +114,7 @@ _FRONTMATTER_WATERMARK_RE = re.compile(r"^watermark:\s*(\d+)")
 _PPT_NO_APP = "__NO_PPT__"
 _PPT_NO_PRESENTATION = "__NO_PRESENTATION__"
 _PPT_SLIDE_UNKNOWN = "__SLIDE_UNKNOWN__"
+_PPT_UNMAPPED_PRESENTATIONS_ALERTED: set[str] = set()
 _PPT_APPLESCRIPT = """
 if application "Microsoft PowerPoint" is not running then
     return "__NO_PPT__"
@@ -206,6 +207,13 @@ def _normalize_slide_match_key(value: str) -> str:
     return re.sub(r"[^a-z0-9]+", "", Path(str(value or "")).stem.lower())
 
 
+def _presentation_alert_key(value: str) -> str:
+    normalized = _normalize_slide_match_key(value)
+    if normalized:
+        return normalized
+    return str(value or "").strip().lower()
+
+
 def _iter_catalog_items(raw) -> list[dict]:
     if isinstance(raw, dict):
         if isinstance(raw.get("decks"), list):
@@ -259,6 +267,7 @@ def _resolve_presentation_slide_target(
                         "slug": slug,
                         "url": f"{server_base}/api/slides/file/{slug}",
                         "target_pdf": target_pdf,
+                        "matched": True,
                     }
         except Exception as e:
             log.error("ppt", f"Failed reading slides catalog map: {e}")
@@ -268,6 +277,7 @@ def _resolve_presentation_slide_target(
         "slug": fallback_slug,
         "url": f"{server_base}/api/slides/file/{fallback_slug}",
         "target_pdf": f"{Path(presentation_name).stem}.pdf",
+        "matched": False,
     }
 
 
@@ -294,6 +304,19 @@ def _probe_powerpoint_state(timeout_seconds: float = 1.5) -> tuple[dict | None, 
         return None, details
 
     return _parse_powerpoint_probe_output(result.stdout), None
+
+
+def _beep_local() -> None:
+    try:
+        subprocess.run(
+            ["osascript", "-e", "beep"],
+            capture_output=True,
+            text=True,
+            timeout=2,
+            check=False,
+        )
+    except Exception:
+        pass
 
 
 def _delete_with_basic_auth(url: str, username: str, password: str, timeout: float = 10.0) -> None:
@@ -326,6 +349,29 @@ def _sync_powerpoint_slide_to_server(main_config, slides_cfg, ppt_state: dict | 
         server_url=main_config.server_url,
         catalog_file=catalog_file,
     )
+    presentation_name = str(ppt_state.get("presentation") or "").strip()
+    alert_key = _presentation_alert_key(presentation_name)
+    is_matched = bool(target.get("matched", True))
+    if not is_matched:
+        if alert_key and alert_key not in _PPT_UNMAPPED_PRESENTATIONS_ALERTED:
+            _PPT_UNMAPPED_PRESENTATIONS_ALERTED.add(alert_key)
+            _beep_local()
+            message = "Presentation inaccessible for participants."
+            if presentation_name:
+                message = f"{message} ({presentation_name})"
+            _post_json(
+                f"{main_config.server_url.rstrip('/')}/api/quiz-status",
+                {"status": "error", "message": message},
+                main_config.host_username,
+                main_config.host_password,
+            )
+            log.error("ppt", message)
+        _delete_with_basic_auth(endpoint, main_config.host_username, main_config.host_password)
+        return
+
+    if alert_key:
+        _PPT_UNMAPPED_PRESENTATIONS_ALERTED.discard(alert_key)
+
     payload = {
         "url": target["url"],
         "slug": target["slug"],
