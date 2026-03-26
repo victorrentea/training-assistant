@@ -9,7 +9,7 @@ from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, Request
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from prometheus_fastapi_instrumentator import Instrumentator
@@ -54,6 +54,15 @@ async def lifespan(app_: FastAPI):
 
 
 app = FastAPI(title="Workshop Tool", lifespan=lifespan)
+
+
+@app.middleware("http")
+async def add_avatar_cache_headers(request: Request, call_next):
+    response = await call_next(request)
+    path = request.url.path
+    if path.startswith("/static/avatars/") and path.endswith(".png"):
+        response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+    return response
 
 Instrumentator().instrument(app).expose(
     app, endpoint="/metrics", dependencies=[Depends(require_host_auth)]

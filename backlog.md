@@ -232,3 +232,4 @@ Host broadcasts a statement: "Have you ever shipped code that violated what we j
 - [x] Direct request: hardened daemon WS auth handshake for slides on-demand by adding `websockets` compatibility fallback (`additional_headers` -> `extra_headers`).
 - [x] Direct request: made daemon on-demand WS runner resilient to slide-path mismatch by discovering PDFs from multiple candidate directories instead of disabling at startup.
 - [x] Direct request: daemon now logs `⬆️` on on-demand slide PDF upload flow (`slides_upload_received` and `slides_upload_upsert_ok` with slug/request_id/path).
+- [x] Direct request: set long-lived browser caching for avatar PNGs via `Cache-Control: public, max-age=31536000, immutable` on `/static/avatars/*.png` responses.
