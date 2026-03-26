@@ -936,6 +936,7 @@ class SlidesPollingRunner:
         self._next_run_at = 0.0
         self._slides_config = None
         self._slides_state: dict = {}
+        self._bg_thread: threading.Thread | None = None
 
     def start(self) -> None:
         try:
@@ -958,18 +959,24 @@ class SlidesPollingRunner:
         self.enabled = True
         log.info("slides", f"Slides watcher enabled ({self.poll_interval_seconds:.0f}s)")
 
-    def tick(self) -> None:
-        if not self.enabled:
-            return
-        now = time.monotonic()
-        if now < self._next_run_at:
-            return
+    def _run_once_bg(self) -> None:
         try:
             slides_daemon.run_once(self._slides_config, self._slides_state)
         except Exception as exc:
             log.error("slides", f"Slides watcher error: {exc}")
-        finally:
-            self._next_run_at = now + self.poll_interval_seconds
+
+    def tick(self) -> None:
+        if not self.enabled:
+            return
+        # Don't start a new run while a previous one is still in progress.
+        if self._bg_thread is not None and self._bg_thread.is_alive():
+            return
+        now = time.monotonic()
+        if now < self._next_run_at:
+            return
+        self._next_run_at = now + self.poll_interval_seconds
+        self._bg_thread = threading.Thread(target=self._run_once_bg, daemon=True)
+        self._bg_thread.start()
 
 
 class MaterialsMirrorRunner:
