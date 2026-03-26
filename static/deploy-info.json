@@ -1,7 +1,7 @@
 {
-  "sha": "a0e3e57c8fc6bfe633f285b0041495e3ce0a6cb4",
+  "sha": "bdf51c5e6ff8db87ac54d4c024eed3972d0ead5b",
   "timestamp": "2026-03-26 17:02",
   "changelog": [
-    "feat: play glass sound for tv overlay"
+    "feat: detect active powerpoint slide in daemon"
   ]
 }
