@@ -1,7 +1,7 @@
 {
-  "sha": "e7d9d1e11f3265dff0e8f5c3cb91e5a95253400a",
-  "timestamp": "2026-03-26 09:38",
+  "sha": "cdec58aebf04762ca81ed8618a9981355c00205e",
+  "timestamp": "2026-03-26 09:41",
   "changelog": [
-    "fix: add daemon backoff for repeated slides/materials failures"
+    "fix: use certifi ssl context for daemon http uploads"
   ]
 }
