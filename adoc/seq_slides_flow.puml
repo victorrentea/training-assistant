@@ -1,57 +1,55 @@
 @startuml seq_slides_flow
-title Slides Catalog Flow - C2 Level
+title Slides Flow (Current Code, C2)
 
 actor "Trainer" as Trainer
-database "PPTX Sources\n(watch dir / catalog)" as PptxSources
+database "PPTX Sources\n(PPTX_WATCH_DIR or PPTX_CATALOG_FILE)" as PptxSources
 participant "Slides Daemon\n(slides_daemon.py)" as Daemon
-database "Published PDFs\n(materials/slides)" as MaterialsSlides
+database "Published PDFs\n(PPTX_PUBLISH_DIR=materials/slides)" as MaterialsSlides
 participant "Workshop Backend\n(FastAPI)" as Backend
-participant "Participant Browser UI" as PaxUI
+participant "Participant UI\n(static/participant.js)" as PaxUI
 actor "Participant" as Pax
 
-== Automatic Publish Pipeline ==
+== Daemon Publish Cycle ==
 
-Trainer -> PptxSources : Save/update .pptx
-Daemon -> PptxSources : Poll and detect changed files
-Daemon -> Daemon : Convert PPTX -> PDF
-Daemon -> MaterialsSlides : Copy PDF (upload_mode=copy)
-Daemon -> Backend : POST /api/slides/current
-Daemon -> Backend : POST /api/quiz-status {slides:[...]}
+Trainer -> PptxSources : Update .pptx
+Daemon -> PptxSources : Poll tracked sources
+Daemon -> Daemon : Convert changed .pptx -> PDF
+Daemon -> MaterialsSlides : Copy PDF to publish_dir
+Daemon -> Backend : POST /api/slides/current\n{url, slug, source_file}
+Daemon -> Backend : POST /api/quiz-status\n{status, message, slides:[...]}
 
-== Participant Opens Slides ==
+note right of Backend
+  /api/quiz-status updates state.slides
+  /api/slides/current updates state.slides_current
+end note
+
+== Participant Slides View ==
 
 Pax -> PaxUI : Open Slides modal
-PaxUI -> Backend : GET /api/slides
-Backend -> MaterialsSlides : Scan local PDFs
-Backend -> Backend : Merge with state.slides\nand slides_current
-Backend --> PaxUI : slides[]
+PaxUI -> Backend : GET /api/slides (no-store)
+Backend -> MaterialsSlides : Build local index of PDFs
+Backend -> Backend : Merge (priority order):\n1) local_materials\n2) state.slides\n+ append slides_current if present
+Backend --> PaxUI : {slides:[name,slug,url,updated_at,...]}
 
-alt no slides
+alt slides empty
   PaxUI -> Pax : Show "No slides published yet"
 else slides available
   PaxUI -> Pax : Populate combo box
-  PaxUI -> Backend : GET /api/slides/file/{slug}
-  Backend -> MaterialsSlides : Read PDF by slug
+  PaxUI -> Backend : GET /api/slides/file/{slug}\n(for local_materials entries)
+  Backend -> MaterialsSlides : Resolve slug -> file path
   MaterialsSlides --> Backend : PDF bytes
   Backend --> PaxUI : application/pdf
-  PaxUI -> Pax : Render preview
+  PaxUI -> Pax : Render PDF.js preview
 end
 
-loop while modal is open
+loop every 30s while modal open
   PaxUI -> Backend : GET /api/slides (no-store)
-  Backend -> MaterialsSlides : Refresh local PDFs
-  Backend -> Backend : Refresh state.slides\nand slides_current
-  Backend --> PaxUI : updated slides[]
+  Backend --> PaxUI : refreshed merged catalog
 end
 
 note over PaxUI, Backend
-  Slide catalog is global for the session,
-  not filtered by participant UUID.
-end note
-
-note over Daemon, MaterialsSlides
-  Default publish directory from code:
-  PPTX_PUBLISH_DIR = materials/slides
+  Catalog is global for the whole session.
+  No filtering by participant UUID.
 end note
 
 @enduml

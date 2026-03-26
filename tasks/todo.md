@@ -50,6 +50,13 @@
 - [x] Add focused tests for first publish, no-change skip, and delete-triggered republish
 - [x] Run targeted slides tests
 
+## Direct request: update slides mirror design + new PUML
+
+- [x] Capture agreed target architecture (host materials hardcoded path + backend mirror requirement)
+- [x] Add dedicated design document in `adoc/` for host->backend PDF sync strategy
+- [x] Add new C2 sequence diagram (`.puml`) for mirror sync and participant read path
+- [x] Render diagram image from PlantUML (`.png`)
+
 ## Backlog item: periodic timestamps in transcription file
 
 - [x] Inspect existing transcription parser format in `quiz_core.py`
