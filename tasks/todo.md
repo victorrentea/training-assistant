@@ -375,3 +375,16 @@
 - [x] Add automated regression test for 🖥️ → sound mapping/resource availability
 - [x] Run targeted tests/build and capture proof
 - [x] Mark request done in `backlog.md`
+
+## Direct request: Host session interval badge opens normalized transcript `.txt`
+
+- [x] Add host-auth endpoint to export transcript lines for a selected interval as `text/plain` (`/api/session/interval-lines.txt`)
+- [x] Filter by selected interval (`start`/`end`) and normalize transcript lines (whitespace/tab cleanup)
+- [x] Wire Host UI interval chips to open selected interval in a new browser tab
+- [x] Keep existing interval edit behavior on container click
+- [x] Add automated tests for endpoint filtering/validation
+- [x] Run targeted verification and syntax checks
+
+### Review
+- Verified with `python3 -m pytest -q tests/test_main.py -k "session_interval_lines_txt"` (2 passed, 124 deselected).
+- Verified with `node --check static/host.js`.

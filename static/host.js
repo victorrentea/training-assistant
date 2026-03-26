@@ -433,9 +433,18 @@
         label: `${_fmtSessionTime(start)}→${endLabel}`,
         start: new Date(start),
         end: new Date(end),
+        startIso: start.toISOString(),
+        endIso: end.toISOString(),
         isOngoing: isOngoingWindow
       };
     }).filter(Boolean);
+  }
+
+  function openSessionIntervalLines(startIso, endIso) {
+    if (!startIso || !endIso) return;
+    const qs = new URLSearchParams({ start: startIso, end: endIso });
+    const url = `/api/session/interval-lines.txt?${qs.toString()}`;
+    window.open(url, '_blank', 'noopener');
   }
 
   function _groupSessionWindowsByDay(session) {
@@ -2978,11 +2987,21 @@ function renderSessionPanel() {
         if (rows.length) {
           const parts = rows.map((row) => {
             const chips = row.windows
-              .map((w) => `<span class="session-main-interval-chip${w.isOngoing ? ' session-main-interval-chip-live' : ''}">${_esc(w.label)}</span>`)
+              .map((w) => (
+                `<span class="session-main-interval-chip${w.isOngoing ? ' session-main-interval-chip-live' : ''}" ` +
+                `data-start="${_esc(w.startIso)}" data-end="${_esc(w.endIso)}" ` +
+                `title="Open normalized transcript lines for this interval in a new tab">${_esc(w.label)}</span>`
+              ))
               .join('');
             return `<div class="session-main-interval-day-row"><span class="session-main-interval-day-label">Day${row.dayNum}:</span><span class="session-main-interval-day-chips">${chips}</span></div>`;
           });
           intervalsEl.innerHTML = parts.join('');
+          intervalsEl.querySelectorAll('.session-main-interval-chip').forEach((chip) => {
+            chip.addEventListener('click', (event) => {
+              event.stopPropagation();
+              openSessionIntervalLines(chip.dataset.start, chip.dataset.end);
+            });
+          });
           intervalsEl.style.display = 'flex';
           intervalsEl.classList.add('session-main-intervals-editable');
           intervalsEl.title = 'Click to edit intervals';
