@@ -1,7 +1,7 @@
 {
-  "sha": "358f33fe446713645a72e1285ed8e822790cbe96",
-  "timestamp": "2026-03-26 17:16",
+  "sha": "70970bfa15281d502ab00826422c1b88d64eec33",
+  "timestamp": "2026-03-26 17:17",
   "changelog": [
-    "participant slides persist page and scroll position"
+    "participant slides maximize viewport above emoji bar"
   ]
 }
