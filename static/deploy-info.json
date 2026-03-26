@@ -1,7 +1,7 @@
 {
-  "sha": "2f60d0c1ba7bf6cd5a036ab91b91dd40e8441eff",
-  "timestamp": "2026-03-26 23:21",
+  "sha": "65c47a674f6b5955e68454f33a6a24500ac4007d",
+  "timestamp": "2026-03-26 23:22",
   "changelog": [
-    "ui: add gap between '7h ago' and download btn, tighten title\u2013timestamp gap"
+    "fix: wait for pagesloaded before setting PDF.js currentPageNumber"
   ]
 }
