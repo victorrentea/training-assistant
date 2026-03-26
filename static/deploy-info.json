@@ -1,7 +1,7 @@
 {
-  "sha": "ad83fda52773081d57ea46218aadd6e256749a4d",
-  "timestamp": "2026-03-26 21:44",
+  "sha": "db3e076604b96df1dd246bc91492e62c046b4cab",
+  "timestamp": "2026-03-26 21:47",
   "changelog": [
-    "Reorder slides catalog: AI Coding second"
+    "fix: force inline mode for native slides preview"
   ]
 }
