@@ -1,7 +1,7 @@
 {
-  "sha": "7905a87d44129ccb1ef2eb04679eeb0e0a80d915",
-  "timestamp": "2026-03-26 21:43",
+  "sha": "ad83fda52773081d57ea46218aadd6e256749a4d",
+  "timestamp": "2026-03-26 21:44",
   "changelog": [
-    "feat: add persistent Native/PDF.js slides toggle"
+    "Reorder slides catalog: AI Coding second"
   ]
 }
