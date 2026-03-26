@@ -1,7 +1,7 @@
 {
-  "sha": "d114ec71d6c45e8f56aef1564a83099d3a3df3d4",
-  "timestamp": "2026-03-26 15:40",
+  "sha": "8afc529f3c84c26913053ac45eac9bad2de97a54",
+  "timestamp": "2026-03-26 15:55",
   "changelog": [
-    "Include catalog slides in /api/slides list"
+    "Harden daemon WS auth header compatibility"
   ]
 }
