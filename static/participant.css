@@ -394,7 +394,8 @@ h1 { display: none; }
 
 .slides-list-download:hover {
   border-color: var(--accent2);
-  color: var(--text);
+  color: #0b0b0b;
+  background: var(--accent2);
 }
 
 .slides-loading {
