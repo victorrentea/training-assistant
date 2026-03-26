@@ -1,7 +1,7 @@
 {
-  "sha": "aded335747e645736f0064c27eaf114f56105045",
-  "timestamp": "2026-03-26 17:27",
+  "sha": "a2785d2dec829f87f7177fce0fe190f7478afbe7",
+  "timestamp": "2026-03-26 17:29",
   "changelog": [
-    "feat: add macOS menu bar app for wispr-addons"
+    "participant slides compact meta row and per-item download"
   ]
 }
