@@ -154,13 +154,13 @@ def test_api_slides_uses_publish_dir_when_local_dir_not_set(monkeypatch, tmp_pat
     assert file_resp.content.startswith(b"%PDF-1.4")
 
 
-def test_api_slides_defaults_to_server_data_dir(monkeypatch, tmp_path):
+def test_api_slides_defaults_to_server_materials_dir(monkeypatch, tmp_path):
     monkeypatch.delenv("TRAINING_ASSISTANT_SLIDES_DIR", raising=False)
     monkeypatch.delenv("PPTX_PUBLISH_DIR", raising=False)
     monkeypatch.chdir(tmp_path)
-    server_data = tmp_path / ".server-data"
-    server_data.mkdir(parents=True, exist_ok=True)
-    pdf = server_data / "FCA.pdf"
+    default_dir = tmp_path / "server_materials" / "slides"
+    default_dir.mkdir(parents=True, exist_ok=True)
+    pdf = default_dir / "FCA.pdf"
     pdf.write_bytes(b"%PDF-1.4\n%test\n")
 
     client = TestClient(app)
