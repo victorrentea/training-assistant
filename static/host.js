@@ -888,15 +888,20 @@
 
   function _setupSlidesCatalogHover() {
     const hover = document.getElementById('slides-catalog-hover');
+    const popover = document.getElementById('slides-catalog-popover');
     if (!hover) return;
     const open = () => {
       clearTimeout(_slidesCatalogHideTimer);
+      if (popover) popover.hidden = false;
       hover.classList.add('open');
       void _loadSlidesCatalogMap();
     };
     const close = () => {
       clearTimeout(_slidesCatalogHideTimer);
-      _slidesCatalogHideTimer = setTimeout(() => hover.classList.remove('open'), 120);
+      _slidesCatalogHideTimer = setTimeout(() => {
+        hover.classList.remove('open');
+        if (popover) popover.hidden = true;
+      }, 120);
     };
     hover.addEventListener('mouseenter', open);
     hover.addEventListener('mouseleave', close);
