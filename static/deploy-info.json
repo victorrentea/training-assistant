@@ -1,7 +1,7 @@
 {
-  "sha": "dfe815898238a80e86963a389ca4f151fa09222c",
-  "timestamp": "2026-03-27 00:13",
+  "sha": "cad25f1c4acc2e89e5e98b57466c6d52d9bb6abb",
+  "timestamp": "2026-03-27 00:18",
   "changelog": [
-    "feat: implement follow state machine, fix currentPageNumber string bug"
+    "ui: reduce slide list gaps by another 5%"
   ]
 }
