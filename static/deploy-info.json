@@ -1,7 +1,7 @@
 {
-  "sha": "2c11514d04c397886ef380dae4795973f9bcc2ce",
-  "timestamp": "2026-03-26 21:19",
+  "sha": "62327bec84c45d75ba2f0ecf0bfade7d1b13fc85",
+  "timestamp": "2026-03-26 21:22",
   "changelog": [
-    "fix: keep slides dock visible and reserve overlay space"
+    "Use PDF.js-only slides and verify offset restore"
   ]
 }
