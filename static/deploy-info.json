@@ -1,7 +1,7 @@
 {
-  "sha": "c3009ebba5762dbd4ee00dcbaa0c81e2274b3e47",
-  "timestamp": "2026-03-26 14:44",
+  "sha": "368f45bc8383033e974a5506ad06c61607e39320",
+  "timestamp": "2026-03-26 15:16",
   "changelog": [
-    "Add slide load progress and HTTP caching"
+    "Add on-demand slides upload via daemon WS"
   ]
 }
