@@ -179,8 +179,7 @@ h1 { display: none; }
 
 /* ── Slides viewer ── */
 #slides-overlay {
-  --slides-bottom-reserved: 52px; /* keep emoji bar visible with minimal gap */
-  inset: 0 0 var(--slides-bottom-reserved) 0;
+  inset: 0;
   align-items: stretch;
   padding: .15rem .35rem .1rem;
   box-sizing: border-box;
@@ -942,9 +941,10 @@ h1 { display: none; }
   justify-content: center;
   gap: .5rem;
   padding: .5rem .75rem;
-  background: var(--surface);
-  border-top: 1px solid var(--border);
-  z-index: 900;
+  background: transparent;
+  border-top: none;
+  z-index: 3001;
+  pointer-events: none;
 }
 
 .emoji-btn {
@@ -962,6 +962,7 @@ h1 { display: none; }
   transition: transform .1s, background .15s;
   padding: 0;
   line-height: 1;
+  pointer-events: auto;
 }
 .emoji-btn:hover { background: var(--surface2); }
 .emoji-btn:active { transform: scale(0.85); }
