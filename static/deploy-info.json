@@ -1,7 +1,7 @@
 {
-  "sha": "c0bc1f307de228979e784fe2a826d245650b0511",
-  "timestamp": "2026-03-26 16:18",
+  "sha": "4bf040d5fd3ab116bde3cf872daf8ede9989562b",
+  "timestamp": "2026-03-26 16:19",
   "changelog": [
-    "Fix participant slides selector and modal loading"
+    "Reduce avatar payloads and avoid repeated avatar refetch"
   ]
 }
