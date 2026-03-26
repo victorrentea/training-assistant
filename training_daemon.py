@@ -22,6 +22,7 @@ import re
 import signal
 import sys
 import time
+import ssl
 import urllib.error
 import urllib.request
 import uuid
@@ -85,6 +86,15 @@ _BACKUP_FILE = _BACKUP_DIR / "state-backup.json"
 
 _DOW_RE = re.compile(r"^([A-Z][a-z]{2})\s+(\d{2}:\d{2})\s+(.+)$")
 _FRONTMATTER_WATERMARK_RE = re.compile(r"^watermark:\s*(\d+)")
+
+
+def _ssl_context() -> ssl.SSLContext:
+    try:
+        import certifi
+
+        return ssl.create_default_context(cafile=certifi.where())
+    except Exception:
+        return ssl.create_default_context()
 
 
 def _check_daily_timing(now_time=None):
@@ -749,7 +759,7 @@ class MaterialsMirrorRunner:
             },
         )
         try:
-            with urllib.request.urlopen(req, timeout=60):
+            with urllib.request.urlopen(req, timeout=60, context=_ssl_context()):
                 pass
         except urllib.error.HTTPError as exc:
             details = exc.read().decode("utf-8", errors="replace")

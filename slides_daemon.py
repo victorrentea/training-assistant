@@ -15,6 +15,7 @@ import json
 import os
 import re
 import shutil
+import ssl
 import subprocess
 import sys
 import time
@@ -45,6 +46,15 @@ def load_secrets_env() -> None:
             continue
         key, _, value = line.partition("=")
         os.environ.setdefault(key.strip(), value.strip())
+
+
+def _ssl_context() -> ssl.SSLContext:
+    try:
+        import certifi
+
+        return ssl.create_default_context(cafile=certifi.where())
+    except Exception:
+        return ssl.create_default_context()
 
 
 @dataclass
@@ -155,7 +165,7 @@ def _post_json(url: str, payload: dict, username: str, password: str, timeout: f
         },
     )
     try:
-        with urllib.request.urlopen(req, timeout=timeout) as response:
+        with urllib.request.urlopen(req, timeout=timeout, context=_ssl_context()) as response:
             text = response.read().decode("utf-8", errors="replace")
             return json.loads(text) if text else {}
     except urllib.error.HTTPError as exc:
@@ -597,7 +607,7 @@ def upload_pdf(pdf_path: Path, slug: str, config: SlidesDaemonConfig, target_nam
             headers=headers,
         )
         try:
-            with urllib.request.urlopen(req, timeout=30):
+            with urllib.request.urlopen(req, timeout=30, context=_ssl_context()):
                 pass
         except urllib.error.HTTPError as exc:
             raise RuntimeError(f"HTTP PUT upload failed with status {exc.code}") from exc
