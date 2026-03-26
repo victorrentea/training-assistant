@@ -1,7 +1,8 @@
 {
-  "sha": "9a156a232746139b2b4aaf9f57ec8da50da77b60",
-  "timestamp": "2026-03-26 22:11",
+  "sha": "b7070bc2fcb47203a9505f5c8cd36e91be8a8d1a",
+  "timestamp": "2026-03-26 22:12",
   "changelog": [
-    "feat: alert on unmapped powerpoint presentation"
+    "Fix leftover conflict marker in backlog",
+    "Align slide page label and close icon typography"
   ]
 }
