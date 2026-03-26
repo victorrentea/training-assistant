@@ -1,7 +1,7 @@
 {
-  "sha": "a21f945539651d99cecb894e53bc171277120cb8",
-  "timestamp": "2026-03-27 00:01",
+  "sha": "b884e9c9263bcc0c85026f2a29271c038b22cbb0",
+  "timestamp": "2026-03-27 00:03",
   "changelog": [
-    "feat: open PDF.js links in new tab"
+    "fix: use <object> instead of <iframe> for native PDF viewer"
   ]
 }
