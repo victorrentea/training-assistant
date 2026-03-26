@@ -478,42 +478,26 @@
   }
 
   function _formatSlideUpdated(updatedAt) {
-    if (!updatedAt) return 'Updated time unavailable';
+    if (!updatedAt) return 'time unavailable';
     const dt = new Date(updatedAt);
-    if (Number.isNaN(dt.getTime())) return 'Updated time unavailable';
+    if (Number.isNaN(dt.getTime())) return 'time unavailable';
     const sec = Math.max(0, Math.floor((Date.now() - dt.getTime()) / 1000));
-    if (sec < 60) return `Updated ${sec}s ago`;
+    if (sec < 60) return `${sec}s ago`;
     const min = Math.floor(sec / 60);
-    if (min < 60) return `Updated ${min}m ago`;
+    if (min < 60) return `${min}m ago`;
     const hrs = Math.floor(min / 60);
-    if (hrs < 24) return `Updated ${hrs}h ago`;
-    return `Updated ${dt.toLocaleString(undefined, {
+    if (hrs < 24) return `${hrs}h ago`;
+    return dt.toLocaleString(undefined, {
       month: 'short',
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
-    })}`;
-  }
-
-  function _slidePagePair(slide) {
-    const current = Math.max(1, Number(
-      slide?._id === slidesSelectedId
-        ? (slidesPdfViewer?.currentPageNumber || _getStoredSlidePage(slide.slug))
-        : _getStoredSlidePage(slide?.slug),
-    ));
-    const total = (
-      slide && slide._id === slidesSelectedId && slidesPdfDoc
-        ? Math.max(1, Number(slidesPdfDoc.numPages || 1))
-        : null
-    );
-    return { current, total };
+    });
   }
 
   function _buildSlideOptionLabel(slide) {
     if (!slide) return 'Select a slide';
-    const { current, total } = _slidePagePair(slide);
-    const pageInfo = total ? `Page ${current}/${total}` : `Page ${current}/-`;
-    return `${slide.name} · ${_formatSlideUpdated(slide.updated_at)} · ${pageInfo}`;
+    return slide.name;
   }
 
   function _syncSlidesSelectWidth() {
@@ -525,6 +509,16 @@
     }
     const widthCh = Math.min(92, Math.max(18, longest + 2));
     select.style.setProperty('--slides-select-width', `${widthCh}ch`);
+  }
+
+  function _renderSlidesUpdatedLabel(slide) {
+    const label = document.getElementById('slides-updated');
+    if (!label) return;
+    if (!slide) {
+      label.textContent = '';
+      return;
+    }
+    label.textContent = `updated ${_formatSlideUpdated(slide.updated_at)}`;
   }
 
   function _setSlidesError(message) {
@@ -593,6 +587,15 @@
         const slide = slidesCatalog.find(s => s.slug === slidesSelectedSlug);
         _renderSlidesMeta(slide || null);
       }
+    });
+
+    // Keep page controls synced while user scrolls through the PDF.
+    slidesPdfEventBus.on('updateviewarea', (evt) => {
+      const page = Number(evt?.location?.pageNumber || 0);
+      if (!slidesSelectedSlug || !page) return;
+      _setStoredSlidePage(slidesSelectedSlug, page);
+      const slide = slidesCatalog.find(s => s.slug === slidesSelectedSlug);
+      _syncSlidesPageControls(slide || null);
     });
   }
 
@@ -702,12 +705,7 @@
 
   function _renderSlidesMeta(slide) {
     _syncSlidesPageControls(slide || null);
-    const select = document.getElementById('slides-select');
-    if (select && slide && slidesSelectedId === slide._id) {
-      const selectedOption = Array.from(select.options || []).find((opt) => opt.value === slide._id);
-      if (selectedOption) selectedOption.textContent = _buildSlideOptionLabel(slide);
-      _syncSlidesSelectWidth();
-    }
+    _renderSlidesUpdatedLabel(slide || null);
   }
 
   function _syncSlidesPageControls(slide) {
