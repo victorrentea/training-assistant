@@ -184,7 +184,7 @@
       if (!anchor) { showStep(index + 1); return; }
       if (step.scanDock) {
         anchor.classList.add('tour-scan');
-        setTimeout(() => anchor.classList.remove('tour-scan'), 1000);
+        setTimeout(() => anchor.classList.remove('tour-scan'), 2000);
       }
 
       glowEl = anchor;
@@ -224,7 +224,7 @@
       bubble.appendChild(footer);
       document.body.appendChild(bubble);
 
-      positionBubble(bubble, anchor);
+      positionBubble(bubble, anchor, step);
 
       let advanced = false;
       function advance() {
@@ -243,9 +243,19 @@
       autoTimer = setTimeout(advance, 3500);
     }
 
-    function positionBubble(bub, anchor) {
+    function positionBubble(bub, anchor, step = null) {
       const rect = anchor.getBoundingClientRect();
       const bubW = 240;
+      if (step?.scanDock) {
+        bub.classList.remove('arrow-top');
+        bub.classList.add('arrow-right');
+        const bubbleTop = Math.max(8, Math.min(window.innerHeight - 120, rect.top + rect.height * 0.3));
+        const bubbleLeft = Math.max(8, rect.left - bubW - 14);
+        bub.style.left = bubbleLeft + 'px';
+        bub.style.top = bubbleTop + 'px';
+        return;
+      }
+      bub.classList.remove('arrow-right');
       const spaceAbove = rect.top;
       const spaceBelow = window.innerHeight - rect.bottom;
       bub.style.left = Math.max(8, Math.min(window.innerWidth - bubW - 8, rect.left + rect.width / 2 - bubW / 2)) + 'px';
