@@ -101,6 +101,22 @@ def test_slides_upload_is_listed_and_served(monkeypatch, tmp_path):
     assert file_resp.content.startswith(b"%PDF-1.4")
 
 
+def test_slides_upload_defaults_to_server_data_dir(monkeypatch, tmp_path):
+    monkeypatch.delenv("TRAINING_ASSISTANT_UPLOADED_SLIDES_DIR", raising=False)
+    monkeypatch.chdir(tmp_path)
+    client = TestClient(app, headers=_HOST_AUTH_HEADERS)
+
+    upload = client.post(
+        "/api/slides/upload",
+        data={"slug": "fca", "name": "FCA"},
+        files={"file": ("fca.pdf", b"%PDF-1.4\n%test\n", "application/pdf")},
+    )
+    assert upload.status_code == 200
+
+    expected = tmp_path / ".server-data" / "uploaded-slides" / "fca.pdf"
+    assert expected.exists()
+
+
 def test_api_slides_lists_local_materials_and_serves_pdf(monkeypatch, tmp_path):
     monkeypatch.setenv("TRAINING_ASSISTANT_SLIDES_DIR", str(tmp_path))
     pdf = tmp_path / "Architecture.pdf"

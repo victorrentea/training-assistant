@@ -74,9 +74,11 @@ def config_from_env() -> SlidesDaemonConfig:
     poll_interval = float(os.environ.get("PPTX_DAEMON_POLL_SECONDS", str(DEFAULT_POLL_SECONDS)))
     min_cpu_free = float(os.environ.get("PPTX_MIN_CPU_FREE_PERCENT", str(DEFAULT_MIN_CPU_FREE)))
     state_file = Path(
-        os.environ.get("PPTX_DAEMON_STATE_FILE", str(Path(".context") / "pptx_daemon_state.json"))
+        os.environ.get("PPTX_DAEMON_STATE_FILE", str(Path(".server-data") / "pptx_daemon_state.json"))
     ).expanduser()
-    work_dir = Path(os.environ.get("PPTX_DAEMON_WORK_DIR", str(Path(".context") / "pptx_daemon_work"))).expanduser()
+    work_dir = Path(
+        os.environ.get("PPTX_DAEMON_WORK_DIR", str(Path(".server-data") / "pptx_daemon_work"))
+    ).expanduser()
 
     server_url = os.environ.get("WORKSHOP_SERVER_URL", DEFAULT_SERVER_URL).rstrip("/")
     host_username = os.environ.get("HOST_USERNAME", "host")
@@ -85,7 +87,7 @@ def config_from_env() -> SlidesDaemonConfig:
     upload_mode = os.environ.get("PPTX_UPLOAD_MODE", "copy").strip().lower()
     public_base_url = os.environ.get("PPTX_PUBLIC_BASE_URL", "").rstrip("/")
     publish_dir = Path(
-        os.environ.get("PPTX_PUBLISH_DIR", str(Path(".context") / "published-slides"))
+        os.environ.get("PPTX_PUBLISH_DIR", str(Path(".server-data") / "published-slides"))
     ).expanduser()
     recursive = os.environ.get("PPTX_RECURSIVE", "0").strip() in {"1", "true", "yes"}
     catalog_file_str = os.environ.get(

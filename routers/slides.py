@@ -131,7 +131,7 @@ def _uploaded_slides_dir() -> Path:
     configured = os.environ.get("TRAINING_ASSISTANT_UPLOADED_SLIDES_DIR")
     if configured:
         return Path(configured).expanduser()
-    return Path(".context") / "uploaded-slides"
+    return Path(".server-data") / "uploaded-slides"
 
 
 def _uploaded_slide_meta_path(slug: str) -> Path:
