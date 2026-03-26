@@ -314,3 +314,4 @@ Host broadcasts a statement: "Have you ever shipped code that violated what we j
 - [x] Direct request: participant header `📍 Location!` now shows the same hover underline affordance as editable name (while still visible, before location is shared).
 - [x] Direct request: forced all participant header tooltips (`.status-bar .has-tooltip`) to render below controls to avoid clipping outside the top of the viewport.
 - [x] Direct request: removed right-side spacing between slide download button and dock edge, and shifted course titles right via +5% left offset in slide title area.
+- [x] Follow-up direct request: restyled slides mode controls to match `Native | PDF.js | Follow` mock (Follow as dedicated pill button at right, with active blue state).

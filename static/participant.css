@@ -306,10 +306,32 @@ h1 { display: none; }
   color: #fff;
 }
 
-#slides-follow-btn.active {
-  background: rgba(72, 207, 173, 0.22);
-  color: var(--accent2);
-  box-shadow: inset 0 0 0 1px rgba(72, 207, 173, 0.45);
+.slides-follow-btn {
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--muted);
+  font-size: .64rem;
+  font-weight: 700;
+  line-height: 1;
+  padding: .32rem .72rem;
+  cursor: pointer;
+  transition: background .15s ease, color .15s ease;
+}
+
+.slides-follow-btn:hover:not(.active) {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+}
+
+.slides-follow-btn.active {
+  background: #4e6be8;
+  color: #060a18;
+}
+
+.slides-follow-btn:disabled {
+  opacity: .45;
+  cursor: not-allowed;
 }
 
 #slides-follow-btn.follow-blink {
