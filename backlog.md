@@ -311,3 +311,4 @@ Host broadcasts a statement: "Have you ever shipped code that violated what we j
 - [x] Direct request: added participant-side `Follow trainer` checkbox next to `Native | PDF.js`; host slide auto-follow now runs only when `PDF.js` + checkbox are active, auto-unchecks on participant manual PDF navigation, and shows disabled/grey state in `Native` mode.
 - [x] Direct request: training daemon now detects unmapped active PowerPoint presentations, keeps them in runtime memory, beeps only on first sight per presentation, clears `/api/slides/current`, and pushes host error `Presentation inaccessible for participants.`
 - [x] Direct request: participant header `📍 Location!` now shows the same hover underline affordance as editable name (while still visible, before location is shared).
+- [x] Direct request: forced all participant header tooltips (`.status-bar .has-tooltip`) to render below controls to avoid clipping outside the top of the viewport.

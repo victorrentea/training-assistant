@@ -125,6 +125,19 @@ h1 { display: none; }
   gap: .75rem;
 }
 
+/* Header tooltips must render below to avoid clipping at top viewport edge. */
+.status-bar .has-tooltip::after {
+  top: calc(100% + 8px);
+  bottom: auto;
+}
+
+.status-bar .has-tooltip::before {
+  top: calc(100% + 2px);
+  bottom: auto;
+  border-top-color: transparent;
+  border-bottom: 6px solid var(--surface2);
+}
+
 @media (max-width: 480px) {
   .status-bar { font-size: .8rem; padding: .5rem .75rem; margin-bottom: .75rem; }
 }
