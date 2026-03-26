@@ -1,7 +1,7 @@
 {
-  "sha": "adb3750c0178d8ba8b2bfbdf4673c59b8e09dcdf",
-  "timestamp": "2026-03-26 21:57",
+  "sha": "f9fc01db60ff6b7273baefecbc4b3bd8b6ff24fa",
+  "timestamp": "2026-03-26 21:58",
   "changelog": [
-    "fix: restore visible 'xh ago' slide timestamps"
+    "feat: always show Notes button and add to tour"
   ]
 }
