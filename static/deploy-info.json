@@ -1,7 +1,7 @@
 {
-  "sha": "dc0b125192a81b58291e54ca67ac4ee2bda72ca3",
+  "sha": "aded335747e645736f0064c27eaf114f56105045",
   "timestamp": "2026-03-26 17:27",
   "changelog": [
-    "Adjust participant welcome text and size"
+    "feat: add macOS menu bar app for wispr-addons"
   ]
 }
