@@ -18,6 +18,7 @@ from pathlib import Path
 
 import anthropic
 import objc
+import AppKit
 import rumps
 import Quartz
 from Quartz import (
@@ -405,6 +406,9 @@ def main():
     tap_thread.start()
 
     log("Wispr Addons started")
+
+    # Hide from Cmd+Tab (menu bar only, no dock icon)
+    AppKit.NSApplication.sharedApplication().setActivationPolicy_(AppKit.NSApplicationActivationPolicyAccessory)
 
     # Run menu bar app on main thread
     _app_ref = WisprAddonsApp()
