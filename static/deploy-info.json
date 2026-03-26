@@ -1,7 +1,7 @@
 {
-  "sha": "67b8de6158e08394468d5eca3fdbc260eccfda12",
-  "timestamp": "2026-03-26 14:24",
+  "sha": "00b5d997d4542db52e145f3e9f759ac503b33cca",
+  "timestamp": "2026-03-26 14:26",
   "changelog": [
-    "Compress daemon and overlay startup logs"
+    "Restore rocket emoji in startup logs"
   ]
 }
