@@ -2458,6 +2458,7 @@
     // Conference mode: show emoji grid when idle, hide when activity (poll) is active
     if (currentMode === 'conference') {
       if (!currentPoll) {
+        if (el) el.dataset.screen = 'conference-idle';
         el.innerHTML = '';
         if (confGrid) confGrid.style.display = '';
         return;
@@ -2466,6 +2467,7 @@
       }
     }
     if (!currentPoll) {
+      if (el) el.dataset.screen = 'waiting';
       const nameSet = (_suggestedName === null || myName !== _suggestedName);
       const locationSet = !!localStorage.getItem(LS_LOCATION_KEY);
       const notifGranted = 'Notification' in window && Notification.permission === 'granted';
@@ -2496,6 +2498,7 @@
       }
       return;
     }
+    if (el) el.dataset.screen = 'poll';
     renderPollCard(el, voteCounts);
     applyResultColors();
   }
