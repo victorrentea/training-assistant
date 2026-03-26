@@ -278,7 +278,7 @@ h1 { display: none; }
 .slides-preview-shell {
   position: absolute;
   inset: 0;
-  padding: 0 0 0 .28rem;
+  padding: 0;
   box-sizing: border-box;
 }
 
@@ -603,6 +603,7 @@ h1 { display: none; }
   width: 100%;
   height: 100%;
   overflow: auto;
+  background: #fff;
 }
 
 #slides-pdf-container.slides-iframe-mode {
@@ -610,11 +611,11 @@ h1 { display: none; }
 }
 
 #slides-pdf-viewer {
-  padding: .2rem 0;
+  padding: 0;
 }
 
 #slides-pdf-container .page {
-  margin: 4px auto !important;
+  margin: 0 0 4px 0 !important;
   border: 1px solid rgba(255, 255, 255, 0.14) !important;
   box-shadow: none !important;
 }
