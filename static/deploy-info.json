@@ -1,7 +1,7 @@
 {
-  "sha": "41ab4da197ac41b7b4cbe041977d96ace5f79d36",
-  "timestamp": "2026-03-26 19:28",
+  "sha": "bf9db1b7658d5c526f75fca017945dc5b48ba452",
+  "timestamp": "2026-03-26 19:29",
   "changelog": [
-    "Match emoji hover border to tooltip color"
+    "Persist slides dock and refine preview UX"
   ]
 }
