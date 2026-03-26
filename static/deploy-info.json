@@ -1,7 +1,7 @@
 {
-  "sha": "55b198aeee21b2751626e69ed17ed2415d09882e",
-  "timestamp": "2026-03-27 00:21",
+  "sha": "8b971ac4d77290ac545fa5e4a3eee51cd96a5467",
+  "timestamp": "2026-03-27 00:22",
   "changelog": [
-    "fix: show native PDF frame with display:block not empty string"
+    "style: shrink PDF.js page badge 50%, add black bg + rounded"
   ]
 }
