@@ -1078,13 +1078,18 @@ class SlidesOnDemandWsRunner:
     def _connect(ws_url: str, headers: dict[str, str]):
         # websockets changed auth-header kwarg name across versions.
         # Try modern API first, then fallback for older clients.
+        ws_kwargs = {
+            "open_timeout": 10,
+            "ping_interval": 20,
+            "ping_timeout": 20,
+        }
+        if ws_url.startswith("wss://"):
+            ws_kwargs["ssl"] = _ssl_context()
         try:
             return ws_connect(
                 ws_url,
                 additional_headers=headers,
-                open_timeout=10,
-                ping_interval=20,
-                ping_timeout=20,
+                **ws_kwargs,
             )
         except TypeError as exc:
             message = str(exc)
@@ -1093,9 +1098,7 @@ class SlidesOnDemandWsRunner:
             return ws_connect(
                 ws_url,
                 extra_headers=headers,
-                open_timeout=10,
-                ping_interval=20,
-                ping_timeout=20,
+                **ws_kwargs,
             )
 
 
