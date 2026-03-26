@@ -1,6 +1,5 @@
 # Tasks
 
-- [x] desktop-overlay: in single-monitor mode, right-edge panel now pops in only when mouse enters the panel's own vertical edge band (not anywhere on the full screen edge) and auto-hides after 1 second; regression tests added.
 - [x] ui: participant Key Points label now includes spacing between count and text (`🧠 38 Key Points` instead of `🧠 38Key Points`)
 - [x] ui: session panel compacted for host screen — session controls are clickable emoji-only (no button chrome), pause is followed by a vertical separator then `🎙️▶️`, and current session now shows transcript active time windows under the row.
 - [x] desktop-overlay: replaced Zorro button icon from battle swords to a little `z`, made Pulse/EKG background layers more transparent, and switched single-monitor right-edge action panel to vertical stacking.
@@ -163,9 +162,6 @@
 - [x] Direct request: use full slides catalog from `https://victorrentea.ro/slides/` and regenerate PDFs into project `materials/slides` whenever any mapped source PPTX changes.
 - [x] Direct request: slides daemon now checks every 5s and regenerates only when source PPTX `last modified` increased; writes per-file markers like `Bio Victor.pdf.lastmodified`.
 - [x] Direct request: daemon now logs `✏️ppt update detected => regenerating ppf` when it detects a changed PPTX before starting regeneration.
-- [x] Direct request: integrated PPTX change detection/regeneration into existing `training_daemon.py` loop (no separate auto-detection daemon), polling every 5s via the same process.
-- [x] Direct request: reduced PPTX daemon poll interval to every 2s; regeneration still happens only when source PPTX modified timestamp increases.
-- [x] Direct request: host UI now shows PDF=>PPTX catalog mapping on hover via a new `📜` icon in the bottom-right footer (next to cost).
  ---
 
 ## Understanding design
@@ -194,8 +190,6 @@ Host posts a provocative statement (e.g. "Microservices are always a mistake for
 - [x] Follow-up GH#67 (production): `slides_daemon.py` now publishes full slide list metadata to `/api/quiz-status` (with hash dedupe), so `/api/slides` is populated in production too.
 - [x] Follow-up GH#67 (UX): removed manual refresh icon from participant Slides preview header; auto-refresh loop remains active while modal is open.
 - [x] Follow-up GH#67 (bugfix): filtered non-displayable slide names (blank/punctuation-only) in backend/frontend to avoid empty entries in participant Slides dropdown.
-- [x] La click pe badge-urile cu intervale de timp asociate sesiunii din host UI, se deschide într-un tab nou un fișier `.txt` cu liniile normalizate din acel interval.
-- [x] Direct request (design): documented target host->backend mirror architecture for slides (`/Users/victorrentea/workspace/training-assistant/materials` on host) and added new sequence diagram `adoc/seq_slides_mirror_sync.puml` (+ rendered PNG).
 
 ## Concept Ranking / Ordering
 Host presents 4–6 items (patterns, approaches, technologies). Participants drag them into an order (e.g. safest → most dangerous, simplest → most complex). Host aggregates the median ranking and highlights disagreements. Pure conceptual reasoning, no coding.

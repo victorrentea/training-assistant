@@ -1,13 +1,5 @@
 # Todo
 
-## Direct request: desktop overlay single-monitor hover zone + 1s auto-hide
-
-- [x] Reproduce issue by code-path inspection in `ButtonBar.swift` (edge trigger active across full right edge).
-- [x] Add failing regression tests for single-monitor trigger zone and auto-hide delay.
-- [x] Restrict single-monitor edge trigger to the vertical band where the panel actually pops in.
-- [x] Set single-monitor auto-hide delay to 1 second after slide-in.
-- [x] Run `swift test` in `desktop-overlay` and capture proof logs.
-
 ## Backlog item: GH#67 participant slides viewer (PDF)
 
 - [x] Add backend slide metadata endpoint `GET /api/slides`
@@ -261,29 +253,6 @@
 - [x] Run targeted tests
 - [x] Mark direct request done in `backlog.md`
 
-## Direct request: integrate slides detection into `training_daemon.py`
-
-- [x] Embed `slides_daemon.run_once()` polling in the existing `training_daemon.run()` main loop
-- [x] Reuse host auth/server config from `training_daemon` for slides sync calls
-- [x] Keep `.pptx` source resolution quiet at startup (no missing-file spam)
-- [x] Preserve daemon reconnect test behavior for incomplete test configs
-- [x] Run targeted tests: `tests/test_quiz_daemon_reconnect.py`, `tests/test_slides_daemon.py`, `tests/test_slides_api.py`
-- [x] Mark direct request done in `backlog.md`
-
-## Direct request: poll slides every 2 seconds
-
-- [x] Change slides watcher default polling interval from 5s to 2s
-- [x] Keep mtime-gated regeneration logic unchanged
-- [x] Mark direct request done in `backlog.md`
-
-## Direct request: host footer hover map for PDF => PPTX
-
-- [x] Add host-auth endpoint `GET /api/slides/catalog-map` with `pdf`, `pptx_path`, `exists`, `updated_at`
-- [x] Add `📜` icon next to token cost in host right footer
-- [x] Show hover popover with PDF => PPTX mapping list (including missing-source warning)
-- [x] Add API tests for auth + payload mapping
-- [x] Run targeted tests and JS syntax check
-- [x] Mark direct request done in `backlog.md`
 ## Review
 
 - Added `scripts/append_transcription_timestamps.py` with 3s default interval and parser-compatible format.
@@ -382,16 +351,3 @@
 - [x] Add automated regression test for 🖥️ → sound mapping/resource availability
 - [x] Run targeted tests/build and capture proof
 - [x] Mark request done in `backlog.md`
-
-## Direct request: Host session interval badge opens normalized transcript `.txt`
-
-- [x] Add host-auth endpoint to export transcript lines for a selected interval as `text/plain` (`/api/session/interval-lines.txt`)
-- [x] Filter by selected interval (`start`/`end`) and normalize transcript lines (whitespace/tab cleanup)
-- [x] Wire Host UI interval chips to open selected interval in a new browser tab
-- [x] Keep existing interval edit behavior on container click
-- [x] Add automated tests for endpoint filtering/validation
-- [x] Run targeted verification and syntax checks
-
-### Review
-- Verified with `python3 -m pytest -q tests/test_main.py -k "session_interval_lines_txt"` (2 passed, 124 deselected).
-- Verified with `node --check static/host.js`.

@@ -1,33 +1,9 @@
 import AppKit
 
-struct SingleScreenHoverLogic {
-    let hiddenFrame: NSRect
-    let shownFrame: NSRect
-    let edgeTriggerDistance: CGFloat
-    let onBarInset: CGFloat
-
-    var edgeTriggerFrame: NSRect {
-        NSRect(
-            x: hiddenFrame.minX - edgeTriggerDistance,
-            y: shownFrame.minY,
-            width: edgeTriggerDistance,
-            height: shownFrame.height
-        )
-    }
-
-    func shouldSlideIn(mouse: NSPoint) -> Bool {
-        if edgeTriggerFrame.contains(mouse) {
-            return true
-        }
-        return shownFrame.insetBy(dx: -onBarInset, dy: -onBarInset).contains(mouse)
-    }
-}
-
 /// Floating bar of round emoji buttons — always on top, clickable.
 /// Multi-screen: centered at bottom of target screen, fades on hover.
 /// Single-screen: vertical stack at right edge (20% from bottom), slides in on hover.
 class ButtonBar: NSPanel {
-    static let singleScreenAutoHideDelay: TimeInterval = 1.0
 
     struct ButtonDef {
         let label: String
@@ -60,7 +36,6 @@ class ButtonBar: NSPanel {
     private var shownFrame: NSRect = .zero
     private var isSlideIn: Bool = false
     private let edgeTriggerDistance: CGFloat = 80
-    private let onBarInset: CGFloat = 20
 
     init(buttons: [ButtonDef], screen: NSScreen, singleScreen: Bool) {
         self.isSingleScreen = singleScreen
@@ -167,35 +142,31 @@ class ButtonBar: NSPanel {
 
     private func checkMouseForEdge() {
         let mouse = NSEvent.mouseLocation
-        let logic = SingleScreenHoverLogic(
-            hiddenFrame: hiddenFrame,
-            shownFrame: shownFrame,
-            edgeTriggerDistance: edgeTriggerDistance,
-            onBarInset: onBarInset
-        )
-        if logic.shouldSlideIn(mouse: mouse) {
+        let nearEdge = mouse.x >= hiddenFrame.minX - edgeTriggerDistance
+        let onBar = shownFrame.insetBy(dx: -20, dy: -20).contains(mouse)
+
+        if nearEdge || onBar {
             slideIn()
         } else if isSlideIn {
-            scheduleSlideOut(after: ButtonBar.singleScreenAutoHideDelay)
+            scheduleSlideOut()
         }
     }
 
     private func slideIn() {
-        guard !isSlideIn else { return }
         slideTimer?.invalidate()
         slideTimer = nil
+        guard !isSlideIn else { return }
         isSlideIn = true
         NSAnimationContext.runAnimationGroup { ctx in
             ctx.duration = 0.1
             self.animator().setFrame(shownFrame, display: true)
             self.animator().alphaValue = hoverOpacity
         }
-        scheduleSlideOut(after: ButtonBar.singleScreenAutoHideDelay)
     }
 
-    private func scheduleSlideOut(after delay: TimeInterval) {
+    private func scheduleSlideOut() {
         guard slideTimer == nil else { return }
-        slideTimer = Timer.scheduledTimer(withTimeInterval: delay, repeats: false) { [weak self] _ in
+        slideTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: false) { [weak self] _ in
             self?.slideOut()
             self?.slideTimer = nil
         }

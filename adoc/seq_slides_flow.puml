@@ -1,55 +1,72 @@
 @startuml seq_slides_flow
-title Slides Flow (Current Code, C2)
+title Slides Catalog Flow - Participant View and Host Upload
 
-actor "Trainer" as Trainer
-database "PPTX Sources\n(PPTX_WATCH_DIR or PPTX_CATALOG_FILE)" as PptxSources
-participant "Slides Daemon\n(slides_daemon.py)" as Daemon
-database "Published PDFs\n(PPTX_PUBLISH_DIR=materials/slides)" as MaterialsSlides
-participant "Workshop Backend\n(FastAPI)" as Backend
-participant "Participant UI\n(static/participant.js)" as PaxUI
-actor "Participant" as Pax
+actor       "Host" as Host
+participant "Host UI\n(host.js)" as HostUI
+participant "Backend\n(FastAPI)" as Backend
+participant "Slides Router\n(routers/slides.py)" as Slides
+participant "Uploaded Store\n(.context/uploaded-slides)" as UploadStore
+participant "Local Materials\n(materials/slides)" as LocalStore
+participant "Daemon State\n(state.slides/slides_current)" as DaemonState
+participant "Participant UI\n(participant.js)" as PaxUI
+actor       "Participant" as Pax
 
-== Daemon Publish Cycle ==
+== Optional Bootstrap on Production (host-only) ==
 
-Trainer -> PptxSources : Update .pptx
-Daemon -> PptxSources : Poll tracked sources
-Daemon -> Daemon : Convert changed .pptx -> PDF
-Daemon -> MaterialsSlides : Copy PDF to publish_dir
-Daemon -> Backend : POST /api/slides/current\n{url, slug, source_file}
-Daemon -> Backend : POST /api/quiz-status\n{status, message, slides:[...]}
+Host -> HostUI : Select PDF file
+HostUI -> Backend : POST /api/slides/upload (multipart)
+Backend -> Slides : upload_slide_pdf(file, slug?, name?)
+Slides -> UploadStore : write <slug>.pdf + <slug>.json
+Slides --> HostUI : 200 {ok:true, slide:{slug,url,name}}
 
 note right of Backend
-  /api/quiz-status updates state.slides
-  /api/slides/current updates state.slides_current
+  /api/slides/upload is protected
+  by host auth (require_host_auth)
 end note
 
-== Participant Slides View ==
+== Participant Opens Slides Modal ==
 
-Pax -> PaxUI : Open Slides modal
-PaxUI -> Backend : GET /api/slides (no-store)
-Backend -> MaterialsSlides : Build local index of PDFs
-Backend -> Backend : Merge (priority order):\n1) local_materials\n2) state.slides\n+ append slides_current if present
-Backend --> PaxUI : {slides:[name,slug,url,updated_at,...]}
+Pax -> PaxUI : Click "Slides"
+PaxUI -> Backend : GET /api/slides
+Backend -> Slides : get_slides()
 
-alt slides empty
-  PaxUI -> Pax : Show "No slides published yet"
-else slides available
-  PaxUI -> Pax : Populate combo box
-  PaxUI -> Backend : GET /api/slides/file/{slug}\n(for local_materials entries)
-  Backend -> MaterialsSlides : Resolve slug -> file path
-  MaterialsSlides --> Backend : PDF bytes
-  Backend --> PaxUI : application/pdf
-  PaxUI -> Pax : Render PDF.js preview
+par Gather source A
+  Slides -> UploadStore : index uploaded PDFs
+  UploadStore --> Slides : uploaded_slides[]
+else Gather source B
+  Slides -> LocalStore : scan materials/slides
+  LocalStore --> Slides : local_slides[]
+else Gather source C
+  Slides -> DaemonState : read state.slides + slides_current
+  DaemonState --> Slides : state_slides[]
 end
 
-loop every 30s while modal open
-  PaxUI -> Backend : GET /api/slides (no-store)
-  Backend --> PaxUI : refreshed merged catalog
+Slides -> Slides : _merge_slide_sources(uploaded, local, state)
+Slides --> PaxUI : 200 {slides:[...]}
+
+alt slides list is empty
+  PaxUI -> Pax : show "No slides published yet"
+else slides list has entries
+  PaxUI -> Pax : fill combo box with slide names
+  PaxUI -> Backend : GET /api/slides/file/{slug}
+  Backend -> Slides : get_slide_file(slug)
+  Slides -> UploadStore : lookup slug
+  Slides -> LocalStore : fallback lookup slug
+  Slides --> PaxUI : PDF bytes (application/pdf)
+  PaxUI -> Pax : render selected PDF
 end
 
-note over PaxUI, Backend
-  Catalog is global for the whole session.
-  No filtering by participant UUID.
+== Refresh Loop While Modal Is Open ==
+
+loop every SLIDES_REFRESH_MS
+  PaxUI -> Backend : GET /api/slides (cache: no-store)
+  Backend --> PaxUI : updated catalog
+  PaxUI -> PaxUI : keep selected slug if still present
+end
+
+note over PaxUI, Slides
+  Slide catalog is global for the session.
+  It is NOT filtered by participant UUID.
 end note
 
 @enduml
