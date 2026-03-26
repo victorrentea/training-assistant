@@ -46,6 +46,10 @@
     </div>
     <div id="content"></div>
   </div>
+  <aside id="slides-dock" class="slides-dock" aria-label="Available slides">
+    <div class="slides-dock-head">📑 Slides</div>
+    <div id="slides-list" class="slides-list" aria-label="Available slides"></div>
+  </aside>
 
 <div id="notes-overlay" class="summary-overlay" onclick="closeNotesModal()">
   <div class="summary-dialog" onclick="event.stopPropagation()">
@@ -77,32 +81,25 @@
   </div>
 </div>
 
-<div id="slides-overlay" class="summary-overlay" onclick="closeSlidesModal()">
-  <div class="summary-dialog slides-dialog" onclick="event.stopPropagation()">
-    <div class="slides-layout">
-      <div class="slides-viewer-area">
-        <div class="slides-meta-inline">
-          <span id="slides-page-inline" class="slides-page-inline"></span>
-        </div>
-        <div id="slides-empty" class="slides-empty" style="display:none;">No slides published yet.</div>
-        <div id="slides-error" class="slides-error" style="display:none;"></div>
-        <div id="slides-viewer-shell" class="slides-viewer-shell" style="display:none;">
-          <div id="slides-loading" class="slides-loading" style="display:none;">
-            <div id="slides-loading-label" class="slides-loading-label">Downloading slide...</div>
-            <div class="slides-progress-track" role="progressbar" aria-label="Slide download progress">
-              <div id="slides-progress-fill" class="slides-progress-fill"></div>
-            </div>
-          </div>
-          <div id="slides-pdf-container" class="pdfViewerContainer">
-            <div id="slides-pdf-viewer" class="pdfViewer"></div>
-          </div>
-        </div>
+<div id="slides-overlay" class="slides-preview-overlay" onclick="closeSlidesModal()">
+  <div class="slides-preview-shell" onclick="event.stopPropagation()">
+    <button class="slides-preview-close" onclick="closeSlidesModal()" aria-label="Close slides preview">✕</button>
+    <div class="slides-viewer-area">
+      <div class="slides-meta-inline">
+        <span id="slides-page-inline" class="slides-page-inline"></span>
       </div>
-      <div class="slides-sidebar">
-        <div class="slides-sidebar-head">
-          <button class="summary-close" onclick="closeSlidesModal()">✕</button>
+      <div id="slides-empty" class="slides-empty" style="display:none;">No slides published yet.</div>
+      <div id="slides-error" class="slides-error" style="display:none;"></div>
+      <div id="slides-viewer-shell" class="slides-viewer-shell" style="display:none;">
+        <div id="slides-loading" class="slides-loading" style="display:none;">
+          <div id="slides-loading-label" class="slides-loading-label">Downloading slide...</div>
+          <div class="slides-progress-track" role="progressbar" aria-label="Slide download progress">
+            <div id="slides-progress-fill" class="slides-progress-fill"></div>
+          </div>
         </div>
-        <div id="slides-list" class="slides-list" aria-label="Available slides"></div>
+        <div id="slides-pdf-container" class="pdfViewerContainer">
+          <div id="slides-pdf-viewer" class="pdfViewer"></div>
+        </div>
       </div>
     </div>
   </div>
