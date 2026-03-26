@@ -787,13 +787,13 @@
     const secRaw = Math.max(1, Math.floor((Date.now() - dt.getTime()) / 1000));
     if (secRaw < 60) {
       const sec = Math.max(15, Math.ceil(secRaw / 15) * 15);
-      return `${sec}s`;
+      return `${sec}s ago`;
     }
-    if (secRaw < 3600) return `${Math.ceil(secRaw / 60)}m`;
-    if (secRaw < 86400) return `${Math.ceil(secRaw / 3600)}h`;
+    if (secRaw < 3600) return `${Math.ceil(secRaw / 60)}m ago`;
+    if (secRaw < 86400) return `${Math.ceil(secRaw / 3600)}h ago`;
     const days = Math.ceil(secRaw / 86400);
-    if (days < 7) return `${days}d`;
-    if (days < 45) return `${Math.ceil(days / 7)}w`;
+    if (days < 7) return `${days}d ago`;
+    if (days < 45) return `${Math.ceil(days / 7)}w ago`;
     const nowYear = new Date().getFullYear();
     if (dt.getFullYear() !== nowYear) return String(dt.getFullYear());
     return dt.toLocaleString(undefined, { month: 'short' });
@@ -1110,11 +1110,13 @@
       title.className = 'slides-list-title';
       title.textContent = _buildSlideOptionLabel(slide);
       openBtn.appendChild(title);
-      const updated = _formatSlideUpdatedCompact(slide.updated_at);
+      const updated = _formatSlideUpdatedCompact(
+        slide.updated_at || slide.last_modified || slide.lastModified || slide.updatedAt
+      );
       if (updated) {
         const badge = document.createElement('span');
         badge.className = 'slides-list-updated';
-        badge.textContent = `${updated} ago`;
+        badge.textContent = updated;
         openBtn.appendChild(badge);
       }
       openBtn.addEventListener('click', async () => {
