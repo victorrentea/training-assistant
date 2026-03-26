@@ -1,7 +1,7 @@
 {
-  "sha": "168cca0e2ef2d705835950b475f076f0c2039952",
+  "sha": "50a70fdb50db157a7e863344d20968e8724e1a33",
   "timestamp": "2026-03-26 08:53",
   "changelog": [
-    "refactor: make transcript query ISO-only"
+    "docs: expand transcript_query usage in CLAUDE.md"
   ]
 }
