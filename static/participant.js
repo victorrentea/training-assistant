@@ -104,8 +104,6 @@
   let slidesPdfEventBus = null;
   let slidesPdfDoc = null;
   let slidesPdfLoadingTask = null;
-  let slidesNativeFrame = null;
-  let slidesNativeHashPollTimer = null;
   let slidesAutoScrollTimer = null;
 
   function escHtml(s) {
@@ -650,7 +648,7 @@
   function _markSelectedSlideInList() {
     const list = document.getElementById('slides-list');
     if (!list) return;
-    const isPdfDisplayed = Boolean(slidesPdfDoc || slidesNativeFrame);
+    const isPdfDisplayed = Boolean(slidesPdfDoc);
     for (const btn of Array.from(list.querySelectorAll('.slides-list-item'))) {
       const active = isPdfDisplayed && btn.getAttribute('data-slide-id') === slidesSelectedId;
       btn.classList.toggle('active', active);
@@ -705,10 +703,11 @@
       return { pdfjsLib: slidesPdfLib, pdfjsViewer: slidesPdfViewerModule };
     }
     if (!slidesPdfModulesPromise) {
-      slidesPdfModulesPromise = Promise.all([
-        import('https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.149/build/pdf.min.mjs'),
-        import('https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.149/web/pdf_viewer.min.mjs'),
-      ]).then(([pdfjsLib, pdfjsViewer]) => {
+      slidesPdfModulesPromise = import('https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.149/build/pdf.min.mjs')
+        .then(async (pdfjsLib) => {
+          // pdf_viewer.min.mjs expects pdfjsLib on globalThis.
+          globalThis.pdfjsLib = pdfjsLib;
+          const pdfjsViewer = await import('https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.149/web/pdf_viewer.min.mjs');
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.149/build/pdf.worker.min.mjs';
         slidesPdfLib = pdfjsLib;
         slidesPdfViewerModule = pdfjsViewer;
@@ -779,19 +778,8 @@
       try { await slidesPdfDoc.destroy(); } catch (_) {}
       slidesPdfDoc = null;
     }
-    if (slidesNativeFrame) {
-      slidesNativeFrame.src = 'about:blank';
-      slidesNativeFrame.remove();
-      slidesNativeFrame = null;
-    }
-    if (slidesNativeHashPollTimer) {
-      clearInterval(slidesNativeHashPollTimer);
-      slidesNativeHashPollTimer = null;
-    }
     const viewer = document.getElementById('slides-pdf-viewer');
     if (viewer) viewer.innerHTML = '';
-    const container = document.getElementById('slides-pdf-container');
-    if (container) container.classList.remove('slides-iframe-mode');
   }
 
   function _scheduleTestAutoScroll(slide) {
@@ -812,62 +800,9 @@
         } catch (_) {}
         slidesPdfViewer.currentPageNumber = targetPage;
         _setStoredSlidePage(slidesSelectedSlug, targetPage);
-      } else if (slidesNativeFrame) {
-        // Try in-frame hash navigation first to avoid visible reload/flicker.
-        try {
-          const win = slidesNativeFrame.contentWindow;
-          if (win?.location) {
-            win.location.hash = `page=${requestedPage}`;
-          }
-        } catch (_) {
-          const raw = String(slidesNativeFrame.src || '');
-          if (raw) {
-            const base = raw.replace(/#page=\d+$/, '');
-            slidesNativeFrame.src = `${base}#page=${requestedPage}`;
-          }
-        }
       }
       _renderSlidesMeta(slide);
     }, SLIDES_TEST_AUTO_SCROLL_DELAY_MS);
-  }
-
-  function _showSlideInNativeFrame(url, slug) {
-    const container = document.getElementById('slides-pdf-container');
-    const viewer = document.getElementById('slides-pdf-viewer');
-    if (!container || !viewer) return false;
-    viewer.innerHTML = '';
-    if (!slidesNativeFrame) {
-      slidesNativeFrame = document.createElement('iframe');
-      slidesNativeFrame.className = 'slides-native-frame';
-      slidesNativeFrame.setAttribute('title', 'Slides preview');
-      slidesNativeFrame.setAttribute('loading', 'eager');
-    }
-    if (slidesNativeHashPollTimer) {
-      clearInterval(slidesNativeHashPollTimer);
-      slidesNativeHashPollTimer = null;
-    }
-    const storedPage = Math.max(1, Number(_getStoredSlidePage(slug)));
-    const joiner = url.includes('?') ? '&' : '?';
-    slidesNativeFrame.src = `${url}${joiner}inline=1#page=${storedPage}`;
-    container.classList.add('slides-iframe-mode');
-    container.appendChild(slidesNativeFrame);
-    slidesNativeHashPollTimer = setInterval(() => {
-      if (!slidesNativeFrame || !slidesSelectedSlug) return;
-      try {
-        const rawHash = String(slidesNativeFrame.contentWindow?.location?.hash || '');
-        const match = rawHash.match(/(?:^|[?#&])page=(\d+)/i);
-        if (!match) return;
-        const page = Math.max(1, Number(match[1]));
-        _setStoredSlidePage(slidesSelectedSlug, page);
-        _setStoredSlideView(slidesSelectedSlug, {
-          page,
-          scrollTop: Number(container.scrollTop || 0),
-        });
-      } catch (_) {
-        // Ignore cross-origin/native viewer access failures.
-      }
-    }, 1200);
-    return true;
   }
 
   function _setSlidesLoading({ visible = false, loaded = 0, total = 0, label = '' } = {}) {
@@ -1046,7 +981,11 @@
         const saved = _getStoredSlideView(slide.slug);
         const maxPages = Math.max(1, Number(slidesPdfDoc.numPages || 1));
         const targetPage = Math.min(saved?.page || _getStoredSlidePage(slide.slug), maxPages);
-        slidesPdfViewer.currentPageNumber = targetPage;
+        try {
+          slidesPdfViewer.currentPageNumber = targetPage;
+        } catch (_) {
+          try { slidesPdfLinkService?.goToPage(targetPage); } catch (_) {}
+        }
         const container = document.getElementById('slides-pdf-container');
         if (container && saved && Number.isFinite(saved.scrollTop)) {
           requestAnimationFrame(() => { container.scrollTop = saved.scrollTop; });
@@ -1086,7 +1025,11 @@
         const saved = _getStoredSlideView(slide.slug);
         const maxPages = Math.max(1, Number(doc.numPages || 1));
         const savedPage = Math.min(saved?.page || _getStoredSlidePage(slide.slug), maxPages);
-        slidesPdfViewer.currentPageNumber = savedPage;
+        try {
+          slidesPdfViewer.currentPageNumber = savedPage;
+        } catch (_) {
+          try { slidesPdfLinkService?.goToPage(savedPage); } catch (_) {}
+        }
         _setStoredSlidePage(slide.slug, savedPage);
         if (saved && Number.isFinite(saved.scrollTop)) {
           const container = document.getElementById('slides-pdf-container');
@@ -1099,24 +1042,15 @@
         _setSlidesLoading({ visible: false });
         _scheduleTestAutoScroll(slide);
       } catch (err) {
-        const fallbackOk = _showSlideInNativeFrame(slide.url, slide.slug);
-        if (!fallbackOk) {
-          slidesSelectedSlug = null;
-          slidesSelectedId = null;
-          _setStoredSelectedSlideId(null);
-          slidesLastFingerprint = null;
-          _setSlidesError('Failed to load this PDF. Try download.');
-          _setSlidesDownload('', true);
-          _setSlidesLoading({ visible: false });
-          _renderSlidesMeta(null);
-          return;
-        }
-        slidesLastFingerprint = fingerprint;
-        _setSlidesDownload(slide.url, false);
-        _renderSlidesMeta({ ...slide, updated_at: effectiveUpdatedAt });
-        _setSlidesError('');
+        console.error('slides_pdfjs_load_failed', err);
+        slidesSelectedSlug = slide.slug;
+        slidesSelectedId = slide._id;
+        _setStoredSelectedSlideId(slidesSelectedId);
+        slidesLastFingerprint = null;
+        _setSlidesDownload('', true);
+        _renderSlidesMeta(null);
+        _setSlidesError('Failed to load this PDF.js viewer. Try download.');
         _setSlidesLoading({ visible: false });
-        _scheduleTestAutoScroll(slide);
       }
     } finally {
       if (withUiBlocker) _setSlidesUiBlocker(false);

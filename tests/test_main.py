@@ -985,6 +985,13 @@ def test_location_prompt_tooltip_renders_below_trigger():
     assert "border-bottom: 6px solid var(--surface2);" in css
 
 
+def test_participant_slides_uses_pdfjs_without_native_iframe_fallback():
+    from pathlib import Path
+    js = (Path(__file__).parent.parent / "static" / "participant.js").read_text(encoding="utf-8")
+    assert "slidesNativeFrame" not in js
+    assert "_showSlideInNativeFrame" not in js
+
+
 def test_quiz_status_updates_slides_and_api_returns_normalized_data(monkeypatch, tmp_path):
     state.reset()
     monkeypatch.setenv("TRAINING_ASSISTANT_SLIDES_DIR", str(tmp_path))
