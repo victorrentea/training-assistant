@@ -1038,12 +1038,15 @@ h1 { display: none; }
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: transform .1s, background .15s;
+  transition: transform .1s, background .15s, border-color .15s;
   padding: 0;
   line-height: 1;
   pointer-events: auto;
 }
-.emoji-btn:hover { background: rgba(20, 20, 35, 0.97); }
+.emoji-btn:hover {
+  background: rgba(20, 20, 35, 0.97);
+  border-color: var(--accent);
+}
 .emoji-btn:active { transform: scale(0.85); }
 
 /* Conference mode emoji grid */
