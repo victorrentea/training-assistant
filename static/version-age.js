@@ -27,15 +27,6 @@
     return 'built at ' + deployDate.getDate() + ' ' + months[deployDate.getMonth()] + ' ' + hh + ':' + mm;
   }
 
-  function formatWorkHours(totalHoursRaw) {
-    const totalHours = Number(totalHoursRaw);
-    if (!Number.isFinite(totalHours) || totalHours <= 0) return '';
-    const roundedHours = Math.floor(totalHours);
-    const days = Math.floor(roundedHours / 24);
-    const hours = roundedHours % 24;
-    return days + 'd + ' + hours + 'h';
-  }
-
   function renderDeployAge(tagId) {
     const el = document.getElementById(tagId || 'version-tag');
     if (!el) return;
@@ -46,8 +37,8 @@
       return;
     }
 
-    const workHours = formatWorkHours(window.WORK_HOURS);
-    const workSuffix = workHours ? ' | total: ' + workHours + ' with Santa \uD83C\uDF85' : '';
+    const workHours = window.WORK_HOURS;
+    const workSuffix = workHours ? ' | total: ' + workHours + 'h with Santa \uD83C\uDF85' : '';
     const builtAt = ' | ' + formatBuiltAt(parsed);
 
     function update() {
@@ -62,3 +53,4 @@
 
   window.renderDeployAge = renderDeployAge;
 })();
+

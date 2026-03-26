@@ -1,4 +1,5 @@
 import base64
+import json
 import os
 
 from fastapi.testclient import TestClient
@@ -62,6 +63,42 @@ def test_slides_current_requires_host_auth_for_write():
 
     resp = client.delete("/api/slides/current")
     assert resp.status_code in (401, 403)
+
+
+def test_slides_upload_requires_host_auth(monkeypatch, tmp_path):
+    monkeypatch.setenv("TRAINING_ASSISTANT_UPLOADED_SLIDES_DIR", str(tmp_path / "uploaded"))
+    client = TestClient(app)
+    resp = client.post(
+        "/api/slides/upload",
+        data={"slug": "demo", "name": "Demo"},
+        files={"file": ("demo.pdf", b"%PDF-1.4\n%test\n", "application/pdf")},
+    )
+    assert resp.status_code in (401, 403)
+
+
+def test_slides_upload_is_listed_and_served(monkeypatch, tmp_path):
+    monkeypatch.setenv("TRAINING_ASSISTANT_UPLOADED_SLIDES_DIR", str(tmp_path / "uploaded"))
+    client = TestClient(app, headers=_HOST_AUTH_HEADERS)
+
+    upload = client.post(
+        "/api/slides/upload",
+        data={"slug": "demo-deck", "name": "Demo Deck"},
+        files={"file": ("demo.pdf", b"%PDF-1.4\n%test\n", "application/pdf")},
+    )
+    assert upload.status_code == 200
+    body = upload.json()
+    assert body["ok"] is True
+    assert body["slide"]["slug"] == "demo-deck"
+
+    public = TestClient(app)
+    resp = public.get("/api/slides")
+    assert resp.status_code == 200
+    slides = resp.json()["slides"]
+    assert any(s["slug"] == "demo-deck" and s["name"] == "Demo Deck" for s in slides)
+
+    file_resp = public.get("/api/slides/file/demo-deck")
+    assert file_resp.status_code == 200
+    assert file_resp.content.startswith(b"%PDF-1.4")
 
 
 def test_api_slides_lists_local_materials_and_serves_pdf(monkeypatch, tmp_path):
@@ -132,3 +169,39 @@ def test_api_slides_ignores_non_displayable_names(monkeypatch, tmp_path):
     assert resp.status_code == 200
     slides = resp.json()["slides"]
     assert [s["name"] for s in slides] == ["Deck 1"]
+
+
+def test_slides_catalog_map_requires_host_auth():
+    client = TestClient(app)
+    resp = client.get("/api/slides/catalog-map")
+    assert resp.status_code in (401, 403)
+
+
+def test_slides_catalog_map_returns_pdf_to_pptx_entries(monkeypatch, tmp_path):
+    source_ok = tmp_path / "Clean Code.pptx"
+    source_ok.write_bytes(b"pptx")
+    source_missing = tmp_path / "Missing.pptx"
+    catalog = tmp_path / "catalog.json"
+    catalog.write_text(json.dumps({
+        "slides": [
+            {"source": str(source_ok), "target_pdf": "Clean Code.pdf"},
+            {"source": str(source_missing), "target_pdf": "Missing.pdf"},
+        ]
+    }), encoding="utf-8")
+    monkeypatch.setenv("PPTX_CATALOG_FILE", str(catalog))
+
+    client = TestClient(app, headers=_HOST_AUTH_HEADERS)
+    resp = client.get("/api/slides/catalog-map")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["catalog_file"] == str(catalog)
+    entries = body["entries"]
+    assert len(entries) == 2
+
+    clean = next(e for e in entries if e["pdf"] == "Clean Code.pdf")
+    missing = next(e for e in entries if e["pdf"] == "Missing.pdf")
+    assert clean["pptx_path"] == str(source_ok)
+    assert clean["exists"] is True
+    assert clean["updated_at"]
+    assert missing["pptx_path"] == str(source_missing)
+    assert missing["exists"] is False
