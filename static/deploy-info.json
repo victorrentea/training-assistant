@@ -1,7 +1,7 @@
 {
-  "sha": "4fea6789e2def4ccc65520d447fe0b047822ffa3",
+  "sha": "7a25c3075c043d736f4899e9949c67f4d1dff014",
   "timestamp": "2026-03-26 19:20",
   "changelog": [
-    "chore: enforce python method length guard"
+    "participant slides hide outer scrollbar in iframe mode"
   ]
 }
