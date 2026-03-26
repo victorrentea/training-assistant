@@ -1,7 +1,7 @@
 {
-  "sha": "62327bec84c45d75ba2f0ecf0bfade7d1b13fc85",
+  "sha": "8ba9ee84bb2a3417fdfb52dbd623060dba5f02f3",
   "timestamp": "2026-03-26 21:22",
   "changelog": [
-    "Use PDF.js-only slides and verify offset restore"
+    "fix: center waiting screen on full viewport"
   ]
 }
