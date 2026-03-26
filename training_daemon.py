@@ -21,6 +21,7 @@ import os
 import re
 import signal
 import sys
+import threading
 import time
 import ssl
 import urllib.error
@@ -55,6 +56,8 @@ from daemon.session_transcript import (
 from daemon.transcript_query import load_normalized_entries
 from daemon import log
 import slides_daemon
+from websockets.sync.client import connect as ws_connect
+from websockets.exceptions import ConnectionClosed
 
 _LOCK_FILE = Path("/tmp/training_daemon.lock")
 _HEARTBEAT_INTERVAL = 1.0  # seconds between heartbeat writes
@@ -83,6 +86,7 @@ _SLIDES_MANIFEST_ERRORS: set[str] = set()
 _BACKUP_DIR = Path.home() / ".training-assistant"
 _BACKUP_FILE = _BACKUP_DIR / "state-backup.json"
 _DEFAULT_MATERIALS_FOLDER = Path("/Users/victorrentea/Documents/workshop-materials")
+_SLIDES_ON_DEMAND_WS_RECONNECT_SECONDS = 3.0
 
 
 def _resolve_materials_folder() -> Path | None:
@@ -609,6 +613,56 @@ class TranscriptNormalizerRunner:
             self._next_run_at = now + self.interval_seconds
 
 
+_SLUG_RE = re.compile(r"[^a-z0-9]+")
+
+
+def _slugify(value: str) -> str:
+    slug = _SLUG_RE.sub("-", value.strip().lower()).strip("-")
+    return slug or "slide"
+
+
+def _post_material_upsert_file(main_config, relative_path: str, file_path: Path) -> None:
+    file_bytes = file_path.read_bytes()
+    boundary = f"----materials-sync-{uuid.uuid4().hex}"
+    payload = []
+    payload.append(f"--{boundary}\r\n".encode("utf-8"))
+    payload.append(
+        f'Content-Disposition: form-data; name="relative_path"\r\n\r\n{relative_path}\r\n'.encode("utf-8")
+    )
+    payload.append(f"--{boundary}\r\n".encode("utf-8"))
+    payload.append(
+        (
+            f'Content-Disposition: form-data; name="file"; filename="{file_path.name}"\r\n'
+            "Content-Type: application/octet-stream\r\n\r\n"
+        ).encode("utf-8")
+    )
+    payload.append(file_bytes)
+    payload.append(b"\r\n")
+    payload.append(f"--{boundary}--\r\n".encode("utf-8"))
+    body = b"".join(payload)
+
+    token = base64.b64encode(
+        f"{main_config.host_username}:{main_config.host_password}".encode("utf-8")
+    ).decode("ascii")
+    req = urllib.request.Request(
+        f"{main_config.server_url}/api/materials/upsert",
+        data=body,
+        method="POST",
+        headers={
+            "Authorization": f"Basic {token}",
+            "Content-Type": f"multipart/form-data; boundary={boundary}",
+        },
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=60, context=_ssl_context()):
+            pass
+    except urllib.error.HTTPError as exc:
+        details = exc.read().decode("utf-8", errors="replace")
+        raise RuntimeError(f"materials upsert failed ({exc.code}): {details}") from exc
+    except urllib.error.URLError as exc:
+        raise RuntimeError(f"materials upsert failed: {exc}") from exc
+
+
 class SlidesPollingRunner:
     """Run PPTX change detection/export from inside the main training daemon."""
 
@@ -747,45 +801,7 @@ class MaterialsMirrorRunner:
         return entries
 
     def _post_material_upsert(self, relative_path: str, file_path: Path) -> None:
-        file_bytes = file_path.read_bytes()
-        boundary = f"----materials-sync-{uuid.uuid4().hex}"
-        payload = []
-        payload.append(f"--{boundary}\r\n".encode("utf-8"))
-        payload.append(
-            f'Content-Disposition: form-data; name="relative_path"\r\n\r\n{relative_path}\r\n'.encode("utf-8")
-        )
-        payload.append(f"--{boundary}\r\n".encode("utf-8"))
-        payload.append(
-            (
-                f'Content-Disposition: form-data; name="file"; filename="{file_path.name}"\r\n'
-                "Content-Type: application/octet-stream\r\n\r\n"
-            ).encode("utf-8")
-        )
-        payload.append(file_bytes)
-        payload.append(b"\r\n")
-        payload.append(f"--{boundary}--\r\n".encode("utf-8"))
-        body = b"".join(payload)
-
-        token = base64.b64encode(
-            f"{self.main_config.host_username}:{self.main_config.host_password}".encode("utf-8")
-        ).decode("ascii")
-        req = urllib.request.Request(
-            f"{self.main_config.server_url}/api/materials/upsert",
-            data=body,
-            method="POST",
-            headers={
-                "Authorization": f"Basic {token}",
-                "Content-Type": f"multipart/form-data; boundary={boundary}",
-            },
-        )
-        try:
-            with urllib.request.urlopen(req, timeout=60, context=_ssl_context()):
-                pass
-        except urllib.error.HTTPError as exc:
-            details = exc.read().decode("utf-8", errors="replace")
-            raise RuntimeError(f"materials upsert failed ({exc.code}): {details}") from exc
-        except urllib.error.URLError as exc:
-            raise RuntimeError(f"materials upsert failed: {exc}") from exc
+        _post_material_upsert_file(self.main_config, relative_path, file_path)
 
     def _post_material_delete(self, relative_path: str) -> None:
         _post_json(
@@ -840,6 +856,195 @@ class MaterialsMirrorRunner:
             self._retry_after = now + self.error_backoff_seconds
         finally:
             self._next_run_at = now + self.poll_interval_seconds
+
+
+class SlidesOnDemandWsRunner:
+    """Serve backend on-demand slide upload requests over a persistent WebSocket."""
+
+    def __init__(self, main_config):
+        self.main_config = main_config
+        self.enabled = False
+        self._stop = threading.Event()
+        self._thread: threading.Thread | None = None
+        self._slug_map: dict[str, tuple[Path, str]] = {}
+        self._materials_folder: Path | None = None
+        self._slides_folder: Path | None = None
+
+    def start(self) -> None:
+        enabled_raw = os.environ.get("SLIDES_ON_DEMAND_UPLOAD_ENABLED", "1").strip().lower()
+        if enabled_raw in {"0", "false", "no", "off"}:
+            log.info("slides", "On-demand WS disabled by SLIDES_ON_DEMAND_UPLOAD_ENABLED")
+            self.enabled = False
+            return
+
+        folder = _resolve_materials_folder()
+        if folder is None:
+            log.info("slides", "On-demand WS disabled: materials folder not found")
+            self.enabled = False
+            return
+        slides_folder = folder / "slides"
+        if not slides_folder.exists() or not slides_folder.is_dir():
+            log.info("slides", f"On-demand WS disabled: slides folder missing: {slides_folder}")
+            self.enabled = False
+            return
+
+        self._materials_folder = folder
+        self._slides_folder = slides_folder
+        self._rebuild_slug_map()
+        self.enabled = True
+        self._thread = threading.Thread(target=self._run_loop, daemon=True)
+        self._thread.start()
+
+    def stop(self) -> None:
+        if not self.enabled:
+            return
+        self._stop.set()
+        if self._thread and self._thread.is_alive():
+            self._thread.join(timeout=2.0)
+
+    def _catalog_path(self) -> Path:
+        configured = os.environ.get("PPTX_CATALOG_FILE", "").strip()
+        if configured:
+            return Path(configured).expanduser()
+        return Path(__file__).parent / "daemon" / "materials_slides_catalog.json"
+
+    def _rebuild_slug_map(self) -> None:
+        self._slug_map = {}
+        slides_folder = self._slides_folder
+        if slides_folder is None:
+            return
+
+        catalog_path = self._catalog_path()
+        if catalog_path.exists():
+            try:
+                raw = json.loads(catalog_path.read_text(encoding="utf-8"))
+                entries = raw.get("decks", []) if isinstance(raw, dict) else []
+                if isinstance(entries, list):
+                    for entry in entries:
+                        if not isinstance(entry, dict):
+                            continue
+                        target_pdf = str(entry.get("target_pdf") or "").strip()
+                        if not target_pdf:
+                            continue
+                        if not target_pdf.lower().endswith(".pdf"):
+                            target_pdf += ".pdf"
+                        explicit_slug = str(entry.get("slug") or "").strip().lower()
+                        slug = explicit_slug or _slugify(Path(target_pdf).stem)
+                        local_pdf = slides_folder / target_pdf
+                        if slug in self._slug_map:
+                            continue
+                        self._slug_map[slug] = (local_pdf, target_pdf)
+            except Exception as exc:
+                log.error("slides", f"On-demand catalog parse failed: {exc}")
+
+        for pdf in sorted(slides_folder.glob("*.pdf"), key=lambda p: p.name.lower()):
+            slug = _slugify(pdf.stem)
+            self._slug_map.setdefault(slug, (pdf, pdf.name))
+
+    def _ws_url(self) -> str:
+        base = self.main_config.server_url.rstrip("/")
+        if base.startswith("https://"):
+            base = "wss://" + base[len("https://"):]
+        elif base.startswith("http://"):
+            base = "ws://" + base[len("http://"):]
+        return f"{base}/ws/daemon"
+
+    def _auth_headers(self) -> dict[str, str]:
+        token = base64.b64encode(
+            f"{self.main_config.host_username}:{self.main_config.host_password}".encode("utf-8")
+        ).decode("ascii")
+        return {"Authorization": f"Basic {token}"}
+
+    def _send_result(self, ws, payload: dict) -> None:
+        try:
+            ws.send(json.dumps(payload))
+        except Exception as exc:
+            log.error("slides", f"slides_upload_result_send_failed: {exc}")
+
+    def _handle_request(self, ws, payload: dict) -> None:
+        if payload.get("type") != "slides_upload_request":
+            return
+        slug = str(payload.get("slug") or "").strip()
+        request_id = str(payload.get("request_id") or "").strip()
+        if not slug or not request_id:
+            return
+
+        self._rebuild_slug_map()
+        match = self._slug_map.get(slug)
+        if not match:
+            log.error("slides", f"slides_upload_failed slug={slug} reason=unknown_slug")
+            self._send_result(ws, {
+                "type": "slides_upload_result",
+                "request_id": request_id,
+                "slug": slug,
+                "status": "failed",
+                "error": "unknown slug",
+            })
+            return
+
+        local_pdf, target_name = match
+        if not local_pdf.exists() or not local_pdf.is_file():
+            log.error("slides", f"slides_upload_failed slug={slug} reason=missing_local_pdf path={local_pdf}")
+            self._send_result(ws, {
+                "type": "slides_upload_result",
+                "request_id": request_id,
+                "slug": slug,
+                "status": "failed",
+                "error": "local pdf missing",
+            })
+            return
+
+        relative_path = f"slides/{target_name}"
+        try:
+            _post_material_upsert_file(self.main_config, relative_path, local_pdf)
+            log.info("slides", f"slides_upload_upsert_ok slug={slug} path={relative_path}")
+            self._send_result(ws, {
+                "type": "slides_upload_result",
+                "request_id": request_id,
+                "slug": slug,
+                "status": "uploaded",
+                "relative_path": relative_path,
+                "size": local_pdf.stat().st_size,
+            })
+        except Exception as exc:
+            log.error("slides", f"slides_upload_failed slug={slug} err={exc}")
+            self._send_result(ws, {
+                "type": "slides_upload_result",
+                "request_id": request_id,
+                "slug": slug,
+                "status": "failed",
+                "error": str(exc),
+            })
+
+    def _run_loop(self) -> None:
+        ws_url = self._ws_url()
+        headers = self._auth_headers()
+        while not self._stop.is_set():
+            try:
+                with ws_connect(
+                    ws_url,
+                    additional_headers=headers,
+                    open_timeout=10,
+                    ping_interval=20,
+                    ping_timeout=20,
+                ) as ws:
+                    log.info("slides", f"slides_ws_connected to {ws_url}")
+                    while not self._stop.is_set():
+                        try:
+                            raw = ws.recv(timeout=1.0)
+                        except TimeoutError:
+                            continue
+                        except ConnectionClosed:
+                            break
+                        try:
+                            payload = json.loads(raw)
+                        except Exception:
+                            continue
+                        self._handle_request(ws, payload)
+            except Exception as exc:
+                if not self._stop.is_set():
+                    log.error("slides", f"slides_ws_connect_failed: {exc}")
+                    time.sleep(_SLIDES_ON_DEMAND_WS_RECONNECT_SECONDS)
 
 
 def _read_lock() -> tuple[int | None, float | None]:
@@ -1030,6 +1235,8 @@ def run() -> None:
     slides_runner.start()
     materials_mirror = MaterialsMirrorRunner(config)
     materials_mirror.start()
+    slides_on_demand_ws = SlidesOnDemandWsRunner(config)
+    slides_on_demand_ws.start()
 
     # Session state: the transcript text used to generate the current preview
     last_text: str | None = None
@@ -1070,645 +1277,648 @@ def run() -> None:
     # Trigger immediate save on first iteration if a session is already active
     _save_counter = _SAVE_INTERVAL if session_stack else 0
 
-    while True:
-        try:
+    try:
+        while True:
             # ── Heartbeat: update lock file so other instances know we're alive ──
-            now = time.monotonic()
-            if now - last_heartbeat_at >= _HEARTBEAT_INTERVAL:
-                _write_lock()
-                last_heartbeat_at = now
-
-            timestamp_appender.tick()
-            transcript_normalizer.tick()
-            slides_runner.tick()
-            materials_mirror.tick()
-
-            # ── Check for session management requests ──
             try:
-                session_req = _get_json(
-                    f"{config.server_url}/api/session/request",
-                    config.host_username, config.host_password,
-                )
-                action = session_req.get("action")
-                if action == "start":
-                    name = session_req["name"]
-                    folder = sessions_root / name
-                    folder.mkdir(parents=True, exist_ok=True)
-                    # Pause the current session while the nested one is active
-                    if session_stack:
-                        _pause_session(session_stack[-1], datetime.now(), reason="nested")
-                    new_session = {
-                        "name": name,
-                        "started_at": datetime.now().isoformat(),
-                        "ended_at": None,
-                    }
-                    session_stack.append(new_session)
-                    current_key_points, summary_watermark = _load_key_points(folder)
-                    _save_daemon_state(sessions_root, _stack_to_daemon_state(session_stack))
-                    notes_file = _find_notes_in_folder(folder)
-                    config = dc_replace(config, session_folder=folder, session_notes=notes_file)
-                    _sync_session_to_server(config, session_stack, current_key_points)
-                    transcript_state.reset()
-                    log.info("session", f"Started: {name}")
-
-                elif action == "end" and len(session_stack) > 1:
-                    ended = session_stack.pop()
-                    ended["ended_at"] = datetime.now().isoformat()
-                    ended_folder = sessions_root / ended["name"]
-                    _save_key_points(ended_folder, current_key_points, summary_watermark, _session_start_date(ended))
-                    # Restore parent session and close its nested pause
-                    parent = session_stack[-1]
-                    _resume_session(parent, datetime.now())
-                    parent_folder = sessions_root / parent["name"]
-                    current_key_points, summary_watermark = _load_key_points(parent_folder)
-                    _save_daemon_state(sessions_root, _stack_to_daemon_state(session_stack))
-                    notes_file = _find_notes_in_folder(parent_folder)
-                    config = dc_replace(config, session_folder=parent_folder, session_notes=notes_file)
-                    _sync_session_to_server(config, session_stack, current_key_points)
-                    transcript_state.reset()
-                    log.info("session", f"Ended: {ended['name']}, restored: {parent['name']}")
-
-                elif action == "rename":
-                    new_name = session_req["name"]
-                    if session_stack:
-                        old_name = session_stack[-1]["name"]
-                        new_folder = sessions_root / new_name
-                        # Load existing points from new folder FIRST (before overwriting)
-                        existing_pts, existing_wm = _load_key_points(new_folder) if new_folder.exists() else ([], 0)
-                        new_folder.mkdir(parents=True, exist_ok=True)
-                        if existing_pts:
-                            current_key_points, summary_watermark = existing_pts, existing_wm
-                        else:
-                            _save_key_points(new_folder, current_key_points, summary_watermark, _session_start_date(session_stack[-1]))
-                        session_stack[-1]["name"] = new_name
-                        _save_daemon_state(sessions_root, _stack_to_daemon_state(session_stack))
-                        notes_file = _find_notes_in_folder(new_folder)
-                        config = dc_replace(config, session_folder=new_folder, session_notes=notes_file)
-                        _sync_session_to_server(config, session_stack, current_key_points)
-                        log.info("session", f"Renamed: {old_name} → {new_name}")
-
-                elif action == "pause" and session_stack:
-                    _pause_session(session_stack[-1], datetime.now(), reason="explicit")
-                    _save_daemon_state(sessions_root, _stack_to_daemon_state(session_stack))
-                    _sync_session_to_server(config, session_stack, current_key_points)
-                    log.info("session", f"Paused: {session_stack[-1]['name']}")
-
-                elif action == "resume" and session_stack:
-                    _resume_session(session_stack[-1], datetime.now())
-                    _save_daemon_state(sessions_root, _stack_to_daemon_state(session_stack))
-                    _sync_session_to_server(config, session_stack, current_key_points)
-                    transcript_state.reset()
-                    log.info("session", f"Resumed: {session_stack[-1]['name']}")
-
-                elif action == "start_talk":
-                    _now = datetime.now()
-                    talk_name = f"{_now.strftime('%Y-%m-%d %H:%M')} talk"
-                    talk_folder = sessions_root / talk_name
-                    talk_folder.mkdir(parents=True, exist_ok=True)
-
-                    # Save current (main) session state immediately before switching
-                    current_folder = sessions_root / session_stack[-1]["name"] if session_stack else None
-                    if current_folder and current_folder.exists():
-                        try:
-                            snapshot = _get_json(
-                                f"{config.server_url}/api/session/snapshot",
-                                config.host_username, config.host_password,
-                            )
-                            _save_session_state(current_folder, snapshot)
-                        except Exception as e:
-                            log.error("daemon", f"START TALK: failed to save main snapshot: {e}")
-
-                    # Load talk's existing key points (if folder had prior data)
-                    talk_points, talk_wm = _load_key_points(talk_folder)
-
-                    # Load talk's existing session state
-                    talk_state = None
-                    talk_state_path = talk_folder / "session_state.json"
-                    if talk_state_path.exists():
-                        try:
-                            talk_state = json.loads(talk_state_path.read_text())
-                        except Exception:
-                            pass
-
-                    # Push new talk session onto stack
-                    session_stack.append({
-                        "name": talk_name,
-                        "started_at": _now.isoformat(),
-                        "status": "active",
-                    })
-                    current_key_points, summary_watermark = talk_points, talk_wm
-                    _save_daemon_state(sessions_root, _stack_to_daemon_state(session_stack))
-                    notes_file = _find_notes_in_folder(talk_folder)
-                    config = dc_replace(config, session_folder=talk_folder, session_notes=notes_file)
-
-                    # Sync to server: mark current participants as paused, restore talk state
-                    _post_json(
-                        f"{config.server_url}/api/session/sync",
-                        {
-                            **_stack_to_daemon_state(session_stack),
-                            "discussion_points": talk_points,
-                            "session_state": talk_state,
-                            "action": "start_talk",
-                        },
+                now = time.monotonic()
+                if now - last_heartbeat_at >= _HEARTBEAT_INTERVAL:
+                    _write_lock()
+                    last_heartbeat_at = now
+    
+                timestamp_appender.tick()
+                transcript_normalizer.tick()
+                slides_runner.tick()
+                materials_mirror.tick()
+    
+                # ── Check for session management requests ──
+                try:
+                    session_req = _get_json(
+                        f"{config.server_url}/api/session/request",
                         config.host_username, config.host_password,
                     )
-                    transcript_state.reset()
-                    log.info("session", f"START TALK: {talk_name}")
-
-                elif action == "end_talk":
-                    if len(session_stack) < 2:
-                        log.warning("daemon", "END TALK requested but no talk is active")
-                    else:
-                        # Save talk state before ending
-                        talk_folder = sessions_root / session_stack[-1]["name"]
-                        if talk_folder.exists():
+                    action = session_req.get("action")
+                    if action == "start":
+                        name = session_req["name"]
+                        folder = sessions_root / name
+                        folder.mkdir(parents=True, exist_ok=True)
+                        # Pause the current session while the nested one is active
+                        if session_stack:
+                            _pause_session(session_stack[-1], datetime.now(), reason="nested")
+                        new_session = {
+                            "name": name,
+                            "started_at": datetime.now().isoformat(),
+                            "ended_at": None,
+                        }
+                        session_stack.append(new_session)
+                        current_key_points, summary_watermark = _load_key_points(folder)
+                        _save_daemon_state(sessions_root, _stack_to_daemon_state(session_stack))
+                        notes_file = _find_notes_in_folder(folder)
+                        config = dc_replace(config, session_folder=folder, session_notes=notes_file)
+                        _sync_session_to_server(config, session_stack, current_key_points)
+                        transcript_state.reset()
+                        log.info("session", f"Started: {name}")
+    
+                    elif action == "end" and len(session_stack) > 1:
+                        ended = session_stack.pop()
+                        ended["ended_at"] = datetime.now().isoformat()
+                        ended_folder = sessions_root / ended["name"]
+                        _save_key_points(ended_folder, current_key_points, summary_watermark, _session_start_date(ended))
+                        # Restore parent session and close its nested pause
+                        parent = session_stack[-1]
+                        _resume_session(parent, datetime.now())
+                        parent_folder = sessions_root / parent["name"]
+                        current_key_points, summary_watermark = _load_key_points(parent_folder)
+                        _save_daemon_state(sessions_root, _stack_to_daemon_state(session_stack))
+                        notes_file = _find_notes_in_folder(parent_folder)
+                        config = dc_replace(config, session_folder=parent_folder, session_notes=notes_file)
+                        _sync_session_to_server(config, session_stack, current_key_points)
+                        transcript_state.reset()
+                        log.info("session", f"Ended: {ended['name']}, restored: {parent['name']}")
+    
+                    elif action == "rename":
+                        new_name = session_req["name"]
+                        if session_stack:
+                            old_name = session_stack[-1]["name"]
+                            new_folder = sessions_root / new_name
+                            # Load existing points from new folder FIRST (before overwriting)
+                            existing_pts, existing_wm = _load_key_points(new_folder) if new_folder.exists() else ([], 0)
+                            new_folder.mkdir(parents=True, exist_ok=True)
+                            if existing_pts:
+                                current_key_points, summary_watermark = existing_pts, existing_wm
+                            else:
+                                _save_key_points(new_folder, current_key_points, summary_watermark, _session_start_date(session_stack[-1]))
+                            session_stack[-1]["name"] = new_name
+                            _save_daemon_state(sessions_root, _stack_to_daemon_state(session_stack))
+                            notes_file = _find_notes_in_folder(new_folder)
+                            config = dc_replace(config, session_folder=new_folder, session_notes=notes_file)
+                            _sync_session_to_server(config, session_stack, current_key_points)
+                            log.info("session", f"Renamed: {old_name} → {new_name}")
+    
+                    elif action == "pause" and session_stack:
+                        _pause_session(session_stack[-1], datetime.now(), reason="explicit")
+                        _save_daemon_state(sessions_root, _stack_to_daemon_state(session_stack))
+                        _sync_session_to_server(config, session_stack, current_key_points)
+                        log.info("session", f"Paused: {session_stack[-1]['name']}")
+    
+                    elif action == "resume" and session_stack:
+                        _resume_session(session_stack[-1], datetime.now())
+                        _save_daemon_state(sessions_root, _stack_to_daemon_state(session_stack))
+                        _sync_session_to_server(config, session_stack, current_key_points)
+                        transcript_state.reset()
+                        log.info("session", f"Resumed: {session_stack[-1]['name']}")
+    
+                    elif action == "start_talk":
+                        _now = datetime.now()
+                        talk_name = f"{_now.strftime('%Y-%m-%d %H:%M')} talk"
+                        talk_folder = sessions_root / talk_name
+                        talk_folder.mkdir(parents=True, exist_ok=True)
+    
+                        # Save current (main) session state immediately before switching
+                        current_folder = sessions_root / session_stack[-1]["name"] if session_stack else None
+                        if current_folder and current_folder.exists():
                             try:
                                 snapshot = _get_json(
                                     f"{config.server_url}/api/session/snapshot",
                                     config.host_username, config.host_password,
                                 )
-                                _save_session_state(talk_folder, snapshot)
-                                _save_key_points(talk_folder, current_key_points, summary_watermark, _session_start_date(session_stack[-1]))
+                                _save_session_state(current_folder, snapshot)
                             except Exception as e:
-                                log.error("daemon", f"END TALK: failed to save talk state: {e}")
-
-                        # Pop talk, restore main
-                        session_stack.pop()
-                        _save_daemon_state(sessions_root, _stack_to_daemon_state(session_stack))
-
-                        main_folder = sessions_root / session_stack[0]["name"] if session_stack else None
-                        current_key_points, summary_watermark = _load_key_points(main_folder) if main_folder else ([], 0)
-
-                        # Load main's saved session state for restore
-                        main_state = None
-                        if main_folder and (main_folder / "session_state.json").exists():
+                                log.error("daemon", f"START TALK: failed to save main snapshot: {e}")
+    
+                        # Load talk's existing key points (if folder had prior data)
+                        talk_points, talk_wm = _load_key_points(talk_folder)
+    
+                        # Load talk's existing session state
+                        talk_state = None
+                        talk_state_path = talk_folder / "session_state.json"
+                        if talk_state_path.exists():
                             try:
-                                main_state = json.loads((main_folder / "session_state.json").read_text())
+                                talk_state = json.loads(talk_state_path.read_text())
                             except Exception:
                                 pass
-
-                        notes_file = _find_notes_in_folder(main_folder) if main_folder else None
-                        config = dc_replace(config, session_folder=main_folder, session_notes=notes_file)
-
-                        # Sync to server: restore main participants, clear talk
+    
+                        # Push new talk session onto stack
+                        session_stack.append({
+                            "name": talk_name,
+                            "started_at": _now.isoformat(),
+                            "status": "active",
+                        })
+                        current_key_points, summary_watermark = talk_points, talk_wm
+                        _save_daemon_state(sessions_root, _stack_to_daemon_state(session_stack))
+                        notes_file = _find_notes_in_folder(talk_folder)
+                        config = dc_replace(config, session_folder=talk_folder, session_notes=notes_file)
+    
+                        # Sync to server: mark current participants as paused, restore talk state
                         _post_json(
                             f"{config.server_url}/api/session/sync",
                             {
                                 **_stack_to_daemon_state(session_stack),
-                                "discussion_points": current_key_points,
-                                "session_state": main_state,
-                                "action": "end_talk",
+                                "discussion_points": talk_points,
+                                "session_state": talk_state,
+                                "action": "start_talk",
                             },
                             config.host_username, config.host_password,
                         )
                         transcript_state.reset()
-                        log.info("daemon", f"END TALK: restored main session {session_stack[0]['name'] if session_stack else 'none'}")
-
-                elif action == "create_talk_folder":
-                    _now = datetime.now()
-                    talk_name = f"{_now.strftime('%Y-%m-%d %H:%M')} talk"
-                    talk_folder = sessions_root / talk_name
-                    talk_folder.mkdir(parents=True, exist_ok=True)
-
-                    # Push talk onto stack without disconnecting participants
-                    session_stack.append({
-                        "name": talk_name,
-                        "started_at": _now.isoformat(),
-                        "status": "active",
-                    })
-                    talk_points, talk_wm = _load_key_points(talk_folder)
-                    current_key_points, summary_watermark = talk_points, talk_wm
-                    _save_daemon_state(sessions_root, _stack_to_daemon_state(session_stack))
-                    notes_file = _find_notes_in_folder(talk_folder)
-                    config = dc_replace(config, session_folder=talk_folder, session_notes=notes_file)
-
-                    # Sync to server without disconnecting participants (no "action" key)
-                    _post_json(
-                        f"{config.server_url}/api/session/sync",
-                        {
-                            **_stack_to_daemon_state(session_stack),
-                            "discussion_points": talk_points,
-                            "session_state": None,
-                        },
-                        config.host_username, config.host_password,
-                    )
-                    log.info("session", f"Created talk folder: {talk_name}")
-
-            except Exception as e:
-                log.error("session", f"Request error: {e}")
-
-            # ── Re-detect session folder on date change or if notes not yet found (every 5s) ──
-            today = date.today()
-            notes_missing = config.session_notes is None
-            date_changed = today != last_detected_date
-            session_recheck_due = notes_missing and (now - last_session_check_at >= 5.0)
-            if date_changed or session_recheck_due:
-                last_session_check_at = now
-                sf, sn = find_session_folder(today)
-                changed = (sf != config.session_folder or sn != config.session_notes)
-                if changed or date_changed:
-                    config = dc_replace(config, session_folder=sf, session_notes=sn)
-                    last_detected_date = today
-                    if sf:
-                        log.info("session", f"Detected: {sf.name} / notes: {sn.name if sn else 'none'}")
+                        log.info("session", f"START TALK: {talk_name}")
+    
+                    elif action == "end_talk":
+                        if len(session_stack) < 2:
+                            log.warning("daemon", "END TALK requested but no talk is active")
+                        else:
+                            # Save talk state before ending
+                            talk_folder = sessions_root / session_stack[-1]["name"]
+                            if talk_folder.exists():
+                                try:
+                                    snapshot = _get_json(
+                                        f"{config.server_url}/api/session/snapshot",
+                                        config.host_username, config.host_password,
+                                    )
+                                    _save_session_state(talk_folder, snapshot)
+                                    _save_key_points(talk_folder, current_key_points, summary_watermark, _session_start_date(session_stack[-1]))
+                                except Exception as e:
+                                    log.error("daemon", f"END TALK: failed to save talk state: {e}")
+    
+                            # Pop talk, restore main
+                            session_stack.pop()
+                            _save_daemon_state(sessions_root, _stack_to_daemon_state(session_stack))
+    
+                            main_folder = sessions_root / session_stack[0]["name"] if session_stack else None
+                            current_key_points, summary_watermark = _load_key_points(main_folder) if main_folder else ([], 0)
+    
+                            # Load main's saved session state for restore
+                            main_state = None
+                            if main_folder and (main_folder / "session_state.json").exists():
+                                try:
+                                    main_state = json.loads((main_folder / "session_state.json").read_text())
+                                except Exception:
+                                    pass
+    
+                            notes_file = _find_notes_in_folder(main_folder) if main_folder else None
+                            config = dc_replace(config, session_folder=main_folder, session_notes=notes_file)
+    
+                            # Sync to server: restore main participants, clear talk
+                            _post_json(
+                                f"{config.server_url}/api/session/sync",
+                                {
+                                    **_stack_to_daemon_state(session_stack),
+                                    "discussion_points": current_key_points,
+                                    "session_state": main_state,
+                                    "action": "end_talk",
+                                },
+                                config.host_username, config.host_password,
+                            )
+                            transcript_state.reset()
+                            log.info("daemon", f"END TALK: restored main session {session_stack[0]['name'] if session_stack else 'none'}")
+    
+                    elif action == "create_talk_folder":
+                        _now = datetime.now()
+                        talk_name = f"{_now.strftime('%Y-%m-%d %H:%M')} talk"
+                        talk_folder = sessions_root / talk_name
+                        talk_folder.mkdir(parents=True, exist_ok=True)
+    
+                        # Push talk onto stack without disconnecting participants
+                        session_stack.append({
+                            "name": talk_name,
+                            "started_at": _now.isoformat(),
+                            "status": "active",
+                        })
+                        talk_points, talk_wm = _load_key_points(talk_folder)
+                        current_key_points, summary_watermark = talk_points, talk_wm
+                        _save_daemon_state(sessions_root, _stack_to_daemon_state(session_stack))
+                        notes_file = _find_notes_in_folder(talk_folder)
+                        config = dc_replace(config, session_folder=talk_folder, session_notes=notes_file)
+    
+                        # Sync to server without disconnecting participants (no "action" key)
+                        _post_json(
+                            f"{config.server_url}/api/session/sync",
+                            {
+                                **_stack_to_daemon_state(session_stack),
+                                "discussion_points": talk_points,
+                                "session_state": None,
+                            },
+                            config.host_username, config.host_password,
+                        )
+                        log.info("session", f"Created talk folder: {talk_name}")
+    
+                except Exception as e:
+                    log.error("session", f"Request error: {e}")
+    
+                # ── Re-detect session folder on date change or if notes not yet found (every 5s) ──
+                today = date.today()
+                notes_missing = config.session_notes is None
+                date_changed = today != last_detected_date
+                session_recheck_due = notes_missing and (now - last_session_check_at >= 5.0)
+                if date_changed or session_recheck_due:
+                    last_session_check_at = now
+                    sf, sn = find_session_folder(today)
+                    changed = (sf != config.session_folder or sn != config.session_notes)
+                    if changed or date_changed:
+                        config = dc_replace(config, session_folder=sf, session_notes=sn)
+                        last_detected_date = today
+                        if sf:
+                            log.info("session", f"Detected: {sf.name} / notes: {sn.name if sn else 'none'}")
+                        else:
+                            log.error("session", "No session folder for today")
+                        _session_status_pending = True
                     else:
-                        log.error("session", "No session folder for today")
-                    _session_status_pending = True
+                        _session_status_pending = False
                 else:
                     _session_status_pending = False
-            else:
-                _session_status_pending = False
-
-            sf_name = config.session_folder.name if config.session_folder else None
-            sn_name = config.session_notes.name if config.session_notes else None
-
-            # ── Working hours enforcement (day-end pause at 20:00, auto-resume at 09:30) ──
-            now_wall = datetime.now()
-            if session_stack and now_wall.hour >= 20 and last_auto_close_date != today:
-                last_auto_close_date = today
-                top = session_stack[-1]
-                top_folder = sessions_root / top["name"]
-                _save_key_points(top_folder, current_key_points, summary_watermark, _session_start_date(top))
-                # Pause all active sessions in the stack (day-end pause — not ended, resumes tomorrow)
-                for s in session_stack:
-                    if s.get("ended_at") is None:
-                        _pause_session(s, now_wall, reason="day_end")
-                _save_daemon_state(sessions_root, _stack_to_daemon_state(session_stack))
-                _sync_session_to_server(config, session_stack, current_key_points)
-                transcript_state.reset()
-                log.info("session", "Auto-paused at 20:00 (end of working hours)")
-
-            elif (session_stack
-                    and 9 <= now_wall.hour < 20
-                    and last_auto_start_date != today):
-                # Resume any open day_end pauses from last night
-                top = session_stack[-1]
-                open_day_end = any(
-                    p.get("to") is None and p.get("reason") == "day_end"
-                    for p in top.get("paused_intervals", [])
-                )
-                if open_day_end:
-                    last_auto_start_date = today
+    
+                sf_name = config.session_folder.name if config.session_folder else None
+                sn_name = config.session_notes.name if config.session_notes else None
+    
+                # ── Working hours enforcement (day-end pause at 20:00, auto-resume at 09:30) ──
+                now_wall = datetime.now()
+                if session_stack and now_wall.hour >= 20 and last_auto_close_date != today:
+                    last_auto_close_date = today
+                    top = session_stack[-1]
+                    top_folder = sessions_root / top["name"]
+                    _save_key_points(top_folder, current_key_points, summary_watermark, _session_start_date(top))
+                    # Pause all active sessions in the stack (day-end pause — not ended, resumes tomorrow)
                     for s in session_stack:
                         if s.get("ended_at") is None:
-                            _resume_session(s, now_wall)
+                            _pause_session(s, now_wall, reason="day_end")
                     _save_daemon_state(sessions_root, _stack_to_daemon_state(session_stack))
                     _sync_session_to_server(config, session_stack, current_key_points)
                     transcript_state.reset()
-                    log.info("session", f"Auto-resumed at 09:30: {session_stack[-1]['name']}")
-
-            elif (not session_stack
-                    and 9 <= now_wall.hour < 20
-                    and config.session_folder
-                    and last_auto_start_date != today):
-                last_auto_start_date = today
-                new_session = {
-                    "name": config.session_folder.name,
-                    "started_at": now_wall.isoformat(),
-                    "ended_at": None,
-                }
-                session_stack.append(new_session)
-                current_key_points, summary_watermark = _load_key_points(config.session_folder)
-                _save_daemon_state(sessions_root, _stack_to_daemon_state(session_stack))
-                notes_file = _find_notes_in_folder(config.session_folder)
-                config = dc_replace(config, session_notes=notes_file)
-                _sync_session_to_server(config, session_stack, current_key_points)
-                transcript_state.reset()
-                log.info("session", f"Auto-started at 09:30: {config.session_folder.name}")
-
-            # ── Daily timing events (5:30pm warning, 6pm auto-pause, midnight session end) ──
-            if _timing_fired_date != today:
-                _timing_fired_date = today
-                _timing_fired_today = set()
-
-            timing = _check_daily_timing()
-            if timing == "warning" and "warning" not in _timing_fired_today:
-                _timing_fired_today.add("warning")
-                try:
-                    _post_json(
-                        f"{config.server_url}/api/session/timing_event",
-                        {"event": "recording_warning", "minutes_remaining": 30},
-                        config.host_username, config.host_password,
+                    log.info("session", "Auto-paused at 20:00 (end of working hours)")
+    
+                elif (session_stack
+                        and 9 <= now_wall.hour < 20
+                        and last_auto_start_date != today):
+                    # Resume any open day_end pauses from last night
+                    top = session_stack[-1]
+                    open_day_end = any(
+                        p.get("to") is None and p.get("reason") == "day_end"
+                        for p in top.get("paused_intervals", [])
                     )
-                    log.info("daemon", "Sent recording_warning event at 17:30")
-                except Exception as e:
-                    log.error("daemon", f"Failed to send warning event: {e}")
-
-            elif timing == "auto_pause" and "auto_pause" not in _timing_fired_today:
-                _timing_fired_today.add("auto_pause")
-                if session_stack and session_stack[-1].get("status") not in ("ended", "paused"):
-                    try:
-                        _post_json(
-                            f"{config.server_url}/api/session/pause",
-                            {},
-                            config.host_username, config.host_password,
-                        )
-                        log.info("daemon", "Auto-paused recording at 18:00")
-                    except Exception as e:
-                        log.error("daemon", f"Failed to auto-pause: {e}")
-
-            elif timing == "midnight" and "midnight" not in _timing_fired_today:
-                _timing_fired_today.add("midnight")
-                if session_stack:
-                    session_stack[-1]["status"] = "ended"
-                    _save_daemon_state(sessions_root, _stack_to_daemon_state(session_stack))
-                    log.info("daemon", "Session marked as ended at midnight")
-
-            # ── Auto-update: check if server version changed ──
-            if _startup_version:
-                try:
-                    status = _get_json(f"{config.server_url}/api/status")
-                    current_version = status.get("backend_version")
-                    if current_version and current_version != _startup_version:
-                        log.info("daemon", f"Server version changed: {_startup_version} → {current_version}")
-                        log.info("daemon", "Exiting for auto-update (exit code 42)...")
-                        _LOCK_FILE.unlink(missing_ok=True)
-                        sys.exit(EXIT_CODE_UPDATE)
-                except RuntimeError:
-                    pass  # server unreachable — skip version check this cycle
-
-            # ── Check for new quiz generation request ──
-            data = _get_json(
-                f"{config.server_url}/api/quiz-request",
-                config.host_username, config.host_password,
-            )
-            if server_disconnected:
-                log.info("daemon", "Reconnected to server.")
-                server_disconnected = False
-                _session_status_pending = True
-
-            # ── Restore state if server lost it (e.g. after Railway redeploy) ──
-            if data.get("needs_restore"):
-                if _BACKUP_FILE.exists():
-                    log.info("daemon", "Server needs state restore — sending backup...")
-                    backup_data = json.loads(_BACKUP_FILE.read_text(encoding="utf-8"))
-                    result = _post_json(
-                        f"{config.server_url}/api/state-restore",
-                        backup_data,
-                        config.host_username, config.host_password,
-                    )
-                    log.info("daemon", f"State restore result: {result.get('status', 'ok')}")
-                else:
-                    log.error("daemon", "Server needs state restore but no backup file found")
-
-            # ── Push session info when changed, on reconnect, or if server lost it ──
-            server_has_session = data.get("session_folder") is not None
-            server_has_notes = data.get("has_notes_content", False)
-            server_has_key_points = data.get("has_key_points", False)
-            server_has_slides = data.get("has_slides", False)
-            current_slides = _load_slides_manifest(config.session_folder)
-            current_slides_hash = hashlib.sha256(
-                json.dumps(current_slides, sort_keys=True).encode("utf-8")
-            ).hexdigest()
-            slides_changed = current_slides_hash != last_slides_payload_hash
-
-            if _session_status_pending or (sf_name and not server_has_session) or slides_changed or (current_slides and not server_has_slides):
-                post_status("ready", "Agent ready.", config,
-                            session_folder=sf_name, session_notes=sn_name, slides=current_slides)
-                last_slides_payload_hash = current_slides_hash
-
-            # Re-sync key points when server lost them (e.g. after backend restart)
-            if current_key_points and not server_has_key_points:
-                try:
-                    _sync_session_to_server(config, session_stack, current_key_points)
-                except Exception as e:
-                    log.error("session", f"Failed to re-sync key points: {e}")
-
-            # Push notes content when file is new or modified
-            if config.session_notes:
-                try:
-                    current_mtime = config.session_notes.stat().st_mtime
-                except OSError:
-                    current_mtime = 0.0
-                notes_changed = current_mtime != last_notes_mtime and current_mtime > 0
-                if notes_changed or not server_has_notes:
-                    notes_text = read_session_notes(config)
-                    if notes_text:
-                        _post_json(
-                            f"{config.server_url}/api/notes",
-                            {"content": notes_text},
-                            config.host_username, config.host_password,
-                        )
-                        last_notes_mtime = current_mtime
-            req = data.get("request")
-            if req:
-                topic = req.get("topic")
-                minutes = req.get("minutes")
-                if topic:
-                    log.info("daemon", f"Topic request: '{topic}'")
-                    result = auto_generate_topic(topic, config)
-                else:
-                    minutes = minutes or config.minutes
-                    log.info("daemon", f"Transcript request: last {minutes} min")
-                    result = auto_generate(minutes, config)
-                if result:
-                    last_quiz, last_text = result
-                else:
-                    last_quiz, last_text = None, None
-
-            # ── Check for refine request ──
-            refine_data = _get_json(
-                f"{config.server_url}/api/quiz-refine",
-                config.host_username, config.host_password,
-            )
-            refine_req = refine_data.get("request")
-            if refine_req:
-                target = refine_req.get("target", "question")
-                # Use server-side preview as current quiz (in case host re-opened page)
-                current_quiz = refine_data.get("preview") or last_quiz
-                if current_quiz and last_text:
-                    log.info("daemon", f"Refine request: target={target}")
-                    updated = auto_refine(target, current_quiz, last_text, config)
-                    if updated:
-                        last_quiz = updated
-                else:
-                    post_status("error", "No conversation context — please generate a question first.", config)
-
-            # ── Check for debate AI cleanup request ──
-            try:
-                debate_data = _get_json(
-                    f"{config.server_url}/api/debate/ai-request",
-                    config.host_username, config.host_password,
-                )
-                debate_req = debate_data.get("request")
-                if debate_req:
-                    log.info("daemon", f"Debate AI cleanup requested: '{debate_req['statement'][:60]}'")
-                    try:
-                        result = run_debate_ai_cleanup(debate_req, config.api_key, config.model)
-                        _post_json(
-                            f"{config.server_url}/api/debate/ai-result",
-                            result,
-                            config.host_username, config.host_password,
-                        )
-                        n_new = len(result.get("new_arguments", []))
-                        n_merges = len(result.get("merges", []))
-                        log.info("daemon", f"Debate AI done: {n_merges} merges, {n_new} new args")
-                    except Exception as e:
-                        log.error("daemon", f"Debate AI cleanup failed: {e}")
-                        # Post empty result so backend advances to prep anyway
-                        _post_json(
-                            f"{config.server_url}/api/debate/ai-result",
-                            {"merges": [], "cleaned": [], "new_arguments": []},
-                            config.host_username, config.host_password,
-                        )
-            except RuntimeError:
-                pass  # server unreachable — skip this cycle
-
-            # ── Push transcript stats every 10s ──
-            if now - last_transcript_stats_at >= 10.0:
-                last_transcript_stats_at = now
-                try:
-                    entries = load_transcription_files(config.folder)
-                    timed = [(ts, txt) for ts, txt in entries if ts is not None]
-                    total_lines = len(entries)
-                    if timed:
-                        max_ts = max(ts for ts, _ in timed)
-                        cutoff = max_ts - DEFAULT_TRANSCRIPT_MINUTES * 60
-                        recent = [(ts, txt) for ts, txt in timed if ts >= cutoff and txt.strip()]
-                        line_count = len(recent)
-                        if max_ts >= 86400:
-                            # Elapsed-style VTT timestamp exceeds 24 h — use current wall-clock time
-                            latest_time = datetime.now().strftime("%H:%M:%S")
-                        else:
-                            h, rem = divmod(int(max_ts), 3600)
-                            m, s = divmod(rem, 60)
-                            latest_time = f"{h:02d}:{m:02d}:{s:02d}"
-                    else:
-                        line_count = 0
-                        latest_time = None
-                    if line_count != last_transcript_line_count:
-                        last_transcript_line_count = line_count
-                    _post_json(
-                        f"{config.server_url}/api/transcript-status",
-                        {"line_count": line_count, "total_lines": total_lines, "latest_ts": latest_time},
-                        config.host_username, config.host_password,
-                    )
-                except SystemExit:
-                    pass
-                except Exception as e:
-                    log.error("transcript", f"Error: {e}")
-
-                # ── Push token usage alongside transcript stats ──
-                try:
-                    _post_json(
-                        f"{config.server_url}/api/token-usage",
-                        get_usage().to_dict(),
-                        config.host_username, config.host_password,
-                    )
-                except Exception as e:
-                    log.error("daemon", f"Token usage POST failed: {e}")
-
-            # ── Snapshot state for backup ──
-            try:
-                snapshot = _get_json(
-                    f"{config.server_url}/api/state-snapshot",
-                    config.host_username, config.host_password,
-                )
-                snapshot_json = json.dumps(snapshot, sort_keys=True)
-                snapshot_hash = hashlib.sha256(snapshot_json.encode("utf-8")).hexdigest()
-                if snapshot_hash != last_snapshot_hash:
-                    _BACKUP_DIR.mkdir(parents=True, exist_ok=True)
-                    tmp_file = _BACKUP_FILE.with_suffix(".tmp")
-                    tmp_file.write_text(snapshot_json, encoding="utf-8")
-                    os.rename(str(tmp_file), str(_BACKUP_FILE))
-                    last_snapshot_hash = snapshot_hash
-                    s = snapshot.get("state", snapshot)
-                    parts = [f"{len(s.get('participant_names', {}))} participants"]
-                    if s.get("qa_questions"):
-                        parts.append(f"{len(s['qa_questions'])} Q&As")
-                    if s.get("wordcloud_words"):
-                        parts.append(f"{len(s['wordcloud_words'])} words in cloud")
-                    if s.get("debate_arguments"):
-                        parts.append(f"{len(s['debate_arguments'])} debate args")
-                    if s.get("votes"):
-                        parts.append(f"{len(s['votes'])} votes")
-                    if s.get("summary_points"):
-                        parts.append(f"{len(s['summary_points'])} summary pts")
-                    backup_log = f"State backup: {', '.join(parts)}"
-                    if backup_log != last_state_backup_log:
-                        log.info("daemon", backup_log)
-                        last_state_backup_log = backup_log
-            except Exception as e:
-                log.error("daemon", f"State snapshot failed: {e}")
-
-            # ── Check for full-reset / forced summary request ──
-            # (full-reset now behaves the same as force — always full regeneration)
-            try:
-                reset_data = _get_json(
-                    f"{config.server_url}/api/summary/full-reset",
-                    config.host_username, config.host_password,
-                )
-                if reset_data.get("requested"):
-                    log.info("summarizer", "Full reset — triggering regeneration")
-            except Exception:
-                pass
-
-            force_summary = False
-            try:
-                force_data = _get_json(
-                    f"{config.server_url}/api/summary/force",
-                    config.host_username, config.host_password,
-                )
-                force_summary = force_data.get("requested", False)
-            except Exception:
-                pass
-
-            # ── On-demand summary generation (incremental when possible) ──
-            now_mono = time.monotonic()
-            if force_summary and session_stack:
-                current_session = session_stack[-1]
-                session_folder = sessions_root / current_session["name"]
-                session_date = _session_start_date(current_session)
-                incremental = summary_watermark > 0 and bool(current_key_points)
-                last_summary_at = now_mono
-                try:
-                    result = generate_summary(
-                        config,
-                        existing_points=current_key_points if incremental else None,
-                        since_entry=summary_watermark if incremental else 0,
-                        session_start_date=session_date,
-                    )
-                    if result is not None:
-                        new_pts = result["new"]
-                        summary_watermark = result["watermark"]
-                        if incremental:
-                            current_key_points = current_key_points + new_pts
-                        else:
-                            current_key_points = new_pts
-                        _save_key_points(session_folder, current_key_points, summary_watermark, session_date)
+                    if open_day_end:
+                        last_auto_start_date = today
+                        for s in session_stack:
+                            if s.get("ended_at") is None:
+                                _resume_session(s, now_wall)
                         _save_daemon_state(sessions_root, _stack_to_daemon_state(session_stack))
                         _sync_session_to_server(config, session_stack, current_key_points)
-                        log.info("summarizer", f"Key points: {len(current_key_points)} total (+{len(new_pts)} new)")
-                except Exception as e:
-                    log.error("summarizer", f"Error: {e}")
-
-            # ── Periodic session state snapshot save ──
-            _save_counter += 1
-            if _save_counter >= _SAVE_INTERVAL:
-                _save_counter = 0
-                current_folder = sessions_root / session_stack[-1]["name"] if session_stack else None
-                if current_folder and current_folder.exists():
+                        transcript_state.reset()
+                        log.info("session", f"Auto-resumed at 09:30: {session_stack[-1]['name']}")
+    
+                elif (not session_stack
+                        and 9 <= now_wall.hour < 20
+                        and config.session_folder
+                        and last_auto_start_date != today):
+                    last_auto_start_date = today
+                    new_session = {
+                        "name": config.session_folder.name,
+                        "started_at": now_wall.isoformat(),
+                        "ended_at": None,
+                    }
+                    session_stack.append(new_session)
+                    current_key_points, summary_watermark = _load_key_points(config.session_folder)
+                    _save_daemon_state(sessions_root, _stack_to_daemon_state(session_stack))
+                    notes_file = _find_notes_in_folder(config.session_folder)
+                    config = dc_replace(config, session_notes=notes_file)
+                    _sync_session_to_server(config, session_stack, current_key_points)
+                    transcript_state.reset()
+                    log.info("session", f"Auto-started at 09:30: {config.session_folder.name}")
+    
+                # ── Daily timing events (5:30pm warning, 6pm auto-pause, midnight session end) ──
+                if _timing_fired_date != today:
+                    _timing_fired_date = today
+                    _timing_fired_today = set()
+    
+                timing = _check_daily_timing()
+                if timing == "warning" and "warning" not in _timing_fired_today:
+                    _timing_fired_today.add("warning")
                     try:
-                        resp = _get_json(
-                            f"{config.server_url}/api/session/snapshot",
+                        _post_json(
+                            f"{config.server_url}/api/session/timing_event",
+                            {"event": "recording_warning", "minutes_remaining": 30},
                             config.host_username, config.host_password,
                         )
-                        _save_session_state(current_folder, resp)
+                        log.info("daemon", "Sent recording_warning event at 17:30")
                     except Exception as e:
-                        log.error("daemon", f"Failed to save session snapshot: {e}")
-
-        except RuntimeError as e:
-            if not server_disconnected:
-                log.error("daemon", f"Server unreachable: {e}")
-                server_disconnected = True
-        except KeyboardInterrupt:
-            _LOCK_FILE.unlink(missing_ok=True)
-            log.info("daemon", "Stopped.")
-            return
-        except Exception as e:
-            # Keep daemon alive for unexpected transient errors; loop retries.
-            log.error("daemon", f"Unexpected error (will retry): {e}")
-        time.sleep(DAEMON_POLL_INTERVAL)
+                        log.error("daemon", f"Failed to send warning event: {e}")
+    
+                elif timing == "auto_pause" and "auto_pause" not in _timing_fired_today:
+                    _timing_fired_today.add("auto_pause")
+                    if session_stack and session_stack[-1].get("status") not in ("ended", "paused"):
+                        try:
+                            _post_json(
+                                f"{config.server_url}/api/session/pause",
+                                {},
+                                config.host_username, config.host_password,
+                            )
+                            log.info("daemon", "Auto-paused recording at 18:00")
+                        except Exception as e:
+                            log.error("daemon", f"Failed to auto-pause: {e}")
+    
+                elif timing == "midnight" and "midnight" not in _timing_fired_today:
+                    _timing_fired_today.add("midnight")
+                    if session_stack:
+                        session_stack[-1]["status"] = "ended"
+                        _save_daemon_state(sessions_root, _stack_to_daemon_state(session_stack))
+                        log.info("daemon", "Session marked as ended at midnight")
+    
+                # ── Auto-update: check if server version changed ──
+                if _startup_version:
+                    try:
+                        status = _get_json(f"{config.server_url}/api/status")
+                        current_version = status.get("backend_version")
+                        if current_version and current_version != _startup_version:
+                            log.info("daemon", f"Server version changed: {_startup_version} → {current_version}")
+                            log.info("daemon", "Exiting for auto-update (exit code 42)...")
+                            _LOCK_FILE.unlink(missing_ok=True)
+                            sys.exit(EXIT_CODE_UPDATE)
+                    except RuntimeError:
+                        pass  # server unreachable — skip version check this cycle
+    
+                # ── Check for new quiz generation request ──
+                data = _get_json(
+                    f"{config.server_url}/api/quiz-request",
+                    config.host_username, config.host_password,
+                )
+                if server_disconnected:
+                    log.info("daemon", "Reconnected to server.")
+                    server_disconnected = False
+                    _session_status_pending = True
+    
+                # ── Restore state if server lost it (e.g. after Railway redeploy) ──
+                if data.get("needs_restore"):
+                    if _BACKUP_FILE.exists():
+                        log.info("daemon", "Server needs state restore — sending backup...")
+                        backup_data = json.loads(_BACKUP_FILE.read_text(encoding="utf-8"))
+                        result = _post_json(
+                            f"{config.server_url}/api/state-restore",
+                            backup_data,
+                            config.host_username, config.host_password,
+                        )
+                        log.info("daemon", f"State restore result: {result.get('status', 'ok')}")
+                    else:
+                        log.error("daemon", "Server needs state restore but no backup file found")
+    
+                # ── Push session info when changed, on reconnect, or if server lost it ──
+                server_has_session = data.get("session_folder") is not None
+                server_has_notes = data.get("has_notes_content", False)
+                server_has_key_points = data.get("has_key_points", False)
+                server_has_slides = data.get("has_slides", False)
+                current_slides = _load_slides_manifest(config.session_folder)
+                current_slides_hash = hashlib.sha256(
+                    json.dumps(current_slides, sort_keys=True).encode("utf-8")
+                ).hexdigest()
+                slides_changed = current_slides_hash != last_slides_payload_hash
+    
+                if _session_status_pending or (sf_name and not server_has_session) or slides_changed or (current_slides and not server_has_slides):
+                    post_status("ready", "Agent ready.", config,
+                                session_folder=sf_name, session_notes=sn_name, slides=current_slides)
+                    last_slides_payload_hash = current_slides_hash
+    
+                # Re-sync key points when server lost them (e.g. after backend restart)
+                if current_key_points and not server_has_key_points:
+                    try:
+                        _sync_session_to_server(config, session_stack, current_key_points)
+                    except Exception as e:
+                        log.error("session", f"Failed to re-sync key points: {e}")
+    
+                # Push notes content when file is new or modified
+                if config.session_notes:
+                    try:
+                        current_mtime = config.session_notes.stat().st_mtime
+                    except OSError:
+                        current_mtime = 0.0
+                    notes_changed = current_mtime != last_notes_mtime and current_mtime > 0
+                    if notes_changed or not server_has_notes:
+                        notes_text = read_session_notes(config)
+                        if notes_text:
+                            _post_json(
+                                f"{config.server_url}/api/notes",
+                                {"content": notes_text},
+                                config.host_username, config.host_password,
+                            )
+                            last_notes_mtime = current_mtime
+                req = data.get("request")
+                if req:
+                    topic = req.get("topic")
+                    minutes = req.get("minutes")
+                    if topic:
+                        log.info("daemon", f"Topic request: '{topic}'")
+                        result = auto_generate_topic(topic, config)
+                    else:
+                        minutes = minutes or config.minutes
+                        log.info("daemon", f"Transcript request: last {minutes} min")
+                        result = auto_generate(minutes, config)
+                    if result:
+                        last_quiz, last_text = result
+                    else:
+                        last_quiz, last_text = None, None
+    
+                # ── Check for refine request ──
+                refine_data = _get_json(
+                    f"{config.server_url}/api/quiz-refine",
+                    config.host_username, config.host_password,
+                )
+                refine_req = refine_data.get("request")
+                if refine_req:
+                    target = refine_req.get("target", "question")
+                    # Use server-side preview as current quiz (in case host re-opened page)
+                    current_quiz = refine_data.get("preview") or last_quiz
+                    if current_quiz and last_text:
+                        log.info("daemon", f"Refine request: target={target}")
+                        updated = auto_refine(target, current_quiz, last_text, config)
+                        if updated:
+                            last_quiz = updated
+                    else:
+                        post_status("error", "No conversation context — please generate a question first.", config)
+    
+                # ── Check for debate AI cleanup request ──
+                try:
+                    debate_data = _get_json(
+                        f"{config.server_url}/api/debate/ai-request",
+                        config.host_username, config.host_password,
+                    )
+                    debate_req = debate_data.get("request")
+                    if debate_req:
+                        log.info("daemon", f"Debate AI cleanup requested: '{debate_req['statement'][:60]}'")
+                        try:
+                            result = run_debate_ai_cleanup(debate_req, config.api_key, config.model)
+                            _post_json(
+                                f"{config.server_url}/api/debate/ai-result",
+                                result,
+                                config.host_username, config.host_password,
+                            )
+                            n_new = len(result.get("new_arguments", []))
+                            n_merges = len(result.get("merges", []))
+                            log.info("daemon", f"Debate AI done: {n_merges} merges, {n_new} new args")
+                        except Exception as e:
+                            log.error("daemon", f"Debate AI cleanup failed: {e}")
+                            # Post empty result so backend advances to prep anyway
+                            _post_json(
+                                f"{config.server_url}/api/debate/ai-result",
+                                {"merges": [], "cleaned": [], "new_arguments": []},
+                                config.host_username, config.host_password,
+                            )
+                except RuntimeError:
+                    pass  # server unreachable — skip this cycle
+    
+                # ── Push transcript stats every 10s ──
+                if now - last_transcript_stats_at >= 10.0:
+                    last_transcript_stats_at = now
+                    try:
+                        entries = load_transcription_files(config.folder)
+                        timed = [(ts, txt) for ts, txt in entries if ts is not None]
+                        total_lines = len(entries)
+                        if timed:
+                            max_ts = max(ts for ts, _ in timed)
+                            cutoff = max_ts - DEFAULT_TRANSCRIPT_MINUTES * 60
+                            recent = [(ts, txt) for ts, txt in timed if ts >= cutoff and txt.strip()]
+                            line_count = len(recent)
+                            if max_ts >= 86400:
+                                # Elapsed-style VTT timestamp exceeds 24 h — use current wall-clock time
+                                latest_time = datetime.now().strftime("%H:%M:%S")
+                            else:
+                                h, rem = divmod(int(max_ts), 3600)
+                                m, s = divmod(rem, 60)
+                                latest_time = f"{h:02d}:{m:02d}:{s:02d}"
+                        else:
+                            line_count = 0
+                            latest_time = None
+                        if line_count != last_transcript_line_count:
+                            last_transcript_line_count = line_count
+                        _post_json(
+                            f"{config.server_url}/api/transcript-status",
+                            {"line_count": line_count, "total_lines": total_lines, "latest_ts": latest_time},
+                            config.host_username, config.host_password,
+                        )
+                    except SystemExit:
+                        pass
+                    except Exception as e:
+                        log.error("transcript", f"Error: {e}")
+    
+                    # ── Push token usage alongside transcript stats ──
+                    try:
+                        _post_json(
+                            f"{config.server_url}/api/token-usage",
+                            get_usage().to_dict(),
+                            config.host_username, config.host_password,
+                        )
+                    except Exception as e:
+                        log.error("daemon", f"Token usage POST failed: {e}")
+    
+                # ── Snapshot state for backup ──
+                try:
+                    snapshot = _get_json(
+                        f"{config.server_url}/api/state-snapshot",
+                        config.host_username, config.host_password,
+                    )
+                    snapshot_json = json.dumps(snapshot, sort_keys=True)
+                    snapshot_hash = hashlib.sha256(snapshot_json.encode("utf-8")).hexdigest()
+                    if snapshot_hash != last_snapshot_hash:
+                        _BACKUP_DIR.mkdir(parents=True, exist_ok=True)
+                        tmp_file = _BACKUP_FILE.with_suffix(".tmp")
+                        tmp_file.write_text(snapshot_json, encoding="utf-8")
+                        os.rename(str(tmp_file), str(_BACKUP_FILE))
+                        last_snapshot_hash = snapshot_hash
+                        s = snapshot.get("state", snapshot)
+                        parts = [f"{len(s.get('participant_names', {}))} participants"]
+                        if s.get("qa_questions"):
+                            parts.append(f"{len(s['qa_questions'])} Q&As")
+                        if s.get("wordcloud_words"):
+                            parts.append(f"{len(s['wordcloud_words'])} words in cloud")
+                        if s.get("debate_arguments"):
+                            parts.append(f"{len(s['debate_arguments'])} debate args")
+                        if s.get("votes"):
+                            parts.append(f"{len(s['votes'])} votes")
+                        if s.get("summary_points"):
+                            parts.append(f"{len(s['summary_points'])} summary pts")
+                        backup_log = f"State backup: {', '.join(parts)}"
+                        if backup_log != last_state_backup_log:
+                            log.info("daemon", backup_log)
+                            last_state_backup_log = backup_log
+                except Exception as e:
+                    log.error("daemon", f"State snapshot failed: {e}")
+    
+                # ── Check for full-reset / forced summary request ──
+                # (full-reset now behaves the same as force — always full regeneration)
+                try:
+                    reset_data = _get_json(
+                        f"{config.server_url}/api/summary/full-reset",
+                        config.host_username, config.host_password,
+                    )
+                    if reset_data.get("requested"):
+                        log.info("summarizer", "Full reset — triggering regeneration")
+                except Exception:
+                    pass
+    
+                force_summary = False
+                try:
+                    force_data = _get_json(
+                        f"{config.server_url}/api/summary/force",
+                        config.host_username, config.host_password,
+                    )
+                    force_summary = force_data.get("requested", False)
+                except Exception:
+                    pass
+    
+                # ── On-demand summary generation (incremental when possible) ──
+                now_mono = time.monotonic()
+                if force_summary and session_stack:
+                    current_session = session_stack[-1]
+                    session_folder = sessions_root / current_session["name"]
+                    session_date = _session_start_date(current_session)
+                    incremental = summary_watermark > 0 and bool(current_key_points)
+                    last_summary_at = now_mono
+                    try:
+                        result = generate_summary(
+                            config,
+                            existing_points=current_key_points if incremental else None,
+                            since_entry=summary_watermark if incremental else 0,
+                            session_start_date=session_date,
+                        )
+                        if result is not None:
+                            new_pts = result["new"]
+                            summary_watermark = result["watermark"]
+                            if incremental:
+                                current_key_points = current_key_points + new_pts
+                            else:
+                                current_key_points = new_pts
+                            _save_key_points(session_folder, current_key_points, summary_watermark, session_date)
+                            _save_daemon_state(sessions_root, _stack_to_daemon_state(session_stack))
+                            _sync_session_to_server(config, session_stack, current_key_points)
+                            log.info("summarizer", f"Key points: {len(current_key_points)} total (+{len(new_pts)} new)")
+                    except Exception as e:
+                        log.error("summarizer", f"Error: {e}")
+    
+                # ── Periodic session state snapshot save ──
+                _save_counter += 1
+                if _save_counter >= _SAVE_INTERVAL:
+                    _save_counter = 0
+                    current_folder = sessions_root / session_stack[-1]["name"] if session_stack else None
+                    if current_folder and current_folder.exists():
+                        try:
+                            resp = _get_json(
+                                f"{config.server_url}/api/session/snapshot",
+                                config.host_username, config.host_password,
+                            )
+                            _save_session_state(current_folder, resp)
+                        except Exception as e:
+                            log.error("daemon", f"Failed to save session snapshot: {e}")
+    
+            except RuntimeError as e:
+                if not server_disconnected:
+                    log.error("daemon", f"Server unreachable: {e}")
+                    server_disconnected = True
+            except KeyboardInterrupt:
+                _LOCK_FILE.unlink(missing_ok=True)
+                log.info("daemon", "Stopped.")
+                return
+            except Exception as e:
+                # Keep daemon alive for unexpected transient errors; loop retries.
+                log.error("daemon", f"Unexpected error (will retry): {e}")
+            time.sleep(DAEMON_POLL_INTERVAL)
+    finally:
+        slides_on_demand_ws.stop()
 
 
 if __name__ == "__main__":

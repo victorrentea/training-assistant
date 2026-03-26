@@ -1,7 +1,7 @@
 from pathlib import Path
-from types import SimpleNamespace
 
 import training_daemon
+from quiz_core import Config
 
 
 class _NoopTimestampAppender:
@@ -26,25 +26,36 @@ def test_daemon_logs_disconnect_once_then_reconnect(tmp_path: Path, monkeypatch,
 
     lock_file = tmp_path / "daemon.lock"
     monkeypatch.setattr(training_daemon, "_LOCK_FILE", lock_file)
+    monkeypatch.setattr(training_daemon, "_post_json", lambda *args, **kwargs: {"ok": True})
 
-    config = SimpleNamespace(
+    config = Config(
         server_url="http://example.test",
         host_username="host",
         host_password="pwd",
         minutes=30,
         folder=tmp_path,
+        api_key="x",
+        model="dummy",
+        dry_run=False,
+        project_folder=None,
     )
     monkeypatch.setattr(training_daemon, "config_from_env", lambda: config)
 
-    calls = {"n": 0}
+    calls = {"quiz_request": 0}
 
-    def _fake_get_json(url, username, password):
-        calls["n"] += 1
-        if calls["n"] == 1:
-            raise RuntimeError("Cannot reach server")
-        if calls["n"] in (2, 3):
-            return {"request": None, "preview": None}
-        raise KeyboardInterrupt()
+    def _fake_get_json(url, username=None, password=None):
+        if url.endswith("/api/status"):
+            return {"backend_version": "test-version", "needs_restore": False}
+        if url.endswith("/api/session/request"):
+            return {"action": None}
+        if url.endswith("/api/quiz-request"):
+            calls["quiz_request"] += 1
+            if calls["quiz_request"] == 1:
+                raise RuntimeError("Cannot reach server")
+            if calls["quiz_request"] == 2:
+                return {"request": None, "preview": None}
+            raise KeyboardInterrupt()
+        return {}
 
     monkeypatch.setattr(training_daemon, "_get_json", _fake_get_json)
 
@@ -53,4 +64,3 @@ def test_daemon_logs_disconnect_once_then_reconnect(tmp_path: Path, monkeypatch,
     out = capsys.readouterr()
     assert out.err.count("Server unreachable:") == 1
     assert "Reconnected to server." in out.out
-
