@@ -343,6 +343,7 @@ Only add memories when explicitly asked, or after the user has confirmed the inf
 
 - User has Railway CLI installed and available in terminal.
 - For any change to the training daemon ("demon"), push directly to `master` because the daemon continuously pulls from `master` and runs those changes.
+- PPTX slides daemon logs must follow the shared daemon pattern from `daemon/log.py`: `HH:MM:SS.f PID [name      ] info|error message` (use component name `slides`, not custom `[pptx-daemon]` prefixes).
 
 ---
 
