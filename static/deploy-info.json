@@ -1,7 +1,7 @@
 {
-  "sha": "46f4669900cf3457ec23a550d2fed828575b88dd",
+  "sha": "0bdb8d09174a4356c5d8192b9fcc326ad077cc5b",
   "timestamp": "2026-03-26 19:37",
   "changelog": [
-    "Clarify location prompt as optional"
+    "Hide participant content scrollbars"
   ]
 }
