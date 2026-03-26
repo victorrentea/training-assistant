@@ -1,7 +1,7 @@
 {
-  "sha": "45fa72e4fed9f651f76dddcbd9578440c0e05b99",
-  "timestamp": "2026-03-26 14:28",
+  "sha": "c22e035cb761bd28db8c4da31244938477f7334d",
+  "timestamp": "2026-03-26 14:29",
   "changelog": [
-    "Remember Railway CLI availability"
+    "Temporarily pause automatic PPTX to PDF conversion"
   ]
 }
