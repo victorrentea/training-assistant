@@ -912,6 +912,19 @@
     ].join('|');
   }
 
+  function _buildNativeSlideUrl(rawUrl, page) {
+    try {
+      const u = new URL(String(rawUrl || ''), window.location.origin);
+      u.searchParams.set('inline', '1');
+      u.hash = `page=${Math.max(1, Number(page || 1))}`;
+      return u.toString();
+    } catch (_) {
+      const base = String(rawUrl || '').split('#')[0];
+      const sep = base.includes('?') ? '&' : '?';
+      return `${base}${sep}inline=1#page=${Math.max(1, Number(page || 1))}`;
+    }
+  }
+
   function _isDisplayableSlideName(name) {
     const cleaned = (name || '').trim();
     if (!cleaned) return false;
@@ -1047,8 +1060,7 @@
         if (pdfContainer) pdfContainer.style.display = 'none';
         if (nativeFrame) {
           const savedPage = Math.max(1, Number(_getStoredSlidePage(slide.slug) || 1));
-          const cleanUrl = String(slide.url || '').split('#')[0];
-          nativeFrame.src = `${cleanUrl}#page=${savedPage}`;
+          nativeFrame.src = _buildNativeSlideUrl(slide.url, savedPage);
           nativeFrame.style.display = '';
           _setStoredSlidePage(slide.slug, savedPage);
         }
