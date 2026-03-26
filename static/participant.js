@@ -1315,7 +1315,7 @@
         if (nativeFrame) {
           const savedPage = Math.max(1, Number(_getStoredSlidePage(slide.slug) || 1));
           nativeFrame.data = _buildNativeSlideUrl(slide.url, savedPage);
-          nativeFrame.style.display = '';
+          nativeFrame.style.display = 'block';
           _setStoredSlidePage(slide.slug, savedPage);
         }
         slidesLastFingerprint = fingerprint;
