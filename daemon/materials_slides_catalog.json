@@ -8,6 +8,13 @@
       "drive_probe_url": "https://docs.google.com/presentation/d/1Fc0AmD8Gzx6MSUi_K5iY8B_oZL6q3w2k/export/pdf"
     },
     {
+      "title": "AI Coding",
+      "source": "/Users/victorrentea/My Drive/Cursuri/CleanCode/AI Coding.pptx",
+      "target_pdf": "AI Coding.pdf",
+      "drive_export_url": "https://docs.google.com/presentation/d/1SxjaM0f97P1EjPJUxrjQ7fU2KKF_CD-N/export/pdf",
+      "drive_probe_url": "https://docs.google.com/presentation/d/1SxjaM0f97P1EjPJUxrjQ7fU2KKF_CD-N/export/pdf"
+    },
+    {
       "title": "Clean Code",
       "source": "/Users/victorrentea/My Drive/Cursuri/CleanCode/Clean Code.pptx",
       "target_pdf": "Clean Code.pdf",
@@ -160,13 +167,6 @@
       "target_pdf": "Secure Coding.pdf",
       "drive_export_url": "https://docs.google.com/presentation/d/10W8rKhajj38mVNbuIJ9hquUvA42D_v9K/export/pdf",
       "drive_probe_url": "https://docs.google.com/presentation/d/10W8rKhajj38mVNbuIJ9hquUvA42D_v9K/export/pdf"
-    },
-    {
-      "title": "AI Coding",
-      "source": "/Users/victorrentea/My Drive/Cursuri/CleanCode/AI Coding.pptx",
-      "target_pdf": "AI Coding.pdf",
-      "drive_export_url": "https://docs.google.com/presentation/d/1SxjaM0f97P1EjPJUxrjQ7fU2KKF_CD-N/export/pdf",
-      "drive_probe_url": "https://docs.google.com/presentation/d/1SxjaM0f97P1EjPJUxrjQ7fU2KKF_CD-N/export/pdf"
     },
     {
       "title": "Reactive/WebFlux",
