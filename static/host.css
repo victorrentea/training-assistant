@@ -259,6 +259,8 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: .5rem;
+  user-select: none;
+  outline: none;
 }
 
 .slides-catalog-name {
@@ -268,6 +270,16 @@ body {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
+  user-select: none;
+  outline: none;
+}
+
+.slides-catalog-line:focus,
+.slides-catalog-line:focus-visible,
+.slides-catalog-name:focus,
+.slides-catalog-name:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
 }
 
 .slides-catalog-available {
