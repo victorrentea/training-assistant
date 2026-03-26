@@ -315,6 +315,26 @@ def test_participant_availability_includes_out_of_sync_status(monkeypatch, tmp_p
     assert "drive_sync_timeout" in clean["sync_message"]
 
 
+def test_participant_availability_name_fallback_to_slug(monkeypatch, tmp_path):
+    monkeypatch.setenv("TRAINING_ASSISTANT_SLIDES_DIR", str(tmp_path / "missing-slides-dir"))
+    monkeypatch.setenv("PPTX_CATALOG_FILE", str(tmp_path / "missing-catalog.json"))
+
+    state.slides = [
+        {
+            "name": "   Design Patterns   ",
+            "slug": "design-patterns",
+            "url": "https://slides.example.com/design-patterns.pdf",
+        }
+    ]
+
+    client = TestClient(app, headers=_HOST_AUTH_HEADERS)
+    resp = client.get("/api/slides/participant-availability")
+    assert resp.status_code == 200
+    entries = resp.json()["entries"]
+    item = next(e for e in entries if e["slug"] == "design-patterns")
+    assert item["name"] == "Design Patterns"
+
+
 def test_slides_catalog_map_returns_pdf_to_pptx_entries(monkeypatch, tmp_path):
     source_ok = tmp_path / "Clean Code.pptx"
     source_ok.write_bytes(b"pptx")

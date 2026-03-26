@@ -552,3 +552,31 @@ def test_convert_pptx_to_pdf_google_drive_pull_requires_export_url(tmp_path):
             state_entry={},
             metadata={},
         )
+
+
+def test_log_startup_drive_sync_status_reports_pending_and_out_of_sync(tmp_path, monkeypatch):
+    watch = tmp_path / "watch"
+    watch.mkdir()
+    deck = watch / "deck.pptx"
+    deck.write_bytes(b"x")
+
+    cfg = _cfg(tmp_path)
+    cfg.watch_dir = watch
+    cfg.catalog_file = None
+    cfg.sync_backend = False
+
+    state = {
+        "files": {
+            str(deck.resolve()): {
+                "slug": "s1",
+                "last_exported_mtime": deck.stat().st_mtime - 10.0,
+                "out_of_sync": True,
+            }
+        }
+    }
+
+    logs: list[str] = []
+    monkeypatch.setattr(slides_daemon.log, "info", lambda _name, msg: logs.append(msg))
+    slides_daemon.log_startup_drive_sync_status(cfg, state)
+    assert any("Startup pending Drive downloads (1):" in msg for msg in logs)
+    assert any("Startup out-of-sync decks (1):" in msg for msg in logs)
