@@ -423,6 +423,10 @@ h1 { display: none; }
   color: #a92020;
 }
 
+.slides-preview-shell.native-mode .slides-preview-close {
+  top: 2.8rem;
+}
+
 @media (max-width: 900px) {
   .slides-preview-overlay {
     right: var(--slides-overlay-width);
