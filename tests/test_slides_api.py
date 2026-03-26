@@ -134,6 +134,9 @@ def test_api_slides_lists_local_materials_and_serves_pdf(monkeypatch, tmp_path):
     assert file_resp.status_code == 200
     assert file_resp.headers.get("content-type", "").startswith("application/pdf")
     assert file_resp.content.startswith(b"%PDF-1.4")
+    head_resp = client.head(slides[0]["url"])
+    assert head_resp.status_code == 200
+    assert head_resp.headers.get("content-type", "").startswith("application/pdf")
 
 
 def test_api_slides_uses_publish_dir_when_local_dir_not_set(monkeypatch, tmp_path):
