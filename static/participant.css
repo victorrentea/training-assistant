@@ -760,6 +760,7 @@ h1 { display: none; }
   background: #ecf0f7;
   padding: 14px 0 22px;
   scrollbar-gutter: stable both-edges;
+  scroll-behavior: smooth;
 }
 
 #slides-pdf-container::-webkit-scrollbar {

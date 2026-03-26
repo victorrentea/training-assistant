@@ -114,7 +114,8 @@
   let slidesFollowTrainerEnabled = true;
   let slidesFollowUncheckSuppressedUntil = 0;
   let slidesNativeFrame = null;
-  let hostSlidesCurrent = null;
+  let hostSlidesCurrent = null;   // what host is showing NOW
+  let hostSlidesPrevious = null;  // what host was showing before (participants follow this)
   let lastHostSlidesCurrentKey = '';
   let slidesFollowQueue = Promise.resolve();
 
@@ -576,8 +577,7 @@
   }
 
   async function _applyHostSlideFollow(slidesCurrent) {
-    hostSlidesCurrent = slidesCurrent || null;
-    if (!hostSlidesCurrent) return;
+    if (!slidesCurrent) return;
     if (!_isSlidesFollowActive()) return;
 
     if (!slidesCatalog.length) {
@@ -626,12 +626,16 @@
   }
 
   function _onIncomingHostSlidesCurrent(slidesCurrent) {
-    hostSlidesCurrent = slidesCurrent || null;
-    const key = _slidesCurrentKey(slidesCurrent);
+    const newCurrent = slidesCurrent || null;
+    const key = _slidesCurrentKey(newCurrent);
     if (key === lastHostSlidesCurrentKey) return;
+    hostSlidesPrevious = hostSlidesCurrent;
+    hostSlidesCurrent = newCurrent;
     lastHostSlidesCurrentKey = key;
     if (!_isSlidesFollowActive()) return;
-    _queueHostSlideFollow(slidesCurrent || null);
+    // Follow the PREVIOUS slide — participants are one slide behind the host.
+    // Fall back to current if there is no previous (e.g. first slide ever seen).
+    _queueHostSlideFollow(hostSlidesPrevious || hostSlidesCurrent);
   }
 
   function _slidePageKey(slug) {
@@ -720,7 +724,7 @@
     if (persist) _setStoredSlidesFollowTrainer(next);
     _renderSlidesFollowTrainerToggle();
     if (applyHost && _isSlidesFollowActive() && hostSlidesCurrent) {
-      _queueHostSlideFollow(hostSlidesCurrent);
+      _queueHostSlideFollow(hostSlidesPrevious || hostSlidesCurrent);
     }
   }
 
@@ -757,7 +761,7 @@
       }
     }
     if (slidesFollowTrainerEnabled && hostSlidesCurrent) {
-      _queueHostSlideFollow(hostSlidesCurrent);
+      _queueHostSlideFollow(hostSlidesPrevious || hostSlidesCurrent);
     }
   }
 
@@ -787,7 +791,7 @@
         _setSlidesOverlayOpen(true);
       }
       if (hostSlidesCurrent) {
-        _queueHostSlideFollow(hostSlidesCurrent);
+        _queueHostSlideFollow(hostSlidesPrevious || hostSlidesCurrent);
       }
     });
   }
@@ -1469,7 +1473,7 @@
     _setSlidesOverlayOpen(true);
     _refreshSlidesCatalog({ autoLoadSelected: true })
       .then(() => {
-        if (hostSlidesCurrent) _queueHostSlideFollow(hostSlidesCurrent);
+        if (hostSlidesCurrent) _queueHostSlideFollow(hostSlidesPrevious || hostSlidesCurrent);
       })
       .catch(() => {});
     _startSlidesRefreshLoop();
