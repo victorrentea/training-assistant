@@ -266,6 +266,6 @@ Host broadcasts a statement: "Have you ever shipped code that violated what we j
 - [x] Direct request: participant slides no longer trigger forced download on preview (`?inline=1` honored) and `/api/slides` now hides guaranteed-503 local entries while daemon is offline.
 - [x] Direct request: public participant slides list now includes only currently servable local files, preventing dropdown selections that end in 503.
 - [x] Direct request: desktop overlay now plays trimmed `breaking-glass.mp3` when the 📺 emoji floats up (sound starts immediately, no initial silence).
-
+- [x] Direct request: lowered broken-glass sound volume by 50% for participant monitor reaction (`🖥️`) in desktop overlay.
 - [x] Direct request: removed “Get ready to participate.” from participant waiting screen and increased “Welcome!” text size by 50%.
 - [x] Direct request: pressing `Esc` on participant page now closes all participant modals in one shot (Key Points, Slides, Notes, and avatar/participant modal), with E2E regression coverage.
