@@ -1,7 +1,7 @@
 {
-  "sha": "0749304ecc11aef11e11a9bfabd5a998b3ecc732",
-  "timestamp": "2026-03-26 17:32",
+  "sha": "e95149df4b538672cc5fb9186f32a8343b7f8ede",
+  "timestamp": "2026-03-26 17:33",
   "changelog": [
-    "participant slides test auto-scroll support iframe fallback"
+    "participant emoji bar transparent over full-height slides"
   ]
 }
