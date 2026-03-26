@@ -1,7 +1,7 @@
 {
-  "sha": "b8486b6d9233168bcf4a8fdfb52323371fe13c0a",
+  "sha": "56a52ccc487b1fbe925cd416728e16e577d712c1",
   "timestamp": "2026-03-26 17:38",
   "changelog": [
-    "participant slides tighten top spacing and style close button"
+    "participant slides tighten deck row height and one-line titles"
   ]
 }
