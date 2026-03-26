@@ -1,7 +1,7 @@
 {
-  "sha": "f9fc01db60ff6b7273baefecbc4b3bd8b6ff24fa",
-  "timestamp": "2026-03-26 21:58",
+  "sha": "58f35a247efbce73a14c24d37fac6ba1874dcdb1",
+  "timestamp": "2026-03-26 21:59",
   "changelog": [
-    "feat: always show Notes button and add to tour"
+    "feat: add participant follow trainer toggle"
   ]
 }
