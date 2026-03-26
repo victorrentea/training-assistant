@@ -1305,7 +1305,7 @@ class SlidesOnDemandWsRunner:
             )
             log.info(
                 "slides",
-                f"⬆️ slides_upload_upsert_ok slug={slug} request_id={request_id} path={relative_path}",
+                f"⬆️ slides_upload_upsert_ok slug={slug}",
             )
             self._send_result(ws, {
                 "type": "slides_upload_result",
