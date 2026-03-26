@@ -1,7 +1,7 @@
 {
-  "sha": "03eead51b72e5fa2d7a07b23bfef2498662b26fa",
-  "timestamp": "2026-03-26 16:44",
+  "sha": "e80329ab10883ae1b77f42f28f6160926efbd6d2",
+  "timestamp": "2026-03-26 16:48",
   "changelog": [
-    "Improve participant slides UX and preserve host mtime"
+    "Restore participant slides catalog and fix host availability text"
   ]
 }
