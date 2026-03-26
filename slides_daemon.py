@@ -406,9 +406,41 @@ def get_cpu_free_percent(sample_seconds: float = 1.0) -> float:
 
 
 def convert_with_libreoffice(pptx_path: Path, output_dir: Path) -> Path:
+    soffice_override = os.environ.get("PPTX_SOFFICE_BIN", "").strip()
+    soffice_candidates = []
+    if soffice_override:
+        soffice_candidates.append(soffice_override)
+    soffice_candidates.extend(
+        [
+            "soffice",
+            "/Applications/LibreOffice.app/Contents/MacOS/soffice",
+            str(Path.home() / "Applications/LibreOffice.app/Contents/MacOS/soffice"),
+        ]
+    )
+
+    soffice_cmd: str | None = None
+    for candidate in soffice_candidates:
+        if not candidate:
+            continue
+        if os.path.isabs(candidate):
+            if os.path.exists(candidate):
+                soffice_cmd = candidate
+                break
+            continue
+        resolved = shutil.which(candidate)
+        if resolved:
+            soffice_cmd = resolved
+            break
+
+    if soffice_cmd is None:
+        raise RuntimeError(
+            "LibreOffice conversion failed: 'soffice' not found. "
+            "Install LibreOffice or set PPTX_SOFFICE_BIN."
+        )
+
     output_dir.mkdir(parents=True, exist_ok=True)
     cmd = [
-        "soffice",
+        soffice_cmd,
         "--headless",
         "--convert-to",
         "pdf",
