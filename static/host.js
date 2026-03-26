@@ -19,6 +19,12 @@
   let _sessionIntervalsEditing = false;
   let _sessionIntervalsDraft = '';
   let _sessionIntervalsError = '';
+  let _slidesCatalogEntries = [];
+  let _slidesCatalogLoadedAt = 0;
+  let _slidesCatalogLoading = false;
+  let _slidesCatalogError = '';
+  let _slidesCatalogHideTimer = null;
+  const _SLIDES_CATALOG_TTL_MS = 4000;
 
   let _hostWcDebounceTimer = null;
   let _hostWcLastDataKey = null;
@@ -127,6 +133,7 @@
   pLink.innerHTML = location.host.split('').map((ch, i) =>
     `<span class="wave-char" style="animation-delay:${(i * 0.12).toFixed(2)}s">${ch}</span>`
   ).join('');
+  _setupSlidesCatalogHover();
 
   // ── WebSocket (host monitors state too) ──
   function connectWS() {
@@ -426,9 +433,18 @@
         label: `${_fmtSessionTime(start)}→${endLabel}`,
         start: new Date(start),
         end: new Date(end),
+        startIso: start.toISOString(),
+        endIso: end.toISOString(),
         isOngoing: isOngoingWindow
       };
     }).filter(Boolean);
+  }
+
+  function openSessionIntervalLines(startIso, endIso) {
+    if (!startIso || !endIso) return;
+    const qs = new URLSearchParams({ start: startIso, end: endIso });
+    const url = `/api/session/interval-lines.txt?${qs.toString()}`;
+    window.open(url, '_blank', 'noopener');
   }
 
   function _groupSessionWindowsByDay(session) {
@@ -815,6 +831,68 @@
     const out = (usage.output_tokens || 0).toLocaleString();
     el.title = 'Tokens: ' + inp + ' in / ' + out + ' out';
     el.style.color = cost > 3 ? 'var(--danger)' : cost > 1 ? 'var(--warn)' : 'var(--muted)';
+  }
+
+  function _renderSlidesCatalogPopover() {
+    const contentEl = document.getElementById('slides-catalog-content');
+    if (!contentEl) return;
+    if (_slidesCatalogLoading) {
+      contentEl.textContent = 'Loading PDF => PPTX map...';
+      return;
+    }
+    if (_slidesCatalogError) {
+      contentEl.textContent = _slidesCatalogError;
+      return;
+    }
+    if (!_slidesCatalogEntries.length) {
+      contentEl.textContent = 'No PDF => PPTX mappings found in catalog.';
+      return;
+    }
+    const head = `<div class="slides-catalog-head">${_slidesCatalogEntries.length} mapped decks</div>`;
+    const lines = _slidesCatalogEntries.map((entry) => {
+      const pdf = escHtml(entry.pdf || '');
+      const pptxPath = escHtml(entry.pptx_path || '');
+      const missingClass = entry.exists ? '' : ' missing';
+      const missingMark = entry.exists ? '' : ' ⚠';
+      return `<div class="slides-catalog-line"><span class="slides-catalog-pdf">${pdf}</span> => <span class="slides-catalog-pptx${missingClass}" title="${pptxPath}">${pptxPath}${missingMark}</span></div>`;
+    }).join('');
+    contentEl.innerHTML = head + lines;
+  }
+
+  async function _loadSlidesCatalogMap(force = false) {
+    if (_slidesCatalogLoading) return;
+    if (!force && (Date.now() - _slidesCatalogLoadedAt) < _SLIDES_CATALOG_TTL_MS) return;
+    _slidesCatalogLoading = true;
+    _slidesCatalogError = '';
+    _renderSlidesCatalogPopover();
+    try {
+      const resp = await fetch('/api/slides/catalog-map');
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const data = await resp.json();
+      _slidesCatalogEntries = Array.isArray(data.entries) ? data.entries : [];
+      _slidesCatalogLoadedAt = Date.now();
+    } catch (e) {
+      _slidesCatalogError = `Cannot load PDF => PPTX map (${e.message || 'request failed'}).`;
+    } finally {
+      _slidesCatalogLoading = false;
+      _renderSlidesCatalogPopover();
+    }
+  }
+
+  function _setupSlidesCatalogHover() {
+    const hover = document.getElementById('slides-catalog-hover');
+    if (!hover) return;
+    const open = () => {
+      clearTimeout(_slidesCatalogHideTimer);
+      hover.classList.add('open');
+      void _loadSlidesCatalogMap();
+    };
+    const close = () => {
+      clearTimeout(_slidesCatalogHideTimer);
+      _slidesCatalogHideTimer = setTimeout(() => hover.classList.remove('open'), 120);
+    };
+    hover.addEventListener('mouseenter', open);
+    hover.addEventListener('mouseleave', close);
   }
 
   async function toggleMode() {
@@ -2909,11 +2987,21 @@ function renderSessionPanel() {
         if (rows.length) {
           const parts = rows.map((row) => {
             const chips = row.windows
-              .map((w) => `<span class="session-main-interval-chip${w.isOngoing ? ' session-main-interval-chip-live' : ''}">${_esc(w.label)}</span>`)
+              .map((w) => (
+                `<span class="session-main-interval-chip${w.isOngoing ? ' session-main-interval-chip-live' : ''}" ` +
+                `data-start="${_esc(w.startIso)}" data-end="${_esc(w.endIso)}" ` +
+                `title="Open normalized transcript lines for this interval in a new tab">${_esc(w.label)}</span>`
+              ))
               .join('');
             return `<div class="session-main-interval-day-row"><span class="session-main-interval-day-label">Day${row.dayNum}:</span><span class="session-main-interval-day-chips">${chips}</span></div>`;
           });
           intervalsEl.innerHTML = parts.join('');
+          intervalsEl.querySelectorAll('.session-main-interval-chip').forEach((chip) => {
+            chip.addEventListener('click', (event) => {
+              event.stopPropagation();
+              openSessionIntervalLines(chip.dataset.start, chip.dataset.end);
+            });
+          });
           intervalsEl.style.display = 'flex';
           intervalsEl.classList.add('session-main-intervals-editable');
           intervalsEl.title = 'Click to edit intervals';

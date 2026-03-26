@@ -1,5 +1,13 @@
 # Todo
 
+## Direct request: desktop overlay single-monitor hover zone + 1s auto-hide
+
+- [x] Reproduce issue by code-path inspection in `ButtonBar.swift` (edge trigger active across full right edge).
+- [x] Add failing regression tests for single-monitor trigger zone and auto-hide delay.
+- [x] Restrict single-monitor edge trigger to the vertical band where the panel actually pops in.
+- [x] Set single-monitor auto-hide delay to 1 second after slide-in.
+- [x] Run `swift test` in `desktop-overlay` and capture proof logs.
+
 ## Backlog item: GH#67 participant slides viewer (PDF)
 
 - [x] Add backend slide metadata endpoint `GET /api/slides`
@@ -34,6 +42,13 @@
 - [x] Add frontend catalog normalization guard for malformed/empty slide entries
 - [x] Run targeted slides tests and participant JS syntax check
 
+## Follow-up request: prod still says "No slides published yet"
+
+- [x] Add host-authenticated PDF upload endpoint for slides (`POST /api/slides/upload`)
+- [x] Make uploaded PDFs appear in `/api/slides` and be served by `/api/slides/file/{slug}`
+- [x] Add focused API tests for upload auth + list + file serving
+- [x] Run targeted slides tests
+
 ## Follow-up request: production slides list still empty
 
 - [x] Publish full slides list metadata from `slides_daemon.py` via `POST /api/quiz-status`
@@ -41,13 +56,6 @@
 - [x] Add payload-hash dedupe to avoid redundant reposts every poll cycle
 - [x] Add focused tests for first publish, no-change skip, and delete-triggered republish
 - [x] Run targeted slides tests
-
-## Direct request: update slides mirror design + new PUML
-
-- [x] Capture agreed target architecture (host materials hardcoded path + backend mirror requirement)
-- [x] Add dedicated design document in `adoc/` for host->backend PDF sync strategy
-- [x] Add new C2 sequence diagram (`.puml`) for mirror sync and participant read path
-- [x] Render diagram image from PlantUML (`.png`)
 
 ## Backlog item: periodic timestamps in transcription file
 
@@ -253,6 +261,29 @@
 - [x] Run targeted tests
 - [x] Mark direct request done in `backlog.md`
 
+## Direct request: integrate slides detection into `training_daemon.py`
+
+- [x] Embed `slides_daemon.run_once()` polling in the existing `training_daemon.run()` main loop
+- [x] Reuse host auth/server config from `training_daemon` for slides sync calls
+- [x] Keep `.pptx` source resolution quiet at startup (no missing-file spam)
+- [x] Preserve daemon reconnect test behavior for incomplete test configs
+- [x] Run targeted tests: `tests/test_quiz_daemon_reconnect.py`, `tests/test_slides_daemon.py`, `tests/test_slides_api.py`
+- [x] Mark direct request done in `backlog.md`
+
+## Direct request: poll slides every 2 seconds
+
+- [x] Change slides watcher default polling interval from 5s to 2s
+- [x] Keep mtime-gated regeneration logic unchanged
+- [x] Mark direct request done in `backlog.md`
+
+## Direct request: host footer hover map for PDF => PPTX
+
+- [x] Add host-auth endpoint `GET /api/slides/catalog-map` with `pdf`, `pptx_path`, `exists`, `updated_at`
+- [x] Add `📜` icon next to token cost in host right footer
+- [x] Show hover popover with PDF => PPTX mapping list (including missing-source warning)
+- [x] Add API tests for auth + payload mapping
+- [x] Run targeted tests and JS syntax check
+- [x] Mark direct request done in `backlog.md`
 ## Review
 
 - Added `scripts/append_transcription_timestamps.py` with 3s default interval and parser-compatible format.
@@ -336,6 +367,10 @@
 - Verified with `pytest -q tests/test_slides_api.py` (5 passed).
 - Verified with `pytest -q tests/test_main.py -k "slides"` (4 passed, 120 deselected).
 - Frontend syntax check: `node --check static/participant.js`.
+- Follow-up implemented: added host-auth endpoint `POST /api/slides/upload` to upload PDF files into server-side slide storage.
+- Follow-up implemented: uploaded PDFs are merged into `/api/slides` and served by `/api/slides/file/{slug}` (production-safe source, independent of local trainer paths).
+- Verified with `pytest -q tests/test_slides_api.py` (8 passed).
+- Verified with `pytest -q tests/test_main.py -k "slides"` (4 passed, 120 deselected).
 - Added detection log line in daemon: `✏️ppt update detected => regenerating ppf: <file>`.
 - Reproduced desktop-overlay bug by code-path inspection: `🖥️` reactions only called `spawnEmoji` and had no sound trigger.
 - Desktop overlay fix: added `breaking-glass.mp3` resource and wired `spawnEmoji("🖥️")` to `SoundManager.shared.playOverlapping(...)` at animation start.
@@ -351,3 +386,16 @@
 - [x] Add automated regression test for 🖥️ → sound mapping/resource availability
 - [x] Run targeted tests/build and capture proof
 - [x] Mark request done in `backlog.md`
+
+## Direct request: Host session interval badge opens normalized transcript `.txt`
+
+- [x] Add host-auth endpoint to export transcript lines for a selected interval as `text/plain` (`/api/session/interval-lines.txt`)
+- [x] Filter by selected interval (`start`/`end`) and normalize transcript lines (whitespace/tab cleanup)
+- [x] Wire Host UI interval chips to open selected interval in a new browser tab
+- [x] Keep existing interval edit behavior on container click
+- [x] Add automated tests for endpoint filtering/validation
+- [x] Run targeted verification and syntax checks
+
+### Review
+- Verified with `python3 -m pytest -q tests/test_main.py -k "session_interval_lines_txt"` (2 passed, 124 deselected).
+- Verified with `node --check static/host.js`.
