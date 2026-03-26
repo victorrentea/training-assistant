@@ -240,3 +240,4 @@ Host broadcasts a statement: "Have you ever shipped code that violated what we j
 - [x] Direct request: participant slides combo now shows `Select a slide` first and loads decks by unique key (`slug|url`) so selected slide renders correctly in modal.
 - [x] Direct request: reduced all `/static/avatars/*.png` to max 400x400 and stopped repeated self-avatar `src` reassignment in participant client to avoid unnecessary re-download attempts.
 - [x] Direct request: fixed participant slide modal rendering by adding native iframe fallback when PDF.js viewer init fails, so selected slide still opens correctly.
+- [x] Direct request: participant slides no longer trigger forced download on preview (`?inline=1` honored) and `/api/slides` now hides guaranteed-503 local entries while daemon is offline.

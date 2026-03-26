@@ -509,3 +509,18 @@
 - Found production runtime issue: PDF.js viewer initialization threw an uncaught promise error and left modal stuck in loading.
 - Added fallback rendering path to native iframe preview for selected slide URLs; selection now still opens and displays the PDF even if PDF.js fails.
 - Verified with `node --check static/participant.js` and slides-focused test suites.
+
+## Direct request: participant slide select downloads unexpectedly + 503 entries
+
+- [x] Prevent forced download in modal preview by honoring `?inline=1` in slide file endpoint (`Content-Disposition: inline`)
+- [x] Filter public participant `/api/slides` list when daemon is offline to hide missing server PDFs that would return 503
+- [x] Keep host availability endpoint complete (includes missing entries) for operational visibility
+- [x] Add API regression tests for inline disposition and daemon-offline filtering behavior
+- [x] Run targeted slides tests + checks
+
+### Review
+- Fixed modal auto-download behavior: inline preview requests now return `Content-Disposition: inline`.
+- Fixed broken selection set in participant dropdown when daemon is disconnected: `/api/slides` now excludes missing local slide endpoints in that state, avoiding guaranteed 503 selections.
+- Host hover remains complete for observability (`/api/slides/participant-availability` still shows all deck names with availability flags).
+- Verified with `pytest -q tests/test_slides_api.py` (23 passed) and `pytest -q tests/test_main.py -k "slides"` (4 passed).
+- Verified with `node --check static/participant.js` and `python3 -m py_compile routers/slides.py`.
