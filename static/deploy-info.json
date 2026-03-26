@@ -1,7 +1,7 @@
 {
-  "sha": "61d0c6bfb7c320924ac21683bcfb9bd6aec1b13d",
-  "timestamp": "2026-03-26 23:44",
+  "sha": "cfc2d6b4a4b4d204ab770a1ec9f4d0ec04b785cb",
+  "timestamp": "2026-03-26 23:46",
   "changelog": [
-    "fix: run slides watcher in background thread to unblock main daemon loop"
+    "style: prefix slide change log with 'Slide:'"
   ]
 }
