@@ -1,7 +1,7 @@
 {
-  "sha": "3101858f2651aa7bb48ee228ef8265a627af9088",
-  "timestamp": "2026-03-25 22:30",
+  "sha": "f37207465d3834a6bcb6fc722ee8cf59577adaf9",
+  "timestamp": "2026-03-26 07:09",
   "changelog": [
-    "Show PDF to PPTX catalog in host footer"
+    "fix: tighten single-screen overlay hover zone"
   ]
 }
