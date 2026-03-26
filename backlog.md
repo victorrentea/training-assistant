@@ -11,6 +11,7 @@
 - [x] slides-daemon: fixed PPTX auto-conversion when `soffice` is not in PATH by adding macOS LibreOffice fallback (`/Applications/LibreOffice.app/Contents/MacOS/soffice`) plus `PPTX_SOFFICE_BIN` override; verified AI Coding `touch` triggers auto-regeneration to `materials/slides/AI Coding.pdf`.
 - [x] bug: participant onboarding checklist (the 3 checkboxes at the bottom) now stays permanently hidden after all 3 are completed; hand/welcome animation can still reappear.
 - [x] desktop-overlay: in single-monitor mode, right-edge panel now pops in only when mouse enters the panel's own vertical edge band (not anywhere on the full screen edge) and auto-hides after 1 second; regression tests added.
+- [x] desktop-overlay: treat mirrored displays as single-desktop mode (right-edge hidden bar) and switch to bottom bar on external extended desktops.
 - [x] ui: participant Key Points label now includes spacing between count and text (`🧠 38 Key Points` instead of `🧠 38Key Points`)
 - [x] Add and run a direct utility to reset normalization offsets and rebuild normalized transcripts from raw files (`python3 -m daemon.rebuild_normalized_transcripts --from-iso ...`).
 - [x] Migrate quiz/summarizer + transcript-status input to normalized transcripts (`YYYY-MM-DD transcription.txt`) instead of raw transcriber files.

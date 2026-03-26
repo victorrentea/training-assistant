@@ -1,6 +1,52 @@
 import AppKit
 import Foundation
 
+struct ScreenTopology {
+    private static let mirrorTolerance: CGFloat = 1.0
+
+    static func primaryIndex(frames: [CGRect]) -> Int {
+        guard !frames.isEmpty else { return 0 }
+        return frames.enumerated().min { lhs, rhs in
+            if lhs.element.minY == rhs.element.minY {
+                return lhs.element.minX < rhs.element.minX
+            }
+            return lhs.element.minY < rhs.element.minY
+        }?.offset ?? 0
+    }
+
+    static func hasSecondaryDesktop(frames: [CGRect]) -> Bool {
+        guard frames.count > 1 else { return false }
+        let primary = frames[primaryIndex(frames: frames)]
+        return frames.contains { frame in
+            !isMirrorOfPrimary(frame, primary: primary)
+        }
+    }
+
+    static func preferredButtonScreenIndex(frames: [CGRect]) -> Int {
+        guard !frames.isEmpty else { return 0 }
+
+        let primaryIdx = primaryIndex(frames: frames)
+        let primary = frames[primaryIdx]
+        let secondaryDesktops = frames.enumerated().filter { entry in
+            entry.offset != primaryIdx && !isMirrorOfPrimary(entry.element, primary: primary)
+        }
+        guard !secondaryDesktops.isEmpty else { return primaryIdx }
+
+        if let above = secondaryDesktops.first(where: { $0.element.minY >= primary.maxY - 50 }) {
+            return above.offset
+        }
+        return secondaryDesktops[0].offset
+    }
+
+    private static func isMirrorOfPrimary(_ frame: CGRect, primary: CGRect) -> Bool {
+        if abs(frame.minX - primary.minX) > mirrorTolerance { return false }
+        if abs(frame.minY - primary.minY) > mirrorTolerance { return false }
+        if abs(frame.width - primary.width) > mirrorTolerance { return false }
+        if abs(frame.height - primary.height) > mirrorTolerance { return false }
+        return true
+    }
+}
+
 class AppDelegate: NSObject, NSApplicationDelegate, URLSessionWebSocketDelegate {
     private var overlayPanel: OverlayPanel!
     private var animator: EmojiAnimator!
@@ -23,9 +69,15 @@ class AppDelegate: NSObject, NSApplicationDelegate, URLSessionWebSocketDelegate 
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        let singleScreen = NSScreen.screens.count == 1
-        let effectScreen = primaryScreen()   // built-in Mac display — effects always here
-        let buttonScreen = preferredScreen() // external monitor above Mac (or primary if single)
+        let screens = NSScreen.screens
+        guard !screens.isEmpty else { fatalError("No screens available") }
+        let screenFrames = screens.map(\.frame)
+        let primaryIdx = ScreenTopology.primaryIndex(frames: screenFrames)
+        let buttonIdx = ScreenTopology.preferredButtonScreenIndex(frames: screenFrames)
+
+        let singleScreen = !ScreenTopology.hasSecondaryDesktop(frames: screenFrames)
+        let effectScreen = screens[primaryIdx] // built-in Mac display — effects always here
+        let buttonScreen = screens[buttonIdx] // external desktop (or primary if single/mirror)
 
         overlayPanel = OverlayPanel(screen: effectScreen)
         overlayPanel.orderFrontRegardless()
@@ -44,33 +96,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, URLSessionWebSocketDelegate 
         pidCheckTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
             self?.checkPIDFile()
         }
-    }
-
-    // MARK: - Screen selection
-
-    /// Returns the primary/built-in screen (lowest Y origin — the MacBook display).
-    private func primaryScreen() -> NSScreen {
-        return NSScreen.screens.min(by: { $0.frame.minY < $1.frame.minY }) ?? NSScreen.screens[0]
-    }
-
-    /// Returns the preferred screen for the button bar.
-    /// With multiple screens, prefers an external screen positioned above the primary (built-in).
-    /// Falls back to any non-primary screen, then the primary.
-    private func preferredScreen() -> NSScreen {
-        let screens = NSScreen.screens
-        guard screens.count > 1 else { return screens[0] }
-
-        // Primary screen: lowest Y origin (typically the built-in MacBook display)
-        guard let primary = screens.min(by: { $0.frame.minY < $1.frame.minY }) else {
-            return screens[0]
-        }
-
-        // Prefer a screen whose bottom edge aligns with the top of the primary (positioned above)
-        let aboveScreens = screens.filter { $0 !== primary && $0.frame.minY >= primary.frame.maxY - 50 }
-        if let above = aboveScreens.first { return above }
-
-        // Fallback: any non-primary screen
-        return screens.first(where: { $0 !== primary }) ?? screens[0]
     }
 
     // MARK: - Button bar
