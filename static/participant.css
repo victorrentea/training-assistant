@@ -295,19 +295,29 @@ h1 { display: none; }
 
 .slides-preview-close {
   position: absolute;
-  top: .22rem;
-  right: .22rem;
-  border: none;
-  background: transparent;
-  color: #e8e8e8;
-  font-size: 1.45rem;
+  top: .28rem;
+  right: .28rem;
+  border: 2px solid rgba(217, 79, 79, 0.4);
+  background: rgba(255, 255, 255, 0.94);
+  color: #d94f4f;
+  border-radius: 12px;
+  width: 2.7rem;
+  height: 2.7rem;
+  font-size: 4.2rem;
+  font-weight: 800;
   line-height: 1;
   cursor: pointer;
   z-index: 12;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.22);
 }
 
 .slides-preview-close:hover {
-  color: var(--accent2);
+  color: #fff;
+  background: #d94f4f;
+  border-color: #d94f4f;
 }
 
 @media (max-width: 900px) {
@@ -615,7 +625,28 @@ h1 { display: none; }
   position: absolute;
   inset: 0;
   overflow: auto;
-  background: #fff;
+  background: #ecf0f7;
+  padding: 14px 0 22px;
+  scrollbar-gutter: stable both-edges;
+}
+
+#slides-pdf-container::-webkit-scrollbar {
+  width: 13px;
+}
+
+#slides-pdf-container::-webkit-scrollbar-track {
+  background: #d5dce9;
+}
+
+#slides-pdf-container::-webkit-scrollbar-thumb {
+  background: #7a879f;
+  border-radius: 999px;
+  border: 3px solid #d5dce9;
+}
+
+#slides-pdf-container {
+  scrollbar-width: auto;
+  scrollbar-color: #7a879f #d5dce9;
 }
 
 #slides-pdf-viewer {
@@ -623,9 +654,13 @@ h1 { display: none; }
 }
 
 #slides-pdf-container .page {
-  margin: 0 0 4px 0 !important;
-  border: 1px solid rgba(255, 255, 255, 0.14) !important;
-  box-shadow: none !important;
+  margin: 0 auto 18px !important;
+  border: 1px solid #c9d0df !important;
+  box-shadow: 0 2px 12px rgba(23, 34, 56, 0.14) !important;
+}
+
+#slides-pdf-container .page:last-child {
+  margin-bottom: 0 !important;
 }
 
 @media (max-width: 640px) {
@@ -787,9 +822,9 @@ h1 { display: none; }
 
 #version-tag {
   top: auto;
-  right: .45rem;
+  right: calc(var(--slides-overlay-width) + .45rem);
   bottom: .35rem;
-  z-index: 4002;
+  z-index: 7002;
 }
 
 /* ── Poll closed banner ── */

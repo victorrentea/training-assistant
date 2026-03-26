@@ -2497,7 +2497,7 @@
     const versionTag = document.getElementById('version-tag');
     if (versionTag) {
       versionTag.style.top = '';
-      versionTag.style.right = '.45rem';
+      versionTag.style.right = 'calc(var(--slides-overlay-width) + .45rem)';
       versionTag.style.bottom = '.35rem';
     }
   }
