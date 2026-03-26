@@ -1131,7 +1131,7 @@
       s.textContent = '@keyframes _blink-warning{0%,100%{opacity:1}50%{opacity:.25}}';
       document.head.appendChild(s);
     }
-    el.textContent = '⚠️ Deploy incoming';
+    el.textContent = '⚠️ 🚀 Deploy incoming';
     el.style.cssText = 'color:#f5a623;opacity:1;animation:_blink-warning 1s ease-in-out infinite;font-weight:600;';
   }
 
