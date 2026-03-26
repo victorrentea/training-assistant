@@ -82,6 +82,12 @@ h1 { display: none; }
   overflow: auto;
   padding-bottom: 4.1rem;
   box-sizing: border-box;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+#content::-webkit-scrollbar {
+  display: none;
 }
 
 .status-bar {
