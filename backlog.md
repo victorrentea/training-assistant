@@ -285,3 +285,4 @@ Host broadcasts a statement: "Have you ever shipped code that violated what we j
 - [x] Direct request: added Python function/method length guard at 60 LOC with baseline-aware checker, enforced in pre-commit (`hooks/pre-commit`) and CI (`.github/workflows/ci.yml`).
 - [x] Follow-up direct request: reverted emoji button default backgrounds; now only hover uses tooltip color, and tooltip arrow tip was enlarged.
 - [x] Follow-up direct request: reverted tooltip border line thickness back to original while keeping the larger tooltip tip.
+- [x] Follow-up direct request: participant emoji buttons now change border color to match tooltip color only on hover.
