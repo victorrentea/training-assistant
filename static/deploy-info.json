@@ -1,7 +1,7 @@
 {
-  "sha": "20e0ee14b9e3cf87ca8f0b05a75f0d822166bbd3",
-  "timestamp": "2026-03-26 14:41",
+  "sha": "bf88dad7b57385c6e1545429e944fc91dbb53e22",
+  "timestamp": "2026-03-26 14:42",
   "changelog": [
-    "Allow HEAD for slide file endpoint"
+    "docs: remember daemon changes must go to master"
   ]
 }
