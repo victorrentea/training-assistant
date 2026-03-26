@@ -1,7 +1,7 @@
 {
-  "sha": "443e700b69cefdaa237e4e06b5986999bc13b380",
-  "timestamp": "2026-03-26 16:55",
+  "sha": "08d9c820f51087fae4b557cc9b709f50cbc61aaa",
+  "timestamp": "2026-03-26 17:00",
   "changelog": [
-    "Serve slides inline by default for participant viewer"
+    "participant slides inline metadata row"
   ]
 }
