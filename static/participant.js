@@ -145,6 +145,7 @@
     const STEPS = [
       { selector: '#display-name',    emoji: '✏️', text: "That's your name. Tap it to rename yourself. Be creative." },
       { selector: '#summary-btn',     emoji: '🧠', text: 'AI recaps what you missed. Tap any time. Zero FOMO.' },
+      { selector: '#slides-dock',     emoji: '📑', text: 'Slides are always on the right. Click any topic to open it.', scanDock: true },
       { selector: '#location-prompt', emoji: '📍', text: "Tell us where you're from — for the world map. Totally optional." },
       ..._shuffled,
     ];
@@ -167,6 +168,8 @@
     function finish() {
       clearAutoTimer();
       clearGlow();
+      const dock = document.getElementById('slides-dock');
+      if (dock) dock.classList.remove('tour-scan');
       removeBubble();
     }
 
@@ -179,6 +182,10 @@
       const step = STEPS[index];
       const anchor = document.querySelector(step.selector);
       if (!anchor) { showStep(index + 1); return; }
+      if (step.scanDock) {
+        anchor.classList.add('tour-scan');
+        setTimeout(() => anchor.classList.remove('tour-scan'), 1000);
+      }
 
       glowEl = anchor;
       glowEl.classList.add('tour-glow');
@@ -609,17 +616,14 @@
     if (!empty) return;
     let title = 'Pick a Slide';
     let hint = 'Tap one item from the list on the right';
-    let arrow = '👉';
     if (kind === 'none') {
       title = 'No Slides Yet';
       hint = 'Slides will appear here when published';
-      arrow = '📭';
     }
     empty.innerHTML = (
       `<div class="slides-empty-card">` +
       `<div class="slides-empty-title">${escHtml(title)}</div>` +
       `<div class="slides-empty-hint">${escHtml(hint)}</div>` +
-      `<div class="slides-empty-arrow" aria-hidden="true">${arrow}</div>` +
       `</div>`
     );
     empty.style.display = '';
@@ -895,7 +899,9 @@
         openBtn.appendChild(badge);
       }
       openBtn.addEventListener('click', async () => {
-        await _loadSlideIntoViewer(slide, { forceReload: true });
+        const overlay = document.getElementById('slides-overlay');
+        if (overlay) overlay.classList.add('open');
+        await _loadSlideIntoViewer(slide, { forceReload: false });
       });
       const dl = document.createElement('a');
       dl.className = 'slides-list-download';
@@ -1069,8 +1075,6 @@
   function _startSlidesRefreshLoop() {
     _stopSlidesRefreshLoop();
     slidesRefreshTimer = setInterval(() => {
-      const overlay = document.getElementById('slides-overlay');
-      if (!overlay || !overlay.classList.contains('open')) return;
       _refreshSlidesCatalog().catch(() => {});
     }, SLIDES_REFRESH_MS);
   }
@@ -1090,21 +1094,17 @@
     }
     overlay.classList.add('open');
     _refreshSlidesCatalog().catch(() => {});
-    _startSlidesRefreshLoop();
   }
 
   function closeSlidesModal() {
     const overlay = document.getElementById('slides-overlay');
     if (overlay) overlay.classList.remove('open');
-    _stopSlidesRefreshLoop();
     _setSlidesLoading({ visible: false });
   }
 
   function warmSlidesCatalog() {
-    fetch('/api/slides', { cache: 'no-store' })
-      .then(res => (res.ok ? res.json() : { slides: [] }))
-      .then(data => { slidesCatalog = _normalizeSlidesCatalog(data.slides); })
-      .catch(() => {});
+    _refreshSlidesCatalog().catch(() => {});
+    _startSlidesRefreshLoop();
   }
 
   async function requestNotificationPermission() {
