@@ -12,10 +12,9 @@ from pydantic import BaseModel
 from auth import require_host_auth
 from state import state
 from messaging import broadcast_state
-from daemon.session_transcript import parse_txt_entries_with_datetimes
+from daemon.transcript_query import load_normalized_entries
 
 router = APIRouter()
-_TRANSCRIPT_NAME_RE = re.compile(r"^(\d{8})\s+(\d{4})\b")
 
 
 def _get_sessions_root() -> Path | None:
@@ -35,24 +34,6 @@ def _get_transcription_root() -> Path | None:
     )
     p = Path(folder_str).expanduser()
     return p if p.exists() and p.is_dir() else None
-
-
-def _transcript_sort_key(path: Path) -> str:
-    m = _TRANSCRIPT_NAME_RE.match(path.name)
-    if m:
-        return m.group(1) + m.group(2)
-    return str(path.stat().st_mtime)
-
-
-def _transcript_file_date(path: Path):
-    m = _TRANSCRIPT_NAME_RE.match(path.name)
-    if not m:
-        return None
-    ds = m.group(1)
-    try:
-        return datetime(int(ds[:4]), int(ds[4:6]), int(ds[6:8])).date()
-    except ValueError:
-        return None
 
 
 def _normalize_transcript_text(text: str) -> str:
@@ -310,31 +291,19 @@ async def get_interval_lines_txt(
     if root is None:
         raise HTTPException(status_code=404, detail="Transcription folder not found")
 
-    files = sorted(
-        [f for f in root.iterdir() if f.is_file() and f.suffix.lower() == ".txt"],
-        key=_transcript_sort_key,
-    )
-    if not files:
-        raise HTTPException(status_code=404, detail="No transcript files found")
-
-    session_start_date = start_dt.date()
-    filtered_files = [f for f in files if (_transcript_file_date(f) or session_start_date) >= session_start_date]
-    if not filtered_files:
-        filtered_files = [files[-1]]
-
     lines: list[str] = []
-    for transcript_file in filtered_files:
-        file_date = _transcript_file_date(transcript_file)
-        raw = transcript_file.read_text(encoding="utf-8", errors="replace")
-        for dt, txt in parse_txt_entries_with_datetimes(raw, file_date=file_date):
-            if dt is None or not txt.strip():
-                continue
-            if dt < start_dt or dt >= end_dt:
-                continue
-            normalized = _normalize_transcript_text(txt)
-            if not normalized:
-                continue
-            lines.append(f"[{dt.strftime('%Y-%m-%d %H:%M:%S')}] {normalized}")
+    for dt, txt in load_normalized_entries(root, since_date=start_dt.date()):
+        if dt < start_dt or dt >= end_dt:
+            continue
+        normalized = _normalize_transcript_text(txt)
+        if not normalized:
+            continue
+        lines.append(f"[{dt.strftime('%Y-%m-%d %H:%M:%S')}] {normalized}")
+
+    if not lines:
+        normalized_files = list(root.glob("* transcription.txt"))
+        if not normalized_files:
+            raise HTTPException(status_code=404, detail="No normalized transcript files found")
 
     payload = "\n".join(lines) + ("\n" if lines else "")
     filename = (

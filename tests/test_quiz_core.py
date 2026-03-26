@@ -224,29 +224,26 @@ class TestTranscriptionParsing:
 
 
 class TestLoadTranscriptionFiles:
-    def test_loads_vtt(self, tmp_path):
-        (tmp_path / "test.vtt").write_text(SAMPLE_VTT)
-        entries = load_transcription_files(tmp_path)
-        assert len(entries) == 2
-
-    def test_loads_srt(self, tmp_path):
-        (tmp_path / "test.srt").write_text(SAMPLE_SRT)
-        entries = load_transcription_files(tmp_path)
-        assert len(entries) == 2
-
     def test_loads_txt(self, tmp_path):
-        (tmp_path / "test.txt").write_text(SAMPLE_TXT)
+        (tmp_path / "2026-03-25 transcription.txt").write_text("[10:05] Victor: hello\n[10:06] Ana: hi\n")
         entries = load_transcription_files(tmp_path)
-        assert len(entries) == 3
+        assert len(entries) == 2
 
     def test_picks_most_recent(self, tmp_path):
-        (tmp_path / "old.txt").write_text("[00:00:01.00] Speaker:\told")
+        (tmp_path / "2026-03-25 transcription.txt").write_text("[10:00] old")
         time.sleep(0.01)
-        (tmp_path / "new.vtt").write_text(SAMPLE_VTT)
+        (tmp_path / "2026-03-26 transcription.txt").write_text("[11:00] new")
         entries = load_transcription_files(tmp_path)
-        assert len(entries) == 2  # from VTT, not TXT
+        assert len(entries) == 1
+        assert entries[0][0] == 11 * 3600
+        assert entries[0][1] == "new"
 
     def test_no_files_exits(self, tmp_path):
+        with pytest.raises(SystemExit):
+            load_transcription_files(tmp_path)
+
+    def test_no_normalized_files_exits(self, tmp_path):
+        (tmp_path / "20260325 1000 Transcription.txt").write_text("[00:00:01.00] Speaker:\traw")
         with pytest.raises(SystemExit):
             load_transcription_files(tmp_path)
 

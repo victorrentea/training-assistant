@@ -370,16 +370,16 @@ def load_transcription_files(folder: Path, since_date: date | None = None) -> li
         except ValueError:
             return None
 
-    files = sorted([f for f in folder.iterdir() if f.suffix.lower() in {".txt", ".vtt", ".srt"}], key=_sort_key)
+    files = sorted([f for f in folder.iterdir() if f.suffix.lower() == ".txt"], key=_sort_key)
     if not files:
         log.error("transcript", f"No transcription files in {folder}")
         sys.exit(1)
 
     normalized_files = [f for f in files if _NORMALIZED_TXT_NAME_RE.match(f.name)]
-    if normalized_files:
-        base_files = normalized_files
-    else:
-        base_files = files
+    if not normalized_files:
+        log.error("transcript", f"No normalized transcription files in {folder}")
+        sys.exit(1)
+    base_files = normalized_files
 
     if since_date is not None:
         qualifying = [f for f in base_files if (_file_date(f) or date.min) >= since_date]
@@ -392,29 +392,11 @@ def load_transcription_files(folder: Path, since_date: date | None = None) -> li
     base_day = _file_date(qualifying[0]) if qualifying else None
     for f in qualifying:
         raw = f.read_text(encoding="utf-8", errors="replace")
-        ext = f.suffix.lower()
-        if _NORMALIZED_TXT_NAME_RE.match(f.name):
-            file_day = _file_date(f)
-            day_offset = 0
-            if base_day and file_day:
-                day_offset = (file_day - base_day).days * 86400
-            entries = _parse_normalized_txt(raw, day_offset_seconds=day_offset)
-        elif ext == ".vtt":
-            entries = _parse_vtt(raw)
-        elif ext == ".srt":
-            entries = _parse_srt(raw)
-        else:
-            # Derive session start time from filename (e.g. "20250303 1402") so that
-            # elapsed-style timestamps can be converted to real wall-clock values.
-            session_start_secs = None
-            fm = _FILENAME_DATE_RE.match(f.name)
-            if fm:
-                try:
-                    h, mi = int(fm.group(2)[:2]), int(fm.group(2)[2:4])
-                    session_start_secs = h * 3600 + mi * 60
-                except (ValueError, IndexError):
-                    pass
-            entries = _parse_txt(raw, session_start_secs=session_start_secs)
+        file_day = _file_date(f)
+        day_offset = 0
+        if base_day and file_day:
+            day_offset = (file_day - base_day).days * 86400
+        entries = _parse_normalized_txt(raw, day_offset_seconds=day_offset)
         all_entries.extend(entries)
 
     return all_entries
