@@ -438,6 +438,10 @@ h1 { display: none; }
   overflow: auto;
 }
 
+#slides-pdf-container.slides-iframe-mode {
+  overflow: hidden;
+}
+
 #slides-pdf-viewer {
   padding: .2rem 0;
 }

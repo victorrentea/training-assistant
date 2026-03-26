@@ -723,6 +723,8 @@
     }
     const viewer = document.getElementById('slides-pdf-viewer');
     if (viewer) viewer.innerHTML = '';
+    const container = document.getElementById('slides-pdf-container');
+    if (container) container.classList.remove('slides-iframe-mode');
   }
 
   function _scheduleTestAutoScroll(slide) {
@@ -775,6 +777,7 @@
     }
     const joiner = url.includes('?') ? '&' : '?';
     slidesNativeFrame.src = `${url}${joiner}inline=1`;
+    container.classList.add('slides-iframe-mode');
     container.appendChild(slidesNativeFrame);
     return true;
   }
