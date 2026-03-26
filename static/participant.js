@@ -909,6 +909,12 @@
     const list = document.getElementById('slides-list');
     if (!list) return;
     list.innerHTML = '';
+    list.classList.remove('uniform-10');
+    list.style.removeProperty('--slides-uniform-count');
+    if (slidesCatalog.length > 0 && slidesCatalog.length <= 10) {
+      list.classList.add('uniform-10');
+      list.style.setProperty('--slides-uniform-count', String(slidesCatalog.length));
+    }
 
     for (const slide of slidesCatalog) {
       const item = document.createElement('div');
