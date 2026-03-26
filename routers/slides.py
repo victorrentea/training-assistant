@@ -66,8 +66,10 @@ def _candidate_local_slides_dirs() -> list[Path]:
         candidates.append(Path(env_dir).expanduser())
     if publish_dir:
         candidates.append(Path(publish_dir).expanduser())
-    # Default local server storage in project root.
-    candidates.append(Path(".server-data"))
+    # Railway runtime path where daemon-published slides are mirrored.
+    candidates.append(Path("/app/server_materials/slides"))
+    # Local fallback for non-Railway runs from repo root.
+    candidates.append(Path("server_materials") / "slides")
     return candidates
 
 
