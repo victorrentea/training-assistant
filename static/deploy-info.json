@@ -1,7 +1,7 @@
 {
-  "sha": "58f35a247efbce73a14c24d37fac6ba1874dcdb1",
-  "timestamp": "2026-03-26 21:59",
+  "sha": "9a156a232746139b2b4aaf9f57ec8da50da77b60",
+  "timestamp": "2026-03-26 22:11",
   "changelog": [
-    "feat: add participant follow trainer toggle"
+    "feat: alert on unmapped powerpoint presentation"
   ]
 }
