@@ -1,7 +1,7 @@
 {
-  "sha": "c3f79a2519566265fb7f36fd6c0c3987540182a3",
-  "timestamp": "2026-03-26 09:11",
+  "sha": "39c2dcaf80e425362acd535ecc954a2af6ce3326",
+  "timestamp": "2026-03-26 09:19",
   "changelog": [
-    "fix: fallback to macos soffice path"
+    "feat: run slides polling inside training daemon"
   ]
 }
