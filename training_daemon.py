@@ -621,7 +621,12 @@ def _slugify(value: str) -> str:
     return slug or "slide"
 
 
-def _post_material_upsert_file(main_config, relative_path: str, file_path: Path) -> None:
+def _post_material_upsert_file(
+    main_config,
+    relative_path: str,
+    file_path: Path,
+    source_mtime: float | None = None,
+) -> None:
     file_bytes = file_path.read_bytes()
     boundary = f"----materials-sync-{uuid.uuid4().hex}"
     payload = []
@@ -629,6 +634,14 @@ def _post_material_upsert_file(main_config, relative_path: str, file_path: Path)
     payload.append(
         f'Content-Disposition: form-data; name="relative_path"\r\n\r\n{relative_path}\r\n'.encode("utf-8")
     )
+    if source_mtime is not None:
+        payload.append(f"--{boundary}\r\n".encode("utf-8"))
+        payload.append(
+            (
+                'Content-Disposition: form-data; name="source_mtime"\r\n\r\n'
+                f"{float(source_mtime):.6f}\r\n"
+            ).encode("utf-8")
+        )
     payload.append(f"--{boundary}\r\n".encode("utf-8"))
     payload.append(
         (
@@ -800,8 +813,8 @@ class MaterialsMirrorRunner:
             }
         return entries
 
-    def _post_material_upsert(self, relative_path: str, file_path: Path) -> None:
-        _post_material_upsert_file(self.main_config, relative_path, file_path)
+    def _post_material_upsert(self, relative_path: str, file_path: Path, source_mtime: float | None = None) -> None:
+        _post_material_upsert_file(self.main_config, relative_path, file_path, source_mtime=source_mtime)
 
     def _post_material_delete(self, relative_path: str) -> None:
         _post_json(
@@ -835,7 +848,7 @@ class MaterialsMirrorRunner:
                 )
                 if not is_changed:
                     continue
-                self._post_material_upsert(rel_path, meta["path"])
+                self._post_material_upsert(rel_path, meta["path"], source_mtime=float(meta["mtime"]))
                 tracked[rel_path] = {
                     "mtime": meta["mtime"],
                     "size": meta["size"],
@@ -1034,7 +1047,12 @@ class SlidesOnDemandWsRunner:
                 "slides",
                 f"⬆️ slides_upload_received slug={slug} request_id={request_id} path={relative_path}",
             )
-            _post_material_upsert_file(self.main_config, relative_path, local_pdf)
+            _post_material_upsert_file(
+                self.main_config,
+                relative_path,
+                local_pdf,
+                source_mtime=float(local_pdf.stat().st_mtime),
+            )
             log.info(
                 "slides",
                 f"⬆️ slides_upload_upsert_ok slug={slug} request_id={request_id} path={relative_path}",

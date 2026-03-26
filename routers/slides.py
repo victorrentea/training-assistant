@@ -207,6 +207,29 @@ def _uploaded_slide_meta_path(slug: str) -> Path:
     return _uploaded_slides_dir() / f"{slug}.json"
 
 
+def _local_slides_meta_dir() -> Path:
+    configured = os.environ.get("TRAINING_ASSISTANT_LOCAL_SLIDES_META_DIR")
+    if configured:
+        return Path(configured).expanduser()
+    return Path(".server-data") / "local-slides-meta"
+
+
+def _local_slide_meta_path(slug: str) -> Path:
+    return _local_slides_meta_dir() / f"{slug}.json"
+
+
+def _read_local_slide_source_updated_at(slug: str) -> str | None:
+    path = _local_slide_meta_path(slug)
+    if not path.exists():
+        return None
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+    updated = str(raw.get("source_updated_at") or "").strip()
+    return updated or None
+
+
 def _server_materials_dir() -> Path:
     configured = os.environ.get("SERVER_MATERIALS_DIR", "").strip()
     if configured:
@@ -263,11 +286,12 @@ def _build_local_slides_index() -> tuple[list[dict], dict[str, Path]]:
             slug = f"{base_slug}-{idx+1}"
         seen_slugs.add(slug)
         mtime = datetime.fromtimestamp(pdf.stat().st_mtime, tz=timezone.utc).isoformat()
+        source_updated_at = _read_local_slide_source_updated_at(slug)
         slides.append({
             "name": pdf.stem,
             "slug": slug,
             "url": f"/api/slides/file/{slug}",
-            "updated_at": mtime,
+            "updated_at": source_updated_at or mtime,
             "source": "local_materials",
         })
         by_slug[slug] = pdf
@@ -603,6 +627,7 @@ def _is_not_modified(request: Request, etag: str, path: Path) -> bool:
 @router.post("/api/materials/upsert")
 async def upsert_material_file(
     relative_path: str = Form(...),
+    source_mtime: str | None = Form(default=None),
     file: UploadFile = File(...),
 ):
     rel = _normalize_relative_material_path(relative_path)
@@ -613,12 +638,36 @@ async def upsert_material_file(
     target = _material_target_path(rel)
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_bytes(body)
+    source_updated_at = None
+    parsed_source_mtime = None
+    if source_mtime is not None and source_mtime.strip():
+        try:
+            parsed_source_mtime = float(source_mtime)
+            source_updated_at = datetime.fromtimestamp(parsed_source_mtime, tz=timezone.utc).isoformat()
+        except ValueError:
+            parsed_source_mtime = None
+            source_updated_at = None
+
+    if rel.startswith("slides/") and target.suffix.lower() == ".pdf":
+        slug = _slugify(Path(rel).stem)
+        meta_dir = _local_slides_meta_dir()
+        meta_dir.mkdir(parents=True, exist_ok=True)
+        _local_slide_meta_path(slug).write_text(
+            json.dumps(
+                {
+                    "relative_path": rel,
+                    "source_mtime": parsed_source_mtime,
+                    "source_updated_at": source_updated_at,
+                }
+            ),
+            encoding="utf-8",
+        )
 
     return {
         "ok": True,
         "relative_path": rel,
         "size": len(body),
-        "updated_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": source_updated_at or datetime.now(timezone.utc).isoformat(),
     }
 
 
@@ -629,6 +678,9 @@ async def delete_material_file(body: MaterialsDeleteRequest):
     existed = target.exists()
     if target.exists() and target.is_file():
         target.unlink()
+    if rel.startswith("slides/") and target.suffix.lower() == ".pdf":
+        slug = _slugify(Path(rel).stem)
+        _local_slide_meta_path(slug).unlink(missing_ok=True)
 
     # Clean up empty directories up to materials root.
     root = _server_materials_dir().resolve()
