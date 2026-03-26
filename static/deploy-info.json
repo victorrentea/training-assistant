@@ -1,9 +1,7 @@
 {
-  "sha": "8e3d8990be464ad9ddf77ad1a3f094920ab90e7e",
-  "timestamp": "2026-03-26 08:29",
+  "sha": "3a6179eb4d2d7c9b1a59a55a3c083f2279d0e547",
+  "timestamp": "2026-03-26 08:30",
   "changelog": [
-    "chore: enrich transcript normalizer debug log",
-    "feat: accept positional ISO from/to in transcript query",
-    "feat: run transcript normalization in daemon and add range query cli"
+    "overlay: delay ws disconnect error by 3s"
   ]
 }
