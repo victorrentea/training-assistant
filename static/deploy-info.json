@@ -1,19 +1,7 @@
 {
-  "sha": "dc9ba1cc6da82abe26f89dd9d9668fe8cf5c63e5",
-  "timestamp": "2026-03-26 07:26",
+  "sha": "3b17e4beb4dac1f867383561268c64264f0edd93",
+  "timestamp": "2026-03-26 07:32",
   "changelog": [
-    "chore: push workspace updates",
-    "docs: define host-to-backend slides mirror design",
-    "Host interval chips open normalized transcript txt",
-    "docs: align slides sequence flow with daemon-driven source",
-    "fix: tighten single-screen overlay hover zone",
-    "Show PDF to PPTX catalog in host footer",
-    "chore: push workspace updates",
-    "Saving uncommitted changes before archiving",
-    "docs: add slides sequence diagram",
-    "Format work hours as days plus hours",
-    "Reduce slides polling interval to 2s",
-    "Integrate PPTX watcher into training daemon loop",
-    "feat: add host slides upload endpoint"
+    "Update slides sync and desktop overlay"
   ]
 }
