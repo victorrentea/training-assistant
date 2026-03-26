@@ -153,7 +153,7 @@ training-assistant/
 │   ├── test_e2e*.py         ← E2E browser tests (Playwright)
 │   ├── test_load.py         ← Load tests
 │   └── ...                  ← All other test files
-├── clean-clipboard/
+├── wispr-addons/
 │   ├── clean.py             ← macOS clipboard cleanup daemon (CGEventTap, Claude Haiku AI cleanup, dictation mute + media pause/play)
 │   ├── (uses ~/.training-assistants-secrets.env for ANTHROPIC_API_KEY)
 │   ├── requirements.txt     ← Python deps (anthropic, pyobjc)
@@ -309,7 +309,7 @@ Manual rebuild utility (run only on demand):
 
 ---
 
-## Clean Clipboard (`clean-clipboard/clean.py`)
+## Wispr Addons (`wispr-addons/clean.py`)
 
 macOS daemon that runs on the trainer's Mac alongside the workshop:
 - **CGEventTap** intercepts all key and mouse events system-wide
@@ -318,8 +318,8 @@ macOS daemon that runs on the trainer's Mac alongside the workshop:
 - **Cmd+Ctrl+Opt+V**: same as above but adds contextual emojis
 - **Mouse Button 5** (Wispr Flow dictation toggle): pauses media playback and lowers "OS Output" loopback device volume to ~silent; pressing again resumes media and restores volume
 - **Escape while dictating**: also restores volume and resumes media
-- Requires macOS Accessibility permission and `ANTHROPIC_API_KEY` in `~/.training-assistants-secrets.env`
-- Run: `python3 clean-clipboard/clean.py`
+- Requires macOS Accessibility permission and `ANTHROPIC_API_KEY` in `wispr-addons/secrets.env`
+- Run: `python3 wispr-addons/clean.py`
 
 ---
 
