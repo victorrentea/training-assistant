@@ -1049,7 +1049,7 @@
     const nativeFrame = document.getElementById('slides-native-frame');
     if (nativeFrame) {
       nativeFrame.style.display = 'none';
-      nativeFrame.removeAttribute('src');
+      nativeFrame.removeAttribute('data');
     }
   }
 
@@ -1283,7 +1283,7 @@
         if (pdfContainer) pdfContainer.style.display = 'none';
         if (nativeFrame) {
           const savedPage = Math.max(1, Number(_getStoredSlidePage(slide.slug) || 1));
-          nativeFrame.src = _buildNativeSlideUrl(slide.url, savedPage);
+          nativeFrame.data = _buildNativeSlideUrl(slide.url, savedPage);
           nativeFrame.style.display = '';
           _setStoredSlidePage(slide.slug, savedPage);
         }
@@ -1297,7 +1297,7 @@
       if (pdfContainer) pdfContainer.style.display = '';
       if (nativeFrame) {
         nativeFrame.style.display = 'none';
-        nativeFrame.removeAttribute('src');
+        nativeFrame.removeAttribute('data');
       }
 
       if (!forceReload && slidesSelectedId === slide._id && slidesLastFingerprint === fingerprint && slidesPdfDoc) {
