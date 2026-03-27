@@ -49,6 +49,7 @@ class AppState:
         self.daemon_session_notes: Optional[str] = None
         self.daemon_ws: Optional[WebSocket] = None
         self.slides_current: Optional[dict] = None
+        self.slides_meta: dict[str, str] = {}  # slug → updated_at ISO string (daemon-reported)
         # Runtime-only upload coordination state for on-demand slide fetches.
         self.slides_uploads: dict[str, dict] = {}
         self.notes_content: Optional[str] = None
