@@ -443,28 +443,32 @@ h1 { display: none; }
 
 .slides-meta-inline {
   position: absolute;
-  top: .35rem;
-  bottom: auto;
-  left: .5rem;
+  bottom: .5rem;
+  top: auto;
+  left: .75rem;
   right: auto;
   z-index: 11;
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  gap: .3rem;
+  gap: .4rem;
   pointer-events: none;
 }
 
 .slides-page-inline {
-  margin-left: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(20, 20, 35, 0.85);
   color: #fff;
-  background: #000;
-  font-size: 1.1rem;
-  font-weight: 500;
+  font-size: 1rem;
+  font-weight: 600;
   line-height: 1;
   letter-spacing: .01em;
-  padding: .22rem .6rem;
-  border-radius: .45rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
 }
 
 .slides-ctrl-btn {
