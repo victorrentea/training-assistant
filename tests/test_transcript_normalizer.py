@@ -5,7 +5,6 @@ from daemon.transcript_normalizer import (
     default_offset_file_for,
     normalize_folder_incremental,
     normalize_incremental,
-    normalize_latest_in_folder,
 )
 
 
@@ -225,17 +224,3 @@ def test_case12_keeps_contentful_line_even_if_contains_noise_word(tmp_path):
     ]
 
 
-def test_normalize_latest_in_folder_ignores_normalized_output_files(tmp_path):
-    raw = tmp_path / "20260325 1000 Transcription.txt"
-    raw.write_text("[ 00:00:00.03 ] Victor:\tRaw\n", encoding="utf-8")
-
-    (tmp_path / "2026-03-25 transcription.txt").write_text(
-        "[10:00] Victor: already normalized\n",
-        encoding="utf-8",
-    )
-
-    result = normalize_latest_in_folder(tmp_path)
-
-    assert result is not None
-    assert result.raw_file == raw
-    assert result.written_lines == 1

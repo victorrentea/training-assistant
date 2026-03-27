@@ -4,8 +4,8 @@ from typing import Optional
 from datetime import datetime, timezone
 from fastapi import WebSocket
 
-from backend_version import get_backend_version
-from state import state, ActivityType
+from core.version import get_backend_version
+from core.state import state, ActivityType
 
 logger = logging.getLogger(__name__)
 
@@ -349,7 +349,7 @@ async def broadcast_state():
 
 def _build_leaderboard_data() -> tuple[list[dict], int, dict[str, int]]:
     """Build leaderboard entries, total count, and rank map."""
-    from names import compute_letter_avatar
+    from core.names import compute_letter_avatar
 
     all_participants = [(uid, state.scores.get(uid, 0)) for uid in state.participants
                         if not uid.startswith("__")]

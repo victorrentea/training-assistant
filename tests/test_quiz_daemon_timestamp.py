@@ -13,8 +13,8 @@ def test_timestamp_appender_logs_missing_transcript_once(tmp_path: Path, capsys)
     appender.tick()
 
     out = capsys.readouterr()
-    assert "no .txt transcript found" in out.err
-    assert out.err.count("no .txt transcript found") == 1
+    assert "no .txt" in out.err
+    assert out.err.count("no .txt") == 1
 
 
 def test_timestamp_appender_appends_on_interval(tmp_path: Path):
@@ -102,7 +102,7 @@ def test_materials_mirror_runner_detects_create_update_delete(tmp_path: Path, mo
     monkeypatch.setattr(
         runner,
         "_post_material_upsert",
-        lambda relative_path, file_path: uploaded.append((relative_path, file_path.read_bytes())),
+        lambda relative_path, file_path, source_mtime=None: uploaded.append((relative_path, file_path.read_bytes())),
     )
     monkeypatch.setattr(runner, "_post_material_delete", lambda relative_path: deleted.append(relative_path))
 

@@ -14,27 +14,37 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from prometheus_fastapi_instrumentator import Instrumentator
 
-from auth import require_host_auth
-from messaging import broadcast_state
-from state import state  # re-exported for test_main.py: from main import app, state
-import metrics  # noqa: registers custom Prometheus metrics
-from routers import (
-    ws,
-    poll,
-    scores,
-    quiz,
-    pages,
-    wordcloud,
-    activity,
-    qa,
-    codereview,
-    summary,
-    debate,
-    leaderboard,
-    session,
-    state_snapshot,
-    slides,
-)
+from core.auth import require_host_auth
+from core.messaging import broadcast_state
+from core.state import state  # re-exported for test_main.py: from main import app, state
+import core.metrics as metrics  # noqa: registers custom Prometheus metrics
+
+from features.ws import router as ws
+from features.poll import router as poll
+from features.qa import router as qa
+from features.wordcloud import router as wordcloud
+from features.codereview import router as codereview
+from features.debate import router as debate
+from features.quiz import router as quiz
+from features.summary import router as summary
+from features.leaderboard import router as leaderboard
+from features.activity import router as activity
+from features.pages import router as pages
+from features.session import router as session
+from features.snapshot import router as snapshot
+from features.slides import router as slides
+
+# Import scores router from features (formerly routers/scores.py)
+from features.scores import router as scores
+
+import core.state_builder  # noqa: registers core state builder
+import features.poll.state_builder  # noqa
+import features.qa.state_builder  # noqa
+import features.wordcloud.state_builder  # noqa
+import features.codereview.state_builder  # noqa
+import features.debate.state_builder  # noqa
+import features.leaderboard.state_builder  # noqa
+import features.slides.state_builder  # noqa
 
 logging.basicConfig(level=logging.INFO)
 
@@ -84,7 +94,7 @@ app.include_router(slides.public_router)
 app.include_router(debate.router)
 app.include_router(leaderboard.router)
 app.include_router(session.router)
-app.include_router(state_snapshot.router, dependencies=[Depends(require_host_auth)])
+app.include_router(snapshot.router, dependencies=[Depends(require_host_auth)])
 
 class ModeRequest(BaseModel):
     mode: str
