@@ -160,8 +160,8 @@
       { selector: '#display-name',    emoji: '✏️', text: "That's your name. Tap it to rename yourself. Be creative." },
       { selector: '#notes-btn',       emoji: '📝', text: 'Notes are here. Tap to open session notes anytime.' },
       { selector: '#summary-btn',     emoji: '🧠', text: 'AI recaps what you missed. Tap any time. Zero FOMO.' },
-      { selector: '#slides-dock',     emoji: '📑', text: 'Slides are always on the right. Click any topic to open it.', scanDock: true },
       { selector: '#location-prompt', emoji: '📍', text: "Tell us where you're from — for the world map. Totally optional." },
+      { selector: '#slides-dock',     emoji: '📑', text: 'Slides are always on the right. Click any topic to open it.', scanDock: true },
       ..._shuffled,
     ];
 
@@ -264,10 +264,14 @@
       if (step?.scanDock) {
         bub.classList.remove('arrow-top');
         bub.classList.add('arrow-right');
-        const bubbleTop = Math.max(8, Math.min(window.innerHeight - 120, rect.top + rect.height * 0.3));
         const bubbleLeft = Math.max(8, rect.left - bubW - 14);
         bub.style.left = bubbleLeft + 'px';
-        bub.style.top = bubbleTop + 'px';
+        bub.style.transition = 'none';
+        bub.style.top = Math.max(8, Math.min(window.innerHeight - 120, rect.top + rect.height * 0.3)) + 'px';
+        requestAnimationFrame(() => {
+          bub.style.transition = 'top 1.2s ease-in-out';
+          bub.style.top = Math.max(8, Math.min(window.innerHeight - 120, rect.top + rect.height * 0.6)) + 'px';
+        });
         return;
       }
       bub.classList.remove('arrow-right');
