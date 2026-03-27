@@ -1,7 +1,7 @@
 {
-  "sha": "ff321121be21b4b9cbecd4d851d09a6eb760e811",
-  "timestamp": "2026-03-27 07:33",
+  "sha": "47fe3de0b51221632b379f256714852a84a590e1",
+  "timestamp": "2026-03-27 07:37",
   "changelog": [
-    "fix: topic hover lightgreen bg + remove 5% left indent"
+    "fix: PDF.js follow - default pdfjs, red blink, fix page navigation on topic switch and closed overlay"
   ]
 }
