@@ -620,11 +620,11 @@ h1 { display: none; }
   border-radius: 6px;
   background: #1a1a1a;
   padding: .14rem 0 .14rem .2rem;
-  margin-left: 5%;
 }
 
 .slides-list-item:hover {
   border-color: var(--accent2);
+  background: rgba(144, 238, 144, 0.10);
 }
 
 .slides-list-item.active {
