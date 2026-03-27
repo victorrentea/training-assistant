@@ -1,7 +1,7 @@
 {
-  "sha": "b13910260d55f1369bf83ae021885700b2d01142",
-  "timestamp": "2026-03-27 23:33",
+  "sha": "a9d88a423b448ad737e57b9090f3f2c9ed1b5597",
+  "timestamp": "2026-03-27 23:36",
   "changelog": [
-    "fix: use PPTX mtime for slide timestamps (not PDF mtime)"
+    "fix: don't cancel active slide load on background catalog refresh"
   ]
 }
