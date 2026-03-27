@@ -1,7 +1,7 @@
 {
-  "sha": "0192ffed9d952867b9b3325b5c83824ad64b68f3",
+  "sha": "cc96f9f18abb2181637d9e946f82e512631c663d",
   "timestamp": "2026-03-27 18:47",
   "changelog": [
-    "fix: debounce Ctrl+wheel zoom and restore scroll position after re-render"
+    "fix: page badge as pill shape instead of circle"
   ]
 }
