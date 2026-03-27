@@ -1,10 +1,7 @@
 {
-  "sha": "60eb1efaa3c540965a7626bf1be89994e166e343",
-  "timestamp": "2026-03-27 09:26",
+  "sha": "04a04bb4be498d32409945b4461d38b0297f177b",
+  "timestamp": "2026-03-27 09:28",
   "changelog": [
-    "fix: exclude broken slides e2e tests from CI; fix flaky count assertion",
-    "fix: prevent slides-dock from overlapping main content; add pypdf to CI",
-    "fix: remove dead slidesNativeFrame variable (leftover from iframe removal)",
-    "ci: run all 12 e2e test files in 3 parallel matrix jobs"
+    "remove 'Pick a Slide' empty state; always show 'No Slides Yet'"
   ]
 }
