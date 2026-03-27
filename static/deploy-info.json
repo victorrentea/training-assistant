@@ -1,7 +1,7 @@
 {
-  "sha": "20487bb7522e7f8f9b2aa68e61f8eb205fe30560",
-  "timestamp": "2026-03-27 07:02",
+  "sha": "5f55cb9041e41d3eb26760ec91754e6d540a7661",
+  "timestamp": "2026-03-27 07:05",
   "changelog": [
-    "chore: add LaunchAgent for auto-start at login"
+    "feat: PDF.js zoom in/out buttons, auto-fit on resize, page badge to top-left"
   ]
 }
