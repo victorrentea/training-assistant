@@ -125,13 +125,6 @@ def is_raw_transcript_txt(path: Path) -> bool:
     return path.is_file() and path.suffix.lower() == ".txt" and _RAW_TXT_NAME_RE.match(path.name) is not None
 
 
-def find_latest_raw_transcript_file(folder: Path) -> Path | None:
-    if not folder.exists() or not folder.is_dir():
-        return None
-    files = _list_raw_files_sorted(folder)
-    return files[-1] if files else None
-
-
 def default_offset_file_for(raw_file: Path) -> Path:
     return raw_file.parent / "normalization.offset.txt"
 
@@ -451,13 +444,6 @@ def normalize_incremental(
 
     _save_state(offset_file, state, raw_key=raw_key)
     return NormalizeResult(raw_file, offset_file, read_bytes, total_lines, written_files, should_reset)
-
-
-def normalize_latest_in_folder(folder: Path) -> NormalizeResult | None:
-    raw_file = find_latest_raw_transcript_file(folder)
-    if raw_file is None:
-        return None
-    return normalize_incremental(raw_file)
 
 
 def normalize_folder_incremental(folder: Path, now: datetime | None = None) -> list[NormalizeResult]:

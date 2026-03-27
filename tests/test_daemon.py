@@ -115,36 +115,37 @@ class TestDebateAiCleanup:
             "against_args": [{"id": "2", "text": "Humans understand context"}],
         }
 
-    @patch("daemon.debate_ai.anthropic.Anthropic")
+    def _make_mock_response(self, text: str) -> MagicMock:
+        mock_resp = MagicMock()
+        mock_resp.content = [MagicMock(text=text)]
+        mock_resp.usage.input_tokens = 10
+        mock_resp.usage.output_tokens = 5
+        return mock_resp
+
+    @patch("daemon.llm_adapter.anthropic.Anthropic")
     def test_successful_cleanup(self, MockClient):
         result_json = json.dumps({
             "merges": [],
             "cleaned": [{"id": "1", "text": "LLMs write code effectively"}],
             "new_arguments": [{"side": "for", "text": "AI improves productivity"}],
         })
-        mock_resp = MagicMock()
-        mock_resp.content = [MagicMock(text=result_json)]
-        MockClient.return_value.messages.create.return_value = mock_resp
+        MockClient.return_value.messages.create.return_value = self._make_mock_response(result_json)
 
         result = run_debate_ai_cleanup(self._sample_request(), "key", "model")
         assert len(result["cleaned"]) == 1
         assert len(result["new_arguments"]) == 1
 
-    @patch("daemon.debate_ai.anthropic.Anthropic")
+    @patch("daemon.llm_adapter.anthropic.Anthropic")
     def test_strips_markdown_fences(self, MockClient):
         result_json = '```json\n{"merges": [], "cleaned": [], "new_arguments": []}\n```'
-        mock_resp = MagicMock()
-        mock_resp.content = [MagicMock(text=result_json)]
-        MockClient.return_value.messages.create.return_value = mock_resp
+        MockClient.return_value.messages.create.return_value = self._make_mock_response(result_json)
 
         result = run_debate_ai_cleanup(self._sample_request(), "key", "model")
         assert result == {"merges": [], "cleaned": [], "new_arguments": []}
 
-    @patch("daemon.debate_ai.anthropic.Anthropic")
+    @patch("daemon.llm_adapter.anthropic.Anthropic")
     def test_invalid_json_raises(self, MockClient):
-        mock_resp = MagicMock()
-        mock_resp.content = [MagicMock(text="not json")]
-        MockClient.return_value.messages.create.return_value = mock_resp
+        MockClient.return_value.messages.create.return_value = self._make_mock_response("not json")
 
         with pytest.raises(json.JSONDecodeError):
             run_debate_ai_cleanup(self._sample_request(), "key", "model")
@@ -223,21 +224,22 @@ class TestGenerateSummary:
     def test_empty_entries(self, mock_load, tmp_path):
         assert generate_summary(self._cfg(tmp_path), []) is None
 
-    @patch("daemon.summarizer.extract_last_n_minutes", return_value="")
+    @patch("daemon.summarizer.read_session_notes", return_value="")
+    @patch("daemon.summarizer.extract_all_text", return_value="")
     @patch("daemon.summarizer.load_transcription_files", return_value=[(0, "t")])
-    def test_empty_text(self, mock_load, mock_extract, tmp_path):
+    def test_empty_text(self, mock_load, mock_extract, mock_notes, tmp_path):
         assert generate_summary(self._cfg(tmp_path), []) is None
 
     @patch("daemon.summarizer.read_session_notes", return_value="")
-    @patch("daemon.summarizer.extract_last_n_minutes", return_value="transcript")
+    @patch("daemon.summarizer.extract_all_text", return_value="transcript")
     @patch("daemon.summarizer.load_transcription_files", return_value=[(0, "t")])
-    @patch("daemon.summarizer.anthropic.Anthropic")
-    def test_success(self, MockClient, *_mocks):
+    @patch("daemon.summarizer.create_message")
+    def test_success(self, mock_create, *_mocks):
         resp_text = json.dumps([{"text": "Point 1", "source": "discussion", "time": "10:15"}])
         mock_resp = MagicMock()
-        mock_block = MagicMock(type="text", text=resp_text)
-        mock_resp.content = [mock_block]
-        MockClient.return_value.messages.create.return_value = mock_resp
+        mock_resp.content = [MagicMock(type="text", text=resp_text)]
+        mock_resp.stop_reason = "end_turn"
+        mock_create.return_value = mock_resp
 
         result = generate_summary(self._cfg(MagicMock()), [])
         assert result is not None
@@ -245,95 +247,95 @@ class TestGenerateSummary:
         assert result["new"][0]["time"] == "10:15"
 
     @patch("daemon.summarizer.read_session_notes", return_value="")
-    @patch("daemon.summarizer.extract_last_n_minutes", return_value="text")
+    @patch("daemon.summarizer.extract_all_text", return_value="text")
     @patch("daemon.summarizer.load_transcription_files", return_value=[(0, "t")])
-    @patch("daemon.summarizer.anthropic.Anthropic")
-    def test_fence_stripping(self, MockClient, *_mocks):
+    @patch("daemon.summarizer.create_message")
+    def test_fence_stripping(self, mock_create, *_mocks):
         mock_resp = MagicMock()
-        mock_block = MagicMock(type="text", text='```json\n[{"text": "P", "source": "notes"}]\n```')
-        mock_resp.content = [mock_block]
-        MockClient.return_value.messages.create.return_value = mock_resp
+        mock_resp.content = [MagicMock(type="text", text='```json\n[{"text": "P", "source": "notes"}]\n```')]
+        mock_resp.stop_reason = "end_turn"
+        mock_create.return_value = mock_resp
         result = generate_summary(self._cfg(MagicMock()), [])
         assert result is not None
 
     @patch("daemon.summarizer.read_session_notes", return_value="")
-    @patch("daemon.summarizer.extract_last_n_minutes", return_value="text")
+    @patch("daemon.summarizer.extract_all_text", return_value="text")
     @patch("daemon.summarizer.load_transcription_files", return_value=[(0, "t")])
-    @patch("daemon.summarizer.anthropic.Anthropic")
-    def test_legacy_strings(self, MockClient, *_mocks):
+    @patch("daemon.summarizer.create_message")
+    def test_legacy_strings(self, mock_create, *_mocks):
         mock_resp = MagicMock()
-        mock_block = MagicMock(type="text", text='["Point one", "Point two"]')
-        mock_resp.content = [mock_block]
-        MockClient.return_value.messages.create.return_value = mock_resp
+        mock_resp.content = [MagicMock(type="text", text='["Point one", "Point two"]')]
+        mock_resp.stop_reason = "end_turn"
+        mock_create.return_value = mock_resp
         result = generate_summary(self._cfg(MagicMock()), [])
         assert result is not None
         assert len(result["new"]) == 2
         assert all(p["source"] == "discussion" for p in result["new"])
 
     @patch("daemon.summarizer.read_session_notes", return_value="")
-    @patch("daemon.summarizer.extract_last_n_minutes", return_value="text")
+    @patch("daemon.summarizer.extract_all_text", return_value="text")
     @patch("daemon.summarizer.load_transcription_files", return_value=[(0, "t")])
-    @patch("daemon.summarizer.anthropic.Anthropic")
-    def test_api_error(self, MockClient, *_mocks):
+    @patch("daemon.summarizer.create_message")
+    def test_api_error(self, mock_create, *_mocks):
         import anthropic
-        MockClient.return_value.messages.create.side_effect = anthropic.APIError(
+        mock_create.side_effect = anthropic.APIError(
             message="err", request=MagicMock(), body=None
         )
         assert generate_summary(self._cfg(MagicMock()), []) is None
 
     @patch("daemon.summarizer.read_session_notes", return_value="")
-    @patch("daemon.summarizer.extract_last_n_minutes", return_value="text")
+    @patch("daemon.summarizer.extract_all_text", return_value="text")
     @patch("daemon.summarizer.load_transcription_files", return_value=[(0, "t")])
-    @patch("daemon.summarizer.anthropic.Anthropic")
-    def test_invalid_json(self, MockClient, *_mocks):
+    @patch("daemon.summarizer.create_message")
+    def test_invalid_json(self, mock_create, *_mocks):
         mock_resp = MagicMock()
-        mock_block = MagicMock(type="text", text="not json")
-        mock_resp.content = [mock_block]
-        MockClient.return_value.messages.create.return_value = mock_resp
+        mock_resp.content = [MagicMock(type="text", text="not json")]
+        mock_resp.stop_reason = "end_turn"
+        mock_create.return_value = mock_resp
         assert generate_summary(self._cfg(MagicMock()), []) is None
 
     @patch("daemon.summarizer.read_session_notes", return_value="")
-    @patch("daemon.summarizer.extract_last_n_minutes", return_value="text")
+    @patch("daemon.summarizer.extract_all_text", return_value="text")
     @patch("daemon.summarizer.load_transcription_files", return_value=[(0, "t")])
-    @patch("daemon.summarizer.anthropic.Anthropic")
-    def test_not_list(self, MockClient, *_mocks):
+    @patch("daemon.summarizer.create_message")
+    def test_not_list(self, mock_create, *_mocks):
         mock_resp = MagicMock()
-        mock_block = MagicMock(type="text", text='{"not": "list"}')
-        mock_resp.content = [mock_block]
-        MockClient.return_value.messages.create.return_value = mock_resp
+        mock_resp.content = [MagicMock(type="text", text='{"not": "list"}')]
+        mock_resp.stop_reason = "end_turn"
+        mock_create.return_value = mock_resp
         assert generate_summary(self._cfg(MagicMock()), []) is None
 
     @patch("daemon.summarizer.read_session_notes", return_value="")
-    @patch("daemon.summarizer.extract_last_n_minutes", return_value="text")
+    @patch("daemon.summarizer.extract_all_text", return_value="text")
     @patch("daemon.summarizer.load_transcription_files", return_value=[(0, "t")])
-    @patch("daemon.summarizer.anthropic.Anthropic")
-    def test_empty_response(self, MockClient, *_mocks):
+    @patch("daemon.summarizer.create_message")
+    def test_empty_response(self, mock_create, *_mocks):
         mock_resp = MagicMock()
         mock_resp.content = []
         mock_resp.stop_reason = "end_turn"
-        MockClient.return_value.messages.create.return_value = mock_resp
+        mock_create.return_value = mock_resp
         assert generate_summary(self._cfg(MagicMock()), []) is None
 
     @patch("daemon.summarizer.read_session_notes", return_value="")
-    @patch("daemon.summarizer.extract_last_n_minutes", return_value="text")
+    @patch("daemon.summarizer.extract_all_text", return_value="text")
     @patch("daemon.summarizer.load_transcription_files", return_value=[(0, "t")])
-    @patch("daemon.summarizer.anthropic.Anthropic")
-    def test_bad_block_type(self, MockClient, *_mocks):
+    @patch("daemon.summarizer.create_message")
+    def test_bad_block_type(self, mock_create, *_mocks):
         mock_resp = MagicMock()
-        mock_block = MagicMock(type="image")
-        mock_resp.content = [mock_block]
-        MockClient.return_value.messages.create.return_value = mock_resp
+        mock_resp.content = [MagicMock(type="image")]
+        mock_resp.stop_reason = "end_turn"
+        mock_create.return_value = mock_resp
         assert generate_summary(self._cfg(MagicMock()), []) is None
 
     @patch("daemon.summarizer.read_session_notes", return_value="")
-    @patch("daemon.summarizer.extract_last_n_minutes", return_value="text")
+    @patch("daemon.summarizer.extract_all_text", return_value="text")
     @patch("daemon.summarizer.load_transcription_files", return_value=[(0, "t")])
-    @patch("daemon.summarizer.anthropic.Anthropic")
-    def test_invalid_source_normalized(self, MockClient, *_mocks):
+    @patch("daemon.summarizer.create_message")
+    def test_invalid_source_normalized(self, mock_create, *_mocks):
         mock_resp = MagicMock()
-        mock_block = MagicMock(type="text", text='[{"text": "P", "source": "xyz"}]')
-        mock_resp.content = [mock_block]
-        MockClient.return_value.messages.create.return_value = mock_resp
+        mock_resp.content = [MagicMock(type="text", text='[{"text": "P", "source": "xyz"}]')]
+        mock_resp.stop_reason = "end_turn"
+        mock_create.return_value = mock_resp
         result = generate_summary(self._cfg(MagicMock()), [])
         assert result is not None
         assert result["new"][0]["source"] == "discussion"
@@ -349,41 +351,34 @@ class TestSummarizerUpdatedFormat:
         )
 
     @patch("daemon.summarizer.read_session_notes", return_value="")
+    @patch("daemon.summarizer.load_transcription_files", return_value=[(0, "t")])
     @patch("daemon.summarizer.create_message")
-    def test_updated_and_new_format(self, mock_create, *_mocks):
-        resp_text = json.dumps({
-            "updated": [{"index": 0, "text": "Revised point", "source": "discussion", "time": "14:30"}],
-            "new": [{"text": "Brand new point", "source": "discussion", "time": "15:10"}],
-        })
+    def test_new_points_returned(self, mock_create, *_mocks):
+        resp_text = json.dumps([
+            {"text": "Brand new point", "source": "discussion", "time": "15:10"},
+        ])
         mock_resp = MagicMock()
         mock_resp.content = [MagicMock(type="text", text=resp_text)]
         mock_resp.stop_reason = "end_turn"
         mock_create.return_value = mock_resp
 
-        existing = [{"text": "Old point", "source": "discussion", "time": "10:00"}]
-        result = generate_summary(self._cfg(MagicMock()), existing, delta_text="new transcript")
+        result = generate_summary(self._cfg(MagicMock()), [])
         assert result is not None
-        assert len(result["updated"]) == 1
-        assert result["updated"][0]["index"] == 0
-        assert result["updated"][0]["text"] == "Revised point"
         assert len(result["new"]) == 1
         assert result["new"][0]["text"] == "Brand new point"
 
     @patch("daemon.summarizer.read_session_notes", return_value="")
+    @patch("daemon.summarizer.load_transcription_files", return_value=[(0, "t")])
     @patch("daemon.summarizer.create_message")
     def test_new_only_no_updates(self, mock_create, *_mocks):
-        resp_text = json.dumps({
-            "updated": [],
-            "new": [{"text": "Fresh point", "source": "notes"}],
-        })
+        resp_text = json.dumps([{"text": "Fresh point", "source": "notes"}])
         mock_resp = MagicMock()
         mock_resp.content = [MagicMock(type="text", text=resp_text)]
         mock_resp.stop_reason = "end_turn"
         mock_create.return_value = mock_resp
 
-        result = generate_summary(self._cfg(MagicMock()), [], delta_text="some text")
+        result = generate_summary(self._cfg(MagicMock()), [])
         assert result is not None
-        assert len(result["updated"]) == 0
         assert len(result["new"]) == 1
         assert result["new"][0]["source"] == "notes"
 
@@ -470,36 +465,43 @@ from training_daemon import _load_key_points, _save_key_points, _load_daemon_sta
 
 class TestSessionKeyPoints:
     def test_load_from_empty_folder(self, tmp_path):
-        assert _load_key_points(tmp_path) == []
+        points, watermark = _load_key_points(tmp_path)
+        assert points == []
+        assert watermark == 0
 
     def test_save_and_load_roundtrip(self, tmp_path):
         points = [{"text": "P1", "source": "discussion", "time": "10:15"}]
-        _save_key_points(tmp_path, points)
-        loaded = _load_key_points(tmp_path)
+        _save_key_points(tmp_path, points, 5, None)
+        loaded, wm = _load_key_points(tmp_path)
         assert loaded == points
 
     def test_backward_compat_loads_locked_draft(self, tmp_path):
         """Test migration from old summary_cache.json format."""
         cache = tmp_path / "key_points.json"
         cache.write_text('{"locked": [{"text": "L1"}], "draft": [{"text": "D1"}]}')
-        loaded = _load_key_points(tmp_path)
+        loaded, _ = _load_key_points(tmp_path)
         assert len(loaded) == 2
 
     def test_load_daemon_state(self, tmp_path):
         state_file = tmp_path / "daemon_state.json"
+        # Old stack format — should be migrated to {main, talk}
         state_file.write_text('{"stack": [{"name": "Test", "started_at": "2026-03-23T09:00:00", "ended_at": null, "summary_watermark": 0}]}')
-        stack = _load_daemon_state(tmp_path)
-        assert len(stack) == 1
-        assert stack[0]["name"] == "Test"
+        state = _load_daemon_state(tmp_path)
+        assert state["main"]["name"] == "Test"
+        assert state["talk"] is None
 
     def test_load_daemon_state_missing(self, tmp_path):
-        assert _load_daemon_state(tmp_path) == []
+        state = _load_daemon_state(tmp_path)
+        assert state == {"main": None, "talk": None}
 
     def test_save_daemon_state_roundtrip(self, tmp_path):
-        stack = [{"name": "W", "started_at": "2026-03-23T09:00:00", "ended_at": None, "summary_watermark": 42}]
-        _save_daemon_state(tmp_path, stack)
+        daemon_state = {
+            "main": {"name": "W", "started_at": "2026-03-23T09:00:00", "status": "active", "summary_watermark": 42},
+            "talk": None,
+        }
+        _save_daemon_state(tmp_path, daemon_state)
         loaded = _load_daemon_state(tmp_path)
-        assert loaded == stack
+        assert loaded == daemon_state
 
 
 class TestExtractors:

@@ -6,7 +6,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from main import app, state
-import auth  # noqa: ensure shared secrets are loaded
+import core.auth as auth  # noqa: ensure shared secrets are loaded
 
 _HOST_AUTH_HEADERS = {
     "Authorization": "Basic " + base64.b64encode(

@@ -84,8 +84,8 @@ def test_run_loop_keeps_console_output_compact(tmp_path: Path, capsys: pytest.Ca
     )
 
     output = capsys.readouterr().out
-    assert "[info] Appending lines to:" in output
-    assert "[info] Stopped after" in output
+    assert "Appending to:" in output
+    assert "Stopped after" in output
     assert "appended timestamp prefix" not in output
 
 

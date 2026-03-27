@@ -2,6 +2,11 @@
   "max_lines": 60,
   "violations": [
     {
+      "path": "core/state.py",
+      "qualname": "AppState.reset",
+      "lines": 70
+    },
+    {
       "path": "daemon/summarizer.py",
       "qualname": "generate_summary",
       "lines": 121
@@ -10,6 +15,36 @@
       "path": "daemon/transcript_normalizer.py",
       "qualname": "normalize_incremental",
       "lines": 114
+    },
+    {
+      "path": "features/poll/router.py",
+      "qualname": "set_correct_options",
+      "lines": 68
+    },
+    {
+      "path": "features/session/router.py",
+      "qualname": "_restore_state_from_snapshot",
+      "lines": 75
+    },
+    {
+      "path": "features/session/router.py",
+      "qualname": "get_session_snapshot",
+      "lines": 62
+    },
+    {
+      "path": "features/slides/router.py",
+      "qualname": "_wait_for_slide_upload",
+      "lines": 73
+    },
+    {
+      "path": "features/snapshot/router.py",
+      "qualname": "restore_state_snapshot",
+      "lines": 93
+    },
+    {
+      "path": "features/ws/router.py",
+      "qualname": "websocket_endpoint",
+      "lines": 293
     },
     {
       "path": "quiz_core.py",
@@ -22,36 +57,6 @@
       "lines": 73
     },
     {
-      "path": "routers/poll.py",
-      "qualname": "set_correct_options",
-      "lines": 68
-    },
-    {
-      "path": "routers/session.py",
-      "qualname": "_restore_state_from_snapshot",
-      "lines": 75
-    },
-    {
-      "path": "routers/session.py",
-      "qualname": "get_session_snapshot",
-      "lines": 62
-    },
-    {
-      "path": "routers/slides.py",
-      "qualname": "_wait_for_slide_upload",
-      "lines": 73
-    },
-    {
-      "path": "routers/state_snapshot.py",
-      "qualname": "restore_state_snapshot",
-      "lines": 93
-    },
-    {
-      "path": "routers/ws.py",
-      "qualname": "websocket_endpoint",
-      "lines": 293
-    },
-    {
       "path": "slides_daemon.py",
       "qualname": "config_from_env",
       "lines": 83
@@ -60,11 +65,6 @@
       "path": "slides_daemon.py",
       "qualname": "convert_with_google_drive_pull",
       "lines": 61
-    },
-    {
-      "path": "state.py",
-      "qualname": "AppState.reset",
-      "lines": 70
     },
     {
       "path": "tests/test_load.py",

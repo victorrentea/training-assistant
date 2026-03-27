@@ -133,6 +133,7 @@ def test_slides_upload_defaults_to_server_data_dir(monkeypatch, tmp_path):
 def test_api_slides_lists_local_materials_and_serves_pdf(monkeypatch, tmp_path):
     monkeypatch.setenv("TRAINING_ASSISTANT_SLIDES_DIR", str(tmp_path))
     monkeypatch.setenv("PPTX_CATALOG_FILE", str(tmp_path / "missing-catalog.json"))
+    monkeypatch.setenv("TRAINING_ASSISTANT_UPLOADED_SLIDES_DIR", str(tmp_path / "uploaded"))
     pdf = tmp_path / "Architecture.pdf"
     pdf.write_bytes(b"%PDF-1.4\n%test\n")
 
@@ -242,6 +243,7 @@ def test_api_slides_includes_slides_current_when_present(monkeypatch, tmp_path):
 def test_api_slides_ignores_non_displayable_names(monkeypatch, tmp_path):
     monkeypatch.setenv("TRAINING_ASSISTANT_SLIDES_DIR", str(tmp_path))
     monkeypatch.setenv("PPTX_CATALOG_FILE", str(tmp_path / "missing-catalog.json"))
+    monkeypatch.setenv("TRAINING_ASSISTANT_UPLOADED_SLIDES_DIR", str(tmp_path / "uploaded"))
     (tmp_path / "---.pdf").write_bytes(b"%PDF-1.4\n%local\n")
     state.slides = [
         {"name": "   ", "slug": "blank", "url": "https://slides.example.com/blank.pdf"},
@@ -339,7 +341,7 @@ def test_participant_availability_invisible_name_fallbacks_to_slug(monkeypatch, 
     monkeypatch.setenv("TRAINING_ASSISTANT_SLIDES_DIR", str(tmp_path / "missing-slides-dir"))
     monkeypatch.setenv("PPTX_CATALOG_FILE", str(tmp_path / "missing-catalog.json"))
 
-    from routers import slides as slides_router
+    from features.slides import router as slides_router
 
     monkeypatch.setattr(
         slides_router,
@@ -401,6 +403,7 @@ def test_api_slides_includes_catalog_entries_when_pdfs_missing(monkeypatch, tmp_
     }), encoding="utf-8")
     monkeypatch.setenv("PPTX_CATALOG_FILE", str(catalog))
     monkeypatch.setenv("TRAINING_ASSISTANT_SLIDES_DIR", str(tmp_path / "missing-slides"))
+    monkeypatch.setenv("TRAINING_ASSISTANT_UPLOADED_SLIDES_DIR", str(tmp_path / "uploaded"))
     client = TestClient(app)
     resp = client.get("/api/slides")
     assert resp.status_code == 200
@@ -418,6 +421,7 @@ def test_api_slides_includes_missing_local_slides_when_daemon_offline(monkeypatc
     }), encoding="utf-8")
     monkeypatch.setenv("PPTX_CATALOG_FILE", str(catalog))
     monkeypatch.setenv("TRAINING_ASSISTANT_SLIDES_DIR", str(tmp_path / "missing-slides"))
+    monkeypatch.setenv("TRAINING_ASSISTANT_UPLOADED_SLIDES_DIR", str(tmp_path / "uploaded"))
 
     client = TestClient(app)
     resp = client.get("/api/slides")

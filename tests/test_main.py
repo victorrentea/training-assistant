@@ -26,7 +26,7 @@ from main import app, state
 
 import os
 # auth.py loads shared secrets into os.environ on import; we import app (which imports auth) before this line
-import auth  # noqa: ensure shared secrets are loaded
+import core.auth as auth  # noqa: ensure shared secrets are loaded
 _HOST_AUTH_HEADERS = {
     "Authorization": "Basic " + base64.b64encode(
         f"{os.environ.get('HOST_USERNAME', 'host')}:{os.environ.get('HOST_PASSWORD', 'host')}".encode()
@@ -299,7 +299,7 @@ class WorkshopSession:
         assert resp.status_code == 200, f"close_wordcloud failed: {resp.text}"
 
     def assert_activity(self, expected: str):
-        from state import state
+        from core.state import state
         assert state.current_activity == expected, (
             f"current_activity={state.current_activity!r}, expected {expected!r}"
         )
@@ -328,7 +328,7 @@ def session():
 class TestAppState:
 
     def test_appstate_has_main_talk_fields(self):
-        from state import AppState
+        from core.state import AppState
         s = AppState()
         assert hasattr(s, 'session_main')
         assert hasattr(s, 'session_talk')
@@ -1061,14 +1061,14 @@ def test_timing_event_endpoint_warning_event_returns_ok():
 class TestAvatarAssignment:
 
     def test_lotr_name_gets_matching_avatar(self):
-        from state import AppState, assign_avatar, get_avatar_filename
+        from core.state import AppState, assign_avatar, get_avatar_filename
         s = AppState()
         avatar = assign_avatar(s, "test-uuid-1", "Gandalf")
         assert avatar == "gandalf.png"
         assert s.participant_avatars["test-uuid-1"] == "gandalf.png"
 
     def test_custom_name_gets_deterministic_avatar(self):
-        from state import AppState, assign_avatar
+        from core.state import AppState, assign_avatar
         s = AppState()
         a1 = assign_avatar(s, "550e8400-e29b-41d4-a716-446655440000", "Bob")
         a2 = assign_avatar(s, "550e8400-e29b-41d4-a716-446655440000", "Bob")
@@ -1076,14 +1076,14 @@ class TestAvatarAssignment:
         assert a1.endswith(".png")
 
     def test_assign_once_rename_keeps_avatar(self):
-        from state import AppState, assign_avatar
+        from core.state import AppState, assign_avatar
         s = AppState()
         a1 = assign_avatar(s, "test-uuid-1", "Gandalf")
         a2 = assign_avatar(s, "test-uuid-1", "Bob")
         assert a1 == a2 == "gandalf.png"
 
     def test_get_avatar_filename_slugs(self):
-        from state import get_avatar_filename
+        from core.state import get_avatar_filename
         assert get_avatar_filename("Gandalf") == "gandalf.png"
         assert get_avatar_filename("Tom Bombadil") == "tom-bombadil.png"
         assert get_avatar_filename("The One Ring") == "the-one-ring.png"
@@ -1091,7 +1091,7 @@ class TestAvatarAssignment:
 
     def test_no_duplicate_avatars(self):
         """Different participants get different avatars (up to 30)."""
-        from state import AppState, assign_avatar, LOTR_NAMES
+        from core.state import AppState, assign_avatar, LOTR_NAMES
         import uuid as uuid_mod
         s = AppState()
         avatars = []
@@ -1102,7 +1102,7 @@ class TestAvatarAssignment:
 
     def test_lotr_name_always_gets_matching_avatar(self):
         """LOTR names always get their character's avatar, even if duplicated."""
-        from state import AppState, assign_avatar
+        from core.state import AppState, assign_avatar
         s = AppState()
         a1 = assign_avatar(s, "uuid-1", "Gandalf")
         a2 = assign_avatar(s, "uuid-2", "Gandalf")
@@ -1218,7 +1218,7 @@ def test_get_summary_empty():
 # ---------------------------------------------------------------------------
 # Unit tests for auto_assign_remaining (debate side auto-assignment)
 # ---------------------------------------------------------------------------
-from routers.debate import auto_assign_remaining
+from features.debate.router import auto_assign_remaining
 
 
 @pytest.mark.parametrize(
@@ -1616,7 +1616,7 @@ def test_start_talk_queues_action():
     client = TestClient(app)
     resp = client.post("/api/session/start_talk", headers=_HOST_AUTH_HEADERS)
     assert resp.status_code == 200
-    from state import state as s
+    from core.state import state as s
     assert s.session_request is not None
     assert s.session_request["action"] == "start_talk"
 
@@ -1626,7 +1626,7 @@ def test_end_talk_queues_action():
     client = TestClient(app)
     resp = client.post("/api/session/end_talk", headers=_HOST_AUTH_HEADERS)
     assert resp.status_code == 200
-    from state import state as s
+    from core.state import state as s
     assert s.session_request is not None
     assert s.session_request["action"] == "end_talk"
 
@@ -1687,7 +1687,7 @@ def test_pending_deploy_broadcasts_to_participants(monkeypatch):
         broadcast_calls = []
         async def fake_broadcast(msg, exclude=None):
             broadcast_calls.append(msg)
-        monkeypatch.setattr("routers.poll.broadcast", fake_broadcast)
+        monkeypatch.setattr("features.poll.router.broadcast", fake_broadcast)
 
         client = TestClient(app)
         response = client.post("/api/pending-deploy",
@@ -1753,7 +1753,7 @@ def test_session_sync_restores_participants_and_scores():
 
 
 def test_mode_switch_to_conference_queues_create_talk_folder():
-    from state import state
+    from core.state import state
     state.session_main = {"name": "2026-03-25 WS", "started_at": "2026-03-25T09:00:00", "status": "active"}
     state.session_talk = None
     state.session_request = None
@@ -1766,7 +1766,7 @@ def test_mode_switch_to_conference_queues_create_talk_folder():
 
 
 def test_mode_switch_to_conference_no_request_if_talk_exists():
-    from state import state
+    from core.state import state
     state.session_talk = {"name": "2026-03-25 12:30 talk", "started_at": "2026-03-25T12:30:00", "status": "active"}
     state.session_request = None
 
@@ -1788,7 +1788,7 @@ def test_pending_deploy_same_sha_no_broadcast(monkeypatch):
         broadcast_calls = []
         async def fake_broadcast(msg, exclude=None):
             broadcast_calls.append(msg)
-        monkeypatch.setattr("routers.poll.broadcast", fake_broadcast)
+        monkeypatch.setattr("features.poll.router.broadcast", fake_broadcast)
 
         client = TestClient(app)
         response = client.post("/api/pending-deploy",

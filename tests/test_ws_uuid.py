@@ -6,7 +6,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from main import app
-from state import state
+from core.state import state
 
 
 @pytest.fixture(autouse=True)

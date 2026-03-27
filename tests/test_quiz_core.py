@@ -385,7 +385,7 @@ class TestPrintQuiz:
         print_quiz(quiz)
         out = capsys.readouterr().out
         assert "Q?" in out
-        assert "✅" in out
+        assert "<--" in out
 
     def test_multi_correct(self, capsys):
         quiz = {"question": "Q?", "options": ["A", "B", "C"], "correct_indices": [0, 2]}
@@ -490,8 +490,8 @@ class TestGenerateQuiz:
         mock_block.text = quiz_json
         mock_response.content = [mock_block]
 
-        with patch("quiz_core.anthropic.Anthropic") as MockClient:
-            MockClient.return_value.messages.create.return_value = mock_response
+        with patch("quiz_core.create_message") as mock_create:
+            mock_create.return_value = mock_response
             result = generate_quiz("some transcript", cfg)
             assert result["question"] == "Q?"
             assert result["correct_indices"] == [1]
@@ -516,8 +516,8 @@ class TestGenerateQuiz:
         resp2.stop_reason = "end_turn"
         resp2.content = [text_block]
 
-        with patch("quiz_core.anthropic.Anthropic") as MockClient:
-            MockClient.return_value.messages.create.side_effect = [resp1, resp2]
+        with patch("quiz_core.create_message") as mock_create:
+            mock_create.side_effect = [resp1, resp2]
             with patch("quiz_core.search_materials", return_value=[{"content": "test"}]):
                 result = generate_quiz("transcript", cfg)
                 assert result["question"] == "Q?"
@@ -525,8 +525,8 @@ class TestGenerateQuiz:
     def test_api_error(self, tmp_path):
         import anthropic
         cfg = _make_config(tmp_path)
-        with patch("quiz_core.anthropic.Anthropic") as MockClient:
-            MockClient.return_value.messages.create.side_effect = anthropic.APIError(
+        with patch("quiz_core.create_message") as mock_create:
+            mock_create.side_effect = anthropic.APIError(
                 message="Test error", request=MagicMock(), body=None
             )
             with pytest.raises(RuntimeError, match="Claude API error"):
@@ -540,8 +540,8 @@ class TestGenerateQuiz:
         mock_block.type = "text"
         mock_block.text = "not json at all"
         mock_response.content = [mock_block]
-        with patch("quiz_core.anthropic.Anthropic") as MockClient:
-            MockClient.return_value.messages.create.return_value = mock_response
+        with patch("quiz_core.create_message") as mock_create:
+            mock_create.return_value = mock_response
             with pytest.raises(RuntimeError, match="invalid JSON"):
                 generate_quiz("text", cfg)
 
@@ -557,8 +557,8 @@ class TestRefineQuiz:
         updated = '{"question": "Q?", "options": ["A", "New B", "C"], "correct_indices": [1]}'
         mock_response = MagicMock()
         mock_response.content = [MagicMock(text=updated)]
-        with patch("quiz_core.anthropic.Anthropic") as MockClient:
-            MockClient.return_value.messages.create.return_value = mock_response
+        with patch("quiz_core.create_message") as mock_create:
+            mock_create.return_value = mock_response
             result = refine_quiz(self._base_quiz(), "opt1", "transcript", cfg)
             assert result["options"][1] == "New B"
 
@@ -567,8 +567,8 @@ class TestRefineQuiz:
         updated = '{"question": "New Q?", "options": ["X", "Y"], "correct_indices": [0]}'
         mock_response = MagicMock()
         mock_response.content = [MagicMock(text=updated)]
-        with patch("quiz_core.anthropic.Anthropic") as MockClient:
-            MockClient.return_value.messages.create.return_value = mock_response
+        with patch("quiz_core.create_message") as mock_create:
+            mock_create.return_value = mock_response
             result = refine_quiz(self._base_quiz(), "question", "transcript", cfg)
             assert result["question"] == "New Q?"
 
@@ -576,16 +576,16 @@ class TestRefineQuiz:
         cfg = _make_config(tmp_path)
         mock_response = MagicMock()
         mock_response.content = [MagicMock(text="garbage")]
-        with patch("quiz_core.anthropic.Anthropic") as MockClient:
-            MockClient.return_value.messages.create.return_value = mock_response
+        with patch("quiz_core.create_message") as mock_create:
+            mock_create.return_value = mock_response
             result = refine_quiz(self._base_quiz(), "opt0", "transcript", cfg)
             assert result == self._base_quiz()  # fallback to original
 
     def test_refine_api_error(self, tmp_path):
         import anthropic
         cfg = _make_config(tmp_path)
-        with patch("quiz_core.anthropic.Anthropic") as MockClient:
-            MockClient.return_value.messages.create.side_effect = anthropic.APIError(
+        with patch("quiz_core.create_message") as mock_create:
+            mock_create.side_effect = anthropic.APIError(
                 message="err", request=MagicMock(), body=None
             )
             with pytest.raises(RuntimeError):
