@@ -1,7 +1,7 @@
 {
-  "sha": "43bd5f2860763df470dd5b24d37c042c67f6d501",
-  "timestamp": "2026-03-27 23:13",
+  "sha": "a771bed801a390545b931c8a404da50d21934ad9",
+  "timestamp": "2026-03-27 23:14",
   "changelog": [
-    "feat: always show daemon status dot (red/green) in participant bar"
+    "fix: match status bar height to emoji buttons (44px)"
   ]
 }
