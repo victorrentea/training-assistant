@@ -1,7 +1,7 @@
 {
-  "sha": "c998e6373e17563e9da5a559ca92a76c23b7e1e9",
-  "timestamp": "2026-03-27 07:24",
+  "sha": "179f616d43366a230ae8df4cf183ccb5c8e7383c",
+  "timestamp": "2026-03-27 07:25",
   "changelog": [
-    "style: unified download SVG icon; remove wordcloud datalist/autocomplete"
+    "fix: remove 'Generating...' text from participant key points dialog"
   ]
 }
