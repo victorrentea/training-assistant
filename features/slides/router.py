@@ -152,11 +152,20 @@ def _build_catalog_slides_index() -> list[dict]:
         if slug in seen_slugs:
             continue
         seen_slugs.add(slug)
+        source_str = str(entry.get("source") or "").strip()
+        updated_at = None
+        if source_str:
+            try:
+                sp = Path(source_str).expanduser()
+                if sp.exists() and sp.is_file():
+                    updated_at = datetime.fromtimestamp(sp.stat().st_mtime, tz=timezone.utc).isoformat()
+            except Exception:
+                pass
         slides.append({
             "name": name,
             "slug": slug,
             "url": f"/api/slides/file/{slug}",
-            "updated_at": None,
+            "updated_at": updated_at,
             "source": "catalog",
         })
     return slides

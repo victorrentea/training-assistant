@@ -1,7 +1,7 @@
 {
-  "sha": "b884e9c9263bcc0c85026f2a29271c038b22cbb0",
-  "timestamp": "2026-03-27 00:03",
+  "sha": "b79c85c1627e8657dccb4f37cbbca672ca11e724",
+  "timestamp": "2026-03-27 09:47",
   "changelog": [
-    "fix: use <object> instead of <iframe> for native PDF viewer"
+    "fix: save slide scroll view after follow even when page number unchanged"
   ]
 }

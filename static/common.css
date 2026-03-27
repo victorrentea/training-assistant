@@ -315,7 +315,8 @@
   cursor: pointer;
   white-space: nowrap;
 }
-.header-link-btn:hover { border-color: var(--accent); color: var(--accent); }
+.header-link-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+.header-link-btn:disabled { opacity: .4; cursor: default; }
 .modal-newtab-btn {
   background: none;
   border: none;
