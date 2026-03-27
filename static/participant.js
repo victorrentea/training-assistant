@@ -1366,15 +1366,12 @@
 
   function _syncSlidesPageControls(slide) {
     const page = document.getElementById('slides-page-inline');
+    const closeBtn = document.getElementById('slides-close-btn');
     if (!page) return;
-    if (slide && slidesViewMode === 'native' && slidesSelectedId === slide._id) {
-      const current = Math.max(1, Number(_getStoredSlidePage(slide.slug) || 1));
-      page.textContent = `Page ${current}`;
-      return;
-    }
-    const hasPdfjsDoc = Boolean(slide && slidesPdfDoc && slidesPdfViewer && slidesSelectedId === slide._id);
+    const hasPdfjsDoc = Boolean(slide && slidesPdfDoc && slidesPdfViewer && slidesSelectedId === slide._id && slidesViewMode !== 'native');
     if (!hasPdfjsDoc) {
       page.textContent = '';
+      if (closeBtn) closeBtn.style.display = 'none';
       return;
     }
     const numPages = Math.max(1, Number(slidesPdfDoc?.numPages || 1));
@@ -1383,6 +1380,7 @@
       Math.min(numPages, Number(slidesPdfViewer?.currentPageNumber || _getStoredSlidePage(slide.slug))),
     );
     page.textContent = `Page ${current}/${numPages}`;
+    if (closeBtn) closeBtn.style.display = '';
   }
 
   function _renderSlidesList(targetId) {
@@ -1735,6 +1733,8 @@
     _setSlidesUiBlocker(false);
     const page = document.getElementById('slides-page-inline');
     if (page) page.textContent = '';
+    const closeBtn = document.getElementById('slides-close-btn');
+    if (closeBtn) closeBtn.style.display = 'none';
   }
 
   function warmSlidesCatalog() {
