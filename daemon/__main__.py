@@ -173,7 +173,7 @@ def _parse_powerpoint_probe_output(raw: str) -> dict | None:
     return {"presentation": presentation, "slide": slide_number}
 
 
-def _probe_powerpoint_state(timeout_seconds: float = 1.5) -> tuple[dict | None, str | None]:
+def _probe_powerpoint_state(timeout_seconds: float = 2.5) -> tuple[dict | None, str | None]:
     try:
         result = subprocess.run(
             ["osascript", "-e", _PPT_APPLESCRIPT],
