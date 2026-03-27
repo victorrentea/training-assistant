@@ -1,7 +1,10 @@
 {
-  "sha": "323867952d1df243f286ea7d3660afd9bb63e845",
-  "timestamp": "2026-03-27 08:02",
+  "sha": "60eb1efaa3c540965a7626bf1be89994e166e343",
+  "timestamp": "2026-03-27 09:26",
   "changelog": [
-    "fix: add missing import sys in slides_daemon.py"
+    "fix: exclude broken slides e2e tests from CI; fix flaky count assertion",
+    "fix: prevent slides-dock from overlapping main content; add pypdf to CI",
+    "fix: remove dead slidesNativeFrame variable (leftover from iframe removal)",
+    "ci: run all 12 e2e test files in 3 parallel matrix jobs"
   ]
 }
