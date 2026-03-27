@@ -327,6 +327,7 @@ def build_host_state() -> dict:
         "leaderboard_data": _build_leaderboard_for_host(),
         "needs_restore": state.needs_restore,
         "pending_deploy": state.pending_deploy,
+        "transcription_language": state.transcription_language,
     }
 
 

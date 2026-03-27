@@ -104,6 +104,8 @@ class AppState:
         self.needs_restore: bool = True
         self.pending_deploy: dict | None = None  # {sha, message} set by watcher when push detected
         self.quiz_md_content: str = ""  # markdown log of all closed polls
+        self.transcription_language: str = "ro"  # current AudioHijack Transcribe block language
+        self.transcription_language_request: str | None = None  # pending change for daemon
 
     def suggest_name(self) -> str:
         """Return the next available LOTR name (by popularity order).

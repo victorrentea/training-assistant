@@ -64,7 +64,7 @@
     {
       "path": "state.py",
       "qualname": "AppState.reset",
-      "lines": 70
+      "lines": 72
     },
     {
       "path": "tests/test_load.py",
@@ -84,7 +84,7 @@
     {
       "path": "training_daemon.py",
       "qualname": "run",
-      "lines": 722
+      "lines": 742
     }
   ]
 }

@@ -34,6 +34,7 @@ from routers import (
     session,
     state_snapshot,
     slides,
+    transcription_language,
 )
 
 logging.basicConfig(level=logging.INFO)
@@ -85,6 +86,7 @@ app.include_router(debate.router)
 app.include_router(leaderboard.router)
 app.include_router(session.router)
 app.include_router(state_snapshot.router, dependencies=[Depends(require_host_auth)])
+app.include_router(transcription_language.router, dependencies=[Depends(require_host_auth)])
 
 class ModeRequest(BaseModel):
     mode: str
