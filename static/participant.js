@@ -1001,15 +1001,14 @@
   function _showSlidesEmpty() {
     const empty = document.getElementById('slides-empty');
     if (!empty) return;
-    const title = 'No Slides Yet';
-    const hint = 'Slides will appear here when published';
     empty.innerHTML = (
       `<div class="slides-empty-card">` +
-      `<div class="slides-empty-title">${escHtml(title)}</div>` +
-      `<div class="slides-empty-hint">${escHtml(hint)}</div>` +
+      `<div class="slides-empty-hint">Slides will appear here when published</div>` +
       `</div>`
     );
     empty.style.display = '';
+    document.getElementById('slides-zoom-in')?.style.setProperty('display', 'none');
+    document.getElementById('slides-zoom-out')?.style.setProperty('display', 'none');
   }
 
   function _setSlidesDownload(url, disabled = false) {
@@ -1354,6 +1353,8 @@
       const nativeFrame = document.getElementById('slides-native-frame');
       if (shell) shell.style.display = '';
       if (empty) empty.style.display = 'none';
+      document.getElementById('slides-zoom-in')?.style.removeProperty('display');
+      document.getElementById('slides-zoom-out')?.style.removeProperty('display');
 
       const headers = await _fetchSlideHeaders(slide.url);
       const effectiveUpdatedAt = slide.updated_at || headers.lastModified || null;
