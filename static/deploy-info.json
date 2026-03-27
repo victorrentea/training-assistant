@@ -1,7 +1,7 @@
 {
-  "sha": "5d4981bbd0b575a26798dfc2bd268cee78f7b032",
-  "timestamp": "2026-03-27 07:11",
+  "sha": "512fa98e3dde348f6632483294a03ed1f6445875",
+  "timestamp": "2026-03-27 07:20",
   "changelog": [
-    "feat: add sketched heart overlay effect (right half first, then left)"
+    "fix: participant slides UI \u2014 border click, last modified, black bar, X button"
   ]
 }
