@@ -1,26 +1,7 @@
 {
-  "sha": "3373885b441f1f3ae2b3ce0c0477a0d2d830a360",
-  "timestamp": "2026-03-27 22:21",
+  "sha": "89a1cac26c629f15da52ff1813b51fa3bd30a6a0",
+  "timestamp": "2026-03-27 22:32",
   "changelog": [
-    "fix: show previous slide to participants when PowerPoint is presenting fullscreen",
-    "fix: update LaunchAgent plist to use conductor workspace path",
-    "Fix participant slides availability when daemon is online",
-    "fix: use emoji PNG icon, grays out on unfocused monitors",
-    "fix: re-fetch catalog on slides_updated so available_on_server updates in real time",
-    "fix: load secrets from ~/.training-assistants-secrets.env, add template icon",
-    "fix: disable unavailable slides (no click, no download button)",
-    "fix: X close button red background with white icon",
-    "feat: show daemon connection status indicator in participant view",
-    "feat: remove top-right X, red X in bottom-left, emoji-style +/- and page badge",
-    "fix: cross out unavailable slide titles in participant list",
-    "fix: page badge as pill shape instead of circle",
-    "fix: debounce Ctrl+wheel zoom and restore scroll position after re-render",
-    "feat: move slides controls to bottom-left, reorder X-minus-plus-page, round page bubble",
-    "fix: overlay exits when parent start.sh dies (ppid monitoring)",
-    "fix: make 'Try download' a real link when PDF.js fails to load",
-    "feat: restyle slides overlay controls as round accent bubbles with close button",
-    "feat: remember button bar position per monitor layout",
-    "fix: remove 'Slides will appear here when published' placeholder bubble",
-    "fix: remove + separator between host dot and participant count in top bar"
+    "fix: don't save/restore bar position in single-screen mode"
   ]
 }
