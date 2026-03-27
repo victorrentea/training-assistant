@@ -1,7 +1,7 @@
 {
-  "sha": "a80d90d0fad1596ce7fbf976595446a356ce6a28",
-  "timestamp": "2026-03-27 07:48",
+  "sha": "323867952d1df243f286ea7d3660afd9bb63e845",
+  "timestamp": "2026-03-27 08:02",
   "changelog": [
-    "feat: transcription language toggle (EN/RO flag button in host panel)"
+    "fix: add missing import sys in slides_daemon.py"
   ]
 }
