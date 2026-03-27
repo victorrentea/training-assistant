@@ -39,7 +39,7 @@
     {
       "path": "daemon/transcript/normalizer.py",
       "qualname": "normalize_incremental",
-      "lines": 114
+      "lines": 116
     },
     {
       "path": "features/poll/router.py",

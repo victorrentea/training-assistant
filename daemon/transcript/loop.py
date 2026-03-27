@@ -136,14 +136,17 @@ class TranscriptNormalizerRunner:
             results = normalize_folder_incremental(self.folder)
             written = sum(r.written_lines for r in results)
             if written > 0:
+                words = sum(r.written_words for r in results)
                 output_files = len({str(p) for r in results for p in r.output_files})
                 raw_sources = sum(1 for r in results if r.written_lines > 0)
+                words_part = f"Transcripted {words} words" if words > 0 else "Transcripted"
+                lines_part = f" of {written} lines" if written != 1 else ""
                 if output_files == 1 and raw_sources == 1:
-                    log.info("transcript", f"Normalized {written} lines")
+                    log.info("transcript", f"{words_part}{lines_part}")
                 else:
                     log.info(
                         "transcript",
-                        f"Normalized {written} lines to {output_files} normalized files (from {raw_sources} raw sources)",
+                        f"{words_part}{lines_part} to {output_files} normalized files (from {raw_sources} raw sources)",
                     )
         except Exception as exc:
             log.error("transcript", f"Normalizer error: {exc}")
