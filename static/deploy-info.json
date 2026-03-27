@@ -1,7 +1,7 @@
 {
-  "sha": "4e9edd2420912189623418003a36ff8f4ead0af1",
-  "timestamp": "2026-03-27 07:47",
+  "sha": "3fa7023db933d60826f0180fca4314f086b9dd95",
+  "timestamp": "2026-03-27 07:48",
   "changelog": [
-    "style: add light mode overrides for slides panel and host session rows"
+    "fix: allow slides tooltip to overflow right column (names were clipped)"
   ]
 }
