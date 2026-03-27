@@ -647,6 +647,7 @@ h1 { display: none; }
   align-items: center;
   gap: .065rem;
   border: 0;
+  outline: none;
   background: transparent;
   color: var(--text);
   text-align: left;
