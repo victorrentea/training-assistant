@@ -1,7 +1,7 @@
 {
-  "sha": "47fe3de0b51221632b379f256714852a84a590e1",
-  "timestamp": "2026-03-27 07:37",
+  "sha": "8c4b8da59ecf17c3cb3f66989b54e16008990f8f",
+  "timestamp": "2026-03-27 07:39",
   "changelog": [
-    "fix: PDF.js follow - default pdfjs, red blink, fix page navigation on topic switch and closed overlay"
+    "fix: default pdfjs only for new participants (restore localStorage read)"
   ]
 }
