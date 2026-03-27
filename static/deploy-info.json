@@ -1,7 +1,7 @@
 {
-  "sha": "5531f3c735829182c4b7e6c49def7b8eb7dc60f3",
-  "timestamp": "2026-03-27 18:52",
+  "sha": "af835375da724d0061a84fa6b1febc9db8d7c5dd",
+  "timestamp": "2026-03-27 18:53",
   "changelog": [
-    "fix: X close button red background with white icon"
+    "fix: disable unavailable slides (no click, no download button)"
   ]
 }
