@@ -7,6 +7,14 @@ body {
   margin: 0;
 }
 
+#version-tag {
+  top: auto;
+  bottom: .4rem;
+  right: auto;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
 #restore-banner {
   background: var(--warning, #e67e22);
   color: #000;
