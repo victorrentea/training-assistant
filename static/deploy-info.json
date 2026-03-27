@@ -1,7 +1,7 @@
 {
-  "sha": "5f55cb9041e41d3eb26760ec91754e6d540a7661",
-  "timestamp": "2026-03-27 07:05",
+  "sha": "5d4981bbd0b575a26798dfc2bd268cee78f7b032",
+  "timestamp": "2026-03-27 07:11",
   "changelog": [
-    "feat: PDF.js zoom in/out buttons, auto-fit on resize, page badge to top-left"
+    "feat: add sketched heart overlay effect (right half first, then left)"
   ]
 }
