@@ -1370,7 +1370,7 @@
     if (!page) return;
     const hasPdfjsDoc = Boolean(slide && slidesPdfDoc && slidesPdfViewer && slidesSelectedId === slide._id && slidesViewMode !== 'native');
     if (!hasPdfjsDoc) {
-      page.textContent = '';
+      page.style.display = 'none';
       if (closeBtn) closeBtn.style.display = 'none';
       return;
     }
@@ -1380,6 +1380,7 @@
       Math.min(numPages, Number(slidesPdfViewer?.currentPageNumber || _getStoredSlidePage(slide.slug))),
     );
     page.textContent = `Page ${current}/${numPages}`;
+    page.style.display = '';
     if (closeBtn) closeBtn.style.display = '';
   }
 
@@ -1732,7 +1733,7 @@
     _setSlidesLoading({ visible: false });
     _setSlidesUiBlocker(false);
     const page = document.getElementById('slides-page-inline');
-    if (page) page.textContent = '';
+    if (page) page.style.display = 'none';
     const closeBtn = document.getElementById('slides-close-btn');
     if (closeBtn) closeBtn.style.display = 'none';
   }
