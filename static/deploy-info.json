@@ -1,7 +1,7 @@
 {
-  "sha": "6e7dc12334557b4aca9f23b15cdc358015a3902c",
-  "timestamp": "2026-03-27 07:20",
+  "sha": "fd37d41c048457c830db72aac8944b9ff3a03a0b",
+  "timestamp": "2026-03-27 07:21",
   "changelog": [
-    "style: move version-tag to center-bottom on host UI"
+    "fix: dark background for word cloud panel on host"
   ]
 }
