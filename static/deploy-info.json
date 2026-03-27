@@ -1,7 +1,7 @@
 {
-  "sha": "04a04bb4be498d32409945b4461d38b0297f177b",
-  "timestamp": "2026-03-27 09:28",
+  "sha": "0e65e2c9af7406702c8d93ca16b9d95dc72f590c",
+  "timestamp": "2026-03-27 09:40",
   "changelog": [
-    "remove 'Pick a Slide' empty state; always show 'No Slides Yet'"
+    "ci: auto-fix CI failures with Claude; email alert after 30min"
   ]
 }
