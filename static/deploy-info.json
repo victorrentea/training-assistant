@@ -1,7 +1,7 @@
 {
-  "sha": "6e335b33c43e4bcaeb8ecb457c6d006fbe489253",
-  "timestamp": "2026-03-27 18:42",
+  "sha": "8f937ac0938b9dd8bbf19214284d391d4f44e2d5",
+  "timestamp": "2026-03-27 18:45",
   "changelog": [
-    "fix: overlay exits when parent start.sh dies (ppid monitoring)"
+    "feat: move slides controls to bottom-left, reorder X-minus-plus-page, round page bubble"
   ]
 }
