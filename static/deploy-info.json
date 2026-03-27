@@ -1,7 +1,11 @@
 {
-  "sha": "b79c85c1627e8657dccb4f37cbbca672ca11e724",
-  "timestamp": "2026-03-27 09:47",
+  "sha": "a62b0c6cd272b92ae530345a0590b5217ee2ab30",
+  "timestamp": "2026-03-27 14:10",
   "changelog": [
-    "fix: save slide scroll view after follow even when page number unchanged"
+    "Merge origin/master into vertical-slicing: add transcription_language feature",
+    "docs: add C3 diagrams, feature CLAUDE.md files, update architecture docs (phase 16)",
+    "refactor: restructure tests/ to mirror feature/daemon packages (phase 15)",
+    "refactor: vertical slice daemon \u2014 split monolithic modules into subdirectories (phases 8-14)",
+    "refactor: vertical slice backend \u2014 core/ + features/ packages (phases 1-7)"
   ]
 }
