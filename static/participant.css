@@ -459,7 +459,7 @@ h1 { display: none; }
   margin-left: 0;
   color: #fff;
   background: #000;
-  font-size: .85rem;
+  font-size: 1.1rem;
   font-weight: 500;
   line-height: 1;
   letter-spacing: .01em;
@@ -472,10 +472,10 @@ h1 { display: none; }
   color: #fff;
   border: none;
   border-radius: .45rem;
-  font-size: 1.1rem;
+  font-size: 1.6rem;
   font-weight: 600;
   line-height: 1;
-  padding: .1rem .38rem .12rem;
+  padding: .1rem .42rem .14rem;
   cursor: pointer;
   pointer-events: auto;
   user-select: none;
@@ -829,6 +829,17 @@ h1 { display: none; }
   border: 0;
   background: #fff;
   display: none;
+}
+
+#slides-native-overlay {
+  display: none;
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  pointer-events: none;
+}
+.slides-preview-shell.native-mode #slides-native-overlay {
+  display: block;
 }
 
 #slides-pdf-viewer {
