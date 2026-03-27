@@ -1483,3 +1483,23 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
 .host-emoji-float-screen {
   font-size: 24rem;
 }
+
+/* ── Light mode overrides ── */
+@media (prefers-color-scheme: light) {
+  .session-row {
+    background: rgba(0, 0, 0, 0.03);
+  }
+  .session-row-current {
+    background: rgba(0, 0, 0, 0.06);
+  }
+  .session-end-btn {
+    color: var(--muted);
+  }
+  .session-status-paused {
+    color: rgba(0, 0, 0, 0.35);
+  }
+  .session-main-interval-chip {
+    background: rgba(0, 0, 0, 0.05);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+  }
+}
