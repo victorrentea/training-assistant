@@ -1,7 +1,7 @@
 {
-  "sha": "ee83d578693b523df2d215058edc61f524068cb8",
-  "timestamp": "2026-03-27 23:17",
+  "sha": "eda09cd9b7dc497e61851810f73c3adc6459754d",
+  "timestamp": "2026-03-27 23:22",
   "changelog": [
-    "fix: include daemon_connected in participant state broadcast"
+    "fix: live-update slide availability on daemon connect/disconnect"
   ]
 }
