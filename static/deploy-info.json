@@ -1,7 +1,7 @@
 {
-  "sha": "4c4fcef98f06e64c6cf800884ef3ad5d95c6c743",
-  "timestamp": "2026-03-27 18:59",
+  "sha": "0b2f4fd9910e3fb8a252711043645c17e9a82518",
+  "timestamp": "2026-03-27 19:05",
   "changelog": [
-    "fix: re-fetch catalog on slides_updated so available_on_server updates in real time"
+    "fix: use emoji PNG icon, grays out on unfocused monitors"
   ]
 }
