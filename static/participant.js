@@ -1626,18 +1626,12 @@
   }
 
   async function _onSlidesUpdated(slug, updatedAt) {
-    const entry = slidesCatalog.find(s => s.slug === slug);
-    if (entry) {
-      entry.updated_at = updatedAt;
-      _renderSlidesList(slidesSelectedId);
-      const overlay = document.getElementById('slides-overlay');
-      const overlayOpen = Boolean(overlay?.classList.contains('open'));
-      if (overlayOpen && slidesSelectedSlug === slug) {
-        await _reloadCurrentSlideAfterUpdate(entry);
-      }
-    } else {
-      // Slide not yet in catalog — refresh list (may be a newly added slide)
-      await _refreshSlidesCatalog({ forceReloadCurrent: false, autoLoadSelected: false });
+    const overlay = document.getElementById('slides-overlay');
+    const overlayOpen = Boolean(overlay?.classList.contains('open'));
+    await _refreshSlidesCatalog({ forceReloadCurrent: false, autoLoadSelected: false });
+    if (overlayOpen && slidesSelectedSlug === slug) {
+      const entry = slidesCatalog.find(s => s.slug === slug);
+      if (entry) await _reloadCurrentSlideAfterUpdate(entry);
     }
   }
 
