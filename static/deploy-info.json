@@ -1,7 +1,7 @@
 {
-  "sha": "cc96f9f18abb2181637d9e946f82e512631c663d",
-  "timestamp": "2026-03-27 18:47",
+  "sha": "0ca86372843ad9695e8ed7fb194ed7a0bee8db57",
+  "timestamp": "2026-03-27 18:50",
   "changelog": [
-    "fix: page badge as pill shape instead of circle"
+    "fix: cross out unavailable slide titles in participant list"
   ]
 }
