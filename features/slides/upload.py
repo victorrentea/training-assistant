@@ -6,7 +6,7 @@ from pathlib import Path
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from pydantic import BaseModel, field_validator
 
-from core.state import state
+from core.messaging import broadcast
 
 router = APIRouter()
 
@@ -177,6 +177,8 @@ async def upsert_material_file(
             ),
             encoding="utf-8",
         )
+        effective_updated_at = source_updated_at or datetime.now(timezone.utc).isoformat()
+        await broadcast({"type": "slides_updated", "slug": slug, "updated_at": effective_updated_at})
 
     return {
         "ok": True,
@@ -244,6 +246,7 @@ async def upload_slide_pdf(
         "updated_at": datetime.now(timezone.utc).isoformat(),
     }
     _uploaded_slide_meta_path(target_slug).write_text(json.dumps(meta), encoding="utf-8")
+    await broadcast({"type": "slides_updated", "slug": target_slug, "updated_at": meta["updated_at"]})
 
     slide = {
         "name": display_name,

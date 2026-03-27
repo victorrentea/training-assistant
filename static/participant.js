@@ -91,6 +91,7 @@
   const LS_SLIDE_VISITED_IDS = 'workshop_slide_visited_ids';
   const LS_SLIDES_VIEW_MODE = 'workshop_slides_view_mode';
   const LS_SLIDES_FOLLOW_TRAINER = 'workshop_slides_follow_trainer';
+  const LS_SLIDE_SEEN_UPDATED_AT_PREFIX = 'workshop_slide_seen_updated_at:';
   const LS_LOCATION_KEY = 'workshop_participant_location';
   const SLIDES_TEST_AUTO_SCROLL_ENABLED = false;
   const SLIDES_TEST_AUTO_SCROLL_PAGE = 2;
@@ -936,6 +937,23 @@
     _setStoredVisitedSlideIds(next);
   }
 
+  function _getSlideSeenUpdatedAt(slug) {
+    if (!slug) return null;
+    return localStorage.getItem(LS_SLIDE_SEEN_UPDATED_AT_PREFIX + slug) || null;
+  }
+
+  function _setSlideSeenUpdatedAt(slug, updatedAt) {
+    if (!slug || !updatedAt) return;
+    try { localStorage.setItem(LS_SLIDE_SEEN_UPDATED_AT_PREFIX + slug, updatedAt); } catch (_) {}
+  }
+
+  function _isSlideNew(slide) {
+    if (!slide?.updated_at || !slide?.slug) return false;
+    const seen = _getSlideSeenUpdatedAt(slide.slug);
+    if (!seen) return false; // never opened before → not "new"
+    return slide.updated_at !== seen;
+  }
+
   function _getStoredSlidePage(slug) {
     const raw = Number.parseInt(localStorage.getItem(_slidePageKey(slug)) || '1', 10);
     return Number.isFinite(raw) && raw > 0 ? raw : 1;
@@ -1332,6 +1350,12 @@
       title.className = 'slides-list-title';
       title.textContent = _buildSlideOptionLabel(slide);
       openBtn.appendChild(title);
+      if (_isSlideNew(slide)) {
+        const newBadge = document.createElement('sup');
+        newBadge.className = 'slides-list-new';
+        newBadge.textContent = 'new';
+        openBtn.appendChild(newBadge);
+      }
       const updated = _formatSlideUpdatedCompact(
         slide.updated_at || slide.last_modified || slide.lastModified || slide.updatedAt
       );
@@ -1380,13 +1404,14 @@
     _markSelectedSlideInList();
   }
 
-  async function _loadSlideIntoViewer(slide, { forceReload = false, withUiBlocker = false, skipScrollRestore = false } = {}) {
+  async function _loadSlideIntoViewer(slide, { forceReload = false, withUiBlocker = false, skipScrollRestore = false, cacheVersion = null } = {}) {
     if (!slide) return;
     if (withUiBlocker) _setSlidesUiBlocker(true, 'Loading slide...');
     slidesSelectedSlug = slide.slug;
     slidesSelectedId = slide._id;
     _setStoredSelectedSlideId(slidesSelectedId);
     _markSlideVisited(slidesSelectedId);
+    _setSlideSeenUpdatedAt(slide.slug, slide.updated_at);
     _setSlidesError('');
     _setSlidesLoading({ visible: true, loaded: 0, total: 0, label: 'Checking cache...' });
     try {
@@ -1409,7 +1434,8 @@
         if (pdfContainer) pdfContainer.style.display = 'none';
         if (nativeFrame) {
           const savedPage = Math.max(1, Number(_getStoredSlidePage(slide.slug) || 1));
-          nativeFrame.data = _buildNativeSlideUrl(slide.url, savedPage);
+          const nativeLoadUrl = cacheVersion ? (slide.url.split('?')[0] + '?v=' + cacheVersion) : slide.url;
+          nativeFrame.data = _buildNativeSlideUrl(nativeLoadUrl, savedPage);
           nativeFrame.style.display = 'block';
           _setStoredSlidePage(slide.slug, savedPage);
         }
@@ -1453,7 +1479,8 @@
       try {
         await _getSlidesPdfModules();
         await _initSlidesViewer();
-        const loadingTask = slidesPdfLib.getDocument({ url: slide.url });
+        const pdfLoadUrl = cacheVersion ? (slide.url.split('?')[0] + '?v=' + cacheVersion) : slide.url;
+        const loadingTask = slidesPdfLib.getDocument({ url: pdfLoadUrl });
         loadingTask.onProgress = (progress) => {
           _setSlidesLoading({
             visible: true,
@@ -1515,6 +1542,31 @@
       }
     } finally {
       if (withUiBlocker) _setSlidesUiBlocker(false);
+    }
+  }
+
+  async function _reloadCurrentSlideAfterUpdate(slide) {
+    const savedFollowing = slidesFollowTrainerEnabled;
+    _suppressSlidesFollowAutoUncheck(3000);
+    slidesLastFingerprint = null;
+    await _loadSlideIntoViewer(slide, { forceReload: false, withUiBlocker: false, cacheVersion: Date.now() });
+    if (savedFollowing && !slidesFollowTrainerEnabled) {
+      _setSlidesFollowTrainerEnabled(true, { persist: false, applyHost: false });
+      _renderSlidesFollowTrainerToggle();
+    }
+  }
+
+  async function _onSlidesUpdated(slug, updatedAt) {
+    const entry = slidesCatalog.find(s => s.slug === slug);
+    if (entry) {
+      entry.updated_at = updatedAt;
+      _renderSlidesList(slidesSelectedId);
+      if (slidesSelectedSlug === slug) {
+        await _reloadCurrentSlideAfterUpdate(entry);
+      }
+    } else {
+      // Slide not yet in catalog — refresh list (may be a newly added slide)
+      await _refreshSlidesCatalog({ forceReloadCurrent: false, autoLoadSelected: false });
     }
   }
 
@@ -2126,6 +2178,9 @@
         break;
       case 'slides_current':
         _onIncomingHostSlidesCurrent(msg.slides_current || null);
+        break;
+      case 'slides_updated':
+        _onSlidesUpdated(msg.slug, msg.updated_at).catch(() => {});
         break;
     }
   }
