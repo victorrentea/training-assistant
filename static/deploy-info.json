@@ -1,7 +1,7 @@
 {
-  "sha": "eda09cd9b7dc497e61851810f73c3adc6459754d",
-  "timestamp": "2026-03-27 23:22",
+  "sha": "ca1cb7d5f4b8b238da170c78c1f306398f948a02",
+  "timestamp": "2026-03-27 23:23",
   "changelog": [
-    "fix: live-update slide availability on daemon connect/disconnect"
+    "fix: hide page pill with display:none (not just empty text)"
   ]
 }
