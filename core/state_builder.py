@@ -39,6 +39,8 @@ def _build_host_participants_list() -> list[dict]:
 def build_for_participant(pid: str) -> dict:
     from core.messaging import participant_ids
     pids = participant_ids()
+    now = datetime.now(timezone.utc)
+    last_seen = state.daemon_last_seen
     return {
         "type": "state",
         "backend_version": get_backend_version(),
@@ -53,6 +55,7 @@ def build_for_participant(pid: str) -> dict:
         "summary_updated_at": state.summary_updated_at.isoformat() if state.summary_updated_at else None,
         "notes_content": state.notes_content,
         "screen_share_active": state.screen_share_active,
+        "daemon_connected": last_seen is not None and (now - last_seen).total_seconds() < 5,
     }
 
 
