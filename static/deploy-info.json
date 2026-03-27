@@ -1,7 +1,8 @@
 {
-  "sha": "01e7698e3b30c89fa77153e9b72c168107da86a5",
-  "timestamp": "2026-03-27 18:10",
+  "sha": "afe76fcc375981e461e65d8e3a9a9f237ac81207",
+  "timestamp": "2026-03-27 18:28",
   "changelog": [
-    "fix: only auto-reload slide when overlay is open; remove 'new' badge from DOM on open"
+    "fix: remove bold from correct poll option; use green border instead",
+    "fix: suppress position tracking and follow-uncheck during PDF zoom"
   ]
 }
