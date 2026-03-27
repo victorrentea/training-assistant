@@ -1,7 +1,7 @@
 {
-  "sha": "0e65e2c9af7406702c8d93ca16b9d95dc72f590c",
-  "timestamp": "2026-03-27 09:40",
+  "sha": "b79c85c1627e8657dccb4f37cbbca672ca11e724",
+  "timestamp": "2026-03-27 09:47",
   "changelog": [
-    "ci: auto-fix CI failures with Claude; email alert after 30min"
+    "fix: save slide scroll view after follow even when page number unchanged"
   ]
 }
