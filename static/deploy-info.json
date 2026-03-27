@@ -1,7 +1,7 @@
 {
-  "sha": "47d9ccca79adcd70fbd208b83ceae19ce889021e",
-  "timestamp": "2026-03-27 07:25",
+  "sha": "74680370c060418c3eef335fe4a385ca9df673ce",
+  "timestamp": "2026-03-27 07:26",
   "changelog": [
-    "feat: make sketched heart taller and more pointed"
+    "feat: tour location before slides, slides tooltip animates 30%\u219260%"
   ]
 }
