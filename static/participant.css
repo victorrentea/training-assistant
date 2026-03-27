@@ -467,23 +467,31 @@ h1 { display: none; }
   border-radius: .45rem;
 }
 
-.slides-zoom-btn {
-  background: rgba(0, 0, 0, 0.82);
-  color: #fff;
+.slides-ctrl-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
   border: none;
-  border-radius: .45rem;
-  font-size: 1.6rem;
-  font-weight: 600;
+  background: rgba(108, 99, 255, 0.82);
+  color: #fff;
+  font-size: 1.3rem;
+  font-weight: 700;
   line-height: 1;
-  padding: .1rem .42rem .14rem;
+  padding: 0;
   cursor: pointer;
   pointer-events: auto;
   user-select: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform .1s, background .15s;
 }
 
-.slides-zoom-btn:hover {
-  background: rgba(0, 0, 0, 0.95);
+.slides-ctrl-btn:hover {
+  background: rgba(108, 99, 255, 0.97);
 }
+
+.slides-ctrl-btn:active { transform: scale(0.85); }
 
 .slides-preview-shell.native-mode .slides-zoom-btn {
   display: none;
