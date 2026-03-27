@@ -1,7 +1,7 @@
 {
-  "sha": "3fa7023db933d60826f0180fca4314f086b9dd95",
+  "sha": "a80d90d0fad1596ce7fbf976595446a356ce6a28",
   "timestamp": "2026-03-27 07:48",
   "changelog": [
-    "fix: allow slides tooltip to overflow right column (names were clipped)"
+    "feat: transcription language toggle (EN/RO flag button in host panel)"
   ]
 }
