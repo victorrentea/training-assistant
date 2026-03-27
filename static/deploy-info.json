@@ -1,7 +1,7 @@
 {
-  "sha": "8f937ac0938b9dd8bbf19214284d391d4f44e2d5",
-  "timestamp": "2026-03-27 18:45",
+  "sha": "0192ffed9d952867b9b3325b5c83824ad64b68f3",
+  "timestamp": "2026-03-27 18:47",
   "changelog": [
-    "feat: move slides controls to bottom-left, reorder X-minus-plus-page, round page bubble"
+    "fix: debounce Ctrl+wheel zoom and restore scroll position after re-render"
   ]
 }
