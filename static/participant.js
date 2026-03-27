@@ -595,10 +595,14 @@
     if (!slidesCatalog.length) {
       await _refreshSlidesCatalog();
     }
+    // Use current presentation for deck matching; show the previous page within the same deck
+    // (one slide behind), falling back to current page when switching decks.
     const targetSlide = _findSlideForHostCurrent(hostSlidesCurrent);
     if (!targetSlide) return;
 
-    const targetPage = _getHostCurrentPage(hostSlidesCurrent);
+    const prevSlide = _findSlideForHostCurrent(slidesCurrent);
+    const pageSource = (prevSlide && prevSlide._id === targetSlide._id) ? slidesCurrent : hostSlidesCurrent;
+    const targetPage = _getHostCurrentPage(pageSource);
     _setStoredSlidePage(targetSlide.slug, targetPage);
 
     const overlay = document.getElementById('slides-overlay');
@@ -627,12 +631,16 @@
       _renderSlidesList(targetSlide._id);
       await _loadSlideIntoViewer(targetSlide, { forceReload: false, skipScrollRestore: true });
     }
+    // Renew suppression: PDF loading can exceed the initial 5 s window.
+    _suppressSlidesFollowAutoUncheck(5000);
 
     if (slidesPdfDoc && slidesPdfViewer && slidesSelectedId === targetSlide._id) {
       const maxPage = Math.max(1, Number(slidesPdfDoc.numPages || 1));
       const nextPage = Math.min(maxPage, targetPage);
-      _suppressSlidesFollowAutoUncheck(1500);
+      _suppressSlidesFollowAutoUncheck(3000);
       slidesPdfViewer.currentPageNumber = Number(nextPage);
+      // Renew after set: updateviewarea fires asynchronously during rendering.
+      _suppressSlidesFollowAutoUncheck(3000);
       _setStoredSlidePage(targetSlide.slug, nextPage);
       // Explicitly save the view so navigating away and back restores this position.
       // pagechanging won't fire when the page number doesn't change, so we save here too.
@@ -1864,6 +1872,8 @@
     ws = new WebSocket(url);
 
     ws.onopen = () => {
+      // Reset slide dedup key so reconnect always re-syncs to host's current slide.
+      lastHostSlidesCurrentKey = '';
       document.getElementById('main-screen').style.display = 'block';
       runOnboardingTourIfNeeded();
       document.getElementById('display-name').textContent = myName;
