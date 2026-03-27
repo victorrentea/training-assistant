@@ -1,7 +1,7 @@
 {
-  "sha": "b2e045e753a8cde54a55426559e996e5ec705738",
-  "timestamp": "2026-03-27 18:03",
+  "sha": "29dbc752926f246c95ecb6c1bbd0520c0385c2e5",
+  "timestamp": "2026-03-27 18:08",
   "changelog": [
-    "feat: auto-reload updated PDF slides with 'new' badge for participants"
+    "fix: improve slide follow reliability and AppleScript timeout"
   ]
 }
