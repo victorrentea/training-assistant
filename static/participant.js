@@ -1420,6 +1420,10 @@
     _setStoredSelectedSlideId(slidesSelectedId);
     _markSlideVisited(slidesSelectedId);
     _setSlideSeenUpdatedAt(slide.slug, slide.updated_at);
+    // Remove "new" badge from list item immediately (without full re-render)
+    document.getElementById('slides-list')
+      ?.querySelector(`[data-slide-id="${CSS.escape(slide._id)}"] .slides-list-new`)
+      ?.remove();
     _setSlidesError('');
     _setSlidesLoading({ visible: true, loaded: 0, total: 0, label: 'Checking cache...' });
     try {
@@ -1569,7 +1573,9 @@
     if (entry) {
       entry.updated_at = updatedAt;
       _renderSlidesList(slidesSelectedId);
-      if (slidesSelectedSlug === slug) {
+      const overlay = document.getElementById('slides-overlay');
+      const overlayOpen = Boolean(overlay?.classList.contains('open'));
+      if (overlayOpen && slidesSelectedSlug === slug) {
         await _reloadCurrentSlideAfterUpdate(entry);
       }
     } else {
