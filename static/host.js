@@ -231,6 +231,9 @@
           currentMode = msg.mode;
           renderMode(msg.mode);
         }
+        if (msg.transcription_language) {
+          updateTranscriptionLangBtn(msg.transcription_language);
+        }
         // Restore leaderboard overlay if it was active
         if (msg.leaderboard_active && msg.leaderboard_data) {
           renderLeaderboard(msg.leaderboard_data);
@@ -272,6 +275,10 @@
           _lastDebateMsg.debate_round_timer_seconds = null;
           renderDebateHost(_lastDebateMsg);
         }
+      } else if (msg.type === 'transcription_language') {
+        updateTranscriptionLangBtn(msg.language);
+      } else if (msg.type === 'transcription_language_pending') {
+        updateTranscriptionLangBtn(msg.language, true);
       } else if (msg.type === 'quiz_status') {
         renderQuizStatus(msg.status, msg.message);
       } else if (msg.type === 'quiz_preview') {
@@ -1830,6 +1837,29 @@
     if (!confirm('Reset all participant scores to zero?')) return;
     await fetch('/api/scores', { method: 'DELETE' });
     toast('Scores reset ✓');
+  }
+
+  const _LANG_FLAG = { ro: '🇷🇴', en: '🇬🇧', auto: '🌐' };
+
+  function updateTranscriptionLangBtn(lang, pending = false) {
+    const btn = document.getElementById('btn-transcription-lang');
+    if (!btn) return;
+    btn.textContent = _LANG_FLAG[lang] || lang;
+    btn.title = `Transcription: ${lang.toUpperCase()}${pending ? ' (applying…)' : ''} — click to toggle`;
+    btn.style.opacity = pending ? '0.4' : '0.8';
+    btn.dataset.lang = lang;
+  }
+
+  async function toggleTranscriptionLanguage() {
+    const btn = document.getElementById('btn-transcription-lang');
+    const current = btn?.dataset.lang || 'ro';
+    const next = current === 'ro' ? 'en' : 'ro';
+    updateTranscriptionLangBtn(next, true);
+    await fetch('/api/transcription-language', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ language: next }),
+    });
   }
 
   function renderQuizStatus(status, message) {

@@ -281,6 +281,35 @@ def _resolve_presentation_slide_target(
     }
 
 
+_AUDIOHIJACK_SESSIONS_PLIST = os.path.expanduser(
+    "~/Library/Application Support/Audio Hijack 4/Sessions.plist"
+)
+
+
+def _set_audiohijack_language(lang_code: str) -> None:
+    """Kill AudioHijack, update TranscribeBlock languageCode in Sessions.plist, restart."""
+    import plistlib
+    import time as _time
+
+    subprocess.run(["pkill", "-x", "Audio Hijack"], capture_output=True)
+    _time.sleep(1.5)
+
+    plist_path = _AUDIOHIJACK_SESSIONS_PLIST
+    with open(plist_path, "rb") as f:
+        data = plistlib.load(f)
+    changed = False
+    for session_item in data.get("modelItems", []):
+        for block in session_item.get("sessionData", {}).get("geBlocks", []):
+            if block.get("geObjectInfo") == "TranscribeBlock":
+                block.setdefault("geNodeProperties", {})["languageCode"] = lang_code
+                changed = True
+    if changed:
+        with open(plist_path, "wb") as f:
+            plistlib.dump(data, f)
+
+    subprocess.Popen(["open", "-a", "Audio Hijack"])
+
+
 def _probe_powerpoint_state(timeout_seconds: float = 1.5) -> tuple[dict | None, str | None]:
     try:
         result = subprocess.run(
@@ -2118,7 +2147,29 @@ def run() -> None:
                             )
                 except RuntimeError:
                     pass  # server unreachable — skip this cycle
-    
+
+                # ── Check for transcription language change request ──
+                try:
+                    lang_data = _get_json(
+                        f"{config.server_url}/api/transcription-language/request",
+                        config.host_username, config.host_password,
+                    )
+                    lang_req = lang_data.get("request")
+                    if lang_req:
+                        log.info("daemon", f"Transcription language change requested: {lang_req}")
+                        try:
+                            _set_audiohijack_language(lang_req)
+                            _post_json(
+                                f"{config.server_url}/api/transcription-language/status",
+                                {"language": lang_req},
+                                config.host_username, config.host_password,
+                            )
+                            log.info("daemon", f"AudioHijack language set to: {lang_req}")
+                        except Exception as e:
+                            log.error("daemon", f"Failed to set AudioHijack language: {e}")
+                except RuntimeError:
+                    pass  # server unreachable — skip this cycle
+
                 # ── Push transcript stats every 10s ──
                 if now - last_transcript_stats_at >= 10.0:
                     last_transcript_stats_at = now
