@@ -1,7 +1,7 @@
 {
-  "sha": "f670458351733351d57af432ebbd89a0b499cf65",
-  "timestamp": "2026-03-27 17:54",
+  "sha": "4527d2bf9267a35e76f0a68c0c9fadca2f7ef248",
+  "timestamp": "2026-03-27 17:57",
   "changelog": [
-    "fix: remove \ud83d\udcd1 emoji from slides dock title, hide No Slides Yet title, hide +/- zoom buttons when no slide selected"
+    "feat: hide poll results during voting; show progress bar + anonymity message"
   ]
 }
