@@ -348,12 +348,12 @@ h1 { display: none; }
 }
 
 #slides-follow-btn.follow-blink {
-  animation: follow-btn-blink .18s linear 4;
+  animation: follow-btn-blink .25s linear 4;
 }
 
 @keyframes follow-btn-blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: .25; }
+  0%, 100% { }
+  50% { background: #cc2222; color: #fff; border-color: #cc2222; }
 }
 
 .slides-dock.tour-scan::after {
