@@ -357,8 +357,11 @@ def _run_event_tap():
 # --- Menu bar app ---
 class WisprAddonsApp(rumps.App):
     def __init__(self):
+        icon_path = str(Path(__file__).parent / "icon_template.png")
         super().__init__(
-            "\U0001f9d1\u200d\U0001f4bb",  # scissors icon
+            "",
+            icon=icon_path,
+            template=True,
             quit_button=None,
         )
         self.menu = [
@@ -388,7 +391,7 @@ def main():
     global _client, _app_ref
 
     # Load API key
-    secrets_path = Path(__file__).parent / "secrets.env"
+    secrets_path = Path.home() / ".training-assistants-secrets.env"
     if secrets_path.exists():
         for line in secrets_path.read_text().splitlines():
             line = line.strip()
