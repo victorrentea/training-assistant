@@ -1,7 +1,7 @@
 {
-  "sha": "a771bed801a390545b931c8a404da50d21934ad9",
-  "timestamp": "2026-03-27 23:14",
+  "sha": "ee83d578693b523df2d215058edc61f524068cb8",
+  "timestamp": "2026-03-27 23:17",
   "changelog": [
-    "fix: match status bar height to emoji buttons (44px)"
+    "fix: include daemon_connected in participant state broadcast"
   ]
 }
