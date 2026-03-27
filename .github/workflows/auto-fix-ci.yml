@@ -1,0 +1,63 @@
+name: Auto-fix CI failures
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+
+jobs:
+  auto-fix:
+    if: github.event.workflow_run.conclusion == 'failure'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+
+      - name: Get CI failure logs
+        id: logs
+        run: |
+          {
+            echo 'content<<ENDOFFILE'
+            gh run view ${{ github.event.workflow_run.id }} --log-failed 2>&1 | head -400
+            echo 'ENDOFFILE'
+          } >> "$GITHUB_OUTPUT"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Try to fix with Claude
+        id: fix
+        uses: anthropics/claude-code-action@beta
+        timeout-minutes: 25
+        continue-on-error: true
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          prompt: |
+            The CI workflow "${{ github.event.workflow_run.name }}" failed on branch
+            "${{ github.event.workflow_run.head_branch }}" (commit ${{ github.event.workflow_run.head_sha }}).
+
+            Failure logs:
+            ${{ steps.logs.outputs.content }}
+
+            Please analyze the failure, identify the root cause, fix it, and commit the
+            changes directly to the current branch. Keep the fix minimal — only change
+            what is strictly necessary. Do not refactor unrelated code.
+
+      - name: Send email if Claude could not fix it
+        if: steps.fix.outcome != 'success'
+        run: |
+          curl -sf -X POST https://api.resend.com/emails \
+            -H "Authorization: Bearer ${{ secrets.RESEND_API_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "from": "Training Assistant Build Fighter <onboarding@resend.dev>",
+              "to": ["victorentea@gmail.com"],
+              "subject": "⚠️ CI auto-fix failed — ${{ github.event.workflow_run.head_branch }}",
+              "text": "Claude could not fix the CI build after 30 minutes and needs your attention.\n\nBranch: ${{ github.event.workflow_run.head_branch }}\nCommit: ${{ github.event.workflow_run.head_sha }}\nFailed run: https://github.com/${{ github.repository }}/actions/runs/${{ github.event.workflow_run.id }}\n\nPlease investigate manually."
+            }'

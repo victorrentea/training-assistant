@@ -4,7 +4,7 @@
     {
       "path": "core/state.py",
       "qualname": "AppState.reset",
-      "lines": 70
+      "lines": 72
     },
     {
       "path": "daemon/__main__.py",

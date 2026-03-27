@@ -231,6 +231,9 @@
           currentMode = msg.mode;
           renderMode(msg.mode);
         }
+        if (msg.transcription_language) {
+          updateTranscriptionLangBtn(msg.transcription_language);
+        }
         // Restore leaderboard overlay if it was active
         if (msg.leaderboard_active && msg.leaderboard_data) {
           renderLeaderboard(msg.leaderboard_data);
@@ -272,6 +275,10 @@
           _lastDebateMsg.debate_round_timer_seconds = null;
           renderDebateHost(_lastDebateMsg);
         }
+      } else if (msg.type === 'transcription_language') {
+        updateTranscriptionLangBtn(msg.language);
+      } else if (msg.type === 'transcription_language_pending') {
+        updateTranscriptionLangBtn(msg.language, true);
       } else if (msg.type === 'quiz_status') {
         renderQuizStatus(msg.status, msg.message);
       } else if (msg.type === 'quiz_preview') {
@@ -298,8 +305,8 @@
     el.textContent = emoji;
     document.body.appendChild(el);
 
-    // Screen emoji: spawn from center; others: spawn from bottom-right corner
-    const startX = isScreen ? window.innerWidth / 2 : window.innerWidth - 120;
+    // Screen emoji: spawn from center; others: spawn from bottom-left corner (matches desktop overlay)
+    const startX = isScreen ? window.innerWidth / 2 : 100;
     const startY = isScreen ? window.innerHeight / 2 : window.innerHeight - 80;
     el.style.left = startX + 'px';
     el.style.top = startY + 'px';
@@ -308,15 +315,14 @@
     const duration = 2500 + Math.random() * 1500;
     const riseHeight = 500;
 
-    // Rise up with wobble (fâțâială)
-    const wobbleAmp = 15 + Math.random() * 10; // px wobble amplitude
-    const wobbleFreq = 3 + Math.random() * 2; // number of wobbles during rise
+    // Rise up with divergent drift (picks one random direction and goes)
+    const driftX = (Math.random() * 2 - 1) * 50; // -50..+50 px total lateral drift at top
     const steps = 20;
     const keyframes = [];
     for (let i = 0; i <= steps; i++) {
       const t = i / steps;
       const y = -riseHeight * t;
-      const wobble = Math.sin(t * wobbleFreq * Math.PI * 2) * wobbleAmp * (1 - t * 0.5);
+      const wobble = t * driftX;
       const scale = 1 + t * 0.3; // slight grow
       const opacity = t < 0.4 ? 1 : 1 - (t - 0.4) / 0.6;
       keyframes.push({
@@ -704,7 +710,8 @@
         noTranscriptTitle = `No transcription for ${Math.round(minAgo)} minutes`;
       }
     }
-    const flashStyle = (!sessionPaused && noTranscriptWarn) ? ' animation: flash-bg 1.4s ease-in-out infinite;' : '';
+    const sessionActive = sessionMain && !sessionMain.ended_at && !sessionPaused;
+    const flashStyle = (sessionActive && noTranscriptWarn) ? ' animation: flash-bg 1.4s ease-in-out infinite;' : '';
 
     if (summaryPoints.length) {
       badge.textContent = _transcriptLineCount > 0
@@ -718,7 +725,7 @@
       badge.className = 'badge';
       const anim = sessionPaused
         ? ''
-        : ` animation: pulse 1.2s ease-in-out infinite${noTranscriptWarn ? ', flash-bg 1.4s ease-in-out infinite' : ''};`;
+        : ` animation: pulse 1.2s ease-in-out infinite${(sessionActive && noTranscriptWarn) ? ', flash-bg 1.4s ease-in-out infinite' : ''};`;
       badge.style.cssText = `cursor:wait; color:var(--warn); border:1px solid var(--warn);${anim}`;
       badge.title = noTranscriptWarn ? noTranscriptTitle : `Generating key points from transcript… (${_transcriptLineCount} lines)`;
     } else {
@@ -1832,6 +1839,29 @@
     toast('Scores reset ✓');
   }
 
+  const _LANG_FLAG = { ro: '🇷🇴', en: '🇬🇧', auto: '🌐' };
+
+  function updateTranscriptionLangBtn(lang, pending = false) {
+    const btn = document.getElementById('btn-transcription-lang');
+    if (!btn) return;
+    btn.textContent = _LANG_FLAG[lang] || lang;
+    btn.title = `Transcription: ${lang.toUpperCase()}${pending ? ' (applying…)' : ''} — click to toggle`;
+    btn.style.opacity = pending ? '0.4' : '0.8';
+    btn.dataset.lang = lang;
+  }
+
+  async function toggleTranscriptionLanguage() {
+    const btn = document.getElementById('btn-transcription-lang');
+    const current = btn?.dataset.lang || 'ro';
+    const next = current === 'ro' ? 'en' : 'ro';
+    updateTranscriptionLangBtn(next, true);
+    await fetch('/api/transcription-language', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ language: next }),
+    });
+  }
+
   function renderQuizStatus(status, message) {
     const el = document.getElementById('quiz-status');
     if (!el) return;
@@ -1980,11 +2010,6 @@
     _hostWcLastDataKey = key;
     clearTimeout(_hostWcDebounceTimer);
     _hostWcDebounceTimer = setTimeout(() => _drawHostCloud(canvas, wordsMap), 300);
-    const dl = document.getElementById('wc-host-suggestions');
-    if (dl) {
-      dl.innerHTML = Object.keys(wordsMap).sort()
-        .map(w => `<option value="${escHtml(w)}"></option>`).join('');
-    }
     const dlWrap = document.getElementById('wc-download-wrap');
     if (dlWrap) dlWrap.style.display = Object.keys(wordsMap).length ? '' : 'none';
   }
@@ -2266,11 +2291,6 @@
     const panel = document.getElementById('codereview-side-panel');
     const confirmed = new Set(cr.confirmed_lines || []);
 
-    if (codereviewSelectedLine === null) {
-      panel.innerHTML = '<div class="muted" style="text-align:center;margin-top:40px;">Click a line to see details</div>';
-      return;
-    }
-
     const lineNum = codereviewSelectedLine;
     const lineParticipants = (cr.line_participants || {})[String(lineNum)] || [];
     const isConfirmed = confirmed.has(lineNum);
@@ -2360,6 +2380,7 @@
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
     });
+    document.getElementById('codereview-snippet').value = '';
   }
 
   updateGenBtn();

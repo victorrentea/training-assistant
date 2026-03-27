@@ -6,7 +6,7 @@ on:
   pull_request:
 
 jobs:
-  test:
+  checks:
     runs-on: ubuntu-latest
 
     steps:
@@ -22,9 +22,6 @@ jobs:
                       pytest pytest-anyio pytest-playwright anthropic \
                       prometheus-fastapi-instrumentator
 
-      - name: Install Playwright browsers
-        run: python -m playwright install --with-deps chromium
-
       - name: Python method length guard (max 60 LOC)
         run: |
           python3 scripts/check_python_method_length.py \
@@ -37,11 +34,51 @@ jobs:
       - name: JS unit tests
         run: node tests/test_participant_js.js
 
+  e2e:
+    runs-on: ubuntu-latest
+    needs: checks
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - group: core
+            files: >-
+              tests/test_e2e.py
+              tests/test_e2e_connection_poll_identity.py
+          - group: debate-wordcloud-codereview
+            files: >-
+              tests/test_e2e_debate.py
+              tests/test_e2e_wordcloud_qa_activity.py
+              tests/test_e2e_codereview.py
+          - group: gaps-quiz-scoring
+            files: >-
+              tests/test_e2e_remaining_gaps.py
+              tests/test_e2e_quiz_summary.py
+              tests/test_e2e_gaps.py
+              tests/test_e2e_scoring.py
+              tests/test_e2e_participant_escape_modals.py
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          pip install fastapi "uvicorn[standard]" websockets python-multipart httpx \
+                      pytest pytest-anyio pytest-playwright anthropic \
+                      prometheus-fastapi-instrumentator pypdf
+
+      - name: Install Playwright browsers
+        run: python -m playwright install --with-deps chromium
+
       - name: Generate version.js for tests
         run: echo "window.APP_VERSION = '$(date -u '+%Y-%m-%d %H:%M')';" > static/version.js
 
-      - name: E2E browser tests
+      - name: E2E browser tests (${{ matrix.group }})
         env:
           HOST_USERNAME: host
           HOST_PASSWORD: testpass
-        run: pytest tests/test_e2e.py -v -s --tb=short
+        run: pytest ${{ matrix.files }} -v -s --tb=short

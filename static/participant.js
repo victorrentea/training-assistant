@@ -113,7 +113,6 @@
   let slidesViewMode = 'pdfjs';
   let slidesFollowTrainerEnabled = true;
   let slidesFollowUncheckSuppressedUntil = 0;
-  let slidesNativeFrame = null;
   let hostSlidesCurrent = null;   // what host is showing NOW
   let hostSlidesPrevious = null;  // what host was showing before (participants follow this)
   let lastHostSlidesCurrentKey = '';
@@ -160,8 +159,8 @@
       { selector: '#display-name',    emoji: '✏️', text: "That's your name. Tap it to rename yourself. Be creative." },
       { selector: '#notes-btn',       emoji: '📝', text: 'Notes are here. Tap to open session notes anytime.' },
       { selector: '#summary-btn',     emoji: '🧠', text: 'AI recaps what you missed. Tap any time. Zero FOMO.' },
-      { selector: '#slides-dock',     emoji: '📑', text: 'Slides are always on the right. Click any topic to open it.', scanDock: true },
       { selector: '#location-prompt', emoji: '📍', text: "Tell us where you're from — for the world map. Totally optional." },
+      { selector: '#slides-dock',     emoji: '📑', text: 'Slides are always on the right. Click any topic to open it.', scanDock: true },
       ..._shuffled,
     ];
 
@@ -264,10 +263,14 @@
       if (step?.scanDock) {
         bub.classList.remove('arrow-top');
         bub.classList.add('arrow-right');
-        const bubbleTop = Math.max(8, Math.min(window.innerHeight - 120, rect.top + rect.height * 0.3));
         const bubbleLeft = Math.max(8, rect.left - bubW - 14);
         bub.style.left = bubbleLeft + 'px';
-        bub.style.top = bubbleTop + 'px';
+        bub.style.transition = 'none';
+        bub.style.top = Math.max(8, Math.min(window.innerHeight - 120, rect.top + rect.height * 0.3)) + 'px';
+        requestAnimationFrame(() => {
+          bub.style.transition = 'top 1.2s ease-in-out';
+          bub.style.top = Math.max(8, Math.min(window.innerHeight - 120, rect.top + rect.height * 0.6)) + 'px';
+        });
         return;
       }
       bub.classList.remove('arrow-right');
@@ -390,6 +393,11 @@
     if (el) el.textContent = notesContent;
     const dlBtn = document.getElementById('participant-notes-download');
     if (dlBtn) dlBtn.style.display = notesContent ? '' : 'none';
+    const btn = document.getElementById('notes-btn');
+    if (btn) {
+      btn.disabled = !notesContent;
+      btn.dataset.tooltip = notesContent ? 'Session notes' : '(none yet)';
+    }
   }
 
   function downloadParticipantNotes() {
@@ -424,6 +432,11 @@
     }
     const countEl = document.getElementById('summary-count');
     if (countEl) countEl.textContent = summaryPoints.length > 0 ? summaryPoints.length : '';
+    const summaryBtnEl = document.getElementById('summary-btn');
+    if (summaryBtnEl) {
+      summaryBtnEl.disabled = summaryPoints.length === 0;
+      summaryBtnEl.dataset.tooltip = summaryPoints.length ? 'Key points discussed so far' : '(none yet)';
+    }
     if (summaryPoints.length > prevCount) {
       const summaryBtn = document.getElementById('summary-btn');
       if (summaryBtn) {
@@ -440,9 +453,7 @@
     const timeEl = document.getElementById('summary-time');
     if (!list) return;
     if (!summaryPoints.length) {
-      list.innerHTML = _summaryRequested
-        ? '<li class="summary-empty">Generating key points… please wait.</li>'
-        : '<li class="summary-empty">No key points yet. Tap to request.</li>';
+      list.innerHTML = '<li class="summary-empty">No key points yet. Tap to request.</li>';
       if (timeEl) timeEl.textContent = '';
       return;
     }
@@ -483,7 +494,6 @@
     if (!summaryPoints.length && !_summaryRequested) {
       _summaryRequested = true;
       const list = document.getElementById('summary-list');
-      if (list) list.innerHTML = '<li class="summary-empty">Generating key points… please wait.</li>';
       fetch('/api/summary/force', { method: 'POST' }).catch(() => {});
     }
   }
@@ -503,8 +513,7 @@
   function requestSummaryRefresh() {
     _summaryRequested = true;
     if (summaryPoints.length === 0) {
-      const list = document.getElementById('summary-list');
-      if (list) list.innerHTML = '<li class="summary-empty">Generating key points… please wait.</li>';
+      renderSummaryList();
     }
     const btn = document.getElementById('summary-refresh-btn');
     if (btn) { btn.disabled = true; btn.style.opacity = '0.4'; }
@@ -579,6 +588,7 @@
   async function _applyHostSlideFollow(slidesCurrent) {
     if (!slidesCurrent) return;
     if (!_isSlidesFollowActive()) return;
+    _suppressSlidesFollowAutoUncheck(5000);
 
     if (!slidesCatalog.length) {
       await _refreshSlidesCatalog();
@@ -591,7 +601,14 @@
 
     const overlay = document.getElementById('slides-overlay');
     const overlayOpen = overlay && overlay.classList.contains('open');
-    if (!overlayOpen) return;
+    if (!overlayOpen) {
+      if (overlay) {
+        overlay.classList.add('open');
+        _setSlidesOverlayOpen(true);
+      } else {
+        return;
+      }
+    }
 
     if (slidesViewMode === 'native') {
       const selectedMatches = slidesSelectedId === targetSlide._id;
@@ -606,15 +623,22 @@
 
     if (slidesSelectedId !== targetSlide._id || !slidesPdfDoc) {
       _renderSlidesList(targetSlide._id);
-      await _loadSlideIntoViewer(targetSlide, { forceReload: false });
+      await _loadSlideIntoViewer(targetSlide, { forceReload: false, skipScrollRestore: true });
     }
 
     if (slidesPdfDoc && slidesPdfViewer && slidesSelectedId === targetSlide._id) {
       const maxPage = Math.max(1, Number(slidesPdfDoc.numPages || 1));
       const nextPage = Math.min(maxPage, targetPage);
       _suppressSlidesFollowAutoUncheck(1500);
-      slidesPdfViewer.currentPageNumber = nextPage;
+      slidesPdfViewer.currentPageNumber = Number(nextPage);
       _setStoredSlidePage(targetSlide.slug, nextPage);
+      // Explicitly save the view so navigating away and back restores this position.
+      // pagechanging won't fire when the page number doesn't change, so we save here too.
+      const container = document.getElementById('slides-pdf-container');
+      _setStoredSlideView(targetSlide.slug, {
+        page: nextPage,
+        scrollTop: container?.scrollTop || 0,
+      });
       _renderSlidesMeta(targetSlide);
     }
   }
@@ -705,8 +729,16 @@
   function _renderSlidesFollowTrainerToggle() {
     const btn = document.getElementById('slides-follow-btn');
     if (!btn) return;
-    btn.classList.toggle('active', slidesFollowTrainerEnabled);
+    const isNativeFollow = slidesViewMode === 'native' && slidesFollowTrainerEnabled;
+    btn.classList.toggle('active', slidesFollowTrainerEnabled && !isNativeFollow);
+    btn.classList.toggle('native-warning', isNativeFollow);
     btn.setAttribute('aria-pressed', slidesFollowTrainerEnabled ? 'true' : 'false');
+    if (isNativeFollow) {
+      const page = hostSlidesCurrent ? ` #${_getHostCurrentPage(hostSlidesCurrent)}` : '';
+      btn.title = `Use PDF.js viewer to auto-follow slide${page}`;
+    } else {
+      btn.title = '';
+    }
   }
 
   function _blinkSlidesFollowTrainerButton() {
@@ -744,6 +776,8 @@
     pdfjsBtn.classList.toggle('active', !isNative);
     nativeBtn.setAttribute('aria-pressed', isNative ? 'true' : 'false');
     pdfjsBtn.setAttribute('aria-pressed', !isNative ? 'true' : 'false');
+    const shell = document.querySelector('.slides-preview-shell');
+    if (shell) shell.classList.toggle('native-mode', isNative);
     _renderSlidesFollowTrainerToggle();
   }
 
@@ -765,6 +799,19 @@
     }
   }
 
+  function _bindSlidesZoomButtons() {
+    const zoomIn = document.getElementById('slides-zoom-in');
+    const zoomOut = document.getElementById('slides-zoom-out');
+    if (zoomIn) zoomIn.addEventListener('click', () => {
+      if (slidesViewMode !== 'pdfjs' || !slidesPdfViewer) return;
+      slidesPdfViewer.currentScale = Math.min(slidesPdfViewer.currentScale * 1.25, 10);
+    });
+    if (zoomOut) zoomOut.addEventListener('click', () => {
+      if (slidesViewMode !== 'pdfjs' || !slidesPdfViewer) return;
+      slidesPdfViewer.currentScale = Math.max(slidesPdfViewer.currentScale / 1.25, 0.1);
+    });
+  }
+
   function _bindSlidesViewModeToggle() {
     slidesViewMode = _getStoredSlidesViewMode();
     _renderSlidesViewModeToggle();
@@ -780,19 +827,38 @@
     const btn = document.getElementById('slides-follow-btn');
     if (!btn) return;
     btn.addEventListener('click', () => {
-      if (slidesFollowTrainerEnabled) {
-        _setSlidesFollowTrainerEnabled(false, { persist: true, applyHost: false });
+      const overlay = document.getElementById('slides-overlay');
+      if (slidesViewMode === 'native' && slidesFollowTrainerEnabled) {
+        // State 1: native+follow=ON → switch to PDF.js (follow stays ON)
+        _setSlidesViewMode('pdfjs');
         return;
       }
+      if (slidesViewMode === 'native') {
+        // State 2: native+follow=OFF → open host topic in native + turn follow ON
+        _setSlidesFollowTrainerEnabled(true, { persist: true, applyHost: true });
+        if (overlay && !overlay.classList.contains('open')) {
+          overlay.classList.add('open');
+          _setSlidesOverlayOpen(true);
+        }
+        if (hostSlidesCurrent) _queueHostSlideFollow(hostSlidesCurrent);
+        return;
+      }
+      if (slidesFollowTrainerEnabled) {
+        // State 4: pdfjs+follow=ON → re-sync to trainer's current position
+        if (overlay && !overlay.classList.contains('open')) {
+          overlay.classList.add('open');
+          _setSlidesOverlayOpen(true);
+        }
+        if (hostSlidesCurrent) _queueHostSlideFollow(hostSlidesCurrent);
+        return;
+      }
+      // State 3: pdfjs+follow=OFF → open host slide + turn follow ON
       _setSlidesFollowTrainerEnabled(true, { persist: true, applyHost: true });
-      const overlay = document.getElementById('slides-overlay');
       if (overlay && !overlay.classList.contains('open')) {
         overlay.classList.add('open');
         _setSlidesOverlayOpen(true);
       }
-      if (hostSlidesCurrent) {
-        _queueHostSlideFollow(hostSlidesPrevious || hostSlidesCurrent);
-      }
+      if (hostSlidesCurrent) _queueHostSlideFollow(hostSlidesCurrent);
     });
   }
   function _getStoredVisitedSlideIds() {
@@ -932,15 +998,11 @@
     err.textContent = message;
   }
 
-  function _showSlidesEmpty(kind) {
+  function _showSlidesEmpty() {
     const empty = document.getElementById('slides-empty');
     if (!empty) return;
-    let title = 'Pick a Slide';
-    let hint = 'Tap one item from the list on the right';
-    if (kind === 'none') {
-      title = 'No Slides Yet';
-      hint = 'Slides will appear here when published';
-    }
+    const title = 'No Slides Yet';
+    const hint = 'Slides will appear here when published';
     empty.innerHTML = (
       `<div class="slides-empty-card">` +
       `<div class="slides-empty-title">${escHtml(title)}</div>` +
@@ -998,6 +1060,16 @@
       textLayerMode: 1,
     });
     slidesPdfLinkService.setViewer(slidesPdfViewer);
+
+    // Auto-fit to page width on container resize (debounced)
+    let _pdfResizeTimer = null;
+    new ResizeObserver(() => {
+      if (!slidesPdfViewer || slidesViewMode !== 'pdfjs') return;
+      clearTimeout(_pdfResizeTimer);
+      _pdfResizeTimer = setTimeout(() => {
+        if (slidesPdfViewer && slidesViewMode === 'pdfjs') slidesPdfViewer.currentScaleValue = 'page-width';
+      }, 120);
+    }).observe(container);
 
     slidesPdfEventBus.on('pagechanging', (evt) => {
       if (slidesSelectedSlug && evt?.pageNumber) {
@@ -1070,7 +1142,7 @@
         try {
           if (slidesPdfLinkService?.goToPage) slidesPdfLinkService.goToPage(targetPage);
         } catch (_) {}
-        slidesPdfViewer.currentPageNumber = targetPage;
+        slidesPdfViewer.currentPageNumber = Number(targetPage);
         _setStoredSlidePage(slidesSelectedSlug, targetPage);
       }
       _renderSlidesMeta(slide);
@@ -1227,13 +1299,23 @@
         badge.textContent = updated;
         openBtn.appendChild(badge);
       }
-      openBtn.addEventListener('click', async () => {
+      openBtn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        if (_isSlidesFollowActive() && slidesSelectedId !== slide._id) {
+          _setSlidesFollowTrainerEnabled(false, { persist: true, applyHost: false });
+          _blinkSlidesFollowTrainerButton();
+        }
         const overlay = document.getElementById('slides-overlay');
         if (overlay) overlay.classList.add('open');
         _setSlidesOverlayOpen(true);
         _markSlideVisited(slide._id);
         _markSelectedSlideInList();
         await _loadSlideIntoViewer(slide, { forceReload: false, withUiBlocker: true });
+      });
+      item.addEventListener('click', (e) => {
+        if (!e.target.closest('.slides-list-open') && !e.target.closest('.slides-list-download')) {
+          openBtn.click();
+        }
       });
       const dl = document.createElement('a');
       dl.className = 'slides-list-download';
@@ -1256,7 +1338,7 @@
     _markSelectedSlideInList();
   }
 
-  async function _loadSlideIntoViewer(slide, { forceReload = false, withUiBlocker = false } = {}) {
+  async function _loadSlideIntoViewer(slide, { forceReload = false, withUiBlocker = false, skipScrollRestore = false } = {}) {
     if (!slide) return;
     if (withUiBlocker) _setSlidesUiBlocker(true, 'Loading slide...');
     slidesSelectedSlug = slide.slug;
@@ -1284,7 +1366,7 @@
         if (nativeFrame) {
           const savedPage = Math.max(1, Number(_getStoredSlidePage(slide.slug) || 1));
           nativeFrame.data = _buildNativeSlideUrl(slide.url, savedPage);
-          nativeFrame.style.display = '';
+          nativeFrame.style.display = 'block';
           _setStoredSlidePage(slide.slug, savedPage);
         }
         slidesLastFingerprint = fingerprint;
@@ -1306,12 +1388,12 @@
         const targetPage = Math.min(saved?.page || _getStoredSlidePage(slide.slug), maxPages);
         _suppressSlidesFollowAutoUncheck(1500);
         try {
-          slidesPdfViewer.currentPageNumber = targetPage;
+          slidesPdfViewer.currentPageNumber = Number(targetPage);
         } catch (_) {
           try { slidesPdfLinkService?.goToPage(targetPage); } catch (_) {}
         }
         const container = document.getElementById('slides-pdf-container');
-        if (container && saved && Number.isFinite(saved.scrollTop)) {
+        if (!skipScrollRestore && container && saved && Number.isFinite(saved.scrollTop)) {
           requestAnimationFrame(() => { container.scrollTop = saved.scrollTop; });
         }
         _setStoredSlidePage(slide.slug, targetPage);
@@ -1361,12 +1443,12 @@
         const savedPage = Math.min(saved?.page || _getStoredSlidePage(slide.slug), maxPages);
         _suppressSlidesFollowAutoUncheck(1500);
         try {
-          slidesPdfViewer.currentPageNumber = savedPage;
+          slidesPdfViewer.currentPageNumber = Number(savedPage);
         } catch (_) {
           try { slidesPdfLinkService?.goToPage(savedPage); } catch (_) {}
         }
         _setStoredSlidePage(slide.slug, savedPage);
-        if (saved && Number.isFinite(saved.scrollTop)) {
+        if (!skipScrollRestore && saved && Number.isFinite(saved.scrollTop)) {
           const container = document.getElementById('slides-pdf-container');
           if (container) requestAnimationFrame(() => { container.scrollTop = saved.scrollTop; });
         }
@@ -1410,7 +1492,7 @@
         _setSlidesDownload('', true);
         _setSlidesError('');
         _setSlidesLoading({ visible: false });
-        _showSlidesEmpty('none');
+        _showSlidesEmpty();
         if (shell) shell.style.display = 'none';
         return;
       }
@@ -1434,12 +1516,12 @@
         _setSlidesDownload('', true);
         _setSlidesError('');
         _setSlidesLoading({ visible: false });
-        _showSlidesEmpty('pick');
+        _showSlidesEmpty();
         if (shell) shell.style.display = 'none';
       }
     } catch (_) {
       _setSlidesError('Could not fetch slide list from server.');
-      _showSlidesEmpty('none');
+      _showSlidesEmpty();
       if (shell) shell.style.display = 'none';
       _setSlidesDownload('', true);
       _setSlidesLoading({ visible: false });
@@ -1483,6 +1565,10 @@
     const overlay = document.getElementById('slides-overlay');
     if (overlay) overlay.classList.remove('open');
     _setSlidesOverlayOpen(false);
+    if (_isSlidesFollowActive()) {
+      _setSlidesFollowTrainerEnabled(false, { persist: true, applyHost: false });
+      _blinkSlidesFollowTrainerButton();
+    }
     _setSlidesFollowTrainerEnabled(false, { persist: true, applyHost: false });
     _setSlidesLoading({ visible: false });
     _setSlidesUiBlocker(false);
@@ -1565,6 +1651,7 @@
   })();
   _bindSlidesFollowTrainerToggle();
   _bindSlidesViewModeToggle();
+  _bindSlidesZoomButtons();
   warmSlidesCatalog();
 
   // ── Inline name editing ──
@@ -2023,6 +2110,8 @@
   function updateHostDot(connected) {
     const dot = document.getElementById('host-dot');
     if (dot) dot.style.display = connected ? 'inline' : 'none';
+    const sep = document.getElementById('host-pax-sep');
+    if (sep) sep.style.display = connected ? 'inline' : 'none';
   }
 
   function updateScreenShareWarning(active) {
@@ -2465,7 +2554,7 @@
   function showDesktopEmojiFloat(emoji, btn) {
     const el = document.createElement('div');
     el.textContent = emoji;
-    el.className = 'emoji-float';
+    el.style.cssText = 'position:fixed;font-size:8rem;z-index:10000;pointer-events:none';
     let startX, startY;
     if (btn) {
       const rect = btn.getBoundingClientRect();
@@ -2478,8 +2567,26 @@
     el.style.left = startX + 'px';
     el.style.top = startY + 'px';
     document.body.appendChild(el);
-    requestAnimationFrame(() => el.classList.add('emoji-float-active'));
-    setTimeout(() => el.remove(), 2600);
+
+    const duration = 2500 + Math.random() * 1500;
+    const riseHeight = 500;
+    const driftX = (Math.random() * 2 - 1) * 50; // -50..+50 px total lateral drift at top
+    const steps = 20;
+    const keyframes = [];
+    for (let i = 0; i <= steps; i++) {
+      const t = i / steps;
+      const y = -riseHeight * t;
+      const wobble = t * driftX;
+      const scale = 1 + t * 0.3;
+      const opacity = t < 0.4 ? 1 : 1 - (t - 0.4) / 0.6;
+      keyframes.push({
+        transform: `translate(calc(-50% + ${wobble}px), calc(-50% + ${y}px)) scale(${scale})`,
+        opacity: opacity,
+        offset: t
+      });
+    }
+    const anim = el.animate(keyframes, { duration, easing: 'ease-out', fill: 'forwards' });
+    anim.onfinish = () => el.remove();
   }
 
   function submitQuestion() {

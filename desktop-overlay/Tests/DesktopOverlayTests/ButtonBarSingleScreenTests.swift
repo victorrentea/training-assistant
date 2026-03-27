@@ -16,7 +16,7 @@ final class ButtonBarSingleScreenTests: XCTestCase {
         XCTAssertFalse(logic.shouldSlideIn(mouse: NSPoint(x: 980, y: 500)))
     }
 
-    func testEdgeTriggerActivatesInsideBarVerticalBand() {
+    func testShownFrameActivatesWhenMouseOverBarPosition() {
         let hiddenFrame = NSRect(x: 1000, y: 200, width: 52, height: 220)
         let shownFrame = NSRect(x: 936, y: 200, width: 52, height: 220)
         let logic = SingleScreenHoverLogic(
@@ -25,8 +25,21 @@ final class ButtonBarSingleScreenTests: XCTestCase {
             edgeTriggerDistance: 80,
             onBarInset: 20
         )
+        // Mouse exactly at bar's shown position → activate
+        XCTAssertTrue(logic.shouldSlideIn(mouse: NSPoint(x: 950, y: 310)))
+    }
 
-        XCTAssertTrue(logic.shouldSlideIn(mouse: NSPoint(x: 980, y: 260)))
+    func testEdgeTriggerZoneOutsideShownFrameDoesNotActivate() {
+        let hiddenFrame = NSRect(x: 1000, y: 200, width: 52, height: 220)
+        let shownFrame = NSRect(x: 936, y: 200, width: 52, height: 220)
+        let logic = SingleScreenHoverLogic(
+            hiddenFrame: hiddenFrame,
+            shownFrame: shownFrame,
+            edgeTriggerDistance: 80,
+            onBarInset: 20
+        )
+        // Mouse to the left of shownFrame (outside bar zone) → should NOT activate
+        XCTAssertFalse(logic.shouldSlideIn(mouse: NSPoint(x: 880, y: 310)))
     }
 
     func testSingleScreenAutoHideDelayIsOneSecond() {

@@ -33,6 +33,7 @@ from features.pages import router as pages
 from features.session import router as session
 from features.snapshot import router as snapshot
 from features.slides import router as slides
+from features.transcription_language import router as transcription_language_router
 
 # Import scores router from features (formerly routers/scores.py)
 from features.scores import router as scores
@@ -95,6 +96,7 @@ app.include_router(debate.router)
 app.include_router(leaderboard.router)
 app.include_router(session.router)
 app.include_router(snapshot.router, dependencies=[Depends(require_host_auth)])
+app.include_router(transcription_language_router, dependencies=[Depends(require_host_auth)])
 
 class ModeRequest(BaseModel):
     mode: str
