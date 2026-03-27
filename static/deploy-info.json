@@ -1,7 +1,7 @@
 {
-  "sha": "adcffbc30bba144d565cd9e48daa7af22e68ec27",
-  "timestamp": "2026-03-27 07:45",
+  "sha": "ec350242c3b10ed67ccc3b2b946440f6a9fea7e0",
+  "timestamp": "2026-03-27 07:47",
   "changelog": [
-    "style: divergent emoji float \u2014 linear drift up, narrower spawn zone"
+    "ui: follow button native-warning hatch red+blue instead of red+white"
   ]
 }
