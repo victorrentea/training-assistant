@@ -49,6 +49,9 @@ let myPID = ProcessInfo.processInfo.processIdentifier
 try? "\(myPID)".write(toFile: pidFilePath, atomically: true, encoding: .utf8)
 // PID is visible in every log line label — no need to repeat it here
 
+// Remember our parent PID (start.sh) — if it dies, we should too
+let originalParentPID = getppid()
+
 // Server URL from command line or default
 let serverURL: String
 if CommandLine.arguments.count > 1 {
@@ -56,20 +59,27 @@ if CommandLine.arguments.count > 1 {
 } else {
     serverURL = "ws://localhost:8000"
 }
-overlayInfo("🚀 Connecting to \(serverURL)")
+overlayInfo("🚀 Connecting to \(serverURL) (parent pid: \(originalParentPID))")
 
 let delegate = AppDelegate(serverURL: serverURL, pidFilePath: pidFilePath, myPID: myPID)
 app.delegate = delegate
 
-// Periodic self-check: exit if another instance has taken over the lock file
+// Periodic self-check: exit if another instance took over OR parent process died
 Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { _ in
-    guard let pidStr = try? String(contentsOfFile: lockFilePath, encoding: .utf8)
+    // Check 1: PID file replaced by newer instance
+    if let pidStr = try? String(contentsOfFile: lockFilePath, encoding: .utf8)
             .trimmingCharacters(in: .whitespacesAndNewlines),
-          let filePid = Int32(pidStr) else {
-        return // lock file missing or unreadable — keep running
-    }
-    if filePid != myPid {
+       let filePid = Int32(pidStr),
+       filePid != myPid {
         overlayInfo("Replaced by newer instance — exiting")
+        cleanupLockFile()
+        exit(0)
+    }
+
+    // Check 2: Parent process (start.sh) died — ppid changes to 1 (launchd)
+    let currentParent = getppid()
+    if currentParent != originalParentPID {
+        overlayInfo("Parent process died (\(originalParentPID) → \(currentParent)) — exiting")
         cleanupLockFile()
         exit(0)
     }
