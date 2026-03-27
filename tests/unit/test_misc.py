@@ -111,6 +111,20 @@ class TestAssignAvatar:
 # ═══════════════════════════════════════════════════════════════════════
 
 class TestAuth:
+    @pytest.fixture(autouse=True)
+    def restore_auth_env(self):
+        orig_user = os.environ.get("HOST_USERNAME")
+        orig_pass = os.environ.get("HOST_PASSWORD")
+        yield
+        if orig_user is None:
+            os.environ.pop("HOST_USERNAME", None)
+        else:
+            os.environ["HOST_USERNAME"] = orig_user
+        if orig_pass is None:
+            os.environ.pop("HOST_PASSWORD", None)
+        else:
+            os.environ["HOST_PASSWORD"] = orig_pass
+
     def test_correct_credentials(self):
         from core.auth import require_host_auth
         from fastapi.security import HTTPBasicCredentials

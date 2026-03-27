@@ -28,8 +28,8 @@ jobs:
             --max-lines 60 \
             --baseline scripts/python_method_length_baseline.json
 
-      - name: Unit tests (API + scoring)
-        run: pytest tests/test_main.py -v
+      - name: Unit tests
+        run: pytest tests/unit/ tests/core/ tests/openapi/ tests/features/slides/test_router.py -v
 
       - name: JS unit tests
         run: node tests/test_participant_js.js
@@ -43,20 +43,21 @@ jobs:
         include:
           - group: core
             files: >-
-              tests/test_e2e.py
-              tests/test_e2e_connection_poll_identity.py
+              tests/e2e/test_main.py
+              tests/features/poll/test_e2e.py
           - group: debate-wordcloud-codereview
             files: >-
-              tests/test_e2e_debate.py
-              tests/test_e2e_wordcloud_qa_activity.py
-              tests/test_e2e_codereview.py
+              tests/features/debate/test_e2e.py
+              tests/features/wordcloud/test_e2e.py
+              tests/features/qa/test_e2e.py
+              tests/features/codereview/test_e2e.py
           - group: gaps-quiz-scoring
             files: >-
-              tests/test_e2e_remaining_gaps.py
-              tests/test_e2e_quiz_summary.py
-              tests/test_e2e_gaps.py
-              tests/test_e2e_scoring.py
-              tests/test_e2e_participant_escape_modals.py
+              tests/e2e/test_remaining_gaps.py
+              tests/features/quiz/test_e2e.py
+              tests/e2e/test_gaps.py
+              tests/features/scoring/test_e2e.py
+              tests/e2e/test_participant_escape.py
 
     steps:
       - uses: actions/checkout@v4
