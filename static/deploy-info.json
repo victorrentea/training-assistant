@@ -1,7 +1,7 @@
 {
-  "sha": "ec350242c3b10ed67ccc3b2b946440f6a9fea7e0",
+  "sha": "4e9edd2420912189623418003a36ff8f4ead0af1",
   "timestamp": "2026-03-27 07:47",
   "changelog": [
-    "ui: follow button native-warning hatch red+blue instead of red+white"
+    "style: add light mode overrides for slides panel and host session rows"
   ]
 }
