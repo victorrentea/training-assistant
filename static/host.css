@@ -120,7 +120,7 @@ body {
 }
 
 .host-col-right {
-  overflow: hidden;
+  overflow: visible;
   display: flex;
   flex-direction: column;
 }
