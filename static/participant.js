@@ -775,6 +775,19 @@
     }
   }
 
+  function _bindSlidesZoomButtons() {
+    const zoomIn = document.getElementById('slides-zoom-in');
+    const zoomOut = document.getElementById('slides-zoom-out');
+    if (zoomIn) zoomIn.addEventListener('click', () => {
+      if (slidesViewMode !== 'pdfjs' || !slidesPdfViewer) return;
+      slidesPdfViewer.currentScale = Math.min(slidesPdfViewer.currentScale * 1.25, 10);
+    });
+    if (zoomOut) zoomOut.addEventListener('click', () => {
+      if (slidesViewMode !== 'pdfjs' || !slidesPdfViewer) return;
+      slidesPdfViewer.currentScale = Math.max(slidesPdfViewer.currentScale / 1.25, 0.1);
+    });
+  }
+
   function _bindSlidesViewModeToggle() {
     slidesViewMode = _getStoredSlidesViewMode();
     _renderSlidesViewModeToggle();
@@ -1027,6 +1040,16 @@
       textLayerMode: 1,
     });
     slidesPdfLinkService.setViewer(slidesPdfViewer);
+
+    // Auto-fit to page width on container resize (debounced)
+    let _pdfResizeTimer = null;
+    new ResizeObserver(() => {
+      if (!slidesPdfViewer || slidesViewMode !== 'pdfjs') return;
+      clearTimeout(_pdfResizeTimer);
+      _pdfResizeTimer = setTimeout(() => {
+        if (slidesPdfViewer && slidesViewMode === 'pdfjs') slidesPdfViewer.currentScaleValue = 'page-width';
+      }, 120);
+    }).observe(container);
 
     slidesPdfEventBus.on('pagechanging', (evt) => {
       if (slidesSelectedSlug && evt?.pageNumber) {
@@ -1602,6 +1625,7 @@
   })();
   _bindSlidesFollowTrainerToggle();
   _bindSlidesViewModeToggle();
+  _bindSlidesZoomButtons();
   warmSlidesCatalog();
 
   // ── Inline name editing ──
