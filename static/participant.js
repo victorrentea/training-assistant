@@ -991,15 +991,11 @@
     err.textContent = message;
   }
 
-  function _showSlidesEmpty(kind) {
+  function _showSlidesEmpty() {
     const empty = document.getElementById('slides-empty');
     if (!empty) return;
-    let title = 'Pick a Slide';
-    let hint = 'Tap one item from the list on the right';
-    if (kind === 'none') {
-      title = 'No Slides Yet';
-      hint = 'Slides will appear here when published';
-    }
+    const title = 'No Slides Yet';
+    const hint = 'Slides will appear here when published';
     empty.innerHTML = (
       `<div class="slides-empty-card">` +
       `<div class="slides-empty-title">${escHtml(title)}</div>` +
@@ -1489,7 +1485,7 @@
         _setSlidesDownload('', true);
         _setSlidesError('');
         _setSlidesLoading({ visible: false });
-        _showSlidesEmpty('none');
+        _showSlidesEmpty();
         if (shell) shell.style.display = 'none';
         return;
       }
@@ -1513,12 +1509,12 @@
         _setSlidesDownload('', true);
         _setSlidesError('');
         _setSlidesLoading({ visible: false });
-        _showSlidesEmpty('pick');
+        _showSlidesEmpty();
         if (shell) shell.style.display = 'none';
       }
     } catch (_) {
       _setSlidesError('Could not fetch slide list from server.');
-      _showSlidesEmpty('none');
+      _showSlidesEmpty();
       if (shell) shell.style.display = 'none';
       _setSlidesDownload('', true);
       _setSlidesLoading({ visible: false });
