@@ -98,7 +98,7 @@ async def broadcast(message: dict, exclude: Optional[str] = None):
 
 async def broadcast_participant_update():
     """Send participant update: simple count to participants, full details to host."""
-    from messaging import _build_host_participants_list  # original messaging for now
+    from core.state_builder import _build_host_participants_list
     pids = participant_ids()
     count = len(pids)
 
@@ -129,7 +129,7 @@ async def broadcast_participant_update():
 
 async def broadcast_leaderboard():
     """Send personalized leaderboard to each connected participant."""
-    from messaging import _build_leaderboard_data  # original messaging for now
+    from features.leaderboard.state_builder import _build_leaderboard_data
     entries, total, rank_map = _build_leaderboard_data()
 
     dead = []
