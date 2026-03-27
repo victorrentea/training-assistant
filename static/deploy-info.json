@@ -1,7 +1,7 @@
 {
-  "sha": "fd37d41c048457c830db72aac8944b9ff3a03a0b",
-  "timestamp": "2026-03-27 07:21",
+  "sha": "d0074875eb509a19addfcf25264ae500c3557a1b",
+  "timestamp": "2026-03-27 07:24",
   "changelog": [
-    "fix: dark background for word cloud panel on host"
+    "feat: single-screen emoji panel 20% smaller, trigger only at bar position"
   ]
 }
