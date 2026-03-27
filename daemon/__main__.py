@@ -87,9 +87,11 @@ tell application "Microsoft PowerPoint"
 
     set presentationName to name of active presentation
     set slideNumber to 1
+    set isPresenting to "false"
 
     try
         if (count of slide show windows) > 0 then
+            set isPresenting to "true"
             set slideNumber to current show position of slide show view of slide show window 1
         else
             try
@@ -106,7 +108,7 @@ tell application "Microsoft PowerPoint"
         set slideNumber to "__SLIDE_UNKNOWN__"
     end try
 
-    return presentationName & tab & (slideNumber as string)
+    return presentationName & tab & isPresenting & tab & (slideNumber as string)
 end tell
 """.strip()
 
@@ -163,14 +165,19 @@ def _parse_powerpoint_probe_output(raw: str) -> dict | None:
     text = (raw or "").strip()
     if not text or text in {_PPT_NO_APP, _PPT_NO_PRESENTATION}:
         return None
-    if "\t" not in text:
+    parts = text.split("\t")
+    if len(parts) < 2:
         return None
-    presentation, slide_text = text.rsplit("\t", 1)
-    presentation = presentation.strip()
+    presentation = parts[0].strip()
     if not presentation:
         return None
-    slide_number = _coerce_slide_number(slide_text.strip())
-    return {"presentation": presentation, "slide": slide_number}
+    if len(parts) >= 3:
+        is_presenting = parts[1].strip() == "true"
+        slide_number = _coerce_slide_number(parts[2].strip())
+    else:
+        is_presenting = False
+        slide_number = _coerce_slide_number(parts[1].strip())
+    return {"presentation": presentation, "slide": slide_number, "presenting": is_presenting}
 
 
 def _probe_powerpoint_state(timeout_seconds: float = 2.5) -> tuple[dict | None, str | None]:
@@ -347,12 +354,15 @@ def _sync_powerpoint_slide_to_server(main_config, slides_cfg, ppt_state: dict | 
     if alert_key:
         _PPT_UNMAPPED_PRESENTATIONS_ALERTED.discard(alert_key)
 
+    raw_slide = _coerce_slide_number(ppt_state.get("slide"))
+    is_presenting = bool(ppt_state.get("presenting", False))
+    current_page = max(1, raw_slide - 1) if is_presenting else raw_slide
     payload = {
         "url": target["url"],
         "slug": target["slug"],
         "source_file": ppt_state.get("presentation"),
         "presentation_name": ppt_state.get("presentation"),
-        "current_page": _coerce_slide_number(ppt_state.get("slide")),
+        "current_page": current_page,
     }
     _post_json(
         endpoint,
@@ -560,7 +570,8 @@ def run() -> None:
                             log.info("ppt", "No active PowerPoint presentation")
                         else:
                             ppt_stem = Path(ppt_state['presentation']).stem
-                            log.info("ppt", f"📽️ Slide: {ppt_stem} : {ppt_state['slide']}")
+                            presenting_flag = " [presenting]" if ppt_state.get("presenting") else ""
+                            log.info("ppt", f"📽️ Slide: {ppt_stem} : {ppt_state['slide']}{presenting_flag}")
                         try:
                             _sync_powerpoint_slide_to_server(config, slides_runner._slides_config, ppt_state)
                         except Exception as e:
