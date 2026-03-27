@@ -1,7 +1,7 @@
 {
-  "sha": "cce049e90a9c6119f955fecc301d1b0bd9c4daea",
-  "timestamp": "2026-03-27 23:32",
+  "sha": "b13910260d55f1369bf83ae021885700b2d01142",
+  "timestamp": "2026-03-27 23:33",
   "changelog": [
-    "fix: remember scroll position when switching between slides"
+    "fix: use PPTX mtime for slide timestamps (not PDF mtime)"
   ]
 }
