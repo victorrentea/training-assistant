@@ -1,7 +1,7 @@
 {
-  "sha": "af835375da724d0061a84fa6b1febc9db8d7c5dd",
-  "timestamp": "2026-03-27 18:53",
+  "sha": "62e8e59182cf317785657c0efd0e44dbb003dd26",
+  "timestamp": "2026-03-27 18:59",
   "changelog": [
-    "fix: disable unavailable slides (no click, no download button)"
+    "fix: load secrets from ~/.training-assistants-secrets.env, add template icon"
   ]
 }
