@@ -7,6 +7,7 @@ import re
 import ssl
 import threading
 import time
+from datetime import datetime, timezone
 from pathlib import Path
 
 from websockets.sync.client import connect as ws_connect
@@ -233,6 +234,21 @@ class SlidesOnDemandWsRunner:
                 "error": str(exc),
             })
 
+    def _send_slides_meta(self, ws) -> None:
+        entries = []
+        for slug, (local_pdf, _) in self._slug_map.items():
+            try:
+                if local_pdf.exists():
+                    updated_at = datetime.fromtimestamp(local_pdf.stat().st_mtime, tz=timezone.utc).isoformat()
+                    entries.append({"slug": slug, "updated_at": updated_at})
+            except Exception:
+                pass
+        try:
+            ws.send(json.dumps({"type": "slides_meta", "slides": entries}))
+            log.info("slides", f"slides_meta sent: {len(entries)} slides")
+        except Exception as exc:
+            log.error("slides", f"slides_meta_send_failed: {exc}")
+
     def _run_loop(self) -> None:
         ws_url = self._ws_url()
         headers = self._auth_headers()
@@ -240,6 +256,7 @@ class SlidesOnDemandWsRunner:
             try:
                 with self._connect(ws_url, headers) as ws:
                     log.info("slides", f"slides_ws_connected to {ws_url}")
+                    self._send_slides_meta(ws)
                     while not self._stop.is_set():
                         try:
                             raw = ws.recv(timeout=1.0)

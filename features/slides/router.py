@@ -269,7 +269,7 @@ def _merge_slide_sources(
                 "name": name,
                 "slug": slug,
                 "url": participant_url,
-                "updated_at": entry.get("updated_at"),
+                "updated_at": entry.get("updated_at") or state.slides_meta.get(slug),
                 "etag": entry.get("etag"),
                 "last_modified": entry.get("last_modified"),
                 "sync_status": entry.get("sync_status"),
