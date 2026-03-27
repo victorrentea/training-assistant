@@ -308,15 +308,14 @@
     const duration = 2500 + Math.random() * 1500;
     const riseHeight = 500;
 
-    // Rise up with wobble (fâțâială)
-    const wobbleAmp = 15 + Math.random() * 10; // px wobble amplitude
-    const wobbleFreq = 3 + Math.random() * 2; // number of wobbles during rise
+    // Rise up with divergent drift (picks one random direction and goes)
+    const driftX = (Math.random() * 2 - 1) * 50; // -50..+50 px total lateral drift at top
     const steps = 20;
     const keyframes = [];
     for (let i = 0; i <= steps; i++) {
       const t = i / steps;
       const y = -riseHeight * t;
-      const wobble = Math.sin(t * wobbleFreq * Math.PI * 2) * wobbleAmp * (1 - t * 0.5);
+      const wobble = t * driftX;
       const scale = 1 + t * 0.3; // slight grow
       const opacity = t < 0.4 ? 1 : 1 - (t - 0.4) / 0.6;
       keyframes.push({
