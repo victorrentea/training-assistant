@@ -72,7 +72,7 @@
       "lines": 293
     },
     {
-      "path": "tests/test_load.py",
+      "path": "tests/load/test_load.py",
       "qualname": "test_load",
       "lines": 87
     }

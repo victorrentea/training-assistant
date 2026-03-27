@@ -2,7 +2,7 @@
 import sys
 from daemon.rag.retriever import search_materials
 
-def test_search(query: str):
+def run_search(query: str):
     print(f"\n--- Searching for: '{query}' ---")
     results = search_materials(query)
     
@@ -17,4 +17,4 @@ def test_search(query: str):
 
 if __name__ == "__main__":
     query = sys.argv[1] if len(sys.argv) > 1 else "Transactional Outbox"
-    test_search(query)
+    run_search(query)
