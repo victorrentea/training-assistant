@@ -405,6 +405,11 @@ async def get_current_slides():
 @public_router.get("/api/slides")
 async def get_slides():
     slides = _collect_participant_slides()
+    _, local_index = _build_local_slides_index()
+    _, uploaded_index = _build_uploaded_slides_index()
+    for slide in slides:
+        slug = str(slide.get("slug") or "")
+        slide["available_on_server"] = bool(local_index.get(slug) or uploaded_index.get(slug))
     return {"slides": slides}
 
 

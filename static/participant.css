@@ -678,6 +678,11 @@ h1 { display: none; }
   text-overflow: ellipsis;
 }
 
+.slides-list-item.unavailable .slides-list-title {
+  text-decoration: line-through;
+  opacity: 0.45;
+}
+
 .slides-list-updated {
   flex: 0 0 auto;
   color: #98a2b3;
