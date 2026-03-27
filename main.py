@@ -35,9 +35,6 @@ from features.snapshot import router as snapshot
 from features.slides import router as slides
 from features.transcription_language import router as transcription_language_router
 
-# Import scores router from features (formerly routers/scores.py)
-from features.scores import router as scores
-
 import core.state_builder  # noqa: registers core state builder
 import features.poll.state_builder  # noqa
 import features.qa.state_builder  # noqa
@@ -81,7 +78,6 @@ Instrumentator().instrument(app).expose(
 
 app.include_router(ws.router)
 app.include_router(poll.router)
-app.include_router(scores.router)
 app.include_router(quiz.router, dependencies=[Depends(require_host_auth)])
 app.include_router(pages.router)
 app.include_router(wordcloud.router)
