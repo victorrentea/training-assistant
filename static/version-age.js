@@ -37,13 +37,11 @@
       return;
     }
 
-    const workHours = window.WORK_HOURS;
-    const workSuffix = workHours ? ' | total: ' + workHours + 'h with Santa \uD83C\uDF85' : '';
     const builtAt = ' | ' + formatBuiltAt(parsed);
 
     function update() {
       const prefix = window.__deployIncoming ? '\u26a0\ufe0f \uD83D\uDE80 | ' : '';
-      el.textContent = prefix + formatElapsed(parsed, new Date()) + builtAt + workSuffix;
+      el.textContent = prefix + formatElapsed(parsed, new Date()) + builtAt;
     }
     window.__updateDeployAge = update;
     update();
