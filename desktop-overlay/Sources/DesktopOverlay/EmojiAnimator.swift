@@ -96,8 +96,8 @@ class EmojiAnimator {
         let fontSize: CGFloat = isScreen ? 234 : 78
         let size: CGFloat = isScreen ? 260 : 91
 
-        // Screen emoji: center of screen; others: bottom-left corner with ±80px random offset
-        let spawnX: CGFloat = isScreen ? bounds.midX : 100 + CGFloat.random(in: -80...80)
+        // Screen emoji: center of screen; others: bottom-left corner with ±56px random offset (30% narrower)
+        let spawnX: CGFloat = isScreen ? bounds.midX : 100 + CGFloat.random(in: -56...56)
         let spawnY: CGFloat = isScreen ? bounds.height * 0.15 : 80
 
         let layer = CATextLayer()
@@ -114,9 +114,8 @@ class EmojiAnimator {
 
         var animations: [CAAnimation] = []
 
-        // Rise with wobble (matches browser's sinusoidal wobble)
-        let wobbleAmp = CGFloat.random(in: 15...25)
-        let wobbleFreq = CGFloat.random(in: 3...5)
+        // Rise with divergent drift (picks one random direction and goes)
+        let driftX = CGFloat.random(in: -50...50)
         let steps = 20
         let startPoint = layer.position
 
@@ -125,7 +124,7 @@ class EmojiAnimator {
         for i in 1...steps {
             let t = CGFloat(i) / CGFloat(steps)
             let y = startPoint.y + riseHeight * t
-            let wobble = sin(t * wobbleFreq * .pi * 2) * wobbleAmp * (1 - t * 0.5)
+            let wobble = t * driftX
             path.addLine(to: CGPoint(x: startPoint.x + wobble, y: y))
         }
 
