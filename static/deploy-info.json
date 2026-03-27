@@ -1,7 +1,7 @@
 {
-  "sha": "3e73b02d9e3f0f94b4c731f2d73b91f5609856c5",
-  "timestamp": "2026-03-27 14:15",
+  "sha": "ee0b5ffd2d481b0654a3199cd127a440838ef444",
+  "timestamp": "2026-03-27 14:16",
   "changelog": [
-    "fix: remove duplicate scores router from main.py; regenerate openapi.json"
+    "fix: delete root messaging.py (superseded by core/messaging.py)"
   ]
 }
