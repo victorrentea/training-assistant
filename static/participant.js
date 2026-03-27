@@ -91,7 +91,7 @@
   const LS_SLIDE_VISITED_IDS = 'workshop_slide_visited_ids';
   const LS_SLIDES_VIEW_MODE = 'workshop_slides_view_mode';
   const LS_SLIDES_FOLLOW_TRAINER = 'workshop_slides_follow_trainer';
-  const LS_SLIDE_SEEN_UPDATED_AT_PREFIX = 'workshop_slide_seen_updated_at:';
+  let slidesCatalogBaseline = null; // slug → updated_at at session start; null = not yet initialised
   const LS_LOCATION_KEY = 'workshop_participant_location';
   const SLIDES_TEST_AUTO_SCROLL_ENABLED = false;
   const SLIDES_TEST_AUTO_SCROLL_PAGE = 2;
@@ -985,21 +985,24 @@
     _setStoredVisitedSlideIds(next);
   }
 
-  function _getSlideSeenUpdatedAt(slug) {
-    if (!slug) return null;
-    return localStorage.getItem(LS_SLIDE_SEEN_UPDATED_AT_PREFIX + slug) || null;
+  function _initSlidesCatalogBaseline(catalog) {
+    if (slidesCatalogBaseline !== null) return; // capture only once per session
+    slidesCatalogBaseline = {};
+    for (const slide of catalog) {
+      if (slide.slug && slide.updated_at) slidesCatalogBaseline[slide.slug] = slide.updated_at;
+    }
   }
 
-  function _setSlideSeenUpdatedAt(slug, updatedAt) {
-    if (!slug || !updatedAt) return;
-    try { localStorage.setItem(LS_SLIDE_SEEN_UPDATED_AT_PREFIX + slug, updatedAt); } catch (_) {}
+  function _markSlideBaselineSeen(slide) {
+    if (slidesCatalogBaseline && slide?.slug && slide?.updated_at) {
+      slidesCatalogBaseline[slide.slug] = slide.updated_at;
+    }
   }
 
   function _isSlideNew(slide) {
-    if (!slide?.updated_at || !slide?.slug) return false;
-    const seen = _getSlideSeenUpdatedAt(slide.slug);
-    if (!seen) return false; // never opened before → not "new"
-    return slide.updated_at !== seen;
+    if (!slide?.updated_at || !slide?.slug || !slidesCatalogBaseline) return false;
+    const baseline = slidesCatalogBaseline[slide.slug];
+    return baseline != null && slide.updated_at !== baseline;
   }
 
   function _getStoredSlidePage(slug) {
@@ -1483,7 +1486,7 @@
     slidesSelectedId = slide._id;
     _setStoredSelectedSlideId(slidesSelectedId);
     _markSlideVisited(slidesSelectedId);
-    _setSlideSeenUpdatedAt(slide.slug, slide.updated_at);
+    _markSlideBaselineSeen(slide);
     // Remove "new" badge from list item immediately (without full re-render)
     document.getElementById('slides-list')
       ?.querySelector(`[data-slide-id="${CSS.escape(slide._id)}"] .slides-list-new`)
@@ -1649,6 +1652,7 @@
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       slidesCatalog = _normalizeSlidesCatalog(data.slides);
+      _initSlidesCatalogBaseline(slidesCatalog);
       if (!slidesCatalog.length) {
         _renderSlidesList(null);
         slidesSelectedSlug = null;
