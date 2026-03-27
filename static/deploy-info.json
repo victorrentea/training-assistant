@@ -1,7 +1,7 @@
 {
-  "sha": "ee0b5ffd2d481b0654a3199cd127a440838ef444",
-  "timestamp": "2026-03-27 14:16",
+  "sha": "726cca874f3cbe354cc831cc0cf6954a5c14f5d9",
+  "timestamp": "2026-03-27 14:20",
   "changelog": [
-    "fix: delete root messaging.py (superseded by core/messaging.py)"
+    "fix: sync openapi.json with current schema (HEAD/GET key order)"
   ]
 }
