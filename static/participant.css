@@ -107,6 +107,8 @@ h1 { display: none; }
   font-size: .85rem;
   color: var(--muted);
   gap: .5rem;
+  position: relative;
+  z-index: 3000;
 }
 
 .status-left {
