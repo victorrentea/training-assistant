@@ -299,27 +299,6 @@
         }
       }
     },
-    "/api/scores": {
-      "delete": {
-        "summary": "Reset Scores",
-        "operationId": "reset_scores_api_scores_delete",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "HTTPBasic": []
-          }
-        ]
-      }
-    },
     "/api/quiz-request": {
       "get": {
         "summary": "Poll Quiz Request",
@@ -1299,6 +1278,69 @@
         ]
       }
     },
+    "/api/slides/participant-availability": {
+      "get": {
+        "summary": "Get Participant Slides Availability",
+        "operationId": "get_participant_slides_availability_api_slides_participant_availability_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBasic": []
+          }
+        ]
+      }
+    },
+    "/api/slides/upload-status/{slug}": {
+      "get": {
+        "summary": "Get Slide Upload Status",
+        "operationId": "get_slide_upload_status_api_slides_upload_status__slug__get",
+        "security": [
+          {
+            "HTTPBasic": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Slug"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/materials/upsert": {
       "post": {
         "summary": "Upsert Material File",
@@ -1517,69 +1559,6 @@
         ]
       }
     },
-    "/api/slides/participant-availability": {
-      "get": {
-        "summary": "Get Participant Slides Availability",
-        "operationId": "get_participant_slides_availability_api_slides_participant_availability_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "HTTPBasic": []
-          }
-        ]
-      }
-    },
-    "/api/slides/upload-status/{slug}": {
-      "get": {
-        "summary": "Get Slide Upload Status",
-        "operationId": "get_slide_upload_status_api_slides_upload_status__slug__get",
-        "security": [
-          {
-            "HTTPBasic": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "slug",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Slug"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/slides": {
       "get": {
         "summary": "Get Slides",
@@ -1597,9 +1576,9 @@
       }
     },
     "/api/slides/file/{slug}": {
-      "get": {
+      "head": {
         "summary": "Get Slide File",
-        "operationId": "get_slide_file_api_slides_file__slug__get",
+        "operationId": "get_slide_file_api_slides_file__slug__head",
         "parameters": [
           {
             "name": "slug",
@@ -1632,9 +1611,9 @@
           }
         }
       },
-      "head": {
+      "get": {
         "summary": "Get Slide File",
-        "operationId": "get_slide_file_api_slides_file__slug__get",
+        "operationId": "get_slide_file_api_slides_file__slug__head",
         "parameters": [
           {
             "name": "slug",
@@ -2029,6 +2008,27 @@
       "post": {
         "summary": "Hide Leaderboard",
         "operationId": "hide_leaderboard_api_leaderboard_hide_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBasic": []
+          }
+        ]
+      }
+    },
+    "/api/scores": {
+      "delete": {
+        "summary": "Reset Scores",
+        "operationId": "reset_scores_api_scores_delete",
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -2544,6 +2544,109 @@
         ]
       }
     },
+    "/api/transcription-language": {
+      "post": {
+        "summary": "Set Transcription Language",
+        "operationId": "set_transcription_language_api_transcription_language_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LanguageRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBasic": []
+          }
+        ]
+      }
+    },
+    "/api/transcription-language/request": {
+      "get": {
+        "summary": "Poll Transcription Language Request",
+        "operationId": "poll_transcription_language_request_api_transcription_language_request_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBasic": []
+          }
+        ]
+      }
+    },
+    "/api/transcription-language/status": {
+      "post": {
+        "summary": "Transcription Language Status",
+        "operationId": "transcription_language_status_api_transcription_language_status_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LanguageStatus"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBasic": []
+          }
+        ]
+      }
+    },
     "/api/screen-share": {
       "post": {
         "summary": "Toggle Screen Share",
@@ -2827,6 +2930,32 @@
         },
         "type": "object",
         "title": "HTTPValidationError"
+      },
+      "LanguageRequest": {
+        "properties": {
+          "language": {
+            "type": "string",
+            "title": "Language"
+          }
+        },
+        "type": "object",
+        "required": [
+          "language"
+        ],
+        "title": "LanguageRequest"
+      },
+      "LanguageStatus": {
+        "properties": {
+          "language": {
+            "type": "string",
+            "title": "Language"
+          }
+        },
+        "type": "object",
+        "required": [
+          "language"
+        ],
+        "title": "LanguageStatus"
       },
       "MaterialsDeleteRequest": {
         "properties": {
