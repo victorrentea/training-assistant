@@ -2078,6 +2078,7 @@
         pollActive = msg.poll_active;
         updateParticipantCount(msg.participant_count);
         updateHostDot(msg.host_connected);
+        updateDaemonDot(msg.daemon_connected);
         updateScore(msg.my_score);
         window._myScore = msg.my_score || 0;
         window._myUuid = myUUID;
@@ -2275,8 +2276,11 @@
   function updateHostDot(connected) {
     const dot = document.getElementById('host-dot');
     if (dot) dot.style.display = connected ? 'inline' : 'none';
-    const sep = document.getElementById('host-pax-sep');
-    if (sep) sep.style.display = connected ? 'inline' : 'none';
+  }
+
+  function updateDaemonDot(connected) {
+    const el = document.getElementById('daemon-dot');
+    if (el) el.style.display = connected ? 'inline' : 'none';
   }
 
   function updateScreenShareWarning(active) {
