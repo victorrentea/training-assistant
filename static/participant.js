@@ -1068,16 +1068,28 @@
     }
   }
 
-  function _setSlidesError(message) {
+  function _setSlidesError(message, downloadUrl = null) {
     const err = document.getElementById('slides-error');
     if (!err) return;
-    if (!message) {
+    if (!message && !downloadUrl) {
       err.style.display = 'none';
-      err.textContent = '';
+      err.innerHTML = '';
       return;
     }
     err.style.display = '';
-    err.textContent = message;
+    if (downloadUrl) {
+      err.innerHTML = '';
+      err.appendChild(document.createTextNode('Failed to load PDF.js viewer. '));
+      const a = document.createElement('a');
+      a.href = downloadUrl;
+      a.setAttribute('download', '');
+      a.textContent = 'Try download';
+      a.style.cssText = 'color:inherit;text-decoration:underline;cursor:pointer;';
+      err.appendChild(a);
+      err.appendChild(document.createTextNode('.'));
+    } else {
+      err.textContent = message;
+    }
   }
 
   function _showSlidesEmpty() {
@@ -1560,7 +1572,7 @@
         slidesLastFingerprint = null;
         _setSlidesDownload('', true);
         _renderSlidesMeta(null);
-        _setSlidesError('Failed to load this PDF.js viewer. Try download.');
+        _setSlidesError('', slide.url + '?download=1');
         _setSlidesLoading({ visible: false });
       }
     } finally {
