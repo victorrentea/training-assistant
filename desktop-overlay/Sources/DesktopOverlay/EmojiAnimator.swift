@@ -1417,6 +1417,128 @@ class EmojiAnimator {
         }
     }
 
+    // MARK: - Sketched Heart (crayon pencil style, right half first then left half)
+
+    func showSketchedHeart() {
+        let bounds = hostLayer.bounds
+        let cx = bounds.midX
+        let hcy = bounds.midY + bounds.height * 0.03
+        let r: CGFloat = min(bounds.width, bounds.height) * 0.38
+
+        let drawHalf: Double = 0.72      // seconds to draw each half
+        let holdTime: Double = 1.8
+        let fadeDuration: Double = 1.0
+
+        let container = CALayer()
+        container.frame = bounds
+        hostLayer.addSublayer(container)
+
+        // Heart geometry (CALayer coords: y increases upward)
+        let topDip    = CGPoint(x: cx,       y: hcy + r * 0.18)
+        let rightmost = CGPoint(x: cx + r,   y: hcy)
+        let bottomTip = CGPoint(x: cx,       y: hcy - r * 0.70)
+        let leftmost  = CGPoint(x: cx - r,   y: hcy)
+
+        // Right half: top-dip → right-arc → bottom-tip
+        let rightPath = CGMutablePath()
+        rightPath.move(to: topDip)
+        rightPath.addCurve(to: rightmost,
+            control1: CGPoint(x: cx + r * 0.28, y: hcy + r * 0.62),
+            control2: CGPoint(x: cx + r * 0.88, y: hcy + r * 0.48))
+        rightPath.addCurve(to: bottomTip,
+            control1: CGPoint(x: cx + r * 0.98, y: hcy - r * 0.30),
+            control2: CGPoint(x: cx + r * 0.40, y: hcy - r * 0.70))
+
+        // Left half: bottom-tip → left-arc → top-dip (mirror)
+        let leftPath = CGMutablePath()
+        leftPath.move(to: bottomTip)
+        leftPath.addCurve(to: leftmost,
+            control1: CGPoint(x: cx - r * 0.40, y: hcy - r * 0.70),
+            control2: CGPoint(x: cx - r * 0.98, y: hcy - r * 0.30))
+        leftPath.addCurve(to: topDip,
+            control1: CGPoint(x: cx - r * 0.88, y: hcy + r * 0.48),
+            control2: CGPoint(x: cx - r * 0.28, y: hcy + r * 0.62))
+
+        // Crayon stroke layers — multiple slightly offset strokes create the pencil texture
+        struct StrokeDef {
+            let width: CGFloat; let opacity: Float; let dx: CGFloat; let dy: CGFloat
+            let r: CGFloat; let g: CGFloat; let b: CGFloat
+            let shadowRadius: CGFloat
+        }
+        let strokeDefs: [StrokeDef] = [
+            // Soft outer glow
+            StrokeDef(width: 32, opacity: 0.10, dx:  0,  dy:  0, r: 0.90, g: 0.08, b: 0.08, shadowRadius: 18),
+            // Main rough strokes — slightly offset for crayon look
+            StrokeDef(width: 20, opacity: 0.82, dx:  2,  dy: -1, r: 0.76, g: 0.05, b: 0.05, shadowRadius: 0),
+            StrokeDef(width: 18, opacity: 0.65, dx: -2,  dy:  2, r: 0.68, g: 0.04, b: 0.04, shadowRadius: 0),
+            StrokeDef(width: 14, opacity: 0.50, dx:  1,  dy:  3, r: 0.82, g: 0.06, b: 0.06, shadowRadius: 0),
+            // Fine bright edge (gives the "fresh pencil" shine)
+            StrokeDef(width:  8, opacity: 0.40, dx: -1,  dy: -2, r: 0.94, g: 0.20, b: 0.20, shadowRadius: 0),
+        ]
+
+        let now = CACurrentMediaTime()
+
+        for (halfIdx, path) in [(rightPath as CGPath), (leftPath as CGPath)].enumerated() {
+            let halfBegin = now + Double(halfIdx) * drawHalf
+            for def in strokeDefs {
+                let sl = CAShapeLayer()
+                sl.path = path
+                sl.strokeColor = NSColor(red: def.r, green: def.g, blue: def.b, alpha: 1.0).cgColor
+                sl.fillColor = nil
+                sl.lineWidth = def.width
+                sl.lineCap = .round
+                sl.lineJoin = .round
+                sl.strokeEnd = 0
+                sl.opacity = 0
+                if def.dx != 0 || def.dy != 0 {
+                    sl.setAffineTransform(CGAffineTransform(translationX: def.dx, y: def.dy))
+                }
+                if def.shadowRadius > 0 {
+                    sl.shadowColor = NSColor(red: def.r, green: def.g, blue: def.b, alpha: 1.0).cgColor
+                    sl.shadowOffset = .zero
+                    sl.shadowRadius = def.shadowRadius
+                    sl.shadowOpacity = 0.7
+                }
+                container.addSublayer(sl)
+
+                // Draw stroke
+                let draw = CABasicAnimation(keyPath: "strokeEnd")
+                draw.fromValue = 0; draw.toValue = 1
+                draw.beginTime = halfBegin
+                draw.duration = drawHalf
+                draw.timingFunction = CAMediaTimingFunction(name: .linear)
+                draw.fillMode = .both
+                draw.isRemovedOnCompletion = false
+                sl.add(draw, forKey: "draw")
+
+                // Fade in as drawing starts
+                let fadeIn = CABasicAnimation(keyPath: "opacity")
+                fadeIn.fromValue = 0; fadeIn.toValue = def.opacity
+                fadeIn.beginTime = halfBegin
+                fadeIn.duration = drawHalf * 0.25
+                fadeIn.timingFunction = CAMediaTimingFunction(name: .easeOut)
+                fadeIn.fillMode = .both
+                fadeIn.isRemovedOnCompletion = false
+                sl.add(fadeIn, forKey: "reveal")
+            }
+        }
+
+        // Fade out entire container after hold
+        let fadeBegin = now + drawHalf * 2 + holdTime
+        let fadeOut = CABasicAnimation(keyPath: "opacity")
+        fadeOut.fromValue = 1; fadeOut.toValue = 0
+        fadeOut.beginTime = fadeBegin
+        fadeOut.duration = fadeDuration
+        fadeOut.fillMode = .forwards
+        fadeOut.isRemovedOnCompletion = false
+        CATransaction.begin()
+        CATransaction.setCompletionBlock { [weak container] in
+            container?.removeFromSuperlayer()
+        }
+        container.add(fadeOut, forKey: "fadeOut")
+        CATransaction.commit()
+    }
+
     // MARK: - Pulse stop (called when button pressed while running)
 
     private func _stopPulse() {
