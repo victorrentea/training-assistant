@@ -1,7 +1,7 @@
 {
-  "sha": "74680370c060418c3eef335fe4a385ca9df673ce",
+  "sha": "9a52a3435bf6729506f3e2db15bbf1932a98b7a1",
   "timestamp": "2026-03-27 07:26",
   "changelog": [
-    "feat: tour location before slides, slides tooltip animates 30%\u219260%"
+    "fix: suppress transcription warning blink when no active session"
   ]
 }
