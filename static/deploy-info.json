@@ -1,7 +1,7 @@
 {
-  "sha": "3c9b2c9e9806f33a3c4725b69ab42aaed8e78f5e",
-  "timestamp": "2026-03-27 19:40",
+  "sha": "b1ae610497344690f6effe7eef478538ab8dd75a",
+  "timestamp": "2026-03-25 21:25",
   "changelog": [
-    "Fix participant slides availability when daemon is online"
+    "feat: add host slides upload endpoint"
   ]
 }
