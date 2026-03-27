@@ -1,7 +1,7 @@
 {
-  "sha": "39bb2e3855bad0c77a4a4e17c96d912a43c42c96",
-  "timestamp": "2026-03-27 17:53",
+  "sha": "f670458351733351d57af432ebbd89a0b499cf65",
+  "timestamp": "2026-03-27 17:54",
   "changelog": [
-    "fix: correct C2 diagram \u2014 remove phantom SQLite DB, fix Nominatim ownership"
+    "fix: remove \ud83d\udcd1 emoji from slides dock title, hide No Slides Yet title, hide +/- zoom buttons when no slide selected"
   ]
 }
