@@ -1436,7 +1436,7 @@ class EmojiAnimator {
         // Heart geometry (CALayer coords: y increases upward)
         let topDip    = CGPoint(x: cx,       y: hcy + r * 0.18)
         let rightmost = CGPoint(x: cx + r,   y: hcy)
-        let bottomTip = CGPoint(x: cx,       y: hcy - r * 0.70)
+        let bottomTip = CGPoint(x: cx,       y: hcy - r * 1.10)
         let leftmost  = CGPoint(x: cx - r,   y: hcy)
 
         // Right half: top-dip → right-arc → bottom-tip
@@ -1446,15 +1446,15 @@ class EmojiAnimator {
             control1: CGPoint(x: cx + r * 0.28, y: hcy + r * 0.62),
             control2: CGPoint(x: cx + r * 0.88, y: hcy + r * 0.48))
         rightPath.addCurve(to: bottomTip,
-            control1: CGPoint(x: cx + r * 0.98, y: hcy - r * 0.30),
-            control2: CGPoint(x: cx + r * 0.40, y: hcy - r * 0.70))
+            control1: CGPoint(x: cx + r * 0.98, y: hcy - r * 0.42),
+            control2: CGPoint(x: cx + r * 0.22, y: hcy - r * 1.10))
 
         // Left half: bottom-tip → left-arc → top-dip (mirror)
         let leftPath = CGMutablePath()
         leftPath.move(to: bottomTip)
         leftPath.addCurve(to: leftmost,
-            control1: CGPoint(x: cx - r * 0.40, y: hcy - r * 0.70),
-            control2: CGPoint(x: cx - r * 0.98, y: hcy - r * 0.30))
+            control1: CGPoint(x: cx - r * 0.22, y: hcy - r * 1.10),
+            control2: CGPoint(x: cx - r * 0.98, y: hcy - r * 0.42))
         leftPath.addCurve(to: topDip,
             control1: CGPoint(x: cx - r * 0.88, y: hcy + r * 0.48),
             control2: CGPoint(x: cx - r * 0.28, y: hcy + r * 0.62))
