@@ -1,7 +1,7 @@
 {
-  "sha": "ca1cb7d5f4b8b238da170c78c1f306398f948a02",
+  "sha": "2e63f84048ecf1a43754718a75e3e94776c32644",
   "timestamp": "2026-03-27 23:23",
   "changelog": [
-    "fix: hide page pill with display:none (not just empty text)"
+    "fix: remove work hours Santa suffix from version tag"
   ]
 }
