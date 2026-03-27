@@ -1,7 +1,7 @@
 {
-  "sha": "29dbc752926f246c95ecb6c1bbd0520c0385c2e5",
-  "timestamp": "2026-03-27 18:08",
+  "sha": "01e7698e3b30c89fa77153e9b72c168107da86a5",
+  "timestamp": "2026-03-27 18:10",
   "changelog": [
-    "fix: improve slide follow reliability and AppleScript timeout"
+    "fix: only auto-reload slide when overlay is open; remove 'new' badge from DOM on open"
   ]
 }
