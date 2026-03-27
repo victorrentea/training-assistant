@@ -1676,16 +1676,21 @@
           await _loadSlideIntoViewer(slide, { forceReload: forceReloadCurrent });
         }
       } else {
-        slidesSelectedSlug = null;
-        slidesSelectedId = null;
-        _setStoredSelectedSlideId(null);
-        slidesLastFingerprint = null;
-        await _clearSlidesDocument();
-        _setSlidesDownload('', true);
-        _setSlidesError('');
-        _setSlidesLoading({ visible: false });
-        _showSlidesEmpty();
-        if (shell) shell.style.display = 'none';
+        // Only reset viewer if the currently selected slide is no longer in the catalog.
+        // Don't clear a slide that is loading or displayed — background refreshes must not interrupt it.
+        const currentStillExists = slidesSelectedId && slidesCatalog.some(s => s._id === slidesSelectedId);
+        if (!currentStillExists) {
+          slidesSelectedSlug = null;
+          slidesSelectedId = null;
+          _setStoredSelectedSlideId(null);
+          slidesLastFingerprint = null;
+          await _clearSlidesDocument();
+          _setSlidesDownload('', true);
+          _setSlidesError('');
+          _setSlidesLoading({ visible: false });
+          _showSlidesEmpty();
+          if (shell) shell.style.display = 'none';
+        }
       }
     } catch (_) {
       _setSlidesError('Could not fetch slide list from server.');
