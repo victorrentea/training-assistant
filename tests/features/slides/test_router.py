@@ -431,6 +431,33 @@ def test_api_slides_includes_missing_local_slides_when_daemon_offline(monkeypatc
     assert slides[0]["slug"] == "performance-introduction"
 
 
+def test_api_slides_marks_catalog_entries_available_when_daemon_online(monkeypatch, tmp_path):
+    catalog = tmp_path / "catalog.json"
+    catalog.write_text(json.dumps({
+        "decks": [
+            {"title": "Performance Intro", "target_pdf": "Performance Introduction.pdf"},
+        ]
+    }), encoding="utf-8")
+    monkeypatch.setenv("PPTX_CATALOG_FILE", str(catalog))
+    monkeypatch.setenv("TRAINING_ASSISTANT_SLIDES_DIR", str(tmp_path / "missing-slides"))
+    monkeypatch.setenv("TRAINING_ASSISTANT_UPLOADED_SLIDES_DIR", str(tmp_path / "uploaded"))
+    monkeypatch.setenv("SLIDES_ON_DEMAND_UPLOAD_ENABLED", "1")
+
+    original_daemon_ws = state.daemon_ws
+    try:
+        state.daemon_ws = object()
+        client = TestClient(app)
+        resp = client.get("/api/slides")
+    finally:
+        state.daemon_ws = original_daemon_ws
+
+    assert resp.status_code == 200
+    slides = resp.json()["slides"]
+    assert len(slides) == 1
+    assert slides[0]["slug"] == "performance-introduction"
+    assert slides[0]["available_on_server"] is True
+
+
 def test_api_slides_respects_catalog_order_for_topics(monkeypatch, tmp_path):
     slides_dir = tmp_path / "slides"
     slides_dir.mkdir(parents=True, exist_ok=True)

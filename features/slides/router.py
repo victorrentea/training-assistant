@@ -407,9 +407,11 @@ async def get_slides():
     slides = _collect_participant_slides()
     _, local_index = _build_local_slides_index()
     _, uploaded_index = _build_uploaded_slides_index()
+    daemon_available = _on_demand_enabled() and state.daemon_ws is not None
     for slide in slides:
         slug = str(slide.get("slug") or "")
-        slide["available_on_server"] = bool(local_index.get(slug) or uploaded_index.get(slug))
+        has_local_pdf = bool(local_index.get(slug) or uploaded_index.get(slug))
+        slide["available_on_server"] = has_local_pdf or daemon_available
     return {"slides": slides}
 
 
