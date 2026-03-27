@@ -135,9 +135,13 @@ class AppDelegate: NSObject, NSApplicationDelegate, URLSessionWebSocketDelegate 
         ]
 
         let fingerprint = ScreenFingerprint.current()
+        // Position persistence only applies when ≥2 desktops are connected
         let savedOrigin = singleScreen ? nil : PositionStore.load(fingerprint: fingerprint)
         if let pos = savedOrigin {
             overlayInfo("Restoring button bar position \(Int(pos.x)),\(Int(pos.y)) for this monitor layout")
+        }
+        let onPositionChanged: ((NSPoint) -> Void)? = singleScreen ? nil : { origin in
+            PositionStore.save(fingerprint: fingerprint, origin: origin)
         }
 
         buttonBar = ButtonBar(
@@ -145,9 +149,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, URLSessionWebSocketDelegate 
             screen: screen,
             singleScreen: singleScreen,
             savedOrigin: savedOrigin,
-            onPositionChanged: { origin in
-                PositionStore.save(fingerprint: fingerprint, origin: origin)
-            }
+            onPositionChanged: onPositionChanged
         )
         buttonBar.orderFrontRegardless()
     }
