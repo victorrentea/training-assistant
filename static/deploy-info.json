@@ -1,7 +1,7 @@
 {
-  "sha": "3b16d5abc10fd59359d42767aeb2c73c97043196",
-  "timestamp": "2026-03-27 07:42",
+  "sha": "adcffbc30bba144d565cd9e48daa7af22e68ec27",
+  "timestamp": "2026-03-27 07:45",
   "changelog": [
-    "style: align emoji float animation across participant, host, and desktop overlay"
+    "style: divergent emoji float \u2014 linear drift up, narrower spawn zone"
   ]
 }
