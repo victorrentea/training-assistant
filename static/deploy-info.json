@@ -1,7 +1,7 @@
 {
-  "sha": "a9d88a423b448ad737e57b9090f3f2c9ed1b5597",
-  "timestamp": "2026-03-27 23:36",
+  "sha": "fa3944056d61d9261f987cd0b71658e5849ef0f1",
+  "timestamp": "2026-03-27 23:39",
   "changelog": [
-    "fix: don't cancel active slide load on background catalog refresh"
+    "fix: show NEW badge only for slides updated during the current session"
   ]
 }
