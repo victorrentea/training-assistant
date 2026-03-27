@@ -1,7 +1,7 @@
 {
-  "sha": "fa3944056d61d9261f987cd0b71658e5849ef0f1",
-  "timestamp": "2026-03-27 23:39",
+  "sha": "7387c979f9e61c8951f540fadc5bb0fc296d1d49",
+  "timestamp": "2026-03-27 23:46",
   "changelog": [
-    "fix: show NEW badge only for slides updated during the current session"
+    "fix: prevent loading-slide blocker from hanging after on-demand PDF upload"
   ]
 }
