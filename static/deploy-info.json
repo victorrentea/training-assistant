@@ -1,7 +1,7 @@
 {
-  "sha": "5802f3726f2ccf7b28b46a3fa6a3be7b4048041d",
-  "timestamp": "2026-03-27 17:59",
+  "sha": "2cc6b96d69be6a1c03d60070a3ac21dfda11cae2",
+  "timestamp": "2026-03-27 18:03",
   "changelog": [
-    "feat: log transcripted word count instead of line count"
+    "fix: smooth Ctrl+wheel zoom for slides, bigger page/zoom controls"
   ]
 }
