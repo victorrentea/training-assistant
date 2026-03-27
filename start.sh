@@ -124,7 +124,11 @@ stop_all_processes() {
     kill -9 "$DAEMON_PID" 2>/dev/null
     DAEMON_PID=""
   fi
-  # Overlay is left running — the new instance will kill it on startup
+  if [ -n "$OVERLAY_PID" ]; then
+    _log "start" "info" "💀 overlay (pid $OVERLAY_PID)"
+    kill "$OVERLAY_PID" 2>/dev/null
+    OVERLAY_PID=""
+  fi
 }
 
 pull_and_rebuild() {
