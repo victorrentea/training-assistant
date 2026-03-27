@@ -1,7 +1,7 @@
 {
-  "sha": "7d960ac115919849db99df5b031529b537d2b96d",
-  "timestamp": "2026-03-27 18:38",
+  "sha": "96f780f955009521c6e80405cafd8c73abc0af29",
+  "timestamp": "2026-03-27 18:39",
   "changelog": [
-    "feat: restyle slides overlay controls as round accent bubbles with close button"
+    "fix: make 'Try download' a real link when PDF.js fails to load"
   ]
 }
