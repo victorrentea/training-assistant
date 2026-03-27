@@ -7,12 +7,37 @@
       "lines": 70
     },
     {
-      "path": "daemon/summarizer.py",
+      "path": "daemon/__main__.py",
+      "qualname": "run",
+      "lines": 722
+    },
+    {
+      "path": "daemon/quiz/generator.py",
+      "qualname": "generate_quiz",
+      "lines": 73
+    },
+    {
+      "path": "daemon/quiz/history.py",
+      "qualname": "auto_generate",
+      "lines": 70
+    },
+    {
+      "path": "daemon/slides/convert.py",
+      "qualname": "convert_with_google_drive_pull",
+      "lines": 62
+    },
+    {
+      "path": "daemon/slides/daemon.py",
+      "qualname": "config_from_env",
+      "lines": 83
+    },
+    {
+      "path": "daemon/summary/summarizer.py",
       "qualname": "generate_summary",
       "lines": 121
     },
     {
-      "path": "daemon/transcript_normalizer.py",
+      "path": "daemon/transcript/normalizer.py",
       "qualname": "normalize_incremental",
       "lines": 114
     },
@@ -32,9 +57,9 @@
       "lines": 62
     },
     {
-      "path": "features/slides/router.py",
+      "path": "features/slides/drive_status.py",
       "qualname": "_wait_for_slide_upload",
-      "lines": 73
+      "lines": 74
     },
     {
       "path": "features/snapshot/router.py",
@@ -47,44 +72,9 @@
       "lines": 293
     },
     {
-      "path": "quiz_core.py",
-      "qualname": "auto_generate",
-      "lines": 70
-    },
-    {
-      "path": "quiz_core.py",
-      "qualname": "generate_quiz",
-      "lines": 73
-    },
-    {
-      "path": "slides_daemon.py",
-      "qualname": "config_from_env",
-      "lines": 83
-    },
-    {
-      "path": "slides_daemon.py",
-      "qualname": "convert_with_google_drive_pull",
-      "lines": 61
-    },
-    {
       "path": "tests/test_load.py",
       "qualname": "test_load",
       "lines": 87
-    },
-    {
-      "path": "training_daemon.py",
-      "qualname": "SlidesOnDemandWsRunner._handle_request",
-      "lines": 63
-    },
-    {
-      "path": "training_daemon.py",
-      "qualname": "_load_key_points",
-      "lines": 81
-    },
-    {
-      "path": "training_daemon.py",
-      "qualname": "run",
-      "lines": 722
     }
   ]
 }

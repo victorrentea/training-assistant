@@ -15,6 +15,9 @@ from dataclasses import dataclass
 from datetime import date, datetime
 from pathlib import Path
 
+from daemon.transcript.parser import _parse_speaker, _is_low_signal_noise
+from daemon.transcript.writer import _append_outputs, _infer_last_speaker_from_normalized
+
 
 _RAW_TXT_NAME_RE = re.compile(r"^\d{8}\s+\d{4}\b.*\.txt$", re.IGNORECASE)
 _FILENAME_DATE_RE = re.compile(r"^(\d{8})\s+(\d{4})\b")
@@ -25,64 +28,6 @@ _ABSOLUTE_TS_RE = re.compile(
 _TIME_ONLY_TS_RE = re.compile(
     r"^\[\s*(\d{1,3}):(\d{2}):(\d{2})(?:\.\d+)?\s*\]\s*(.*)$"
 )
-_SPEAKER_RE = re.compile(r"^([^:\t\n\r]{1,40}):\s*(.*)$")
-_PARENS_ONLY_RE = re.compile(r"^(?:\([^)]*\)\s*)+$")
-
-_LOW_SIGNAL_SINGLE_WORDS = {
-    "music",
-    "silence",
-    "inaudible",
-    "blank",
-    "audio",
-    "foreign",
-    "romanian",
-    "russian",
-    "beep",
-    "beeping",
-    "homing",
-    "you",
-}
-_LOW_SIGNAL_PREFIXES = (
-    "silence from",
-    "silence for",
-    "pause for group work",
-    "speaking in foreign language",
-    "foreign language spoken",
-    "side conversation",
-    "break in audio",
-    "no speech",
-    "russian inaudible",
-)
-_LOW_SIGNAL_TOKEN_SET = {
-    "music",
-    "upbeat",
-    "soft",
-    "silence",
-    "inaudible",
-    "blank",
-    "audio",
-    "pause",
-    "group",
-    "work",
-    "keyboard",
-    "clicking",
-    "typing",
-    "beep",
-    "beeping",
-    "foreign",
-    "language",
-    "romanian",
-    "russian",
-    "speech",
-    "no",
-    "side",
-    "conversation",
-    "break",
-    "in",
-    "mouse",
-    "playing",
-    "you",
-}
 
 
 @dataclass
@@ -222,91 +167,6 @@ def _has_state_for_raw(offset_file: Path, raw_key: str) -> bool:
     if isinstance(files_map, dict):
         return raw_key in files_map
     return isinstance(data, dict) and "offset" in data
-
-
-def _parse_speaker(text: str) -> tuple[str | None, str]:
-    match = _SPEAKER_RE.match(text)
-    if not match:
-        return None, text
-
-    speaker_candidate = match.group(1).strip().replace("\t", " ")
-    content = match.group(2).strip()
-
-    if not speaker_candidate:
-        return None, text
-
-    words = speaker_candidate.split()
-    if len(words) > 3:
-        return None, text
-    if any(len(w) > 30 for w in words):
-        return None, text
-
-    # Keep speaker parsing conservative to avoid accidental captures like "So: ..."
-    if len(words) == 1 and len(words[0]) <= 2:
-        return None, text
-
-    return speaker_candidate, content
-
-
-def _is_low_signal_noise(text: str) -> bool:
-    raw = text.strip()
-    if not raw:
-        return True
-
-    canonical = re.sub(r"[^a-z0-9]+", " ", raw.lower()).strip()
-    if not canonical:
-        return True
-
-    tokens = canonical.split()
-    if len(tokens) == 1 and tokens[0] in _LOW_SIGNAL_SINGLE_WORDS:
-        return True
-
-    if _PARENS_ONLY_RE.match(raw):
-        inner = " ".join(re.findall(r"\(([^)]*)\)", raw.lower()))
-        inner_tokens = re.sub(r"[^a-z0-9]+", " ", inner).strip().split()
-        if inner_tokens and all(tok in _LOW_SIGNAL_TOKEN_SET for tok in inner_tokens):
-            return True
-
-    for prefix in _LOW_SIGNAL_PREFIXES:
-        if canonical.startswith(prefix) and len(tokens) <= 12:
-            return True
-
-    if len(tokens) <= 6 and all(tok in _LOW_SIGNAL_TOKEN_SET for tok in tokens):
-        return True
-
-    return False
-
-
-def _append_outputs(output_dir: Path, grouped_lines: dict[str, list[str]]) -> list[Path]:
-    written_files: list[Path] = []
-    for day_str in sorted(grouped_lines.keys()):
-        lines = grouped_lines[day_str]
-        if not lines:
-            continue
-        out = output_dir / f"{day_str} transcription.txt"
-        out.parent.mkdir(parents=True, exist_ok=True)
-        with out.open("a", encoding="utf-8") as f:
-            for line in lines:
-                f.write(line)
-                f.write("\n")
-        written_files.append(out)
-    return written_files
-
-
-def _infer_last_speaker_from_normalized(output_file: Path) -> str | None:
-    if not output_file.exists():
-        return None
-    speaker_re = re.compile(r"^\[\d{2}:\d{2}\]\s+([^:]+):\s+")
-    try:
-        with output_file.open("r", encoding="utf-8", errors="replace") as f:
-            lines = f.read().splitlines()
-    except OSError:
-        return None
-    for line in reversed(lines):
-        m = speaker_re.match(line.strip())
-        if m:
-            return m.group(1).strip()
-    return None
 
 
 def normalize_incremental(

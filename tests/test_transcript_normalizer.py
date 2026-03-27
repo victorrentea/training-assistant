@@ -1,7 +1,7 @@
 import json
 from datetime import datetime
 
-from daemon.transcript_normalizer import (
+from daemon.transcript.normalizer import (
     default_offset_file_for,
     normalize_folder_incremental,
     normalize_incremental,

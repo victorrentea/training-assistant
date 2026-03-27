@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from daemon.transcript_query import QueryRange, query_lines, _resolve_query_range
+from daemon.transcript.query import QueryRange, query_lines, _resolve_query_range
 
 
 class _Args:

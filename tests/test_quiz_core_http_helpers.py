@@ -4,7 +4,7 @@ from types import SimpleNamespace
 
 import pytest
 
-import quiz_core
+import daemon.http as quiz_core
 
 
 class _Resp:

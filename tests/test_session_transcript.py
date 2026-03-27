@@ -2,7 +2,7 @@
 
 from datetime import datetime, date
 import pytest
-from daemon.session_transcript import (
+from daemon.transcript.session import (
     compute_active_windows,
     count_lines_in_windows,
     format_time_ranges,

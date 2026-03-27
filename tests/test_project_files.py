@@ -4,7 +4,7 @@ import pytest
 from pathlib import Path
 from unittest.mock import patch, MagicMock
 
-from daemon.project_files import get_project_tree, read_project_file, get_project_tools, handle_project_tool_call, PROJECT_TOOL_NAMES
+from daemon.rag.project_files import get_project_tree, read_project_file, get_project_tools, handle_project_tool_call, PROJECT_TOOL_NAMES
 
 
 @pytest.fixture
@@ -198,7 +198,8 @@ def test_handle_tool_call_unknown_tool(sample_project):
 
 # --- integration test: generate_quiz includes project tools ---
 
-from quiz_core import Config, generate_quiz
+from daemon.config import Config
+from daemon.quiz.generator import generate_quiz
 
 
 def _make_config_with_project(tmp_path):
@@ -235,8 +236,8 @@ def test_generate_quiz_includes_project_tools(tmp_path):
         captured_kwargs.update(kwargs)
         return mock_response
 
-    with patch("quiz_core.create_message", side_effect=capture_create_message):
-        with patch("quiz_core.search_materials", return_value=[]):
+    with patch("daemon.quiz.generator.create_message", side_effect=capture_create_message):
+        with patch("daemon.rag.search_materials", return_value=[]):
             generate_quiz("some transcript text", config)
 
     tools = captured_kwargs.get("tools", [])

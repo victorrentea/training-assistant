@@ -38,7 +38,7 @@ def _extract_code_with_ai(raw_snippet: str) -> tuple[str, str | None] | None:
     """Call Claude Haiku to extract code from LLM output.
     Returns (code, language) or None on any failure."""
     try:
-        from daemon.llm_adapter import create_message
+        from daemon.llm.adapter import create_message
         api_key = os.environ.get("ANTHROPIC_API_KEY")
         if not api_key:
             return None

@@ -10,7 +10,7 @@ def test_load_daemon_state_new_format():
             "main": {"name": "2026-03-25 WS", "started_at": "2026-03-25T09:00:00", "status": "active"},
             "talk": None
         }))
-        from training_daemon import _load_daemon_state
+        from daemon.session_state import load_daemon_state as _load_daemon_state
         result = _load_daemon_state(Path(d))
         assert result["main"]["name"] == "2026-03-25 WS"
         assert result["talk"] is None
@@ -25,7 +25,7 @@ def test_load_daemon_state_migrates_old_stack_format():
                 {"name": "2026-03-25 WS", "started_at": "2026-03-25T09:00:00"}
             ]
         }))
-        from training_daemon import _load_daemon_state
+        from daemon.session_state import load_daemon_state as _load_daemon_state
         result = _load_daemon_state(Path(d))
         assert result["main"]["name"] == "2026-03-25 WS"
         assert result["talk"] is None
@@ -41,7 +41,7 @@ def test_load_daemon_state_migrates_two_item_stack():
                 {"name": "2026-03-25 12:30 talk", "started_at": "2026-03-25T12:30:00"}
             ]
         }))
-        from training_daemon import _load_daemon_state
+        from daemon.session_state import load_daemon_state as _load_daemon_state
         result = _load_daemon_state(Path(d))
         assert result["main"]["name"] == "2026-03-25 WS"
         assert result["talk"]["name"] == "2026-03-25 12:30 talk"
@@ -49,14 +49,14 @@ def test_load_daemon_state_migrates_two_item_stack():
 
 def test_load_daemon_state_returns_empty_when_no_file():
     with tempfile.TemporaryDirectory() as d:
-        from training_daemon import _load_daemon_state
+        from daemon.session_state import load_daemon_state as _load_daemon_state
         result = _load_daemon_state(Path(d))
         assert result == {"main": None, "talk": None}
 
 
 def test_save_daemon_state_writes_new_format():
     with tempfile.TemporaryDirectory() as d:
-        from training_daemon import _save_daemon_state
+        from daemon.session_state import save_daemon_state as _save_daemon_state
         _save_daemon_state(Path(d), {
             "main": {"name": "2026-03-25 WS", "started_at": "2026-03-25T09:00:00", "status": "active"},
             "talk": None
@@ -71,7 +71,7 @@ def test_save_daemon_state_writes_new_format():
 
 def test_daemon_state_to_stack_filters_ended_main():
     """Main session with status 'ended' should produce an empty stack."""
-    from training_daemon import _daemon_state_to_stack
+    from daemon.session_state import daemon_state_to_stack as _daemon_state_to_stack
     result = _daemon_state_to_stack({
         "main": {"name": "2026-03-25 WS", "started_at": "2026-03-25T09:00:00", "status": "ended"},
         "talk": None,
@@ -81,7 +81,7 @@ def test_daemon_state_to_stack_filters_ended_main():
 
 def test_daemon_state_to_stack_filters_ended_talk_keeps_main():
     """Talk session with status 'ended' is discarded; main is kept."""
-    from training_daemon import _daemon_state_to_stack
+    from daemon.session_state import daemon_state_to_stack as _daemon_state_to_stack
     result = _daemon_state_to_stack({
         "main": {"name": "2026-03-25 WS", "started_at": "2026-03-25T09:00:00", "status": "active"},
         "talk": {"name": "2026-03-25 12:30 talk", "started_at": "2026-03-25T12:30:00", "status": "ended"},
@@ -92,7 +92,7 @@ def test_daemon_state_to_stack_filters_ended_talk_keeps_main():
 
 def test_daemon_state_to_stack_active_sessions_included():
     """Active and paused sessions are included in the stack."""
-    from training_daemon import _daemon_state_to_stack
+    from daemon.session_state import daemon_state_to_stack as _daemon_state_to_stack
     result = _daemon_state_to_stack({
         "main": {"name": "2026-03-25 WS", "started_at": "2026-03-25T09:00:00", "status": "active"},
         "talk": {"name": "2026-03-25 12:30 talk", "started_at": "2026-03-25T12:30:00", "status": "paused"},
@@ -103,10 +103,11 @@ def test_daemon_state_to_stack_active_sessions_included():
 # ── Issue 1: startup restore includes session_state.json ─────────────────────
 
 def test_sync_session_includes_session_state_when_file_exists():
-    """When session_state.json exists in the session folder, _sync_session_to_server
+    """When session_state.json exists in the session folder, sync_session_to_server
     is called with the contents in the payload."""
-    from unittest.mock import patch, call
-    import training_daemon
+    from unittest.mock import patch
+    import daemon.session_state as session_state_mod
+    from daemon.session_state import sync_session_to_server
 
     session_state_data = {"mode": "workshop", "activity": "poll", "token_usage": {}}
 
@@ -127,8 +128,8 @@ def test_sync_session_includes_session_state_when_file_exists():
         def fake_post_json(url, payload, username, password):
             captured["payload"] = payload
 
-        with patch.object(training_daemon, "_post_json", fake_post_json):
-            training_daemon._sync_session_to_server(
+        with patch.object(session_state_mod, "_post_json", fake_post_json):
+            sync_session_to_server(
                 type("C", (), {
                     "server_url": "http://test",
                     "host_username": "u",
@@ -146,15 +147,16 @@ def test_sync_session_includes_session_state_when_file_exists():
 def test_sync_session_no_session_state_key_when_none():
     """When session_state is None, the payload should not include the key."""
     from unittest.mock import patch
-    import training_daemon
+    import daemon.session_state as session_state_mod
+    from daemon.session_state import sync_session_to_server
 
     captured = {}
 
     def fake_post_json(url, payload, username, password):
         captured["payload"] = payload
 
-    with patch.object(training_daemon, "_post_json", fake_post_json):
-        training_daemon._sync_session_to_server(
+    with patch.object(session_state_mod, "_post_json", fake_post_json):
+        sync_session_to_server(
             type("C", (), {
                 "server_url": "http://test",
                 "host_username": "u",
@@ -169,7 +171,7 @@ def test_sync_session_no_session_state_key_when_none():
 
 
 def test_normalize_slides_manifest_accepts_slug_mapping():
-    from training_daemon import _normalize_slides_manifest
+    from daemon.session_state import _normalize_slides_manifest
     slides = _normalize_slides_manifest({
         "slides": {
             "arch-deck": {
@@ -186,7 +188,7 @@ def test_normalize_slides_manifest_accepts_slug_mapping():
 
 
 def test_load_slides_manifest_reads_candidate_file():
-    from training_daemon import _load_slides_manifest
+    from daemon.session_state import load_slides_manifest as _load_slides_manifest
     with tempfile.TemporaryDirectory() as d:
         folder = Path(d)
         (folder / "slides_manifest.json").write_text(json.dumps({
@@ -201,14 +203,14 @@ def test_load_slides_manifest_reads_candidate_file():
 
 
 def test_parse_powerpoint_probe_output_active_state():
-    from training_daemon import _parse_powerpoint_probe_output
+    from daemon.__main__ import _parse_powerpoint_probe_output
 
     parsed = _parse_powerpoint_probe_output("Architecture deck\t12\n")
     assert parsed == {"presentation": "Architecture deck", "slide": 12}
 
 
 def test_parse_powerpoint_probe_output_handles_no_presentation_tokens():
-    from training_daemon import _parse_powerpoint_probe_output
+    from daemon.__main__ import _parse_powerpoint_probe_output
 
     assert _parse_powerpoint_probe_output("__NO_PPT__") is None
     assert _parse_powerpoint_probe_output("__NO_PRESENTATION__") is None
@@ -216,14 +218,14 @@ def test_parse_powerpoint_probe_output_handles_no_presentation_tokens():
 
 
 def test_parse_powerpoint_probe_output_missing_value_defaults_to_slide_one():
-    from training_daemon import _parse_powerpoint_probe_output
+    from daemon.__main__ import _parse_powerpoint_probe_output
 
     parsed = _parse_powerpoint_probe_output("Deck A\tmissing value")
     assert parsed == {"presentation": "Deck A", "slide": 1}
 
 
 def test_probe_powerpoint_state_success(monkeypatch):
-    import training_daemon
+    import daemon.__main__ as training_daemon
 
     monkeypatch.setattr(
         training_daemon.subprocess,
@@ -237,7 +239,7 @@ def test_probe_powerpoint_state_success(monkeypatch):
 
 
 def test_probe_powerpoint_state_returns_error_on_nonzero_exit(monkeypatch):
-    import training_daemon
+    import daemon.__main__ as training_daemon
 
     monkeypatch.setattr(
         training_daemon.subprocess,
@@ -251,7 +253,7 @@ def test_probe_powerpoint_state_returns_error_on_nonzero_exit(monkeypatch):
 
 
 def test_resolve_presentation_slide_target_uses_catalog_mapping(tmp_path):
-    from training_daemon import _resolve_presentation_slide_target
+    from daemon.__main__ import _resolve_presentation_slide_target
 
     catalog = tmp_path / "catalog.json"
     catalog.write_text(json.dumps({
@@ -275,7 +277,7 @@ def test_resolve_presentation_slide_target_uses_catalog_mapping(tmp_path):
 
 
 def test_resolve_presentation_slide_target_fallback_when_not_mapped(tmp_path):
-    from training_daemon import _resolve_presentation_slide_target
+    from daemon.__main__ import _resolve_presentation_slide_target
 
     target = _resolve_presentation_slide_target(
         presentation_name="Unmapped Deck.pptx",
@@ -288,7 +290,7 @@ def test_resolve_presentation_slide_target_fallback_when_not_mapped(tmp_path):
 
 
 def test_sync_powerpoint_slide_unknown_presentation_alerts_once(monkeypatch):
-    import training_daemon
+    import daemon.__main__ as training_daemon
 
     training_daemon._PPT_UNMAPPED_PRESENTATIONS_ALERTED.clear()
     calls = {"delete": 0, "beep": 0, "status": []}

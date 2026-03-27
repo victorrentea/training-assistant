@@ -10,7 +10,7 @@ def test_save_session_state_writes_json():
             "mode": "workshop",
             "participants": {"uuid-1": {"name": "Alice", "score": 100}},
         }
-        from training_daemon import _save_session_state
+        from daemon.session_state import save_session_state as _save_session_state
         _save_session_state(folder, snapshot)
         written = json.loads((folder / "session_state.json").read_text())
         assert written["participants"]["uuid-1"]["name"] == "Alice"
@@ -22,6 +22,6 @@ def test_save_session_state_overwrites_existing():
         folder = Path(d)
         existing = folder / "session_state.json"
         existing.write_text(json.dumps({"mode": "old"}))
-        from training_daemon import _save_session_state
+        from daemon.session_state import save_session_state as _save_session_state
         _save_session_state(folder, {"mode": "new"})
         assert json.loads(existing.read_text())["mode"] == "new"

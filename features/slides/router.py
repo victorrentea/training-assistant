@@ -1,94 +1,46 @@
-import asyncio
-from datetime import datetime, timezone
-from email.utils import formatdate, parsedate_to_datetime
 import json
 import logging
 import os
-import re
-import uuid
+from datetime import datetime, timezone
+from email.utils import formatdate, parsedate_to_datetime
 from pathlib import Path
 
-from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
+from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import FileResponse, Response
-from pydantic import BaseModel, field_validator
 
 from core.messaging import broadcast, broadcast_state
 from core.state import state
+from features.slides.drive_status import (
+    _on_demand_enabled,
+    _wait_for_slide_upload,
+    router as drive_status_router,
+)
+from features.slides.upload import (
+    SlidesUpdate,
+    _is_displayable_slide_name,
+    _local_slide_meta_path,
+    _local_slides_meta_dir,
+    _read_local_slide_source_updated_at,
+    _slugify,
+    _uploaded_slide_meta_path,
+    _uploaded_slides_dir,
+    router as upload_router,
+)
 
 router = APIRouter()
 public_router = APIRouter()
-_SLUG_RE = re.compile(r"[^a-z0-9]+")
 logger = logging.getLogger(__name__)
 
-_DEFAULT_ON_DEMAND_TIMEOUT_SECONDS = 60.0
-_DEFAULT_ON_DEMAND_STALE_SECONDS = 60.0
-_UPLOAD_STATE_TTL_SECONDS = 300.0
-_upload_events: dict[str, asyncio.Event] = {}
-_upload_locks: dict[str, asyncio.Lock] = {}
-_daemon_send_lock = asyncio.Lock()
+# Include sub-routers so that main.py only needs to include slides.router / slides.public_router.
+router.include_router(drive_status_router)
+router.include_router(upload_router)
 
 
-class SlidesUpdate(BaseModel):
-    url: str
-    slug: str
-    source_file: str | None = None
-    presentation_name: str | None = None
-    current_page: int | None = None
-    converter: str | None = None
-    updated_at: str | None = None
-
-    @field_validator("url")
-    @classmethod
-    def validate_url(cls, value: str) -> str:
-        cleaned = value.strip()
-        if not (cleaned.startswith("http://") or cleaned.startswith("https://")):
-            raise ValueError("url must start with http:// or https://")
-        return cleaned
-
-    @field_validator("slug")
-    @classmethod
-    def validate_slug(cls, value: str) -> str:
-        cleaned = value.strip()
-        if not cleaned:
-            raise ValueError("slug cannot be empty")
-        if "/" in cleaned or "\\" in cleaned:
-            raise ValueError("slug cannot contain path separators")
-        return cleaned
-
-    @field_validator("current_page")
-    @classmethod
-    def validate_current_page(cls, value: int | None) -> int | None:
-        if value is None:
-            return None
-        if value < 1:
-            raise ValueError("current_page must be >= 1")
-        return value
-
-
-class MaterialsDeleteRequest(BaseModel):
-    relative_path: str
-
-
-def _slugify(value: str) -> str:
-    slug = _SLUG_RE.sub("-", value.strip().lower()).strip("-")
-    return slug or "slide"
-
-
-def _is_displayable_slide_name(value: str) -> bool:
-    cleaned = value.strip()
-    if not cleaned:
-        return False
-    return any(ch.isalnum() for ch in cleaned)
-
-
-def _display_name_or_slug(name: str, slug: str) -> str:
-    cleaned_name = str(name or "").strip()
-    cleaned_slug = str(slug or "").strip()
-    if _is_displayable_slide_name(cleaned_name):
-        return cleaned_name
-    if _is_displayable_slide_name(cleaned_slug):
-        return cleaned_slug
-    return "Unnamed slide"
+def _resolve_catalog_file() -> Path:
+    configured = os.environ.get("PPTX_CATALOG_FILE")
+    if configured:
+        return Path(configured).expanduser()
+    return Path(__file__).resolve().parent.parent.parent / "daemon" / "materials_slides_catalog.json"
 
 
 def _candidate_local_slides_dirs() -> list[Path]:
@@ -111,13 +63,6 @@ def _resolve_local_slides_dir() -> Path | None:
         if candidate.exists() and candidate.is_dir():
             return candidate
     return None
-
-
-def _resolve_catalog_file() -> Path:
-    configured = os.environ.get("PPTX_CATALOG_FILE")
-    if configured:
-        return Path(configured).expanduser()
-    return Path(__file__).resolve().parent.parent.parent / "daemon" / "materials_slides_catalog.json"
 
 
 def _normalize_catalog_map_entry(raw: dict) -> dict | None:
@@ -217,75 +162,6 @@ def _build_catalog_slides_index() -> list[dict]:
     return slides
 
 
-def _uploaded_slides_dir() -> Path:
-    configured = os.environ.get("TRAINING_ASSISTANT_UPLOADED_SLIDES_DIR")
-    if configured:
-        return Path(configured).expanduser()
-    return Path(".server-data") / "uploaded-slides"
-
-
-def _uploaded_slide_meta_path(slug: str) -> Path:
-    return _uploaded_slides_dir() / f"{slug}.json"
-
-
-def _local_slides_meta_dir() -> Path:
-    configured = os.environ.get("TRAINING_ASSISTANT_LOCAL_SLIDES_META_DIR")
-    if configured:
-        return Path(configured).expanduser()
-    return Path(".server-data") / "local-slides-meta"
-
-
-def _local_slide_meta_path(slug: str) -> Path:
-    return _local_slides_meta_dir() / f"{slug}.json"
-
-
-def _read_local_slide_source_updated_at(slug: str) -> str | None:
-    path = _local_slide_meta_path(slug)
-    if not path.exists():
-        return None
-    try:
-        raw = json.loads(path.read_text(encoding="utf-8"))
-    except Exception:
-        return None
-    updated = str(raw.get("source_updated_at") or "").strip()
-    return updated or None
-
-
-def _server_materials_dir() -> Path:
-    configured = os.environ.get("SERVER_MATERIALS_DIR", "").strip()
-    if configured:
-        return Path(configured).expanduser()
-    return Path("server_materials")
-
-
-def _normalize_relative_material_path(value: str) -> str:
-    raw = str(value or "").strip().replace("\\", "/")
-    if not raw:
-        raise HTTPException(status_code=400, detail="relative_path is required")
-    pure = Path(raw)
-    if pure.is_absolute():
-        raise HTTPException(status_code=400, detail="relative_path must be relative")
-    parts = [part for part in pure.parts if part not in ("", ".")]
-    if any(part == ".." for part in parts):
-        raise HTTPException(status_code=400, detail="relative_path cannot contain '..'")
-    if not parts:
-        raise HTTPException(status_code=400, detail="relative_path is required")
-    return "/".join(parts)
-
-
-def _material_target_path(relative_path: str) -> Path:
-    root = _server_materials_dir()
-    target = root / relative_path
-    try:
-        root_resolved = root.resolve()
-        target_resolved = target.resolve()
-    except FileNotFoundError:
-        # Parent may not exist yet; resolve lexical path safely.
-        root_resolved = root.resolve()
-        target_resolved = (root / relative_path).resolve(strict=False)
-    if root_resolved not in target_resolved.parents and target_resolved != root_resolved:
-        raise HTTPException(status_code=400, detail="Invalid relative_path")
-    return target
 def _build_local_slides_index() -> tuple[list[dict], dict[str, Path]]:
     slides_dir = _resolve_local_slides_dir()
     if not slides_dir:
@@ -432,199 +308,20 @@ def _collect_participant_slides(*, include_unavailable_when_daemon_offline: bool
     return ordered
 
 
-def _on_demand_enabled() -> bool:
-    raw = os.environ.get("SLIDES_ON_DEMAND_UPLOAD_ENABLED", "1").strip().lower()
-    return raw not in {"0", "false", "no", "off"}
-
-
-def _on_demand_timeout_seconds() -> float:
-    raw = os.environ.get("SLIDES_ON_DEMAND_TIMEOUT_SECONDS", str(_DEFAULT_ON_DEMAND_TIMEOUT_SECONDS)).strip()
-    try:
-        return max(1.0, float(raw))
-    except ValueError:
-        return _DEFAULT_ON_DEMAND_TIMEOUT_SECONDS
-
-
-def _on_demand_stale_seconds() -> float:
-    raw = os.environ.get("SLIDES_ON_DEMAND_STALE_SECONDS", str(_DEFAULT_ON_DEMAND_STALE_SECONDS)).strip()
-    try:
-        return max(1.0, float(raw))
-    except ValueError:
-        return _DEFAULT_ON_DEMAND_STALE_SECONDS
-
-
-def _upload_lock(slug: str) -> asyncio.Lock:
-    lock = _upload_locks.get(slug)
-    if lock is None:
-        lock = asyncio.Lock()
-        _upload_locks[slug] = lock
-    return lock
-
-
-def _upload_event(slug: str) -> asyncio.Event:
-    event = _upload_events.get(slug)
-    if event is None:
-        event = asyncio.Event()
-        _upload_events[slug] = event
-    return event
+def _display_name_or_slug(name: str, slug: str) -> str:
+    cleaned_name = str(name or "").strip()
+    cleaned_slug = str(slug or "").strip()
+    if _is_displayable_slide_name(cleaned_name):
+        return cleaned_name
+    if _is_displayable_slide_name(cleaned_slug):
+        return cleaned_slug
+    return "Unnamed slide"
 
 
 def _resolve_slide_path(slug: str) -> Path | None:
     _, local_index = _build_local_slides_index()
     _, uploaded_index = _build_uploaded_slides_index()
     return local_index.get(slug) or uploaded_index.get(slug)
-
-
-def _cleanup_upload_states(now: datetime | None = None) -> None:
-    now = now or datetime.now(timezone.utc)
-    keep: set[str] = set()
-    for slug, entry in list(state.slides_uploads.items()):
-        updated_at = entry.get("updated_at")
-        age = (now - updated_at).total_seconds() if isinstance(updated_at, datetime) else _UPLOAD_STATE_TTL_SECONDS + 1
-        if entry.get("status") == "uploading":
-            keep.add(slug)
-            continue
-        if age <= _UPLOAD_STATE_TTL_SECONDS:
-            keep.add(slug)
-        else:
-            state.slides_uploads.pop(slug, None)
-            _upload_events.pop(slug, None)
-            _upload_locks.pop(slug, None)
-    for slug in keep:
-        _upload_events.setdefault(slug, asyncio.Event())
-
-
-async def _send_upload_request_to_daemon(slug: str, request_id: str, timeout_s: float) -> bool:
-    ws = state.daemon_ws
-    if ws is None:
-        return False
-    payload = {
-        "type": "slides_upload_request",
-        "slug": slug,
-        "request_id": request_id,
-        "timeout_s": int(timeout_s),
-    }
-    async with _daemon_send_lock:
-        try:
-            await ws.send_json(payload)
-            logger.info("slides_upload_requested slug=%s request_id=%s", slug, request_id)
-            return True
-        except Exception as exc:
-            logger.error("slides_upload_request_failed slug=%s request_id=%s err=%s", slug, request_id, exc)
-            if state.daemon_ws is ws:
-                state.daemon_ws = None
-            return False
-
-
-async def _wait_for_slide_upload(slug: str) -> Path:
-    timeout_s = _on_demand_timeout_seconds()
-    stale_s = _on_demand_stale_seconds()
-    now = datetime.now(timezone.utc)
-    _cleanup_upload_states(now)
-
-    path = _resolve_slide_path(slug)
-    if path is not None:
-        state.slides_uploads[slug] = {
-            "status": "uploaded",
-            "started_at": now,
-            "updated_at": now,
-            "request_id": None,
-            "last_error": None,
-        }
-        return path
-
-    should_send = False
-    request_id = None
-    lock = _upload_lock(slug)
-    async with lock:
-        now = datetime.now(timezone.utc)
-        entry = state.slides_uploads.get(slug)
-        if entry and entry.get("status") == "uploading" and isinstance(entry.get("started_at"), datetime):
-            age = (now - entry["started_at"]).total_seconds()
-            if age > stale_s:
-                logger.warning("slides_upload_stale_retrigger slug=%s age=%.1fs", slug, age)
-                should_send = True
-            else:
-                logger.info("slides_upload_wait slug=%s status=uploading age=%.1fs", slug, age)
-        elif not entry or entry.get("status") != "uploaded":
-            should_send = True
-
-        if should_send:
-            request_id = uuid.uuid4().hex
-            event = asyncio.Event()
-            _upload_events[slug] = event
-            state.slides_uploads[slug] = {
-                "status": "uploading",
-                "started_at": now,
-                "updated_at": now,
-                "request_id": request_id,
-                "last_error": None,
-            }
-
-    if should_send and request_id:
-        sent = await _send_upload_request_to_daemon(slug, request_id, timeout_s)
-        if not sent:
-            async with lock:
-                current = state.slides_uploads.get(slug)
-                if current and current.get("request_id") == request_id:
-                    current["status"] = "failed"
-                    current["updated_at"] = datetime.now(timezone.utc)
-                    current["last_error"] = "daemon unavailable"
-                _upload_event(slug).set()
-            raise HTTPException(status_code=503, detail="Slides service temporarily unavailable.")
-
-    event = _upload_event(slug)
-    try:
-        await asyncio.wait_for(event.wait(), timeout=timeout_s)
-    except asyncio.TimeoutError:
-        async with lock:
-            current = state.slides_uploads.get(slug)
-            if current and current.get("status") == "uploading":
-                current["status"] = "failed"
-                current["updated_at"] = datetime.now(timezone.utc)
-                current["last_error"] = "timeout"
-            event.set()
-        logger.error("slides_upload_timeout slug=%s timeout=%.1fs", slug, timeout_s)
-        raise HTTPException(status_code=504, detail="Slide upload timed out. Please retry.")
-
-    path = _resolve_slide_path(slug)
-    if path is None:
-        entry = state.slides_uploads.get(slug, {})
-        detail = "Slides service temporarily unavailable."
-        if entry.get("last_error") == "timeout":
-            detail = "Slide upload timed out. Please retry."
-        raise HTTPException(status_code=503, detail=detail)
-    return path
-
-
-async def register_daemon_upload_result(payload: dict) -> None:
-    slug = str(payload.get("slug") or "").strip()
-    if not slug:
-        return
-    status_value = str(payload.get("status") or "").strip().lower()
-    request_id = str(payload.get("request_id") or "").strip() or None
-    error = str(payload.get("error") or "").strip() or None
-    now = datetime.now(timezone.utc)
-
-    lock = _upload_lock(slug)
-    async with lock:
-        entry = state.slides_uploads.setdefault(slug, {})
-        current_request_id = entry.get("request_id")
-        if request_id and current_request_id and request_id != current_request_id:
-            return
-
-        if status_value == "uploaded":
-            entry["status"] = "uploaded"
-            entry["last_error"] = None
-            logger.info("slides_upload_completed slug=%s request_id=%s", slug, request_id)
-        else:
-            entry["status"] = "failed"
-            entry["last_error"] = error or "upload failed"
-            logger.error("slides_upload_failed slug=%s request_id=%s err=%s", slug, request_id, entry["last_error"])
-        entry["updated_at"] = now
-        entry.setdefault("started_at", now)
-        entry["request_id"] = request_id
-        _upload_event(slug).set()
 
 
 def _slide_etag(path: Path) -> str:
@@ -658,122 +355,6 @@ def _is_not_modified(request: Request, etag: str, path: Path) -> bool:
     return False
 
 
-@router.post("/api/materials/upsert")
-async def upsert_material_file(
-    relative_path: str = Form(...),
-    source_mtime: str | None = Form(default=None),
-    file: UploadFile = File(...),
-):
-    rel = _normalize_relative_material_path(relative_path)
-    body = await file.read()
-    if not body:
-        raise HTTPException(status_code=400, detail="Empty file upload")
-
-    target = _material_target_path(rel)
-    target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_bytes(body)
-    source_updated_at = None
-    parsed_source_mtime = None
-    if source_mtime is not None and source_mtime.strip():
-        try:
-            parsed_source_mtime = float(source_mtime)
-            source_updated_at = datetime.fromtimestamp(parsed_source_mtime, tz=timezone.utc).isoformat()
-        except ValueError:
-            parsed_source_mtime = None
-            source_updated_at = None
-
-    if rel.startswith("slides/") and target.suffix.lower() == ".pdf":
-        slug = _slugify(Path(rel).stem)
-        meta_dir = _local_slides_meta_dir()
-        meta_dir.mkdir(parents=True, exist_ok=True)
-        _local_slide_meta_path(slug).write_text(
-            json.dumps(
-                {
-                    "relative_path": rel,
-                    "source_mtime": parsed_source_mtime,
-                    "source_updated_at": source_updated_at,
-                }
-            ),
-            encoding="utf-8",
-        )
-
-    return {
-        "ok": True,
-        "relative_path": rel,
-        "size": len(body),
-        "updated_at": source_updated_at or datetime.now(timezone.utc).isoformat(),
-    }
-
-
-@router.post("/api/materials/delete")
-async def delete_material_file(body: MaterialsDeleteRequest):
-    rel = _normalize_relative_material_path(body.relative_path)
-    target = _material_target_path(rel)
-    existed = target.exists()
-    if target.exists() and target.is_file():
-        target.unlink()
-    if rel.startswith("slides/") and target.suffix.lower() == ".pdf":
-        slug = _slugify(Path(rel).stem)
-        _local_slide_meta_path(slug).unlink(missing_ok=True)
-
-    # Clean up empty directories up to materials root.
-    root = _server_materials_dir().resolve()
-    parent = target.parent
-    while True:
-        try:
-            parent_resolved = parent.resolve()
-        except Exception:
-            break
-        if parent_resolved == root:
-            break
-        if parent_resolved.exists() and parent_resolved.is_dir() and not any(parent_resolved.iterdir()):
-            parent_resolved.rmdir()
-            parent = parent_resolved.parent
-            continue
-        break
-
-    return {"ok": True, "relative_path": rel, "deleted": bool(existed)}
-
-
-@router.post("/api/slides/upload")
-async def upload_slide_pdf(
-    file: UploadFile = File(...),
-    slug: str | None = Form(default=None),
-    name: str | None = Form(default=None),
-):
-    incoming_name = (file.filename or "slide.pdf").strip()
-    if not incoming_name.lower().endswith(".pdf"):
-        raise HTTPException(status_code=400, detail="Only .pdf files are accepted")
-
-    target_slug = _slugify(slug or Path(incoming_name).stem)
-    body = await file.read()
-    if not body:
-        raise HTTPException(status_code=400, detail="Empty file upload")
-
-    store_dir = _uploaded_slides_dir()
-    store_dir.mkdir(parents=True, exist_ok=True)
-    target_pdf = store_dir / f"{target_slug}.pdf"
-    target_pdf.write_bytes(body)
-
-    display_name = str(name or Path(incoming_name).stem or target_slug).strip()
-    if not _is_displayable_slide_name(display_name):
-        display_name = target_slug
-    meta = {
-        "name": display_name,
-        "updated_at": datetime.now(timezone.utc).isoformat(),
-    }
-    _uploaded_slide_meta_path(target_slug).write_text(json.dumps(meta), encoding="utf-8")
-
-    slide = {
-        "name": display_name,
-        "slug": target_slug,
-        "url": f"/api/slides/file/{target_slug}",
-        "updated_at": meta["updated_at"],
-        "source": "uploaded",
-    }
-    return {"ok": True, "slide": slide}
-
-
 @router.post("/api/slides/current")
 async def set_current_slides(body: SlidesUpdate):
     state.slides_current = {
@@ -804,49 +385,6 @@ async def get_slides_catalog_map():
     return {
         "catalog_file": str(path),
         "entries": _load_catalog_map_entries(path),
-    }
-
-
-@router.get("/api/slides/participant-availability")
-async def get_participant_slides_availability():
-    slides = _collect_participant_slides(include_unavailable_when_daemon_offline=True)
-    entries: list[dict] = []
-    for slide in slides:
-        slug = str(slide.get("slug") or "").strip()
-        raw_name = str(slide.get("name") or "").strip()
-        display_name = _display_name_or_slug(raw_name, slug)
-        path = _resolve_slide_path(slug) if slug else None
-        entries.append({
-            "name": display_name,
-            "slug": slug,
-            "source": slide.get("source"),
-            "url": slide.get("url"),
-            "available_on_server": bool(path is not None and path.exists()),
-            "sync_status": slide.get("sync_status"),
-            "sync_message": slide.get("sync_message"),
-        })
-    return {"entries": entries}
-
-
-@router.get("/api/slides/upload-status/{slug}")
-async def get_slide_upload_status(slug: str):
-    now = datetime.now(timezone.utc)
-    _cleanup_upload_states(now)
-    entry = state.slides_uploads.get(slug)
-    if not entry:
-        return {"slug": slug, "status": "not_uploaded", "started_at": None, "age_seconds": None, "last_error": None}
-    started_at = entry.get("started_at")
-    age_seconds = None
-    if isinstance(started_at, datetime):
-        age_seconds = max(0.0, (now - started_at).total_seconds())
-    return {
-        "slug": slug,
-        "status": entry.get("status", "not_uploaded"),
-        "started_at": started_at.isoformat() if isinstance(started_at, datetime) else None,
-        "age_seconds": age_seconds,
-        "last_error": entry.get("last_error"),
-        "request_id": entry.get("request_id"),
-        "updated_at": entry.get("updated_at").isoformat() if isinstance(entry.get("updated_at"), datetime) else None,
     }
 
 

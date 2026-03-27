@@ -12,7 +12,7 @@ from pydantic import BaseModel
 from core.auth import require_host_auth
 from core.state import state
 from core.messaging import broadcast_state
-from daemon.transcript_query import load_normalized_entries
+from daemon.transcript.query import load_normalized_entries
 
 router = APIRouter()
 

@@ -9,31 +9,38 @@ from unittest.mock import patch, MagicMock
 
 import pytest
 
-import quiz_core
-from quiz_core import (
+import daemon.quiz.generator as quiz_core
+from daemon.config import (
     find_session_folder,
     load_secrets_env,
+    read_session_notes,
+    Config,
+    MAX_CHARS_TO_CLAUDE,
+    MAX_SESSION_NOTES_CHARS,
+)
+from daemon.transcript.loader import (
     _parse_vtt,
     _parse_srt,
     _parse_txt,
-    _parse_raw_response,
-    _validate_quiz,
     _ts_to_seconds,
     load_transcription_files,
     extract_last_n_minutes,
     extract_text_for_time_window,
-    read_session_notes,
-    _request_json,
-    _get_json,
-    post_poll,
-    open_poll,
-    post_status,
+)
+from daemon.quiz.generator import (
+    _parse_raw_response,
+    _validate_quiz,
     generate_quiz,
     refine_quiz,
-    Config,
     print_quiz,
-    search_materials,
 )
+from daemon.http import _request_json, _get_json
+from daemon.quiz.poll_api import post_poll, open_poll, post_status
+from daemon.rag.retriever import search_materials
+
+# Patch quiz_core module to expose needed attributes for tests
+quiz_core.MAX_CHARS_TO_CLAUDE = MAX_CHARS_TO_CLAUDE
+quiz_core.MAX_SESSION_NOTES_CHARS = MAX_SESSION_NOTES_CHARS
 
 
 # ── Helpers ───────────────────────────────────────────────────────────
@@ -403,7 +410,7 @@ class TestPrintQuiz:
 # ── HTTP helpers ──────────────────────────────────────────────────────
 
 class TestRequestJson:
-    @patch("quiz_core.urllib.request.urlopen")
+    @patch("daemon.http.urllib.request.urlopen")
     def test_success(self, mock_urlopen):
         mock_resp = MagicMock()
         mock_resp.read.return_value = b'{"ok": true}'
@@ -413,27 +420,27 @@ class TestRequestJson:
         result = _request_json("http://test/api", {"data": 1}, username="u", password="p")
         assert result == {"ok": True}
 
-    @patch("quiz_core.urllib.request.urlopen")
+    @patch("daemon.http.urllib.request.urlopen")
     def test_http_error(self, mock_urlopen):
         import urllib.error
         mock_urlopen.side_effect = urllib.error.HTTPError("http://test", 401, "Unauthorized", {}, None)
         with pytest.raises(RuntimeError, match="401"):
             _request_json("http://test/api", {})
 
-    @patch("quiz_core.urllib.request.urlopen")
+    @patch("daemon.http.urllib.request.urlopen")
     def test_timeout(self, mock_urlopen):
         mock_urlopen.side_effect = TimeoutError()
         with pytest.raises(RuntimeError, match="timed out"):
             _request_json("http://test/api", {})
 
-    @patch("quiz_core.urllib.request.urlopen")
+    @patch("daemon.http.urllib.request.urlopen")
     def test_url_error(self, mock_urlopen):
         import urllib.error
         mock_urlopen.side_effect = urllib.error.URLError("Connection refused")
         with pytest.raises(RuntimeError, match="Cannot reach"):
             _request_json("http://test/api", {})
 
-    @patch("quiz_core.urllib.request.urlopen")
+    @patch("daemon.http.urllib.request.urlopen")
     def test_invalid_json_response(self, mock_urlopen):
         mock_resp = MagicMock()
         mock_resp.read.return_value = b"not json"
@@ -445,7 +452,7 @@ class TestRequestJson:
 
 
 class TestGetJson:
-    @patch("quiz_core.urllib.request.urlopen")
+    @patch("daemon.http.urllib.request.urlopen")
     def test_success(self, mock_urlopen):
         mock_resp = MagicMock()
         mock_resp.read.return_value = b'{"status": "ok"}'
@@ -455,7 +462,7 @@ class TestGetJson:
         result = _get_json("http://test/api", username="u", password="p")
         assert result == {"status": "ok"}
 
-    @patch("quiz_core.urllib.request.urlopen")
+    @patch("daemon.http.urllib.request.urlopen")
     def test_http_error(self, mock_urlopen):
         import urllib.error
         mock_urlopen.side_effect = urllib.error.HTTPError("http://test", 500, "ISE", {}, None)
@@ -468,8 +475,8 @@ class TestGetJson:
 class TestSearchMaterials:
     def test_fallback_when_no_rag(self):
         with patch.dict("sys.modules", {"daemon.rag": None}):
-            with patch("quiz_core.search_materials") as mock_sm:
-                mock_sm.side_effect = quiz_core.search_materials.__wrapped__ if hasattr(quiz_core.search_materials, '__wrapped__') else None
+            with patch("daemon.rag.retriever.search_materials") as mock_sm:
+                mock_sm.side_effect = search_materials.__wrapped__ if hasattr(search_materials, '__wrapped__') else None
         # The actual function tries dynamic import
         results = search_materials("test")
         assert isinstance(results, list)
@@ -490,7 +497,7 @@ class TestGenerateQuiz:
         mock_block.text = quiz_json
         mock_response.content = [mock_block]
 
-        with patch("quiz_core.create_message") as mock_create:
+        with patch("daemon.quiz.generator.create_message") as mock_create:
             mock_create.return_value = mock_response
             result = generate_quiz("some transcript", cfg)
             assert result["question"] == "Q?"
@@ -516,16 +523,16 @@ class TestGenerateQuiz:
         resp2.stop_reason = "end_turn"
         resp2.content = [text_block]
 
-        with patch("quiz_core.create_message") as mock_create:
+        with patch("daemon.quiz.generator.create_message") as mock_create:
             mock_create.side_effect = [resp1, resp2]
-            with patch("quiz_core.search_materials", return_value=[{"content": "test"}]):
+            with patch("daemon.rag.retriever.search_materials", return_value=[{"content": "test"}]):
                 result = generate_quiz("transcript", cfg)
                 assert result["question"] == "Q?"
 
     def test_api_error(self, tmp_path):
         import anthropic
         cfg = _make_config(tmp_path)
-        with patch("quiz_core.create_message") as mock_create:
+        with patch("daemon.quiz.generator.create_message") as mock_create:
             mock_create.side_effect = anthropic.APIError(
                 message="Test error", request=MagicMock(), body=None
             )
@@ -540,7 +547,7 @@ class TestGenerateQuiz:
         mock_block.type = "text"
         mock_block.text = "not json at all"
         mock_response.content = [mock_block]
-        with patch("quiz_core.create_message") as mock_create:
+        with patch("daemon.quiz.generator.create_message") as mock_create:
             mock_create.return_value = mock_response
             with pytest.raises(RuntimeError, match="invalid JSON"):
                 generate_quiz("text", cfg)
@@ -557,7 +564,7 @@ class TestRefineQuiz:
         updated = '{"question": "Q?", "options": ["A", "New B", "C"], "correct_indices": [1]}'
         mock_response = MagicMock()
         mock_response.content = [MagicMock(text=updated)]
-        with patch("quiz_core.create_message") as mock_create:
+        with patch("daemon.quiz.generator.create_message") as mock_create:
             mock_create.return_value = mock_response
             result = refine_quiz(self._base_quiz(), "opt1", "transcript", cfg)
             assert result["options"][1] == "New B"
@@ -567,7 +574,7 @@ class TestRefineQuiz:
         updated = '{"question": "New Q?", "options": ["X", "Y"], "correct_indices": [0]}'
         mock_response = MagicMock()
         mock_response.content = [MagicMock(text=updated)]
-        with patch("quiz_core.create_message") as mock_create:
+        with patch("daemon.quiz.generator.create_message") as mock_create:
             mock_create.return_value = mock_response
             result = refine_quiz(self._base_quiz(), "question", "transcript", cfg)
             assert result["question"] == "New Q?"
@@ -576,7 +583,7 @@ class TestRefineQuiz:
         cfg = _make_config(tmp_path)
         mock_response = MagicMock()
         mock_response.content = [MagicMock(text="garbage")]
-        with patch("quiz_core.create_message") as mock_create:
+        with patch("daemon.quiz.generator.create_message") as mock_create:
             mock_create.return_value = mock_response
             result = refine_quiz(self._base_quiz(), "opt0", "transcript", cfg)
             assert result == self._base_quiz()  # fallback to original
@@ -584,7 +591,7 @@ class TestRefineQuiz:
     def test_refine_api_error(self, tmp_path):
         import anthropic
         cfg = _make_config(tmp_path)
-        with patch("quiz_core.create_message") as mock_create:
+        with patch("daemon.quiz.generator.create_message") as mock_create:
             mock_create.side_effect = anthropic.APIError(
                 message="err", request=MagicMock(), body=None
             )
@@ -595,7 +602,7 @@ class TestRefineQuiz:
 # ── post_poll / open_poll / post_status ───────────────────────────────
 
 class TestServerHelpers:
-    @patch("quiz_core._post_json")
+    @patch("daemon.quiz.poll_api._post_json")
     def test_post_poll(self, mock_post, tmp_path):
         cfg = _make_config(tmp_path)
         quiz = {"question": "Q?", "options": ["A", "B"], "correct_indices": [0]}
@@ -605,7 +612,7 @@ class TestServerHelpers:
         assert payload["question"] == "Q?"
         assert payload["multi"] is False
 
-    @patch("quiz_core._post_json")
+    @patch("daemon.quiz.poll_api._post_json")
     def test_post_poll_multi(self, mock_post, tmp_path):
         cfg = _make_config(tmp_path)
         quiz = {"question": "Q?", "options": ["A", "B", "C"], "correct_indices": [0, 2]}
@@ -613,7 +620,7 @@ class TestServerHelpers:
         payload = mock_post.call_args[0][1]
         assert payload["multi"] is True
 
-    @patch("quiz_core._post_json")
+    @patch("daemon.quiz.poll_api._post_json")
     def test_post_poll_with_source(self, mock_post, tmp_path):
         cfg = _make_config(tmp_path)
         quiz = {"question": "Q?", "options": ["A", "B"], "correct_indices": [0], "source": "Book", "page": "42"}
@@ -621,7 +628,7 @@ class TestServerHelpers:
         payload = mock_post.call_args[0][1]
         assert "Source: Book" in payload["question"]
 
-    @patch("quiz_core._put_json")
+    @patch("daemon.quiz.poll_api._put_json")
     def test_open_poll(self, mock_put, tmp_path):
         cfg = _make_config(tmp_path)
         open_poll(cfg)
@@ -629,20 +636,20 @@ class TestServerHelpers:
         payload = mock_put.call_args[0][1]
         assert payload["open"] is True
 
-    @patch("quiz_core._post_json")
+    @patch("daemon.quiz.poll_api._post_json")
     def test_post_status(self, mock_post, tmp_path):
         cfg = _make_config(tmp_path)
         post_status("generating", "Working...", cfg)
         mock_post.assert_called_once()
 
-    @patch("quiz_core._post_json")
+    @patch("daemon.quiz.poll_api._post_json")
     def test_post_status_with_session(self, mock_post, tmp_path):
         cfg = _make_config(tmp_path)
         post_status("idle", "Ready", cfg, session_folder="/path", session_notes="notes.txt")
         payload = mock_post.call_args[0][1]
         assert payload["session_folder"] == "/path"
 
-    @patch("quiz_core._post_json")
+    @patch("daemon.quiz.poll_api._post_json")
     def test_post_status_with_slides(self, mock_post, tmp_path):
         cfg = _make_config(tmp_path)
         post_status("idle", "Ready", cfg, slides=[{"name": "Deck", "url": "https://cdn.example.com/deck.pdf"}])
@@ -650,7 +657,7 @@ class TestServerHelpers:
         assert "slides" in payload
         assert payload["slides"][0]["name"] == "Deck"
 
-    @patch("quiz_core._post_json")
+    @patch("daemon.quiz.poll_api._post_json")
     def test_post_status_error_swallowed(self, mock_post, tmp_path):
         cfg = _make_config(tmp_path)
         mock_post.side_effect = RuntimeError("connection refused")

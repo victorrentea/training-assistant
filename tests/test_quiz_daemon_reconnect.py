@@ -1,7 +1,9 @@
 from pathlib import Path
 
-import training_daemon
-from quiz_core import Config
+import daemon.__main__ as training_daemon
+import daemon.lock as _daemon_lock
+import daemon.materials.ws_runner as _ws_runner_mod
+from daemon.config import Config
 
 
 class _NoopTimestampAppender:
@@ -16,10 +18,10 @@ class _NoopTimestampAppender:
 
 
 def test_daemon_logs_disconnect_once_then_reconnect(tmp_path: Path, monkeypatch, capsys):
-    monkeypatch.setattr(training_daemon, "_check_and_acquire_lock", lambda: None)
-    monkeypatch.setattr(training_daemon, "_write_lock", lambda: None)
+    monkeypatch.setattr(training_daemon, "check_and_acquire_lock", lambda: None)
+    monkeypatch.setattr(training_daemon, "write_lock", lambda: None)
     monkeypatch.setattr(training_daemon, "TranscriptTimestampAppender", _NoopTimestampAppender)
-    monkeypatch.setattr(training_daemon.signal, "signal", lambda *args, **kwargs: None)
+    monkeypatch.setattr(_daemon_lock.signal, "signal", lambda *args, **kwargs: None)
     monkeypatch.setattr(training_daemon, "DAEMON_POLL_INTERVAL", 0)
     monkeypatch.setattr(training_daemon.time, "sleep", lambda *_: None)
     monkeypatch.setenv("MATERIALS_FOLDER", str(tmp_path / "missing-materials"))
@@ -80,8 +82,8 @@ def test_slides_ws_connect_uses_additional_headers_when_supported(monkeypatch):
         calls.append({"url": url, **kwargs})
         return _DummyConn()
 
-    monkeypatch.setattr(training_daemon, "ws_connect", _fake_connect)
-    conn = training_daemon.SlidesOnDemandWsRunner._connect("wss://example/ws/daemon", {"Authorization": "Basic abc"})
+    monkeypatch.setattr(_ws_runner_mod, "ws_connect", _fake_connect)
+    conn = _ws_runner_mod.SlidesOnDemandWsRunner._connect("wss://example/ws/daemon", {"Authorization": "Basic abc"})
     assert isinstance(conn, _DummyConn)
     assert len(calls) == 1
     assert calls[0]["additional_headers"] == {"Authorization": "Basic abc"}
@@ -103,8 +105,8 @@ def test_slides_ws_connect_falls_back_to_extra_headers(monkeypatch):
             raise TypeError("connect() got an unexpected keyword argument 'additional_headers'")
         return _DummyConn()
 
-    monkeypatch.setattr(training_daemon, "ws_connect", _fake_connect)
-    conn = training_daemon.SlidesOnDemandWsRunner._connect("wss://example/ws/daemon", {"Authorization": "Basic abc"})
+    monkeypatch.setattr(_ws_runner_mod, "ws_connect", _fake_connect)
+    conn = _ws_runner_mod.SlidesOnDemandWsRunner._connect("wss://example/ws/daemon", {"Authorization": "Basic abc"})
     assert isinstance(conn, _DummyConn)
     assert len(calls) == 2
     assert calls[1]["extra_headers"] == {"Authorization": "Basic abc"}
@@ -119,7 +121,7 @@ def test_slides_runner_candidate_dirs_from_env_and_materials(tmp_path: Path, mon
     monkeypatch.setenv("TRAINING_ASSISTANT_SLIDES_DIR", str(slides_env))
     monkeypatch.setenv("PPTX_PUBLISH_DIR", str(publish_env))
     monkeypatch.setenv("MATERIALS_FOLDER", str(materials))
-    monkeypatch.setattr(training_daemon, "_resolve_materials_folder", lambda: materials)
+    monkeypatch.setattr(_ws_runner_mod, "resolve_materials_folder", lambda: materials)
 
     cfg = Config(
         server_url="http://example.test",
@@ -131,7 +133,7 @@ def test_slides_runner_candidate_dirs_from_env_and_materials(tmp_path: Path, mon
         model="dummy",
         dry_run=False,
     )
-    runner = training_daemon.SlidesOnDemandWsRunner(cfg)
+    runner = _ws_runner_mod.SlidesOnDemandWsRunner(cfg)
     dirs = runner._candidate_slides_dirs()
     paths = {str(p) for p in dirs}
     assert str(slides_env) in paths

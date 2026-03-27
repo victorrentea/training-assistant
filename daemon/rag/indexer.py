@@ -11,7 +11,7 @@ from daemon import log
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
-from daemon.rag import _get_collection, _get_embedder, COLLECTION_NAME
+from daemon.rag.retriever import _get_collection, _get_embedder, COLLECTION_NAME
 
 SUPPORTED_EXTENSIONS = {".pdf", ".epub", ".mobi", ".txt", ".md", ".html"}
 CHUNK_SIZE = 2000        # ~500 tokens at ~4 chars/token
