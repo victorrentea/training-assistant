@@ -63,7 +63,7 @@ h1 { display: none; }
 
 /* ── Main screen ── */
 #main-screen {
-  width: min(900px, calc(100vw - 1rem));
+  width: min(900px, calc(100vw - var(--slides-overlay-width) - 1rem));
   max-width: 900px;
   display: none;
   height: 100vh;
@@ -71,7 +71,7 @@ h1 { display: none; }
   padding: .28rem .45rem 0;
   box-sizing: border-box;
   overflow: hidden;
-  margin: 0 auto;
+  margin: 0 var(--slides-overlay-width) 0 auto;
 }
 
 #content {
