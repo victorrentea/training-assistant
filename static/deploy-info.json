@@ -1,7 +1,7 @@
 {
-  "sha": "4c5be56cbb475b863401451092f8c2a86a672f35",
-  "timestamp": "2026-03-27 18:35",
+  "sha": "7d960ac115919849db99df5b031529b537d2b96d",
+  "timestamp": "2026-03-27 18:38",
   "changelog": [
-    "feat: remember button bar position per monitor layout"
+    "feat: restyle slides overlay controls as round accent bubbles with close button"
   ]
 }
