@@ -1478,42 +1478,6 @@ h1 { display: none; }
   background: var(--border);
 }
 
-/* Desktop: emoji rises like a cloud, drifting left-right, growing and fading */
-.emoji-float {
-  position: fixed;
-  font-size: 2.5rem;
-  z-index: 10000;
-  pointer-events: none;
-  opacity: 1;
-  transform: scale(1);
-  transition: none;
-}
-
-.emoji-float-active {
-  animation: emoji-rise 2.5s ease-out forwards, emoji-drift 1.2s ease-in-out infinite alternate;
-}
-@keyframes emoji-rise {
-  0% {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-  }
-  30% {
-    opacity: 0.9;
-    transform: scale(1.6) translateY(-120px);
-  }
-  60% {
-    opacity: 0.5;
-    transform: scale(1.9) translateY(-280px);
-  }
-  100% {
-    opacity: 0;
-    transform: scale(2.1) translateY(-450px);
-  }
-}
-@keyframes emoji-drift {
-  0%   { margin-left: -20px; }
-  100% { margin-left: 20px; }
-}
 
 /* Mobile: big shaking emoji in center */
 .emoji-shake-overlay {
