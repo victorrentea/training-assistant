@@ -700,8 +700,8 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
 .result-row { margin-bottom: .75rem; border-radius: 6px; padding: .1rem .3rem; }
 .result-row.markable { cursor: pointer; }
 .result-row.markable:hover { background: var(--surface2); }
-.result-row.correct { background: #48cfad18; }
-.result-row.correct .result-label span:first-child { color: var(--accent2); font-weight: 600; }
+.result-row.correct { background: #48cfad18; border: 1px solid var(--accent2); }
+.result-row.correct .result-label span:first-child { color: var(--accent2); }
 .result-label {
   display: flex; justify-content: space-between;
   font-size: 1.5rem; margin-bottom: .3rem;
