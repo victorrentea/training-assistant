@@ -829,29 +829,56 @@
     }
   }
 
+  // Apply a new PDF.js scale and restore the scroll position afterwards so
+  // the viewer doesn't jump up/down during re-render.
+  function _pdfZoomAndRestore(newScale) {
+    if (!slidesPdfViewer) return;
+    const container = document.getElementById('slides-pdf-container');
+    _suppressSlidesZoom(1000);
+    const scrollRatio = container && container.scrollHeight > 0
+      ? container.scrollTop / container.scrollHeight
+      : 0;
+    slidesPdfViewer.currentScale = newScale;
+    // Restore after PDF.js finishes re-rendering (two rAFs + 200ms safety net).
+    const restore = () => {
+      if (container && container.scrollHeight > 0) {
+        container.scrollTop = scrollRatio * container.scrollHeight;
+      }
+    };
+    requestAnimationFrame(() => requestAnimationFrame(restore));
+    setTimeout(restore, 200);
+  }
+
+  let _slidesWheelZoomAccum = 1.0;
+  let _slidesWheelZoomTimer = null;
+
   function _bindSlidesZoomButtons() {
     const zoomIn = document.getElementById('slides-zoom-in');
     const zoomOut = document.getElementById('slides-zoom-out');
     if (zoomIn) zoomIn.addEventListener('click', () => {
       if (slidesViewMode !== 'pdfjs' || !slidesPdfViewer) return;
-      _suppressSlidesZoom(1000);
-      slidesPdfViewer.currentScale = Math.min(slidesPdfViewer.currentScale * 1.25, 10);
+      _pdfZoomAndRestore(Math.min(slidesPdfViewer.currentScale * 1.25, 10));
     });
     if (zoomOut) zoomOut.addEventListener('click', () => {
       if (slidesViewMode !== 'pdfjs' || !slidesPdfViewer) return;
-      _suppressSlidesZoom(1000);
-      slidesPdfViewer.currentScale = Math.max(slidesPdfViewer.currentScale / 1.25, 0.1);
+      _pdfZoomAndRestore(Math.max(slidesPdfViewer.currentScale / 1.25, 0.1));
     });
 
-    // Ctrl+wheel zoom for PDF.js mode
+    // Ctrl+wheel zoom for PDF.js mode — debounced so scale applies once per
+    // gesture (prevents mid-gesture re-render scroll jumps).
     const pdfContainer = document.getElementById('slides-pdf-container');
     if (pdfContainer) {
       pdfContainer.addEventListener('wheel', (e) => {
         if (!e.ctrlKey || slidesViewMode !== 'pdfjs' || !slidesPdfViewer) return;
         e.preventDefault();
-        _suppressSlidesZoom(1000);
-        const factor = e.deltaY < 0 ? 1.1 : 1 / 1.1;
-        slidesPdfViewer.currentScale = Math.max(0.1, Math.min(10, slidesPdfViewer.currentScale * factor));
+        _suppressSlidesZoom(1200);
+        _slidesWheelZoomAccum *= e.deltaY < 0 ? 1.1 : 1 / 1.1;
+        clearTimeout(_slidesWheelZoomTimer);
+        _slidesWheelZoomTimer = setTimeout(() => {
+          const newScale = Math.max(0.1, Math.min(10, slidesPdfViewer.currentScale * _slidesWheelZoomAccum));
+          _slidesWheelZoomAccum = 1.0;
+          _pdfZoomAndRestore(newScale);
+        }, 80);
       }, { passive: false });
     }
 
