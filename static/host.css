@@ -366,7 +366,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #fff;
+  background: var(--bg);
   border-radius: 10px;
   overflow: hidden;
 }
