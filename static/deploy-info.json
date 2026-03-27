@@ -1,7 +1,7 @@
 {
-  "sha": "87cfa7828f0b8fc6a3e1dc6e33ae86f1d345aa53",
-  "timestamp": "2026-03-27 07:01",
+  "sha": "20487bb7522e7f8f9b2aa68e61f8eb205fe30560",
+  "timestamp": "2026-03-27 07:02",
   "changelog": [
-    "fix: remove debug 'same slide' print log"
+    "chore: add LaunchAgent for auto-start at login"
   ]
 }
