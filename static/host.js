@@ -298,8 +298,8 @@
     el.textContent = emoji;
     document.body.appendChild(el);
 
-    // Screen emoji: spawn from center; others: spawn from bottom-right corner
-    const startX = isScreen ? window.innerWidth / 2 : window.innerWidth - 120;
+    // Screen emoji: spawn from center; others: spawn from bottom-left corner (matches desktop overlay)
+    const startX = isScreen ? window.innerWidth / 2 : 100;
     const startY = isScreen ? window.innerHeight / 2 : window.innerHeight - 80;
     el.style.left = startX + 'px';
     el.style.top = startY + 'px';
