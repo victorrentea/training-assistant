@@ -111,6 +111,7 @@
   let slidesPdfLoadingTask = null;
   let slidesAutoScrollTimer = null;
   let slidesViewMode = 'pdfjs';
+  let slidesNativeZoom = 1.0;
   let slidesFollowTrainerEnabled = true;
   let slidesFollowUncheckSuppressedUntil = 0;
   let hostSlidesCurrent = null;   // what host is showing NOW
@@ -785,6 +786,7 @@
     const nextMode = mode === 'native' ? 'native' : 'pdfjs';
     if (slidesViewMode === nextMode) return;
     slidesViewMode = nextMode;
+    _resetNativeZoom();
     _setStoredSlidesViewMode(nextMode);
     _renderSlidesViewModeToggle();
 
@@ -799,6 +801,15 @@
     }
   }
 
+  function _resetNativeZoom() {
+    slidesNativeZoom = 1.0;
+    const nativeFrame = document.getElementById('slides-native-frame');
+    if (nativeFrame) {
+      nativeFrame.style.transform = '';
+      nativeFrame.style.transformOrigin = '';
+    }
+  }
+
   function _bindSlidesZoomButtons() {
     const zoomIn = document.getElementById('slides-zoom-in');
     const zoomOut = document.getElementById('slides-zoom-out');
@@ -810,6 +821,38 @@
       if (slidesViewMode !== 'pdfjs' || !slidesPdfViewer) return;
       slidesPdfViewer.currentScale = Math.max(slidesPdfViewer.currentScale / 1.25, 0.1);
     });
+
+    // Ctrl+wheel zoom for PDF.js mode
+    const pdfContainer = document.getElementById('slides-pdf-container');
+    if (pdfContainer) {
+      pdfContainer.addEventListener('wheel', (e) => {
+        if (!e.ctrlKey || slidesViewMode !== 'pdfjs' || !slidesPdfViewer) return;
+        e.preventDefault();
+        const factor = e.deltaY < 0 ? 1.1 : 1 / 1.1;
+        slidesPdfViewer.currentScale = Math.max(0.1, Math.min(10, slidesPdfViewer.currentScale * factor));
+      }, { passive: false });
+    }
+
+    // Native mode: overlay captures Ctrl+wheel for smooth CSS transform zoom.
+    // Toggle pointer-events on Ctrl keydown/keyup so normal interactions pass through.
+    const nativeOverlay = document.getElementById('slides-native-overlay');
+    const nativeFrame = document.getElementById('slides-native-frame');
+    if (nativeOverlay && nativeFrame) {
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Control') nativeOverlay.style.pointerEvents = 'all';
+      });
+      document.addEventListener('keyup', (e) => {
+        if (e.key === 'Control') nativeOverlay.style.pointerEvents = '';
+      });
+      nativeOverlay.addEventListener('wheel', (e) => {
+        if (!e.ctrlKey) return;
+        e.preventDefault();
+        const factor = e.deltaY < 0 ? 1.1 : 1 / 1.1;
+        slidesNativeZoom = Math.max(0.25, Math.min(4, slidesNativeZoom * factor));
+        nativeFrame.style.transform = `scale(${slidesNativeZoom})`;
+        nativeFrame.style.transformOrigin = 'top center';
+      }, { passive: false });
+    }
   }
 
   function _bindSlidesViewModeToggle() {
