@@ -1,7 +1,7 @@
 {
-  "sha": "96f780f955009521c6e80405cafd8c73abc0af29",
-  "timestamp": "2026-03-27 18:39",
+  "sha": "6e335b33c43e4bcaeb8ecb457c6d006fbe489253",
+  "timestamp": "2026-03-27 18:42",
   "changelog": [
-    "fix: make 'Try download' a real link when PDF.js fails to load"
+    "fix: overlay exits when parent start.sh dies (ppid monitoring)"
   ]
 }
