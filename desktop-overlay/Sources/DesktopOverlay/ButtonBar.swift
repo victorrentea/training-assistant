@@ -57,7 +57,8 @@ class ButtonBar: NSPanel {
     private let edgeTriggerDistance: CGFloat = 80
     private let onBarInset: CGFloat = 20
 
-    init(buttons: [ButtonDef], screen: NSScreen, singleScreen: Bool) {
+    init(buttons: [ButtonDef], screen: NSScreen, singleScreen: Bool,
+         savedOrigin: NSPoint? = nil, onPositionChanged: ((NSPoint) -> Void)? = nil) {
         self.isSingleScreen = singleScreen
 
         // Single-screen panel is 20% smaller to stay unobtrusive
@@ -83,9 +84,10 @@ class ButtonBar: NSPanel {
             let barY = max(sf.minY + 12, min(preferredY, sf.maxY - barHeight - 12))
             initialFrame = NSRect(x: sf.maxX, y: barY, width: barWidth, height: barHeight)
         } else {
-            // Centered at the bottom of the target screen
-            let x = sf.midX - barWidth / 2
-            initialFrame = NSRect(x: x, y: sf.minY, width: barWidth, height: barHeight)
+            // Multi-screen: use saved position or default to bottom-center of target screen
+            let x = savedOrigin?.x ?? (sf.midX - barWidth / 2)
+            let y = savedOrigin?.y ?? sf.minY
+            initialFrame = NSRect(x: x, y: y, width: barWidth, height: barHeight)
         }
 
         super.init(
@@ -104,7 +106,8 @@ class ButtonBar: NSPanel {
         becomesKeyOnlyIfNeeded = true
 
         let container = ButtonBarContainer(frame: NSRect(x: 0, y: 0, width: barWidth, height: barHeight),
-                                           dragEnabled: !singleScreen)
+                                           dragEnabled: !singleScreen,
+                                           onDragEnded: onPositionChanged)
         container.wantsLayer = true
         container.layer?.backgroundColor = NSColor(white: 0.15, alpha: 0.85).cgColor
         container.layer?.cornerRadius = min(barWidth, barHeight) / 2
@@ -243,9 +246,11 @@ class ButtonBar: NSPanel {
 private class ButtonBarContainer: NSView {
     private var dragOrigin: NSPoint?
     private let dragEnabled: Bool
+    private let onDragEnded: ((NSPoint) -> Void)?
 
-    init(frame: NSRect, dragEnabled: Bool) {
+    init(frame: NSRect, dragEnabled: Bool, onDragEnded: ((NSPoint) -> Void)? = nil) {
         self.dragEnabled = dragEnabled
+        self.onDragEnded = onDragEnded
         super.init(frame: frame)
     }
 
@@ -280,8 +285,12 @@ private class ButtonBarContainer: NSView {
     }
 
     override func mouseUp(with event: NSEvent) {
+        let hadDrag = dragOrigin != nil
         dragOrigin = nil
         super.mouseUp(with: event)
+        if hadDrag, let origin = window?.frame.origin {
+            onDragEnded?(origin)
+        }
     }
 }
 
