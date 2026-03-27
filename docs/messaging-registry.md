@@ -79,7 +79,7 @@ Each `state_builder.py` file calls `register_state_builder` at module level (bot
 ```python
 # features/poll/state_builder.py
 
-from state import state
+from core.state import state
 
 def build_for_participant(pid: str) -> dict:
     return {
@@ -98,7 +98,7 @@ def build_for_host() -> dict:
         # ...
     }
 
-from messaging import register_state_builder
+from core.messaging import register_state_builder
 register_state_builder("poll", build_for_participant, build_for_host)
 ```
 
@@ -111,7 +111,7 @@ after which the registry is fully populated.
 1. Create `features/myfeature/state_builder.py` with:
    - `build_for_participant(pid: str) -> dict` — keys/values for participant WebSocket state
    - `build_for_host() -> dict` — keys/values for host WebSocket state
-   - At the bottom: `from messaging import register_state_builder; register_state_builder("myfeature", build_for_participant, build_for_host)`
+   - At the bottom: `from core.messaging import register_state_builder; register_state_builder("myfeature", build_for_participant, build_for_host)`
 
 2. Import the new state_builder somewhere in the startup path so the registration fires
    (e.g. in the feature's `__init__.py`, or directly in `main.py`).
@@ -140,7 +140,4 @@ duplicate keys across builders.
 
 ## Import Path Note
 
-During Phase 4, all state_builder files use `from state import state` and
-`from messaging import register_state_builder` (original paths). Phase 6 will update these
-to `from core.state import state` and `from core.messaging import register_state_builder`
-once all imports are consolidated.
+All state_builder files use `from core.state import state` and `from core.messaging import register_state_builder` (updated in Phase 6).

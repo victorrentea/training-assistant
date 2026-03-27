@@ -1,3 +1,5 @@
+' DEPRECATED: replaced by c3_backend.puml, c3_host_daemon.puml, c3_desktop_overlay.puml
+
 @startuml C3_Components
 !include <C4/C4_Component>
 

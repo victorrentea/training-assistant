@@ -114,53 +114,59 @@ Build a **self-hosted, real-time audience interaction tool** for use during onli
 
 ```
 training-assistant/
-├── main.py                  ← FastAPI application (entry point, mounts routers, POST /api/mode)
-├── state.py                 ← AppState singleton (all dicts UUID-keyed)
-├── messaging.py             ← WebSocket broadcast & personalized state serialization
-├── auth.py                  ← HTTP Basic Auth middleware (~/.training-assistants-secrets.env or env vars)
-├── names.py                 ← Character name pool for conference mode (251 names from movies/games)
-├── metrics.py               ← Prometheus custom metrics (connections, votes, Q&A)
-├── backend_version.py       ← Version detection from static/version.js (cached by mtime)
-├── quiz_core.py             ← Quiz generation core logic (used by training_daemon)
-├── index_materials.py       ← Project file indexing for RAG
-├── training_daemon.py       ← Daemon orchestration on trainer's Mac (quiz, debate AI, summary, timestamps)
-├── routers/
-│   ├── ws.py                ← WebSocket endpoint /ws/{uuid} (all real-time messages)
-│   ├── poll.py              ← Poll lifecycle (create, open/close, correct, timer)
-│   ├── scores.py            ← Score reset endpoint
-│   ├── quiz.py              ← Quiz request/status/preview/refine (daemon integration)
-│   ├── summary.py           ← Summary, notes, transcript-status, token-usage endpoints
-│   ├── pages.py             ← HTML page serving (/, /host, /notes)
-│   ├── wordcloud.py         ← Word cloud topic/clear endpoints
-│   ├── qa.py                ← Q&A question editing (text, delete, answered, clear)
-│   ├── activity.py          ← Activity type switching (none|poll|wordcloud|qa|debate|codereview)
-│   ├── codereview.py        ← Code review with smart paste (snippet, line selection, confirm)
-│   ├── debate.py            ← Debate lifecycle (10 endpoints, AI cleanup via daemon)
-│   └── leaderboard.py       ← Leaderboard show/hide
-├── daemon/
-│   ├── llm_adapter.py       ← Claude API wrapper with token counting & cost tracking
-│   ├── summarizer.py        ← Live transcript summarization
-│   ├── debate_ai.py         ← AI cleanup of debate arguments
-│   ├── transcript_state.py  ← Transcript line counter for progress tracking
-│   ├── transcript_timestamps.py ← Auto-append timestamps to transcript (~3s interval)
-│   ├── indexer.py            ← Project file indexing for RAG
-│   ├── rag.py                ← Retrieve project context for quiz generation
-│   └── project_files.py     ← Scan & list project files; handle Claude tool calls
+├── main.py                  ← FastAPI application (entry point, mounts all feature routers)
+├── core/                    ← Shared infrastructure
+│   ├── state.py             ← AppState singleton (all dicts UUID-keyed)
+│   ├── messaging.py         ← WebSocket broadcast + state-builder registry
+│   ├── state_builder.py     ← Core participant/host state fields (mode, scores, participants)
+│   ├── auth.py              ← HTTP Basic Auth middleware
+│   ├── names.py             ← Character name pool for conference mode (251 names)
+│   ├── metrics.py           ← Prometheus custom metrics (connections, votes, Q&A)
+│   └── version.py           ← Backend version detection from static/version.js
+├── features/                ← One sub-package per feature; each has router.py + optional state_builder.py
+│   ├── ws/                  ← WebSocket endpoint /ws/{uuid}, /ws/daemon
+│   ├── poll/                ← Poll CRUD, voting, timer, correct answers, scoring
+│   ├── qa/                  ← Q&A moderation (edit, delete, mark answered, clear)
+│   ├── wordcloud/           ← Word cloud topic/clear
+│   ├── codereview/          ← Code review (smart paste, line selection, confirm)
+│   ├── debate/              ← Debate lifecycle (10 endpoints, AI cleanup via daemon)
+│   ├── quiz/                ← Quiz request/status/preview/refine (daemon integration)
+│   ├── summary/             ← Summary, notes, transcript-status, token-usage
+│   ├── leaderboard/         ← Leaderboard show/hide + score reset
+│   ├── slides/              ← Slides navigation, Drive sync, upload/publish
+│   ├── session/             ← Session lifecycle + snapshot/restore for daemon persistence
+│   ├── snapshot/            ← Low-level state serialize/restore (diagnostic)
+│   ├── activity/            ← Activity type switching (none|poll|wordcloud|qa|debate|codereview)
+│   └── pages/               ← HTML page serving (/, /host, /notes)
+├── daemon/                  ← Training daemon (runs on host's Mac)
+│   ├── __main__.py          ← Daemon entry point + orchestrator loop
+│   ├── config.py            ← Env vars and defaults
+│   ├── http.py              ← Shared HTTP helper (Basic Auth headers)
+│   ├── log.py               ← Shared logging format (HH:MM:SS.f PID [name])
+│   ├── session_state.py     ← Session stack management + disk persistence
+│   ├── lock.py              ← PID file lock (single instance)
+│   ├── llm/adapter.py       ← Claude API wrapper with token counting & cost tracking
+│   ├── quiz/                ← Quiz generation: generator.py, history.py, poll_api.py
+│   ├── debate/ai_cleanup.py ← AI deduplication and cleanup of debate arguments
+│   ├── summary/             ← Live transcript summarization: summarizer.py, loop.py
+│   ├── transcript/          ← Transcript processing: normalizer, parser, loader, writer,
+│   │                           timestamps, loop, query, rebuild, session, state
+│   ├── slides/              ← PPTX→PDF: daemon.py, catalog.py, convert.py,
+│   │                           drive_sync.py, upload.py, loop.py
+│   ├── materials/           ← Project file mirroring: mirror.py, ws_runner.py
+│   └── rag/                 ← RAG: indexer.py, retriever.py, project_files.py
 ├── tests/
 │   ├── conftest.py          ← Pytest fixtures (e2e server, browser helpers, cleanup)
-│   ├── pages/               ← Page object models (host_page.py, participant_page.py)
-│   ├── test_main.py         ← API & unit tests
-│   ├── test_e2e*.py         ← E2E browser tests (Playwright)
-│   ├── test_load.py         ← Load tests
-│   └── ...                  ← All other test files
+│   ├── unit/                ← Unit tests (no server required)
+│   ├── integration/         ← Integration tests (local server)
+│   ├── e2e/                 ← E2E browser tests (Playwright)
+│   └── load/                ← Load tests
+├── desktop-overlay/         ← Swift/AppKit emoji overlay (EmojiAnimator, ButtonBar, SoundManager)
 ├── wispr-addons/
-│   ├── clean.py             ← macOS clipboard cleanup daemon (CGEventTap, Claude Haiku AI cleanup, dictation mute + media pause/play)
-│   ├── (uses ~/.training-assistants-secrets.env for ANTHROPIC_API_KEY)
-│   ├── requirements.txt     ← Python deps (anthropic, pyobjc)
-│   └── README.md            ← Usage & configuration docs
-├── dependencies.txt         ← Python dependencies
+│   ├── clean.py             ← macOS clipboard cleanup daemon (CGEventTap, Claude Haiku AI cleanup,
+│   │                           dictation mute + media pause/play)
+│   └── requirements.txt     ← Python deps (anthropic, pyobjc)
 ├── pyproject.toml           ← Python dependencies (used by Railway via uv)
-├── (uses ~/.training-assistants-secrets.env) ← Host panel credentials
 ├── static/
 │   ├── participant.html     ← Participant-facing page
 │   ├── participant.js       ← Participant logic (WS, voting, Q&A, debate, codereview, emoji)
@@ -173,10 +179,17 @@ training-assistant/
 │   ├── version.js           ← Generated at deploy time (not committed)
 │   ├── version-age.js       ← Version age display in corner
 │   ├── version-reload.js    ← Auto-reload on version change
-│   └── work-hours.js        ← Work hours utility
-└── adoc/                    ← Architecture diagrams (PlantUML C4 + sequence)
+│   └── work-hours.js        ← Work hours utility (do not auto-edit)
+├── adoc/                    ← Architecture diagrams (PlantUML C4)
+│   ├── c4_c1_context.puml   ← C1 System Context
+│   ├── c4_c2_containers.puml ← C2 Containers
+│   ├── c3_backend.puml      ← C3 FastAPI backend components
+│   ├── c3_host_daemon.puml  ← C3 Daemon components
+│   └── c3_desktop_overlay.puml ← C3 Desktop overlay + Wispr Addons
+└── docs/
+    └── messaging-registry.md ← Registry pattern architecture doc
 ```
-- For further architectural details, see the adoc folder. 
+- For further architectural details, see the adoc folder.
 ---
 
 ## AppState model

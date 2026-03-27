@@ -1,0 +1,87 @@
+@startuml c3_backend
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+title Backend — C3 Component Diagram
+
+LAYOUT_WITH_LEGEND()
+
+Container_Ext(participant_spa, "Participant SPA", "Vanilla JS in trainee's browser")
+Container_Ext(host_spa, "Host SPA", "Vanilla JS in host's browser")
+Container_Ext(daemon, "Daemon", "Python CLI on host's Mac")
+Container_Ext(emoji_overlay, "Emoji Overlay", "Swift app on host's Mac")
+ContainerDb_Ext(sqlite_db, "SQLite Database", "data/state.db")
+
+Container_Boundary(backend, "FastAPI Backend") {
+
+  Component(core, "core/", "Python package", "Shared infrastructure:\nstate.py (AppState singleton),\nauth.py (HTTP Basic Auth),\nmetrics.py (Prometheus),\nnames.py (conference mode names),\nmessaging.py (registry + broadcast),\nstate_builder.py (core WS state)")
+
+  Component(ws, "features/ws", "FastAPI router", "WebSocket endpoints:\n/ws/{uuid} — participant, host, overlay\n/ws/daemon — daemon heartbeat + slide upload\nDispatches all real-time messages.\nSends personalized state on connect.")
+
+  Component(poll, "features/poll", "FastAPI router", "POST /api/poll\nPUT /api/poll/status\nPUT /api/poll/correct\nPOST /api/poll/timer\nDELETE /api/poll\nGET /api/quiz-md\nGET /api/suggest-name\nGET /api/status\nPOST /api/pending-deploy")
+
+  Component(qa, "features/qa", "FastAPI router", "PUT /api/qa/question/{id}/text\nDELETE /api/qa/question/{id}\nPUT /api/qa/question/{id}/answered\nPOST /api/qa/clear")
+
+  Component(wordcloud, "features/wordcloud", "FastAPI router", "POST /api/wordcloud/topic\nPOST /api/wordcloud/clear")
+
+  Component(codereview, "features/codereview", "FastAPI router", "POST /api/codereview (smart paste)\nPUT /api/codereview/status\nPUT /api/codereview/confirm-line\nDELETE /api/codereview")
+
+  Component(debate, "features/debate", "FastAPI router", "POST /api/debate\nPOST /api/debate/reset\nPOST /api/debate/close-selection\nPOST /api/debate/force-assign\nPOST /api/debate/phase\nPOST /api/debate/first-side\nPOST /api/debate/round-timer\nPOST /api/debate/end-round\nPOST /api/debate/end-arguments\nGET /api/debate/ai-request\nPOST /api/debate/ai-result")
+
+  Component(quiz, "features/quiz", "FastAPI router", "POST/GET /api/quiz-request\nPOST /api/quiz-status\nPOST/DELETE /api/quiz-preview\nPOST/GET /api/quiz-refine")
+
+  Component(summary, "features/summary", "FastAPI router", "POST /api/summary\nGET /api/summary\nPOST /api/notes\nGET /api/notes\nPOST /api/transcript-status\nPOST/GET /api/summary/force\nPOST/GET /api/summary/full-reset\nPOST /api/token-usage")
+
+  Component(leaderboard, "features/leaderboard", "FastAPI router", "POST /api/leaderboard/show\nPOST /api/leaderboard/hide\nDELETE /api/scores")
+
+  Component(slides, "features/slides", "FastAPI router", "POST /api/slides/current\nDELETE /api/slides/current\nGET /api/slides (public)\nGET /api/slides/file/{slug} (public)\nGET /api/slides/catalog-map\nPOST /api/slides/upload\nGET /api/slides/drive-status")
+
+  Component(session, "features/session", "FastAPI router", "POST /api/session/start|end|pause|resume\nPOST /api/session/start_talk|end_talk\nPOST /api/session/create\nPATCH /api/session/rename\nGET /api/session/request\nPOST /api/session/sync\nGET /api/session/snapshot\nGET /api/session/folders\nGET /api/session/interval-lines.txt\nPOST /api/session/timing_event")
+
+  Component(snapshot, "features/snapshot", "FastAPI router", "GET /api/state-snapshot\nPOST /api/state-restore")
+
+  Component(pages, "features/pages", "FastAPI router", "GET / → participant.html\nGET /host → host.html\nGET /notes → notes.html")
+
+  Component(activity, "features/activity", "FastAPI router", "POST /api/activity\n(switches current_activity)")
+}
+
+' External → Backend
+Rel(participant_spa, ws, "WS connect, vote, Q&A,\ndebate, codereview, emoji", "WSS /ws/{uuid}")
+Rel(participant_spa, pages, "GET /", "HTTPS")
+Rel(participant_spa, poll, "GET /api/status, /api/suggest-name", "HTTPS")
+
+Rel(host_spa, ws, "Host WS connection", "WSS /ws/__host__")
+Rel(host_spa, pages, "GET /host, /notes", "HTTPS")
+Rel(host_spa, poll, "Manage polls", "HTTPS")
+Rel(host_spa, activity, "Switch activity", "HTTPS")
+Rel(host_spa, wordcloud, "Word cloud lifecycle", "HTTPS")
+Rel(host_spa, qa, "Manage Q&A", "HTTPS")
+Rel(host_spa, codereview, "Code review lifecycle", "HTTPS")
+Rel(host_spa, debate, "Manage debate", "HTTPS")
+Rel(host_spa, leaderboard, "Show/hide leaderboard, reset scores", "HTTPS")
+Rel(host_spa, summary, "Summary, notes, transcript", "HTTPS")
+Rel(host_spa, slides, "Set/clear current slides", "HTTPS")
+Rel(host_spa, session, "Session lifecycle", "HTTPS")
+
+Rel(daemon, quiz, "Quiz pipeline (long-poll + preview)", "HTTPS")
+Rel(daemon, summary, "Summary + transcript status", "HTTPS")
+Rel(daemon, session, "Session sync + snapshot", "HTTPS")
+Rel(daemon, ws, "Daemon WS (heartbeat + slide upload)", "WSS /ws/daemon")
+Rel(daemon, slides, "Upload converted PDFs", "HTTPS")
+
+Rel(emoji_overlay, ws, "WS /ws/__overlay__\n(emoji reactions)", "WSS")
+
+' Internal relationships
+Rel(ws, core, "Reads/writes state, dispatches\npersonalized broadcast", "")
+Rel(poll, core, "Poll lifecycle, scoring")
+Rel(qa, core, "Q&A questions lifecycle")
+Rel(wordcloud, core, "Word cloud state")
+Rel(codereview, core, "Code review lifecycle")
+Rel(debate, core, "Debate lifecycle")
+Rel(quiz, core, "Quiz pipeline state")
+Rel(summary, core, "Summary points, notes, transcript")
+Rel(leaderboard, core, "Leaderboard visibility, score reset")
+Rel(slides, core, "Slides list, slides_current")
+Rel(session, core, "Full state snapshot + restore")
+Rel(snapshot, core, "Serialize/deserialize AppState")
+
+@enduml

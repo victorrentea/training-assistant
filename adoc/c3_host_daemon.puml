@@ -1,0 +1,126 @@
+@startuml c3_host_daemon
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+title Daemon — C3 Component Diagram
+
+LAYOUT_WITH_LEGEND()
+
+Container_Ext(fastapi, "FastAPI Backend", "HTTPS REST + WSS")
+Container_Ext(claude_api, "Anthropic Claude API", "HTTPS REST")
+System_Ext(audio_hijack, "Audio Hijack", "Writes transcript file to disk")
+System_Ext(google_drive, "Google Drive", "HTTPS REST")
+
+Container_Boundary(daemon_pkg, "Daemon (Python 3.12, host's Mac)") {
+
+  Component(main, "daemon/__main__", "Orchestrator", "Starts all background loops.\nGraceful shutdown on SIGTERM.\nExit code 42 triggers git pull + restart.")
+
+  Component(config_http, "daemon/config + daemon/http", "Config & HTTP", "DEFAULT_TRANSCRIPT_MINUTES, SESSIONS_FOLDER,\nTRANSCRIPTION_FOLDER env vars.\nShared HTTP helper with Basic Auth headers.")
+
+  Component(quiz_gen, "daemon/quiz/generator", "Quiz generator", "Reads transcript or topic,\ncalls LLM, generates poll question + options.")
+
+  Component(quiz_hist, "daemon/quiz/history", "Quiz history", "Tracks previously generated questions\nto avoid repetition.")
+
+  Component(quiz_api, "daemon/quiz/poll_api", "Quiz poll API", "Posts quiz preview to backend.\nPolls /api/quiz-request and /api/quiz-refine.")
+
+  Component(debate_ai, "daemon/debate/ai_cleanup", "Debate AI cleanup", "Deduplicates, fixes typos, suggests\nnew arguments via LLM.\nPolls /api/debate/ai-request, posts result.")
+
+  Component(summarizer, "daemon/summary/summarizer", "Summarizer", "Delta-based key-point extraction from transcript.\nTwo-tier: notes + discussion points.")
+
+  Component(summary_loop, "daemon/summary/loop", "Summary loop", "Polls /api/summary/force every few seconds.\nTriggered by host or participant Key Points button.")
+
+  Component(transcript_normalizer, "daemon/transcript/normalizer", "Transcript normalizer", "Incrementally normalizes raw transcript lines\ninto daily YYYY-MM-DD transcription.txt files.")
+
+  Component(transcript_parser, "daemon/transcript/parser", "Transcript parser", "Parses .txt, .vtt, .srt transcript formats.")
+
+  Component(transcript_loader, "daemon/transcript/loader", "Transcript loader", "Reads last N minutes from normalized files.")
+
+  Component(transcript_writer, "daemon/transcript/writer", "Transcript writer", "Writes transcript lines to daily files.")
+
+  Component(transcript_timestamps, "daemon/transcript/timestamps", "Timestamp injector", "Auto-appends [HH:MM:SS] markers every ~3s\nto the active transcript file.")
+
+  Component(transcript_loop, "daemon/transcript/loop", "Transcript loop", "Orchestrates normalization + timestamp injection.")
+
+  Component(slides_catalog, "daemon/slides/catalog", "Slides catalog", "Reads materials_slides_catalog.json.\nResolves PPTX → target PDF mappings.")
+
+  Component(slides_convert, "daemon/slides/convert", "PPTX converter", "Converts PPTX to PDF via LibreOffice or PowerPoint.")
+
+  Component(slides_drive, "daemon/slides/drive_sync", "Google Drive sync", "Downloads slides from Google Drive links.")
+
+  Component(slides_upload, "daemon/slides/upload", "Slides uploader", "Uploads converted PDFs to backend via WSS.")
+
+  Component(slides_loop, "daemon/slides/loop", "Slides loop", "Watches catalog for changes, triggers\nconvert + upload pipeline.")
+
+  Component(slides_daemon, "daemon/slides/daemon", "Slides daemon main", "Manages slide WS connection to backend.\nHandles upload requests and results.")
+
+  Component(materials_mirror, "daemon/materials/mirror", "Materials mirror", "Mirrors project files to server_materials/.\nKeeps backend's RAG index fresh.")
+
+  Component(materials_ws, "daemon/materials/ws_runner", "Materials WS runner", "WebSocket runner for materials upload.")
+
+  Component(rag_indexer, "daemon/rag/indexer", "RAG indexer", "Indexes project files into vector store.")
+
+  Component(rag_retriever, "daemon/rag/retriever", "RAG retriever", "Retrieves relevant context for quiz generation.")
+
+  Component(rag_files, "daemon/rag/project_files", "Project files scanner", "Scans and lists project files.\nHandles Claude tool calls for file reading.")
+
+  Component(llm, "daemon/llm/adapter", "LLM adapter", "Claude API wrapper.\nToken counting & cost tracking.\ncreate_message() with timeout.")
+
+  Component(session_state, "daemon/session_state", "Session state", "Tracks session stack (main + nested talks).\nPersists session_state.json to disk every 5s.")
+
+  Component(lock, "daemon/lock", "Process lock", "PID file ensures single daemon instance.")
+}
+
+' Orchestration
+Rel(main, transcript_loop, "starts")
+Rel(main, summary_loop, "starts")
+Rel(main, slides_loop, "starts")
+Rel(main, materials_mirror, "starts")
+Rel(main, session_state, "starts polling loop")
+
+' Transcript pipeline
+Rel(transcript_loop, transcript_normalizer, "drives")
+Rel(transcript_loop, transcript_timestamps, "drives")
+Rel(transcript_normalizer, transcript_parser, "uses")
+Rel(transcript_normalizer, transcript_writer, "uses")
+Rel(transcript_loader, transcript_normalizer, "reads output of")
+
+' Quiz pipeline
+Rel(quiz_api, fastapi, "GET /api/quiz-request\nGET /api/quiz-refine", "HTTPS")
+Rel(quiz_api, quiz_gen, "triggers on request")
+Rel(quiz_gen, transcript_loader, "reads last N minutes")
+Rel(quiz_gen, rag_retriever, "enriches context")
+Rel(quiz_gen, llm, "LLM call")
+Rel(quiz_gen, quiz_hist, "checks history")
+Rel(quiz_api, fastapi, "POST /api/quiz-preview\nPOST /api/quiz-status", "HTTPS")
+
+' Debate AI pipeline
+Rel(debate_ai, fastapi, "GET /api/debate/ai-request\nPOST /api/debate/ai-result", "HTTPS")
+Rel(debate_ai, llm, "LLM call")
+
+' Summary pipeline
+Rel(summary_loop, fastapi, "GET /api/summary/force\nPOST /api/summary", "HTTPS")
+Rel(summary_loop, summarizer, "triggers")
+Rel(summarizer, transcript_loader, "reads transcript")
+Rel(summarizer, llm, "LLM call")
+
+' Slides pipeline
+Rel(slides_loop, slides_catalog, "reads")
+Rel(slides_loop, slides_convert, "triggers conversion")
+Rel(slides_loop, slides_drive, "triggers Drive download")
+Rel(slides_daemon, slides_upload, "triggers upload")
+Rel(slides_upload, fastapi, "uploads PDF via WSS", "WSS /ws/daemon")
+
+' Session
+Rel(session_state, fastapi, "GET /api/session/snapshot\nGET /api/session/request\nPOST /api/session/sync", "HTTPS")
+
+' RAG
+Rel(rag_indexer, rag_files, "uses")
+Rel(rag_retriever, rag_indexer, "queries")
+
+' Audio Hijack → transcript file → daemon
+Rel(audio_hijack, transcript_normalizer, "Writes raw transcript\n(daemon reads local disk)", "Local file")
+
+' External calls
+Rel(llm, claude_api, "claude-haiku / claude-sonnet\nAPI calls", "HTTPS")
+Rel(slides_drive, google_drive, "Downloads PPTX", "HTTPS")
+
+@enduml
