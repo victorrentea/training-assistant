@@ -704,7 +704,8 @@
         noTranscriptTitle = `No transcription for ${Math.round(minAgo)} minutes`;
       }
     }
-    const flashStyle = (!sessionPaused && noTranscriptWarn) ? ' animation: flash-bg 1.4s ease-in-out infinite;' : '';
+    const sessionActive = sessionMain && !sessionMain.ended_at && !sessionPaused;
+    const flashStyle = (sessionActive && noTranscriptWarn) ? ' animation: flash-bg 1.4s ease-in-out infinite;' : '';
 
     if (summaryPoints.length) {
       badge.textContent = _transcriptLineCount > 0
@@ -718,7 +719,7 @@
       badge.className = 'badge';
       const anim = sessionPaused
         ? ''
-        : ` animation: pulse 1.2s ease-in-out infinite${noTranscriptWarn ? ', flash-bg 1.4s ease-in-out infinite' : ''};`;
+        : ` animation: pulse 1.2s ease-in-out infinite${(sessionActive && noTranscriptWarn) ? ', flash-bg 1.4s ease-in-out infinite' : ''};`;
       badge.style.cssText = `cursor:wait; color:var(--warn); border:1px solid var(--warn);${anim}`;
       badge.title = noTranscriptWarn ? noTranscriptTitle : `Generating key points from transcript… (${_transcriptLineCount} lines)`;
     } else {
