@@ -1470,6 +1470,14 @@
 
   async function _loadSlideIntoViewer(slide, { forceReload = false, withUiBlocker = false, skipScrollRestore = false, cacheVersion = null } = {}) {
     if (!slide) return;
+    // Save scroll position for the slide we're leaving before overwriting state.
+    if (slidesSelectedSlug && slidesSelectedSlug !== slide.slug && slidesPdfDoc && slidesViewMode !== 'native') {
+      const container = document.getElementById('slides-pdf-container');
+      if (container) {
+        const page = Number(slidesPdfViewer?.currentPageNumber || _getStoredSlidePage(slidesSelectedSlug));
+        _setStoredSlideView(slidesSelectedSlug, { page, scrollTop: container.scrollTop });
+      }
+    }
     if (withUiBlocker) _setSlidesUiBlocker(true, 'Loading slide...');
     slidesSelectedSlug = slide.slug;
     slidesSelectedId = slide._id;
@@ -1532,7 +1540,7 @@
         }
         const container = document.getElementById('slides-pdf-container');
         if (!skipScrollRestore && container && saved && Number.isFinite(saved.scrollTop)) {
-          requestAnimationFrame(() => { container.scrollTop = saved.scrollTop; });
+          requestAnimationFrame(() => requestAnimationFrame(() => { container.scrollTop = saved.scrollTop; }));
         }
         _setStoredSlidePage(slide.slug, targetPage);
         _renderSlidesMeta({ ...slide, updated_at: effectiveUpdatedAt });
@@ -1589,7 +1597,7 @@
         _setStoredSlidePage(slide.slug, savedPage);
         if (!skipScrollRestore && saved && Number.isFinite(saved.scrollTop)) {
           const container = document.getElementById('slides-pdf-container');
-          if (container) requestAnimationFrame(() => { container.scrollTop = saved.scrollTop; });
+          if (container) requestAnimationFrame(() => requestAnimationFrame(() => { container.scrollTop = saved.scrollTop; }));
         }
 
         slidesLastFingerprint = fingerprint;
