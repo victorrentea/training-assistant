@@ -440,9 +440,7 @@
     const timeEl = document.getElementById('summary-time');
     if (!list) return;
     if (!summaryPoints.length) {
-      list.innerHTML = _summaryRequested
-        ? '<li class="summary-empty">Generating key points… please wait.</li>'
-        : '<li class="summary-empty">No key points yet. Tap to request.</li>';
+      list.innerHTML = '<li class="summary-empty">No key points yet. Tap to request.</li>';
       if (timeEl) timeEl.textContent = '';
       return;
     }
@@ -483,7 +481,6 @@
     if (!summaryPoints.length && !_summaryRequested) {
       _summaryRequested = true;
       const list = document.getElementById('summary-list');
-      if (list) list.innerHTML = '<li class="summary-empty">Generating key points… please wait.</li>';
       fetch('/api/summary/force', { method: 'POST' }).catch(() => {});
     }
   }
@@ -503,8 +500,7 @@
   function requestSummaryRefresh() {
     _summaryRequested = true;
     if (summaryPoints.length === 0) {
-      const list = document.getElementById('summary-list');
-      if (list) list.innerHTML = '<li class="summary-empty">Generating key points… please wait.</li>';
+      renderSummaryList();
     }
     const btn = document.getElementById('summary-refresh-btn');
     if (btn) { btn.disabled = true; btn.style.opacity = '0.4'; }
