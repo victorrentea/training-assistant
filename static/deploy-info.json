@@ -1,7 +1,7 @@
 {
-  "sha": "f148ebb18c61b67a36fd82fbabb44f0f9491a37d",
-  "timestamp": "2026-03-27 07:41",
+  "sha": "3b16d5abc10fd59359d42767aeb2c73c97043196",
+  "timestamp": "2026-03-27 07:42",
   "changelog": [
-    "style: center content in left area, shrink slides dock 25%"
+    "style: align emoji float animation across participant, host, and desktop overlay"
   ]
 }
