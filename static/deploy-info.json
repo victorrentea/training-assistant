@@ -1,7 +1,7 @@
 {
-  "sha": "0b2f4fd9910e3fb8a252711043645c17e9a82518",
-  "timestamp": "2026-03-27 19:05",
+  "sha": "3c9b2c9e9806f33a3c4725b69ab42aaed8e78f5e",
+  "timestamp": "2026-03-27 19:40",
   "changelog": [
-    "fix: use emoji PNG icon, grays out on unfocused monitors"
+    "Fix participant slides availability when daemon is online"
   ]
 }
