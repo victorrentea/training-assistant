@@ -1,7 +1,7 @@
 {
-  "sha": "1469b262262d01e2bcb54d8968c105e9448cb030",
+  "sha": "f148ebb18c61b67a36fd82fbabb44f0f9491a37d",
   "timestamp": "2026-03-27 07:41",
   "changelog": [
-    "feat: disable Notes/Key Points buttons when empty; add + between Host and pax count"
+    "style: center content in left area, shrink slides dock 25%"
   ]
 }
