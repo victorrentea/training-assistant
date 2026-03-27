@@ -76,6 +76,7 @@ async def daemon_websocket_endpoint(websocket: WebSocket):
     state.daemon_ws = websocket
     state.daemon_last_seen = datetime.now(timezone.utc)
     logger.info("Daemon WS connected")
+    await broadcast({"type": "slides_catalog_changed"})
 
     try:
         while True:
@@ -95,6 +96,7 @@ async def daemon_websocket_endpoint(websocket: WebSocket):
         if state.daemon_ws is websocket:
             state.daemon_ws = None
         logger.info("Daemon WS disconnected")
+        await broadcast({"type": "slides_catalog_changed"})
 
 
 @router.websocket("/ws/{participant_id}")
