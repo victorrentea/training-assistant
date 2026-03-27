@@ -1,5 +1,5 @@
 body {
-  --slides-overlay-width: min(320px, 28vw);
+  --slides-overlay-width: min(240px, 21vw);
   background: var(--bg);
   color: var(--text);
   font-family: 'Segoe UI', system-ui, sans-serif;
@@ -8,11 +8,13 @@ body {
   margin: 0;
   display: block;
   padding: 0;
+  padding-right: var(--slides-overlay-width);
   overflow: hidden;
+  box-sizing: border-box;
 }
 
 @media (max-width: 900px) {
-  body { --slides-overlay-width: min(220px, 32vw); }
+  body { --slides-overlay-width: min(165px, 24vw); }
 }
 
 
@@ -63,7 +65,7 @@ h1 { display: none; }
 
 /* ── Main screen ── */
 #main-screen {
-  width: min(900px, calc(100vw - 1rem));
+  width: min(900px, calc(100% - 1rem));
   max-width: 900px;
   display: none;
   height: 100vh;
@@ -991,7 +993,7 @@ h1 { display: none; }
 
 @media (max-width: 900px) {
   #main-screen {
-    width: min(900px, calc(100vw - .5rem));
+    width: min(900px, calc(100% - .5rem));
     max-width: 900px;
     margin: 0 auto;
   }
@@ -1407,7 +1409,7 @@ h1 { display: none; }
   position: fixed;
   bottom: 0;
   left: 0;
-  right: 0;
+  right: var(--slides-overlay-width);
   display: flex;
   justify-content: center;
   gap: .5rem;
