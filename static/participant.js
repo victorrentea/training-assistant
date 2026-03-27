@@ -1279,7 +1279,8 @@
         badge.textContent = updated;
         openBtn.appendChild(badge);
       }
-      openBtn.addEventListener('click', async () => {
+      openBtn.addEventListener('click', async (e) => {
+        e.stopPropagation();
         if (_isSlidesFollowActive() && slidesSelectedId !== slide._id) {
           _setSlidesFollowTrainerEnabled(false, { persist: true, applyHost: false });
           _blinkSlidesFollowTrainerButton();
@@ -1290,6 +1291,11 @@
         _markSlideVisited(slide._id);
         _markSelectedSlideInList();
         await _loadSlideIntoViewer(slide, { forceReload: false, withUiBlocker: true });
+      });
+      item.addEventListener('click', (e) => {
+        if (!e.target.closest('.slides-list-open') && !e.target.closest('.slides-list-download')) {
+          openBtn.click();
+        }
       });
       const dl = document.createElement('a');
       dl.className = 'slides-list-download';
