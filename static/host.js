@@ -3,6 +3,7 @@
   let pollActive = false;
   let voteCounts = {};
   let totalVotes = 0;
+  let totalParticipants = 0;
   let participantDataById = {};     // uuid -> participant payload
   let participantDebateSides = {};  // uuid -> "for"|"against"|undefined
   let _debateActive = false;
@@ -194,6 +195,7 @@
         totalVotes = Object.values(voteCounts).reduce((a,b)=>a+b,0);
         _debateActive = msg.current_activity === 'debate' && !!msg.debate_phase;
         ingestParticipants(msg.participants || []);
+        totalParticipants = msg.participant_count || 0;
         document.getElementById('pax-count').textContent = msg.participant_count;
         updatePaxBadge(msg.participant_count);
         renderParticipantList(cachedParticipantIds);
@@ -243,10 +245,12 @@
         totalVotes = msg.total_votes || 0;
         renderBars();
       } else if (msg.type === 'participant_count') {
+        totalParticipants = msg.count || 0;
         document.getElementById('pax-count').textContent = msg.count;
         updatePaxBadge(msg.count);
         ingestParticipants(msg.participants || []);
         renderParticipantList(cachedParticipantIds);
+        if (pollActive && currentPoll) renderBars();
         updateLeaderboardButton();
         // Re-render code review side panel with fresh scores
         if (window._lastCodereviewState && window._lastCodereviewState.phase !== 'idle') {
@@ -1616,13 +1620,25 @@
     }
 
     el.className = pollActive ? 'voting-active' : '';
+
+    const votePct = totalParticipants > 0 ? Math.round((totalVotes / totalParticipants) * 100) : 0;
+    const voteProgressSection = pollActive ? `
+      <div class="vote-progress-overlay">
+        <div class="vote-progress-fill" id="vote-progress-fill" style="width:${votePct}%"></div>
+        <span class="vote-progress-label" id="vote-progress-label">${totalVotes} of ${totalParticipants} voted</span>
+      </div>
+      <p class="vote-anon-msg">🔒 Votes are anonymous — no wrong answers, just deeper understanding</p>` : '';
+
+    const mainContent = pollActive
+      ? `<div class="options-plain">${currentPoll.options.map(opt =>
+          `<div class="option-text-only">${escHtml(opt.text)}</div>`).join('')}</div>
+         ${voteProgressSection}`
+      : `<div class="bars-container"><div class="bars-wrapper">${bars}</div></div>
+         <p style="font-size:.8rem; color:var(--muted); margin-top:.5rem;">${totalVotes} total vote${totalVotes!==1?'s':''}`;
+
     el.innerHTML = `
       <p class="poll-question">${escHtml(currentPoll.question)}</p>
-      <div class="bars-container">
-        <div class="bars-wrapper">${bars}</div>
-        ${pollActive ? `<div class="voting-dots"><div class="voting-dots-row"><span></span><span></span><span></span></div><div class="voting-dots-label">voting in progress</div></div>` : ''}
-      </div>
-      <p style="font-size:.8rem; color:var(--muted); margin-top:.5rem;">${totalVotes} total vote${totalVotes!==1?'s':''}</p>
+      ${mainContent}${pollActive ? '' : '</p>'}
       ${currentPoll.source ? `<p class="poll-source-ref">📖 ${escHtml(currentPoll.source)}${currentPoll.page ? `, p. ${escHtml(currentPoll.page)}` : ''}</p>` : ''}
       <div class="btn-row">
         <span class="status-pill ${statusLabel}">${statusText}</span>
@@ -1640,6 +1656,15 @@
 
   function renderBars() {
     if (!currentPoll) return;
+    if (pollActive) {
+      // During voting: update vote progress overlay only (results hidden)
+      const fill = document.getElementById('vote-progress-fill');
+      const label = document.getElementById('vote-progress-label');
+      const pct = totalParticipants > 0 ? Math.round((totalVotes / totalParticipants) * 100) : 0;
+      if (fill) fill.style.width = `${pct}%`;
+      if (label) label.textContent = `${totalVotes} of ${totalParticipants} voted`;
+      return;
+    }
     const maxCount = Math.max(...Object.values(voteCounts), 0);
     currentPoll.options.forEach(opt => {
       const row = document.querySelector(`.result-row[data-id="${opt.id}"]`);

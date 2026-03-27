@@ -362,6 +362,51 @@ body {
   50%      { background-color: transparent; }
 }
 
+/* Vote progress overlay (shown instead of results during active voting) */
+.options-plain { margin-bottom: 1rem; }
+.option-text-only {
+  padding: .55rem .8rem;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  margin-bottom: .5rem;
+  font-size: 1rem;
+  color: var(--text);
+  opacity: .7;
+}
+.vote-progress-overlay {
+  position: relative;
+  height: 72px;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: .75rem 0 .5rem;
+}
+.vote-progress-fill {
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  background: rgba(108, 99, 255, 0.38);
+  transition: width .5s ease;
+}
+.vote-progress-label {
+  position: relative;
+  z-index: 1;
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: .02em;
+}
+.vote-anon-msg {
+  font-size: .82rem;
+  color: var(--muted);
+  text-align: center;
+  margin: .25rem 0 .75rem;
+  letter-spacing: .01em;
+}
+
 #center-wordcloud {
   display: flex;
   align-items: center;

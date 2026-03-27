@@ -3040,6 +3040,10 @@
         </button>`;
     }).join('');
 
+    const anonMsg = pollActive
+      ? `<div class="vote-anon-hint">🔒 Your vote is anonymous — no wrong answers, just deeper understanding</div>`
+      : '';
+
     let footer = '';
     if (!pollActive) {
       footer = `<div class="closed-banner">Voting is closed — final results shown above</div>`;
@@ -3078,6 +3082,7 @@
         ${optionsHTML}
         ${countdownEl}
         ${footer}
+        ${anonMsg}
       </div>`;
 
     if (activeTimer) _startParticipantCountdown();
