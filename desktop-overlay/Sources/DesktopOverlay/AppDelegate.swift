@@ -134,7 +134,21 @@ class AppDelegate: NSObject, NSApplicationDelegate, URLSessionWebSocketDelegate 
             },
         ]
 
-        buttonBar = ButtonBar(buttons: buttons, screen: screen, singleScreen: singleScreen)
+        let fingerprint = ScreenFingerprint.current()
+        let savedOrigin = singleScreen ? nil : PositionStore.load(fingerprint: fingerprint)
+        if let pos = savedOrigin {
+            overlayInfo("Restoring button bar position \(Int(pos.x)),\(Int(pos.y)) for this monitor layout")
+        }
+
+        buttonBar = ButtonBar(
+            buttons: buttons,
+            screen: screen,
+            singleScreen: singleScreen,
+            savedOrigin: savedOrigin,
+            onPositionChanged: { origin in
+                PositionStore.save(fingerprint: fingerprint, origin: origin)
+            }
+        )
         buttonBar.orderFrontRegardless()
     }
 
