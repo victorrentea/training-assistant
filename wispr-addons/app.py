@@ -357,11 +357,11 @@ def _run_event_tap():
 # --- Menu bar app ---
 class WisprAddonsApp(rumps.App):
     def __init__(self):
-        icon_path = str(Path(__file__).parent / "icon_template.png")
+        icon_path = str(Path(__file__).parent / "icon_emoji.png")
         super().__init__(
             "",
             icon=icon_path,
-            template=True,
+            template=False,
             quit_button=None,
         )
         self.menu = [
