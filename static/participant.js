@@ -797,7 +797,7 @@
   }
 
   function _bindSlidesViewModeToggle() {
-    slidesViewMode = 'pdfjs';
+    slidesViewMode = _getStoredSlidesViewMode();
     _renderSlidesViewModeToggle();
     const nativeBtn = document.getElementById('slides-view-native');
     const pdfjsBtn = document.getElementById('slides-view-pdfjs');
