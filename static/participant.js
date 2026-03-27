@@ -98,6 +98,7 @@
   const SLIDES_TEST_AUTO_SCROLL_DELAY_MS = 3000;
   const SLIDES_DISABLE_VIEW_PERSISTENCE = false;
   let slidesCatalog = [];
+  let _slidesViewerBusy = false; // true while _loadSlideIntoViewer is executing
   let slidesSelectedSlug = null;
   let slidesSelectedId = null;
   let slidesLastFingerprint = null;
@@ -1481,6 +1482,7 @@
         _setStoredSlideView(slidesSelectedSlug, { page, scrollTop: container.scrollTop });
       }
     }
+    _slidesViewerBusy = true;
     if (withUiBlocker) _setSlidesUiBlocker(true, 'Loading slide...');
     slidesSelectedSlug = slide.slug;
     slidesSelectedId = slide._id;
@@ -1620,6 +1622,7 @@
         _setSlidesLoading({ visible: false });
       }
     } finally {
+      _slidesViewerBusy = false;
       if (withUiBlocker) _setSlidesUiBlocker(false);
     }
   }
@@ -1639,7 +1642,7 @@
     const overlay = document.getElementById('slides-overlay');
     const overlayOpen = Boolean(overlay?.classList.contains('open'));
     await _refreshSlidesCatalog({ forceReloadCurrent: false, autoLoadSelected: false });
-    if (overlayOpen && slidesSelectedSlug === slug) {
+    if (overlayOpen && slidesSelectedSlug === slug && !_slidesViewerBusy) {
       const entry = slidesCatalog.find(s => s.slug === slug);
       if (entry) await _reloadCurrentSlideAfterUpdate(entry);
     }
