@@ -148,14 +148,14 @@ def test_api_slides_lists_local_materials_and_serves_pdf(monkeypatch, tmp_path):
     file_resp = client.get(slides[0]["url"])
     assert file_resp.status_code == 200
     assert file_resp.headers.get("content-type", "").startswith("application/pdf")
-    assert file_resp.headers.get("cache-control") == "public, max-age=86400, must-revalidate"
+    assert file_resp.headers.get("cache-control") == "no-cache"
     assert file_resp.headers.get("etag")
     assert file_resp.headers.get("last-modified")
     assert file_resp.content.startswith(b"%PDF-1.4")
     head_resp = client.head(slides[0]["url"])
     assert head_resp.status_code == 200
     assert head_resp.headers.get("content-type", "").startswith("application/pdf")
-    assert head_resp.headers.get("cache-control") == "public, max-age=86400, must-revalidate"
+    assert head_resp.headers.get("cache-control") == "no-cache"
     assert head_resp.headers.get("etag") == file_resp.headers.get("etag")
     assert head_resp.headers.get("last-modified") == file_resp.headers.get("last-modified")
 

@@ -673,6 +673,22 @@ h1 { display: none; }
   white-space: nowrap;
 }
 
+.slides-list-new {
+  flex: 0 0 auto;
+  font-size: .52rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #fff;
+  background: #17b26a;
+  border-radius: 3px;
+  padding: 1px 4px;
+  vertical-align: super;
+  line-height: 1;
+  margin-left: 3px;
+  white-space: nowrap;
+}
+
 .slides-list-download {
   flex: 0 0 auto;
   display: inline-flex;

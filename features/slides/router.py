@@ -422,7 +422,7 @@ async def get_slide_file(slug: str, request: Request):
     headers = {
         "ETag": etag,
         "Last-Modified": _slide_last_modified(path),
-        "Cache-Control": "public, max-age=86400, must-revalidate",
+        "Cache-Control": "no-cache",
     }
     if _is_not_modified(request, etag, path):
         return Response(status_code=304, headers=headers)
