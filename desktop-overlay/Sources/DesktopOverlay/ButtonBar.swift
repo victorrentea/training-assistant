@@ -16,9 +16,6 @@ struct SingleScreenHoverLogic {
     }
 
     func shouldSlideIn(mouse: NSPoint) -> Bool {
-        if edgeTriggerFrame.contains(mouse) {
-            return true
-        }
         return shownFrame.insetBy(dx: -onBarInset, dy: -onBarInset).contains(mouse)
     }
 }
@@ -43,8 +40,6 @@ class ButtonBar: NSPanel {
         }
     }
 
-    private let buttonSize: CGFloat = 40
-    private let padding: CGFloat = 6
     private let idleOpacity: CGFloat = 0.35
     private let hoverOpacity: CGFloat = 1.0
     private let isSingleScreen: Bool
@@ -64,6 +59,10 @@ class ButtonBar: NSPanel {
 
     init(buttons: [ButtonDef], screen: NSScreen, singleScreen: Bool) {
         self.isSingleScreen = singleScreen
+
+        // Single-screen panel is 20% smaller to stay unobtrusive
+        let buttonSize: CGFloat = singleScreen ? 32 : 40
+        let padding: CGFloat = singleScreen ? 5 : 6
 
         let count = CGFloat(buttons.count)
         let barWidth: CGFloat
@@ -312,19 +311,21 @@ private class RoundEmojiButton: NSView {
         bgLayer.opacity = 0
         layer?.addSublayer(bgLayer)
 
+        let fontSize = bounds.width * 0.55
+        let textHeight = bounds.width * 0.70
         let textLayer = CATextLayer()
         if let color = labelColor {
             let attr = NSAttributedString(string: label, attributes: [
                 .foregroundColor: NSColor(cgColor: color) ?? .white,
-                .font: NSFont.systemFont(ofSize: 20)
+                .font: NSFont.systemFont(ofSize: fontSize)
             ])
             textLayer.string = attr
         } else {
             textLayer.string = label
-            textLayer.fontSize = 22
+            textLayer.fontSize = fontSize
         }
         textLayer.alignmentMode = .center
-        textLayer.frame = CGRect(x: 0, y: (bounds.height - 28) / 2, width: bounds.width, height: 28)
+        textLayer.frame = CGRect(x: 0, y: (bounds.height - textHeight) / 2, width: bounds.width, height: textHeight)
         textLayer.contentsScale = NSScreen.screens.first?.backingScaleFactor ?? 2.0
         layer?.addSublayer(textLayer)
 
