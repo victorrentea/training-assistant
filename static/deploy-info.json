@@ -1,7 +1,8 @@
 {
-  "sha": "e45e35adcdfa37f50379d2baaa631af05ce00e50",
-  "timestamp": "2026-03-27 14:27",
+  "sha": "d90b146add7087183bd2381896fa823bf777115e",
+  "timestamp": "2026-03-27 14:41",
   "changelog": [
-    "fix: add tests/features/__init__.py + pythonpath to fix isolated test collection"
+    "fix: update CI test paths + fix auth env pollution in unit tests",
+    "fix: replace stale 'from messaging import' with correct module paths"
   ]
 }
