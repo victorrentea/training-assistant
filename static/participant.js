@@ -632,6 +632,13 @@
       _suppressSlidesFollowAutoUncheck(1500);
       slidesPdfViewer.currentPageNumber = Number(nextPage);
       _setStoredSlidePage(targetSlide.slug, nextPage);
+      // Explicitly save the view so navigating away and back restores this position.
+      // pagechanging won't fire when the page number doesn't change, so we save here too.
+      const container = document.getElementById('slides-pdf-container');
+      _setStoredSlideView(targetSlide.slug, {
+        page: nextPage,
+        scrollTop: container?.scrollTop || 0,
+      });
       _renderSlidesMeta(targetSlide);
     }
   }
