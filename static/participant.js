@@ -1398,7 +1398,7 @@
 
     for (const slide of slidesCatalog) {
       const item = document.createElement('div');
-      item.className = 'slides-list-item';
+      item.className = 'slides-list-item' + (slide.available_on_server === false ? ' unavailable' : '');
       item.setAttribute('data-slide-id', slide._id);
       const openBtn = document.createElement('button');
       openBtn.type = 'button';
