@@ -144,14 +144,15 @@ class SlidesOnDemandWsRunner:
                             continue
                         if slug in self._slug_map:
                             continue
-                        self._slug_map[slug] = (local_pdf, target_pdf)
+                        source_pptx = Path(str(entry.get("source") or "").strip()) if entry.get("source") else None
+                        self._slug_map[slug] = (local_pdf, target_pdf, source_pptx)
             except Exception as exc:
                 log.error("slides", f"On-demand catalog parse failed: {exc}")
 
         for slides_dir in self._slides_dirs:
             for pdf in sorted(slides_dir.glob("*.pdf"), key=lambda p: p.name.lower()):
                 slug = _slugify(pdf.stem)
-                self._slug_map.setdefault(slug, (pdf, pdf.name))
+                self._slug_map.setdefault(slug, (pdf, pdf.name, None))
 
     def _ws_url(self) -> str:
         base = self.main_config.server_url.rstrip("/")
@@ -194,7 +195,7 @@ class SlidesOnDemandWsRunner:
             })
             return
 
-        local_pdf, target_name = match
+        local_pdf, target_name, _ = match
         if not local_pdf.exists() or not local_pdf.is_file():
             log.error("slides", f"slides_upload_failed slug={slug} reason=missing_local_pdf path={local_pdf}")
             self._send_result(ws, {
@@ -236,10 +237,11 @@ class SlidesOnDemandWsRunner:
 
     def _send_slides_meta(self, ws) -> None:
         entries = []
-        for slug, (local_pdf, _) in self._slug_map.items():
+        for slug, (local_pdf, _, source_pptx) in self._slug_map.items():
             try:
-                if local_pdf.exists():
-                    updated_at = datetime.fromtimestamp(local_pdf.stat().st_mtime, tz=timezone.utc).isoformat()
+                timestamp_path = source_pptx if (source_pptx and source_pptx.exists()) else (local_pdf if local_pdf.exists() else None)
+                if timestamp_path:
+                    updated_at = datetime.fromtimestamp(timestamp_path.stat().st_mtime, tz=timezone.utc).isoformat()
                     entries.append({"slug": slug, "updated_at": updated_at})
             except Exception:
                 pass
