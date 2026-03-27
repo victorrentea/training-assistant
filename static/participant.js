@@ -113,7 +113,6 @@
   let slidesViewMode = 'pdfjs';
   let slidesFollowTrainerEnabled = true;
   let slidesFollowUncheckSuppressedUntil = 0;
-  let slidesNativeFrame = null;
   let hostSlidesCurrent = null;   // what host is showing NOW
   let hostSlidesPrevious = null;  // what host was showing before (participants follow this)
   let lastHostSlidesCurrentKey = '';
