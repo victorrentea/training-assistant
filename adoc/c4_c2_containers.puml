@@ -21,7 +21,6 @@ System_Boundary(workshop, "Workshop Tool", $link="c4_c3_components.puml") {
 
     Container(emoji_overlay, "Emoji Overlay", "Swift / AppKit (host's Mac)", "Transparent always-on-top window.\nReceives emoji reactions via WebSocket\nand animates them over the screen.\nPID lock file ensures single instance.")
 
-    ContainerDb(sqlite_db, "SQLite Database", "SQLite 3 (WAL mode)", "Persists participant data, scores,\napp settings, and activity state\nacross server restarts.\nFile: data/state.db")
 }
 
 ' ── right: host + external AI ────────────────────────────────────
@@ -36,7 +35,7 @@ Lay_R(host, host_spa)
 Lay_D(host, audio_hijack)
 Lay_D(audio_hijack, training_daemon)
 Lay_R(claude_api, training_daemon)
-Lay_D(nominatim, host_spa)
+Lay_D(nominatim, participant_spa)
 Lay_D(training_daemon, emoji_overlay)
 
 ' relationships
@@ -44,12 +43,12 @@ Rel(participant, participant_spa, "Votes, sees live results", "Browser")
 Rel(participant_spa, fastapi, "Vote API, WebSocket", "HTTPS / WSS")
 Rel(host, host_spa, "Manages polls, views results", "Browser")
 Rel(host_spa, fastapi, "Poll API, WebSocket", "HTTPS / WSS")
-Rel(host_spa, nominatim, "Resolves GPS to city and map coordinates", "HTTPS REST")
+Rel(participant_spa, nominatim, "Reverse geocodes GPS → city+country", "HTTPS REST")
 Rel(host, training_daemon, "Starts/stops", "Local terminal")
 Rel(audio_hijack, training_daemon, "Writes transcript file to disk\n(daemon reads on local filesystem)", "Local file")
 Rel(training_daemon, fastapi, "Polls for requests, posts preview\nand slides upload", "HTTPS REST + WSS")
 Rel(training_daemon, claude_api, "Generates quiz, debate AI cleanup, summary", "HTTPS REST")
-Rel(fastapi, sqlite_db, "Snapshots state every 2s,\nrestores on startup,\nruns migrations", "SQLite3 (file I/O)")
+
 Rel(host, emoji_overlay, "Starts/stops", "start.sh")
 Rel(emoji_overlay, fastapi, "Connects as __overlay__ participant", "WSS /ws/__overlay__")
 
