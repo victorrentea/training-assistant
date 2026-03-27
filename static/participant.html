@@ -30,13 +30,14 @@
         <span id="my-score" class="has-tooltip" data-tooltip="Your score" style="display:none; color:var(--accent2); font-weight:700; font-size:.85rem;"></span>
       </span>
       <span class="status-center">
-        <button id="notes-btn" class="header-link-btn has-tooltip" data-tooltip="Session notes" onclick="toggleNotesModal()">📝 Notes</button>
-        <button id="summary-btn" class="header-link-btn has-tooltip" data-tooltip="Key points discussed so far" onclick="toggleSummaryModal()">🧠 <span id="summary-count"></span> Key Points</button>
+        <button id="notes-btn" class="header-link-btn has-tooltip" data-tooltip="(none yet)" onclick="toggleNotesModal()" disabled>📝 Notes</button>
+        <button id="summary-btn" class="header-link-btn has-tooltip" data-tooltip="(none yet)" onclick="toggleSummaryModal()" disabled>🧠 <span id="summary-count"></span> Key Points</button>
       </span>
       <span class="status-right">
         <button id="notif-btn" style="display:none" class="has-tooltip" data-tooltip="Enable notifications">🔔</button>
         <span id="location-prompt" class="location-prompt has-tooltip" onclick="requestLocation()" data-tooltip="Share your location (optional)">📍 Location!</span>
         <span id="host-dot" class="has-tooltip" data-tooltip="Host is live" style="display:none;"><span class="dot"></span>Host</span>
+        <span id="host-pax-sep" style="display:none; color:var(--muted);">+</span>
         <span id="pax-count" class="has-tooltip" data-tooltip="Participants connected"></span>
       </span>
     </div>

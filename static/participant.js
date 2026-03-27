@@ -394,6 +394,11 @@
     if (el) el.textContent = notesContent;
     const dlBtn = document.getElementById('participant-notes-download');
     if (dlBtn) dlBtn.style.display = notesContent ? '' : 'none';
+    const btn = document.getElementById('notes-btn');
+    if (btn) {
+      btn.disabled = !notesContent;
+      btn.dataset.tooltip = notesContent ? 'Session notes' : '(none yet)';
+    }
   }
 
   function downloadParticipantNotes() {
@@ -428,6 +433,11 @@
     }
     const countEl = document.getElementById('summary-count');
     if (countEl) countEl.textContent = summaryPoints.length > 0 ? summaryPoints.length : '';
+    const summaryBtnEl = document.getElementById('summary-btn');
+    if (summaryBtnEl) {
+      summaryBtnEl.disabled = summaryPoints.length === 0;
+      summaryBtnEl.dataset.tooltip = summaryPoints.length ? 'Key points discussed so far' : '(none yet)';
+    }
     if (summaryPoints.length > prevCount) {
       const summaryBtn = document.getElementById('summary-btn');
       if (summaryBtn) {
@@ -2098,6 +2108,8 @@
   function updateHostDot(connected) {
     const dot = document.getElementById('host-dot');
     if (dot) dot.style.display = connected ? 'inline' : 'none';
+    const sep = document.getElementById('host-pax-sep');
+    if (sep) sep.style.display = connected ? 'inline' : 'none';
   }
 
   function updateScreenShareWarning(active) {
