@@ -1,7 +1,7 @@
 {
-  "sha": "2cc6b96d69be6a1c03d60070a3ac21dfda11cae2",
+  "sha": "b2e045e753a8cde54a55426559e996e5ec705738",
   "timestamp": "2026-03-27 18:03",
   "changelog": [
-    "fix: smooth Ctrl+wheel zoom for slides, bigger page/zoom controls"
+    "feat: auto-reload updated PDF slides with 'new' badge for participants"
   ]
 }
