@@ -1,7 +1,7 @@
 {
-  "sha": "179f616d43366a230ae8df4cf183ccb5c8e7383c",
+  "sha": "47d9ccca79adcd70fbd208b83ceae19ce889021e",
   "timestamp": "2026-03-27 07:25",
   "changelog": [
-    "fix: remove 'Generating...' text from participant key points dialog"
+    "feat: make sketched heart taller and more pointed"
   ]
 }
