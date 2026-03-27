@@ -1646,7 +1646,7 @@ def run() -> None:
                         except Exception as e:
                             log.error("ppt", f"Failed to sync slides current to server: {e}")
                     else:
-                        print("same slide", flush=True)
+                        pass
     
                 # ── Check for session management requests ──
                 try:
