@@ -1,7 +1,7 @@
 {
-  "sha": "9a52a3435bf6729506f3e2db15bbf1932a98b7a1",
-  "timestamp": "2026-03-27 07:26",
+  "sha": "ff321121be21b4b9cbecd4d851d09a6eb760e811",
+  "timestamp": "2026-03-27 07:33",
   "changelog": [
-    "fix: suppress transcription warning blink when no active session"
+    "fix: topic hover lightgreen bg + remove 5% left indent"
   ]
 }
