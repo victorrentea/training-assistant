@@ -470,12 +470,15 @@ h1 { display: none; }
 .slides-ctrl-btn:active { transform: scale(0.85); }
 
 .slides-close-btn {
-  color: #d94f4f;
+  background: #c0392b;
+  border-color: #c0392b;
+  color: #fff;
 }
 
 .slides-close-btn:hover {
-  border-color: #d94f4f;
-  color: #ff3333;
+  background: #e74c3c;
+  border-color: #e74c3c;
+  color: #fff;
 }
 
 .slides-preview-shell.native-mode .slides-zoom-btn {
