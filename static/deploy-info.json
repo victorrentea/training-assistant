@@ -1,7 +1,7 @@
 {
-  "sha": "ccdc129167fe31f051a172e6b0e82135fd444aba",
-  "timestamp": "2026-03-27 23:12",
+  "sha": "43bd5f2860763df470dd5b24d37c042c67f6d501",
+  "timestamp": "2026-03-27 23:13",
   "changelog": [
-    "fix: hide close btn and page pill unless PDF.js is rendering"
+    "feat: always show daemon status dot (red/green) in participant bar"
   ]
 }
