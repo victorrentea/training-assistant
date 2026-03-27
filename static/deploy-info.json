@@ -1,7 +1,7 @@
 {
-  "sha": "e8c0b3b30d0728696261aabe35b36505fdb2ebed",
-  "timestamp": "2026-03-27 00:26",
+  "sha": "87cfa7828f0b8fc6a3e1dc6e33ae86f1d345aa53",
+  "timestamp": "2026-03-27 07:01",
   "changelog": [
-    "fix: move X button lower in native PDF viewer mode"
+    "fix: remove debug 'same slide' print log"
   ]
 }
