@@ -59,7 +59,7 @@
     {
       "path": "slides_daemon.py",
       "qualname": "convert_with_google_drive_pull",
-      "lines": 61
+      "lines": 62
     },
     {
       "path": "state.py",
