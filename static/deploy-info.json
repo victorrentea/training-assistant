@@ -1,8 +1,7 @@
 {
-  "sha": "afe76fcc375981e461e65d8e3a9a9f237ac81207",
-  "timestamp": "2026-03-27 18:28",
+  "sha": "d45e671b32d846723b5adf7e9fcf864f0822146d",
+  "timestamp": "2026-03-27 18:29",
   "changelog": [
-    "fix: remove bold from correct poll option; use green border instead",
-    "fix: suppress position tracking and follow-uncheck during PDF zoom"
+    "fix: remove + separator between host dot and participant count in top bar"
   ]
 }
