@@ -1,7 +1,7 @@
 {
-  "sha": "2e63f84048ecf1a43754718a75e3e94776c32644",
-  "timestamp": "2026-03-27 23:23",
+  "sha": "44c814ae02c64a45e3e7f40cfa002b22b54f2c3e",
+  "timestamp": "2026-03-27 23:26",
   "changelog": [
-    "fix: remove work hours Santa suffix from version tag"
+    "fix: remove focus outline from slides list buttons"
   ]
 }
