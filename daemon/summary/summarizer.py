@@ -13,16 +13,12 @@ from datetime import date
 from typing import Optional
 
 import anthropic
-from daemon.llm_adapter import create_message
-from daemon.project_files import get_project_tools, handle_project_tool_call, PROJECT_TOOL_NAMES
+from daemon.llm.adapter import create_message
+from daemon.rag.project_files import get_project_tools, handle_project_tool_call, PROJECT_TOOL_NAMES
 from daemon import log
 
-from quiz_core import (
-    Config,
-    load_transcription_files,
-    extract_all_text,
-    read_session_notes,
-)
+from daemon.config import Config, read_session_notes
+from daemon.transcript.loader import load_transcription_files, extract_all_text
 
 SUMMARY_INTERVAL_SECONDS = 5 * 60  # 5 minutes
 

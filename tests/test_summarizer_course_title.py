@@ -2,8 +2,8 @@ import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from quiz_core import Config
-from daemon.summarizer import generate_summary, _normalize_course_title
+from daemon.config import Config
+from daemon.summary.summarizer import generate_summary, _normalize_course_title
 
 
 def _cfg(tmp_path: Path) -> Config:
@@ -25,11 +25,11 @@ def test_normalize_course_title_removes_date_prefix():
     assert _normalize_course_title("2026.03.26 09:30 - Spring") == "Spring"
 
 
-@patch("daemon.summarizer.get_project_tools", return_value=[])
-@patch("daemon.summarizer.read_session_notes", return_value="")
-@patch("daemon.summarizer.extract_all_text", return_value="Transcript line")
-@patch("daemon.summarizer.load_transcription_files", return_value=[("t", "x")])
-@patch("daemon.summarizer.create_message")
+@patch("daemon.summary.summarizer.get_project_tools", return_value=[])
+@patch("daemon.summary.summarizer.read_session_notes", return_value="")
+@patch("daemon.summary.summarizer.extract_all_text", return_value="Transcript line")
+@patch("daemon.summary.summarizer.load_transcription_files", return_value=[("t", "x")])
+@patch("daemon.summary.summarizer.create_message")
 def test_generate_summary_includes_clean_course_title(
     mock_create, *_mocks
 ):

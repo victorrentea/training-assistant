@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from daemon import indexer
+from daemon.rag import indexer
 
 
 def _write_manifest(folder: Path, files: dict[str, str]):

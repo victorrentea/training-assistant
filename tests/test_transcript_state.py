@@ -1,7 +1,7 @@
 """Tests for TranscriptStateManager — delta tracking for incremental summaries."""
 
 import pytest
-from daemon.transcript_state import TranscriptStateManager
+from daemon.transcript.state import TranscriptStateManager
 
 
 class TestTranscriptStateManager:

@@ -1,5 +1,5 @@
 from datetime import time
-from training_daemon import _check_daily_timing
+from daemon.session_state import check_daily_timing as _check_daily_timing
 
 
 def test_warning_window():

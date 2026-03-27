@@ -108,4 +108,3 @@ def run_loop(
 
     log.info("timestamps", f"Stopped after {count} insert(s).")
     return count
-

@@ -81,7 +81,7 @@ build_overlay() {
 # ── Process launchers ──
 
 start_daemon() {
-  python3 training_daemon.py &
+  python3 -m daemon &
   DAEMON_PID=$!
 }
 

@@ -1,7 +1,7 @@
 """Debate AI cleanup — called by the daemon when backend requests it."""
 import json
 
-from daemon.llm_adapter import create_message
+from daemon.llm.adapter import create_message
 
 
 def run_debate_ai_cleanup(request: dict, api_key: str, model: str) -> dict:

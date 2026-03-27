@@ -83,7 +83,7 @@ async def daemon_websocket_endpoint(websocket: WebSocket):
             state.daemon_last_seen = datetime.now(timezone.utc)
             msg_type = data.get("type")
             if msg_type == "slides_upload_result":
-                from features.slides.router import register_daemon_upload_result
+                from features.slides.drive_status import register_daemon_upload_result
 
                 await register_daemon_upload_result(data)
             elif msg_type == "daemon_ping":

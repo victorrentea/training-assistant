@@ -5,7 +5,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, model_validator
 
 from core.messaging import broadcast
-from quiz_core import DEFAULT_TRANSCRIPT_MINUTES
+from daemon.config import DEFAULT_TRANSCRIPT_MINUTES
 from core.state import state
 
 router = APIRouter()

@@ -1,6 +1,6 @@
 
 import sys
-from quiz_core import search_materials
+from daemon.rag.retriever import search_materials
 
 def test_search(query: str):
     print(f"\n--- Searching for: '{query}' ---")

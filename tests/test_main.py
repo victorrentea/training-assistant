@@ -907,13 +907,17 @@ class TestQA:
 
 
 def test_search_materials_fallback_without_daemon(monkeypatch):
-    """search_materials returns a safe fallback when daemon deps are not installed."""
-    import sys, quiz_core
-    # Setting daemon.rag to None in sys.modules causes ImportError on "from daemon.rag import ..."
-    monkeypatch.setitem(sys.modules, "daemon.rag", None)
-    results = quiz_core.search_materials("circuit breaker")
+    """search_materials returns a safe fallback when chromadb deps are not available."""
+    import daemon.rag.retriever as _retriever
+    from daemon.rag.retriever import search_materials
+
+    def _raise_import():
+        raise ImportError("chromadb not available")
+
+    monkeypatch.setattr(_retriever, "_get_collection", _raise_import)
+    results = search_materials("circuit breaker")
     assert len(results) == 1
-    assert results[0]["source"] == "N/A"
+    assert results[0]["source"] == "Error"
 
 
 def test_quiz_request_transcript_mode():

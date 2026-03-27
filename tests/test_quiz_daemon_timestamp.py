@@ -1,8 +1,9 @@
 from pathlib import Path
 from types import SimpleNamespace
 
-import training_daemon
-from training_daemon import TranscriptTimestampAppender
+import daemon.__main__ as training_daemon
+import daemon.slides.loop as _slides_loop
+from daemon.transcript.loop import TranscriptTimestampAppender
 
 
 def test_timestamp_appender_logs_missing_transcript_once(tmp_path: Path, capsys):
@@ -40,7 +41,7 @@ def test_slides_polling_runner_disables_cleanly_on_missing_config(monkeypatch):
     def _raise_config():
         raise RuntimeError("missing slides config")
 
-    monkeypatch.setattr(training_daemon.slides_daemon, "config_from_env", _raise_config)
+    monkeypatch.setattr(_slides_loop.slides_daemon, "config_from_env", _raise_config)
     runner = training_daemon.SlidesPollingRunner(
         SimpleNamespace(server_url="http://server", host_username="host", host_password="pwd")
     )
@@ -56,8 +57,8 @@ def test_slides_polling_runner_uses_main_daemon_auth_and_server(tmp_path: Path, 
         host_username="other-user",
         host_password="other-pass",
     )
-    monkeypatch.setattr(training_daemon.slides_daemon, "config_from_env", lambda: cfg)
-    monkeypatch.setattr(training_daemon.slides_daemon, "load_daemon_state", lambda _path: {"files": {}})
+    monkeypatch.setattr(_slides_loop.slides_daemon, "config_from_env", lambda: cfg)
+    monkeypatch.setattr(_slides_loop.slides_daemon, "load_daemon_state", lambda _path: {"files": {}})
     seen = {}
 
     def _fake_run_once(run_cfg, _state):
@@ -65,7 +66,7 @@ def test_slides_polling_runner_uses_main_daemon_auth_and_server(tmp_path: Path, 
         seen["host_username"] = run_cfg.host_username
         seen["host_password"] = run_cfg.host_password
 
-    monkeypatch.setattr(training_daemon.slides_daemon, "run_once", _fake_run_once)
+    monkeypatch.setattr(_slides_loop.slides_upload, "run_once", _fake_run_once)
 
     runner = training_daemon.SlidesPollingRunner(
         SimpleNamespace(server_url="http://main-server", host_username="main-user", host_password="main-pass")

@@ -1,6 +1,6 @@
 """Query normalized transcript lines by time range.
 
-Reads normalized files produced by `daemon.transcript_normalizer`:
+Reads normalized files produced by `daemon.transcript.normalizer`:
   YYYY-MM-DD transcription.txt with lines like: [HH:MM] Speaker: text
 """
 

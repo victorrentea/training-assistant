@@ -12,7 +12,7 @@ import shutil
 from datetime import datetime
 from pathlib import Path
 
-from daemon.transcript_normalizer import normalize_incremental, is_raw_transcript_txt
+from daemon.transcript.normalizer import normalize_incremental, is_raw_transcript_txt
 
 _NORMALIZED_RE = re.compile(r"^\d{4}-\d{2}-\d{2}\s+transcription\.txt$", re.IGNORECASE)
 

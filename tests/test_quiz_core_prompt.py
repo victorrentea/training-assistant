@@ -1,4 +1,4 @@
-from quiz_core import _SYSTEM_PROMPT
+from daemon.quiz.generator import _SYSTEM_PROMPT
 
 
 def test_system_prompt_warns_about_noisy_transcripts():

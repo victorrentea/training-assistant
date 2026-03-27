@@ -1,4 +1,4 @@
-from daemon.llm_adapter import TokenUsage, PRICING
+from daemon.llm.adapter import TokenUsage, PRICING
 
 
 def test_token_usage_zero():
