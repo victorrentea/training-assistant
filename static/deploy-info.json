@@ -1,7 +1,7 @@
 {
-  "sha": "4527d2bf9267a35e76f0a68c0c9fadca2f7ef248",
-  "timestamp": "2026-03-27 17:57",
+  "sha": "5802f3726f2ccf7b28b46a3fa6a3be7b4048041d",
+  "timestamp": "2026-03-27 17:59",
   "changelog": [
-    "feat: hide poll results during voting; show progress bar + anonymity message"
+    "feat: log transcripted word count instead of line count"
   ]
 }
