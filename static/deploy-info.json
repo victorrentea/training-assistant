@@ -1,8 +1,7 @@
 {
-  "sha": "d90b146add7087183bd2381896fa823bf777115e",
-  "timestamp": "2026-03-27 14:41",
+  "sha": "79b2fb0823a839fd24d832cc6f50100e0c7e771b",
+  "timestamp": "2026-03-27 17:52",
   "changelog": [
-    "fix: update CI test paths + fix auth env pollution in unit tests",
-    "fix: replace stale 'from messaging import' with correct module paths"
+    "chore: remove petclinic tests experiment"
   ]
 }
