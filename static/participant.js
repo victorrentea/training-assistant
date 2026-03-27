@@ -2281,7 +2281,10 @@
 
   function updateDaemonDot(connected) {
     const el = document.getElementById('daemon-dot');
-    if (el) el.style.display = connected ? 'inline' : 'none';
+    if (!el) return;
+    const dot = el.querySelector('.dot');
+    if (dot) { dot.classList.toggle('dot-green', connected); dot.classList.toggle('dot-red', !connected); }
+    el.dataset.tooltip = connected ? 'AI assistant connected' : 'AI assistant offline';
   }
 
   function updateScreenShareWarning(active) {
