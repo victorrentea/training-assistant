@@ -1,7 +1,7 @@
 {
-  "sha": "89a1cac26c629f15da52ff1813b51fa3bd30a6a0",
-  "timestamp": "2026-03-27 22:32",
+  "sha": "09287806c3ad7ac522fd978ee7f7c689f9a519a2",
+  "timestamp": "2026-03-27 23:09",
   "changelog": [
-    "fix: don't save/restore bar position in single-screen mode"
+    "fix: show status bar above PDF preview overlay"
   ]
 }
