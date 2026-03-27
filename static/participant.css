@@ -399,38 +399,6 @@ h1 { display: none; }
   box-sizing: border-box;
 }
 
-.slides-preview-close {
-  position: absolute;
-  top: .22rem;
-  right: .32rem;
-  border: none;
-  background: transparent;
-  color: #d94f4f;
-  border-radius: 6px;
-  width: auto;
-  height: auto;
-  font-size: 3.12rem;
-  font-weight: 900;
-  line-height: 1;
-  cursor: pointer;
-  z-index: 12;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: .04rem .22rem;
-  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.65);
-  transition: color .15s, background .15s, transform .15s;
-}
-
-.slides-preview-close:hover {
-  color: #ff3333;
-  background: rgba(220, 50, 50, 0.18);
-  transform: scale(1.12);
-}
-
-.slides-preview-shell.native-mode .slides-preview-close {
-  top: 2.8rem;
-}
 
 @media (max-width: 900px) {
   .slides-preview-overlay {
@@ -459,8 +427,9 @@ h1 { display: none; }
   height: 40px;
   padding: 0 .75rem;
   border-radius: 999px;
-  background: rgba(20, 20, 35, 0.85);
-  color: #fff;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
   font-size: 1rem;
   font-weight: 600;
   line-height: 1;
@@ -476,9 +445,9 @@ h1 { display: none; }
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  border: none;
-  background: rgba(108, 99, 255, 0.82);
-  color: #fff;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
   font-size: 1.3rem;
   font-weight: 700;
   line-height: 1;
@@ -489,14 +458,24 @@ h1 { display: none; }
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: transform .1s, background .15s;
+  transition: transform .1s, background .15s, border-color .15s;
 }
 
 .slides-ctrl-btn:hover {
-  background: rgba(108, 99, 255, 0.97);
+  background: rgba(20, 20, 35, 0.97);
+  border-color: var(--accent);
 }
 
 .slides-ctrl-btn:active { transform: scale(0.85); }
+
+.slides-close-btn {
+  color: #d94f4f;
+}
+
+.slides-close-btn:hover {
+  border-color: #d94f4f;
+  color: #ff3333;
+}
 
 .slides-preview-shell.native-mode .slides-zoom-btn {
   display: none;
