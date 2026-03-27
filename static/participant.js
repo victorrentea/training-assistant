@@ -1083,12 +1083,8 @@
   function _showSlidesEmpty() {
     const empty = document.getElementById('slides-empty');
     if (!empty) return;
-    empty.innerHTML = (
-      `<div class="slides-empty-card">` +
-      `<div class="slides-empty-hint">Slides will appear here when published</div>` +
-      `</div>`
-    );
-    empty.style.display = '';
+    empty.innerHTML = '';
+    empty.style.display = 'none';
     document.getElementById('slides-zoom-in')?.style.setProperty('display', 'none');
     document.getElementById('slides-zoom-out')?.style.setProperty('display', 'none');
   }
