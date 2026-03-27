@@ -979,7 +979,6 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
     line-height: 2;
     background: var(--surface);
     border-radius: var(--radius);
-    overflow-x: auto;
 }
 
 .codereview-line {

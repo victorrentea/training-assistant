@@ -2266,11 +2266,6 @@
     const panel = document.getElementById('codereview-side-panel');
     const confirmed = new Set(cr.confirmed_lines || []);
 
-    if (codereviewSelectedLine === null) {
-      panel.innerHTML = '<div class="muted" style="text-align:center;margin-top:40px;">Click a line to see details</div>';
-      return;
-    }
-
     const lineNum = codereviewSelectedLine;
     const lineParticipants = (cr.line_participants || {})[String(lineNum)] || [];
     const isConfirmed = confirmed.has(lineNum);
@@ -2360,6 +2355,7 @@
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
     });
+    document.getElementById('codereview-snippet').value = '';
   }
 
   updateGenBtn();
