@@ -115,6 +115,7 @@
   let slidesNativeZoom = 1.0;
   let slidesFollowTrainerEnabled = true;
   let slidesFollowUncheckSuppressedUntil = 0;
+  let slidesZoomInProgressUntil = 0;
   let hostSlidesCurrent = null;   // what host is showing NOW
   let hostSlidesPrevious = null;  // what host was showing before (participants follow this)
   let lastHostSlidesCurrentKey = '';
@@ -732,6 +733,15 @@
     return Date.now() < slidesFollowUncheckSuppressedUntil;
   }
 
+  function _suppressSlidesZoom(ms = 1000) {
+    slidesZoomInProgressUntil = Date.now() + Math.max(0, Number(ms || 0));
+    _suppressSlidesFollowAutoUncheck(ms);
+  }
+
+  function _isSlidesZoomInProgress() {
+    return Date.now() < slidesZoomInProgressUntil;
+  }
+
   function _isSlidesFollowActive() {
     return slidesFollowTrainerEnabled;
   }
@@ -824,10 +834,12 @@
     const zoomOut = document.getElementById('slides-zoom-out');
     if (zoomIn) zoomIn.addEventListener('click', () => {
       if (slidesViewMode !== 'pdfjs' || !slidesPdfViewer) return;
+      _suppressSlidesZoom(1000);
       slidesPdfViewer.currentScale = Math.min(slidesPdfViewer.currentScale * 1.25, 10);
     });
     if (zoomOut) zoomOut.addEventListener('click', () => {
       if (slidesViewMode !== 'pdfjs' || !slidesPdfViewer) return;
+      _suppressSlidesZoom(1000);
       slidesPdfViewer.currentScale = Math.max(slidesPdfViewer.currentScale / 1.25, 0.1);
     });
 
@@ -837,6 +849,7 @@
       pdfContainer.addEventListener('wheel', (e) => {
         if (!e.ctrlKey || slidesViewMode !== 'pdfjs' || !slidesPdfViewer) return;
         e.preventDefault();
+        _suppressSlidesZoom(1000);
         const factor = e.deltaY < 0 ? 1.1 : 1 / 1.1;
         slidesPdfViewer.currentScale = Math.max(0.1, Math.min(10, slidesPdfViewer.currentScale * factor));
       }, { passive: false });
@@ -1141,14 +1154,15 @@
 
     slidesPdfEventBus.on('pagechanging', (evt) => {
       if (slidesSelectedSlug && evt?.pageNumber) {
+        const slide = slidesCatalog.find(s => s.slug === slidesSelectedSlug);
+        _renderSlidesMeta(slide || null);
+        if (_isSlidesZoomInProgress()) return;
         _setStoredSlidePage(slidesSelectedSlug, evt.pageNumber);
         const container = document.getElementById('slides-pdf-container');
         _setStoredSlideView(slidesSelectedSlug, {
           page: evt.pageNumber,
           scrollTop: Number(container?.scrollTop || 0),
         });
-        const slide = slidesCatalog.find(s => s.slug === slidesSelectedSlug);
-        _renderSlidesMeta(slide || null);
         _autoDisableSlidesFollowFromParticipantNav();
       }
     });
@@ -1157,6 +1171,7 @@
     slidesPdfEventBus.on('updateviewarea', (evt) => {
       const page = Number(evt?.location?.pageNumber || 0);
       if (!slidesSelectedSlug || !page) return;
+      if (_isSlidesZoomInProgress()) return;
       const container = document.getElementById('slides-pdf-container');
       _setStoredSlidePage(slidesSelectedSlug, page);
       _setStoredSlideView(slidesSelectedSlug, {
