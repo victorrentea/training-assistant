@@ -1,7 +1,7 @@
 {
-  "sha": "0a17edeb641d51cebcdc2fdfa00b34d27ffa9e72",
-  "timestamp": "2026-03-27 18:33",
+  "sha": "4c5be56cbb475b863401451092f8c2a86a672f35",
+  "timestamp": "2026-03-27 18:35",
   "changelog": [
-    "fix: remove 'Slides will appear here when published' placeholder bubble"
+    "feat: remember button bar position per monitor layout"
   ]
 }
