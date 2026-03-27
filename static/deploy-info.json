@@ -1,7 +1,7 @@
 {
-  "sha": "7387c979f9e61c8951f540fadc5bb0fc296d1d49",
-  "timestamp": "2026-03-27 23:46",
+  "sha": "bd69fe8890eb12f5f75529ca49d33d603b4bf8a4",
+  "timestamp": "2026-03-27 23:48",
   "changelog": [
-    "fix: prevent loading-slide blocker from hanging after on-demand PDF upload"
+    "feat: show download progress bar in Loading Slide blocker dialog"
   ]
 }
