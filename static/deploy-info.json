@@ -1,7 +1,7 @@
 {
-  "sha": "7e75973a940c8731923d571c5ecf9a09ba94e0d3",
+  "sha": "c998e6373e17563e9da5a559ca92a76c23b7e1e9",
   "timestamp": "2026-03-27 07:24",
   "changelog": [
-    "fix: code review UX \u2014 scrollable code box, remove useless hint, clear on delete"
+    "style: unified download SVG icon; remove wordcloud datalist/autocomplete"
   ]
 }
