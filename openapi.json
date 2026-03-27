@@ -1576,9 +1576,9 @@
       }
     },
     "/api/slides/file/{slug}": {
-      "head": {
+      "get": {
         "summary": "Get Slide File",
-        "operationId": "get_slide_file_api_slides_file__slug__head",
+        "operationId": "get_slide_file_api_slides_file__slug__get",
         "parameters": [
           {
             "name": "slug",
@@ -1611,9 +1611,9 @@
           }
         }
       },
-      "get": {
+      "head": {
         "summary": "Get Slide File",
-        "operationId": "get_slide_file_api_slides_file__slug__head",
+        "operationId": "get_slide_file_api_slides_file__slug__get",
         "parameters": [
           {
             "name": "slug",
