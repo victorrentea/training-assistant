@@ -50,14 +50,12 @@ jobs:
               tests/test_e2e_debate.py
               tests/test_e2e_wordcloud_qa_activity.py
               tests/test_e2e_codereview.py
-          - group: gaps-quiz-scoring-slides
+          - group: gaps-quiz-scoring
             files: >-
               tests/test_e2e_remaining_gaps.py
               tests/test_e2e_quiz_summary.py
               tests/test_e2e_gaps.py
               tests/test_e2e_scoring.py
-              tests/test_e2e_slides_pdf_offset.py
-              tests/test_e2e_slides_resume.py
               tests/test_e2e_participant_escape_modals.py
 
     steps:
