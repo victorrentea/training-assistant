@@ -1,7 +1,7 @@
 {
-  "sha": "d0074875eb509a19addfcf25264ae500c3557a1b",
+  "sha": "7e75973a940c8731923d571c5ecf9a09ba94e0d3",
   "timestamp": "2026-03-27 07:24",
   "changelog": [
-    "feat: single-screen emoji panel 20% smaller, trigger only at bar position"
+    "fix: code review UX \u2014 scrollable code box, remove useless hint, clear on delete"
   ]
 }
