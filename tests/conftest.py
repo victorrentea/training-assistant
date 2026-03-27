@@ -20,6 +20,7 @@ for _p in (_project_root, _tests_dir):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
+import json
 import requests
 import pytest
 
@@ -47,6 +48,15 @@ def server_url(tmp_path_factory):
     server_env = os.environ.copy()
     server_env["HOST_USERNAME"] = HOST_USER
     server_env["HOST_PASSWORD"] = HOST_PASS
+
+    # Provide a test catalog with one unavailable slide (no PDF on disk)
+    # so e2e tests can verify the unavailable-slide UI behaviour.
+    catalog_path = tmp_path_factory.mktemp("catalog") / "test_catalog.json"
+    catalog_path.write_text(json.dumps({
+        "slides": [{"name": "E2E Unavailable Slide", "target_pdf": "e2e-unavailable-slide.pdf",
+                    "slug": "e2e-unavailable-slide"}]
+    }), encoding="utf-8")
+    server_env["PPTX_CATALOG_FILE"] = str(catalog_path)
 
     # Detect whether pytest-cov is active
     use_coverage = os.environ.get("_E2E_COVERAGE") == "1"
