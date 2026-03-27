@@ -1,8 +1,7 @@
 {
-  "sha": "a4fdf22fa023c04f250c3fbafdffb5bc14fa2f1a",
-  "timestamp": "2026-03-27 18:50",
+  "sha": "5531f3c735829182c4b7e6c49def7b8eb7dc60f3",
+  "timestamp": "2026-03-27 18:52",
   "changelog": [
-    "feat: show daemon connection status indicator in participant view",
-    "feat: remove top-right X, red X in bottom-left, emoji-style +/- and page badge"
+    "fix: X close button red background with white icon"
   ]
 }
