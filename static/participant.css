@@ -917,6 +917,14 @@ h1 { display: none; }
   color: var(--accent2);
 }
 
+.vote-anon-hint {
+  margin-top: .75rem;
+  text-align: center;
+  font-size: .78rem;
+  color: var(--muted);
+  letter-spacing: .01em;
+}
+
 .multi-hint {
   color: var(--warn);
   font-size: .85em;
