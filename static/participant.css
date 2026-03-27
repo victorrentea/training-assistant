@@ -661,6 +661,11 @@ h1 { display: none; }
   text-overflow: ellipsis;
 }
 
+.slides-list-item.unavailable {
+  cursor: default;
+  pointer-events: none;
+}
+
 .slides-list-item.unavailable .slides-list-title {
   text-decoration: line-through;
   opacity: 0.45;
