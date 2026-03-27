@@ -1,0 +1,46 @@
+@startuml c3_desktop_overlay
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+title Desktop Overlay & Wispr Addons — C3 Component Diagram
+
+LAYOUT_WITH_LEGEND()
+
+Container_Ext(fastapi, "FastAPI Backend", "WSS /ws/__overlay__")
+Container_Ext(claude_api, "Anthropic Claude API", "HTTPS REST (Haiku)")
+
+Container_Boundary(overlay, "Emoji Overlay (Swift / AppKit, host's Mac)") {
+
+  Component(app_delegate, "AppDelegate", "Swift / AppKit", "App entry point.\nManages window lifecycle.\nConnects WebSocket to backend on launch.")
+
+  Component(overlay_panel, "OverlayPanel", "NSPanel subclass", "Transparent always-on-top window.\nCovers full screen, ignores mouse events.\nPID lock file ensures single instance.")
+
+  Component(emoji_animator, "EmojiAnimator", "Swift / AppKit", "Receives emoji reactions from WebSocket.\nAnimates emoji sprites flying up the screen.\nSelf-removing after animation completes.")
+
+  Component(button_bar, "ButtonBar", "Swift / AppKit", "Small floating button bar (not transparent).\nHost-triggered controls:\n• Sound effects\n• Overlay show/hide toggle")
+
+  Component(sound_manager, "SoundManager", "Swift / AVFoundation", "Plays applause, drum roll, fanfare sounds.\nTriggered by host via ButtonBar.")
+}
+
+Container_Boundary(wispr, "Wispr Addons (Python, host's Mac)") {
+
+  Component(clean_py, "wispr-addons/clean.py", "Python / pyobjc", "CGEventTap intercepts all keyboard & mouse events.")
+
+  Component(clipboard_capture, "Clipboard capture", "Python / pyobjc", "Cmd+V: stores clipboard at each paste.\nCmd+Ctrl+V: sends to Claude Haiku for cleanup,\nundoes original paste, re-pastes cleaned version.\nCmd+Ctrl+Opt+V: same but adds contextual emojis.")
+
+  Component(dictation_mute, "Dictation mute", "Python / pyobjc", "Mouse Button 5 (Wispr Flow dictation toggle):\nPauses media playback, lowers loopback volume.\nEscape while dictating: restores volume + media.")
+}
+
+' Overlay connections
+Rel(app_delegate, overlay_panel, "creates + manages")
+Rel(app_delegate, emoji_animator, "creates + starts")
+Rel(app_delegate, button_bar, "creates + shows")
+Rel(app_delegate, fastapi, "WS connect as __overlay__\nReceives emoji_reaction events", "WSS")
+Rel(emoji_animator, overlay_panel, "renders emoji sprites on")
+Rel(button_bar, sound_manager, "triggers sounds")
+
+' Wispr connections
+Rel(clean_py, clipboard_capture, "contains")
+Rel(clean_py, dictation_mute, "contains")
+Rel(clipboard_capture, claude_api, "POST to Claude Haiku\nfor grammar/filler cleanup", "HTTPS")
+
+@enduml
