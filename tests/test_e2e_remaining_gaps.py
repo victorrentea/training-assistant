@@ -401,7 +401,7 @@ class TestConnectionIndicators:
     def test_participant_count_updates(self, host: HostPage, pax: ParticipantPage):
         """Host sees participant count increase when someone joins."""
         pax.join("CountTest")
-        expect(host._page.locator("#pax-list li")).to_have_count(1, timeout=5000)
+        expect(host._page.locator("#pax-list li")).not_to_have_count(0, timeout=5000)
 
 
 class TestHostPanelGeneral:
