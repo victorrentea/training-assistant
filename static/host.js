@@ -1980,11 +1980,6 @@
     _hostWcLastDataKey = key;
     clearTimeout(_hostWcDebounceTimer);
     _hostWcDebounceTimer = setTimeout(() => _drawHostCloud(canvas, wordsMap), 300);
-    const dl = document.getElementById('wc-host-suggestions');
-    if (dl) {
-      dl.innerHTML = Object.keys(wordsMap).sort()
-        .map(w => `<option value="${escHtml(w)}"></option>`).join('');
-    }
     const dlWrap = document.getElementById('wc-download-wrap');
     if (dlWrap) dlWrap.style.display = Object.keys(wordsMap).length ? '' : 'none';
   }
