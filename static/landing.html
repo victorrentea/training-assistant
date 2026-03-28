@@ -99,6 +99,7 @@
       margin-top: 1.2rem;
       min-height: 1.2em;
     }
+    @keyframes blink-fast { 0%,49%{opacity:1} 50%,100%{opacity:0} }
   </style>
 </head>
 <body>
@@ -174,8 +175,9 @@
       input.value = code.toUpperCase();
       onCodeInput();
       const statusEl = document.getElementById('status-msg');
-      statusEl.textContent = 'Auto-joining on host machine...';
-      statusEl.style.color = 'var(--accent)';
+      statusEl.textContent = 'Auto-joining on host machine…';
+      statusEl.style.color = 'var(--danger)';
+      statusEl.style.animation = 'blink-fast .3s linear infinite';
       setTimeout(() => { window.location.href = '/' + code; }, 2000);
     })();
 
