@@ -122,6 +122,8 @@ def build_for_host() -> dict:
         "slides_log_deep_count": _slides_deep_count(),
         "slides_log_topic": _slides_topic(),
         "git_repos_count": len(state.git_repos),
+        "slides_log": state.slides_log,
+        "git_repos": state.git_repos,
     }
 
 

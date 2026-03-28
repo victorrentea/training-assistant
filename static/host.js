@@ -28,6 +28,8 @@
   let _blockerDismissed = false;
   let _blockerOriginalName = '';
   let _slidesCatalogHideTimer = null;
+  let _gitRepos = [];
+  let _slidesLog = [];
   const _ZERO_WIDTH_RE = /[\u200B-\u200D\uFEFF]/g;
 
   let _hostWcDebounceTimer = null;
@@ -136,6 +138,7 @@
   pLink.href = link;
   pLink.innerHTML = _buildUrlHtml();
   _setupSlidesCatalogHover();
+  _setupActivityLogHovers();
 
   // ── WebSocket (host monitors state too) ──
   function connectWS() {
@@ -211,9 +214,9 @@
           badge.textContent = topic ? `📊 ${topic} (${count})` : `📊 ${count}`;
           badge.title = `${count} slide${count !== 1 ? 's' : ''} viewed for > 10 sec`;
         }
-        if (msg.git_repos_count !== undefined) {
-          document.getElementById('git-repos-badge').textContent = '⎇ ' + msg.git_repos_count;
-        }
+        if (msg.git_repos !== undefined) _gitRepos = msg.git_repos;
+        if (msg.slides_log !== undefined) _slidesLog = msg.slides_log;
+        document.getElementById('git-repos-badge').textContent = '⎇ ' + (_gitRepos.length > 0 ? (msg.git_repos_count ?? _gitRepos.length) : 0);
         renderTranscriptStatus(msg.transcript_line_count, msg.transcript_total_lines, msg.transcript_latest_ts, msg.transcript_last_content_at);
         renderOverlayStatus(msg.overlay_connected);
         renderPendingDeploy(msg.pending_deploy);
@@ -935,6 +938,69 @@
     };
     hover.addEventListener('mouseenter', open);
     hover.addEventListener('mouseleave', close);
+  }
+
+  function _fmtSecs(s) {
+    s = Math.round(s);
+    if (s < 60) return s + 's';
+    const m = Math.floor(s / 60), r = s % 60;
+    return r > 0 ? m + 'm ' + r + 's' : m + 'm';
+  }
+
+  function _renderGitReposPopover() {
+    const el = document.getElementById('git-repos-content');
+    if (!el) return;
+    if (!_gitRepos.length) { el.innerHTML = '<div style="padding:8px;opacity:0.5">No repos yet</div>'; return; }
+    const sorted = [..._gitRepos].sort((a, b) => (b.seconds_spent || 0) - (a.seconds_spent || 0));
+    let html = '';
+    for (const r of sorted) {
+      html += '<div class="slides-catalog-line">'
+        + '<span class="slides-cache-title truncate">' + escHtml(r.project || r.path || '') + '</span>'
+        + '<span class="slides-cache-label" style="color:var(--muted);font-family:monospace">@ ' + escHtml(r.branch || '') + '</span>'
+        + '<span class="slides-cache-detail">' + _fmtSecs(r.seconds_spent || 0) + '</span>'
+        + '</div>';
+    }
+    el.innerHTML = html;
+  }
+
+  function _renderSlidesLogPopover() {
+    const el = document.getElementById('slides-log-content');
+    if (!el) return;
+    if (!_slidesLog.length) { el.innerHTML = '<div style="padding:8px;opacity:0.5">No slides yet</div>'; return; }
+    // Group by file: {slides: Set, totalSecs}
+    const byFile = {};
+    for (const e of _slidesLog) {
+      const f = e.file || '';
+      if (!byFile[f]) byFile[f] = { slides: new Set(), totalSecs: 0 };
+      byFile[f].slides.add(e.slide);
+      byFile[f].totalSecs += e.seconds_spent || 0;
+    }
+    const sorted = Object.entries(byFile).sort((a, b) => b[1].totalSecs - a[1].totalSecs);
+    let html = '';
+    for (const [file, data] of sorted) {
+      const name = file.replace(/\.pptx?$/i, '') || file;
+      html += '<div class="slides-catalog-line">'
+        + '<span class="slides-cache-title truncate">' + escHtml(name) + '</span>'
+        + '<span class="slides-cache-label" style="color:var(--muted)">' + data.slides.size + ' slides</span>'
+        + '<span class="slides-cache-detail">' + _fmtSecs(data.totalSecs) + '</span>'
+        + '</div>';
+    }
+    el.innerHTML = html;
+  }
+
+  function _setupActivityLogHovers() {
+    function _makeHover(hoverId, popoverId, renderFn) {
+      const hover = document.getElementById(hoverId);
+      const popover = document.getElementById(popoverId);
+      if (!hover) return;
+      let hideTimer = null;
+      const open = () => { clearTimeout(hideTimer); if (popover) popover.hidden = false; hover.classList.add('open'); renderFn(); };
+      const close = () => { clearTimeout(hideTimer); hideTimer = setTimeout(() => { hover.classList.remove('open'); if (popover) popover.hidden = true; }, 120); };
+      hover.addEventListener('mouseenter', open);
+      hover.addEventListener('mouseleave', close);
+    }
+    _makeHover('git-repos-hover', 'git-repos-popover', _renderGitReposPopover);
+    _makeHover('slides-log-hover', 'slides-log-popover', _renderSlidesLogPopover);
   }
 
   async function toggleMode() {
