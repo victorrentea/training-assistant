@@ -165,6 +165,20 @@
       }
     })();
 
+    // Auto-join from host cookie (same machine)
+    (function autoJoinFromHostCookie() {
+      const m = document.cookie.match(/(?:^|;\s*)host_session_id=([a-z0-9]{4,8})/);
+      if (!m) return;
+      const code = m[1];
+      const input = document.getElementById('code-input');
+      input.value = code.toUpperCase();
+      onCodeInput();
+      const statusEl = document.getElementById('status-msg');
+      statusEl.textContent = 'Auto-joining on host machine...';
+      statusEl.style.color = 'var(--accent)';
+      setTimeout(() => { window.location.href = '/' + code; }, 2000);
+    })();
+
     // Check if any session is active
     (async function checkSessionActive() {
       try {
