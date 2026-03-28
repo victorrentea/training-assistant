@@ -106,7 +106,14 @@ tell application "Microsoft PowerPoint"
         set slideNumber to "__SLIDE_UNKNOWN__"
     end try
 
-    return presentationName & tab & isPresenting & tab & (slideNumber as string)
+    set isFrontmost to "false"
+    tell application "System Events"
+        try
+            set isFrontmost to (frontmost of application process "Microsoft PowerPoint") as string
+        end try
+    end tell
+
+    return presentationName & tab & isPresenting & tab & (slideNumber as string) & tab & isFrontmost
 end tell
 """.strip()
 
@@ -205,7 +212,8 @@ def _parse_powerpoint_probe_output(raw: str) -> dict | None:
     else:
         is_presenting = False
         slide_number = _coerce_slide_number(parts[1].strip())
-    return {"presentation": presentation, "slide": slide_number, "presenting": is_presenting}
+    is_frontmost = parts[3].strip() == "true" if len(parts) >= 4 else True
+    return {"presentation": presentation, "slide": slide_number, "presenting": is_presenting, "frontmost": is_frontmost}
 
 
 def _probe_powerpoint_state(timeout_seconds: float = 2.5) -> tuple[dict | None, str | None]:
@@ -614,8 +622,8 @@ def run() -> None:
                     else:
                         pass
 
-                # ── Track slides log from PowerPoint state ──
-                if not ppt_error and ppt_state:
+                # ── Track slides log from PowerPoint state (foreground only) ──
+                if not ppt_error and ppt_state and ppt_state.get("frontmost", True):
                     _ppt_file = ppt_state.get("presentation", "")
                     _ppt_slide = _coerce_slide_number(ppt_state.get("slide"))
                     _now_hhmm = datetime.now().strftime("%H:%M")
