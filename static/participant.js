@@ -2243,6 +2243,9 @@ function closeEmojiPopup(ev) {
     if (page) page.style.display = 'none';
     const closeBtn = document.getElementById('slides-close-btn');
     if (closeBtn) closeBtn.style.display = 'none';
+    document.getElementById('slides-zoom-in')?.style.setProperty('display', 'none');
+    document.getElementById('slides-zoom-out')?.style.setProperty('display', 'none');
+    document.getElementById('slides-fit-width')?.style.setProperty('display', 'none');
   }
 
   function warmSlidesCatalog() {
