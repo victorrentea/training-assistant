@@ -4,9 +4,28 @@ type, backend_version, mode, my_score, my_avatar, my_name, current_activity, par
 host_connected, overlay_connected, screen_share_active, summary, notes, daemon info, token_usage,
 participants list, needs_restore, pending_deploy.
 """
+import os
 from datetime import datetime, timezone
 from core.state import state
 from core.version import get_backend_version
+
+
+def _slides_deep_count() -> int:
+    totals: dict[tuple, int] = {}
+    for e in state.slides_log:
+        key = (e.get('file', ''), e.get('slide', 0))
+        totals[key] = totals.get(key, 0) + e.get('seconds_spent', 0)
+    return sum(1 for t in totals.values() if t >= 10)
+
+
+def _slides_topic() -> str:
+    if state.slides_current and state.slides_current.get('presentation_name'):
+        return state.slides_current['presentation_name']
+    for e in reversed(state.slides_log):
+        f = e.get('file', '')
+        if f:
+            return os.path.splitext(os.path.basename(f))[0]
+    return ''
 
 
 def _participant_display_name(pid: str) -> str:
@@ -100,7 +119,8 @@ def build_for_host() -> dict:
         "needs_restore": state.needs_restore,
         "pending_deploy": state.pending_deploy,
         "session_id": state.session_id,
-        "slides_log_count": len(state.slides_log),
+        "slides_log_deep_count": _slides_deep_count(),
+        "slides_log_topic": _slides_topic(),
         "git_repos_count": len(state.git_repos),
     }
 

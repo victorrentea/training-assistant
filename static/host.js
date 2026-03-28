@@ -204,8 +204,12 @@
         document.getElementById('restore-banner').style.display =
           (msg.needs_restore && !msg.daemon_connected) ? '' : 'none';
         updateTokenBadge(msg.token_usage);
-        if (msg.slides_log_count !== undefined) {
-          document.getElementById('slides-log-badge').textContent = '📊 ' + msg.slides_log_count;
+        if (msg.slides_log_deep_count !== undefined || msg.slides_log_topic !== undefined) {
+          const badge = document.getElementById('slides-log-badge');
+          const topic = msg.slides_log_topic || '';
+          const count = msg.slides_log_deep_count ?? 0;
+          badge.textContent = topic ? `📊 ${topic} (${count})` : `📊 ${count}`;
+          badge.title = `${count} slide${count !== 1 ? 's' : ''} viewed for > 10 sec`;
         }
         if (msg.git_repos_count !== undefined) {
           document.getElementById('git-repos-badge').textContent = '⎇ ' + msg.git_repos_count;
