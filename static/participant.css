@@ -415,19 +415,7 @@ h1 { display: none; }
   }
 }
 
-.slides-meta-inline {
-  position: absolute;
-  bottom: .5rem;
-  top: auto;
-  left: .75rem;
-  right: auto;
-  z-index: 11;
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: .4rem;
-  pointer-events: none;
-}
+/* .slides-meta-inline removed — ctrl buttons moved into #emoji-bar as #slides-ctrl-group */
 
 .slides-page-inline {
   height: 40px;
@@ -1461,6 +1449,7 @@ h1 { display: none; }
   right: var(--slides-overlay-width);
   display: flex;
   justify-content: flex-start;
+  align-items: center;
   gap: .5rem;
   padding: .5rem .75rem;
   background: transparent;
