@@ -1,7 +1,7 @@
 {
-  "sha": "8a8a1170bf65917afa5475b6b59ce36341702fa2",
-  "timestamp": "2026-03-28 23:45",
+  "sha": "e2a29aa973f39b04f61fff6bab8bd11ea44214f8",
+  "timestamp": "2026-03-28 23:46",
   "changelog": [
-    "fix(host): simplify summary badge styling to match notes badge"
+    "fix(host): add ISO code label to transcription language badge (\ud83c\uddf7\ud83c\uddf4 RO)"
   ]
 }
