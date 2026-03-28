@@ -1,8 +1,7 @@
 {
-  "sha": "2361197d471c6598e35eb4ba8d747532363a1f61",
-  "timestamp": "2026-03-28 07:17",
+  "sha": "35401530edb4f394f61d3f68039515ef88b83cad",
+  "timestamp": "2026-03-28 07:18",
   "changelog": [
-    "fix: use scrollTo instant to bypass smooth-scroll during position restore",
-    "feat: slides catalog shows status, date, min width"
+    "feat: add Follow button step to welcome tour"
   ]
 }
