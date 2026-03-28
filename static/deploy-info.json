@@ -1,7 +1,19 @@
 {
-  "sha": "9d8de3e26f1002b07d05f0e052b970da77f6b89e",
-  "timestamp": "2026-03-28 12:22",
+  "sha": "111b92e100f14096f9e9ef610bbcd976b724d54a",
+  "timestamp": "2026-03-28 12:29",
   "changelog": [
-    "fix(overlay): skip sketched heart for participant emoji reactions"
+    "chore: remove drive_status.py and old upload/meta references",
+    "feat(daemon): send slide_invalidated on PPTX change instead of converting",
+    "feat(daemon): send slides_catalog on connect, handle slide_log, remove upload logic",
+    "feat(host): render slides cache status in popover from WS state",
+    "feat(slides): push cache status to host via WS state",
+    "feat(slides): serve PDFs from cache, remove drive_status refs, update availability",
+    "feat(ws): handle slides_catalog and slide_invalidated, remove old handlers",
+    "feat(slides): add server-side PDF cache with GDrive download + fingerprint polling",
+    "feat(state): add slides cache fields, remove slides_uploads and slides_meta",
+    "chore: remove PoC ping/download code from main.py",
+    "docs: implementation plan for server-side PDF cache",
+    "docs: tighten per-slug GDrive lock constraint in spec",
+    "docs: server-side PDF cache design spec"
   ]
 }
