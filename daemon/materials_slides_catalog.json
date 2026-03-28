@@ -16,7 +16,7 @@
       "drive_probe_url": "https://docs.google.com/presentation/d/1SxjaM0f97P1EjPJUxrjQ7fU2KKF_CD-N/export/pdf"
     },
     {
-      "title": "Architecture Design Principles",
+      "title": "Design Principles",
       "group": "Architecture",
       "source": "/Users/victorrentea/My Drive/Cursuri/Architecture/Design Principles.pptx",
       "target_pdf": "Design Principles.pdf",
@@ -24,7 +24,7 @@
       "drive_probe_url": "https://docs.google.com/presentation/d/1OV2fE1vo2V12r1kNJKWCBB-mxwlxZHFI/export/pdf"
     },
     {
-      "title": "Architecture - Fundamentals",
+      "title": "Fundamentals",
       "group": "Architecture",
       "source": "/Users/victorrentea/My Drive/Cursuri/Architecture/Architecture.pptx",
       "target_pdf": "Architecture.pdf",
@@ -32,7 +32,7 @@
       "drive_probe_url": "https://docs.google.com/presentation/d/1OLTybLCDCmpzZM2ttn8IS1A14TeXSK8q/export/pdf"
     },
     {
-      "title": "Architecture - REST",
+      "title": "REST",
       "group": "Architecture",
       "source": "/Users/victorrentea/My Drive/Cursuri/Architecture/REST.pptx",
       "target_pdf": "REST.pdf",
@@ -40,7 +40,7 @@
       "drive_probe_url": "https://docs.google.com/presentation/d/1KKTcvBbQpuy3kEFViigs4HOCk7eoBxdf/export/pdf"
     },
     {
-      "title": "Architecture - Modulith",
+      "title": "Modulith",
       "group": "Architecture",
       "source": "/Users/victorrentea/My Drive/Cursuri/Architecture/Modulith.pptx",
       "target_pdf": "Modulith.pdf",
@@ -48,7 +48,7 @@
       "drive_probe_url": "https://docs.google.com/presentation/d/1KYMqjtP8qXhrvA2b3kP1yHbUdiLVJvkh/export/pdf"
     },
     {
-      "title": "Architecture - Microservices",
+      "title": "Microservices",
       "group": "Architecture",
       "source": "/Users/victorrentea/My Drive/Cursuri/Architecture/Microservices.pptx",
       "target_pdf": "Microservices.pdf",
@@ -96,7 +96,7 @@
       "drive_probe_url": "https://docs.google.com/presentation/d/1oggnHZLrjvrT8sdA01yjs3tPlvALe_i8/export/pdf"
     },
     {
-      "title": "Testing - Unit 🔄",
+      "title": "Unit Testing",
       "group": "Testing",
       "source": "/Users/victorrentea/My Drive/Cursuri/Unit Testing/Unit Testing.pptx",
       "target_pdf": "Unit Testing.pdf",
@@ -104,7 +104,7 @@
       "drive_probe_url": "https://docs.google.com/presentation/d/1TQ7FFCiouBlkIFlcssitCcbL_II2mWkM/export/pdf"
     },
     {
-      "title": "Testing - Integration 🔄",
+      "title": "Integration Testing",
       "group": "Testing",
       "source": "/Users/victorrentea/My Drive/Cursuri/Unit Testing/Integration Testing.pptx",
       "target_pdf": "Integration Testing.pdf",
@@ -112,7 +112,7 @@
       "drive_probe_url": "https://docs.google.com/presentation/d/1YbY4CQZmlerB92niux5tdQ7aSQIVW4jQ/export/pdf"
     },
     {
-      "title": "Secure Coding 🧑‍💻",
+      "title": "Secure Coding",
       "group": "Coding Practices",
       "source": "/Users/victorrentea/My Drive/Cursuri/Security/Secure Coding.pptx",
       "target_pdf": "Secure Coding.pdf",
@@ -128,7 +128,7 @@
       "drive_probe_url": "https://docs.google.com/presentation/d/1KVq27_OJoLSofPfykUHBfGRbSKaWI7P5/export/pdf"
     },
     {
-      "title": "Performance Intro",
+      "title": "Introduction",
       "group": "Java Performance",
       "source": "/Users/victorrentea/My Drive/Cursuri/Performance/Introduction.pptx",
       "target_pdf": "Performance Intro.pdf",
@@ -136,7 +136,7 @@
       "drive_probe_url": "https://docs.google.com/presentation/d/18bqAoDOukzycyzaGmJBChecRZ1oOsU0r/export/pdf"
     },
     {
-      "title": "Profiling Java 🔎",
+      "title": "Profiling Java",
       "group": "Java Performance",
       "source": "/Users/victorrentea/My Drive/Cursuri/Performance/Profiling.pptx",
       "target_pdf": "Profiling Java.pdf",
@@ -144,7 +144,7 @@
       "drive_probe_url": "https://docs.google.com/presentation/d/1KVHiuR-Sm0x86ztHQAbKDNm33CfqX90T/export/pdf"
     },
     {
-      "title": "Java Memory 💥",
+      "title": "Java Memory",
       "group": "Java Performance",
       "source": "/Users/victorrentea/My Drive/Cursuri/Performance/Java Memory.pptx",
       "target_pdf": "Java Memory.pdf",
@@ -152,7 +152,7 @@
       "drive_probe_url": "https://docs.google.com/presentation/d/1KVKBEUKpTpzjpYm4__Kfo2IXxnPsvPwG/export/pdf"
     },
     {
-      "title": "Java Concurrency 🔀",
+      "title": "Java Concurrency",
       "group": "Java Performance",
       "source": "/Users/victorrentea/My Drive/Cursuri/Performance/Java Concurrency.pptx",
       "target_pdf": "Java Concurrency.pdf",
@@ -168,7 +168,7 @@
       "drive_probe_url": "https://docs.google.com/presentation/d/1KUmuB4ntRn2EghT3Tf0BqA1hMth33aUr/export/pdf"
     },
     {
-      "title": "Java JIT ⏩",
+      "title": "Java JIT",
       "group": "Java Performance",
       "source": "/Users/victorrentea/My Drive/Cursuri/Performance/Java JIT.pptx",
       "target_pdf": "Java JIT.pdf",
@@ -184,7 +184,7 @@
       "drive_probe_url": "https://docs.google.com/presentation/d/1OUhu7W6-SncG-cgeYqW42I5YNipisMu4/export/pdf"
     },
     {
-      "title": "Spring 🍃",
+      "title": "Spring Framework",
       "group": "Java Frameworks",
       "source": "/Users/victorrentea/My Drive/Cursuri/Spring/Spring.pptx",
       "target_pdf": "Spring.pdf",
@@ -192,7 +192,7 @@
       "drive_probe_url": "https://docs.google.com/presentation/d/1FGBvQOvug2GMgWjOAWzhTE6GFMax3bbm/export/pdf"
     },
     {
-      "title": "Reactive/WebFlux 🤯",
+      "title": "Reactive/WebFlux",
       "group": "Java Frameworks",
       "source": "/Users/victorrentea/My Drive/Cursuri/Reactive/Reactive.pptx",
       "target_pdf": "Reactive WebFlux.pdf",
