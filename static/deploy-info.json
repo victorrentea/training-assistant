@@ -1,7 +1,7 @@
 {
-  "sha": "229633e6f89d22f4dcb0597710ff6effc13537d9",
-  "timestamp": "2026-03-28 07:57",
+  "sha": "658d65f06cc6a2f6ce478bc9214cdfa114482208",
+  "timestamp": "2026-03-28 07:59",
   "changelog": [
-    "fix: clear slides state on participant session reset"
+    "feat: instant scroll for large page jumps when following trainer"
   ]
 }
