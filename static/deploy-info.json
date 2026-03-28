@@ -1,7 +1,9 @@
 {
-  "sha": "f26c81288ac2e6c8a6d5b360d4340730f014ec3d",
-  "timestamp": "2026-03-28 13:37",
+  "sha": "19b06a2ea883c19e16abc434075c9fa27e7f8c7d",
+  "timestamp": "2026-03-28 13:42",
   "changelog": [
-    "fix(emoji): left-align emoji bar, push upload/paste to right"
+    "feat(slides): show pptx updated_at in catalog popover before PDF download",
+    "fix(emoji): left-align emoji bar, push upload/paste to right",
+    "docs: add emoji overflow dots plan and spec"
   ]
 }
