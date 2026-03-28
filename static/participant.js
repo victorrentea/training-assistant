@@ -1547,14 +1547,17 @@
         const maxPages = Math.max(1, Number(slidesPdfDoc.numPages || 1));
         const targetPage = Math.min(saved?.page || _getStoredSlidePage(slide.slug), maxPages);
         _suppressSlidesFollowAutoUncheck(1500);
-        try {
-          slidesPdfViewer.currentPageNumber = Number(targetPage);
-        } catch (_) {
-          try { slidesPdfLinkService?.goToPage(targetPage); } catch (_) {}
-        }
         const container = document.getElementById('slides-pdf-container');
-        if (!skipScrollRestore && container && saved && Number.isFinite(saved.scrollTop)) {
+        const hasScroll = !skipScrollRestore && container && saved && Number.isFinite(saved.scrollTop) && saved.scrollTop > 0;
+        if (hasScroll) {
+          // Set scrollTop directly — skipping currentPageNumber avoids a conflicting PDF.js scroll.
           requestAnimationFrame(() => requestAnimationFrame(() => { container.scrollTop = saved.scrollTop; }));
+        } else {
+          try {
+            slidesPdfViewer.currentPageNumber = Number(targetPage);
+          } catch (_) {
+            try { slidesPdfLinkService?.goToPage(targetPage); } catch (_) {}
+          }
         }
         _setStoredSlidePage(slide.slug, targetPage);
         _renderSlidesMeta({ ...slide, updated_at: effectiveUpdatedAt });
@@ -1603,16 +1606,19 @@
         const maxPages = Math.max(1, Number(doc.numPages || 1));
         const savedPage = Math.min(saved?.page || _getStoredSlidePage(slide.slug), maxPages);
         _suppressSlidesFollowAutoUncheck(1500);
-        try {
-          slidesPdfViewer.currentPageNumber = Number(savedPage);
-        } catch (_) {
-          try { slidesPdfLinkService?.goToPage(savedPage); } catch (_) {}
+        const container = document.getElementById('slides-pdf-container');
+        const hasScroll = !skipScrollRestore && container && saved && Number.isFinite(saved.scrollTop) && saved.scrollTop > 0;
+        if (hasScroll) {
+          // Set scrollTop directly — skipping currentPageNumber avoids a conflicting PDF.js scroll.
+          requestAnimationFrame(() => requestAnimationFrame(() => { container.scrollTop = saved.scrollTop; }));
+        } else {
+          try {
+            slidesPdfViewer.currentPageNumber = Number(savedPage);
+          } catch (_) {
+            try { slidesPdfLinkService?.goToPage(savedPage); } catch (_) {}
+          }
         }
         _setStoredSlidePage(slide.slug, savedPage);
-        if (!skipScrollRestore && saved && Number.isFinite(saved.scrollTop)) {
-          const container = document.getElementById('slides-pdf-container');
-          if (container) requestAnimationFrame(() => requestAnimationFrame(() => { container.scrollTop = saved.scrollTop; }));
-        }
 
         slidesLastFingerprint = fingerprint;
         _setSlidesDownload(slide.url, false);
