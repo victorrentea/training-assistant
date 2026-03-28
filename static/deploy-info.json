@@ -1,7 +1,7 @@
 {
-  "sha": "9b0c9a363cac5b8082459e06f9ef21cd0b9286dd",
-  "timestamp": "2026-03-28 22:53",
+  "sha": "44be2f16fb5a16a29fd8e3fa1d34df5d946d47b5",
+  "timestamp": "2026-03-28 22:57",
   "changelog": [
-    "feat: auto-join session on host machine via cookie"
+    "fix(landing): fast red blink for auto-join message"
   ]
 }
