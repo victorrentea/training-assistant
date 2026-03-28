@@ -1,7 +1,7 @@
 {
-  "sha": "cbabfd1643f5331a045da40d97825c90ebb209f6",
-  "timestamp": "2026-03-28 17:42",
+  "sha": "cce84019184d75d4a0f0682c5ecef665ae6b860f",
+  "timestamp": "2026-03-28 17:43",
   "changelog": [
-    "fix(feedback): update placeholder to hint at app improvement"
+    "fix(emoji-bar): measure button content widths, not 1fr grid cell widths"
   ]
 }
