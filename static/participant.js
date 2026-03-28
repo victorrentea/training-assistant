@@ -453,8 +453,8 @@ function closeEmojiPopup(ev) {
 
     const refreshBtn = document.createElement('button');
     refreshBtn.className = 'avatar-refresh-btn';
-    refreshBtn.innerHTML = '\u{1F504}';
-    refreshBtn.title = 'Get a new avatar';
+    refreshBtn.innerHTML = '\u{1F3B2}';
+    refreshBtn.title = 'Roll for a new avatar';
     refreshBtn.onclick = function(e) {
         e.stopPropagation();
         // Track the current avatar as rejected
@@ -464,9 +464,9 @@ function closeEmojiPopup(ev) {
             rejectedAvatars.push(filename);
         }
         sendWS('refresh_avatar', { rejected: rejectedAvatars });
-        // Spin the refresh button
-        refreshBtn.classList.add('spinning');
-        setTimeout(function() { refreshBtn.classList.remove('spinning'); }, 600);
+        // Roll the dice button
+        refreshBtn.classList.add('rolling');
+        setTimeout(function() { refreshBtn.classList.remove('rolling'); }, 600);
         // Keep modal open; timer starts when new avatar arrives via state broadcast
         window._avatarModalImg = img;
         window._avatarModal = modal;
@@ -2588,6 +2588,7 @@ function closeEmojiPopup(ev) {
             if (letterEl && !letterEl._clickBound) {
                 letterEl._clickBound = true;
                 letterEl.style.cursor = 'pointer';
+                letterEl.title = 'Click to change avatar';
                 letterEl.addEventListener('click', function() {
                     showLetterAvatarModal(this.textContent, this.style.background);
                 });
