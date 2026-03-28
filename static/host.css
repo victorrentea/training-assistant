@@ -233,7 +233,8 @@ body {
   position: absolute;
   right: 0;
   bottom: calc(100% + .45rem);
-  width: min(78vw, 700px);
+  width: max-content;
+  max-width: min(78vw, 520px);
   max-height: 44vh;
   overflow: auto;
   background: var(--surface);
@@ -292,10 +293,24 @@ body {
 
 .slides-catalog-available {
   color: var(--ok);
+  flex-shrink: 0;
 }
 
 .slides-catalog-missing {
+  color: var(--danger);
+  flex-shrink: 0;
+}
+
+.slides-catalog-sync-warn {
+  color: var(--warn);
+  flex-shrink: 0;
+}
+
+.slides-catalog-date {
   color: var(--muted);
+  font-size: .65rem;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 #center-poll {

@@ -870,20 +870,29 @@
     }
     const available = _slidesCatalogEntries.filter((entry) => !!entry.available_on_server).length;
     const outOfSync = _slidesCatalogEntries.filter((entry) => (entry.sync_status || '') === 'out_of_sync').length;
-    const head = `<div class="slides-catalog-head">${_slidesCatalogEntries.length} participant slides • ${available} on server • ${outOfSync} out of sync</div>`;
+    const syncNote = outOfSync > 0 ? ` · <span style="color:var(--warn)">${outOfSync} pending GDrive</span>` : '';
+    const head = `<div class="slides-catalog-head">${_slidesCatalogEntries.length} slides · ${available} on server${syncNote}</div>`;
     const lines = _slidesCatalogEntries.map((entry) => {
       const rawName = String(entry.name || '');
       const rawSlug = String(entry.slug || '');
       const name = escHtml(normalizeSlideDisplayName(rawName, rawSlug));
       const slug = escHtml(rawSlug);
       const syncMessage = escHtml(entry.sync_message || '');
+      const isOutOfSync = (entry.sync_status || '') === 'out_of_sync';
       const availableMark = entry.available_on_server
-        ? '<span class="slides-catalog-available" title="Downloaded on server">⬇️</span>'
-        : '<span class="slides-catalog-missing" title="Not yet on server">·</span>';
-      const syncMark = (entry.sync_status || '') === 'out_of_sync'
-        ? `<span class="slides-catalog-missing" title="${syncMessage || 'Out of sync'}">⚠️</span>`
+        ? '<span class="slides-catalog-available" title="PDF on server">⬇</span>'
+        : '<span class="slides-catalog-missing" title="Not on server">✗</span>';
+      const syncMark = isOutOfSync
+        ? `<span class="slides-catalog-sync-warn" title="${syncMessage || 'PDF pending GDrive generation'}">⚠</span>`
         : '';
-      return `<div class="slides-catalog-line"><span class="slides-catalog-name" title="${slug}">${name}</span>${availableMark}${syncMark}</div>`;
+      let datePart = '';
+      if (entry.updated_at) {
+        try {
+          const d = new Date(entry.updated_at);
+          datePart = `<span class="slides-catalog-date">${d.toLocaleDateString('en-GB', {day:'numeric',month:'short'})}</span>`;
+        } catch (_) {}
+      }
+      return `<div class="slides-catalog-line"><span class="slides-catalog-name" title="${slug}">${name}</span>${availableMark}${syncMark}${datePart}</div>`;
     }).join('');
     contentEl.innerHTML = head + lines;
   }
