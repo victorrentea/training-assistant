@@ -3,6 +3,7 @@ from datetime import datetime
 from fastapi import WebSocket
 from enum import Enum
 import random
+import asyncio
 
 
 class ActivityType(str, Enum):
@@ -53,9 +54,15 @@ class AppState:
         self.daemon_session_notes: Optional[str] = None
         self.daemon_ws: Optional[WebSocket] = None
         self.slides_current: Optional[dict] = None
-        self.slides_meta: dict[str, str] = {}  # slug → updated_at ISO string (daemon-reported)
-        # Runtime-only upload coordination state for on-demand slide fetches.
-        self.slides_uploads: dict[str, dict] = {}
+        # Slides cache (server-side GDrive download)
+        # Note: slides_catalog is NOT reset here — daemon may not re-send on soft reset
+        if not hasattr(self, 'slides_catalog'):
+            self.slides_catalog = {}
+        self.slides_cache_status: dict[str, dict] = {}      # slug -> {status, size_bytes, downloaded_at, title}
+        self.slides_download_events: dict[str, asyncio.Event] = {}  # slug -> event for waiters
+        self.slides_gdrive_locks: dict[str, asyncio.Lock] = {}      # slug -> per-slug GDrive lock
+        self.slides_fingerprints: dict[str, str] = {}        # slug -> last known fingerprint
+        self.slides_download_semaphore: asyncio.Semaphore = asyncio.Semaphore(3)
         self.notes_content: Optional[str] = None
         self.transcript_line_count: int = 0
         self.transcript_total_lines: int = 0
