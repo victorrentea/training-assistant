@@ -649,7 +649,12 @@
       const maxPage = Math.max(1, Number(slidesPdfDoc.numPages || 1));
       const nextPage = Math.min(maxPage, targetPage);
       _suppressSlidesFollowAutoUncheck(3000);
+      // Smooth scroll only for small same-topic jumps; large jumps get instant scroll.
+      const pageDiff = Math.abs(nextPage - (slidesPdfViewer.currentPageNumber || 1));
+      const container = document.getElementById('slides-pdf-container');
+      if (pageDiff >= 5 && container) container.style.scrollBehavior = 'auto';
       slidesPdfViewer.currentPageNumber = Number(nextPage);
+      if (pageDiff >= 5 && container) setTimeout(() => { container.style.scrollBehavior = ''; }, 100);
       // Renew after set: updateviewarea fires asynchronously during rendering.
       _suppressSlidesFollowAutoUncheck(3000);
       _setStoredSlidePage(targetSlide.slug, nextPage);
