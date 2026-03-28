@@ -1,7 +1,7 @@
 {
-  "sha": "2c8e09b1dd59e3ca35f2bbb529cc7974b4408cf4",
-  "timestamp": "2026-03-28 19:01",
+  "sha": "186dc9ae8a36fd7f2cd66fdc5153eb68a486461a",
+  "timestamp": "2026-03-28 19:19",
   "changelog": [
-    "fix(session): auto-generate session_id for pre-existing sessions on sync"
+    "fix(slides): highlight title green when topics list is pinned open"
   ]
 }
