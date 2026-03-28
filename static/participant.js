@@ -3751,8 +3751,9 @@
       const emoji = btn.dataset.tooltipEmoji;
       if (!text) return;
 
+      const large = btn.id === 'slides-follow-btn';
       const bub = document.createElement('div');
-      bub.className = 'tour-bubble emoji-hover-bubble';
+      bub.className = large ? 'tour-bubble arrow-top' : 'tour-bubble emoji-hover-bubble';
 
       const emojiSpan = document.createElement('span');
       emojiSpan.className = 'tour-bubble-emoji';
@@ -3768,14 +3769,18 @@
       activeBubble = bub;
 
       const rect = btn.getBoundingClientRect();
-      const bubW = 200;
+      const bubW = large ? 240 : 200;
       bub.style.width = bubW + 'px';
       bub.style.left = Math.max(8, Math.min(window.innerWidth - bubW - 8, rect.left + rect.width / 2 - bubW / 2)) + 'px';
-      bub.style.top = '0px';
-      requestAnimationFrame(() => {
-        const bh = bub.getBoundingClientRect().height;
-        bub.style.top = Math.max(8, rect.top - bh - 12) + 'px';
-      });
+      if (large) {
+        bub.style.top = (rect.bottom + 12) + 'px';
+      } else {
+        bub.style.top = '0px';
+        requestAnimationFrame(() => {
+          const bh = bub.getBoundingClientRect().height;
+          bub.style.top = Math.max(8, rect.top - bh - 12) + 'px';
+        });
+      }
     }
 
     document.querySelectorAll('#slides-follow-btn, #slides-view-pdfjs, #slides-view-native, #paste-btn').forEach(btn => {
