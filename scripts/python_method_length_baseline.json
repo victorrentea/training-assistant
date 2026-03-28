@@ -4,7 +4,7 @@
     {
       "path": "core/state.py",
       "qualname": "AppState.reset",
-      "lines": 73
+      "lines": 75
     },
     {
       "path": "daemon/__main__.py",
@@ -69,7 +69,7 @@
     {
       "path": "features/ws/router.py",
       "qualname": "websocket_endpoint",
-      "lines": 293
+      "lines": 312
     },
     {
       "path": "tests/load/test_load.py",

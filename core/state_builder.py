@@ -30,6 +30,9 @@ def _build_host_participants_list() -> list[dict]:
             "ip": state.participant_ips.get(pid, ""),
             "online": pid in state.participants,
         }
+        paste_entries = state.paste_texts.get(pid, [])
+        if paste_entries:
+            participant["paste_texts"] = paste_entries
         if include_debate_side:
             participant["debate_side"] = state.debate_sides.get(pid)
         participants_list.append(participant)
