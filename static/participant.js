@@ -4090,6 +4090,11 @@ function closeEmojiPopup(ev) {
 
   // ── Emoji bar hover bubbles + dev-reset: need full DOM ──
   document.addEventListener('DOMContentLoaded', () => {
+    // Slides dock title click toggles pinned-open state
+    document.querySelector('.slides-dock-title').addEventListener('click', () => {
+      document.getElementById('slides-dock').classList.toggle('pinned');
+    });
+
     // Wire buttons inside #emoji-bar
     document.getElementById('emoji-ping-btn').onclick = (ev) => sendEmoji('🖥️', ev);
     document.getElementById('upload-btn').onclick = openUploadModal;
