@@ -1,4 +1,4 @@
-"""SlidesOnDemandWsRunner — serve backend on-demand slide upload requests over a persistent WebSocket."""
+"""SlidesOnDemandWsRunner — send slides catalog and handle slide_log messages over a persistent WebSocket."""
 
 import base64
 import json
@@ -7,14 +7,12 @@ import re
 import ssl
 import threading
 import time
-from datetime import datetime, timezone
 from pathlib import Path
 
 from websockets.sync.client import connect as ws_connect
 from websockets.exceptions import ConnectionClosed
 
 from daemon import log
-from daemon.materials.mirror import post_material_upsert_file
 from daemon.session_state import resolve_materials_folder
 
 _SLIDES_ON_DEMAND_WS_RECONNECT_SECONDS = 3.0
@@ -37,7 +35,7 @@ def _ssl_context() -> ssl.SSLContext:
 
 
 class SlidesOnDemandWsRunner:
-    """Serve backend on-demand slide upload requests over a persistent WebSocket."""
+    """Send slides catalog to backend and handle slide_log messages over a persistent WebSocket."""
 
     def __init__(self, main_config):
         self.main_config = main_config
@@ -168,95 +166,32 @@ class SlidesOnDemandWsRunner:
         ).decode("ascii")
         return {"Authorization": f"Basic {token}"}
 
-    def _send_result(self, ws, payload: dict) -> None:
+    def _send_slides_catalog(self, ws) -> None:
+        """Send full catalog with drive_export_url to backend."""
         try:
-            ws.send(json.dumps(payload))
+            catalog_path = self._catalog_path()
+            if not catalog_path.exists():
+                log.info("slides", "slides_catalog: no catalog file found")
+                return
+            data = json.loads(catalog_path.read_text(encoding="utf-8"))
+            entries = []
+            for deck in data.get("decks", []):
+                slug = deck.get("slug") or _slugify(deck.get("title", ""))
+                url = deck.get("drive_export_url", "")
+                if slug and url:
+                    entries.append({"slug": slug, "title": deck.get("title", slug), "drive_export_url": url})
+            ws.send(json.dumps({"type": "slides_catalog", "entries": entries}))
+            log.info("slides", f"slides_catalog sent: {len(entries)} entries")
         except Exception as exc:
-            log.error("slides", f"slides_upload_result_send_failed: {exc}")
+            log.error("slides", f"slides_catalog_send_failed: {exc}")
 
     def _handle_request(self, ws, payload: dict) -> None:
-        if payload.get("type") == "server_ping":
-            log.info("slides", f"🏓 server_ping received ts={payload.get('ts')}")
+        if payload.get("type") == "slide_log":
+            slug = payload.get("slug", "?")
+            event = payload.get("event", "?")
+            detail = payload.get("detail", "")
+            log.info("slides", f"📡 {event} slug={slug} {detail}")
             return
-        if payload.get("type") == "drive_download_result":
-            size_kb = (payload.get("size_bytes") or 0) // 1024
-            log.info("slides", f"📥 drive_download_result path={payload.get('path')} size={size_kb}KB")
-            return
-        if payload.get("type") != "slides_upload_request":
-            return
-        slug = str(payload.get("slug") or "").strip()
-        request_id = str(payload.get("request_id") or "").strip()
-        if not slug or not request_id:
-            return
-
-        self._rebuild_slug_map()
-        match = self._slug_map.get(slug)
-        if not match:
-            log.error("slides", f"slides_upload_failed slug={slug} reason=unknown_slug")
-            self._send_result(ws, {
-                "type": "slides_upload_result",
-                "request_id": request_id,
-                "slug": slug,
-                "status": "failed",
-                "error": "unknown slug",
-            })
-            return
-
-        local_pdf, target_name, _ = match
-        if not local_pdf.exists() or not local_pdf.is_file():
-            log.error("slides", f"slides_upload_failed slug={slug} reason=missing_local_pdf path={local_pdf}")
-            self._send_result(ws, {
-                "type": "slides_upload_result",
-                "request_id": request_id,
-                "slug": slug,
-                "status": "failed",
-                "error": "local pdf missing",
-            })
-            return
-
-        relative_path = f"slides/{target_name}"
-        try:
-            log.info("slides", f"⬆️ requested: {slug}")
-            post_material_upsert_file(
-                self.main_config,
-                relative_path,
-                local_pdf,
-                source_mtime=float(local_pdf.stat().st_mtime),
-            )
-            log.info("slides", f"⬆️ uploaded: {slug}")
-            self._send_result(ws, {
-                "type": "slides_upload_result",
-                "request_id": request_id,
-                "slug": slug,
-                "status": "uploaded",
-                "relative_path": relative_path,
-                "size": local_pdf.stat().st_size,
-            })
-        except Exception as exc:
-            log.error("slides", f"slides_upload_failed slug={slug} err={exc}")
-            self._send_result(ws, {
-                "type": "slides_upload_result",
-                "request_id": request_id,
-                "slug": slug,
-                "status": "failed",
-                "error": str(exc),
-            })
-
-    def _send_slides_meta(self, ws) -> None:
-        entries = []
-        for slug, (local_pdf, _, source_pptx) in self._slug_map.items():
-            try:
-                timestamp_path = source_pptx if (source_pptx and source_pptx.exists()) else (local_pdf if local_pdf.exists() else None)
-                if timestamp_path:
-                    updated_at = datetime.fromtimestamp(timestamp_path.stat().st_mtime, tz=timezone.utc).isoformat()
-                    entries.append({"slug": slug, "updated_at": updated_at})
-            except Exception:
-                pass
-        try:
-            ws.send(json.dumps({"type": "slides_meta", "slides": entries}))
-            log.info("slides", f"slides_meta sent: {len(entries)} slides")
-        except Exception as exc:
-            log.error("slides", f"slides_meta_send_failed: {exc}")
 
     def _run_loop(self) -> None:
         ws_url = self._ws_url()
@@ -265,7 +200,7 @@ class SlidesOnDemandWsRunner:
             try:
                 with self._connect(ws_url, headers) as ws:
                     log.info("slides", f"slides_ws_connected to {ws_url}")
-                    self._send_slides_meta(ws)
+                    self._send_slides_catalog(ws)
                     while not self._stop.is_set():
                         try:
                             raw = ws.recv(timeout=1.0)
