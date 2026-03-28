@@ -132,6 +132,9 @@ class AppState:
         available = [n for n in LOTR_NAMES if n not in connected_names]
         return available[0] if available else f"Guest{random.randint(100, 999)}"
 
+    def add_score(self, pid: str, points: int):
+        self.scores[pid] = self.scores.get(pid, 0) + points
+
     def vote_counts(self) -> dict:
         if not self.poll:
             return {}

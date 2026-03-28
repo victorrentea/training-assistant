@@ -65,35 +65,42 @@ def build_host_state() -> dict:
     return result
 
 
-async def broadcast_state():
-    """Send personalized state to each connected client."""
+async def _broadcast_foreach(sender):
+    """Iterate participants, call sender(pid, ws) for each, and clean up dead connections.
+
+    The sender callback should send a message or return without sending to skip.
+    Raising any exception signals a dead connection.
+    """
     dead = []
     for pid, ws in state.participants.items():
-        if pid == "__overlay__":
-            continue
         try:
-            if pid == "__host__":
-                await ws.send_text(json.dumps(build_host_state()))
-            else:
-                await ws.send_text(json.dumps(build_participant_state(pid)))
+            await sender(pid, ws)
         except Exception:
             dead.append(pid)
     for pid in dead:
         state.participants.pop(pid, None)
+
+
+async def broadcast_state():
+    """Send personalized state to each connected client."""
+    async def _send(pid, ws):
+        if pid == "__overlay__":
+            return
+        if pid == "__host__":
+            await ws.send_text(json.dumps(build_host_state()))
+        else:
+            await ws.send_text(json.dumps(build_participant_state(pid)))
+    await _broadcast_foreach(_send)
 
 
 async def broadcast(message: dict, exclude: Optional[str] = None):
     """Send identical message to all connected clients."""
-    dead = []
-    for pid, ws in state.participants.items():
+    text = json.dumps(message)
+    async def _send(pid, ws):
         if pid == exclude:
-            continue
-        try:
-            await ws.send_text(json.dumps(message))
-        except Exception:
-            dead.append(pid)
-    for pid in dead:
-        state.participants.pop(pid, None)
+            return
+        await ws.send_text(text)
+    await _broadcast_foreach(_send)
 
 
 async def broadcast_participant_update():
@@ -114,17 +121,12 @@ async def broadcast_participant_update():
         "participants": _build_host_participants_list(),
     })
 
-    dead = []
-    for pid, ws in state.participants.items():
-        try:
-            if pid == "__host__":
-                await ws.send_text(host_msg)
-            else:
-                await ws.send_text(participant_msg)
-        except Exception:
-            dead.append(pid)
-    for pid in dead:
-        state.participants.pop(pid, None)
+    async def _send(pid, ws):
+        if pid == "__host__":
+            await ws.send_text(host_msg)
+        else:
+            await ws.send_text(participant_msg)
+    await _broadcast_foreach(_send)
 
 
 async def broadcast_leaderboard():
@@ -132,25 +134,20 @@ async def broadcast_leaderboard():
     from features.leaderboard.state_builder import _build_leaderboard_data
     entries, total, rank_map = _build_leaderboard_data()
 
-    dead = []
-    for pid, ws in state.participants.items():
+    async def _send(pid, ws):
         if pid == "__overlay__":
-            continue
-        try:
-            is_participant = not pid.startswith("__")
-            msg = {
-                "type": "leaderboard",
-                "entries": entries,
-                "total_participants": total,
-                "your_rank": rank_map.get(pid) if is_participant else None,
-                "your_score": state.scores.get(pid, 0) if is_participant else None,
-                "your_name": state.participant_names.get(pid, "") if is_participant else None,
-            }
-            await ws.send_text(json.dumps(msg))
-        except Exception:
-            dead.append(pid)
-    for pid in dead:
-        state.participants.pop(pid, None)
+            return
+        is_participant = not pid.startswith("__")
+        msg = {
+            "type": "leaderboard",
+            "entries": entries,
+            "total_participants": total,
+            "your_rank": rank_map.get(pid) if is_participant else None,
+            "your_score": state.scores.get(pid, 0) if is_participant else None,
+            "your_name": state.participant_names.get(pid, "") if is_participant else None,
+        }
+        await ws.send_text(json.dumps(msg))
+    await _broadcast_foreach(_send)
 
 
 async def send_state_to_participant(ws: WebSocket, pid: str):
@@ -163,23 +160,22 @@ async def send_state_to_host(ws: WebSocket):
     await ws.send_text(json.dumps(build_host_state()))
 
 
-async def send_emoji_to_overlay(emoji: str):
-    """Forward an emoji reaction to the overlay client if connected."""
-    ws = state.participants.get("__overlay__")
+async def _send_to_special(key: str, message: dict):
+    """Send a message to a special client (e.g. __host__, __overlay__), cleaning up on failure."""
+    ws = state.participants.get(key)
     if ws is None:
         return
     try:
-        await ws.send_text(json.dumps({"type": "emoji_reaction", "emoji": emoji}))
+        await ws.send_text(json.dumps(message))
     except Exception:
-        state.participants.pop("__overlay__", None)
+        state.participants.pop(key, None)
+
+
+async def send_emoji_to_overlay(emoji: str):
+    """Forward an emoji reaction to the overlay client if connected."""
+    await _send_to_special("__overlay__", {"type": "emoji_reaction", "emoji": emoji})
 
 
 async def send_emoji_to_host(emoji: str):
     """Forward an emoji reaction to the host client if connected."""
-    ws = state.participants.get("__host__")
-    if ws is None:
-        return
-    try:
-        await ws.send_text(json.dumps({"type": "emoji_reaction", "emoji": emoji}))
-    except Exception:
-        state.participants.pop("__host__", None)
+    await _send_to_special("__host__", {"type": "emoji_reaction", "emoji": emoji})

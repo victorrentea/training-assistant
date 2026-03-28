@@ -36,6 +36,31 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
+async def _record_vote_and_broadcast(pid: str):
+    if pid not in state.vote_times:
+        state.vote_times[pid] = datetime.now(timezone.utc)
+        poll_votes_total.inc()
+        if state.poll_opened_at:
+            duration = (datetime.now(timezone.utc) - state.poll_opened_at).total_seconds()
+            poll_vote_duration_seconds.observe(duration)
+    await broadcast({
+        "type": "vote_update",
+        "vote_counts": state.vote_counts(),
+        "total_votes": len(state.votes),
+    })
+
+
+async def _kick_old_connection(pid: str):
+    if pid in state.participants:
+        old_ws = state.participants[pid]
+        try:
+            await old_ws.send_text(json.dumps({"type": "kicked"}))
+            await old_ws.close(code=1001)
+        except Exception:
+            pass
+        del state.participants[pid]
+
+
 def _is_host_authorized_for_ws(websocket: WebSocket) -> bool:
     raw = websocket.headers.get("authorization", "").strip()
     if not raw.lower().startswith("basic "):
@@ -115,24 +140,12 @@ async def websocket_endpoint(websocket: WebSocket, participant_id: str):
     role = "host" if is_host else ("overlay" if is_overlay else "participant")
 
     # Overlay reconnect: kick old overlay connection
-    if is_overlay and "__overlay__" in state.participants:
-        old_ws = state.participants["__overlay__"]
-        try:
-            await old_ws.send_text(json.dumps({"type": "kicked"}))
-            await old_ws.close(code=1001)
-        except Exception:
-            pass
-        del state.participants["__overlay__"]
+    if is_overlay:
+        await _kick_old_connection("__overlay__")
 
     # Host reconnect: kick old host connection
-    if is_host and "__host__" in state.participants:
-        old_ws = state.participants["__host__"]
-        try:
-            await old_ws.send_text(json.dumps({"type": "kicked"}))
-            await old_ws.close(code=1001)
-        except Exception:
-            pass
-        del state.participants["__host__"]
+    if is_host:
+        await _kick_old_connection("__host__")
 
     await websocket.accept()
 
@@ -243,17 +256,7 @@ async def websocket_endpoint(websocket: WebSocket, participant_id: str):
                     and option_id in valid_ids
                 ):
                     state.votes[pid] = option_id
-                    if pid not in state.vote_times:
-                        state.vote_times[pid] = datetime.now(timezone.utc)
-                        poll_votes_total.inc()
-                        if state.poll_opened_at:
-                            duration = (datetime.now(timezone.utc) - state.poll_opened_at).total_seconds()
-                            poll_vote_duration_seconds.observe(duration)
-                    await broadcast({
-                        "type": "vote_update",
-                        "vote_counts": state.vote_counts(),
-                        "total_votes": len(state.votes),
-                    })
+                    await _record_vote_and_broadcast(pid)
 
             elif msg_type == "multi_vote":
                 option_ids = data.get("option_ids", [])
@@ -270,17 +273,7 @@ async def websocket_endpoint(websocket: WebSocket, participant_id: str):
                     and all(oid in valid_ids for oid in option_ids)
                 ):
                     state.votes[pid] = option_ids
-                    if pid not in state.vote_times:
-                        state.vote_times[pid] = datetime.now(timezone.utc)
-                        poll_votes_total.inc()
-                        if state.poll_opened_at:
-                            duration = (datetime.now(timezone.utc) - state.poll_opened_at).total_seconds()
-                            poll_vote_duration_seconds.observe(duration)
-                    await broadcast({
-                        "type": "vote_update",
-                        "vote_counts": state.vote_counts(),
-                        "total_votes": len(state.votes),
-                    })
+                    await _record_vote_and_broadcast(pid)
 
             elif msg_type == "wordcloud_word":
                 word = str(data.get("word", "")).strip().lower()
@@ -289,7 +282,7 @@ async def websocket_endpoint(websocket: WebSocket, participant_id: str):
                         state.wordcloud_word_order.insert(0, word)
                     state.wordcloud_words[word] = state.wordcloud_words.get(word, 0) + 1
                     if not is_host:
-                        state.scores[pid] = state.scores.get(pid, 0) + 200
+                        state.add_score(pid, 200)
                     await broadcast_state()
 
             elif msg_type == "qa_submit":
@@ -304,7 +297,7 @@ async def websocket_endpoint(websocket: WebSocket, participant_id: str):
                         "answered": False,
                         "timestamp": time.time(),
                     }
-                    state.scores[pid] = state.scores.get(pid, 0) + 100
+                    state.add_score(pid, 100)
                     qa_questions_total.inc()
                     await broadcast_state()
 
@@ -314,8 +307,8 @@ async def websocket_endpoint(websocket: WebSocket, participant_id: str):
                 if q and q["author"] != pid and pid not in q["upvoters"]:
                     q["upvoters"].add(pid)
                     author_pid = q["author"]
-                    state.scores[author_pid] = state.scores.get(author_pid, 0) + 50
-                    state.scores[pid] = state.scores.get(pid, 0) + 25
+                    state.add_score(author_pid, 50)
+                    state.add_score(pid, 25)
                     qa_upvotes_total.inc()
                     await broadcast_state()
 
@@ -367,7 +360,7 @@ async def websocket_endpoint(websocket: WebSocket, participant_id: str):
                         "ai_generated": False,
                         "merged_into": None,
                     })
-                    state.scores[pid] = state.scores.get(pid, 0) + 100
+                    state.add_score(pid, 100)
                     await broadcast_state()
 
             elif msg_type == "debate_upvote":
@@ -381,8 +374,8 @@ async def websocket_endpoint(websocket: WebSocket, participant_id: str):
                     if arg and pid not in arg["upvoters"] and arg["author_uuid"] != pid:
                         arg["upvoters"].add(pid)
                         if arg["author_uuid"] != "__ai__":
-                            state.scores[arg["author_uuid"]] = state.scores.get(arg["author_uuid"], 0) + 50
-                        state.scores[pid] = state.scores.get(pid, 0) + 25
+                            state.add_score(arg["author_uuid"], 50)
+                        state.add_score(pid, 25)
                         await broadcast_state()
 
             elif msg_type == "debate_volunteer":
@@ -395,7 +388,7 @@ async def websocket_endpoint(websocket: WebSocket, participant_id: str):
                     my_side = state.debate_sides[pid]
                     if my_side not in state.debate_champions:
                         state.debate_champions[my_side] = pid
-                        state.scores[pid] = state.scores.get(pid, 0) + 2500
+                        state.add_score(pid, 2500)
                         await broadcast_state()
 
             elif msg_type == "codereview_select":

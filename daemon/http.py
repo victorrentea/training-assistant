@@ -45,12 +45,8 @@ def _http_error_message(code: int, url: str) -> str:
 # Core request helpers
 # ---------------------------------------------------------------------------
 
-def _request_json(url: str, payload: dict, method: str = "POST", username: str = "", password: str = "") -> dict:
-    data = json.dumps(payload).encode("utf-8")
-    headers = {"Content-Type": "application/json"}
-    if username:
-        headers["Authorization"] = "Basic " + base64.b64encode(f"{username}:{password}".encode()).decode()
-    req = urllib.request.Request(url, data=data, headers=headers, method=method)
+def _urlopen_json(req: urllib.request.Request, url: str) -> dict:
+    """Execute a prepared request, parse JSON, and wrap errors with helpful messages."""
     try:
         with urllib.request.urlopen(req, timeout=_HTTP_TIMEOUT_SECONDS, context=_ssl_context()) as resp:
             try:
@@ -65,6 +61,15 @@ def _request_json(url: str, payload: dict, method: str = "POST", username: str =
         raise RuntimeError(f"Cannot reach server: {e.reason} [{url}]") from e
     except OSError as e:
         raise RuntimeError(f"Cannot reach server: {e} [{url}]") from e
+
+
+def _request_json(url: str, payload: dict, method: str = "POST", username: str = "", password: str = "") -> dict:
+    data = json.dumps(payload).encode("utf-8")
+    headers = {"Content-Type": "application/json"}
+    if username:
+        headers["Authorization"] = "Basic " + base64.b64encode(f"{username}:{password}".encode()).decode()
+    req = urllib.request.Request(url, data=data, headers=headers, method=method)
+    return _urlopen_json(req, url)
 
 
 def _post_json(url: str, payload: dict, username: str = "", password: str = "") -> dict:
@@ -80,17 +85,4 @@ def _get_json(url: str, username: str = "", password: str = "") -> dict:
     if username:
         headers["Authorization"] = "Basic " + base64.b64encode(f"{username}:{password}".encode()).decode()
     req = urllib.request.Request(url, headers=headers)
-    try:
-        with urllib.request.urlopen(req, timeout=_HTTP_TIMEOUT_SECONDS, context=_ssl_context()) as resp:
-            try:
-                return json.loads(resp.read())
-            except json.JSONDecodeError as e:
-                raise RuntimeError(f"Invalid JSON response from server [{url}]") from e
-    except urllib.error.HTTPError as e:
-        raise RuntimeError(_http_error_message(e.code, url)) from e
-    except (TimeoutError, socket.timeout) as e:
-        raise RuntimeError(f"Server request timed out after {_HTTP_TIMEOUT_SECONDS:.1f}s [{url}]") from e
-    except urllib.error.URLError as e:
-        raise RuntimeError(f"Cannot reach server: {e.reason} [{url}]") from e
-    except OSError as e:
-        raise RuntimeError(f"Cannot reach server: {e} [{url}]") from e
+    return _urlopen_json(req, url)
