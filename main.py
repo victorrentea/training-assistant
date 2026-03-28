@@ -60,6 +60,8 @@ def _stamp_version_js():
 @asynccontextmanager
 async def lifespan(app_: FastAPI):
     _stamp_version_js()
+    from features.slides.cache import seed_catalog_from_file
+    seed_catalog_from_file()
     yield
 
 
