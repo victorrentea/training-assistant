@@ -1,7 +1,7 @@
 {
-  "sha": "ee9022a8a8fd18a5806daff29384dbe83b4441d3",
-  "timestamp": "2026-03-28 12:20",
+  "sha": "8df5b7881d87223cb3c6935847ea07635f06e0e6",
+  "timestamp": "2026-03-28 12:21",
   "changelog": [
-    "fix(slides): skip currentPageNumber after instant jump to prevent PDF.js re-scroll flicker"
+    "style(slides): double PDF scrollbar width from 13px to 26px"
   ]
 }
