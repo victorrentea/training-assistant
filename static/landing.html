@@ -104,8 +104,7 @@
 </head>
 <body>
   <div class="landing-card">
-    <div class="landing-logo">Interact</div>
-    <div class="landing-subtitle">Live workshop interaction tool</div>
+    <div class="landing-logo">Join the Session</div>
 
     <label class="landing-label" for="code-input">Enter session code</label>
     <input
@@ -166,33 +165,30 @@
       }
     })();
 
-    // Auto-join from host cookie (same machine)
-    (function autoJoinFromHostCookie() {
-      const m = document.cookie.match(/(?:^|;\s*)host_session_id=([a-z0-9]{4,8})/);
-      if (!m) return;
-      const code = m[1];
-      const input = document.getElementById('code-input');
-      input.value = code.toUpperCase();
-      onCodeInput();
-      const statusEl = document.getElementById('status-msg');
-      statusEl.textContent = 'Auto-joining on host machine…';
-      statusEl.style.color = 'var(--danger)';
-      statusEl.style.animation = 'blink-fast .3s linear infinite';
-      setTimeout(() => { window.location.href = '/' + code; }, 2000);
+    // Auto-join from host cookie (same machine) — poll every 3s for changes
+    (function pollHostCookie() {
+      let lastCode = null;
+      function readCookie() {
+        const m = document.cookie.match(/(?:^|;\s*)host_session_id=([a-z0-9]{4,8})/);
+        return m ? m[1] : null;
+      }
+      function tryAutoJoin() {
+        const code = readCookie();
+        if (!code || code === lastCode) return;
+        lastCode = code;
+        const input = document.getElementById('code-input');
+        input.value = code.toUpperCase();
+        onCodeInput();
+        const statusEl = document.getElementById('status-msg');
+        statusEl.textContent = 'Auto-joining on host machine…';
+        statusEl.style.color = 'var(--danger)';
+        statusEl.style.animation = 'blink-fast .3s linear infinite';
+        setTimeout(() => { window.location.href = '/' + code; }, 2000);
+      }
+      tryAutoJoin();
+      setInterval(tryAutoJoin, 3000);
     })();
 
-    // Check if any session is active
-    (async function checkSessionActive() {
-      try {
-        const res = await fetch('/api/session/active');
-        if (!res.ok) return;
-        const data = await res.json();
-        const statusEl = document.getElementById('status-msg');
-        if (!data.active) {
-          statusEl.textContent = 'No active session yet';
-        }
-      } catch { /* ignore */ }
-    })();
   </script>
 
   <script src="/static/version.js"></script>
