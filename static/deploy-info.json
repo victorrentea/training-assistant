@@ -1,7 +1,7 @@
 {
-  "sha": "0ba722d692dcd7413fff5c0f9e55100d85828e02",
-  "timestamp": "2026-03-28 11:51",
+  "sha": "d7a52b65fc64ab38eae3c3b7c70a0b026f3647a2",
+  "timestamp": "2026-03-28 11:56",
   "changelog": [
-    "fix(emoji): heart floats from bottom-left on participant; fullscreen on host"
+    "feat(upload): auto-open upload modal on window file drag with full-screen highlight"
   ]
 }
