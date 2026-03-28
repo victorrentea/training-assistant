@@ -2010,6 +2010,108 @@ h1 { display: none; }
   filter: brightness(1.15);
 }
 
+/* Upload-to-host floating button */
+.upload-floating-btn {
+  position: fixed;
+  bottom: .75rem;
+  right: calc(var(--slides-overlay-width) + .75rem + 52px);
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 1.3rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3002;
+  transition: transform .1s, background .15s, border-color .15s;
+  padding: 0;
+  line-height: 1;
+}
+.upload-floating-btn:hover {
+  background: rgba(20, 20, 35, 0.97);
+  border-color: var(--accent);
+}
+.upload-floating-btn:active { transform: scale(0.85); }
+
+/* Upload bubble */
+.upload-bubble {
+  position: fixed;
+  bottom: 3.5rem;
+  right: calc(var(--slides-overlay-width) + .75rem + 52px);
+  width: min(360px, 80vw);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: .75rem;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  animation: paste-bubble-pop .2s ease-out;
+  transform-origin: bottom right;
+}
+.upload-bubble::after {
+  content: '';
+  position: absolute;
+  bottom: -8px;
+  right: 14px;
+  width: 16px;
+  height: 16px;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  transform: rotate(45deg);
+}
+
+/* Dropzone */
+.upload-dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 120px;
+  border: 2px dashed var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  cursor: pointer;
+  padding: 1.5rem 1rem;
+  margin-bottom: .5rem;
+  transition: border-color .15s, background .15s;
+}
+.upload-dropzone.drag-over {
+  border-color: var(--accent);
+  background: rgba(99, 102, 241, 0.08);
+}
+.upload-dropzone-text {
+  color: var(--muted);
+  font-size: .85rem;
+}
+.upload-file-info {
+  margin-top: .4rem;
+  font-size: .8rem;
+  color: var(--accent);
+  font-weight: 600;
+  word-break: break-all;
+  text-align: center;
+}
+
+/* Progress bar */
+.upload-progress-bar {
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  margin-bottom: .5rem;
+  overflow: hidden;
+}
+.upload-progress-fill {
+  height: 100%;
+  width: 0%;
+  background: var(--accent);
+  border-radius: 2px;
+  transition: width .2s;
+}
+
 /* ── Light mode overrides ── */
 @media (prefers-color-scheme: light) {
   /* Slides dock panel */
