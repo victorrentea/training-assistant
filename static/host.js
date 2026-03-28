@@ -712,43 +712,32 @@
   function renderSummaryBadge() {
     const badge = document.getElementById('summary-badge');
     if (!badge) return;
-    const transcriptPart = _transcriptLineCount > 0 ? `💬 ${_transcriptLineCount}` : '';
-    const sessionPaused = _isSessionPaused(sessionMain);
 
-    // Transcription warning: no effective content in last 5 minutes
-    let noTranscriptWarn = false, noTranscriptTitle = '';
+    // Transcription warning (used for tooltip only)
+    let noTranscriptTitle = '';
     if (_transcriptLastContentAt === null) {
-      noTranscriptWarn = true;
       noTranscriptTitle = 'No transcription today';
     } else {
       const minAgo = (Date.now() - _transcriptLastContentAt) / 60000;
-      if (minAgo >= 5) {
-        noTranscriptWarn = true;
-        noTranscriptTitle = `No transcription for ${Math.round(minAgo)} minutes`;
-      }
+      if (minAgo >= 5) noTranscriptTitle = `No transcription for ${Math.round(minAgo)} minutes`;
     }
-    const sessionActive = sessionMain && !sessionMain.ended_at && !sessionPaused;
-    const flashStyle = (sessionActive && noTranscriptWarn) ? ' animation: flash-bg 1.4s ease-in-out infinite;' : '';
 
     if (summaryPoints.length) {
       badge.textContent = `🧠 (${summaryPoints.length}) Key Points.txt`;
       badge.className = 'badge connected';
-      badge.style.cssText = `cursor:pointer;${flashStyle}`;
-      badge.title = noTranscriptWarn ? noTranscriptTitle : `${summaryPoints.length} key points · ${_transcriptLineCount} transcript lines (last 30 min) — click to view`;
+      badge.style.cssText = 'cursor:pointer;';
+      badge.title = noTranscriptTitle || `${summaryPoints.length} key points · ${_transcriptLineCount} transcript lines — click to view`;
     } else if (_summaryGenerating) {
       badge.textContent = `🧠 (…) Key Points.txt`;
       badge.className = 'badge';
-      const anim = sessionPaused
-        ? ''
-        : ` animation: pulse 1.2s ease-in-out infinite${(sessionActive && noTranscriptWarn) ? ', flash-bg 1.4s ease-in-out infinite' : ''};`;
-      badge.style.cssText = `cursor:wait; color:var(--warn); border:1px solid var(--warn);${anim}`;
-      badge.title = noTranscriptWarn ? noTranscriptTitle : `Generating key points from transcript… (${_transcriptLineCount} lines)`;
+      badge.style.cssText = 'cursor:wait; color:var(--warn); border:1px solid var(--warn);';
+      badge.title = noTranscriptTitle || `Generating key points from transcript… (${_transcriptLineCount} lines)`;
     } else {
       badge.textContent = _transcriptLineCount > 0 ? `🧠 (0) Key Points.txt` : `🧠 Key Points.txt`;
       badge.className = _transcriptLineCount > 0 ? 'badge' : 'badge disconnected';
-      badge.style.cssText = `cursor:pointer;${flashStyle}`;
-      badge.title = noTranscriptWarn ? noTranscriptTitle
-        : (_transcriptLineCount > 0
+      badge.style.cssText = 'cursor:pointer;';
+      badge.title = noTranscriptTitle
+        || (_transcriptLineCount > 0
           ? `${_transcriptLineCount} transcript lines ready — click to generate key points`
           : 'No key points yet — click to generate now');
     }
