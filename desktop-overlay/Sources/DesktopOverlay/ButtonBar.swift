@@ -121,7 +121,7 @@ class ButtonBar: NSPanel {
             slideIn()
             slideTimer?.invalidate()
             slideTimer = nil
-            scheduleSlideOut(after: ButtonBar.autoHideDelay)
+            // Don't schedule slide-out while mouse is over the bar
         } else if isSlideIn && slideTimer == nil {
             scheduleSlideOut(after: ButtonBar.autoHideDelay)
         }
@@ -160,6 +160,14 @@ class ButtonBar: NSPanel {
     }
 }
 
+// MARK: - Drag helpers
+
+private func clampedY(for frame: NSRect, on window: NSWindow) -> CGFloat {
+    let margin: CGFloat = 12
+    let sf = (window.screen ?? NSScreen.screens[0]).frame
+    return max(sf.minY + margin, min(frame.origin.y, sf.maxY - frame.height - margin))
+}
+
 // MARK: - Container view (vertically draggable by background)
 
 private class ButtonBarContainer: NSView {
@@ -193,7 +201,7 @@ private class ButtonBarContainer: NSView {
         }
         let dy = event.locationInWindow.y - origin.y
         var frame = window.frame
-        frame.origin.y += dy
+        frame.origin.y = clampedY(for: NSRect(x: frame.origin.x, y: frame.origin.y + dy, width: frame.width, height: frame.height), on: window)
         window.setFrame(frame, display: true)
     }
 
@@ -310,7 +318,7 @@ private class RoundEmojiButton: NSView {
 
         if isDragging, let window = self.window {
             var frame = window.frame
-            frame.origin.y += dy
+            frame.origin.y = clampedY(for: NSRect(x: frame.origin.x, y: frame.origin.y + dy, width: frame.width, height: frame.height), on: window)
             window.setFrame(frame, display: true)
         }
     }
