@@ -1557,11 +1557,20 @@ h1 { display: none; }
   pointer-events: auto;
 }
 
-/* Invisible spacer — margin-left:auto pushes upload/paste to right */
+/* Center wrapper — takes all available space, centers emoji buttons */
+#emoji-center {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: .5rem;
+  min-width: 0;
+}
+
+/* Invisible spacer between emoji-center and upload/paste */
 .emoji-bar-divider {
   width: 0;
   flex-shrink: 0;
-  margin-left: auto;
   pointer-events: none;
 }
 
