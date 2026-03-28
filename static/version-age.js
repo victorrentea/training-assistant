@@ -49,6 +49,81 @@
     if (ageSec < 86400) setInterval(update, 60000);
   }
 
-  window.renderDeployAge = renderDeployAge;
+  let _deployInfoCache = null;
+  async function _fetchDeployInfo() {
+    if (_deployInfoCache !== null) return _deployInfoCache;
+    try {
+      const r = await fetch('/static/deploy-info.json?_nc=' + Date.now());
+      _deployInfoCache = await r.json();
+    } catch (e) {
+      _deployInfoCache = {};
+    }
+    return _deployInfoCache;
+  }
+
+  function _attachBranchTooltip(el) {
+    if (!el || el._branchTipAttached) return;
+    el._branchTipAttached = true;
+    el.style.cursor = 'help';
+
+    let popup = null;
+
+    el.addEventListener('mouseenter', async () => {
+      if (!popup) {
+        popup = document.createElement('div');
+        popup.style.cssText = [
+          'position:fixed',
+          'background:var(--surface2,#252840)',
+          'border:1px solid var(--border,#2e3250)',
+          'border-radius:8px',
+          'padding:.55rem .8rem',
+          'font:500 .75rem/1.6 Segoe UI,system-ui,sans-serif',
+          'color:var(--text,#e8eaf0)',
+          'z-index:9999',
+          'box-shadow:0 4px 14px rgba(0,0,0,.45)',
+          'pointer-events:none',
+          'min-width:220px',
+          'display:none',
+        ].join(';');
+        document.body.appendChild(popup);
+      }
+
+      const rect = el.getBoundingClientRect();
+      popup.style.top = (rect.bottom + 4) + 'px';
+      popup.style.right = (window.innerWidth - rect.right) + 'px';
+
+      const info = await _fetchDeployInfo();
+      const branches = (info && info.branches) || [];
+      const sha = info && info.sha ? info.sha.slice(0, 8) : '';
+      if (!branches.length && !sha) return;
+
+      const fmt = m => m >= 60
+        ? Math.floor(m / 60) + 'h' + (m % 60 ? (m % 60) + 'm' : '')
+        : m + 'm';
+      let html = sha
+        ? `<div style="font-family:monospace;color:var(--muted,#7b80a0);margin-bottom:.35rem">${sha}</div>`
+        : '';
+      html += branches.map(b =>
+        `<div style="display:flex;justify-content:space-between;gap:1.5rem">` +
+        `<span>${b.branch}</span>` +
+        `<span style="color:var(--muted,#7b80a0);flex-shrink:0;text-align:right">${fmt(b.minutes)}</span>` +
+        `</div>`
+      ).join('');
+
+      popup.innerHTML = html;
+      popup.style.display = 'block';
+    });
+
+    el.addEventListener('mouseleave', () => {
+      if (popup) popup.style.display = 'none';
+    });
+  }
+
+  const _origRenderDeployAge = renderDeployAge;
+  window.renderDeployAge = function(tagId) {
+    _origRenderDeployAge(tagId);
+    const el = document.getElementById(tagId || 'version-tag');
+    _attachBranchTooltip(el);
+  };
 })();
 
