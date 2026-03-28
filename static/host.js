@@ -2983,9 +2983,138 @@ function onSessionEmojiKey(event, action) {
 }
 
 let _currentSessionId = null;
+let _blockerAutoTimer = null;
+let _blockerFolderExists = false;
+let _blockerDismissed = false;
+let _blockerOriginalName = ''; // tracks the pre-filled name to detect user edits
+
+function _updateBlocker() {
+  const blocker = document.getElementById('session-blocker');
+  if (!blocker) return;
+
+  // Dismiss if session_id exists
+  if (_currentSessionId) {
+    blocker.style.display = 'none';
+    _blockerDismissed = true;
+    _clearBlockerAutoStart();
+    return;
+  }
+  if (_blockerDismissed) return; // user already passed through
+
+  blocker.style.display = 'flex';
+
+  const input = document.getElementById('blocker-session-input');
+  const check = document.getElementById('blocker-folder-check');
+  const statusEl = document.getElementById('blocker-status');
+
+  // Pre-fill from sessionMain (daemon found folder) or default date
+  if (sessionMain && sessionMain.name) {
+    if (!input.value || input.value === _blockerOriginalName || !input.dataset.touched) {
+      input.value = sessionMain.name;
+      _blockerOriginalName = sessionMain.name;
+      _blockerFolderExists = true;
+      check.style.display = '';
+      onBlockerInput(); // enable button
+      statusEl.textContent = 'Folder found — auto-starting...';
+      _startBlockerAutoStart();
+    }
+  } else if (!input.value && !input.dataset.touched) {
+    const today = new Date().toISOString().slice(0, 10);
+    input.value = today + ' ';
+    _blockerOriginalName = today + ' ';
+    onBlockerInput();
+    statusEl.textContent = '';
+  }
+}
+
+function onBlockerInput() {
+  const input = document.getElementById('blocker-session-input');
+  const btn = document.getElementById('blocker-start-btn');
+  const check = document.getElementById('blocker-folder-check');
+  const statusEl = document.getElementById('blocker-status');
+  input.dataset.touched = '1';
+  btn.disabled = !input.value.trim();
+
+  // Green check: only if value matches the daemon-detected folder name
+  const matchesFolder = _blockerFolderExists && input.value === _blockerOriginalName;
+  check.style.display = matchesFolder ? '' : 'none';
+
+  // Cancel auto-start if user changed the name
+  if (!matchesFolder) {
+    _clearBlockerAutoStart();
+    statusEl.textContent = '';
+  }
+}
+
+function _startBlockerAutoStart() {
+  _clearBlockerAutoStart();
+  const prog = document.getElementById('blocker-btn-progress');
+  if (prog) {
+    prog.style.transition = 'none';
+    prog.style.width = '0';
+    requestAnimationFrame(() => {
+      prog.style.transition = 'width 3s linear';
+      prog.style.width = '100%';
+    });
+  }
+  _blockerAutoTimer = setTimeout(() => {
+    _blockerAutoTimer = null;
+    blockerStart();
+  }, 3000);
+}
+
+function _clearBlockerAutoStart() {
+  if (_blockerAutoTimer) {
+    clearTimeout(_blockerAutoTimer);
+    _blockerAutoTimer = null;
+  }
+  const prog = document.getElementById('blocker-btn-progress');
+  if (prog) {
+    prog.style.transition = 'none';
+    prog.style.width = '0';
+  }
+}
+
+function blockerStart() {
+  const input = document.getElementById('blocker-session-input');
+  const name = input.value.trim();
+  if (!name) return;
+  _clearBlockerAutoStart();
+
+  const check = document.getElementById('blocker-folder-check');
+  const folderExists = check && check.style.display !== 'none';
+
+  if (!folderExists) {
+    if (!confirm(`Create folder "${name}"?`)) return;
+  }
+
+  // Call createSession
+  fetch('/api/session/create', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({name})
+  }).catch(e => console.error('blockerStart failed:', e));
+
+  const statusEl = document.getElementById('blocker-status');
+  if (statusEl) statusEl.textContent = 'Starting session...';
+  const btn = document.getElementById('blocker-start-btn');
+  if (btn) btn.disabled = true;
+}
+
+// Initialize blocker with date pre-fill on page load
+_updateBlocker();
+setTimeout(() => {
+  const input = document.getElementById('blocker-session-input');
+  if (input && document.getElementById('session-blocker').style.display !== 'none') input.focus();
+}, 100);
 
 function updateSessionCodeBar(sessionId) {
   _currentSessionId = sessionId;
+  _updateBlocker();
+  const bar = document.getElementById('session-code-bar');
+  const display = document.getElementById('session-code-display');
+  if (bar) bar.style.display = sessionId ? 'flex' : 'none';
+  if (display) display.textContent = sessionId || '';
 
   // Update participant link suffix and copy icon
   const suffix = document.getElementById('session-id-suffix');
