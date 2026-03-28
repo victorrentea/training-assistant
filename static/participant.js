@@ -100,17 +100,17 @@ function renderEmojiBar() {
   const hasOverflow = overflow.length > 0;
   dotsWrap.style.display = hasOverflow ? '' : 'none';
 
-  // Remove old overflow buttons from popup (keep .emoji-popup-close)
+  // Remove old overflow buttons from popup
   popup.querySelectorAll('.emoji-popup-btn').forEach(el => el.remove());
-  const closeBtn = popup.querySelector('.emoji-popup-close');
   overflow.forEach(({ emoji, tooltip }) => {
     const btn = document.createElement('button');
     btn.className = 'emoji-btn emoji-popup-btn';
     btn.dataset.tooltip = tooltip;
-    btn.style.cssText = 'width:36px;height:36px;font-size:1.1rem;flex-shrink:0;pointer-events:auto;';
+    btn.style.flexShrink = '0';
+    btn.style.pointerEvents = 'auto';
     btn.textContent = emoji;
     btn.onclick = (ev) => { sendEmoji(emoji, ev); closeEmojiPopup(); };
-    popup.insertBefore(btn, closeBtn ? closeBtn.nextSibling : null);
+    popup.appendChild(btn);
   });
 }
 
@@ -4070,12 +4070,26 @@ function closeEmojiPopup(ev) {
 
   // ── Emoji bar hover bubbles + dev-reset: need full DOM ──
   document.addEventListener('DOMContentLoaded', () => {
-    // Wire onclick for buttons now inside #emoji-bar
-    document.getElementById('emoji-dots-btn').onclick = toggleEmojiPopup;
+    // Wire buttons inside #emoji-bar
     document.getElementById('emoji-ping-btn').onclick = (ev) => sendEmoji('🖥️', ev);
-    document.getElementById('emoji-popup').querySelector('.emoji-popup-close').onclick = closeEmojiPopup;
     document.getElementById('upload-btn').onclick = openUploadModal;
     document.getElementById('paste-btn').onclick = openPasteModal;
+
+    // Open popup on hover over dotsWrap; close when mouse leaves
+    const dotsWrapEl = document.getElementById('emoji-dots-wrap');
+    dotsWrapEl.addEventListener('mouseenter', () => {
+      const popup = document.getElementById('emoji-popup');
+      if (popup) popup.style.display = 'flex';
+    });
+    dotsWrapEl.addEventListener('mouseleave', () => {
+      const popup = document.getElementById('emoji-popup');
+      if (popup) popup.style.display = 'none';
+    });
+    // Also support tap on touch devices
+    document.getElementById('emoji-dots-btn').addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      toggleEmojiPopup(ev);
+    });
 
     // Initial render
     renderEmojiBar();
@@ -4084,7 +4098,7 @@ function closeEmojiPopup(ev) {
     new ResizeObserver(() => { closeEmojiPopup(); renderEmojiBar(); })
       .observe(document.getElementById('emoji-bar'));
 
-    // Close popup on outside click
+    // Close popup on outside click (touch fallback)
     document.addEventListener('click', (ev) => {
       const dotsWrap = document.getElementById('emoji-dots-wrap');
       if (dotsWrap && !dotsWrap.contains(ev.target)) closeEmojiPopup();
