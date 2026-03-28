@@ -33,6 +33,12 @@ def _build_host_participants_list() -> list[dict]:
         paste_entries = state.paste_texts.get(pid, [])
         if paste_entries:
             participant["paste_texts"] = paste_entries
+        upload_entries = state.uploaded_files.get(pid, [])
+        if upload_entries:
+            participant["uploaded_files"] = [
+                {"id": e["id"], "filename": e["filename"], "size": e["size"]}
+                for e in upload_entries
+            ]
         if include_debate_side:
             participant["debate_side"] = state.debate_sides.get(pid)
         participants_list.append(participant)
