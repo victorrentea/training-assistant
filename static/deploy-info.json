@@ -1,7 +1,7 @@
 {
-  "sha": "2dc3f907865f2d92c2dd6fcf51dd54b75084b04b",
-  "timestamp": "2026-03-28 14:21",
+  "sha": "190313874e13defd139d073185bdc4015a1a55a7",
+  "timestamp": "2026-03-28 14:22",
   "changelog": [
-    "fix(ui): update host dot tooltip to 'Host is offline' when red"
+    "feat(slides): light green border on hover for previously visited topics"
   ]
 }
