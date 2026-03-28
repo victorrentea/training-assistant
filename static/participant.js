@@ -1298,11 +1298,9 @@
 
   function _setSlidesLoading({ visible = false, loaded = 0, total = 0, label = '' } = {}) {
     const box = document.getElementById('slides-loading');
-    const text = document.getElementById('slides-loading-label');
     const fill = document.getElementById('slides-progress-fill');
     const blockerFill = document.getElementById('slides-ui-blocker-progress-fill');
-    const blockerLabel = document.getElementById('slides-ui-blocker-label');
-    if (!box || !text || !fill) return;
+    if (!box || !fill) return;
     if (!visible) {
       box.style.display = 'none';
       fill.style.width = '0%';
@@ -1313,29 +1311,17 @@
     const pct = total > 0 ? Math.max(2, Math.min(100, Math.round((loaded / total) * 100))) : 10;
     fill.style.width = `${pct}%`;
     if (blockerFill) blockerFill.style.width = `${pct}%`;
-    let displayLabel;
-    if (label) {
-      displayLabel = label;
-    } else if (total > 0) {
-      displayLabel = `Downloading slide... ${pct}%`;
-    } else {
-      displayLabel = 'Downloading slide...';
-    }
-    text.textContent = displayLabel;
-    if (blockerLabel && !label) blockerLabel.textContent = displayLabel;
   }
 
-  function _setSlidesUiBlocker(visible, label = 'Loading slide...') {
+  function _setSlidesUiBlocker(visible, label = '') {
     const blocker = document.getElementById('slides-ui-blocker');
-    const text = document.getElementById('slides-ui-blocker-label');
-    if (!blocker || !text) return;
+    if (!blocker) return;
     if (!visible) {
       blocker.style.display = 'none';
       const fill = document.getElementById('slides-ui-blocker-progress-fill');
       if (fill) fill.style.width = '0%';
       return;
     }
-    text.textContent = label || 'Loading slide...';
     blocker.style.display = 'flex';
   }
 
