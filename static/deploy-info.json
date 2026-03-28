@@ -1,7 +1,8 @@
 {
-  "sha": "124015f75c64e1319e12f3fdefc111be5698e902",
-  "timestamp": "2026-03-28 09:55",
+  "sha": "b0e6623e1e450727750e4d43cc5b4d5f2416da5b",
+  "timestamp": "2026-03-28 09:59",
   "changelog": [
-    "fix(paste): rename Send button to \"Send to host\""
+    "feat(paste): add hover tooltip to paste floating button",
+    "feat(slides): add onboarding-style hover tooltips to Follow/PDF.js/Native buttons"
   ]
 }
