@@ -363,7 +363,7 @@
 </div>
 
 <!-- QR fullscreen overlay -->
-<div id="qr-overlay" onclick="closeQR()">
+<div id="qr-overlay" class="modal-overlay" onclick="closeQR()">
   <div id="qr-fullscreen"></div>
   <div id="qr-overlay-url"></div>
 </div>
@@ -371,8 +371,8 @@
 <div class="toast" id="toast"></div>
 
 <!-- Map modal -->
-<div id="map-overlay" onclick="closeMap(event)">
-  <div id="map-dialog" onclick="event.stopPropagation()">
+<div id="map-overlay" class="modal-overlay" onclick="closeMap(event)">
+  <div id="map-dialog" class="modal-dialog" onclick="event.stopPropagation()">
     <div id="map-header">
       <span id="map-title">Participant Locations</span>
       <button id="map-close" onclick="closeMap()" title="Close">✕</button>
@@ -384,8 +384,8 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 
-<div id="host-notes-overlay" class="summary-overlay" onclick="closeHostNotesModal()">
-  <div class="summary-dialog" onclick="event.stopPropagation()">
+<div id="host-notes-overlay" class="modal-overlay summary-overlay" onclick="closeHostNotesModal()">
+  <div class="modal-dialog summary-dialog" onclick="event.stopPropagation()">
     <div class="summary-header">
       <span>📝 Session Notes</span>
       <span>
@@ -397,8 +397,8 @@
   </div>
 </div>
 
-<div id="summary-overlay" class="summary-overlay" onclick="closeSummaryModal()">
-  <div class="summary-dialog" onclick="event.stopPropagation()">
+<div id="summary-overlay" class="modal-overlay summary-overlay" onclick="closeSummaryModal()">
+  <div class="modal-dialog summary-dialog" onclick="event.stopPropagation()">
     <div class="summary-header">
       <span>🧠 Key Points</span>
       <span class="summary-actions">
@@ -419,6 +419,7 @@
 <script src="/static/work-hours.js"></script>
 <script src="/static/version-age.js"></script>
 <script src="/static/version-reload.js"></script>
+<script src="/static/utils.js"></script>
 <script src="/static/host.js"></script>
 <div class="version-tag" id="version-tag"></div>
 <script>window.renderDeployAge && window.renderDeployAge('version-tag');</script>

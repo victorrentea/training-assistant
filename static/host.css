@@ -333,9 +333,6 @@ body {
 
 .slides-cache-title {
   flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .slides-cache-detail {
@@ -766,14 +763,8 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
 .bar-fill.leading { background: var(--accent2); }
 
 .status-pill {
-  display: inline-flex;
-  align-items: center;
   padding: 0 .7rem;
-  border-radius: 20px;
   font-size: .78rem;
-  font-weight: 600;
-  height: 34px;
-  box-sizing: border-box;
   white-space: nowrap;
 }
 .status-pill.open   { background: #48cfad22; color: var(--accent2); border: 1px solid var(--accent2); }
@@ -876,9 +867,6 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
   overflow: hidden;
 }
 .pax-name-text {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
   min-width: 0;
 }
 .pax-list li.online .pax-name-text,
@@ -910,18 +898,12 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
 }
 
 #qr-overlay {
-  display: none;
-  position: fixed;
-  inset: 0;
   background: rgba(0,0,0,.92);
   z-index: 1000;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
   gap: 1.5rem;
   cursor: pointer;
 }
-#qr-overlay.open { display: flex; }
 #qr-fullscreen canvas, #qr-fullscreen img { display: block; }
 #qr-overlay-url {
   color: #fff;
@@ -950,24 +932,12 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
 
 /* ── Map modal ── */
 #map-overlay {
-  display: none;
-  position: fixed;
-  inset: 0;
   background: rgba(0,0,0,.7);
-  z-index: 2000;
-  align-items: center;
-  justify-content: center;
 }
-#map-overlay.open { display: flex; }
 
 #map-dialog {
-  background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
   width: min(860px, 94vw);
-  max-height: 90vh;
-  display: flex;
-  flex-direction: column;
   overflow: hidden;
 }
 

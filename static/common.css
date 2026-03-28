@@ -195,27 +195,12 @@
 
 /* Summary modal */
 .summary-overlay {
-  display: none;
-  position: fixed;
-  inset: 0;
   background: rgba(0,0,0,0.6);
-  z-index: 2000;
-  justify-content: center;
-  align-items: center;
-}
-.summary-overlay.open {
-  display: flex;
 }
 .summary-dialog {
-  background: var(--surface);
-  border-radius: 12px;
   padding: 1.2rem;
   max-width: 95vw;
   width: 95vw;
-  max-height: 90vh;
-  display: flex;
-  flex-direction: column;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
 }
 .summary-header {
   display: flex;
@@ -566,7 +551,43 @@ input[type=text].debate-round-duration {
   height: 2rem;
   border: 3px solid var(--surface2);
   border-top-color: var(--accent);
-  border-radius: 50%;
-  animation: debate-spin 0.8s linear infinite;
 }
-@keyframes debate-spin { to { transform: rotate(360deg); } }
+
+/* --- Modal base --- */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  justify-content: center;
+  align-items: center;
+}
+.modal-overlay.open { display: flex; }
+.modal-dialog {
+  background: var(--surface);
+  border-radius: 12px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+}
+
+/* --- Spinner base --- */
+.spinner {
+  border-radius: 50%;
+  animation: spin 0.75s linear infinite;
+  flex-shrink: 0;
+}
+
+/* --- Utilities --- */
+.truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* --- Tooltip below modifier --- */
+.tooltip-below.has-tooltip::after,
+.tooltip-below .has-tooltip::after { top: calc(100% + 8px); bottom: auto; }
+.tooltip-below.has-tooltip::before,
+.tooltip-below .has-tooltip::before { top: calc(100% + 2px); bottom: auto; border-top-color: transparent; border-bottom: 6px solid var(--surface2); }

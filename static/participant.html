@@ -17,7 +17,7 @@
 
   <!-- Main screen (auto-join, no join screen) -->
   <div id="main-screen">
-    <div class="status-bar">
+    <div class="status-bar tooltip-below">
       <span class="status-left">
         <img id="my-avatar" class="avatar" style="display:none" alt="">
         <span><span class="dot"></span>
@@ -35,7 +35,7 @@
       </span>
       <span class="status-right">
         <button id="notif-btn" style="display:none" class="has-tooltip" data-tooltip="Enable notifications">🔔</button>
-        <span id="location-prompt" class="location-prompt has-tooltip" onclick="requestLocation()" data-tooltip="Share your location (optional)">📍 Location!</span>
+        <span id="location-prompt" class="location-prompt tooltip-below has-tooltip" onclick="requestLocation()" data-tooltip="Share your location (optional)">📍 Location!</span>
         <span id="host-dot" class="has-tooltip" data-tooltip="Host is live"><span class="dot dot-red"></span>Host</span>
         <span id="daemon-dot" class="has-tooltip" data-tooltip="AI assistant offline"><span class="dot dot-red"></span>🤖</span>
         <span id="pax-count" class="has-tooltip" data-tooltip="Participants connected"></span>
@@ -60,8 +60,8 @@
     <div id="slides-list" class="slides-list" aria-label="Available slides"></div>
   </aside>
 
-<div id="notes-overlay" class="summary-overlay" onclick="closeNotesModal()">
-  <div class="summary-dialog" onclick="event.stopPropagation()">
+<div id="notes-overlay" class="modal-overlay summary-overlay" onclick="closeNotesModal()">
+  <div class="modal-dialog summary-dialog" onclick="event.stopPropagation()">
     <div class="summary-header">
       <span>📝 Session Notes</span>
       <span>
@@ -74,8 +74,8 @@
   </div>
 </div>
 
-<div id="summary-overlay" class="summary-overlay" onclick="closeSummaryModal()">
-  <div class="summary-dialog" onclick="event.stopPropagation()">
+<div id="summary-overlay" class="modal-overlay summary-overlay" onclick="closeSummaryModal()">
+  <div class="modal-dialog summary-dialog" onclick="event.stopPropagation()">
     <div class="summary-header">
       <span>🧠 Key Points</span>
       <span>
@@ -108,7 +108,7 @@
 </div>
 <div id="slides-ui-blocker" class="slides-ui-blocker" style="display:none;" aria-live="polite" aria-busy="true">
   <div class="slides-ui-blocker-card">
-    <div class="slides-ui-spinner" aria-hidden="true"></div>
+    <div class="spinner slides-ui-spinner" aria-hidden="true"></div>
     <div class="slides-progress-track" role="progressbar" aria-label="Slide download progress">
       <div id="slides-ui-blocker-progress-fill" class="slides-progress-fill"></div>
     </div>
@@ -119,6 +119,7 @@
 <script src="/static/work-hours.js"></script>
 <script src="/static/version-age.js"></script>
 <script src="/static/version-reload.js"></script>
+<script src="/static/utils.js"></script>
 <script src="/static/participant.js"></script>
 <div class="version-tag" id="version-tag"></div>
 <script>window.renderDeployAge && window.renderDeployAge('version-tag');</script>

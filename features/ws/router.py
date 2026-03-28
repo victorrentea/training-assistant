@@ -99,14 +99,14 @@ async def daemon_websocket_endpoint(websocket: WebSocket):
             pass
 
     state.daemon_ws = websocket
-    state.daemon_last_seen = datetime.now(timezone.utc)
+    state.touch_daemon()
     logger.info("Daemon WS connected")
     await broadcast({"type": "slides_catalog_changed"})
 
     try:
         while True:
             data = await websocket.receive_json()
-            state.daemon_last_seen = datetime.now(timezone.utc)
+            state.touch_daemon()
             msg_type = data.get("type")
             if msg_type == "slides_catalog":
                 from features.slides.cache import handle_slides_catalog
@@ -212,8 +212,7 @@ async def websocket_endpoint(websocket: WebSocket, participant_id: str):
                     and state.debate_phase
                     and state.debate_phase != "side_selection"
                     and pid not in state.debate_sides):
-                    for_count = sum(1 for s in state.debate_sides.values() if s == "for")
-                    against_count = sum(1 for s in state.debate_sides.values() if s == "against")
+                    for_count, against_count = state.debate_side_counts()
                     state.debate_sides[pid] = "for" if for_count <= against_count else "against"
                     state.debate_auto_assigned.add(pid)
                     logger.info(f"Late joiner {name} auto-assigned to {state.debate_sides[pid]}")
@@ -332,8 +331,7 @@ async def websocket_endpoint(websocket: WebSocket, participant_id: str):
 
                     # Auto-advance if all participants now have sides and both sides have members
                     if all(p in state.debate_sides for p in all_pids):
-                        fc = sum(1 for s in state.debate_sides.values() if s == "for")
-                        ac = sum(1 for s in state.debate_sides.values() if s == "against")
+                        fc, ac = state.debate_side_counts()
                         if fc > 0 and ac > 0:
                             state.debate_phase = "arguments"
                             logger.info("All participants assigned — auto-advancing to arguments phase")

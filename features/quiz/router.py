@@ -1,4 +1,3 @@
-from datetime import datetime, timezone
 import re
 
 from fastapi import APIRouter, HTTPException
@@ -80,7 +79,7 @@ async def request_quiz(body: QuizRequest):
 
 @router.get("/api/quiz-request")
 async def poll_quiz_request():
-    state.daemon_last_seen = datetime.now(timezone.utc)
+    state.touch_daemon()
     req = state.quiz_request
     state.quiz_request = None
     return {
@@ -161,7 +160,7 @@ async def request_quiz_refine(body: QuizRefineRequest):
 
 @router.get("/api/quiz-refine")
 async def poll_quiz_refine():
-    state.daemon_last_seen = datetime.now(timezone.utc)
+    state.touch_daemon()
     req = state.quiz_refine_request
     state.quiz_refine_request = None
     return {"request": req, "preview": state.quiz_preview}

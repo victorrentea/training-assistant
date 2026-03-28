@@ -253,9 +253,7 @@ function closeEmojiPopup(ev) {
   let lastHostSlidesCurrentKey = '';
   let slidesFollowQueue = Promise.resolve();
 
-  function escHtml(s) {
-    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  }
+  // escHtml is now in utils.js
 
   // ── Onboarding tour ──
   const LS_TOUR_KEY = 'workshop_tour_shown';
@@ -465,7 +463,7 @@ function closeEmojiPopup(ev) {
         if (filename && !rejectedAvatars.includes(filename)) {
             rejectedAvatars.push(filename);
         }
-        if (ws) ws.send(JSON.stringify({ type: 'refresh_avatar', rejected: rejectedAvatars }));
+        sendWS('refresh_avatar', { rejected: rejectedAvatars });
         // Spin the refresh button
         refreshBtn.classList.add('spinning');
         setTimeout(function() { refreshBtn.classList.remove('spinning'); }, 600);
@@ -550,13 +548,11 @@ function closeEmojiPopup(ev) {
   }
 
   function toggleNotesModal() {
-    const overlay = document.getElementById('notes-overlay');
-    if (overlay) overlay.classList.toggle('open');
+    toggleModal('notes-overlay');
   }
 
   function closeNotesModal() {
-    const overlay = document.getElementById('notes-overlay');
-    if (overlay) overlay.classList.remove('open');
+    closeModal('notes-overlay');
   }
 
   function updateSummary(points, updatedAt) {
@@ -637,8 +633,7 @@ function closeEmojiPopup(ev) {
   }
 
   function closeSummaryModal() {
-    const overlay = document.getElementById('summary-overlay');
-    if (overlay) overlay.classList.remove('open');
+    closeModal('summary-overlay');
   }
 
   function openPasteModal() {
@@ -652,8 +647,7 @@ function closeEmojiPopup(ev) {
   }
 
   function closePasteModal() {
-    const overlay = document.getElementById('paste-overlay');
-    if (overlay) overlay.classList.remove('open');
+    closeModal('paste-overlay');
   }
 
   function sendPasteText() {
@@ -664,7 +658,7 @@ function closeEmojiPopup(ev) {
       alert('Text too large (max 100KB)');
       return;
     }
-    ws.send(JSON.stringify({ type: 'paste_text', text: text }));
+    sendWS('paste_text', { text: text });
     closePasteModal();
     showPasteToast();
   }
@@ -1788,7 +1782,7 @@ function closeEmojiPopup(ev) {
       const _cfg = _dotCfg[_cacheEntry.status] || _dotCfg['not_cached'];
       if (_cfg.spinner) {
         const spinner = document.createElement('div');
-        spinner.className = 'slides-cache-spinner has-tooltip';
+        spinner.className = 'spinner slides-cache-spinner has-tooltip';
         spinner.setAttribute('data-tooltip', _cfg.tip);
         item.appendChild(spinner);
       } else {
@@ -2328,9 +2322,7 @@ function closeEmojiPopup(ev) {
         localStorage.setItem(LS_KEY, myName);
         localStorage.setItem(LS_CUSTOM_NAME_KEY, '1');
         document.getElementById('display-name').textContent = myName;
-        if (ws && ws.readyState === WebSocket.OPEN) {
-            ws.send(JSON.stringify({ type: 'set_name', name: myName }));
-        }
+        sendWS('set_name', { name: myName });
     }
     document.getElementById('display-name').style.display = '';
     document.getElementById('name-edit-wrap').style.display = 'none';
@@ -2352,9 +2344,7 @@ function closeEmojiPopup(ev) {
   }
 
   function sendLocation(locationStr) {
-    if (ws && ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify({ type: 'location', location: locationStr }));
-    }
+    sendWS('location', { location: locationStr });
   }
 
   function updateLocationPrompt() {
@@ -2428,7 +2418,7 @@ function closeEmojiPopup(ev) {
       document.getElementById('display-name').textContent = myName;
 
       // Send name as first message
-      ws.send(JSON.stringify({ type: 'set_name', name: myName }));
+      sendWS('set_name', { name: myName });
 
       // Show 🔔 button for auto-joiners who haven't been asked for permission yet
       if ('Notification' in window && Notification.permission === 'default' && !_notifBtnBound) {
@@ -2967,7 +2957,7 @@ function closeEmojiPopup(ev) {
     // When called from onclick, existingWord is an Event — ignore it
     const word = (typeof existingWord === 'string' && existingWord) || (input && input.value.trim());
     if (!word) return;
-    ws.send(JSON.stringify({ type: 'wordcloud_word', word }));
+    sendWS('wordcloud_word', { word });
     if (input && typeof existingWord !== 'string') {
       input.value = '';
       const goBtn = document.getElementById('wc-go');
@@ -3205,7 +3195,7 @@ function closeEmojiPopup(ev) {
 
   function sendEmoji(emoji, ev) {
     if (!ws) return;
-    ws.send(JSON.stringify({ type: 'emoji_reaction', emoji }));
+    sendWS('emoji_reaction', { emoji });
     // Track usage for priority reordering (only for overflow-eligible emojis)
     if (EMOJI_CONFIG.some(e => e.emoji === emoji)) {
       incrementEmojiCount(emoji);
@@ -3274,7 +3264,7 @@ function closeEmojiPopup(ev) {
     if (!input) return;
     const text = input.value.trim();
     if (!text || !ws) return;
-    ws.send(JSON.stringify({ type: 'qa_submit', text }));
+    sendWS('qa_submit', { text });
     input.value = '';
     const qaBtn = document.getElementById('qa-submit-btn');
     if (qaBtn) qaBtn.disabled = true;
@@ -3283,7 +3273,7 @@ function closeEmojiPopup(ev) {
 
   function upvoteQuestion(questionId) {
     if (!ws) return;
-    ws.send(JSON.stringify({ type: 'qa_upvote', question_id: questionId }));
+    sendWS('qa_upvote', { question_id: questionId });
   }
 
   function renderQACleanup() {
@@ -3291,12 +3281,7 @@ function closeEmojiPopup(ev) {
     // Q&A DOM is inside #content which gets replaced when switching activities
   }
 
-  // ── HTML escaping utility ──
-  function escDebate(str) {
-    const d = document.createElement('div');
-    d.textContent = str;
-    return d.innerHTML;
-  }
+  // escDebate replaced by escHtml from utils.js
 
   // ── Debate rendering ──
   const DEBATE_PHASES = [
@@ -3433,7 +3418,7 @@ function closeEmojiPopup(ev) {
     html += renderDebatePhaseStepper(displayPhase);
     html += `<div class="debate-statement-row">
       <span class="debate-side-count debate-side-against">👎 ${sideCounts.against}</span>
-      <span class="debate-statement-text">"${escDebate(statement)}"</span>
+      <span class="debate-statement-text">"${escHtml(statement)}"</span>
       <span class="debate-side-count debate-side-for">${sideCounts.for} 👍</span>
     </div>`;
 
@@ -3469,7 +3454,7 @@ function closeEmojiPopup(ev) {
       html += renderDebateArgColumns(args, mySide, msg, false);
       if (phase === 'ai_cleanup') {
         html += `<div class="debate-ai-loading">
-          <div class="debate-ai-spinner"></div>
+          <div class="spinner debate-ai-spinner"></div>
           <div>AI is enriching arguments…</div>
         </div>`;
       }
@@ -3478,7 +3463,7 @@ function closeEmojiPopup(ev) {
         html += `<button class="btn btn-warn debate-volunteer-btn" onclick="debateVolunteer()">🏆 I'll be our champion!</button>`;
       } else if (mySide && champions[mySide]) {
         const isMe = msg.debate_my_is_champion;
-        html += `<div class="debate-champion-info">${isMe ? '🏆 You are your team\'s champion!' : '🏆 Champion: ' + escDebate(champions[mySide])}</div>`;
+        html += `<div class="debate-champion-info">${isMe ? '🏆 You are your team\'s champion!' : '🏆 Champion: ' + escHtml(champions[mySide])}</div>`;
       }
     } else if (phase === 'live_debate') {
       const rounds = getDebateRounds(msg.debate_first_side);
@@ -3491,7 +3476,7 @@ function closeEmojiPopup(ev) {
         const sideClass = sub.side === 'for' ? 'debate-round-side-for' : sub.side === 'against' ? 'debate-round-side-against' : 'debate-round-side-both';
         const sideIcon = sub.side === 'for' ? '👍' : '👎';
         html += `<div style="text-align:center; margin:.5rem 0;">
-          <span class="${sideClass}" style="font-weight:700; font-size:1.1rem;">${sideIcon} ${escDebate(sub.label)}</span>
+          <span class="${sideClass}" style="font-weight:700; font-size:1.1rem;">${sideIcon} ${escHtml(sub.label)}</span>
         </div>`;
         if (timerActive) {
           html += `<div id="debate-pax-countdown" class="debate-countdown-large"></div>`;
@@ -3501,7 +3486,7 @@ function closeEmojiPopup(ev) {
       } else {
         html += `<div style="text-align:center; margin:.5rem 0; color:var(--muted);">Waiting for host to start…</div>`;
       }
-      const champNames = Object.entries(champions).map(([s, n]) => `${s === 'for' ? '👍' : '👎'} ${escDebate(n)}`).join(' vs ');
+      const champNames = Object.entries(champions).map(([s, n]) => `${s === 'for' ? '👍' : '👎'} ${escHtml(n)}`).join(' vs ');
       if (champNames) html += `<div class="debate-live-info">🎤 ${champNames}</div>`;
       html += renderDebateArgColumns(args, mySide, msg, true);
       html += renderDebateHints();
@@ -3546,10 +3531,10 @@ function closeEmojiPopup(ev) {
       return `<div class="debate-arg${aiClass}${ownClass}${upvotedClass}" ${canUpvote ? `onclick="debateUpvote('${a.id}')"` : ''}>
         <div class="debate-arg-header">
           ${a.author_avatar ? `<img src="/static/avatars/${a.author_avatar}" class="debate-arg-avatar">` : ''}
-          <span class="debate-arg-author">${escDebate(a.author)}</span>
+          <span class="debate-arg-author">${escHtml(a.author)}</span>
           ${showVotes ? `<span class="debate-arg-votes">▲ ${a.upvote_count}</span>` : ''}
         </div>
-        <div class="debate-arg-text">${escDebate(a.text)}</div>
+        <div class="debate-arg-text">${escHtml(a.text)}</div>
       </div>`;
     };
 
@@ -3581,7 +3566,7 @@ function closeEmojiPopup(ev) {
 
   // ── Debate WS senders ──
   function debatePickSide(side) {
-    if (ws) ws.send(JSON.stringify({ type: 'debate_pick_side', side }));
+    sendWS('debate_pick_side', { side });
   }
 
   function debateSubmitArg() {
@@ -3589,18 +3574,18 @@ function closeEmojiPopup(ev) {
     if (!input) return;
     const text = input.value.trim();
     if (!text || !ws) return;
-    ws.send(JSON.stringify({ type: 'debate_argument', text }));
+    sendWS('debate_argument', { text });
     input.value = '';
     const btn = document.getElementById('debate-arg-submit');
     if (btn) btn.disabled = true;
   }
 
   function debateUpvote(argId) {
-    if (ws) ws.send(JSON.stringify({ type: 'debate_upvote', argument_id: argId }));
+    sendWS('debate_upvote', { argument_id: argId });
   }
 
   function debateVolunteer() {
-    if (ws) ws.send(JSON.stringify({ type: 'debate_volunteer' }));
+    sendWS('debate_volunteer', {});
   }
 
   // ── Render ──
@@ -3803,11 +3788,11 @@ function closeEmojiPopup(ev) {
         if (limit && myVote.size >= limit) return; // cap at correct_count
         myVote.add(optionId);
       }
-      ws.send(JSON.stringify({ type: 'multi_vote', option_ids: [...myVote] }));
+      sendWS('multi_vote', { option_ids: [...myVote] });
     } else {
       if (myVote === optionId) return;
       myVote = optionId;
-      ws.send(JSON.stringify({ type: 'vote', option_id: optionId }));
+      sendWS('vote', { option_id: optionId });
     }
     saveVote();
     updateSelectionUI();
@@ -4009,9 +3994,9 @@ function closeEmojiPopup(ev) {
   function toggleCodeReviewLine(lineNum) {
     if (!ws || ws.readyState !== WebSocket.OPEN) return;
     if (codereviewMySelections.has(lineNum)) {
-      ws.send(JSON.stringify({ type: 'codereview_deselect', line: lineNum }));
+      sendWS('codereview_deselect', { line: lineNum });
     } else {
-      ws.send(JSON.stringify({ type: 'codereview_select', line: lineNum }));
+      sendWS('codereview_select', { line: lineNum });
     }
   }
 

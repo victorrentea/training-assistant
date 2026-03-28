@@ -97,8 +97,7 @@ async def create_codereview(body: CodeReviewCreate):
     lines = snippet.splitlines()
     if len(lines) > _MAX_LINES:
         raise HTTPException(400, f"Snippet cannot exceed {_MAX_LINES} lines")
-    if state.current_activity not in (ActivityType.NONE, ActivityType.CODEREVIEW):
-        raise HTTPException(409, "Another activity is already active")
+    state.ensure_activity_available(ActivityType.CODEREVIEW)
 
     state.codereview_snippet = snippet
     # Use detected language only if host chose "Auto-detect" (null)
