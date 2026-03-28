@@ -14,7 +14,7 @@ from io import BytesIO
 from playwright.sync_api import expect
 from pypdf import PdfWriter
 
-from conftest import api, pax_browser_ctx
+from conftest import api, pax_browser_ctx, pax_url
 from pages.participant_page import ParticipantPage
 
 
@@ -135,7 +135,7 @@ def test_participant_pdfjs_scroll_offset_manual_and_restore(server_url, playwrig
 
     browser, ctx = pax_browser_ctx(server_url, playwright)
     page = ctx.new_page()
-    page.goto("/")
+    page.goto(pax_url())
     pax = ParticipantPage(page)
 
     try:
