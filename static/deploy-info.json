@@ -1,7 +1,7 @@
 {
-  "sha": "ae422e20953d38309fab6584320b8e175cce4525",
-  "timestamp": "2026-03-28 23:15",
+  "sha": "51917c402409ed6d843a674b6f0e5f5f5056f099",
+  "timestamp": "2026-03-28 23:17",
   "changelog": [
-    "fix(landing): single-line \"Host machine: auto-login\" message"
+    "feat(overlay): always right-edge, Y-only drag, remove multi-monitor logic"
   ]
 }
