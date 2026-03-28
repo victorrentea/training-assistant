@@ -1,7 +1,11 @@
 {
-  "sha": "5b92a3e00d1996e101ab3f76831a08f88ff4df8d",
+  "sha": "67ebd509031b3ebe27af6fc27133bcc4e01a4cd9",
   "timestamp": "2026-03-28 11:08",
   "changelog": [
-    "proof: drive download"
+    "feat(upload): cleanup uploaded files on state reset",
+    "feat(upload): participant upload button, modal with drag-and-drop",
+    "feat(upload): host download icons with dismiss",
+    "feat(upload): backend file upload with streaming to disk",
+    "docs: add participant file upload implementation plan"
   ]
 }
