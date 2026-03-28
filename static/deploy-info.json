@@ -1,8 +1,8 @@
 {
-  "sha": "ac4b17737406d13648103a5e095a8941c114a17f",
-  "timestamp": "2026-03-29 01:05",
+  "sha": "df104991352e3a4e9c496396985f7817dd29221c",
+  "timestamp": "2026-03-29 01:08",
   "changelog": [
-    "fix(daemon): log sessions_root path at startup"
+    "fix(host): blocker recognizes active session on page reload"
   ],
   "branches": [
     {
