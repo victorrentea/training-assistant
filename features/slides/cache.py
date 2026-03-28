@@ -353,6 +353,58 @@ async def _poll_fingerprint_loop(slug: str, url: str) -> None:
 # Catalog management
 # ---------------------------------------------------------------------------
 
+def seed_catalog_from_file() -> None:
+    """
+    Pre-populate state.slides_catalog from the static catalog JSON at startup.
+    This lets the server download slides from Google Drive immediately, without
+    waiting for the daemon to reconnect and send the catalog via WebSocket.
+    Skips entries already present (so daemon-sent data always wins).
+    """
+    catalog_path = Path(__file__).resolve().parent.parent.parent / "daemon" / "materials_slides_catalog.json"
+    if not catalog_path.exists():
+        return
+    try:
+        raw = json.loads(catalog_path.read_text(encoding="utf-8"))
+    except Exception:
+        return
+    items = raw.get("decks") if isinstance(raw, dict) and "decks" in raw else []
+    if not isinstance(items, list):
+        return
+
+    import re
+    _slug_re = re.compile(r"[^a-z0-9]+")
+
+    def _slugify(v: str) -> str:
+        s = _slug_re.sub("-", v.strip().lower()).strip("-")
+        return s or "slide"
+
+    seeded = 0
+    for entry in items:
+        if not isinstance(entry, dict):
+            continue
+        target_pdf = str(entry.get("target_pdf") or "").strip()
+        if not target_pdf:
+            source = str(entry.get("source") or "").strip()
+            if source:
+                target_pdf = f"{Path(source).stem}.pdf"
+        if not target_pdf:
+            continue
+        slug = _slugify(Path(target_pdf).stem)
+        if slug in state.slides_catalog:
+            continue
+        drive_url = str(entry.get("drive_export_url") or "").strip()
+        if not drive_url:
+            continue
+        state.slides_catalog[slug] = {
+            "slug": slug,
+            "title": str(entry.get("title") or slug),
+            "drive_export_url": drive_url,
+        }
+        seeded += 1
+    if seeded:
+        logger.info("slides: pre-seeded %d catalog entries from static file", seeded)
+
+
 async def handle_slides_catalog(entries: list[dict]) -> None:
     """
     Populate state.slides_catalog from a list of {slug, title, drive_export_url} entries.
