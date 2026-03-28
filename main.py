@@ -67,7 +67,14 @@ async def lifespan(app_: FastAPI):
     _stamp_version_js()
     from features.slides.cache import seed_catalog_from_file
     seed_catalog_from_file()
+    from features.ws.router import snapshot_pusher
+    task = asyncio.create_task(snapshot_pusher())
     yield
+    task.cancel()
+    try:
+        await task
+    except asyncio.CancelledError:
+        pass
 
 
 app = FastAPI(title="Workshop Tool", lifespan=lifespan)
