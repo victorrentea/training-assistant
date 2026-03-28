@@ -1,7 +1,7 @@
 {
-  "sha": "22f7805157ca6a74adc26d0224b7c67cf55fc647",
-  "timestamp": "2026-03-28 08:18",
+  "sha": "f17c7c9c4178b8cc9ed84d5b3615f99f5f9f6441",
+  "timestamp": "2026-03-28 08:25",
   "changelog": [
-    "feat: log participant page and fullscreen status on slide change"
+    "fix: don't auto-reload native viewer on slide update; clear NEW badge on manual click"
   ]
 }
