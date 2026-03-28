@@ -1,7 +1,7 @@
 {
-  "sha": "c40b4ac3fcfc1f237513b703a7da59c6c32ef201",
-  "timestamp": "2026-03-28 23:02",
+  "sha": "bf64ca35588f0aa58296ddb6b724fb58ae0d2e8f",
+  "timestamp": "2026-03-28 23:03",
   "changelog": [
-    "feat(landing): poll host cookie every 3s for session changes"
+    "fix(landing): simplify to \"Join the Session\" title only"
   ]
 }
