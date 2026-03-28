@@ -591,11 +591,6 @@ h1 { display: none; }
   flex-shrink: 0;
 }
 
-.slides-group-block.solo {
-  border-left: none;
-  border-right: 3px solid var(--slides-group-color, #888);
-  border-radius: 6px 0 0 6px;
-}
 
 .slides-group-name {
   font-size: .62rem;
