@@ -1,7 +1,7 @@
 {
-  "sha": "a8b984d44c51563bbba57c72bca3e62d77d93dec",
-  "timestamp": "2026-03-28 18:38",
+  "sha": "7fdcf94aea2a211bc8259d94066b0f1defe69ea6",
+  "timestamp": "2026-03-28 18:40",
   "changelog": [
-    "test: add session ID e2e tests + fix existing tests for session-scoped URLs"
+    "feat: show session code on participant page (top-right, clickable to copy)"
   ]
 }
