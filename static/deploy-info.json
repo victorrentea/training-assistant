@@ -1,7 +1,8 @@
 {
-  "sha": "739e71954ae256a1992fad3cc920957641f1720a",
-  "timestamp": "2026-03-28 16:29",
+  "sha": "c3fe188e27490cb35e3e58c5318786fc08a67758",
+  "timestamp": "2026-03-28 16:36",
   "changelog": [
-    "fix(slides): merge split coding-practices into 4th section, add \u2622\ufe0f to secure coding, fix text cut-off"
+    "fix(emoji-popup): keep popup open while mouse within hot zone",
+    "fix(slides): seed catalog from static file at startup so slides load without daemon"
   ]
 }
