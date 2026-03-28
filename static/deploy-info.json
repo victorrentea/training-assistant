@@ -1,7 +1,7 @@
 {
-  "sha": "6f31b9a2afd6a4aa5d39e13a38f62cbd3b15cd17",
-  "timestamp": "2026-03-28 16:39",
+  "sha": "dd9b9122b80034c07494eb8fe420381ddf6a6fb2",
+  "timestamp": "2026-03-28 16:41",
   "changelog": [
-    "chore(catalog): rename REST to REST API"
+    "fix(slides): wrap long slide titles to 2 lines instead of truncating"
   ]
 }
