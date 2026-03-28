@@ -237,13 +237,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, URLSessionWebSocketDelegate 
             return
         }
 
-        if type == "emoji_reaction", let emoji = json["emoji"] as? String {
+        if type == "emoji_reaction", let emoji = json["emoji"] as? String, emoji != "❤️" {
             DispatchQueue.main.async { [weak self] in
-                if emoji == "❤️" {
-                    self?.animator.showSketchedHeart()
-                } else {
-                    self?.animator.spawnEmoji(emoji)
-                }
+                self?.animator.spawnEmoji(emoji)
             }
         } else if type == "confetti" {
             DispatchQueue.main.async { [weak self] in
