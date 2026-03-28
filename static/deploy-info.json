@@ -1,7 +1,7 @@
 {
-  "sha": "18c99dc0d1ddd82de190282476a04c18e698264b",
-  "timestamp": "2026-03-28 23:59",
+  "sha": "ec05673b03a12fda802bc1f3cb0019afa7a07d01",
+  "timestamp": "2026-03-29 00:08",
   "changelog": [
-    "fix(host): green border on Key Points and language badges"
+    "feat(host): full-screen session blocker before host UI access"
   ]
 }
