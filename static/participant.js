@@ -4143,12 +4143,16 @@ function closeEmojiPopup(ev) {
         list.classList.remove('expanded');
       }
 
-      dock.addEventListener('mouseenter', expand);
-      dock.addEventListener('mouseleave', () => {
+      function scheduleCollapse() {
         if (pinned) return;
         clearTimeout(collapseTimer);
         collapseTimer = setTimeout(collapse, 2000);
-      });
+      }
+
+      dock.addEventListener('mouseenter', expand);
+      dock.addEventListener('mouseleave', scheduleCollapse);
+      list.addEventListener('mouseenter', () => clearTimeout(collapseTimer));
+      list.addEventListener('mouseleave', scheduleCollapse);
 
       document.querySelector('.slides-dock-title').addEventListener('click', () => {
         pinned = !pinned;
