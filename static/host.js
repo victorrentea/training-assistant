@@ -129,7 +129,8 @@
   const link = `${location.protocol}//${location.host}/`;
   const pLink = document.getElementById('participant-link');
   pLink.href = link;
-  pLink.innerHTML = location.host.split('').map((ch, i) =>
+  const linkDisplay = `https://${location.host}/`;
+  pLink.innerHTML = linkDisplay.split('').map((ch, i) =>
     `<span class="wave-char" style="animation-delay:${(i * 0.12).toFixed(2)}s">${ch}</span>`
   ).join('');
   _setupSlidesCatalogHover();
@@ -970,9 +971,6 @@
       if (notesBadge) notesBadge.style.display = 'none';
       // Make center QR bright for conference
       if (centerQR) centerQR.classList.add('conference-center-qr');
-      // Show URL above center QR in conference mode
-      const centerQRUrl = document.getElementById('center-qr-url');
-      if (centerQRUrl) centerQRUrl.style.display = '';
       // Regenerate all QR codes with session-scoped join URL
       requestAnimationFrame(() => _regenerateAllQRCodes());
     } else {
@@ -985,9 +983,6 @@
       if (tokenCost) tokenCost.style.display = '';
       if (notesBadge) notesBadge.style.display = '';
       stopAutoReturnTimer();
-      // Hide center QR URL
-      const centerQRUrl = document.getElementById('center-qr-url');
-      if (centerQRUrl) centerQRUrl.style.display = 'none';
       // Restore muted center QR
       if (centerQR) centerQR.classList.remove('conference-center-qr');
       _regenerateAllQRCodes();
@@ -3084,8 +3079,8 @@ function _regenerateAllQRCodes() {
     ).join('');
   }
   const centerUrl = document.getElementById('center-qr-url');
-  if (centerUrl && centerUrl.style.display !== 'none') {
-    const fullUrl = _currentSessionId ? 'https://' + location.host + '/' + _currentSessionId : 'https://' + location.host;
+  if (centerUrl) {
+    const fullUrl = (_currentSessionId ? 'https://' + location.host + '/' + _currentSessionId : 'https://' + location.host) + '/';
     centerUrl.innerHTML = fullUrl.split('').map((ch, i) =>
       `<span class="wave-char" style="animation-delay:${(i * 0.12).toFixed(2)}s">${ch}</span>`
     ).join('');
