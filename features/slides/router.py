@@ -10,11 +10,6 @@ from fastapi.responses import FileResponse, Response
 
 from core.messaging import broadcast, broadcast_state
 from core.state import state
-from features.slides.drive_status import (
-    _on_demand_enabled,
-    _wait_for_slide_upload,
-    router as drive_status_router,
-)
 from features.slides.upload import (
     SlidesUpdate,
     _is_displayable_slide_name,
@@ -32,7 +27,6 @@ public_router = APIRouter()
 logger = logging.getLogger(__name__)
 
 # Include sub-routers so that main.py only needs to include slides.router / slides.public_router.
-router.include_router(drive_status_router)
 router.include_router(upload_router)
 
 
@@ -269,7 +263,7 @@ def _merge_slide_sources(
                 "name": name,
                 "slug": slug,
                 "url": participant_url,
-                "updated_at": entry.get("updated_at") or state.slides_meta.get(slug),
+                "updated_at": entry.get("updated_at"),
                 "etag": entry.get("etag"),
                 "last_modified": entry.get("last_modified"),
                 "sync_status": entry.get("sync_status"),
@@ -404,26 +398,38 @@ async def get_current_slides():
 
 @public_router.get("/api/slides")
 async def get_slides():
+    from features.slides.cache import _cache_path
     slides = _collect_participant_slides()
     _, local_index = _build_local_slides_index()
     _, uploaded_index = _build_uploaded_slides_index()
-    daemon_available = _on_demand_enabled() and state.daemon_ws is not None
     for slide in slides:
         slug = str(slide.get("slug") or "")
         has_local_pdf = bool(local_index.get(slug) or uploaded_index.get(slug))
-        slide["available_on_server"] = has_local_pdf or daemon_available
+        in_cache = _cache_path(slug).exists()
+        in_catalog = slug in state.slides_catalog
+        slide["available_on_server"] = has_local_pdf or in_cache or in_catalog
     return {"slides": slides}
 
 
 @public_router.api_route("/api/slides/file/{slug}", methods=["GET", "HEAD"])
 async def get_slide_file(slug: str, request: Request):
+    from features.slides.cache import _cache_path, download_or_wait_cached
+
+    # 1. Check local / uploaded
     path = _resolve_slide_path(slug)
-    if path is None:
-        if not _on_demand_enabled():
-            raise HTTPException(status_code=404, detail="Slide not found")
-        if state.daemon_ws is None:
-            raise HTTPException(status_code=503, detail="Slides service temporarily unavailable.")
-        path = await _wait_for_slide_upload(slug)
+
+    # 2. Check cache dir
+    if not path:
+        cached = _cache_path(slug)
+        if cached.exists():
+            path = cached
+
+    # 3. On-demand GDrive download
+    if not path:
+        path = await download_or_wait_cached(slug)
+
+    if not path or not path.exists():
+        raise HTTPException(status_code=404, detail="Slide not found")
 
     etag = _slide_etag(path)
     headers = {

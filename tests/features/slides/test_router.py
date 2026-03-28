@@ -264,103 +264,7 @@ def test_slides_catalog_map_requires_host_auth():
     assert resp.status_code in (401, 403)
 
 
-def test_participant_availability_requires_host_auth():
-    client = TestClient(app)
-    resp = client.get("/api/slides/participant-availability")
-    assert resp.status_code in (401, 403)
-
-
-def test_participant_availability_lists_slides_and_server_presence(monkeypatch, tmp_path):
-    slides_dir = tmp_path / "server_materials" / "slides"
-    slides_dir.mkdir(parents=True, exist_ok=True)
-    (slides_dir / "Clean Code.pdf").write_bytes(b"%PDF-1.4\n%test\n")
-    catalog = tmp_path / "catalog.json"
-    catalog.write_text(json.dumps({
-        "decks": [
-            {"title": "Clean Code", "target_pdf": "Clean Code.pdf"},
-            {"title": "Architecture", "target_pdf": "Architecture.pdf"},
-        ]
-    }), encoding="utf-8")
-    monkeypatch.setenv("TRAINING_ASSISTANT_SLIDES_DIR", str(slides_dir))
-    monkeypatch.setenv("PPTX_CATALOG_FILE", str(catalog))
-
-    client = TestClient(app, headers=_HOST_AUTH_HEADERS)
-    resp = client.get("/api/slides/participant-availability")
-    assert resp.status_code == 200
-    entries = resp.json()["entries"]
-    clean = next(e for e in entries if e["slug"] == "clean-code")
-    architecture = next(e for e in entries if e["slug"] == "architecture")
-    assert clean["available_on_server"] is True
-    assert architecture["available_on_server"] is False
-
-
-def test_participant_availability_includes_out_of_sync_status(monkeypatch, tmp_path):
-    monkeypatch.setenv("TRAINING_ASSISTANT_SLIDES_DIR", str(tmp_path / "missing-slides-dir"))
-    monkeypatch.setenv("PPTX_CATALOG_FILE", str(tmp_path / "missing-catalog.json"))
-
-    state.slides = [
-        {
-            "name": "Clean Code",
-            "slug": "clean-code",
-            "url": "https://slides.example.com/clean-code.pdf",
-            "sync_status": "out_of_sync",
-            "sync_message": "drive_sync_timeout: example",
-        }
-    ]
-
-    client = TestClient(app, headers=_HOST_AUTH_HEADERS)
-    resp = client.get("/api/slides/participant-availability")
-    assert resp.status_code == 200
-    entries = resp.json()["entries"]
-    clean = next(e for e in entries if e["slug"] == "clean-code")
-    assert clean["sync_status"] == "out_of_sync"
-    assert "drive_sync_timeout" in clean["sync_message"]
-
-
-def test_participant_availability_name_fallback_to_slug(monkeypatch, tmp_path):
-    monkeypatch.setenv("TRAINING_ASSISTANT_SLIDES_DIR", str(tmp_path / "missing-slides-dir"))
-    monkeypatch.setenv("PPTX_CATALOG_FILE", str(tmp_path / "missing-catalog.json"))
-
-    state.slides = [
-        {
-            "name": "   Design Patterns   ",
-            "slug": "design-patterns",
-            "url": "https://slides.example.com/design-patterns.pdf",
-        }
-    ]
-
-    client = TestClient(app, headers=_HOST_AUTH_HEADERS)
-    resp = client.get("/api/slides/participant-availability")
-    assert resp.status_code == 200
-    entries = resp.json()["entries"]
-    item = next(e for e in entries if e["slug"] == "design-patterns")
-    assert item["name"] == "Design Patterns"
-
-
-def test_participant_availability_invisible_name_fallbacks_to_slug(monkeypatch, tmp_path):
-    monkeypatch.setenv("TRAINING_ASSISTANT_SLIDES_DIR", str(tmp_path / "missing-slides-dir"))
-    monkeypatch.setenv("PPTX_CATALOG_FILE", str(tmp_path / "missing-catalog.json"))
-
-    from features.slides import router as slides_router
-
-    monkeypatch.setattr(
-        slides_router,
-        "_collect_participant_slides",
-        lambda include_unavailable_when_daemon_offline=True: [
-            {
-                "name": "\u200b\u200d\ufeff",
-                "slug": "ai-coding",
-                "url": "https://slides.example.com/ai-coding.pdf",
-            }
-        ],
-    )
-
-    client = TestClient(app, headers=_HOST_AUTH_HEADERS)
-    resp = client.get("/api/slides/participant-availability")
-    assert resp.status_code == 200
-    entries = resp.json()["entries"]
-    item = next(e for e in entries if e["slug"] == "ai-coding")
-    assert item["name"] == "ai-coding"
+# NOTE: /api/slides/participant-availability endpoint removed in Task 10 (drive_status.py cleanup)
 
 
 def test_slides_catalog_map_returns_pdf_to_pptx_entries(monkeypatch, tmp_path):
@@ -431,7 +335,8 @@ def test_api_slides_includes_missing_local_slides_when_daemon_offline(monkeypatc
     assert slides[0]["slug"] == "performance-introduction"
 
 
-def test_api_slides_marks_catalog_entries_available_when_daemon_online(monkeypatch, tmp_path):
+def test_api_slides_marks_catalog_entries_available_when_in_slides_catalog(monkeypatch, tmp_path):
+    # Slides in state.slides_catalog are downloadable on demand, so available_on_server=True
     catalog = tmp_path / "catalog.json"
     catalog.write_text(json.dumps({
         "decks": [
@@ -441,15 +346,14 @@ def test_api_slides_marks_catalog_entries_available_when_daemon_online(monkeypat
     monkeypatch.setenv("PPTX_CATALOG_FILE", str(catalog))
     monkeypatch.setenv("TRAINING_ASSISTANT_SLIDES_DIR", str(tmp_path / "missing-slides"))
     monkeypatch.setenv("TRAINING_ASSISTANT_UPLOADED_SLIDES_DIR", str(tmp_path / "uploaded"))
-    monkeypatch.setenv("SLIDES_ON_DEMAND_UPLOAD_ENABLED", "1")
 
-    original_daemon_ws = state.daemon_ws
+    original_catalog = state.slides_catalog
     try:
-        state.daemon_ws = object()
+        state.slides_catalog = {"performance-introduction": {"slug": "performance-introduction", "title": "Performance Intro", "drive_export_url": "https://example.com/perf.pdf"}}
         client = TestClient(app)
         resp = client.get("/api/slides")
     finally:
-        state.daemon_ws = original_daemon_ws
+        state.slides_catalog = original_catalog
 
     assert resp.status_code == 200
     slides = resp.json()["slides"]
@@ -549,65 +453,38 @@ def test_materials_upsert_rejects_traversal(monkeypatch, tmp_path):
     assert resp.status_code == 400
 
 
-def test_api_slides_file_missing_returns_503_when_daemon_not_connected(monkeypatch, tmp_path):
+def test_api_slides_file_missing_returns_404_when_not_in_cache_or_catalog(monkeypatch, tmp_path):
+    # New behavior: no daemon upload flow; missing slide returns 404
     slides_dir = tmp_path / "server_materials" / "slides"
     slides_dir.mkdir(parents=True, exist_ok=True)
-    monkeypatch.setenv("SLIDES_ON_DEMAND_UPLOAD_ENABLED", "1")
     monkeypatch.setenv("TRAINING_ASSISTANT_SLIDES_DIR", str(slides_dir))
     monkeypatch.setenv("SERVER_MATERIALS_DIR", str(tmp_path / "server_materials"))
 
     client = TestClient(app)
     resp = client.get("/api/slides/file/fca")
-    assert resp.status_code == 503
+    assert resp.status_code == 404
 
 
-def test_api_slides_file_can_wait_for_daemon_upload(monkeypatch, tmp_path):
-    root = tmp_path / "server_materials"
-    slides_dir = root / "slides"
+def test_api_slides_file_served_from_cache_dir(monkeypatch, tmp_path):
+    # New behavior: file found in cache dir (/tmp/slides-cache/{slug}.pdf) is served
+    from features.slides.cache import CACHE_DIR
+
+    slides_dir = tmp_path / "server_materials" / "slides"
     slides_dir.mkdir(parents=True, exist_ok=True)
-    monkeypatch.setenv("SLIDES_ON_DEMAND_UPLOAD_ENABLED", "1")
-    monkeypatch.setenv("SLIDES_ON_DEMAND_TIMEOUT_SECONDS", "5")
     monkeypatch.setenv("TRAINING_ASSISTANT_SLIDES_DIR", str(slides_dir))
-    monkeypatch.setenv("SERVER_MATERIALS_DIR", str(root))
 
-    result: dict = {}
+    # Write a fake cached PDF
+    CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    cached_pdf = CACHE_DIR / "fca.pdf"
+    cached_pdf.write_bytes(b"%PDF-1.4\n%cached\n")
 
-    with TestClient(app) as client:
-        with client.websocket_connect("/ws/daemon", headers=_HOST_AUTH_HEADERS) as daemon_ws:
-            def _fetch():
-                result["resp"] = client.get("/api/slides/file/fca")
-
-            t = threading.Thread(target=_fetch)
-            t.start()
-
-            request_msg = daemon_ws.receive_json()
-            assert request_msg["type"] == "slides_upload_request"
-            assert request_msg["slug"] == "fca"
-            request_id = request_msg["request_id"]
-
-            upsert = client.post(
-                "/api/materials/upsert",
-                data={"relative_path": "slides/FCA.pdf"},
-                files={"file": ("FCA.pdf", b"%PDF-1.4\n%ondemand\n", "application/pdf")},
-                headers=_HOST_AUTH_HEADERS,
-            )
-            assert upsert.status_code == 200
-
-            daemon_ws.send_json({
-                "type": "slides_upload_result",
-                "request_id": request_id,
-                "slug": "fca",
-                "status": "uploaded",
-                "relative_path": "slides/FCA.pdf",
-                "size": len(b"%PDF-1.4\n%ondemand\n"),
-            })
-
-            t.join(timeout=5)
-            assert not t.is_alive()
-
-    resp = result["resp"]
-    assert resp.status_code == 200
-    assert resp.content.startswith(b"%PDF-1.4")
+    try:
+        client = TestClient(app)
+        resp = client.get("/api/slides/file/fca")
+        assert resp.status_code == 200
+        assert resp.content.startswith(b"%PDF-1.4")
+    finally:
+        cached_pdf.unlink(missing_ok=True)
 
 
 def test_api_slides_file_inline_query_sets_inline_disposition(monkeypatch, tmp_path):
@@ -636,14 +513,4 @@ def test_api_slides_file_defaults_to_inline_and_supports_explicit_download(monke
     assert download_resp.headers.get("content-disposition", "").startswith('attachment; filename="Deck.pdf"')
 
 
-def test_api_slides_upload_status_endpoint(monkeypatch, tmp_path):
-    slides_dir = tmp_path / "server_materials" / "slides"
-    slides_dir.mkdir(parents=True, exist_ok=True)
-    monkeypatch.setenv("SLIDES_ON_DEMAND_UPLOAD_ENABLED", "1")
-    monkeypatch.setenv("TRAINING_ASSISTANT_SLIDES_DIR", str(slides_dir))
-    monkeypatch.setenv("SERVER_MATERIALS_DIR", str(tmp_path / "server_materials"))
-
-    host = TestClient(app, headers=_HOST_AUTH_HEADERS)
-    body = host.get("/api/slides/upload-status/unknown").json()
-    assert body["slug"] == "unknown"
-    assert body["status"] == "not_uploaded"
+# NOTE: /api/slides/upload-status/{slug} endpoint removed in Task 10 (drive_status.py cleanup)
