@@ -1,7 +1,7 @@
 {
-  "sha": "02982ce899e40791fb43d6bb81a1385cf22f1c78",
-  "timestamp": "2026-03-29 00:15",
+  "sha": "b3fb2569713cf812580098993f7080b2b823f240",
+  "timestamp": "2026-03-29 00:19",
   "changelog": [
-    "fix(host): remove trailing slash and yellow-highlight session code in URL"
+    "fix(host): move copy-link and QR icons next to joining URL in center panel"
   ]
 }
