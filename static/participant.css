@@ -1460,7 +1460,7 @@ h1 { display: none; }
   left: 0;
   right: var(--slides-overlay-width);
   display: flex;
-  justify-content: center;
+  justify-content: flex-start;
   gap: .5rem;
   padding: .5rem .75rem;
   background: transparent;
@@ -1512,12 +1512,13 @@ h1 { display: none; }
   pointer-events: auto;
 }
 
-/* Divider between emojis and upload/paste */
+/* Divider between emojis and upload/paste — margin-left:auto pushes upload/paste to right */
 .emoji-bar-divider {
   width: 1px;
   height: 24px;
   background: var(--border);
   flex-shrink: 0;
+  margin-left: auto;
   pointer-events: none;
 }
 
