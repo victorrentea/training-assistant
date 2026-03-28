@@ -1,7 +1,7 @@
 {
-  "sha": "b3f35c2b0c310ffe1308c5950453faaf80b71525",
-  "timestamp": "2026-03-28 23:49",
+  "sha": "f9a56daed971e956adc4084fecb4b0fe45c968ba",
+  "timestamp": "2026-03-28 23:50",
   "changelog": [
-    "fix(host): use monospace font for center joining URL"
+    "fix(host): align lang badge font-size to match other badges"
   ]
 }
