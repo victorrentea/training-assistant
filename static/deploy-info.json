@@ -1,7 +1,7 @@
 {
-  "sha": "6a7bd98eff2b64c0653625475ab469ef879b954d",
-  "timestamp": "2026-03-28 08:01",
+  "sha": "1b4a37d95723e248c297e51e27b0b25e4804d28a",
+  "timestamp": "2026-03-28 08:05",
   "changelog": [
-    "fix: remove duplicate container declaration causing SyntaxError"
+    "fix: no smooth scroll on topic change or large page jumps in follow mode"
   ]
 }
