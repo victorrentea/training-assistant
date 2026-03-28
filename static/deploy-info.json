@@ -1,7 +1,7 @@
 {
-  "sha": "36de5c707ba0adac68fff4d69ebd6d817fb150e4",
-  "timestamp": "2026-03-28 13:53",
+  "sha": "a1bfbf6283635cae027902581175ecb06ef0552b",
+  "timestamp": "2026-03-28 14:08",
   "changelog": [
-    "feat(slides): animated progress bar instead of blue dot while server downloads PDF"
+    "fix(slides): prevent PDF.js zoom accumulation when switching slides"
   ]
 }
