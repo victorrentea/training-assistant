@@ -1,7 +1,7 @@
 {
-  "sha": "ccd8d7bcc87a9a492fa7e83bb7e2aa63c1699d35",
-  "timestamp": "2026-03-28 18:07",
+  "sha": "cb4fe4024f705bb4d4b2752fc471b917f19ee9fb",
+  "timestamp": "2026-03-28 18:15",
   "changelog": [
-    "fix(version-tag): position to the left of Slides dock header"
+    "feat: add session ID security \u2014 6-char code gates all participant access"
   ]
 }
