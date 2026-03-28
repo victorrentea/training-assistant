@@ -22,6 +22,11 @@
   let _sessionIntervalsDraft = '';
   let _sessionIntervalsError = '';
   let _slidesCacheStatus = {};
+  let _currentSessionId = null;
+  let _blockerAutoTimer = null;
+  let _blockerFolderExists = false;
+  let _blockerDismissed = false;
+  let _blockerOriginalName = '';
   let _slidesCatalogHideTimer = null;
   const _ZERO_WIDTH_RE = /[\u200B-\u200D\uFEFF]/g;
 
@@ -2982,11 +2987,7 @@ function onSessionEmojiKey(event, action) {
   if (typeof action === 'function') action();
 }
 
-let _currentSessionId = null;
-let _blockerAutoTimer = null;
-let _blockerFolderExists = false;
-let _blockerDismissed = false;
-let _blockerOriginalName = ''; // tracks the pre-filled name to detect user edits
+// (declarations moved to top of file)
 
 function _updateBlocker() {
   const blocker = document.getElementById('session-blocker');
