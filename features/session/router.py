@@ -108,7 +108,10 @@ class SessionNameBody(BaseModel):
 
 @router.post("/api/session/create", dependencies=[Depends(require_host_auth)])
 async def create_session(body: SessionNameBody):
+    if not state.session_id:
+        state.generate_session_id()
     state.session_request = {"action": "create", "name": body.name}
+    await broadcast_state()
     return {"ok": True}
 
 
@@ -216,8 +219,8 @@ def _restore_state_from_snapshot(snap: dict):
     state.codereview_confirmed = set(cr.get("confirmed") or [])
     state.codereview_selections = {uid: set(lines) for uid, lines in (cr.get("selections") or {}).items()}
 
-    # Session ID
-    state.session_id = snap.get("session_id")
+    # Session ID (generate if missing — e.g. old snapshot from before session security)
+    state.session_id = snap.get("session_id") or state.generate_session_id()
 
     # Misc
     state.leaderboard_active = snap.get("leaderboard_active", False)
