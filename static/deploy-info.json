@@ -1,12 +1,8 @@
 {
-  "sha": "95ca125a54c856b110bf735f3bd11f5525691a8d",
-  "timestamp": "2026-03-29 00:52",
+  "sha": "1104e95767a0fb1e79bdfbc85a61856015eb8250",
+  "timestamp": "2026-03-29 00:55",
   "changelog": [
-    "fix(daemon): only accumulate IntelliJ time when it is frontmost",
-    "fix(daemon): only accumulate slide time when PowerPoint is frontmost",
-    "feat(slides-badge): show topic + count of slides viewed > 10 sec",
-    "feat(version-tag): hover shows git SHA + per-branch time spent sorted desc",
-    "fix(host): gray empty state + border-color hover for footer badges"
+    "fix: daemon handles session create + blocker uses real folder status"
   ],
   "branches": [
     {
