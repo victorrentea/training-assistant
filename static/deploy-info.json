@@ -1,7 +1,7 @@
 {
-  "sha": "190313874e13defd139d073185bdc4015a1a55a7",
-  "timestamp": "2026-03-28 14:22",
+  "sha": "7f164bdb08e8e61b3470e5533e91cd8497d9dff0",
+  "timestamp": "2026-03-28 14:24",
   "changelog": [
-    "feat(slides): light green border on hover for previously visited topics"
+    "feat(slides): replace progress bar with spinner; green dot when cached"
   ]
 }
