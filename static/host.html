@@ -19,6 +19,24 @@
   ⚠️ Server restarted with no state — waiting for daemon to restore...
 </div>
 
+<!-- Session blocker: gates host UI until a session is active -->
+<div id="session-blocker" style="position:fixed; inset:0; z-index:99999; background:var(--bg); display:flex; align-items:center; justify-content:center; flex-direction:column; gap:1.2rem;">
+  <div style="font-size:1.6rem; font-weight:700; color:var(--accent); margin-bottom:.5rem;">Start Session</div>
+  <div style="display:flex; align-items:center; gap:.5rem;">
+    <input id="blocker-session-input" type="text" placeholder="Session name" autocomplete="off"
+           style="font-size:1.1rem; padding:.55rem .8rem; border-radius:var(--radius); border:2px solid var(--border); background:var(--surface2); color:var(--text); width:320px; outline:none; transition:border-color .15s;"
+           oninput="onBlockerInput()"
+           onkeydown="if(event.key==='Enter' && !document.getElementById('blocker-start-btn').disabled) blockerStart();" />
+    <span id="blocker-folder-check" style="display:none; color:#4caf50; font-size:1.4rem; line-height:1;" title="Folder exists">&#10003;</span>
+  </div>
+  <button id="blocker-start-btn" disabled onclick="blockerStart()"
+          style="position:relative; overflow:hidden; min-width:180px; padding:.65rem 1.5rem; font-size:1.05rem; font-weight:700; border:none; border-radius:var(--radius); background:var(--accent); color:#fff; cursor:pointer; transition:filter .15s;">
+    <span id="blocker-btn-label">Start</span>
+    <span id="blocker-btn-progress" style="position:absolute; left:0; top:0; bottom:0; width:0; background:rgba(255,255,255,.18); transition:width linear; pointer-events:none;"></span>
+  </button>
+  <div id="blocker-status" style="color:var(--muted); font-size:.8rem; min-height:1.2em;"></div>
+</div>
+
 <div class="host-layout">
 <div class="host-columns">
 
