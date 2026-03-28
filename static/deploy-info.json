@@ -1,7 +1,7 @@
 {
-  "sha": "29098c34b1563c6d7e79cf948bfef6f00409c268",
-  "timestamp": "2026-03-28 07:25",
+  "sha": "396fe47e82c78c1fc33332a41216d46987261849",
+  "timestamp": "2026-03-28 07:27",
   "changelog": [
-    "fix: slide tour bubble from top to bottom of slides dock"
+    "fix: restore exact scroll position after PDF.js ResizeObserver re-scale"
   ]
 }
