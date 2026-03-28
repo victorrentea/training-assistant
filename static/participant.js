@@ -4143,16 +4143,26 @@ function closeEmojiPopup(ev) {
       document.body.appendChild(bub);
       activeBubble = bub;
 
-      // Position above the button
       const rect = btn.getBoundingClientRect();
       const bubW = 180;
       bub.style.width = bubW + 'px';
-      bub.style.left = Math.max(8, Math.min(window.innerWidth - bubW - 8, rect.left + rect.width / 2 - bubW / 2)) + 'px';
-      bub.style.top = '0px';
-      requestAnimationFrame(() => {
-        const bh = bub.getBoundingClientRect().height;
-        bub.style.top = Math.max(8, rect.top - bh - 12) + 'px';
-      });
+      if (btn.closest('.emoji-popup')) {
+        // Popup buttons float above the bar — show tooltip to the right
+        bub.style.left = (rect.right + 12) + 'px';
+        bub.style.top = '0px';
+        requestAnimationFrame(() => {
+          const bh = bub.getBoundingClientRect().height;
+          bub.style.top = Math.max(8, rect.top + rect.height / 2 - bh / 2) + 'px';
+        });
+      } else {
+        // Position above the button
+        bub.style.left = Math.max(8, Math.min(window.innerWidth - bubW - 8, rect.left + rect.width / 2 - bubW / 2)) + 'px';
+        bub.style.top = '0px';
+        requestAnimationFrame(() => {
+          const bh = bub.getBoundingClientRect().height;
+          bub.style.top = Math.max(8, rect.top - bh - 12) + 'px';
+        });
+      }
     }
 
     const emojiBarEl = document.getElementById('emoji-bar');
