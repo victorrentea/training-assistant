@@ -1,3 +1,4 @@
+  const UPLOAD_CLEANUP_MINUTES = 5; // hide download icon + delete file after this many minutes
   let ws = null;
   let currentPoll = null;
   let pollActive = false;
@@ -1243,20 +1244,20 @@
         const preview = (entry.text.length > 100 ? entry.text.substring(0, 100) + '…' : entry.text).replace(/\n/g, ' ');
         return `<span class="paste-icon" title="${escHtml(preview)}" data-uuid="${escHtml(pid)}" data-paste-id="${entry.id}" onclick="copyAndDismissPaste(this)"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5.5" y="5.5" width="9" height="9" rx="2"/><path d="M3 10.5H2.5a1.5 1.5 0 0 1-1.5-1.5V2.5A1.5 1.5 0 0 1 2.5 1h6.5A1.5 1.5 0 0 1 11 2.5V3"/></svg></span>`;
       }).join('');
-      const uploadedFiles = participant.uploaded_files || [];
+      const uploadedFiles = (participant.uploaded_files || []).filter(entry => {
+        // Hide icons after UPLOAD_CLEANUP_MINUTES
+        if (entry.downloaded_at != null) {
+          const elapsed = Date.now() / 1000 - entry.downloaded_at;
+          if (elapsed >= UPLOAD_CLEANUP_MINUTES * 60) return false;
+        }
+        return true;
+      });
       const uploadIcons = uploadedFiles.map(entry => {
         const sizeMB = (entry.size / (1024 * 1024)).toFixed(1);
         const sizeStr = entry.size < 1024 * 1024 ? `${(entry.size / 1024).toFixed(0)} KB` : `${sizeMB} MB`;
         const downloaded = entry.downloaded_at != null;
-        const title = downloaded ? `${entry.filename} (${sizeStr}) — downloaded, fading...` : `${entry.filename} (${sizeStr}) — click to download`;
-        // Calculate fade opacity: 1.0 at download time → 0.15 after 5 minutes
-        let fadeStyle = '';
-        if (downloaded) {
-          const elapsed = Date.now() / 1000 - entry.downloaded_at;
-          const opacity = Math.max(0.15, 1.0 - elapsed / 300);
-          fadeStyle = ` style="opacity:${opacity.toFixed(2)};animation:none"`;
-        }
-        return `<span class="upload-icon${downloaded ? ' downloaded' : ''}"${fadeStyle} title="${escHtml(title)}" data-uuid="${escHtml(pid)}" data-upload-id="${entry.id}" onclick="downloadUploadedFile(this)"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 4v9"/><path d="M6 9.5L10 13.5L14 9.5"/><path d="M4.5 13.5v1a2 2 0 0 0 2 2h7a2 2 0 0 0 2-2v-1"/></svg></span>`;
+        const title = downloaded ? `${entry.filename} (${sizeStr}) — downloaded` : `${entry.filename} (${sizeStr}) — click to download`;
+        return `<span class="upload-icon${downloaded ? ' downloaded' : ''}" title="${escHtml(title)}" data-uuid="${escHtml(pid)}" data-upload-id="${entry.id}" onclick="downloadUploadedFile(this)"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 4v9"/><path d="M6 9.5L10 13.5L14 9.5"/><path d="M4.5 13.5v1a2 2 0 0 0 2 2h7a2 2 0 0 0 2-2v-1"/></svg></span>`;
       }).join('');
       return `<li class="${online ? 'online' : 'offline'}"><span class="pax-name" title="${ip ? 'IP: ' + ip : ''}">${debateIcon}${avatarHtml}<span class="pax-name-text">${escHtml(name)}</span></span>${pasteIcons}${uploadIcons}${scoreTag}${locLabel ? `<span class="pax-location" onclick="openMap()" title="View all on map">${escHtml(locLabel)}</span>` : ''}</li>`;
     }).join('');
