@@ -14,7 +14,6 @@ from features.slides.upload import (
     SlidesUpdate,
     _is_displayable_slide_name,
     _local_slide_meta_path,
-    _local_slides_meta_dir,
     _read_local_slide_source_updated_at,
     _slugify,
     _uploaded_slide_meta_path,
