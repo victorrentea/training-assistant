@@ -79,7 +79,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, URLSessionWebSocketDelegate 
             .init(label: "👏", tooltip: "Applause (toggle)") { [weak self] in
                 self?.animator.showApplause()
             },
-            .init(label: "💚", tooltip: "Pulse") { [weak self] in
+            .init(label: "☠️", tooltip: "Pulse") { [weak self] in
                 self?.animator.showPulse()
             },
         ]
