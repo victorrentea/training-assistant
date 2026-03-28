@@ -826,8 +826,12 @@
       const nextPage = Math.min(maxPage, targetPage);
       _suppressSlidesFollowAutoUncheck(3000);
       // Smooth scroll only for small same-topic jumps; large jumps get instant scroll via offsetTop.
+      // For large jumps we skip currentPageNumber — calling it after a direct scrollTop triggers
+      // a conflicting PDF.js async smooth scroll. PDF.js updates its internal page tracking from
+      // the scroll event automatically (same pattern as the hasScroll path above).
       const pageDiff = Math.abs(nextPage - (slidesPdfViewer.currentPageNumber || 1));
       const container = document.getElementById('slides-pdf-container');
+      let didInstantJump = false;
       if (pageDiff >= 5 && container) {
         const pages = container.querySelectorAll('.page');
         const targetEl = pages[nextPage - 1];
@@ -835,9 +839,10 @@
           container.style.scrollBehavior = 'auto';
           container.scrollTop = targetEl.offsetTop;
           container.style.scrollBehavior = '';
+          didInstantJump = true;
         }
       }
-      slidesPdfViewer.currentPageNumber = Number(nextPage);
+      if (!didInstantJump) slidesPdfViewer.currentPageNumber = Number(nextPage);
       // Renew after set: updateviewarea fires asynchronously during rendering.
       _suppressSlidesFollowAutoUncheck(3000);
       _setStoredSlidePage(targetSlide.slug, nextPage);
