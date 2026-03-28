@@ -1492,6 +1492,81 @@ h1 { display: none; }
 }
 .emoji-btn:active { transform: scale(0.85); }
 
+/* Dots overflow button */
+.emoji-btn-dots {
+  font-size: .8rem;
+  color: var(--text-muted, #9090b0);
+  letter-spacing: .05em;
+}
+
+/* Ping button (always visible) */
+.emoji-btn-ping {
+  border-color: rgba(200, 90, 20, 0.45);
+}
+.emoji-btn-ping:hover {
+  border-color: rgba(200, 90, 20, 0.9);
+}
+
+/* Upload / paste as part of emoji bar */
+.emoji-bar-action-btn {
+  pointer-events: auto;
+}
+
+/* Divider between emojis and upload/paste */
+.emoji-bar-divider {
+  width: 1px;
+  height: 24px;
+  background: var(--border);
+  flex-shrink: 0;
+  pointer-events: none;
+}
+
+/* Overflow popup */
+.emoji-popup {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: .45rem;
+  display: flex;
+  flex-direction: column;
+  gap: .3rem;
+  align-items: center;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, .7);
+  z-index: 3010;
+  pointer-events: auto;
+  max-height: calc(100vh - 80px);
+  overflow-y: auto;
+}
+
+/* Small ✕ close button on popup */
+.emoji-popup-close {
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text-muted, #9090b0);
+  font-size: .6rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  pointer-events: auto;
+  line-height: 1;
+  padding: 0;
+}
+.emoji-popup-close:hover {
+  color: var(--text);
+  border-color: var(--accent);
+}
+
 /* Conference mode emoji grid */
 #conference-emoji-grid {
   display: flex;
@@ -1906,33 +1981,6 @@ h1 { display: none; }
   font-size: .85rem;
 }
 
-/* Paste-to-host floating button */
-.paste-floating-btn {
-  position: fixed;
-  bottom: .75rem;
-  right: calc(var(--slides-overlay-width) + .75rem);
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  border: 2px solid var(--border);
-  background: var(--bg);
-  color: var(--text);
-  font-size: 1.3rem;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 3002;
-  transition: transform .1s, background .15s, border-color .15s;
-  padding: 0;
-  line-height: 1;
-}
-.paste-floating-btn:hover {
-  background: rgba(20, 20, 35, 0.97);
-  border-color: var(--accent);
-}
-.paste-floating-btn:active { transform: scale(0.85); }
-
 /* Paste bubble overlay */
 .paste-overlay {
   display: none;
@@ -2009,33 +2057,6 @@ h1 { display: none; }
 .paste-send-btn:not(:disabled):hover {
   filter: brightness(1.15);
 }
-
-/* Upload-to-host floating button */
-.upload-floating-btn {
-  position: fixed;
-  bottom: .75rem;
-  right: calc(var(--slides-overlay-width) + .75rem + 52px);
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  border: 2px solid var(--border);
-  background: var(--bg);
-  color: var(--text);
-  font-size: 1.3rem;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 3002;
-  transition: transform .1s, background .15s, border-color .15s;
-  padding: 0;
-  line-height: 1;
-}
-.upload-floating-btn:hover {
-  background: rgba(20, 20, 35, 0.97);
-  border-color: var(--accent);
-}
-.upload-floating-btn:active { transform: scale(0.85); }
 
 /* Upload bubble */
 .upload-bubble {
