@@ -1,7 +1,7 @@
 {
-  "sha": "1b4a37d95723e248c297e51e27b0b25e4804d28a",
-  "timestamp": "2026-03-28 08:05",
+  "sha": "b519d972218a55ac9500b54b51c7027aee63d633",
+  "timestamp": "2026-03-28 08:09",
   "changelog": [
-    "fix: no smooth scroll on topic change or large page jumps in follow mode"
+    "fix: improve Follow button tour text"
   ]
 }
