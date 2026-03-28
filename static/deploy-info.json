@@ -1,7 +1,7 @@
 {
-  "sha": "5bb9d08b1ff8e2b497d8556e4fae3c5bf80ea3c2",
-  "timestamp": "2026-03-28 09:53",
+  "sha": "af25805657c7a34fb26026722b8ecfe51853b855",
+  "timestamp": "2026-03-28 09:55",
   "changelog": [
-    "fix(paste): position paste button over main content, not slides panel"
+    "fix(paste): redesign modal as bubble popping from paste button"
   ]
 }
