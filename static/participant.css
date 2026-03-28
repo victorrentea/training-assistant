@@ -1527,11 +1527,9 @@ h1 { display: none; }
   pointer-events: auto;
 }
 
-/* Divider between emojis and upload/paste — margin-left:auto pushes upload/paste to right */
+/* Invisible spacer — margin-left:auto pushes upload/paste to right */
 .emoji-bar-divider {
-  width: 1px;
-  height: 24px;
-  background: var(--border);
+  width: 0;
   flex-shrink: 0;
   margin-left: auto;
   pointer-events: none;
