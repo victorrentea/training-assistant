@@ -1,7 +1,7 @@
 {
-  "sha": "069301a9a968830daa55556fc28c0fe8bb645fcf",
-  "timestamp": "2026-03-28 16:51",
+  "sha": "12c69d2a93ff90e6c9133bb61c78eef3b2d37989",
+  "timestamp": "2026-03-28 16:54",
   "changelog": [
-    "feat(slides): hide group title for solo categories"
+    "fix(avatar): update small avatar tooltip to 'Click to view or change'"
   ]
 }
