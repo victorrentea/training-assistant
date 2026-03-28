@@ -1,7 +1,7 @@
 {
-  "sha": "116b0878de9d21dd92d983baa7505c496d2b8d24",
-  "timestamp": "2026-03-28 23:28",
+  "sha": "1d6af568b7e01fd2bfddce2bdb22fb8a11329698",
+  "timestamp": "2026-03-28 23:29",
   "changelog": [
-    "feat(overlay): replace green heart with skull \u2620\ufe0f button"
+    "docs: add consolidated UML sequence diagram of all system interactions"
   ]
 }
