@@ -1,7 +1,7 @@
 {
-  "sha": "0b31880e8d0e0306ab389a9798e9406dbb09fc31",
-  "timestamp": "2026-03-28 12:42",
+  "sha": "191844ebbe6a88592cb2e5be9ef3849508e25082",
+  "timestamp": "2026-03-28 13:33",
   "changelog": [
-    "feat(emoji): responsive overflow bar with \u2022\u2022\u2022 popup, ping always-on, usage reordering"
+    "docs: add emoji overflow dots plan and spec"
   ]
 }
