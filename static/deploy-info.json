@@ -1,12 +1,7 @@
 {
-  "sha": "72de069c4bbc13a332fec2ef9503176ae922fb72",
-  "timestamp": "2026-03-28 09:46",
+  "sha": "5bb9d08b1ff8e2b497d8556e4fae3c5bf80ea3c2",
+  "timestamp": "2026-03-28 09:53",
   "changelog": [
-    "feat(paste): add floating paste button and modal to participant UI",
-    "feat(paste): show clipboard icons in host participant list with copy+dismiss",
-    "feat(paste): add paste modal logic and mode-aware visibility",
-    "feat(paste): add backend state, state builder, and WS handlers",
-    "docs: add implementation plan for participant paste-to-host",
-    "docs: add spec for participant paste-to-host feature"
+    "fix(paste): position paste button over main content, not slides panel"
   ]
 }
