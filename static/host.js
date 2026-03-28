@@ -1090,16 +1090,16 @@
       : 0;
     el.style.cssText = 'cursor:pointer;';
     if (_notesSessionFolder && _notesSessionNotes) {
-      el.textContent = nonEmptyLines > 0 ? `📝 (${nonEmptyLines}) Notes` : `📝 Notes`;
+      el.textContent = nonEmptyLines > 0 ? `📝 (${nonEmptyLines}) Notes.txt` : `📝 Notes.txt`;
       el.className = 'badge connected';
       el.title = `${_notesSessionFolder}/${_notesSessionNotes}${nonEmptyLines > 0 ? `\n${nonEmptyLines} non-empty lines` : ''}\nClick to view`;
     } else if (_notesSessionFolder) {
-      el.textContent = nonEmptyLines > 0 ? `📝 (${nonEmptyLines}) Notes` : `📝 Notes`;
+      el.textContent = nonEmptyLines > 0 ? `📝 (${nonEmptyLines}) Notes.txt` : `📝 Notes.txt`;
       el.className = 'badge';
       el.style.cssText = 'cursor:pointer; color:var(--warn); border:1px solid var(--warn);';
       el.title = 'Session folder found but no notes file inside';
     } else {
-      el.textContent = '📝 Notes';
+      el.textContent = '📝 Notes.txt';
       el.className = 'badge disconnected';
       el.title = 'No session folder found for today';
     }
