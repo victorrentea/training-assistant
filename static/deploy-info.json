@@ -1,7 +1,7 @@
 {
-  "sha": "89781c92e6b144714fb43e6e64cf07274fd07b8f",
-  "timestamp": "2026-03-28 15:20",
+  "sha": "66780a5eed8c6e128683e974c9f58bdeca4bd682",
+  "timestamp": "2026-03-28 15:49",
   "changelog": [
-    "fix(overlay): tighten single-screen slide-in trigger to exact bar position"
+    "feat(slides): group topics by category with colored left-stripe indicators"
   ]
 }
