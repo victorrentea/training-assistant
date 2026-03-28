@@ -1,7 +1,7 @@
 {
-  "sha": "35401530edb4f394f61d3f68039515ef88b83cad",
-  "timestamp": "2026-03-28 07:18",
+  "sha": "6c08e96b46c3e201adfa59a22de0d9e70e5664bb",
+  "timestamp": "2026-03-28 07:24",
   "changelog": [
-    "feat: add Follow button step to welcome tour"
+    "fix: swap Follow and viewer toggle button order in slides dock"
   ]
 }
