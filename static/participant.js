@@ -167,6 +167,8 @@
       { selector: '#location-prompt', emoji: '📍', text: "Tell us where you're from — for the world map. Totally optional." },
       { selector: '#slides-dock',        emoji: '📑', text: 'Slides are always on the right. Click any topic to open it.', scanDock: true },
       { selector: '#slides-follow-btn',  emoji: '📌', text: "Auto-syncs your view to the trainer's current slide." },
+      { selector: '#paste-btn',           emoji: '📋', text: "Got code or text to share? Paste it here — the host sees it instantly.", arrowRight: true },
+      { selector: '#upload-btn',          emoji: '📤', text: "Send a file to the host — drag it anywhere on the page or tap here.", arrowRight: true },
       ..._shuffled,
     ];
 
@@ -3926,7 +3928,7 @@
       }
     }
 
-    document.querySelectorAll('#slides-follow-btn, #slides-view-pdfjs, #slides-view-native, #paste-btn').forEach(btn => {
+    document.querySelectorAll('#slides-follow-btn, #slides-view-pdfjs, #slides-view-native, #paste-btn, #upload-btn').forEach(btn => {
       btn.addEventListener('mouseenter', () => { showTimer = setTimeout(() => showBubble(btn), 150); });
       btn.addEventListener('mouseleave', removeBubble);
       btn.addEventListener('click', removeBubble);
