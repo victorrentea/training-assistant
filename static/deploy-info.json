@@ -1,7 +1,7 @@
 {
-  "sha": "d7a52b65fc64ab38eae3c3b7c70a0b026f3647a2",
-  "timestamp": "2026-03-28 11:56",
+  "sha": "991ef8e50438c5e6cfb47485356c8b7117652292",
+  "timestamp": "2026-03-28 12:07",
   "changelog": [
-    "feat(upload): auto-open upload modal on window file drag with full-screen highlight"
+    "feat(upload): add hover tooltip and onboarding tour steps"
   ]
 }
