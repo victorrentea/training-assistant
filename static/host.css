@@ -146,6 +146,8 @@ body {
   color: var(--muted);
 }
 
+#copy-link-icon:hover { opacity: .9 !important; }
+
 .btn-scores-reset {
   background: none;
   border: none;

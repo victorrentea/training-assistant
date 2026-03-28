@@ -3041,25 +3041,39 @@ function updateSessionCodeBar(sessionId) {
   _currentSessionId = sessionId;
   const bar = document.getElementById('session-code-bar');
   const display = document.getElementById('session-code-display');
-  if (!bar || !display) return;
-  if (sessionId) {
-    display.textContent = sessionId;
-    bar.style.display = 'flex';
-  } else {
-    bar.style.display = 'none';
+  if (bar) bar.style.display = sessionId ? 'flex' : 'none';
+  if (display) display.textContent = sessionId || '';
+
+  // Update participant link suffix and copy icon
+  const suffix = document.getElementById('session-id-suffix');
+  const copyIcon = document.getElementById('copy-link-icon');
+  const pLink = document.getElementById('participant-link');
+  if (suffix) {
+    if (sessionId) {
+      suffix.textContent = '/' + sessionId;
+      suffix.style.display = '';
+    } else {
+      suffix.style.display = 'none';
+    }
   }
+  if (copyIcon) copyIcon.style.display = sessionId ? '' : 'none';
+  if (pLink) pLink.href = sessionId ? `/${sessionId}` : '/';
 }
 
 function copySessionLink() {
   if (!_currentSessionId) return;
-  const baseUrl = location.origin;
-  const link = `${baseUrl}/${_currentSessionId}`;
+  const link = `${location.origin}/${_currentSessionId}`;
   navigator.clipboard.writeText(link).then(() => {
     const btn = document.getElementById('session-copy-link-btn');
     if (btn) {
       const orig = btn.textContent;
       btn.textContent = 'Copied!';
       setTimeout(() => { btn.textContent = orig; }, 1500);
+    }
+    const icon = document.getElementById('copy-link-icon');
+    if (icon) {
+      icon.style.opacity = '1';
+      setTimeout(() => { icon.style.opacity = ''; }, 1200);
     }
   });
 }
