@@ -1,7 +1,7 @@
 {
-  "sha": "3c8fd2581d75f1a0975c04284ded21de43c2833b",
-  "timestamp": "2026-03-28 11:00",
+  "sha": "5b92a3e00d1996e101ab3f76831a08f88ff4df8d",
+  "timestamp": "2026-03-28 11:08",
   "changelog": [
-    "proof: background poller sends server_ping to daemon every 5s"
+    "proof: drive download"
   ]
 }
