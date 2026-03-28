@@ -92,6 +92,7 @@
   const LS_SLIDES_VIEW_MODE = 'workshop_slides_view_mode';
   const LS_SLIDES_FOLLOW_TRAINER = 'workshop_slides_follow_trainer';
   let slidesCatalogBaseline = null; // slug → updated_at at session start; null = not yet initialised
+  let _nativePendingReloadSlugs = {}; // slug → cacheVersion: new version available, bust cache on next native load
   const LS_LOCATION_KEY = 'workshop_participant_location';
   const SLIDES_TEST_AUTO_SCROLL_ENABLED = false;
   const SLIDES_TEST_AUTO_SCROLL_PAGE = 2;
@@ -1538,7 +1539,10 @@
         if (pdfContainer) pdfContainer.style.display = 'none';
         if (nativeFrame) {
           const savedPage = Math.max(1, Number(_getStoredSlidePage(slide.slug) || 1));
-          const nativeLoadUrl = cacheVersion ? (slide.url.split('?')[0] + '?v=' + cacheVersion) : slide.url;
+          const pendingCacheV = _nativePendingReloadSlugs[slide.slug];
+          if (pendingCacheV) delete _nativePendingReloadSlugs[slide.slug];
+          const effectiveCacheV = cacheVersion || pendingCacheV;
+          const nativeLoadUrl = effectiveCacheV ? (slide.url.split('?')[0] + '?v=' + effectiveCacheV) : slide.url;
           nativeFrame.data = _buildNativeSlideUrl(nativeLoadUrl, savedPage);
           nativeFrame.style.display = 'block';
           _setStoredSlidePage(slide.slug, savedPage);
@@ -1684,7 +1688,15 @@
     await _refreshSlidesCatalog({ forceReloadCurrent: false, autoLoadSelected: false });
     if (overlayOpen && slidesSelectedSlug === slug && !_slidesViewerBusy) {
       const entry = slidesCatalog.find(s => s.slug === slug);
-      if (entry) await _reloadCurrentSlideAfterUpdate(entry);
+      if (entry) {
+        if (slidesViewMode === 'native') {
+          // Don't auto-reload native viewer — it loses scroll position.
+          // Store a cache-buster so the user's next manual click loads the new version.
+          _nativePendingReloadSlugs[slug] = Date.now();
+        } else {
+          await _reloadCurrentSlideAfterUpdate(entry);
+        }
+      }
     }
   }
 
