@@ -548,7 +548,7 @@
   function showPasteToast() {
     const toast = document.createElement('div');
     toast.textContent = 'Sent!';
-    toast.style.cssText = 'position:fixed;bottom:110px;right:12px;background:var(--accent);color:#fff;padding:.4rem .9rem;border-radius:8px;font-weight:600;font-size:.85rem;z-index:9999;opacity:1;transition:opacity .5s;';
+    toast.style.cssText = 'position:fixed;bottom:3.5rem;right:calc(var(--slides-overlay-width) + .75rem);background:var(--accent);color:#fff;padding:.4rem .9rem;border-radius:8px;font-weight:600;font-size:.85rem;z-index:9999;opacity:1;transition:opacity .5s;';
     document.body.appendChild(toast);
     setTimeout(() => { toast.style.opacity = '0'; }, 1000);
     setTimeout(() => toast.remove(), 1500);
