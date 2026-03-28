@@ -1,7 +1,7 @@
 {
-  "sha": "9985eaccf2948c76b42210ac3a6914770cbf18b7",
-  "timestamp": "2026-03-28 23:52",
+  "sha": "848642362305fa3420fb423b6ecc9d2c8bf00233",
+  "timestamp": "2026-03-28 23:53",
   "changelog": [
-    "fix(host): add default border to plain .badge for consistent look"
+    "feat(daemon): track IntelliJ git repos and PowerPoint slides per session"
   ]
 }
