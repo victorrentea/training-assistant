@@ -578,6 +578,11 @@ input[type=text].debate-round-duration {
   animation: spin 0.75s linear infinite;
   flex-shrink: 0;
 }
+/* Tooltip pseudo-elements on spinners must not inherit the spin animation */
+.spinner.has-tooltip::after,
+.spinner.has-tooltip::before {
+  animation: none;
+}
 
 /* --- Utilities --- */
 .truncate {

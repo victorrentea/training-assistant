@@ -213,6 +213,11 @@ async def _do_download(slug: str, url: str) -> Path:
                 await broadcast_state()
                 await _push_log(slug, "download_failed", str(exc))
                 raise
+            except BaseException as exc:
+                # Catches CancelledError (not a subclass of Exception in Python 3.8+)
+                _set_status(slug, "download_failed", error=f"cancelled: {exc}")
+                await broadcast_state()
+                raise
 
 
 # ---------------------------------------------------------------------------
@@ -295,6 +300,7 @@ async def _poll_fingerprint_loop(slug: str, url: str) -> None:
     Poll GDrive fingerprint until it changes (then re-download) or timeout.
     All HTTP calls go through the per-slug lock.
     """
+    import time
     lock = _get_lock(slug)
 
     # Get or establish baseline fingerprint
@@ -315,15 +321,14 @@ async def _poll_fingerprint_loop(slug: str, url: str) -> None:
     # Initial delay before first check
     await asyncio.sleep(_POLL_DELAY_S)
 
-    elapsed = _POLL_DELAY_S
-    while elapsed < _POLL_TIMEOUT_S:
+    deadline = time.monotonic() + _POLL_TIMEOUT_S
+    while time.monotonic() < deadline:
         try:
             async with lock:
                 new_fp = await _probe_fingerprint(url)
         except Exception as exc:
             await _push_log(slug, "fingerprint_probe_error", str(exc))
             await asyncio.sleep(_POLL_INTERVAL_S)
-            elapsed += _POLL_INTERVAL_S
             continue
 
         if new_fp != old_fp:
@@ -341,9 +346,9 @@ async def _poll_fingerprint_loop(slug: str, url: str) -> None:
             return
 
         await asyncio.sleep(_POLL_INTERVAL_S)
-        elapsed += _POLL_INTERVAL_S
 
     # Timed out
+    elapsed = _POLL_DELAY_S + _POLL_TIMEOUT_S
     _set_status(slug, "poll_timeout")
     await broadcast_state()
     await _push_log(slug, "poll_timeout", f"after {elapsed:.0f}s")
