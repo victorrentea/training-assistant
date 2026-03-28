@@ -21,7 +21,7 @@ DEFAULT_MODEL      = "claude-sonnet-4-6"
 DEFAULT_MINUTES    = 60
 DEFAULT_TRANSCRIPT_MINUTES = 30  # default lookback window for transcript stats & summaries
 MAX_CHARS_TO_CLAUDE = 60_000
-DAEMON_POLL_INTERVAL = 3  # seconds
+DAEMON_POLL_INTERVAL = 1  # seconds
 
 
 # ---------------------------------------------------------------------------

@@ -534,6 +534,7 @@ def run() -> None:
 
     last_summary_at = 0.0  # monotonic time of last summary run
     last_snapshot_hash: str | None = None  # hash of last saved state snapshot
+    last_snapshot_check_at = 0.0  # monotonic time of last state-snapshot GET
     last_state_backup_log: str | None = None  # last emitted state-backup log line (dedupe consecutive repeats)
     transcript_state = TranscriptStateManager()
     _SAVE_INTERVAL = 5
@@ -1119,38 +1120,40 @@ def run() -> None:
                     except Exception as e:
                         log.error("daemon", f"Token usage POST failed: {e}")
 
-                # ── Snapshot state for backup ──
-                try:
-                    snapshot = _get_json(
-                        f"{config.server_url}/api/state-snapshot",
-                        config.host_username, config.host_password,
-                    )
-                    snapshot_json = json.dumps(snapshot, sort_keys=True)
-                    snapshot_hash = hashlib.sha256(snapshot_json.encode("utf-8")).hexdigest()
-                    if snapshot_hash != last_snapshot_hash:
-                        _BACKUP_DIR.mkdir(parents=True, exist_ok=True)
-                        tmp_file = _BACKUP_FILE.with_suffix(".tmp")
-                        tmp_file.write_text(snapshot_json, encoding="utf-8")
-                        os.rename(str(tmp_file), str(_BACKUP_FILE))
-                        last_snapshot_hash = snapshot_hash
-                        s = snapshot.get("state", snapshot)
-                        parts = [f"{len(s.get('participant_names', {}))} participants"]
-                        if s.get("qa_questions"):
-                            parts.append(f"{len(s['qa_questions'])} Q&As")
-                        if s.get("wordcloud_words"):
-                            parts.append(f"{len(s['wordcloud_words'])} words in cloud")
-                        if s.get("debate_arguments"):
-                            parts.append(f"{len(s['debate_arguments'])} debate args")
-                        if s.get("votes"):
-                            parts.append(f"{len(s['votes'])} votes")
-                        if s.get("summary_points"):
-                            parts.append(f"{len(s['summary_points'])} summary pts")
-                        backup_log = f"State backup: {', '.join(parts)}"
-                        if backup_log != last_state_backup_log:
-                            log.info("daemon", backup_log)
-                            last_state_backup_log = backup_log
-                except Exception as e:
-                    log.error("daemon", f"State snapshot failed: {e}")
+                # ── Snapshot state for backup (every 7s) ──
+                if now - last_snapshot_check_at >= 7.0:
+                    last_snapshot_check_at = now
+                    try:
+                        snapshot = _get_json(
+                            f"{config.server_url}/api/state-snapshot",
+                            config.host_username, config.host_password,
+                        )
+                        snapshot_json = json.dumps(snapshot, sort_keys=True)
+                        snapshot_hash = hashlib.sha256(snapshot_json.encode("utf-8")).hexdigest()
+                        if snapshot_hash != last_snapshot_hash:
+                            _BACKUP_DIR.mkdir(parents=True, exist_ok=True)
+                            tmp_file = _BACKUP_FILE.with_suffix(".tmp")
+                            tmp_file.write_text(snapshot_json, encoding="utf-8")
+                            os.rename(str(tmp_file), str(_BACKUP_FILE))
+                            last_snapshot_hash = snapshot_hash
+                            s = snapshot.get("state", snapshot)
+                            parts = [f"{len(s.get('participant_names', {}))} participants"]
+                            if s.get("qa_questions"):
+                                parts.append(f"{len(s['qa_questions'])} Q&As")
+                            if s.get("wordcloud_words"):
+                                parts.append(f"{len(s['wordcloud_words'])} words in cloud")
+                            if s.get("debate_arguments"):
+                                parts.append(f"{len(s['debate_arguments'])} debate args")
+                            if s.get("votes"):
+                                parts.append(f"{len(s['votes'])} votes")
+                            if s.get("summary_points"):
+                                parts.append(f"{len(s['summary_points'])} summary pts")
+                            backup_log = f"State backup: {', '.join(parts)}"
+                            if backup_log != last_state_backup_log:
+                                log.info("daemon", backup_log)
+                                last_state_backup_log = backup_log
+                    except Exception as e:
+                        log.error("daemon", f"State snapshot failed: {e}")
 
                 # ── Check for full-reset / forced summary request ──
                 # (full-reset now behaves the same as force — always full regeneration)
