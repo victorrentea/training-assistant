@@ -128,17 +128,23 @@ def test_sync_session_includes_session_state_when_file_exists():
         def fake_post_json(url, payload, username, password):
             captured["payload"] = payload
 
-        with patch.object(session_state_mod, "_post_json", fake_post_json):
-            sync_session_to_server(
-                type("C", (), {
-                    "server_url": "http://test",
-                    "host_username": "u",
-                    "host_password": "p",
-                })(),
-                stack,
-                [],
-                session_state_data,
-            )
+        # Reset module-level ws_client to ensure HTTP fallback path is exercised
+        original_ws = session_state_mod._ws_client
+        session_state_mod._ws_client = None
+        try:
+            with patch.object(session_state_mod, "_post_json", fake_post_json):
+                sync_session_to_server(
+                    type("C", (), {
+                        "server_url": "http://test",
+                        "host_username": "u",
+                        "host_password": "p",
+                    })(),
+                    stack,
+                    [],
+                    session_state_data,
+                )
+        finally:
+            session_state_mod._ws_client = original_ws
 
         assert "session_state" in captured["payload"]
         assert captured["payload"]["session_state"]["mode"] == "workshop"
@@ -155,17 +161,23 @@ def test_sync_session_no_session_state_key_when_none():
     def fake_post_json(url, payload, username, password):
         captured["payload"] = payload
 
-    with patch.object(session_state_mod, "_post_json", fake_post_json):
-        sync_session_to_server(
-            type("C", (), {
-                "server_url": "http://test",
-                "host_username": "u",
-                "host_password": "p",
-            })(),
-            [],
-            [],
-            None,
-        )
+    # Reset module-level ws_client to ensure HTTP fallback path is exercised
+    original_ws = session_state_mod._ws_client
+    session_state_mod._ws_client = None
+    try:
+        with patch.object(session_state_mod, "_post_json", fake_post_json):
+            sync_session_to_server(
+                type("C", (), {
+                    "server_url": "http://test",
+                    "host_username": "u",
+                    "host_password": "p",
+                })(),
+                [],
+                [],
+                None,
+            )
+    finally:
+        session_state_mod._ws_client = original_ws
 
     assert "session_state" not in captured["payload"]
 
@@ -206,7 +218,7 @@ def test_parse_powerpoint_probe_output_active_state():
     from daemon.__main__ import _parse_powerpoint_probe_output
 
     parsed = _parse_powerpoint_probe_output("Architecture deck\t12\n")
-    assert parsed == {"presentation": "Architecture deck", "slide": 12}
+    assert parsed == {"presentation": "Architecture deck", "slide": 12, "presenting": False}
 
 
 def test_parse_powerpoint_probe_output_handles_no_presentation_tokens():
@@ -221,7 +233,7 @@ def test_parse_powerpoint_probe_output_missing_value_defaults_to_slide_one():
     from daemon.__main__ import _parse_powerpoint_probe_output
 
     parsed = _parse_powerpoint_probe_output("Deck A\tmissing value")
-    assert parsed == {"presentation": "Deck A", "slide": 1}
+    assert parsed == {"presentation": "Deck A", "slide": 1, "presenting": False}
 
 
 def test_probe_powerpoint_state_success(monkeypatch):
@@ -235,7 +247,7 @@ def test_probe_powerpoint_state_success(monkeypatch):
 
     state, error = training_daemon._probe_powerpoint_state()
     assert error is None
-    assert state == {"presentation": "Deck A", "slide": 7}
+    assert state == {"presentation": "Deck A", "slide": 7, "presenting": False}
 
 
 def test_probe_powerpoint_state_returns_error_on_nonzero_exit(monkeypatch):
@@ -290,10 +302,11 @@ def test_resolve_presentation_slide_target_fallback_when_not_mapped(tmp_path):
 
 
 def test_sync_powerpoint_slide_unknown_presentation_alerts_once(monkeypatch):
+    from unittest.mock import MagicMock
     import daemon.__main__ as training_daemon
 
     training_daemon._PPT_UNMAPPED_PRESENTATIONS_ALERTED.clear()
-    calls = {"delete": 0, "beep": 0, "status": []}
+    ws_messages = []
 
     monkeypatch.setattr(
         training_daemon,
@@ -305,19 +318,15 @@ def test_sync_powerpoint_slide_unknown_presentation_alerts_once(monkeypatch):
         },
     )
 
-    def _fake_delete(*args, **kwargs):
-        calls["delete"] += 1
+    beep_calls = {"count": 0}
 
     def _fake_beep():
-        calls["beep"] += 1
+        beep_calls["count"] += 1
 
-    def _fake_post(url, payload, username, password):
-        calls["status"].append({"url": url, "payload": payload})
-        return {"ok": True}
-
-    monkeypatch.setattr(training_daemon, "_delete_with_basic_auth", _fake_delete)
     monkeypatch.setattr(training_daemon, "_beep_local", _fake_beep)
-    monkeypatch.setattr(training_daemon, "_post_json", _fake_post)
+
+    mock_ws = MagicMock()
+    mock_ws.send = MagicMock(side_effect=lambda msg: ws_messages.append(msg))
 
     cfg = SimpleNamespace(
         server_url="http://localhost:8000",
@@ -326,12 +335,14 @@ def test_sync_powerpoint_slide_unknown_presentation_alerts_once(monkeypatch):
     )
     ppt_state = {"presentation": "Unknown Deck.pptx", "slide": 4}
 
-    training_daemon._sync_powerpoint_slide_to_server(cfg, None, ppt_state)
-    training_daemon._sync_powerpoint_slide_to_server(cfg, None, ppt_state)
+    training_daemon._sync_powerpoint_slide_to_server(cfg, None, ppt_state, mock_ws)
+    training_daemon._sync_powerpoint_slide_to_server(cfg, None, ppt_state, mock_ws)
 
-    assert calls["delete"] == 2
-    assert calls["beep"] == 1
-    assert len(calls["status"]) == 1
-    assert calls["status"][0]["url"].endswith("/api/quiz-status")
-    assert calls["status"][0]["payload"]["status"] == "error"
-    assert "Presentation inaccessible for participants." in calls["status"][0]["payload"]["message"]
+    assert beep_calls["count"] == 1
+    # slides_clear sent twice (once per call), quiz_status error sent once (first call only)
+    slides_clear_msgs = [m for m in ws_messages if m.get("type") == "slides_clear"]
+    quiz_status_msgs = [m for m in ws_messages if m.get("type") == "quiz_status"]
+    assert len(slides_clear_msgs) == 2
+    assert len(quiz_status_msgs) == 1
+    assert quiz_status_msgs[0]["status"] == "error"
+    assert "Presentation inaccessible for participants." in quiz_status_msgs[0]["message"]

@@ -59,27 +59,17 @@ def test_slides_polling_runner_uses_main_daemon_auth_and_server(tmp_path: Path, 
     )
     monkeypatch.setattr(_slides_loop.slides_daemon, "config_from_env", lambda: cfg)
     monkeypatch.setattr(_slides_loop.slides_daemon, "load_daemon_state", lambda _path: {"files": {}})
-    seen = {}
-
-    def _fake_run_once(run_cfg, _state):
-        seen["server_url"] = run_cfg.server_url
-        seen["host_username"] = run_cfg.host_username
-        seen["host_password"] = run_cfg.host_password
-
-    monkeypatch.setattr(_slides_loop.slides_upload, "run_once", _fake_run_once)
 
     runner = training_daemon.SlidesPollingRunner(
         SimpleNamespace(server_url="http://main-server", host_username="main-user", host_password="main-pass")
     )
     runner.start()
-    runner.tick()
 
     assert runner.enabled is True
-    assert seen == {
-        "server_url": "http://main-server",
-        "host_username": "main-user",
-        "host_password": "main-pass",
-    }
+    # Auth and server_url are overridden from main daemon config, not the slides-specific config
+    assert runner._slides_config.server_url == "http://main-server"
+    assert runner._slides_config.host_username == "main-user"
+    assert runner._slides_config.host_password == "main-pass"
 
 
 def test_materials_mirror_runner_detects_create_update_delete(tmp_path: Path, monkeypatch):
