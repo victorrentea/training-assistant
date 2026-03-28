@@ -7,7 +7,6 @@ import secrets
 import time
 import uuid as uuid_mod
 from datetime import datetime, timezone
-from pathlib import Path
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
@@ -453,22 +452,6 @@ async def websocket_endpoint(websocket: WebSocket, participant_id: str):
                             del state.paste_texts[target_uuid]
                         await broadcast_participant_update()
 
-            elif msg_type == "upload_dismiss":
-                if is_host:
-                    target_uuid = str(data.get("uuid", ""))
-                    upload_id = data.get("upload_id")
-                    if target_uuid in state.uploaded_files and upload_id is not None:
-                        # Also delete the file from disk
-                        for entry in state.uploaded_files[target_uuid]:
-                            if entry["id"] == upload_id:
-                                Path(entry["disk_path"]).unlink(missing_ok=True)
-                                break
-                        state.uploaded_files[target_uuid] = [
-                            e for e in state.uploaded_files[target_uuid] if e["id"] != upload_id
-                        ]
-                        if not state.uploaded_files[target_uuid]:
-                            del state.uploaded_files[target_uuid]
-                        await broadcast_participant_update()
 
 
     except WebSocketDisconnect:

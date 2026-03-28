@@ -1247,8 +1247,16 @@
       const uploadIcons = uploadedFiles.map(entry => {
         const sizeMB = (entry.size / (1024 * 1024)).toFixed(1);
         const sizeStr = entry.size < 1024 * 1024 ? `${(entry.size / 1024).toFixed(0)} KB` : `${sizeMB} MB`;
-        const title = `${entry.filename} (${sizeStr}) — click to download`;
-        return `<span class="upload-icon" title="${escHtml(title)}" data-uuid="${escHtml(pid)}" data-upload-id="${entry.id}" onclick="downloadAndDismissUpload(this)"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 4v9"/><path d="M6 9.5L10 13.5L14 9.5"/><path d="M4.5 13.5v1a2 2 0 0 0 2 2h7a2 2 0 0 0 2-2v-1"/></svg></span>`;
+        const downloaded = entry.downloaded_at != null;
+        const title = downloaded ? `${entry.filename} (${sizeStr}) — downloaded, fading...` : `${entry.filename} (${sizeStr}) — click to download`;
+        // Calculate fade opacity: 1.0 at download time → 0.15 after 5 minutes
+        let fadeStyle = '';
+        if (downloaded) {
+          const elapsed = Date.now() / 1000 - entry.downloaded_at;
+          const opacity = Math.max(0.15, 1.0 - elapsed / 300);
+          fadeStyle = ` style="opacity:${opacity.toFixed(2)};animation:none"`;
+        }
+        return `<span class="upload-icon${downloaded ? ' downloaded' : ''}"${fadeStyle} title="${escHtml(title)}" data-uuid="${escHtml(pid)}" data-upload-id="${entry.id}" onclick="downloadUploadedFile(this)"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 4v9"/><path d="M6 9.5L10 13.5L14 9.5"/><path d="M4.5 13.5v1a2 2 0 0 0 2 2h7a2 2 0 0 0 2-2v-1"/></svg></span>`;
       }).join('');
       return `<li class="${online ? 'online' : 'offline'}"><span class="pax-name" title="${ip ? 'IP: ' + ip : ''}">${debateIcon}${avatarHtml}<span class="pax-name-text">${escHtml(name)}</span></span>${pasteIcons}${uploadIcons}${scoreTag}${locLabel ? `<span class="pax-location" onclick="openMap()" title="View all on map">${escHtml(locLabel)}</span>` : ''}</li>`;
     }).join('');
@@ -3197,25 +3205,45 @@ function copyAndDismissPaste(el) {
   }
 }
 
-function downloadAndDismissUpload(el) {
-  const uuid = el.dataset.uuid;
+function downloadUploadedFile(el) {
   const uploadId = parseInt(el.dataset.uploadId, 10);
-  // Trigger download via hidden link
-  const a = document.createElement('a');
-  a.href = `/api/upload/${uploadId}`;
-  a.download = '';
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  // Show "Downloaded!" tip
-  const tip = document.createElement('span');
-  tip.textContent = 'Downloaded!';
-  tip.className = 'paste-copied-tip';
-  const rect = el.getBoundingClientRect();
-  tip.style.left = rect.left + rect.width / 2 + 'px';
-  tip.style.top = rect.top - 4 + 'px';
-  document.body.appendChild(tip);
-  setTimeout(() => tip.remove(), 1200);
-  // Send dismiss
-  ws.send(JSON.stringify({ type: 'upload_dismiss', uuid: uuid, upload_id: uploadId }));
+  // Fetch with credentials (Basic Auth) then trigger browser download
+  fetch(`/api/upload/${uploadId}`, { credentials: 'same-origin' })
+    .then(resp => {
+      if (!resp.ok) throw new Error('Download failed');
+      const cd = resp.headers.get('content-disposition') || '';
+      const match = cd.match(/filename="?([^";\n]+)"?/);
+      const filename = match ? match[1] : 'file';
+      return resp.blob().then(blob => ({ blob, filename }));
+    })
+    .then(({ blob, filename }) => {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      // Show "Downloaded!" tip
+      const tip = document.createElement('span');
+      tip.textContent = 'Downloaded!';
+      tip.className = 'paste-copied-tip';
+      const rect = el.getBoundingClientRect();
+      tip.style.left = rect.left + rect.width / 2 + 'px';
+      tip.style.top = rect.top - 4 + 'px';
+      document.body.appendChild(tip);
+      setTimeout(() => tip.remove(), 1200);
+    })
+    .catch(() => {
+      const tip = document.createElement('span');
+      tip.textContent = 'Failed!';
+      tip.className = 'paste-copied-tip';
+      tip.style.background = '#ef4444';
+      const rect = el.getBoundingClientRect();
+      tip.style.left = rect.left + rect.width / 2 + 'px';
+      tip.style.top = rect.top - 4 + 'px';
+      document.body.appendChild(tip);
+      setTimeout(() => tip.remove(), 1200);
+    });
 }
