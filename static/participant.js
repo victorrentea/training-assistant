@@ -2353,8 +2353,8 @@
   }
 
   function updateHostDot(connected) {
-    const dot = document.getElementById('host-dot');
-    if (dot) dot.style.display = connected ? 'inline' : 'none';
+    const dot = document.querySelector('#host-dot .dot');
+    if (dot) dot.className = connected ? 'dot dot-green' : 'dot dot-red';
   }
 
   function updateDaemonDot(connected) {
