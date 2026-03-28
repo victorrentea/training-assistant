@@ -843,7 +843,7 @@
     // Restore after PDF.js finishes re-rendering (two rAFs + 200ms safety net).
     const restore = () => {
       if (container && container.scrollHeight > 0) {
-        container.scrollTop = scrollRatio * container.scrollHeight;
+        container.scrollTo({ top: scrollRatio * container.scrollHeight, behavior: 'instant' });
       }
     };
     requestAnimationFrame(() => requestAnimationFrame(restore));
@@ -1551,7 +1551,7 @@
         const hasScroll = !skipScrollRestore && container && saved && Number.isFinite(saved.scrollTop) && saved.scrollTop > 0;
         if (hasScroll) {
           // Set scrollTop directly — skipping currentPageNumber avoids a conflicting PDF.js scroll.
-          requestAnimationFrame(() => requestAnimationFrame(() => { container.scrollTop = saved.scrollTop; }));
+          requestAnimationFrame(() => requestAnimationFrame(() => { container.scrollTo({ top: saved.scrollTop, behavior: 'instant' }); }));
         } else {
           try {
             slidesPdfViewer.currentPageNumber = Number(targetPage);
@@ -1610,7 +1610,7 @@
         const hasScroll = !skipScrollRestore && container && saved && Number.isFinite(saved.scrollTop) && saved.scrollTop > 0;
         if (hasScroll) {
           // Set scrollTop directly — skipping currentPageNumber avoids a conflicting PDF.js scroll.
-          requestAnimationFrame(() => requestAnimationFrame(() => { container.scrollTop = saved.scrollTop; }));
+          requestAnimationFrame(() => requestAnimationFrame(() => { container.scrollTo({ top: saved.scrollTop, behavior: 'instant' }); }));
         } else {
           try {
             slidesPdfViewer.currentPageNumber = Number(savedPage);
