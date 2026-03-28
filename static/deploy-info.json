@@ -1,7 +1,7 @@
 {
-  "sha": "cb4fe4024f705bb4d4b2752fc471b917f19ee9fb",
-  "timestamp": "2026-03-28 18:15",
+  "sha": "a8b984d44c51563bbba57c72bca3e62d77d93dec",
+  "timestamp": "2026-03-28 18:38",
   "changelog": [
-    "feat: add session ID security \u2014 6-char code gates all participant access"
+    "test: add session ID e2e tests + fix existing tests for session-scoped URLs"
   ]
 }
