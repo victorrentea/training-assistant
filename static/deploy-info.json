@@ -1,7 +1,7 @@
 {
-  "sha": "69528874ddb2406374a712df23521134b706d3c5",
+  "sha": "6603e4e9e88c8dc71a72ab4b896b4c4a1e2e6532",
   "timestamp": "2026-03-28 16:15",
   "changelog": [
-    "refactor(slides): extract shared _buildSlideItem to eliminate duplication"
+    "fix(slides): skip full GDrive URL in download_start daemon log"
   ]
 }
