@@ -1,7 +1,8 @@
 {
-  "sha": "21097333fa50b7ead20ffdf89afbf2793bf142bb",
-  "timestamp": "2026-03-28 10:02",
+  "sha": "60d7e4af456c51bb53db5cc59f48e627a429849f",
+  "timestamp": "2026-03-28 10:07",
   "changelog": [
-    "fix(paste): textarea 50vh height, Enter sends, Shift+Enter for newline"
+    "fix(slides): use diagonal expand arrows for fit-to-width button icon",
+    "feat(slides): add fit-to-width button between zoom buttons in PDF.js view"
   ]
 }
