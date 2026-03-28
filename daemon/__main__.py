@@ -64,6 +64,7 @@ from daemon.lock import (
     _LOCK_FILE,
     _HEARTBEAT_INTERVAL,
 )
+from daemon.email_notify import notify as email_notify
 
 EXIT_CODE_UPDATE = 42  # signals start.sh to git pull and restart
 _BACKUP_DIR = Path.home() / ".training-assistant"
@@ -381,6 +382,7 @@ def run() -> None:
 
     config = config_from_env()
     log.info("daemon", f"🚀 Starting — connecting to {config.server_url}")
+    email_notify("🚀 Daemon started", f"Training daemon started.\nServer: {config.server_url}")
 
     if config.project_folder:
         log.info("daemon", f"Project folder configured: {config.project_folder}")
@@ -611,6 +613,7 @@ def run() -> None:
                         sync_session_to_server(config, session_stack, current_key_points)
                         transcript_state.reset()
                         log.info("session", f"Started: {name}")
+                        email_notify(f"▶️ Session started: {name}", f"Session '{name}' started at {datetime.now().strftime('%H:%M')}.")
 
                     elif action == "end" and len(session_stack) > 1:
                         ended = session_stack.pop()
@@ -628,6 +631,7 @@ def run() -> None:
                         sync_session_to_server(config, session_stack, current_key_points)
                         transcript_state.reset()
                         log.info("session", f"Ended: {ended['name']}, restored: {parent['name']}")
+                        email_notify(f"⏹️ Session ended: {ended['name']}", f"Session '{ended['name']}' ended at {datetime.now().strftime('%H:%M')}.\nResumed: {parent['name']}")
 
                     elif action == "rename":
                         new_name = session_req["name"]
