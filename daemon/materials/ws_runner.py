@@ -194,7 +194,16 @@ class SlidesOnDemandWsRunner:
                 slug = deck.get("slug") or _slugify(deck.get("title", ""))
                 url = deck.get("drive_export_url", "")
                 if slug and url:
-                    entries.append({"slug": slug, "title": deck.get("title", slug), "drive_export_url": url})
+                    entry = {"slug": slug, "title": deck.get("title", slug), "drive_export_url": url}
+                    source = deck.get("source", "")
+                    if source:
+                        src_path = Path(source)
+                        if src_path.exists():
+                            from datetime import datetime, timezone
+                            entry["updated_at"] = datetime.fromtimestamp(
+                                src_path.stat().st_mtime, tz=timezone.utc
+                            ).isoformat()
+                    entries.append(entry)
             ws.send(json.dumps({"type": "slides_catalog", "entries": entries}))
             log.info("slides", f"slides_catalog sent: {len(entries)} entries")
         except Exception as exc:

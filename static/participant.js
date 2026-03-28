@@ -1761,10 +1761,8 @@ function closeEmojiPopup(ev) {
     if (slide._id === targetId) item.classList.add('active');
     item.appendChild(openBtn);
     // Timestamp — shown to the left of the status dot, outside openBtn so both align across rows
-    const _cacheEntryTs = (_slidesCacheStatus || {})[slide.slug];
     const updated = _formatSlideUpdatedCompact(
       slide.updated_at || slide.last_modified || slide.lastModified || slide.updatedAt
-      || (_cacheEntryTs && (_cacheEntryTs.updated_at || _cacheEntryTs.downloaded_at))
     );
     if (updated) {
       const badge = document.createElement('span');

@@ -154,6 +154,11 @@ def _build_catalog_slides_index() -> list[dict]:
                     updated_at = datetime.fromtimestamp(sp.stat().st_mtime, tz=timezone.utc).isoformat()
             except Exception:
                 pass
+        # Fall back to daemon-reported PPTX mtime from slides_catalog
+        if not updated_at:
+            cat_entry = state.slides_catalog.get(slug)
+            if cat_entry:
+                updated_at = cat_entry.get("updated_at")
         slides.append({
             "name": name,
             "slug": slug,
