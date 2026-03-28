@@ -17,7 +17,7 @@ from prometheus_fastapi_instrumentator import Instrumentator
 
 from core.auth import require_host_auth
 from core.messaging import broadcast_state
-from core.session_guard import require_valid_session
+from core.session_guard import require_valid_session, InvalidSessionRedirect
 from core.state import state  # re-exported for test_main.py: from main import app, state
 import core.metrics as metrics  # noqa: registers custom Prometheus metrics
 
@@ -71,6 +71,12 @@ async def lifespan(app_: FastAPI):
 
 
 app = FastAPI(title="Workshop Tool", lifespan=lifespan)
+
+
+@app.exception_handler(InvalidSessionRedirect)
+async def _redirect_invalid_session(request: Request, exc: InvalidSessionRedirect):
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse("/?error=invalid")
 
 
 @app.middleware("http")
