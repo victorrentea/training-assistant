@@ -1,7 +1,7 @@
 {
-  "sha": "186dc9ae8a36fd7f2cd66fdc5153eb68a486461a",
-  "timestamp": "2026-03-28 19:19",
+  "sha": "1ebb2c888f75ea16c1b4c0965054202045535e3d",
+  "timestamp": "2026-03-28 19:20",
   "changelog": [
-    "fix(slides): highlight title green when topics list is pinned open"
+    "fix(slides): keep topics list open while hovering over it"
   ]
 }
