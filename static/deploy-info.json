@@ -1,7 +1,7 @@
 {
-  "sha": "4e22d3e388ce6ed0e2b1049b2527ad24e6bb03f2",
-  "timestamp": "2026-03-28 23:35",
+  "sha": "5be78480e71060d932ee537c7744f1b13c4dd267",
+  "timestamp": "2026-03-28 23:36",
   "changelog": [
-    "feat(host): remove session code bar panel"
+    "fix(host): rename Notes badge to Notes.txt"
   ]
 }
