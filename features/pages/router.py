@@ -1,24 +1,37 @@
 from fastapi import APIRouter, Depends
 from fastapi.responses import HTMLResponse, FileResponse
-from fastapi.staticfiles import StaticFiles
 
 from core.auth import require_host_auth
 from core.state import state
 
-router = APIRouter()
+landing_router = APIRouter()
+host_router = APIRouter()
+participant_router = APIRouter()
 
 
-@router.get("/", response_class=HTMLResponse)
+@landing_router.get("/", response_class=HTMLResponse)
+async def landing_page():
+    return FileResponse("static/landing.html")
+
+
+@host_router.get("/host", response_class=HTMLResponse, dependencies=[Depends(require_host_auth)])
+async def host_page():
+    response = FileResponse("static/host.html")
+    response.set_cookie("is_host", "1", path="/", samesite="strict")
+    return response
+
+
+@participant_router.get("/", response_class=HTMLResponse)
 async def participant_page():
     return FileResponse("static/participant.html")
 
 
-@router.get("/notes", response_class=HTMLResponse)
+@participant_router.get("/notes", response_class=HTMLResponse)
 async def notes_page():
     return FileResponse("static/notes.html")
 
 
-@router.get("/quiz", response_class=HTMLResponse)
+@participant_router.get("/quiz", response_class=HTMLResponse)
 async def quiz_history_page():
     content = state.quiz_md_content.strip()
     if not content:
@@ -53,10 +66,3 @@ async def quiz_history_page():
   {body}
 </body>
 </html>""")
-
-
-@router.get("/host", response_class=HTMLResponse, dependencies=[Depends(require_host_auth)])
-async def host_page():
-    response = FileResponse("static/host.html")
-    response.set_cookie("is_host", "1", path="/", samesite="strict")
-    return response

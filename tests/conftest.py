@@ -30,6 +30,8 @@ from pages.participant_page import ParticipantPage
 HOST_USER = os.environ.get("HOST_USERNAME", "host")
 HOST_PASS = os.environ.get("HOST_PASSWORD", "testpass")
 
+_server_port = {"port": None}  # set by server_url fixture, read by pax_url()
+
 
 # ---------------------------------------------------------------------------
 # Server fixture
@@ -101,7 +103,19 @@ def server_url(tmp_path_factory):
 
     threading.Thread(target=proc.stderr.read, daemon=True).start()
 
-    yield f"http://127.0.0.1:{port}"
+    base_url = f"http://127.0.0.1:{port}"
+
+    # Start a session so participant routes are accessible
+    r = requests.post(
+        f"{base_url}/api/session/start",
+        auth=(HOST_USER, HOST_PASS),
+        json={"name": "e2e-test"},
+    )
+    r.raise_for_status()
+
+    _server_port["port"] = port
+
+    yield base_url
 
     # Send SIGINT (KeyboardInterrupt) so coverage.py gets to flush data
     import signal
@@ -124,6 +138,49 @@ def api(server_url, method, path, **kwargs):
         auth=(HOST_USER, HOST_PASS),
         **kwargs,
     )
+
+
+_cached_session_id = [None]  # list so it's mutable across module copies
+
+
+def _get_session_id():
+    """Fetch session ID from running server (cached after first call)."""
+    if _cached_session_id[0]:
+        return _cached_session_id[0]
+    port = _server_port.get("port") if isinstance(_server_port, dict) else None
+    if not port:
+        # Fallback: try all module copies
+        import sys
+        for mod in sys.modules.values():
+            sp = getattr(mod, "_server_port", None)
+            if isinstance(sp, dict) and sp.get("port"):
+                port = sp["port"]
+                break
+    assert port, "No server port — server_url fixture must run first"
+    r = requests.get(
+        f"http://127.0.0.1:{port}/api/session/snapshot",
+        auth=(HOST_USER, HOST_PASS),
+    )
+    r.raise_for_status()
+    sid = r.json().get("session_id")
+    assert sid, "No session_id in snapshot"
+    _cached_session_id[0] = sid
+    return sid
+
+
+@pytest.fixture(scope="session")
+def session_id(server_url):
+    """Return the active session ID (created by server_url fixture)."""
+    return _get_session_id()
+
+
+def pax_url(path="/"):
+    """Return session-scoped participant URL path. Use in tests that create their own browser contexts.
+    Example: page.goto(pax_url()) instead of page.goto("/")"""
+    sid = _get_session_id()
+    if path == "/":
+        return f"/{sid}"
+    return f"/{sid}{path}"
 
 
 def host_browser_ctx(server_url, playwright):
@@ -163,7 +220,7 @@ def _make_pax_fixture():
     def pax(server_url, playwright) -> ParticipantPage:
         browser, ctx = pax_browser_ctx(server_url, playwright)
         page = ctx.new_page()
-        page.goto("/")
+        page.goto(pax_url())
         yield ParticipantPage(page)
         ctx.close()
         browser.close()

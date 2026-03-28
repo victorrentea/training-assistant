@@ -62,7 +62,8 @@ class SyncSessionRequest(BaseModel):
 
 @router.post("/api/session/start", dependencies=[Depends(require_host_auth)])
 async def start_session(body: StartSessionRequest):
-    state.session_request = {"action": "start", "name": body.name}
+    session_id = state.generate_session_id()
+    state.session_request = {"action": "start", "name": body.name, "session_id": session_id}
     await push_to_daemon({"type": "session_request", **state.session_request})
     return {"ok": True}
 
@@ -114,6 +115,8 @@ class SessionNameBody(BaseModel):
 
 @router.post("/api/session/create", dependencies=[Depends(require_host_auth)])
 async def create_session(body: SessionNameBody):
+    if not state.session_id:
+        state.generate_session_id()
     state.session_request = {"action": "create", "name": body.name}
     await push_to_daemon({"type": "session_request", **state.session_request})
     return {"ok": True}
@@ -224,6 +227,9 @@ def _restore_state_from_snapshot(snap: dict):
     state.codereview_confirmed = set(cr.get("confirmed") or [])
     state.codereview_selections = {uid: set(lines) for uid, lines in (cr.get("selections") or {}).items()}
 
+    # Session ID (generate if missing — e.g. old snapshot from before session security)
+    state.session_id = snap.get("session_id") or state.generate_session_id()
+
     # Misc
     state.leaderboard_active = snap.get("leaderboard_active", False)
     if snap.get("token_usage"):
@@ -252,6 +258,10 @@ async def sync_session(body: SyncSessionRequest):
     # Plain server-restart restore: clear paused set
     if body.action is None and body.session_state:
         state.paused_participant_uuids = set()
+
+    # Safety net: ensure session_id exists whenever a session is active
+    if state.session_main and not state.session_id:
+        state.generate_session_id()
 
     await broadcast_state()
     return {"ok": True}
@@ -392,6 +402,7 @@ async def get_session_snapshot():
 
     return {
         "saved_at": datetime.now(timezone.utc).isoformat(),
+        "session_id": state.session_id,
         "mode": state.mode,
         "participants": participants,
         "activity": state.current_activity.value if state.current_activity else "none",
@@ -407,3 +418,9 @@ async def get_session_snapshot():
         "leaderboard_active": state.leaderboard_active,
         "token_usage": state.token_usage,
     }
+
+
+@router.get("/api/session/active")
+async def get_session_active():
+    """Public endpoint: returns whether a session is active (no code revealed)."""
+    return {"active": state.session_id is not None}

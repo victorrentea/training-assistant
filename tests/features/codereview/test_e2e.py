@@ -15,7 +15,7 @@ from playwright.sync_api import expect
 
 from pages.host_page import HostPage
 from pages.participant_page import ParticipantPage
-from conftest import api, host_browser_ctx, pax_browser_ctx
+from conftest import api, host_browser_ctx, pax_browser_ctx, pax_url
 
 
 JAVA_SNIPPET = """\
@@ -79,8 +79,8 @@ class TestCodeReview:
         p2 = ParticipantPage(ctx2.new_page())
 
         host._page.goto("/host")
-        p1._page.goto("/")
-        p2._page.goto("/")
+        p1._page.goto(pax_url())
+        p2._page.goto(pax_url())
 
         try:
             p1.join("Charlie")
@@ -157,7 +157,7 @@ class TestCodeReview:
         p1 = ParticipantPage(ctx1.new_page())
 
         host._page.goto("/host")
-        p1._page.goto("/")
+        p1._page.goto(pax_url())
 
         try:
             p1.join("Grace")

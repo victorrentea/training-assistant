@@ -11,7 +11,7 @@ from playwright.sync_api import expect
 
 from pages.host_page import HostPage
 from pages.participant_page import ParticipantPage
-from conftest import api, host_browser_ctx, pax_browser_ctx
+from conftest import api, host_browser_ctx, pax_browser_ctx, pax_url
 
 
 # ---------------------------------------------------------------------------
@@ -40,7 +40,7 @@ class TestConnectionReconnection:
 
         host = HostPage(ctx_host.new_page())
         pax_page = ctx_pax.new_page()
-        pax_page.goto("/")
+        pax_page.goto(pax_url())
         pax = ParticipantPage(pax_page)
 
         try:
@@ -95,7 +95,7 @@ class TestConnectionReconnection:
 
         try:
             page1 = ctx.new_page()
-            page1.goto(server_url)
+            page1.goto(pax_url())
             pax = ParticipantPage(page1)
             pax.join("ReconTest")
 
@@ -104,7 +104,7 @@ class TestConnectionReconnection:
 
             # Open new page in same context (same localStorage)
             page2 = ctx.new_page()
-            page2.goto(server_url)
+            page2.goto(pax_url())
 
             # Should auto-join with saved name
             expect(page2.locator("#main-screen")).to_be_visible(timeout=10000)
@@ -158,9 +158,9 @@ class TestPollEdgeCases:
         p3 = ParticipantPage(ctx3.new_page())
 
         host._page.goto("/host")
-        p1._page.goto("/")
-        p2._page.goto("/")
-        p3._page.goto("/")
+        p1._page.goto(pax_url())
+        p2._page.goto(pax_url())
+        p3._page.goto(pax_url())
 
         try:
             p1.join("Voter1")
@@ -199,8 +199,8 @@ class TestPollEdgeCases:
         p2 = ParticipantPage(ctx2.new_page())
 
         host._page.goto("/host")
-        p1._page.goto("/")
-        p2._page.goto("/")
+        p1._page.goto(pax_url())
+        p2._page.goto(pax_url())
 
         try:
             p1.join("FastVoter")
@@ -299,8 +299,8 @@ class TestIdentityEdgeCases:
         p2 = ParticipantPage(ctx2.new_page())
 
         host._page.goto("/host")
-        p1._page.goto("/")
-        p2._page.goto("/")
+        p1._page.goto(pax_url())
+        p2._page.goto(pax_url())
 
         try:
             p1.join("Frodo")

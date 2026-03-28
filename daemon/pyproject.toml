@@ -10,6 +10,7 @@ dependencies = [
     "ebooklib>=0.18",
     "mobi>=0.3.3",
     "watchdog>=4.0.0",
+    "agentmail>=0.1.0",
 ]
 
 [tool.setuptools]
