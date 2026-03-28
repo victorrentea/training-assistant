@@ -1,7 +1,7 @@
 {
-  "sha": "4b68f20016e59be87d4c112709d3a01b9b4b773b",
-  "timestamp": "2026-03-28 16:45",
+  "sha": "5eadd17e237e3ef05aa70dd6ff62eaef1ba32b7b",
+  "timestamp": "2026-03-28 16:48",
   "changelog": [
-    "fix(slides): prevent group sections from being flex-compressed and clipped"
+    "fix(slides): send correct slug and trigger refresh after catalog received"
   ]
 }
