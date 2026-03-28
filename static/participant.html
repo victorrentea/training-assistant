@@ -164,7 +164,7 @@
 </div>
 <div id="paste-overlay" class="paste-overlay" onclick="closePasteModal()">
   <div class="paste-bubble" onclick="event.stopPropagation()">
-    <textarea id="paste-textarea" class="paste-textarea" placeholder="Paste your text here..." oninput="document.getElementById('paste-send-btn').disabled = !this.value.trim()"></textarea>
+    <textarea id="paste-textarea" class="paste-textarea" placeholder="Paste your text here... (Enter to send, Shift+Enter for new line)" oninput="document.getElementById('paste-send-btn').disabled = !this.value.trim()" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendPasteText();}"></textarea>
     <button id="paste-send-btn" class="paste-send-btn" disabled onclick="sendPasteText()">Send to host</button>
   </div>
 </div>
