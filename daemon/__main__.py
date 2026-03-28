@@ -635,6 +635,7 @@ def run() -> None:
                     )
                     if _entry:
                         _entry["seconds_spent"] += DAEMON_POLL_INTERVAL
+                        log.debug("ppt", f"Slide +{DAEMON_POLL_INTERVAL}s: {Path(_ppt_file).stem} #{_ppt_slide} (total: {_entry['seconds_spent']}s)")
                     else:
                         slides_log.append({
                             "file": _ppt_file,
@@ -657,6 +658,7 @@ def run() -> None:
                             )
                             if _repo_entry:
                                 _repo_entry["seconds_spent"] += _INTELLIJ_PROBE_INTERVAL
+                                log.debug("intellij", f"Git +{_INTELLIJ_PROBE_INTERVAL:.0f}s: {_ij['project']} @ {_ij['branch']} (total: {_repo_entry['seconds_spent']:.0f}s)")
                             else:
                                 git_repos.append({
                                     "project": _ij["project"],
