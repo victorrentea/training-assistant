@@ -5,6 +5,7 @@ from pydantic import BaseModel
 
 from core.messaging import broadcast
 from core.state import state
+from features.ws.daemon_protocol import push_to_daemon
 
 router = APIRouter()
 
@@ -20,6 +21,7 @@ async def set_transcription_language(body: LanguageRequest):
         from fastapi import HTTPException
         raise HTTPException(400, "language must be 'ro', 'en', or 'auto'")
     state.transcription_language_request = lang
+    await push_to_daemon({"type": "transcription_language_request", "language": lang})
     await broadcast({"type": "transcription_language_pending", "language": lang})
     return {"ok": True}
 

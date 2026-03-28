@@ -31,7 +31,14 @@ from core.metrics import (
 from core.state import state, ActivityType, assign_avatar, refresh_avatar
 from core.messaging import participant_ids
 from features.debate.router import auto_assign_remaining
-from features.ws.daemon_protocol import MSG_SLIDES_CATALOG, MSG_SLIDE_INVALIDATED, MSG_DAEMON_PING
+from features.ws.daemon_protocol import (
+    MSG_SLIDES_CATALOG, MSG_SLIDE_INVALIDATED, MSG_DAEMON_PING,
+    MSG_QUIZ_PREVIEW, MSG_QUIZ_STATUS, MSG_POLL_CREATE, MSG_POLL_OPEN,
+    MSG_DEBATE_AI_RESULT, MSG_SESSION_SYNC, MSG_TRANSCRIPT_STATUS,
+    MSG_TOKEN_USAGE, MSG_NOTES_CONTENT, MSG_SLIDES_CURRENT, MSG_SLIDES_CLEAR,
+    MSG_TRANSCRIPTION_LANGUAGE_STATUS, MSG_TIMING_EVENT, MSG_STATE_RESTORE,
+    MSG_STATE_SNAPSHOT_RESULT, MSG_SESSION_SNAPSHOT_RESULT,
+)
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -92,10 +99,383 @@ async def _handle_daemon_slide_invalidated(data):
     if slug:
         await handle_slide_invalidated(slug)
 
+
+async def _handle_quiz_preview(data):
+    """Daemon sends generated quiz preview."""
+    quiz = data.get("quiz")
+    if quiz is None:
+        state.quiz_preview = None
+    else:
+        state.quiz_preview = {
+            "question": quiz.get("question", ""),
+            "options": quiz.get("options", []),
+            "multi": quiz.get("multi", False),
+            "correct_indices": quiz.get("correct_indices", []),
+            "source": quiz.get("source"),
+            "page": quiz.get("page"),
+        }
+    await broadcast({"type": "quiz_preview", "quiz": state.quiz_preview})
+
+
+async def _handle_quiz_status(data):
+    """Daemon sends quiz status update."""
+    state.quiz_status = {"status": data.get("status", ""), "message": data.get("message", "")}
+    if data.get("session_folder") is not None or data.get("session_notes") is not None:
+        state.daemon_session_folder = data.get("session_folder")
+        state.daemon_session_notes = data.get("session_notes")
+    slides = data.get("slides")
+    if slides is not None:
+        import re
+        _slug_re = re.compile(r"[^a-z0-9]+")
+        def _slugify_inline(value: str) -> str:
+            raw = value.strip().lower()
+            raw = _slug_re.sub("-", raw).strip("-")
+            return raw or "slide"
+        normalized: list[dict] = []
+        seen: set[str] = set()
+        for idx, slide in enumerate(slides):
+            name = (slide.get("name") or "").strip()
+            url = (slide.get("url") or "").strip()
+            if not name or not url:
+                continue
+            slug = (slide.get("slug") or "").strip() or _slugify_inline(name)
+            if slug in seen:
+                slug = f"{slug}-{idx+1}"
+            seen.add(slug)
+            normalized.append({
+                "name": name,
+                "slug": slug,
+                "url": url,
+                "updated_at": slide.get("updated_at"),
+                "etag": slide.get("etag"),
+                "last_modified": slide.get("last_modified"),
+                "sync_status": slide.get("sync_status"),
+                "sync_message": slide.get("sync_message"),
+            })
+        state.slides = normalized
+        from features.slides.cache import sync_slides_updated_at
+        sync_slides_updated_at()
+    await broadcast({"type": "quiz_status", **state.quiz_status})
+
+
+async def _handle_poll_create(data):
+    """Daemon sends quiz as a poll — replicate POST /api/poll logic."""
+    question = str(data.get("question", "")).strip()
+    options = data.get("options", [])
+    multi = data.get("multi", False)
+    correct_count = data.get("correct_count")
+    source = data.get("source")
+    page = data.get("page")
+
+    if not question or len(options) < 2:
+        logger.warning("poll_create: invalid data (question=%r, options=%d)", question, len(options))
+        return
+
+    state.poll = {
+        "id": int(datetime.now(timezone.utc).timestamp() * 1000),
+        "question": question,
+        "multi": multi,
+        "correct_count": correct_count if multi else None,
+        "options": [
+            {"id": f"opt{i}", "text": str(opt).strip()}
+            for i, opt in enumerate(options)
+            if str(opt).strip()
+        ],
+        "source": source or None,
+        "page": page or None,
+    }
+    state.current_activity = ActivityType.POLL
+    state.poll_active = False
+    state.votes = {}
+    state.poll_correct_ids = None
+    await broadcast_state()
+
+
+async def _handle_poll_open(data):
+    """Daemon opens the poll — replicate PUT /api/poll/status with open=true."""
+    if not state.poll:
+        logger.warning("poll_open: no poll created")
+        return
+    open_flag = data.get("open", True)
+    state.poll_active = open_flag
+    if open_flag:
+        state.poll_opened_at = datetime.now(timezone.utc)
+        state.vote_times = {}
+        state.base_scores = dict(state.scores)
+    else:
+        state.poll_timer_seconds = None
+        state.poll_timer_started_at = None
+    await broadcast_state()
+
+
+async def _handle_debate_ai_result(data):
+    """Daemon sends AI cleanup results — replicate POST /api/debate/ai-result."""
+    if state.debate_phase != "ai_cleanup":
+        logger.warning("debate_ai_result: not in ai_cleanup phase (current: %s)", state.debate_phase)
+        return
+
+    merges = data.get("merges", [])
+    cleaned = data.get("cleaned", [])
+    new_arguments = data.get("new_arguments", [])
+
+    for merge in merges:
+        keep_id = merge.get("keep_id")
+        for remove_id in merge.get("remove_ids", []):
+            for arg in state.debate_arguments:
+                if arg["id"] == remove_id:
+                    arg["merged_into"] = keep_id
+                    kept = next((a for a in state.debate_arguments if a["id"] == keep_id), None)
+                    if kept:
+                        kept["upvoters"] = kept["upvoters"] | arg["upvoters"]
+
+    for c in cleaned:
+        for arg in state.debate_arguments:
+            if arg["id"] == c.get("id"):
+                arg["text"] = c["text"]
+
+    for new_arg in new_arguments:
+        state.debate_arguments.append({
+            "id": str(uuid_mod.uuid4()),
+            "author_uuid": "__ai__",
+            "side": new_arg["side"],
+            "text": new_arg["text"],
+            "upvoters": set(),
+            "ai_generated": True,
+            "merged_into": None,
+        })
+
+    logger.info("AI result via WS: %d merges, %d new args", len(merges), len(new_arguments))
+    state.debate_phase = "prep"
+    await broadcast_state()
+
+
+async def _handle_session_sync(data):
+    """Daemon sends session state — replicate POST /api/session/sync."""
+    if data.get("main") is not None or data.get("talk") is not None:
+        state.session_main = data.get("main")
+        state.session_talk = data.get("talk")
+    key_points = data.get("key_points") or data.get("discussion_points") or []
+    if key_points:
+        state.summary_points = key_points
+        state.summary_updated_at = datetime.now(timezone.utc)
+
+    action = data.get("action")
+    if action == "start_talk":
+        state.paused_participant_uuids = set(state.participant_names.keys())
+    elif action == "end_talk":
+        state.paused_participant_uuids = set(state.participant_names.keys())
+
+    session_state = data.get("session_state")
+    if session_state:
+        from features.session.router import _restore_state_from_snapshot
+        _restore_state_from_snapshot(session_state)
+
+    if action is None and session_state:
+        state.paused_participant_uuids = set()
+
+    await broadcast_state()
+
+
+async def _handle_transcript_status(data):
+    """Daemon sends transcript progress — replicate POST /api/transcript-status."""
+    line_count = data.get("line_count", 0)
+    if line_count > state.transcript_line_count:
+        state.transcript_last_content_at = datetime.now(timezone.utc)
+    state.transcript_line_count = line_count
+    state.transcript_total_lines = data.get("total_lines", 0)
+    state.transcript_latest_ts = data.get("latest_ts")
+    await broadcast_state()
+
+
+async def _handle_token_usage(data):
+    """Daemon sends LLM cost tracking — replicate POST /api/token-usage."""
+    usage = {k: v for k, v in data.items() if k != "type"}
+    state.token_usage = usage
+    await broadcast_state()
+
+
+async def _handle_notes_content(data):
+    """Daemon sends notes text — replicate POST /api/notes."""
+    state.notes_content = data.get("content")
+    await broadcast_state()
+
+
+async def _handle_slides_current(data):
+    """Daemon sends current slide info — replicate POST /api/slides/current."""
+    state.slides_current = {
+        "url": data.get("url"),
+        "slug": data.get("slug"),
+        "source_file": data.get("source_file"),
+        "presentation_name": data.get("presentation_name"),
+        "current_page": data.get("current_page"),
+        "converter": data.get("converter"),
+        "updated_at": data.get("updated_at") or datetime.now(timezone.utc).isoformat(),
+    }
+    await broadcast_state()
+    await broadcast({"type": "slides_current", "slides_current": state.slides_current})
+
+
+async def _handle_slides_clear(data):
+    """Daemon clears current slide — replicate DELETE /api/slides/current."""
+    state.slides_current = None
+    await broadcast_state()
+    await broadcast({"type": "slides_current", "slides_current": None})
+
+
+async def _handle_transcription_language_status(data):
+    """Daemon confirms language change — replicate POST /api/transcription-language/status."""
+    lang = data.get("language", "")
+    state.transcription_language = lang
+    await broadcast({"type": "transcription_language", "language": lang})
+
+
+async def _handle_timing_event(data):
+    """Daemon sends timing event — replicate POST /api/session/timing_event."""
+    host_ws = state.participants.get("__host__")
+    if host_ws:
+        try:
+            await host_ws.send_json({
+                "type": "timing_event",
+                "event": data.get("event"),
+                "minutes_remaining": data.get("minutes_remaining"),
+            })
+        except Exception:
+            pass
+    # Also forward to overlay if connected
+    overlay_ws = state.participants.get("__overlay__")
+    if overlay_ws:
+        try:
+            await overlay_ws.send_json({
+                "type": "timing_event",
+                "event": data.get("event"),
+                "minutes_remaining": data.get("minutes_remaining"),
+            })
+        except Exception:
+            pass
+
+
+async def _handle_state_restore(data):
+    """Daemon sends full state backup to restore — replicate POST /api/state-restore."""
+    from features.snapshot.router import _parse_iso_or_none
+    restore_data = data.get("state", data)
+
+    if "participant_names" in restore_data:
+        state.participant_names = restore_data["participant_names"]
+    if "participant_avatars" in restore_data:
+        state.participant_avatars = restore_data["participant_avatars"]
+    if "participant_universes" in restore_data:
+        state.participant_universes = restore_data["participant_universes"]
+    if "scores" in restore_data:
+        state.scores = restore_data["scores"]
+    if "locations" in restore_data:
+        state.locations = restore_data["locations"]
+    if "mode" in restore_data:
+        state.mode = restore_data["mode"]
+    if "current_activity" in restore_data:
+        state.current_activity = ActivityType(restore_data["current_activity"])
+    if "leaderboard_active" in restore_data:
+        state.leaderboard_active = restore_data["leaderboard_active"]
+    if "poll" in restore_data:
+        state.poll = restore_data["poll"]
+    if "poll_active" in restore_data:
+        state.poll_active = restore_data["poll_active"]
+    if "votes" in restore_data:
+        state.votes = restore_data["votes"]
+    if "poll_correct_ids" in restore_data:
+        state.poll_correct_ids = restore_data["poll_correct_ids"]
+    if "poll_opened_at" in restore_data:
+        state.poll_opened_at = _parse_iso_or_none(restore_data["poll_opened_at"])
+    if "poll_timer_seconds" in restore_data:
+        state.poll_timer_seconds = restore_data["poll_timer_seconds"]
+    if "poll_timer_started_at" in restore_data:
+        state.poll_timer_started_at = _parse_iso_or_none(restore_data["poll_timer_started_at"])
+    if "wordcloud_words" in restore_data:
+        state.wordcloud_words = restore_data["wordcloud_words"]
+    if "wordcloud_word_order" in restore_data:
+        state.wordcloud_word_order = restore_data["wordcloud_word_order"]
+    if "wordcloud_topic" in restore_data:
+        state.wordcloud_topic = restore_data["wordcloud_topic"]
+    if "qa_questions" in restore_data:
+        qa_questions = {}
+        for qid, q in restore_data["qa_questions"].items():
+            qa_questions[qid] = {**q, "upvoters": set(q.get("upvoters", []))}
+        state.qa_questions = qa_questions
+    if "codereview_snippet" in restore_data:
+        state.codereview_snippet = restore_data["codereview_snippet"]
+    if "codereview_language" in restore_data:
+        state.codereview_language = restore_data["codereview_language"]
+    if "codereview_phase" in restore_data:
+        state.codereview_phase = restore_data["codereview_phase"]
+    if "codereview_selections" in restore_data:
+        state.codereview_selections = {
+            uid: set(lines) for uid, lines in restore_data["codereview_selections"].items()
+        }
+    if "codereview_confirmed" in restore_data:
+        state.codereview_confirmed = set(restore_data["codereview_confirmed"])
+    if "debate_statement" in restore_data:
+        state.debate_statement = restore_data["debate_statement"]
+    if "debate_phase" in restore_data:
+        state.debate_phase = restore_data["debate_phase"]
+    if "debate_sides" in restore_data:
+        state.debate_sides = restore_data["debate_sides"]
+    if "debate_champions" in restore_data:
+        state.debate_champions = restore_data["debate_champions"]
+    if "debate_auto_assigned" in restore_data:
+        state.debate_auto_assigned = set(restore_data["debate_auto_assigned"])
+    if "debate_first_side" in restore_data:
+        state.debate_first_side = restore_data["debate_first_side"]
+    if "debate_round_index" in restore_data:
+        state.debate_round_index = restore_data["debate_round_index"]
+    if "debate_round_timer_seconds" in restore_data:
+        state.debate_round_timer_seconds = restore_data["debate_round_timer_seconds"]
+    if "debate_round_timer_started_at" in restore_data:
+        state.debate_round_timer_started_at = _parse_iso_or_none(restore_data["debate_round_timer_started_at"])
+    if "debate_arguments" in restore_data:
+        state.debate_arguments = [
+            {**arg, "upvoters": set(arg.get("upvoters", []))}
+            for arg in restore_data["debate_arguments"]
+        ]
+    if "summary_points" in restore_data:
+        state.summary_points = restore_data["summary_points"]
+    if "slides_current" in restore_data:
+        state.slides_current = restore_data["slides_current"]
+
+    state.needs_restore = False
+    await broadcast_state()
+    restored_count = len(state.participant_names)
+    logger.info("State restored via WS with %d participants", restored_count)
+
+
+async def _handle_state_snapshot_result(data):
+    """Daemon confirms state snapshot saved — just log."""
+    logger.info("State snapshot saved by daemon (hash=%s)", data.get("hash", "?"))
+
+
+async def _handle_session_snapshot_result(data):
+    """Daemon confirms session snapshot saved — just log."""
+    logger.info("Session snapshot saved by daemon")
+
+
 _DAEMON_MSG_HANDLERS = {
     MSG_SLIDES_CATALOG: _handle_daemon_slides_catalog,
     MSG_SLIDE_INVALIDATED: _handle_daemon_slide_invalidated,
     MSG_DAEMON_PING: None,  # heartbeat only — last_seen already updated
+    MSG_QUIZ_PREVIEW: _handle_quiz_preview,
+    MSG_QUIZ_STATUS: _handle_quiz_status,
+    MSG_POLL_CREATE: _handle_poll_create,
+    MSG_POLL_OPEN: _handle_poll_open,
+    MSG_DEBATE_AI_RESULT: _handle_debate_ai_result,
+    MSG_SESSION_SYNC: _handle_session_sync,
+    MSG_TRANSCRIPT_STATUS: _handle_transcript_status,
+    MSG_TOKEN_USAGE: _handle_token_usage,
+    MSG_NOTES_CONTENT: _handle_notes_content,
+    MSG_SLIDES_CURRENT: _handle_slides_current,
+    MSG_SLIDES_CLEAR: _handle_slides_clear,
+    MSG_TRANSCRIPTION_LANGUAGE_STATUS: _handle_transcription_language_status,
+    MSG_TIMING_EVENT: _handle_timing_event,
+    MSG_STATE_RESTORE: _handle_state_restore,
+    MSG_STATE_SNAPSHOT_RESULT: _handle_state_snapshot_result,
+    MSG_SESSION_SNAPSHOT_RESULT: _handle_session_snapshot_result,
 }
 
 

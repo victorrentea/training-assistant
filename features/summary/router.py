@@ -5,6 +5,7 @@ from pydantic import BaseModel
 
 from core.messaging import broadcast_state
 from core.state import state
+from features.ws.daemon_protocol import push_to_daemon
 
 router = APIRouter()
 public_router = APIRouter()
@@ -87,6 +88,7 @@ async def force_summary():
         return {"ok": True, "cooldown": True}
     _last_force_at = now
     state.summary_force_requested = True
+    await push_to_daemon({"type": "summary_force"})
     return {"ok": True}
 
 
@@ -101,6 +103,7 @@ async def poll_summary_force():
 async def full_reset_summary():
     state.summary_reset_requested = True
     state.summary_force_requested = True
+    await push_to_daemon({"type": "summary_full_reset"})
     return {"ok": True}
 
 

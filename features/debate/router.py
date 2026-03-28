@@ -10,6 +10,7 @@ from pydantic import BaseModel
 from core.auth import require_host_auth
 from core.messaging import broadcast, broadcast_state, participant_ids
 from core.state import state, ActivityType
+from features.ws.daemon_protocol import push_to_daemon
 
 def get_debate_rounds(first_side: str) -> list[dict]:
     """Generate 4 timed rounds based on which side speaks first."""
@@ -276,6 +277,7 @@ async def end_arguments():
         "for_args": for_args,
         "against_args": against_args,
     }
+    await push_to_daemon({"type": "debate_ai_request", "request": state.debate_ai_request})
     state.debate_phase = "ai_cleanup"
     logger.info("Arguments ended — waiting for daemon AI cleanup")
     await broadcast_state()
