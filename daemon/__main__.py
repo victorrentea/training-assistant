@@ -565,7 +565,7 @@ def run() -> None:
 
     last_summary_at = 0.0  # monotonic time of last summary run
     last_snapshot_hash: str | None = None  # hash of last saved state snapshot
-last_state_backup_log: str | None = None  # last emitted state-backup log line (dedupe consecutive repeats)
+    last_state_backup_log: str | None = None  # last emitted state-backup log line (dedupe consecutive repeats)
     transcript_state = TranscriptStateManager()
     ws_client.start()
 
