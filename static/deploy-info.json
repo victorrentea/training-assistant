@@ -1,7 +1,7 @@
 {
-  "sha": "c449efe1fbccefc460c6fd284239e80c03fbb541",
+  "sha": "23c4e3af7cb23ab2c5f313a533aea5aec14f2b93",
   "timestamp": "2026-03-28 16:38",
   "changelog": [
-    "fix(slides): add overflow:hidden to slide button so long titles ellipsize"
+    "refactor: extract shared JS utils, CSS base classes, and Python helpers"
   ]
 }
