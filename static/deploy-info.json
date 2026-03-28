@@ -1,7 +1,7 @@
 {
-  "sha": "ec946892f7f61b7d5e0b35862e4533120702c46a",
-  "timestamp": "2026-03-29 00:50",
+  "sha": "a701227e864f2d153b281b54c9f0fa0f283b4871",
+  "timestamp": "2026-03-29 00:51",
   "changelog": [
-    "fix(daemon): restore indentation of last_state_backup_log variable"
+    "perf(poll): cache vote_counts() \u2014 compute once per broadcast instead of per participant"
   ]
 }
