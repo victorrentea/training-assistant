@@ -304,6 +304,7 @@
   }
 
   function showHostEmoji(emoji) {
+    if (emoji === '❤️' && _suppressHeartEcho) return;
     const el = document.createElement('div');
     const isScreen = emoji === '🖥️';
     el.className = 'host-emoji-float' + (isScreen ? ' host-emoji-float-screen' : '');
@@ -343,6 +344,18 @@
       fill: 'forwards'
     });
     anim.onfinish = () => el.remove();
+  }
+
+  function showHostHeartFullscreen() {
+    const overlay = document.createElement('div');
+    overlay.className = 'host-heart-fullscreen';
+    overlay.innerHTML = '<div class="host-heart-fullscreen-emoji">❤️</div>';
+    document.body.appendChild(overlay);
+    requestAnimationFrame(() => overlay.classList.add('host-heart-fullscreen-visible'));
+    setTimeout(() => {
+      overlay.classList.remove('host-heart-fullscreen-visible');
+      setTimeout(() => overlay.remove(), 600);
+    }, 2200);
   }
 
   function escHtml(s) {
@@ -1094,9 +1107,13 @@
     el.title = connected ? 'Desktop Overlay connected — click to fire a heart' : 'Desktop Overlay not connected — click to fire a heart';
   }
 
+  let _suppressHeartEcho = false;
   function triggerHostHeart() {
     if (!ws) return;
+    _suppressHeartEcho = true;
+    setTimeout(() => { _suppressHeartEcho = false; }, 500);
     ws.send(JSON.stringify({ type: 'emoji_reaction', emoji: '❤️' }));
+    showHostHeartFullscreen();
   }
 
   function renderPendingDeploy(_pendingDeploy) {}

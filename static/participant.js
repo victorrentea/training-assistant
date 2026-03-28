@@ -2936,7 +2936,7 @@
     if (currentMode === 'conference' || window.innerWidth <= 600) {
       showMobileEmojiShake(emoji);
     } else {
-      showDesktopEmojiFloat(emoji, btn);
+      showDesktopEmojiFloat(emoji, emoji === '❤️' ? null : btn);
     }
   }
 
@@ -2962,7 +2962,7 @@
       startX = rect.left + rect.width / 2;
       startY = rect.top;
     } else {
-      startX = window.innerWidth / 2;
+      startX = 80;
       startY = window.innerHeight - 100;
     }
     el.style.left = startX + 'px';
