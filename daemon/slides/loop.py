@@ -1,16 +1,22 @@
-"""SlidesPollingRunner — runs PPTX change detection/export from inside the main daemon."""
+"""SlidesPollingRunner — runs PPTX change detection from inside the main daemon."""
 
 import threading
 import time
+from types import SimpleNamespace
 
 from daemon import log
 from daemon.slides import daemon as slides_daemon
-from daemon.slides import upload as slides_upload
-from types import SimpleNamespace
+from daemon.slides.catalog import (
+    _abs_key,
+    detect_changed_files,
+    ensure_slug,
+    resolve_tracked_sources,
+)
+from daemon.slides.daemon import save_daemon_state
 
 
 class SlidesPollingRunner:
-    """Run PPTX change detection/export from inside the main training daemon."""
+    """Watch PPTX files for changes and notify the backend via WebSocket."""
 
     def __init__(self, main_config):
         self.main_config = main_config
@@ -20,6 +26,11 @@ class SlidesPollingRunner:
         self._slides_config = None
         self._slides_state: dict = {}
         self._bg_thread: threading.Thread | None = None
+        self._send_ws_message = None  # callable(dict) → bool, injected after start()
+
+    def set_ws_sender(self, sender) -> None:
+        """Inject a callable(dict) that sends a message over the daemon WebSocket."""
+        self._send_ws_message = sender
 
     def start(self) -> None:
         try:
@@ -44,7 +55,25 @@ class SlidesPollingRunner:
 
     def _run_once_bg(self) -> None:
         try:
-            slides_upload.run_once(self._slides_config, self._slides_state)
+            cfg = self._slides_config
+            state = self._slides_state
+            files, metadata = resolve_tracked_sources(cfg)
+            changed = detect_changed_files(files, state, metadata=metadata, publish_dir=cfg.publish_dir)
+            if not changed:
+                return
+            for pptx_path in changed:
+                key = _abs_key(pptx_path)
+                slug = ensure_slug(state, pptx_path)
+                # Update the tracked mtime so we don't re-fire on next poll
+                state.setdefault("files", {}).setdefault(key, {})["last_exported_mtime"] = pptx_path.stat().st_mtime
+                save_daemon_state(cfg.state_file, state)
+                log.info("slides", f"PPTX changed: {pptx_path.name} (slug={slug}) — sending slide_invalidated")
+                if self._send_ws_message is not None:
+                    sent = self._send_ws_message({"type": "slide_invalidated", "slug": slug})
+                    if not sent:
+                        log.error("slides", f"slide_invalidated not sent (WS not connected) for slug={slug}")
+                else:
+                    log.error("slides", f"slide_invalidated: no WS sender configured for slug={slug}")
         except Exception as exc:
             log.error("slides", f"Slides watcher error: {exc}")
 

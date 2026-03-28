@@ -44,6 +44,21 @@ class SlidesOnDemandWsRunner:
         self._thread: threading.Thread | None = None
         self._slug_map: dict[str, tuple[Path, str]] = {}
         self._slides_dirs: list[Path] = []
+        self._current_ws = None
+        self._ws_lock = threading.Lock()
+
+    def send_message(self, msg: dict) -> bool:
+        """Send a message over the current WS connection. Returns True if sent, False if not connected."""
+        with self._ws_lock:
+            ws = self._current_ws
+        if ws is None:
+            return False
+        try:
+            ws.send(json.dumps(msg))
+            return True
+        except Exception as exc:
+            log.error("slides", f"send_message failed: {exc}")
+            return False
 
     def start(self) -> None:
         enabled_raw = os.environ.get("SLIDES_ON_DEMAND_UPLOAD_ENABLED", "1").strip().lower()
@@ -199,20 +214,26 @@ class SlidesOnDemandWsRunner:
         while not self._stop.is_set():
             try:
                 with self._connect(ws_url, headers) as ws:
-                    log.info("slides", f"slides_ws_connected to {ws_url}")
-                    self._send_slides_catalog(ws)
-                    while not self._stop.is_set():
-                        try:
-                            raw = ws.recv(timeout=1.0)
-                        except TimeoutError:
-                            continue
-                        except ConnectionClosed:
-                            break
-                        try:
-                            payload = json.loads(raw)
-                        except Exception:
-                            continue
-                        self._handle_request(ws, payload)
+                    with self._ws_lock:
+                        self._current_ws = ws
+                    try:
+                        log.info("slides", f"slides_ws_connected to {ws_url}")
+                        self._send_slides_catalog(ws)
+                        while not self._stop.is_set():
+                            try:
+                                raw = ws.recv(timeout=1.0)
+                            except TimeoutError:
+                                continue
+                            except ConnectionClosed:
+                                break
+                            try:
+                                payload = json.loads(raw)
+                            except Exception:
+                                continue
+                            self._handle_request(ws, payload)
+                    finally:
+                        with self._ws_lock:
+                            self._current_ws = None
             except Exception as exc:
                 if not self._stop.is_set():
                     log.error("slides", f"slides_ws_connect_failed: {exc}")

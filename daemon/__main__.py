@@ -498,6 +498,7 @@ def run() -> None:
     materials_mirror.start()
     slides_on_demand_ws = SlidesOnDemandWsRunner(config)
     slides_on_demand_ws.start()
+    slides_runner.set_ws_sender(slides_on_demand_ws.send_message)
 
     # Session state: the transcript text used to generate the current preview
     last_text: str | None = None
