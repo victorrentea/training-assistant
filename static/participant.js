@@ -1717,6 +1717,106 @@ function closeEmojiPopup(ev) {
     renderEmojiBar();
   }
 
+  function _buildSlideItem(slide, targetId) {
+    const item = document.createElement('div');
+    item.className = 'slides-list-item' + (slide.available_on_server === false ? ' unavailable' : '') + (_isSlideVisited(slide._id) ? ' visited' : '');
+    item.setAttribute('data-slide-id', slide._id);
+    const openBtn = document.createElement('button');
+    openBtn.type = 'button';
+    openBtn.className = 'slides-list-open';
+    openBtn.title = slide.name;
+    const title = document.createElement('span');
+    title.className = 'slides-list-title';
+    title.textContent = _buildSlideOptionLabel(slide);
+    openBtn.appendChild(title);
+    if (_isSlideNew(slide)) {
+      const newBadge = document.createElement('sup');
+      newBadge.className = 'slides-list-new';
+      newBadge.textContent = 'new';
+      openBtn.appendChild(newBadge);
+    }
+    const unavailable = slide.available_on_server === false;
+    if (unavailable) {
+      openBtn.disabled = true;
+    } else {
+      openBtn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        if (_isSlidesFollowActive() && slidesSelectedId !== slide._id) {
+          _setSlidesFollowTrainerEnabled(false, { persist: true, applyHost: false });
+          _blinkSlidesFollowTrainerButton();
+        }
+        const overlay = document.getElementById('slides-overlay');
+        if (overlay) overlay.classList.add('open');
+        _setSlidesOverlayOpen(true);
+        _markSlideVisited(slide._id);
+        _markSelectedSlideInList();
+        await _loadSlideIntoViewer(slide, { forceReload: false, withUiBlocker: true });
+      });
+    }
+    item.addEventListener('click', (e) => {
+      if (!e.target.closest('.slides-list-open') && !e.target.closest('.slides-list-download')) {
+        openBtn.click();
+      }
+    });
+    if (slide._id === targetId) item.classList.add('active');
+    item.appendChild(openBtn);
+    // Timestamp — shown to the left of the status dot, outside openBtn so both align across rows
+    const _cacheEntryTs = (_slidesCacheStatus || {})[slide.slug];
+    const updated = _formatSlideUpdatedCompact(
+      slide.updated_at || slide.last_modified || slide.lastModified || slide.updatedAt
+      || (_cacheEntryTs && (_cacheEntryTs.updated_at || _cacheEntryTs.downloaded_at))
+    );
+    if (updated) {
+      const badge = document.createElement('span');
+      badge.className = 'slides-list-updated';
+      badge.textContent = updated;
+      item.appendChild(badge);
+    }
+    // Status indicator — spinner while loading, dot once done
+    const _cacheEntry = (_slidesCacheStatus || {})[slide.slug];
+    if (_cacheEntry && _cacheEntry.status) {
+      const _dotCfg = {
+        'cached':          { color: '#4caf50', tip: 'Available on server' },
+        'downloading':     { spinner: true,    tip: 'Downloading PDF...' },
+        'polling_drive':   { spinner: true,    tip: 'Waiting for Google Drive...' },
+        'stale':           { color: '#ff9800', tip: 'Update available, syncing...' },
+        'not_cached':      { color: '#f44336', tip: 'Not yet on server' },
+        'poll_timeout':    { color: '#ff9800', tip: 'Sync timed out' },
+        'download_failed': { color: '#f44336', tip: 'Download failed' },
+      };
+      const _cfg = _dotCfg[_cacheEntry.status] || _dotCfg['not_cached'];
+      if (_cfg.spinner) {
+        const spinner = document.createElement('div');
+        spinner.className = 'slides-cache-spinner has-tooltip';
+        spinner.setAttribute('data-tooltip', _cfg.tip);
+        item.appendChild(spinner);
+      } else {
+        const dot = document.createElement('span');
+        dot.className = 'slides-cache-dot has-tooltip';
+        dot.style.cssText = 'display:inline-block;width:8px;height:8px;border-radius:50%;background:' + _cfg.color + ';flex-shrink:0;';
+        dot.setAttribute('data-tooltip', _cfg.tip);
+        item.appendChild(dot);
+      }
+    }
+    if (!unavailable) {
+      const dl = document.createElement('a');
+      dl.className = 'slides-list-download';
+      dl.href = slide.url;
+      dl.setAttribute('download', '');
+      dl.innerHTML = (
+        '<svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">' +
+        '<path d="M10 3.25a.75.75 0 0 1 .75.75v6.19l2.22-2.22a.75.75 0 1 1 1.06 1.06l-3.5 3.5a.75.75 0 0 1-1.06 0l-3.5-3.5a.75.75 0 1 1 1.06-1.06l2.22 2.22V4a.75.75 0 0 1 .75-.75Z"></path>' +
+        '<path d="M4.5 13.75a.75.75 0 0 1 .75.75v1h9.5v-1a.75.75 0 0 1 1.5 0V16A1.5 1.5 0 0 1 14.75 17.5h-9.5A1.5 1.5 0 0 1 3.75 16v-1.5a.75.75 0 0 1 .75-.75Z"></path>' +
+        '</svg>'
+      );
+      dl.title = `Download ${slide.name}`;
+      dl.setAttribute('aria-label', `Download ${slide.name}`);
+      dl.addEventListener('click', (evt) => evt.stopPropagation());
+      item.appendChild(dl);
+    }
+    return item;
+  }
+
   function _renderSlidesListFlat(targetId) {
     const list = document.getElementById('slides-list');
     if (!list) return;
@@ -1729,103 +1829,7 @@ function closeEmojiPopup(ev) {
     }
 
     for (const slide of slidesCatalog) {
-      const item = document.createElement('div');
-      item.className = 'slides-list-item' + (slide.available_on_server === false ? ' unavailable' : '') + (_isSlideVisited(slide._id) ? ' visited' : '');
-      item.setAttribute('data-slide-id', slide._id);
-      const openBtn = document.createElement('button');
-      openBtn.type = 'button';
-      openBtn.className = 'slides-list-open';
-      openBtn.title = slide.name;
-      const title = document.createElement('span');
-      title.className = 'slides-list-title';
-      title.textContent = _buildSlideOptionLabel(slide);
-      openBtn.appendChild(title);
-      if (_isSlideNew(slide)) {
-        const newBadge = document.createElement('sup');
-        newBadge.className = 'slides-list-new';
-        newBadge.textContent = 'new';
-        openBtn.appendChild(newBadge);
-      }
-      const unavailable = slide.available_on_server === false;
-      if (unavailable) {
-        openBtn.disabled = true;
-      } else {
-        openBtn.addEventListener('click', async (e) => {
-          e.stopPropagation();
-          if (_isSlidesFollowActive() && slidesSelectedId !== slide._id) {
-            _setSlidesFollowTrainerEnabled(false, { persist: true, applyHost: false });
-            _blinkSlidesFollowTrainerButton();
-          }
-          const overlay = document.getElementById('slides-overlay');
-          if (overlay) overlay.classList.add('open');
-          _setSlidesOverlayOpen(true);
-          _markSlideVisited(slide._id);
-          _markSelectedSlideInList();
-          await _loadSlideIntoViewer(slide, { forceReload: false, withUiBlocker: true });
-        });
-      }
-      item.addEventListener('click', (e) => {
-        if (!e.target.closest('.slides-list-open') && !e.target.closest('.slides-list-download')) {
-          openBtn.click();
-        }
-      });
-      if (slide._id === targetId) item.classList.add('active');
-      item.appendChild(openBtn);
-      // Timestamp — shown to the left of the status dot, outside openBtn so both align across rows
-      const _cacheEntryTs = (_slidesCacheStatus || {})[slide.slug];
-      const updated = _formatSlideUpdatedCompact(
-        slide.updated_at || slide.last_modified || slide.lastModified || slide.updatedAt
-        || (_cacheEntryTs && (_cacheEntryTs.updated_at || _cacheEntryTs.downloaded_at))
-      );
-      if (updated) {
-        const badge = document.createElement('span');
-        badge.className = 'slides-list-updated';
-        badge.textContent = updated;
-        item.appendChild(badge);
-      }
-      // Status indicator — spinner while loading, dot once done
-      const _cacheEntry = (_slidesCacheStatus || {})[slide.slug];
-      if (_cacheEntry && _cacheEntry.status) {
-        const _dotCfg = {
-          'cached':          { color: '#4caf50', tip: 'Available on server' },
-          'downloading':     { spinner: true,    tip: 'Downloading PDF...' },
-          'polling_drive':   { spinner: true,    tip: 'Waiting for Google Drive...' },
-          'stale':           { color: '#ff9800', tip: 'Update available, syncing...' },
-          'not_cached':      { color: '#f44336', tip: 'Not yet on server' },
-          'poll_timeout':    { color: '#ff9800', tip: 'Sync timed out' },
-          'download_failed': { color: '#f44336', tip: 'Download failed' },
-        };
-        const _cfg = _dotCfg[_cacheEntry.status] || _dotCfg['not_cached'];
-        if (_cfg.spinner) {
-          const spinner = document.createElement('div');
-          spinner.className = 'slides-cache-spinner has-tooltip';
-          spinner.setAttribute('data-tooltip', _cfg.tip);
-          item.appendChild(spinner);
-        } else {
-          const dot = document.createElement('span');
-          dot.className = 'slides-cache-dot has-tooltip';
-          dot.style.cssText = 'display:inline-block;width:8px;height:8px;border-radius:50%;background:' + _cfg.color + ';flex-shrink:0;';
-          dot.setAttribute('data-tooltip', _cfg.tip);
-          item.appendChild(dot);
-        }
-      }
-      if (!unavailable) {
-        const dl = document.createElement('a');
-        dl.className = 'slides-list-download';
-        dl.href = slide.url;
-        dl.setAttribute('download', '');
-        dl.innerHTML = (
-          '<svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">' +
-          '<path d="M10 3.25a.75.75 0 0 1 .75.75v6.19l2.22-2.22a.75.75 0 1 1 1.06 1.06l-3.5 3.5a.75.75 0 0 1-1.06 0l-3.5-3.5a.75.75 0 1 1 1.06-1.06l2.22 2.22V4a.75.75 0 0 1 .75-.75Z"></path>' +
-          '<path d="M4.5 13.75a.75.75 0 0 1 .75.75v1h9.5v-1a.75.75 0 0 1 1.5 0V16A1.5 1.5 0 0 1 14.75 17.5h-9.5A1.5 1.5 0 0 1 3.75 16v-1.5a.75.75 0 0 1 .75-.75Z"></path>' +
-          '</svg>'
-        );
-        dl.title = `Download ${slide.name}`;
-        dl.setAttribute('aria-label', `Download ${slide.name}`);
-        dl.addEventListener('click', (evt) => evt.stopPropagation());
-        item.appendChild(dl);
-      }
-      list.appendChild(item);
+      list.appendChild(_buildSlideItem(slide, targetId));
     }
     _markSelectedSlideInList();
   }
@@ -1855,104 +1859,6 @@ function closeEmojiPopup(ev) {
     list.classList.remove('uniform-10');
     list.style.removeProperty('--slides-uniform-count');
 
-    function _buildSlideItem(slide) {
-      const item = document.createElement('div');
-      item.className = 'slides-list-item' + (slide.available_on_server === false ? ' unavailable' : '') + (_isSlideVisited(slide._id) ? ' visited' : '');
-      item.setAttribute('data-slide-id', slide._id);
-      const openBtn = document.createElement('button');
-      openBtn.type = 'button';
-      openBtn.className = 'slides-list-open';
-      openBtn.title = slide.name;
-      const title = document.createElement('span');
-      title.className = 'slides-list-title';
-      title.textContent = _buildSlideOptionLabel(slide);
-      openBtn.appendChild(title);
-      if (_isSlideNew(slide)) {
-        const newBadge = document.createElement('sup');
-        newBadge.className = 'slides-list-new';
-        newBadge.textContent = 'new';
-        openBtn.appendChild(newBadge);
-      }
-      const unavailable = slide.available_on_server === false;
-      if (unavailable) {
-        openBtn.disabled = true;
-      } else {
-        openBtn.addEventListener('click', async (e) => {
-          e.stopPropagation();
-          if (_isSlidesFollowActive() && slidesSelectedId !== slide._id) {
-            _setSlidesFollowTrainerEnabled(false, { persist: true, applyHost: false });
-            _blinkSlidesFollowTrainerButton();
-          }
-          const overlay = document.getElementById('slides-overlay');
-          if (overlay) overlay.classList.add('open');
-          _setSlidesOverlayOpen(true);
-          _markSlideVisited(slide._id);
-          _markSelectedSlideInList();
-          await _loadSlideIntoViewer(slide, { forceReload: false, withUiBlocker: true });
-        });
-      }
-      item.addEventListener('click', (e) => {
-        if (!e.target.closest('.slides-list-open') && !e.target.closest('.slides-list-download')) {
-          openBtn.click();
-        }
-      });
-      if (slide._id === targetId) item.classList.add('active');
-      item.appendChild(openBtn);
-      const _cacheEntryTs2 = (_slidesCacheStatus || {})[slide.slug];
-      const updated = _formatSlideUpdatedCompact(
-        slide.updated_at || slide.last_modified || slide.lastModified || slide.updatedAt
-        || (_cacheEntryTs2 && (_cacheEntryTs2.updated_at || _cacheEntryTs2.downloaded_at))
-      );
-      if (updated) {
-        const badge = document.createElement('span');
-        badge.className = 'slides-list-updated';
-        badge.textContent = updated;
-        item.appendChild(badge);
-      }
-      const _cacheEntry = (_slidesCacheStatus || {})[slide.slug];
-      if (_cacheEntry && _cacheEntry.status) {
-        const _dotCfg = {
-          'cached':          { color: '#4caf50', tip: 'Available on server' },
-          'downloading':     { spinner: true,    tip: 'Downloading PDF...' },
-          'polling_drive':   { spinner: true,    tip: 'Waiting for Google Drive...' },
-          'stale':           { color: '#ff9800', tip: 'Update available, syncing...' },
-          'not_cached':      { color: '#f44336', tip: 'Not yet on server' },
-          'poll_timeout':    { color: '#ff9800', tip: 'Sync timed out' },
-          'download_failed': { color: '#f44336', tip: 'Download failed' },
-        };
-        const _cfg = _dotCfg[_cacheEntry.status] || _dotCfg['not_cached'];
-        if (_cfg.spinner) {
-          const spinner = document.createElement('div');
-          spinner.className = 'slides-cache-spinner has-tooltip';
-          spinner.setAttribute('data-tooltip', _cfg.tip);
-          item.appendChild(spinner);
-        } else {
-          const dot = document.createElement('span');
-          dot.className = 'slides-cache-dot has-tooltip';
-          dot.style.cssText = 'display:inline-block;width:8px;height:8px;border-radius:50%;background:' + _cfg.color + ';flex-shrink:0;';
-          dot.setAttribute('data-tooltip', _cfg.tip);
-          item.appendChild(dot);
-        }
-      }
-      if (!unavailable) {
-        const dl = document.createElement('a');
-        dl.className = 'slides-list-download';
-        dl.href = slide.url;
-        dl.setAttribute('download', '');
-        dl.innerHTML = (
-          '<svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">' +
-          '<path d="M10 3.25a.75.75 0 0 1 .75.75v6.19l2.22-2.22a.75.75 0 1 1 1.06 1.06l-3.5 3.5a.75.75 0 0 1-1.06 0l-3.5-3.5a.75.75 0 1 1 1.06-1.06l2.22 2.22V4a.75.75 0 0 1 .75-.75Z"></path>' +
-          '<path d="M4.5 13.75a.75.75 0 0 1 .75.75v1h9.5v-1a.75.75 0 0 1 1.5 0V16A1.5 1.5 0 0 1 14.75 17.5h-9.5A1.5 1.5 0 0 1 3.75 16v-1.5a.75.75 0 0 1 .75-.75Z"></path>' +
-          '</svg>'
-        );
-        dl.title = `Download ${slide.name}`;
-        dl.setAttribute('aria-label', `Download ${slide.name}`);
-        dl.addEventListener('click', (evt) => evt.stopPropagation());
-        item.appendChild(dl);
-      }
-      return item;
-    }
-
     let currentGroup = null;
     let currentGroupEl = null;
     for (const slide of slidesCatalog) {
@@ -1969,9 +1875,9 @@ function closeEmojiPopup(ev) {
         list.appendChild(currentGroupEl);
       }
       if (slide.group) {
-        currentGroupEl.appendChild(_buildSlideItem(slide));
+        currentGroupEl.appendChild(_buildSlideItem(slide, targetId));
       } else {
-        list.appendChild(_buildSlideItem(slide));
+        list.appendChild(_buildSlideItem(slide, targetId));
         currentGroup = null;
         currentGroupEl = null;
       }
