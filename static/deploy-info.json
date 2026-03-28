@@ -1,7 +1,7 @@
 {
-  "sha": "6c01fc1f2721053a9d5e07a5e9a647c2d0d8a35a",
-  "timestamp": "2026-03-29 00:11",
+  "sha": "02982ce899e40791fb43d6bb81a1385cf22f1c78",
+  "timestamp": "2026-03-29 00:15",
   "changelog": [
-    "fix(host): center joining URL vertically and unify footer URL style"
+    "fix(host): remove trailing slash and yellow-highlight session code in URL"
   ]
 }
