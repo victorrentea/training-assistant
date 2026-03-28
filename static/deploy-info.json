@@ -1,7 +1,7 @@
 {
-  "sha": "af25805657c7a34fb26026722b8ecfe51853b855",
+  "sha": "124015f75c64e1319e12f3fdefc111be5698e902",
   "timestamp": "2026-03-28 09:55",
   "changelog": [
-    "fix(paste): redesign modal as bubble popping from paste button"
+    "fix(paste): rename Send button to \"Send to host\""
   ]
 }
