@@ -1,7 +1,7 @@
 {
-  "sha": "46e85f1daf2f67fc8f212d895e8471e422fb985c",
-  "timestamp": "2026-03-28 13:50",
+  "sha": "474b6a99f7c9c2ff04e94c54aec89a73c945a88f",
+  "timestamp": "2026-03-28 13:52",
   "changelog": [
-    "fix(emoji): move PDF ctrl buttons into emoji-bar flex row for proper responsive overflow"
+    "fix(slides): move timestamp and status dot to item level, right-aligned before download"
   ]
 }
