@@ -1,7 +1,7 @@
 {
-  "sha": "6baade1c24984cfd49140cefdcab672c3f301a52",
-  "timestamp": "2026-03-28 17:18",
+  "sha": "357c88ce5de4377c46f662b21f93a46f31e1d784",
+  "timestamp": "2026-03-28 17:20",
   "changelog": [
-    "fix(slides): increase catalog popover max-height from 44vh to 80vh"
+    "fix(slides): hide zoom buttons when closing PDF view via Escape"
   ]
 }
