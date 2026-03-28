@@ -541,7 +541,10 @@ async def daemon_websocket_endpoint(websocket: WebSocket):
             msg_type = data.get("type")
             handler = _DAEMON_MSG_HANDLERS.get(msg_type)
             if handler is not None:
-                await handler(data)
+                try:
+                    await handler(data)
+                except Exception:
+                    logger.exception("Error handling daemon message type: %s", msg_type)
             elif msg_type not in _DAEMON_MSG_HANDLERS:
                 logger.warning("Unknown daemon message type: %s", msg_type)
     except WebSocketDisconnect:
