@@ -363,11 +363,14 @@ async def handle_slides_catalog(entries: list[dict]) -> None:
         slug = str(entry.get("slug") or "").strip()
         if not slug:
             continue
-        new_catalog[slug] = {
+        cat_entry: dict = {
             "slug": slug,
             "title": str(entry.get("title") or slug),
             "drive_export_url": str(entry.get("drive_export_url") or ""),
         }
+        if entry.get("updated_at"):
+            cat_entry["updated_at"] = entry["updated_at"]
+        new_catalog[slug] = cat_entry
 
     state.slides_catalog = new_catalog
 
