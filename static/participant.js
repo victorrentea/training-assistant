@@ -1297,20 +1297,14 @@
   }
 
   function _setSlidesLoading({ visible = false, loaded = 0, total = 0, label = '' } = {}) {
-    const box = document.getElementById('slides-loading');
-    const fill = document.getElementById('slides-progress-fill');
     const blockerFill = document.getElementById('slides-ui-blocker-progress-fill');
-    if (!box || !fill) return;
+    if (!blockerFill) return;
     if (!visible) {
-      box.style.display = 'none';
-      fill.style.width = '0%';
-      if (blockerFill) blockerFill.style.width = '0%';
+      blockerFill.style.width = '0%';
       return;
     }
-    box.style.display = '';
     const pct = total > 0 ? Math.max(2, Math.min(100, Math.round((loaded / total) * 100))) : 10;
-    fill.style.width = `${pct}%`;
-    if (blockerFill) blockerFill.style.width = `${pct}%`;
+    blockerFill.style.width = `${pct}%`;
   }
 
   function _setSlidesUiBlocker(visible, label = '') {
