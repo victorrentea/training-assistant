@@ -159,6 +159,7 @@ def _build_catalog_slides_index() -> list[dict]:
             "slug": slug,
             "url": f"/api/slides/file/{slug}",
             "updated_at": updated_at,
+            "group": str(entry.get("group") or "").strip() or None,
             "source": "catalog",
         })
     return slides
@@ -268,6 +269,7 @@ def _merge_slide_sources(
                 "sync_status": entry.get("sync_status"),
                 "sync_message": entry.get("sync_message"),
                 "source": entry.get("source"),
+                "group": entry.get("group"),
             })
     return merged
 

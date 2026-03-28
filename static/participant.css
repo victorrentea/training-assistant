@@ -602,6 +602,45 @@ h1 { display: none; }
   min-height: 0;
 }
 
+/* Group blocks — colored left-stripe style */
+.slides-group-block {
+  border-left: 3px solid var(--slides-group-color, #888);
+  border-radius: 0 6px 6px 0;
+  margin-bottom: 8px;
+  overflow: hidden;
+}
+
+.slides-group-name {
+  font-size: .62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--slides-group-color, #888);
+  padding: 3px 8px 3px 7px;
+  background: rgba(255,255,255,.04);
+  white-space: nowrap;
+}
+
+.slides-group-block .slides-list-item {
+  border: none;
+  border-radius: 0;
+  border-bottom: 1px solid rgba(255,255,255,.04);
+  margin: 0;
+}
+
+.slides-group-block .slides-list-item:last-child {
+  border-bottom: none;
+}
+
+.slides-group-block .slides-list-item.visited:not(.active) {
+  border-color: transparent;
+  background: rgba(72, 207, 173, 0.06);
+}
+
+.slides-group-block .slides-list-item.active {
+  border-color: transparent;
+}
+
 .slides-list-item {
   display: flex;
   align-items: center;
