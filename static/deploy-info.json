@@ -1,7 +1,7 @@
 {
-  "sha": "73c96b4a42a9d7098fa38a812dd190c620d52218",
-  "timestamp": "2026-03-28 16:19",
+  "sha": "9f806862f23b5be2760149972fd4a112efaee14f",
+  "timestamp": "2026-03-28 16:25",
   "changelog": [
-    "fix(emoji-popup): hover to open, transparent bg, same-size buttons, no scrollbar"
+    "fix(emoji-popup): remove tooltip from \u2022\u2022\u2022 button \u2014 popup already shows on hover"
   ]
 }
