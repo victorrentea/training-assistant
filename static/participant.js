@@ -3702,8 +3702,9 @@
       ['workshop_participant_uuid', 'workshop_participant_name', 'workshop_custom_name',
        'workshop_vote', 'workshop_participant_location', 'workshop_tour_shown', 'workshop_onboarding_hidden', 'workshop_wc_session',
        'workshop_slide_selected_id', 'workshop_slides_overlay_open', 'workshop_slide_visited_ids',
-       'workshop_slides_view_mode', 'workshop_slides_follow_trainer']
+       'workshop_slides_view_mode']
         .forEach(k => localStorage.removeItem(k));
+      localStorage.setItem('workshop_slides_follow_trainer', '0');
       Object.keys(localStorage)
         .filter(k => k.startsWith('workshop_slide_page:') || k.startsWith('workshop_slide_view:'))
         .forEach(k => localStorage.removeItem(k));
