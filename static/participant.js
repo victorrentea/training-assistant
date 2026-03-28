@@ -1854,6 +1854,9 @@ function closeEmojiPopup(ev) {
     list.classList.remove('uniform-10');
     list.style.removeProperty('--slides-uniform-count');
 
+    const groupCounts = {};
+    for (const slide of slidesCatalog) if (slide.group) groupCounts[slide.group] = (groupCounts[slide.group] || 0) + 1;
+
     let currentGroup = null;
     let currentGroupEl = null;
     for (const slide of slidesCatalog) {
@@ -1863,10 +1866,12 @@ function closeEmojiPopup(ev) {
         currentGroupEl.className = 'slides-group-block';
         const color = SLIDES_GROUP_COLORS[slide.group] || '#888';
         currentGroupEl.style.setProperty('--slides-group-color', color);
-        const groupName = document.createElement('div');
-        groupName.className = 'slides-group-name';
-        groupName.textContent = slide.group;
-        currentGroupEl.appendChild(groupName);
+        if (groupCounts[slide.group] > 1) {
+          const groupName = document.createElement('div');
+          groupName.className = 'slides-group-name';
+          groupName.textContent = slide.group;
+          currentGroupEl.appendChild(groupName);
+        }
         list.appendChild(currentGroupEl);
       }
       if (slide.group) {
