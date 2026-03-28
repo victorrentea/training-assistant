@@ -2710,8 +2710,11 @@ function closeEmojiPopup(ev) {
   }
 
   function updateHostDot(connected) {
-    const dot = document.querySelector('#host-dot .dot');
+    const el = document.getElementById('host-dot');
+    if (!el) return;
+    const dot = el.querySelector('.dot');
     if (dot) dot.className = connected ? 'dot dot-green' : 'dot dot-red';
+    el.dataset.tooltip = connected ? 'Host is live' : 'Host is offline';
   }
 
   function updateDaemonDot(connected) {
