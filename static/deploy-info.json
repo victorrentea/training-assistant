@@ -1,7 +1,7 @@
 {
-  "sha": "6b329e9e04b91fdfcaa5ac0cdf5deebf58106318",
-  "timestamp": "2026-03-28 12:36",
+  "sha": "57322a86b0935b2b9d1fb354e355efebaefce84f",
+  "timestamp": "2026-03-28 12:38",
   "changelog": [
-    "feat(participant): show slide cache status dot with tooltip in slides list"
+    "fix(host): show slide titles first, sort alphabetically in cache popover"
   ]
 }
