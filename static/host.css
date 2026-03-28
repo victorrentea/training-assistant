@@ -263,7 +263,6 @@ body {
 
 .slides-catalog-line {
   margin: 0 0 .28rem;
-  white-space: nowrap;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -274,11 +273,12 @@ body {
 
 .slides-catalog-name {
   color: var(--text);
-  display: inline-block;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
   flex: 1 1 auto;
   min-width: 0;
   overflow: hidden;
-  text-overflow: ellipsis;
   user-select: none;
   outline: none;
 }
