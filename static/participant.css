@@ -1975,8 +1975,7 @@ h1 { display: none; }
 }
 .paste-textarea {
   width: 100%;
-  min-height: 120px;
-  max-height: 40vh;
+  height: 50vh;
   background: var(--bg);
   color: var(--text);
   border: 1px solid var(--border);
