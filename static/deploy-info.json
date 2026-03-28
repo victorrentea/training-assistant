@@ -1,7 +1,7 @@
 {
-  "sha": "357c88ce5de4377c46f662b21f93a46f31e1d784",
-  "timestamp": "2026-03-28 17:20",
+  "sha": "ed736de6b1333eb1a0a169f1646891792db850c0",
+  "timestamp": "2026-03-28 17:23",
   "changelog": [
-    "fix(slides): hide zoom buttons when closing PDF view via Escape"
+    "feat(slides): collapse topic list behind hover-expand arrow"
   ]
 }
