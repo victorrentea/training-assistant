@@ -1097,9 +1097,9 @@ h1 { display: none; }
 }
 
 #version-tag {
-  top: auto;
-  right: .45rem;
-  bottom: .35rem;
+  top: 3.2rem;
+  bottom: auto;
+  right: .35rem;
   z-index: 7002;
   background: rgba(0, 0, 0, 0.55);
   border: 1px solid rgba(255, 255, 255, 0.22);
