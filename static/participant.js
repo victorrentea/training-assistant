@@ -99,6 +99,7 @@
   const SLIDES_TEST_AUTO_SCROLL_DELAY_MS = 3000;
   const SLIDES_DISABLE_VIEW_PERSISTENCE = false;
   let slidesCatalog = [];
+  let _slidesCacheStatus = {};
   let _slidesViewerBusy = false; // true while _loadSlideIntoViewer is executing
   let slidesSelectedSlug = null;
   let slidesSelectedId = null;
@@ -1619,6 +1620,24 @@
       title.className = 'slides-list-title';
       title.textContent = _buildSlideOptionLabel(slide);
       openBtn.appendChild(title);
+      const _cacheEntry = (_slidesCacheStatus || {})[slide.slug];
+      if (_cacheEntry && _cacheEntry.status) {
+        const _dotCfg = {
+          'cached':          { color: '#4caf50', tip: 'Available on server' },
+          'downloading':     { color: '#2196f3', tip: 'Downloading from cloud...' },
+          'polling_drive':   { color: '#2196f3', tip: 'Checking for updates...' },
+          'stale':           { color: '#ff9800', tip: 'Update available, syncing...' },
+          'not_cached':      { color: '#f44336', tip: 'Not yet on server' },
+          'poll_timeout':    { color: '#ff9800', tip: 'Sync timed out' },
+          'download_failed': { color: '#f44336', tip: 'Download failed' },
+        };
+        const _cfg = _dotCfg[_cacheEntry.status] || _dotCfg['not_cached'];
+        const dot = document.createElement('span');
+        dot.className = 'slides-cache-dot';
+        dot.style.cssText = 'display:inline-block;width:8px;height:8px;border-radius:50%;background:' + _cfg.color + ';margin-left:6px;flex-shrink:0;';
+        dot.title = _cfg.tip;
+        openBtn.appendChild(dot);
+      }
       if (_isSlideNew(slide)) {
         const newBadge = document.createElement('sup');
         newBadge.className = 'slides-list-new';
@@ -2467,6 +2486,10 @@
         updateSummary(msg.summary_points, msg.summary_updated_at);
         updateNotes(msg.notes_content);
         _onIncomingHostSlidesCurrent(msg.slides_current || null);
+        if (msg.slides_cache_status !== undefined) {
+          _slidesCacheStatus = msg.slides_cache_status || {};
+          if (document.getElementById('slides-list')) _renderSlidesList(slidesSelectedId || null);
+        }
         // Restore leaderboard overlay if it was active
         if (msg.leaderboard_active && msg.leaderboard_data) {
           showParticipantLeaderboard(msg.leaderboard_data);
