@@ -37,6 +37,7 @@ from features.session import router as session
 from features.snapshot import router as snapshot
 from features.slides import router as slides
 from features.transcription_language import router as transcription_language_router
+from features.upload import router as upload
 
 import core.state_builder  # noqa: registers core state builder
 import features.poll.state_builder  # noqa
@@ -175,6 +176,7 @@ app.include_router(leaderboard.router)
 app.include_router(session.router)
 app.include_router(snapshot.router, dependencies=[Depends(require_host_auth)])
 app.include_router(transcription_language_router, dependencies=[Depends(require_host_auth)])
+app.include_router(upload.router)
 
 class ModeRequest(BaseModel):
     mode: str
