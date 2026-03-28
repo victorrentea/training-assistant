@@ -1563,3 +1563,15 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
     border: 1px solid rgba(0, 0, 0, 0.1);
   }
 }
+
+.paste-icon {
+  cursor: pointer;
+  font-size: .85rem;
+  margin-left: .2rem;
+  opacity: 0.8;
+  transition: opacity .15s, transform .15s;
+}
+.paste-icon:hover {
+  opacity: 1;
+  transform: scale(1.15);
+}

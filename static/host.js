@@ -1238,7 +1238,12 @@
           : '';
       const ip = participant.ip || '';
       const online = participant.online !== false;
-      return `<li class="${online ? 'online' : 'offline'}"><span class="pax-name" title="${ip ? 'IP: ' + ip : ''}">${debateIcon}${avatarHtml}<span class="pax-name-text">${escHtml(name)}</span></span>${scoreTag}${locLabel ? `<span class="pax-location" onclick="openMap()" title="View all on map">${escHtml(locLabel)}</span>` : ''}</li>`;
+      const pasteTexts = participant.paste_texts || [];
+      const pasteIcons = pasteTexts.map((entry, i) => {
+        const preview = (entry.text.length > 100 ? entry.text.substring(0, 100) + '…' : entry.text).replace(/\n/g, ' ');
+        return `<span class="paste-icon" title="${escHtml(preview)}" data-uuid="${escHtml(pid)}" data-paste-id="${entry.id}" onclick="copyAndDismissPaste(this)">📋</span>`;
+      }).join('');
+      return `<li class="${online ? 'online' : 'offline'}"><span class="pax-name" title="${ip ? 'IP: ' + ip : ''}">${debateIcon}${avatarHtml}<span class="pax-name-text">${escHtml(name)}</span></span>${pasteIcons}${scoreTag}${locLabel ? `<span class="pax-location" onclick="openMap()" title="View all on map">${escHtml(locLabel)}</span>` : ''}</li>`;
     }).join('');
 
     // Lazily resolve any raw "lat, lon" strings to city names
@@ -3156,4 +3161,21 @@ function togglePauseSession() {
   const endpoint = paused ? '/api/session/resume' : '/api/session/pause';
   fetch(endpoint, {method: 'POST'})
     .catch(e => console.error('togglePauseSession failed:', e));
+}
+
+function copyAndDismissPaste(el) {
+  const uuid = el.dataset.uuid;
+  const pasteId = parseInt(el.dataset.pasteId, 10);
+  const participant = participantDataById[uuid];
+  const entry = (participant?.paste_texts || []).find(e => e.id === pasteId);
+  if (entry) {
+    navigator.clipboard.writeText(entry.text).then(() => {
+      el.style.transition = 'opacity .3s';
+      el.style.opacity = '0';
+      setTimeout(() => el.remove(), 300);
+    });
+  }
+  if (ws) {
+    ws.send(JSON.stringify({ type: 'paste_dismiss', uuid: uuid, paste_id: pasteId }));
+  }
 }
