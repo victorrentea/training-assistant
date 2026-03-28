@@ -1,7 +1,7 @@
 {
-  "sha": "06721cff09bd1c85c2fddabc19c5e705d68ad8f7",
-  "timestamp": "2026-03-29 00:24",
+  "sha": "9c17f0a5f3b1f991a615115fe5ee81c2a0e9b4b5",
+  "timestamp": "2026-03-29 00:26",
   "changelog": [
-    "fix(host): move session/blocker variable declarations to top of file"
+    "refactor(ws): backend pushes snapshots to daemon proactively (no more daemon requests)"
   ]
 }
