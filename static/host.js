@@ -129,10 +129,7 @@
   const link = `${location.protocol}//${location.host}/`;
   const pLink = document.getElementById('participant-link');
   pLink.href = link;
-  const linkDisplay = `https://${location.host}/`;
-  pLink.innerHTML = linkDisplay.split('').map((ch, i) =>
-    `<span class="wave-char" style="animation-delay:${(i * 0.12).toFixed(2)}s">${ch}</span>`
-  ).join('');
+  pLink.innerHTML = _buildUrlHtml();
   _setupSlidesCatalogHover();
 
   // ── WebSocket (host monitors state too) ──
@@ -3124,10 +3121,7 @@ function updateSessionCodeBar(sessionId) {
   const pLink = document.getElementById('participant-link');
   if (pLink) {
     pLink.href = sessionId ? `/${sessionId}` : '/';
-    const fullDisplay = sessionId ? `https://${location.host}/${sessionId}/` : `https://${location.host}/`;
-    pLink.innerHTML = fullDisplay.split('').map((ch, i) =>
-      `<span class="wave-char" style="animation-delay:${(i * 0.12).toFixed(2)}s">${ch}</span>`
-    ).join('');
+    pLink.innerHTML = _buildUrlHtml();
   }
 
   // Regenerate all QR codes with the session-scoped join URL
@@ -3176,7 +3170,18 @@ function copyCenterUrl(el) {
 }
 
 function _getJoinUrl() {
-  return _currentSessionId ? `${location.origin}/${_currentSessionId}` : `${location.protocol}//${location.host}/`;
+  return _currentSessionId ? `${location.origin}/${_currentSessionId}` : `${location.origin}`;
+}
+
+function _buildUrlHtml() {
+  const base = 'https://' + location.host;
+  const full = _currentSessionId ? base + '/' + _currentSessionId : base;
+  const yellowFrom = _currentSessionId ? base.length + 1 : full.length; // after the '/'
+  return full.split('').map((ch, i) => {
+    const yellow = i >= yellowFrom;
+    const style = `animation-delay:${(i * 0.12).toFixed(2)}s${yellow ? '; --wave-dim:#f0c040aa; --wave-bright:#f0c040;' : ''}`;
+    return `<span class="wave-char" style="${style}">${ch}</span>`;
+  }).join('');
 }
 
 function _regenerateAllQRCodes() {
@@ -3220,19 +3225,9 @@ function _regenerateAllQRCodes() {
 
   // Update URL labels with session path
   const confUrl = document.getElementById('conference-qr-url');
-  if (confUrl && confUrl.offsetParent !== null) {
-    const fullUrl = _currentSessionId ? 'https://' + location.host + '/' + _currentSessionId : 'https://' + location.host;
-    confUrl.innerHTML = fullUrl.split('').map((ch, i) =>
-      `<span class="wave-char" style="animation-delay:${(i * 0.12).toFixed(2)}s">${ch}</span>`
-    ).join('');
-  }
+  if (confUrl && confUrl.offsetParent !== null) confUrl.innerHTML = _buildUrlHtml();
   const centerUrl = document.getElementById('center-qr-url');
-  if (centerUrl) {
-    const fullUrl = (_currentSessionId ? 'https://' + location.host + '/' + _currentSessionId : 'https://' + location.host) + '/';
-    centerUrl.innerHTML = fullUrl.split('').map((ch, i) =>
-      `<span class="wave-char" style="animation-delay:${(i * 0.12).toFixed(2)}s">${ch}</span>`
-    ).join('');
-  }
+  if (centerUrl) centerUrl.innerHTML = _buildUrlHtml();
 }
 
 function renderSessionPanel() {
