@@ -68,15 +68,51 @@ body {
 #pax-badge { transition: background 1.5s ease; }
 #pax-badge.flash { background: #ffd16688; transition: none; }
 
+/* Host page outer layout: columns + consolidated footer */
+.host-layout {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
 /* 3-column host layout */
 .host-columns {
   display: grid;
   grid-template-columns: 25% 1fr 25%;
   gap: 1rem;
-  height: 100vh;
+  flex: 1;
+  min-height: 0;
   padding: 1rem;
+  padding-bottom: 0;
   box-sizing: border-box;
   overflow: hidden;
+}
+
+/* Consolidated full-width footer */
+.host-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: .5rem 1rem;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+  gap: .5rem;
+}
+
+.host-footer-left {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  flex-wrap: wrap;
+}
+
+.host-footer-right {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  flex-wrap: nowrap;
+  min-width: 0;
 }
 
 .host-col {
@@ -138,13 +174,7 @@ body {
   border-bottom: 1px solid var(--border);
 }
 
-.right-footer {
-  margin-top: auto;
-  padding-top: .5rem;
-  border-top: 1px solid var(--border);
-  font-size: .8rem;
-  color: var(--muted);
-}
+/* .right-footer removed — content now in .host-footer-right */
 
 #copy-link-icon:hover { opacity: .9 !important; }
 
@@ -540,16 +570,7 @@ body {
 
 /* Host Q&A: no extra overrides needed — uses activity-input-row from common.css */
 
-/* Status badges pinned to bottom of left column */
-.left-status-bar {
-  margin-top: auto;
-  padding: .5rem 0 0;
-  border-top: 1px solid var(--border);
-  display: flex;
-  gap: .5rem;
-  flex-wrap: wrap;
-  flex-shrink: 0;
-}
+/* .left-status-bar removed — badges now in .host-footer-left */
 
 .card {
   background: var(--surface);
@@ -1141,9 +1162,7 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
   grid-template-rows: 1fr 1fr auto;
   gap: 0;
 }
-.host-col-left.conference-layout .left-status-bar {
-  align-self: end;
-}
+/* .host-col-left.conference-layout .left-status-bar removed — status bar is now in consolidated footer */
 .left-tabs-wrapper {
   display: flex;
   flex-direction: column;

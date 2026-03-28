@@ -19,6 +19,7 @@
   ⚠️ Server restarted with no state — waiting for daemon to restore...
 </div>
 
+<div class="host-layout">
 <div class="host-columns">
 
   <!-- LEFT COLUMN: controls -->
@@ -194,15 +195,6 @@
       <div id="conference-qr-url" style="font-size:1.1rem; text-align:center;"></div>
     </div>
 
-    <!-- Status badges — pinned to bottom of left column -->
-    <div class="left-status-bar">
-<span id="mode-badge" class="badge mode-badge-workshop" title="Workshop mode — click to switch to Conference" onclick="toggleMode()" style="cursor:pointer; font-size:1.2rem;">🎓</span>
-      <span id="ws-badge" class="badge disconnected">🟢</span>
-      <span id="daemon-badge" class="badge disconnected" title="">🤖</span>
-      <span id="notes-badge" class="badge disconnected" title="" onclick="toggleHostNotesModal()" style="cursor:pointer">📝</span>
-      <span id="summary-badge" class="badge disconnected" title="No key points yet — click to generate now" onclick="toggleSummaryModal()" style="cursor:pointer">🧠</span>
-      <span id="overlay-badge" class="badge disconnected" title="Desktop Overlay app — click to fire a heart" onclick="triggerHostHeart()" style="cursor:pointer">❤️</span>
-    </div>
   </div>
 
   <!-- CENTER COLUMN: current activity -->
@@ -324,47 +316,58 @@
                 onclick="createSession()" disabled>CREATE</button>
       </div>
     </div>
-    <div class="right-footer">
-      <span style="display:flex; align-items:center; gap:.5rem; flex-wrap:nowrap; min-width:0;">
-        <a id="participant-link" style="color:#fff; font-size:1.25rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; flex-shrink:1;" href="/" target="_blank"></a><span id="session-id-suffix" style="display:none; font-size:1.25rem; font-family:monospace; font-weight:bold; color:#f0c040; letter-spacing:2px; white-space:nowrap;"></span>
-        <svg id="copy-link-icon" style="display:none; cursor:pointer; flex-shrink:0; width:22px; height:22px; opacity:.45; transition:opacity .15s;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" title="Copy join link" onclick="copySessionLink()">
-          <rect x="9" y="9" width="13" height="13" rx="2"/>
-          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
-        </svg>
-        <div id="qr-icon" title="Show QR code" style="cursor:pointer; opacity:.5; flex-shrink:0; width:28px; height:28px;">
-          <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" fill="currentColor" width="28" height="28">
-            <rect x="5" y="5" width="35" height="35" rx="4"/>
-            <rect x="13" y="13" width="19" height="19" rx="2" fill="var(--bg,#1a1a2e)"/>
-            <rect x="18" y="18" width="9" height="9" rx="1"/>
-            <rect x="60" y="5" width="35" height="35" rx="4"/>
-            <rect x="68" y="13" width="19" height="19" rx="2" fill="var(--bg,#1a1a2e)"/>
-            <rect x="73" y="18" width="9" height="9" rx="1"/>
-            <rect x="5" y="60" width="35" height="35" rx="4"/>
-            <rect x="13" y="68" width="19" height="19" rx="2" fill="var(--bg,#1a1a2e)"/>
-            <rect x="18" y="73" width="9" height="9" rx="1"/>
-            <rect x="60" y="60" width="9" height="9" rx="1"/>
-            <rect x="73" y="60" width="9" height="9" rx="1"/>
-            <rect x="86" y="60" width="9" height="9" rx="1"/>
-            <rect x="60" y="73" width="9" height="9" rx="1"/>
-            <rect x="86" y="73" width="9" height="9" rx="1"/>
-            <rect x="60" y="86" width="9" height="9" rx="1"/>
-            <rect x="73" y="86" width="9" height="9" rx="1"/>
-          </svg>
-        </div>
-        <button class="btn-scores-reset" onclick="resetScores()" title="Reset all scores to zero">🗑</button>
-        <button id="btn-transcription-lang" onclick="toggleTranscriptionLanguage()" title="Toggle transcription language" style="background:none;border:none;cursor:pointer;font-size:1.1rem;padding:0 2px;opacity:.8;flex-shrink:0;">🇷🇴</button>
-        <span id="token-cost" style="font-size:.75rem; color:var(--muted); flex-shrink:0;">$0.00</span>
-        <div id="slides-catalog-hover" class="slides-catalog-hover">
-          <span id="slides-catalog-icon" title="Participant slides availability">📜</span>
-          <div id="slides-catalog-popover" class="slides-catalog-popover" hidden>
-            <div id="slides-catalog-content" class="slides-catalog-content">Loading...</div>
-          </div>
-        </div>
-      </span>
-    </div>
   </div>
 
 </div>
+
+<!-- Consolidated full-width footer -->
+<div class="host-footer">
+  <div class="host-footer-left">
+    <span id="mode-badge" class="badge mode-badge-workshop" title="Workshop mode — click to switch to Conference" onclick="toggleMode()" style="cursor:pointer; font-size:1.2rem;">🎓</span>
+    <span id="ws-badge" class="badge disconnected">🟢</span>
+    <span id="daemon-badge" class="badge disconnected" title="">🤖</span>
+    <span id="notes-badge" class="badge disconnected" title="" onclick="toggleHostNotesModal()" style="cursor:pointer">📝</span>
+    <span id="summary-badge" class="badge disconnected" title="No key points yet — click to generate now" onclick="toggleSummaryModal()" style="cursor:pointer">🧠</span>
+    <span id="overlay-badge" class="badge disconnected" title="Desktop Overlay app — click to fire a heart" onclick="triggerHostHeart()" style="cursor:pointer">❤️</span>
+  </div>
+  <div class="host-footer-right">
+    <a id="participant-link" style="color:#fff; font-size:1.25rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; flex-shrink:1;" href="/" target="_blank"></a><span id="session-id-suffix" style="display:none; font-size:1.25rem; font-family:monospace; font-weight:bold; color:#f0c040; letter-spacing:2px; white-space:nowrap;"></span>
+    <svg id="copy-link-icon" style="display:none; cursor:pointer; flex-shrink:0; width:22px; height:22px; opacity:.45; transition:opacity .15s;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" title="Copy join link" onclick="copySessionLink()">
+      <rect x="9" y="9" width="13" height="13" rx="2"/>
+      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+    </svg>
+    <div id="qr-icon" title="Show QR code" style="cursor:pointer; opacity:.5; flex-shrink:0; width:28px; height:28px;">
+      <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" fill="currentColor" width="28" height="28">
+        <rect x="5" y="5" width="35" height="35" rx="4"/>
+        <rect x="13" y="13" width="19" height="19" rx="2" fill="var(--bg,#1a1a2e)"/>
+        <rect x="18" y="18" width="9" height="9" rx="1"/>
+        <rect x="60" y="5" width="35" height="35" rx="4"/>
+        <rect x="68" y="13" width="19" height="19" rx="2" fill="var(--bg,#1a1a2e)"/>
+        <rect x="73" y="18" width="9" height="9" rx="1"/>
+        <rect x="5" y="60" width="35" height="35" rx="4"/>
+        <rect x="13" y="68" width="19" height="19" rx="2" fill="var(--bg,#1a1a2e)"/>
+        <rect x="18" y="73" width="9" height="9" rx="1"/>
+        <rect x="60" y="60" width="9" height="9" rx="1"/>
+        <rect x="73" y="60" width="9" height="9" rx="1"/>
+        <rect x="86" y="60" width="9" height="9" rx="1"/>
+        <rect x="60" y="73" width="9" height="9" rx="1"/>
+        <rect x="86" y="73" width="9" height="9" rx="1"/>
+        <rect x="60" y="86" width="9" height="9" rx="1"/>
+        <rect x="73" y="86" width="9" height="9" rx="1"/>
+      </svg>
+    </div>
+    <button class="btn-scores-reset" onclick="resetScores()" title="Reset all scores to zero">🗑</button>
+    <button id="btn-transcription-lang" onclick="toggleTranscriptionLanguage()" title="Toggle transcription language" style="background:none;border:none;cursor:pointer;font-size:1.1rem;padding:0 2px;opacity:.8;flex-shrink:0;">🇷🇴</button>
+    <span id="token-cost" style="font-size:.75rem; color:var(--muted); flex-shrink:0;">$0.00</span>
+    <div id="slides-catalog-hover" class="slides-catalog-hover">
+      <span id="slides-catalog-icon" title="Participant slides availability">📜</span>
+      <div id="slides-catalog-popover" class="slides-catalog-popover" hidden>
+        <div id="slides-catalog-content" class="slides-catalog-content">Loading...</div>
+      </div>
+    </div>
+  </div>
+</div>
+</div><!-- /host-layout -->
 
 <!-- QR fullscreen overlay -->
 <div id="qr-overlay" class="modal-overlay" onclick="closeQR()">
