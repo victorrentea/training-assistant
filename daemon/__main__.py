@@ -649,7 +649,7 @@ def run() -> None:
                     last_intellij_probe_at = _now_mono
                     try:
                         _ij = probe_intellij_state()
-                        if _ij:
+                        if _ij and _ij.get("frontmost", True):
                             _repo_entry = next(
                                 (e for e in git_repos if e["path"] == _ij["path"] and e["branch"] == _ij["branch"]),
                                 None,

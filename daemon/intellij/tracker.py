@@ -8,19 +8,26 @@ from pathlib import Path
 from daemon import log
 
 
-def _get_intellij_window_title(timeout: float = 2.0) -> str | None:
-    """Use osascript to get the title of the front IntelliJ window."""
-    script = 'tell application "System Events" to tell process "idea" to get title of front window'
+def _get_intellij_window_title(timeout: float = 2.0) -> tuple[str | None, bool]:
+    """Use osascript to get the title of the front IntelliJ window and whether it is frontmost.
+    Returns (title, is_frontmost). Returns (None, False) if IntelliJ has no window."""
+    script = (
+        'tell application "System Events" to tell process "idea" to '
+        'return (frontmost as string) & tab & (title of front window)'
+    )
     try:
         result = subprocess.run(
             ["osascript", "-e", script],
             capture_output=True, text=True, timeout=timeout, check=False,
         )
         if result.returncode == 0 and result.stdout.strip():
-            return result.stdout.strip()
+            parts = result.stdout.strip().split("\t", 1)
+            is_frontmost = parts[0].strip() == "true"
+            title = parts[1].strip() if len(parts) > 1 else ""
+            return (title or None, is_frontmost)
     except (FileNotFoundError, subprocess.TimeoutExpired):
         pass
-    return None
+    return None, False
 
 
 def _find_recent_projects_xml() -> Path | None:
@@ -62,8 +69,8 @@ def _lookup_project_path(project_name: str, xml_path: Path) -> str | None:
 
 
 def probe_intellij_state(timeout: float = 2.0) -> dict | None:
-    """Return {project_name, path, branch} for the active IntelliJ project, or None."""
-    title = _get_intellij_window_title(timeout)
+    """Return {project, path, branch, frontmost} for the active IntelliJ project, or None."""
+    title, is_frontmost = _get_intellij_window_title(timeout)
     if not title:
         return None
 
@@ -94,4 +101,5 @@ def probe_intellij_state(timeout: float = 2.0) -> dict | None:
         "project": project_name,
         "path": project_path,
         "branch": branch or "unknown",
+        "frontmost": is_frontmost,
     }
