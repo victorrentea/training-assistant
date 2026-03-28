@@ -1,7 +1,7 @@
 {
-  "sha": "2a02c3bf74174d2cabfe7b2f18a604ea348e3b76",
-  "timestamp": "2026-03-28 16:13",
+  "sha": "ac73e9bc4c2d4ed57d0bc93a5108436be78d7188",
+  "timestamp": "2026-03-28 16:14",
   "changelog": [
-    "fix(slides): show updated timestamp for all topics in slides list"
+    "feat(emoji-bar): cap visible emojis at 5 and center them in bar"
   ]
 }
