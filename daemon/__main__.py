@@ -570,8 +570,11 @@ def run() -> None:
                             log.info("ppt", "No active PowerPoint presentation")
                         else:
                             ppt_stem = Path(ppt_state['presentation']).stem
-                            presenting_flag = " [presenting]" if ppt_state.get("presenting") else ""
-                            log.info("ppt", f"📽️ Slide: {ppt_stem} : {ppt_state['slide']}{presenting_flag}")
+                            raw_slide = _coerce_slide_number(ppt_state.get("slide"))
+                            is_presenting = bool(ppt_state.get("presenting", False))
+                            participant_page = max(1, raw_slide - 1) if is_presenting else raw_slide
+                            fullscreen_flag = " [fullscreen]" if is_presenting else " [normal]"
+                            log.info("ppt", f"📽️ Slide: {ppt_stem} : {raw_slide}{fullscreen_flag} → p.{participant_page} to participants")
                         try:
                             _sync_powerpoint_slide_to_server(config, slides_runner._slides_config, ppt_state)
                         except Exception as e:
