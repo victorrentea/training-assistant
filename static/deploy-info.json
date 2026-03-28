@@ -1,11 +1,7 @@
 {
-  "sha": "67ebd509031b3ebe27af6fc27133bcc4e01a4cd9",
-  "timestamp": "2026-03-28 11:08",
+  "sha": "f37d91fba63fd7ad23d81abc25683766f20bed71",
+  "timestamp": "2026-03-28 11:24",
   "changelog": [
-    "feat(upload): cleanup uploaded files on state reset",
-    "feat(upload): participant upload button, modal with drag-and-drop",
-    "feat(upload): host download icons with dismiss",
-    "feat(upload): backend file upload with streaming to disk",
-    "docs: add participant file upload implementation plan"
+    "fix(upload): fetch-based download with auth, 5-min auto-cleanup with fading icon"
   ]
 }
