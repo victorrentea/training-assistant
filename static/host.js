@@ -2993,14 +2993,12 @@ function _updateBlocker() {
   const blocker = document.getElementById('session-blocker');
   if (!blocker) return;
 
-  // Dismiss if session_id exists
-  if (_currentSessionId) {
+  // Only dismiss after host explicitly started/confirmed via blockerStart()
+  if (_blockerDismissed) {
     blocker.style.display = 'none';
-    _blockerDismissed = true;
     _clearBlockerAutoStart();
     return;
   }
-  if (_blockerDismissed) return; // user already passed through
 
   blocker.style.display = 'flex';
 
@@ -3089,11 +3087,16 @@ function blockerStart() {
     if (!confirm(`Create folder "${name}"?`)) return;
   }
 
-  // Call createSession
+  // Call createSession — dismiss blocker on success
   fetch('/api/session/create', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({name})
+  }).then(r => {
+    if (r.ok) {
+      _blockerDismissed = true;
+      _updateBlocker();
+    }
   }).catch(e => console.error('blockerStart failed:', e));
 
   const statusEl = document.getElementById('blocker-status');
