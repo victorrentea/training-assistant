@@ -13,6 +13,7 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
+      id-token: write
 
     steps:
       - uses: actions/checkout@v4
@@ -38,7 +39,7 @@ jobs:
         continue-on-error: true
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          prompt: |
+          direct_prompt: |
             The CI workflow "${{ github.event.workflow_run.name }}" failed on branch
             "${{ github.event.workflow_run.head_branch }}" (commit ${{ github.event.workflow_run.head_sha }}).
 
