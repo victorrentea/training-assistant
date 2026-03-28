@@ -54,15 +54,18 @@ body {
   box-sizing: border-box;
   cursor: default;
   border: 1px solid var(--border);
+  --badge-fill: var(--surface2);
 }
-.badge.connected { background: #48cfad22; color: var(--accent2); border: 1px solid var(--accent2); }
-.badge.disconnected { background: #ff6b6b22; color: var(--danger); border: 1px solid var(--danger); }
-.badge.disabled { background: #88888822; color: var(--text-muted); border: 1px solid var(--text-muted); opacity: 0.6; }
-.badge.warning { background: #ffd16622; color: var(--warn); border: 1px solid var(--warn); }
-.badge.error { background: #ff6b6b22; color: var(--danger); border: 1px solid var(--danger); }
+.badge.connected    { background: #48cfad22; color: var(--accent2); border: 1px solid var(--accent2); --badge-fill: #48cfad44; }
+.badge.disconnected { background: #ff6b6b22; color: var(--danger);  border: 1px solid var(--danger);  --badge-fill: #ff6b6b44; }
+.badge.disabled     { background: #88888822; color: var(--text-muted); border: 1px solid var(--text-muted); opacity: 0.6; }
+.badge.warning      { background: #ffd16622; color: var(--warn);    border: 1px solid var(--warn);    --badge-fill: #ffd16644; }
+.badge.error        { background: #ff6b6b22; color: var(--danger);  border: 1px solid var(--danger);  --badge-fill: #ff6b6b44; }
+.badge.empty        { background: #7b80a022; color: var(--muted);   border: 1px solid var(--muted);   --badge-fill: #7b80a044; }
+.host-footer .badge:hover { background: var(--badge-fill); }
 #pax-badge { transition: background 1.5s ease; }
 #pax-badge.flash { background: #ffd16688; transition: none; }
-#summary-badge, #btn-transcription-lang { border-color: var(--accent2) !important; color: var(--accent2); }
+#summary-badge, #btn-transcription-lang { border-color: var(--accent2) !important; color: var(--accent2); --badge-fill: #48cfad44; }
 
 /* Host page outer layout: columns + consolidated footer */
 .host-layout {
