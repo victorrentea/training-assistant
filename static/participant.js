@@ -825,12 +825,19 @@
       const maxPage = Math.max(1, Number(slidesPdfDoc.numPages || 1));
       const nextPage = Math.min(maxPage, targetPage);
       _suppressSlidesFollowAutoUncheck(3000);
-      // Smooth scroll only for small same-topic jumps; large jumps get instant scroll.
+      // Smooth scroll only for small same-topic jumps; large jumps get instant scroll via offsetTop.
       const pageDiff = Math.abs(nextPage - (slidesPdfViewer.currentPageNumber || 1));
       const container = document.getElementById('slides-pdf-container');
-      if (pageDiff >= 5 && container) container.style.scrollBehavior = 'auto';
+      if (pageDiff >= 5 && container) {
+        const pages = container.querySelectorAll('.page');
+        const targetEl = pages[nextPage - 1];
+        if (targetEl) {
+          container.style.scrollBehavior = 'auto';
+          container.scrollTop = targetEl.offsetTop;
+          container.style.scrollBehavior = '';
+        }
+      }
       slidesPdfViewer.currentPageNumber = Number(nextPage);
-      if (pageDiff >= 5 && container) setTimeout(() => { container.style.scrollBehavior = ''; }, 100);
       // Renew after set: updateviewarea fires asynchronously during rendering.
       _suppressSlidesFollowAutoUncheck(3000);
       _setStoredSlidePage(targetSlide.slug, nextPage);
@@ -1745,10 +1752,19 @@
           // Set scrollTop directly — skipping currentPageNumber avoids a conflicting PDF.js scroll.
           requestAnimationFrame(() => requestAnimationFrame(() => { container.scrollTo({ top: saved.scrollTop, behavior: 'instant' }); }));
         } else {
-          try {
-            slidesPdfViewer.currentPageNumber = Number(targetPage);
-          } catch (_) {
-            try { slidesPdfLinkService?.goToPage(targetPage); } catch (_) {}
+          // Revisit with page-only (no saved scrollTop): jump instantly via offsetTop.
+          const pages = container?.querySelectorAll('.page') || [];
+          const targetEl = pages[targetPage - 1];
+          if (targetEl && container) {
+            container.style.scrollBehavior = 'auto';
+            container.scrollTop = targetEl.offsetTop;
+            container.style.scrollBehavior = '';
+          } else {
+            try {
+              slidesPdfViewer.currentPageNumber = Number(targetPage);
+            } catch (_) {
+              try { slidesPdfLinkService?.goToPage(targetPage); } catch (_) {}
+            }
           }
         }
         _setStoredSlidePage(slide.slug, targetPage);
@@ -1802,14 +1818,14 @@
         const savedPage = Math.min(saved?.page || _getStoredSlidePage(slide.slug), maxPages);
         _suppressSlidesFollowAutoUncheck(1500);
         const pdfContainer = document.getElementById('slides-pdf-container');
-        // When skipping scroll restore (follow-mode topic change), scroll instantly to the page.
-        if (skipScrollRestore && pdfContainer) pdfContainer.style.scrollBehavior = 'auto';
+        // Restore page instantly — programmatic restores are never smooth-scrolled.
+        if (pdfContainer) pdfContainer.style.scrollBehavior = 'auto';
         try {
           slidesPdfViewer.currentPageNumber = Number(savedPage);
         } catch (_) {
           try { slidesPdfLinkService?.goToPage(savedPage); } catch (_) {}
         }
-        if (skipScrollRestore && pdfContainer) setTimeout(() => { pdfContainer.style.scrollBehavior = ''; }, 100);
+        if (pdfContainer) setTimeout(() => { pdfContainer.style.scrollBehavior = ''; }, 100);
         _setStoredSlidePage(slide.slug, savedPage);
         if (!skipScrollRestore && saved && Number.isFinite(saved.scrollTop) && saved.scrollTop > 0) {
           // Use timeout > ResizeObserver debounce (120ms) so our restore fires after
