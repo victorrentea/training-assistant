@@ -1,7 +1,7 @@
 {
-  "sha": "dd9b9122b80034c07494eb8fe420381ddf6a6fb2",
-  "timestamp": "2026-03-28 16:41",
+  "sha": "4b68f20016e59be87d4c112709d3a01b9b4b773b",
+  "timestamp": "2026-03-28 16:45",
   "changelog": [
-    "fix(slides): wrap long slide titles to 2 lines instead of truncating"
+    "fix(slides): prevent group sections from being flex-compressed and clipped"
   ]
 }
