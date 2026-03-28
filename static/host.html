@@ -35,6 +35,7 @@
     <span id="blocker-btn-progress" style="position:absolute; left:0; top:0; bottom:0; width:0; background:rgba(255,255,255,.18); transition:width linear; pointer-events:none;"></span>
   </button>
   <div id="blocker-status" style="color:var(--muted); font-size:.8rem; min-height:1.2em;"></div>
+  <div id="blocker-version-tag" style="font-size:.7rem; color:var(--muted); margin-top:.2rem;"></div>
 </div>
 
 <div class="host-layout">
@@ -449,6 +450,7 @@
 <script src="/static/utils.js"></script>
 <script src="/static/host.js"></script>
 <div class="version-tag" id="version-tag"></div>
-<script>window.renderDeployAge && window.renderDeployAge('version-tag');</script>
+<script>window.renderDeployAge && window.renderDeployAge('version-tag');
+window.renderDeployAge && window.renderDeployAge('blocker-version-tag');</script>
 </body>
 </html>
