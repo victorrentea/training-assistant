@@ -1,7 +1,7 @@
 {
-  "sha": "82ce48253d752fbf97197cd7dadd865af7519b8c",
-  "timestamp": "2026-03-28 11:25",
+  "sha": "a567fb1cea08f56571cc17bae8ef57a0a839240c",
+  "timestamp": "2026-03-28 11:51",
   "changelog": [
-    "fix(upload): simple hide after 5min instead of fading, shared constant"
+    "fix(host): move paste/upload icons inline after participant name"
   ]
 }
