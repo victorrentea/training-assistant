@@ -1,7 +1,7 @@
 {
-  "sha": "5d98849ef489195ac7349a8783b3993058be2198",
+  "sha": "c90f425c2bbee02fdb8ad946fd443e4cb34b6ba4",
   "timestamp": "2026-03-28 09:00",
   "changelog": [
-    "fix: remove duplicate screen-wide progress bar from PDF.js slides viewer"
+    "feat: host label always visible, dot turns red when disconnected"
   ]
 }
