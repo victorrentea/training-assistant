@@ -1014,7 +1014,8 @@
   }
 
   function _isSlideNew(slide) {
-    if (!slide?.updated_at || !slide?.slug || !slidesCatalogBaseline) return false;
+    if (!slide?.updated_at || !slide?.slug || !slide?._id || !slidesCatalogBaseline) return false;
+    if (!_isSlideVisited(slide._id)) return false; // only show NEW after participant has visited the slide
     const baseline = slidesCatalogBaseline[slide.slug];
     return baseline != null && slide.updated_at !== baseline;
   }
