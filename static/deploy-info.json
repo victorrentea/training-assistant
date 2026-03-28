@@ -1,7 +1,7 @@
 {
-  "sha": "658d65f06cc6a2f6ce478bc9214cdfa114482208",
-  "timestamp": "2026-03-28 07:59",
+  "sha": "6a7bd98eff2b64c0653625475ab469ef879b954d",
+  "timestamp": "2026-03-28 08:01",
   "changelog": [
-    "feat: instant scroll for large page jumps when following trainer"
+    "fix: remove duplicate container declaration causing SyntaxError"
   ]
 }
