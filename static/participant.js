@@ -1462,9 +1462,6 @@ function closeEmojiPopup(ev) {
     if (!empty) return;
     empty.innerHTML = '';
     empty.style.display = 'none';
-    document.getElementById('slides-zoom-in')?.style.setProperty('display', 'none');
-    document.getElementById('slides-zoom-out')?.style.setProperty('display', 'none');
-    document.getElementById('slides-fit-width')?.style.setProperty('display', 'none');
     renderEmojiBar();
   }
 
@@ -1697,9 +1694,15 @@ function closeEmojiPopup(ev) {
     const closeBtn = document.getElementById('slides-close-btn');
     if (!page) return;
     const hasPdfjsDoc = Boolean(slide && slidesPdfDoc && slidesPdfViewer && slidesSelectedId === slide._id && slidesViewMode !== 'native');
+    const zoomIn = document.getElementById('slides-zoom-in');
+    const zoomOut = document.getElementById('slides-zoom-out');
+    const fitWidth = document.getElementById('slides-fit-width');
     if (!hasPdfjsDoc) {
       page.style.display = 'none';
       if (closeBtn) closeBtn.style.display = 'none';
+      if (zoomIn) zoomIn.style.display = 'none';
+      if (zoomOut) zoomOut.style.display = 'none';
+      if (fitWidth) fitWidth.style.display = 'none';
       renderEmojiBar();
       return;
     }
@@ -1711,6 +1714,9 @@ function closeEmojiPopup(ev) {
     page.textContent = `Page ${current}/${numPages}`;
     page.style.display = '';
     if (closeBtn) closeBtn.style.display = '';
+    if (zoomIn) zoomIn.style.display = '';
+    if (zoomOut) zoomOut.style.display = '';
+    if (fitWidth) fitWidth.style.display = '';
     renderEmojiBar();
   }
 
@@ -1918,9 +1924,6 @@ function closeEmojiPopup(ev) {
       const nativeFrame = document.getElementById('slides-native-frame');
       if (shell) shell.style.display = '';
       if (empty) empty.style.display = 'none';
-      document.getElementById('slides-zoom-in')?.style.removeProperty('display');
-      document.getElementById('slides-zoom-out')?.style.removeProperty('display');
-      document.getElementById('slides-fit-width')?.style.removeProperty('display');
       renderEmojiBar();
 
       const headers = await _fetchSlideHeaders(slide.url);
