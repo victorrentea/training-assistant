@@ -1,7 +1,7 @@
 {
-  "sha": "c90f425c2bbee02fdb8ad946fd443e4cb34b6ba4",
-  "timestamp": "2026-03-28 09:00",
+  "sha": "572f72ecc6b1d7dac93897d8ae560fadded3127a",
+  "timestamp": "2026-03-28 09:03",
   "changelog": [
-    "feat: host label always visible, dot turns red when disconnected"
+    "perf: reduce daemon poll interval to 1s, snapshot every 7s"
   ]
 }
