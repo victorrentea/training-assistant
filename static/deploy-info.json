@@ -1,7 +1,7 @@
 {
-  "sha": "76ccf4467c0624a0a8ba34b71cb32a4a571e6744",
-  "timestamp": "2026-03-28 17:56",
+  "sha": "c738c0e950b33d45858efcc7637428a863b8ee46",
+  "timestamp": "2026-03-28 17:58",
   "changelog": [
-    "fix(overlay): replace sketched heart with floating emoji for \u2764\ufe0f"
+    "feat(slides): click title to pin list open"
   ]
 }
