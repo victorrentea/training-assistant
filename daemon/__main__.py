@@ -115,6 +115,24 @@ _AUDIOHIJACK_SESSIONS_PLIST = os.path.expanduser(
 )
 
 
+def _read_audiohijack_language() -> str | None:
+    """Read the current TranscribeBlock languageCode from Sessions.plist. Returns None if unreadable."""
+    import plistlib
+    plist_path = _AUDIOHIJACK_SESSIONS_PLIST
+    try:
+        with open(plist_path, "rb") as f:
+            data = plistlib.load(f)
+        for session_item in data.get("modelItems", []):
+            for block in session_item.get("sessionData", {}).get("geBlocks", []):
+                if block.get("geObjectInfo") == "TranscribeBlock":
+                    lang = block.get("geNodeProperties", {}).get("languageCode")
+                    if lang:
+                        return lang
+    except Exception:
+        pass
+    return None
+
+
 def _set_audiohijack_language(lang_code: str) -> None:
     """Kill AudioHijack, update TranscribeBlock languageCode in Sessions.plist, restart."""
     import plistlib
@@ -510,6 +528,21 @@ def run() -> None:
         sync_session_to_server(config, session_stack, current_key_points, startup_session_state)
     except Exception as e:
         log.error("session", f"Failed to sync initial state: {e}")
+
+    # ── Sync AudioHijack language to server at startup ──
+    try:
+        current_lang = _read_audiohijack_language()
+        if current_lang:
+            _post_json(
+                f"{config.server_url}/api/transcription-language/status",
+                {"language": current_lang},
+                config.host_username, config.host_password,
+            )
+            log.info("daemon", f"AudioHijack language synced at startup: {current_lang}")
+        else:
+            log.error("daemon", "Could not read AudioHijack language from plist")
+    except Exception as e:
+        log.error("daemon", f"Failed to sync AudioHijack language at startup: {e}")
 
     last_summary_at = 0.0  # monotonic time of last summary run
     last_snapshot_hash: str | None = None  # hash of last saved state snapshot
