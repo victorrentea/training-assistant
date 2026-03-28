@@ -2083,6 +2083,13 @@ h1 { display: none; }
   border-color: var(--accent);
   background: rgba(99, 102, 241, 0.08);
 }
+#upload-overlay.drag-over-window {
+  background: rgba(99, 102, 241, 0.12);
+}
+#upload-overlay.drag-over-window .upload-dropzone {
+  border-color: var(--accent);
+  background: rgba(99, 102, 241, 0.12);
+}
 .upload-dropzone-text {
   color: var(--muted);
   font-size: .85rem;
