@@ -467,7 +467,7 @@ def run() -> None:
         log.error("daemon", f"MATERIALS_FOLDER not found (MATERIALS_FOLDER={raw}) — indexer disabled")
 
     # ── Session stack initialization (early — needed for transcript log) ──
-    sessions_root = config.session_folder.parent if config.session_folder else Path.cwd()
+    sessions_root = config.session_folder.parent if config.session_folder else Path(os.environ.get("SESSIONS_FOLDER", str(Path.home() / "My Drive" / "Cursuri" / "###sesiuni")))
     session_stack = daemon_state_to_stack(load_daemon_state(sessions_root))
     current_key_points: list[dict] = []
     summary_watermark: int = 0
