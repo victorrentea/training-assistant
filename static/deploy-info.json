@@ -1,7 +1,7 @@
 {
-  "sha": "cce84019184d75d4a0f0682c5ecef665ae6b860f",
-  "timestamp": "2026-03-28 17:43",
+  "sha": "15ffd2f2c09b7e85f3323e15aa0abf5f8ad413a4",
+  "timestamp": "2026-03-28 17:47",
   "changelog": [
-    "fix(emoji-bar): measure button content widths, not 1fr grid cell widths"
+    "fix(slides): 2s collapse delay + fill-to-bottom dropdown"
   ]
 }
