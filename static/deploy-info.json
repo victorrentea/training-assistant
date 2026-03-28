@@ -1,7 +1,7 @@
 {
-  "sha": "7f164bdb08e8e61b3470e5533e91cd8497d9dff0",
-  "timestamp": "2026-03-28 14:24",
+  "sha": "a9fd8b4e95b20e8e1df3a179833fa8562b9c4ab3",
+  "timestamp": "2026-03-28 14:26",
   "changelog": [
-    "feat(slides): replace progress bar with spinner; green dot when cached"
+    "feat(catalog): rename and reorder slide titles with emojis"
   ]
 }
