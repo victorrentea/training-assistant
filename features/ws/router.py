@@ -441,7 +441,10 @@ async def websocket_endpoint(websocket: WebSocket, participant_id: str):
                             del state.paste_texts[target_uuid]
                         await broadcast_participant_update()
 
-
+            elif msg_type == "submit_feedback":
+                text = str(data.get("text", "")).strip()
+                if text and len(text) <= 2000 and not is_host:
+                    state.feedback_pending.append(text)
 
     except WebSocketDisconnect:
         state.participants.pop(pid, None)

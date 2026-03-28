@@ -41,6 +41,7 @@ class AppState:
         self.participant_ips: dict[str, str] = {}  # uuid → IP address
         self.paste_texts: dict[str, list[dict]] = {}  # uuid → [{id: int, text: str}, ...]
         self.paste_next_id: int = 0
+        self.feedback_pending: list[str] = []
         self.uploaded_files: dict[str, list[dict]] = {}  # uuid → [{id, filename, size, disk_path}]
         self.upload_next_id: int = 0
         self.leaderboard_active: bool = False
