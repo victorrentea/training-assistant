@@ -1,52 +1,6 @@
 import AppKit
 import Foundation
 
-struct ScreenTopology {
-    private static let mirrorTolerance: CGFloat = 1.0
-
-    static func primaryIndex(frames: [CGRect]) -> Int {
-        guard !frames.isEmpty else { return 0 }
-        return frames.enumerated().min { lhs, rhs in
-            if lhs.element.minY == rhs.element.minY {
-                return lhs.element.minX < rhs.element.minX
-            }
-            return lhs.element.minY < rhs.element.minY
-        }?.offset ?? 0
-    }
-
-    static func hasSecondaryDesktop(frames: [CGRect]) -> Bool {
-        guard frames.count > 1 else { return false }
-        let primary = frames[primaryIndex(frames: frames)]
-        return frames.contains { frame in
-            !isMirrorOfPrimary(frame, primary: primary)
-        }
-    }
-
-    static func preferredButtonScreenIndex(frames: [CGRect]) -> Int {
-        guard !frames.isEmpty else { return 0 }
-
-        let primaryIdx = primaryIndex(frames: frames)
-        let primary = frames[primaryIdx]
-        let secondaryDesktops = frames.enumerated().filter { entry in
-            entry.offset != primaryIdx && !isMirrorOfPrimary(entry.element, primary: primary)
-        }
-        guard !secondaryDesktops.isEmpty else { return primaryIdx }
-
-        if let above = secondaryDesktops.first(where: { $0.element.minY >= primary.maxY - 50 }) {
-            return above.offset
-        }
-        return secondaryDesktops[0].offset
-    }
-
-    private static func isMirrorOfPrimary(_ frame: CGRect, primary: CGRect) -> Bool {
-        if abs(frame.minX - primary.minX) > mirrorTolerance { return false }
-        if abs(frame.minY - primary.minY) > mirrorTolerance { return false }
-        if abs(frame.width - primary.width) > mirrorTolerance { return false }
-        if abs(frame.height - primary.height) > mirrorTolerance { return false }
-        return true
-    }
-}
-
 class AppDelegate: NSObject, NSApplicationDelegate, URLSessionWebSocketDelegate {
     private var overlayPanel: OverlayPanel!
     private var animator: EmojiAnimator!
@@ -69,17 +23,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, URLSessionWebSocketDelegate 
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        let screens = NSScreen.screens
-        guard !screens.isEmpty else { fatalError("No screens available") }
-        let screenFrames = screens.map(\.frame)
-        let primaryIdx = ScreenTopology.primaryIndex(frames: screenFrames)
-        let buttonIdx = ScreenTopology.preferredButtonScreenIndex(frames: screenFrames)
+        guard let screen = NSScreen.main ?? NSScreen.screens.first else {
+            fatalError("No screens available")
+        }
 
-        let singleScreen = !ScreenTopology.hasSecondaryDesktop(frames: screenFrames)
-        let effectScreen = screens[primaryIdx] // built-in Mac display — effects always here
-        let buttonScreen = screens[buttonIdx] // external desktop (or primary if single/mirror)
-
-        overlayPanel = OverlayPanel(screen: effectScreen)
+        overlayPanel = OverlayPanel(screen: screen)
         overlayPanel.orderFrontRegardless()
 
         guard let hostLayer = overlayPanel.contentView?.layer else {
@@ -89,8 +37,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, URLSessionWebSocketDelegate 
 
         session = URLSession(configuration: .default, delegate: self, delegateQueue: .main)
         connectWebSocket()
-        setupButtonBar(screen: buttonScreen, singleScreen: singleScreen)
-
+        setupButtonBar(screen: screen)
 
         // Check every 2s if another instance took over the PID file
         pidCheckTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
@@ -100,7 +47,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, URLSessionWebSocketDelegate 
 
     // MARK: - Button bar
 
-    private func setupButtonBar(screen: NSScreen, singleScreen: Bool) {
+    private func setupButtonBar(screen: NSScreen) {
         let buttons: [ButtonBar.ButtonDef] = [
             .init(label: "❤️", tooltip: "Floating Heart") { [weak self] in
                 self?.animator.spawnEmoji("❤️")
@@ -134,23 +81,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, URLSessionWebSocketDelegate 
             },
         ]
 
-        let fingerprint = ScreenFingerprint.current()
-        // Position persistence only applies when ≥2 desktops are connected
-        let savedOrigin = singleScreen ? nil : PositionStore.load(fingerprint: fingerprint)
-        if let pos = savedOrigin {
-            overlayInfo("Restoring button bar position \(Int(pos.x)),\(Int(pos.y)) for this monitor layout")
-        }
-        let onPositionChanged: ((NSPoint) -> Void)? = singleScreen ? nil : { origin in
-            PositionStore.save(fingerprint: fingerprint, origin: origin)
-        }
-
-        buttonBar = ButtonBar(
-            buttons: buttons,
-            screen: screen,
-            singleScreen: singleScreen,
-            savedOrigin: savedOrigin,
-            onPositionChanged: onPositionChanged
-        )
+        buttonBar = ButtonBar(buttons: buttons, screen: screen)
         buttonBar.orderFrontRegardless()
     }
 
@@ -189,7 +120,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, URLSessionWebSocketDelegate 
     func urlSession(_ session: URLSession, webSocketTask: URLSessionWebSocketTask,
                     didOpenWithProtocol protocol: String?) {
         cancelPendingDisconnectError()
-        // Send set_name as required by protocol
         let msg = "{\"type\":\"set_name\",\"name\":\"Overlay\"}"
         wsTask?.send(.string(msg)) { error in
             if let error = error {
