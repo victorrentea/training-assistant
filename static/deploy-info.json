@@ -1,7 +1,7 @@
 {
-  "sha": "981f7929afa4519384c28ba4d04c1907558391aa",
-  "timestamp": "2026-03-28 23:47",
+  "sha": "62d384e745c4c836e5585b6793b0c2f3bbbdaa46",
+  "timestamp": "2026-03-28 23:48",
   "changelog": [
-    "fix(daemon): use WS for AudioHijack language sync (was referencing removed _post_json)"
+    "feat(host): show joining URL with https:// centered on screen always"
   ]
 }
