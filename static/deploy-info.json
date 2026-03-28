@@ -1,7 +1,7 @@
 {
-  "sha": "6d918449c3c74ce6ca2b1f288968c4dc1d723461",
-  "timestamp": "2026-03-28 16:10",
+  "sha": "03ee5cd0a01eed53e542f5debf75cfcb93a40d0c",
+  "timestamp": "2026-03-28 16:11",
   "changelog": [
-    "chore(catalog): rename slide deck titles to match desired names"
+    "chore(catalog): remove AI group \u2014 show as ungrouped like About Victor"
   ]
 }
