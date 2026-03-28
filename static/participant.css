@@ -632,6 +632,7 @@ h1 { display: none; }
   align-items: center;
   gap: .4rem;
   cursor: pointer;
+  min-width: 0;
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 6px;
   background: #1a1a1a;
