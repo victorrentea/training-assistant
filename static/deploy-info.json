@@ -1,7 +1,7 @@
 {
-  "sha": "a9f7c30fabbf6e607e943ba4a94ee6291c69b32b",
-  "timestamp": "2026-03-28 17:36",
+  "sha": "cbabfd1643f5331a045da40d97825c90ebb209f6",
+  "timestamp": "2026-03-28 17:42",
   "changelog": [
-    "fix(deps): move agentmail to daemon deps, remove from server"
+    "fix(feedback): update placeholder to hint at app improvement"
   ]
 }
