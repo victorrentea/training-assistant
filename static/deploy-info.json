@@ -1,7 +1,7 @@
 {
-  "sha": "f17c7c9c4178b8cc9ed84d5b3615f99f5f9f6441",
-  "timestamp": "2026-03-28 08:25",
+  "sha": "112cebd4b34fac8d700d06daa641c6630bef8382",
+  "timestamp": "2026-03-28 08:51",
   "changelog": [
-    "fix: don't auto-reload native viewer on slide update; clear NEW badge on manual click"
+    "fix: don't auto-open slides after identity reset"
   ]
 }
