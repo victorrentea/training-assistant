@@ -162,12 +162,8 @@
     <button class="emoji-grid-btn" onclick="sendEmoji('❌', event)">❌</button>
   </div>
 </div>
-<div id="paste-overlay" class="summary-overlay" onclick="closePasteModal()">
-  <div class="summary-dialog paste-dialog" onclick="event.stopPropagation()">
-    <div class="summary-header">
-      <span>📋 Send Text to Host</span>
-      <button class="summary-close" onclick="closePasteModal()">✕</button>
-    </div>
+<div id="paste-overlay" class="paste-overlay" onclick="closePasteModal()">
+  <div class="paste-bubble" onclick="event.stopPropagation()">
     <textarea id="paste-textarea" class="paste-textarea" placeholder="Paste your text here..." oninput="document.getElementById('paste-send-btn').disabled = !this.value.trim()"></textarea>
     <button id="paste-send-btn" class="paste-send-btn" disabled onclick="sendPasteText()">Send</button>
   </div>
