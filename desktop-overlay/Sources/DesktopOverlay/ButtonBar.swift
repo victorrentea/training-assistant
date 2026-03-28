@@ -8,11 +8,11 @@ struct SingleScreenHoverLogic {
     }
 }
 
-/// Floating bar of round emoji buttons — always on top, clickable.
-/// Multi-screen: centered at bottom of target screen, fades on hover.
-/// Single-screen: vertical stack at right edge (20% from bottom), slides in on hover.
+/// Floating vertical bar of round emoji buttons — always on top, clickable.
+/// Positioned at the right edge of the screen, slides in on hover.
+/// Draggable vertically only.
 class ButtonBar: NSPanel {
-    static let singleScreenAutoHideDelay: TimeInterval = 1.0
+    static let autoHideDelay: TimeInterval = 1.0
 
     struct ButtonDef {
         let label: String
@@ -28,14 +28,8 @@ class ButtonBar: NSPanel {
         }
     }
 
-    private let idleOpacity: CGFloat = 0.35
     private let hoverOpacity: CGFloat = 1.0
-    private let isSingleScreen: Bool
 
-    // Multi-screen hover fade
-    private var fadeTimer: Timer?
-
-    // Single-screen slide
     private var slideTimer: Timer?
     private var globalMouseMonitor: Any?
     private var localMouseMonitor: Any?
@@ -43,38 +37,19 @@ class ButtonBar: NSPanel {
     private var shownFrame: NSRect = .zero
     private var isSlideIn: Bool = false
 
-    init(buttons: [ButtonDef], screen: NSScreen, singleScreen: Bool,
-         savedOrigin: NSPoint? = nil, onPositionChanged: ((NSPoint) -> Void)? = nil) {
-        self.isSingleScreen = singleScreen
-
-        // Single-screen panel is 20% smaller to stay unobtrusive
-        let buttonSize: CGFloat = singleScreen ? 32 : 40
-        let padding: CGFloat = singleScreen ? 5 : 6
+    init(buttons: [ButtonDef], screen: NSScreen) {
+        let buttonSize: CGFloat = 32
+        let padding: CGFloat = 5
 
         let count = CGFloat(buttons.count)
-        let barWidth: CGFloat
-        let barHeight: CGFloat
-        if singleScreen {
-            barWidth = buttonSize + padding * 2
-            barHeight = count * buttonSize + (count + 1) * padding
-        } else {
-            barWidth = count * buttonSize + (count + 1) * padding
-            barHeight = buttonSize + padding * 2
-        }
-        let sf = screen.frame
+        let barWidth = buttonSize + padding * 2
+        let barHeight = count * buttonSize + (count + 1) * padding
 
-        let initialFrame: NSRect
-        if singleScreen {
-            // Start hidden: off the right edge, 20% from screen bottom
-            let preferredY = sf.minY + sf.height * 0.2
-            let barY = max(sf.minY + 12, min(preferredY, sf.maxY - barHeight - 12))
-            initialFrame = NSRect(x: sf.maxX, y: barY, width: barWidth, height: barHeight)
-        } else {
-            // Multi-screen: use saved position or default to bottom-center of target screen
-            let x = savedOrigin?.x ?? (sf.midX - barWidth / 2)
-            let y = savedOrigin?.y ?? sf.minY
-            initialFrame = NSRect(x: x, y: y, width: barWidth, height: barHeight)
-        }
+        let sf = screen.frame
+        let preferredY = sf.minY + sf.height * 0.2
+        let barY = max(sf.minY + 12, min(preferredY, sf.maxY - barHeight - 12))
+
+        let initialFrame = NSRect(x: sf.maxX, y: barY, width: barWidth, height: barHeight)
 
         super.init(
             contentRect: initialFrame,
@@ -91,57 +66,43 @@ class ButtonBar: NSPanel {
         acceptsMouseMovedEvents = true
         becomesKeyOnlyIfNeeded = true
 
+        hiddenFrame = NSRect(x: sf.maxX, y: barY, width: barWidth, height: barHeight)
+        shownFrame  = NSRect(x: sf.maxX - barWidth - 12, y: barY, width: barWidth, height: barHeight)
+
+        let onDragEnded: (NSPoint) -> Void = { [weak self] origin in
+            guard let self = self else { return }
+            self.shownFrame.origin.y = origin.y
+            self.hiddenFrame.origin.y = origin.y
+        }
+
         let container = ButtonBarContainer(frame: NSRect(x: 0, y: 0, width: barWidth, height: barHeight),
-                                           dragEnabled: !singleScreen,
-                                           onDragEnded: onPositionChanged)
+                                           onDragEnded: onDragEnded)
         container.wantsLayer = true
         container.layer?.backgroundColor = NSColor(white: 0.15, alpha: 0.85).cgColor
         container.layer?.cornerRadius = min(barWidth, barHeight) / 2
 
         for (i, def) in buttons.enumerated() {
-            let bx: CGFloat
-            let by: CGFloat
-            if singleScreen {
-                bx = padding
-                by = barHeight - padding - buttonSize - CGFloat(i) * (buttonSize + padding)
-            } else {
-                bx = padding + CGFloat(i) * (buttonSize + padding)
-                by = padding
-            }
+            let bx = padding
+            let by = barHeight - padding - buttonSize - CGFloat(i) * (buttonSize + padding)
             let btn = RoundEmojiButton(
                 frame: NSRect(x: bx, y: by, width: buttonSize, height: buttonSize),
                 label: def.label,
                 tooltip: def.tooltip,
                 labelColor: def.labelColor,
+                onDragEnded: onDragEnded,
                 action: def.action
             )
             container.addSubview(btn)
         }
 
         contentView = container
-
-        if singleScreen {
-            alphaValue = 0.0
-            let preferredY = sf.minY + sf.height * 0.2
-            let barY = max(sf.minY + 12, min(preferredY, sf.maxY - barHeight - 12))
-            hiddenFrame = NSRect(x: sf.maxX, y: barY, width: barWidth, height: barHeight)
-            shownFrame  = NSRect(x: sf.maxX - barWidth - 12, y: barY, width: barWidth, height: barHeight)
-            setupGlobalMouseMonitor()
-        } else {
-            alphaValue = idleOpacity
-            let ta = NSTrackingArea(
-                rect: container.bounds,
-                options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect],
-                owner: self,
-                userInfo: nil
-            )
-            container.addTrackingArea(ta)
-        }
+        alphaValue = 0.0
+        setupGlobalMouseMonitor()
     }
 
     override var canBecomeKey: Bool { true }
 
-    // MARK: - Single-screen: slide on global mouse position
+    // MARK: - Slide on global mouse position
 
     private func setupGlobalMouseMonitor() {
         globalMouseMonitor = NSEvent.addGlobalMonitorForEvents(matching: .mouseMoved) { [weak self] _ in
@@ -158,12 +119,11 @@ class ButtonBar: NSPanel {
         let logic = SingleScreenHoverLogic(shownFrame: shownFrame)
         if logic.shouldSlideIn(mouse: mouse) {
             slideIn()
-            // Reset auto-hide timer on every move while in zone — keeps bar shown while hovering
             slideTimer?.invalidate()
             slideTimer = nil
-            scheduleSlideOut(after: ButtonBar.singleScreenAutoHideDelay)
+            scheduleSlideOut(after: ButtonBar.autoHideDelay)
         } else if isSlideIn && slideTimer == nil {
-            scheduleSlideOut(after: ButtonBar.singleScreenAutoHideDelay)
+            scheduleSlideOut(after: ButtonBar.autoHideDelay)
         }
     }
 
@@ -198,40 +158,15 @@ class ButtonBar: NSPanel {
         if let m = globalMouseMonitor { NSEvent.removeMonitor(m) }
         if let m = localMouseMonitor  { NSEvent.removeMonitor(m) }
     }
-
-    // MARK: - Multi-screen: hover fade
-
-    override func mouseEntered(with event: NSEvent) {
-        guard !isSingleScreen else { return }
-        fadeTimer?.invalidate()
-        NSAnimationContext.runAnimationGroup { ctx in
-            ctx.duration = 0.15
-            self.animator().alphaValue = hoverOpacity
-        }
-    }
-
-    override func mouseExited(with event: NSEvent) {
-        guard !isSingleScreen else { return }
-        fadeTimer?.invalidate()
-        fadeTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: false) { [weak self] _ in
-            guard let self = self else { return }
-            NSAnimationContext.runAnimationGroup { ctx in
-                ctx.duration = 0.4
-                self.animator().alphaValue = self.idleOpacity
-            }
-        }
-    }
 }
 
-// MARK: - Container view (draggable by background in multi-screen mode)
+// MARK: - Container view (vertically draggable by background)
 
 private class ButtonBarContainer: NSView {
     private var dragOrigin: NSPoint?
-    private let dragEnabled: Bool
-    private let onDragEnded: ((NSPoint) -> Void)?
+    private let onDragEnded: (NSPoint) -> Void
 
-    init(frame: NSRect, dragEnabled: Bool, onDragEnded: ((NSPoint) -> Void)? = nil) {
-        self.dragEnabled = dragEnabled
+    init(frame: NSRect, onDragEnded: @escaping (NSPoint) -> Void) {
         self.onDragEnded = onDragEnded
         super.init(frame: frame)
     }
@@ -242,7 +177,6 @@ private class ButtonBarContainer: NSView {
     override var mouseDownCanMoveWindow: Bool { false }
 
     override func mouseDown(with event: NSEvent) {
-        guard dragEnabled else { return }
         let loc = convert(event.locationInWindow, from: nil)
         let hitView = hitTest(convert(loc, to: superview))
         if hitView === self {
@@ -253,15 +187,12 @@ private class ButtonBarContainer: NSView {
     }
 
     override func mouseDragged(with event: NSEvent) {
-        guard dragEnabled, let origin = dragOrigin, let window = self.window else {
+        guard let origin = dragOrigin, let window = self.window else {
             super.mouseDragged(with: event)
             return
         }
-        let current = event.locationInWindow
-        let dx = current.x - origin.x
-        let dy = current.y - origin.y
+        let dy = event.locationInWindow.y - origin.y
         var frame = window.frame
-        frame.origin.x += dx
         frame.origin.y += dy
         window.setFrame(frame, display: true)
     }
@@ -271,7 +202,7 @@ private class ButtonBarContainer: NSView {
         dragOrigin = nil
         super.mouseUp(with: event)
         if hadDrag, let origin = window?.frame.origin {
-            onDragEnded?(origin)
+            onDragEnded(origin)
         }
     }
 }
@@ -280,6 +211,7 @@ private class ButtonBarContainer: NSView {
 
 private class RoundEmojiButton: NSView {
     private let action: () -> Void
+    private let onDragEnded: (NSPoint) -> Void
     private var isPressed = false
     private var isDragging = false
     private var dragOrigin: NSPoint = .zero
@@ -288,13 +220,14 @@ private class RoundEmojiButton: NSView {
     private let hoverBgColor = NSColor(white: 0.75, alpha: 0.45).cgColor
     private let pressBgColor = NSColor(white: 0.75, alpha: 0.75).cgColor
 
-    init(frame: NSRect, label: String, tooltip: String, labelColor: CGColor? = nil, action: @escaping () -> Void) {
+    init(frame: NSRect, label: String, tooltip: String, labelColor: CGColor? = nil,
+         onDragEnded: @escaping (NSPoint) -> Void, action: @escaping () -> Void) {
         self.action = action
+        self.onDragEnded = onDragEnded
         super.init(frame: frame)
         self.toolTip = tooltip
         wantsLayer = true
 
-        // Background: invisible by default, shows light gray on hover
         bgLayer = CALayer()
         bgLayer.frame = bounds
         bgLayer.cornerRadius = bounds.width / 2
@@ -377,7 +310,6 @@ private class RoundEmojiButton: NSView {
 
         if isDragging, let window = self.window {
             var frame = window.frame
-            frame.origin.x += dx
             frame.origin.y += dy
             window.setFrame(frame, display: true)
         }
@@ -391,6 +323,9 @@ private class RoundEmojiButton: NSView {
         layer?.setAffineTransform(.identity)
         CATransaction.commit()
 
+        if isDragging, let origin = window?.frame.origin {
+            onDragEnded(origin)
+        }
         if isPressed && !isDragging {
             let loc = convert(event.locationInWindow, from: nil)
             if bounds.contains(loc) {

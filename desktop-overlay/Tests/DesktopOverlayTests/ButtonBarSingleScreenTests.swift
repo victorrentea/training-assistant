@@ -24,7 +24,7 @@ final class ButtonBarSingleScreenTests: XCTestCase {
         XCTAssertFalse(logic.shouldSlideIn(mouse: NSPoint(x: 880, y: 310)))
     }
 
-    func testSingleScreenAutoHideDelayIsOneSecond() {
-        XCTAssertEqual(ButtonBar.singleScreenAutoHideDelay, 1.0, accuracy: 0.001)
+    func testAutoHideDelayIsOneSecond() {
+        XCTAssertEqual(ButtonBar.autoHideDelay, 1.0, accuracy: 0.001)
     }
 }
