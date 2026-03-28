@@ -1,7 +1,7 @@
 {
-  "sha": "ed736de6b1333eb1a0a169f1646891792db850c0",
-  "timestamp": "2026-03-28 17:23",
+  "sha": "6d067c342408bc2003af13ffadcfc8c110fe330a",
+  "timestamp": "2026-03-28 17:24",
   "changelog": [
-    "feat(slides): collapse topic list behind hover-expand arrow"
+    "fix(emoji-bar): always center emoji buttons regardless of PDF controls visibility"
   ]
 }
