@@ -35,14 +35,8 @@ def _build_leaderboard_data() -> tuple[list[dict], int, dict[str, int]]:
             "avatar": avatar,
         })
 
-    total = len([uid for uid in state.participants if not uid.startswith("__")])
-    all_scored = [
-        (uid, state.scores.get(uid, 0))
-        for uid in state.participants
-        if not uid.startswith("__")
-    ]
-    all_scored.sort(key=lambda x: (-x[1], state.participant_names.get(x[0], "")))
-    rank_map = {uid: idx + 1 for idx, (uid, _) in enumerate(all_scored)}
+    total = len(all_participants)
+    rank_map = {uid: idx + 1 for idx, (uid, _) in enumerate(all_participants)}
 
     return entries, total, rank_map
 

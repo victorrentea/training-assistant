@@ -18,14 +18,16 @@ class TokenUsage:
     output_tokens: int = 0
     estimated_cost_usd: float = 0.0
 
-    def add(self, input_tokens: int, output_tokens: int, model: str = ""):
+    def add(self, input_tokens: int, output_tokens: int, model: str = "") -> float:
         self.input_tokens += input_tokens
         self.output_tokens += output_tokens
         # Compute cost using model-specific pricing
         pricing = PRICING.get(model, PRICING["claude-sonnet-4-6"])
-        self.estimated_cost_usd += (
+        cost = (
             input_tokens * pricing["input"] + output_tokens * pricing["output"]
         ) / 1_000_000
+        self.estimated_cost_usd += cost
+        return cost
 
     def to_dict(self) -> dict:
         return {
@@ -67,9 +69,7 @@ def create_message(
     duration_ms = int((time.monotonic() - t0) * 1000)
     in_tok = response.usage.input_tokens
     out_tok = response.usage.output_tokens
-    _usage.add(in_tok, out_tok, model)
-    pricing = PRICING.get(model, PRICING["claude-sonnet-4-6"])
-    cost = (in_tok * pricing["input"] + out_tok * pricing["output"]) / 1_000_000
+    cost = _usage.add(in_tok, out_tok, model)
     short_model = model.split("-")[1] if "-" in model else model  # haiku/sonnet/opus
     log.info("llm", f"💸 {short_model:<7} in={in_tok:<5} out={out_tok:<4} ${cost:.3f}  {duration_ms}ms")
     return response
