@@ -1,7 +1,14 @@
 {
-  "sha": "bf64ca35588f0aa58296ddb6b724fb58ae0d2e8f",
-  "timestamp": "2026-03-28 23:03",
+  "sha": "935715a6e7db8be654b398fce4e82ae2c67f4998",
+  "timestamp": "2026-03-28 23:04",
   "changelog": [
-    "fix(landing): simplify to \"Join the Session\" title only"
+    "chore(daemon): clean up unused HTTP helpers after WS migration",
+    "refactor(daemon): remove SlidesOnDemandWsRunner (merged into DaemonWsClient)",
+    "feat(daemon): convert periodic HTTP pushes and snapshot polling to WebSocket",
+    "feat(daemon): replace HTTP polling with WS message handlers for request/response flows",
+    "feat(daemon): create unified DaemonWsClient with queue-based thread-safe dispatch",
+    "feat(ws): push all work requests to daemon via WS, handle all result messages",
+    "refactor(ws): dispatch daemon WS messages via handler table",
+    "feat(ws): add daemon WebSocket protocol module with message types and push helper"
   ]
 }
