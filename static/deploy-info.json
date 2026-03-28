@@ -1,7 +1,7 @@
 {
-  "sha": "03ee5cd0a01eed53e542f5debf75cfcb93a40d0c",
-  "timestamp": "2026-03-28 16:11",
+  "sha": "2a02c3bf74174d2cabfe7b2f18a604ea348e3b76",
+  "timestamp": "2026-03-28 16:13",
   "changelog": [
-    "chore(catalog): remove AI group \u2014 show as ungrouped like About Victor"
+    "fix(slides): show updated timestamp for all topics in slides list"
   ]
 }
