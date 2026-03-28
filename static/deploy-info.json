@@ -1,7 +1,7 @@
 {
-  "sha": "54d3645a0452169969d33f82315b8f87cb74cb6f",
-  "timestamp": "2026-03-28 16:58",
+  "sha": "216ec946fb8e4a27a73face2c91030f57ca4f139",
+  "timestamp": "2026-03-28 16:59",
   "changelog": [
-    "fix(tooltips): popup emojis tooltip right, cache dots tooltip left"
+    "fix(slides): reduce topic list item height by 5%"
   ]
 }
