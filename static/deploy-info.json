@@ -1,7 +1,8 @@
 {
-  "sha": "effdf723cfb0cb2e55193814379a92ed5a7bf444",
-  "timestamp": "2026-03-28 23:08",
+  "sha": "9770d4a51f2d876b8a20a1555e5528e9145cca15",
+  "timestamp": "2026-03-28 23:14",
   "changelog": [
-    "fix(landing): change auto-join message to \"Host machine : auto-login\""
+    "test: update daemon tests for WebSocket-only communication",
+    "fix(ws): resolve merge conflicts in WebSocket router"
   ]
 }
