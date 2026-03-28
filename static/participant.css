@@ -451,7 +451,7 @@ h1 { display: none; }
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  border: 1px solid var(--border);
+  border: 2px solid var(--border);
   background: var(--bg);
   color: var(--text);
   font-size: 1.3rem;
@@ -1473,7 +1473,7 @@ h1 { display: none; }
   width: 44px;
   height: 44px;
   border-radius: 50%;
-  border: 1px solid var(--border);
+  border: 2px solid var(--border);
   background: var(--bg);
   color: var(--text);
   font-size: 1.3rem;
@@ -1914,7 +1914,7 @@ h1 { display: none; }
   width: 44px;
   height: 44px;
   border-radius: 50%;
-  border: 1px solid var(--border);
+  border: 2px solid var(--border);
   background: var(--bg);
   color: var(--text);
   font-size: 1.3rem;
@@ -2018,7 +2018,7 @@ h1 { display: none; }
   width: 44px;
   height: 44px;
   border-radius: 50%;
-  border: 1px solid var(--border);
+  border: 2px solid var(--border);
   background: var(--bg);
   color: var(--text);
   font-size: 1.3rem;
