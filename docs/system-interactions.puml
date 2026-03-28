@@ -78,10 +78,9 @@ group Quiz generation (daemon)
   AI --> D : Generated quiz JSON
   D --> B : WS quiz_preview {quiz}
   B --> H : WS broadcast quiz_preview
-  H -> H : Host reviews/accepts
-  D --> B : WS poll_create {question, options}
-  D --> B : WS poll_open
-  B --> P : WS broadcast (poll open)
+  H -> H : Host reviews quiz
+  H -> B : POST /api/poll (accept quiz as poll)
+  B --> P : WS broadcast (poll created)
 end
 
 H -> B : PUT /api/poll/status {open:true}
