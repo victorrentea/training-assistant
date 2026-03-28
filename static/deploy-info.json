@@ -1,7 +1,7 @@
 {
-  "sha": "51917c402409ed6d843a674b6f0e5f5f5056f099",
-  "timestamp": "2026-03-28 23:17",
+  "sha": "a816d8ab0a45115fb52d0f84f896c196c5f8cec2",
+  "timestamp": "2026-03-28 23:19",
   "changelog": [
-    "feat(overlay): always right-edge, Y-only drag, remove multi-monitor logic"
+    "feat(host): consolidate left and right footers into single full-width footer"
   ]
 }
