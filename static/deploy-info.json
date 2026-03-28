@@ -1,7 +1,7 @@
 {
-  "sha": "9b04c6f235c371ecb951abbd204cf4fca3cff89d",
-  "timestamp": "2026-03-28 18:00",
+  "sha": "8648db597c7d9a1bd4d0a497c22a4686a2c9e697",
+  "timestamp": "2026-03-28 18:02",
   "changelog": [
-    "fix(slides): proper toggle \u2014 JS-driven expand/collapse"
+    "fix(version-tag): move from bottom-right to top-right on participant page"
   ]
 }
