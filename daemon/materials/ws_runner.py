@@ -175,6 +175,9 @@ class SlidesOnDemandWsRunner:
             log.error("slides", f"slides_upload_result_send_failed: {exc}")
 
     def _handle_request(self, ws, payload: dict) -> None:
+        if payload.get("type") == "server_ping":
+            log.info("slides", f"🏓 server_ping received ts={payload.get('ts')}")
+            return
         if payload.get("type") != "slides_upload_request":
             return
         slug = str(payload.get("slug") or "").strip()
