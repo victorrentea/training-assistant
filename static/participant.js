@@ -3,9 +3,26 @@
   if (!sessionId) { window.location.href = '/'; }
   const apiBase = '/' + sessionId;
 
-  // Update /notes links to be session-aware
+  // Update /notes links to be session-aware + display session code
   document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('a[href="/notes"]').forEach(a => { a.href = '/' + sessionId + '/notes'; });
+    // Show session code in version tag area
+    const vt = document.getElementById('version-tag');
+    if (vt) {
+      const span = document.createElement('span');
+      span.id = 'session-code-tag';
+      span.textContent = sessionId.toUpperCase();
+      span.style.cssText = 'margin-left:.6em; letter-spacing:.12em; font-weight:600; opacity:.7; cursor:pointer;';
+      span.title = 'Session code (click to copy join link)';
+      span.onclick = () => {
+        navigator.clipboard.writeText(location.origin + '/' + sessionId).then(() => {
+          span.textContent = 'Copied!';
+          setTimeout(() => { span.textContent = sessionId.toUpperCase(); }, 1500);
+        });
+      };
+      vt.appendChild(document.createTextNode(' | '));
+      vt.appendChild(span);
+    }
   });
 
   const LS_KEY = 'workshop_participant_name';
