@@ -1,7 +1,7 @@
 {
-  "sha": "12c69d2a93ff90e6c9133bb61c78eef3b2d37989",
+  "sha": "55cd795b577ecf5f1d877d4efd54c08541129d87",
   "timestamp": "2026-03-28 16:54",
   "changelog": [
-    "fix(avatar): update small avatar tooltip to 'Click to view or change'"
+    "fix(slides): show tooltips to the right in slides list panel"
   ]
 }
