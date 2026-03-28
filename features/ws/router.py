@@ -83,16 +83,14 @@ async def daemon_websocket_endpoint(websocket: WebSocket):
             data = await websocket.receive_json()
             state.daemon_last_seen = datetime.now(timezone.utc)
             msg_type = data.get("type")
-            if msg_type == "slides_upload_result":
-                from features.slides.drive_status import register_daemon_upload_result
-
-                await register_daemon_upload_result(data)
-            elif msg_type == "slides_meta":
-                state.slides_meta = {
-                    s["slug"]: s["updated_at"]
-                    for s in data.get("slides", [])
-                    if s.get("slug") and s.get("updated_at")
-                }
+            if msg_type == "slides_catalog":
+                from features.slides.cache import handle_slides_catalog
+                await handle_slides_catalog(data.get("entries", []))
+            elif msg_type == "slide_invalidated":
+                from features.slides.cache import handle_slide_invalidated
+                slug = data.get("slug", "").strip()
+                if slug:
+                    await handle_slide_invalidated(slug)
             elif msg_type == "daemon_ping":
                 # Heartbeat message; last_seen already updated.
                 continue
