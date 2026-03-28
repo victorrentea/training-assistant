@@ -1,8 +1,7 @@
 {
-  "sha": "5406e9f7d932beffaa8cd85e025381bfde508f83",
-  "timestamp": "2026-03-28 14:11",
+  "sha": "cfce8ea93365aa630c846b8274fa8aa7e0c81bf5",
+  "timestamp": "2026-03-28 14:12",
   "changelog": [
-    "fix(slides): shorten Follow button tooltip to 'Follow trainer slide'",
-    "feat(slides): tour-bubble style tooltips for PDF ctrl buttons"
+    "fix(ui): rename 'Send text to host' -> 'Paste text to the host'"
   ]
 }
