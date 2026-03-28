@@ -251,6 +251,10 @@ async def sync_session(body: SyncSessionRequest):
     if body.action is None and body.session_state:
         state.paused_participant_uuids = set()
 
+    # Safety net: ensure session_id exists whenever a session is active
+    if state.session_main and not state.session_id:
+        state.generate_session_id()
+
     await broadcast_state()
     return {"ok": True}
 
