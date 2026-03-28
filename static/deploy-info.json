@@ -1,7 +1,7 @@
 {
-  "sha": "a325cf023da2b422ea88cabee12551e834def6dd",
+  "sha": "fc446164babb9dd55fc84aac40903d7302417856",
   "timestamp": "2026-03-28 07:29",
   "changelog": [
-    "fix: swap PDF.js and Native button order in slides dock"
+    "fix: show Follow tour bubble below the button"
   ]
 }
