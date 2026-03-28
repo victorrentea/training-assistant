@@ -1,7 +1,7 @@
 {
-  "sha": "d0f19571026e608b44dcc5480c38c84e89762222",
+  "sha": "72ec69107b52ef51e748fe1c6049049911526c87",
   "timestamp": "2026-03-28 12:09",
   "changelog": [
-    "fix(upload): shorten tooltip and onboarding labels for paste and upload buttons"
+    "fix(slides): hard-scroll on restore and large host jumps"
   ]
 }
