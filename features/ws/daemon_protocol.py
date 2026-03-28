@@ -1,7 +1,7 @@
 # features/ws/daemon_protocol.py
 """Daemon WebSocket protocol — message types and push helpers."""
 import logging
-from core.state import app_state as state
+from core.state import state
 
 logger = logging.getLogger(__name__)
 
