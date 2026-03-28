@@ -111,6 +111,12 @@ class AppState:
         self.quiz_md_content: str = ""  # markdown log of all closed polls
         self.transcription_language: str = "ro"  # current AudioHijack Transcribe block language
         self.transcription_language_request: str | None = None  # pending change for daemon
+        # Clean up uploaded files from disk
+        import shutil
+        from pathlib import Path
+        upload_dir = Path(".server-data") / "uploads"
+        if upload_dir.exists():
+            shutil.rmtree(upload_dir, ignore_errors=True)
 
     def suggest_name(self) -> str:
         """Return the next available LOTR name (by popularity order).
