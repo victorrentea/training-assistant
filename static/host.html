@@ -326,7 +326,11 @@
     </div>
     <div class="right-footer">
       <span style="display:flex; align-items:center; gap:.5rem; flex-wrap:nowrap; min-width:0;">
-        <a id="participant-link" style="color:#fff; font-size:1.25rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; flex-shrink:1;" href="/" target="_blank"></a>
+        <a id="participant-link" style="color:#fff; font-size:1.25rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; flex-shrink:1;" href="/" target="_blank"></a><span id="session-id-suffix" style="display:none; font-size:1.25rem; font-family:monospace; font-weight:bold; color:#f0c040; letter-spacing:2px; white-space:nowrap;"></span>
+        <svg id="copy-link-icon" style="display:none; cursor:pointer; flex-shrink:0; width:22px; height:22px; opacity:.45; transition:opacity .15s;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" title="Copy join link" onclick="copySessionLink()">
+          <rect x="9" y="9" width="13" height="13" rx="2"/>
+          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+        </svg>
         <div id="qr-icon" title="Show QR code" style="cursor:pointer; opacity:.5; flex-shrink:0; width:28px; height:28px;">
           <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" fill="currentColor" width="28" height="28">
             <rect x="5" y="5" width="35" height="35" rx="4"/>
