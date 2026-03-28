@@ -887,11 +887,7 @@
       'download_failed': { icon: '❌', label: 'failed',     color: 'var(--danger, #f44336)' },
     };
 
-    entries.sort((a, b) => {
-      const ao = a.status === 'cached' ? 0 : 1;
-      const bo = b.status === 'cached' ? 0 : 1;
-      return ao - bo || (a.title || '').localeCompare(b.title || '');
-    });
+    entries.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
 
     const cachedCount = entries.filter(e => e.status === 'cached').length;
     let html = '<div class="slides-catalog-header">' + cachedCount + '/' + entries.length + ' cached</div>';
@@ -904,8 +900,8 @@
       const detail = [sizePart, agePart].filter(Boolean).join('  ');
       html += '<div class="slides-catalog-line">'
           + '<span class="slides-cache-icon">' + cfg.icon + '</span>'
-          + '<span class="slides-cache-label" style="color:' + cfg.color + '">' + cfg.label + '</span>'
           + '<span class="slides-cache-title">' + escHtml(title) + '</span>'
+          + '<span class="slides-cache-label" style="color:' + cfg.color + '">' + cfg.label + '</span>'
           + '<span class="slides-cache-detail">' + detail + '</span>'
           + '</div>';
     }
