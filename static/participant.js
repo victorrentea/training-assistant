@@ -454,7 +454,7 @@ function closeEmojiPopup(ev) {
     const refreshBtn = document.createElement('button');
     refreshBtn.className = 'avatar-refresh-btn';
     refreshBtn.innerHTML = '\u{1F3B2}';
-    refreshBtn.title = 'Roll for a new avatar';
+    refreshBtn.title = 'Click to draw another one';
     refreshBtn.onclick = function(e) {
         e.stopPropagation();
         // Track the current avatar as rejected
