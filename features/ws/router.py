@@ -878,16 +878,11 @@ async def _handle_participant_connection(websocket: WebSocket, pid: str, is_host
 
 @router.websocket("/ws/{participant_id}")
 async def websocket_endpoint(websocket: WebSocket, participant_id: str):
-    """WebSocket endpoint for host (__host__) and overlay (__overlay__) only.
+    """WebSocket endpoint for participants, host (__host__), and overlay (__overlay__).
 
-    Regular participants must connect via /ws/{session_id}/{participant_id}.
+    Also accepts regular participants directly (without session_id).
     """
     pid = participant_id.strip()
-    if pid not in ("__host__", "__overlay__"):
-        await websocket.accept()
-        await websocket.close(code=1008)
-        return
-
     is_host = pid == "__host__"
     is_overlay = pid == "__overlay__"
 
