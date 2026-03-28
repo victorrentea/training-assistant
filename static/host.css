@@ -273,12 +273,11 @@ body {
 
 .slides-catalog-name {
   color: var(--text);
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
   flex: 1 1 auto;
   min-width: 0;
+  white-space: nowrap;
   overflow: hidden;
+  text-overflow: ellipsis;
   user-select: none;
   outline: none;
 }
