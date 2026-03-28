@@ -9,6 +9,7 @@
     },
     {
       "title": "AI Coding 🔥",
+      "group": "AI",
       "source": "/Users/victorrentea/My Drive/Cursuri/CleanCode/AI Coding.pptx",
       "target_pdf": "AI Coding.pdf",
       "drive_export_url": "https://docs.google.com/presentation/d/1SxjaM0f97P1EjPJUxrjQ7fU2KKF_CD-N/export/pdf",
@@ -16,6 +17,7 @@
     },
     {
       "title": "Architecture Design Principles",
+      "group": "Architecture",
       "source": "/Users/victorrentea/My Drive/Cursuri/Architecture/Design Principles.pptx",
       "target_pdf": "Design Principles.pdf",
       "drive_export_url": "https://docs.google.com/presentation/d/1OV2fE1vo2V12r1kNJKWCBB-mxwlxZHFI/export/pdf",
@@ -23,6 +25,7 @@
     },
     {
       "title": "Architecture - Fundamentals",
+      "group": "Architecture",
       "source": "/Users/victorrentea/My Drive/Cursuri/Architecture/Architecture.pptx",
       "target_pdf": "Architecture.pdf",
       "drive_export_url": "https://docs.google.com/presentation/d/1OLTybLCDCmpzZM2ttn8IS1A14TeXSK8q/export/pdf",
@@ -30,6 +33,7 @@
     },
     {
       "title": "Architecture - REST",
+      "group": "Architecture",
       "source": "/Users/victorrentea/My Drive/Cursuri/Architecture/REST.pptx",
       "target_pdf": "REST.pdf",
       "drive_export_url": "https://docs.google.com/presentation/d/1KKTcvBbQpuy3kEFViigs4HOCk7eoBxdf/export/pdf",
@@ -37,6 +41,7 @@
     },
     {
       "title": "Architecture - Modulith",
+      "group": "Architecture",
       "source": "/Users/victorrentea/My Drive/Cursuri/Architecture/Modulith.pptx",
       "target_pdf": "Modulith.pdf",
       "drive_export_url": "https://docs.google.com/presentation/d/1KYMqjtP8qXhrvA2b3kP1yHbUdiLVJvkh/export/pdf",
@@ -44,6 +49,7 @@
     },
     {
       "title": "Architecture - Microservices",
+      "group": "Architecture",
       "source": "/Users/victorrentea/My Drive/Cursuri/Architecture/Microservices.pptx",
       "target_pdf": "Microservices.pdf",
       "drive_export_url": "https://docs.google.com/presentation/d/1KYOo8EkIy9UrLXvBTQjCduJgwMSAGMwF/export/pdf",
@@ -51,6 +57,7 @@
     },
     {
       "title": "Psychology",
+      "group": "Architecture",
       "source": "/Users/victorrentea/My Drive/Cursuri/Architecture/Psychology.pptx",
       "target_pdf": "Psychology.pdf",
       "drive_export_url": "https://docs.google.com/presentation/d/1KVgI3spS60gO3QXQpvznKTrMbag6Nqmg/export/pdf",
@@ -58,6 +65,7 @@
     },
     {
       "title": "Event-Driven Architectures",
+      "group": "Architecture",
       "source": "/Users/victorrentea/My Drive/Cursuri/Architecture/Event-Driven Architectures (EDA).pptx",
       "target_pdf": "Event-Driven Architectures.pdf",
       "drive_export_url": "https://docs.google.com/presentation/d/16ce9eoLrZcngZdHp9YhFj3SNbZ_hu_Cu/export/pdf",
@@ -65,6 +73,7 @@
     },
     {
       "title": "Event-Driven Pitfalls",
+      "group": "Architecture",
       "source": "/Users/victorrentea/My Drive/Cursuri/Architecture/Event-Driven Pitfalls.pptx",
       "target_pdf": "Event-Driven Pitfalls.pdf",
       "drive_export_url": "https://docs.google.com/presentation/d/1RWP-kzEMJ6M6VLzgW6XP4jALAkYo8FGE/export/pdf",
@@ -72,6 +81,7 @@
     },
     {
       "title": "Clean Code ✨",
+      "group": "Coding Practices",
       "source": "/Users/victorrentea/My Drive/Cursuri/CleanCode/Clean Code.pptx",
       "target_pdf": "Clean Code.pdf",
       "drive_export_url": "https://docs.google.com/presentation/d/1L5_7FDXH-nmIyymv49hfMQh_0iQIJlMb/export/pdf",
@@ -79,6 +89,7 @@
     },
     {
       "title": "Code Smells 🤢",
+      "group": "Coding Practices",
       "source": "/Users/victorrentea/My Drive/Cursuri/CleanCode/Code Smells.pptx",
       "target_pdf": "Code Smells.pdf",
       "drive_export_url": "https://docs.google.com/presentation/d/1oggnHZLrjvrT8sdA01yjs3tPlvALe_i8/export/pdf",
@@ -86,6 +97,7 @@
     },
     {
       "title": "Testing - Unit 🔄",
+      "group": "Testing",
       "source": "/Users/victorrentea/My Drive/Cursuri/Unit Testing/Unit Testing.pptx",
       "target_pdf": "Unit Testing.pdf",
       "drive_export_url": "https://docs.google.com/presentation/d/1TQ7FFCiouBlkIFlcssitCcbL_II2mWkM/export/pdf",
@@ -93,6 +105,7 @@
     },
     {
       "title": "Testing - Integration 🔄",
+      "group": "Testing",
       "source": "/Users/victorrentea/My Drive/Cursuri/Unit Testing/Integration Testing.pptx",
       "target_pdf": "Integration Testing.pdf",
       "drive_export_url": "https://docs.google.com/presentation/d/1YbY4CQZmlerB92niux5tdQ7aSQIVW4jQ/export/pdf",
@@ -100,6 +113,7 @@
     },
     {
       "title": "Secure Coding 🧑‍💻",
+      "group": "Coding Practices",
       "source": "/Users/victorrentea/My Drive/Cursuri/Security/Secure Coding.pptx",
       "target_pdf": "Secure Coding.pdf",
       "drive_export_url": "https://docs.google.com/presentation/d/10W8rKhajj38mVNbuIJ9hquUvA42D_v9K/export/pdf",
@@ -107,6 +121,7 @@
     },
     {
       "title": "Design Patterns",
+      "group": "Coding Practices",
       "source": "/Users/victorrentea/My Drive/Cursuri/Architecture/Design Patterns.pptx",
       "target_pdf": "Design Patterns.pdf",
       "drive_export_url": "https://docs.google.com/presentation/d/1KVq27_OJoLSofPfykUHBfGRbSKaWI7P5/export/pdf",
@@ -114,6 +129,7 @@
     },
     {
       "title": "Performance Intro",
+      "group": "Java Performance",
       "source": "/Users/victorrentea/My Drive/Cursuri/Performance/Introduction.pptx",
       "target_pdf": "Performance Intro.pdf",
       "drive_export_url": "https://docs.google.com/presentation/d/18bqAoDOukzycyzaGmJBChecRZ1oOsU0r/export/pdf",
@@ -121,6 +137,7 @@
     },
     {
       "title": "Profiling Java 🔎",
+      "group": "Java Performance",
       "source": "/Users/victorrentea/My Drive/Cursuri/Performance/Profiling.pptx",
       "target_pdf": "Profiling Java.pdf",
       "drive_export_url": "https://docs.google.com/presentation/d/1KVHiuR-Sm0x86ztHQAbKDNm33CfqX90T/export/pdf",
@@ -128,6 +145,7 @@
     },
     {
       "title": "Java Memory 💥",
+      "group": "Java Performance",
       "source": "/Users/victorrentea/My Drive/Cursuri/Performance/Java Memory.pptx",
       "target_pdf": "Java Memory.pdf",
       "drive_export_url": "https://docs.google.com/presentation/d/1KVKBEUKpTpzjpYm4__Kfo2IXxnPsvPwG/export/pdf",
@@ -135,6 +153,7 @@
     },
     {
       "title": "Java Concurrency 🔀",
+      "group": "Java Performance",
       "source": "/Users/victorrentea/My Drive/Cursuri/Performance/Java Concurrency.pptx",
       "target_pdf": "Java Concurrency.pdf",
       "drive_export_url": "https://docs.google.com/presentation/d/1KSOHw8S7VSmO7lUJHYmtpPIFlxBqHfjz/export/pdf",
@@ -142,6 +161,7 @@
     },
     {
       "title": "Virtual Threads",
+      "group": "Java Performance",
       "source": "/Users/victorrentea/My Drive/Cursuri/Performance/Virtual Threads.pptx",
       "target_pdf": "Virtual Threads.pdf",
       "drive_export_url": "https://docs.google.com/presentation/d/1KUmuB4ntRn2EghT3Tf0BqA1hMth33aUr/export/pdf",
@@ -149,6 +169,7 @@
     },
     {
       "title": "Java JIT ⏩",
+      "group": "Java Performance",
       "source": "/Users/victorrentea/My Drive/Cursuri/Performance/Java JIT.pptx",
       "target_pdf": "Java JIT.pdf",
       "drive_export_url": "https://docs.google.com/presentation/d/1KTDBoBZuZpe2EN3MXCsN0dMW1U6IUdAn/export/pdf",
@@ -156,6 +177,7 @@
     },
     {
       "title": "JPA",
+      "group": "Java Frameworks",
       "source": "/Users/victorrentea/My Drive/Cursuri/JPA/JPA.pptx",
       "target_pdf": "JPA.pdf",
       "drive_export_url": "https://docs.google.com/presentation/d/1OUhu7W6-SncG-cgeYqW42I5YNipisMu4/export/pdf",
@@ -163,6 +185,7 @@
     },
     {
       "title": "Spring 🍃",
+      "group": "Java Frameworks",
       "source": "/Users/victorrentea/My Drive/Cursuri/Spring/Spring.pptx",
       "target_pdf": "Spring.pdf",
       "drive_export_url": "https://docs.google.com/presentation/d/1FGBvQOvug2GMgWjOAWzhTE6GFMax3bbm/export/pdf",
@@ -170,6 +193,7 @@
     },
     {
       "title": "Reactive/WebFlux 🤯",
+      "group": "Java Frameworks",
       "source": "/Users/victorrentea/My Drive/Cursuri/Reactive/Reactive.pptx",
       "target_pdf": "Reactive WebFlux.pdf",
       "drive_export_url": "https://docs.google.com/presentation/d/1EG7uHj8LYUzHAEhpSQ-7MJgnli-3e75c/export/pdf",
