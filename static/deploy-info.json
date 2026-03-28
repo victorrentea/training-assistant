@@ -1,8 +1,7 @@
 {
-  "sha": "e0b661d610a2e78f6eececf67bfcee8279fdcbc9",
-  "timestamp": "2026-03-28 23:34",
+  "sha": "4e22d3e388ce6ed0e2b1049b2527ad24e6bb03f2",
+  "timestamp": "2026-03-28 23:35",
   "changelog": [
-    "fix: redirect browser to landing page on invalid session code",
-    "fix(host): move deploy version tag to top-right corner"
+    "feat(host): remove session code bar panel"
   ]
 }
