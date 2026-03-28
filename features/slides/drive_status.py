@@ -230,6 +230,7 @@ async def get_participant_slides_availability():
             "available_on_server": bool(path is not None and path.exists()),
             "sync_status": slide.get("sync_status"),
             "sync_message": slide.get("sync_message"),
+            "updated_at": slide.get("updated_at"),
         })
     return {"entries": entries}
 
