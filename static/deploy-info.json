@@ -1,8 +1,8 @@
 {
-  "sha": "7151aeb07226d83c720fe59e30ad8bd0d4c650c1",
-  "timestamp": "2026-03-29 01:02",
+  "sha": "ac4b17737406d13648103a5e095a8941c114a17f",
+  "timestamp": "2026-03-29 01:05",
   "changelog": [
-    "fix(daemon): use SESSIONS_FOLDER env for sessions_root fallback"
+    "fix(daemon): log sessions_root path at startup"
   ],
   "branches": [
     {
