@@ -93,13 +93,6 @@
 <div id="slides-overlay" class="slides-preview-overlay" onclick="closeSlidesModal()">
   <div class="slides-preview-shell" onclick="event.stopPropagation()">
     <div class="slides-viewer-area">
-      <div class="slides-meta-inline">
-        <button id="slides-close-btn" class="slides-ctrl-btn slides-close-btn" type="button" title="Close slides" onclick="closeSlidesModal()" style="display:none">✕</button>
-        <button id="slides-zoom-out" class="slides-ctrl-btn slides-zoom-btn" type="button" title="Zoom out" style="display:none">−</button>
-        <button id="slides-fit-width" class="slides-ctrl-btn slides-zoom-btn" type="button" title="Fit to width" style="display:none"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg></button>
-        <button id="slides-zoom-in" class="slides-ctrl-btn slides-zoom-btn" type="button" title="Zoom in" style="display:none">+</button>
-        <span id="slides-page-inline" class="slides-page-inline" style="display:none"></span>
-      </div>
       <div id="slides-empty" class="slides-empty" style="display:none;">No slides published yet.</div>
       <div id="slides-error" class="slides-error" style="display:none;"></div>
       <div id="slides-viewer-shell" class="slides-viewer-shell" style="display:none;">
@@ -131,6 +124,14 @@
 <script>window.renderDeployAge && window.renderDeployAge('version-tag');</script>
 <div id="qa-toast" class="qa-toast"></div>
 <div id="emoji-bar">
+  <!-- PDF slide controls — moved here so renderEmojiBar() can measure them as part of the single flex row -->
+  <div id="slides-ctrl-group" style="display:none; gap:.4rem; align-items:center; flex-shrink:0; pointer-events:auto;">
+    <button id="slides-close-btn" class="slides-ctrl-btn slides-close-btn has-tooltip" type="button" data-tooltip="Close slides" onclick="closeSlidesModal()" style="display:none">✕</button>
+    <button id="slides-zoom-out" class="slides-ctrl-btn slides-zoom-btn has-tooltip" type="button" data-tooltip="Zoom out" style="display:none">−</button>
+    <button id="slides-fit-width" class="slides-ctrl-btn slides-zoom-btn has-tooltip" type="button" data-tooltip="Fit to width" style="display:none"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg></button>
+    <button id="slides-zoom-in" class="slides-ctrl-btn slides-zoom-btn has-tooltip" type="button" data-tooltip="Zoom in" style="display:none">+</button>
+    <span id="slides-page-inline" class="slides-page-inline" style="display:none"></span>
+  </div>
   <!-- Dynamic emoji buttons injected here by renderEmojiBar() -->
   <div id="emoji-dots-wrap" style="display:none; position:relative; pointer-events:auto; flex-shrink:0;">
     <button id="emoji-dots-btn" class="emoji-btn emoji-btn-dots" data-tooltip="More reactions">•••</button>
