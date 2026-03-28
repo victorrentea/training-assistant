@@ -205,7 +205,8 @@ class SlidesOnDemandWsRunner:
             slug = payload.get("slug", "?")
             event = payload.get("event", "?")
             detail = payload.get("detail", "")
-            log.info("slides", f"📡 {event} slug={slug} {detail}")
+            log_detail = "" if event == "download_start" else detail
+            log.info("slides", f"📡 {event} slug={slug}" + (f" {log_detail}" if log_detail else ""))
             return
 
     def _run_loop(self) -> None:
