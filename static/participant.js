@@ -663,6 +663,26 @@ function closeEmojiPopup(ev) {
     showPasteToast();
   }
 
+  function openFeedbackModal() {
+    const overlay = document.getElementById('feedback-overlay');
+    if (overlay) {
+      overlay.classList.add('open');
+      const ta = document.getElementById('feedback-textarea');
+      if (ta) { ta.value = ''; ta.focus(); }
+      document.getElementById('feedback-send-btn').disabled = true;
+    }
+  }
+  function closeFeedbackModal() {
+    closeModal('feedback-overlay');
+  }
+  function submitFeedback() {
+    const ta = document.getElementById('feedback-textarea');
+    const text = ta ? ta.value.trim() : '';
+    if (!text || !ws) return;
+    sendWS('submit_feedback', { text });
+    closeFeedbackModal();
+  }
+
   function showPasteToast() {
     const toast = document.createElement('div');
     toast.textContent = 'Sent!';
@@ -4069,6 +4089,7 @@ function closeEmojiPopup(ev) {
     document.getElementById('emoji-ping-btn').onclick = (ev) => sendEmoji('🖥️', ev);
     document.getElementById('upload-btn').onclick = openUploadModal;
     document.getElementById('paste-btn').onclick = openPasteModal;
+    document.getElementById('feedback-btn').onclick = openFeedbackModal;
 
     // Open popup on hover; close only when mouse leaves the combined hot zone
     // (popup area + full width of emoji-center + bar height) so the user can

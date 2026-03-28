@@ -181,6 +181,14 @@
     <button id="upload-send-btn" class="paste-send-btn" disabled onclick="sendUploadFile()">Send to host</button>
   </div>
 </div>
+<!-- Feedback button — fixed top-left, always visible -->
+<button id="feedback-btn" class="emoji-btn feedback-fixed-btn" data-tooltip="Share feedback" data-tooltip-emoji="💬">💬</button>
+<div id="feedback-overlay" class="paste-overlay" onclick="closeFeedbackModal()">
+  <div class="feedback-bubble" onclick="event.stopPropagation()">
+    <textarea id="feedback-textarea" class="feedback-textarea" placeholder="Dream out loud… what would make this unforgettable?" oninput="document.getElementById('feedback-send-btn').disabled = !this.value.trim()" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();submitFeedback();}"></textarea>
+    <button id="feedback-send-btn" class="paste-send-btn" disabled onclick="submitFeedback()">Submit Prompt</button>
+  </div>
+</div>
 <div id="leaderboard-overlay" class="leaderboard-overlay" style="display:none;">
   <div class="leaderboard-content">
     <div class="leaderboard-title">LEADERBOARD</div>
