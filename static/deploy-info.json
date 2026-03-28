@@ -1,8 +1,7 @@
 {
-  "sha": "b0e6623e1e450727750e4d43cc5b4d5f2416da5b",
-  "timestamp": "2026-03-28 09:59",
+  "sha": "b4b246e5134b739b0b7f508e386f9f185336ed52",
+  "timestamp": "2026-03-28 10:00",
   "changelog": [
-    "feat(paste): add hover tooltip to paste floating button",
-    "feat(slides): add onboarding-style hover tooltips to Follow/PDF.js/Native buttons"
+    "fix(paste): copy icon with blinking yellow bg + Copied tooltip on host"
   ]
 }
