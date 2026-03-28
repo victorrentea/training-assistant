@@ -1,7 +1,7 @@
 {
-  "sha": "848642362305fa3420fb423b6ecc9d2c8bf00233",
-  "timestamp": "2026-03-28 23:53",
+  "sha": "68d9a0e6b9985249596b688dfaa4d49e3db61588",
+  "timestamp": "2026-03-28 23:58",
   "changelog": [
-    "feat(daemon): track IntelliJ git repos and PowerPoint slides per session"
+    "fix(host): hide (0) count on Key Points badge when empty"
   ]
 }
