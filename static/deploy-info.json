@@ -1,7 +1,7 @@
 {
-  "sha": "6d067c342408bc2003af13ffadcfc8c110fe330a",
-  "timestamp": "2026-03-28 17:24",
+  "sha": "a9f7c30fabbf6e607e943ba4a94ee6291c69b32b",
+  "timestamp": "2026-03-28 17:36",
   "changelog": [
-    "fix(emoji-bar): always center emoji buttons regardless of PDF controls visibility"
+    "fix(deps): move agentmail to daemon deps, remove from server"
   ]
 }
