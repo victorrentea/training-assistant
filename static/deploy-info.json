@@ -1,7 +1,7 @@
 {
-  "sha": "ac73e9bc4c2d4ed57d0bc93a5108436be78d7188",
-  "timestamp": "2026-03-28 16:14",
+  "sha": "69528874ddb2406374a712df23521134b706d3c5",
+  "timestamp": "2026-03-28 16:15",
   "changelog": [
-    "feat(emoji-bar): cap visible emojis at 5 and center them in bar"
+    "refactor(slides): extract shared _buildSlideItem to eliminate duplication"
   ]
 }
