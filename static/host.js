@@ -3010,8 +3010,10 @@ function _updateBlocker() {
   const check = document.getElementById('blocker-folder-check');
   const statusEl = document.getElementById('blocker-status');
 
-  // Pre-fill from daemon_session_folder (actual disk folder) or default date
-  const folderName = daemonSessionFolder ? daemonSessionFolder.split('/').pop() : null;
+  // Pre-fill from daemon_session_folder (disk) or active session (session_id + sessionMain)
+  const folderName = daemonSessionFolder
+    ? daemonSessionFolder.split('/').pop()
+    : (_currentSessionId && sessionMain ? sessionMain.name : null);
   if (folderName) {
     if (!input.value || input.value === _blockerOriginalName || !input.dataset.touched) {
       input.value = folderName;
