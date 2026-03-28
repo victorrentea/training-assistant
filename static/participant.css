@@ -692,9 +692,7 @@ h1 { display: none; }
   flex: 1;
   min-width: 0;
   cursor: pointer;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  word-break: break-word;
 }
 
 .slides-list-item.unavailable {
