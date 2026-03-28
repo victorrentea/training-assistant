@@ -1924,6 +1924,18 @@ h1 { display: none; }
   border-left: none;
   border-top: none;
 }
+.tour-bubble.arrow-left::after {
+  top: 50%;
+  left: -8px;
+  right: auto;
+  bottom: auto;
+  margin-left: 0;
+  margin-top: -7px;
+  border-left: 1px solid var(--accent);
+  border-top: 1px solid var(--accent);
+  border-right: none;
+  border-bottom: none;
+}
 .tour-bubble-emoji {
   font-size: 1.5rem;
   display: block;

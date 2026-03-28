@@ -4148,7 +4148,8 @@ function closeEmojiPopup(ev) {
       const bubW = 180;
       bub.style.width = bubW + 'px';
       if (btn.closest('.emoji-popup')) {
-        // Popup buttons float above the bar — show tooltip to the right
+        // Popup buttons float above the bar — show tooltip to the right, arrow points left toward button
+        bub.classList.add('arrow-left');
         bub.style.left = (rect.right + 12) + 'px';
         bub.style.top = '0px';
         requestAnimationFrame(() => {
