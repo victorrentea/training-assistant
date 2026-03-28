@@ -164,7 +164,8 @@
       { selector: '#notes-btn',       emoji: '📝', text: 'Notes are here. Tap to open session notes anytime.' },
       { selector: '#summary-btn',     emoji: '🧠', text: 'AI recaps what you missed. Tap any time. Zero FOMO.' },
       { selector: '#location-prompt', emoji: '📍', text: "Tell us where you're from — for the world map. Totally optional." },
-      { selector: '#slides-dock',     emoji: '📑', text: 'Slides are always on the right. Click any topic to open it.', scanDock: true },
+      { selector: '#slides-dock',        emoji: '📑', text: 'Slides are always on the right. Click any topic to open it.', scanDock: true },
+      { selector: '#slides-follow-btn',  emoji: '📌', text: "Follows the trainer's current slide. Tap to browse freely.", arrowRight: true },
       ..._shuffled,
     ];
 
@@ -275,6 +276,14 @@
           bub.style.transition = 'top 1.2s ease-in-out';
           bub.style.top = Math.max(8, Math.min(window.innerHeight - 120, rect.top + rect.height * 0.6)) + 'px';
         });
+        return;
+      }
+      if (step?.arrowRight) {
+        bub.classList.remove('arrow-top');
+        bub.classList.add('arrow-right');
+        const bubbleLeft = Math.max(8, rect.left - bubW - 14);
+        bub.style.left = bubbleLeft + 'px';
+        bub.style.top = Math.max(8, Math.min(window.innerHeight - 120, rect.top + rect.height / 2 - 30)) + 'px';
         return;
       }
       bub.classList.remove('arrow-right');
