@@ -1,7 +1,7 @@
 {
-  "sha": "d2220dd2dba8691cbf1bc924d6e1e671ba6b058f",
-  "timestamp": "2026-03-28 23:24",
+  "sha": "b5cb39bb639226e8b756eb7b0023e3d45b6573f0",
+  "timestamp": "2026-03-28 23:25",
   "changelog": [
-    "fix(overlay): use CGDisplayIsBuiltin to find built-in MacBook screen"
+    "test: add daemon WS integration test for quiz request cycle"
   ]
 }
