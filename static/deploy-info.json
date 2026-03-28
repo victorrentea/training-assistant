@@ -1,7 +1,7 @@
 {
-  "sha": "8e99a3d7210a68fc79d6aca1abb6e842cb050430",
-  "timestamp": "2026-03-29 00:27",
+  "sha": "05e8f4622d340c04f3a9f0ab984d12fdf06c655f",
+  "timestamp": "2026-03-29 00:36",
   "changelog": [
-    "fix(host): blocker only dismissed after explicit host action"
+    "fix(diagram): correct quiz flow, add diagram sync rule to CLAUDE.md, reorder participants"
   ]
 }
