@@ -1,7 +1,7 @@
 {
-  "sha": "852f779184f888d6b9e4eb005ac1a88d7ccae399",
-  "timestamp": "2026-03-28 16:57",
+  "sha": "54d3645a0452169969d33f82315b8f87cb74cb6f",
+  "timestamp": "2026-03-28 16:58",
   "changelog": [
-    "fix(avatar): dice tooltip -> 'Click to draw another one'"
+    "fix(tooltips): popup emojis tooltip right, cache dots tooltip left"
   ]
 }
