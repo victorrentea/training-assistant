@@ -1,7 +1,7 @@
 {
-  "sha": "7221b5c5c56bd0f2aaae68fe0197d73d65eeaf92",
-  "timestamp": "2026-03-28 17:03",
+  "sha": "3b23bd128d72d2108097664d7a1d95b8e7b2cf62",
+  "timestamp": "2026-03-28 17:04",
   "changelog": [
-    "feat(daemon): add AgentMail email notifications"
+    "fix(slides): stop tooltip spinning on cache spinner; fix poll timeout using wall clock"
   ]
 }
