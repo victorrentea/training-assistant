@@ -2,6 +2,113 @@
   const LS_UUID_KEY = 'workshop_participant_uuid';
   const LS_VOTE_KEY = 'workshop_vote';
 
+// ── Emoji bar ─────────────────────────────────────────────────────────────
+const EMOJI_CONFIG = [
+  { emoji: '❤️', tooltip: 'Genuinely love this.' },
+  { emoji: '☕', tooltip: 'I need a break. Now.' },
+  { emoji: '👍', tooltip: 'Yes. More of this.' },
+  { emoji: '🔥', tooltip: 'This is absolute fire.' },
+  { emoji: '🤔', tooltip: 'Hmm... not convinced yet.' },
+  { emoji: '⚔️', tooltip: 'Fight me on this.' },
+  { emoji: '😂', tooltip: "I'm dead 💀" },
+  { emoji: '🤯', tooltip: 'My brain just exploded.' },
+  { emoji: '💡', tooltip: 'Wait, I have an idea!' },
+  { emoji: '✅', tooltip: 'Agreed. 100%.' },
+  { emoji: '❌', tooltip: 'Nope. Hard disagree.' },
+];
+const LS_EMOJI_COUNTS = 'emoji_use_counts';
+const EMOJI_BTN_PX = 44 + 8; // button width (44px) + gap (.5rem ≈ 8px)
+
+function getEmojiCounts() {
+  try { return JSON.parse(localStorage.getItem(LS_EMOJI_COUNTS) || '{}'); }
+  catch { return {}; }
+}
+
+function incrementEmojiCount(emoji) {
+  const counts = getEmojiCounts();
+  counts[emoji] = (counts[emoji] || 0) + 1;
+  localStorage.setItem(LS_EMOJI_COUNTS, JSON.stringify(counts));
+}
+
+function getSortedEmojis() {
+  const counts = getEmojiCounts();
+  return [...EMOJI_CONFIG].sort((a, b) => {
+    const diff = (counts[b.emoji] || 0) - (counts[a.emoji] || 0);
+    return diff !== 0 ? diff : EMOJI_CONFIG.indexOf(a) - EMOJI_CONFIG.indexOf(b);
+  });
+}
+
+function renderEmojiBar() {
+  const bar = document.getElementById('emoji-bar');
+  const dotsWrap = document.getElementById('emoji-dots-wrap');
+  const popup = document.getElementById('emoji-popup');
+  if (!bar || !dotsWrap || !popup) return;
+
+  // Measure space consumed by fixed elements (dots + ping + divider + upload + paste + bar padding)
+  // Use actual rendered widths of fixed children so this adapts to font/zoom changes.
+  const fixedEls = [dotsWrap, document.getElementById('emoji-ping-btn'),
+    bar.querySelector('.emoji-bar-divider'), document.getElementById('upload-btn'),
+    document.getElementById('paste-btn')];
+  const fixedWidth = fixedEls.reduce((sum, el) => {
+    if (!el) return sum;
+    return sum + el.getBoundingClientRect().width + 8; // +8 for gap
+  }, 0);
+  const barPx = bar.getBoundingClientRect().width - 24; // subtract bar padding (.75rem * 2)
+  const visibleCount = Math.min(
+    Math.max(0, Math.floor((barPx - fixedWidth) / EMOJI_BTN_PX)),
+    EMOJI_CONFIG.length
+  );
+
+  const sorted = getSortedEmojis();
+  const visible = sorted.slice(0, visibleCount);
+  const overflow = sorted.slice(visibleCount);
+
+  // Remove existing dynamic emoji buttons
+  bar.querySelectorAll('.emoji-btn-dynamic').forEach(el => el.remove());
+
+  // Insert visible emoji buttons before #emoji-dots-wrap
+  visible.forEach(({ emoji, tooltip }) => {
+    const btn = document.createElement('button');
+    btn.className = 'emoji-btn emoji-btn-dynamic';
+    btn.dataset.tooltip = tooltip;
+    btn.style.pointerEvents = 'auto';
+    btn.style.flexShrink = '0';
+    btn.textContent = emoji;
+    btn.onclick = (ev) => sendEmoji(emoji, ev);
+    bar.insertBefore(btn, dotsWrap);
+  });
+
+  // Show/hide ••• and populate popup overflow buttons
+  const hasOverflow = overflow.length > 0;
+  dotsWrap.style.display = hasOverflow ? '' : 'none';
+
+  // Remove old overflow buttons from popup (keep .emoji-popup-close)
+  popup.querySelectorAll('.emoji-popup-btn').forEach(el => el.remove());
+  const closeBtn = popup.querySelector('.emoji-popup-close');
+  overflow.forEach(({ emoji, tooltip }) => {
+    const btn = document.createElement('button');
+    btn.className = 'emoji-btn emoji-popup-btn';
+    btn.dataset.tooltip = tooltip;
+    btn.style.cssText = 'width:36px;height:36px;font-size:1.1rem;flex-shrink:0;pointer-events:auto;';
+    btn.textContent = emoji;
+    btn.onclick = (ev) => { sendEmoji(emoji, ev); closeEmojiPopup(); };
+    popup.insertBefore(btn, closeBtn ? closeBtn.nextSibling : null);
+  });
+}
+
+function toggleEmojiPopup(ev) {
+  if (ev) ev.stopPropagation();
+  const popup = document.getElementById('emoji-popup');
+  if (!popup) return;
+  popup.style.display = popup.style.display === 'none' ? 'flex' : 'none';
+}
+
+function closeEmojiPopup(ev) {
+  if (ev) ev.stopPropagation();
+  const popup = document.getElementById('emoji-popup');
+  if (popup) popup.style.display = 'none';
+}
+
   // Host cookie (is_host=1) → sessionStorage (per-tab UUID for multi-tab testing)
   // Normal participants → localStorage (same UUID across tabs/reloads)
   const uuidStorage = document.cookie.includes('is_host=1') ? sessionStorage : localStorage;
@@ -145,22 +252,14 @@
     if (localStorage.getItem(LS_TOUR_KEY)) return;
     localStorage.setItem(LS_TOUR_KEY, '1');
 
-    const _ALL_EMOJI_STEPS = [
-      { selector: '#emoji-bar button[onclick*="👍"]',  emoji: '👍', text: "Tap when the speaker nails it. Their ego needs the fuel." },
-      { selector: '#emoji-bar button[onclick*="⚔️"]',  emoji: '⚔️', text: "Fight me on this. Intellectually." },
-      { selector: '#emoji-bar button[onclick*="🤔"]',  emoji: '🤔', text: "Hmm... I'm not convinced yet." },
-      { selector: '#emoji-bar button[onclick*="🎉"]',  emoji: '🎉', text: "THIS IS AMAZING!" },
-      { selector: '#emoji-bar button[onclick*="❤️"]',  emoji: '❤️', text: "Genuinely love this." },
-      { selector: '#emoji-bar button[onclick*="🔥"]',  emoji: '🔥', text: "This is absolute fire." },
-      { selector: '#emoji-bar button[onclick*="👏"]',  emoji: '👏', text: "Standing ovation!" },
-      { selector: '#emoji-bar button[onclick*="😂"]',  emoji: '😂', text: "I'm dead 💀" },
-      { selector: '#emoji-bar button[onclick*="🤯"]',  emoji: '🤯', text: "My brain just exploded." },
-      { selector: '#emoji-bar button[onclick*="💡"]',  emoji: '💡', text: "Wait, I have an idea!" },
-      { selector: '#emoji-bar button[onclick*="☕"]',  emoji: '☕', text: "I need a break. Now." },
-      { selector: '#emoji-bar button[onclick*="✅"]',  emoji: '✅', text: "Agreed. 100%." },
-      { selector: '#emoji-bar button[onclick*="❌"]',  emoji: '❌', text: "Nope. Hard disagree." },
-    ];
-    const _shuffled = _ALL_EMOJI_STEPS.slice().sort(() => Math.random() - .5).slice(0, 4);
+    const _ALL_EMOJI_STEPS = EMOJI_CONFIG.map(({ emoji, tooltip }) => ({
+      selector: `#emoji-bar .emoji-btn-dynamic[data-tooltip="${tooltip}"]`,
+      emoji,
+      text: tooltip,
+    }));
+    const _available = _ALL_EMOJI_STEPS.filter(s => document.querySelector(s.selector));
+    const _shuffled = (_available.length >= 4 ? _available : _ALL_EMOJI_STEPS)
+      .slice().sort(() => Math.random() - .5).slice(0, 4);
     const STEPS = [
       { selector: '#display-name',    emoji: '✏️', text: "That's your name. Tap it to rename yourself. Be creative." },
       { selector: '#notes-btn',       emoji: '📝', text: 'Notes are here. Tap to open session notes anytime.' },
@@ -3008,6 +3107,11 @@
   function sendEmoji(emoji, ev) {
     if (!ws) return;
     ws.send(JSON.stringify({ type: 'emoji_reaction', emoji }));
+    // Track usage for priority reordering (only for overflow-eligible emojis)
+    if (EMOJI_CONFIG.some(e => e.emoji === emoji)) {
+      incrementEmojiCount(emoji);
+      renderEmojiBar();
+    }
     const btn = ev && ev.currentTarget;
     if (currentMode === 'conference' || window.innerWidth <= 600) {
       showMobileEmojiShake(emoji);
@@ -3870,6 +3974,25 @@
 
   // ── Emoji bar hover bubbles + dev-reset: need full DOM ──
   document.addEventListener('DOMContentLoaded', () => {
+    // Wire onclick for buttons now inside #emoji-bar
+    document.getElementById('emoji-dots-btn').onclick = toggleEmojiPopup;
+    document.getElementById('emoji-ping-btn').onclick = (ev) => sendEmoji('🖥️', ev);
+    document.getElementById('emoji-popup').querySelector('.emoji-popup-close').onclick = closeEmojiPopup;
+    document.getElementById('upload-btn').onclick = openUploadModal;
+    document.getElementById('paste-btn').onclick = openPasteModal;
+
+    // Initial render
+    renderEmojiBar();
+
+    // Re-render on bar resize
+    new ResizeObserver(() => { closeEmojiPopup(); renderEmojiBar(); })
+      .observe(document.getElementById('emoji-bar'));
+
+    // Close popup on outside click
+    document.addEventListener('click', (ev) => {
+      const dotsWrap = document.getElementById('emoji-dots-wrap');
+      if (dotsWrap && !dotsWrap.contains(ev.target)) closeEmojiPopup();
+    });
 
   // Emoji hover bubbles (reuse tour-bubble style)
   (function setupEmojiBubbles() {
@@ -3884,7 +4007,7 @@
     function showBubble(btn) {
       removeBubble();
       const text = btn.dataset.tooltip;
-      const emoji = btn.textContent.trim();
+      const emoji = btn.dataset.tooltipEmoji || btn.textContent.trim();
       if (!text) return;
 
       const bub = document.createElement('div');
@@ -3915,13 +4038,16 @@
       });
     }
 
-    document.querySelectorAll('#emoji-bar .emoji-btn[data-tooltip]').forEach(btn => {
-      btn.addEventListener('mouseenter', () => {
-        showTimer = setTimeout(() => showBubble(btn), 100);
-      });
-      btn.addEventListener('mouseleave', removeBubble);
-      btn.addEventListener('click', removeBubble);
-    });
+    const emojiBarEl = document.getElementById('emoji-bar');
+    emojiBarEl.addEventListener('mouseenter', (ev) => {
+      const btn = ev.target.closest('.emoji-btn[data-tooltip]');
+      if (!btn) return;
+      showTimer = setTimeout(() => showBubble(btn), 100);
+    }, true);
+    emojiBarEl.addEventListener('mouseleave', removeBubble, true);
+    emojiBarEl.addEventListener('click', (ev) => {
+      if (ev.target.closest('.emoji-btn[data-tooltip]')) removeBubble();
+    }, true);
   })();
 
   // Slides panel hover bubbles (Follow, PDF.js, Native)
@@ -3972,7 +4098,7 @@
       }
     }
 
-    document.querySelectorAll('#slides-follow-btn, #slides-view-pdfjs, #slides-view-native, #paste-btn, #upload-btn').forEach(btn => {
+    document.querySelectorAll('#slides-follow-btn, #slides-view-pdfjs, #slides-view-native').forEach(btn => {
       btn.addEventListener('mouseenter', () => { showTimer = setTimeout(() => showBubble(btn), 150); });
       btn.addEventListener('mouseleave', removeBubble);
       btn.addEventListener('click', removeBubble);
