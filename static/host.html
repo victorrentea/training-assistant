@@ -219,7 +219,33 @@
   <div class="host-col host-col-center">
     <!-- QR idle state -->
     <div id="center-qr" class="center-panel">
-      <div id="center-qr-url" style="font-family:monospace; font-size:2.2rem; font-weight:700; letter-spacing:.04em; text-align:center; padding:1rem 0 .5rem; cursor:pointer; position:relative;" title="Click to copy" onclick="copyCenterUrl(this)"></div>
+      <div style="display:flex; align-items:center; gap:.75rem; padding:1rem 0 .5rem;">
+        <div id="center-qr-url" style="font-family:monospace; font-size:2.2rem; font-weight:700; letter-spacing:.04em; cursor:pointer; position:relative;" title="Click to copy" onclick="copyCenterUrl(this)"></div>
+        <svg id="copy-link-icon" style="display:none; cursor:pointer; flex-shrink:0; width:22px; height:22px; opacity:.45; transition:opacity .15s;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" title="Copy join link" onclick="copySessionLink()">
+          <rect x="9" y="9" width="13" height="13" rx="2"/>
+          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+        </svg>
+        <div id="qr-icon" title="Show QR code" style="cursor:pointer; opacity:.5; flex-shrink:0; width:28px; height:28px;">
+          <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" fill="currentColor" width="28" height="28">
+            <rect x="5" y="5" width="35" height="35" rx="4"/>
+            <rect x="13" y="13" width="19" height="19" rx="2" fill="var(--bg,#1a1a2e)"/>
+            <rect x="18" y="18" width="9" height="9" rx="1"/>
+            <rect x="60" y="5" width="35" height="35" rx="4"/>
+            <rect x="68" y="13" width="19" height="19" rx="2" fill="var(--bg,#1a1a2e)"/>
+            <rect x="73" y="18" width="9" height="9" rx="1"/>
+            <rect x="5" y="60" width="35" height="35" rx="4"/>
+            <rect x="13" y="68" width="19" height="19" rx="2" fill="var(--bg,#1a1a2e)"/>
+            <rect x="18" y="73" width="9" height="9" rx="1"/>
+            <rect x="60" y="60" width="9" height="9" rx="1"/>
+            <rect x="73" y="60" width="9" height="9" rx="1"/>
+            <rect x="86" y="60" width="9" height="9" rx="1"/>
+            <rect x="60" y="73" width="9" height="9" rx="1"/>
+            <rect x="86" y="73" width="9" height="9" rx="1"/>
+            <rect x="60" y="86" width="9" height="9" rx="1"/>
+            <rect x="73" y="86" width="9" height="9" rx="1"/>
+          </svg>
+        </div>
+      </div>
       <div id="qr-code" class="qr-code" title="Click to brighten"></div>
     </div>
     <!-- Poll results panel -->
@@ -349,30 +375,6 @@
     <span id="participant-link" style="color:#fff; font-size:1.25rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; flex-shrink:1;"></span><span id="session-id-suffix" style="display:none; font-size:1.25rem; font-family:monospace; font-weight:bold; color:#f0c040; letter-spacing:2px; white-space:nowrap;"></span>
   </div>
   <div class="host-footer-right">
-    <svg id="copy-link-icon" style="display:none; cursor:pointer; flex-shrink:0; width:22px; height:22px; opacity:.45; transition:opacity .15s;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" title="Copy join link" onclick="copySessionLink()">
-      <rect x="9" y="9" width="13" height="13" rx="2"/>
-      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
-    </svg>
-    <div id="qr-icon" title="Show QR code" style="cursor:pointer; opacity:.5; flex-shrink:0; width:28px; height:28px;">
-      <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" fill="currentColor" width="28" height="28">
-        <rect x="5" y="5" width="35" height="35" rx="4"/>
-        <rect x="13" y="13" width="19" height="19" rx="2" fill="var(--bg,#1a1a2e)"/>
-        <rect x="18" y="18" width="9" height="9" rx="1"/>
-        <rect x="60" y="5" width="35" height="35" rx="4"/>
-        <rect x="68" y="13" width="19" height="19" rx="2" fill="var(--bg,#1a1a2e)"/>
-        <rect x="73" y="18" width="9" height="9" rx="1"/>
-        <rect x="5" y="60" width="35" height="35" rx="4"/>
-        <rect x="13" y="68" width="19" height="19" rx="2" fill="var(--bg,#1a1a2e)"/>
-        <rect x="18" y="73" width="9" height="9" rx="1"/>
-        <rect x="60" y="60" width="9" height="9" rx="1"/>
-        <rect x="73" y="60" width="9" height="9" rx="1"/>
-        <rect x="86" y="60" width="9" height="9" rx="1"/>
-        <rect x="60" y="73" width="9" height="9" rx="1"/>
-        <rect x="86" y="73" width="9" height="9" rx="1"/>
-        <rect x="60" y="86" width="9" height="9" rx="1"/>
-        <rect x="73" y="86" width="9" height="9" rx="1"/>
-      </svg>
-    </div>
     <button class="btn-scores-reset" onclick="resetScores()" title="Reset all scores to zero">🗑</button>
     <span id="token-cost" class="badge" style="font-size:.75rem; color:var(--muted); flex-shrink:0;">$0.00</span>
     <span id="git-repos-badge" class="badge" title="Git repositories visited this session" style="font-size:0.85rem; cursor:default;">⎇ 0</span>
