@@ -1,7 +1,7 @@
 {
-  "sha": "bd69fe8890eb12f5f75529ca49d33d603b4bf8a4",
-  "timestamp": "2026-03-27 23:48",
+  "sha": "dd7a3a6e18db6e925d23e460a3f0ab9fd5f1499e",
+  "timestamp": "2026-03-28 07:04",
   "changelog": [
-    "feat: show download progress bar in Loading Slide blocker dialog"
+    "fix: restore scroll position when returning to a previously visited topic"
   ]
 }
