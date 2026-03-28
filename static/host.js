@@ -1241,7 +1241,7 @@
       const pasteTexts = participant.paste_texts || [];
       const pasteIcons = pasteTexts.map((entry, i) => {
         const preview = (entry.text.length > 100 ? entry.text.substring(0, 100) + '…' : entry.text).replace(/\n/g, ' ');
-        return `<span class="paste-icon" title="${escHtml(preview)}" data-uuid="${escHtml(pid)}" data-paste-id="${entry.id}" onclick="copyAndDismissPaste(this)">📋</span>`;
+        return `<span class="paste-icon" title="${escHtml(preview)}" data-uuid="${escHtml(pid)}" data-paste-id="${entry.id}" onclick="copyAndDismissPaste(this)"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5.5" y="5.5" width="9" height="9" rx="2"/><path d="M3 10.5H2.5a1.5 1.5 0 0 1-1.5-1.5V2.5A1.5 1.5 0 0 1 2.5 1h6.5A1.5 1.5 0 0 1 11 2.5V3"/></svg></span>`;
       }).join('');
       return `<li class="${online ? 'online' : 'offline'}"><span class="pax-name" title="${ip ? 'IP: ' + ip : ''}">${debateIcon}${avatarHtml}<span class="pax-name-text">${escHtml(name)}</span></span>${pasteIcons}${scoreTag}${locLabel ? `<span class="pax-location" onclick="openMap()" title="View all on map">${escHtml(locLabel)}</span>` : ''}</li>`;
     }).join('');
@@ -3170,6 +3170,16 @@ function copyAndDismissPaste(el) {
   const entry = (participant?.paste_texts || []).find(e => e.id === pasteId);
   if (entry) {
     navigator.clipboard.writeText(entry.text).then(() => {
+      // Show "Copied!" tooltip
+      const tip = document.createElement('span');
+      tip.textContent = 'Copied!';
+      tip.className = 'paste-copied-tip';
+      const rect = el.getBoundingClientRect();
+      tip.style.left = rect.left + rect.width / 2 + 'px';
+      tip.style.top = rect.top - 4 + 'px';
+      document.body.appendChild(tip);
+      setTimeout(() => tip.remove(), 1200);
+      // Fade out icon
       el.style.transition = 'opacity .3s';
       el.style.opacity = '0';
       setTimeout(() => el.remove(), 300);
