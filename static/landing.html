@@ -104,8 +104,7 @@
 </head>
 <body>
   <div class="landing-card">
-    <div class="landing-logo">Interact</div>
-    <div class="landing-subtitle">Live workshop interaction tool</div>
+    <div class="landing-logo">Join the Session</div>
 
     <label class="landing-label" for="code-input">Enter session code</label>
     <input
@@ -190,18 +189,6 @@
       setInterval(tryAutoJoin, 3000);
     })();
 
-    // Check if any session is active
-    (async function checkSessionActive() {
-      try {
-        const res = await fetch('/api/session/active');
-        if (!res.ok) return;
-        const data = await res.json();
-        const statusEl = document.getElementById('status-msg');
-        if (!data.active) {
-          statusEl.textContent = 'No active session yet';
-        }
-      } catch { /* ignore */ }
-    })();
   </script>
 
   <script src="/static/version.js"></script>
