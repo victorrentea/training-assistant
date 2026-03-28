@@ -1,7 +1,7 @@
 {
-  "sha": "45b134142f5751a5fe05a55f957642796f32b253",
-  "timestamp": "2026-03-28 17:17",
+  "sha": "6baade1c24984cfd49140cefdcab672c3f301a52",
+  "timestamp": "2026-03-28 17:18",
   "changelog": [
-    "feat(participant): add \ud83d\udcac feedback button \u2192 email via daemon"
+    "fix(slides): increase catalog popover max-height from 44vh to 80vh"
   ]
 }
