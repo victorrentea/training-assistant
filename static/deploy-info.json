@@ -1,7 +1,7 @@
 {
-  "sha": "216ec946fb8e4a27a73face2c91030f57ca4f139",
-  "timestamp": "2026-03-28 16:59",
+  "sha": "7221b5c5c56bd0f2aaae68fe0197d73d65eeaf92",
+  "timestamp": "2026-03-28 17:03",
   "changelog": [
-    "fix(slides): reduce topic list item height by 5%"
+    "feat(daemon): add AgentMail email notifications"
   ]
 }
