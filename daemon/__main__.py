@@ -61,6 +61,7 @@ from daemon.lock import (
     _HEARTBEAT_INTERVAL,
 )
 from daemon.email_notify import notify as email_notify
+from daemon.intellij.tracker import probe_intellij_state
 
 EXIT_CODE_UPDATE = 42  # signals start.sh to git pull and restart
 _BACKUP_DIR = Path.home() / ".training-assistant"
@@ -534,6 +535,11 @@ def run() -> None:
     last_lang_sync_date: date | None = None    # sync AudioHijack language once per day
     _timing_fired_date: date | None = None     # date for which timing events were tracked
     _timing_fired_today: set = set()           # timing events already fired today
+    slides_log: list[dict] = []        # {file, slide, first_seen_at, first_seen_hhmm, seconds_spent}
+    git_repos: list[dict] = []         # {project, path, branch, seconds_spent}
+    last_intellij_probe_at: float = 0.0
+    _INTELLIJ_PROBE_INTERVAL: float = 5.0  # probe IntelliJ every 5 seconds
+    _last_activity_log_key: tuple = (0, 0)  # (slides_count, git_count) — detect changes
 
     # Sync initial state to server — include session_state.json if present in the active folder
     try:
@@ -546,7 +552,7 @@ def run() -> None:
                     log.info("session", f"Loaded session_state.json for restore ({len(startup_session_state)} keys)")
                 except Exception as e:
                     log.error("session", f"Failed to read session_state.json: {e}")
-        sync_session_to_server(config, session_stack, current_key_points, startup_session_state)
+        sync_session_to_server(config, session_stack, current_key_points, startup_session_state, slides_log=slides_log, git_repos=git_repos)
     except Exception as e:
         log.error("session", f"Failed to sync initial state: {e}")
 
@@ -613,6 +619,56 @@ def run() -> None:
                     else:
                         pass
 
+                # ── Track slides log from PowerPoint state ──
+                if not ppt_error and ppt_state:
+                    _ppt_file = ppt_state.get("presentation", "")
+                    _ppt_slide = _coerce_slide_number(ppt_state.get("slide"))
+                    _now_hhmm = datetime.now().strftime("%H:%M")
+                    _now_hhmmss = datetime.now().strftime("%H:%M:%S")
+                    _entry = next(
+                        (e for e in slides_log if e["file"] == _ppt_file and e["slide"] == _ppt_slide and e["first_seen_hhmm"] == _now_hhmm),
+                        None,
+                    )
+                    if _entry:
+                        _entry["seconds_spent"] += DAEMON_POLL_INTERVAL
+                    else:
+                        slides_log.append({
+                            "file": _ppt_file,
+                            "slide": _ppt_slide,
+                            "first_seen_at": _now_hhmmss,
+                            "first_seen_hhmm": _now_hhmm,
+                            "seconds_spent": DAEMON_POLL_INTERVAL,
+                        })
+
+                # ── Probe IntelliJ every 5 seconds and track git repos ──
+                _now_mono = time.monotonic()
+                if _now_mono - last_intellij_probe_at >= _INTELLIJ_PROBE_INTERVAL:
+                    last_intellij_probe_at = _now_mono
+                    try:
+                        _ij = probe_intellij_state()
+                        if _ij:
+                            _repo_entry = next(
+                                (e for e in git_repos if e["path"] == _ij["path"] and e["branch"] == _ij["branch"]),
+                                None,
+                            )
+                            if _repo_entry:
+                                _repo_entry["seconds_spent"] += _INTELLIJ_PROBE_INTERVAL
+                            else:
+                                git_repos.append({
+                                    "project": _ij["project"],
+                                    "path": _ij["path"],
+                                    "branch": _ij["branch"],
+                                    "seconds_spent": _INTELLIJ_PROBE_INTERVAL,
+                                })
+                    except Exception as _e:
+                        log.error("intellij", f"Probe failed: {_e}")
+
+                # ── Send activity_log to server when counts change ──
+                _activity_key = (len(slides_log), len(git_repos))
+                if _activity_key != _last_activity_log_key and ws_client.connected:
+                    _last_activity_log_key = _activity_key
+                    ws_client.send({"type": "activity_log", "slides_log": slides_log, "git_repos": git_repos})
+
                 # ── Check for session management requests ──
                 try:
                     session_req = _pending_requests.pop("session_request", None)
@@ -634,8 +690,11 @@ def run() -> None:
                         save_daemon_state(sessions_root, stack_to_daemon_state(session_stack))
                         notes_file = find_notes_in_folder(folder)
                         config = dc_replace(config, session_folder=folder, session_notes=notes_file)
-                        sync_session_to_server(config, session_stack, current_key_points)
+                        sync_session_to_server(config, session_stack, current_key_points, slides_log=slides_log, git_repos=git_repos)
                         transcript_state.reset()
+                        slides_log = []
+                        git_repos = []
+                        _last_activity_log_key = (0, 0)
                         try:
                             _sync_audiohijack_language(config)
                         except Exception:
@@ -655,7 +714,7 @@ def run() -> None:
                         save_daemon_state(sessions_root, stack_to_daemon_state(session_stack))
                         notes_file = find_notes_in_folder(parent_folder)
                         config = dc_replace(config, session_folder=parent_folder, session_notes=notes_file)
-                        sync_session_to_server(config, session_stack, current_key_points)
+                        sync_session_to_server(config, session_stack, current_key_points, slides_log=slides_log, git_repos=git_repos)
                         transcript_state.reset()
                         log.info("session", f"Ended: {ended['name']}, restored: {parent['name']}")
 
@@ -675,19 +734,19 @@ def run() -> None:
                             save_daemon_state(sessions_root, stack_to_daemon_state(session_stack))
                             notes_file = find_notes_in_folder(new_folder)
                             config = dc_replace(config, session_folder=new_folder, session_notes=notes_file)
-                            sync_session_to_server(config, session_stack, current_key_points)
+                            sync_session_to_server(config, session_stack, current_key_points, slides_log=slides_log, git_repos=git_repos)
                             log.info("session", f"Renamed: {old_name} → {new_name}")
 
                     elif action == "pause" and session_stack:
                         pause_session(session_stack[-1], datetime.now(), reason="explicit")
                         save_daemon_state(sessions_root, stack_to_daemon_state(session_stack))
-                        sync_session_to_server(config, session_stack, current_key_points)
+                        sync_session_to_server(config, session_stack, current_key_points, slides_log=slides_log, git_repos=git_repos)
                         log.info("session", f"Paused: {session_stack[-1]['name']}")
 
                     elif action == "resume" and session_stack:
                         resume_session(session_stack[-1], datetime.now())
                         save_daemon_state(sessions_root, stack_to_daemon_state(session_stack))
-                        sync_session_to_server(config, session_stack, current_key_points)
+                        sync_session_to_server(config, session_stack, current_key_points, slides_log=slides_log, git_repos=git_repos)
                         transcript_state.reset()
                         log.info("session", f"Resumed: {session_stack[-1]['name']}")
 
@@ -732,6 +791,8 @@ def run() -> None:
                             session_state=talk_state,
                             discussion_points=talk_points,
                             action="start_talk",
+                            slides_log=slides_log,
+                            git_repos=git_repos,
                         )
                         transcript_state.reset()
                         log.info("session", f"START TALK: {talk_name}")
@@ -773,6 +834,8 @@ def run() -> None:
                                 session_state=main_state,
                                 discussion_points=current_key_points,
                                 action="end_talk",
+                                slides_log=slides_log,
+                                git_repos=git_repos,
                             )
                             transcript_state.reset()
                             log.info("daemon", f"END TALK: restored main session {session_stack[0]['name'] if session_stack else 'none'}")
@@ -799,6 +862,8 @@ def run() -> None:
                         sync_session_to_server(
                             config, session_stack, talk_points,
                             discussion_points=talk_points,
+                            slides_log=slides_log,
+                            git_repos=git_repos,
                         )
                         log.info("session", f"Created talk folder: {talk_name}")
 
@@ -842,7 +907,7 @@ def run() -> None:
                         if s.get("ended_at") is None:
                             pause_session(s, now_wall, reason="day_end")
                     save_daemon_state(sessions_root, stack_to_daemon_state(session_stack))
-                    sync_session_to_server(config, session_stack, current_key_points)
+                    sync_session_to_server(config, session_stack, current_key_points, slides_log=slides_log, git_repos=git_repos)
                     transcript_state.reset()
                     log.info("session", "Auto-paused at 20:00 (end of working hours)")
 
@@ -861,7 +926,7 @@ def run() -> None:
                             if s.get("ended_at") is None:
                                 resume_session(s, now_wall)
                         save_daemon_state(sessions_root, stack_to_daemon_state(session_stack))
-                        sync_session_to_server(config, session_stack, current_key_points)
+                        sync_session_to_server(config, session_stack, current_key_points, slides_log=slides_log, git_repos=git_repos)
                         transcript_state.reset()
                         log.info("session", f"Auto-resumed at 09:30: {session_stack[-1]['name']}")
 
@@ -880,7 +945,7 @@ def run() -> None:
                     save_daemon_state(sessions_root, stack_to_daemon_state(session_stack))
                     notes_file = find_notes_in_folder(config.session_folder)
                     config = dc_replace(config, session_notes=notes_file)
-                    sync_session_to_server(config, session_stack, current_key_points)
+                    sync_session_to_server(config, session_stack, current_key_points, slides_log=slides_log, git_repos=git_repos)
                     transcript_state.reset()
                     log.info("session", f"Auto-started at 09:30: {config.session_folder.name}")
 

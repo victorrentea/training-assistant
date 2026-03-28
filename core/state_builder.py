@@ -100,6 +100,8 @@ def build_for_host() -> dict:
         "needs_restore": state.needs_restore,
         "pending_deploy": state.pending_deploy,
         "session_id": state.session_id,
+        "slides_log_count": len(state.slides_log),
+        "git_repos_count": len(state.git_repos),
     }
 
 
