@@ -1,7 +1,7 @@
 {
-  "sha": "112cebd4b34fac8d700d06daa641c6630bef8382",
-  "timestamp": "2026-03-28 08:51",
+  "sha": "9a643caf4dbdd26f2fc11ef8ac4283dd106fcf6b",
+  "timestamp": "2026-03-28 08:55",
   "changelog": [
-    "fix: don't auto-open slides after identity reset"
+    "feat: native-mode update banner + e2e tests for slide NEW badge"
   ]
 }
