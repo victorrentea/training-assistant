@@ -1,7 +1,7 @@
 {
-  "sha": "85f34863af8411f378fa3edfba10cea99dabbabd",
-  "timestamp": "2026-03-28 10:01",
+  "sha": "21097333fa50b7ead20ffdf89afbf2793bf142bb",
+  "timestamp": "2026-03-28 10:02",
   "changelog": [
-    "feat(slides): show large onboarding-style bubble below Follow button on hover"
+    "fix(paste): textarea 50vh height, Enter sends, Shift+Enter for newline"
   ]
 }
