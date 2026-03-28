@@ -1909,8 +1909,8 @@ h1 { display: none; }
 /* Paste-to-host floating button */
 .paste-floating-btn {
   position: fixed;
-  bottom: 60px;
-  right: 12px;
+  bottom: .75rem;
+  right: calc(var(--slides-overlay-width) + .75rem);
   width: 44px;
   height: 44px;
   border-radius: 50%;
