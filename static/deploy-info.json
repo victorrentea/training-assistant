@@ -1,7 +1,7 @@
 {
-  "sha": "4fe150ef091fa2e65b03cb489005250e66f4e2ee",
-  "timestamp": "2026-03-28 19:23",
+  "sha": "9c88368f2127e362cb71ff34e165642dc79c7bf6",
+  "timestamp": "2026-03-28 19:26",
   "changelog": [
-    "feat(host): show session ID after domain URL with copy icon"
+    "fix(host): QR codes now include session ID in join URL"
   ]
 }
