@@ -1,7 +1,7 @@
 {
-  "sha": "30cb79db98c0ae0a1478593333b41a360f43a69f",
-  "timestamp": "2026-03-28 17:05",
+  "sha": "059b975de9caafee6f1ef10a7a8c6860cd0d48f6",
+  "timestamp": "2026-03-28 17:06",
   "changelog": [
-    "feat(slides): add 'Last update' tooltip to updated-time badge"
+    "fix(slides): reduce topic list item height by another 5%"
   ]
 }
