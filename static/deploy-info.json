@@ -1,14 +1,8 @@
 {
-  "sha": "935715a6e7db8be654b398fce4e82ae2c67f4998",
-  "timestamp": "2026-03-28 23:04",
+  "sha": "a9ae0003d3ab87178dc31786802bd86b9bbe21df",
+  "timestamp": "2026-03-28 23:07",
   "changelog": [
-    "chore(daemon): clean up unused HTTP helpers after WS migration",
-    "refactor(daemon): remove SlidesOnDemandWsRunner (merged into DaemonWsClient)",
-    "feat(daemon): convert periodic HTTP pushes and snapshot polling to WebSocket",
-    "feat(daemon): replace HTTP polling with WS message handlers for request/response flows",
-    "feat(daemon): create unified DaemonWsClient with queue-based thread-safe dispatch",
-    "feat(ws): push all work requests to daemon via WS, handle all result messages",
-    "refactor(ws): dispatch daemon WS messages via handler table",
-    "feat(ws): add daemon WebSocket protocol module with message types and push helper"
+    "fix(daemon): sync AudioHijack language on session start and daily",
+    "fix(daemon): sync AudioHijack language to server on startup"
   ]
 }
