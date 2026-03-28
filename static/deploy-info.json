@@ -1,7 +1,7 @@
 {
-  "sha": "40b57ba50ab150fc3e03d7d6252a6aa1cf70169a",
+  "sha": "2dc3f907865f2d92c2dd6fcf51dd54b75084b04b",
   "timestamp": "2026-03-28 14:21",
   "changelog": [
-    "fix(ui): remove visible divider between emoji bar buttons"
+    "fix(ui): update host dot tooltip to 'Host is offline' when red"
   ]
 }
