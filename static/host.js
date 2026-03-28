@@ -980,49 +980,13 @@
       startAutoReturnTimer();
       if (tokenCost) tokenCost.style.display = 'none';
       if (notesBadge) notesBadge.style.display = 'none';
-      // Generate left QR (hidden until needed) — sized to fill container height
-      const qrContainer = document.getElementById('conference-qr-code');
-      qrContainer.innerHTML = '';
-      const pLink = document.getElementById('participant-link');
-      if (pLink && pLink.href && typeof QRCode !== 'undefined') {
-        // Defer QR generation to let grid layout settle
-        requestAnimationFrame(() => {
-          const confQREl = document.getElementById('conference-qr');
-          const availH = confQREl ? confQREl.clientHeight - 40 : 200; // subtract padding + URL label
-          const availW = confQREl ? confQREl.clientWidth - 20 : 200; // subtract horizontal padding
-          const qrSize = Math.max(120, Math.min(availH, availW, 400));
-          qrContainer.style.width = qrSize + 'px';
-          qrContainer.style.height = qrSize + 'px';
-          new QRCode(qrContainer, { text: pLink.href, width: qrSize, height: qrSize, colorDark: '#000', colorLight: '#fff' });
-        });
-      }
-      // URL with https:// prefix and wave animation in left QR panel
-      const urlEl = document.getElementById('conference-qr-url');
-      if (urlEl) {
-        const fullUrl = 'https://' + location.host;
-        urlEl.innerHTML = fullUrl.split('').map((ch, i) =>
-          `<span class="wave-char" style="animation-delay:${(i * 0.12).toFixed(2)}s">${ch}</span>`
-        ).join('');
-      }
+      // Make center QR bright for conference
+      if (centerQR) centerQR.classList.add('conference-center-qr');
       // Show URL above center QR in conference mode
       const centerQRUrl = document.getElementById('center-qr-url');
-      if (centerQRUrl) {
-        const fullUrl = 'https://' + location.host;
-        centerQRUrl.innerHTML = fullUrl.split('').map((ch, i) =>
-          `<span class="wave-char" style="animation-delay:${(i * 0.12).toFixed(2)}s">${ch}</span>`
-        ).join('');
-        centerQRUrl.style.display = '';
-      }
-      // Make center QR bright for conference — color adapts to theme
-      if (centerQR) centerQR.classList.add('conference-center-qr');
-      const centerQRDiv = document.getElementById('qr-code');
-      if (centerQRDiv) {
-        centerQRDiv.innerHTML = '';
-        const sz = (Math.min(centerQR.offsetWidth, centerQR.offsetHeight) || 400) * 0.85;
-        const qrDark = isLight ? '#1a1d2e' : '#ffffff';
-        const qrLight = isLight ? '#f4f5f9' : '#0f1117';
-        new QRCode(centerQRDiv, { text: pLink.href, width: sz, height: sz, colorDark: qrDark, colorLight: qrLight });
-      }
+      if (centerQRUrl) centerQRUrl.style.display = '';
+      // Regenerate all QR codes with session-scoped join URL
+      requestAnimationFrame(() => _regenerateAllQRCodes());
     } else {
       rightCol.style.display = '';
       grid.style.gridTemplateColumns = '25% 1fr 25%';
@@ -1038,13 +1002,7 @@
       if (centerQRUrl) centerQRUrl.style.display = 'none';
       // Restore muted center QR
       if (centerQR) centerQR.classList.remove('conference-center-qr');
-      const centerQRDiv = document.getElementById('qr-code');
-      if (centerQRDiv) {
-        centerQRDiv.innerHTML = '';
-        const sz = (Math.min(centerQR.offsetWidth, centerQR.offsetHeight) || 400) * 0.8;
-        const mutedColor = isLight ? '#aaaaaa' : '#888888';
-        new QRCode(centerQRDiv, { text: link, width: sz, height: sz, colorDark: mutedColor, colorLight: 'transparent' });
-      }
+      _regenerateAllQRCodes();
     }
   }
 
@@ -3058,6 +3016,9 @@ function updateSessionCodeBar(sessionId) {
   }
   if (copyIcon) copyIcon.style.display = sessionId ? '' : 'none';
   if (pLink) pLink.href = sessionId ? `/${sessionId}` : '/';
+
+  // Regenerate all QR codes with the session-scoped join URL
+  _regenerateAllQRCodes();
 }
 
 function copySessionLink() {
@@ -3076,6 +3037,66 @@ function copySessionLink() {
       setTimeout(() => { icon.style.opacity = ''; }, 1200);
     }
   });
+}
+
+function _getJoinUrl() {
+  return _currentSessionId ? `${location.origin}/${_currentSessionId}` : `${location.protocol}//${location.host}/`;
+}
+
+function _regenerateAllQRCodes() {
+  const joinUrl = _getJoinUrl();
+  const isLight = window.matchMedia('(prefers-color-scheme: light)').matches;
+
+  // Center QR (muted in workshop, bright in conference)
+  const centerPanel = document.getElementById('center-qr');
+  const qrDiv = document.getElementById('qr-code');
+  if (centerPanel && qrDiv) {
+    qrDiv.innerHTML = '';
+    const isConf = centerPanel.classList.contains('conference-center-qr');
+    const sz = (Math.min(centerPanel.offsetWidth, centerPanel.offsetHeight) || 400) * (isConf ? 0.85 : 0.8);
+    const dark = isConf ? (isLight ? '#1a1d2e' : '#ffffff') : (isLight ? '#aaaaaa' : '#888888');
+    const light = isConf ? (isLight ? '#f4f5f9' : '#0f1117') : 'transparent';
+    if (typeof QRCode !== 'undefined') new QRCode(qrDiv, { text: joinUrl, width: sz, height: sz, colorDark: dark, colorLight: light });
+  }
+
+  // Fullscreen QR overlay
+  const qrFull = document.getElementById('qr-fullscreen');
+  if (qrFull) {
+    qrFull.innerHTML = '';
+    const qrFullSize = Math.min(window.innerWidth, window.innerHeight) * 0.8;
+    if (typeof QRCode !== 'undefined') new QRCode(qrFull, { text: joinUrl, width: qrFullSize, height: qrFullSize, colorDark: '#000000', colorLight: '#ffffff' });
+  }
+  const overlayUrl = document.getElementById('qr-overlay-url');
+  if (overlayUrl) overlayUrl.textContent = joinUrl;
+
+  // Conference left QR
+  const confQRCode = document.getElementById('conference-qr-code');
+  if (confQRCode && confQRCode.offsetParent !== null) {
+    confQRCode.innerHTML = '';
+    const confQREl = document.getElementById('conference-qr');
+    const availH = confQREl ? confQREl.clientHeight - 40 : 200;
+    const availW = confQREl ? confQREl.clientWidth - 20 : 200;
+    const qrSize = Math.max(120, Math.min(availH, availW, 400));
+    confQRCode.style.width = qrSize + 'px';
+    confQRCode.style.height = qrSize + 'px';
+    if (typeof QRCode !== 'undefined') new QRCode(confQRCode, { text: joinUrl, width: qrSize, height: qrSize, colorDark: '#000', colorLight: '#fff' });
+  }
+
+  // Update URL labels with session path
+  const confUrl = document.getElementById('conference-qr-url');
+  if (confUrl && confUrl.offsetParent !== null) {
+    const fullUrl = _currentSessionId ? 'https://' + location.host + '/' + _currentSessionId : 'https://' + location.host;
+    confUrl.innerHTML = fullUrl.split('').map((ch, i) =>
+      `<span class="wave-char" style="animation-delay:${(i * 0.12).toFixed(2)}s">${ch}</span>`
+    ).join('');
+  }
+  const centerUrl = document.getElementById('center-qr-url');
+  if (centerUrl && centerUrl.style.display !== 'none') {
+    const fullUrl = _currentSessionId ? 'https://' + location.host + '/' + _currentSessionId : 'https://' + location.host;
+    centerUrl.innerHTML = fullUrl.split('').map((ch, i) =>
+      `<span class="wave-char" style="animation-delay:${(i * 0.12).toFixed(2)}s">${ch}</span>`
+    ).join('');
+  }
 }
 
 function renderSessionPanel() {
