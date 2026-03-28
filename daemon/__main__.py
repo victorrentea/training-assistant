@@ -1038,8 +1038,10 @@ def run() -> None:
                         if _BACKUP_FILE.exists():
                             log.info("daemon", "Server needs state restore — sending backup via WS...")
                             backup_data = json.loads(_BACKUP_FILE.read_text(encoding="utf-8"))
-                            ws_client.send({"type": "state_restore", **backup_data})
-                            log.info("daemon", "State restore sent via WS")
+                            if ws_client.send({"type": "state_restore", **backup_data}):
+                                log.info("daemon", "State restore sent via WS")
+                            else:
+                                log.error("daemon", "State restore failed — WS not connected (will retry)")
                         else:
                             log.error("daemon", "Server needs state restore but no backup file found")
                 except RuntimeError:
