@@ -107,6 +107,22 @@ body {
   flex-wrap: wrap;
 }
 
+.host-footer-center {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: .25rem;
+  min-width: 0;
+  overflow: hidden;
+}
+
+#participant-link {
+  pointer-events: none;
+  cursor: default;
+  text-decoration: none;
+}
+
 .host-footer-right {
   display: flex;
   align-items: center;

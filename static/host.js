@@ -731,14 +731,12 @@
     const flashStyle = (sessionActive && noTranscriptWarn) ? ' animation: flash-bg 1.4s ease-in-out infinite;' : '';
 
     if (summaryPoints.length) {
-      badge.textContent = _transcriptLineCount > 0
-        ? `${transcriptPart} > 🧠 ${summaryPoints.length}`
-        : `🧠 ${summaryPoints.length}`;
+      badge.textContent = `🧠 (${summaryPoints.length}) Key Points`;
       badge.className = 'badge connected';
       badge.style.cssText = `cursor:pointer;${flashStyle}`;
       badge.title = noTranscriptWarn ? noTranscriptTitle : `${summaryPoints.length} key points · ${_transcriptLineCount} transcript lines (last 30 min) — click to view`;
     } else if (_summaryGenerating) {
-      badge.textContent = _transcriptLineCount > 0 ? `${transcriptPart} > 🧠 …` : '🧠 …';
+      badge.textContent = `🧠 (…) Key Points`;
       badge.className = 'badge';
       const anim = sessionPaused
         ? ''
@@ -746,7 +744,7 @@
       badge.style.cssText = `cursor:wait; color:var(--warn); border:1px solid var(--warn);${anim}`;
       badge.title = noTranscriptWarn ? noTranscriptTitle : `Generating key points from transcript… (${_transcriptLineCount} lines)`;
     } else {
-      badge.textContent = _transcriptLineCount > 0 ? `${transcriptPart} > 🧠 0` : '🧠';
+      badge.textContent = _transcriptLineCount > 0 ? `🧠 (0) Key Points` : `🧠 Key Points`;
       badge.className = _transcriptLineCount > 0 ? 'badge' : 'badge disconnected';
       badge.style.cssText = `cursor:pointer;${flashStyle}`;
       badge.title = noTranscriptWarn ? noTranscriptTitle
@@ -857,6 +855,7 @@
   function updateTokenBadge(usage) {
     const el = document.getElementById('token-cost');
     if (!el || !usage) return;
+    el.className = 'badge';
     const cost = usage.estimated_cost_usd || 0;
     el.textContent = '$' + cost.toFixed(2);
     const inp = (usage.input_tokens || 0).toLocaleString();
@@ -1089,19 +1088,18 @@
     const nonEmptyLines = hostNotesContent
       ? hostNotesContent.split('\n').filter(l => l.trim()).length
       : 0;
-    const lineLabel = nonEmptyLines > 0 ? ` ${nonEmptyLines}` : '';
     el.style.cssText = 'cursor:pointer;';
     if (_notesSessionFolder && _notesSessionNotes) {
-      el.textContent = `📝${lineLabel}`;
+      el.textContent = nonEmptyLines > 0 ? `📝 (${nonEmptyLines}) Notes` : `📝 Notes`;
       el.className = 'badge connected';
       el.title = `${_notesSessionFolder}/${_notesSessionNotes}${nonEmptyLines > 0 ? `\n${nonEmptyLines} non-empty lines` : ''}\nClick to view`;
     } else if (_notesSessionFolder) {
-      el.textContent = `📝${lineLabel}`;
+      el.textContent = nonEmptyLines > 0 ? `📝 (${nonEmptyLines}) Notes` : `📝 Notes`;
       el.className = 'badge';
       el.style.cssText = 'cursor:pointer; color:var(--warn); border:1px solid var(--warn);';
       el.title = 'Session folder found but no notes file inside';
     } else {
-      el.textContent = '📝';
+      el.textContent = '📝 Notes';
       el.className = 'badge disconnected';
       el.title = 'No session folder found for today';
     }
@@ -1859,6 +1857,7 @@
     btn.title = `Transcription: ${lang.toUpperCase()}${pending ? ' (applying…)' : ''} — click to toggle`;
     btn.style.opacity = pending ? '0.4' : '0.8';
     btn.dataset.lang = lang;
+    btn.className = 'badge' + (pending ? ' disabled' : '');
   }
 
   async function toggleTranscriptionLanguage() {

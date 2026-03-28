@@ -328,10 +328,13 @@
     <span id="daemon-badge" class="badge disconnected" title="">🤖</span>
     <span id="notes-badge" class="badge disconnected" title="" onclick="toggleHostNotesModal()" style="cursor:pointer">📝</span>
     <span id="summary-badge" class="badge disconnected" title="No key points yet — click to generate now" onclick="toggleSummaryModal()" style="cursor:pointer">🧠</span>
+    <span id="btn-transcription-lang" class="badge" onclick="toggleTranscriptionLanguage()" title="Toggle transcription language" style="cursor:pointer; font-size:1.1rem;">🇷🇴</span>
     <span id="overlay-badge" class="badge disconnected" title="Desktop Overlay app — click to fire a heart" onclick="triggerHostHeart()" style="cursor:pointer">❤️</span>
   </div>
+  <div class="host-footer-center">
+    <span id="participant-link" style="color:#fff; font-size:1.25rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; flex-shrink:1;"></span><span id="session-id-suffix" style="display:none; font-size:1.25rem; font-family:monospace; font-weight:bold; color:#f0c040; letter-spacing:2px; white-space:nowrap;"></span>
+  </div>
   <div class="host-footer-right">
-    <a id="participant-link" style="color:#fff; font-size:1.25rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; flex-shrink:1;" href="/" target="_blank"></a><span id="session-id-suffix" style="display:none; font-size:1.25rem; font-family:monospace; font-weight:bold; color:#f0c040; letter-spacing:2px; white-space:nowrap;"></span>
     <svg id="copy-link-icon" style="display:none; cursor:pointer; flex-shrink:0; width:22px; height:22px; opacity:.45; transition:opacity .15s;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" title="Copy join link" onclick="copySessionLink()">
       <rect x="9" y="9" width="13" height="13" rx="2"/>
       <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
@@ -357,10 +360,9 @@
       </svg>
     </div>
     <button class="btn-scores-reset" onclick="resetScores()" title="Reset all scores to zero">🗑</button>
-    <button id="btn-transcription-lang" onclick="toggleTranscriptionLanguage()" title="Toggle transcription language" style="background:none;border:none;cursor:pointer;font-size:1.1rem;padding:0 2px;opacity:.8;flex-shrink:0;">🇷🇴</button>
-    <span id="token-cost" style="font-size:.75rem; color:var(--muted); flex-shrink:0;">$0.00</span>
+    <span id="token-cost" class="badge" style="font-size:.75rem; color:var(--muted); flex-shrink:0;">$0.00</span>
     <div id="slides-catalog-hover" class="slides-catalog-hover">
-      <span id="slides-catalog-icon" title="Participant slides availability">📜</span>
+      <span id="slides-catalog-icon" class="badge" title="Participant slides availability">📜</span>
       <div id="slides-catalog-popover" class="slides-catalog-popover" hidden>
         <div id="slides-catalog-content" class="slides-catalog-content">Loading...</div>
       </div>
