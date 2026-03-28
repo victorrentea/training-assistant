@@ -277,9 +277,12 @@ h1 { display: none; }
   transform: rotate(90deg);
 }
 
+.slides-dock.pinned .slides-dock-title {
+  color: var(--accent2);
+}
+
 .slides-dock.pinned .slides-dock-title::before {
   opacity: 1;
-  color: var(--accent2);
 }
 
 .slides-dock-controls {
