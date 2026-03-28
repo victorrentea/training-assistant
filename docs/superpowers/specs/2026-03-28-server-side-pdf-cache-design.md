@@ -77,16 +77,19 @@ not_cached ──(participant requests)──> downloading ──(success)──
 - `poll_timeout` — GDrive fingerprint didn't change within 60s; still serving last cached version
 - `download_failed` — download attempt failed; retryable on next request or invalidation
 
-### Request deduplication
+### Per-slug GDrive lock (critical constraint)
 
-When multiple participants request the same uncached/downloading slide:
-- First request creates an `asyncio.Event` in `state.slides_download_events[slug]`
-- First request triggers the download coroutine
-- Subsequent requests `await` the same event (with timeout of 60s)
-- Download coroutine sets the event on completion (success or failure)
-- Event is removed after being set
+**At most ONE in-flight HTTP request to Google Drive per slug at any time.** This is the single most important concurrency rule. No matter what triggers a GDrive call — participant request, fingerprint poll HEAD, invalidation re-download — they all go through one `asyncio.Lock` per slug (`state.slides_gdrive_locks[slug]`). Anyone else wanting GDrive access for that slug awaits the lock.
 
-**Download concurrency limit**: at most 3 simultaneous GDrive downloads (semaphore). This prevents thundering herd after a redeploy when many participants request different slides at once. Additional downloads queue behind the semaphore.
+This prevents: 20 participants requesting the same slide → 20 parallel GDrive downloads. Instead: first request acquires the lock and downloads; the other 19 await an `asyncio.Event` that fires when the download completes.
+
+**Implementation**:
+- `state.slides_gdrive_locks`: `dict[str, asyncio.Lock]` — one lock per slug, lazily created
+- `state.slides_download_events`: `dict[str, asyncio.Event]` — signals waiters when a download completes
+- All GDrive HTTP calls (HEAD probes, GET downloads) acquire the slug's lock first
+- Participant requests that find a download already in progress skip the lock entirely and just `await` the event (timeout 60s)
+
+**Cross-slug concurrency limit**: at most 3 simultaneous GDrive downloads across all slugs (global `asyncio.Semaphore`). This prevents thundering herd after a redeploy when many participants request different slides at once. Additional downloads queue behind the semaphore.
 
 ### GDrive fingerprint polling (on invalidation)
 
