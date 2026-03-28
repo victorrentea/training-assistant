@@ -1,7 +1,7 @@
 {
-  "sha": "68d9a0e6b9985249596b688dfaa4d49e3db61588",
-  "timestamp": "2026-03-28 23:58",
+  "sha": "18c99dc0d1ddd82de190282476a04c18e698264b",
+  "timestamp": "2026-03-28 23:59",
   "changelog": [
-    "fix(host): hide (0) count on Key Points badge when empty"
+    "fix(host): green border on Key Points and language badges"
   ]
 }
