@@ -1576,6 +1576,9 @@
         return;
       }
 
+      // Capture scroll position BEFORE setDocument — updateviewarea fires during load and overwrites it.
+      const savedViewBeforeLoad = _getStoredSlideView(slide.slug);
+
       await _clearSlidesDocument();
 
       try {
@@ -1611,7 +1614,7 @@
           return;
         }
 
-        const saved = _getStoredSlideView(slide.slug);
+        const saved = savedViewBeforeLoad;
         const maxPages = Math.max(1, Number(doc.numPages || 1));
         const savedPage = Math.min(saved?.page || _getStoredSlidePage(slide.slug), maxPages);
         _suppressSlidesFollowAutoUncheck(1500);
