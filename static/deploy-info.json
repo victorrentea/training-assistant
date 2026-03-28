@@ -1,7 +1,7 @@
 {
-  "sha": "ad5243589dce1e97c14e934864bc739adeb369f5",
-  "timestamp": "2026-03-28 08:55",
+  "sha": "5d98849ef489195ac7349a8783b3993058be2198",
+  "timestamp": "2026-03-28 09:00",
   "changelog": [
-    "fix: remove text labels from slide loading bubbles"
+    "fix: remove duplicate screen-wide progress bar from PDF.js slides viewer"
   ]
 }
