@@ -1480,8 +1480,8 @@ h1 { display: none; }
   bottom: 0;
   left: 0;
   right: var(--slides-overlay-width);
-  display: flex;
-  justify-content: flex-start;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
   gap: .5rem;
   padding: .5rem .75rem;
@@ -1534,20 +1534,20 @@ h1 { display: none; }
   pointer-events: auto;
 }
 
-/* Center wrapper — takes all available space, centers emoji buttons */
+/* Center wrapper — grid center cell, always centered in bar */
 #emoji-center {
-  flex: 1;
   display: flex;
   justify-content: center;
   align-items: center;
   gap: .5rem;
-  min-width: 0;
 }
 
-/* Invisible spacer between emoji-center and upload/paste */
-.emoji-bar-divider {
-  width: 0;
-  flex-shrink: 0;
+/* Right cell: upload + paste buttons, justified to the end */
+#emoji-bar-right {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: .5rem;
   pointer-events: none;
 }
 
