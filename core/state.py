@@ -38,6 +38,8 @@ class AppState:
         self.participant_avatars: dict[str, str] = {}
         self.participant_universes: dict[str, str] = {}  # uuid → universe string
         self.participant_ips: dict[str, str] = {}  # uuid → IP address
+        self.paste_texts: dict[str, list[dict]] = {}  # uuid → [{id: int, text: str}, ...]
+        self.paste_next_id: int = 0
         self.leaderboard_active: bool = False
         self.locations: dict[str, str] = {}
         self.quiz_request: Optional[dict] = None

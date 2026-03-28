@@ -431,6 +431,27 @@ async def websocket_endpoint(websocket: WebSocket, participant_id: str):
                         state.codereview_selections[pid].discard(line)
                     await broadcast_state()
 
+            elif msg_type == "paste_text":
+                text = str(data.get("text", ""))
+                if text and len(text) <= 102400 and not is_host:  # 100KB limit
+                    entries = state.paste_texts.setdefault(pid, [])
+                    if len(entries) < 10:  # max 10 pending per participant
+                        state.paste_next_id += 1
+                        entries.append({"id": state.paste_next_id, "text": text})
+                        await broadcast_participant_update()
+
+            elif msg_type == "paste_dismiss":
+                if is_host:
+                    target_uuid = str(data.get("uuid", ""))
+                    paste_id = data.get("paste_id")
+                    if target_uuid in state.paste_texts and paste_id is not None:
+                        state.paste_texts[target_uuid] = [
+                            e for e in state.paste_texts[target_uuid] if e["id"] != paste_id
+                        ]
+                        if not state.paste_texts[target_uuid]:
+                            del state.paste_texts[target_uuid]
+                        await broadcast_participant_update()
+
 
     except WebSocketDisconnect:
         state.participants.pop(pid, None)
