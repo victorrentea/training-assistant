@@ -1,22 +1,10 @@
 import AppKit
 
 struct SingleScreenHoverLogic {
-    let hiddenFrame: NSRect
     let shownFrame: NSRect
-    let edgeTriggerDistance: CGFloat
-    let onBarInset: CGFloat
-
-    var edgeTriggerFrame: NSRect {
-        NSRect(
-            x: hiddenFrame.minX - edgeTriggerDistance,
-            y: shownFrame.minY,
-            width: edgeTriggerDistance,
-            height: shownFrame.height
-        )
-    }
 
     func shouldSlideIn(mouse: NSPoint) -> Bool {
-        return shownFrame.insetBy(dx: -onBarInset, dy: -onBarInset).contains(mouse)
+        return shownFrame.contains(mouse)
     }
 }
 
@@ -54,8 +42,6 @@ class ButtonBar: NSPanel {
     private var hiddenFrame: NSRect = .zero
     private var shownFrame: NSRect = .zero
     private var isSlideIn: Bool = false
-    private let edgeTriggerDistance: CGFloat = 80
-    private let onBarInset: CGFloat = 20
 
     init(buttons: [ButtonDef], screen: NSScreen, singleScreen: Bool,
          savedOrigin: NSPoint? = nil, onPositionChanged: ((NSPoint) -> Void)? = nil) {
@@ -169,30 +155,26 @@ class ButtonBar: NSPanel {
 
     private func checkMouseForEdge() {
         let mouse = NSEvent.mouseLocation
-        let logic = SingleScreenHoverLogic(
-            hiddenFrame: hiddenFrame,
-            shownFrame: shownFrame,
-            edgeTriggerDistance: edgeTriggerDistance,
-            onBarInset: onBarInset
-        )
+        let logic = SingleScreenHoverLogic(shownFrame: shownFrame)
         if logic.shouldSlideIn(mouse: mouse) {
             slideIn()
-        } else if isSlideIn {
+            // Reset auto-hide timer on every move while in zone — keeps bar shown while hovering
+            slideTimer?.invalidate()
+            slideTimer = nil
+            scheduleSlideOut(after: ButtonBar.singleScreenAutoHideDelay)
+        } else if isSlideIn && slideTimer == nil {
             scheduleSlideOut(after: ButtonBar.singleScreenAutoHideDelay)
         }
     }
 
     private func slideIn() {
         guard !isSlideIn else { return }
-        slideTimer?.invalidate()
-        slideTimer = nil
         isSlideIn = true
         NSAnimationContext.runAnimationGroup { ctx in
             ctx.duration = 0.1
             self.animator().setFrame(shownFrame, display: true)
             self.animator().alphaValue = hoverOpacity
         }
-        scheduleSlideOut(after: ButtonBar.singleScreenAutoHideDelay)
     }
 
     private func scheduleSlideOut(after delay: TimeInterval) {
