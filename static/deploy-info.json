@@ -1,7 +1,7 @@
 {
-  "sha": "dd7a3a6e18db6e925d23e460a3f0ab9fd5f1499e",
-  "timestamp": "2026-03-28 07:04",
+  "sha": "8cbb2738ff7c58ac2ea01be9aec22a03af394781",
+  "timestamp": "2026-03-28 07:09",
   "changelog": [
-    "fix: restore scroll position when returning to a previously visited topic"
+    "fix: prevent reload loop when version.js is served from browser cache"
   ]
 }
