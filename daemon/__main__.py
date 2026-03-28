@@ -36,7 +36,6 @@ from daemon.transcript.session import compute_active_windows, format_startup_log
 from daemon.transcript.state import TranscriptStateManager
 from daemon.slides.loop import SlidesPollingRunner
 from daemon.materials.mirror import MaterialsMirrorRunner
-from daemon.materials.ws_runner import SlidesOnDemandWsRunner
 from daemon.ws_client import DaemonWsClient
 from daemon.session_state import (
     resolve_materials_folder,
@@ -476,8 +475,6 @@ def run() -> None:
     slides_runner.start()
     materials_mirror = MaterialsMirrorRunner(config)
     materials_mirror.start()
-    slides_on_demand_ws = SlidesOnDemandWsRunner(config)
-    slides_on_demand_ws.start()
     slides_runner.set_ws_sender(lambda msg: ws_client.send(msg))
 
     # Session state: the transcript text used to generate the current preview
@@ -1121,7 +1118,6 @@ def run() -> None:
             time.sleep(DAEMON_POLL_INTERVAL)
     finally:
         ws_client.stop()
-        slides_on_demand_ws.stop()
 
 
 if __name__ == "__main__":
