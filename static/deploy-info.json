@@ -1,7 +1,7 @@
 {
-  "sha": "6603e4e9e88c8dc71a72ab4b896b4c4a1e2e6532",
-  "timestamp": "2026-03-28 16:15",
+  "sha": "c15f37c218f94dfea786d06edbc009e6ad4a34dd",
+  "timestamp": "2026-03-28 16:17",
   "changelog": [
-    "fix(slides): skip full GDrive URL in download_start daemon log"
+    "fix(slides): human-friendly size + Google Drive hint in download_complete log"
   ]
 }
