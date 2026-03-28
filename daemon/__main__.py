@@ -41,6 +41,7 @@ from daemon.transcript.state import TranscriptStateManager
 from daemon.slides.loop import SlidesPollingRunner
 from daemon.materials.mirror import MaterialsMirrorRunner
 from daemon.materials.ws_runner import SlidesOnDemandWsRunner
+from daemon.ws_client import DaemonWsClient
 from daemon.session_state import (
     resolve_materials_folder,
     check_daily_timing,
@@ -382,6 +383,29 @@ def run() -> None:
     config = config_from_env()
     log.info("daemon", f"🚀 Starting — connecting to {config.server_url}")
 
+    # ── Initialize WebSocket client for backend communication ──
+    ws_client = DaemonWsClient()
+    _pending_requests: dict[str, dict] = {}  # msg_type → data, populated by WS handlers, consumed by main loop
+
+    def _ws_handler(msg_type: str):
+        def handler(data):
+            _pending_requests[msg_type] = data
+        return handler
+
+    ws_client.register_handler("quiz_request", _ws_handler("quiz_request"))
+    ws_client.register_handler("quiz_refine", _ws_handler("quiz_refine"))
+    ws_client.register_handler("debate_ai_request", _ws_handler("debate_ai_request"))
+    ws_client.register_handler("summary_force", _ws_handler("summary_force"))
+    ws_client.register_handler("summary_full_reset", _ws_handler("summary_full_reset"))
+    ws_client.register_handler("session_request", _ws_handler("session_request"))
+    ws_client.register_handler("transcription_language_request", _ws_handler("transcription_language_request"))
+
+    # Set ws_client on modules that send results back via WS
+    from daemon.quiz.poll_api import set_ws_client as set_poll_ws
+    from daemon.session_state import set_ws_client as set_session_ws
+    set_poll_ws(ws_client)
+    set_session_ws(ws_client)
+
     if config.project_folder:
         log.info("daemon", f"Project folder configured: {config.project_folder}")
         if not os.path.isdir(config.project_folder):
@@ -542,8 +566,13 @@ def run() -> None:
     # Trigger immediate save on first iteration if a session is already active
     _save_counter = _SAVE_INTERVAL if session_stack else 0
 
+    ws_client.start()
+
     try:
         while True:
+            # ── Drain pending WS messages (handlers run on main thread) ──
+            ws_client.drain_queue()
+
             # ── Heartbeat: update lock file so other instances know we're alive ──
             try:
                 now = time.monotonic()
@@ -586,11 +615,8 @@ def run() -> None:
 
                 # ── Check for session management requests ──
                 try:
-                    session_req = _get_json(
-                        f"{config.server_url}/api/session/request",
-                        config.host_username, config.host_password,
-                    )
-                    action = session_req.get("action")
+                    session_req = _pending_requests.pop("session_request", None)
+                    action = session_req.get("action") if session_req else None
                     if action == "start":
                         name = session_req["name"]
                         folder = sessions_root / name
@@ -703,15 +729,11 @@ def run() -> None:
                         config = dc_replace(config, session_folder=talk_folder, session_notes=notes_file)
 
                         # Sync to server: mark current participants as paused, restore talk state
-                        _post_json(
-                            f"{config.server_url}/api/session/sync",
-                            {
-                                **stack_to_daemon_state(session_stack),
-                                "discussion_points": talk_points,
-                                "session_state": talk_state,
-                                "action": "start_talk",
-                            },
-                            config.host_username, config.host_password,
+                        sync_session_to_server(
+                            config, session_stack, talk_points,
+                            session_state=talk_state,
+                            discussion_points=talk_points,
+                            action="start_talk",
                         )
                         transcript_state.reset()
                         log.info("session", f"START TALK: {talk_name}")
@@ -752,15 +774,11 @@ def run() -> None:
                             config = dc_replace(config, session_folder=main_folder, session_notes=notes_file)
 
                             # Sync to server: restore main participants, clear talk
-                            _post_json(
-                                f"{config.server_url}/api/session/sync",
-                                {
-                                    **stack_to_daemon_state(session_stack),
-                                    "discussion_points": current_key_points,
-                                    "session_state": main_state,
-                                    "action": "end_talk",
-                                },
-                                config.host_username, config.host_password,
+                            sync_session_to_server(
+                                config, session_stack, current_key_points,
+                                session_state=main_state,
+                                discussion_points=current_key_points,
+                                action="end_talk",
                             )
                             transcript_state.reset()
                             log.info("daemon", f"END TALK: restored main session {session_stack[0]['name'] if session_stack else 'none'}")
@@ -784,14 +802,9 @@ def run() -> None:
                         config = dc_replace(config, session_folder=talk_folder, session_notes=notes_file)
 
                         # Sync to server without disconnecting participants (no "action" key)
-                        _post_json(
-                            f"{config.server_url}/api/session/sync",
-                            {
-                                **stack_to_daemon_state(session_stack),
-                                "discussion_points": talk_points,
-                                "session_state": None,
-                            },
-                            config.host_username, config.host_password,
+                        sync_session_to_server(
+                            config, session_stack, talk_points,
+                            discussion_points=talk_points,
                         )
                         log.info("session", f"Created talk folder: {talk_name}")
 
@@ -915,65 +928,52 @@ def run() -> None:
                         save_daemon_state(sessions_root, stack_to_daemon_state(session_stack))
                         log.info("daemon", "Session marked as ended at midnight")
 
-                # ── Auto-update: check if server version changed ──
-                if _startup_version:
-                    try:
-                        status = _get_json(f"{config.server_url}/api/status")
-                        current_version = status.get("backend_version")
+                # ── Auto-update + server connectivity check via /api/status ──
+                try:
+                    status_data = _get_json(f"{config.server_url}/api/status")
+                    if server_disconnected:
+                        log.info("daemon", "Reconnected to server.")
+                        server_disconnected = False
+                        _session_status_pending = True
+
+                    # Auto-update: exit if server version changed
+                    if _startup_version:
+                        current_version = status_data.get("backend_version")
                         if current_version and current_version != _startup_version:
                             log.info("daemon", f"Server version changed: {_startup_version} → {current_version}")
                             log.info("daemon", "Exiting for auto-update (exit code 42)...")
                             _LOCK_FILE.unlink(missing_ok=True)
                             sys.exit(EXIT_CODE_UPDATE)
-                    except RuntimeError:
-                        pass  # server unreachable — skip version check this cycle
 
-                # ── Check for new quiz generation request ──
-                data = _get_json(
-                    f"{config.server_url}/api/quiz-request",
-                    config.host_username, config.host_password,
-                )
-                if server_disconnected:
-                    log.info("daemon", "Reconnected to server.")
-                    server_disconnected = False
-                    _session_status_pending = True
+                    # Restore state if server lost it (e.g. after Railway redeploy)
+                    if status_data.get("needs_restore"):
+                        if _BACKUP_FILE.exists():
+                            log.info("daemon", "Server needs state restore — sending backup...")
+                            backup_data = json.loads(_BACKUP_FILE.read_text(encoding="utf-8"))
+                            result = _post_json(
+                                f"{config.server_url}/api/state-restore",
+                                backup_data,
+                                config.host_username, config.host_password,
+                            )
+                            log.info("daemon", f"State restore result: {result.get('status', 'ok')}")
+                        else:
+                            log.error("daemon", "Server needs state restore but no backup file found")
+                except RuntimeError:
+                    if not server_disconnected:
+                        log.error("daemon", "Server unreachable (status check)")
+                        server_disconnected = True
 
-                # ── Restore state if server lost it (e.g. after Railway redeploy) ──
-                if data.get("needs_restore"):
-                    if _BACKUP_FILE.exists():
-                        log.info("daemon", "Server needs state restore — sending backup...")
-                        backup_data = json.loads(_BACKUP_FILE.read_text(encoding="utf-8"))
-                        result = _post_json(
-                            f"{config.server_url}/api/state-restore",
-                            backup_data,
-                            config.host_username, config.host_password,
-                        )
-                        log.info("daemon", f"State restore result: {result.get('status', 'ok')}")
-                    else:
-                        log.error("daemon", "Server needs state restore but no backup file found")
-
-                # ── Push session info when changed, on reconnect, or if server lost it ──
-                server_has_session = data.get("session_folder") is not None
-                server_has_notes = data.get("has_notes_content", False)
-                server_has_key_points = data.get("has_key_points", False)
-                server_has_slides = data.get("has_slides", False)
+                # ── Push session info when changed, on reconnect, or periodically ──
                 current_slides = load_slides_manifest(config.session_folder)
                 current_slides_hash = hashlib.sha256(
                     json.dumps(current_slides, sort_keys=True).encode("utf-8")
                 ).hexdigest()
                 slides_changed = current_slides_hash != last_slides_payload_hash
 
-                if _session_status_pending or (sf_name and not server_has_session) or slides_changed or (current_slides and not server_has_slides):
+                if _session_status_pending or slides_changed:
                     post_status("ready", "Agent ready.", config,
                                 session_folder=sf_name, session_notes=sn_name, slides=current_slides)
                     last_slides_payload_hash = current_slides_hash
-
-                # Re-sync key points when server lost them (e.g. after backend restart)
-                if current_key_points and not server_has_key_points:
-                    try:
-                        sync_session_to_server(config, session_stack, current_key_points)
-                    except Exception as e:
-                        log.error("session", f"Failed to re-sync key points: {e}")
 
                 # Push notes content when file is new or modified
                 if config.session_notes:
@@ -982,7 +982,7 @@ def run() -> None:
                     except OSError:
                         current_mtime = 0.0
                     notes_changed = current_mtime != last_notes_mtime and current_mtime > 0
-                    if notes_changed or not server_has_notes:
+                    if notes_changed:
                         notes_text = read_session_notes(config)
                         if notes_text:
                             _post_json(
@@ -991,91 +991,77 @@ def run() -> None:
                                 config.host_username, config.host_password,
                             )
                             last_notes_mtime = current_mtime
-                req = data.get("request")
-                if req:
-                    topic = req.get("topic")
-                    minutes = req.get("minutes")
-                    if topic:
-                        log.info("daemon", f"Topic request: '{topic}'")
-                        result = auto_generate_topic(topic, config)
-                    else:
-                        minutes = minutes or config.minutes
-                        log.info("daemon", f"Transcript request: last {minutes} min")
-                        result = auto_generate(minutes, config)
-                    if result:
-                        last_quiz, last_text = result
-                    else:
-                        last_quiz, last_text = None, None
 
-                # ── Check for refine request ──
-                refine_data = _get_json(
-                    f"{config.server_url}/api/quiz-refine",
-                    config.host_username, config.host_password,
-                )
-                refine_req = refine_data.get("request")
-                if refine_req:
-                    target = refine_req.get("target", "question")
-                    # Use server-side preview as current quiz (in case host re-opened page)
-                    current_quiz = refine_data.get("preview") or last_quiz
-                    if current_quiz and last_text:
-                        log.info("daemon", f"Refine request: target={target}")
-                        updated = auto_refine(target, current_quiz, last_text, config)
-                        if updated:
-                            last_quiz = updated
-                    else:
-                        post_status("error", "No conversation context — please generate a question first.", config)
+                # ── Check for new quiz generation request (via WS) ──
+                quiz_data = _pending_requests.pop("quiz_request", None)
+                if quiz_data:
+                    req = quiz_data.get("request")
+                    if req:
+                        topic = req.get("topic")
+                        minutes = req.get("minutes")
+                        if topic:
+                            log.info("daemon", f"Topic request: '{topic}'")
+                            result = auto_generate_topic(topic, config)
+                        else:
+                            minutes = minutes or config.minutes
+                            log.info("daemon", f"Transcript request: last {minutes} min")
+                            result = auto_generate(minutes, config)
+                        if result:
+                            last_quiz, last_text = result
+                        else:
+                            last_quiz, last_text = None, None
 
-                # ── Check for debate AI cleanup request ──
-                try:
-                    debate_data = _get_json(
-                        f"{config.server_url}/api/debate/ai-request",
-                        config.host_username, config.host_password,
-                    )
+                # ── Check for refine request (via WS) ──
+                refine_data = _pending_requests.pop("quiz_refine", None)
+                if refine_data:
+                    refine_req = refine_data.get("request")
+                    if refine_req:
+                        target = refine_req.get("target", "question")
+                        # Use server-side preview as current quiz (in case host re-opened page)
+                        current_quiz = refine_data.get("preview") or last_quiz
+                        if current_quiz and last_text:
+                            log.info("daemon", f"Refine request: target={target}")
+                            updated = auto_refine(target, current_quiz, last_text, config)
+                            if updated:
+                                last_quiz = updated
+                        else:
+                            post_status("error", "No conversation context — please generate a question first.", config)
+
+                # ── Check for debate AI cleanup request (via WS) ──
+                debate_data = _pending_requests.pop("debate_ai_request", None)
+                if debate_data:
                     debate_req = debate_data.get("request")
                     if debate_req:
                         log.info("daemon", f"Debate AI cleanup requested: '{debate_req['statement'][:60]}'")
                         try:
                             result = run_debate_ai_cleanup(debate_req, config.api_key, config.model)
-                            _post_json(
-                                f"{config.server_url}/api/debate/ai-result",
-                                result,
-                                config.host_username, config.host_password,
-                            )
+                            ws_client.send({"type": "debate_ai_result", **result})
                             n_new = len(result.get("new_arguments", []))
                             n_merges = len(result.get("merges", []))
                             log.info("daemon", f"Debate AI done: {n_merges} merges, {n_new} new args")
                         except Exception as e:
                             log.error("daemon", f"Debate AI cleanup failed: {e}")
                             # Post empty result so backend advances to prep anyway
-                            _post_json(
-                                f"{config.server_url}/api/debate/ai-result",
-                                {"merges": [], "cleaned": [], "new_arguments": []},
-                                config.host_username, config.host_password,
-                            )
-                except RuntimeError:
-                    pass  # server unreachable — skip this cycle
+                            ws_client.send({
+                                "type": "debate_ai_result",
+                                "merges": [], "cleaned": [], "new_arguments": [],
+                            })
 
-                # ── Check for transcription language change request ──
-                try:
-                    lang_data = _get_json(
-                        f"{config.server_url}/api/transcription-language/request",
-                        config.host_username, config.host_password,
-                    )
-                    lang_req = lang_data.get("request")
+                # ── Check for transcription language change request (via WS) ──
+                lang_data = _pending_requests.pop("transcription_language_request", None)
+                if lang_data:
+                    lang_req = lang_data.get("language")
                     if lang_req:
                         log.info("daemon", f"Transcription language change requested: {lang_req}")
                         try:
                             _set_audiohijack_language(lang_req)
-                            _post_json(
-                                f"{config.server_url}/api/transcription-language/status",
-                                {"language": lang_req},
-                                config.host_username, config.host_password,
-                            )
+                            ws_client.send({
+                                "type": "transcription_language_status",
+                                "language": lang_req,
+                            })
                             log.info("daemon", f"AudioHijack language set to: {lang_req}")
                         except Exception as e:
                             log.error("daemon", f"Failed to set AudioHijack language: {e}")
-                except RuntimeError:
-                    pass  # server unreachable — skip this cycle
 
                 # ── Push transcript stats every 10s ──
                 if now - last_transcript_stats_at >= 10.0:
@@ -1156,27 +1142,13 @@ def run() -> None:
                     except Exception as e:
                         log.error("daemon", f"State snapshot failed: {e}")
 
-                # ── Check for full-reset / forced summary request ──
-                # (full-reset now behaves the same as force — always full regeneration)
-                try:
-                    reset_data = _get_json(
-                        f"{config.server_url}/api/summary/full-reset",
-                        config.host_username, config.host_password,
-                    )
-                    if reset_data.get("requested"):
-                        log.info("summarizer", "Full reset — triggering regeneration")
-                except Exception:
-                    pass
+                # ── Check for full-reset / forced summary request (via WS) ──
+                full_reset_data = _pending_requests.pop("summary_full_reset", None)
+                if full_reset_data:
+                    log.info("summarizer", "Full reset — triggering regeneration")
 
-                force_summary = False
-                try:
-                    force_data = _get_json(
-                        f"{config.server_url}/api/summary/force",
-                        config.host_username, config.host_password,
-                    )
-                    force_summary = force_data.get("requested", False)
-                except Exception:
-                    pass
+                force_data = _pending_requests.pop("summary_force", None)
+                force_summary = bool(force_data) or bool(full_reset_data)
 
                 # ── On-demand summary generation (incremental when possible) ──
                 if force_summary and session_stack:
@@ -1213,6 +1185,7 @@ def run() -> None:
                 log.error("daemon", f"Unexpected error (will retry): {e}")
             time.sleep(DAEMON_POLL_INTERVAL)
     finally:
+        ws_client.stop()
         slides_on_demand_ws.stop()
 
 

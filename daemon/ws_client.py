@@ -7,8 +7,9 @@ import ssl
 import threading
 from websockets.sync.client import connect as ws_connect
 from websockets.exceptions import ConnectionClosed
+import os
 from daemon import log
-from daemon.config import WORKSHOP_SERVER_URL, HOST_USERNAME, HOST_PASSWORD
+from daemon.config import DEFAULT_SERVER_URL
 
 _RECONNECT_INTERVAL = 3.0
 
@@ -103,9 +104,12 @@ class DaemonWsClient:
                 self._stop.wait(_RECONNECT_INTERVAL)
 
     def _connect_and_listen(self):
-        url = WORKSHOP_SERVER_URL.replace("http://", "ws://").replace("https://", "wss://")
+        server_url = os.environ.get("WORKSHOP_SERVER_URL", DEFAULT_SERVER_URL).rstrip("/")
+        host_username = os.environ.get("HOST_USERNAME", "host")
+        host_password = os.environ.get("HOST_PASSWORD", "")
+        url = server_url.replace("http://", "ws://").replace("https://", "wss://")
         url = f"{url}/ws/daemon"
-        creds = base64.b64encode(f"{HOST_USERNAME}:{HOST_PASSWORD}".encode()).decode()
+        creds = base64.b64encode(f"{host_username}:{host_password}".encode()).decode()
         headers = {"Authorization": f"Basic {creds}"}
 
         ws_kwargs = {
