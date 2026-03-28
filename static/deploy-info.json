@@ -1,7 +1,8 @@
 {
-  "sha": "d685e3be0a3e46f774247729181df4b17a51ea8f",
+  "sha": "6911a2d4a996f9696df8a31268b13c5a4a538dde",
   "timestamp": "2026-03-28 16:49",
   "changelog": [
-    "feat(avatar): add tooltip on small avatar and replace refresh icon with dice"
+    "chore(catalog): rename Fundamentals to Clean Architecture",
+    "feat(slides): add AI group for AI Coding with right-border styling for solo categories"
   ]
 }
