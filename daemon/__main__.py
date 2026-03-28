@@ -679,7 +679,9 @@ def run() -> None:
                     if action == "create":
                         name = session_req["name"]
                         folder = sessions_root / name
+                        existed = folder.exists()
                         folder.mkdir(parents=True, exist_ok=True)
+                        log.info("session", f"{'Found' if existed else 'Created'} folder: {folder}")
                         if not session_stack:
                             new_session = {
                                 "name": name,
@@ -697,7 +699,7 @@ def run() -> None:
                                 _sync_audiohijack_language(config)
                             except Exception:
                                 pass
-                        log.info("session", f"Created: {name}")
+                        log.info("session", f"Session started: {name} (stack size: {len(session_stack)})")
 
                     elif action == "start":
                         name = session_req["name"]
