@@ -271,10 +271,10 @@
         const bubbleLeft = Math.max(8, rect.left - bubW - 14);
         bub.style.left = bubbleLeft + 'px';
         bub.style.transition = 'none';
-        bub.style.top = Math.max(8, Math.min(window.innerHeight - 120, rect.top + rect.height * 0.3)) + 'px';
+        bub.style.top = Math.max(8, rect.top + 8) + 'px';
         requestAnimationFrame(() => {
-          bub.style.transition = 'top 1.2s ease-in-out';
-          bub.style.top = Math.max(8, Math.min(window.innerHeight - 120, rect.top + rect.height * 0.6)) + 'px';
+          bub.style.transition = 'top 2s ease-in-out';
+          bub.style.top = Math.max(8, Math.min(window.innerHeight - 120, rect.bottom - 120)) + 'px';
         });
         return;
       }
