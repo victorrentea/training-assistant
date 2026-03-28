@@ -41,8 +41,10 @@ function getSortedEmojis() {
 function _syncCtrlGroupVisibility() {
   const group = document.getElementById('slides-ctrl-group');
   if (!group) return;
-  const anyVisible = Array.from(group.querySelectorAll('button')).some(b => b.style.display !== 'none');
-  group.style.display = anyVisible ? 'flex' : 'none';
+  // Keep the group as display:flex always so it stays in the grid flow as the left cell.
+  // When all child buttons are hidden it has zero content width but still occupies the 1fr column,
+  // ensuring #emoji-center stays centered in the middle grid column.
+  group.style.display = 'flex';
 }
 
 function renderEmojiBar() {
@@ -55,17 +57,12 @@ function renderEmojiBar() {
   // Sync ctrl group visibility first so its width is accurate before measurement
   _syncCtrlGroupVisibility();
 
-  // Measure fixed elements outside the center (left: slides-ctrl, right: upload/paste).
-  const outerFixedEls = [
-    document.getElementById('slides-ctrl-group'),
-    bar.querySelector('.emoji-bar-divider'), document.getElementById('upload-btn'),
-    document.getElementById('paste-btn'),
-  ];
-  const outerFixedWidth = outerFixedEls.reduce((sum, el) => {
-    if (!el) return sum;
-    const w = el.getBoundingClientRect().width;
-    return sum + (w > 0 ? w + 8 : 0);
-  }, 0);
+  // Measure side elements: use max(left, right) * 2 for symmetric centering (grid 1fr auto 1fr).
+  const slidesCtrl = document.getElementById('slides-ctrl-group');
+  const rightGroup = document.getElementById('emoji-bar-right');
+  const leftW = slidesCtrl ? slidesCtrl.getBoundingClientRect().width : 0;
+  const rightW = rightGroup ? rightGroup.getBoundingClientRect().width : 0;
+  const outerFixedWidth = Math.max(leftW, rightW) * 2 + 16; // 2 grid column gaps (8px each)
   // Fixed elements inside center (dots + ping) always consume space.
   const innerFixedEls = [dotsWrap, document.getElementById('emoji-ping-btn')];
   const innerFixedWidth = innerFixedEls.reduce((sum, el) => {
