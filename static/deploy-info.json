@@ -1,7 +1,7 @@
 {
-  "sha": "a1dd21447171714dfb14983833cf940d93727981",
-  "timestamp": "2026-03-28 17:52",
+  "sha": "76ccf4467c0624a0a8ba34b71cb32a4a571e6744",
+  "timestamp": "2026-03-28 17:56",
   "changelog": [
-    "fix(host): remove map icon from right pane bottom bar"
+    "fix(overlay): replace sketched heart with floating emoji for \u2764\ufe0f"
   ]
 }
