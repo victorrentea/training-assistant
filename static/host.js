@@ -1842,7 +1842,7 @@
   function updateTranscriptionLangBtn(lang, pending = false) {
     const btn = document.getElementById('btn-transcription-lang');
     if (!btn) return;
-    btn.textContent = _LANG_FLAG[lang] || lang;
+    btn.textContent = `${_LANG_FLAG[lang] || lang} ${lang.toUpperCase()}`;
     btn.title = `Transcription: ${lang.toUpperCase()}${pending ? ' (applying…)' : ''} — click to toggle`;
     btn.style.opacity = pending ? '0.4' : '0.8';
     btn.dataset.lang = lang;
