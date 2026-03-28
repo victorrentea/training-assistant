@@ -191,7 +191,11 @@ class SlidesOnDemandWsRunner:
             data = json.loads(catalog_path.read_text(encoding="utf-8"))
             entries = []
             for deck in data.get("decks", []):
-                slug = deck.get("slug") or _slugify(deck.get("title", ""))
+                target_pdf_val = deck.get("target_pdf", "")
+                slug = deck.get("slug") or (
+                    _slugify(Path(target_pdf_val).stem) if target_pdf_val
+                    else _slugify(deck.get("title", ""))
+                )
                 url = deck.get("drive_export_url", "")
                 if slug and url:
                     entry = {"slug": slug, "title": deck.get("title", slug), "drive_export_url": url}
