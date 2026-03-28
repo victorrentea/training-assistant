@@ -4090,10 +4090,37 @@ function closeEmojiPopup(ev) {
 
   // ── Emoji bar hover bubbles + dev-reset: need full DOM ──
   document.addEventListener('DOMContentLoaded', () => {
-    // Slides dock title click toggles pinned-open state
-    document.querySelector('.slides-dock-title').addEventListener('click', () => {
-      document.getElementById('slides-dock').classList.toggle('pinned');
-    });
+    // Slides dock: hover-expand with 2s collapse delay; click title to pin/unpin
+    (function() {
+      const dock = document.getElementById('slides-dock');
+      const list = document.getElementById('slides-list');
+      let collapseTimer = null;
+      let pinned = false;
+
+      function expand() {
+        clearTimeout(collapseTimer);
+        dock.classList.add('expanded');
+        list.classList.add('expanded');
+      }
+      function collapse() {
+        dock.classList.remove('expanded');
+        list.classList.remove('expanded');
+      }
+
+      dock.addEventListener('mouseenter', expand);
+      dock.addEventListener('mouseleave', () => {
+        if (pinned) return;
+        clearTimeout(collapseTimer);
+        collapseTimer = setTimeout(collapse, 2000);
+      });
+
+      document.querySelector('.slides-dock-title').addEventListener('click', () => {
+        pinned = !pinned;
+        dock.classList.toggle('pinned', pinned);
+        if (!pinned) collapse();
+        else expand();
+      });
+    })();
 
     // Wire buttons inside #emoji-bar
     document.getElementById('emoji-ping-btn').onclick = (ev) => sendEmoji('🖥️', ev);
