@@ -31,6 +31,7 @@ from core.metrics import (
 from core.state import state, ActivityType, assign_avatar, refresh_avatar
 from core.messaging import participant_ids
 from features.debate.router import auto_assign_remaining
+from features.ws.daemon_protocol import MSG_SLIDES_CATALOG, MSG_SLIDE_INVALIDATED, MSG_DAEMON_PING
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -81,6 +82,23 @@ def _is_host_authorized_for_ws(websocket: WebSocket) -> bool:
     )
 
 
+async def _handle_daemon_slides_catalog(data):
+    from features.slides.cache import handle_slides_catalog
+    await handle_slides_catalog(data.get("entries", []))
+
+async def _handle_daemon_slide_invalidated(data):
+    from features.slides.cache import handle_slide_invalidated
+    slug = data.get("slug", "").strip()
+    if slug:
+        await handle_slide_invalidated(slug)
+
+_DAEMON_MSG_HANDLERS = {
+    MSG_SLIDES_CATALOG: _handle_daemon_slides_catalog,
+    MSG_SLIDE_INVALIDATED: _handle_daemon_slide_invalidated,
+    MSG_DAEMON_PING: None,  # heartbeat only — last_seen already updated
+}
+
+
 @router.websocket("/ws/daemon")
 async def daemon_websocket_endpoint(websocket: WebSocket):
     if not _is_host_authorized_for_ws(websocket):
@@ -108,17 +126,11 @@ async def daemon_websocket_endpoint(websocket: WebSocket):
             data = await websocket.receive_json()
             state.daemon_last_seen = datetime.now(timezone.utc)
             msg_type = data.get("type")
-            if msg_type == "slides_catalog":
-                from features.slides.cache import handle_slides_catalog
-                await handle_slides_catalog(data.get("entries", []))
-            elif msg_type == "slide_invalidated":
-                from features.slides.cache import handle_slide_invalidated
-                slug = data.get("slug", "").strip()
-                if slug:
-                    await handle_slide_invalidated(slug)
-            elif msg_type == "daemon_ping":
-                # Heartbeat message; last_seen already updated.
-                continue
+            handler = _DAEMON_MSG_HANDLERS.get(msg_type)
+            if handler is not None:
+                await handler(data)
+            elif msg_type not in _DAEMON_MSG_HANDLERS:
+                logger.warning("Unknown daemon message type: %s", msg_type)
     except WebSocketDisconnect:
         pass
     finally:
