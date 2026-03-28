@@ -3019,6 +3019,13 @@ function updateSessionCodeBar(sessionId) {
 
   // Regenerate all QR codes with the session-scoped join URL
   _regenerateAllQRCodes();
+
+  // Set cookie so participant page on same machine can auto-join
+  if (sessionId) {
+    document.cookie = `host_session_id=${sessionId}; path=/; SameSite=Lax; max-age=86400`;
+  } else {
+    document.cookie = 'host_session_id=; path=/; max-age=0';
+  }
 }
 
 function copySessionLink() {
