@@ -60,6 +60,7 @@ from daemon.lock import (
     _LOCK_FILE,
     _HEARTBEAT_INTERVAL,
 )
+from daemon.email_notify import notify as email_notify
 
 EXIT_CODE_UPDATE = 42  # signals start.sh to git pull and restart
 _BACKUP_DIR = Path.home() / ".training-assistant"
@@ -993,6 +994,18 @@ def run() -> None:
                             log.info("daemon", f"AudioHijack language set to: {lang_req}")
                         except Exception as e:
                             log.error("daemon", f"Failed to set AudioHijack language: {e}")
+
+                # ── Email participant feedback ──
+                try:
+                    feedback_data = _get_json(
+                        f"{config.server_url}/api/feedback/pending",
+                        config.host_username, config.host_password,
+                    )
+                    for text in feedback_data.get("items", []):
+                        log.info("email", f"Feedback received: {text[:80]}")
+                        email_notify("💬 Workshop feedback", text)
+                except RuntimeError:
+                    pass  # server unreachable — skip this cycle
 
                 # ── Push transcript stats every 10s ──
                 if now - last_transcript_stats_at >= 10.0:

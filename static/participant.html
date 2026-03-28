@@ -17,9 +17,9 @@
 
   <!-- Main screen (auto-join, no join screen) -->
   <div id="main-screen">
-    <div class="status-bar">
+    <div class="status-bar tooltip-below">
       <span class="status-left">
-        <img id="my-avatar" class="avatar" style="display:none" alt="">
+        <img id="my-avatar" class="avatar has-tooltip" style="display:none" alt="" data-tooltip="Click to view or change">
         <span><span class="dot"></span>
             <strong id="display-name" class="editable-name has-tooltip" data-tooltip="Click to change your name"></strong>
 
@@ -35,7 +35,7 @@
       </span>
       <span class="status-right">
         <button id="notif-btn" style="display:none" class="has-tooltip" data-tooltip="Enable notifications">🔔</button>
-        <span id="location-prompt" class="location-prompt has-tooltip" onclick="requestLocation()" data-tooltip="Share your location (optional)">📍 Location!</span>
+        <span id="location-prompt" class="location-prompt tooltip-below has-tooltip" onclick="requestLocation()" data-tooltip="Share your location (optional)">📍 Location!</span>
         <span id="host-dot" class="has-tooltip" data-tooltip="Host is live"><span class="dot dot-red"></span>Host</span>
         <span id="daemon-dot" class="has-tooltip" data-tooltip="AI assistant offline"><span class="dot dot-red"></span>🤖</span>
         <span id="pax-count" class="has-tooltip" data-tooltip="Participants connected"></span>
@@ -60,8 +60,8 @@
     <div id="slides-list" class="slides-list" aria-label="Available slides"></div>
   </aside>
 
-<div id="notes-overlay" class="summary-overlay" onclick="closeNotesModal()">
-  <div class="summary-dialog" onclick="event.stopPropagation()">
+<div id="notes-overlay" class="modal-overlay summary-overlay" onclick="closeNotesModal()">
+  <div class="modal-dialog summary-dialog" onclick="event.stopPropagation()">
     <div class="summary-header">
       <span>📝 Session Notes</span>
       <span>
@@ -74,8 +74,8 @@
   </div>
 </div>
 
-<div id="summary-overlay" class="summary-overlay" onclick="closeSummaryModal()">
-  <div class="summary-dialog" onclick="event.stopPropagation()">
+<div id="summary-overlay" class="modal-overlay summary-overlay" onclick="closeSummaryModal()">
+  <div class="modal-dialog summary-dialog" onclick="event.stopPropagation()">
     <div class="summary-header">
       <span>🧠 Key Points</span>
       <span>
@@ -108,7 +108,7 @@
 </div>
 <div id="slides-ui-blocker" class="slides-ui-blocker" style="display:none;" aria-live="polite" aria-busy="true">
   <div class="slides-ui-blocker-card">
-    <div class="slides-ui-spinner" aria-hidden="true"></div>
+    <div class="spinner slides-ui-spinner" aria-hidden="true"></div>
     <div class="slides-progress-track" role="progressbar" aria-label="Slide download progress">
       <div id="slides-ui-blocker-progress-fill" class="slides-progress-fill"></div>
     </div>
@@ -119,13 +119,14 @@
 <script src="/static/work-hours.js"></script>
 <script src="/static/version-age.js"></script>
 <script src="/static/version-reload.js"></script>
+<script src="/static/utils.js"></script>
 <script src="/static/participant.js"></script>
 <div class="version-tag" id="version-tag"></div>
 <script>window.renderDeployAge && window.renderDeployAge('version-tag');</script>
 <div id="qa-toast" class="qa-toast"></div>
 <div id="emoji-bar">
   <!-- PDF slide controls — moved here so renderEmojiBar() can measure them as part of the single flex row -->
-  <div id="slides-ctrl-group" style="display:none; gap:.4rem; align-items:center; flex-shrink:0; pointer-events:auto;">
+  <div id="slides-ctrl-group" style="display:flex; gap:.4rem; align-items:center; pointer-events:auto;">
     <button id="slides-close-btn" class="slides-ctrl-btn slides-close-btn" type="button" data-tooltip="Close slides" onclick="closeSlidesModal()" style="display:none">✕</button>
     <button id="slides-zoom-out" class="slides-ctrl-btn slides-zoom-btn" type="button" data-tooltip="Zoom out" style="display:none">−</button>
     <button id="slides-fit-width" class="slides-ctrl-btn slides-zoom-btn" type="button" data-tooltip="Fit to width" style="display:none"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg></button>
@@ -142,9 +143,10 @@
     </div>
     <button id="emoji-ping-btn" class="emoji-btn emoji-btn-ping" data-tooltip="I can't see your screen." style="flex-shrink:0; pointer-events:auto;">🖥️</button>
   </div>
-  <div class="emoji-bar-divider"></div>
-  <button id="upload-btn" class="emoji-btn emoji-bar-action-btn" data-tooltip="Send a file to the host." data-tooltip-emoji="📤" style="flex-shrink:0;"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13V4"/><path d="M6 7.5L10 3.5L14 7.5"/><path d="M4.5 13.5v1a2 2 0 0 0 2 2h7a2 2 0 0 0 2-2v-1"/></svg></button>
-  <button id="paste-btn" class="emoji-btn emoji-bar-action-btn" data-tooltip="Paste text to the host." data-tooltip-emoji="📋" style="flex-shrink:0;">📋</button>
+  <div id="emoji-bar-right">
+    <button id="upload-btn" class="emoji-btn emoji-bar-action-btn" data-tooltip="Send a file to the host." data-tooltip-emoji="📤"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13V4"/><path d="M6 7.5L10 3.5L14 7.5"/><path d="M4.5 13.5v1a2 2 0 0 0 2 2h7a2 2 0 0 0 2-2v-1"/></svg></button>
+    <button id="paste-btn" class="emoji-btn emoji-bar-action-btn" data-tooltip="Paste text to the host." data-tooltip-emoji="📋">📋</button>
+  </div>
 </div>
 <div id="conference-emoji-grid" style="display:none;">
   <div id="conference-url-display" class="conference-url-display"></div>
@@ -178,6 +180,14 @@
     <input type="file" id="upload-file-input" style="display:none" onchange="onUploadFileSelected(this)">
     <div id="upload-progress-bar" class="upload-progress-bar" style="display:none"><div id="upload-progress-fill" class="upload-progress-fill"></div></div>
     <button id="upload-send-btn" class="paste-send-btn" disabled onclick="sendUploadFile()">Send to host</button>
+  </div>
+</div>
+<!-- Feedback button — fixed top-left, always visible -->
+<button id="feedback-btn" class="emoji-btn feedback-fixed-btn" data-tooltip="Share feedback" data-tooltip-emoji="💬">💬</button>
+<div id="feedback-overlay" class="paste-overlay" onclick="closeFeedbackModal()">
+  <div class="feedback-bubble" onclick="event.stopPropagation()">
+    <textarea id="feedback-textarea" class="feedback-textarea" placeholder="Dream it up — what would you add to this app?" oninput="document.getElementById('feedback-send-btn').disabled = !this.value.trim()" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();submitFeedback();}"></textarea>
+    <button id="feedback-send-btn" class="paste-send-btn" disabled onclick="submitFeedback()">Submit Prompt</button>
   </div>
 </div>
 <div id="leaderboard-overlay" class="leaderboard-overlay" style="display:none;">

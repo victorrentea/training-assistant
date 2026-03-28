@@ -42,6 +42,7 @@ from features.ws.daemon_protocol import (
 )
 
 router = APIRouter()
+session_router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
@@ -549,15 +550,12 @@ async def daemon_websocket_endpoint(websocket: WebSocket):
         await broadcast({"type": "slides_catalog_changed"})
 
 
-@router.websocket("/ws/{participant_id}")
-async def websocket_endpoint(websocket: WebSocket, participant_id: str):
-    pid = participant_id.strip()
-    if not pid:
-        await websocket.close(code=1008)
-        return
+async def _handle_participant_connection(websocket: WebSocket, pid: str, is_host: bool, is_overlay: bool):
+    """Shared logic for participant/host/overlay WebSocket connections.
 
-    is_host = pid == "__host__"
-    is_overlay = pid == "__overlay__"
+    Handles: paused check, accept, name registration, message loop, disconnect cleanup.
+    Caller must have already validated auth and session_id as appropriate.
+    """
     role = "host" if is_host else ("overlay" if is_overlay else "participant")
 
     # Overlay reconnect: kick old overlay connection
@@ -633,8 +631,7 @@ async def websocket_endpoint(websocket: WebSocket, participant_id: str):
                     and state.debate_phase
                     and state.debate_phase != "side_selection"
                     and pid not in state.debate_sides):
-                    for_count = sum(1 for s in state.debate_sides.values() if s == "for")
-                    against_count = sum(1 for s in state.debate_sides.values() if s == "against")
+                    for_count, against_count = state.debate_side_counts()
                     state.debate_sides[pid] = "for" if for_count <= against_count else "against"
                     state.debate_auto_assigned.add(pid)
                     logger.info(f"Late joiner {name} auto-assigned to {state.debate_sides[pid]}")
@@ -753,8 +750,7 @@ async def websocket_endpoint(websocket: WebSocket, participant_id: str):
 
                     # Auto-advance if all participants now have sides and both sides have members
                     if all(p in state.debate_sides for p in all_pids):
-                        fc = sum(1 for s in state.debate_sides.values() if s == "for")
-                        ac = sum(1 for s in state.debate_sides.values() if s == "against")
+                        fc, ac = state.debate_side_counts()
                         if fc > 0 and ac > 0:
                             state.debate_phase = "arguments"
                             logger.info("All participants assigned — auto-advancing to arguments phase")
@@ -864,7 +860,10 @@ async def websocket_endpoint(websocket: WebSocket, participant_id: str):
                             del state.paste_texts[target_uuid]
                         await broadcast_participant_update()
 
-
+            elif msg_type == "submit_feedback":
+                text = str(data.get("text", "")).strip()
+                if text and len(text) <= 2000 and not is_host:
+                    state.feedback_pending.append(text)
 
     except WebSocketDisconnect:
         state.participants.pop(pid, None)
@@ -875,3 +874,39 @@ async def websocket_endpoint(websocket: WebSocket, participant_id: str):
         # Keep participant_names and scores (persist for session)
         logger.info(f"Disconnected: {pid} ({len(state.participants)} remaining)")
         await broadcast_participant_update()
+
+
+@router.websocket("/ws/{participant_id}")
+async def websocket_endpoint(websocket: WebSocket, participant_id: str):
+    """WebSocket endpoint for host (__host__) and overlay (__overlay__) only.
+
+    Regular participants must connect via /ws/{session_id}/{participant_id}.
+    """
+    pid = participant_id.strip()
+    if pid not in ("__host__", "__overlay__"):
+        await websocket.accept()
+        await websocket.close(code=1008)
+        return
+
+    is_host = pid == "__host__"
+    is_overlay = pid == "__overlay__"
+
+    await _handle_participant_connection(websocket, pid, is_host, is_overlay)
+
+
+@session_router.websocket("/ws/{session_id}/{participant_id}")
+async def session_websocket_endpoint(websocket: WebSocket, session_id: str, participant_id: str):
+    """WebSocket endpoint for regular participants, requiring a valid session_id."""
+    # Validate session_id — accept first so client gets a clean 1008 close code
+    if not state.session_id or session_id.lower() != state.session_id.lower():
+        await websocket.accept()
+        await websocket.close(code=1008)
+        return
+
+    pid = participant_id.strip()
+    if not pid or pid.startswith("__"):
+        await websocket.accept()
+        await websocket.close(code=1008)
+        return
+
+    await _handle_participant_connection(websocket, pid, is_host=False, is_overlay=False)

@@ -14,6 +14,7 @@ from core.messaging import broadcast, broadcast_state, participant_ids
 from core.state import state, ActivityType
 
 router = APIRouter()
+public_router = APIRouter()  # participant-facing endpoints (no auth), mounted under session prefix
 logger = logging.getLogger(__name__)
 
 
@@ -70,8 +71,7 @@ async def create_poll(poll: PollCreate):
         raise HTTPException(400, "Need at least 2 options")
     if len(poll.options) > 8:
         raise HTTPException(400, "Maximum 8 options")
-    if state.current_activity not in (ActivityType.NONE, ActivityType.POLL):
-        raise HTTPException(409, "Another activity is already active")
+    state.ensure_activity_available(ActivityType.POLL)
 
     state.poll = {
         "id": int(datetime.now(timezone.utc).timestamp() * 1000),
@@ -221,19 +221,18 @@ async def clear_poll():
     return {"ok": True}
 
 
-@router.get("/api/quiz-md")
+@public_router.get("/api/quiz-md")
 async def get_quiz_md():
     """Returns all closed polls as markdown (public endpoint for participants and daemon)."""
     return {"content": state.quiz_md_content}
 
 
-@router.get("/api/suggest-name")
+@public_router.get("/api/suggest-name")
 async def suggest_name():
     return {"name": state.suggest_name()}
 
 
-@router.get("/api/status")
-async def status():
+def _status_response():
     return {
         "backend_version": get_backend_version(),
         "participants": len(participant_ids()),
@@ -244,6 +243,18 @@ async def status():
         "slides_current": state.slides_current,
         "needs_restore": state.needs_restore,
     }
+
+
+@router.get("/api/status")
+async def status():
+    """Status endpoint on main router (daemon + backward compat)."""
+    return _status_response()
+
+
+@public_router.get("/api/status")
+async def status_public():
+    """Status endpoint on public router (participant-facing, under session prefix)."""
+    return _status_response()
 
 
 @router.post("/api/pending-deploy")

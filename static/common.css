@@ -72,7 +72,7 @@
 .has-tooltip:hover::after,
 .has-tooltip:hover::before {
   opacity: 1;
-  transition-delay: .1s;
+  transition-delay: .4s;
 }
 #notif-btn {
   background: none;
@@ -195,27 +195,12 @@
 
 /* Summary modal */
 .summary-overlay {
-  display: none;
-  position: fixed;
-  inset: 0;
   background: rgba(0,0,0,0.6);
-  z-index: 2000;
-  justify-content: center;
-  align-items: center;
-}
-.summary-overlay.open {
-  display: flex;
 }
 .summary-dialog {
-  background: var(--surface);
-  border-radius: 12px;
   padding: 1.2rem;
   max-width: 95vw;
   width: 95vw;
-  max-height: 90vh;
-  display: flex;
-  flex-direction: column;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
 }
 .summary-header {
   display: flex;
@@ -566,7 +551,58 @@ input[type=text].debate-round-duration {
   height: 2rem;
   border: 3px solid var(--surface2);
   border-top-color: var(--accent);
-  border-radius: 50%;
-  animation: debate-spin 0.8s linear infinite;
 }
-@keyframes debate-spin { to { transform: rotate(360deg); } }
+
+/* --- Modal base --- */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  justify-content: center;
+  align-items: center;
+}
+.modal-overlay.open { display: flex; }
+.modal-dialog {
+  background: var(--surface);
+  border-radius: 12px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+}
+
+/* --- Spinner base --- */
+.spinner {
+  border-radius: 50%;
+  animation: spin 0.75s linear infinite;
+  flex-shrink: 0;
+}
+/* Tooltip pseudo-elements on spinners must not inherit the spin animation */
+.spinner.has-tooltip::after,
+.spinner.has-tooltip::before {
+  animation: none;
+}
+
+/* --- Utilities --- */
+.truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* --- Tooltip below modifier --- */
+.tooltip-below.has-tooltip::after,
+.tooltip-below .has-tooltip::after { top: calc(100% + 8px); bottom: auto; }
+.tooltip-below.has-tooltip::before,
+.tooltip-below .has-tooltip::before { top: calc(100% + 2px); bottom: auto; border-top-color: transparent; border-bottom: 6px solid var(--surface2); }
+
+.tooltip-right.has-tooltip::after,
+.tooltip-right .has-tooltip::after { left: calc(100% + 8px); right: auto; top: 50%; bottom: auto; transform: translateY(-50%); }
+.tooltip-right.has-tooltip::before,
+.tooltip-right .has-tooltip::before { left: calc(100% + 2px); right: auto; top: 50%; bottom: auto; transform: translateY(-50%); border-top-color: transparent; border-right: 6px solid var(--surface2); }
+
+.tooltip-left.has-tooltip::after,
+.tooltip-left .has-tooltip::after { right: calc(100% + 8px); left: auto; top: 50%; bottom: auto; transform: translateY(-50%); }
+.tooltip-left.has-tooltip::before,
+.tooltip-left .has-tooltip::before { right: calc(100% + 2px); left: auto; top: 50%; bottom: auto; transform: translateY(-50%); border-top-color: transparent; border-left: 6px solid var(--surface2); }

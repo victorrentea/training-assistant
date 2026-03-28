@@ -1,5 +1,3 @@
-from datetime import datetime, timezone
-
 from fastapi import APIRouter
 from pydantic import BaseModel
 
@@ -28,7 +26,7 @@ async def set_transcription_language(body: LanguageRequest):
 
 @router.get("/api/transcription-language/request")
 async def poll_transcription_language_request():
-    state.daemon_last_seen = datetime.now(timezone.utc)
+    state.touch_daemon()
     req = state.transcription_language_request
     state.transcription_language_request = None
     return {"request": req}

@@ -1,3 +1,30 @@
+  // ── Session ID from URL ──
+  const sessionId = window.location.pathname.split('/')[1];
+  if (!sessionId) { window.location.href = '/'; }
+  const apiBase = '/' + sessionId;
+
+  // Update /notes links to be session-aware + display session code
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('a[href="/notes"]').forEach(a => { a.href = '/' + sessionId + '/notes'; });
+    // Show session code in version tag area
+    const vt = document.getElementById('version-tag');
+    if (vt) {
+      const span = document.createElement('span');
+      span.id = 'session-code-tag';
+      span.textContent = sessionId.toUpperCase();
+      span.style.cssText = 'margin-left:.6em; letter-spacing:.12em; font-weight:600; opacity:.7; cursor:pointer;';
+      span.title = 'Session code (click to copy join link)';
+      span.onclick = () => {
+        navigator.clipboard.writeText(location.origin + '/' + sessionId).then(() => {
+          span.textContent = 'Copied!';
+          setTimeout(() => { span.textContent = sessionId.toUpperCase(); }, 1500);
+        });
+      };
+      vt.appendChild(document.createTextNode(' | '));
+      vt.appendChild(span);
+    }
+  });
+
   const LS_KEY = 'workshop_participant_name';
   const LS_UUID_KEY = 'workshop_participant_uuid';
   const LS_VOTE_KEY = 'workshop_vote';
@@ -41,8 +68,10 @@ function getSortedEmojis() {
 function _syncCtrlGroupVisibility() {
   const group = document.getElementById('slides-ctrl-group');
   if (!group) return;
-  const anyVisible = Array.from(group.querySelectorAll('button')).some(b => b.style.display !== 'none');
-  group.style.display = anyVisible ? 'flex' : 'none';
+  // Keep the group as display:flex always so it stays in the grid flow as the left cell.
+  // When all child buttons are hidden it has zero content width but still occupies the 1fr column,
+  // ensuring #emoji-center stays centered in the middle grid column.
+  group.style.display = 'flex';
 }
 
 function renderEmojiBar() {
@@ -55,17 +84,17 @@ function renderEmojiBar() {
   // Sync ctrl group visibility first so its width is accurate before measurement
   _syncCtrlGroupVisibility();
 
-  // Measure fixed elements outside the center (left: slides-ctrl, right: upload/paste).
-  const outerFixedEls = [
-    document.getElementById('slides-ctrl-group'),
-    bar.querySelector('.emoji-bar-divider'), document.getElementById('upload-btn'),
-    document.getElementById('paste-btn'),
-  ];
-  const outerFixedWidth = outerFixedEls.reduce((sum, el) => {
-    if (!el) return sum;
+  // Measure actual button content widths (not the 1fr grid cell widths which stretch to fill).
+  const leftBtns = Array.from((document.getElementById('slides-ctrl-group') || document.createElement('div'))
+    .querySelectorAll('button, span')).filter(el => el.getBoundingClientRect().width > 0);
+  const leftW = leftBtns.reduce((s, el) => s + el.getBoundingClientRect().width + 8, 0);
+  const rightBtns = [document.getElementById('upload-btn'), document.getElementById('paste-btn')];
+  const rightW = rightBtns.reduce((s, el) => {
+    if (!el) return s;
     const w = el.getBoundingClientRect().width;
-    return sum + (w > 0 ? w + 8 : 0);
+    return s + (w > 0 ? w + 8 : 0);
   }, 0);
+  const outerFixedWidth = Math.max(leftW, rightW) * 2 + 16; // 2 grid column gaps (8px each)
   // Fixed elements inside center (dots + ping) always consume space.
   const innerFixedEls = [dotsWrap, document.getElementById('emoji-ping-btn')];
   const innerFixedWidth = innerFixedEls.reduce((sum, el) => {
@@ -253,9 +282,7 @@ function closeEmojiPopup(ev) {
   let lastHostSlidesCurrentKey = '';
   let slidesFollowQueue = Promise.resolve();
 
-  function escHtml(s) {
-    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  }
+  // escHtml is now in utils.js
 
   // ── Onboarding tour ──
   const LS_TOUR_KEY = 'workshop_tour_shown';
@@ -455,8 +482,8 @@ function closeEmojiPopup(ev) {
 
     const refreshBtn = document.createElement('button');
     refreshBtn.className = 'avatar-refresh-btn';
-    refreshBtn.innerHTML = '\u{1F504}';
-    refreshBtn.title = 'Get a new avatar';
+    refreshBtn.innerHTML = '\u{1F3B2}';
+    refreshBtn.title = 'Click to draw another one';
     refreshBtn.onclick = function(e) {
         e.stopPropagation();
         // Track the current avatar as rejected
@@ -465,10 +492,10 @@ function closeEmojiPopup(ev) {
         if (filename && !rejectedAvatars.includes(filename)) {
             rejectedAvatars.push(filename);
         }
-        if (ws) ws.send(JSON.stringify({ type: 'refresh_avatar', rejected: rejectedAvatars }));
-        // Spin the refresh button
-        refreshBtn.classList.add('spinning');
-        setTimeout(function() { refreshBtn.classList.remove('spinning'); }, 600);
+        sendWS('refresh_avatar', { rejected: rejectedAvatars });
+        // Roll the dice button
+        refreshBtn.classList.add('rolling');
+        setTimeout(function() { refreshBtn.classList.remove('rolling'); }, 600);
         // Keep modal open; timer starts when new avatar arrives via state broadcast
         window._avatarModalImg = img;
         window._avatarModal = modal;
@@ -550,13 +577,11 @@ function closeEmojiPopup(ev) {
   }
 
   function toggleNotesModal() {
-    const overlay = document.getElementById('notes-overlay');
-    if (overlay) overlay.classList.toggle('open');
+    toggleModal('notes-overlay');
   }
 
   function closeNotesModal() {
-    const overlay = document.getElementById('notes-overlay');
-    if (overlay) overlay.classList.remove('open');
+    closeModal('notes-overlay');
   }
 
   function updateSummary(points, updatedAt) {
@@ -632,13 +657,12 @@ function closeEmojiPopup(ev) {
     if (!summaryPoints.length && !_summaryRequested) {
       _summaryRequested = true;
       const list = document.getElementById('summary-list');
-      fetch('/api/summary/force', { method: 'POST' }).catch(() => {});
+      fetch(apiBase + '/api/summary/force', { method: 'POST' }).catch(() => {});
     }
   }
 
   function closeSummaryModal() {
-    const overlay = document.getElementById('summary-overlay');
-    if (overlay) overlay.classList.remove('open');
+    closeModal('summary-overlay');
   }
 
   function openPasteModal() {
@@ -652,8 +676,7 @@ function closeEmojiPopup(ev) {
   }
 
   function closePasteModal() {
-    const overlay = document.getElementById('paste-overlay');
-    if (overlay) overlay.classList.remove('open');
+    closeModal('paste-overlay');
   }
 
   function sendPasteText() {
@@ -664,9 +687,29 @@ function closeEmojiPopup(ev) {
       alert('Text too large (max 100KB)');
       return;
     }
-    ws.send(JSON.stringify({ type: 'paste_text', text: text }));
+    sendWS('paste_text', { text: text });
     closePasteModal();
     showPasteToast();
+  }
+
+  function openFeedbackModal() {
+    const overlay = document.getElementById('feedback-overlay');
+    if (overlay) {
+      overlay.classList.add('open');
+      const ta = document.getElementById('feedback-textarea');
+      if (ta) { ta.value = ''; ta.focus(); }
+      document.getElementById('feedback-send-btn').disabled = true;
+    }
+  }
+  function closeFeedbackModal() {
+    closeModal('feedback-overlay');
+  }
+  function submitFeedback() {
+    const ta = document.getElementById('feedback-textarea');
+    const text = ta ? ta.value.trim() : '';
+    if (!text || !ws) return;
+    sendWS('submit_feedback', { text });
+    closeFeedbackModal();
   }
 
   function showPasteToast() {
@@ -746,7 +789,7 @@ function closeEmojiPopup(ev) {
     formData.append('uuid', myUUID);
 
     const xhr = new XMLHttpRequest();
-    xhr.open('POST', '/api/upload');
+    xhr.open('POST', apiBase + '/api/upload');
     xhr.upload.onprogress = e => {
       if (e.lengthComputable) {
         progressFill.style.width = Math.round(e.loaded / e.total * 100) + '%';
@@ -828,7 +871,7 @@ function closeEmojiPopup(ev) {
     }
     const btn = document.getElementById('summary-refresh-btn');
     if (btn) { btn.disabled = true; btn.style.opacity = '0.4'; }
-    fetch('/api/summary/force', { method: 'POST' }).catch(() => {});
+    fetch(apiBase + '/api/summary/force', { method: 'POST' }).catch(() => {});
   }
 
   function _normalizeSlideMatchToken(value) {
@@ -985,6 +1028,10 @@ function closeEmojiPopup(ev) {
   }
 
   function _onIncomingHostSlidesCurrent(slidesCurrent) {
+    // Prefix slide URL with session base path for matching against catalog
+    if (slidesCurrent && slidesCurrent.url && slidesCurrent.url.startsWith('/api/')) {
+      slidesCurrent = { ...slidesCurrent, url: apiBase + slidesCurrent.url };
+    }
     const newCurrent = slidesCurrent || null;
     const key = _slidesCurrentKey(newCurrent);
     if (key === lastHostSlidesCurrentKey) return;
@@ -1682,8 +1729,10 @@ function closeEmojiPopup(ev) {
     for (const raw of (Array.isArray(rawSlides) ? rawSlides : [])) {
       if (!raw || typeof raw !== 'object') continue;
       const name = String(raw.name || '').trim();
-      const url = String(raw.url || '').trim();
+      let url = String(raw.url || '').trim();
       if (!_isDisplayableSlideName(name) || !url) continue;
+      // Prefix relative slide URLs with session base path
+      if (url.startsWith('/api/')) url = apiBase + url;
       const slug = String(raw.slug || '').trim() || 'slide';
       const key = `${slug}|${url}`;
       if (seen.has(key)) continue;
@@ -1769,7 +1818,8 @@ function closeEmojiPopup(ev) {
     );
     if (updated) {
       const badge = document.createElement('span');
-      badge.className = 'slides-list-updated';
+      badge.className = 'slides-list-updated has-tooltip';
+      badge.setAttribute('data-tooltip', 'Last update');
       badge.textContent = updated;
       item.appendChild(badge);
     }
@@ -1788,7 +1838,7 @@ function closeEmojiPopup(ev) {
       const _cfg = _dotCfg[_cacheEntry.status] || _dotCfg['not_cached'];
       if (_cfg.spinner) {
         const spinner = document.createElement('div');
-        spinner.className = 'slides-cache-spinner has-tooltip';
+        spinner.className = 'spinner slides-cache-spinner has-tooltip';
         spinner.setAttribute('data-tooltip', _cfg.tip);
         item.appendChild(spinner);
       } else {
@@ -1860,6 +1910,9 @@ function closeEmojiPopup(ev) {
     list.classList.remove('uniform-10');
     list.style.removeProperty('--slides-uniform-count');
 
+    const groupCounts = {};
+    for (const slide of slidesCatalog) if (slide.group) groupCounts[slide.group] = (groupCounts[slide.group] || 0) + 1;
+
     let currentGroup = null;
     let currentGroupEl = null;
     for (const slide of slidesCatalog) {
@@ -1869,10 +1922,12 @@ function closeEmojiPopup(ev) {
         currentGroupEl.className = 'slides-group-block';
         const color = SLIDES_GROUP_COLORS[slide.group] || '#888';
         currentGroupEl.style.setProperty('--slides-group-color', color);
-        const groupName = document.createElement('div');
-        groupName.className = 'slides-group-name';
-        groupName.textContent = slide.group;
-        currentGroupEl.appendChild(groupName);
+        if (groupCounts[slide.group] > 1) {
+          const groupName = document.createElement('div');
+          groupName.className = 'slides-group-name';
+          groupName.textContent = slide.group;
+          currentGroupEl.appendChild(groupName);
+        }
         list.appendChild(currentGroupEl);
       }
       if (slide.group) {
@@ -2118,7 +2173,8 @@ function closeEmojiPopup(ev) {
   async function _refreshSlidesCatalog({ forceReloadCurrent = false, autoLoadSelected = false } = {}) {
     const shell = document.getElementById('slides-viewer-shell');
     try {
-      const res = await fetch('/api/slides', { cache: 'no-store' });
+      const res = await fetch(apiBase + '/api/slides', { cache: 'no-store' });
+      if (res.status === 404) { window.location.href = '/?error=invalid'; return; }
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       slidesCatalog = _normalizeSlidesCatalog(data.slides);
@@ -2223,6 +2279,9 @@ function closeEmojiPopup(ev) {
     if (page) page.style.display = 'none';
     const closeBtn = document.getElementById('slides-close-btn');
     if (closeBtn) closeBtn.style.display = 'none';
+    document.getElementById('slides-zoom-in')?.style.setProperty('display', 'none');
+    document.getElementById('slides-zoom-out')?.style.setProperty('display', 'none');
+    document.getElementById('slides-fit-width')?.style.setProperty('display', 'none');
   }
 
   function warmSlidesCatalog() {
@@ -2276,7 +2335,8 @@ function closeEmojiPopup(ev) {
   }
 
   async function fetchSuggestedName() {
-    const res = await fetch('/api/suggest-name');
+    const res = await fetch(apiBase + '/api/suggest-name');
+    if (res.status === 404) { window.location.href = '/?error=invalid'; return; }
     const data = await res.json();
     return data.name;
   }
@@ -2328,9 +2388,7 @@ function closeEmojiPopup(ev) {
         localStorage.setItem(LS_KEY, myName);
         localStorage.setItem(LS_CUSTOM_NAME_KEY, '1');
         document.getElementById('display-name').textContent = myName;
-        if (ws && ws.readyState === WebSocket.OPEN) {
-            ws.send(JSON.stringify({ type: 'set_name', name: myName }));
-        }
+        sendWS('set_name', { name: myName });
     }
     document.getElementById('display-name').style.display = '';
     document.getElementById('name-edit-wrap').style.display = 'none';
@@ -2352,9 +2410,7 @@ function closeEmojiPopup(ev) {
   }
 
   function sendLocation(locationStr) {
-    if (ws && ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify({ type: 'location', location: locationStr }));
-    }
+    sendWS('location', { location: locationStr });
   }
 
   function updateLocationPrompt() {
@@ -2417,7 +2473,7 @@ function closeEmojiPopup(ev) {
   function connectWS(name) {
     _stateInitialised = false;
     const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-    const url = `${proto}://${location.host}/ws/${encodeURIComponent(myUUID)}`;
+    const url = `${proto}://${location.host}/ws/${sessionId}/${encodeURIComponent(myUUID)}`;
     ws = new WebSocket(url);
 
     ws.onopen = () => {
@@ -2428,7 +2484,7 @@ function closeEmojiPopup(ev) {
       document.getElementById('display-name').textContent = myName;
 
       // Send name as first message
-      ws.send(JSON.stringify({ type: 'set_name', name: myName }));
+      sendWS('set_name', { name: myName });
 
       // Show 🔔 button for auto-joiners who haven't been asked for permission yet
       if ('Notification' in window && Notification.permission === 'default' && !_notifBtnBound) {
@@ -2448,7 +2504,8 @@ function closeEmojiPopup(ev) {
       handleMessage(msg);
     };
 
-    ws.onclose = () => {
+    ws.onclose = (event) => {
+      if (event.code === 1008) { window.location.href = '/'; return; }
       setTimeout(() => connectWS(myName), 3000);
     };
   }
@@ -2598,6 +2655,7 @@ function closeEmojiPopup(ev) {
             if (letterEl && !letterEl._clickBound) {
                 letterEl._clickBound = true;
                 letterEl.style.cursor = 'pointer';
+                letterEl.title = 'Click to change avatar';
                 letterEl.addEventListener('click', function() {
                     showLetterAvatarModal(this.textContent, this.style.background);
                 });
@@ -2967,7 +3025,7 @@ function closeEmojiPopup(ev) {
     // When called from onclick, existingWord is an Event — ignore it
     const word = (typeof existingWord === 'string' && existingWord) || (input && input.value.trim());
     if (!word) return;
-    ws.send(JSON.stringify({ type: 'wordcloud_word', word }));
+    sendWS('wordcloud_word', { word });
     if (input && typeof existingWord !== 'string') {
       input.value = '';
       const goBtn = document.getElementById('wc-go');
@@ -3205,7 +3263,7 @@ function closeEmojiPopup(ev) {
 
   function sendEmoji(emoji, ev) {
     if (!ws) return;
-    ws.send(JSON.stringify({ type: 'emoji_reaction', emoji }));
+    sendWS('emoji_reaction', { emoji });
     // Track usage for priority reordering (only for overflow-eligible emojis)
     if (EMOJI_CONFIG.some(e => e.emoji === emoji)) {
       incrementEmojiCount(emoji);
@@ -3274,7 +3332,7 @@ function closeEmojiPopup(ev) {
     if (!input) return;
     const text = input.value.trim();
     if (!text || !ws) return;
-    ws.send(JSON.stringify({ type: 'qa_submit', text }));
+    sendWS('qa_submit', { text });
     input.value = '';
     const qaBtn = document.getElementById('qa-submit-btn');
     if (qaBtn) qaBtn.disabled = true;
@@ -3283,7 +3341,7 @@ function closeEmojiPopup(ev) {
 
   function upvoteQuestion(questionId) {
     if (!ws) return;
-    ws.send(JSON.stringify({ type: 'qa_upvote', question_id: questionId }));
+    sendWS('qa_upvote', { question_id: questionId });
   }
 
   function renderQACleanup() {
@@ -3291,12 +3349,7 @@ function closeEmojiPopup(ev) {
     // Q&A DOM is inside #content which gets replaced when switching activities
   }
 
-  // ── HTML escaping utility ──
-  function escDebate(str) {
-    const d = document.createElement('div');
-    d.textContent = str;
-    return d.innerHTML;
-  }
+  // escDebate replaced by escHtml from utils.js
 
   // ── Debate rendering ──
   const DEBATE_PHASES = [
@@ -3433,7 +3486,7 @@ function closeEmojiPopup(ev) {
     html += renderDebatePhaseStepper(displayPhase);
     html += `<div class="debate-statement-row">
       <span class="debate-side-count debate-side-against">👎 ${sideCounts.against}</span>
-      <span class="debate-statement-text">"${escDebate(statement)}"</span>
+      <span class="debate-statement-text">"${escHtml(statement)}"</span>
       <span class="debate-side-count debate-side-for">${sideCounts.for} 👍</span>
     </div>`;
 
@@ -3469,7 +3522,7 @@ function closeEmojiPopup(ev) {
       html += renderDebateArgColumns(args, mySide, msg, false);
       if (phase === 'ai_cleanup') {
         html += `<div class="debate-ai-loading">
-          <div class="debate-ai-spinner"></div>
+          <div class="spinner debate-ai-spinner"></div>
           <div>AI is enriching arguments…</div>
         </div>`;
       }
@@ -3478,7 +3531,7 @@ function closeEmojiPopup(ev) {
         html += `<button class="btn btn-warn debate-volunteer-btn" onclick="debateVolunteer()">🏆 I'll be our champion!</button>`;
       } else if (mySide && champions[mySide]) {
         const isMe = msg.debate_my_is_champion;
-        html += `<div class="debate-champion-info">${isMe ? '🏆 You are your team\'s champion!' : '🏆 Champion: ' + escDebate(champions[mySide])}</div>`;
+        html += `<div class="debate-champion-info">${isMe ? '🏆 You are your team\'s champion!' : '🏆 Champion: ' + escHtml(champions[mySide])}</div>`;
       }
     } else if (phase === 'live_debate') {
       const rounds = getDebateRounds(msg.debate_first_side);
@@ -3491,7 +3544,7 @@ function closeEmojiPopup(ev) {
         const sideClass = sub.side === 'for' ? 'debate-round-side-for' : sub.side === 'against' ? 'debate-round-side-against' : 'debate-round-side-both';
         const sideIcon = sub.side === 'for' ? '👍' : '👎';
         html += `<div style="text-align:center; margin:.5rem 0;">
-          <span class="${sideClass}" style="font-weight:700; font-size:1.1rem;">${sideIcon} ${escDebate(sub.label)}</span>
+          <span class="${sideClass}" style="font-weight:700; font-size:1.1rem;">${sideIcon} ${escHtml(sub.label)}</span>
         </div>`;
         if (timerActive) {
           html += `<div id="debate-pax-countdown" class="debate-countdown-large"></div>`;
@@ -3501,7 +3554,7 @@ function closeEmojiPopup(ev) {
       } else {
         html += `<div style="text-align:center; margin:.5rem 0; color:var(--muted);">Waiting for host to start…</div>`;
       }
-      const champNames = Object.entries(champions).map(([s, n]) => `${s === 'for' ? '👍' : '👎'} ${escDebate(n)}`).join(' vs ');
+      const champNames = Object.entries(champions).map(([s, n]) => `${s === 'for' ? '👍' : '👎'} ${escHtml(n)}`).join(' vs ');
       if (champNames) html += `<div class="debate-live-info">🎤 ${champNames}</div>`;
       html += renderDebateArgColumns(args, mySide, msg, true);
       html += renderDebateHints();
@@ -3546,10 +3599,10 @@ function closeEmojiPopup(ev) {
       return `<div class="debate-arg${aiClass}${ownClass}${upvotedClass}" ${canUpvote ? `onclick="debateUpvote('${a.id}')"` : ''}>
         <div class="debate-arg-header">
           ${a.author_avatar ? `<img src="/static/avatars/${a.author_avatar}" class="debate-arg-avatar">` : ''}
-          <span class="debate-arg-author">${escDebate(a.author)}</span>
+          <span class="debate-arg-author">${escHtml(a.author)}</span>
           ${showVotes ? `<span class="debate-arg-votes">▲ ${a.upvote_count}</span>` : ''}
         </div>
-        <div class="debate-arg-text">${escDebate(a.text)}</div>
+        <div class="debate-arg-text">${escHtml(a.text)}</div>
       </div>`;
     };
 
@@ -3581,7 +3634,7 @@ function closeEmojiPopup(ev) {
 
   // ── Debate WS senders ──
   function debatePickSide(side) {
-    if (ws) ws.send(JSON.stringify({ type: 'debate_pick_side', side }));
+    sendWS('debate_pick_side', { side });
   }
 
   function debateSubmitArg() {
@@ -3589,18 +3642,18 @@ function closeEmojiPopup(ev) {
     if (!input) return;
     const text = input.value.trim();
     if (!text || !ws) return;
-    ws.send(JSON.stringify({ type: 'debate_argument', text }));
+    sendWS('debate_argument', { text });
     input.value = '';
     const btn = document.getElementById('debate-arg-submit');
     if (btn) btn.disabled = true;
   }
 
   function debateUpvote(argId) {
-    if (ws) ws.send(JSON.stringify({ type: 'debate_upvote', argument_id: argId }));
+    sendWS('debate_upvote', { argument_id: argId });
   }
 
   function debateVolunteer() {
-    if (ws) ws.send(JSON.stringify({ type: 'debate_volunteer' }));
+    sendWS('debate_volunteer', {});
   }
 
   // ── Render ──
@@ -3803,11 +3856,11 @@ function closeEmojiPopup(ev) {
         if (limit && myVote.size >= limit) return; // cap at correct_count
         myVote.add(optionId);
       }
-      ws.send(JSON.stringify({ type: 'multi_vote', option_ids: [...myVote] }));
+      sendWS('multi_vote', { option_ids: [...myVote] });
     } else {
       if (myVote === optionId) return;
       myVote = optionId;
-      ws.send(JSON.stringify({ type: 'vote', option_id: optionId }));
+      sendWS('vote', { option_id: optionId });
     }
     saveVote();
     updateSelectionUI();
@@ -4009,9 +4062,9 @@ function closeEmojiPopup(ev) {
   function toggleCodeReviewLine(lineNum) {
     if (!ws || ws.readyState !== WebSocket.OPEN) return;
     if (codereviewMySelections.has(lineNum)) {
-      ws.send(JSON.stringify({ type: 'codereview_deselect', line: lineNum }));
+      sendWS('codereview_deselect', { line: lineNum });
     } else {
-      ws.send(JSON.stringify({ type: 'codereview_select', line: lineNum }));
+      sendWS('codereview_select', { line: lineNum });
     }
   }
 
@@ -4073,10 +4126,47 @@ function closeEmojiPopup(ev) {
 
   // ── Emoji bar hover bubbles + dev-reset: need full DOM ──
   document.addEventListener('DOMContentLoaded', () => {
+    // Slides dock: hover-expand with 2s collapse delay; click title to pin/unpin
+    (function() {
+      const dock = document.getElementById('slides-dock');
+      const list = document.getElementById('slides-list');
+      let collapseTimer = null;
+      let pinned = false;
+
+      function expand() {
+        clearTimeout(collapseTimer);
+        dock.classList.add('expanded');
+        list.classList.add('expanded');
+      }
+      function collapse() {
+        dock.classList.remove('expanded');
+        list.classList.remove('expanded');
+      }
+
+      function scheduleCollapse() {
+        if (pinned) return;
+        clearTimeout(collapseTimer);
+        collapseTimer = setTimeout(collapse, 2000);
+      }
+
+      dock.addEventListener('mouseenter', expand);
+      dock.addEventListener('mouseleave', scheduleCollapse);
+      list.addEventListener('mouseenter', () => clearTimeout(collapseTimer));
+      list.addEventListener('mouseleave', scheduleCollapse);
+
+      document.querySelector('.slides-dock-title').addEventListener('click', () => {
+        pinned = !pinned;
+        dock.classList.toggle('pinned', pinned);
+        if (!pinned) collapse();
+        else expand();
+      });
+    })();
+
     // Wire buttons inside #emoji-bar
     document.getElementById('emoji-ping-btn').onclick = (ev) => sendEmoji('🖥️', ev);
     document.getElementById('upload-btn').onclick = openUploadModal;
     document.getElementById('paste-btn').onclick = openPasteModal;
+    document.getElementById('feedback-btn').onclick = openFeedbackModal;
 
     // Open popup on hover; close only when mouse leaves the combined hot zone
     // (popup area + full width of emoji-center + bar height) so the user can
@@ -4152,16 +4242,27 @@ function closeEmojiPopup(ev) {
       document.body.appendChild(bub);
       activeBubble = bub;
 
-      // Position above the button
       const rect = btn.getBoundingClientRect();
       const bubW = 180;
       bub.style.width = bubW + 'px';
-      bub.style.left = Math.max(8, Math.min(window.innerWidth - bubW - 8, rect.left + rect.width / 2 - bubW / 2)) + 'px';
-      bub.style.top = '0px';
-      requestAnimationFrame(() => {
-        const bh = bub.getBoundingClientRect().height;
-        bub.style.top = Math.max(8, rect.top - bh - 12) + 'px';
-      });
+      if (btn.closest('.emoji-popup')) {
+        // Popup buttons float above the bar — show tooltip to the right, arrow points left toward button
+        bub.classList.add('arrow-left');
+        bub.style.left = (rect.right + 12) + 'px';
+        bub.style.top = '0px';
+        requestAnimationFrame(() => {
+          const bh = bub.getBoundingClientRect().height;
+          bub.style.top = Math.max(8, rect.top + rect.height / 2 - bh / 2) + 'px';
+        });
+      } else {
+        // Position above the button
+        bub.style.left = Math.max(8, Math.min(window.innerWidth - bubW - 8, rect.left + rect.width / 2 - bubW / 2)) + 'px';
+        bub.style.top = '0px';
+        requestAnimationFrame(() => {
+          const bh = bub.getBoundingClientRect().height;
+          bub.style.top = Math.max(8, rect.top - bh - 12) + 'px';
+        });
+      }
     }
 
     const emojiBarEl = document.getElementById('emoji-bar');

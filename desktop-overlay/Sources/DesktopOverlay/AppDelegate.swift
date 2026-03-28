@@ -102,8 +102,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, URLSessionWebSocketDelegate 
 
     private func setupButtonBar(screen: NSScreen, singleScreen: Bool) {
         let buttons: [ButtonBar.ButtonDef] = [
-            .init(label: "❤️", tooltip: "Sketched Heart") { [weak self] in
-                self?.animator.showSketchedHeart()
+            .init(label: "❤️", tooltip: "Floating Heart") { [weak self] in
+                self?.animator.spawnEmoji("❤️")
             },
             .init(label: "🎊", tooltip: "Confetti") { [weak self] in
                 self?.animator.spawnConfetti()
@@ -237,7 +237,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, URLSessionWebSocketDelegate 
             return
         }
 
-        if type == "emoji_reaction", let emoji = json["emoji"] as? String, emoji != "❤️" {
+        if type == "emoji_reaction", let emoji = json["emoji"] as? String {
             DispatchQueue.main.async { [weak self] in
                 self?.animator.spawnEmoji(emoji)
             }

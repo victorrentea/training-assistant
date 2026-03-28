@@ -120,8 +120,7 @@ async def close_selection():
     if newly:
         state.debate_auto_assigned.update(newly)
 
-    for_count = sum(1 for s in state.debate_sides.values() if s == "for")
-    against_count = sum(1 for s in state.debate_sides.values() if s == "against")
+    for_count, against_count = state.debate_side_counts()
 
     # Advance to arguments phase (atomic)
     state.debate_phase = "arguments"
@@ -140,8 +139,7 @@ async def force_assign():
     if not unassigned:
         raise HTTPException(400, "No unassigned participants")
 
-    for_count = sum(1 for s in state.debate_sides.values() if s == "for")
-    against_count = sum(1 for s in state.debate_sides.values() if s == "against")
+    for_count, against_count = state.debate_side_counts()
 
     random.shuffle(unassigned)
     for p in unassigned:
