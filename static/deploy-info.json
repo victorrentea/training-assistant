@@ -1,7 +1,7 @@
 {
-  "sha": "f9a56daed971e956adc4084fecb4b0fe45c968ba",
-  "timestamp": "2026-03-28 23:50",
+  "sha": "ce5f4319b566b77151697b765ed054d20f2a893c",
+  "timestamp": "2026-03-28 23:52",
   "changelog": [
-    "fix(host): align lang badge font-size to match other badges"
+    "fix(overlay): clamp drag to screen edges, keep bar visible while hovering"
   ]
 }
