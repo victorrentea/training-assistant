@@ -3035,6 +3035,14 @@ function copySessionLink() {
     if (icon) {
       icon.style.opacity = '1';
       setTimeout(() => { icon.style.opacity = ''; }, 1200);
+      // Floating "Copied!" tooltip above icon
+      const tip = document.createElement('span');
+      tip.textContent = 'Copied!';
+      tip.style.cssText = 'position:absolute; bottom:calc(100% + 6px); left:50%; transform:translateX(-50%); background:#222; color:#4f4; font-size:.75rem; padding:2px 8px; border-radius:4px; white-space:nowrap; pointer-events:none; opacity:1; transition:opacity .6s ease 0.8s;';
+      icon.parentElement.style.position = 'relative';
+      icon.parentElement.appendChild(tip);
+      requestAnimationFrame(() => tip.style.opacity = '0');
+      setTimeout(() => tip.remove(), 1600);
     }
   });
 }
