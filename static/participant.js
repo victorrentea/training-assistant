@@ -1735,38 +1735,11 @@ function closeEmojiPopup(ev) {
       title.className = 'slides-list-title';
       title.textContent = _buildSlideOptionLabel(slide);
       openBtn.appendChild(title);
-      const _cacheEntry = (_slidesCacheStatus || {})[slide.slug];
-      if (_cacheEntry && _cacheEntry.status) {
-        const _dotCfg = {
-          'cached':          { color: '#4caf50', tip: 'Available on server' },
-          'downloading':     { color: '#2196f3', tip: 'Downloading from cloud...' },
-          'polling_drive':   { color: '#2196f3', tip: 'Checking for updates...' },
-          'stale':           { color: '#ff9800', tip: 'Update available, syncing...' },
-          'not_cached':      { color: '#f44336', tip: 'Not yet on server' },
-          'poll_timeout':    { color: '#ff9800', tip: 'Sync timed out' },
-          'download_failed': { color: '#f44336', tip: 'Download failed' },
-        };
-        const _cfg = _dotCfg[_cacheEntry.status] || _dotCfg['not_cached'];
-        const dot = document.createElement('span');
-        dot.className = 'slides-cache-dot has-tooltip';
-        dot.style.cssText = 'display:inline-block;width:8px;height:8px;border-radius:50%;background:' + _cfg.color + ';margin-left:6px;flex-shrink:0;';
-        dot.setAttribute('data-tooltip', _cfg.tip);
-        openBtn.appendChild(dot);
-      }
       if (_isSlideNew(slide)) {
         const newBadge = document.createElement('sup');
         newBadge.className = 'slides-list-new';
         newBadge.textContent = 'new';
         openBtn.appendChild(newBadge);
-      }
-      const updated = _formatSlideUpdatedCompact(
-        slide.updated_at || slide.last_modified || slide.lastModified || slide.updatedAt
-      );
-      if (updated) {
-        const badge = document.createElement('span');
-        badge.className = 'slides-list-updated';
-        badge.textContent = updated;
-        openBtn.appendChild(badge);
       }
       const unavailable = slide.available_on_server === false;
       if (unavailable) {
@@ -1793,6 +1766,35 @@ function closeEmojiPopup(ev) {
       });
       if (slide._id === targetId) item.classList.add('active');
       item.appendChild(openBtn);
+      // Timestamp — shown to the left of the status dot, outside openBtn so both align across rows
+      const updated = _formatSlideUpdatedCompact(
+        slide.updated_at || slide.last_modified || slide.lastModified || slide.updatedAt
+      );
+      if (updated) {
+        const badge = document.createElement('span');
+        badge.className = 'slides-list-updated';
+        badge.textContent = updated;
+        item.appendChild(badge);
+      }
+      // Status dot — right next to the download button
+      const _cacheEntry = (_slidesCacheStatus || {})[slide.slug];
+      if (_cacheEntry && _cacheEntry.status) {
+        const _dotCfg = {
+          'cached':          { color: '#4caf50', tip: 'Available on server' },
+          'downloading':     { color: '#2196f3', tip: 'Downloading from cloud...' },
+          'polling_drive':   { color: '#2196f3', tip: 'Checking for updates...' },
+          'stale':           { color: '#ff9800', tip: 'Update available, syncing...' },
+          'not_cached':      { color: '#f44336', tip: 'Not yet on server' },
+          'poll_timeout':    { color: '#ff9800', tip: 'Sync timed out' },
+          'download_failed': { color: '#f44336', tip: 'Download failed' },
+        };
+        const _cfg = _dotCfg[_cacheEntry.status] || _dotCfg['not_cached'];
+        const dot = document.createElement('span');
+        dot.className = 'slides-cache-dot has-tooltip';
+        dot.style.cssText = 'display:inline-block;width:8px;height:8px;border-radius:50%;background:' + _cfg.color + ';flex-shrink:0;';
+        dot.setAttribute('data-tooltip', _cfg.tip);
+        item.appendChild(dot);
+      }
       if (!unavailable) {
         const dl = document.createElement('a');
         dl.className = 'slides-list-download';
