@@ -1043,7 +1043,10 @@
     sendWS('emoji_reaction', { emoji: '❤️' });
   }
 
-  function renderPendingDeploy(_pendingDeploy) {}
+  function renderPendingDeploy(pendingDeploy) {
+    window.__deployIncoming = !!pendingDeploy;
+    if (window.__updateDeployAge) window.__updateDeployAge();
+  }
 
   let _prevPaxCount = 0;
   function updatePaxBadge(count) {
