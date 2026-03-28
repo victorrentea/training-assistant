@@ -235,7 +235,7 @@ body {
   bottom: calc(100% + .45rem);
   width: max-content;
   max-width: min(78vw, 520px);
-  max-height: 44vh;
+  max-height: 80vh;
   overflow: auto;
   background: var(--surface);
   border: 1px solid var(--border);
