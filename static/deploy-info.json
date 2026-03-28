@@ -1,7 +1,7 @@
 {
-  "sha": "3b23bd128d72d2108097664d7a1d95b8e7b2cf62",
-  "timestamp": "2026-03-28 17:04",
+  "sha": "b7feab76eed18d63aaf20d3ee915d846e5700995",
+  "timestamp": "2026-03-28 17:05",
   "changelog": [
-    "fix(slides): stop tooltip spinning on cache spinner; fix poll timeout using wall clock"
+    "fix(slides): add min-width:0 to list item so long titles ellipsize"
   ]
 }
