@@ -1,7 +1,7 @@
 {
-  "sha": "fc446164babb9dd55fc84aac40903d7302417856",
-  "timestamp": "2026-03-28 07:29",
+  "sha": "f020d5219f07621348fc948beaced25d99c105ea",
+  "timestamp": "2026-03-28 07:34",
   "changelog": [
-    "fix: show Follow tour bubble below the button"
+    "fix: read saved scroll before setDocument to prevent updateviewarea overwrite"
   ]
 }
