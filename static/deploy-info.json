@@ -1,7 +1,7 @@
 {
-  "sha": "7938f0c189038a4b0d616688f83243f44234ec1e",
+  "sha": "45b134142f5751a5fe05a55f957642796f32b253",
   "timestamp": "2026-03-28 17:17",
   "changelog": [
-    "fix(tooltip): reduce hover delay from 0.1s to 0.4s for all tooltips"
+    "feat(participant): add \ud83d\udcac feedback button \u2192 email via daemon"
   ]
 }
