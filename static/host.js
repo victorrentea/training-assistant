@@ -358,9 +358,7 @@
     }, 2200);
   }
 
-  function escHtml(s) {
-    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  }
+  // escHtml is now in utils.js
 
   function normalizeSlideDisplayName(name, slug) {
     const cleanedName = String(name || '').replace(_ZERO_WIDTH_RE, '').trim();
@@ -809,8 +807,7 @@
   }
 
   function closeSummaryModal() {
-    const overlay = document.getElementById('summary-overlay');
-    if (overlay) overlay.classList.remove('open');
+    closeModal('summary-overlay');
   }
 
   function requestSummaryRefresh() {
@@ -902,7 +899,7 @@
       const detail = [sizePart, agePart].filter(Boolean).join('  ');
       html += '<div class="slides-catalog-line">'
           + '<span class="slides-cache-icon">' + cfg.icon + '</span>'
-          + '<span class="slides-cache-title">' + escHtml(title) + '</span>'
+          + '<span class="slides-cache-title truncate">' + escHtml(title) + '</span>'
           + '<span class="slides-cache-label" style="color:' + cfg.color + '">' + cfg.label + '</span>'
           + '<span class="slides-cache-detail">' + detail + '</span>'
           + '</div>';
@@ -1098,7 +1095,7 @@
     if (!ws) return;
     _suppressHeartEcho = true;
     setTimeout(() => { _suppressHeartEcho = false; }, 500);
-    ws.send(JSON.stringify({ type: 'emoji_reaction', emoji: '❤️' }));
+    sendWS('emoji_reaction', { emoji: '❤️' });
     showHostHeartFullscreen();
   }
 
@@ -1198,13 +1195,11 @@
   }
 
   function toggleHostNotesModal() {
-    const overlay = document.getElementById('host-notes-overlay');
-    if (overlay) overlay.classList.toggle('open');
+    toggleModal('host-notes-overlay');
   }
 
   function closeHostNotesModal() {
-    const overlay = document.getElementById('host-notes-overlay');
-    if (overlay) overlay.classList.remove('open');
+    closeModal('host-notes-overlay');
   }
 
   function renderParticipantList(participantIds) {
@@ -1262,7 +1257,7 @@
         const title = downloaded ? `${entry.filename} (${sizeStr}) — downloaded` : `${entry.filename} (${sizeStr}) — click to download`;
         return `<span class="upload-icon${downloaded ? ' downloaded' : ''}" title="${escHtml(title)}" data-uuid="${escHtml(pid)}" data-upload-id="${entry.id}" onclick="downloadUploadedFile(this)"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 4v9"/><path d="M6 9.5L10 13.5L14 9.5"/><path d="M4.5 13.5v1a2 2 0 0 0 2 2h7a2 2 0 0 0 2-2v-1"/></svg></span>`;
       }).join('');
-      return `<li class="${online ? 'online' : 'offline'}"><span class="pax-name" title="${ip ? 'IP: ' + ip : ''}">${debateIcon}${avatarHtml}<span class="pax-name-text">${escHtml(name)}</span>${pasteIcons}${uploadIcons}</span>${scoreTag}${locLabel ? `<span class="pax-location" onclick="openMap()" title="View all on map">${escHtml(locLabel)}</span>` : ''}</li>`;
+      return `<li class="${online ? 'online' : 'offline'}"><span class="pax-name" title="${ip ? 'IP: ' + ip : ''}">${debateIcon}${avatarHtml}<span class="pax-name-text truncate">${escHtml(name)}</span>${pasteIcons}${uploadIcons}</span>${scoreTag}${locLabel ? `<span class="pax-location" onclick="openMap()" title="View all on map">${escHtml(locLabel)}</span>` : ''}</li>`;
     }).join('');
 
     // Lazily resolve any raw "lat, lon" strings to city names
@@ -1405,7 +1400,7 @@
   });
 
   function closeQR() {
-    document.getElementById('qr-overlay').classList.remove('open');
+    closeModal('qr-overlay');
   }
 
 
@@ -1674,7 +1669,7 @@
       ${mainContent}${pollActive ? '' : '</p>'}
       ${currentPoll.source ? `<p class="poll-source-ref">📖 ${escHtml(currentPoll.source)}${currentPoll.page ? `, p. ${escHtml(currentPoll.page)}` : ''}</p>` : ''}
       <div class="btn-row">
-        <span class="status-pill ${statusLabel}">${statusText}</span>
+        <span class="badge status-pill ${statusLabel}">${statusText}</span>
         ${!pollActive
           ? `<button class="btn btn-success" onclick="setPollStatus(true)">${totalVotes > 0 ? '↺ Re-open' : '▶ Open voting'}</button>`
           : !activeTimer ? `<button class="btn btn-warn" onclick="setPollStatus(false)">⏹ Close voting</button>` : ''}
@@ -2034,7 +2029,7 @@
     if (!input) return;
     const word = input.value.trim();
     if (!word || !ws) return;
-    ws.send(JSON.stringify({ type: 'wordcloud_word', word }));
+    sendWS('wordcloud_word', { word });
     input.value = '';
     const btn = document.getElementById('wc-host-submit');
     if (btn) btn.disabled = true;
@@ -2116,7 +2111,7 @@
     if (!input) return;
     const text = input.value.trim();
     if (!text || !ws) return;
-    ws.send(JSON.stringify({ type: 'qa_submit', text }));
+    sendWS('qa_submit', { text });
     input.value = '';
     const btn = document.getElementById('host-qa-submit-btn');
     if (btn) btn.disabled = true;
@@ -2451,12 +2446,7 @@
     if (e.key === 'Enter') pushWordCloudTopic();
   });
 
-  // ── HTML escaping utility ──
-  function escDebate(str) {
-    const d = document.createElement('div');
-    d.textContent = str;
-    return d.innerHTML;
-  }
+  // escDebate replaced by escHtml from utils.js
 
   // ── Debate Phase Stepper ──
 
@@ -2686,7 +2676,7 @@
 
     // Update center panel title if debate is active
     if (title) {
-      title.innerHTML = debateActive ? escDebate(msg.debate_statement) : '';
+      title.innerHTML = debateActive ? escHtml(msg.debate_statement) : '';
     }
 
     // Hide statement input once launched (shrink vertically upward), show reset button
@@ -2718,7 +2708,7 @@
     const currentIdx = debateActive ? DEBATE_PHASES.findIndex(p => p.key === displayPhase) : -1;
     const phaseActions = {
       prep: champions.for || champions.against
-        ? `<span style="color:var(--accent);font-size:.8rem;">🏆 ${Object.entries(champions).map(([s,n]) => `${s==='for'?'👍':'👎'} ${escDebate(n)}`).join(', ')}</span>`
+        ? `<span style="color:var(--accent);font-size:.8rem;">🏆 ${Object.entries(champions).map(([s,n]) => `${s==='for'?'👍':'👎'} ${escHtml(n)}`).join(', ')}</span>`
         : '',
     };
 
@@ -2863,7 +2853,7 @@
       if (phase === 'live_debate' && _debateRoundTimer) _startDebateCountdown();
       if (phase === 'ai_cleanup') {
         content.innerHTML += `<div class="debate-ai-loading">
-          <div class="debate-ai-spinner"></div>
+          <div class="spinner debate-ai-spinner"></div>
           <div>AI is enriching arguments…</div>
         </div>`;
       }
@@ -2876,10 +2866,10 @@
       return `<div class="debate-arg${aiClass}" data-id="${a.id}">
         <div class="debate-arg-header">
           ${a.author_avatar ? `<img src="/static/avatars/${a.author_avatar}" class="debate-arg-avatar">` : ''}
-          <span class="debate-arg-author">${escDebate(a.author)}</span>
+          <span class="debate-arg-author">${escHtml(a.author)}</span>
           <span class="debate-arg-votes">▲ ${a.upvote_count}</span>
         </div>
-        <div class="debate-arg-text">${escDebate(a.text)}</div>
+        <div class="debate-arg-text">${escHtml(a.text)}</div>
       </div>`;
     };
 
@@ -2887,8 +2877,8 @@
       <span style="color:var(--muted);font-size:.8rem;">🤖 duplicate, merged above</span>
     </div>`;
 
-    const champFor = champions?.for ? `<div class="debate-champion">🏆 ${escDebate(champions.for)}</div>` : '';
-    const champAgainst = champions?.against ? `<div class="debate-champion">🏆 ${escDebate(champions.against)}</div>` : '';
+    const champFor = champions?.for ? `<div class="debate-champion">🏆 ${escHtml(champions.for)}</div>` : '';
+    const champAgainst = champions?.against ? `<div class="debate-champion">🏆 ${escHtml(champions.against)}</div>` : '';
 
     // Show hints in prep/live_debate
     let hints = '';
@@ -3205,7 +3195,7 @@ function copyAndDismissPaste(el) {
     });
   }
   if (ws) {
-    ws.send(JSON.stringify({ type: 'paste_dismiss', uuid: uuid, paste_id: pasteId }));
+    sendWS('paste_dismiss', { uuid, paste_id: pasteId });
   }
 }
 

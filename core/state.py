@@ -135,6 +135,23 @@ class AppState:
     def add_score(self, pid: str, points: int):
         self.scores[pid] = self.scores.get(pid, 0) + points
 
+    def debate_side_counts(self) -> tuple[int, int]:
+        """Return (for_count, against_count) from debate_sides."""
+        for_count = sum(1 for s in self.debate_sides.values() if s == "for")
+        against_count = sum(1 for s in self.debate_sides.values() if s == "against")
+        return for_count, against_count
+
+    def ensure_activity_available(self, allowed: 'ActivityType'):
+        """Raise HTTPException if another activity is active."""
+        from fastapi import HTTPException
+        if self.current_activity not in (ActivityType.NONE, allowed):
+            raise HTTPException(409, "Another activity is already active")
+
+    def touch_daemon(self):
+        """Update daemon last-seen timestamp."""
+        from datetime import datetime, timezone
+        self.daemon_last_seen = datetime.now(timezone.utc)
+
     def vote_counts(self) -> dict:
         if not self.poll:
             return {}

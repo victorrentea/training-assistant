@@ -131,18 +131,7 @@ h1 { display: none; }
   gap: .75rem;
 }
 
-/* Header tooltips must render below to avoid clipping at top viewport edge. */
-.status-bar .has-tooltip::after {
-  top: calc(100% + 8px);
-  bottom: auto;
-}
-
-.status-bar .has-tooltip::before {
-  top: calc(100% + 2px);
-  bottom: auto;
-  border-top-color: transparent;
-  border-bottom: 6px solid var(--surface2);
-}
+/* Header tooltips render below — handled by .tooltip-below in common.css */
 
 @media (max-width: 480px) {
   .status-bar { font-size: .8rem; padding: .5rem .75rem; margin-bottom: .75rem; }
@@ -240,16 +229,7 @@ h1 { display: none; }
   text-decoration-color: var(--muted);
   text-underline-offset: 3px;
 }
-.location-prompt.has-tooltip::after {
-  top: calc(100% + 8px);
-  bottom: auto;
-}
-.location-prompt.has-tooltip::before {
-  top: calc(100% + 2px);
-  bottom: auto;
-  border-top-color: transparent;
-  border-bottom: 6px solid var(--surface2);
-}
+/* tooltip-below positioning now handled by .tooltip-below in common.css */
 
 /* ── Slides viewer ── */
 .slides-dock {
@@ -716,16 +696,10 @@ h1 { display: none; }
 
 /* Spinner shown while server is downloading / polling a slide PDF */
 .slides-cache-spinner {
-  flex-shrink: 0;
   width: 10px;
   height: 10px;
-  border-radius: 50%;
   border: 2px solid rgba(33, 150, 243, 0.25);
   border-top-color: #2196f3;
-  animation: slides-spin 0.8s linear infinite;
-}
-@keyframes slides-spin {
-  to { transform: rotate(360deg); }
 }
 
 .slides-list-new {
@@ -815,20 +789,15 @@ h1 { display: none; }
 .slides-ui-spinner {
   width: 1.05rem;
   height: 1.05rem;
-  border-radius: 50%;
   border: 2px solid rgba(255, 255, 255, 0.28);
   border-top-color: var(--accent2);
-  animation: slides-ui-spin .65s linear infinite;
+  animation-duration: .65s;
 }
 
 .slides-ui-blocker-label {
   color: #eff3fb;
   font-size: .92rem;
   font-weight: 600;
-}
-
-@keyframes slides-ui-spin {
-  to { transform: rotate(360deg); }
 }
 
 .slides-progress-track {

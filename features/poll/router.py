@@ -70,8 +70,7 @@ async def create_poll(poll: PollCreate):
         raise HTTPException(400, "Need at least 2 options")
     if len(poll.options) > 8:
         raise HTTPException(400, "Maximum 8 options")
-    if state.current_activity not in (ActivityType.NONE, ActivityType.POLL):
-        raise HTTPException(409, "Another activity is already active")
+    state.ensure_activity_available(ActivityType.POLL)
 
     state.poll = {
         "id": int(datetime.now(timezone.utc).timestamp() * 1000),
