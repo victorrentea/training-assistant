@@ -1,7 +1,7 @@
 {
-  "sha": "191844ebbe6a88592cb2e5be9ef3849508e25082",
-  "timestamp": "2026-03-28 13:33",
+  "sha": "f26c81288ac2e6c8a6d5b360d4340730f014ec3d",
+  "timestamp": "2026-03-28 13:37",
   "changelog": [
-    "docs: add emoji overflow dots plan and spec"
+    "fix(emoji): left-align emoji bar, push upload/paste to right"
   ]
 }
