@@ -14,10 +14,11 @@ def build_for_participant(pid: str) -> dict:
     pids = _participant_ids()
     total = len(pids)
     line_percentages = {}
-    if state.codereview_phase == "reviewing" and total > 0:
+    if state.codereview_phase == "reviewing" and total > 0 and state.codereview_confirmed:
         for p in pids:
             for line in state.codereview_selections.get(p, set()):
-                line_percentages[str(line)] = line_percentages.get(str(line), 0) + 1
+                if line in state.codereview_confirmed:
+                    line_percentages[str(line)] = line_percentages.get(str(line), 0) + 1
         line_percentages = {k: round(v * 100 / total) for k, v in line_percentages.items()}
     return {
         "codereview": {
