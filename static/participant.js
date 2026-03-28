@@ -121,10 +121,13 @@ function toggleEmojiPopup(ev) {
   popup.style.display = popup.style.display === 'none' ? 'flex' : 'none';
 }
 
+let _dotsHotZone = null;
+
 function closeEmojiPopup(ev) {
   if (ev) ev.stopPropagation();
   const popup = document.getElementById('emoji-popup');
   if (popup) popup.style.display = 'none';
+  _dotsHotZone = null;
 }
 
   // Host cookie (is_host=1) → sessionStorage (per-tab UUID for multi-tab testing)
@@ -4075,17 +4078,30 @@ function closeEmojiPopup(ev) {
     document.getElementById('upload-btn').onclick = openUploadModal;
     document.getElementById('paste-btn').onclick = openPasteModal;
 
-    // Open popup on hover over dotsWrap; close when mouse leaves
+    // Open popup on hover; close only when mouse leaves the combined hot zone
+    // (popup area + full width of emoji-center + bar height) so the user can
+    // move from ••• up to the overflow emojis without the popup snapping shut.
     const dotsWrapEl = document.getElementById('emoji-dots-wrap');
     dotsWrapEl.addEventListener('mouseenter', () => {
       const popup = document.getElementById('emoji-popup');
-      if (popup) popup.style.display = 'flex';
+      if (!popup) return;
+      popup.style.display = 'flex';
+      // Capture hot zone: X spans all of emoji-center; Y from popup top to bar bottom
+      const center = document.getElementById('emoji-center');
+      const bar   = document.getElementById('emoji-bar');
+      const pr = popup.getBoundingClientRect();
+      const cr = center ? center.getBoundingClientRect() : pr;
+      const br = bar    ? bar.getBoundingClientRect()    : pr;
+      _dotsHotZone = { left: cr.left - 4, right: cr.right + 4, top: pr.top - 4, bottom: br.bottom + 4 };
     });
-    dotsWrapEl.addEventListener('mouseleave', () => {
-      const popup = document.getElementById('emoji-popup');
-      if (popup) popup.style.display = 'none';
+    document.addEventListener('mousemove', (ev) => {
+      if (!_dotsHotZone) return;
+      const { left, right, top, bottom } = _dotsHotZone;
+      if (ev.clientX < left || ev.clientX > right || ev.clientY < top || ev.clientY > bottom) {
+        closeEmojiPopup();
+      }
     });
-    // Also support tap on touch devices
+    // Touch devices: tap to toggle
     document.getElementById('emoji-dots-btn').addEventListener('click', (ev) => {
       ev.stopPropagation();
       toggleEmojiPopup(ev);
