@@ -129,6 +129,7 @@
 <div class="version-tag" id="version-tag"></div>
 <script>window.renderDeployAge && window.renderDeployAge('version-tag');</script>
 <div id="qa-toast" class="qa-toast"></div>
+<button id="paste-btn" class="paste-floating-btn" onclick="openPasteModal()" title="Send text to host">📋</button>
 <div id="emoji-bar">
   <button class="emoji-btn" data-tooltip="Yes. More of this." onclick="sendEmoji('👍', event)">👍</button>
   <button class="emoji-btn" data-tooltip="Fight me on this." onclick="sendEmoji('⚔️', event)">⚔️</button>
@@ -159,6 +160,16 @@
     <button class="emoji-grid-btn" onclick="sendEmoji('💪', event)">💪</button>
     <button class="emoji-grid-btn" onclick="sendEmoji('✅', event)">✅</button>
     <button class="emoji-grid-btn" onclick="sendEmoji('❌', event)">❌</button>
+  </div>
+</div>
+<div id="paste-overlay" class="summary-overlay" onclick="closePasteModal()">
+  <div class="summary-dialog paste-dialog" onclick="event.stopPropagation()">
+    <div class="summary-header">
+      <span>📋 Send Text to Host</span>
+      <button class="summary-close" onclick="closePasteModal()">✕</button>
+    </div>
+    <textarea id="paste-textarea" class="paste-textarea" placeholder="Paste your text here..." oninput="document.getElementById('paste-send-btn').disabled = !this.value.trim()"></textarea>
+    <button id="paste-send-btn" class="paste-send-btn" disabled onclick="sendPasteText()">Send</button>
   </div>
 </div>
 <div id="leaderboard-overlay" class="leaderboard-overlay" style="display:none;">
