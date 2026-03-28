@@ -731,12 +731,12 @@
     const flashStyle = (sessionActive && noTranscriptWarn) ? ' animation: flash-bg 1.4s ease-in-out infinite;' : '';
 
     if (summaryPoints.length) {
-      badge.textContent = `🧠 (${summaryPoints.length}) Key Points`;
+      badge.textContent = `🧠 (${summaryPoints.length}) Key Points.txt`;
       badge.className = 'badge connected';
       badge.style.cssText = `cursor:pointer;${flashStyle}`;
       badge.title = noTranscriptWarn ? noTranscriptTitle : `${summaryPoints.length} key points · ${_transcriptLineCount} transcript lines (last 30 min) — click to view`;
     } else if (_summaryGenerating) {
-      badge.textContent = `🧠 (…) Key Points`;
+      badge.textContent = `🧠 (…) Key Points.txt`;
       badge.className = 'badge';
       const anim = sessionPaused
         ? ''
@@ -744,7 +744,7 @@
       badge.style.cssText = `cursor:wait; color:var(--warn); border:1px solid var(--warn);${anim}`;
       badge.title = noTranscriptWarn ? noTranscriptTitle : `Generating key points from transcript… (${_transcriptLineCount} lines)`;
     } else {
-      badge.textContent = _transcriptLineCount > 0 ? `🧠 (0) Key Points` : `🧠 Key Points`;
+      badge.textContent = _transcriptLineCount > 0 ? `🧠 (0) Key Points.txt` : `🧠 Key Points.txt`;
       badge.className = _transcriptLineCount > 0 ? 'badge' : 'badge disconnected';
       badge.style.cssText = `cursor:pointer;${flashStyle}`;
       badge.title = noTranscriptWarn ? noTranscriptTitle
