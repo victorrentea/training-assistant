@@ -3,7 +3,6 @@
 Run as: python3 -m daemon
 """
 
-import base64
 import hashlib
 import json
 import os
@@ -11,9 +10,6 @@ import re
 import subprocess
 import sys
 import time
-import ssl
-import urllib.error
-import urllib.request
 from dataclasses import replace as dc_replace
 from datetime import date, datetime
 from pathlib import Path
@@ -27,7 +23,7 @@ from daemon.config import (
     DAEMON_POLL_INTERVAL,
     DEFAULT_TRANSCRIPT_MINUTES,
 )
-from daemon.http import _get_json, _post_json
+from daemon.http import _get_json
 from daemon.llm.adapter import get_usage
 from daemon.quiz.history import auto_generate, auto_generate_topic, auto_refine
 from daemon.quiz.poll_api import post_status
@@ -143,14 +139,6 @@ def _set_audiohijack_language(lang_code: str) -> None:
     subprocess.Popen(["open", "-a", "Audio Hijack"])
 
 
-def _ssl_context() -> ssl.SSLContext:
-    try:
-        import certifi
-        return ssl.create_default_context(cafile=certifi.where())
-    except Exception:
-        return ssl.create_default_context()
-
-
 def _coerce_slide_number(value) -> int:
     raw = str(value or "").strip()
     if not raw or raw.lower() == "missing value" or raw == _PPT_SLIDE_UNKNOWN:
@@ -247,24 +235,6 @@ def _iter_catalog_items(raw) -> list[dict]:
     return []
 
 
-def _delete_with_basic_auth(url: str, username: str, password: str, timeout: float = 10.0) -> None:
-    token = base64.b64encode(f"{username}:{password}".encode("utf-8")).decode("ascii")
-    req = urllib.request.Request(
-        url,
-        data=b"",
-        method="DELETE",
-        headers={"Authorization": f"Basic {token}"},
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=timeout, context=_ssl_context()):
-            return
-    except urllib.error.HTTPError as exc:
-        details = exc.read().decode("utf-8", errors="replace")
-        raise RuntimeError(f"HTTP {exc.code} from {url}: {details}") from exc
-    except urllib.error.URLError as exc:
-        raise RuntimeError(f"Failed to reach {url}: {exc}") from exc
-
-
 def _resolve_presentation_slide_target(
     presentation_name: str,
     server_url: str,
@@ -320,10 +290,9 @@ def _resolve_presentation_slide_target(
     }
 
 
-def _sync_powerpoint_slide_to_server(main_config, slides_cfg, ppt_state: dict | None) -> None:
-    endpoint = f"{main_config.server_url.rstrip('/')}/api/slides/current"
+def _sync_powerpoint_slide_to_server(main_config, slides_cfg, ppt_state: dict | None, ws_client) -> None:
     if ppt_state is None:
-        _delete_with_basic_auth(endpoint, main_config.host_username, main_config.host_password)
+        ws_client.send({"type": "slides_clear"})
         return
 
     catalog_file = getattr(slides_cfg, "catalog_file", None) if slides_cfg else None
@@ -342,14 +311,9 @@ def _sync_powerpoint_slide_to_server(main_config, slides_cfg, ppt_state: dict | 
             message = "Presentation inaccessible for participants."
             if presentation_name:
                 message = f"{message} ({presentation_name})"
-            _post_json(
-                f"{main_config.server_url.rstrip('/')}/api/quiz-status",
-                {"status": "error", "message": message},
-                main_config.host_username,
-                main_config.host_password,
-            )
+            ws_client.send({"type": "quiz_status", "status": "error", "message": message})
             log.error("ppt", message)
-        _delete_with_basic_auth(endpoint, main_config.host_username, main_config.host_password)
+        ws_client.send({"type": "slides_clear"})
         return
 
     if alert_key:
@@ -359,18 +323,14 @@ def _sync_powerpoint_slide_to_server(main_config, slides_cfg, ppt_state: dict | 
     is_presenting = bool(ppt_state.get("presenting", False))
     current_page = max(1, raw_slide - 1) if is_presenting else raw_slide
     payload = {
+        "type": "slides_current",
         "url": target["url"],
         "slug": target["slug"],
         "source_file": ppt_state.get("presentation"),
         "presentation_name": ppt_state.get("presentation"),
         "current_page": current_page,
     }
-    _post_json(
-        endpoint,
-        payload,
-        main_config.host_username,
-        main_config.host_password,
-    )
+    ws_client.send(payload)
 
 
 # ── Main run loop ──────────────────────────────────────────────────────────────
@@ -397,6 +357,8 @@ def run() -> None:
     ws_client.register_handler("debate_ai_request", _ws_handler("debate_ai_request"))
     ws_client.register_handler("summary_force", _ws_handler("summary_force"))
     ws_client.register_handler("summary_full_reset", _ws_handler("summary_full_reset"))
+    ws_client.register_handler("state_snapshot_result", _ws_handler("state_snapshot_result"))
+    ws_client.register_handler("session_snapshot_result", _ws_handler("session_snapshot_result"))
     ws_client.register_handler("session_request", _ws_handler("session_request"))
     ws_client.register_handler("transcription_language_request", _ws_handler("transcription_language_request"))
 
@@ -430,14 +392,8 @@ def run() -> None:
         status = _get_json(f"{config.server_url}/api/status")
         if status.get("needs_restore"):
             if _BACKUP_FILE.exists():
-                log.info("daemon", "Server needs state restore — sending backup...")
-                backup_data = json.loads(_BACKUP_FILE.read_text(encoding="utf-8"))
-                result = _post_json(
-                    f"{config.server_url}/api/state-restore",
-                    backup_data,
-                    config.host_username, config.host_password,
-                )
-                log.info("daemon", f"State restore result: {result.get('status', 'ok')}")
+                log.info("daemon", "Server needs state restore — sending backup (will use WS once connected)...")
+                # Deferred: restore will be sent via WS after ws_client connects
             else:
                 log.error("daemon", f"Server needs state restore but no backup file found at {_BACKUP_FILE}")
         else:
@@ -522,7 +478,7 @@ def run() -> None:
     materials_mirror.start()
     slides_on_demand_ws = SlidesOnDemandWsRunner(config)
     slides_on_demand_ws.start()
-    slides_runner.set_ws_sender(slides_on_demand_ws.send_message)
+    slides_runner.set_ws_sender(lambda msg: ws_client.send(msg))
 
     # Session state: the transcript text used to generate the current preview
     last_text: str | None = None
@@ -607,7 +563,7 @@ def run() -> None:
                             fullscreen_flag = " [fullscreen]" if is_presenting else " [normal]"
                             log.info("ppt", f"📽️ Slide: {ppt_stem} : {raw_slide}{fullscreen_flag} → p.{participant_page} to participants")
                         try:
-                            _sync_powerpoint_slide_to_server(config, slides_runner._slides_config, ppt_state)
+                            _sync_powerpoint_slide_to_server(config, slides_runner._slides_config, ppt_state, ws_client)
                         except Exception as e:
                             log.error("ppt", f"Failed to sync slides current to server: {e}")
                     else:
@@ -694,16 +650,10 @@ def run() -> None:
                         talk_folder.mkdir(parents=True, exist_ok=True)
 
                         # Save current (main) session state immediately before switching
+                        # (request snapshot via WS — result will be saved when received)
                         current_folder = sessions_root / session_stack[-1]["name"] if session_stack else None
                         if current_folder and current_folder.exists():
-                            try:
-                                snapshot = _get_json(
-                                    f"{config.server_url}/api/session/snapshot",
-                                    config.host_username, config.host_password,
-                                )
-                                save_session_state(current_folder, snapshot)
-                            except Exception as e:
-                                log.error("daemon", f"START TALK: failed to save main snapshot: {e}")
+                            ws_client.send({"type": "session_snapshot_request"})
 
                         # Load talk's existing key points (if folder had prior data)
                         talk_points, talk_wm = load_key_points(talk_folder)
@@ -742,18 +692,14 @@ def run() -> None:
                         if len(session_stack) < 2:
                             log.warning("daemon", "END TALK requested but no talk is active")
                         else:
-                            # Save talk state before ending
+                            # Save talk state before ending (request snapshot via WS — async save)
                             talk_folder = sessions_root / session_stack[-1]["name"]
                             if talk_folder.exists():
+                                ws_client.send({"type": "session_snapshot_request"})
                                 try:
-                                    snapshot = _get_json(
-                                        f"{config.server_url}/api/session/snapshot",
-                                        config.host_username, config.host_password,
-                                    )
-                                    save_session_state(talk_folder, snapshot)
                                     save_key_points(talk_folder, current_key_points, summary_watermark, session_start_date(session_stack[-1]))
                                 except Exception as e:
-                                    log.error("daemon", f"END TALK: failed to save talk state: {e}")
+                                    log.error("daemon", f"END TALK: failed to save key points: {e}")
 
                             # Pop talk, restore main
                             session_stack.pop()
@@ -899,11 +845,11 @@ def run() -> None:
                 if timing == "warning" and "warning" not in _timing_fired_today:
                     _timing_fired_today.add("warning")
                     try:
-                        _post_json(
-                            f"{config.server_url}/api/session/timing_event",
-                            {"event": "recording_warning", "minutes_remaining": 30},
-                            config.host_username, config.host_password,
-                        )
+                        ws_client.send({
+                            "type": "timing_event",
+                            "event": "recording_warning",
+                            "minutes_remaining": 30,
+                        })
                         log.info("daemon", "Sent recording_warning event at 17:30")
                     except Exception as e:
                         log.error("daemon", f"Failed to send warning event: {e}")
@@ -912,11 +858,7 @@ def run() -> None:
                     _timing_fired_today.add("auto_pause")
                     if session_stack and session_stack[-1].get("status") not in ("ended", "paused"):
                         try:
-                            _post_json(
-                                f"{config.server_url}/api/session/pause",
-                                {},
-                                config.host_username, config.host_password,
-                            )
+                            ws_client.send({"type": "session_request", "action": "pause"})
                             log.info("daemon", "Auto-paused recording at 18:00")
                         except Exception as e:
                             log.error("daemon", f"Failed to auto-pause: {e}")
@@ -948,14 +890,10 @@ def run() -> None:
                     # Restore state if server lost it (e.g. after Railway redeploy)
                     if status_data.get("needs_restore"):
                         if _BACKUP_FILE.exists():
-                            log.info("daemon", "Server needs state restore — sending backup...")
+                            log.info("daemon", "Server needs state restore — sending backup via WS...")
                             backup_data = json.loads(_BACKUP_FILE.read_text(encoding="utf-8"))
-                            result = _post_json(
-                                f"{config.server_url}/api/state-restore",
-                                backup_data,
-                                config.host_username, config.host_password,
-                            )
-                            log.info("daemon", f"State restore result: {result.get('status', 'ok')}")
+                            ws_client.send({"type": "state_restore", **backup_data})
+                            log.info("daemon", "State restore sent via WS")
                         else:
                             log.error("daemon", "Server needs state restore but no backup file found")
                 except RuntimeError:
@@ -985,11 +923,7 @@ def run() -> None:
                     if notes_changed:
                         notes_text = read_session_notes(config)
                         if notes_text:
-                            _post_json(
-                                f"{config.server_url}/api/notes",
-                                {"content": notes_text},
-                                config.host_username, config.host_password,
-                            )
+                            ws_client.send({"type": "notes_content", "content": notes_text})
                             last_notes_mtime = current_mtime
 
                 # ── Check for new quiz generation request (via WS) ──
@@ -1087,11 +1021,12 @@ def run() -> None:
                             latest_time = None
                         if line_count != last_transcript_line_count:
                             last_transcript_line_count = line_count
-                        _post_json(
-                            f"{config.server_url}/api/transcript-status",
-                            {"line_count": line_count, "total_lines": total_lines, "latest_ts": latest_time},
-                            config.host_username, config.host_password,
-                        )
+                        ws_client.send({
+                            "type": "transcript_status",
+                            "line_count": line_count,
+                            "total_lines": total_lines,
+                            "latest_ts": latest_time,
+                        })
                     except SystemExit:
                         pass
                     except Exception as e:
@@ -1099,23 +1034,20 @@ def run() -> None:
 
                     # ── Push token usage alongside transcript stats ──
                     try:
-                        _post_json(
-                            f"{config.server_url}/api/token-usage",
-                            get_usage().to_dict(),
-                            config.host_username, config.host_password,
-                        )
+                        ws_client.send({"type": "token_usage", **get_usage().to_dict()})
                     except Exception as e:
-                        log.error("daemon", f"Token usage POST failed: {e}")
+                        log.error("daemon", f"Token usage push failed: {e}")
 
-                # ── Snapshot state for backup (every 7s) ──
+                # ── Snapshot state for backup (every 7s) — request via WS ──
                 if now - last_snapshot_check_at >= 7.0:
                     last_snapshot_check_at = now
+                    ws_client.send({"type": "state_snapshot_request"})
+
+                # ── Process state snapshot result (if received from backend) ──
+                snapshot_result = _pending_requests.pop("state_snapshot_result", None)
+                if snapshot_result:
                     try:
-                        snapshot = _get_json(
-                            f"{config.server_url}/api/state-snapshot",
-                            config.host_username, config.host_password,
-                        )
-                        snapshot_json = json.dumps(snapshot, sort_keys=True)
+                        snapshot_json = json.dumps(snapshot_result, sort_keys=True)
                         snapshot_hash = hashlib.sha256(snapshot_json.encode("utf-8")).hexdigest()
                         if snapshot_hash != last_snapshot_hash:
                             _BACKUP_DIR.mkdir(parents=True, exist_ok=True)
@@ -1123,7 +1055,7 @@ def run() -> None:
                             tmp_file.write_text(snapshot_json, encoding="utf-8")
                             os.rename(str(tmp_file), str(_BACKUP_FILE))
                             last_snapshot_hash = snapshot_hash
-                            s = snapshot.get("state", snapshot)
+                            s = snapshot_result.get("state", snapshot_result)
                             parts = [f"{len(s.get('participant_names', {}))} participants"]
                             if s.get("qa_questions"):
                                 parts.append(f"{len(s['qa_questions'])} Q&As")
@@ -1140,7 +1072,7 @@ def run() -> None:
                                 log.info("daemon", backup_log)
                                 last_state_backup_log = backup_log
                     except Exception as e:
-                        log.error("daemon", f"State snapshot failed: {e}")
+                        log.error("daemon", f"State snapshot save failed: {e}")
 
                 # ── Check for full-reset / forced summary request (via WS) ──
                 full_reset_data = _pending_requests.pop("summary_full_reset", None)
@@ -1157,18 +1089,21 @@ def run() -> None:
                         current_key_points, summary_watermark,
                     )
 
-                # ── Periodic session state snapshot save ──
+                # ── Periodic session state snapshot save — request via WS ──
                 _save_counter += 1
                 if _save_counter >= _SAVE_INTERVAL:
                     _save_counter = 0
                     current_folder = sessions_root / session_stack[-1]["name"] if session_stack else None
                     if current_folder and current_folder.exists():
+                        ws_client.send({"type": "session_snapshot_request"})
+
+                # ── Process session snapshot result (if received from backend) ──
+                session_snapshot = _pending_requests.pop("session_snapshot_result", None)
+                if session_snapshot:
+                    current_folder = sessions_root / session_stack[-1]["name"] if session_stack else None
+                    if current_folder and current_folder.exists():
                         try:
-                            resp = _get_json(
-                                f"{config.server_url}/api/session/snapshot",
-                                config.host_username, config.host_password,
-                            )
-                            save_session_state(current_folder, resp)
+                            save_session_state(current_folder, session_snapshot)
                         except Exception as e:
                             log.error("daemon", f"Failed to save session snapshot: {e}")
 
