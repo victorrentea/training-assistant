@@ -1,8 +1,8 @@
 {
-  "sha": "8af67c07ca6107c15641abf420cb624dd9faad84",
-  "timestamp": "2026-03-29 00:57",
+  "sha": "7151aeb07226d83c720fe59e30ad8bd0d4c650c1",
+  "timestamp": "2026-03-29 01:02",
   "changelog": [
-    "fix(daemon): log folder mkdir and session start status"
+    "fix(daemon): use SESSIONS_FOLDER env for sessions_root fallback"
   ],
   "branches": [
     {
