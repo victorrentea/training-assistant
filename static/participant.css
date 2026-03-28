@@ -1906,6 +1906,75 @@ h1 { display: none; }
   font-size: .85rem;
 }
 
+/* Paste-to-host floating button */
+.paste-floating-btn {
+  position: fixed;
+  bottom: 60px;
+  right: 12px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 1.3rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3002;
+  transition: transform .1s, background .15s, border-color .15s;
+  padding: 0;
+  line-height: 1;
+}
+.paste-floating-btn:hover {
+  background: rgba(20, 20, 35, 0.97);
+  border-color: var(--accent);
+}
+.paste-floating-btn:active { transform: scale(0.85); }
+
+/* Paste modal */
+.paste-dialog {
+  max-width: 500px;
+  width: 90vw;
+}
+.paste-textarea {
+  width: 100%;
+  min-height: 150px;
+  max-height: 50vh;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: .75rem;
+  font-family: monospace;
+  font-size: .85rem;
+  resize: vertical;
+  margin-bottom: .75rem;
+}
+.paste-textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.paste-send-btn {
+  width: 100%;
+  padding: .6rem;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: .95rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.paste-send-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.paste-send-btn:not(:disabled):hover {
+  filter: brightness(1.15);
+}
+
 /* ── Light mode overrides ── */
 @media (prefers-color-scheme: light) {
   /* Slides dock panel */
