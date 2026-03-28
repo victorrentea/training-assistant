@@ -1,7 +1,7 @@
 {
-  "sha": "c738c0e950b33d45858efcc7637428a863b8ee46",
-  "timestamp": "2026-03-28 17:58",
+  "sha": "9b04c6f235c371ecb951abbd204cf4fca3cff89d",
+  "timestamp": "2026-03-28 18:00",
   "changelog": [
-    "feat(slides): click title to pin list open"
+    "fix(slides): proper toggle \u2014 JS-driven expand/collapse"
   ]
 }
