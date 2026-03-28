@@ -1,8 +1,8 @@
 {
-  "sha": "4949dc8f1c104bf850602b8b7ecc1dd86938cf87",
-  "timestamp": "2026-03-29 01:24",
+  "sha": "cfb5c3d2c9bbd3b46600ad3eb2d5e56fe439580f",
+  "timestamp": "2026-03-29 01:29",
   "changelog": [
-    "fix(daemon): promote slide and git time tracking logs from debug to info"
+    "fix(daemon): log WS send failure and guard server against handler crashes"
   ],
   "branches": [
     {
