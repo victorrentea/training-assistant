@@ -1096,7 +1096,6 @@
     _suppressHeartEcho = true;
     setTimeout(() => { _suppressHeartEcho = false; }, 500);
     sendWS('emoji_reaction', { emoji: '❤️' });
-    showHostHeartFullscreen();
   }
 
   function renderPendingDeploy(_pendingDeploy) {}
