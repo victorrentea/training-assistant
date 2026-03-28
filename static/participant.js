@@ -3679,7 +3679,12 @@
     vt.addEventListener('click', () => {
       if (!confirm('Are you sure you want to reset your identity?')) return;
       ['workshop_participant_uuid', 'workshop_participant_name', 'workshop_custom_name',
-       'workshop_vote', 'workshop_participant_location', 'workshop_tour_shown', 'workshop_onboarding_hidden', 'workshop_wc_session']
+       'workshop_vote', 'workshop_participant_location', 'workshop_tour_shown', 'workshop_onboarding_hidden', 'workshop_wc_session',
+       'workshop_slide_selected_id', 'workshop_slides_overlay_open', 'workshop_slide_visited_ids',
+       'workshop_slides_view_mode', 'workshop_slides_follow_trainer']
+        .forEach(k => localStorage.removeItem(k));
+      Object.keys(localStorage)
+        .filter(k => k.startsWith('workshop_slide_page:') || k.startsWith('workshop_slide_view:'))
         .forEach(k => localStorage.removeItem(k));
       sessionStorage.clear();
       document.cookie.split(';').forEach(c => {
