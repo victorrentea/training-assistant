@@ -79,22 +79,6 @@
       "drive_probe_url": "https://docs.google.com/presentation/d/1RWP-kzEMJ6M6VLzgW6XP4jALAkYo8FGE/export/pdf"
     },
     {
-      "title": "Clean Code ✨",
-      "group": "Coding Practices",
-      "source": "/Users/victorrentea/My Drive/Cursuri/CleanCode/Clean Code.pptx",
-      "target_pdf": "Clean Code.pdf",
-      "drive_export_url": "https://docs.google.com/presentation/d/1L5_7FDXH-nmIyymv49hfMQh_0iQIJlMb/export/pdf",
-      "drive_probe_url": "https://docs.google.com/presentation/d/1L5_7FDXH-nmIyymv49hfMQh_0iQIJlMb/export/pdf"
-    },
-    {
-      "title": "Code Smells 🤢",
-      "group": "Coding Practices",
-      "source": "/Users/victorrentea/My Drive/Cursuri/CleanCode/Code Smells.pptx",
-      "target_pdf": "Code Smells.pdf",
-      "drive_export_url": "https://docs.google.com/presentation/d/1oggnHZLrjvrT8sdA01yjs3tPlvALe_i8/export/pdf",
-      "drive_probe_url": "https://docs.google.com/presentation/d/1oggnHZLrjvrT8sdA01yjs3tPlvALe_i8/export/pdf"
-    },
-    {
       "title": "Unit Testing",
       "group": "Testing",
       "source": "/Users/victorrentea/My Drive/Cursuri/Unit Testing/Unit Testing.pptx",
@@ -111,7 +95,23 @@
       "drive_probe_url": "https://docs.google.com/presentation/d/1YbY4CQZmlerB92niux5tdQ7aSQIVW4jQ/export/pdf"
     },
     {
-      "title": "Secure Coding",
+      "title": "Clean Code ✨",
+      "group": "Coding Practices",
+      "source": "/Users/victorrentea/My Drive/Cursuri/CleanCode/Clean Code.pptx",
+      "target_pdf": "Clean Code.pdf",
+      "drive_export_url": "https://docs.google.com/presentation/d/1L5_7FDXH-nmIyymv49hfMQh_0iQIJlMb/export/pdf",
+      "drive_probe_url": "https://docs.google.com/presentation/d/1L5_7FDXH-nmIyymv49hfMQh_0iQIJlMb/export/pdf"
+    },
+    {
+      "title": "Code Smells 🤢",
+      "group": "Coding Practices",
+      "source": "/Users/victorrentea/My Drive/Cursuri/CleanCode/Code Smells.pptx",
+      "target_pdf": "Code Smells.pdf",
+      "drive_export_url": "https://docs.google.com/presentation/d/1oggnHZLrjvrT8sdA01yjs3tPlvALe_i8/export/pdf",
+      "drive_probe_url": "https://docs.google.com/presentation/d/1oggnHZLrjvrT8sdA01yjs3tPlvALe_i8/export/pdf"
+    },
+    {
+      "title": "Secure Coding ☢️",
       "group": "Coding Practices",
       "source": "/Users/victorrentea/My Drive/Cursuri/Security/Secure Coding.pptx",
       "target_pdf": "Secure Coding.pdf",
