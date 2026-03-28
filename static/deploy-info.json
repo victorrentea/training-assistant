@@ -1,7 +1,7 @@
 {
-  "sha": "1ebb2c888f75ea16c1b4c0965054202045535e3d",
-  "timestamp": "2026-03-28 19:20",
+  "sha": "4fe150ef091fa2e65b03cb489005250e66f4e2ee",
+  "timestamp": "2026-03-28 19:23",
   "changelog": [
-    "fix(slides): keep topics list open while hovering over it"
+    "feat(host): show session ID after domain URL with copy icon"
   ]
 }
