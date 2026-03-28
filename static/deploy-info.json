@@ -1,7 +1,7 @@
 {
-  "sha": "1089454b6350aa601f04984b2f0eb9bb3b0f203c",
-  "timestamp": "2026-03-29 00:43",
+  "sha": "916b7b14d6ec62b45c36b5776fbcfca5d5221867",
+  "timestamp": "2026-03-29 00:47",
   "changelog": [
-    "fix(codereview): only reveal line percentages after host confirms a line"
+    "fix(ci): update claude-code-action to use direct_prompt + id-token permission"
   ]
 }
