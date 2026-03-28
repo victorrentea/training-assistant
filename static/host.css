@@ -62,6 +62,7 @@ body {
 .badge.error { background: #ff6b6b22; color: var(--danger); border: 1px solid var(--danger); }
 #pax-badge { transition: background 1.5s ease; }
 #pax-badge.flash { background: #ffd16688; transition: none; }
+#summary-badge, #btn-transcription-lang { border-color: var(--accent2) !important; color: var(--accent2); }
 
 /* Host page outer layout: columns + consolidated footer */
 .host-layout {
