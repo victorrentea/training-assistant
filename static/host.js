@@ -2996,10 +2996,6 @@ let _currentSessionId = null;
 
 function updateSessionCodeBar(sessionId) {
   _currentSessionId = sessionId;
-  const bar = document.getElementById('session-code-bar');
-  const display = document.getElementById('session-code-display');
-  if (bar) bar.style.display = sessionId ? 'flex' : 'none';
-  if (display) display.textContent = sessionId || '';
 
   // Update participant link suffix and copy icon
   const suffix = document.getElementById('session-id-suffix');
@@ -3031,12 +3027,6 @@ function copySessionLink() {
   if (!_currentSessionId) return;
   const link = `${location.origin}/${_currentSessionId}`;
   navigator.clipboard.writeText(link).then(() => {
-    const btn = document.getElementById('session-copy-link-btn');
-    if (btn) {
-      const orig = btn.textContent;
-      btn.textContent = 'Copied!';
-      setTimeout(() => { btn.textContent = orig; }, 1500);
-    }
     const icon = document.getElementById('copy-link-icon');
     if (icon) {
       icon.style.opacity = '1';
