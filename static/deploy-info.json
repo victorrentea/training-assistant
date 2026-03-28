@@ -1,7 +1,7 @@
 {
-  "sha": "396fe47e82c78c1fc33332a41216d46987261849",
-  "timestamp": "2026-03-28 07:27",
+  "sha": "a325cf023da2b422ea88cabee12551e834def6dd",
+  "timestamp": "2026-03-28 07:29",
   "changelog": [
-    "fix: restore exact scroll position after PDF.js ResizeObserver re-scale"
+    "fix: swap PDF.js and Native button order in slides dock"
   ]
 }
