@@ -1,7 +1,7 @@
 {
-  "sha": "991ef8e50438c5e6cfb47485356c8b7117652292",
-  "timestamp": "2026-03-28 12:07",
+  "sha": "d0f19571026e608b44dcc5480c38c84e89762222",
+  "timestamp": "2026-03-28 12:09",
   "changelog": [
-    "feat(upload): add hover tooltip and onboarding tour steps"
+    "fix(upload): shorten tooltip and onboarding labels for paste and upload buttons"
   ]
 }
