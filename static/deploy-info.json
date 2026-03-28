@@ -1,7 +1,7 @@
 {
-  "sha": "b5cb39bb639226e8b756eb7b0023e3d45b6573f0",
-  "timestamp": "2026-03-28 23:25",
+  "sha": "116b0878de9d21dd92d983baa7505c496d2b8d24",
+  "timestamp": "2026-03-28 23:28",
   "changelog": [
-    "test: add daemon WS integration test for quiz request cycle"
+    "feat(overlay): replace green heart with skull \u2620\ufe0f button"
   ]
 }
