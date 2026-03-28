@@ -1,7 +1,7 @@
 {
-  "sha": "7fdcf94aea2a211bc8259d94066b0f1defe69ea6",
-  "timestamp": "2026-03-28 18:40",
+  "sha": "1dc3a3027960e329dee380c6a13403c50be483fa",
+  "timestamp": "2026-03-28 18:58",
   "changelog": [
-    "feat: show session code on participant page (top-right, clickable to copy)"
+    "fix: generate session_id on /api/session/create (host UI path)"
   ]
 }
