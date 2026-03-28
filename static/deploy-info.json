@@ -1,8 +1,7 @@
 {
-  "sha": "a9ae0003d3ab87178dc31786802bd86b9bbe21df",
-  "timestamp": "2026-03-28 23:07",
+  "sha": "effdf723cfb0cb2e55193814379a92ed5a7bf444",
+  "timestamp": "2026-03-28 23:08",
   "changelog": [
-    "fix(daemon): sync AudioHijack language on session start and daily",
-    "fix(daemon): sync AudioHijack language to server on startup"
+    "fix(landing): change auto-join message to \"Host machine : auto-login\""
   ]
 }
