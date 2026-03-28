@@ -12,6 +12,7 @@ from pydantic import BaseModel
 from core.auth import require_host_auth
 from core.state import state
 from core.messaging import broadcast_state
+from features.ws.daemon_protocol import push_to_daemon
 from daemon.transcript.query import load_normalized_entries
 
 router = APIRouter()
@@ -62,18 +63,21 @@ class SyncSessionRequest(BaseModel):
 @router.post("/api/session/start", dependencies=[Depends(require_host_auth)])
 async def start_session(body: StartSessionRequest):
     state.session_request = {"action": "start", "name": body.name}
+    await push_to_daemon({"type": "session_request", **state.session_request})
     return {"ok": True}
 
 
 @router.post("/api/session/end", dependencies=[Depends(require_host_auth)])
 async def end_session():
     state.session_request = {"action": "end"}
+    await push_to_daemon({"type": "session_request", **state.session_request})
     return {"ok": True}
 
 
 @router.post("/api/session/pause", dependencies=[Depends(require_host_auth)])
 async def pause_session():
     state.session_request = {"action": "pause"}
+    await push_to_daemon({"type": "session_request", **state.session_request})
     if state.session_main:
         state.session_main = {**state.session_main, "status": "paused"}
         await broadcast_state()
@@ -83,6 +87,7 @@ async def pause_session():
 @router.post("/api/session/resume", dependencies=[Depends(require_host_auth)])
 async def resume_session():
     state.session_request = {"action": "resume"}
+    await push_to_daemon({"type": "session_request", **state.session_request})
     if state.session_main:
         state.session_main = {**state.session_main, "status": "active"}
         await broadcast_state()
@@ -92,12 +97,14 @@ async def resume_session():
 @router.post("/api/session/start_talk", dependencies=[Depends(require_host_auth)])
 async def start_talk():
     state.session_request = {"action": "start_talk"}
+    await push_to_daemon({"type": "session_request", **state.session_request})
     return {"ok": True}
 
 
 @router.post("/api/session/end_talk", dependencies=[Depends(require_host_auth)])
 async def end_talk():
     state.session_request = {"action": "end_talk"}
+    await push_to_daemon({"type": "session_request", **state.session_request})
     return {"ok": True}
 
 
@@ -108,12 +115,14 @@ class SessionNameBody(BaseModel):
 @router.post("/api/session/create", dependencies=[Depends(require_host_auth)])
 async def create_session(body: SessionNameBody):
     state.session_request = {"action": "create", "name": body.name}
+    await push_to_daemon({"type": "session_request", **state.session_request})
     return {"ok": True}
 
 
 @router.patch("/api/session/rename", dependencies=[Depends(require_host_auth)])
 async def rename_session(body: RenameSessionRequest):
     state.session_request = {"action": "rename", "name": body.name}
+    await push_to_daemon({"type": "session_request", **state.session_request})
     return {"ok": True}
 
 

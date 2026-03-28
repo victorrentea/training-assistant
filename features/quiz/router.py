@@ -7,6 +7,7 @@ from pydantic import BaseModel, model_validator
 from core.messaging import broadcast
 from daemon.config import DEFAULT_TRANSCRIPT_MINUTES
 from core.state import state
+from features.ws.daemon_protocol import push_to_daemon
 
 router = APIRouter()
 
@@ -73,6 +74,14 @@ async def request_quiz(body: QuizRequest):
         minutes = body.minutes or DEFAULT_TRANSCRIPT_MINUTES
         state.quiz_request = {"minutes": minutes, "topic": None}
         msg = f"Waiting for daemon (last {minutes} min)…"
+    await push_to_daemon({
+        "type": "quiz_request",
+        "request": state.quiz_request,
+        "session_folder": state.daemon_session_folder,
+        "has_notes_content": state.notes_content is not None,
+        "has_key_points": bool(state.summary_points),
+        "has_slides": bool(getattr(state, 'slides', None)),
+    })
     state.quiz_status = {"status": "requested", "message": msg}
     await broadcast({"type": "quiz_status", **state.quiz_status})
     return {"ok": True}
@@ -154,6 +163,11 @@ async def request_quiz_refine(body: QuizRefineRequest):
     if not state.quiz_preview:
         raise HTTPException(400, "No preview to refine")
     state.quiz_refine_request = {"target": body.target}
+    await push_to_daemon({
+        "type": "quiz_refine",
+        "request": state.quiz_refine_request,
+        "preview": state.quiz_preview,
+    })
     state.quiz_status = {"status": "generating", "message": f"Regenerating {'question' if body.target == 'question' else 'option'}…"}
     await broadcast({"type": "quiz_status", **state.quiz_status})
     return {"ok": True}
