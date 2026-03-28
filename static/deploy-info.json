@@ -1,7 +1,7 @@
 {
-  "sha": "09f9ddd39603780beae95afbbc807599d26bfcfe",
-  "timestamp": "2026-03-28 15:57",
+  "sha": "6d918449c3c74ce6ca2b1f288968c4dc1d723461",
+  "timestamp": "2026-03-28 16:10",
   "changelog": [
-    "fix(slides): catalog slides always available \u2014 on-demand GDrive fetch"
+    "chore(catalog): rename slide deck titles to match desired names"
   ]
 }
