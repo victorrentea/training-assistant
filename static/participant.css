@@ -870,6 +870,25 @@ h1 { display: none; }
   display: block;
 }
 
+#slides-native-update-banner {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 10px 20px;
+  background: rgba(20, 18, 48, 0.94);
+  border-top: 2px solid var(--accent2);
+  color: var(--text);
+  text-align: center;
+  font-size: 0.88rem;
+  cursor: pointer;
+  z-index: 30;
+  transition: background 0.2s;
+}
+#slides-native-update-banner:hover {
+  background: rgba(124, 108, 213, 0.3);
+}
+
 #slides-pdf-viewer {
   padding: 0;
 }
