@@ -122,6 +122,8 @@ async def update_quiz_status(body: QuizStatus):
                 "sync_message": slide.sync_message,
             })
         state.slides = normalized
+        from features.slides.cache import sync_slides_updated_at
+        sync_slides_updated_at()
     await broadcast({"type": "quiz_status", **state.quiz_status})
     return {"ok": True}
 

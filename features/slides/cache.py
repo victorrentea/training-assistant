@@ -66,8 +66,22 @@ def _set_status(slug: str, status: str, **extra) -> None:
     catalog_entry = state.slides_catalog.get(slug)
     if catalog_entry:
         entry["title"] = catalog_entry.get("title", slug)
+    # Carry updated_at from daemon slides list (PPTX mtime) if not already set
+    if "updated_at" not in entry:
+        slide = next((s for s in (state.slides or []) if s.get("slug") == slug), None)
+        if slide and slide.get("updated_at"):
+            entry["updated_at"] = slide["updated_at"]
     entry.update(extra)
     state.slides_cache_status[slug] = entry
+
+
+def sync_slides_updated_at() -> None:
+    """Propagate updated_at from state.slides into slides_cache_status (called after slides list changes)."""
+    for slide in (state.slides or []):
+        slug = slide.get("slug")
+        updated_at = slide.get("updated_at")
+        if slug and updated_at and slug in state.slides_cache_status:
+            state.slides_cache_status[slug]["updated_at"] = updated_at
 
 
 def _get_status(slug: str) -> str:
