@@ -1615,19 +1615,23 @@
         const maxPages = Math.max(1, Number(doc.numPages || 1));
         const savedPage = Math.min(saved?.page || _getStoredSlidePage(slide.slug), maxPages);
         _suppressSlidesFollowAutoUncheck(1500);
-        const container = document.getElementById('slides-pdf-container');
-        const hasScroll = !skipScrollRestore && container && saved && Number.isFinite(saved.scrollTop) && saved.scrollTop > 0;
-        if (hasScroll) {
-          // Set scrollTop directly — skipping currentPageNumber avoids a conflicting PDF.js scroll.
-          requestAnimationFrame(() => requestAnimationFrame(() => { container.scrollTo({ top: saved.scrollTop, behavior: 'instant' }); }));
-        } else {
-          try {
-            slidesPdfViewer.currentPageNumber = Number(savedPage);
-          } catch (_) {
-            try { slidesPdfLinkService?.goToPage(savedPage); } catch (_) {}
-          }
+        try {
+          slidesPdfViewer.currentPageNumber = Number(savedPage);
+        } catch (_) {
+          try { slidesPdfLinkService?.goToPage(savedPage); } catch (_) {}
         }
         _setStoredSlidePage(slide.slug, savedPage);
+        if (!skipScrollRestore && saved && Number.isFinite(saved.scrollTop) && saved.scrollTop > 0) {
+          // Use timeout > ResizeObserver debounce (120ms) so our restore fires after
+          // PDF.js re-scrolls to currentPageNumber due to the scale re-trigger.
+          const container = document.getElementById('slides-pdf-container');
+          const targetSlug = slide.slug;
+          setTimeout(() => {
+            if (slidesSelectedSlug === targetSlug && container) {
+              container.scrollTo({ top: saved.scrollTop, behavior: 'instant' });
+            }
+          }, 250);
+        }
 
         slidesLastFingerprint = fingerprint;
         _setSlidesDownload(slide.url, false);
