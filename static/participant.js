@@ -168,7 +168,7 @@
       { selector: '#slides-dock',        emoji: '📑', text: 'Slides are always on the right. Click any topic to open it.', scanDock: true },
       { selector: '#slides-follow-btn',  emoji: '📌', text: "Auto-syncs your view to the trainer's current slide." },
       { selector: '#paste-btn',           emoji: '📋', text: "Paste large code or text.", arrowRight: true },
-      { selector: '#upload-btn',          emoji: '📤', text: "Send a file to the host.", arrowRight: true },
+      { selector: '#upload-btn',          emoji: '📤', text: "Drop a file anywhere to send it to the host.", arrowRight: true },
       ..._shuffled,
     ];
 
