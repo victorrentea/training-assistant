@@ -3,9 +3,10 @@ Workshop Live Interaction Tool
 FastAPI + WebSocket backend
 """
 
+import asyncio
 import logging
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -55,10 +56,31 @@ def _stamp_version_js():
     logging.getLogger(__name__).info("version.js stamped: %s", ts)
 
 
+_bg_logger = logging.getLogger("bg_poller")
+
+
+async def _daemon_ping_loop():
+    """Background task: send a server_ping to the daemon WS every 5 seconds."""
+    while True:
+        await asyncio.sleep(5)
+        ws = state.daemon_ws
+        if ws is not None:
+            try:
+                ts = datetime.now(timezone.utc).strftime("%H:%M:%S")
+                await ws.send_json({"type": "server_ping", "ts": ts})
+                _bg_logger.info("server_ping sent to daemon at %s", ts)
+            except Exception as exc:
+                _bg_logger.warning("server_ping failed: %s", exc)
+
+
 @asynccontextmanager
 async def lifespan(app_: FastAPI):
     _stamp_version_js()
-    yield
+    task = asyncio.create_task(_daemon_ping_loop())
+    try:
+        yield
+    finally:
+        task.cancel()
 
 
 app = FastAPI(title="Workshop Tool", lifespan=lifespan)
