@@ -577,7 +577,7 @@ h1 { display: none; }
 .slides-list {
   max-height: 0;
   overflow: hidden;
-  transition: max-height 0.25s ease;
+  transition: max-height 0.3s ease 2s; /* 2s delay before collapsing */
   display: flex;
   flex-direction: column;
   gap: .08rem;
@@ -585,9 +585,10 @@ h1 { display: none; }
 }
 
 .slides-dock:hover .slides-list {
-  max-height: 80vh;
+  max-height: calc(100vh - 2.5rem); /* fill to bottom of screen */
   overflow-y: auto;
   padding: .18rem 0 20px .18rem;
+  transition: max-height 0.25s ease 0s; /* expand immediately */
 }
 
 .slides-list.uniform-10 {
