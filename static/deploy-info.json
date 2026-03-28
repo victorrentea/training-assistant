@@ -1,7 +1,7 @@
 {
-  "sha": "9c88368f2127e362cb71ff34e165642dc79c7bf6",
-  "timestamp": "2026-03-28 19:26",
+  "sha": "9b7dc32a522c12051ccbc212494f6ac4441643e0",
+  "timestamp": "2026-03-28 22:50",
   "changelog": [
-    "fix(host): QR codes now include session ID in join URL"
+    "feat(host): show fading \"Copied!\" tooltip above URL copy icon"
   ]
 }
