@@ -908,6 +908,7 @@
   function _bindSlidesZoomButtons() {
     const zoomIn = document.getElementById('slides-zoom-in');
     const zoomOut = document.getElementById('slides-zoom-out');
+    const fitWidth = document.getElementById('slides-fit-width');
     if (zoomIn) zoomIn.addEventListener('click', () => {
       if (slidesViewMode !== 'pdfjs' || !slidesPdfViewer) return;
       _pdfZoomAndRestore(Math.min(slidesPdfViewer.currentScale * 1.25, 10));
@@ -915,6 +916,11 @@
     if (zoomOut) zoomOut.addEventListener('click', () => {
       if (slidesViewMode !== 'pdfjs' || !slidesPdfViewer) return;
       _pdfZoomAndRestore(Math.max(slidesPdfViewer.currentScale / 1.25, 0.1));
+    });
+    if (fitWidth) fitWidth.addEventListener('click', () => {
+      if (slidesViewMode !== 'pdfjs' || !slidesPdfViewer) return;
+      slidesPdfViewer.currentScaleValue = 'page-width';
+      _suppressSlidesZoom(1000);
     });
 
     // Ctrl+wheel zoom for PDF.js mode — debounced so scale applies once per
@@ -1193,6 +1199,7 @@
     empty.style.display = 'none';
     document.getElementById('slides-zoom-in')?.style.setProperty('display', 'none');
     document.getElementById('slides-zoom-out')?.style.setProperty('display', 'none');
+    document.getElementById('slides-fit-width')?.style.setProperty('display', 'none');
   }
 
   function _setSlidesDownload(url, disabled = false) {
@@ -1557,6 +1564,7 @@
       if (empty) empty.style.display = 'none';
       document.getElementById('slides-zoom-in')?.style.removeProperty('display');
       document.getElementById('slides-zoom-out')?.style.removeProperty('display');
+      document.getElementById('slides-fit-width')?.style.removeProperty('display');
 
       const headers = await _fetchSlideHeaders(slide.url);
       const effectiveUpdatedAt = slide.updated_at || headers.lastModified || null;
