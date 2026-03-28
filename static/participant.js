@@ -1776,24 +1776,24 @@ function closeEmojiPopup(ev) {
         badge.textContent = updated;
         item.appendChild(badge);
       }
-      // Status indicator — progress bar while downloading, dot otherwise
+      // Status indicator — spinner while loading, dot once done
       const _cacheEntry = (_slidesCacheStatus || {})[slide.slug];
       if (_cacheEntry && _cacheEntry.status) {
         const _dotCfg = {
           'cached':          { color: '#4caf50', tip: 'Available on server' },
-          'downloading':     { color: '#2196f3', tip: 'Downloading from cloud...' },
-          'polling_drive':   { color: '#2196f3', tip: 'Checking for updates...' },
+          'downloading':     { spinner: true,    tip: 'Downloading PDF...' },
+          'polling_drive':   { spinner: true,    tip: 'Waiting for Google Drive...' },
           'stale':           { color: '#ff9800', tip: 'Update available, syncing...' },
           'not_cached':      { color: '#f44336', tip: 'Not yet on server' },
           'poll_timeout':    { color: '#ff9800', tip: 'Sync timed out' },
           'download_failed': { color: '#f44336', tip: 'Download failed' },
         };
         const _cfg = _dotCfg[_cacheEntry.status] || _dotCfg['not_cached'];
-        if (_cacheEntry.status === 'downloading' || _cacheEntry.status === 'polling_drive') {
-          const bar = document.createElement('div');
-          bar.className = 'slides-cache-progress has-tooltip';
-          bar.setAttribute('data-tooltip', _cfg.tip);
-          item.appendChild(bar);
+        if (_cfg.spinner) {
+          const spinner = document.createElement('div');
+          spinner.className = 'slides-cache-spinner has-tooltip';
+          spinner.setAttribute('data-tooltip', _cfg.tip);
+          item.appendChild(spinner);
         } else {
           const dot = document.createElement('span');
           dot.className = 'slides-cache-dot has-tooltip';
