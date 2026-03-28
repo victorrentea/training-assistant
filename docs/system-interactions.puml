@@ -3,8 +3,8 @@
 
 title Workshop Live Interaction Tool — System Interactions
 
-participant "Participant UI" as P
 participant "Host UI" as H
+participant "Participant UI" as P
 participant "Backend\n(FastAPI)" as B
 participant "Daemon" as D
 participant "Desktop Overlay" as O
@@ -18,26 +18,26 @@ B --> D : WS session_request {action:"start", name}
 D -> D : Create session folder\non disk
 D --> B : WS session_sync {main, talk, key_points}
 B --> H : WS broadcast (session state)
-B --> P : WS broadcast (session state)
 
-... (session running) ...
+... (participants join, session running) ...
 
 H -> B : POST /api/session/pause
 B --> D : WS session_request {action:"pause"}
-B --> P : WS broadcast (status:"paused")
+B --> H : WS broadcast (status:"paused")
+B --> P : WS session_paused → disconnect
 
 H -> B : POST /api/session/resume
 B --> D : WS session_request {action:"resume"}
-B --> P : WS broadcast (status:"active")
+B --> H : WS broadcast (status:"active")
+note right of P : Paused participants\nreconnect automatically
 
 H -> B : POST /api/session/end
 B --> D : WS session_request {action:"end"}
 D -> D : Persist state to disk
 
 note over D,B
-  Daemon periodically requests session snapshots
-  via WS session_snapshot_request; backend replies
-  with session_snapshot_result for disk persistence.
+  Backend proactively pushes state and session snapshots
+  to daemon every 7s via WS for disk persistence.
 end note
 
 == 2. Participant Join ==
@@ -70,7 +70,7 @@ group Host-created poll
 end
 
 group Quiz generation (daemon)
-  H --> B : WS or HTTP: quiz_request {minutes, topic}
+  H -> B : POST /api/quiz-request {minutes, topic}
   B --> D : WS quiz_request {minutes, topic}
   D --> B : WS quiz_status {status:"generating"}
   B --> H : WS broadcast quiz_status
@@ -80,7 +80,7 @@ group Quiz generation (daemon)
   B --> H : WS broadcast quiz_preview
   H -> H : Host reviews/accepts
   D --> B : WS poll_create {question, options}
-  D --> B : WS poll_open {open:true}
+  D --> B : WS poll_open
   B --> P : WS broadcast (poll open)
 end
 
@@ -220,9 +220,10 @@ B -> B : Cache PDF in /tmp/slides-cache/
 B --> P : WS broadcast (slides_cache_status updated)
 B --> H : WS broadcast
 
-note over D,B
-  Daemon also sends slides_catalog on connect,
-  listing all known slide decks with Drive URLs.
+note over B
+  Slide catalog is pre-loaded from static catalog
+  file at backend startup. Daemon sends
+  slide_invalidated when PPTX files change.
 end note
 
 == 9. Slide Loading Flow ==
@@ -267,15 +268,38 @@ H --> B : WS paste_dismiss {uuid, paste_id}
 B -> B : Remove paste entry
 B --> H : WS participant_update
 
-== 12. Emoji Reaction Flow ==
+== 12. File Upload Flow ==
+
+P -> B : POST /api/upload (multipart file)
+B -> B : Store file on disk\n(max 100KB, max 10 per participant)
+B --> H : WS participant_update (upload icon visible)
+
+H -> B : GET /api/upload/{uuid}/{file_id}
+B --> H : HTTP 200 (file bytes)
+
+== 13. Emoji Reaction Flow ==
 
 P --> B : WS emoji_reaction {emoji}
-B --> O : WS forward emoji to overlay
-B --> H : WS forward emoji to host
+B --> O : WS broadcast emoji to overlay
+B --> H : WS broadcast emoji to host
 
 O -> O : Animate emoji on screen
 
-== 13. Summary / Key Points Flow ==
+== 14. Activity Switch ==
+
+H -> B : POST /api/activity {type: POLL|WORDCLOUD|QA|DEBATE|CODEREVIEW|NONE}
+B -> B : Set current_activity
+B --> P : WS broadcast (activity changed)
+B --> H : WS broadcast
+
+== 15. Mode Switch ==
+
+H -> B : POST /api/mode {mode: "workshop"|"conference"}
+B -> B : Set mode, assign character names\nif switching to conference
+B --> P : WS broadcast (mode changed)
+B --> H : WS broadcast
+
+== 16. Summary / Key Points Flow ==
 
 H -> B : POST /api/summary/force
 note right: or participant triggers same endpoint\n(public, 30s cooldown)
@@ -289,7 +313,7 @@ B -> B : Update summary_points
 B --> P : WS broadcast (summary updated)
 B --> H : WS broadcast
 
-== 14. Leaderboard Flow ==
+== 17. Leaderboard Flow ==
 
 H -> B : POST /api/leaderboard/show
 B -> B : leaderboard_active = true
@@ -301,14 +325,14 @@ H -> B : POST /api/leaderboard/hide
 B --> P : WS leaderboard_hide
 B --> H : WS leaderboard_hide
 
-== 15. Daemon Heartbeat & State Persistence ==
+== 18. Daemon Heartbeat & State Persistence ==
 
 D --> B : WS daemon_ping (periodic heartbeat)
 B -> B : Update daemon_last_seen
 
-D --> B : WS session_snapshot_request
-B --> D : WS session_snapshot_result {full state}
-D -> D : Write session_state.json to disk
+B --> D : WS state_snapshot_result (periodic, every 7s)
+B --> D : WS session_snapshot_result (periodic, every 7s)
+D -> D : Write state-backup.json + session_state.json to disk
 
 D --> B : WS transcript_status {line_count, total_lines}
 B --> H : WS broadcast (transcript progress)

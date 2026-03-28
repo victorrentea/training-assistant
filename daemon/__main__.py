@@ -565,13 +565,8 @@ def run() -> None:
 
     last_summary_at = 0.0  # monotonic time of last summary run
     last_snapshot_hash: str | None = None  # hash of last saved state snapshot
-    last_snapshot_check_at = 0.0  # monotonic time of last state-snapshot GET
-    last_state_backup_log: str | None = None  # last emitted state-backup log line (dedupe consecutive repeats)
+last_state_backup_log: str | None = None  # last emitted state-backup log line (dedupe consecutive repeats)
     transcript_state = TranscriptStateManager()
-    _SAVE_INTERVAL = 5
-    # Trigger immediate save on first iteration if a session is already active
-    _save_counter = _SAVE_INTERVAL if session_stack else 0
-
     ws_client.start()
 
     try:
@@ -756,11 +751,7 @@ def run() -> None:
                         talk_folder = sessions_root / talk_name
                         talk_folder.mkdir(parents=True, exist_ok=True)
 
-                        # Save current (main) session state immediately before switching
-                        # (request snapshot via WS — result will be saved when received)
                         current_folder = sessions_root / session_stack[-1]["name"] if session_stack else None
-                        if current_folder and current_folder.exists():
-                            ws_client.send({"type": "session_snapshot_request"})
 
                         # Load talk's existing key points (if folder had prior data)
                         talk_points, talk_wm = load_key_points(talk_folder)
@@ -801,10 +792,8 @@ def run() -> None:
                         if len(session_stack) < 2:
                             log.warning("daemon", "END TALK requested but no talk is active")
                         else:
-                            # Save talk state before ending (request snapshot via WS — async save)
                             talk_folder = sessions_root / session_stack[-1]["name"]
                             if talk_folder.exists():
-                                ws_client.send({"type": "session_snapshot_request"})
                                 try:
                                     save_key_points(talk_folder, current_key_points, summary_watermark, session_start_date(session_stack[-1]))
                                 except Exception as e:
@@ -1171,12 +1160,7 @@ def run() -> None:
                     except Exception as e:
                         log.error("daemon", f"Token usage push failed: {e}")
 
-                # ── Snapshot state for backup (every 7s) — request via WS ──
-                if now - last_snapshot_check_at >= 7.0:
-                    last_snapshot_check_at = now
-                    ws_client.send({"type": "state_snapshot_request"})
-
-                # ── Process state snapshot result (if received from backend) ──
+                # ── Process state snapshot result (pushed by backend every 7s) ──
                 snapshot_result = _pending_requests.pop("state_snapshot_result", None)
                 if snapshot_result:
                     try:
@@ -1222,15 +1206,7 @@ def run() -> None:
                         current_key_points, summary_watermark,
                     )
 
-                # ── Periodic session state snapshot save — request via WS ──
-                _save_counter += 1
-                if _save_counter >= _SAVE_INTERVAL:
-                    _save_counter = 0
-                    current_folder = sessions_root / session_stack[-1]["name"] if session_stack else None
-                    if current_folder and current_folder.exists():
-                        ws_client.send({"type": "session_snapshot_request"})
-
-                # ── Process session snapshot result (if received from backend) ──
+                # ── Process session snapshot result (pushed by backend every 7s) ──
                 session_snapshot = _pending_requests.pop("session_snapshot_result", None)
                 if session_snapshot:
                     current_folder = sessions_root / session_stack[-1]["name"] if session_stack else None

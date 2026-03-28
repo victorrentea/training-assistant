@@ -37,8 +37,6 @@ from features.ws.daemon_protocol import (
     MSG_DEBATE_AI_RESULT, MSG_SESSION_SYNC, MSG_TRANSCRIPT_STATUS,
     MSG_TOKEN_USAGE, MSG_NOTES_CONTENT, MSG_SLIDES_CURRENT, MSG_SLIDES_CLEAR,
     MSG_TRANSCRIPTION_LANGUAGE_STATUS, MSG_TIMING_EVENT, MSG_STATE_RESTORE,
-    MSG_STATE_SNAPSHOT_RESULT, MSG_SESSION_SNAPSHOT_RESULT,
-    MSG_STATE_SNAPSHOT_REQUEST, MSG_SESSION_SNAPSHOT_REQUEST,
     MSG_ACTIVITY_LOG,
 )
 
@@ -449,40 +447,40 @@ async def _handle_state_restore(data):
     logger.info("State restored via WS with %d participants", restored_count)
 
 
-async def _handle_state_snapshot_request(data):
-    """Daemon requests a state snapshot — serialize and send back via WS."""
+async def _build_state_snapshot() -> dict:
+    """Build a state snapshot dict for pushing to daemon."""
     from features.snapshot.router import _serialize_state
     import hashlib as _hashlib
     state_dict = _serialize_state()
     state_json = json.dumps(state_dict, sort_keys=True)
     md5_hex = _hashlib.md5(state_json.encode()).hexdigest()
-    if state.daemon_ws:
-        await state.daemon_ws.send_json({
-            "type": "state_snapshot_result",
-            "hash": md5_hex,
-            "state": state_dict,
-        })
+    return {"type": "state_snapshot_result", "hash": md5_hex, "state": state_dict}
 
 
-async def _handle_session_snapshot_request(data):
-    """Daemon requests a session snapshot — serialize and send back via WS."""
+async def _build_session_snapshot() -> dict:
+    """Build a session snapshot dict for pushing to daemon."""
     from features.session.router import get_session_snapshot
     snapshot = await get_session_snapshot()
-    if state.daemon_ws:
-        await state.daemon_ws.send_json({
-            "type": "session_snapshot_result",
-            **snapshot,
-        })
+    return {"type": "session_snapshot_result", **snapshot}
 
 
-async def _handle_state_snapshot_result(data):
-    """Daemon confirms state snapshot saved — just log."""
-    logger.info("State snapshot saved by daemon (hash=%s)", data.get("hash", "?"))
-
-
-async def _handle_session_snapshot_result(data):
-    """Daemon confirms session snapshot saved — just log."""
-    logger.info("Session snapshot saved by daemon")
+async def snapshot_pusher():
+    """Push state and session snapshots to daemon every 7 seconds."""
+    import asyncio
+    while True:
+        await asyncio.sleep(7)
+        if state.daemon_ws is None:
+            continue
+        try:
+            msg = await _build_state_snapshot()
+            await state.daemon_ws.send_json(msg)
+        except Exception:
+            pass
+        try:
+            msg = await _build_session_snapshot()
+            await state.daemon_ws.send_json(msg)
+        except Exception:
+            pass
 
 
 async def _handle_activity_log(data):
@@ -510,10 +508,6 @@ _DAEMON_MSG_HANDLERS = {
     MSG_TRANSCRIPTION_LANGUAGE_STATUS: _handle_transcription_language_status,
     MSG_TIMING_EVENT: _handle_timing_event,
     MSG_STATE_RESTORE: _handle_state_restore,
-    MSG_STATE_SNAPSHOT_REQUEST: _handle_state_snapshot_request,
-    MSG_SESSION_SNAPSHOT_REQUEST: _handle_session_snapshot_request,
-    MSG_STATE_SNAPSHOT_RESULT: _handle_state_snapshot_result,
-    MSG_SESSION_SNAPSHOT_RESULT: _handle_session_snapshot_result,
     MSG_ACTIVITY_LOG: _handle_activity_log,
 }
 
