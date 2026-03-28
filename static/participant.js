@@ -1622,11 +1622,15 @@
         const maxPages = Math.max(1, Number(doc.numPages || 1));
         const savedPage = Math.min(saved?.page || _getStoredSlidePage(slide.slug), maxPages);
         _suppressSlidesFollowAutoUncheck(1500);
+        const pdfContainer = document.getElementById('slides-pdf-container');
+        // When skipping scroll restore (follow-mode topic change), scroll instantly to the page.
+        if (skipScrollRestore && pdfContainer) pdfContainer.style.scrollBehavior = 'auto';
         try {
           slidesPdfViewer.currentPageNumber = Number(savedPage);
         } catch (_) {
           try { slidesPdfLinkService?.goToPage(savedPage); } catch (_) {}
         }
+        if (skipScrollRestore && pdfContainer) setTimeout(() => { pdfContainer.style.scrollBehavior = ''; }, 100);
         _setStoredSlidePage(slide.slug, savedPage);
         if (!skipScrollRestore && saved && Number.isFinite(saved.scrollTop) && saved.scrollTop > 0) {
           // Use timeout > ResizeObserver debounce (120ms) so our restore fires after
