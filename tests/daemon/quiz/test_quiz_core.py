@@ -602,65 +602,69 @@ class TestRefineQuiz:
 # ── post_poll / open_poll / post_status ───────────────────────────────
 
 class TestServerHelpers:
-    @patch("daemon.quiz.poll_api._post_json")
-    def test_post_poll(self, mock_post, tmp_path):
+    @pytest.fixture(autouse=True)
+    def _setup_ws_client(self):
+        """Set up a mock ws_client for all tests in this class."""
+        import daemon.quiz.poll_api as poll_api
+        self.mock_ws = MagicMock()
+        self.mock_ws.connected = True
+        self.mock_ws.send = MagicMock(return_value=True)
+        poll_api._ws_client = self.mock_ws
+        yield
+        poll_api._ws_client = None
+
+    def test_post_poll(self, tmp_path):
         cfg = _make_config(tmp_path)
         quiz = {"question": "Q?", "options": ["A", "B"], "correct_indices": [0]}
         post_poll(quiz, cfg)
-        mock_post.assert_called_once()
-        payload = mock_post.call_args[0][1]
+        self.mock_ws.send.assert_called_once()
+        payload = self.mock_ws.send.call_args[0][0]
+        assert payload["type"] == "poll_create"
         assert payload["question"] == "Q?"
         assert payload["multi"] is False
 
-    @patch("daemon.quiz.poll_api._post_json")
-    def test_post_poll_multi(self, mock_post, tmp_path):
+    def test_post_poll_multi(self, tmp_path):
         cfg = _make_config(tmp_path)
         quiz = {"question": "Q?", "options": ["A", "B", "C"], "correct_indices": [0, 2]}
         post_poll(quiz, cfg)
-        payload = mock_post.call_args[0][1]
+        payload = self.mock_ws.send.call_args[0][0]
         assert payload["multi"] is True
 
-    @patch("daemon.quiz.poll_api._post_json")
-    def test_post_poll_with_source(self, mock_post, tmp_path):
+    def test_post_poll_with_source(self, tmp_path):
         cfg = _make_config(tmp_path)
         quiz = {"question": "Q?", "options": ["A", "B"], "correct_indices": [0], "source": "Book", "page": "42"}
         post_poll(quiz, cfg)
-        payload = mock_post.call_args[0][1]
+        payload = self.mock_ws.send.call_args[0][0]
         assert "Source: Book" in payload["question"]
 
-    @patch("daemon.quiz.poll_api._put_json")
-    def test_open_poll(self, mock_put, tmp_path):
+    def test_open_poll(self, tmp_path):
         cfg = _make_config(tmp_path)
         open_poll(cfg)
-        mock_put.assert_called_once()
-        payload = mock_put.call_args[0][1]
-        assert payload["open"] is True
+        self.mock_ws.send.assert_called_once()
+        payload = self.mock_ws.send.call_args[0][0]
+        assert payload["type"] == "poll_open"
 
-    @patch("daemon.quiz.poll_api._post_json")
-    def test_post_status(self, mock_post, tmp_path):
+    def test_post_status(self, tmp_path):
         cfg = _make_config(tmp_path)
         post_status("generating", "Working...", cfg)
-        mock_post.assert_called_once()
+        self.mock_ws.send.assert_called_once()
 
-    @patch("daemon.quiz.poll_api._post_json")
-    def test_post_status_with_session(self, mock_post, tmp_path):
+    def test_post_status_with_session(self, tmp_path):
         cfg = _make_config(tmp_path)
         post_status("idle", "Ready", cfg, session_folder="/path", session_notes="notes.txt")
-        payload = mock_post.call_args[0][1]
+        payload = self.mock_ws.send.call_args[0][0]
         assert payload["session_folder"] == "/path"
 
-    @patch("daemon.quiz.poll_api._post_json")
-    def test_post_status_with_slides(self, mock_post, tmp_path):
+    def test_post_status_with_slides(self, tmp_path):
         cfg = _make_config(tmp_path)
         post_status("idle", "Ready", cfg, slides=[{"name": "Deck", "url": "https://cdn.example.com/deck.pdf"}])
-        payload = mock_post.call_args[0][1]
+        payload = self.mock_ws.send.call_args[0][0]
         assert "slides" in payload
         assert payload["slides"][0]["name"] == "Deck"
 
-    @patch("daemon.quiz.poll_api._post_json")
-    def test_post_status_error_swallowed(self, mock_post, tmp_path):
+    def test_post_status_error_swallowed(self, tmp_path):
         cfg = _make_config(tmp_path)
-        mock_post.side_effect = RuntimeError("connection refused")
+        self.mock_ws.send.side_effect = RuntimeError("connection refused")
         post_status("idle", "msg", cfg)  # should not raise
 
 

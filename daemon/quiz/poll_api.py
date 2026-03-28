@@ -1,16 +1,27 @@
 """
-HTTP helpers for posting quiz state to the workshop server.
+Helpers for posting quiz state to the workshop server via WebSocket.
+Falls back to HTTP for read-only fetches (quiz history, summary points).
 """
 
 from typing import Optional
 
 from daemon import log
 from daemon.config import Config
-from daemon.http import _get_json, _post_json, _put_json
+from daemon.http import _get_json
+
+# Module-level ws_client reference, set by daemon/__main__.py at startup
+_ws_client = None
+
+
+def set_ws_client(client) -> None:
+    """Set the module-level ws_client reference."""
+    global _ws_client
+    _ws_client = client
 
 
 def post_poll(quiz: dict, config: Config) -> None:
     payload = {
+        "type": "poll_create",
         "question": quiz["question"],
         "options": quiz["options"],
         "multi": len(quiz.get("correct_indices", [])) > 1,
@@ -18,28 +29,35 @@ def post_poll(quiz: dict, config: Config) -> None:
     if quiz.get("source"):
         payload["question"] += f"\n\n(Source: {quiz['source']}, p. {quiz.get('page', 'N/A')})"
 
-    _post_json(f"{config.server_url}/api/poll", payload, config.host_username, config.host_password)
+    if _ws_client and _ws_client.connected:
+        _ws_client.send(payload)
+    else:
+        log.error("daemon", "Cannot post poll: WS not connected")
 
 
 def open_poll(config: Config) -> None:
-    _put_json(f"{config.server_url}/api/poll/status", {"open": True}, config.host_username, config.host_password)
+    if _ws_client and _ws_client.connected:
+        _ws_client.send({"type": "poll_open"})
+    else:
+        log.error("daemon", "Cannot open poll: WS not connected")
 
 
 def post_status(status: str, message: str, config: Config,
                 session_folder: Optional[str] = None,
                 session_notes: Optional[str] = None,
                 slides: Optional[list[dict]] = None) -> None:
-    payload: dict = {"status": status, "message": message}
+    payload: dict = {"type": "quiz_status", "status": status, "message": message}
     if session_folder is not None or session_notes is not None:
         payload["session_folder"] = session_folder
         payload["session_notes"] = session_notes
     if slides is not None:
         payload["slides"] = slides
     try:
-        _post_json(f"{config.server_url}/api/quiz-status",
-                   payload,
-                   config.host_username, config.host_password)
-    except RuntimeError as e:
+        if _ws_client and _ws_client.connected:
+            _ws_client.send(payload)
+        else:
+            log.error("daemon", f"Could not post status: WS not connected")
+    except Exception as e:
         log.error("daemon", f"Could not post status: {e}")
 
 

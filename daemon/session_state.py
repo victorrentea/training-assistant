@@ -9,6 +9,15 @@ from pathlib import Path
 from daemon import log
 from daemon.http import _get_json, _post_json
 
+# Module-level ws_client reference, set by daemon/__main__.py at startup
+_ws_client = None
+
+
+def set_ws_client(client) -> None:
+    """Set the module-level ws_client reference."""
+    global _ws_client
+    _ws_client = client
+
 # ── Constants ──────────────────────────────────────────────────────────────────
 _KEY_POINTS_FILE = "transcript_discussion.md"
 _KEY_POINTS_FILE_LEGACY_MD = "transcript_keypoints.md"
@@ -294,18 +303,25 @@ def find_notes_in_folder(folder: Path) -> Path | None:
 def sync_session_to_server(
     config, stack: list[dict], key_points: list[dict],
     session_state: dict | None = None,
+    **extra_fields,
 ) -> None:
-    """Push session stack and key points to server.
-    If session_state is provided, it is included for a plain restore (no participant disconnect)."""
+    """Push session stack and key points to server via WS (falls back to HTTP).
+    If session_state is provided, it is included for a plain restore (no participant disconnect).
+    Extra keyword arguments (e.g. action, discussion_points) are merged into the payload."""
     daemon_state = stack_to_daemon_state(stack)
     payload: dict = {"main": daemon_state["main"], "talk": daemon_state["talk"], "key_points": key_points}
     if session_state is not None:
         payload["session_state"] = session_state
-    _post_json(
-        f"{config.server_url}/api/session/sync",
-        payload,
-        config.host_username, config.host_password,
-    )
+    payload.update(extra_fields)
+
+    if _ws_client and _ws_client.connected:
+        _ws_client.send({"type": "session_sync", **payload})
+    else:
+        _post_json(
+            f"{config.server_url}/api/session/sync",
+            payload,
+            config.host_username, config.host_password,
+        )
 
 
 # ── Slides manifest helpers ────────────────────────────────────────────────────
