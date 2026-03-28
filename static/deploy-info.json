@@ -1,7 +1,7 @@
 {
-  "sha": "f37d91fba63fd7ad23d81abc25683766f20bed71",
-  "timestamp": "2026-03-28 11:24",
+  "sha": "82ce48253d752fbf97197cd7dadd865af7519b8c",
+  "timestamp": "2026-03-28 11:25",
   "changelog": [
-    "fix(upload): fetch-based download with auth, 5-min auto-cleanup with fading icon"
+    "fix(upload): simple hide after 5min instead of fading, shared constant"
   ]
 }
