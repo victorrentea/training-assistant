@@ -1725,7 +1725,7 @@ function closeEmojiPopup(ev) {
 
     for (const slide of slidesCatalog) {
       const item = document.createElement('div');
-      item.className = 'slides-list-item' + (slide.available_on_server === false ? ' unavailable' : '');
+      item.className = 'slides-list-item' + (slide.available_on_server === false ? ' unavailable' : '') + (_isSlideVisited(slide._id) ? ' visited' : '');
       item.setAttribute('data-slide-id', slide._id);
       const openBtn = document.createElement('button');
       openBtn.type = 'button';

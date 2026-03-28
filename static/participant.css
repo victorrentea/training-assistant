@@ -617,6 +617,9 @@ h1 { display: none; }
   border-color: var(--accent2);
   background: rgba(144, 238, 144, 0.10);
 }
+.slides-list-item.visited:hover {
+  border-color: #7ec882;
+}
 
 .slides-list-item.active {
   border-color: var(--accent2);
