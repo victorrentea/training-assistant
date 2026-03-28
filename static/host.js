@@ -743,7 +743,7 @@
       badge.title = noTranscriptTitle || `Generating key points from transcript… (${_transcriptLineCount} lines)`;
     } else {
       badge.textContent = `🧠 Key Points.txt`;
-      badge.className = _transcriptLineCount > 0 ? 'badge' : 'badge disconnected';
+      badge.className = 'badge empty';
       badge.style.cssText = 'cursor:pointer;';
       badge.title = noTranscriptTitle
         || (_transcriptLineCount > 0
@@ -1091,11 +1091,11 @@
     } else if (_notesSessionFolder) {
       el.textContent = nonEmptyLines > 0 ? `📝 (${nonEmptyLines}) Notes.txt` : `📝 Notes.txt`;
       el.className = 'badge';
-      el.style.cssText = 'cursor:pointer; color:var(--warn); border:1px solid var(--warn);';
+      el.style.cssText = 'cursor:pointer; color:var(--warn); border:1px solid var(--warn); --badge-fill:#ffd16644;';
       el.title = 'Session folder found but no notes file inside';
     } else {
       el.textContent = '📝 Notes.txt';
-      el.className = 'badge disconnected';
+      el.className = 'badge empty';
       el.title = 'No session folder found for today';
     }
   }
