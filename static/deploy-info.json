@@ -1,7 +1,7 @@
 {
-  "sha": "9b7dc32a522c12051ccbc212494f6ac4441643e0",
-  "timestamp": "2026-03-28 22:50",
+  "sha": "9b0c9a363cac5b8082459e06f9ef21cd0b9286dd",
+  "timestamp": "2026-03-28 22:53",
   "changelog": [
-    "feat(host): show fading \"Copied!\" tooltip above URL copy icon"
+    "feat: auto-join session on host machine via cookie"
   ]
 }
