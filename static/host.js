@@ -3027,6 +3027,20 @@ function copySessionLink() {
   });
 }
 
+function copyCenterUrl(el) {
+  const url = _getJoinUrl();
+  navigator.clipboard.writeText(url).then(() => {
+    toast('Link copied ✓');
+    // "Copied!" tooltip above the element
+    const tip = document.createElement('div');
+    tip.textContent = 'Copied!';
+    tip.style.cssText = 'position:absolute;top:-2rem;left:50%;transform:translateX(-50%);background:var(--accent2);color:#000;padding:.15rem .6rem;border-radius:6px;font-size:.85rem;font-weight:600;pointer-events:none;opacity:1;transition:opacity 1s;white-space:nowrap;';
+    el.appendChild(tip);
+    requestAnimationFrame(() => requestAnimationFrame(() => tip.style.opacity = '0'));
+    setTimeout(() => tip.remove(), 1400);
+  });
+}
+
 function _getJoinUrl() {
   return _currentSessionId ? `${location.origin}/${_currentSessionId}` : `${location.protocol}//${location.host}/`;
 }
