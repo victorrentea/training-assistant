@@ -38,20 +38,33 @@ function getSortedEmojis() {
   });
 }
 
+function _syncCtrlGroupVisibility() {
+  const group = document.getElementById('slides-ctrl-group');
+  if (!group) return;
+  const anyVisible = Array.from(group.querySelectorAll('button')).some(b => b.style.display !== 'none');
+  group.style.display = anyVisible ? 'flex' : 'none';
+}
+
 function renderEmojiBar() {
   const bar = document.getElementById('emoji-bar');
   const dotsWrap = document.getElementById('emoji-dots-wrap');
   const popup = document.getElementById('emoji-popup');
   if (!bar || !dotsWrap || !popup) return;
 
-  // Measure space consumed by fixed elements (dots + ping + divider + upload + paste + bar padding)
-  // Use actual rendered widths of fixed children so this adapts to font/zoom changes.
-  const fixedEls = [dotsWrap, document.getElementById('emoji-ping-btn'),
+  // Sync ctrl group visibility first so its width is accurate before measurement
+  _syncCtrlGroupVisibility();
+
+  // Measure space consumed by all fixed elements; skip hidden ones (width=0, no gap).
+  const fixedEls = [
+    document.getElementById('slides-ctrl-group'),   // left: PDF controls (0 when hidden)
+    dotsWrap, document.getElementById('emoji-ping-btn'),
     bar.querySelector('.emoji-bar-divider'), document.getElementById('upload-btn'),
-    document.getElementById('paste-btn')];
+    document.getElementById('paste-btn'),
+  ];
   const fixedWidth = fixedEls.reduce((sum, el) => {
     if (!el) return sum;
-    return sum + el.getBoundingClientRect().width + 8; // +8 for gap
+    const w = el.getBoundingClientRect().width;
+    return sum + (w > 0 ? w + 8 : 0); // only count gap when element is visible
   }, 0);
   const barPx = bar.getBoundingClientRect().width - 24; // subtract bar padding (.75rem * 2)
   const visibleCount = Math.min(
@@ -1449,6 +1462,7 @@ function closeEmojiPopup(ev) {
     document.getElementById('slides-zoom-in')?.style.setProperty('display', 'none');
     document.getElementById('slides-zoom-out')?.style.setProperty('display', 'none');
     document.getElementById('slides-fit-width')?.style.setProperty('display', 'none');
+    renderEmojiBar();
   }
 
   function _setSlidesDownload(url, disabled = false) {
@@ -1684,6 +1698,7 @@ function closeEmojiPopup(ev) {
     if (!hasPdfjsDoc) {
       page.style.display = 'none';
       if (closeBtn) closeBtn.style.display = 'none';
+      renderEmojiBar();
       return;
     }
     const numPages = Math.max(1, Number(slidesPdfDoc?.numPages || 1));
@@ -1694,6 +1709,7 @@ function closeEmojiPopup(ev) {
     page.textContent = `Page ${current}/${numPages}`;
     page.style.display = '';
     if (closeBtn) closeBtn.style.display = '';
+    renderEmojiBar();
   }
 
   function _renderSlidesList(targetId) {
@@ -1832,6 +1848,7 @@ function closeEmojiPopup(ev) {
       document.getElementById('slides-zoom-in')?.style.removeProperty('display');
       document.getElementById('slides-zoom-out')?.style.removeProperty('display');
       document.getElementById('slides-fit-width')?.style.removeProperty('display');
+      renderEmojiBar();
 
       const headers = await _fetchSlideHeaders(slide.url);
       const effectiveUpdatedAt = slide.updated_at || headers.lastModified || null;
