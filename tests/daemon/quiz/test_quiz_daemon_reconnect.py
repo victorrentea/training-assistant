@@ -1,4 +1,5 @@
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import daemon.__main__ as training_daemon
 import daemon.lock as _daemon_lock
@@ -27,7 +28,12 @@ def test_daemon_logs_disconnect_once_then_reconnect(tmp_path: Path, monkeypatch,
 
     lock_file = tmp_path / "daemon.lock"
     monkeypatch.setattr(training_daemon, "_LOCK_FILE", lock_file)
-    monkeypatch.setattr(training_daemon, "_post_json", lambda *args, **kwargs: {"ok": True})
+
+    # Mock DaemonWsClient so no real WebSocket connection is attempted
+    mock_ws = MagicMock()
+    mock_ws.connected = True
+    mock_ws.send = MagicMock(return_value=True)
+    monkeypatch.setattr(training_daemon, "DaemonWsClient", lambda: mock_ws)
 
     config = Config(
         server_url="http://example.test",
@@ -42,19 +48,24 @@ def test_daemon_logs_disconnect_once_then_reconnect(tmp_path: Path, monkeypatch,
     )
     monkeypatch.setattr(training_daemon, "config_from_env", lambda: config)
 
-    calls = {"quiz_request": 0}
+    calls = {"status": 0}
 
     def _fake_get_json(url, username=None, password=None):
         if url.endswith("/api/status"):
-            return {"backend_version": "test-version", "needs_restore": False}
-        if url.endswith("/api/session/request"):
-            return {"action": None}
-        if url.endswith("/api/quiz-request"):
-            calls["quiz_request"] += 1
-            if calls["quiz_request"] == 1:
+            calls["status"] += 1
+            if calls["status"] == 1:
+                # Startup version check — succeed
+                return {"backend_version": "test-version", "needs_restore": False}
+            if calls["status"] == 2:
+                # Startup restore check — succeed
+                return {"backend_version": "test-version", "needs_restore": False}
+            if calls["status"] == 3:
+                # First loop iteration — simulate disconnect
                 raise RuntimeError("Cannot reach server")
-            if calls["quiz_request"] == 2:
-                return {"request": None, "preview": None}
+            if calls["status"] == 4:
+                # Second loop iteration — reconnect
+                return {"backend_version": "test-version", "needs_restore": False}
+            # Third loop iteration — stop the test
             raise KeyboardInterrupt()
         return {}
 
@@ -63,5 +74,5 @@ def test_daemon_logs_disconnect_once_then_reconnect(tmp_path: Path, monkeypatch,
     training_daemon.run()
 
     out = capsys.readouterr()
-    assert out.err.count("Server unreachable:") == 1
+    assert out.err.count("Server unreachable") == 1
     assert "Reconnected to server." in out.out
