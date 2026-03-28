@@ -239,6 +239,7 @@ function closeEmojiPopup(ev) {
   let slidesFollowTrainerEnabled = true;
   let slidesFollowUncheckSuppressedUntil = 0;
   let slidesZoomInProgressUntil = 0;
+  let _pdfResizeTimer = null;
   let hostSlidesCurrent = null;   // what host is showing NOW
   let hostSlidesPrevious = null;  // what host was showing before (participants follow this)
   let lastHostSlidesCurrentKey = '';
@@ -1515,7 +1516,6 @@ function closeEmojiPopup(ev) {
     slidesPdfLinkService.setViewer(slidesPdfViewer);
 
     // Auto-fit to page width on container resize (debounced)
-    let _pdfResizeTimer = null;
     new ResizeObserver(() => {
       if (!slidesPdfViewer || slidesViewMode !== 'pdfjs') return;
       clearTimeout(_pdfResizeTimer);
@@ -1961,6 +1961,12 @@ function closeEmojiPopup(ev) {
           try { await doc.destroy(); } catch (_) {}
           return;
         }
+
+        // Cancel any pending ResizeObserver scale update and re-assert page-width
+        // now that the document is fully loaded and container dimensions are stable.
+        clearTimeout(_pdfResizeTimer);
+        _pdfResizeTimer = null;
+        slidesPdfViewer.currentScaleValue = 'page-width';
 
         const saved = savedViewBeforeLoad;
         const maxPages = Math.max(1, Number(doc.numPages || 1));
