@@ -1,8 +1,8 @@
 {
-  "sha": "1104e95767a0fb1e79bdfbc85a61856015eb8250",
-  "timestamp": "2026-03-29 00:55",
+  "sha": "8af67c07ca6107c15641abf420cb624dd9faad84",
+  "timestamp": "2026-03-29 00:57",
   "changelog": [
-    "fix: daemon handles session create + blocker uses real folder status"
+    "fix(daemon): log folder mkdir and session start status"
   ],
   "branches": [
     {
