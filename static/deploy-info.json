@@ -1,7 +1,7 @@
 {
-  "sha": "15ffd2f2c09b7e85f3323e15aa0abf5f8ad413a4",
-  "timestamp": "2026-03-28 17:47",
+  "sha": "4c3a50bd1d4e3b950dc01e438c9ef078507ac890",
+  "timestamp": "2026-03-28 17:50",
   "changelog": [
-    "fix(slides): 2s collapse delay + fill-to-bottom dropdown"
+    "fix(overlay): route host heart click to desktop overlay sketched heart"
   ]
 }
