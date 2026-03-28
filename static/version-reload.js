@@ -48,10 +48,14 @@
   function createVersionReloadGuard(opts) {
     const options = opts || {};
     const countdownStart = Number(options.countdownSeconds || 10);
+
+    let targetVersion = null;
     const doReload = typeof options.onReload === 'function'
       ? options.onReload
       : function () {
-          // Force cache-busting so version.js is re-fetched
+          // Remember which version we reloaded for, to prevent reload loops
+          // when version.js is served from browser cache after reload
+          if (targetVersion) sessionStorage.setItem('_reloading_for_version', targetVersion);
           var url = new URL(window.location.href);
           url.searchParams.set('_v', Date.now());
           window.location.replace(url.toString());
@@ -99,9 +103,16 @@
 
     function check(serverVersion) {
       if (!serverVersion || !window.APP_VERSION) return;
-      if (String(serverVersion).trim() === String(window.APP_VERSION).trim()) return;
+      const sv = String(serverVersion).trim();
+      if (sv === String(window.APP_VERSION).trim()) {
+        sessionStorage.removeItem('_reloading_for_version');
+        return;
+      }
+      // Loop prevention: already reloaded for this version but version.js was cached
+      if (sessionStorage.getItem('_reloading_for_version') === sv) return;
       if (active) return;
 
+      targetVersion = sv;
       active = true;
       window.__deployIncoming = true;
       window.__updateDeployAge && window.__updateDeployAge();
