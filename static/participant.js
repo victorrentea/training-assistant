@@ -659,6 +659,36 @@
     setTimeout(() => toast.remove(), 1500);
   }
 
+  // ── Window-level file drag detection ──
+  let _fileDragCounter = 0;
+  document.addEventListener('dragenter', e => {
+    if (!e.dataTransfer || !e.dataTransfer.types.includes('Files')) return;
+    _fileDragCounter++;
+    if (_fileDragCounter === 1) {
+      const overlay = document.getElementById('upload-overlay');
+      if (!overlay.classList.contains('open')) openUploadModal();
+      overlay.classList.add('drag-over-window');
+    }
+  });
+  document.addEventListener('dragleave', e => {
+    if (!e.dataTransfer || !e.dataTransfer.types.includes('Files')) return;
+    _fileDragCounter = Math.max(0, _fileDragCounter - 1);
+    if (_fileDragCounter === 0) {
+      document.getElementById('upload-overlay').classList.remove('drag-over-window');
+    }
+  });
+  document.addEventListener('dragover', e => {
+    if (e.dataTransfer && e.dataTransfer.types.includes('Files')) e.preventDefault();
+  });
+  document.addEventListener('drop', e => {
+    _fileDragCounter = 0;
+    document.getElementById('upload-overlay').classList.remove('drag-over-window');
+    if (e.dataTransfer && e.dataTransfer.files.length && !e.target.closest('#upload-dropzone')) {
+      e.preventDefault();
+      _setUploadFile(e.dataTransfer.files[0]);
+    }
+  });
+
   function closeParticipantModals() {
     closeNotesModal();
     closeSummaryModal();
