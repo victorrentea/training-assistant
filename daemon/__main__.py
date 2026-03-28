@@ -139,11 +139,16 @@ def _sync_audiohijack_language(config) -> bool:
     if not lang:
         log.error("daemon", "Could not read AudioHijack language from plist")
         return False
-    _post_json(
-        f"{config.server_url}/api/transcription-language/status",
-        {"language": lang},
-        config.host_username, config.host_password,
-    )
+    from daemon.quiz.poll_api import _ws_client as _ws
+    if _ws and _ws.send({"type": "transcription_language_status", "language": lang}):
+        pass
+    else:
+        from daemon.http import _post_json
+        _post_json(
+            f"{config.server_url}/api/transcription-language/status",
+            {"language": lang},
+            config.host_username, config.host_password,
+        )
     log.info("daemon", f"AudioHijack language synced: {lang}")
     return True
 
