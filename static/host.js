@@ -896,7 +896,9 @@
       const cfg = statusConfig[entry.status] || statusConfig['not_cached'];
       const title = entry.title || entry.slug || '';
       const sizePart = entry.size_bytes ? (entry.size_bytes / 1048576).toFixed(1) + ' MB' : '';
-      const agePart = entry.downloaded_at ? _formatSlideAge(entry.downloaded_at) : '';
+      const agePart = entry.downloaded_at ? _formatSlideAge(entry.downloaded_at)
+                    : entry.updated_at    ? 'pptx ' + _formatSlideAge(entry.updated_at)
+                    : '';
       const detail = [sizePart, agePart].filter(Boolean).join('  ');
       html += '<div class="slides-catalog-line">'
           + '<span class="slides-cache-icon">' + cfg.icon + '</span>'
