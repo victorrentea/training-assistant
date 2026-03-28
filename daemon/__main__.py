@@ -676,7 +676,30 @@ def run() -> None:
                 try:
                     session_req = _pending_requests.pop("session_request", None)
                     action = session_req.get("action") if session_req else None
-                    if action == "start":
+                    if action == "create":
+                        name = session_req["name"]
+                        folder = sessions_root / name
+                        folder.mkdir(parents=True, exist_ok=True)
+                        if not session_stack:
+                            new_session = {
+                                "name": name,
+                                "started_at": datetime.now().isoformat(),
+                                "ended_at": None,
+                            }
+                            session_stack.append(new_session)
+                            current_key_points, summary_watermark = load_key_points(folder)
+                            save_daemon_state(sessions_root, stack_to_daemon_state(session_stack))
+                            notes_file = find_notes_in_folder(folder)
+                            config = dc_replace(config, session_folder=folder, session_notes=notes_file)
+                            sync_session_to_server(config, session_stack, current_key_points, slides_log=slides_log, git_repos=git_repos)
+                            transcript_state.reset()
+                            try:
+                                _sync_audiohijack_language(config)
+                            except Exception:
+                                pass
+                        log.info("session", f"Created: {name}")
+
+                    elif action == "start":
                         name = session_req["name"]
                         folder = sessions_root / name
                         folder.mkdir(parents=True, exist_ok=True)
