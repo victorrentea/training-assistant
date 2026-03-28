@@ -1,7 +1,7 @@
 {
-  "sha": "8df5b7881d87223cb3c6935847ea07635f06e0e6",
-  "timestamp": "2026-03-28 12:21",
+  "sha": "9d8de3e26f1002b07d05f0e052b970da77f6b89e",
+  "timestamp": "2026-03-28 12:22",
   "changelog": [
-    "style(slides): double PDF scrollbar width from 13px to 26px"
+    "fix(overlay): skip sketched heart for participant emoji reactions"
   ]
 }
