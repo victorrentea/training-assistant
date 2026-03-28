@@ -1625,3 +1625,8 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
   background: rgba(99, 200, 255, 0.5);
   animation: none;
 }
+.upload-icon.downloaded {
+  animation: none;
+  background: rgba(99, 200, 255, 0.12);
+  cursor: pointer;
+}

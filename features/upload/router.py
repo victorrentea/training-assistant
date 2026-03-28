@@ -1,4 +1,5 @@
-import shutil
+import asyncio
+import time
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
@@ -12,11 +13,34 @@ router = APIRouter()
 
 MAX_UPLOAD_SIZE = 500 * 1024 * 1024  # 500MB
 UPLOAD_DIR = Path(".server-data") / "uploads"
+CLEANUP_DELAY_SECONDS = 5 * 60  # 5 minutes after download
 
 
 def _upload_dir() -> Path:
     UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
     return UPLOAD_DIR
+
+
+def _find_entry(file_id: int) -> tuple[str, dict] | None:
+    for uuid, entries in state.uploaded_files.items():
+        for entry in entries:
+            if entry["id"] == file_id:
+                return uuid, entry
+    return None
+
+
+async def _cleanup_after_delay(file_id: int):
+    """Delete file from disk and state after CLEANUP_DELAY_SECONDS."""
+    await asyncio.sleep(CLEANUP_DELAY_SECONDS)
+    for uuid, entries in list(state.uploaded_files.items()):
+        for entry in entries:
+            if entry["id"] == file_id:
+                Path(entry["disk_path"]).unlink(missing_ok=True)
+                state.uploaded_files[uuid] = [e for e in entries if e["id"] != file_id]
+                if not state.uploaded_files[uuid]:
+                    del state.uploaded_files[uuid]
+                await broadcast_state()
+                return
 
 
 @router.post("/api/upload")
@@ -70,6 +94,7 @@ async def upload_file(
         "filename": filename,
         "size": total,
         "disk_path": str(dest),
+        "downloaded_at": None,  # epoch seconds, set on first host download
     }
     state.uploaded_files.setdefault(uuid, []).append(entry)
     await broadcast_state()
@@ -78,16 +103,21 @@ async def upload_file(
 
 @router.get("/api/upload/{file_id}", dependencies=[Depends(require_host_auth)])
 async def download_file(file_id: int):
-    # Find the entry
-    for uuid, entries in state.uploaded_files.items():
-        for entry in entries:
-            if entry["id"] == file_id:
-                path = Path(entry["disk_path"])
-                if not path.exists():
-                    raise HTTPException(404, "File no longer available")
-                return FileResponse(
-                    path,
-                    filename=entry["filename"],
-                    media_type="application/octet-stream",
-                )
-    raise HTTPException(404, "File not found")
+    result = _find_entry(file_id)
+    if not result:
+        raise HTTPException(404, "File not found")
+    uuid, entry = result
+    path = Path(entry["disk_path"])
+    if not path.exists():
+        raise HTTPException(404, "File no longer available")
+    # Mark as downloaded and schedule cleanup
+    if entry["downloaded_at"] is None:
+        entry["downloaded_at"] = time.time()
+        asyncio.create_task(_cleanup_after_delay(file_id))
+        # Broadcast so host UI shows the fade
+        await broadcast_state()
+    return FileResponse(
+        path,
+        filename=entry["filename"],
+        media_type="application/octet-stream",
+    )

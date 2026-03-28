@@ -36,7 +36,8 @@ def _build_host_participants_list() -> list[dict]:
         upload_entries = state.uploaded_files.get(pid, [])
         if upload_entries:
             participant["uploaded_files"] = [
-                {"id": e["id"], "filename": e["filename"], "size": e["size"]}
+                {"id": e["id"], "filename": e["filename"], "size": e["size"],
+                 "downloaded_at": e.get("downloaded_at")}
                 for e in upload_entries
             ]
         if include_debate_side:
