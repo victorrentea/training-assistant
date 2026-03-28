@@ -1,7 +1,7 @@
 {
-  "sha": "72ec69107b52ef51e748fe1c6049049911526c87",
-  "timestamp": "2026-03-28 12:09",
+  "sha": "5e8386fac6ddda8db342efc8442a4d48bdda3e2e",
+  "timestamp": "2026-03-28 12:11",
   "changelog": [
-    "fix(slides): hard-scroll on restore and large host jumps"
+    "fix(participant): thicker border (2px) on all round buttons"
   ]
 }
