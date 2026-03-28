@@ -1732,9 +1732,9 @@ function closeEmojiPopup(ev) {
         };
         const _cfg = _dotCfg[_cacheEntry.status] || _dotCfg['not_cached'];
         const dot = document.createElement('span');
-        dot.className = 'slides-cache-dot';
+        dot.className = 'slides-cache-dot has-tooltip';
         dot.style.cssText = 'display:inline-block;width:8px;height:8px;border-radius:50%;background:' + _cfg.color + ';margin-left:6px;flex-shrink:0;';
-        dot.title = _cfg.tip;
+        dot.setAttribute('data-tooltip', _cfg.tip);
         openBtn.appendChild(dot);
       }
       if (_isSlideNew(slide)) {
