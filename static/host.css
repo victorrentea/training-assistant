@@ -1566,12 +1566,40 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
 
 .paste-icon {
   cursor: pointer;
-  font-size: .85rem;
-  margin-left: .2rem;
-  opacity: 0.8;
-  transition: opacity .15s, transform .15s;
+  margin-left: .25rem;
+  padding: 2px 4px;
+  border-radius: 4px;
+  color: #e0e0e0;
+  background: rgba(255, 200, 0, 0.25);
+  animation: paste-blink 1.2s ease-in-out infinite;
+  transition: transform .15s;
+  display: inline-flex;
+  align-items: center;
+  vertical-align: middle;
+}
+@keyframes paste-blink {
+  0%, 100% { background: rgba(255, 200, 0, 0.15); }
+  50% { background: rgba(255, 200, 0, 0.45); }
 }
 .paste-icon:hover {
-  opacity: 1;
   transform: scale(1.15);
+  background: rgba(255, 200, 0, 0.5);
+  animation: none;
+}
+.paste-copied-tip {
+  position: fixed;
+  transform: translate(-50%, -100%);
+  background: #2ecc71;
+  color: #fff;
+  padding: .2rem .5rem;
+  border-radius: 6px;
+  font-size: .75rem;
+  font-weight: 600;
+  z-index: 9999;
+  pointer-events: none;
+  animation: paste-tip-fade 1.2s ease-out forwards;
+}
+@keyframes paste-tip-fade {
+  0% { opacity: 1; transform: translate(-50%, -100%); }
+  100% { opacity: 0; transform: translate(-50%, -150%); }
 }
