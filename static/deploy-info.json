@@ -1,7 +1,8 @@
 {
-  "sha": "af5e437d61a267ebb5809304a897e967f077a30d",
+  "sha": "5406e9f7d932beffaa8cd85e025381bfde508f83",
   "timestamp": "2026-03-28 14:11",
   "changelog": [
+    "fix(slides): shorten Follow button tooltip to 'Follow trainer slide'",
     "feat(slides): tour-bubble style tooltips for PDF ctrl buttons"
   ]
 }
