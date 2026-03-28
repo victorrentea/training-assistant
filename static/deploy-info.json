@@ -1,8 +1,7 @@
 {
-  "sha": "c3fe188e27490cb35e3e58c5318786fc08a67758",
-  "timestamp": "2026-03-28 16:36",
+  "sha": "c449efe1fbccefc460c6fd284239e80c03fbb541",
+  "timestamp": "2026-03-28 16:38",
   "changelog": [
-    "fix(emoji-popup): keep popup open while mouse within hot zone",
-    "fix(slides): seed catalog from static file at startup so slides load without daemon"
+    "fix(slides): add overflow:hidden to slide button so long titles ellipsize"
   ]
 }
