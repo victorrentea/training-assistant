@@ -1,7 +1,8 @@
 {
-  "sha": "c15f37c218f94dfea786d06edbc009e6ad4a34dd",
-  "timestamp": "2026-03-28 16:17",
+  "sha": "747c1096bfeeff1a0f7e9d130ab974477839414b",
+  "timestamp": "2026-03-28 16:18",
   "changelog": [
-    "fix(slides): human-friendly size + Google Drive hint in download_complete log"
+    "fix(slides): propagate PPTX mtime from daemon so all topics show updated_at",
+    "fix(slides): reword download_complete detail to 'Downloaded PDF from Google Drive: X MB'"
   ]
 }
