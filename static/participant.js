@@ -1631,13 +1631,18 @@
         if (!skipScrollRestore && saved && Number.isFinite(saved.scrollTop) && saved.scrollTop > 0) {
           // Use timeout > ResizeObserver debounce (120ms) so our restore fires after
           // PDF.js re-scrolls to currentPageNumber due to the scale re-trigger.
+          // A second attempt at 600ms catches cascading ResizeObserver waves: the first
+          // page-width scale change alters page heights, firing the ResizeObserver again
+          // (~240ms), whose async PDF.js scroll can override the 250ms restore.
           const container = document.getElementById('slides-pdf-container');
           const targetSlug = slide.slug;
-          setTimeout(() => {
+          const restoreScroll = () => {
             if (slidesSelectedSlug === targetSlug && container) {
               container.scrollTo({ top: saved.scrollTop, behavior: 'instant' });
             }
-          }, 250);
+          };
+          setTimeout(restoreScroll, 250);
+          setTimeout(restoreScroll, 600);
         }
 
         slidesLastFingerprint = fingerprint;
