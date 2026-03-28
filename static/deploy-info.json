@@ -1,7 +1,7 @@
 {
-  "sha": "825ebb20cca04f212c9630a33cc542594ba97f6c",
-  "timestamp": "2026-03-28 23:44",
+  "sha": "8a8a1170bf65917afa5475b6b59ce36341702fa2",
+  "timestamp": "2026-03-28 23:45",
   "changelog": [
-    "fix(host): rename Key Points badge to Key Points.txt"
+    "fix(host): simplify summary badge styling to match notes badge"
   ]
 }
