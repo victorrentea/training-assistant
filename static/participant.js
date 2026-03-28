@@ -47,39 +47,44 @@ function _syncCtrlGroupVisibility() {
 
 function renderEmojiBar() {
   const bar = document.getElementById('emoji-bar');
+  const center = document.getElementById('emoji-center');
   const dotsWrap = document.getElementById('emoji-dots-wrap');
   const popup = document.getElementById('emoji-popup');
-  if (!bar || !dotsWrap || !popup) return;
+  if (!bar || !center || !dotsWrap || !popup) return;
 
   // Sync ctrl group visibility first so its width is accurate before measurement
   _syncCtrlGroupVisibility();
 
-  // Measure space consumed by all fixed elements; skip hidden ones (width=0, no gap).
-  const fixedEls = [
-    document.getElementById('slides-ctrl-group'),   // left: PDF controls (0 when hidden)
-    dotsWrap, document.getElementById('emoji-ping-btn'),
+  // Measure fixed elements outside the center (left: slides-ctrl, right: upload/paste).
+  const outerFixedEls = [
+    document.getElementById('slides-ctrl-group'),
     bar.querySelector('.emoji-bar-divider'), document.getElementById('upload-btn'),
     document.getElementById('paste-btn'),
   ];
-  const fixedWidth = fixedEls.reduce((sum, el) => {
+  const outerFixedWidth = outerFixedEls.reduce((sum, el) => {
     if (!el) return sum;
     const w = el.getBoundingClientRect().width;
-    return sum + (w > 0 ? w + 8 : 0); // only count gap when element is visible
+    return sum + (w > 0 ? w + 8 : 0);
+  }, 0);
+  // Fixed elements inside center (dots + ping) always consume space.
+  const innerFixedEls = [dotsWrap, document.getElementById('emoji-ping-btn')];
+  const innerFixedWidth = innerFixedEls.reduce((sum, el) => {
+    if (!el) return sum;
+    const w = el.getBoundingClientRect().width;
+    return sum + (w > 0 ? w + 8 : 0);
   }, 0);
   const barPx = bar.getBoundingClientRect().width - 24; // subtract bar padding (.75rem * 2)
-  const visibleCount = Math.min(
-    Math.max(0, Math.floor((barPx - fixedWidth) / EMOJI_BTN_PX)),
-    EMOJI_CONFIG.length
-  );
+  const maxBySpace = Math.max(0, Math.floor((barPx - outerFixedWidth - innerFixedWidth) / EMOJI_BTN_PX));
+  const visibleCount = Math.min(maxBySpace, 5); // cap at 5 visible emojis
 
   const sorted = getSortedEmojis();
   const visible = sorted.slice(0, visibleCount);
   const overflow = sorted.slice(visibleCount);
 
-  // Remove existing dynamic emoji buttons
-  bar.querySelectorAll('.emoji-btn-dynamic').forEach(el => el.remove());
+  // Remove existing dynamic emoji buttons from center
+  center.querySelectorAll('.emoji-btn-dynamic').forEach(el => el.remove());
 
-  // Insert visible emoji buttons before #emoji-dots-wrap
+  // Insert visible emoji buttons into center before #emoji-dots-wrap
   visible.forEach(({ emoji, tooltip }) => {
     const btn = document.createElement('button');
     btn.className = 'emoji-btn emoji-btn-dynamic';
@@ -88,7 +93,7 @@ function renderEmojiBar() {
     btn.style.flexShrink = '0';
     btn.textContent = emoji;
     btn.onclick = (ev) => sendEmoji(emoji, ev);
-    bar.insertBefore(btn, dotsWrap);
+    center.insertBefore(btn, dotsWrap);
   });
 
   // Show/hide ••• and populate popup overflow buttons
