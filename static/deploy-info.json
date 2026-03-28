@@ -1,7 +1,7 @@
 {
-  "sha": "62d384e745c4c836e5585b6793b0c2f3bbbdaa46",
-  "timestamp": "2026-03-28 23:48",
+  "sha": "8ea7835d7b537907a7d6fe2dd46908d3412e2d18",
+  "timestamp": "2026-03-28 23:49",
   "changelog": [
-    "feat(host): show joining URL with https:// centered on screen always"
+    "feat(host): click center URL to copy, hand cursor + Copied! tooltip"
   ]
 }
