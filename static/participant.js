@@ -824,7 +824,7 @@
     _setStoredSlidesViewMode(nextMode);
     _renderSlidesViewModeToggle();
 
-    if (slidesSelectedId) {
+    if (slidesSelectedId && !(slidesFollowTrainerEnabled && hostSlidesCurrent)) {
       const slide = slidesCatalog.find((s) => s._id === slidesSelectedId);
       if (slide) {
         _loadSlideIntoViewer(slide, { forceReload: true, withUiBlocker: true }).catch(() => {});
