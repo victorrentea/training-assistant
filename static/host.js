@@ -3116,20 +3116,19 @@ function updateSessionCodeBar(sessionId) {
   if (bar) bar.style.display = sessionId ? 'flex' : 'none';
   if (display) display.textContent = sessionId || '';
 
-  // Update participant link suffix and copy icon
+  // Update participant link (full URL as uniform wave chars) and copy icon
   const suffix = document.getElementById('session-id-suffix');
+  if (suffix) suffix.style.display = 'none'; // always hidden — full URL in wave chars
   const copyIcon = document.getElementById('copy-link-icon');
-  const pLink = document.getElementById('participant-link');
-  if (suffix) {
-    if (sessionId) {
-      suffix.textContent = '/' + sessionId;
-      suffix.style.display = '';
-    } else {
-      suffix.style.display = 'none';
-    }
-  }
   if (copyIcon) copyIcon.style.display = sessionId ? '' : 'none';
-  if (pLink) pLink.href = sessionId ? `/${sessionId}` : '/';
+  const pLink = document.getElementById('participant-link');
+  if (pLink) {
+    pLink.href = sessionId ? `/${sessionId}` : '/';
+    const fullDisplay = sessionId ? `https://${location.host}/${sessionId}/` : `https://${location.host}/`;
+    pLink.innerHTML = fullDisplay.split('').map((ch, i) =>
+      `<span class="wave-char" style="animation-delay:${(i * 0.12).toFixed(2)}s">${ch}</span>`
+    ).join('');
+  }
 
   // Regenerate all QR codes with the session-scoped join URL
   _regenerateAllQRCodes();
