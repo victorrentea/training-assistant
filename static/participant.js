@@ -4130,7 +4130,7 @@ function closeEmojiPopup(ev) {
       }
     }
 
-    document.querySelectorAll('#slides-follow-btn, #slides-view-pdfjs, #slides-view-native').forEach(btn => {
+    document.querySelectorAll('#slides-follow-btn, #slides-view-pdfjs, #slides-view-native, #slides-close-btn, #slides-zoom-out, #slides-fit-width, #slides-zoom-in').forEach(btn => {
       btn.addEventListener('mouseenter', () => { showTimer = setTimeout(() => showBubble(btn), 150); });
       btn.addEventListener('mouseleave', removeBubble);
       btn.addEventListener('click', removeBubble);
