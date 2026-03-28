@@ -1,9 +1,7 @@
 {
-  "sha": "19b06a2ea883c19e16abc434075c9fa27e7f8c7d",
-  "timestamp": "2026-03-28 13:42",
+  "sha": "e2be948f5547760cac9d43694d50324b4c4e9c04",
+  "timestamp": "2026-03-28 13:43",
   "changelog": [
-    "feat(slides): show pptx updated_at in catalog popover before PDF download",
-    "fix(emoji): left-align emoji bar, push upload/paste to right",
-    "docs: add emoji overflow dots plan and spec"
+    "fix(slides): use instant CSS tooltip on cache status dot instead of slow native title"
   ]
 }
