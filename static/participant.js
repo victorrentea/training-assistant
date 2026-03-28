@@ -165,7 +165,7 @@
       { selector: '#summary-btn',     emoji: '🧠', text: 'AI recaps what you missed. Tap any time. Zero FOMO.' },
       { selector: '#location-prompt', emoji: '📍', text: "Tell us where you're from — for the world map. Totally optional." },
       { selector: '#slides-dock',        emoji: '📑', text: 'Slides are always on the right. Click any topic to open it.', scanDock: true },
-      { selector: '#slides-follow-btn',  emoji: '📌', text: "Follows the trainer's current slide. Tap to browse freely.", arrowRight: true },
+      { selector: '#slides-follow-btn',  emoji: '📌', text: "Follows the trainer's current slide. Tap to browse freely." },
       ..._shuffled,
     ];
 
