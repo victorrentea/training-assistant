@@ -740,7 +740,7 @@
       badge.style.cssText = 'cursor:wait; color:var(--warn); border:1px solid var(--warn);';
       badge.title = noTranscriptTitle || `Generating key points from transcript… (${_transcriptLineCount} lines)`;
     } else {
-      badge.textContent = _transcriptLineCount > 0 ? `🧠 (0) Key Points.txt` : `🧠 Key Points.txt`;
+      badge.textContent = `🧠 Key Points.txt`;
       badge.className = _transcriptLineCount > 0 ? 'badge' : 'badge disconnected';
       badge.style.cssText = 'cursor:pointer;';
       badge.title = noTranscriptTitle
