@@ -1008,6 +1008,16 @@
     }
   }
 
+  function _showSlidesNativeUpdateBanner() {
+    const el = document.getElementById('slides-native-update-banner');
+    if (el) el.style.display = '';
+  }
+
+  function _hideSlidesNativeUpdateBanner() {
+    const el = document.getElementById('slides-native-update-banner');
+    if (el) el.style.display = 'none';
+  }
+
   function _markSlideBaselineSeen(slide) {
     if (slidesCatalogBaseline && slide?.slug && slide?.updated_at) {
       slidesCatalogBaseline[slide.slug] = slide.updated_at;
@@ -1507,6 +1517,7 @@
       }
     }
     _slidesViewerBusy = true;
+    _hideSlidesNativeUpdateBanner();
     if (withUiBlocker) _setSlidesUiBlocker(true, 'Loading slide...');
     slidesSelectedSlug = slide.slug;
     slidesSelectedId = slide._id;
@@ -1693,6 +1704,7 @@
           // Don't auto-reload native viewer — it loses scroll position.
           // Store a cache-buster so the user's next manual click loads the new version.
           _nativePendingReloadSlugs[slug] = Date.now();
+          _showSlidesNativeUpdateBanner();
         } else {
           await _reloadCurrentSlideAfterUpdate(entry);
         }
@@ -1886,6 +1898,10 @@
   _bindSlidesFollowTrainerToggle();
   _bindSlidesViewModeToggle();
   _bindSlidesZoomButtons();
+  document.getElementById('slides-native-update-banner')?.addEventListener('click', async () => {
+    const slide = slidesCatalog.find(s => s.slug === slidesSelectedSlug);
+    if (slide) await _loadSlideIntoViewer(slide, { forceReload: false, withUiBlocker: true });
+  });
   warmSlidesCatalog();
 
   // ── Inline name editing ──
