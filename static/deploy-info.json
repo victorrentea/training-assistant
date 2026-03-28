@@ -1,7 +1,7 @@
 {
-  "sha": "b519d972218a55ac9500b54b51c7027aee63d633",
+  "sha": "50eaafce77f32adbe0e1312c57e0959d29081f8f",
   "timestamp": "2026-03-28 08:09",
   "changelog": [
-    "fix: improve Follow button tour text"
+    "fix: only show NEW badge on slides visited then updated in session"
   ]
 }
