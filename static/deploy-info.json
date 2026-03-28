@@ -1,7 +1,8 @@
 {
-  "sha": "8cbb2738ff7c58ac2ea01be9aec22a03af394781",
-  "timestamp": "2026-03-28 07:09",
+  "sha": "2361197d471c6598e35eb4ba8d747532363a1f61",
+  "timestamp": "2026-03-28 07:17",
   "changelog": [
-    "fix: prevent reload loop when version.js is served from browser cache"
+    "fix: use scrollTo instant to bypass smooth-scroll during position restore",
+    "feat: slides catalog shows status, date, min width"
   ]
 }
