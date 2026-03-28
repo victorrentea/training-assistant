@@ -1,7 +1,7 @@
 {
-  "sha": "23c4e3af7cb23ab2c5f313a533aea5aec14f2b93",
-  "timestamp": "2026-03-28 16:38",
+  "sha": "6f31b9a2afd6a4aa5d39e13a38f62cbd3b15cd17",
+  "timestamp": "2026-03-28 16:39",
   "changelog": [
-    "refactor: extract shared JS utils, CSS base classes, and Python helpers"
+    "chore(catalog): rename REST to REST API"
   ]
 }
