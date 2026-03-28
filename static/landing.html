@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Join Session - Interact</title>
+  <link rel="icon" type="image/svg+xml" href="/static/favicon-participant.svg" />
+  <link rel="stylesheet" href="/static/common.css" />
+  <style>
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      min-height: 100vh;
+      margin: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .landing-card {
+      text-align: center;
+      padding: 2.5rem 2rem;
+      max-width: 380px;
+      width: 100%;
+    }
+    .landing-logo {
+      font-size: 2.2rem;
+      font-weight: 800;
+      margin-bottom: .3rem;
+      color: var(--accent);
+    }
+    .landing-subtitle {
+      font-size: .9rem;
+      color: var(--muted);
+      margin-bottom: 2rem;
+    }
+    .landing-label {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: .7rem;
+      display: block;
+    }
+    .landing-input {
+      width: 100%;
+      max-width: 260px;
+      background: var(--surface2);
+      color: var(--text);
+      border: 2px solid var(--border);
+      border-radius: var(--radius);
+      padding: .85rem 1rem;
+      font-size: 1.4rem;
+      font-weight: 700;
+      text-align: center;
+      letter-spacing: .25em;
+      text-transform: uppercase;
+      box-sizing: border-box;
+      outline: none;
+      transition: border-color .15s;
+    }
+    .landing-input:focus {
+      border-color: var(--accent);
+    }
+    .landing-input::placeholder {
+      font-weight: 400;
+      letter-spacing: .05em;
+      text-transform: none;
+      font-size: 1rem;
+      color: var(--muted);
+      opacity: .7;
+    }
+    .landing-join-btn {
+      display: block;
+      width: 100%;
+      max-width: 260px;
+      margin: 1rem auto 0;
+      padding: .8rem 1.2rem;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius);
+      font-size: 1.1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: filter .15s, transform .1s;
+    }
+    .landing-join-btn:hover:not(:disabled) { filter: brightness(1.25); }
+    .landing-join-btn:active:not(:disabled) { transform: scale(.97); }
+    .landing-join-btn:disabled { opacity: .35; cursor: default; }
+    .landing-error {
+      color: var(--danger);
+      font-size: .85rem;
+      font-weight: 600;
+      margin-top: .8rem;
+      min-height: 1.2em;
+    }
+    .landing-status {
+      color: var(--muted);
+      font-size: .8rem;
+      margin-top: 1.2rem;
+      min-height: 1.2em;
+    }
+  </style>
+</head>
+<body>
+  <div class="landing-card">
+    <div class="landing-logo">Interact</div>
+    <div class="landing-subtitle">Live workshop interaction tool</div>
+
+    <label class="landing-label" for="code-input">Enter session code</label>
+    <input
+      id="code-input"
+      class="landing-input"
+      type="text"
+      maxlength="6"
+      autocomplete="off"
+      autocapitalize="none"
+      spellcheck="false"
+      placeholder="e.g. k7m2xp"
+      oninput="onCodeInput()"
+      onpaste="onCodePaste(event)"
+      onkeydown="if(event.key==='Enter' && !document.getElementById('join-btn').disabled) joinSession();"
+    />
+    <button id="join-btn" class="landing-join-btn" disabled onclick="joinSession()">Join</button>
+    <div id="error-msg" class="landing-error"></div>
+    <div id="status-msg" class="landing-status"></div>
+  </div>
+
+  <script>
+    function onCodeInput() {
+      const input = document.getElementById('code-input');
+      const btn = document.getElementById('join-btn');
+      // Clear error when typing
+      document.getElementById('error-msg').textContent = '';
+      btn.disabled = !input.value.trim();
+    }
+
+    function onCodePaste(event) {
+      // Smart paste: extract session code from full URL
+      const pasted = (event.clipboardData || window.clipboardData).getData('text').trim();
+      const urlMatch = pasted.match(/^https?:\/\/[^/]+\/([a-zA-Z0-9]{4,8})\/?$/);
+      if (urlMatch) {
+        event.preventDefault();
+        const input = document.getElementById('code-input');
+        input.value = urlMatch[1];
+        onCodeInput();
+      }
+    }
+
+    function joinSession() {
+      const input = document.getElementById('code-input');
+      const code = input.value.trim().toLowerCase();
+      if (!code) return;
+      if (!/^[a-z0-9]{4,8}$/.test(code)) {
+        document.getElementById('error-msg').textContent = 'Code must be 4-8 alphanumeric characters.';
+        return;
+      }
+      window.location.href = '/' + code;
+    }
+
+    // Check for error redirect
+    (function checkError() {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('error') === 'invalid') {
+        document.getElementById('error-msg').textContent = 'Invalid session code';
+      }
+    })();
+
+    // Check if any session is active
+    (async function checkSessionActive() {
+      try {
+        const res = await fetch('/api/session/active');
+        if (!res.ok) return;
+        const data = await res.json();
+        const statusEl = document.getElementById('status-msg');
+        if (!data.active) {
+          statusEl.textContent = 'No active session yet';
+        }
+      } catch { /* ignore */ }
+    })();
+  </script>
+
+  <script src="/static/version.js"></script>
+  <script src="/static/work-hours.js"></script>
+  <script src="/static/version-age.js"></script>
+  <script src="/static/version-reload.js"></script>
+  <div class="version-tag" id="version-tag"></div>
+  <script>window.renderDeployAge && window.renderDeployAge('version-tag');</script>
+</body>
+</html>

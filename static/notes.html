@@ -83,10 +83,17 @@
       URL.revokeObjectURL(url);
     }
 
+    const sessionId = window.location.pathname.split('/')[1];
+    if (!sessionId) { window.location.href = '/'; }
+    const apiBase = '/' + sessionId;
+
     const savedY = sessionStorage.getItem('notes_scrollY');
 
-    fetch('/api/notes')
-      .then(r => r.json())
+    fetch(apiBase + '/api/notes')
+      .then(r => {
+        if (r.status === 404) { window.location.href = '/?error=invalid'; throw new Error('redirect'); }
+        return r.json();
+      })
       .then(data => {
         const notesEl = document.getElementById('notes');
         if (data.content) {
