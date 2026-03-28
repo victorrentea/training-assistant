@@ -1,8 +1,7 @@
 {
-  "sha": "60d7e4af456c51bb53db5cc59f48e627a429849f",
-  "timestamp": "2026-03-28 10:07",
+  "sha": "3c8fd2581d75f1a0975c04284ded21de43c2833b",
+  "timestamp": "2026-03-28 11:00",
   "changelog": [
-    "fix(slides): use diagonal expand arrows for fit-to-width button icon",
-    "feat(slides): add fit-to-width button between zoom buttons in PDF.js view"
+    "proof: background poller sends server_ping to daemon every 5s"
   ]
 }
