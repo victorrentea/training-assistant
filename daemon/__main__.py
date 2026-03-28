@@ -468,6 +468,7 @@ def run() -> None:
 
     # ── Session stack initialization (early — needed for transcript log) ──
     sessions_root = config.session_folder.parent if config.session_folder else Path(os.environ.get("SESSIONS_FOLDER", str(Path.home() / "My Drive" / "Cursuri" / "###sesiuni")))
+    log.info("session", f"Sessions root: {sessions_root}")
     session_stack = daemon_state_to_stack(load_daemon_state(sessions_root))
     current_key_points: list[dict] = []
     summary_watermark: int = 0
