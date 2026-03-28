@@ -76,10 +76,6 @@ def _post_json(url: str, payload: dict, username: str = "", password: str = "") 
     return _request_json(url, payload, method="POST", username=username, password=password)
 
 
-def _put_json(url: str, payload: dict, username: str = "", password: str = "") -> dict:
-    return _request_json(url, payload, method="PUT", username=username, password=password)
-
-
 def _get_json(url: str, username: str = "", password: str = "") -> dict:
     headers = {}
     if username:
