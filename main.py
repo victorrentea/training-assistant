@@ -5,6 +5,8 @@ FastAPI + WebSocket backend
 
 import asyncio
 import logging
+import ssl
+import urllib.request
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
@@ -58,6 +60,63 @@ def _stamp_version_js():
 
 _bg_logger = logging.getLogger("bg_poller")
 
+_PROBE_DRIVE_URL = (
+    "https://docs.google.com/presentation/d/1Fc0AmD8Gzx6MSUi_K5iY8B_oZL6q3w2k/export/pdf"
+)
+_DOWNLOAD_DIR = Path("/tmp/slides-probe")
+
+
+def _ssl_ctx() -> ssl.SSLContext:
+    try:
+        import certifi
+        return ssl.create_default_context(cafile=certifi.where())
+    except Exception:
+        return ssl.create_default_context()
+
+
+def _download_pdf_sync(url: str, dest: Path) -> int:
+    """Download PDF from URL to dest; return file size in bytes."""
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    req = urllib.request.Request(url, method="GET")
+    with urllib.request.urlopen(req, timeout=60, context=_ssl_ctx()) as resp:
+        payload = resp.read()
+    if not payload.startswith(b"%PDF-"):
+        raise RuntimeError("Response is not a PDF")
+    dest.write_bytes(payload)
+    return len(payload)
+
+
+async def _drive_download_once():
+    """One-shot task: download a PDF from Drive and notify the daemon."""
+    _bg_logger.info("drive_download: starting download of probe PDF")
+    dest = _DOWNLOAD_DIR / "About Victor.pdf"
+    try:
+        size = await asyncio.get_event_loop().run_in_executor(
+            None, _download_pdf_sync, _PROBE_DRIVE_URL, dest
+        )
+    except Exception as exc:
+        _bg_logger.error("drive_download: failed: %s", exc)
+        return
+
+    _bg_logger.info("drive_download: saved %d bytes → %s", size, dest)
+
+    # Wait for daemon WS to connect (up to 60s), then send the result
+    for _ in range(60):
+        ws = state.daemon_ws
+        if ws is not None:
+            try:
+                await ws.send_json({
+                    "type": "drive_download_result",
+                    "path": str(dest),
+                    "size_bytes": size,
+                })
+                _bg_logger.info("drive_download: notified daemon")
+            except Exception as exc:
+                _bg_logger.warning("drive_download: notify failed: %s", exc)
+            return
+        await asyncio.sleep(1)
+    _bg_logger.warning("drive_download: daemon never connected, skipping notify")
+
 
 async def _daemon_ping_loop():
     """Background task: send a server_ping to the daemon WS every 5 seconds."""
@@ -76,11 +135,12 @@ async def _daemon_ping_loop():
 @asynccontextmanager
 async def lifespan(app_: FastAPI):
     _stamp_version_js()
-    task = asyncio.create_task(_daemon_ping_loop())
+    ping_task = asyncio.create_task(_daemon_ping_loop())
+    asyncio.create_task(_drive_download_once())
     try:
         yield
     finally:
-        task.cancel()
+        ping_task.cancel()
 
 
 app = FastAPI(title="Workshop Tool", lifespan=lifespan)

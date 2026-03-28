@@ -178,6 +178,10 @@ class SlidesOnDemandWsRunner:
         if payload.get("type") == "server_ping":
             log.info("slides", f"🏓 server_ping received ts={payload.get('ts')}")
             return
+        if payload.get("type") == "drive_download_result":
+            size_kb = (payload.get("size_bytes") or 0) // 1024
+            log.info("slides", f"📥 drive_download_result path={payload.get('path')} size={size_kb}KB")
+            return
         if payload.get("type") != "slides_upload_request":
             return
         slug = str(payload.get("slug") or "").strip()
