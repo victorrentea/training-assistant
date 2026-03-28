@@ -408,7 +408,8 @@ async def get_slides():
         has_local_pdf = bool(local_index.get(slug) or uploaded_index.get(slug))
         in_cache = _cache_path(slug).exists()
         in_catalog = slug in state.slides_catalog
-        slide["available_on_server"] = has_local_pdf or in_cache or in_catalog
+        is_catalog_source = slide.get("source") == "catalog"  # has GDrive URL, on-demand fetch works
+        slide["available_on_server"] = has_local_pdf or in_cache or in_catalog or is_catalog_source
     return {"slides": slides}
 
 
