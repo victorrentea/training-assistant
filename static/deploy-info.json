@@ -1,7 +1,7 @@
 {
-  "sha": "ce5f4319b566b77151697b765ed054d20f2a893c",
+  "sha": "9985eaccf2948c76b42210ac3a6914770cbf18b7",
   "timestamp": "2026-03-28 23:52",
   "changelog": [
-    "fix(overlay): clamp drag to screen edges, keep bar visible while hovering"
+    "fix(host): add default border to plain .badge for consistent look"
   ]
 }
