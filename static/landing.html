@@ -180,7 +180,7 @@
         input.value = code.toUpperCase();
         onCodeInput();
         const statusEl = document.getElementById('status-msg');
-        statusEl.innerHTML = 'Host machine<br>: auto-login';
+        statusEl.textContent = 'Host machine: auto-login';
         statusEl.style.color = 'var(--danger)';
         statusEl.style.animation = 'blink-fast .3s linear infinite';
         setTimeout(() => { window.location.href = '/' + code; }, 2000);
