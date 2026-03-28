@@ -204,7 +204,9 @@ async def _do_download(slug: str, url: str) -> Path:
                 downloaded_at = datetime.now(timezone.utc).isoformat()
                 _set_status(slug, "cached", size_bytes=size, downloaded_at=downloaded_at)
                 await broadcast_state()
-                await _push_log(slug, "download_complete", f"{size} bytes")
+                size_mb = size / (1024 * 1024)
+                size_str = f"{size_mb:.1f} MB" if size_mb >= 1 else f"{size / 1024:.0f} KB"
+                await _push_log(slug, "download_complete", f"{size_str} from Google Drive")
                 return dest
             except Exception as exc:
                 _set_status(slug, "download_failed", error=str(exc))
