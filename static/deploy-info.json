@@ -1,7 +1,7 @@
 {
-  "sha": "591ca9ed52cf9fde14fed5c7fd171901df8f258f",
-  "timestamp": "2026-03-28 09:12",
+  "sha": "9babc87d1a45269e1f0b464b290dc951a9537bef",
+  "timestamp": "2026-03-28 09:20",
   "changelog": [
-    "fix: avoid concurrent loads when switching to pdfjs with follow active"
+    "fix: add second scroll restore to prevent drift when switching slide topics"
   ]
 }
