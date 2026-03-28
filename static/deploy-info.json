@@ -1,7 +1,7 @@
 {
-  "sha": "b7feab76eed18d63aaf20d3ee915d846e5700995",
+  "sha": "30cb79db98c0ae0a1478593333b41a360f43a69f",
   "timestamp": "2026-03-28 17:05",
   "changelog": [
-    "fix(slides): add min-width:0 to list item so long titles ellipsize"
+    "feat(slides): add 'Last update' tooltip to updated-time badge"
   ]
 }
