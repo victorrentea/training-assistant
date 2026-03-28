@@ -1,8 +1,8 @@
 {
-  "sha": "6911a2d4a996f9696df8a31268b13c5a4a538dde",
-  "timestamp": "2026-03-28 16:49",
+  "sha": "39b252ff6178695a3fb826327cf4d08bdc629016",
+  "timestamp": "2026-03-28 16:51",
   "changelog": [
-    "chore(catalog): rename Fundamentals to Clean Architecture",
-    "feat(slides): add AI group for AI Coding with right-border styling for solo categories"
+    "fix(slides): AI category uses standard left border like all other categories",
+    "fix(slides): single-line titles with ellipsis; scroll pane to see all items"
   ]
 }
