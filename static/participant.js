@@ -3778,7 +3778,7 @@
       });
     }
 
-    document.querySelectorAll('#slides-follow-btn, #slides-view-pdfjs, #slides-view-native').forEach(btn => {
+    document.querySelectorAll('#slides-follow-btn, #slides-view-pdfjs, #slides-view-native, #paste-btn').forEach(btn => {
       btn.addEventListener('mouseenter', () => { showTimer = setTimeout(() => showBubble(btn), 150); });
       btn.addEventListener('mouseleave', removeBubble);
       btn.addEventListener('click', removeBubble);
