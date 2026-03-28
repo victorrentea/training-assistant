@@ -1,4 +1,5 @@
 import AppKit
+import CoreGraphics
 import Foundation
 
 class AppDelegate: NSObject, NSApplicationDelegate, URLSessionWebSocketDelegate {
@@ -23,11 +24,13 @@ class AppDelegate: NSObject, NSApplicationDelegate, URLSessionWebSocketDelegate 
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        guard let screen = NSScreen.main ?? NSScreen.screens.first else {
-            fatalError("No screens available")
-        }
+        guard !NSScreen.screens.isEmpty else { fatalError("No screens available") }
+        let builtInScreen = NSScreen.screens.first { screen in
+            guard let id = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID else { return false }
+            return CGDisplayIsBuiltin(id) != 0
+        } ?? NSScreen.screens[0]
 
-        overlayPanel = OverlayPanel(screen: screen)
+        overlayPanel = OverlayPanel(screen: builtInScreen)
         overlayPanel.orderFrontRegardless()
 
         guard let hostLayer = overlayPanel.contentView?.layer else {
@@ -37,7 +40,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, URLSessionWebSocketDelegate 
 
         session = URLSession(configuration: .default, delegate: self, delegateQueue: .main)
         connectWebSocket()
-        setupButtonBar(screen: screen)
+        setupButtonBar(screen: builtInScreen)
 
         // Check every 2s if another instance took over the PID file
         pidCheckTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
