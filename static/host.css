@@ -1566,7 +1566,6 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
 
 .paste-icon {
   cursor: pointer;
-  margin-left: .25rem;
   padding: 2px 4px;
   border-radius: 4px;
   color: #e0e0e0;
@@ -1605,7 +1604,6 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
 }
 .upload-icon {
   cursor: pointer;
-  margin-left: .25rem;
   padding: 2px 4px;
   border-radius: 4px;
   color: #e0e0e0;
