@@ -1,7 +1,7 @@
 {
-  "sha": "5e8386fac6ddda8db342efc8442a4d48bdda3e2e",
+  "sha": "8e3ecbf5da48b3635a4543c8c44ee9c798a28105",
   "timestamp": "2026-03-28 12:11",
   "changelog": [
-    "fix(participant): thicker border (2px) on all round buttons"
+    "fix(upload): update upload tooltip and onboarding text"
   ]
 }
