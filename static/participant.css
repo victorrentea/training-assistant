@@ -588,6 +588,7 @@ h1 { display: none; }
   border-radius: 0 6px 6px 0;
   margin-bottom: 8px;
   overflow: hidden;
+  flex-shrink: 0;
 }
 
 .slides-group-name {
