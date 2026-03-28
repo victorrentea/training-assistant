@@ -1,7 +1,113 @@
 {
-  "sha": "a701227e864f2d153b281b54c9f0fa0f283b4871",
-  "timestamp": "2026-03-29 00:51",
+  "sha": "95ca125a54c856b110bf735f3bd11f5525691a8d",
+  "timestamp": "2026-03-29 00:52",
   "changelog": [
-    "perf(poll): cache vote_counts() \u2014 compute once per broadcast instead of per participant"
+    "fix(daemon): only accumulate IntelliJ time when it is frontmost",
+    "fix(daemon): only accumulate slide time when PowerPoint is frontmost",
+    "feat(slides-badge): show topic + count of slides viewed > 10 sec",
+    "feat(version-tag): hover shows git SHA + per-branch time spent sorted desc",
+    "fix(host): gray empty state + border-color hover for footer badges"
+  ],
+  "branches": [
+    {
+      "branch": "fix-version-reload-loop",
+      "sha": "8cbb273",
+      "minutes": 442
+    },
+    {
+      "branch": "fix-transcription-lang-sync",
+      "sha": "3a35f5c",
+      "minutes": 342
+    },
+    {
+      "branch": "overlay-hide-emoji-single-screen",
+      "sha": "5b07b93",
+      "minutes": 218
+    },
+    {
+      "branch": "fix-ci-run-23695885613",
+      "sha": "916b7b1",
+      "minutes": 99
+    },
+    {
+      "branch": "adjust-topic-names",
+      "sha": "6d91844",
+      "minutes": 94
+    },
+    {
+      "branch": "fix-emoji-overlay-hover",
+      "sha": "1fcd15e",
+      "minutes": 84
+    },
+    {
+      "branch": "pull-master",
+      "sha": "7387c97",
+      "minutes": 83
+    },
+    {
+      "branch": "demo-slide-log",
+      "sha": "22f7805",
+      "minutes": 61
+    },
+    {
+      "branch": "participant-file-upload",
+      "sha": "6441120",
+      "minutes": 60
+    },
+    {
+      "branch": "upload-tooltip-onboarding",
+      "sha": "991ef8e",
+      "minutes": 59
+    },
+    {
+      "branch": "host-label-always-visible",
+      "sha": "0c876ee",
+      "minutes": 40
+    },
+    {
+      "branch": "emoji-overflow-dots",
+      "sha": "25b9b9a",
+      "minutes": 39
+    },
+    {
+      "branch": "slides-hover-tooltips",
+      "sha": "0652ac9",
+      "minutes": 36
+    },
+    {
+      "branch": "remove-slides-placeholder",
+      "sha": "0a17ede",
+      "minutes": 35
+    },
+    {
+      "branch": "fix-ui-layout-cutoff",
+      "sha": "739e719",
+      "minutes": 27
+    },
+    {
+      "branch": "ai-coding-category-line",
+      "sha": "8fa3b8e",
+      "minutes": 20
+    },
+    {
+      "branch": "remove-host-heart-drone",
+      "sha": "9d8de3e",
+      "minutes": 15
+    },
+    {
+      "branch": "shrink-topic-height-5pct",
+      "sha": "466fbe7",
+      "minutes": 14
+    },
+    {
+      "branch": "daemon-status-indicator",
+      "sha": "a600c0d",
+      "minutes": 13
+    },
+    {
+      "branch": "pdf-fit-width-btn",
+      "sha": "60d7e4a",
+      "minutes": 10
+    }
   ]
 }
