@@ -1763,7 +1763,8 @@ function closeEmojiPopup(ev) {
     );
     if (updated) {
       const badge = document.createElement('span');
-      badge.className = 'slides-list-updated';
+      badge.className = 'slides-list-updated has-tooltip';
+      badge.setAttribute('data-tooltip', 'Last update');
       badge.textContent = updated;
       item.appendChild(badge);
     }
