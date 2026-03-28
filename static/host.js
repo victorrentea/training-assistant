@@ -202,6 +202,12 @@
         document.getElementById('restore-banner').style.display =
           (msg.needs_restore && !msg.daemon_connected) ? '' : 'none';
         updateTokenBadge(msg.token_usage);
+        if (msg.slides_log_count !== undefined) {
+          document.getElementById('slides-log-badge').textContent = '📊 ' + msg.slides_log_count;
+        }
+        if (msg.git_repos_count !== undefined) {
+          document.getElementById('git-repos-badge').textContent = '⎇ ' + msg.git_repos_count;
+        }
         renderTranscriptStatus(msg.transcript_line_count, msg.transcript_total_lines, msg.transcript_latest_ts, msg.transcript_last_content_at);
         renderOverlayStatus(msg.overlay_connected);
         renderPendingDeploy(msg.pending_deploy);

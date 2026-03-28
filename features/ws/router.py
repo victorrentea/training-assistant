@@ -39,6 +39,7 @@ from features.ws.daemon_protocol import (
     MSG_TRANSCRIPTION_LANGUAGE_STATUS, MSG_TIMING_EVENT, MSG_STATE_RESTORE,
     MSG_STATE_SNAPSHOT_RESULT, MSG_SESSION_SNAPSHOT_RESULT,
     MSG_STATE_SNAPSHOT_REQUEST, MSG_SESSION_SNAPSHOT_REQUEST,
+    MSG_ACTIVITY_LOG,
 )
 
 router = APIRouter()
@@ -484,6 +485,13 @@ async def _handle_session_snapshot_result(data):
     logger.info("Session snapshot saved by daemon")
 
 
+async def _handle_activity_log(data):
+    """Daemon sends slides log and git repos activity tracking."""
+    state.slides_log = data.get("slides_log") or []
+    state.git_repos = data.get("git_repos") or []
+    await broadcast_state()
+
+
 _DAEMON_MSG_HANDLERS = {
     MSG_SLIDES_CATALOG: _handle_daemon_slides_catalog,
     MSG_SLIDE_INVALIDATED: _handle_daemon_slide_invalidated,
@@ -506,6 +514,7 @@ _DAEMON_MSG_HANDLERS = {
     MSG_SESSION_SNAPSHOT_REQUEST: _handle_session_snapshot_request,
     MSG_STATE_SNAPSHOT_RESULT: _handle_state_snapshot_result,
     MSG_SESSION_SNAPSHOT_RESULT: _handle_session_snapshot_result,
+    MSG_ACTIVITY_LOG: _handle_activity_log,
 }
 
 

@@ -58,6 +58,8 @@ class SyncSessionRequest(BaseModel):
     # backward compat:
     stack: list | None = None
     key_points: list | None = None
+    slides_log: list = []
+    git_repos: list = []
 
 
 @router.post("/api/session/start", dependencies=[Depends(require_host_auth)])
@@ -234,6 +236,10 @@ def _restore_state_from_snapshot(snap: dict):
     state.leaderboard_active = snap.get("leaderboard_active", False)
     if snap.get("token_usage"):
         state.token_usage.update(snap["token_usage"])
+    if snap.get("slides_log") is not None:
+        state.slides_log = snap["slides_log"]
+    if snap.get("git_repos") is not None:
+        state.git_repos = snap["git_repos"]
 
 
 @router.post("/api/session/sync", dependencies=[Depends(require_host_auth)])
@@ -245,6 +251,11 @@ async def sync_session(body: SyncSessionRequest):
     if key_points:
         state.summary_points = key_points
         state.summary_updated_at = datetime.now()
+
+    if body.slides_log:
+        state.slides_log = body.slides_log
+    if body.git_repos:
+        state.git_repos = body.git_repos
 
     # Manage paused participants BEFORE restoring
     if body.action == "start_talk":
@@ -417,6 +428,8 @@ async def get_session_snapshot():
         "codereview": codereview_data,
         "leaderboard_active": state.leaderboard_active,
         "token_usage": state.token_usage,
+        "slides_log": state.slides_log,
+        "git_repos": state.git_repos,
     }
 
 
