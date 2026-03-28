@@ -1,7 +1,7 @@
 {
-  "sha": "5eadd17e237e3ef05aa70dd6ff62eaef1ba32b7b",
-  "timestamp": "2026-03-28 16:48",
+  "sha": "d685e3be0a3e46f774247729181df4b17a51ea8f",
+  "timestamp": "2026-03-28 16:49",
   "changelog": [
-    "fix(slides): send correct slug and trigger refresh after catalog received"
+    "feat(avatar): add tooltip on small avatar and replace refresh icon with dice"
   ]
 }
