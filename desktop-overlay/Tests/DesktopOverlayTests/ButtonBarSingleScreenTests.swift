@@ -4,40 +4,22 @@ import XCTest
 
 final class ButtonBarSingleScreenTests: XCTestCase {
     func testEdgeTriggerDoesNotActivateOutsideBarVerticalBand() {
-        let hiddenFrame = NSRect(x: 1000, y: 200, width: 52, height: 220)
         let shownFrame = NSRect(x: 936, y: 200, width: 52, height: 220)
-        let logic = SingleScreenHoverLogic(
-            hiddenFrame: hiddenFrame,
-            shownFrame: shownFrame,
-            edgeTriggerDistance: 80,
-            onBarInset: 20
-        )
-
+        let logic = SingleScreenHoverLogic(shownFrame: shownFrame)
+        // Mouse within bar X range but above bar Y range → should NOT activate
         XCTAssertFalse(logic.shouldSlideIn(mouse: NSPoint(x: 980, y: 500)))
     }
 
     func testShownFrameActivatesWhenMouseOverBarPosition() {
-        let hiddenFrame = NSRect(x: 1000, y: 200, width: 52, height: 220)
         let shownFrame = NSRect(x: 936, y: 200, width: 52, height: 220)
-        let logic = SingleScreenHoverLogic(
-            hiddenFrame: hiddenFrame,
-            shownFrame: shownFrame,
-            edgeTriggerDistance: 80,
-            onBarInset: 20
-        )
+        let logic = SingleScreenHoverLogic(shownFrame: shownFrame)
         // Mouse exactly at bar's shown position → activate
         XCTAssertTrue(logic.shouldSlideIn(mouse: NSPoint(x: 950, y: 310)))
     }
 
     func testEdgeTriggerZoneOutsideShownFrameDoesNotActivate() {
-        let hiddenFrame = NSRect(x: 1000, y: 200, width: 52, height: 220)
         let shownFrame = NSRect(x: 936, y: 200, width: 52, height: 220)
-        let logic = SingleScreenHoverLogic(
-            hiddenFrame: hiddenFrame,
-            shownFrame: shownFrame,
-            edgeTriggerDistance: 80,
-            onBarInset: 20
-        )
+        let logic = SingleScreenHoverLogic(shownFrame: shownFrame)
         // Mouse to the left of shownFrame (outside bar zone) → should NOT activate
         XCTAssertFalse(logic.shouldSlideIn(mouse: NSPoint(x: 880, y: 310)))
     }
