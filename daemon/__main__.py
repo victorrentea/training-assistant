@@ -133,6 +133,21 @@ def _read_audiohijack_language() -> str | None:
     return None
 
 
+def _sync_audiohijack_language(config) -> bool:
+    """Read current AudioHijack language and POST it to the server. Returns True if synced."""
+    lang = _read_audiohijack_language()
+    if not lang:
+        log.error("daemon", "Could not read AudioHijack language from plist")
+        return False
+    _post_json(
+        f"{config.server_url}/api/transcription-language/status",
+        {"language": lang},
+        config.host_username, config.host_password,
+    )
+    log.info("daemon", f"AudioHijack language synced: {lang}")
+    return True
+
+
 def _set_audiohijack_language(lang_code: str) -> None:
     """Kill AudioHijack, update TranscribeBlock languageCode in Sessions.plist, restart."""
     import plistlib
@@ -511,6 +526,7 @@ def run() -> None:
     last_powerpoint_error: str | None = None
     last_auto_close_date: date | None = None   # prevent double-close on same calendar day
     last_auto_start_date: date | None = None   # prevent double-start on same calendar day
+    last_lang_sync_date: date | None = None    # sync AudioHijack language once per day
     _timing_fired_date: date | None = None     # date for which timing events were tracked
     _timing_fired_today: set = set()           # timing events already fired today
 
@@ -531,16 +547,8 @@ def run() -> None:
 
     # ── Sync AudioHijack language to server at startup ──
     try:
-        current_lang = _read_audiohijack_language()
-        if current_lang:
-            _post_json(
-                f"{config.server_url}/api/transcription-language/status",
-                {"language": current_lang},
-                config.host_username, config.host_password,
-            )
-            log.info("daemon", f"AudioHijack language synced at startup: {current_lang}")
-        else:
-            log.error("daemon", "Could not read AudioHijack language from plist")
+        _sync_audiohijack_language(config)
+        last_lang_sync_date = date.today()
     except Exception as e:
         log.error("daemon", f"Failed to sync AudioHijack language at startup: {e}")
 
@@ -623,6 +631,10 @@ def run() -> None:
                         config = dc_replace(config, session_folder=folder, session_notes=notes_file)
                         sync_session_to_server(config, session_stack, current_key_points)
                         transcript_state.reset()
+                        try:
+                            _sync_audiohijack_language(config)
+                        except Exception:
+                            pass
                         log.info("session", f"Started: {name}")
 
                     elif action == "end" and len(session_stack) > 1:
@@ -900,6 +912,14 @@ def run() -> None:
                         session_stack[-1]["status"] = "ended"
                         save_daemon_state(sessions_root, stack_to_daemon_state(session_stack))
                         log.info("daemon", "Session marked as ended at midnight")
+
+                # ── Sync AudioHijack language once per day ──
+                if last_lang_sync_date != today:
+                    try:
+                        _sync_audiohijack_language(config)
+                        last_lang_sync_date = today
+                    except Exception as e:
+                        log.error("daemon", f"Failed to sync AudioHijack language: {e}")
 
                 # ── Auto-update + server connectivity check via /api/status ──
                 try:
