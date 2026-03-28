@@ -1580,44 +1580,15 @@ h1 { display: none; }
   bottom: calc(100% + 6px);
   left: 50%;
   transform: translateX(-50%);
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: .45rem;
+  background: transparent;
+  border: none;
+  padding: 0;
   display: flex;
   flex-direction: column;
   gap: .3rem;
   align-items: center;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, .7);
   z-index: 3010;
   pointer-events: auto;
-  max-height: calc(100vh - 80px);
-  overflow-y: auto;
-}
-
-/* Small ✕ close button on popup */
-.emoji-popup-close {
-  position: absolute;
-  top: -10px;
-  right: -10px;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  color: var(--text-muted, #9090b0);
-  font-size: .6rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  pointer-events: auto;
-  line-height: 1;
-  padding: 0;
-}
-.emoji-popup-close:hover {
-  color: var(--text);
-  border-color: var(--accent);
 }
 
 /* Conference mode emoji grid */
