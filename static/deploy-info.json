@@ -1,7 +1,7 @@
 {
-  "sha": "e2be948f5547760cac9d43694d50324b4c4e9c04",
-  "timestamp": "2026-03-28 13:43",
+  "sha": "46e85f1daf2f67fc8f212d895e8471e422fb985c",
+  "timestamp": "2026-03-28 13:50",
   "changelog": [
-    "fix(slides): use instant CSS tooltip on cache status dot instead of slow native title"
+    "fix(emoji): move PDF ctrl buttons into emoji-bar flex row for proper responsive overflow"
   ]
 }
