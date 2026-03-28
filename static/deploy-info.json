@@ -1,7 +1,7 @@
 {
-  "sha": "b4b246e5134b739b0b7f508e386f9f185336ed52",
-  "timestamp": "2026-03-28 10:00",
+  "sha": "85f34863af8411f378fa3edfba10cea99dabbabd",
+  "timestamp": "2026-03-28 10:01",
   "changelog": [
-    "fix(paste): copy icon with blinking yellow bg + Copied tooltip on host"
+    "feat(slides): show large onboarding-style bubble below Follow button on hover"
   ]
 }
