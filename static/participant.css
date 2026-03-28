@@ -676,30 +676,18 @@ h1 { display: none; }
   white-space: nowrap;
 }
 
-/* Indeterminate progress bar shown while server is downloading a slide PDF */
-.slides-cache-progress {
+/* Spinner shown while server is downloading / polling a slide PDF */
+.slides-cache-spinner {
   flex-shrink: 0;
-  width: 28px;
-  height: 4px;
-  border-radius: 2px;
-  background: rgba(33, 150, 243, 0.2);
-  overflow: hidden;
-  position: relative;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid rgba(33, 150, 243, 0.25);
+  border-top-color: #2196f3;
+  animation: slides-spin 0.8s linear infinite;
 }
-.slides-cache-progress::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -60%;
-  width: 60%;
-  height: 100%;
-  background: #2196f3;
-  border-radius: 2px;
-  animation: slides-progress-sweep 1.3s ease-in-out infinite;
-}
-@keyframes slides-progress-sweep {
-  0%   { left: -60%; }
-  100% { left: 110%; }
+@keyframes slides-spin {
+  to { transform: rotate(360deg); }
 }
 
 .slides-list-new {
