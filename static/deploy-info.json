@@ -1,7 +1,7 @@
 {
-  "sha": "8648db597c7d9a1bd4d0a497c22a4686a2c9e697",
-  "timestamp": "2026-03-28 18:02",
+  "sha": "ccd8d7bcc87a9a492fa7e83bb7e2aa63c1699d35",
+  "timestamp": "2026-03-28 18:07",
   "changelog": [
-    "fix(version-tag): move from bottom-right to top-right on participant page"
+    "fix(version-tag): position to the left of Slides dock header"
   ]
 }
