@@ -1,8 +1,7 @@
 {
-  "sha": "39b252ff6178695a3fb826327cf4d08bdc629016",
+  "sha": "069301a9a968830daa55556fc28c0fe8bb645fcf",
   "timestamp": "2026-03-28 16:51",
   "changelog": [
-    "fix(slides): AI category uses standard left border like all other categories",
-    "fix(slides): single-line titles with ellipsis; scroll pane to see all items"
+    "feat(slides): hide group title for solo categories"
   ]
 }
