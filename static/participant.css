@@ -673,6 +673,32 @@ h1 { display: none; }
   white-space: nowrap;
 }
 
+/* Indeterminate progress bar shown while server is downloading a slide PDF */
+.slides-cache-progress {
+  flex-shrink: 0;
+  width: 28px;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(33, 150, 243, 0.2);
+  overflow: hidden;
+  position: relative;
+}
+.slides-cache-progress::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -60%;
+  width: 60%;
+  height: 100%;
+  background: #2196f3;
+  border-radius: 2px;
+  animation: slides-progress-sweep 1.3s ease-in-out infinite;
+}
+@keyframes slides-progress-sweep {
+  0%   { left: -60%; }
+  100% { left: 110%; }
+}
+
 .slides-list-new {
   flex: 0 0 auto;
   font-size: .52rem;

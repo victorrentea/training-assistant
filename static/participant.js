@@ -1776,7 +1776,7 @@ function closeEmojiPopup(ev) {
         badge.textContent = updated;
         item.appendChild(badge);
       }
-      // Status dot — right next to the download button
+      // Status indicator — progress bar while downloading, dot otherwise
       const _cacheEntry = (_slidesCacheStatus || {})[slide.slug];
       if (_cacheEntry && _cacheEntry.status) {
         const _dotCfg = {
@@ -1789,11 +1789,18 @@ function closeEmojiPopup(ev) {
           'download_failed': { color: '#f44336', tip: 'Download failed' },
         };
         const _cfg = _dotCfg[_cacheEntry.status] || _dotCfg['not_cached'];
-        const dot = document.createElement('span');
-        dot.className = 'slides-cache-dot has-tooltip';
-        dot.style.cssText = 'display:inline-block;width:8px;height:8px;border-radius:50%;background:' + _cfg.color + ';flex-shrink:0;';
-        dot.setAttribute('data-tooltip', _cfg.tip);
-        item.appendChild(dot);
+        if (_cacheEntry.status === 'downloading' || _cacheEntry.status === 'polling_drive') {
+          const bar = document.createElement('div');
+          bar.className = 'slides-cache-progress has-tooltip';
+          bar.setAttribute('data-tooltip', _cfg.tip);
+          item.appendChild(bar);
+        } else {
+          const dot = document.createElement('span');
+          dot.className = 'slides-cache-dot has-tooltip';
+          dot.style.cssText = 'display:inline-block;width:8px;height:8px;border-radius:50%;background:' + _cfg.color + ';flex-shrink:0;';
+          dot.setAttribute('data-tooltip', _cfg.tip);
+          item.appendChild(dot);
+        }
       }
       if (!unavailable) {
         const dl = document.createElement('a');
