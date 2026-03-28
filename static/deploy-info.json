@@ -1,8 +1,8 @@
 {
-  "sha": "cfb5c3d2c9bbd3b46600ad3eb2d5e56fe439580f",
-  "timestamp": "2026-03-29 01:29",
+  "sha": "8a47d3b0818cbcce64fe2815be6c11aae8ff7054",
+  "timestamp": "2026-03-29 01:30",
   "changelog": [
-    "fix(daemon): log WS send failure and guard server against handler crashes"
+    "feat(host): hover tooltips for git repos and slides log badges"
   ],
   "branches": [
     {
