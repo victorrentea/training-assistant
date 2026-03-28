@@ -1,7 +1,7 @@
 {
-  "sha": "57322a86b0935b2b9d1fb354e355efebaefce84f",
-  "timestamp": "2026-03-28 12:38",
+  "sha": "0b31880e8d0e0306ab389a9798e9406dbb09fc31",
+  "timestamp": "2026-03-28 12:42",
   "changelog": [
-    "fix(host): show slide titles first, sort alphabetically in cache popover"
+    "feat(emoji): responsive overflow bar with \u2022\u2022\u2022 popup, ping always-on, usage reordering"
   ]
 }
