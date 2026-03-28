@@ -1,7 +1,7 @@
 {
-  "sha": "a9fd8b4e95b20e8e1df3a179833fa8562b9c4ab3",
-  "timestamp": "2026-03-28 14:26",
+  "sha": "89781c92e6b144714fb43e6e64cf07274fd07b8f",
+  "timestamp": "2026-03-28 15:20",
   "changelog": [
-    "feat(catalog): rename and reorder slide titles with emojis"
+    "fix(overlay): tighten single-screen slide-in trigger to exact bar position"
   ]
 }
