@@ -686,6 +686,7 @@ h1 { display: none; }
   line-height: 1.05;
   padding: .06rem 0 .06rem .2rem;
   min-width: 0;
+  overflow: hidden;
 }
 
 .slides-list-title {
