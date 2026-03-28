@@ -554,6 +554,111 @@
     setTimeout(() => toast.remove(), 1500);
   }
 
+  // ── File Upload ──
+  let _uploadSelectedFile = null;
+
+  function openUploadModal() {
+    _uploadSelectedFile = null;
+    const overlay = document.getElementById('upload-overlay');
+    if (overlay) overlay.classList.add('open');
+    document.getElementById('upload-file-info').textContent = '';
+    document.getElementById('upload-send-btn').disabled = true;
+    document.getElementById('upload-progress-bar').style.display = 'none';
+    document.getElementById('upload-progress-fill').style.width = '0%';
+
+    // Set up drag-and-drop
+    const dz = document.getElementById('upload-dropzone');
+    dz.ondragover = e => { e.preventDefault(); dz.classList.add('drag-over'); };
+    dz.ondragleave = () => dz.classList.remove('drag-over');
+    dz.ondrop = e => {
+      e.preventDefault();
+      dz.classList.remove('drag-over');
+      if (e.dataTransfer.files.length) _setUploadFile(e.dataTransfer.files[0]);
+    };
+  }
+
+  function closeUploadModal() {
+    const overlay = document.getElementById('upload-overlay');
+    if (overlay) overlay.classList.remove('open');
+    _uploadSelectedFile = null;
+  }
+
+  function onUploadFileSelected(input) {
+    if (input.files.length) _setUploadFile(input.files[0]);
+    input.value = ''; // reset so same file can be re-selected
+  }
+
+  function _setUploadFile(file) {
+    const maxSize = 500 * 1024 * 1024;
+    if (file.size > maxSize) {
+      document.getElementById('upload-file-info').textContent = 'File too large (max 500MB)';
+      document.getElementById('upload-file-info').style.color = '#ef4444';
+      document.getElementById('upload-send-btn').disabled = true;
+      _uploadSelectedFile = null;
+      return;
+    }
+    _uploadSelectedFile = file;
+    const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
+    const sizeStr = file.size < 1024 * 1024 ? `${(file.size / 1024).toFixed(0)} KB` : `${sizeMB} MB`;
+    document.getElementById('upload-file-info').textContent = `${file.name} (${sizeStr})`;
+    document.getElementById('upload-file-info').style.color = '';
+    document.getElementById('upload-send-btn').disabled = false;
+  }
+
+  function sendUploadFile() {
+    if (!_uploadSelectedFile) return;
+    const file = _uploadSelectedFile;
+    const btn = document.getElementById('upload-send-btn');
+    btn.disabled = true;
+    btn.textContent = 'Uploading...';
+
+    const progressBar = document.getElementById('upload-progress-bar');
+    const progressFill = document.getElementById('upload-progress-fill');
+    progressBar.style.display = 'block';
+    progressFill.style.width = '0%';
+
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('uuid', myUUID);
+
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', '/api/upload');
+    xhr.upload.onprogress = e => {
+      if (e.lengthComputable) {
+        progressFill.style.width = Math.round(e.loaded / e.total * 100) + '%';
+      }
+    };
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        closeUploadModal();
+        showUploadToast();
+      } else {
+        let msg = 'Upload failed';
+        try { msg = JSON.parse(xhr.responseText).detail || msg; } catch {}
+        document.getElementById('upload-file-info').textContent = msg;
+        document.getElementById('upload-file-info').style.color = '#ef4444';
+      }
+      btn.textContent = 'Send to host';
+      btn.disabled = !_uploadSelectedFile;
+    };
+    xhr.onerror = () => {
+      document.getElementById('upload-file-info').textContent = 'Network error';
+      document.getElementById('upload-file-info').style.color = '#ef4444';
+      btn.textContent = 'Send to host';
+      btn.disabled = !_uploadSelectedFile;
+    };
+    xhr.send(formData);
+  }
+
+  function showUploadToast() {
+    const toast = document.createElement('div');
+    toast.textContent = 'File sent!';
+    toast.style.cssText = 'position:fixed;bottom:3.5rem;right:calc(var(--slides-overlay-width) + .75rem + 52px);background:var(--accent);color:#fff;padding:.4rem .9rem;border-radius:8px;font-weight:600;font-size:.85rem;z-index:9999;opacity:1;transition:opacity .5s;';
+    document.body.appendChild(toast);
+    setTimeout(() => { toast.style.opacity = '0'; }, 1000);
+    setTimeout(() => toast.remove(), 1500);
+  }
+
   function closeParticipantModals() {
     closeNotesModal();
     closeSummaryModal();
