@@ -57,11 +57,16 @@ function renderEmojiBar() {
   // Sync ctrl group visibility first so its width is accurate before measurement
   _syncCtrlGroupVisibility();
 
-  // Measure side elements: use max(left, right) * 2 for symmetric centering (grid 1fr auto 1fr).
-  const slidesCtrl = document.getElementById('slides-ctrl-group');
-  const rightGroup = document.getElementById('emoji-bar-right');
-  const leftW = slidesCtrl ? slidesCtrl.getBoundingClientRect().width : 0;
-  const rightW = rightGroup ? rightGroup.getBoundingClientRect().width : 0;
+  // Measure actual button content widths (not the 1fr grid cell widths which stretch to fill).
+  const leftBtns = Array.from((document.getElementById('slides-ctrl-group') || document.createElement('div'))
+    .querySelectorAll('button, span')).filter(el => el.getBoundingClientRect().width > 0);
+  const leftW = leftBtns.reduce((s, el) => s + el.getBoundingClientRect().width + 8, 0);
+  const rightBtns = [document.getElementById('upload-btn'), document.getElementById('paste-btn')];
+  const rightW = rightBtns.reduce((s, el) => {
+    if (!el) return s;
+    const w = el.getBoundingClientRect().width;
+    return s + (w > 0 ? w + 8 : 0);
+  }, 0);
   const outerFixedWidth = Math.max(leftW, rightW) * 2 + 16; // 2 grid column gaps (8px each)
   // Fixed elements inside center (dots + ping) always consume space.
   const innerFixedEls = [dotsWrap, document.getElementById('emoji-ping-btn')];
