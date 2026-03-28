@@ -10,7 +10,7 @@ from playwright.sync_api import expect
 
 from pages.host_page import HostPage
 from pages.participant_page import ParticipantPage
-from conftest import api, host_browser_ctx, pax_browser_ctx
+from conftest import api, host_browser_ctx, pax_browser_ctx, pax_url
 
 
 # ---------------------------------------------------------------------------
@@ -39,8 +39,8 @@ class TestWordCloudGaps:
         p2 = ParticipantPage(ctx2.new_page())
 
         host._page.goto("/host")
-        p1._page.goto("/")
-        p2._page.goto("/")
+        p1._page.goto(pax_url())
+        p2._page.goto(pax_url())
 
         try:
             p1.join("Dedup1")
@@ -78,8 +78,8 @@ class TestWordCloudGaps:
         p2 = ParticipantPage(ctx2.new_page())
 
         host._page.goto("/host")
-        p1._page.goto("/")
-        p2._page.goto("/")
+        p1._page.goto(pax_url())
+        p2._page.goto(pax_url())
 
         try:
             p1.join("AutoP1")
@@ -127,7 +127,7 @@ class TestWordCloudGaps:
 
         host = HostPage(ctx_host.new_page())
         pax_page = ctx_pax.new_page()
-        pax_page.goto("/")
+        pax_page.goto(pax_url())
         pax = ParticipantPage(pax_page)
 
         try:
@@ -233,8 +233,8 @@ class TestQAGaps:
         p2 = ParticipantPage(ctx2.new_page())
 
         host._page.goto("/host")
-        p1._page.goto("/")
-        p2._page.goto("/")
+        p1._page.goto(pax_url())
+        p2._page.goto(pax_url())
 
         try:
             p1.join("QAMany1")
@@ -334,7 +334,7 @@ class TestEdgeCases:
         p1 = ParticipantPage(ctx1.new_page())
 
         host._page.goto("/host")
-        p1._page.goto("/")
+        p1._page.goto(pax_url())
 
         try:
             p1.join("EarlyBird")
@@ -344,7 +344,7 @@ class TestEdgeCases:
 
             # New participant joins after closing
             p2_page = ctx2.new_page()
-            p2_page.goto(server_url)
+            p2_page.goto(pax_url())
             p2 = ParticipantPage(p2_page)
             p2.join("LateComer")
 
@@ -405,9 +405,9 @@ class TestEdgeCases:
         p3 = ParticipantPage(ctx3.new_page())
 
         host._page.goto("/host")
-        p1._page.goto("/")
-        p2._page.goto("/")
-        p3._page.goto("/")
+        p1._page.goto(pax_url())
+        p2._page.goto(pax_url())
+        p3._page.goto(pax_url())
 
         try:
             p1.join("Sim1")
@@ -453,10 +453,10 @@ class TestEdgeCases:
         p4 = ParticipantPage(ctx4.new_page())
 
         host._page.goto("/host")
-        p1._page.goto("/")
-        p2._page.goto("/")
-        p3._page.goto("/")
-        p4._page.goto("/")
+        p1._page.goto(pax_url())
+        p2._page.goto(pax_url())
+        p3._page.goto(pax_url())
+        p4._page.goto(pax_url())
 
         try:
             p1.join("Author")
