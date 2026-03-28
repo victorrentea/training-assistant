@@ -1,7 +1,7 @@
 {
-  "sha": "572f72ecc6b1d7dac93897d8ae560fadded3127a",
-  "timestamp": "2026-03-28 09:03",
+  "sha": "591ca9ed52cf9fde14fed5c7fd171901df8f258f",
+  "timestamp": "2026-03-28 09:12",
   "changelog": [
-    "perf: reduce daemon poll interval to 1s, snapshot every 7s"
+    "fix: avoid concurrent loads when switching to pdfjs with follow active"
   ]
 }
