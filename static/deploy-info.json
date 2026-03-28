@@ -1,7 +1,7 @@
 {
-  "sha": "66780a5eed8c6e128683e974c9f58bdeca4bd682",
-  "timestamp": "2026-03-28 15:49",
+  "sha": "09f9ddd39603780beae95afbbc807599d26bfcfe",
+  "timestamp": "2026-03-28 15:57",
   "changelog": [
-    "feat(slides): group topics by category with colored left-stripe indicators"
+    "fix(slides): catalog slides always available \u2014 on-demand GDrive fetch"
   ]
 }
