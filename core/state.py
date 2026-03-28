@@ -33,6 +33,7 @@ class AppState:
         self.poll: Optional[dict] = None
         self.poll_active: bool = False
         self.votes: dict[str, str] = {}
+        self._vote_counts_cache: Optional[tuple[int, dict]] = None  # (len, counts)
         self.participants: dict[str, WebSocket] = {}
         self.participant_history: set[str] = set()  # uuids seen in this session (online or offline)
         self.participant_names: dict[str, str] = {}  # uuid -> display_name
@@ -164,12 +165,16 @@ class AppState:
     def vote_counts(self) -> dict:
         if not self.poll:
             return {}
+        current_len = len(self.votes)
+        if self._vote_counts_cache is not None and self._vote_counts_cache[0] == current_len:
+            return self._vote_counts_cache[1]
         counts = {opt["id"]: 0 for opt in self.poll["options"]}
         for selection in self.votes.values():
             ids = selection if isinstance(selection, list) else [selection]
             for option_id in ids:
                 if option_id in counts:
                     counts[option_id] += 1
+        self._vote_counts_cache = (current_len, counts)
         return counts
 
 
