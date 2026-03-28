@@ -313,6 +313,38 @@ body {
   white-space: nowrap;
 }
 
+.slides-catalog-header {
+  color: var(--muted);
+  margin-bottom: .35rem;
+  font-size: .69rem;
+}
+
+.slides-cache-icon {
+  width: 20px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.slides-cache-label {
+  width: 70px;
+  font-size: 0.8em;
+  flex-shrink: 0;
+}
+
+.slides-cache-title {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.slides-cache-detail {
+  font-size: 0.75em;
+  opacity: 0.6;
+  flex-shrink: 0;
+  margin-left: 8px;
+}
+
 #center-poll {
   overflow-y: auto;
   display: flex;

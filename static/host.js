@@ -21,12 +21,8 @@
   let _sessionIntervalsEditing = false;
   let _sessionIntervalsDraft = '';
   let _sessionIntervalsError = '';
-  let _slidesCatalogEntries = [];
-  let _slidesCatalogLoadedAt = 0;
-  let _slidesCatalogLoading = false;
-  let _slidesCatalogError = '';
+  let _slidesCacheStatus = {};
   let _slidesCatalogHideTimer = null;
-  const _SLIDES_CATALOG_TTL_MS = 4000;
   const _ZERO_WIDTH_RE = /[\u200B-\u200D\uFEFF]/g;
 
   let _hostWcDebounceTimer = null;
@@ -240,6 +236,10 @@
         // Restore leaderboard overlay if it was active
         if (msg.leaderboard_active && msg.leaderboard_data) {
           renderLeaderboard(msg.leaderboard_data);
+        }
+        if (msg.slides_cache_status !== undefined) {
+          _slidesCacheStatus = msg.slides_cache_status || {};
+          _renderSlidesCatalogPopover();
         }
       } else if (msg.type === 'vote_update') {
         voteCounts = msg.vote_counts || {};
@@ -868,67 +868,55 @@
   }
 
   function _renderSlidesCatalogPopover() {
-    const contentEl = document.getElementById('slides-catalog-content');
-    if (!contentEl) return;
-    if (_slidesCatalogLoading) {
-      contentEl.textContent = 'Loading participant slides list...';
+    const el = document.getElementById('slides-catalog-content');
+    if (!el) return;
+    const entries = Object.values(_slidesCacheStatus);
+
+    if (!entries.length) {
+      el.innerHTML = '<div style="padding:8px;opacity:0.5">No slides in catalog</div>';
       return;
     }
-    if (_slidesCatalogError) {
-      contentEl.textContent = _slidesCatalogError;
-      return;
+
+    const statusConfig = {
+      'cached':          { icon: '🟢', label: 'cached',     color: 'var(--ok, #4caf50)' },
+      'downloading':     { icon: '🔄', label: 'syncing',    color: 'var(--info, #2196f3)' },
+      'polling_drive':   { icon: '🔄', label: 'syncing',    color: 'var(--info, #2196f3)' },
+      'stale':           { icon: '🟡', label: 'stale',      color: 'var(--warn, #ff9800)' },
+      'not_cached':      { icon: '🔴', label: 'not cached', color: 'var(--danger, #f44336)' },
+      'poll_timeout':    { icon: '⚠',  label: 'timeout',    color: 'var(--warn, #ff9800)' },
+      'download_failed': { icon: '❌', label: 'failed',     color: 'var(--danger, #f44336)' },
+    };
+
+    entries.sort((a, b) => {
+      const ao = a.status === 'cached' ? 0 : 1;
+      const bo = b.status === 'cached' ? 0 : 1;
+      return ao - bo || (a.title || '').localeCompare(b.title || '');
+    });
+
+    const cachedCount = entries.filter(e => e.status === 'cached').length;
+    let html = '<div class="slides-catalog-header">' + cachedCount + '/' + entries.length + ' cached</div>';
+
+    for (const entry of entries) {
+      const cfg = statusConfig[entry.status] || statusConfig['not_cached'];
+      const title = entry.title || entry.slug || '';
+      const sizePart = entry.size_bytes ? (entry.size_bytes / 1048576).toFixed(1) + ' MB' : '';
+      const agePart = entry.downloaded_at ? _formatSlideAge(entry.downloaded_at) : '';
+      const detail = [sizePart, agePart].filter(Boolean).join('  ');
+      html += '<div class="slides-catalog-line">'
+          + '<span class="slides-cache-icon">' + cfg.icon + '</span>'
+          + '<span class="slides-cache-label" style="color:' + cfg.color + '">' + cfg.label + '</span>'
+          + '<span class="slides-cache-title">' + escHtml(title) + '</span>'
+          + '<span class="slides-cache-detail">' + detail + '</span>'
+          + '</div>';
     }
-    if (!_slidesCatalogEntries.length) {
-      contentEl.textContent = 'No slides available for participants.';
-      return;
-    }
-    const available = _slidesCatalogEntries.filter((entry) => !!entry.available_on_server).length;
-    const outOfSync = _slidesCatalogEntries.filter((entry) => (entry.sync_status || '') === 'out_of_sync').length;
-    const syncNote = outOfSync > 0 ? ` · <span style="color:var(--warn)">${outOfSync} pending GDrive</span>` : '';
-    const head = `<div class="slides-catalog-head">${_slidesCatalogEntries.length} slides · ${available} on server${syncNote}</div>`;
-    const lines = _slidesCatalogEntries.map((entry) => {
-      const rawName = String(entry.name || '');
-      const rawSlug = String(entry.slug || '');
-      const name = escHtml(normalizeSlideDisplayName(rawName, rawSlug));
-      const slug = escHtml(rawSlug);
-      const syncMessage = escHtml(entry.sync_message || '');
-      const isOutOfSync = (entry.sync_status || '') === 'out_of_sync';
-      const availableMark = entry.available_on_server
-        ? '<span class="slides-catalog-available" title="PDF on server">⬇</span>'
-        : '<span class="slides-catalog-missing" title="Not on server">✗</span>';
-      const syncMark = isOutOfSync
-        ? `<span class="slides-catalog-sync-warn" title="${syncMessage || 'PDF pending GDrive generation'}">⚠</span>`
-        : '';
-      let datePart = '';
-      if (entry.updated_at) {
-        try {
-          const d = new Date(entry.updated_at);
-          datePart = `<span class="slides-catalog-date">${d.toLocaleDateString('en-GB', {day:'numeric',month:'short'})}</span>`;
-        } catch (_) {}
-      }
-      return `<div class="slides-catalog-line"><span class="slides-catalog-name" title="${slug}">${name}</span>${availableMark}${syncMark}${datePart}</div>`;
-    }).join('');
-    contentEl.innerHTML = head + lines;
+    el.innerHTML = html;
   }
 
-  async function _loadSlidesCatalogMap(force = false) {
-    if (_slidesCatalogLoading) return;
-    if (!force && (Date.now() - _slidesCatalogLoadedAt) < _SLIDES_CATALOG_TTL_MS) return;
-    _slidesCatalogLoading = true;
-    _slidesCatalogError = '';
-    _renderSlidesCatalogPopover();
-    try {
-      const resp = await fetch('/api/slides/participant-availability');
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-      const data = await resp.json();
-      _slidesCatalogEntries = Array.isArray(data.entries) ? data.entries : [];
-      _slidesCatalogLoadedAt = Date.now();
-    } catch (e) {
-      _slidesCatalogError = `Cannot load participant slides (${e.message || 'request failed'}).`;
-    } finally {
-      _slidesCatalogLoading = false;
-      _renderSlidesCatalogPopover();
-    }
+  function _formatSlideAge(isoStr) {
+    const ms = Date.now() - new Date(isoStr).getTime();
+    if (ms < 60000) return 'just now';
+    if (ms < 3600000) return Math.floor(ms / 60000) + 'm ago';
+    return Math.floor(ms / 3600000) + 'h ago';
   }
 
   function _setupSlidesCatalogHover() {
@@ -939,7 +927,7 @@
       clearTimeout(_slidesCatalogHideTimer);
       if (popover) popover.hidden = false;
       hover.classList.add('open');
-      void _loadSlidesCatalogMap();
+      _renderSlidesCatalogPopover();
     };
     const close = () => {
       clearTimeout(_slidesCatalogHideTimer);
