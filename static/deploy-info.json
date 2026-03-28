@@ -1,7 +1,7 @@
 {
-  "sha": "55cd795b577ecf5f1d877d4efd54c08541129d87",
-  "timestamp": "2026-03-28 16:54",
+  "sha": "852f779184f888d6b9e4eb005ac1a88d7ccae399",
+  "timestamp": "2026-03-28 16:57",
   "changelog": [
-    "fix(slides): show tooltips to the right in slides list panel"
+    "fix(avatar): dice tooltip -> 'Click to draw another one'"
   ]
 }
