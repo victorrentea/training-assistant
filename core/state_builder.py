@@ -99,6 +99,7 @@ def build_for_host() -> dict:
         "token_usage": state.token_usage,
         "needs_restore": state.needs_restore,
         "pending_deploy": state.pending_deploy,
+        "session_id": state.session_id,
     }
 
 

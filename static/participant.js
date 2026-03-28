@@ -1,3 +1,13 @@
+  // ── Session ID from URL ──
+  const sessionId = window.location.pathname.split('/')[1];
+  if (!sessionId) { window.location.href = '/'; }
+  const apiBase = '/' + sessionId;
+
+  // Update /notes links to be session-aware
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('a[href="/notes"]').forEach(a => { a.href = '/' + sessionId + '/notes'; });
+  });
+
   const LS_KEY = 'workshop_participant_name';
   const LS_UUID_KEY = 'workshop_participant_uuid';
   const LS_VOTE_KEY = 'workshop_vote';
@@ -630,7 +640,7 @@ function closeEmojiPopup(ev) {
     if (!summaryPoints.length && !_summaryRequested) {
       _summaryRequested = true;
       const list = document.getElementById('summary-list');
-      fetch('/api/summary/force', { method: 'POST' }).catch(() => {});
+      fetch(apiBase + '/api/summary/force', { method: 'POST' }).catch(() => {});
     }
   }
 
@@ -762,7 +772,7 @@ function closeEmojiPopup(ev) {
     formData.append('uuid', myUUID);
 
     const xhr = new XMLHttpRequest();
-    xhr.open('POST', '/api/upload');
+    xhr.open('POST', apiBase + '/api/upload');
     xhr.upload.onprogress = e => {
       if (e.lengthComputable) {
         progressFill.style.width = Math.round(e.loaded / e.total * 100) + '%';
@@ -844,7 +854,7 @@ function closeEmojiPopup(ev) {
     }
     const btn = document.getElementById('summary-refresh-btn');
     if (btn) { btn.disabled = true; btn.style.opacity = '0.4'; }
-    fetch('/api/summary/force', { method: 'POST' }).catch(() => {});
+    fetch(apiBase + '/api/summary/force', { method: 'POST' }).catch(() => {});
   }
 
   function _normalizeSlideMatchToken(value) {
@@ -1001,6 +1011,10 @@ function closeEmojiPopup(ev) {
   }
 
   function _onIncomingHostSlidesCurrent(slidesCurrent) {
+    // Prefix slide URL with session base path for matching against catalog
+    if (slidesCurrent && slidesCurrent.url && slidesCurrent.url.startsWith('/api/')) {
+      slidesCurrent = { ...slidesCurrent, url: apiBase + slidesCurrent.url };
+    }
     const newCurrent = slidesCurrent || null;
     const key = _slidesCurrentKey(newCurrent);
     if (key === lastHostSlidesCurrentKey) return;
@@ -1698,8 +1712,10 @@ function closeEmojiPopup(ev) {
     for (const raw of (Array.isArray(rawSlides) ? rawSlides : [])) {
       if (!raw || typeof raw !== 'object') continue;
       const name = String(raw.name || '').trim();
-      const url = String(raw.url || '').trim();
+      let url = String(raw.url || '').trim();
       if (!_isDisplayableSlideName(name) || !url) continue;
+      // Prefix relative slide URLs with session base path
+      if (url.startsWith('/api/')) url = apiBase + url;
       const slug = String(raw.slug || '').trim() || 'slide';
       const key = `${slug}|${url}`;
       if (seen.has(key)) continue;
@@ -2140,7 +2156,8 @@ function closeEmojiPopup(ev) {
   async function _refreshSlidesCatalog({ forceReloadCurrent = false, autoLoadSelected = false } = {}) {
     const shell = document.getElementById('slides-viewer-shell');
     try {
-      const res = await fetch('/api/slides', { cache: 'no-store' });
+      const res = await fetch(apiBase + '/api/slides', { cache: 'no-store' });
+      if (res.status === 404) { window.location.href = '/?error=invalid'; return; }
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       slidesCatalog = _normalizeSlidesCatalog(data.slides);
@@ -2301,7 +2318,8 @@ function closeEmojiPopup(ev) {
   }
 
   async function fetchSuggestedName() {
-    const res = await fetch('/api/suggest-name');
+    const res = await fetch(apiBase + '/api/suggest-name');
+    if (res.status === 404) { window.location.href = '/?error=invalid'; return; }
     const data = await res.json();
     return data.name;
   }
@@ -2438,7 +2456,7 @@ function closeEmojiPopup(ev) {
   function connectWS(name) {
     _stateInitialised = false;
     const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-    const url = `${proto}://${location.host}/ws/${encodeURIComponent(myUUID)}`;
+    const url = `${proto}://${location.host}/ws/${sessionId}/${encodeURIComponent(myUUID)}`;
     ws = new WebSocket(url);
 
     ws.onopen = () => {
@@ -2469,7 +2487,8 @@ function closeEmojiPopup(ev) {
       handleMessage(msg);
     };
 
-    ws.onclose = () => {
+    ws.onclose = (event) => {
+      if (event.code === 1008) { window.location.href = '/'; return; }
       setTimeout(() => connectWS(myName), 3000);
     };
   }

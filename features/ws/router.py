@@ -33,6 +33,7 @@ from core.messaging import participant_ids
 from features.debate.router import auto_assign_remaining
 
 router = APIRouter()
+session_router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
@@ -81,62 +82,12 @@ def _is_host_authorized_for_ws(websocket: WebSocket) -> bool:
     )
 
 
-@router.websocket("/ws/daemon")
-async def daemon_websocket_endpoint(websocket: WebSocket):
-    if not _is_host_authorized_for_ws(websocket):
-        await websocket.close(code=1008)
-        return
+async def _handle_participant_connection(websocket: WebSocket, pid: str, is_host: bool, is_overlay: bool):
+    """Shared logic for participant/host/overlay WebSocket connections.
 
-    await websocket.accept()
-
-    # Kick old daemon connection if present.
-    old_ws = state.daemon_ws
-    if old_ws is not None and old_ws is not websocket:
-        try:
-            await old_ws.send_json({"type": "kicked"})
-            await old_ws.close(code=1001)
-        except Exception:
-            pass
-
-    state.daemon_ws = websocket
-    state.touch_daemon()
-    logger.info("Daemon WS connected")
-    await broadcast({"type": "slides_catalog_changed"})
-
-    try:
-        while True:
-            data = await websocket.receive_json()
-            state.touch_daemon()
-            msg_type = data.get("type")
-            if msg_type == "slides_catalog":
-                from features.slides.cache import handle_slides_catalog
-                await handle_slides_catalog(data.get("entries", []))
-            elif msg_type == "slide_invalidated":
-                from features.slides.cache import handle_slide_invalidated
-                slug = data.get("slug", "").strip()
-                if slug:
-                    await handle_slide_invalidated(slug)
-            elif msg_type == "daemon_ping":
-                # Heartbeat message; last_seen already updated.
-                continue
-    except WebSocketDisconnect:
-        pass
-    finally:
-        if state.daemon_ws is websocket:
-            state.daemon_ws = None
-        logger.info("Daemon WS disconnected")
-        await broadcast({"type": "slides_catalog_changed"})
-
-
-@router.websocket("/ws/{participant_id}")
-async def websocket_endpoint(websocket: WebSocket, participant_id: str):
-    pid = participant_id.strip()
-    if not pid:
-        await websocket.close(code=1008)
-        return
-
-    is_host = pid == "__host__"
-    is_overlay = pid == "__overlay__"
+    Handles: paused check, accept, name registration, message loop, disconnect cleanup.
+    Caller must have already validated auth and session_id as appropriate.
+    """
     role = "host" if is_host else ("overlay" if is_overlay else "participant")
 
     # Overlay reconnect: kick old overlay connection
@@ -455,3 +406,86 @@ async def websocket_endpoint(websocket: WebSocket, participant_id: str):
         # Keep participant_names and scores (persist for session)
         logger.info(f"Disconnected: {pid} ({len(state.participants)} remaining)")
         await broadcast_participant_update()
+
+
+@router.websocket("/ws/daemon")
+async def daemon_websocket_endpoint(websocket: WebSocket):
+    if not _is_host_authorized_for_ws(websocket):
+        await websocket.close(code=1008)
+        return
+
+    await websocket.accept()
+
+    # Kick old daemon connection if present.
+    old_ws = state.daemon_ws
+    if old_ws is not None and old_ws is not websocket:
+        try:
+            await old_ws.send_json({"type": "kicked"})
+            await old_ws.close(code=1001)
+        except Exception:
+            pass
+
+    state.daemon_ws = websocket
+    state.touch_daemon()
+    logger.info("Daemon WS connected")
+    await broadcast({"type": "slides_catalog_changed"})
+
+    try:
+        while True:
+            data = await websocket.receive_json()
+            state.touch_daemon()
+            msg_type = data.get("type")
+            if msg_type == "slides_catalog":
+                from features.slides.cache import handle_slides_catalog
+                await handle_slides_catalog(data.get("entries", []))
+            elif msg_type == "slide_invalidated":
+                from features.slides.cache import handle_slide_invalidated
+                slug = data.get("slug", "").strip()
+                if slug:
+                    await handle_slide_invalidated(slug)
+            elif msg_type == "daemon_ping":
+                # Heartbeat message; last_seen already updated.
+                continue
+    except WebSocketDisconnect:
+        pass
+    finally:
+        if state.daemon_ws is websocket:
+            state.daemon_ws = None
+        logger.info("Daemon WS disconnected")
+        await broadcast({"type": "slides_catalog_changed"})
+
+
+@router.websocket("/ws/{participant_id}")
+async def websocket_endpoint(websocket: WebSocket, participant_id: str):
+    """WebSocket endpoint for host (__host__) and overlay (__overlay__) only.
+
+    Regular participants must connect via /ws/{session_id}/{participant_id}.
+    """
+    pid = participant_id.strip()
+    if pid not in ("__host__", "__overlay__"):
+        await websocket.accept()
+        await websocket.close(code=1008)
+        return
+
+    is_host = pid == "__host__"
+    is_overlay = pid == "__overlay__"
+
+    await _handle_participant_connection(websocket, pid, is_host, is_overlay)
+
+
+@session_router.websocket("/ws/{session_id}/{participant_id}")
+async def session_websocket_endpoint(websocket: WebSocket, session_id: str, participant_id: str):
+    """WebSocket endpoint for regular participants, requiring a valid session_id."""
+    # Validate session_id — accept first so client gets a clean 1008 close code
+    if not state.session_id or session_id.lower() != state.session_id.lower():
+        await websocket.accept()
+        await websocket.close(code=1008)
+        return
+
+    pid = participant_id.strip()
+    if not pid or pid.startswith("__"):
+        await websocket.accept()
+        await websocket.close(code=1008)
+        return
+
+    await _handle_participant_connection(websocket, pid, is_host=False, is_overlay=False)

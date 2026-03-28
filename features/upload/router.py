@@ -9,7 +9,8 @@ from core.auth import require_host_auth
 from core.messaging import broadcast_state
 from core.state import state
 
-router = APIRouter()
+router = APIRouter()  # host-auth endpoints (download)
+public_router = APIRouter()  # participant-facing endpoints (upload), mounted under session prefix
 
 MAX_UPLOAD_SIZE = 500 * 1024 * 1024  # 500MB
 UPLOAD_DIR = Path(".server-data") / "uploads"
@@ -43,7 +44,7 @@ async def _cleanup_after_delay(file_id: int):
                 return
 
 
-@router.post("/api/upload")
+@public_router.post("/api/upload")
 async def upload_file(
     file: UploadFile = File(...),
     uuid: str = Form(...),

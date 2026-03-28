@@ -225,6 +225,7 @@
         if (msg.session_main !== undefined) sessionMain = msg.session_main;
         if (msg.session_talk !== undefined) sessionTalk = msg.session_talk;
         if (msg.daemon_last_seen !== undefined) daemonLastSeen = msg.daemon_last_seen;
+        updateSessionCodeBar(msg.session_id || null);
         renderSessionPanel();
         if (msg.mode) {
           currentMode = msg.mode;
@@ -3032,6 +3033,35 @@ function onSessionEmojiKey(event, action) {
   if (event.key !== 'Enter' && event.key !== ' ') return;
   event.preventDefault();
   if (typeof action === 'function') action();
+}
+
+let _currentSessionId = null;
+
+function updateSessionCodeBar(sessionId) {
+  _currentSessionId = sessionId;
+  const bar = document.getElementById('session-code-bar');
+  const display = document.getElementById('session-code-display');
+  if (!bar || !display) return;
+  if (sessionId) {
+    display.textContent = sessionId;
+    bar.style.display = 'flex';
+  } else {
+    bar.style.display = 'none';
+  }
+}
+
+function copySessionLink() {
+  if (!_currentSessionId) return;
+  const baseUrl = location.origin;
+  const link = `${baseUrl}/${_currentSessionId}`;
+  navigator.clipboard.writeText(link).then(() => {
+    const btn = document.getElementById('session-copy-link-btn');
+    if (btn) {
+      const orig = btn.textContent;
+      btn.textContent = 'Copied!';
+      setTimeout(() => { btn.textContent = orig; }, 1500);
+    }
+  });
 }
 
 function renderSessionPanel() {
