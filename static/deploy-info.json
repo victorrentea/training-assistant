@@ -1,7 +1,7 @@
 {
-  "sha": "b3fb2569713cf812580098993f7080b2b823f240",
-  "timestamp": "2026-03-29 00:19",
+  "sha": "9a72f0bcc09defd5de17c1b3f49561d61d8d942b",
+  "timestamp": "2026-03-29 00:21",
   "changelog": [
-    "fix(host): move copy-link and QR icons next to joining URL in center panel"
+    "feat(host): display deploy status on session blocker landing page"
   ]
 }
