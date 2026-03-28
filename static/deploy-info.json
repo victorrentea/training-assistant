@@ -1,7 +1,7 @@
 {
-  "sha": "f020d5219f07621348fc948beaced25d99c105ea",
-  "timestamp": "2026-03-28 07:34",
+  "sha": "229633e6f89d22f4dcb0597710ff6effc13537d9",
+  "timestamp": "2026-03-28 07:57",
   "changelog": [
-    "fix: read saved scroll before setDocument to prevent updateviewarea overwrite"
+    "fix: clear slides state on participant session reset"
   ]
 }
