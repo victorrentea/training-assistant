@@ -3286,7 +3286,7 @@ function onFooterJoinLinkClick(event) {
     return;
   }
   event.preventDefault();
-  _showFooterCopiedTooltip(event.currentTarget, 'Link Copied');
+  _showFooterCopiedTooltip(document.querySelector('.host-footer-center'), 'Link Copied');
   void navigator.clipboard.writeText(url).catch(() => {});
 }
 
