@@ -7,6 +7,8 @@
 - [x] **Slide view (cache miss)**: Participant clicks topic → backend fetches from mock Drive → PDF served
 - [x] **Slide view (cache hit)**: Second participant views same topic → served from cache, 0 extra Drive calls
 - [x] **Follow Me basic**: Stub PPT set to "Clean Code" slide 3 → daemon sends slides_current → participant clicks Follow → correct topic selected
+- [x] **Name change**: Participant renames → host sees new name in participant list
+- [x] **Emoji reaction to host**: Participant clicks emoji → host page shows floating emoji
 
 ---
 

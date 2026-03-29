@@ -374,6 +374,7 @@ The user frequently uses a dictation tool. Messages may contain misheard or mist
 - **After any significant architectural change**: update the C4 diagrams (C1, C2, C3) and system interactions sequence diagram inlined in [ARCHITECTURE.md](ARCHITECTURE.md) to reflect the new structure.
 - **After any change to inter-system communication** (WebSocket messages, REST endpoints, HTTP calls between backend/daemon/frontend/overlay/external services): update the "System Interactions" sequence diagram inlined in [ARCHITECTURE.md](ARCHITECTURE.md) to keep it in sync with the code. This includes adding, removing, or renaming WS message types, HTTP endpoints, or changing which component initiates a flow.
 - **Test-Drive-Fix any human-reported bug**: see [TESTING.md](TESTING.md) for the full protocol.
+- **E2E = hermetic**: when the user says "E2E test" or "end-to-end test", they mean a **hermetic Docker test** (`tests/docker/`): real backend + real daemon (stub adapters) + Playwright browsers, all in one container. The goal is to migrate all existing `tests/e2e/` tests into hermetic tests. See [TESTING.md](TESTING.md) for infrastructure details.
 - **Document direct request**: Every time the human requests a feature change or bug fix after you do it, keep track of it in backlog.md in a concise way as being done.
 
 
