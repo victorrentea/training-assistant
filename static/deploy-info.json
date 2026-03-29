@@ -1,10 +1,15 @@
 {
-  "sha": "41c4124384bf65362b6f66ab59c3b9b6568693cc",
+  "sha": "a892d5a1d3b31c85a32e24531cce000030a1ff15",
   "timestamp": "2026-03-29 16:15",
   "changelog": [
-    "ux: show footer link copied tooltip immediately"
+    "ui: constrain footer QR overlay between header and footer"
   ],
   "commits": [
+    {
+      "sha": "a892d5a1",
+      "msg": "ui: constrain footer QR overlay between header and footer",
+      "ts": "2026-03-29T16:15:07+03:00"
+    },
     {
       "sha": "41c41243",
       "msg": "ux: show footer link copied tooltip immediately",
@@ -99,11 +104,6 @@
       "sha": "359dd8f5",
       "msg": "fix: keep start.sh alive on stale pid kills",
       "ts": "2026-03-29T15:18:22+03:00"
-    },
-    {
-      "sha": "33a4dbb1",
-      "msg": "chore: simplify transcript log line format",
-      "ts": "2026-03-29T15:16:29+03:00"
     }
   ],
   "branches": [
