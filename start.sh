@@ -177,7 +177,6 @@ while true; do
       if [ $DAEMON_EXIT -eq 0 ]; then
         _log "start" "info" "🔴 daemon (clean exit)"
         stop_all_processes
-        EXIT_REASON="daemon exited cleanly"
         exit 0
       elif [ $DAEMON_EXIT -eq 42 ]; then
         RESTART_REASON="daemon-version-change"
