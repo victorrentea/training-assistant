@@ -1,10 +1,15 @@
 {
-  "sha": "c6aa4fb6379946a38d85ee473012f0a0db412257",
-  "timestamp": "2026-03-29 13:09",
+  "sha": "0caf1d01c473e831496806d34f02da4a71bf350b",
+  "timestamp": "2026-03-29 13:10",
   "changelog": [
-    "fix(wispr-addons): use template icon so it fades on secondary monitors"
+    "fix(session): folders only transferred on backend start, not every daemon reconnect"
   ],
   "commits": [
+    {
+      "sha": "0caf1d01",
+      "msg": "fix(session): folders only transferred on backend start, not every daemon reconnect",
+      "ts": "2026-03-29T13:10:26+03:00"
+    },
     {
       "sha": "c6aa4fb6",
       "msg": "fix(wispr-addons): use template icon so it fades on secondary monitors",
@@ -99,11 +104,6 @@
       "sha": "0f2b1eeb",
       "msg": "feat(host-landing): replace radio+create with two typed start buttons",
       "ts": "2026-03-29T12:40:26+03:00"
-    },
-    {
-      "sha": "51a9ba9b",
-      "msg": "feat(host-landing): table layout for previous sessions with date/topic split",
-      "ts": "2026-03-29T12:39:28+03:00"
     }
   ],
   "branches": [
