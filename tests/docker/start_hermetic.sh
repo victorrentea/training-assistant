@@ -17,7 +17,14 @@ export FIXTURE_PDF_DIR=/tmp/fixture-pdfs
 export MOCK_DRIVE_PORT=9090
 
 # Create fixture directories
-mkdir -p "$SESSIONS_FOLDER" "$TRANSCRIPTION_FOLDER" "$FIXTURE_PDF_DIR"
+mkdir -p "$SESSIONS_FOLDER" "$TRANSCRIPTION_FOLDER" "$FIXTURE_PDF_DIR" /tmp/test-pptx
+
+# Create dummy PPTX files (just empty files — daemon only checks mtime)
+touch "/tmp/test-pptx/Clean Code.pptx"
+touch "/tmp/test-pptx/Design Patterns.pptx"
+touch "/tmp/test-pptx/Architecture.pptx"
+
+export PPTX_WATCH_DIR=/tmp/test-pptx
 
 # Create version.js stub
 echo "window.APP_VERSION = 'docker-hermetic';" > /app/static/version.js
@@ -32,7 +39,7 @@ cat > /tmp/test-slides-catalog.json <<CATALOG
     {
       "title": "Clean Code",
       "slug": "clean-code",
-      "source": "/tmp/nonexistent.pptx",
+      "source": "/tmp/test-pptx/Clean Code.pptx",
       "target_pdf": "clean-code.pdf",
       "drive_export_url": "http://localhost:${MOCK_DRIVE_PORT}/presentation/d/clean-code/export/pdf",
       "group": "Coding"
@@ -40,7 +47,7 @@ cat > /tmp/test-slides-catalog.json <<CATALOG
     {
       "title": "Design Patterns",
       "slug": "design-patterns",
-      "source": "/tmp/nonexistent2.pptx",
+      "source": "/tmp/test-pptx/Design Patterns.pptx",
       "target_pdf": "design-patterns.pdf",
       "drive_export_url": "http://localhost:${MOCK_DRIVE_PORT}/presentation/d/design-patterns/export/pdf",
       "group": "Coding"
@@ -48,7 +55,7 @@ cat > /tmp/test-slides-catalog.json <<CATALOG
     {
       "title": "Architecture",
       "slug": "architecture",
-      "source": "/tmp/nonexistent3.pptx",
+      "source": "/tmp/test-pptx/Architecture.pptx",
       "target_pdf": "architecture.pdf",
       "drive_export_url": "http://localhost:${MOCK_DRIVE_PORT}/presentation/d/architecture/export/pdf",
       "group": "Design"
