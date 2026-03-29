@@ -17,6 +17,7 @@ async function loadPage() {
 
 function renderPage(active, folders) {
   const app = document.getElementById('app');
+  const today = new Date().toISOString().slice(0, 10);
 
   let rejoinHtml = '';
   if (active && active.active && active.session_id) {
@@ -30,12 +31,27 @@ function renderPage(active, folders) {
       </div>`;
   }
 
+  const todayFolders = (folders || []).filter(f => f.startsWith(today));
+  let todayHtml = '';
+  if (todayFolders.length > 0) {
+    const btns = todayFolders.map(f => {
+      const suffix = f.slice(today.length).replace(/^\s+/, '') || f;
+      return `<button class="today-resume-btn" onclick="doResumeFolder(${JSON.stringify(f)})">▶ ${_esc(suffix)}</button>`;
+    }).join('');
+    todayHtml = `
+      <div class="today-section">
+        <div class="today-label">Resume today</div>
+        ${btns}
+      </div>`;
+  }
+
   const folderListHtml = buildFolderList(folders);
 
   app.innerHTML = `
     <div class="landing-card">
       <div class="landing-title">Start Session</div>
       ${rejoinHtml}
+      ${todayHtml}
       <div class="new-session-label">New session</div>
       <div class="session-name-row">
         <span class="session-date-prefix">${new Date().toISOString().slice(0, 10)}&nbsp;</span>
