@@ -559,6 +559,8 @@ def run() -> None:
     git_repos: list[dict] = []         # {project, path, branch, seconds_spent}
     last_intellij_probe_at: float = 0.0
     _INTELLIJ_PROBE_INTERVAL: float = 5.0  # probe IntelliJ every 5 seconds
+    last_ppt_track_at: float = 0.0
+    _PPT_TRACK_INTERVAL: float = 5.0       # accumulate slide time every 5 seconds
     _last_activity_log_key: tuple = (0, 0)  # (slides_count, git_count) — detect changes
 
     # Sync initial state to server — include session_state.json if present in the active folder
@@ -642,8 +644,10 @@ def run() -> None:
                     else:
                         pass
 
-                # ── Track slides log from PowerPoint state (foreground only) ──
-                if not ppt_error and ppt_state and ppt_state.get("frontmost", True):
+                # ── Track slides log from PowerPoint state (foreground only, every 5s) ──
+                _now_mono = time.monotonic()
+                if not ppt_error and ppt_state and ppt_state.get("frontmost", True) and _now_mono - last_ppt_track_at >= _PPT_TRACK_INTERVAL:
+                    last_ppt_track_at = _now_mono
                     _ppt_file = ppt_state.get("presentation", "")
                     _ppt_slide = _coerce_slide_number(ppt_state.get("slide"))
                     _now_hhmm = datetime.now().strftime("%H:%M")
@@ -653,15 +657,15 @@ def run() -> None:
                         None,
                     )
                     if _entry:
-                        _entry["seconds_spent"] += DAEMON_POLL_INTERVAL
-                        log.info("ppt", f"Slide +{DAEMON_POLL_INTERVAL}s: {Path(_ppt_file).stem} #{_ppt_slide} (total: {_entry['seconds_spent']}s)")
+                        _entry["seconds_spent"] += _PPT_TRACK_INTERVAL
+                        log.info("ppt", f"Slide +{_PPT_TRACK_INTERVAL:.0f}s: {Path(_ppt_file).stem} #{_ppt_slide} (total: {_entry['seconds_spent']}s)")
                     else:
                         slides_log.append({
                             "file": _ppt_file,
                             "slide": _ppt_slide,
                             "first_seen_at": _now_hhmmss,
                             "first_seen_hhmm": _now_hhmm,
-                            "seconds_spent": DAEMON_POLL_INTERVAL,
+                            "seconds_spent": _PPT_TRACK_INTERVAL,
                         })
 
                 # ── Probe IntelliJ every 5 seconds and track git repos ──
