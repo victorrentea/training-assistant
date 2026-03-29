@@ -33,7 +33,8 @@ def get_current_session_id() -> str | None:
 _KEY_POINTS_FILE = "transcript_discussion.md"
 _KEY_POINTS_FILE_LEGACY_MD = "transcript_keypoints.md"
 _KEY_POINTS_FILE_LEGACY = "key_points.json"
-_DAEMON_STATE_FILENAME = "daemon_state.json"
+GLOBAL_STATE_FILENAME = "training-assistant-global-state.json"
+_LEGACY_DAEMON_STATE_FILENAME = "daemon_state.json"
 
 _SLIDES_MANIFEST_CANDIDATES = (
     "slides_manifest.json",
@@ -199,7 +200,11 @@ def save_key_points(
 def load_daemon_state(sessions_root: Path) -> dict:
     """Load daemon state. Returns {main: dict|None, talk: dict|None}.
     Migrates old {stack:[...]} format transparently."""
-    state_file = sessions_root / _DAEMON_STATE_FILENAME
+    state_file = sessions_root / GLOBAL_STATE_FILENAME
+    if not state_file.exists():
+        legacy_file = sessions_root / _LEGACY_DAEMON_STATE_FILENAME
+        if legacy_file.exists():
+            state_file = legacy_file
     empty = {"main": None, "talk": None}
     if not state_file.exists():
         return empty
@@ -251,7 +256,7 @@ def save_daemon_state(sessions_root: Path, daemon_state: dict) -> None:
     """Persist {main, talk} daemon state to disk atomically."""
     try:
         sessions_root.mkdir(parents=True, exist_ok=True)
-        path = sessions_root / _DAEMON_STATE_FILENAME
+        path = sessions_root / GLOBAL_STATE_FILENAME
         tmp = path.with_suffix(".tmp")
         tmp.write_text(json.dumps(daemon_state, default=str, indent=2), encoding="utf-8")
         tmp.replace(path)

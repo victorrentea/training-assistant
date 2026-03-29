@@ -3,12 +3,12 @@
 ## Disk location
 
 - `sessions_root` = `SESSIONS_FOLDER` env var, default: `~/My Drive/Cursuri/###sesiuni`
-- Global daemon state file: `${sessions_root}/daemon_state.json`
+- Global daemon state file: `${sessions_root}/training-assistant-global-state.json`
 - Per-session state file: `${sessions_root}/${session_name}/session_state.json`
 
 ## What is stored
 
-- Global (`daemon_state.json`):
+- Global (`training-assistant-global-state.json`):
   - `main`: active/paused/ended workshop session metadata
   - `talk`: active/paused/ended nested talk session metadata (or `null`)
   - `session_id`: currently active public session id (stable join id)
@@ -24,7 +24,7 @@ classDiagram
     }
 
     class DaemonStateFile {
-      +path: daemon_state.json
+      +path: training-assistant-global-state.json
       +main: SessionRef?
       +talk: SessionRef?
       +session_id: string?

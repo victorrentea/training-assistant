@@ -38,6 +38,7 @@ from daemon.slides.loop import SlidesPollingRunner
 from daemon.materials.mirror import MaterialsMirrorRunner
 from daemon.ws_client import DaemonWsClient
 from daemon.session_state import (
+    GLOBAL_STATE_FILENAME,
     resolve_materials_folder,
     check_daily_timing,
     load_daemon_state,
@@ -475,6 +476,28 @@ def _sync_powerpoint_slide_to_server(main_config, slides_cfg, ppt_state: dict | 
     ws_client.send(payload)
 
 
+def _send_global_state_saved_ack(
+    ws_client,
+    session_req: dict | None,
+    action: str | None,
+    persisted: bool,
+    session_id: str | None,
+) -> None:
+    if not session_req:
+        return
+    request_id = str(session_req.get("request_id") or "").strip()
+    if not request_id:
+        return
+    ws_client.send({
+        "type": "global_state_saved",
+        "request_id": request_id,
+        "action": action,
+        "persisted": persisted,
+        "session_id": session_id,
+        "global_state_file": GLOBAL_STATE_FILENAME,
+    })
+
+
 def _bind_initial_session_folder(config, sessions_root: Path, session_stack: list[dict]) -> tuple[object, str]:
     """Resolve and log session folder binding at daemon startup."""
     today_folder = today_notes = None
@@ -857,6 +880,7 @@ def run() -> None:
                 try:
                     session_req = _pending_requests.pop("session_request", None)
                     action = session_req.get("action") if session_req else None
+                    global_state_persisted = False
                     if action == "create":
                         name = session_req["name"]
                         sid = session_req.get("session_id")
@@ -876,6 +900,7 @@ def run() -> None:
                             session_stack.append(new_session)
                             current_key_points, summary_watermark = load_key_points(folder)
                             _do_save_daemon_state()
+                            global_state_persisted = True
                             notes_file = find_notes_in_folder(folder)
                             config = dc_replace(config, session_folder=folder, session_notes=notes_file)
                             sync_session_to_server(config, session_stack, current_key_points, slides_log=slides_log, git_repos=git_repos)
@@ -910,6 +935,7 @@ def run() -> None:
                         session_stack.append(new_session)
                         current_key_points, summary_watermark = load_key_points(folder)
                         _do_save_daemon_state()
+                        global_state_persisted = True
                         notes_file = find_notes_in_folder(folder)
                         config = dc_replace(config, session_folder=folder, session_notes=notes_file)
                         sync_session_to_server(config, session_stack, current_key_points, slides_log=slides_log, git_repos=git_repos)
@@ -947,6 +973,7 @@ def run() -> None:
                             _last_activity_log_key = (0, 0)
                             log.info("session", f"Ended: {ended['name']}")
                         _do_save_daemon_state()
+                        global_state_persisted = True
                         sync_session_to_server(config, session_stack, current_key_points, slides_log=slides_log, git_repos=git_repos)
                         transcript_state.reset()
 
@@ -964,6 +991,7 @@ def run() -> None:
                                 save_key_points(new_folder, current_key_points, summary_watermark, session_start_date(session_stack[-1]))
                             session_stack[-1]["name"] = new_name
                             _do_save_daemon_state()
+                            global_state_persisted = True
                             notes_file = find_notes_in_folder(new_folder)
                             config = dc_replace(config, session_folder=new_folder, session_notes=notes_file)
                             sync_session_to_server(config, session_stack, current_key_points, slides_log=slides_log, git_repos=git_repos)
@@ -972,12 +1000,14 @@ def run() -> None:
                     elif action == "pause" and session_stack:
                         pause_session(session_stack[-1], datetime.now(), reason="explicit")
                         _do_save_daemon_state()
+                        global_state_persisted = True
                         sync_session_to_server(config, session_stack, current_key_points, slides_log=slides_log, git_repos=git_repos)
                         log.info("session", f"Paused: {session_stack[-1]['name']}")
 
                     elif action == "resume" and session_stack:
                         resume_session(session_stack[-1], datetime.now())
                         _do_save_daemon_state()
+                        global_state_persisted = True
                         sync_session_to_server(config, session_stack, current_key_points, slides_log=slides_log, git_repos=git_repos)
                         transcript_state.reset()
                         log.info("session", f"Resumed: {session_stack[-1]['name']}")
@@ -997,6 +1027,7 @@ def run() -> None:
                         talk_points, talk_wm = load_key_points(talk_folder)
                         current_key_points, summary_watermark = talk_points, talk_wm
                         _do_save_daemon_state()
+                        global_state_persisted = True
                         notes_file = find_notes_in_folder(talk_folder)
                         config = dc_replace(config, session_folder=talk_folder, session_notes=notes_file)
 
@@ -1008,6 +1039,8 @@ def run() -> None:
                             git_repos=git_repos,
                         )
                         log.info("session", f"Created talk folder: {talk_name}")
+                    if action:
+                        _send_global_state_saved_ack(ws_client, session_req, action, global_state_persisted, _active_session_id)
 
                 except Exception as e:
                     log.error("session", f"Request error: {e}")

@@ -460,7 +460,13 @@ class TestManifest:
 # ═══════════════════════════════════════════════════════════════════════
 # training_daemon.py — session persistence functions
 # ═══════════════════════════════════════════════════════════════════════
-from daemon.session_state import load_key_points as _load_key_points, save_key_points as _save_key_points, load_daemon_state as _load_daemon_state, save_daemon_state as _save_daemon_state
+from daemon.session_state import (
+    GLOBAL_STATE_FILENAME,
+    load_key_points as _load_key_points,
+    save_key_points as _save_key_points,
+    load_daemon_state as _load_daemon_state,
+    save_daemon_state as _save_daemon_state,
+)
 
 
 class TestSessionKeyPoints:
@@ -483,7 +489,7 @@ class TestSessionKeyPoints:
         assert len(loaded) == 2
 
     def test_load_daemon_state(self, tmp_path):
-        state_file = tmp_path / "daemon_state.json"
+        state_file = tmp_path / GLOBAL_STATE_FILENAME
         # Old stack format — should be migrated to {main, talk}
         state_file.write_text('{"stack": [{"name": "Test", "started_at": "2026-03-23T09:00:00", "ended_at": null, "summary_watermark": 0}]}')
         state = _load_daemon_state(tmp_path)
