@@ -9,8 +9,6 @@
 
 Who uses the system and what external systems it touches.
 
-Source: [`adoc/c4_c1_context.puml`](adoc/c4_c1_context.puml)
-
 ```plantuml
 @startuml C1_SystemContext
 !include <C4/C4_Context>
