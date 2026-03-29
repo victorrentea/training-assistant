@@ -1,17 +1,27 @@
+html {
+  height: 100%;
+  overflow: hidden;
+}
+
 body {
   background: var(--bg);
   color: var(--text);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
   display: flex;
   align-items: flex-start;
   justify-content: center;
   padding: 3rem 1rem 2rem;
+  box-sizing: border-box;
 }
 
 #app {
   width: 100%;
   max-width: 520px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .landing-card {
@@ -19,7 +29,8 @@ body {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 2rem;
-  margin-bottom: 1.5rem;
+  margin-bottom: 1rem;
+  flex-shrink: 0;
 }
 
 .landing-title {
@@ -67,46 +78,6 @@ body {
   transform: scale(.98);
 }
 
-/* Today's sessions */
-.today-section {
-  margin-bottom: 1.5rem;
-  padding-bottom: 1.5rem;
-  border-bottom: 1px solid var(--border);
-}
-
-.today-label {
-  font-size: .8rem;
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: .06em;
-  margin-bottom: .6rem;
-}
-
-.today-resume-btn {
-  display: block;
-  width: 100%;
-  padding: .6rem 1rem;
-  background: var(--surface2);
-  color: var(--text);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  font-size: 1rem;
-  font-weight: 600;
-  text-align: left;
-  cursor: pointer;
-  transition: background .12s, border-color .12s;
-  margin-bottom: .4rem;
-}
-
-.today-resume-btn:last-child {
-  margin-bottom: 0;
-}
-
-.today-resume-btn:hover {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: #fff;
-}
 
 /* New session form */
 .new-session-label {
@@ -199,6 +170,11 @@ body {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .folders-header {
@@ -208,14 +184,25 @@ body {
   text-transform: uppercase;
   letter-spacing: .06em;
   border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
 }
 
 .folder-list {
   list-style: none;
   padding: 0;
   margin: 0;
-  max-height: 340px;
+  flex: 1;
   overflow-y: auto;
+}
+
+.folder-group-label {
+  padding: .35rem 1.5rem;
+  font-size: .72rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
 }
 
 .folder-row {
