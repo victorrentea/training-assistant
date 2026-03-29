@@ -12,6 +12,23 @@ from daemon.transcript.normalizer import normalize_folder_incremental
 
 _TIMESTAMP_INTERVAL_SECONDS = float(os.environ.get("TRANSCRIPT_TIMESTAMP_INTERVAL_SECONDS", "3"))
 _NORMALIZER_INTERVAL_SECONDS = float(os.environ.get("TRANSCRIPT_NORMALIZER_INTERVAL_SECONDS", "3"))
+
+# --- LLM pre-filter (easy to remove: delete this block + usage in TranscriptNormalizerRunner) ---
+_LLM_CLEAN_ENABLED = os.environ.get("TRANSCRIPT_LLM_CLEAN", "0").strip().lower() not in {
+    "0", "false", "no", "off",
+}
+
+def _build_llm_line_filter():
+    from daemon.transcript.llm_cleaner import clean_line
+    log.info("transcript", "LLM pre-filter enabled (TRANSCRIPT_LLM_CLEAN=1, model: gemma3:4b)")
+    def _filter(text: str) -> str | None:
+        result = clean_line(text)
+        return None if result == "[SKIP]" else result
+    return _filter
+
+_llm_line_filter = _build_llm_line_filter() if _LLM_CLEAN_ENABLED else None
+# -------------------------------------------------------------------------------------------------
+
 _NORMALIZER_ENABLED = os.environ.get("TRANSCRIPT_NORMALIZER_ENABLED", "1").strip().lower() not in {
     "0",
     "false",
@@ -133,7 +150,7 @@ class TranscriptNormalizerRunner:
         if now < self._next_run_at:
             return
         try:
-            results = normalize_folder_incremental(self.folder)
+            results = normalize_folder_incremental(self.folder, line_pre_filter=_llm_line_filter)
             written = sum(r.written_lines for r in results)
             if written > 0:
                 words = sum(r.written_words for r in results)
