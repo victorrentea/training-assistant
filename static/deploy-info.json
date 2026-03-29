@@ -1,8 +1,8 @@
 {
-  "sha": "0366ddc46bc32db9addaf6a717d4f5d755a0bbb8",
-  "timestamp": "2026-03-29 12:15",
+  "sha": "15da7231c2058b2419eb2708ef80294c39e68e36",
+  "timestamp": "2026-03-29 12:21",
   "changelog": [
-    "fix(host): add missing session-code-bar element to host panel HTML"
+    "feat(session): show date as static prefix in session name input"
   ],
   "branches": [
     {
@@ -26,11 +26,6 @@
       "minutes": 255
     },
     {
-      "branch": "overlay-hide-emoji-single-screen",
-      "sha": "5b07b93",
-      "minutes": 218
-    },
-    {
       "branch": "fix-ci-run-23695885613",
       "sha": "916b7b1",
       "minutes": 99
@@ -44,11 +39,6 @@
       "branch": "fix-emoji-overlay-hover",
       "sha": "1fcd15e",
       "minutes": 84
-    },
-    {
-      "branch": "pull-master",
-      "sha": "7387c97",
-      "minutes": 83
     },
     {
       "branch": "demo-slide-log",
@@ -104,6 +94,16 @@
       "branch": "shrink-topic-height-5pct",
       "sha": "466fbe7",
       "minutes": 14
+    },
+    {
+      "branch": "pdf-fit-width-btn",
+      "sha": "60d7e4a",
+      "minutes": 10
+    },
+    {
+      "branch": "fix-slides-scroll-drift",
+      "sha": "9babc87",
+      "minutes": 10
     }
   ]
 }
