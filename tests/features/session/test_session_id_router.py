@@ -153,7 +153,7 @@ def test_session_active_not_active_for_stopped_main_with_stale_session_id():
     assert body["session_id"] == "stale1"
 
 
-def test_session_active_pending_create_without_main_is_active_but_not_autojoin():
+def test_session_active_pending_create_without_main_is_active_and_autojoin():
     client = TestClient(app, headers=_HOST_AUTH_HEADERS)
     state.session_main = None
     state.session_id = "abc123"
@@ -164,7 +164,7 @@ def test_session_active_pending_create_without_main_is_active_but_not_autojoin()
     body = resp.json()
 
     assert body["active"] is True
-    assert body["auto_join"] is False
+    assert body["auto_join"] is True
     assert body["session_id"] == "abc123"
 
 

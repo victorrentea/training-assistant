@@ -536,10 +536,11 @@ async def get_session_active():
         folder_name = _normalize_session_name(str((state.session_main or {}).get("name") or state.session_name or ""))
         state.session_id = _resolve_session_id_for_folder(folder_name) if folder_name else state.generate_session_id()
     active = (main_open and state.session_id is not None) or pending_create
+    auto_join = ((main_open and state.session_id is not None) or pending_create)
     name = state.session_name or ((state.session_main or {}).get("name") if isinstance(state.session_main, dict) else None)
     return {
         "active": active,
-        "auto_join": main_open and state.session_id is not None,
+        "auto_join": auto_join,
         "session_id": state.session_id,
         "session_name": name,
     }
