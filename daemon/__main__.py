@@ -821,6 +821,24 @@ def run() -> None:
         ws_client.send({"type": "session_folders", "folders": folders})
     ws_client.on_connect(_push_session_folders)
 
+    # Re-sync active session state to backend on every (re)connect (e.g. after backend restart)
+    def _sync_session_on_reconnect():
+        if not session_stack:
+            return
+        reconnect_session_state: dict | None = None
+        state_file = sessions_root / session_stack[-1]["name"] / "session_state.json"
+        if state_file.exists():
+            try:
+                reconnect_session_state = json.loads(state_file.read_text(encoding="utf-8"))
+            except Exception as e:
+                log.error("session", f"Failed to read session_state.json on reconnect: {e}")
+        try:
+            sync_session_to_server(config, session_stack, current_key_points, reconnect_session_state, slides_log=slides_log, git_repos=git_repos)
+            log.info("session", f"Re-synced session '{session_stack[-1]['name']}' to backend on reconnect")
+        except Exception as e:
+            log.error("session", f"Session re-sync on reconnect failed: {e}")
+    ws_client.on_connect(_sync_session_on_reconnect)
+
     ws_client.start()
 
     try:
