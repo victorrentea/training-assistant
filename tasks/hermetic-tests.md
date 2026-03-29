@@ -130,9 +130,21 @@
 - [ ] **Unavailable slide styling**: Unavailable slides crossed out and disabled
 - [ ] **Slide NEW badge lifecycle**: No badge before visit → badge after update → clears on click
 
+## Integration Point Coverage (WIP)
+
+Tests written but need investigation before they pass:
+
+- [ ] **PPTX change detection**: `test_integrations.py::test_pptx_change_triggers_slide_invalidation`
+  - Blocker: daemon's `ensure_slug()` generates UUID slugs for watched PPTX files instead of matching catalog slugs. The `slide_invalidated` message uses auto-slug, not the catalog slug (`clean-code`). Need to investigate slug resolution between slides loop and catalog.
+- [ ] **IntelliJ state**: `test_integrations.py::test_intellij_state_visible_to_host`
+  - Blocker: need to understand how daemon sends IntelliJ state to host. It may be via `activity_log` WS message rather than a directly visible UI element.
+- [ ] **Quiz generation**: `test_integrations.py::test_quiz_generation_with_stub_llm`
+  - Blocker: need to trace the exact WS message flow for quiz request → daemon processes → quiz_preview sent back. The stub LLM returns canned JSON but the quiz parser may expect a different format.
+
 ## Infrastructure Still Needed
 
 - [x] Controllable stub PowerPoint adapter (file-based)
-- [ ] Controllable stub IntelliJ adapter (file-based, like PowerPoint stub)
+- [x] Controllable stub IntelliJ adapter (file-based, like PowerPoint stub)
 - [ ] Desktop overlay WS mock that records received messages
 - [ ] Fixture session folders with pre-populated state for resume test
+- [ ] PPTX slug resolution fix (ensure watched files use catalog slugs)
