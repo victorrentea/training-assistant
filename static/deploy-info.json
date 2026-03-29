@@ -1,10 +1,20 @@
 {
-  "sha": "ede3c831b4b165fca960d6ca0ab611fd43b5b20a",
-  "timestamp": "2026-03-29 17:16",
+  "sha": "95ca6db31055f5603afa6c946f49cd1bcbda3d7f",
+  "timestamp": "2026-03-29 17:20",
   "changelog": [
-    "docs: clarify single-session daemon state model"
+    "feat: sync session global state through daemon ws"
   ],
   "commits": [
+    {
+      "sha": "95ca6db3",
+      "msg": "feat: sync session global state through daemon ws",
+      "ts": "2026-03-29T17:16:48+03:00"
+    },
+    {
+      "sha": "82030e71",
+      "msg": "fix: widen footer tooltips and hide when popover open",
+      "ts": "2026-03-29T17:14:28+03:00"
+    },
     {
       "sha": "ede3c831",
       "msg": "docs: clarify single-session daemon state model",
@@ -94,16 +104,6 @@
       "sha": "af6ad569",
       "msg": "ui: remove floating end session button",
       "ts": "2026-03-29T16:18:57+03:00"
-    },
-    {
-      "sha": "f3aceea5",
-      "msg": "ui: stop blinking deploy countdown on participant",
-      "ts": "2026-03-29T16:18:14+03:00"
-    },
-    {
-      "sha": "a39ab4b6",
-      "msg": "ui: move heart badge to third position",
-      "ts": "2026-03-29T16:15:57+03:00"
     }
   ],
   "branches": [

@@ -23,7 +23,7 @@ classDiagram
       +path: SESSIONS_FOLDER
     }
 
-    class DaemonStateFile {
+    class GlobalStateFile {
       +path: training-assistant-global-state.json
       +main: SessionRef?
       +talk: SessionRef?
@@ -67,10 +67,10 @@ classDiagram
       +git_repos: list
     }
 
-    SessionsRoot "1" o-- "1" DaemonStateFile : stores global
+    SessionsRoot "1" o-- "1" GlobalStateFile : stores global
     SessionsRoot "1" o-- "*" SessionFolder : contains
     SessionFolder "1" o-- "1" SessionStateFile : stores per-session
-    DaemonStateFile "1" --> "0..1" SessionRef : main
-    DaemonStateFile "1" --> "0..1" SessionRef : talk
+    GlobalStateFile "1" --> "0..1" SessionRef : main
+    GlobalStateFile "1" --> "0..1" SessionRef : talk
     SessionRef "1" o-- "*" PauseInterval
 ```
