@@ -1,11 +1,15 @@
 {
-  "sha": "2f4c32ddce12e5f4ce4c21bd2a5c27c5c2fcad85",
-  "timestamp": "2026-03-29 13:14",
+  "sha": "40d3895c53c74e7b35bcd0ba85a628acc7b28c94",
+  "timestamp": "2026-03-29 13:17",
   "changelog": [
-    "feat(wispr-addons): use \ud83c\udf99\ufe0f emoji PNG as menu bar icon",
-    "refactor(session): simplify folders sync \u2014 use on_connect push instead of request/response"
+    "feat(host): show stop sign blocker when server is unreachable"
   ],
   "commits": [
+    {
+      "sha": "40d3895c",
+      "msg": "feat(host): show stop sign blocker when server is unreachable",
+      "ts": "2026-03-29T13:16:55+03:00"
+    },
     {
       "sha": "2f4c32dd",
       "msg": "feat(wispr-addons): use \ud83c\udf99\ufe0f emoji PNG as menu bar icon",
@@ -100,11 +104,6 @@
       "sha": "9eb10f77",
       "msg": "fix(host-landing): make /api/session/folders public so JS fetch works",
       "ts": "2026-03-29T12:46:32+03:00"
-    },
-    {
-      "sha": "551e2d5d",
-      "msg": "feat(wispr-addons): load API key from ~/.training-assistants-secrets.env",
-      "ts": "2026-03-29T12:41:36+03:00"
     }
   ],
   "branches": [
@@ -139,11 +138,6 @@
       "minutes": 84
     },
     {
-      "branch": "demo-slide-log",
-      "sha": "22f7805",
-      "minutes": 61
-    },
-    {
       "branch": "participant-file-upload",
       "sha": "6441120",
       "minutes": 60
@@ -175,8 +169,8 @@
     },
     {
       "branch": "host-landing-scroll-fix",
-      "sha": "26c55c4",
-      "minutes": 32
+      "sha": "33b8328",
+      "minutes": 33
     },
     {
       "branch": "fix-ui-layout-cutoff",
@@ -206,6 +200,11 @@
     {
       "branch": "pdf-fit-width-btn",
       "sha": "60d7e4a",
+      "minutes": 10
+    },
+    {
+      "branch": "fix-slides-scroll-drift",
+      "sha": "9babc87",
       "minutes": 10
     }
   ]
