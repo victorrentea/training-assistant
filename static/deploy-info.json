@@ -1,10 +1,15 @@
 {
-  "sha": "0b77b0ec6325e77323dc2d052c368600ad656877",
-  "timestamp": "2026-03-29 13:37",
+  "sha": "8c82272191675b98b786bd47ccc737b4b4098b74",
+  "timestamp": "2026-03-29 13:39",
   "changelog": [
-    "fix(host): smarter server-unreachable blocker + redirect on session loss"
+    "feat(host): add \u23f9\ufe0f end-session button at bottom-right"
   ],
   "commits": [
+    {
+      "sha": "8c822721",
+      "msg": "feat(host): add \u23f9\ufe0f end-session button at bottom-right",
+      "ts": "2026-03-29T13:39:13+03:00"
+    },
     {
       "sha": "0b77b0ec",
       "msg": "fix(host): smarter server-unreachable blocker + redirect on session loss",
@@ -99,11 +104,6 @@
       "sha": "c2118fc6",
       "msg": "feat(wispr-addons): log USD cost of each AI cleanup call",
       "ts": "2026-03-29T13:05:02+03:00"
-    },
-    {
-      "sha": "79b588fd",
-      "msg": "fix(wispr-addons): make clean paste menu items clickable, use WISPR_CLEANUP_ANTHROPIC_API_KEY",
-      "ts": "2026-03-29T13:02:43+03:00"
     }
   ],
   "branches": [
