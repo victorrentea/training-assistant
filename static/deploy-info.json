@@ -1,10 +1,15 @@
 {
-  "sha": "a4c08f343babf59561eafd04389808d0f2b1ae17",
-  "timestamp": "2026-03-29 15:53",
+  "sha": "1aaa0123fabd0cb63ae51164ea90fe90449e7081",
+  "timestamp": "2026-03-29 15:55",
   "changelog": [
-    "chore: update deploy-info [skip ci]"
+    "chore: prevent deploy-info bot commit loop"
   ],
   "commits": [
+    {
+      "sha": "1aaa0123",
+      "msg": "chore: prevent deploy-info bot commit loop",
+      "ts": "2026-03-29T15:52:41+03:00"
+    },
     {
       "sha": "a8182bb8",
       "msg": "Fix fullscreen join QR overlay behavior",
@@ -99,11 +104,6 @@
       "sha": "53cf4a39",
       "msg": "feat: log 🤖 and latency for transcript llm cleaning",
       "ts": "2026-03-29T15:10:38+03:00"
-    },
-    {
-      "sha": "bbebedae",
-      "msg": "Increase PowerPoint probe timeout to 5s",
-      "ts": "2026-03-29T15:08:51+03:00"
     }
   ],
   "branches": [
