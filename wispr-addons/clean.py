@@ -64,19 +64,25 @@ CLEANUP_PROMPT = (
     "Detect the input language and respond in the same language.\n"
     "Return ONLY the cleaned text, nothing else."
 )
-def _emoji_prompt(level: int) -> str:
-    """Return cleanup prompt with emoji density scaled by level (1=light, 2=moderate, 3=heavy)."""
-    density = {1: "1–2 emojis total", 2: "several emojis (roughly one per sentence)", 3: "abundant emojis after almost every phrase or keyword"}[level]
-    return (
-        "Fix grammar, punctuation, and spelling errors.\n"
-        "Remove filler words and false starts from speech-to-text output.\n"
-        "Synthesize verbose text into concise form while preserving all meaning.\n"
-        f"Insert emojis in contextually appropriate positions: use {density}.\n"
-        "Detect the input language and respond in the same language.\n"
-        "Return ONLY the cleaned text, nothing else."
-    )
+_EMOJI_PROMPT_OPTIONAL = (
+    "Fix grammar, punctuation, and spelling errors.\n"
+    "Remove filler words and false starts from speech-to-text output.\n"
+    "Synthesize verbose text into concise form while preserving all meaning.\n"
+    "You may add an emoji only if it genuinely fits the context — it's fine to add none.\n"
+    "Detect the input language and respond in the same language.\n"
+    "Return ONLY the cleaned text, nothing else."
+)
 
-CLEANUP_PROMPT_EMOJI = _emoji_prompt(2)  # default for menu-bar click
+_EMOJI_PROMPT_ENRICH = (
+    "Fix grammar, punctuation, and spelling errors.\n"
+    "Remove filler words and false starts from speech-to-text output.\n"
+    "Synthesize verbose text into concise form while preserving all meaning.\n"
+    "Enrich the text with emojis: add at least one, typically one per sentence or key idea, occasionally more where it fits naturally.\n"
+    "Detect the input language and respond in the same language.\n"
+    "Return ONLY the cleaned text, nothing else."
+)
+
+CLEANUP_PROMPT_EMOJI = _EMOJI_PROMPT_ENRICH  # default for menu-bar click
 
 # macOS virtual key codes
 VK_V = 0x09
@@ -238,20 +244,13 @@ def play_sound() -> None:
     )
 
 
-def _emoji_level_from_hold(hold_seconds: float) -> int:
-    """Map hold duration to emoji density: <1s→1, 1–3s→2, >3s→3."""
-    if hold_seconds < 1.0:
-        return 1
-    elif hold_seconds < 3.0:
-        return 2
-    else:
-        return 3
-
-
-def clean_text(text: str, with_emoji: bool = False, emoji_level: int = 2) -> str | None:
+def clean_text(text: str, with_emoji: bool = False, emoji_enrich: bool = True) -> str | None:
     """Send text to Claude Haiku for cleanup. Returns cleaned text or None on failure."""
     timeout = compute_timeout(text)
-    prompt = _emoji_prompt(emoji_level) if with_emoji else CLEANUP_PROMPT
+    if with_emoji:
+        prompt = _EMOJI_PROMPT_ENRICH if emoji_enrich else _EMOJI_PROMPT_OPTIONAL
+    else:
+        prompt = CLEANUP_PROMPT
     try:
         response = client.messages.create(
             model=MODEL,
@@ -287,11 +286,11 @@ def handle_clean_hotkey(with_emoji: bool = False, hold_seconds: float = 0.0) -> 
 
         start = time.time()
         timeout = compute_timeout(text)
-        emoji_level = _emoji_level_from_hold(hold_seconds) if with_emoji else 2
-        emoji_tag = f" +emoji(level {emoji_level}, held {hold_seconds:.1f}s)" if with_emoji else ""
+        emoji_enrich = hold_seconds >= 1.0
+        emoji_tag = f" +emoji({'enrich' if emoji_enrich else 'optional'}, held {hold_seconds:.1f}s)" if with_emoji else ""
         log(f"Cleaning {len(text)} chars{emoji_tag} (timeout {timeout:.1f}s)...")
 
-        cleaned = clean_text(text, with_emoji=with_emoji, emoji_level=emoji_level)
+        cleaned = clean_text(text, with_emoji=with_emoji, emoji_enrich=emoji_enrich)
 
         if cleaned is None:
             log("Failed: no response from API — original text preserved")
