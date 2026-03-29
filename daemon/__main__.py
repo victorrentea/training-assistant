@@ -864,6 +864,7 @@ def run() -> None:
                         ended["ended_at"] = datetime.now().isoformat()
                         ended_folder = sessions_root / ended["name"]
                         save_key_points(ended_folder, current_key_points, summary_watermark, session_start_date(ended))
+                        parent_snapshot = None
                         if session_stack:
                             # Nested session ended — restore parent
                             parent = session_stack[-1]
@@ -872,6 +873,14 @@ def run() -> None:
                             current_key_points, summary_watermark = load_key_points(parent_folder)
                             notes_file = find_notes_in_folder(parent_folder)
                             config = dc_replace(config, session_folder=parent_folder, session_notes=notes_file)
+                            # Load saved activity state from parent session snapshot
+                            parent_ss_path = parent_folder / "session_state.json"
+                            if parent_ss_path.exists():
+                                try:
+                                    parent_snapshot = json.loads(parent_ss_path.read_text(encoding="utf-8"))
+                                    log.info("session", f"Loaded parent snapshot from {parent_ss_path}")
+                                except Exception as e:
+                                    log.error("session", f"Failed to load parent snapshot: {e}")
                             log.info("session", f"Ended: {ended['name']}, restored: {parent['name']}")
                         else:
                             # Main session ended — clear everything
@@ -885,7 +894,11 @@ def run() -> None:
                             log.info("session", f"Ended: {ended['name']}")
                         _do_save_daemon_state()
                         global_state_persisted = True
-                        sync_session_to_server(config, session_stack, current_key_points, slides_log=slides_log, git_repos=git_repos)
+                        sync_session_to_server(
+                            config, session_stack, current_key_points,
+                            session_state=parent_snapshot,
+                            slides_log=slides_log, git_repos=git_repos,
+                        )
                         transcript_state.reset()
 
                     elif action == "rename":
