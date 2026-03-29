@@ -28,6 +28,7 @@ Person(host, "Host", "Workshop facilitator.")
 System_Ext(audio_hijack, "Audio Hijack", "Captures live audio and writes\nthe transcript file.")
 System_Ext(claude_api, "Anthropic Claude API", "LLM for quiz generation,\ndebate argument cleanup,\nand session summaries.")
 System_Ext(nominatim, "Nominatim", "GPS coords → city + country.")
+System_Ext(google_drive, "Google Drive", "Hosts public PDF exports\nof presentation slides.")
 
 ' layout hints — keep host cluster top-right, nominatim bottom-right
 Lay_L(participant, participant_spa)
@@ -36,6 +37,7 @@ Lay_D(host, audio_hijack)
 Lay_D(audio_hijack, training_daemon)
 Lay_R(claude_api, training_daemon)
 Lay_D(nominatim, participant_spa)
+Lay_D(claude_api, google_drive)
 Lay_D(training_daemon, emoji_overlay)
 
 ' relationships
@@ -48,6 +50,8 @@ Rel(host, training_daemon, "Starts/stops", "Local terminal")
 Rel(audio_hijack, training_daemon, "Writes transcript file to disk\n(daemon reads on local filesystem)", "Local file")
 Rel(training_daemon, fastapi, "Polls for requests, posts preview\nand slides upload", "HTTPS REST + WSS")
 Rel(training_daemon, claude_api, "Generates quiz, debate AI cleanup, summary", "HTTPS REST")
+Rel(fastapi, google_drive, "On-demand PDF download\n(fallback when not cached)", "HTTPS")
+Rel(training_daemon, google_drive, "Proactive PDF download\nwhen PPTX changes detected", "HTTPS")
 
 Rel(host, emoji_overlay, "Starts/stops", "start.sh")
 Rel(emoji_overlay, fastapi, "Connects as __overlay__ participant", "WSS /ws/__overlay__")
