@@ -1,10 +1,15 @@
 {
-  "sha": "1ae1443ae69d3cf80b1c67f711783b1227e6f8e3",
-  "timestamp": "2026-03-29 13:31",
+  "sha": "1bcae32ed740008bfa5c05b189a0eaf01232c85b",
+  "timestamp": "2026-03-29 13:32",
   "changelog": [
-    "feat(wispr): scale emoji density by Ctrl+Opt hold duration"
+    "feat(landing): make session date editable, wider for date ranges"
   ],
   "commits": [
+    {
+      "sha": "1bcae32e",
+      "msg": "feat(landing): make session date editable, wider for date ranges",
+      "ts": "2026-03-29T13:32:07+03:00"
+    },
     {
       "sha": "1ae1443a",
       "msg": "feat(wispr): scale emoji density by Ctrl+Opt hold duration",
@@ -99,11 +104,6 @@
       "sha": "3cb563b6",
       "msg": "feat(start): launch wispr-addons/clean.py alongside daemon and overlay",
       "ts": "2026-03-29T12:59:59+03:00"
-    },
-    {
-      "sha": "9104fe53",
-      "msg": "feat(host): \u26d4 stop badge with inline confirm bubble instead of browser dialog",
-      "ts": "2026-03-29T12:59:21+03:00"
     }
   ],
   "branches": [
