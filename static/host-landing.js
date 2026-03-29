@@ -46,8 +46,8 @@ function renderPage(active, folders) {
                onkeydown="if(event.key==='Enter' && !document.getElementById('create-btn').disabled) doCreate();" />
       </div>
       <div class="create-btns-row">
-        <button id="create-btn-workshop" class="create-btn" onclick="doCreate('workshop')" disabled>🎓 Start workshop</button>
-        <button id="create-btn-talk" class="create-btn create-btn-talk" onclick="doCreate('talk')" disabled>🎙️ Start talk</button>
+        <button id="create-btn-workshop" class="create-btn" onclick="doCreate('workshop')" disabled>Start workshop 🎓</button>
+        <button id="create-btn-talk" class="create-btn create-btn-talk" onclick="doCreate('talk')" disabled>Start talk 🎙️</button>
       </div>
       <div id="create-error" class="error-msg" style="display:none;"></div>
     </div>
