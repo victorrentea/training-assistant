@@ -12,34 +12,21 @@ async function loadPage() {
       onSessionReady(active.session_id);
       return;
     }
-    renderPage(active, folders);
+    renderPage(folders);
   } catch (e) {
     document.getElementById('app').innerHTML =
       '<div style="color:var(--danger);text-align:center;padding:2rem;">Failed to load session info. Please reload.</div>';
   }
 }
 
-function renderPage(active, folders) {
+function renderPage(folders) {
   const app = document.getElementById('app');
   const today = new Date().toISOString().slice(0, 10);
-
-  let rejoinHtml = '';
-  if (active && active.active && active.session_id) {
-    const name = active.session_name || active.session_id;
-    rejoinHtml = `
-      <div class="landing-card rejoin-card">
-        <div class="rejoin-label">Active session</div>
-        <button class="rejoin-btn" onclick="rejoinSession('${active.session_id}')">
-          Rejoin: ${_esc(name)}
-        </button>
-      </div>`;
-  }
 
   const folderListHtml = buildFolderList(folders, today);
 
   app.innerHTML = `
     <div class="landing-title">Start Session</div>
-    ${rejoinHtml}
     <div class="landing-card">
       <div class="new-session-label">New session</div>
       <div class="session-name-row">
@@ -127,10 +114,6 @@ function onNameInput() {
 
 function onSessionReady(session_id) {
   window.location = '/host/' + session_id;
-}
-
-function rejoinSession(session_id) {
-  onSessionReady(session_id);
 }
 
 async function doCreate(type) {

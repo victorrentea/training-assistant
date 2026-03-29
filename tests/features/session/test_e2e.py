@@ -43,6 +43,15 @@ class TestLandingPage:
         assert r.status_code == 200
         assert r.json()["active"] is True
 
+    def test_host_landing_does_not_render_active_session_card(self, server_url, playwright):
+        browser, ctx = host_browser_ctx(server_url, playwright)
+        page = ctx.new_page()
+        page.goto("/host")
+        expect(page.locator(".landing-title")).to_have_text("Start Session", timeout=5000)
+        expect(page.locator(".rejoin-card")).to_have_count(0, timeout=5000)
+        ctx.close()
+        browser.close()
+
 
 class TestSessionJoin:
     """Joining via session code."""
