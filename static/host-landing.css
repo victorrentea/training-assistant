@@ -156,39 +156,29 @@ body {
   border-color: var(--accent);
 }
 
-.session-type-row {
+.create-btns-row {
   display: flex;
-  gap: 1rem;
-  margin-bottom: 1rem;
-}
-
-.session-type-option {
-  display: flex;
-  align-items: center;
-  gap: .4rem;
-  cursor: pointer;
-  font-size: .95rem;
-  color: var(--text);
-}
-
-.session-type-option input[type="radio"] {
-  width: 1rem;
-  height: 1rem;
-  cursor: pointer;
-  accent-color: var(--accent);
+  gap: .75rem;
+  margin-bottom: 0;
 }
 
 .create-btn {
-  width: 100%;
-  padding: .65rem 1.2rem;
+  flex: 1;
+  padding: .65rem 1rem;
   background: var(--action);
   color: #fff;
   border: none;
   border-radius: 8px;
-  font-size: 1rem;
+  font-size: .95rem;
   font-weight: 700;
   cursor: pointer;
   transition: filter .15s, transform .1s;
+}
+
+.create-btn-talk {
+  background: var(--surface2);
+  color: var(--text);
+  border: 1px solid var(--border);
 }
 
 .create-btn:hover:not(:disabled) {
