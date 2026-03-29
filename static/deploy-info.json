@@ -1,10 +1,15 @@
 {
-  "sha": "33a4dbb1dff5f51d9c1e524118d449788116cb1c",
-  "timestamp": "2026-03-29 15:16",
+  "sha": "359dd8f550f14e230ddb924066b969d84a41d097",
+  "timestamp": "2026-03-29 15:18",
   "changelog": [
-    "chore: simplify transcript log line format"
+    "fix: keep start.sh alive on stale pid kills"
   ],
   "commits": [
+    {
+      "sha": "359dd8f5",
+      "msg": "fix: keep start.sh alive on stale pid kills",
+      "ts": "2026-03-29T15:18:22+03:00"
+    },
     {
       "sha": "33a4dbb1",
       "msg": "chore: simplify transcript log line format",
@@ -99,11 +104,6 @@
       "sha": "945021e5",
       "msg": "fix: initialize slides_cache_status during startup catalog seed",
       "ts": "2026-03-29T14:52:49+03:00"
-    },
-    {
-      "sha": "542b4ecb",
-      "msg": "feat: show topic count next to slides catalog folder icon",
-      "ts": "2026-03-29T14:50:22+03:00"
     }
   ],
   "branches": [
