@@ -1,25 +1,8 @@
 {
-  "sha": "37bd63f7685ea656311c99b07e2758c98f766c44",
-  "timestamp": "2026-03-29 08:24",
+  "sha": "a30ceb9d1598c08db51b6f1c98770b71c3dbbb41",
+  "timestamp": "2026-03-29 12:13",
   "changelog": [
-    "Revert \"fix(host): auto-dismiss session-blocker when session already active on server\"",
-    "Revert \"fix(tests): update e2e tests for session-scoped participant routes\"",
-    "Revert \"fix(ci): fix remaining session-scoped URL and summary endpoint issues in tests\"",
-    "Revert \"fix(ci): fix test_poll_force - GET /api/summary/force is root-level, not session-scoped\"",
-    "Revert \"docs: add session-id-in-path implementation plan\"",
-    "Revert \"feat(session): expose session_id in active endpoint, create/end broadcast, /host/{session_id} route, public folders\"",
-    "Revert \"feat(host): folder-list blocker + URL redirect on session start\"",
-    "Revert \"feat(host): add stop session button to footer\"",
-    "Revert \"fix(host): remove dead blocker vars, load folder list only once\"",
-    "fix(host): remove dead blocker vars, load folder list only once",
-    "feat(host): add stop session button to footer",
-    "feat(host): folder-list blocker + URL redirect on session start",
-    "feat(session): expose session_id in active endpoint, create/end broadcast, /host/{session_id} route, public folders",
-    "docs: add session-id-in-path implementation plan",
-    "fix(ci): fix test_poll_force - GET /api/summary/force is root-level, not session-scoped",
-    "fix(ci): fix remaining session-scoped URL and summary endpoint issues in tests",
-    "fix(tests): update e2e tests for session-scoped participant routes",
-    "fix(host): auto-dismiss session-blocker when session already active on server"
+    "feat(session): session ID in URL path - Phase 6 complete (tests updated)"
   ],
   "branches": [
     {
@@ -36,6 +19,11 @@
       "branch": "session-id-in-path",
       "sha": "c665635",
       "minutes": 320
+    },
+    {
+      "branch": "session-id-in-path-v3",
+      "sha": "a30ceb9",
+      "minutes": 249
     },
     {
       "branch": "overlay-hide-emoji-single-screen",
@@ -116,11 +104,6 @@
       "branch": "shrink-topic-height-5pct",
       "sha": "466fbe7",
       "minutes": 14
-    },
-    {
-      "branch": "daemon-status-indicator",
-      "sha": "a600c0d",
-      "minutes": 13
     }
   ]
 }
