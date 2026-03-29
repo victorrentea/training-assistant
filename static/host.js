@@ -2018,6 +2018,7 @@
 
   function updateCenterPanel(currentActivity) {
     _currentActivity = currentActivity;
+    _resetInactivityTimer();
     ['qr', 'poll', 'wordcloud', 'qa', 'debate', 'codereview'].forEach(id => {
       const el = document.getElementById('center-' + id);
       if (id === 'qr') {
@@ -3452,11 +3453,11 @@ function _startModalCountdown() {
   const timerEl = document.getElementById('inactivity-timer');
   let remaining = INACTIVITY_WARN_MS; // 3 minutes in ms
   const tick = () => {
-    remaining -= 1000;
-    if (remaining <= 0) remaining = 0;
     const m = Math.floor(remaining / 60000);
     const s = Math.floor((remaining % 60000) / 1000);
     if (timerEl) timerEl.textContent = `${m}:${s.toString().padStart(2, '0')}`;
+    remaining -= 1000;
+    if (remaining < 0) remaining = 0;
   };
   tick();
   _inactivityCountdownInterval = setInterval(tick, 1000);
