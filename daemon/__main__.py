@@ -763,22 +763,32 @@ def run() -> None:
                             pass
                         log.info("session", f"Started: {name}")
 
-                    elif action == "end" and len(session_stack) > 1:
+                    elif action == "end" and session_stack:
                         ended = session_stack.pop()
                         ended["ended_at"] = datetime.now().isoformat()
                         ended_folder = sessions_root / ended["name"]
                         save_key_points(ended_folder, current_key_points, summary_watermark, session_start_date(ended))
-                        # Restore parent session and close its nested pause
-                        parent = session_stack[-1]
-                        resume_session(parent, datetime.now())
-                        parent_folder = sessions_root / parent["name"]
-                        current_key_points, summary_watermark = load_key_points(parent_folder)
+                        if session_stack:
+                            # Nested session ended — restore parent
+                            parent = session_stack[-1]
+                            resume_session(parent, datetime.now())
+                            parent_folder = sessions_root / parent["name"]
+                            current_key_points, summary_watermark = load_key_points(parent_folder)
+                            notes_file = find_notes_in_folder(parent_folder)
+                            config = dc_replace(config, session_folder=parent_folder, session_notes=notes_file)
+                            log.info("session", f"Ended: {ended['name']}, restored: {parent['name']}")
+                        else:
+                            # Main session ended — clear everything
+                            current_key_points = []
+                            summary_watermark = 0
+                            config = dc_replace(config, session_folder=None, session_notes=None)
+                            slides_log = []
+                            git_repos = []
+                            _last_activity_log_key = (0, 0)
+                            log.info("session", f"Ended: {ended['name']}")
                         _do_save_daemon_state()
-                        notes_file = find_notes_in_folder(parent_folder)
-                        config = dc_replace(config, session_folder=parent_folder, session_notes=notes_file)
                         sync_session_to_server(config, session_stack, current_key_points, slides_log=slides_log, git_repos=git_repos)
                         transcript_state.reset()
-                        log.info("session", f"Ended: {ended['name']}, restored: {parent['name']}")
 
                     elif action == "rename":
                         new_name = session_req["name"]
