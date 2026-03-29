@@ -3063,6 +3063,9 @@ function _updateBlocker() {
   const blocker = document.getElementById('session-blocker');
   if (!blocker) return;
 
+  // Auto-dismiss if server already has an active session (e.g. page reload or test setup)
+  if (_currentSessionId) _blockerDismissed = true;
+
   // Only dismiss after host explicitly started/confirmed via blockerStart()
   if (_blockerDismissed) {
     blocker.style.display = 'none';
