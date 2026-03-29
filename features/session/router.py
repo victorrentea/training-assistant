@@ -19,6 +19,11 @@ router = APIRouter()          # global session endpoints
 session_router = APIRouter()  # session-scoped endpoints (mounted under /api/{session_id}/)
 
 
+def _normalize_session_name(name: str) -> str:
+    """Replace non-breaking spaces and other Unicode whitespace with regular spaces."""
+    return name.replace('\xa0', ' ').strip()
+
+
 def _get_sessions_root() -> Path | None:
     """Resolve the sessions root directory from env, same as quiz_core.find_session_folder."""
     sessions_root_str = os.environ.get(
@@ -65,8 +70,9 @@ class SyncSessionRequest(BaseModel):
 @router.post("/api/session/start", dependencies=[Depends(require_host_auth)])
 async def start_session(body: StartSessionRequest):
     session_id = state.generate_session_id()
-    state.session_name = body.name
-    state.session_request = {"action": "start", "name": body.name, "session_id": session_id}
+    name = _normalize_session_name(body.name)
+    state.session_name = name
+    state.session_request = {"action": "start", "name": name, "session_id": session_id}
     await push_to_daemon({"type": "session_request", **state.session_request})
     return {"ok": True}
 
@@ -106,16 +112,17 @@ class SessionCreateBody(BaseModel):
 @router.post("/api/session/create", dependencies=[Depends(require_host_auth_or_cookie)])
 async def create_session(body: SessionCreateBody):
     session_id = state.generate_session_id()
-    state.session_name = body.name
+    name = _normalize_session_name(body.name)
+    state.session_name = name
     state.session_type = body.type
-    state.session_request = {"action": "create", "name": body.name, "session_id": state.session_id}
+    state.session_request = {"action": "create", "name": name, "session_id": state.session_id}
     await push_to_daemon({"type": "session_request", **state.session_request})
     return {"ok": True, "session_id": state.session_id, "session_name": state.session_name}
 
 
 @router.patch("/api/session/rename", dependencies=[Depends(require_host_auth)])
 async def rename_session(body: RenameSessionRequest):
-    state.session_request = {"action": "rename", "name": body.name}
+    state.session_request = {"action": "rename", "name": _normalize_session_name(body.name)}
     await push_to_daemon({"type": "session_request", **state.session_request})
     return {"ok": True}
 
