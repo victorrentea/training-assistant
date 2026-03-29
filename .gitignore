@@ -46,3 +46,4 @@ monitoring/data/
 
 load-tests/results/*.jtl
 load-tests/results/report/
+static/deploy-info.json
