@@ -74,10 +74,10 @@ function buildFolderList(folders, today) {
     const isToday = today && dates[0] === today;
     const todayTag = isToday ? `<span class="folder-today-tag">TODAY</span>` : '';
     return `
-    <li class="folder-row${isToday ? ' folder-row-today' : ''}" onclick="doResumeFolder(${JSON.stringify(f)})">
+    <li class="folder-row${isToday ? ' folder-row-today' : ''}" onclick='doResumeFolder(${JSON.stringify(f)})'>
       <span class="folder-date">${_esc(dateStr)}</span>
       <span class="folder-topic">${_esc(topic)}${todayTag}</span>
-      <button class="folder-play-btn" onclick="event.stopPropagation(); doResumeFolder(${JSON.stringify(f)})" title="Resume session">▶</button>
+      <button class="folder-play-btn" onclick='event.stopPropagation(); doResumeFolder(${JSON.stringify(f)})' title="Resume session">▶</button>
     </li>`;
   }).join('');
 
