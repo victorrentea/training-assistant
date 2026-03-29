@@ -1,10 +1,15 @@
 {
-  "sha": "ee372f15004b031c13cc9378c3cdc8789c2b2db4",
-  "timestamp": "2026-03-29 15:41",
+  "sha": "eb745e36cfc23d3ce9ed60df3fd31c5f561ce422",
+  "timestamp": "2026-03-29 15:42",
   "changelog": [
-    "fix: uniform gray border color for all neutral host footer badges (#88)"
+    "Fix transcript preview log timestamp leakage"
   ],
   "commits": [
+    {
+      "sha": "eb745e36",
+      "msg": "Fix transcript preview log timestamp leakage",
+      "ts": "2026-03-29T15:42:03+03:00"
+    },
     {
       "sha": "ee372f15",
       "msg": "fix: uniform gray border color for all neutral host footer badges (#88)",
@@ -99,11 +104,6 @@
       "sha": "ae98fc70",
       "msg": "fix: countdown starts at 3:00; arm inactivity timer on server activity change",
       "ts": "2026-03-29T15:01:35+03:00"
-    },
-    {
-      "sha": "f325a805",
-      "msg": "feat: add 6-min host inactivity auto-return modal",
-      "ts": "2026-03-29T14:58:48+03:00"
     }
   ],
   "branches": [
