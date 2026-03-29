@@ -854,6 +854,21 @@
     const b = document.getElementById('ws-badge');
     b.textContent = ok ? '🟢' : '🟢';
     b.className = `badge ${ok ? 'connected' : 'disconnected'}`;
+    const existingOverlay = document.getElementById('server-unreachable-overlay');
+    if (!ok) {
+      if (!existingOverlay) {
+        document.body.insertAdjacentHTML('beforeend', `
+          <div id="server-unreachable-overlay" style="position:fixed;inset:0;background:rgba(0,0,0,.88);display:flex;
+            align-items:center;justify-content:center;z-index:9998;flex-direction:column;gap:1.2rem;
+            text-align:center;padding:2rem;">
+            <div style="font-size:5rem;line-height:1">🛑</div>
+            <div style="font-size:1.6rem;font-weight:700;color:#fff">Server not reachable</div>
+            <div style="font-size:0.95rem;color:#aaa">Reconnecting…</div>
+          </div>`);
+      }
+    } else {
+      if (existingOverlay) existingOverlay.remove();
+    }
   }
 
   function updateTokenBadge(usage) {
