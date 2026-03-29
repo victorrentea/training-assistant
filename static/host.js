@@ -239,6 +239,10 @@
         updateSummary(msg.summary_points, msg.summary_updated_at);
         if (msg.session_main !== undefined) sessionMain = msg.session_main;
         if (msg.session_talk !== undefined) sessionTalk = msg.session_talk;
+        if (msg.session_name !== undefined) {
+          const el = document.getElementById('host-top-title');
+          if (el) el.textContent = msg.session_name || '';
+        }
         if (msg.daemon_last_seen !== undefined) daemonLastSeen = msg.daemon_last_seen;
         updateSessionCodeBar(msg.session_id || null);
         renderSessionPanel();
