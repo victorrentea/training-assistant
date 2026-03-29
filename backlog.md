@@ -1,5 +1,6 @@
 # Tasks
 
+- [x] host footer join link UX: click copies link and shows fading `Copied...` tooltip; Ctrl/Cmd+click opens join URL in new tab.
 - [x] daemon startup transcript summary log: reword to `Unprocessed: <session_lines> lines since <watermark> / <total_lines> lines ...`.
 - [x] start.sh: prevent auto-restart loop from exiting on stale/missing PID kill failures (`set -e` safe kill/wait in cleanup and stop paths).
 - [x] daemon transcript logs: compact format without preview text (`Transcripted N words (🤖 Xms)`), and zero-text case uses `- remove all = noise`.

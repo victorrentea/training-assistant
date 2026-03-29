@@ -165,9 +165,10 @@ body {
 }
 
 #participant-link {
-  pointer-events: none;
-  cursor: default;
+  pointer-events: auto;
+  cursor: pointer;
   text-decoration: none;
+  position: relative;
 }
 
 .host-footer-right {
@@ -1728,4 +1729,3 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
   animation: none;
   background: rgba(99, 200, 255, 0.15);
 }
-

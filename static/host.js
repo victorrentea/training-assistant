@@ -130,10 +130,12 @@
   }
 
   // Set participant link
-  const link = `${location.protocol}//${location.host}/`;
   const pLink = document.getElementById('participant-link');
-  pLink.href = link;
-  pLink.innerHTML = _buildUrlHtml();
+  if (pLink) {
+    pLink.innerHTML = _buildUrlHtml();
+    pLink.title = 'Click to copy • Ctrl/Cmd+Click to open';
+    pLink.addEventListener('click', onFooterJoinLinkClick);
+  }
   _setupSlidesCatalogHover();
   _setupActivityLogHovers();
 
@@ -3090,8 +3092,8 @@ function updateSessionCodeBar(sessionId) {
   if (copyIcon) copyIcon.style.display = sessionId ? '' : 'none';
   const pLink = document.getElementById('participant-link');
   if (pLink) {
-    pLink.href = sessionId ? `/${sessionId}` : '/';
     pLink.innerHTML = _buildUrlHtml();
+    pLink.title = 'Click to copy • Ctrl/Cmd+Click to open';
   }
 
   // Regenerate all QR codes with the session-scoped join URL
@@ -3136,6 +3138,32 @@ function copyCenterUrl(el) {
     el.appendChild(tip);
     requestAnimationFrame(() => requestAnimationFrame(() => tip.style.opacity = '0'));
     setTimeout(() => tip.remove(), 1400);
+  });
+}
+
+function _showFooterCopiedTooltip(el) {
+  if (!el) return;
+  const old = el.querySelector('.footer-copy-tip');
+  if (old) old.remove();
+  const tip = document.createElement('div');
+  tip.className = 'footer-copy-tip';
+  tip.textContent = 'Copied...';
+  tip.style.cssText = 'position:absolute; left:50%; bottom:calc(100% + 6px); transform:translateX(-50%); background:var(--surface2); color:var(--accent2); border:1px solid var(--border); padding:.12rem .45rem; border-radius:6px; font-size:.72rem; pointer-events:none; opacity:1; transition:opacity .9s ease;';
+  el.appendChild(tip);
+  requestAnimationFrame(() => requestAnimationFrame(() => { tip.style.opacity = '0'; }));
+  setTimeout(() => tip.remove(), 1000);
+}
+
+function onFooterJoinLinkClick(event) {
+  const url = _getJoinUrl();
+  if (event.ctrlKey || event.metaKey) {
+    event.preventDefault();
+    window.open(url, '_blank', 'noopener,noreferrer');
+    return;
+  }
+  event.preventDefault();
+  navigator.clipboard.writeText(url).then(() => {
+    _showFooterCopiedTooltip(event.currentTarget);
   });
 }
 
