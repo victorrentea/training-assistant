@@ -245,6 +245,12 @@ body {
   letter-spacing: .02em;
 }
 
+.folder-date-range {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.4;
+}
+
 .folder-topic {
   font-size: .95rem;
   color: var(--text);

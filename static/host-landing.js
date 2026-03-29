@@ -85,12 +85,13 @@ function buildFolderList(folders) {
   }
 
   const items = folders.map(f => {
-    const m = f.match(/^(\d{4}-\d{2}-\d{2})\s+(.+)$/);
-    const date = m ? m[1] : '';
-    const topic = m ? m[2] : f;
+    const {dates, topic} = parseFolderDates(f);
+    const dateHtml = dates.length > 1
+      ? dates.map(d => `<span>${_esc(d)}</span>`).join('<br>')
+      : _esc(dates[0] || '');
     return `
     <li class="folder-row" onclick="doResumeFolder(${JSON.stringify(f)})">
-      <span class="folder-date">${_esc(date)}</span>
+      <span class="folder-date${dates.length > 1 ? ' folder-date-range' : ''}">${dateHtml}</span>
       <span class="folder-topic">${_esc(topic)}</span>
       <button class="folder-play-btn" onclick="event.stopPropagation(); doResumeFolder(${JSON.stringify(f)})" title="Resume session">▶</button>
     </li>`;
@@ -101,6 +102,19 @@ function buildFolderList(folders) {
       <div class="folders-header">Previous sessions</div>
       <ul class="folder-list">${items}</ul>
     </div>`;
+}
+
+function parseFolderDates(f) {
+  // Range: YYYY-MM-DD..DD topic (same month)
+  let m = f.match(/^(\d{4}-\d{2})-(\d{2})\.\.(\d{2})\s+(.+)$/);
+  if (m) return {dates: [m[1] + '-' + m[2], m[1] + '-' + m[3]], topic: m[4]};
+  // Range: YYYY-MM-DD..YYYY-MM-DD topic
+  m = f.match(/^(\d{4}-\d{2}-\d{2})\.\.(\d{4}-\d{2}-\d{2})\s+(.+)$/);
+  if (m) return {dates: [m[1], m[2]], topic: m[3]};
+  // Single date: YYYY-MM-DD topic
+  m = f.match(/^(\d{4}-\d{2}-\d{2})\s+(.+)$/);
+  if (m) return {dates: [m[1]], topic: m[2]};
+  return {dates: [], topic: f};
 }
 
 function _esc(str) {
