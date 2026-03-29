@@ -1,8 +1,110 @@
 {
-  "sha": "c7514919a69417755ca855270af2ba8e8e45846f",
-  "timestamp": "2026-03-29 12:52",
+  "sha": "928b08d1e0d059355ec280be58bac9a1fc2e3be8",
+  "timestamp": "2026-03-29 12:56",
   "changelog": [
-    "refactor(host): tabs left-aligned, session title centered in top bar, join link absolutely centered"
+    "feat(host): show deployed commit history on version badge hover"
+  ],
+  "commits": [
+    {
+      "sha": "928b08d1",
+      "msg": "feat(host): show deployed commit history on version badge hover",
+      "ts": "2026-03-29T12:56:25+03:00"
+    },
+    {
+      "sha": "c7514919",
+      "msg": "refactor(host): tabs left-aligned, session title centered in top bar, join link absolutely centered",
+      "ts": "2026-03-29T12:52:22+03:00"
+    },
+    {
+      "sha": "6af8f5e6",
+      "msg": "fix(auth): restore Basic Auth on session landing endpoints via httponly cookie",
+      "ts": "2026-03-29T12:50:28+03:00"
+    },
+    {
+      "sha": "9eb10f77",
+      "msg": "fix(host-landing): make /api/session/folders public so JS fetch works",
+      "ts": "2026-03-29T12:46:32+03:00"
+    },
+    {
+      "sha": "551e2d5d",
+      "msg": "feat(wispr-addons): load API key from ~/.training-assistants-secrets.env",
+      "ts": "2026-03-29T12:41:36+03:00"
+    },
+    {
+      "sha": "0a1df0d6",
+      "msg": "feat(wispr-addons): add menu bar icon with clickable clean repaste actions",
+      "ts": "2026-03-29T12:40:51+03:00"
+    },
+    {
+      "sha": "0f2b1eeb",
+      "msg": "feat(host-landing): replace radio+create with two typed start buttons",
+      "ts": "2026-03-29T12:40:26+03:00"
+    },
+    {
+      "sha": "51a9ba9b",
+      "msg": "feat(host-landing): table layout for previous sessions with date/topic split",
+      "ts": "2026-03-29T12:39:28+03:00"
+    },
+    {
+      "sha": "2d9d6c60",
+      "msg": "refactor(host): unified top bar, session title in center, stop badge in footer",
+      "ts": "2026-03-29T12:38:18+03:00"
+    },
+    {
+      "sha": "e21a1b60",
+      "msg": "feat(host-landing): show today's session folders as resume buttons",
+      "ts": "2026-03-29T12:31:53+03:00"
+    },
+    {
+      "sha": "aaf126ba",
+      "msg": "feat(host-landing): static date prefix on session name input",
+      "ts": "2026-03-29T12:29:51+03:00"
+    },
+    {
+      "sha": "719059ce",
+      "msg": "fix(wispr): remove duplicate menu bar icon",
+      "ts": "2026-03-29T12:27:10+03:00"
+    },
+    {
+      "sha": "77036274",
+      "msg": "chore: add LLM transcript cleanup experiment script",
+      "ts": "2026-03-29T12:23:36+03:00"
+    },
+    {
+      "sha": "58971604",
+      "msg": "feat(transcript): optional LLM pre-filter for Whisper hallucination cleanup",
+      "ts": "2026-03-29T12:20:57+03:00"
+    },
+    {
+      "sha": "15da7231",
+      "msg": "feat(session): show date as static prefix in session name input",
+      "ts": "2026-03-29T12:20:56+03:00"
+    },
+    {
+      "sha": "0366ddc4",
+      "msg": "fix(host): add missing session-code-bar element to host panel HTML",
+      "ts": "2026-03-29T12:15:26+03:00"
+    },
+    {
+      "sha": "a30ceb9d",
+      "msg": "feat(session): session ID in URL path - Phase 6 complete (tests updated)",
+      "ts": "2026-03-29T12:09:21+03:00"
+    },
+    {
+      "sha": "37bd63f7",
+      "msg": "Revert \"fix(host): auto-dismiss session-blocker when session already active on server\"",
+      "ts": "2026-03-29T08:19:40+03:00"
+    },
+    {
+      "sha": "be86497a",
+      "msg": "Revert \"fix(tests): update e2e tests for session-scoped participant routes\"",
+      "ts": "2026-03-29T08:19:38+03:00"
+    },
+    {
+      "sha": "62248450",
+      "msg": "Revert \"fix(ci): fix remaining session-scoped URL and summary endpoint issues in tests\"",
+      "ts": "2026-03-29T08:19:37+03:00"
+    }
   ],
   "branches": [
     {
