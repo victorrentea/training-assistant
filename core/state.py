@@ -121,6 +121,7 @@ class AppState:
         self.transcription_language: str = "ro"  # current AudioHijack Transcribe block language
         self.transcription_language_request: str | None = None  # pending change for daemon
         self.session_id: str | None = None  # 6-char alphanumeric session code for participant URLs
+        self.session_folders: list[str] = []  # pushed by daemon on connect
         self.slides_log: list = []
         self.git_repos: list = []
         # Clean up uploaded files from disk

@@ -26,6 +26,7 @@ MSG_STATE_RESTORE = "state_restore"
 MSG_STATE_SNAPSHOT_RESULT = "state_snapshot_result"
 MSG_SESSION_SNAPSHOT_RESULT = "session_snapshot_result"
 MSG_ACTIVITY_LOG = "activity_log"
+MSG_SESSION_FOLDERS = "session_folders"
 
 # --- Outbound message types (backend → daemon) ---
 MSG_QUIZ_REQUEST = "quiz_request"
