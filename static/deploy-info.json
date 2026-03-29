@@ -1,10 +1,15 @@
 {
-  "sha": "c2118fc66d22d722b3e6cde696818951ad7216b1",
+  "sha": "41775d5daea25a167e5fb6ec40d826499169824e",
   "timestamp": "2026-03-29 13:05",
   "changelog": [
-    "feat(wispr-addons): log USD cost of each AI cleanup call"
+    "feat(wispr-addons): show \u2764\ufe0f in log when cleaned with emoji mode"
   ],
   "commits": [
+    {
+      "sha": "41775d5d",
+      "msg": "feat(wispr-addons): show \u2764\ufe0f in log when cleaned with emoji mode",
+      "ts": "2026-03-29T13:05:24+03:00"
+    },
     {
       "sha": "c2118fc6",
       "msg": "feat(wispr-addons): log USD cost of each AI cleanup call",
@@ -99,11 +104,6 @@
       "sha": "aaf126ba",
       "msg": "feat(host-landing): static date prefix on session name input",
       "ts": "2026-03-29T12:29:51+03:00"
-    },
-    {
-      "sha": "719059ce",
-      "msg": "fix(wispr): remove duplicate menu bar icon",
-      "ts": "2026-03-29T12:27:10+03:00"
     }
   ],
   "branches": [
