@@ -75,20 +75,31 @@ body {
   overflow: hidden;
 }
 
-/* Unified top bar: tabs (left) + pax count (right) */
+/* Unified top bar: tabs (left) | session title (center) | pax count (right) */
 .host-top-bar {
   display: flex;
-  align-items: stretch;
+  align-items: center;
   border-bottom: 1px solid var(--border);
   padding: 0 1rem;
   flex-shrink: 0;
-  gap: 1rem;
 }
 .host-top-bar .tab-bar {
-  flex: 1;
+  flex-shrink: 0;
   border-bottom: none;
   margin-bottom: 0;
   padding-bottom: 0;
+}
+.host-top-title {
+  flex: 1;
+  text-align: center;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 0 1rem;
+  opacity: .85;
 }
 .host-top-pax {
   display: flex;
@@ -127,6 +138,7 @@ body {
   border-top: 1px solid var(--border);
   flex-shrink: 0;
   gap: .5rem;
+  position: relative;
 }
 
 .host-footer-left {
@@ -136,14 +148,16 @@ body {
   flex-wrap: wrap;
 }
 
+/* Absolutely centered — unaffected by badge count on either side */
 .host-footer-center {
-  flex: 1;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
   display: flex;
   align-items: center;
-  justify-content: center;
   gap: .25rem;
-  min-width: 0;
-  overflow: hidden;
+  pointer-events: none;
+  white-space: nowrap;
 }
 
 #participant-link {
@@ -158,6 +172,7 @@ body {
   gap: .5rem;
   flex-wrap: nowrap;
   min-width: 0;
+  margin-left: auto;
 }
 
 .host-col {

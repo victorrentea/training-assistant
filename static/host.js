@@ -3203,12 +3203,9 @@ function renderSessionPanel() {
     }
   }
 
-  // Session title in center column
-  const titleEl = document.getElementById('session-title-center');
-  if (titleEl) {
-    titleEl.textContent = main ? main.name : '';
-    titleEl.style.display = main ? '' : 'none';
-  }
+  // Session title in top bar center
+  const titleEl = document.getElementById('host-top-title');
+  if (titleEl) titleEl.textContent = main ? main.name : '';
   // Stop button visibility
   const stopBtn = document.getElementById('stop-session-btn');
   if (stopBtn) stopBtn.style.display = main ? '' : 'none';
