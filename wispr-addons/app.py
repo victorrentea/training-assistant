@@ -62,6 +62,8 @@ CLEANUP_PROMPT = (
     "Fix grammar, punctuation, and spelling errors.\n"
     "Remove filler words and false starts from speech-to-text output.\n"
     "Synthesize verbose text into concise form while preserving all meaning.\n"
+    "For emojis: use at most 1 emoji per 2 sentences, and only when clearly context-appropriate.\n"
+    "It is perfectly fine to use no emoji at all.\n"
     "Detect the input language and respond in the same language.\n"
     "Return ONLY the cleaned text, nothing else."
 )
@@ -69,7 +71,9 @@ CLEANUP_PROMPT_EMOJI = (
     "Fix grammar, punctuation, and spelling errors.\n"
     "Remove filler words and false starts from speech-to-text output.\n"
     "Synthesize verbose text into concise form while preserving all meaning.\n"
-    "Insert emojis in contextually appropriate positions throughout the text.\n"
+    "Enrich with emojis more aggressively while keeping the message natural.\n"
+    "Target roughly 1 emoji per sentence (you may use slightly fewer or more where it fits).\n"
+    "Do not skip emojis unless the content is clearly formal/inappropriate for emoji.\n"
     "Detect the input language and respond in the same language.\n"
     "Return ONLY the cleaned text, nothing else."
 )
