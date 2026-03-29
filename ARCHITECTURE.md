@@ -32,6 +32,26 @@ Rel(workshop, google_drive, "Downloads PDF exports of presentation slides", "HTT
 @enduml
 ```
 
+### C1 — System Context (Mermaid copy)
+
+```mermaid
+flowchart LR
+  host["Host"]
+  participant["Participant"]
+  workshop["Workshop Live Interaction Tool"]
+  audio_hijack["Audio Hijack"]
+  claude_api["Anthropic Claude API"]
+  nominatim["Nominatim (OpenStreetMap)"]
+  google_drive["Google Drive"]
+
+  audio_hijack -->|"Transcript file written to disk (Local file)"| workshop
+  host -->|"Manages activities and participants (HTTPS / WebSocket)"| workshop
+  participant -->|"Votes, Q&A, word cloud, debate, code review (HTTPS / WebSocket)"| workshop
+  workshop -->|"Quiz generation, debate AI cleanup, session summaries (HTTPS REST)"| claude_api
+  workshop -->|"Resolves participant GPS to city / client-side (HTTPS REST)"| nominatim
+  workshop -->|"Downloads PDF exports of presentation slides (HTTPS)"| google_drive
+```
+
 ---
 
 ## C2 — Containers
