@@ -1408,9 +1408,10 @@
   // ── QR code ──
   const centerPanel = document.getElementById('center-qr');
   const qrSize = (Math.min(centerPanel.offsetWidth, centerPanel.offsetHeight) || 400) * 0.8;
+  const joinUrl = _getJoinUrl();
   // Center QR: light gray (muted), click to brighten for 5s
   new QRCode(document.getElementById('qr-code'), {
-    text: link,
+    text: joinUrl,
     width: qrSize,
     height: qrSize,
     colorDark: '#888888',

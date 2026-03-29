@@ -3,6 +3,7 @@
 //
 // Each function under test is copied here verbatim (same as in the source files)
 // to avoid module-system gymnastics with vanilla-JS browser scripts.
+const fs = require('fs');
 
 let passed = 0, failed = 0, suiteName = '';
 
@@ -260,6 +261,15 @@ const multiPoll = { ...samplePoll, multi: true };
 const h4 = recordPollInHistory_logic([], multiPoll, new Set(['a', 'c']));
 assertEq('multi-select marks two correct', h4[0].options.filter(o => o.correct).length, 2);
 assertEq('multi flag is true', h4[0].multi, true);
+
+// ── host.js regressions (source-level guards) ───────────────────────
+suite('host.js regressions');
+
+const hostJsSource = fs.readFileSync('static/host.js', 'utf8');
+assert(
+  'center QR does not reference undefined `link` variable',
+  !hostJsSource.includes('text: link,')
+);
 
 // ═══════════════════════════════════════════════════════════════════════
 // Summary
