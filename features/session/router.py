@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel
 
-from core.auth import require_host_auth
+from core.auth import require_host_auth, require_host_auth_or_cookie
 from core.state import state
 from core.messaging import broadcast_state
 from features.ws.daemon_protocol import push_to_daemon
@@ -103,7 +103,7 @@ class SessionCreateBody(BaseModel):
     type: str = "workshop"
 
 
-@router.post("/api/session/create", dependencies=[Depends(require_host_auth)])
+@router.post("/api/session/create", dependencies=[Depends(require_host_auth_or_cookie)])
 async def create_session(body: SessionCreateBody):
     session_id = state.generate_session_id()
     state.session_name = body.name
@@ -334,7 +334,7 @@ async def get_interval_lines_txt(
     return PlainTextResponse(content=payload, headers=headers)
 
 
-@router.get("/api/session/folders")
+@router.get("/api/session/folders", dependencies=[Depends(require_host_auth_or_cookie)])
 async def list_session_folders():
     root = _get_sessions_root()
     folders = []
@@ -427,7 +427,7 @@ class ResumeFolderBody(BaseModel):
     folder_name: str
 
 
-@router.post("/api/session/resume-folder", dependencies=[Depends(require_host_auth)])
+@router.post("/api/session/resume-folder", dependencies=[Depends(require_host_auth_or_cookie)])
 async def resume_session_folder(body: ResumeFolderBody):
     """Host resumes a past session from a folder. Reuses old session_id from snapshot if available."""
     state.session_name = body.folder_name
