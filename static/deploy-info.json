@@ -1,10 +1,15 @@
 {
-  "sha": "0a55730a23d0c9a3c96cb03c102f268cafc0cba3",
-  "timestamp": "2026-03-29 15:25",
+  "sha": "9db0c782f1d86419fb4dc299e664624cf43bd13e",
+  "timestamp": "2026-03-29 15:31",
   "changelog": [
-    "feat: footer join link ctrl-open and click-copy tooltip"
+    "Improve host auto-join and transcript logging"
   ],
   "commits": [
+    {
+      "sha": "9db0c782",
+      "msg": "Improve host auto-join and transcript logging",
+      "ts": "2026-03-29T15:30:48+03:00"
+    },
     {
       "sha": "0a55730a",
       "msg": "feat: footer join link ctrl-open and click-copy tooltip",
@@ -99,11 +104,6 @@
       "sha": "e4062462",
       "msg": "fix: restart daemon on clean exit instead of stopping start.sh",
       "ts": "2026-03-29T14:56:38+03:00"
-    },
-    {
-      "sha": "d71450ab",
-      "msg": "fix: remove .txt extension from Key Points badge label",
-      "ts": "2026-03-29T14:55:25+03:00"
     }
   ],
   "branches": [
