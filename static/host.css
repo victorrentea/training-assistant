@@ -85,6 +85,7 @@ body {
   font-size: .78rem;
   font-weight: 500;
   white-space: pre-line;
+  width: max-content;
   text-align: center;
   pointer-events: none;
   opacity: 0;
@@ -395,6 +396,9 @@ body {
 
 .slides-catalog-hover.open .slides-catalog-popover {
   display: block;
+}
+.slides-catalog-hover.open .footer-badge-tooltip {
+  opacity: 0 !important;
 }
 
 .slides-catalog-content {
