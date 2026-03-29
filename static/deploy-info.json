@@ -1,10 +1,15 @@
 {
-  "sha": "40d3895c53c74e7b35bcd0ba85a628acc7b28c94",
-  "timestamp": "2026-03-29 13:17",
+  "sha": "fc93c4b4f07bfb1abf1de379136eece1bdb95781",
+  "timestamp": "2026-03-29 13:20",
   "changelog": [
-    "feat(host): show stop sign blocker when server is unreachable"
+    "feat(host-landing): support date-range folder names in session list"
   ],
   "commits": [
+    {
+      "sha": "fc93c4b4",
+      "msg": "feat(host-landing): support date-range folder names in session list",
+      "ts": "2026-03-29T13:19:53+03:00"
+    },
     {
       "sha": "40d3895c",
       "msg": "feat(host): show stop sign blocker when server is unreachable",
@@ -99,11 +104,6 @@
       "sha": "6af8f5e6",
       "msg": "fix(auth): restore Basic Auth on session landing endpoints via httponly cookie",
       "ts": "2026-03-29T12:50:28+03:00"
-    },
-    {
-      "sha": "9eb10f77",
-      "msg": "fix(host-landing): make /api/session/folders public so JS fetch works",
-      "ts": "2026-03-29T12:46:32+03:00"
     }
   ],
   "branches": [
@@ -151,11 +151,6 @@
       "branch": "fix-ci-job",
       "sha": "582b580",
       "minutes": 53
-    },
-    {
-      "branch": "host-label-always-visible",
-      "sha": "0c876ee",
-      "minutes": 40
     },
     {
       "branch": "emoji-overflow-dots",
@@ -206,6 +201,11 @@
       "branch": "fix-slides-scroll-drift",
       "sha": "9babc87",
       "minutes": 10
+    },
+    {
+      "branch": "fix-follow-download-bubble",
+      "sha": "591ca9e",
+      "minutes": 9
     }
   ]
 }
