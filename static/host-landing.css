@@ -98,7 +98,6 @@ body {
 
 .session-name-row {
   display: flex;
-  gap: .5rem;
   margin-bottom: .75rem;
 }
 
