@@ -1048,7 +1048,6 @@
     const grid = document.querySelector('.host-columns');
     const confQR = document.getElementById('conference-qr');
     const debateTab = document.getElementById('tab-debate');
-    const helloTab = document.getElementById('tab-hello');
     const tokenCost = document.getElementById('token-cost');
     const notesBadge = document.getElementById('notes-badge');
     const centerQR = document.getElementById('center-qr');
@@ -1065,7 +1064,6 @@
       const centerQRVisible = document.getElementById('center-qr').style.display !== 'none';
       confQR.style.display = centerQRVisible ? 'none' : 'flex';
       if (debateTab) debateTab.style.display = 'none';
-      if (helloTab) helloTab.style.display = '';
       startAutoReturnTimer();
       if (tokenCost) tokenCost.style.display = 'none';
       if (notesBadge) notesBadge.style.display = 'none';
@@ -1079,7 +1077,6 @@
       leftCol.classList.remove('conference-layout');
       confQR.style.display = 'none';
       if (debateTab) debateTab.style.display = '';
-      if (helloTab) helloTab.style.display = 'none';
       if (tokenCost) tokenCost.style.display = '';
       if (notesBadge) notesBadge.style.display = '';
       stopAutoReturnTimer();
@@ -1979,8 +1976,8 @@
 
   async function switchTab(tab) {
     _currentActivity = tab;
-    const helloTab = document.getElementById('tab-hello');
-    if (helloTab) helloTab.classList.toggle('active', tab === 'none');
+    const slidesTab = document.getElementById('tab-slides');
+    if (slidesTab) slidesTab.classList.toggle('active', tab === 'none');
     ['poll', 'wordcloud', 'qa', 'codereview', 'debate'].forEach(t => {
       document.getElementById('tab-' + t).classList.toggle('active', tab === t);
       const contentEl = document.getElementById('tab-content-' + t);
@@ -2038,9 +2035,9 @@
       const confQR = document.getElementById('conference-qr');
       confQR.style.display = 'flex';
     }
-    // Sync hello tab active state
-    const helloTab = document.getElementById('tab-hello');
-    if (helloTab) helloTab.classList.toggle('active', currentActivity === 'none');
+    // Sync slides tab active state
+    const slidesTab = document.getElementById('tab-slides');
+    if (slidesTab) slidesTab.classList.toggle('active', currentActivity === 'none');
     if (currentActivity && currentActivity !== 'none') {
       ['poll', 'wordcloud', 'qa', 'codereview', 'debate'].forEach(t => {
         document.getElementById('tab-' + t).classList.toggle('active', currentActivity === t);
