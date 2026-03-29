@@ -26,9 +26,8 @@ function renderPage(folders) {
   const folderListHtml = buildFolderList(folders, today);
 
   app.innerHTML = `
-    <div class="landing-title">Start Session</div>
     <div class="landing-card">
-      <div class="new-session-label">New session</div>
+      <div class="new-session-label">START NEW SESSION</div>
       <div class="session-name-row">
         <input id="session-date-input" class="session-date-prefix" type="text"
                value="${new Date().toISOString().slice(0, 10)}"
@@ -57,7 +56,7 @@ function buildFolderList(folders, today) {
   if (!folders || folders.length === 0) {
     return `
       <div class="folders-card">
-        <div class="folders-header">Previous sessions</div>
+        <div class="folders-header">RESUME PREVIOUS SESSION</div>
         <div class="folders-empty">No previous sessions found.</div>
       </div>`;
   }
@@ -76,7 +75,7 @@ function buildFolderList(folders, today) {
 
   return `
     <div class="folders-card">
-      <div class="folders-header">Previous sessions</div>
+      <div class="folders-header">RESUME PREVIOUS SESSION</div>
       <ul class="folder-list">${items}</ul>
     </div>`;
 }
