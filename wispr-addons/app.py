@@ -78,9 +78,11 @@ VK_V = 0x09
 VK_Z = 0x06
 VK_ESCAPE = 0x35
 MOUSE_BUTTON_5 = 4
+MOUSE_BUTTON_3 = 2
 DICTATION_MUTE_DEVICE = "\U0001f50aOS Output"
 DICTATION_VOLUME_LOW = 0.01
 DICTATION_MUTE_DELAY = 0.05
+MOUSE_WHEEL_DOUBLE_CLICK_WINDOW = 0.35
 
 # --- CoreAudio helpers ---
 _ca = ctypes.cdll.LoadLibrary(ctypes.util.find_library("CoreAudio"))
@@ -148,6 +150,8 @@ _tap_ref = None
 _tap_run_loop_ref = None
 _log_buffer: deque[str] = deque(maxlen=50)
 _app_ref: "WisprAddonsApp | None" = None
+_mouse_wheel_click_lock = threading.Lock()
+_mouse_wheel_pending_timer: threading.Timer | None = None
 
 
 def log(message: str) -> None:
@@ -255,6 +259,46 @@ def handle_clean_hotkey(with_emoji: bool = False) -> None:
         _clean_lock.release()
 
 
+def _paste_last_intercepted_text() -> None:
+    with _last_paste_lock:
+        text = _last_paste_text
+    if not text or not text.strip():
+        log("Skipped: no captured paste text to repaste")
+        return
+
+    previous_clipboard = get_clipboard()
+    set_clipboard(text)
+    time.sleep(0.05)
+    simulate_keystroke(VK_V, kCGEventFlagMaskCommand)
+    time.sleep(0.05)
+    set_clipboard(previous_clipboard)
+    log(f"Repasted last captured text ({len(text)} chars)")
+
+
+def _on_mouse_wheel_timeout() -> None:
+    global _mouse_wheel_pending_timer
+    with _mouse_wheel_click_lock:
+        _mouse_wheel_pending_timer = None
+
+
+def _on_mouse_wheel_click() -> None:
+    global _mouse_wheel_pending_timer
+    with _mouse_wheel_click_lock:
+        if _mouse_wheel_pending_timer is not None:
+            _mouse_wheel_pending_timer.cancel()
+            _mouse_wheel_pending_timer = None
+            is_double_click = True
+        else:
+            timer = threading.Timer(MOUSE_WHEEL_DOUBLE_CLICK_WINDOW, _on_mouse_wheel_timeout)
+            timer.daemon = True
+            _mouse_wheel_pending_timer = timer
+            timer.start()
+            is_double_click = False
+
+    if is_double_click:
+        threading.Thread(target=_paste_last_intercepted_text, daemon=True).start()
+
+
 def handle_dictation_toggle() -> None:
     global _mute_device_original_volume, _dictation_active
     if _dictation_active:
@@ -304,6 +348,8 @@ def event_tap_callback(proxy, event_type, event, refcon):
         button = CGEventGetIntegerValueField(event, kCGMouseEventButtonNumber)
         if button == MOUSE_BUTTON_5:
             threading.Thread(target=handle_dictation_toggle, daemon=True).start()
+        elif button == MOUSE_BUTTON_3:
+            _on_mouse_wheel_click()
         return event
 
     keycode = CGEventGetIntegerValueField(event, kCGKeyboardEventKeycode)
@@ -380,12 +426,14 @@ class WisprAddonsApp(rumps.App):
             rumps.MenuItem("\u2318\u2303V — Clean paste", callback=self.on_clean),
             rumps.MenuItem("\u2318\u2303\u2325V — Clean + emoji", callback=self.on_clean_emoji),
             rumps.MenuItem("Mouse 5 — Dictation mute", callback=None),
+            rumps.MenuItem("Double-click wheel — Repaste last intercepted text", callback=None),
             None,  # separator
             rumps.MenuItem("Show Log", callback=self.show_log),
             None,
             rumps.MenuItem("Quit", callback=self.quit_app),
         ]
         self.menu["Mouse 5 — Dictation mute"].enabled = False
+        self.menu["Double-click wheel — Repaste last intercepted text"].enabled = False
 
     def on_clean(self, _):
         threading.Thread(target=handle_clean_hotkey, args=(False,), daemon=True).start()
