@@ -1,10 +1,15 @@
 {
-  "sha": "79b588fdfe1a999d32d6c20d934e0256d502f243",
-  "timestamp": "2026-03-29 13:02",
+  "sha": "c2118fc66d22d722b3e6cde696818951ad7216b1",
+  "timestamp": "2026-03-29 13:05",
   "changelog": [
-    "fix(wispr-addons): make clean paste menu items clickable, use WISPR_CLEANUP_ANTHROPIC_API_KEY"
+    "feat(wispr-addons): log USD cost of each AI cleanup call"
   ],
   "commits": [
+    {
+      "sha": "c2118fc6",
+      "msg": "feat(wispr-addons): log USD cost of each AI cleanup call",
+      "ts": "2026-03-29T13:05:02+03:00"
+    },
     {
       "sha": "79b588fd",
       "msg": "fix(wispr-addons): make clean paste menu items clickable, use WISPR_CLEANUP_ANTHROPIC_API_KEY",
@@ -99,11 +104,6 @@
       "sha": "719059ce",
       "msg": "fix(wispr): remove duplicate menu bar icon",
       "ts": "2026-03-29T12:27:10+03:00"
-    },
-    {
-      "sha": "77036274",
-      "msg": "chore: add LLM transcript cleanup experiment script",
-      "ts": "2026-03-29T12:23:36+03:00"
     }
   ],
   "branches": [
