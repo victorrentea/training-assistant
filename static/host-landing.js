@@ -25,7 +25,7 @@ function renderPage(active, folders) {
     rejoinHtml = `
       <div class="landing-card rejoin-card">
         <div class="rejoin-label">Active session</div>
-        <button class="rejoin-btn" onclick="rejoinSession(${JSON.stringify(active.session_id)})">
+        <button class="rejoin-btn" onclick="rejoinSession('${active.session_id}')">
           Rejoin: ${_esc(name)}
         </button>
       </div>`;
