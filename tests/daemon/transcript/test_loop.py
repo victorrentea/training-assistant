@@ -32,8 +32,8 @@ def test_normalizer_log_preview_strips_leading_transcript_timestamp(tmp_path):
 
     message = info_mock.call_args.args[1]
     assert message == (
-        "Transcripted 22 words (of 81 🤖 2622ms OLLAMA):\n"
-        " Tocmai atunci cand oamenii adorm la webinar ..."
+        "Transcripted 22 words (of 81 🤖 2622ms OLLAMA): "
+        "Tocmai atunci cand oamenii adorm la webinar ..."
     )
+    assert "\n" not in message
     assert "[ 14:52:12 ]" not in message
-

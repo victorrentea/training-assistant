@@ -188,7 +188,7 @@ class TranscriptNormalizerRunner:
                     if len(preview_words) >= 7:
                         break
                 base_part = f"Transcripted {words} words{llm_part}"
-                preview_part = f":\n {' '.join(preview_words)} ..." if preview_words else ""
+                preview_part = f": {' '.join(preview_words)} ..." if preview_words else ""
                 if output_files == 1 and raw_sources == 1:
                     log.info("transcript", f"{base_part}{preview_part}")
                 else:

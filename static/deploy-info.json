@@ -1,10 +1,15 @@
 {
-  "sha": "7a7dda2fb1e2f0d65c318e9878d6bed9b8684e26",
-  "timestamp": "2026-03-29 16:42",
+  "sha": "e69b5301500ca23de6a54528efb7066af46aea90",
+  "timestamp": "2026-03-29 16:44",
   "changelog": [
-    "fix: unify host footer badge tooltips"
+    "chore: remove active session card from host landing"
   ],
   "commits": [
+    {
+      "sha": "e69b5301",
+      "msg": "chore: remove active session card from host landing",
+      "ts": "2026-03-29T16:42:38+03:00"
+    },
     {
       "sha": "7a7dda2f",
       "msg": "fix: unify host footer badge tooltips",
@@ -99,11 +104,6 @@
       "sha": "98697531",
       "msg": "Host footer QR icon after join link",
       "ts": "2026-03-29T15:45:24+03:00"
-    },
-    {
-      "sha": "eb745e36",
-      "msg": "Fix transcript preview log timestamp leakage",
-      "ts": "2026-03-29T15:42:03+03:00"
     }
   ],
   "branches": [
