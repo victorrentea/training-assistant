@@ -1109,6 +1109,9 @@ h1 { display: none; }
   border-radius: 6px;
   padding: .12rem .38rem;
 }
+#version-tag.deploy-incoming {
+  animation: none;
+}
 
 /* ── Poll closed banner ── */
 .closed-banner {

@@ -2312,14 +2312,8 @@ function closeEmojiPopup(ev) {
   function showDeployPending() {
     const el = document.getElementById('version-tag');
     if (!el) return;
-    if (!document.getElementById('_blink-style')) {
-      const s = document.createElement('style');
-      s.id = '_blink-style';
-      s.textContent = '@keyframes _blink-warning{0%,100%{opacity:1}50%{opacity:.25}}';
-      document.head.appendChild(s);
-    }
     el.textContent = '⚠️ 🚀 Deploy incoming';
-    el.style.cssText = 'color:#f5a623;opacity:1;animation:_blink-warning 1s ease-in-out infinite;font-weight:600;';
+    el.style.cssText = 'color:#f5a623;opacity:1;font-weight:600;';
   }
 
   // Largest-remainder rounding: ensures integer percentages sum to exactly 100
