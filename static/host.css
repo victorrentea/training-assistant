@@ -82,6 +82,7 @@ body {
   border-bottom: 1px solid var(--border);
   padding: 0 1rem;
   flex-shrink: 0;
+  position: relative;
 }
 .host-top-bar .tab-bar {
   flex-shrink: 0;
@@ -90,7 +91,10 @@ body {
   padding-bottom: 0;
 }
 .host-top-title {
-  flex: 1;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: 40%;
   text-align: center;
   font-size: 1.5rem;
   font-weight: 700;
@@ -98,8 +102,8 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  padding: 0 1rem;
   letter-spacing: .01em;
+  pointer-events: none;
 }
 .host-top-pax {
   display: flex;
