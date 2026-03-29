@@ -9,6 +9,7 @@ export SESSIONS_FOLDER=/tmp/test-sessions
 export TRANSCRIPTION_FOLDER=/tmp/test-transcriptions
 export WORKSHOP_SERVER_URL=http://localhost:8000
 export DAEMON_ADAPTER=stub
+export LLM_ADAPTER=stub
 export MATERIALS_MIRROR_ENABLED=0
 export TRANSCRIPT_LLM_CLEAN=0
 export PYTHONUNBUFFERED=1

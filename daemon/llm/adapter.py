@@ -45,7 +45,7 @@ def get_usage() -> TokenUsage:
     return _usage
 
 
-def create_message(
+def _real_create_message(
     api_key: str,
     model: str,
     max_tokens: int,
@@ -73,3 +73,71 @@ def create_message(
     short_model = model.split("-")[1] if "-" in model else model  # haiku/sonnet/opus
     log.info("llm", f"💸 {short_model:<7} in={in_tok:<5} out={out_tok:<4} ${cost:.3f}  {duration_ms}ms")
     return response
+
+
+def _stub_create_message(
+    api_key: str,
+    model: str,
+    max_tokens: int,
+    messages: list,
+    system: str = "",
+    tools: list | None = None,
+    timeout: float | None = None,
+) -> anthropic.types.Message:
+    """Returns canned responses for hermetic testing. No real API call."""
+    import json as _json
+
+    # Detect what kind of request this is from the system prompt or message content
+    user_text = " ".join(
+        str(m.get("content", "")) for m in messages if m.get("role") == "user"
+    ).lower()
+    system_lower = (system or "").lower()
+
+    if "quiz" in system_lower or "poll" in system_lower or "question" in user_text:
+        # Canned quiz response
+        quiz_json = _json.dumps({
+            "question": "Which design pattern decouples an abstraction from its implementation?",
+            "options": ["Bridge", "Adapter", "Facade", "Proxy"],
+            "correct": 0,
+            "multi": False,
+        })
+        text = f"```json\n{quiz_json}\n```"
+    elif "debate" in system_lower or "argument" in system_lower:
+        # Canned debate cleanup response
+        text = _json.dumps({
+            "merges": [],
+            "cleaned": [],
+            "new_arguments": [
+                {"side": "for", "text": "Improves testability through dependency injection"},
+                {"side": "against", "text": "Adds unnecessary complexity for simple cases"},
+            ],
+        })
+    elif "summary" in system_lower or "key point" in system_lower:
+        # Canned summary response
+        text = _json.dumps({
+            "added": [{"text": "Discussed adapter pattern for hermetic testing", "source": "discussion"}],
+            "removed": [],
+            "edited": [],
+        })
+    else:
+        text = "This is a canned response from the LLM stub adapter."
+
+    log.info("llm", f"🧪 STUB  model={model}  (canned response, no API call)")
+    return anthropic.types.Message(
+        id="msg_stub_000",
+        type="message",
+        role="assistant",
+        content=[anthropic.types.TextBlock(type="text", text=text)],
+        model=model,
+        stop_reason="end_turn",
+        stop_sequence=None,
+        usage=anthropic.types.Usage(input_tokens=100, output_tokens=50),
+    )
+
+
+import os as _os
+if _os.environ.get("LLM_ADAPTER") == "stub":
+    create_message = _stub_create_message
+    log.info("llm", "🧪 Using STUB LLM adapter (no real API calls)")
+else:
+    create_message = _real_create_message
