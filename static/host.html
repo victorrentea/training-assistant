@@ -419,5 +419,19 @@
 <div class="version-tag" id="version-tag"></div>
 <script>window.renderDeployAge && window.renderDeployAge('version-tag');</script>
 <button id="end-session-btn" class="end-session-btn" onclick="endSession()" title="End session and return to landing page">⏹️</button>
+
+<!-- Inactivity auto-return modal -->
+<div id="inactivity-modal" style="display:none; position:fixed; inset:0; z-index:9999;
+     background:rgba(0,0,0,0.75); align-items:center; justify-content:center;">
+  <div style="background:#0f172a; border:2px solid #f59e0b; border-radius:20px;
+       padding:36px 48px; text-align:center; max-width:320px;
+       box-shadow:0 0 60px rgba(245,158,11,0.35), 0 24px 48px rgba(0,0,0,0.6);">
+    <div style="font-size:2.4rem; margin-bottom:12px;">💤</div>
+    <div style="color:#fbbf24; font-weight:700; font-size:1.05rem; margin-bottom:16px;">Are you still there?</div>
+    <div id="inactivity-timer" style="font-size:4rem; font-weight:800; color:#f59e0b;
+         font-variant-numeric:tabular-nums; line-height:1; margin-bottom:14px;">3:00</div>
+    <div style="color:#475569; font-size:.78rem;">Move your mouse to stay here</div>
+  </div>
+</div>
 </body>
 </html>
