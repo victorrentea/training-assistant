@@ -34,8 +34,6 @@
   let _hostWcDebounceTimer = null;
   let _hostWcLastDataKey = null;
   let currentMode = 'workshop';
-  let _autoReturnTimer = null;
-  const AUTO_RETURN_DELAY = 30000; // 30 seconds
   const versionReloadGuard = window.createVersionReloadGuard
     ? window.createVersionReloadGuard({ countdownSeconds: 5 })
     : null;
@@ -1064,7 +1062,6 @@
       const centerQRVisible = document.getElementById('center-qr').style.display !== 'none';
       confQR.style.display = centerQRVisible ? 'none' : 'flex';
       if (debateTab) debateTab.style.display = 'none';
-      startAutoReturnTimer();
       if (tokenCost) tokenCost.style.display = 'none';
       if (notesBadge) notesBadge.style.display = 'none';
       // Make center QR bright for conference
@@ -1079,7 +1076,6 @@
       if (debateTab) debateTab.style.display = '';
       if (tokenCost) tokenCost.style.display = '';
       if (notesBadge) notesBadge.style.display = '';
-      stopAutoReturnTimer();
       // Restore muted center QR
       if (centerQR) centerQR.classList.remove('conference-center-qr');
       _regenerateAllQRCodes();
@@ -3037,32 +3033,7 @@ function updateLeaderboardButton() {
     btn.disabled = scoredCount < 1;
 }
 
-// ── Auto-return to Hello tab (conference mode only) ──
-
 let _currentActivity = 'none';
-
-function _resetAutoReturn() {
-  if (currentMode !== 'conference') return;
-  clearTimeout(_autoReturnTimer);
-  if (_currentActivity !== 'none') {
-    _autoReturnTimer = setTimeout(() => switchTab('none'), AUTO_RETURN_DELAY);
-  }
-}
-
-function startAutoReturnTimer() {
-  ['click', 'keypress', 'mousemove'].forEach(evt =>
-    document.addEventListener(evt, _resetAutoReturn, { passive: true })
-  );
-  _resetAutoReturn();
-}
-
-function stopAutoReturnTimer() {
-  clearTimeout(_autoReturnTimer);
-  _autoReturnTimer = null;
-  ['click', 'keypress', 'mousemove'].forEach(evt =>
-    document.removeEventListener(evt, _resetAutoReturn)
-  );
-}
 
 // ── Session management panel ──
 
