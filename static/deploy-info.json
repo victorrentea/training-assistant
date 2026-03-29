@@ -1,10 +1,15 @@
 {
-  "sha": "0b86ad36262fb82388494f48b30550101eba1252",
-  "timestamp": "2026-03-29 15:11",
+  "sha": "3cecf57cd9966796a93099e7b3e02829b447caec",
+  "timestamp": "2026-03-29 15:14",
   "changelog": [
-    "chore: compact initial sync error log"
+    "feat: restart hijack when today raw file missing"
   ],
   "commits": [
+    {
+      "sha": "3cecf57c",
+      "msg": "feat: restart hijack when today raw file missing",
+      "ts": "2026-03-29T15:14:06+03:00"
+    },
     {
       "sha": "0b86ad36",
       "msg": "chore: compact initial sync error log",
@@ -99,11 +104,6 @@
       "sha": "e22c767f",
       "msg": "feat: show first 10 words preview in transcript log",
       "ts": "2026-03-29T14:48:51+03:00"
-    },
-    {
-      "sha": "28e7d0e4",
-      "msg": "fix: uniform gray border color for all neutral host footer badges",
-      "ts": "2026-03-29T14:47:27+03:00"
     }
   ],
   "branches": [
