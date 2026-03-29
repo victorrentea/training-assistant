@@ -121,9 +121,8 @@ class AppState:
         self.transcription_language: str = "ro"  # current AudioHijack Transcribe block language
         self.transcription_language_request: str | None = None  # pending change for daemon
         self.session_id: str | None = None  # 6-char alphanumeric session code for participant URLs
-        self.session_folders: list[str] = []  # pushed by daemon on connect
-        self.slides_log: list = []
-        self.git_repos: list = []
+        self.session_folders, self.session_folder_ids = [], {}  # daemon folders + stable folder->session_id map
+        self.slides_log, self.git_repos = [], []
         # Clean up uploaded files from disk
         import shutil
         from pathlib import Path

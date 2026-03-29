@@ -119,6 +119,27 @@ end tell
 """.strip()
 
 
+def _read_session_id_from_session_folder(folder: Path) -> str | None:
+    path = folder / "session_state.json"
+    if not path.exists() or not path.is_file():
+        return None
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+    sid = data.get("session_id")
+    if isinstance(sid, str) and sid.strip():
+        return sid.strip()
+    return None
+
+
+def _build_session_folders_payload(sessions_root: Path) -> list[dict[str, str | None]]:
+    return [
+        {"name": folder.name, "session_id": _read_session_id_from_session_folder(folder)}
+        for folder in sorted((f for f in sessions_root.iterdir() if f.is_dir()), key=lambda p: p.name, reverse=True)
+    ]
+
+
 _AUDIOHIJACK_SESSIONS_PLIST = os.path.expanduser(
     "~/Library/Application Support/Audio Hijack 4/Sessions.plist"
 )
@@ -641,7 +662,7 @@ def run() -> None:
     def _push_session_folders():
         if not sessions_root.exists():
             return
-        folders = sorted([f.name for f in sessions_root.iterdir() if f.is_dir()], reverse=True)
+        folders = _build_session_folders_payload(sessions_root)
         ws_client.send({"type": "session_folders", "folders": folders})
     ws_client.on_connect(_push_session_folders)
 
