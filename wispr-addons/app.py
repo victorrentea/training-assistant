@@ -184,7 +184,11 @@ def play_sound() -> None:
 
 
 # --- Core handlers ---
-def clean_text(text: str, with_emoji: bool = False) -> str | None:
+COST_PER_INPUT_TOKEN  = 0.80 / 1_000_000   # claude-haiku-4-5
+COST_PER_OUTPUT_TOKEN = 4.00 / 1_000_000
+
+
+def clean_text(text: str, with_emoji: bool = False) -> tuple[str, float] | tuple[None, None]:
     timeout = compute_timeout(text)
     prompt = CLEANUP_PROMPT_EMOJI if with_emoji else CLEANUP_PROMPT
     try:
@@ -193,10 +197,12 @@ def clean_text(text: str, with_emoji: bool = False) -> str | None:
             messages=[{"role": "user", "content": text}],
             system=prompt, timeout=timeout,
         )
-        return response.content[0].text
+        cost = (response.usage.input_tokens * COST_PER_INPUT_TOKEN
+                + response.usage.output_tokens * COST_PER_OUTPUT_TOKEN)
+        return response.content[0].text, cost
     except Exception as e:
         log(f"API error: {e}")
-        return None
+        return None, None
 
 
 def handle_clean_hotkey(with_emoji: bool = False) -> None:
@@ -220,7 +226,7 @@ def handle_clean_hotkey(with_emoji: bool = False) -> None:
         if _app_ref:
             _app_ref.title = "\U0001f9f9"  # broom — cleaning in progress
 
-        cleaned = clean_text(text, with_emoji=with_emoji)
+        cleaned, cost = clean_text(text, with_emoji=with_emoji)
         if cleaned is None:
             log("Failed: no response from API")
             if _app_ref:
@@ -234,7 +240,7 @@ def handle_clean_hotkey(with_emoji: bool = False) -> None:
         simulate_keystroke(VK_V, kCGEventFlagMaskCommand)
 
         elapsed_ms = int((time.time() - start) * 1000)
-        log(f"Done ({len(text)}\u2192{len(cleaned)} chars, {elapsed_ms}ms):\n  {cleaned[:200]}")
+        log(f"Done ({len(text)}\u2192{len(cleaned)} chars, {elapsed_ms}ms, ${cost:.4f}):\n  {cleaned[:200]}")
         if _app_ref:
             _app_ref.title = "\U0001f9d1\u200d\U0001f4bb"
     except Exception as e:
