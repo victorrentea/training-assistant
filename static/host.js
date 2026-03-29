@@ -1407,12 +1407,28 @@
   });
 
   // Fullscreen QR overlay
+  function _positionQROverlayBetweenHeaderAndFooter() {
+    const overlay = document.getElementById('qr-overlay');
+    const topBar = document.querySelector('.host-top-bar');
+    const footer = document.querySelector('.host-footer');
+    if (!overlay || !topBar || !footer) return;
+    const top = Math.max(0, Math.ceil(topBar.getBoundingClientRect().bottom));
+    const bottom = Math.max(0, Math.ceil(window.innerHeight - footer.getBoundingClientRect().top));
+    overlay.style.top = `${top}px`;
+    overlay.style.bottom = `${bottom}px`;
+    overlay.style.left = '0';
+    overlay.style.right = '0';
+  }
+
   function renderFullscreenQR() {
     const joinUrl = _getJoinUrl();
     const qrFull = document.getElementById('qr-fullscreen');
     if (qrFull) {
       qrFull.innerHTML = '';
-      const qrFullSize = Math.floor(Math.min(window.innerWidth, window.innerHeight) * 0.92);
+      const overlay = document.getElementById('qr-overlay');
+      const availW = overlay && overlay.classList.contains('open') ? overlay.clientWidth : window.innerWidth;
+      const availH = overlay && overlay.classList.contains('open') ? overlay.clientHeight : window.innerHeight;
+      const qrFullSize = Math.max(120, Math.floor(Math.min(availW, availH) * 0.98));
       if (typeof QRCode !== 'undefined') {
         new QRCode(qrFull, { text: joinUrl, width: qrFullSize, height: qrFullSize, colorDark: '#000000', colorLight: '#ffffff' });
       }
@@ -1432,9 +1448,12 @@
   });
 
   function openQR() {
-    renderFullscreenQR();
     const overlay = document.getElementById('qr-overlay');
-    if (overlay) overlay.classList.add('open');
+    if (overlay) {
+      overlay.classList.add('open');
+      _positionQROverlayBetweenHeaderAndFooter();
+      renderFullscreenQR();
+    }
   }
 
   // Footer QR icon: open fullscreen join QR overlay
@@ -1452,13 +1471,24 @@
     });
   }
 
+  const qrFullscreen = document.getElementById('qr-fullscreen');
+  if (qrFullscreen) {
+    qrFullscreen.addEventListener('click', (event) => {
+      event.stopPropagation();
+      closeQR();
+    });
+  }
+
   function closeQR() {
     closeModal('qr-overlay');
   }
 
   window.addEventListener('resize', () => {
     const overlay = document.getElementById('qr-overlay');
-    if (overlay && overlay.classList.contains('open')) renderFullscreenQR();
+    if (overlay && overlay.classList.contains('open')) {
+      _positionQROverlayBetweenHeaderAndFooter();
+      renderFullscreenQR();
+    }
   });
 
 
