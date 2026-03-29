@@ -1,8 +1,8 @@
 {
-  "sha": "aaf126bae8786ad6a952fe8a7f3dea586f5a63db",
-  "timestamp": "2026-03-29 12:30",
+  "sha": "e21a1b60f4d09c3dca91a18b14ed844d7b8983c4",
+  "timestamp": "2026-03-29 12:32",
   "changelog": [
-    "feat(host-landing): static date prefix on session name input"
+    "feat(host-landing): show today's session folders as resume buttons"
   ],
   "branches": [
     {
