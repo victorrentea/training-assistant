@@ -132,8 +132,9 @@ def test_follow_me_basic():
             msg="Follow button not found on participant page"
         )
 
-        # Wait for slides_current to be received by participant (daemon needs time to send it)
-        time.sleep(5)  # daemon polls ppt every ~1s, then WS broadcast
+        # Wait for slides_current to be received by participant
+        # With fast intervals (0.5s PPT probe), this should be quick
+        time.sleep(2)
 
         # Wait for daemon to detect PowerPoint and push slides_current to backend
         # Verify via /api/status or by checking the host page state

@@ -19,6 +19,10 @@
 - [x] **PPTX change detection**: Touch PPTX file → daemon sends slide_invalidated
 - [x] **IntelliJ tracking**: Stub IntelliJ state → daemon sends activity_log → backend has git_repos
 - [ ] **Quiz generation** (skipped #98): Stub LLM returns quiz but WS delivery has import binding bug
+- [x] **Correct answer scoring**: Vote correct → get score >= 500 (speed-based)
+- [x] **Paste text to host**: Participant pastes text → host sees paste icon
+- [x] **Late joiner sees Q&A**: Join after questions submitted → see them all
+- [x] **Self-upvote disabled**: Can't upvote own Q&A question
 
 ---
 
