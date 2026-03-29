@@ -9,11 +9,11 @@ LAYOUT_LEFT_RIGHT()
 Person(participant, "Participant", "Trainee.")
 
 ' ── centre: the system ───────────────────────────────────────────
-System_Boundary(workshop, "Workshop Tool", $link="c4_c3_components.puml") {
+System_Boundary(workshop, "Workshop Tool", $link="c3_backend.puml") {
 
     Container(participant_spa, "Participant SPA", "Vanilla JS (trainee's browser)", "Voting, Q&A, word cloud,\ndebate, code review,\ngeolocation, emoji reactions.")
 
-    Container(fastapi, "FastAPI Backend", "Python 3.12 / FastAPI / Uvicorn", "REST endpoints + WebSocket.\nHTTP Basic Auth via middleware.\nTLS handled by Railway.", $link="c4_c3_components.puml")
+    Container(fastapi, "FastAPI Backend", "Python 3.12 / FastAPI / Uvicorn", "REST endpoints + WebSocket.\nHTTP Basic Auth via middleware.\nTLS handled by Railway.", $link="c3_backend.puml")
 
     Container(host_spa, "Host SPA", "Vanilla JS (host's browser)", "Poll/activity management,\nparticipant list, map view (Leaflet),\nquiz preview, debate control.")
 
