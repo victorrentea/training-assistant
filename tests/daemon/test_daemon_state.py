@@ -214,6 +214,33 @@ def test_load_slides_manifest_reads_candidate_file():
         assert slides[0]["url"] == "https://cdn.example.com/intro.pdf"
 
 
+def test_resolve_session_folder_prefers_active_stack_folder(tmp_path):
+    from daemon.__main__ import _resolve_session_folder_from_state
+
+    sessions_root = tmp_path
+    active_folder = sessions_root / "2026-03-29 Active"
+    active_folder.mkdir()
+    active_notes = active_folder / "active-notes.txt"
+    active_notes.write_text("active")
+
+    detected_folder = sessions_root / "2026-03-29 Abc"
+    detected_folder.mkdir()
+    detected_notes = detected_folder / "detected-notes.txt"
+    detected_notes.write_text("detected")
+
+    stack = [{"name": active_folder.name, "started_at": "2026-03-29T10:00:00", "status": "active"}]
+    sf, sn, source = _resolve_session_folder_from_state(
+        sessions_root=sessions_root,
+        session_stack=stack,
+        detected_folder=detected_folder,
+        detected_notes=detected_notes,
+    )
+
+    assert sf == active_folder
+    assert sn == active_notes
+    assert source == "stack"
+
+
 def test_parse_powerpoint_probe_output_active_state():
     from daemon.__main__ import _parse_powerpoint_probe_output
 

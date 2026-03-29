@@ -152,3 +152,7 @@ Important env vars:
 - Normalized transcript files are minute-granularity (`[HH:MM]`), not second-granularity.
 - Cross-day queries are supported by loading multiple `YYYY-MM-DD transcription.txt` files.
 - If no normalized files exist, transcript-dependent flows now fail fast with explicit logs/errors.
+
+## Persisted Session State
+
+- Global daemon state + per-session snapshot schema/class diagram: `docs/daemon-persisted-state.md`
