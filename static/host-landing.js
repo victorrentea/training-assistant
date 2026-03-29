@@ -34,8 +34,8 @@ function renderPage(active, folders) {
   const folderListHtml = buildFolderList(folders, today);
 
   app.innerHTML = `
+    <div class="landing-title">Start Session</div>
     <div class="landing-card">
-      <div class="landing-title">Start Session</div>
       ${rejoinHtml}
       <div class="new-session-label">New session</div>
       <div class="session-name-row">
