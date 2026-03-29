@@ -64,8 +64,68 @@
 
 - [ ] **Resume existing session from disk**: Pre-existing folder in sessions root → host opens landing page → sees it listed → clicks to resume → session initialized in that folder → host closes → daemon global state shows no active session
 
+## From Existing E2E Suite (to migrate)
+
+### Poll (advanced)
+- [ ] **Zero votes → 0%**: Close poll with no votes → all options show 0%
+- [ ] **Correct answer feedback**: Mark correct → participant sees green/red feedback
+- [ ] **Correct count hint**: Multi-select shows "select N" hint
+- [ ] **Multi-select cap enforced**: Can't select more than correct_count options
+- [ ] **Multi-vote submit + host count**: Multi-select voting and host count update
+- [ ] **Multi-select scoring (all correct)**: Full score when all correct
+- [ ] **Multi-select scoring (partial wrong)**: Zero score on partial-wrong
+- [ ] **Timer countdown visible**: Poll timer appears and counts down
+- [ ] **Timer cleared on close**: Timer disappears when poll closes
+- [ ] **Poll download text**: Download captures two polls with correct answers
+
+### Q&A
+- [ ] **Question submission**: Participant submits question → host sees it
+- [ ] **Question editing**: Host edits question → participant sees update
+- [ ] **Question deletion**: Host deletes question → participant list empty
+- [ ] **Question answered**: Host marks answered → participant sees checkmark
+- [ ] **Upvoting + sort order**: Multiple participants upvote → questions sorted by votes
+- [ ] **Self-upvote disabled**: Can't upvote own question
+- [ ] **Already-upvoted disabled**: Upvote button disabled after voting
+- [ ] **Late joiner sees Q&A**: Participant joins mid-Q&A → sees existing questions
+
+### Word Cloud
+- [ ] **Word cloud visible**: Host opens wordcloud → participant sees canvas
+- [ ] **Word submission**: Participant submits word → appears in "my words"
+- [ ] **No JS errors on submit**: Word submission doesn't trigger JS errors
+- [ ] **Close wordcloud**: Host closes → participant returns to idle
+- [ ] **Late joiner sees canvas**: Participant joins mid-wordcloud → sees it
+- [ ] **Special chars in wordcloud**: Unicode characters handled correctly
+
+### Code Review
+- [ ] **Create snippet**: Host pastes code → participant sees line selection UI
+- [ ] **Line selection + confirm**: Participant flags lines → host confirms → scoring
+- [ ] **Status transitions**: idle → selecting → reviewing flow
+- [ ] **Create rejects empty**: Empty snippet returns error
+
+### Leaderboard
+- [ ] **Show + hide**: Host triggers leaderboard show → participants see top 5 → host hides
+- [ ] **Personal rank**: Each participant sees their own rank
+
+### Conference Mode
+- [ ] **Toggle mode**: Host switches to conference → participants see character names
+- [ ] **Auto character name**: Conference mode auto-assigns character names
+- [ ] **Scores hidden**: Conference mode hides participant scores
+
+### UI/UX
+- [ ] **Escape closes modals**: Escape key closes all participant modals
+- [ ] **Auto-join no JS errors**: Returning participant auto-joins without console errors
+- [ ] **Host tab survives reload**: Active tab persists after host page reload
+- [ ] **Version tag elapsed time**: Version tag shows deploy age and updates
+- [ ] **Notification button states**: Hidden on load, hidden after fresh join, visible for returning participant
+- [ ] **No spurious notification on mid-poll join**: Regression test
+- [ ] **QR code rendered**: QR code visible on host panel
+- [ ] **Participant link displayed**: Session link shown on host panel
+- [ ] **Unavailable slide styling**: Unavailable slides crossed out and disabled
+- [ ] **Slide NEW badge lifecycle**: No badge before visit → badge after update → clears on click
+
 ## Infrastructure Still Needed
 
+- [x] Controllable stub PowerPoint adapter (file-based)
 - [ ] Controllable stub IntelliJ adapter (file-based, like PowerPoint stub)
 - [ ] Desktop overlay WS mock that records received messages
 - [ ] Fixture session folders with pre-populated state for resume test
