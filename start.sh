@@ -176,6 +176,7 @@ while true; do
       DAEMON_PID=""
       if [ $DAEMON_EXIT -eq 0 ]; then
         _log "start" "info" "🔴 daemon (clean exit) — restarting in 3s"
+        afplay /System/Library/Sounds/Sosumi.aiff &
         sleep 3
         RESTART_REASON="daemon-clean-exit"
         break
