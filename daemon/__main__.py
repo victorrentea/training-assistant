@@ -66,7 +66,7 @@ from daemon.lock import (
     _HEARTBEAT_INTERVAL,
 )
 from daemon.email_notify import notify as email_notify
-from daemon.intellij.tracker import probe_intellij_state
+from daemon.adapters.loader import adapter as _platform
 
 EXIT_CODE_UPDATE = 42  # signals start.sh to git pull and restart
 _BACKUP_DIR = Path.home() / ".training-assistant"
@@ -74,53 +74,7 @@ _BACKUP_FILE = _BACKUP_DIR / "state-backup.json"
 
 # ── PowerPoint helpers ─────────────────────────────────────────────────────────
 
-_PPT_NO_APP = "__NO_PPT__"
-_PPT_NO_PRESENTATION = "__NO_PRESENTATION__"
-_PPT_SLIDE_UNKNOWN = "__SLIDE_UNKNOWN__"
 _PPT_UNMAPPED_PRESENTATIONS_ALERTED: set[str] = set()
-_PPT_APPLESCRIPT = """
-if application "Microsoft PowerPoint" is not running then
-    return "__NO_PPT__"
-end if
-
-tell application "Microsoft PowerPoint"
-    if (count of presentations) is 0 then
-        return "__NO_PRESENTATION__"
-    end if
-
-    set presentationName to name of active presentation
-    set slideNumber to 1
-    set isPresenting to "false"
-
-    try
-        if (count of slide show windows) > 0 then
-            set isPresenting to "true"
-            set slideNumber to current show position of slide show view of slide show window 1
-        else
-            try
-                set slideNumber to slide index of slide of view of active window
-            on error
-                try
-                    set slideNumber to slide index of slide of view of document window 1
-                on error
-                    set slideNumber to "__SLIDE_UNKNOWN__"
-                end try
-            end try
-        end if
-    on error
-        set slideNumber to "__SLIDE_UNKNOWN__"
-    end try
-
-    set isFrontmost to "false"
-    tell application "System Events"
-        try
-            set isFrontmost to (frontmost of application process "Microsoft PowerPoint") as string
-        end try
-    end tell
-
-    return presentationName & tab & isPresenting & tab & (slideNumber as string) & tab & isFrontmost
-end tell
-""".strip()
 
 
 def _read_session_id_from_session_folder(folder: Path) -> str | None:
@@ -175,33 +129,12 @@ def _resolve_session_folder_from_state(
     return None, None, "none"
 
 
-_AUDIOHIJACK_SESSIONS_PLIST = os.path.expanduser(
-    "~/Library/Application Support/Audio Hijack 4/Sessions.plist"
-)
 _RAW_TRANSCRIPT_TXT_RE = re.compile(r"^(\d{8})\s+\d{4}\b.*\.txt$", re.IGNORECASE)
-
-
-def _read_audiohijack_language() -> str | None:
-    """Read the current TranscribeBlock languageCode from Sessions.plist. Returns None if unreadable."""
-    import plistlib
-    plist_path = _AUDIOHIJACK_SESSIONS_PLIST
-    try:
-        with open(plist_path, "rb") as f:
-            data = plistlib.load(f)
-        for session_item in data.get("modelItems", []):
-            for block in session_item.get("sessionData", {}).get("geBlocks", []):
-                if block.get("geObjectInfo") == "TranscribeBlock":
-                    lang = block.get("geNodeProperties", {}).get("languageCode")
-                    if lang:
-                        return lang
-    except Exception:
-        pass
-    return None
 
 
 def _sync_audiohijack_language(config) -> bool:
     """Read current AudioHijack language and POST it to the server. Returns True if synced."""
-    lang = _read_audiohijack_language()
+    lang = _platform.read_audiohijack_language()
     if not lang:
         log.error("daemon", "Could not read AudioHijack language from plist")
         return False
@@ -217,36 +150,6 @@ def _sync_audiohijack_language(config) -> bool:
         )
     log.info("daemon", f"AudioHijack language synced: {lang}")
     return True
-
-
-def _set_audiohijack_language(lang_code: str) -> None:
-    """Kill AudioHijack, update TranscribeBlock languageCode in Sessions.plist, restart."""
-    import plistlib
-    import time as _time
-
-    subprocess.run(["pkill", "-x", "Audio Hijack"], capture_output=True)
-    _time.sleep(1.5)
-
-    plist_path = _AUDIOHIJACK_SESSIONS_PLIST
-    with open(plist_path, "rb") as f:
-        data = plistlib.load(f)
-    changed = False
-    for session_item in data.get("modelItems", []):
-        for block in session_item.get("sessionData", {}).get("geBlocks", []):
-            if block.get("geObjectInfo") == "TranscribeBlock":
-                block.setdefault("geNodeProperties", {})["languageCode"] = lang_code
-                changed = True
-    if changed:
-        with open(plist_path, "wb") as f:
-            plistlib.dump(data, f)
-
-    subprocess.Popen(["open", "-a", "Audio Hijack"])
-
-
-def _restart_audiohijack() -> None:
-    """Restart Audio Hijack process (used when transcript capture is stale)."""
-    subprocess.run(["pkill", "-x", "Audio Hijack"], capture_output=True)
-    subprocess.Popen(["open", "-a", "Audio Hijack"])
 
 
 def _raw_transcript_dates(folder: Path) -> set[date]:
@@ -284,73 +187,6 @@ def _should_restart_for_missing_today_raw(folder: Path, today: date) -> bool:
     return max(dates) == yesterday
 
 
-def _coerce_slide_number(value) -> int:
-    raw = str(value or "").strip()
-    if not raw or raw.lower() == "missing value" or raw == _PPT_SLIDE_UNKNOWN:
-        return 1
-    try:
-        number = int(raw)
-    except (TypeError, ValueError):
-        return 1
-    return max(1, number)
-
-
-def _parse_powerpoint_probe_output(raw: str) -> dict | None:
-    text = (raw or "").strip()
-    if not text or text in {_PPT_NO_APP, _PPT_NO_PRESENTATION}:
-        return None
-    parts = text.split("\t")
-    if len(parts) < 2:
-        return None
-    presentation = parts[0].strip()
-    if not presentation:
-        return None
-    if len(parts) >= 3:
-        is_presenting = parts[1].strip() == "true"
-        slide_number = _coerce_slide_number(parts[2].strip())
-    else:
-        is_presenting = False
-        slide_number = _coerce_slide_number(parts[1].strip())
-    is_frontmost = parts[3].strip() == "true" if len(parts) >= 4 else True
-    return {"presentation": presentation, "slide": slide_number, "presenting": is_presenting, "frontmost": is_frontmost}
-
-
-def _probe_powerpoint_state(timeout_seconds: float = 5.0) -> tuple[dict | None, str | None]:
-    try:
-        result = subprocess.run(
-            ["osascript", "-e", _PPT_APPLESCRIPT],
-            capture_output=True,
-            text=True,
-            timeout=max(0.1, timeout_seconds),
-            check=False,
-        )
-    except FileNotFoundError:
-        return None, "osascript not available on PATH"
-    except subprocess.TimeoutExpired:
-        return None, f"osascript timed out after {timeout_seconds:.1f}s"
-    except Exception as e:
-        return None, f"osascript failed: {e}"
-
-    if result.returncode != 0:
-        details = (result.stderr or result.stdout or "").strip()
-        if not details:
-            details = f"osascript exit code {result.returncode}"
-        return None, details
-
-    return _parse_powerpoint_probe_output(result.stdout), None
-
-
-def _beep_local() -> None:
-    try:
-        subprocess.run(
-            ["osascript", "-e", "beep"],
-            capture_output=True,
-            text=True,
-            timeout=2,
-            check=False,
-        )
-    except Exception:
-        pass
 
 
 def _slugify(value: str) -> str:
@@ -453,7 +289,7 @@ def _sync_powerpoint_slide_to_server(main_config, slides_cfg, ppt_state: dict | 
     if not is_matched:
         if alert_key and alert_key not in _PPT_UNMAPPED_PRESENTATIONS_ALERTED:
             _PPT_UNMAPPED_PRESENTATIONS_ALERTED.add(alert_key)
-            _beep_local()
+            _platform.beep()
             message = "Presentation inaccessible for participants."
             if presentation_name:
                 message = f"{message} ({presentation_name})"
@@ -859,7 +695,7 @@ def run() -> None:
                 materials_mirror.tick()
 
                 # ── Detect active PowerPoint presentation/slide via AppleScript ──
-                ppt_state, ppt_error = _probe_powerpoint_state()
+                ppt_state, ppt_error = _platform.probe_powerpoint()
                 if ppt_error:
                     if ppt_error != last_powerpoint_error:
                         log.error("ppt", f"AppleScript probe failed: {ppt_error}")
@@ -915,7 +751,7 @@ def run() -> None:
                 if _now_mono - last_intellij_probe_at >= _INTELLIJ_PROBE_INTERVAL:
                     last_intellij_probe_at = _now_mono
                     try:
-                        _ij = probe_intellij_state()
+                        _ij = _platform.probe_intellij()
                         if _ij and _ij.get("frontmost", True):
                             _repo_entry = next(
                                 (e for e in git_repos if e["path"] == _ij["path"] and e["branch"] == _ij["branch"]),
@@ -1122,7 +958,7 @@ def run() -> None:
                                     f"No raw transcript file for today ({today.isoformat()}); only yesterday exists. "
                                     "Restarting Audio Hijack and sleeping 3s to force today's file.",
                                 )
-                                _restart_audiohijack()
+                                _platform.restart_audiohijack()
                                 time.sleep(3)
                                 log.info("transcript", "Audio Hijack restart guard completed (slept 3s)")
                                 last_hijack_restart_for_missing_today = today
@@ -1272,7 +1108,7 @@ def run() -> None:
                     if lang_req:
                         log.info("daemon", f"Transcription language change requested: {lang_req}")
                         try:
-                            _set_audiohijack_language(lang_req)
+                            _platform.set_audiohijack_language(lang_req)
                             ws_client.send({
                                 "type": "transcription_language_status",
                                 "language": lang_req,
