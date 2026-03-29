@@ -1,5 +1,6 @@
 # Tasks
 
+- [x] daemon transcript logs: collapse `🤖 LLM sanitized ...` + `Transcripted ...` into a single line (`Transcripted N words (🤖 Xms): preview ...`).
 - [x] daemon: if today's raw transcript file is missing and latest raw file is from yesterday, restart Audio Hijack once (anti-loop guard) and sleep 3s, with explicit log message.
 - [x] ui: participant Key Points label now includes spacing between count and text (`🧠 38 Key Points` instead of `🧠 38Key Points`)
 - [x] ui: session panel compacted for host screen — session controls are clickable emoji-only (no button chrome), pause is followed by a vertical separator then `🎙️▶️`, and current session now shows transcript active time windows under the row.

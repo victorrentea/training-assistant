@@ -17,6 +17,7 @@ _NORMALIZER_INTERVAL_SECONDS = float(os.environ.get("TRANSCRIPT_NORMALIZER_INTER
 _LLM_CLEAN_ENABLED = os.environ.get("TRANSCRIPT_LLM_CLEAN", "1").strip().lower() not in {
     "0", "false", "no", "off",
 }
+_LLM_FILTER_STATS: dict[str, float | None] = {"last_ms": None}
 
 def _build_llm_line_filter():
     from daemon.transcript.llm_cleaner import clean_line_with_meta
@@ -24,7 +25,7 @@ def _build_llm_line_filter():
     def _filter(text: str) -> str | None:
         result, used_llm, elapsed_ms = clean_line_with_meta(text)
         if used_llm:
-            log.info("transcript", f"🤖 LLM sanitized in {elapsed_ms:.0f}ms")
+            _LLM_FILTER_STATS["last_ms"] = elapsed_ms
         return None if result == "[SKIP]" else result
     return _filter
 
@@ -152,6 +153,7 @@ class TranscriptNormalizerRunner:
         if now < self._next_run_at:
             return
         try:
+            _LLM_FILTER_STATS["last_ms"] = None
             results = normalize_folder_incremental(self.folder, line_pre_filter=_llm_line_filter)
             written = sum(r.written_lines for r in results)
             if written > 0:
@@ -165,7 +167,9 @@ class TranscriptNormalizerRunner:
                     if len(all_first) >= 10:
                         break
                 preview = " ".join(all_first[:10])
-                words_part = f"Transcripted {words}\n words: {preview} ..." if words > 0 else "Transcripted"
+                llm_ms = _LLM_FILTER_STATS.get("last_ms")
+                llm_part = f" (🤖 {llm_ms:.0f}ms)" if llm_ms is not None else ""
+                words_part = f"Transcripted {words} words{llm_part}: {preview} ..." if words > 0 else "Transcripted"
                 lines_part = f" of {written} lines" if written != 1 else ""
                 if output_files == 1 and raw_sources == 1:
                     log.info("transcript", f"{words_part}{lines_part}")
