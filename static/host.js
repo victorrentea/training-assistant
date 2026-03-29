@@ -174,6 +174,10 @@
         }, 1000);
         return;
       }
+      if (msg.type === 'redirect') {
+        window.location.href = msg.url;
+        return;
+      }
       if (msg.type === 'leaderboard') {
         renderLeaderboard(msg);
         return;
