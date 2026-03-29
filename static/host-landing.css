@@ -30,41 +30,6 @@ body {
   text-align: center;
 }
 
-/* Rejoin card */
-.rejoin-card {
-  margin-bottom: 1.5rem;
-}
-
-.rejoin-label {
-  font-size: .8rem;
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: .06em;
-  margin-bottom: .6rem;
-}
-
-.rejoin-btn {
-  width: 100%;
-  padding: .75rem 1.2rem;
-  background: var(--accent);
-  color: #fff;
-  border: none;
-  border-radius: 8px;
-  font-size: 1.1rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: filter .15s, transform .1s;
-  text-align: center;
-}
-
-.rejoin-btn:hover {
-  filter: brightness(1.2);
-}
-
-.rejoin-btn:active {
-  transform: scale(.98);
-}
-
 /* Today tag in folder list */
 .folder-today-tag {
   display: inline-block;

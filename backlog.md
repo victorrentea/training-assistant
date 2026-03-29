@@ -1,5 +1,6 @@
 # Tasks
 
+- [x] host landing: removed redundant “Active session” rejoin card (auto-join handles active sessions).
 - [x] host footer badges: unified all tooltips to custom `div` tooltips (removed native `title` tooltips).
 - [x] host top bar label renamed from `pax` to `participants`.
 - [x] host footer: unified 📁 slides badge border style with the other footer badges.
