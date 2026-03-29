@@ -53,7 +53,6 @@
     'git-repos-badge': 'Git repos activity',
     'slides-log-badge': 'Slides activity',
     'slides-catalog-icon': 'Slides catalog status',
-    'stop-session-btn-left': 'Stop session',
   };
 
   function _ensureFooterBadgeTooltip(target) {
@@ -184,6 +183,7 @@
     pLink.addEventListener('click', onFooterJoinLinkClick);
   }
   _setupSlidesCatalogHover();
+  _setupStopSessionHover();
   _setupActivityLogHovers();
 
   // ── WebSocket (host monitors state too) ──
@@ -1010,6 +1010,20 @@
     if (ms < 60000) return 'just now';
     if (ms < 3600000) return Math.floor(ms / 60000) + 'm ago';
     return Math.floor(ms / 3600000) + 'h ago';
+  }
+
+  function _setupStopSessionHover() {
+    const wrap = document.getElementById('stop-session-wrap-left');
+    const bubble = document.getElementById('stop-confirm-bubble-left');
+    if (!wrap || !bubble) return;
+    let hideTimer;
+    wrap.addEventListener('mouseenter', () => {
+      clearTimeout(hideTimer);
+      bubble.style.display = '';
+    });
+    wrap.addEventListener('mouseleave', () => {
+      hideTimer = setTimeout(() => { bubble.style.display = 'none'; }, 150);
+    });
   }
 
   function _setupSlidesCatalogHover() {
