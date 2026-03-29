@@ -14,7 +14,7 @@ from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel
 
 from core.auth import require_host_auth, require_host_auth_or_cookie
-from core.state import state
+from core.state import state, ActivityType
 from core.messaging import broadcast_state
 from features.ws.daemon_protocol import push_to_daemon
 from daemon.transcript.query import load_normalized_entries
@@ -153,6 +153,80 @@ def _apply_session_main(main: dict | None) -> None:
         state.generate_session_id()
 
 
+def _clear_activity_state():
+    """Clear all activity state for a fresh session. Preserves daemon WS, slides catalog, and WS connections."""
+    # Polls
+    state.poll = None
+    state.poll_active = False
+    state.votes = {}
+    state.vote_times = {}
+    state.poll_correct_ids = None
+    state.poll_opened_at = None
+    state.poll_timer_seconds = None
+    state.poll_timer_started_at = None
+    state.quiz_preview = None
+    state.quiz_request = None
+    state.quiz_refine_request = None
+    state.quiz_status = None
+    state.quiz_md_content = ""
+    # Q&A
+    state.qa_questions.clear()
+    # Word cloud
+    state.wordcloud_words.clear()
+    state.wordcloud_word_order.clear()
+    state.wordcloud_topic = ""
+    # Code review
+    state.codereview_snippet = None
+    state.codereview_language = None
+    state.codereview_phase = "idle"
+    state.codereview_selections.clear()
+    state.codereview_confirmed.clear()
+    # Debate
+    state.debate_statement = None
+    state.debate_phase = None
+    state.debate_sides.clear()
+    state.debate_arguments.clear()
+    state.debate_champions.clear()
+    state.debate_auto_assigned.clear()
+    state.debate_first_side = None
+    state.debate_round_index = None
+    state.debate_round_timer_seconds = None
+    state.debate_round_timer_started_at = None
+    state.debate_ai_request = None
+    # Scores and participants
+    state.scores.clear()
+    state.base_scores.clear()
+    state.participant_names.clear()
+    state.participant_history.clear()
+    state.participant_avatars.clear()
+    state.participant_universes.clear()
+    state.locations.clear()
+    state.participant_ips.clear()
+    state.paste_texts.clear()
+    state.paste_next_id = 0
+    state.uploaded_files.clear()
+    state.upload_next_id = 0
+    # Leaderboard
+    state.leaderboard_active = False
+    # Activity
+    state.current_activity = ActivityType.NONE
+    # Summary
+    state.summary_points.clear()
+    state.summary_updated_at = None
+    state.summary_force_requested = False
+    state.summary_reset_requested = False
+    state.notes_content = None
+    # Session metadata
+    state.session_main = None
+    state.session_request = None
+    state.slides_current = None
+    state.slides_log = []
+    state.git_repos = []
+    state.needs_restore = False
+    # Disconnect existing participants (they belong to the old session)
+    state.paused_participant_uuids = set(state.participants.keys()) - {"__host__", "__overlay__"}
+
+
 class StartSessionRequest(BaseModel):
     name: str
 
@@ -219,11 +293,17 @@ class SessionCreateBody(BaseModel):
 async def create_session(body: SessionCreateBody):
     name = _normalize_session_name(body.name)
     session_id = _resolve_session_id_for_folder(name)
+
+    # Clear all activity state from previous session — fresh start
+    _clear_activity_state()
+
     state.session_id = session_id
     state.session_name = name
     state.session_type = body.type
+    state.mode = "conference" if body.type == "talk" else "workshop"
     state.session_request = {"action": "create", "name": name, "session_id": state.session_id}
     await _push_session_request_sync(state.session_request)
+    await broadcast_state()
     return {"ok": True, "session_id": state.session_id, "session_name": state.session_name}
 
 
