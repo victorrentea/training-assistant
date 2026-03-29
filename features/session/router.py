@@ -73,9 +73,7 @@ async def start_session(body: StartSessionRequest):
 @router.post("/api/session/end", dependencies=[Depends(require_host_auth)])
 async def end_session():
     state.session_request = {"action": "end"}
-    state.session_id = None  # immediately revoke session — blocks new participant connections
     await push_to_daemon({"type": "session_request", **state.session_request})
-    await broadcast_state()
     return {"ok": True}
 
 
@@ -119,11 +117,11 @@ class SessionNameBody(BaseModel):
 
 @router.post("/api/session/create", dependencies=[Depends(require_host_auth)])
 async def create_session(body: SessionNameBody):
-    session_id = state.generate_session_id()  # always generate fresh
-    state.session_request = {"action": "create", "name": body.name, "session_id": session_id}
+    if not state.session_id:
+        state.generate_session_id()
+    state.session_request = {"action": "create", "name": body.name}
     await push_to_daemon({"type": "session_request", **state.session_request})
-    await broadcast_state()
-    return {"ok": True, "session_id": session_id}
+    return {"ok": True}
 
 
 @router.patch("/api/session/rename", dependencies=[Depends(require_host_auth)])
@@ -352,7 +350,7 @@ async def get_interval_lines_txt(
     return PlainTextResponse(content=payload, headers=headers)
 
 
-@router.get("/api/session/folders")  # public — folder names are not sensitive
+@router.get("/api/session/folders", dependencies=[Depends(require_host_auth)])
 async def list_session_folders():
     root = _get_sessions_root()
     folders = []
@@ -437,5 +435,5 @@ async def get_session_snapshot():
 
 @router.get("/api/session/active")
 async def get_session_active():
-    """Public endpoint: returns whether a session is active and its ID."""
-    return {"active": state.session_id is not None, "session_id": state.session_id}
+    """Public endpoint: returns whether a session is active (no code revealed)."""
+    return {"active": state.session_id is not None}
