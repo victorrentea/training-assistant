@@ -430,6 +430,10 @@ async def _handle_state_restore(data):
         state.summary_points = restore_data["summary_points"]
     if "slides_current" in restore_data:
         state.slides_current = restore_data["slides_current"]
+    if restore_data.get("session_id"):
+        state.session_id = restore_data["session_id"]
+    if restore_data.get("session_name"):
+        state.session_name = restore_data["session_name"]
 
     state.needs_restore = False
     await broadcast_state()

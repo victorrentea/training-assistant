@@ -105,6 +105,9 @@ def _serialize_state() -> dict:
         # Summary
         "summary_points": state.summary_points,
         "slides_current": state.slides_current,
+        # Session identity — must be preserved so URLs like /host/{id} survive restarts
+        "session_id": state.session_id,
+        "session_name": state.session_name,
         # Needs restore flag
         "needs_restore": state.needs_restore,
     }
