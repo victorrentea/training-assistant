@@ -111,6 +111,17 @@ function onNameInput() {
   document.getElementById('create-btn-talk').disabled = !hasName;
 }
 
+function showSessionBlocker(message) {
+  let el = document.getElementById('session-blocker');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'session-blocker';
+    document.body.appendChild(el);
+  }
+  el.textContent = message;
+  el.style.display = 'flex';
+}
+
 function onSessionReady(session_id) {
   window.location = '/host/' + session_id;
 }
@@ -124,6 +135,7 @@ async function doCreate(type) {
 
   const btn = document.getElementById('create-btn-' + type);
   btn.disabled = true;
+  showSessionBlocker('Starting session…');
 
   const errEl = document.getElementById('create-error');
   if (errEl) errEl.style.display = 'none';
@@ -142,14 +154,19 @@ async function doCreate(type) {
       const msg = data.detail || data.error || 'Failed to create session.';
       if (errEl) { errEl.textContent = msg; errEl.style.display = ''; }
       btn.disabled = false;
+      const blocker = document.getElementById('session-blocker');
+      if (blocker) blocker.style.display = 'none';
     }
   } catch (e) {
     if (errEl) { errEl.textContent = 'Network error — please retry.'; errEl.style.display = ''; }
     btn.disabled = false;
+    const blocker = document.getElementById('session-blocker');
+    if (blocker) blocker.style.display = 'none';
   }
 }
 
 async function doResumeFolder(folder_name) {
+  showSessionBlocker('Resuming session…');
   try {
     const r = await fetch('/api/session/resume-folder', {
       method: 'POST',
@@ -161,9 +178,13 @@ async function doResumeFolder(folder_name) {
     if (r.ok && data.session_id) {
       onSessionReady(data.session_id);
     } else {
+      const blocker = document.getElementById('session-blocker');
+      if (blocker) blocker.style.display = 'none';
       alert('Failed to resume session: ' + (data.detail || data.error || 'unknown error'));
     }
   } catch (e) {
+    const blocker = document.getElementById('session-blocker');
+    if (blocker) blocker.style.display = 'none';
     alert('Network error resuming session.');
   }
 }

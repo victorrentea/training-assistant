@@ -251,3 +251,17 @@ body {
   margin-top: .5rem;
   text-align: center;
 }
+
+#session-blocker {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  z-index: 9999;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 1.4rem;
+  font-weight: 600;
+  letter-spacing: .03em;
+}
