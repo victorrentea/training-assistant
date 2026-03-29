@@ -9,6 +9,9 @@
 - [x] **Follow Me basic**: Stub PPT set to "Clean Code" slide 3 → daemon sends slides_current → participant clicks Follow → correct topic selected
 - [x] **Name change**: Participant renames → host sees new name in participant list
 - [x] **Emoji reaction to host**: Participant clicks emoji → host page shows floating emoji
+- [x] **Q&A submission**: Participant submits question → host sees it in Q&A panel
+- [x] **Q&A host edit**: Host edits question → participant sees updated text
+- [x] **Word cloud submission**: Host opens wordcloud → participant submits word → appears in "my words"
 
 ---
 
