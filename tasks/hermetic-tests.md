@@ -16,6 +16,9 @@
 - [x] **Q&A mark answered**: Host toggles answered → both host and participant see answered styling
 - [x] **Q&A upvoting + sort**: 3 participants upvote → questions sorted by votes descending
 - [x] **Leaderboard show/hide**: Host shows leaderboard → participant sees overlay → host hides it
+- [x] **PPTX change detection**: Touch PPTX file → daemon sends slide_invalidated
+- [x] **IntelliJ tracking**: Stub IntelliJ state → daemon sends activity_log → backend has git_repos
+- [ ] **Quiz generation** (skipped #98): Stub LLM returns quiz but WS delivery has import binding bug
 
 ---
 

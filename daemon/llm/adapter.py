@@ -94,12 +94,11 @@ def _stub_create_message(
     system_lower = (system or "").lower()
 
     if "quiz" in system_lower or "poll" in system_lower or "question" in user_text:
-        # Canned quiz response
+        # Canned quiz response (must match _validate_quiz expectations)
         quiz_json = _json.dumps({
             "question": "Which design pattern decouples an abstraction from its implementation?",
             "options": ["Bridge", "Adapter", "Facade", "Proxy"],
-            "correct": 0,
-            "multi": False,
+            "correct_indices": [0],
         })
         text = f"```json\n{quiz_json}\n```"
     elif "debate" in system_lower or "argument" in system_lower:
