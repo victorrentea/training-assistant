@@ -22,6 +22,7 @@ from datetime import datetime
 
 import anthropic
 import objc
+import rumps
 from pathlib import Path
 import Quartz
 from Quartz import (
@@ -378,13 +379,58 @@ def event_tap_callback(proxy, event_type, event, refcon):
     return event
 
 
-_run_loop_ref = None
 _tap_ref = None
+_tap_run_loop_ref = None
+
+
+def _run_event_tap() -> None:
+    """Run the CGEventTap on a background thread with its own CFRunLoop."""
+    global _tap_ref, _tap_run_loop_ref
+
+    tap = CGEventTapCreate(
+        kCGSessionEventTap,
+        kCGHeadInsertEventTap,
+        0,  # active tap (can modify/suppress events)
+        CGEventMaskBit(kCGEventKeyDown) | CGEventMaskBit(kCGEventOtherMouseDown),
+        event_tap_callback,
+        None,
+    )
+
+    _tap_ref = tap
+    if tap is None:
+        print(
+            "Error: Could not create event tap.\n"
+            "Grant Accessibility permission in:\n"
+            "  System Settings > Privacy & Security > Accessibility\n"
+            "Add your terminal app (Terminal, iTerm2, etc.) to the list."
+        )
+        os._exit(1)
+
+    source = CFMachPortCreateRunLoopSource(None, tap, 0)
+    _tap_run_loop_ref = CFRunLoopGetCurrent()
+    CFRunLoopAddSource(_tap_run_loop_ref, source, kCFRunLoopCommonModes)
+    CFRunLoopRun()
+
+
+class CleanerApp(rumps.App):
+    def __init__(self):
+        menu = [
+            rumps.MenuItem("Clean Repaste   ⌘⌃V", callback=self.on_clean),
+            rumps.MenuItem("Clean Repaste + Emoji   ⌘⌃⌥V", callback=self.on_clean_emoji),
+            None,  # separator
+            rumps.MenuItem("Mouse 5: pause music + mute OS Output", callback=None),
+        ]
+        super().__init__("✂", menu=menu)
+        self.menu["Mouse 5: pause music + mute OS Output"].enabled = False
+
+    def on_clean(self, _):
+        threading.Thread(target=handle_clean_hotkey, args=(False,), daemon=True).start()
+
+    def on_clean_emoji(self, _):
+        threading.Thread(target=handle_clean_hotkey, args=(True,), daemon=True).start()
 
 
 def main() -> None:
-    global _run_loop_ref, _tap_ref
-
     # Load API key from wispr-addons/secrets.env
     secrets_path = Path(__file__).parent / "secrets.env"
     if secrets_path.exists():
@@ -404,49 +450,27 @@ def main() -> None:
     else:
         log(f"WARNING: Device '{DICTATION_MUTE_DEVICE}' not found — dictation mute may not work")
 
-    # Create event tap for key down + mouse button events
-    tap = CGEventTapCreate(
-        kCGSessionEventTap,
-        kCGHeadInsertEventTap,
-        0,  # active tap (can modify/suppress events)
-        CGEventMaskBit(kCGEventKeyDown) | CGEventMaskBit(kCGEventOtherMouseDown),
-        event_tap_callback,
-        None,
-    )
-
-    _tap_ref = tap
-    if tap is None:
-        print(
-            "Error: Could not create event tap.\n"
-            "Grant Accessibility permission in:\n"
-            "  System Settings > Privacy & Security > Accessibility\n"
-            "Add your terminal app (Terminal, iTerm2, etc.) to the list."
-        )
-        sys.exit(1)
-
-    source = CFMachPortCreateRunLoopSource(None, tap, 0)
-    _run_loop_ref = CFRunLoopGetCurrent()
-    CFRunLoopAddSource(_run_loop_ref, source, kCFRunLoopCommonModes)
-
-    def on_shutdown(signum, frame):
-        log("Shutting down...")
-        if _dictation_active:
-            _restore_dictation_volume()
-        if _run_loop_ref:
-            CFRunLoopStop(_run_loop_ref)
-        # Force exit if run loop doesn't stop within 2s
-        threading.Timer(2.0, lambda: os._exit(0)).start()
-
-    signal.signal(signal.SIGINT, on_shutdown)
-    signal.signal(signal.SIGTERM, on_shutdown)
-
     log("Clipboard cleaner started (CGEventTap).")
     log("Every Cmd+V is captured. Press Cmd+Ctrl+V to clean the last paste.")
     log("Hold Option (Cmd+Ctrl+Opt+V) to clean with contextual emojis.")
     if device_id:
         log(f"Mouse Button 5 toggles volume on '{DICTATION_MUTE_DEVICE}'.")
 
-    CFRunLoopRun()
+    # Signal handlers: stop event tap run loop + quit rumps
+    def on_shutdown(signum, frame):
+        log("Shutting down...")
+        if _dictation_active:
+            _restore_dictation_volume()
+        if _tap_run_loop_ref:
+            CFRunLoopStop(_tap_run_loop_ref)
+        rumps.quit_application()
+
+    signal.signal(signal.SIGINT, on_shutdown)
+    signal.signal(signal.SIGTERM, on_shutdown)
+
+    # Start event tap in background thread; rumps owns the main thread
+    threading.Thread(target=_run_event_tap, daemon=True).start()
+    CleanerApp().run()
 
 
 if __name__ == "__main__":
