@@ -1,8 +1,8 @@
 {
-  "sha": "a8182bb8e4f5bcd5a1c5db498d53f2844185fd82",
-  "timestamp": "2026-03-29 15:50",
+  "sha": "a4c08f343babf59561eafd04389808d0f2b1ae17",
+  "timestamp": "2026-03-29 15:53",
   "changelog": [
-    "Fix fullscreen join QR overlay behavior"
+    "chore: update deploy-info [skip ci]"
   ],
   "commits": [
     {
@@ -97,7 +97,7 @@
     },
     {
       "sha": "53cf4a39",
-      "msg": "feat: log \ud83e\udd16 and latency for transcript llm cleaning",
+      "msg": "feat: log 🤖 and latency for transcript llm cleaning",
       "ts": "2026-03-29T15:10:38+03:00"
     },
     {
@@ -109,102 +109,102 @@
   "branches": [
     {
       "branch": "fix-transcription-lang-sync",
-      "sha": "3a35f5c",
+      "sha": "3a35f5c3",
       "minutes": 342
     },
     {
       "branch": "session-id-in-path",
-      "sha": "c665635",
+      "sha": "c6656353",
       "minutes": 320
     },
     {
       "branch": "session-id-in-path-v3",
-      "sha": "96b27e4",
+      "sha": "96b27e4a",
       "minutes": 255
     },
     {
       "branch": "fix-ci-run-23695885613",
-      "sha": "916b7b1",
+      "sha": "916b7b14",
       "minutes": 99
     },
     {
       "branch": "fix-ci-job",
-      "sha": "582b580",
+      "sha": "582b5800",
       "minutes": 53
     },
     {
       "branch": "slides-tab-inactivity",
-      "sha": "6807786",
+      "sha": "6807786f",
       "minutes": 48
     },
     {
       "branch": "host-landing-scroll-fix",
-      "sha": "33b8328",
+      "sha": "33b8328a",
       "minutes": 33
     },
     {
       "branch": "fix-ui-layout-cutoff",
-      "sha": "739e719",
+      "sha": "739e7195",
       "minutes": 27
     },
     {
       "branch": "redirect-host-trailing-slash",
-      "sha": "5e967ba",
+      "sha": "5e967ba6",
       "minutes": 26
     },
     {
       "branch": "ai-coding-category-line",
-      "sha": "8fa3b8e",
+      "sha": "8fa3b8ee",
       "minutes": 20
     },
     {
       "branch": "host-landing-section-divider",
-      "sha": "e7a6d30",
+      "sha": "e7a6d302",
       "minutes": 19
     },
     {
       "branch": "wispr-menu-clickable",
-      "sha": "0a1df0d",
+      "sha": "0a1df0d6",
       "minutes": 19
     },
     {
       "branch": "host-ui-empty-state-bug",
-      "sha": "6b332f9",
+      "sha": "6b332f98",
       "minutes": 15
     },
     {
       "branch": "shrink-topic-height-5pct",
-      "sha": "466fbe7",
+      "sha": "466fbe70",
       "minutes": 14
     },
     {
       "branch": "stop-btn-red-badge",
-      "sha": "d331e11",
+      "sha": "d331e11e",
       "minutes": 13
     },
     {
       "branch": "slides-eye-emoji-tooltip",
-      "sha": "de981e2",
+      "sha": "de981e27",
       "minutes": 7
     },
     {
       "branch": "fix-emoji-tooltip-direction",
-      "sha": "a3b87b1",
+      "sha": "a3b87b19",
       "minutes": 7
     },
     {
       "branch": "folder-icon-topic-count",
-      "sha": "5442b8f",
+      "sha": "5442b8f8",
       "minutes": 6
     },
     {
       "branch": "center-emoji-buttons",
-      "sha": "1f1faa1",
+      "sha": "1f1faa1f",
       "minutes": 6
     },
     {
       "branch": "session-date-prefix",
-      "sha": "15da723",
+      "sha": "15da7231",
       "minutes": 5
     }
   ]

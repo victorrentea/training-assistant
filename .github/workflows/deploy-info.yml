@@ -5,7 +5,7 @@ on:
     branches: [master]
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   deploy-info:
@@ -16,108 +16,6 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
-      - name: Compute changelog
-        id: changelog
-        run: |
-          PREV_SHA=""
-          if [ -f static/deploy-info.json ]; then
-            PREV_SHA=$(python3 -c "import json; print(json.load(open('static/deploy-info.json'))['sha'])" 2>/dev/null || true)
-          fi
-
-          if [ -n "$PREV_SHA" ] && git cat-file -e "$PREV_SHA" 2>/dev/null; then
-            CHANGELOG=$(git log "$PREV_SHA"..HEAD \
-              --no-merges \
-              --author-date-order \
-              --invert-grep --grep="chore: update deploy-info" \
-              --format="%s" | head -20)
-          else
-            CHANGELOG=$(git log -1 --format="%s" HEAD)
-          fi
-
-          SHA=$(git rev-parse HEAD)
-          TIMESTAMP=$(TZ=Europe/Bucharest date '+%Y-%m-%d %H:%M')
-
-          export CHANGELOG SHA TIMESTAMP
-          python3 << 'PYEOF'
-          import json, os, subprocess
-          from datetime import datetime
-
-          changelog = [l for l in os.environ["CHANGELOG"].strip().split("\n") if l]
-
-          def compute_commits():
-              try:
-                  raw = subprocess.check_output(
-                      ['git', 'log', '-20', '--no-merges',
-                       '--invert-grep', '--grep=chore: update deploy-info',
-                       '--format=%H|%s|%aI'],
-                      text=True
-                  ).strip()
-                  result = []
-                  for line in raw.splitlines():
-                      parts = line.split('|', 2)
-                      if len(parts) < 3:
-                          continue
-                      sha, msg, ts = parts
-                      result.append({'sha': sha[:8], 'msg': msg, 'ts': ts})
-                  return result
-              except Exception as e:
-                  print(f"Warning: commits compute failed: {e}")
-                  return []
-
-          def compute_branches():
-              try:
-                  raw = subprocess.check_output(
-                      ['git', 'for-each-ref',
-                       '--format=%(objectname:short) %(authordate:format:%Y-%m-%dT%H:%M:%S%z) %(refname:short)',
-                       '--sort=-authordate',
-                       'refs/remotes/origin/victorrentea/'],
-                      text=True
-                  ).strip()
-                  entries = []
-                  for line in raw.splitlines():
-                      parts = line.split(' ', 2)
-                      if len(parts) < 3:
-                          continue
-                      sha, date_str, refname = parts
-                      branch = refname.replace('origin/victorrentea/', '')
-                      try:
-                          dt = datetime.fromisoformat(date_str)
-                      except Exception:
-                          continue
-                      entries.append((dt, sha, branch))
-                  result = []
-                  for i, (dt, sha, name) in enumerate(entries[:30]):
-                      gap_sec = (dt - entries[i + 1][0]).total_seconds() if i + 1 < len(entries) else 0
-                      result.append({'branch': name, 'sha': sha, 'minutes': max(0, int(gap_sec / 60))})
-                  result.sort(key=lambda x: x['minutes'], reverse=True)
-                  return result[:20]
-              except Exception as e:
-                  print(f"Warning: branch time compute failed: {e}")
-                  return []
-
-          data = {
-              "sha": os.environ["SHA"],
-              "timestamp": os.environ["TIMESTAMP"],
-              "changelog": changelog,
-              "commits": compute_commits(),
-              "branches": compute_branches(),
-          }
-          json.dump(data, open("static/deploy-info.json", "w"), indent=2)
-          print(json.dumps(data, indent=2))
-          PYEOF
-
-      - name: Commit and push
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add -f static/deploy-info.json
-          if git diff --cached --quiet; then
-            echo "No changes to deploy-info.json"
-            exit 0
-          fi
-          git commit -m "chore: update deploy-info [skip ci]"
-          git push
 
       - name: Notify server of incoming deploy
         env:
