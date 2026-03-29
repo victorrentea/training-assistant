@@ -1729,18 +1729,3 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
   background: rgba(99, 200, 255, 0.15);
 }
 
-.end-session-btn {
-  position: fixed;
-  bottom: .5rem;
-  right: .5rem;
-  background: none;
-  border: none;
-  font-size: 1.4rem;
-  cursor: pointer;
-  opacity: .35;
-  z-index: 100;
-  padding: .25rem;
-  line-height: 1;
-  transition: opacity .15s;
-}
-.end-session-btn:hover { opacity: 1; }
