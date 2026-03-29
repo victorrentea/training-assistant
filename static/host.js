@@ -1101,8 +1101,8 @@
       const popover = document.getElementById(popoverId);
       if (!hover) return;
       let hideTimer = null;
-      const open = () => { clearTimeout(hideTimer); if (popover) popover.hidden = false; hover.classList.add('open'); renderFn(); };
-      const close = () => { clearTimeout(hideTimer); hideTimer = setTimeout(() => { hover.classList.remove('open'); if (popover) popover.hidden = true; }, 120); };
+      const open = () => { clearTimeout(hideTimer); hover.classList.add('open'); renderFn(); };
+      const close = () => { clearTimeout(hideTimer); hideTimer = setTimeout(() => { hover.classList.remove('open'); }, 120); };
       hover.addEventListener('mouseenter', open);
       hover.addEventListener('mouseleave', close);
     }
