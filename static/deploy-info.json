@@ -1,10 +1,15 @@
 {
-  "sha": "d8454e0b1c570b251938e3338b453a8898f8859c",
-  "timestamp": "2026-03-29 16:57",
+  "sha": "c522ae92ab6b2259eef21006c01f0312fed9f9ec",
+  "timestamp": "2026-03-29 16:59",
   "changelog": [
-    "feat: compact host landing and relabel sections"
+    "wispr-addons: bind repaste to wheel double-click"
   ],
   "commits": [
+    {
+      "sha": "c522ae92",
+      "msg": "wispr-addons: bind repaste to wheel double-click",
+      "ts": "2026-03-29T16:54:31+03:00"
+    },
     {
       "sha": "d8454e0b",
       "msg": "feat: compact host landing and relabel sections",
@@ -99,11 +104,6 @@
       "sha": "46f29d86",
       "msg": "fix: use join URL for center host QR",
       "ts": "2026-03-29T15:55:53+03:00"
-    },
-    {
-      "sha": "1aaa0123",
-      "msg": "chore: prevent deploy-info bot commit loop",
-      "ts": "2026-03-29T15:52:41+03:00"
     }
   ],
   "branches": [
