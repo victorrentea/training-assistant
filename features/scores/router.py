@@ -13,3 +13,11 @@ async def reset_scores():
     state.base_scores = {}
     await broadcast_state()
     return {"ok": True}
+
+
+@router.delete("/api/scores/{uuid}", dependencies=[Depends(require_host_auth)])
+async def reset_score(uuid: str):
+    state.scores.pop(uuid, None)
+    state.base_scores.pop(uuid, None)
+    await broadcast_state()
+    return {"ok": True}

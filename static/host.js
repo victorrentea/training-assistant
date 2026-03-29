@@ -1261,7 +1261,7 @@
       const name = participant.name || 'Unknown';
       const loc = participant.location || '';
       const pts = scores[pid] || 0;
-      const scoreTag = pts > 0 ? `<span class="pax-score">⭐ ${pts} pts</span>` : '';
+      const scoreTag = pts > 0 ? `<span class="pax-score" title="Click to reset score" onclick="resetOneScore('${escHtml(pid)}','${escHtml(name)}',${pts})">⭐ ${pts} pts</span>` : '';
       const locLabel = loc ? resolvedCities[loc] || loc : null;
       const avatar = participant.avatar || '';
       let avatarHtml = '';
@@ -1932,6 +1932,12 @@
     if (!confirm('Reset all participant scores to zero?')) return;
     await fetch(API('/scores'), { method: 'DELETE' });
     toast('Scores reset ✓');
+  }
+
+  async function resetOneScore(uuid, name, pts) {
+    if (!confirm(`Reset ${name}'s score (${pts} pts) to zero?`)) return;
+    await fetch(API(`/scores/${uuid}`), { method: 'DELETE' });
+    toast(`${name}'s score reset ✓`);
   }
 
   const _LANG_FLAG = { ro: '🇷🇴', en: '🇬🇧', auto: '🌐' };
