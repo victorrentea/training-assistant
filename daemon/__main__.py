@@ -40,8 +40,7 @@ from daemon.ws_client import DaemonWsClient
 from daemon.session_state import (
     GLOBAL_STATE_FILENAME,
     resolve_materials_folder,
-    check_daily_timing,
-    load_daemon_state,
+load_daemon_state,
     daemon_state_to_stack,
     stack_to_daemon_state,
     save_daemon_state,
@@ -776,14 +775,10 @@ def run() -> None:
     last_slides_payload_hash: str | None = None
     last_powerpoint_state: dict | None = None
     last_powerpoint_error: str | None = None
-    last_auto_close_date: date | None = None   # prevent double-close on same calendar day
-    last_auto_start_date: date | None = None   # prevent double-start on same calendar day
     last_lang_sync_date: date | None = None    # sync AudioHijack language once per day
     last_hijack_restart_for_missing_today: date | None = None  # anti-loop guard: restart at most once/day
     last_raw_transcript_guard_check_at: float = 0.0
     _RAW_TRANSCRIPT_GUARD_INTERVAL: float = 30.0
-    _timing_fired_date: date | None = None     # date for which timing events were tracked
-    _timing_fired_today: set = set()           # timing events already fired today
     slides_log: list[dict] = []        # {file, slide, first_seen_at, first_seen_hhmm, seconds_spent}
     git_repos: list[dict] = []         # {project, path, branch, seconds_spent}
     last_intellij_probe_at: float = 0.0
@@ -1129,94 +1124,6 @@ def run() -> None:
 
                 sf_name = config.session_folder.name if config.session_folder else None
                 sn_name = config.session_notes.name if config.session_notes else None
-
-                # ── Working hours enforcement (day-end pause at 20:00, auto-resume at 09:30) ──
-                now_wall = datetime.now()
-                if session_stack and now_wall.hour >= 20 and last_auto_close_date != today:
-                    last_auto_close_date = today
-                    top = session_stack[-1]
-                    top_folder = sessions_root / top["name"]
-                    save_key_points(top_folder, current_key_points, summary_watermark, session_start_date(top))
-                    # Pause all active sessions in the stack (day-end pause — not ended, resumes tomorrow)
-                    for s in session_stack:
-                        if s.get("ended_at") is None:
-                            pause_session(s, now_wall, reason="day_end")
-                    _do_save_daemon_state()
-                    sync_session_to_server(config, session_stack, current_key_points, slides_log=slides_log, git_repos=git_repos)
-                    transcript_state.reset()
-                    log.info("session", "Auto-paused at 20:00 (end of working hours)")
-
-                elif (session_stack
-                        and 9 <= now_wall.hour < 20
-                        and last_auto_start_date != today):
-                    # Resume any open day_end pauses from last night
-                    top = session_stack[-1]
-                    open_day_end = any(
-                        p.get("to") is None and p.get("reason") == "day_end"
-                        for p in top.get("paused_intervals", [])
-                    )
-                    if open_day_end:
-                        last_auto_start_date = today
-                        for s in session_stack:
-                            if s.get("ended_at") is None:
-                                resume_session(s, now_wall)
-                        _do_save_daemon_state()
-                        sync_session_to_server(config, session_stack, current_key_points, slides_log=slides_log, git_repos=git_repos)
-                        transcript_state.reset()
-                        log.info("session", f"Auto-resumed at 09:30: {session_stack[-1]['name']}")
-
-                elif (not session_stack
-                        and 9 <= now_wall.hour < 20
-                        and config.session_folder
-                        and last_auto_start_date != today):
-                    last_auto_start_date = today
-                    new_session = {
-                        "name": config.session_folder.name,
-                        "started_at": now_wall.isoformat(),
-                        "ended_at": None,
-                    }
-                    session_stack.append(new_session)
-                    current_key_points, summary_watermark = load_key_points(config.session_folder)
-                    _do_save_daemon_state()
-                    notes_file = find_notes_in_folder(config.session_folder)
-                    config = dc_replace(config, session_notes=notes_file)
-                    sync_session_to_server(config, session_stack, current_key_points, slides_log=slides_log, git_repos=git_repos)
-                    transcript_state.reset()
-                    log.info("session", f"Auto-started at 09:30: {config.session_folder.name}")
-
-                # ── Daily timing events (5:30pm warning, 6pm auto-pause, midnight session end) ──
-                if _timing_fired_date != today:
-                    _timing_fired_date = today
-                    _timing_fired_today = set()
-
-                timing = check_daily_timing()
-                if timing == "warning" and "warning" not in _timing_fired_today:
-                    _timing_fired_today.add("warning")
-                    try:
-                        ws_client.send({
-                            "type": "timing_event",
-                            "event": "recording_warning",
-                            "minutes_remaining": 30,
-                        })
-                        log.info("daemon", "Sent recording_warning event at 17:30")
-                    except Exception as e:
-                        log.error("daemon", f"Failed to send warning event: {e}")
-
-                elif timing == "auto_pause" and "auto_pause" not in _timing_fired_today:
-                    _timing_fired_today.add("auto_pause")
-                    if session_stack and session_stack[-1].get("status") not in ("ended", "paused"):
-                        try:
-                            ws_client.send({"type": "session_request", "action": "pause"})
-                            log.info("daemon", "Auto-paused recording at 18:00")
-                        except Exception as e:
-                            log.error("daemon", f"Failed to auto-pause: {e}")
-
-                elif timing == "midnight" and "midnight" not in _timing_fired_today:
-                    _timing_fired_today.add("midnight")
-                    if session_stack:
-                        session_stack[-1]["status"] = "ended"
-                        _do_save_daemon_state()
-                        log.info("daemon", "Session marked as ended at midnight")
 
                 # ── Sync AudioHijack language once per day ──
                 if last_lang_sync_date != today:

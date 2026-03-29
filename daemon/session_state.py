@@ -72,24 +72,6 @@ def resolve_materials_folder() -> Path | None:
     return None
 
 
-# ── Daily timing check ─────────────────────────────────────────────────────────
-
-def check_daily_timing(now_time=None):
-    """Returns 'midnight', 'auto_pause', 'warning', or None based on current time."""
-    from datetime import time as _time
-    if now_time is None:
-        now_time = datetime.now().time()
-    # Check midnight first (spans 23:59-00:01)
-    if now_time >= _time(23, 59) or now_time < _time(0, 1):
-        return "midnight"
-    # auto_pause uses threshold (>= 18:00), deduplication prevents re-firing
-    if now_time >= _time(18, 0):
-        return "auto_pause"
-    if now_time >= _time(17, 30):
-        return "warning"
-    return None
-
-
 # ── Key points I/O ─────────────────────────────────────────────────────────────
 
 def load_key_points(session_folder: Path) -> tuple[list[dict], int]:
