@@ -23,7 +23,7 @@ function renderPage(active, folders) {
   if (active && active.active && active.session_id) {
     const name = active.session_name || active.session_id;
     rejoinHtml = `
-      <div class="rejoin-section">
+      <div class="landing-card rejoin-card">
         <div class="rejoin-label">Active session</div>
         <button class="rejoin-btn" onclick="rejoinSession(${JSON.stringify(active.session_id)})">
           Rejoin: ${_esc(name)}
@@ -35,8 +35,8 @@ function renderPage(active, folders) {
 
   app.innerHTML = `
     <div class="landing-title">Start Session</div>
+    ${rejoinHtml}
     <div class="landing-card">
-      ${rejoinHtml}
       <div class="new-session-label">New session</div>
       <div class="session-name-row">
         <input id="session-date-input" class="session-date-prefix" type="text"
