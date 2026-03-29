@@ -660,7 +660,7 @@ body {
 }
 
 .tab-btn {
-  padding: .3rem .4rem .4rem;
+  padding: .3rem .8rem .4rem;
   border: none;
   background: transparent;
   color: var(--muted);
