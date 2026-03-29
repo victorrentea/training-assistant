@@ -1,5 +1,6 @@
 # Tasks
 
+- [x] host UI: all tooltips now display with zero delay on hover/focus.
 - [x] host footer QR overlay: ensure fullscreen QR regenerates from current join URL on click; close on Escape/click anywhere.
 - [x] Direct request: avoid double Railway deploys by generating `static/deploy-info.json` locally (pre-commit) and removing bot auto-commit/push from GitHub deploy-info workflow.
 - [x] host footer copy tooltip: keep `Copied...` visible for 3 seconds above join link on click-copy.

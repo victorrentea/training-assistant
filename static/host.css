@@ -259,6 +259,12 @@ body {
 
 #copy-link-icon:hover { opacity: .9 !important; }
 
+/* Host UX: show tooltips immediately (no hover delay) */
+.has-tooltip:hover::after,
+.has-tooltip:hover::before {
+  transition-delay: 0s !important;
+}
+
 
 .stop-badge {
   background: #7b80a022;

@@ -1,10 +1,15 @@
 {
-  "sha": "af6ad569e35c0fed5d0ab5003a241e41c5772d23",
-  "timestamp": "2026-03-29 16:25",
+  "sha": "70da39bc925e7d76c459c89b1415bda33b3cac27",
+  "timestamp": "2026-03-29 16:27",
   "changelog": [
-    "ui: remove floating end session button"
+    "feat: autojoin host to open session"
   ],
   "commits": [
+    {
+      "sha": "70da39bc",
+      "msg": "feat: autojoin host to open session",
+      "ts": "2026-03-29T16:25:30+03:00"
+    },
     {
       "sha": "af6ad569",
       "msg": "ui: remove floating end session button",
@@ -99,11 +104,6 @@
       "sha": "4360b302",
       "msg": "Include crude word count in transcript noise logs",
       "ts": "2026-03-29T15:33:17+03:00"
-    },
-    {
-      "sha": "9db0c782",
-      "msg": "Improve host auto-join and transcript logging",
-      "ts": "2026-03-29T15:30:48+03:00"
     }
   ],
   "branches": [
