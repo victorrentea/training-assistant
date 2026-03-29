@@ -395,7 +395,7 @@ body {
   max-width: min(78vw, 520px);
   max-height: 80vh;
   overflow: auto;
-  background: var(--surface);
+  background: var(--surface2);
   border: 1px solid var(--border);
   border-radius: 8px;
   box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45);
@@ -1088,8 +1088,10 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
 .pax-location {
   cursor: pointer;
   text-decoration: underline dotted;
+  position: relative;
 }
 .pax-location:hover { color: var(--accent); }
+.pax-location:hover .footer-badge-tooltip { opacity: 1; }
 
 /* ── Map modal ── */
 #map-overlay {

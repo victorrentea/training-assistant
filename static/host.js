@@ -53,6 +53,7 @@
     'git-repos-badge': 'Git repos activity',
     'slides-log-badge': 'Slides activity',
     'slides-catalog-icon': 'Slides catalog status',
+    'stop-session-btn-left': 'Stop session',
   };
 
   function _ensureFooterBadgeTooltip(target) {
@@ -1362,7 +1363,7 @@
         const title = downloaded ? `${entry.filename} (${sizeStr}) — downloaded` : `${entry.filename} (${sizeStr}) — click to download`;
         return `<span class="upload-icon${downloaded ? ' downloaded' : ''}" title="${escHtml(title)}" data-uuid="${escHtml(pid)}" data-upload-id="${entry.id}" onclick="downloadUploadedFile(this)"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 4v9"/><path d="M6 9.5L10 13.5L14 9.5"/><path d="M4.5 13.5v1a2 2 0 0 0 2 2h7a2 2 0 0 0 2-2v-1"/></svg></span>`;
       }).join('');
-      return `<li class="${online ? 'online' : 'offline'}"><span class="pax-name" title="${ip ? 'IP: ' + ip : ''}">${debateIcon}${avatarHtml}<span class="pax-name-text truncate">${escHtml(name)}</span>${pasteIcons}${uploadIcons}</span>${scoreTag}${locLabel ? `<span class="pax-location" onclick="openMap()" title="View all on map">${escHtml(locLabel)}</span>` : ''}</li>`;
+      return `<li class="${online ? 'online' : 'offline'}"><span class="pax-name" title="${ip ? 'IP: ' + ip : ''}">${debateIcon}${avatarHtml}<span class="pax-name-text truncate">${escHtml(name)}</span>${pasteIcons}${uploadIcons}</span>${scoreTag}${locLabel ? `<span class="pax-location" onclick="openMap()">${escHtml(locLabel)}<div class="footer-badge-tooltip">View all on map</div></span>` : ''}</li>`;
     }).join('');
 
     // Lazily resolve any raw "lat, lon" strings to city names
