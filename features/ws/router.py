@@ -263,6 +263,7 @@ async def _handle_session_sync(data):
     if session_state:
         from features.session.router import _restore_state_from_snapshot
         _restore_state_from_snapshot(session_state)
+        state.needs_restore = False
 
     await broadcast_state()
 
@@ -891,10 +892,19 @@ async def websocket_endpoint(websocket: WebSocket, participant_id: str):
 @session_router.websocket("/ws/{session_id}/{participant_id}")
 async def session_websocket_endpoint(websocket: WebSocket, session_id: str, participant_id: str):
     """WebSocket endpoint for participants, host (__host__), and overlay (__overlay__), requiring a valid session_id."""
-    # Validate session_id — accept first so client gets a clean 1008 close code
+    # Validate session_id — accept first so client gets a clean close code
     if not state.session_id or session_id.lower() != state.session_id.lower():
-        await websocket.accept()
-        await websocket.close(code=1008)
+        is_host_attempt = participant_id.strip() == "__host__"
+        if is_host_attempt and not state.needs_restore:
+            await websocket.accept()
+            if state.session_id:
+                await websocket.send_text(json.dumps({"type": "redirect", "url": f"/host/{state.session_id}"}))
+            else:
+                await websocket.send_text(json.dumps({"type": "redirect", "url": "/host"}))
+            await websocket.close(code=1000)
+        else:
+            await websocket.accept()
+            await websocket.close(code=1008)
         return
 
     pid = participant_id.strip()
