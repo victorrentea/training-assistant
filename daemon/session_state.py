@@ -197,36 +197,114 @@ def save_key_points(
 
 # ── Daemon state persistence ────────────────────────────────────────────────────
 
+SESSION_META_FILENAME = "session_meta.json"
+
+
 def load_daemon_state(sessions_root: Path) -> dict:
-    """Load daemon state. Returns {main: dict|None, talk: dict|None}.
-    Migrates old {stack:[...]} format transparently."""
+    """Load daemon state. Returns raw JSON dict from disk (any format).
+    New format: {active_session_id: str|None}.
+    Old formats (main/talk, stack) are returned as-is for caller to handle."""
     state_file = sessions_root / GLOBAL_STATE_FILENAME
     if not state_file.exists():
         legacy_file = sessions_root / _LEGACY_DAEMON_STATE_FILENAME
         if legacy_file.exists():
             state_file = legacy_file
-    empty = {"main": None, "talk": None}
     if not state_file.exists():
-        return empty
+        return {}
     try:
-        data = json.loads(state_file.read_text(encoding="utf-8"))
+        return json.loads(state_file.read_text(encoding="utf-8"))
     except Exception as e:
         log.error("session", f"Failed to load daemon state: {e}")
-        return empty
-    # Migration: old format had {stack: [...]}
-    if "stack" in data and "main" not in data:
-        stack = data["stack"]
-        active = [s for s in stack if not s.get("ended_at")]
-        return {
-            "main": {**active[0], "status": "active"} if len(active) >= 1 else None,
-            "talk": {**active[1], "status": "active"} if len(active) >= 2 else None,
-        }
-    return data
+        return {}
+
+
+def save_daemon_state(sessions_root: Path, daemon_state: dict) -> None:
+    """Persist daemon state to disk atomically.
+    New format: {active_session_id: str|None}."""
+    try:
+        sessions_root.mkdir(parents=True, exist_ok=True)
+        path = sessions_root / GLOBAL_STATE_FILENAME
+        tmp = path.with_suffix(".tmp")
+        tmp.write_text(json.dumps(daemon_state, default=str, indent=2), encoding="utf-8")
+        tmp.replace(path)
+    except Exception as e:
+        log.error("session", f"Failed to save daemon state: {e}")
+
+
+def load_session_meta(session_folder: Path) -> dict:
+    """Load session_meta.json from a session folder.
+    Returns {session_id, started_at, paused_intervals, talk?} or {} if not found."""
+    path = session_folder / SESSION_META_FILENAME
+    if not path.exists():
+        return {}
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except Exception as e:
+        log.error("session", f"Failed to load session meta from {session_folder.name}: {e}")
+        return {}
+
+
+def save_session_meta(session_folder: Path, meta: dict) -> None:
+    """Atomically write session_meta.json to a session folder."""
+    try:
+        session_folder.mkdir(parents=True, exist_ok=True)
+        path = session_folder / SESSION_META_FILENAME
+        tmp = path.with_suffix(".tmp")
+        tmp.write_text(json.dumps(meta, default=str, indent=2), encoding="utf-8")
+        tmp.replace(path)
+    except Exception as e:
+        log.error("session", f"Failed to save session meta to {session_folder.name}: {e}")
+
+
+def find_session_folder_by_id(sessions_root: Path, session_id: str) -> Path | None:
+    """Scan session folders and return the one whose session_id matches.
+    Checks session_meta.json first (fast), then session_state.json (server snapshot)."""
+    if not sessions_root.exists() or not session_id:
+        return None
+    try:
+        folders = sorted(
+            (f for f in sessions_root.iterdir() if f.is_dir()),
+            key=lambda p: p.name,
+            reverse=True,
+        )
+    except Exception:
+        return None
+    for folder in folders:
+        # Check session_meta.json first (daemon-owned, always up to date)
+        meta = load_session_meta(folder)
+        if meta.get("session_id") == session_id:
+            return folder
+        # Fall back to session_state.json (server snapshot, may lag)
+        ss_path = folder / "session_state.json"
+        if ss_path.exists():
+            try:
+                data = json.loads(ss_path.read_text(encoding="utf-8"))
+                if data.get("session_id") == session_id:
+                    return folder
+            except Exception:
+                pass
+    return None
+
+
+def session_meta_to_stack(meta: dict, folder_name: str) -> list[dict]:
+    """Build an in-memory session stack from session_meta.json data and folder name."""
+    if not meta:
+        return []
+    main_entry = {
+        "name": folder_name,
+        "started_at": meta.get("started_at", datetime.now().isoformat()),
+        "paused_intervals": meta.get("paused_intervals", []),
+    }
+    talk = meta.get("talk")
+    if talk and talk.get("status") != "ended":
+        return [main_entry, talk]
+    return [main_entry]
 
 
 def daemon_state_to_stack(daemon_state: dict) -> list[dict]:
     """Convert {main, talk} daemon state dict to the in-memory session stack list.
-    Sessions with status 'ended' are excluded — they are not restored."""
+    Sessions with status 'ended' are excluded — they are not restored.
+    Used for migrating old global state format."""
     main = daemon_state.get("main")
     talk = daemon_state.get("talk")
     # If main session is ended, treat as no session at all
@@ -242,7 +320,7 @@ def daemon_state_to_stack(daemon_state: dict) -> list[dict]:
 
 
 def stack_to_daemon_state(stack: list[dict]) -> dict:
-    """Convert in-memory session stack list to {main, talk} dict for persistence."""
+    """Convert in-memory session stack list to {main, talk} dict for server sync."""
     def _with_status(s: dict) -> dict:
         paused = any(p.get("to") is None for p in s.get("paused_intervals", []))
         return {**s, "status": "paused" if paused else "active"}
@@ -250,18 +328,6 @@ def stack_to_daemon_state(stack: list[dict]) -> dict:
         "main": _with_status(stack[0]) if len(stack) >= 1 else None,
         "talk": _with_status(stack[1]) if len(stack) >= 2 else None,
     }
-
-
-def save_daemon_state(sessions_root: Path, daemon_state: dict) -> None:
-    """Persist {main, talk} daemon state to disk atomically."""
-    try:
-        sessions_root.mkdir(parents=True, exist_ok=True)
-        path = sessions_root / GLOBAL_STATE_FILENAME
-        tmp = path.with_suffix(".tmp")
-        tmp.write_text(json.dumps(daemon_state, default=str, indent=2), encoding="utf-8")
-        tmp.replace(path)
-    except Exception as e:
-        log.error("session", f"Failed to save daemon state: {e}")
 
 
 # ── Session pause/resume helpers ───────────────────────────────────────────────

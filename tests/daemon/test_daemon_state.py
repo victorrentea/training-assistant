@@ -6,6 +6,19 @@ from daemon.session_state import GLOBAL_STATE_FILENAME
 
 
 def test_load_daemon_state_new_format():
+    """New format stores only active_session_id."""
+    with tempfile.TemporaryDirectory() as d:
+        f = Path(d) / GLOBAL_STATE_FILENAME
+        f.write_text(json.dumps({"active_session_id": "abc123"}))
+        from daemon.session_state import load_daemon_state as _load_daemon_state
+        result = _load_daemon_state(Path(d))
+        assert result["active_session_id"] == "abc123"
+        assert "main" not in result
+        assert "talk" not in result
+
+
+def test_load_daemon_state_returns_raw_old_main_talk_format():
+    """Old {main, talk} format is returned as-is for caller to migrate."""
     with tempfile.TemporaryDirectory() as d:
         f = Path(d) / GLOBAL_STATE_FILENAME
         f.write_text(json.dumps({
@@ -18,23 +31,8 @@ def test_load_daemon_state_new_format():
         assert result["talk"] is None
 
 
-def test_load_daemon_state_migrates_old_stack_format():
-    """Old {stack:[...]} format is migrated to {main, talk}."""
-    with tempfile.TemporaryDirectory() as d:
-        f = Path(d) / GLOBAL_STATE_FILENAME
-        f.write_text(json.dumps({
-            "stack": [
-                {"name": "2026-03-25 WS", "started_at": "2026-03-25T09:00:00"}
-            ]
-        }))
-        from daemon.session_state import load_daemon_state as _load_daemon_state
-        result = _load_daemon_state(Path(d))
-        assert result["main"]["name"] == "2026-03-25 WS"
-        assert result["talk"] is None
-
-
-def test_load_daemon_state_migrates_two_item_stack():
-    """Old stack with 2 items: first=main, second=talk."""
+def test_load_daemon_state_returns_raw_old_stack_format():
+    """Old {stack:[...]} format is returned as-is for caller to migrate."""
     with tempfile.TemporaryDirectory() as d:
         f = Path(d) / GLOBAL_STATE_FILENAME
         f.write_text(json.dumps({
@@ -45,40 +43,121 @@ def test_load_daemon_state_migrates_two_item_stack():
         }))
         from daemon.session_state import load_daemon_state as _load_daemon_state
         result = _load_daemon_state(Path(d))
-        assert result["main"]["name"] == "2026-03-25 WS"
-        assert result["talk"]["name"] == "2026-03-25 12:30 talk"
+        assert "stack" in result
+        assert len(result["stack"]) == 2
 
 
 def test_load_daemon_state_returns_empty_when_no_file():
     with tempfile.TemporaryDirectory() as d:
         from daemon.session_state import load_daemon_state as _load_daemon_state
         result = _load_daemon_state(Path(d))
-        assert result == {"main": None, "talk": None}
+        assert result == {}
 
 
-def test_save_daemon_state_writes_new_format():
+def test_save_daemon_state_writes_active_session_id_only():
+    """New format: only active_session_id is persisted to global state."""
     with tempfile.TemporaryDirectory() as d:
         from daemon.session_state import save_daemon_state as _save_daemon_state
-        _save_daemon_state(Path(d), {
-            "main": {"name": "2026-03-25 WS", "started_at": "2026-03-25T09:00:00", "status": "active"},
-            "talk": None
-        })
+        _save_daemon_state(Path(d), {"active_session_id": "abc123"})
         data = json.loads((Path(d) / GLOBAL_STATE_FILENAME).read_text())
-        assert "main" in data
+        assert data == {"active_session_id": "abc123"}
+        assert "main" not in data
         assert "stack" not in data
-        assert data["main"]["name"] == "2026-03-25 WS"
 
 
 def test_load_daemon_state_reads_legacy_filename():
     with tempfile.TemporaryDirectory() as d:
         legacy = Path(d) / "daemon_state.json"
-        legacy.write_text(json.dumps({
-            "main": {"name": "2026-03-25 WS", "started_at": "2026-03-25T09:00:00", "status": "active"},
-            "talk": None
-        }))
+        legacy.write_text(json.dumps({"active_session_id": "legacy123"}))
         from daemon.session_state import load_daemon_state as _load_daemon_state
         result = _load_daemon_state(Path(d))
-        assert result["main"]["name"] == "2026-03-25 WS"
+        assert result["active_session_id"] == "legacy123"
+
+
+# ── Session meta I/O ──────────────────────────────────────────────────────────
+
+def test_save_and_load_session_meta():
+    from daemon.session_state import save_session_meta, load_session_meta
+    with tempfile.TemporaryDirectory() as d:
+        folder = Path(d) / "2026-03-25 WS"
+        folder.mkdir()
+        meta = {
+            "session_id": "abc123",
+            "started_at": "2026-03-25T09:00:00",
+            "paused_intervals": [{"from": "2026-03-25T12:00:00", "to": "2026-03-25T13:00:00", "reason": "lunch"}],
+        }
+        save_session_meta(folder, meta)
+        result = load_session_meta(folder)
+        assert result["session_id"] == "abc123"
+        assert result["started_at"] == "2026-03-25T09:00:00"
+        assert len(result["paused_intervals"]) == 1
+
+
+def test_load_session_meta_returns_empty_when_no_file():
+    from daemon.session_state import load_session_meta
+    with tempfile.TemporaryDirectory() as d:
+        result = load_session_meta(Path(d) / "missing-folder")
+        assert result == {}
+
+
+def test_find_session_folder_by_id_via_meta(tmp_path):
+    from daemon.session_state import save_session_meta, find_session_folder_by_id
+    folder = tmp_path / "2026-03-25 WS"
+    folder.mkdir()
+    save_session_meta(folder, {"session_id": "target-id-123", "started_at": "2026-03-25T09:00:00"})
+
+    result = find_session_folder_by_id(tmp_path, "target-id-123")
+    assert result == folder
+
+
+def test_find_session_folder_by_id_via_session_state(tmp_path):
+    from daemon.session_state import find_session_folder_by_id
+    folder = tmp_path / "2026-03-25 WS"
+    folder.mkdir()
+    (folder / "session_state.json").write_text(json.dumps({"session_id": "server-id-456"}))
+
+    result = find_session_folder_by_id(tmp_path, "server-id-456")
+    assert result == folder
+
+
+def test_find_session_folder_by_id_returns_none_when_not_found(tmp_path):
+    from daemon.session_state import find_session_folder_by_id
+    result = find_session_folder_by_id(tmp_path, "nonexistent-id")
+    assert result is None
+
+
+def test_session_meta_to_stack_with_talk():
+    from daemon.session_state import session_meta_to_stack
+    meta = {
+        "session_id": "abc123",
+        "started_at": "2026-03-25T09:00:00",
+        "paused_intervals": [],
+        "talk": {"name": "2026-03-25 12:30 talk", "started_at": "2026-03-25T12:30:00", "status": "active"},
+    }
+    stack = session_meta_to_stack(meta, "2026-03-25 WS")
+    assert len(stack) == 2
+    assert stack[0]["name"] == "2026-03-25 WS"
+    assert stack[1]["name"] == "2026-03-25 12:30 talk"
+
+
+def test_session_meta_to_stack_without_talk():
+    from daemon.session_state import session_meta_to_stack
+    meta = {"session_id": "abc123", "started_at": "2026-03-25T09:00:00", "paused_intervals": []}
+    stack = session_meta_to_stack(meta, "2026-03-25 WS")
+    assert len(stack) == 1
+    assert stack[0]["name"] == "2026-03-25 WS"
+
+
+def test_session_meta_to_stack_ignores_ended_talk():
+    from daemon.session_state import session_meta_to_stack
+    meta = {
+        "session_id": "abc123",
+        "started_at": "2026-03-25T09:00:00",
+        "paused_intervals": [],
+        "talk": {"name": "2026-03-25 12:30 talk", "status": "ended"},
+    }
+    stack = session_meta_to_stack(meta, "2026-03-25 WS")
+    assert len(stack) == 1
 
 
 # ── Issue 2: status "ended" filtering ────────────────────────────────────────
