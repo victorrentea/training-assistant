@@ -1,12 +1,15 @@
 {
-  "sha": "2a9272247b7367e0bd96975b5d4dabbb3cbaa0b6",
-  "timestamp": "2026-03-29 14:54",
+  "sha": "d71450ab24a5b668608ff1a9fd86b33f964387b6",
+  "timestamp": "2026-03-29 14:55",
   "changelog": [
-    "feat: replace slides catalog SVG icon with gray folder emoji",
-    "fix: initialize slides_cache_status during startup catalog seed",
-    "feat: show topic count next to slides catalog folder icon"
+    "fix: remove .txt extension from Key Points badge label"
   ],
   "commits": [
+    {
+      "sha": "d71450ab",
+      "msg": "fix: remove .txt extension from Key Points badge label",
+      "ts": "2026-03-29T14:55:25+03:00"
+    },
     {
       "sha": "2a927224",
       "msg": "feat: replace slides catalog SVG icon with gray folder emoji",
@@ -101,11 +104,6 @@
       "sha": "84eb9fdc",
       "msg": "fix: slides badge count = all unique slides, not only those with >=10s",
       "ts": "2026-03-29T14:25:01+03:00"
-    },
-    {
-      "sha": "59a2a187",
-      "msg": "feat: throttle PowerPoint time-tracking to every 5s (matches IntelliJ)",
-      "ts": "2026-03-29T14:23:26+03:00"
     }
   ],
   "branches": [
