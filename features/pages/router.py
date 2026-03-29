@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, Response
-from fastapi.responses import HTMLResponse, FileResponse
+from fastapi.responses import HTMLResponse, FileResponse, RedirectResponse
 
 from core.auth import get_host_cookie_token, require_host_auth
 from core.state import state
@@ -12,6 +12,11 @@ participant_router = APIRouter()
 @landing_router.get("/", response_class=HTMLResponse)
 async def landing_page():
     return FileResponse("static/landing.html")
+
+
+@host_router.get("/host/", response_class=HTMLResponse)
+async def host_landing_redirect():
+    return RedirectResponse(url="/host", status_code=301)
 
 
 @host_router.get("/host", response_class=HTMLResponse, dependencies=[Depends(require_host_auth)])
