@@ -1,10 +1,15 @@
 {
-  "sha": "e60b3ac4d761f734e51b299524c8621d4db1e081",
-  "timestamp": "2026-03-29 14:47",
+  "sha": "28e7d0e45896cd5c82a4bd9779bb3600797c6d98",
+  "timestamp": "2026-03-29 14:48",
   "changelog": [
-    "fix: rejoin button broken by JSON.stringify double quotes in onclick attr"
+    "fix: uniform gray border color for all neutral host footer badges"
   ],
   "commits": [
+    {
+      "sha": "28e7d0e4",
+      "msg": "fix: uniform gray border color for all neutral host footer badges",
+      "ts": "2026-03-29T14:47:27+03:00"
+    },
     {
       "sha": "e60b3ac4",
       "msg": "fix: rejoin button broken by JSON.stringify double quotes in onclick attr",
@@ -99,11 +104,6 @@
       "sha": "2c3ca4e5",
       "msg": "fix: strip non-breaking spaces from session names before creating folders",
       "ts": "2026-03-29T14:08:35+03:00"
-    },
-    {
-      "sha": "32d786e9",
-      "msg": "fix(slides): change repos empty state to 'No repos viewed yet'",
-      "ts": "2026-03-29T13:57:51+03:00"
     }
   ],
   "branches": [
