@@ -514,6 +514,67 @@ On daemon WS reconnect, the daemon re-sends `session_sync` with the full `sessio
 
 ---
 
+## Polling Loops & Background Jobs
+
+All periodic timers, polling loops, and autonomous background jobs across the system.
+
+### Daemon (Python, host's Mac)
+
+| Job | Interval | File | Configurable? |
+|---|---|---|---|
+| **Main event loop** — orchestrates all sub-runners, processes WS messages | 1s | `daemon/config.py:24` | `DAEMON_POLL_INTERVAL` |
+| **Lock heartbeat** — updates PID lock file to prevent multiple instances | 1s | `daemon/lock.py:13` | No |
+| **PowerPoint probe** — detects active presentation + slide via stub/osascript | Every main loop tick (1s) | `daemon/__main__.py:~698` | No |
+| **Transcript timestamp appender** — appends `[HH:MM:SS]` markers to raw transcript | 3s | `daemon/transcript/loop.py:13` | `TRANSCRIPT_TIMESTAMP_INTERVAL_SECONDS` |
+| **Transcript normalizer** — normalizes raw transcripts into daily files | 3s | `daemon/transcript/loop.py:14` | `TRANSCRIPT_NORMALIZER_INTERVAL_SECONDS` |
+| **Slides file watcher** — polls PPTX mtime, sends `slide_invalidated` on change | 5s | `daemon/slides/loop.py:51` | `SLIDES_POLL_INTERVAL_SECONDS` |
+| **IntelliJ probe** — detects current project + branch via stub/osascript | 5s | `daemon/__main__.py:~761` | `_INTELLIJ_PROBE_INTERVAL` |
+| **Slide activity logger** — accumulates time spent on each slide (foreground) | 5s | `daemon/__main__.py:~737` | `_PPT_TRACK_INTERVAL` |
+| **Materials mirror** — syncs local files to backend via HTTP | 5s | `daemon/materials/mirror.py:109` | `MATERIALS_MIRROR_INTERVAL_SECONDS` |
+| **RAG indexer** — watches materials folder for file changes | 0.5s poll + 2s debounce | `daemon/rag/indexer.py:355` | `DEBOUNCE_SECONDS` |
+| **WS reconnect** — reconnects daemon WS on disconnect | 3s retry | `daemon/ws_client.py:14` | `_RECONNECT_INTERVAL` |
+| **WS ping** — keepalive ping to backend | 20s | `daemon/ws_client.py:117` | `ping_interval` param |
+| **Summary cycle** — on-demand only (triggered by WS `summary_force`) | Event-driven | `daemon/summary/loop.py:28` | N/A |
+
+### FastAPI Backend (Python, Railway)
+
+| Job | Interval | File | Configurable? |
+|---|---|---|---|
+| **State snapshot push** — pushes state + session snapshots to daemon for disk persistence | 7s | `features/ws/router.py:~460` | No (hardcoded `asyncio.sleep(7)`) |
+
+### Host UI (JavaScript, host's browser)
+
+| Job | Interval | File | Configurable? |
+|---|---|---|---|
+| **WS reconnect** | 3s retry | `static/host.js:196` | No |
+| **Summary badge refresh** | 30s | `static/host.js:837` | No |
+| **Poll timer countdown** | 200ms | `static/host.js:1747` | No |
+| **Debate round timer** | 200ms | `static/host.js:2716` | No |
+| **Inactivity counter** | 1s | `static/host.js:3626` | No |
+| **Version age updater** | 60s (if deployed < 24h) | `static/version-age.js:49` | No |
+| **Version reload guard** | 1s countdown (after mismatch detected) | `static/version-reload.js:93` | `countdownSeconds` (default 10) |
+
+### Participant UI (JavaScript, participant's browser)
+
+| Job | Interval | File | Configurable? |
+|---|---|---|---|
+| **WS reconnect** | 3s retry | `static/participant.js` | No |
+| **Slides catalog refresh** | 30s (when overlay open) | `static/participant.js:243` | `SLIDES_REFRESH_MS` |
+| **Q&A toast display** | 15s | `static/participant.js:3130` | No |
+| **Debate toast display** | 15s | `static/participant.js:3156` | No |
+| **Debate timer countdown** | 200ms | `static/participant.js:3431` | No |
+| **Version age updater** | 60s (if deployed < 24h) | `static/version-age.js:49` | No |
+
+### Landing Page (JavaScript)
+
+| Job | Interval | File | Configurable? |
+|---|---|---|---|
+| **Host cookie auto-join poller** | 3s | `static/landing.html:207` | No |
+| **Auto-join countdown** | 1s | `static/landing.html:185` | No |
+| **Version status poll** | 30s | `static/host-landing.html:~25` | No |
+
+---
+
 ## System Interactions (Sequence Flows)
 
 The diagram covers 19 interaction flows:
