@@ -577,13 +577,13 @@ def run() -> None:
     last_snapshot_hash: str | None = None  # hash of last saved state snapshot
     last_state_backup_log: str | None = None  # last emitted state-backup log line (dedupe consecutive repeats)
     transcript_state = TranscriptStateManager()
-    # Push session folders list to backend on every (re)connect
-    def _push_session_folders():
+    # Send session folders list when backend requests it (only on backend start)
+    def _on_request_session_folders(_data):
         if not sessions_root.exists():
             return
         folders = sorted([f.name for f in sessions_root.iterdir() if f.is_dir()], reverse=True)
         ws_client.send({"type": "session_folders", "folders": folders})
-    ws_client.on_connect(_push_session_folders)
+    ws_client.register_handler("request_session_folders", _on_request_session_folders)
 
     ws_client.start()
 
@@ -714,7 +714,6 @@ def run() -> None:
                                 _sync_audiohijack_language(config)
                             except Exception:
                                 pass
-                        _push_session_folders()
                         log.info("session", f"Session started: {name} (stack size: {len(session_stack)})")
 
                     elif action == "start":

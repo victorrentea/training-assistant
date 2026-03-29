@@ -531,6 +531,12 @@ async def daemon_websocket_endpoint(websocket: WebSocket):
     state.daemon_last_seen = datetime.now(timezone.utc)
     logger.info("Daemon WS connected")
     await broadcast({"type": "slides_catalog_changed"})
+    # Request session folders only when backend just started (list is empty)
+    if not state.session_folders:
+        try:
+            await websocket.send_json({"type": "request_session_folders"})
+        except Exception:
+            pass
 
     try:
         while True:
