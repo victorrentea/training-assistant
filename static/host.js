@@ -3119,14 +3119,6 @@ function onBlockerInput() {
   if (input && btn) btn.disabled = !input.value.trim();
 }
 
-function stopSession() {
-  if (!_currentSessionId) return;
-  if (!confirm('Stop this session and return to the host landing page?')) return;
-  fetch('/api/session/end', {method: 'POST'})
-    .then(() => { location.href = '/host'; })
-    .catch(e => console.error('stopSession failed:', e));
-}
-
 
 function blockerStart() {
   const input = document.getElementById('blocker-session-input');
@@ -3165,8 +3157,6 @@ _updateBlocker();
 
 function updateSessionCodeBar(sessionId) {
   _currentSessionId = sessionId;
-  const stopBtn = document.getElementById('stop-session-btn');
-  if (stopBtn) stopBtn.style.display = sessionId ? '' : 'none';
   _updateBlocker();
   const bar = document.getElementById('session-code-bar');
   const display = document.getElementById('session-code-display');
