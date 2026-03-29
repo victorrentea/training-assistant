@@ -534,6 +534,7 @@ async def daemon_websocket_endpoint(websocket: WebSocket):
 
     state.daemon_ws = websocket
     state.daemon_last_seen = datetime.now(timezone.utc)
+    state.needs_restore = False
     logger.info("Daemon WS connected")
     await broadcast({"type": "slides_catalog_changed"})
 
