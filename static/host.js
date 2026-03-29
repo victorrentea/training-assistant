@@ -750,17 +750,17 @@
     }
 
     if (summaryPoints.length) {
-      badge.textContent = `🧠 (${summaryPoints.length}) Key Points.txt`;
+      badge.textContent = `🧠 (${summaryPoints.length}) Key Points`;
       badge.className = 'badge connected';
       badge.style.cssText = 'cursor:pointer;';
       badge.title = noTranscriptTitle || `${summaryPoints.length} key points · ${_transcriptLineCount} transcript lines — click to view`;
     } else if (_summaryGenerating) {
-      badge.textContent = `🧠 (…) Key Points.txt`;
+      badge.textContent = `🧠 (…) Key Points`;
       badge.className = 'badge';
       badge.style.cssText = 'cursor:wait; color:var(--warn); border:1px solid var(--warn);';
       badge.title = noTranscriptTitle || `Generating key points from transcript… (${_transcriptLineCount} lines)`;
     } else {
-      badge.textContent = `🧠 Key Points.txt`;
+      badge.textContent = `🧠 Key Points`;
       badge.className = 'badge empty';
       badge.style.cssText = 'cursor:pointer;';
       badge.title = noTranscriptTitle
