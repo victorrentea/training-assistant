@@ -67,6 +67,8 @@
   11. Host resumes the workshop
   12. Participant A auto-rejoins and appears connected
 
+- [ ] **Participant name persists across sessions**: Participant sets custom name → host stops session → host creates new session → same participant (same UUID via localStorage) rejoins → name is still the custom one (not auto-assigned)
+
 - [ ] **Materials accessible after session end**: Host creates session → participant joins → host closes → participant's WS closes but slides + notes remain accessible
 
 - [ ] **Resume existing session from disk**: Pre-existing folder in sessions root → host opens landing page → sees it listed → clicks to resume → session initialized in that folder → host closes → daemon global state shows no active session
