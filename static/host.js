@@ -982,7 +982,7 @@
   function _renderGitReposPopover() {
     const el = document.getElementById('git-repos-content');
     if (!el) return;
-    if (!_gitRepos.length) { el.innerHTML = '<div style="padding:8px;opacity:0.5">No repos yet</div>'; return; }
+    if (!_gitRepos.length) { el.innerHTML = '<div style="padding:8px;opacity:0.5">No repos viewed yet</div>'; return; }
     const sorted = [..._gitRepos].sort((a, b) => (b.seconds_spent || 0) - (a.seconds_spent || 0));
     let html = '';
     for (const r of sorted) {
