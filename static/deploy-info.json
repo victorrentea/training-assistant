@@ -1,10 +1,15 @@
 {
-  "sha": "83728b655db4669b53133daaa484bed20d17a1c9",
+  "sha": "1ae1443ae69d3cf80b1c67f711783b1227e6f8e3",
   "timestamp": "2026-03-29 13:31",
   "changelog": [
-    "feat(landing): red background on Start talk button"
+    "feat(wispr): scale emoji density by Ctrl+Opt hold duration"
   ],
   "commits": [
+    {
+      "sha": "1ae1443a",
+      "msg": "feat(wispr): scale emoji density by Ctrl+Opt hold duration",
+      "ts": "2026-03-29T13:31:12+03:00"
+    },
     {
       "sha": "83728b65",
       "msg": "feat(landing): red background on Start talk button",
@@ -99,11 +104,6 @@
       "sha": "9104fe53",
       "msg": "feat(host): \u26d4 stop badge with inline confirm bubble instead of browser dialog",
       "ts": "2026-03-29T12:59:21+03:00"
-    },
-    {
-      "sha": "9922b0b8",
-      "msg": "style(host): larger accent-colored title in top bar header",
-      "ts": "2026-03-29T12:57:51+03:00"
     }
   ],
   "branches": [
