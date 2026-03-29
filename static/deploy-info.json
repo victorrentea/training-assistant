@@ -1,10 +1,15 @@
 {
-  "sha": "d1da13e1ebe01da510fb00377dfd8ca3c404b30b",
-  "timestamp": "2026-03-29 14:32",
+  "sha": "4191d227b4e4aaaa8f9b6c682ad369eb61387a84",
+  "timestamp": "2026-03-29 14:34",
   "changelog": [
-    "fix: remove floating end-session button, use stop badge with \u23f9\ufe0f emoji"
+    "fix: remove top margin from pax-list to close gap below header"
   ],
   "commits": [
+    {
+      "sha": "4191d227",
+      "msg": "fix: remove top margin from pax-list to close gap below header",
+      "ts": "2026-03-29T14:33:59+03:00"
+    },
     {
       "sha": "d1da13e1",
       "msg": "fix: remove floating end-session button, use stop badge with \u23f9\ufe0f emoji",
@@ -99,11 +104,6 @@
       "sha": "f396c18d",
       "msg": "fix: remove gap between joined date/name inputs on landing page",
       "ts": "2026-03-29T13:49:23+03:00"
-    },
-    {
-      "sha": "f3c6083f",
-      "msg": "fix(host): center session title truly in top bar using absolute positioning",
-      "ts": "2026-03-29T13:49:15+03:00"
     }
   ],
   "branches": [
