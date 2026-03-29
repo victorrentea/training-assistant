@@ -410,6 +410,35 @@ body {
   opacity: 0 !important;
 }
 
+/* git-repos and slides-log popovers: match footer-badge-tooltip style */
+.activity-log-popover {
+  display: block;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .08s ease;
+  box-shadow: 0 4px 14px rgba(0,0,0,.45);
+  font-size: .78rem;
+  font-weight: 500;
+  text-align: left;
+  left: 50%;
+  right: auto;
+  transform: translateX(-50%);
+  max-width: min(360px, 90vw);
+}
+.slides-catalog-hover.open .activity-log-popover {
+  opacity: 1;
+  pointer-events: auto;
+}
+.activity-log-popover.slides-catalog-popover {
+  padding: 5px 11px;
+}
+.activity-log-popover .slides-catalog-content {
+  font-size: inherit;
+}
+#stop-session-wrap-left:hover .footer-badge-tooltip {
+  display: none !important;
+}
+
 .slides-catalog-content {
   font-size: .72rem;
   color: var(--text);
