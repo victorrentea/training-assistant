@@ -64,7 +64,7 @@ Container_Boundary(daemon_pkg, "Daemon (Python 3.12, host's Mac)") {
 
   Component(llm, "daemon/llm/adapter", "LLM adapter", "Claude API wrapper.\nToken counting & cost tracking.\ncreate_message() with timeout.")
 
-  Component(session_state, "daemon/session_state", "Session + global state", "Tracks active session metadata and session snapshots.\nPersists training-assistant-global-state.json and session_state.json on disk.")
+  Component(session_state, "daemon/session_state", "Session + global state", "Global state: training-assistant-global-state.json stores active_session_id only.\nSession metadata (started_at, paused_intervals) stored in session_meta.json per session folder.\nAt startup, scans session folders to find active session by ID.\nAlso persists full server snapshot to session_state.json per folder.")
 
   Component(lock, "daemon/lock", "Process lock", "PID file ensures single daemon instance.")
 }
