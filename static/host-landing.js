@@ -70,17 +70,13 @@ function buildFolderList(folders, today) {
   }
 
   const items = folders.map(f => {
-    const {dates, topic} = parseFolderDates(f);
-    const dateHtml = dates.length > 1
-      ? dates.map(d => `<span>${_esc(d)}</span>`).join('<br>')
-      : _esc(dates[0] || '');
+    const {dateStr, dates, topic} = parseFolderDates(f);
     const isToday = today && dates[0] === today;
     const todayTag = isToday ? `<span class="folder-today-tag">TODAY</span>` : '';
     return `
     <li class="folder-row${isToday ? ' folder-row-today' : ''}" onclick="doResumeFolder(${JSON.stringify(f)})">
-      <span class="folder-date${dates.length > 1 ? ' folder-date-range' : ''}">${dateHtml}</span>
-      <span class="folder-topic">${_esc(topic)}</span>
-      ${todayTag}
+      <span class="folder-date">${_esc(dateStr)}</span>
+      <span class="folder-topic">${_esc(topic)}${todayTag}</span>
       <button class="folder-play-btn" onclick="event.stopPropagation(); doResumeFolder(${JSON.stringify(f)})" title="Resume session">▶</button>
     </li>`;
   }).join('');
@@ -94,15 +90,18 @@ function buildFolderList(folders, today) {
 
 function parseFolderDates(f) {
   // Range: YYYY-MM-DD..DD topic (same month)
-  let m = f.match(/^(\d{4}-\d{2})-(\d{2})\.\.(\d{2})\s+(.+)$/);
-  if (m) return {dates: [m[1] + '-' + m[2], m[1] + '-' + m[3]], topic: m[4]};
+  let m = f.match(/^((\d{4}-\d{2})-(\d{2})\.\.(\d{2}))\s+(.+)$/);
+  if (m) return {dateStr: m[1], dates: [m[2] + '-' + m[3], m[2] + '-' + m[4]], topic: m[5]};
   // Range: YYYY-MM-DD..YYYY-MM-DD topic
-  m = f.match(/^(\d{4}-\d{2}-\d{2})\.\.(\d{4}-\d{2}-\d{2})\s+(.+)$/);
-  if (m) return {dates: [m[1], m[2]], topic: m[3]};
+  m = f.match(/^((\d{4}-\d{2}-\d{2})\.\.(\d{4}-\d{2}-\d{2}))\s+(.+)$/);
+  if (m) return {dateStr: m[1], dates: [m[2], m[3]], topic: m[4]};
   // Single date: YYYY-MM-DD topic
   m = f.match(/^(\d{4}-\d{2}-\d{2})\s+(.+)$/);
-  if (m) return {dates: [m[1]], topic: m[2]};
-  return {dates: [], topic: f};
+  if (m) return {dateStr: m[1], dates: [m[1]], topic: m[2]};
+  // Single date only (no topic)
+  m = f.match(/^(\d{4}-\d{2}-\d{2})$/);
+  if (m) return {dateStr: m[1], dates: [m[1]], topic: ''};
+  return {dateStr: '', dates: [], topic: f};
 }
 
 function _esc(str) {
