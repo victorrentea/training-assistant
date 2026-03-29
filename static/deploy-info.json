@@ -1,10 +1,15 @@
 {
-  "sha": "98697531a2842159ed5ee3123d372fb4d96fb12b",
-  "timestamp": "2026-03-29 15:46",
+  "sha": "a8182bb8e4f5bcd5a1c5db498d53f2844185fd82",
+  "timestamp": "2026-03-29 15:50",
   "changelog": [
-    "Host footer QR icon after join link"
+    "Fix fullscreen join QR overlay behavior"
   ],
   "commits": [
+    {
+      "sha": "a8182bb8",
+      "msg": "Fix fullscreen join QR overlay behavior",
+      "ts": "2026-03-29T15:49:58+03:00"
+    },
     {
       "sha": "98697531",
       "msg": "Host footer QR icon after join link",
@@ -99,11 +104,6 @@
       "sha": "bbebedae",
       "msg": "Increase PowerPoint probe timeout to 5s",
       "ts": "2026-03-29T15:08:51+03:00"
-    },
-    {
-      "sha": "2d58016d",
-      "msg": "feat: enable transcript llm clean and update log format",
-      "ts": "2026-03-29T15:08:37+03:00"
     }
   ],
   "branches": [
