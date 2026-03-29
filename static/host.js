@@ -998,7 +998,7 @@
   function _renderSlidesLogPopover() {
     const el = document.getElementById('slides-log-content');
     if (!el) return;
-    if (!_slidesLog.length) { el.innerHTML = '<div style="padding:8px;opacity:0.5">No slides yet</div>'; return; }
+    if (!_slidesLog.length) { el.innerHTML = '<div style="padding:8px;opacity:0.5">No slides viewed yet</div>'; return; }
     // Group by file: {slides: Set, totalSecs}
     const byFile = {};
     for (const e of _slidesLog) {
