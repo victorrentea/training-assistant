@@ -254,6 +254,17 @@ body {
 .btn-scores-reset:hover { opacity: .7; color: var(--muted); }
 .btn-scores-reset:active { opacity: 1; color: #e74c3c; }
 
+.stop-badge {
+  --badge-fill: transparent;
+  color: var(--muted);
+  transition: background .15s, border-color .15s, color .15s;
+}
+.stop-badge:hover {
+  background: #e74c3c !important;
+  border-color: #e74c3c !important;
+  color: #fff !important;
+}
+
 /* Center activity panel */
 .center-panel {
   flex: 1;

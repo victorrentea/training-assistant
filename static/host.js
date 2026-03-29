@@ -3056,8 +3056,15 @@ function onSessionEmojiKey(event, action) {
   if (typeof action === 'function') action();
 }
 
-function stopSession() {
-  if (!confirm('Stop this session and return to the session list?')) return;
+function toggleStopConfirm() {
+  const bubble = document.getElementById('stop-confirm-bubble');
+  if (bubble) bubble.style.display = bubble.style.display === 'none' ? '' : 'none';
+}
+function hideStopConfirm() {
+  const bubble = document.getElementById('stop-confirm-bubble');
+  if (bubble) bubble.style.display = 'none';
+}
+function stopSessionConfirmed() {
   fetch('/api/session/end', {method: 'POST'})
     .then(() => { window.location = '/host'; })
     .catch(e => console.error('stopSession failed:', e));
@@ -3207,8 +3214,8 @@ function renderSessionPanel() {
   const titleEl = document.getElementById('host-top-title');
   if (titleEl) titleEl.textContent = main ? main.name : '';
   // Stop button visibility
-  const stopBtn = document.getElementById('stop-session-btn');
-  if (stopBtn) stopBtn.style.display = main ? '' : 'none';
+  const stopWrap = document.getElementById('stop-session-wrap');
+  if (stopWrap) stopWrap.style.display = main ? '' : 'none';
 
   // Main session row
   const mainRow = document.getElementById('session-main-row');
