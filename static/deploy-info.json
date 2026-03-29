@@ -1,10 +1,15 @@
 {
-  "sha": "c522ae92ab6b2259eef21006c01f0312fed9f9ec",
-  "timestamp": "2026-03-29 16:59",
+  "sha": "482d5d170cedd002c99deb823256c5f58d861108",
+  "timestamp": "2026-03-29 17:00",
   "changelog": [
-    "wispr-addons: bind repaste to wheel double-click"
+    "fix daemon session-state precedence"
   ],
   "commits": [
+    {
+      "sha": "482d5d17",
+      "msg": "fix daemon session-state precedence",
+      "ts": "2026-03-29T16:57:17+03:00"
+    },
     {
       "sha": "c522ae92",
       "msg": "wispr-addons: bind repaste to wheel double-click",
@@ -99,11 +104,6 @@
       "sha": "f517e136",
       "msg": "fix: persist stable session ids per folder",
       "ts": "2026-03-29T16:05:58+03:00"
-    },
-    {
-      "sha": "46f29d86",
-      "msg": "fix: use join URL for center host QR",
-      "ts": "2026-03-29T15:55:53+03:00"
     }
   ],
   "branches": [

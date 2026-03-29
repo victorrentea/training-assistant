@@ -99,6 +99,12 @@ def _dedupe_normalized_folder_names(folders: list[str]) -> list[str]:
     return result
 
 
+def _filter_folders_to_current_year(folders: list[str], current_year: int | None = None) -> list[str]:
+    year = current_year or datetime.now(timezone.utc).year
+    year_prefix = str(year)
+    return [name for name in folders if re.match(rf"^{re.escape(year_prefix)}(?!\d)", name)]
+
+
 def _is_open_session(main: dict | None) -> bool:
     if not isinstance(main, dict) or not main:
         return False
@@ -429,15 +435,17 @@ async def list_session_folders():
     # Prefer daemon-pushed list (works on Railway where local filesystem isn't accessible)
     if state.session_folders:
         deduped = _dedupe_normalized_folder_names(state.session_folders)
-        state.session_folders = deduped
-        return {"folders": deduped}
+        filtered = _filter_folders_to_current_year(deduped)
+        state.session_folders = filtered
+        return {"folders": filtered}
     # Fallback: scan local filesystem (works when running locally)
     root = _get_sessions_root()
     folders = []
     if root:
-        folders = _dedupe_normalized_folder_names(
+        deduped = _dedupe_normalized_folder_names(
             sorted([f.name for f in root.iterdir() if f.is_dir()], reverse=True)
         )
+        folders = _filter_folders_to_current_year(deduped)
     return {"folders": folders}
 
 
