@@ -244,6 +244,10 @@
           if (el) el.textContent = msg.session_name || '';
         }
         if (msg.daemon_last_seen !== undefined) daemonLastSeen = msg.daemon_last_seen;
+        if (!msg.session_id && msg.needs_restore === false) {
+          window.location = '/host';
+          return;
+        }
         updateSessionCodeBar(msg.session_id || null);
         renderSessionPanel();
         if (msg.mode) {
@@ -854,24 +858,33 @@
     link.href = canvas.toDataURL();
   }
 
+  let _unreachableTimer = null;
+
   function setBadge(ok) {
     const b = document.getElementById('ws-badge');
     b.textContent = ok ? '🟢' : '🟢';
     b.className = `badge ${ok ? 'connected' : 'disconnected'}`;
-    const existingOverlay = document.getElementById('server-unreachable-overlay');
-    if (!ok) {
-      if (!existingOverlay) {
-        document.body.insertAdjacentHTML('beforeend', `
-          <div id="server-unreachable-overlay" style="position:fixed;inset:0;background:rgba(0,0,0,.88);display:flex;
-            align-items:center;justify-content:center;z-index:9998;flex-direction:column;gap:1.2rem;
-            text-align:center;padding:2rem;">
-            <div style="font-size:5rem;line-height:1">🛑</div>
-            <div style="font-size:1.6rem;font-weight:700;color:#fff">Server not reachable</div>
-            <div style="font-size:0.95rem;color:#aaa">Reconnecting…</div>
-          </div>`);
-      }
+    if (ok) {
+      if (_unreachableTimer) { clearTimeout(_unreachableTimer); _unreachableTimer = null; }
+      const el = document.getElementById('server-unreachable-overlay');
+      if (el) el.remove();
     } else {
-      if (existingOverlay) existingOverlay.remove();
+      if (!_unreachableTimer && !document.getElementById('server-unreachable-overlay')) {
+        _unreachableTimer = setTimeout(() => {
+          _unreachableTimer = null;
+          if (!document.getElementById('server-unreachable-overlay')) {
+            document.body.insertAdjacentHTML('beforeend', `
+              <div id="server-unreachable-overlay" style="position:fixed;inset:0;background:rgba(0,0,0,.88);display:flex;
+                align-items:center;justify-content:center;z-index:9998;flex-direction:column;gap:1.2rem;
+                text-align:center;padding:2rem;">
+                <div style="font-size:5rem;line-height:1">🛑</div>
+                <div style="font-size:1.6rem;font-weight:700;color:#fff">Server not reachable</div>
+                <div style="font-size:0.95rem;color:#aaa">Reconnecting…</div>
+                <a href="/host" style="margin-top:.5rem;font-size:.9rem;color:#7ba7ff;text-decoration:underline">Go to landing page</a>
+              </div>`);
+          }
+        }, 8000);
+      }
     }
   }
 
