@@ -1,8 +1,12 @@
 {
-  "sha": "eb745e36cfc23d3ce9ed60df3fd31c5f561ce422",
-  "timestamp": "2026-03-29 15:42",
+  "sha": "9ebce8d1e201d9be53d6a50a670f230e395043ad",
+  "timestamp": "2026-03-29 15:44",
   "changelog": [
-    "Fix transcript preview log timestamp leakage"
+    "fix: countdown starts at 3:00; arm inactivity timer on server activity change",
+    "feat: add 6-min host inactivity auto-return modal",
+    "chore: remove old 30s conference auto-return timer",
+    "feat: replace Hello tab with Slides tab (\ud83d\udc68\ud83c\udffb\u200d\ud83c\udfeb)",
+    "docs: add Slides tab + inactivity auto-return spec and plan"
   ],
   "commits": [
     {
@@ -133,6 +137,11 @@
       "minutes": 53
     },
     {
+      "branch": "slides-tab-inactivity",
+      "sha": "6807786",
+      "minutes": 48
+    },
+    {
       "branch": "host-landing-scroll-fix",
       "sha": "33b8328",
       "minutes": 33
@@ -196,11 +205,6 @@
       "branch": "center-emoji-buttons",
       "sha": "1f1faa1",
       "minutes": 6
-    },
-    {
-      "branch": "slides-tab-inactivity",
-      "sha": "7bd87d9",
-      "minutes": 5
     },
     {
       "branch": "session-date-prefix",
