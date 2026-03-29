@@ -14,7 +14,7 @@ _TIMESTAMP_INTERVAL_SECONDS = float(os.environ.get("TRANSCRIPT_TIMESTAMP_INTERVA
 _NORMALIZER_INTERVAL_SECONDS = float(os.environ.get("TRANSCRIPT_NORMALIZER_INTERVAL_SECONDS", "3"))
 
 # --- LLM pre-filter (easy to remove: delete this block + usage in TranscriptNormalizerRunner) ---
-_LLM_CLEAN_ENABLED = os.environ.get("TRANSCRIPT_LLM_CLEAN", "0").strip().lower() not in {
+_LLM_CLEAN_ENABLED = os.environ.get("TRANSCRIPT_LLM_CLEAN", "1").strip().lower() not in {
     "0", "false", "no", "off",
 }
 
@@ -163,7 +163,7 @@ class TranscriptNormalizerRunner:
                     if len(all_first) >= 10:
                         break
                 preview = " ".join(all_first[:10])
-                words_part = f"Transcripted {words} words: \"{preview}...\"" if words > 0 else "Transcripted"
+                words_part = f"Transcripted {words}\n words: {preview} ..." if words > 0 else "Transcripted"
                 lines_part = f" of {written} lines" if written != 1 else ""
                 if output_files == 1 and raw_sources == 1:
                     log.info("transcript", f"{words_part}{lines_part}")
