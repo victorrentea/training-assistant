@@ -1,10 +1,15 @@
 {
-  "sha": "4191d227b4e4aaaa8f9b6c682ad369eb61387a84",
+  "sha": "1ae23885fdf08573dec43a38e5ec5e77a58738b0",
   "timestamp": "2026-03-29 14:34",
   "changelog": [
-    "fix: remove top margin from pax-list to close gap below header"
+    "fix: show language ISO code in transcription badge from initial render"
   ],
   "commits": [
+    {
+      "sha": "1ae23885",
+      "msg": "fix: show language ISO code in transcription badge from initial render",
+      "ts": "2026-03-29T14:34:43+03:00"
+    },
     {
       "sha": "4191d227",
       "msg": "fix: remove top margin from pax-list to close gap below header",
@@ -99,11 +104,6 @@
       "sha": "8a87de47",
       "msg": "feat: move stop button to left-most footer badge, turns red on hover",
       "ts": "2026-03-29T13:50:59+03:00"
-    },
-    {
-      "sha": "f396c18d",
-      "msg": "fix: remove gap between joined date/name inputs on landing page",
-      "ts": "2026-03-29T13:49:23+03:00"
     }
   ],
   "branches": [
