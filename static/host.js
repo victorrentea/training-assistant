@@ -3092,11 +3092,11 @@ function onSessionEmojiKey(event, action) {
 }
 
 function toggleStopConfirm() {
-  const bubble = document.getElementById('stop-confirm-bubble');
+  const bubble = document.getElementById('stop-confirm-bubble-left');
   if (bubble) bubble.style.display = bubble.style.display === 'none' ? '' : 'none';
 }
 function hideStopConfirm() {
-  const bubble = document.getElementById('stop-confirm-bubble');
+  const bubble = document.getElementById('stop-confirm-bubble-left');
   if (bubble) bubble.style.display = 'none';
 }
 function stopSessionConfirmed() {
@@ -3249,7 +3249,7 @@ function renderSessionPanel() {
   const titleEl = document.getElementById('host-top-title');
   if (titleEl) titleEl.textContent = main ? main.name : '';
   // Stop button visibility
-  const stopWrap = document.getElementById('stop-session-wrap');
+  const stopWrap = document.getElementById('stop-session-wrap-left');
   if (stopWrap) stopWrap.style.display = main ? '' : 'none';
 
   // Main session row

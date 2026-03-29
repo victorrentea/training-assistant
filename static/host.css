@@ -259,13 +259,16 @@ body {
 .btn-scores-reset:active { opacity: 1; color: #e74c3c; }
 
 .stop-badge {
-  background: #e74c3c !important;
-  border-color: #e74c3c !important;
-  color: #fff !important;
-  transition: filter .15s;
+  background: #7b80a022;
+  color: var(--muted);
+  border: 1px solid var(--muted);
+  --badge-fill: #e74c3c99;
+  transition: background .15s, color .15s, border-color .15s;
 }
 .stop-badge:hover {
-  filter: brightness(1.2);
+  background: #e74c3c !important;
+  color: #fff !important;
+  border-color: #e74c3c !important;
 }
 
 /* Center activity panel */
