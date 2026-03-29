@@ -3148,10 +3148,10 @@ function _showFooterCopiedTooltip(el) {
   const tip = document.createElement('div');
   tip.className = 'footer-copy-tip';
   tip.textContent = 'Copied...';
-  tip.style.cssText = 'position:absolute; left:50%; bottom:calc(100% + 6px); transform:translateX(-50%); background:var(--surface2); color:var(--accent2); border:1px solid var(--border); padding:.12rem .45rem; border-radius:6px; font-size:.72rem; pointer-events:none; opacity:1; transition:opacity .9s ease;';
+  tip.style.cssText = 'position:absolute; left:50%; bottom:calc(100% + 6px); transform:translateX(-50%); background:var(--surface2); color:var(--accent2); border:1px solid var(--border); padding:.12rem .45rem; border-radius:6px; font-size:.72rem; pointer-events:none; opacity:1; transition:opacity .35s ease 3s;';
   el.appendChild(tip);
   requestAnimationFrame(() => requestAnimationFrame(() => { tip.style.opacity = '0'; }));
-  setTimeout(() => tip.remove(), 1000);
+  setTimeout(() => tip.remove(), 3400);
 }
 
 function onFooterJoinLinkClick(event) {
