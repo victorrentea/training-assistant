@@ -110,7 +110,7 @@ def _serialize_state() -> dict:
     }
 
 
-@router.get("/api/state-snapshot")
+@router.get("/state-snapshot")
 async def get_state_snapshot():
     """Serialize all persistent state to JSON with MD5 hash."""
     state_dict = _serialize_state()
@@ -119,7 +119,7 @@ async def get_state_snapshot():
     return {"hash": md5_hex, "state": state_dict}
 
 
-@router.post("/api/state-restore")
+@router.post("/state-restore")
 async def restore_state_snapshot(body: dict):
     """Restore state from a snapshot dict."""
     data = body.get("state", body)

@@ -65,7 +65,7 @@ class PhaseAdvance(BaseModel):
     phase: str  # "arguments"|"ai_cleanup"|"prep"|"live_debate"|"ended"
 
 
-@router.post("/api/debate", dependencies=[Depends(require_host_auth)])
+@router.post("/debate", dependencies=[Depends(require_host_auth)])
 async def launch_debate(body: DebateLaunch):
     statement = body.statement.strip()
     if not statement:
@@ -89,7 +89,7 @@ async def launch_debate(body: DebateLaunch):
     return {"ok": True}
 
 
-@router.post("/api/debate/reset", dependencies=[Depends(require_host_auth)])
+@router.post("/debate/reset", dependencies=[Depends(require_host_auth)])
 async def reset_debate():
     """Reset all debate state back to scratch."""
     state.debate_statement = None
@@ -109,7 +109,7 @@ async def reset_debate():
     return {"ok": True}
 
 
-@router.post("/api/debate/close-selection", dependencies=[Depends(require_host_auth)])
+@router.post("/debate/close-selection", dependencies=[Depends(require_host_auth)])
 async def close_selection():
     if state.debate_phase != "side_selection":
         raise HTTPException(400, "Not in side_selection phase")
@@ -129,7 +129,7 @@ async def close_selection():
     return {"ok": True, "for": for_count, "against": against_count}
 
 
-@router.post("/api/debate/force-assign", dependencies=[Depends(require_host_auth)])
+@router.post("/debate/force-assign", dependencies=[Depends(require_host_auth)])
 async def force_assign():
     if state.debate_phase != "side_selection":
         raise HTTPException(400, "Not in side_selection phase")
@@ -168,7 +168,7 @@ async def force_assign():
 VALID_PHASES = {"arguments", "ai_cleanup", "prep", "live_debate", "ended"}
 
 
-@router.post("/api/debate/phase", dependencies=[Depends(require_host_auth)])
+@router.post("/debate/phase", dependencies=[Depends(require_host_auth)])
 async def advance_phase(body: PhaseAdvance):
     if body.phase not in VALID_PHASES:
         raise HTTPException(400, f"Invalid phase: {body.phase}")
@@ -190,7 +190,7 @@ class FirstSide(BaseModel):
     side: str  # "for" or "against"
 
 
-@router.post("/api/debate/first-side", dependencies=[Depends(require_host_auth)])
+@router.post("/debate/first-side", dependencies=[Depends(require_host_auth)])
 async def set_first_side(body: FirstSide):
     if state.debate_phase != "live_debate":
         raise HTTPException(400, "Not in live_debate phase")
@@ -208,7 +208,7 @@ class RoundTimer(BaseModel):
     seconds: int
 
 
-@router.post("/api/debate/round-timer", dependencies=[Depends(require_host_auth)])
+@router.post("/debate/round-timer", dependencies=[Depends(require_host_auth)])
 async def start_round_timer(body: RoundTimer):
     if state.debate_phase != "live_debate":
         raise HTTPException(400, "Not in live_debate phase")
@@ -233,7 +233,7 @@ async def start_round_timer(body: RoundTimer):
     return {"ok": True}
 
 
-@router.post("/api/debate/end-round", dependencies=[Depends(require_host_auth)])
+@router.post("/debate/end-round", dependencies=[Depends(require_host_auth)])
 async def end_round():
     """End the current round early."""
     if state.debate_phase != "live_debate":
@@ -251,7 +251,7 @@ async def end_round():
     return {"ok": True}
 
 
-@router.post("/api/debate/end-arguments", dependencies=[Depends(require_host_auth)])
+@router.post("/debate/end-arguments", dependencies=[Depends(require_host_auth)])
 async def end_arguments():
     """End arguments phase — store AI request for daemon pickup."""
     if state.debate_phase != "arguments":
@@ -282,7 +282,7 @@ async def end_arguments():
     return {"ok": True}
 
 
-@router.get("/api/debate/ai-request", dependencies=[Depends(require_host_auth)])
+@router.get("/debate/ai-request", dependencies=[Depends(require_host_auth)])
 async def poll_debate_ai_request():
     """Daemon polls this. Returns pending AI request or null, then clears it."""
     req = state.debate_ai_request
@@ -296,7 +296,7 @@ class DebateAiResult(BaseModel):
     new_arguments: list[dict] = []
 
 
-@router.post("/api/debate/ai-result", dependencies=[Depends(require_host_auth)])
+@router.post("/debate/ai-result", dependencies=[Depends(require_host_auth)])
 async def receive_ai_result(body: DebateAiResult):
     """Daemon posts AI cleanup results. Apply and advance to prep."""
     if state.debate_phase != "ai_cleanup":

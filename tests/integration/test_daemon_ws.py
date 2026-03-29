@@ -8,7 +8,7 @@ import pytest
 import requests
 from websockets.sync.client import connect as ws_connect
 
-from conftest import api
+from conftest import api, sapi
 
 
 def _daemon_ws_url(server_url: str) -> str:
@@ -43,7 +43,7 @@ class TestDaemonWsProtocol:
         """Host requests quiz → backend pushes quiz_request to daemon WS."""
         with ws_connect(_daemon_ws_url(server_url), additional_headers=_auth_headers()) as ws:
             # Host triggers quiz request via REST
-            resp = api(server_url, "post", "/api/quiz-request", json={"topic": "testing"})
+            resp = sapi(server_url, "post", "/quiz-request", json={"topic": "testing"})
             assert resp.status_code == 200
 
             # Daemon should receive quiz_request via WS
@@ -72,7 +72,7 @@ class TestDaemonWsProtocol:
             time.sleep(0.3)  # Let backend process
 
             # Verify the preview was stored — GET /api/quiz-refine is auth-protected and returns current preview
-            resp = api(server_url, "get", "/api/quiz-refine")
+            resp = sapi(server_url, "get", "/quiz-refine")
             assert resp.status_code == 200
             data = resp.json()
             assert data["preview"] is not None

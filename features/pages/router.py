@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Response
 from fastapi.responses import HTMLResponse, FileResponse
 
 from core.auth import require_host_auth
@@ -15,7 +15,14 @@ async def landing_page():
 
 
 @host_router.get("/host", response_class=HTMLResponse, dependencies=[Depends(require_host_auth)])
-async def host_page():
+async def host_landing():
+    response = FileResponse("static/host-landing.html")
+    response.set_cookie("is_host", "1", path="/", samesite="strict")
+    return response
+
+
+@host_router.get("/host/{session_id}", response_class=HTMLResponse, dependencies=[Depends(require_host_auth)])
+async def host_page(session_id: str):
     response = FileResponse("static/host.html")
     response.set_cookie("is_host", "1", path="/", samesite="strict")
     return response

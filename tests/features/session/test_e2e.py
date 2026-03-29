@@ -19,6 +19,7 @@ from conftest import (
     api,
     host_browser_ctx,
     pax_browser_ctx,
+    host_url,
 )
 from pages.participant_page import ParticipantPage
 from pages.host_page import HostPage
@@ -123,7 +124,7 @@ class TestHostSessionCode:
     def test_host_sees_session_code(self, server_url, session_id, playwright):
         browser, ctx = host_browser_ctx(server_url, playwright)
         page = ctx.new_page()
-        page.goto("/host")
+        page.goto(host_url())
 
         # Wait for WebSocket state to arrive and session code bar to appear
         code_bar = page.locator("#session-code-bar")
@@ -177,7 +178,7 @@ class TestParticipantInteractionWithSession:
         b_pax, ctx_pax = pax_browser_ctx(server_url, playwright)
 
         host_page = ctx_host.new_page()
-        host_page.goto("/host")
+        host_page.goto(host_url())
         host = HostPage(host_page)
 
         pax_page = ctx_pax.new_page()

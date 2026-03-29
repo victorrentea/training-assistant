@@ -18,7 +18,7 @@ class AnswerToggle(BaseModel):
     answered: bool
 
 
-@router.put("/api/qa/question/{question_id}/text", dependencies=[Depends(require_host_auth)])
+@router.put("/qa/question/{question_id}/text", dependencies=[Depends(require_host_auth)])
 async def edit_question(question_id: str, body: QuestionEdit):
     q = state.qa_questions.get(question_id)
     if not q:
@@ -33,7 +33,7 @@ async def edit_question(question_id: str, body: QuestionEdit):
     return {"ok": True}
 
 
-@router.delete("/api/qa/question/{question_id}", dependencies=[Depends(require_host_auth)])
+@router.delete("/qa/question/{question_id}", dependencies=[Depends(require_host_auth)])
 async def delete_question(question_id: str):
     if question_id not in state.qa_questions:
         raise HTTPException(404, "Question not found")
@@ -42,7 +42,7 @@ async def delete_question(question_id: str):
     return {"ok": True}
 
 
-@router.put("/api/qa/question/{question_id}/answered", dependencies=[Depends(require_host_auth)])
+@router.put("/qa/question/{question_id}/answered", dependencies=[Depends(require_host_auth)])
 async def toggle_answered(question_id: str, body: AnswerToggle):
     q = state.qa_questions.get(question_id)
     if not q:
@@ -52,7 +52,7 @@ async def toggle_answered(question_id: str, body: AnswerToggle):
     return {"ok": True}
 
 
-@router.post("/api/qa/clear", dependencies=[Depends(require_host_auth)])
+@router.post("/qa/clear", dependencies=[Depends(require_host_auth)])
 async def clear_qa():
     state.qa_questions = {}
     await broadcast_state()

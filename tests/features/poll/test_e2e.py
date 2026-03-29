@@ -11,7 +11,7 @@ from playwright.sync_api import expect
 
 from pages.host_page import HostPage
 from pages.participant_page import ParticipantPage
-from conftest import api, host_browser_ctx, pax_browser_ctx, pax_url
+from conftest import api, sapi, host_browser_ctx, pax_browser_ctx, pax_url, host_url
 
 
 # ---------------------------------------------------------------------------
@@ -44,7 +44,7 @@ class TestConnectionReconnection:
         pax = ParticipantPage(pax_page)
 
         try:
-            host._page.goto("/host")
+            host._page.goto(host_url())
             pax.join("ScoreRefresh")
             host.open_qa_tab()
             pax.submit_question("Refresh test question")
@@ -71,14 +71,14 @@ class TestConnectionReconnection:
         b2, ctx2 = host_browser_ctx(server_url, playwright)
 
         page1 = ctx1.new_page()
-        page1.goto("/host")
+        page1.goto(host_url())
         # First host is connected — badge has class "connected"
         expect(page1.locator("#ws-badge.connected")).to_be_visible(timeout=5000)
 
         try:
             # Open second host tab
             page2 = ctx2.new_page()
-            page2.goto("/host")
+            page2.goto(host_url())
             expect(page2.locator("#ws-badge.connected")).to_be_visible(timeout=5000)
 
             # First host should show the kicked overlay
@@ -121,11 +121,11 @@ class TestConnectionReconnection:
 @pytest.fixture(autouse=False)
 def clean_poll(server_url):
     """Clear poll state before and after each test."""
-    api(server_url, "put", "/api/poll/status", json={"open": False})
-    api(server_url, "delete", "/api/poll")
+    sapi(server_url, "put", "/poll/status", json={"open": False})
+    sapi(server_url, "delete", "/poll")
     yield
-    api(server_url, "put", "/api/poll/status", json={"open": False})
-    api(server_url, "delete", "/api/poll")
+    sapi(server_url, "put", "/poll/status", json={"open": False})
+    sapi(server_url, "delete", "/poll")
 
 
 @pytest.mark.usefixtures("clean_poll")
@@ -157,7 +157,7 @@ class TestPollEdgeCases:
         p2 = ParticipantPage(ctx2.new_page())
         p3 = ParticipantPage(ctx3.new_page())
 
-        host._page.goto("/host")
+        host._page.goto(host_url())
         p1._page.goto(pax_url())
         p2._page.goto(pax_url())
         p3._page.goto(pax_url())
@@ -198,7 +198,7 @@ class TestPollEdgeCases:
         p1 = ParticipantPage(ctx1.new_page())
         p2 = ParticipantPage(ctx2.new_page())
 
-        host._page.goto("/host")
+        host._page.goto(host_url())
         p1._page.goto(pax_url())
         p2._page.goto(pax_url())
 
@@ -298,7 +298,7 @@ class TestIdentityEdgeCases:
         p1 = ParticipantPage(ctx1.new_page())
         p2 = ParticipantPage(ctx2.new_page())
 
-        host._page.goto("/host")
+        host._page.goto(host_url())
         p1._page.goto(pax_url())
         p2._page.goto(pax_url())
 

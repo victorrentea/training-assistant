@@ -34,6 +34,10 @@ HOST_PASS = os.environ.get("HOST_PASSWORD", "testpass")
 @pytest.fixture(scope="module")
 def server_url():
     if LOAD_TEST_URL:
+        # Fetch active session from the remote server
+        r = requests.get(f"{LOAD_TEST_URL}/api/session/active")
+        r.raise_for_status()
+        _load_session_id[0] = r.json().get("session_id")
         yield LOAD_TEST_URL
         return
     server_env = os.environ.copy()
@@ -60,9 +64,29 @@ def server_url():
         proc.terminate()
         raise RuntimeError("uvicorn did not log a bound port within 15s")
     threading.Thread(target=proc.stderr.read, daemon=True).start()
-    yield f"http://127.0.0.1:{port}"
+    base_url = f"http://127.0.0.1:{port}"
+
+    # Create a session so session-scoped participant routes are accessible
+    r = requests.post(
+        f"{base_url}/api/session/create",
+        auth=(HOST_USER, HOST_PASS),
+        json={"name": "load-test", "type": "workshop"},
+    )
+    r.raise_for_status()
+    _load_session_id[0] = r.json().get("session_id")
+
+    yield base_url
     proc.terminate()
     proc.wait(timeout=5)
+
+
+_load_session_id = [None]
+
+
+def _shost(base_url, method, path, **kwargs):
+    """Session-scoped authenticated API call for load tests."""
+    sid = _load_session_id[0] or ""
+    return _host(base_url, method, f"/api/{sid}{path}", **kwargs)
 
 
 def _host(base_url, method, path, **kwargs):
@@ -193,7 +217,7 @@ def test_load(server_url):
         # Phase 2: host creates and opens poll
         # Use asyncio.to_thread so requests don't block the event loop (participant ping/pong)
         poll_resp = await asyncio.to_thread(
-            lambda: _host(server_url, "post", "/api/poll", json={
+            lambda: _shost(server_url, "post", "/poll", json={
                 "question": "Load test poll — pick any option",
                 "options": ["Option A", "Option B", "Option C", "Option D"],
             })
@@ -201,7 +225,7 @@ def test_load(server_url):
         assert poll_resp.status_code == 200, f"create_poll failed: {poll_resp.text}"
         correct_id = poll_resp.json()["poll"]["options"][0]["id"]  # opt0 is the "correct" answer
 
-        await asyncio.to_thread(lambda: _host(server_url, "put", "/api/poll/status", json={"open": True}))
+        await asyncio.to_thread(lambda: _shost(server_url, "put", "/poll/status", json={"open": True}))
         poll_ready_event.set()
         print(f"✓ Poll opened — {n} participants voting...")
 
@@ -219,8 +243,8 @@ def test_load(server_url):
         print(f"✓ All {n} votes cast")
 
         # Phase 4: close poll and post correct answer → triggers scores broadcast
-        await asyncio.to_thread(lambda: _host(server_url, "put", "/api/poll/status", json={"open": False}))
-        await asyncio.to_thread(lambda: _host(server_url, "put", "/api/poll/correct", json={"correct_ids": [correct_id]}))
+        await asyncio.to_thread(lambda: _shost(server_url, "put", "/poll/status", json={"open": False}))
+        await asyncio.to_thread(lambda: _shost(server_url, "put", "/poll/correct", json={"correct_ids": [correct_id]}))
         print("✓ Poll closed, correct answer posted")
 
         # Phase 5: wait for all scores received
@@ -241,11 +265,11 @@ def test_load(server_url):
     finally:
         # Teardown: always clean up server state (essential for prod)
         try:
-            _host(server_url, "delete", "/api/poll")
+            _shost(server_url, "delete", "/poll")
         except Exception as exc:
             print(f"  [warn] DELETE /api/poll failed during teardown: {exc}")
         try:
-            _host(server_url, "delete", "/api/scores")
+            _shost(server_url, "delete", "/scores")
         except Exception as exc:
             print(f"  [warn] DELETE /api/scores failed during teardown: {exc}")
 

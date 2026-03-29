@@ -102,7 +102,7 @@ async def upload_file(
     return {"ok": True, "id": file_id, "filename": filename, "size": total}
 
 
-@router.get("/api/upload/{file_id}", dependencies=[Depends(require_host_auth)])
+@router.get("/upload/{file_id}", dependencies=[Depends(require_host_auth)])
 async def download_file(file_id: int):
     result = _find_entry(file_id)
     if not result:

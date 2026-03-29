@@ -12,7 +12,7 @@ class ActivitySwitch(BaseModel):
     activity: str  # "poll" | "wordcloud" | "qa" | "debate" | "none"
 
 
-@router.post("/api/activity", dependencies=[Depends(require_host_auth)])
+@router.post("/activity", dependencies=[Depends(require_host_auth)])
 async def set_activity(body: ActivitySwitch):
     try:
         new_activity = ActivityType(body.activity)

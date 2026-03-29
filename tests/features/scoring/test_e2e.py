@@ -8,7 +8,7 @@ reset scores, and confetti on correct answer.
 import pytest
 from playwright.sync_api import expect
 
-from conftest import api, host_browser_ctx, pax_browser_ctx
+from conftest import api, sapi, host_browser_ctx, pax_browser_ctx
 from pages.host_page import HostPage
 from pages.participant_page import ParticipantPage
 
@@ -64,7 +64,7 @@ class TestScoring:
         assert pax.get_score() == 100
 
         # Reset scores via API
-        api(server_url, "delete", "/api/scores")
+        sapi(server_url, "delete", "/scores")
         pax._page.wait_for_timeout(1500)  # wait for WS broadcast
 
         score = pax.get_score()

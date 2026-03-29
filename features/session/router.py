@@ -15,7 +15,8 @@ from core.messaging import broadcast_state
 from features.ws.daemon_protocol import push_to_daemon
 from daemon.transcript.query import load_normalized_entries
 
-router = APIRouter()
+router = APIRouter()          # global session endpoints
+session_router = APIRouter()  # session-scoped endpoints (mounted under /api/{session_id}/)
 
 
 def _get_sessions_root() -> Path | None:
@@ -51,7 +52,6 @@ class RenameSessionRequest(BaseModel):
 
 class SyncSessionRequest(BaseModel):
     main: dict | None = None
-    talk: dict | None = None
     discussion_points: list = []
     session_state: dict | None = None
     action: str | None = None
@@ -65,6 +65,7 @@ class SyncSessionRequest(BaseModel):
 @router.post("/api/session/start", dependencies=[Depends(require_host_auth)])
 async def start_session(body: StartSessionRequest):
     session_id = state.generate_session_id()
+    state.session_name = body.name
     state.session_request = {"action": "start", "name": body.name, "session_id": session_id}
     await push_to_daemon({"type": "session_request", **state.session_request})
     return {"ok": True}
@@ -97,31 +98,19 @@ async def resume_session():
     return {"ok": True}
 
 
-@router.post("/api/session/start_talk", dependencies=[Depends(require_host_auth)])
-async def start_talk():
-    state.session_request = {"action": "start_talk"}
-    await push_to_daemon({"type": "session_request", **state.session_request})
-    return {"ok": True}
-
-
-@router.post("/api/session/end_talk", dependencies=[Depends(require_host_auth)])
-async def end_talk():
-    state.session_request = {"action": "end_talk"}
-    await push_to_daemon({"type": "session_request", **state.session_request})
-    return {"ok": True}
-
-
-class SessionNameBody(BaseModel):
+class SessionCreateBody(BaseModel):
     name: str
+    type: str = "workshop"
 
 
 @router.post("/api/session/create", dependencies=[Depends(require_host_auth)])
-async def create_session(body: SessionNameBody):
-    if not state.session_id:
-        state.generate_session_id()
-    state.session_request = {"action": "create", "name": body.name}
+async def create_session(body: SessionCreateBody):
+    session_id = state.generate_session_id()
+    state.session_name = body.name
+    state.session_type = body.type
+    state.session_request = {"action": "create", "name": body.name, "session_id": state.session_id}
     await push_to_daemon({"type": "session_request", **state.session_request})
-    return {"ok": True}
+    return {"ok": True, "session_id": state.session_id, "session_name": state.session_name}
 
 
 @router.patch("/api/session/rename", dependencies=[Depends(require_host_auth)])
@@ -232,6 +221,12 @@ def _restore_state_from_snapshot(snap: dict):
     # Session ID (generate if missing — e.g. old snapshot from before session security)
     state.session_id = snap.get("session_id") or state.generate_session_id()
 
+    # Session name and type
+    if snap.get("session_name") is not None:
+        state.session_name = snap["session_name"]
+    if snap.get("session_type") is not None:
+        state.session_type = snap["session_type"]
+
     # Misc
     state.leaderboard_active = snap.get("leaderboard_active", False)
     if snap.get("token_usage"):
@@ -242,11 +237,10 @@ def _restore_state_from_snapshot(snap: dict):
         state.git_repos = snap["git_repos"]
 
 
-@router.post("/api/session/sync", dependencies=[Depends(require_host_auth)])
+@session_router.post("/session/sync", dependencies=[Depends(require_host_auth)])
 async def sync_session(body: SyncSessionRequest):
-    if body.main is not None or body.talk is not None:
+    if body.main is not None:
         state.session_main = body.main
-        state.session_talk = body.talk
     key_points = body.key_points or body.discussion_points
     if key_points:
         state.summary_points = key_points
@@ -257,18 +251,8 @@ async def sync_session(body: SyncSessionRequest):
     if body.git_repos:
         state.git_repos = body.git_repos
 
-    # Manage paused participants BEFORE restoring
-    if body.action == "start_talk":
-        state.paused_participant_uuids = set(state.participant_names.keys())
-    elif body.action == "end_talk":
-        state.paused_participant_uuids = set(state.participant_names.keys())
-
     if body.session_state:
         _restore_state_from_snapshot(body.session_state)
-
-    # Plain server-restart restore: clear paused set
-    if body.action is None and body.session_state:
-        state.paused_participant_uuids = set()
 
     # Safety net: ensure session_id exists whenever a session is active
     if state.session_main and not state.session_id:
@@ -283,7 +267,7 @@ class TimingEventBody(BaseModel):
     minutes_remaining: int | None = None
 
 
-@router.post("/api/session/timing_event", dependencies=[Depends(require_host_auth)])
+@session_router.post("/session/timing_event", dependencies=[Depends(require_host_auth)])
 async def timing_event(body: TimingEventBody):
     """Daemon notifies server of a time-based event; server pushes to host WS."""
     host_ws = state.participants.get("__host__")
@@ -299,8 +283,8 @@ async def timing_event(body: TimingEventBody):
     return {"ok": True}
 
 
-@router.get(
-    "/api/session/interval-lines.txt",
+@session_router.get(
+    "/session/interval-lines.txt",
     dependencies=[Depends(require_host_auth)],
     response_class=PlainTextResponse,
 )
@@ -359,7 +343,7 @@ async def list_session_folders():
     return {"folders": folders}
 
 
-@router.get("/api/session/snapshot", dependencies=[Depends(require_host_auth)])
+@session_router.get("/session/snapshot", dependencies=[Depends(require_host_auth)])
 async def get_session_snapshot():
     """Returns full serializable session state for daemon to persist to disk every 5s."""
     participants = {}
@@ -436,4 +420,19 @@ async def get_session_snapshot():
 @router.get("/api/session/active")
 async def get_session_active():
     """Public endpoint: returns whether a session is active (no code revealed)."""
-    return {"active": state.session_id is not None}
+    return {"active": state.session_id is not None, "session_id": state.session_id, "session_name": state.session_name}
+
+
+class ResumeFolderBody(BaseModel):
+    folder_name: str
+
+
+@router.post("/api/session/resume-folder", dependencies=[Depends(require_host_auth)])
+async def resume_session_folder(body: ResumeFolderBody):
+    """Host resumes a past session from a folder. Reuses old session_id from snapshot if available."""
+    state.session_name = body.folder_name
+    if not state.session_id:
+        state.generate_session_id()
+    state.session_request = {"action": "create", "name": body.folder_name, "session_id": state.session_id}
+    await push_to_daemon({"type": "session_request", **state.session_request})
+    return {"ok": True, "session_id": state.session_id, "session_name": state.session_name}

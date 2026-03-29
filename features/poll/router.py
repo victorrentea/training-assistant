@@ -13,8 +13,9 @@ from pydantic import BaseModel
 from core.messaging import broadcast, broadcast_state, participant_ids
 from core.state import state, ActivityType
 
-router = APIRouter()
+router = APIRouter()          # session-scoped host endpoints (mounted under /api/{session_id}/)
 public_router = APIRouter()  # participant-facing endpoints (no auth), mounted under session prefix
+global_router = APIRouter()  # global endpoints (no session prefix — daemon + backward compat)
 logger = logging.getLogger(__name__)
 
 
@@ -63,7 +64,7 @@ class PollCorrect(BaseModel):
     correct_ids: list[str]
 
 
-@router.post("/api/poll", dependencies=[Depends(require_host_auth)])
+@router.post("/poll", dependencies=[Depends(require_host_auth)])
 async def create_poll(poll: PollCreate):
     if not poll.question.strip():
         raise HTTPException(400, "Question cannot be empty")
@@ -95,7 +96,7 @@ async def create_poll(poll: PollCreate):
     return {"ok": True, "poll": state.poll}
 
 
-@router.put("/api/poll/status", dependencies=[Depends(require_host_auth)])
+@router.put("/poll/status", dependencies=[Depends(require_host_auth)])
 async def set_poll_status(body: PollOpen):
     if not state.poll:
         raise HTTPException(400, "No poll created yet")
@@ -111,7 +112,7 @@ async def set_poll_status(body: PollOpen):
     return {"ok": True, "poll_active": state.poll_active}
 
 
-@router.put("/api/poll/correct", dependencies=[Depends(require_host_auth)])
+@router.put("/poll/correct", dependencies=[Depends(require_host_auth)])
 async def set_correct_options(body: PollCorrect):
     if not state.poll:
         raise HTTPException(400, "No active poll")
@@ -194,7 +195,7 @@ async def set_correct_options(body: PollCorrect):
     return {"ok": True}
 
 
-@router.post("/api/poll/timer", dependencies=[Depends(require_host_auth)])
+@router.post("/poll/timer", dependencies=[Depends(require_host_auth)])
 async def start_poll_timer(body: PollTimer):
     """Host starts a countdown; broadcasts timer to all clients."""
     if not state.poll_active:
@@ -208,7 +209,7 @@ async def start_poll_timer(body: PollTimer):
     return {"ok": True}
 
 
-@router.delete("/api/poll", dependencies=[Depends(require_host_auth)])
+@router.delete("/poll", dependencies=[Depends(require_host_auth)])
 async def clear_poll():
     state.poll = None
     state.poll_active = False
@@ -245,9 +246,9 @@ def _status_response():
     }
 
 
-@router.get("/api/status")
+@global_router.get("/api/status")
 async def status():
-    """Status endpoint on main router (daemon + backward compat)."""
+    """Status endpoint on global router (daemon + backward compat)."""
     return _status_response()
 
 
@@ -257,7 +258,7 @@ async def status_public():
     return _status_response()
 
 
-@router.post("/api/pending-deploy")
+@global_router.post("/api/pending-deploy")
 async def set_pending_deploy(payload: dict):
     """Called by deploy watcher or GitHub Actions when a new push is detected on master."""
     incoming_sha = (payload.get("sha") or "").strip()

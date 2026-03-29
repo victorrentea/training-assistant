@@ -76,9 +76,25 @@ def _post_json(url: str, payload: dict, username: str = "", password: str = "") 
     return _request_json(url, payload, method="POST", username=username, password=password)
 
 
+def session_api_url(base_url: str, session_id: str | None, path: str) -> str:
+    """Build a session-scoped API URL. Falls back to non-scoped if session_id is None."""
+    if session_id:
+        return f"{base_url}/api/{session_id}{path}"
+    return f"{base_url}/api{path}"
+
+
 def _get_json(url: str, username: str = "", password: str = "") -> dict:
     headers = {}
     if username:
         headers["Authorization"] = "Basic " + base64.b64encode(f"{username}:{password}".encode()).decode()
     req = urllib.request.Request(url, headers=headers)
     return _urlopen_json(req, url)
+
+
+def get_active_session_id(server_url: str) -> str | None:
+    """Fetch the active session_id from the server. Returns None if server is unreachable or no active session."""
+    try:
+        data = _get_json(f"{server_url}/api/session/active")
+        return data.get("session_id") if data.get("active") else None
+    except Exception:
+        return None
