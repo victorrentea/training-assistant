@@ -1035,6 +1035,7 @@ def run() -> None:
                             slides_log = []
                             git_repos = []
                             _last_activity_log_key = (0, 0)
+                            _active_session_id = None
                             log.info("session", f"Ended: {ended['name']}")
                         _do_save_daemon_state()
                         global_state_persisted = True

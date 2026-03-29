@@ -53,7 +53,6 @@
     'git-repos-badge': 'Git repos activity',
     'slides-log-badge': 'Slides activity',
     'slides-catalog-icon': 'Slides catalog status',
-    'stop-session-btn-left': 'Stop session',
   };
 
   function _ensureFooterBadgeTooltip(target) {
@@ -184,6 +183,7 @@
     pLink.addEventListener('click', onFooterJoinLinkClick);
   }
   _setupSlidesCatalogHover();
+  _setupStopSessionHover();
   _setupActivityLogHovers();
 
   // ── WebSocket (host monitors state too) ──
@@ -1012,6 +1012,20 @@
     return Math.floor(ms / 3600000) + 'h ago';
   }
 
+  function _setupStopSessionHover() {
+    const wrap = document.getElementById('stop-session-wrap-left');
+    const bubble = document.getElementById('stop-confirm-bubble-left');
+    if (!wrap || !bubble) return;
+    let hideTimer;
+    wrap.addEventListener('mouseenter', () => {
+      clearTimeout(hideTimer);
+      bubble.style.display = '';
+    });
+    wrap.addEventListener('mouseleave', () => {
+      hideTimer = setTimeout(() => { bubble.style.display = 'none'; }, 150);
+    });
+  }
+
   function _setupSlidesCatalogHover() {
     const hover = document.getElementById('slides-catalog-hover');
     const popover = document.getElementById('slides-catalog-popover');
@@ -1087,8 +1101,8 @@
       const popover = document.getElementById(popoverId);
       if (!hover) return;
       let hideTimer = null;
-      const open = () => { clearTimeout(hideTimer); if (popover) popover.hidden = false; hover.classList.add('open'); renderFn(); };
-      const close = () => { clearTimeout(hideTimer); hideTimer = setTimeout(() => { hover.classList.remove('open'); if (popover) popover.hidden = true; }, 120); };
+      const open = () => { clearTimeout(hideTimer); hover.classList.add('open'); renderFn(); };
+      const close = () => { clearTimeout(hideTimer); hideTimer = setTimeout(() => { hover.classList.remove('open'); }, 120); };
       hover.addEventListener('mouseenter', open);
       hover.addEventListener('mouseleave', close);
     }
