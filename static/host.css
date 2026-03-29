@@ -1248,17 +1248,6 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
 .host-col-left.conference-layout .tab-content {
   overflow-y: auto;
 }
-/* Mode badge — white background for visibility */
-.mode-badge-workshop {
-  background: #fff !important;
-  color: #333 !important;
-  border: 2px solid var(--accent) !important;
-}
-.mode-badge-conference {
-  background: #fff !important;
-  color: #333 !important;
-  border: 2px solid #e74c3c !important;
-}
 
 /* Conference mode: center QR — themed background with bordered QR */
 .conference-center-qr {
