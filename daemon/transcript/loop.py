@@ -160,10 +160,15 @@ class TranscriptNormalizerRunner:
             _LLM_FILTER_STATS["last_ms"] = None
             results = normalize_folder_incremental(self.folder, line_pre_filter=_llm_line_filter)
             written = sum(r.written_lines for r in results)
+            crude_words = sum(r.raw_words for r in results)
             llm_ms = _LLM_FILTER_STATS.get("last_ms")
             llm_provider = _LLM_FILTER_STATS.get("provider")
             llm_name = str(llm_provider or "").strip()
-            llm_part = f" (🤖 {llm_ms:.0f}ms{(' ' + llm_name) if llm_name else ''})" if llm_ms is not None else ""
+            if llm_ms is not None:
+                crude_part = f"of {crude_words} " if crude_words > 0 else ""
+                llm_part = f" ({crude_part}🤖 {llm_ms:.0f}ms{(' ' + llm_name) if llm_name else ''})"
+            else:
+                llm_part = ""
             if written > 0:
                 words = sum(r.written_words for r in results)
                 output_files = len({str(p) for r in results for p in r.output_files})
