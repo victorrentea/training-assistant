@@ -99,7 +99,7 @@ start_overlay() {
 }
 
 start_wispr() {
-  python3 wispr-addons/clean.py &
+  python3 wispr-addons/app.py &
   WISPR_PID=$!
 }
 

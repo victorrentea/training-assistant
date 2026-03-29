@@ -364,15 +364,21 @@ class WisprAddonsApp(rumps.App):
             quit_button=None,
         )
         self.menu = [
-            rumps.MenuItem("Hotkeys:", callback=None),
-            rumps.MenuItem("  \u2318\u2303V — Clean paste", callback=None),
-            rumps.MenuItem("  \u2318\u2303\u2325V — Clean + emoji", callback=None),
-            rumps.MenuItem("  Mouse 5 — Dictation mute", callback=None),
+            rumps.MenuItem("\u2318\u2303V — Clean paste", callback=self.on_clean),
+            rumps.MenuItem("\u2318\u2303\u2325V — Clean + emoji", callback=self.on_clean_emoji),
+            rumps.MenuItem("Mouse 5 — Dictation mute", callback=None),
             None,  # separator
             rumps.MenuItem("Show Log", callback=self.show_log),
             None,
             rumps.MenuItem("Quit", callback=self.quit_app),
         ]
+        self.menu["Mouse 5 — Dictation mute"].enabled = False
+
+    def on_clean(self, _):
+        threading.Thread(target=handle_clean_hotkey, args=(False,), daemon=True).start()
+
+    def on_clean_emoji(self, _):
+        threading.Thread(target=handle_clean_hotkey, args=(True,), daemon=True).start()
 
     def show_log(self, _):
         log_text = "\n".join(_log_buffer) if _log_buffer else "(no log entries yet)"
@@ -397,9 +403,11 @@ def main():
             if line and not line.startswith("#") and "=" in line:
                 key, _, value = line.partition("=")
                 os.environ[key.strip()] = value.strip()
-    if not os.environ.get("ANTHROPIC_API_KEY"):
-        rumps.alert("Wispr Addons", f"ANTHROPIC_API_KEY not set.\nAdd it to:\n{secrets_path}")
+    api_key = os.environ.get("WISPR_CLEANUP_ANTHROPIC_API_KEY")
+    if not api_key:
+        rumps.alert("Wispr Addons", f"WISPR_CLEANUP_ANTHROPIC_API_KEY not set.\nAdd it to:\n{secrets_path}")
         sys.exit(1)
+    os.environ["ANTHROPIC_API_KEY"] = api_key
 
     _client = anthropic.Anthropic(max_retries=0)
 
