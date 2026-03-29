@@ -3283,12 +3283,12 @@ function renderSessionPanel() {
   // Session title in top bar center
   const titleEl = document.getElementById('host-top-title');
   if (titleEl) titleEl.textContent = main ? main.name : '';
-  // Stop button visibility
+  // Stop button is always enabled (host can always request session end).
   const stopBtn = document.getElementById('stop-session-btn-left');
   if (stopBtn) {
-    stopBtn.disabled = !main;
-    stopBtn.style.pointerEvents = main ? '' : 'none';
-    stopBtn.classList.toggle('disabled', !main);
+    stopBtn.disabled = false;
+    stopBtn.style.pointerEvents = '';
+    stopBtn.classList.remove('disabled');
   }
 
   // Main session row
