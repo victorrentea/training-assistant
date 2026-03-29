@@ -428,7 +428,7 @@ class TestEdgeCases:
             p3.vote_for("Alpha")
 
             # Host should show 3 total votes
-            expect(host._page.locator("text=3 total vote")).to_be_visible(timeout=5000)
+            expect(host._page.locator("#vote-progress-label")).to_contain_text("3 of", timeout=5000)
         finally:
             api(server_url, "put", "/api/poll/status", json={"open": False})
             api(server_url, "delete", "/api/poll")

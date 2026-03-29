@@ -143,7 +143,7 @@ class TestPollEdgeCases:
         pax._page.wait_for_timeout(500)
 
         # Host should still show only 1 vote total
-        expect(host._page.locator("text=1 total vote")).to_be_visible(timeout=3000)
+        expect(host._page.locator("#vote-progress-label")).to_contain_text("1 of", timeout=3000)
 
     def test_multiple_participants_vote_correct_counts(self, server_url, playwright):
         """3 participants: P1→A, P2→B, P3→A. Host sees A=2, B=1."""
@@ -172,7 +172,7 @@ class TestPollEdgeCases:
             p2.vote_for("B")
             p3.vote_for("A")
 
-            expect(host._page.locator("text=3 total vote")).to_be_visible(timeout=5000)
+            expect(host._page.locator("#vote-progress-label")).to_contain_text("3 of", timeout=5000)
 
             host.close_poll()
             # Check percentages from any participant

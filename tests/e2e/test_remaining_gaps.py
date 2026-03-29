@@ -15,7 +15,7 @@ from playwright.sync_api import expect
 
 from pages.host_page import HostPage
 from pages.participant_page import ParticipantPage
-from conftest import api, host_browser_ctx, pax_browser_ctx
+from conftest import api, host_browser_ctx, pax_browser_ctx, pax_url
 
 
 # ---------------------------------------------------------------------------
@@ -47,7 +47,7 @@ class TestMultiSelectPoll:
         p1 = ParticipantPage(ctx1.new_page())
 
         host._page.goto("/host")
-        p1._page.goto("/")
+        p1._page.goto(pax_url())
 
         try:
             p1.join("MultiVoter")
@@ -60,8 +60,8 @@ class TestMultiSelectPoll:
             p1.multi_vote("A", "C")
             p1._page.wait_for_timeout(1000)
 
-            # Host should see 1 total vote
-            expect(host._page.locator("text=1 total vote")).to_be_visible(timeout=5000)
+            # Host should see 1 vote registered
+            expect(host._page.locator("#vote-progress-label")).to_contain_text("1 of", timeout=5000)
         finally:
             for ctx in (ctx_host, ctx1):
                 ctx.close()
@@ -77,7 +77,7 @@ class TestMultiSelectPoll:
         p1 = ParticipantPage(ctx1.new_page())
 
         host._page.goto("/host")
-        p1._page.goto("/")
+        p1._page.goto(pax_url())
 
         try:
             p1.join("AllCorrect")
@@ -113,7 +113,7 @@ class TestMultiSelectPoll:
         p1 = ParticipantPage(ctx1.new_page())
 
         host._page.goto("/host")
-        p1._page.goto("/")
+        p1._page.goto(pax_url())
 
         try:
             p1.join("PartialVoter")
@@ -149,7 +149,7 @@ class TestMultiSelectPoll:
         p1 = ParticipantPage(ctx1.new_page())
 
         host._page.goto("/host")
-        p1._page.goto("/")
+        p1._page.goto(pax_url())
 
         try:
             p1.join("AllWrong")
@@ -278,8 +278,8 @@ class TestLeaderboard:
         p2 = ParticipantPage(ctx2.new_page())
 
         host._page.goto("/host")
-        p1._page.goto("/")
-        p2._page.goto("/")
+        p1._page.goto(pax_url())
+        p2._page.goto(pax_url())
 
         try:
             p1.join("Leader1")
@@ -459,7 +459,7 @@ class TestAdditionalEdgeCases:
         p1 = ParticipantPage(ctx1.new_page())
 
         host._page.goto("/host")
-        p1._page.goto("/")
+        p1._page.goto(pax_url())
 
         try:
             p1.join("EarlyQA")
@@ -525,7 +525,7 @@ class TestAdditionalEdgeCases:
         p1 = ParticipantPage(ctx1.new_page())
 
         host._page.goto("/host")
-        p1._page.goto("/")
+        p1._page.goto(pax_url())
 
         try:
             p1.join("CapTest")
@@ -564,7 +564,7 @@ class TestAdditionalEdgeCases:
 
         host = HostPage(ctx_host.new_page())
         p1_page = ctx1.new_page()
-        p1_page.goto("/")
+        p1_page.goto(pax_url())
         p1 = ParticipantPage(p1_page)
 
         host._page.goto("/host")
