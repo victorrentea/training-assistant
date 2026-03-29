@@ -1,15 +1,10 @@
 {
-  "sha": "0f2b1eebedff831ca144dcd73f7ed8a9daae42e5",
-  "timestamp": "2026-03-29 12:40",
+  "sha": "0a1df0d6118567fa6ea255b9081b8da3c9c80554",
+  "timestamp": "2026-03-29 12:41",
   "changelog": [
-    "feat(host-landing): replace radio+create with two typed start buttons"
+    "feat(wispr-addons): add menu bar icon with clickable clean repaste actions"
   ],
   "branches": [
-    {
-      "branch": "fix-version-reload-loop",
-      "sha": "8cbb273",
-      "minutes": 442
-    },
     {
       "branch": "fix-transcription-lang-sync",
       "sha": "3a35f5c",
@@ -84,6 +79,11 @@
       "branch": "ai-coding-category-line",
       "sha": "8fa3b8e",
       "minutes": 20
+    },
+    {
+      "branch": "wispr-menu-clickable",
+      "sha": "0a1df0d",
+      "minutes": 19
     },
     {
       "branch": "remove-host-heart-drone",
