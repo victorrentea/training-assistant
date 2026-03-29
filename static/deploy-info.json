@@ -1,10 +1,15 @@
 {
-  "sha": "4360b30223f44799d9b652b12b9c517459af7a82",
-  "timestamp": "2026-03-29 15:33",
+  "sha": "146ec2a95842ea9b02d24fb48c76dab259dc0355",
+  "timestamp": "2026-03-29 15:34",
   "changelog": [
-    "Include crude word count in transcript noise logs"
+    "Fix daemon startup UnboundLocalError for state save"
   ],
   "commits": [
+    {
+      "sha": "146ec2a9",
+      "msg": "Fix daemon startup UnboundLocalError for state save",
+      "ts": "2026-03-29T15:34:18+03:00"
+    },
     {
       "sha": "4360b302",
       "msg": "Include crude word count in transcript noise logs",
@@ -99,11 +104,6 @@
       "sha": "a0c9dfeb",
       "msg": "feat: show daemon connection status on host landing page",
       "ts": "2026-03-29T14:55:36+03:00"
-    },
-    {
-      "sha": "80cca2ff",
-      "msg": "feat: play Sosumi sound on daemon clean exit",
-      "ts": "2026-03-29T14:57:01+03:00"
     }
   ],
   "branches": [
