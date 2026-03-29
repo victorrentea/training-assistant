@@ -1,10 +1,21 @@
 {
-  "sha": "0caf1d01c473e831496806d34f02da4a71bf350b",
-  "timestamp": "2026-03-29 13:10",
+  "sha": "2f4c32ddce12e5f4ce4c21bd2a5c27c5c2fcad85",
+  "timestamp": "2026-03-29 13:14",
   "changelog": [
-    "fix(session): folders only transferred on backend start, not every daemon reconnect"
+    "feat(wispr-addons): use \ud83c\udf99\ufe0f emoji PNG as menu bar icon",
+    "refactor(session): simplify folders sync \u2014 use on_connect push instead of request/response"
   ],
   "commits": [
+    {
+      "sha": "2f4c32dd",
+      "msg": "feat(wispr-addons): use \ud83c\udf99\ufe0f emoji PNG as menu bar icon",
+      "ts": "2026-03-29T13:13:59+03:00"
+    },
+    {
+      "sha": "ce896631",
+      "msg": "refactor(session): simplify folders sync \u2014 use on_connect push instead of request/response",
+      "ts": "2026-03-29T13:13:54+03:00"
+    },
     {
       "sha": "0caf1d01",
       "msg": "fix(session): folders only transferred on backend start, not every daemon reconnect",
@@ -94,16 +105,6 @@
       "sha": "551e2d5d",
       "msg": "feat(wispr-addons): load API key from ~/.training-assistants-secrets.env",
       "ts": "2026-03-29T12:41:36+03:00"
-    },
-    {
-      "sha": "0a1df0d6",
-      "msg": "feat(wispr-addons): add menu bar icon with clickable clean repaste actions",
-      "ts": "2026-03-29T12:40:51+03:00"
-    },
-    {
-      "sha": "0f2b1eeb",
-      "msg": "feat(host-landing): replace radio+create with two typed start buttons",
-      "ts": "2026-03-29T12:40:26+03:00"
     }
   ],
   "branches": [
@@ -173,6 +174,11 @@
       "minutes": 36
     },
     {
+      "branch": "host-landing-scroll-fix",
+      "sha": "26c55c4",
+      "minutes": 32
+    },
+    {
       "branch": "fix-ui-layout-cutoff",
       "sha": "739e719",
       "minutes": 27
@@ -200,11 +206,6 @@
     {
       "branch": "pdf-fit-width-btn",
       "sha": "60d7e4a",
-      "minutes": 10
-    },
-    {
-      "branch": "fix-slides-scroll-drift",
-      "sha": "9babc87",
       "minutes": 10
     }
   ]
