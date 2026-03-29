@@ -181,15 +181,15 @@ training-assistant/
 │   ├── version-age.js       ← Version age display in corner
 │   ├── version-reload.js    ← Auto-reload on version change
 │   └── work-hours.js        ← Work hours utility (do not auto-edit)
-├── adoc/                    ← Architecture diagrams (PlantUML C4)
-│   ├── c4_c2_containers.puml ← C2 Containers
-│   ├── c3_backend.puml      ← C3 FastAPI backend components
-│   ├── c3_host_daemon.puml  ← C3 Daemon components
-│   └── c3_desktop_overlay.puml ← C3 Desktop overlay + Wispr Addons
+├── adoc/                    ← Sequence diagrams (PlantUML)
+│   ├── seq_debate_flow.puml ← Debate sequence flow
+│   ├── seq_quiz_flow.puml   ← Quiz sequence flow
+│   ├── seq_slides_*.puml    ← Slides sequence flows
+│   └── seq_summary_flow.puml ← Summary sequence flow
 └── docs/
     └── messaging-registry.md ← Registry pattern architecture doc
 ```
-- For architecture diagrams and deep-dive reference, see [ARCHITECTURE.md](ARCHITECTURE.md).
+- All C4 diagrams (C1, C2, C3) and the system interactions sequence diagram are inlined in [ARCHITECTURE.md](ARCHITECTURE.md).
 ---
 
 ## AppState model
@@ -376,8 +376,8 @@ The user frequently uses a dictation tool. Messages may contain misheard or mist
 - **After completing each backlog item**: create a git commit and push directly to master (no PR needed for this project).
 - **After completing each backlog item**: attach proof before marking it done (screenshot evidence by default; for non-visual tasks, include equivalent captured proof such as test output/logs).
 - **Deploy monitoring**: `./watch-deploy.sh` runs continuously in the background (started once per work session). It writes a heartbeat to `/tmp/watch_deploy.lock` (JSON with `pid` and `heartbeat` epoch). **After creating a PR**, check the lock file: read the JSON, verify the PID is alive (`kill -0`) and heartbeat is fresh (<15s). If running, praise the user ("Deploy watcher is running"). If not running or stale, warn and suggest: `./watch-deploy.sh &`
-- **After any significant architectural change**: update the C4 diagrams in `adoc/` (c4_c2_containers.puml, c3_backend.puml, c3_host_daemon.puml, c3_desktop_overlay.puml) and [ARCHITECTURE.md](ARCHITECTURE.md) to reflect the new structure.
-- **After any change to inter-system communication** (WebSocket messages, REST endpoints, HTTP calls between backend/daemon/frontend/overlay/external services): update `docs/system-interactions.puml` to keep the sequence diagram in sync with the code. This includes adding, removing, or renaming WS message types, HTTP endpoints, or changing which component initiates a flow.
+- **After any significant architectural change**: update the C4 diagrams (C1, C2, C3) and system interactions sequence diagram inlined in [ARCHITECTURE.md](ARCHITECTURE.md) to reflect the new structure.
+- **After any change to inter-system communication** (WebSocket messages, REST endpoints, HTTP calls between backend/daemon/frontend/overlay/external services): update the "System Interactions" sequence diagram inlined in [ARCHITECTURE.md](ARCHITECTURE.md) to keep it in sync with the code. This includes adding, removing, or renaming WS message types, HTTP endpoints, or changing which component initiates a flow.
 - **Test-Drive-Fix any human-reported bug**: start by reproducing the bug yourself manually, then write an automated test for the bug, see it failing, then passing after you fixed the bug.
 - **Document direct request**: Every time the human requests a feature change or bug fix after you do it, keep track of it in backlog.md in a concise way as being done.
 
