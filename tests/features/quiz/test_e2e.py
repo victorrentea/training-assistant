@@ -1,6 +1,6 @@
 """E2E tests for routers/quiz.py and routers/summary.py."""
 import pytest
-from conftest import api
+from conftest import api, pax_url
 
 
 class TestQuizRequest:
@@ -92,7 +92,7 @@ class TestSummary:
 
     def test_get_summary(self, server_url):
         import requests
-        resp = requests.get(f"{server_url}/api/summary")
+        resp = requests.get(f"{server_url}{pax_url('/api/summary')}")
         assert resp.status_code == 200
         data = resp.json()
         assert "points" in data
@@ -103,7 +103,7 @@ class TestSummary:
 
     def test_get_notes(self, server_url):
         import requests
-        resp = requests.get(f"{server_url}/api/notes")
+        resp = requests.get(f"{server_url}{pax_url('/api/notes')}")
         assert resp.status_code == 200
         assert "content" in resp.json()
 
@@ -113,14 +113,14 @@ class TestSummary:
         assert resp.status_code == 200
 
     def test_force_summary(self, server_url):
-        resp = api(server_url, "post", "/api/summary/force")
+        resp = api(server_url, "post", pax_url("/api/summary/force"))
         assert resp.status_code == 200
 
     def test_poll_force(self, server_url):
-        api(server_url, "post", "/api/summary/force")
-        resp = api(server_url, "get", "/api/summary/force")
+        api(server_url, "post", pax_url("/api/summary/force"))
+        resp = api(server_url, "get", pax_url("/api/summary/force"))
         assert resp.status_code == 200
         assert resp.json()["requested"] is True
         # Second poll should be False
-        resp2 = api(server_url, "get", "/api/summary/force")
+        resp2 = api(server_url, "get", pax_url("/api/summary/force"))
         assert resp2.json()["requested"] is False

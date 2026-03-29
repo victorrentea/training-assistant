@@ -343,7 +343,7 @@ class TestConferenceMode:
 
             b_pax, ctx_pax = pax_browser_ctx(server_url, playwright)
             page = ctx_pax.new_page()
-            page.goto(server_url)
+            page.goto(pax_url())
 
             try:
                 # Should auto-join with character name
@@ -366,7 +366,7 @@ class TestConferenceMode:
 
             b_pax, ctx_pax = pax_browser_ctx(server_url, playwright)
             page = ctx_pax.new_page()
-            page.goto(server_url)
+            page.goto(pax_url())
 
             try:
                 expect(page.locator("#main-screen")).to_be_visible(timeout=10000)
@@ -427,7 +427,7 @@ class TestHostPanelGeneral:
         host._page.wait_for_timeout(1000)
         link = host._page.locator("#participant-link")
         expect(link).to_be_visible(timeout=5000)
-        href = link.get_attribute("href")
+        href = host._page.evaluate("document.getElementById('participant-link').href")
         assert href and "/" in href, f"Link should have a valid href, got: {href}"
 
     def test_qr_fullscreen_on_click(self, host: HostPage):
@@ -469,7 +469,7 @@ class TestAdditionalEdgeCases:
 
             # Now P2 joins late
             p2_page = ctx2.new_page()
-            p2_page.goto(server_url)
+            p2_page.goto(pax_url())
             p2 = ParticipantPage(p2_page)
             p2.join("LateQA")
 
@@ -494,7 +494,7 @@ class TestAdditionalEdgeCases:
             host._page.wait_for_timeout(500)
 
             p1_page = ctx1.new_page()
-            p1_page.goto(server_url)
+            p1_page.goto(pax_url())
             p1 = ParticipantPage(p1_page)
             p1.join("LateWC")
 
