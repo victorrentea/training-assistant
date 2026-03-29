@@ -42,6 +42,51 @@
 
   // ── Poll history (persisted in localStorage, keyed by today's date) ──
   const TODAY_KEY = `host_polls_${new Date().toISOString().slice(0, 10)}`;
+  const _FOOTER_BADGE_TOOLTIP_DEFAULTS = {
+    'ws-badge': 'Server connection status',
+    'daemon-badge': 'AI assistant status',
+    'overlay-badge': 'Desktop Overlay app',
+    'notes-badge': 'Session notes',
+    'summary-badge': 'Key points summary',
+    'btn-transcription-lang': 'Toggle transcription language',
+    'token-cost': 'Token usage and cost',
+    'git-repos-badge': 'Git repos activity',
+    'slides-log-badge': 'Slides activity',
+    'slides-catalog-icon': 'Slides catalog status',
+  };
+
+  function _ensureFooterBadgeTooltip(target) {
+    if (!target) return null;
+    let tip = target.querySelector('.footer-badge-tooltip');
+    if (!tip) {
+      tip = document.createElement('div');
+      tip.className = 'footer-badge-tooltip';
+      target.appendChild(tip);
+    }
+    return tip;
+  }
+
+  function _setFooterBadgeTooltip(targetOrId, text) {
+    const target = typeof targetOrId === 'string'
+      ? document.getElementById(targetOrId)
+      : targetOrId;
+    if (!target) return;
+    const tip = _ensureFooterBadgeTooltip(target);
+    const value = String(text || '').trim();
+    target.removeAttribute('title');
+    if (!tip) return;
+    tip.textContent = value;
+    tip.style.display = value ? '' : 'none';
+  }
+
+  function _initFooterBadgeTooltips() {
+    Object.entries(_FOOTER_BADGE_TOOLTIP_DEFAULTS).forEach(([id, text]) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.classList.add('footer-tooltip-target');
+      _setFooterBadgeTooltip(el, text);
+    });
+  }
 
   function ingestParticipants(participants) {
     participantDataById = {};
@@ -131,6 +176,7 @@
 
   // Set participant link
   const pLink = document.getElementById('participant-link');
+  _initFooterBadgeTooltips();
   if (pLink) {
     pLink.innerHTML = _buildUrlHtml();
     pLink.title = 'Click to copy • Ctrl/Cmd+Click to open';
@@ -216,7 +262,12 @@
         }
         if (msg.git_repos !== undefined) _gitRepos = msg.git_repos;
         if (msg.slides_log !== undefined) _slidesLog = msg.slides_log;
-        document.getElementById('git-repos-badge').textContent = '⎇ ' + (_gitRepos.length > 0 ? (msg.git_repos_count ?? _gitRepos.length) : 0);
+        const gitCount = _gitRepos.length > 0 ? (msg.git_repos_count ?? _gitRepos.length) : 0;
+        const gitBadge = document.getElementById('git-repos-badge');
+        if (gitBadge) {
+          gitBadge.textContent = '⎇ ' + gitCount;
+          _setFooterBadgeTooltip(gitBadge, 'Git repos activity');
+        }
         renderTranscriptStatus(msg.transcript_line_count, msg.transcript_total_lines, msg.transcript_latest_ts, msg.transcript_last_content_at);
         renderOverlayStatus(msg.overlay_connected);
         renderPendingDeploy(msg.pending_deploy);
@@ -753,20 +804,29 @@
       badge.textContent = `🧠 (${summaryPoints.length}) Key Points`;
       badge.className = 'badge connected';
       badge.style.cssText = 'cursor:pointer;';
-      badge.title = noTranscriptTitle || `${summaryPoints.length} key points · ${_transcriptLineCount} transcript lines — click to view`;
+      _setFooterBadgeTooltip(
+        badge,
+        noTranscriptTitle || `${summaryPoints.length} key points · ${_transcriptLineCount} transcript lines — click to view`,
+      );
     } else if (_summaryGenerating) {
       badge.textContent = `🧠 (…) Key Points`;
       badge.className = 'badge';
       badge.style.cssText = 'cursor:wait; color:var(--warn); border:1px solid var(--warn);';
-      badge.title = noTranscriptTitle || `Generating key points from transcript… (${_transcriptLineCount} lines)`;
+      _setFooterBadgeTooltip(
+        badge,
+        noTranscriptTitle || `Generating key points from transcript… (${_transcriptLineCount} lines)`,
+      );
     } else {
       badge.textContent = `🧠 Key Points`;
       badge.className = 'badge empty';
       badge.style.cssText = 'cursor:pointer;';
-      badge.title = noTranscriptTitle
-        || (_transcriptLineCount > 0
-          ? `${_transcriptLineCount} transcript lines ready — click to generate key points`
-          : 'No key points yet — click to generate now');
+      _setFooterBadgeTooltip(
+        badge,
+        noTranscriptTitle
+          || (_transcriptLineCount > 0
+            ? `${_transcriptLineCount} transcript lines ready — click to generate key points`
+            : 'No key points yet — click to generate now'),
+      );
     }
   }
   function renderGenerateButton() {
@@ -868,6 +928,7 @@
     const b = document.getElementById('ws-badge');
     b.textContent = ok ? '🟢' : '🟢';
     b.className = `badge ${ok ? 'connected' : 'disconnected'}`;
+    _setFooterBadgeTooltip(b, ok ? 'Server connected' : 'Server disconnected — reconnecting');
     if (ok) {
       if (_unreachableTimer) { clearTimeout(_unreachableTimer); _unreachableTimer = null; }
       const el = document.getElementById('server-unreachable-overlay');
@@ -900,7 +961,7 @@
     el.textContent = '$' + cost.toFixed(2);
     const inp = (usage.input_tokens || 0).toLocaleString();
     const out = (usage.output_tokens || 0).toLocaleString();
-    el.title = 'Tokens: ' + inp + ' in / ' + out + ' out';
+    _setFooterBadgeTooltip(el, 'Tokens: ' + inp + ' in / ' + out + ' out');
     el.style.color = cost > 3 ? 'var(--danger)' : cost > 1 ? 'var(--warn)' : 'var(--muted)';
   }
 
@@ -1090,7 +1151,11 @@
     const el = document.getElementById('daemon-badge');
 
     if (!lastSeenIso) {
-      if (el) { el.textContent = '🤖'; el.className = 'badge disconnected'; el.title = 'Never connected — start with ./start.sh'; }
+      if (el) {
+        el.textContent = '🤖';
+        el.className = 'badge disconnected';
+        _setFooterBadgeTooltip(el, 'Never connected — start with ./start.sh');
+      }
       return;
     }
 
@@ -1098,9 +1163,19 @@
     const agoText = ago < 60 ? `${ago}s ago` : `${Math.round(ago/60)}m ago`;
 
     if (connected) {
-      if (el) { el.textContent = '🤖'; el.className = 'badge connected'; el.style.cssText = ''; el.title = `Connected (last seen ${agoText})`; }
+      if (el) {
+        el.textContent = '🤖';
+        el.className = 'badge connected';
+        el.style.cssText = '';
+        _setFooterBadgeTooltip(el, `Connected (last seen ${agoText})`);
+      }
     } else {
-      if (el) { el.textContent = '🤖'; el.className = 'badge'; el.style.cssText = 'color:var(--warn);border:1px solid var(--warn);'; el.title = `Connection lost (last seen ${agoText})`; }
+      if (el) {
+        el.textContent = '🤖';
+        el.className = 'badge';
+        el.style.cssText = 'color:var(--warn);border:1px solid var(--warn);';
+        _setFooterBadgeTooltip(el, `Connection lost (last seen ${agoText})`);
+      }
     }
   }
 
@@ -1117,7 +1192,10 @@
     const el = document.getElementById('overlay-badge');
     if (!el) return;
     el.className = `badge ${connected ? 'connected' : 'disconnected'}`;
-    el.title = connected ? 'Desktop Overlay connected — click to fire a heart' : 'Desktop Overlay not connected — click to fire a heart';
+    _setFooterBadgeTooltip(
+      el,
+      connected ? 'Desktop Overlay connected — click to fire a heart' : 'Desktop Overlay not connected — click to fire a heart',
+    );
   }
 
   let _suppressHeartEcho = false;
@@ -1167,16 +1245,19 @@
     if (_notesSessionFolder && _notesSessionNotes) {
       el.textContent = nonEmptyLines > 0 ? `📝 (${nonEmptyLines}) Notes.txt` : `📝 Notes.txt`;
       el.className = 'badge connected';
-      el.title = `${_notesSessionFolder}/${_notesSessionNotes}${nonEmptyLines > 0 ? `\n${nonEmptyLines} non-empty lines` : ''}\nClick to view`;
+      _setFooterBadgeTooltip(
+        el,
+        `${_notesSessionFolder}/${_notesSessionNotes}${nonEmptyLines > 0 ? `\n${nonEmptyLines} non-empty lines` : ''}\nClick to view`,
+      );
     } else if (_notesSessionFolder) {
       el.textContent = nonEmptyLines > 0 ? `📝 (${nonEmptyLines}) Notes.txt` : `📝 Notes.txt`;
       el.className = 'badge';
       el.style.cssText = 'cursor:pointer; color:var(--warn); border:1px solid var(--warn); --badge-fill:#ffd16644;';
-      el.title = 'Session folder found but no notes file inside';
+      _setFooterBadgeTooltip(el, 'Session folder found but no notes file inside');
     } else {
       el.textContent = '📝 Notes.txt';
       el.className = 'badge empty';
-      el.title = 'No session folder found for today';
+      _setFooterBadgeTooltip(el, 'No session folder found for today');
     }
   }
 
@@ -1992,7 +2073,7 @@
     const btn = document.getElementById('btn-transcription-lang');
     if (!btn) return;
     btn.textContent = `${_LANG_FLAG[lang] || lang} ${lang.toUpperCase()}`;
-    btn.title = `Transcription: ${lang.toUpperCase()}${pending ? ' (applying…)' : ''} — click to toggle`;
+    _setFooterBadgeTooltip(btn, `Transcription: ${lang.toUpperCase()}${pending ? ' (applying…)' : ''} — click to toggle`);
     btn.style.opacity = pending ? '0.4' : '0.8';
     btn.dataset.lang = lang;
     btn.className = 'badge' + (pending ? ' disabled' : '');

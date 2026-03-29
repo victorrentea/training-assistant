@@ -1,10 +1,15 @@
 {
-  "sha": "f1ab921b8b6deaa2caa3bd4d70a8bc6bee69cd8e",
-  "timestamp": "2026-03-29 16:34",
+  "sha": "695d97561aab6d18e5570887a8d9d8381f506213",
+  "timestamp": "2026-03-29 16:40",
   "changelog": [
-    "fix: unify slides badge border in host footer"
+    "chore: rename pax label to participants"
   ],
   "commits": [
+    {
+      "sha": "695d9756",
+      "msg": "chore: rename pax label to participants",
+      "ts": "2026-03-29T16:34:09+03:00"
+    },
     {
       "sha": "f1ab921b",
       "msg": "fix: unify slides badge border in host footer",
@@ -99,11 +104,6 @@
       "sha": "ee372f15",
       "msg": "fix: uniform gray border color for all neutral host footer badges (#88)",
       "ts": "2026-03-29T15:41:07+03:00"
-    },
-    {
-      "sha": "6d3eca4b",
-      "msg": "Victorrentea/folder icon topic count (#87)",
-      "ts": "2026-03-29T15:40:42+03:00"
     }
   ],
   "branches": [

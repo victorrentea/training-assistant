@@ -188,6 +188,44 @@ class TestHostSessionCode:
         ctx.close()
         browser.close()
 
+    def test_footer_badges_use_div_tooltips_not_title(self, server_url, playwright):
+        browser, ctx = host_browser_ctx(server_url, playwright)
+        page = ctx.new_page()
+        page.goto(host_url())
+        page.wait_for_timeout(1200)
+
+        state = page.evaluate(
+            """() => {
+                const ids = [
+                    'ws-badge',
+                    'daemon-badge',
+                    'overlay-badge',
+                    'notes-badge',
+                    'summary-badge',
+                    'btn-transcription-lang',
+                    'token-cost',
+                    'git-repos-badge',
+                    'slides-log-badge',
+                    'slides-catalog-icon',
+                ];
+                return ids.map((id) => {
+                    const el = document.getElementById(id);
+                    return {
+                        id,
+                        hasTitleAttr: !!el && el.hasAttribute('title'),
+                        hasTooltipDiv: !!el && !!el.querySelector('.footer-badge-tooltip'),
+                    };
+                });
+            }"""
+        )
+
+        assert all(not item["hasTitleAttr"] for item in state), state
+        missing = [item["id"] for item in state if not item["hasTooltipDiv"]]
+        assert not missing, missing
+
+        ctx.close()
+        browser.close()
+
 
 class TestWebSocketSessionGating:
     """WebSocket connections are gated by session ID."""
