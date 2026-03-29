@@ -409,6 +409,9 @@ body {
 .slides-catalog-hover.open .footer-badge-tooltip {
   opacity: 0 !important;
 }
+#stop-session-wrap-left:hover .footer-badge-tooltip {
+  display: none !important;
+}
 
 .slides-catalog-content {
   font-size: .72rem;
