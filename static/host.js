@@ -208,10 +208,8 @@
         updateTokenBadge(msg.token_usage);
         if (msg.slides_log_deep_count !== undefined || msg.slides_log_topic !== undefined) {
           const badge = document.getElementById('slides-log-badge');
-          const topic = msg.slides_log_topic || '';
           const count = msg.slides_log_deep_count ?? 0;
-          badge.textContent = topic ? `📊 ${topic} (${count})` : `📊 ${count}`;
-          badge.title = `${count} slide${count !== 1 ? 's' : ''} viewed for > 10 sec`;
+          badge.textContent = `👁️ ${count}`;
         }
         if (msg.git_repos !== undefined) _gitRepos = msg.git_repos;
         if (msg.slides_log !== undefined) _slidesLog = msg.slides_log;
