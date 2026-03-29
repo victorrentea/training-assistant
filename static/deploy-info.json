@@ -1,10 +1,15 @@
 {
-  "sha": "f396c18de10b54f0654de5dd72778b96453c68fa",
-  "timestamp": "2026-03-29 13:50",
+  "sha": "8a87de47b4a4ff904e399352776c6c6f2db6061e",
+  "timestamp": "2026-03-29 13:51",
   "changelog": [
-    "fix: remove gap between joined date/name inputs on landing page"
+    "feat: move stop button to left-most footer badge, turns red on hover"
   ],
   "commits": [
+    {
+      "sha": "8a87de47",
+      "msg": "feat: move stop button to left-most footer badge, turns red on hover",
+      "ts": "2026-03-29T13:50:59+03:00"
+    },
     {
       "sha": "f396c18d",
       "msg": "fix: remove gap between joined date/name inputs on landing page",
@@ -99,11 +104,6 @@
       "sha": "40d3895c",
       "msg": "feat(host): show stop sign blocker when server is unreachable",
       "ts": "2026-03-29T13:16:55+03:00"
-    },
-    {
-      "sha": "2f4c32dd",
-      "msg": "feat(wispr-addons): use \ud83c\udf99\ufe0f emoji PNG as menu bar icon",
-      "ts": "2026-03-29T13:13:59+03:00"
     }
   ],
   "branches": [
@@ -158,11 +158,6 @@
       "minutes": 39
     },
     {
-      "branch": "slides-hover-tooltips",
-      "sha": "0652ac9",
-      "minutes": 36
-    },
-    {
       "branch": "host-landing-scroll-fix",
       "sha": "33b8328",
       "minutes": 33
@@ -206,6 +201,11 @@
       "branch": "fix-emoji-tooltip-direction",
       "sha": "a3b87b1",
       "minutes": 7
+    },
+    {
+      "branch": "center-emoji-buttons",
+      "sha": "1f1faa1",
+      "minutes": 6
     }
   ]
 }
