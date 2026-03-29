@@ -1037,21 +1037,7 @@
     _makeHover('slides-log-hover', 'slides-log-popover', _renderSlidesLogPopover);
   }
 
-  async function toggleMode() {
-    const newMode = (currentMode === 'workshop') ? 'conference' : 'workshop';
-    await fetch(API('/mode'), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ mode: newMode }),
-    });
-  }
-
   function renderMode(mode) {
-    const badge = document.getElementById('mode-badge');
-    if (!badge) return;
-    badge.textContent = mode === 'conference' ? '🎤' : '🎓';
-    badge.title = mode === 'conference' ? 'Conference mode — click to switch to Workshop' : 'Workshop mode — click to switch to Conference';
-    badge.className = 'badge ' + (mode === 'conference' ? 'mode-badge-conference' : 'mode-badge-workshop');
     applyConferenceLayout(mode === 'conference');
   }
 
