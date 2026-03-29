@@ -1,10 +1,15 @@
 {
-  "sha": "9db0c782f1d86419fb4dc299e664624cf43bd13e",
-  "timestamp": "2026-03-29 15:31",
+  "sha": "4360b30223f44799d9b652b12b9c517459af7a82",
+  "timestamp": "2026-03-29 15:33",
   "changelog": [
-    "Improve host auto-join and transcript logging"
+    "Include crude word count in transcript noise logs"
   ],
   "commits": [
+    {
+      "sha": "4360b302",
+      "msg": "Include crude word count in transcript noise logs",
+      "ts": "2026-03-29T15:33:17+03:00"
+    },
     {
       "sha": "9db0c782",
       "msg": "Improve host auto-join and transcript logging",
@@ -99,11 +104,6 @@
       "sha": "80cca2ff",
       "msg": "feat: play Sosumi sound on daemon clean exit",
       "ts": "2026-03-29T14:57:01+03:00"
-    },
-    {
-      "sha": "e4062462",
-      "msg": "fix: restart daemon on clean exit instead of stopping start.sh",
-      "ts": "2026-03-29T14:56:38+03:00"
     }
   ],
   "branches": [
