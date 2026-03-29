@@ -1,12 +1,15 @@
 {
-  "sha": "32d786e9ebdc7b74fff208d46592d093d3ff2cba",
-  "timestamp": "2026-03-29 14:02",
+  "sha": "2c3ca4e5905be21068bfb38d129b16443ddf87ae",
+  "timestamp": "2026-03-29 14:09",
   "changelog": [
-    "fix(slides): change repos empty state to 'No repos viewed yet'",
-    "fix(slides): change empty state message to 'No slides viewed yet'",
-    "feat(slides): replace pptx icon with eye emoji, show slide count only"
+    "fix: strip non-breaking spaces from session names before creating folders"
   ],
   "commits": [
+    {
+      "sha": "2c3ca4e5",
+      "msg": "fix: strip non-breaking spaces from session names before creating folders",
+      "ts": "2026-03-29T14:08:35+03:00"
+    },
     {
       "sha": "32d786e9",
       "msg": "fix(slides): change repos empty state to 'No repos viewed yet'",
@@ -101,11 +104,6 @@
       "sha": "1bcae32e",
       "msg": "feat(landing): make session date editable, wider for date ranges",
       "ts": "2026-03-29T13:32:07+03:00"
-    },
-    {
-      "sha": "1ae1443a",
-      "msg": "feat(wispr): scale emoji density by Ctrl+Opt hold duration",
-      "ts": "2026-03-29T13:31:12+03:00"
     }
   ],
   "branches": [
