@@ -69,15 +69,18 @@ body {
 
 /* Today tag in folder list */
 .folder-today-tag {
-  font-size: .68rem;
+  display: inline-block;
+  font-size: .65rem;
   font-weight: 700;
   letter-spacing: .07em;
   color: var(--accent);
   border: 1px solid var(--accent);
   border-radius: 4px;
   padding: .1rem .35rem;
-  margin-left: .4rem;
-  flex-shrink: 0;
+  margin-left: .45rem;
+  vertical-align: middle;
+  position: relative;
+  top: -1px;
 }
 
 .folder-row-today {
@@ -196,7 +199,7 @@ body {
 
 .folder-row {
   display: grid;
-  grid-template-columns: 6.5rem 1fr auto auto;
+  grid-template-columns: 6.5rem 1fr auto;
   align-items: center;
   gap: .75rem;
   padding: .5rem 1rem .5rem 1.5rem;
@@ -221,12 +224,6 @@ body {
   letter-spacing: .02em;
 }
 
-.folder-date-range {
-  display: flex;
-  flex-direction: column;
-  line-height: 1.4;
-}
-
 .folder-topic {
   font-size: .95rem;
   color: var(--text);
@@ -248,7 +245,8 @@ body {
   line-height: 1;
 }
 
-.folder-play-btn:hover {
+.folder-play-btn:hover,
+.folder-row:hover .folder-play-btn {
   background: var(--accent);
   border-color: var(--accent);
   color: #fff;
