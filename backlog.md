@@ -1,5 +1,6 @@
 # Tasks
 
+- [x] host footer QR overlay: ensure fullscreen QR regenerates from current join URL on click; close on Escape/click anywhere.
 - [x] host footer copy tooltip: keep `Copied...` visible for 3 seconds above join link on click-copy.
 - [x] footer center QR hardening: keep QR icon fixed to the right of join link (no shrink).
 - [x] host footer: move QR icon after join link and open large join QR overlay on click.

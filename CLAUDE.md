@@ -358,6 +358,7 @@ Only add memories when explicitly asked, or after the user has confirmed the inf
 - For any change to the training daemon ("demon"), push directly to `master` because the daemon continuously pulls from `master` and runs those changes.
 - PPTX slides daemon logs must follow the shared daemon pattern from `daemon/log.py`: `HH:MM:SS.f PID [name      ] info|error message` (use component name `slides`, not custom `[pptx-daemon]` prefixes).
 - There is a course catalog and a slides catalog file in this project that maps course names to local disk paths of the associated PowerPoint presentations.
+- User wants every completed task pushed to `master` immediately.
 
 ---
 
