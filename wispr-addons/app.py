@@ -240,7 +240,8 @@ def handle_clean_hotkey(with_emoji: bool = False) -> None:
         simulate_keystroke(VK_V, kCGEventFlagMaskCommand)
 
         elapsed_ms = int((time.time() - start) * 1000)
-        log(f"Done ({len(text)}\u2192{len(cleaned)} chars, {elapsed_ms}ms, ${cost:.4f}):\n  {cleaned[:200]}")
+        heart = "❤️" if with_emoji else ""
+        log(f"Done{heart} ({len(text)}\u2192{len(cleaned)} chars, {elapsed_ms}ms, ${cost:.4f}):\n  {cleaned[:200]}")
         if _app_ref:
             _app_ref.title = "\U0001f9d1\u200d\U0001f4bb"
     except Exception as e:
