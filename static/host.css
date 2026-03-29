@@ -7,11 +7,11 @@ body {
   margin: 0;
 }
 
-/* version-tag: bottom-right of host-top-bar, just above the border-bottom line */
+/* version-tag: bottom-right of main content area, just above the footer */
 #version-tag {
   position: absolute;
   top: auto;
-  bottom: 2px;
+  bottom: 4px;
   right: .5rem;
   z-index: 2;
 }
@@ -175,6 +175,7 @@ body {
   padding: .75rem 1rem 0;
   box-sizing: border-box;
   overflow: hidden;
+  position: relative;
 }
 
 /* Consolidated full-width footer */
