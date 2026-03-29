@@ -82,7 +82,7 @@
           'z-index:9999',
           'box-shadow:0 4px 14px rgba(0,0,0,.45)',
           'pointer-events:none',
-          'min-width:220px',
+          'min-width:380px',
           'display:none',
         ].join(';');
         document.body.appendChild(popup);
@@ -93,20 +93,24 @@
       popup.style.right = (window.innerWidth - rect.right) + 'px';
 
       const info = await _fetchDeployInfo();
-      const branches = (info && info.branches) || [];
+      const commits = (info && info.commits) || [];
       const sha = info && info.sha ? info.sha.slice(0, 8) : '';
-      if (!branches.length && !sha) return;
+      if (!commits.length && !sha) return;
 
-      const fmt = m => m >= 60
-        ? Math.floor(m / 60) + 'h' + (m % 60 ? (m % 60) + 'm' : '')
-        : m + 'm';
+      const fmtAge = ts => {
+        const sec = Math.max(0, Math.floor((Date.now() - new Date(ts).getTime()) / 1000));
+        if (sec < 60) return sec + 's ago';
+        if (sec < 3600) return Math.floor(sec / 60) + 'm ago';
+        if (sec < 86400) return Math.floor(sec / 3600) + 'h ago';
+        return Math.floor(sec / 86400) + 'd ago';
+      };
       let html = sha
-        ? `<div style="font-family:monospace;color:var(--muted,#7b80a0);margin-bottom:.35rem">${sha}</div>`
+        ? `<div style="font-family:monospace;font-size:.7rem;color:var(--muted,#7b80a0);margin-bottom:.4rem;padding-bottom:.3rem;border-bottom:1px solid var(--border,#2e3250)">${sha}</div>`
         : '';
-      html += branches.map(b =>
-        `<div style="display:flex;justify-content:space-between;gap:1.5rem">` +
-        `<span>${b.branch}</span>` +
-        `<span style="color:var(--muted,#7b80a0);flex-shrink:0;text-align:right">${fmt(b.minutes)}</span>` +
+      html += commits.map(c =>
+        `<div style="display:flex;justify-content:space-between;gap:1.2rem;align-items:baseline">` +
+        `<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:280px" title="${c.msg.replace(/"/g,'&quot;')}">${c.msg}</span>` +
+        `<span style="color:var(--muted,#7b80a0);flex-shrink:0;font-size:.7rem;font-family:monospace">${fmtAge(c.ts)}</span>` +
         `</div>`
       ).join('');
 
