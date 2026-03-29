@@ -22,7 +22,7 @@
 
 <div class="host-layout">
 
-<!-- Unified top bar: tabs + participant count -->
+<!-- Unified top bar: tabs (left) | session title (center) | pax count (right) -->
 <div class="host-top-bar">
   <div class="tab-bar">
     <button class="tab-btn" id="tab-hello" onclick="switchTab('none')" style="display:none"><span class="tab-icon">👋</span>Hello</button>
@@ -35,6 +35,7 @@
       <span class="tab-icon">🏆</span>Board
     </button>
   </div>
+  <div class="host-top-title" id="host-top-title"></div>
   <div class="host-top-pax">
     <span class="stat" id="pax-count">0</span>
     <span class="stat-label">pax</span>
@@ -208,8 +209,6 @@
 
   <!-- CENTER COLUMN: current activity -->
   <div class="host-col host-col-center">
-    <!-- Session title -->
-    <div id="session-title-center" style="display:none; text-align:center; padding:.3rem 0; font-size:1rem; font-weight:600; color:var(--muted); border-bottom:1px solid var(--border); flex-shrink:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"></div>
     <!-- QR idle state -->
     <div id="center-qr" class="center-panel">
       <div style="display:flex; align-items:center; gap:.75rem; padding:1rem 0 .5rem;">
