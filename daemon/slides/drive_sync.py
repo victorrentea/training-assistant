@@ -83,31 +83,13 @@ def extract_drive_export_links(html_text: str) -> dict[str, str]:
 
 
 def _beep_local() -> None:
-    try:
-        subprocess.run(
-            ["osascript", "-e", "beep"],
-            capture_output=True,
-            text=True,
-            timeout=2,
-            check=False,
-        )
-    except Exception:
-        pass
+    from daemon.adapters.loader import adapter
+    adapter.beep()
 
 
 def _is_google_drive_running() -> bool:
-    if sys.platform != "darwin":
-        return True
-    try:
-        proc = subprocess.run(
-            ["pgrep", "-x", "Google Drive"],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        return proc.returncode == 0
-    except Exception:
-        return True
+    from daemon.adapters.loader import adapter
+    return adapter.is_google_drive_running()
 
 
 def _probe_drive_fingerprint(url: str) -> tuple[str, dict[str, str]]:
