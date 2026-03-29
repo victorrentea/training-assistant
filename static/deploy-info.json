@@ -1,10 +1,15 @@
 {
-  "sha": "e7a6d3024d3c977454bb35c5e49afe2076dff61c",
+  "sha": "e60b3ac4d761f734e51b299524c8621d4db1e081",
   "timestamp": "2026-03-29 14:47",
   "changelog": [
-    "fix: separate active session into its own card on host landing page"
+    "fix: rejoin button broken by JSON.stringify double quotes in onclick attr"
   ],
   "commits": [
+    {
+      "sha": "e60b3ac4",
+      "msg": "fix: rejoin button broken by JSON.stringify double quotes in onclick attr",
+      "ts": "2026-03-29T14:47:24+03:00"
+    },
     {
       "sha": "e7a6d302",
       "msg": "fix: separate active session into its own card on host landing page",
@@ -99,11 +104,6 @@
       "sha": "32d786e9",
       "msg": "fix(slides): change repos empty state to 'No repos viewed yet'",
       "ts": "2026-03-29T13:57:51+03:00"
-    },
-    {
-      "sha": "b265a984",
-      "msg": "fix(slides): change empty state message to 'No slides viewed yet'",
-      "ts": "2026-03-29T13:57:26+03:00"
     }
   ],
   "branches": [
@@ -183,11 +183,6 @@
       "minutes": 15
     },
     {
-      "branch": "remove-host-heart-drone",
-      "sha": "9d8de3e",
-      "minutes": 15
-    },
-    {
       "branch": "shrink-topic-height-5pct",
       "sha": "466fbe7",
       "minutes": 14
@@ -206,6 +201,11 @@
       "branch": "fix-emoji-tooltip-direction",
       "sha": "a3b87b1",
       "minutes": 7
+    },
+    {
+      "branch": "center-emoji-buttons",
+      "sha": "1f1faa1",
+      "minutes": 6
     }
   ]
 }
