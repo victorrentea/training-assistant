@@ -3241,7 +3241,8 @@ function renderSessionPanel() {
 
   // FRAGILE: daemon connected, no main session folder
   const fragile = daemonOnline && !main;
-  document.getElementById('session-fragile-row').style.display = fragile ? 'flex' : 'none';
+  const fragileRow = document.getElementById('session-fragile-row');
+  if (fragileRow) fragileRow.style.display = fragile ? 'flex' : 'none';
   if (fragile) {
     const prefix = document.getElementById('session-date-prefix');
     if (prefix && !prefix.textContent) {

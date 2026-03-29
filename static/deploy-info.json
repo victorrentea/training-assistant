@@ -1,10 +1,15 @@
 {
-  "sha": "f517e1363c3414f1f4f3b6af4258070539b0560e",
-  "timestamp": "2026-03-29 16:07",
+  "sha": "d4832809c96629ea97f0eab84766aa685ae98346",
+  "timestamp": "2026-03-29 16:08",
   "changelog": [
-    "fix: persist stable session ids per folder"
+    "ui: remove center daemon status panel"
   ],
   "commits": [
+    {
+      "sha": "d4832809",
+      "msg": "ui: remove center daemon status panel",
+      "ts": "2026-03-29T16:07:31+03:00"
+    },
     {
       "sha": "f517e136",
       "msg": "fix: persist stable session ids per folder",
@@ -99,11 +104,6 @@
       "sha": "0d2a89bb",
       "msg": "chore: compact transcript llm log into one line",
       "ts": "2026-03-29T15:15:01+03:00"
-    },
-    {
-      "sha": "3cecf57c",
-      "msg": "feat: restart hijack when today raw file missing",
-      "ts": "2026-03-29T15:14:06+03:00"
     }
   ],
   "branches": [
