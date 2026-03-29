@@ -9,6 +9,7 @@ import time
 from pathlib import Path
 
 from daemon import log
+from daemon.http import session_api_url, get_active_session_id
 from daemon.slides.daemon import SlidesDaemonConfig, _post_json
 from daemon.slides.drive_sync import _beep_local, _download_pdf_from_url, _is_google_drive_running
 
@@ -22,8 +23,9 @@ def _push_error_status(config: SlidesDaemonConfig, message: str) -> None:
         "slides": [],
     }
     try:
+        sid = get_active_session_id(config.server_url)
         _post_json(
-            f"{config.server_url}/api/quiz-status",
+            session_api_url(config.server_url, sid, "/quiz-status"),
             payload,
             config.host_username,
             config.host_password,

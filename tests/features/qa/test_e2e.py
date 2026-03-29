@@ -10,7 +10,7 @@ from playwright.sync_api import expect
 
 from pages.host_page import HostPage
 from pages.participant_page import ParticipantPage
-from conftest import api, host_browser_ctx, pax_browser_ctx, pax_url
+from conftest import api, sapi, host_browser_ctx, pax_browser_ctx, pax_url, host_url
 
 
 # ---------------------------------------------------------------------------
@@ -23,7 +23,7 @@ class TestWordCloudGaps:
     def test_set_topic_participant_sees_it(self, server_url, host: HostPage, pax: ParticipantPage):
         """Host sets word cloud topic, participant sees it."""
         pax.join("WcTopic1")
-        api(server_url, "post", "/api/wordcloud/topic", json={"topic": "Design Patterns"})
+        sapi(server_url, "post", "/wordcloud/topic", json={"topic": "Design Patterns"})
         host.open_wordcloud_tab()
 
         expect(pax._page.locator("#wc-prompt-text")).to_contain_text("Design Patterns", timeout=5000)
@@ -38,7 +38,7 @@ class TestWordCloudGaps:
         p1 = ParticipantPage(ctx1.new_page())
         p2 = ParticipantPage(ctx2.new_page())
 
-        host._page.goto("/host")
+        host._page.goto(host_url())
         p1._page.goto(pax_url())
         p2._page.goto(pax_url())
 
@@ -77,7 +77,7 @@ class TestWordCloudGaps:
         p1 = ParticipantPage(ctx1.new_page())
         p2 = ParticipantPage(ctx2.new_page())
 
-        host._page.goto("/host")
+        host._page.goto(host_url())
         p1._page.goto(pax_url())
         p2._page.goto(pax_url())
 
@@ -114,7 +114,7 @@ class TestWordCloudGaps:
         pax._page.wait_for_timeout(500)
         assert "cleanup" in pax.get_wordcloud_my_words()
 
-        api(server_url, "post", "/api/wordcloud/clear")
+        sapi(server_url, "post", "/wordcloud/clear")
         pax._page.wait_for_timeout(1000)
         # Words should be cleared
         words = pax.get_wordcloud_my_words()
@@ -131,7 +131,7 @@ class TestWordCloudGaps:
         pax = ParticipantPage(pax_page)
 
         try:
-            host._page.goto("/host")
+            host._page.goto(host_url())
             pax.join("WcPersist")
             host.open_wordcloud_tab()
             expect(pax_page.locator("#wc-canvas")).to_be_visible(timeout=5000)
@@ -165,7 +165,7 @@ class TestWordCloudGaps:
         assert "resetme" in pax.get_wordcloud_my_words()
 
         # Host clears
-        api(server_url, "post", "/api/wordcloud/clear")
+        sapi(server_url, "post", "/wordcloud/clear")
         pax._page.wait_for_timeout(1000)
 
         # Reopen word cloud
@@ -232,7 +232,7 @@ class TestQAGaps:
         p1 = ParticipantPage(ctx1.new_page())
         p2 = ParticipantPage(ctx2.new_page())
 
-        host._page.goto("/host")
+        host._page.goto(host_url())
         p1._page.goto(pax_url())
         p2._page.goto(pax_url())
 
@@ -307,11 +307,11 @@ class TestActivitySwitching:
 
         activities = ["qa", "wordcloud", "qa", "wordcloud", "qa"]
         for act in activities:
-            api(server_url, "post", "/api/activity", json={"activity": act})
+            sapi(server_url, "post", "/activity", json={"activity": act})
             pax._page.wait_for_timeout(300)
 
         # Reset to none
-        api(server_url, "post", "/api/activity", json={"activity": "none"})
+        sapi(server_url, "post", "/activity", json={"activity": "none"})
         pax._page.wait_for_timeout(500)
 
         assert js_errors == [], f"JS errors during rapid switching: {js_errors}"
@@ -333,7 +333,7 @@ class TestEdgeCases:
         host = HostPage(ctx_host.new_page())
         p1 = ParticipantPage(ctx1.new_page())
 
-        host._page.goto("/host")
+        host._page.goto(host_url())
         p1._page.goto(pax_url())
 
         try:
@@ -354,8 +354,8 @@ class TestEdgeCases:
             expect(p2._page.locator(".closed-banner")).to_be_visible(timeout=5000)
         finally:
             # Clean up poll
-            api(server_url, "put", "/api/poll/status", json={"open": False})
-            api(server_url, "delete", "/api/poll")
+            sapi(server_url, "put", "/poll/status", json={"open": False})
+            sapi(server_url, "delete", "/poll")
             for ctx in (ctx_host, ctx1, ctx2):
                 ctx.close()
             for b in (b_host, b1, b2):
@@ -404,7 +404,7 @@ class TestEdgeCases:
         p2 = ParticipantPage(ctx2.new_page())
         p3 = ParticipantPage(ctx3.new_page())
 
-        host._page.goto("/host")
+        host._page.goto(host_url())
         p1._page.goto(pax_url())
         p2._page.goto(pax_url())
         p3._page.goto(pax_url())
@@ -430,8 +430,8 @@ class TestEdgeCases:
             # Host should show 3 total votes
             expect(host._page.locator("text=3 total vote")).to_be_visible(timeout=5000)
         finally:
-            api(server_url, "put", "/api/poll/status", json={"open": False})
-            api(server_url, "delete", "/api/poll")
+            sapi(server_url, "put", "/poll/status", json={"open": False})
+            sapi(server_url, "delete", "/poll")
             for ctx in (ctx_host, ctx1, ctx2, ctx3):
                 ctx.close()
             for b in (b_host, b1, b2, b3):
@@ -452,7 +452,7 @@ class TestEdgeCases:
         p3 = ParticipantPage(ctx3.new_page())
         p4 = ParticipantPage(ctx4.new_page())
 
-        host._page.goto("/host")
+        host._page.goto(host_url())
         p1._page.goto(pax_url())
         p2._page.goto(pax_url())
         p3._page.goto(pax_url())

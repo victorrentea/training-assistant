@@ -8,6 +8,7 @@ from typing import Optional
 from daemon import log
 from daemon.config import Config
 from daemon.http import _get_json
+from daemon.session_state import get_current_session_id
 
 # Module-level ws_client reference, set by daemon/__main__.py at startup
 _ws_client = None
@@ -64,7 +65,9 @@ def post_status(status: str, message: str, config: Config,
 def fetch_quiz_history(config: Config) -> str:
     """Fetch previously asked questions from the server as markdown. Returns '' on failure."""
     try:
-        data = _get_json(f"{config.server_url}/api/quiz-md")
+        sid = get_current_session_id()
+        url = f"{config.server_url}/api/{sid}/quiz-md" if sid else f"{config.server_url}/api/quiz-md"
+        data = _get_json(url)
         return data.get("content", "").strip()
     except RuntimeError:
         return ""
@@ -73,7 +76,9 @@ def fetch_quiz_history(config: Config) -> str:
 def fetch_summary_points(config: Config) -> list[dict]:
     """Fetch existing summary key points from the server. Returns [] on failure."""
     try:
-        data = _get_json(f"{config.server_url}/api/summary")
+        sid = get_current_session_id()
+        url = f"{config.server_url}/api/{sid}/summary" if sid else f"{config.server_url}/api/summary"
+        data = _get_json(url)
         return data.get("points", [])
     except RuntimeError:
         return []

@@ -21,7 +21,7 @@ class SummaryUpdate(BaseModel):
     points: list[SummaryPoint]
 
 
-@router.post("/api/summary")
+@router.post("/summary")
 async def update_summary(body: SummaryUpdate):
     state.summary_points = [p.model_dump() for p in body.points]
     state.summary_updated_at = datetime.now(timezone.utc)
@@ -33,7 +33,7 @@ class NotesUpdate(BaseModel):
     content: str
 
 
-@router.post("/api/notes")
+@router.post("/notes")
 async def update_notes(body: NotesUpdate):
     state.notes_content = body.content
     await broadcast_state()
@@ -64,7 +64,7 @@ class TranscriptStatus(BaseModel):
     latest_ts: str | None = None
 
 
-@router.post("/api/transcript-status")
+@router.post("/transcript-status")
 async def update_transcript_status(body: TranscriptStatus):
     if body.line_count > state.transcript_line_count:
         state.transcript_last_content_at = datetime.now(timezone.utc)
@@ -92,14 +92,14 @@ async def force_summary():
     return {"ok": True}
 
 
-@router.get("/api/summary/force")
+@router.get("/summary/force")
 async def poll_summary_force():
     requested = state.summary_force_requested
     state.summary_force_requested = False
     return {"requested": requested}
 
 
-@router.post("/api/summary/full-reset")
+@router.post("/summary/full-reset")
 async def full_reset_summary():
     state.summary_reset_requested = True
     state.summary_force_requested = True
@@ -107,14 +107,14 @@ async def full_reset_summary():
     return {"ok": True}
 
 
-@router.get("/api/summary/full-reset")
+@router.get("/summary/full-reset")
 async def poll_summary_full_reset():
     requested = state.summary_reset_requested
     state.summary_reset_requested = False
     return {"requested": requested}
 
 
-@router.post("/api/token-usage")
+@router.post("/token-usage")
 async def update_token_usage(data: dict):
     state.token_usage = data
     await broadcast_state()

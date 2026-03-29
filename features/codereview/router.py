@@ -82,7 +82,7 @@ class CodeReviewConfirmLine(BaseModel):
     line: int
 
 
-@router.post("/api/codereview", dependencies=[Depends(require_host_auth)])
+@router.post("/codereview", dependencies=[Depends(require_host_auth)])
 async def create_codereview(body: CodeReviewCreate):
     snippet = body.snippet.strip()
     if not snippet:
@@ -111,7 +111,7 @@ async def create_codereview(body: CodeReviewCreate):
     return {"ok": True}
 
 
-@router.put("/api/codereview/status", dependencies=[Depends(require_host_auth)])
+@router.put("/codereview/status", dependencies=[Depends(require_host_auth)])
 async def set_codereview_status(body: CodeReviewStatus):
     if not state.codereview_snippet:
         raise HTTPException(400, "No code review created yet")
@@ -122,7 +122,7 @@ async def set_codereview_status(body: CodeReviewStatus):
     return {"ok": True, "phase": state.codereview_phase}
 
 
-@router.put("/api/codereview/confirm-line", dependencies=[Depends(require_host_auth)])
+@router.put("/codereview/confirm-line", dependencies=[Depends(require_host_auth)])
 async def confirm_line(body: CodeReviewConfirmLine):
     if not state.codereview_snippet:
         raise HTTPException(400, "No code review created yet")
@@ -143,7 +143,7 @@ async def confirm_line(body: CodeReviewConfirmLine):
     return {"ok": True, "confirmed_line": body.line}
 
 
-@router.delete("/api/codereview", dependencies=[Depends(require_host_auth)])
+@router.delete("/codereview", dependencies=[Depends(require_host_auth)])
 async def clear_codereview():
     state.codereview_snippet = None
     state.codereview_language = None

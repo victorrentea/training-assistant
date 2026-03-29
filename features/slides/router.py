@@ -24,9 +24,8 @@ from features.slides.upload import (
 router = APIRouter()
 public_router = APIRouter()
 logger = logging.getLogger(__name__)
-
-# Include sub-routers so that main.py only needs to include slides.router / slides.public_router.
-router.include_router(upload_router)
+# Note: upload_router (daemon-facing /api/materials/* and /api/slides/upload) is mounted globally
+# in main.py so it is NOT included here (would conflict with /api/{session_id} prefix).
 
 
 def _resolve_catalog_file() -> Path:
@@ -364,7 +363,7 @@ def _is_not_modified(request: Request, etag: str, path: Path) -> bool:
     return False
 
 
-@router.post("/api/slides/current")
+@router.post("/slides/current")
 async def set_current_slides(body: SlidesUpdate):
     state.slides_current = {
         "url": body.url,
@@ -380,7 +379,7 @@ async def set_current_slides(body: SlidesUpdate):
     return {"ok": True, "slides_current": state.slides_current}
 
 
-@router.delete("/api/slides/current")
+@router.delete("/slides/current")
 async def clear_current_slides():
     state.slides_current = None
     await broadcast_state()
@@ -388,7 +387,7 @@ async def clear_current_slides():
     return {"ok": True}
 
 
-@router.get("/api/slides/catalog-map")
+@router.get("/slides/catalog-map")
 async def get_slides_catalog_map():
     path = _resolve_catalog_file()
     return {
@@ -398,13 +397,20 @@ async def get_slides_catalog_map():
 
 
 @public_router.get("/api/slides/current")
-async def get_current_slides():
-    return {"slides_current": state.slides_current}
+async def get_current_slides(request: Request):
+    sid = request.path_params.get("session_id", "")
+    prefix = f"/{sid}" if sid else ""
+    sc = state.slides_current
+    if sc and isinstance(sc.get("url"), str) and sc["url"].startswith("/api/slides/file/"):
+        sc = {**sc, "url": f"{prefix}{sc['url']}"}
+    return {"slides_current": sc}
 
 
 @public_router.get("/api/slides")
-async def get_slides():
+async def get_slides(request: Request):
     from features.slides.cache import _cache_path
+    sid = request.path_params.get("session_id", "")
+    prefix = f"/{sid}" if sid else ""
     slides = _collect_participant_slides()
     _, local_index = _build_local_slides_index()
     _, uploaded_index = _build_uploaded_slides_index()
@@ -415,6 +421,10 @@ async def get_slides():
         in_catalog = slug in state.slides_catalog
         is_catalog_source = slide.get("source") == "catalog"  # has GDrive URL, on-demand fetch works
         slide["available_on_server"] = has_local_pdf or in_cache or in_catalog or is_catalog_source
+        # Rewrite local file URLs to include session prefix
+        url = str(slide.get("url") or "")
+        if url.startswith("/api/slides/file/"):
+            slide["url"] = f"{prefix}{url}"
     return {"slides": slides}
 
 

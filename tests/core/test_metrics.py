@@ -79,18 +79,19 @@ def test_vote_increments_counter():
     """Voting should increment poll_votes_total."""
     # Reset state to avoid stale participants causing broadcast hangs
     state.reset()
+    state.generate_session_id()
     client = TestClient(app)
     before = _get_metric_value("poll_votes_total", {}) or 0
 
     # Create and open a poll via host API
-    resp = client.post("/api/poll", json={
+    resp = client.post(f"/api/{state.session_id}/poll", json={
         "question": "Metrics test?",
         "options": ["Yes", "No"],
     }, headers=_HOST_AUTH_HEADERS)
     assert resp.status_code == 200
     poll_data = resp.json()["poll"]
     option_id = poll_data["options"][0]["id"]  # first option id
-    client.put("/api/poll/status", json={"open": True}, headers=_HOST_AUTH_HEADERS)
+    client.put(f"/api/{state.session_id}/poll/status", json={"open": True}, headers=_HOST_AUTH_HEADERS)
 
     with client.websocket_connect("/ws/test-metrics-voter") as ws:
         ws.send_text(json.dumps({"type": "set_name", "name": "Voter"}))
@@ -110,6 +111,7 @@ def test_vote_increments_counter():
 
     # Cleanup
     state.reset()
+    state.generate_session_id()
 
 
 def test_ws_messages_tracked_by_type():

@@ -15,7 +15,7 @@ from playwright.sync_api import expect
 
 from pages.host_page import HostPage
 from pages.participant_page import ParticipantPage
-from conftest import api, host_browser_ctx, pax_browser_ctx
+from conftest import api, sapi, host_browser_ctx, pax_browser_ctx, host_url, pax_url
 
 
 # ---------------------------------------------------------------------------
@@ -24,11 +24,11 @@ from conftest import api, host_browser_ctx, pax_browser_ctx
 
 @pytest.fixture(autouse=False)
 def clean_poll(server_url):
-    api(server_url, "put", "/api/poll/status", json={"open": False})
-    api(server_url, "delete", "/api/poll")
+    sapi(server_url, "put", "/poll/status", json={"open": False})
+    sapi(server_url, "delete", "/poll")
     yield
-    api(server_url, "put", "/api/poll/status", json={"open": False})
-    api(server_url, "delete", "/api/poll")
+    sapi(server_url, "put", "/poll/status", json={"open": False})
+    sapi(server_url, "delete", "/poll")
 
 
 # ---------------------------------------------------------------------------
@@ -46,8 +46,8 @@ class TestMultiSelectPoll:
         host = HostPage(ctx_host.new_page())
         p1 = ParticipantPage(ctx1.new_page())
 
-        host._page.goto("/host")
-        p1._page.goto("/")
+        host._page.goto(host_url())
+        p1._page.goto(pax_url())
 
         try:
             p1.join("MultiVoter")
@@ -76,8 +76,8 @@ class TestMultiSelectPoll:
         host = HostPage(ctx_host.new_page())
         p1 = ParticipantPage(ctx1.new_page())
 
-        host._page.goto("/host")
-        p1._page.goto("/")
+        host._page.goto(host_url())
+        p1._page.goto(pax_url())
 
         try:
             p1.join("AllCorrect")
@@ -112,8 +112,8 @@ class TestMultiSelectPoll:
         host = HostPage(ctx_host.new_page())
         p1 = ParticipantPage(ctx1.new_page())
 
-        host._page.goto("/host")
-        p1._page.goto("/")
+        host._page.goto(host_url())
+        p1._page.goto(pax_url())
 
         try:
             p1.join("PartialVoter")
@@ -148,8 +148,8 @@ class TestMultiSelectPoll:
         host = HostPage(ctx_host.new_page())
         p1 = ParticipantPage(ctx1.new_page())
 
-        host._page.goto("/host")
-        p1._page.goto("/")
+        host._page.goto(host_url())
+        p1._page.goto(pax_url())
 
         try:
             p1.join("AllWrong")
@@ -190,7 +190,7 @@ class TestPollTimer:
         host.create_poll("Timer Q?", ["A", "B"])
 
         # Start a 10-second timer via API
-        resp = api(server_url, "post", "/api/poll/timer", json={"seconds": 10})
+        resp = sapi(server_url, "post", "/poll/timer", json={"seconds": 10})
         assert resp.status_code == 200
 
         # Participant should see the countdown element with timer text
@@ -212,14 +212,14 @@ class TestPollTimer:
         host.create_poll("Timer close?", ["Yes", "No"])
         expect(host._page.locator("text=Close voting")).to_be_visible(timeout=5000)
 
-        api(server_url, "post", "/api/poll/timer", json={"seconds": 30})
+        sapi(server_url, "post", "/poll/timer", json={"seconds": 30})
         pax._page.wait_for_function(
             "() => document.getElementById('pax-countdown')?.textContent?.includes('s')",
             timeout=5000
         )
 
         # Close voting via API (more reliable than clicking UI)
-        api(server_url, "put", "/api/poll/status", json={"open": False})
+        sapi(server_url, "put", "/poll/status", json={"open": False})
         pax._page.wait_for_timeout(2000)
 
         # After closing, the poll re-renders without active timer
@@ -249,7 +249,7 @@ class TestLeaderboard:
         assert pax.get_score() == 100
 
         # Show leaderboard
-        resp = api(server_url, "post", "/api/leaderboard/show")
+        resp = sapi(server_url, "post", "/leaderboard/show")
         assert resp.status_code == 200
 
         # Participant should see leaderboard overlay (display changes from none to flex)
@@ -259,7 +259,7 @@ class TestLeaderboard:
         )
 
         # Hide leaderboard
-        resp = api(server_url, "post", "/api/leaderboard/hide")
+        resp = sapi(server_url, "post", "/leaderboard/hide")
         assert resp.status_code == 200
 
         pax._page.wait_for_function(
@@ -277,9 +277,9 @@ class TestLeaderboard:
         p1 = ParticipantPage(ctx1.new_page())
         p2 = ParticipantPage(ctx2.new_page())
 
-        host._page.goto("/host")
-        p1._page.goto("/")
-        p2._page.goto("/")
+        host._page.goto(host_url())
+        p1._page.goto(pax_url())
+        p2._page.goto(pax_url())
 
         try:
             p1.join("Leader1")
@@ -292,7 +292,7 @@ class TestLeaderboard:
             p2.submit_question("Q1 from P2")
             p1._page.wait_for_timeout(1500)
 
-            api(server_url, "post", "/api/leaderboard/show")
+            sapi(server_url, "post", "/leaderboard/show")
 
             # Both should see leaderboard (display changes from none to flex)
             p1._page.wait_for_function(
@@ -310,7 +310,7 @@ class TestLeaderboard:
             rank_text = p1_rank.inner_text()
             assert len(rank_text) > 0, "Personal rank should be displayed"
 
-            api(server_url, "post", "/api/leaderboard/hide")
+            sapi(server_url, "post", "/leaderboard/hide")
         finally:
             for ctx in (ctx_host, ctx1, ctx2):
                 ctx.close()
@@ -327,23 +327,23 @@ class TestConferenceMode:
     def test_toggle_conference_mode(self, server_url, host: HostPage):
         """Toggle to conference mode and back."""
         try:
-            resp = api(server_url, "post", "/api/mode", json={"mode": "conference"})
+            resp = sapi(server_url, "post", "/mode", json={"mode": "conference"})
             assert resp.status_code == 200
             host._page.wait_for_timeout(1000)
 
-            resp = api(server_url, "post", "/api/mode", json={"mode": "workshop"})
+            resp = sapi(server_url, "post", "/mode", json={"mode": "workshop"})
             assert resp.status_code == 200
         finally:
-            api(server_url, "post", "/api/mode", json={"mode": "workshop"})
+            sapi(server_url, "post", "/mode", json={"mode": "workshop"})
 
     def test_conference_mode_auto_assigns_character_name(self, server_url, playwright):
         """In conference mode, participant gets auto-assigned character name."""
         try:
-            api(server_url, "post", "/api/mode", json={"mode": "conference"})
+            sapi(server_url, "post", "/mode", json={"mode": "conference"})
 
             b_pax, ctx_pax = pax_browser_ctx(server_url, playwright)
             page = ctx_pax.new_page()
-            page.goto(server_url)
+            page.goto(pax_url())
 
             try:
                 # Should auto-join with character name
@@ -357,16 +357,16 @@ class TestConferenceMode:
                 ctx_pax.close()
                 b_pax.close()
         finally:
-            api(server_url, "post", "/api/mode", json={"mode": "workshop"})
+            sapi(server_url, "post", "/mode", json={"mode": "workshop"})
 
     def test_conference_mode_hides_score(self, server_url, playwright):
         """Conference mode hides the score display."""
         try:
-            api(server_url, "post", "/api/mode", json={"mode": "conference"})
+            sapi(server_url, "post", "/mode", json={"mode": "conference"})
 
             b_pax, ctx_pax = pax_browser_ctx(server_url, playwright)
             page = ctx_pax.new_page()
-            page.goto(server_url)
+            page.goto(pax_url())
 
             try:
                 expect(page.locator("#main-screen")).to_be_visible(timeout=10000)
@@ -380,7 +380,7 @@ class TestConferenceMode:
                 ctx_pax.close()
                 b_pax.close()
         finally:
-            api(server_url, "post", "/api/mode", json={"mode": "workshop"})
+            sapi(server_url, "post", "/mode", json={"mode": "workshop"})
 
 
 # ---------------------------------------------------------------------------
@@ -458,8 +458,8 @@ class TestAdditionalEdgeCases:
         host = HostPage(ctx_host.new_page())
         p1 = ParticipantPage(ctx1.new_page())
 
-        host._page.goto("/host")
-        p1._page.goto("/")
+        host._page.goto(host_url())
+        p1._page.goto(pax_url())
 
         try:
             p1.join("EarlyQA")
@@ -469,7 +469,7 @@ class TestAdditionalEdgeCases:
 
             # Now P2 joins late
             p2_page = ctx2.new_page()
-            p2_page.goto(server_url)
+            p2_page.goto(pax_url())
             p2 = ParticipantPage(p2_page)
             p2.join("LateQA")
 
@@ -487,14 +487,14 @@ class TestAdditionalEdgeCases:
         b1, ctx1 = pax_browser_ctx(server_url, playwright)
 
         host = HostPage(ctx_host.new_page())
-        host._page.goto("/host")
+        host._page.goto(host_url())
 
         try:
             host.open_wordcloud_tab()
             host._page.wait_for_timeout(500)
 
             p1_page = ctx1.new_page()
-            p1_page.goto(server_url)
+            p1_page.goto(pax_url())
             p1 = ParticipantPage(p1_page)
             p1.join("LateWC")
 
@@ -524,8 +524,8 @@ class TestAdditionalEdgeCases:
         host = HostPage(ctx_host.new_page())
         p1 = ParticipantPage(ctx1.new_page())
 
-        host._page.goto("/host")
-        p1._page.goto("/")
+        host._page.goto(host_url())
+        p1._page.goto(pax_url())
 
         try:
             p1.join("CapTest")
@@ -549,8 +549,8 @@ class TestAdditionalEdgeCases:
             }""")
             assert selected <= 2, f"Should not have more than 2 selected, got {selected}"
         finally:
-            api(server_url, "put", "/api/poll/status", json={"open": False})
-            api(server_url, "delete", "/api/poll")
+            sapi(server_url, "put", "/poll/status", json={"open": False})
+            sapi(server_url, "delete", "/poll")
             for ctx in (ctx_host, ctx1):
                 ctx.close()
             for b in (b_host, b1):
@@ -564,10 +564,10 @@ class TestAdditionalEdgeCases:
 
         host = HostPage(ctx_host.new_page())
         p1_page = ctx1.new_page()
-        p1_page.goto("/")
+        p1_page.goto(pax_url())
         p1 = ParticipantPage(p1_page)
 
-        host._page.goto("/host")
+        host._page.goto(host_url())
 
         js_errors = []
         p1_page.on("pageerror", lambda e: js_errors.append(str(e)))
@@ -595,16 +595,16 @@ class TestAdditionalEdgeCases:
             expect(p1_page.locator(".result-icon", has_text="✅")).to_be_visible(timeout=5000)
 
             # Leaderboard
-            api(server_url, "post", "/api/leaderboard/show")
+            sapi(server_url, "post", "/leaderboard/show")
             p1_page.wait_for_timeout(2000)
-            api(server_url, "post", "/api/leaderboard/hide")
+            sapi(server_url, "post", "/leaderboard/hide")
             p1_page.wait_for_timeout(500)
 
             assert js_errors == [], f"JS errors during full lifecycle: {js_errors}"
         finally:
-            api(server_url, "put", "/api/poll/status", json={"open": False})
-            api(server_url, "delete", "/api/poll")
-            api(server_url, "post", "/api/wordcloud/clear")
+            sapi(server_url, "put", "/poll/status", json={"open": False})
+            sapi(server_url, "delete", "/poll")
+            sapi(server_url, "post", "/wordcloud/clear")
             for ctx in (ctx_host, ctx1):
                 ctx.close()
             for b in (b_host, b1):

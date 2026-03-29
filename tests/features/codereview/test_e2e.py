@@ -15,7 +15,7 @@ from playwright.sync_api import expect
 
 from pages.host_page import HostPage
 from pages.participant_page import ParticipantPage
-from conftest import api, host_browser_ctx, pax_browser_ctx, pax_url
+from conftest import api, sapi, host_browser_ctx, pax_browser_ctx, pax_url, host_url
 
 
 JAVA_SNIPPET = """\
@@ -78,7 +78,7 @@ class TestCodeReview:
         p1 = ParticipantPage(ctx1.new_page())
         p2 = ParticipantPage(ctx2.new_page())
 
-        host._page.goto("/host")
+        host._page.goto(host_url())
         p1._page.goto(pax_url())
         p2._page.goto(pax_url())
 
@@ -156,7 +156,7 @@ class TestCodeReview:
         host = HostPage(ctx_host.new_page())
         p1 = ParticipantPage(ctx1.new_page())
 
-        host._page.goto("/host")
+        host._page.goto(host_url())
         p1._page.goto(pax_url())
 
         try:
@@ -187,14 +187,14 @@ class TestCodeReview:
 
     def test_snippet_validation_too_short_and_too_long(self, server_url):
         """API rejects empty snippets and snippets exceeding 50 lines."""
-        resp_empty = api(server_url, "post", "/api/codereview", json={"snippet": ""})
+        resp_empty = sapi(server_url, "post", "/codereview", json={"snippet": ""})
         assert resp_empty.status_code == 400
 
         long_snippet = "\n".join(f"line {i}" for i in range(51))
-        resp_long = api(server_url, "post", "/api/codereview", json={"snippet": long_snippet})
+        resp_long = sapi(server_url, "post", "/codereview", json={"snippet": long_snippet})
         assert resp_long.status_code == 400
 
-        resp_valid = api(server_url, "post", "/api/codereview", json={"snippet": "int x = 1;"})
+        resp_valid = sapi(server_url, "post", "/codereview", json={"snippet": "int x = 1;"})
         assert resp_valid.status_code == 200
 
     def test_close_code_review_returns_to_idle(

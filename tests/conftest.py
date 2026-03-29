@@ -27,6 +27,16 @@ import pytest
 from pages.host_page import HostPage
 from pages.participant_page import ParticipantPage
 
+# Load secrets file early so HOST_USERNAME/HOST_PASSWORD are in env before being read
+_secrets_file = os.path.join(os.path.expanduser("~"), ".training-assistants-secrets.env")
+if os.path.exists(_secrets_file):
+    with open(_secrets_file) as _sf:
+        for _line in _sf:
+            _line = _line.strip()
+            if _line and not _line.startswith("#") and "=" in _line:
+                _k, _, _v = _line.partition("=")
+                os.environ.setdefault(_k.strip(), _v.strip())
+
 HOST_USER = os.environ.get("HOST_USERNAME", "host")
 HOST_PASS = os.environ.get("HOST_PASSWORD", "testpass")
 
@@ -107,11 +117,12 @@ def server_url(tmp_path_factory):
 
     # Start a session so participant routes are accessible
     r = requests.post(
-        f"{base_url}/api/session/start",
+        f"{base_url}/api/session/create",
         auth=(HOST_USER, HOST_PASS),
-        json={"name": "e2e-test"},
+        json={"name": "e2e-test", "type": "workshop"},
     )
     r.raise_for_status()
+    _cached_session_id[0] = r.json().get("session_id")
 
     _server_port["port"] = port
 
@@ -140,6 +151,18 @@ def api(server_url, method, path, **kwargs):
     )
 
 
+def sapi(server_url, method, path, **kwargs):
+    """Session-scoped authenticated API call (prepends /api/{session_id})."""
+    sid = _get_session_id()
+    return api(server_url, method, f"/api/{sid}{path}", **kwargs)
+
+
+def papi(server_url, method, path, **kwargs):
+    """Session-scoped public API call (prepends /{session_id}/api). No auth."""
+    sid = _get_session_id()
+    return getattr(requests, method)(f"{server_url}/{sid}/api{path}", **kwargs)
+
+
 _cached_session_id = [None]  # list so it's mutable across module copies
 
 
@@ -157,13 +180,10 @@ def _get_session_id():
                 port = sp["port"]
                 break
     assert port, "No server port — server_url fixture must run first"
-    r = requests.get(
-        f"http://127.0.0.1:{port}/api/session/snapshot",
-        auth=(HOST_USER, HOST_PASS),
-    )
+    r = requests.get(f"http://127.0.0.1:{port}/api/session/active")
     r.raise_for_status()
     sid = r.json().get("session_id")
-    assert sid, "No session_id in snapshot"
+    assert sid, "No session_id in /api/session/active"
     _cached_session_id[0] = sid
     return sid
 
@@ -181,6 +201,13 @@ def pax_url(path="/"):
     if path == "/":
         return f"/{sid}"
     return f"/{sid}{path}"
+
+
+def host_url():
+    """Return session-scoped host URL path.
+    Example: page.goto(host_url()) instead of page.goto("/host/{sid}")"""
+    sid = _get_session_id()
+    return f"/host/{sid}"
 
 
 def host_browser_ctx(server_url, playwright):
@@ -209,7 +236,8 @@ def pax_browser_ctx(server_url, playwright):
 def host(server_url, playwright) -> HostPage:
     browser, ctx = host_browser_ctx(server_url, playwright)
     page = ctx.new_page()
-    page.goto("/host")
+    sid = _get_session_id()
+    page.goto(f"/host/{sid}")
     yield HostPage(page)
     ctx.close()
     browser.close()
@@ -239,46 +267,46 @@ pax3 = _make_pax_fixture()
 @pytest.fixture(autouse=False)
 def clean_qa(server_url):
     """Clear Q&A state before and after each test that uses it."""
-    api(server_url, "post", "/api/qa/clear")
+    sapi(server_url, "post", "/qa/clear")
     yield
-    api(server_url, "post", "/api/qa/clear")
+    sapi(server_url, "post", "/qa/clear")
 
 
 @pytest.fixture(autouse=False)
 def clean_codereview(server_url):
     """Clear code review state before and after each test that uses it."""
-    api(server_url, "delete", "/api/codereview")
+    sapi(server_url, "delete", "/codereview")
     yield
-    api(server_url, "delete", "/api/codereview")
+    sapi(server_url, "delete", "/codereview")
 
 
 @pytest.fixture(autouse=False)
 def clean_wordcloud(server_url):
     """Clear word cloud state before and after each test that uses it."""
-    api(server_url, "post", "/api/wordcloud/clear")
+    sapi(server_url, "post", "/wordcloud/clear")
     yield
-    api(server_url, "post", "/api/wordcloud/clear")
+    sapi(server_url, "post", "/wordcloud/clear")
 
 
 @pytest.fixture(autouse=False)
 def clean_scores(server_url):
     """Reset all scores before and after each test that uses it."""
-    api(server_url, "delete", "/api/scores")
+    sapi(server_url, "delete", "/scores")
     yield
-    api(server_url, "delete", "/api/scores")
+    sapi(server_url, "delete", "/scores")
 
 
 @pytest.fixture(autouse=False)
 def clean_all(server_url):
     """Clear all activity state."""
-    api(server_url, "post", "/api/qa/clear")
-    api(server_url, "delete", "/api/codereview")
-    api(server_url, "post", "/api/wordcloud/clear")
-    api(server_url, "delete", "/api/scores")
-    api(server_url, "post", "/api/activity", json={"activity": "none"})
+    sapi(server_url, "post", "/qa/clear")
+    sapi(server_url, "delete", "/codereview")
+    sapi(server_url, "post", "/wordcloud/clear")
+    sapi(server_url, "delete", "/scores")
+    sapi(server_url, "post", "/activity", json={"activity": "none"})
     yield
-    api(server_url, "post", "/api/qa/clear")
-    api(server_url, "delete", "/api/codereview")
-    api(server_url, "post", "/api/wordcloud/clear")
-    api(server_url, "delete", "/api/scores")
-    api(server_url, "post", "/api/activity", json={"activity": "none"})
+    sapi(server_url, "post", "/qa/clear")
+    sapi(server_url, "delete", "/codereview")
+    sapi(server_url, "post", "/wordcloud/clear")
+    sapi(server_url, "delete", "/scores")
+    sapi(server_url, "post", "/activity", json={"activity": "none"})

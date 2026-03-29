@@ -7,21 +7,21 @@ from core.messaging import broadcast_leaderboard, broadcast, broadcast_state
 router = APIRouter()
 
 
-@router.post("/api/leaderboard/show", dependencies=[Depends(require_host_auth)])
+@router.post("/leaderboard/show", dependencies=[Depends(require_host_auth)])
 async def show_leaderboard():
     state.leaderboard_active = True
     await broadcast_leaderboard()
     return {"ok": True}
 
 
-@router.post("/api/leaderboard/hide", dependencies=[Depends(require_host_auth)])
+@router.post("/leaderboard/hide", dependencies=[Depends(require_host_auth)])
 async def hide_leaderboard():
     state.leaderboard_active = False
     await broadcast({"type": "leaderboard_hide"})
     return {"ok": True}
 
 
-@router.delete("/api/scores", dependencies=[Depends(require_host_auth)])
+@router.delete("/scores", dependencies=[Depends(require_host_auth)])
 async def reset_scores():
     state.scores = {}
     state.base_scores = {}

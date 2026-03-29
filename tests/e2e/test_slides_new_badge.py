@@ -19,7 +19,7 @@ import pytest
 import requests
 from playwright.sync_api import Page, expect
 
-from conftest import HOST_USER, HOST_PASS, pax_browser_ctx
+from conftest import HOST_USER, HOST_PASS, pax_browser_ctx, pax_url
 
 # ── Minimal valid PDF ────────────────────────────────────────────────────────
 _MINIMAL_PDF = (
@@ -90,7 +90,7 @@ class TestSlidesNewBadge:
         browser, ctx = pax_browser_ctx(server_url, playwright)
         page = ctx.new_page()
         try:
-            page.goto("/")
+            page.goto(pax_url())
             expect(page.locator("#main-screen")).to_be_visible(timeout=10_000)
             # Wait for the slide to appear in the list.
             expect(page.locator(f"{_ITEM_SEL}:not(.unavailable)")).to_be_visible(timeout=8_000)
@@ -114,7 +114,7 @@ class TestSlidesNewBadge:
         browser, ctx = pax_browser_ctx(server_url, playwright)
         page = ctx.new_page()
         try:
-            page.goto("/")
+            page.goto(pax_url())
             expect(page.locator("#main-screen")).to_be_visible(timeout=10_000)
             expect(page.locator(f"{_ITEM_SEL}:not(.unavailable)")).to_be_visible(timeout=8_000)
 
@@ -138,7 +138,7 @@ class TestSlidesNewBadge:
         browser, ctx = pax_browser_ctx(server_url, playwright)
         page = ctx.new_page()
         try:
-            page.goto("/")
+            page.goto(pax_url())
             expect(page.locator("#main-screen")).to_be_visible(timeout=10_000)
             expect(page.locator(f"{_ITEM_SEL}:not(.unavailable)")).to_be_visible(timeout=8_000)
 
@@ -165,7 +165,7 @@ class TestSlidesNewBadge:
         browser, ctx = pax_browser_ctx(server_url, playwright)
         page = ctx.new_page()
         try:
-            page.goto("/")
+            page.goto(pax_url())
             expect(page.locator("#main-screen")).to_be_visible(timeout=10_000)
             expect(page.locator(f"{_ITEM_SEL}:not(.unavailable)")).to_be_visible(timeout=8_000)
 
@@ -195,7 +195,7 @@ class TestSlidesNewBadge:
         )
         page = ctx.new_page()
         try:
-            page.goto("/")
+            page.goto(pax_url())
             expect(page.locator("#main-screen")).to_be_visible(timeout=10_000)
             expect(page.locator(f"{_ITEM_SEL}:not(.unavailable)")).to_be_visible(timeout=8_000)
 

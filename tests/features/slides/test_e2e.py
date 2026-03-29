@@ -14,7 +14,7 @@ from io import BytesIO
 from playwright.sync_api import expect
 from pypdf import PdfWriter
 
-from conftest import api, pax_browser_ctx, pax_url
+from conftest import api, sapi, pax_browser_ctx, pax_url
 from pages.participant_page import ParticipantPage
 
 
@@ -174,7 +174,12 @@ def _dock_item_has_class(page, title: str, token: str) -> bool:
     ))
 
 
-def test_slides_mark_visited_and_persist_across_reload(pax):
+def test_slides_mark_visited_and_persist_across_reload(server_url, pax):
+    # Upload the test decks so they appear in the participant slide list
+    for slug, name in [("deck-a", "Deck-A"), ("deck-b", "Deck-B")]:
+        api(server_url, "post", "/api/slides/upload",
+            data={"slug": slug, "name": name},
+            files={"file": (f"{slug}.pdf", b"%PDF-1.4\n%%EOF\n", "application/pdf")})
     pax.join("SlidesVisited")
     page = pax._page
 

@@ -18,6 +18,7 @@ import urllib.request
 from pathlib import Path
 
 from daemon import log
+from daemon.http import _get_json as _http_get_json, session_api_url, get_active_session_id
 from daemon.slides.catalog import (
     _abs_key,
     _merge_slides,
@@ -100,8 +101,9 @@ def push_current_slides(config: SlidesDaemonConfig, public_url: str, slug: str, 
         "source_file": source_file,
         "converter": config.converter,
     }
+    sid = get_active_session_id(config.server_url)
     _post_json(
-        f"{config.server_url}/api/slides/current",
+        session_api_url(config.server_url, sid, "/slides/current"),
         payload,
         config.host_username,
         config.host_password,
@@ -114,8 +116,9 @@ def push_slides_list(config: SlidesDaemonConfig, slides: list[dict]) -> None:
         "message": "Agent ready.",
         "slides": slides,
     }
+    sid = get_active_session_id(config.server_url)
     _post_json(
-        f"{config.server_url}/api/quiz-status",
+        session_api_url(config.server_url, sid, "/quiz-status"),
         payload,
         config.host_username,
         config.host_password,

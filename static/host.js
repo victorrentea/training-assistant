@@ -1,3 +1,6 @@
+  const SESSION_ID = location.pathname.split('/')[2];
+  const API = (path) => `/api/${SESSION_ID}${path}`;
+
   const UPLOAD_CLEANUP_MINUTES = 5; // hide download icon + delete file after this many minutes
   let ws = null;
   let currentPoll = null;
@@ -23,10 +26,6 @@
   let _sessionIntervalsError = '';
   let _slidesCacheStatus = {};
   let _currentSessionId = null;
-  let _blockerAutoTimer = null;
-  let _blockerFolderExists = false;
-  let _blockerDismissed = false;
-  let _blockerOriginalName = '';
   let _slidesCatalogHideTimer = null;
   let _gitRepos = [];
   let _slidesLog = [];
@@ -124,7 +123,7 @@
     renderBars();
     recordPollInHistory(currentPoll, correctOptIds);
     // Post to backend to award points
-    const resp = await fetch('/api/poll/correct', {
+    const resp = await fetch(API('/poll/correct'), {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ correct_ids: [...correctOptIds] }),
@@ -143,7 +142,7 @@
   // ── WebSocket (host monitors state too) ──
   function connectWS() {
     const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-    ws = new WebSocket(`${proto}://${location.host}/ws/__host__`);
+    ws = new WebSocket(`${proto}://${location.host}/ws/${SESSION_ID}/__host__`);
 
     let _kicked = false;
     ws.onopen = () => setBadge(true);
@@ -491,7 +490,7 @@
   function openSessionIntervalLines(startIso, endIso) {
     if (!startIso || !endIso) return;
     const qs = new URLSearchParams({ start: startIso, end: endIso });
-    const url = `/api/session/interval-lines.txt?${qs.toString()}`;
+    const url = API(`/session/interval-lines.txt?${qs.toString()}`);
     window.open(url, '_blank', 'noopener');
   }
 
@@ -622,7 +621,7 @@
   }
 
   async function _syncSessionMain(main) {
-    const resp = await fetch('/api/session/sync', {
+    const resp = await fetch(API('/session/sync'), {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({ main, talk: sessionTalk }),
@@ -802,7 +801,7 @@
       if (!confirm('No summary cached for today.\nFeed the entire day\'s transcript to AI for summarization?')) return;
       _summaryGenerating = true;
       renderSummaryBadge();
-      fetch('/api/summary/force', {
+      fetch(API('/summary/force'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ full_day: true }),
@@ -819,7 +818,7 @@
     renderSummaryBadge();
     const btn = document.getElementById('summary-refresh-btn');
     if (btn) { btn.disabled = true; btn.style.opacity = '0.4'; }
-    fetch('/api/summary/force', { method: 'POST' }).catch(() => {});
+    fetch(API('/summary/force'), { method: 'POST' }).catch(() => {});
   }
 
   function requestFullDayRegenerate() {
@@ -827,7 +826,7 @@
     renderSummaryBadge();
     const btn = document.getElementById('summary-refresh-btn');
     if (btn) { btn.disabled = true; btn.style.opacity = '0.4'; }
-    fetch('/api/summary/full-reset', { method: 'POST' }).catch(() => {});
+    fetch(API('/summary/full-reset'), { method: 'POST' }).catch(() => {});
   }
 
   function setKickedFavicon() {
@@ -1005,7 +1004,7 @@
 
   async function toggleMode() {
     const newMode = (currentMode === 'workshop') ? 'conference' : 'workshop';
-    await fetch('/api/mode', {
+    await fetch(API('/mode'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ mode: newMode }),
@@ -1539,7 +1538,7 @@
     const multi = document.getElementById('multi-check').checked;
     const correctCountEl = document.getElementById('correct-count');
     const correct_count = multi ? (parseInt(correctCountEl.value) || null) : null;
-    const res = await fetch('/api/poll', {
+    const res = await fetch(API('/poll'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ question, options, multi, correct_count }),
@@ -1567,7 +1566,7 @@
   let _timerInterval = null;
 
   async function startTimer(seconds) {
-    const res = await fetch('/api/poll/timer', {
+    const res = await fetch(API('/poll/timer'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ seconds }),
@@ -1603,7 +1602,7 @@
 
   // ── Open / close / clear ──
   async function setPollStatus(open) {
-    await fetch('/api/poll/status', {
+    await fetch(API('/poll/status'), {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ open }),
@@ -1611,7 +1610,7 @@
   }
 
   async function clearPoll() {
-    await fetch('/api/poll', { method: 'DELETE' });
+    await fetch(API('/poll'), { method: 'DELETE' });
   }
 
   // ── Render ──
@@ -1767,7 +1766,7 @@
     }
     renderQuizStatus('requested', statusMsg);
     try {
-      await fetch('/api/quiz-request', {
+      await fetch(API('/quiz-request'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
@@ -1835,7 +1834,7 @@
     refiningTarget = target;
     _applyRefineGrayOut(target);
     try {
-      const res = await fetch('/api/quiz-refine', {
+      const res = await fetch(API('/quiz-refine'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ target }),
@@ -1875,7 +1874,7 @@
     if (payload.multi && payload.correct_indices?.length) {
       payload.correct_count = payload.correct_indices.length;
     }
-    const res = await fetch('/api/poll', {
+    const res = await fetch(API('/poll'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
@@ -1889,7 +1888,7 @@
         );
       }
       await setPollStatus(true);
-      await fetch('/api/quiz-preview', { method: 'DELETE' });
+      await fetch(API('/quiz-preview'), { method: 'DELETE' });
       toast('Poll fired ✓');
     } else {
       const err = await res.json();
@@ -1904,12 +1903,12 @@
   }
 
   async function dismissPreview() {
-    await fetch('/api/quiz-preview', { method: 'DELETE' });
+    await fetch(API('/quiz-preview'), { method: 'DELETE' });
   }
 
   async function resetScores() {
     if (!confirm('Reset all participant scores to zero?')) return;
-    await fetch('/api/scores', { method: 'DELETE' });
+    await fetch(API('/scores'), { method: 'DELETE' });
     toast('Scores reset ✓');
   }
 
@@ -1964,7 +1963,7 @@
       const contentEl = document.getElementById('tab-content-' + t);
       contentEl.style.display = tab === t ? (t === 'codereview' ? 'flex' : '') : 'none';
     });
-    await fetch('/api/activity', {
+    await fetch(API('/activity'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ activity: tab }),
@@ -2037,7 +2036,7 @@
     const input = document.getElementById('wc-topic-input');
     if (!input) return;
     const topic = input.value.trim();
-    await fetch('/api/wordcloud/topic', {
+    await fetch(API('/wordcloud/topic'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ topic }),
@@ -2074,7 +2073,7 @@
   async function clearWordCloud() {
     const dlWrap = document.getElementById('wc-download-wrap');
     if (dlWrap) dlWrap.style.display = 'none';
-    await fetch('/api/wordcloud/clear', { method: 'POST' });
+    await fetch(API('/wordcloud/clear'), { method: 'POST' });
   }
 
   function renderHostWordCloud(wordsMap) {
@@ -2141,11 +2140,11 @@
   }
 
   async function clearQA() {
-    await fetch('/api/qa/clear', { method: 'POST' });
+    await fetch(API('/qa/clear'), { method: 'POST' });
   }
 
   async function toggleAnswered(qid, current) {
-    await fetch(`/api/qa/question/${qid}/answered`, {
+    await fetch(API(`/qa/question/${qid}/answered`), {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ answered: !current }),
@@ -2153,7 +2152,7 @@
   }
 
   async function deleteQuestion(qid) {
-    await fetch(`/api/qa/question/${qid}`, { method: 'DELETE' });
+    await fetch(API(`/qa/question/${qid}`), { method: 'DELETE' });
   }
 
   function editQuestion(qid) {
@@ -2180,7 +2179,7 @@
       const newText = input.value.trim();
       if (newText && newText !== currentText) {
         textEl.textContent = newText; // optimistic update (WS will confirm)
-        await fetch(`/api/qa/question/${qid}/text`, {
+        await fetch(API(`/qa/question/${qid}/text`), {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ text: newText }),
@@ -2422,7 +2421,7 @@
     btn.textContent = smartPaste ? 'Extracting code...' : 'Starting...';
 
     try {
-      await fetch('/api/codereview', {
+      await fetch(API('/codereview'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ snippet, language, smart_paste: smartPaste }),
@@ -2434,7 +2433,7 @@
   }
 
   async function closeCodeReviewSelection() {
-    await fetch('/api/codereview/status', {
+    await fetch(API('/codereview/status'), {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ open: false }),
@@ -2442,7 +2441,7 @@
   }
 
   async function confirmCodeReviewLine(line) {
-    await fetch('/api/codereview/confirm-line', {
+    await fetch(API('/codereview/confirm-line'), {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ line }),
@@ -2451,7 +2450,7 @@
 
   async function clearCodeReview() {
     codereviewSelectedLine = null;
-    await fetch('/api/codereview', {
+    await fetch(API('/codereview'), {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
     });
@@ -2584,7 +2583,7 @@
     }
     _debateChimePlayed = false;
     _stopBeeping();
-    await fetch('/api/debate/round-timer', {
+    await fetch(API('/debate/round-timer'), {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({round_index: index, seconds}),
@@ -2593,11 +2592,11 @@
 
   async function endDebateRound() {
     _stopBeeping();
-    await fetch('/api/debate/end-round', { method: 'POST' });
+    await fetch(API('/debate/end-round'), { method: 'POST' });
   }
 
   async function setDebateFirstSide(side) {
-    await fetch('/api/debate/first-side', {
+    await fetch(API('/debate/first-side'), {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({side}),
@@ -2620,7 +2619,7 @@
     const input = document.getElementById('debate-statement-input');
     const statement = input.value.trim();
     if (!statement) return;
-    await fetch('/api/debate', {
+    await fetch(API('/debate'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ statement }),
@@ -2628,7 +2627,7 @@
   }
 
   async function debateCloseSelection() {
-    await fetch('/api/debate/close-selection', { method: 'POST' });
+    await fetch(API('/debate/close-selection'), { method: 'POST' });
   }
 
   async function debateEndArguments() {
@@ -2640,7 +2639,7 @@
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 20000);
     try {
-      await fetch('/api/debate/end-arguments', { method: 'POST', signal: controller.signal });
+      await fetch(API('/debate/end-arguments'), { method: 'POST', signal: controller.signal });
     } catch(e) {
       // timeout or network error — state will update via WS anyway
     } finally {
@@ -2649,15 +2648,15 @@
   }
 
   async function debateForceAssign() {
-    await fetch('/api/debate/force-assign', { method: 'POST' });
+    await fetch(API('/debate/force-assign'), { method: 'POST' });
   }
 
   async function debateReset() {
-    await fetch('/api/debate/reset', { method: 'POST' });
+    await fetch(API('/debate/reset'), { method: 'POST' });
   }
 
   async function debateNextPhase(phase) {
-    await fetch('/api/debate/phase', {
+    await fetch(API('/debate/phase'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ phase }),
@@ -2666,7 +2665,7 @@
 
   async function debateSkipAI() {
     // Post empty result to advance past ai_cleanup if daemon is unavailable
-    await fetch('/api/debate/ai-result', {
+    await fetch(API('/debate/ai-result'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ merges: [], cleaned: [], new_arguments: [] }),
@@ -2937,9 +2936,9 @@ let _leaderboardActive = false;
 async function toggleLeaderboard() {
     try {
         if (_leaderboardActive) {
-            await fetch('/api/leaderboard/hide', { method: 'POST' });
+            await fetch(API('/leaderboard/hide'), { method: 'POST' });
         } else {
-            await fetch('/api/leaderboard/show', { method: 'POST' });
+            await fetch(API('/leaderboard/show'), { method: 'POST' });
         }
     } catch (e) {
         console.error('Leaderboard toggle failed:', e);
@@ -3057,137 +3056,15 @@ function onSessionEmojiKey(event, action) {
   if (typeof action === 'function') action();
 }
 
-// (declarations moved to top of file)
-
-function _updateBlocker() {
-  const blocker = document.getElementById('session-blocker');
-  if (!blocker) return;
-
-  // Only dismiss after host explicitly started/confirmed via blockerStart()
-  if (_blockerDismissed) {
-    blocker.style.display = 'none';
-    _clearBlockerAutoStart();
-    return;
-  }
-
-  blocker.style.display = 'flex';
-
-  const input = document.getElementById('blocker-session-input');
-  const check = document.getElementById('blocker-folder-check');
-  const statusEl = document.getElementById('blocker-status');
-
-  // Pre-fill from daemon_session_folder (disk) or active session (session_id + sessionMain)
-  const folderName = daemonSessionFolder
-    ? daemonSessionFolder.split('/').pop()
-    : (_currentSessionId && sessionMain ? sessionMain.name : null);
-  if (folderName) {
-    if (!input.value || input.value === _blockerOriginalName || !input.dataset.touched) {
-      input.value = folderName;
-      _blockerOriginalName = folderName;
-      _blockerFolderExists = true;
-      check.style.display = '';
-      onBlockerInput(); // enable button
-      statusEl.textContent = 'Folder found — auto-starting...';
-      _startBlockerAutoStart();
-    }
-  } else if (!input.value && !input.dataset.touched) {
-    const today = new Date().toISOString().slice(0, 10);
-    input.value = today + ' ';
-    _blockerOriginalName = today + ' ';
-    onBlockerInput();
-    statusEl.textContent = '';
-  }
+function stopSession() {
+  if (!confirm('Stop this session and return to the session list?')) return;
+  fetch('/api/session/end', {method: 'POST'})
+    .then(() => { window.location = '/host'; })
+    .catch(e => console.error('stopSession failed:', e));
 }
-
-function onBlockerInput() {
-  const input = document.getElementById('blocker-session-input');
-  const btn = document.getElementById('blocker-start-btn');
-  const check = document.getElementById('blocker-folder-check');
-  const statusEl = document.getElementById('blocker-status');
-  input.dataset.touched = '1';
-  btn.disabled = !input.value.trim();
-
-  // Green check: only if value matches the daemon-detected folder name
-  const matchesFolder = _blockerFolderExists && input.value === _blockerOriginalName;
-  check.style.display = matchesFolder ? '' : 'none';
-
-  // Cancel auto-start if user changed the name
-  if (!matchesFolder) {
-    _clearBlockerAutoStart();
-    statusEl.textContent = '';
-  }
-}
-
-function _startBlockerAutoStart() {
-  _clearBlockerAutoStart();
-  const prog = document.getElementById('blocker-btn-progress');
-  if (prog) {
-    prog.style.transition = 'none';
-    prog.style.width = '0';
-    requestAnimationFrame(() => {
-      prog.style.transition = 'width 3s linear';
-      prog.style.width = '100%';
-    });
-  }
-  _blockerAutoTimer = setTimeout(() => {
-    _blockerAutoTimer = null;
-    blockerStart();
-  }, 3000);
-}
-
-function _clearBlockerAutoStart() {
-  if (_blockerAutoTimer) {
-    clearTimeout(_blockerAutoTimer);
-    _blockerAutoTimer = null;
-  }
-  const prog = document.getElementById('blocker-btn-progress');
-  if (prog) {
-    prog.style.transition = 'none';
-    prog.style.width = '0';
-  }
-}
-
-function blockerStart() {
-  const input = document.getElementById('blocker-session-input');
-  const name = input.value.trim();
-  if (!name) return;
-  _clearBlockerAutoStart();
-
-  const check = document.getElementById('blocker-folder-check');
-  const folderExists = check && check.style.display !== 'none';
-
-  if (!folderExists) {
-    if (!confirm(`Create folder "${name}"?`)) return;
-  }
-
-  // Call createSession — dismiss blocker on success
-  fetch('/api/session/create', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({name})
-  }).then(r => {
-    if (r.ok) {
-      _blockerDismissed = true;
-      _updateBlocker();
-    }
-  }).catch(e => console.error('blockerStart failed:', e));
-
-  const statusEl = document.getElementById('blocker-status');
-  if (statusEl) statusEl.textContent = 'Starting session...';
-  const btn = document.getElementById('blocker-start-btn');
-  if (btn) btn.disabled = true;
-}
-
-// Initialize blocker with date pre-fill on page load
-_updateBlocker();
-setTimeout(() => {
-  const input = document.getElementById('blocker-session-input');
-  if (input && document.getElementById('session-blocker').style.display !== 'none') input.focus();
-}, 100);
 
 function updateSessionCodeBar(sessionId) {
   _currentSessionId = sessionId;
-  _updateBlocker();
   const bar = document.getElementById('session-code-bar');
   const display = document.getElementById('session-code-display');
   if (bar) bar.style.display = sessionId ? 'flex' : 'none';
@@ -3477,7 +3354,7 @@ function copyAndDismissPaste(el) {
 function downloadUploadedFile(el) {
   const uploadId = parseInt(el.dataset.uploadId, 10);
   // Fetch with credentials (Basic Auth) then trigger browser download
-  fetch(`/api/upload/${uploadId}`, { credentials: 'same-origin' })
+  fetch(API(`/upload/${uploadId}`), { credentials: 'same-origin' })
     .then(resp => {
       if (!resp.ok) throw new Error('Download failed');
       const cd = resp.headers.get('content-disposition') || '';

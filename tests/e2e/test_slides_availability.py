@@ -9,7 +9,7 @@ import requests
 import pytest
 from playwright.sync_api import expect
 
-from conftest import HOST_USER, HOST_PASS, pax_browser_ctx
+from conftest import HOST_USER, HOST_PASS, pax_browser_ctx, pax_url
 
 # A minimal valid PDF accepted by PDF.js.
 _MINIMAL_PDF = (
@@ -58,7 +58,7 @@ class TestSlidesAvailability:
         browser, ctx = pax_browser_ctx(server_url, playwright)
         page = ctx.new_page()
         try:
-            page.goto("/")
+            page.goto(pax_url())
             expect(page.locator("#main-screen")).to_be_visible(timeout=10_000)
 
             unavailable = page.locator(f"{_ITEM_SEL}.unavailable")
@@ -73,7 +73,7 @@ class TestSlidesAvailability:
         browser, ctx = pax_browser_ctx(server_url, playwright)
         page = ctx.new_page()
         try:
-            page.goto("/")
+            page.goto(pax_url())
             expect(page.locator("#main-screen")).to_be_visible(timeout=10_000)
 
             expect(page.locator(f"{_ITEM_SEL}.unavailable")).to_be_visible(timeout=5_000)

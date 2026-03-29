@@ -96,8 +96,8 @@ class AppState:
         self.summary_reset_requested: bool = False
         # Session state
         self.session_main: dict | None = None   # {name, started_at, status}
-        self.session_talk: dict | None = None   # {name, started_at, status} | None
-        self.paused_participant_uuids: set[str] = set()  # UUIDs of paused session's participants
+        self.session_type: str = "workshop"     # "workshop" | "conference"
+        self.session_name: str | None = None    # display name for current session
         self.session_request: dict | None = None
         # Debate state
         self.debate_statement: Optional[str] = None

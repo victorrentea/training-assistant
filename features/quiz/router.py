@@ -64,7 +64,7 @@ def _slugify(value: str) -> str:
     return raw or "slide"
 
 
-@router.post("/api/quiz-request")
+@router.post("/quiz-request")
 async def request_quiz(body: QuizRequest):
     if body.topic:
         state.quiz_request = {"minutes": None, "topic": body.topic}
@@ -86,7 +86,7 @@ async def request_quiz(body: QuizRequest):
     return {"ok": True}
 
 
-@router.get("/api/quiz-request")
+@router.get("/quiz-request")
 async def poll_quiz_request():
     state.touch_daemon()
     req = state.quiz_request
@@ -101,7 +101,7 @@ async def poll_quiz_request():
     }
 
 
-@router.post("/api/quiz-status")
+@router.post("/quiz-status")
 async def update_quiz_status(body: QuizStatus):
     state.quiz_status = {"status": body.status, "message": body.message}
     if body.session_folder is not None or body.session_notes is not None:
@@ -136,7 +136,7 @@ async def update_quiz_status(body: QuizStatus):
     return {"ok": True}
 
 
-@router.post("/api/quiz-preview")
+@router.post("/quiz-preview")
 async def set_quiz_preview(body: QuizPreview):
     state.quiz_preview = {
         "question": body.question,
@@ -150,14 +150,14 @@ async def set_quiz_preview(body: QuizPreview):
     return {"ok": True}
 
 
-@router.delete("/api/quiz-preview")
+@router.delete("/quiz-preview")
 async def clear_quiz_preview():
     state.quiz_preview = None
     await broadcast({"type": "quiz_preview", "quiz": None})
     return {"ok": True}
 
 
-@router.post("/api/quiz-refine")
+@router.post("/quiz-refine")
 async def request_quiz_refine(body: QuizRefineRequest):
     if not state.quiz_preview:
         raise HTTPException(400, "No preview to refine")
@@ -172,7 +172,7 @@ async def request_quiz_refine(body: QuizRefineRequest):
     return {"ok": True}
 
 
-@router.get("/api/quiz-refine")
+@router.get("/quiz-refine")
 async def poll_quiz_refine():
     state.touch_daemon()
     req = state.quiz_refine_request

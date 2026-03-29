@@ -51,6 +51,7 @@ from daemon.session_state import (
     find_notes_in_folder,
     sync_session_to_server,
     load_slides_manifest,
+    set_current_session_id,
 )
 from daemon.lock import (
     check_and_acquire_lock,
@@ -681,6 +682,9 @@ def run() -> None:
                     action = session_req.get("action") if session_req else None
                     if action == "create":
                         name = session_req["name"]
+                        sid = session_req.get("session_id")
+                        if sid:
+                            set_current_session_id(sid)
                         folder = sessions_root / name
                         existed = folder.exists()
                         folder.mkdir(parents=True, exist_ok=True)
@@ -780,90 +784,6 @@ def run() -> None:
                         sync_session_to_server(config, session_stack, current_key_points, slides_log=slides_log, git_repos=git_repos)
                         transcript_state.reset()
                         log.info("session", f"Resumed: {session_stack[-1]['name']}")
-
-                    elif action == "start_talk":
-                        _now = datetime.now()
-                        talk_name = f"{_now.strftime('%Y-%m-%d %H:%M')} talk"
-                        talk_folder = sessions_root / talk_name
-                        talk_folder.mkdir(parents=True, exist_ok=True)
-
-                        current_folder = sessions_root / session_stack[-1]["name"] if session_stack else None
-
-                        # Load talk's existing key points (if folder had prior data)
-                        talk_points, talk_wm = load_key_points(talk_folder)
-
-                        # Load talk's existing session state
-                        talk_state = None
-                        talk_state_path = talk_folder / "session_state.json"
-                        if talk_state_path.exists():
-                            try:
-                                talk_state = json.loads(talk_state_path.read_text())
-                            except Exception:
-                                pass
-
-                        # Push new talk session onto stack
-                        session_stack.append({
-                            "name": talk_name,
-                            "started_at": _now.isoformat(),
-                            "status": "active",
-                        })
-                        current_key_points, summary_watermark = talk_points, talk_wm
-                        save_daemon_state(sessions_root, stack_to_daemon_state(session_stack))
-                        notes_file = find_notes_in_folder(talk_folder)
-                        config = dc_replace(config, session_folder=talk_folder, session_notes=notes_file)
-
-                        # Sync to server: mark current participants as paused, restore talk state
-                        sync_session_to_server(
-                            config, session_stack, talk_points,
-                            session_state=talk_state,
-                            discussion_points=talk_points,
-                            action="start_talk",
-                            slides_log=slides_log,
-                            git_repos=git_repos,
-                        )
-                        transcript_state.reset()
-                        log.info("session", f"START TALK: {talk_name}")
-
-                    elif action == "end_talk":
-                        if len(session_stack) < 2:
-                            log.warning("daemon", "END TALK requested but no talk is active")
-                        else:
-                            talk_folder = sessions_root / session_stack[-1]["name"]
-                            if talk_folder.exists():
-                                try:
-                                    save_key_points(talk_folder, current_key_points, summary_watermark, session_start_date(session_stack[-1]))
-                                except Exception as e:
-                                    log.error("daemon", f"END TALK: failed to save key points: {e}")
-
-                            # Pop talk, restore main
-                            session_stack.pop()
-                            save_daemon_state(sessions_root, stack_to_daemon_state(session_stack))
-
-                            main_folder = sessions_root / session_stack[0]["name"] if session_stack else None
-                            current_key_points, summary_watermark = load_key_points(main_folder) if main_folder else ([], 0)
-
-                            # Load main's saved session state for restore
-                            main_state = None
-                            if main_folder and (main_folder / "session_state.json").exists():
-                                try:
-                                    main_state = json.loads((main_folder / "session_state.json").read_text())
-                                except Exception:
-                                    pass
-
-                            notes_file = find_notes_in_folder(main_folder) if main_folder else None
-                            config = dc_replace(config, session_folder=main_folder, session_notes=notes_file)
-
-                            # Sync to server: restore main participants, clear talk
-                            sync_session_to_server(
-                                config, session_stack, current_key_points,
-                                session_state=main_state,
-                                discussion_points=current_key_points,
-                                action="end_talk",
-                                slides_log=slides_log,
-                                git_repos=git_repos,
-                            )
-                            transcript_state.reset()
-                            log.info("daemon", f"END TALK: restored main session {session_stack[0]['name'] if session_stack else 'none'}")
 
                     elif action == "create_talk_folder":
                         _now = datetime.now()

@@ -1,0 +1,222 @@
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  min-height: 100vh;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 3rem 1rem 2rem;
+}
+
+#app {
+  width: 100%;
+  max-width: 520px;
+}
+
+.landing-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 2rem;
+  margin-bottom: 1.5rem;
+}
+
+.landing-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--accent);
+  margin-bottom: 1.5rem;
+  text-align: center;
+}
+
+/* Rejoin section */
+.rejoin-section {
+  margin-bottom: 1.5rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.rejoin-label {
+  font-size: .8rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  margin-bottom: .6rem;
+}
+
+.rejoin-btn {
+  width: 100%;
+  padding: .75rem 1.2rem;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: filter .15s, transform .1s;
+  text-align: center;
+}
+
+.rejoin-btn:hover {
+  filter: brightness(1.2);
+}
+
+.rejoin-btn:active {
+  transform: scale(.98);
+}
+
+/* New session form */
+.new-session-label {
+  font-size: .8rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  margin-bottom: .75rem;
+}
+
+.session-name-row {
+  display: flex;
+  gap: .5rem;
+  margin-bottom: .75rem;
+}
+
+.session-name-input {
+  flex: 1;
+  background: var(--surface2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0 .85rem;
+  font-size: 1rem;
+  height: 42px;
+  outline: none;
+  transition: border-color .15s;
+}
+
+.session-name-input:focus {
+  border-color: var(--accent);
+}
+
+.session-type-row {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.session-type-option {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+  cursor: pointer;
+  font-size: .95rem;
+  color: var(--text);
+}
+
+.session-type-option input[type="radio"] {
+  width: 1rem;
+  height: 1rem;
+  cursor: pointer;
+  accent-color: var(--accent);
+}
+
+.create-btn {
+  width: 100%;
+  padding: .65rem 1.2rem;
+  background: var(--action);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: filter .15s, transform .1s;
+}
+
+.create-btn:hover:not(:disabled) {
+  filter: brightness(1.2);
+}
+
+.create-btn:active:not(:disabled) {
+  transform: scale(.98);
+}
+
+.create-btn:disabled {
+  opacity: .35;
+  cursor: default;
+}
+
+/* Folder list */
+.folders-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.folders-header {
+  padding: 1rem 1.5rem .75rem;
+  font-size: .8rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  border-bottom: 1px solid var(--border);
+}
+
+.folder-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  max-height: 340px;
+  overflow-y: auto;
+}
+
+.folder-row {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  padding: .75rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background .1s;
+}
+
+.folder-row:last-child {
+  border-bottom: none;
+}
+
+.folder-row:hover {
+  background: var(--surface2);
+}
+
+.folder-icon {
+  font-size: 1rem;
+  flex-shrink: 0;
+  opacity: .6;
+}
+
+.folder-name {
+  flex: 1;
+  font-size: .95rem;
+  color: var(--text);
+}
+
+.folder-arrow {
+  color: var(--muted);
+  font-size: .85rem;
+  flex-shrink: 0;
+}
+
+.folders-empty {
+  padding: 1.5rem;
+  text-align: center;
+  color: var(--muted);
+  font-size: .9rem;
+}
+
+.error-msg {
+  color: var(--danger);
+  font-size: .85rem;
+  margin-top: .5rem;
+  text-align: center;
+}

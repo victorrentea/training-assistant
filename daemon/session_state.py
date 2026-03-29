@@ -11,12 +11,23 @@ from daemon.http import _get_json, _post_json
 
 # Module-level ws_client reference, set by daemon/__main__.py at startup
 _ws_client = None
+_current_session_id: str | None = None
 
 
 def set_ws_client(client) -> None:
     """Set the module-level ws_client reference."""
     global _ws_client
     _ws_client = client
+
+
+def set_current_session_id(session_id: str | None) -> None:
+    """Set the active server session_id for session-scoped HTTP calls."""
+    global _current_session_id
+    _current_session_id = session_id
+
+
+def get_current_session_id() -> str | None:
+    return _current_session_id
 
 # ── Constants ──────────────────────────────────────────────────────────────────
 _KEY_POINTS_FILE = "transcript_discussion.md"
@@ -317,8 +328,10 @@ def sync_session_to_server(
     if _ws_client and _ws_client.connected:
         _ws_client.send({"type": "session_sync", **payload})
     else:
+        sid = _current_session_id
+        path = f"/api/{sid}/session/sync" if sid else "/api/session/sync"
         _post_json(
-            f"{config.server_url}/api/session/sync",
+            f"{config.server_url}{path}",
             payload,
             config.host_username, config.host_password,
         )

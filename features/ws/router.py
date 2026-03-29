@@ -252,27 +252,17 @@ async def _handle_debate_ai_result(data):
 
 async def _handle_session_sync(data):
     """Daemon sends session state — replicate POST /api/session/sync."""
-    if data.get("main") is not None or data.get("talk") is not None:
+    if data.get("main") is not None:
         state.session_main = data.get("main")
-        state.session_talk = data.get("talk")
     key_points = data.get("key_points") or data.get("discussion_points") or []
     if key_points:
         state.summary_points = key_points
         state.summary_updated_at = datetime.now(timezone.utc)
 
-    action = data.get("action")
-    if action == "start_talk":
-        state.paused_participant_uuids = set(state.participant_names.keys())
-    elif action == "end_talk":
-        state.paused_participant_uuids = set(state.participant_names.keys())
-
     session_state = data.get("session_state")
     if session_state:
         from features.session.router import _restore_state_from_snapshot
         _restore_state_from_snapshot(session_state)
-
-    if action is None and session_state:
-        state.paused_participant_uuids = set()
 
     await broadcast_state()
 
@@ -573,15 +563,6 @@ async def _handle_participant_connection(websocket: WebSocket, pid: str, is_host
         await _kick_old_connection("__host__")
 
     await websocket.accept()
-
-    # UUID resolution: check if this UUID belongs to the paused session
-    if not is_host and not is_overlay and pid in state.paused_participant_uuids:
-        await websocket.send_json({
-            "type": "session_paused",
-            "message": "Session paused — you'll reconnect automatically"
-        })
-        await websocket.close()
-        return
 
     state.participants[pid] = websocket
     if not is_host and not is_overlay:
@@ -897,7 +878,7 @@ async def websocket_endpoint(websocket: WebSocket, participant_id: str):
 
 @session_router.websocket("/ws/{session_id}/{participant_id}")
 async def session_websocket_endpoint(websocket: WebSocket, session_id: str, participant_id: str):
-    """WebSocket endpoint for regular participants, requiring a valid session_id."""
+    """WebSocket endpoint for participants, host (__host__), and overlay (__overlay__), requiring a valid session_id."""
     # Validate session_id — accept first so client gets a clean 1008 close code
     if not state.session_id or session_id.lower() != state.session_id.lower():
         await websocket.accept()
@@ -905,9 +886,12 @@ async def session_websocket_endpoint(websocket: WebSocket, session_id: str, part
         return
 
     pid = participant_id.strip()
-    if not pid or pid.startswith("__"):
+    is_host = (pid == "__host__")
+    is_overlay = (pid == "__overlay__")
+
+    if not is_host and not is_overlay and (not pid or pid.startswith("__")):
         await websocket.accept()
         await websocket.close(code=1008)
         return
 
-    await _handle_participant_connection(websocket, pid, is_host=False, is_overlay=False)
+    await _handle_participant_connection(websocket, pid, is_host=is_host, is_overlay=is_overlay)
