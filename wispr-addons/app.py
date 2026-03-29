@@ -22,6 +22,8 @@ import AppKit
 import rumps
 import Quartz
 from Quartz import (
+    CGEventCreateKeyboardEvent,
+    CGEventSetFlags,
     CGEventGetFlags,
     CGEventGetIntegerValueField,
     CGEventMaskBit,
@@ -34,9 +36,11 @@ from Quartz import (
     CFRunLoopRun,
     CFRunLoopStop,
     kCGEventKeyDown,
+    kCGEventKeyUp,
     kCGEventOtherMouseDown,
     kCGEventTapDisabledByTimeout,
     kCGHeadInsertEventTap,
+    kCGHIDEventTap,
     kCGKeyboardEventKeycode,
     kCGSessionEventTap,
     kCFRunLoopCommonModes,
@@ -169,10 +173,11 @@ def set_clipboard(text: str) -> None:
 
 
 def simulate_keystroke(keycode: int, flags: int = 0) -> None:
-    if keycode == VK_V and flags == kCGEventFlagMaskCommand:
-        subprocess.run(["osascript", "-e", 'tell application "System Events" to keystroke "v" using command down'], timeout=2)
-    elif keycode == VK_Z and flags == kCGEventFlagMaskCommand:
-        subprocess.run(["osascript", "-e", 'tell application "System Events" to keystroke "z" using command down'], timeout=2)
+    for key_down in (True, False):
+        event = CGEventCreateKeyboardEvent(None, keycode, key_down)
+        if flags:
+            CGEventSetFlags(event, flags)
+        CGEventPost(kCGHIDEventTap, event)
 
 
 def compute_timeout(text: str) -> float:
