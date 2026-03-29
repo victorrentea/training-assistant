@@ -203,7 +203,7 @@ body {
 
 .folder-row {
   display: grid;
-  grid-template-columns: 6.5rem 1fr auto;
+  grid-template-columns: 8rem 1fr auto;
   align-items: center;
   gap: .75rem;
   padding: .5rem 1rem .5rem 1.5rem;
@@ -224,8 +224,10 @@ body {
   font-family: monospace;
   font-size: .8rem;
   color: var(--muted);
-  flex-shrink: 0;
   letter-spacing: .02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .folder-topic {
