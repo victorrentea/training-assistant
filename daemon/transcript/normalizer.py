@@ -11,6 +11,7 @@ import json
 import os
 import re
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import date, datetime
 from pathlib import Path
@@ -175,6 +176,7 @@ def normalize_incremental(
     offset_file: Path | None = None,
     output_dir: Path | None = None,
     now: datetime | None = None,
+    line_pre_filter: "Callable[[str], str | None] | None" = None,
 ) -> NormalizeResult:
     if not raw_file.exists() or not raw_file.is_file():
         raise FileNotFoundError(f"Raw transcript file not found: {raw_file}")
@@ -295,6 +297,12 @@ def normalize_incremental(
             continue
         if _is_low_signal_noise(text_content):
             continue
+        # --- LLM pre-filter (optional, easy to remove) ---
+        if line_pre_filter is not None:
+            text_content = line_pre_filter(text_content)
+            if not text_content:
+                continue
+        # --------------------------------------------------
 
         speaker = state.current_speaker or "Unknown"
         line_day = state.current_date or default_output_day
@@ -309,7 +317,11 @@ def normalize_incremental(
     return NormalizeResult(raw_file, offset_file, read_bytes, total_lines, written_files, should_reset, total_words)
 
 
-def normalize_folder_incremental(folder: Path, now: datetime | None = None) -> list[NormalizeResult]:
+def normalize_folder_incremental(
+    folder: Path,
+    now: datetime | None = None,
+    line_pre_filter: "Callable[[str], str | None] | None" = None,
+) -> list[NormalizeResult]:
     """Normalize all relevant raw files in folder.
 
     Policy:
@@ -334,7 +346,7 @@ def normalize_folder_incremental(folder: Path, now: datetime | None = None) -> l
 
     results: list[NormalizeResult] = []
     for raw in candidates:
-        results.append(normalize_incremental(raw, now=now))
+        results.append(normalize_incremental(raw, now=now, line_pre_filter=line_pre_filter))
     return results
 
 
