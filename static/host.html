@@ -337,8 +337,12 @@
 
       <!-- FRAGILE state: CREATE button (shown when no folder for today) -->
       <div id="session-fragile-row" style="display:none">
-        <input type="text" id="session-create-input" placeholder="Session name"
-               oninput="updateCreateBtn()">
+        <div style="display:flex; align-items:center; gap:0; flex:1;">
+          <span id="session-date-prefix" style="font-family:monospace; background:var(--surface2); border:1px solid var(--border); border-right:none; border-radius:var(--radius) 0 0 var(--radius); padding:.35rem .5rem; color:var(--muted); white-space:nowrap; font-size:.9rem;"></span>
+          <input type="text" id="session-create-input" placeholder="session name"
+                 oninput="updateCreateBtn()"
+                 style="border-radius:0 var(--radius) var(--radius) 0; flex:1;">
+        </div>
         <button class="btn btn-sm session-fragile-blink" id="btn-create-session"
                 onclick="createSession()" disabled>CREATE</button>
       </div>
