@@ -1,10 +1,15 @@
 {
-  "sha": "b415a5f8a5ea32cbcafdcf26aa540ec508fdef6e",
+  "sha": "df93d18060d947e7845a1c72686edc1f7e51bf9a",
   "timestamp": "2026-03-29 13:44",
   "changelog": [
-    "feat(host): session title in white, strip date prefix"
+    "feat(landing): move Start Session title above the card"
   ],
   "commits": [
+    {
+      "sha": "df93d180",
+      "msg": "feat(landing): move Start Session title above the card",
+      "ts": "2026-03-29T13:44:39+03:00"
+    },
     {
       "sha": "b415a5f8",
       "msg": "feat(host): session title in white, strip date prefix",
@@ -99,11 +104,6 @@
       "sha": "2c393fca",
       "msg": "feat(session): daemon pushes session folders list to backend on connect",
       "ts": "2026-03-29T13:09:09+03:00"
-    },
-    {
-      "sha": "520ad47e",
-      "msg": "fix(wispr-addons): replace osascript keystroke with CGEventPost (no timeout risk)",
-      "ts": "2026-03-29T13:07:05+03:00"
     }
   ],
   "branches": [
