@@ -1,10 +1,15 @@
 {
-  "sha": "8a87de47b4a4ff904e399352776c6c6f2db6061e",
-  "timestamp": "2026-03-29 13:51",
+  "sha": "58ccfd4437e835ef165c7be98ee6e235127da7c0",
+  "timestamp": "2026-03-29 13:52",
   "changelog": [
-    "feat: move stop button to left-most footer badge, turns red on hover"
+    "feat: remove session type toggle button from host footer"
   ],
   "commits": [
+    {
+      "sha": "58ccfd44",
+      "msg": "feat: remove session type toggle button from host footer",
+      "ts": "2026-03-29T13:50:29+03:00"
+    },
     {
       "sha": "8a87de47",
       "msg": "feat: move stop button to left-most footer badge, turns red on hover",
@@ -99,11 +104,6 @@
       "sha": "fc93c4b4",
       "msg": "feat(host-landing): support date-range folder names in session list",
       "ts": "2026-03-29T13:19:53+03:00"
-    },
-    {
-      "sha": "40d3895c",
-      "msg": "feat(host): show stop sign blocker when server is unreachable",
-      "ts": "2026-03-29T13:16:55+03:00"
     }
   ],
   "branches": [
@@ -193,11 +193,6 @@
       "minutes": 14
     },
     {
-      "branch": "pdf-fit-width-btn",
-      "sha": "60d7e4a",
-      "minutes": 10
-    },
-    {
       "branch": "fix-emoji-tooltip-direction",
       "sha": "a3b87b1",
       "minutes": 7
@@ -206,6 +201,11 @@
       "branch": "center-emoji-buttons",
       "sha": "1f1faa1",
       "minutes": 6
+    },
+    {
+      "branch": "session-date-prefix",
+      "sha": "15da723",
+      "minutes": 5
     }
   ]
 }
