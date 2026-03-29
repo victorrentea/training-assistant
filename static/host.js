@@ -1417,16 +1417,21 @@
     colorLight: 'transparent',
   });
 
-  // Fullscreen QR overlay (opened from bottom-right icon)
-  const qrFullSize = Math.min(window.innerWidth, window.innerHeight) * 0.8;
-  new QRCode(document.getElementById('qr-fullscreen'), {
-    text: link,
-    width: qrFullSize,
-    height: qrFullSize,
-    colorDark: '#000000',
-    colorLight: '#ffffff',
-  });
-  document.getElementById('qr-overlay-url').textContent = link;
+  // Fullscreen QR overlay
+  function renderFullscreenQR() {
+    const joinUrl = _getJoinUrl();
+    const qrFull = document.getElementById('qr-fullscreen');
+    if (qrFull) {
+      qrFull.innerHTML = '';
+      const qrFullSize = Math.floor(Math.min(window.innerWidth, window.innerHeight) * 0.92);
+      if (typeof QRCode !== 'undefined') {
+        new QRCode(qrFull, { text: joinUrl, width: qrFullSize, height: qrFullSize, colorDark: '#000000', colorLight: '#ffffff' });
+      }
+    }
+    const overlayUrl = document.getElementById('qr-overlay-url');
+    if (overlayUrl) overlayUrl.textContent = joinUrl;
+  }
+  renderFullscreenQR();
 
   // Center QR: click to brighten for 5s then fade back
   let _qrBrightenTimer = null;
@@ -1438,6 +1443,7 @@
   });
 
   function openQR() {
+    renderFullscreenQR();
     const overlay = document.getElementById('qr-overlay');
     if (overlay) overlay.classList.add('open');
   }
@@ -1460,6 +1466,11 @@
   function closeQR() {
     closeModal('qr-overlay');
   }
+
+  window.addEventListener('resize', () => {
+    const overlay = document.getElementById('qr-overlay');
+    if (overlay && overlay.classList.contains('open')) renderFullscreenQR();
+  });
 
 
   // ── Poll composer (contenteditable) ──
@@ -3214,14 +3225,7 @@ function _regenerateAllQRCodes() {
   }
 
   // Fullscreen QR overlay
-  const qrFull = document.getElementById('qr-fullscreen');
-  if (qrFull) {
-    qrFull.innerHTML = '';
-    const qrFullSize = Math.min(window.innerWidth, window.innerHeight) * 0.8;
-    if (typeof QRCode !== 'undefined') new QRCode(qrFull, { text: joinUrl, width: qrFullSize, height: qrFullSize, colorDark: '#000000', colorLight: '#ffffff' });
-  }
-  const overlayUrl = document.getElementById('qr-overlay-url');
-  if (overlayUrl) overlayUrl.textContent = joinUrl;
+  renderFullscreenQR();
 
   // Conference left QR
   const confQRCode = document.getElementById('conference-qr-code');
