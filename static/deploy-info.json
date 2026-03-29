@@ -1,10 +1,15 @@
 {
-  "sha": "c247a63436d4be24eac68b9842a82c33e74dbbf4",
-  "timestamp": "2026-03-29 12:57",
+  "sha": "9922b0b8b440d32428a1a36f04720e39123dfced",
+  "timestamp": "2026-03-29 12:58",
   "changelog": [
-    "feat(host-landing): show deploy age and incoming deploy warning"
+    "style(host): larger accent-colored title in top bar header"
   ],
   "commits": [
+    {
+      "sha": "9922b0b8",
+      "msg": "style(host): larger accent-colored title in top bar header",
+      "ts": "2026-03-29T12:57:51+03:00"
+    },
     {
       "sha": "c247a634",
       "msg": "feat(host-landing): show deploy age and incoming deploy warning",
@@ -99,11 +104,6 @@
       "sha": "37bd63f7",
       "msg": "Revert \"fix(host): auto-dismiss session-blocker when session already active on server\"",
       "ts": "2026-03-29T08:19:40+03:00"
-    },
-    {
-      "sha": "be86497a",
-      "msg": "Revert \"fix(tests): update e2e tests for session-scoped participant routes\"",
-      "ts": "2026-03-29T08:19:38+03:00"
     }
   ],
   "branches": [
