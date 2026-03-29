@@ -69,10 +69,14 @@ tests/
 - Reset: `POST /mock-drive/reset-stats`.
 - Use this to verify cache hits (0 extra Drive calls) and deduplication.
 
-### Session reuse
-- Hermetic tests run sequentially in one container with one backend.
-- Use `GET /api/session/active` to detect and reuse existing sessions instead of always creating new ones.
+### Test isolation via session lifecycle
+- **Each test should create its own session** for perfect data isolation. `POST /api/session/create` clears all activity state (polls, Q&A, scores, wordcloud, debate, code review, participants).
+- Do NOT add test-only reset endpoints. The production session create/stop flow is the isolation mechanism.
+- **State is saved before clearing**: when a new session is created, the backend pushes the request to the daemon first (daemon saves old state to `session_state.json` on disk), waits for ack, then clears in-memory state.
+- **Session resume restores state**: when a nested talk ends and the parent session resumes, the daemon loads the parent's `session_state.json` from disk and sends it to the backend for full state restoration (participants, scores, Q&A, polls, etc.).
+- **No test-only endpoints** — production code handles all isolation needs.
 - The host landing page auto-redirects to `/host/{session_id}` if a session is active.
+- Legacy pattern `_get_or_create_session()` reuses an existing session — acceptable for tests that don't need isolation, but new tests should prefer creating fresh sessions.
 
 ### Page objects
 - Reuse `tests/pages/host_page.py` and `tests/pages/participant_page.py` for browser interactions.
