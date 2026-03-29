@@ -45,6 +45,26 @@ jobs:
 
           changelog = [l for l in os.environ["CHANGELOG"].strip().split("\n") if l]
 
+          def compute_commits():
+              try:
+                  raw = subprocess.check_output(
+                      ['git', 'log', '-20', '--no-merges',
+                       '--invert-grep', '--grep=chore: update deploy-info',
+                       '--format=%H|%s|%aI'],
+                      text=True
+                  ).strip()
+                  result = []
+                  for line in raw.splitlines():
+                      parts = line.split('|', 2)
+                      if len(parts) < 3:
+                          continue
+                      sha, msg, ts = parts
+                      result.append({'sha': sha[:8], 'msg': msg, 'ts': ts})
+                  return result
+              except Exception as e:
+                  print(f"Warning: commits compute failed: {e}")
+                  return []
+
           def compute_branches():
               try:
                   raw = subprocess.check_output(
@@ -80,6 +100,7 @@ jobs:
               "sha": os.environ["SHA"],
               "timestamp": os.environ["TIMESTAMP"],
               "changelog": changelog,
+              "commits": compute_commits(),
               "branches": compute_branches(),
           }
           json.dump(data, open("static/deploy-info.json", "w"), indent=2)
