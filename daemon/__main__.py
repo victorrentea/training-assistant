@@ -481,6 +481,7 @@ def run() -> None:
         current_folder = sessions_root / session_stack[-1]["name"]
         current_key_points, summary_watermark = load_key_points(current_folder)
         log.info("session", f"Restored stack ({len(session_stack)} sessions), {len(current_key_points)} key points")
+        log.info("session", f"Found active session: {session_stack[-1]['name']}")
     elif config.session_folder:
         # Auto-start from today's detected session folder
         session_stack = [{
@@ -490,7 +491,9 @@ def run() -> None:
         }]
         current_key_points, summary_watermark = load_key_points(config.session_folder)
         _do_save_daemon_state()
-        log.info("session", f"Auto-started: {config.session_folder.name}")
+        log.info("session", f"Found active session: {config.session_folder.name}")
+    else:
+        log.info("session", "Found active session: <NONE>")
 
     # ── Log transcription time ranges at startup ──
     try:
