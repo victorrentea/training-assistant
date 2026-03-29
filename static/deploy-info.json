@@ -1,8 +1,8 @@
 {
-  "sha": "62e8fb0a4ee59b182c1835370f1a52c3b0eb3b1e",
-  "timestamp": "2026-03-29 01:49",
+  "sha": "f602bf1d63f296a9d39802d6aa61697107948b0b",
+  "timestamp": "2026-03-29 07:38",
   "changelog": [
-    "fix(ci): update slides tests for session-scoped routes and fix openapi"
+    "fix(host): auto-dismiss session-blocker when session already active on server"
   ],
   "branches": [
     {
