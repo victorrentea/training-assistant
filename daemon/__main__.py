@@ -470,7 +470,9 @@ def run() -> None:
     # ── Session stack initialization (early — needed for transcript log) ──
     sessions_root = config.session_folder.parent if config.session_folder else Path(os.environ.get("SESSIONS_FOLDER", str(Path.home() / "My Drive" / "Cursuri" / "###sesiuni")))
     log.info("session", f"Sessions root: {sessions_root}")
-    session_stack = daemon_state_to_stack(load_daemon_state(sessions_root))
+    _loaded_daemon_state = load_daemon_state(sessions_root)
+    _active_session_id: str | None = _loaded_daemon_state.get("session_id")
+    session_stack = daemon_state_to_stack(_loaded_daemon_state)
     current_key_points: list[dict] = []
     summary_watermark: int = 0
 
@@ -487,7 +489,7 @@ def run() -> None:
             "ended_at": None,
         }]
         current_key_points, summary_watermark = load_key_points(config.session_folder)
-        save_daemon_state(sessions_root, stack_to_daemon_state(session_stack))
+        _do_save_daemon_state()
         log.info("session", f"Auto-started: {config.session_folder.name}")
 
     # ── Log transcription time ranges at startup ──
@@ -526,6 +528,14 @@ def run() -> None:
     materials_mirror = MaterialsMirrorRunner(config)
     materials_mirror.start()
     slides_runner.set_ws_sender(lambda msg: ws_client.send(msg))
+
+    def _do_save_daemon_state():
+        """Save daemon state to disk, persisting _active_session_id alongside the session stack."""
+        nonlocal _active_session_id
+        d = stack_to_daemon_state(session_stack)
+        if _active_session_id:
+            d["session_id"] = _active_session_id
+        save_daemon_state(sessions_root, d)
 
     # Session state: the transcript text used to generate the current preview
     last_text: str | None = None
@@ -693,6 +703,7 @@ def run() -> None:
                         sid = session_req.get("session_id")
                         if sid:
                             set_current_session_id(sid)
+                            _active_session_id = sid
                         folder = sessions_root / name
                         existed = folder.exists()
                         folder.mkdir(parents=True, exist_ok=True)
@@ -705,7 +716,7 @@ def run() -> None:
                             }
                             session_stack.append(new_session)
                             current_key_points, summary_watermark = load_key_points(folder)
-                            save_daemon_state(sessions_root, stack_to_daemon_state(session_stack))
+                            _do_save_daemon_state()
                             notes_file = find_notes_in_folder(folder)
                             config = dc_replace(config, session_folder=folder, session_notes=notes_file)
                             sync_session_to_server(config, session_stack, current_key_points, slides_log=slides_log, git_repos=git_repos)
@@ -731,7 +742,7 @@ def run() -> None:
                         }
                         session_stack.append(new_session)
                         current_key_points, summary_watermark = load_key_points(folder)
-                        save_daemon_state(sessions_root, stack_to_daemon_state(session_stack))
+                        _do_save_daemon_state()
                         notes_file = find_notes_in_folder(folder)
                         config = dc_replace(config, session_folder=folder, session_notes=notes_file)
                         sync_session_to_server(config, session_stack, current_key_points, slides_log=slides_log, git_repos=git_repos)
@@ -755,7 +766,7 @@ def run() -> None:
                         resume_session(parent, datetime.now())
                         parent_folder = sessions_root / parent["name"]
                         current_key_points, summary_watermark = load_key_points(parent_folder)
-                        save_daemon_state(sessions_root, stack_to_daemon_state(session_stack))
+                        _do_save_daemon_state()
                         notes_file = find_notes_in_folder(parent_folder)
                         config = dc_replace(config, session_folder=parent_folder, session_notes=notes_file)
                         sync_session_to_server(config, session_stack, current_key_points, slides_log=slides_log, git_repos=git_repos)
@@ -775,7 +786,7 @@ def run() -> None:
                             else:
                                 save_key_points(new_folder, current_key_points, summary_watermark, session_start_date(session_stack[-1]))
                             session_stack[-1]["name"] = new_name
-                            save_daemon_state(sessions_root, stack_to_daemon_state(session_stack))
+                            _do_save_daemon_state()
                             notes_file = find_notes_in_folder(new_folder)
                             config = dc_replace(config, session_folder=new_folder, session_notes=notes_file)
                             sync_session_to_server(config, session_stack, current_key_points, slides_log=slides_log, git_repos=git_repos)
@@ -783,13 +794,13 @@ def run() -> None:
 
                     elif action == "pause" and session_stack:
                         pause_session(session_stack[-1], datetime.now(), reason="explicit")
-                        save_daemon_state(sessions_root, stack_to_daemon_state(session_stack))
+                        _do_save_daemon_state()
                         sync_session_to_server(config, session_stack, current_key_points, slides_log=slides_log, git_repos=git_repos)
                         log.info("session", f"Paused: {session_stack[-1]['name']}")
 
                     elif action == "resume" and session_stack:
                         resume_session(session_stack[-1], datetime.now())
-                        save_daemon_state(sessions_root, stack_to_daemon_state(session_stack))
+                        _do_save_daemon_state()
                         sync_session_to_server(config, session_stack, current_key_points, slides_log=slides_log, git_repos=git_repos)
                         transcript_state.reset()
                         log.info("session", f"Resumed: {session_stack[-1]['name']}")
@@ -808,7 +819,7 @@ def run() -> None:
                         })
                         talk_points, talk_wm = load_key_points(talk_folder)
                         current_key_points, summary_watermark = talk_points, talk_wm
-                        save_daemon_state(sessions_root, stack_to_daemon_state(session_stack))
+                        _do_save_daemon_state()
                         notes_file = find_notes_in_folder(talk_folder)
                         config = dc_replace(config, session_folder=talk_folder, session_notes=notes_file)
 
@@ -860,7 +871,7 @@ def run() -> None:
                     for s in session_stack:
                         if s.get("ended_at") is None:
                             pause_session(s, now_wall, reason="day_end")
-                    save_daemon_state(sessions_root, stack_to_daemon_state(session_stack))
+                    _do_save_daemon_state()
                     sync_session_to_server(config, session_stack, current_key_points, slides_log=slides_log, git_repos=git_repos)
                     transcript_state.reset()
                     log.info("session", "Auto-paused at 20:00 (end of working hours)")
@@ -879,7 +890,7 @@ def run() -> None:
                         for s in session_stack:
                             if s.get("ended_at") is None:
                                 resume_session(s, now_wall)
-                        save_daemon_state(sessions_root, stack_to_daemon_state(session_stack))
+                        _do_save_daemon_state()
                         sync_session_to_server(config, session_stack, current_key_points, slides_log=slides_log, git_repos=git_repos)
                         transcript_state.reset()
                         log.info("session", f"Auto-resumed at 09:30: {session_stack[-1]['name']}")
@@ -896,7 +907,7 @@ def run() -> None:
                     }
                     session_stack.append(new_session)
                     current_key_points, summary_watermark = load_key_points(config.session_folder)
-                    save_daemon_state(sessions_root, stack_to_daemon_state(session_stack))
+                    _do_save_daemon_state()
                     notes_file = find_notes_in_folder(config.session_folder)
                     config = dc_replace(config, session_notes=notes_file)
                     sync_session_to_server(config, session_stack, current_key_points, slides_log=slides_log, git_repos=git_repos)
@@ -934,7 +945,7 @@ def run() -> None:
                     _timing_fired_today.add("midnight")
                     if session_stack:
                         session_stack[-1]["status"] = "ended"
-                        save_daemon_state(sessions_root, stack_to_daemon_state(session_stack))
+                        _do_save_daemon_state()
                         log.info("daemon", "Session marked as ended at midnight")
 
                 # ── Sync AudioHijack language once per day ──
@@ -1176,6 +1187,8 @@ def run() -> None:
                 # ── Process session snapshot result (pushed by backend every 7s) ──
                 session_snapshot = _pending_requests.pop("session_snapshot_result", None)
                 if session_snapshot:
+                    if session_snapshot.get("session_id"):
+                        _active_session_id = session_snapshot["session_id"]
                     current_folder = sessions_root / session_stack[-1]["name"] if session_stack else None
                     if current_folder and current_folder.exists():
                         try:
