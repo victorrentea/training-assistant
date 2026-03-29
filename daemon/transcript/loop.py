@@ -162,24 +162,16 @@ class TranscriptNormalizerRunner:
                 words = sum(r.written_words for r in results)
                 output_files = len({str(p) for r in results for p in r.output_files})
                 raw_sources = sum(1 for r in results if r.written_lines > 0)
-                all_first: list[str] = []
-                for r in results:
-                    if r.first_words:
-                        all_first.extend(r.first_words.split())
-                    if len(all_first) >= 10:
-                        break
-                preview = " ".join(all_first[:10])
-                words_part = f"Transcripted {words} words{llm_part}: {preview} ..." if words > 0 else "Transcripted"
-                lines_part = f" of {written} lines" if written != 1 else ""
+                words_part = f"Transcripted {words} words{llm_part}"
                 if output_files == 1 and raw_sources == 1:
-                    log.info("transcript", f"{words_part}{lines_part}")
+                    log.info("transcript", words_part)
                 else:
                     log.info(
                         "transcript",
-                        f"{words_part}{lines_part} to {output_files} normalized files (from {raw_sources} raw sources)",
+                        f"{words_part} to {output_files} normalized files (from {raw_sources} raw sources)",
                     )
             elif llm_ms is not None:
-                log.info("transcript", f"Transcripted 0 words{llm_part}:")
+                log.info("transcript", f"Transcripted 0 words{llm_part} - remove all = noise")
         except Exception as exc:
             log.error("transcript", f"Normalizer error: {exc}")
         finally:
