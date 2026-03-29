@@ -20,7 +20,7 @@ from playwright.sync_api import Page, expect, sync_playwright
 
 from pages.host_page import HostPage
 from pages.participant_page import ParticipantPage
-from conftest import api as _api, host_browser_ctx as _host_browser_ctx, pax_browser_ctx as _pax_browser_ctx
+from conftest import api as _api, host_browser_ctx as _host_browser_ctx, pax_browser_ctx as _pax_browser_ctx, pax_url as _pax_url
 
 PROD_URL = "https://interact.victorrentea.ro"
 PROD_HOST_USER = os.environ.get("PROD_HOST_USERNAME", "host")
@@ -46,7 +46,7 @@ class TestPollLifecycle:
         pax.join("Bob")
         host.create_poll("Best DB?", ["Postgres", "MySQL", "SQLite"])
         pax.vote_for("Postgres")
-        expect(host._page.locator("text=1 total vote")).to_be_visible(timeout=5000)
+        expect(host._page.locator("#vote-progress-label")).to_contain_text("1 of", timeout=5000)
 
     def test_results_shown_after_poll_closed(self, host: HostPage, pax: ParticipantPage):
         pax.join("Carol")
@@ -109,7 +109,7 @@ class TestRegressions:
         js_errors = []
         page.on("pageerror", lambda e: js_errors.append(str(e)))
 
-        page.goto("/")
+        page.goto(_pax_url())
         page.evaluate("localStorage.setItem('workshop_participant_name', 'AutoJoiner')")
         page.evaluate("localStorage.setItem('workshop_participant_uuid', crypto.randomUUID())")
         page.reload()
@@ -364,9 +364,9 @@ class TestQA:
         p3   = ParticipantPage(ctx3.new_page())
 
         host._page.goto("/host")
-        p1._page.goto("/")
-        p2._page.goto("/")
-        p3._page.goto("/")
+        p1._page.goto(_pax_url())
+        p2._page.goto(_pax_url())
+        p3._page.goto(_pax_url())
 
         p1.join("Alice")
         p2.join("Bob")
@@ -439,8 +439,8 @@ class TestQA:
         p2   = ParticipantPage(ctx2.new_page())
 
         host._page.goto("/host")
-        p1._page.goto("/")
-        p2._page.goto("/")
+        p1._page.goto(_pax_url())
+        p2._page.goto(_pax_url())
 
         p1.join("Greta")
         p2.join("Henry")
@@ -632,7 +632,7 @@ class TestNotifications:
         # Grant notifications so requestPermission() resolves immediately
         ctx = browser.new_context(permissions=["notifications"])
         page = ctx.new_page()
-        page.goto(server_url)
+        page.goto(f"{server_url}{_pax_url()}")
         ParticipantPage(page).join("NotifFreshJoiner")
         # ws.onopen sees permission !== 'default' → button stays hidden
         expect(page.locator("#notif-btn")).to_be_hidden()
@@ -649,7 +649,7 @@ class TestNotifications:
             "Object.defineProperty(Notification, 'permission', { get: () => 'default', configurable: true });"
         )
         page = ctx.new_page()
-        page.goto(server_url)
+        page.goto(f"{server_url}{_pax_url()}")
         # Simulate returning participant by seeding localStorage, then reload
         page.evaluate("localStorage.setItem('workshop_participant_name', 'ReturningUser')")
         page.reload()
@@ -688,7 +688,7 @@ class TestNotifications:
             """)
 
             page = ctx.new_page()
-            page.goto(server_url)
+            page.goto(f"{server_url}{_pax_url()}")
             ParticipantPage(page).join("NotifJoinMid")
             # Wait for the poll to render — proves the state message was processed
             expect(page.locator("#content h2")).to_be_visible(timeout=5000)
