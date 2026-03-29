@@ -1,10 +1,27 @@
 {
-  "sha": "fd5296dad5dff376037d4cca5a3849b4769d0c38",
+  "sha": "2a9272247b7367e0bd96975b5d4dabbb3cbaa0b6",
   "timestamp": "2026-03-29 14:54",
   "changelog": [
-    "fix: remove \ud83d\udca5 on daemon clean exit \u2014 not an error"
+    "feat: replace slides catalog SVG icon with gray folder emoji",
+    "fix: initialize slides_cache_status during startup catalog seed",
+    "feat: show topic count next to slides catalog folder icon"
   ],
   "commits": [
+    {
+      "sha": "2a927224",
+      "msg": "feat: replace slides catalog SVG icon with gray folder emoji",
+      "ts": "2026-03-29T14:53:53+03:00"
+    },
+    {
+      "sha": "945021e5",
+      "msg": "fix: initialize slides_cache_status during startup catalog seed",
+      "ts": "2026-03-29T14:52:49+03:00"
+    },
+    {
+      "sha": "542b4ecb",
+      "msg": "feat: show topic count next to slides catalog folder icon",
+      "ts": "2026-03-29T14:50:22+03:00"
+    },
     {
       "sha": "fd5296da",
       "msg": "fix: remove \ud83d\udca5 on daemon clean exit \u2014 not an error",
@@ -89,21 +106,6 @@
       "sha": "59a2a187",
       "msg": "feat: throttle PowerPoint time-tracking to every 5s (matches IntelliJ)",
       "ts": "2026-03-29T14:23:26+03:00"
-    },
-    {
-      "sha": "03834b27",
-      "msg": "feat: replace eye emoji with PowerPoint logo in slides-log badge",
-      "ts": "2026-03-29T14:22:12+03:00"
-    },
-    {
-      "sha": "36d658db",
-      "msg": "feat: always show stop button badge as rightmost, red on hover",
-      "ts": "2026-03-29T14:21:27+03:00"
-    },
-    {
-      "sha": "bee2a845",
-      "msg": "fix: clear needs_restore when daemon WS connects",
-      "ts": "2026-03-29T14:16:11+03:00"
     }
   ],
   "branches": [
