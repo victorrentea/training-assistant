@@ -1,10 +1,15 @@
 {
-  "sha": "4719e111c5c3b1e880b4170c49edbdf36fde86f0",
-  "timestamp": "2026-03-29 14:27",
+  "sha": "d1da13e1ebe01da510fb00377dfd8ca3c404b30b",
+  "timestamp": "2026-03-29 14:32",
   "changelog": [
-    "feat: replace \ud83d\udcdc with folder SVG icon in slides-catalog badge"
+    "fix: remove floating end-session button, use stop badge with \u23f9\ufe0f emoji"
   ],
   "commits": [
+    {
+      "sha": "d1da13e1",
+      "msg": "fix: remove floating end-session button, use stop badge with \u23f9\ufe0f emoji",
+      "ts": "2026-03-29T14:32:22+03:00"
+    },
     {
       "sha": "4719e111",
       "msg": "feat: replace \ud83d\udcdc with folder SVG icon in slides-catalog badge",
@@ -99,11 +104,6 @@
       "sha": "f3c6083f",
       "msg": "fix(host): center session title truly in top bar using absolute positioning",
       "ts": "2026-03-29T13:49:15+03:00"
-    },
-    {
-      "sha": "91d9f1c9",
-      "msg": "chore: remove wispr from start.sh launcher",
-      "ts": "2026-03-29T13:48:05+03:00"
     }
   ],
   "branches": [
