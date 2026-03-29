@@ -1,8 +1,8 @@
 {
-  "sha": "f602bf1d63f296a9d39802d6aa61697107948b0b",
-  "timestamp": "2026-03-29 07:38",
+  "sha": "d118eb093cc8d7e65b857fede6bf44936b57ad8e",
+  "timestamp": "2026-03-29 07:52",
   "changelog": [
-    "fix(host): auto-dismiss session-blocker when session already active on server"
+    "fix(tests): update e2e tests for session-scoped participant routes"
   ],
   "branches": [
     {
