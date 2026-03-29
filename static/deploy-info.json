@@ -1,10 +1,15 @@
 {
-  "sha": "88154780f463e31885f5a60a9f53b25d95409215",
-  "timestamp": "2026-03-29 16:29",
+  "sha": "3cfe8b2e9021c5e9da1d2372104a8f4f5c612045",
+  "timestamp": "2026-03-29 16:32",
   "changelog": [
-    "feat: animate TODAY badge on host landing"
+    "fix: keep host stop button always enabled"
   ],
   "commits": [
+    {
+      "sha": "3cfe8b2e",
+      "msg": "fix: keep host stop button always enabled",
+      "ts": "2026-03-29T16:29:53+03:00"
+    },
     {
       "sha": "88154780",
       "msg": "feat: animate TODAY badge on host landing",
@@ -99,11 +104,6 @@
       "sha": "b2279e0b",
       "msg": "feat: show daemon connection status on host landing page (#86)",
       "ts": "2026-03-29T15:40:14+03:00"
-    },
-    {
-      "sha": "52dede13",
-      "msg": "chore: keep footer copied tooltip visible 3s",
-      "ts": "2026-03-29T15:38:31+03:00"
     }
   ],
   "branches": [

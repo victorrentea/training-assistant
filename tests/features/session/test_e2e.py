@@ -152,6 +152,32 @@ class TestHostSessionCode:
         ctx.close()
         browser.close()
 
+    def test_footer_slides_badge_border_matches_other_footer_badges(self, server_url, playwright):
+        browser, ctx = host_browser_ctx(server_url, playwright)
+        page = ctx.new_page()
+        page.goto(host_url())
+
+        styles = page.evaluate(
+            """() => {
+                const slides = document.getElementById('slides-catalog-icon');
+                const git = document.getElementById('git-repos-badge');
+                const s = getComputedStyle(slides);
+                const g = getComputedStyle(git);
+                return {
+                    slidesBorder: s.borderTopColor,
+                    gitBorder: g.borderTopColor,
+                    slidesOpacity: s.opacity,
+                    gitOpacity: g.opacity,
+                };
+            }"""
+        )
+
+        assert styles["slidesBorder"] == styles["gitBorder"]
+        assert styles["slidesOpacity"] == styles["gitOpacity"]
+
+        ctx.close()
+        browser.close()
+
 
 class TestWebSocketSessionGating:
     """WebSocket connections are gated by session ID."""
