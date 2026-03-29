@@ -1,10 +1,15 @@
 {
-  "sha": "0d2a89bb441172f07db2a232e8973863168173f2",
+  "sha": "6870eb67babc7b2da7d2a242503acf1f3a1a6914",
   "timestamp": "2026-03-29 15:15",
   "changelog": [
-    "chore: compact transcript llm log into one line"
+    "chore: log zero-word transcript after llm sanitize"
   ],
   "commits": [
+    {
+      "sha": "6870eb67",
+      "msg": "chore: log zero-word transcript after llm sanitize",
+      "ts": "2026-03-29T15:15:37+03:00"
+    },
     {
       "sha": "0d2a89bb",
       "msg": "chore: compact transcript llm log into one line",
@@ -99,11 +104,6 @@
       "sha": "fd5296da",
       "msg": "fix: remove \ud83d\udca5 on daemon clean exit \u2014 not an error",
       "ts": "2026-03-29T14:53:55+03:00"
-    },
-    {
-      "sha": "ef81b609",
-      "msg": "feat: log exit reason with \ud83d\udca5 when start.sh terminates",
-      "ts": "2026-03-29T14:52:32+03:00"
     }
   ],
   "branches": [
