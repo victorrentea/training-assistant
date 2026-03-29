@@ -1,10 +1,15 @@
 {
-  "sha": "9104fe530074279619e7b2e01c9000c93bbb3f29",
-  "timestamp": "2026-03-29 12:59",
+  "sha": "3cb563b6a3384ec18032121de9aa40ccd608c6a1",
+  "timestamp": "2026-03-29 13:00",
   "changelog": [
-    "feat(host): \u26d4 stop badge with inline confirm bubble instead of browser dialog"
+    "feat(start): launch wispr-addons/clean.py alongside daemon and overlay"
   ],
   "commits": [
+    {
+      "sha": "3cb563b6",
+      "msg": "feat(start): launch wispr-addons/clean.py alongside daemon and overlay",
+      "ts": "2026-03-29T12:59:59+03:00"
+    },
     {
       "sha": "9104fe53",
       "msg": "feat(host): \u26d4 stop badge with inline confirm bubble instead of browser dialog",
@@ -99,11 +104,6 @@
       "sha": "0366ddc4",
       "msg": "fix(host): add missing session-code-bar element to host panel HTML",
       "ts": "2026-03-29T12:15:26+03:00"
-    },
-    {
-      "sha": "a30ceb9d",
-      "msg": "feat(session): session ID in URL path - Phase 6 complete (tests updated)",
-      "ts": "2026-03-29T12:09:21+03:00"
     }
   ],
   "branches": [
