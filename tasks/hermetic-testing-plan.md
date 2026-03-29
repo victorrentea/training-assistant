@@ -29,16 +29,16 @@ interface so we can swap in a no-op/stub implementation for Docker.
 | `daemon/intellij/tracker.py` | IntelliJ probe | osascript + XML parse + git branch |
 
 ### Steps:
-- [ ] A1. Create `daemon/adapters/macos.py` with a `MacOSAdapter` class (or protocol) exposing:
+- [x] A1. Create `daemon/adapters/macos.py` with a `MacOSAdapter` class (or protocol) exposing:
   - `probe_powerpoint() -> dict | None`
   - `control_audio_hijack(action, language?) -> bool`
   - `probe_intellij() -> dict | None`
   - `beep() -> None`
-- [ ] A2. Create `daemon/adapters/stub.py` with `StubAdapter` (all no-ops / fixture returns)
-- [ ] A3. Refactor `daemon/__main__.py` to use the adapter (injected via env var or config flag)
-- [ ] A4. Refactor `daemon/slides/drive_sync.py` beep call
-- [ ] A5. Verify daemon still works on macOS with real adapter
-- [ ] A6. Verify daemon starts in Docker with stub adapter (no crashes)
+- [x] A2. Create `daemon/adapters/stub.py` with `StubAdapter` (all no-ops / fixture returns)
+- [x] A3. Refactor `daemon/__main__.py` to use the adapter (injected via env var or config flag)
+- [x] A4. Refactor `daemon/slides/drive_sync.py` beep call
+- [x] A5. Verify daemon still works on macOS with real adapter (202 tests pass)
+- [x] A6. Verify daemon starts in Docker with stub adapter (3 tests pass)
 
 ---
 
@@ -55,8 +55,8 @@ Run the real daemon process in the same Docker container, with:
 ### Steps:
 - [ ] B1. Create fixture data directory structure in `tests/docker/fixtures/`
 - [ ] B2. Mock the Anthropic Claude adapter (canned quiz/summary/debate responses)
-- [ ] B3. Dockerfile: run backend + daemon + Playwright in one container
-- [ ] B4. Test: daemon connects, sends session_sync on reconnect
+- [x] B3. Dockerfile: run backend + daemon + Playwright in one container
+- [x] B4. Test: daemon connects, host starts session, participant joins
 - [ ] B5. Test: host requests quiz → daemon returns canned quiz → host sees preview
 
 ---
