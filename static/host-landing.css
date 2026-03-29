@@ -79,10 +79,22 @@ body {
   vertical-align: middle;
   position: relative;
   top: -1px;
+  animation: today-tag-blink 2.8s ease-in-out infinite;
 }
 
 .folder-row-today {
   font-weight: 600;
+}
+
+@keyframes today-tag-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .35; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .folder-today-tag {
+    animation: none;
+  }
 }
 
 /* New session form */

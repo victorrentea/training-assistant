@@ -1,10 +1,15 @@
 {
-  "sha": "70da39bc925e7d76c459c89b1415bda33b3cac27",
-  "timestamp": "2026-03-29 16:27",
+  "sha": "b66640d96f6be2453b92e6ce2c0b46a091c7fad9",
+  "timestamp": "2026-03-29 16:28",
   "changelog": [
-    "feat: autojoin host to open session"
+    "fix: remove host tooltip hover delay"
   ],
   "commits": [
+    {
+      "sha": "b66640d9",
+      "msg": "fix: remove host tooltip hover delay",
+      "ts": "2026-03-29T16:27:22+03:00"
+    },
     {
       "sha": "70da39bc",
       "msg": "feat: autojoin host to open session",
@@ -99,11 +104,6 @@
       "sha": "146ec2a9",
       "msg": "Fix daemon startup UnboundLocalError for state save",
       "ts": "2026-03-29T15:34:18+03:00"
-    },
-    {
-      "sha": "4360b302",
-      "msg": "Include crude word count in transcript noise logs",
-      "ts": "2026-03-29T15:33:17+03:00"
     }
   ],
   "branches": [
