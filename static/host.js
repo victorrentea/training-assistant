@@ -211,9 +211,8 @@
           (msg.needs_restore && !msg.daemon_connected) ? '' : 'none';
         updateTokenBadge(msg.token_usage);
         if (msg.slides_log_deep_count !== undefined || msg.slides_log_topic !== undefined) {
-          const badge = document.getElementById('slides-log-badge');
           const count = msg.slides_log_deep_count ?? 0;
-          badge.textContent = `👁️ ${count}`;
+          document.getElementById('slides-log-count').textContent = count;
         }
         if (msg.git_repos !== undefined) _gitRepos = msg.git_repos;
         if (msg.slides_log !== undefined) _slidesLog = msg.slides_log;
