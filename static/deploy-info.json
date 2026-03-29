@@ -1,10 +1,15 @@
 {
-  "sha": "6d3eca4b788c6556178a143cb2a2e75be631c659",
-  "timestamp": "2026-03-29 15:40",
+  "sha": "ee372f15004b031c13cc9378c3cdc8789c2b2db4",
+  "timestamp": "2026-03-29 15:41",
   "changelog": [
-    "Victorrentea/folder icon topic count (#87)"
+    "fix: uniform gray border color for all neutral host footer badges (#88)"
   ],
   "commits": [
+    {
+      "sha": "ee372f15",
+      "msg": "fix: uniform gray border color for all neutral host footer badges (#88)",
+      "ts": "2026-03-29T15:41:07+03:00"
+    },
     {
       "sha": "6d3eca4b",
       "msg": "Victorrentea/folder icon topic count (#87)",
@@ -99,11 +104,6 @@
       "sha": "f325a805",
       "msg": "feat: add 6-min host inactivity auto-return modal",
       "ts": "2026-03-29T14:58:48+03:00"
-    },
-    {
-      "sha": "51b5d34d",
-      "msg": "chore: remove old 30s conference auto-return timer",
-      "ts": "2026-03-29T14:56:32+03:00"
     }
   ],
   "branches": [
