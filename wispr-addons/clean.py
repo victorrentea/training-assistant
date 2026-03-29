@@ -38,6 +38,7 @@ from Quartz import (
     CFRunLoopRun,
     CFRunLoopStop,
     kCGEventKeyDown,
+    kCGEventFlagsChanged,
     kCGEventOtherMouseDown,
     kCGEventTapDisabledByTimeout,
     kCGHeadInsertEventTap,
@@ -63,14 +64,19 @@ CLEANUP_PROMPT = (
     "Detect the input language and respond in the same language.\n"
     "Return ONLY the cleaned text, nothing else."
 )
-CLEANUP_PROMPT_EMOJI = (
-    "Fix grammar, punctuation, and spelling errors.\n"
-    "Remove filler words and false starts from speech-to-text output.\n"
-    "Synthesize verbose text into concise form while preserving all meaning.\n"
-    "Insert emojis in contextually appropriate positions throughout the text.\n"
-    "Detect the input language and respond in the same language.\n"
-    "Return ONLY the cleaned text, nothing else."
-)
+def _emoji_prompt(level: int) -> str:
+    """Return cleanup prompt with emoji density scaled by level (1=light, 2=moderate, 3=heavy)."""
+    density = {1: "1–2 emojis total", 2: "several emojis (roughly one per sentence)", 3: "abundant emojis after almost every phrase or keyword"}[level]
+    return (
+        "Fix grammar, punctuation, and spelling errors.\n"
+        "Remove filler words and false starts from speech-to-text output.\n"
+        "Synthesize verbose text into concise form while preserving all meaning.\n"
+        f"Insert emojis in contextually appropriate positions: use {density}.\n"
+        "Detect the input language and respond in the same language.\n"
+        "Return ONLY the cleaned text, nothing else."
+    )
+
+CLEANUP_PROMPT_EMOJI = _emoji_prompt(2)  # default for menu-bar click
 
 # macOS virtual key codes
 VK_V = 0x09
@@ -174,6 +180,9 @@ lock = threading.Lock()
 last_paste_text: str | None = None
 last_paste_lock = threading.Lock()
 
+# Tracks when Ctrl+Opt were pressed together (for emoji hold-duration)
+_ctrl_opt_pressed_at: float | None = None
+
 
 def log(message: str) -> None:
     timestamp = datetime.now().strftime("%H:%M:%S")
@@ -229,10 +238,20 @@ def play_sound() -> None:
     )
 
 
-def clean_text(text: str, with_emoji: bool = False) -> str | None:
+def _emoji_level_from_hold(hold_seconds: float) -> int:
+    """Map hold duration to emoji density: <1s→1, 1–3s→2, >3s→3."""
+    if hold_seconds < 1.0:
+        return 1
+    elif hold_seconds < 3.0:
+        return 2
+    else:
+        return 3
+
+
+def clean_text(text: str, with_emoji: bool = False, emoji_level: int = 2) -> str | None:
     """Send text to Claude Haiku for cleanup. Returns cleaned text or None on failure."""
     timeout = compute_timeout(text)
-    prompt = CLEANUP_PROMPT_EMOJI if with_emoji else CLEANUP_PROMPT
+    prompt = _emoji_prompt(emoji_level) if with_emoji else CLEANUP_PROMPT
     try:
         response = client.messages.create(
             model=MODEL,
@@ -247,7 +266,7 @@ def clean_text(text: str, with_emoji: bool = False) -> str | None:
         return None
 
 
-def handle_clean_hotkey(with_emoji: bool = False) -> None:
+def handle_clean_hotkey(with_emoji: bool = False, hold_seconds: float = 0.0) -> None:
     """Handle Cmd+Ctrl+V: clean the last captured paste."""
     global last_paste_text
 
@@ -268,10 +287,11 @@ def handle_clean_hotkey(with_emoji: bool = False) -> None:
 
         start = time.time()
         timeout = compute_timeout(text)
-        emoji_tag = " +emoji" if with_emoji else ""
+        emoji_level = _emoji_level_from_hold(hold_seconds) if with_emoji else 2
+        emoji_tag = f" +emoji(level {emoji_level}, held {hold_seconds:.1f}s)" if with_emoji else ""
         log(f"Cleaning {len(text)} chars{emoji_tag} (timeout {timeout:.1f}s)...")
 
-        cleaned = clean_text(text, with_emoji=with_emoji)
+        cleaned = clean_text(text, with_emoji=with_emoji, emoji_level=emoji_level)
 
         if cleaned is None:
             log("Failed: no response from API — original text preserved")
@@ -333,7 +353,7 @@ def _restore_dictation_volume() -> None:
 
 def event_tap_callback(proxy, event_type, event, refcon):
     """CGEventTap callback — intercepts key + mouse events."""
-    global last_paste_text
+    global last_paste_text, _ctrl_opt_pressed_at
 
     # macOS disables the tap if the callback is too slow — re-enable it
     if event_type == kCGEventTapDisabledByTimeout:
@@ -346,6 +366,16 @@ def event_tap_callback(proxy, event_type, event, refcon):
         button = CGEventGetIntegerValueField(event, kCGMouseEventButtonNumber)
         if button == MOUSE_BUTTON_5:
             threading.Thread(target=handle_dictation_toggle, daemon=True).start()
+        return event
+
+    # Track Ctrl+Opt hold start/end via flags-changed events
+    if event_type == kCGEventFlagsChanged:
+        flags = CGEventGetFlags(event)
+        both_held = bool(flags & kCGEventFlagMaskControl) and bool(flags & kCGEventFlagMaskAlternate)
+        if both_held and _ctrl_opt_pressed_at is None:
+            _ctrl_opt_pressed_at = time.time()
+        elif not both_held and _ctrl_opt_pressed_at is not None:
+            _ctrl_opt_pressed_at = None
         return event
 
     # Key events
@@ -366,7 +396,8 @@ def event_tap_callback(proxy, event_type, event, refcon):
 
     if has_cmd and has_ctrl:
         # Cmd+Ctrl+V — cleanup; Cmd+Ctrl+Opt+V — cleanup with emojis
-        threading.Thread(target=handle_clean_hotkey, args=(has_opt,), daemon=True).start()
+        hold = (time.time() - _ctrl_opt_pressed_at) if (has_opt and _ctrl_opt_pressed_at) else 0.0
+        threading.Thread(target=handle_clean_hotkey, args=(has_opt, hold), daemon=True).start()
         return None  # Suppress the original event
 
     if has_cmd and not has_ctrl:
@@ -391,7 +422,7 @@ def _run_event_tap() -> None:
         kCGSessionEventTap,
         kCGHeadInsertEventTap,
         0,  # active tap (can modify/suppress events)
-        CGEventMaskBit(kCGEventKeyDown) | CGEventMaskBit(kCGEventOtherMouseDown),
+        CGEventMaskBit(kCGEventKeyDown) | CGEventMaskBit(kCGEventFlagsChanged) | CGEventMaskBit(kCGEventOtherMouseDown),
         event_tap_callback,
         None,
     )
