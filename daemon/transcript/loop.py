@@ -19,10 +19,12 @@ _LLM_CLEAN_ENABLED = os.environ.get("TRANSCRIPT_LLM_CLEAN", "1").strip().lower()
 }
 
 def _build_llm_line_filter():
-    from daemon.transcript.llm_cleaner import clean_line
+    from daemon.transcript.llm_cleaner import clean_line_with_meta
     log.info("transcript", "LLM pre-filter enabled (TRANSCRIPT_LLM_CLEAN=1, model: gemma3:4b)")
     def _filter(text: str) -> str | None:
-        result = clean_line(text)
+        result, used_llm, elapsed_ms = clean_line_with_meta(text)
+        if used_llm:
+            log.info("transcript", f"🤖 LLM sanitized in {elapsed_ms:.0f}ms")
         return None if result == "[SKIP]" else result
     return _filter
 
