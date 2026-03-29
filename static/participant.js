@@ -2732,6 +2732,12 @@ function closeEmojiPopup(ev) {
         updateScreenShareWarning(msg.screen_share_active);
         updateSummary(msg.summary_points, msg.summary_updated_at);
         updateNotes(msg.notes_content);
+        const sessionTitleEl = document.getElementById('session-title');
+        if (sessionTitleEl && msg.session_name !== undefined) {
+          const topic = (msg.session_name || '').replace(/^\d{4}-\d{2}-\d{2}(?:\.\.\S+)?\s*/, '');
+          sessionTitleEl.textContent = topic;
+          sessionTitleEl.style.display = topic ? '' : 'none';
+        }
         _onIncomingHostSlidesCurrent(msg.slides_current || null);
         if (msg.slides_cache_status !== undefined) {
           _slidesCacheStatus = msg.slides_cache_status || {};
