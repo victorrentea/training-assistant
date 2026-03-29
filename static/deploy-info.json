@@ -1,8 +1,25 @@
 {
-  "sha": "62e8fb0a4ee59b182c1835370f1a52c3b0eb3b1e",
-  "timestamp": "2026-03-29 01:49",
+  "sha": "37bd63f7685ea656311c99b07e2758c98f766c44",
+  "timestamp": "2026-03-29 08:24",
   "changelog": [
-    "fix(ci): update slides tests for session-scoped routes and fix openapi"
+    "Revert \"fix(host): auto-dismiss session-blocker when session already active on server\"",
+    "Revert \"fix(tests): update e2e tests for session-scoped participant routes\"",
+    "Revert \"fix(ci): fix remaining session-scoped URL and summary endpoint issues in tests\"",
+    "Revert \"fix(ci): fix test_poll_force - GET /api/summary/force is root-level, not session-scoped\"",
+    "Revert \"docs: add session-id-in-path implementation plan\"",
+    "Revert \"feat(session): expose session_id in active endpoint, create/end broadcast, /host/{session_id} route, public folders\"",
+    "Revert \"feat(host): folder-list blocker + URL redirect on session start\"",
+    "Revert \"feat(host): add stop session button to footer\"",
+    "Revert \"fix(host): remove dead blocker vars, load folder list only once\"",
+    "fix(host): remove dead blocker vars, load folder list only once",
+    "feat(host): add stop session button to footer",
+    "feat(host): folder-list blocker + URL redirect on session start",
+    "feat(session): expose session_id in active endpoint, create/end broadcast, /host/{session_id} route, public folders",
+    "docs: add session-id-in-path implementation plan",
+    "fix(ci): fix test_poll_force - GET /api/summary/force is root-level, not session-scoped",
+    "fix(ci): fix remaining session-scoped URL and summary endpoint issues in tests",
+    "fix(tests): update e2e tests for session-scoped participant routes",
+    "fix(host): auto-dismiss session-blocker when session already active on server"
   ],
   "branches": [
     {
@@ -14,6 +31,11 @@
       "branch": "fix-transcription-lang-sync",
       "sha": "3a35f5c",
       "minutes": 342
+    },
+    {
+      "branch": "session-id-in-path",
+      "sha": "c665635",
+      "minutes": 320
     },
     {
       "branch": "overlay-hide-emoji-single-screen",
@@ -74,11 +96,6 @@
       "branch": "slides-hover-tooltips",
       "sha": "0652ac9",
       "minutes": 36
-    },
-    {
-      "branch": "remove-slides-placeholder",
-      "sha": "0a17ede",
-      "minutes": 35
     },
     {
       "branch": "fix-ui-layout-cutoff",
