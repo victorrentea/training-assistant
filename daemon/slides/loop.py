@@ -48,7 +48,7 @@ class SlidesPollingRunner:
 
         self._slides_config = cfg
         self._slides_state = slides_daemon.load_daemon_state(cfg.state_file)
-        self.poll_interval_seconds = max(1.0, float(cfg.poll_interval_seconds))
+        self.poll_interval_seconds = max(0.1, float(cfg.poll_interval_seconds))
         self._next_run_at = time.monotonic()
         self.enabled = True
         log.info("slides", f"Slides watcher enabled ({self.poll_interval_seconds:.0f}s)")

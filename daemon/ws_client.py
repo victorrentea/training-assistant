@@ -11,7 +11,7 @@ import os
 from daemon import log
 from daemon.config import DEFAULT_SERVER_URL
 
-_RECONNECT_INTERVAL = 3.0
+_RECONNECT_INTERVAL = float(os.environ.get("DAEMON_WS_RECONNECT_INTERVAL_SECONDS", "3.0"))
 
 
 def _ssl_context() -> ssl.SSLContext:
@@ -112,10 +112,11 @@ class DaemonWsClient:
         creds = base64.b64encode(f"{host_username}:{host_password}".encode()).decode()
         headers = {"Authorization": f"Basic {creds}"}
 
+        _ping_interval = float(os.environ.get("DAEMON_WS_PING_INTERVAL_SECONDS", "20"))
         ws_kwargs = {
             "open_timeout": 10,
-            "ping_interval": 20,
-            "ping_timeout": 20,
+            "ping_interval": _ping_interval,
+            "ping_timeout": _ping_interval,
         }
         if url.startswith("wss://"):
             ws_kwargs["ssl"] = _ssl_context()
