@@ -1,10 +1,15 @@
 {
-  "sha": "e67f774e01d4b90f53e969cda11b68cc207154d3",
-  "timestamp": "2026-03-29 16:09",
+  "sha": "41c4124384bf65362b6f66ab59c3b9b6568693cc",
+  "timestamp": "2026-03-29 16:15",
   "changelog": [
-    "fix: guard missing session fragile row in host ui"
+    "ux: show footer link copied tooltip immediately"
   ],
   "commits": [
+    {
+      "sha": "41c41243",
+      "msg": "ux: show footer link copied tooltip immediately",
+      "ts": "2026-03-29T16:09:44+03:00"
+    },
     {
       "sha": "e67f774e",
       "msg": "fix: guard missing session fragile row in host ui",
@@ -99,11 +104,6 @@
       "sha": "33a4dbb1",
       "msg": "chore: simplify transcript log line format",
       "ts": "2026-03-29T15:16:29+03:00"
-    },
-    {
-      "sha": "6870eb67",
-      "msg": "chore: log zero-word transcript after llm sanitize",
-      "ts": "2026-03-29T15:15:37+03:00"
     }
   ],
   "branches": [
