@@ -1,10 +1,15 @@
 {
-  "sha": "c0759805e25d57d75ec5cec981d2c1745cf22e98",
-  "timestamp": "2026-03-29 14:44",
+  "sha": "e7a6d3024d3c977454bb35c5e49afe2076dff61c",
+  "timestamp": "2026-03-29 14:47",
   "changelog": [
-    "fix: group same-day windows into one bracket in startup log"
+    "fix: separate active session into its own card on host landing page"
   ],
   "commits": [
+    {
+      "sha": "e7a6d302",
+      "msg": "fix: separate active session into its own card on host landing page",
+      "ts": "2026-03-29T14:46:07+03:00"
+    },
     {
       "sha": "c0759805",
       "msg": "fix: group same-day windows into one bracket in startup log",
@@ -99,11 +104,6 @@
       "sha": "b265a984",
       "msg": "fix(slides): change empty state message to 'No slides viewed yet'",
       "ts": "2026-03-29T13:57:26+03:00"
-    },
-    {
-      "sha": "f5fa4151",
-      "msg": "feat(slides): replace pptx icon with eye emoji, show slide count only",
-      "ts": "2026-03-29T13:52:35+03:00"
     }
   ],
   "branches": [
@@ -168,6 +168,11 @@
       "minutes": 20
     },
     {
+      "branch": "host-landing-section-divider",
+      "sha": "e7a6d30",
+      "minutes": 19
+    },
+    {
       "branch": "wispr-menu-clickable",
       "sha": "0a1df0d",
       "minutes": 19
@@ -201,11 +206,6 @@
       "branch": "fix-emoji-tooltip-direction",
       "sha": "a3b87b1",
       "minutes": 7
-    },
-    {
-      "branch": "center-emoji-buttons",
-      "sha": "1f1faa1",
-      "minutes": 6
     }
   ]
 }
