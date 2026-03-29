@@ -1,10 +1,15 @@
 {
-  "sha": "52dede13c3beb9b4fd36268887b673706d1538bc",
-  "timestamp": "2026-03-29 15:38",
+  "sha": "b2279e0bacfefe02821ebb345ec0ca9708fe32e8",
+  "timestamp": "2026-03-29 15:40",
   "changelog": [
-    "chore: keep footer copied tooltip visible 3s"
+    "feat: show daemon connection status on host landing page (#86)"
   ],
   "commits": [
+    {
+      "sha": "b2279e0b",
+      "msg": "feat: show daemon connection status on host landing page (#86)",
+      "ts": "2026-03-29T15:40:14+03:00"
+    },
     {
       "sha": "52dede13",
       "msg": "chore: keep footer copied tooltip visible 3s",
@@ -99,11 +104,6 @@
       "sha": "d59bf310",
       "msg": "feat: replace Hello tab with Slides tab (\ud83d\udc68\ud83c\udffb\u200d\ud83c\udfeb)",
       "ts": "2026-03-29T14:54:07+03:00"
-    },
-    {
-      "sha": "a88c5043",
-      "msg": "docs: add Slides tab + inactivity auto-return spec and plan",
-      "ts": "2026-03-29T14:48:29+03:00"
     }
   ],
   "branches": [
