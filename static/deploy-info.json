@@ -1,8 +1,8 @@
 {
-  "sha": "6af8f5e63e1833482cdccb52c6c4ea02cb77af15",
-  "timestamp": "2026-03-29 12:50",
+  "sha": "c7514919a69417755ca855270af2ba8e8e45846f",
+  "timestamp": "2026-03-29 12:52",
   "changelog": [
-    "fix(auth): restore Basic Auth on session landing endpoints via httponly cookie"
+    "refactor(host): tabs left-aligned, session title centered in top bar, join link absolutely centered"
   ],
   "branches": [
     {
