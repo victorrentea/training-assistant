@@ -92,14 +92,14 @@ body {
 .host-top-title {
   flex: 1;
   text-align: center;
-  font-size: 1rem;
-  font-weight: 600;
-  color: var(--text);
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--accent);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   padding: 0 1rem;
-  opacity: .85;
+  letter-spacing: .01em;
 }
 .host-top-pax {
   display: flex;
