@@ -17,7 +17,6 @@ async function loadPage() {
 
 function renderPage(active, folders) {
   const app = document.getElementById('app');
-  const today = new Date().toISOString().slice(0, 10);
 
   let rejoinHtml = '';
   if (active && active.active && active.session_id) {
@@ -31,27 +30,12 @@ function renderPage(active, folders) {
       </div>`;
   }
 
-  const todayFolders = (folders || []).filter(f => f.startsWith(today));
-  let todayHtml = '';
-  if (todayFolders.length > 0) {
-    const btns = todayFolders.map(f => {
-      const suffix = f.slice(today.length).replace(/^\s+/, '') || f;
-      return `<button class="today-resume-btn" onclick="doResumeFolder(${JSON.stringify(f)})">▶ ${_esc(suffix)}</button>`;
-    }).join('');
-    todayHtml = `
-      <div class="today-section">
-        <div class="today-label">Resume today</div>
-        ${btns}
-      </div>`;
-  }
-
   const folderListHtml = buildFolderList(folders);
 
   app.innerHTML = `
     <div class="landing-card">
       <div class="landing-title">Start Session</div>
       ${rejoinHtml}
-      ${todayHtml}
       <div class="new-session-label">New session</div>
       <div class="session-name-row">
         <span class="session-date-prefix">${new Date().toISOString().slice(0, 10)}&nbsp;</span>
@@ -75,30 +59,44 @@ function renderPage(active, folders) {
   if (input) input.focus();
 }
 
+function buildFolderRow(f, showDate) {
+  const m = f.match(/^(\d{4}-\d{2}-\d{2})\s+(.+)$/);
+  const date = m ? m[1] : '';
+  const topic = m ? m[2] : f;
+  return `
+    <li class="folder-row" onclick="doResumeFolder(${JSON.stringify(f)})">
+      <span class="folder-date">${showDate ? _esc(date) : ''}</span>
+      <span class="folder-topic">${_esc(topic)}</span>
+      <button class="folder-play-btn" onclick="event.stopPropagation(); doResumeFolder(${JSON.stringify(f)})" title="Resume session">▶</button>
+    </li>`;
+}
+
 function buildFolderList(folders) {
-  if (!folders || folders.length === 0) {
+  const today = new Date().toISOString().slice(0, 10);
+  const todayFolders = (folders || []).filter(f => f.startsWith(today));
+  const prevFolders = (folders || []).filter(f => !f.startsWith(today));
+
+  if (todayFolders.length === 0 && prevFolders.length === 0) {
     return `
       <div class="folders-card">
-        <div class="folders-header">Previous sessions</div>
+        <div class="folders-header">Sessions</div>
         <div class="folders-empty">No previous sessions found.</div>
       </div>`;
   }
 
-  const items = folders.map(f => {
-    const m = f.match(/^(\d{4}-\d{2}-\d{2})\s+(.+)$/);
-    const date = m ? m[1] : '';
-    const topic = m ? m[2] : f;
-    return `
-    <li class="folder-row" onclick="doResumeFolder(${JSON.stringify(f)})">
-      <span class="folder-date">${_esc(date)}</span>
-      <span class="folder-topic">${_esc(topic)}</span>
-      <button class="folder-play-btn" onclick="event.stopPropagation(); doResumeFolder(${JSON.stringify(f)})" title="Resume session">▶</button>
-    </li>`;
-  }).join('');
+  let items = '';
+  if (todayFolders.length > 0) {
+    items += `<li class="folder-group-label">Today</li>`;
+    items += todayFolders.map(f => buildFolderRow(f, false)).join('');
+  }
+  if (prevFolders.length > 0) {
+    items += `<li class="folder-group-label">Previous</li>`;
+    items += prevFolders.map(f => buildFolderRow(f, true)).join('');
+  }
 
   return `
     <div class="folders-card">
-      <div class="folders-header">Previous sessions</div>
+      <div class="folders-header">Sessions</div>
       <ul class="folder-list">${items}</ul>
     </div>`;
 }
