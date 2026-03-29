@@ -27,10 +27,11 @@ COPY tests/docker/test_daemon_connected.py .
 COPY tests/docker/test_poll_flow.py .
 COPY tests/docker/test_slides_view.py .
 COPY tests/docker/test_follow_me.py .
+COPY tests/docker/test_participant_interactions.py .
 COPY tests/docker/generate_fixture_pdfs.py .
 COPY tests/docker/mock_drive_server.py .
 COPY tests/docker/start_hermetic.sh /start_hermetic.sh
 RUN chmod +x /start_hermetic.sh
 
 ENTRYPOINT ["/start_hermetic.sh"]
-CMD ["test_daemon_connected.py", "test_poll_flow.py", "test_slides_view.py", "test_follow_me.py", "-v", "--tb=long", "-s"]
+CMD ["test_daemon_connected.py", "test_poll_flow.py", "test_slides_view.py", "test_follow_me.py", "test_participant_interactions.py", "-v", "--tb=long", "-s"]
