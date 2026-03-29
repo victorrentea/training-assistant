@@ -77,6 +77,16 @@ _BACKUP_FILE = _BACKUP_DIR / "state-backup.json"
 _PPT_UNMAPPED_PRESENTATIONS_ALERTED: set[str] = set()
 
 
+def _coerce_slide_number(value) -> int:
+    raw = str(value or "").strip()
+    if not raw or raw.lower() == "missing value":
+        return 1
+    try:
+        return max(1, int(raw))
+    except (TypeError, ValueError):
+        return 1
+
+
 def _read_session_id_from_session_folder(folder: Path) -> str | None:
     path = folder / "session_state.json"
     if not path.exists() or not path.is_file():
