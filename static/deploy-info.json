@@ -1,10 +1,15 @@
 {
-  "sha": "928b08d1e0d059355ec280be58bac9a1fc2e3be8",
-  "timestamp": "2026-03-29 12:56",
+  "sha": "c247a63436d4be24eac68b9842a82c33e74dbbf4",
+  "timestamp": "2026-03-29 12:57",
   "changelog": [
-    "feat(host): show deployed commit history on version badge hover"
+    "feat(host-landing): show deploy age and incoming deploy warning"
   ],
   "commits": [
+    {
+      "sha": "c247a634",
+      "msg": "feat(host-landing): show deploy age and incoming deploy warning",
+      "ts": "2026-03-29T12:57:11+03:00"
+    },
     {
       "sha": "928b08d1",
       "msg": "feat(host): show deployed commit history on version badge hover",
@@ -99,11 +104,6 @@
       "sha": "be86497a",
       "msg": "Revert \"fix(tests): update e2e tests for session-scoped participant routes\"",
       "ts": "2026-03-29T08:19:38+03:00"
-    },
-    {
-      "sha": "62248450",
-      "msg": "Revert \"fix(ci): fix remaining session-scoped URL and summary endpoint issues in tests\"",
-      "ts": "2026-03-29T08:19:37+03:00"
     }
   ],
   "branches": [
