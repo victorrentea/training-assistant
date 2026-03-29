@@ -1,10 +1,15 @@
 {
-  "sha": "e69b5301500ca23de6a54528efb7066af46aea90",
-  "timestamp": "2026-03-29 16:44",
+  "sha": "dbdde7cad5bf2dcfa75b4c2d04e67c2171e5a05c",
+  "timestamp": "2026-03-29 16:46",
   "changelog": [
-    "chore: remove active session card from host landing"
+    "fix: keep transcript preview log on one line"
   ],
   "commits": [
+    {
+      "sha": "dbdde7ca",
+      "msg": "fix: keep transcript preview log on one line",
+      "ts": "2026-03-29T16:44:03+03:00"
+    },
     {
       "sha": "e69b5301",
       "msg": "chore: remove active session card from host landing",
@@ -99,11 +104,6 @@
       "sha": "a8182bb8",
       "msg": "Fix fullscreen join QR overlay behavior",
       "ts": "2026-03-29T15:49:58+03:00"
-    },
-    {
-      "sha": "98697531",
-      "msg": "Host footer QR icon after join link",
-      "ts": "2026-03-29T15:45:24+03:00"
     }
   ],
   "branches": [

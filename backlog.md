@@ -1,5 +1,6 @@
 # Tasks
 
+- [x] host landing layout: no page vertical scrollbar, previous sessions panel spans to bottom, removed “Start Session” title, renamed labels to “START NEW SESSION” and “RESUME PREVIOUS SESSION”.
 - [x] daemon transcript log: keep preview text on the same line as `Transcripted ...` (no newline after colon).
 - [x] host landing: removed redundant “Active session” rejoin card (auto-join handles active sessions).
 - [x] host footer badges: unified all tooltips to custom `div` tooltips (removed native `title` tooltips).
