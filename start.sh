@@ -61,15 +61,15 @@ cleanup() {
   echo ""
   if [ -n "$DAEMON_PID" ]; then
     _log "start" "info" "💀 daemon (pid $DAEMON_PID)"
-    kill "$DAEMON_PID" 2>/dev/null
+    kill "$DAEMON_PID" 2>/dev/null || true
     DAEMON_PID=""
   fi
   if [ -n "$OVERLAY_PID" ]; then
     _log "start" "info" "💀 overlay (pid $OVERLAY_PID)"
-    kill "$OVERLAY_PID" 2>/dev/null
+    kill "$OVERLAY_PID" 2>/dev/null || true
     OVERLAY_PID=""
   fi
-  wait 2>/dev/null
+  wait 2>/dev/null || true
   EXIT_REASON="interrupted (SIGINT/SIGTERM)"
   exit 0
 }
@@ -131,12 +131,12 @@ check_git_updates() {
 stop_all_processes() {
   if [ -n "$DAEMON_PID" ]; then
     _log "start" "info" "💀 daemon (pid $DAEMON_PID)"
-    kill -9 "$DAEMON_PID" 2>/dev/null
+    kill -9 "$DAEMON_PID" 2>/dev/null || true
     DAEMON_PID=""
   fi
   if [ -n "$OVERLAY_PID" ]; then
     _log "start" "info" "💀 overlay (pid $OVERLAY_PID)"
-    kill "$OVERLAY_PID" 2>/dev/null
+    kill "$OVERLAY_PID" 2>/dev/null || true
     OVERLAY_PID=""
   fi
 }

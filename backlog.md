@@ -1,5 +1,6 @@
 # Tasks
 
+- [x] start.sh: prevent auto-restart loop from exiting on stale/missing PID kill failures (`set -e` safe kill/wait in cleanup and stop paths).
 - [x] daemon transcript logs: compact format without preview text (`Transcripted N words (🤖 Xms)`), and zero-text case uses `- remove all = noise`.
 - [x] daemon transcript logs: when LLM sanitization leaves no normalized text, log `Transcripted 0 words (🤖 Xms):` explicitly.
 - [x] daemon transcript logs: collapse `🤖 LLM sanitized ...` + `Transcripted ...` into a single line (`Transcripted N words (🤖 Xms): preview ...`).
