@@ -3191,11 +3191,14 @@ function hideStopConfirm() {
   if (bubble) bubble.style.display = 'none';
 }
 function stopSessionConfirmed() {
-  const bubble = document.getElementById('stop-confirm-bubble-left');
-  if (bubble) {
-    bubble.innerHTML = '<div style="padding:.2rem .1rem; color:var(--muted); font-size:.82rem; display:flex; align-items:center; gap:.5rem;">' +
-      '<span style="display:inline-block; width:14px; height:14px; border:2px solid var(--muted); border-top-color:transparent; border-radius:50%; animation:spin .7s linear infinite; flex-shrink:0;"></span>' +
-      'Ending session…</div>';
+  // Show full-screen blocker while ending session
+  let blocker = document.getElementById('session-ending-blocker');
+  if (!blocker) {
+    blocker = document.createElement('div');
+    blocker.id = 'session-ending-blocker';
+    blocker.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.82);z-index:99999;display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.4rem;font-weight:600;letter-spacing:.03em;flex-direction:column;gap:1rem;';
+    blocker.innerHTML = '<span style="display:inline-block;width:32px;height:32px;border:3px solid #fff;border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite;"></span><span>Ending session…</span>';
+    document.body.appendChild(blocker);
   }
   fetch('/api/session/end', {method: 'POST'})
     .then(() => { window.location = '/host'; })
