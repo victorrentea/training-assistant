@@ -21,6 +21,7 @@ _LLM_FILTER_STATS: dict[str, float | str | None] = {
     "last_ms": None,
     "provider": None,
 }
+_PREVIEW_LEADING_TS_RE = re.compile(r"^\[\s*\d{1,4}:\d{2}:\d{2}(?:\.\d+)?\s*\]\s*")
 
 def _build_llm_line_filter():
     from daemon.transcript.llm_cleaner import clean_line_with_meta
@@ -177,20 +178,23 @@ class TranscriptNormalizerRunner:
                 for result in results:
                     if not result.first_words:
                         continue
-                    for word in result.first_words.split():
+                    cleaned_preview = _PREVIEW_LEADING_TS_RE.sub("", result.first_words).strip()
+                    if not cleaned_preview:
+                        continue
+                    for word in cleaned_preview.split():
                         if len(preview_words) >= 7:
                             break
                         preview_words.append(word)
                     if len(preview_words) >= 7:
                         break
-                preview_part = f" {' '.join(preview_words)} ..." if preview_words else ""
-                words_part = f"Transcripted {words} words{llm_part}{preview_part}"
+                base_part = f"Transcripted {words} words{llm_part}"
+                preview_part = f":\n {' '.join(preview_words)} ..." if preview_words else ""
                 if output_files == 1 and raw_sources == 1:
-                    log.info("transcript", words_part)
+                    log.info("transcript", f"{base_part}{preview_part}")
                 else:
                     log.info(
                         "transcript",
-                        f"{words_part} to {output_files} normalized files (from {raw_sources} raw sources)",
+                        f"{base_part} to {output_files} normalized files (from {raw_sources} raw sources){preview_part}",
                     )
             elif llm_ms is not None:
                 log.info("transcript", f"Transcripted 0 words{llm_part} - remove all = noise")
