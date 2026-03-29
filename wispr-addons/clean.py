@@ -431,17 +431,19 @@ class CleanerApp(rumps.App):
 
 
 def main() -> None:
-    # Load API key from wispr-addons/secrets.env
-    secrets_path = Path(__file__).parent / "secrets.env"
+    # Load secrets from ~/.training-assistants-secrets.env
+    secrets_path = Path.home() / ".training-assistants-secrets.env"
     if secrets_path.exists():
         for line in secrets_path.read_text().splitlines():
             line = line.strip()
             if line and not line.startswith("#") and "=" in line:
                 key, _, value = line.partition("=")
                 os.environ[key.strip()] = value.strip()
-    if not os.environ.get("ANTHROPIC_API_KEY"):
-        print(f"Error: ANTHROPIC_API_KEY not set. Add it to {secrets_path}")
+    api_key = os.environ.get("WISPR_CLEANUP_ANTHROPIC_API_KEY")
+    if not api_key:
+        print(f"Error: WISPR_CLEANUP_ANTHROPIC_API_KEY not set in {secrets_path}")
         sys.exit(1)
+    os.environ["ANTHROPIC_API_KEY"] = api_key
 
     # Verify the loopback device exists at startup (ID resolved fresh each toggle)
     device_id = _find_audio_device_id(DICTATION_MUTE_DEVICE)
