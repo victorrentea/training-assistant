@@ -164,9 +164,9 @@ def format_startup_log(
     """Format the startup transcript log line.
 
     Example output:
-        Watermark: 12:11, Unprocessed: 74 lines, session: 100 lines during [09:30-12:30, 13:30-now...
-        Watermark: Day 1 17:00, Unprocessed: 12 lines, session: 50 lines during [Day 1 09:30-17:00] [09:00-now...
-        Watermark: —, Unprocessed: 100 lines, session: 100 lines during [09:30-now...
+        Unprocessed: 100 lines since 12:11 / 174 during [09:30-12:30, 13:30-now...
+        Unprocessed: 50 lines since Day 1 17:00 / 120 during [Day 1 09:30-17:00] [09:00-now...
+        Unprocessed: 100 lines since — / 100 during [09:30-now...
     """
     def _fmt_dt(dt: datetime) -> str:
         d = dt.date()
@@ -186,7 +186,7 @@ def format_startup_log(
         watermark_str = _fmt_dt(watermark_dt)
 
     # Counts
-    unprocessed = max(0, len(non_empty) - summary_watermark)
+    total_lines = len(non_empty)
     session_lines = count_lines_in_windows(non_empty, windows)
 
     # Segments — group same-day windows into one bracket
@@ -227,4 +227,4 @@ def format_startup_log(
                 parts.append(f"[{inner}]")
         during = " during " + " ".join(parts)
 
-    return f"Watermark: {watermark_str}, Unprocessed: {unprocessed} lines, session: {session_lines} lines{during}"
+    return f"Unprocessed: {session_lines} lines since {watermark_str} / {total_lines} lines{during}"
