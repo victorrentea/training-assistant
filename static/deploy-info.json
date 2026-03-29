@@ -1,8 +1,8 @@
 {
-  "sha": "0a1df0d6118567fa6ea255b9081b8da3c9c80554",
+  "sha": "551e2d5dafab1e21e9eaa7bbeefc244f4a422f11",
   "timestamp": "2026-03-29 12:41",
   "changelog": [
-    "feat(wispr-addons): add menu bar icon with clickable clean repaste actions"
+    "feat(wispr-addons): load API key from ~/.training-assistants-secrets.env"
   ],
   "branches": [
     {
