@@ -1,10 +1,15 @@
 {
-  "sha": "df93d18060d947e7845a1c72686edc1f7e51bf9a",
-  "timestamp": "2026-03-29 13:44",
+  "sha": "5e967ba6fb1462604ccfbbc0d0b1e93dc92d03f4",
+  "timestamp": "2026-03-29 13:47",
   "changelog": [
-    "feat(landing): move Start Session title above the card"
+    "fix: redirect /host/ to /host to avoid 404 on trailing slash"
   ],
   "commits": [
+    {
+      "sha": "5e967ba6",
+      "msg": "fix: redirect /host/ to /host to avoid 404 on trailing slash",
+      "ts": "2026-03-29T13:46:39+03:00"
+    },
     {
       "sha": "df93d180",
       "msg": "feat(landing): move Start Session title above the card",
@@ -99,11 +104,6 @@
       "sha": "c6aa4fb6",
       "msg": "fix(wispr-addons): use template icon so it fades on secondary monitors",
       "ts": "2026-03-29T13:09:24+03:00"
-    },
-    {
-      "sha": "2c393fca",
-      "msg": "feat(session): daemon pushes session folders list to backend on connect",
-      "ts": "2026-03-29T13:09:09+03:00"
     }
   ],
   "branches": [
@@ -173,6 +173,11 @@
       "minutes": 27
     },
     {
+      "branch": "redirect-host-trailing-slash",
+      "sha": "5e967ba",
+      "minutes": 26
+    },
+    {
       "branch": "ai-coding-category-line",
       "sha": "8fa3b8e",
       "minutes": 20
@@ -201,11 +206,6 @@
       "branch": "fix-slides-scroll-drift",
       "sha": "9babc87",
       "minutes": 10
-    },
-    {
-      "branch": "fix-follow-download-bubble",
-      "sha": "591ca9e",
-      "minutes": 9
     }
   ]
 }
