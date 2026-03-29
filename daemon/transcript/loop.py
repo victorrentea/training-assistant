@@ -156,7 +156,14 @@ class TranscriptNormalizerRunner:
                 words = sum(r.written_words for r in results)
                 output_files = len({str(p) for r in results for p in r.output_files})
                 raw_sources = sum(1 for r in results if r.written_lines > 0)
-                words_part = f"Transcripted {words} words" if words > 0 else "Transcripted"
+                all_first: list[str] = []
+                for r in results:
+                    if r.first_words:
+                        all_first.extend(r.first_words.split())
+                    if len(all_first) >= 10:
+                        break
+                preview = " ".join(all_first[:10])
+                words_part = f"Transcripted {words} words: \"{preview}...\"" if words > 0 else "Transcripted"
                 lines_part = f" of {written} lines" if written != 1 else ""
                 if output_files == 1 and raw_sources == 1:
                     log.info("transcript", f"{words_part}{lines_part}")
