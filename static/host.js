@@ -909,11 +909,8 @@
     if (!el) return;
     const entries = Object.values(_slidesCacheStatus);
 
-    const iconEl = document.getElementById('slides-catalog-icon');
-    if (iconEl) {
-      const svgHtml = '<svg width="15" height="13" viewBox="0 0 15 13" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 2.5C1 1.67 1.67 1 2.5 1H5.5L7 3H12.5C13.33 3 14 3.67 14 4.5V10.5C14 11.33 13.33 12 12.5 12H2.5C1.67 12 1 11.33 1 10.5V2.5Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" fill="none"/></svg>';
-      iconEl.innerHTML = entries.length ? svgHtml + '<span style="margin-left:3px">' + entries.length + '</span>' : svgHtml;
-    }
+    const countEl = document.getElementById('slides-catalog-count');
+    if (countEl) countEl.textContent = entries.length ? ' ' + entries.length : '';
 
     if (!entries.length) {
       el.innerHTML = '<div style="padding:8px;opacity:0.5">No slides in catalog</div>';
