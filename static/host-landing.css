@@ -155,9 +155,9 @@ body {
 }
 
 .create-btn-talk {
-  background: var(--surface2);
-  color: var(--text);
-  border: 1px solid var(--border);
+  background: var(--danger);
+  color: #fff;
+  border: none;
 }
 
 .create-btn:hover:not(:disabled) {
