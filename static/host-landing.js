@@ -91,12 +91,17 @@ function buildFolderList(folders) {
       </div>`;
   }
 
-  const items = folders.map(f => `
+  const items = folders.map(f => {
+    const m = f.match(/^(\d{4}-\d{2}-\d{2})\s+(.+)$/);
+    const date = m ? m[1] : '';
+    const topic = m ? m[2] : f;
+    return `
     <li class="folder-row" onclick="doResumeFolder(${JSON.stringify(f)})">
-      <span class="folder-icon">📁</span>
-      <span class="folder-name">${_esc(f)}</span>
-      <span class="folder-arrow">▶</span>
-    </li>`).join('');
+      <span class="folder-date">${_esc(date)}</span>
+      <span class="folder-topic">${_esc(topic)}</span>
+      <button class="folder-play-btn" onclick="event.stopPropagation(); doResumeFolder(${JSON.stringify(f)})" title="Resume session">▶</button>
+    </li>`;
+  }).join('');
 
   return `
     <div class="folders-card">
