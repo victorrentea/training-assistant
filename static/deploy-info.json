@@ -1,10 +1,15 @@
 {
-  "sha": "3cecf57cd9966796a93099e7b3e02829b447caec",
-  "timestamp": "2026-03-29 15:14",
+  "sha": "0d2a89bb441172f07db2a232e8973863168173f2",
+  "timestamp": "2026-03-29 15:15",
   "changelog": [
-    "feat: restart hijack when today raw file missing"
+    "chore: compact transcript llm log into one line"
   ],
   "commits": [
+    {
+      "sha": "0d2a89bb",
+      "msg": "chore: compact transcript llm log into one line",
+      "ts": "2026-03-29T15:15:01+03:00"
+    },
     {
       "sha": "3cecf57c",
       "msg": "feat: restart hijack when today raw file missing",
@@ -99,11 +104,6 @@
       "sha": "ef81b609",
       "msg": "feat: log exit reason with \ud83d\udca5 when start.sh terminates",
       "ts": "2026-03-29T14:52:32+03:00"
-    },
-    {
-      "sha": "e22c767f",
-      "msg": "feat: show first 10 words preview in transcript log",
-      "ts": "2026-03-29T14:48:51+03:00"
     }
   ],
   "branches": [
