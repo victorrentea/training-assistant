@@ -1,5 +1,6 @@
 # Tasks
 
+- [x] diagrams: updated C3 host daemon component and persisted-state class diagram to reflect `training-assistant-global-state.json` as global state.
 - [x] session activation persistence: backend now sends `session_request` with `request_id` over daemon websocket and waits for daemon `global_state_saved` ack; daemon persists active session to `training-assistant-global-state.json` (legacy `daemon_state.json` still readable).
 - [x] host landing: when a host removes `/host/{session_id}` to `/host` while a session is still active (including pending-create state), auto-redirect back to the active session URL.
 - [x] host landing: in previous sessions list, show only folders that start with the current year (skip older/non-year-prefixed folders).

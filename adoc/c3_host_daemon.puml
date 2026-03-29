@@ -64,7 +64,7 @@ Container_Boundary(daemon_pkg, "Daemon (Python 3.12, host's Mac)") {
 
   Component(llm, "daemon/llm/adapter", "LLM adapter", "Claude API wrapper.\nToken counting & cost tracking.\ncreate_message() with timeout.")
 
-  Component(session_state, "daemon/session_state", "Session state", "Tracks session stack (main + nested talks).\nPersists session_state.json to disk every 5s.")
+  Component(session_state, "daemon/session_state", "Session + global state", "Tracks active session metadata and session snapshots.\nPersists training-assistant-global-state.json and session_state.json on disk.")
 
   Component(lock, "daemon/lock", "Process lock", "PID file ensures single daemon instance.")
 }
