@@ -65,9 +65,30 @@ def _stamp_version_js():
     logging.getLogger(__name__).info("version.js stamped: %s", ts)
 
 
+def _stamp_deploy_info():
+    """Generate static/deploy-info.json from Railway env vars at startup (no git needed)."""
+    import json, os
+    sha = os.environ.get("RAILWAY_GIT_COMMIT_SHA", "")
+    if not sha:
+        return  # local dev — skip, file may be stale or absent
+    msg = os.environ.get("RAILWAY_GIT_COMMIT_MESSAGE", "")
+    ts = datetime.now(ZoneInfo("Europe/Bucharest")).isoformat()
+    deploy_info = {
+        "sha": sha[:8],
+        "timestamp": datetime.now(ZoneInfo("Europe/Bucharest")).strftime("%Y-%m-%d %H:%M"),
+        "changelog": [msg] if msg else [],
+        "commits": [{"sha": sha[:8], "msg": msg, "ts": ts}] if msg else [],
+        "branches": [],
+    }
+    path = Path(__file__).parent / "static" / "deploy-info.json"
+    path.write_text(json.dumps(deploy_info, indent=2), encoding="utf-8")
+    logging.getLogger(__name__).info("deploy-info.json stamped: %s", sha[:8])
+
+
 @asynccontextmanager
 async def lifespan(app_: FastAPI):
     _stamp_version_js()
+    _stamp_deploy_info()
     from features.slides.cache import seed_catalog_from_file
     seed_catalog_from_file()
     from features.ws.router import snapshot_pusher
