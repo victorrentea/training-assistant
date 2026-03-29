@@ -3442,11 +3442,4 @@ function downloadUploadedFile(el) {
     });
 }
 
-async function endSession() {
-  if (!confirm('End session and return to landing page?')) return;
-  try {
-    await fetch('/api/session/end', {method: 'POST', credentials: 'include'});
-  } catch (e) { /* ignore — navigate regardless */ }
-  window.location = '/host';
-}
 
