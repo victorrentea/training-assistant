@@ -94,7 +94,7 @@ body {
   text-align: center;
   font-size: 1.5rem;
   font-weight: 700;
-  color: var(--accent);
+  color: var(--text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

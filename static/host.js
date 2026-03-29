@@ -241,7 +241,10 @@
         if (msg.session_talk !== undefined) sessionTalk = msg.session_talk;
         if (msg.session_name !== undefined) {
           const el = document.getElementById('host-top-title');
-          if (el) el.textContent = msg.session_name || '';
+          if (el) {
+            const name = (msg.session_name || '').replace(/^\d{4}-\d{2}-\d{2}(?:\.\.\S+)?\s*/, '');
+            el.textContent = name;
+          }
         }
         if (msg.daemon_last_seen !== undefined) daemonLastSeen = msg.daemon_last_seen;
         if (!msg.session_id && msg.needs_restore === false) {
