@@ -11,7 +11,7 @@ import subprocess
 import sys
 import time
 from dataclasses import replace as dc_replace
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -122,6 +122,7 @@ end tell
 _AUDIOHIJACK_SESSIONS_PLIST = os.path.expanduser(
     "~/Library/Application Support/Audio Hijack 4/Sessions.plist"
 )
+_RAW_TRANSCRIPT_TXT_RE = re.compile(r"^(\d{8})\s+\d{4}\b.*\.txt$", re.IGNORECASE)
 
 
 def _read_audiohijack_language() -> str | None:
@@ -186,6 +187,47 @@ def _set_audiohijack_language(lang_code: str) -> None:
     subprocess.Popen(["open", "-a", "Audio Hijack"])
 
 
+def _restart_audiohijack() -> None:
+    """Restart Audio Hijack process (used when transcript capture is stale)."""
+    subprocess.run(["pkill", "-x", "Audio Hijack"], capture_output=True)
+    subprocess.Popen(["open", "-a", "Audio Hijack"])
+
+
+def _raw_transcript_dates(folder: Path) -> set[date]:
+    """Return distinct dates found in raw Audio Hijack transcript filenames."""
+    dates: set[date] = set()
+    if not folder.exists() or not folder.is_dir():
+        return dates
+    for entry in folder.iterdir():
+        if not entry.is_file():
+            continue
+        match = _RAW_TRANSCRIPT_TXT_RE.match(entry.name)
+        if not match:
+            continue
+        ds = match.group(1)
+        try:
+            dates.add(date(int(ds[:4]), int(ds[4:6]), int(ds[6:8])))
+        except ValueError:
+            continue
+    return dates
+
+
+def _should_restart_for_missing_today_raw(folder: Path, today: date) -> bool:
+    """
+    Restart trigger:
+    - no raw transcript file for today
+    - at least one file for yesterday
+    - latest available raw date is yesterday
+    """
+    dates = _raw_transcript_dates(folder)
+    if not dates or today in dates:
+        return False
+    yesterday = today - timedelta(days=1)
+    if yesterday not in dates:
+        return False
+    return max(dates) == yesterday
+
+
 def _coerce_slide_number(value) -> int:
     raw = str(value or "").strip()
     if not raw or raw.lower() == "missing value" or raw == _PPT_SLIDE_UNKNOWN:
@@ -217,7 +259,7 @@ def _parse_powerpoint_probe_output(raw: str) -> dict | None:
     return {"presentation": presentation, "slide": slide_number, "presenting": is_presenting, "frontmost": is_frontmost}
 
 
-def _probe_powerpoint_state(timeout_seconds: float = 2.5) -> tuple[dict | None, str | None]:
+def _probe_powerpoint_state(timeout_seconds: float = 5.0) -> tuple[dict | None, str | None]:
     try:
         result = subprocess.run(
             ["osascript", "-e", _PPT_APPLESCRIPT],
@@ -476,11 +518,20 @@ def run() -> None:
     current_key_points: list[dict] = []
     summary_watermark: int = 0
 
+    def _do_save_daemon_state():
+        """Save daemon state to disk, persisting _active_session_id alongside the session stack."""
+        nonlocal _active_session_id
+        d = stack_to_daemon_state(session_stack)
+        if _active_session_id:
+            d["session_id"] = _active_session_id
+        save_daemon_state(sessions_root, d)
+
     if session_stack:
         # Restore from persisted stack
         current_folder = sessions_root / session_stack[-1]["name"]
         current_key_points, summary_watermark = load_key_points(current_folder)
         log.info("session", f"Restored stack ({len(session_stack)} sessions), {len(current_key_points)} key points")
+        log.info("session", f"Found active session: {session_stack[-1]['name']}")
     elif config.session_folder:
         # Auto-start from today's detected session folder
         session_stack = [{
@@ -490,7 +541,9 @@ def run() -> None:
         }]
         current_key_points, summary_watermark = load_key_points(config.session_folder)
         _do_save_daemon_state()
-        log.info("session", f"Auto-started: {config.session_folder.name}")
+        log.info("session", f"Found active session: {config.session_folder.name}")
+    else:
+        log.info("session", "Found active session: <NONE>")
 
     # ── Log transcription time ranges at startup ──
     try:
@@ -529,14 +582,6 @@ def run() -> None:
     materials_mirror.start()
     slides_runner.set_ws_sender(lambda msg: ws_client.send(msg))
 
-    def _do_save_daemon_state():
-        """Save daemon state to disk, persisting _active_session_id alongside the session stack."""
-        nonlocal _active_session_id
-        d = stack_to_daemon_state(session_stack)
-        if _active_session_id:
-            d["session_id"] = _active_session_id
-        save_daemon_state(sessions_root, d)
-
     # Session state: the transcript text used to generate the current preview
     last_text: str | None = None
     last_quiz: dict | None = None
@@ -553,12 +598,17 @@ def run() -> None:
     last_auto_close_date: date | None = None   # prevent double-close on same calendar day
     last_auto_start_date: date | None = None   # prevent double-start on same calendar day
     last_lang_sync_date: date | None = None    # sync AudioHijack language once per day
+    last_hijack_restart_for_missing_today: date | None = None  # anti-loop guard: restart at most once/day
+    last_raw_transcript_guard_check_at: float = 0.0
+    _RAW_TRANSCRIPT_GUARD_INTERVAL: float = 30.0
     _timing_fired_date: date | None = None     # date for which timing events were tracked
     _timing_fired_today: set = set()           # timing events already fired today
     slides_log: list[dict] = []        # {file, slide, first_seen_at, first_seen_hhmm, seconds_spent}
     git_repos: list[dict] = []         # {project, path, branch, seconds_spent}
     last_intellij_probe_at: float = 0.0
     _INTELLIJ_PROBE_INTERVAL: float = 5.0  # probe IntelliJ every 5 seconds
+    last_ppt_track_at: float = 0.0
+    _PPT_TRACK_INTERVAL: float = 5.0       # accumulate slide time every 5 seconds
     _last_activity_log_key: tuple = (0, 0)  # (slides_count, git_count) — detect changes
 
     # Sync initial state to server — include session_state.json if present in the active folder
@@ -574,7 +624,7 @@ def run() -> None:
                     log.error("session", f"Failed to read session_state.json: {e}")
         sync_session_to_server(config, session_stack, current_key_points, startup_session_state, slides_log=slides_log, git_repos=git_repos)
     except Exception as e:
-        log.error("session", f"Failed to sync initial state: {e}")
+        log.error("session", f"Initial sync failed: {e}")
 
     # ── Sync AudioHijack language to server at startup ──
     try:
@@ -642,8 +692,10 @@ def run() -> None:
                     else:
                         pass
 
-                # ── Track slides log from PowerPoint state (foreground only) ──
-                if not ppt_error and ppt_state and ppt_state.get("frontmost", True):
+                # ── Track slides log from PowerPoint state (foreground only, every 5s) ──
+                _now_mono = time.monotonic()
+                if not ppt_error and ppt_state and ppt_state.get("frontmost", True) and _now_mono - last_ppt_track_at >= _PPT_TRACK_INTERVAL:
+                    last_ppt_track_at = _now_mono
                     _ppt_file = ppt_state.get("presentation", "")
                     _ppt_slide = _coerce_slide_number(ppt_state.get("slide"))
                     _now_hhmm = datetime.now().strftime("%H:%M")
@@ -653,15 +705,15 @@ def run() -> None:
                         None,
                     )
                     if _entry:
-                        _entry["seconds_spent"] += DAEMON_POLL_INTERVAL
-                        log.info("ppt", f"Slide +{DAEMON_POLL_INTERVAL}s: {Path(_ppt_file).stem} #{_ppt_slide} (total: {_entry['seconds_spent']}s)")
+                        _entry["seconds_spent"] += _PPT_TRACK_INTERVAL
+                        log.info("ppt", f"Slide +{_PPT_TRACK_INTERVAL:.0f}s: {Path(_ppt_file).stem} #{_ppt_slide} (total: {_entry['seconds_spent']}s)")
                     else:
                         slides_log.append({
                             "file": _ppt_file,
                             "slide": _ppt_slide,
                             "first_seen_at": _now_hhmmss,
                             "first_seen_hhmm": _now_hhmm,
-                            "seconds_spent": DAEMON_POLL_INTERVAL,
+                            "seconds_spent": _PPT_TRACK_INTERVAL,
                         })
 
                 # ── Probe IntelliJ every 5 seconds and track git repos ──
@@ -726,7 +778,15 @@ def run() -> None:
                             except Exception:
                                 pass
                         _push_session_folders()
-                        log.info("session", f"Session started: {name} (stack size: {len(session_stack)})")
+                        participant_join_link = (
+                            f"{config.server_url}/{_active_session_id}"
+                            if _active_session_id
+                            else f"{config.server_url}/"
+                        )
+                        log.info(
+                            "session",
+                            f"Session started: {name} (stack size: {len(session_stack)}) | participant join: {participant_join_link}",
+                        )
 
                     elif action == "start":
                         name = session_req["name"]
@@ -756,22 +816,32 @@ def run() -> None:
                             pass
                         log.info("session", f"Started: {name}")
 
-                    elif action == "end" and len(session_stack) > 1:
+                    elif action == "end" and session_stack:
                         ended = session_stack.pop()
                         ended["ended_at"] = datetime.now().isoformat()
                         ended_folder = sessions_root / ended["name"]
                         save_key_points(ended_folder, current_key_points, summary_watermark, session_start_date(ended))
-                        # Restore parent session and close its nested pause
-                        parent = session_stack[-1]
-                        resume_session(parent, datetime.now())
-                        parent_folder = sessions_root / parent["name"]
-                        current_key_points, summary_watermark = load_key_points(parent_folder)
+                        if session_stack:
+                            # Nested session ended — restore parent
+                            parent = session_stack[-1]
+                            resume_session(parent, datetime.now())
+                            parent_folder = sessions_root / parent["name"]
+                            current_key_points, summary_watermark = load_key_points(parent_folder)
+                            notes_file = find_notes_in_folder(parent_folder)
+                            config = dc_replace(config, session_folder=parent_folder, session_notes=notes_file)
+                            log.info("session", f"Ended: {ended['name']}, restored: {parent['name']}")
+                        else:
+                            # Main session ended — clear everything
+                            current_key_points = []
+                            summary_watermark = 0
+                            config = dc_replace(config, session_folder=None, session_notes=None)
+                            slides_log = []
+                            git_repos = []
+                            _last_activity_log_key = (0, 0)
+                            log.info("session", f"Ended: {ended['name']}")
                         _do_save_daemon_state()
-                        notes_file = find_notes_in_folder(parent_folder)
-                        config = dc_replace(config, session_folder=parent_folder, session_notes=notes_file)
                         sync_session_to_server(config, session_stack, current_key_points, slides_log=slides_log, git_repos=git_repos)
                         transcript_state.reset()
-                        log.info("session", f"Ended: {ended['name']}, restored: {parent['name']}")
 
                     elif action == "rename":
                         new_name = session_req["name"]
@@ -837,6 +907,23 @@ def run() -> None:
 
                 # ── Re-detect session folder on date change or if notes not yet found (every 5s) ──
                 today = date.today()
+                if now - last_raw_transcript_guard_check_at >= _RAW_TRANSCRIPT_GUARD_INTERVAL:
+                    last_raw_transcript_guard_check_at = now
+                    if last_hijack_restart_for_missing_today != today:
+                        try:
+                            if _should_restart_for_missing_today_raw(config.folder, today):
+                                log.info(
+                                    "transcript",
+                                    f"No raw transcript file for today ({today.isoformat()}); only yesterday exists. "
+                                    "Restarting Audio Hijack and sleeping 3s to force today's file.",
+                                )
+                                _restart_audiohijack()
+                                time.sleep(3)
+                                log.info("transcript", "Audio Hijack restart guard completed (slept 3s)")
+                                last_hijack_restart_for_missing_today = today
+                        except Exception as e:
+                            log.error("transcript", f"Audio Hijack restart guard failed: {e}")
+
                 notes_missing = config.session_notes is None
                 date_changed = today != last_detected_date
                 session_recheck_due = notes_missing and (now - last_session_check_at >= 5.0)

@@ -1,109 +1,109 @@
 {
-  "sha": "bee2a8459ddf7b4132602b03658fc80bb37344fa",
-  "timestamp": "2026-03-29 14:16",
+  "sha": "eb745e36cfc23d3ce9ed60df3fd31c5f561ce422",
+  "timestamp": "2026-03-29 15:42",
   "changelog": [
-    "fix: clear needs_restore when daemon WS connects"
+    "Fix transcript preview log timestamp leakage"
   ],
   "commits": [
     {
-      "sha": "bee2a845",
-      "msg": "fix: clear needs_restore when daemon WS connects",
-      "ts": "2026-03-29T14:16:11+03:00"
+      "sha": "eb745e36",
+      "msg": "Fix transcript preview log timestamp leakage",
+      "ts": "2026-03-29T15:42:03+03:00"
     },
     {
-      "sha": "76030531",
-      "msg": "feat: redirect host UI to correct session after server restart",
-      "ts": "2026-03-29T14:14:41+03:00"
+      "sha": "ee372f15",
+      "msg": "fix: uniform gray border color for all neutral host footer badges (#88)",
+      "ts": "2026-03-29T15:41:07+03:00"
     },
     {
-      "sha": "c40d98c3",
-      "msg": "feat: persist session_id in daemon state files across server restarts",
-      "ts": "2026-03-29T14:13:41+03:00"
+      "sha": "6d3eca4b",
+      "msg": "Victorrentea/folder icon topic count (#87)",
+      "ts": "2026-03-29T15:40:42+03:00"
     },
     {
-      "sha": "2c3ca4e5",
-      "msg": "fix: strip non-breaking spaces from session names before creating folders",
-      "ts": "2026-03-29T14:08:35+03:00"
+      "sha": "b2279e0b",
+      "msg": "feat: show daemon connection status on host landing page (#86)",
+      "ts": "2026-03-29T15:40:14+03:00"
     },
     {
-      "sha": "32d786e9",
-      "msg": "fix(slides): change repos empty state to 'No repos viewed yet'",
-      "ts": "2026-03-29T13:57:51+03:00"
+      "sha": "52dede13",
+      "msg": "chore: keep footer copied tooltip visible 3s",
+      "ts": "2026-03-29T15:38:31+03:00"
     },
     {
-      "sha": "b265a984",
-      "msg": "fix(slides): change empty state message to 'No slides viewed yet'",
-      "ts": "2026-03-29T13:57:26+03:00"
+      "sha": "146ec2a9",
+      "msg": "Fix daemon startup UnboundLocalError for state save",
+      "ts": "2026-03-29T15:34:18+03:00"
     },
     {
-      "sha": "f5fa4151",
-      "msg": "feat(slides): replace pptx icon with eye emoji, show slide count only",
-      "ts": "2026-03-29T13:52:35+03:00"
+      "sha": "4360b302",
+      "msg": "Include crude word count in transcript noise logs",
+      "ts": "2026-03-29T15:33:17+03:00"
     },
     {
-      "sha": "48e0efdb",
-      "msg": "feat(wispr): simplify emoji to 2 levels based on 1s hold threshold",
-      "ts": "2026-03-29T13:59:25+03:00"
+      "sha": "9db0c782",
+      "msg": "Improve host auto-join and transcript logging",
+      "ts": "2026-03-29T15:30:48+03:00"
     },
     {
-      "sha": "e908d287",
-      "msg": "fix: move stop button to right-most footer badge position",
-      "ts": "2026-03-29T13:56:49+03:00"
+      "sha": "0a55730a",
+      "msg": "feat: footer join link ctrl-open and click-copy tooltip",
+      "ts": "2026-03-29T15:25:28+03:00"
     },
     {
-      "sha": "58ccfd44",
-      "msg": "feat: remove session type toggle button from host footer",
-      "ts": "2026-03-29T13:50:29+03:00"
+      "sha": "44ee60e2",
+      "msg": "chore: reword startup unprocessed transcript log",
+      "ts": "2026-03-29T15:21:31+03:00"
     },
     {
-      "sha": "8a87de47",
-      "msg": "feat: move stop button to left-most footer badge, turns red on hover",
-      "ts": "2026-03-29T13:50:59+03:00"
+      "sha": "359dd8f5",
+      "msg": "fix: keep start.sh alive on stale pid kills",
+      "ts": "2026-03-29T15:18:22+03:00"
     },
     {
-      "sha": "f396c18d",
-      "msg": "fix: remove gap between joined date/name inputs on landing page",
-      "ts": "2026-03-29T13:49:23+03:00"
+      "sha": "33a4dbb1",
+      "msg": "chore: simplify transcript log line format",
+      "ts": "2026-03-29T15:16:29+03:00"
     },
     {
-      "sha": "f3c6083f",
-      "msg": "fix(host): center session title truly in top bar using absolute positioning",
-      "ts": "2026-03-29T13:49:15+03:00"
+      "sha": "6870eb67",
+      "msg": "chore: log zero-word transcript after llm sanitize",
+      "ts": "2026-03-29T15:15:37+03:00"
     },
     {
-      "sha": "91d9f1c9",
-      "msg": "chore: remove wispr from start.sh launcher",
-      "ts": "2026-03-29T13:48:05+03:00"
+      "sha": "0d2a89bb",
+      "msg": "chore: compact transcript llm log into one line",
+      "ts": "2026-03-29T15:15:01+03:00"
     },
     {
-      "sha": "5e967ba6",
-      "msg": "fix: redirect /host/ to /host to avoid 404 on trailing slash",
-      "ts": "2026-03-29T13:46:39+03:00"
+      "sha": "3cecf57c",
+      "msg": "feat: restart hijack when today raw file missing",
+      "ts": "2026-03-29T15:14:06+03:00"
     },
     {
-      "sha": "df93d180",
-      "msg": "feat(landing): move Start Session title above the card",
-      "ts": "2026-03-29T13:44:39+03:00"
+      "sha": "0b86ad36",
+      "msg": "chore: compact initial sync error log",
+      "ts": "2026-03-29T15:11:21+03:00"
     },
     {
-      "sha": "b415a5f8",
-      "msg": "feat(host): session title in white, strip date prefix",
-      "ts": "2026-03-29T13:44:10+03:00"
+      "sha": "53cf4a39",
+      "msg": "feat: log \ud83e\udd16 and latency for transcript llm cleaning",
+      "ts": "2026-03-29T15:10:38+03:00"
     },
     {
-      "sha": "112a047c",
-      "msg": "fix(session): persist session_id in state-backup so URLs survive BE restart",
-      "ts": "2026-03-29T13:43:15+03:00"
+      "sha": "bbebedae",
+      "msg": "Increase PowerPoint probe timeout to 5s",
+      "ts": "2026-03-29T15:08:51+03:00"
     },
     {
-      "sha": "8c822721",
-      "msg": "feat(host): add \u23f9\ufe0f end-session button at bottom-right",
-      "ts": "2026-03-29T13:39:13+03:00"
+      "sha": "2d58016d",
+      "msg": "feat: enable transcript llm clean and update log format",
+      "ts": "2026-03-29T15:08:37+03:00"
     },
     {
-      "sha": "0b77b0ec",
-      "msg": "fix(host): smarter server-unreachable blocker + redirect on session loss",
-      "ts": "2026-03-29T13:37:47+03:00"
+      "sha": "ae98fc70",
+      "msg": "fix: countdown starts at 3:00; arm inactivity timer on server activity change",
+      "ts": "2026-03-29T15:01:35+03:00"
     }
   ],
   "branches": [
@@ -128,29 +128,9 @@
       "minutes": 99
     },
     {
-      "branch": "adjust-topic-names",
-      "sha": "6d91844",
-      "minutes": 94
-    },
-    {
-      "branch": "fix-emoji-overlay-hover",
-      "sha": "1fcd15e",
-      "minutes": 84
-    },
-    {
-      "branch": "upload-tooltip-onboarding",
-      "sha": "991ef8e",
-      "minutes": 59
-    },
-    {
       "branch": "fix-ci-job",
       "sha": "582b580",
       "minutes": 53
-    },
-    {
-      "branch": "emoji-overflow-dots",
-      "sha": "25b9b9a",
-      "minutes": 39
     },
     {
       "branch": "host-landing-scroll-fix",
@@ -173,6 +153,11 @@
       "minutes": 20
     },
     {
+      "branch": "host-landing-section-divider",
+      "sha": "e7a6d30",
+      "minutes": 19
+    },
+    {
       "branch": "wispr-menu-clickable",
       "sha": "0a1df0d",
       "minutes": 19
@@ -183,14 +168,14 @@
       "minutes": 15
     },
     {
-      "branch": "remove-host-heart-drone",
-      "sha": "9d8de3e",
-      "minutes": 15
-    },
-    {
       "branch": "shrink-topic-height-5pct",
       "sha": "466fbe7",
       "minutes": 14
+    },
+    {
+      "branch": "stop-btn-red-badge",
+      "sha": "d331e11",
+      "minutes": 13
     },
     {
       "branch": "slides-eye-emoji-tooltip",
@@ -203,9 +188,24 @@
       "minutes": 7
     },
     {
+      "branch": "folder-icon-topic-count",
+      "sha": "5442b8f",
+      "minutes": 6
+    },
+    {
       "branch": "center-emoji-buttons",
       "sha": "1f1faa1",
       "minutes": 6
+    },
+    {
+      "branch": "slides-tab-inactivity",
+      "sha": "7bd87d9",
+      "minutes": 5
+    },
+    {
+      "branch": "session-date-prefix",
+      "sha": "15da723",
+      "minutes": 5
     }
   ]
 }

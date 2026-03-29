@@ -14,15 +14,23 @@ _TIMESTAMP_INTERVAL_SECONDS = float(os.environ.get("TRANSCRIPT_TIMESTAMP_INTERVA
 _NORMALIZER_INTERVAL_SECONDS = float(os.environ.get("TRANSCRIPT_NORMALIZER_INTERVAL_SECONDS", "3"))
 
 # --- LLM pre-filter (easy to remove: delete this block + usage in TranscriptNormalizerRunner) ---
-_LLM_CLEAN_ENABLED = os.environ.get("TRANSCRIPT_LLM_CLEAN", "0").strip().lower() not in {
+_LLM_CLEAN_ENABLED = os.environ.get("TRANSCRIPT_LLM_CLEAN", "1").strip().lower() not in {
     "0", "false", "no", "off",
 }
+_LLM_FILTER_STATS: dict[str, float | str | None] = {
+    "last_ms": None,
+    "provider": None,
+}
+_PREVIEW_LEADING_TS_RE = re.compile(r"^\[\s*\d{1,4}:\d{2}:\d{2}(?:\.\d+)?\s*\]\s*")
 
 def _build_llm_line_filter():
-    from daemon.transcript.llm_cleaner import clean_line
+    from daemon.transcript.llm_cleaner import clean_line_with_meta
+    _LLM_FILTER_STATS["provider"] = "OLLAMA"
     log.info("transcript", "LLM pre-filter enabled (TRANSCRIPT_LLM_CLEAN=1, model: gemma3:4b)")
     def _filter(text: str) -> str | None:
-        result = clean_line(text)
+        result, used_llm, elapsed_ms = clean_line_with_meta(text)
+        if used_llm:
+            _LLM_FILTER_STATS["last_ms"] = elapsed_ms
         return None if result == "[SKIP]" else result
     return _filter
 
@@ -150,21 +158,46 @@ class TranscriptNormalizerRunner:
         if now < self._next_run_at:
             return
         try:
+            _LLM_FILTER_STATS["last_ms"] = None
             results = normalize_folder_incremental(self.folder, line_pre_filter=_llm_line_filter)
             written = sum(r.written_lines for r in results)
+            crude_words = sum(r.raw_words for r in results)
+            llm_ms = _LLM_FILTER_STATS.get("last_ms")
+            llm_provider = _LLM_FILTER_STATS.get("provider")
+            llm_name = str(llm_provider or "").strip()
+            if llm_ms is not None:
+                crude_part = f"of {crude_words} " if crude_words > 0 else ""
+                llm_part = f" ({crude_part}🤖 {llm_ms:.0f}ms{(' ' + llm_name) if llm_name else ''})"
+            else:
+                llm_part = ""
             if written > 0:
                 words = sum(r.written_words for r in results)
                 output_files = len({str(p) for r in results for p in r.output_files})
                 raw_sources = sum(1 for r in results if r.written_lines > 0)
-                words_part = f"Transcripted {words} words" if words > 0 else "Transcripted"
-                lines_part = f" of {written} lines" if written != 1 else ""
+                preview_words: list[str] = []
+                for result in results:
+                    if not result.first_words:
+                        continue
+                    cleaned_preview = _PREVIEW_LEADING_TS_RE.sub("", result.first_words).strip()
+                    if not cleaned_preview:
+                        continue
+                    for word in cleaned_preview.split():
+                        if len(preview_words) >= 7:
+                            break
+                        preview_words.append(word)
+                    if len(preview_words) >= 7:
+                        break
+                base_part = f"Transcripted {words} words{llm_part}"
+                preview_part = f":\n {' '.join(preview_words)} ..." if preview_words else ""
                 if output_files == 1 and raw_sources == 1:
-                    log.info("transcript", f"{words_part}{lines_part}")
+                    log.info("transcript", f"{base_part}{preview_part}")
                 else:
                     log.info(
                         "transcript",
-                        f"{words_part}{lines_part} to {output_files} normalized files (from {raw_sources} raw sources)",
+                        f"{base_part} to {output_files} normalized files (from {raw_sources} raw sources){preview_part}",
                     )
+            elif llm_ms is not None:
+                log.info("transcript", f"Transcripted 0 words{llm_part} - remove all = noise")
         except Exception as exc:
             log.error("transcript", f"Normalizer error: {exc}")
         finally:

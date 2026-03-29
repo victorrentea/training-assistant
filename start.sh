@@ -30,6 +30,12 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$SCRIPT_DIR"
 source "$SCRIPT_DIR/daemon/bash_log.sh"
 
+EXIT_REASON=""
+_on_exit() {
+  [ -n "$EXIT_REASON" ] && _log "start" "info" "💥 $EXIT_REASON"
+}
+trap _on_exit EXIT
+
 OVERLAY_SERVER="${1:-wss://interact.victorrentea.ro}"
 SECRETS_FILE="${TRAINING_ASSISTANTS_SECRETS_FILE:-$HOME/.training-assistants-secrets.env}"
 
@@ -37,6 +43,7 @@ SECRETS_FILE="${TRAINING_ASSISTANTS_SECRETS_FILE:-$HOME/.training-assistants-sec
 
 if [ ! -f "$SECRETS_FILE" ]; then
   _log "start" "error" "$SECRETS_FILE not found — create with ANTHROPIC_API_KEY and TRANSCRIPTION_FOLDER"
+  EXIT_REASON="secrets file not found: $SECRETS_FILE"
   exit 1
 fi
 
@@ -54,15 +61,16 @@ cleanup() {
   echo ""
   if [ -n "$DAEMON_PID" ]; then
     _log "start" "info" "💀 daemon (pid $DAEMON_PID)"
-    kill "$DAEMON_PID" 2>/dev/null
+    kill "$DAEMON_PID" 2>/dev/null || true
     DAEMON_PID=""
   fi
   if [ -n "$OVERLAY_PID" ]; then
     _log "start" "info" "💀 overlay (pid $OVERLAY_PID)"
-    kill "$OVERLAY_PID" 2>/dev/null
+    kill "$OVERLAY_PID" 2>/dev/null || true
     OVERLAY_PID=""
   fi
-  wait 2>/dev/null
+  wait 2>/dev/null || true
+  EXIT_REASON="interrupted (SIGINT/SIGTERM)"
   exit 0
 }
 trap cleanup INT TERM
@@ -123,12 +131,12 @@ check_git_updates() {
 stop_all_processes() {
   if [ -n "$DAEMON_PID" ]; then
     _log "start" "info" "💀 daemon (pid $DAEMON_PID)"
-    kill -9 "$DAEMON_PID" 2>/dev/null
+    kill -9 "$DAEMON_PID" 2>/dev/null || true
     DAEMON_PID=""
   fi
   if [ -n "$OVERLAY_PID" ]; then
     _log "start" "info" "💀 overlay (pid $OVERLAY_PID)"
-    kill "$OVERLAY_PID" 2>/dev/null
+    kill "$OVERLAY_PID" 2>/dev/null || true
     OVERLAY_PID=""
   fi
 }
@@ -167,9 +175,11 @@ while true; do
       wait "$DAEMON_PID" 2>/dev/null && DAEMON_EXIT=0 || DAEMON_EXIT=$?
       DAEMON_PID=""
       if [ $DAEMON_EXIT -eq 0 ]; then
-        _log "start" "info" "🔴 daemon (clean exit)"
-        stop_all_processes
-        exit 0
+        _log "start" "info" "🔴 daemon (clean exit) — restarting in 3s"
+        afplay /System/Library/Sounds/Sosumi.aiff &
+        sleep 3
+        RESTART_REASON="daemon-clean-exit"
+        break
       elif [ $DAEMON_EXIT -eq 42 ]; then
         RESTART_REASON="daemon-version-change"
         break

@@ -1,5 +1,14 @@
 # Tasks
 
+- [x] host footer copy tooltip: keep `Copied...` visible for 3 seconds above join link on click-copy.
+- [x] host footer join link UX: click copies link and shows fading `Copied...` tooltip; Ctrl/Cmd+click opens join URL in new tab.
+- [x] daemon startup transcript summary log: reword to `Unprocessed: <session_lines> lines since <watermark> / <total_lines> lines ...`.
+- [x] start.sh: prevent auto-restart loop from exiting on stale/missing PID kill failures (`set -e` safe kill/wait in cleanup and stop paths).
+- [x] daemon transcript logs: compact format without preview text (`Transcripted N words (🤖 Xms)`), and zero-text case uses `- remove all = noise`.
+- [x] daemon transcript logs: when LLM sanitization leaves no normalized text, log `Transcripted 0 words (🤖 Xms):` explicitly.
+- [x] daemon transcript logs: collapse `🤖 LLM sanitized ...` + `Transcripted ...` into a single line (`Transcripted N words (🤖 Xms): preview ...`).
+- [x] daemon transcript logs: preview no longer echoes inline transcript timestamp tokens (e.g. `[ 14:52:12 ]`); format is `... OLLAMA:` then preview on next line.
+- [x] daemon: if today's raw transcript file is missing and latest raw file is from yesterday, restart Audio Hijack once (anti-loop guard) and sleep 3s, with explicit log message.
 - [x] ui: participant Key Points label now includes spacing between count and text (`🧠 38 Key Points` instead of `🧠 38Key Points`)
 - [x] ui: session panel compacted for host screen — session controls are clickable emoji-only (no button chrome), pause is followed by a vertical separator then `🎙️▶️`, and current session now shows transcript active time windows under the row.
 - [x] desktop-overlay: replaced Zorro button icon from battle swords to a little `z`, made Pulse/EKG background layers more transparent, and switched single-monitor right-edge action panel to vertical stacking.

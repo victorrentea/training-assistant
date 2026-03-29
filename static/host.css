@@ -53,7 +53,7 @@ body {
   align-items: center;
   box-sizing: border-box;
   cursor: default;
-  border: 1px solid var(--border);
+  border: 1px solid var(--muted);
   --badge-fill: var(--surface2);
 }
 .badge.connected    { background: #48cfad22; color: var(--accent2); border: 1px solid var(--accent2); --badge-fill: #48cfad44; }
@@ -165,9 +165,10 @@ body {
 }
 
 #participant-link {
-  pointer-events: none;
-  cursor: default;
+  pointer-events: auto;
+  cursor: pointer;
   text-decoration: none;
+  position: relative;
 }
 
 .host-footer-right {
@@ -242,21 +243,6 @@ body {
 
 #copy-link-icon:hover { opacity: .9 !important; }
 
-.btn-scores-reset {
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: .85rem;
-  padding: .1rem .2rem;
-  line-height: 1;
-  flex-shrink: 0;
-  color: var(--muted);
-  opacity: .35;
-  transition: opacity .15s, color .15s;
-  border-radius: 4px;
-}
-.btn-scores-reset:hover { opacity: .7; color: var(--muted); }
-.btn-scores-reset:active { opacity: 1; color: #e74c3c; }
 
 .stop-badge {
   background: #7b80a022;
@@ -265,7 +251,7 @@ body {
   --badge-fill: #e74c3c99;
   transition: background .15s, color .15s, border-color .15s;
 }
-.stop-badge:hover {
+.stop-badge:not(.disabled):hover {
   background: #e74c3c !important;
   color: #fff !important;
   border-color: #e74c3c !important;
@@ -940,7 +926,7 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
 
 .pax-list {
   list-style: none;
-  margin-top: .75rem;
+  margin-top: 0;
   max-height: 160px;
   overflow-y: auto;
   font-size: .85rem;
@@ -979,7 +965,9 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
   color: var(--accent2);
   font-weight: 700;
   white-space: nowrap;
+  cursor: pointer;
 }
+.pax-score:hover { color: var(--danger); }
 .pax-location {
   color: var(--muted);
   font-size: .78rem;
@@ -1741,19 +1729,3 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
   animation: none;
   background: rgba(99, 200, 255, 0.15);
 }
-
-.end-session-btn {
-  position: fixed;
-  bottom: .5rem;
-  right: .5rem;
-  background: none;
-  border: none;
-  font-size: 1.4rem;
-  cursor: pointer;
-  opacity: .35;
-  z-index: 100;
-  padding: .25rem;
-  line-height: 1;
-  transition: opacity .15s;
-}
-.end-session-btn:hover { opacity: 1; }

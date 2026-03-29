@@ -130,10 +130,12 @@
   }
 
   // Set participant link
-  const link = `${location.protocol}//${location.host}/`;
   const pLink = document.getElementById('participant-link');
-  pLink.href = link;
-  pLink.innerHTML = _buildUrlHtml();
+  if (pLink) {
+    pLink.innerHTML = _buildUrlHtml();
+    pLink.title = 'Click to copy • Ctrl/Cmd+Click to open';
+    pLink.addEventListener('click', onFooterJoinLinkClick);
+  }
   _setupSlidesCatalogHover();
   _setupActivityLogHovers();
 
@@ -209,9 +211,8 @@
           (msg.needs_restore && !msg.daemon_connected) ? '' : 'none';
         updateTokenBadge(msg.token_usage);
         if (msg.slides_log_deep_count !== undefined || msg.slides_log_topic !== undefined) {
-          const badge = document.getElementById('slides-log-badge');
           const count = msg.slides_log_deep_count ?? 0;
-          badge.textContent = `👁️ ${count}`;
+          document.getElementById('slides-log-count').textContent = count;
         }
         if (msg.git_repos !== undefined) _gitRepos = msg.git_repos;
         if (msg.slides_log !== undefined) _slidesLog = msg.slides_log;
@@ -749,17 +750,17 @@
     }
 
     if (summaryPoints.length) {
-      badge.textContent = `🧠 (${summaryPoints.length}) Key Points.txt`;
+      badge.textContent = `🧠 (${summaryPoints.length}) Key Points`;
       badge.className = 'badge connected';
       badge.style.cssText = 'cursor:pointer;';
       badge.title = noTranscriptTitle || `${summaryPoints.length} key points · ${_transcriptLineCount} transcript lines — click to view`;
     } else if (_summaryGenerating) {
-      badge.textContent = `🧠 (…) Key Points.txt`;
+      badge.textContent = `🧠 (…) Key Points`;
       badge.className = 'badge';
       badge.style.cssText = 'cursor:wait; color:var(--warn); border:1px solid var(--warn);';
       badge.title = noTranscriptTitle || `Generating key points from transcript… (${_transcriptLineCount} lines)`;
     } else {
-      badge.textContent = `🧠 Key Points.txt`;
+      badge.textContent = `🧠 Key Points`;
       badge.className = 'badge empty';
       badge.style.cssText = 'cursor:pointer;';
       badge.title = noTranscriptTitle
@@ -907,6 +908,9 @@
     const el = document.getElementById('slides-catalog-content');
     if (!el) return;
     const entries = Object.values(_slidesCacheStatus);
+
+    const countEl = document.getElementById('slides-catalog-count');
+    if (countEl) countEl.textContent = entries.length ? ' ' + entries.length : '';
 
     if (!entries.length) {
       el.innerHTML = '<div style="padding:8px;opacity:0.5">No slides in catalog</div>';
@@ -1084,12 +1088,15 @@
 
   function renderDaemonStatus(connected, lastSeenIso) {
     const el = document.getElementById('daemon-badge');
-    if (!el) return;
+    const landingIcon = document.getElementById('daemon-landing-icon');
+    const landingLabel = document.getElementById('daemon-landing-label');
+    const landingDetail = document.getElementById('daemon-landing-detail');
 
     if (!lastSeenIso) {
-      el.textContent = '🤖';
-      el.className = 'badge disconnected';
-      el.title = 'Never connected — start with ./start.sh';
+      if (el) { el.textContent = '🤖'; el.className = 'badge disconnected'; el.title = 'Never connected — start with ./start.sh'; }
+      if (landingIcon) landingIcon.style.opacity = '.35';
+      if (landingLabel) { landingLabel.textContent = 'Daemon not running'; landingLabel.style.color = 'var(--muted)'; }
+      if (landingDetail) landingDetail.textContent = './start.sh';
       return;
     }
 
@@ -1097,15 +1104,15 @@
     const agoText = ago < 60 ? `${ago}s ago` : `${Math.round(ago/60)}m ago`;
 
     if (connected) {
-      el.textContent = '🤖';
-      el.className = 'badge connected';
-      el.style.cssText = '';
-      el.title = `Connected (last seen ${agoText})`;
+      if (el) { el.textContent = '🤖'; el.className = 'badge connected'; el.style.cssText = ''; el.title = `Connected (last seen ${agoText})`; }
+      if (landingIcon) landingIcon.style.opacity = '1';
+      if (landingLabel) { landingLabel.textContent = 'Daemon connected'; landingLabel.style.color = 'var(--accent2)'; }
+      if (landingDetail) landingDetail.textContent = `last seen ${agoText}`;
     } else {
-      el.textContent = '🤖';
-      el.className = 'badge';
-      el.style.cssText = 'color:var(--warn);border:1px solid var(--warn);';
-      el.title = `Connection lost (last seen ${agoText})`;
+      if (el) { el.textContent = '🤖'; el.className = 'badge'; el.style.cssText = 'color:var(--warn);border:1px solid var(--warn);'; el.title = `Connection lost (last seen ${agoText})`; }
+      if (landingIcon) landingIcon.style.opacity = '.6';
+      if (landingLabel) { landingLabel.textContent = 'Daemon disconnected'; landingLabel.style.color = 'var(--warn)'; }
+      if (landingDetail) landingDetail.textContent = `last seen ${agoText}`;
     }
   }
 
@@ -1255,7 +1262,7 @@
       const name = participant.name || 'Unknown';
       const loc = participant.location || '';
       const pts = scores[pid] || 0;
-      const scoreTag = pts > 0 ? `<span class="pax-score">⭐ ${pts} pts</span>` : '';
+      const scoreTag = pts > 0 ? `<span class="pax-score" title="Click to reset score" onclick="resetOneScore('${escHtml(pid)}','${escHtml(name)}',${pts})">⭐ ${pts} pts</span>` : '';
       const locLabel = loc ? resolvedCities[loc] || loc : null;
       const avatar = participant.avatar || '';
       let avatarHtml = '';
@@ -1928,6 +1935,12 @@
     toast('Scores reset ✓');
   }
 
+  async function resetOneScore(uuid, name, pts) {
+    if (!confirm(`Reset ${name}'s score (${pts} pts) to zero?`)) return;
+    await fetch(API(`/scores/${uuid}`), { method: 'DELETE' });
+    toast(`${name}'s score reset ✓`);
+  }
+
   const _LANG_FLAG = { ro: '🇷🇴', en: '🇬🇧', auto: '🌐' };
 
   function updateTranscriptionLangBtn(lang, pending = false) {
@@ -2017,8 +2030,10 @@
         const show = currentActivity === 'poll' || currentActivity === 'none';
         el.style.display = show ? 'flex' : 'none';
         // Hide the poll results section when no poll is active
-        const pollResults = el.querySelector(':scope > div:first-child');
+        const pollResults = document.getElementById('poll-results-section');
         if (pollResults) pollResults.style.display = currentActivity === 'poll' ? '' : 'none';
+        const daemonLanding = document.getElementById('daemon-landing-status');
+        if (daemonLanding) daemonLanding.style.display = currentActivity === 'none' ? 'flex' : 'none';
         // Change divider text based on whether a poll exists
         const divider = el.querySelector('.or-divider span');
         if (divider) divider.textContent = currentActivity === 'poll' ? 'generate next' : 'generate question';
@@ -3077,8 +3092,8 @@ function updateSessionCodeBar(sessionId) {
   if (copyIcon) copyIcon.style.display = sessionId ? '' : 'none';
   const pLink = document.getElementById('participant-link');
   if (pLink) {
-    pLink.href = sessionId ? `/${sessionId}` : '/';
     pLink.innerHTML = _buildUrlHtml();
+    pLink.title = 'Click to copy • Ctrl/Cmd+Click to open';
   }
 
   // Regenerate all QR codes with the session-scoped join URL
@@ -3123,6 +3138,32 @@ function copyCenterUrl(el) {
     el.appendChild(tip);
     requestAnimationFrame(() => requestAnimationFrame(() => tip.style.opacity = '0'));
     setTimeout(() => tip.remove(), 1400);
+  });
+}
+
+function _showFooterCopiedTooltip(el) {
+  if (!el) return;
+  const old = el.querySelector('.footer-copy-tip');
+  if (old) old.remove();
+  const tip = document.createElement('div');
+  tip.className = 'footer-copy-tip';
+  tip.textContent = 'Copied...';
+  tip.style.cssText = 'position:absolute; left:50%; bottom:calc(100% + 6px); transform:translateX(-50%); background:var(--surface2); color:var(--accent2); border:1px solid var(--border); padding:.12rem .45rem; border-radius:6px; font-size:.72rem; pointer-events:none; opacity:1; transition:opacity .35s ease 3s;';
+  el.appendChild(tip);
+  requestAnimationFrame(() => requestAnimationFrame(() => { tip.style.opacity = '0'; }));
+  setTimeout(() => tip.remove(), 3400);
+}
+
+function onFooterJoinLinkClick(event) {
+  const url = _getJoinUrl();
+  if (event.ctrlKey || event.metaKey) {
+    event.preventDefault();
+    window.open(url, '_blank', 'noopener,noreferrer');
+    return;
+  }
+  event.preventDefault();
+  navigator.clipboard.writeText(url).then(() => {
+    _showFooterCopiedTooltip(event.currentTarget);
   });
 }
 
@@ -3207,8 +3248,12 @@ function renderSessionPanel() {
   const titleEl = document.getElementById('host-top-title');
   if (titleEl) titleEl.textContent = main ? main.name : '';
   // Stop button visibility
-  const stopWrap = document.getElementById('stop-session-wrap-left');
-  if (stopWrap) stopWrap.style.display = main ? '' : 'none';
+  const stopBtn = document.getElementById('stop-session-btn-left');
+  if (stopBtn) {
+    stopBtn.disabled = !main;
+    stopBtn.style.pointerEvents = main ? '' : 'none';
+    stopBtn.classList.toggle('disabled', !main);
+  }
 
   // Main session row
   const mainRow = document.getElementById('session-main-row');
@@ -3403,13 +3448,6 @@ function downloadUploadedFile(el) {
     });
 }
 
-async function endSession() {
-  if (!confirm('End session and return to landing page?')) return;
-  try {
-    await fetch('/api/session/end', {method: 'POST', credentials: 'include'});
-  } catch (e) { /* ignore — navigate regardless */ }
-  window.location = '/host';
-}
 
 // ── Host inactivity auto-return (all modes) ──
 // After 3 min idle during an activity → show warning modal with 3-min countdown
