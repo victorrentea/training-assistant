@@ -1,10 +1,15 @@
 {
-  "sha": "6c68a8a5bcdc13a137c1471fee16cc9e2a603b83",
-  "timestamp": "2026-03-29 17:05",
+  "sha": "1f554b6dbed107110a69749ccf9225a276ee05be",
+  "timestamp": "2026-03-29 17:07",
   "changelog": [
-    "docs: remember single active session model"
+    "fix host landing auto-redirect for active session"
   ],
   "commits": [
+    {
+      "sha": "1f554b6d",
+      "msg": "fix host landing auto-redirect for active session",
+      "ts": "2026-03-29T17:05:28+03:00"
+    },
     {
       "sha": "6c68a8a5",
       "msg": "docs: remember single active session model",
@@ -99,11 +104,6 @@
       "sha": "a892d5a1",
       "msg": "ui: constrain footer QR overlay between header and footer",
       "ts": "2026-03-29T16:15:07+03:00"
-    },
-    {
-      "sha": "41c41243",
-      "msg": "ux: show footer link copied tooltip immediately",
-      "ts": "2026-03-29T16:09:44+03:00"
     }
   ],
   "branches": [
