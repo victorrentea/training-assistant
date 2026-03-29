@@ -628,9 +628,9 @@ def run() -> None:
     slides_log: list[dict] = []        # {file, slide, first_seen_at, first_seen_hhmm, seconds_spent}
     git_repos: list[dict] = []         # {project, path, branch, seconds_spent}
     last_intellij_probe_at: float = 0.0
-    _INTELLIJ_PROBE_INTERVAL: float = 5.0  # probe IntelliJ every 5 seconds
+    _INTELLIJ_PROBE_INTERVAL: float = float(os.environ.get("DAEMON_INTELLIJ_PROBE_INTERVAL_SECONDS", "5.0"))  # probe IntelliJ every 5 seconds
     last_ppt_track_at: float = 0.0
-    _PPT_TRACK_INTERVAL: float = 5.0       # accumulate slide time every 5 seconds
+    _PPT_TRACK_INTERVAL: float = float(os.environ.get("DAEMON_PPT_TRACK_INTERVAL_SECONDS", "5.0"))       # accumulate slide time every 5 seconds
     _last_activity_log_key: tuple = (0, 0)  # (slides_count, git_count) — detect changes
 
     # Sync initial state to server — include session_state.json if present in the active folder

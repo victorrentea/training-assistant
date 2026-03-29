@@ -10,7 +10,7 @@ from pathlib import Path
 from daemon import log
 
 _LOCK_FILE = Path("/tmp/training_daemon.lock")
-_HEARTBEAT_INTERVAL = 1.0  # seconds between heartbeat writes
+_HEARTBEAT_INTERVAL = float(os.environ.get("DAEMON_HEARTBEAT_INTERVAL_SECONDS", "1.0"))  # seconds between heartbeat writes
 _HEARTBEAT_STALE_THRESHOLD = 10.0  # seconds before heartbeat is considered stale
 
 

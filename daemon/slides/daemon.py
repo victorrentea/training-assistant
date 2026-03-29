@@ -149,7 +149,7 @@ def config_from_env() -> SlidesDaemonConfig:
 
     return SlidesDaemonConfig(
         watch_dir=watch_dir,
-        poll_interval_seconds=max(1.0, poll_interval),
+        poll_interval_seconds=max(0.1, poll_interval),
         min_cpu_free_percent=min_cpu_free,
         state_file=state_file,
         work_dir=work_dir,

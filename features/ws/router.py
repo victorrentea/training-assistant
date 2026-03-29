@@ -456,11 +456,14 @@ async def _build_session_snapshot() -> dict:
     return {"type": "session_snapshot_result", **snapshot}
 
 
+_SNAPSHOT_PUSH_INTERVAL = float(os.environ.get("BACKEND_SNAPSHOT_INTERVAL_SECONDS", "7"))
+
+
 async def snapshot_pusher():
-    """Push state and session snapshots to daemon every 7 seconds."""
+    """Push state and session snapshots to daemon periodically."""
     import asyncio
     while True:
-        await asyncio.sleep(7)
+        await asyncio.sleep(_SNAPSHOT_PUSH_INTERVAL)
         if state.daemon_ws is None:
             continue
         try:
