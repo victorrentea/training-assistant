@@ -3364,7 +3364,7 @@ function renderSessionPanel() {
 
   // Session title in top bar center
   const titleEl = document.getElementById('host-top-title');
-  if (titleEl) titleEl.textContent = main ? main.name : '';
+  if (titleEl) titleEl.textContent = main ? (main.name || '').replace(/^\d{4}-\d{2}-\d{2}(?:\.\.\S+)?\s*/, '') : '';
   // Stop button is always enabled (host can always request session end).
   const stopBtn = document.getElementById('stop-session-btn-left');
   if (stopBtn) {
