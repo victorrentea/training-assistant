@@ -323,6 +323,8 @@ def sync_session_to_server(
     payload: dict = {"main": daemon_state["main"], "talk": daemon_state["talk"], "key_points": key_points}
     if session_state is not None:
         payload["session_state"] = session_state
+        if session_state.get("session_id"):
+            payload["session_id"] = session_state["session_id"]
     payload.update(extra_fields)
 
     if _ws_client and _ws_client.connected:
