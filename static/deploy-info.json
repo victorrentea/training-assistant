@@ -1,10 +1,15 @@
 {
-  "sha": "51fef97caf6f7426e64ffbb95a1a5faaf526e763",
-  "timestamp": "2026-03-29 14:35",
+  "sha": "cd6c8e2de80d8ff7e653d23e5b81816ac56b9b6a",
+  "timestamp": "2026-03-29 14:37",
   "changelog": [
-    "fix: remove tooltip from slides-catalog badge"
+    "feat: print active session name (or <NONE>) at daemon startup"
   ],
   "commits": [
+    {
+      "sha": "cd6c8e2d",
+      "msg": "feat: print active session name (or <NONE>) at daemon startup",
+      "ts": "2026-03-29T14:37:02+03:00"
+    },
     {
       "sha": "51fef97c",
       "msg": "fix: remove tooltip from slides-catalog badge",
@@ -99,11 +104,6 @@
       "sha": "e908d287",
       "msg": "fix: move stop button to right-most footer badge position",
       "ts": "2026-03-29T13:56:49+03:00"
-    },
-    {
-      "sha": "58ccfd44",
-      "msg": "feat: remove session type toggle button from host footer",
-      "ts": "2026-03-29T13:50:29+03:00"
     }
   ],
   "branches": [
