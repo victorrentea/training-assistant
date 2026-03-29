@@ -12,7 +12,7 @@ System_Ext(google_drive, "Google Drive", "HTTPS REST")
 
 Container_Boundary(daemon_pkg, "Daemon (Python 3.12, host's Mac)") {
 
-  Component(main, "daemon/__main__", "Orchestrator", "Starts all background loops.\nGraceful shutdown on SIGTERM.\nExit code 42 triggers git pull + restart.")
+  Component(main, "daemon/__main__", "Orchestrator", "Starts all background loops.\nGraceful shutdown on SIGTERM.\nExit code 42 triggers git pull + restart.\nOn WS reconnect: re-syncs active session\n(session_state.json) to backend.")
 
   Component(config_http, "daemon/config + daemon/http", "Config & HTTP", "DEFAULT_TRANSCRIPT_MINUTES, SESSIONS_FOLDER,\nTRANSCRIPTION_FOLDER env vars.\nShared HTTP helper with Basic Auth headers.")
 
