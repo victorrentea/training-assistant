@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, Response
 from fastapi.responses import HTMLResponse, FileResponse
 
-from core.auth import require_host_auth
+from core.auth import get_host_cookie_token, require_host_auth
 from core.state import state
 
 landing_router = APIRouter()
@@ -17,14 +17,14 @@ async def landing_page():
 @host_router.get("/host", response_class=HTMLResponse, dependencies=[Depends(require_host_auth)])
 async def host_landing():
     response = FileResponse("static/host-landing.html")
-    response.set_cookie("is_host", "1", path="/", samesite="strict")
+    response.set_cookie("is_host", get_host_cookie_token(), path="/", samesite="strict", httponly=True)
     return response
 
 
 @host_router.get("/host/{session_id}", response_class=HTMLResponse, dependencies=[Depends(require_host_auth)])
 async def host_page(session_id: str):
     response = FileResponse("static/host.html")
-    response.set_cookie("is_host", "1", path="/", samesite="strict")
+    response.set_cookie("is_host", get_host_cookie_token(), path="/", samesite="strict", httponly=True)
     return response
 
 

@@ -4,7 +4,7 @@ async function loadPage() {
   try {
     const [activeRes, foldersRes] = await Promise.all([
       fetch('/api/session/active'),
-      fetch('/api/session/folders'),
+      fetch('/api/session/folders', {credentials: 'include'}),
     ]);
     const active = await activeRes.json();
     const {folders} = await foldersRes.json();
@@ -143,6 +143,7 @@ async function doCreate(type) {
     const r = await fetch('/api/session/create', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
+      credentials: 'include',
       body: JSON.stringify({name, type}),
     });
     const data = await r.json();
@@ -164,6 +165,7 @@ async function doResumeFolder(folder_name) {
     const r = await fetch('/api/session/resume-folder', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
+      credentials: 'include',
       body: JSON.stringify({folder_name}),
     });
     const data = await r.json();
