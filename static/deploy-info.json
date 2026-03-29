@@ -1,14 +1,15 @@
 {
-  "sha": "ae98fc70f6d16dcc5686fdff3c7a2b79d47f77c0",
-  "timestamp": "2026-03-29 15:06",
+  "sha": "2d58016d66c30b8a12c8543f533e8d9621e38eca",
+  "timestamp": "2026-03-29 15:09",
   "changelog": [
-    "fix: countdown starts at 3:00; arm inactivity timer on server activity change",
-    "feat: add 6-min host inactivity auto-return modal",
-    "chore: remove old 30s conference auto-return timer",
-    "feat: replace Hello tab with Slides tab (\ud83d\udc68\ud83c\udffb\u200d\ud83c\udfeb)",
-    "docs: add Slides tab + inactivity auto-return spec and plan"
+    "feat: enable transcript llm clean and update log format"
   ],
   "commits": [
+    {
+      "sha": "2d58016d",
+      "msg": "feat: enable transcript llm clean and update log format",
+      "ts": "2026-03-29T15:08:37+03:00"
+    },
     {
       "sha": "ae98fc70",
       "msg": "fix: countdown starts at 3:00; arm inactivity timer on server activity change",
@@ -103,11 +104,6 @@
       "sha": "c0759805",
       "msg": "fix: group same-day windows into one bracket in startup log",
       "ts": "2026-03-29T14:43:58+03:00"
-    },
-    {
-      "sha": "b4136beb",
-      "msg": "fix: daemon handles main session end from host stop button",
-      "ts": "2026-03-29T14:41:25+03:00"
     }
   ],
   "branches": [
