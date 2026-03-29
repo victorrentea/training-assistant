@@ -1,8 +1,8 @@
 {
-  "sha": "9eb10f778c7cd2cbb3ac6b8cbf07ee0192b10561",
-  "timestamp": "2026-03-29 12:46",
+  "sha": "6af8f5e63e1833482cdccb52c6c4ea02cb77af15",
+  "timestamp": "2026-03-29 12:50",
   "changelog": [
-    "fix(host-landing): make /api/session/folders public so JS fetch works"
+    "fix(auth): restore Basic Auth on session landing endpoints via httponly cookie"
   ],
   "branches": [
     {
