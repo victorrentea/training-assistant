@@ -1983,6 +1983,7 @@
 
   async function switchTab(tab) {
     _currentActivity = tab;
+    _resetInactivityTimer();
     const slidesTab = document.getElementById('tab-slides');
     if (slidesTab) slidesTab.classList.toggle('active', tab === 'none');
     ['poll', 'wordcloud', 'qa', 'codereview', 'debate'].forEach(t => {
@@ -3419,3 +3420,78 @@ function downloadUploadedFile(el) {
 }
 
 
+// ── Host inactivity auto-return (all modes) ──
+// After 3 min idle during an activity → show warning modal with 3-min countdown
+// Any mouse/key activity resets the full 6-min timer
+// After 6 min total idle → switchTab('none')
+
+const INACTIVITY_WARN_MS  = 3 * 60 * 1000;  // 3 minutes → show modal
+const INACTIVITY_TOTAL_MS = 6 * 60 * 1000;  // 6 minutes → auto-switch
+
+let _inactivityWarnTimer   = null;
+let _inactivitySwitchTimer = null;
+let _inactivityModalVisible = false;
+let _inactivityCountdownInterval = null;
+
+function _showInactivityModal() {
+  _inactivityModalVisible = true;
+  const modal = document.getElementById('inactivity-modal');
+  if (modal) modal.style.display = 'flex';
+  _startModalCountdown();
+}
+
+function _hideInactivityModal() {
+  _inactivityModalVisible = false;
+  const modal = document.getElementById('inactivity-modal');
+  if (modal) modal.style.display = 'none';
+  clearInterval(_inactivityCountdownInterval);
+  _inactivityCountdownInterval = null;
+}
+
+function _startModalCountdown() {
+  const timerEl = document.getElementById('inactivity-timer');
+  let remaining = INACTIVITY_WARN_MS; // 3 minutes in ms
+  const tick = () => {
+    remaining -= 1000;
+    if (remaining <= 0) remaining = 0;
+    const m = Math.floor(remaining / 60000);
+    const s = Math.floor((remaining % 60000) / 1000);
+    if (timerEl) timerEl.textContent = `${m}:${s.toString().padStart(2, '0')}`;
+  };
+  tick();
+  _inactivityCountdownInterval = setInterval(tick, 1000);
+}
+
+function _resetInactivityTimer() {
+  // Called on any user activity
+  clearTimeout(_inactivityWarnTimer);
+  clearTimeout(_inactivitySwitchTimer);
+  if (_inactivityModalVisible) _hideInactivityModal();
+
+  if (_currentActivity === 'none') return; // not tracking when on Slides
+
+  // Restart full 6-min cycle
+  _inactivityWarnTimer = setTimeout(_showInactivityModal, INACTIVITY_WARN_MS);
+  _inactivitySwitchTimer = setTimeout(() => {
+    _hideInactivityModal();
+    switchTab('none');
+  }, INACTIVITY_TOTAL_MS);
+}
+
+function startInactivityTracking() {
+  ['mousemove', 'click', 'keydown'].forEach(evt =>
+    document.addEventListener(evt, _resetInactivityTimer, { passive: true })
+  );
+  _resetInactivityTimer(); // arm the timers immediately
+}
+
+function stopInactivityTracking() {
+  clearTimeout(_inactivityWarnTimer);
+  clearTimeout(_inactivitySwitchTimer);
+  _hideInactivityModal();
+  ['mousemove', 'click', 'keydown'].forEach(evt =>
+    document.removeEventListener(evt, _resetInactivityTimer)
+  );
+}
+
+startInactivityTracking();
