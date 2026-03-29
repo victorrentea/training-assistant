@@ -579,7 +579,7 @@ def run() -> None:
                     log.error("session", f"Failed to read session_state.json: {e}")
         sync_session_to_server(config, session_stack, current_key_points, startup_session_state, slides_log=slides_log, git_repos=git_repos)
     except Exception as e:
-        log.error("session", f"Failed to sync initial state: {e}")
+        log.error("session", f"Initial sync failed: {e}")
 
     # ── Sync AudioHijack language to server at startup ──
     try:
