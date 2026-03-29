@@ -1,10 +1,15 @@
 {
-  "sha": "58ccfd4437e835ef165c7be98ee6e235127da7c0",
-  "timestamp": "2026-03-29 13:52",
+  "sha": "e908d2874a75dc24be2fe2f403fa84f90a6d5ff9",
+  "timestamp": "2026-03-29 13:57",
   "changelog": [
-    "feat: remove session type toggle button from host footer"
+    "fix: move stop button to right-most footer badge position"
   ],
   "commits": [
+    {
+      "sha": "e908d287",
+      "msg": "fix: move stop button to right-most footer badge position",
+      "ts": "2026-03-29T13:56:49+03:00"
+    },
     {
       "sha": "58ccfd44",
       "msg": "feat: remove session type toggle button from host footer",
@@ -99,11 +104,6 @@
       "sha": "734f8143",
       "msg": "feat(landing): merge today's sessions into previous sessions list with TODAY tag",
       "ts": "2026-03-29T13:21:43+03:00"
-    },
-    {
-      "sha": "fc93c4b4",
-      "msg": "feat(host-landing): support date-range folder names in session list",
-      "ts": "2026-03-29T13:19:53+03:00"
     }
   ],
   "branches": [
