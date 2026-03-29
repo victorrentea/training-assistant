@@ -137,12 +137,15 @@ def find_session_folder(today: date) -> tuple[Optional[Path], Optional[Path]]:
     if not matches:
         return None, None
 
-    if len(matches) > 1:
-        log.error("session", f"Multiple folders match today: {[m[1] for m in matches]}")
-
     # Latest start_date; tie-break: alphabetically last name
     matches.sort(key=lambda x: (x[0], x[1]))
     _, _, session_folder = matches[-1]
+
+    if len(matches) > 1:
+        log.info(
+            "session",
+            f"Multiple folders match today: {[m[1] for m in matches]}; selected: {session_folder.name}",
+        )
 
     # Find most recently modified .txt file
     txt_files = sorted(

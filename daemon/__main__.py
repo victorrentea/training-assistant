@@ -140,6 +140,37 @@ def _build_session_folders_payload(sessions_root: Path) -> list[dict[str, str | 
     ]
 
 
+def _sessions_root_from_env() -> Path:
+    return Path(
+        os.environ.get(
+            "SESSIONS_FOLDER",
+            str(Path.home() / "My Drive" / "Cursuri" / "###sesiuni"),
+        )
+    ).expanduser()
+
+
+def _resolve_session_folder_from_state(
+    sessions_root: Path,
+    session_stack: list[dict],
+    detected_folder: Path | None,
+    detected_notes: Path | None,
+) -> tuple[Path | None, Path | None, str]:
+    """Resolve active session folder source: daemon stack first, then today detection fallback."""
+    if session_stack:
+        active_name = session_stack[-1].get("name")
+        if active_name:
+            active_folder = sessions_root / active_name
+            if active_folder.exists() and active_folder.is_dir():
+                return active_folder, find_notes_in_folder(active_folder), "stack"
+            log.error(
+                "session",
+                f"Active session folder missing on disk: {active_name}; fallback to today detection",
+            )
+    if detected_folder:
+        return detected_folder, detected_notes, "today"
+    return None, None, "none"
+
+
 _AUDIOHIJACK_SESSIONS_PLIST = os.path.expanduser(
     "~/Library/Application Support/Audio Hijack 4/Sessions.plist"
 )
@@ -444,6 +475,69 @@ def _sync_powerpoint_slide_to_server(main_config, slides_cfg, ppt_state: dict | 
     ws_client.send(payload)
 
 
+def _bind_initial_session_folder(config, sessions_root: Path, session_stack: list[dict]) -> tuple[object, str]:
+    """Resolve and log session folder binding at daemon startup."""
+    today_folder = today_notes = None
+    if not session_stack:
+        today_folder, today_notes = find_session_folder(date.today())
+    resolved_folder, resolved_notes, resolved_source = _resolve_session_folder_from_state(
+        sessions_root=sessions_root,
+        session_stack=session_stack,
+        detected_folder=today_folder,
+        detected_notes=today_notes,
+    )
+    config = dc_replace(config, session_folder=resolved_folder, session_notes=resolved_notes)
+    if resolved_folder:
+        source_msg = "daemon state" if resolved_source == "stack" else "today detection"
+        log.info("session", f"Session folder from {source_msg}: {resolved_folder.name}")
+        log.info("session", f"Notes file: {resolved_notes.name if resolved_notes else 'NOT FOUND'}")
+    else:
+        log.info("session", "No session folder found for today")
+    return config, resolved_source
+
+
+def _refresh_session_folder_binding(
+    config,
+    sessions_root: Path,
+    session_stack: list[dict],
+    today: date,
+    last_detected_date: date | None,
+    last_session_check_at: float,
+    now_mono: float,
+) -> tuple[object, date | None, float, bool]:
+    """Periodic session-folder refresh: prefer active stack, fallback to today detection when stack is empty."""
+    notes_missing = config.session_notes is None
+    date_changed = today != last_detected_date
+    session_recheck_due = notes_missing and (now_mono - last_session_check_at >= 5.0)
+    if not (date_changed or session_recheck_due):
+        return config, last_detected_date, last_session_check_at, False
+
+    last_session_check_at = now_mono
+    detected_sf = detected_sn = None
+    if not session_stack:
+        detected_sf, detected_sn = find_session_folder(today)
+
+    sf, sn, source = _resolve_session_folder_from_state(
+        sessions_root=sessions_root,
+        session_stack=session_stack,
+        detected_folder=detected_sf,
+        detected_notes=detected_sn,
+    )
+    changed = (sf != config.session_folder or sn != config.session_notes)
+    if changed or date_changed:
+        config = dc_replace(config, session_folder=sf, session_notes=sn)
+        last_detected_date = today
+        if sf:
+            if source == "stack":
+                log.info("session", f"Active session folder: {sf.name} / notes: {sn.name if sn else 'none'}")
+            else:
+                log.info("session", f"Detected: {sf.name} / notes: {sn.name if sn else 'none'}")
+        else:
+            log.info("session", "No session folder for today")
+        return config, last_detected_date, last_session_check_at, True
+    return config, last_detected_date, last_session_check_at, False
+
+
 # ── Main run loop ──────────────────────────────────────────────────────────────
 
 def run() -> None:
@@ -512,15 +606,6 @@ def run() -> None:
     except Exception as e:
         log.error("daemon", f"State restore check failed: {e}")
 
-    # Detect today's session folder
-    sf, sn = find_session_folder(date.today())
-    config = dc_replace(config, session_folder=sf, session_notes=sn)
-    if sf:
-        log.info("session", f"Session folder: {sf.name}")
-        log.info("session", f"Notes file: {sn.name if sn else 'NOT FOUND'}")
-    else:
-        log.error("session", "No session folder found for today")
-
     # Start background material indexer
     materials_folder = resolve_materials_folder()
     if materials_folder is not None:
@@ -531,11 +616,12 @@ def run() -> None:
         log.error("daemon", f"MATERIALS_FOLDER not found (MATERIALS_FOLDER={raw}) — indexer disabled")
 
     # ── Session stack initialization (early — needed for transcript log) ──
-    sessions_root = config.session_folder.parent if config.session_folder else Path(os.environ.get("SESSIONS_FOLDER", str(Path.home() / "My Drive" / "Cursuri" / "###sesiuni")))
+    sessions_root = _sessions_root_from_env()
     log.info("session", f"Sessions root: {sessions_root}")
     _loaded_daemon_state = load_daemon_state(sessions_root)
     _active_session_id: str | None = _loaded_daemon_state.get("session_id")
     session_stack = daemon_state_to_stack(_loaded_daemon_state)
+    config, _ = _bind_initial_session_folder(config, sessions_root, session_stack)
     current_key_points: list[dict] = []
     summary_watermark: int = 0
 
@@ -549,7 +635,7 @@ def run() -> None:
 
     if session_stack:
         # Restore from persisted stack
-        current_folder = sessions_root / session_stack[-1]["name"]
+        current_folder = config.session_folder or (sessions_root / session_stack[-1]["name"])
         current_key_points, summary_watermark = load_key_points(current_folder)
         log.info("session", f"Restored stack ({len(session_stack)} sessions), {len(current_key_points)} key points")
         log.info("session", f"Found active session: {session_stack[-1]['name']}")
@@ -945,25 +1031,17 @@ def run() -> None:
                         except Exception as e:
                             log.error("transcript", f"Audio Hijack restart guard failed: {e}")
 
-                notes_missing = config.session_notes is None
-                date_changed = today != last_detected_date
-                session_recheck_due = notes_missing and (now - last_session_check_at >= 5.0)
-                if date_changed or session_recheck_due:
-                    last_session_check_at = now
-                    sf, sn = find_session_folder(today)
-                    changed = (sf != config.session_folder or sn != config.session_notes)
-                    if changed or date_changed:
-                        config = dc_replace(config, session_folder=sf, session_notes=sn)
-                        last_detected_date = today
-                        if sf:
-                            log.info("session", f"Detected: {sf.name} / notes: {sn.name if sn else 'none'}")
-                        else:
-                            log.error("session", "No session folder for today")
-                        _session_status_pending = True
-                    else:
-                        _session_status_pending = False
-                else:
-                    _session_status_pending = False
+                config, last_detected_date, last_session_check_at, _session_status_pending = (
+                    _refresh_session_folder_binding(
+                        config=config,
+                        sessions_root=sessions_root,
+                        session_stack=session_stack,
+                        today=today,
+                        last_detected_date=last_detected_date,
+                        last_session_check_at=last_session_check_at,
+                        now_mono=now,
+                    )
+                )
 
                 sf_name = config.session_folder.name if config.session_folder else None
                 sn_name = config.session_notes.name if config.session_notes else None
@@ -1295,8 +1373,11 @@ def run() -> None:
                 # ── Process session snapshot result (pushed by backend every 7s) ──
                 session_snapshot = _pending_requests.pop("session_snapshot_result", None)
                 if session_snapshot:
-                    if session_snapshot.get("session_id"):
-                        _active_session_id = session_snapshot["session_id"]
+                    snapshot_sid = session_snapshot.get("session_id")
+                    if isinstance(snapshot_sid, str) and snapshot_sid:
+                        if snapshot_sid != _active_session_id:
+                            _active_session_id = snapshot_sid
+                            _do_save_daemon_state()
                     current_folder = sessions_root / session_stack[-1]["name"] if session_stack else None
                     if current_folder and current_folder.exists():
                         try:

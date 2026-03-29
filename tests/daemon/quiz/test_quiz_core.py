@@ -129,6 +129,19 @@ class TestFindSessionFolder:
         _, sn = find_session_folder(date(2026, 3, 19))
         assert sn == new
 
+    def test_multiple_today_folders_do_not_log_error(self, tmp_path):
+        f1 = _make_folder(tmp_path, "2026-03-29 Abc")
+        f2 = _make_folder(tmp_path, "2026-03-29 Hahaa")
+        os.environ["SESSIONS_FOLDER"] = str(tmp_path)
+        with patch("daemon.config.log.error") as mock_error:
+            sf, _ = find_session_folder(date(2026, 3, 29))
+        assert sf == f2
+        assert not any(
+            "Multiple folders match today" in str(c.args[1])
+            for c in mock_error.call_args_list
+            if len(c.args) >= 2
+        )
+
 
 # ── load_secrets_env ──────────────────────────────────────────────────
 
