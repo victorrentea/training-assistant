@@ -38,8 +38,9 @@ function renderPage(active, folders) {
       ${rejoinHtml}
       <div class="new-session-label">New session</div>
       <div class="session-name-row">
+        <span class="session-date-prefix">${new Date().toISOString().slice(0, 10)}&nbsp;</span>
         <input id="session-name-input" class="session-name-input" type="text"
-               placeholder="Session name (e.g. 2025-01-15 Clean Code)"
+               placeholder="session name"
                autocomplete="off"
                oninput="onNameInput()"
                onkeydown="if(event.key==='Enter' && !document.getElementById('create-btn').disabled) doCreate();" />
@@ -112,7 +113,9 @@ function rejoinSession(session_id) {
 
 async function doCreate() {
   const input = document.getElementById('session-name-input');
-  const name = input.value.trim();
+  const prefixEl = document.querySelector('.session-date-prefix');
+  const prefix = prefixEl ? prefixEl.textContent : '';
+  const name = (prefix + input.value).trim();
   if (!name) return;
 
   const typeEl = document.querySelector('input[name="session-type"]:checked');

@@ -82,12 +82,28 @@ body {
   margin-bottom: .75rem;
 }
 
+.session-date-prefix {
+  background: var(--surface2);
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-right: none;
+  border-radius: 8px 0 0 8px;
+  padding: 0 .6rem;
+  font-family: monospace;
+  font-size: 1rem;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
 .session-name-input {
   flex: 1;
   background: var(--surface2);
   color: var(--text);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 0 8px 8px 0;
   padding: 0 .85rem;
   font-size: 1rem;
   height: 42px;
