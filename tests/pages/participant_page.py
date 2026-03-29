@@ -4,6 +4,7 @@ All interactions go through the real browser UI.
 """
 from __future__ import annotations
 
+import re
 from playwright.sync_api import Page, expect
 
 
@@ -162,4 +163,4 @@ class ParticipantPage:
     def expect_question_answered(self, question_id: str, timeout: int = 5000) -> None:
         expect(
             self._page.locator(f'.qa-card-p[data-id="{question_id}"]')
-        ).to_have_class(lambda c: "qa-answered-p" in c, timeout=timeout)
+        ).to_have_class(re.compile(r"qa-answered-p"), timeout=timeout)

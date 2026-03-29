@@ -12,6 +12,10 @@
 - [x] **Q&A submission**: Participant submits question → host sees it in Q&A panel
 - [x] **Q&A host edit**: Host edits question → participant sees updated text
 - [x] **Word cloud submission**: Host opens wordcloud → participant submits word → appears in "my words"
+- [x] **Q&A delete**: Host deletes question → both host and participant lists empty
+- [x] **Q&A mark answered**: Host toggles answered → both host and participant see answered styling
+- [x] **Q&A upvoting + sort**: 3 participants upvote → questions sorted by votes descending
+- [x] **Leaderboard show/hide**: Host shows leaderboard → participant sees overlay → host hides it
 
 ---
 
