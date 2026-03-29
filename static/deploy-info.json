@@ -1,10 +1,15 @@
 {
-  "sha": "2d58016d66c30b8a12c8543f533e8d9621e38eca",
+  "sha": "bbebedae91bcdc966c081564dea416e34ecb2ac9",
   "timestamp": "2026-03-29 15:09",
   "changelog": [
-    "feat: enable transcript llm clean and update log format"
+    "Increase PowerPoint probe timeout to 5s"
   ],
   "commits": [
+    {
+      "sha": "bbebedae",
+      "msg": "Increase PowerPoint probe timeout to 5s",
+      "ts": "2026-03-29T15:08:51+03:00"
+    },
     {
       "sha": "2d58016d",
       "msg": "feat: enable transcript llm clean and update log format",
@@ -99,11 +104,6 @@
       "sha": "e7a6d302",
       "msg": "fix: separate active session into its own card on host landing page",
       "ts": "2026-03-29T14:46:07+03:00"
-    },
-    {
-      "sha": "c0759805",
-      "msg": "fix: group same-day windows into one bracket in startup log",
-      "ts": "2026-03-29T14:43:58+03:00"
     }
   ],
   "branches": [
