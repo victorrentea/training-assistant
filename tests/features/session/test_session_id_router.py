@@ -1,6 +1,7 @@
 import base64
 import json
 import os
+from datetime import datetime, timezone
 
 import pytest
 from fastapi.testclient import TestClient
@@ -77,6 +78,40 @@ def test_resume_folder_uses_session_id_from_local_snapshot(monkeypatch, tmp_path
 
     assert body["session_id"] == "hist42"
     assert state.session_folder_ids[folder] == "hist42"
+
+
+def test_session_folders_endpoint_filters_non_current_year_from_daemon_list():
+    client = TestClient(app, headers=_HOST_AUTH_HEADERS)
+    current_year = datetime.now(timezone.utc).year
+    previous_year = current_year - 1
+    state.session_folders = [
+        f"{current_year}-03-29 Current One",
+        f"{previous_year}-12-30 Old One",
+        "legacy-folder-no-date",
+        f"{current_year}-01-10 Current Two",
+    ]
+
+    resp = client.get("/api/session/folders")
+    assert resp.status_code == 200
+    assert resp.json()["folders"] == [
+        f"{current_year}-03-29 Current One",
+        f"{current_year}-01-10 Current Two",
+    ]
+
+
+def test_session_folders_endpoint_filters_non_current_year_from_local_scan(monkeypatch, tmp_path):
+    client = TestClient(app, headers=_HOST_AUTH_HEADERS)
+    current_year = datetime.now(timezone.utc).year
+    previous_year = current_year - 1
+    (tmp_path / f"{current_year}-03-29 Current One").mkdir()
+    (tmp_path / f"{previous_year}-03-29 Old One").mkdir()
+    (tmp_path / "No Date Folder").mkdir()
+    monkeypatch.setenv("SESSIONS_FOLDER", str(tmp_path))
+    state.session_folders = []
+
+    resp = client.get("/api/session/folders")
+    assert resp.status_code == 200
+    assert resp.json()["folders"] == [f"{current_year}-03-29 Current One"]
 
 
 def test_session_active_autojoin_when_main_open_and_session_id_missing():
