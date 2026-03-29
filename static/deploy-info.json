@@ -1,10 +1,15 @@
 {
-  "sha": "28e7d0e45896cd5c82a4bd9779bb3600797c6d98",
-  "timestamp": "2026-03-29 14:48",
+  "sha": "e22c767f7688cf5d95c75e264f80e765afe909ae",
+  "timestamp": "2026-03-29 14:49",
   "changelog": [
-    "fix: uniform gray border color for all neutral host footer badges"
+    "feat: show first 10 words preview in transcript log"
   ],
   "commits": [
+    {
+      "sha": "e22c767f",
+      "msg": "feat: show first 10 words preview in transcript log",
+      "ts": "2026-03-29T14:48:51+03:00"
+    },
     {
       "sha": "28e7d0e4",
       "msg": "fix: uniform gray border color for all neutral host footer badges",
@@ -99,11 +104,6 @@
       "sha": "c40d98c3",
       "msg": "feat: persist session_id in daemon state files across server restarts",
       "ts": "2026-03-29T14:13:41+03:00"
-    },
-    {
-      "sha": "2c3ca4e5",
-      "msg": "fix: strip non-breaking spaces from session names before creating folders",
-      "ts": "2026-03-29T14:08:35+03:00"
     }
   ],
   "branches": [
