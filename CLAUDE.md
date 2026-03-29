@@ -359,6 +359,8 @@ Only add memories when explicitly asked, or after the user has confirmed the inf
 - PPTX slides daemon logs must follow the shared daemon pattern from `daemon/log.py`: `HH:MM:SS.f PID [name      ] info|error message` (use component name `slides`, not custom `[pptx-daemon]` prefixes).
 - There is a course catalog and a slides catalog file in this project that maps course names to local disk paths of the associated PowerPoint presentations.
 - User wants every completed task pushed to `master` immediately.
+- Session model simplification requested by user: no session stack model; exactly one active session at a time (activate one, stop it, then resume another).
+- Session links must remain stable across days: each session has a unique persistent `session_id`, and participants can reuse that same link whenever host restarts/resumes that session (today, tomorrow, or weeks later).
 
 ---
 
