@@ -118,9 +118,9 @@ class TestSummary:
 
     def test_poll_force(self, server_url):
         api(server_url, "post", pax_url("/api/summary/force"))
-        resp = api(server_url, "get", "/api/summary/force")
+        resp = api(server_url, "get", pax_url("/api/summary/force"))
         assert resp.status_code == 200
         assert resp.json()["requested"] is True
         # Second poll should be False
-        resp2 = api(server_url, "get", "/api/summary/force")
+        resp2 = api(server_url, "get", pax_url("/api/summary/force"))
         assert resp2.json()["requested"] is False
