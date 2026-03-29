@@ -1088,15 +1088,9 @@
 
   function renderDaemonStatus(connected, lastSeenIso) {
     const el = document.getElementById('daemon-badge');
-    const landingIcon = document.getElementById('daemon-landing-icon');
-    const landingLabel = document.getElementById('daemon-landing-label');
-    const landingDetail = document.getElementById('daemon-landing-detail');
 
     if (!lastSeenIso) {
       if (el) { el.textContent = '🤖'; el.className = 'badge disconnected'; el.title = 'Never connected — start with ./start.sh'; }
-      if (landingIcon) landingIcon.style.opacity = '.35';
-      if (landingLabel) { landingLabel.textContent = 'Daemon not running'; landingLabel.style.color = 'var(--muted)'; }
-      if (landingDetail) landingDetail.textContent = './start.sh';
       return;
     }
 
@@ -1105,14 +1099,8 @@
 
     if (connected) {
       if (el) { el.textContent = '🤖'; el.className = 'badge connected'; el.style.cssText = ''; el.title = `Connected (last seen ${agoText})`; }
-      if (landingIcon) landingIcon.style.opacity = '1';
-      if (landingLabel) { landingLabel.textContent = 'Daemon connected'; landingLabel.style.color = 'var(--accent2)'; }
-      if (landingDetail) landingDetail.textContent = `last seen ${agoText}`;
     } else {
       if (el) { el.textContent = '🤖'; el.className = 'badge'; el.style.cssText = 'color:var(--warn);border:1px solid var(--warn);'; el.title = `Connection lost (last seen ${agoText})`; }
-      if (landingIcon) landingIcon.style.opacity = '.6';
-      if (landingLabel) { landingLabel.textContent = 'Daemon disconnected'; landingLabel.style.color = 'var(--warn)'; }
-      if (landingDetail) landingDetail.textContent = `last seen ${agoText}`;
     }
   }
 
@@ -2059,8 +2047,6 @@
         // Hide the poll results section when no poll is active
         const pollResults = document.getElementById('poll-results-section');
         if (pollResults) pollResults.style.display = currentActivity === 'poll' ? '' : 'none';
-        const daemonLanding = document.getElementById('daemon-landing-status');
-        if (daemonLanding) daemonLanding.style.display = currentActivity === 'none' ? 'flex' : 'none';
         // Change divider text based on whether a poll exists
         const divider = el.querySelector('.or-divider span');
         if (divider) divider.textContent = currentActivity === 'poll' ? 'generate next' : 'generate question';
