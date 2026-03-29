@@ -1,10 +1,20 @@
 {
-  "sha": "49b1a27ea9cf39478ccff043a48a029a763ea852",
-  "timestamp": "2026-03-29 17:34",
+  "sha": "d5b78565be65f10c4cd5911e82f65821ccdb52af",
+  "timestamp": "2026-03-29 17:37",
   "changelog": [
-    "fix: show Link Copied tooltip above footer join link"
+    "feat: expose git_sha in /api/status from RAILWAY_GIT_COMMIT_SHA"
   ],
   "commits": [
+    {
+      "sha": "d5b78565",
+      "msg": "feat: expose git_sha in /api/status from RAILWAY_GIT_COMMIT_SHA",
+      "ts": "2026-03-29T17:34:32+03:00"
+    },
+    {
+      "sha": "1c83fbdc",
+      "msg": "fix: wave animation reset — skip re-render on same session ID, fill backwards",
+      "ts": "2026-03-29T17:32:33+03:00"
+    },
     {
       "sha": "49b1a27e",
       "msg": "fix: show Link Copied tooltip above footer join link",
@@ -94,16 +104,6 @@
       "sha": "3cfe8b2e",
       "msg": "fix: keep host stop button always enabled",
       "ts": "2026-03-29T16:29:53+03:00"
-    },
-    {
-      "sha": "88154780",
-      "msg": "feat: animate TODAY badge on host landing",
-      "ts": "2026-03-29T16:28:15+03:00"
-    },
-    {
-      "sha": "b66640d9",
-      "msg": "fix: remove host tooltip hover delay",
-      "ts": "2026-03-29T16:27:22+03:00"
     }
   ],
   "branches": [

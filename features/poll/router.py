@@ -237,7 +237,7 @@ def _status_response():
     import os
     return {
         "backend_version": get_backend_version(),
-        "git_sha": os.environ.get("RAILWAY_GIT_COMMIT_SHA", "")[:8],
+        "git_sha": os.environ.get("RAILWAY_GIT_COMMIT_SHA", ""),
         "participants": len(participant_ids()),
         "poll": state.poll,
         "poll_active": state.poll_active,
