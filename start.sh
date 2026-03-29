@@ -30,6 +30,12 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$SCRIPT_DIR"
 source "$SCRIPT_DIR/daemon/bash_log.sh"
 
+EXIT_REASON=""
+_on_exit() {
+  [ -n "$EXIT_REASON" ] && _log "start" "info" "💥 $EXIT_REASON"
+}
+trap _on_exit EXIT
+
 OVERLAY_SERVER="${1:-wss://interact.victorrentea.ro}"
 SECRETS_FILE="${TRAINING_ASSISTANTS_SECRETS_FILE:-$HOME/.training-assistants-secrets.env}"
 
@@ -37,6 +43,7 @@ SECRETS_FILE="${TRAINING_ASSISTANTS_SECRETS_FILE:-$HOME/.training-assistants-sec
 
 if [ ! -f "$SECRETS_FILE" ]; then
   _log "start" "error" "$SECRETS_FILE not found — create with ANTHROPIC_API_KEY and TRANSCRIPTION_FOLDER"
+  EXIT_REASON="secrets file not found: $SECRETS_FILE"
   exit 1
 fi
 
@@ -63,6 +70,7 @@ cleanup() {
     OVERLAY_PID=""
   fi
   wait 2>/dev/null
+  EXIT_REASON="interrupted (SIGINT/SIGTERM)"
   exit 0
 }
 trap cleanup INT TERM
@@ -169,6 +177,7 @@ while true; do
       if [ $DAEMON_EXIT -eq 0 ]; then
         _log "start" "info" "🔴 daemon (clean exit)"
         stop_all_processes
+        EXIT_REASON="daemon exited cleanly"
         exit 0
       elif [ $DAEMON_EXIT -eq 42 ]; then
         RESTART_REASON="daemon-version-change"
