@@ -67,6 +67,47 @@ body {
   transform: scale(.98);
 }
 
+/* Today's sessions */
+.today-section {
+  margin-bottom: 1.5rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.today-label {
+  font-size: .8rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  margin-bottom: .6rem;
+}
+
+.today-resume-btn {
+  display: block;
+  width: 100%;
+  padding: .6rem 1rem;
+  background: var(--surface2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  transition: background .12s, border-color .12s;
+  margin-bottom: .4rem;
+}
+
+.today-resume-btn:last-child {
+  margin-bottom: 0;
+}
+
+.today-resume-btn:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
 /* New session form */
 .new-session-label {
   font-size: .8rem;
