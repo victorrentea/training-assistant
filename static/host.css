@@ -265,7 +265,7 @@ body {
   --badge-fill: #e74c3c99;
   transition: background .15s, color .15s, border-color .15s;
 }
-.stop-badge:hover {
+.stop-badge:not(.disabled):hover {
   background: #e74c3c !important;
   color: #fff !important;
   border-color: #e74c3c !important;
