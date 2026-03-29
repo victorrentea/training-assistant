@@ -31,27 +31,12 @@ function renderPage(active, folders) {
       </div>`;
   }
 
-  const todayFolders = (folders || []).filter(f => f.startsWith(today));
-  let todayHtml = '';
-  if (todayFolders.length > 0) {
-    const btns = todayFolders.map(f => {
-      const suffix = f.slice(today.length).replace(/^\s+/, '') || f;
-      return `<button class="today-resume-btn" onclick="doResumeFolder(${JSON.stringify(f)})">▶ ${_esc(suffix)}</button>`;
-    }).join('');
-    todayHtml = `
-      <div class="today-section">
-        <div class="today-label">Resume today</div>
-        ${btns}
-      </div>`;
-  }
-
-  const folderListHtml = buildFolderList(folders);
+  const folderListHtml = buildFolderList(folders, today);
 
   app.innerHTML = `
     <div class="landing-card">
       <div class="landing-title">Start Session</div>
       ${rejoinHtml}
-      ${todayHtml}
       <div class="new-session-label">New session</div>
       <div class="session-name-row">
         <span class="session-date-prefix">${new Date().toISOString().slice(0, 10)}&nbsp;</span>
@@ -75,7 +60,7 @@ function renderPage(active, folders) {
   if (input) input.focus();
 }
 
-function buildFolderList(folders) {
+function buildFolderList(folders, today) {
   if (!folders || folders.length === 0) {
     return `
       <div class="folders-card">
@@ -89,10 +74,13 @@ function buildFolderList(folders) {
     const dateHtml = dates.length > 1
       ? dates.map(d => `<span>${_esc(d)}</span>`).join('<br>')
       : _esc(dates[0] || '');
+    const isToday = today && dates[0] === today;
+    const todayTag = isToday ? `<span class="folder-today-tag">TODAY</span>` : '';
     return `
-    <li class="folder-row" onclick="doResumeFolder(${JSON.stringify(f)})">
+    <li class="folder-row${isToday ? ' folder-row-today' : ''}" onclick="doResumeFolder(${JSON.stringify(f)})">
       <span class="folder-date${dates.length > 1 ? ' folder-date-range' : ''}">${dateHtml}</span>
       <span class="folder-topic">${_esc(topic)}</span>
+      ${todayTag}
       <button class="folder-play-btn" onclick="event.stopPropagation(); doResumeFolder(${JSON.stringify(f)})" title="Resume session">▶</button>
     </li>`;
   }).join('');
