@@ -61,17 +61,10 @@ function renderPage(active, folders) {
                oninput="onNameInput()"
                onkeydown="if(event.key==='Enter' && !document.getElementById('create-btn').disabled) doCreate();" />
       </div>
-      <div class="session-type-row">
-        <label class="session-type-option">
-          <input type="radio" name="session-type" value="workshop" checked>
-          Workshop
-        </label>
-        <label class="session-type-option">
-          <input type="radio" name="session-type" value="talk">
-          Talk
-        </label>
+      <div class="create-btns-row">
+        <button id="create-btn-workshop" class="create-btn" onclick="doCreate('workshop')" disabled>🎓 Start workshop</button>
+        <button id="create-btn-talk" class="create-btn create-btn-talk" onclick="doCreate('talk')" disabled>🎙️ Start talk</button>
       </div>
-      <button id="create-btn" class="create-btn" onclick="doCreate()" disabled>Create</button>
       <div id="create-error" class="error-msg" style="display:none;"></div>
     </div>
     ${folderListHtml}
@@ -120,8 +113,9 @@ function _esc(str) {
 
 function onNameInput() {
   const input = document.getElementById('session-name-input');
-  const btn = document.getElementById('create-btn');
-  if (btn) btn.disabled = !input.value.trim();
+  const hasName = !!input.value.trim();
+  document.getElementById('create-btn-workshop').disabled = !hasName;
+  document.getElementById('create-btn-talk').disabled = !hasName;
 }
 
 function onSessionReady(session_id) {
@@ -132,17 +126,14 @@ function rejoinSession(session_id) {
   onSessionReady(session_id);
 }
 
-async function doCreate() {
+async function doCreate(type) {
   const input = document.getElementById('session-name-input');
   const prefixEl = document.querySelector('.session-date-prefix');
   const prefix = prefixEl ? prefixEl.textContent : '';
   const name = (prefix + input.value).trim();
   if (!name) return;
 
-  const typeEl = document.querySelector('input[name="session-type"]:checked');
-  const type = typeEl ? typeEl.value : 'workshop';
-
-  const btn = document.getElementById('create-btn');
+  const btn = document.getElementById('create-btn-' + type);
   btn.disabled = true;
 
   const errEl = document.getElementById('create-error');
