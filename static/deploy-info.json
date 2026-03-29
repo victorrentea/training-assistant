@@ -1,10 +1,15 @@
 {
-  "sha": "f3aceea50c40c071a14efdec70a9338b71f3729a",
-  "timestamp": "2026-03-29 16:18",
+  "sha": "af6ad569e35c0fed5d0ab5003a241e41c5772d23",
+  "timestamp": "2026-03-29 16:25",
   "changelog": [
-    "ui: stop blinking deploy countdown on participant"
+    "ui: remove floating end session button"
   ],
   "commits": [
+    {
+      "sha": "af6ad569",
+      "msg": "ui: remove floating end session button",
+      "ts": "2026-03-29T16:18:57+03:00"
+    },
     {
       "sha": "f3aceea5",
       "msg": "ui: stop blinking deploy countdown on participant",
@@ -99,11 +104,6 @@
       "sha": "9db0c782",
       "msg": "Improve host auto-join and transcript logging",
       "ts": "2026-03-29T15:30:48+03:00"
-    },
-    {
-      "sha": "0a55730a",
-      "msg": "feat: footer join link ctrl-open and click-copy tooltip",
-      "ts": "2026-03-29T15:25:28+03:00"
     }
   ],
   "branches": [

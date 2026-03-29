@@ -87,6 +87,48 @@ def _normalize_transcript_text(text: str) -> str:
     return re.sub(r"\s+", " ", text.replace("\t", " ")).strip()
 
 
+def _dedupe_normalized_folder_names(folders: list[str]) -> list[str]:
+    seen: set[str] = set()
+    result: list[str] = []
+    for raw in folders:
+        name = _normalize_session_name(str(raw))
+        if not name or name in seen:
+            continue
+        seen.add(name)
+        result.append(name)
+    return result
+
+
+def _is_open_session(main: dict | None) -> bool:
+    if not isinstance(main, dict) or not main:
+        return False
+    status = str(main.get("status") or "").strip().lower()
+    if status in {"ended", "stopped", "closed"}:
+        return False
+    ended_at = main.get("ended_at")
+    if isinstance(ended_at, str) and ended_at.strip():
+        return False
+    return True
+
+
+def _apply_session_main(main: dict | None) -> None:
+    """Apply daemon-provided main session and keep session_id stable."""
+    if not _is_open_session(main):
+        state.session_main = None
+        return
+
+    state.session_main = main
+    name = _normalize_session_name(str(main.get("name") or state.session_name or ""))
+    if name:
+        state.session_name = name
+        if not state.session_id:
+            state.session_id = _resolve_session_id_for_folder(name)
+        if state.session_id:
+            state.session_folder_ids[name] = state.session_id
+    elif not state.session_id:
+        state.generate_session_id()
+
+
 class StartSessionRequest(BaseModel):
     name: str
 
@@ -284,8 +326,8 @@ def _restore_activity_blocks_from_snapshot(snap: dict):
 
 @session_router.post("/session/sync", dependencies=[Depends(require_host_auth)])
 async def sync_session(body: SyncSessionRequest):
-    if body.main is not None:
-        state.session_main = body.main
+    if "main" in body.model_fields_set:
+        _apply_session_main(body.main)
     key_points = body.key_points or body.discussion_points
     if key_points:
         state.summary_points = key_points
@@ -301,9 +343,10 @@ async def sync_session(body: SyncSessionRequest):
         if state.session_name and state.session_id:
             state.session_folder_ids[state.session_name] = state.session_id
 
-    # Safety net: ensure session_id exists whenever a session is active
-    if state.session_main and not state.session_id:
-        state.generate_session_id()
+    # Safety net: ensure session_id exists whenever a daemon-open session is active
+    if _is_open_session(state.session_main) and not state.session_id:
+        name = _normalize_session_name(str((state.session_main or {}).get("name") or ""))
+        state.session_id = _resolve_session_id_for_folder(name) if name else state.generate_session_id()
 
     await broadcast_state()
     return {"ok": True}
@@ -385,12 +428,16 @@ async def get_interval_lines_txt(
 async def list_session_folders():
     # Prefer daemon-pushed list (works on Railway where local filesystem isn't accessible)
     if state.session_folders:
-        return {"folders": state.session_folders}
+        deduped = _dedupe_normalized_folder_names(state.session_folders)
+        state.session_folders = deduped
+        return {"folders": deduped}
     # Fallback: scan local filesystem (works when running locally)
     root = _get_sessions_root()
     folders = []
     if root:
-        folders = sorted([f.name for f in root.iterdir() if f.is_dir()], reverse=True)
+        folders = _dedupe_normalized_folder_names(
+            sorted([f.name for f in root.iterdir() if f.is_dir()], reverse=True)
+        )
     return {"folders": folders}
 
 
@@ -471,7 +518,23 @@ async def get_session_snapshot():
 @router.get("/api/session/active")
 async def get_session_active():
     """Public endpoint: returns whether a session is active (no code revealed)."""
-    return {"active": state.session_id is not None, "session_id": state.session_id, "session_name": state.session_name}
+    main_open = _is_open_session(state.session_main)
+    pending_create = (
+        isinstance(state.session_request, dict)
+        and state.session_request.get("action") == "create"
+        and state.session_id is not None
+    )
+    if main_open and not state.session_id:
+        folder_name = _normalize_session_name(str((state.session_main or {}).get("name") or state.session_name or ""))
+        state.session_id = _resolve_session_id_for_folder(folder_name) if folder_name else state.generate_session_id()
+    active = (main_open and state.session_id is not None) or pending_create
+    name = state.session_name or ((state.session_main or {}).get("name") if isinstance(state.session_main, dict) else None)
+    return {
+        "active": active,
+        "auto_join": main_open and state.session_id is not None,
+        "session_id": state.session_id,
+        "session_name": name,
+    }
 
 
 class ResumeFolderBody(BaseModel):
