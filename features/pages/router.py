@@ -21,6 +21,14 @@ async def host_page():
     return response
 
 
+@host_router.get("/host/{session_id}", response_class=HTMLResponse, dependencies=[Depends(require_host_auth)])
+async def host_session_page(session_id: str):
+    """Serve host panel for a specific session. Session validation is handled client-side."""
+    response = FileResponse("static/host.html")
+    response.set_cookie("is_host", "1", path="/", samesite="strict")
+    return response
+
+
 @participant_router.get("/", response_class=HTMLResponse)
 async def participant_page():
     return FileResponse("static/participant.html")
