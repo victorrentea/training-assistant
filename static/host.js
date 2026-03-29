@@ -3196,10 +3196,10 @@ function renderSessionPanel() {
   const fragile = daemonOnline && !main;
   document.getElementById('session-fragile-row').style.display = fragile ? 'flex' : 'none';
   if (fragile) {
-    const input = document.getElementById('session-create-input');
-    if (input && !input.value) {
+    const prefix = document.getElementById('session-date-prefix');
+    if (prefix && !prefix.textContent) {
       const today = new Date().toISOString().slice(0, 10);
-      input.value = today + ' ';
+      prefix.textContent = today + ' ';
     }
   }
 
@@ -3301,8 +3301,10 @@ function endTalk() {
 }
 
 function createSession() {
-  const name = document.getElementById('session-create-input').value.trim();
-  if (!name) return;
+  const prefix = (document.getElementById('session-date-prefix')?.textContent || '');
+  const suffix = document.getElementById('session-create-input').value.trim();
+  if (!suffix) return;
+  const name = prefix + suffix;
   fetch('/api/session/create', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
