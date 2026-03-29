@@ -1,10 +1,25 @@
 {
-  "sha": "82030e71c6733c597efc1c05725431385f14bd22",
-  "timestamp": "2026-03-29 17:25",
+  "sha": "49b1a27ea9cf39478ccff043a48a029a763ea852",
+  "timestamp": "2026-03-29 17:32",
   "changelog": [
-    "fix: widen footer tooltips and hide when popover open"
+    "fix: show Link Copied tooltip above footer join link"
   ],
   "commits": [
+    {
+      "sha": "49b1a27e",
+      "msg": "fix: show Link Copied tooltip above footer join link",
+      "ts": "2026-03-29T17:25:15+03:00"
+    },
+    {
+      "sha": "d66c8e52",
+      "msg": "docs: update persistent state diagrams",
+      "ts": "2026-03-29T17:20:08+03:00"
+    },
+    {
+      "sha": "95ca6db3",
+      "msg": "feat: sync session global state through daemon ws",
+      "ts": "2026-03-29T17:16:48+03:00"
+    },
     {
       "sha": "82030e71",
       "msg": "fix: widen footer tooltips and hide when popover open",
@@ -89,21 +104,6 @@
       "sha": "b66640d9",
       "msg": "fix: remove host tooltip hover delay",
       "ts": "2026-03-29T16:27:22+03:00"
-    },
-    {
-      "sha": "70da39bc",
-      "msg": "feat: autojoin host to open session",
-      "ts": "2026-03-29T16:25:30+03:00"
-    },
-    {
-      "sha": "af6ad569",
-      "msg": "ui: remove floating end session button",
-      "ts": "2026-03-29T16:18:57+03:00"
-    },
-    {
-      "sha": "f3aceea5",
-      "msg": "ui: stop blinking deploy countdown on participant",
-      "ts": "2026-03-29T16:18:14+03:00"
     }
   ],
   "branches": [

@@ -3203,6 +3203,7 @@ function stopSessionConfirmed() {
 }
 
 function updateSessionCodeBar(sessionId) {
+  const changed = sessionId !== _currentSessionId;
   _currentSessionId = sessionId;
   const bar = document.getElementById('session-code-bar');
   const display = document.getElementById('session-code-display');
@@ -3215,7 +3216,7 @@ function updateSessionCodeBar(sessionId) {
   const copyIcon = document.getElementById('copy-link-icon');
   if (copyIcon) copyIcon.style.display = sessionId ? '' : 'none';
   const pLink = document.getElementById('participant-link');
-  if (pLink) {
+  if (pLink && changed) {
     pLink.innerHTML = _buildUrlHtml();
     pLink.title = 'Click to copy • Ctrl/Cmd+Click to open';
   }

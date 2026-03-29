@@ -29,6 +29,7 @@ body {
 .wave-char {
   display: inline-block;
   animation: wave-shimmer 2.5s ease-in-out infinite;
+  animation-fill-mode: backwards;
   --wave-dim: rgba(255,255,255,.55);
   --wave-bright: #fff;
 }
