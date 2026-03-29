@@ -1,10 +1,15 @@
 {
-  "sha": "91d9f1c963dc0c0e4be380ae93c740ee5d25679a",
-  "timestamp": "2026-03-29 13:48",
+  "sha": "f3c6083f5b074f2e5269b5757fd6894922f8f90f",
+  "timestamp": "2026-03-29 13:49",
   "changelog": [
-    "chore: remove wispr from start.sh launcher"
+    "fix(host): center session title truly in top bar using absolute positioning"
   ],
   "commits": [
+    {
+      "sha": "f3c6083f",
+      "msg": "fix(host): center session title truly in top bar using absolute positioning",
+      "ts": "2026-03-29T13:49:15+03:00"
+    },
     {
       "sha": "91d9f1c9",
       "msg": "chore: remove wispr from start.sh launcher",
@@ -99,11 +104,6 @@
       "sha": "ce896631",
       "msg": "refactor(session): simplify folders sync \u2014 use on_connect push instead of request/response",
       "ts": "2026-03-29T13:13:54+03:00"
-    },
-    {
-      "sha": "0caf1d01",
-      "msg": "fix(session): folders only transferred on backend start, not every daemon reconnect",
-      "ts": "2026-03-29T13:10:26+03:00"
     }
   ],
   "branches": [
@@ -203,9 +203,9 @@
       "minutes": 10
     },
     {
-      "branch": "fix-slides-scroll-drift",
-      "sha": "9babc87",
-      "minutes": 10
+      "branch": "fix-emoji-tooltip-direction",
+      "sha": "a3b87b1",
+      "minutes": 7
     }
   ]
 }
