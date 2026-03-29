@@ -925,7 +925,7 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
 
 .pax-list {
   list-style: none;
-  margin-top: .75rem;
+  margin-top: 0;
   max-height: 160px;
   overflow-y: auto;
   font-size: .85rem;
