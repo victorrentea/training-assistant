@@ -1,10 +1,15 @@
 {
-  "sha": "1f554b6dbed107110a69749ccf9225a276ee05be",
-  "timestamp": "2026-03-29 17:07",
+  "sha": "ede3c831b4b165fca960d6ca0ab611fd43b5b20a",
+  "timestamp": "2026-03-29 17:14",
   "changelog": [
-    "fix host landing auto-redirect for active session"
+    "docs: clarify single-session daemon state model"
   ],
   "commits": [
+    {
+      "sha": "ede3c831",
+      "msg": "docs: clarify single-session daemon state model",
+      "ts": "2026-03-29T17:07:56+03:00"
+    },
     {
       "sha": "1f554b6d",
       "msg": "fix host landing auto-redirect for active session",
@@ -99,11 +104,6 @@
       "sha": "a39ab4b6",
       "msg": "ui: move heart badge to third position",
       "ts": "2026-03-29T16:15:57+03:00"
-    },
-    {
-      "sha": "a892d5a1",
-      "msg": "ui: constrain footer QR overlay between header and footer",
-      "ts": "2026-03-29T16:15:07+03:00"
     }
   ],
   "branches": [
