@@ -1,8 +1,8 @@
 {
-  "sha": "51a9ba9b3abcf435704d1877d5bb9a207b4cc73e",
-  "timestamp": "2026-03-29 12:39",
+  "sha": "0f2b1eebedff831ca144dcd73f7ed8a9daae42e5",
+  "timestamp": "2026-03-29 12:40",
   "changelog": [
-    "feat(host-landing): table layout for previous sessions with date/topic split"
+    "feat(host-landing): replace radio+create with two typed start buttons"
   ],
   "branches": [
     {
