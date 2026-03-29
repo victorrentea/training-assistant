@@ -1,8 +1,12 @@
 {
-  "sha": "3ca9b5fce6babec1008bb624c2c191d25c4e9a72",
-  "timestamp": "2026-03-29 08:03",
+  "sha": "ec5a060cb9e7c281b016fd963c43909faf1de5e8",
+  "timestamp": "2026-03-29 08:07",
   "changelog": [
-    "fix(ci): fix test_poll_force - GET /api/summary/force is root-level, not session-scoped"
+    "fix(host): remove dead blocker vars, load folder list only once",
+    "feat(host): add stop session button to footer",
+    "feat(host): folder-list blocker + URL redirect on session start",
+    "feat(session): expose session_id in active endpoint, create/end broadcast, /host/{session_id} route, public folders",
+    "docs: add session-id-in-path implementation plan"
   ],
   "branches": [
     {
