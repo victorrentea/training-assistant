@@ -168,9 +168,31 @@
     // Auto-join from host cookie (same machine) — poll every 3s for changes
     (function pollHostCookie() {
       let lastCode = null;
+      let countdownInterval = null;
       function readCookie() {
         const m = document.cookie.match(/(?:^|;\s*)host_session_id=([a-z0-9]{4,8})/);
         return m ? m[1] : null;
+      }
+      function startAutoJoinCountdown() {
+        const statusEl = document.getElementById('status-msg');
+        const joinBtn = document.getElementById('join-btn');
+        const AUTO_JOIN_SECONDS = 3;
+        let remaining = AUTO_JOIN_SECONDS;
+        if (countdownInterval) clearInterval(countdownInterval);
+        statusEl.style.color = 'var(--danger)';
+        statusEl.style.animation = 'blink-fast .3s linear infinite';
+        statusEl.textContent = `Host machine: auto-login in ${remaining}s (Join auto-click)`;
+        countdownInterval = setInterval(() => {
+          remaining -= 1;
+          if (remaining <= 0) {
+            clearInterval(countdownInterval);
+            countdownInterval = null;
+            statusEl.textContent = 'Host machine: auto-login now';
+            joinBtn.click();
+            return;
+          }
+          statusEl.textContent = `Host machine: auto-login in ${remaining}s (Join auto-click)`;
+        }, 1000);
       }
       function tryAutoJoin() {
         const code = readCookie();
@@ -179,11 +201,7 @@
         const input = document.getElementById('code-input');
         input.value = code.toUpperCase();
         onCodeInput();
-        const statusEl = document.getElementById('status-msg');
-        statusEl.textContent = 'Host machine: auto-login';
-        statusEl.style.color = 'var(--danger)';
-        statusEl.style.animation = 'blink-fast .3s linear infinite';
-        setTimeout(() => { window.location.href = '/' + code; }, 2000);
+        startAutoJoinCountdown();
       }
       tryAutoJoin();
       setInterval(tryAutoJoin, 3000);
