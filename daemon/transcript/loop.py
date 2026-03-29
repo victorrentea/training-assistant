@@ -156,6 +156,8 @@ class TranscriptNormalizerRunner:
             _LLM_FILTER_STATS["last_ms"] = None
             results = normalize_folder_incremental(self.folder, line_pre_filter=_llm_line_filter)
             written = sum(r.written_lines for r in results)
+            llm_ms = _LLM_FILTER_STATS.get("last_ms")
+            llm_part = f" (🤖 {llm_ms:.0f}ms)" if llm_ms is not None else ""
             if written > 0:
                 words = sum(r.written_words for r in results)
                 output_files = len({str(p) for r in results for p in r.output_files})
@@ -167,8 +169,6 @@ class TranscriptNormalizerRunner:
                     if len(all_first) >= 10:
                         break
                 preview = " ".join(all_first[:10])
-                llm_ms = _LLM_FILTER_STATS.get("last_ms")
-                llm_part = f" (🤖 {llm_ms:.0f}ms)" if llm_ms is not None else ""
                 words_part = f"Transcripted {words} words{llm_part}: {preview} ..." if words > 0 else "Transcripted"
                 lines_part = f" of {written} lines" if written != 1 else ""
                 if output_files == 1 and raw_sources == 1:
@@ -178,6 +178,8 @@ class TranscriptNormalizerRunner:
                         "transcript",
                         f"{words_part}{lines_part} to {output_files} normalized files (from {raw_sources} raw sources)",
                     )
+            elif llm_ms is not None:
+                log.info("transcript", f"Transcripted 0 words{llm_part}:")
         except Exception as exc:
             log.error("transcript", f"Normalizer error: {exc}")
         finally:

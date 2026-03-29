@@ -1,5 +1,6 @@
 # Tasks
 
+- [x] daemon transcript logs: when LLM sanitization leaves no normalized text, log `Transcripted 0 words (🤖 Xms):` explicitly.
 - [x] daemon transcript logs: collapse `🤖 LLM sanitized ...` + `Transcripted ...` into a single line (`Transcripted N words (🤖 Xms): preview ...`).
 - [x] daemon: if today's raw transcript file is missing and latest raw file is from yesterday, restart Audio Hijack once (anti-loop guard) and sleep 3s, with explicit log message.
 - [x] ui: participant Key Points label now includes spacing between count and text (`🧠 38 Key Points` instead of `🧠 38Key Points`)
