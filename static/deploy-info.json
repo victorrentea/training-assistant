@@ -1,10 +1,15 @@
 {
-  "sha": "f3c6083f5b074f2e5269b5757fd6894922f8f90f",
-  "timestamp": "2026-03-29 13:49",
+  "sha": "f396c18de10b54f0654de5dd72778b96453c68fa",
+  "timestamp": "2026-03-29 13:50",
   "changelog": [
-    "fix(host): center session title truly in top bar using absolute positioning"
+    "fix: remove gap between joined date/name inputs on landing page"
   ],
   "commits": [
+    {
+      "sha": "f396c18d",
+      "msg": "fix: remove gap between joined date/name inputs on landing page",
+      "ts": "2026-03-29T13:49:23+03:00"
+    },
     {
       "sha": "f3c6083f",
       "msg": "fix(host): center session title truly in top bar using absolute positioning",
@@ -99,11 +104,6 @@
       "sha": "2f4c32dd",
       "msg": "feat(wispr-addons): use \ud83c\udf99\ufe0f emoji PNG as menu bar icon",
       "ts": "2026-03-29T13:13:59+03:00"
-    },
-    {
-      "sha": "ce896631",
-      "msg": "refactor(session): simplify folders sync \u2014 use on_connect push instead of request/response",
-      "ts": "2026-03-29T13:13:54+03:00"
     }
   ],
   "branches": [
