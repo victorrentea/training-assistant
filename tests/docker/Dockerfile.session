@@ -1,0 +1,29 @@
+FROM mcr.microsoft.com/playwright/python:v1.50.0-noble
+
+# Install backend + test dependencies (pin playwright to match image browsers)
+RUN pip install \
+    fastapi \
+    "uvicorn[standard]" \
+    python-multipart \
+    prometheus-fastapi-instrumentator \
+    websockets \
+    pytest \
+    pytest-playwright \
+    playwright==1.50.0
+
+# Copy the full application codebase
+COPY app/ /app/
+
+# Copy test files
+WORKDIR /tests
+COPY tests/docker/mock_daemon.py .
+COPY tests/docker/test_session_flow.py .
+
+# Create version.js stub (normally generated at deploy time)
+RUN echo "window.APP_VERSION = 'docker-test';" > /app/static/version.js
+
+ENV HOST_USERNAME=host
+ENV HOST_PASSWORD=testpass
+ENV PYTHONUNBUFFERED=1
+
+CMD ["pytest", "test_session_flow.py", "-v", "--tb=long", "-s"]

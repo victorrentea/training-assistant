@@ -1,0 +1,12 @@
+FROM mcr.microsoft.com/playwright/python:v1.50.0-noble
+
+WORKDIR /tests
+
+# Install FastAPI + uvicorn + test deps (pinned playwright to match image)
+RUN pip install fastapi "uvicorn[standard]" pytest pytest-playwright playwright==1.50.0
+
+# Copy test files
+COPY dummy_app.py .
+COPY test_three_browsers.py .
+
+CMD ["pytest", "test_three_browsers.py", "-v", "--tb=short"]

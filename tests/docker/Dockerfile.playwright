@@ -1,0 +1,11 @@
+FROM mcr.microsoft.com/playwright/python:v1.50.0-noble
+
+WORKDIR /tests
+
+# Pin playwright to match the Docker image's browser binaries
+RUN pip install pytest pytest-playwright playwright==1.50.0
+
+# Copy only the smoke test
+COPY test_smoke_prod.py .
+
+CMD ["pytest", "test_smoke_prod.py", "-v", "--tb=short"]
