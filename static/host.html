@@ -21,23 +21,31 @@
 
 
 <div class="host-layout">
+
+<!-- Unified top bar: tabs + participant count -->
+<div class="host-top-bar">
+  <div class="tab-bar">
+    <button class="tab-btn" id="tab-hello" onclick="switchTab('none')" style="display:none"><span class="tab-icon">👋</span>Hello</button>
+    <button class="tab-btn active" id="tab-poll" onclick="switchTab('poll')"><span class="tab-icon">📊</span>Poll</button>
+    <button class="tab-btn" id="tab-wordcloud" onclick="switchTab('wordcloud')"><span class="tab-icon">☁</span>Words</button>
+    <button class="tab-btn" id="tab-qa" onclick="switchTab('qa')"><span class="tab-icon">❓</span>Q&A</button>
+    <button class="tab-btn" id="tab-codereview" onclick="switchTab('codereview')"><span class="tab-icon">🕵️</span>Code</button>
+    <button class="tab-btn" id="tab-debate" onclick="switchTab('debate')"><span class="tab-icon">⚔️</span>Debate</button>
+    <button class="tab-btn leaderboard-btn" id="btn-leaderboard" onclick="toggleLeaderboard()" title="Show Leaderboard" disabled>
+      <span class="tab-icon">🏆</span>Board
+    </button>
+  </div>
+  <div class="host-top-pax">
+    <span class="stat" id="pax-count">0</span>
+    <span class="stat-label">pax</span>
+  </div>
+</div>
+
 <div class="host-columns">
 
   <!-- LEFT COLUMN: controls -->
   <div class="host-col host-col-left">
     <div class="left-tabs-wrapper">
-    <!-- Tab switcher -->
-    <div class="tab-bar">
-      <button class="tab-btn" id="tab-hello" onclick="switchTab('none')" style="display:none"><span class="tab-icon">👋</span>Hello</button>
-      <button class="tab-btn active" id="tab-poll" onclick="switchTab('poll')"><span class="tab-icon">📊</span>Poll</button>
-      <button class="tab-btn" id="tab-wordcloud" onclick="switchTab('wordcloud')"><span class="tab-icon">☁</span>Words</button>
-      <button class="tab-btn" id="tab-qa" onclick="switchTab('qa')"><span class="tab-icon">❓</span>Q&A</button>
-      <button class="tab-btn" id="tab-codereview" onclick="switchTab('codereview')"><span class="tab-icon">🕵️</span>Code</button>
-      <button class="tab-btn" id="tab-debate" onclick="switchTab('debate')"><span class="tab-icon">⚔️</span>Debate</button>
-      <button class="tab-btn leaderboard-btn" id="btn-leaderboard" onclick="toggleLeaderboard()" title="Show Leaderboard" disabled>
-        <span class="tab-icon">🏆</span>Board
-      </button>
-    </div>
 
     <!-- Poll tab content -->
     <div id="tab-content-poll" class="tab-content">
@@ -200,6 +208,8 @@
 
   <!-- CENTER COLUMN: current activity -->
   <div class="host-col host-col-center">
+    <!-- Session title -->
+    <div id="session-title-center" style="display:none; text-align:center; padding:.3rem 0; font-size:1rem; font-weight:600; color:var(--muted); border-bottom:1px solid var(--border); flex-shrink:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"></div>
     <!-- QR idle state -->
     <div id="center-qr" class="center-panel">
       <div style="display:flex; align-items:center; gap:.75rem; padding:1rem 0 .5rem;">
@@ -280,72 +290,9 @@
 
   <!-- RIGHT COLUMN: participants -->
   <div class="host-col host-col-right">
-    <div class="right-header">
-      <div class="stat" id="pax-count">0</div>
-      <div class="stat-label">participants connected</div>
-      <div id="session-code-bar" style="display:none; align-items:center; gap:6px; margin-top:4px;">
-        <span style="color:var(--muted); font-size:0.8rem;">Code:</span>
-        <span id="session-code-display" style="font-family:monospace; font-weight:bold; font-size:1rem; color:#f0c040; letter-spacing:2px;"></span>
-      </div>
-    </div>
     <ul id="pax-list" class="pax-list" title="Click a location to view map"></ul>
     <div id="recording-warning-banner" style="display:none; background:#f5a623; color:#000; text-align:center; padding:8px; font-weight:bold;">
       Recording pauses in <span id="recording-warning-countdown">30</span> min
-    </div>
-
-    <div class="session-panel" id="session-panel">
-      <!-- Talk session row (shown when session_talk is not null, blinks yellow) -->
-      <div id="session-talk-row" style="display:none">
-        <div class="session-row session-talk-active" id="session-talk-box">
-          <span id="session-talk-name" class="session-name"></span>
-          <span
-            class="session-action-emoji"
-            role="button"
-            tabindex="0"
-            title="End talk"
-            onclick="endTalk()"
-            onkeydown="onSessionEmojiKey(event, endTalk)">🎙️⏹️</span>
-        </div>
-      </div>
-
-      <!-- Main session row -->
-      <div id="session-main-row" style="display:none">
-        <div class="session-row">
-          <span id="session-main-name" class="session-name"></span>
-          <span id="session-status" class="session-status-badge"></span>
-          <span
-            class="session-action-emoji"
-            id="btn-pause-session"
-            role="button"
-            tabindex="0"
-            title="Pause recording"
-            onclick="togglePauseSession()"
-            onkeydown="onSessionEmojiKey(event, togglePauseSession)">⏸️</span>
-          <span id="session-controls-separator" class="session-control-separator" style="display:none">|</span>
-          <span
-            class="session-action-emoji"
-            id="btn-start-talk"
-            role="button"
-            tabindex="0"
-            style="display:none"
-            title="Start talk"
-            onclick="startTalk()"
-            onkeydown="onSessionEmojiKey(event, startTalk)">🎙️▶️</span>
-        </div>
-        <div id="session-main-intervals" class="session-main-intervals" style="display:none"></div>
-      </div>
-
-      <!-- FRAGILE state: CREATE button (shown when no folder for today) -->
-      <div id="session-fragile-row" style="display:none">
-        <div style="display:flex; align-items:center; gap:0; flex:1;">
-          <span id="session-date-prefix" style="font-family:monospace; background:var(--surface2); border:1px solid var(--border); border-right:none; border-radius:var(--radius) 0 0 var(--radius); padding:.35rem .5rem; color:var(--muted); white-space:nowrap; font-size:.9rem;"></span>
-          <input type="text" id="session-create-input" placeholder="session name"
-                 oninput="updateCreateBtn()"
-                 style="border-radius:0 var(--radius) var(--radius) 0; flex:1;">
-        </div>
-        <button class="btn btn-sm session-fragile-blink" id="btn-create-session"
-                onclick="createSession()" disabled>CREATE</button>
-      </div>
     </div>
   </div>
 
@@ -366,6 +313,8 @@
     <span id="participant-link" style="color:#fff; font-size:1.25rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; flex-shrink:1;"></span><span id="session-id-suffix" style="display:none; font-size:1.25rem; font-family:monospace; font-weight:bold; color:#f0c040; letter-spacing:2px; white-space:nowrap;"></span>
   </div>
   <div class="host-footer-right">
+    <button id="stop-session-btn" onclick="stopSession()" title="Stop session and return to session list"
+            class="badge" style="cursor:pointer; color:var(--muted); font-size:.78rem; display:none;">&#9209; Stop</button>
     <button class="btn-scores-reset" onclick="resetScores()" title="Reset all scores to zero">🗑</button>
     <span id="token-cost" class="badge" style="font-size:.75rem; color:var(--muted); flex-shrink:0;">$0.00</span>
     <div id="git-repos-hover" class="slides-catalog-hover">
@@ -443,8 +392,6 @@
   </div>
 </div>
 
-<button id="stop-session-btn" onclick="stopSession()" title="Stop session and return to session list"
-        style="position:fixed; bottom:.5rem; right:.5rem; z-index:100; background:var(--surface2); border:1px solid var(--border); color:var(--muted); border-radius:var(--radius); padding:.25rem .6rem; font-size:.75rem; cursor:pointer;">&#9209; Stop</button>
 
 <script src="/static/version.js"></script>
 <script src="/static/work-hours.js"></script>

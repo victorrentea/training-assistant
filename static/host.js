@@ -3203,6 +3203,16 @@ function renderSessionPanel() {
     }
   }
 
+  // Session title in center column
+  const titleEl = document.getElementById('session-title-center');
+  if (titleEl) {
+    titleEl.textContent = main ? main.name : '';
+    titleEl.style.display = main ? '' : 'none';
+  }
+  // Stop button visibility
+  const stopBtn = document.getElementById('stop-session-btn');
+  if (stopBtn) stopBtn.style.display = main ? '' : 'none';
+
   // Main session row
   const mainRow = document.getElementById('session-main-row');
   if (mainRow) mainRow.style.display = main ? 'flex' : 'none';
