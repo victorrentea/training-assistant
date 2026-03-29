@@ -1,5 +1,5 @@
 #!/bin/bash
-# Start backend + daemon + run Playwright tests in a single container.
+# Start backend + daemon + mock services + run Playwright tests in a single container.
 set -e
 
 export HOST_USERNAME=host
@@ -13,12 +13,57 @@ export LLM_ADAPTER=stub
 export MATERIALS_MIRROR_ENABLED=0
 export TRANSCRIPT_LLM_CLEAN=0
 export PYTHONUNBUFFERED=1
+export FIXTURE_PDF_DIR=/tmp/fixture-pdfs
+export MOCK_DRIVE_PORT=9090
 
 # Create fixture directories
-mkdir -p "$SESSIONS_FOLDER" "$TRANSCRIPTION_FOLDER"
+mkdir -p "$SESSIONS_FOLDER" "$TRANSCRIPTION_FOLDER" "$FIXTURE_PDF_DIR"
 
 # Create version.js stub
 echo "window.APP_VERSION = 'docker-hermetic';" > /app/static/version.js
+
+# Generate fixture PDFs
+python /tests/generate_fixture_pdfs.py
+
+# Create fixture slides catalog pointing to mock Drive server
+cat > /tmp/test-slides-catalog.json <<CATALOG
+{
+  "decks": [
+    {
+      "title": "Clean Code",
+      "slug": "clean-code",
+      "source": "/tmp/nonexistent.pptx",
+      "target_pdf": "clean-code.pdf",
+      "drive_export_url": "http://localhost:${MOCK_DRIVE_PORT}/presentation/d/clean-code/export/pdf",
+      "group": "Coding"
+    },
+    {
+      "title": "Design Patterns",
+      "slug": "design-patterns",
+      "source": "/tmp/nonexistent2.pptx",
+      "target_pdf": "design-patterns.pdf",
+      "drive_export_url": "http://localhost:${MOCK_DRIVE_PORT}/presentation/d/design-patterns/export/pdf",
+      "group": "Coding"
+    },
+    {
+      "title": "Architecture",
+      "slug": "architecture",
+      "source": "/tmp/nonexistent3.pptx",
+      "target_pdf": "architecture.pdf",
+      "drive_export_url": "http://localhost:${MOCK_DRIVE_PORT}/presentation/d/architecture/export/pdf",
+      "group": "Design"
+    }
+  ]
+}
+CATALOG
+# Overwrite the production catalog with our test catalog (backend hardcodes this path)
+cp /tmp/test-slides-catalog.json /app/daemon/materials_slides_catalog.json
+
+# Start mock Google Drive server
+python /tests/mock_drive_server.py &
+MOCK_DRIVE_PID=$!
+sleep 0.5
+echo "[startup] Mock Drive server started (PID=$MOCK_DRIVE_PID)"
 
 # Start FastAPI backend
 cd /app
@@ -50,4 +95,5 @@ TEST_EXIT=$?
 # Cleanup
 kill $DAEMON_PID 2>/dev/null || true
 kill $BACKEND_PID 2>/dev/null || true
+kill $MOCK_DRIVE_PID 2>/dev/null || true
 exit $TEST_EXIT
