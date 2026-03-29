@@ -1,10 +1,15 @@
 {
-  "sha": "880ccb38a5dc66e78e405b3bdce028ee37d4cea5",
+  "sha": "f73ac7acc3c3dffca2b48cb643a9cc9aa8a057e9",
   "timestamp": "2026-03-29 13:00",
   "changelog": [
-    "fix(host): use \u23f9 stop emoji on stop badge"
+    "style(host): stop badge always red background"
   ],
   "commits": [
+    {
+      "sha": "f73ac7ac",
+      "msg": "style(host): stop badge always red background",
+      "ts": "2026-03-29T13:00:44+03:00"
+    },
     {
       "sha": "880ccb38",
       "msg": "fix(host): use \u23f9 stop emoji on stop badge",
@@ -99,11 +104,6 @@
       "sha": "58971604",
       "msg": "feat(transcript): optional LLM pre-filter for Whisper hallucination cleanup",
       "ts": "2026-03-29T12:20:57+03:00"
-    },
-    {
-      "sha": "15da7231",
-      "msg": "feat(session): show date as static prefix in session name input",
-      "ts": "2026-03-29T12:20:56+03:00"
     }
   ],
   "branches": [
