@@ -7,7 +7,14 @@ body {
   margin: 0;
 }
 
-/* version-tag uses default top-right position from common.css */
+/* version-tag: bottom-right of host-top-bar, just above the border-bottom line */
+#version-tag {
+  position: absolute;
+  top: auto;
+  bottom: 2px;
+  right: .5rem;
+  z-index: 2;
+}
 
 #restore-banner {
   background: var(--warning, #e67e22);
