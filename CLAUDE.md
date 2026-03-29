@@ -76,6 +76,7 @@ Build a **self-hosted, real-time audience interaction tool** for use during onli
 - **No frontend build step**: plain HTML + vanilla JavaScript only — no npm, no bundler, no framework compilation
 - **No participant install**: everything works in a standard browser tab
 - **Language**: participant UI in **English**; host UI in English
+- **No large data through host machine**: the daemon (running on the host's Mac) must never download or proxy large files (PDFs, media) from external services. All large-file downloads (e.g. slide PDFs from Google Drive) must happen on the backend (Railway), not on the host's machine. The daemon may signal the backend to fetch content, but must not fetch and re-upload it.
 
 ---
 
