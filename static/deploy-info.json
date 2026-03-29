@@ -1,8 +1,8 @@
 {
-  "sha": "a30ceb9d1598c08db51b6f1c98770b71c3dbbb41",
-  "timestamp": "2026-03-29 12:13",
+  "sha": "0366ddc46bc32db9addaf6a717d4f5d755a0bbb8",
+  "timestamp": "2026-03-29 12:15",
   "changelog": [
-    "feat(session): session ID in URL path - Phase 6 complete (tests updated)"
+    "fix(host): add missing session-code-bar element to host panel HTML"
   ],
   "branches": [
     {
@@ -22,8 +22,8 @@
     },
     {
       "branch": "session-id-in-path-v3",
-      "sha": "a30ceb9",
-      "minutes": 249
+      "sha": "96b27e4",
+      "minutes": 255
     },
     {
       "branch": "overlay-hide-emoji-single-screen",
