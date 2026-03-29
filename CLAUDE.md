@@ -156,12 +156,7 @@ training-assistant/
 │   │                           drive_sync.py, upload.py, loop.py
 │   ├── materials/           ← Project file mirroring: mirror.py, ws_runner.py
 │   └── rag/                 ← RAG: indexer.py, retriever.py, project_files.py
-├── tests/
-│   ├── conftest.py          ← Pytest fixtures (e2e server, browser helpers, cleanup)
-│   ├── unit/                ← Unit tests (no server required)
-│   ├── integration/         ← Integration tests (local server)
-│   ├── e2e/                 ← E2E browser tests (Playwright)
-│   └── load/                ← Load tests
+├── tests/                   ← See [TESTING.md](TESTING.md) for test rules and structure
 ├── desktop-overlay/         ← Swift/AppKit emoji overlay (EmojiAnimator, ButtonBar, SoundManager)
 ├── wispr-addons/
 │   ├── clean.py             ← macOS clipboard cleanup daemon (CGEventTap, Claude Haiku AI cleanup,
@@ -378,7 +373,7 @@ The user frequently uses a dictation tool. Messages may contain misheard or mist
 - **Deploy monitoring**: `./watch-deploy.sh` runs continuously in the background (started once per work session). It writes a heartbeat to `/tmp/watch_deploy.lock` (JSON with `pid` and `heartbeat` epoch). **After creating a PR**, check the lock file: read the JSON, verify the PID is alive (`kill -0`) and heartbeat is fresh (<15s). If running, praise the user ("Deploy watcher is running"). If not running or stale, warn and suggest: `./watch-deploy.sh &`
 - **After any significant architectural change**: update the C4 diagrams (C1, C2, C3) and system interactions sequence diagram inlined in [ARCHITECTURE.md](ARCHITECTURE.md) to reflect the new structure.
 - **After any change to inter-system communication** (WebSocket messages, REST endpoints, HTTP calls between backend/daemon/frontend/overlay/external services): update the "System Interactions" sequence diagram inlined in [ARCHITECTURE.md](ARCHITECTURE.md) to keep it in sync with the code. This includes adding, removing, or renaming WS message types, HTTP endpoints, or changing which component initiates a flow.
-- **Test-Drive-Fix any human-reported bug**: start by reproducing the bug yourself manually, then write an automated test for the bug, see it failing, then passing after you fixed the bug.
+- **Test-Drive-Fix any human-reported bug**: see [TESTING.md](TESTING.md) for the full protocol.
 - **Document direct request**: Every time the human requests a feature change or bug fix after you do it, keep track of it in backlog.md in a concise way as being done.
 
 
