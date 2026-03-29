@@ -518,6 +518,14 @@ def run() -> None:
     current_key_points: list[dict] = []
     summary_watermark: int = 0
 
+    def _do_save_daemon_state():
+        """Save daemon state to disk, persisting _active_session_id alongside the session stack."""
+        nonlocal _active_session_id
+        d = stack_to_daemon_state(session_stack)
+        if _active_session_id:
+            d["session_id"] = _active_session_id
+        save_daemon_state(sessions_root, d)
+
     if session_stack:
         # Restore from persisted stack
         current_folder = sessions_root / session_stack[-1]["name"]
@@ -573,14 +581,6 @@ def run() -> None:
     materials_mirror = MaterialsMirrorRunner(config)
     materials_mirror.start()
     slides_runner.set_ws_sender(lambda msg: ws_client.send(msg))
-
-    def _do_save_daemon_state():
-        """Save daemon state to disk, persisting _active_session_id alongside the session stack."""
-        nonlocal _active_session_id
-        d = stack_to_daemon_state(session_stack)
-        if _active_session_id:
-            d["session_id"] = _active_session_id
-        save_daemon_state(sessions_root, d)
 
     # Session state: the transcript text used to generate the current preview
     last_text: str | None = None
