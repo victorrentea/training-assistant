@@ -1437,10 +1437,25 @@
     _qrBrightenTimer = setTimeout(() => el.classList.remove('qr-bright'), 5000);
   });
 
-  // Bottom-right icon: click to open fullscreen overlay
-  document.getElementById('qr-icon').addEventListener('click', () => {
-    document.getElementById('qr-overlay').classList.add('open');
-  });
+  function openQR() {
+    const overlay = document.getElementById('qr-overlay');
+    if (overlay) overlay.classList.add('open');
+  }
+
+  // Footer QR icon: open fullscreen join QR overlay
+  const footerQrIcon = document.getElementById('footer-qr-icon');
+  if (footerQrIcon) {
+    footerQrIcon.addEventListener('click', (event) => {
+      event.preventDefault();
+      openQR();
+    });
+    footerQrIcon.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        openQR();
+      }
+    });
+  }
 
   function closeQR() {
     closeModal('qr-overlay');

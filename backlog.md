@@ -1,6 +1,9 @@
 # Tasks
 
 - [x] host footer copy tooltip: keep `Copied...` visible for 3 seconds above join link on click-copy.
+- [x] footer center QR hardening: keep QR icon fixed to the right of join link (no shrink).
+- [x] host footer: move QR icon after join link and open large join QR overlay on click.
+- [x] remove the 🎓 mode badge from host UI footer (session type no longer changes at runtime).
 - [x] host footer join link UX: click copies link and shows fading `Copied...` tooltip; Ctrl/Cmd+click opens join URL in new tab.
 - [x] daemon startup transcript summary log: reword to `Unprocessed: <session_lines> lines since <watermark> / <total_lines> lines ...`.
 - [x] start.sh: prevent auto-restart loop from exiting on stale/missing PID kill failures (`set -e` safe kill/wait in cleanup and stop paths).

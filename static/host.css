@@ -170,6 +170,22 @@ body {
   text-decoration: none;
   position: relative;
 }
+#footer-qr-icon {
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  line-height: 0;
+  cursor: pointer;
+  opacity: .55;
+  transition: opacity .2s ease;
+  margin-left: .35rem;
+}
+#footer-qr-icon:hover,
+#footer-qr-icon:focus-visible {
+  opacity: 1;
+}
 
 .host-footer-right {
   display: flex;
@@ -287,17 +303,12 @@ body {
   display: block;
 }
 
-#qr-icon, #map-icon {
+#map-icon {
   line-height: 0;
   transition: opacity .2s;
 }
-#qr-icon:hover, #map-icon:hover {
+#map-icon:hover {
   opacity: 1 !important;
-}
-#qr-icon img, #qr-icon canvas {
-  display: block;
-  width: 48px !important;
-  height: 48px !important;
 }
 
 .slides-catalog-hover {
