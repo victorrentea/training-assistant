@@ -1,10 +1,39 @@
 {
-  "sha": "a0c9dfebd2cc39064383d29c92fbdbf9aad126b6",
-  "timestamp": "2026-03-29 14:57",
+  "sha": "ae98fc70f6d16dcc5686fdff3c7a2b79d47f77c0",
+  "timestamp": "2026-03-29 15:06",
   "changelog": [
-    "feat: show daemon connection status on host landing page"
+    "fix: countdown starts at 3:00; arm inactivity timer on server activity change",
+    "feat: add 6-min host inactivity auto-return modal",
+    "chore: remove old 30s conference auto-return timer",
+    "feat: replace Hello tab with Slides tab (\ud83d\udc68\ud83c\udffb\u200d\ud83c\udfeb)",
+    "docs: add Slides tab + inactivity auto-return spec and plan"
   ],
   "commits": [
+    {
+      "sha": "ae98fc70",
+      "msg": "fix: countdown starts at 3:00; arm inactivity timer on server activity change",
+      "ts": "2026-03-29T15:01:35+03:00"
+    },
+    {
+      "sha": "f325a805",
+      "msg": "feat: add 6-min host inactivity auto-return modal",
+      "ts": "2026-03-29T14:58:48+03:00"
+    },
+    {
+      "sha": "51b5d34d",
+      "msg": "chore: remove old 30s conference auto-return timer",
+      "ts": "2026-03-29T14:56:32+03:00"
+    },
+    {
+      "sha": "d59bf310",
+      "msg": "feat: replace Hello tab with Slides tab (\ud83d\udc68\ud83c\udffb\u200d\ud83c\udfeb)",
+      "ts": "2026-03-29T14:54:07+03:00"
+    },
+    {
+      "sha": "a88c5043",
+      "msg": "docs: add Slides tab + inactivity auto-return spec and plan",
+      "ts": "2026-03-29T14:48:29+03:00"
+    },
     {
       "sha": "a0c9dfeb",
       "msg": "feat: show daemon connection status on host landing page",
@@ -79,31 +108,6 @@
       "sha": "b4136beb",
       "msg": "fix: daemon handles main session end from host stop button",
       "ts": "2026-03-29T14:41:25+03:00"
-    },
-    {
-      "sha": "cd6c8e2d",
-      "msg": "feat: print active session name (or <NONE>) at daemon startup",
-      "ts": "2026-03-29T14:37:02+03:00"
-    },
-    {
-      "sha": "51fef97c",
-      "msg": "fix: remove tooltip from slides-catalog badge",
-      "ts": "2026-03-29T14:35:01+03:00"
-    },
-    {
-      "sha": "1ae23885",
-      "msg": "fix: show language ISO code in transcription badge from initial render",
-      "ts": "2026-03-29T14:34:43+03:00"
-    },
-    {
-      "sha": "4191d227",
-      "msg": "fix: remove top margin from pax-list to close gap below header",
-      "ts": "2026-03-29T14:33:59+03:00"
-    },
-    {
-      "sha": "d1da13e1",
-      "msg": "fix: remove floating end-session button, use stop badge with \u23f9\ufe0f emoji",
-      "ts": "2026-03-29T14:32:22+03:00"
     }
   ],
   "branches": [
@@ -126,11 +130,6 @@
       "branch": "fix-ci-run-23695885613",
       "sha": "916b7b1",
       "minutes": 99
-    },
-    {
-      "branch": "adjust-topic-names",
-      "sha": "6d91844",
-      "minutes": 94
     },
     {
       "branch": "fix-ci-job",
@@ -201,6 +200,11 @@
       "branch": "center-emoji-buttons",
       "sha": "1f1faa1",
       "minutes": 6
+    },
+    {
+      "branch": "slides-tab-inactivity",
+      "sha": "7bd87d9",
+      "minutes": 5
     },
     {
       "branch": "session-date-prefix",
