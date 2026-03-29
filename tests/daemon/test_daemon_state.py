@@ -2,10 +2,12 @@ import json, tempfile
 from pathlib import Path
 from types import SimpleNamespace
 
+from daemon.session_state import GLOBAL_STATE_FILENAME
+
 
 def test_load_daemon_state_new_format():
     with tempfile.TemporaryDirectory() as d:
-        f = Path(d) / "daemon_state.json"
+        f = Path(d) / GLOBAL_STATE_FILENAME
         f.write_text(json.dumps({
             "main": {"name": "2026-03-25 WS", "started_at": "2026-03-25T09:00:00", "status": "active"},
             "talk": None
@@ -19,7 +21,7 @@ def test_load_daemon_state_new_format():
 def test_load_daemon_state_migrates_old_stack_format():
     """Old {stack:[...]} format is migrated to {main, talk}."""
     with tempfile.TemporaryDirectory() as d:
-        f = Path(d) / "daemon_state.json"
+        f = Path(d) / GLOBAL_STATE_FILENAME
         f.write_text(json.dumps({
             "stack": [
                 {"name": "2026-03-25 WS", "started_at": "2026-03-25T09:00:00"}
@@ -34,7 +36,7 @@ def test_load_daemon_state_migrates_old_stack_format():
 def test_load_daemon_state_migrates_two_item_stack():
     """Old stack with 2 items: first=main, second=talk."""
     with tempfile.TemporaryDirectory() as d:
-        f = Path(d) / "daemon_state.json"
+        f = Path(d) / GLOBAL_STATE_FILENAME
         f.write_text(json.dumps({
             "stack": [
                 {"name": "2026-03-25 WS", "started_at": "2026-03-25T09:00:00"},
@@ -61,10 +63,22 @@ def test_save_daemon_state_writes_new_format():
             "main": {"name": "2026-03-25 WS", "started_at": "2026-03-25T09:00:00", "status": "active"},
             "talk": None
         })
-        data = json.loads((Path(d) / "daemon_state.json").read_text())
+        data = json.loads((Path(d) / GLOBAL_STATE_FILENAME).read_text())
         assert "main" in data
         assert "stack" not in data
         assert data["main"]["name"] == "2026-03-25 WS"
+
+
+def test_load_daemon_state_reads_legacy_filename():
+    with tempfile.TemporaryDirectory() as d:
+        legacy = Path(d) / "daemon_state.json"
+        legacy.write_text(json.dumps({
+            "main": {"name": "2026-03-25 WS", "started_at": "2026-03-25T09:00:00", "status": "active"},
+            "talk": None
+        }))
+        from daemon.session_state import load_daemon_state as _load_daemon_state
+        result = _load_daemon_state(Path(d))
+        assert result["main"]["name"] == "2026-03-25 WS"
 
 
 # ── Issue 2: status "ended" filtering ────────────────────────────────────────

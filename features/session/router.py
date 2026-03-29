@@ -1,8 +1,11 @@
 """Session stack management — host commands + daemon sync."""
 
+import asyncio
 import json
 import os
 import re
+import time
+import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -18,6 +21,7 @@ from daemon.transcript.query import load_normalized_entries
 
 router = APIRouter()          # global session endpoints
 session_router = APIRouter()  # session-scoped endpoints (mounted under /api/{session_id}/)
+_GLOBAL_STATE_ACK_TIMEOUT_SECONDS = 3.0
 
 
 def _normalize_session_name(name: str) -> str:
@@ -117,6 +121,20 @@ def _is_open_session(main: dict | None) -> bool:
     return True
 
 
+async def _push_session_request_sync(session_request: dict) -> None:
+    """Push session request to daemon and wait for global-state persistence ack when daemon is connected."""
+    request_id = uuid.uuid4().hex
+    sent = await push_to_daemon({"type": "session_request", **session_request, "request_id": request_id})
+    if not sent or state.daemon_ws is None:
+        return
+    deadline = time.monotonic() + _GLOBAL_STATE_ACK_TIMEOUT_SECONDS
+    while time.monotonic() < deadline:
+        ack = state.daemon_global_state_acks.pop(request_id, None)
+        if ack is not None:
+            return
+        await asyncio.sleep(0.05)
+
+
 def _apply_session_main(main: dict | None) -> None:
     """Apply daemon-provided main session and keep session_id stable."""
     if not _is_open_session(main):
@@ -161,21 +179,21 @@ async def start_session(body: StartSessionRequest):
     name = _normalize_session_name(body.name)
     state.session_name = name
     state.session_request = {"action": "start", "name": name, "session_id": session_id}
-    await push_to_daemon({"type": "session_request", **state.session_request})
+    await _push_session_request_sync(state.session_request)
     return {"ok": True}
 
 
 @router.post("/api/session/end", dependencies=[Depends(require_host_auth)])
 async def end_session():
     state.session_request = {"action": "end"}
-    await push_to_daemon({"type": "session_request", **state.session_request})
+    await _push_session_request_sync(state.session_request)
     return {"ok": True}
 
 
 @router.post("/api/session/pause", dependencies=[Depends(require_host_auth)])
 async def pause_session():
     state.session_request = {"action": "pause"}
-    await push_to_daemon({"type": "session_request", **state.session_request})
+    await _push_session_request_sync(state.session_request)
     if state.session_main:
         state.session_main = {**state.session_main, "status": "paused"}
         await broadcast_state()
@@ -185,7 +203,7 @@ async def pause_session():
 @router.post("/api/session/resume", dependencies=[Depends(require_host_auth)])
 async def resume_session():
     state.session_request = {"action": "resume"}
-    await push_to_daemon({"type": "session_request", **state.session_request})
+    await _push_session_request_sync(state.session_request)
     if state.session_main:
         state.session_main = {**state.session_main, "status": "active"}
         await broadcast_state()
@@ -205,14 +223,14 @@ async def create_session(body: SessionCreateBody):
     state.session_name = name
     state.session_type = body.type
     state.session_request = {"action": "create", "name": name, "session_id": state.session_id}
-    await push_to_daemon({"type": "session_request", **state.session_request})
+    await _push_session_request_sync(state.session_request)
     return {"ok": True, "session_id": state.session_id, "session_name": state.session_name}
 
 
 @router.patch("/api/session/rename", dependencies=[Depends(require_host_auth)])
 async def rename_session(body: RenameSessionRequest):
     state.session_request = {"action": "rename", "name": _normalize_session_name(body.name)}
-    await push_to_daemon({"type": "session_request", **state.session_request})
+    await _push_session_request_sync(state.session_request)
     return {"ok": True}
 
 
@@ -557,5 +575,5 @@ async def resume_session_folder(body: ResumeFolderBody):
     state.session_name = folder_name
     state.session_id = _resolve_session_id_for_folder(folder_name)
     state.session_request = {"action": "create", "name": folder_name, "session_id": state.session_id}
-    await push_to_daemon({"type": "session_request", **state.session_request})
+    await _push_session_request_sync(state.session_request)
     return {"ok": True, "session_id": state.session_id, "session_name": state.session_name}

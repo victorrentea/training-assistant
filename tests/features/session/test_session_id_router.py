@@ -2,11 +2,13 @@ import base64
 import json
 import os
 from datetime import datetime, timezone
+from types import SimpleNamespace
 
 import pytest
 from fastapi.testclient import TestClient
 
 from main import app, state
+import features.session.router as session_router_mod
 from features.ws.router import _handle_session_folders
 
 
@@ -182,3 +184,24 @@ async def test_ws_session_folders_updates_folder_to_id_map():
 
     assert state.session_folders == ["A", "B", "legacy-folder"]
     assert state.session_folder_ids == {"A": "aaa111"}
+
+
+def test_create_session_sends_request_id_and_consumes_daemon_ack(monkeypatch):
+    client = TestClient(app, headers=_HOST_AUTH_HEADERS)
+    sent_messages = []
+    state.daemon_ws = SimpleNamespace()  # mark daemon as connected for sync-wait path
+
+    async def _fake_push_to_daemon(msg: dict) -> bool:
+        sent_messages.append(msg)
+        rid = msg.get("request_id")
+        if rid:
+            state.daemon_global_state_acks[rid] = {"request_id": rid}
+        return True
+
+    monkeypatch.setattr(session_router_mod, "push_to_daemon", _fake_push_to_daemon)
+
+    resp = client.post("/api/session/create", json={"name": "2026-03-30 Demo", "type": "workshop"})
+    assert resp.status_code == 200
+    assert sent_messages, "session request should be sent to daemon"
+    assert sent_messages[0].get("type") == "session_request"
+    assert isinstance(sent_messages[0].get("request_id"), str) and sent_messages[0]["request_id"]

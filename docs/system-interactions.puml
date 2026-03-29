@@ -14,26 +14,30 @@ participant "Claude API\n(Anthropic)" as AI
 == 1. Session Lifecycle ==
 
 H -> B : POST /api/session/start {name}
-B --> D : WS session_request {action:"start", name}
+B --> D : WS session_request {action:"start", name, request_id}
 D -> D : Create session folder\non disk
+D --> B : WS global_state_saved {request_id, persisted:true,\n  global_state_file:"training-assistant-global-state.json"}
 D --> B : WS session_sync {main, talk, key_points}
 B --> H : WS broadcast (session state)
 
 ... (participants join, session running) ...
 
 H -> B : POST /api/session/pause
-B --> D : WS session_request {action:"pause"}
+B --> D : WS session_request {action:"pause", request_id}
+B <-- D : WS global_state_saved {request_id, persisted:true}
 B --> H : WS broadcast (status:"paused")
 B --> P : WS session_paused → disconnect
 
 H -> B : POST /api/session/resume
-B --> D : WS session_request {action:"resume"}
+B --> D : WS session_request {action:"resume", request_id}
+B <-- D : WS global_state_saved {request_id, persisted:true}
 B --> H : WS broadcast (status:"active")
 note right of P : Paused participants\nreconnect automatically
 
 H -> B : POST /api/session/end
-B --> D : WS session_request {action:"end"}
+B --> D : WS session_request {action:"end", request_id}
 D -> D : Persist state to disk
+B <-- D : WS global_state_saved {request_id, persisted:true}
 
 note over D,B
   Backend proactively pushes state and session snapshots

@@ -38,6 +38,7 @@ from features.ws.daemon_protocol import (
     MSG_TOKEN_USAGE, MSG_NOTES_CONTENT, MSG_SLIDES_CURRENT, MSG_SLIDES_CLEAR,
     MSG_TRANSCRIPTION_LANGUAGE_STATUS, MSG_TIMING_EVENT, MSG_STATE_RESTORE,
     MSG_ACTIVITY_LOG, MSG_SESSION_FOLDERS,
+    MSG_GLOBAL_STATE_SAVED,
 )
 
 router = APIRouter()
@@ -503,6 +504,13 @@ async def _handle_session_folders(data):
         state.session_folder_ids = ids
 
 
+async def _handle_global_state_saved(data):
+    """Daemon confirms a global-state file write for a request_id."""
+    request_id = str(data.get("request_id") or "").strip()
+    if request_id:
+        state.daemon_global_state_acks[request_id] = data
+
+
 _DAEMON_MSG_HANDLERS = {
     MSG_SLIDES_CATALOG: _handle_daemon_slides_catalog,
     MSG_SLIDE_INVALIDATED: _handle_daemon_slide_invalidated,
@@ -523,6 +531,7 @@ _DAEMON_MSG_HANDLERS = {
     MSG_STATE_RESTORE: _handle_state_restore,
     MSG_ACTIVITY_LOG: _handle_activity_log,
     MSG_SESSION_FOLDERS: _handle_session_folders,
+    MSG_GLOBAL_STATE_SAVED: _handle_global_state_saved,
 }
 
 
