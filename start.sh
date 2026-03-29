@@ -175,9 +175,10 @@ while true; do
       wait "$DAEMON_PID" 2>/dev/null && DAEMON_EXIT=0 || DAEMON_EXIT=$?
       DAEMON_PID=""
       if [ $DAEMON_EXIT -eq 0 ]; then
-        _log "start" "info" "🔴 daemon (clean exit)"
-        stop_all_processes
-        exit 0
+        _log "start" "info" "🔴 daemon (clean exit) — restarting in 3s"
+        sleep 3
+        RESTART_REASON="daemon-clean-exit"
+        break
       elif [ $DAEMON_EXIT -eq 42 ]; then
         RESTART_REASON="daemon-version-change"
         break
