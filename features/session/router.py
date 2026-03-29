@@ -334,7 +334,7 @@ async def get_interval_lines_txt(
     return PlainTextResponse(content=payload, headers=headers)
 
 
-@router.get("/api/session/folders", dependencies=[Depends(require_host_auth)])
+@router.get("/api/session/folders")
 async def list_session_folders():
     root = _get_sessions_root()
     folders = []
