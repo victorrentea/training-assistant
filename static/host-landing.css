@@ -112,10 +112,14 @@ body {
   font-family: monospace;
   font-size: 1rem;
   height: 42px;
-  display: flex;
-  align-items: center;
-  white-space: nowrap;
+  width: 9.5rem;
   flex-shrink: 0;
+  outline: none;
+}
+
+.session-date-prefix:focus {
+  color: var(--text);
+  border-color: var(--accent);
 }
 
 .session-name-input {

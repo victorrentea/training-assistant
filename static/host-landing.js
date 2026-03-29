@@ -39,7 +39,9 @@ function renderPage(active, folders) {
       ${rejoinHtml}
       <div class="new-session-label">New session</div>
       <div class="session-name-row">
-        <span class="session-date-prefix">${new Date().toISOString().slice(0, 10)}&nbsp;</span>
+        <input id="session-date-input" class="session-date-prefix" type="text"
+               value="${new Date().toISOString().slice(0, 10)}"
+               autocomplete="off" spellcheck="false" />
         <input id="session-name-input" class="session-name-input" type="text"
                placeholder="session name"
                autocomplete="off"
@@ -129,9 +131,9 @@ function rejoinSession(session_id) {
 
 async function doCreate(type) {
   const input = document.getElementById('session-name-input');
-  const prefixEl = document.querySelector('.session-date-prefix');
-  const prefix = prefixEl ? prefixEl.textContent : '';
-  const name = (prefix + input.value).trim();
+  const dateInput = document.getElementById('session-date-input');
+  const dateVal = dateInput ? dateInput.value.trim() : '';
+  const name = (dateVal ? dateVal + ' ' : '') + input.value.trim();
   if (!name) return;
 
   const btn = document.getElementById('create-btn-' + type);
