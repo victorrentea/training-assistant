@@ -1,10 +1,15 @@
 {
-  "sha": "46f29d8660f25cf9909fe0592b72fb22a0cddc9d",
-  "timestamp": "2026-03-29 16:05",
+  "sha": "f517e1363c3414f1f4f3b6af4258070539b0560e",
+  "timestamp": "2026-03-29 16:07",
   "changelog": [
-    "fix: use join URL for center host QR"
+    "fix: persist stable session ids per folder"
   ],
   "commits": [
+    {
+      "sha": "f517e136",
+      "msg": "fix: persist stable session ids per folder",
+      "ts": "2026-03-29T16:05:58+03:00"
+    },
     {
       "sha": "46f29d86",
       "msg": "fix: use join URL for center host QR",
@@ -99,11 +104,6 @@
       "sha": "3cecf57c",
       "msg": "feat: restart hijack when today raw file missing",
       "ts": "2026-03-29T15:14:06+03:00"
-    },
-    {
-      "sha": "0b86ad36",
-      "msg": "chore: compact initial sync error log",
-      "ts": "2026-03-29T15:11:21+03:00"
     }
   ],
   "branches": [
