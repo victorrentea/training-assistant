@@ -1,5 +1,6 @@
 # Tasks
 
+- [x] host ui: STOP (`⏹️`) button is never disabled; it remains active after host page load/refresh.
 - [x] host landing: `TODAY` tag in Previous sessions now blinks slowly.
 - [x] host UI: all tooltips now display with zero delay on hover/focus.
 - [x] host footer QR overlay: ensure fullscreen QR regenerates from current join URL on click; close on Escape/click anywhere.

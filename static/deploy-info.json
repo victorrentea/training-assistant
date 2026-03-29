@@ -1,10 +1,15 @@
 {
-  "sha": "b66640d96f6be2453b92e6ce2c0b46a091c7fad9",
-  "timestamp": "2026-03-29 16:28",
+  "sha": "88154780f463e31885f5a60a9f53b25d95409215",
+  "timestamp": "2026-03-29 16:29",
   "changelog": [
-    "fix: remove host tooltip hover delay"
+    "feat: animate TODAY badge on host landing"
   ],
   "commits": [
+    {
+      "sha": "88154780",
+      "msg": "feat: animate TODAY badge on host landing",
+      "ts": "2026-03-29T16:28:15+03:00"
+    },
     {
       "sha": "b66640d9",
       "msg": "fix: remove host tooltip hover delay",
@@ -99,11 +104,6 @@
       "sha": "52dede13",
       "msg": "chore: keep footer copied tooltip visible 3s",
       "ts": "2026-03-29T15:38:31+03:00"
-    },
-    {
-      "sha": "146ec2a9",
-      "msg": "Fix daemon startup UnboundLocalError for state save",
-      "ts": "2026-03-29T15:34:18+03:00"
     }
   ],
   "branches": [

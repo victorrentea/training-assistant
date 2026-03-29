@@ -136,6 +136,22 @@ class TestHostSessionCode:
         ctx.close()
         browser.close()
 
+    def test_stop_button_never_disabled(self, server_url, playwright):
+        browser, ctx = host_browser_ctx(server_url, playwright)
+        page = ctx.new_page()
+        page.goto(host_url())
+
+        stop_btn = page.locator("#stop-session-btn-left")
+        expect(stop_btn).to_be_visible(timeout=10000)
+        expect(stop_btn).to_be_enabled(timeout=10000)
+
+        # Regression: remained enabled after async state render updates.
+        page.wait_for_timeout(1500)
+        expect(stop_btn).to_be_enabled(timeout=3000)
+
+        ctx.close()
+        browser.close()
+
 
 class TestWebSocketSessionGating:
     """WebSocket connections are gated by session ID."""
