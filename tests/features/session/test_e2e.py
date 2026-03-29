@@ -43,7 +43,20 @@ class TestLandingPage:
         assert r.status_code == 200
         assert r.json()["active"] is True
 
-    def test_host_landing_does_not_render_active_session_card(self, server_url, playwright):
+    def test_host_landing_redirects_to_active_session(self, server_url, playwright):
+        browser, ctx = host_browser_ctx(server_url, playwright)
+        page = ctx.new_page()
+        page.goto(host_url())
+        page.goto("/host")
+        page.wait_for_url(f"**{host_url()}", timeout=5000)
+        ctx.close()
+        browser.close()
+
+    def test_host_landing_layout_when_no_active_session(self, server_url, playwright):
+        requests.post(
+            f"{server_url}/api/session/end",
+            auth=(HOST_USER, HOST_PASS),
+        ).raise_for_status()
         browser, ctx = host_browser_ctx(server_url, playwright)
         page = ctx.new_page()
         page.goto("/host")

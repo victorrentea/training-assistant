@@ -1,5 +1,6 @@
 # Tasks
 
+- [x] host landing: when a host removes `/host/{session_id}` to `/host` while a session is still active (including pending-create state), auto-redirect back to the active session URL.
 - [x] host landing: in previous sessions list, show only folders that start with the current year (skip older/non-year-prefixed folders).
 - [x] host landing layout: no page vertical scrollbar, previous sessions panel spans to bottom, removed “Start Session” title, renamed labels to “START NEW SESSION” and “RESUME PREVIOUS SESSION”.
 - [x] daemon transcript log: keep preview text on the same line as `Transcripted ...` (no newline after colon).
