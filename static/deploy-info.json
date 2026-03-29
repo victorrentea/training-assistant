@@ -1,10 +1,15 @@
 {
-  "sha": "a892d5a1d3b31c85a32e24531cce000030a1ff15",
-  "timestamp": "2026-03-29 16:15",
+  "sha": "a39ab4b69afc60d4ad36a3d39eab40d135483a11",
+  "timestamp": "2026-03-29 16:18",
   "changelog": [
-    "ui: constrain footer QR overlay between header and footer"
+    "ui: move heart badge to third position"
   ],
   "commits": [
+    {
+      "sha": "a39ab4b6",
+      "msg": "ui: move heart badge to third position",
+      "ts": "2026-03-29T16:15:57+03:00"
+    },
     {
       "sha": "a892d5a1",
       "msg": "ui: constrain footer QR overlay between header and footer",
@@ -99,11 +104,6 @@
       "sha": "44ee60e2",
       "msg": "chore: reword startup unprocessed transcript log",
       "ts": "2026-03-29T15:21:31+03:00"
-    },
-    {
-      "sha": "359dd8f5",
-      "msg": "fix: keep start.sh alive on stale pid kills",
-      "ts": "2026-03-29T15:18:22+03:00"
     }
   ],
   "branches": [
