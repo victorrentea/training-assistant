@@ -1,10 +1,15 @@
 {
-  "sha": "41775d5daea25a167e5fb6ec40d826499169824e",
-  "timestamp": "2026-03-29 13:05",
+  "sha": "520ad47e2af8c57d57339b6a2a6b941c4319ed4b",
+  "timestamp": "2026-03-29 13:07",
   "changelog": [
-    "feat(wispr-addons): show \u2764\ufe0f in log when cleaned with emoji mode"
+    "fix(wispr-addons): replace osascript keystroke with CGEventPost (no timeout risk)"
   ],
   "commits": [
+    {
+      "sha": "520ad47e",
+      "msg": "fix(wispr-addons): replace osascript keystroke with CGEventPost (no timeout risk)",
+      "ts": "2026-03-29T13:07:05+03:00"
+    },
     {
       "sha": "41775d5d",
       "msg": "feat(wispr-addons): show \u2764\ufe0f in log when cleaned with emoji mode",
@@ -99,11 +104,6 @@
       "sha": "e21a1b60",
       "msg": "feat(host-landing): show today's session folders as resume buttons",
       "ts": "2026-03-29T12:31:53+03:00"
-    },
-    {
-      "sha": "aaf126ba",
-      "msg": "feat(host-landing): static date prefix on session name input",
-      "ts": "2026-03-29T12:29:51+03:00"
     }
   ],
   "branches": [
