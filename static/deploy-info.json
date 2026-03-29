@@ -1,10 +1,27 @@
 {
-  "sha": "48e0efdbea286e3e62ea126f9f6161351bc3c3c5",
-  "timestamp": "2026-03-29 13:59",
+  "sha": "32d786e9ebdc7b74fff208d46592d093d3ff2cba",
+  "timestamp": "2026-03-29 14:02",
   "changelog": [
-    "feat(wispr): simplify emoji to 2 levels based on 1s hold threshold"
+    "fix(slides): change repos empty state to 'No repos viewed yet'",
+    "fix(slides): change empty state message to 'No slides viewed yet'",
+    "feat(slides): replace pptx icon with eye emoji, show slide count only"
   ],
   "commits": [
+    {
+      "sha": "32d786e9",
+      "msg": "fix(slides): change repos empty state to 'No repos viewed yet'",
+      "ts": "2026-03-29T13:57:51+03:00"
+    },
+    {
+      "sha": "b265a984",
+      "msg": "fix(slides): change empty state message to 'No slides viewed yet'",
+      "ts": "2026-03-29T13:57:26+03:00"
+    },
+    {
+      "sha": "f5fa4151",
+      "msg": "feat(slides): replace pptx icon with eye emoji, show slide count only",
+      "ts": "2026-03-29T13:52:35+03:00"
+    },
     {
       "sha": "48e0efdb",
       "msg": "feat(wispr): simplify emoji to 2 levels based on 1s hold threshold",
@@ -89,21 +106,6 @@
       "sha": "1ae1443a",
       "msg": "feat(wispr): scale emoji density by Ctrl+Opt hold duration",
       "ts": "2026-03-29T13:31:12+03:00"
-    },
-    {
-      "sha": "83728b65",
-      "msg": "feat(landing): red background on Start talk button",
-      "ts": "2026-03-29T13:30:53+03:00"
-    },
-    {
-      "sha": "7b79a40f",
-      "msg": "fix(landing): fix folder resume onclick broken by JSON.stringify double quotes",
-      "ts": "2026-03-29T13:30:25+03:00"
-    },
-    {
-      "sha": "9c1126e7",
-      "msg": "fix(landing): fix folder list display issues",
-      "ts": "2026-03-29T13:26:48+03:00"
     }
   ],
   "branches": [
