@@ -45,6 +45,10 @@ from daemon.session_state import (
     daemon_state_to_stack,
     stack_to_daemon_state,
     save_daemon_state,
+    load_session_meta,
+    save_session_meta,
+    find_session_folder_by_id,
+    session_meta_to_stack,
     pause_session,
     resume_session,
     session_start_date,
@@ -641,20 +645,67 @@ def run() -> None:
     # ── Session stack initialization (early — needed for transcript log) ──
     sessions_root = _sessions_root_from_env()
     log.info("session", f"Sessions root: {sessions_root}")
-    _loaded_daemon_state = load_daemon_state(sessions_root)
-    _active_session_id: str | None = _loaded_daemon_state.get("session_id")
-    session_stack = daemon_state_to_stack(_loaded_daemon_state)
+    _raw_state = load_daemon_state(sessions_root)
+    _active_session_id: str | None = None
+    session_stack: list[dict] = []
+
+    if "main" in _raw_state or "stack" in _raw_state:
+        # Old format — migrate: write session_meta.json per folder, then use new format going forward
+        if "stack" in _raw_state:
+            _stack_items = _raw_state["stack"]
+            _active = [s for s in _stack_items if not s.get("ended_at")]
+            _old_state = {
+                "main": {**_active[0], "status": "active"} if len(_active) >= 1 else None,
+                "talk": {**_active[1], "status": "active"} if len(_active) >= 2 else None,
+            }
+        else:
+            _old_state = _raw_state
+        _active_session_id = _raw_state.get("session_id")
+        session_stack = daemon_state_to_stack(_old_state)
+        if session_stack:
+            _main_folder = sessions_root / session_stack[0]["name"]
+            if _main_folder.exists() and _main_folder.is_dir():
+                _meta = {
+                    "session_id": _active_session_id,
+                    "started_at": session_stack[0].get("started_at"),
+                    "paused_intervals": session_stack[0].get("paused_intervals", []),
+                }
+                if len(session_stack) >= 2:
+                    _meta["talk"] = session_stack[1]
+                save_session_meta(_main_folder, _meta)
+        log.info("session", "Migrated old daemon state format to session_meta.json")
+    elif "active_session_id" in _raw_state:
+        # New format — find folder by session_id, load session_meta.json
+        _active_session_id = _raw_state.get("active_session_id")
+        if _active_session_id:
+            _active_folder = find_session_folder_by_id(sessions_root, _active_session_id)
+            if _active_folder:
+                _meta = load_session_meta(_active_folder)
+                session_stack = session_meta_to_stack(_meta, _active_folder.name)
+
     config, _ = _bind_initial_session_folder(config, sessions_root, session_stack)
     current_key_points: list[dict] = []
     summary_watermark: int = 0
 
     def _do_save_daemon_state():
-        """Save daemon state to disk, persisting _active_session_id alongside the session stack."""
+        """Save global state (active_session_id only) and session metadata to folder."""
         nonlocal _active_session_id
-        d = stack_to_daemon_state(session_stack)
-        if _active_session_id:
-            d["session_id"] = _active_session_id
-        save_daemon_state(sessions_root, d)
+        global_state = {"active_session_id": _active_session_id} if _active_session_id else {}
+        save_daemon_state(sessions_root, global_state)
+        if session_stack:
+            _main_folder = sessions_root / session_stack[0]["name"]
+            _meta = {
+                "session_id": _active_session_id,
+                "started_at": session_stack[0].get("started_at"),
+                "paused_intervals": session_stack[0].get("paused_intervals", []),
+            }
+            if len(session_stack) >= 2:
+                _talk = session_stack[1]
+                _meta["talk"] = {
+                    **_talk,
+                    "status": "paused" if any(p.get("to") is None for p in _talk.get("paused_intervals", [])) else "active",
+                }
+            save_session_meta(_main_folder, _meta)
 
     if session_stack:
         # Restore from persisted stack

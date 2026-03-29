@@ -9,7 +9,7 @@
     {
       "path": "daemon/__main__.py",
       "qualname": "run",
-      "lines": 751
+      "lines": 793
     },
     {
       "path": "daemon/quiz/generator.py",
