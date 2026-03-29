@@ -399,9 +399,7 @@ async def _handle_state_restore(data):
     if "codereview_phase" in restore_data:
         state.codereview_phase = restore_data["codereview_phase"]
     if "codereview_selections" in restore_data:
-        state.codereview_selections = {
-            uid: set(lines) for uid, lines in restore_data["codereview_selections"].items()
-        }
+        state.codereview_selections = {uid: set(lines) for uid, lines in restore_data["codereview_selections"].items()}
     if "codereview_confirmed" in restore_data:
         state.codereview_confirmed = set(restore_data["codereview_confirmed"])
     if "debate_statement" in restore_data:
@@ -423,10 +421,7 @@ async def _handle_state_restore(data):
     if "debate_round_timer_started_at" in restore_data:
         state.debate_round_timer_started_at = _parse_iso_or_none(restore_data["debate_round_timer_started_at"])
     if "debate_arguments" in restore_data:
-        state.debate_arguments = [
-            {**arg, "upvoters": set(arg.get("upvoters", []))}
-            for arg in restore_data["debate_arguments"]
-        ]
+        state.debate_arguments = [{**arg, "upvoters": set(arg.get("upvoters", []))} for arg in restore_data["debate_arguments"]]
     if "summary_points" in restore_data:
         state.summary_points = restore_data["summary_points"]
     if "slides_current" in restore_data:
@@ -489,7 +484,22 @@ async def _handle_session_folders(data):
     """Daemon pushes list of session folders from local disk."""
     folders = data.get("folders")
     if isinstance(folders, list):
-        state.session_folders = [str(f) for f in folders]
+        names: list[str] = []
+        ids: dict[str, str] = {}
+        for item in folders:
+            if isinstance(item, str):
+                names.append(item)
+                continue
+            if isinstance(item, dict):
+                name = str(item.get("name") or "").strip()
+                if not name:
+                    continue
+                names.append(name)
+                sid = item.get("session_id")
+                if isinstance(sid, str) and sid.strip():
+                    ids[name] = sid.strip()
+        state.session_folders = names
+        state.session_folder_ids = ids
 
 
 _DAEMON_MSG_HANDLERS = {

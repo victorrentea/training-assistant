@@ -1,5 +1,6 @@
 """Session stack management — host commands + daemon sync."""
 
+import json
 import os
 import re
 from datetime import datetime, timezone
@@ -41,6 +42,45 @@ def _get_transcription_root() -> Path | None:
     )
     p = Path(folder_str).expanduser()
     return p if p.exists() and p.is_dir() else None
+
+
+def _read_session_id_from_snapshot(path: Path) -> str | None:
+    """Reads session_id from a session_state.json file."""
+    if not path.exists() or not path.is_file():
+        return None
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+    sid = data.get("session_id")
+    if isinstance(sid, str) and sid.strip():
+        return sid.strip()
+    return None
+
+
+def _load_session_id_for_folder(folder_name: str) -> str | None:
+    """Best-effort local lookup for folder -> session_id."""
+    root = _get_sessions_root()
+    if root is None:
+        return None
+    return _read_session_id_from_snapshot(root / folder_name / "session_state.json")
+
+
+def _resolve_session_id_for_folder(folder_name: str) -> str:
+    """Return stable session_id for a folder, assigning one if missing."""
+    normalized_name = _normalize_session_name(folder_name)
+    existing = state.session_folder_ids.get(normalized_name)
+    if existing:
+        return existing
+
+    loaded = _load_session_id_for_folder(normalized_name)
+    if loaded:
+        state.session_folder_ids[normalized_name] = loaded
+        return loaded
+
+    new_id = state.generate_session_id()
+    state.session_folder_ids[normalized_name] = new_id
+    return new_id
 
 
 def _normalize_transcript_text(text: str) -> str:
@@ -111,8 +151,9 @@ class SessionCreateBody(BaseModel):
 
 @router.post("/api/session/create", dependencies=[Depends(require_host_auth_or_cookie)])
 async def create_session(body: SessionCreateBody):
-    session_id = state.generate_session_id()
     name = _normalize_session_name(body.name)
+    session_id = _resolve_session_id_for_folder(name)
+    state.session_id = session_id
     state.session_name = name
     state.session_type = body.type
     state.session_request = {"action": "create", "name": name, "session_id": state.session_id}
@@ -155,11 +196,9 @@ def _restore_state_from_snapshot(snap: dict):
         state.participant_avatars[uuid] = p.get("avatar", "")
         state.participant_universes[uuid] = p.get("universe", "")
 
-    # Mode
     if snap.get("mode"):
         state.mode = snap["mode"]
 
-    # Activity
     if snap.get("activity"):
         from core.state import ActivityType
         try:
@@ -167,7 +206,6 @@ def _restore_state_from_snapshot(snap: dict):
         except ValueError:
             pass
 
-    # Poll
     state.poll = None
     state.poll_active = False
     state.votes = {}
@@ -188,42 +226,7 @@ def _restore_state_from_snapshot(snap: dict):
         state.poll_timer_seconds = p.get("timer_seconds")
         state.poll_timer_started_at = datetime.fromisoformat(p["timer_started_at"]) if p.get("timer_started_at") else None
 
-    # QA
-    state.qa_questions.clear()
-    for q in (snap.get("qa") or {}).get("questions") or []:
-        q_copy = dict(q)
-        q_copy["upvoters"] = set(q_copy.get("upvoters") or [])
-        state.qa_questions[q_copy["id"]] = q_copy
-
-    # Wordcloud
-    wc = snap.get("wordcloud") or {}
-    state.wordcloud_topic = wc.get("topic", "")
-    state.wordcloud_words = wc.get("words") or {}
-    if hasattr(state, 'wordcloud_word_order'):
-        state.wordcloud_word_order = wc.get("word_order") or []
-
-    # Debate
-    debate = snap.get("debate") or {}
-    state.debate_statement = debate.get("statement")
-    state.debate_phase = debate.get("phase")
-    state.debate_sides = debate.get("sides") or {}
-    state.debate_arguments = [{**a, "upvoters": set(a.get("upvoters") or [])} for a in (debate.get("arguments") or [])]
-    state.debate_champions = debate.get("champions") or {}
-    state.debate_auto_assigned = set(debate.get("auto_assigned") or [])
-    state.debate_first_side = debate.get("first_side")
-    state.debate_round_index = debate.get("round_index")
-    state.debate_round_timer_seconds = debate.get("round_timer_seconds")
-    state.debate_round_timer_started_at = None  # reset first
-    if debate.get("round_timer_started_at"):
-        state.debate_round_timer_started_at = datetime.fromisoformat(debate["round_timer_started_at"])
-
-    # Codereview
-    cr = snap.get("codereview") or {}
-    state.codereview_snippet = cr.get("snippet")
-    state.codereview_language = cr.get("language")
-    state.codereview_phase = cr.get("phase", "idle")
-    state.codereview_confirmed = set(cr.get("confirmed") or [])
-    state.codereview_selections = {uid: set(lines) for uid, lines in (cr.get("selections") or {}).items()}
+    _restore_activity_blocks_from_snapshot(snap)
 
     # Session ID (generate if missing — e.g. old snapshot from before session security)
     state.session_id = snap.get("session_id") or state.generate_session_id()
@@ -244,6 +247,41 @@ def _restore_state_from_snapshot(snap: dict):
         state.git_repos = snap["git_repos"]
 
 
+def _restore_activity_blocks_from_snapshot(snap: dict):
+    state.qa_questions.clear()
+    for q in (snap.get("qa") or {}).get("questions") or []:
+        q_copy = dict(q)
+        q_copy["upvoters"] = set(q_copy.get("upvoters") or [])
+        state.qa_questions[q_copy["id"]] = q_copy
+
+    wc = snap.get("wordcloud") or {}
+    state.wordcloud_topic = wc.get("topic", "")
+    state.wordcloud_words = wc.get("words") or {}
+    if hasattr(state, "wordcloud_word_order"):
+        state.wordcloud_word_order = wc.get("word_order") or []
+
+    debate = snap.get("debate") or {}
+    state.debate_statement = debate.get("statement")
+    state.debate_phase = debate.get("phase")
+    state.debate_sides = debate.get("sides") or {}
+    state.debate_arguments = [{**a, "upvoters": set(a.get("upvoters") or [])} for a in (debate.get("arguments") or [])]
+    state.debate_champions = debate.get("champions") or {}
+    state.debate_auto_assigned = set(debate.get("auto_assigned") or [])
+    state.debate_first_side = debate.get("first_side")
+    state.debate_round_index = debate.get("round_index")
+    state.debate_round_timer_seconds = debate.get("round_timer_seconds")
+    state.debate_round_timer_started_at = None
+    if debate.get("round_timer_started_at"):
+        state.debate_round_timer_started_at = datetime.fromisoformat(debate["round_timer_started_at"])
+
+    cr = snap.get("codereview") or {}
+    state.codereview_snippet = cr.get("snippet")
+    state.codereview_language = cr.get("language")
+    state.codereview_phase = cr.get("phase", "idle")
+    state.codereview_confirmed = set(cr.get("confirmed") or [])
+    state.codereview_selections = {uid: set(lines) for uid, lines in (cr.get("selections") or {}).items()}
+
+
 @session_router.post("/session/sync", dependencies=[Depends(require_host_auth)])
 async def sync_session(body: SyncSessionRequest):
     if body.main is not None:
@@ -260,6 +298,8 @@ async def sync_session(body: SyncSessionRequest):
 
     if body.session_state:
         _restore_state_from_snapshot(body.session_state)
+        if state.session_name and state.session_id:
+            state.session_folder_ids[state.session_name] = state.session_id
 
     # Safety net: ensure session_id exists whenever a session is active
     if state.session_main and not state.session_id:
@@ -441,9 +481,9 @@ class ResumeFolderBody(BaseModel):
 @router.post("/api/session/resume-folder", dependencies=[Depends(require_host_auth_or_cookie)])
 async def resume_session_folder(body: ResumeFolderBody):
     """Host resumes a past session from a folder. Reuses old session_id from snapshot if available."""
-    state.session_name = body.folder_name
-    if not state.session_id:
-        state.generate_session_id()
-    state.session_request = {"action": "create", "name": body.folder_name, "session_id": state.session_id}
+    folder_name = _normalize_session_name(body.folder_name)
+    state.session_name = folder_name
+    state.session_id = _resolve_session_id_for_folder(folder_name)
+    state.session_request = {"action": "create", "name": folder_name, "session_id": state.session_id}
     await push_to_daemon({"type": "session_request", **state.session_request})
     return {"ok": True, "session_id": state.session_id, "session_name": state.session_name}

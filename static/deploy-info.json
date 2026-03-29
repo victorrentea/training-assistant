@@ -1,10 +1,15 @@
 {
-  "sha": "1aaa0123fabd0cb63ae51164ea90fe90449e7081",
-  "timestamp": "2026-03-29 15:55",
+  "sha": "46f29d8660f25cf9909fe0592b72fb22a0cddc9d",
+  "timestamp": "2026-03-29 16:05",
   "changelog": [
-    "chore: prevent deploy-info bot commit loop"
+    "fix: use join URL for center host QR"
   ],
   "commits": [
+    {
+      "sha": "46f29d86",
+      "msg": "fix: use join URL for center host QR",
+      "ts": "2026-03-29T15:55:53+03:00"
+    },
     {
       "sha": "1aaa0123",
       "msg": "chore: prevent deploy-info bot commit loop",
@@ -99,11 +104,6 @@
       "sha": "0b86ad36",
       "msg": "chore: compact initial sync error log",
       "ts": "2026-03-29T15:11:21+03:00"
-    },
-    {
-      "sha": "53cf4a39",
-      "msg": "feat: log 🤖 and latency for transcript llm cleaning",
-      "ts": "2026-03-29T15:10:38+03:00"
     }
   ],
   "branches": [
