@@ -1,10 +1,15 @@
 {
-  "sha": "bbebedae91bcdc966c081564dea416e34ecb2ac9",
-  "timestamp": "2026-03-29 15:09",
+  "sha": "53cf4a39bb017940ad0e7c20961596b4e7f40daa",
+  "timestamp": "2026-03-29 15:10",
   "changelog": [
-    "Increase PowerPoint probe timeout to 5s"
+    "feat: log \ud83e\udd16 and latency for transcript llm cleaning"
   ],
   "commits": [
+    {
+      "sha": "53cf4a39",
+      "msg": "feat: log \ud83e\udd16 and latency for transcript llm cleaning",
+      "ts": "2026-03-29T15:10:38+03:00"
+    },
     {
       "sha": "bbebedae",
       "msg": "Increase PowerPoint probe timeout to 5s",
@@ -99,11 +104,6 @@
       "sha": "e60b3ac4",
       "msg": "fix: rejoin button broken by JSON.stringify double quotes in onclick attr",
       "ts": "2026-03-29T14:47:24+03:00"
-    },
-    {
-      "sha": "e7a6d302",
-      "msg": "fix: separate active session into its own card on host landing page",
-      "ts": "2026-03-29T14:46:07+03:00"
     }
   ],
   "branches": [
