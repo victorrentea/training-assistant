@@ -136,6 +136,16 @@ class TestHostSessionCode:
         ctx.close()
         browser.close()
 
+    def test_host_topbar_uses_participants_label(self, server_url, playwright):
+        browser, ctx = host_browser_ctx(server_url, playwright)
+        page = ctx.new_page()
+        page.goto(host_url())
+
+        expect(page.locator(".host-top-pax .stat-label")).to_have_text("participants", timeout=5000)
+
+        ctx.close()
+        browser.close()
+
     def test_stop_button_never_disabled(self, server_url, playwright):
         browser, ctx = host_browser_ctx(server_url, playwright)
         page = ctx.new_page()
