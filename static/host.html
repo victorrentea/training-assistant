@@ -243,7 +243,13 @@
     </div>
     <!-- Poll results panel -->
     <div id="center-poll" class="center-panel" style="display:none;">
-      <div style="flex-shrink:0;">
+      <!-- Daemon status shown on landing (activity=none) -->
+      <div id="daemon-landing-status" style="display:none; flex-direction:column; align-items:center; justify-content:center; gap:.6rem; padding:2rem 1rem; text-align:center;">
+        <div id="daemon-landing-icon" style="font-size:3rem; line-height:1;">🤖</div>
+        <div id="daemon-landing-label" style="font-size:1.1rem; font-weight:600; color:var(--text);"></div>
+        <div id="daemon-landing-detail" style="font-size:.85rem; color:var(--muted); font-family:monospace;"></div>
+      </div>
+      <div id="poll-results-section" style="flex-shrink:0;">
         <div style="display:flex; align-items:center; gap:.5rem; flex-wrap:wrap; margin-bottom:.9rem;">
           <h2 style="margin:0; font-size:.95rem; color:var(--muted); text-transform:uppercase; letter-spacing:.08em;">Current Poll</h2>
           <span id="poll-pills"></span>
