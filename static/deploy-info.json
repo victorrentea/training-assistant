@@ -1,10 +1,15 @@
 {
-  "sha": "e908d2874a75dc24be2fe2f403fa84f90a6d5ff9",
-  "timestamp": "2026-03-29 13:57",
+  "sha": "48e0efdbea286e3e62ea126f9f6161351bc3c3c5",
+  "timestamp": "2026-03-29 13:59",
   "changelog": [
-    "fix: move stop button to right-most footer badge position"
+    "feat(wispr): simplify emoji to 2 levels based on 1s hold threshold"
   ],
   "commits": [
+    {
+      "sha": "48e0efdb",
+      "msg": "feat(wispr): simplify emoji to 2 levels based on 1s hold threshold",
+      "ts": "2026-03-29T13:59:25+03:00"
+    },
     {
       "sha": "e908d287",
       "msg": "fix: move stop button to right-most footer badge position",
@@ -99,11 +104,6 @@
       "sha": "9c1126e7",
       "msg": "fix(landing): fix folder list display issues",
       "ts": "2026-03-29T13:26:48+03:00"
-    },
-    {
-      "sha": "734f8143",
-      "msg": "feat(landing): merge today's sessions into previous sessions list with TODAY tag",
-      "ts": "2026-03-29T13:21:43+03:00"
     }
   ],
   "branches": [
@@ -193,6 +193,11 @@
       "minutes": 14
     },
     {
+      "branch": "slides-eye-emoji-tooltip",
+      "sha": "de981e2",
+      "minutes": 7
+    },
+    {
       "branch": "fix-emoji-tooltip-direction",
       "sha": "a3b87b1",
       "minutes": 7
@@ -201,11 +206,6 @@
       "branch": "center-emoji-buttons",
       "sha": "1f1faa1",
       "minutes": 6
-    },
-    {
-      "branch": "session-date-prefix",
-      "sha": "15da723",
-      "minutes": 5
     }
   ]
 }
