@@ -1,10 +1,15 @@
 {
-  "sha": "2c3ca4e5905be21068bfb38d129b16443ddf87ae",
-  "timestamp": "2026-03-29 14:09",
+  "sha": "c40d98c3ffadac16c5f8aba79cf11ac6bf355ec8",
+  "timestamp": "2026-03-29 14:14",
   "changelog": [
-    "fix: strip non-breaking spaces from session names before creating folders"
+    "feat: persist session_id in daemon state files across server restarts"
   ],
   "commits": [
+    {
+      "sha": "c40d98c3",
+      "msg": "feat: persist session_id in daemon state files across server restarts",
+      "ts": "2026-03-29T14:13:41+03:00"
+    },
     {
       "sha": "2c3ca4e5",
       "msg": "fix: strip non-breaking spaces from session names before creating folders",
@@ -99,11 +104,6 @@
       "sha": "1e7285f5",
       "msg": "feat(host): display session name in top bar title",
       "ts": "2026-03-29T13:33:10+03:00"
-    },
-    {
-      "sha": "1bcae32e",
-      "msg": "feat(landing): make session date editable, wider for date ranges",
-      "ts": "2026-03-29T13:32:07+03:00"
     }
   ],
   "branches": [
@@ -136,11 +136,6 @@
       "branch": "fix-emoji-overlay-hover",
       "sha": "1fcd15e",
       "minutes": 84
-    },
-    {
-      "branch": "participant-file-upload",
-      "sha": "6441120",
-      "minutes": 60
     },
     {
       "branch": "upload-tooltip-onboarding",
@@ -181,6 +176,11 @@
       "branch": "wispr-menu-clickable",
       "sha": "0a1df0d",
       "minutes": 19
+    },
+    {
+      "branch": "host-ui-empty-state-bug",
+      "sha": "6b332f9",
+      "minutes": 15
     },
     {
       "branch": "remove-host-heart-drone",
