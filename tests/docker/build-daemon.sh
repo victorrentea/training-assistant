@@ -1,0 +1,35 @@
+#!/bin/bash
+# Build and run the hermetic daemon test (Phase B).
+# Run from repo root: bash tests/docker/build-daemon.sh
+
+set -e
+
+REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+DOCKER_DIR="$REPO_ROOT/tests/docker"
+BUILD_DIR=$(mktemp -d)
+
+echo "=== Preparing build context in $BUILD_DIR ==="
+
+# Copy app code
+mkdir -p "$BUILD_DIR/app/static" "$BUILD_DIR/app/core" "$BUILD_DIR/app/features" "$BUILD_DIR/app/daemon"
+cp "$REPO_ROOT/main.py" "$BUILD_DIR/app/"
+cp -r "$REPO_ROOT/core" "$BUILD_DIR/app/"
+cp -r "$REPO_ROOT/features" "$BUILD_DIR/app/"
+cp -r "$REPO_ROOT/daemon" "$BUILD_DIR/app/"
+cp -r "$REPO_ROOT/static" "$BUILD_DIR/app/"
+
+# Copy test files
+mkdir -p "$BUILD_DIR/tests/docker"
+cp "$DOCKER_DIR/test_daemon_connected.py" "$BUILD_DIR/tests/docker/"
+cp "$DOCKER_DIR/start_hermetic.sh" "$BUILD_DIR/tests/docker/"
+cp "$DOCKER_DIR/Dockerfile.daemon" "$BUILD_DIR/"
+
+echo "=== Building Docker image ==="
+docker build -f "$BUILD_DIR/Dockerfile.daemon" -t hermetic-daemon "$BUILD_DIR"
+
+echo "=== Running tests ==="
+docker run --rm hermetic-daemon
+
+# Cleanup
+rm -rf "$BUILD_DIR"
+echo "=== Done ==="

@@ -1,0 +1,28 @@
+FROM mcr.microsoft.com/playwright/python:v1.50.0-noble
+
+# Install backend + daemon + test dependencies
+RUN pip install \
+    fastapi \
+    "uvicorn[standard]" \
+    python-multipart \
+    prometheus-fastapi-instrumentator \
+    websockets \
+    anthropic \
+    pytest \
+    pytest-playwright \
+    playwright==1.50.0
+
+# Install curl for health checks
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+
+# Copy the full application codebase
+COPY app/ /app/
+
+# Copy test files
+WORKDIR /tests
+COPY tests/docker/test_daemon_connected.py .
+COPY tests/docker/start_hermetic.sh /start_hermetic.sh
+RUN chmod +x /start_hermetic.sh
+
+ENTRYPOINT ["/start_hermetic.sh"]
+CMD ["test_daemon_connected.py", "-v", "--tb=long", "-s"]
