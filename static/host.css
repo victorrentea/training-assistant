@@ -66,6 +66,9 @@ body {
 #pax-badge { transition: background 1.5s ease; }
 #pax-badge.flash { background: #ffd16688; transition: none; }
 #summary-badge, #btn-transcription-lang { border-color: var(--accent2) !important; color: var(--accent2); --badge-fill: #48cfad44; }
+.host-footer-right .footer-neutral-badge {
+  border-color: var(--muted) !important;
+}
 
 /* Host page outer layout: columns + consolidated footer */
 .host-layout {
@@ -329,7 +332,7 @@ body {
   align-items: center;
   justify-content: center;
   cursor: default;
-  opacity: .55;
+  opacity: 1;
   line-height: 1;
   font-size: 1rem;
   user-select: none;
