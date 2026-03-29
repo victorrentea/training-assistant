@@ -1,14 +1,15 @@
 {
-  "sha": "9ebce8d1e201d9be53d6a50a670f230e395043ad",
-  "timestamp": "2026-03-29 15:44",
+  "sha": "98697531a2842159ed5ee3123d372fb4d96fb12b",
+  "timestamp": "2026-03-29 15:46",
   "changelog": [
-    "fix: countdown starts at 3:00; arm inactivity timer on server activity change",
-    "feat: add 6-min host inactivity auto-return modal",
-    "chore: remove old 30s conference auto-return timer",
-    "feat: replace Hello tab with Slides tab (\ud83d\udc68\ud83c\udffb\u200d\ud83c\udfeb)",
-    "docs: add Slides tab + inactivity auto-return spec and plan"
+    "Host footer QR icon after join link"
   ],
   "commits": [
+    {
+      "sha": "98697531",
+      "msg": "Host footer QR icon after join link",
+      "ts": "2026-03-29T15:45:24+03:00"
+    },
     {
       "sha": "eb745e36",
       "msg": "Fix transcript preview log timestamp leakage",
@@ -103,11 +104,6 @@
       "sha": "2d58016d",
       "msg": "feat: enable transcript llm clean and update log format",
       "ts": "2026-03-29T15:08:37+03:00"
-    },
-    {
-      "sha": "ae98fc70",
-      "msg": "fix: countdown starts at 3:00; arm inactivity timer on server activity change",
-      "ts": "2026-03-29T15:01:35+03:00"
     }
   ],
   "branches": [
