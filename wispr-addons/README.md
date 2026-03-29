@@ -61,6 +61,9 @@ When dictation stops (Mouse Button 5 again, or Escape):
 - **Resumes** media playback
 - **Restores** the original volume level
 
+Double-click Mouse Button 3 (wheel click):
+- **Repastes** the last text captured from Wispr Flow/Cmd+V at the current cursor position
+
 This ensures meeting/stream audio doesn't leak into dictation, even for apps that ignore volume changes.
 
 ## Stop
