@@ -1,10 +1,15 @@
 {
-  "sha": "44ee60e254d07c36076cf49f420de8f1f13aaa86",
-  "timestamp": "2026-03-29 15:21",
+  "sha": "0a55730a23d0c9a3c96cb03c102f268cafc0cba3",
+  "timestamp": "2026-03-29 15:25",
   "changelog": [
-    "chore: reword startup unprocessed transcript log"
+    "feat: footer join link ctrl-open and click-copy tooltip"
   ],
   "commits": [
+    {
+      "sha": "0a55730a",
+      "msg": "feat: footer join link ctrl-open and click-copy tooltip",
+      "ts": "2026-03-29T15:25:28+03:00"
+    },
     {
       "sha": "44ee60e2",
       "msg": "chore: reword startup unprocessed transcript log",
@@ -99,11 +104,6 @@
       "sha": "d71450ab",
       "msg": "fix: remove .txt extension from Key Points badge label",
       "ts": "2026-03-29T14:55:25+03:00"
-    },
-    {
-      "sha": "2a927224",
-      "msg": "feat: replace slides catalog SVG icon with gray folder emoji",
-      "ts": "2026-03-29T14:53:53+03:00"
     }
   ],
   "branches": [
