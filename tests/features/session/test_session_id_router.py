@@ -79,6 +79,60 @@ def test_resume_folder_uses_session_id_from_local_snapshot(monkeypatch, tmp_path
     assert state.session_folder_ids[folder] == "hist42"
 
 
+def test_session_active_autojoin_when_main_open_and_session_id_missing():
+    client = TestClient(app, headers=_HOST_AUTH_HEADERS)
+    state.session_main = {
+        "name": "2026-03-29 Open Session",
+        "started_at": "2026-03-29T09:00:00",
+        "status": "active",
+    }
+    state.session_name = "2026-03-29 Open Session"
+    state.session_id = None
+
+    resp = client.get("/api/session/active")
+    assert resp.status_code == 200
+    body = resp.json()
+
+    assert body["active"] is True
+    assert body["auto_join"] is True
+    assert isinstance(body["session_id"], str) and len(body["session_id"]) == 6
+    assert state.session_folder_ids["2026-03-29 Open Session"] == body["session_id"]
+
+
+def test_session_active_not_active_for_stopped_main_with_stale_session_id():
+    client = TestClient(app, headers=_HOST_AUTH_HEADERS)
+    state.session_main = {
+        "name": "2026-03-29 Stopped Session",
+        "started_at": "2026-03-29T09:00:00",
+        "status": "ended",
+    }
+    state.session_id = "stale1"
+    state.session_request = None
+
+    resp = client.get("/api/session/active")
+    assert resp.status_code == 200
+    body = resp.json()
+
+    assert body["active"] is False
+    assert body["auto_join"] is False
+    assert body["session_id"] == "stale1"
+
+
+def test_session_active_pending_create_without_main_is_active_but_not_autojoin():
+    client = TestClient(app, headers=_HOST_AUTH_HEADERS)
+    state.session_main = None
+    state.session_id = "abc123"
+    state.session_request = {"action": "create", "name": "2026-03-29 Pending"}
+
+    resp = client.get("/api/session/active")
+    assert resp.status_code == 200
+    body = resp.json()
+
+    assert body["active"] is True
+    assert body["auto_join"] is False
+    assert body["session_id"] == "abc123"
+
+
 @pytest.mark.anyio
 async def test_ws_session_folders_updates_folder_to_id_map():
     await _handle_session_folders(

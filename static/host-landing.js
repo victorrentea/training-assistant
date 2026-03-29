@@ -8,6 +8,10 @@ async function loadPage() {
     ]);
     const active = await activeRes.json();
     const {folders} = await foldersRes.json();
+    if (active && active.auto_join && active.session_id) {
+      onSessionReady(active.session_id);
+      return;
+    }
     renderPage(active, folders);
   } catch (e) {
     document.getElementById('app').innerHTML =

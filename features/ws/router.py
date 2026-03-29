@@ -252,8 +252,9 @@ async def _handle_debate_ai_result(data):
 
 async def _handle_session_sync(data):
     """Daemon sends session state — replicate POST /api/session/sync."""
-    if data.get("main") is not None:
-        state.session_main = data.get("main")
+    if "main" in data:
+        from features.session.router import _apply_session_main
+        _apply_session_main(data.get("main"))
     key_points = data.get("key_points") or data.get("discussion_points") or []
     if key_points:
         state.summary_points = key_points
