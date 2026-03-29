@@ -1,10 +1,15 @@
 {
-  "sha": "b2279e0bacfefe02821ebb345ec0ca9708fe32e8",
+  "sha": "6d3eca4b788c6556178a143cb2a2e75be631c659",
   "timestamp": "2026-03-29 15:40",
   "changelog": [
-    "feat: show daemon connection status on host landing page (#86)"
+    "Victorrentea/folder icon topic count (#87)"
   ],
   "commits": [
+    {
+      "sha": "6d3eca4b",
+      "msg": "Victorrentea/folder icon topic count (#87)",
+      "ts": "2026-03-29T15:40:42+03:00"
+    },
     {
       "sha": "b2279e0b",
       "msg": "feat: show daemon connection status on host landing page (#86)",
@@ -99,11 +104,6 @@
       "sha": "51b5d34d",
       "msg": "chore: remove old 30s conference auto-return timer",
       "ts": "2026-03-29T14:56:32+03:00"
-    },
-    {
-      "sha": "d59bf310",
-      "msg": "feat: replace Hello tab with Slides tab (\ud83d\udc68\ud83c\udffb\u200d\ud83c\udfeb)",
-      "ts": "2026-03-29T14:54:07+03:00"
     }
   ],
   "branches": [
