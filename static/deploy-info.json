@@ -1,10 +1,15 @@
 {
-  "sha": "fc93c4b4f07bfb1abf1de379136eece1bdb95781",
-  "timestamp": "2026-03-29 13:20",
+  "sha": "734f81437f90e6e148b27c2753337d582ac4d76e",
+  "timestamp": "2026-03-29 13:22",
   "changelog": [
-    "feat(host-landing): support date-range folder names in session list"
+    "feat(landing): merge today's sessions into previous sessions list with TODAY tag"
   ],
   "commits": [
+    {
+      "sha": "734f8143",
+      "msg": "feat(landing): merge today's sessions into previous sessions list with TODAY tag",
+      "ts": "2026-03-29T13:21:43+03:00"
+    },
     {
       "sha": "fc93c4b4",
       "msg": "feat(host-landing): support date-range folder names in session list",
@@ -99,11 +104,6 @@
       "sha": "c7514919",
       "msg": "refactor(host): tabs left-aligned, session title centered in top bar, join link absolutely centered",
       "ts": "2026-03-29T12:52:22+03:00"
-    },
-    {
-      "sha": "6af8f5e6",
-      "msg": "fix(auth): restore Basic Auth on session landing endpoints via httponly cookie",
-      "ts": "2026-03-29T12:50:28+03:00"
     }
   ],
   "branches": [
