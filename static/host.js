@@ -3154,13 +3154,13 @@ function copyCenterUrl(el) {
   });
 }
 
-function _showFooterCopiedTooltip(el) {
+function _showFooterCopiedTooltip(el, message = 'Link Copied') {
   if (!el) return;
   const old = el.querySelector('.footer-copy-tip');
   if (old) old.remove();
   const tip = document.createElement('div');
   tip.className = 'footer-copy-tip';
-  tip.textContent = 'Copied...';
+  tip.textContent = message;
   tip.style.cssText = 'position:absolute; left:50%; bottom:calc(100% + 6px); transform:translateX(-50%); background:var(--surface2); color:var(--accent2); border:1px solid var(--border); padding:.12rem .45rem; border-radius:6px; font-size:.72rem; pointer-events:none; opacity:1; transition:opacity .35s ease 3s;';
   el.appendChild(tip);
   requestAnimationFrame(() => requestAnimationFrame(() => { tip.style.opacity = '0'; }));
@@ -3175,9 +3175,8 @@ function onFooterJoinLinkClick(event) {
     return;
   }
   event.preventDefault();
-  navigator.clipboard.writeText(url).then(() => {
-    _showFooterCopiedTooltip(event.currentTarget);
-  });
+  _showFooterCopiedTooltip(event.currentTarget, 'Link Copied');
+  void navigator.clipboard.writeText(url).catch(() => {});
 }
 
 function _getJoinUrl() {

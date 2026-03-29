@@ -1,10 +1,15 @@
 {
-  "sha": "d4832809c96629ea97f0eab84766aa685ae98346",
-  "timestamp": "2026-03-29 16:08",
+  "sha": "e67f774e01d4b90f53e969cda11b68cc207154d3",
+  "timestamp": "2026-03-29 16:09",
   "changelog": [
-    "ui: remove center daemon status panel"
+    "fix: guard missing session fragile row in host ui"
   ],
   "commits": [
+    {
+      "sha": "e67f774e",
+      "msg": "fix: guard missing session fragile row in host ui",
+      "ts": "2026-03-29T16:08:26+03:00"
+    },
     {
       "sha": "d4832809",
       "msg": "ui: remove center daemon status panel",
@@ -99,11 +104,6 @@
       "sha": "6870eb67",
       "msg": "chore: log zero-word transcript after llm sanitize",
       "ts": "2026-03-29T15:15:37+03:00"
-    },
-    {
-      "sha": "0d2a89bb",
-      "msg": "chore: compact transcript llm log into one line",
-      "ts": "2026-03-29T15:15:01+03:00"
     }
   ],
   "branches": [
