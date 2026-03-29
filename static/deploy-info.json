@@ -1,10 +1,15 @@
 {
-  "sha": "7603053138c895deafdfe2705545321aa52212db",
-  "timestamp": "2026-03-29 14:14",
+  "sha": "bee2a8459ddf7b4132602b03658fc80bb37344fa",
+  "timestamp": "2026-03-29 14:16",
   "changelog": [
-    "feat: redirect host UI to correct session after server restart"
+    "fix: clear needs_restore when daemon WS connects"
   ],
   "commits": [
+    {
+      "sha": "bee2a845",
+      "msg": "fix: clear needs_restore when daemon WS connects",
+      "ts": "2026-03-29T14:16:11+03:00"
+    },
     {
       "sha": "76030531",
       "msg": "feat: redirect host UI to correct session after server restart",
@@ -99,11 +104,6 @@
       "sha": "0b77b0ec",
       "msg": "fix(host): smarter server-unreachable blocker + redirect on session loss",
       "ts": "2026-03-29T13:37:47+03:00"
-    },
-    {
-      "sha": "d0803624",
-      "msg": "fix(landing): widen date column and add ellipsis to prevent line-break",
-      "ts": "2026-03-29T13:33:52+03:00"
     }
   ],
   "branches": [
