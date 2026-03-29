@@ -23,10 +23,8 @@
   let _sessionIntervalsError = '';
   let _slidesCacheStatus = {};
   let _currentSessionId = null;
-  let _blockerAutoTimer = null;
-  let _blockerFolderExists = false;
   let _blockerDismissed = false;
-  let _blockerOriginalName = '';
+  let _blockerFolderListLoaded = false;
   let _slidesCatalogHideTimer = null;
   let _gitRepos = [];
   let _slidesLog = [];
@@ -3099,6 +3097,7 @@ function _updateBlocker() {
   // Dismiss if host explicitly started a session via blockerStart()
   if (_blockerDismissed) {
     blocker.style.display = 'none';
+    _blockerFolderListLoaded = false;
     return;
   }
 
@@ -3106,11 +3105,18 @@ function _updateBlocker() {
   const urlSessionId = _getSessionIdFromUrl();
   if (urlSessionId && _currentSessionId && urlSessionId === _currentSessionId) {
     blocker.style.display = 'none';
+    _blockerFolderListLoaded = false;
     return;
   }
 
-  blocker.style.display = 'flex';
-  _loadBlockerFolderList();
+  if (blocker.style.display !== 'flex') {
+    blocker.style.display = 'flex';
+    _blockerFolderListLoaded = false;  // reset when blocker becomes visible
+  }
+  if (!_blockerFolderListLoaded) {
+    _blockerFolderListLoaded = true;
+    _loadBlockerFolderList();
+  }
 }
 
 function onBlockerInput() {
