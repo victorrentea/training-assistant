@@ -1,10 +1,15 @@
 {
-  "sha": "f73ac7acc3c3dffca2b48cb643a9cc9aa8a057e9",
-  "timestamp": "2026-03-29 13:00",
+  "sha": "79b588fdfe1a999d32d6c20d934e0256d502f243",
+  "timestamp": "2026-03-29 13:02",
   "changelog": [
-    "style(host): stop badge always red background"
+    "fix(wispr-addons): make clean paste menu items clickable, use WISPR_CLEANUP_ANTHROPIC_API_KEY"
   ],
   "commits": [
+    {
+      "sha": "79b588fd",
+      "msg": "fix(wispr-addons): make clean paste menu items clickable, use WISPR_CLEANUP_ANTHROPIC_API_KEY",
+      "ts": "2026-03-29T13:02:43+03:00"
+    },
     {
       "sha": "f73ac7ac",
       "msg": "style(host): stop badge always red background",
@@ -99,11 +104,6 @@
       "sha": "77036274",
       "msg": "chore: add LLM transcript cleanup experiment script",
       "ts": "2026-03-29T12:23:36+03:00"
-    },
-    {
-      "sha": "58971604",
-      "msg": "feat(transcript): optional LLM pre-filter for Whisper hallucination cleanup",
-      "ts": "2026-03-29T12:20:57+03:00"
     }
   ],
   "branches": [
