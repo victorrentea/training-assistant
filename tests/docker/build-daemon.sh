@@ -18,9 +18,14 @@ cp -r "$REPO_ROOT/features" "$BUILD_DIR/app/"
 cp -r "$REPO_ROOT/daemon" "$BUILD_DIR/app/"
 cp -r "$REPO_ROOT/static" "$BUILD_DIR/app/"
 
+# Copy test page objects
+mkdir -p "$BUILD_DIR/tests/pages"
+cp -r "$REPO_ROOT/tests/pages/"* "$BUILD_DIR/tests/pages/"
+
 # Copy test files
 mkdir -p "$BUILD_DIR/tests/docker"
 cp "$DOCKER_DIR/test_daemon_connected.py" "$BUILD_DIR/tests/docker/"
+cp "$DOCKER_DIR/test_poll_flow.py" "$BUILD_DIR/tests/docker/"
 cp "$DOCKER_DIR/start_hermetic.sh" "$BUILD_DIR/tests/docker/"
 cp "$DOCKER_DIR/Dockerfile.daemon" "$BUILD_DIR/"
 
