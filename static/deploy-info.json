@@ -1,10 +1,15 @@
 {
-  "sha": "1bcae32ed740008bfa5c05b189a0eaf01232c85b",
-  "timestamp": "2026-03-29 13:32",
+  "sha": "1e7285f585669a85a01771d98c6d36202674f167",
+  "timestamp": "2026-03-29 13:33",
   "changelog": [
-    "feat(landing): make session date editable, wider for date ranges"
+    "feat(host): display session name in top bar title"
   ],
   "commits": [
+    {
+      "sha": "1e7285f5",
+      "msg": "feat(host): display session name in top bar title",
+      "ts": "2026-03-29T13:33:10+03:00"
+    },
     {
       "sha": "1bcae32e",
       "msg": "feat(landing): make session date editable, wider for date ranges",
@@ -99,11 +104,6 @@
       "sha": "880ccb38",
       "msg": "fix(host): use \u23f9 stop emoji on stop badge",
       "ts": "2026-03-29T13:00:22+03:00"
-    },
-    {
-      "sha": "3cb563b6",
-      "msg": "feat(start): launch wispr-addons/clean.py alongside daemon and overlay",
-      "ts": "2026-03-29T12:59:59+03:00"
     }
   ],
   "branches": [
