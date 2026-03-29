@@ -149,21 +149,6 @@ app.include_router(poll_global_router)
 app.include_router(feedback.router)
 
 
-# ── Test-only state reset (enabled by HERMETIC_TEST_MODE=1) ──
-import os as _os
-if _os.environ.get("HERMETIC_TEST_MODE") == "1":
-    @app.post("/api/test/reset")
-    async def _test_reset_state():
-        """Reset all in-memory state except daemon WS connection and slides catalog."""
-        daemon_ws = state.daemon_ws
-        catalog = getattr(state, 'slides_catalog', {})
-        state.reset()
-        state.daemon_ws = daemon_ws
-        state.slides_catalog = catalog
-        state.needs_restore = False
-        return {"ok": True}
-
-
 # ── Session-scoped host dependency ──
 
 async def _require_active_session_host(session_id: str):

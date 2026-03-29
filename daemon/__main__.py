@@ -863,6 +863,14 @@ def run() -> None:
                         ended = session_stack.pop()
                         ended["ended_at"] = datetime.now().isoformat()
                         ended_folder = sessions_root / ended["name"]
+                        # Save the current session's full state snapshot before clearing
+                        _latest_session_snapshot = _pending_requests.pop("session_snapshot_result", None)
+                        if _latest_session_snapshot and ended_folder.exists():
+                            try:
+                                save_session_state(ended_folder, _latest_session_snapshot)
+                                log.info("session", f"Saved final snapshot for {ended['name']}")
+                            except Exception as e:
+                                log.error("session", f"Failed to save final snapshot: {e}")
                         save_key_points(ended_folder, current_key_points, summary_watermark, session_start_date(ended))
                         parent_snapshot = None
                         if session_stack:

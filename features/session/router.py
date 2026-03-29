@@ -294,15 +294,18 @@ async def create_session(body: SessionCreateBody):
     name = _normalize_session_name(body.name)
     session_id = _resolve_session_id_for_folder(name)
 
-    # Clear all activity state from previous session — fresh start
+    # Tell daemon to save the old session's state to disk first,
+    # then clear activity state for the fresh session
+    state.session_request = {"action": "create", "name": name, "session_id": session_id}
+    await _push_session_request_sync(state.session_request)
+
+    # Daemon has acked (saved old state) — now safe to clear
     _clear_activity_state()
 
     state.session_id = session_id
     state.session_name = name
     state.session_type = body.type
     state.mode = "conference" if body.type == "talk" else "workshop"
-    state.session_request = {"action": "create", "name": name, "session_id": state.session_id}
-    await _push_session_request_sync(state.session_request)
     await broadcast_state()
     return {"ok": True, "session_id": state.session_id, "session_name": state.session_name}
 
