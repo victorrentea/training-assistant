@@ -89,7 +89,8 @@
       }
 
       const rect = el.getBoundingClientRect();
-      popup.style.top = (rect.bottom + 4) + 'px';
+      popup.style.bottom = (window.innerHeight - rect.top + 4) + 'px';
+      popup.style.top = '';
       popup.style.right = (window.innerWidth - rect.right) + 'px';
 
       const info = await _fetchDeployInfo();
