@@ -1,10 +1,15 @@
 {
-  "sha": "112a047c626bb1c31273fec962734408cbee35c6",
-  "timestamp": "2026-03-29 13:43",
+  "sha": "b415a5f8a5ea32cbcafdcf26aa540ec508fdef6e",
+  "timestamp": "2026-03-29 13:44",
   "changelog": [
-    "fix(session): persist session_id in state-backup so URLs survive BE restart"
+    "feat(host): session title in white, strip date prefix"
   ],
   "commits": [
+    {
+      "sha": "b415a5f8",
+      "msg": "feat(host): session title in white, strip date prefix",
+      "ts": "2026-03-29T13:44:10+03:00"
+    },
     {
       "sha": "112a047c",
       "msg": "fix(session): persist session_id in state-backup so URLs survive BE restart",
@@ -99,11 +104,6 @@
       "sha": "520ad47e",
       "msg": "fix(wispr-addons): replace osascript keystroke with CGEventPost (no timeout risk)",
       "ts": "2026-03-29T13:07:05+03:00"
-    },
-    {
-      "sha": "41775d5d",
-      "msg": "feat(wispr-addons): show \u2764\ufe0f in log when cleaned with emoji mode",
-      "ts": "2026-03-29T13:05:24+03:00"
     }
   ],
   "branches": [
