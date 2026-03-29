@@ -1,10 +1,15 @@
 {
-  "sha": "80cca2ff88caa09bbb1b9da57508a58eb78e819e",
+  "sha": "a0c9dfebd2cc39064383d29c92fbdbf9aad126b6",
   "timestamp": "2026-03-29 14:57",
   "changelog": [
-    "feat: play Sosumi sound on daemon clean exit"
+    "feat: show daemon connection status on host landing page"
   ],
   "commits": [
+    {
+      "sha": "a0c9dfeb",
+      "msg": "feat: show daemon connection status on host landing page",
+      "ts": "2026-03-29T14:55:36+03:00"
+    },
     {
       "sha": "80cca2ff",
       "msg": "feat: play Sosumi sound on daemon clean exit",
@@ -99,11 +104,6 @@
       "sha": "d1da13e1",
       "msg": "fix: remove floating end-session button, use stop badge with \u23f9\ufe0f emoji",
       "ts": "2026-03-29T14:32:22+03:00"
-    },
-    {
-      "sha": "4719e111",
-      "msg": "feat: replace \ud83d\udcdc with folder SVG icon in slides-catalog badge",
-      "ts": "2026-03-29T14:27:38+03:00"
     }
   ],
   "branches": [
