@@ -3237,8 +3237,12 @@ function renderSessionPanel() {
   const titleEl = document.getElementById('host-top-title');
   if (titleEl) titleEl.textContent = main ? main.name : '';
   // Stop button visibility
-  const stopWrap = document.getElementById('stop-session-wrap-left');
-  if (stopWrap) stopWrap.style.display = main ? '' : 'none';
+  const stopBtn = document.getElementById('stop-session-btn-left');
+  if (stopBtn) {
+    stopBtn.disabled = !main;
+    stopBtn.style.pointerEvents = main ? '' : 'none';
+    stopBtn.classList.toggle('disabled', !main);
+  }
 
   // Main session row
   const mainRow = document.getElementById('session-main-row');
