@@ -11,7 +11,7 @@ import subprocess
 import sys
 import time
 from dataclasses import replace as dc_replace
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -122,6 +122,7 @@ end tell
 _AUDIOHIJACK_SESSIONS_PLIST = os.path.expanduser(
     "~/Library/Application Support/Audio Hijack 4/Sessions.plist"
 )
+_RAW_TRANSCRIPT_TXT_RE = re.compile(r"^(\d{8})\s+\d{4}\b.*\.txt$", re.IGNORECASE)
 
 
 def _read_audiohijack_language() -> str | None:
@@ -184,6 +185,47 @@ def _set_audiohijack_language(lang_code: str) -> None:
             plistlib.dump(data, f)
 
     subprocess.Popen(["open", "-a", "Audio Hijack"])
+
+
+def _restart_audiohijack() -> None:
+    """Restart Audio Hijack process (used when transcript capture is stale)."""
+    subprocess.run(["pkill", "-x", "Audio Hijack"], capture_output=True)
+    subprocess.Popen(["open", "-a", "Audio Hijack"])
+
+
+def _raw_transcript_dates(folder: Path) -> set[date]:
+    """Return distinct dates found in raw Audio Hijack transcript filenames."""
+    dates: set[date] = set()
+    if not folder.exists() or not folder.is_dir():
+        return dates
+    for entry in folder.iterdir():
+        if not entry.is_file():
+            continue
+        match = _RAW_TRANSCRIPT_TXT_RE.match(entry.name)
+        if not match:
+            continue
+        ds = match.group(1)
+        try:
+            dates.add(date(int(ds[:4]), int(ds[4:6]), int(ds[6:8])))
+        except ValueError:
+            continue
+    return dates
+
+
+def _should_restart_for_missing_today_raw(folder: Path, today: date) -> bool:
+    """
+    Restart trigger:
+    - no raw transcript file for today
+    - at least one file for yesterday
+    - latest available raw date is yesterday
+    """
+    dates = _raw_transcript_dates(folder)
+    if not dates or today in dates:
+        return False
+    yesterday = today - timedelta(days=1)
+    if yesterday not in dates:
+        return False
+    return max(dates) == yesterday
 
 
 def _coerce_slide_number(value) -> int:
@@ -556,6 +598,9 @@ def run() -> None:
     last_auto_close_date: date | None = None   # prevent double-close on same calendar day
     last_auto_start_date: date | None = None   # prevent double-start on same calendar day
     last_lang_sync_date: date | None = None    # sync AudioHijack language once per day
+    last_hijack_restart_for_missing_today: date | None = None  # anti-loop guard: restart at most once/day
+    last_raw_transcript_guard_check_at: float = 0.0
+    _RAW_TRANSCRIPT_GUARD_INTERVAL: float = 30.0
     _timing_fired_date: date | None = None     # date for which timing events were tracked
     _timing_fired_today: set = set()           # timing events already fired today
     slides_log: list[dict] = []        # {file, slide, first_seen_at, first_seen_hhmm, seconds_spent}
@@ -854,6 +899,23 @@ def run() -> None:
 
                 # ── Re-detect session folder on date change or if notes not yet found (every 5s) ──
                 today = date.today()
+                if now - last_raw_transcript_guard_check_at >= _RAW_TRANSCRIPT_GUARD_INTERVAL:
+                    last_raw_transcript_guard_check_at = now
+                    if last_hijack_restart_for_missing_today != today:
+                        try:
+                            if _should_restart_for_missing_today_raw(config.folder, today):
+                                log.info(
+                                    "transcript",
+                                    f"No raw transcript file for today ({today.isoformat()}); only yesterday exists. "
+                                    "Restarting Audio Hijack and sleeping 3s to force today's file.",
+                                )
+                                _restart_audiohijack()
+                                time.sleep(3)
+                                log.info("transcript", "Audio Hijack restart guard completed (slept 3s)")
+                                last_hijack_restart_for_missing_today = today
+                        except Exception as e:
+                            log.error("transcript", f"Audio Hijack restart guard failed: {e}")
+
                 notes_missing = config.session_notes is None
                 date_changed = today != last_detected_date
                 session_recheck_due = notes_missing and (now - last_session_check_at >= 5.0)
