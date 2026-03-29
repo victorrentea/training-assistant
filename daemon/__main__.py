@@ -778,7 +778,15 @@ def run() -> None:
                             except Exception:
                                 pass
                         _push_session_folders()
-                        log.info("session", f"Session started: {name} (stack size: {len(session_stack)})")
+                        participant_join_link = (
+                            f"{config.server_url}/{_active_session_id}"
+                            if _active_session_id
+                            else f"{config.server_url}/"
+                        )
+                        log.info(
+                            "session",
+                            f"Session started: {name} (stack size: {len(session_stack)}) | participant join: {participant_join_link}",
+                        )
 
                     elif action == "start":
                         name = session_req["name"]
