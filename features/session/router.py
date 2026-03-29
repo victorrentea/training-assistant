@@ -336,6 +336,10 @@ async def get_interval_lines_txt(
 
 @router.get("/api/session/folders", dependencies=[Depends(require_host_auth_or_cookie)])
 async def list_session_folders():
+    # Prefer daemon-pushed list (works on Railway where local filesystem isn't accessible)
+    if state.session_folders:
+        return {"folders": state.session_folders}
+    # Fallback: scan local filesystem (works when running locally)
     root = _get_sessions_root()
     folders = []
     if root:
