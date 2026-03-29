@@ -3,10 +3,11 @@
 # start.sh — Unified launcher for all workshop companion processes
 # ═══════════════════════════════════════════════════════════════════
 #
-# Starts three processes:
+# Starts two processes:
 #   1. Training daemon  — polls server for quiz/debate/summary requests
 #   2. Desktop overlay  — macOS overlay app rendering participant emoji reactions
-#   3. Wispr cleanup    — menu bar icon for AI clipboard cleanup (Cmd+Ctrl+V)
+#
+# NOTE: Wispr cleanup (wispr-addons/app.py) is NOT started here — run it separately.
 #
 # Auto-updates: every 2s, `git fetch` checks for new commits on master.
 # When new code is detected (or daemon exits with code 42), the daemon is
@@ -48,7 +49,6 @@ fi
 
 DAEMON_PID=""
 OVERLAY_PID=""
-WISPR_PID=""
 
 cleanup() {
   echo ""
@@ -61,11 +61,6 @@ cleanup() {
     _log "start" "info" "💀 overlay (pid $OVERLAY_PID)"
     kill "$OVERLAY_PID" 2>/dev/null
     OVERLAY_PID=""
-  fi
-  if [ -n "$WISPR_PID" ]; then
-    _log "start" "info" "💀 wispr (pid $WISPR_PID)"
-    kill "$WISPR_PID" 2>/dev/null
-    WISPR_PID=""
   fi
   wait 2>/dev/null
   exit 0
@@ -96,11 +91,6 @@ start_overlay() {
   if [ -n "$NO_OVERLAY" ]; then return; fi
   (cd desktop-overlay && .build/arm64-apple-macosx/debug/DesktopOverlay "$OVERLAY_SERVER") &
   OVERLAY_PID=$!
-}
-
-start_wispr() {
-  python3 wispr-addons/app.py &
-  WISPR_PID=$!
 }
 
 # ── Git auto-update (fallback when watcher unavailable) ──
@@ -141,11 +131,6 @@ stop_all_processes() {
     kill "$OVERLAY_PID" 2>/dev/null
     OVERLAY_PID=""
   fi
-  if [ -n "$WISPR_PID" ]; then
-    _log "start" "info" "💀 wispr (pid $WISPR_PID)"
-    kill "$WISPR_PID" 2>/dev/null
-    WISPR_PID=""
-  fi
 }
 
 pull_and_rebuild() {
@@ -165,10 +150,9 @@ build_overlay
 while true; do
   start_daemon
   start_overlay
-  start_wispr
 
   echo ""
-  _log "start" "info" "🟢 daemon  🟢 overlay  🟢 wispr"
+  _log "start" "info" "🟢 daemon  🟢 overlay"
   echo ""
 
   # Poll loop: check daemon health + git updates every 10s
