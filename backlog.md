@@ -7,6 +7,7 @@
 - [x] daemon transcript logs: compact format without preview text (`Transcripted N words (🤖 Xms)`), and zero-text case uses `- remove all = noise`.
 - [x] daemon transcript logs: when LLM sanitization leaves no normalized text, log `Transcripted 0 words (🤖 Xms):` explicitly.
 - [x] daemon transcript logs: collapse `🤖 LLM sanitized ...` + `Transcripted ...` into a single line (`Transcripted N words (🤖 Xms): preview ...`).
+- [x] daemon transcript logs: preview no longer echoes inline transcript timestamp tokens (e.g. `[ 14:52:12 ]`); format is `... OLLAMA:` then preview on next line.
 - [x] daemon: if today's raw transcript file is missing and latest raw file is from yesterday, restart Audio Hijack once (anti-loop guard) and sleep 3s, with explicit log message.
 - [x] ui: participant Key Points label now includes spacing between count and text (`🧠 38 Key Points` instead of `🧠 38Key Points`)
 - [x] ui: session panel compacted for host screen — session controls are clickable emoji-only (no button chrome), pause is followed by a vertical separator then `🎙️▶️`, and current session now shows transcript active time windows under the row.
