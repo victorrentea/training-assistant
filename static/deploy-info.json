@@ -1,10 +1,15 @@
 {
-  "sha": "3cfe8b2e9021c5e9da1d2372104a8f4f5c612045",
-  "timestamp": "2026-03-29 16:32",
+  "sha": "f1ab921b8b6deaa2caa3bd4d70a8bc6bee69cd8e",
+  "timestamp": "2026-03-29 16:34",
   "changelog": [
-    "fix: keep host stop button always enabled"
+    "fix: unify slides badge border in host footer"
   ],
   "commits": [
+    {
+      "sha": "f1ab921b",
+      "msg": "fix: unify slides badge border in host footer",
+      "ts": "2026-03-29T16:32:59+03:00"
+    },
     {
       "sha": "3cfe8b2e",
       "msg": "fix: keep host stop button always enabled",
@@ -99,11 +104,6 @@
       "sha": "6d3eca4b",
       "msg": "Victorrentea/folder icon topic count (#87)",
       "ts": "2026-03-29T15:40:42+03:00"
-    },
-    {
-      "sha": "b2279e0b",
-      "msg": "feat: show daemon connection status on host landing page (#86)",
-      "ts": "2026-03-29T15:40:14+03:00"
     }
   ],
   "branches": [

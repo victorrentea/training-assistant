@@ -1,5 +1,6 @@
 # Tasks
 
+- [x] host top bar label renamed from `pax` to `participants`.
 - [x] host footer: unified 📁 slides badge border style with the other footer badges.
 - [x] host ui: STOP (`⏹️`) button is never disabled; it remains active after host page load/refresh.
 - [x] host landing: `TODAY` tag in Previous sessions now blinks slowly.
