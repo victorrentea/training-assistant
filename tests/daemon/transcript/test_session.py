@@ -347,7 +347,7 @@ class TestFormatStartupLog:
             session_start_date=SESSION_START_DATE,
             today=TODAY,
         )
-        assert result == "Watermark: —, Unprocessed: 3 lines, session: 3 lines during [09:30-12:00] [13:30-now..."
+        assert result == "Watermark: —, Unprocessed: 3 lines, session: 3 lines during [09:30-12:00, 13:30-now..."
 
     def test_previous_day_watermark_and_segment(self):
         """Multi-day: watermark and first segment are on Day 1 (previous day)."""
@@ -370,7 +370,7 @@ class TestFormatStartupLog:
         )
         assert result == (
             "Watermark: Day 1 09:30, Unprocessed: 1 lines, session: 2 lines during "
-            "[Day 1 09:30-Day 1 17:00] [09:00-now..."
+            "[Day 1 09:30-17:00] [09:00-now..."
         )
 
     def test_entries_with_none_timestamps_excluded_from_counts(self):

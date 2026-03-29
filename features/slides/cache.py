@@ -405,6 +405,10 @@ def seed_catalog_from_file() -> None:
             "title": str(entry.get("title") or slug),
             "drive_export_url": drive_url,
         }
+        if slug not in state.slides_cache_status:
+            dest = _cache_path(slug)
+            initial_status = "cached" if dest.exists() else "not_cached"
+            _set_status(slug, initial_status)
         seeded += 1
     if seeded:
         logger.info("slides: pre-seeded %d catalog entries from static file", seeded)

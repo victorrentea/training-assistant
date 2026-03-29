@@ -243,7 +243,13 @@
     </div>
     <!-- Poll results panel -->
     <div id="center-poll" class="center-panel" style="display:none;">
-      <div style="flex-shrink:0;">
+      <!-- Daemon status shown on landing (activity=none) -->
+      <div id="daemon-landing-status" style="display:none; flex-direction:column; align-items:center; justify-content:center; gap:.6rem; padding:2rem 1rem; text-align:center;">
+        <div id="daemon-landing-icon" style="font-size:3rem; line-height:1;">🤖</div>
+        <div id="daemon-landing-label" style="font-size:1.1rem; font-weight:600; color:var(--text);"></div>
+        <div id="daemon-landing-detail" style="font-size:.85rem; color:var(--muted); font-family:monospace;"></div>
+      </div>
+      <div id="poll-results-section" style="flex-shrink:0;">
         <div style="display:flex; align-items:center; gap:.5rem; flex-wrap:wrap; margin-bottom:.9rem;">
           <h2 style="margin:0; font-size:.95rem; color:var(--muted); text-transform:uppercase; letter-spacing:.08em;">Current Poll</h2>
           <span id="poll-pills"></span>
@@ -306,14 +312,13 @@
     <span id="daemon-badge" class="badge disconnected" title="">🤖</span>
     <span id="notes-badge" class="badge disconnected" title="" onclick="toggleHostNotesModal()" style="cursor:pointer">📝</span>
     <span id="summary-badge" class="badge disconnected" title="No key points yet — click to generate now" onclick="toggleSummaryModal()" style="cursor:pointer">🧠</span>
-    <span id="btn-transcription-lang" class="badge" onclick="toggleTranscriptionLanguage()" title="Toggle transcription language" style="cursor:pointer;">🇷🇴</span>
+    <span id="btn-transcription-lang" class="badge" onclick="toggleTranscriptionLanguage()" title="Toggle transcription language" style="cursor:pointer;">🇷🇴 RO</span>
     <span id="overlay-badge" class="badge disconnected" title="Desktop Overlay app — click to fire a heart" onclick="triggerHostHeart()" style="cursor:pointer">❤️</span>
   </div>
   <div class="host-footer-center">
     <span id="participant-link" style="color:#fff; font-size:1.25rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; flex-shrink:1;"></span><span id="session-id-suffix" style="display:none; font-size:1.25rem; font-family:monospace; font-weight:bold; color:#f0c040; letter-spacing:2px; white-space:nowrap;"></span>
   </div>
   <div class="host-footer-right">
-    <button class="btn-scores-reset" onclick="resetScores()" title="Reset all scores to zero">🗑</button>
     <span id="token-cost" class="badge" style="font-size:.75rem; color:var(--muted); flex-shrink:0;">$0.00</span>
     <div id="git-repos-hover" class="slides-catalog-hover">
       <span id="git-repos-badge" class="badge" style="font-size:0.85rem; cursor:default;">⎇ 0</span>
@@ -322,18 +327,18 @@
       </div>
     </div>
     <div id="slides-log-hover" class="slides-catalog-hover">
-      <span id="slides-log-badge" class="badge" style="font-size:0.85rem; cursor:default;">👁️ 0</span>
+      <span id="slides-log-badge" class="badge" style="font-size:0.85rem; cursor:default; gap:.35rem;"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;"><rect width="14" height="14" rx="2.5" fill="#D04E26"/><text x="7" y="10.5" text-anchor="middle" font-size="9" font-weight="700" font-family="Arial,sans-serif" fill="white">P</text></svg><span id="slides-log-count">0</span></span>
       <div id="slides-log-popover" class="slides-catalog-popover" hidden>
         <div id="slides-log-content" class="slides-catalog-content">No slides yet</div>
       </div>
     </div>
     <div id="slides-catalog-hover" class="slides-catalog-hover">
-      <span id="slides-catalog-icon" class="badge" title="Participant slides availability">📜</span>
+      <span id="slides-catalog-icon" class="badge" title="" style="filter:grayscale(1)">📁<span id="slides-catalog-count"></span></span>
       <div id="slides-catalog-popover" class="slides-catalog-popover" hidden>
         <div id="slides-catalog-content" class="slides-catalog-content">Loading...</div>
       </div>
     </div>
-    <div id="stop-session-wrap-left" style="position:relative; display:none;">
+    <div id="stop-session-wrap-left" style="position:relative;">
       <div id="stop-confirm-bubble-left" style="display:none; position:absolute; bottom:calc(100% + 8px); right:0;
            background:var(--surface2); border:1px solid var(--danger,#e74c3c); border-radius:8px;
            padding:.5rem .75rem; white-space:nowrap; font-size:.82rem; color:var(--text);
@@ -350,7 +355,7 @@
              border-bottom:1px solid var(--danger,#e74c3c); transform:rotate(45deg);"></div>
       </div>
       <button id="stop-session-btn-left" onclick="toggleStopConfirm()" title="Stop session"
-              class="badge stop-badge" style="cursor:pointer; font-size:1rem;">⏹</button>
+              class="badge stop-badge" style="cursor:pointer; font-size:1rem;">⏹️</button>
     </div>
   </div>
 </div>

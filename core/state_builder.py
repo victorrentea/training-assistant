@@ -11,11 +11,7 @@ from core.version import get_backend_version
 
 
 def _slides_deep_count() -> int:
-    totals: dict[tuple, int] = {}
-    for e in state.slides_log:
-        key = (e.get('file', ''), e.get('slide', 0))
-        totals[key] = totals.get(key, 0) + e.get('seconds_spent', 0)
-    return sum(1 for t in totals.values() if t >= 10)
+    return len({(e.get('file', ''), e.get('slide', 0)) for e in state.slides_log})
 
 
 def _slides_topic() -> str:

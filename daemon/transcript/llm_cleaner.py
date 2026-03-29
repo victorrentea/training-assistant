@@ -15,6 +15,7 @@ Run it offline to pre-clean raw files before normalization.
 import json
 import re
 import sys
+import time
 import urllib.request
 from pathlib import Path
 
@@ -122,6 +123,30 @@ def clean_line(line: str, model: str = MODEL, url: str = OLLAMA_URL, timeout: in
     if is_deterministic_garbage(content):
         return "[SKIP]"
     return call_ollama(line, model=model, url=url, timeout=timeout)
+
+
+def clean_line_with_meta(
+    line: str,
+    model: str = MODEL,
+    url: str = OLLAMA_URL,
+    timeout: int = 30,
+) -> tuple[str, bool, float]:
+    """
+    Clean one transcript line and return metadata.
+
+    Returns:
+      - cleaned text or '[SKIP]'
+      - whether a local LLM call was made
+      - local LLM duration in ms (0 when no LLM call was made)
+    """
+    content = re.sub(r"^\[\s*[\d\-: .]+\s*\]\s*", "", line.strip())
+    if is_deterministic_garbage(content):
+        return "[SKIP]", False, 0.0
+
+    started_at = time.perf_counter()
+    result = call_ollama(line, model=model, url=url, timeout=timeout)
+    elapsed_ms = (time.perf_counter() - started_at) * 1000.0
+    return result, True, elapsed_ms
 
 
 def call_ollama(line: str, model: str = MODEL, url: str = OLLAMA_URL, timeout: int = 30) -> str:

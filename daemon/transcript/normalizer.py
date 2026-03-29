@@ -51,7 +51,9 @@ class NormalizeResult:
     written_lines: int
     output_files: list[Path]
     reset_offset: bool
+    raw_words: int = 0
     written_words: int = 0
+    first_words: str = ""
 
 
 def _legacy_offset_file_for(raw_file: Path) -> Path:
@@ -256,7 +258,9 @@ def normalize_incremental(
         state.current_date = default_output_day
     state.current_hhmm = poll_hhmm
     grouped: dict[str, list[str]] = {}
+    raw_words = 0
     total_words = 0
+    first_words: list[str] = []
 
     for line in complete_lines:
         stripped = line.strip()
@@ -295,6 +299,7 @@ def normalize_incremental(
 
         if not text_content:
             continue
+        raw_words += len(text_content.split())
         if _is_low_signal_noise(text_content):
             continue
         # --- LLM pre-filter (optional, easy to remove) ---
@@ -308,13 +313,26 @@ def normalize_incremental(
         line_day = state.current_date or default_output_day
         normalized = f"[{poll_hhmm}] {speaker}: {text_content}"
         grouped.setdefault(line_day, []).append(normalized)
-        total_words += len(text_content.split())
+        words = text_content.split()
+        total_words += len(words)
+        if len(first_words) < 10:
+            first_words.extend(words[: 10 - len(first_words)])
 
     written_files = _append_outputs(output_dir, grouped)
     total_lines = sum(len(v) for v in grouped.values())
 
     _save_state(offset_file, state, raw_key=raw_key)
-    return NormalizeResult(raw_file, offset_file, read_bytes, total_lines, written_files, should_reset, total_words)
+    return NormalizeResult(
+        raw_file,
+        offset_file,
+        read_bytes,
+        total_lines,
+        written_files,
+        should_reset,
+        raw_words,
+        total_words,
+        " ".join(first_words),
+    )
 
 
 def normalize_folder_incremental(

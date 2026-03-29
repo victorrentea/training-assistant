@@ -27,7 +27,7 @@ def _ssl_context() -> ssl.SSLContext:
 _HTTP_ERROR_HINTS = {
     401: "wrong credentials (check HOST_USERNAME / HOST_PASSWORD)",
     403: "access denied (check Caddy basic_auth config)",
-    404: "endpoint not found (server may be outdated)",
+    404: "endpoint missing (server outdated?)",
     500: "server internal error (check uvicorn logs)",
     502: "bad gateway (reverse proxy issue — Caddy/nginx)",
     503: "server unavailable (workshop service may be down)",
