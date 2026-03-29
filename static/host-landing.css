@@ -30,11 +30,9 @@ body {
   text-align: center;
 }
 
-/* Rejoin section */
-.rejoin-section {
+/* Rejoin card */
+.rejoin-card {
   margin-bottom: 1.5rem;
-  padding-bottom: 1.5rem;
-  border-bottom: 1px solid var(--border);
 }
 
 .rejoin-label {
