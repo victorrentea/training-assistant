@@ -1,10 +1,15 @@
 {
-  "sha": "cd6c8e2de80d8ff7e653d23e5b81816ac56b9b6a",
-  "timestamp": "2026-03-29 14:37",
+  "sha": "b4136beb84b97a27eed8facc3ce5bfedf53b2d31",
+  "timestamp": "2026-03-29 14:41",
   "changelog": [
-    "feat: print active session name (or <NONE>) at daemon startup"
+    "fix: daemon handles main session end from host stop button"
   ],
   "commits": [
+    {
+      "sha": "b4136beb",
+      "msg": "fix: daemon handles main session end from host stop button",
+      "ts": "2026-03-29T14:41:25+03:00"
+    },
     {
       "sha": "cd6c8e2d",
       "msg": "feat: print active session name (or <NONE>) at daemon startup",
@@ -99,11 +104,6 @@
       "sha": "48e0efdb",
       "msg": "feat(wispr): simplify emoji to 2 levels based on 1s hold threshold",
       "ts": "2026-03-29T13:59:25+03:00"
-    },
-    {
-      "sha": "e908d287",
-      "msg": "fix: move stop button to right-most footer badge position",
-      "ts": "2026-03-29T13:56:49+03:00"
     }
   ],
   "branches": [
