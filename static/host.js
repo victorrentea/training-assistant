@@ -3197,6 +3197,12 @@ function hideStopConfirm() {
   if (bubble) bubble.style.display = 'none';
 }
 function stopSessionConfirmed() {
+  const bubble = document.getElementById('stop-confirm-bubble-left');
+  if (bubble) {
+    bubble.innerHTML = '<div style="padding:.2rem .1rem; color:var(--muted); font-size:.82rem; display:flex; align-items:center; gap:.5rem;">' +
+      '<span style="display:inline-block; width:14px; height:14px; border:2px solid var(--muted); border-top-color:transparent; border-radius:50%; animation:spin .7s linear infinite; flex-shrink:0;"></span>' +
+      'Ending session…</div>';
+  }
   fetch('/api/session/end', {method: 'POST'})
     .then(() => { window.location = '/host'; })
     .catch(e => console.error('stopSession failed:', e));
