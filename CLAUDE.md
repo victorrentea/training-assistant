@@ -158,10 +158,6 @@ training-assistant/
 │   └── rag/                 ← RAG: indexer.py, retriever.py, project_files.py
 ├── tests/                   ← See [TESTING.md](TESTING.md) for test rules and structure
 ├── desktop-overlay/         ← Swift/AppKit emoji overlay (EmojiAnimator, ButtonBar, SoundManager)
-├── wispr-addons/
-│   ├── clean.py             ← macOS clipboard cleanup daemon (CGEventTap, Claude Haiku AI cleanup,
-│   │                           dictation mute + media pause/play)
-│   └── requirements.txt     ← Python deps (anthropic, pyobjc)
 ├── pyproject.toml           ← Python dependencies (used by Railway via uv)
 ├── static/
 │   ├── participant.html     ← Participant-facing page
@@ -314,20 +310,6 @@ Manual rebuild utility (run only on demand):
   - re-runs normalization across all raw transcript files
 - Example:
   - `python3 -m daemon.rebuild_normalized_transcripts --from-iso 2026-03-24T09:30:00`
-
----
-
-## Wispr Addons (`wispr-addons/clean.py`)
-
-macOS daemon that runs on the trainer's Mac alongside the workshop:
-- **CGEventTap** intercepts all key and mouse events system-wide
-- **Cmd+V capture**: stores clipboard content at each paste for later cleanup
-- **Cmd+Ctrl+V**: sends captured text to Claude Haiku for grammar/filler cleanup, undoes original paste, re-pastes cleaned version
-- **Cmd+Ctrl+Opt+V**: same as above but adds contextual emojis
-- **Mouse Button 5** (Wispr Flow dictation toggle): pauses media playback and lowers "OS Output" loopback device volume to ~silent; pressing again resumes media and restores volume
-- **Escape while dictating**: also restores volume and resumes media
-- Requires macOS Accessibility permission and `ANTHROPIC_API_KEY` in `wispr-addons/secrets.env`
-- Run: `python3 wispr-addons/clean.py`
 
 ---
 
