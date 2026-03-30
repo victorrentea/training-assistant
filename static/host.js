@@ -274,7 +274,6 @@
         renderPendingDeploy(msg.pending_deploy);
         daemonSessionFolder = msg.daemon_session_folder || null;
         renderNotesStatus(msg.daemon_session_folder, msg.daemon_session_notes);
-        updateHostNotes(msg.notes_content);
         renderPreview(msg.quiz_preview || null);
         renderPollDisplay();
         const currentActivity = msg.current_activity || 'none';
@@ -289,7 +288,6 @@
         if (currentActivity === 'codereview' && msg.codereview) {
           renderHostCodeReview(msg.codereview);
         }
-        updateSummary(msg.summary_points, msg.summary_updated_at);
         if (msg.session_main !== undefined) sessionMain = msg.session_main;
         if (msg.session_talk !== undefined) sessionTalk = msg.session_talk;
         if (msg.session_name !== undefined) {
@@ -317,10 +315,13 @@
         if (msg.leaderboard_active && msg.leaderboard_data) {
           renderLeaderboard(msg.leaderboard_data);
         }
-        if (msg.slides_cache_status !== undefined) {
-          _slidesCacheStatus = msg.slides_cache_status || {};
-          _renderSlidesCatalogPopover();
-        }
+      } else if (msg.type === 'notes') {
+        updateHostNotes(msg.notes_content);
+      } else if (msg.type === 'summary') {
+        updateSummary(msg.points, msg.updated_at);
+      } else if (msg.type === 'slides_cache_status') {
+        _slidesCacheStatus = msg.slides_cache_status || {};
+        _renderSlidesCatalogPopover();
       } else if (msg.type === 'vote_update') {
         voteCounts = msg.vote_counts || {};
         totalVotes = msg.total_votes || 0;
@@ -368,8 +369,6 @@
         renderQuizStatus(msg.status, msg.message);
       } else if (msg.type === 'quiz_preview') {
         renderPreview(msg.quiz || null);
-      } else if (msg.type === 'summary') {
-        updateSummary(msg.points, msg.updated_at);
       } else if (msg.type === 'emoji_reaction') {
         showHostEmoji(msg.emoji);
       }

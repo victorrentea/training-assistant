@@ -79,7 +79,7 @@
     {
       "path": "features/ws/router.py",
       "qualname": "_handle_participant_connection",
-      "lines": 276
+      "lines": 282
     },
     {
       "path": "features/ws/router.py",

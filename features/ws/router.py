@@ -268,6 +268,9 @@ async def _handle_session_sync(data):
         state.needs_restore = False
 
     await broadcast_state()
+    if key_points:
+        await broadcast({"type": "summary", "points": state.summary_points,
+                         "updated_at": state.summary_updated_at.isoformat()})
 
 
 async def _handle_transcript_status(data):
@@ -291,7 +294,7 @@ async def _handle_token_usage(data):
 async def _handle_notes_content(data):
     """Daemon sends notes text — replicate POST /api/notes."""
     state.notes_content = data.get("content")
-    await broadcast_state()
+    await broadcast({"type": "notes", "notes_content": state.notes_content})
 
 
 async def _handle_slides_current(data):
@@ -584,6 +587,20 @@ async def daemon_websocket_endpoint(websocket: WebSocket):
         await broadcast({"type": "slides_catalog_changed"})
 
 
+async def _send_content_messages(websocket: WebSocket) -> None:
+    """Send notes, summary, and slides_cache_status as separate initial messages after state."""
+    try:
+        await websocket.send_text(json.dumps({"type": "notes", "notes_content": state.notes_content}))
+        await websocket.send_text(json.dumps({
+            "type": "summary",
+            "points": state.summary_points,
+            "updated_at": state.summary_updated_at.isoformat() if state.summary_updated_at else None,
+        }))
+        await websocket.send_text(json.dumps({"type": "slides_cache_status", "slides_cache_status": state.slides_cache_status}))
+    except Exception:
+        pass
+
+
 async def _handle_participant_connection(websocket: WebSocket, pid: str, is_host: bool, is_overlay: bool):
     """Shared logic for participant/host/overlay WebSocket connections.
 
@@ -618,6 +635,7 @@ async def _handle_participant_connection(websocket: WebSocket, pid: str, is_host
         state.participant_names["__host__"] = "Host"
         logger.info(f"Host connected ({len(state.participants)} total)")
         await send_state_to_host(websocket)
+        await _send_content_messages(websocket)
         await broadcast_participant_update()
     else:
         # Participant: wait for set_name before sending state
@@ -630,6 +648,7 @@ async def _handle_participant_connection(websocket: WebSocket, pid: str, is_host
         state.participant_names[pid] = ""
         named = True
         await websocket.send_text(json.dumps(build_participant_state(pid)))
+        await _send_content_messages(websocket)
 
     try:
         while True:
@@ -661,6 +680,7 @@ async def _handle_participant_connection(websocket: WebSocket, pid: str, is_host
                     state.debate_auto_assigned.add(pid)
                     logger.info(f"Late joiner {name} auto-assigned to {state.debate_sides[pid]}")
                 await send_state_to_participant(websocket, pid)
+                await _send_content_messages(websocket)
                 await broadcast_participant_update()
                 if not is_host and state.debate_phase:
                     await broadcast_state()
@@ -889,6 +909,19 @@ async def _handle_participant_connection(websocket: WebSocket, pid: str, is_host
                 text = str(data.get("text", "")).strip()
                 if text and len(text) <= 2000 and not is_host:
                     state.feedback_pending.append(text)
+
+            elif msg_type == "get_notes":
+                await websocket.send_text(json.dumps({"type": "notes", "notes_content": state.notes_content}))
+
+            elif msg_type == "get_summary":
+                await websocket.send_text(json.dumps({
+                    "type": "summary",
+                    "points": state.summary_points,
+                    "updated_at": state.summary_updated_at.isoformat() if state.summary_updated_at else None,
+                }))
+
+            elif msg_type == "get_slides_cache_status":
+                await websocket.send_text(json.dumps({"type": "slides_cache_status", "slides_cache_status": state.slides_cache_status}))
 
     except WebSocketDisconnect:
         state.participants.pop(pid, None)

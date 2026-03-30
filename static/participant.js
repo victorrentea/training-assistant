@@ -2709,8 +2709,6 @@ function closeEmojiPopup(ev) {
           renderContent(msg.vote_counts);
         }
         updateScreenShareWarning(msg.screen_share_active);
-        updateSummary(msg.summary_points, msg.summary_updated_at);
-        updateNotes(msg.notes_content);
         const sessionTitleEl = document.getElementById('session-title');
         if (sessionTitleEl && msg.session_name !== undefined) {
           const topic = (msg.session_name || '').replace(/^\d{4}-\d{2}-\d{2}(?:\.\.\S+)?\s*/, '');
@@ -2718,10 +2716,6 @@ function closeEmojiPopup(ev) {
           sessionTitleEl.style.display = topic ? '' : 'none';
         }
         _onIncomingHostSlidesCurrent(msg.slides_current || null);
-        if (msg.slides_cache_status !== undefined) {
-          _slidesCacheStatus = msg.slides_cache_status || {};
-          if (document.getElementById('slides-list')) _renderSlidesList(slidesSelectedId || null);
-        }
         // Restore leaderboard overlay if it was active
         if (msg.leaderboard_active && msg.leaderboard_data) {
           showParticipantLeaderboard(msg.leaderboard_data);
@@ -2767,6 +2761,13 @@ function closeEmojiPopup(ev) {
         break;
       case 'summary':
         updateSummary(msg.points, msg.updated_at);
+        break;
+      case 'notes':
+        updateNotes(msg.notes_content);
+        break;
+      case 'slides_cache_status':
+        _slidesCacheStatus = msg.slides_cache_status || {};
+        if (document.getElementById('slides-list')) _renderSlidesList(slidesSelectedId || null);
         break;
       case 'leaderboard':
         showParticipantLeaderboard(msg);
