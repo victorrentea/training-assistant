@@ -220,7 +220,6 @@ def test_intellij_state_tracked_by_daemon():
 # ── Quiz Generation via Stub LLM ──────────────────────────────────────────
 
 
-@pytest.mark.skip(reason="Quiz preview WS delivery has import-binding issue — quiz_preview not sent to host. See #97-adjacent.")
 def test_quiz_generation_with_stub_llm():
     """Host requests quiz → daemon uses stub LLM → quiz preview appears on host."""
     session_id = _get_or_create_session()
@@ -234,6 +233,7 @@ def test_quiz_generation_with_stub_llm():
         host_page = host_ctx.new_page()
         host_page.goto(f"{BASE}/host/{session_id}", wait_until="networkidle")
         expect(host_page.locator("#tab-poll")).to_be_visible(timeout=10000)
+        expect(host_page.locator("#ws-badge.connected")).to_be_visible(timeout=10000)
 
         # Click Poll tab to see quiz controls
         host_page.click("#tab-poll")
@@ -249,28 +249,49 @@ def test_quiz_generation_with_stub_llm():
         gen_btn.click()
         print("Clicked generate quiz button")
 
-        # Daemon processes the quiz request via stub LLM, sends quiz_status
-        # messages ("generating" → "done") and quiz_preview via WS.
-        # The quiz_status element on the poll tab shows the status.
+        # First: confirm the request was acknowledged (status shows "Waiting"/"requested")
         _await_condition(
             lambda: host_page.evaluate("""() => {
                 const el = document.getElementById('quiz-status');
                 if (!el) return false;
                 const text = el.textContent.toLowerCase();
-                return text.includes('generating') || text.includes('done')
-                    || text.includes('ready') || text.includes('error');
+                return text.includes('waiting') || text.includes('generating')
+                    || text.includes('done') || text.includes('error');
             }"""),
-            timeout_ms=20000,
-            msg="Quiz status did not update (no generating/done/error in #quiz-status)"
+            timeout_ms=10000,
+            msg="Quiz status did not show initial 'waiting' or 'generating'"
+        )
+        initial_status = host_page.evaluate("() => document.getElementById('quiz-status')?.textContent || ''")
+        print(f"Initial quiz status: '{initial_status}'")
+
+        # Then: wait for daemon to finish processing (done/error)
+        _await_condition(
+            lambda: host_page.evaluate("""() => {
+                const el = document.getElementById('quiz-status');
+                if (!el) return false;
+                const text = el.textContent.toLowerCase();
+                return text.includes('done') || text.includes('ready')
+                    || text.includes('review') || text.includes('error');
+            }"""),
+            timeout_ms=25000,
+            msg="Quiz status did not reach done/ready/error in #quiz-status"
         )
 
         status_text = host_page.evaluate("() => document.getElementById('quiz-status')?.textContent || ''")
-        print(f"Quiz status: '{status_text}'")
+        print(f"Final quiz status: '{status_text}'")
 
-        # Check if the preview card also appeared (bonus — depends on WS import fix)
-        if host_page.locator("#preview-card").is_visible():
-            preview_text = host_page.inner_text("#preview-card")
-            print(f"Quiz preview: {preview_text[:100]}")
+        assert "error" not in status_text.lower(), f"Quiz generation reported error: {status_text}"
 
-        print("SUCCESS: Quiz generation triggered via stub LLM!")
+        # Preview card should now appear (fixed: "preview" → "quiz" key + import-binding)
+        _await_condition(
+            lambda: host_page.locator("#preview-card").is_visible(),
+            timeout_ms=8000,
+            msg="Quiz preview card did not appear"
+        )
+        preview_text = host_page.inner_text("#preview-card")
+        print(f"Quiz preview: {preview_text[:100]}")
+        assert "design pattern" in preview_text.lower() or "Bridge" in preview_text or "Adapter" in preview_text, \
+            f"Preview doesn't contain expected quiz content: {preview_text[:200]}"
+
+        print("SUCCESS: Quiz generation with stub LLM works!")
         browser.close()
