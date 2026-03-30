@@ -61,9 +61,9 @@ def _api_call(method, path, data=None):
         return json.loads(resp.read())
 
 
-def _create_session(name="Test") -> str:
+def _create_session(name="Test", session_type="workshop") -> str:
     """Create a fresh session via API — gives clean state."""
-    result = _api_call("POST", "/api/session/create", {"name": f"{name} {int(time.time())}", "type": "workshop"})
+    result = _api_call("POST", "/api/session/create", {"name": f"{name} {int(time.time())}", "type": session_type})
     return result["session_id"]
 
 
@@ -112,20 +112,17 @@ def test_correct_answer_gives_score():
 # ── 2. Conference mode character names ─────────────────────────────────────
 
 def test_conference_mode_auto_assigns_character_name():
-    """Conference mode: new participant gets auto-assigned character name."""
-    session_id = _create_session("Conference")
+    """Conference mode (talk session): participant gets auto-assigned character name."""
+    session_id = _create_session("Conference", session_type="talk")
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
-
-        # Switch to conference mode BEFORE participant joins
-        _api_call("POST", f"/api/{session_id}/mode", {"mode": "conference"})
 
         # Open a participant browser — should auto-join with character name
         pax_ctx = browser.new_context()
         pax_page = pax_ctx.new_page()
         pax_page.goto(f"{BASE}/{session_id}", wait_until="networkidle")
 
-        # Wait for auto-join to complete (conference mode auto-names)
+        # Wait for auto-join to complete (conference/talk mode auto-names)
         expect(pax_page.locator("#main-screen")).to_be_visible(timeout=10000)
         pax_page.wait_for_timeout(1500)  # allow WS state delivery
 
@@ -145,9 +142,6 @@ def test_conference_mode_auto_assigns_character_name():
                        || getComputedStyle(el).visibility === 'hidden';
         }""")
         print(f"Score hidden in conference mode: {score_hidden}")
-
-        # Restore workshop mode
-        _api_call("POST", f"/api/{session_id}/mode", {"mode": "workshop"})
 
         print("SUCCESS: Conference mode assigns character names!")
         browser.close()
@@ -205,8 +199,7 @@ def test_zero_votes_shows_zero_percent():
         host.create_poll("Empty poll?", ["A", "B", "C"])
         # Wait for poll to appear on participant before closing
         expect(pax_page.locator(".option-btn").first).to_be_visible(timeout=5000)
-        # Close poll via API (more reliable than UI click in timing-sensitive test)
-        _api_call("PUT", f"/api/{session_id}/poll/status", {"open": False})
+        host.close_poll()
 
         expect(pax_page.locator(".pct").first).to_be_visible(timeout=5000)
         pcts = pax.get_percentages()

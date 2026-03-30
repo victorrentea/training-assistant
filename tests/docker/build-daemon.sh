@@ -40,6 +40,8 @@ cp "$DOCKER_DIR/start_hermetic.sh" "$BUILD_DIR/tests/docker/"
 cp "$DOCKER_DIR/Dockerfile.daemon" "$BUILD_DIR/"
 
 echo "=== Building Docker image ==="
+# Remove previous image to avoid dangling images piling up (~2.7 GB each)
+docker rmi hermetic-daemon 2>/dev/null || true
 docker build -f "$BUILD_DIR/Dockerfile.daemon" -t hermetic-daemon "$BUILD_DIR"
 
 echo "=== Running tests ==="

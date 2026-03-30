@@ -39,8 +39,14 @@ class HostPage:
         self._page.fill("#quiz-topic", text)
 
     def close_poll(self) -> None:
-        self._page.click("text=Close voting")
-        expect(self._page.locator("text=Re-open")).to_be_visible(timeout=5000)
+        btn = self._page.locator("text=Close voting")
+        expect(btn).to_be_visible(timeout=5000)
+        expect(btn).to_be_enabled(timeout=3000)
+        btn.click()
+        # With 0 votes the button says "Open voting"; with votes it says "Re-open"
+        expect(
+            self._page.locator("text=Re-open").or_(self._page.locator("text=Open voting"))
+        ).to_be_visible(timeout=5000)
 
     def reopen_poll(self) -> None:
         self._page.click("text=Re-open")
