@@ -64,8 +64,8 @@ h1 { display: none; }
 
 /* ── Main screen ── */
 #main-screen {
-  width: min(900px, 100%);
-  max-width: 900px;
+  width: min(1350px, 100%);
+  max-width: 1350px;
   display: none;
   height: 100vh;
   min-height: 0;
@@ -1090,8 +1090,8 @@ h1 { display: none; }
 
 @media (max-width: 900px) {
   #main-screen {
-    width: min(900px, calc(100% - .5rem));
-    max-width: 900px;
+    width: min(1350px, calc(100% - .5rem));
+    max-width: 1350px;
     margin: 0 auto;
   }
   .waiting {
