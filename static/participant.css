@@ -1572,13 +1572,33 @@ h1 { display: none; }
   gap: .5rem;
 }
 
-/* Right cell: upload + paste buttons, justified to the end */
+/* Right cell: now empty, kept for grid layout */
 #emoji-bar-right {
   display: flex;
   justify-content: flex-end;
   align-items: center;
   gap: .5rem;
   pointer-events: none;
+}
+
+/* Upload + paste floating over the bottom-right corner of the slides viewer */
+.slides-action-corner {
+  position: absolute;
+  bottom: .75rem;
+  right: .75rem;
+  z-index: 10;
+  display: flex;
+  gap: .4rem;
+  pointer-events: auto;
+}
+
+.slides-action-btn {
+  opacity: .55;
+  transition: opacity .15s, transform .1s, background .15s, border-color .15s;
+}
+
+.slides-action-btn:hover {
+  opacity: 1;
 }
 
 /* Overflow popup */
