@@ -1,11 +1,11 @@
 """Live Whisper transcription runner — writes directly to normalized transcript files.
 
-Activated by setting env vars:
-    WHISPER_ME_DEVICE=5        # device index for trainer mic (🎙️TO Zoom = XLR filtered)
-    WHISPER_AUDIENCE_DEVICE=17 # device index for audience (FROM Zoom loopback)
+Defaults:
+    WHISPER_ME_DEVICE=5        # XLR (🎙️TO Zoom); falls back to MacBook mic if unavailable
+    WHISPER_AUDIENCE_DEVICE=17 # FROM Zoom loopback
 
 Optional:
-    WHISPER_ME_SPEAKER=Victor        (default)
+    WHISPER_ME_SPEAKER=Trainer       (default)
     WHISPER_AUDIENCE_SPEAKER=Participant  (default)
     WHISPER_MODEL=mlx-community/whisper-large-v3-mlx  (default)
     WHISPER_CHUNK_SECONDS=4
@@ -25,8 +25,8 @@ import numpy as np
 from daemon import log
 
 # ── Config from env ────────────────────────────────────────────────────────────
-_ME_DEVICE    = os.environ.get("WHISPER_ME_DEVICE")
-_AUD_DEVICE   = os.environ.get("WHISPER_AUDIENCE_DEVICE")
+_ME_DEVICE    = os.environ.get("WHISPER_ME_DEVICE",       "5")   # XLR (🎙️TO Zoom), fallback to MacBook mic
+_AUD_DEVICE   = os.environ.get("WHISPER_AUDIENCE_DEVICE", "17")  # FROM Zoom loopback
 _ME_SPEAKER   = os.environ.get("WHISPER_ME_SPEAKER",       "Trainer")
 _AUD_SPEAKER  = os.environ.get("WHISPER_AUDIENCE_SPEAKER", "Participant")
 _MODEL        = os.environ.get("WHISPER_MODEL",            "mlx-community/whisper-large-v3-mlx")
@@ -40,6 +40,24 @@ _HALLUCINATIONS = {
     "subtitles by the amara.org community", "www.mooji.org",
     "[music]", "[ music ]", "(music)", "♪", "...",
 }
+
+
+# ── Device resolution ─────────────────────────────────────────────────────────
+def _resolve_device(preferred_idx: int, fallback_pattern: str | None = None) -> int:
+    """Return preferred_idx if available, else find first device matching fallback_pattern."""
+    import sounddevice as sd
+    try:
+        info = sd.query_devices(preferred_idx)
+        if info["max_input_channels"] > 0:
+            return preferred_idx
+    except Exception:
+        pass
+    if fallback_pattern:
+        for i, d in enumerate(sd.query_devices()):
+            if fallback_pattern.lower() in d["name"].lower() and d["max_input_channels"] > 0:
+                log.info("transcript", f"🎙️ Device {preferred_idx} unavailable — falling back to [{i}] {d['name']!r}")
+                return i
+    raise RuntimeError(f"Device {preferred_idx} not available and no fallback found (pattern={fallback_pattern!r})")
 
 
 # ── Audio capture ──────────────────────────────────────────────────────────────
@@ -151,14 +169,24 @@ class WhisperTranscriptionRunner:
         aud_idx = int(_AUD_DEVICE) if _AUD_DEVICE else None
 
         if me_idx is None and aud_idx is None:
-            log.info("transcript", "🎙️ Whisper disabled — set WHISPER_ME_DEVICE / WHISPER_AUDIENCE_DEVICE to enable")
+            log.info("transcript", "🎙️ Whisper disabled (WHISPER_ME_DEVICE / WHISPER_AUDIENCE_DEVICE both unset)")
             return
 
         tx_queue: queue.Queue = queue.Queue()
+        if me_idx is not None:
+            try:
+                me_idx = _resolve_device(me_idx, fallback_pattern="MacBook")
+            except RuntimeError as exc:
+                log.error("transcript", f"🎙️ [me] {exc} — skipping me-channel")
+                me_idx = None
         if me_idx  is not None:
             self._channels.append(_ChannelCapture(me_idx,  _ME_SPEAKER,  tx_queue))
         if aud_idx is not None:
             self._channels.append(_ChannelCapture(aud_idx, _AUD_SPEAKER, tx_queue))
+
+        if not self._channels:
+            log.error("transcript", "🎙️ Whisper disabled — no usable audio devices")
+            return
 
         for ch in self._channels:
             ch.start()
