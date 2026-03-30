@@ -558,7 +558,7 @@ input[type=text].debate-round-duration {
   display: none;
   position: fixed;
   inset: 0;
-  z-index: 2000;
+  z-index: 3500;
   justify-content: center;
   align-items: center;
 }
