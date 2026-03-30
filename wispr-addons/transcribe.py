@@ -168,15 +168,53 @@ def pick_device(prompt: str) -> int | None:
             print("  Enter a number (or 'n' to skip).")
 
 
+def _build_channels(args, tx_queue: queue.Queue) -> list[ChannelCapture] | None:
+    """Parse CLI args into ChannelCapture instances. Returns None on error."""
+    channels: list[ChannelCapture] = []
+    if args.channels:
+        for spec in args.channels:
+            try:
+                idx_str, label = spec.split(":", 1)
+                channels.append(ChannelCapture(int(idx_str), label, tx_queue))
+            except ValueError:
+                print(f"  Bad --channels spec {spec!r}, expected idx:label", file=sys.stderr)
+                return None
+    else:
+        me_idx = args.me
+        if me_idx is None:
+            me_idx = pick_device("  Device index for [me] (your mic): ")
+        audience_idx = args.audience
+        if not args.no_audience and audience_idx is None:
+            print("  For Loopback app: look for 'Loopback Audio' or your virtual device above.")
+            audience_idx = pick_device("  Device index for [audience] (Loopback virtual device, or 'n' to skip): ")
+        if me_idx is not None:
+            channels.append(ChannelCapture(me_idx, "me", tx_queue))
+        if audience_idx is not None:
+            channels.append(ChannelCapture(audience_idx, "audience", tx_queue))
+
+    if not channels:
+        print("No channels configured. Exiting.")
+        return None
+    return channels
+
+
 # ── Main ──────────────────────────────────────────────────────────────────────
 def main():
     global CHUNK_SECONDS, SILENCE_RMS_THRESHOLD
 
-    parser = argparse.ArgumentParser(description="Live dual-channel Whisper transcription")
+    parser = argparse.ArgumentParser(
+        description="Live multi-channel Whisper transcription",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="Examples:\n"
+               "  --me 5 --audience 17\n"
+               "  --channels 5:xlr 7:macbook 18:tozoom   (compare 3 sources)",
+    )
     parser.add_argument("--list-devices", action="store_true", help="Print audio devices and exit")
     parser.add_argument("--me", type=int, default=None, metavar="IDX", help="Device index for 'me' channel")
     parser.add_argument("--audience", type=int, default=None, metavar="IDX", help="Device index for 'audience' channel")
-    parser.add_argument("--no-audience", action="store_true", help="Skip audience channel")
+    parser.add_argument("--no-audience", action="store_true", help="Skip audience channel (ignored when --channels used)")
+    parser.add_argument("--channels", nargs="+", metavar="IDX:LABEL",
+                        help="Explicit channel list, overrides --me/--audience. Format: idx:label")
     parser.add_argument("--model", default=MODEL, help=f"mlx-whisper model (default: {MODEL})")
     parser.add_argument("--chunk", type=float, default=CHUNK_SECONDS, help=f"Chunk size in seconds (default: {CHUNK_SECONDS})")
     parser.add_argument("--threshold", type=float, default=SILENCE_RMS_THRESHOLD, help="RMS silence threshold")
@@ -191,25 +229,9 @@ def main():
 
     list_devices()
 
-    me_idx = args.me
-    if me_idx is None:
-        me_idx = pick_device("  Device index for [me] (your mic): ")
-
-    audience_idx = args.audience
-    if not args.no_audience and audience_idx is None:
-        print("  For Loopback app: look for 'Loopback Audio' or your virtual device above.")
-        audience_idx = pick_device("  Device index for [audience] (Loopback virtual device, or 'n' to skip): ")
-
-    channels: list[ChannelCapture] = []
     tx_queue: queue.Queue = queue.Queue()
-
-    if me_idx is not None:
-        channels.append(ChannelCapture(me_idx, "me", tx_queue))
-    if audience_idx is not None:
-        channels.append(ChannelCapture(audience_idx, "audience", tx_queue))
-
-    if not channels:
-        print("No channels configured. Exiting.")
+    channels = _build_channels(args, tx_queue)
+    if channels is None:
         return
 
     print("\nStarting capture streams...")
