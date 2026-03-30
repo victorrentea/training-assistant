@@ -743,10 +743,10 @@ def run() -> None:
                                     is_presenting = bool(ppt_state.get("presenting", False))
                                     participant_page = max(1, raw_slide - 1) if is_presenting else raw_slide
                                     if was_presenting and not is_presenting:
-                                        log.info("ppt", f"📽️ Exited fullscreen — slide: {ppt_stem} #{raw_slide} → p.{participant_page} to participants")
+                                        log.info("ppt", f"📽️ Exited fullscreen — {ppt_stem}:{raw_slide} → :{participant_page}")
                                     else:
                                         fullscreen_flag = " [fullscreen]" if is_presenting else " [normal]"
-                                        log.info("ppt", f"📽️ Slide: {ppt_stem} : {raw_slide}{fullscreen_flag} → p.{participant_page} to participants")
+                                        log.info("ppt", f"📽️ Slide: {ppt_stem}:{raw_slide}{fullscreen_flag} → :{participant_page}")
                                 try:
                                     _sync_powerpoint_slide_to_server(config, slides_runner._slides_config, ppt_state, ws_client)
                                 except Exception as e:
