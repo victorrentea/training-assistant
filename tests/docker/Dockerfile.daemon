@@ -32,6 +32,8 @@ COPY tests/docker/test_participant_interactions.py .
 COPY tests/docker/test_qa_wordcloud.py .
 COPY tests/docker/test_integrations.py .
 COPY tests/docker/test_high_value.py .
+COPY tests/docker/test_poll_advanced.py .
+COPY tests/docker/test_ui_interactions.py .
 COPY tests/docker/features/ ./features/
 COPY tests/docker/step_defs/ ./step_defs/
 COPY tests/docker/generate_fixture_pdfs.py .
