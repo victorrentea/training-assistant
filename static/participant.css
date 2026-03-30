@@ -1102,7 +1102,7 @@ h1 { display: none; }
 #version-tag {
   top: auto;
   bottom: .35rem;
-  right: calc(var(--slides-overlay-width) + .45rem);
+  right: .45rem;
   z-index: 7002;
   background: rgba(0, 0, 0, 0.55);
   border: 1px solid rgba(255, 255, 255, 0.22);

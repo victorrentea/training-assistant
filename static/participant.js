@@ -12,7 +12,7 @@
       const span = document.createElement('span');
       span.id = 'session-code-tag';
       span.textContent = sessionId.toUpperCase();
-      span.style.cssText = 'margin-left:.6em; letter-spacing:.12em; font-weight:600; opacity:.7; cursor:pointer;';
+      span.style.cssText = 'letter-spacing:.12em; font-weight:600; opacity:.7; cursor:pointer;';
       span.title = 'Session code (click to copy join link)';
       span.onclick = () => {
         navigator.clipboard.writeText(location.origin + '/' + sessionId).then(() => {
@@ -20,7 +20,7 @@
           setTimeout(() => { span.textContent = sessionId.toUpperCase(); }, 1500);
         });
       };
-      vt.appendChild(document.createTextNode(' | '));
+      vt.appendChild(document.createTextNode('\n'));
       vt.appendChild(span);
     }
   });
