@@ -34,6 +34,8 @@ COPY tests/docker/test_integrations.py .
 COPY tests/docker/test_high_value.py .
 COPY tests/docker/test_poll_advanced.py .
 COPY tests/docker/test_ui_interactions.py .
+COPY tests/docker/test_slides_advanced.py .
+COPY tests/docker/test_regressions.py .
 COPY tests/docker/features/ ./features/
 COPY tests/docker/step_defs/ ./step_defs/
 COPY tests/docker/generate_fixture_pdfs.py .
