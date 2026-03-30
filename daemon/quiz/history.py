@@ -7,7 +7,8 @@ from typing import Optional
 from daemon import log
 from daemon.config import Config, read_session_notes
 from daemon.quiz.generator import generate_quiz, print_quiz, refine_quiz
-from daemon.quiz.poll_api import fetch_quiz_history, fetch_summary_points, post_status, _ws_client
+from daemon.quiz import poll_api
+from daemon.quiz.poll_api import fetch_quiz_history, fetch_summary_points, post_status
 from daemon.transcript.loader import extract_last_n_minutes, load_transcription_files
 
 try:
@@ -86,8 +87,8 @@ def auto_generate(minutes: int, config: Config) -> Optional[tuple]:
     print_quiz(quiz)
 
     try:
-        if _ws_client and _ws_client.connected:
-            _ws_client.send({"type": "quiz_preview", "preview": {
+        if poll_api._ws_client and poll_api._ws_client.connected:
+            poll_api._ws_client.send({"type": "quiz_preview", "quiz": {
                 "question": quiz["question"],
                 "options": quiz["options"],
                 "multi": len(quiz.get("correct_indices", [])) > 1,
@@ -129,8 +130,8 @@ def auto_generate_topic(topic: str, config: Config) -> Optional[tuple]:
     print_quiz(quiz)
     topic_context = f"TOPIC: {topic}"
     try:
-        if _ws_client and _ws_client.connected:
-            _ws_client.send({"type": "quiz_preview", "preview": {
+        if poll_api._ws_client and poll_api._ws_client.connected:
+            poll_api._ws_client.send({"type": "quiz_preview", "quiz": {
                 "question": quiz["question"],
                 "options": quiz["options"],
                 "multi": len(quiz.get("correct_indices", [])) > 1,
@@ -160,8 +161,8 @@ def auto_refine(target: str, current_quiz: dict, original_text: str, config: Con
 
     print_quiz(updated)
     try:
-        if _ws_client and _ws_client.connected:
-            _ws_client.send({"type": "quiz_preview", "preview": {
+        if poll_api._ws_client and poll_api._ws_client.connected:
+            poll_api._ws_client.send({"type": "quiz_preview", "quiz": {
                 "question": updated["question"],
                 "options": updated["options"],
                 "multi": len(updated.get("correct_indices", [])) > 1,

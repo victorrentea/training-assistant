@@ -9,6 +9,7 @@ RUN pip install \
     websockets \
     anthropic \
     pytest \
+    pytest-bdd \
     pytest-playwright \
     playwright==1.50.0
 
@@ -31,6 +32,8 @@ COPY tests/docker/test_participant_interactions.py .
 COPY tests/docker/test_qa_wordcloud.py .
 COPY tests/docker/test_integrations.py .
 COPY tests/docker/test_high_value.py .
+COPY tests/docker/features/ ./features/
+COPY tests/docker/step_defs/ ./step_defs/
 COPY tests/docker/generate_fixture_pdfs.py .
 COPY tests/docker/mock_drive_server.py .
 COPY tests/docker/start_hermetic.sh /start_hermetic.sh
