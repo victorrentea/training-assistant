@@ -92,11 +92,6 @@
 
 <div id="slides-overlay" class="slides-preview-overlay" onclick="closeSlidesModal()">
   <div class="slides-preview-shell" onclick="event.stopPropagation()">
-    <div class="slides-action-corner">
-      <button id="upload-btn" class="slides-ctrl-btn slides-action-btn" data-tooltip="Send a file to the host." data-tooltip-emoji="📤"><svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13V4"/><path d="M6 7.5L10 3.5L14 7.5"/><path d="M4.5 13.5v1a2 2 0 0 0 2 2h7a2 2 0 0 0 2-2v-1"/></svg></button>
-      <button id="paste-btn" class="slides-ctrl-btn slides-action-btn" data-tooltip="Paste text to the host." data-tooltip-emoji="📋">📋</button>
-      <button id="feedback-btn" class="slides-ctrl-btn slides-action-btn" data-tooltip="Share feedback" data-tooltip-emoji="💬">💬</button>
-    </div>
     <div class="slides-viewer-area">
       <div id="slides-empty" class="slides-empty" style="display:none;">No slides published yet.</div>
       <div id="slides-error" class="slides-error" style="display:none;"></div>
@@ -110,6 +105,11 @@
       </div>
     </div>
   </div>
+</div>
+<div class="slides-action-corner">
+  <button id="upload-btn" class="slides-ctrl-btn slides-action-btn" data-tooltip="Send a file to the host." data-tooltip-emoji="📤"><svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13V4"/><path d="M6 7.5L10 3.5L14 7.5"/><path d="M4.5 13.5v1a2 2 0 0 0 2 2h7a2 2 0 0 0 2-2v-1"/></svg></button>
+  <button id="paste-btn" class="slides-ctrl-btn slides-action-btn" data-tooltip="Paste text to the host." data-tooltip-emoji="📋">📋</button>
+  <button id="feedback-btn" class="slides-ctrl-btn slides-action-btn" data-tooltip="Share feedback" data-tooltip-emoji="💬">💬</button>
 </div>
 <div id="slides-ui-blocker" class="slides-ui-blocker" style="display:none;" aria-live="polite" aria-busy="true">
   <div class="slides-ui-blocker-card">
