@@ -36,6 +36,7 @@ cp "$DOCKER_DIR/test_poll_advanced.py" "$BUILD_DIR/tests/docker/"
 cp "$DOCKER_DIR/test_ui_interactions.py" "$BUILD_DIR/tests/docker/"
 cp "$DOCKER_DIR/test_slides_advanced.py" "$BUILD_DIR/tests/docker/"
 cp "$DOCKER_DIR/test_regressions.py" "$BUILD_DIR/tests/docker/"
+cp "$DOCKER_DIR/test_follow_mode_slow_drive.py" "$BUILD_DIR/tests/docker/"
 cp -r "$DOCKER_DIR/features" "$BUILD_DIR/tests/docker/"
 cp -r "$DOCKER_DIR/step_defs" "$BUILD_DIR/tests/docker/"
 cp "$DOCKER_DIR/generate_fixture_pdfs.py" "$BUILD_DIR/tests/docker/"
@@ -49,7 +50,7 @@ docker rmi hermetic-daemon 2>/dev/null || true
 docker build -f "$BUILD_DIR/Dockerfile.daemon" -t hermetic-daemon "$BUILD_DIR"
 
 echo "=== Running tests ==="
-docker run --rm hermetic-daemon
+docker run --rm hermetic-daemon "$@"
 
 # Cleanup
 rm -rf "$BUILD_DIR"

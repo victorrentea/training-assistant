@@ -177,6 +177,7 @@ def _assert_follow_mode_active_and_on_page(pax_page, delay_s: int, slug: str, ex
     print(f"[{delay_s}s] Active slide '{active_id}' ✓")
 
 
+@pytest.mark.nightly
 @pytest.mark.parametrize("delay_s,presentation,slug,host_slide,expected_page", [
     (20, "Architecture.pptx",   "architecture",    2, 2),
 ], ids=["20s-delay"])
