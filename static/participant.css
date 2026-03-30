@@ -2308,7 +2308,7 @@ h1 { display: none; }
   position: fixed;
   top: 1rem;
   left: 1rem;
-  z-index: 200;
+  z-index: 2900;
   pointer-events: auto;
 }
 
