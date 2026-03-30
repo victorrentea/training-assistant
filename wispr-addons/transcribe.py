@@ -62,22 +62,41 @@ class ChannelCapture:
         self._stream = None
 
     def start(self):
+        """Start capture in a background thread that auto-restarts on device errors."""
+        self._running = True
+        threading.Thread(target=self._capture_loop, daemon=True).start()
+
+    def stop(self):
+        self._running = False
+
+    def _open_stream(self):
         import sounddevice as sd
-        self._stream = sd.InputStream(
+        stream = sd.InputStream(
             device=self.device,
             channels=1,
             samplerate=SAMPLE_RATE,
             dtype="float32",
-            blocksize=int(SAMPLE_RATE * 0.1),   # 100ms callback blocks
+            blocksize=int(SAMPLE_RATE * 0.1),
             callback=self._callback,
         )
-        self._stream.start()
-        print(f"  ✓ [{self.label:<8}] capturing from device {self.device!r}")
+        stream.start()
+        return stream
 
-    def stop(self):
-        if self._stream:
-            self._stream.stop()
-            self._stream.close()
+    def _capture_loop(self):
+        """Keep the stream alive; restart on CoreAudio / device errors."""
+        while self._running:
+            try:
+                stream = self._open_stream()
+                print(f"  ✓ [{self.label:<8}] capturing from device {self.device!r}")
+                while self._running and stream.active:
+                    time.sleep(0.5)
+                stream.stop()
+                stream.close()
+                if self._running:
+                    print(f"  ↻ [{self.label:<8}] stream ended, restarting...", file=sys.stderr)
+            except Exception as e:
+                print(f"  ✗ [{self.label:<8}] stream error: {e} — retrying in 2s", file=sys.stderr)
+                time.sleep(2)
 
     def _callback(self, indata, frames, time_info, status):
         mono = indata[:, 0]
