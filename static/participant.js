@@ -91,7 +91,7 @@ function renderEmojiBar() {
       btn.style.flexShrink = '0';
       btn.style.pointerEvents = 'auto';
       btn.textContent = emoji;
-      btn.onclick = (ev) => { sendEmoji(emoji, ev); closeEmojiPopup(); };
+      btn.onclick = (ev) => sendEmoji(emoji, ev);
       popup.appendChild(btn);
     });
 
