@@ -1,0 +1,17 @@
+name: Nightly
+
+on:
+  schedule:
+    - cron: "0 3 * * *"   # 03:00 UTC every day
+  workflow_dispatch:       # allow manual trigger from the Actions tab
+
+jobs:
+  slow-hermetic:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Slow hermetic tests (nightly marker)
+        run: bash tests/docker/build-daemon.sh -m nightly -v --tb=long -s

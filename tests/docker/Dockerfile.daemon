@@ -36,6 +36,7 @@ COPY tests/docker/test_poll_advanced.py .
 COPY tests/docker/test_ui_interactions.py .
 COPY tests/docker/test_slides_advanced.py .
 COPY tests/docker/test_regressions.py .
+COPY tests/docker/test_follow_mode_slow_drive.py .
 COPY tests/docker/features/ ./features/
 COPY tests/docker/step_defs/ ./step_defs/
 COPY tests/docker/generate_fixture_pdfs.py .
@@ -44,4 +45,4 @@ COPY tests/docker/start_hermetic.sh /start_hermetic.sh
 RUN chmod +x /start_hermetic.sh
 
 ENTRYPOINT ["/start_hermetic.sh"]
-CMD ["-v", "--tb=long", "-s", "--durations=0"]
+CMD ["-v", "--tb=long", "-s", "--durations=0", "-m", "not nightly"]
