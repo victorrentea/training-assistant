@@ -100,7 +100,7 @@ h1 { display: none; }
   padding: .25rem .9rem;
   height: 44px;
   box-sizing: border-box;
-  width: 70%;
+  width: 95%;
   margin: 0 auto .35rem;
   background: var(--surface);
   border: 1px solid var(--border);
