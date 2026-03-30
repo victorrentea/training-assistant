@@ -43,27 +43,8 @@ const EMOJI_CONFIG = [
   { emoji: '✅', tooltip: 'Agreed. 100%.' },
   { emoji: '❌', tooltip: 'Nope. Hard disagree.' },
 ];
-const LS_EMOJI_COUNTS = 'emoji_use_counts';
 const EMOJI_BTN_PX = 44 + 8; // button width (44px) + gap (.5rem ≈ 8px)
-
-function getEmojiCounts() {
-  try { return JSON.parse(localStorage.getItem(LS_EMOJI_COUNTS) || '{}'); }
-  catch { return {}; }
-}
-
-function incrementEmojiCount(emoji) {
-  const counts = getEmojiCounts();
-  counts[emoji] = (counts[emoji] || 0) + 1;
-  localStorage.setItem(LS_EMOJI_COUNTS, JSON.stringify(counts));
-}
-
-function getSortedEmojis() {
-  const counts = getEmojiCounts();
-  return [...EMOJI_CONFIG].sort((a, b) => {
-    const diff = (counts[b.emoji] || 0) - (counts[a.emoji] || 0);
-    return diff !== 0 ? diff : EMOJI_CONFIG.indexOf(a) - EMOJI_CONFIG.indexOf(b);
-  });
-}
+let _emojiBarInitialized = false;
 
 function _syncCtrlGroupVisibility() {
   const group = document.getElementById('slides-ctrl-group');
@@ -81,10 +62,44 @@ function renderEmojiBar() {
   const popup = document.getElementById('emoji-popup');
   if (!bar || !center || !dotsWrap || !popup) return;
 
-  // Sync ctrl group visibility first so its width is accurate before measurement
   _syncCtrlGroupVisibility();
 
-  // Measure actual button content widths (not the 1fr grid cell widths which stretch to fill).
+  const MAX_VISIBLE = 5;
+  const ordered = [...EMOJI_CONFIG]; // fixed order — no personalisation
+
+  if (!_emojiBarInitialized) {
+    // One-time setup: create visible buttons and populate overflow popup (never changes).
+    center.querySelectorAll('.emoji-btn-dynamic').forEach(el => el.remove());
+    popup.querySelectorAll('.emoji-popup-btn').forEach(el => el.remove());
+
+    ordered.slice(0, MAX_VISIBLE).forEach(({ emoji, tooltip }) => {
+      const btn = document.createElement('button');
+      btn.className = 'emoji-btn emoji-btn-dynamic';
+      btn.dataset.tooltip = tooltip;
+      btn.style.pointerEvents = 'auto';
+      btn.style.flexShrink = '0';
+      btn.textContent = emoji;
+      btn.onclick = (ev) => sendEmoji(emoji, ev);
+      center.insertBefore(btn, dotsWrap);
+    });
+
+    const overflowSlice = ordered.slice(MAX_VISIBLE);
+    overflowSlice.forEach(({ emoji, tooltip }) => {
+      const btn = document.createElement('button');
+      btn.className = 'emoji-btn emoji-popup-btn';
+      btn.dataset.tooltip = tooltip;
+      btn.style.flexShrink = '0';
+      btn.style.pointerEvents = 'auto';
+      btn.textContent = emoji;
+      btn.onclick = (ev) => { sendEmoji(emoji, ev); closeEmojiPopup(); };
+      popup.appendChild(btn);
+    });
+
+    dotsWrap.style.display = overflowSlice.length > 0 ? '' : 'none';
+    _emojiBarInitialized = true;
+  }
+
+  // On resize: show/hide visible buttons that fit — hidden in-place, never moved to overflow.
   const leftBtns = Array.from((document.getElementById('slides-ctrl-group') || document.createElement('div'))
     .querySelectorAll('button, span')).filter(el => el.getBoundingClientRect().width > 0);
   const leftW = leftBtns.reduce((s, el) => s + el.getBoundingClientRect().width + 8, 0);
@@ -94,52 +109,19 @@ function renderEmojiBar() {
     const w = el.getBoundingClientRect().width;
     return s + (w > 0 ? w + 8 : 0);
   }, 0);
-  const outerFixedWidth = Math.max(leftW, rightW) * 2 + 16; // 2 grid column gaps (8px each)
-  // Fixed elements inside center (dots + ping) always consume space.
+  const outerFixedWidth = Math.max(leftW, rightW) * 2 + 16;
   const innerFixedEls = [dotsWrap, document.getElementById('emoji-ping-btn')];
   const innerFixedWidth = innerFixedEls.reduce((sum, el) => {
     if (!el) return sum;
     const w = el.getBoundingClientRect().width;
     return sum + (w > 0 ? w + 8 : 0);
   }, 0);
-  const barPx = bar.getBoundingClientRect().width - 24; // subtract bar padding (.75rem * 2)
+  const barPx = bar.getBoundingClientRect().width - 24;
   const maxBySpace = Math.max(0, Math.floor((barPx - outerFixedWidth - innerFixedWidth) / EMOJI_BTN_PX));
-  const visibleCount = Math.min(maxBySpace, 5); // cap at 5 visible emojis
+  const showCount = Math.min(maxBySpace, MAX_VISIBLE);
 
-  const sorted = getSortedEmojis();
-  const visible = sorted.slice(0, visibleCount);
-  const overflow = sorted.slice(visibleCount);
-
-  // Remove existing dynamic emoji buttons from center
-  center.querySelectorAll('.emoji-btn-dynamic').forEach(el => el.remove());
-
-  // Insert visible emoji buttons into center before #emoji-dots-wrap
-  visible.forEach(({ emoji, tooltip }) => {
-    const btn = document.createElement('button');
-    btn.className = 'emoji-btn emoji-btn-dynamic';
-    btn.dataset.tooltip = tooltip;
-    btn.style.pointerEvents = 'auto';
-    btn.style.flexShrink = '0';
-    btn.textContent = emoji;
-    btn.onclick = (ev) => sendEmoji(emoji, ev);
-    center.insertBefore(btn, dotsWrap);
-  });
-
-  // Show/hide ••• and populate popup overflow buttons
-  const hasOverflow = overflow.length > 0;
-  dotsWrap.style.display = hasOverflow ? '' : 'none';
-
-  // Remove old overflow buttons from popup
-  popup.querySelectorAll('.emoji-popup-btn').forEach(el => el.remove());
-  overflow.forEach(({ emoji, tooltip }) => {
-    const btn = document.createElement('button');
-    btn.className = 'emoji-btn emoji-popup-btn';
-    btn.dataset.tooltip = tooltip;
-    btn.style.flexShrink = '0';
-    btn.style.pointerEvents = 'auto';
-    btn.textContent = emoji;
-    btn.onclick = (ev) => { sendEmoji(emoji, ev); closeEmojiPopup(); };
-    popup.appendChild(btn);
+  Array.from(center.querySelectorAll('.emoji-btn-dynamic')).forEach((btn, i) => {
+    btn.style.display = i < showCount ? '' : 'none';
   });
 }
 
@@ -3270,11 +3252,6 @@ function closeEmojiPopup(ev) {
   function sendEmoji(emoji, ev) {
     if (!ws) return;
     sendWS('emoji_reaction', { emoji });
-    // Track usage for priority reordering (only for overflow-eligible emojis)
-    if (EMOJI_CONFIG.some(e => e.emoji === emoji)) {
-      incrementEmojiCount(emoji);
-      renderEmojiBar();
-    }
     const btn = ev && ev.currentTarget;
     if (currentMode === 'conference' || window.innerWidth <= 600) {
       showMobileEmojiShake(emoji);
