@@ -16,8 +16,8 @@ Output:
     [me      ] Deci, hai să vorbim despre design patterns.
     [audience] Can you explain the factory pattern?
 
-Model: mlx-community/whisper-large-v3-mlx-4bit
-  - ~4-5s latency per chunk
+Model: mlx-community/whisper-large-v3
+  - ~6-8s latency per chunk
   - Auto-detects Romanian / English per chunk
   - Runs fully on Apple Silicon GPU (no internet needed after first download)
 """
@@ -38,7 +38,7 @@ SAMPLE_RATE = 16000           # Whisper expects 16kHz mono
 CHUNK_SECONDS = 4             # audio chunk size sent to Whisper (seconds)
 OVERLAP_SECONDS = 0.5         # overlap between chunks to avoid cutting words
 SILENCE_RMS_THRESHOLD = 0.018 # skip transcription if chunk is below this RMS
-MODEL = "mlx-community/whisper-large-v3-mlx-4bit"
+MODEL = "mlx-community/whisper-large-v3"
 
 # Whisper hallucinations to suppress (common on near-silence)
 HALLUCINATIONS = {
