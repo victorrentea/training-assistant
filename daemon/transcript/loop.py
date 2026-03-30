@@ -2,6 +2,7 @@
 
 import os
 import re
+import socket
 import time
 from datetime import datetime
 from pathlib import Path
@@ -17,6 +18,7 @@ _NORMALIZER_INTERVAL_SECONDS = float(os.environ.get("TRANSCRIPT_NORMALIZER_INTER
 _LLM_CLEAN_ENABLED = os.environ.get("TRANSCRIPT_LLM_CLEAN", "1").strip().lower() not in {
     "0", "false", "no", "off",
 }
+_LLM_TIMEOUT_SECONDS = int(os.environ.get("TRANSCRIPT_LLM_TIMEOUT_SECONDS", "3"))
 _LLM_FILTER_STATS: dict[str, float | str | None] = {
     "last_ms": None,
     "provider": None,
@@ -31,12 +33,15 @@ def _build_llm_line_filter():
     def _filter(text: str) -> str | None:
         global _llm_last_error_logged_at
         try:
-            result, used_llm, elapsed_ms = clean_line_with_meta(text)
+            result, used_llm, elapsed_ms = clean_line_with_meta(text, timeout=_LLM_TIMEOUT_SECONDS)
         except Exception as exc:
             now = time.monotonic()
             if now - _llm_last_error_logged_at >= 60.0:
                 _llm_last_error_logged_at = now
-                log.error("transcript", f"LLM cleaner unavailable ({exc}) — writing lines as-is")
+                if isinstance(exc, (TimeoutError, socket.timeout)) or "timed out" in str(exc).lower():
+                    log.error("transcript", f"LLM cleaner timed out after {_LLM_TIMEOUT_SECONDS}s — writing lines as-is")
+                else:
+                    log.error("transcript", f"LLM cleaner unavailable ({exc}) — writing lines as-is")
             return text  # fallback: write line without LLM cleanup
         if used_llm:
             _LLM_FILTER_STATS["last_ms"] = elapsed_ms
