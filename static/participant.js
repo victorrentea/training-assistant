@@ -1751,7 +1751,8 @@ function closeEmojiPopup(ev) {
     const page = document.getElementById('slides-page-inline');
     const closeBtn = document.getElementById('slides-close-btn');
     if (!page) return;
-    const hasPdfjsDoc = Boolean(slide && slidesPdfDoc && slidesPdfViewer && slidesSelectedId === slide._id && slidesViewMode !== 'native');
+    const overlayOpen = Boolean(document.getElementById('slides-overlay')?.classList.contains('open'));
+    const hasPdfjsDoc = overlayOpen && Boolean(slide && slidesPdfDoc && slidesPdfViewer && slidesSelectedId === slide._id && slidesViewMode !== 'native');
     if (!hasPdfjsDoc) {
       page.style.display = 'none';
       if (closeBtn) closeBtn.style.display = 'none';
