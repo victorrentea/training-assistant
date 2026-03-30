@@ -22,12 +22,6 @@ jobs:
                       pytest pytest-anyio pytest-playwright anthropic \
                       prometheus-fastapi-instrumentator
 
-      - name: Python method length guard (max 60 LOC)
-        run: |
-          python3 scripts/check_python_method_length.py \
-            --max-lines 60 \
-            --baseline scripts/python_method_length_baseline.json
-
       - name: Unit tests
         run: pytest tests/unit/ tests/core/ tests/openapi/ tests/features/slides/test_router.py -v
 

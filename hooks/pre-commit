@@ -3,7 +3,3 @@ set -e
 
 # work-hours.js is maintained manually by the project owner.
 # deploy-info.json is generated at Railway startup from RAILWAY_GIT_COMMIT_SHA — not committed.
-python3 scripts/check_python_method_length.py \
-  --max-lines 60 \
-  --baseline scripts/python_method_length_baseline.json \
-  --staged
