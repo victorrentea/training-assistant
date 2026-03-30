@@ -22,13 +22,22 @@ _LLM_FILTER_STATS: dict[str, float | str | None] = {
     "provider": None,
 }
 _PREVIEW_LEADING_TS_RE = re.compile(r"^\[\s*\d{1,4}:\d{2}:\d{2}(?:\.\d+)?\s*\]\s*")
+_llm_last_error_logged_at: float = 0.0
 
 def _build_llm_line_filter():
     from daemon.transcript.llm_cleaner import clean_line_with_meta
     _LLM_FILTER_STATS["provider"] = "OLLAMA"
     log.info("transcript", "LLM pre-filter enabled (TRANSCRIPT_LLM_CLEAN=1, model: gemma3:4b)")
     def _filter(text: str) -> str | None:
-        result, used_llm, elapsed_ms = clean_line_with_meta(text)
+        global _llm_last_error_logged_at
+        try:
+            result, used_llm, elapsed_ms = clean_line_with_meta(text)
+        except Exception as exc:
+            now = time.monotonic()
+            if now - _llm_last_error_logged_at >= 60.0:
+                _llm_last_error_logged_at = now
+                log.error("transcript", f"LLM cleaner unavailable ({exc}) — writing lines as-is")
+            return text  # fallback: write line without LLM cleanup
         if used_llm:
             _LLM_FILTER_STATS["last_ms"] = elapsed_ms
         return None if result == "[SKIP]" else result
