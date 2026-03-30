@@ -216,8 +216,8 @@ class TranscriptNormalizerRunner:
                         "transcript",
                         f"{base_part} to {output_files} normalized files (from {raw_sources} raw sources){preview_part}",
                     )
-            elif llm_ms is not None:
-                log.info("transcript", f"Transcripted 0 words{llm_part} - remove all = noise")
+            # elif llm_ms is not None:
+            #     log.info("transcript", f"Transcripted 0 words{llm_part} - remove all = noise")
         except Exception as exc:
             log.error("transcript", f"Normalizer error: {exc}")
         finally:
