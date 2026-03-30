@@ -13,9 +13,10 @@ covering the entire setDocument + scale + pagesloaded window regardless of
 download time.
 
 Test coverage:
-  - 1s Drive delay  → clean-code deck, host on slide 3
-  - 5s Drive delay  → design-patterns deck, host on slide 4
   - 20s Drive delay → architecture deck, host on slide 2
+
+  Only 20s is tested: 1s/5s downloads complete within the original 5s
+  suppression window and would pass even without the fix, wasting ~36s.
 
 Each case asserts:
   1. Follow mode (aria-pressed on #slides-follow-btn) is still ENABLED after load
@@ -177,10 +178,8 @@ def _assert_follow_mode_active_and_on_page(pax_page, delay_s: int, slug: str, ex
 
 
 @pytest.mark.parametrize("delay_s,presentation,slug,host_slide,expected_page", [
-    (1,  "Clean Code.pptx",     "clean-code",      3, 3),
-    (5,  "Design Patterns.pptx","design-patterns", 4, 4),
     (20, "Architecture.pptx",   "architecture",    2, 2),
-], ids=["1s-delay", "5s-delay", "20s-delay"])
+], ids=["20s-delay"])
 def test_follow_mode_survives_slow_drive(delay_s, presentation, slug, host_slide, expected_page):
     """
     Participant in follow mode eventually sees the correct slide page
