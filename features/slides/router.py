@@ -245,6 +245,11 @@ def _merge_slide_sources(
 ) -> list[dict]:
     merged: list[dict] = []
     seen_pairs: set[tuple[str, str]] = set()
+    # Build slug → group lookup from catalog so non-catalog sources inherit the group.
+    catalog_group_by_slug: dict[str, str | None] = {
+        str(e.get("slug") or "").strip(): e.get("group")
+        for e in catalog_slides if isinstance(e, dict) and e.get("slug")
+    }
 
     for source in (uploaded_slides, local_slides, state_slides, catalog_slides):
         for entry in source:
@@ -273,7 +278,7 @@ def _merge_slide_sources(
                 "sync_status": entry.get("sync_status"),
                 "sync_message": entry.get("sync_message"),
                 "source": entry.get("source"),
-                "group": entry.get("group"),
+                "group": entry.get("group") or catalog_group_by_slug.get(slug),
             })
     return merged
 
