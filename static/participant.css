@@ -1603,6 +1603,7 @@ h1 { display: none; }
 
 .slides-action-btn:hover {
   opacity: 1;
+  border-color: var(--accent);
 }
 
 #upload-btn, #paste-btn, #feedback-btn {
