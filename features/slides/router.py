@@ -433,7 +433,8 @@ async def get_slides(request: Request):
     return {"slides": slides}
 
 
-@public_router.api_route("/api/slides/file/{slug}", methods=["GET", "HEAD"], operation_id="get_slide_file")
+@public_router.api_route("/api/slides/file/{slug}", methods=["GET", "HEAD"], include_in_schema=False)
+@public_router.get("/api/slides/file/{slug}", operation_id="get_slide_file")
 async def get_slide_file(slug: str, request: Request):
     from features.slides.cache import _cache_path, download_or_wait_cached
 
