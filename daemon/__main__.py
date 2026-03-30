@@ -630,7 +630,7 @@ def run() -> None:
     last_intellij_probe_at: float = 0.0
     _INTELLIJ_PROBE_INTERVAL: float = float(os.environ.get("DAEMON_INTELLIJ_PROBE_INTERVAL_SECONDS", "5.0"))  # probe IntelliJ every 5 seconds
     last_ppt_probe_at: float = 0.0
-    _PPT_PROBE_INTERVAL: float = float(os.environ.get("DAEMON_PPT_PROBE_INTERVAL_SECONDS", "5.0"))      # poll PowerPoint for current slide every 5 seconds
+    _PPT_PROBE_INTERVAL: float = float(os.environ.get("DAEMON_PPT_PROBE_INTERVAL_SECONDS", "1.0"))      # poll PowerPoint for current slide every second
     ppt_state: dict | None = None     # last known PowerPoint state (persisted between probe ticks)
     ppt_error: str | None = None      # last known probe error
     last_ppt_track_at: float = 0.0
