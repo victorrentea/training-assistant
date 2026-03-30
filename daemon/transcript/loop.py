@@ -25,23 +25,29 @@ _LLM_FILTER_STATS: dict[str, float | str | None] = {
 }
 _PREVIEW_LEADING_TS_RE = re.compile(r"^\[\s*\d{1,4}:\d{2}:\d{2}(?:\.\d+)?\s*\]\s*")
 _llm_last_error_logged_at: float = 0.0
+_llm_circuit_open_until: float = 0.0   # circuit breaker: skip LLM until this monotonic time
+
+_LLM_CIRCUIT_COOLDOWN_SECONDS = 60.0   # how long to bypass LLM after a failure
 
 def _build_llm_line_filter():
     from daemon.transcript.llm_cleaner import clean_line_with_meta
     _LLM_FILTER_STATS["provider"] = "OLLAMA"
     log.info("transcript", "LLM pre-filter enabled (TRANSCRIPT_LLM_CLEAN=1, model: gemma3:4b)")
     def _filter(text: str) -> str | None:
-        global _llm_last_error_logged_at
+        global _llm_last_error_logged_at, _llm_circuit_open_until
+        now = time.monotonic()
+        if now < _llm_circuit_open_until:
+            return text  # circuit open: bypass LLM, write as-is immediately
         try:
             result, used_llm, elapsed_ms = clean_line_with_meta(text, timeout=_LLM_TIMEOUT_SECONDS)
         except Exception as exc:
-            now = time.monotonic()
-            if now - _llm_last_error_logged_at >= 60.0:
+            _llm_circuit_open_until = now + _LLM_CIRCUIT_COOLDOWN_SECONDS
+            if now - _llm_last_error_logged_at >= _LLM_CIRCUIT_COOLDOWN_SECONDS:
                 _llm_last_error_logged_at = now
                 if isinstance(exc, (TimeoutError, socket.timeout)) or "timed out" in str(exc).lower():
-                    log.error("transcript", f"LLM cleaner timed out after {_LLM_TIMEOUT_SECONDS}s — writing lines as-is")
+                    log.error("transcript", f"LLM cleaner timed out after {_LLM_TIMEOUT_SECONDS}s — bypassing for {_LLM_CIRCUIT_COOLDOWN_SECONDS:.0f}s")
                 else:
-                    log.error("transcript", f"LLM cleaner unavailable ({exc}) — writing lines as-is")
+                    log.error("transcript", f"LLM cleaner unavailable ({exc}) — bypassing for {_LLM_CIRCUIT_COOLDOWN_SECONDS:.0f}s")
             return text  # fallback: write line without LLM cleanup
         if used_llm:
             _LLM_FILTER_STATS["last_ms"] = elapsed_ms
