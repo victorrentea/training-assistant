@@ -3686,13 +3686,7 @@ function closeEmojiPopup(ev) {
     const pasteBtn = document.getElementById('paste-btn');
     if (pasteBtn) pasteBtn.style.display = mode === 'conference' ? 'none' : 'flex';
 
-    // Version tag: always keep at bottom-right in participant view.
-    const versionTag = document.getElementById('version-tag');
-    if (versionTag) {
-      versionTag.style.top = '';
-      versionTag.style.right = 'calc(var(--slides-overlay-width) + .45rem)';
-      versionTag.style.bottom = '.35rem';
-    }
+
   }
 
   function renderContent(voteCounts) {

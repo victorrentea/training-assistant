@@ -1100,14 +1100,17 @@ h1 { display: none; }
 }
 
 #version-tag {
-  top: .3rem;
-  bottom: auto;
-  right: var(--slides-overlay-width);
+  top: auto;
+  bottom: .35rem;
+  right: calc(var(--slides-overlay-width) + .45rem);
   z-index: 7002;
   background: rgba(0, 0, 0, 0.55);
   border: 1px solid rgba(255, 255, 255, 0.22);
   border-radius: 6px;
-  padding: .12rem .38rem;
+  padding: .2rem .45rem;
+  text-align: right;
+  line-height: 1.45;
+  white-space: pre-line;
 }
 #version-tag.deploy-incoming {
   animation: none;
