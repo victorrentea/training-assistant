@@ -94,6 +94,21 @@ class ChannelCapture:
 
 
 # ── Transcription worker ──────────────────────────────────────────────────────
+def _transcribe(audio, model: str, language: str | None = None) -> dict:
+    """Run mlx_whisper with all output suppressed."""
+    import mlx_whisper
+    with open(os.devnull, "w") as devnull, \
+         contextlib.redirect_stdout(devnull), \
+         contextlib.redirect_stderr(devnull):
+        return mlx_whisper.transcribe(
+            audio,
+            path_or_hf_repo=model,
+            language=language,
+            verbose=False,
+            condition_on_previous_text=False,
+        )
+
+
 def transcriber_loop(tx_queue: queue.Queue, model: str):
     """Single thread — serialises GPU usage so both channels share the model."""
     import mlx_whisper
@@ -108,18 +123,16 @@ def transcriber_loop(tx_queue: queue.Queue, model: str):
             continue
 
         try:
-            with open(os.devnull, "w") as devnull, \
-                 contextlib.redirect_stdout(devnull), \
-                 contextlib.redirect_stderr(devnull):
-                result = mlx_whisper.transcribe(
-                    audio,
-                    path_or_hf_repo=model,
-                    # no language= → auto-detect per chunk (Romanian + English)
-                    verbose=False,
-                    condition_on_previous_text=False,  # avoid hallucination snowball
-                )
+            result = _transcribe(audio, model)
             text = result.get("text", "").strip()
             lang = result.get("language", "?")
+
+            # If Whisper guessed a language other than ro/en, re-run forced to Romanian
+            # (Romanian shares many sounds with other Latin/Slavic languages and gets misidentified)
+            if lang not in ("ro", "en"):
+                result = _transcribe(audio, model, language="ro")
+                text = result.get("text", "").strip()
+                lang = "ro"
 
             if not text or text.lower() in HALLUCINATIONS:
                 continue
