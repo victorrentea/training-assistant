@@ -297,8 +297,9 @@ function closeEmojiPopup(ev) {
       { selector: '#location-prompt', emoji: '📍', text: "Tell us where you're from — for the world map. Totally optional." },
       { selector: '#slides-dock',        emoji: '📑', text: 'Slides are always on the right. Click any topic to open it.', scanDock: true },
       { selector: '#slides-follow-btn',  emoji: '📌', text: "Auto-syncs your view to the trainer's current slide." },
-      { selector: '#paste-btn',           emoji: '📋', text: "Paste large code or text.", arrowRight: true },
-      { selector: '#upload-btn',          emoji: '📤', text: "Drop a file anywhere to send it to the host.", arrowRight: true },
+      { selector: '#feedback-btn',         emoji: '💬', text: "Got feedback? Drop it here. We want to hear it." },
+      { selector: '#paste-btn',           emoji: '📋', text: "Got code or text to share? Paste it to the host." },
+      { selector: '#upload-btn',          emoji: '📤', text: "Got a file? Drop it anywhere to send it to the host." },
       ..._shuffled,
     ];
 
@@ -646,10 +647,21 @@ function closeEmojiPopup(ev) {
     closeModal('summary-overlay');
   }
 
+  function positionDialogAboveBtn(bubble, btn) {
+    const rect = btn.getBoundingClientRect();
+    const bubW = bubble.offsetWidth || 360;
+    const left = Math.max(8, Math.min(window.innerWidth - bubW - 8, rect.left + rect.width / 2 - bubW / 2));
+    bubble.style.left = left + 'px';
+    bubble.style.right = 'auto';
+    bubble.style.bottom = (window.innerHeight - rect.top + 8) + 'px';
+    bubble.style.top = 'auto';
+  }
+
   function openPasteModal() {
     const overlay = document.getElementById('paste-overlay');
     if (overlay) {
       overlay.classList.add('open');
+      positionDialogAboveBtn(overlay.querySelector('.paste-bubble'), document.getElementById('paste-btn'));
       const ta = document.getElementById('paste-textarea');
       if (ta) { ta.value = ''; ta.focus(); }
       document.getElementById('paste-send-btn').disabled = true;
@@ -677,6 +689,7 @@ function closeEmojiPopup(ev) {
     const overlay = document.getElementById('feedback-overlay');
     if (overlay) {
       overlay.classList.add('open');
+      positionDialogAboveBtn(overlay.querySelector('.feedback-bubble'), document.getElementById('feedback-btn'));
       const ta = document.getElementById('feedback-textarea');
       if (ta) { ta.value = ''; ta.focus(); }
       document.getElementById('feedback-send-btn').disabled = true;
@@ -708,7 +721,10 @@ function closeEmojiPopup(ev) {
   function openUploadModal() {
     _uploadSelectedFile = null;
     const overlay = document.getElementById('upload-overlay');
-    if (overlay) overlay.classList.add('open');
+    if (overlay) {
+      overlay.classList.add('open');
+      positionDialogAboveBtn(overlay.querySelector('.upload-bubble'), document.getElementById('upload-btn'));
+    }
     document.getElementById('upload-file-info').textContent = '';
     document.getElementById('upload-send-btn').disabled = true;
     document.getElementById('upload-progress-bar').style.display = 'none';
@@ -4236,13 +4252,13 @@ function closeEmojiPopup(ev) {
 
     const emojiBarEl = document.getElementById('emoji-bar');
     emojiBarEl.addEventListener('mouseenter', (ev) => {
-      const btn = ev.target.closest('.emoji-btn[data-tooltip]');
+      const btn = ev.target.closest('.emoji-btn[data-tooltip], .slides-action-btn[data-tooltip]');
       if (!btn) return;
       showTimer = setTimeout(() => showBubble(btn), 100);
     }, true);
     emojiBarEl.addEventListener('mouseleave', removeBubble, true);
     emojiBarEl.addEventListener('click', (ev) => {
-      if (ev.target.closest('.emoji-btn[data-tooltip]')) removeBubble();
+      if (ev.target.closest('.emoji-btn[data-tooltip], .slides-action-btn[data-tooltip]')) removeBubble();
     }, true);
   })();
 
