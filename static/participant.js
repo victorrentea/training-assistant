@@ -2067,6 +2067,10 @@ function closeEmojiPopup(ev) {
           return;
         }
         slidesPdfDoc = doc;
+        // Renew suppression to cover setDocument + scale + pagesloaded events below.
+        // Without this, a slow PDF download (> initial 5s window) leaves the suppression
+        // expired when PDF.js fires updateviewarea during rendering, disabling follow mode.
+        _suppressSlidesFollowAutoUncheck(5000);
         slidesPdfViewer.setDocument(doc);
         slidesPdfLinkService.setDocument(doc, null);
         slidesPdfViewer.currentScaleValue = 'page-width';
