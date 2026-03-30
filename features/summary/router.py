@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter
 from pydantic import BaseModel
 
-from core.messaging import broadcast_state
+from core.messaging import broadcast_state, broadcast
 from core.state import state
 from features.ws.daemon_protocol import push_to_daemon
 
@@ -25,7 +25,8 @@ class SummaryUpdate(BaseModel):
 async def update_summary(body: SummaryUpdate):
     state.summary_points = [p.model_dump() for p in body.points]
     state.summary_updated_at = datetime.now(timezone.utc)
-    await broadcast_state()
+    await broadcast({"type": "summary", "points": state.summary_points,
+                     "updated_at": state.summary_updated_at.isoformat()})
     return {"ok": True}
 
 
@@ -36,7 +37,7 @@ class NotesUpdate(BaseModel):
 @router.post("/notes")
 async def update_notes(body: NotesUpdate):
     state.notes_content = body.content
-    await broadcast_state()
+    await broadcast({"type": "notes", "notes_content": state.notes_content})
     return {"ok": True}
 
 

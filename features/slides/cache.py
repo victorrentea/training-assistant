@@ -111,6 +111,11 @@ def _get_event(slug: str) -> asyncio.Event:
     return state.slides_download_events[slug]
 
 
+async def broadcast_slides_cache_status() -> None:
+    """Broadcast slides_cache_status as a dedicated message (separate from full state)."""
+    await broadcast({"type": "slides_cache_status", "slides_cache_status": state.slides_cache_status})
+
+
 # ---------------------------------------------------------------------------
 # Sync functions (run in executor)
 # ---------------------------------------------------------------------------
@@ -191,7 +196,7 @@ async def _do_download(slug: str, url: str) -> Path:
     async with lock:
         async with state.slides_download_semaphore:
             _set_status(slug, "downloading")
-            await broadcast_state()
+            await broadcast_slides_cache_status()
             await _push_log(slug, "download_start", url)
             try:
                 size = await _download_pdf(url, dest)
@@ -203,20 +208,20 @@ async def _do_download(slug: str, url: str) -> Path:
                     logger.warning("[slides-cache] fingerprint probe failed for %s: %s", slug, fp_err)
                 downloaded_at = datetime.now(timezone.utc).isoformat()
                 _set_status(slug, "cached", size_bytes=size, downloaded_at=downloaded_at)
-                await broadcast_state()
+                await broadcast_slides_cache_status()
                 size_mb = size / (1024 * 1024)
                 size_str = f"{size_mb:.1f} MB" if size_mb >= 1 else f"{size / 1024:.0f} KB"
                 await _push_log(slug, "download_complete", f"Downloaded PDF from Google Drive: {size_str}")
                 return dest
             except Exception as exc:
                 _set_status(slug, "download_failed", error=str(exc))
-                await broadcast_state()
+                await broadcast_slides_cache_status()
                 await _push_log(slug, "download_failed", str(exc))
                 raise
             except BaseException as exc:
                 # Catches CancelledError (not a subclass of Exception in Python 3.8+)
                 _set_status(slug, "download_failed", error=f"cancelled: {exc}")
-                await broadcast_state()
+                await broadcast_slides_cache_status()
                 raise
 
 
@@ -289,7 +294,7 @@ async def handle_slide_invalidated(slug: str) -> None:
     dest = _cache_path(slug)
     new_status = "stale" if dest.exists() else "not_cached"
     _set_status(slug, new_status)
-    await broadcast_state()
+    await broadcast_slides_cache_status()
     await _push_log(slug, "invalidated", f"status={new_status}")
 
     asyncio.create_task(_poll_fingerprint_loop(slug, url))
@@ -315,7 +320,7 @@ async def _poll_fingerprint_loop(slug: str, url: str) -> None:
             return
 
     _set_status(slug, "polling_drive")
-    await broadcast_state()
+    await broadcast_slides_cache_status()
     await _push_log(slug, "poll_start", f"baseline={old_fp[:30]}...")
 
     # Initial delay before first check
@@ -350,7 +355,7 @@ async def _poll_fingerprint_loop(slug: str, url: str) -> None:
     # Timed out
     elapsed = _POLL_DELAY_S + _POLL_TIMEOUT_S
     _set_status(slug, "poll_timeout")
-    await broadcast_state()
+    await broadcast_slides_cache_status()
     await _push_log(slug, "poll_timeout", f"after {elapsed:.0f}s")
 
 
@@ -443,5 +448,6 @@ async def handle_slides_catalog(entries: list[dict]) -> None:
             _set_status(slug, initial_status)
 
     await broadcast_state()
+    await broadcast_slides_cache_status()
     await broadcast({"type": "slides_catalog_changed"})
     await _push_log("*", "catalog_loaded", f"{len(new_catalog)} entries")
