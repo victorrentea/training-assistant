@@ -714,12 +714,11 @@ def run() -> None:
                     last_ppt_probe_at = _ppt_now
                     ppt_state, ppt_error = _platform.probe_powerpoint()
                     if ppt_error:
-                        if ppt_error != last_powerpoint_error:
-                            log.error("ppt", f"AppleScript probe failed: {ppt_error}")
-                            last_powerpoint_error = ppt_error
+                        log.error("ppt", f"osascript failed: {ppt_error}")
+                        last_powerpoint_error = ppt_error
                     else:
                         if last_powerpoint_error is not None:
-                            log.info("ppt", "AppleScript probe recovered")
+                            log.info("ppt", "osascript recovered")
                             last_powerpoint_error = None
                         if ppt_state != last_powerpoint_state:
                             was_presenting = bool((last_powerpoint_state or {}).get("presenting", False))
