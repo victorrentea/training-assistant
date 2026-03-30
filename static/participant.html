@@ -128,7 +128,23 @@
 <script src="/static/utils.js"></script>
 <script src="/static/participant.js"></script>
 <div class="version-tag" id="version-tag"></div>
-<script>window.renderDeployAge && window.renderDeployAge('version-tag');</script>
+<script>
+  if (window.renderDeployAge) {
+    window.renderDeployAge('version-tag');
+    // Reformat into 3 lines: "deployed\n2h ago\nbuilt at 30 Mar 14:30"
+    const _origUpdate = window.__updateDeployAge;
+    if (_origUpdate) {
+      window.__updateDeployAge = function() {
+        _origUpdate();
+        const el = document.getElementById('version-tag');
+        if (!el) return;
+        // "deployed 2h ago | built at 30 Mar 14:30" → 3 lines
+        el.textContent = el.textContent.replace(/^(deployed) (\S+) \| (.*)$/, '$1\n$2\n$3');
+      };
+      window.__updateDeployAge();
+    }
+  }
+</script>
 <div id="qa-toast" class="qa-toast"></div>
 <div id="emoji-bar">
   <!-- PDF slide controls — moved here so renderEmojiBar() can measure them as part of the single flex row -->
