@@ -89,11 +89,18 @@ class _ChannelCapture:
         s.start()
         return s
 
+    def _device_name(self) -> str:
+        try:
+            import sounddevice as sd
+            return sd.query_devices(self.device)["name"]
+        except Exception:
+            return str(self.device)
+
     def _loop(self):
         while self._running:
             try:
                 s = self._open()
-                log.info("transcript", f"🎙️ [{self.label}] capturing from device {self.device!r}")
+                log.info("transcript", f"🎙️ [{self.label}] capturing from [{self.device}] {self._device_name()!r}")
                 while self._running and s.active:
                     time.sleep(0.5)
                 s.stop(); s.close()
