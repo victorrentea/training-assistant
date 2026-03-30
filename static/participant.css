@@ -1584,12 +1584,12 @@ h1 { display: none; }
   pointer-events: none;
 }
 
-/* Upload + paste floating over the bottom-right corner of the slides viewer */
+/* Upload + paste + feedback — always visible, fixed at bottom-right of screen */
 .slides-action-corner {
-  position: absolute;
+  position: fixed;
   bottom: .75rem;
   right: .75rem;
-  z-index: 10;
+  z-index: 3100;
   display: flex;
   gap: .4rem;
   pointer-events: auto;
