@@ -27,7 +27,7 @@ from daemon import log
 # ── Config from env ────────────────────────────────────────────────────────────
 _ME_DEVICE    = os.environ.get("WHISPER_ME_DEVICE")
 _AUD_DEVICE   = os.environ.get("WHISPER_AUDIENCE_DEVICE")
-_ME_SPEAKER   = os.environ.get("WHISPER_ME_SPEAKER",       "Victor")
+_ME_SPEAKER   = os.environ.get("WHISPER_ME_SPEAKER",       "Trainer")
 _AUD_SPEAKER  = os.environ.get("WHISPER_AUDIENCE_SPEAKER", "Participant")
 _MODEL        = os.environ.get("WHISPER_MODEL",            "mlx-community/whisper-large-v3-mlx")
 _CHUNK_SEC    = float(os.environ.get("WHISPER_CHUNK_SECONDS",      "4"))
