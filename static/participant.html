@@ -106,10 +106,12 @@
     </div>
   </div>
 </div>
-<div class="slides-action-corner">
-  <button id="upload-btn" class="slides-ctrl-btn slides-action-btn" data-tooltip="Send a file to the host." data-tooltip-emoji="📤"><svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13V4"/><path d="M6 7.5L10 3.5L14 7.5"/><path d="M4.5 13.5v1a2 2 0 0 0 2 2h7a2 2 0 0 0 2-2v-1"/></svg></button>
-  <button id="paste-btn" class="slides-ctrl-btn slides-action-btn" data-tooltip="Paste text to the host." data-tooltip-emoji="📋">📋</button>
-  <button id="feedback-btn" class="slides-ctrl-btn slides-action-btn" data-tooltip="Share feedback" data-tooltip-emoji="💬">💬</button>
+<div id="slides-zoom-corner">
+  <button id="slides-close-btn" class="slides-ctrl-btn slides-close-btn" type="button" data-tooltip="Close slides" onclick="closeSlidesModal()" style="display:none">✕</button>
+  <button id="slides-zoom-out" class="slides-ctrl-btn slides-zoom-btn" type="button" data-tooltip="Zoom out" style="display:none">−</button>
+  <button id="slides-fit-width" class="slides-ctrl-btn slides-zoom-btn" type="button" data-tooltip="Fit to width" style="display:none"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg></button>
+  <button id="slides-zoom-in" class="slides-ctrl-btn slides-zoom-btn" type="button" data-tooltip="Zoom in" style="display:none">+</button>
+  <span id="slides-page-inline" class="slides-page-inline" style="display:none"></span>
 </div>
 <div id="slides-ui-blocker" class="slides-ui-blocker" style="display:none;" aria-live="polite" aria-busy="true">
   <div class="slides-ui-blocker-card">
@@ -148,11 +150,9 @@
 <div id="emoji-bar">
   <!-- PDF slide controls — moved here so renderEmojiBar() can measure them as part of the single flex row -->
   <div id="slides-ctrl-group" style="display:flex; gap:.4rem; align-items:center; pointer-events:auto;">
-    <button id="slides-close-btn" class="slides-ctrl-btn slides-close-btn" type="button" data-tooltip="Close slides" onclick="closeSlidesModal()" style="display:none">✕</button>
-    <button id="slides-zoom-out" class="slides-ctrl-btn slides-zoom-btn" type="button" data-tooltip="Zoom out" style="display:none">−</button>
-    <button id="slides-fit-width" class="slides-ctrl-btn slides-zoom-btn" type="button" data-tooltip="Fit to width" style="display:none"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg></button>
-    <button id="slides-zoom-in" class="slides-ctrl-btn slides-zoom-btn" type="button" data-tooltip="Zoom in" style="display:none">+</button>
-    <span id="slides-page-inline" class="slides-page-inline" style="display:none"></span>
+    <button id="feedback-btn" class="slides-ctrl-btn slides-action-btn" data-tooltip="Share feedback" data-tooltip-emoji="💬">💬</button>
+    <button id="paste-btn" class="slides-ctrl-btn slides-action-btn" data-tooltip="Paste text to the host." data-tooltip-emoji="📋">📋</button>
+    <button id="upload-btn" class="slides-ctrl-btn slides-action-btn" data-tooltip="Send a file to the host." data-tooltip-emoji="📤"><svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13V4"/><path d="M6 7.5L10 3.5L14 7.5"/><path d="M4.5 13.5v1a2 2 0 0 0 2 2h7a2 2 0 0 0 2-2v-1"/></svg></button>
   </div>
   <!-- Dynamic emoji buttons + dots + ping injected/centered here -->
   <div id="emoji-center">

@@ -1584,14 +1584,15 @@ h1 { display: none; }
   pointer-events: none;
 }
 
-/* Upload + paste + feedback — always visible, fixed at bottom-right of screen */
-.slides-action-corner {
+/* Zoom / page / close — fixed near right edge of PDF viewer */
+#slides-zoom-corner {
   position: fixed;
   bottom: .75rem;
-  right: .75rem;
+  right: calc(var(--slides-overlay-width) + .75rem);
   z-index: 3100;
   display: flex;
   gap: .4rem;
+  align-items: center;
   pointer-events: auto;
 }
 

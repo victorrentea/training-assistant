@@ -88,7 +88,7 @@ function renderEmojiBar() {
   const leftBtns = Array.from((document.getElementById('slides-ctrl-group') || document.createElement('div'))
     .querySelectorAll('button, span')).filter(el => el.getBoundingClientRect().width > 0);
   const leftW = leftBtns.reduce((s, el) => s + el.getBoundingClientRect().width + 8, 0);
-  const rightBtns = [document.getElementById('upload-btn'), document.getElementById('paste-btn')];
+  const rightBtns = ['slides-zoom-out', 'slides-fit-width', 'slides-zoom-in', 'slides-page-inline', 'slides-close-btn'].map(id => document.getElementById(id));
   const rightW = rightBtns.reduce((s, el) => {
     if (!el) return s;
     const w = el.getBoundingClientRect().width;
