@@ -26,40 +26,32 @@ HOST_USER = os.environ.get("HOST_USERNAME", "host")
 HOST_PASS = os.environ.get("HOST_PASSWORD", "testpass")
 
 
-def _get_or_create_session() -> str:
-    """Get existing session_id or create a new one."""
-    try:
-        with urllib.request.urlopen(f"{BASE}/api/session/active", timeout=5) as resp:
-            data = json.loads(resp.read())
-            if data.get("session_id"):
-                return data["session_id"]
-    except Exception:
-        pass
+import base64
+import time
 
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
-        ctx = browser.new_context(
-            http_credentials={"username": HOST_USER, "password": HOST_PASS}
-        )
-        page = ctx.new_page()
-        page.goto(f"{BASE}/host", wait_until="networkidle")
-        if re.search(r"/host/[a-zA-Z0-9]+", page.url):
-            sid = page.url.split("/host/")[-1].split("?")[0]
-            browser.close()
-            return sid
-        page.locator("#session-name-input").fill("Poll Test")
-        btn = page.locator("#create-btn-workshop")
-        expect(btn).to_be_enabled(timeout=3000)
-        btn.click()
-        page.wait_for_url(re.compile(r"/host/[a-zA-Z0-9]+"), timeout=15000)
-        sid = page.url.split("/host/")[-1].split("?")[0]
-        browser.close()
-        return sid
+
+def _api_call(method, path, data=None):
+    auth = base64.b64encode(f"{HOST_USER}:{HOST_PASS}".encode()).decode()
+    body = json.dumps(data).encode() if data else (b"" if method == "POST" else None)
+    req = urllib.request.Request(
+        f"{BASE}{path}", method=method,
+        headers={"Authorization": f"Basic {auth}", "Content-Type": "application/json"},
+        data=body,
+    )
+    if method == "POST" and data is None:
+        req.add_header("Content-Length", "0")
+    with urllib.request.urlopen(req, timeout=10) as resp:
+        return json.loads(resp.read())
+
+
+def _create_session(name="PollTest") -> str:
+    result = _api_call("POST", "/api/session/create", {"name": f"{name} {int(time.time())}", "type": "workshop"})
+    return result["session_id"]
 
 
 def test_full_poll_lifecycle():
     """Complete poll flow: create → vote → close → verify percentages."""
-    session_id = _get_or_create_session()
+    session_id = _create_session()
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
