@@ -50,6 +50,15 @@ tests/
   ```
 - Avoid bare `time.sleep()` in tests. If you must wait, use a condition-based wait.
 
+### Prefer UI interactions over direct API calls
+- Hermetic tests should **click buttons and fill inputs like real users**, not call REST APIs directly.
+- Use page objects (`HostPage`, `ParticipantPage`) for all user-facing interactions.
+- Direct API calls are acceptable only for:
+  - **Test setup** — creating sessions, seeding data before the scenario starts
+  - **Assertions** — verifying backend state that has no visible UI indicator
+  - **Operations with no UI equivalent** — e.g., stub control files, mock Drive stats
+- If an API-driven step is needed because the UI interaction is flaky, fix the page object (add waits, retries) rather than bypassing the UI.
+
 ### Test-Drive-Fix bugs
 - Start by reproducing the bug manually.
 - Write an automated test that fails due to the bug.

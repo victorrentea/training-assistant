@@ -33,10 +33,8 @@ def participant_votes(connected, option):
 
 
 @when("the host closes the poll")
-def host_closes_poll(connected, session_id):
-    from step_defs.conftest import _api_call
-    # Use API to close — more reliable than UI click timing
-    _api_call("PUT", f"/api/{session_id}/poll/status", {"open": False})
+def host_closes_poll(connected):
+    connected["host"].close_poll()
 
 
 @when(parsers.parse('the host marks "{option}" as correct'))
