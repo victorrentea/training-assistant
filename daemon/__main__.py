@@ -630,7 +630,7 @@ def run() -> None:
     last_intellij_probe_at: float = 0.0
     _INTELLIJ_PROBE_INTERVAL: float = float(os.environ.get("DAEMON_INTELLIJ_PROBE_INTERVAL_SECONDS", "5.0"))  # probe IntelliJ every 5 seconds
     last_ppt_probe_at: float = 0.0
-    _PPT_PROBE_INTERVAL: float = float(os.environ.get("DAEMON_PPT_PROBE_INTERVAL_SECONDS", "5.0"))      # poll PowerPoint for current slide every 5 seconds
+    _PPT_PROBE_INTERVAL: float = float(os.environ.get("DAEMON_PPT_PROBE_INTERVAL_SECONDS", "5.0"))      # idle poll interval; 1s override applied automatically when presenting
     ppt_state: dict | None = None     # last known PowerPoint state (persisted between probe ticks)
     ppt_error: str | None = None      # last known probe error
     last_ppt_track_at: float = 0.0
@@ -708,11 +708,15 @@ def run() -> None:
                 slides_runner.tick()
                 materials_mirror.tick()
 
-                # ── Detect active PowerPoint presentation/slide via AppleScript (every 5s) ──
+                # ── Detect active PowerPoint presentation/slide via AppleScript ──
+                # Use 1s interval when presenting (fullscreen) for responsive slide-follow;
+                # fall back to the configured interval (default 5s) when idle.
                 _ppt_now = time.monotonic()
-                if _ppt_now - last_ppt_probe_at >= _PPT_PROBE_INTERVAL:
+                _ppt_presenting = bool((ppt_state or {}).get("presenting", False))
+                _ppt_interval = 1.0 if _ppt_presenting else _PPT_PROBE_INTERVAL
+                if _ppt_now - last_ppt_probe_at >= _ppt_interval:
                     last_ppt_probe_at = _ppt_now
-                    ppt_state, ppt_error = _platform.probe_powerpoint(timeout_seconds=5.0)
+                    ppt_state, ppt_error = _platform.probe_powerpoint(timeout_seconds=2.0)
                     if ppt_error:
                         log.error("ppt", f"osascript failed: {ppt_error}")
                         last_powerpoint_error = ppt_error
