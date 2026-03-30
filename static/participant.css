@@ -1615,6 +1615,11 @@ h1 { display: none; }
   opacity: 1;
 }
 
+#upload-btn:hover, #paste-btn:hover, #feedback-btn:hover {
+  background: rgba(20, 20, 35, 0.97);
+  border-color: var(--accent);
+}
+
 /* Overflow popup */
 .emoji-popup {
   position: absolute;
@@ -2074,7 +2079,7 @@ h1 { display: none; }
 .paste-bubble {
   position: fixed;
   bottom: 3.5rem;
-  right: .75rem;
+  left: .75rem;
   width: min(360px, 80vw);
   background: var(--surface);
   border: 1px solid var(--border);
@@ -2082,24 +2087,24 @@ h1 { display: none; }
   padding: .75rem;
   box-shadow: 0 8px 32px rgba(0,0,0,0.5);
   animation: paste-bubble-pop .2s ease-out;
-  transform-origin: bottom right;
+  transform-origin: bottom center;
 }
 @keyframes paste-bubble-pop {
   0% { transform: scale(0.3); opacity: 0; }
   100% { transform: scale(1); opacity: 1; }
 }
-/* Tail pointing down-right toward the paste button */
+/* Tail pointing down toward the button */
 .paste-bubble::after {
   content: '';
   position: absolute;
   bottom: -8px;
-  right: 14px;
+  left: 50%;
+  transform: translateX(-50%) rotate(45deg);
   width: 16px;
   height: 16px;
   background: var(--surface);
   border-right: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
-  transform: rotate(45deg);
 }
 .paste-textarea {
   width: 100%;
@@ -2142,7 +2147,7 @@ h1 { display: none; }
 .upload-bubble {
   position: fixed;
   bottom: 3.5rem;
-  right: calc(.75rem + 52px);
+  left: .75rem;
   width: min(360px, 80vw);
   background: var(--surface);
   border: 1px solid var(--border);
@@ -2150,19 +2155,19 @@ h1 { display: none; }
   padding: .75rem;
   box-shadow: 0 8px 32px rgba(0,0,0,0.5);
   animation: paste-bubble-pop .2s ease-out;
-  transform-origin: bottom right;
+  transform-origin: bottom center;
 }
 .upload-bubble::after {
   content: '';
   position: absolute;
   bottom: -8px;
-  right: 14px;
+  left: 50%;
+  transform: translateX(-50%) rotate(45deg);
   width: 16px;
   height: 16px;
   background: var(--surface);
   border-right: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
-  transform: rotate(45deg);
 }
 
 /* Dropzone */
@@ -2321,8 +2326,8 @@ h1 { display: none; }
 /* ── Feedback bubble (opens above the bottom-right corner) ── */
 .feedback-bubble {
   position: fixed;
-  bottom: calc(.75rem + 40px + 10px);
-  right: .75rem;
+  bottom: 3.5rem;
+  left: .75rem;
   width: min(300px, 75vw);
   background: var(--surface);
   border: 1px solid var(--border);
@@ -2330,7 +2335,7 @@ h1 { display: none; }
   padding: .75rem;
   box-shadow: 0 8px 32px rgba(0,0,0,0.5);
   animation: feedback-bubble-pop .2s ease-out;
-  transform-origin: bottom right;
+  transform-origin: bottom center;
   z-index: 3004;
 }
 @keyframes feedback-bubble-pop {
@@ -2341,13 +2346,13 @@ h1 { display: none; }
   content: '';
   position: absolute;
   bottom: -7px;
-  right: 13px;
+  left: 50%;
+  transform: translateX(-50%) rotate(45deg);
   width: 14px;
   height: 14px;
   background: var(--surface);
   border-right: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
-  transform: rotate(45deg);
 }
 .feedback-textarea {
   width: 100%;
