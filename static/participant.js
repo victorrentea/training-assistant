@@ -955,7 +955,6 @@ function closeEmojiPopup(ev) {
     const prevSlide = _findSlideForHostCurrent(slidesCurrent);
     const pageSource = (prevSlide && prevSlide._id === targetSlide._id) ? slidesCurrent : hostSlidesCurrent;
     const targetPage = _getHostCurrentPage(pageSource);
-    const previousStoredPage = _getStoredSlidePage(targetSlide.slug);
     _setStoredSlidePage(targetSlide.slug, targetPage);
 
     const overlay = document.getElementById('slides-overlay');
@@ -970,8 +969,9 @@ function closeEmojiPopup(ev) {
     }
 
     if (slidesViewMode === 'native') {
+      // Native viewer can't programmatically navigate pages — only reload when switching presentations.
       const selectedMatches = slidesSelectedId === targetSlide._id;
-      const needsReload = !selectedMatches || previousStoredPage !== targetPage;
+      const needsReload = !selectedMatches;
       if (needsReload) {
         _renderSlidesList(targetSlide._id);
         await _loadSlideIntoViewer(targetSlide, { forceReload: true, withUiBlocker: false });
