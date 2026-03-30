@@ -283,10 +283,13 @@ def _resolve_presentation_slide_target(
 
 
 def _ppt_slide_key(state: dict | None) -> tuple | None:
-    """Extract the fields that affect what participants see (ignores frontmost)."""
+    """Extract (presentation, participant_page) — what participants actually see."""
     if state is None:
         return None
-    return (state.get("presentation"), state.get("slide"), state.get("presenting"))
+    raw_slide = _coerce_slide_number(state.get("slide"))
+    is_presenting = bool(state.get("presenting", False))
+    participant_page = max(1, raw_slide - 1) if is_presenting else raw_slide
+    return (state.get("presentation"), participant_page)
 
 
 def _sync_powerpoint_slide_to_server(main_config, slides_cfg, ppt_state: dict | None, ws_client) -> None:

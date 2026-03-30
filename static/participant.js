@@ -260,7 +260,6 @@ function closeEmojiPopup(ev) {
   let slidesZoomInProgressUntil = 0;
   let _pdfResizeTimer = null;
   let hostSlidesCurrent = null;   // what host is showing NOW
-  let hostSlidesPrevious = null;  // what host was showing before (participants follow this)
   let lastHostSlidesCurrentKey = '';
   let slidesFollowQueue = Promise.resolve();
 
@@ -929,14 +928,10 @@ function closeEmojiPopup(ev) {
     if (!slidesCatalog.length) {
       await _refreshSlidesCatalog();
     }
-    // Use current presentation for deck matching; show the previous page within the same deck
-    // (one slide behind), falling back to current page when switching decks.
-    const targetSlide = _findSlideForHostCurrent(hostSlidesCurrent);
+    const targetSlide = _findSlideForHostCurrent(slidesCurrent);
     if (!targetSlide) return;
 
-    const prevSlide = _findSlideForHostCurrent(slidesCurrent);
-    const pageSource = (prevSlide && prevSlide._id === targetSlide._id) ? slidesCurrent : hostSlidesCurrent;
-    const targetPage = _getHostCurrentPage(pageSource);
+    const targetPage = _getHostCurrentPage(slidesCurrent);
     _setStoredSlidePage(targetSlide.slug, targetPage);
 
     const overlay = document.getElementById('slides-overlay');
@@ -1018,13 +1013,10 @@ function closeEmojiPopup(ev) {
     const key = _slidesCurrentKey(newCurrent);
     if (key === lastHostSlidesCurrentKey) return;
     console.log('[slides-follow] host slide update:', newCurrent?.slug, 'p.' + newCurrent?.current_page, new Date().toISOString());
-    hostSlidesPrevious = hostSlidesCurrent;
     hostSlidesCurrent = newCurrent;
     lastHostSlidesCurrentKey = key;
     if (!_isSlidesFollowActive()) return;
-    // Follow the PREVIOUS slide — participants are one slide behind the host.
-    // Fall back to current if there is no previous (e.g. first slide ever seen).
-    _queueHostSlideFollow(hostSlidesPrevious || hostSlidesCurrent);
+    _queueHostSlideFollow(hostSlidesCurrent);
   }
 
   function _slidePageKey(slug) {
@@ -1130,7 +1122,7 @@ function closeEmojiPopup(ev) {
     if (persist) _setStoredSlidesFollowTrainer(next);
     _renderSlidesFollowTrainerToggle();
     if (applyHost && _isSlidesFollowActive() && hostSlidesCurrent) {
-      _queueHostSlideFollow(hostSlidesPrevious || hostSlidesCurrent);
+      _queueHostSlideFollow(hostSlidesCurrent);
     }
   }
 
@@ -1170,7 +1162,7 @@ function closeEmojiPopup(ev) {
       }
     }
     if (slidesFollowTrainerEnabled && hostSlidesCurrent) {
-      _queueHostSlideFollow(hostSlidesPrevious || hostSlidesCurrent);
+      _queueHostSlideFollow(hostSlidesCurrent);
     }
   }
 
@@ -1679,12 +1671,11 @@ function closeEmojiPopup(ev) {
   }
 
   function _slideFingerprint(slide, headers) {
-    return [
-      slide.url || '',
-      slide.updated_at || '',
-      slide.etag || headers.etag || '',
-      slide.last_modified || headers.lastModified || '',
-    ].join('|');
+    // Use ETag/Last-Modified from HEAD request (authoritative for PDF content).
+    // Avoid slide.updated_at — it reflects PPTX source mtime and changes when the
+    // source file is saved, triggering unnecessary re-downloads even when the PDF is unchanged.
+    const cacheKey = headers.etag || headers.lastModified || slide.updated_at || '';
+    return [slide.url || '', cacheKey].join('|');
   }
 
   function _buildNativeSlideUrl(rawUrl, page) {
@@ -2246,7 +2237,7 @@ function closeEmojiPopup(ev) {
     _setSlidesOverlayOpen(true);
     _refreshSlidesCatalog({ autoLoadSelected: true })
       .then(() => {
-        if (hostSlidesCurrent) _queueHostSlideFollow(hostSlidesPrevious || hostSlidesCurrent);
+        if (hostSlidesCurrent) _queueHostSlideFollow(hostSlidesCurrent);
       })
       .catch(() => {});
     _startSlidesRefreshLoop();
