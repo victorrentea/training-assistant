@@ -55,7 +55,7 @@ def _resolve_device(preferred_idx: int, fallback_pattern: str | None = None) -> 
     if fallback_pattern:
         for i, d in enumerate(sd.query_devices()):
             if fallback_pattern.lower() in d["name"].lower() and d["max_input_channels"] > 0:
-                log.info("transcript", f"🎙️ Device {preferred_idx} unavailable — falling back to [{i}] {d['name']!r}")
+                log.info("transcript", f"🎙️ Device {preferred_idx} unavailable — falling back to {d['name']!r}")
                 return i
     raise RuntimeError(f"Device {preferred_idx} not available and no fallback found (pattern={fallback_pattern!r})")
 
@@ -100,7 +100,7 @@ class _ChannelCapture:
         while self._running:
             try:
                 s = self._open()
-                log.info("transcript", f"🎙️ [{self.label}] capturing from [{self.device}] {self._device_name()!r}")
+                log.info("transcript", f"🎙️ [{self.label}] capturing from {self._device_name()!r}")
                 while self._running and s.active:
                     time.sleep(0.5)
                 s.stop(); s.close()
