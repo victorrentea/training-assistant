@@ -23,6 +23,8 @@ Model: mlx-community/whisper-large-v3-turbo
 """
 
 import argparse
+import contextlib
+import os
 import queue
 import sys
 import threading
@@ -35,7 +37,7 @@ import numpy as np
 SAMPLE_RATE = 16000           # Whisper expects 16kHz mono
 CHUNK_SECONDS = 4             # audio chunk size sent to Whisper (seconds)
 OVERLAP_SECONDS = 0.5         # overlap between chunks to avoid cutting words
-SILENCE_RMS_THRESHOLD = 0.005 # skip transcription if chunk is below this RMS
+SILENCE_RMS_THRESHOLD = 0.012 # skip transcription if chunk is below this RMS
 MODEL = "mlx-community/whisper-large-v3-turbo"
 
 # Whisper hallucinations to suppress (common on near-silence)
@@ -106,13 +108,16 @@ def transcriber_loop(tx_queue: queue.Queue, model: str):
             continue
 
         try:
-            result = mlx_whisper.transcribe(
-                audio,
-                path_or_hf_repo=model,
-                # no language= → auto-detect per chunk (Romanian + English)
-                verbose=False,
-                condition_on_previous_text=False,  # avoid hallucination snowball
-            )
+            with open(os.devnull, "w") as devnull, \
+                 contextlib.redirect_stdout(devnull), \
+                 contextlib.redirect_stderr(devnull):
+                result = mlx_whisper.transcribe(
+                    audio,
+                    path_or_hf_repo=model,
+                    # no language= → auto-detect per chunk (Romanian + English)
+                    verbose=False,
+                    condition_on_previous_text=False,  # avoid hallucination snowball
+                )
             text = result.get("text", "").strip()
             lang = result.get("language", "?")
 
