@@ -39,7 +39,7 @@
     {
       "path": "daemon/transcript/normalizer.py",
       "qualname": "normalize_incremental",
-      "lines": 116
+      "lines": 137
     },
     {
       "path": "features/poll/router.py",
@@ -68,6 +68,11 @@
     },
     {
       "path": "features/snapshot/router.py",
+      "qualname": "_serialize_state",
+      "lines": 62
+    },
+    {
+      "path": "features/snapshot/router.py",
       "qualname": "restore_state_snapshot",
       "lines": 93
     },
@@ -89,7 +94,12 @@
     {
       "path": "tests/conftest.py",
       "qualname": "server_url",
-      "lines": 64
+      "lines": 65
+    },
+    {
+      "path": "tests/docker/test_follow_me.py",
+      "qualname": "test_follow_me_basic",
+      "lines": 74
     },
     {
       "path": "tests/load/test_load.py",
