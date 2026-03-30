@@ -242,7 +242,7 @@ h1 { display: none; }
   display: flex;
   flex-direction: column;
   overflow: visible;
-  z-index: 40;
+  z-index: 7003;
 }
 
 .slides-dock-head {
