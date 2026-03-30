@@ -1035,6 +1035,7 @@ function closeEmojiPopup(ev) {
     const newCurrent = slidesCurrent || null;
     const key = _slidesCurrentKey(newCurrent);
     if (key === lastHostSlidesCurrentKey) return;
+    console.log('[slides-follow] host slide update:', newCurrent?.slug, 'p.' + newCurrent?.current_page, new Date().toISOString());
     hostSlidesPrevious = hostSlidesCurrent;
     hostSlidesCurrent = newCurrent;
     lastHostSlidesCurrentKey = key;
