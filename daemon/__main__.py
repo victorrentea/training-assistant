@@ -629,6 +629,10 @@ def run() -> None:
     git_repos: list[dict] = []         # {project, path, branch, seconds_spent}
     last_intellij_probe_at: float = 0.0
     _INTELLIJ_PROBE_INTERVAL: float = float(os.environ.get("DAEMON_INTELLIJ_PROBE_INTERVAL_SECONDS", "5.0"))  # probe IntelliJ every 5 seconds
+    last_ppt_probe_at: float = 0.0
+    _PPT_PROBE_INTERVAL: float = float(os.environ.get("DAEMON_PPT_PROBE_INTERVAL_SECONDS", "5.0"))      # poll PowerPoint for current slide every 5 seconds
+    ppt_state: dict | None = None     # last known PowerPoint state (persisted between probe ticks)
+    ppt_error: str | None = None      # last known probe error
     last_ppt_track_at: float = 0.0
     _PPT_TRACK_INTERVAL: float = float(os.environ.get("DAEMON_PPT_TRACK_INTERVAL_SECONDS", "5.0"))       # accumulate slide time every 5 seconds
     _last_activity_log_key: tuple = (0, 0)  # (slides_count, git_count) — detect changes
@@ -704,33 +708,38 @@ def run() -> None:
                 slides_runner.tick()
                 materials_mirror.tick()
 
-                # ── Detect active PowerPoint presentation/slide via AppleScript ──
-                ppt_state, ppt_error = _platform.probe_powerpoint()
-                if ppt_error:
-                    if ppt_error != last_powerpoint_error:
-                        log.error("ppt", f"AppleScript probe failed: {ppt_error}")
-                        last_powerpoint_error = ppt_error
-                else:
-                    if last_powerpoint_error is not None:
-                        log.info("ppt", "AppleScript probe recovered")
-                        last_powerpoint_error = None
-                    if ppt_state != last_powerpoint_state:
-                        last_powerpoint_state = ppt_state
-                        if ppt_state is None:
-                            log.info("ppt", "No active PowerPoint presentation")
-                        else:
-                            ppt_stem = Path(ppt_state['presentation']).stem
-                            raw_slide = _coerce_slide_number(ppt_state.get("slide"))
-                            is_presenting = bool(ppt_state.get("presenting", False))
-                            participant_page = max(1, raw_slide - 1) if is_presenting else raw_slide
-                            fullscreen_flag = " [fullscreen]" if is_presenting else " [normal]"
-                            log.info("ppt", f"📽️ Slide: {ppt_stem} : {raw_slide}{fullscreen_flag} → p.{participant_page} to participants")
-                        try:
-                            _sync_powerpoint_slide_to_server(config, slides_runner._slides_config, ppt_state, ws_client)
-                        except Exception as e:
-                            log.error("ppt", f"Failed to sync slides current to server: {e}")
+                # ── Detect active PowerPoint presentation/slide via AppleScript (every 5s) ──
+                _ppt_now = time.monotonic()
+                if _ppt_now - last_ppt_probe_at >= _PPT_PROBE_INTERVAL:
+                    last_ppt_probe_at = _ppt_now
+                    ppt_state, ppt_error = _platform.probe_powerpoint()
+                    if ppt_error:
+                        if ppt_error != last_powerpoint_error:
+                            log.error("ppt", f"AppleScript probe failed: {ppt_error}")
+                            last_powerpoint_error = ppt_error
                     else:
-                        pass
+                        if last_powerpoint_error is not None:
+                            log.info("ppt", "AppleScript probe recovered")
+                            last_powerpoint_error = None
+                        if ppt_state != last_powerpoint_state:
+                            was_presenting = bool((last_powerpoint_state or {}).get("presenting", False))
+                            last_powerpoint_state = ppt_state
+                            if ppt_state is None:
+                                log.info("ppt", "No active PowerPoint presentation")
+                            else:
+                                ppt_stem = Path(ppt_state['presentation']).stem
+                                raw_slide = _coerce_slide_number(ppt_state.get("slide"))
+                                is_presenting = bool(ppt_state.get("presenting", False))
+                                participant_page = max(1, raw_slide - 1) if is_presenting else raw_slide
+                                if was_presenting and not is_presenting:
+                                    log.info("ppt", f"📽️ Exited fullscreen — slide: {ppt_stem} #{raw_slide} → p.{participant_page} to participants")
+                                else:
+                                    fullscreen_flag = " [fullscreen]" if is_presenting else " [normal]"
+                                    log.info("ppt", f"📽️ Slide: {ppt_stem} : {raw_slide}{fullscreen_flag} → p.{participant_page} to participants")
+                            try:
+                                _sync_powerpoint_slide_to_server(config, slides_runner._slides_config, ppt_state, ws_client)
+                            except Exception as e:
+                                log.error("ppt", f"Failed to sync slides current to server: {e}")
 
                 # ── Track slides log from PowerPoint state (foreground only, every 5s) ──
                 _now_mono = time.monotonic()
