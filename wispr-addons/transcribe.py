@@ -133,7 +133,10 @@ def transcriber_loop(tx_queue: queue.Queue, model: str):
     import mlx_whisper
 
     print(f"\nLoading model: {model}")
-    print("(first run downloads ~800 MB — subsequent runs are instant)\n")
+    print("(first run downloads ~3 GB — this may take a few minutes...)\n")
+    # Warm-up: trigger model download/load with visible output (1s of silence)
+    mlx_whisper.transcribe(np.zeros(SAMPLE_RATE, dtype=np.float32), path_or_hf_repo=model, verbose=False)
+    print("Model ready. Transcribing...\n")
 
     while True:
         try:
