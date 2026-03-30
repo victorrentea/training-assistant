@@ -955,6 +955,7 @@ function closeEmojiPopup(ev) {
     const prevSlide = _findSlideForHostCurrent(slidesCurrent);
     const pageSource = (prevSlide && prevSlide._id === targetSlide._id) ? slidesCurrent : hostSlidesCurrent;
     const targetPage = _getHostCurrentPage(pageSource);
+    const previousStoredPage = _getStoredSlidePage(targetSlide.slug);
     _setStoredSlidePage(targetSlide.slug, targetPage);
 
     const overlay = document.getElementById('slides-overlay');
@@ -970,8 +971,7 @@ function closeEmojiPopup(ev) {
 
     if (slidesViewMode === 'native') {
       const selectedMatches = slidesSelectedId === targetSlide._id;
-      const storedPage = _getStoredSlidePage(targetSlide.slug);
-      const needsReload = !selectedMatches || storedPage !== targetPage;
+      const needsReload = !selectedMatches || previousStoredPage !== targetPage;
       if (needsReload) {
         _renderSlidesList(targetSlide._id);
         await _loadSlideIntoViewer(targetSlide, { forceReload: true, withUiBlocker: false });

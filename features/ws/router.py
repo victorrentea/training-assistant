@@ -305,7 +305,8 @@ async def _handle_slides_current(data):
         "converter": data.get("converter"),
         "updated_at": data.get("updated_at") or datetime.now(timezone.utc).isoformat(),
     }
-    await broadcast_state()
+    # Targeted broadcast only — full broadcast_state() is unnecessary here and adds
+    # latency on every slide advance by sending large personalized payloads to all participants.
     await broadcast({"type": "slides_current", "slides_current": state.slides_current})
 
 
