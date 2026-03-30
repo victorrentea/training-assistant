@@ -15,6 +15,7 @@ import hashlib
 import json
 import os
 import threading
+import time
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from pathlib import Path
 
@@ -23,6 +24,7 @@ FIXTURE_DIR = os.environ.get("FIXTURE_PDF_DIR", "/tmp/fixture-pdfs")
 MOCK_DRIVE_PORT = int(os.environ.get("MOCK_DRIVE_PORT", "9090"))
 
 _request_counts: dict[str, int] = {}
+_delays: dict[str, float] = {}   # slug → seconds to sleep before responding
 _lock = threading.Lock()
 
 
@@ -78,10 +80,15 @@ class MockDriveHandler(BaseHTTPRequestHandler):
             self.send_error(404, f"No fixture PDF for slug: {slug}")
             return
 
-        # Track request
+        # Track request and capture delay under lock
         with _lock:
             _request_counts[slug] = _request_counts.get(slug, 0) + 1
             count = _request_counts[slug]
+            delay = _delays.get(slug, 0.0)
+
+        if delay > 0:
+            print(f"[mock-drive] GET {slug}.pdf — sleeping {delay}s to simulate slow Drive")
+            time.sleep(delay)
 
         data = pdf_path.read_bytes()
         etag = hashlib.md5(data).hexdigest()
@@ -99,6 +106,30 @@ class MockDriveHandler(BaseHTTPRequestHandler):
         if self.path == "/mock-drive/reset-stats":
             with _lock:
                 _request_counts.clear()
+            self.send_response(200)
+            self.send_header("Content-Length", "2")
+            self.end_headers()
+            self.wfile.write(b"{}")
+            return
+        if self.path == "/mock-drive/set-delay":
+            length = int(self.headers.get("Content-Length", 0))
+            body = json.loads(self.rfile.read(length))
+            slug = body.get("slug", "")
+            delay_s = float(body.get("delay_s", 0))
+            with _lock:
+                if delay_s > 0:
+                    _delays[slug] = delay_s
+                else:
+                    _delays.pop(slug, None)
+            print(f"[mock-drive] delay for '{slug}' set to {delay_s}s")
+            self.send_response(200)
+            self.send_header("Content-Length", "2")
+            self.end_headers()
+            self.wfile.write(b"{}")
+            return
+        if self.path == "/mock-drive/reset-delays":
+            with _lock:
+                _delays.clear()
             self.send_response(200)
             self.send_header("Content-Length", "2")
             self.end_headers()
