@@ -1601,9 +1601,10 @@ h1 { display: none; }
   opacity: 1;
 }
 
-#upload-btn, #paste-btn {
+#upload-btn, #paste-btn, #feedback-btn {
   background: #000;
   border-color: #333;
+  opacity: 1;
 }
 
 /* Overflow popup */
