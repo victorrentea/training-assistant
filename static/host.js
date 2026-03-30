@@ -3099,6 +3099,13 @@
 let _leaderboardActive = false;
 
 async function toggleLeaderboard() {
+    if (!_leaderboardActive) {
+        const scoredCount = Object.values(scores || {}).filter(s => s > 0).length;
+        if (scoredCount < 1) {
+            showLeaderboardError('No scores yet — run a poll first');
+            return;
+        }
+    }
     try {
         if (_leaderboardActive) {
             await fetch(API('/leaderboard/hide'), { method: 'POST' });
@@ -3108,6 +3115,21 @@ async function toggleLeaderboard() {
     } catch (e) {
         console.error('Leaderboard toggle failed:', e);
     }
+}
+
+let _leaderboardErrorTimer = null;
+function showLeaderboardError(msg) {
+    let el = document.getElementById('leaderboard-error');
+    if (!el) {
+        el = document.createElement('span');
+        el.id = 'leaderboard-error';
+        el.style.cssText = 'margin-left:8px;color:#f87171;font-size:12px;white-space:nowrap;';
+        const btn = document.getElementById('btn-leaderboard');
+        btn.parentNode.insertBefore(el, btn.nextSibling);
+    }
+    el.textContent = msg;
+    clearTimeout(_leaderboardErrorTimer);
+    _leaderboardErrorTimer = setTimeout(() => { el.textContent = ''; }, 3000);
 }
 
 let _leaderboardAutoHideTimer = null;
@@ -3175,11 +3197,7 @@ function hideLeaderboard() {
 }
 
 function updateLeaderboardButton() {
-    const btn = document.getElementById('btn-leaderboard');
-    if (!btn) return;
-    // Enable only when there are participants with scores
-    const scoredCount = Object.values(scores || {}).filter(s => s > 0).length;
-    btn.disabled = scoredCount < 1;
+    // Button is always enabled; error shown on click if no scores
 }
 
 let _currentActivity = 'none';
