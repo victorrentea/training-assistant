@@ -282,6 +282,13 @@ def _resolve_presentation_slide_target(
     }
 
 
+def _ppt_slide_key(state: dict | None) -> tuple | None:
+    """Extract the fields that affect what participants see (ignores frontmost)."""
+    if state is None:
+        return None
+    return (state.get("presentation"), state.get("slide"), state.get("presenting"))
+
+
 def _sync_powerpoint_slide_to_server(main_config, slides_cfg, ppt_state: dict | None, ws_client) -> None:
     if ppt_state is None:
         ws_client.send({"type": "slides_clear"})
@@ -722,23 +729,25 @@ def run() -> None:
                             last_powerpoint_error = None
                         if ppt_state != last_powerpoint_state:
                             was_presenting = bool((last_powerpoint_state or {}).get("presenting", False))
+                            slide_key_changed = _ppt_slide_key(ppt_state) != _ppt_slide_key(last_powerpoint_state)
                             last_powerpoint_state = ppt_state
-                            if ppt_state is None:
-                                log.info("ppt", "No active PowerPoint presentation")
-                            else:
-                                ppt_stem = Path(ppt_state['presentation']).stem
-                                raw_slide = _coerce_slide_number(ppt_state.get("slide"))
-                                is_presenting = bool(ppt_state.get("presenting", False))
-                                participant_page = max(1, raw_slide - 1) if is_presenting else raw_slide
-                                if was_presenting and not is_presenting:
-                                    log.info("ppt", f"📽️ Exited fullscreen — slide: {ppt_stem} #{raw_slide} → p.{participant_page} to participants")
+                            if slide_key_changed:
+                                if ppt_state is None:
+                                    log.info("ppt", "No active PowerPoint presentation")
                                 else:
-                                    fullscreen_flag = " [fullscreen]" if is_presenting else " [normal]"
-                                    log.info("ppt", f"📽️ Slide: {ppt_stem} : {raw_slide}{fullscreen_flag} → p.{participant_page} to participants")
-                            try:
-                                _sync_powerpoint_slide_to_server(config, slides_runner._slides_config, ppt_state, ws_client)
-                            except Exception as e:
-                                log.error("ppt", f"Failed to sync slides current to server: {e}")
+                                    ppt_stem = Path(ppt_state['presentation']).stem
+                                    raw_slide = _coerce_slide_number(ppt_state.get("slide"))
+                                    is_presenting = bool(ppt_state.get("presenting", False))
+                                    participant_page = max(1, raw_slide - 1) if is_presenting else raw_slide
+                                    if was_presenting and not is_presenting:
+                                        log.info("ppt", f"📽️ Exited fullscreen — slide: {ppt_stem} #{raw_slide} → p.{participant_page} to participants")
+                                    else:
+                                        fullscreen_flag = " [fullscreen]" if is_presenting else " [normal]"
+                                        log.info("ppt", f"📽️ Slide: {ppt_stem} : {raw_slide}{fullscreen_flag} → p.{participant_page} to participants")
+                                try:
+                                    _sync_powerpoint_slide_to_server(config, slides_runner._slides_config, ppt_state, ws_client)
+                                except Exception as e:
+                                    log.error("ppt", f"Failed to sync slides current to server: {e}")
 
                 # ── Track slides log from PowerPoint state (foreground only, every 5s) ──
                 _now_mono = time.monotonic()
