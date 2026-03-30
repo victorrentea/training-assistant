@@ -140,7 +140,7 @@
         const el = document.getElementById('version-tag');
         if (!el) return;
         // "deployed 2h ago | built at 30 Mar 14:30" → 2 lines (session code added as 3rd line by participant.js)
-        el.textContent = el.textContent.replace(/^(deployed \S+) \| (.*)$/, '$1\n$2');
+        el.textContent = el.textContent.replace(/^(.+?) \| (.+)$/, '$1\n$2');
       };
       window.__updateDeployAge();
     }
