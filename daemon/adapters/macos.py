@@ -158,7 +158,7 @@ def read_audiohijack_language() -> str | None:
 def set_audiohijack_language(lang_code: str) -> None:
     """Kill AudioHijack, update TranscribeBlock languageCode, restart."""
     import plistlib
-    import time as _time
+    import time as _time  # used for the post-kill settle sleep below
 
     subprocess.run(["pkill", "-x", "Audio Hijack"], capture_output=True)
     _time.sleep(1.5)
@@ -175,13 +175,26 @@ def set_audiohijack_language(lang_code: str) -> None:
         with open(_AUDIOHIJACK_SESSIONS_PLIST, "wb") as f:
             plistlib.dump(data, f)
 
-    subprocess.Popen(["open", "-a", "Audio Hijack"])
+    _start_audiohijack_with_retry()
 
 
 def restart_audiohijack() -> None:
     """Restart Audio Hijack process."""
     subprocess.run(["pkill", "-x", "Audio Hijack"], capture_output=True)
-    subprocess.Popen(["open", "-a", "Audio Hijack"])
+    _start_audiohijack_with_retry()
+
+
+def _start_audiohijack_with_retry(retries: int = 5, backoff: float = 3.0) -> None:
+    """Launch Audio Hijack, retrying up to `retries` times with `backoff` seconds between attempts."""
+    import time as _time
+
+    for attempt in range(1, retries + 1):
+        result = subprocess.run(["open", "-a", "Audio Hijack"], capture_output=True)
+        if result.returncode == 0:
+            return
+        if attempt < retries:
+            _time.sleep(backoff)
+    # Last attempt already tried; log failure silently (caller decides whether to raise)
 
 
 # ── IntelliJ ────────────────────────────────────────────────────────────────
