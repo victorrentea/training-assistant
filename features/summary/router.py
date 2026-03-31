@@ -19,13 +19,17 @@ class SummaryPoint(BaseModel):
 
 class SummaryUpdate(BaseModel):
     points: list[SummaryPoint]
+    raw_markdown: str | None = None
 
 
 @router.post("/summary")
 async def update_summary(body: SummaryUpdate):
     state.summary_points = [p.model_dump() for p in body.points]
+    if body.raw_markdown is not None:
+        state.summary_raw_markdown = body.raw_markdown
     state.summary_updated_at = datetime.now(timezone.utc)
     await broadcast({"type": "summary", "points": state.summary_points,
+                     "raw_markdown": state.summary_raw_markdown,
                      "updated_at": state.summary_updated_at.isoformat()})
     return {"ok": True}
 

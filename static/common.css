@@ -245,18 +245,101 @@
   margin-bottom: .5rem;
   line-height: 1.4;
   color: var(--text);
-  font-family: 'Courier New', Courier, monospace;
-  padding-left: 1.6em;
-  text-indent: -1.6em;
 }
 .summary-list .summary-empty {
   list-style: none;
-  color: var(--text-muted);
+  color: var(--muted);
+}
+/* ── Markdown key points prose ── */
+.summary-md-content {
+  overflow-y: auto;
+  flex: 1;
+  color: var(--text);
+  font-size: .9rem;
+  line-height: 1.55;
+  padding: .1rem 0;
+}
+.summary-md-content h1 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--accent);
+  margin: .8rem 0 .4rem;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: .25rem;
+}
+.summary-md-content h2 {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--accent2);
+  margin: .7rem 0 .3rem;
+}
+.summary-md-content h3 {
+  font-size: .9rem;
+  font-weight: 700;
+  color: var(--text);
+  margin: .5rem 0 .2rem;
+}
+.summary-md-content p {
+  margin: .35rem 0;
+}
+.summary-md-content ul,
+.summary-md-content ol {
+  padding-left: 1.4rem;
+  margin: .25rem 0;
+}
+.summary-md-content li {
+  margin-bottom: .3rem;
+  line-height: 1.5;
+}
+.summary-md-content code {
+  background: var(--surface2);
+  border-radius: 3px;
+  padding: .1em .35em;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: .83em;
+  color: var(--accent2);
+}
+.summary-md-content pre {
+  background: var(--surface2);
+  border-radius: 6px;
+  padding: .6rem .9rem;
+  overflow-x: auto;
+  margin: .5rem 0;
+}
+.summary-md-content pre code {
+  background: none;
+  padding: 0;
+  color: var(--text);
+  font-size: .82rem;
+}
+.summary-md-content strong {
+  color: var(--text);
+  font-weight: 700;
+}
+.summary-md-content em {
+  font-style: normal;
+  font-weight: 600;
+  color: var(--accent);
+}
+.summary-md-content a {
+  color: var(--action);
+  text-decoration: underline;
+}
+.summary-md-content blockquote {
+  border-left: 3px solid var(--accent);
+  margin: .4rem 0;
+  padding: .3rem .8rem;
+  color: var(--muted);
+}
+.summary-md-content hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: .6rem 0;
 }
 .summary-time {
   margin-top: .8rem;
   font-size: .75rem;
-  color: var(--text-muted);
+  color: var(--muted);
   text-align: right;
 }
 .summary-ts {

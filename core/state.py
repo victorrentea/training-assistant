@@ -91,6 +91,7 @@ class AppState:
         self.codereview_selections: dict[str, set[int]] = {}  # uuid → set of line numbers
         self.codereview_confirmed: set[int] = set()  # lines host confirmed
         self.summary_points: list[dict] = []
+        self.summary_raw_markdown: str | None = None
         self.summary_updated_at: Optional[datetime] = None
         self.summary_force_requested: bool = False
         self.summary_reset_requested: bool = False

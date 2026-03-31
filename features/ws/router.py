@@ -257,9 +257,12 @@ async def _handle_session_sync(data):
         from features.session.router import _apply_session_main
         _apply_session_main(data.get("main"))
     key_points = data.get("key_points") or data.get("discussion_points") or []
+    raw_markdown = data.get("raw_markdown")
     if key_points:
         state.summary_points = key_points
         state.summary_updated_at = datetime.now(timezone.utc)
+    if raw_markdown is not None:
+        state.summary_raw_markdown = raw_markdown
 
     session_state = data.get("session_state")
     if session_state:
@@ -268,9 +271,10 @@ async def _handle_session_sync(data):
         state.needs_restore = False
 
     await broadcast_state()
-    if key_points:
+    if key_points or raw_markdown is not None:
         await broadcast({"type": "summary", "points": state.summary_points,
-                         "updated_at": state.summary_updated_at.isoformat()})
+                         "raw_markdown": state.summary_raw_markdown,
+                         "updated_at": state.summary_updated_at.isoformat() if state.summary_updated_at else None})
 
 
 async def _handle_transcript_status(data):
@@ -604,6 +608,7 @@ async def _send_content_messages(websocket: WebSocket) -> None:
         await websocket.send_text(json.dumps({
             "type": "summary",
             "points": state.summary_points,
+            "raw_markdown": state.summary_raw_markdown,
             "updated_at": state.summary_updated_at.isoformat() if state.summary_updated_at else None,
         }))
         await websocket.send_text(json.dumps({"type": "slides_cache_status", "slides_cache_status": state.slides_cache_status}))
@@ -948,6 +953,7 @@ async def _handle_participant_connection(websocket: WebSocket, pid: str, is_host
                 await websocket.send_text(json.dumps({
                     "type": "summary",
                     "points": state.summary_points,
+                    "raw_markdown": state.summary_raw_markdown,
                     "updated_at": state.summary_updated_at.isoformat() if state.summary_updated_at else None,
                 }))
 

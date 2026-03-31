@@ -223,6 +223,7 @@ function closeEmojiPopup(ev) {
   let _scoreRollTimer = null;
   let summaryPoints = [];
   let summaryUpdatedAt = null;
+  let summaryRawMarkdown = null;
   const SLIDES_REFRESH_MS = 30000;
   const LS_SLIDE_PAGE_PREFIX = 'workshop_slide_page:';
   const LS_SLIDE_VIEW_PREFIX = 'workshop_slide_view:';
@@ -574,21 +575,17 @@ function closeEmojiPopup(ev) {
     closeModal('notes-overlay');
   }
 
-  function updateSummary(points, updatedAt) {
+  function updateSummary(points, updatedAt, rawMarkdown) {
     const prevCount = summaryPoints.length;
     summaryPoints = points || [];
     summaryUpdatedAt = updatedAt;
-    if (summaryPoints.length) {
-      _summaryRequested = false;
-      const btn = document.getElementById('summary-refresh-btn');
-      if (btn) { btn.disabled = false; btn.style.opacity = ''; }
-    }
+    if (rawMarkdown !== undefined) summaryRawMarkdown = rawMarkdown || null;
     const countEl = document.getElementById('summary-count');
     if (countEl) countEl.textContent = summaryPoints.length > 0 ? summaryPoints.length : '';
     const summaryBtnEl = document.getElementById('summary-btn');
     if (summaryBtnEl) {
-      summaryBtnEl.disabled = summaryPoints.length === 0;
-      summaryBtnEl.dataset.tooltip = summaryPoints.length ? 'Key points discussed so far' : '(none yet)';
+      summaryBtnEl.disabled = !summaryPoints.length && !summaryRawMarkdown;
+      summaryBtnEl.dataset.tooltip = (summaryPoints.length || summaryRawMarkdown) ? 'Key points discussed so far' : '(none yet)';
     }
     if (summaryPoints.length > prevCount) {
       const summaryBtn = document.getElementById('summary-btn');
@@ -602,35 +599,46 @@ function closeEmojiPopup(ev) {
   }
 
   function renderSummaryList() {
-    const list = document.getElementById('summary-list');
+    const container = document.getElementById('summary-content');
     const timeEl = document.getElementById('summary-time');
-    if (!list) return;
-    if (!summaryPoints.length) {
-      list.innerHTML = '<li class="summary-empty">No key points yet. Tap to request.</li>';
+    if (!container) return;
+    const hasContent = summaryRawMarkdown || summaryPoints.length;
+    if (!hasContent) {
+      container.innerHTML = '<p style="color:var(--muted)">No key points yet.</p>';
       if (timeEl) timeEl.textContent = '';
+      const dlBtn = document.getElementById('keypoints-download');
+      if (dlBtn) dlBtn.style.display = 'none';
       return;
     }
-    list.innerHTML = summaryPoints.map(p => {
-      const text = typeof p === 'string' ? p : p.text;
-      const source = typeof p === 'string' ? 'discussion' : (p.source || 'discussion');
-      const icon = source === 'notes' ? '✏️' : '💬';
-      return `<li>${icon} ${escHtml(text)}</li>`;
-    }).join('');
+    if (summaryRawMarkdown && typeof marked !== 'undefined') {
+      container.innerHTML = marked.parse(summaryRawMarkdown);
+    } else {
+      container.innerHTML = '<ul style="list-style:disc;padding-left:1.4rem">' +
+        summaryPoints.map(p => {
+          const text = typeof p === 'string' ? p : p.text;
+          return `<li>${escHtml(text)}</li>`;
+        }).join('') + '</ul>';
+    }
     if (timeEl && summaryUpdatedAt) {
       const d = new Date(summaryUpdatedAt);
       timeEl.textContent = 'Updated ' + d.toLocaleTimeString();
     }
     const dlBtn = document.getElementById('keypoints-download');
-    if (dlBtn) dlBtn.style.display = summaryPoints.length ? '' : 'none';
+    if (dlBtn) dlBtn.style.display = hasContent ? '' : 'none';
   }
 
   function downloadKeyPoints() {
-    if (!summaryPoints.length) return;
-    const lines = summaryPoints.map(p => {
-      const text = typeof p === 'string' ? p : p.text;
-      return '• ' + text;
-    });
-    const content = 'Key Points\n' + '='.repeat(10) + '\n\n' + lines.join('\n');
+    if (!summaryPoints.length && !summaryRawMarkdown) return;
+    let content;
+    if (summaryRawMarkdown) {
+      content = summaryRawMarkdown;
+    } else {
+      const lines = summaryPoints.map(p => {
+        const text = typeof p === 'string' ? p : p.text;
+        return '• ' + text;
+      });
+      content = 'Key Points\n' + '='.repeat(10) + '\n\n' + lines.join('\n');
+    }
     const blob = new Blob([content], { type: 'text/plain' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
@@ -2797,7 +2805,7 @@ function closeEmojiPopup(ev) {
         }
         break;
       case 'summary':
-        updateSummary(msg.points, msg.updated_at);
+        updateSummary(msg.points, msg.updated_at, msg.raw_markdown);
         break;
       case 'notes':
         updateNotes(msg.notes_content);
