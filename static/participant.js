@@ -143,7 +143,8 @@ function closeEmojiPopup(ev) {
 
   // Host cookie (is_host=1) → sessionStorage (per-tab UUID for multi-tab testing)
   // Normal participants → localStorage (same UUID across tabs/reloads)
-  const uuidStorage = document.cookie.includes('is_host=1') ? sessionStorage : localStorage;
+  const isHostTab = document.cookie.includes('is_host=1');
+  const uuidStorage = isHostTab ? sessionStorage : localStorage;
   const _isFirstVisit = !uuidStorage.getItem(LS_UUID_KEY);
 
   function getOrCreateUUID() {
@@ -2336,6 +2337,13 @@ function closeEmojiPopup(ev) {
   const LS_CUSTOM_NAME_KEY = 'workshop_custom_name'; // true if user explicitly renamed
   let _suggestedName = null; // tracks the auto-suggested name (for onboarding checklist)
 
+  // Append " (host)" suffix when running on host's browser tab, without duplicating it.
+  function applyHostSuffix(name) {
+    if (!isHostTab) return name;
+    const SUFFIX = ' (host)';
+    return name.endsWith(SUFFIX) ? name : name + SUFFIX;
+  }
+
   (async function autoJoin() {
     const isCustom = localStorage.getItem(LS_CUSTOM_NAME_KEY);
     const savedName = localStorage.getItem(LS_KEY);
@@ -2345,6 +2353,7 @@ function closeEmojiPopup(ev) {
       _suggestedName = await fetchSuggestedName();
       myName = _suggestedName;
     }
+    myName = applyHostSuffix(myName);
     connectWS(myName);
   })();
   _bindSlidesFollowTrainerToggle();
@@ -2371,7 +2380,7 @@ function closeEmojiPopup(ev) {
   document.getElementById('display-name').addEventListener('click', startNameEdit);
 
   function confirmNameEdit() {
-    const newName = document.getElementById('name-edit-input').value.trim();
+    const newName = applyHostSuffix(document.getElementById('name-edit-input').value.trim());
     if (newName && newName !== myName) {
         myName = newName;
         localStorage.setItem(LS_KEY, myName);
