@@ -36,6 +36,7 @@ COPY tests/docker/test_poll_advanced.py .
 COPY tests/docker/test_ui_interactions.py .
 COPY tests/docker/test_slides_advanced.py .
 COPY tests/docker/test_regressions.py .
+COPY tests/docker/test_unique_avatars.py .
 COPY tests/docker/test_follow_mode_slow_drive.py .
 COPY tests/docker/features/ ./features/
 COPY tests/docker/step_defs/ ./step_defs/

@@ -135,12 +135,13 @@ class AppState:
         self.session_id = ''.join(random.choices('abcdefghijklmnopqrstuvwxyz0123456789', k=6))
         return self.session_id
 
-    def suggest_name(self) -> str:
+    def suggest_name(self) -> str | None:
         """Return the next available LOTR name (by popularity order).
-        A name is 'taken' if any currently connected participant has it."""
-        connected_names = {self.participant_names[uid] for uid in self.participants if uid in self.participant_names and not uid.startswith("__")}
-        available = [n for n in LOTR_NAMES if n not in connected_names]
-        return available[0] if available else f"Guest{random.randint(100, 999)}"
+        A name is 'taken' if any participant in this session already has it (connected or not).
+        Returns None when all 30 names are taken (session full)."""
+        taken_names = set(self.participant_names.values())
+        available = [n for n in LOTR_NAMES if n not in taken_names]
+        return available[0] if available else None
 
     def add_score(self, pid: str, points: int):
         self.scores[pid] = self.scores.get(pid, 0) + points
@@ -221,10 +222,9 @@ def refresh_avatar(app_state: AppState, uuid: str, rejected: set[str] | None = N
     if current:
         rejected.add(current)
 
-    # Get avatars used by OTHER currently connected participants
-    connected_uuids = set(app_state.participants.keys()) - {"__host__", "__overlay__"}
-    taken_by_others = {app_state.participant_avatars[u] for u in connected_uuids
-                       if u in app_state.participant_avatars and u != uuid}
+    # Get avatars used by ALL OTHER participants (connected or disconnected)
+    taken_by_others = {avatar for uid, avatar in app_state.participant_avatars.items()
+                       if uid != uuid and not uid.startswith("__")}
 
     all_avatars = [get_avatar_filename(n) for n in LOTR_NAMES]
 

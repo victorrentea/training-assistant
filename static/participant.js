@@ -2610,9 +2610,10 @@ function closeEmojiPopup(ev) {
           applyParticipantMode(msg.mode);
         }
         if (msg.mode) currentMode = msg.mode;
-        // In conference mode, use the server-assigned name
-        if (msg.my_name && currentMode === 'conference') {
+        // Sync server-assigned name (covers conference auto-assign and workshop race fallback)
+        if (msg.my_name && msg.my_name !== myName) {
           myName = msg.my_name;
+          localStorage.setItem(LS_KEY, myName);
           document.getElementById('display-name').textContent = myName;
           window._myName = myName;
         }
@@ -2833,6 +2834,16 @@ function closeEmojiPopup(ev) {
       case 'slides_catalog_changed':
         _refreshSlidesCatalog({ autoLoadSelected: false }).catch(() => {});
         break;
+      case 'name_rejected': {
+        const editInput = document.getElementById('name-edit-input');
+        if (editInput) {
+          editInput.style.borderColor = 'var(--danger, #e74c3c)';
+          editInput.title = msg.reason || 'Name already taken';
+          setTimeout(() => { editInput.style.borderColor = ''; editInput.title = ''; }, 3000);
+        }
+        // Revert myName to what the server still has (we never actually changed it on our side)
+        break;
+      }
     }
   }
 
