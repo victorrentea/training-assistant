@@ -217,6 +217,9 @@ Host posts a provocative statement (e.g. "Microservices are always a mistake for
 - [x] Follow-up GH#67 (UX): removed manual refresh icon from participant Slides preview header; auto-refresh loop remains active while modal is open.
 - [x] Follow-up GH#67 (bugfix): filtered non-displayable slide names (blank/punctuation-only) in backend/frontend to avoid empty entries in participant Slides dropdown.
 - [x] Follow-up GH#67 (production bootstrap): added host-auth slide PDF upload endpoint and server-backed slide storage so production can be populated without relying on local trainer filesystem paths.
+- [ ] can daemon REPLACE the last line with a new one isntead of appending lines that log time spent -- they pollute the daemon log. so  22:44:44.1 75888  [intellij  ] info    Git +5s: java-memory @ main (total: 70s) wouldchange to ... total: 75s)
+
+
 
 ## Concept Ranking / Ordering
 Host presents 4–6 items (patterns, approaches, technologies). Participants drag them into an order (e.g. safest → most dangerous, simplest → most complex). Host aggregates the median ranking and highlights disagreements. Pure conceptual reasoning, no coding.
