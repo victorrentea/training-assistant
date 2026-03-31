@@ -4,7 +4,7 @@ Key-points I/O is provided by session_state; this module re-exports for convenie
 and provides the run_summary_cycle() helper used by the main orchestrator loop.
 """
 
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 
 from daemon import log
@@ -22,6 +22,7 @@ __all__ = [
     "load_key_points",
     "save_key_points",
     "run_summary_cycle",
+    "get_ai_summary_mtime",
 ]
 
 AI_SUMMARY_FILE = "ai-summary.md"
@@ -34,6 +35,19 @@ def _read_ai_summary_raw(session_folder: Path) -> str | None:
         return None
     try:
         return ai_file.read_text(encoding="utf-8", errors="replace").strip()
+    except OSError:
+        return None
+
+
+def get_ai_summary_mtime(session_folder: Path) -> str | None:
+    """Return ISO-format UTC mtime of ai-summary.md, or None if not found."""
+    ai_file = session_folder / AI_SUMMARY_FILE
+    if not ai_file.exists():
+        return None
+    try:
+        from datetime import timezone as _tz
+        mtime = ai_file.stat().st_mtime
+        return datetime.fromtimestamp(mtime, tz=_tz.utc).isoformat()
     except OSError:
         return None
 
@@ -119,11 +133,12 @@ def run_summary_cycle(
     try:
         new_points = _read_ai_summary_file(session_folder)
         raw_markdown = _read_ai_summary_raw(session_folder)
+        file_time = get_ai_summary_mtime(session_folder)
         if new_points is not None:
             current_key_points = new_points
             save_key_points(session_folder, current_key_points, 0, s_date)
             save_daemon_state(sessions_root, stack_to_daemon_state(session_stack))
-            sync_session_to_server(config, session_stack, current_key_points, raw_markdown=raw_markdown)
+            sync_session_to_server(config, session_stack, current_key_points, raw_markdown=raw_markdown, file_time=file_time)
             log.info("summarizer", f"Key points: {len(current_key_points)} total (from {AI_SUMMARY_FILE})")
     except Exception as e:
         log.error("summarizer", f"Error reading {AI_SUMMARY_FILE}: {e}")

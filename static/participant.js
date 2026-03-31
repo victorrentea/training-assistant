@@ -581,7 +581,16 @@ function closeEmojiPopup(ev) {
     summaryUpdatedAt = updatedAt;
     if (rawMarkdown !== undefined) summaryRawMarkdown = rawMarkdown || null;
     const countEl = document.getElementById('summary-count');
-    if (countEl) countEl.textContent = summaryPoints.length > 0 ? summaryPoints.length : '';
+    if (countEl) {
+      if (summaryUpdatedAt) {
+        const d = new Date(summaryUpdatedAt);
+        const hhmm = d.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit', hour12: false});
+        const today = new Date();
+        countEl.textContent = d.toDateString() === today.toDateString() ? hhmm : '📅 ' + hhmm;
+      } else {
+        countEl.textContent = '';
+      }
+    }
     const summaryBtnEl = document.getElementById('summary-btn');
     if (summaryBtnEl) {
       summaryBtnEl.disabled = !summaryPoints.length && !summaryRawMarkdown;
