@@ -107,6 +107,9 @@ app = FastAPI(title="Workshop Tool", lifespan=lifespan)
 @app.exception_handler(InvalidSessionRedirect)
 async def _redirect_invalid_session(request: Request, exc: InvalidSessionRedirect):
     from fastapi.responses import RedirectResponse
+    from core.state import state as _state
+    if _state.session_id:
+        return RedirectResponse(f"/{_state.session_id}")
     return RedirectResponse("/?error=invalid")
 
 
