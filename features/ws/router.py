@@ -258,9 +258,16 @@ async def _handle_session_sync(data):
         _apply_session_main(data.get("main"))
     key_points = data.get("key_points") or data.get("discussion_points") or []
     raw_markdown = data.get("raw_markdown")
+    file_time = data.get("file_time")
     if key_points:
         state.summary_points = key_points
-        state.summary_updated_at = datetime.now(timezone.utc)
+        if file_time:
+            try:
+                state.summary_updated_at = datetime.fromisoformat(file_time)
+            except Exception:
+                state.summary_updated_at = datetime.now(timezone.utc)
+        else:
+            state.summary_updated_at = datetime.now(timezone.utc)
     if raw_markdown is not None:
         state.summary_raw_markdown = raw_markdown
 

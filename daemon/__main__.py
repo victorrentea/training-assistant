@@ -28,7 +28,7 @@ from daemon.llm.adapter import get_usage
 from daemon.quiz.history import auto_generate, auto_generate_topic, auto_refine
 from daemon.quiz.poll_api import post_status
 from daemon.debate.ai_cleanup import run_debate_ai_cleanup
-from daemon.summary.loop import run_summary_cycle, load_key_points, save_key_points
+from daemon.summary.loop import run_summary_cycle, load_key_points, save_key_points, get_ai_summary_mtime
 from daemon.transcript.loop import TranscriptNormalizerRunner
 from daemon.transcript.whisper_runner import WhisperTranscriptionRunner
 from daemon.transcript.loader import load_transcription_files
@@ -658,7 +658,8 @@ def run() -> None:
                     log.info("session", f"Loaded session_state.json for restore ({len(startup_session_state)} keys)")
                 except Exception as e:
                     log.error("session", f"Failed to read session_state.json: {e}")
-        sync_session_to_server(config, session_stack, current_key_points, startup_session_state, slides_log=slides_log, git_repos=git_repos)
+        _startup_folder = (config.session_folder or (sessions_root / session_stack[-1]["name"])) if session_stack else None
+        sync_session_to_server(config, session_stack, current_key_points, startup_session_state, slides_log=slides_log, git_repos=git_repos, file_time=get_ai_summary_mtime(_startup_folder) if _startup_folder else None)
     except Exception as e:
         log.error("session", f"Initial sync failed: {e}")
 
@@ -832,7 +833,7 @@ def run() -> None:
                             global_state_persisted = True
                             notes_file = find_notes_in_folder(folder)
                             config = dc_replace(config, session_folder=folder, session_notes=notes_file)
-                            sync_session_to_server(config, session_stack, current_key_points, slides_log=slides_log, git_repos=git_repos)
+                            sync_session_to_server(config, session_stack, current_key_points, slides_log=slides_log, git_repos=git_repos, file_time=get_ai_summary_mtime(folder))
                             transcript_state.reset()
                             # try:  # disabled — no longer using Audio Hijack
                             #     _sync_audiohijack_language(config)
@@ -867,7 +868,7 @@ def run() -> None:
                         global_state_persisted = True
                         notes_file = find_notes_in_folder(folder)
                         config = dc_replace(config, session_folder=folder, session_notes=notes_file)
-                        sync_session_to_server(config, session_stack, current_key_points, slides_log=slides_log, git_repos=git_repos)
+                        sync_session_to_server(config, session_stack, current_key_points, slides_log=slides_log, git_repos=git_repos, file_time=get_ai_summary_mtime(folder))
                         transcript_state.reset()
                         slides_log = []
                         git_repos = []

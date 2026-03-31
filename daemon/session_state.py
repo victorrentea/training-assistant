@@ -399,9 +399,12 @@ def sync_session_to_server(
     Extra keyword arguments (e.g. action, discussion_points) are merged into the payload."""
     daemon_state = stack_to_daemon_state(stack)
     raw_markdown = extra_fields.pop("raw_markdown", None)
+    file_time = extra_fields.pop("file_time", None)
     payload: dict = {"main": daemon_state["main"], "talk": daemon_state["talk"], "key_points": key_points}
     if raw_markdown is not None:
         payload["raw_markdown"] = raw_markdown
+    if file_time is not None:
+        payload["file_time"] = file_time
     if session_state is not None:
         payload["session_state"] = session_state
         if session_state.get("session_id"):

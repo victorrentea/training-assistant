@@ -786,13 +786,22 @@
       if (minAgo >= 5) noTranscriptTitle = `No transcription for ${Math.round(minAgo)} minutes`;
     }
 
+    const _fmtSummaryTime = (iso) => {
+      if (!iso) return '';
+      const d = new Date(iso);
+      if (isNaN(d)) return '';
+      const hhmm = d.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit', hour12: false});
+      const today = new Date();
+      return d.toDateString() === today.toDateString() ? hhmm : '📅 ' + hhmm;
+    };
+    const timeLabel = _fmtSummaryTime(summaryUpdatedAt);
     if (summaryPoints.length) {
-      badge.textContent = `🧠 (${summaryPoints.length}) Key Points`;
+      badge.textContent = timeLabel ? `🧠 ${timeLabel} Key Points` : `🧠 Key Points`;
       badge.className = 'badge connected';
       badge.style.cssText = 'cursor:pointer;';
       _setFooterBadgeTooltip(
         badge,
-        noTranscriptTitle || `${summaryPoints.length} key points · ${_transcriptLineCount} transcript lines — click to view`,
+        noTranscriptTitle || `Key points from ${timeLabel || 'session'} — click to view`,
       );
     } else {
       badge.textContent = `🧠 Key Points`;
