@@ -999,6 +999,8 @@ async def session_websocket_endpoint(websocket: WebSocket, session_id: str, part
             await websocket.close(code=1000)
         else:
             await websocket.accept()
+            if state.session_id:
+                await websocket.send_text(json.dumps({"type": "redirect", "url": f"/{state.session_id}"}))
             await websocket.close(code=1008)
         return
 

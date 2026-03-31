@@ -2487,7 +2487,9 @@ function closeEmojiPopup(ev) {
   }
 
   // ── WebSocket ──
+  let pendingRedirect = null;
   function connectWS(name) {
+    pendingRedirect = null;
     _stateInitialised = false;
     const proto = location.protocol === 'https:' ? 'wss' : 'ws';
     const url = `${proto}://${location.host}/ws/${sessionId}/${encodeURIComponent(myUUID)}`;
@@ -2522,8 +2524,8 @@ function closeEmojiPopup(ev) {
     };
 
     ws.onclose = (event) => {
-      if (event.code === 1008) { window.location.href = '/'; return; }
-      setTimeout(() => connectWS(myName), 3000);
+      if (event.code === 1008 && !pendingRedirect) { window.location.href = '/'; return; }
+      if (!pendingRedirect) setTimeout(() => connectWS(myName), 3000);
     };
   }
 
@@ -2557,6 +2559,10 @@ function closeEmojiPopup(ev) {
   // ── Message handler ──
   function handleMessage(msg) {
     switch (msg.type) {
+      case 'redirect':
+        pendingRedirect = msg.url;
+        window.location.href = msg.url;
+        return;
       case 'session_paused':
         const overlay = document.getElementById('session-paused-overlay');
         const msgEl = document.getElementById('session-paused-message');
