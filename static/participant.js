@@ -1138,8 +1138,23 @@ function closeEmojiPopup(ev) {
     slidesFollowTrainerEnabled = next;
     if (persist) _setStoredSlidesFollowTrainer(next);
     _renderSlidesFollowTrainerToggle();
-    if (applyHost && _isSlidesFollowActive() && hostSlidesCurrent) {
+    if (applyHost && _isSlidesFollowActive()) {
+      _queueHostSlideCurrent();
+    }
+  }
+
+  // Queues a follow using the current hostSlidesCurrent, fetching from API first if not yet known.
+  function _queueHostSlideCurrent() {
+    if (hostSlidesCurrent) {
       _queueHostSlideFollow(hostSlidesCurrent);
+    } else {
+      fetch(apiBase + '/api/slides/current')
+        .then(r => r.ok ? r.json() : null)
+        .then(data => {
+          if (data) _onIncomingHostSlidesCurrent(data.slides_current || null);
+          if (hostSlidesCurrent) _queueHostSlideFollow(hostSlidesCurrent);
+        })
+        .catch(() => {});
     }
   }
 
@@ -1301,7 +1316,7 @@ function closeEmojiPopup(ev) {
           overlay.classList.add('open');
           _setSlidesOverlayOpen(true);
         }
-        if (hostSlidesCurrent) _queueHostSlideFollow(hostSlidesCurrent);
+        _queueHostSlideCurrent();
         return;
       }
       if (slidesFollowTrainerEnabled) {
@@ -1310,7 +1325,7 @@ function closeEmojiPopup(ev) {
           overlay.classList.add('open');
           _setSlidesOverlayOpen(true);
         }
-        if (hostSlidesCurrent) _queueHostSlideFollow(hostSlidesCurrent);
+        _queueHostSlideCurrent();
         return;
       }
       // State 3: pdfjs+follow=OFF → open host slide + turn follow ON
@@ -1319,7 +1334,6 @@ function closeEmojiPopup(ev) {
         overlay.classList.add('open');
         _setSlidesOverlayOpen(true);
       }
-      if (hostSlidesCurrent) _queueHostSlideFollow(hostSlidesCurrent);
     });
   }
   function _getStoredVisitedSlideIds() {
@@ -2253,9 +2267,7 @@ function closeEmojiPopup(ev) {
     overlay.classList.add('open');
     _setSlidesOverlayOpen(true);
     _refreshSlidesCatalog({ autoLoadSelected: true })
-      .then(() => {
-        if (hostSlidesCurrent) _queueHostSlideFollow(hostSlidesCurrent);
-      })
+      .then(() => { _queueHostSlideCurrent(); })
       .catch(() => {});
     _startSlidesRefreshLoop();
   }
@@ -2288,6 +2300,15 @@ function closeEmojiPopup(ev) {
     }
     _refreshSlidesCatalog({ autoLoadSelected: shouldRestoreOpen }).catch(() => {});
     _startSlidesRefreshLoop();
+    // Pre-warm hostSlidesCurrent so follow button works immediately before first WS state message.
+    _prefetchHostSlidesCurrent();
+  }
+
+  function _prefetchHostSlidesCurrent() {
+    fetch(apiBase + '/api/slides/current')
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data) _onIncomingHostSlidesCurrent(data.slides_current || null); })
+      .catch(() => {});
   }
 
   async function requestNotificationPermission() {
