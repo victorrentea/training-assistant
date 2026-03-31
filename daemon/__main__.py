@@ -143,24 +143,23 @@ def _resolve_session_folder_from_state(
 _RAW_TRANSCRIPT_TXT_RE = re.compile(r"^(\d{8})\s+\d{4}\b.*\.txt$", re.IGNORECASE)
 
 
-def _sync_audiohijack_language(config) -> bool:
-    """Read current AudioHijack language and POST it to the server. Returns True if synced."""
-    lang = _platform.read_audiohijack_language()
-    if not lang:
-        log.error("daemon", "Could not read AudioHijack language from plist")
-        return False
-    from daemon.quiz.poll_api import _ws_client as _ws
-    if _ws and _ws.send({"type": "transcription_language_status", "language": lang}):
-        pass
-    else:
-        from daemon.http import _post_json
-        _post_json(
-            f"{config.server_url}/api/transcription-language/status",
-            {"language": lang},
-            config.host_username, config.host_password,
-        )
-    log.info("daemon", f"AudioHijack language synced: {lang}")
-    return True
+# def _sync_audiohijack_language(config) -> bool:  # disabled — no longer using Audio Hijack
+#     lang = _platform.read_audiohijack_language()
+#     if not lang:
+#         log.error("daemon", "Could not read AudioHijack language from plist")
+#         return False
+#     from daemon.quiz.poll_api import _ws_client as _ws
+#     if _ws and _ws.send({"type": "transcription_language_status", "language": lang}):
+#         pass
+#     else:
+#         from daemon.http import _post_json
+#         _post_json(
+#             f"{config.server_url}/api/transcription-language/status",
+#             {"language": lang},
+#             config.host_username, config.host_password,
+#         )
+#     log.info("daemon", f"AudioHijack language synced: {lang}")
+#     return True
 
 
 def _raw_transcript_dates(folder: Path) -> set[date]:
@@ -634,8 +633,8 @@ def run() -> None:
     last_slides_payload_hash: str | None = None
     last_powerpoint_state: dict | None = None
     last_powerpoint_error: str | None = None
-    last_lang_sync_date: date | None = None    # sync AudioHijack language once per day
-    last_hijack_restart_for_missing_today: date | None = None  # anti-loop guard: restart at most once/day
+    # last_lang_sync_date: date | None = None    # disabled — no longer using Audio Hijack
+    # last_hijack_restart_for_missing_today: date | None = None  # disabled — no longer using Audio Hijack
     last_raw_transcript_guard_check_at: float = 0.0
     _RAW_TRANSCRIPT_GUARD_INTERVAL: float = 30.0
     slides_log: list[dict] = []        # {file, slide, first_seen_at, first_seen_hhmm, seconds_spent}
@@ -665,12 +664,12 @@ def run() -> None:
     except Exception as e:
         log.error("session", f"Initial sync failed: {e}")
 
-    # ── Sync AudioHijack language to server at startup ──
-    try:
-        _sync_audiohijack_language(config)
-        last_lang_sync_date = date.today()
-    except Exception as e:
-        log.error("daemon", f"Failed to sync AudioHijack language at startup: {e}")
+    # ── Sync AudioHijack language to server at startup — disabled ──
+    # try:
+    #     _sync_audiohijack_language(config)
+    #     last_lang_sync_date = date.today()
+    # except Exception as e:
+    #     log.error("daemon", f"Failed to sync AudioHijack language at startup: {e}")
 
     last_summary_at = 0.0  # monotonic time of last summary run
     last_snapshot_hash: str | None = None  # hash of last saved state snapshot
@@ -838,10 +837,10 @@ def run() -> None:
                             config = dc_replace(config, session_folder=folder, session_notes=notes_file)
                             sync_session_to_server(config, session_stack, current_key_points, slides_log=slides_log, git_repos=git_repos)
                             transcript_state.reset()
-                            try:
-                                _sync_audiohijack_language(config)
-                            except Exception:
-                                pass
+                            # try:  # disabled — no longer using Audio Hijack
+                            #     _sync_audiohijack_language(config)
+                            # except Exception:
+                            #     pass
                         _push_session_folders()
                         participant_join_link = (
                             f"{config.server_url}/{_active_session_id}"
@@ -876,10 +875,10 @@ def run() -> None:
                         slides_log = []
                         git_repos = []
                         _last_activity_log_key = (0, 0)
-                        try:
-                            _sync_audiohijack_language(config)
-                        except Exception:
-                            pass
+                        # try:  # disabled — no longer using Audio Hijack
+                        #     _sync_audiohijack_language(config)
+                        # except Exception:
+                        #     pass
                         log.info("session", f"Started: {name}")
 
                     elif action == "end" and session_stack:
@@ -1002,22 +1001,23 @@ def run() -> None:
 
                 # ── Re-detect session folder on date change or if notes not yet found (every 5s) ──
                 today = date.today()
-                if now - last_raw_transcript_guard_check_at >= _RAW_TRANSCRIPT_GUARD_INTERVAL:
-                    last_raw_transcript_guard_check_at = now
-                    if last_hijack_restart_for_missing_today != today:
-                        try:
-                            if _should_restart_for_missing_today_raw(config.folder, today):
-                                log.info(
-                                    "transcript",
-                                    f"No raw transcript file for today ({today.isoformat()}); only yesterday exists. "
-                                    "Restarting Audio Hijack and sleeping 3s to force today's file.",
-                                )
-                                _platform.restart_audiohijack()
-                                time.sleep(3)
-                                log.info("transcript", "Audio Hijack restart guard completed (slept 3s)")
-                                last_hijack_restart_for_missing_today = today
-                        except Exception as e:
-                            log.error("transcript", f"Audio Hijack restart guard failed: {e}")
+                # Audio Hijack restart guard — disabled (no longer using Audio Hijack)
+                # if now - last_raw_transcript_guard_check_at >= _RAW_TRANSCRIPT_GUARD_INTERVAL:
+                #     last_raw_transcript_guard_check_at = now
+                #     if last_hijack_restart_for_missing_today != today:
+                #         try:
+                #             if _should_restart_for_missing_today_raw(config.folder, today):
+                #                 log.info(
+                #                     "transcript",
+                #                     f"No raw transcript file for today ({today.isoformat()}); only yesterday exists. "
+                #                     "Restarting Audio Hijack and sleeping 3s to force today's file.",
+                #                 )
+                #                 _platform.restart_audiohijack()
+                #                 time.sleep(3)
+                #                 log.info("transcript", "Audio Hijack restart guard completed (slept 3s)")
+                #                 last_hijack_restart_for_missing_today = today
+                #         except Exception as e:
+                #             log.error("transcript", f"Audio Hijack restart guard failed: {e}")
 
                 config, last_detected_date, last_session_check_at, _session_status_pending = (
                     _refresh_session_folder_binding(
@@ -1034,13 +1034,13 @@ def run() -> None:
                 sf_name = config.session_folder.name if config.session_folder else None
                 sn_name = config.session_notes.name if config.session_notes else None
 
-                # ── Sync AudioHijack language once per day ──
-                if last_lang_sync_date != today:
-                    try:
-                        _sync_audiohijack_language(config)
-                        last_lang_sync_date = today
-                    except Exception as e:
-                        log.error("daemon", f"Failed to sync AudioHijack language: {e}")
+                # ── Sync AudioHijack language once per day — disabled ──
+                # if last_lang_sync_date != today:
+                #     try:
+                #         _sync_audiohijack_language(config)
+                #         last_lang_sync_date = today
+                #     except Exception as e:
+                #         log.error("daemon", f"Failed to sync AudioHijack language: {e}")
 
                 # ── Auto-update + server connectivity check via /api/status ──
                 try:
@@ -1155,21 +1155,21 @@ def run() -> None:
                                 "merges": [], "cleaned": [], "new_arguments": [],
                             })
 
-                # ── Check for transcription language change request (via WS) ──
-                lang_data = _pending_requests.pop("transcription_language_request", None)
-                if lang_data:
-                    lang_req = lang_data.get("language")
-                    if lang_req:
-                        log.info("daemon", f"Transcription language change requested: {lang_req}")
-                        try:
-                            _platform.set_audiohijack_language(lang_req)
-                            ws_client.send({
-                                "type": "transcription_language_status",
-                                "language": lang_req,
-                            })
-                            log.info("daemon", f"AudioHijack language set to: {lang_req}")
-                        except Exception as e:
-                            log.error("daemon", f"Failed to set AudioHijack language: {e}")
+                # ── Transcription language change via WS — disabled (no longer using Audio Hijack) ──
+                # lang_data = _pending_requests.pop("transcription_language_request", None)
+                # if lang_data:
+                #     lang_req = lang_data.get("language")
+                #     if lang_req:
+                #         log.info("daemon", f"Transcription language change requested: {lang_req}")
+                #         try:
+                #             _platform.set_audiohijack_language(lang_req)
+                #             ws_client.send({
+                #                 "type": "transcription_language_status",
+                #                 "language": lang_req,
+                #             })
+                #             log.info("daemon", f"AudioHijack language set to: {lang_req}")
+                #         except Exception as e:
+                #             log.error("daemon", f"Failed to set AudioHijack language: {e}")
 
                 # ── Email participant feedback ──
                 try:
