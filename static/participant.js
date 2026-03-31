@@ -294,7 +294,7 @@ function closeEmojiPopup(ev) {
     const STEPS = [
       { selector: '#display-name',    emoji: '✏️', text: "That's your name. Tap it to rename yourself. Be creative." },
       { selector: '#notes-btn',       emoji: '📝', text: 'Notes are here. Tap to open session notes anytime.' },
-      { selector: '#summary-btn',     emoji: '🧠', text: 'AI recaps what you missed. Tap any time. Zero FOMO.' },
+      { selector: '#summary-btn',     emoji: '🧠', text: 'Session key points, updated live. Zero FOMO.' },
       { selector: '#location-prompt', emoji: '📍', text: "Tell us where you're from — for the world map. Totally optional." },
       { selector: '#slides-dock',        emoji: '📑', text: 'Slides are always on the right. Click any topic to open it.', scanDock: true },
       { selector: '#slides-follow-btn',  emoji: '📌', text: "Auto-syncs your view to the trainer's current slide." },
@@ -639,16 +639,9 @@ function closeEmojiPopup(ev) {
     URL.revokeObjectURL(a.href);
   }
 
-  let _summaryRequested = false;
   function toggleSummaryModal() {
     const overlay = document.getElementById('summary-overlay');
     if (overlay) overlay.classList.toggle('open');
-    // Request generation if no points yet
-    if (!summaryPoints.length && !_summaryRequested) {
-      _summaryRequested = true;
-      const list = document.getElementById('summary-list');
-      fetch(apiBase + '/api/summary/force', { method: 'POST' }).catch(() => {});
-    }
   }
 
   function closeSummaryModal() {
@@ -867,16 +860,6 @@ function closeEmojiPopup(ev) {
     closePasteModal();
     closeSlidesModal();
     closeAvatarModal();
-  }
-
-  function requestSummaryRefresh() {
-    _summaryRequested = true;
-    if (summaryPoints.length === 0) {
-      renderSummaryList();
-    }
-    const btn = document.getElementById('summary-refresh-btn');
-    if (btn) { btn.disabled = true; btn.style.opacity = '0.4'; }
-    fetch(apiBase + '/api/summary/force', { method: 'POST' }).catch(() => {});
   }
 
   function _normalizeSlideMatchToken(value) {
