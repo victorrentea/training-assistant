@@ -138,7 +138,13 @@ async def _push_session_request_sync(session_request: dict) -> None:
 def _apply_session_main(main: dict | None) -> None:
     """Apply daemon-provided main session and keep session_id stable."""
     if not _is_open_session(main):
+        # Daemon confirmed session ended — clear the pending end request
+        if state.session_request and state.session_request.get("action") == "end":
+            state.session_request = None
         state.session_main = None
+        return
+    # If end was requested but daemon hasn't confirmed yet, ignore re-activation syncs
+    if state.session_request and state.session_request.get("action") == "end":
         return
 
     state.session_main = main
@@ -261,6 +267,11 @@ async def start_session(body: StartSessionRequest):
 async def end_session():
     state.session_request = {"action": "end"}
     await _push_session_request_sync(state.session_request)
+    # Immediately mark session as ended on the backend so the host UI responds promptly,
+    # even if the daemon hasn't confirmed yet (daemon will send a sync to clear it fully).
+    if state.session_main:
+        state.session_main = {**state.session_main, "status": "ended"}
+        await broadcast_state()
     return {"ok": True}
 
 

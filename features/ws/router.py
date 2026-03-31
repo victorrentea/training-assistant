@@ -565,6 +565,16 @@ async def daemon_websocket_endpoint(websocket: WebSocket):
     logger.info("Daemon WS connected")
     await broadcast({"type": "slides_catalog_changed"})
 
+    # Re-deliver any pending session request that was not yet processed (e.g. sent before WS drop)
+    if state.session_request:
+        import uuid as _uuid
+        request_id = _uuid.uuid4().hex
+        try:
+            await websocket.send_json({"type": "session_request", **state.session_request, "request_id": request_id})
+            logger.info("Re-delivered pending session_request action=%s to reconnected daemon", state.session_request.get("action"))
+        except Exception:
+            pass
+
     try:
         while True:
             data = await websocket.receive_json()
