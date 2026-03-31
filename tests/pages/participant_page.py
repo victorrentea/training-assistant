@@ -14,6 +14,17 @@ class ParticipantPage:
 
     # ── Session ──────────────────────────────────────────────────────────────
 
+    def auto_join(self) -> str:
+        """Wait for auto-join to complete and return the server-assigned name (no rename)."""
+        expect(self._page.locator("#main-screen")).to_be_visible(timeout=10000)
+        expect(self._page.locator("#display-name")).not_to_be_empty(timeout=5000)
+        return self._page.locator("#display-name").inner_text().strip()
+
+    def get_avatar_src(self) -> str:
+        """Return the current avatar image filename (e.g. 'gandalf.png'), or '' if none."""
+        src = self._page.locator("#my-avatar").get_attribute("src") or ""
+        return src.split("/")[-1] if src else ""
+
     def join(self, name: str) -> None:
         """Join session with a given name.
         Participants auto-join with a LotR name, so wait for main screen,

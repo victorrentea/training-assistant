@@ -18,20 +18,22 @@ class TestSuggestName:
 
     def test_skips_taken(self):
         s = AppState()
-        uid = "test-uuid"
-        s.participants[uid] = MagicMock()
-        s.participant_names[uid] = "Gandalf"
-        name = s.suggest_name()
-        assert name == "Frodo"  # second LOTR name
+        s.participant_names["test-uuid"] = "Gandalf"
+        assert s.suggest_name() == "Frodo"  # second LOTR name
 
-    def test_fallback_when_all_taken(self):
+    def test_returns_none_when_all_taken(self):
         s = AppState()
         for i, n in enumerate(LOTR_NAMES):
             uid = f"uuid-{i}"
-            s.participants[uid] = MagicMock()
             s.participant_names[uid] = n
-        name = s.suggest_name()
-        assert name.startswith("Guest")
+        assert s.suggest_name() is None
+
+    def test_skips_disconnected_names(self):
+        """Names of disconnected participants are also reserved."""
+        s = AppState()
+        # Gandalf is taken by a disconnected participant (not in s.participants)
+        s.participant_names["offline-uuid"] = "Gandalf"
+        assert s.suggest_name() == "Frodo"
 
 
 class TestVoteCounts:

@@ -672,9 +672,24 @@ async def _handle_participant_connection(websocket: WebSocket, pid: str, is_host
             if not named:
                 if msg_type != "set_name":
                     continue
+                # Returning participant — restore their stored name and avatar
+                if pid in state.participant_names:
+                    name = state.participant_names[pid]
+                    named = True
+                    logger.info(f"Returning: {pid} -> {name} ({len(state.participants)} total)")
+                    await send_state_to_participant(websocket, pid)
+                    await _send_content_messages(websocket)
+                    await broadcast_participant_update()
+                    if not is_host and state.debate_phase:
+                        await broadcast_state()
+                    continue
                 name = str(data.get("name", "")).strip()[:32]
                 if not name:
                     continue
+                # Guard against race condition: another participant grabbed the same name
+                taken_names = set(state.participant_names.values())
+                if name in taken_names:
+                    name = state.suggest_name() or f"Guest{secrets.randbelow(900) + 100}"
                 state.participant_names[pid] = name
                 if not is_host:
                     assign_avatar(state, pid, name)
@@ -699,11 +714,17 @@ async def _handle_participant_connection(websocket: WebSocket, pid: str, is_host
             if msg_type == "set_name":
                 # Allow rename
                 name = str(data.get("name", "")).strip()[:32]
-                if name:
-                    state.participant_names[pid] = name
-                    if not is_host:
-                        assign_avatar(state, pid, name)  # no-op if already assigned
-                    await broadcast_participant_update()
+                if name and name != state.participant_names.get(pid):
+                    taken_by_others = {v for k, v in state.participant_names.items() if k != pid}
+                    if name in taken_by_others:
+                        await websocket.send_text(json.dumps({"type": "name_rejected", "reason": "Name already taken"}))
+                        # Send state back so client reverts display to the actual current name
+                        await send_state_to_participant(websocket, pid)
+                    else:
+                        state.participant_names[pid] = name
+                        if not is_host:
+                            assign_avatar(state, pid, name)  # no-op if already assigned
+                        await broadcast_participant_update()
 
             elif msg_type == "refresh_avatar":
                 if not is_host:

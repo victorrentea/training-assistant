@@ -230,7 +230,10 @@ async def get_quiz_md():
 
 @public_router.get("/api/suggest-name")
 async def suggest_name():
-    return {"name": state.suggest_name()}
+    name = state.suggest_name()
+    if name is None:
+        return {"name": None, "session_full": True}
+    return {"name": name}
 
 
 def _status_response():
