@@ -762,7 +762,6 @@
     el.title = `Transcript frames included in "Regenerate Entire Session": ${windows}`;
   }
 
-  let _summaryGenerating = false;
   let _transcriptLineCount = 0;
   let _transcriptLastContentAt = null; // Date or null
   let _transcriptLatestTs = null;      // "HH:MM:SS" string or null
@@ -770,14 +769,8 @@
   function updateSummary(points, updatedAt) {
     summaryPoints = points || [];
     summaryUpdatedAt = updatedAt;
-    if (summaryPoints.length) {
-      _summaryGenerating = false;
-      const btn = document.getElementById('summary-refresh-btn');
-      if (btn) { btn.disabled = false; btn.style.opacity = ''; }
-    }
     renderSummaryBadge();
     renderSummaryList();
-    renderGenerateButton();
   }
 
   function renderSummaryBadge() {
@@ -801,39 +794,14 @@
         badge,
         noTranscriptTitle || `${summaryPoints.length} key points · ${_transcriptLineCount} transcript lines — click to view`,
       );
-    } else if (_summaryGenerating) {
-      badge.textContent = `🧠 (…) Key Points`;
-      badge.className = 'badge';
-      badge.style.cssText = 'cursor:wait; color:var(--warn); border:1px solid var(--warn);';
-      _setFooterBadgeTooltip(
-        badge,
-        noTranscriptTitle || `Generating key points from transcript… (${_transcriptLineCount} lines)`,
-      );
     } else {
       badge.textContent = `🧠 Key Points`;
       badge.className = 'badge empty';
       badge.style.cssText = 'cursor:pointer;';
-      _setFooterBadgeTooltip(
-        badge,
-        noTranscriptTitle
-          || (_transcriptLineCount > 0
-            ? `${_transcriptLineCount} transcript lines ready — click to generate key points`
-            : 'No key points yet — click to generate now'),
-      );
+      _setFooterBadgeTooltip(badge, noTranscriptTitle || 'No key points yet');
     }
   }
-  function renderGenerateButton() {
-    const btn = document.getElementById('summary-refresh-btn');
-    const wmEl = document.getElementById('summary-watermark');
-    if (!btn) return;
-    renderSummarySessionWindows();
-    if (wmEl) wmEl.textContent = _transcriptLatestTs ? '⏱️' + _transcriptLatestTs.slice(0, 5) : '';
-    const twoMinAgo = Date.now() - 2 * 60 * 1000;
-    const lastGen = summaryUpdatedAt ? new Date(summaryUpdatedAt).getTime() : 0;
-    btn.style.display = (!summaryUpdatedAt || lastGen < twoMinAgo) ? '' : 'none';
-  }
-
-  setInterval(() => { renderSummaryBadge(); renderGenerateButton(); }, 30000); // keep tooltip + button visibility accurate
+  setInterval(renderSummaryBadge, 30000); // keep tooltip accurate
 
   function renderSummaryList() {
     const list = document.getElementById('summary-list');
@@ -859,39 +827,12 @@
   }
 
   function toggleSummaryModal() {
-    if (summaryPoints.length) {
-      const overlay = document.getElementById('summary-overlay');
-      if (overlay) overlay.classList.toggle('open');
-    } else {
-      if (!confirm('No summary cached for today.\nFeed the entire day\'s transcript to AI for summarization?')) return;
-      _summaryGenerating = true;
-      renderSummaryBadge();
-      fetch(API('/summary/force'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ full_day: true }),
-      });
-    }
+    const overlay = document.getElementById('summary-overlay');
+    if (overlay) overlay.classList.toggle('open');
   }
 
   function closeSummaryModal() {
     closeModal('summary-overlay');
-  }
-
-  function requestSummaryRefresh() {
-    _summaryGenerating = true;
-    renderSummaryBadge();
-    const btn = document.getElementById('summary-refresh-btn');
-    if (btn) { btn.disabled = true; btn.style.opacity = '0.4'; }
-    fetch(API('/summary/force'), { method: 'POST' }).catch(() => {});
-  }
-
-  function requestFullDayRegenerate() {
-    _summaryGenerating = true;
-    renderSummaryBadge();
-    const btn = document.getElementById('summary-refresh-btn');
-    if (btn) { btn.disabled = true; btn.style.opacity = '0.4'; }
-    fetch(API('/summary/full-reset'), { method: 'POST' }).catch(() => {});
   }
 
   function setKickedFavicon() {
