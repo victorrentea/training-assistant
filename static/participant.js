@@ -623,28 +623,52 @@ function closeEmojiPopup(ev) {
       const d = new Date(summaryUpdatedAt);
       timeEl.textContent = 'Updated ' + d.toLocaleTimeString();
     }
-    const dlBtn = document.getElementById('keypoints-download');
-    if (dlBtn) dlBtn.style.display = hasContent ? '' : 'none';
+    const show = hasContent ? '' : 'none';
+    const dlMd = document.getElementById('keypoints-download-md');
+    const dlPdf = document.getElementById('keypoints-download-pdf');
+    if (dlMd) dlMd.style.display = show;
+    if (dlPdf) dlPdf.style.display = show;
   }
 
   function downloadKeyPoints() {
     if (!summaryPoints.length && !summaryRawMarkdown) return;
-    let content;
-    if (summaryRawMarkdown) {
-      content = summaryRawMarkdown;
-    } else {
-      const lines = summaryPoints.map(p => {
-        const text = typeof p === 'string' ? p : p.text;
-        return '• ' + text;
-      });
-      content = 'Key Points\n' + '='.repeat(10) + '\n\n' + lines.join('\n');
-    }
-    const blob = new Blob([content], { type: 'text/plain' });
+    const content = summaryRawMarkdown ||
+      summaryPoints.map(p => '- ' + (typeof p === 'string' ? p : p.text)).join('\n');
+    const blob = new Blob([content], { type: 'text/markdown' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = `key-points-${new Date().toISOString().slice(0, 10)}.txt`;
+    a.download = `key-points-${new Date().toISOString().slice(0, 10)}.md`;
     a.click();
     URL.revokeObjectURL(a.href);
+  }
+
+  function downloadKeyPointsPDF() {
+    if (!summaryPoints.length && !summaryRawMarkdown) return;
+    const md = summaryRawMarkdown ||
+      summaryPoints.map(p => '- ' + (typeof p === 'string' ? p : p.text)).join('\n');
+    const html = (typeof marked !== 'undefined') ? marked.parse(md) : escHtml(md).replace(/\n/g, '<br>');
+    const win = window.open('', '_blank');
+    if (!win) return;
+    win.document.write(`<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>Key Points</title><style>
+  body{font-family:'Segoe UI',system-ui,sans-serif;max-width:780px;margin:2.5rem auto;padding:0 1.5rem;color:#1a1d2e;line-height:1.6;font-size:1rem}
+  h1{font-size:1.4rem;color:#5a52e0;border-bottom:1px solid #d0d4e8;padding-bottom:.4rem;margin-bottom:1rem}
+  h2{font-size:1.15rem;color:#2daa8a;margin:1.2rem 0 .4rem}
+  h3{font-size:1rem;margin:.9rem 0 .3rem}
+  ul,ol{padding-left:1.5rem}li{margin-bottom:.35rem}
+  code{background:#f0f2f8;border-radius:3px;padding:.1em .3em;font-size:.85em;color:#2daa8a;font-family:ui-monospace,Menlo,monospace}
+  pre{background:#f0f2f8;border-radius:6px;padding:.7rem 1rem;overflow-x:auto;margin:.6rem 0}
+  pre code{background:none;color:#1a1d2e;font-size:.83rem}
+  strong{font-weight:700}
+  blockquote{border-left:3px solid #5a52e0;margin:.4rem 0;padding:.3rem .8rem;color:#555}
+  hr{border:none;border-top:1px solid #d0d4e8;margin:.7rem 0}
+  @media print{body{margin:.5cm 1cm;max-width:none}@page{margin:1.5cm}}
+</style></head><body><h1>🧠 Key Points</h1>
+${html}
+</body></html>`);
+    win.document.close();
+    win.focus();
+    setTimeout(() => win.print(), 250);
   }
 
   function toggleSummaryModal() {

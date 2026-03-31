@@ -59,6 +59,7 @@ async def get_notes():
     return {
         "content": state.notes_content,
         "summary_points": state.summary_points,
+        "raw_markdown": state.summary_raw_markdown,
         "summary_updated_at": state.summary_updated_at.isoformat() if state.summary_updated_at else None,
     }
 
