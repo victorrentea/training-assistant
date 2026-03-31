@@ -535,10 +535,17 @@ function closeEmojiPopup(ev) {
 
   let notesContent = '';
 
+  function linkifyText(text) {
+    const urlRegex = /(https?:\/\/[^\s<>"]+)/g;
+    return escHtml(text).replace(urlRegex, url =>
+      `<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`
+    );
+  }
+
   function updateNotes(content) {
     notesContent = content || '';
     const el = document.getElementById('notes-content');
-    if (el) el.textContent = notesContent;
+    if (el) el.innerHTML = linkifyText(notesContent);
     const dlBtn = document.getElementById('participant-notes-download');
     if (dlBtn) dlBtn.style.display = notesContent ? '' : 'none';
     const btn = document.getElementById('notes-btn');
