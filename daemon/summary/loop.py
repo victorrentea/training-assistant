@@ -23,6 +23,7 @@ __all__ = [
     "save_key_points",
     "run_summary_cycle",
     "get_ai_summary_mtime",
+    "get_ai_summary_raw",
 ]
 
 AI_SUMMARY_FILE = "ai-summary.md"
@@ -37,6 +38,11 @@ def _read_ai_summary_raw(session_folder: Path) -> str | None:
         return ai_file.read_text(encoding="utf-8", errors="replace").strip()
     except OSError:
         return None
+
+
+def get_ai_summary_raw(session_folder: Path) -> str | None:
+    """Public alias for reading raw ai-summary.md content."""
+    return _read_ai_summary_raw(session_folder)
 
 
 def get_ai_summary_mtime(session_folder: Path) -> str | None:

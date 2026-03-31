@@ -619,8 +619,10 @@ function closeEmojiPopup(ev) {
       if (dlBtn) dlBtn.style.display = 'none';
       return;
     }
-    if (summaryRawMarkdown && typeof marked !== 'undefined') {
-      container.innerHTML = marked.parse(summaryRawMarkdown);
+    const md = summaryRawMarkdown ||
+      summaryPoints.map(p => '- ' + (typeof p === 'string' ? p : p.text)).join('\n');
+    if (typeof marked !== 'undefined') {
+      container.innerHTML = marked.parse(md);
     } else {
       container.innerHTML = '<ul style="list-style:disc;padding-left:1.4rem">' +
         summaryPoints.map(p => {
