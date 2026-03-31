@@ -278,6 +278,14 @@
   margin: 0;
   padding: .5rem 0;
 }
+.notes-content a {
+  color: var(--accent);
+  text-decoration: underline;
+  word-break: break-all;
+}
+.notes-content a:hover {
+  opacity: .8;
+}
 .notes-download-btn {
   display: inline-block;
   padding: .2rem .6rem;
