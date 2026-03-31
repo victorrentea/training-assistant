@@ -1132,7 +1132,6 @@
     _transcriptLatestTs = latestTs || null;
     _transcriptLastContentAt = lastContentAt ? new Date(lastContentAt).getTime() : null;
     renderSummaryBadge();
-    renderGenerateButton();
   }
 
 
