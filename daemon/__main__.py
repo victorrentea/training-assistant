@@ -28,7 +28,7 @@ from daemon.llm.adapter import get_usage
 from daemon.quiz.history import auto_generate, auto_generate_topic, auto_refine
 from daemon.quiz.poll_api import post_status
 from daemon.debate.ai_cleanup import run_debate_ai_cleanup
-from daemon.summary.loop import run_summary_cycle, load_key_points, save_key_points, get_ai_summary_mtime
+from daemon.summary.loop import run_summary_cycle, load_key_points, save_key_points, get_ai_summary_mtime, get_ai_summary_raw
 from daemon.transcript.loop import TranscriptNormalizerRunner
 from daemon.transcript.whisper_runner import WhisperTranscriptionRunner
 from daemon.transcript.loader import load_transcription_files
@@ -659,7 +659,7 @@ def run() -> None:
                 except Exception as e:
                     log.error("session", f"Failed to read session_state.json: {e}")
         _startup_folder = (config.session_folder or (sessions_root / session_stack[-1]["name"])) if session_stack else None
-        sync_session_to_server(config, session_stack, current_key_points, startup_session_state, slides_log=slides_log, git_repos=git_repos, file_time=get_ai_summary_mtime(_startup_folder) if _startup_folder else None)
+        sync_session_to_server(config, session_stack, current_key_points, startup_session_state, slides_log=slides_log, git_repos=git_repos, file_time=get_ai_summary_mtime(_startup_folder) if _startup_folder else None, raw_markdown=get_ai_summary_raw(_startup_folder) if _startup_folder else None)
     except Exception as e:
         log.error("session", f"Initial sync failed: {e}")
 
@@ -694,7 +694,8 @@ def run() -> None:
             except Exception as e:
                 log.error("session", f"Failed to read session_state.json on reconnect: {e}")
         try:
-            sync_session_to_server(config, session_stack, current_key_points, reconnect_session_state, slides_log=slides_log, git_repos=git_repos)
+            _reconnect_folder = sessions_root / session_stack[-1]["name"] if session_stack else None
+            sync_session_to_server(config, session_stack, current_key_points, reconnect_session_state, slides_log=slides_log, git_repos=git_repos, file_time=get_ai_summary_mtime(_reconnect_folder) if _reconnect_folder else None, raw_markdown=get_ai_summary_raw(_reconnect_folder) if _reconnect_folder else None)
             log.info("session", f"Re-synced session '{session_stack[-1]['name']}' to backend on reconnect")
         except Exception as e:
             log.error("session", f"Session re-sync on reconnect failed: {e}")
@@ -833,7 +834,7 @@ def run() -> None:
                             global_state_persisted = True
                             notes_file = find_notes_in_folder(folder)
                             config = dc_replace(config, session_folder=folder, session_notes=notes_file)
-                            sync_session_to_server(config, session_stack, current_key_points, slides_log=slides_log, git_repos=git_repos, file_time=get_ai_summary_mtime(folder))
+                            sync_session_to_server(config, session_stack, current_key_points, slides_log=slides_log, git_repos=git_repos, file_time=get_ai_summary_mtime(folder), raw_markdown=get_ai_summary_raw(folder))
                             transcript_state.reset()
                             # try:  # disabled — no longer using Audio Hijack
                             #     _sync_audiohijack_language(config)
@@ -868,7 +869,7 @@ def run() -> None:
                         global_state_persisted = True
                         notes_file = find_notes_in_folder(folder)
                         config = dc_replace(config, session_folder=folder, session_notes=notes_file)
-                        sync_session_to_server(config, session_stack, current_key_points, slides_log=slides_log, git_repos=git_repos, file_time=get_ai_summary_mtime(folder))
+                        sync_session_to_server(config, session_stack, current_key_points, slides_log=slides_log, git_repos=git_repos, file_time=get_ai_summary_mtime(folder), raw_markdown=get_ai_summary_raw(folder))
                         transcript_state.reset()
                         slides_log = []
                         git_repos = []
