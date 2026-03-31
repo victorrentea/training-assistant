@@ -68,10 +68,6 @@ Implemented by `daemon/transcript_normalizer.py`, called by `TranscriptNormalize
   - `Normalized X lines` (common case 1 source -> 1 output)
   - or full multi-file message when applicable
 
-## Timestamp appender loop
-
-`TranscriptTimestampAppender` is still present and appends heartbeat timestamps in raw transcript files at interval (`TRANSCRIPT_TIMESTAMP_INTERVAL_SECONDS`).
-
 ## Responsibilities of the Daemon
 
 1. Quiz orchestration

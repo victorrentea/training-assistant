@@ -151,7 +151,7 @@ training-assistant/
 │   ├── debate/ai_cleanup.py ← AI deduplication and cleanup of debate arguments
 │   ├── summary/             ← Live transcript summarization: summarizer.py, loop.py
 │   ├── transcript/          ← Transcript processing: normalizer, parser, loader, writer,
-│   │                           timestamps, loop, query, rebuild, session, state
+│   │                           loop, query, rebuild, session, state
 │   ├── slides/              ← PPTX→PDF: daemon.py, catalog.py, convert.py,
 │   │                           drive_sync.py, upload.py, loop.py
 │   ├── materials/           ← Project file mirroring: mirror.py, ws_runner.py
@@ -282,12 +282,11 @@ Orchestration daemon running on the trainer's Mac:
 - Quiz refinement: regenerates specific question/option on host request
 - Debate AI cleanup: deduplicates, fixes typos, suggests new arguments via Claude
 - Live summary: periodically reads transcript, generates key points via Claude, posts to backend
-- Transcript timestamps: auto-appends `[HH:MM:SS]` markers every ~3 seconds
 - Transcript normalization: incrementally normalizes raw transcript lines into daily files (`YYYY-MM-DD transcription.txt`)
 - Auto-update: exit code 42 signals wrapper script to git pull + restart
 - `ANTHROPIC_API_KEY` is set in the environment
 - Run: `python3 training_daemon.py`
-- Uses `daemon/` subpackage: `llm_adapter.py`, `summarizer.py`, `debate_ai.py`, `transcript_state.py`, `transcript_timestamps.py`, `transcript_normalizer.py`, `transcript_query.py`, `indexer.py`, `rag.py`, `project_files.py`
+- Uses `daemon/` subpackage: `llm_adapter.py`, `summarizer.py`, `debate_ai.py`, `transcript_state.py`, `transcript_normalizer.py`, `transcript_query.py`, `indexer.py`, `rag.py`, `project_files.py`
 
 Manual normalized transcript query (run only on demand):
 - Script: `python3 -m daemon.transcript_query <from_iso> <to_iso>`

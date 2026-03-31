@@ -1,4 +1,4 @@
-"""Transcript background loops: timestamp appender and normalizer runner."""
+"""Transcript background loops: normalizer runner."""
 
 import os
 import re
@@ -8,10 +8,8 @@ from datetime import datetime
 from pathlib import Path
 
 from daemon import log
-from daemon.transcript.timestamps import append_empty_line_then_timestamp, infer_template_from_first_line
 from daemon.transcript.normalizer import normalize_folder_incremental
 
-_TIMESTAMP_INTERVAL_SECONDS = float(os.environ.get("TRANSCRIPT_TIMESTAMP_INTERVAL_SECONDS", "3"))
 _NORMALIZER_INTERVAL_SECONDS = float(os.environ.get("TRANSCRIPT_NORMALIZER_INTERVAL_SECONDS", "3"))
 
 # --- LLM pre-filter (easy to remove: delete this block + usage in TranscriptNormalizerRunner) ---
@@ -63,76 +61,6 @@ _NORMALIZER_ENABLED = os.environ.get("TRANSCRIPT_NORMALIZER_ENABLED", "1").strip
     "no",
     "off",
 }
-
-
-class TranscriptTimestampAppender:
-    """Append heartbeat timestamp lines to the latest transcript text file."""
-
-    def __init__(self, folder: Path, interval_seconds: float = _TIMESTAMP_INTERVAL_SECONDS):
-        self.folder = folder
-        self.interval_seconds = interval_seconds
-        self.enabled = False
-        self._next_append_at = 0.0
-        self._target_file: Path | None = None
-        self._template = None
-        self._startup_error_logged = False
-
-    def _resolve_target_file(self) -> Path | None:
-        if not self.folder.exists() or not self.folder.is_dir():
-            return None
-        _date_re = re.compile(r"^(\d{8})\s+(\d{4})\b")
-
-        def _sort_key(f: Path):
-            m = _date_re.match(f.name)
-            return m.group(1) + m.group(2) if m else ""
-
-        txt_files = sorted(
-            [f for f in self.folder.iterdir() if f.suffix.lower() == ".txt"],
-            key=_sort_key,
-        )
-        return txt_files[-1] if txt_files else None
-
-    def _log_startup_error_once(self, message: str) -> None:
-        if self._startup_error_logged:
-            return
-        log.error("daemon", message)
-        self._startup_error_logged = True
-
-    def start(self) -> None:
-        if self.interval_seconds <= 0:
-            self._log_startup_error_once(
-                "Timestamp appender disabled: INTERVAL_SECONDS must be > 0"
-            )
-            return
-
-        self._target_file = self._resolve_target_file()
-        if self._target_file is None:
-            self._log_startup_error_once(
-                f"Timestamp appender disabled: no .txt in {self.folder}"
-            )
-            return
-
-        self._template = infer_template_from_first_line(self._target_file)
-        self._next_append_at = time.monotonic()
-        self.enabled = True
-        log.info("daemon", f"Transcript timestamp appender enabled ({self.interval_seconds:.1f}s) on {self._target_file.name}")
-
-    def tick(self) -> None:
-        if not self.enabled:
-            return
-
-        now = time.monotonic()
-        if now < self._next_append_at:
-            return
-
-        try:
-            append_empty_line_then_timestamp(self._target_file, self._template)
-        except OSError as exc:
-            self.enabled = False
-            log.error("daemon", f"Timestamp appender stopped: {exc}")
-            return
-
-        self._next_append_at = now + self.interval_seconds
 
 
 class TranscriptNormalizerRunner:
