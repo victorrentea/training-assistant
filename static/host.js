@@ -100,6 +100,7 @@
       scores[p.uuid] = p.score || 0;
       cachedParticipantIds.push(p.uuid);
     });
+    document.getElementById('pax-total').textContent = cachedParticipantIds.length;
   }
 
   function loadPollHistory() {

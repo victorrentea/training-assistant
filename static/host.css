@@ -159,6 +159,26 @@ body {
 .host-top-pax .stat {
   font-size: 1.8rem;
   line-height: 1;
+  display: flex;
+  align-items: center;
+  gap: .3rem;
+}
+.pax-online-dot {
+  width: .55rem;
+  height: .55rem;
+  border-radius: 50%;
+  background: #22c55e;
+  flex-shrink: 0;
+  animation: pax-dot-pulse 1.4s ease-in-out infinite;
+}
+@keyframes pax-dot-pulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(34,197,94,.6); }
+  50% { opacity: .7; box-shadow: 0 0 0 5px rgba(34,197,94,0); }
+}
+.pax-slash {
+  font-size: 1.2rem;
+  color: var(--muted);
+  margin: 0 .05rem;
 }
 .host-top-pax .stat-label {
   font-size: .8rem;
