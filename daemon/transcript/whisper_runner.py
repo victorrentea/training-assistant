@@ -7,7 +7,7 @@ Defaults:
 Optional:
     WHISPER_ME_SPEAKER=Trainer       (default)
     WHISPER_AUDIENCE_SPEAKER=Participant  (default)
-    WHISPER_MODEL=mlx-community/whisper-large-v3-mlx  (default)
+    WHISPER_MODEL=mlx-community/whisper-large-v3-turbo  (default)
     WHISPER_CHUNK_SECONDS=4
     WHISPER_SILENCE_THRESHOLD=0.018
 """
@@ -29,7 +29,7 @@ _ME_DEVICE    = os.environ.get("WHISPER_ME_DEVICE",       "5")   # XLR (🎙️T
 _AUD_DEVICE   = os.environ.get("WHISPER_AUDIENCE_DEVICE", "17")  # FROM Zoom loopback
 _ME_SPEAKER   = os.environ.get("WHISPER_ME_SPEAKER",       "Trainer")
 _AUD_SPEAKER  = os.environ.get("WHISPER_AUDIENCE_SPEAKER", "Participant")
-_MODEL        = os.environ.get("WHISPER_MODEL",            "mlx-community/whisper-large-v3-mlx")
+_MODEL        = os.environ.get("WHISPER_MODEL",            "mlx-community/whisper-large-v3-turbo")
 _CHUNK_SEC    = float(os.environ.get("WHISPER_CHUNK_SECONDS",      "4"))
 _OVERLAP_SEC  = float(os.environ.get("WHISPER_OVERLAP_SECONDS",    "0.5"))
 _THRESHOLD    = float(os.environ.get("WHISPER_SILENCE_THRESHOLD",  "0.018"))
