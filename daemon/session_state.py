@@ -398,7 +398,10 @@ def sync_session_to_server(
     If session_state is provided, it is included for a plain restore (no participant disconnect).
     Extra keyword arguments (e.g. action, discussion_points) are merged into the payload."""
     daemon_state = stack_to_daemon_state(stack)
+    raw_markdown = extra_fields.pop("raw_markdown", None)
     payload: dict = {"main": daemon_state["main"], "talk": daemon_state["talk"], "key_points": key_points}
+    if raw_markdown is not None:
+        payload["raw_markdown"] = raw_markdown
     if session_state is not None:
         payload["session_state"] = session_state
         if session_state.get("session_id"):

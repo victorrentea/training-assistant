@@ -27,6 +27,17 @@ __all__ = [
 AI_SUMMARY_FILE = "ai-summary.md"
 
 
+def _read_ai_summary_raw(session_folder: Path) -> str | None:
+    """Read raw content of ai-summary.md for markdown rendering."""
+    ai_file = session_folder / AI_SUMMARY_FILE
+    if not ai_file.exists():
+        return None
+    try:
+        return ai_file.read_text(encoding="utf-8", errors="replace").strip()
+    except OSError:
+        return None
+
+
 def _read_ai_summary_file(session_folder: Path) -> list[dict] | None:
     """Read ai-summary.md from session folder and return as key points list.
 
@@ -107,11 +118,12 @@ def run_summary_cycle(
     # Read from ai-summary.md file in session folder
     try:
         new_points = _read_ai_summary_file(session_folder)
+        raw_markdown = _read_ai_summary_raw(session_folder)
         if new_points is not None:
             current_key_points = new_points
             save_key_points(session_folder, current_key_points, 0, s_date)
             save_daemon_state(sessions_root, stack_to_daemon_state(session_stack))
-            sync_session_to_server(config, session_stack, current_key_points)
+            sync_session_to_server(config, session_stack, current_key_points, raw_markdown=raw_markdown)
             log.info("summarizer", f"Key points: {len(current_key_points)} total (from {AI_SUMMARY_FILE})")
     except Exception as e:
         log.error("summarizer", f"Error reading {AI_SUMMARY_FILE}: {e}")
