@@ -33,6 +33,7 @@ def get_current_session_id() -> str | None:
 _KEY_POINTS_FILE = "transcript_discussion.md"
 _KEY_POINTS_FILE_LEGACY_MD = "transcript_keypoints.md"
 _KEY_POINTS_FILE_LEGACY = "key_points.json"
+_AI_SUMMARY_FILE = "ai-summary.md"
 GLOBAL_STATE_FILENAME = "training-assistant-global-state.json"
 _LEGACY_DAEMON_STATE_FILENAME = "daemon_state.json"
 
@@ -76,8 +77,32 @@ def resolve_materials_folder() -> Path | None:
 
 def load_key_points(session_folder: Path) -> tuple[list[dict], int]:
     """Load key points from session folder. Returns (points, watermark).
-    Reads transcript_discussion.md (new) or falls back to transcript_keypoints.md (legacy md)
+    Prefers ai-summary.md (external AI-generated file) if present.
+    Falls back to transcript_discussion.md, transcript_keypoints.md (legacy md),
     or key_points.json (oldest legacy)."""
+    # Prefer external ai-summary.md if present
+    ai_summary_file = session_folder / _AI_SUMMARY_FILE
+    if ai_summary_file.exists():
+        try:
+            text = ai_summary_file.read_text(encoding="utf-8", errors="replace").strip()
+            points = []
+            for line in text.splitlines():
+                line = line.strip()
+                if not line or line.startswith("#"):
+                    continue
+                if line.startswith("- ") or line.startswith("* "):
+                    text_content = line[2:].strip()
+                elif line and line[0].isdigit() and ". " in line:
+                    text_content = line.split(". ", 1)[1].strip()
+                else:
+                    text_content = line
+                if text_content:
+                    points.append({"text": text_content, "source": "notes"})
+            log.info("session", f"Loaded {len(points)} key points from {_AI_SUMMARY_FILE} in {session_folder.name}")
+            return points, 0
+        except Exception as e:
+            log.error("session", f"Failed to load {_AI_SUMMARY_FILE}: {e}")
+
     md_file = session_folder / _KEY_POINTS_FILE
     legacy_md_file = session_folder / _KEY_POINTS_FILE_LEGACY_MD
     json_file = session_folder / _KEY_POINTS_FILE_LEGACY
