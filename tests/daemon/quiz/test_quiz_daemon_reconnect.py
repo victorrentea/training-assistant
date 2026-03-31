@@ -6,21 +6,9 @@ import daemon.lock as _daemon_lock
 from daemon.config import Config
 
 
-class _NoopTimestampAppender:
-    def __init__(self, *args, **kwargs):
-        pass
-
-    def start(self):
-        pass
-
-    def tick(self):
-        pass
-
-
 def test_daemon_logs_disconnect_once_then_reconnect(tmp_path: Path, monkeypatch, capsys):
     monkeypatch.setattr(training_daemon, "check_and_acquire_lock", lambda: None)
     monkeypatch.setattr(training_daemon, "write_lock", lambda: None)
-    monkeypatch.setattr(training_daemon, "TranscriptTimestampAppender", _NoopTimestampAppender)
     monkeypatch.setattr(_daemon_lock.signal, "signal", lambda *args, **kwargs: None)
     monkeypatch.setattr(training_daemon, "DAEMON_POLL_INTERVAL", 0)
     monkeypatch.setattr(training_daemon.time, "sleep", lambda *_: None)

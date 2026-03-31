@@ -29,7 +29,7 @@ from daemon.quiz.history import auto_generate, auto_generate_topic, auto_refine
 from daemon.quiz.poll_api import post_status
 from daemon.debate.ai_cleanup import run_debate_ai_cleanup
 from daemon.summary.loop import run_summary_cycle, load_key_points, save_key_points
-from daemon.transcript.loop import TranscriptTimestampAppender, TranscriptNormalizerRunner
+from daemon.transcript.loop import TranscriptNormalizerRunner
 from daemon.transcript.whisper_runner import WhisperTranscriptionRunner
 from daemon.transcript.loader import load_transcription_files
 from daemon.transcript.query import load_normalized_entries
@@ -608,8 +608,6 @@ def run() -> None:
     except Exception as e:
         log.error("transcript", f"Could not read transcription: {e}")
 
-    timestamp_appender = TranscriptTimestampAppender(config.folder)
-    timestamp_appender.start()
     # transcript_normalizer = TranscriptNormalizerRunner(config.folder)  # disabled: replaced by Whisper live transcription
     # transcript_normalizer.start()
     whisper_runner = WhisperTranscriptionRunner(config.folder)
@@ -715,7 +713,6 @@ def run() -> None:
                     write_lock()
                     last_heartbeat_at = now
 
-                timestamp_appender.tick()
                 # transcript_normalizer.tick()  # disabled: replaced by Whisper live transcription
                 slides_runner.tick()
                 materials_mirror.tick()
