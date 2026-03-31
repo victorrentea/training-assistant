@@ -221,7 +221,8 @@ class WhisperTranscriptionRunner:
         with out_file.open("a", encoding="utf-8") as f:
             f.write(line + "\n")
 
-        words   = len(text.split())
-        preview = " ".join(text.split()[:8])
-        dots    = " ..." if len(text.split()) > 8 else ""
-        log.info("transcript", f"🎙️Transcripted {words} words: {preview}{dots}")
+        parts   = text.split()
+        words   = len(parts)
+        preview = " ".join(parts[:9])
+        dots    = " ..." if words > 9 else ""
+        log.info("transcript", f"🎙️{words} words: {preview}{dots}")
