@@ -816,7 +816,6 @@ def run() -> None:
                         sync_session_to_server(
                             config, session_stack, current_key_points,
                             session_state=parent_snapshot,
-                            git_repos=git_repos,
                         )
                         transcript_state.reset()
 
@@ -878,7 +877,6 @@ def run() -> None:
                         sync_session_to_server(
                             config, session_stack, talk_points,
                             discussion_points=talk_points,
-                            git_repos=git_repos,
                         )
                         log.info("session", f"Created talk folder: {talk_name}")
                     if action:
