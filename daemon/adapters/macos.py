@@ -1,7 +1,6 @@
 """macOS adapter — real implementations using osascript, plistlib, subprocess.
 
 This module provides the real macOS-specific functionality:
-- IntelliJ project tracking
 - Local beep sound
 - Google Drive process detection
 
@@ -15,14 +14,6 @@ import sys
 from pathlib import Path
 
 from daemon import log
-
-
-# ── IntelliJ ────────────────────────────────────────────────────────────────
-
-def probe_intellij(timeout: float = 2.0) -> dict | None:
-    """Return {project, path, branch, frontmost} for the active IntelliJ project."""
-    from daemon.intellij.tracker import probe_intellij_state
-    return probe_intellij_state(timeout)
 
 
 # ── Beep ────────────────────────────────────────────────────────────────────

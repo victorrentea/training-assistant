@@ -2,7 +2,7 @@
 
 Usage:
     from daemon.adapters.loader import adapter
-    ij = adapter.probe_intellij()
+    adapter.beep()
 """
 
 import os

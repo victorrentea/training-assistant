@@ -1006,14 +1006,16 @@
   function _renderGitReposPopover() {
     const el = document.getElementById('git-repos-content');
     if (!el) return;
-    if (!_gitRepos.length) { el.innerHTML = '<div style="padding:8px;opacity:0.5">No repos viewed yet</div>'; return; }
-    const sorted = [..._gitRepos].sort((a, b) => (b.seconds_spent || 0) - (a.seconds_spent || 0));
+    if (!_gitRepos.length) { el.innerHTML = '<div style="padding:8px;opacity:0.5">No repos tracked yet</div>'; return; }
+    const sorted = [..._gitRepos].sort((a, b) => (b.files?.length || 0) - (a.files?.length || 0));
     let html = '';
     for (const r of sorted) {
+      const repoName = (r.url || '').replace(/.*\//, '') || r.url || '';
+      const fileCount = (r.files || []).length;
       html += '<div class="slides-catalog-line">'
-        + '<span class="slides-cache-title truncate">' + escHtml(r.project || r.path || '') + '</span>'
+        + '<span class="slides-cache-title truncate">' + escHtml(repoName) + '</span>'
         + '<span class="slides-cache-label" style="color:var(--muted);font-family:monospace">@ ' + escHtml(r.branch || '') + '</span>'
-        + '<span class="slides-cache-detail">' + _fmtSecs(r.seconds_spent || 0) + '</span>'
+        + '<span class="slides-cache-detail">' + fileCount + ' file' + (fileCount !== 1 ? 's' : '') + '</span>'
         + '</div>';
     }
     el.innerHTML = html;
