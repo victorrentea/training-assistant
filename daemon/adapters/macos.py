@@ -2,7 +2,6 @@
 
 This module provides the real macOS-specific functionality:
 - PowerPoint probe (slide number, presentation name, frontmost)
-- Audio Hijack control (read language, set language, restart)
 - IntelliJ project tracking
 - Local beep sound
 - Google Drive process detection
@@ -130,71 +129,6 @@ def probe_powerpoint(timeout_seconds: float = 5.0) -> tuple[dict | None, str | N
 
     return _parse_powerpoint_probe_output(result.stdout), None
 
-
-# ── Audio Hijack (disabled — transcription now handled by own Whisper model) ─
-#
-# _AUDIOHIJACK_SESSIONS_PLIST = os.path.expanduser(
-#     "~/Library/Application Support/Audio Hijack 4/Sessions.plist"
-# )
-#
-#
-# def read_audiohijack_language() -> str | None:
-#     """Read the current TranscribeBlock languageCode from Sessions.plist."""
-#     import plistlib
-#     try:
-#         with open(_AUDIOHIJACK_SESSIONS_PLIST, "rb") as f:
-#             data = plistlib.load(f)
-#         for session_item in data.get("modelItems", []):
-#             for block in session_item.get("sessionData", {}).get("geBlocks", []):
-#                 if block.get("geObjectInfo") == "TranscribeBlock":
-#                     lang = block.get("geNodeProperties", {}).get("languageCode")
-#                     if lang:
-#                         return lang
-#     except Exception:
-#         pass
-#     return None
-#
-#
-# def set_audiohijack_language(lang_code: str) -> None:
-#     """Kill AudioHijack, update TranscribeBlock languageCode, restart."""
-#     import plistlib
-#     import time as _time
-#
-#     subprocess.run(["pkill", "-x", "Audio Hijack"], capture_output=True)
-#     _time.sleep(1.5)
-#
-#     with open(_AUDIOHIJACK_SESSIONS_PLIST, "rb") as f:
-#         data = plistlib.load(f)
-#     changed = False
-#     for session_item in data.get("modelItems", []):
-#         for block in session_item.get("sessionData", {}).get("geBlocks", []):
-#             if block.get("geObjectInfo") == "TranscribeBlock":
-#                 block.setdefault("geNodeProperties", {})["languageCode"] = lang_code
-#                 changed = True
-#     if changed:
-#         with open(_AUDIOHIJACK_SESSIONS_PLIST, "wb") as f:
-#             plistlib.dump(data, f)
-#
-#     _start_audiohijack_with_retry()
-#
-#
-# def restart_audiohijack() -> None:
-#     """Restart Audio Hijack process."""
-#     subprocess.run(["pkill", "-x", "Audio Hijack"], capture_output=True)
-#     _start_audiohijack_with_retry()
-#
-#
-# def _start_audiohijack_with_retry(retries: int = 5, backoff: float = 3.0) -> None:
-#     """Launch Audio Hijack, retrying up to `retries` times with `backoff` seconds between attempts."""
-#     import time as _time
-#
-#     for attempt in range(1, retries + 1):
-#         result = subprocess.run(["open", "-a", "Audio Hijack"], capture_output=True)
-#         if result.returncode == 0:
-#             return
-#         if attempt < retries:
-#             _time.sleep(backoff)
-#     # Last attempt already tried; log failure silently (caller decides whether to raise)
 
 
 # ── IntelliJ ────────────────────────────────────────────────────────────────
