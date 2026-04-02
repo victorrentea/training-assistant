@@ -80,7 +80,7 @@ trap cleanup INT TERM
 build_overlay() {
   if [ -n "$NO_OVERLAY" ]; then return; fi
   _log "start" "info" "Building desktop overlay..."
-  if (cd desktop-overlay && swift build 2>&1 | tail -1); then
+  if (cd ~/workspace/victor-macos-addons/desktop-overlay && swift build 2>&1 | tail -1); then
     _log "start" "info" "Overlay built"
   else
     _log "start" "error" "Overlay build failed — skipping"
@@ -97,7 +97,7 @@ start_daemon() {
 
 start_overlay() {
   if [ -n "$NO_OVERLAY" ]; then return; fi
-  (cd desktop-overlay && .build/arm64-apple-macosx/debug/DesktopOverlay "$OVERLAY_SERVER") &
+  (cd ~/workspace/victor-macos-addons/desktop-overlay && .build/arm64-apple-macosx/debug/DesktopOverlay "$OVERLAY_SERVER") &
   OVERLAY_PID=$!
 }
 

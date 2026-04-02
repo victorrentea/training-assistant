@@ -157,7 +157,6 @@ training-assistant/
 │   ├── materials/           ← Project file mirroring: mirror.py, ws_runner.py
 │   └── rag/                 ← RAG: indexer.py, retriever.py, project_files.py
 ├── tests/                   ← See [TESTING.md](TESTING.md) for test rules and structure
-├── desktop-overlay/         ← Swift/AppKit emoji overlay (EmojiAnimator, ButtonBar, SoundManager)
 ├── pyproject.toml           ← Python dependencies (used by Railway via uv)
 ├── static/
 │   ├── participant.html     ← Participant-facing page
