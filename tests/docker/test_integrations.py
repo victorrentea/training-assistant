@@ -3,7 +3,7 @@ Hermetic E2E tests: daemon integration points.
 
 Tests that verify each daemon external integration works through the stub adapters:
 - PPTX file change detection → slide_invalidated → backend re-downloads
-- IntelliJ project tracking → host sees project + branch
+- Git activity file tracking → host sees repos + branches
 - Quiz generation via stub LLM → host sees quiz preview
 - Session folder creation + state persistence on disk
 """
@@ -15,6 +15,8 @@ import subprocess
 import sys
 import time
 import urllib.request
+from datetime import datetime
+from pathlib import Path
 
 sys.path.insert(0, "/app")
 sys.path.insert(0, "/app/tests")
@@ -31,8 +33,8 @@ MOCK_DRIVE = "http://localhost:9090"
 HOST_USER = os.environ.get("HOST_USERNAME", "host")
 HOST_PASS = os.environ.get("HOST_PASSWORD", "testpass")
 
-STUB_INTELLIJ_FILE = "/tmp/stub-intellij.json"
 STUB_CALLS_FILE = "/tmp/stub-calls.jsonl"
+TRANSCRIPTION_FOLDER = Path(os.environ.get("TRANSCRIPTION_FOLDER", "/tmp/test-transcriptions"))
 
 
 def _await_condition(fn, timeout_ms=10000, poll_ms=300, msg=""):
@@ -164,25 +166,24 @@ def test_pptx_change_triggers_slide_invalidation():
         browser.close()
 
 
-# ── IntelliJ Tracker ───────────────────────────────────────────────────────
+# ── Git Activity File Tracker ──────────────────────────────────────────────
 
 
-def test_intellij_state_tracked_by_daemon():
-    """Set stub IntelliJ state → daemon picks it up → git_repos list in backend state grows."""
-    # Write stub state
-    with open(STUB_INTELLIJ_FILE, "w") as f:
-        json.dump({
-            "project": "training-assistant",
-            "path": "/workspace/training-assistant",
-            "branch": "feature/hermetic-tests",
-            "frontmost": True,
-        }, f)
+def test_git_activity_file_tracked_by_daemon():
+    """Write activity-git file → daemon reads it → git_repos list in backend state grows."""
+    today = datetime.now().strftime("%Y-%m-%d")
+    git_file = TRANSCRIPTION_FOLDER / f"activity-git-{today}.md"
+    TRANSCRIPTION_FOLDER.mkdir(parents=True, exist_ok=True)
+
+    now_hhmm = datetime.now().strftime("%H:%M:%S")
+    git_file.write_text(
+        f"{now_hhmm} https://github.com/victorrentea/training-assistant branch:feature/hermetic-tests file:main.py\n"
+        f"{now_hhmm} https://github.com/victorrentea/training-assistant branch:feature/hermetic-tests file:test.py\n",
+        encoding="utf-8",
+    )
 
     session_id = _get_or_create_session()
 
-    # Daemon probes IntelliJ every ~5s, then sends activity_log to backend.
-    # Check the backend's state for git_repos via the host WS state.
-    # Use the session snapshot endpoint (authenticated) which includes git_repos.
     import base64
     auth = base64.b64encode(f"{HOST_USER}:{HOST_PASS}".encode()).decode()
 
@@ -201,19 +202,20 @@ def test_intellij_state_tracked_by_daemon():
 
     repos = _await_condition(
         _backend_has_git_repos,
-        timeout_ms=30000,
-        msg="Daemon did not push IntelliJ git_repos to backend"
+        timeout_ms=15000,
+        msg="Daemon did not push git_repos from activity file to backend"
     )
     print(f"Git repos from backend: {repos}")
-    assert any("training-assistant" in r.get("project", "") for r in repos), \
-        f"Expected 'training-assistant' project in git_repos: {repos}"
+    assert any("training-assistant" in r.get("url", "") for r in repos), \
+        f"Expected 'training-assistant' url in git_repos: {repos}"
     assert any("hermetic" in r.get("branch", "") for r in repos), \
         f"Expected 'hermetic' branch in git_repos: {repos}"
+    assert any(len(r.get("files", [])) >= 2 for r in repos), \
+        f"Expected at least 2 files in git_repos: {repos}"
 
-    print("SUCCESS: IntelliJ state tracked by daemon!")
+    print("SUCCESS: Git activity file tracked by daemon!")
 
-    from pathlib import Path
-    Path(STUB_INTELLIJ_FILE).unlink(missing_ok=True)
+    git_file.unlink(missing_ok=True)
 
 
 # ── Quiz Generation via Stub LLM ──────────────────────────────────────────

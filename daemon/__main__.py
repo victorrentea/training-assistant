@@ -503,13 +503,12 @@ def run() -> None:
     last_transcript_line_count = -1
     last_notes_mtime: float = 0.0  # track notes file mtime for re-push on change
     last_slides_payload_hash: str | None = None
-    git_repos: list[dict] = []         # {project, path, branch, seconds_spent}
-    last_intellij_probe_at: float = 0.0
-    _INTELLIJ_PROBE_INTERVAL: float = float(os.environ.get("DAEMON_INTELLIJ_PROBE_INTERVAL_SECONDS", "5.0"))  # probe IntelliJ every 5 seconds
     _SLIDE_FILE_READ_INTERVAL: float = 0.5
     last_slide_file_read_at: float = 0.0
     last_slide_file_pointer: str | None = None  # "deckname:slide_number"
-    _last_activity_log_git_count: int = 0  # detect changes in git_repos
+    _GIT_FILE_READ_INTERVAL: float = 1.0
+    last_git_file_read_at: float = 0.0
+    last_git_repos_hash: str = ""
 
     # Sync initial state to server — include session_state.json if present in the active folder
     try:
@@ -523,7 +522,7 @@ def run() -> None:
                 except Exception as e:
                     log.error("session", f"Failed to read session_state.json: {e}")
         _startup_folder = (config.session_folder or (sessions_root / session_stack[-1]["name"])) if session_stack else None
-        sync_session_to_server(config, session_stack, current_key_points, startup_session_state, git_repos=git_repos, file_time=get_ai_summary_mtime(_startup_folder) if _startup_folder else None, raw_markdown=get_ai_summary_raw(_startup_folder) if _startup_folder else None)
+        sync_session_to_server(config, session_stack, current_key_points, startup_session_state, file_time=get_ai_summary_mtime(_startup_folder) if _startup_folder else None, raw_markdown=get_ai_summary_raw(_startup_folder) if _startup_folder else None)
     except Exception as e:
         log.error("session", f"Initial sync failed: {e}")
 
@@ -552,7 +551,7 @@ def run() -> None:
                 log.error("session", f"Failed to read session_state.json on reconnect: {e}")
         try:
             _reconnect_folder = sessions_root / session_stack[-1]["name"] if session_stack else None
-            sync_session_to_server(config, session_stack, current_key_points, reconnect_session_state, git_repos=git_repos, file_time=get_ai_summary_mtime(_reconnect_folder) if _reconnect_folder else None, raw_markdown=get_ai_summary_raw(_reconnect_folder) if _reconnect_folder else None)
+            sync_session_to_server(config, session_stack, current_key_points, reconnect_session_state, file_time=get_ai_summary_mtime(_reconnect_folder) if _reconnect_folder else None, raw_markdown=get_ai_summary_raw(_reconnect_folder) if _reconnect_folder else None)
             log.info("session", f"Re-synced session '{session_stack[-1]['name']}' to backend on reconnect")
         except Exception as e:
             log.error("session", f"Session re-sync on reconnect failed: {e}")
@@ -647,35 +646,68 @@ def run() -> None:
                                 ws_client.send({"type": "slides_clear"})
                                 log.info("slides", "No active slide pointer")
 
-                # ── Probe IntelliJ every 5 seconds and track git repos ──
-                _now_mono = time.monotonic()
-                if _now_mono - last_intellij_probe_at >= _INTELLIJ_PROBE_INTERVAL:
-                    last_intellij_probe_at = _now_mono
-                    try:
-                        _ij = _platform.probe_intellij()
-                        if _ij and _ij.get("frontmost", True):
-                            _repo_entry = next(
-                                (e for e in git_repos if e["path"] == _ij["path"] and e["branch"] == _ij["branch"]),
-                                None,
-                            )
-                            if _repo_entry:
-                                _repo_entry["seconds_spent"] += _INTELLIJ_PROBE_INTERVAL
-                                log.info("intellij", f"Git +{_INTELLIJ_PROBE_INTERVAL:.0f}s: {_ij['project']} @ {_ij['branch']} (total: {_repo_entry['seconds_spent']:.0f}s)")
-                            else:
-                                git_repos.append({
-                                    "project": _ij["project"],
-                                    "path": _ij["path"],
-                                    "branch": _ij["branch"],
-                                    "seconds_spent": _INTELLIJ_PROBE_INTERVAL,
-                                })
-                    except Exception as _e:
-                        log.error("intellij", f"Probe failed: {_e}")
+                # ── Read git activity from file ──
+                if now - last_git_file_read_at >= _GIT_FILE_READ_INTERVAL:
+                    last_git_file_read_at = now
+                    today_str = datetime.now().strftime("%Y-%m-%d")
+                    git_file = config.folder / f"activity-git-{today_str}.md"
+                    git_repos_payload = []
+                    if git_file.exists():
+                        try:
+                            # Determine session start time for filtering
+                            session_start_hhmm = "00:00:00"
+                            if session_stack:
+                                current_session = session_stack[-1]
+                                started_at_str = current_session.get("started_at")
+                                if started_at_str:
+                                    try:
+                                        session_start_hhmm = datetime.fromisoformat(started_at_str).strftime("%H:%M:%S")
+                                    except (ValueError, TypeError):
+                                        pass
 
-                # ── Send activity_log to server when counts change ──
-                _activity_key = len(git_repos)
-                if _activity_key != _last_activity_log_git_count and ws_client.connected:
-                    _last_activity_log_git_count = _activity_key
-                    ws_client.send({"type": "activity_log", "git_repos": git_repos})
+                            lines = git_file.read_text(encoding="utf-8").splitlines()
+                            # Parse lines: "HH:MM:SS url branch:name file:filename"
+                            repos_map: dict[tuple[str, str], set[str]] = {}
+                            for line in lines:
+                                line = line.strip()
+                                if not line:
+                                    continue
+                                parts = line.split(" ", 1)
+                                if len(parts) < 2:
+                                    continue
+                                timestamp = parts[0]
+                                if timestamp < session_start_hhmm:
+                                    continue
+
+                                rest = parts[1]
+                                tokens = rest.split(" ")
+                                url = tokens[0] if tokens else ""
+                                branch = ""
+                                filename = ""
+                                for token in tokens[1:]:
+                                    if token.startswith("branch:"):
+                                        branch = token[7:]
+                                    elif token.startswith("file:"):
+                                        filename = token[5:]
+
+                                if url:
+                                    key = (url, branch)
+                                    if key not in repos_map:
+                                        repos_map[key] = set()
+                                    if filename:
+                                        repos_map[key].add(filename)
+
+                            git_repos_payload = [
+                                {"url": url, "branch": branch, "files": sorted(files)}
+                                for (url, branch), files in repos_map.items()
+                            ]
+                        except Exception:
+                            pass
+
+                    repos_hash = hashlib.md5(str(git_repos_payload).encode()).hexdigest()
+                    if repos_hash != last_git_repos_hash and ws_client.connected:
+                        last_git_repos_hash = repos_hash
+                        ws_client.send({"type": "activity_log", "git_repos": git_repos_payload})
 
                 # ── Check for session management requests ──
                 try:
@@ -704,7 +736,7 @@ def run() -> None:
                             global_state_persisted = True
                             notes_file = find_notes_in_folder(folder)
                             config = dc_replace(config, session_folder=folder, session_notes=notes_file)
-                            sync_session_to_server(config, session_stack, current_key_points, git_repos=git_repos, file_time=get_ai_summary_mtime(folder), raw_markdown=get_ai_summary_raw(folder))
+                            sync_session_to_server(config, session_stack, current_key_points, file_time=get_ai_summary_mtime(folder), raw_markdown=get_ai_summary_raw(folder))
                             transcript_state.reset()
                         _push_session_folders()
                         participant_join_link = (
@@ -735,10 +767,9 @@ def run() -> None:
                         global_state_persisted = True
                         notes_file = find_notes_in_folder(folder)
                         config = dc_replace(config, session_folder=folder, session_notes=notes_file)
-                        sync_session_to_server(config, session_stack, current_key_points, git_repos=git_repos, file_time=get_ai_summary_mtime(folder), raw_markdown=get_ai_summary_raw(folder))
+                        sync_session_to_server(config, session_stack, current_key_points, file_time=get_ai_summary_mtime(folder), raw_markdown=get_ai_summary_raw(folder))
                         transcript_state.reset()
-                        git_repos = []
-                        _last_activity_log_git_count = 0
+                        last_git_repos_hash = ""
                         log.info("session", f"Started: {name}")
 
                     elif action == "end" and session_stack:
@@ -777,8 +808,7 @@ def run() -> None:
                             current_key_points = []
                             summary_watermark = 0
                             config = dc_replace(config, session_folder=None, session_notes=None)
-                            git_repos = []
-                            _last_activity_log_git_count = 0
+                            last_git_repos_hash = ""
                             _active_session_id = None
                             log.info("session", f"Ended: {ended['name']}")
                         _do_save_daemon_state()
@@ -807,21 +837,21 @@ def run() -> None:
                             global_state_persisted = True
                             notes_file = find_notes_in_folder(new_folder)
                             config = dc_replace(config, session_folder=new_folder, session_notes=notes_file)
-                            sync_session_to_server(config, session_stack, current_key_points, git_repos=git_repos)
+                            sync_session_to_server(config, session_stack, current_key_points)
                             log.info("session", f"Renamed: {old_name} → {new_name}")
 
                     elif action == "pause" and session_stack:
                         pause_session(session_stack[-1], datetime.now(), reason="explicit")
                         _do_save_daemon_state()
                         global_state_persisted = True
-                        sync_session_to_server(config, session_stack, current_key_points, git_repos=git_repos)
+                        sync_session_to_server(config, session_stack, current_key_points)
                         log.info("session", f"Paused: {session_stack[-1]['name']}")
 
                     elif action == "resume" and session_stack:
                         resume_session(session_stack[-1], datetime.now())
                         _do_save_daemon_state()
                         global_state_persisted = True
-                        sync_session_to_server(config, session_stack, current_key_points, git_repos=git_repos)
+                        sync_session_to_server(config, session_stack, current_key_points)
                         transcript_state.reset()
                         log.info("session", f"Resumed: {session_stack[-1]['name']}")
 
