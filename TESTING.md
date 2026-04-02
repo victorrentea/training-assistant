@@ -67,8 +67,8 @@ tests/
 ### Controllable stubs
 - The daemon's macOS adapter (`daemon/adapters/stub.py`) is **controllable via files**:
   - `/tmp/stub-powerpoint.json` — set current presentation + slide number
-  - `/tmp/stub-intellij.json` — set current project + branch
   - `/tmp/stub-calls.jsonl` — log of all adapter calls (for observability)
+- Git activity is tracked via `activity-git-YYYY-MM-DD.md` files in `TRANSCRIPTION_FOLDER`.
 - Tests write to these files to simulate macOS state changes.
 - The daemon reads them on each probe cycle (~1s).
 
