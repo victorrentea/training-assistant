@@ -47,18 +47,6 @@ def probe_powerpoint(timeout_seconds: float = 5.0) -> tuple[dict | None, str | N
         return None, f"stub read error: {e}"
 
 
-# Audio Hijack stubs — disabled (no longer using Audio Hijack for transcription)
-# def read_audiohijack_language() -> str | None:
-#     return None
-#
-# def set_audiohijack_language(lang_code: str) -> None:
-#     _log_call("set_audiohijack_language", lang_code=lang_code)
-#     log.info("stub", f"set_audiohijack_language({lang_code}) — stubbed")
-#
-# def restart_audiohijack() -> None:
-#     _log_call("restart_audiohijack")
-#     log.info("stub", "restart_audiohijack() — stubbed")
-
 
 def probe_intellij(timeout: float = 2.0) -> dict | None:
     """Return state from /tmp/stub-intellij.json, or None if not set."""

@@ -18,12 +18,12 @@ LAYOUT_WITH_LEGEND()
 Person(host, "Host", "Manages activities, views results,\ncontrols debate and code review.")
 Person(participant, "Participant", "Trainee.")
 System(workshop, "Workshop Live Interaction Tool", "Real-time trainee interaction platform\nfor live workshops.")
-System_Ext(audio_hijack, "Audio Hijack", "Captures and transcribes live workshop audio\nto a local file on host's Mac.")
+System_Ext(macos_addons, "victor-macos-addons", "Whisper transcription on trainer's Mac.\nCaptures audio and writes normalized\ntranscript files to local disk.")
 System_Ext(claude_api, "Anthropic Claude API", "LLM for quiz generation, debate cleanup, summaries.")
 System_Ext(nominatim, "Nominatim (OpenStreetMap)", "GPS → city + country.")
 System_Ext(google_drive, "Google Drive", "Hosts public PDF exports\nof presentation slides.")
 
-Rel(audio_hijack, workshop, "Transcript file written to disk", "Local file")
+Rel(macos_addons, workshop, "Transcript file written to disk", "Local file")
 Rel(host, workshop, "Manages activities and participants", "HTTPS / WebSocket")
 Rel(participant, workshop, "Votes, Q&A, word cloud, debate, code review", "HTTPS / WebSocket")
 Rel(workshop, claude_api, "Quiz generation, debate AI cleanup, session summaries", "HTTPS REST")
@@ -66,7 +66,7 @@ System_Boundary(workshop, "Workshop Tool") {
 
 ' ── right: host + external AI ────────────────────────────────────
 Person(host, "Host", "Workshop facilitator.")
-System_Ext(audio_hijack, "Audio Hijack", "Captures live audio and writes\nthe transcript file.")
+System_Ext(macos_addons, "victor-macos-addons", "Whisper transcription on trainer's Mac.\nWrites normalized transcript files to disk.")
 System_Ext(claude_api, "Anthropic Claude API", "LLM for quiz generation,\ndebate argument cleanup,\nand session summaries.")
 System_Ext(nominatim, "Nominatim", "GPS coords → city + country.")
 System_Ext(google_drive, "Google Drive", "Hosts public PDF exports\nof presentation slides.")
@@ -74,8 +74,8 @@ System_Ext(google_drive, "Google Drive", "Hosts public PDF exports\nof presentat
 ' layout hints — keep host cluster top-right, nominatim bottom-right
 Lay_L(participant, participant_spa)
 Lay_R(host, host_spa)
-Lay_D(host, audio_hijack)
-Lay_D(audio_hijack, training_daemon)
+Lay_D(host, macos_addons)
+Lay_D(macos_addons, training_daemon)
 Lay_R(claude_api, training_daemon)
 Lay_D(nominatim, participant_spa)
 Lay_D(claude_api, google_drive)
@@ -88,7 +88,7 @@ Rel(host, host_spa, "Manages polls, views results", "Browser")
 Rel(host_spa, fastapi, "Poll API, WebSocket", "HTTPS / WSS")
 Rel(participant_spa, nominatim, "Reverse geocodes GPS → city+country", "HTTPS REST")
 Rel(host, training_daemon, "Starts/stops", "Local terminal")
-Rel(audio_hijack, training_daemon, "Writes transcript file to disk\n(daemon reads on local filesystem)", "Local file")
+Rel(macos_addons, training_daemon, "Writes normalized transcript files\nto local disk (daemon reads them)", "Local file")
 Rel(training_daemon, fastapi, "Polls for requests, posts preview\nand slides upload", "HTTPS REST + WSS")
 Rel(training_daemon, claude_api, "Generates quiz, debate AI cleanup, summary", "HTTPS REST")
 Rel(fastapi, google_drive, "Downloads PDF exports\nof presentation slides", "HTTPS")
@@ -209,7 +209,7 @@ Key sub-systems:
 | **Quiz pipeline** | `quiz/generator`, `quiz/history`, `quiz/poll_api` | Reads transcript → LLM → posts preview to backend |
 | **Debate AI** | `debate/ai_cleanup` | Deduplicates and suggests arguments via LLM |
 | **Summary** | `summary/summarizer`, `summary/loop` | Delta-based key-point extraction from transcript |
-| **Transcript** | `transcript/normalizer`, `parser`, `loader`, `writer`, `timestamps`, `loop` | Normalizes raw transcript → daily files; injects timestamps |
+| **Transcript** | `transcript/parser`, `loader`, `query`, `rebuild`, `session`, `state` | Reads normalized transcript files (produced by `victor-macos-addons`) |
 | **Slides** | `slides/catalog`, `convert`, `drive_sync`, `upload`, `loop`, `daemon` | PPTX→PDF via LibreOffice/PowerPoint; uploads to backend |
 | **RAG** | `rag/indexer`, `rag/retriever`, `rag/project_files` | Indexes project files; enriches quiz generation context |
 | **Session state** | `daemon/session_state` | Reads/writes global state + per-session JSON to disk |
@@ -225,7 +225,7 @@ LAYOUT_WITH_LEGEND()
 
 Container_Ext(fastapi, "FastAPI Backend", "HTTPS REST + WSS")
 Container_Ext(claude_api, "Anthropic Claude API", "HTTPS REST")
-System_Ext(audio_hijack, "Audio Hijack", "Writes transcript file to disk")
+System_Ext(macos_addons, "victor-macos-addons", "Writes normalized transcript files to disk")
 
 Container_Boundary(daemon_pkg, "Daemon (Python 3.12, host's Mac)") {
 
@@ -245,17 +245,15 @@ Container_Boundary(daemon_pkg, "Daemon (Python 3.12, host's Mac)") {
 
   Component(summary_loop, "daemon/summary/loop", "Summary loop", "Polls /api/summary/force every few seconds.\nTriggered by host or participant Key Points button.")
 
-  Component(transcript_normalizer, "daemon/transcript/normalizer", "Transcript normalizer", "Incrementally normalizes raw transcript lines\ninto daily YYYY-MM-DD transcription.txt files.")
-
   Component(transcript_parser, "daemon/transcript/parser", "Transcript parser", "Parses .txt, .vtt, .srt transcript formats.")
 
   Component(transcript_loader, "daemon/transcript/loader", "Transcript loader", "Reads last N minutes from normalized files.")
 
-  Component(transcript_writer, "daemon/transcript/writer", "Transcript writer", "Writes transcript lines to daily files.")
+  Component(transcript_query, "daemon/transcript/query", "Transcript query", "CLI tool: query normalized transcripts\nby ISO datetime range.")
 
-  Component(transcript_timestamps, "daemon/transcript/timestamps", "Timestamp injector", "Auto-appends [HH:MM:SS] markers every ~3s\nto the active transcript file.")
+  Component(transcript_session, "daemon/transcript/session", "Transcript session", "Session-scoped transcript windowing.")
 
-  Component(transcript_loop, "daemon/transcript/loop", "Transcript loop", "Orchestrates normalization + timestamp injection.")
+  Component(transcript_state, "daemon/transcript/state", "Transcript state", "Tracks transcript processing state.")
 
   Component(slides_catalog, "daemon/slides/catalog", "Slides catalog", "Reads materials_slides_catalog.json.\nResolves PPTX → target PDF mappings.")
 
@@ -285,18 +283,14 @@ Container_Boundary(daemon_pkg, "Daemon (Python 3.12, host's Mac)") {
 }
 
 ' Orchestration
-Rel(main, transcript_loop, "starts")
 Rel(main, summary_loop, "starts")
 Rel(main, slides_loop, "starts")
 Rel(main, materials_mirror, "starts")
 Rel(main, session_state, "starts polling loop")
 
-' Transcript pipeline
-Rel(transcript_loop, transcript_normalizer, "drives")
-Rel(transcript_loop, transcript_timestamps, "drives")
-Rel(transcript_normalizer, transcript_parser, "uses")
-Rel(transcript_normalizer, transcript_writer, "uses")
-Rel(transcript_loader, transcript_normalizer, "reads output of")
+' Transcript reading
+Rel(transcript_loader, transcript_parser, "uses")
+Rel(transcript_loader, transcript_state, "uses")
 
 ' Quiz pipeline
 Rel(quiz_api, fastapi, "GET /api/quiz-request\nGET /api/quiz-refine", "HTTPS")
@@ -330,8 +324,8 @@ Rel(session_state, fastapi, "GET /api/session/snapshot\nGET /api/session/request
 Rel(rag_indexer, rag_files, "uses")
 Rel(rag_retriever, rag_indexer, "queries")
 
-' Audio Hijack → transcript file → daemon
-Rel(audio_hijack, transcript_normalizer, "Writes raw transcript\n(daemon reads local disk)", "Local file")
+' victor-macos-addons → transcript files → daemon
+Rel(macos_addons, transcript_loader, "Writes normalized transcript files\n(daemon reads local disk)", "Local file")
 
 ' External calls
 Rel(llm, claude_api, "claude-haiku / claude-sonnet\nAPI calls", "HTTPS")
@@ -525,8 +519,7 @@ All periodic timers, polling loops, and autonomous background jobs across the sy
 | **Main event loop** — orchestrates all sub-runners, processes WS messages | 1s | `daemon/config.py:24` | `DAEMON_POLL_INTERVAL` |
 | **Lock heartbeat** — updates PID lock file to prevent multiple instances | 1s | `daemon/lock.py:13` | No |
 | **PowerPoint probe** — detects active presentation + slide via stub/osascript | Every main loop tick (1s) | `daemon/__main__.py:~698` | No |
-| **Transcript timestamp appender** — appends `[HH:MM:SS]` markers to raw transcript | 3s | `daemon/transcript/loop.py:13` | `TRANSCRIPT_TIMESTAMP_INTERVAL_SECONDS` |
-| **Transcript normalizer** — normalizes raw transcripts into daily files | 3s | `daemon/transcript/loop.py:14` | `TRANSCRIPT_NORMALIZER_INTERVAL_SECONDS` |
+| ~~Transcript normalization~~ | — | Moved to `victor-macos-addons` repo | — |
 | **Slides file watcher** — polls PPTX mtime, sends `slide_invalidated` on change | 5s | `daemon/slides/loop.py:51` | `SLIDES_POLL_INTERVAL_SECONDS` |
 | **IntelliJ probe** — detects current project + branch via stub/osascript | 5s | `daemon/__main__.py:~761` | `_INTELLIJ_PROBE_INTERVAL` |
 | **Slide activity logger** — accumulates time spent on each slide (foreground) | 5s | `daemon/__main__.py:~737` | `_PPT_TRACK_INTERVAL` |

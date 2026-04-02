@@ -150,8 +150,7 @@ training-assistant/
 │   ├── quiz/                ← Quiz generation: generator.py, history.py, poll_api.py
 │   ├── debate/ai_cleanup.py ← AI deduplication and cleanup of debate arguments
 │   ├── summary/             ← Live transcript summarization: summarizer.py, loop.py
-│   ├── transcript/          ← Transcript processing: normalizer, parser, loader, writer,
-│   │                           loop, query, rebuild, session, state
+│   ├── transcript/          ← Transcript reading: parser, loader, query, rebuild, session, state
 │   ├── slides/              ← PPTX→PDF: daemon.py, catalog.py, convert.py,
 │   │                           drive_sync.py, upload.py, loop.py
 │   ├── materials/           ← Project file mirroring: mirror.py, ws_runner.py
@@ -276,16 +275,17 @@ All state dicts are keyed by **UUID**, not display name. Duplicate display names
 
 Orchestration daemon running on the trainer's Mac:
 - Long-polls the backend for quiz requests, debate AI cleanup, and summary force requests
-- Reads transcription files from local disk (supports `.txt`, `.vtt`, `.srt` formats)
+- Reads normalized transcript files from local disk (produced by `victor-macos-addons` repo which handles live Whisper transcription)
 - Quiz generation: reads last N minutes of transcript, sends to Claude API, posts preview to backend
 - Quiz refinement: regenerates specific question/option on host request
 - Debate AI cleanup: deduplicates, fixes typos, suggests new arguments via Claude
-- Live summary: periodically reads transcript, generates key points via Claude, posts to backend
-- Transcript normalization: incrementally normalizes raw transcript lines into daily files (`YYYY-MM-DD transcription.txt`)
+- Live summary: reads transcript on demand, generates key points via Claude, posts to backend
 - Auto-update: exit code 42 signals wrapper script to git pull + restart
 - `ANTHROPIC_API_KEY` is set in the environment
 - Run: `python3 training_daemon.py`
-- Uses `daemon/` subpackage: `llm_adapter.py`, `summarizer.py`, `debate_ai.py`, `transcript_state.py`, `transcript_normalizer.py`, `transcript_query.py`, `indexer.py`, `rag.py`, `project_files.py`
+- Uses `daemon/` subpackage: `llm_adapter.py`, `summarizer.py`, `debate_ai.py`, `transcript_state.py`, `transcript_query.py`, `indexer.py`, `rag.py`, `project_files.py`
+
+> **Note:** Live audio transcription (Whisper, audio capture, transcript normalization/writing) has been moved to the [`victor-macos-addons`](https://github.com/victorrentea/victor-macos-addons) repo. This daemon only reads the normalized transcript files produced by that tool.
 
 Manual normalized transcript query (run only on demand):
 - Script: `python3 -m daemon.transcript_query <from_iso> <to_iso>`
