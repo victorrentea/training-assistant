@@ -334,56 +334,6 @@ def test_resolve_session_folder_prefers_active_stack_folder(tmp_path):
     assert source == "stack"
 
 
-def test_parse_powerpoint_probe_output_active_state():
-    from daemon.__main__ import _parse_powerpoint_probe_output
-
-    parsed = _parse_powerpoint_probe_output("Architecture deck\t12\n")
-    assert parsed == {"presentation": "Architecture deck", "slide": 12, "presenting": False}
-
-
-def test_parse_powerpoint_probe_output_handles_no_presentation_tokens():
-    from daemon.__main__ import _parse_powerpoint_probe_output
-
-    assert _parse_powerpoint_probe_output("__NO_PPT__") is None
-    assert _parse_powerpoint_probe_output("__NO_PRESENTATION__") is None
-    assert _parse_powerpoint_probe_output("") is None
-
-
-def test_parse_powerpoint_probe_output_missing_value_defaults_to_slide_one():
-    from daemon.__main__ import _parse_powerpoint_probe_output
-
-    parsed = _parse_powerpoint_probe_output("Deck A\tmissing value")
-    assert parsed == {"presentation": "Deck A", "slide": 1, "presenting": False}
-
-
-def test_probe_powerpoint_state_success(monkeypatch):
-    import daemon.__main__ as training_daemon
-
-    monkeypatch.setattr(
-        training_daemon.subprocess,
-        "run",
-        lambda *args, **kwargs: SimpleNamespace(returncode=0, stdout="Deck A\t7\n", stderr=""),
-    )
-
-    state, error = training_daemon._probe_powerpoint_state()
-    assert error is None
-    assert state == {"presentation": "Deck A", "slide": 7, "presenting": False}
-
-
-def test_probe_powerpoint_state_returns_error_on_nonzero_exit(monkeypatch):
-    import daemon.__main__ as training_daemon
-
-    monkeypatch.setattr(
-        training_daemon.subprocess,
-        "run",
-        lambda *args, **kwargs: SimpleNamespace(returncode=1, stdout="", stderr="Execution error"),
-    )
-
-    state, error = training_daemon._probe_powerpoint_state()
-    assert state is None
-    assert error == "Execution error"
-
-
 def test_resolve_presentation_slide_target_uses_catalog_mapping(tmp_path):
     from daemon.__main__ import _resolve_presentation_slide_target
 

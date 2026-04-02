@@ -2,7 +2,7 @@
 
 Usage:
     from daemon.adapters.loader import adapter
-    state, err = adapter.probe_powerpoint()
+    ij = adapter.probe_intellij()
 """
 
 import os
