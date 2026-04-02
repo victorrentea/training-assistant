@@ -76,16 +76,6 @@ _BACKUP_FILE = _BACKUP_DIR / "state-backup.json"
 _PPT_UNMAPPED_PRESENTATIONS_ALERTED: set[str] = set()
 
 
-def _coerce_slide_number(value) -> int:
-    raw = str(value or "").strip()
-    if not raw or raw.lower() == "missing value":
-        return 1
-    try:
-        return max(1, int(raw))
-    except (TypeError, ValueError):
-        return 1
-
-
 def _read_session_id_from_session_folder(folder: Path) -> str | None:
     path = folder / "session_state.json"
     if not path.exists() or not path.is_file():
@@ -222,59 +212,6 @@ def _resolve_presentation_slide_target(
         "target_pdf": f"{Path(presentation_name).stem}.pdf",
         "matched": False,
     }
-
-
-def _ppt_slide_key(state: dict | None) -> tuple | None:
-    """Extract (presentation, participant_page) — what participants actually see."""
-    if state is None:
-        return None
-    raw_slide = _coerce_slide_number(state.get("slide"))
-    is_presenting = bool(state.get("presenting", False))
-    participant_page = max(1, raw_slide - 1) if is_presenting else raw_slide
-    return (state.get("presentation"), participant_page)
-
-
-def _sync_powerpoint_slide_to_server(main_config, slides_cfg, ppt_state: dict | None, ws_client) -> None:
-    if ppt_state is None:
-        ws_client.send({"type": "slides_clear"})
-        return
-
-    catalog_file = getattr(slides_cfg, "catalog_file", None) if slides_cfg else None
-    target = _resolve_presentation_slide_target(
-        presentation_name=ppt_state.get("presentation", ""),
-        server_url=main_config.server_url,
-        catalog_file=catalog_file,
-    )
-    presentation_name = str(ppt_state.get("presentation") or "").strip()
-    alert_key = _presentation_alert_key(presentation_name)
-    is_matched = bool(target.get("matched", True))
-    if not is_matched:
-        if alert_key and alert_key not in _PPT_UNMAPPED_PRESENTATIONS_ALERTED:
-            _PPT_UNMAPPED_PRESENTATIONS_ALERTED.add(alert_key)
-            _platform.beep()
-            message = "Presentation inaccessible for participants."
-            if presentation_name:
-                message = f"{message} ({presentation_name})"
-            ws_client.send({"type": "quiz_status", "status": "error", "message": message})
-            log.error("ppt", message)
-        ws_client.send({"type": "slides_clear"})
-        return
-
-    if alert_key:
-        _PPT_UNMAPPED_PRESENTATIONS_ALERTED.discard(alert_key)
-
-    raw_slide = _coerce_slide_number(ppt_state.get("slide"))
-    is_presenting = bool(ppt_state.get("presenting", False))
-    current_page = max(1, raw_slide - 1) if is_presenting else raw_slide
-    payload = {
-        "type": "slides_current",
-        "url": target["url"],
-        "slug": target["slug"],
-        "source_file": ppt_state.get("presentation"),
-        "presentation_name": ppt_state.get("presentation"),
-        "current_page": current_page,
-    }
-    ws_client.send(payload)
 
 
 def _send_global_state_saved_ack(
@@ -567,19 +504,13 @@ def run() -> None:
     last_transcript_line_count = -1
     last_notes_mtime: float = 0.0  # track notes file mtime for re-push on change
     last_slides_payload_hash: str | None = None
-    last_powerpoint_state: dict | None = None
-    last_powerpoint_error: str | None = None
-    slides_log: list[dict] = []        # {file, slide, first_seen_at, first_seen_hhmm, seconds_spent}
     git_repos: list[dict] = []         # {project, path, branch, seconds_spent}
     last_intellij_probe_at: float = 0.0
     _INTELLIJ_PROBE_INTERVAL: float = float(os.environ.get("DAEMON_INTELLIJ_PROBE_INTERVAL_SECONDS", "5.0"))  # probe IntelliJ every 5 seconds
-    last_ppt_probe_at: float = 0.0
-    _PPT_PROBE_INTERVAL: float = float(os.environ.get("DAEMON_PPT_PROBE_INTERVAL_SECONDS", "3.0"))      # poll PowerPoint for current slide every 3s
-    ppt_state: dict | None = None     # last known PowerPoint state (persisted between probe ticks)
-    ppt_error: str | None = None      # last known probe error
-    last_ppt_track_at: float = 0.0
-    _PPT_TRACK_INTERVAL: float = float(os.environ.get("DAEMON_PPT_TRACK_INTERVAL_SECONDS", "5.0"))       # accumulate slide time every 5 seconds
-    _last_activity_log_key: tuple = (0, 0)  # (slides_count, git_count) — detect changes
+    _SLIDE_FILE_READ_INTERVAL: float = 0.5
+    last_slide_file_read_at: float = 0.0
+    last_slide_file_pointer: str | None = None  # "deckname:slide_number"
+    _last_activity_log_git_count: int = 0  # detect changes in git_repos
 
     # Sync initial state to server — include session_state.json if present in the active folder
     try:
@@ -593,7 +524,7 @@ def run() -> None:
                 except Exception as e:
                     log.error("session", f"Failed to read session_state.json: {e}")
         _startup_folder = (config.session_folder or (sessions_root / session_stack[-1]["name"])) if session_stack else None
-        sync_session_to_server(config, session_stack, current_key_points, startup_session_state, slides_log=slides_log, git_repos=git_repos, file_time=get_ai_summary_mtime(_startup_folder) if _startup_folder else None, raw_markdown=get_ai_summary_raw(_startup_folder) if _startup_folder else None)
+        sync_session_to_server(config, session_stack, current_key_points, startup_session_state, git_repos=git_repos, file_time=get_ai_summary_mtime(_startup_folder) if _startup_folder else None, raw_markdown=get_ai_summary_raw(_startup_folder) if _startup_folder else None)
     except Exception as e:
         log.error("session", f"Initial sync failed: {e}")
 
@@ -622,7 +553,7 @@ def run() -> None:
                 log.error("session", f"Failed to read session_state.json on reconnect: {e}")
         try:
             _reconnect_folder = sessions_root / session_stack[-1]["name"] if session_stack else None
-            sync_session_to_server(config, session_stack, current_key_points, reconnect_session_state, slides_log=slides_log, git_repos=git_repos, file_time=get_ai_summary_mtime(_reconnect_folder) if _reconnect_folder else None, raw_markdown=get_ai_summary_raw(_reconnect_folder) if _reconnect_folder else None)
+            sync_session_to_server(config, session_stack, current_key_points, reconnect_session_state, git_repos=git_repos, file_time=get_ai_summary_mtime(_reconnect_folder) if _reconnect_folder else None, raw_markdown=get_ai_summary_raw(_reconnect_folder) if _reconnect_folder else None)
             log.info("session", f"Re-synced session '{session_stack[-1]['name']}' to backend on reconnect")
         except Exception as e:
             log.error("session", f"Session re-sync on reconnect failed: {e}")
@@ -645,63 +576,77 @@ def run() -> None:
                 slides_runner.tick()
                 materials_mirror.tick()
 
-                # ── Detect active PowerPoint presentation/slide via AppleScript ──
-                _ppt_now = time.monotonic()
-                if _ppt_now - last_ppt_probe_at >= _PPT_PROBE_INTERVAL:
-                    last_ppt_probe_at = _ppt_now
-                    ppt_state, ppt_error = _platform.probe_powerpoint(timeout_seconds=5.0)
-                    if ppt_error:
-                        log.error("ppt", f"osascript failed: {ppt_error}")
-                        last_powerpoint_error = ppt_error
-                    else:
-                        if last_powerpoint_error is not None:
-                            log.info("ppt", "osascript recovered")
-                            last_powerpoint_error = None
-                        if ppt_state != last_powerpoint_state:
-                            was_presenting = bool((last_powerpoint_state or {}).get("presenting", False))
-                            slide_key_changed = _ppt_slide_key(ppt_state) != _ppt_slide_key(last_powerpoint_state)
-                            last_powerpoint_state = ppt_state
-                            if slide_key_changed:
-                                if ppt_state is None:
-                                    log.info("ppt", "No active PowerPoint presentation")
-                                else:
-                                    ppt_stem = Path(ppt_state['presentation']).stem
-                                    raw_slide = _coerce_slide_number(ppt_state.get("slide"))
-                                    is_presenting = bool(ppt_state.get("presenting", False))
-                                    participant_page = max(1, raw_slide - 1) if is_presenting else raw_slide
-                                    if was_presenting and not is_presenting:
-                                        log.info("ppt", f"📽️ Exited fullscreen — {ppt_stem}:{raw_slide} → :{participant_page}")
-                                    else:
-                                        fullscreen_flag = " [fullscreen]" if is_presenting else " [normal]"
-                                        log.info("ppt", f"📽️ Slide: {ppt_stem}:{raw_slide}{fullscreen_flag} → :{participant_page}")
-                                try:
-                                    _sync_powerpoint_slide_to_server(config, slides_runner._slides_config, ppt_state, ws_client)
-                                except Exception as e:
-                                    log.error("ppt", f"Failed to sync slides current to server: {e}")
+                # ── Read PowerPoint state from activity-slides file ──
+                if now - last_slide_file_read_at >= _SLIDE_FILE_READ_INTERVAL:
+                    last_slide_file_read_at = now
+                    today = datetime.now().strftime("%Y-%m-%d")
+                    slide_file = config.folder / f"activity-slides-{today}.md"
+                    pointer = None
+                    if slide_file.exists():
+                        try:
+                            # Read only the last line efficiently
+                            with slide_file.open("r", encoding="utf-8") as f:
+                                lines = f.readlines()
+                                if lines:
+                                    last_line = lines[-1].strip()
+                                    if ":" in last_line and not last_line.startswith("#"):
+                                        pointer = last_line
+                        except Exception:
+                            pass
 
-                # ── Track slides log from PowerPoint state (foreground only, every 5s) ──
-                _now_mono = time.monotonic()
-                if not ppt_error and ppt_state and ppt_state.get("frontmost", True) and _now_mono - last_ppt_track_at >= _PPT_TRACK_INTERVAL:
-                    last_ppt_track_at = _now_mono
-                    _ppt_file = ppt_state.get("presentation", "")
-                    _ppt_slide = _coerce_slide_number(ppt_state.get("slide"))
-                    _now_hhmm = datetime.now().strftime("%H:%M")
-                    _now_hhmmss = datetime.now().strftime("%H:%M:%S")
-                    _entry = next(
-                        (e for e in slides_log if e["file"] == _ppt_file and e["slide"] == _ppt_slide and e["first_seen_hhmm"] == _now_hhmm),
-                        None,
-                    )
-                    if _entry:
-                        _entry["seconds_spent"] += _PPT_TRACK_INTERVAL
-                        log.info("ppt", f"Slide +{_PPT_TRACK_INTERVAL:.0f}s: {Path(_ppt_file).stem} #{_ppt_slide} (total: {_entry['seconds_spent']}s)")
-                    else:
-                        slides_log.append({
-                            "file": _ppt_file,
-                            "slide": _ppt_slide,
-                            "first_seen_at": _now_hhmmss,
-                            "first_seen_hhmm": _now_hhmm,
-                            "seconds_spent": _PPT_TRACK_INTERVAL,
-                        })
+                    if pointer != last_slide_file_pointer:
+                        last_slide_file_pointer = pointer
+                        if pointer:
+                            # Parse "deckname:slide_number"
+                            deck, _, slide_str = pointer.rpartition(":")
+                            try:
+                                slide_num = max(1, int(slide_str))
+                            except ValueError:
+                                slide_num = 1
+
+                            # Resolve to PDF URL using existing catalog logic
+                            if slides_runner and slides_runner._slides_config:
+                                catalog_file = getattr(slides_runner._slides_config, "catalog_file", None)
+                                target = _resolve_presentation_slide_target(
+                                    presentation_name=deck,
+                                    server_url=config.server_url,
+                                    catalog_file=catalog_file,
+                                )
+                                if target and ws_client.connected:
+                                    is_matched = bool(target.get("matched", True))
+                                    alert_key = _presentation_alert_key(deck)
+                                    if not is_matched:
+                                        if alert_key and alert_key not in _PPT_UNMAPPED_PRESENTATIONS_ALERTED:
+                                            _PPT_UNMAPPED_PRESENTATIONS_ALERTED.add(alert_key)
+                                            _platform.beep()
+                                            message = f"Presentation inaccessible for participants. ({deck})"
+                                            ws_client.send({"type": "quiz_status", "status": "error", "message": message})
+                                            log.error("slides", message)
+                                        ws_client.send({"type": "slides_clear"})
+                                    else:
+                                        if alert_key:
+                                            _PPT_UNMAPPED_PRESENTATIONS_ALERTED.discard(alert_key)
+                                        ws_client.send({
+                                            "type": "slides_current",
+                                            "url": target["url"],
+                                            "slug": target["slug"],
+                                            "source_file": deck,
+                                            "presentation_name": deck,
+                                            "current_page": slide_num,
+                                        })
+                                        log.info("slides", f"Slide: {deck}:{slide_num}")
+                            elif ws_client.connected:
+                                # No slides config — send minimal info
+                                ws_client.send({
+                                    "type": "slides_current",
+                                    "presentation_name": deck,
+                                    "current_page": slide_num,
+                                })
+                                log.info("slides", f"Slide: {deck}:{slide_num} (no catalog)")
+                        else:
+                            if ws_client.connected:
+                                ws_client.send({"type": "slides_clear"})
+                                log.info("slides", "No active slide pointer")
 
                 # ── Probe IntelliJ every 5 seconds and track git repos ──
                 _now_mono = time.monotonic()
@@ -728,10 +673,10 @@ def run() -> None:
                         log.error("intellij", f"Probe failed: {_e}")
 
                 # ── Send activity_log to server when counts change ──
-                _activity_key = (len(slides_log), len(git_repos))
-                if _activity_key != _last_activity_log_key and ws_client.connected:
-                    _last_activity_log_key = _activity_key
-                    ws_client.send({"type": "activity_log", "slides_log": slides_log, "git_repos": git_repos})
+                _activity_key = len(git_repos)
+                if _activity_key != _last_activity_log_git_count and ws_client.connected:
+                    _last_activity_log_git_count = _activity_key
+                    ws_client.send({"type": "activity_log", "git_repos": git_repos})
 
                 # ── Check for session management requests ──
                 try:
@@ -760,7 +705,7 @@ def run() -> None:
                             global_state_persisted = True
                             notes_file = find_notes_in_folder(folder)
                             config = dc_replace(config, session_folder=folder, session_notes=notes_file)
-                            sync_session_to_server(config, session_stack, current_key_points, slides_log=slides_log, git_repos=git_repos, file_time=get_ai_summary_mtime(folder), raw_markdown=get_ai_summary_raw(folder))
+                            sync_session_to_server(config, session_stack, current_key_points, git_repos=git_repos, file_time=get_ai_summary_mtime(folder), raw_markdown=get_ai_summary_raw(folder))
                             transcript_state.reset()
                         _push_session_folders()
                         participant_join_link = (
@@ -791,11 +736,10 @@ def run() -> None:
                         global_state_persisted = True
                         notes_file = find_notes_in_folder(folder)
                         config = dc_replace(config, session_folder=folder, session_notes=notes_file)
-                        sync_session_to_server(config, session_stack, current_key_points, slides_log=slides_log, git_repos=git_repos, file_time=get_ai_summary_mtime(folder), raw_markdown=get_ai_summary_raw(folder))
+                        sync_session_to_server(config, session_stack, current_key_points, git_repos=git_repos, file_time=get_ai_summary_mtime(folder), raw_markdown=get_ai_summary_raw(folder))
                         transcript_state.reset()
-                        slides_log = []
                         git_repos = []
-                        _last_activity_log_key = (0, 0)
+                        _last_activity_log_git_count = 0
                         log.info("session", f"Started: {name}")
 
                     elif action == "end" and session_stack:
@@ -834,9 +778,8 @@ def run() -> None:
                             current_key_points = []
                             summary_watermark = 0
                             config = dc_replace(config, session_folder=None, session_notes=None)
-                            slides_log = []
                             git_repos = []
-                            _last_activity_log_key = (0, 0)
+                            _last_activity_log_git_count = 0
                             _active_session_id = None
                             log.info("session", f"Ended: {ended['name']}")
                         _do_save_daemon_state()
@@ -844,7 +787,7 @@ def run() -> None:
                         sync_session_to_server(
                             config, session_stack, current_key_points,
                             session_state=parent_snapshot,
-                            slides_log=slides_log, git_repos=git_repos,
+                            git_repos=git_repos,
                         )
                         transcript_state.reset()
 
@@ -865,21 +808,21 @@ def run() -> None:
                             global_state_persisted = True
                             notes_file = find_notes_in_folder(new_folder)
                             config = dc_replace(config, session_folder=new_folder, session_notes=notes_file)
-                            sync_session_to_server(config, session_stack, current_key_points, slides_log=slides_log, git_repos=git_repos)
+                            sync_session_to_server(config, session_stack, current_key_points, git_repos=git_repos)
                             log.info("session", f"Renamed: {old_name} → {new_name}")
 
                     elif action == "pause" and session_stack:
                         pause_session(session_stack[-1], datetime.now(), reason="explicit")
                         _do_save_daemon_state()
                         global_state_persisted = True
-                        sync_session_to_server(config, session_stack, current_key_points, slides_log=slides_log, git_repos=git_repos)
+                        sync_session_to_server(config, session_stack, current_key_points, git_repos=git_repos)
                         log.info("session", f"Paused: {session_stack[-1]['name']}")
 
                     elif action == "resume" and session_stack:
                         resume_session(session_stack[-1], datetime.now())
                         _do_save_daemon_state()
                         global_state_persisted = True
-                        sync_session_to_server(config, session_stack, current_key_points, slides_log=slides_log, git_repos=git_repos)
+                        sync_session_to_server(config, session_stack, current_key_points, git_repos=git_repos)
                         transcript_state.reset()
                         log.info("session", f"Resumed: {session_stack[-1]['name']}")
 
@@ -906,7 +849,6 @@ def run() -> None:
                         sync_session_to_server(
                             config, session_stack, talk_points,
                             discussion_points=talk_points,
-                            slides_log=slides_log,
                             git_repos=git_repos,
                         )
                         log.info("session", f"Created talk folder: {talk_name}")
