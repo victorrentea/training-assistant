@@ -47,10 +47,16 @@ BASE = "http://localhost:8000"
 MOCK_DRIVE_BASE = f"http://localhost:{os.environ.get('MOCK_DRIVE_PORT', '9090')}"
 HOST_USER = os.environ.get("HOST_USERNAME", "host")
 HOST_PASS = os.environ.get("HOST_PASSWORD", "testpass")
-STUB_PPT_FILE = "/tmp/stub-powerpoint.json"
+TRANSCRIPTION_FOLDER = Path(os.environ.get("TRANSCRIPTION_FOLDER", "/tmp/test-transcriptions"))
 
 # Extra buffer on top of the Drive delay when waiting for assertions.
 _ASSERT_BUFFER_S = 20
+
+
+def _activity_slides_file() -> Path:
+    from datetime import datetime
+    today = datetime.now().strftime("%Y-%m-%d")
+    return TRANSCRIPTION_FOLDER / f"activity-slides-{today}.md"
 
 
 def _await_condition(fn, timeout_ms=10_000, poll_ms=300, msg=""):
@@ -63,19 +69,16 @@ def _await_condition(fn, timeout_ms=10_000, poll_ms=300, msg=""):
     raise AssertionError(msg or f"Condition not met within {timeout_ms}ms")
 
 
-def _set_powerpoint_state(presentation: str, slide: int, presenting: bool = False):
-    """Write stub PowerPoint state for the daemon to pick up."""
-    with open(STUB_PPT_FILE, "w") as f:
-        json.dump({
-            "presentation": presentation,
-            "slide": slide,
-            "presenting": presenting,
-            "frontmost": True,
-        }, f)
+def _set_slide_pointer(deck: str, slide: int):
+    """Write slide pointer for the daemon to pick up."""
+    f = _activity_slides_file()
+    f.parent.mkdir(parents=True, exist_ok=True)
+    with f.open("a", encoding="utf-8") as fh:
+        fh.write(f"{deck}:{slide}\n")
 
 
-def _clear_powerpoint_state():
-    Path(STUB_PPT_FILE).unlink(missing_ok=True)
+def _clear_slide_pointer():
+    _activity_slides_file().unlink(missing_ok=True)
 
 
 def _create_session(name: str) -> str:
@@ -189,8 +192,8 @@ def test_follow_mode_survives_slow_drive(delay_s, presentation, slug, host_slide
     """
     _mock_drive_reset_delays()
     _mock_drive_set_delay(slug, delay_s)
-    _clear_powerpoint_state()
-    _set_powerpoint_state(presentation, host_slide)
+    _clear_slide_pointer()
+    _set_slide_pointer(presentation, host_slide)
     session_id = _create_session(f"SlowDrive-{delay_s}s")
     pdf_ready_timeout_ms = (delay_s + _ASSERT_BUFFER_S) * 1000
 
@@ -231,5 +234,5 @@ def test_follow_mode_survives_slow_drive(delay_s, presentation, slug, host_slide
             browser.close()
 
     finally:
-        _clear_powerpoint_state()
+        _clear_slide_pointer()
         _mock_drive_reset_delays()

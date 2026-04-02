@@ -31,7 +31,6 @@ MOCK_DRIVE = "http://localhost:9090"
 HOST_USER = os.environ.get("HOST_USERNAME", "host")
 HOST_PASS = os.environ.get("HOST_PASSWORD", "testpass")
 
-STUB_PPT_FILE = "/tmp/stub-powerpoint.json"
 STUB_INTELLIJ_FILE = "/tmp/stub-intellij.json"
 STUB_CALLS_FILE = "/tmp/stub-calls.jsonl"
 

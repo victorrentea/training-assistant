@@ -2,14 +2,13 @@
 Hermetic E2E test: Follow Me — participant follows host's slide.
 
 Flow:
-1. Test writes to /tmp/stub-powerpoint.json to simulate host on "Clean Code" slide 3
-2. Daemon picks it up (probes every ~1s) and sends slides_current to backend
+1. Test writes to activity-slides-YYYY-MM-DD.md to simulate host on "Clean Code" slide 3
+2. Daemon picks it up (reads every ~0.5s) and sends slides_current to backend
 3. Participant clicks "Follow" button
 4. Participant is navigated to "Clean Code" topic, page 3
 
 Infrastructure:
-- Stub PowerPoint adapter reads from /tmp/stub-powerpoint.json
-- Daemon polls the stub every ~1s in its main loop
+- Daemon reads the last line of activity-slides-YYYY-MM-DD.md in TRANSCRIPTION_FOLDER
 - Backend broadcasts slides_current to participant via WS
 """
 
@@ -19,6 +18,8 @@ import re
 import sys
 import time
 import urllib.request
+from datetime import datetime
+from pathlib import Path
 
 sys.path.insert(0, "/app")
 sys.path.insert(0, "/app/tests")
@@ -33,7 +34,12 @@ BASE = "http://localhost:8000"
 HOST_USER = os.environ.get("HOST_USERNAME", "host")
 HOST_PASS = os.environ.get("HOST_PASSWORD", "testpass")
 
-STUB_PPT_FILE = "/tmp/stub-powerpoint.json"
+TRANSCRIPTION_FOLDER = Path(os.environ.get("TRANSCRIPTION_FOLDER", "/tmp/test-transcriptions"))
+
+
+def _activity_slides_file() -> Path:
+    today = datetime.now().strftime("%Y-%m-%d")
+    return TRANSCRIPTION_FOLDER / f"activity-slides-{today}.md"
 
 
 def _await_condition(fn, timeout_ms=10000, poll_ms=300, msg=""):
@@ -46,20 +52,16 @@ def _await_condition(fn, timeout_ms=10000, poll_ms=300, msg=""):
     raise AssertionError(msg or f"Condition not met within {timeout_ms}ms")
 
 
-def _set_powerpoint_state(presentation: str, slide: int, presenting: bool = False):
-    """Write stub PowerPoint state for the daemon to pick up."""
-    with open(STUB_PPT_FILE, "w") as f:
-        json.dump({
-            "presentation": presentation,
-            "slide": slide,
-            "presenting": presenting,
-            "frontmost": True,
-        }, f)
+def _set_slide_pointer(deck: str, slide: int):
+    """Write slide pointer for the daemon to pick up."""
+    f = _activity_slides_file()
+    f.parent.mkdir(parents=True, exist_ok=True)
+    with f.open("a", encoding="utf-8") as fh:
+        fh.write(f"{deck}:{slide}\n")
 
 
-def _clear_powerpoint_state():
-    import pathlib
-    pathlib.Path(STUB_PPT_FILE).unlink(missing_ok=True)
+def _clear_slide_pointer():
+    _activity_slides_file().unlink(missing_ok=True)
 
 
 def _get_or_create_session() -> str:
@@ -96,7 +98,7 @@ def test_follow_me_basic():
     session_id = _get_or_create_session()
 
     # Simulate host on "Clean Code.pptx" slide 3
-    _set_powerpoint_state("Clean Code.pptx", slide=3)
+    _set_slide_pointer("Clean Code.pptx", slide=3)
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
@@ -116,14 +118,12 @@ def test_follow_me_basic():
         pax = ParticipantPage(pax_page)
         pax.join("Follower")
 
-        # Wait for daemon to pick up the PowerPoint state and send slides_current
-        # The daemon polls every ~1s, so give it a few seconds
+        # Wait for daemon to pick up the slide pointer and send slides_current
         _await_condition(
             lambda: pax_page.evaluate("""
                 () => {
                     try {
                         const el = document.getElementById('slides-follow-btn');
-                        // Follow button should exist and slides_current should be set
                         return el !== null;
                     } catch { return false; }
                 }
@@ -132,12 +132,9 @@ def test_follow_me_basic():
             msg="Follow button not found on participant page"
         )
 
-        # Wait for slides_current to be received by participant
-        # With fast intervals (0.5s PPT probe), this should be quick
         time.sleep(2)
 
-        # Wait for daemon to detect PowerPoint and push slides_current to backend
-        # Verify via /api/status or by checking the host page state
+        # Wait for daemon to detect slide pointer and push slides_current to backend
         def _backend_has_slides_current():
             try:
                 req = urllib.request.Request(
@@ -169,7 +166,6 @@ def test_follow_me_basic():
         print("Slides overlay opened")
 
         # Verify the PDF was fetched (from mock Drive or cache)
-        # Wait for the slide to load — check that the endpoint returns PDF
         slug = "clean-code"
         pdf_url = f"{BASE}/{session_id}/api/slides/file/{slug}"
 
@@ -180,7 +176,6 @@ def test_follow_me_basic():
         )
 
         # Verify the participant navigated to the correct slide
-        # Check the .active class on slide list items (data-slide-id contains slug|url)
         active_slide = _await_condition(
             lambda: pax_page.locator(".slides-list-item.active").count() > 0,
             timeout_ms=15000,
@@ -196,7 +191,7 @@ def test_follow_me_basic():
 
         print("SUCCESS: Follow Me navigated participant to host's 'Clean Code' slide!")
 
-        _clear_powerpoint_state()
+        _clear_slide_pointer()
         browser.close()
 
 
