@@ -560,6 +560,12 @@ def run() -> None:
 
     ws_client.start()
 
+    # ── Start local host panel server ──
+    from daemon.host_server import start_host_server
+    from daemon.config import DAEMON_HOST_PORT
+    host_server_thread = start_host_server(config.server_url, port=DAEMON_HOST_PORT)
+    log.info("daemon", f"Host panel: http://127.0.0.1:{DAEMON_HOST_PORT}/host")
+
     try:
         while True:
             # ── Drain pending WS messages (handlers run on main thread) ──
