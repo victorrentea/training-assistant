@@ -12,6 +12,13 @@ logger = logging.getLogger(__name__)
 # Set by __main__.py during daemon startup
 _ws_client = None
 
+
+def set_ws_client(client):
+    """Set the WebSocket client for broadcasting events."""
+    global _ws_client
+    _ws_client = client
+
+
 # ── Participant router (proxied via Railway) ──
 
 participant_router = APIRouter(prefix="/api/participant/wordcloud", tags=["wordcloud"])
