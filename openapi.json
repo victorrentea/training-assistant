@@ -722,6 +722,88 @@
         ]
       }
     },
+    "/internal/upload-static": {
+      "post": {
+        "summary": "Upload Static",
+        "operationId": "upload_static_internal_upload_static_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UploadStaticRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBasic": []
+          }
+        ]
+      }
+    },
+    "/internal/delete-static": {
+      "post": {
+        "summary": "Delete Static",
+        "operationId": "delete_static_internal_delete_static_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeleteStaticRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBasic": []
+          }
+        ]
+      }
+    },
     "/api/{session_id}/poll": {
       "post": {
         "summary": "Create Poll",
@@ -3449,6 +3531,19 @@
         ],
         "title": "DebateLaunch"
       },
+      "DeleteStaticRequest": {
+        "properties": {
+          "path": {
+            "type": "string",
+            "title": "Path"
+          }
+        },
+        "type": "object",
+        "required": [
+          "path"
+        ],
+        "title": "DeleteStaticRequest"
+      },
       "FirstSide": {
         "properties": {
           "side": {
@@ -3919,6 +4014,24 @@
           "event"
         ],
         "title": "TimingEventBody"
+      },
+      "UploadStaticRequest": {
+        "properties": {
+          "path": {
+            "type": "string",
+            "title": "Path"
+          },
+          "content_b64": {
+            "type": "string",
+            "title": "Content B64"
+          }
+        },
+        "type": "object",
+        "required": [
+          "path",
+          "content_b64"
+        ],
+        "title": "UploadStaticRequest"
       },
       "ValidationError": {
         "properties": {

@@ -44,6 +44,7 @@ from features.transcription_language import router as transcription_language_rou
 from features.upload import router as upload
 from features.upload.router import public_router as upload_public_router
 from features.feedback import router as feedback
+from features.internal.router import router as internal_router
 
 import core.state_builder  # noqa: registers core state builder
 import features.poll.state_builder  # noqa
@@ -150,6 +151,9 @@ app.include_router(poll_global_router)
 
 # Global feedback endpoint
 app.include_router(feedback.router)
+
+# Internal daemon → backend file management endpoints
+app.include_router(internal_router)
 
 
 # ── Session-scoped host dependency ──

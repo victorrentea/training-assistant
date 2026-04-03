@@ -326,6 +326,7 @@ def run() -> None:
     ws_client.register_handler("session_snapshot_result", _ws_handler("session_snapshot_result"))
     ws_client.register_handler("session_request", _ws_handler("session_request"))
     ws_client.register_handler("transcription_language_request", _ws_handler("transcription_language_request"))
+    ws_client.register_handler("sync_files", _ws_handler("sync_files"))
 
     # Set ws_client on modules that send results back via WS
     from daemon.quiz.poll_api import set_ws_client as set_poll_ws
@@ -1113,6 +1114,20 @@ def run() -> None:
                         config, session_stack, sessions_root,
                         current_key_points, summary_watermark,
                     )
+
+                # ── Static file sync (triggered by backend on WS connect) ──
+                sync_files_data = _pending_requests.pop("sync_files", None)
+                if sync_files_data is not None:
+                    from daemon.static_sync import sync_static_files
+                    static_dir = Path(__file__).resolve().parent.parent / "static"
+                    remote_hashes = sync_files_data.get("static_hashes", {})
+                    changed = sync_static_files(
+                        static_dir, remote_hashes,
+                        config.server_url, config.host_username, config.host_password,
+                    )
+                    if changed > 0:
+                        ws_client.send({"type": "reload"})
+                        log.info("static-sync", f"Synced {changed} file(s), triggered browser reload")
 
                 # ── Process session snapshot result (pushed by backend every 7s) ──
                 session_snapshot = _pending_requests.pop("session_snapshot_result", None)

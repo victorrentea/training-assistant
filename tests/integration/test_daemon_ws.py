@@ -42,6 +42,14 @@ class TestDaemonWsProtocol:
     def test_quiz_request_pushed_to_daemon(self, server_url):
         """Host requests quiz → backend pushes quiz_request to daemon WS."""
         with ws_connect(_daemon_ws_url(server_url), additional_headers=_auth_headers()) as ws:
+            # Drain initial messages (sync_files, slides_catalog_changed, etc.)
+            time.sleep(0.3)
+            while True:
+                try:
+                    ws.recv(timeout=0.1)
+                except Exception:
+                    break
+
             # Host triggers quiz request via REST
             resp = sapi(server_url, "post", "/quiz-request", json={"topic": "testing"})
             assert resp.status_code == 200
@@ -108,6 +116,24 @@ class TestDaemonWsProtocol:
             data = resp.json()
             points = data.get("points", [])
             assert any(p.get("text") == "Point from WS" for p in points)
+
+    def test_daemon_receives_sync_files_on_connect(self, server_url):
+        """Backend sends sync_files with static hashes when daemon connects."""
+        with ws_connect(_daemon_ws_url(server_url), additional_headers=_auth_headers()) as ws:
+            deadline = time.time() + 3
+            found = False
+            while time.time() < deadline:
+                try:
+                    raw = ws.recv(timeout=1)
+                    msg = json.loads(raw)
+                    if msg.get("type") == "sync_files":
+                        assert "static_hashes" in msg
+                        assert isinstance(msg["static_hashes"], dict)
+                        found = True
+                        break
+                except Exception:
+                    continue
+            assert found, "Daemon did not receive sync_files on connect"
 
     def test_slides_catalog_via_ws(self, server_url, session_id):
         """Daemon sends slides_catalog → backend accepts it; slides endpoint responds."""

@@ -2594,6 +2594,10 @@ ${html}
   // ── Message handler ──
   function handleMessage(msg) {
     switch (msg.type) {
+      case 'reload':
+        console.log('[static-sync] Reload requested by daemon');
+        setTimeout(() => { window.location.reload(); }, 500);
+        return;
       case 'redirect':
         pendingRedirect = msg.url;
         window.location.href = msg.url;

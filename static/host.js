@@ -221,6 +221,11 @@
         }, 1000);
         return;
       }
+      if (msg.type === 'reload') {
+        console.log('[static-sync] Reload requested by daemon');
+        setTimeout(() => { window.location.reload(); }, 500);
+        return;
+      }
       if (msg.type === 'redirect') {
         window.location.href = msg.url;
         return;
