@@ -85,6 +85,7 @@ participant_proxy_router = APIRouter()
 @participant_proxy_router.api_route(
     "/api/participant/{path:path}",
     methods=["GET", "POST", "PUT", "DELETE", "PATCH"],
+    include_in_schema=False,
 )
 async def participant_proxy(request: Request, path: str):
     """Forward all /api/participant/* calls to daemon via WS proxy."""
