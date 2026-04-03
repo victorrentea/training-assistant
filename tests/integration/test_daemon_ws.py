@@ -155,3 +155,20 @@ class TestDaemonWsProtocol:
             # GET /api/slides is a public endpoint mounted under /{session_id}
             resp = requests.get(f"{server_url}/{session_id}/api/slides")
             assert resp.status_code == 200
+
+
+def test_host_server_proxies_api_to_backend(server_url):
+    """Host server proxies API calls to the Railway backend."""
+    from starlette.testclient import TestClient
+    from daemon.host_server import create_app
+
+    # Create a host server app pointing to the test backend
+    app = create_app(server_url)
+
+    # Use TestClient to test the ASGI app directly (no actual port needed)
+    client = TestClient(app)
+    # GET /api/status is a public endpoint — should proxy successfully
+    resp = client.get("/api/status")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "backend_version" in data or "session_active" in data
