@@ -7,7 +7,6 @@ from datetime import date, datetime, timedelta
 from pathlib import Path
 
 from daemon import log
-from daemon.http import _get_json, _post_json
 
 # Module-level ws_client reference, set by daemon/__main__.py at startup
 _ws_client = None
@@ -414,13 +413,7 @@ def sync_session_to_server(
     if _ws_client and _ws_client.connected:
         _ws_client.send({"type": "session_sync", **payload})
     else:
-        sid = _current_session_id
-        path = f"/api/{sid}/session/sync" if sid else "/api/session/sync"
-        _post_json(
-            f"{config.server_url}{path}",
-            payload,
-            config.host_username, config.host_password,
-        )
+        log.error("session", "Cannot sync session: WS not connected")
 
 
 # ── Slides manifest helpers ────────────────────────────────────────────────────

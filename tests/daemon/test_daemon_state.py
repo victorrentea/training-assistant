@@ -198,7 +198,6 @@ def test_daemon_state_to_stack_active_sessions_included():
 def test_sync_session_includes_session_state_when_file_exists():
     """When session_state.json exists in the session folder, sync_session_to_server
     is called with the contents in the payload."""
-    from unittest.mock import patch
     import daemon.session_state as session_state_mod
     from daemon.session_state import sync_session_to_server
 
@@ -218,24 +217,24 @@ def test_sync_session_includes_session_state_when_file_exists():
 
         captured = {}
 
-        def fake_post_json(url, payload, username, password):
-            captured["payload"] = payload
+        class FakeWsClient:
+            connected = True
+            def send(self, payload):
+                captured["payload"] = payload
 
-        # Reset module-level ws_client to ensure HTTP fallback path is exercised
         original_ws = session_state_mod._ws_client
-        session_state_mod._ws_client = None
+        session_state_mod._ws_client = FakeWsClient()
         try:
-            with patch.object(session_state_mod, "_post_json", fake_post_json):
-                sync_session_to_server(
-                    type("C", (), {
-                        "server_url": "http://test",
-                        "host_username": "u",
-                        "host_password": "p",
-                    })(),
-                    stack,
-                    [],
-                    session_state_data,
-                )
+            sync_session_to_server(
+                type("C", (), {
+                    "server_url": "http://test",
+                    "host_username": "u",
+                    "host_password": "p",
+                })(),
+                stack,
+                [],
+                session_state_data,
+            )
         finally:
             session_state_mod._ws_client = original_ws
 
@@ -245,30 +244,29 @@ def test_sync_session_includes_session_state_when_file_exists():
 
 def test_sync_session_no_session_state_key_when_none():
     """When session_state is None, the payload should not include the key."""
-    from unittest.mock import patch
     import daemon.session_state as session_state_mod
     from daemon.session_state import sync_session_to_server
 
     captured = {}
 
-    def fake_post_json(url, payload, username, password):
-        captured["payload"] = payload
+    class FakeWsClient:
+        connected = True
+        def send(self, payload):
+            captured["payload"] = payload
 
-    # Reset module-level ws_client to ensure HTTP fallback path is exercised
     original_ws = session_state_mod._ws_client
-    session_state_mod._ws_client = None
+    session_state_mod._ws_client = FakeWsClient()
     try:
-        with patch.object(session_state_mod, "_post_json", fake_post_json):
-            sync_session_to_server(
-                type("C", (), {
-                    "server_url": "http://test",
-                    "host_username": "u",
-                    "host_password": "p",
-                })(),
-                [],
-                [],
-                None,
-            )
+        sync_session_to_server(
+            type("C", (), {
+                "server_url": "http://test",
+                "host_username": "u",
+                "host_password": "p",
+            })(),
+            [],
+            [],
+            None,
+        )
     finally:
         session_state_mod._ws_client = original_ws
 
