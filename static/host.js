@@ -376,6 +376,8 @@
         renderPreview(msg.quiz || null);
       } else if (msg.type === 'emoji_reaction') {
         showHostEmoji(msg.emoji);
+      } else if (msg.type === 'qa_updated') {
+        renderQAList(msg.questions || []);
       }
     };
   }
@@ -2255,8 +2257,12 @@
     const input = document.getElementById('host-qa-input');
     if (!input) return;
     const text = input.value.trim();
-    if (!text || !ws) return;
-    sendWS('qa_submit', { text });
+    if (!text) return;
+    fetch(API('/qa/submit'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text })
+    });
     input.value = '';
     const btn = document.getElementById('host-qa-submit-btn');
     if (btn) btn.disabled = true;
