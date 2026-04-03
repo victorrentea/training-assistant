@@ -11,6 +11,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from daemon.host_proxy import create_http_client, proxy_http, proxy_websocket
+from daemon.participant.router import router as participant_router
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +37,17 @@ def create_app(backend_url: str) -> FastAPI:
 
     app = FastAPI(title="Daemon Host Panel", docs_url=None, redoc_url=None, lifespan=lifespan)
 
+    # --- Write-back middleware (collects events set by participant router handlers) ---
+    @app.middleware("http")
+    async def write_back_middleware(request: Request, call_next):
+        request.state.write_back_events = []
+        response = await call_next(request)
+        events = getattr(request.state, "write_back_events", [])
+        if events:
+            import json as _json
+            response.headers["X-Write-Back-Events"] = _json.dumps(events)
+        return response
+
     # --- Host HTML page ---
     @app.get("/host/{session_id}")
     async def serve_host_page(session_id: str):
@@ -52,6 +64,9 @@ def create_app(backend_url: str) -> FastAPI:
         if not host_html.exists():
             return {"error": "host.html not found"}
         return FileResponse(host_html, media_type="text/html")
+
+    # --- Participant identity router (must come BEFORE catch-all to avoid infinite loop) ---
+    app.include_router(participant_router)
 
     # --- WebSocket proxy ---
     @app.websocket("/ws/{path:path}")

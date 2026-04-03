@@ -328,6 +328,10 @@ def run() -> None:
     ws_client.register_handler("transcription_language_request", _ws_handler("transcription_language_request"))
     ws_client.register_handler("sync_files", _ws_handler("sync_files"))
 
+    from daemon.proxy_handler import handle_proxy_request
+    ws_client.register_handler("proxy_request",
+        lambda data: handle_proxy_request(data, ws_client))
+
     # Set ws_client on modules that send results back via WS
     from daemon.quiz.poll_api import set_ws_client as set_poll_ws
     from daemon.session_state import set_ws_client as set_session_ws
