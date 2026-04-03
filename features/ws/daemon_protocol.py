@@ -58,6 +58,18 @@ MSG_PARTICIPANT_REGISTERED = "participant_registered"
 MSG_PARTICIPANT_LOCATION = "participant_location"
 MSG_PARTICIPANT_AVATAR_UPDATED = "participant_avatar_updated"
 
+# --- Generic broadcast (daemon → all participants via backend) ---
+MSG_BROADCAST = "broadcast"
+
+# --- Word cloud state sync (daemon → backend) ---
+MSG_WORDCLOUD_STATE_SYNC = "wordcloud_state_sync"
+
+# --- Score award (daemon → backend, transitional) ---
+MSG_SCORE_AWARD = "score_award"
+
+# --- State push (backend → daemon, on connect) ---
+MSG_DAEMON_STATE_PUSH = "daemon_state_push"
+
 
 async def push_to_daemon(msg: dict) -> bool:
     """Send a JSON message to the daemon via WebSocket. Returns True if sent."""
