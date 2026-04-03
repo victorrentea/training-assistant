@@ -28,24 +28,35 @@ class ParticipantState:
         self.debate_sides: dict[str, str] = {}
 
     def sync_from_restore(self, data: dict):
-        """Update cache from state_restore or session_sync data."""
+        """Update cache from state_restore or session_sync data.
+
+        Uses in-place clear+update to preserve dict object identity so that
+        router handlers holding a reference to the same dict object don't
+        silently lose their writes.
+        """
         with self._lock:
             if "participant_names" in data:
-                self.participant_names = dict(data["participant_names"])
+                self.participant_names.clear()
+                self.participant_names.update(data["participant_names"])
             if "participant_avatars" in data:
-                self.participant_avatars = dict(data["participant_avatars"])
+                self.participant_avatars.clear()
+                self.participant_avatars.update(data["participant_avatars"])
             if "participant_universes" in data:
-                self.participant_universes = dict(data["participant_universes"])
+                self.participant_universes.clear()
+                self.participant_universes.update(data["participant_universes"])
             if "scores" in data:
-                self.scores = dict(data["scores"])
+                self.scores.clear()
+                self.scores.update(data["scores"])
             if "locations" in data:
-                self.locations = dict(data["locations"])
+                self.locations.clear()
+                self.locations.update(data["locations"])
             if "mode" in data:
                 self.mode = data["mode"]
             if "debate_phase" in data:
                 self.debate_phase = data["debate_phase"]
             if "debate_sides" in data:
-                self.debate_sides = dict(data["debate_sides"])
+                self.debate_sides.clear()
+                self.debate_sides.update(data["debate_sides"])
 
     def snapshot(self) -> dict:
         """Return a copy of all state (for testing/debugging)."""

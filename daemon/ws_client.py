@@ -47,16 +47,20 @@ class DaemonWsClient:
         self._on_connect_callbacks.append(callback)
 
     def send(self, msg: dict) -> bool:
-        """Send JSON message to backend. Thread-safe."""
+        """Send JSON message to backend. Thread-safe.
+
+        The lock is held for the entire send to prevent ConcurrencyError from
+        concurrent thread pool workers (websockets.sync raises ConcurrencyError
+        if two threads call ws.send() simultaneously).
+        """
         with self._ws_lock:
-            ws = self._ws
-        if ws is None:
-            return False
-        try:
-            ws.send(json.dumps(msg))
-            return True
-        except Exception:
-            return False
+            if self._ws is None:
+                return False
+            try:
+                self._ws.send(json.dumps(msg))
+                return True
+            except Exception:
+                return False
 
     def drain_queue(self):
         """Process all pending work items. Call from main thread each loop iteration."""
