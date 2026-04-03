@@ -1,0 +1,108 @@
+graph LR
+  linkStyle default fill:#ffffff
+
+  subgraph diagram ["Component View: Workshop Live Interaction Tool - FastAPI Backend"]
+    style diagram fill:#ffffff,stroke:#ffffff
+
+    subgraph 7 ["Workshop Live Interaction Tool"]
+      style 7 fill:#ffffff,stroke:#144d2e,color:#144d2e
+
+      subgraph 10 ["FastAPI Backend"]
+        style 10 fill:#ffffff,stroke:#3e703e,color:#3e703e
+
+        11["<div style='font-weight: bold'>Core Platform</div><div style='font-size: 70%; margin-top: 0px'>[Component: core/*]</div><div style='font-size: 80%; margin-top:10px'>AppState, auth, metrics,<br />versioning, session guards,<br />and messaging registry.</div>"]
+        style 11 fill:#d6e8c8,stroke:#95a28c,color:#10210f
+        12["<div style='font-weight: bold'>WS Router</div><div style='font-size: 70%; margin-top: 0px'>[Component: features/ws/*]</div><div style='font-size: 80%; margin-top:10px'>Host, participant, overlay,<br />and daemon WebSocket<br />endpoints plus proxy bridge.</div>"]
+        style 12 fill:#d6e8c8,stroke:#95a28c,color:#10210f
+        13["<div style='font-weight: bold'>Poll Router</div><div style='font-size: 70%; margin-top: 0px'>[Component: features/poll/*]</div><div style='font-size: 80%; margin-top:10px'>Poll lifecycle, status,<br />correct answers, scoring, and<br />public helpers.</div>"]
+        style 13 fill:#d6e8c8,stroke:#95a28c,color:#10210f
+        14["<div style='font-weight: bold'>Q&A Router</div><div style='font-size: 70%; margin-top: 0px'>[Component: features/qa/*]</div><div style='font-size: 80%; margin-top:10px'>Question edit, delete,<br />answer, and clear lifecycle.</div>"]
+        style 14 fill:#d6e8c8,stroke:#95a28c,color:#10210f
+        15["<div style='font-weight: bold'>Word Cloud Router</div><div style='font-size: 70%; margin-top: 0px'>[Component: features/wordcloud/*]</div><div style='font-size: 80%; margin-top:10px'>Topic changes and reset<br />operations.</div>"]
+        style 15 fill:#d6e8c8,stroke:#95a28c,color:#10210f
+        16["<div style='font-weight: bold'>Code Review Router</div><div style='font-size: 70%; margin-top: 0px'>[Component: features/codereview/*]</div><div style='font-size: 80%; margin-top:10px'>Snippet lifecycle,<br />selections, and line<br />confirmation.</div>"]
+        style 16 fill:#d6e8c8,stroke:#95a28c,color:#10210f
+        17["<div style='font-weight: bold'>Debate Router</div><div style='font-size: 70%; margin-top: 0px'>[Component: features/debate/*]</div><div style='font-size: 80%; margin-top:10px'>Debate phases, AI request<br />lifecycle, and round<br />orchestration.</div>"]
+        style 17 fill:#d6e8c8,stroke:#95a28c,color:#10210f
+        18["<div style='font-weight: bold'>Quiz Router</div><div style='font-size: 70%; margin-top: 0px'>[Component: features/quiz/*]</div><div style='font-size: 80%; margin-top:10px'>Quiz request, status,<br />preview, and refinement<br />endpoints.</div>"]
+        style 18 fill:#d6e8c8,stroke:#95a28c,color:#10210f
+        19["<div style='font-weight: bold'>Summary Router</div><div style='font-size: 70%; margin-top: 0px'>[Component: features/summary/*]</div><div style='font-size: 80%; margin-top:10px'>Summaries, notes, transcript<br />status, and token usage.</div>"]
+        style 19 fill:#d6e8c8,stroke:#95a28c,color:#10210f
+        20["<div style='font-weight: bold'>Leaderboard Router</div><div style='font-size: 70%; margin-top: 0px'>[Component: features/leaderboard/*]</div><div style='font-size: 80%; margin-top:10px'>Leaderboard reveal and score<br />reset endpoints.</div>"]
+        style 20 fill:#d6e8c8,stroke:#95a28c,color:#10210f
+        21["<div style='font-weight: bold'>Activity Router</div><div style='font-size: 70%; margin-top: 0px'>[Component: features/activity/*]</div><div style='font-size: 80%; margin-top:10px'>Switches the currently active<br />participant experience.</div>"]
+        style 21 fill:#d6e8c8,stroke:#95a28c,color:#10210f
+        22["<div style='font-weight: bold'>Session Router</div><div style='font-size: 70%; margin-top: 0px'>[Component: features/session/*]</div><div style='font-size: 80%; margin-top:10px'>Global and session-scoped<br />lifecycle, sync, snapshots,<br />and timing events.</div>"]
+        style 22 fill:#d6e8c8,stroke:#95a28c,color:#10210f
+        23["<div style='font-weight: bold'>Snapshot Router</div><div style='font-size: 70%; margin-top: 0px'>[Component: features/snapshot/*]</div><div style='font-size: 80%; margin-top:10px'>Diagnostic state snapshot and<br />restore endpoints.</div>"]
+        style 23 fill:#d6e8c8,stroke:#95a28c,color:#10210f
+        24["<div style='font-weight: bold'>Slides Router</div><div style='font-size: 70%; margin-top: 0px'>[Component: features/slides/*]</div><div style='font-size: 80%; margin-top:10px'>Slides publishing, public<br />file serving, upload, and<br />catalog management.</div>"]
+        style 24 fill:#d6e8c8,stroke:#95a28c,color:#10210f
+        25["<div style='font-weight: bold'>Upload Router</div><div style='font-size: 70%; margin-top: 0px'>[Component: features/upload/*]</div><div style='font-size: 80%; margin-top:10px'>Participant and host file<br />upload endpoints.</div>"]
+        style 25 fill:#d6e8c8,stroke:#95a28c,color:#10210f
+        26["<div style='font-weight: bold'>Pages Router</div><div style='font-size: 70%; margin-top: 0px'>[Component: features/pages/*]</div><div style='font-size: 80%; margin-top:10px'>Landing, participant, host,<br />and notes pages.</div>"]
+        style 26 fill:#d6e8c8,stroke:#95a28c,color:#10210f
+        27["<div style='font-weight: bold'>Feedback Router</div><div style='font-size: 70%; margin-top: 0px'>[Component: features/feedback/*]</div><div style='font-size: 80%; margin-top:10px'>Global feedback endpoint.</div>"]
+        style 27 fill:#d6e8c8,stroke:#95a28c,color:#10210f
+        28["<div style='font-weight: bold'>Internal Router</div><div style='font-size: 70%; margin-top: 0px'>[Component: features/internal/*]</div><div style='font-size: 80%; margin-top:10px'>Daemon-facing internal<br />file-management endpoints.</div>"]
+        style 28 fill:#d6e8c8,stroke:#95a28c,color:#10210f
+        29["<div style='font-weight: bold'>Transcription Language Router</div><div style='font-size: 70%; margin-top: 0px'>[Component: features/transcription_language/*]</div><div style='font-size: 80%; margin-top:10px'>Global transcription language<br />endpoint.</div>"]
+        style 29 fill:#d6e8c8,stroke:#95a28c,color:#10210f
+        30["<div style='font-weight: bold'>Scores Router</div><div style='font-size: 70%; margin-top: 0px'>[Component: features/scores/*]</div><div style='font-size: 80%; margin-top:10px'>Score reset helper endpoints.</div>"]
+        style 30 fill:#d6e8c8,stroke:#95a28c,color:#10210f
+      end
+
+      57["<div style='font-weight: bold'>Emoji Overlay</div><div style='font-size: 70%; margin-top: 0px'>[Container: Swift / AppKit]</div><div style='font-size: 80%; margin-top:10px'>Always-on-top overlay for<br />live emoji reactions on the<br />host machine.</div>"]
+      style 57 fill:#5aa05a,stroke:#3e703e,color:#ffffff
+      8["<div style='font-weight: bold'>Participant SPA</div><div style='font-size: 70%; margin-top: 0px'>[Container: HTML/CSS/JavaScript]</div><div style='font-size: 80%; margin-top:10px'>Participant-facing UI served<br />from static files.</div>"]
+      style 8 fill:#5aa05a,stroke:#3e703e,color:#ffffff
+      9["<div style='font-weight: bold'>Host SPA</div><div style='font-size: 70%; margin-top: 0px'>[Container: HTML/CSS/JavaScript]</div><div style='font-size: 80%; margin-top:10px'>Host control panel served<br />from static files.</div>"]
+      style 9 fill:#5aa05a,stroke:#3e703e,color:#ffffff
+    end
+
+    57-. "<div>Connects as overlay</div><div style='font-size: 70%'></div>" .->12
+    28-. "<div>Uses shared backend state</div><div style='font-size: 70%'></div>" .->11
+    27-. "<div>Updates shared state if<br />needed</div><div style='font-size: 70%'></div>" .->11
+    29-. "<div>Reads current session context</div><div style='font-size: 70%'></div>" .->11
+    25-. "<div>Associates uploads with<br />active state</div><div style='font-size: 70%'></div>" .->11
+    26-. "<div>Reads active mode and session<br />state</div><div style='font-size: 70%'></div>" .->11
+    12-. "<div>Builds and broadcasts state</div><div style='font-size: 70%'></div>" .->11
+    13-. "<div>Mutates poll state and scores</div><div style='font-size: 70%'></div>" .->11
+    14-. "<div>Mutates Q&A state</div><div style='font-size: 70%'></div>" .->11
+    15-. "<div>Mutates word cloud state</div><div style='font-size: 70%'></div>" .->11
+    16-. "<div>Mutates code review state</div><div style='font-size: 70%'></div>" .->11
+    17-. "<div>Mutates debate state</div><div style='font-size: 70%'></div>" .->11
+    18-. "<div>Stores quiz generation state</div><div style='font-size: 70%'></div>" .->11
+    19-. "<div>Reads and updates summaries<br />and notes</div><div style='font-size: 70%'></div>" .->11
+    20-. "<div>Updates leaderboard<br />visibility and scores</div><div style='font-size: 70%'></div>" .->11
+    21-. "<div>Updates current activity</div><div style='font-size: 70%'></div>" .->11
+    22-. "<div>Serializes and restores<br />session state</div><div style='font-size: 70%'></div>" .->11
+    23-. "<div>Serializes and restores<br />diagnostic snapshots</div><div style='font-size: 70%'></div>" .->11
+    24-. "<div>Stores slide catalog and<br />current slide</div><div style='font-size: 70%'></div>" .->11
+    30-. "<div>Resets score state</div><div style='font-size: 70%'></div>" .->11
+    8-. "<div>Loads participant and notes<br />pages</div><div style='font-size: 70%'></div>" .->26
+    8-. "<div>Connects as participant</div><div style='font-size: 70%'></div>" .->12
+    8-. "<div>Reads status and identity<br />helpers</div><div style='font-size: 70%'></div>" .->13
+    8-. "<div>Reads public notes and<br />summaries</div><div style='font-size: 70%'></div>" .->19
+    8-. "<div>Reads public slides</div><div style='font-size: 70%'></div>" .->24
+    8-. "<div>Uploads participant files</div><div style='font-size: 70%'></div>" .->25
+    9-. "<div>Loads host page</div><div style='font-size: 70%'></div>" .->26
+    9-. "<div>Connects as host</div><div style='font-size: 70%'></div>" .->12
+    9-. "<div>Creates polls and manages<br />poll state</div><div style='font-size: 70%'></div>" .->13
+    9-. "<div>Moderates questions</div><div style='font-size: 70%'></div>" .->14
+    9-. "<div>Sets topic and clears cloud</div><div style='font-size: 70%'></div>" .->15
+    9-. "<div>Manages code review activity</div><div style='font-size: 70%'></div>" .->16
+    9-. "<div>Controls debate phases and<br />cleanup</div><div style='font-size: 70%'></div>" .->17
+    9-. "<div>Reveals leaderboard</div><div style='font-size: 70%'></div>" .->20
+    9-. "<div>Switches activity</div><div style='font-size: 70%'></div>" .->21
+    9-. "<div>Requests and refines quizzes</div><div style='font-size: 70%'></div>" .->18
+    9-. "<div>Reads notes and summaries</div><div style='font-size: 70%'></div>" .->19
+    9-. "<div>Publishes current slides</div><div style='font-size: 70%'></div>" .->24
+    9-. "<div>Controls session lifecycle</div><div style='font-size: 70%'></div>" .->22
+    9-. "<div>Requests snapshot/restore</div><div style='font-size: 70%'></div>" .->23
+    9-. "<div>Uploads host files</div><div style='font-size: 70%'></div>" .->25
+    9-. "<div>Sends feedback</div><div style='font-size: 70%'></div>" .->27
+    9-. "<div>Resets scores</div><div style='font-size: 70%'></div>" .->30
+    9-. "<div>Changes transcription<br />language</div><div style='font-size: 70%'></div>" .->29
+
+  end

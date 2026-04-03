@@ -1,0 +1,50 @@
+graph LR
+  linkStyle default fill:#ffffff
+
+  subgraph diagram ["Component View: Workshop Live Interaction Tool - Training Daemon"]
+    style diagram fill:#ffffff,stroke:#ffffff
+
+    3["<div style='font-weight: bold'>victor-macos-addons</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Produces normalized<br />transcript files on the<br />trainer's Mac.</div>"]
+    style 3 fill:#1d6f42,stroke:#144d2e,color:#ffffff
+    4["<div style='font-weight: bold'>Anthropic Claude API</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>LLM used for quiz generation,<br />debate cleanup, and<br />summaries.</div>"]
+    style 4 fill:#1d6f42,stroke:#144d2e,color:#ffffff
+
+    subgraph 7 ["Workshop Live Interaction Tool"]
+      style 7 fill:#ffffff,stroke:#144d2e,color:#144d2e
+
+      subgraph 31 ["Training Daemon"]
+        style 31 fill:#ffffff,stroke:#3e703e,color:#3e703e
+
+        32["<div style='font-weight: bold'>Orchestrator</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/__main__.py]</div><div style='font-size: 80%; margin-top:10px'>Main loop, startup binding,<br />polling, and restart<br />coordination.</div>"]
+        style 32 fill:#d6e8c8,stroke:#95a28c,color:#10210f
+        40["<div style='font-weight: bold'>Summary Loop</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/summary/loop.py]</div><div style='font-size: 80%; margin-top:10px'>Triggers summary generation<br />cycles and publishes results.</div>"]
+        style 40 fill:#d6e8c8,stroke:#95a28c,color:#10210f
+        41["<div style='font-weight: bold'>Summarizer</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/summary/summarizer.py]</div><div style='font-size: 80%; margin-top:10px'>Extracts discussion points<br />and notes from transcript<br />deltas.</div>"]
+        style 41 fill:#d6e8c8,stroke:#95a28c,color:#10210f
+        42["<div style='font-weight: bold'>Transcript Loader</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/transcript/loader.py]</div><div style='font-size: 80%; margin-top:10px'>Loads and filters normalized<br />transcript windows.</div>"]
+        style 42 fill:#d6e8c8,stroke:#95a28c,color:#10210f
+        43["<div style='font-weight: bold'>Transcript Parser</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/transcript/parser.py]</div><div style='font-size: 80%; margin-top:10px'>Parses transcript files such<br />as txt, vtt, and srt.</div>"]
+        style 43 fill:#d6e8c8,stroke:#95a28c,color:#10210f
+        44["<div style='font-weight: bold'>Transcript Session</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/transcript/session.py]</div><div style='font-size: 80%; margin-top:10px'>Computes active transcript<br />windows per session.</div>"]
+        style 44 fill:#d6e8c8,stroke:#95a28c,color:#10210f
+        45["<div style='font-weight: bold'>Transcript State</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/transcript/state.py]</div><div style='font-size: 80%; margin-top:10px'>Tracks transcript processing<br />state.</div>"]
+        style 45 fill:#d6e8c8,stroke:#95a28c,color:#10210f
+        55["<div style='font-weight: bold'>LLM Adapter</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/llm/adapter.py]</div><div style='font-size: 80%; margin-top:10px'>Claude client wrapper with<br />token accounting.</div>"]
+        style 55 fill:#d6e8c8,stroke:#95a28c,color:#10210f
+      end
+
+      10["<div style='font-weight: bold'>FastAPI Backend</div><div style='font-size: 70%; margin-top: 0px'>[Container: Python 3.12 / FastAPI / Uvicorn]</div><div style='font-size: 80%; margin-top:10px'>REST endpoints, WebSocket<br />hub, session routing, and<br />in-memory state.</div>"]
+      style 10 fill:#5aa05a,stroke:#3e703e,color:#ffffff
+    end
+
+    32-. "<div>Triggers</div><div style='font-size: 70%'></div>" .->40
+    32-. "<div>Computes active windows with</div><div style='font-size: 70%'></div>" .->44
+    40-. "<div>Triggers</div><div style='font-size: 70%'></div>" .->41
+    40-. "<div>Posts summaries and<br />transcript status</div><div style='font-size: 70%'></div>" .->10
+    41-. "<div>Reads transcript deltas from</div><div style='font-size: 70%'></div>" .->42
+    41-. "<div>Requests summary output from</div><div style='font-size: 70%'></div>" .->55
+    42-. "<div>Parses files through</div><div style='font-size: 70%'></div>" .->43
+    42-. "<div>Tracks processing through</div><div style='font-size: 70%'></div>" .->45
+    55-. "<div>Calls</div><div style='font-size: 70%'></div>" .->4
+
+  end

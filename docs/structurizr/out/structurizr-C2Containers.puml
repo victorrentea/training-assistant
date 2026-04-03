@@ -1,0 +1,48 @@
+@startuml
+title <size:24>Container View: Workshop Live Interaction Tool</size>\n<size:24>All runtime containers in the current repository.</size>
+
+set separator none
+left to right direction
+
+<style>
+  root {
+    BackgroundColor: #ffffff
+    FontColor: #444444
+  }
+</style>
+
+!include <C4/C4>
+!include <C4/C4_Context>
+!include <C4/C4_Container>
+
+Person(Host, "Host", $descr="Runs the workshop, controls activities, and monitors the live session.", $tags="", $link="")
+Person(Participant, "Participant", $descr="Joins from a browser, votes, reacts, uploads, and follows the session.", $tags="", $link="")
+System(victormacosaddons, "victor-macos-addons", $descr="Produces normalized transcript files on the trainer's Mac.", $tags="", $link="")
+System(AnthropicClaudeAPI, "Anthropic Claude API", $descr="LLM used for quiz generation, debate cleanup, and summaries.", $tags="", $link="")
+System(Nominatim, "Nominatim", $descr="Reverse geocodes GPS coordinates into city and country.", $tags="", $link="")
+System(GoogleDrive, "Google Drive", $descr="Hosts exported slide PDFs consumed by the backend.", $tags="", $link="")
+
+System_Boundary("WorkshopLiveInteractionTool_boundary", "Workshop Live Interaction Tool", $tags="") {
+  Container(WorkshopLiveInteractionTool.FastAPIBackend, "FastAPI Backend", $techn="Python 3.12 / FastAPI / Uvicorn", $descr="REST endpoints, WebSocket hub, session routing, and in-memory state.", $tags="", $link="")
+  Container(WorkshopLiveInteractionTool.TrainingDaemon, "Training Daemon", $techn="Python 3.12 CLI", $descr="Background worker running on the host machine.", $tags="", $link="")
+  Container(WorkshopLiveInteractionTool.EmojiOverlay, "Emoji Overlay", $techn="Swift / AppKit", $descr="Always-on-top overlay for live emoji reactions on the host machine.", $tags="", $link="")
+  Container(WorkshopLiveInteractionTool.ParticipantSPA, "Participant SPA", $techn="HTML/CSS/JavaScript", $descr="Participant-facing UI served from static files.", $tags="", $link="")
+  Container(WorkshopLiveInteractionTool.HostSPA, "Host SPA", $techn="HTML/CSS/JavaScript", $descr="Host control panel served from static files.", $tags="", $link="")
+}
+
+Rel(Participant, WorkshopLiveInteractionTool.ParticipantSPA, "Uses in browser", $techn="", $tags="", $link="")
+Rel(Host, WorkshopLiveInteractionTool.HostSPA, "Uses in browser", $techn="", $tags="", $link="")
+Rel(Host, WorkshopLiveInteractionTool.TrainingDaemon, "Starts and monitors locally", $techn="", $tags="", $link="")
+Rel(Host, WorkshopLiveInteractionTool.EmojiOverlay, "Starts locally", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.ParticipantSPA, WorkshopLiveInteractionTool.FastAPIBackend, "Calls public REST and WebSocket APIs", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.ParticipantSPA, Nominatim, "Reverse geocodes location", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.HostSPA, WorkshopLiveInteractionTool.FastAPIBackend, "Calls host REST and WebSocket APIs", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.EmojiOverlay, WorkshopLiveInteractionTool.FastAPIBackend, "Receives live emoji reactions", $techn="", $tags="", $link="")
+Rel(victormacosaddons, WorkshopLiveInteractionTool.TrainingDaemon, "Writes transcript files read by", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon, WorkshopLiveInteractionTool.FastAPIBackend, "Polls, syncs, uploads, and publishes", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon, AnthropicClaudeAPI, "Requests LLM completions", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.FastAPIBackend, GoogleDrive, "Downloads exported slide PDFs", $techn="", $tags="", $link="")
+
+SHOW_LEGEND(true)
+hide stereotypes
+@enduml
