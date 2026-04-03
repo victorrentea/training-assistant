@@ -1,5 +1,6 @@
 import base64
 import binascii
+import hashlib as _hashlib_mod
 import json
 import logging
 import os
@@ -7,6 +8,7 @@ import secrets
 import time
 import uuid as uuid_mod
 from datetime import datetime, timezone
+from pathlib import Path
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
@@ -38,7 +40,7 @@ from features.ws.daemon_protocol import (
     MSG_TOKEN_USAGE, MSG_NOTES_CONTENT, MSG_SLIDES_CURRENT, MSG_SLIDES_CLEAR,
     MSG_TRANSCRIPTION_LANGUAGE_STATUS, MSG_TIMING_EVENT, MSG_STATE_RESTORE,
     MSG_ACTIVITY_LOG, MSG_SESSION_FOLDERS,
-    MSG_GLOBAL_STATE_SAVED,
+    MSG_GLOBAL_STATE_SAVED, MSG_RELOAD,
 )
 
 router = APIRouter()
@@ -454,6 +456,21 @@ async def _handle_state_restore(data):
     logger.info("State restored via WS with %d participants", restored_count)
 
 
+_SYNC_EXCLUDED = {"version.js", "deploy-info.json", "work-hours.js"}
+
+def _build_static_hashes() -> dict[str, str]:
+    """Build {relative_path: md5_hex} for all files in static/ (recursive)."""
+    static_dir = Path(__file__).resolve().parent.parent.parent / "static"
+    hashes = {}
+    if static_dir.is_dir():
+        for f in static_dir.rglob("*"):
+            if f.is_file() and f.name not in _SYNC_EXCLUDED:
+                rel = str(f.relative_to(static_dir))
+                md5 = _hashlib_mod.md5(f.read_bytes()).hexdigest()
+                hashes[rel] = md5
+    return hashes
+
+
 async def _build_state_snapshot() -> dict:
     """Build a state snapshot dict for pushing to daemon."""
     from features.snapshot.router import _serialize_state
@@ -529,6 +546,12 @@ async def _handle_global_state_saved(data):
         state.daemon_global_state_acks[request_id] = data
 
 
+async def _handle_reload(data):
+    """Daemon requests all participant browsers to reload (static files updated)."""
+    logger.info("Daemon triggered browser reload (static files updated)")
+    await broadcast({"type": "reload"})
+
+
 _DAEMON_MSG_HANDLERS = {
     MSG_SLIDES_CATALOG: _handle_daemon_slides_catalog,
     MSG_SLIDE_INVALIDATED: _handle_daemon_slide_invalidated,
@@ -550,6 +573,7 @@ _DAEMON_MSG_HANDLERS = {
     MSG_ACTIVITY_LOG: _handle_activity_log,
     MSG_SESSION_FOLDERS: _handle_session_folders,
     MSG_GLOBAL_STATE_SAVED: _handle_global_state_saved,
+    MSG_RELOAD: _handle_reload,
 }
 
 
@@ -575,6 +599,13 @@ async def daemon_websocket_endpoint(websocket: WebSocket):
     state.needs_restore = False
     logger.info("Daemon WS connected")
     await broadcast({"type": "slides_catalog_changed"})
+
+    # Send static file inventory for daemon to diff and upload changes
+    try:
+        static_hashes = _build_static_hashes()
+        await websocket.send_json({"type": "sync_files", "static_hashes": static_hashes, "pdf_slugs": {}})
+    except Exception:
+        logger.warning("Failed to send sync_files to daemon")
 
     # Re-deliver any pending session request that was not yet processed (e.g. sent before WS drop)
     if state.session_request:

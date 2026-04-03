@@ -43,6 +43,12 @@ MSG_STATUS = "status"
 MSG_SLIDE_LOG = "slide_log"
 MSG_KICKED = "kicked"
 
+# --- Static file sync (backend → daemon) ---
+MSG_SYNC_FILES = "sync_files"
+
+# --- Static file sync (daemon → backend) ---
+MSG_RELOAD = "reload"
+
 
 async def push_to_daemon(msg: dict) -> bool:
     """Send a JSON message to the daemon via WebSocket. Returns True if sent."""
