@@ -22,6 +22,7 @@ DEFAULT_MINUTES    = 60
 DEFAULT_TRANSCRIPT_MINUTES = 30  # default lookback window for transcript stats & summaries
 MAX_CHARS_TO_CLAUDE = 60_000
 DAEMON_POLL_INTERVAL = 1  # seconds
+DAEMON_HOST_PORT = int(os.environ.get("DAEMON_HOST_PORT", "8081"))
 
 
 # ---------------------------------------------------------------------------
