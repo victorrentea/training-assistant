@@ -2170,7 +2170,11 @@
     if (!input) return;
     const word = input.value.trim();
     if (!word || !ws) return;
-    sendWS('wordcloud_word', { word });
+    fetch(API('/wordcloud/word'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ word })
+    });
     input.value = '';
     const btn = document.getElementById('wc-host-submit');
     if (btn) btn.disabled = true;
