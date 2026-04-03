@@ -3317,55 +3317,10 @@
       }
     },
     "/{session_id}/api/participant/{path}": {
-      "delete": {
+      "put": {
         "summary": "Participant Proxy",
         "description": "Forward all /api/participant/* calls to daemon via WS proxy.",
-        "operationId": "participant_proxy__session_id__api_participant__path__delete",
-        "parameters": [
-          {
-            "name": "path",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Path"
-            }
-          },
-          {
-            "name": "session_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Session Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "get": {
-        "summary": "Participant Proxy",
-        "description": "Forward all /api/participant/* calls to daemon via WS proxy.",
-        "operationId": "participant_proxy__session_id__api_participant__path__delete",
+        "operationId": "participant_proxy__session_id__api_participant__path__put",
         "parameters": [
           {
             "name": "path",
@@ -3410,7 +3365,7 @@
       "post": {
         "summary": "Participant Proxy",
         "description": "Forward all /api/participant/* calls to daemon via WS proxy.",
-        "operationId": "participant_proxy__session_id__api_participant__path__delete",
+        "operationId": "participant_proxy__session_id__api_participant__path__put",
         "parameters": [
           {
             "name": "path",
@@ -3452,10 +3407,10 @@
           }
         }
       },
-      "put": {
+      "get": {
         "summary": "Participant Proxy",
         "description": "Forward all /api/participant/* calls to daemon via WS proxy.",
-        "operationId": "participant_proxy__session_id__api_participant__path__delete",
+        "operationId": "participant_proxy__session_id__api_participant__path__put",
         "parameters": [
           {
             "name": "path",
@@ -3500,7 +3455,52 @@
       "patch": {
         "summary": "Participant Proxy",
         "description": "Forward all /api/participant/* calls to daemon via WS proxy.",
-        "operationId": "participant_proxy__session_id__api_participant__path__delete",
+        "operationId": "participant_proxy__session_id__api_participant__path__put",
+        "parameters": [
+          {
+            "name": "path",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Path"
+            }
+          },
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Participant Proxy",
+        "description": "Forward all /api/participant/* calls to daemon via WS proxy.",
+        "operationId": "participant_proxy__session_id__api_participant__path__put",
         "parameters": [
           {
             "name": "path",
