@@ -43,6 +43,9 @@ from features.ws.daemon_protocol import (
     MSG_GLOBAL_STATE_SAVED, MSG_RELOAD,
     MSG_PROXY_RESPONSE,
     MSG_PARTICIPANT_REGISTERED, MSG_PARTICIPANT_LOCATION, MSG_PARTICIPANT_AVATAR_UPDATED,
+    MSG_BROADCAST,
+    MSG_WORDCLOUD_STATE_SYNC,
+    MSG_SCORE_AWARD,
 )
 from features.ws.proxy_bridge import handle_proxy_response
 
@@ -603,6 +606,40 @@ async def _handle_participant_avatar_updated(data: dict):
         await broadcast_state()
 
 
+async def _handle_broadcast(data: dict):
+    """Fan out a daemon broadcast event to all connected participant WSs."""
+    event = data.get("event")
+    if not event:
+        return
+    msg = json.dumps(event)
+    for pid, ws in list(state.participants.items()):
+        if pid.startswith("__"):  # skip __host__, __overlay__
+            continue
+        try:
+            await ws.send_text(msg)
+        except Exception:
+            pass
+
+
+async def _handle_wordcloud_state_sync(data: dict):
+    """Keep Railway's AppState word cloud fields in sync with daemon."""
+    if "words" in data:
+        state.wordcloud_words = data["words"]
+    if "word_order" in data:
+        state.wordcloud_word_order = data["word_order"]
+    if "topic" in data:
+        state.wordcloud_topic = data["topic"]
+
+
+async def _handle_score_award(data: dict):
+    """Award points to a participant (daemon → Railway, transitional)."""
+    pid = data.get("participant_id")
+    points = data.get("points", 0)
+    if pid and points:
+        state.add_score(pid, points)
+        await broadcast_state()
+
+
 _DAEMON_MSG_HANDLERS = {
     MSG_SLIDES_CATALOG: _handle_daemon_slides_catalog,
     MSG_SLIDE_INVALIDATED: _handle_daemon_slide_invalidated,
@@ -629,6 +666,9 @@ _DAEMON_MSG_HANDLERS = {
     MSG_PARTICIPANT_REGISTERED: _handle_participant_registered,
     MSG_PARTICIPANT_LOCATION: _handle_participant_location,
     MSG_PARTICIPANT_AVATAR_UPDATED: _handle_participant_avatar_updated,
+    MSG_BROADCAST: _handle_broadcast,
+    MSG_WORDCLOUD_STATE_SYNC: _handle_wordcloud_state_sync,
+    MSG_SCORE_AWARD: _handle_score_award,
 }
 
 
