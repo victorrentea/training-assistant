@@ -341,13 +341,18 @@ def run() -> None:
     from daemon.wordcloud.router import set_ws_client as set_wc_ws
     set_wc_ws(ws_client)
 
+    from daemon.qa.router import set_ws_client as set_qa_ws
+    set_qa_ws(ws_client)
+
     # State push handler — daemon receives current state from Railway on connect
     from daemon.participant.state import participant_state
     from daemon.wordcloud.state import wordcloud_state
+    from daemon.qa.state import qa_state
 
     def _handle_daemon_state_push(data):
         participant_state.sync_from_restore(data)
         wordcloud_state.sync_from_restore(data)
+        qa_state.sync_from_restore(data)
 
     ws_client.register_handler("daemon_state_push", _handle_daemon_state_push)
 
