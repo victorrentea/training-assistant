@@ -49,6 +49,15 @@ MSG_SYNC_FILES = "sync_files"
 # --- Static file sync (daemon → backend) ---
 MSG_RELOAD = "reload"
 
+# --- Proxy (bidirectional) ---
+MSG_PROXY_REQUEST = "proxy_request"
+MSG_PROXY_RESPONSE = "proxy_response"
+
+# --- Identity events (daemon → backend) ---
+MSG_PARTICIPANT_REGISTERED = "participant_registered"
+MSG_PARTICIPANT_LOCATION = "participant_location"
+MSG_PARTICIPANT_AVATAR_UPDATED = "participant_avatar_updated"
+
 
 async def push_to_daemon(msg: dict) -> bool:
     """Send a JSON message to the daemon via WebSocket. Returns True if sent."""
