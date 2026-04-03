@@ -719,6 +719,10 @@ async def daemon_websocket_endpoint(websocket: WebSocket):
             "wordcloud_words": state.wordcloud_words,
             "wordcloud_word_order": state.wordcloud_word_order,
             "wordcloud_topic": state.wordcloud_topic,
+            "qa_questions": {
+                qid: {**q, "upvoters": list(q["upvoters"])}
+                for qid, q in state.qa_questions.items()
+            },
         })
     except Exception:
         logger.warning("Failed to send daemon_state_push")
