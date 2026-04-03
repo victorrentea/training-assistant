@@ -191,6 +191,11 @@ workspace "Workshop Live Interaction Tool" "Structurizr DSL model aligned to the
             autoLayout lr
         }
 
+        container workshop "C2TrainingDaemonOnly" "Single-container view for the Training Daemon." {
+            include trainingDaemon
+            autoLayout lr
+        }
+
         component fastapi "C3BackendOverview" "Main backend components registered in main.py." {
             include *
             autoLayout lr
