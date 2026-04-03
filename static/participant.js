@@ -476,7 +476,7 @@ function closeEmojiPopup(ev) {
         if (filename && !rejectedAvatars.includes(filename)) {
             rejectedAvatars.push(filename);
         }
-        sendWS('refresh_avatar', { rejected: rejectedAvatars });
+        participantApi('avatar', { rejected: rejectedAvatars });
         // Roll the dice button
         refreshBtn.classList.add('rolling');
         setTimeout(function() { refreshBtn.classList.remove('rolling'); }, 600);
@@ -2440,7 +2440,7 @@ ${html}
         localStorage.setItem(LS_KEY, myName);
         localStorage.setItem(LS_CUSTOM_NAME_KEY, '1');
         document.getElementById('display-name').textContent = myName;
-        sendWS('set_name', { name: myName });
+        participantApi('name', { name: myName });
     }
     document.getElementById('display-name').style.display = '';
     document.getElementById('name-edit-wrap').style.display = 'none';
@@ -2462,7 +2462,7 @@ ${html}
   }
 
   function sendLocation(locationStr) {
-    sendWS('location', { location: locationStr });
+    participantApi('location', { location: locationStr });
   }
 
   function updateLocationPrompt() {
@@ -2538,7 +2538,7 @@ ${html}
       document.getElementById('display-name').textContent = myName;
 
       // Send name as first message
-      sendWS('set_name', { name: myName });
+      participantApi('name', { name: myName });
 
       // Show 🔔 button for auto-joiners who haven't been asked for permission yet
       if ('Notification' in window && Notification.permission === 'default' && !_notifBtnBound) {

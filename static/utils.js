@@ -10,6 +10,18 @@ function sendWS(type, payload) {
   }
 }
 
+/** POST to participant REST API (identity endpoints) */
+function participantApi(path, body) {
+  return fetch(`/${sessionId}/api/participant/${path}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Participant-ID': myUUID
+    },
+    body: JSON.stringify(body)
+  });
+}
+
 /** Enable or disable a button with opacity feedback */
 function setButtonEnabled(btn, enabled) {
   if (!btn) return;
