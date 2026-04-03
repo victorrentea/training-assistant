@@ -45,6 +45,7 @@ from features.upload import router as upload
 from features.upload.router import public_router as upload_public_router
 from features.feedback import router as feedback
 from features.internal.router import router as internal_router
+from features.ws.proxy_bridge import participant_proxy_router
 
 import core.state_builder  # noqa: registers core state builder
 import features.poll.state_builder  # noqa
@@ -220,6 +221,7 @@ session_participant.include_router(poll_public_router)       # /api/suggest-name
 session_participant.include_router(slides.public_router)     # /api/slides, /api/slides/file/{slug}, /api/slides/current
 session_participant.include_router(summary.public_router)    # /api/summary, /api/notes, /api/summary/force
 session_participant.include_router(upload_public_router)     # /api/upload (participant file upload)
+session_participant.include_router(participant_proxy_router)  # /api/participant/* → daemon proxy
 app.include_router(session_participant)
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
