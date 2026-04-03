@@ -46,6 +46,7 @@ from features.ws.daemon_protocol import (
     MSG_BROADCAST,
     MSG_WORDCLOUD_STATE_SYNC,
     MSG_SCORE_AWARD,
+    MSG_DAEMON_STATE_PUSH,
 )
 from features.ws.proxy_bridge import handle_proxy_response
 
@@ -701,6 +702,26 @@ async def daemon_websocket_endpoint(websocket: WebSocket):
         await websocket.send_json({"type": "sync_files", "static_hashes": static_hashes, "pdf_slugs": {}})
     except Exception:
         logger.warning("Failed to send sync_files to daemon")
+
+    # Push current state to daemon so it can serve participant/host requests
+    try:
+        await websocket.send_json({
+            "type": MSG_DAEMON_STATE_PUSH,
+            "participant_names": state.participant_names,
+            "participant_avatars": state.participant_avatars,
+            "participant_universes": state.participant_universes,
+            "scores": dict(state.scores),
+            "locations": dict(state.locations),
+            "mode": state.mode,
+            "debate_phase": state.debate_phase,
+            "debate_sides": dict(state.debate_sides),
+            "current_activity": state.current_activity.value if hasattr(state.current_activity, 'value') else str(state.current_activity),
+            "wordcloud_words": state.wordcloud_words,
+            "wordcloud_word_order": state.wordcloud_word_order,
+            "wordcloud_topic": state.wordcloud_topic,
+        })
+    except Exception:
+        logger.warning("Failed to send daemon_state_push")
 
     # Re-deliver any pending session request that was not yet processed (e.g. sent before WS drop)
     if state.session_request:
