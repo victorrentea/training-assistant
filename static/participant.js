@@ -2877,6 +2877,9 @@ ${html}
       case 'slides_catalog_changed':
         _refreshSlidesCatalog({ autoLoadSelected: false }).catch(() => {});
         break;
+      case 'wordcloud_updated':
+        renderWordCloudScreen(msg.words || {}, msg.word_order || [], msg.topic || '');
+        break;
       case 'name_rejected': {
         const editInput = document.getElementById('name-edit-input');
         if (editInput) {
@@ -3105,7 +3108,7 @@ ${html}
     // When called from onclick, existingWord is an Event — ignore it
     const word = (typeof existingWord === 'string' && existingWord) || (input && input.value.trim());
     if (!word) return;
-    sendWS('wordcloud_word', { word });
+    participantApi('wordcloud/word', { word });
     if (input && typeof existingWord !== 'string') {
       input.value = '';
       const goBtn = document.getElementById('wc-go');
