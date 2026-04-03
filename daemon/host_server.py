@@ -68,6 +68,11 @@ def create_app(backend_url: str) -> FastAPI:
     # --- Participant identity router (must come BEFORE catch-all to avoid infinite loop) ---
     app.include_router(participant_router)
 
+    from daemon.wordcloud.router import participant_router as wc_participant_router
+    from daemon.wordcloud.router import host_router as wc_host_router
+    app.include_router(wc_participant_router)  # /api/participant/wordcloud/*
+    app.include_router(wc_host_router)         # /api/{session_id}/wordcloud/*
+
     # --- WebSocket proxy ---
     @app.websocket("/ws/{path:path}")
     async def ws_proxy(websocket: WebSocket, path: str):
