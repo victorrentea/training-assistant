@@ -1,0 +1,34 @@
+@startuml
+title <size:24>System Context View: Workshop Live Interaction Tool</size>\n<size:24>Overall system context.</size>
+
+set separator none
+left to right direction
+
+<style>
+  root {
+    BackgroundColor: #ffffff
+    FontColor: #444444
+  }
+</style>
+
+!include <C4/C4>
+!include <C4/C4_Context>
+
+Person(Host, "Host", $descr="Runs the workshop, controls activities, and monitors the live session.", $tags="", $link="")
+Person(Participant, "Participant", $descr="Joins from a browser, votes, reacts, uploads, and follows the session.", $tags="", $link="")
+System(victormacosaddons, "victor-macos-addons", $descr="Produces normalized transcript files on the trainer's Mac.", $tags="", $link="")
+System(AnthropicClaudeAPI, "Anthropic Claude API", $descr="LLM used for quiz generation, debate cleanup, and summaries.", $tags="", $link="")
+System(Nominatim, "Nominatim", $descr="Reverse geocodes GPS coordinates into city and country.", $tags="", $link="")
+System(GoogleDrive, "Google Drive", $descr="Hosts exported slide PDFs consumed by the backend.", $tags="", $link="")
+System(WorkshopLiveInteractionTool, "Workshop Live Interaction Tool", $descr="Self-hosted real-time audience interaction platform.", $tags="", $link="")
+
+Rel(Participant, WorkshopLiveInteractionTool, "Uses in browser", $techn="", $tags="", $link="")
+Rel(Host, WorkshopLiveInteractionTool, "Uses in browser", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool, Nominatim, "Reverse geocodes location", $techn="", $tags="", $link="")
+Rel(victormacosaddons, WorkshopLiveInteractionTool, "Writes transcript files read by", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool, AnthropicClaudeAPI, "Requests LLM completions", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool, GoogleDrive, "Downloads exported slide PDFs", $techn="", $tags="", $link="")
+
+SHOW_LEGEND(true)
+hide stereotypes
+@enduml

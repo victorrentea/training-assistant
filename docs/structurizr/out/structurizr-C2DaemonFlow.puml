@@ -1,0 +1,36 @@
+@startuml
+title <size:24>Container View: Workshop Live Interaction Tool</size>\n<size:24>Focused container view around the daemon and AI/slides integrations.</size>
+
+set separator none
+left to right direction
+
+<style>
+  root {
+    BackgroundColor: #ffffff
+    FontColor: #444444
+  }
+</style>
+
+!include <C4/C4>
+!include <C4/C4_Context>
+!include <C4/C4_Container>
+
+Person(Host, "Host", $descr="Runs the workshop, controls activities, and monitors the live session.", $tags="", $link="")
+System(victormacosaddons, "victor-macos-addons", $descr="Produces normalized transcript files on the trainer's Mac.", $tags="", $link="")
+System(AnthropicClaudeAPI, "Anthropic Claude API", $descr="LLM used for quiz generation, debate cleanup, and summaries.", $tags="", $link="")
+System(GoogleDrive, "Google Drive", $descr="Hosts exported slide PDFs consumed by the backend.", $tags="", $link="")
+
+System_Boundary("WorkshopLiveInteractionTool_boundary", "Workshop Live Interaction Tool", $tags="") {
+  Container(WorkshopLiveInteractionTool.FastAPIBackend, "FastAPI Backend", $techn="Python 3.12 / FastAPI / Uvicorn", $descr="REST endpoints, WebSocket hub, session routing, and in-memory state.", $tags="", $link="")
+  Container(WorkshopLiveInteractionTool.TrainingDaemon, "Training Daemon", $techn="Python 3.12 CLI", $descr="Background worker running on the host machine.", $tags="", $link="")
+}
+
+Rel(Host, WorkshopLiveInteractionTool.TrainingDaemon, "Starts and monitors locally", $techn="", $tags="", $link="")
+Rel(victormacosaddons, WorkshopLiveInteractionTool.TrainingDaemon, "Writes transcript files read by", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon, WorkshopLiveInteractionTool.FastAPIBackend, "Polls, syncs, uploads, and publishes", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon, AnthropicClaudeAPI, "Requests LLM completions", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.FastAPIBackend, GoogleDrive, "Downloads exported slide PDFs", $techn="", $tags="", $link="")
+
+SHOW_LEGEND(true)
+hide stereotypes
+@enduml

@@ -1,0 +1,91 @@
+@startuml
+title <size:24>Component View: Workshop Live Interaction Tool - Training Daemon</size>\n<size:24>Main daemon subsystems present in the repository.</size>
+
+set separator none
+left to right direction
+
+<style>
+  root {
+    BackgroundColor: #ffffff
+    FontColor: #444444
+  }
+</style>
+
+!include <C4/C4>
+!include <C4/C4_Context>
+!include <C4/C4_Container>
+!include <C4/C4_Component>
+
+System(AnthropicClaudeAPI, "Anthropic Claude API", $descr="LLM used for quiz generation, debate cleanup, and summaries.", $tags="", $link="")
+
+System_Boundary("WorkshopLiveInteractionTool_boundary", "Workshop Live Interaction Tool", $tags="") {
+  Container_Boundary("WorkshopLiveInteractionTool.TrainingDaemon_boundary", "Training Daemon", $tags="") {
+    Component(WorkshopLiveInteractionTool.TrainingDaemon.Orchestrator, "Orchestrator", $techn="daemon/__main__.py", $descr="Main loop, startup binding, polling, and restart coordination.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.TrainingDaemon.ConfigHTTP, "Config + HTTP", $techn="daemon/config.py + daemon/http.py", $descr="Environment config and shared HTTP helpers.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.TrainingDaemon.DaemonWSClient, "Daemon WS Client", $techn="daemon/ws_client.py", $descr="WebSocket channel used for daemon sync and uploads.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.TrainingDaemon.SessionState, "Session State", $techn="daemon/session_state.py", $descr="Persists daemon stack and synchronizes session snapshots with backend.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.TrainingDaemon.QuizGenerator, "Quiz Generator", $techn="daemon/quiz/generator.py", $descr="Builds quiz suggestions from transcript or topic context.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.TrainingDaemon.QuizHistory, "Quiz History", $techn="daemon/quiz/history.py", $descr="Prevents repeated quiz questions.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.TrainingDaemon.QuizPollAPI, "Quiz Poll API", $techn="daemon/quiz/poll_api.py", $descr="Polls quiz requests and posts previews/status.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.TrainingDaemon.DebateAICleanup, "Debate AI Cleanup", $techn="daemon/debate/ai_cleanup.py", $descr="Cleans up debate arguments and posts AI suggestions.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.TrainingDaemon.SummaryLoop, "Summary Loop", $techn="daemon/summary/loop.py", $descr="Triggers summary generation cycles and publishes results.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.TrainingDaemon.Summarizer, "Summarizer", $techn="daemon/summary/summarizer.py", $descr="Extracts discussion points and notes from transcript deltas.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.TrainingDaemon.TranscriptLoader, "Transcript Loader", $techn="daemon/transcript/loader.py", $descr="Loads and filters normalized transcript windows.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.TrainingDaemon.TranscriptParser, "Transcript Parser", $techn="daemon/transcript/parser.py", $descr="Parses transcript files such as txt, vtt, and srt.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.TrainingDaemon.TranscriptSession, "Transcript Session", $techn="daemon/transcript/session.py", $descr="Computes active transcript windows per session.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.TrainingDaemon.TranscriptState, "Transcript State", $techn="daemon/transcript/state.py", $descr="Tracks transcript processing state.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.TrainingDaemon.SlidesLoop, "Slides Loop", $techn="daemon/slides/loop.py", $descr="Polls for slide work and orchestrates conversions/uploads.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.TrainingDaemon.SlidesCatalog, "Slides Catalog", $techn="daemon/slides/catalog.py", $descr="Reads and resolves slide catalog entries.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.TrainingDaemon.SlidesConvert, "Slides Convert", $techn="daemon/slides/convert.py", $descr="Converts PPTX to PDF via host tooling.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.TrainingDaemon.SlidesUpload, "Slides Upload", $techn="daemon/slides/upload.py", $descr="Uploads converted slide PDFs to the backend.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.TrainingDaemon.SlidesDaemon, "Slides Daemon", $techn="daemon/slides/daemon.py", $descr="Coordinates slide upload workflow over WebSocket.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.TrainingDaemon.MaterialsMirror, "Materials Mirror", $techn="daemon/materials/mirror.py", $descr="Mirrors project files for backend-side materials access.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.TrainingDaemon.RAGIndexer, "RAG Indexer", $techn="daemon/rag/indexer.py", $descr="Indexes local project files for retrieval.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.TrainingDaemon.RAGRetriever, "RAG Retriever", $techn="daemon/rag/retriever.py", $descr="Retrieves relevant context for quiz generation.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.TrainingDaemon.ProjectFilesScanner, "Project Files Scanner", $techn="daemon/rag/project_files.py", $descr="Scans repository files for RAG and tooling.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.TrainingDaemon.LLMAdapter, "LLM Adapter", $techn="daemon/llm/adapter.py", $descr="Claude client wrapper with token accounting.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.TrainingDaemon.ProcessLock, "Process Lock", $techn="daemon/lock.py", $descr="Single-instance PID lock and heartbeat.", $tags="", $link="")
+  }
+
+  Container(WorkshopLiveInteractionTool.FastAPIBackend, "FastAPI Backend", $techn="Python 3.12 / FastAPI / Uvicorn", $descr="REST endpoints, WebSocket hub, session routing, and in-memory state.", $tags="", $link="")
+}
+
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.Orchestrator, WorkshopLiveInteractionTool.TrainingDaemon.ConfigHTTP, "Uses", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.Orchestrator, WorkshopLiveInteractionTool.TrainingDaemon.DaemonWSClient, "Maintains daemon WebSocket", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.Orchestrator, WorkshopLiveInteractionTool.TrainingDaemon.SessionState, "Loads and saves daemon/session state", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.Orchestrator, WorkshopLiveInteractionTool.TrainingDaemon.SummaryLoop, "Triggers", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.Orchestrator, WorkshopLiveInteractionTool.TrainingDaemon.SlidesLoop, "Triggers", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.Orchestrator, WorkshopLiveInteractionTool.TrainingDaemon.MaterialsMirror, "Triggers", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.Orchestrator, WorkshopLiveInteractionTool.TrainingDaemon.ProcessLock, "Maintains", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.Orchestrator, WorkshopLiveInteractionTool.TrainingDaemon.TranscriptSession, "Computes active windows with", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.ConfigHTTP, WorkshopLiveInteractionTool.FastAPIBackend, "Calls host-protected HTTP endpoints", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.DaemonWSClient, WorkshopLiveInteractionTool.FastAPIBackend, "Connects to daemon WebSocket endpoint", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.SessionState, WorkshopLiveInteractionTool.FastAPIBackend, "Synchronizes snapshots and active session", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.QuizPollAPI, WorkshopLiveInteractionTool.FastAPIBackend, "Polls quiz endpoints and posts preview/status", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.QuizPollAPI, WorkshopLiveInteractionTool.TrainingDaemon.QuizGenerator, "Triggers generation", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.QuizGenerator, WorkshopLiveInteractionTool.TrainingDaemon.TranscriptLoader, "Reads transcript context from", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.QuizGenerator, WorkshopLiveInteractionTool.TrainingDaemon.RAGRetriever, "Retrieves project context from", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.QuizGenerator, WorkshopLiveInteractionTool.TrainingDaemon.QuizHistory, "Checks against", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.QuizGenerator, WorkshopLiveInteractionTool.TrainingDaemon.LLMAdapter, "Requests quiz suggestions from", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.DebateAICleanup, WorkshopLiveInteractionTool.FastAPIBackend, "Polls AI cleanup endpoints", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.DebateAICleanup, WorkshopLiveInteractionTool.TrainingDaemon.LLMAdapter, "Requests cleanup suggestions from", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.SummaryLoop, WorkshopLiveInteractionTool.TrainingDaemon.Summarizer, "Triggers", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.SummaryLoop, WorkshopLiveInteractionTool.FastAPIBackend, "Posts summaries and transcript status", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.Summarizer, WorkshopLiveInteractionTool.TrainingDaemon.TranscriptLoader, "Reads transcript deltas from", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.Summarizer, WorkshopLiveInteractionTool.TrainingDaemon.LLMAdapter, "Requests summary output from", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.TranscriptLoader, WorkshopLiveInteractionTool.TrainingDaemon.TranscriptParser, "Parses files through", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.TranscriptLoader, WorkshopLiveInteractionTool.TrainingDaemon.TranscriptState, "Tracks processing through", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.SlidesLoop, WorkshopLiveInteractionTool.TrainingDaemon.SlidesCatalog, "Reads catalog from", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.SlidesLoop, WorkshopLiveInteractionTool.TrainingDaemon.SlidesConvert, "Triggers PDF conversion in", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.SlidesLoop, WorkshopLiveInteractionTool.TrainingDaemon.SlidesDaemon, "Coordinates upload flow with", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.SlidesDaemon, WorkshopLiveInteractionTool.TrainingDaemon.SlidesUpload, "Delegates uploads to", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.SlidesUpload, WorkshopLiveInteractionTool.TrainingDaemon.DaemonWSClient, "Streams slide artifacts through", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.MaterialsMirror, WorkshopLiveInteractionTool.TrainingDaemon.ProjectFilesScanner, "Scans repository through", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.MaterialsMirror, WorkshopLiveInteractionTool.FastAPIBackend, "Synchronizes mirrored materials", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.RAGIndexer, WorkshopLiveInteractionTool.TrainingDaemon.ProjectFilesScanner, "Indexes files from", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.RAGRetriever, WorkshopLiveInteractionTool.TrainingDaemon.RAGIndexer, "Queries", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.LLMAdapter, AnthropicClaudeAPI, "Calls", $techn="", $tags="", $link="")
+
+SHOW_LEGEND(true)
+hide stereotypes
+@enduml

@@ -1,0 +1,48 @@
+graph LR
+  linkStyle default fill:#ffffff
+
+  subgraph diagram ["Container View: Workshop Live Interaction Tool"]
+    style diagram fill:#ffffff,stroke:#ffffff
+
+    1["<div style='font-weight: bold'>Host</div><div style='font-size: 70%; margin-top: 0px'>[Person]</div><div style='font-size: 80%; margin-top:10px'>Runs the workshop, controls<br />activities, and monitors the<br />live session.</div>"]
+    style 1 fill:#0b3d2c,stroke:#072a1e,color:#ffffff
+    2["<div style='font-weight: bold'>Participant</div><div style='font-size: 70%; margin-top: 0px'>[Person]</div><div style='font-size: 80%; margin-top:10px'>Joins from a browser, votes,<br />reacts, uploads, and follows<br />the session.</div>"]
+    style 2 fill:#0b3d2c,stroke:#072a1e,color:#ffffff
+    3["<div style='font-weight: bold'>victor-macos-addons</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Produces normalized<br />transcript files on the<br />trainer's Mac.</div>"]
+    style 3 fill:#1d6f42,stroke:#144d2e,color:#ffffff
+    4["<div style='font-weight: bold'>Anthropic Claude API</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>LLM used for quiz generation,<br />debate cleanup, and<br />summaries.</div>"]
+    style 4 fill:#1d6f42,stroke:#144d2e,color:#ffffff
+    5["<div style='font-weight: bold'>Nominatim</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Reverse geocodes GPS<br />coordinates into city and<br />country.</div>"]
+    style 5 fill:#1d6f42,stroke:#144d2e,color:#ffffff
+    6["<div style='font-weight: bold'>Google Drive</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Hosts exported slide PDFs<br />consumed by the backend.</div>"]
+    style 6 fill:#1d6f42,stroke:#144d2e,color:#ffffff
+
+    subgraph 7 ["Workshop Live Interaction Tool"]
+      style 7 fill:#ffffff,stroke:#144d2e,color:#144d2e
+
+      10["<div style='font-weight: bold'>FastAPI Backend</div><div style='font-size: 70%; margin-top: 0px'>[Container: Python 3.12 / FastAPI / Uvicorn]</div><div style='font-size: 80%; margin-top:10px'>REST endpoints, WebSocket<br />hub, session routing, and<br />in-memory state.</div>"]
+      style 10 fill:#5aa05a,stroke:#3e703e,color:#ffffff
+      31["<div style='font-weight: bold'>Training Daemon</div><div style='font-size: 70%; margin-top: 0px'>[Container: Python 3.12 CLI]</div><div style='font-size: 80%; margin-top:10px'>Background worker running on<br />the host machine.</div>"]
+      style 31 fill:#5aa05a,stroke:#3e703e,color:#ffffff
+      57["<div style='font-weight: bold'>Emoji Overlay</div><div style='font-size: 70%; margin-top: 0px'>[Container: Swift / AppKit]</div><div style='font-size: 80%; margin-top:10px'>Always-on-top overlay for<br />live emoji reactions on the<br />host machine.</div>"]
+      style 57 fill:#5aa05a,stroke:#3e703e,color:#ffffff
+      8["<div style='font-weight: bold'>Participant SPA</div><div style='font-size: 70%; margin-top: 0px'>[Container: HTML/CSS/JavaScript]</div><div style='font-size: 80%; margin-top:10px'>Participant-facing UI served<br />from static files.</div>"]
+      style 8 fill:#5aa05a,stroke:#3e703e,color:#ffffff
+      9["<div style='font-weight: bold'>Host SPA</div><div style='font-size: 70%; margin-top: 0px'>[Container: HTML/CSS/JavaScript]</div><div style='font-size: 80%; margin-top:10px'>Host control panel served<br />from static files.</div>"]
+      style 9 fill:#5aa05a,stroke:#3e703e,color:#ffffff
+    end
+
+    2-. "<div>Uses in browser</div><div style='font-size: 70%'></div>" .->8
+    1-. "<div>Uses in browser</div><div style='font-size: 70%'></div>" .->9
+    1-. "<div>Starts and monitors locally</div><div style='font-size: 70%'></div>" .->31
+    1-. "<div>Starts locally</div><div style='font-size: 70%'></div>" .->57
+    8-. "<div>Calls public REST and<br />WebSocket APIs</div><div style='font-size: 70%'></div>" .->10
+    8-. "<div>Reverse geocodes location</div><div style='font-size: 70%'></div>" .->5
+    9-. "<div>Calls host REST and WebSocket<br />APIs</div><div style='font-size: 70%'></div>" .->10
+    57-. "<div>Receives live emoji reactions</div><div style='font-size: 70%'></div>" .->10
+    3-. "<div>Writes transcript files read<br />by</div><div style='font-size: 70%'></div>" .->31
+    31-. "<div>Polls, syncs, uploads, and<br />publishes</div><div style='font-size: 70%'></div>" .->10
+    31-. "<div>Requests LLM completions</div><div style='font-size: 70%'></div>" .->4
+    10-. "<div>Downloads exported slide PDFs</div><div style='font-size: 70%'></div>" .->6
+
+  end

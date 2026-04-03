@@ -1,0 +1,58 @@
+graph LR
+  linkStyle default fill:#ffffff
+
+  subgraph diagram ["Component View: Workshop Live Interaction Tool - FastAPI Backend"]
+    style diagram fill:#ffffff,stroke:#ffffff
+
+    subgraph 7 ["Workshop Live Interaction Tool"]
+      style 7 fill:#ffffff,stroke:#144d2e,color:#144d2e
+
+      subgraph 10 ["FastAPI Backend"]
+        style 10 fill:#ffffff,stroke:#3e703e,color:#3e703e
+
+        11["<div style='font-weight: bold'>Core Platform</div><div style='font-size: 70%; margin-top: 0px'>[Component: core/*]</div><div style='font-size: 80%; margin-top:10px'>AppState, auth, metrics,<br />versioning, session guards,<br />and messaging registry.</div>"]
+        style 11 fill:#d6e8c8,stroke:#95a28c,color:#10210f
+        12["<div style='font-weight: bold'>WS Router</div><div style='font-size: 70%; margin-top: 0px'>[Component: features/ws/*]</div><div style='font-size: 80%; margin-top:10px'>Host, participant, overlay,<br />and daemon WebSocket<br />endpoints plus proxy bridge.</div>"]
+        style 12 fill:#d6e8c8,stroke:#95a28c,color:#10210f
+        13["<div style='font-weight: bold'>Poll Router</div><div style='font-size: 70%; margin-top: 0px'>[Component: features/poll/*]</div><div style='font-size: 80%; margin-top:10px'>Poll lifecycle, status,<br />correct answers, scoring, and<br />public helpers.</div>"]
+        style 13 fill:#d6e8c8,stroke:#95a28c,color:#10210f
+        14["<div style='font-weight: bold'>Q&A Router</div><div style='font-size: 70%; margin-top: 0px'>[Component: features/qa/*]</div><div style='font-size: 80%; margin-top:10px'>Question edit, delete,<br />answer, and clear lifecycle.</div>"]
+        style 14 fill:#d6e8c8,stroke:#95a28c,color:#10210f
+        15["<div style='font-weight: bold'>Word Cloud Router</div><div style='font-size: 70%; margin-top: 0px'>[Component: features/wordcloud/*]</div><div style='font-size: 80%; margin-top:10px'>Topic changes and reset<br />operations.</div>"]
+        style 15 fill:#d6e8c8,stroke:#95a28c,color:#10210f
+        16["<div style='font-weight: bold'>Code Review Router</div><div style='font-size: 70%; margin-top: 0px'>[Component: features/codereview/*]</div><div style='font-size: 80%; margin-top:10px'>Snippet lifecycle,<br />selections, and line<br />confirmation.</div>"]
+        style 16 fill:#d6e8c8,stroke:#95a28c,color:#10210f
+        17["<div style='font-weight: bold'>Debate Router</div><div style='font-size: 70%; margin-top: 0px'>[Component: features/debate/*]</div><div style='font-size: 80%; margin-top:10px'>Debate phases, AI request<br />lifecycle, and round<br />orchestration.</div>"]
+        style 17 fill:#d6e8c8,stroke:#95a28c,color:#10210f
+        20["<div style='font-weight: bold'>Leaderboard Router</div><div style='font-size: 70%; margin-top: 0px'>[Component: features/leaderboard/*]</div><div style='font-size: 80%; margin-top:10px'>Leaderboard reveal and score<br />reset endpoints.</div>"]
+        style 20 fill:#d6e8c8,stroke:#95a28c,color:#10210f
+        21["<div style='font-weight: bold'>Activity Router</div><div style='font-size: 70%; margin-top: 0px'>[Component: features/activity/*]</div><div style='font-size: 80%; margin-top:10px'>Switches the currently active<br />participant experience.</div>"]
+        style 21 fill:#d6e8c8,stroke:#95a28c,color:#10210f
+      end
+
+      8["<div style='font-weight: bold'>Participant SPA</div><div style='font-size: 70%; margin-top: 0px'>[Container: HTML/CSS/JavaScript]</div><div style='font-size: 80%; margin-top:10px'>Participant-facing UI served<br />from static files.</div>"]
+      style 8 fill:#5aa05a,stroke:#3e703e,color:#ffffff
+      9["<div style='font-weight: bold'>Host SPA</div><div style='font-size: 70%; margin-top: 0px'>[Container: HTML/CSS/JavaScript]</div><div style='font-size: 80%; margin-top:10px'>Host control panel served<br />from static files.</div>"]
+      style 9 fill:#5aa05a,stroke:#3e703e,color:#ffffff
+    end
+
+    12-. "<div>Builds and broadcasts state</div><div style='font-size: 70%'></div>" .->11
+    13-. "<div>Mutates poll state and scores</div><div style='font-size: 70%'></div>" .->11
+    14-. "<div>Mutates Q&A state</div><div style='font-size: 70%'></div>" .->11
+    15-. "<div>Mutates word cloud state</div><div style='font-size: 70%'></div>" .->11
+    16-. "<div>Mutates code review state</div><div style='font-size: 70%'></div>" .->11
+    17-. "<div>Mutates debate state</div><div style='font-size: 70%'></div>" .->11
+    20-. "<div>Updates leaderboard<br />visibility and scores</div><div style='font-size: 70%'></div>" .->11
+    21-. "<div>Updates current activity</div><div style='font-size: 70%'></div>" .->11
+    8-. "<div>Connects as participant</div><div style='font-size: 70%'></div>" .->12
+    8-. "<div>Reads status and identity<br />helpers</div><div style='font-size: 70%'></div>" .->13
+    9-. "<div>Connects as host</div><div style='font-size: 70%'></div>" .->12
+    9-. "<div>Creates polls and manages<br />poll state</div><div style='font-size: 70%'></div>" .->13
+    9-. "<div>Moderates questions</div><div style='font-size: 70%'></div>" .->14
+    9-. "<div>Sets topic and clears cloud</div><div style='font-size: 70%'></div>" .->15
+    9-. "<div>Manages code review activity</div><div style='font-size: 70%'></div>" .->16
+    9-. "<div>Controls debate phases and<br />cleanup</div><div style='font-size: 70%'></div>" .->17
+    9-. "<div>Reveals leaderboard</div><div style='font-size: 70%'></div>" .->20
+    9-. "<div>Switches activity</div><div style='font-size: 70%'></div>" .->21
+
+  end

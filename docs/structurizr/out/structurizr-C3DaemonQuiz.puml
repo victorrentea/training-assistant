@@ -1,0 +1,49 @@
+@startuml
+title <size:24>Component View: Workshop Live Interaction Tool - Training Daemon</size>\n<size:24>Daemon slice for quiz generation.</size>
+
+set separator none
+left to right direction
+
+<style>
+  root {
+    BackgroundColor: #ffffff
+    FontColor: #444444
+  }
+</style>
+
+!include <C4/C4>
+!include <C4/C4_Context>
+!include <C4/C4_Container>
+!include <C4/C4_Component>
+
+System(AnthropicClaudeAPI, "Anthropic Claude API", $descr="LLM used for quiz generation, debate cleanup, and summaries.", $tags="", $link="")
+
+System_Boundary("WorkshopLiveInteractionTool_boundary", "Workshop Live Interaction Tool", $tags="") {
+  Container_Boundary("WorkshopLiveInteractionTool.TrainingDaemon_boundary", "Training Daemon", $tags="") {
+    Component(WorkshopLiveInteractionTool.TrainingDaemon.Orchestrator, "Orchestrator", $techn="daemon/__main__.py", $descr="Main loop, startup binding, polling, and restart coordination.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.TrainingDaemon.QuizGenerator, "Quiz Generator", $techn="daemon/quiz/generator.py", $descr="Builds quiz suggestions from transcript or topic context.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.TrainingDaemon.QuizHistory, "Quiz History", $techn="daemon/quiz/history.py", $descr="Prevents repeated quiz questions.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.TrainingDaemon.QuizPollAPI, "Quiz Poll API", $techn="daemon/quiz/poll_api.py", $descr="Polls quiz requests and posts previews/status.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.TrainingDaemon.TranscriptLoader, "Transcript Loader", $techn="daemon/transcript/loader.py", $descr="Loads and filters normalized transcript windows.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.TrainingDaemon.RAGIndexer, "RAG Indexer", $techn="daemon/rag/indexer.py", $descr="Indexes local project files for retrieval.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.TrainingDaemon.RAGRetriever, "RAG Retriever", $techn="daemon/rag/retriever.py", $descr="Retrieves relevant context for quiz generation.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.TrainingDaemon.ProjectFilesScanner, "Project Files Scanner", $techn="daemon/rag/project_files.py", $descr="Scans repository files for RAG and tooling.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.TrainingDaemon.LLMAdapter, "LLM Adapter", $techn="daemon/llm/adapter.py", $descr="Claude client wrapper with token accounting.", $tags="", $link="")
+  }
+
+  Container(WorkshopLiveInteractionTool.FastAPIBackend, "FastAPI Backend", $techn="Python 3.12 / FastAPI / Uvicorn", $descr="REST endpoints, WebSocket hub, session routing, and in-memory state.", $tags="", $link="")
+}
+
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.QuizPollAPI, WorkshopLiveInteractionTool.FastAPIBackend, "Polls quiz endpoints and posts preview/status", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.QuizPollAPI, WorkshopLiveInteractionTool.TrainingDaemon.QuizGenerator, "Triggers generation", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.QuizGenerator, WorkshopLiveInteractionTool.TrainingDaemon.TranscriptLoader, "Reads transcript context from", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.QuizGenerator, WorkshopLiveInteractionTool.TrainingDaemon.RAGRetriever, "Retrieves project context from", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.QuizGenerator, WorkshopLiveInteractionTool.TrainingDaemon.QuizHistory, "Checks against", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.QuizGenerator, WorkshopLiveInteractionTool.TrainingDaemon.LLMAdapter, "Requests quiz suggestions from", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.RAGIndexer, WorkshopLiveInteractionTool.TrainingDaemon.ProjectFilesScanner, "Indexes files from", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.RAGRetriever, WorkshopLiveInteractionTool.TrainingDaemon.RAGIndexer, "Queries", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.LLMAdapter, AnthropicClaudeAPI, "Calls", $techn="", $tags="", $link="")
+
+SHOW_LEGEND(true)
+hide stereotypes
+@enduml

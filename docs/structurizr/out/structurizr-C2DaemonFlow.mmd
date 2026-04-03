@@ -1,0 +1,31 @@
+graph LR
+  linkStyle default fill:#ffffff
+
+  subgraph diagram ["Container View: Workshop Live Interaction Tool"]
+    style diagram fill:#ffffff,stroke:#ffffff
+
+    1["<div style='font-weight: bold'>Host</div><div style='font-size: 70%; margin-top: 0px'>[Person]</div><div style='font-size: 80%; margin-top:10px'>Runs the workshop, controls<br />activities, and monitors the<br />live session.</div>"]
+    style 1 fill:#0b3d2c,stroke:#072a1e,color:#ffffff
+    3["<div style='font-weight: bold'>victor-macos-addons</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Produces normalized<br />transcript files on the<br />trainer's Mac.</div>"]
+    style 3 fill:#1d6f42,stroke:#144d2e,color:#ffffff
+    4["<div style='font-weight: bold'>Anthropic Claude API</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>LLM used for quiz generation,<br />debate cleanup, and<br />summaries.</div>"]
+    style 4 fill:#1d6f42,stroke:#144d2e,color:#ffffff
+    6["<div style='font-weight: bold'>Google Drive</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Hosts exported slide PDFs<br />consumed by the backend.</div>"]
+    style 6 fill:#1d6f42,stroke:#144d2e,color:#ffffff
+
+    subgraph 7 ["Workshop Live Interaction Tool"]
+      style 7 fill:#ffffff,stroke:#144d2e,color:#144d2e
+
+      10["<div style='font-weight: bold'>FastAPI Backend</div><div style='font-size: 70%; margin-top: 0px'>[Container: Python 3.12 / FastAPI / Uvicorn]</div><div style='font-size: 80%; margin-top:10px'>REST endpoints, WebSocket<br />hub, session routing, and<br />in-memory state.</div>"]
+      style 10 fill:#5aa05a,stroke:#3e703e,color:#ffffff
+      31["<div style='font-weight: bold'>Training Daemon</div><div style='font-size: 70%; margin-top: 0px'>[Container: Python 3.12 CLI]</div><div style='font-size: 80%; margin-top:10px'>Background worker running on<br />the host machine.</div>"]
+      style 31 fill:#5aa05a,stroke:#3e703e,color:#ffffff
+    end
+
+    1-. "<div>Starts and monitors locally</div><div style='font-size: 70%'></div>" .->31
+    3-. "<div>Writes transcript files read<br />by</div><div style='font-size: 70%'></div>" .->31
+    31-. "<div>Polls, syncs, uploads, and<br />publishes</div><div style='font-size: 70%'></div>" .->10
+    31-. "<div>Requests LLM completions</div><div style='font-size: 70%'></div>" .->4
+    10-. "<div>Downloads exported slide PDFs</div><div style='font-size: 70%'></div>" .->6
+
+  end

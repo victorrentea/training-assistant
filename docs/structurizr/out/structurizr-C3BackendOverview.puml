@@ -1,0 +1,95 @@
+@startuml
+title <size:24>Component View: Workshop Live Interaction Tool - FastAPI Backend</size>\n<size:24>Main backend components registered in main.py.</size>
+
+set separator none
+left to right direction
+
+<style>
+  root {
+    BackgroundColor: #ffffff
+    FontColor: #444444
+  }
+</style>
+
+!include <C4/C4>
+!include <C4/C4_Context>
+!include <C4/C4_Container>
+!include <C4/C4_Component>
+
+System_Boundary("WorkshopLiveInteractionTool_boundary", "Workshop Live Interaction Tool", $tags="") {
+  Container_Boundary("WorkshopLiveInteractionTool.FastAPIBackend_boundary", "FastAPI Backend", $tags="") {
+    Component(WorkshopLiveInteractionTool.FastAPIBackend.CorePlatform, "Core Platform", $techn="core/*", $descr="AppState, auth, metrics, versioning, session guards, and messaging registry.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.FastAPIBackend.WSRouter, "WS Router", $techn="features/ws/*", $descr="Host, participant, overlay, and daemon WebSocket endpoints plus proxy bridge.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.FastAPIBackend.PollRouter, "Poll Router", $techn="features/poll/*", $descr="Poll lifecycle, status, correct answers, scoring, and public helpers.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.FastAPIBackend.QARouter, "Q&A Router", $techn="features/qa/*", $descr="Question edit, delete, answer, and clear lifecycle.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.FastAPIBackend.WordCloudRouter, "Word Cloud Router", $techn="features/wordcloud/*", $descr="Topic changes and reset operations.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.FastAPIBackend.CodeReviewRouter, "Code Review Router", $techn="features/codereview/*", $descr="Snippet lifecycle, selections, and line confirmation.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.FastAPIBackend.DebateRouter, "Debate Router", $techn="features/debate/*", $descr="Debate phases, AI request lifecycle, and round orchestration.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.FastAPIBackend.QuizRouter, "Quiz Router", $techn="features/quiz/*", $descr="Quiz request, status, preview, and refinement endpoints.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.FastAPIBackend.SummaryRouter, "Summary Router", $techn="features/summary/*", $descr="Summaries, notes, transcript status, and token usage.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.FastAPIBackend.LeaderboardRouter, "Leaderboard Router", $techn="features/leaderboard/*", $descr="Leaderboard reveal and score reset endpoints.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.FastAPIBackend.ActivityRouter, "Activity Router", $techn="features/activity/*", $descr="Switches the currently active participant experience.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.FastAPIBackend.SessionRouter, "Session Router", $techn="features/session/*", $descr="Global and session-scoped lifecycle, sync, snapshots, and timing events.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.FastAPIBackend.SnapshotRouter, "Snapshot Router", $techn="features/snapshot/*", $descr="Diagnostic state snapshot and restore endpoints.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.FastAPIBackend.SlidesRouter, "Slides Router", $techn="features/slides/*", $descr="Slides publishing, public file serving, upload, and catalog management.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.FastAPIBackend.UploadRouter, "Upload Router", $techn="features/upload/*", $descr="Participant and host file upload endpoints.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.FastAPIBackend.PagesRouter, "Pages Router", $techn="features/pages/*", $descr="Landing, participant, host, and notes pages.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.FastAPIBackend.FeedbackRouter, "Feedback Router", $techn="features/feedback/*", $descr="Global feedback endpoint.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.FastAPIBackend.InternalRouter, "Internal Router", $techn="features/internal/*", $descr="Daemon-facing internal file-management endpoints.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.FastAPIBackend.TranscriptionLanguageRouter, "Transcription Language Router", $techn="features/transcription_language/*", $descr="Global transcription language endpoint.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.FastAPIBackend.ScoresRouter, "Scores Router", $techn="features/scores/*", $descr="Score reset helper endpoints.", $tags="", $link="")
+  }
+
+  Container(WorkshopLiveInteractionTool.EmojiOverlay, "Emoji Overlay", $techn="Swift / AppKit", $descr="Always-on-top overlay for live emoji reactions on the host machine.", $tags="", $link="")
+  Container(WorkshopLiveInteractionTool.ParticipantSPA, "Participant SPA", $techn="HTML/CSS/JavaScript", $descr="Participant-facing UI served from static files.", $tags="", $link="")
+  Container(WorkshopLiveInteractionTool.HostSPA, "Host SPA", $techn="HTML/CSS/JavaScript", $descr="Host control panel served from static files.", $tags="", $link="")
+}
+
+Rel(WorkshopLiveInteractionTool.EmojiOverlay, WorkshopLiveInteractionTool.FastAPIBackend.WSRouter, "Connects as overlay", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.FastAPIBackend.InternalRouter, WorkshopLiveInteractionTool.FastAPIBackend.CorePlatform, "Uses shared backend state", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.FastAPIBackend.FeedbackRouter, WorkshopLiveInteractionTool.FastAPIBackend.CorePlatform, "Updates shared state if needed", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.FastAPIBackend.TranscriptionLanguageRouter, WorkshopLiveInteractionTool.FastAPIBackend.CorePlatform, "Reads current session context", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.FastAPIBackend.UploadRouter, WorkshopLiveInteractionTool.FastAPIBackend.CorePlatform, "Associates uploads with active state", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.FastAPIBackend.PagesRouter, WorkshopLiveInteractionTool.FastAPIBackend.CorePlatform, "Reads active mode and session state", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.FastAPIBackend.WSRouter, WorkshopLiveInteractionTool.FastAPIBackend.CorePlatform, "Builds and broadcasts state", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.FastAPIBackend.PollRouter, WorkshopLiveInteractionTool.FastAPIBackend.CorePlatform, "Mutates poll state and scores", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.FastAPIBackend.QARouter, WorkshopLiveInteractionTool.FastAPIBackend.CorePlatform, "Mutates Q&A state", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.FastAPIBackend.WordCloudRouter, WorkshopLiveInteractionTool.FastAPIBackend.CorePlatform, "Mutates word cloud state", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.FastAPIBackend.CodeReviewRouter, WorkshopLiveInteractionTool.FastAPIBackend.CorePlatform, "Mutates code review state", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.FastAPIBackend.DebateRouter, WorkshopLiveInteractionTool.FastAPIBackend.CorePlatform, "Mutates debate state", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.FastAPIBackend.QuizRouter, WorkshopLiveInteractionTool.FastAPIBackend.CorePlatform, "Stores quiz generation state", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.FastAPIBackend.SummaryRouter, WorkshopLiveInteractionTool.FastAPIBackend.CorePlatform, "Reads and updates summaries and notes", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.FastAPIBackend.LeaderboardRouter, WorkshopLiveInteractionTool.FastAPIBackend.CorePlatform, "Updates leaderboard visibility and scores", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.FastAPIBackend.ActivityRouter, WorkshopLiveInteractionTool.FastAPIBackend.CorePlatform, "Updates current activity", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.FastAPIBackend.SessionRouter, WorkshopLiveInteractionTool.FastAPIBackend.CorePlatform, "Serializes and restores session state", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.FastAPIBackend.SnapshotRouter, WorkshopLiveInteractionTool.FastAPIBackend.CorePlatform, "Serializes and restores diagnostic snapshots", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.FastAPIBackend.SlidesRouter, WorkshopLiveInteractionTool.FastAPIBackend.CorePlatform, "Stores slide catalog and current slide", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.FastAPIBackend.ScoresRouter, WorkshopLiveInteractionTool.FastAPIBackend.CorePlatform, "Resets score state", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.ParticipantSPA, WorkshopLiveInteractionTool.FastAPIBackend.PagesRouter, "Loads participant and notes pages", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.ParticipantSPA, WorkshopLiveInteractionTool.FastAPIBackend.WSRouter, "Connects as participant", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.ParticipantSPA, WorkshopLiveInteractionTool.FastAPIBackend.PollRouter, "Reads status and identity helpers", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.ParticipantSPA, WorkshopLiveInteractionTool.FastAPIBackend.SummaryRouter, "Reads public notes and summaries", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.ParticipantSPA, WorkshopLiveInteractionTool.FastAPIBackend.SlidesRouter, "Reads public slides", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.ParticipantSPA, WorkshopLiveInteractionTool.FastAPIBackend.UploadRouter, "Uploads participant files", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.HostSPA, WorkshopLiveInteractionTool.FastAPIBackend.PagesRouter, "Loads host page", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.HostSPA, WorkshopLiveInteractionTool.FastAPIBackend.WSRouter, "Connects as host", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.HostSPA, WorkshopLiveInteractionTool.FastAPIBackend.PollRouter, "Creates polls and manages poll state", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.HostSPA, WorkshopLiveInteractionTool.FastAPIBackend.QARouter, "Moderates questions", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.HostSPA, WorkshopLiveInteractionTool.FastAPIBackend.WordCloudRouter, "Sets topic and clears cloud", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.HostSPA, WorkshopLiveInteractionTool.FastAPIBackend.CodeReviewRouter, "Manages code review activity", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.HostSPA, WorkshopLiveInteractionTool.FastAPIBackend.DebateRouter, "Controls debate phases and cleanup", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.HostSPA, WorkshopLiveInteractionTool.FastAPIBackend.LeaderboardRouter, "Reveals leaderboard", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.HostSPA, WorkshopLiveInteractionTool.FastAPIBackend.ActivityRouter, "Switches activity", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.HostSPA, WorkshopLiveInteractionTool.FastAPIBackend.QuizRouter, "Requests and refines quizzes", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.HostSPA, WorkshopLiveInteractionTool.FastAPIBackend.SummaryRouter, "Reads notes and summaries", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.HostSPA, WorkshopLiveInteractionTool.FastAPIBackend.SlidesRouter, "Publishes current slides", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.HostSPA, WorkshopLiveInteractionTool.FastAPIBackend.SessionRouter, "Controls session lifecycle", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.HostSPA, WorkshopLiveInteractionTool.FastAPIBackend.SnapshotRouter, "Requests snapshot/restore", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.HostSPA, WorkshopLiveInteractionTool.FastAPIBackend.UploadRouter, "Uploads host files", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.HostSPA, WorkshopLiveInteractionTool.FastAPIBackend.FeedbackRouter, "Sends feedback", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.HostSPA, WorkshopLiveInteractionTool.FastAPIBackend.ScoresRouter, "Resets scores", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.HostSPA, WorkshopLiveInteractionTool.FastAPIBackend.TranscriptionLanguageRouter, "Changes transcription language", $techn="", $tags="", $link="")
+
+SHOW_LEGEND(true)
+hide stereotypes
+@enduml

@@ -1,0 +1,44 @@
+@startuml
+title <size:24>Component View: Workshop Live Interaction Tool - Training Daemon</size>\n<size:24>Daemon slice for slide conversion and upload.</size>
+
+set separator none
+left to right direction
+
+<style>
+  root {
+    BackgroundColor: #ffffff
+    FontColor: #444444
+  }
+</style>
+
+!include <C4/C4>
+!include <C4/C4_Context>
+!include <C4/C4_Container>
+!include <C4/C4_Component>
+
+System_Boundary("WorkshopLiveInteractionTool_boundary", "Workshop Live Interaction Tool", $tags="") {
+  Container_Boundary("WorkshopLiveInteractionTool.TrainingDaemon_boundary", "Training Daemon", $tags="") {
+    Component(WorkshopLiveInteractionTool.TrainingDaemon.Orchestrator, "Orchestrator", $techn="daemon/__main__.py", $descr="Main loop, startup binding, polling, and restart coordination.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.TrainingDaemon.DaemonWSClient, "Daemon WS Client", $techn="daemon/ws_client.py", $descr="WebSocket channel used for daemon sync and uploads.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.TrainingDaemon.SlidesLoop, "Slides Loop", $techn="daemon/slides/loop.py", $descr="Polls for slide work and orchestrates conversions/uploads.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.TrainingDaemon.SlidesCatalog, "Slides Catalog", $techn="daemon/slides/catalog.py", $descr="Reads and resolves slide catalog entries.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.TrainingDaemon.SlidesConvert, "Slides Convert", $techn="daemon/slides/convert.py", $descr="Converts PPTX to PDF via host tooling.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.TrainingDaemon.SlidesUpload, "Slides Upload", $techn="daemon/slides/upload.py", $descr="Uploads converted slide PDFs to the backend.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.TrainingDaemon.SlidesDaemon, "Slides Daemon", $techn="daemon/slides/daemon.py", $descr="Coordinates slide upload workflow over WebSocket.", $tags="", $link="")
+  }
+
+  Container(WorkshopLiveInteractionTool.FastAPIBackend, "FastAPI Backend", $techn="Python 3.12 / FastAPI / Uvicorn", $descr="REST endpoints, WebSocket hub, session routing, and in-memory state.", $tags="", $link="")
+}
+
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.Orchestrator, WorkshopLiveInteractionTool.TrainingDaemon.DaemonWSClient, "Maintains daemon WebSocket", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.Orchestrator, WorkshopLiveInteractionTool.TrainingDaemon.SlidesLoop, "Triggers", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.DaemonWSClient, WorkshopLiveInteractionTool.FastAPIBackend, "Connects to daemon WebSocket endpoint", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.SlidesLoop, WorkshopLiveInteractionTool.TrainingDaemon.SlidesCatalog, "Reads catalog from", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.SlidesLoop, WorkshopLiveInteractionTool.TrainingDaemon.SlidesConvert, "Triggers PDF conversion in", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.SlidesLoop, WorkshopLiveInteractionTool.TrainingDaemon.SlidesDaemon, "Coordinates upload flow with", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.SlidesDaemon, WorkshopLiveInteractionTool.TrainingDaemon.SlidesUpload, "Delegates uploads to", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.SlidesUpload, WorkshopLiveInteractionTool.TrainingDaemon.DaemonWSClient, "Streams slide artifacts through", $techn="", $tags="", $link="")
+
+SHOW_LEGEND(true)
+hide stereotypes
+@enduml

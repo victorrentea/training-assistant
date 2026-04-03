@@ -1,0 +1,49 @@
+@startuml
+title <size:24>Component View: Workshop Live Interaction Tool - Training Daemon</size>\n<size:24>Daemon slice for transcript-driven summaries.</size>
+
+set separator none
+left to right direction
+
+<style>
+  root {
+    BackgroundColor: #ffffff
+    FontColor: #444444
+  }
+</style>
+
+!include <C4/C4>
+!include <C4/C4_Context>
+!include <C4/C4_Container>
+!include <C4/C4_Component>
+
+System(victormacosaddons, "victor-macos-addons", $descr="Produces normalized transcript files on the trainer's Mac.", $tags="", $link="")
+System(AnthropicClaudeAPI, "Anthropic Claude API", $descr="LLM used for quiz generation, debate cleanup, and summaries.", $tags="", $link="")
+
+System_Boundary("WorkshopLiveInteractionTool_boundary", "Workshop Live Interaction Tool", $tags="") {
+  Container_Boundary("WorkshopLiveInteractionTool.TrainingDaemon_boundary", "Training Daemon", $tags="") {
+    Component(WorkshopLiveInteractionTool.TrainingDaemon.Orchestrator, "Orchestrator", $techn="daemon/__main__.py", $descr="Main loop, startup binding, polling, and restart coordination.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.TrainingDaemon.SummaryLoop, "Summary Loop", $techn="daemon/summary/loop.py", $descr="Triggers summary generation cycles and publishes results.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.TrainingDaemon.Summarizer, "Summarizer", $techn="daemon/summary/summarizer.py", $descr="Extracts discussion points and notes from transcript deltas.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.TrainingDaemon.TranscriptLoader, "Transcript Loader", $techn="daemon/transcript/loader.py", $descr="Loads and filters normalized transcript windows.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.TrainingDaemon.TranscriptParser, "Transcript Parser", $techn="daemon/transcript/parser.py", $descr="Parses transcript files such as txt, vtt, and srt.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.TrainingDaemon.TranscriptSession, "Transcript Session", $techn="daemon/transcript/session.py", $descr="Computes active transcript windows per session.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.TrainingDaemon.TranscriptState, "Transcript State", $techn="daemon/transcript/state.py", $descr="Tracks transcript processing state.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.TrainingDaemon.LLMAdapter, "LLM Adapter", $techn="daemon/llm/adapter.py", $descr="Claude client wrapper with token accounting.", $tags="", $link="")
+  }
+
+  Container(WorkshopLiveInteractionTool.FastAPIBackend, "FastAPI Backend", $techn="Python 3.12 / FastAPI / Uvicorn", $descr="REST endpoints, WebSocket hub, session routing, and in-memory state.", $tags="", $link="")
+}
+
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.Orchestrator, WorkshopLiveInteractionTool.TrainingDaemon.SummaryLoop, "Triggers", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.Orchestrator, WorkshopLiveInteractionTool.TrainingDaemon.TranscriptSession, "Computes active windows with", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.SummaryLoop, WorkshopLiveInteractionTool.TrainingDaemon.Summarizer, "Triggers", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.SummaryLoop, WorkshopLiveInteractionTool.FastAPIBackend, "Posts summaries and transcript status", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.Summarizer, WorkshopLiveInteractionTool.TrainingDaemon.TranscriptLoader, "Reads transcript deltas from", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.Summarizer, WorkshopLiveInteractionTool.TrainingDaemon.LLMAdapter, "Requests summary output from", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.TranscriptLoader, WorkshopLiveInteractionTool.TrainingDaemon.TranscriptParser, "Parses files through", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.TranscriptLoader, WorkshopLiveInteractionTool.TrainingDaemon.TranscriptState, "Tracks processing through", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.LLMAdapter, AnthropicClaudeAPI, "Calls", $techn="", $tags="", $link="")
+
+SHOW_LEGEND(true)
+hide stereotypes
+@enduml
