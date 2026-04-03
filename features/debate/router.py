@@ -2,8 +2,6 @@ import logging
 import random
 import uuid as uuid_mod
 from datetime import datetime, timezone
-from typing import Optional
-
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
@@ -280,14 +278,6 @@ async def end_arguments():
     logger.info("Arguments ended — waiting for daemon AI cleanup")
     await broadcast_state()
     return {"ok": True}
-
-
-@router.get("/debate/ai-request", dependencies=[Depends(require_host_auth)])
-async def poll_debate_ai_request():
-    """Daemon polls this. Returns pending AI request or null, then clears it."""
-    req = state.debate_ai_request
-    state.debate_ai_request = None
-    return {"request": req}
 
 
 class DebateAiResult(BaseModel):

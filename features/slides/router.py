@@ -8,10 +8,8 @@ from pathlib import Path
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import FileResponse, Response
 
-from core.messaging import broadcast, broadcast_state
 from core.state import state
 from features.slides.upload import (
-    SlidesUpdate,
     _is_displayable_slide_name,
     _local_slide_meta_path,
     _read_local_slide_source_updated_at,
@@ -366,30 +364,6 @@ def _is_not_modified(request: Request, etag: str, path: Path) -> bool:
         except Exception:
             pass
     return False
-
-
-@router.post("/slides/current")
-async def set_current_slides(body: SlidesUpdate):
-    state.slides_current = {
-        "url": body.url,
-        "slug": body.slug,
-        "source_file": body.source_file,
-        "presentation_name": body.presentation_name,
-        "current_page": body.current_page,
-        "converter": body.converter,
-        "updated_at": body.updated_at or datetime.now(timezone.utc).isoformat(),
-    }
-    await broadcast_state()
-    await broadcast({"type": "slides_current", "slides_current": state.slides_current})
-    return {"ok": True, "slides_current": state.slides_current}
-
-
-@router.delete("/slides/current")
-async def clear_current_slides():
-    state.slides_current = None
-    await broadcast_state()
-    await broadcast({"type": "slides_current", "slides_current": None})
-    return {"ok": True}
 
 
 @router.get("/slides/catalog-map")

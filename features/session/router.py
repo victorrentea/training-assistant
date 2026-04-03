@@ -328,15 +328,6 @@ async def rename_session(body: RenameSessionRequest):
     return {"ok": True}
 
 
-@router.get("/api/session/request", dependencies=[Depends(require_host_auth)])
-async def poll_session_request():
-    req = state.session_request
-    state.session_request = None
-    if req:
-        return req
-    return {"action": None}
-
-
 def _restore_state_from_snapshot(snap: dict):
     """Restores AppState from a session_state.json snapshot."""
     # Participants
@@ -561,7 +552,6 @@ async def list_session_folders():
     return {"folders": folders}
 
 
-@session_router.get("/session/snapshot", dependencies=[Depends(require_host_auth)])
 async def get_session_snapshot():
     """Returns full serializable session state for daemon to persist to disk every 5s."""
     participants = {}

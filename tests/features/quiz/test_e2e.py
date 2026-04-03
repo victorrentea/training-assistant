@@ -21,46 +21,8 @@ class TestQuizRequest:
         assert resp.status_code == 422
 
 
-class TestQuizPollRequest:
-    def test_poll_empty(self, server_url):
-        resp = sapi(server_url, "get", "/quiz-request")
-        assert resp.status_code == 200
-        # request may or may not be None depending on prior tests
-
-    def test_poll_after_request(self, server_url):
-        sapi(server_url, "post", "/quiz-request", json={"minutes": 15})
-        resp = sapi(server_url, "get", "/quiz-request")
-        assert resp.status_code == 200
-        data = resp.json()
-        assert data["request"] is not None
-        assert data["request"]["minutes"] == 15
-        # Second poll should return None (consumed)
-        resp2 = sapi(server_url, "get", "/quiz-request")
-        assert resp2.json()["request"] is None
-
-
-class TestQuizStatus:
-    def test_update_status(self, server_url):
-        resp = sapi(server_url, "post", "/quiz-status",
-                   json={"status": "generating", "message": "Working..."})
-        assert resp.status_code == 200
-
-    def test_update_with_session(self, server_url):
-        resp = sapi(server_url, "post", "/quiz-status",
-                   json={"status": "idle", "message": "Ready",
-                          "session_folder": "/path", "session_notes": "notes.txt"})
-        assert resp.status_code == 200
-
-
-class TestQuizPreview:
-    def test_set_preview(self, server_url):
-        resp = sapi(server_url, "post", "/quiz-preview",
-                   json={"question": "Q?", "options": ["A", "B"], "multi": False, "correct_indices": [0]})
-        assert resp.status_code == 200
-
+class TestQuizClearPreview:
     def test_clear_preview(self, server_url):
-        sapi(server_url, "post", "/quiz-preview",
-            json={"question": "Q?", "options": ["A", "B"]})
         resp = sapi(server_url, "delete", "/quiz-preview")
         assert resp.status_code == 200
 
@@ -70,16 +32,6 @@ class TestQuizRefine:
         sapi(server_url, "delete", "/quiz-preview")
         resp = sapi(server_url, "post", "/quiz-refine", json={"target": "opt0"})
         assert resp.status_code == 400
-
-    def test_refine_with_preview(self, server_url):
-        sapi(server_url, "post", "/quiz-preview",
-            json={"question": "Q?", "options": ["A", "B"], "correct_indices": [0]})
-        resp = sapi(server_url, "post", "/quiz-refine", json={"target": "opt1"})
-        assert resp.status_code == 200
-
-    def test_poll_refine(self, server_url):
-        resp = sapi(server_url, "get", "/quiz-refine")
-        assert resp.status_code == 200
 
 
 # ── Summary endpoints ─────────────────────────────────────────────────

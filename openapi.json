@@ -334,27 +334,6 @@
         ]
       }
     },
-    "/api/session/request": {
-      "get": {
-        "summary": "Poll Session Request",
-        "operationId": "poll_session_request_api_session_request_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "HTTPBasic": []
-          }
-        ]
-      }
-    },
     "/api/session/folders": {
       "get": {
         "summary": "List Session Folders",
@@ -655,47 +634,6 @@
             "content": {
               "application/json": {
                 "schema": {}
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "HTTPBasic": []
-          }
-        ]
-      }
-    },
-    "/api/transcription-language/status": {
-      "post": {
-        "summary": "Transcription Language Status",
-        "operationId": "transcription_language_status_api_transcription_language_status_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/LanguageStatus"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
               }
             }
           }
@@ -1959,49 +1897,6 @@
         }
       }
     },
-    "/api/{session_id}/debate/ai-request": {
-      "get": {
-        "summary": "Poll Debate Ai Request",
-        "description": "Daemon polls this. Returns pending AI request or null, then clears it.",
-        "operationId": "poll_debate_ai_request_api__session_id__debate_ai_request_get",
-        "security": [
-          {
-            "HTTPBasic": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "session_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Session Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/{session_id}/debate/ai-result": {
       "post": {
         "summary": "Receive Ai Result",
@@ -2231,151 +2126,9 @@
             }
           }
         }
-      },
-      "get": {
-        "summary": "Poll Quiz Request",
-        "operationId": "poll_quiz_request_api__session_id__quiz_request_get",
-        "security": [
-          {
-            "HTTPBasic": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "session_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Session Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/{session_id}/quiz-status": {
-      "post": {
-        "summary": "Update Quiz Status",
-        "operationId": "update_quiz_status_api__session_id__quiz_status_post",
-        "security": [
-          {
-            "HTTPBasic": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "session_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Session Id"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/QuizStatus"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
       }
     },
     "/api/{session_id}/quiz-preview": {
-      "post": {
-        "summary": "Set Quiz Preview",
-        "operationId": "set_quiz_preview_api__session_id__quiz_preview_post",
-        "security": [
-          {
-            "HTTPBasic": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "session_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Session Id"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/QuizPreview"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
       "delete": {
         "summary": "Clear Quiz Preview",
         "operationId": "clear_quiz_preview_api__session_id__quiz_preview_delete",
@@ -2447,46 +2200,6 @@
             }
           }
         },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "get": {
-        "summary": "Poll Quiz Refine",
-        "operationId": "poll_quiz_refine_api__session_id__quiz_refine_get",
-        "security": [
-          {
-            "HTTPBasic": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "session_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Session Id"
-            }
-          }
-        ],
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -2613,342 +2326,10 @@
         }
       }
     },
-    "/api/{session_id}/notes": {
-      "post": {
-        "summary": "Update Notes",
-        "operationId": "update_notes_api__session_id__notes_post",
-        "security": [
-          {
-            "HTTPBasic": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "session_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Session Id"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/NotesUpdate"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/{session_id}/transcript-status": {
-      "post": {
-        "summary": "Update Transcript Status",
-        "operationId": "update_transcript_status_api__session_id__transcript_status_post",
-        "security": [
-          {
-            "HTTPBasic": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "session_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Session Id"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/TranscriptStatus"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/{session_id}/summary/force": {
-      "get": {
-        "summary": "Poll Summary Force",
-        "operationId": "poll_summary_force_api__session_id__summary_force_get",
-        "security": [
-          {
-            "HTTPBasic": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "session_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Session Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/{session_id}/summary/full-reset": {
       "post": {
         "summary": "Full Reset Summary",
         "operationId": "full_reset_summary_api__session_id__summary_full_reset_post",
-        "security": [
-          {
-            "HTTPBasic": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "session_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Session Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "get": {
-        "summary": "Poll Summary Full Reset",
-        "operationId": "poll_summary_full_reset_api__session_id__summary_full_reset_get",
-        "security": [
-          {
-            "HTTPBasic": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "session_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Session Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/{session_id}/token-usage": {
-      "post": {
-        "summary": "Update Token Usage",
-        "operationId": "update_token_usage_api__session_id__token_usage_post",
-        "security": [
-          {
-            "HTTPBasic": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "session_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Session Id"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "additionalProperties": true,
-                "title": "Data"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/{session_id}/slides/current": {
-      "post": {
-        "summary": "Set Current Slides",
-        "operationId": "set_current_slides_api__session_id__slides_current_post",
-        "security": [
-          {
-            "HTTPBasic": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "session_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Session Id"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/SlidesUpdate"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "delete": {
-        "summary": "Clear Current Slides",
-        "operationId": "clear_current_slides_api__session_id__slides_current_delete",
         "security": [
           {
             "HTTPBasic": []
@@ -3007,104 +2388,6 @@
             }
           }
         ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/{session_id}/state-snapshot": {
-      "get": {
-        "summary": "Get State Snapshot",
-        "description": "Serialize all persistent state to JSON with MD5 hash.",
-        "operationId": "get_state_snapshot_api__session_id__state_snapshot_get",
-        "security": [
-          {
-            "HTTPBasic": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "session_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Session Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/{session_id}/state-restore": {
-      "post": {
-        "summary": "Restore State Snapshot",
-        "description": "Restore state from a snapshot dict.",
-        "operationId": "restore_state_snapshot_api__session_id__state_restore_post",
-        "security": [
-          {
-            "HTTPBasic": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "session_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Session Id"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "additionalProperties": true,
-                "title": "Body"
-              }
-            }
-          }
-        },
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -3333,49 +2616,6 @@
                 "schema": {
                   "type": "string"
                 }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/{session_id}/session/snapshot": {
-      "get": {
-        "summary": "Get Session Snapshot",
-        "description": "Returns full serializable session state for daemon to persist to disk every 5s.",
-        "operationId": "get_session_snapshot_api__session_id__session_snapshot_get",
-        "security": [
-          {
-            "HTTPBasic": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "session_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Session Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
               }
             }
           },
@@ -4248,19 +3488,6 @@
         ],
         "title": "LanguageRequest"
       },
-      "LanguageStatus": {
-        "properties": {
-          "language": {
-            "type": "string",
-            "title": "Language"
-          }
-        },
-        "type": "object",
-        "required": [
-          "language"
-        ],
-        "title": "LanguageStatus"
-      },
       "MaterialsDeleteRequest": {
         "properties": {
           "relative_path": {
@@ -4286,19 +3513,6 @@
           "mode"
         ],
         "title": "ModeRequest"
-      },
-      "NotesUpdate": {
-        "properties": {
-          "content": {
-            "type": "string",
-            "title": "Content"
-          }
-        },
-        "type": "object",
-        "required": [
-          "content"
-        ],
-        "title": "NotesUpdate"
       },
       "PhaseAdvance": {
         "properties": {
@@ -4427,62 +3641,6 @@
         ],
         "title": "QuestionEdit"
       },
-      "QuizPreview": {
-        "properties": {
-          "question": {
-            "type": "string",
-            "title": "Question"
-          },
-          "options": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Options"
-          },
-          "multi": {
-            "type": "boolean",
-            "title": "Multi",
-            "default": false
-          },
-          "correct_indices": {
-            "items": {
-              "type": "integer"
-            },
-            "type": "array",
-            "title": "Correct Indices",
-            "default": []
-          },
-          "source": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Source"
-          },
-          "page": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Page"
-          }
-        },
-        "type": "object",
-        "required": [
-          "question",
-          "options"
-        ],
-        "title": "QuizPreview"
-      },
       "QuizRefineRequest": {
         "properties": {
           "target": {
@@ -4523,60 +3681,6 @@
         },
         "type": "object",
         "title": "QuizRequest"
-      },
-      "QuizStatus": {
-        "properties": {
-          "status": {
-            "type": "string",
-            "title": "Status"
-          },
-          "message": {
-            "type": "string",
-            "title": "Message",
-            "default": ""
-          },
-          "session_folder": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Session Folder"
-          },
-          "session_notes": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Session Notes"
-          },
-          "slides": {
-            "anyOf": [
-              {
-                "items": {
-                  "$ref": "#/components/schemas/SlideStatus"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Slides"
-          }
-        },
-        "type": "object",
-        "required": [
-          "status"
-        ],
-        "title": "QuizStatus"
       },
       "RenameSessionRequest": {
         "properties": {
@@ -4640,163 +3744,6 @@
         ],
         "title": "SessionCreateBody"
       },
-      "SlideStatus": {
-        "properties": {
-          "name": {
-            "type": "string",
-            "title": "Name"
-          },
-          "url": {
-            "type": "string",
-            "title": "Url"
-          },
-          "slug": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Slug"
-          },
-          "updated_at": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Updated At"
-          },
-          "etag": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Etag"
-          },
-          "last_modified": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Last Modified"
-          },
-          "sync_status": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Sync Status"
-          },
-          "sync_message": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Sync Message"
-          }
-        },
-        "type": "object",
-        "required": [
-          "name",
-          "url"
-        ],
-        "title": "SlideStatus"
-      },
-      "SlidesUpdate": {
-        "properties": {
-          "url": {
-            "type": "string",
-            "title": "Url"
-          },
-          "slug": {
-            "type": "string",
-            "title": "Slug"
-          },
-          "source_file": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Source File"
-          },
-          "presentation_name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Presentation Name"
-          },
-          "current_page": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Current Page"
-          },
-          "converter": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Converter"
-          },
-          "updated_at": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Updated At"
-          }
-        },
-        "type": "object",
-        "required": [
-          "url",
-          "slug"
-        ],
-        "title": "SlidesUpdate"
-      },
       "StartSessionRequest": {
         "properties": {
           "name": {
@@ -4847,6 +3794,17 @@
             },
             "type": "array",
             "title": "Points"
+          },
+          "raw_markdown": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Raw Markdown"
           }
         },
         "type": "object",
@@ -4961,35 +3919,6 @@
           "event"
         ],
         "title": "TimingEventBody"
-      },
-      "TranscriptStatus": {
-        "properties": {
-          "line_count": {
-            "type": "integer",
-            "title": "Line Count"
-          },
-          "total_lines": {
-            "type": "integer",
-            "title": "Total Lines",
-            "default": 0
-          },
-          "latest_ts": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Latest Ts"
-          }
-        },
-        "type": "object",
-        "required": [
-          "line_count"
-        ],
-        "title": "TranscriptStatus"
       },
       "ValidationError": {
         "properties": {

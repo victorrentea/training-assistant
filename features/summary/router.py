@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter
 from pydantic import BaseModel
 
-from core.messaging import broadcast_state, broadcast
+from core.messaging import broadcast
 from core.state import state
 from features.ws.daemon_protocol import push_to_daemon
 
@@ -34,17 +34,6 @@ async def update_summary(body: SummaryUpdate):
     return {"ok": True}
 
 
-class NotesUpdate(BaseModel):
-    content: str
-
-
-@router.post("/notes")
-async def update_notes(body: NotesUpdate):
-    state.notes_content = body.content
-    await broadcast({"type": "notes", "notes_content": state.notes_content})
-    return {"ok": True}
-
-
 # Public endpoints — no auth required
 @public_router.get("/api/summary")
 async def get_summary():
@@ -64,23 +53,6 @@ async def get_notes():
     }
 
 
-class TranscriptStatus(BaseModel):
-    line_count: int
-    total_lines: int = 0
-    latest_ts: str | None = None
-
-
-@router.post("/transcript-status")
-async def update_transcript_status(body: TranscriptStatus):
-    if body.line_count > state.transcript_line_count:
-        state.transcript_last_content_at = datetime.now(timezone.utc)
-    state.transcript_line_count = body.line_count
-    state.transcript_total_lines = body.total_lines
-    state.transcript_latest_ts = body.latest_ts
-    await broadcast_state()
-    return {"ok": True}
-
-
 _last_force_at: float = 0.0
 _FORCE_COOLDOWN = 30.0  # seconds — ignore rapid requests
 
@@ -98,13 +70,6 @@ async def force_summary():
     return {"ok": True}
 
 
-@router.get("/summary/force")
-async def poll_summary_force():
-    requested = state.summary_force_requested
-    state.summary_force_requested = False
-    return {"requested": requested}
-
-
 @router.post("/summary/full-reset")
 async def full_reset_summary():
     state.summary_reset_requested = True
@@ -113,15 +78,3 @@ async def full_reset_summary():
     return {"ok": True}
 
 
-@router.get("/summary/full-reset")
-async def poll_summary_full_reset():
-    requested = state.summary_reset_requested
-    state.summary_reset_requested = False
-    return {"requested": requested}
-
-
-@router.post("/token-usage")
-async def update_token_usage(data: dict):
-    state.token_usage = data
-    await broadcast_state()
-    return {"ok": True}

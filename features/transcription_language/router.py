@@ -32,12 +32,3 @@ async def poll_transcription_language_request():
     return {"request": req}
 
 
-class LanguageStatus(BaseModel):
-    language: str
-
-
-@router.post("/api/transcription-language/status")
-async def transcription_language_status(body: LanguageStatus):
-    state.transcription_language = body.language
-    await broadcast({"type": "transcription_language", "language": body.language})
-    return {"ok": True}

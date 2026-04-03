@@ -25,58 +25,29 @@ def teardown_function():
     state.reset()
 
 
-def test_slides_current_set_and_get_publicly():
-    client = TestClient(app, headers=_HOST_AUTH_HEADERS)
-    payload = {
+def test_slides_current_get_publicly():
+    """GET /api/slides/current is public and returns slides_current from state."""
+    state.slides_current = {
         "url": "https://slides.example.com/abc123.pdf",
         "slug": "abc123",
         "source_file": "deck.pptx",
         "presentation_name": "deck.pptx",
         "current_page": 3,
         "converter": "google_drive",
+        "updated_at": "2026-01-01T00:00:00+00:00",
     }
-
-    resp = client.post(f"/api/{state.session_id}/slides/current", json=payload)
-    assert resp.status_code == 200
-    body = resp.json()
-    assert body["ok"] is True
-    assert body["slides_current"]["url"] == payload["url"]
-    assert body["slides_current"]["slug"] == payload["slug"]
-    assert body["slides_current"]["source_file"] == payload["source_file"]
-    assert body["slides_current"]["presentation_name"] == payload["presentation_name"]
-    assert body["slides_current"]["current_page"] == payload["current_page"]
-    assert body["slides_current"]["converter"] == payload["converter"]
-    assert body["slides_current"]["updated_at"]
 
     public = TestClient(app)
     get_resp = public.get(f"/{state.session_id}/api/slides/current")
     assert get_resp.status_code == 200
-    assert get_resp.json()["slides_current"]["url"] == payload["url"]
+    assert get_resp.json()["slides_current"]["url"] == state.slides_current["url"]
 
     status = public.get("/api/status")
     assert status.status_code == 200
-    assert status.json()["slides_current"]["slug"] == payload["slug"]
-
-    snapshot = client.get(f"/api/{state.session_id}/state-snapshot")
-    assert snapshot.status_code == 200
-    assert snapshot.json()["state"]["slides_current"]["slug"] == payload["slug"]
+    assert status.json()["slides_current"]["slug"] == "abc123"
 
 
-def test_slides_current_requires_host_auth_for_write():
-    client = TestClient(app)
-    payload = {"url": "https://slides.example.com/x.pdf", "slug": "x"}
-    resp = client.post(f"/api/{state.session_id}/slides/current", json=payload)
-    assert resp.status_code in (401, 403)
-
-    resp = client.delete(f"/api/{state.session_id}/slides/current")
-    assert resp.status_code in (401, 403)
-
-
-def test_slides_current_rejects_non_positive_current_page():
-    client = TestClient(app, headers=_HOST_AUTH_HEADERS)
-    payload = {"url": "https://slides.example.com/x.pdf", "slug": "x", "current_page": 0}
-    resp = client.post(f"/api/{state.session_id}/slides/current", json=payload)
-    assert resp.status_code == 422
+# NOTE: POST /slides/current and DELETE /slides/current removed — daemon uses WS now.
 
 
 def test_slides_upload_requires_host_auth(monkeypatch, tmp_path):

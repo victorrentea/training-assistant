@@ -53,30 +53,42 @@ class TestDaemonWsProtocol:
             assert msg["request"]["topic"] == "testing"
 
     def test_daemon_sends_quiz_preview_back(self, server_url):
-        """Daemon sends quiz_preview → backend stores it; host can retrieve it via quiz-refine poll."""
-        with ws_connect(_daemon_ws_url(server_url), additional_headers=_auth_headers()) as ws:
-            # Daemon sends a quiz preview
-            ws.send(json.dumps({
-                "type": "quiz_preview",
-                "quiz": {
-                    "question": "What is TDD?",
-                    "options": [
-                        {"id": "a", "text": "Test-Driven Development"},
-                        {"id": "b", "text": "Type-Driven Design"},
-                    ],
-                    "multi": False,
-                    "correct_indices": [0],
-                }
-            }))
+        """Daemon sends quiz_preview → backend broadcasts it to connected host."""
+        # Connect host WS to receive the broadcast
+        host_ws_url = server_url.replace("http://", "ws://") + "/ws/__host__"
+        with ws_connect(host_ws_url, additional_headers=_auth_headers()) as host_ws:
+            # Drain initial state message
+            host_ws.recv(timeout=3)
 
-            time.sleep(0.3)  # Let backend process
+            with ws_connect(_daemon_ws_url(server_url), additional_headers=_auth_headers()) as ws:
+                # Daemon sends a quiz preview
+                ws.send(json.dumps({
+                    "type": "quiz_preview",
+                    "quiz": {
+                        "question": "What is TDD?",
+                        "options": [
+                            {"id": "a", "text": "Test-Driven Development"},
+                            {"id": "b", "text": "Type-Driven Design"},
+                        ],
+                        "multi": False,
+                        "correct_indices": [0],
+                    }
+                }))
 
-            # Verify the preview was stored — GET /api/quiz-refine is auth-protected and returns current preview
-            resp = sapi(server_url, "get", "/quiz-refine")
-            assert resp.status_code == 200
-            data = resp.json()
-            assert data["preview"] is not None
-            assert data["preview"]["question"] == "What is TDD?"
+                # Host should receive the quiz_preview broadcast
+                deadline = time.time() + 3
+                found = False
+                while time.time() < deadline:
+                    try:
+                        raw = host_ws.recv(timeout=1)
+                        msg = json.loads(raw)
+                        if msg.get("type") == "quiz_preview":
+                            assert msg["quiz"]["question"] == "What is TDD?"
+                            found = True
+                            break
+                    except Exception:
+                        continue
+                assert found, "Host did not receive quiz_preview broadcast"
 
     def test_session_sync_via_ws(self, server_url, session_id):
         """Daemon sends session_sync → backend updates summary points (readable via public endpoint)."""

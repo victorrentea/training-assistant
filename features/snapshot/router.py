@@ -1,17 +1,14 @@
-"""State snapshot endpoints for daemon-based persistence.
+"""State snapshot helpers for daemon-based persistence.
 
-GET /api/state-snapshot — serialize all persistent state to JSON + MD5 hash
-POST /api/state-restore — restore state from a snapshot dict
+Serialization and restore logic used by the daemon WebSocket protocol.
+HTTP endpoints were removed — daemon communicates via WS only.
 """
 
-import hashlib
-import json
 import logging
 from datetime import datetime
 
 from fastapi import APIRouter
 
-from core.messaging import broadcast_state
 from core.state import state, ActivityType
 
 router = APIRouter()
@@ -113,20 +110,8 @@ def _serialize_state() -> dict:
     }
 
 
-@router.get("/state-snapshot")
-async def get_state_snapshot():
-    """Serialize all persistent state to JSON with MD5 hash."""
-    state_dict = _serialize_state()
-    state_json = json.dumps(state_dict, sort_keys=True)
-    md5_hex = hashlib.md5(state_json.encode()).hexdigest()
-    return {"hash": md5_hex, "state": state_dict}
-
-
-@router.post("/state-restore")
-async def restore_state_snapshot(body: dict):
-    """Restore state from a snapshot dict."""
-    data = body.get("state", body)
-
+def restore_state_from_dict(data: dict):
+    """Restore state from a snapshot dict (called from WS handler)."""
     # Participants
     if "participant_names" in data:
         state.participant_names = data["participant_names"]
@@ -232,10 +217,6 @@ async def restore_state_snapshot(body: dict):
     # Mark as restored
     state.needs_restore = False
 
-    await broadcast_state()
-
-    # Count restored participants
     restored_count = len(state.participant_names)
     logger.info("State restored with %d participants", restored_count)
-
-    return {"ok": True, "restored_participants": restored_count}
+    return restored_count
