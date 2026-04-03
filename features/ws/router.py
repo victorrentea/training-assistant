@@ -41,7 +41,10 @@ from features.ws.daemon_protocol import (
     MSG_TRANSCRIPTION_LANGUAGE_STATUS, MSG_TIMING_EVENT, MSG_STATE_RESTORE,
     MSG_ACTIVITY_LOG, MSG_SESSION_FOLDERS,
     MSG_GLOBAL_STATE_SAVED, MSG_RELOAD,
+    MSG_PROXY_RESPONSE,
+    MSG_PARTICIPANT_REGISTERED, MSG_PARTICIPANT_LOCATION, MSG_PARTICIPANT_AVATAR_UPDATED,
 )
+from features.ws.proxy_bridge import handle_proxy_response
 
 router = APIRouter()
 session_router = APIRouter()
@@ -552,6 +555,54 @@ async def _handle_reload(data):
     await broadcast({"type": "reload"})
 
 
+async def _handle_participant_registered(data: dict):
+    """Daemon registered a participant — update state and broadcast."""
+    pid = data.get("participant_id")
+    if not pid:
+        return
+    state.participant_history.add(pid)
+    if "name" in data:
+        state.participant_names[pid] = data["name"]
+    if "avatar" in data:
+        state.participant_avatars[pid] = data["avatar"]
+    if "universe" in data:
+        state.participant_universes[pid] = data["universe"]
+    if "score" in data:
+        state.scores.setdefault(pid, data["score"])
+        state.base_scores.setdefault(pid, 0)
+    if "debate_side" in data and data["debate_side"]:
+        state.debate_sides[pid] = data["debate_side"]
+        state.debate_auto_assigned.add(pid)
+    # Send full state to this participant if connected
+    ws = state.participants.get(pid)
+    if ws:
+        try:
+            await send_state_to_participant(ws, pid)
+        except Exception:
+            pass
+    await broadcast_participant_update()
+    if state.debate_phase:
+        await broadcast_state()
+
+
+async def _handle_participant_location(data: dict):
+    """Daemon set participant location."""
+    pid = data.get("participant_id")
+    loc = data.get("location")
+    if pid and loc:
+        state.locations[pid] = loc
+        await broadcast_participant_update()
+
+
+async def _handle_participant_avatar_updated(data: dict):
+    """Daemon refreshed participant avatar."""
+    pid = data.get("participant_id")
+    avatar = data.get("avatar")
+    if pid and avatar:
+        state.participant_avatars[pid] = avatar
+        await broadcast_state()
+
+
 _DAEMON_MSG_HANDLERS = {
     MSG_SLIDES_CATALOG: _handle_daemon_slides_catalog,
     MSG_SLIDE_INVALIDATED: _handle_daemon_slide_invalidated,
@@ -574,6 +625,10 @@ _DAEMON_MSG_HANDLERS = {
     MSG_SESSION_FOLDERS: _handle_session_folders,
     MSG_GLOBAL_STATE_SAVED: _handle_global_state_saved,
     MSG_RELOAD: _handle_reload,
+    MSG_PROXY_RESPONSE: handle_proxy_response,
+    MSG_PARTICIPANT_REGISTERED: _handle_participant_registered,
+    MSG_PARTICIPANT_LOCATION: _handle_participant_location,
+    MSG_PARTICIPANT_AVATAR_UPDATED: _handle_participant_avatar_updated,
 }
 
 
