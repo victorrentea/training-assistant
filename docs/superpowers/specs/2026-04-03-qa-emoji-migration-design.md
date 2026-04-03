@@ -514,11 +514,12 @@ case 'qa_updated':
 - Railway's Q&A REST endpoints (`features/qa/router.py`) become dead code once daemon handles them. Left in place.
 - Prometheus counters (`qa_questions_total`, `qa_upvotes_total`) stay on Railway — they'll go stale for new-path requests.
 - `score_award` triggers `broadcast_state()` on Railway — still provides `my_score` to participants until scoring migrates.
+- **Known limitation:** `author_avatar` in conference mode uses `"letter:XX:color"` format which the Q&A `<img>` tag can't render (shows broken image). This is a pre-existing bug in Railway's state_builder — not introduced by this migration. Will be fixed separately.
 
 ## Testing Strategy
 
 - **`tests/daemon/test_emoji_router.py`**: emoji reaction endpoint (happy path, validation, host_ws send verification, overlay POST verification)
-- **`tests/daemon/test_qa_router.py`**: participant submit/upvote (happy path, validation, activity gate, duplicate upvote, self-upvote), host submit/edit/delete/answered/clear, write-back events, host_ws send verification
+- **`tests/daemon/test_qa_router.py`**: participant submit/upvote (happy path, validation, duplicate upvote, self-upvote), host submit/edit/delete/answered/clear, write-back events, host_ws send verification
 - **`tests/daemon/test_qa_state.py`**: QAState unit tests (submit, upvote, edit, delete, toggle_answered, clear, build_question_list sorting, sync_from_restore)
 - **`tests/daemon/test_host_ws.py`**: host WS module (set/clear/send_to_host)
 - **Existing tests**: must still pass
