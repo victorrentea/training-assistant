@@ -19,6 +19,7 @@ Examples included in [workspace.dsl](/Users/victorrentea/conductor/workspaces/tr
 - `C2Containers`
 - `C2DaemonFlow`
 - `C2ParticipantFlow`
+- `C2TrainingDaemonOnly`
 - `C3BackendOverview`
 - `C3BackendRealtime`
 - `C3BackendSessionAndSlides`
