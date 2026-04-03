@@ -26,6 +26,7 @@ class ParticipantState:
         self.mode: str = "workshop"
         self.debate_phase: str | None = None
         self.debate_sides: dict[str, str] = {}
+        self.current_activity: str = "none"
 
     def sync_from_restore(self, data: dict):
         """Update cache from state_restore or session_sync data.
@@ -57,6 +58,8 @@ class ParticipantState:
             if "debate_sides" in data:
                 self.debate_sides.clear()
                 self.debate_sides.update(data["debate_sides"])
+            if "current_activity" in data:
+                self.current_activity = str(data["current_activity"])
 
     def snapshot(self) -> dict:
         """Return a copy of all state (for testing/debugging)."""
@@ -70,6 +73,7 @@ class ParticipantState:
                 "mode": self.mode,
                 "debate_phase": self.debate_phase,
                 "debate_sides": dict(self.debate_sides),
+                "current_activity": self.current_activity,
             }
 
 
