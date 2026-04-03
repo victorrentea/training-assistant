@@ -2169,7 +2169,7 @@
     const input = document.getElementById('wc-host-input');
     if (!input) return;
     const word = input.value.trim();
-    if (!word || !ws) return;
+    if (!word) return;
     fetch(API('/wordcloud/word'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
