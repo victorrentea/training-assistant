@@ -2880,6 +2880,15 @@ ${html}
       case 'wordcloud_updated':
         renderWordCloudScreen(msg.words || {}, msg.word_order || [], msg.topic || '');
         break;
+      case 'qa_updated': {
+        const myQuestions = (msg.questions || []).map(q => ({
+            ...q,
+            is_own: q.author_uuid === myUUID,
+            has_upvoted: (q.upvoters || []).includes(myUUID),
+        }));
+        renderQAScreen(myQuestions);
+        break;
+      }
       case 'name_rejected': {
         const editInput = document.getElementById('name-edit-input');
         if (editInput) {
@@ -3345,8 +3354,7 @@ ${html}
   }
 
   function sendEmoji(emoji, ev) {
-    if (!ws) return;
-    sendWS('emoji_reaction', { emoji });
+    participantApi('emoji/reaction', { emoji });
     const btn = ev && ev.currentTarget;
     if (currentMode === 'conference' || window.innerWidth <= 600) {
       showMobileEmojiShake(emoji);
@@ -3409,8 +3417,8 @@ ${html}
     const input = document.getElementById('qa-input');
     if (!input) return;
     const text = input.value.trim();
-    if (!text || !ws) return;
-    sendWS('qa_submit', { text });
+    if (!text) return;
+    participantApi('qa/submit', { text });
     input.value = '';
     const qaBtn = document.getElementById('qa-submit-btn');
     if (qaBtn) qaBtn.disabled = true;
@@ -3418,8 +3426,7 @@ ${html}
   }
 
   function upvoteQuestion(questionId) {
-    if (!ws) return;
-    sendWS('qa_upvote', { question_id: questionId });
+    participantApi('qa/upvote', { question_id: questionId });
   }
 
   function renderQACleanup() {
