@@ -1,0 +1,364 @@
+@startuml System Interactions
+!pragma teoz true
+
+title Workshop Live Interaction Tool — System Interactions
+
+participant "Host UI" as H
+participant "Participant UI" as P
+participant "Backend\n(FastAPI)" as B
+participant "Daemon" as D
+participant "Desktop Overlay" as O
+participant "Google Drive" as GD
+participant "Claude API\n(Anthropic)" as AI
+
+== 1. Session Lifecycle ==
+
+H -> B : POST /api/session/start {name}
+B --> D : WS session_request {action:"start", name, request_id}
+D -> D : Create session folder\non disk
+D --> B : WS global_state_saved {request_id, persisted:true,\n  global_state_file:"training-assistant-global-state.json"}
+D --> B : WS session_sync {main, talk, key_points}
+B --> H : WS broadcast (session state)
+
+... (participants join, session running) ...
+
+H -> B : POST /api/session/pause
+B --> D : WS session_request {action:"pause", request_id}
+B <-- D : WS global_state_saved {request_id, persisted:true}
+B --> H : WS broadcast (status:"paused")
+B --> P : WS session_paused -> disconnect
+
+H -> B : POST /api/session/resume
+B --> D : WS session_request {action:"resume", request_id}
+B <-- D : WS global_state_saved {request_id, persisted:true}
+B --> H : WS broadcast (status:"active")
+note right of P : Paused participants\nreconnect automatically
+
+H -> B : POST /api/session/end
+B --> D : WS session_request {action:"end", request_id}
+D -> D : Persist state to disk
+B <-- D : WS global_state_saved {request_id, persisted:true}
+
+note over D,B
+  Backend proactively pushes state and session snapshots
+  to daemon every 7s via WS for disk persistence.
+end note
+
+== 2. Participant Join ==
+
+P -> B : WS connect /ws/{uuid}
+B -> P : WS accept
+P --> B : WS set_name {name}
+B -> B : Store participant_names[uuid]
+B -> B : assign_avatar(uuid)
+B --> P : WS full state (poll, activity, scores...)
+B --> H : WS participant_update (list of participants)
+
+opt Geolocation granted
+  P -> P : Browser Geolocation API
+  P --> B : WS location {city, country}
+  B --> H : WS participant_update
+end
+
+opt Geolocation denied
+  P --> B : WS location {timezone from Intl API}
+end
+
+== 3. Poll / Quiz Flow ==
+
+group Host-created poll
+  H -> B : POST /api/poll {question, options[], multi}
+  B -> B : Store poll, set activity=POLL
+  B --> P : WS broadcast (poll state)
+  B --> H : WS broadcast (poll state)
+end
+
+group Quiz generation (daemon)
+  H -> B : POST /api/quiz-request {minutes, topic}
+  B --> D : WS quiz_request {minutes, topic}
+  D --> B : WS quiz_status {status:"generating"}
+  B --> H : WS broadcast quiz_status
+  D -> AI : Claude API (transcript + prompt)
+  AI --> D : Generated quiz JSON
+  D --> B : WS quiz_preview {quiz}
+  B --> H : WS broadcast quiz_preview
+  H -> H : Host reviews quiz
+  H -> B : POST /api/poll (accept quiz as poll)
+  B --> P : WS broadcast (poll created)
+end
+
+H -> B : PUT /api/poll/status {open:true}
+B -> B : poll_opened_at = now()
+B --> P : WS broadcast (poll active)
+
+P --> B : WS vote {option_id}
+B -> B : Store votes[uuid], record vote_time
+B --> P : WS vote_update {vote_counts, total_votes}
+B --> H : WS vote_update
+
+H -> B : PUT /api/poll/correct {correct_ids}
+B -> B : Calculate speed-based scores\n(1000 max, 500 min, linear decay)
+B --> P : WS result {correct_ids, voted_ids, score}
+B --> H : WS broadcast (scores updated)
+
+== 4. Q&A Flow ==
+
+P --> B : WS qa_submit {text}
+B -> B : Store qa_questions[qid]\nAward 100 pts to author
+B --> P : WS broadcast (qa state)
+B --> H : WS broadcast (qa state)
+
+P --> B : WS qa_upvote {question_id}
+B -> B : Add to upvoters set\n+50 pts to author, +25 pts to voter
+B --> P : WS broadcast
+B --> H : WS broadcast
+
+H -> B : PUT /api/qa/question/{id}/text {text}
+B --> P : WS broadcast
+H -> B : DELETE /api/qa/question/{id}
+B --> P : WS broadcast
+H -> B : PUT /api/qa/question/{id}/answered {true}
+B --> P : WS broadcast
+
+== 5. Word Cloud Flow ==
+
+H -> B : POST /api/wordcloud/topic {topic}
+B -> B : Set wordcloud_topic
+B --> P : WS broadcast (topic)
+
+P --> B : WS wordcloud_word {word}
+B -> B : Increment word count\n+200 pts to submitter
+B --> P : WS broadcast (words updated)
+B --> H : WS broadcast
+
+H -> B : POST /api/wordcloud/clear
+B --> P : WS broadcast (cleared)
+
+== 6. Code Review Flow ==
+
+H -> B : POST /api/codereview {snippet, language, smart_paste}
+
+opt smart_paste enabled
+  B -> AI : Claude Haiku: extract code
+  AI --> B : {code, language}
+end
+
+B -> B : Store snippet, phase="selecting"
+B --> P : WS broadcast (code review state)
+
+P --> B : WS codereview_select {line}
+B -> B : Add line to selections[uuid]
+B --> P : WS broadcast
+B --> H : WS broadcast
+
+P --> B : WS codereview_deselect {line}
+B -> B : Remove line from selections[uuid]
+B --> P : WS broadcast
+
+H -> B : PUT /api/codereview/status {open:false}
+B -> B : phase = "reviewing"
+B --> P : WS broadcast
+
+H -> B : PUT /api/codereview/confirm-line {line}
+B -> B : Add to confirmed set\n+200 pts per participant who flagged it
+B --> P : WS broadcast (confirmed lines, scores)
+B --> H : WS broadcast
+
+== 7. Debate Flow ==
+
+H -> B : POST /api/debate {statement}
+B -> B : Reset debate state\nphase = "side_selection"
+B --> P : WS broadcast
+
+P --> B : WS debate_pick_side {side: "for"|"against"}
+B -> B : Record side choice
+
+opt >= 50% picked
+  B -> B : Auto-assign remaining\nto balance teams
+end
+
+opt All assigned
+  B -> B : phase = "arguments"
+end
+
+B --> P : WS broadcast
+
+P --> B : WS debate_argument {text}
+B -> B : Store argument\n+100 pts to author
+B --> P : WS broadcast
+
+P --> B : WS debate_upvote {argument_id}
+B -> B : +50 pts to author\n+25 pts to voter
+B --> P : WS broadcast
+
+H -> B : POST /api/debate/end-arguments
+B -> B : phase = "ai_cleanup"
+B --> D : WS debate_ai_request {statement, for_args, against_args}
+B --> P : WS broadcast (ai_cleanup phase)
+
+D -> AI : Claude API (deduplicate, cleanup, suggest)
+AI --> D : {merges, cleaned, new_arguments}
+D --> B : WS debate_ai_result {merges, cleaned, new_arguments}
+B -> B : Apply merges, add AI args\nphase = "prep"
+B --> P : WS broadcast
+
+P --> B : WS debate_volunteer
+B -> B : Set champion for side\n+2500 pts
+B --> P : WS broadcast
+
+H -> B : POST /api/debate/round-timer {index, seconds}
+B --> P : WS debate_timer
+B --> H : WS debate_timer
+
+== 8. Slide Update Flow (PPTX change) ==
+
+D -> D : Watch PPTX folders\nfor mtime changes
+D --> B : WS slide_invalidated {slug}
+
+B -> B : Clear cached PDF fingerprint
+B -> GD : HTTP GET (download updated PDF)
+GD --> B : PDF bytes
+B -> B : Cache PDF in /tmp/slides-cache/
+
+B --> P : WS broadcast (slides_cache_status updated)
+B --> H : WS broadcast
+
+note over B
+  Slide catalog is pre-loaded from static catalog
+  file at backend startup. Daemon sends
+  slide_invalidated when PPTX files change.
+end note
+
+== 9. Slide Loading Flow ==
+
+P -> B : GET /api/slides/file/{slug}
+
+alt PDF cached locally
+  B --> P : HTTP 200 (PDF bytes)
+else Not cached, Drive URL known
+  B -> GD : HTTP GET (download PDF)
+  GD --> B : PDF bytes
+  B -> B : Cache to /tmp/slides-cache/
+  B --> P : HTTP 200 (PDF bytes)
+else Not cached, no Drive URL
+  B --> P : HTTP 404
+end
+
+P -> P : PDF.js renders in iframe
+
+== 10. Follow Trainer (Slides) ==
+
+D -> D : osascript probes PowerPoint\n(presentation name + slide number)
+D --> B : WS slides_current {slug, current_page, presentation_name}
+B -> B : Store slides_current
+B --> P : WS slides_current {slug, page}
+B --> H : WS broadcast
+
+P -> P : Auto-navigate to page\n(if "follow" enabled)
+
+note over D
+  When PowerPoint closes or no presentation open,
+  daemon sends slides_clear to remove current slide.
+end note
+
+== 11. Paste Text Flow ==
+
+P --> B : WS paste_text {text}
+B -> B : Store in paste_texts[uuid]\n(max 10 pending, 100KB limit)
+B --> H : WS participant_update (paste icon visible)
+
+H --> B : WS paste_dismiss {uuid, paste_id}
+B -> B : Remove paste entry
+B --> H : WS participant_update
+
+== 12. File Upload Flow ==
+
+P -> B : POST /api/upload (multipart file)
+B -> B : Store file on disk\n(max 100KB, max 10 per participant)
+B --> H : WS participant_update (upload icon visible)
+
+H -> B : GET /api/upload/{uuid}/{file_id}
+B --> H : HTTP 200 (file bytes)
+
+== 13. Emoji Reaction Flow ==
+
+P --> B : WS emoji_reaction {emoji}
+B --> O : WS broadcast emoji to overlay
+B --> H : WS broadcast emoji to host
+
+O -> O : Animate emoji on screen
+
+== 14. Activity Switch ==
+
+H -> B : POST /api/activity {type: POLL|WORDCLOUD|QA|DEBATE|CODEREVIEW|NONE}
+B -> B : Set current_activity
+B --> P : WS broadcast (activity changed)
+B --> H : WS broadcast
+
+== 15. Mode Switch ==
+
+H -> B : POST /api/mode {mode: "workshop"|"conference"}
+B -> B : Set mode, assign character names\nif switching to conference
+B --> P : WS broadcast (mode changed)
+B --> H : WS broadcast
+
+== 16. Summary / Key Points Flow ==
+
+H -> B : POST /api/summary/force
+note right : or participant triggers same endpoint\n(public, 30s cooldown)
+B --> D : WS summary_force
+D -> D : Read transcript from disk
+D -> AI : Claude API (transcript + existing key points)
+AI --> D : Diff (added/removed/edited points)
+D -> D : Save updated key points to disk
+D --> B : WS session_sync {key_points: [...]}
+B -> B : Update summary_points
+B --> P : WS broadcast (summary updated)
+B --> H : WS broadcast
+
+== 17. Leaderboard Flow ==
+
+H -> B : POST /api/leaderboard/show
+B -> B : leaderboard_active = true
+B --> P : WS leaderboard {top5[], my_rank, my_score}
+note right of P : Each participant receives\npersonalized rank
+B --> H : WS leaderboard {top5[]}
+
+H -> B : POST /api/leaderboard/hide
+B --> P : WS leaderboard_hide
+B --> H : WS leaderboard_hide
+
+== 18. Daemon Heartbeat & State Persistence ==
+
+D --> B : WS daemon_ping (periodic heartbeat)
+B -> B : Update daemon_last_seen
+
+B --> D : WS state_snapshot_result (periodic, every 7s)
+B --> D : WS session_snapshot_result (periodic, every 7s)
+D -> D : Write state-backup.json + session_state.json to disk
+
+D --> B : WS transcript_status {line_count, total_lines}
+B --> H : WS broadcast (transcript progress)
+
+D --> B : WS token_usage {input_tokens, output_tokens, cost}
+B --> H : WS broadcast (cost tracking)
+
+== 19. Backend Restart Recovery ==
+
+note over B : Backend restarts (deploy or crash)\nIn-memory state cleared
+
+D -> D : WS disconnect detected (3s timeout)
+D -> B : WS reconnect /ws/daemon
+B --> D : WS accept
+
+D --> B : WS session_folders {folders}
+note over D : on_connect: re-sync active session
+D -> D : Load session_state.json\nfrom active session folder
+D --> B : WS session_sync {main, key_points, session_state}
+B -> B : Restore session_main, scores,\nparticipants, activity state
+
+H -> B : GET /api/session/active
+B --> H : {auto_join:true, session_id}
+H -> H : Auto-redirect to /host/{session_id}
+
+@enduml
