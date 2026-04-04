@@ -21,7 +21,7 @@ All host REST: `/api/{sid}/host/...` on daemon localhost.
 | Method | Path | Body | Response |
 |--------|------|------|----------|
 | POST | `/{sid}/api/participant/register` | `{}` | `{name, avatar}` |
-| PUT | `/{sid}/api/participant/name` | `{name}` | `{ok}` or `{error}` |
+| PUT | `/{sid}/api/participant/name` | `{name}` | 200 or 409 (no body) |
 | POST | `/{sid}/api/participant/avatar/roll` | `{rejected[]}` | `{ok, avatar}` |
 | PUT | `/{sid}/api/participant/location` | `{location}` | `{ok}` |
 | GET | `/{sid}/api/participant/state` | — | Full personalized state |
@@ -58,7 +58,7 @@ current_activity: str           # "none"|"poll"|"wordcloud"|"qa"|"codereview"|"d
 3. Connect WS `ws://host/ws/{sid}/{uuid}` (receive-only)
 4. `GET /{sid}/api/participant/state` → full state → render
 5. Track WS events for incremental updates
-6. On WS disconnect → reconnect with backoff → re-fetch state
+6. On WS disconnect → reconnect with backoff (1s→3s→5s then 5s±1s jitter) → re-fetch state
 
 ---
 
@@ -92,7 +92,7 @@ current_activity: str           # "none"|"poll"|"wordcloud"|"qa"|"codereview"|"d
 | POST | `/api/{sid}/host/poll/timer` | `{seconds}` | `{ok}` |
 
 **Daemon → Browser WS:**
-- `vote_update` — `{votes: {option_id→count}}` — real-time tally (only event host needs from WS)
+- `vote_update` — `{votes: {option_id→count}}` — real-time tally
 
 ### State
 ```
@@ -156,7 +156,7 @@ Submit: 100pts. Upvote: 50pts to author + 25pts to voter. Can't upvote own. Serv
 **Daemon → Browser WS:**
 - `qa_updated` — `{questions: [{id, text, author_uuid, upvoter_uuids[], answered, timestamp}]}`
 
-Participant JS computes `is_own` (author_uuid == myUUID) and `has_upvoted` (myUUID in upvoter_uuids) locally.
+Participant JS computes `is_own` and `has_upvoted` locally using its UUID.
 
 ### Host
 **Browser → Daemon REST:**
@@ -169,7 +169,7 @@ Participant JS computes `is_own` (author_uuid == myUUID) and `has_upvoted` (myUU
 | POST | `/api/{sid}/host/qa/clear` | — | `{ok}` |
 
 **Daemon → Browser WS:**
-- `qa_updated` — same as participant (host sees all questions)
+- `qa_updated` — same structure (host sees all questions)
 
 ### State
 ```
@@ -214,7 +214,7 @@ Full replacement of selected lines. Only during "selecting" phase.
 Smart paste: Claude Haiku extracts code from LLM output. Max 50 lines.
 
 **Daemon → Browser WS:**
-- `codereview_selections_updated` — `{line_counts: {line→count}}` — host-only, not sent to participants
+- `codereview_selections_updated` — `{line_counts: {line→count}}` — host-only
 
 ### State
 ```
@@ -223,6 +223,66 @@ language: str | null
 phase: str                          # "idle" | "selecting" | "reviewing"
 selections: dict[str, set[int]]     # pid → selected line numbers
 confirmed: set[int]                 # host-confirmed lines
+```
+
+---
+
+## Feature: Debate
+
+### Participant
+**Browser → Daemon REST:**
+| Method | Path | Body | Response |
+|--------|------|------|----------|
+| POST | `/{sid}/api/participant/debate/pick-side` | `{side}` | `{ok}` |
+| POST | `/{sid}/api/participant/debate/argument` | `{text}` | `{ok}` |
+| POST | `/{sid}/api/participant/debate/upvote` | `{argument_id}` | `{ok}` |
+| POST | `/{sid}/api/participant/debate/volunteer` | `{}` | `{ok}` |
+
+Side: "for" or "against". Argument: max 280 chars, 100pts. Upvote: 50pts to author (human only) + 25pts to voter. Volunteer as champion: 2500pts.
+
+**Daemon → Browser WS:**
+- `debate_updated` — full debate state snapshot
+- `debate_timer` — `{round_index, seconds, started_at}`
+- `debate_round_ended` — `{}`
+- `scores_updated` — on scoring actions
+
+### Host
+**Browser → Daemon REST:**
+| Method | Path | Body | Response |
+|--------|------|------|----------|
+| POST | `/api/{sid}/host/debate` | `{statement}` | `{ok}` |
+| POST | `/api/{sid}/host/debate/reset` | — | `{ok}` |
+| POST | `/api/{sid}/host/debate/close-selection` | — | `{ok}` |
+| POST | `/api/{sid}/host/debate/force-assign` | — | `{ok}` |
+| POST | `/api/{sid}/host/debate/phase` | `{phase}` | `{ok}` |
+| POST | `/api/{sid}/host/debate/first-side` | `{side}` | `{ok}` |
+| POST | `/api/{sid}/host/debate/round-timer` | `{round_index, seconds}` | `{ok}` |
+| POST | `/api/{sid}/host/debate/end-round` | — | `{ok}` |
+| POST | `/api/{sid}/host/debate/end-arguments` | — | `{ok}` |
+| POST | `/api/{sid}/host/debate/ai-result` | `{merges[], cleaned[], new_arguments[]}` | `{ok}` |
+
+**Daemon → Browser WS:** (none — host triggered the actions)
+
+### State
+```
+statement: str | null
+phase: str | null               # "side_selection"|"arguments"|"ai_cleanup"|"prep"|"live_debate"|"ended"
+sides: dict[str, str]           # uuid → "for"|"against"
+arguments: list[Argument]
+  Argument:
+    id: str
+    author_uuid: str
+    side: str
+    text: str
+    upvoters: set[str]
+    ai_generated: bool
+    merged_into: str | null
+champions: dict[str, str]       # "for"|"against" → uuid
+auto_assigned: set[str]         # uuids auto-assigned to balance sides
+first_side: str | null          # which side speaks first
+round_index: int | null
+round_timer_seconds: int | null
+round_timer_started_at: datetime | null
 ```
 
 ---
@@ -251,8 +311,6 @@ confirmed: set[int]                 # host-confirmed lines
 scores: dict[str, int]    # uuid → total points
 ```
 
-No `leaderboard_active` flag — it's a one-shot display, not persistent state.
-
 ---
 
 ## Feature: Activity Switching
@@ -261,7 +319,7 @@ No `leaderboard_active` flag — it's a one-shot display, not persistent state.
 **Browser → Daemon REST:** (none — host controls)
 
 **Daemon → Browser WS:**
-- `activity_updated` — `{current_activity}` — participant JS shows/hides screens
+- `activity_updated` — `{current_activity}`
 
 ### Host
 **Browser → Daemon REST:**
@@ -275,7 +333,7 @@ No `leaderboard_active` flag — it's a one-shot display, not persistent state.
 
 ### State
 ```
-current_activity: str    # stored in participant_state
+current_activity: str
 ```
 
 ---
@@ -290,7 +348,7 @@ current_activity: str    # stored in participant_state
 
 Max 4 chars. Fire and forget.
 
-**Daemon → Browser WS:** (none — participants don't see each other's emojis)
+**Daemon → Browser WS:** (none)
 
 ### Host
 **Browser → Daemon REST:** (none)
@@ -308,7 +366,7 @@ None — not persisted.
 ### Participant
 **Browser → Daemon REST:** (none — joins by URL)
 
-**Daemon → Browser WS:** (none — on session end, Railway closes WS connections for that sid; participant JS enters retry loop waiting for host to return)
+**Daemon → Browser WS:** (none — on session end, Railway closes WS connections for that sid; participant JS enters retry loop with backoff: 1s→3s→5s then 5s±1s jitter, showing "Waiting for host to connect")
 
 ### Host
 **Browser → Daemon REST:**
@@ -330,7 +388,33 @@ active_session_id: str | null    # the 6-char code (THE one string Railway needs
 session_name: str | null         # display name
 ```
 
-No session stack — only one active session at a time.
+---
+
+## Feature: Quiz Generation
+
+### Participant
+**Browser → Daemon REST:** (none — quiz creates a poll which participants interact with via Poll feature)
+
+**Daemon → Browser WS:**
+- `quiz_status` — `{status, message}` — generation progress ("generating", "ready", "error")
+- `quiz_preview` — `{question, options[], multi, correct_indices[]}` — preview for host before publishing
+
+### Host
+**Browser → Daemon REST:**
+| Method | Path | Body | Response |
+|--------|------|------|----------|
+| POST | `/api/{sid}/host/quiz-request` | `{minutes?, topic?}` | `{ok}` |
+| DELETE | `/api/{sid}/host/quiz-preview` | — | `{ok}` |
+| POST | `/api/{sid}/host/quiz-refine` | `{target}` | `{ok}` |
+
+`minutes`: how many minutes of transcript to use. `topic`: optional focus topic. `target`: which part to regenerate ("question", "opt1", "opt2", etc.).
+
+**Daemon → Browser WS:**
+- `quiz_status` — generation progress
+- `quiz_preview` — preview for host review
+
+### State
+Quiz is ephemeral — daemon generates from transcript, publishes as a poll. No persistent quiz state beyond the preview.
 
 ---
 
@@ -343,7 +427,7 @@ No session stack — only one active session at a time.
 | POST | `/{sid}/api/participant/paste` | `{text}` | `{ok}` |
 | POST | `/{sid}/api/participant/upload` | multipart file | `{ok, file_id}` |
 
-Paste: 100KB max. Upload: participant screenshots/files.
+Paste: 100KB max. Upload: participant screenshots/files. Upload goes to Railway first, then Railway notifies daemon to download the file. Daemon stores it in `{session_folder}/uploads/`.
 
 **Daemon → Browser WS:** (none)
 
@@ -353,6 +437,7 @@ Paste: 100KB max. Upload: participant screenshots/files.
 |--------|------|------|----------|
 | GET | `/api/{sid}/host/pastes` | — | `{pastes: {uuid→[{id, text}]}}` |
 | GET | `/api/{sid}/host/uploads` | — | `{uploads: {uuid→[{id, filename, size}]}}` |
+| GET | `/api/{sid}/host/uploads/{file_id}` | — | file binary |
 | POST | `/api/{sid}/host/paste-dismiss` | `{uuid, paste_id}` | `{ok}` |
 
 **Daemon → Browser WS:**
@@ -362,7 +447,41 @@ Paste: 100KB max. Upload: participant screenshots/files.
 ### State
 ```
 paste_texts: dict[str, list[dict]]    # uuid → [{id, text}]
+uploads: dict[str, list[dict]]        # uuid → [{id, filename, size, path}] — files on disk in session_folder/uploads/
 ```
+
+### Upload flow
+1. Participant uploads file to Railway (`POST /{sid}/api/participant/upload`)
+2. Railway stores temporarily, sends WS notification to daemon: `{type: "file_uploaded", uuid, file_id, filename, size, download_url}`
+3. Daemon downloads file from Railway immediately, stores in `{session_folder}/uploads/{file_id}`
+4. Daemon sends `file_uploaded` event to host via WS
+5. Railway deletes temporary file after daemon confirms download
+6. Host can view/download files from daemon via `GET /api/{sid}/host/uploads/{file_id}`
+
+---
+
+## Feature: Notes & Summary
+
+### Participant
+**Browser → Daemon REST:**
+| Method | Path | Body | Response |
+|--------|------|------|----------|
+| GET | `/{sid}/api/participant/notes` | — | `{notes_content}` |
+| GET | `/{sid}/api/participant/summary` | — | `{points[], raw_markdown, updated_at}` |
+
+Notes and summary are files on disk in the session folder. Daemon reads them on request.
+
+**Daemon → Browser WS:** (none — participant fetches on demand)
+
+### Host
+**Browser → Daemon REST:** (none — host sees notes/summary via the host panel which reads the files directly)
+
+**Daemon → Browser WS:** (none)
+
+### State
+None persisted in memory — read from disk:
+- `{session_folder}/notes.md` — session notes
+- `{session_folder}/summary.json` — key points + raw markdown
 
 ---
 
@@ -375,17 +494,17 @@ paste_texts: dict[str, list[dict]]    # uuid → [{id, text}]
 | GET | `/{sid}/api/slides` | — | `{slides[]}` |
 | GET | `/{sid}/api/slides/current` | — | `{slides_current}` |
 | GET | `/{sid}/api/slides/file/{slug}` | — | PDF binary |
-| GET | `/{sid}/api/participant/misc/slides-cache-status` | — | `{slides_cache_status}` |
+| GET | `/{sid}/api/participant/slides-cache-status` | — | `{slides_cache_status}` |
 
 Initial cache status from GET, then updated via WS.
 
 **Daemon → Browser WS:**
 - `slides_current` — `{slides_current}` — when host navigates slides
-- `slides_cache_status` — `{slides_cache_status: {slug→{status, size_bytes}}}` — download progress updates
+- `slides_cache_status` — `{slides_cache_status: {slug→{status, size_bytes}}}` — download progress
 
 ### Host
 **Browser → Daemon REST:**
-Slides are managed via the daemon's session/transcript tooling, not direct host REST calls.
+Slides managed via daemon's session tooling, not direct host REST calls.
 
 **Daemon → Browser WS:** (none relevant)
 
@@ -394,4 +513,4 @@ Slides are managed via the daemon's session/transcript tooling, not direct host 
 slides_cache_status: dict[str, dict]   # slug → {status: "downloading"|"ready"|"error", size_bytes, downloaded_at}
 ```
 
-Railway owns this state (it does the GDrive downloads and PDF serving). Daemon tells Railway which decks exist via `slides_catalog` WS message.
+Railway owns this state (GDrive downloads + PDF serving). Daemon tells Railway which decks exist via `slides_catalog` WS message.
