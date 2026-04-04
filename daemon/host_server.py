@@ -89,6 +89,18 @@ def create_app(backend_url: str) -> FastAPI:
     app.include_router(quiz_md_router)            # /api/{session_id}/quiz-md
     app.include_router(leaderboard_router)        # /api/{session_id}/leaderboard/*
 
+    from daemon.misc.router import participant_router as misc_participant_router
+    from daemon.misc.router import host_router as misc_host_router
+    app.include_router(misc_participant_router)   # /api/participant/misc/*
+    app.include_router(misc_host_router)          # /api/{session_id}/misc/*
+
+    from daemon.codereview.router import participant_router as codereview_participant_router
+    from daemon.codereview.router import host_router as codereview_host_router
+    from daemon.activity.router import host_router as activity_host_router
+    app.include_router(codereview_participant_router)  # /api/participant/codereview/*
+    app.include_router(codereview_host_router)         # /api/{session_id}/codereview/*
+    app.include_router(activity_host_router)           # /api/{session_id}/activity
+
     # --- WebSocket proxy ---
     @app.websocket("/ws/{path:path}")
     async def ws_proxy(websocket: WebSocket, path: str):
