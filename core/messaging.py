@@ -1,12 +1,12 @@
 """
-Broadcast infrastructure + registry pattern for state serialization.
+Broadcast infrastructure.
 
-Each feature registers its own state builders at import time via register_state_builder().
-build_participant_state() and build_host_state() merge contributions from all registered features.
+broadcast() sends semantic events to all connected clients.
+broadcast_participant_update() sends participant count to participants, full details to host.
 """
 import json
 import logging
-from typing import Optional, Callable
+from typing import Optional
 from fastapi import WebSocket
 
 from core.state import state
@@ -14,14 +14,6 @@ from core.state import state
 logger = logging.getLogger(__name__)
 
 SPECIAL_PIDS = {"__host__", "__overlay__"}
-
-# Registry: feature name → (build_for_participant, build_for_host) callables
-_state_builders: dict[str, tuple[Callable, Callable]] = {}
-
-
-def register_state_builder(feature: str, for_participant: Callable, for_host: Callable):
-    """Called by each feature's state_builder.py at import time."""
-    _state_builders[feature] = (for_participant, for_host)
 
 
 def participant_ids() -> list[str]:
@@ -49,22 +41,6 @@ def historical_participant_ids() -> list[str]:
     )
 
 
-def build_participant_state(pid: str) -> dict:
-    """Merge state from all registered feature builders for a participant."""
-    result = {}
-    for feature, (builder, _) in _state_builders.items():
-        result.update(builder(pid))
-    return result
-
-
-def build_host_state() -> dict:
-    """Merge state from all registered feature builders for the host."""
-    result = {}
-    for feature, (_, builder) in _state_builders.items():
-        result.update(builder())
-    return result
-
-
 async def _broadcast_foreach(sender):
     """Iterate participants, call sender(pid, ws) for each, and clean up dead connections.
 
@@ -81,18 +57,6 @@ async def _broadcast_foreach(sender):
         state.participants.pop(pid, None)
 
 
-async def broadcast_state():
-    """Send personalized state to each connected client."""
-    async def _send(pid, ws):
-        if pid == "__overlay__":
-            return
-        if pid == "__host__":
-            await ws.send_text(json.dumps(build_host_state()))
-        else:
-            await ws.send_text(json.dumps(build_participant_state(pid)))
-    await _broadcast_foreach(_send)
-
-
 async def broadcast(message: dict, exclude: Optional[str] = None):
     """Send identical message to all connected clients."""
     text = json.dumps(message)
@@ -103,9 +67,36 @@ async def broadcast(message: dict, exclude: Optional[str] = None):
     await _broadcast_foreach(_send)
 
 
+def _build_host_participants_list() -> list[dict]:
+    """Build the list of all historical participants for the host."""
+    participants_list: list[dict] = []
+    for pid in historical_participant_ids():
+        name = state.participant_names.get(pid, "").strip()
+        participant = {
+            "uuid": pid,
+            "name": name if name else f"Guest {pid[:8]}",
+            "score": state.scores.get(pid, 0),
+            "location": state.locations.get(pid, ""),
+            "avatar": state.participant_avatars.get(pid, ""),
+            "ip": state.participant_ips.get(pid, ""),
+            "online": pid in state.participants,
+        }
+        paste_entries = state.paste_texts.get(pid, [])
+        if paste_entries:
+            participant["paste_texts"] = paste_entries
+        upload_entries = state.uploaded_files.get(pid, [])
+        if upload_entries:
+            participant["uploaded_files"] = [
+                {"id": e["id"], "filename": e["filename"], "size": e["size"],
+                 "downloaded_at": e.get("downloaded_at")}
+                for e in upload_entries
+            ]
+        participants_list.append(participant)
+    return participants_list
+
+
 async def broadcast_participant_update():
     """Send participant update: simple count to participants, full details to host."""
-    from core.state_builder import _build_host_participants_list
     pids = participant_ids()
     count = len(pids)
 
@@ -127,16 +118,6 @@ async def broadcast_participant_update():
         else:
             await ws.send_text(participant_msg)
     await _broadcast_foreach(_send)
-
-
-async def send_state_to_participant(ws: WebSocket, pid: str):
-    """Send personalized state to a specific participant."""
-    await ws.send_text(json.dumps(build_participant_state(pid)))
-
-
-async def send_state_to_host(ws: WebSocket):
-    """Send host state to the host websocket."""
-    await ws.send_text(json.dumps(build_host_state()))
 
 
 async def _send_to_special(key: str, message: dict):

@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 
 from core.auth import require_host_auth
-from core.messaging import broadcast_state
+from core.messaging import broadcast_participant_update
 from core.state import state
 
 router = APIRouter()  # host-auth endpoints (download)
@@ -40,7 +40,7 @@ async def _cleanup_after_delay(file_id: int):
                 state.uploaded_files[uuid] = [e for e in entries if e["id"] != file_id]
                 if not state.uploaded_files[uuid]:
                     del state.uploaded_files[uuid]
-                await broadcast_state()
+                await broadcast_participant_update()
                 return
 
 
@@ -98,7 +98,7 @@ async def upload_file(
         "downloaded_at": None,  # epoch seconds, set on first host download
     }
     state.uploaded_files.setdefault(uuid, []).append(entry)
-    await broadcast_state()
+    await broadcast_participant_update()
     return {"ok": True, "id": file_id, "filename": filename, "size": total}
 
 
@@ -116,7 +116,7 @@ async def download_file(file_id: int):
         entry["downloaded_at"] = time.time()
         asyncio.create_task(_cleanup_after_delay(file_id))
         # Broadcast so host UI shows the fade
-        await broadcast_state()
+        await broadcast_participant_update()
     return FileResponse(
         path,
         filename=entry["filename"],

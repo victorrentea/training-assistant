@@ -17,7 +17,7 @@ import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
-from core.messaging import broadcast, broadcast_state
+from core.messaging import broadcast
 from core.state import state
 
 logger = logging.getLogger(__name__)
@@ -447,7 +447,6 @@ async def handle_slides_catalog(entries: list[dict]) -> None:
             initial_status = "cached" if dest.exists() else "not_cached"
             _set_status(slug, initial_status)
 
-    await broadcast_state()
     await broadcast_slides_cache_status()
     await broadcast({"type": "slides_catalog_changed"})
     await _push_log("*", "catalog_loaded", f"{len(new_catalog)} entries")

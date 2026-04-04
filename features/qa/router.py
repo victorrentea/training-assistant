@@ -2,12 +2,31 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from core.auth import require_host_auth
-from core.messaging import broadcast_state
+from core.messaging import broadcast
 from core.state import state
 
 router = APIRouter()
 
 _MAX_QUESTION_LENGTH = 280
+
+
+def _build_qa_questions_payload() -> list[dict]:
+    """Build serializable qa_questions list for broadcast."""
+    questions = []
+    for qid, q in sorted(
+        state.qa_questions.items(),
+        key=lambda item: (-len(item[1]["upvoters"]), item[1]["timestamp"]),
+    ):
+        questions.append({
+            "id": qid,
+            "text": q["text"],
+            "author": state.participant_names.get(q["author"], "Unknown"),
+            "upvote_count": len(q["upvoters"]),
+            "answered": q["answered"],
+            "timestamp": q["timestamp"],
+            "author_avatar": state.participant_avatars.get(q["author"], ""),
+        })
+    return questions
 
 
 class QuestionEdit(BaseModel):
@@ -29,7 +48,7 @@ async def edit_question(question_id: str, body: QuestionEdit):
     if len(text) > _MAX_QUESTION_LENGTH:
         raise HTTPException(400, f"Question too long (max {_MAX_QUESTION_LENGTH} chars)")
     q["text"] = text
-    await broadcast_state()
+    await broadcast({"type": "qa_updated", "qa_questions": _build_qa_questions_payload()})
     return {"ok": True}
 
 
@@ -38,7 +57,7 @@ async def delete_question(question_id: str):
     if question_id not in state.qa_questions:
         raise HTTPException(404, "Question not found")
     del state.qa_questions[question_id]
-    await broadcast_state()
+    await broadcast({"type": "qa_updated", "qa_questions": _build_qa_questions_payload()})
     return {"ok": True}
 
 
@@ -48,12 +67,12 @@ async def toggle_answered(question_id: str, body: AnswerToggle):
     if not q:
         raise HTTPException(404, "Question not found")
     q["answered"] = body.answered
-    await broadcast_state()
+    await broadcast({"type": "qa_updated", "qa_questions": _build_qa_questions_payload()})
     return {"ok": True}
 
 
 @router.post("/qa/clear", dependencies=[Depends(require_host_auth)])
 async def clear_qa():
     state.qa_questions = {}
-    await broadcast_state()
+    await broadcast({"type": "qa_updated", "qa_questions": []})
     return {"ok": True}

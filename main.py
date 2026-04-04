@@ -3,7 +3,6 @@ Workshop Live Interaction Tool
 FastAPI + WebSocket backend
 """
 
-import asyncio
 import logging
 from contextlib import asynccontextmanager
 from datetime import datetime
@@ -16,7 +15,7 @@ from pydantic import BaseModel
 from prometheus_fastapi_instrumentator import Instrumentator
 
 from core.auth import require_host_auth
-from core.messaging import broadcast_state
+from core.messaging import broadcast, broadcast_participant_update
 from core.session_guard import require_valid_session, InvalidSessionRedirect
 from core.state import state  # re-exported for test_main.py: from main import app, state
 import core.metrics as metrics  # noqa: registers custom Prometheus metrics
@@ -30,7 +29,6 @@ from features.summary import router as summary
 from features.pages.router import landing_router, host_router, participant_router
 from features.session import router as session
 from features.session.router import session_router as session_session_router
-from features.snapshot import router as snapshot
 from features.slides import router as slides
 from features.slides.upload import router as slides_upload_router
 from features.transcription_language import router as transcription_language_router
@@ -40,10 +38,6 @@ from features.feedback import router as feedback
 from features.internal.router import router as internal_router
 from features.ws.proxy_bridge import participant_proxy_router
 
-import core.state_builder  # noqa: registers core state builder
-import features.qa.state_builder  # noqa
-import features.wordcloud.state_builder  # noqa
-import features.slides.state_builder  # noqa
 
 logging.basicConfig(level=logging.INFO)
 
@@ -82,14 +76,7 @@ async def lifespan(app_: FastAPI):
     _stamp_deploy_info()
     from features.slides.cache import seed_catalog_from_file
     seed_catalog_from_file()
-    from features.ws.router import snapshot_pusher
-    task = asyncio.create_task(snapshot_pusher())
     yield
-    task.cancel()
-    try:
-        await task
-    except asyncio.CancelledError:
-        pass
 
 
 app = FastAPI(title="Workshop Tool", lifespan=lifespan)
@@ -168,7 +155,6 @@ session_host.include_router(wordcloud.router)
 session_host.include_router(quiz.router)
 session_host.include_router(summary.router)
 session_host.include_router(slides.router)
-session_host.include_router(snapshot.router)
 session_host.include_router(upload.router)
 session_host.include_router(session_session_router)
 
@@ -176,7 +162,7 @@ session_host.include_router(session_session_router)
 @session_host.post("/screen-share")
 async def toggle_screen_share():
     state.screen_share_active = not state.screen_share_active
-    await broadcast_state()
+    await broadcast({"type": "screen_share_updated", "screen_share_active": state.screen_share_active})
     return {"screen_share_active": state.screen_share_active}
 
 
@@ -185,7 +171,7 @@ async def set_mode(req: ModeRequest):
     if req.mode not in ("workshop", "conference"):
         raise HTTPException(400, "mode must be 'workshop' or 'conference'")
     state.mode = req.mode
-    await broadcast_state()
+    await broadcast({"type": "mode_updated", "mode": state.mode})
     return {"mode": state.mode}
 
 
