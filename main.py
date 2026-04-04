@@ -21,8 +21,7 @@ import core.metrics as metrics  # noqa: registers custom Prometheus metrics
 from features.ws import router as ws
 from features.ws.router import session_router as ws_session_router
 from features.pages.router import landing_router, host_router, participant_router
-from features.session import router as session
-from features.session.router import session_router as session_session_router, public_router as session_public_router
+from features.session.notes_router import public_router as session_public_router
 from features.slides import router as slides
 from features.slides.upload import router as slides_upload_router
 from features.upload import router as upload
@@ -106,9 +105,6 @@ app.include_router(ws_session_router)
 app.include_router(landing_router)
 app.include_router(host_router)
 
-# Global session lifecycle endpoints (no session prefix — host creates/ends sessions from here)
-app.include_router(session.router)
-
 # Daemon-facing slides upload endpoints (global — daemon doesn't know session_id)
 app.include_router(slides_upload_router, dependencies=[Depends(require_host_auth)])
 
@@ -132,7 +128,6 @@ session_host = APIRouter(
 )
 session_host.include_router(slides.router)
 session_host.include_router(upload.router)
-session_host.include_router(session_session_router)
 
 
 app.include_router(session_host)
