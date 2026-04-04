@@ -15,7 +15,7 @@ from pydantic import BaseModel
 
 from core.auth import require_host_auth, require_host_auth_or_cookie
 from core.state import state, ActivityType
-from core.messaging import broadcast_state
+from core.messaging import broadcast, broadcast_participant_update
 from features.ws.daemon_protocol import push_to_daemon
 from daemon.transcript.query import load_normalized_entries
 
@@ -253,7 +253,7 @@ async def end_session():
     # even if the daemon hasn't confirmed yet (daemon will send a sync to clear it fully).
     if state.session_main:
         state.session_main = {**state.session_main, "status": "ended"}
-        await broadcast_state()
+        await broadcast({"type": "session_updated", "session_main": state.session_main})
     return {"ok": True}
 
 
@@ -263,7 +263,7 @@ async def pause_session():
     await _push_session_request_sync(state.session_request)
     if state.session_main:
         state.session_main = {**state.session_main, "status": "paused"}
-        await broadcast_state()
+        await broadcast({"type": "session_updated", "session_main": state.session_main})
     return {"ok": True}
 
 
@@ -273,7 +273,7 @@ async def resume_session():
     await _push_session_request_sync(state.session_request)
     if state.session_main:
         state.session_main = {**state.session_main, "status": "active"}
-        await broadcast_state()
+        await broadcast({"type": "session_updated", "session_main": state.session_main})
     return {"ok": True}
 
 
@@ -303,7 +303,7 @@ async def create_session(body: SessionCreateBody):
     state.session_name = name
     state.session_type = body.type
     state.mode = "conference" if body.type == "talk" else "workshop"
-    await broadcast_state()
+    await broadcast_participant_update()
     return {"ok": True, "session_id": state.session_id, "session_name": state.session_name}
 
 
@@ -419,7 +419,7 @@ async def sync_session(body: SyncSessionRequest):
         name = _normalize_session_name(str((state.session_main or {}).get("name") or ""))
         state.session_id = _resolve_session_id_for_folder(name) if name else state.generate_session_id()
 
-    await broadcast_state()
+    await broadcast_participant_update()
     return {"ok": True}
 
 

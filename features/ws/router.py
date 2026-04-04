@@ -5,8 +5,6 @@ import json
 import logging
 import os
 import secrets
-import time
-import uuid as uuid_mod
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -14,22 +12,16 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 from core.messaging import (
     broadcast,
-    broadcast_state,
     broadcast_participant_update,
-    build_participant_state,
-    send_state_to_participant,
-    send_state_to_host,
     send_emoji_to_overlay,
     send_emoji_to_host,
+    participant_ids,
 )
 from core.metrics import (
     ws_connections_active,
     ws_messages_total,
-    qa_questions_total,
-    qa_upvotes_total,
 )
 from core.state import state, ActivityType, assign_avatar, refresh_avatar
-from core.messaging import participant_ids
 from features.ws.daemon_protocol import (
     MSG_SLIDES_CATALOG, MSG_SLIDE_INVALIDATED, MSG_DAEMON_PING,
     MSG_QUIZ_PREVIEW, MSG_QUIZ_STATUS,
@@ -41,7 +33,6 @@ from features.ws.daemon_protocol import (
     MSG_PROXY_RESPONSE,
     MSG_PARTICIPANT_REGISTERED, MSG_PARTICIPANT_LOCATION, MSG_PARTICIPANT_AVATAR_UPDATED,
     MSG_BROADCAST,
-    MSG_DAEMON_STATE_PUSH,
 )
 from features.ws.proxy_bridge import handle_proxy_response
 
@@ -177,7 +168,7 @@ async def _handle_session_sync(data):
         _restore_state_from_snapshot(session_state)
         state.needs_restore = False
 
-    await broadcast_state()
+    await broadcast_participant_update()
     if key_points or raw_markdown is not None:
         await broadcast({"type": "summary", "points": state.summary_points,
                          "raw_markdown": state.summary_raw_markdown,
@@ -192,14 +183,14 @@ async def _handle_transcript_status(data):
     state.transcript_line_count = line_count
     state.transcript_total_lines = data.get("total_lines", 0)
     state.transcript_latest_ts = data.get("latest_ts")
-    await broadcast_state()
+    # No broadcast needed — transcript status is host-only info, host fetches via REST
 
 
 async def _handle_token_usage(data):
     """Daemon sends LLM cost tracking — replicate POST /api/token-usage."""
     usage = {k: v for k, v in data.items() if k != "type"}
     state.token_usage = usage
-    await broadcast_state()
+    # No broadcast needed — token usage is host-only info
 
 
 async def _handle_notes_content(data):
@@ -227,7 +218,6 @@ async def _handle_slides_current(data):
 async def _handle_slides_clear(data):
     """Daemon clears current slide — replicate DELETE /api/slides/current."""
     state.slides_current = None
-    await broadcast_state()
     await broadcast({"type": "slides_current", "slides_current": None})
 
 
@@ -263,9 +253,13 @@ async def _handle_timing_event(data):
             pass
 
 
+def _parse_iso_or_none(s):
+    """Parse an ISO datetime string back to datetime, or return None."""
+    return datetime.fromisoformat(s) if s else None
+
+
 async def _handle_state_restore(data):
     """Daemon sends full state backup to restore — replicate POST /api/state-restore."""
-    from features.snapshot.router import _parse_iso_or_none
     restore_data = data.get("state", data)
 
     if "participant_names" in restore_data:
@@ -317,7 +311,7 @@ async def _handle_state_restore(data):
         state.session_name = restore_data["session_name"]
 
     state.needs_restore = False
-    await broadcast_state()
+    await broadcast_participant_update()
     restored_count = len(state.participant_names)
     logger.info("State restored via WS with %d participants", restored_count)
 
@@ -337,50 +331,12 @@ def _build_static_hashes() -> dict[str, str]:
     return hashes
 
 
-async def _build_state_snapshot() -> dict:
-    """Build a state snapshot dict for pushing to daemon."""
-    from features.snapshot.router import _serialize_state
-    import hashlib as _hashlib
-    state_dict = _serialize_state()
-    state_json = json.dumps(state_dict, sort_keys=True)
-    md5_hex = _hashlib.md5(state_json.encode()).hexdigest()
-    return {"type": "state_snapshot_result", "hash": md5_hex, "state": state_dict}
-
-
-async def _build_session_snapshot() -> dict:
-    """Build a session snapshot dict for pushing to daemon."""
-    from features.session.router import get_session_snapshot
-    snapshot = await get_session_snapshot()
-    return {"type": "session_snapshot_result", **snapshot}
-
-
-_SNAPSHOT_PUSH_INTERVAL = float(os.environ.get("BACKEND_SNAPSHOT_INTERVAL_SECONDS", "7"))
-
-
-async def snapshot_pusher():
-    """Push state and session snapshots to daemon periodically."""
-    import asyncio
-    while True:
-        await asyncio.sleep(_SNAPSHOT_PUSH_INTERVAL)
-        if state.daemon_ws is None:
-            continue
-        try:
-            msg = await _build_state_snapshot()
-            await state.daemon_ws.send_json(msg)
-        except Exception:
-            pass
-        try:
-            msg = await _build_session_snapshot()
-            await state.daemon_ws.send_json(msg)
-        except Exception:
-            pass
-
 
 async def _handle_activity_log(data):
     """Daemon sends slides log and git repos activity tracking."""
     state.slides_log = data.get("slides_log") or []
     state.git_repos = data.get("git_repos") or []
-    await broadcast_state()
+    # No broadcast needed — activity log is host-only info
 
 
 async def _handle_session_folders(data):
@@ -433,13 +389,6 @@ async def _handle_participant_registered(data: dict):
     if "score" in data:
         state.scores.setdefault(pid, data["score"])
         state.base_scores.setdefault(pid, 0)
-    # Send full state to this participant if connected
-    ws = state.participants.get(pid)
-    if ws:
-        try:
-            await send_state_to_participant(ws, pid)
-        except Exception:
-            pass
     await broadcast_participant_update()
 
 
@@ -458,7 +407,7 @@ async def _handle_participant_avatar_updated(data: dict):
     avatar = data.get("avatar")
     if pid and avatar:
         state.participant_avatars[pid] = avatar
-        await broadcast_state()
+        await broadcast_participant_update()
 
 
 async def _handle_broadcast(data: dict):
@@ -536,27 +485,6 @@ async def daemon_websocket_endpoint(websocket: WebSocket):
         await websocket.send_json({"type": "sync_files", "static_hashes": static_hashes, "pdf_slugs": {}})
     except Exception:
         logger.warning("Failed to send sync_files to daemon")
-
-    # Push current state to daemon so it can serve participant/host requests
-    try:
-        await websocket.send_json({
-            "type": MSG_DAEMON_STATE_PUSH,
-            "participant_names": state.participant_names,
-            "participant_avatars": state.participant_avatars,
-            "participant_universes": state.participant_universes,
-            "locations": dict(state.locations),
-            "mode": state.mode,
-            "current_activity": state.current_activity.value if hasattr(state.current_activity, 'value') else str(state.current_activity),
-            "wordcloud_words": state.wordcloud_words,
-            "wordcloud_word_order": state.wordcloud_word_order,
-            "wordcloud_topic": state.wordcloud_topic,
-            "qa_questions": {
-                qid: {**q, "upvoters": list(q["upvoters"])}
-                for qid, q in state.qa_questions.items()
-            },
-        })
-    except Exception:
-        logger.warning("Failed to send daemon_state_push")
 
     # Re-deliver any pending session request that was not yet processed (e.g. sent before WS drop)
     if state.session_request:
@@ -638,7 +566,6 @@ async def _handle_participant_connection(websocket: WebSocket, pid: str, is_host
     elif is_host:
         state.participant_names["__host__"] = "Host"
         logger.info(f"Host connected ({len(state.participants)} total)")
-        await send_state_to_host(websocket)
         await _send_content_messages(websocket)
         await broadcast_participant_update()
     else:
@@ -651,7 +578,6 @@ async def _handle_participant_connection(websocket: WebSocket, pid: str, is_host
     if state.mode == "conference" and not named:
         state.participant_names[pid] = ""
         named = True
-        await websocket.send_text(json.dumps(build_participant_state(pid)))
         await _send_content_messages(websocket)
 
     try:
@@ -671,7 +597,6 @@ async def _handle_participant_connection(websocket: WebSocket, pid: str, is_host
                     name = state.participant_names[pid]
                     named = True
                     logger.info(f"Returning: {pid} -> {name} ({len(state.participants)} total)")
-                    await send_state_to_participant(websocket, pid)
                     await _send_content_messages(websocket)
                     await broadcast_participant_update()
                     continue
@@ -687,7 +612,6 @@ async def _handle_participant_connection(websocket: WebSocket, pid: str, is_host
                     assign_avatar(state, pid, name)
                 named = True
                 logger.info(f"Named: {pid} -> {name} ({len(state.participants)} total)")
-                await send_state_to_participant(websocket, pid)
                 await _send_content_messages(websocket)
                 await broadcast_participant_update()
                 continue
@@ -699,8 +623,6 @@ async def _handle_participant_connection(websocket: WebSocket, pid: str, is_host
                     taken_by_others = {v for k, v in state.participant_names.items() if k != pid}
                     if name in taken_by_others:
                         await websocket.send_text(json.dumps({"type": "name_rejected", "reason": "Name already taken"}))
-                        # Send state back so client reverts display to the actual current name
-                        await send_state_to_participant(websocket, pid)
                     else:
                         state.participant_names[pid] = name
                         if not is_host:
@@ -712,7 +634,6 @@ async def _handle_participant_connection(websocket: WebSocket, pid: str, is_host
                     rejected = set(data.get("rejected", []))
                     new_avatar = refresh_avatar(state, pid, rejected)
                     if new_avatar:
-                        await send_state_to_participant(websocket, pid)
                         await broadcast_participant_update()
 
             elif msg_type == "location":
@@ -720,37 +641,6 @@ async def _handle_participant_connection(websocket: WebSocket, pid: str, is_host
                 if loc:
                     state.locations[pid] = loc
                     await broadcast_participant_update()
-
-            elif msg_type == "wordcloud_word":
-                word = str(data.get("word", "")).strip().lower()
-                if state.current_activity == ActivityType.WORDCLOUD and word:
-                    if word not in state.wordcloud_words:
-                        state.wordcloud_word_order.insert(0, word)
-                    state.wordcloud_words[word] = state.wordcloud_words.get(word, 0) + 1
-                    await broadcast_state()
-
-            elif msg_type == "qa_submit":
-                text = str(data.get("text", "")).strip()
-                if text and len(text) <= 280:
-                    qid = str(uuid_mod.uuid4())
-                    state.qa_questions[qid] = {
-                        "id": qid,
-                        "text": text,
-                        "author": pid,
-                        "upvoters": set(),
-                        "answered": False,
-                        "timestamp": time.time(),
-                    }
-                    qa_questions_total.inc()
-                    await broadcast_state()
-
-            elif msg_type == "qa_upvote":
-                question_id = data.get("question_id")
-                q = state.qa_questions.get(question_id)
-                if q and q["author"] != pid and pid not in q["upvoters"]:
-                    q["upvoters"].add(pid)
-                    qa_upvotes_total.inc()
-                    await broadcast_state()
 
             elif msg_type == "emoji_reaction":
                 emoji = str(data.get("emoji", "")).strip()

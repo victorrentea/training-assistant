@@ -245,7 +245,7 @@ class TestConcurrentRequestDedup(unittest.TestCase):
                     patch.object(cache_mod, "CACHE_DIR", cache_dir),
                     patch.object(cache_mod, "_download_pdf_sync", side_effect=_mock_download),
                     patch.object(cache_mod, "_probe_fingerprint_sync", return_value="hdr:test|test|test"),
-                    patch("core.messaging.broadcast_state", new_callable=AsyncMock),
+                    patch("core.messaging.broadcast", new_callable=AsyncMock),
                 ):
                     tasks = [
                         asyncio.create_task(cache_mod.download_or_wait_cached(slug))
@@ -285,7 +285,7 @@ class TestHandleSlidesCatalog(unittest.TestCase):
                 ]
                 with (
                     patch.object(cache_mod, "CACHE_DIR", cache_dir),
-                    patch("core.messaging.broadcast_state", new_callable=AsyncMock),
+                    patch("core.messaging.broadcast", new_callable=AsyncMock),
                 ):
                     await cache_mod.handle_slides_catalog(entries)
 
@@ -320,7 +320,7 @@ class TestHandleSlidesCatalog(unittest.TestCase):
                 ]
                 with (
                     patch.object(cache_mod, "CACHE_DIR", cache_dir),
-                    patch("core.messaging.broadcast_state", new_callable=AsyncMock),
+                    patch("core.messaging.broadcast", new_callable=AsyncMock),
                 ):
                     await cache_mod.handle_slides_catalog(entries)
 
@@ -345,7 +345,7 @@ class TestHandleSlidesCatalog(unittest.TestCase):
                 ]
                 with (
                     patch.object(cache_mod, "CACHE_DIR", cache_dir),
-                    patch("core.messaging.broadcast_state", new_callable=AsyncMock),
+                    patch("core.messaging.broadcast", new_callable=AsyncMock),
                 ):
                     await cache_mod.handle_slides_catalog(entries)
 
