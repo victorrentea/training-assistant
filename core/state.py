@@ -46,8 +46,6 @@ class AppState:
         self.quiz_status: Optional[dict] = None
         self.slides: list[dict] = []
         self.daemon_last_seen: Optional[datetime] = None
-        self.daemon_session_folder: Optional[str] = None
-        self.daemon_session_notes: Optional[str] = None
         self.daemon_ws: Optional[WebSocket] = None
         self.slides_current: Optional[dict] = None
         # Slides cache (server-side GDrive download)
@@ -83,9 +81,7 @@ class AppState:
         self.session_request: dict | None = None
         self.token_usage: dict = {"input_tokens": 0, "output_tokens": 0, "estimated_cost_usd": 0.0}
         self.mode: str = "workshop"  # "workshop" | "conference"
-        self.needs_restore: bool = True
         self.pending_deploy: dict | None = None  # {sha, message} set by watcher when push detected
-        self.transcription_language: str = "ro"  # current AudioHijack Transcribe block language
         self.session_id: str | None = None  # 6-char alphanumeric session code for participant URLs
         self.session_folders, self.session_folder_ids, self.daemon_global_state_acks = [], {}, {}  # daemon folders + stable folder->session_id map + request_id -> global-state ack
         self.slides_log, self.git_repos = [], []

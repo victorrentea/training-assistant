@@ -209,9 +209,6 @@ def _clear_activity_state():
     state.slides_current = None
     state.slides_log = []
     state.git_repos = []
-    state.needs_restore = False
-    # Disconnect existing participants (they belong to the old session)
-    state.paused_participant_uuids = set(state.participants.keys()) - {"__host__", "__overlay__"}
 
 
 class StartSessionRequest(BaseModel):

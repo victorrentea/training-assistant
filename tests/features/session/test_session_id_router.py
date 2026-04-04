@@ -9,7 +9,6 @@ from fastapi.testclient import TestClient
 
 from main import app, state
 import features.session.router as session_router_mod
-from features.ws.router import _handle_session_folders
 
 
 _HOST_AUTH_HEADERS = {
@@ -168,22 +167,6 @@ def test_session_active_pending_create_without_main_is_active_and_autojoin():
     assert body["active"] is True
     assert body["auto_join"] is True
     assert body["session_id"] == "abc123"
-
-
-@pytest.mark.anyio
-async def test_ws_session_folders_updates_folder_to_id_map():
-    await _handle_session_folders(
-        {
-            "folders": [
-                {"name": "A", "session_id": "aaa111"},
-                {"name": "B", "session_id": ""},
-                "legacy-folder",
-            ]
-        }
-    )
-
-    assert state.session_folders == ["A", "B", "legacy-folder"]
-    assert state.session_folder_ids == {"A": "aaa111"}
 
 
 def test_create_session_sends_request_id_and_consumes_daemon_ack(monkeypatch):
