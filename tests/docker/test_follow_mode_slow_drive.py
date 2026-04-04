@@ -41,6 +41,7 @@ import pytest
 from playwright.sync_api import sync_playwright, expect
 
 from pages.participant_page import ParticipantPage
+from session_utils import fresh_session
 
 
 BASE = "http://localhost:8000"
@@ -80,22 +81,6 @@ def _set_slide_pointer(deck: str, slide: int):
 
 def _clear_slide_pointer():
     _activity_slides_file().unlink(missing_ok=True)
-
-
-def _create_session(name: str) -> str:
-    import base64
-    auth = base64.b64encode(f"{HOST_USER}:{HOST_PASS}".encode()).decode()
-    req = urllib.request.Request(
-        f"{DAEMON_BASE}/api/session/create",
-        method="POST",
-        headers={
-            "Authorization": f"Basic {auth}",
-            "Content-Type": "application/json",
-        },
-        data=json.dumps({"name": f"{name} {int(time.time())}", "type": "workshop"}).encode(),
-    )
-    with urllib.request.urlopen(req, timeout=10) as resp:
-        return json.loads(resp.read())["session_id"]
 
 
 def _mock_drive_set_delay(slug: str, delay_s: float):
@@ -195,7 +180,7 @@ def test_follow_mode_survives_slow_drive(delay_s, presentation, slug, host_slide
     _mock_drive_set_delay(slug, delay_s)
     _clear_slide_pointer()
     _set_slide_pointer(presentation, host_slide)
-    session_id = _create_session(f"SlowDrive-{delay_s}s")
+    session_id = fresh_session(f"SlowDrive-{delay_s}s")
     pdf_ready_timeout_ms = (delay_s + _ASSERT_BUFFER_S) * 1000
 
     try:

@@ -24,6 +24,7 @@ cp -r "$REPO_ROOT/tests/pages/"* "$BUILD_DIR/tests/pages/"
 
 # Copy test files
 mkdir -p "$BUILD_DIR/tests/docker"
+cp "$DOCKER_DIR/session_utils.py" "$BUILD_DIR/tests/docker/"
 cp "$DOCKER_DIR/test_daemon_connected.py" "$BUILD_DIR/tests/docker/"
 cp "$DOCKER_DIR/test_poll_flow.py" "$BUILD_DIR/tests/docker/"
 cp "$DOCKER_DIR/test_slides_view.py" "$BUILD_DIR/tests/docker/"

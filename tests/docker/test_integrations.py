@@ -26,6 +26,7 @@ from playwright.sync_api import sync_playwright, expect
 
 from pages.participant_page import ParticipantPage
 from pages.host_page import HostPage
+from session_utils import fresh_session
 
 
 BASE = "http://localhost:8000"
@@ -73,41 +74,12 @@ def _api_call(method, path, data=None):
         return json.loads(resp.read())
 
 
-def _get_or_create_session() -> str:
-    try:
-        with urllib.request.urlopen(f"{DAEMON_BASE}/api/session/active", timeout=5) as resp:
-            data = json.loads(resp.read())
-            if data.get("session_id"):
-                return data["session_id"]
-    except Exception:
-        pass
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
-        ctx = browser.new_context(
-            http_credentials={"username": HOST_USER, "password": HOST_PASS}
-        )
-        page = ctx.new_page()
-        page.goto(f"{DAEMON_BASE}/host", wait_until="networkidle")
-        if re.search(r"/host/[a-zA-Z0-9]+", page.url):
-            sid = page.url.split("/host/")[-1].split("?")[0]
-            browser.close()
-            return sid
-        page.locator("#session-name-input").fill("Integration Tests")
-        btn = page.locator("#create-btn-workshop")
-        expect(btn).to_be_enabled(timeout=3000)
-        btn.click()
-        page.wait_for_url(re.compile(r"/host/[a-zA-Z0-9]+"), timeout=15000)
-        sid = page.url.split("/host/")[-1].split("?")[0]
-        browser.close()
-        return sid
-
-
 # ── PPTX Change Detection ──────────────────────────────────────────────────
 
 
 def test_pptx_change_triggers_slide_invalidation():
     """Touch a PPTX file → daemon detects change → sends slide_invalidated to backend."""
-    session_id = _get_or_create_session()
+    session_id = fresh_session("Integration")
 
     # Touch the PPTX file to simulate a change (ensure mtime differs from daemon's last scan)
     pptx_path = "/tmp/test-pptx/Clean Code.pptx"
@@ -183,7 +155,7 @@ def test_git_activity_file_tracked_by_daemon():
         encoding="utf-8",
     )
 
-    session_id = _get_or_create_session()
+    session_id = fresh_session("Integration")
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
@@ -222,7 +194,7 @@ def test_git_activity_file_tracked_by_daemon():
 
 def test_quiz_generation_with_stub_llm():
     """Host requests quiz → daemon uses stub LLM → quiz preview appears on host."""
-    session_id = _get_or_create_session()
+    session_id = fresh_session("Integration")
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)

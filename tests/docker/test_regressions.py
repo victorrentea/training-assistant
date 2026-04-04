@@ -23,6 +23,7 @@ from playwright.sync_api import sync_playwright, expect
 
 from pages.participant_page import ParticipantPage
 from pages.host_page import HostPage
+from session_utils import fresh_session
 
 
 BASE = "http://localhost:8000"
@@ -57,12 +58,6 @@ def _api_call(method, path, data=None, base=None):
         return json.loads(resp.read())
 
 
-def _create_session(name="Test", session_type="workshop") -> str:
-    """Create a fresh session via API — gives clean state."""
-    result = _api_call("POST", "/api/session/create", {"name": f"{name} {int(time.time())}", "type": session_type})
-    return result["session_id"]
-
-
 def _open_browser_trio(p, session_id):
     """Open host + participant browsers connected to a session."""
     browser = p.chromium.launch(headless=True)
@@ -83,7 +78,7 @@ def _open_browser_trio(p, session_id):
 
 def test_autojoin_with_saved_name_no_js_error():
     """Participant with saved name + UUID in localStorage auto-joins without JS errors."""
-    session_id = _create_session("AutoJoin")
+    session_id = fresh_session("AutoJoin")
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         pax_ctx = browser.new_context()
@@ -120,7 +115,7 @@ def test_autojoin_with_saved_name_no_js_error():
 
 def test_qa_action_labels_and_edit_with_quotes():
     """Q&A host card has correct action labels; editing with quotes works."""
-    session_id = _create_session("QALabels")
+    session_id = fresh_session("QALabels")
     with sync_playwright() as p:
         browser, host, host_page, pax, pax_page = _open_browser_trio(p, session_id)
         pax.join("QuoteTester")
@@ -179,7 +174,7 @@ def test_qa_action_labels_and_edit_with_quotes():
 
 def test_qr_fullscreen_on_click():
     """Host QR icon opens fullscreen overlay; clicking dismisses it."""
-    session_id = _create_session("QROverlay")
+    session_id = fresh_session("QROverlay")
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         host_ctx = browser.new_context(http_credentials={"username": HOST_USER, "password": HOST_PASS})
