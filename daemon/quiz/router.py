@@ -53,7 +53,7 @@ async def request_quiz(request: Request):
     quiz_pending.put("quiz_request", {"request": req})
 
     if _ws_client:
-        _ws_client.send({"type": "quiz_status", "status": "requested", "message": msg})
+        _ws_client.send({"type": "broadcast", "event": {"type": "quiz_status", "status": "requested", "message": msg}})
 
     return JSONResponse({"ok": True})
 
@@ -62,7 +62,7 @@ async def request_quiz(request: Request):
 async def clear_quiz_preview():
     """Host clears the current quiz preview."""
     if _ws_client:
-        _ws_client.send({"type": "quiz_preview", "quiz": None})
+        _ws_client.send({"type": "broadcast", "event": {"type": "quiz_preview", "quiz": None}})
     return JSONResponse({"ok": True})
 
 
@@ -82,6 +82,6 @@ async def request_quiz_refine(request: Request):
     msg = f"Regenerating {label}…"
 
     if _ws_client:
-        _ws_client.send({"type": "quiz_status", "status": "generating", "message": msg})
+        _ws_client.send({"type": "broadcast", "event": {"type": "quiz_status", "status": "generating", "message": msg}})
 
     return JSONResponse({"ok": True})
