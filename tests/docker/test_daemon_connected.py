@@ -11,8 +11,6 @@ Verifies:
 import os
 import re
 import time
-import urllib.request
-import json
 
 import pytest
 from playwright.sync_api import sync_playwright, expect
@@ -24,18 +22,16 @@ HOST_USER = os.environ.get("HOST_USERNAME", "host")
 HOST_PASS = os.environ.get("HOST_PASSWORD", "testpass")
 
 
-def _api_session_active() -> dict:
-    """Fetch /api/session/active from the backend."""
-    req = urllib.request.Request(f"{BASE}/api/session/active")
-    with urllib.request.urlopen(req, timeout=5) as resp:
-        return json.loads(resp.read())
-
-
 def test_backend_healthy():
-    """Backend responds to /api/session/active."""
-    status = _api_session_active()
-    # /api/session/active returns {active: bool, ...}
-    assert "active" in status or "session_id" in status or status is not None
+    """Backend serves the participant page without errors."""
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        page = browser.new_page()
+        response = page.goto(f"{BASE}/", wait_until="networkidle")
+        assert response and response.status < 400, f"Backend returned HTTP {response and response.status}"
+        # Page should have loaded some visible content
+        expect(page.locator("body")).to_be_visible(timeout=5000)
+        browser.close()
 
 
 def test_daemon_connected():
