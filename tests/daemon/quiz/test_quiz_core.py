@@ -674,14 +674,16 @@ class TestServerHelpers:
         cfg = _make_config(tmp_path)
         post_status("idle", "Ready", cfg, session_folder="/path", session_notes="notes.txt")
         payload = self.mock_ws.send.call_args[0][0]
-        assert payload["session_folder"] == "/path"
+        event = payload.get("event", payload)
+        assert event.get("session_folder") == "/path"
 
     def test_post_status_with_slides(self, tmp_path):
         cfg = _make_config(tmp_path)
         post_status("idle", "Ready", cfg, slides=[{"name": "Deck", "url": "https://cdn.example.com/deck.pdf"}])
         payload = self.mock_ws.send.call_args[0][0]
-        assert "slides" in payload
-        assert payload["slides"][0]["name"] == "Deck"
+        event = payload.get("event", payload)
+        assert "slides" in event
+        assert event["slides"][0]["name"] == "Deck"
 
     def test_post_status_error_swallowed(self, tmp_path):
         cfg = _make_config(tmp_path)
