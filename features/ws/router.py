@@ -1002,7 +1002,6 @@ async def _handle_participant_connection(websocket: WebSocket, pid: str, is_host
     except WebSocketDisconnect:
         state.participants.pop(pid, None)
         state.locations.pop(pid, None)
-        state.vote_times.pop(pid, None)
         state.participant_ips.pop(pid, None)
         ws_connections_active.labels(role=role).dec()
         # Keep participant_names and scores (persist for session)

@@ -3,7 +3,7 @@ import json
 import pytest
 from unittest.mock import AsyncMock, patch, MagicMock
 
-from features.ws.router import _handle_broadcast, _handle_wordcloud_state_sync, _handle_score_award
+from features.ws.router import _handle_broadcast
 
 
 class TestHandleBroadcast:
@@ -65,28 +65,3 @@ class TestHandleBroadcast:
 
         mock_state.participants["uuid1"].send_text.assert_not_called()
 
-
-class TestHandleWordcloudStateSync:
-    @pytest.mark.anyio
-    async def test_updates_appstate(self):
-        mock_state = MagicMock()
-        with patch("features.ws.router.state", mock_state):
-            await _handle_wordcloud_state_sync({
-                "words": {"hello": 2},
-                "word_order": ["hello"],
-                "topic": "greetings",
-            })
-        assert mock_state.wordcloud_words == {"hello": 2}
-        assert mock_state.wordcloud_word_order == ["hello"]
-        assert mock_state.wordcloud_topic == "greetings"
-
-
-class TestHandleScoreAward:
-    @pytest.mark.anyio
-    async def test_awards_score_and_broadcasts(self):
-        mock_state = MagicMock()
-        with patch("features.ws.router.state", mock_state), \
-             patch("features.ws.router.broadcast_state", new_callable=AsyncMock) as mock_broadcast:
-            await _handle_score_award({"participant_id": "uuid1", "points": 200})
-        mock_state.add_score.assert_called_once_with("uuid1", 200)
-        mock_broadcast.assert_called_once()

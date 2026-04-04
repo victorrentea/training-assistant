@@ -36,32 +36,6 @@ class TestSuggestName:
         assert s.suggest_name() == "Frodo"
 
 
-class TestVoteCounts:
-    def test_no_poll(self):
-        s = AppState()
-        assert s.vote_counts() == {}
-
-    def test_single_votes(self):
-        s = AppState()
-        s.poll = {"options": [{"id": "a"}, {"id": "b"}]}
-        s.votes = {"u1": "a", "u2": "a", "u3": "b"}
-        counts = s.vote_counts()
-        assert counts == {"a": 2, "b": 1}
-
-    def test_multi_votes(self):
-        s = AppState()
-        s.poll = {"options": [{"id": "a"}, {"id": "b"}, {"id": "c"}]}
-        s.votes = {"u1": ["a", "b"], "u2": ["b", "c"]}
-        counts = s.vote_counts()
-        assert counts == {"a": 1, "b": 2, "c": 1}
-
-    def test_invalid_option_ignored(self):
-        s = AppState()
-        s.poll = {"options": [{"id": "a"}]}
-        s.votes = {"u1": "nonexistent"}
-        counts = s.vote_counts()
-        assert counts == {"a": 0}
-
 
 class TestGetAvatarFilename:
     def test_basic(self):
