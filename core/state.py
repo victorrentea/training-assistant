@@ -94,14 +94,6 @@ class AppState:
         self.session_id = ''.join(random.choices('abcdefghijklmnopqrstuvwxyz0123456789', k=6))
         return self.session_id
 
-    def suggest_name(self) -> str | None:
-        """Return the next available LOTR name (by popularity order).
-        A name is 'taken' if any participant in this session already has it (connected or not).
-        Returns None when all 30 names are taken (session full)."""
-        taken_names = set(self.participant_names.values())
-        available = [n for n in LOTR_NAMES if n not in taken_names]
-        return available[0] if available else None
-
     def touch_daemon(self):
         """Update daemon last-seen timestamp."""
         from datetime import datetime, timezone

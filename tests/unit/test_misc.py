@@ -10,32 +10,6 @@ from core.state import AppState, LOTR_NAMES, assign_avatar, get_avatar_filename
 # state.py
 # ═══════════════════════════════════════════════════════════════════════
 
-class TestSuggestName:
-    def test_first_name(self):
-        s = AppState()
-        name = s.suggest_name()
-        assert name == "Gandalf"  # first LOTR name
-
-    def test_skips_taken(self):
-        s = AppState()
-        s.participant_names["test-uuid"] = "Gandalf"
-        assert s.suggest_name() == "Frodo"  # second LOTR name
-
-    def test_returns_none_when_all_taken(self):
-        s = AppState()
-        for i, n in enumerate(LOTR_NAMES):
-            uid = f"uuid-{i}"
-            s.participant_names[uid] = n
-        assert s.suggest_name() is None
-
-    def test_skips_disconnected_names(self):
-        """Names of disconnected participants are also reserved."""
-        s = AppState()
-        # Gandalf is taken by a disconnected participant (not in s.participants)
-        s.participant_names["offline-uuid"] = "Gandalf"
-        assert s.suggest_name() == "Frodo"
-
-
 
 class TestGetAvatarFilename:
     def test_basic(self):

@@ -37,13 +37,39 @@ paths:
 
   # ── Identity ──
 
-  /name:
+  /register:
     post:
-      summary: Register or restore participant identity
+      summary: Register participant — assign name+avatar
       description: |
-        First-time registration sets the participant's display name and assigns
-        an avatar. Returning participants (known UUID) get their existing identity
-        back without re-validation.
+        Assigns a LOTR name and matching avatar to a new participant.
+        Idempotent: calling twice with the same UUID returns the same name+avatar.
+        Conference mode auto-assigns a character name.
+      tags: [identity]
+      parameters:
+        - $ref: '#/components/parameters/ParticipantID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Empty body
+      responses:
+        '200':
+          description: Identity assigned (new or existing)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegisterResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /name:
+    put:
+      summary: Rename a registered participant
+      description: |
+        Updates the display name of an already-registered participant.
+        Returns 400 if the participant is not yet registered (call /register first).
       tags: [identity]
       parameters:
         - $ref: '#/components/parameters/ParticipantID'
@@ -55,11 +81,11 @@ paths:
               $ref: '#/components/schemas/SetNameRequest'
       responses:
         '200':
-          description: Identity registered or restored
+          description: Name updated
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SetNameResponse'
+                $ref: '#/components/schemas/RenameResponse'
         '400':
           $ref: '#/components/responses/BadRequest'
 
@@ -494,28 +520,33 @@ components:
 
     # Identity
 
+    RegisterResponse:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Assigned display name (LOTR name or conference character)
+        avatar:
+          type: string
+          description: Avatar filename or "letter:XX:color" identifier
+
     SetNameRequest:
       type: object
+      required: [name]
       properties:
         name:
           type: string
           maxLength: 32
-          description: Desired display name; empty string allowed in conference mode (auto-assigns character name)
-      required: []
+          description: New display name
 
-    SetNameResponse:
+    RenameResponse:
       type: object
       properties:
         ok:
           type: boolean
-        returning:
-          type: boolean
-          description: True if this is a returning participant (existing UUID)
         name:
           type: string
-        avatar:
-          type: string
-          description: Avatar filename or "letter:XX:color" identifier
+          description: Confirmed display name (may differ if original was taken)
 
     RefreshAvatarRequest:
       type: object
