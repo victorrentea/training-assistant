@@ -13,20 +13,17 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from core.messaging import (
     broadcast,
     broadcast_participant_update,
-    send_emoji_to_overlay,
-    send_emoji_to_host,
-    participant_ids,
 )
 from core.metrics import (
     ws_connections_active,
     ws_messages_total,
 )
-from core.state import state, ActivityType, assign_avatar, refresh_avatar
+from core.state import state, ActivityType
 from features.ws.daemon_protocol import (
     MSG_SLIDES_CATALOG, MSG_SLIDE_INVALIDATED, MSG_DAEMON_PING,
     MSG_QUIZ_PREVIEW, MSG_QUIZ_STATUS,
     MSG_SESSION_SYNC, MSG_TRANSCRIPT_STATUS,
-    MSG_TOKEN_USAGE, MSG_NOTES_CONTENT, MSG_SLIDES_CURRENT, MSG_SLIDES_CLEAR,
+    MSG_TOKEN_USAGE, MSG_SLIDES_CURRENT, MSG_SLIDES_CLEAR,
     MSG_TRANSCRIPTION_LANGUAGE_STATUS, MSG_TIMING_EVENT, MSG_STATE_RESTORE,
     MSG_ACTIVITY_LOG, MSG_SESSION_FOLDERS,
     MSG_GLOBAL_STATE_SAVED, MSG_RELOAD,
@@ -147,20 +144,6 @@ async def _handle_session_sync(data):
     if "main" in data:
         from features.session.router import _apply_session_main
         _apply_session_main(data.get("main"))
-    key_points = data.get("key_points") or data.get("discussion_points") or []
-    raw_markdown = data.get("raw_markdown")
-    file_time = data.get("file_time")
-    if key_points:
-        state.summary_points = key_points
-        if file_time:
-            try:
-                state.summary_updated_at = datetime.fromisoformat(file_time)
-            except Exception:
-                state.summary_updated_at = datetime.now(timezone.utc)
-        else:
-            state.summary_updated_at = datetime.now(timezone.utc)
-    if raw_markdown is not None:
-        state.summary_raw_markdown = raw_markdown
 
     session_state = data.get("session_state")
     if session_state:
@@ -169,10 +152,6 @@ async def _handle_session_sync(data):
         state.needs_restore = False
 
     await broadcast_participant_update()
-    if key_points or raw_markdown is not None:
-        await broadcast({"type": "summary", "points": state.summary_points,
-                         "raw_markdown": state.summary_raw_markdown,
-                         "updated_at": state.summary_updated_at.isoformat() if state.summary_updated_at else None})
 
 
 async def _handle_transcript_status(data):
@@ -191,12 +170,6 @@ async def _handle_token_usage(data):
     usage = {k: v for k, v in data.items() if k != "type"}
     state.token_usage = usage
     # No broadcast needed — token usage is host-only info
-
-
-async def _handle_notes_content(data):
-    """Daemon sends notes text — replicate POST /api/notes."""
-    state.notes_content = data.get("content")
-    await broadcast({"type": "notes", "notes_content": state.notes_content})
 
 
 async def _handle_slides_current(data):
@@ -438,7 +411,6 @@ _DAEMON_MSG_HANDLERS = {
     MSG_SESSION_SYNC: _handle_session_sync,
     MSG_TRANSCRIPT_STATUS: _handle_transcript_status,
     MSG_TOKEN_USAGE: _handle_token_usage,
-    MSG_NOTES_CONTENT: _handle_notes_content,
     MSG_SLIDES_CURRENT: _handle_slides_current,
     MSG_SLIDES_CLEAR: _handle_slides_clear,
     MSG_TRANSCRIPTION_LANGUAGE_STATUS: _handle_transcription_language_status,
@@ -518,16 +490,9 @@ async def daemon_websocket_endpoint(websocket: WebSocket):
         await broadcast({"type": "slides_catalog_changed"})
 
 
-async def _send_content_messages(websocket: WebSocket) -> None:
-    """Send notes, summary, and slides_cache_status as separate initial messages after state."""
+async def _send_initial_messages(websocket: WebSocket) -> None:
+    """Send slides_cache_status as a separate initial message after state."""
     try:
-        await websocket.send_text(json.dumps({"type": "notes", "notes_content": state.notes_content}))
-        await websocket.send_text(json.dumps({
-            "type": "summary",
-            "points": state.summary_points,
-            "raw_markdown": state.summary_raw_markdown,
-            "updated_at": state.summary_updated_at.isoformat() if state.summary_updated_at else None,
-        }))
         await websocket.send_text(json.dumps({"type": "slides_cache_status", "slides_cache_status": state.slides_cache_status}))
     except Exception:
         pass
@@ -566,19 +531,14 @@ async def _handle_participant_connection(websocket: WebSocket, pid: str, is_host
     elif is_host:
         state.participant_names["__host__"] = "Host"
         logger.info(f"Host connected ({len(state.participants)} total)")
-        await _send_content_messages(websocket)
+        await _send_initial_messages(websocket)
         await broadcast_participant_update()
     else:
-        # Participant: wait for set_name before sending state
-        logger.info(f"WS connected: {pid} (awaiting set_name)")
-
-    named = is_host or is_overlay  # host and overlay are always "named"
-
-    # In conference mode, auto-name and mark as named immediately
-    if state.mode == "conference" and not named:
-        state.participant_names[pid] = ""
-        named = True
-        await _send_content_messages(websocket)
+        # Participant registered via daemon REST — send initial state and broadcast presence
+        name = state.participant_names.get(pid, "")
+        logger.info(f"WS connected: {pid} name={name!r} ({len(state.participants)} total)")
+        await _send_initial_messages(websocket)
+        await broadcast_participant_update()
 
     try:
         while True:
@@ -587,66 +547,7 @@ async def _handle_participant_connection(websocket: WebSocket, pid: str, is_host
             msg_type = data.get("type")
             if msg_type:
                 ws_messages_total.labels(type=msg_type).inc()
-
-            # Before named, only accept set_name
-            if not named:
-                if msg_type != "set_name":
-                    continue
-                # Returning participant — restore their stored name and avatar
-                if pid in state.participant_names:
-                    name = state.participant_names[pid]
-                    named = True
-                    logger.info(f"Returning: {pid} -> {name} ({len(state.participants)} total)")
-                    await _send_content_messages(websocket)
-                    await broadcast_participant_update()
-                    continue
-                name = str(data.get("name", "")).strip()[:32]
-                if not name:
-                    continue
-                # Guard against race condition: another participant grabbed the same name
-                taken_names = set(state.participant_names.values())
-                if name in taken_names:
-                    name = state.suggest_name() or f"Guest{secrets.randbelow(900) + 100}"
-                state.participant_names[pid] = name
-                if not is_host:
-                    assign_avatar(state, pid, name)
-                named = True
-                logger.info(f"Named: {pid} -> {name} ({len(state.participants)} total)")
-                await _send_content_messages(websocket)
-                await broadcast_participant_update()
-                continue
-
-            if msg_type == "set_name":
-                # Allow rename
-                name = str(data.get("name", "")).strip()[:32]
-                if name and name != state.participant_names.get(pid):
-                    taken_by_others = {v for k, v in state.participant_names.items() if k != pid}
-                    if name in taken_by_others:
-                        await websocket.send_text(json.dumps({"type": "name_rejected", "reason": "Name already taken"}))
-                    else:
-                        state.participant_names[pid] = name
-                        if not is_host:
-                            assign_avatar(state, pid, name)  # no-op if already assigned
-                        await broadcast_participant_update()
-
-            elif msg_type == "refresh_avatar":
-                if not is_host:
-                    rejected = set(data.get("rejected", []))
-                    new_avatar = refresh_avatar(state, pid, rejected)
-                    if new_avatar:
-                        await broadcast_participant_update()
-
-            elif msg_type == "location":
-                loc = str(data.get("location", "")).strip()[:80]
-                if loc:
-                    state.locations[pid] = loc
-                    await broadcast_participant_update()
-
-            elif msg_type == "emoji_reaction":
-                emoji = str(data.get("emoji", "")).strip()
-                if emoji and len(emoji) <= 4:
-                    await send_emoji_to_overlay(emoji)
-                    await send_emoji_to_host(emoji)
+            # All participant actions go through daemon REST — just keep the WS alive for broadcasts
 
     except WebSocketDisconnect:
         state.participants.pop(pid, None)
@@ -656,19 +557,6 @@ async def _handle_participant_connection(websocket: WebSocket, pid: str, is_host
         # Keep participant_names and scores (persist for session)
         logger.info(f"Disconnected: {pid} ({len(state.participants)} remaining)")
         await broadcast_participant_update()
-
-
-@router.websocket("/ws/{participant_id}")
-async def websocket_endpoint(websocket: WebSocket, participant_id: str):
-    """WebSocket endpoint for participants, host (__host__), and overlay (__overlay__).
-
-    Also accepts regular participants directly (without session_id).
-    """
-    pid = participant_id.strip()
-    is_host = pid == "__host__"
-    is_overlay = pid == "__overlay__"
-
-    await _handle_participant_connection(websocket, pid, is_host, is_overlay)
 
 
 @session_router.websocket("/ws/{session_id}/{participant_id}")

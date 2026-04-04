@@ -2814,8 +2814,7 @@ ${html}
           _stopDebateToasts();
           renderContent(msg.vote_counts);
         }
-        updateScreenShareWarning(msg.screen_share_active);
-        const sessionTitleEl = document.getElementById('session-title');
+const sessionTitleEl = document.getElementById('session-title');
         if (sessionTitleEl && msg.session_name !== undefined) {
           const topic = (msg.session_name || '').replace(/^\d{4}-\d{2}-\d{2}(?:\.\.\S+)?\s*/, '');
           sessionTitleEl.textContent = topic;
@@ -2994,12 +2993,6 @@ ${html}
     const dot = el.querySelector('.dot');
     if (dot) { dot.classList.toggle('dot-green', connected); dot.classList.toggle('dot-red', !connected); }
     el.dataset.tooltip = connected ? 'AI assistant connected' : 'AI assistant offline';
-  }
-
-  function updateScreenShareWarning(active) {
-    const el = document.getElementById('screen-share-warning');
-    if (!el) return;
-    el.style.display = (active === false) ? 'flex' : 'none';
   }
 
   function updateScore(pts) {
