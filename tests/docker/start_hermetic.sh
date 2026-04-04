@@ -89,9 +89,9 @@ cd /app
 python -m uvicorn main:app --host 0.0.0.0 --port 8000 &
 BACKEND_PID=$!
 
-# Wait for backend to be ready
+# Wait for backend to be ready (use root landing page — session/active moved to daemon)
 for i in $(seq 1 60); do
-    if curl -sf http://localhost:8000/api/session/active >/dev/null 2>&1; then
+    if curl -sf http://localhost:8000/ >/dev/null 2>&1; then
         echo "[startup] Backend ready after ${i}s"
         break
     fi

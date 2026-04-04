@@ -62,7 +62,7 @@ def _api_call(method, path, data=None):
     import base64
     auth = base64.b64encode(f"{HOST_USER}:{HOST_PASS}".encode()).decode()
     req = urllib.request.Request(
-        f"{BASE}{path}",
+        f"{DAEMON_BASE}{path}",
         method=method,
         headers={"Authorization": f"Basic {auth}", "Content-Type": "application/json"},
         data=json.dumps(data).encode() if data else (b"" if method == "POST" else None),
@@ -75,7 +75,7 @@ def _api_call(method, path, data=None):
 
 def _get_or_create_session() -> str:
     try:
-        with urllib.request.urlopen(f"{BASE}/api/session/active", timeout=5) as resp:
+        with urllib.request.urlopen(f"{DAEMON_BASE}/api/session/active", timeout=5) as resp:
             data = json.loads(resp.read())
             if data.get("session_id"):
                 return data["session_id"]

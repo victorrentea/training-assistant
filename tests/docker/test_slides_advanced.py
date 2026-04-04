@@ -60,11 +60,13 @@ def _await_condition(fn, timeout_ms=10000, poll_ms=300, msg=""):
     raise AssertionError(msg or f"Condition not met within {timeout_ms}ms")
 
 
-def _api_call(method, path, data=None):
+def _api_call(method, path, data=None, base=None):
+    """Make API call. Defaults to DAEMON_BASE for host endpoints."""
+    target = base or DAEMON_BASE
     auth = base64.b64encode(f"{HOST_USER}:{HOST_PASS}".encode()).decode()
     body = json.dumps(data).encode() if data else (b"" if method == "POST" else None)
     req = urllib.request.Request(
-        f"{BASE}{path}", method=method,
+        f"{target}{path}", method=method,
         headers={"Authorization": f"Basic {auth}", "Content-Type": "application/json"},
         data=body,
     )

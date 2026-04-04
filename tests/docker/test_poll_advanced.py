@@ -62,7 +62,7 @@ def _api_call(method, path, data=None, base=None):
 
 def _create_session(name="Test", session_type="workshop") -> str:
     """Create a fresh session via API — gives clean state."""
-    result = _api_call("POST", "/api/session/create", {"name": f"{name} {int(time.time())}", "type": session_type})
+    result = _api_call("POST", "/api/session/create", {"name": f"{name} {int(time.time())}", "type": session_type}, base=DAEMON_BASE)
     return result["session_id"]
 
 

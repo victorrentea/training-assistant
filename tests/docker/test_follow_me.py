@@ -67,7 +67,7 @@ def _clear_slide_pointer():
 
 def _get_or_create_session() -> str:
     try:
-        with urllib.request.urlopen(f"{BASE}/api/session/active", timeout=5) as resp:
+        with urllib.request.urlopen(f"{DAEMON_BASE}/api/session/active", timeout=5) as resp:
             data = json.loads(resp.read())
             if data.get("session_id"):
                 return data["session_id"]

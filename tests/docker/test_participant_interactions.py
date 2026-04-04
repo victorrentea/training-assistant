@@ -40,7 +40,7 @@ def _await_condition(fn, timeout_ms=10000, poll_ms=300, msg=""):
 
 def _get_or_create_session() -> str:
     try:
-        with urllib.request.urlopen(f"{BASE}/api/session/active", timeout=5) as resp:
+        with urllib.request.urlopen(f"{DAEMON_BASE}/api/session/active", timeout=5) as resp:
             data = json.loads(resp.read())
             if data.get("session_id"):
                 return data["session_id"]
