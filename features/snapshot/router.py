@@ -119,8 +119,7 @@ def restore_state_from_dict(data: dict):
         state.participant_avatars = data["participant_avatars"]
     if "participant_universes" in data:
         state.participant_universes = data["participant_universes"]
-    if "scores" in data:
-        state.scores = data["scores"]
+    # scores are owned by daemon — not restored here (daemon restores its own scores)
     if "locations" in data:
         state.locations = data["locations"]
 

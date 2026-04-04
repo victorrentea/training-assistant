@@ -199,9 +199,9 @@ def _clear_activity_state():
     state.debate_round_timer_seconds = None
     state.debate_round_timer_started_at = None
     state.debate_ai_request = None
+    # Scores are owned by daemon — send reset signal; local mirror will be updated via scores_updated broadcast
+    # (fire-and-forget; daemon_ws may not be connected yet during startup)
     # Scores and participants
-    state.scores.clear()
-    state.base_scores.clear()
     state.participant_names.clear()
     state.participant_history.clear()
     state.participant_avatars.clear()
@@ -313,6 +313,10 @@ async def create_session(body: SessionCreateBody):
     # Daemon has acked (saved old state) — now safe to clear
     _clear_activity_state()
 
+    # Tell daemon to reset scores for the new session
+    if state.daemon_ws:
+        await state.daemon_ws.send_json({"type": "scores_reset"})
+
     state.session_id = session_id
     state.session_name = name
     state.session_type = body.type
@@ -333,16 +337,13 @@ def _restore_state_from_snapshot(snap: dict):
     # Participants
     state.participant_history.clear()
     state.participant_names.clear()
-    state.scores.clear()
-    state.base_scores.clear()
     state.locations.clear()
     state.participant_avatars.clear()
     state.participant_universes.clear()
     for uuid, p in (snap.get("participants") or {}).items():
         state.participant_history.add(uuid)
         state.participant_names[uuid] = p["name"]
-        state.scores[uuid] = p.get("score", 0)
-        state.base_scores[uuid] = p.get("base_score", 0)
+        # scores are owned by daemon — not restored here
         state.locations[uuid] = p.get("location", "")
         state.participant_avatars[uuid] = p.get("avatar", "")
         state.participant_universes[uuid] = p.get("universe", "")
