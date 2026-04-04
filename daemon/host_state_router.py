@@ -174,7 +174,6 @@ async def get_host_state(request: Request, session_id: str):
         "daemon_session_folder": None,   # daemon doesn't currently expose this via state endpoint
         "daemon_session_notes": None,
         # Leaderboard
-        "leaderboard_active": leaderboard_state.active,
         "leaderboard_data": leaderboard_state.data,
         # Summary / notes
         "summary_points": misc_state.summary_points,

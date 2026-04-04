@@ -46,14 +46,9 @@ def _resolve_session_id_for_folder(folder_name: str) -> str:
 
 logger = logging.getLogger(__name__)
 
-# Set by daemon/__main__.py during startup
-_ws_client = None
-
-
 def set_ws_client(client) -> None:
-    """Set the module-level ws_client reference."""
-    global _ws_client
-    _ws_client = client
+    """No-op: ws_client no longer needed after session broadcast removal."""
+    pass
 
 
 def _normalize_transcript_text(text: str) -> str:
@@ -128,17 +123,9 @@ class StartSessionRequest(BaseModel):
     name: str
 
 
-class RenameSessionRequest(BaseModel):
-    name: str
-
-
 class SessionCreateBody(BaseModel):
     name: str
     type: str = "workshop"
-
-
-class ResumeFolderBody(BaseModel):
-    folder_name: str
 
 
 @global_router.post("/start")
@@ -151,41 +138,8 @@ async def start_session(body: StartSessionRequest):
 
 @global_router.post("/end")
 async def end_session():
-    """Host ends the current session."""
+    """Host ends the current session. Railway closes WS connections on session end."""
     session_pending.put("session_request", {"action": "end"})
-    # Optimistic broadcast: immediately tell clients session ended
-    if _ws_client:
-        _ws_client.send({"type": "broadcast", "event": {"type": "session_updated", "session_main": None}})
-    return JSONResponse({"ok": True})
-
-
-@global_router.post("/pause")
-async def pause_session():
-    """Host pauses the current session."""
-    session_pending.put("session_request", {"action": "pause"})
-    # Optimistic broadcast
-    stack = session_state.get_session_stack()
-    if stack:
-        session_main = _build_session_main(stack)
-        if session_main:
-            session_main = {**session_main, "status": "paused"}
-            if _ws_client:
-                _ws_client.send({"type": "broadcast", "event": {"type": "session_updated", "session_main": session_main}})
-    return JSONResponse({"ok": True})
-
-
-@global_router.post("/resume")
-async def resume_session():
-    """Host resumes a paused session."""
-    session_pending.put("session_request", {"action": "resume"})
-    # Optimistic broadcast
-    stack = session_state.get_session_stack()
-    if stack:
-        session_main = _build_session_main(stack)
-        if session_main:
-            session_main = {**session_main, "status": "active"}
-            if _ws_client:
-                _ws_client.send({"type": "broadcast", "event": {"type": "session_updated", "session_main": session_main}})
     return JSONResponse({"ok": True})
 
 
@@ -202,22 +156,6 @@ async def create_session(body: SessionCreateBody):
         "session_id": session_id,
     })
     return JSONResponse({"ok": True, "session_name": name, "session_id": session_id})
-
-
-@global_router.patch("/rename")
-async def rename_session(body: RenameSessionRequest):
-    """Host renames the current session."""
-    session_pending.put("session_request", {"action": "rename", "name": normalize_session_name(body.name)})
-    return JSONResponse({"ok": True})
-
-
-@global_router.post("/resume-folder")
-async def resume_session_folder(body: ResumeFolderBody):
-    """Host resumes a past session from a folder. Reuses old session_id from session_meta.json if available."""
-    folder_name = normalize_session_name(body.folder_name)
-    session_id = _resolve_session_id_for_folder(folder_name)
-    session_pending.put("session_request", {"action": "create", "name": folder_name, "session_id": session_id})
-    return JSONResponse({"ok": True, "session_name": folder_name, "session_id": session_id})
 
 
 @global_router.get("/folders")
@@ -256,16 +194,12 @@ async def end_talk():
 
 @public_router.get("/active")
 async def get_session_active():
-    """Public endpoint: returns whether a session is active."""
+    """Public endpoint: returns the active session_id or null."""
     stack = session_state.get_session_stack()
     active_session_id = session_state.get_active_session_id()
     is_active = _is_session_active(stack) and active_session_id is not None
-    name = stack[-1].get("name") if stack else None
     return JSONResponse({
-        "active": is_active,
-        "auto_join": is_active,
-        "session_id": active_session_id,
-        "session_name": name,
+        "session_id": active_session_id if is_active else None,
     })
 
 
@@ -322,17 +256,3 @@ async def get_interval_lines_txt(
     return PlainTextResponse(content=payload, headers=headers)
 
 
-# ── Helpers ──
-
-def _build_session_main(stack: list[dict]) -> dict | None:
-    """Build session_main dict from stack top."""
-    if not stack:
-        return None
-    top = stack[-1]
-    paused = any(p.get("to") is None for p in top.get("paused_intervals", []))
-    status = "paused" if paused else "active"
-    return {
-        "name": top.get("name"),
-        "started_at": top.get("started_at"),
-        "status": status,
-    }

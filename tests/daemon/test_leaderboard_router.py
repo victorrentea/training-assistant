@@ -115,19 +115,6 @@ class TestShowLeaderboard:
         assert entries[0]["name"] == "???"
 
 
-class TestHideLeaderboard:
-    def test_hide_leaderboard(self, client, mock_ws_client, mock_host_ws):
-        resp = client.post("/api/test-session/host/leaderboard/hide")
-
-        assert resp.status_code == 200
-        assert resp.json() == {"ok": True}
-        mock_ws_client.send.assert_called_once()
-        call_arg = mock_ws_client.send.call_args[0][0]
-        assert call_arg["type"] == "broadcast"
-        assert call_arg["event"]["type"] == "leaderboard_hide"
-        mock_host_ws.assert_called_once()
-
-
 class TestResetScores:
     def test_reset_scores(self, client, fresh_scores, mock_ws_client, mock_host_ws):
         fresh_scores.add_score("p1", 500)

@@ -39,16 +39,6 @@ async def show_leaderboard():
     return JSONResponse({"ok": True})
 
 
-@router.post("/leaderboard/hide")
-async def hide_leaderboard():
-    leaderboard_state.hide()
-    payload = {"type": "leaderboard_hide"}
-    if _ws_client:
-        _ws_client.send({"type": "broadcast", "event": payload})
-    await send_to_host(payload)
-    return JSONResponse({"ok": True})
-
-
 @router.delete("/scores")
 async def reset_scores():
     scores.reset()
