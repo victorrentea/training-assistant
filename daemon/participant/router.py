@@ -5,6 +5,7 @@ from types import SimpleNamespace
 
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
+from starlette.responses import Response
 
 from core.names import assign_conference_name
 from core.state import assign_avatar, refresh_avatar as _refresh_avatar_logic, LOTR_NAMES
@@ -193,11 +194,10 @@ async def rename_participant(request: Request):
     if not raw_name:
         return JSONResponse({"error": "Name required"}, status_code=400)
 
-    # Check for duplicate names (race guard)
+    # Check for duplicate names — reject with 409 if name is taken
     taken = {v for k, v in ps.participant_names.items() if k != pid}
     if raw_name in taken:
-        available = [n for n in LOTR_NAMES if n not in taken]
-        raw_name = available[0] if available else f"Guest{secrets.randbelow(900) + 100}"
+        return Response(status_code=409)
 
     ps.participant_names[pid] = raw_name
 
@@ -207,7 +207,7 @@ async def rename_participant(request: Request):
         "name": raw_name,
     }]
 
-    return JSONResponse({"ok": True, "name": raw_name})
+    return Response(status_code=200)
 
 
 @router.post("/avatar")

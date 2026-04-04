@@ -158,9 +158,9 @@ class TestParticipantApiContract:
             ("POST", "/api/participant/debate/volunteer"),
             ("POST", "/api/participant/emoji/reaction"),
             ("POST", "/api/participant/paste"),
-            ("GET",  "/api/participant/misc/notes"),
-            ("GET",  "/api/participant/misc/summary"),
-            ("GET",  "/api/participant/misc/slides-cache-status"),
+            ("GET",  "/api/participant/notes"),
+            ("GET",  "/api/participant/summary"),
+            ("GET",  "/api/participant/slides-cache-status"),
         ]
         missing = [
             f"{m} {p}" for m, p in required
