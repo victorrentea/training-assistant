@@ -230,12 +230,69 @@
         window.location.href = msg.url;
         return;
       }
-      if (msg.type === 'leaderboard') {
+      if (msg.type === 'leaderboard' || msg.type === 'leaderboard_revealed') {
         renderLeaderboard(msg);
         return;
       }
       if (msg.type === 'leaderboard_hide') {
         hideLeaderboard();
+        return;
+      }
+      if (msg.type === 'poll_created') {
+        currentPoll = msg.poll;
+        pollActive = false;
+        voteCounts = {};
+        totalVotes = 0;
+        loadCorrectOpts(currentPoll.question);
+        renderPollDisplay();
+        return;
+      }
+      if (msg.type === 'poll_opened') {
+        currentPoll = msg.poll || currentPoll;
+        pollActive = true;
+        voteCounts = {};
+        totalVotes = 0;
+        renderPollDisplay();
+        return;
+      }
+      if (msg.type === 'poll_closed') {
+        pollActive = false;
+        _clearTimer();
+        voteCounts = msg.vote_counts || {};
+        totalVotes = msg.total_votes || 0;
+        renderPollDisplay();
+        renderBars();
+        return;
+      }
+      if (msg.type === 'poll_correct_revealed') {
+        correctOptIds = new Set(msg.correct_ids || []);
+        if (currentPoll) {
+          saveCorrectOpts(currentPoll.question);
+          recordPollInHistory(currentPoll, correctOptIds);
+        }
+        renderBars();
+        return;
+      }
+      if (msg.type === 'poll_cleared') {
+        currentPoll = null;
+        pollActive = false;
+        _clearTimer();
+        voteCounts = {};
+        totalVotes = 0;
+        correctOptIds = new Set();
+        renderPollDisplay();
+        return;
+      }
+      if (msg.type === 'poll_timer_started') {
+        _applyTimer(msg.seconds, msg.started_at);
+        _startHostCountdown();
+        return;
+      }
+      if (msg.type === 'scores_updated') {
+        const updated = msg.scores || {};
+        Object.assign(scores, updated);
+        renderParticipantList(cachedParticipantIds);
+        updateLeaderboardButton();
         return;
       }
       if (msg.type === 'state') {
@@ -1716,10 +1773,8 @@
 
   // ── Open / close / clear ──
   async function setPollStatus(open) {
-    await fetch(API('/poll/status'), {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ open }),
+    await fetch(API(open ? '/poll/open' : '/poll/close'), {
+      method: 'POST',
     });
   }
 
