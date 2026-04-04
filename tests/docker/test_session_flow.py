@@ -53,11 +53,11 @@ def backend_server():
         stderr=subprocess.PIPE,
     )
 
-    # Wait for server to be ready
+    # Wait for server to be ready (use /api/session/active which always returns 200)
     import urllib.request
     for _ in range(60):
         try:
-            urllib.request.urlopen(f"{BASE}/api/status")
+            urllib.request.urlopen(f"{BASE}/api/session/active")
             break
         except Exception:
             time.sleep(0.3)
@@ -112,7 +112,8 @@ def test_host_starts_session_participant_joins():
         )
         host_page = host_ctx.new_page()
 
-        # Host opens landing page
+        # Host opens landing page — this test uses mock_daemon (no daemon host server),
+        # so use Railway backend directly for session creation flow.
         host_page.goto(f"{BASE}/host", wait_until="networkidle")
         assert "Start Session" in host_page.title() or host_page.locator(".landing-card").count() > 0
 
