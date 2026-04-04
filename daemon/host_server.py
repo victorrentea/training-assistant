@@ -91,8 +91,13 @@ def create_app(backend_url: str) -> FastAPI:
 
     from daemon.misc.router import participant_router as misc_participant_router
     from daemon.misc.router import host_router as misc_host_router
+    from daemon.misc.router import global_router as misc_global_router
     app.include_router(misc_participant_router)   # /api/participant/misc/*
     app.include_router(misc_host_router)          # /api/{session_id}/misc/*
+    app.include_router(misc_global_router)        # /api/transcription-language (global, no session_id)
+
+    from daemon.quiz.router import host_router as quiz_host_router
+    app.include_router(quiz_host_router)          # /api/{session_id}/quiz-request, /quiz-preview, /quiz-refine
 
     from daemon.codereview.router import participant_router as codereview_participant_router
     from daemon.codereview.router import host_router as codereview_host_router

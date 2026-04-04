@@ -1,5 +1,6 @@
 """Daemon misc router — participant + host endpoints for paste, feedback, notes, summary, slides cache."""
 import logging
+import threading
 
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
@@ -10,6 +11,10 @@ logger = logging.getLogger(__name__)
 
 # Set by __main__.py during daemon startup
 _ws_client = None
+
+# Pending transcription language request (read by daemon loop or macos-addons polling)
+_transcription_language_lock = threading.Lock()
+_transcription_language_pending: str | None = None
 
 
 def set_ws_client(client):
@@ -109,3 +114,43 @@ async def paste_dismiss(request: Request):
         })
 
     return JSONResponse({"ok": True})
+
+
+@host_router.get("/feedback")
+async def get_pending_feedback():
+    """Return and clear pending feedback items."""
+    items = list(misc_state.feedback_pending)
+    misc_state.feedback_pending.clear()
+    return JSONResponse({"items": items})
+
+
+# ── Global router (no session_id prefix) — used for transcription language ──
+
+global_router = APIRouter(prefix="/api", tags=["misc"])
+
+VALID_LANGUAGES = {"ro", "en", "auto"}
+
+
+@global_router.post("/transcription-language")
+async def set_transcription_language(request: Request):
+    """Host sets the transcription language — stores pending request for daemon/macos-addons."""
+    global _transcription_language_pending
+    body = await request.json()
+    lang = str(body.get("language", "")).lower().strip()
+    if lang not in VALID_LANGUAGES:
+        return JSONResponse({"error": "language must be 'ro', 'en', or 'auto'"}, status_code=400)
+    with _transcription_language_lock:
+        _transcription_language_pending = lang
+    if _ws_client:
+        _ws_client.send({"type": "broadcast", "event": {"type": "transcription_language_pending", "language": lang}})
+    return JSONResponse({"ok": True})
+
+
+@global_router.get("/transcription-language/request")
+async def poll_transcription_language_request():
+    """Daemon/macos-addons polls for a pending language change request (clears on read)."""
+    global _transcription_language_pending
+    with _transcription_language_lock:
+        req = _transcription_language_pending
+        _transcription_language_pending = None
+    return JSONResponse({"request": req})

@@ -38,7 +38,6 @@ class AppState:
         self.participant_ips: dict[str, str] = {}  # uuid → IP address
         self.paste_texts: dict[str, list[dict]] = {}  # uuid → [{id: int, text: str}, ...]
         self.paste_next_id: int = 0
-        self.feedback_pending: list[str] = []
         self.uploaded_files: dict[str, list[dict]] = {}  # uuid → [{id, filename, size, disk_path}]
         self.upload_next_id: int = 0
         self.locations: dict[str, str] = {}
@@ -90,7 +89,6 @@ class AppState:
         self.needs_restore: bool = True
         self.pending_deploy: dict | None = None  # {sha, message} set by watcher when push detected
         self.transcription_language: str = "ro"  # current AudioHijack Transcribe block language
-        self.transcription_language_request: str | None = None  # pending change for daemon
         self.session_id: str | None = None  # 6-char alphanumeric session code for participant URLs
         self.session_folders, self.session_folder_ids, self.daemon_global_state_acks = [], {}, {}  # daemon folders + stable folder->session_id map + request_id -> global-state ack
         self.slides_log, self.git_repos = [], []
