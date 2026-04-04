@@ -134,10 +134,15 @@ async def confirm_line(body: CodeReviewConfirmLine):
 
     state.codereview_confirmed.add(body.line)
 
-    # Award points to every participant who selected this line
-    for pid, selected_lines in state.codereview_selections.items():
-        if body.line in selected_lines:
-            state.scores[pid] = state.scores.get(pid, 0) + _CONFIRM_LINE_POINTS
+    # Award points to every participant who selected this line (via daemon)
+    awarded_pids = [pid for pid, selected_lines in state.codereview_selections.items()
+                    if body.line in selected_lines]
+    if awarded_pids and state.daemon_ws:
+        await state.daemon_ws.send_json({
+            "type": "codereview_score_award",
+            "participant_ids": awarded_pids,
+            "points": _CONFIRM_LINE_POINTS,
+        })
 
     await broadcast_state()
     return {"ok": True, "confirmed_line": body.line}
