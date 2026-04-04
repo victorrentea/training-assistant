@@ -34,6 +34,8 @@ from daemon.transcript.state import TranscriptStateManager
 from daemon.slides.loop import SlidesPollingRunner
 from daemon.materials.mirror import MaterialsMirrorRunner
 from daemon.ws_client import DaemonWsClient
+from daemon.session import pending as session_pending
+from daemon.session import state as session_shared_state
 from daemon.session_state import (
     GLOBAL_STATE_FILENAME,
     resolve_materials_folder,
@@ -311,7 +313,8 @@ def run() -> None:
     ws_client.register_handler("summary_full_reset", _ws_handler("summary_full_reset"))
     ws_client.register_handler("state_snapshot_result", _ws_handler("state_snapshot_result"))
     ws_client.register_handler("session_snapshot_result", _ws_handler("session_snapshot_result"))
-    ws_client.register_handler("session_request", _ws_handler("session_request"))
+    # session_request is now served via daemon REST endpoint (daemon/session/router.py)
+    # stored in daemon.session.pending — no longer via WS push from Railway
     # transcription_language_request is now served via daemon REST endpoint (daemon/misc/router.py)
     ws_client.register_handler("sync_files", _ws_handler("sync_files"))
 
@@ -350,6 +353,9 @@ def run() -> None:
 
     from daemon.quiz.router import set_ws_client as set_quiz_ws
     set_quiz_ws(ws_client)
+
+    from daemon.session.router import set_ws_client as set_session_router_ws
+    set_session_router_ws(ws_client)
 
     def _handle_scores_reset(data):
         daemon_scores.reset()
@@ -421,6 +427,7 @@ def run() -> None:
     # ── Session stack initialization (early — needed for transcript log) ──
     sessions_root = _sessions_root_from_env()
     log.info("session", f"Sessions root: {sessions_root}")
+    session_shared_state.set_sessions_root(sessions_root)
     _raw_state = load_daemon_state(sessions_root)
     _active_session_id: str | None = None
     session_stack: list[dict] = []
@@ -482,6 +489,8 @@ def run() -> None:
                     "status": "paused" if any(p.get("to") is None for p in _talk.get("paused_intervals", [])) else "active",
                 }
             save_session_meta(_main_folder, _meta)
+        # Keep shared session state up to date for the daemon REST router
+        session_shared_state.set_active_session(_active_session_id, session_stack)
 
     if session_stack:
         # Restore from persisted stack
@@ -501,6 +510,8 @@ def run() -> None:
         log.info("session", f"Found active session: {config.session_folder.name}")
     else:
         log.info("session", "Found active session: <NONE>")
+    # Publish initial session state to daemon REST router
+    session_shared_state.set_active_session(_active_session_id, session_stack)
 
     # ── Log transcription time ranges at startup ──
     try:
@@ -760,12 +771,13 @@ def run() -> None:
 
                 # ── Check for session management requests ──
                 try:
-                    session_req = _pending_requests.pop("session_request", None)
+                    session_req = session_pending.pop("session_request")
                     action = session_req.get("action") if session_req else None
                     global_state_persisted = False
                     if action == "create":
                         name = session_req["name"]
                         sid = session_req.get("session_id")
+                        session_type = session_req.get("type", "workshop")
                         if sid:
                             set_current_session_id(sid)
                             _active_session_id = sid
@@ -785,7 +797,10 @@ def run() -> None:
                             global_state_persisted = True
                             notes_file = find_notes_in_folder(folder)
                             config = dc_replace(config, session_folder=folder, session_notes=notes_file)
-                            sync_session_to_server(config, session_stack, current_key_points, file_time=get_ai_summary_mtime(folder), raw_markdown=get_ai_summary_raw(folder))
+                            new_mode = "conference" if session_type == "talk" else "workshop"
+                            sync_session_to_server(config, session_stack, current_key_points, session_id=_active_session_id, file_time=get_ai_summary_mtime(folder), raw_markdown=get_ai_summary_raw(folder))
+                            # Broadcast mode change to participants
+                            ws_client.send({"type": "broadcast", "event": {"type": "mode_changed", "mode": new_mode}})
                             transcript_state.reset()
                         _push_session_folders()
                         participant_join_link = (
