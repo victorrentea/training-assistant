@@ -725,7 +725,11 @@ ${html}
       alert('Text too large (max 100KB)');
       return;
     }
-    sendWS('paste_text', { text: text });
+    fetch(apiBase + '/api/participant/misc/paste', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Participant-ID': myUUID },
+      body: JSON.stringify({ text }),
+    }).catch(err => console.error('Paste submit failed:', err));
     closePasteModal();
     showPasteToast();
   }
@@ -747,7 +751,11 @@ ${html}
     const ta = document.getElementById('feedback-textarea');
     const text = ta ? ta.value.trim() : '';
     if (!text || !ws) return;
-    sendWS('submit_feedback', { text });
+    fetch(apiBase + '/api/participant/misc/feedback', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Participant-ID': myUUID },
+      body: JSON.stringify({ text }),
+    }).catch(err => console.error('Feedback submit failed:', err));
     closeFeedbackModal();
   }
 
@@ -4181,12 +4189,16 @@ ${html}
   }
 
   function toggleCodeReviewLine(lineNum) {
-    if (!ws || ws.readyState !== WebSocket.OPEN) return;
     if (codereviewMySelections.has(lineNum)) {
-      sendWS('codereview_deselect', { line: lineNum });
+      codereviewMySelections.delete(lineNum);
     } else {
-      sendWS('codereview_select', { line: lineNum });
+      codereviewMySelections.add(lineNum);
     }
+    fetch(apiBase + '/api/participant/codereview/selection', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'X-Participant-ID': myUUID },
+      body: JSON.stringify({ lines: Array.from(codereviewMySelections) }),
+    }).catch(err => console.error('Code review selection failed:', err));
   }
 
   // ── Leaderboard ──────────────────────────────────────
