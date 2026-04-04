@@ -401,7 +401,7 @@ All events broadcast to participants via `_ws_client.send({"type": "broadcast", 
 - `core/state.py`: poll fields (`poll`, `poll_active`, `votes`, `vote_times`, `poll_opened_at`, `poll_timer_*`, `poll_correct_ids`, `_vote_counts_cache`, `quiz_md_content`); `add_score()` method; leaderboard field (`leaderboard_active`)
 - `core/messaging.py`: `broadcast_leaderboard()` function and its lazy import of `_build_leaderboard_data`
 - `main.py`: poll router mount, leaderboard router mount removed
-- `daemon_state_push` in `features/ws/router.py`: remove poll fields; **keep scores** (daemon syncs from them on reconnect)
+- `daemon_state_push` in `features/ws/router.py`: remove poll fields AND `scores`/`base_scores` — daemon owns scores; pushing Railway's stale mirror back would corrupt authoritative data on WS reconnect
 
 ### What STAYS on Railway (read-only score mirror)
 - `core/state.py`: `scores: dict[str, int]` and `base_scores: dict[str, int]` remain but are **never written by Railway code**. Updated only by the new `_handle_scores_updated` handler.
