@@ -26,7 +26,6 @@ from daemon.http import _get_json
 from daemon.llm.adapter import get_usage
 from daemon.quiz.history import auto_generate, auto_generate_topic, auto_refine
 from daemon.quiz.poll_api import post_status
-from daemon.debate.ai_cleanup import run_debate_ai_cleanup
 from daemon.summary.loop import run_summary_cycle, load_key_points, save_key_points, get_ai_summary_mtime, get_ai_summary_raw
 from daemon.transcript.loader import load_transcription_files
 from daemon.transcript.query import load_normalized_entries
@@ -319,7 +318,7 @@ def run() -> None:
 
     ws_client.register_handler("quiz_request", _ws_handler("quiz_request"))
     ws_client.register_handler("quiz_refine", _ws_handler("quiz_refine"))
-    ws_client.register_handler("debate_ai_request", _ws_handler("debate_ai_request"))
+    # debate_ai_request handled directly by debate router (no longer via WS polling)
     ws_client.register_handler("summary_force", _ws_handler("summary_force"))
     ws_client.register_handler("summary_full_reset", _ws_handler("summary_full_reset"))
     ws_client.register_handler("state_snapshot_result", _ws_handler("state_snapshot_result"))
@@ -358,6 +357,9 @@ def run() -> None:
     set_codereview_ws(ws_client)
     set_activity_ws(ws_client)
 
+    from daemon.debate.router import set_ws_client as set_debate_ws
+    set_debate_ws(ws_client)
+
     def _handle_scores_reset(data):
         daemon_scores.reset()
         payload = {"type": "scores_updated", "scores": daemon_scores.snapshot()}
@@ -371,6 +373,7 @@ def run() -> None:
     from daemon.qa.state import qa_state
     from daemon.misc.state import misc_state
     from daemon.codereview.state import codereview_state
+    from daemon.debate.state import debate_state
 
     def _handle_daemon_state_push(data):
         participant_state.sync_from_restore(data)
@@ -378,6 +381,7 @@ def run() -> None:
         qa_state.sync_from_restore(data)
         misc_state.sync_from_restore(data)
         codereview_state.sync_from_restore(data)
+        debate_state.sync_from_restore(data)
 
     ws_client.register_handler("daemon_state_push", _handle_daemon_state_push)
 
@@ -1048,26 +1052,6 @@ def run() -> None:
                                 last_quiz = updated
                         else:
                             post_status("error", "No conversation context — please generate a question first.", config)
-
-                # ── Check for debate AI cleanup request (via WS) ──
-                debate_data = _pending_requests.pop("debate_ai_request", None)
-                if debate_data:
-                    debate_req = debate_data.get("request")
-                    if debate_req:
-                        log.info("daemon", f"Debate AI cleanup requested: '{debate_req['statement'][:60]}'")
-                        try:
-                            result = run_debate_ai_cleanup(debate_req, config.api_key, config.model)
-                            ws_client.send({"type": "debate_ai_result", **result})
-                            n_new = len(result.get("new_arguments", []))
-                            n_merges = len(result.get("merges", []))
-                            log.info("daemon", f"Debate AI done: {n_merges} merges, {n_new} new args")
-                        except Exception as e:
-                            log.error("daemon", f"Debate AI cleanup failed: {e}")
-                            # Post empty result so backend advances to prep anyway
-                            ws_client.send({
-                                "type": "debate_ai_result",
-                                "merges": [], "cleaned": [], "new_arguments": [],
-                            })
 
                 # ── Email participant feedback ──
                 try:

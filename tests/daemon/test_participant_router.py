@@ -72,15 +72,6 @@ class TestSetName:
         data = resp.json()
         assert data["name"]  # non-empty auto-assigned name
 
-    def test_debate_late_joiner_auto_assigned(self, client, fresh_state):
-        fresh_state.debate_phase = "arguments"
-        fresh_state.debate_sides = {"a": "for", "b": "for"}
-        resp = client.post("/api/participant/name",
-                           json={"name": "Charlie"},
-                           headers={"X-Participant-ID": "uuid1"})
-        assert resp.status_code == 200
-        assert fresh_state.debate_sides["uuid1"] == "against"  # fewer against
-
     def test_missing_participant_id_returns_400(self, client):
         resp = client.post("/api/participant/name", json={"name": "Alice"})
         assert resp.status_code == 400
