@@ -181,12 +181,6 @@ def _clear_activity_state():
     state.wordcloud_words.clear()
     state.wordcloud_word_order.clear()
     state.wordcloud_topic = ""
-    # Code review
-    state.codereview_snippet = None
-    state.codereview_language = None
-    state.codereview_phase = "idle"
-    state.codereview_selections.clear()
-    state.codereview_confirmed.clear()
     # Scores are owned by daemon — send reset signal; local mirror will be updated via scores_updated broadcast
     # (fire-and-forget; daemon_ws may not be connected yet during startup)
     # Scores and participants
@@ -400,13 +394,6 @@ def _restore_activity_blocks_from_snapshot(snap: dict):
     if hasattr(state, "wordcloud_word_order"):
         state.wordcloud_word_order = wc.get("word_order") or []
 
-    cr = snap.get("codereview") or {}
-    state.codereview_snippet = cr.get("snippet")
-    state.codereview_language = cr.get("language")
-    state.codereview_phase = cr.get("phase", "idle")
-    state.codereview_confirmed = set(cr.get("confirmed") or [])
-    state.codereview_selections = {uid: set(lines) for uid, lines in (cr.get("selections") or {}).items()}
-
 
 @session_router.post("/session/sync", dependencies=[Depends(require_host_auth)])
 async def sync_session(body: SyncSessionRequest):
@@ -557,14 +544,6 @@ async def get_session_snapshot():
     for q in state.qa_questions.values():
         qa_questions.append({**q, "upvoters": list(q.get("upvoters", set()))})
 
-    codereview_data = {
-        "snippet": state.codereview_snippet,
-        "language": state.codereview_language,
-        "phase": state.codereview_phase,
-        "confirmed": list(state.codereview_confirmed),
-        "selections": {uid: list(lines) for uid, lines in state.codereview_selections.items()},
-    }
-
     return {
         "saved_at": datetime.now(timezone.utc).isoformat(),
         "session_id": state.session_id,
@@ -578,7 +557,6 @@ async def get_session_snapshot():
             "words": state.wordcloud_words,
             "word_order": getattr(state, 'wordcloud_word_order', []),
         },
-        "codereview": codereview_data,
         "leaderboard_active": state.leaderboard_active,
         "token_usage": state.token_usage,
         "slides_log": state.slides_log,

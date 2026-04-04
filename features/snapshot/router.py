@@ -44,11 +44,6 @@ def _serialize_state() -> dict:
             "upvoters": sorted(q.get("upvoters", set())),
         }
 
-    # Code Review — convert sets to sorted lists
-    codereview_selections = {
-        uuid: sorted(lines) for uuid, lines in state.codereview_selections.items()
-    }
-
     return {
         # Participants
         "participant_names": participant_names,
@@ -74,12 +69,6 @@ def _serialize_state() -> dict:
         "wordcloud_topic": state.wordcloud_topic,
         # Q&A
         "qa_questions": qa_serializable,
-        # Code Review
-        "codereview_snippet": state.codereview_snippet,
-        "codereview_language": state.codereview_language,
-        "codereview_phase": state.codereview_phase,
-        "codereview_selections": codereview_selections,
-        "codereview_confirmed": sorted(state.codereview_confirmed),
         # Summary
         "summary_points": state.summary_points,
         "slides_current": state.slides_current,
@@ -145,20 +134,6 @@ def restore_state_from_dict(data: dict):
                 "upvoters": set(q.get("upvoters", [])),
             }
         state.qa_questions = qa_questions
-
-    # Code Review — convert lists back to sets
-    if "codereview_snippet" in data:
-        state.codereview_snippet = data["codereview_snippet"]
-    if "codereview_language" in data:
-        state.codereview_language = data["codereview_language"]
-    if "codereview_phase" in data:
-        state.codereview_phase = data["codereview_phase"]
-    if "codereview_selections" in data:
-        state.codereview_selections = {
-            uuid: set(lines) for uuid, lines in data["codereview_selections"].items()
-        }
-    if "codereview_confirmed" in data:
-        state.codereview_confirmed = set(data["codereview_confirmed"])
 
     # Summary
     if "summary_points" in data:

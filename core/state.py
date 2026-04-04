@@ -74,12 +74,6 @@ class AppState:
         self.wordcloud_topic: str = ""
         self.qa_questions: dict[str, dict] = {}
         # Each value: { id, text, author, upvoters: set[str], answered: bool, timestamp: float }
-        # Code Review state
-        self.codereview_snippet: str | None = None
-        self.codereview_language: str | None = None
-        self.codereview_phase: str = "idle"  # "idle" | "selecting" | "reviewing"
-        self.codereview_selections: dict[str, set[int]] = {}  # uuid → set of line numbers
-        self.codereview_confirmed: set[int] = set()  # lines host confirmed
         self.summary_points: list[dict] = []
         self.summary_raw_markdown: str | None = None
         self.summary_updated_at: Optional[datetime] = None
@@ -119,12 +113,6 @@ class AppState:
         taken_names = set(self.participant_names.values())
         available = [n for n in LOTR_NAMES if n not in taken_names]
         return available[0] if available else None
-
-    def ensure_activity_available(self, allowed: 'ActivityType'):
-        """Raise HTTPException if another activity is active."""
-        from fastapi import HTTPException
-        if self.current_activity not in (ActivityType.NONE, allowed):
-            raise HTTPException(409, "Another activity is already active")
 
     def touch_daemon(self):
         """Update daemon last-seen timestamp."""

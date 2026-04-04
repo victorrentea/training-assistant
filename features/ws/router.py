@@ -307,16 +307,6 @@ async def _handle_state_restore(data):
         for qid, q in restore_data["qa_questions"].items():
             qa_questions[qid] = {**q, "upvoters": set(q.get("upvoters", []))}
         state.qa_questions = qa_questions
-    if "codereview_snippet" in restore_data:
-        state.codereview_snippet = restore_data["codereview_snippet"]
-    if "codereview_language" in restore_data:
-        state.codereview_language = restore_data["codereview_language"]
-    if "codereview_phase" in restore_data:
-        state.codereview_phase = restore_data["codereview_phase"]
-    if "codereview_selections" in restore_data:
-        state.codereview_selections = {uid: set(lines) for uid, lines in restore_data["codereview_selections"].items()}
-    if "codereview_confirmed" in restore_data:
-        state.codereview_confirmed = set(restore_data["codereview_confirmed"])
     if "summary_points" in restore_data:
         state.summary_points = restore_data["summary_points"]
     if "slides_current" in restore_data:
@@ -737,8 +727,6 @@ async def _handle_participant_connection(websocket: WebSocket, pid: str, is_host
                     if word not in state.wordcloud_words:
                         state.wordcloud_word_order.insert(0, word)
                     state.wordcloud_words[word] = state.wordcloud_words.get(word, 0) + 1
-                    if not is_host:
-                        state.add_score(pid, 200)
                     await broadcast_state()
 
             elif msg_type == "qa_submit":
@@ -753,7 +741,6 @@ async def _handle_participant_connection(websocket: WebSocket, pid: str, is_host
                         "answered": False,
                         "timestamp": time.time(),
                     }
-                    state.add_score(pid, 100)
                     qa_questions_total.inc()
                     await broadcast_state()
 
@@ -762,9 +749,6 @@ async def _handle_participant_connection(websocket: WebSocket, pid: str, is_host
                 q = state.qa_questions.get(question_id)
                 if q and q["author"] != pid and pid not in q["upvoters"]:
                     q["upvoters"].add(pid)
-                    author_pid = q["author"]
-                    state.add_score(author_pid, 50)
-                    state.add_score(pid, 25)
                     qa_upvotes_total.inc()
                     await broadcast_state()
 
