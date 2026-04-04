@@ -316,15 +316,15 @@ def run() -> None:
             _pending_requests[msg_type] = data
         return handler
 
-    ws_client.register_handler("quiz_request", _ws_handler("quiz_request"))
-    ws_client.register_handler("quiz_refine", _ws_handler("quiz_refine"))
+    # quiz_request and quiz_refine are now served via daemon REST endpoints (daemon/quiz/router.py)
+    # and stored in daemon.quiz.pending — no longer via WS push from Railway
     # debate_ai_request handled directly by debate router (no longer via WS polling)
     ws_client.register_handler("summary_force", _ws_handler("summary_force"))
     ws_client.register_handler("summary_full_reset", _ws_handler("summary_full_reset"))
     ws_client.register_handler("state_snapshot_result", _ws_handler("state_snapshot_result"))
     ws_client.register_handler("session_snapshot_result", _ws_handler("session_snapshot_result"))
     ws_client.register_handler("session_request", _ws_handler("session_request"))
-    ws_client.register_handler("transcription_language_request", _ws_handler("transcription_language_request"))
+    # transcription_language_request is now served via daemon REST endpoint (daemon/misc/router.py)
     ws_client.register_handler("sync_files", _ws_handler("sync_files"))
 
     from daemon.proxy_handler import handle_proxy_request
@@ -359,6 +359,9 @@ def run() -> None:
 
     from daemon.debate.router import set_ws_client as set_debate_ws
     set_debate_ws(ws_client)
+
+    from daemon.quiz.router import set_ws_client as set_quiz_ws
+    set_quiz_ws(ws_client)
 
     def _handle_scores_reset(data):
         daemon_scores.reset()
@@ -1018,8 +1021,9 @@ def run() -> None:
                             ws_client.send({"type": "notes_content", "content": notes_text})
                             last_notes_mtime = current_mtime
 
-                # ── Check for new quiz generation request (via WS) ──
-                quiz_data = _pending_requests.pop("quiz_request", None)
+                # ── Check for new quiz generation request (via daemon REST endpoint) ──
+                from daemon.quiz.pending import pop as _quiz_pending_pop
+                quiz_data = _quiz_pending_pop("quiz_request")
                 if quiz_data:
                     req = quiz_data.get("request")
                     if req:
@@ -1037,8 +1041,8 @@ def run() -> None:
                         else:
                             last_quiz, last_text = None, None
 
-                # ── Check for refine request (via WS) ──
-                refine_data = _pending_requests.pop("quiz_refine", None)
+                # ── Check for refine request (via daemon REST endpoint) ──
+                refine_data = _quiz_pending_pop("quiz_refine")
                 if refine_data:
                     refine_req = refine_data.get("request")
                     if refine_req:
@@ -1053,17 +1057,13 @@ def run() -> None:
                         else:
                             post_status("error", "No conversation context — please generate a question first.", config)
 
-                # ── Email participant feedback ──
-                try:
-                    feedback_data = _get_json(
-                        f"{config.server_url}/api/feedback/pending",
-                        config.host_username, config.host_password,
-                    )
-                    for text in feedback_data.get("items", []):
-                        log.info("email", f"Feedback received: {text[:80]}")
-                        email_notify("💬 Workshop feedback", text)
-                except RuntimeError:
-                    pass  # server unreachable — skip this cycle
+                # ── Email participant feedback (read from daemon misc_state directly) ──
+                from daemon.misc.state import misc_state as _misc_state
+                _feedback_items = list(_misc_state.feedback_pending)
+                _misc_state.feedback_pending.clear()
+                for text in _feedback_items:
+                    log.info("email", f"Feedback received: {text[:80]}")
+                    email_notify("💬 Workshop feedback", text)
 
                 # ── Push transcript stats every 10s ──
                 if now - last_transcript_stats_at >= 10.0:

@@ -22,19 +22,14 @@ import core.metrics as metrics  # noqa: registers custom Prometheus metrics
 
 from features.ws import router as ws
 from features.ws.router import session_router as ws_session_router
-from features.qa import router as qa
-from features.wordcloud import router as wordcloud
-from features.quiz import router as quiz
 from features.summary import router as summary
 from features.pages.router import landing_router, host_router, participant_router
 from features.session import router as session
 from features.session.router import session_router as session_session_router
 from features.slides import router as slides
 from features.slides.upload import router as slides_upload_router
-from features.transcription_language import router as transcription_language_router
 from features.upload import router as upload
 from features.upload.router import public_router as upload_public_router
-from features.feedback import router as feedback
 from features.internal.router import router as internal_router
 from features.ws.proxy_bridge import participant_proxy_router
 
@@ -120,12 +115,6 @@ app.include_router(session.router)
 # Daemon-facing slides upload endpoints (global — daemon doesn't know session_id)
 app.include_router(slides_upload_router, dependencies=[Depends(require_host_auth)])
 
-# Global transcription language endpoint
-app.include_router(transcription_language_router, dependencies=[Depends(require_host_auth)])
-
-# Global feedback endpoint
-app.include_router(feedback.router)
-
 # Internal daemon → backend file management endpoints
 app.include_router(internal_router)
 
@@ -150,9 +139,6 @@ session_host = APIRouter(
     prefix="/api/{session_id}",
     dependencies=[Depends(require_host_auth), Depends(_require_active_session_host)],
 )
-session_host.include_router(qa.router)
-session_host.include_router(wordcloud.router)
-session_host.include_router(quiz.router)
 session_host.include_router(summary.router)
 session_host.include_router(slides.router)
 session_host.include_router(upload.router)
