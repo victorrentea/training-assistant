@@ -578,16 +578,14 @@ components:
 
     VoteRequest:
       type: object
-      description: Provide either option_id (single-select) or option_ids (multi-select)
+      required: [option_ids]
+      description: Always provide option_ids as a list (single-select polls use a one-element list)
       properties:
-        option_id:
-          type: string
-          description: Option ID for single-select polls
         option_ids:
           type: array
           items:
             type: string
-          description: Option IDs for multi-select polls
+          description: Option IDs to vote for (one element for single-select, multiple for multi-select)
 
     # Word Cloud
 
@@ -893,25 +891,26 @@ components:
 
     QAQuestionForParticipant:
       type: object
+      description: |
+        Raw question format — client computes is_own (author_uuid == my_uuid)
+        and has_upvoted (my_uuid in upvoter_uuids) locally.
       properties:
         id:
           type: string
         text:
           type: string
-        author:
+        author_uuid:
           type: string
-        author_avatar:
-          type: string
-        upvote_count:
-          type: integer
+          description: UUID of the question author (resolved to name client-side)
+        upvoter_uuids:
+          type: array
+          items:
+            type: string
+          description: List of UUIDs that upvoted this question
         answered:
           type: boolean
         timestamp:
           type: string
-        is_own:
-          type: boolean
-        has_upvoted:
-          type: boolean
 
     CodeReviewStateForParticipant:
       type: object
