@@ -23,16 +23,12 @@ import core.metrics as metrics  # noqa: registers custom Prometheus metrics
 
 from features.ws import router as ws
 from features.ws.router import session_router as ws_session_router
-from features.poll import router as poll
-from features.poll.router import public_router as poll_public_router
-from features.poll.router import global_router as poll_global_router
 from features.qa import router as qa
 from features.wordcloud import router as wordcloud
 from features.codereview import router as codereview
 from features.debate import router as debate
 from features.quiz import router as quiz
 from features.summary import router as summary
-from features.leaderboard import router as leaderboard
 from features.activity import router as activity
 from features.pages.router import landing_router, host_router, participant_router
 from features.session import router as session
@@ -48,12 +44,10 @@ from features.internal.router import router as internal_router
 from features.ws.proxy_bridge import participant_proxy_router
 
 import core.state_builder  # noqa: registers core state builder
-import features.poll.state_builder  # noqa
 import features.qa.state_builder  # noqa
 import features.wordcloud.state_builder  # noqa
 import features.codereview.state_builder  # noqa
 import features.debate.state_builder  # noqa
-import features.leaderboard.state_builder  # noqa
 import features.slides.state_builder  # noqa
 
 logging.basicConfig(level=logging.INFO)
@@ -147,9 +141,6 @@ app.include_router(slides_upload_router, dependencies=[Depends(require_host_auth
 # Global transcription language endpoint
 app.include_router(transcription_language_router, dependencies=[Depends(require_host_auth)])
 
-# Global poll endpoints (backward compat for daemon: /api/status, /api/pending-deploy)
-app.include_router(poll_global_router)
-
 # Global feedback endpoint
 app.include_router(feedback.router)
 
@@ -177,12 +168,10 @@ session_host = APIRouter(
     prefix="/api/{session_id}",
     dependencies=[Depends(require_host_auth), Depends(_require_active_session_host)],
 )
-session_host.include_router(poll.router)
 session_host.include_router(qa.router)
 session_host.include_router(wordcloud.router)
 session_host.include_router(codereview.router)
 session_host.include_router(debate.router)
-session_host.include_router(leaderboard.router)
 session_host.include_router(quiz.router)
 session_host.include_router(activity.router)
 session_host.include_router(summary.router)
@@ -217,7 +206,6 @@ session_participant = APIRouter(
     dependencies=[Depends(require_valid_session)],
 )
 session_participant.include_router(participant_router)       # /, /notes, /quiz
-session_participant.include_router(poll_public_router)       # /api/suggest-name, /api/status, /api/quiz-md
 session_participant.include_router(slides.public_router)     # /api/slides, /api/slides/file/{slug}, /api/slides/current
 session_participant.include_router(summary.public_router)    # /api/summary, /api/notes, /api/summary/force
 session_participant.include_router(upload_public_router)     # /api/upload (participant file upload)
