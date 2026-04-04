@@ -20,7 +20,8 @@ from features.ws.daemon_protocol import push_to_daemon
 from daemon.transcript.query import load_normalized_entries
 
 router = APIRouter()          # global session endpoints
-session_router = APIRouter()  # session-scoped endpoints (mounted under /api/{session_id}/)
+session_router = APIRouter()  # session-scoped endpoints (mounted under /api/{session_id}/, host-auth)
+public_router = APIRouter()   # session-scoped public endpoints (mounted under /{session_id}/api/)
 _GLOBAL_STATE_ACK_TIMEOUT_SECONDS = 3.0
 
 
@@ -201,8 +202,6 @@ def _clear_activity_state():
     # Summary
     state.summary_points.clear()
     state.summary_updated_at = None
-    state.summary_force_requested = False
-    state.summary_reset_requested = False
     state.notes_content = None
     # Session metadata
     state.session_main = None
@@ -512,6 +511,26 @@ async def list_session_folders():
         )
         folders = _filter_folders_to_current_year(deduped)
     return {"folders": folders}
+
+
+# ── Public summary/notes endpoints (session-scoped, no auth) ──
+
+@public_router.get("/api/summary")
+async def get_summary():
+    return {
+        "points": state.summary_points,
+        "updated_at": state.summary_updated_at.isoformat() if state.summary_updated_at else None,
+    }
+
+
+@public_router.get("/api/notes")
+async def get_notes():
+    return {
+        "content": state.notes_content,
+        "summary_points": state.summary_points,
+        "raw_markdown": state.summary_raw_markdown,
+        "summary_updated_at": state.summary_updated_at.isoformat() if state.summary_updated_at else None,
+    }
 
 
 async def get_session_snapshot():

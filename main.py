@@ -22,10 +22,9 @@ import core.metrics as metrics  # noqa: registers custom Prometheus metrics
 
 from features.ws import router as ws
 from features.ws.router import session_router as ws_session_router
-from features.summary import router as summary
 from features.pages.router import landing_router, host_router, participant_router
 from features.session import router as session
-from features.session.router import session_router as session_session_router
+from features.session.router import session_router as session_session_router, public_router as session_public_router
 from features.slides import router as slides
 from features.slides.upload import router as slides_upload_router
 from features.upload import router as upload
@@ -139,7 +138,6 @@ session_host = APIRouter(
     prefix="/api/{session_id}",
     dependencies=[Depends(require_host_auth), Depends(_require_active_session_host)],
 )
-session_host.include_router(summary.router)
 session_host.include_router(slides.router)
 session_host.include_router(upload.router)
 session_host.include_router(session_session_router)
@@ -171,7 +169,7 @@ session_participant = APIRouter(
 )
 session_participant.include_router(participant_router)       # /, /notes, /quiz
 session_participant.include_router(slides.public_router)     # /api/slides, /api/slides/file/{slug}, /api/slides/current
-session_participant.include_router(summary.public_router)    # /api/summary, /api/notes, /api/summary/force
+session_participant.include_router(session_public_router)    # /api/summary, /api/notes
 session_participant.include_router(upload_public_router)     # /api/upload (participant file upload)
 session_participant.include_router(participant_proxy_router)  # /api/participant/* → daemon proxy
 app.include_router(session_participant)

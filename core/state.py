@@ -76,8 +76,6 @@ class AppState:
         self.summary_points: list[dict] = []
         self.summary_raw_markdown: str | None = None
         self.summary_updated_at: Optional[datetime] = None
-        self.summary_force_requested: bool = False
-        self.summary_reset_requested: bool = False
         # Session state
         self.session_main: dict | None = None   # {name, started_at, status}
         self.session_type: str = "workshop"     # "workshop" | "conference"
