@@ -24,6 +24,7 @@ COPY tests/pages/ /app/tests/pages/
 
 # Copy test files
 WORKDIR /tests
+COPY tests/docker/session_utils.py .
 COPY tests/docker/test_daemon_connected.py .
 COPY tests/docker/test_poll_flow.py .
 COPY tests/docker/test_slides_view.py .

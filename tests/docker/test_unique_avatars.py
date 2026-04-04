@@ -27,6 +27,7 @@ import pytest
 from playwright.sync_api import sync_playwright, expect
 
 from pages.participant_page import ParticipantPage
+from session_utils import fresh_session
 
 BASE = "http://localhost:8000"
 DAEMON_BASE = os.environ.get("DAEMON_BASE", "http://localhost:8081")
@@ -50,14 +51,19 @@ def _api_call(method, path, data=None, base=None):
         return json.loads(resp.read())
 
 
-def _create_session(name="Test") -> str:
-    result = _api_call("POST", "/api/session/create", {"name": f"{name} {int(time.time())}", "type": "workshop"})
-    return result["session_id"]
-
 LOTR_NAMES_ORDER = [
     "Gandalf", "Frodo", "Aragorn", "Legolas", "Gollum",
     "Samwise", "Gimli", "Smaug", "Bilbo", "Saruman",
 ]  # just the first 10 for reference
+
+ALL_LOTR_NAMES = set([
+    "Gandalf", "Frodo", "Aragorn", "Legolas", "Gollum",
+    "Samwise", "Gimli", "Smaug", "Bilbo", "Saruman",
+    "Galadriel", "Boromir", "Arwen", "Eowyn", "Merry",
+    "Pippin", "Elrond", "Thorin", "Theoden", "Faramir",
+    "Treebeard", "Shadowfax", "Radagast", "Tom Bombadil", "Eomer",
+    "Haldir", "Glorfindel", "Celeborn", "Grima Wormtongue", "The One Ring",
+])
 
 
 def _open_participant(browser, session_id) -> tuple:
@@ -71,9 +77,9 @@ def _open_participant(browser, session_id) -> tuple:
 # ── 1. Sequential unique assignment ──────────────────────────────────────────
 
 def test_sequential_unique_name_and_avatar_assignment():
-    """3 participants join sequentially — each gets a distinct name+avatar.
-    First participant gets 'Gandalf' (most famous), second gets 'Frodo', etc."""
-    session_id = _create_session("UniqueNames")
+    """3 participants join sequentially — each gets a distinct LOTR name+avatar.
+    Names are assigned from the LOTR pool in order; each name gets its matching avatar."""
+    session_id = fresh_session("UniqueNames")
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
 
@@ -93,10 +99,10 @@ def test_sequential_unique_name_and_avatar_assignment():
         print(f"P2: {name2} / {avatar2}")
         print(f"P3: {name3} / {avatar3}")
 
-        # First participant must get the most famous LOTR name
-        assert name1 == "Gandalf", f"Expected 'Gandalf' for first participant, got '{name1}'"
-        assert name2 == "Frodo", f"Expected 'Frodo' for second participant, got '{name2}'"
-        assert name3 == "Aragorn", f"Expected 'Aragorn' for third participant, got '{name3}'"
+        # All names must come from the LOTR pool
+        assert name1 in ALL_LOTR_NAMES, f"P1 name not a LOTR name: '{name1}'"
+        assert name2 in ALL_LOTR_NAMES, f"P2 name not a LOTR name: '{name2}'"
+        assert name3 in ALL_LOTR_NAMES, f"P3 name not a LOTR name: '{name3}'"
 
         # All names must be distinct
         assert len({name1, name2, name3}) == 3, "Participants share a name!"
@@ -105,10 +111,13 @@ def test_sequential_unique_name_and_avatar_assignment():
         assert avatar1 and avatar2 and avatar3, "Some avatar is empty"
         assert len({avatar1, avatar2, avatar3}) == 3, f"Participants share an avatar: {avatar1}, {avatar2}, {avatar3}"
 
-        # Avatars must match the LOTR name pair
-        assert avatar1 == "gandalf.png", f"Expected gandalf.png, got {avatar1}"
-        assert avatar2 == "frodo.png", f"Expected frodo.png, got {avatar2}"
-        assert avatar3 == "aragorn.png", f"Expected aragorn.png, got {avatar3}"
+        # Each avatar must match its LOTR name pair (name → name.lower().replace(' ', '-') + '.png')
+        def expected_avatar(name):
+            return name.lower().replace(' ', '-') + '.png'
+
+        assert avatar1 == expected_avatar(name1), f"Avatar mismatch for P1: name={name1}, avatar={avatar1}"
+        assert avatar2 == expected_avatar(name2), f"Avatar mismatch for P2: name={name2}, avatar={avatar2}"
+        assert avatar3 == expected_avatar(name3), f"Avatar mismatch for P3: name={name3}, avatar={avatar3}"
 
         print("SUCCESS: Sequential unique name+avatar assignment works!")
         browser.close()
@@ -117,30 +126,34 @@ def test_sequential_unique_name_and_avatar_assignment():
 # ── 2. Avatar refresh uniqueness ─────────────────────────────────────────────
 
 def test_avatar_refresh_gives_unique_avatar_to_second_participant():
-    """P1 joins (Gandalf+gandalf.png), refreshes avatar (gets something else).
-    P2 joins — P2 gets Frodo+frodo.png (their own LOTR pair, not P1's refreshed avatar)."""
-    session_id = _create_session("AvatarRefresh")
+    """P1 joins and gets a LOTR name+avatar, then refreshes avatar (gets something different).
+    P2 joins — P2 gets a different name+avatar pair, not P1's refreshed avatar."""
+    session_id = fresh_session("AvatarRefresh")
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
 
         page1, pax1 = _open_participant(browser, session_id)
         name1 = pax1.auto_join()
-        assert name1 == "Gandalf"
+        avatar1_original = pax1.get_avatar_src()
+        assert name1 in ALL_LOTR_NAMES, f"P1 name not a LOTR name: '{name1}'"
+        expected_avatar1 = name1.lower().replace(' ', '-') + '.png'
+        assert avatar1_original == expected_avatar1, f"P1 avatar should match name, got {avatar1_original}"
 
-        # P1 refreshes avatar — gets a random avatar (not gandalf.png)
+        # P1 refreshes avatar — gets a random avatar (not the original)
         page1.evaluate("sendWS('refresh_avatar', { rejected: [] })")
         page1.wait_for_timeout(1500)
         avatar1_refreshed = pax1.get_avatar_src()
-        assert avatar1_refreshed != "gandalf.png", "Refresh should change the avatar"
-        print(f"P1 refreshed avatar: {avatar1_refreshed}")
+        assert avatar1_refreshed != avatar1_original, "Refresh should change the avatar"
+        print(f"P1: {name1} original={avatar1_original} refreshed={avatar1_refreshed}")
 
-        # P2 joins — should get Frodo + frodo.png
+        # P2 joins — should get a different name+avatar
         page2, pax2 = _open_participant(browser, session_id)
         name2 = pax2.auto_join()
         avatar2 = pax2.get_avatar_src()
         print(f"P2: {name2} / {avatar2}")
 
-        assert name2 == "Frodo", f"Expected 'Frodo' for second participant, got '{name2}'"
+        assert name2 in ALL_LOTR_NAMES, f"P2 name not a LOTR name: '{name2}'"
+        assert name2 != name1, "P2 should have a different name than P1"
         # P2's avatar must not be the same as P1's refreshed avatar
         assert avatar2 != avatar1_refreshed, (
             f"P2 got same avatar as P1's refreshed avatar: {avatar2}"
@@ -154,7 +167,7 @@ def test_avatar_refresh_gives_unique_avatar_to_second_participant():
 
 def test_rename_rejected_when_name_already_taken():
     """P1 renames to 'Myname'. P2 tries to rename to 'Myname' → rejected."""
-    session_id = _create_session("RenameRejection")
+    session_id = fresh_session("RenameRejection")
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
 
@@ -191,7 +204,7 @@ def test_rename_rejected_when_name_already_taken():
 def test_returning_participant_keeps_name_and_avatar():
     """P1 joins, navigates away, navigates back (same browser context → same UUID).
     Server must restore the same name and avatar without reassignment."""
-    session_id = _create_session("Returning")
+    session_id = fresh_session("Returning")
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
 

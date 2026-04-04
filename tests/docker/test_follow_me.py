@@ -28,6 +28,7 @@ import pytest
 from playwright.sync_api import sync_playwright, expect
 
 from pages.participant_page import ParticipantPage
+from session_utils import fresh_session
 
 
 BASE = "http://localhost:8000"
@@ -65,38 +66,9 @@ def _clear_slide_pointer():
     _activity_slides_file().unlink(missing_ok=True)
 
 
-def _get_or_create_session() -> str:
-    try:
-        with urllib.request.urlopen(f"{DAEMON_BASE}/api/session/active", timeout=5) as resp:
-            data = json.loads(resp.read())
-            if data.get("session_id"):
-                return data["session_id"]
-    except Exception:
-        pass
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
-        ctx = browser.new_context(
-            http_credentials={"username": HOST_USER, "password": HOST_PASS}
-        )
-        page = ctx.new_page()
-        page.goto(f"{DAEMON_BASE}/host", wait_until="networkidle")
-        if re.search(r"/host/[a-zA-Z0-9]+", page.url):
-            sid = page.url.split("/host/")[-1].split("?")[0]
-            browser.close()
-            return sid
-        page.locator("#session-name-input").fill("Follow Test")
-        btn = page.locator("#create-btn-workshop")
-        expect(btn).to_be_enabled(timeout=3000)
-        btn.click()
-        page.wait_for_url(re.compile(r"/host/[a-zA-Z0-9]+"), timeout=15000)
-        sid = page.url.split("/host/")[-1].split("?")[0]
-        browser.close()
-        return sid
-
-
 def test_follow_me_basic():
     """Participant clicks Follow → sees the host's current slide + page."""
-    session_id = _get_or_create_session()
+    session_id = fresh_session("FollowMe")
 
     # Simulate host on "Clean Code.pptx" slide 3
     _set_slide_pointer("Clean Code.pptx", slide=3)

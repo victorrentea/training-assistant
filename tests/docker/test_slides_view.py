@@ -24,6 +24,7 @@ import pytest
 from playwright.sync_api import sync_playwright, expect
 
 from pages.participant_page import ParticipantPage
+from session_utils import fresh_session
 
 
 BASE = "http://localhost:8000"
@@ -54,39 +55,9 @@ def _mock_drive_reset():
     urllib.request.urlopen(req, timeout=3)
 
 
-def _get_or_create_session() -> str:
-    try:
-        with urllib.request.urlopen(f"{DAEMON_BASE}/api/session/active", timeout=5) as resp:
-            data = json.loads(resp.read())
-            if data.get("session_id"):
-                return data["session_id"]
-    except Exception:
-        pass
-
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
-        ctx = browser.new_context(
-            http_credentials={"username": HOST_USER, "password": HOST_PASS}
-        )
-        page = ctx.new_page()
-        page.goto(f"{DAEMON_BASE}/host", wait_until="networkidle")
-        if re.search(r"/host/[a-zA-Z0-9]+", page.url):
-            sid = page.url.split("/host/")[-1].split("?")[0]
-            browser.close()
-            return sid
-        page.locator("#session-name-input").fill("Slides Test")
-        btn = page.locator("#create-btn-workshop")
-        expect(btn).to_be_enabled(timeout=3000)
-        btn.click()
-        page.wait_for_url(re.compile(r"/host/[a-zA-Z0-9]+"), timeout=15000)
-        sid = page.url.split("/host/")[-1].split("?")[0]
-        browser.close()
-        return sid
-
-
 def test_participant_views_slide_from_catalog():
     """Participant selects a slide topic, backend fetches PDF from mock Drive."""
-    session_id = _get_or_create_session()
+    session_id = fresh_session("SlidesView")
     _mock_drive_reset()
 
     with sync_playwright() as p:
@@ -136,7 +107,7 @@ def test_participant_views_slide_from_catalog():
 
 def test_second_participant_gets_cached_pdf():
     """Second participant viewing the same slide gets it from cache (no extra Drive call)."""
-    session_id = _get_or_create_session()
+    session_id = fresh_session("SlidesCached")
 
     # First, ensure the slide is already cached from the previous test
     # (or trigger a load if not)

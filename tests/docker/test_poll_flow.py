@@ -30,6 +30,8 @@ HOST_PASS = os.environ.get("HOST_PASSWORD", "testpass")
 import base64
 import time
 
+from session_utils import fresh_session
+
 
 def _api_call(method, path, data=None, base=None):
     """Make API call. Defaults to DAEMON_BASE for host endpoints."""
@@ -47,14 +49,9 @@ def _api_call(method, path, data=None, base=None):
         return json.loads(resp.read())
 
 
-def _create_session(name="PollTest") -> str:
-    result = _api_call("POST", "/api/session/create", {"name": f"{name} {int(time.time())}", "type": "workshop"})
-    return result["session_id"]
-
-
 def test_full_poll_lifecycle():
     """Complete poll flow: create → vote → close → verify percentages."""
-    session_id = _create_session()
+    session_id = fresh_session("PollTest")
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)

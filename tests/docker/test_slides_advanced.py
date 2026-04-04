@@ -25,6 +25,7 @@ from playwright.sync_api import sync_playwright, expect
 
 from pages.participant_page import ParticipantPage
 from pages.host_page import HostPage
+from session_utils import fresh_session
 
 
 BASE = "http://localhost:8000"
@@ -74,12 +75,6 @@ def _api_call(method, path, data=None, base=None):
         req.add_header("Content-Length", "0")
     with urllib.request.urlopen(req, timeout=10) as resp:
         return json.loads(resp.read())
-
-
-def _create_session(name="Test", session_type="workshop") -> str:
-    """Create a fresh session via API — gives clean state."""
-    result = _api_call("POST", "/api/session/create", {"name": f"{name} {int(time.time())}", "type": session_type})
-    return result["session_id"]
 
 
 def _upload_slide(slug=_SLUG, name="Hermetic Badge Slide"):
@@ -157,7 +152,7 @@ def _close_overlay(page):
 def test_uploaded_slide_appears_in_catalog():
     """Upload a minimal PDF → participant sees it in the slides list."""
     _delete_slide()
-    session_id = _create_session("SlidesCatalog")
+    session_id = fresh_session("SlidesCatalog")
     _upload_slide()
     try:
         with sync_playwright() as p:
@@ -192,7 +187,7 @@ def test_slide_becomes_available_after_upload():
     # Use a unique slug so no prior test can leave it behind
     slug = f"live-upload-{int(time.time())}"
     item_sel = f'[data-slide-id*="{slug}"]'
-    session_id = _create_session("SlidesLive")
+    session_id = fresh_session("SlidesLive")
     try:
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
@@ -223,7 +218,7 @@ def test_slide_becomes_available_after_upload():
 def test_no_badge_before_first_visit():
     """Slide is updated but participant never opened it → no NEW badge."""
     _delete_slide()
-    session_id = _create_session("NoBadge")
+    session_id = fresh_session("NoBadge")
     _upload_slide()  # v1
     try:
         with sync_playwright() as p:
@@ -259,7 +254,7 @@ def test_no_badge_before_first_visit():
 def test_badge_appears_after_update():
     """Participant visits slide, then it's updated → NEW badge appears."""
     _delete_slide()
-    session_id = _create_session("BadgeAppears")
+    session_id = fresh_session("BadgeAppears")
     _upload_slide()  # v1
     try:
         with sync_playwright() as p:
@@ -299,7 +294,7 @@ def test_badge_appears_after_update():
 def test_badge_clears_after_click():
     """After badge appears, clicking the slide again clears it."""
     _delete_slide()
-    session_id = _create_session("BadgeClear")
+    session_id = fresh_session("BadgeClear")
     _upload_slide()  # v1
     try:
         with sync_playwright() as p:

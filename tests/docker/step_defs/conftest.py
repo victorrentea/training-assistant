@@ -21,6 +21,9 @@ from playwright.sync_api import sync_playwright, expect
 from pages.host_page import HostPage
 from pages.participant_page import ParticipantPage
 
+sys.path.insert(0, "/tests")
+from session_utils import fresh_session
+
 
 BASE = "http://localhost:8000"
 DAEMON_BASE = os.environ.get("DAEMON_BASE", "http://localhost:8081")
@@ -42,11 +45,6 @@ def _api_call(method, path, data=None, base=None):
         req.add_header("Content-Length", "0")
     with urllib.request.urlopen(req, timeout=10) as resp:
         return json.loads(resp.read())
-
-
-def _create_session(name="BDD Test") -> str:
-    result = _api_call("POST", "/api/session/create", {"name": f"{name} {int(time.time())}", "type": "workshop"})
-    return result["session_id"]
 
 
 def _clear_qa(session_id: str) -> None:
@@ -76,7 +74,7 @@ from pytest_bdd import given, when
 @pytest.fixture
 def session_id():
     """Create a fresh session for each scenario."""
-    return _create_session()
+    return fresh_session("BDD Test")
 
 
 # ── Shared Given steps ─────────────────────────────────────────────────────

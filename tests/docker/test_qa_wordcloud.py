@@ -20,6 +20,7 @@ from playwright.sync_api import sync_playwright, expect
 
 from pages.participant_page import ParticipantPage
 from pages.host_page import HostPage
+from session_utils import fresh_session
 
 
 BASE = "http://localhost:8000"
@@ -51,41 +52,12 @@ def _clear_qa(session_id: str) -> None:
     urllib.request.urlopen(req, timeout=5)
 
 
-def _get_or_create_session() -> str:
-    try:
-        with urllib.request.urlopen(f"{DAEMON_BASE}/api/session/active", timeout=5) as resp:
-            data = json.loads(resp.read())
-            if data.get("session_id"):
-                return data["session_id"]
-    except Exception:
-        pass
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
-        ctx = browser.new_context(
-            http_credentials={"username": HOST_USER, "password": HOST_PASS}
-        )
-        page = ctx.new_page()
-        page.goto(f"{DAEMON_BASE}/host", wait_until="networkidle")
-        if re.search(r"/host/[a-zA-Z0-9]+", page.url):
-            sid = page.url.split("/host/")[-1].split("?")[0]
-            browser.close()
-            return sid
-        page.locator("#session-name-input").fill("QA WC Tests")
-        btn = page.locator("#create-btn-workshop")
-        expect(btn).to_be_enabled(timeout=3000)
-        btn.click()
-        page.wait_for_url(re.compile(r"/host/[a-zA-Z0-9]+"), timeout=15000)
-        sid = page.url.split("/host/")[-1].split("?")[0]
-        browser.close()
-        return sid
-
-
 # ── Q&A Tests ───────────────────────────────────────────────────────────────
 
 
 def test_qa_submit_and_host_sees():
     """Participant submits a question → host sees it in Q&A panel."""
-    session_id = _get_or_create_session()
+    session_id = fresh_session("QATest")
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
@@ -129,7 +101,7 @@ def test_qa_submit_and_host_sees():
 
 def test_qa_host_edits_participant_sees():
     """Host edits a question → participant sees the updated text."""
-    session_id = _get_or_create_session()
+    session_id = fresh_session("QAEditTest")
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
@@ -174,8 +146,7 @@ def test_qa_host_edits_participant_sees():
 
 def test_qa_host_deletes_question():
     """Host deletes question → both host and participant lists are empty."""
-    session_id = _get_or_create_session()
-    _clear_qa(session_id)
+    session_id = fresh_session("QADeleteTest")
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
@@ -211,8 +182,7 @@ def test_qa_host_deletes_question():
 
 def test_qa_host_marks_answered():
     """Host marks question answered → participant sees answered styling."""
-    session_id = _get_or_create_session()
-    _clear_qa(session_id)
+    session_id = fresh_session("QAAnswerTest")
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
@@ -254,8 +224,7 @@ def test_qa_host_marks_answered():
 
 def test_qa_upvoting_and_sort_order():
     """3 participants upvote questions → sorted by upvotes descending."""
-    session_id = _get_or_create_session()
-    _clear_qa(session_id)
+    session_id = fresh_session("QAUpvoteTest")
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
@@ -329,7 +298,7 @@ def test_qa_upvoting_and_sort_order():
 
 def test_leaderboard_show_and_hide():
     """Host shows leaderboard → participant sees overlay → host hides it."""
-    session_id = _get_or_create_session()
+    session_id = fresh_session("LeaderboardTest")
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
@@ -397,7 +366,7 @@ def test_leaderboard_show_and_hide():
 
 def test_wordcloud_submit_appears_in_my_words():
     """Host opens wordcloud → participant submits word → appears in 'my words'."""
-    session_id = _get_or_create_session()
+    session_id = fresh_session("WordcloudTest")
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)

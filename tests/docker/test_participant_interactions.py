@@ -20,6 +20,7 @@ from playwright.sync_api import sync_playwright, expect
 
 from pages.participant_page import ParticipantPage
 from pages.host_page import HostPage
+from session_utils import fresh_session
 
 
 BASE = "http://localhost:8000"
@@ -38,38 +39,9 @@ def _await_condition(fn, timeout_ms=10000, poll_ms=300, msg=""):
     raise AssertionError(msg or f"Condition not met within {timeout_ms}ms")
 
 
-def _get_or_create_session() -> str:
-    try:
-        with urllib.request.urlopen(f"{DAEMON_BASE}/api/session/active", timeout=5) as resp:
-            data = json.loads(resp.read())
-            if data.get("session_id"):
-                return data["session_id"]
-    except Exception:
-        pass
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
-        ctx = browser.new_context(
-            http_credentials={"username": HOST_USER, "password": HOST_PASS}
-        )
-        page = ctx.new_page()
-        page.goto(f"{DAEMON_BASE}/host", wait_until="networkidle")
-        if re.search(r"/host/[a-zA-Z0-9]+", page.url):
-            sid = page.url.split("/host/")[-1].split("?")[0]
-            browser.close()
-            return sid
-        page.locator("#session-name-input").fill("Interaction Tests")
-        btn = page.locator("#create-btn-workshop")
-        expect(btn).to_be_enabled(timeout=3000)
-        btn.click()
-        page.wait_for_url(re.compile(r"/host/[a-zA-Z0-9]+"), timeout=15000)
-        sid = page.url.split("/host/")[-1].split("?")[0]
-        browser.close()
-        return sid
-
-
 def test_participant_rename_visible_to_host():
     """Participant renames themselves → host participant list shows new name."""
-    session_id = _get_or_create_session()
+    session_id = fresh_session("RenameTest")
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
@@ -116,7 +88,7 @@ def test_participant_rename_visible_to_host():
 
 def test_emoji_reaction_visible_to_host():
     """Participant sends emoji → host page shows the emoji."""
-    session_id = _get_or_create_session()
+    session_id = fresh_session("EmojiTest")
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
