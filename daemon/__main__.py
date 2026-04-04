@@ -219,19 +219,7 @@ def _send_global_state_saved_ack(
     persisted: bool,
     session_id: str | None,
 ) -> None:
-    if not session_req:
-        return
-    request_id = str(session_req.get("request_id") or "").strip()
-    if not request_id:
-        return
-    ws_client.send({
-        "type": "global_state_saved",
-        "request_id": request_id,
-        "action": action,
-        "persisted": persisted,
-        "session_id": session_id,
-        "global_state_file": GLOBAL_STATE_FILENAME,
-    })
+    pass  # global_state_saved removed: Railway no longer tracks ACKs
 
 
 def _bind_initial_session_folder(config, sessions_root: Path, session_stack: list[dict]) -> tuple[object, str]:
@@ -590,7 +578,7 @@ def run() -> None:
         if not sessions_root.exists():
             return
         folders = _build_session_folders_payload(sessions_root)
-        ws_client.send({"type": "session_folders", "folders": folders})
+        ws_client.send({"type": "send_to_host", "event": {"type": "session_folders", "folders": folders}})
     ws_client.on_connect(_push_session_folders)
 
     # Re-sync active session state to backend on every (re)connect (e.g. after backend restart)
@@ -679,32 +667,32 @@ def run() -> None:
                                             _PPT_UNMAPPED_PRESENTATIONS_ALERTED.add(alert_key)
                                             _platform.beep()
                                             message = f"Presentation inaccessible for participants. ({deck})"
-                                            ws_client.send({"type": "quiz_status", "status": "error", "message": message})
+                                            ws_client.send({"type": "broadcast", "event": {"type": "quiz_status", "status": "error", "message": message}})
                                             log.error("slides", message)
-                                        ws_client.send({"type": "slides_clear"})
+                                        ws_client.send({"type": "broadcast", "event": {"type": "slides_current", "slides_current": None}})
                                     else:
                                         if alert_key:
                                             _PPT_UNMAPPED_PRESENTATIONS_ALERTED.discard(alert_key)
-                                        ws_client.send({
+                                        ws_client.send({"type": "broadcast", "event": {
                                             "type": "slides_current",
                                             "url": target["url"],
                                             "slug": target["slug"],
                                             "source_file": deck,
                                             "presentation_name": deck,
                                             "current_page": slide_num,
-                                        })
+                                        }})
                                         log.info("slides", f"Slide: {deck}:{slide_num}")
                             elif ws_client.connected:
                                 # No slides config — send minimal info
-                                ws_client.send({
+                                ws_client.send({"type": "broadcast", "event": {
                                     "type": "slides_current",
                                     "presentation_name": deck,
                                     "current_page": slide_num,
-                                })
+                                }})
                                 log.info("slides", f"Slide: {deck}:{slide_num} (no catalog)")
                         else:
                             if ws_client.connected:
-                                ws_client.send({"type": "slides_clear"})
+                                ws_client.send({"type": "broadcast", "event": {"type": "slides_current", "slides_current": None}})
                                 log.info("slides", "No active slide pointer")
 
                 # ── Read git activity from file ──
@@ -768,7 +756,7 @@ def run() -> None:
                     repos_hash = hashlib.md5(str(git_repos_payload).encode()).hexdigest()
                     if repos_hash != last_git_repos_hash and ws_client.connected:
                         last_git_repos_hash = repos_hash
-                        ws_client.send({"type": "activity_log", "git_repos": git_repos_payload})
+                        ws_client.send({"type": "send_to_host", "event": {"type": "activity_log", "git_repos": git_repos_payload}})
 
                 # ── Check for session management requests ──
                 try:
@@ -980,17 +968,7 @@ def run() -> None:
                             _LOCK_FILE.unlink(missing_ok=True)
                             sys.exit(EXIT_CODE_UPDATE)
 
-                    # Restore state if server lost it (e.g. after Railway redeploy)
-                    if status_data.get("needs_restore"):
-                        if _BACKUP_FILE.exists():
-                            log.info("daemon", "Server needs state restore — sending backup via WS...")
-                            backup_data = json.loads(_BACKUP_FILE.read_text(encoding="utf-8"))
-                            if ws_client.send({"type": "state_restore", **backup_data}):
-                                log.info("daemon", "State restore sent via WS")
-                            else:
-                                log.error("daemon", "State restore failed — WS not connected (will retry)")
-                        else:
-                            log.error("daemon", "Server needs state restore but no backup file found")
+                    # state_restore removed: Railway is no longer stateless proxy; no restore needed
                 except RuntimeError:
                     if not server_disconnected:
                         log.error("daemon", "Server unreachable (status check)")
@@ -1008,18 +986,7 @@ def run() -> None:
                                 session_folder=sf_name, session_notes=sn_name, slides=current_slides)
                     last_slides_payload_hash = current_slides_hash
 
-                # Push notes content when file is new or modified
-                if config.session_notes:
-                    try:
-                        current_mtime = config.session_notes.stat().st_mtime
-                    except OSError:
-                        current_mtime = 0.0
-                    notes_changed = current_mtime != last_notes_mtime and current_mtime > 0
-                    if notes_changed:
-                        notes_text = read_session_notes(config)
-                        if notes_text:
-                            ws_client.send({"type": "notes_content", "content": notes_text})
-                            last_notes_mtime = current_mtime
+                # notes_content send removed: notes are no longer pushed via WS
 
                 # ── Check for new quiz generation request (via daemon REST endpoint) ──
                 from daemon.quiz.pending import pop as _quiz_pending_pop
@@ -1089,12 +1056,12 @@ def run() -> None:
                             latest_time = None
                         if line_count != last_transcript_line_count:
                             last_transcript_line_count = line_count
-                        ws_client.send({
+                        ws_client.send({"type": "send_to_host", "event": {
                             "type": "transcript_status",
                             "line_count": line_count,
                             "total_lines": total_lines,
                             "latest_ts": latest_time,
-                        })
+                        }})
                     except SystemExit:
                         pass
                     except Exception as e:
@@ -1102,7 +1069,7 @@ def run() -> None:
 
                     # ── Push token usage alongside transcript stats ──
                     try:
-                        ws_client.send({"type": "token_usage", **get_usage().to_dict()})
+                        ws_client.send({"type": "send_to_host", "event": {"type": "token_usage", **get_usage().to_dict()}})
                     except Exception as e:
                         log.error("daemon", f"Token usage push failed: {e}")
 
@@ -1163,7 +1130,7 @@ def run() -> None:
                         config.server_url, config.host_username, config.host_password,
                     )
                     if changed > 0:
-                        ws_client.send({"type": "reload"})
+                        ws_client.send({"type": "broadcast", "event": {"type": "reload"}})
                         log.info("static-sync", f"Synced {changed} file(s), triggered browser reload")
 
                 # ── Process session snapshot result (pushed by backend every 7s) ──

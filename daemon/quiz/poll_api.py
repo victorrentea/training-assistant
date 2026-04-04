@@ -60,15 +60,15 @@ def post_status(status: str, message: str, config: Config,
                 session_folder: Optional[str] = None,
                 session_notes: Optional[str] = None,
                 slides: Optional[list[dict]] = None) -> None:
-    payload: dict = {"type": "quiz_status", "status": status, "message": message}
+    event: dict = {"type": "quiz_status", "status": status, "message": message}
     if session_folder is not None or session_notes is not None:
-        payload["session_folder"] = session_folder
-        payload["session_notes"] = session_notes
+        event["session_folder"] = session_folder
+        event["session_notes"] = session_notes
     if slides is not None:
-        payload["slides"] = slides
+        event["slides"] = slides
     try:
         if _ws_client and _ws_client.connected:
-            _ws_client.send(payload)
+            _ws_client.send({"type": "broadcast", "event": event})
         else:
             log.error("daemon", f"Could not post status: WS not connected")
     except Exception as e:

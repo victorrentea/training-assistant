@@ -411,7 +411,14 @@ def sync_session_to_server(
     payload.update(extra_fields)
 
     if _ws_client and _ws_client.connected:
-        _ws_client.send({"type": "session_sync", **payload})
+        session_id = payload.get("session_id") or (stack[-1].get("session_id") if stack else None)
+        session_name = stack[-1].get("name") if stack else None
+        msg: dict = {"type": "set_session_id"}
+        if session_id:
+            msg["session_id"] = session_id
+        if session_name:
+            msg["session_name"] = session_name
+        _ws_client.send(msg)
     else:
         log.error("session", "Cannot sync session: WS not connected")
 

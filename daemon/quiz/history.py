@@ -88,14 +88,14 @@ def auto_generate(minutes: int, config: Config) -> Optional[tuple]:
 
     try:
         if poll_api._ws_client and poll_api._ws_client.connected:
-            poll_api._ws_client.send({"type": "quiz_preview", "quiz": {
+            poll_api._ws_client.send({"type": "broadcast", "event": {"type": "quiz_preview", "quiz": {
                 "question": quiz["question"],
                 "options": quiz["options"],
                 "multi": len(quiz.get("correct_indices", [])) > 1,
                 "correct_indices": quiz.get("correct_indices", []),
                 "source": quiz.get("source"),
                 "page": quiz.get("page"),
-            }})
+            }}})
         else:
             post_status("error", "Failed to post preview: WS not connected", config)
             return None
@@ -131,14 +131,14 @@ def auto_generate_topic(topic: str, config: Config) -> Optional[tuple]:
     topic_context = f"TOPIC: {topic}"
     try:
         if poll_api._ws_client and poll_api._ws_client.connected:
-            poll_api._ws_client.send({"type": "quiz_preview", "quiz": {
+            poll_api._ws_client.send({"type": "broadcast", "event": {"type": "quiz_preview", "quiz": {
                 "question": quiz["question"],
                 "options": quiz["options"],
                 "multi": len(quiz.get("correct_indices", [])) > 1,
                 "correct_indices": quiz.get("correct_indices", []),
                 "source": quiz.get("source"),
                 "page": quiz.get("page"),
-            }})
+            }}})
         else:
             post_status("error", "Failed to post preview: WS not connected", config)
             return None
@@ -162,14 +162,14 @@ def auto_refine(target: str, current_quiz: dict, original_text: str, config: Con
     print_quiz(updated)
     try:
         if poll_api._ws_client and poll_api._ws_client.connected:
-            poll_api._ws_client.send({"type": "quiz_preview", "quiz": {
+            poll_api._ws_client.send({"type": "broadcast", "event": {"type": "quiz_preview", "quiz": {
                 "question": updated["question"],
                 "options": updated["options"],
                 "multi": len(updated.get("correct_indices", [])) > 1,
                 "correct_indices": updated.get("correct_indices", []),
                 "source": updated.get("source"),
                 "page": updated.get("page"),
-            }})
+            }}})
         else:
             post_status("error", "Failed to post updated preview: WS not connected", config)
             return None
