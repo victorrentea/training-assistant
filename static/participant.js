@@ -2549,6 +2549,12 @@ ${html}
       // Send name as first message
       participantApi('name', { name: myName });
 
+      // Fetch initial state via REST (daemon no longer pushes state via WS)
+      fetch(apiBase + '/api/participant/state')
+        .then(r => r.json())
+        .then(state => { state.type = 'state'; handleMessage(state); })
+        .catch(err => console.error('Failed to fetch state:', err));
+
       // Show 🔔 button for auto-joiners who haven't been asked for permission yet
       if ('Notification' in window && Notification.permission === 'default' && !_notifBtnBound) {
         _notifBtnBound = true;
@@ -2571,6 +2577,7 @@ ${html}
       if (event.code === 1008 && !pendingRedirect) { window.location.href = '/'; return; }
       if (!pendingRedirect) setTimeout(() => connectWS(myName), 3000);
     };
+    // Note: state is fetched via REST in ws.onopen after each (re)connect
   }
 
   // ── Vote persistence ──

@@ -192,7 +192,14 @@
     ws = new WebSocket(`${proto}://${location.host}/ws/${SESSION_ID}/__host__`);
 
     let _kicked = false;
-    ws.onopen = () => setBadge(true);
+    ws.onopen = () => {
+      setBadge(true);
+      // Fetch initial state via REST (daemon no longer pushes state via WS)
+      fetch(API('/host-state'))
+        .then(r => r.json())
+        .then(state => { state.type = 'state'; handleWSMessage(state); })
+        .catch(err => console.error('Failed to fetch host state:', err));
+    };
     ws.onclose = () => { setBadge(false); if (!_kicked) setTimeout(connectWS, 3000); };
     ws.onmessage = (e) => {
       const msg = JSON.parse(e.data);
@@ -221,6 +228,11 @@
         }, 1000);
         return;
       }
+      handleWSMessage(msg);
+    };
+  }
+
+  function handleWSMessage(msg) {
       if (msg.type === 'reload') {
         console.log('[static-sync] Reload requested by daemon');
         setTimeout(() => { window.location.reload(); }, 500);
@@ -436,7 +448,6 @@
       } else if (msg.type === 'qa_updated') {
         renderQAList(msg.questions || []);
       }
-    };
   }
 
   function showHostEmoji(emoji) {
