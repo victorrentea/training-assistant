@@ -117,9 +117,23 @@ def test_qa_action_labels_and_edit_with_quotes():
     """Q&A host card has correct action labels; editing with quotes works."""
     session_id = fresh_session("QALabels")
     with sync_playwright() as p:
-        browser, host, host_page, pax, pax_page = _open_browser_trio(p, session_id)
-        pax.join("QuoteTester")
+        browser = p.chromium.launch(headless=True)
+
+        # Open host first and switch to Q&A tab BEFORE participant joins
+        # so participant's initial state fetch returns current_activity='qa'
+        host_ctx = browser.new_context(http_credentials={"username": HOST_USER, "password": HOST_PASS})
+        host_page = host_ctx.new_page()
+        host_page.goto(f"{DAEMON_BASE}/host/{session_id}", wait_until="networkidle")
+        expect(host_page.locator("#tab-poll")).to_be_visible(timeout=10000)
+        host = HostPage(host_page)
         host.open_qa_tab()
+
+        # NOW participant joins — state fetch will return current_activity='qa'
+        pax_ctx = browser.new_context()
+        pax_page = pax_ctx.new_page()
+        pax_page.goto(f"{BASE}/{session_id}", wait_until="networkidle")
+        pax = ParticipantPage(pax_page)
+        pax.join("QuoteTester")
 
         # Submit a question with quotes
         pax.submit_question('Could "quoted" text break edit?')

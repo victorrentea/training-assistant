@@ -30,7 +30,7 @@ from playwright.sync_api import sync_playwright, expect
 
 from pages.participant_page import ParticipantPage
 from pages.host_page import HostPage
-from session_utils import fresh_session
+from session_utils import fresh_session, daemon_has_participant
 
 
 BASE = "http://localhost:8000"
@@ -474,7 +474,7 @@ def test_poll_download_captures_two_polls():
         pax.join("PollVoter")
 
         _await_condition(
-            lambda: "PollVoter" in host_page.inner_text("body"),
+            lambda: daemon_has_participant(session_id, "PollVoter"),
             timeout_ms=5000, msg="Host didn't see PollVoter"
         )
 

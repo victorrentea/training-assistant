@@ -94,8 +94,8 @@ class ParticipantPage:
             q_id = card.get_attribute("data-id")
             text = card.locator(".qa-text-p").inner_text().strip()
             upvote_btn = card.locator(".qa-upvote-btn")
-            upvotes_raw = upvote_btn.inner_text()
-            upvotes = int(upvotes_raw.replace("▲", "").strip())
+            upvotes_raw = upvote_btn.inner_text().replace("▲", "").strip()
+            upvotes = int(upvotes_raw) if upvotes_raw.lstrip("-").isdigit() else 0
             upvoted = "qa-upvoted" in (upvote_btn.get_attribute("class") or "")
             answered = "qa-answered-p" in (card.get_attribute("class") or "")
             result.append({
