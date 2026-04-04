@@ -15,7 +15,7 @@ def set_ws_client(client):
     _ws_client = client
 
 
-router = APIRouter(prefix="/api/{session_id}", tags=["leaderboard"])
+router = APIRouter(prefix="/api/{session_id}/host", tags=["leaderboard"])
 
 
 @router.post("/leaderboard/show")

@@ -16,7 +16,7 @@ from daemon.leaderboard.state import leaderboard_state
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/{session_id}", tags=["host-state"])
+router = APIRouter(prefix="/api/{session_id}/host", tags=["host-state"])
 
 
 def _build_host_participants_list() -> list[dict]:
@@ -124,7 +124,7 @@ def _get_current_session_id() -> str | None:
         return None
 
 
-@router.get("/host/state")
+@router.get("/state")
 async def get_host_state(request: Request, session_id: str):
     """Return full state for host page load — replicates Railway build_for_host()."""
     ps = participant_state

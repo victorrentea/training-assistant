@@ -78,13 +78,13 @@ def host_client(fresh_poll_state, fresh_scores, mock_ws_client, mock_host_ws, mo
 
 def _create_and_open_poll(client, fresh_poll_state, fresh_scores):
     """Create a poll via API then open it."""
-    resp = client.post("/api/test-session/poll", json={
+    resp = client.post("/api/test-session/host/poll", json={
         "question": "Which option?",
         "options": _SAMPLE_OPTIONS,
         "multi": False,
     })
     assert resp.status_code == 200
-    client.post("/api/test-session/poll/open", json={})
+    client.post("/api/test-session/host/poll/open", json={})
 
 
 # ──────────────────────────────────────────────
@@ -99,7 +99,7 @@ class TestParticipantVote:
 
         resp = participant_client.post(
             "/api/participant/poll/vote",
-            json={"option_id": "a"},
+            json={"option_ids": ["a"]},
             headers={"X-Participant-ID": "pid1"},
         )
         assert resp.status_code == 200
@@ -128,7 +128,7 @@ class TestParticipantVote:
         # Poll not created — cast_vote returns False
         resp = participant_client.post(
             "/api/participant/poll/vote",
-            json={"option_id": "a"},
+            json={"option_ids": ["a"]},
             headers={"X-Participant-ID": "pid1"},
         )
         assert resp.status_code == 409
@@ -137,7 +137,7 @@ class TestParticipantVote:
         """Missing X-Participant-ID returns 400."""
         resp = participant_client.post(
             "/api/participant/poll/vote",
-            json={"option_id": "a"},
+            json={"option_ids": ["a"]},
         )
         assert resp.status_code == 400
 
@@ -149,7 +149,7 @@ class TestParticipantVote:
 class TestHostCreatePoll:
     def test_create_poll(self, host_client, fresh_poll_state, mock_host_ws):
         """Create poll returns created poll and notifies host."""
-        resp = host_client.post("/api/test-session/poll", json={
+        resp = host_client.post("/api/test-session/host/poll", json={
             "question": "Best framework?",
             "options": _SAMPLE_OPTIONS,
         })
@@ -166,7 +166,7 @@ class TestHostCreatePoll:
     def test_create_poll_activity_gate(self, host_client, mock_participant_state):
         """Cannot create poll when another activity (debate) is active."""
         mock_participant_state.current_activity = "debate"
-        resp = host_client.post("/api/test-session/poll", json={
+        resp = host_client.post("/api/test-session/host/poll", json={
             "question": "Q?",
             "options": _SAMPLE_OPTIONS,
         })
@@ -178,7 +178,7 @@ class TestHostOpenPoll:
         """Opening a poll broadcasts to participants and notifies host."""
         fresh_poll_state.create_poll("Q?", _SAMPLE_OPTIONS)
 
-        resp = host_client.post("/api/test-session/poll/open", json={})
+        resp = host_client.post("/api/test-session/host/poll/open", json={})
         assert resp.status_code == 200
 
         # Broadcast to participants
@@ -194,7 +194,7 @@ class TestHostOpenPoll:
 
     def test_open_poll_no_poll(self, host_client):
         """Open when no poll exists returns 400."""
-        resp = host_client.post("/api/test-session/poll/open", json={})
+        resp = host_client.post("/api/test-session/host/poll/open", json={})
         assert resp.status_code == 400
 
 
@@ -203,7 +203,7 @@ class TestHostClosePoll:
         """Closing a poll broadcasts vote_counts and notifies host."""
         _create_and_open_poll(host_client, fresh_poll_state, fresh_scores)
 
-        resp = host_client.post("/api/test-session/poll/close", json={})
+        resp = host_client.post("/api/test-session/host/poll/close", json={})
         assert resp.status_code == 200
         data = resp.json()
         assert data["ok"] is True
@@ -218,7 +218,7 @@ class TestHostClosePoll:
 
     def test_close_poll_no_poll(self, host_client):
         """Close when no poll returns 400."""
-        resp = host_client.post("/api/test-session/poll/close", json={})
+        resp = host_client.post("/api/test-session/host/poll/close", json={})
         assert resp.status_code == 400
 
 
@@ -227,7 +227,7 @@ class TestHostRevealCorrect:
         """Revealing correct answers broadcasts correct_revealed + scores_updated."""
         _create_and_open_poll(host_client, fresh_poll_state, fresh_scores)
 
-        resp = host_client.put("/api/test-session/poll/correct", json={"correct_ids": ["a"]})
+        resp = host_client.put("/api/test-session/host/poll/correct", json={"correct_ids": ["a"]})
         assert resp.status_code == 200
 
         # Two broadcasts: poll_correct_revealed + scores_updated
@@ -246,7 +246,7 @@ class TestHostRevealCorrect:
 
     def test_reveal_correct_no_poll(self, host_client):
         """Reveal correct when no poll returns 400."""
-        resp = host_client.put("/api/test-session/poll/correct", json={"correct_ids": ["a"]})
+        resp = host_client.put("/api/test-session/host/poll/correct", json={"correct_ids": ["a"]})
         assert resp.status_code == 400
 
 
@@ -255,7 +255,7 @@ class TestHostStartTimer:
         """Starting timer broadcasts timer_started with seconds."""
         fresh_poll_state.create_poll("Q?", _SAMPLE_OPTIONS)
 
-        resp = host_client.post("/api/test-session/poll/timer", json={"seconds": 45})
+        resp = host_client.post("/api/test-session/host/poll/timer", json={"seconds": 45})
         assert resp.status_code == 200
 
         broadcast_msg = mock_ws_client.send.call_args_list[0][0][0]
@@ -268,7 +268,7 @@ class TestHostStartTimer:
 
     def test_start_timer_no_poll(self, host_client):
         """Start timer with no poll returns 400."""
-        resp = host_client.post("/api/test-session/poll/timer", json={"seconds": 30})
+        resp = host_client.post("/api/test-session/host/poll/timer", json={"seconds": 30})
         assert resp.status_code == 400
 
 
@@ -277,7 +277,7 @@ class TestHostDeletePoll:
         """Deleting a poll clears state and broadcasts poll_cleared + activity_updated."""
         fresh_poll_state.create_poll("Q?", _SAMPLE_OPTIONS)
 
-        resp = host_client.delete("/api/test-session/poll")
+        resp = host_client.delete("/api/test-session/host/poll")
         assert resp.status_code == 200
         assert fresh_poll_state.poll is None
         assert mock_participant_state.current_activity == "none"

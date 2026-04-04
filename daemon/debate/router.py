@@ -145,7 +145,7 @@ async def volunteer_champion(request: Request):
 # ── Host router (called directly on daemon localhost) ──
 # NOTE: Host JS calls API('/debate') which expands to /api/{session_id}/debate.
 
-host_router = APIRouter(prefix="/api/{session_id}/debate", tags=["debate"])
+host_router = APIRouter(prefix="/api/{session_id}/host/debate", tags=["debate"])
 
 VALID_PHASES = {"arguments", "ai_cleanup", "prep", "live_debate", "ended"}
 

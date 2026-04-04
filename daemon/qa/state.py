@@ -69,13 +69,25 @@ class QAState:
     def clear(self):
         self.questions.clear()
 
-    def build_question_list(self, names: dict[str, str], avatars: dict[str, str]) -> list[dict]:
-        """Build sorted question list for broadcast.
+    def build_question_list_raw(self) -> list[dict]:
+        """Build sorted question list for participant broadcast — raw UUIDs, no personalisation."""
+        questions = []
+        for qid, q in sorted(
+            self.questions.items(),
+            key=lambda item: (-len(item[1]["upvoters"]), item[1]["timestamp"]),
+        ):
+            questions.append({
+                "id": qid,
+                "text": q["text"],
+                "author_uuid": q["author"],
+                "upvoter_uuids": list(q["upvoters"]),
+                "answered": q["answered"],
+                "timestamp": q["timestamp"],
+            })
+        return questions
 
-        Resolves author UUIDs to display names daemon-side. Includes
-        author_uuid for client-side is_own check and upvoters as UUID
-        list for client-side has_upvoted check.
-        """
+    def build_question_list(self, names: dict[str, str], avatars: dict[str, str]) -> list[dict]:
+        """Build sorted question list for host — resolves names and avatars."""
         questions = []
         for qid, q in sorted(
             self.questions.items(),

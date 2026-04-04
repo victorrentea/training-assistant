@@ -50,7 +50,7 @@ class TestShowLeaderboard:
         fresh_scores.add_score("p2", 100)
         fresh_scores.add_score("p3", 200)
 
-        resp = client.post("/api/test-session/leaderboard/show")
+        resp = client.post("/api/test-session/host/leaderboard/show")
 
         assert resp.status_code == 200
         assert resp.json() == {"ok": True}
@@ -75,7 +75,7 @@ class TestShowLeaderboard:
         fresh_participant_state.participant_names["p1"] = "Alice"
         fresh_participant_state.participant_names["p2"] = "Bob"
 
-        resp = client.post("/api/test-session/leaderboard/show")
+        resp = client.post("/api/test-session/host/leaderboard/show")
 
         assert resp.status_code == 200
         call_arg = mock_ws_client.send.call_args[0][0]
@@ -84,7 +84,7 @@ class TestShowLeaderboard:
         assert entries[1]["name"] == "Bob"
 
     def test_show_leaderboard_empty(self, client, fresh_scores, mock_ws_client, mock_host_ws):
-        resp = client.post("/api/test-session/leaderboard/show")
+        resp = client.post("/api/test-session/host/leaderboard/show")
 
         assert resp.status_code == 200
         call_arg = mock_ws_client.send.call_args[0][0]
@@ -95,7 +95,7 @@ class TestShowLeaderboard:
         for i in range(7):
             fresh_scores.add_score(f"p{i}", (i + 1) * 100)
 
-        resp = client.post("/api/test-session/leaderboard/show")
+        resp = client.post("/api/test-session/host/leaderboard/show")
 
         assert resp.status_code == 200
         call_arg = mock_ws_client.send.call_args[0][0]
@@ -107,7 +107,7 @@ class TestShowLeaderboard:
     def test_show_leaderboard_unknown_name_fallback(self, client, fresh_scores, mock_ws_client, mock_host_ws):
         fresh_scores.add_score("unknown-uuid", 100)
 
-        resp = client.post("/api/test-session/leaderboard/show")
+        resp = client.post("/api/test-session/host/leaderboard/show")
 
         assert resp.status_code == 200
         call_arg = mock_ws_client.send.call_args[0][0]
@@ -117,7 +117,7 @@ class TestShowLeaderboard:
 
 class TestHideLeaderboard:
     def test_hide_leaderboard(self, client, mock_ws_client, mock_host_ws):
-        resp = client.post("/api/test-session/leaderboard/hide")
+        resp = client.post("/api/test-session/host/leaderboard/hide")
 
         assert resp.status_code == 200
         assert resp.json() == {"ok": True}
@@ -133,7 +133,7 @@ class TestResetScores:
         fresh_scores.add_score("p1", 500)
         fresh_scores.add_score("p2", 300)
 
-        resp = client.delete("/api/test-session/scores")
+        resp = client.delete("/api/test-session/host/scores")
 
         assert resp.status_code == 200
         assert resp.json() == {"ok": True}

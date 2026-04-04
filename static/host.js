@@ -1,5 +1,5 @@
   const SESSION_ID = location.pathname.split('/')[2];
-  const API = (path) => `/api/${SESSION_ID}${path}`;
+  const API = (path) => `/api/${SESSION_ID}/host${path}`;
 
   const UPLOAD_CLEANUP_MINUTES = 5; // hide download icon + delete file after this many minutes
   let ws = null;
@@ -195,7 +195,7 @@
     ws.onopen = () => {
       setBadge(true);
       // Fetch initial state via REST (daemon no longer pushes state via WS)
-      fetch(API('/host-state'))
+      fetch(API('/state'))
         .then(r => r.json())
         .then(state => { state.type = 'state'; handleWSMessage(state); })
         .catch(err => console.error('Failed to fetch host state:', err));
@@ -256,6 +256,7 @@
         voteCounts = {};
         totalVotes = 0;
         loadCorrectOpts(currentPoll.question);
+        updateCenterPanel('poll');
         renderPollDisplay();
         return;
       }
@@ -264,6 +265,7 @@
         pollActive = true;
         voteCounts = {};
         totalVotes = 0;
+        updateCenterPanel('poll');
         renderPollDisplay();
         return;
       }

@@ -30,6 +30,7 @@ from playwright.sync_api import sync_playwright, expect
 
 from pages.participant_page import ParticipantPage
 from pages.host_page import HostPage
+from session_utils import fresh_session
 
 
 BASE = "http://localhost:8000"
@@ -64,12 +65,6 @@ def _api_call(method, path, data=None, base=None):
         return json.loads(resp.read())
 
 
-def _create_session(name="Test", session_type="workshop") -> str:
-    """Create a fresh session via API — gives clean state."""
-    result = _api_call("POST", "/api/session/create", {"name": f"{name} {int(time.time())}", "type": session_type}, base=DAEMON_BASE)
-    return result["session_id"]
-
-
 def _open_browser_trio(p, session_id):
     """Open host + participant browsers connected to a session."""
     browser = p.chromium.launch(headless=True)
@@ -90,7 +85,7 @@ def _open_browser_trio(p, session_id):
 
 def test_correct_answer_gives_score():
     """Participant votes correct answer → gets score points."""
-    session_id = _create_session("Scoring")
+    session_id = fresh_session("Scoring")
     with sync_playwright() as p:
         browser, host, host_page, pax, pax_page = _open_browser_trio(p, session_id)
         pax.join("Scorer")
@@ -116,7 +111,7 @@ def test_correct_answer_gives_score():
 
 def test_conference_mode_auto_assigns_character_name():
     """Conference mode (talk session): participant gets auto-assigned character name."""
-    session_id = _create_session("Conference", session_type="talk")
+    session_id = fresh_session("Conference", session_type="talk")
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
 
@@ -154,7 +149,7 @@ def test_conference_mode_auto_assigns_character_name():
 
 def test_paste_text_visible_to_host():
     """Participant pastes text → host sees paste icon in participant list."""
-    session_id = _create_session("Paste")
+    session_id = fresh_session("Paste")
     with sync_playwright() as p:
         browser, host, host_page, pax, pax_page = _open_browser_trio(p, session_id)
         pax.join("Paster")
@@ -186,7 +181,7 @@ def test_paste_text_visible_to_host():
 
 def test_zero_votes_shows_zero_percent():
     """Close poll with zero votes → all options show 0%."""
-    session_id = _create_session("ZeroVotes")
+    session_id = fresh_session("ZeroVotes")
     with sync_playwright() as p:
         browser, host, host_page, pax, pax_page = _open_browser_trio(p, session_id)
         # Wait for host WS connection before poll operations
@@ -216,7 +211,7 @@ def test_zero_votes_shows_zero_percent():
 
 def test_late_joiner_sees_existing_qa():
     """Participant joins after questions were submitted → sees them."""
-    session_id = _create_session("LateQA")
+    session_id = fresh_session("LateQA")
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
 
@@ -267,7 +262,7 @@ def test_late_joiner_sees_existing_qa():
 
 def test_code_review_line_selection():
     """Host pastes code snippet → participant selects lines → host sees selection."""
-    session_id = _create_session("CodeReview")
+    session_id = fresh_session("CodeReview")
     with sync_playwright() as p:
         browser, host, host_page, pax, pax_page = _open_browser_trio(p, session_id)
         # Wait for host WS connection
@@ -276,7 +271,7 @@ def test_code_review_line_selection():
 
         # Host creates code review with a snippet (disable smart_paste — no API key in test)
         snippet = "public void process() {\n    // TODO: implement\n    return null;\n}"
-        _api_call("POST", f"/api/{session_id}/codereview",
+        _api_call("POST", f"/api/{session_id}/host/codereview",
                   {"snippet": snippet, "language": "java", "smart_paste": False}, base=DAEMON_BASE)
 
         # Wait for code review to appear on participant
@@ -303,7 +298,7 @@ def test_code_review_line_selection():
 
 def test_wordcloud_close_returns_to_idle():
     """Host opens wordcloud → submits word → host closes → participant returns to idle."""
-    session_id = _create_session("WCClose")
+    session_id = fresh_session("WCClose")
     with sync_playwright() as p:
         browser, host, host_page, pax, pax_page = _open_browser_trio(p, session_id)
         pax.join("CloudUser")
@@ -314,7 +309,7 @@ def test_wordcloud_close_returns_to_idle():
         pax.submit_word("testing")
 
         # Switch to NONE activity (close wordcloud) — daemon endpoint
-        _api_call("POST", f"/api/{session_id}/activity", {"activity": "none"}, base=DAEMON_BASE)
+        _api_call("POST", f"/api/{session_id}/host/activity", {"activity": "none"}, base=DAEMON_BASE)
 
         # Participant should no longer see the wordcloud
         _await_condition(
@@ -332,7 +327,7 @@ def test_wordcloud_close_returns_to_idle():
 
 def test_self_upvote_disabled():
     """Participant can't upvote their own Q&A question."""
-    session_id = _create_session("SelfUpvote")
+    session_id = fresh_session("SelfUpvote")
     with sync_playwright() as p:
         browser, host, host_page, pax, pax_page = _open_browser_trio(p, session_id)
         pax.join("Author")
@@ -360,7 +355,7 @@ def test_self_upvote_disabled():
 
 def test_multi_select_cap_enforced():
     """Multi-select poll: participant can't select more options than correct_count."""
-    session_id = _create_session("MultiCap")
+    session_id = fresh_session("MultiCap")
     with sync_playwright() as p:
         browser, host, host_page, pax, pax_page = _open_browser_trio(p, session_id)
         # Wait for host WS connection
@@ -400,7 +395,7 @@ def test_multi_select_cap_enforced():
 
 def test_participant_count_updates():
     """Host sees participant count increase as participants join."""
-    session_id = _create_session("ParticipantCount")
+    session_id = fresh_session("ParticipantCount")
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
 

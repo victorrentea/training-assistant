@@ -23,7 +23,7 @@ def set_ws_client(client):
 # ── Host router (called directly on daemon localhost) ──
 # Host JS calls API('/quiz-request') which expands to /api/{session_id}/quiz-request.
 
-host_router = APIRouter(prefix="/api/{session_id}", tags=["quiz"])
+host_router = APIRouter(prefix="/api/{session_id}/host", tags=["quiz"])
 
 
 @host_router.post("/quiz-request")
