@@ -148,7 +148,7 @@ def test_host_starts_session_participant_joins():
         pax_page.goto(participant_url, wait_until="networkidle")
         pax_page.wait_for_load_state("networkidle")
 
-        # Participant auto-joins: fetches name from /api/suggest-name, connects WS, sends set_name
+        # Participant auto-joins: calls /api/participant/register, connects WS
         # Wait for the display-name element to appear (proves WS connected + name set)
         display_name = pax_page.locator("#display-name")
         display_name.wait_for(state="visible", timeout=10000)

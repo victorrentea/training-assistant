@@ -136,14 +136,25 @@ class TestSessionJoin:
 class TestSessionScopedAPIs:
     """Participant APIs only work under valid session prefix."""
 
-    def test_suggest_name_with_valid_session(self, server_url, session_id):
-        r = requests.get(f"{server_url}/{session_id}/api/suggest-name")
+    def test_register_with_valid_session(self, server_url, session_id):
+        import uuid
+        r = requests.post(
+            f"{server_url}/{session_id}/api/participant/register",
+            headers={"X-Participant-ID": str(uuid.uuid4()), "Content-Type": "application/json"},
+            json={},
+        )
         assert r.status_code == 200
         data = r.json()
         assert "name" in data
+        assert "avatar" in data
 
-    def test_suggest_name_with_invalid_session_404(self, server_url):
-        r = requests.get(f"{server_url}/zzzzzz/api/suggest-name")
+    def test_register_with_invalid_session_404(self, server_url):
+        import uuid
+        r = requests.post(
+            f"{server_url}/zzzzzz/api/participant/register",
+            headers={"X-Participant-ID": str(uuid.uuid4()), "Content-Type": "application/json"},
+            json={},
+        )
         assert r.status_code == 404
 
     def test_status_with_valid_session(self, server_url, session_id):

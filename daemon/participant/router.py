@@ -141,57 +141,48 @@ def _build_mini_state() -> SimpleNamespace:
     )
 
 
-@router.post("/name")
-async def set_name(request: Request):
-    """Register or rename a participant."""
+@router.post("/register")
+async def register_participant(request: Request):
+    """Register participant — assign name+avatar. Idempotent for returning participants."""
     pid = request.headers.get("x-participant-id")
     if not pid:
         return JSONResponse({"error": "Missing X-Participant-ID"}, status_code=400)
 
-    body = await request.json()
-    raw_name = str(body.get("name", "")).strip()[:32]
-
     ps = participant_state
 
-    # Returning participant — fast path (matches Railway WS behavior: any set_name
-    # from a known UUID restores existing identity without re-validation)
+    # Returning participant — return stored identity unchanged
     if pid in ps.participant_names:
         return JSONResponse({
-            "ok": True,
-            "returning": True,
             "name": ps.participant_names[pid],
             "avatar": ps.participant_avatars.get(pid, ""),
         })
 
-    # Conference mode with empty name → auto-assign character name
-    if ps.mode == "conference" and not raw_name:
+    # New participant — assign identity
+    raw_name: str
+
+    if ps.mode == "conference":
+        # Conference mode: auto-assign character name
         fake_state = _build_mini_state()
         char_name, universe = assign_conference_name(fake_state)
         raw_name = char_name
         ps.participant_universes[pid] = universe
-
-    if not raw_name:
-        return JSONResponse({"error": "Name required"}, status_code=400)
-
-    # Check for duplicate names (race guard)
-    taken = {v for k, v in ps.participant_names.items() if k != pid}
-    if raw_name in taken:
-        # Try to suggest alternative
-        available = [n for n in LOTR_NAMES if n not in taken]
-        raw_name = available[0] if available else f"Guest{secrets.randbelow(900) + 100}"
+    else:
+        # Workshop mode: assign next available LOTR name, skip taken ones
+        taken_names = set(ps.participant_names.values())
+        lotr_name = next((n for n in LOTR_NAMES if n not in taken_names), None)
+        raw_name = lotr_name if lotr_name else f"Guest-{secrets.token_hex(3)}"
 
     ps.participant_names[pid] = raw_name
 
     # Assign avatar
     fake_state = _build_mini_state()
     avatar = assign_avatar(fake_state, pid, raw_name)
-    # Sync back to our cache
     ps.participant_avatars[pid] = avatar
 
     # Initialize score
     ps.scores.setdefault(pid, 0)
 
-    # Build write-back event (sent by proxy_handler BEFORE proxy_response)
+    # Broadcast participant registered event
     request.state.write_back_events = [{
         "type": "participant_registered",
         "participant_id": pid,
@@ -202,7 +193,41 @@ async def set_name(request: Request):
         "debate_side": None,
     }]
 
-    return JSONResponse({"ok": True, "name": raw_name, "avatar": avatar})
+    return JSONResponse({"name": raw_name, "avatar": avatar})
+
+
+@router.put("/name")
+async def rename_participant(request: Request):
+    """Rename a registered participant. Returns 400 if not yet registered."""
+    pid = request.headers.get("x-participant-id")
+    if not pid:
+        return JSONResponse({"error": "Missing X-Participant-ID"}, status_code=400)
+
+    ps = participant_state
+
+    if pid not in ps.participant_names:
+        return JSONResponse({"error": "Participant not registered — call /register first"}, status_code=400)
+
+    body = await request.json()
+    raw_name = str(body.get("name", "")).strip()[:32]
+    if not raw_name:
+        return JSONResponse({"error": "Name required"}, status_code=400)
+
+    # Check for duplicate names (race guard)
+    taken = {v for k, v in ps.participant_names.items() if k != pid}
+    if raw_name in taken:
+        available = [n for n in LOTR_NAMES if n not in taken]
+        raw_name = available[0] if available else f"Guest{secrets.randbelow(900) + 100}"
+
+    ps.participant_names[pid] = raw_name
+
+    request.state.write_back_events = [{
+        "type": "participant_renamed",
+        "participant_id": pid,
+        "name": raw_name,
+    }]
+
+    return JSONResponse({"ok": True, "name": raw_name})
 
 
 @router.post("/avatar")

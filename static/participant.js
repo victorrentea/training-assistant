@@ -2387,18 +2387,9 @@ ${html}
     return floors;
   }
 
-  async function fetchSuggestedName() {
-    const res = await fetch(apiBase + '/api/suggest-name');
-    if (res.status === 404) { window.location.href = '/?error=invalid'; return; }
-    const data = await res.json();
-    return data.name;
-  }
-
-  // ── Auto-join: always get fresh name from server ──
-  // localStorage only stores names the user explicitly chose (via pencil edit).
-  // Auto-suggested LOTR names are never persisted — each tab gets a fresh one.
+  // ── Auto-join: register with server to get assigned name+avatar ──
   const LS_CUSTOM_NAME_KEY = 'workshop_custom_name'; // true if user explicitly renamed
-  let _suggestedName = null; // tracks the auto-suggested name (for onboarding checklist)
+  let _assignedName = null; // tracks the server-assigned name (for onboarding checklist)
 
   // Append " (host)" suffix when running on host's browser tab, without duplicating it.
   function applyHostSuffix(name) {
@@ -2408,15 +2399,28 @@ ${html}
   }
 
   (async function autoJoin() {
-    const isCustom = localStorage.getItem(LS_CUSTOM_NAME_KEY);
-    const savedName = localStorage.getItem(LS_KEY);
-    if (isCustom && savedName) {
-      myName = savedName;
-    } else {
-      _suggestedName = await fetchSuggestedName();
-      myName = _suggestedName;
+    // Register with daemon — get assigned name+avatar (idempotent for returning participants)
+    try {
+      const regResp = await fetch(apiBase + '/api/participant/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Participant-ID': myUUID },
+        body: '{}',
+      });
+      if (regResp.status === 404) { window.location.href = '/?error=invalid'; return; }
+      const { name, avatar } = await regResp.json();
+      _assignedName = name;
+      myName = applyHostSuffix(name);
+      // If user has a custom name stored locally, that overrides the assigned name for display
+      // but the server keeps the assigned name until they explicitly rename
+      const isCustom = localStorage.getItem(LS_CUSTOM_NAME_KEY);
+      const savedName = localStorage.getItem(LS_KEY);
+      if (isCustom && savedName) {
+        myName = applyHostSuffix(savedName);
+      }
+    } catch (err) {
+      console.error('Registration failed:', err);
+      myName = 'Guest';
     }
-    myName = applyHostSuffix(myName);
     connectWS(myName);
   })();
   _bindSlidesFollowTrainerToggle();
@@ -2449,7 +2453,11 @@ ${html}
         localStorage.setItem(LS_KEY, myName);
         localStorage.setItem(LS_CUSTOM_NAME_KEY, '1');
         document.getElementById('display-name').textContent = myName;
-        participantApi('name', { name: myName });
+        fetch(`/${sessionId}/api/participant/name`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', 'X-Participant-ID': myUUID },
+          body: JSON.stringify({ name: myName }),
+        });
     }
     document.getElementById('display-name').style.display = '';
     document.getElementById('name-edit-wrap').style.display = 'none';
@@ -2484,7 +2492,7 @@ ${html}
     const nameEl = document.getElementById('onboard-name');
     const locEl = document.getElementById('onboard-location');
     const notifEl = document.getElementById('onboard-notif');
-    if (nameEl && !nameEl.classList.contains('done') && (_suggestedName === null || myName !== _suggestedName)) {
+    if (nameEl && !nameEl.classList.contains('done') && (_assignedName === null || myName !== _assignedName)) {
       nameEl.classList.add('done');
       nameEl.querySelector('input[type=checkbox]').checked = true;
       nameEl.style.cursor = 'default';
@@ -2546,11 +2554,10 @@ ${html}
       runOnboardingTourIfNeeded();
       document.getElementById('display-name').textContent = myName;
 
-      // Send name as first message
-      participantApi('name', { name: myName });
-
       // Fetch initial state via REST (daemon no longer pushes state via WS)
-      fetch(apiBase + '/api/participant/state')
+      fetch(apiBase + '/api/participant/state', {
+        headers: { 'X-Participant-ID': myUUID },
+      })
         .then(r => r.json())
         .then(state => { state.type = 'state'; handleMessage(state); })
         .catch(err => console.error('Failed to fetch state:', err));
@@ -3850,7 +3857,7 @@ const sessionTitleEl = document.getElementById('session-title');
     }
     if (!currentPoll) {
       if (el) el.dataset.screen = 'waiting';
-      const nameSet = (_suggestedName === null || myName !== _suggestedName);
+      const nameSet = (_assignedName === null || myName !== _assignedName);
       const locationSet = !!localStorage.getItem(LS_LOCATION_KEY);
       const notifGranted = 'Notification' in window && Notification.permission === 'granted';
       const allDone = nameSet && locationSet && notifGranted;
