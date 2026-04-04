@@ -58,7 +58,7 @@ paths:
 
   # ── Poll ──
 
-  /poll:
+  /host/poll:
     post:
       summary: Create a new poll
       tags: [poll]
@@ -88,7 +88,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/OkResponse'
 
-  /poll/open:
+  /host/poll/open:
     post:
       summary: Open the poll for participant voting
       tags: [poll]
@@ -102,7 +102,7 @@ paths:
         '400':
           description: No poll exists
 
-  /poll/close:
+  /host/poll/close:
     post:
       summary: Close the poll
       tags: [poll]
@@ -116,7 +116,7 @@ paths:
         '400':
           description: No poll exists
 
-  /poll/correct:
+  /host/poll/correct:
     put:
       summary: Reveal correct answers and award scores
       tags: [poll]
@@ -136,7 +136,7 @@ paths:
         '400':
           description: No poll exists
 
-  /poll/timer:
+  /host/poll/timer:
     post:
       summary: Start a countdown timer on the active poll
       tags: [poll]
@@ -161,6 +161,7 @@ paths:
   /quiz-md:
     get:
       summary: Get accumulated quiz markdown history
+      description: Note — this endpoint is NOT under /host/; it is at /api/{session_id}/quiz-md.
       tags: [quiz]
       responses:
         '200':
@@ -172,7 +173,7 @@ paths:
 
   # ── Word Cloud ──
 
-  /wordcloud/word:
+  /host/wordcloud/word:
     post:
       summary: Submit a word to the word cloud (host, no scoring)
       tags: [wordcloud]
@@ -192,7 +193,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /wordcloud/topic:
+  /host/wordcloud/topic:
     post:
       summary: Set the word cloud topic prompt
       tags: [wordcloud]
@@ -210,7 +211,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/OkResponse'
 
-  /wordcloud/clear:
+  /host/wordcloud/clear:
     post:
       summary: Clear the word cloud (all words and topic)
       tags: [wordcloud]
@@ -224,7 +225,7 @@ paths:
 
   # ── Q&A ──
 
-  /qa/submit:
+  /host/qa/submit:
     post:
       summary: Host submits a Q&A question (no scoring)
       tags: [qa]
@@ -244,7 +245,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /qa/question/{question_id}/text:
+  /host/qa/question/{question_id}/text:
     put:
       summary: Edit a question's text
       tags: [qa]
@@ -268,7 +269,7 @@ paths:
         '404':
           description: Question not found
 
-  /qa/question/{question_id}:
+  /host/qa/question/{question_id}:
     delete:
       summary: Delete a Q&A question
       tags: [qa]
@@ -284,7 +285,7 @@ paths:
         '404':
           description: Question not found
 
-  /qa/question/{question_id}/answered:
+  /host/qa/question/{question_id}/answered:
     put:
       summary: Toggle a question's answered flag
       tags: [qa]
@@ -306,7 +307,7 @@ paths:
         '404':
           description: Question not found
 
-  /qa/clear:
+  /host/qa/clear:
     post:
       summary: Clear all Q&A questions
       tags: [qa]
@@ -320,7 +321,7 @@ paths:
 
   # ── Code Review ──
 
-  /codereview:
+  /host/codereview:
     post:
       summary: Create a code review session
       description: |
@@ -354,7 +355,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/OkResponse'
 
-  /codereview/status:
+  /host/codereview/status:
     put:
       summary: Close the selection phase
       description: Sets phase from "selecting" to "reviewing".
@@ -373,7 +374,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/CodeReviewStatusResponse'
 
-  /codereview/confirm-line:
+  /host/codereview/confirm-line:
     put:
       summary: Confirm a line as problematic and award points
       description: Awards 200 points to all participants who selected this line.
@@ -398,7 +399,7 @@ paths:
 
   # ── Debate ──
 
-  /debate:
+  /host/debate:
     post:
       summary: Launch a debate with a statement
       tags: [debate]
@@ -418,7 +419,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /debate/reset:
+  /host/debate/reset:
     post:
       summary: Reset all debate state
       tags: [debate]
@@ -430,7 +431,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/OkResponse'
 
-  /debate/close-selection:
+  /host/debate/close-selection:
     post:
       summary: Close side selection and auto-assign remaining participants
       tags: [debate]
@@ -442,7 +443,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/OkResponse'
 
-  /debate/force-assign:
+  /host/debate/force-assign:
     post:
       summary: Force-assign all unassigned participants to sides
       tags: [debate]
@@ -454,7 +455,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/OkResponse'
 
-  /debate/phase:
+  /host/debate/phase:
     post:
       summary: Advance the debate to a specific phase
       tags: [debate]
@@ -474,7 +475,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /debate/first-side:
+  /host/debate/first-side:
     post:
       summary: Set which side speaks first in live debate
       tags: [debate]
@@ -494,7 +495,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /debate/round-timer:
+  /host/debate/round-timer:
     post:
       summary: Start a timed round
       tags: [debate]
@@ -514,7 +515,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /debate/end-round:
+  /host/debate/end-round:
     post:
       summary: End the current debate round early
       tags: [debate]
@@ -526,7 +527,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/OkResponse'
 
-  /debate/end-arguments:
+  /host/debate/end-arguments:
     post:
       summary: End arguments phase and trigger AI cleanup
       description: |
@@ -544,7 +545,7 @@ paths:
         '409':
           description: Not in arguments phase
 
-  /debate/ai-result:
+  /host/debate/ai-result:
     post:
       summary: Apply AI cleanup result manually (skip or override)
       tags: [debate]
@@ -564,7 +565,7 @@ paths:
 
   # ── Leaderboard ──
 
-  /leaderboard/show:
+  /host/leaderboard/show:
     post:
       summary: Show the leaderboard overlay (top 5 reveal)
       description: Broadcasts top-5 entries sorted by score to all participants.
@@ -577,7 +578,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/OkResponse'
 
-  /leaderboard/hide:
+  /host/leaderboard/hide:
     post:
       summary: Hide the leaderboard overlay
       tags: [leaderboard]
@@ -589,7 +590,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/OkResponse'
 
-  /scores:
+  /host/scores:
     delete:
       summary: Reset all participant scores to zero
       tags: [leaderboard]
@@ -603,7 +604,7 @@ paths:
 
   # ── Activity ──
 
-  /activity:
+  /host/activity:
     post:
       summary: Switch the current activity type
       tags: [activity]
@@ -625,7 +626,7 @@ paths:
 
   # ── Quiz ──
 
-  /quiz-request:
+  /host/quiz-request:
     post:
       summary: Request AI quiz generation
       description: |
@@ -649,7 +650,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /quiz-preview:
+  /host/quiz-preview:
     delete:
       summary: Clear the current quiz preview
       tags: [quiz]
@@ -661,7 +662,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/OkResponse'
 
-  /quiz-refine:
+  /host/quiz-refine:
     post:
       summary: Regenerate a specific question or option
       tags: [quiz]
@@ -683,7 +684,7 @@ paths:
 
   # ── Misc (host) ──
 
-  /misc/paste-dismiss:
+  /host/misc/paste-dismiss:
     post:
       summary: Dismiss a participant paste entry
       tags: [misc]
@@ -703,7 +704,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /misc/feedback:
+  /host/misc/feedback:
     get:
       summary: Return and clear all pending feedback items
       tags: [misc]
@@ -810,12 +811,6 @@ components:
           type: boolean
           default: false
         correct_count:
-          type: integer
-          nullable: true
-        source:
-          type: string
-          nullable: true
-        page:
           type: integer
           nullable: true
 
