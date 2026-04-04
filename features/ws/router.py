@@ -25,8 +25,6 @@ from core.messaging import (
 from core.metrics import (
     ws_connections_active,
     ws_messages_total,
-    poll_votes_total,
-    poll_vote_duration_seconds,
     qa_questions_total,
     qa_upvotes_total,
 )
@@ -35,7 +33,7 @@ from core.messaging import participant_ids
 from features.debate.router import auto_assign_remaining
 from features.ws.daemon_protocol import (
     MSG_SLIDES_CATALOG, MSG_SLIDE_INVALIDATED, MSG_DAEMON_PING,
-    MSG_QUIZ_PREVIEW, MSG_QUIZ_STATUS, MSG_POLL_CREATE, MSG_POLL_OPEN,
+    MSG_QUIZ_PREVIEW, MSG_QUIZ_STATUS,
     MSG_DEBATE_AI_RESULT, MSG_SESSION_SYNC, MSG_TRANSCRIPT_STATUS,
     MSG_TOKEN_USAGE, MSG_NOTES_CONTENT, MSG_SLIDES_CURRENT, MSG_SLIDES_CLEAR,
     MSG_TRANSCRIPTION_LANGUAGE_STATUS, MSG_TIMING_EVENT, MSG_STATE_RESTORE,
@@ -44,8 +42,6 @@ from features.ws.daemon_protocol import (
     MSG_PROXY_RESPONSE,
     MSG_PARTICIPANT_REGISTERED, MSG_PARTICIPANT_LOCATION, MSG_PARTICIPANT_AVATAR_UPDATED,
     MSG_BROADCAST,
-    MSG_WORDCLOUD_STATE_SYNC,
-    MSG_SCORE_AWARD,
     MSG_DAEMON_STATE_PUSH,
 )
 from features.ws.proxy_bridge import handle_proxy_response
@@ -53,20 +49,6 @@ from features.ws.proxy_bridge import handle_proxy_response
 router = APIRouter()
 session_router = APIRouter()
 logger = logging.getLogger(__name__)
-
-
-async def _record_vote_and_broadcast(pid: str):
-    if pid not in state.vote_times:
-        state.vote_times[pid] = datetime.now(timezone.utc)
-        poll_votes_total.inc()
-        if state.poll_opened_at:
-            duration = (datetime.now(timezone.utc) - state.poll_opened_at).total_seconds()
-            poll_vote_duration_seconds.observe(duration)
-    await broadcast({
-        "type": "vote_update",
-        "vote_counts": state.vote_counts(),
-        "total_votes": len(state.votes),
-    })
 
 
 async def _kick_old_connection(pid: str):
@@ -167,56 +149,6 @@ async def _handle_quiz_status(data):
         from features.slides.cache import sync_slides_updated_at
         sync_slides_updated_at()
     await broadcast({"type": "quiz_status", **state.quiz_status})
-
-
-async def _handle_poll_create(data):
-    """Daemon sends quiz as a poll — replicate POST /api/poll logic."""
-    question = str(data.get("question", "")).strip()
-    options = data.get("options", [])
-    multi = data.get("multi", False)
-    correct_count = data.get("correct_count")
-    source = data.get("source")
-    page = data.get("page")
-
-    if not question or len(options) < 2:
-        logger.warning("poll_create: invalid data (question=%r, options=%d)", question, len(options))
-        return
-
-    state.poll = {
-        "id": int(datetime.now(timezone.utc).timestamp() * 1000),
-        "question": question,
-        "multi": multi,
-        "correct_count": correct_count if multi else None,
-        "options": [
-            {"id": f"opt{i}", "text": str(opt).strip()}
-            for i, opt in enumerate(options)
-            if str(opt).strip()
-        ],
-        "source": source or None,
-        "page": page or None,
-    }
-    state.current_activity = ActivityType.POLL
-    state.poll_active = False
-    state.votes = {}
-    state.poll_correct_ids = None
-    await broadcast_state()
-
-
-async def _handle_poll_open(data):
-    """Daemon opens the poll — replicate PUT /api/poll/status with open=true."""
-    if not state.poll:
-        logger.warning("poll_open: no poll created")
-        return
-    open_flag = data.get("open", True)
-    state.poll_active = open_flag
-    if open_flag:
-        state.poll_opened_at = datetime.now(timezone.utc)
-        state.vote_times = {}
-        state.base_scores = dict(state.scores)
-    else:
-        state.poll_timer_seconds = None
-        state.poll_timer_started_at = None
-    await broadcast_state()
 
 
 async def _handle_debate_ai_result(data):
@@ -383,8 +315,6 @@ async def _handle_state_restore(data):
         state.participant_avatars = restore_data["participant_avatars"]
     if "participant_universes" in restore_data:
         state.participant_universes = restore_data["participant_universes"]
-    if "scores" in restore_data:
-        state.scores = restore_data["scores"]
     if "locations" in restore_data:
         state.locations = restore_data["locations"]
     if "mode" in restore_data:
@@ -612,6 +542,10 @@ async def _handle_broadcast(data: dict):
     event = data.get("event")
     if not event:
         return
+    # Update score mirror if this is a scores_updated broadcast
+    if event.get("type") == "scores_updated" and "scores" in event:
+        state.scores = {k: v for k, v in event["scores"].items()}
+    # Fan out to all participants
     msg = json.dumps(event)
     for pid, ws in list(state.participants.items()):
         if pid.startswith("__"):  # skip __host__, __overlay__
@@ -622,33 +556,12 @@ async def _handle_broadcast(data: dict):
             pass
 
 
-async def _handle_wordcloud_state_sync(data: dict):
-    """Keep Railway's AppState word cloud fields in sync with daemon."""
-    if "words" in data:
-        state.wordcloud_words = data["words"]
-    if "word_order" in data:
-        state.wordcloud_word_order = data["word_order"]
-    if "topic" in data:
-        state.wordcloud_topic = data["topic"]
-
-
-async def _handle_score_award(data: dict):
-    """Award points to a participant (daemon → Railway, transitional)."""
-    pid = data.get("participant_id")
-    points = data.get("points", 0)
-    if pid and points:
-        state.add_score(pid, points)
-        await broadcast_state()
-
-
 _DAEMON_MSG_HANDLERS = {
     MSG_SLIDES_CATALOG: _handle_daemon_slides_catalog,
     MSG_SLIDE_INVALIDATED: _handle_daemon_slide_invalidated,
     MSG_DAEMON_PING: None,  # heartbeat only — last_seen already updated
     MSG_QUIZ_PREVIEW: _handle_quiz_preview,
     MSG_QUIZ_STATUS: _handle_quiz_status,
-    MSG_POLL_CREATE: _handle_poll_create,
-    MSG_POLL_OPEN: _handle_poll_open,
     MSG_DEBATE_AI_RESULT: _handle_debate_ai_result,
     MSG_SESSION_SYNC: _handle_session_sync,
     MSG_TRANSCRIPT_STATUS: _handle_transcript_status,
@@ -668,8 +581,6 @@ _DAEMON_MSG_HANDLERS = {
     MSG_PARTICIPANT_LOCATION: _handle_participant_location,
     MSG_PARTICIPANT_AVATAR_UPDATED: _handle_participant_avatar_updated,
     MSG_BROADCAST: _handle_broadcast,
-    MSG_WORDCLOUD_STATE_SYNC: _handle_wordcloud_state_sync,
-    MSG_SCORE_AWARD: _handle_score_award,
 }
 
 
@@ -710,7 +621,6 @@ async def daemon_websocket_endpoint(websocket: WebSocket):
             "participant_names": state.participant_names,
             "participant_avatars": state.participant_avatars,
             "participant_universes": state.participant_universes,
-            "scores": dict(state.scores),
             "locations": dict(state.locations),
             "mode": state.mode,
             "debate_phase": state.debate_phase,
@@ -902,35 +812,6 @@ async def _handle_participant_connection(websocket: WebSocket, pid: str, is_host
                 if loc:
                     state.locations[pid] = loc
                     await broadcast_participant_update()
-
-            elif msg_type == "vote":
-                option_id = data.get("option_id")
-                valid_ids = [o["id"] for o in state.poll["options"]] if state.poll else []
-                if (
-                    state.poll_active
-                    and state.poll
-                    and not state.poll.get("multi")
-                    and option_id in valid_ids
-                ):
-                    state.votes[pid] = option_id
-                    await _record_vote_and_broadcast(pid)
-
-            elif msg_type == "multi_vote":
-                option_ids = data.get("option_ids", [])
-                valid_ids = [o["id"] for o in state.poll["options"]] if state.poll else []
-                correct_count = state.poll.get("correct_count") if state.poll else None
-                max_allowed = correct_count if correct_count else len(valid_ids)
-                if (
-                    state.poll_active
-                    and state.poll
-                    and state.poll.get("multi")
-                    and isinstance(option_ids, list)
-                    and len(option_ids) <= max_allowed
-                    and len(set(option_ids)) == len(option_ids)
-                    and all(oid in valid_ids for oid in option_ids)
-                ):
-                    state.votes[pid] = option_ids
-                    await _record_vote_and_broadcast(pid)
 
             elif msg_type == "wordcloud_word":
                 word = str(data.get("word", "")).strip().lower()

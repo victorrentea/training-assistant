@@ -11,8 +11,6 @@ MSG_SLIDE_INVALIDATED = "slide_invalidated"
 MSG_DAEMON_PING = "daemon_ping"
 MSG_QUIZ_PREVIEW = "quiz_preview"
 MSG_QUIZ_STATUS = "quiz_status"
-MSG_POLL_CREATE = "poll_create"
-MSG_POLL_OPEN = "poll_open"
 MSG_DEBATE_AI_RESULT = "debate_ai_result"
 MSG_SESSION_SYNC = "session_sync"
 MSG_TRANSCRIPT_STATUS = "transcript_status"
@@ -60,12 +58,6 @@ MSG_PARTICIPANT_AVATAR_UPDATED = "participant_avatar_updated"
 
 # --- Generic broadcast (daemon → all participants via backend) ---
 MSG_BROADCAST = "broadcast"
-
-# --- Word cloud state sync (daemon → backend) ---
-MSG_WORDCLOUD_STATE_SYNC = "wordcloud_state_sync"
-
-# --- Score award (daemon → backend, transitional) ---
-MSG_SCORE_AWARD = "score_award"
 
 # --- State push (backend → daemon, on connect) ---
 MSG_DAEMON_STATE_PUSH = "daemon_state_push"
