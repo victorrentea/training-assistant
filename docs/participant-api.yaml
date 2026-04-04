@@ -70,6 +70,7 @@ paths:
       description: |
         Updates the display name of an already-registered participant.
         Returns 400 if the participant is not yet registered (call /register first).
+        Returns 409 if the name is already taken by another participant.
       tags: [identity]
       parameters:
         - $ref: '#/components/parameters/ParticipantID'
@@ -81,13 +82,11 @@ paths:
               $ref: '#/components/schemas/SetNameRequest'
       responses:
         '200':
-          description: Name updated
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/RenameResponse'
+          description: Name updated (no body)
         '400':
           $ref: '#/components/responses/BadRequest'
+        '409':
+          description: Name already taken by another participant (no body)
 
   /avatar:
     post:
@@ -425,7 +424,7 @@ paths:
         '409':
           description: Paste limit reached (max 10)
 
-  /misc/notes:
+  /notes:
     get:
       summary: Get session notes content
       tags: [misc]
@@ -437,7 +436,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/NotesResponse'
 
-  /misc/summary:
+  /summary:
     get:
       summary: Get summary points and raw markdown
       tags: [misc]
@@ -449,7 +448,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/SummaryResponse'
 
-  /misc/slides-cache-status:
+  /slides-cache-status:
     get:
       summary: Get slides cache status
       tags: [misc]

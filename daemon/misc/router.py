@@ -52,13 +52,13 @@ async def paste_text(request: Request):
     return JSONResponse({"ok": True})
 
 
-@participant_router.get("/misc/notes")
+@participant_router.get("/notes")
 async def get_notes(request: Request):
     """Get session notes content."""
     return JSONResponse({"notes_content": misc_state.notes_content})
 
 
-@participant_router.get("/misc/summary")
+@participant_router.get("/summary")
 async def get_summary(request: Request):
     """Get summary points and raw markdown."""
     return JSONResponse({
@@ -68,7 +68,7 @@ async def get_summary(request: Request):
     })
 
 
-@participant_router.get("/misc/slides-cache-status")
+@participant_router.get("/slides-cache-status")
 async def get_slides_cache_status(request: Request):
     """Get slides cache status."""
     return JSONResponse({"slides_cache_status": misc_state.slides_cache_status})
