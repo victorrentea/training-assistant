@@ -350,31 +350,34 @@ def run() -> None:
     set_poll_router_ws(ws_client)
     set_lb_ws(ws_client)
 
-    def _handle_codereview_score_award(data):
-        pids = data.get("participant_ids", [])
-        points = data.get("points", 0)
-        for pid in pids:
-            daemon_scores.add_score(pid, points)
-        payload = {"type": "scores_updated", "scores": daemon_scores.snapshot()}
-        ws_client.send({"type": "broadcast", "event": payload})
+    from daemon.misc.router import set_ws_client as set_misc_ws
+    set_misc_ws(ws_client)
+
+    from daemon.codereview.router import set_ws_client as set_codereview_ws
+    from daemon.activity.router import set_ws_client as set_activity_ws
+    set_codereview_ws(ws_client)
+    set_activity_ws(ws_client)
 
     def _handle_scores_reset(data):
         daemon_scores.reset()
         payload = {"type": "scores_updated", "scores": daemon_scores.snapshot()}
         ws_client.send({"type": "broadcast", "event": payload})
 
-    ws_client.register_handler("codereview_score_award", _handle_codereview_score_award)
     ws_client.register_handler("scores_reset", _handle_scores_reset)
 
     # State push handler — daemon receives current state from Railway on connect
     from daemon.participant.state import participant_state
     from daemon.wordcloud.state import wordcloud_state
     from daemon.qa.state import qa_state
+    from daemon.misc.state import misc_state
+    from daemon.codereview.state import codereview_state
 
     def _handle_daemon_state_push(data):
         participant_state.sync_from_restore(data)
         wordcloud_state.sync_from_restore(data)
         qa_state.sync_from_restore(data)
+        misc_state.sync_from_restore(data)
+        codereview_state.sync_from_restore(data)
 
     ws_client.register_handler("daemon_state_push", _handle_daemon_state_push)
 
