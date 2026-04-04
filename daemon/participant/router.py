@@ -285,7 +285,6 @@ async def get_participant_state(request: Request):
         "current_activity": ps.current_activity,
         "participant_count": participant_count,
         "host_connected": True,   # daemon is the host server; if they reached us, host is connected
-        "screen_share_active": True,
         "daemon_connected": True,
         # Wordcloud
         "wordcloud_words": wc.words,

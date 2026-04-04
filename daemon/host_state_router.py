@@ -143,7 +143,6 @@ async def get_host_state(request: Request, session_id: str):
         "participant_count": participant_count,
         "participants": _build_host_participants_list(),
         "daemon_connected": True,
-        "screen_share_active": True,
         # Wordcloud
         "wordcloud_words": wc.words,
         "wordcloud_word_order": wc.word_order,

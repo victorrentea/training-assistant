@@ -11,11 +11,9 @@ from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, FastAPI, Depends, HTTPException, Request
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
 from prometheus_fastapi_instrumentator import Instrumentator
 
 from core.auth import require_host_auth
-from core.messaging import broadcast, broadcast_participant_update
 from core.session_guard import require_valid_session, InvalidSessionRedirect
 from core.state import state  # re-exported for test_main.py: from main import app, state
 import core.metrics as metrics  # noqa: registers custom Prometheus metrics
@@ -126,12 +124,6 @@ async def _require_active_session_host(session_id: str):
         raise HTTPException(status_code=404, detail="Session not found or not active")
 
 
-# ── Session-scoped mode + screen-share ──
-
-class ModeRequest(BaseModel):
-    mode: str
-
-
 # ── Session-scoped host router (/api/{session_id}/...) ──
 
 session_host = APIRouter(
@@ -141,22 +133,6 @@ session_host = APIRouter(
 session_host.include_router(slides.router)
 session_host.include_router(upload.router)
 session_host.include_router(session_session_router)
-
-
-@session_host.post("/screen-share")
-async def toggle_screen_share():
-    state.screen_share_active = not state.screen_share_active
-    await broadcast({"type": "screen_share_updated", "screen_share_active": state.screen_share_active})
-    return {"screen_share_active": state.screen_share_active}
-
-
-@session_host.post("/mode")
-async def set_mode(req: ModeRequest):
-    if req.mode not in ("workshop", "conference"):
-        raise HTTPException(400, "mode must be 'workshop' or 'conference'")
-    state.mode = req.mode
-    await broadcast({"type": "mode_updated", "mode": state.mode})
-    return {"mode": state.mode}
 
 
 app.include_router(session_host)

@@ -83,7 +83,6 @@ class AppState:
         self.session_request: dict | None = None
         self.token_usage: dict = {"input_tokens": 0, "output_tokens": 0, "estimated_cost_usd": 0.0}
         self.mode: str = "workshop"  # "workshop" | "conference"
-        self.screen_share_active: bool = True
         self.needs_restore: bool = True
         self.pending_deploy: dict | None = None  # {sha, message} set by watcher when push detected
         self.transcription_language: str = "ro"  # current AudioHijack Transcribe block language
