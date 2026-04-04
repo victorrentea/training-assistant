@@ -12,6 +12,10 @@ class MiscState:
         self.summary_raw_markdown: str | None = None
         self.summary_updated_at: str | None = None  # ISO string
         self.slides_cache_status: dict[str, dict] = {}
+        # Synced from Railway state (slides + session info)
+        self.slides_current: dict | None = None
+        self.session_main: dict | None = None
+        self.session_name: str | None = None
 
     def sync_from_restore(self, data: dict):
         with self._lock:
@@ -34,6 +38,12 @@ class MiscState:
             if "slides_cache_status" in data:
                 self.slides_cache_status.clear()
                 self.slides_cache_status.update(data["slides_cache_status"])
+            if "slides_current" in data:
+                self.slides_current = data["slides_current"]
+            if "session_main" in data:
+                self.session_main = data["session_main"]
+            if "session_name" in data:
+                self.session_name = data["session_name"]
 
     def add_paste(self, pid: str, text: str) -> dict | None:
         entries = self.paste_texts.setdefault(pid, [])

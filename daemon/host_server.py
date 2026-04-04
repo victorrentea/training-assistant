@@ -106,6 +106,9 @@ def create_app(backend_url: str) -> FastAPI:
     app.include_router(debate_participant_router)  # /api/participant/debate/*
     app.include_router(debate_host_router)         # /api/{session_id}/debate/*
 
+    from daemon.host_state_router import router as host_state_router
+    app.include_router(host_state_router)          # /api/{session_id}/host/state
+
     # --- WebSocket proxy ---
     @app.websocket("/ws/{path:path}")
     async def ws_proxy(websocket: WebSocket, path: str):
