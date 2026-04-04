@@ -1039,14 +1039,6 @@ def run() -> None:
                         else:
                             post_status("error", "No conversation context — please generate a question first.", config)
 
-                # ── Email participant feedback (read from daemon misc_state directly) ──
-                from daemon.misc.state import misc_state as _misc_state
-                _feedback_items = list(_misc_state.feedback_pending)
-                _misc_state.feedback_pending.clear()
-                for text in _feedback_items:
-                    log.info("email", f"Feedback received: {text[:80]}")
-                    email_notify("💬 Workshop feedback", text)
-
                 # ── Push transcript stats every 10s ──
                 if now - last_transcript_stats_at >= 10.0:
                     last_transcript_stats_at = now

@@ -400,7 +400,7 @@ paths:
 
   # ── Misc ──
 
-  /misc/paste:
+  /paste:
     post:
       summary: Paste text visible to the host
       description: Max 100 KB per paste; max 10 pastes per participant.
@@ -424,28 +424,6 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '409':
           description: Paste limit reached (max 10)
-
-  /misc/feedback:
-    post:
-      summary: Submit feedback text
-      tags: [misc]
-      parameters:
-        - $ref: '#/components/parameters/ParticipantID'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/FeedbackRequest'
-      responses:
-        '200':
-          description: Feedback stored
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/OkResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
 
   /misc/notes:
     get:

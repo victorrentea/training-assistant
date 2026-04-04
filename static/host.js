@@ -246,10 +246,6 @@
         renderLeaderboard(msg);
         return;
       }
-      if (msg.type === 'leaderboard_hide') {
-        hideLeaderboard();
-        return;
-      }
       if (msg.type === 'poll_created') {
         currentPoll = msg.poll;
         pollActive = false;
@@ -386,10 +382,6 @@
         }
         if (msg.transcription_language) {
           updateTranscriptionLangBtn(msg.transcription_language);
-        }
-        // Restore leaderboard overlay if it was active
-        if (msg.leaderboard_active && msg.leaderboard_data) {
-          renderLeaderboard(msg.leaderboard_data);
         }
       } else if (msg.type === 'notes') {
         updateHostNotes(msg.notes_content);
@@ -2153,7 +2145,7 @@
       contentEl.style.display = tab === t ? (t === 'codereview' ? 'flex' : '') : 'none';
     });
     await fetch(API('/activity'), {
-      method: 'POST',
+      method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ activity: tab }),
     });
@@ -3138,15 +3130,13 @@ async function toggleLeaderboard() {
             showLeaderboardError('No scores yet — run a poll first');
             return;
         }
-    }
-    try {
-        if (_leaderboardActive) {
-            await fetch(API('/leaderboard/hide'), { method: 'POST' });
-        } else {
+        try {
             await fetch(API('/leaderboard/show'), { method: 'POST' });
+        } catch (e) {
+            console.error('Leaderboard show failed:', e);
         }
-    } catch (e) {
-        console.error('Leaderboard toggle failed:', e);
+    } else {
+        hideLeaderboard();
     }
 }
 
@@ -3556,19 +3546,12 @@ function updateCreateBtn() {
   if (btn) btn.disabled = !name;
 }
 
-function togglePauseSession() {
-  if (!sessionMain) return;
-  const paused = sessionMain.status === 'paused';
-  const endpoint = paused ? '/api/session/resume' : '/api/session/pause';
-  fetch(endpoint, {method: 'POST'})
-    .catch(e => console.error('togglePauseSession failed:', e));
-}
 
 function copyAndDismissPaste(el) {
   const uuid = el.dataset.uuid;
-  const pasteId = parseInt(el.dataset.pasteId, 10);
+  const pasteId = el.dataset.pasteId;
   const participant = participantDataById[uuid];
-  const entry = (participant?.paste_texts || []).find(e => e.id === pasteId);
+  const entry = (participant?.paste_texts || []).find(e => String(e.id) === pasteId);
   if (entry) {
     navigator.clipboard.writeText(entry.text).then(() => {
       // Show "Copied!" tooltip
@@ -3586,7 +3569,7 @@ function copyAndDismissPaste(el) {
       setTimeout(() => el.remove(), 300);
     });
   }
-  fetch(API('/misc/paste-dismiss'), {
+  fetch(API('/paste-dismiss'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ uuid, paste_id: pasteId }),

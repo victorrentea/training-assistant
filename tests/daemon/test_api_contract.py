@@ -157,8 +157,7 @@ class TestParticipantApiContract:
             ("POST", "/api/participant/debate/upvote"),
             ("POST", "/api/participant/debate/volunteer"),
             ("POST", "/api/participant/emoji/reaction"),
-            ("POST", "/api/participant/misc/paste"),
-            ("POST", "/api/participant/misc/feedback"),
+            ("POST", "/api/participant/paste"),
             ("GET",  "/api/participant/misc/notes"),
             ("GET",  "/api/participant/misc/summary"),
             ("GET",  "/api/participant/misc/slides-cache-status"),
@@ -221,14 +220,13 @@ class TestHostApiContract:
             ("POST",   "/api/{session_id}/host/debate"),
             ("POST",   "/api/{session_id}/host/debate/reset"),
             ("POST",   "/api/{session_id}/host/leaderboard/show"),
-            ("POST",   "/api/{session_id}/host/leaderboard/hide"),
             ("DELETE", "/api/{session_id}/host/scores"),
-            ("POST",   "/api/{session_id}/host/activity"),
+            ("PUT",    "/api/{session_id}/host/activity"),
             ("POST",   "/api/{session_id}/host/quiz-request"),
             ("DELETE", "/api/{session_id}/host/quiz-preview"),
             ("POST",   "/api/{session_id}/host/quiz-refine"),
-            ("POST",   "/api/{session_id}/host/misc/paste-dismiss"),
-            ("GET",    "/api/{session_id}/host/misc/feedback"),
+            ("POST",   "/api/{session_id}/host/paste-dismiss"),
+            ("GET",    "/api/{session_id}/host/pastes"),
         ]
         missing = [
             f"{m} {p}" for m, p in required

@@ -1,12 +1,15 @@
 import threading
+import uuid
 
 
 class MiscState:
     def __init__(self):
         self._lock = threading.Lock()
         self.paste_texts: dict[str, list[dict]] = {}  # uuid → [{id, text}]
-        self.paste_next_id: int = 0
-        self.feedback_pending: list[str] = []
+        # TODO: notes_content, summary_points, summary_raw_markdown, summary_updated_at
+        #  are currently synced from Railway state (via sync_from_restore).
+        #  They should be read from disk files (ai-summary.md, notes.md) instead of stored in state.
+        #  Deferred until summary/notes pipeline is refactored to write to known disk paths.
         self.notes_content: str | None = None
         self.summary_points: list[dict] = []
         self.summary_raw_markdown: str | None = None
@@ -22,11 +25,6 @@ class MiscState:
             if "paste_texts" in data:
                 self.paste_texts.clear()
                 self.paste_texts.update(data["paste_texts"])
-            if "paste_next_id" in data:
-                self.paste_next_id = data["paste_next_id"]
-            if "feedback_pending" in data:
-                self.feedback_pending.clear()
-                self.feedback_pending.extend(data["feedback_pending"])
             if "notes_content" in data:
                 self.notes_content = data["notes_content"]
             if "summary_points" in data:
@@ -49,12 +47,11 @@ class MiscState:
         entries = self.paste_texts.setdefault(pid, [])
         if len(entries) >= 10:
             return None
-        self.paste_next_id += 1
-        entry = {"id": self.paste_next_id, "text": text}
+        entry = {"id": str(uuid.uuid4()), "text": text}
         entries.append(entry)
         return entry
 
-    def dismiss_paste(self, target_uuid: str, paste_id: int) -> bool:
+    def dismiss_paste(self, target_uuid: str, paste_id: str) -> bool:
         if target_uuid not in self.paste_texts:
             return False
         self.paste_texts[target_uuid] = [
@@ -64,14 +61,9 @@ class MiscState:
             del self.paste_texts[target_uuid]
         return True
 
-    def add_feedback(self, text: str):
-        self.feedback_pending.append(text)
-
     def snapshot(self) -> dict:
         return {
             "paste_texts": {k: list(v) for k, v in self.paste_texts.items()},
-            "paste_next_id": self.paste_next_id,
-            "feedback_pending": list(self.feedback_pending),
         }
 
 

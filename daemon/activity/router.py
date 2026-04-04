@@ -26,7 +26,7 @@ def set_ws_client(client):
 host_router = APIRouter(prefix="/api/{session_id}/host/activity", tags=["activity"])
 
 
-@host_router.post("")
+@host_router.put("")
 async def set_activity(request: Request):
     """Host switches the current activity."""
     body = await request.json()

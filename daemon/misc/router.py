@@ -1,4 +1,4 @@
-"""Daemon misc router — participant + host endpoints for paste, feedback, notes, summary, slides cache."""
+"""Daemon misc router — participant + host endpoints for paste, notes, summary, slides cache."""
 import logging
 import threading
 
@@ -25,7 +25,7 @@ def set_ws_client(client):
 
 # ── Participant router (proxied via Railway) ──
 
-participant_router = APIRouter(prefix="/api/participant/misc", tags=["misc"])
+participant_router = APIRouter(prefix="/api/participant", tags=["misc"])
 
 
 @participant_router.post("/paste")
@@ -44,36 +44,21 @@ async def paste_text(request: Request):
     if entry is None:
         return JSONResponse({"error": "Paste limit reached (max 10)"}, status_code=409)
 
+    # Send only to host (not broadcast to all participants)
     request.state.write_back_events = [
-        {"type": "broadcast", "event": {"type": "paste_received", "uuid": pid, **entry}},
+        {"type": "send_to_host", "event": {"type": "paste_received", "uuid": pid, **entry}},
     ]
 
     return JSONResponse({"ok": True})
 
 
-@participant_router.post("/feedback")
-async def submit_feedback(request: Request):
-    """Participant submits feedback text."""
-    pid = request.headers.get("x-participant-id")
-    if not pid:
-        return JSONResponse({"error": "Missing X-Participant-ID"}, status_code=400)
-
-    body = await request.json()
-    text = str(body.get("text", "")).strip()
-    if not text or len(text) > 2000:
-        return JSONResponse({"error": "Invalid feedback text"}, status_code=400)
-
-    misc_state.add_feedback(text)
-    return JSONResponse({"ok": True})
-
-
-@participant_router.get("/notes")
+@participant_router.get("/misc/notes")
 async def get_notes(request: Request):
     """Get session notes content."""
     return JSONResponse({"notes_content": misc_state.notes_content})
 
 
-@participant_router.get("/summary")
+@participant_router.get("/misc/summary")
 async def get_summary(request: Request):
     """Get summary points and raw markdown."""
     return JSONResponse({
@@ -83,16 +68,15 @@ async def get_summary(request: Request):
     })
 
 
-@participant_router.get("/slides-cache-status")
+@participant_router.get("/misc/slides-cache-status")
 async def get_slides_cache_status(request: Request):
     """Get slides cache status."""
     return JSONResponse({"slides_cache_status": misc_state.slides_cache_status})
 
 
 # ── Host router (called directly on daemon localhost) ──
-# NOTE: Host JS calls API('/misc/paste-dismiss') which expands to /api/{session_id}/misc/paste-dismiss.
 
-host_router = APIRouter(prefix="/api/{session_id}/host/misc", tags=["misc"])
+host_router = APIRouter(prefix="/api/{session_id}/host", tags=["misc"])
 
 
 @host_router.post("/paste-dismiss")
@@ -105,7 +89,7 @@ async def paste_dismiss(request: Request):
     if not target_uuid or paste_id is None:
         return JSONResponse({"error": "Missing uuid or paste_id"}, status_code=400)
 
-    misc_state.dismiss_paste(target_uuid, int(paste_id))
+    misc_state.dismiss_paste(target_uuid, str(paste_id))
 
     if _ws_client is not None:
         _ws_client.send({
@@ -116,12 +100,10 @@ async def paste_dismiss(request: Request):
     return JSONResponse({"ok": True})
 
 
-@host_router.get("/feedback")
-async def get_pending_feedback():
-    """Return and clear pending feedback items."""
-    items = list(misc_state.feedback_pending)
-    misc_state.feedback_pending.clear()
-    return JSONResponse({"items": items})
+@host_router.get("/pastes")
+async def get_pastes():
+    """Return all pending paste entries grouped by participant uuid."""
+    return JSONResponse({"pastes": misc_state.paste_texts})
 
 
 # ── Global router (no session_id prefix) — used for transcription language ──

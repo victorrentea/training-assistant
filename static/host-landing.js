@@ -8,7 +8,7 @@ async function loadPage() {
     ]);
     const active = await activeRes.json();
     const {folders} = await foldersRes.json();
-    if (active && active.auto_join && active.session_id) {
+    if (active && active.session_id) {
       onSessionReady(active.session_id);
       return;
     }
@@ -168,11 +168,11 @@ async function doCreate(type) {
 async function doResumeFolder(folder_name) {
   showSessionBlocker('Resuming session…');
   try {
-    const r = await fetch('/api/session/resume-folder', {
+    const r = await fetch('/api/session/create', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       credentials: 'include',
-      body: JSON.stringify({folder_name}),
+      body: JSON.stringify({name: folder_name, type: 'workshop'}),
     });
     const data = await r.json();
     if (r.ok && data.session_id) {

@@ -725,7 +725,7 @@ ${html}
       alert('Text too large (max 100KB)');
       return;
     }
-    fetch(apiBase + '/api/participant/misc/paste', {
+    fetch(apiBase + '/api/participant/paste', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Participant-ID': myUUID },
       body: JSON.stringify({ text }),
@@ -2828,10 +2828,6 @@ const sessionTitleEl = document.getElementById('session-title');
           sessionTitleEl.style.display = topic ? '' : 'none';
         }
         _onIncomingHostSlidesCurrent(msg.slides_current || null);
-        // Restore leaderboard overlay if it was active
-        if (msg.leaderboard_active && msg.leaderboard_data) {
-          showParticipantLeaderboard(msg.leaderboard_data);
-        }
         break;
       case 'participant_count':
         updateParticipantCount(msg.count);
@@ -2883,9 +2879,6 @@ const sessionTitleEl = document.getElementById('session-title');
         });
         break;
       }
-      case 'leaderboard_hide':
-        hideParticipantLeaderboard();
-        break;
       case 'deploy_pending':
         showDeployPending();
         break;

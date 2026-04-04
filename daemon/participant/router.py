@@ -319,7 +319,6 @@ async def get_participant_state(request: Request):
         "session_main": misc_state.session_main,
         "session_name": misc_state.session_name,
         # Leaderboard
-        "leaderboard_active": leaderboard_state.active,
         "leaderboard_data": leaderboard_state.data,
         # Summary / notes
         "summary_points": misc_state.summary_points,

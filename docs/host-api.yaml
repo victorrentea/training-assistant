@@ -578,18 +578,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/OkResponse'
 
-  /host/leaderboard/hide:
-    post:
-      summary: Hide the leaderboard overlay
-      tags: [leaderboard]
-      responses:
-        '200':
-          description: Leaderboard hidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/OkResponse'
-
   /host/scores:
     delete:
       summary: Reset all participant scores to zero
@@ -605,7 +593,7 @@ paths:
   # ── Activity ──
 
   /host/activity:
-    post:
+    put:
       summary: Switch the current activity type
       tags: [activity]
       requestBody:
@@ -684,7 +672,7 @@ paths:
 
   # ── Misc (host) ──
 
-  /host/misc/paste-dismiss:
+  /host/paste-dismiss:
     post:
       summary: Dismiss a participant paste entry
       tags: [misc]
@@ -704,17 +692,29 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /host/misc/feedback:
+  /host/pastes:
     get:
-      summary: Return and clear all pending feedback items
+      summary: Get all pending paste entries grouped by participant UUID
       tags: [misc]
       responses:
         '200':
-          description: Pending feedback items (consumed on read)
+          description: Pending paste entries
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/FeedbackItemsResponse'
+                type: object
+                properties:
+                  pastes:
+                    type: object
+                    additionalProperties:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          id:
+                            type: string
+                          text:
+                            type: string
 
 # ── Global (no session_id prefix) ──
 # Note: these live under /api (not /api/{session_id})
