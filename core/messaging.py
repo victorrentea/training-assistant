@@ -129,27 +129,6 @@ async def broadcast_participant_update():
     await _broadcast_foreach(_send)
 
 
-async def broadcast_leaderboard():
-    """Send personalized leaderboard to each connected participant."""
-    from features.leaderboard.state_builder import _build_leaderboard_data
-    entries, total, rank_map = _build_leaderboard_data()
-
-    async def _send(pid, ws):
-        if pid == "__overlay__":
-            return
-        is_participant = not pid.startswith("__")
-        msg = {
-            "type": "leaderboard",
-            "entries": entries,
-            "total_participants": total,
-            "your_rank": rank_map.get(pid) if is_participant else None,
-            "your_score": state.scores.get(pid, 0) if is_participant else None,
-            "your_name": state.participant_names.get(pid, "") if is_participant else None,
-        }
-        await ws.send_text(json.dumps(msg))
-    await _broadcast_foreach(_send)
-
-
 async def send_state_to_participant(ws: WebSocket, pid: str):
     """Send personalized state to a specific participant."""
     await ws.send_text(json.dumps(build_participant_state(pid)))

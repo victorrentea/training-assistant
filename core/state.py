@@ -30,10 +30,6 @@ class AppState:
         self.reset()
 
     def reset(self):
-        self.poll: Optional[dict] = None
-        self.poll_active: bool = False
-        self.votes: dict[str, str] = {}
-        self._vote_counts_cache: Optional[tuple[int, dict]] = None  # (len, counts)
         self.participants: dict[str, WebSocket] = {}
         self.participant_history: set[str] = set()  # uuids seen in this session (online or offline)
         self.participant_names: dict[str, str] = {}  # uuid -> display_name
@@ -45,7 +41,6 @@ class AppState:
         self.feedback_pending: list[str] = []
         self.uploaded_files: dict[str, list[dict]] = {}  # uuid → [{id, filename, size, disk_path}]
         self.upload_next_id: int = 0
-        self.leaderboard_active: bool = False
         self.locations: dict[str, str] = {}
         self.quiz_request: Optional[dict] = None
         self.quiz_refine_request: Optional[dict] = None
@@ -73,11 +68,6 @@ class AppState:
         self.quiz_preview: Optional[dict] = None
         self.scores: dict[str, int] = {}
         self.base_scores: dict[str, int] = {}
-        self.poll_opened_at: Optional[datetime] = None
-        self.poll_timer_seconds: Optional[int] = None
-        self.poll_timer_started_at: Optional[datetime] = None
-        self.poll_correct_ids: Optional[list[str]] = None
-        self.vote_times: dict[str, datetime] = {}
         self.current_activity: ActivityType = ActivityType.NONE
         self.wordcloud_words: dict[str, int] = {}
         self.wordcloud_word_order: list[str] = []  # newest first
@@ -118,7 +108,6 @@ class AppState:
         self.screen_share_active: bool = True
         self.needs_restore: bool = True
         self.pending_deploy: dict | None = None  # {sha, message} set by watcher when push detected
-        self.quiz_md_content: str = ""  # markdown log of all closed polls
         self.transcription_language: str = "ro"  # current AudioHijack Transcribe block language
         self.transcription_language_request: str | None = None  # pending change for daemon
         self.session_id: str | None = None  # 6-char alphanumeric session code for participant URLs
@@ -144,9 +133,6 @@ class AppState:
         available = [n for n in LOTR_NAMES if n not in taken_names]
         return available[0] if available else None
 
-    def add_score(self, pid: str, points: int):
-        self.scores[pid] = self.scores.get(pid, 0) + points
-
     def debate_side_counts(self) -> tuple[int, int]:
         """Return (for_count, against_count) from debate_sides."""
         for_count = sum(1 for s in self.debate_sides.values() if s == "for")
@@ -163,21 +149,6 @@ class AppState:
         """Update daemon last-seen timestamp."""
         from datetime import datetime, timezone
         self.daemon_last_seen = datetime.now(timezone.utc)
-
-    def vote_counts(self) -> dict:
-        if not self.poll:
-            return {}
-        current_len = len(self.votes)
-        if self._vote_counts_cache is not None and self._vote_counts_cache[0] == current_len:
-            return self._vote_counts_cache[1]
-        counts = {opt["id"]: 0 for opt in self.poll["options"]}
-        for selection in self.votes.values():
-            ids = selection if isinstance(selection, list) else [selection]
-            for option_id in ids:
-                if option_id in counts:
-                    counts[option_id] += 1
-        self._vote_counts_cache = (current_len, counts)
-        return counts
 
 
 state = AppState()
