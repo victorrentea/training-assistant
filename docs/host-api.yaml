@@ -1,0 +1,1394 @@
+openapi: 3.0.3
+info:
+  title: Training Assistant — Host API
+  description: |
+    REST endpoints for the host (trainer). These are called directly on the
+    daemon running at `localhost:8081` under `/api/{session_id}/...`.
+    No proxy is involved — the host browser connects to the daemon directly.
+  version: "1.0"
+
+servers:
+  - url: http://localhost:8081/api/{session_id}
+    description: Daemon (host-direct, local)
+    variables:
+      session_id:
+        description: Active session identifier
+        default: default
+
+tags:
+  - name: host-state
+    description: Full host session state
+  - name: poll
+    description: Poll lifecycle management
+  - name: wordcloud
+    description: Word cloud management
+  - name: qa
+    description: Q&A moderation
+  - name: codereview
+    description: Code review management
+  - name: debate
+    description: Debate lifecycle management
+  - name: leaderboard
+    description: Leaderboard reveal and score management
+  - name: activity
+    description: Activity type switching
+  - name: quiz
+    description: AI quiz generation
+  - name: misc
+    description: Paste dismissal, feedback, transcription language
+
+paths:
+
+  # ── Host State ──
+
+  /host/state:
+    get:
+      summary: Get full host session state
+      description: |
+        Returns the complete session state for the host panel — equivalent to
+        Railway's build_for_host(). Used on page load and WS reconnect.
+      tags: [host-state]
+      responses:
+        '200':
+          description: Full host session state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HostState'
+
+  # ── Poll ──
+
+  /poll:
+    post:
+      summary: Create a new poll
+      tags: [poll]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePollRequest'
+      responses:
+        '200':
+          description: Poll created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreatePollResponse'
+        '409':
+          description: Another activity is currently active
+    delete:
+      summary: Delete the current poll and reset activity to none
+      tags: [poll]
+      responses:
+        '200':
+          description: Poll deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse'
+
+  /poll/open:
+    post:
+      summary: Open the poll for participant voting
+      tags: [poll]
+      responses:
+        '200':
+          description: Poll opened
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse'
+        '400':
+          description: No poll exists
+
+  /poll/close:
+    post:
+      summary: Close the poll
+      tags: [poll]
+      responses:
+        '200':
+          description: Poll closed; includes vote counts
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClosePollResponse'
+        '400':
+          description: No poll exists
+
+  /poll/correct:
+    put:
+      summary: Reveal correct answers and award scores
+      tags: [poll]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RevealCorrectRequest'
+      responses:
+        '200':
+          description: Correct answers revealed and scores updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse'
+        '400':
+          description: No poll exists
+
+  /poll/timer:
+    post:
+      summary: Start a countdown timer on the active poll
+      tags: [poll]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StartTimerRequest'
+      responses:
+        '200':
+          description: Timer started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse'
+        '400':
+          description: No poll exists
+
+  # ── Quiz MD ──
+
+  /quiz-md:
+    get:
+      summary: Get accumulated quiz markdown history
+      tags: [quiz]
+      responses:
+        '200':
+          description: Quiz markdown content
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuizMdResponse'
+
+  # ── Word Cloud ──
+
+  /wordcloud/word:
+    post:
+      summary: Submit a word to the word cloud (host, no scoring)
+      tags: [wordcloud]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubmitWordRequest'
+      responses:
+        '200':
+          description: Word added
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /wordcloud/topic:
+    post:
+      summary: Set the word cloud topic prompt
+      tags: [wordcloud]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetTopicRequest'
+      responses:
+        '200':
+          description: Topic set
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse'
+
+  /wordcloud/clear:
+    post:
+      summary: Clear the word cloud (all words and topic)
+      tags: [wordcloud]
+      responses:
+        '200':
+          description: Word cloud cleared
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse'
+
+  # ── Q&A ──
+
+  /qa/submit:
+    post:
+      summary: Host submits a Q&A question (no scoring)
+      tags: [qa]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubmitQuestionRequest'
+      responses:
+        '200':
+          description: Question submitted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /qa/question/{question_id}/text:
+    put:
+      summary: Edit a question's text
+      tags: [qa]
+      parameters:
+        - $ref: '#/components/parameters/QuestionID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EditQuestionTextRequest'
+      responses:
+        '200':
+          description: Question text updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          description: Question not found
+
+  /qa/question/{question_id}:
+    delete:
+      summary: Delete a Q&A question
+      tags: [qa]
+      parameters:
+        - $ref: '#/components/parameters/QuestionID'
+      responses:
+        '200':
+          description: Question deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse'
+        '404':
+          description: Question not found
+
+  /qa/question/{question_id}/answered:
+    put:
+      summary: Toggle a question's answered flag
+      tags: [qa]
+      parameters:
+        - $ref: '#/components/parameters/QuestionID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ToggleAnsweredRequest'
+      responses:
+        '200':
+          description: Answered flag updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse'
+        '404':
+          description: Question not found
+
+  /qa/clear:
+    post:
+      summary: Clear all Q&A questions
+      tags: [qa]
+      responses:
+        '200':
+          description: All questions cleared
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse'
+
+  # ── Code Review ──
+
+  /codereview:
+    post:
+      summary: Create a code review session
+      description: |
+        Pastes a code snippet for participants to review. If `smart_paste` is
+        true (default), Claude Haiku extracts clean code from raw LLM output.
+        Max 50 lines.
+      tags: [codereview]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCodeReviewRequest'
+      responses:
+        '200':
+          description: Code review created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+    delete:
+      summary: Clear the code review and reset activity to none
+      tags: [codereview]
+      responses:
+        '200':
+          description: Code review cleared
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse'
+
+  /codereview/status:
+    put:
+      summary: Close the selection phase
+      description: Sets phase from "selecting" to "reviewing".
+      tags: [codereview]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CodeReviewStatusRequest'
+      responses:
+        '200':
+          description: Phase updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CodeReviewStatusResponse'
+
+  /codereview/confirm-line:
+    put:
+      summary: Confirm a line as problematic and award points
+      description: Awards 200 points to all participants who selected this line.
+      tags: [codereview]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConfirmLineRequest'
+      responses:
+        '200':
+          description: Line confirmed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConfirmLineResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: Line already confirmed
+
+  # ── Debate ──
+
+  /debate:
+    post:
+      summary: Launch a debate with a statement
+      tags: [debate]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LaunchDebateRequest'
+      responses:
+        '200':
+          description: Debate launched
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /debate/reset:
+    post:
+      summary: Reset all debate state
+      tags: [debate]
+      responses:
+        '200':
+          description: Debate reset
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse'
+
+  /debate/close-selection:
+    post:
+      summary: Close side selection and auto-assign remaining participants
+      tags: [debate]
+      responses:
+        '200':
+          description: Side selection closed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse'
+
+  /debate/force-assign:
+    post:
+      summary: Force-assign all unassigned participants to sides
+      tags: [debate]
+      responses:
+        '200':
+          description: All participants assigned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse'
+
+  /debate/phase:
+    post:
+      summary: Advance the debate to a specific phase
+      tags: [debate]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdvancePhaseRequest'
+      responses:
+        '200':
+          description: Phase advanced
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdvancePhaseResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /debate/first-side:
+    post:
+      summary: Set which side speaks first in live debate
+      tags: [debate]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetFirstSideRequest'
+      responses:
+        '200':
+          description: First side set
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /debate/round-timer:
+    post:
+      summary: Start a timed round
+      tags: [debate]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StartRoundTimerRequest'
+      responses:
+        '200':
+          description: Round timer started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /debate/end-round:
+    post:
+      summary: End the current debate round early
+      tags: [debate]
+      responses:
+        '200':
+          description: Round ended
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse'
+
+  /debate/end-arguments:
+    post:
+      summary: End arguments phase and trigger AI cleanup
+      description: |
+        Advances to `ai_cleanup` phase and runs Claude AI deduplication/cleanup
+        of submitted arguments in the background. If no arguments exist, advances
+        directly to `prep`.
+      tags: [debate]
+      responses:
+        '200':
+          description: Arguments phase ended; AI cleanup running in background
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse'
+        '409':
+          description: Not in arguments phase
+
+  /debate/ai-result:
+    post:
+      summary: Apply AI cleanup result manually (skip or override)
+      tags: [debate]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AiResultRequest'
+      responses:
+        '200':
+          description: AI result applied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse'
+
+  # ── Leaderboard ──
+
+  /leaderboard/show:
+    post:
+      summary: Show the leaderboard overlay (top 5 reveal)
+      description: Broadcasts top-5 entries sorted by score to all participants.
+      tags: [leaderboard]
+      responses:
+        '200':
+          description: Leaderboard shown
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse'
+
+  /leaderboard/hide:
+    post:
+      summary: Hide the leaderboard overlay
+      tags: [leaderboard]
+      responses:
+        '200':
+          description: Leaderboard hidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse'
+
+  /scores:
+    delete:
+      summary: Reset all participant scores to zero
+      tags: [leaderboard]
+      responses:
+        '200':
+          description: Scores reset
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse'
+
+  # ── Activity ──
+
+  /activity:
+    post:
+      summary: Switch the current activity type
+      tags: [activity]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetActivityRequest'
+      responses:
+        '200':
+          description: Activity updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SetActivityResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  # ── Quiz ──
+
+  /quiz-request:
+    post:
+      summary: Request AI quiz generation
+      description: |
+        Triggers quiz generation via the daemon's orchestrator loop.
+        Provide either `minutes` (use last N minutes of transcript) or
+        `topic` (topic-based generation) — not both or neither.
+      tags: [quiz]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QuizRequestBody'
+      responses:
+        '200':
+          description: Quiz generation requested
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /quiz-preview:
+    delete:
+      summary: Clear the current quiz preview
+      tags: [quiz]
+      responses:
+        '200':
+          description: Quiz preview cleared
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse'
+
+  /quiz-refine:
+    post:
+      summary: Regenerate a specific question or option
+      tags: [quiz]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QuizRefineRequest'
+      responses:
+        '200':
+          description: Refinement requested
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  # ── Misc (host) ──
+
+  /misc/paste-dismiss:
+    post:
+      summary: Dismiss a participant paste entry
+      tags: [misc]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasteDismissRequest'
+      responses:
+        '200':
+          description: Paste dismissed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /misc/feedback:
+    get:
+      summary: Return and clear all pending feedback items
+      tags: [misc]
+      responses:
+        '200':
+          description: Pending feedback items (consumed on read)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FeedbackItemsResponse'
+
+# ── Global (no session_id prefix) ──
+# Note: these live under /api (not /api/{session_id})
+
+x-global-paths:
+  /api/transcription-language:
+    post:
+      summary: Set transcription language
+      description: |
+        Stores a pending language change request for the daemon or macos-addons.
+        Valid values are "ro", "en", or "auto".
+        NOTE: This endpoint is under /api (not /api/{session_id}).
+      tags: [misc]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TranscriptionLanguageRequest'
+      responses:
+        '200':
+          description: Language request stored
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/transcription-language/request:
+    get:
+      summary: Poll for pending transcription language change (daemon/macos-addons use only)
+      description: |
+        Returns and clears the pending language change request.
+        Returns null if no request is pending.
+        NOTE: This endpoint is under /api (not /api/{session_id}).
+      tags: [misc]
+      responses:
+        '200':
+          description: Pending request or null
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TranscriptionLanguageRequestResponse'
+
+components:
+
+  parameters:
+    QuestionID:
+      name: question_id
+      in: path
+      required: true
+      schema:
+        type: string
+
+  responses:
+    BadRequest:
+      description: Bad request (missing or invalid fields)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  schemas:
+
+    OkResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+          example: true
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+
+    # Poll
+
+    CreatePollRequest:
+      type: object
+      required: [question, options]
+      properties:
+        question:
+          type: string
+        options:
+          type: array
+          items:
+            type: string
+          minItems: 2
+          maxItems: 8
+        multi:
+          type: boolean
+          default: false
+        correct_count:
+          type: integer
+          nullable: true
+        source:
+          type: string
+          nullable: true
+        page:
+          type: integer
+          nullable: true
+
+    CreatePollResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        poll:
+          $ref: '#/components/schemas/PollObject'
+
+    ClosePollResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        vote_counts:
+          type: object
+          additionalProperties:
+            type: integer
+
+    RevealCorrectRequest:
+      type: object
+      required: [correct_ids]
+      properties:
+        correct_ids:
+          type: array
+          items:
+            type: string
+
+    StartTimerRequest:
+      type: object
+      properties:
+        seconds:
+          type: integer
+          default: 30
+
+    QuizMdResponse:
+      type: object
+      properties:
+        content:
+          type: string
+
+    # Word Cloud
+
+    SubmitWordRequest:
+      type: object
+      required: [word]
+      properties:
+        word:
+          type: string
+          maxLength: 40
+
+    SetTopicRequest:
+      type: object
+      properties:
+        topic:
+          type: string
+
+    # Q&A
+
+    SubmitQuestionRequest:
+      type: object
+      required: [text]
+      properties:
+        text:
+          type: string
+          maxLength: 280
+
+    EditQuestionTextRequest:
+      type: object
+      required: [text]
+      properties:
+        text:
+          type: string
+          maxLength: 280
+
+    ToggleAnsweredRequest:
+      type: object
+      required: [answered]
+      properties:
+        answered:
+          type: boolean
+
+    # Code Review
+
+    CreateCodeReviewRequest:
+      type: object
+      required: [snippet]
+      properties:
+        snippet:
+          type: string
+          description: Code snippet (max 50 lines)
+        language:
+          type: string
+          nullable: true
+          description: Language override; null means auto-detect via AI
+        smart_paste:
+          type: boolean
+          default: true
+          description: If true, Claude extracts clean code from LLM output
+
+    CodeReviewStatusRequest:
+      type: object
+      properties:
+        open:
+          type: boolean
+          default: true
+          description: false to close the selection phase
+
+    CodeReviewStatusResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        phase:
+          type: string
+          enum: [idle, selecting, reviewing]
+
+    ConfirmLineRequest:
+      type: object
+      required: [line]
+      properties:
+        line:
+          type: integer
+          description: Zero-based line index to confirm as problematic
+
+    ConfirmLineResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        confirmed_line:
+          type: integer
+
+    # Debate
+
+    LaunchDebateRequest:
+      type: object
+      required: [statement]
+      properties:
+        statement:
+          type: string
+
+    AdvancePhaseRequest:
+      type: object
+      required: [phase]
+      properties:
+        phase:
+          type: string
+          enum: [arguments, ai_cleanup, prep, live_debate, ended]
+
+    AdvancePhaseResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        phase:
+          type: string
+
+    SetFirstSideRequest:
+      type: object
+      required: [side]
+      properties:
+        side:
+          type: string
+          enum: [for, against]
+
+    StartRoundTimerRequest:
+      type: object
+      required: [round_index, seconds]
+      properties:
+        round_index:
+          type: integer
+          description: 0-based round index (0–3)
+        seconds:
+          type: integer
+
+    AiResultRequest:
+      type: object
+      properties:
+        merges:
+          type: array
+          items: {}
+          description: Merge operations from AI cleanup
+        cleaned:
+          type: array
+          items: {}
+          description: Cleaned argument list from AI
+        new_arguments:
+          type: array
+          items: {}
+          description: New AI-generated arguments
+
+    # Activity
+
+    SetActivityRequest:
+      type: object
+      required: [activity]
+      properties:
+        activity:
+          type: string
+          enum: [none, poll, wordcloud, qa, codereview, debate]
+
+    SetActivityResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        current_activity:
+          type: string
+
+    # Quiz
+
+    QuizRequestBody:
+      type: object
+      description: Provide exactly one of minutes or topic
+      properties:
+        minutes:
+          type: integer
+          nullable: true
+          description: Read last N minutes of transcript for quiz context
+        topic:
+          type: string
+          nullable: true
+          description: Topic string for topic-based quiz generation
+
+    QuizRefineRequest:
+      type: object
+      required: [target]
+      properties:
+        target:
+          type: string
+          description: "\"question\" or \"opt0\"–\"opt5\" to regenerate a specific option"
+        preview:
+          type: object
+          nullable: true
+          description: Current quiz preview to refine against
+
+    # Misc
+
+    PasteDismissRequest:
+      type: object
+      required: [uuid, paste_id]
+      properties:
+        uuid:
+          type: string
+          description: Participant UUID whose paste to dismiss
+        paste_id:
+          type: integer
+
+    FeedbackItemsResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            type: string
+
+    TranscriptionLanguageRequest:
+      type: object
+      required: [language]
+      properties:
+        language:
+          type: string
+          enum: [ro, en, auto]
+
+    TranscriptionLanguageRequestResponse:
+      type: object
+      properties:
+        request:
+          type: string
+          nullable: true
+          enum: [ro, en, auto, null]
+
+    # Shared objects
+
+    PollObject:
+      type: object
+      nullable: true
+      properties:
+        id:
+          type: string
+        question:
+          type: string
+        multi:
+          type: boolean
+        correct_count:
+          type: integer
+          nullable: true
+        options:
+          type: array
+          items:
+            $ref: '#/components/schemas/PollOption'
+        source:
+          type: string
+          nullable: true
+        page:
+          type: integer
+          nullable: true
+
+    PollOption:
+      type: object
+      properties:
+        id:
+          type: string
+        text:
+          type: string
+
+    SummaryPoint:
+      type: object
+      properties:
+        text:
+          type: string
+        source:
+          type: string
+          enum: [notes, discussion]
+        time:
+          type: string
+
+    # Host full state
+
+    HostState:
+      type: object
+      description: Full session state for host panel
+      properties:
+        type:
+          type: string
+          example: state
+        mode:
+          type: string
+          enum: [workshop, conference]
+        current_activity:
+          type: string
+          enum: [none, poll, wordcloud, qa, codereview, debate]
+        participant_count:
+          type: integer
+        participants:
+          type: array
+          items:
+            $ref: '#/components/schemas/ParticipantEntry'
+        daemon_connected:
+          type: boolean
+        # Poll
+        poll:
+          $ref: '#/components/schemas/PollObject'
+        poll_active:
+          type: boolean
+        vote_counts:
+          type: object
+          additionalProperties:
+            type: integer
+        votes:
+          type: object
+          additionalProperties: {}
+          description: "Map of participant UUID to voted option ID(s)"
+        poll_timer_seconds:
+          type: integer
+          nullable: true
+        poll_timer_started_at:
+          type: string
+          nullable: true
+        poll_correct_ids:
+          type: array
+          items:
+            type: string
+          nullable: true
+        # Word cloud
+        wordcloud_words:
+          type: object
+          additionalProperties:
+            type: integer
+        wordcloud_word_order:
+          type: array
+          items:
+            type: string
+        wordcloud_topic:
+          type: string
+        # Q&A
+        qa_questions:
+          type: array
+          items:
+            $ref: '#/components/schemas/QAQuestionForHost'
+        # Code review
+        codereview:
+          $ref: '#/components/schemas/CodeReviewStateForHost'
+        # Debate
+        debate_statement:
+          type: string
+          nullable: true
+        debate_phase:
+          type: string
+          nullable: true
+        debate_side_counts:
+          type: object
+          properties:
+            for:
+              type: integer
+            against:
+              type: integer
+        debate_sides:
+          type: object
+          additionalProperties:
+            type: string
+          description: Map of participant UUID to "for"/"against"
+        debate_arguments:
+          type: array
+          items:
+            $ref: '#/components/schemas/DebateArgumentForHost'
+        debate_champions:
+          type: object
+          additionalProperties:
+            type: string
+        debate_auto_assigned:
+          type: array
+          items:
+            type: string
+        debate_first_side:
+          type: string
+          nullable: true
+        debate_round_index:
+          type: integer
+          nullable: true
+        debate_round_timer_seconds:
+          type: integer
+          nullable: true
+        debate_round_timer_started_at:
+          type: string
+          nullable: true
+        # Session / slides
+        slides_current:
+          nullable: true
+        session_main:
+          nullable: true
+        session_name:
+          nullable: true
+        session_id:
+          type: string
+          nullable: true
+        # Leaderboard
+        leaderboard_active:
+          type: boolean
+        leaderboard_data:
+          nullable: true
+        # Summary / notes
+        summary_points:
+          type: array
+          items:
+            $ref: '#/components/schemas/SummaryPoint'
+        notes_content:
+          type: string
+          nullable: true
+        # Token usage
+        token_usage:
+          $ref: '#/components/schemas/TokenUsage'
+        # Transcript
+        transcript_line_count:
+          type: integer
+        transcript_total_lines:
+          type: integer
+        transcript_latest_ts:
+          type: string
+          nullable: true
+        # Quiz
+        quiz_preview:
+          nullable: true
+
+    ParticipantEntry:
+      type: object
+      properties:
+        uuid:
+          type: string
+        name:
+          type: string
+        score:
+          type: integer
+        location:
+          type: string
+        avatar:
+          type: string
+        paste_texts:
+          type: array
+          items:
+            type: object
+          description: Present only if participant has active pastes
+
+    QAQuestionForHost:
+      type: object
+      properties:
+        id:
+          type: string
+        text:
+          type: string
+        author:
+          type: string
+        author_uuid:
+          type: string
+        author_avatar:
+          type: string
+        upvote_count:
+          type: integer
+        upvoters:
+          type: array
+          items:
+            type: string
+        answered:
+          type: boolean
+        timestamp:
+          type: string
+
+    CodeReviewStateForHost:
+      type: object
+      properties:
+        snippet:
+          type: string
+          nullable: true
+        language:
+          type: string
+          nullable: true
+        phase:
+          type: string
+          enum: [idle, selecting, reviewing]
+        confirmed_lines:
+          type: array
+          items:
+            type: integer
+        selections:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: integer
+          description: Map of participant UUID to sorted list of selected line indices
+        line_percentages:
+          type: object
+          additionalProperties:
+            type: integer
+          description: Present in "reviewing" phase; maps line index to selection percentage
+        line_counts:
+          type: object
+          additionalProperties:
+            type: integer
+          description: Present in "reviewing" phase; maps line index to raw selection count
+
+    DebateArgumentForHost:
+      type: object
+      properties:
+        id:
+          type: string
+        side:
+          type: string
+          enum: [for, against]
+        text:
+          type: string
+        author_uuid:
+          type: string
+        upvoters:
+          type: array
+          items:
+            type: string
+        ai_generated:
+          type: boolean
+        merged_into:
+          type: string
+          nullable: true
+
+    TokenUsage:
+      type: object
+      properties:
+        input_tokens:
+          type: integer
+        output_tokens:
+          type: integer
+        estimated_cost_usd:
+          type: number
+          format: float

@@ -1,0 +1,935 @@
+openapi: 3.0.3
+info:
+  title: Training Assistant — Participant API
+  description: |
+    REST endpoints for workshop participants. These are proxied through Railway
+    under `/{session_id}/api/participant/...` and forwarded to the daemon.
+    The Railway proxy injects the `X-Participant-ID` header before forwarding.
+  version: "1.0"
+
+servers:
+  - url: https://interact.victorrentea.ro/{session_id}/api/participant
+    description: Production (Railway proxy)
+    variables:
+      session_id:
+        description: Active session identifier
+        default: default
+
+tags:
+  - name: identity
+    description: Participant registration and identity management
+  - name: poll
+    description: Poll voting
+  - name: wordcloud
+    description: Word cloud submissions
+  - name: qa
+    description: Q&A question submission and upvoting
+  - name: codereview
+    description: Code review line selection
+  - name: debate
+    description: Debate side selection, arguments, and upvoting
+  - name: emoji
+    description: Emoji reactions
+  - name: misc
+    description: Paste, feedback, notes, summary, and slides cache
+
+paths:
+
+  # ── Identity ──
+
+  /name:
+    post:
+      summary: Register or restore participant identity
+      description: |
+        First-time registration sets the participant's display name and assigns
+        an avatar. Returning participants (known UUID) get their existing identity
+        back without re-validation.
+      tags: [identity]
+      parameters:
+        - $ref: '#/components/parameters/ParticipantID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetNameRequest'
+      responses:
+        '200':
+          description: Identity registered or restored
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SetNameResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /avatar:
+    post:
+      summary: Re-roll avatar (conference mode only)
+      tags: [identity]
+      parameters:
+        - $ref: '#/components/parameters/ParticipantID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshAvatarRequest'
+      responses:
+        '200':
+          description: New avatar assigned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RefreshAvatarResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: No avatar available
+
+  /location:
+    post:
+      summary: Store participant location or timezone
+      tags: [identity]
+      parameters:
+        - $ref: '#/components/parameters/ParticipantID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetLocationRequest'
+      responses:
+        '200':
+          description: Location stored
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /state:
+    get:
+      summary: Get full personalised session state
+      description: |
+        Returns the complete session state personalised for this participant.
+        Used on page load and after WebSocket reconnect to sync all feature states.
+      tags: [identity]
+      parameters:
+        - $ref: '#/components/parameters/ParticipantID'
+      responses:
+        '200':
+          description: Full session state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ParticipantState'
+
+  # ── Poll ──
+
+  /poll/vote:
+    post:
+      summary: Cast a vote on the active poll
+      description: Vote is final — cannot be changed after submission.
+      tags: [poll]
+      parameters:
+        - $ref: '#/components/parameters/ParticipantID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VoteRequest'
+      responses:
+        '200':
+          description: Vote accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: Vote rejected (already voted, poll closed, or no active poll)
+
+  # ── Word Cloud ──
+
+  /wordcloud/word:
+    post:
+      summary: Submit a word to the word cloud
+      tags: [wordcloud]
+      parameters:
+        - $ref: '#/components/parameters/ParticipantID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubmitWordRequest'
+      responses:
+        '200':
+          description: Word accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: Word cloud not active
+
+  # ── Q&A ──
+
+  /qa/submit:
+    post:
+      summary: Submit a Q&A question
+      tags: [qa]
+      parameters:
+        - $ref: '#/components/parameters/ParticipantID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubmitQuestionRequest'
+      responses:
+        '200':
+          description: Question submitted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /qa/upvote:
+    post:
+      summary: Upvote a Q&A question
+      tags: [qa]
+      parameters:
+        - $ref: '#/components/parameters/ParticipantID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpvoteQuestionRequest'
+      responses:
+        '200':
+          description: Upvote recorded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: Cannot upvote (already upvoted or own question)
+
+  # ── Code Review ──
+
+  /codereview/selection:
+    put:
+      summary: Set selected lines for code review (full replacement)
+      description: Replaces the participant's entire line selection.
+      tags: [codereview]
+      parameters:
+        - $ref: '#/components/parameters/ParticipantID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CodeReviewSelectionRequest'
+      responses:
+        '200':
+          description: Selection recorded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: Code review not active or selection phase is closed
+
+  # ── Debate ──
+
+  /debate/pick-side:
+    post:
+      summary: Pick a debate side (for/against)
+      tags: [debate]
+      parameters:
+        - $ref: '#/components/parameters/ParticipantID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PickSideRequest'
+      responses:
+        '200':
+          description: Side picked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: Debate not active or side cannot be picked
+
+  /debate/argument:
+    post:
+      summary: Submit a debate argument
+      tags: [debate]
+      parameters:
+        - $ref: '#/components/parameters/ParticipantID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubmitArgumentRequest'
+      responses:
+        '200':
+          description: Argument submitted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: Debate not active or argument rejected
+
+  /debate/upvote:
+    post:
+      summary: Upvote a debate argument
+      tags: [debate]
+      parameters:
+        - $ref: '#/components/parameters/ParticipantID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpvoteArgumentRequest'
+      responses:
+        '200':
+          description: Upvote recorded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: Cannot upvote
+
+  /debate/volunteer:
+    post:
+      summary: Volunteer as champion for your debate side
+      description: Awards 2500 points to the volunteering participant.
+      tags: [debate]
+      parameters:
+        - $ref: '#/components/parameters/ParticipantID'
+      responses:
+        '200':
+          description: Volunteered as champion
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: Debate not active or champion already set
+
+  # ── Emoji ──
+
+  /emoji/reaction:
+    post:
+      summary: Send an emoji reaction
+      description: Forwarded to host browser and desktop overlay.
+      tags: [emoji]
+      parameters:
+        - $ref: '#/components/parameters/ParticipantID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmojiReactionRequest'
+      responses:
+        '200':
+          description: Reaction forwarded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  # ── Misc ──
+
+  /misc/paste:
+    post:
+      summary: Paste text visible to the host
+      description: Max 100 KB per paste; max 10 pastes per participant.
+      tags: [misc]
+      parameters:
+        - $ref: '#/components/parameters/ParticipantID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasteTextRequest'
+      responses:
+        '200':
+          description: Paste stored
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: Paste limit reached (max 10)
+
+  /misc/feedback:
+    post:
+      summary: Submit feedback text
+      tags: [misc]
+      parameters:
+        - $ref: '#/components/parameters/ParticipantID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FeedbackRequest'
+      responses:
+        '200':
+          description: Feedback stored
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /misc/notes:
+    get:
+      summary: Get session notes content
+      tags: [misc]
+      responses:
+        '200':
+          description: Notes content
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotesResponse'
+
+  /misc/summary:
+    get:
+      summary: Get summary points and raw markdown
+      tags: [misc]
+      responses:
+        '200':
+          description: Summary data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SummaryResponse'
+
+  /misc/slides-cache-status:
+    get:
+      summary: Get slides cache status
+      tags: [misc]
+      responses:
+        '200':
+          description: Cache status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SlidesCacheStatusResponse'
+
+components:
+
+  parameters:
+    ParticipantID:
+      name: X-Participant-ID
+      in: header
+      required: true
+      description: Participant UUID injected by the Railway proxy
+      schema:
+        type: string
+        format: uuid
+
+  responses:
+    BadRequest:
+      description: Bad request (missing or invalid fields)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  schemas:
+
+    OkResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+          example: true
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+
+    # Identity
+
+    SetNameRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 32
+          description: Desired display name; empty string allowed in conference mode (auto-assigns character name)
+      required: []
+
+    SetNameResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        returning:
+          type: boolean
+          description: True if this is a returning participant (existing UUID)
+        name:
+          type: string
+        avatar:
+          type: string
+          description: Avatar filename or "letter:XX:color" identifier
+
+    RefreshAvatarRequest:
+      type: object
+      properties:
+        rejected:
+          type: array
+          items:
+            type: string
+          description: List of previously rejected avatar identifiers to exclude
+
+    RefreshAvatarResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        avatar:
+          type: string
+
+    SetLocationRequest:
+      type: object
+      required: [location]
+      properties:
+        location:
+          type: string
+          maxLength: 80
+          description: City/country string or IANA timezone name
+
+    # Poll
+
+    VoteRequest:
+      type: object
+      description: Provide either option_id (single-select) or option_ids (multi-select)
+      properties:
+        option_id:
+          type: string
+          description: Option ID for single-select polls
+        option_ids:
+          type: array
+          items:
+            type: string
+          description: Option IDs for multi-select polls
+
+    # Word Cloud
+
+    SubmitWordRequest:
+      type: object
+      required: [word]
+      properties:
+        word:
+          type: string
+          maxLength: 40
+
+    # Q&A
+
+    SubmitQuestionRequest:
+      type: object
+      required: [text]
+      properties:
+        text:
+          type: string
+          maxLength: 280
+
+    UpvoteQuestionRequest:
+      type: object
+      required: [question_id]
+      properties:
+        question_id:
+          type: string
+
+    # Code Review
+
+    CodeReviewSelectionRequest:
+      type: object
+      required: [lines]
+      properties:
+        lines:
+          type: array
+          items:
+            type: integer
+          description: Zero-based line indices the participant has selected (full replacement)
+
+    # Debate
+
+    PickSideRequest:
+      type: object
+      required: [side]
+      properties:
+        side:
+          type: string
+          enum: [for, against]
+
+    SubmitArgumentRequest:
+      type: object
+      required: [text]
+      properties:
+        text:
+          type: string
+
+    UpvoteArgumentRequest:
+      type: object
+      required: [argument_id]
+      properties:
+        argument_id:
+          type: string
+
+    # Emoji
+
+    EmojiReactionRequest:
+      type: object
+      required: [emoji]
+      properties:
+        emoji:
+          type: string
+          maxLength: 4
+
+    # Misc
+
+    PasteTextRequest:
+      type: object
+      required: [text]
+      properties:
+        text:
+          type: string
+          maxLength: 102400
+
+    FeedbackRequest:
+      type: object
+      required: [text]
+      properties:
+        text:
+          type: string
+          maxLength: 2000
+
+    NotesResponse:
+      type: object
+      properties:
+        notes_content:
+          type: string
+          nullable: true
+
+    SummaryResponse:
+      type: object
+      properties:
+        points:
+          type: array
+          items:
+            $ref: '#/components/schemas/SummaryPoint'
+        raw_markdown:
+          type: string
+          nullable: true
+        updated_at:
+          type: string
+          nullable: true
+
+    SummaryPoint:
+      type: object
+      properties:
+        text:
+          type: string
+        source:
+          type: string
+          enum: [notes, discussion]
+        time:
+          type: string
+          description: "Formatted time string e.g. HH:MM"
+
+    SlidesCacheStatusResponse:
+      type: object
+      properties:
+        slides_cache_status:
+          type: string
+          nullable: true
+
+    # Participant full state
+
+    ParticipantState:
+      type: object
+      description: Full personalised session state returned on page load or WS reconnect
+      properties:
+        type:
+          type: string
+          example: state
+        mode:
+          type: string
+          enum: [workshop, conference]
+        my_score:
+          type: integer
+        my_name:
+          type: string
+        my_avatar:
+          type: string
+        current_activity:
+          type: string
+          enum: [none, poll, wordcloud, qa, codereview, debate]
+        participant_count:
+          type: integer
+        host_connected:
+          type: boolean
+        daemon_connected:
+          type: boolean
+        # Poll
+        poll:
+          $ref: '#/components/schemas/PollObject'
+        poll_active:
+          type: boolean
+        vote_counts:
+          type: object
+          additionalProperties:
+            type: integer
+        poll_timer_seconds:
+          type: integer
+          nullable: true
+        poll_timer_started_at:
+          type: string
+          nullable: true
+        poll_correct_ids:
+          type: array
+          items:
+            type: string
+          nullable: true
+        my_vote:
+          type: string
+          nullable: true
+        my_voted_ids:
+          type: array
+          items:
+            type: string
+          nullable: true
+        # Word cloud
+        wordcloud_words:
+          type: object
+          additionalProperties:
+            type: integer
+        wordcloud_word_order:
+          type: array
+          items:
+            type: string
+        wordcloud_topic:
+          type: string
+        # Q&A
+        qa_questions:
+          type: array
+          items:
+            $ref: '#/components/schemas/QAQuestionForParticipant'
+        # Code review
+        codereview:
+          $ref: '#/components/schemas/CodeReviewStateForParticipant'
+        # Debate
+        debate_statement:
+          type: string
+          nullable: true
+        debate_phase:
+          type: string
+          nullable: true
+        debate_my_side:
+          type: string
+          nullable: true
+          enum: [for, against, null]
+        debate_my_is_champion:
+          type: boolean
+        debate_side_counts:
+          type: object
+          properties:
+            for:
+              type: integer
+            against:
+              type: integer
+        debate_arguments:
+          type: array
+          items:
+            $ref: '#/components/schemas/DebateArgumentForParticipant'
+        debate_champions:
+          type: object
+          additionalProperties:
+            type: string
+        debate_auto_assigned:
+          type: array
+          items:
+            type: string
+        debate_first_side:
+          type: string
+          nullable: true
+        debate_round_index:
+          type: integer
+          nullable: true
+        debate_round_timer_seconds:
+          type: integer
+          nullable: true
+        debate_round_timer_started_at:
+          type: string
+          nullable: true
+        # Slides / session
+        slides_current:
+          nullable: true
+        session_main:
+          nullable: true
+        session_name:
+          nullable: true
+        # Leaderboard
+        leaderboard_active:
+          type: boolean
+        leaderboard_data:
+          nullable: true
+        # Summary / notes
+        summary_points:
+          type: array
+          items:
+            $ref: '#/components/schemas/SummaryPoint'
+        notes_content:
+          type: string
+          nullable: true
+
+    PollObject:
+      type: object
+      nullable: true
+      properties:
+        id:
+          type: string
+        question:
+          type: string
+        multi:
+          type: boolean
+        correct_count:
+          type: integer
+          nullable: true
+        options:
+          type: array
+          items:
+            $ref: '#/components/schemas/PollOption'
+        source:
+          type: string
+          nullable: true
+        page:
+          type: integer
+          nullable: true
+
+    PollOption:
+      type: object
+      properties:
+        id:
+          type: string
+        text:
+          type: string
+
+    QAQuestionForParticipant:
+      type: object
+      properties:
+        id:
+          type: string
+        text:
+          type: string
+        author:
+          type: string
+        author_avatar:
+          type: string
+        upvote_count:
+          type: integer
+        answered:
+          type: boolean
+        timestamp:
+          type: string
+        is_own:
+          type: boolean
+        has_upvoted:
+          type: boolean
+
+    CodeReviewStateForParticipant:
+      type: object
+      properties:
+        snippet:
+          type: string
+          nullable: true
+        language:
+          type: string
+          nullable: true
+        phase:
+          type: string
+          enum: [idle, selecting, reviewing]
+        confirmed_lines:
+          type: array
+          items:
+            type: integer
+        my_selections:
+          type: array
+          items:
+            type: integer
+        line_percentages:
+          type: object
+          additionalProperties:
+            type: integer
+          description: Present only in "reviewing" phase; maps line index to selection percentage
+
+    DebateArgumentForParticipant:
+      type: object
+      properties:
+        id:
+          type: string
+        side:
+          type: string
+          enum: [for, against]
+        text:
+          type: string
+        author_uuid:
+          type: string
+        upvoters:
+          type: array
+          items:
+            type: string
+        ai_generated:
+          type: boolean
+        merged_into:
+          type: string
+          nullable: true
+        is_own:
+          type: boolean
+        has_upvoted:
+          type: boolean
