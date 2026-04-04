@@ -344,6 +344,28 @@ def run() -> None:
     from daemon.qa.router import set_ws_client as set_qa_ws
     set_qa_ws(ws_client)
 
+    from daemon.poll.router import set_ws_client as set_poll_router_ws
+    from daemon.leaderboard.router import set_ws_client as set_lb_ws
+    from daemon.scores import scores as daemon_scores
+    set_poll_router_ws(ws_client)
+    set_lb_ws(ws_client)
+
+    def _handle_codereview_score_award(data):
+        pids = data.get("participant_ids", [])
+        points = data.get("points", 0)
+        for pid in pids:
+            daemon_scores.add_score(pid, points)
+        payload = {"type": "scores_updated", "scores": daemon_scores.snapshot()}
+        ws_client.send({"type": "broadcast", "event": payload})
+
+    def _handle_scores_reset(data):
+        daemon_scores.reset()
+        payload = {"type": "scores_updated", "scores": daemon_scores.snapshot()}
+        ws_client.send({"type": "broadcast", "event": payload})
+
+    ws_client.register_handler("codereview_score_award", _handle_codereview_score_award)
+    ws_client.register_handler("scores_reset", _handle_scores_reset)
+
     # State push handler — daemon receives current state from Railway on connect
     from daemon.participant.state import participant_state
     from daemon.wordcloud.state import wordcloud_state
