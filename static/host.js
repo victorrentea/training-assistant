@@ -3573,9 +3573,11 @@ function copyAndDismissPaste(el) {
       setTimeout(() => el.remove(), 300);
     });
   }
-  if (ws) {
-    sendWS('paste_dismiss', { uuid, paste_id: pasteId });
-  }
+  fetch(API('/misc/paste-dismiss'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ uuid, paste_id: pasteId }),
+  }).catch(err => console.error('Paste dismiss failed:', err));
 }
 
 function downloadUploadedFile(el) {

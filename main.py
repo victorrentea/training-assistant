@@ -25,11 +25,9 @@ from features.ws import router as ws
 from features.ws.router import session_router as ws_session_router
 from features.qa import router as qa
 from features.wordcloud import router as wordcloud
-from features.codereview import router as codereview
 from features.debate import router as debate
 from features.quiz import router as quiz
 from features.summary import router as summary
-from features.activity import router as activity
 from features.pages.router import landing_router, host_router, participant_router
 from features.session import router as session
 from features.session.router import session_router as session_session_router
@@ -46,7 +44,6 @@ from features.ws.proxy_bridge import participant_proxy_router
 import core.state_builder  # noqa: registers core state builder
 import features.qa.state_builder  # noqa
 import features.wordcloud.state_builder  # noqa
-import features.codereview.state_builder  # noqa
 import features.debate.state_builder  # noqa
 import features.slides.state_builder  # noqa
 
@@ -170,10 +167,8 @@ session_host = APIRouter(
 )
 session_host.include_router(qa.router)
 session_host.include_router(wordcloud.router)
-session_host.include_router(codereview.router)
 session_host.include_router(debate.router)
 session_host.include_router(quiz.router)
-session_host.include_router(activity.router)
 session_host.include_router(summary.router)
 session_host.include_router(slides.router)
 session_host.include_router(snapshot.router)
