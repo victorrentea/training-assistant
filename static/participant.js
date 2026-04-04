@@ -220,6 +220,7 @@ function closeEmojiPopup(ev) {
   let currentMode = 'workshop';
   let _notifBtnBound = false;      // prevent re-binding on reconnect
   let _displayedScore = 0;
+  let myScoreBefore = 0;
   let _scoreRollTimer = null;
   let summaryPoints = [];
   let summaryUpdatedAt = null;
@@ -2811,23 +2812,11 @@ ${html}
           showParticipantLeaderboard(msg.leaderboard_data);
         }
         break;
-      case 'vote_update':
-        renderOptions(msg.vote_counts, msg.total_votes);
-        break;
       case 'participant_count':
         updateParticipantCount(msg.count);
         updateHostDot(msg.host_connected);
         break;
       case 'scores':
-        break;
-      case 'result':
-        pollResult = { correct_ids: new Set(msg.correct_ids), voted_ids: new Set(msg.voted_ids) };
-        if (msg.score !== undefined) {
-          const gained = msg.score - _displayedScore;
-          updateScore(msg.score);
-          if (gained > 0) launchConfetti(gained);
-        }
-        applyResultColors();
         break;
       case 'timer':
         activeTimer = { seconds: msg.seconds, startedAt: new Date(msg.started_at).getTime() };
@@ -2859,9 +2848,20 @@ ${html}
         _slidesCacheStatus = msg.slides_cache_status || {};
         if (document.getElementById('slides-list')) _renderSlidesList(slidesSelectedId || null);
         break;
-      case 'leaderboard':
-        showParticipantLeaderboard(msg);
+      case 'leaderboard_revealed': {
+        const lbEntries = msg.entries || [];
+        const myLbEntry = lbEntries.find(e => e.uuid === myUUID);
+        const myLbRank = myLbEntry ? lbEntries.indexOf(myLbEntry) + 1 : null;
+        // Build data object compatible with showParticipantLeaderboard
+        showParticipantLeaderboard({
+          entries: lbEntries,
+          total_participants: msg.total_participants,
+          your_rank: myLbRank,
+          your_score: _displayedScore,
+          your_name: myName,
+        });
         break;
+      }
       case 'leaderboard_hide':
         hideParticipantLeaderboard();
         break;
@@ -2889,6 +2889,48 @@ ${html}
         renderQAScreen(myQuestions);
         break;
       }
+      case 'poll_opened':
+        myScoreBefore = _displayedScore; // save for delta in poll_correct_revealed
+        currentPoll = msg.poll;
+        pollActive = true;
+        myVote = currentPoll.multi ? new Set() : null;
+        pollResult = null;
+        renderContent({});
+        break;
+      case 'poll_closed':
+        pollActive = false;
+        renderContent(msg.vote_counts || {});
+        break;
+      case 'poll_correct_revealed': {
+        const myVotedIds = msg.votes[myUUID] || [];
+        const myNewScore = (msg.scores && msg.scores[myUUID]) || 0;
+        pollResult = {
+          correct_ids: new Set(msg.correct_ids || []),
+          voted_ids: new Set(Array.isArray(myVotedIds) ? myVotedIds : [myVotedIds]),
+        };
+        const gained = myNewScore - (myScoreBefore || 0);
+        updateScore(myNewScore);
+        window._myScore = myNewScore;
+        if (gained > 0) launchConfetti(gained);
+        applyResultColors();
+        break;
+      }
+      case 'poll_cleared':
+        currentPoll = null;
+        pollActive = false;
+        pollResult = null;
+        renderContent({});
+        break;
+      case 'poll_timer_started':
+        activeTimer = { seconds: msg.seconds, startedAt: new Date(msg.started_at).getTime() };
+        _startParticipantCountdown();
+        break;
+      case 'scores_updated':
+        if (msg.scores && msg.scores[myUUID] !== undefined) {
+          updateScore(msg.scores[myUUID]);
+          window._myScore = msg.scores[myUUID];
+        }
+        break;
       case 'name_rejected': {
         const editInput = document.getElementById('name-edit-input');
         if (editInput) {
@@ -3935,11 +3977,11 @@ ${html}
         if (limit && myVote.size >= limit) return; // cap at correct_count
         myVote.add(optionId);
       }
-      sendWS('multi_vote', { option_ids: [...myVote] });
+      participantApi('poll/vote', { option_ids: [...myVote] });
     } else {
       if (myVote === optionId) return;
       myVote = optionId;
-      sendWS('vote', { option_id: optionId });
+      participantApi('poll/vote', { option_id: optionId });
     }
     saveVote();
     updateSelectionUI();
