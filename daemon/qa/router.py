@@ -7,6 +7,7 @@ from fastapi.responses import JSONResponse
 from daemon.host_ws import send_to_host
 from daemon.participant.state import participant_state
 from daemon.qa.state import qa_state
+from daemon.scores import scores
 
 logger = logging.getLogger(__name__)
 
@@ -48,12 +49,14 @@ async def submit_question(request: Request):
     qa_state.submit(pid, text)
     questions = _build_questions()
 
+    scores.add_score(pid, 100)
     request.state.write_back_events = [
         {"type": "broadcast", "event": {"type": "qa_updated", "questions": questions}},
-        {"type": "score_award", "participant_id": pid, "points": 100},
+        {"type": "broadcast", "event": {"type": "scores_updated", "scores": scores.snapshot()}},
     ]
 
     await send_to_host({"type": "qa_updated", "questions": questions})
+    await send_to_host({"type": "scores_updated", "scores": scores.snapshot()})
 
     return JSONResponse({"ok": True})
 
@@ -76,13 +79,15 @@ async def upvote_question(request: Request):
 
     questions = _build_questions()
 
+    scores.add_score(author_pid, 50)
+    scores.add_score(pid, 25)
     request.state.write_back_events = [
         {"type": "broadcast", "event": {"type": "qa_updated", "questions": questions}},
-        {"type": "score_award", "participant_id": author_pid, "points": 50},
-        {"type": "score_award", "participant_id": pid, "points": 25},
+        {"type": "broadcast", "event": {"type": "scores_updated", "scores": scores.snapshot()}},
     ]
 
     await send_to_host({"type": "qa_updated", "questions": questions})
+    await send_to_host({"type": "scores_updated", "scores": scores.snapshot()})
 
     return JSONResponse({"ok": True})
 

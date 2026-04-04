@@ -5,6 +5,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 
 from daemon.participant.state import participant_state
+from daemon.scores import scores
 from daemon.wordcloud.state import wordcloud_state
 
 logger = logging.getLogger(__name__)
@@ -42,11 +43,10 @@ async def submit_word(request: Request):
 
     snapshot = wordcloud_state.add_word(word)
 
-    # Write-back events: broadcast + state sync + scoring
+    scores.add_score(pid, 200)
     request.state.write_back_events = [
         {"type": "broadcast", "event": {"type": "wordcloud_updated", **snapshot}},
-        {"type": "wordcloud_state_sync", **snapshot},
-        {"type": "score_award", "participant_id": pid, "points": 200},
+        {"type": "broadcast", "event": {"type": "scores_updated", "scores": scores.snapshot()}},
     ]
 
     return JSONResponse({"ok": True})
@@ -91,14 +91,10 @@ async def clear_wordcloud(request: Request):
 
 
 def _send_wordcloud_events(snapshot: dict):
-    """Send broadcast + state sync directly via ws_client (host-direct path)."""
+    """Send broadcast directly via ws_client (host-direct path)."""
     if _ws_client is None:
         return
     _ws_client.send({
         "type": "broadcast",
         "event": {"type": "wordcloud_updated", **snapshot},
-    })
-    _ws_client.send({
-        "type": "wordcloud_state_sync",
-        **snapshot,
     })

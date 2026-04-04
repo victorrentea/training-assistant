@@ -83,9 +83,11 @@ class TestParticipantSubmit:
         participant_client.post("/api/participant/qa/submit",
                                 json={"text": "Question?"},
                                 headers={"X-Participant-ID": "uuid1"})
-        mock_host_ws.assert_called_once()
-        msg = mock_host_ws.call_args[0][0]
-        assert msg["type"] == "qa_updated"
+        assert mock_host_ws.call_count == 2
+        first_msg = mock_host_ws.call_args_list[0][0][0]
+        assert first_msg["type"] == "qa_updated"
+        second_msg = mock_host_ws.call_args_list[1][0][0]
+        assert second_msg["type"] == "scores_updated"
 
 
 class TestParticipantUpvote:
