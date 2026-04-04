@@ -619,12 +619,15 @@ class TestServerHelpers:
     def _setup_ws_client(self):
         """Set up a mock ws_client for all tests in this class."""
         import daemon.quiz.poll_api as poll_api
+        from daemon.poll.state import poll_state
         self.mock_ws = MagicMock()
         self.mock_ws.connected = True
         self.mock_ws.send = MagicMock(return_value=True)
         poll_api._ws_client = self.mock_ws
+        poll_state.clear()
         yield
         poll_api._ws_client = None
+        poll_state.clear()
 
     def test_post_poll(self, tmp_path):
         cfg = _make_config(tmp_path)
@@ -632,30 +635,35 @@ class TestServerHelpers:
         post_poll(quiz, cfg)
         self.mock_ws.send.assert_called_once()
         payload = self.mock_ws.send.call_args[0][0]
-        assert payload["type"] == "poll_create"
-        assert payload["question"] == "Q?"
-        assert payload["multi"] is False
+        assert payload["type"] == "broadcast"
+        assert payload["event"]["type"] == "poll_created"
+        assert payload["event"]["poll"]["question"] == "Q?"
+        assert payload["event"]["poll"]["multi"] is False
 
     def test_post_poll_multi(self, tmp_path):
         cfg = _make_config(tmp_path)
         quiz = {"question": "Q?", "options": ["A", "B", "C"], "correct_indices": [0, 2]}
         post_poll(quiz, cfg)
         payload = self.mock_ws.send.call_args[0][0]
-        assert payload["multi"] is True
+        assert payload["event"]["poll"]["multi"] is True
 
     def test_post_poll_with_source(self, tmp_path):
         cfg = _make_config(tmp_path)
         quiz = {"question": "Q?", "options": ["A", "B"], "correct_indices": [0], "source": "Book", "page": "42"}
         post_poll(quiz, cfg)
         payload = self.mock_ws.send.call_args[0][0]
-        assert "Source: Book" in payload["question"]
+        assert "Source: Book" in payload["event"]["poll"]["question"]
 
     def test_open_poll(self, tmp_path):
+        from daemon.poll.state import poll_state
         cfg = _make_config(tmp_path)
+        # Create a poll first so open_poll has something to open
+        poll_state.create_poll(question="Q?", options=[{"id": "a", "text": "A"}])
         open_poll(cfg)
         self.mock_ws.send.assert_called_once()
         payload = self.mock_ws.send.call_args[0][0]
-        assert payload["type"] == "poll_open"
+        assert payload["type"] == "broadcast"
+        assert payload["event"]["type"] == "poll_opened"
 
     def test_post_status(self, tmp_path):
         cfg = _make_config(tmp_path)

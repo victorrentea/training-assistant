@@ -1,6 +1,6 @@
 """
 Helpers for posting quiz state to the workshop server via WebSocket.
-Falls back to HTTP for read-only fetches (quiz history, summary points).
+Falls back to HTTP for read-only fetches (summary points).
 """
 
 from typing import Optional
@@ -8,6 +8,8 @@ from typing import Optional
 from daemon import log
 from daemon.config import Config
 from daemon.http import _get_json
+from daemon.poll.state import poll_state
+from daemon.scores import scores
 from daemon.session_state import get_current_session_id
 
 # Module-level ws_client reference, set by daemon/__main__.py at startup
@@ -21,26 +23,37 @@ def set_ws_client(client) -> None:
 
 
 def post_poll(quiz: dict, config: Config) -> None:
-    payload = {
-        "type": "poll_create",
-        "question": quiz["question"],
-        "options": quiz["options"],
-        "multi": len(quiz.get("correct_indices", [])) > 1,
-    }
+    """Create poll from quiz data."""
+    question = quiz["question"]
     if quiz.get("source"):
-        payload["question"] += f"\n\n(Source: {quiz['source']}, p. {quiz.get('page', 'N/A')})"
+        question += f"\n\n(Source: {quiz['source']}, p. {quiz.get('page', 'N/A')})"
 
+    # Convert string options to dict format expected by poll_state
+    raw_options = quiz["options"]
+    options = [
+        {"id": f"opt{i}", "text": str(opt).strip()}
+        for i, opt in enumerate(raw_options)
+        if str(opt).strip()
+    ]
+
+    poll = poll_state.create_poll(
+        question=question,
+        options=options,
+        multi=len(quiz.get("correct_indices", [])) > 1,
+    )
     if _ws_client and _ws_client.connected:
-        _ws_client.send(payload)
+        _ws_client.send({"type": "broadcast", "event": {"type": "poll_created", "poll": poll}})
     else:
-        log.error("daemon", "Cannot post poll: WS not connected")
+        log.error("daemon", "Cannot broadcast poll: WS not connected")
 
 
 def open_poll(config: Config) -> None:
+    """Open voting on current poll."""
+    poll_state.open_poll(scores.snapshot_base)
     if _ws_client and _ws_client.connected:
-        _ws_client.send({"type": "poll_open"})
+        _ws_client.send({"type": "broadcast", "event": {"type": "poll_opened", "poll": poll_state.poll}})
     else:
-        log.error("daemon", "Cannot open poll: WS not connected")
+        log.error("daemon", "Cannot broadcast poll open: WS not connected")
 
 
 def post_status(status: str, message: str, config: Config,
@@ -63,14 +76,8 @@ def post_status(status: str, message: str, config: Config,
 
 
 def fetch_quiz_history(config: Config) -> str:
-    """Fetch previously asked questions from the server as markdown. Returns '' on failure."""
-    try:
-        sid = get_current_session_id()
-        url = f"{config.server_url}/api/{sid}/quiz-md" if sid else f"{config.server_url}/api/quiz-md"
-        data = _get_json(url)
-        return data.get("content", "").strip()
-    except RuntimeError:
-        return ""
+    """Return accumulated closed polls as markdown."""
+    return poll_state.quiz_md_content.strip()
 
 
 def fetch_summary_points(config: Config) -> list[dict]:
