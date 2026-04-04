@@ -33,10 +33,9 @@ async def cast_vote(request: Request):
         return JSONResponse({"error": "Missing participant ID"}, status_code=400)
 
     body = await request.json()
-    option_id = body.get("option_id")
     option_ids = body.get("option_ids")
 
-    accepted = poll_state.cast_vote(pid, option_id=option_id, option_ids=option_ids)
+    accepted = poll_state.cast_vote(pid, option_ids=option_ids)
     if not accepted:
         return JSONResponse({"error": "Vote rejected"}, status_code=409)
 
@@ -46,7 +45,7 @@ async def cast_vote(request: Request):
 # ── Host router (called directly on daemon localhost) ──
 # Host JS calls API('/poll') which expands to /api/{session_id}/poll.
 
-host_router = APIRouter(prefix="/api/{session_id}/poll", tags=["poll"])
+host_router = APIRouter(prefix="/api/{session_id}/host/poll", tags=["poll"])
 
 
 @host_router.post("")
@@ -57,15 +56,13 @@ async def create_poll(request: Request):
     options = body.get("options", [])
     multi = body.get("multi", False)
     correct_count = body.get("correct_count")
-    source = body.get("source")
-    page = body.get("page")
 
     # Activity gate
     activity = participant_state.current_activity
     if activity and activity not in ("none", "poll"):
         return JSONResponse({"error": f"Activity {activity} is active"}, status_code=409)
 
-    poll = poll_state.create_poll(question, options, multi, correct_count, source, page)
+    poll = poll_state.create_poll(question, options, multi, correct_count)
     participant_state.current_activity = "poll"
 
     # Only notify host — participants see nothing until opened

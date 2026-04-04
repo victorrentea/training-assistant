@@ -40,7 +40,7 @@ def test_create_poll():
 def test_create_poll_clears_previous_state():
     ps = PollState()
     _make_poll(ps)
-    ps.cast_vote("pid1", option_id="a")
+    ps.cast_vote("pid1", option_ids=["a"])
     # Create a new poll — should clear votes
     result = ps.create_poll("New?", [{"id": "x", "text": "X"}])
     assert ps.votes == {}
@@ -64,7 +64,7 @@ def test_open_poll():
     options = [{"id": "a", "text": "A"}]
     ps.create_poll("Q?", options)
     # Pre-seed some votes to verify they're cleared
-    ps.votes["old"] = "a"
+    ps.votes["old"] = {"option_ids": ["a"], "voted_at": "2024-01-01T00:00:00+00:00"}
     snapshot_called = []
     ps.open_poll(lambda: snapshot_called.append(True))
     assert ps.poll_active is True
@@ -78,8 +78,8 @@ def test_open_poll():
 def test_close_poll():
     ps = PollState()
     _make_poll(ps)
-    ps.cast_vote("pid1", option_id="a")
-    ps.cast_vote("pid2", option_id="b")
+    ps.cast_vote("pid1", option_ids=["a"])
+    ps.cast_vote("pid2", option_ids=["b"])
     result = ps.close_poll()
     assert ps.poll_active is False
     assert result["total_votes"] == 2
@@ -91,20 +91,20 @@ def test_close_poll():
 def test_cast_vote_single_select():
     ps = PollState()
     _make_poll(ps)
-    result = ps.cast_vote("pid1", option_id="a")
+    result = ps.cast_vote("pid1", option_ids=["a"])
     assert result is True
-    assert ps.votes["pid1"] == "a"
-    assert "pid1" in ps.vote_times
+    assert ps.votes["pid1"]["option_ids"] == ["a"]
+    assert "voted_at" in ps.votes["pid1"]
 
 
 def test_cast_vote_single_select_final():
     """Second vote from same pid must be rejected."""
     ps = PollState()
     _make_poll(ps)
-    ps.cast_vote("pid1", option_id="a")
-    result = ps.cast_vote("pid1", option_id="b")
+    ps.cast_vote("pid1", option_ids=["a"])
+    result = ps.cast_vote("pid1", option_ids=["b"])
     assert result is False
-    assert ps.votes["pid1"] == "a"  # original vote unchanged
+    assert ps.votes["pid1"]["option_ids"] == ["a"]  # original vote unchanged
 
 
 # ── cast_vote multi-select ───────────────────────────────────────────────────
@@ -114,17 +114,17 @@ def test_cast_vote_multi_select():
     _make_poll(ps, multi=True, correct_count=2)
     result = ps.cast_vote("pid1", option_ids=["a", "b"])
     assert result is True
-    assert ps.votes["pid1"] == ["a", "b"]
+    assert ps.votes["pid1"]["option_ids"] == ["a", "b"]
 
 
 def test_cast_vote_multi_select_toggle():
-    """Multi-select allows overwriting the selection set."""
+    """Multi-select no longer allows overwriting — votes are final."""
     ps = PollState()
     _make_poll(ps, multi=True, correct_count=2)
     ps.cast_vote("pid1", option_ids=["a", "b"])
     result = ps.cast_vote("pid1", option_ids=["b", "c"])
-    assert result is True
-    assert ps.votes["pid1"] == ["b", "c"]
+    assert result is False  # votes are final; second attempt rejected
+    assert ps.votes["pid1"]["option_ids"] == ["a", "b"]  # original unchanged
 
 
 def test_cast_vote_multi_select_over_limit():
@@ -141,20 +141,20 @@ def test_cast_vote_poll_closed():
     ps = PollState()
     _make_poll(ps)
     ps.close_poll()
-    result = ps.cast_vote("pid1", option_id="a")
+    result = ps.cast_vote("pid1", option_ids=["a"])
     assert result is False
 
 
 def test_cast_vote_no_poll():
     ps = PollState()
-    result = ps.cast_vote("pid1", option_id="a")
+    result = ps.cast_vote("pid1", option_ids=["a"])
     assert result is False
 
 
 def test_cast_vote_invalid_option():
     ps = PollState()
     _make_poll(ps)
-    result = ps.cast_vote("pid1", option_id="z")
+    result = ps.cast_vote("pid1", option_ids=["z"])
     assert result is False
 
 
@@ -171,8 +171,10 @@ def test_reveal_correct_speed_scoring():
     slow_vote_time = base_time + timedelta(seconds=8)
 
     ps.poll_opened_at = opened_at
-    ps.votes = {"fast": "a", "slow": "a"}
-    ps.vote_times = {"fast": fast_vote_time, "slow": slow_vote_time}
+    ps.votes = {
+        "fast": {"option_ids": ["a"], "voted_at": fast_vote_time.isoformat()},
+        "slow": {"option_ids": ["a"], "voted_at": slow_vote_time.isoformat()},
+    }
 
     scores = MockScores()
     result = ps.reveal_correct(["a"], scores)
@@ -196,8 +198,8 @@ def test_reveal_correct_multi_proportional():
     base_time = datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
     ps.poll_opened_at = base_time
     # Selects a, b (correct), d (wrong) — misses c
-    ps.votes = {"pid1": ["a", "b", "d"]}
-    ps.vote_times = {"pid1": base_time + timedelta(seconds=1)}
+    vote_time = (base_time + timedelta(seconds=1)).isoformat()
+    ps.votes = {"pid1": {"option_ids": ["a", "b", "d"], "voted_at": vote_time}}
 
     scores = MockScores()
     ps.reveal_correct(["a", "b", "c"], scores)
@@ -237,13 +239,12 @@ def test_start_timer():
 def test_clear():
     ps = PollState()
     _make_poll(ps)
-    ps.cast_vote("pid1", option_id="a")
+    ps.cast_vote("pid1", option_ids=["a"])
     ps.start_timer(20)
     ps.clear()
     assert ps.poll is None
     assert ps.poll_active is False
     assert ps.votes == {}
-    assert ps.vote_times == {}
     assert ps.poll_opened_at is None
     assert ps.poll_correct_ids is None
     assert ps.poll_timer_seconds is None
@@ -255,7 +256,7 @@ def test_clear():
 def test_vote_counts_dirty_flag():
     ps = PollState()
     _make_poll(ps)
-    ps.cast_vote("pid1", option_id="a")
+    ps.cast_vote("pid1", option_ids=["a"])
     # First call computes and caches
     counts1 = ps.vote_counts()
     assert counts1 == {"a": 1}
@@ -266,7 +267,7 @@ def test_vote_counts_dirty_flag():
     assert counts2 is counts1  # same object from cache
 
     # New vote invalidates cache
-    ps.cast_vote("pid2", option_id="b")
+    ps.cast_vote("pid2", option_ids=["b"])
     assert ps._vote_counts_dirty is True
     counts3 = ps.vote_counts()
     assert counts3 == {"a": 1, "b": 1}
@@ -278,7 +279,7 @@ def test_vote_counts_dirty_flag():
 def test_append_to_quiz_md():
     ps = PollState()
     _make_poll(ps)
-    ps.cast_vote("pid1", option_id="a")
+    ps.cast_vote("pid1", option_ids=["a"])
     ps.reveal_correct(["a"], MockScores())
 
     md = ps.quiz_md_content

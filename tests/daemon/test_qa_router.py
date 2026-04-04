@@ -122,7 +122,7 @@ class TestParticipantUpvote:
 
 class TestHostEndpoints:
     def test_host_submit(self, host_client, fresh_qa_state, mock_ws_client):
-        resp = host_client.post("/api/test-session/qa/submit",
+        resp = host_client.post("/api/test-session/host/qa/submit",
                                 json={"text": "Host question"})
         assert resp.status_code == 200
         assert len(fresh_qa_state.questions) == 1
@@ -131,20 +131,20 @@ class TestHostEndpoints:
 
     def test_edit_question(self, host_client, fresh_qa_state, mock_ws_client):
         qid = fresh_qa_state.submit("uuid1", "Original")
-        resp = host_client.put(f"/api/test-session/qa/question/{qid}/text",
+        resp = host_client.put(f"/api/test-session/host/qa/question/{qid}/text",
                                json={"text": "Edited"})
         assert resp.status_code == 200
         assert fresh_qa_state.questions[qid]["text"] == "Edited"
 
     def test_delete_question(self, host_client, fresh_qa_state, mock_ws_client):
         qid = fresh_qa_state.submit("uuid1", "To delete")
-        resp = host_client.delete(f"/api/test-session/qa/question/{qid}")
+        resp = host_client.delete(f"/api/test-session/host/qa/question/{qid}")
         assert resp.status_code == 200
         assert qid not in fresh_qa_state.questions
 
     def test_toggle_answered(self, host_client, fresh_qa_state, mock_ws_client):
         qid = fresh_qa_state.submit("uuid1", "Question")
-        resp = host_client.put(f"/api/test-session/qa/question/{qid}/answered",
+        resp = host_client.put(f"/api/test-session/host/qa/question/{qid}/answered",
                                json={"answered": True})
         assert resp.status_code == 200
         assert fresh_qa_state.questions[qid]["answered"] is True
@@ -152,17 +152,17 @@ class TestHostEndpoints:
     def test_clear(self, host_client, fresh_qa_state, mock_ws_client):
         fresh_qa_state.submit("uuid1", "Q1")
         fresh_qa_state.submit("uuid2", "Q2")
-        resp = host_client.post("/api/test-session/qa/clear", json={})
+        resp = host_client.post("/api/test-session/host/qa/clear", json={})
         assert resp.status_code == 200
         assert fresh_qa_state.questions == {}
 
     def test_edit_nonexistent_404(self, host_client):
-        resp = host_client.put("/api/test-session/qa/question/bad-id/text",
+        resp = host_client.put("/api/test-session/host/qa/question/bad-id/text",
                                json={"text": "New"})
         assert resp.status_code == 404
 
     def test_host_submit_sends_broadcast(self, host_client, mock_ws_client):
-        host_client.post("/api/test-session/qa/submit",
+        host_client.post("/api/test-session/host/qa/submit",
                          json={"text": "Question"})
         assert mock_ws_client.send.call_count >= 1
         broadcast = mock_ws_client.send.call_args_list[0][0][0]

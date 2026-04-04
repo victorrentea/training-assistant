@@ -11,8 +11,7 @@ class PollState:
     def __init__(self):
         self.poll: dict | None = None
         self.poll_active: bool = False
-        self.votes: dict[str, str | list] = {}
-        self.vote_times: dict[str, datetime] = {}
+        self.votes: dict[str, dict] = {}  # uuid → {"option_ids": list[str], "voted_at": str ISO}
         self.poll_opened_at: datetime | None = None
         self.poll_correct_ids: list[str] | None = None
         self.poll_timer_seconds: int | None = None
@@ -39,7 +38,6 @@ class PollState:
             self.poll["page"] = page
         self.poll_active = False
         self.votes.clear()
-        self.vote_times.clear()
         self.poll_correct_ids = None
         self.poll_timer_seconds = None
         self.poll_timer_started_at = None
@@ -50,7 +48,6 @@ class PollState:
         self.poll_active = True
         self.poll_opened_at = datetime.now(timezone.utc)
         self.votes.clear()
-        self.vote_times.clear()
         self._vote_counts_dirty = True
         scores_snapshot_fn()
 
@@ -60,30 +57,27 @@ class PollState:
         total = len(self.votes)
         return {"vote_counts": counts, "total_votes": total}
 
-    def cast_vote(self, pid: str, option_id: str = None, option_ids: list[str] = None) -> bool:
+    def cast_vote(self, pid: str, option_ids: list[str] = None) -> bool:
         if not self.poll or not self.poll_active:
+            return False
+        if pid in self.votes:
+            return False  # votes are final
+        if option_ids is None or not isinstance(option_ids, list):
             return False
         valid_ids = [o["id"] for o in self.poll["options"]]
         is_multi = self.poll.get("multi", False)
         if is_multi:
-            if option_ids is None:
-                return False
             correct_count = self.poll.get("correct_count")
             max_allowed = correct_count if correct_count else len(valid_ids)
-            if (not isinstance(option_ids, list)
-                or len(option_ids) > max_allowed
+            if (len(option_ids) > max_allowed
                 or len(set(option_ids)) != len(option_ids)
                 or not all(oid in valid_ids for oid in option_ids)):
                 return False
-            self.votes[pid] = option_ids
         else:
-            if pid in self.votes:
-                return False  # votes are final for single-select
-            if option_id is None or option_id not in valid_ids:
+            if len(option_ids) != 1 or option_ids[0] not in valid_ids:
                 return False
-            self.votes[pid] = option_id
-        if pid not in self.vote_times:
-            self.vote_times[pid] = datetime.now(timezone.utc)
+        voted_at = datetime.now(timezone.utc).isoformat()
+        self.votes[pid] = {"option_ids": option_ids, "voted_at": voted_at}
         self._vote_counts_dirty = True
         return True
 
@@ -96,8 +90,8 @@ class PollState:
         multi = self.poll.get("multi", False)
 
         correct_voters = set()
-        for pid, selection in self.votes.items():
-            voted = set(selection) if isinstance(selection, list) else {selection}
+        for pid, vote in self.votes.items():
+            voted = set(vote["option_ids"])
             if multi and correct_set:
                 R = len(voted & correct_set)
                 W = len(voted & wrong_set)
@@ -107,14 +101,19 @@ class PollState:
                 if voted & correct_set:
                     correct_voters.add(pid)
 
-        elapsed_times = [
-            max(0.0, (self.vote_times.get(p, now) - opened_at).total_seconds())
-            for p in correct_voters
-        ]
+        def _elapsed(pid: str) -> float:
+            voted_at_str = self.votes[pid]["voted_at"]
+            try:
+                voted_at = datetime.fromisoformat(voted_at_str)
+                return max(0.0, (voted_at - opened_at).total_seconds())
+            except Exception:
+                return 0.0
+
+        elapsed_times = [_elapsed(p) for p in correct_voters]
         min_time = min(elapsed_times) if elapsed_times else 0.0
 
-        for pid, selection in self.votes.items():
-            voted = set(selection) if isinstance(selection, list) else {selection}
+        for pid, vote in self.votes.items():
+            voted = set(vote["option_ids"])
             if multi and correct_set:
                 R = len(voted & correct_set)
                 W = len(voted & wrong_set)
@@ -126,7 +125,7 @@ class PollState:
                 if not (voted & correct_set):
                     continue
                 ratio = 1.0
-            elapsed = max(0.0, (self.vote_times.get(pid, now) - opened_at).total_seconds())
+            elapsed = _elapsed(pid)
             speed_window = min_time * (_SLOWEST_MULTIPLIER - 1)
             if speed_window > 0:
                 decay = min(1.0, (elapsed - min_time) / speed_window)
@@ -142,7 +141,7 @@ class PollState:
         return {
             "correct_ids": list(correct_set),
             "scores": scores_obj.snapshot(),
-            "votes": dict(self.votes),
+            "votes": {pid: v["option_ids"] for pid, v in self.votes.items()},
         }
 
     def start_timer(self, seconds: int) -> dict:
@@ -157,7 +156,6 @@ class PollState:
         self.poll = None
         self.poll_active = False
         self.votes.clear()
-        self.vote_times.clear()
         self.poll_opened_at = None
         self.poll_correct_ids = None
         self.poll_timer_seconds = None
@@ -168,9 +166,8 @@ class PollState:
         if not self._vote_counts_dirty and self._vote_counts_cache is not None:
             return self._vote_counts_cache
         counts: dict[str, int] = {}
-        for selection in self.votes.values():
-            ids = selection if isinstance(selection, list) else [selection]
-            for oid in ids:
+        for vote in self.votes.values():
+            for oid in vote["option_ids"]:
                 counts[oid] = counts.get(oid, 0) + 1
         self._vote_counts_cache = counts
         self._vote_counts_dirty = False

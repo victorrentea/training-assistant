@@ -92,7 +92,7 @@ async def get_slides_cache_status(request: Request):
 # ── Host router (called directly on daemon localhost) ──
 # NOTE: Host JS calls API('/misc/paste-dismiss') which expands to /api/{session_id}/misc/paste-dismiss.
 
-host_router = APIRouter(prefix="/api/{session_id}/misc", tags=["misc"])
+host_router = APIRouter(prefix="/api/{session_id}/host/misc", tags=["misc"])
 
 
 @host_router.post("/paste-dismiss")

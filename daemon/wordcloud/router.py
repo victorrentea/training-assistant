@@ -56,7 +56,7 @@ async def submit_word(request: Request):
 # NOTE: Host JS calls API('/wordcloud/word') which expands to /api/{session_id}/wordcloud/word.
 # The prefix includes {session_id} path parameter to match this pattern.
 
-host_router = APIRouter(prefix="/api/{session_id}/wordcloud", tags=["wordcloud"])
+host_router = APIRouter(prefix="/api/{session_id}/host/wordcloud", tags=["wordcloud"])
 
 
 @host_router.post("/word")

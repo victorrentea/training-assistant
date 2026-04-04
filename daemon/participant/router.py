@@ -14,26 +14,9 @@ logger = logging.getLogger(__name__)
 
 
 def _build_qa_for_participant(pid: str) -> list[dict]:
-    """Build QA question list personalised for participant pid."""
+    """Build QA question list (raw format) for participant — is_own/has_upvoted computed client-side."""
     from daemon.qa.state import qa_state
-    ps = participant_state
-    questions = []
-    for qid, q in sorted(
-        qa_state.questions.items(),
-        key=lambda item: (-len(item[1]["upvoters"]), item[1]["timestamp"]),
-    ):
-        questions.append({
-            "id": qid,
-            "text": q["text"],
-            "author": ps.participant_names.get(q["author"], "Unknown"),
-            "author_avatar": ps.participant_avatars.get(q["author"], ""),
-            "upvote_count": len(q["upvoters"]),
-            "answered": q["answered"],
-            "timestamp": q["timestamp"],
-            "is_own": q["author"] == pid,
-            "has_upvoted": pid in q["upvoters"],
-        })
-    return questions
+    return qa_state.build_question_list_raw()
 
 
 def _build_codereview_for_participant(pid: str) -> dict:
@@ -104,14 +87,11 @@ def _build_poll_for_participant(pid: str) -> dict:
         "poll_correct_ids": ps.poll_correct_ids,
     }
     # Personalise vote
-    my_vote = ps.votes.get(pid)
-    if my_vote is not None:
-        if isinstance(my_vote, list):
-            result["my_vote"] = my_vote
-            result["my_voted_ids"] = my_vote
-        else:
-            result["my_vote"] = my_vote
-            result["my_voted_ids"] = [my_vote]
+    my_vote_entry = ps.votes.get(pid)
+    if my_vote_entry is not None:
+        option_ids = my_vote_entry["option_ids"]
+        result["my_vote"] = option_ids[0] if len(option_ids) == 1 else option_ids
+        result["my_voted_ids"] = option_ids
     else:
         result["my_vote"] = None
         result["my_voted_ids"] = None

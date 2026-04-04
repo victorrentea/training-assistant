@@ -26,6 +26,7 @@ from playwright.sync_api import sync_playwright, expect
 
 from pages.participant_page import ParticipantPage
 from pages.host_page import HostPage
+from session_utils import fresh_session
 
 
 BASE = "http://localhost:8000"
@@ -60,12 +61,6 @@ def _api_call(method, path, data=None, base=None):
         return json.loads(resp.read())
 
 
-def _create_session(name="Test", session_type="workshop") -> str:
-    """Create a fresh session via API — gives clean state."""
-    result = _api_call("POST", "/api/session/create", {"name": f"{name} {int(time.time())}", "type": session_type}, base=DAEMON_BASE)
-    return result["session_id"]
-
-
 def _open_browser_trio(p, session_id):
     """Open host + participant browsers connected to a session."""
     browser = p.chromium.launch(headless=True)
@@ -86,7 +81,7 @@ def _open_browser_trio(p, session_id):
 
 def test_correct_count_hint_shown_to_participant():
     """Multi-select poll with correct_count=2 → participant sees 'exactly 2' hint."""
-    session_id = _create_session("CorrectCountHint")
+    session_id = fresh_session("CorrectCountHint")
     with sync_playwright() as p:
         browser, host, host_page, pax, pax_page = _open_browser_trio(p, session_id)
         expect(host_page.locator("#ws-badge.connected")).to_be_visible(timeout=10000)
@@ -114,7 +109,7 @@ def test_correct_count_hint_shown_to_participant():
 
 def test_multi_select_scoring_all_correct():
     """Vote for both correct options in multi-select → score >= 400."""
-    session_id = _create_session("MultiAllCorrect")
+    session_id = fresh_session("MultiAllCorrect")
     with sync_playwright() as p:
         browser, host, host_page, pax, pax_page = _open_browser_trio(p, session_id)
         expect(host_page.locator("#ws-badge.connected")).to_be_visible(timeout=10000)
@@ -151,7 +146,7 @@ def test_multi_select_scoring_all_correct():
 
 def test_multi_select_scoring_partial_zero():
     """Vote 1 correct + 1 wrong in multi-select → score == 0."""
-    session_id = _create_session("MultiPartial")
+    session_id = fresh_session("MultiPartial")
     with sync_playwright() as p:
         browser, host, host_page, pax, pax_page = _open_browser_trio(p, session_id)
         expect(host_page.locator("#ws-badge.connected")).to_be_visible(timeout=10000)
@@ -186,7 +181,7 @@ def test_multi_select_scoring_partial_zero():
 
 def test_multi_select_all_wrong_zero_score():
     """Vote 2 wrong options in multi-select → score == 0."""
-    session_id = _create_session("MultiAllWrong")
+    session_id = fresh_session("MultiAllWrong")
     with sync_playwright() as p:
         browser, host, host_page, pax, pax_page = _open_browser_trio(p, session_id)
         expect(host_page.locator("#ws-badge.connected")).to_be_visible(timeout=10000)
@@ -221,7 +216,7 @@ def test_multi_select_all_wrong_zero_score():
 
 def test_timer_countdown_visible():
     """Start a 10s timer → participant sees countdown with 's' in text."""
-    session_id = _create_session("TimerVisible")
+    session_id = fresh_session("TimerVisible")
     with sync_playwright() as p:
         browser, host, host_page, pax, pax_page = _open_browser_trio(p, session_id)
         expect(host_page.locator("#ws-badge.connected")).to_be_visible(timeout=10000)
@@ -233,7 +228,7 @@ def test_timer_countdown_visible():
         expect(pax_page.locator(".option-btn").first).to_be_visible(timeout=5000)
 
         # Start a 10-second timer via API (daemon endpoint)
-        _api_call("POST", f"/api/{session_id}/poll/timer", {"seconds": 10}, base=DAEMON_BASE)
+        _api_call("POST", f"/api/{session_id}/host/poll/timer", {"seconds": 10}, base=DAEMON_BASE)
 
         # Participant should see countdown element with text containing "s"
         countdown = pax_page.locator("#pax-countdown")
@@ -254,7 +249,7 @@ def test_timer_countdown_visible():
 
 def test_timer_cleared_on_close():
     """Start timer → verify visible → close poll → timer text cleared."""
-    session_id = _create_session("TimerClear")
+    session_id = fresh_session("TimerClear")
     with sync_playwright() as p:
         browser, host, host_page, pax, pax_page = _open_browser_trio(p, session_id)
         expect(host_page.locator("#ws-badge.connected")).to_be_visible(timeout=10000)
@@ -265,7 +260,7 @@ def test_timer_cleared_on_close():
         expect(pax_page.locator(".option-btn").first).to_be_visible(timeout=5000)
 
         # Start timer (daemon endpoint)
-        _api_call("POST", f"/api/{session_id}/poll/timer", {"seconds": 30}, base=DAEMON_BASE)
+        _api_call("POST", f"/api/{session_id}/host/poll/timer", {"seconds": 30}, base=DAEMON_BASE)
 
         # Verify countdown is active
         countdown = pax_page.locator("#pax-countdown")
@@ -278,7 +273,7 @@ def test_timer_cleared_on_close():
 
         # Close the poll via API — the "Close voting" button is hidden while timer is active
         # Daemon has /poll/close endpoint (not /poll/status)
-        _api_call("POST", f"/api/{session_id}/poll/close", base=DAEMON_BASE)
+        _api_call("POST", f"/api/{session_id}/host/poll/close", base=DAEMON_BASE)
 
         # Timer should be cleared (empty text or element gone)
         _await_condition(

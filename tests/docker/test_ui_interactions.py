@@ -30,6 +30,7 @@ from playwright.sync_api import sync_playwright, expect
 
 from pages.participant_page import ParticipantPage
 from pages.host_page import HostPage
+from session_utils import fresh_session
 
 
 BASE = "http://localhost:8000"
@@ -64,17 +65,11 @@ def _api_call(method, path, data=None, base=None):
         return json.loads(resp.read())
 
 
-def _create_session(name="Test", session_type="workshop") -> str:
-    """Create a fresh session via API — gives clean state."""
-    result = _api_call("POST", "/api/session/create", {"name": f"{name} {int(time.time())}", "type": session_type}, base=DAEMON_BASE)
-    return result["session_id"]
-
-
 # ── 1. Already-upvoted button disabled ────────────────────────────────────
 
 def test_already_upvoted_button_disabled():
     """P1 submits question, P2 upvotes it → P2's upvote button is disabled with qa-upvoted class."""
-    session_id = _create_session("UpvoteDisabled")
+    session_id = fresh_session("UpvoteDisabled")
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
 
@@ -128,7 +123,7 @@ def test_already_upvoted_button_disabled():
 
 def test_wordcloud_no_js_errors_on_submit():
     """Submit a word to wordcloud — no JS errors should fire."""
-    session_id = _create_session("WCNoErrors")
+    session_id = fresh_session("WCNoErrors")
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
 
@@ -168,7 +163,7 @@ def test_wordcloud_no_js_errors_on_submit():
 
 def test_special_chars_in_wordcloud():
     """Submit 'cafe' with accent → appears in my words list."""
-    session_id = _create_session("WCSpecial")
+    session_id = fresh_session("WCSpecial")
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
 
@@ -203,7 +198,7 @@ def test_special_chars_in_wordcloud():
 
 def test_late_joiner_sees_wordcloud():
     """Host opens wordcloud, then a NEW participant joins → sees #wc-canvas visible."""
-    session_id = _create_session("WCLateJoin")
+    session_id = fresh_session("WCLateJoin")
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
 
@@ -235,7 +230,7 @@ def test_late_joiner_sees_wordcloud():
 
 def test_leaderboard_shows_personal_rank():
     """P1 submits 2 questions (200pts), P2 submits 1 (100pts). Leaderboard show → both see overlay."""
-    session_id = _create_session("LeaderRank")
+    session_id = fresh_session("LeaderRank")
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
 
@@ -270,7 +265,7 @@ def test_leaderboard_shows_personal_rank():
         )
 
         # Trigger leaderboard show (daemon endpoint)
-        _api_call("POST", f"/api/{session_id}/leaderboard/show", base=DAEMON_BASE)
+        _api_call("POST", f"/api/{session_id}/host/leaderboard/show", base=DAEMON_BASE)
 
         # Both participants should see the leaderboard overlay
         _await_condition(
@@ -301,7 +296,7 @@ def test_leaderboard_shows_personal_rank():
 
 def test_escape_closes_all_participant_modals():
     """Open overlays programmatically, press Escape, all should close."""
-    session_id = _create_session("EscapeClose")
+    session_id = fresh_session("EscapeClose")
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
 
@@ -361,7 +356,7 @@ def test_escape_closes_all_participant_modals():
 
 def test_host_tab_survives_reload():
     """Switch to Q&A tab, reload page, Q&A tab should still be active."""
-    session_id = _create_session("TabReload")
+    session_id = fresh_session("TabReload")
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
 
@@ -397,7 +392,7 @@ def test_host_tab_survives_reload():
 
 def test_qr_code_rendered():
     """Host page should render a QR code."""
-    session_id = _create_session("QRCode")
+    session_id = fresh_session("QRCode")
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
 
@@ -432,7 +427,7 @@ def test_qr_code_rendered():
 
 def test_participant_link_displayed():
     """Host page should show a participant link."""
-    session_id = _create_session("PaxLink")
+    session_id = fresh_session("PaxLink")
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
 
@@ -461,7 +456,7 @@ def test_participant_link_displayed():
 
 def test_poll_download_captures_two_polls():
     """Create 2 polls sequentially, verify download text contains both questions with correct marks."""
-    session_id = _create_session("TwoPolls")
+    session_id = fresh_session("TwoPolls")
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
 
@@ -491,7 +486,7 @@ def test_poll_download_captures_two_polls():
         host.mark_correct("4")
         # Remove poll
         host_page.wait_for_timeout(500)
-        _api_call("DELETE", f"/api/{session_id}/poll", base=DAEMON_BASE)
+        _api_call("DELETE", f"/api/{session_id}/host/poll", base=DAEMON_BASE)
         host_page.wait_for_timeout(500)
 
         # ── Poll 2 ──

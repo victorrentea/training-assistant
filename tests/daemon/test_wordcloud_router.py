@@ -106,14 +106,14 @@ class TestParticipantSubmitWord:
 class TestHostEndpoints:
     # Host router prefix is /api/{session_id}/wordcloud — use "test-session" as session_id
     def test_host_word_submission(self, host_client, fresh_wc_state, mock_ws_client):
-        resp = host_client.post("/api/test-session/wordcloud/word", json={"word": "Hello"})
+        resp = host_client.post("/api/test-session/host/wordcloud/word", json={"word": "Hello"})
         assert resp.status_code == 200
         assert fresh_wc_state.words.get("hello") == 1
         # Verify WS broadcast event was sent
         assert mock_ws_client.send.call_count == 1  # broadcast only
 
     def test_set_topic(self, host_client, fresh_wc_state, mock_ws_client):
-        resp = host_client.post("/api/test-session/wordcloud/topic", json={"topic": "AI trends"})
+        resp = host_client.post("/api/test-session/host/wordcloud/topic", json={"topic": "AI trends"})
         assert resp.status_code == 200
         assert fresh_wc_state.topic == "AI trends"
         assert mock_ws_client.send.call_count == 1
@@ -122,14 +122,14 @@ class TestHostEndpoints:
         fresh_wc_state.words = {"hello": 1}
         fresh_wc_state.word_order = ["hello"]
         fresh_wc_state.topic = "test"
-        resp = host_client.post("/api/test-session/wordcloud/clear", json={})
+        resp = host_client.post("/api/test-session/host/wordcloud/clear", json={})
         assert resp.status_code == 200
         assert fresh_wc_state.words == {}
         assert fresh_wc_state.word_order == []
         assert fresh_wc_state.topic == ""
 
     def test_host_word_sends_broadcast_event(self, host_client, mock_ws_client):
-        host_client.post("/api/test-session/wordcloud/word", json={"word": "test"})
+        host_client.post("/api/test-session/host/wordcloud/word", json={"word": "test"})
         broadcast_call = mock_ws_client.send.call_args_list[0]
         msg = broadcast_call[0][0]
         assert msg["type"] == "broadcast"

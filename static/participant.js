@@ -2905,7 +2905,8 @@ const sessionTitleEl = document.getElementById('session-title');
         const myQuestions = (msg.questions || []).map(q => ({
             ...q,
             is_own: q.author_uuid === myUUID,
-            has_upvoted: (q.upvoters || []).includes(myUUID),
+            has_upvoted: (q.upvoter_uuids || []).includes(myUUID),
+            upvote_count: (q.upvoter_uuids || []).length,
         }));
         renderQAScreen(myQuestions);
         break;
@@ -3390,14 +3391,11 @@ const sessionTitleEl = document.getElementById('session-title');
       const isOwn = q.is_own;
       const hasUpvoted = q.has_upvoted;
       const canUpvote = !isOwn && !hasUpvoted;
-      const avatarHtml = q.author_avatar
-          ? `<img src="/static/avatars/${escHtml(q.author_avatar)}" class="avatar" style="width:24px;height:24px" onerror="this.style.display='none'">`
-          : '';
       return `
         <div class="qa-card-p${q.answered ? ' qa-answered-p' : ''}${condensed ? ' qa-condensed' : ''}" data-id="${escHtml(q.id)}">
           <div class="qa-text-p">${escHtml(q.text)}</div>
           <div class="qa-footer-p">
-            ${avatarHtml}<span class="qa-author-p">${escHtml(q.author)}${isOwn ? ' (you)' : ''}</span>
+            <span class="qa-author-p">${isOwn ? 'You' : 'Anonymous'}</span>
             <button class="qa-upvote-btn${hasUpvoted ? ' qa-upvoted' : ''}"
                     data-qid="${escHtml(q.id)}"
                     ${canUpvote ? `onclick="upvoteQuestion('${escHtml(q.id)}')"` : 'disabled'}

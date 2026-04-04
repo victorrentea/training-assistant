@@ -19,12 +19,17 @@ def set_ws_client(client):
     _ws_client = client
 
 
-def _build_questions():
-    """Helper: build question list with resolved names."""
+def _build_questions_for_host():
+    """Helper: build question list with resolved names for host."""
     return qa_state.build_question_list(
         participant_state.participant_names,
         participant_state.participant_avatars,
     )
+
+
+def _build_questions_for_broadcast():
+    """Helper: build raw question list for participant broadcast."""
+    return qa_state.build_question_list_raw()
 
 
 # ── Participant router (proxied via Railway) ──
@@ -47,15 +52,16 @@ async def submit_question(request: Request):
     # No activity gate — Railway accepts Q&A submissions regardless of current activity
 
     qa_state.submit(pid, text)
-    questions = _build_questions()
+    raw_questions = _build_questions_for_broadcast()
+    host_questions = _build_questions_for_host()
 
     scores.add_score(pid, 100)
     request.state.write_back_events = [
-        {"type": "broadcast", "event": {"type": "qa_updated", "questions": questions}},
+        {"type": "broadcast", "event": {"type": "qa_updated", "questions": raw_questions}},
         {"type": "broadcast", "event": {"type": "scores_updated", "scores": scores.snapshot()}},
     ]
 
-    await send_to_host({"type": "qa_updated", "questions": questions})
+    await send_to_host({"type": "qa_updated", "questions": host_questions})
     await send_to_host({"type": "scores_updated", "scores": scores.snapshot()})
 
     return JSONResponse({"ok": True})
@@ -77,16 +83,17 @@ async def upvote_question(request: Request):
     if not success:
         return JSONResponse({"error": "Cannot upvote"}, status_code=409)
 
-    questions = _build_questions()
+    raw_questions = _build_questions_for_broadcast()
+    host_questions = _build_questions_for_host()
 
     scores.add_score(author_pid, 50)
     scores.add_score(pid, 25)
     request.state.write_back_events = [
-        {"type": "broadcast", "event": {"type": "qa_updated", "questions": questions}},
+        {"type": "broadcast", "event": {"type": "qa_updated", "questions": raw_questions}},
         {"type": "broadcast", "event": {"type": "scores_updated", "scores": scores.snapshot()}},
     ]
 
-    await send_to_host({"type": "qa_updated", "questions": questions})
+    await send_to_host({"type": "qa_updated", "questions": host_questions})
     await send_to_host({"type": "scores_updated", "scores": scores.snapshot()})
 
     return JSONResponse({"ok": True})
@@ -95,7 +102,7 @@ async def upvote_question(request: Request):
 # ── Host router (called directly on daemon localhost) ──
 # Host JS calls API('/qa/submit') which expands to /api/{session_id}/qa/submit.
 
-host_router = APIRouter(prefix="/api/{session_id}/qa", tags=["qa"])
+host_router = APIRouter(prefix="/api/{session_id}/host/qa", tags=["qa"])
 
 
 @host_router.post("/submit")
@@ -154,10 +161,11 @@ async def clear_qa():
 
 async def _send_qa_events():
     """Send broadcast to participants (via Railway) and to host (local WS)."""
-    questions = _build_questions()
+    raw_questions = _build_questions_for_broadcast()
+    host_questions = _build_questions_for_host()
     if _ws_client:
         _ws_client.send({
             "type": "broadcast",
-            "event": {"type": "qa_updated", "questions": questions},
+            "event": {"type": "qa_updated", "questions": raw_questions},
         })
-    await send_to_host({"type": "qa_updated", "questions": questions})
+    await send_to_host({"type": "qa_updated", "questions": host_questions})

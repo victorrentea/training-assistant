@@ -103,14 +103,14 @@ async def update_selection(request: Request):
 
     codereview_state.select_lines(pid, lines)
 
-    # Broadcast selection update (line counts for host)
+    # Send selection update only to host (line counts are host-only)
     line_counts = {
         str(ln): sum(1 for sel in codereview_state.selections.values() if ln in sel)
         for pid_sel in codereview_state.selections.values()
         for ln in pid_sel
     }
     request.state.write_back_events = [
-        {"type": "broadcast", "event": {"type": "codereview_selections_updated", "line_counts": line_counts}},
+        {"type": "send_to_host", "event": {"type": "codereview_selections_updated", "line_counts": line_counts}},
     ]
 
     return JSONResponse({"ok": True})
@@ -120,7 +120,7 @@ async def update_selection(request: Request):
 # NOTE: Host JS calls API('/codereview') which expands to /api/{session_id}/codereview.
 # The prefix includes {session_id} path parameter to match this pattern.
 
-host_router = APIRouter(prefix="/api/{session_id}/codereview", tags=["codereview"])
+host_router = APIRouter(prefix="/api/{session_id}/host/codereview", tags=["codereview"])
 
 _MAX_LINES = 50
 
