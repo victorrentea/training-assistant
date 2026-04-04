@@ -33,6 +33,7 @@ from pages.host_page import HostPage
 
 
 BASE = "http://localhost:8000"
+DAEMON_BASE = os.environ.get("DAEMON_BASE", "http://localhost:8081")
 HOST_USER = os.environ.get("HOST_USERNAME", "host")
 HOST_PASS = os.environ.get("HOST_PASSWORD", "testpass")
 
@@ -47,11 +48,13 @@ def _await_condition(fn, timeout_ms=10000, poll_ms=300, msg=""):
     raise AssertionError(msg or f"Condition not met within {timeout_ms}ms")
 
 
-def _api_call(method, path, data=None):
+def _api_call(method, path, data=None, base=None):
+    """Make API call. Defaults to BASE (Railway). Pass base=DAEMON_BASE for daemon endpoints."""
+    target = base or BASE
     auth = base64.b64encode(f"{HOST_USER}:{HOST_PASS}".encode()).decode()
     body = json.dumps(data).encode() if data else (b"" if method == "POST" else None)
     req = urllib.request.Request(
-        f"{BASE}{path}", method=method,
+        f"{target}{path}", method=method,
         headers={"Authorization": f"Basic {auth}", "Content-Type": "application/json"},
         data=body,
     )
@@ -72,7 +75,7 @@ def _open_browser_trio(p, session_id):
     browser = p.chromium.launch(headless=True)
     host_ctx = browser.new_context(http_credentials={"username": HOST_USER, "password": HOST_PASS})
     host_page = host_ctx.new_page()
-    host_page.goto(f"{BASE}/host/{session_id}", wait_until="networkidle")
+    host_page.goto(f"{DAEMON_BASE}/host/{session_id}", wait_until="networkidle")
     expect(host_page.locator("#tab-poll")).to_be_visible(timeout=10000)
     host = HostPage(host_page)
 
@@ -220,7 +223,7 @@ def test_late_joiner_sees_existing_qa():
         # Host + first participant
         host_ctx = browser.new_context(http_credentials={"username": HOST_USER, "password": HOST_PASS})
         host_page = host_ctx.new_page()
-        host_page.goto(f"{BASE}/host/{session_id}", wait_until="networkidle")
+        host_page.goto(f"{DAEMON_BASE}/host/{session_id}", wait_until="networkidle")
         host = HostPage(host_page)
         host.open_qa_tab()
 
@@ -274,7 +277,7 @@ def test_code_review_line_selection():
         # Host creates code review with a snippet (disable smart_paste — no API key in test)
         snippet = "public void process() {\n    // TODO: implement\n    return null;\n}"
         _api_call("POST", f"/api/{session_id}/codereview",
-                  {"snippet": snippet, "language": "java", "smart_paste": False})
+                  {"snippet": snippet, "language": "java", "smart_paste": False}, base=DAEMON_BASE)
 
         # Wait for code review to appear on participant
         expect(pax_page.locator(".codereview-pline-clickable").first).to_be_visible(timeout=5000)
@@ -310,8 +313,8 @@ def test_wordcloud_close_returns_to_idle():
 
         pax.submit_word("testing")
 
-        # Switch to NONE activity (close wordcloud)
-        _api_call("POST", f"/api/{session_id}/activity", {"activity": "none"})
+        # Switch to NONE activity (close wordcloud) — daemon endpoint
+        _api_call("POST", f"/api/{session_id}/activity", {"activity": "none"}, base=DAEMON_BASE)
 
         # Participant should no longer see the wordcloud
         _await_condition(
@@ -403,7 +406,7 @@ def test_participant_count_updates():
 
         host_ctx = browser.new_context(http_credentials={"username": HOST_USER, "password": HOST_PASS})
         host_page = host_ctx.new_page()
-        host_page.goto(f"{BASE}/host/{session_id}", wait_until="networkidle")
+        host_page.goto(f"{DAEMON_BASE}/host/{session_id}", wait_until="networkidle")
         expect(host_page.locator("#tab-poll")).to_be_visible(timeout=10000)
         # Wait for WS connection before joining participants
         expect(host_page.locator("#ws-badge.connected")).to_be_visible(timeout=10000)

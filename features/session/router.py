@@ -533,6 +533,7 @@ async def get_notes():
     }
 
 
+@session_router.get("/session/snapshot")
 async def get_session_snapshot():
     """Returns full serializable session state for daemon to persist to disk every 5s."""
     participants = {}

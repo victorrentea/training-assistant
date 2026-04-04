@@ -23,6 +23,7 @@ from pages.participant_page import ParticipantPage
 
 
 BASE = "http://localhost:8000"
+DAEMON_BASE = os.environ.get("DAEMON_BASE", "http://localhost:8081")
 HOST_USER = os.environ.get("HOST_USERNAME", "host")
 HOST_PASS = os.environ.get("HOST_PASSWORD", "testpass")
 
@@ -49,7 +50,7 @@ def _create_session(name="BDD Test") -> str:
 def _clear_qa(session_id: str) -> None:
     auth = base64.b64encode(f"{HOST_USER}:{HOST_PASS}".encode()).decode()
     req = urllib.request.Request(
-        f"{BASE}/api/{session_id}/qa/clear",
+        f"{DAEMON_BASE}/api/{session_id}/qa/clear",
         method="POST",
         headers={"Authorization": f"Basic {auth}", "Content-Length": "0"},
         data=b""
@@ -129,7 +130,7 @@ def host_page(browser, session_id):
         http_credentials={"username": HOST_USER, "password": HOST_PASS}
     )
     page = ctx.new_page()
-    page.goto(f"{BASE}/host/{session_id}", wait_until="networkidle")
+    page.goto(f"{DAEMON_BASE}/host/{session_id}", wait_until="networkidle")
     expect(page.locator("#tab-poll")).to_be_visible(timeout=10000)
     return HostPage(page)
 

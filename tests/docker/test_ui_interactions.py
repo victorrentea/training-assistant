@@ -33,6 +33,7 @@ from pages.host_page import HostPage
 
 
 BASE = "http://localhost:8000"
+DAEMON_BASE = os.environ.get("DAEMON_BASE", "http://localhost:8081")
 HOST_USER = os.environ.get("HOST_USERNAME", "host")
 HOST_PASS = os.environ.get("HOST_PASSWORD", "testpass")
 
@@ -47,11 +48,13 @@ def _await_condition(fn, timeout_ms=10000, poll_ms=300, msg=""):
     raise AssertionError(msg or f"Condition not met within {timeout_ms}ms")
 
 
-def _api_call(method, path, data=None):
+def _api_call(method, path, data=None, base=None):
+    """Make API call. Defaults to BASE (Railway). Pass base=DAEMON_BASE for daemon endpoints."""
+    target = base or BASE
     auth = base64.b64encode(f"{HOST_USER}:{HOST_PASS}".encode()).decode()
     body = json.dumps(data).encode() if data else (b"" if method == "POST" else None)
     req = urllib.request.Request(
-        f"{BASE}{path}", method=method,
+        f"{target}{path}", method=method,
         headers={"Authorization": f"Basic {auth}", "Content-Type": "application/json"},
         data=body,
     )
@@ -78,7 +81,7 @@ def test_already_upvoted_button_disabled():
         # Host opens Q&A
         host_ctx = browser.new_context(http_credentials={"username": HOST_USER, "password": HOST_PASS})
         host_page = host_ctx.new_page()
-        host_page.goto(f"{BASE}/host/{session_id}", wait_until="networkidle")
+        host_page.goto(f"{DAEMON_BASE}/host/{session_id}", wait_until="networkidle")
         host = HostPage(host_page)
         host.open_qa_tab()
 
@@ -132,7 +135,7 @@ def test_wordcloud_no_js_errors_on_submit():
         # Host opens wordcloud
         host_ctx = browser.new_context(http_credentials={"username": HOST_USER, "password": HOST_PASS})
         host_page = host_ctx.new_page()
-        host_page.goto(f"{BASE}/host/{session_id}", wait_until="networkidle")
+        host_page.goto(f"{DAEMON_BASE}/host/{session_id}", wait_until="networkidle")
         host = HostPage(host_page)
         host.open_wordcloud_tab()
 
@@ -172,7 +175,7 @@ def test_special_chars_in_wordcloud():
         # Host opens wordcloud
         host_ctx = browser.new_context(http_credentials={"username": HOST_USER, "password": HOST_PASS})
         host_page = host_ctx.new_page()
-        host_page.goto(f"{BASE}/host/{session_id}", wait_until="networkidle")
+        host_page.goto(f"{DAEMON_BASE}/host/{session_id}", wait_until="networkidle")
         host = HostPage(host_page)
         host.open_wordcloud_tab()
 
@@ -207,7 +210,7 @@ def test_late_joiner_sees_wordcloud():
         # Host opens wordcloud
         host_ctx = browser.new_context(http_credentials={"username": HOST_USER, "password": HOST_PASS})
         host_page = host_ctx.new_page()
-        host_page.goto(f"{BASE}/host/{session_id}", wait_until="networkidle")
+        host_page.goto(f"{DAEMON_BASE}/host/{session_id}", wait_until="networkidle")
         host = HostPage(host_page)
         host.open_wordcloud_tab()
 
@@ -239,7 +242,7 @@ def test_leaderboard_shows_personal_rank():
         # Host opens Q&A
         host_ctx = browser.new_context(http_credentials={"username": HOST_USER, "password": HOST_PASS})
         host_page = host_ctx.new_page()
-        host_page.goto(f"{BASE}/host/{session_id}", wait_until="networkidle")
+        host_page.goto(f"{DAEMON_BASE}/host/{session_id}", wait_until="networkidle")
         host = HostPage(host_page)
         host.open_qa_tab()
 
@@ -266,8 +269,8 @@ def test_leaderboard_shows_personal_rank():
             timeout_ms=5000, msg="P1 didn't get score from Q&A"
         )
 
-        # Trigger leaderboard show
-        _api_call("POST", f"/api/{session_id}/leaderboard/show")
+        # Trigger leaderboard show (daemon endpoint)
+        _api_call("POST", f"/api/{session_id}/leaderboard/show", base=DAEMON_BASE)
 
         # Both participants should see the leaderboard overlay
         _await_condition(
@@ -364,7 +367,7 @@ def test_host_tab_survives_reload():
 
         host_ctx = browser.new_context(http_credentials={"username": HOST_USER, "password": HOST_PASS})
         host_page = host_ctx.new_page()
-        host_page.goto(f"{BASE}/host/{session_id}", wait_until="networkidle")
+        host_page.goto(f"{DAEMON_BASE}/host/{session_id}", wait_until="networkidle")
         host = HostPage(host_page)
 
         # Switch to Q&A tab
@@ -400,7 +403,7 @@ def test_qr_code_rendered():
 
         host_ctx = browser.new_context(http_credentials={"username": HOST_USER, "password": HOST_PASS})
         host_page = host_ctx.new_page()
-        host_page.goto(f"{BASE}/host/{session_id}", wait_until="networkidle")
+        host_page.goto(f"{DAEMON_BASE}/host/{session_id}", wait_until="networkidle")
         expect(host_page.locator("#tab-poll")).to_be_visible(timeout=10000)
 
         # Wait for QR code to render
@@ -435,7 +438,7 @@ def test_participant_link_displayed():
 
         host_ctx = browser.new_context(http_credentials={"username": HOST_USER, "password": HOST_PASS})
         host_page = host_ctx.new_page()
-        host_page.goto(f"{BASE}/host/{session_id}", wait_until="networkidle")
+        host_page.goto(f"{DAEMON_BASE}/host/{session_id}", wait_until="networkidle")
         expect(host_page.locator("#tab-poll")).to_be_visible(timeout=10000)
 
         # Wait for WS to deliver state
@@ -464,7 +467,7 @@ def test_poll_download_captures_two_polls():
 
         host_ctx = browser.new_context(http_credentials={"username": HOST_USER, "password": HOST_PASS})
         host_page = host_ctx.new_page()
-        host_page.goto(f"{BASE}/host/{session_id}", wait_until="networkidle")
+        host_page.goto(f"{DAEMON_BASE}/host/{session_id}", wait_until="networkidle")
         host = HostPage(host_page)
         expect(host_page.locator("#ws-badge.connected")).to_be_visible(timeout=10000)
 
@@ -488,7 +491,7 @@ def test_poll_download_captures_two_polls():
         host.mark_correct("4")
         # Remove poll
         host_page.wait_for_timeout(500)
-        _api_call("DELETE", f"/api/{session_id}/poll")
+        _api_call("DELETE", f"/api/{session_id}/poll", base=DAEMON_BASE)
         host_page.wait_for_timeout(500)
 
         # ── Poll 2 ──

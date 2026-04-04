@@ -22,6 +22,7 @@ from pages.participant_page import ParticipantPage
 
 
 BASE = "http://localhost:8000"
+DAEMON_BASE = os.environ.get("DAEMON_BASE", "http://localhost:8081")
 HOST_USER = os.environ.get("HOST_USERNAME", "host")
 HOST_PASS = os.environ.get("HOST_PASSWORD", "testpass")
 
@@ -61,7 +62,7 @@ def test_full_poll_lifecycle():
             http_credentials={"username": HOST_USER, "password": HOST_PASS}
         )
         host_raw = host_ctx.new_page()
-        host_raw.goto(f"{BASE}/host/{session_id}", wait_until="networkidle")
+        host_raw.goto(f"{DAEMON_BASE}/host/{session_id}", wait_until="networkidle")
         expect(host_raw.locator("#tab-poll")).to_be_visible(timeout=10000)
         host = HostPage(host_raw)
 

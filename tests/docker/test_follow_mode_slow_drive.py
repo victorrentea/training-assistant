@@ -44,6 +44,7 @@ from pages.participant_page import ParticipantPage
 
 
 BASE = "http://localhost:8000"
+DAEMON_BASE = os.environ.get("DAEMON_BASE", "http://localhost:8081")
 MOCK_DRIVE_BASE = f"http://localhost:{os.environ.get('MOCK_DRIVE_PORT', '9090')}"
 HOST_USER = os.environ.get("HOST_USERNAME", "host")
 HOST_PASS = os.environ.get("HOST_PASSWORD", "testpass")
@@ -205,7 +206,7 @@ def test_follow_mode_survives_slow_drive(delay_s, presentation, slug, host_slide
                 http_credentials={"username": HOST_USER, "password": HOST_PASS}
             )
             host_page = host_ctx.new_page()
-            host_page.goto(f"{BASE}/host/{session_id}", wait_until="networkidle")
+            host_page.goto(f"{DAEMON_BASE}/host/{session_id}", wait_until="networkidle")
             expect(host_page.locator("#tab-poll")).to_be_visible(timeout=10_000)
 
             # Fresh browser context → localStorage empty → follow mode defaults to ON.

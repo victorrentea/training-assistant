@@ -23,6 +23,7 @@ from pages.host_page import HostPage
 
 
 BASE = "http://localhost:8000"
+DAEMON_BASE = os.environ.get("DAEMON_BASE", "http://localhost:8081")
 HOST_USER = os.environ.get("HOST_USERNAME", "host")
 HOST_PASS = os.environ.get("HOST_PASSWORD", "testpass")
 
@@ -38,11 +39,11 @@ def _await_condition(fn, timeout_ms=10000, poll_ms=300, msg=""):
 
 
 def _clear_qa(session_id: str) -> None:
-    """Clear all Q&A questions via API."""
+    """Clear all Q&A questions via API (daemon endpoint)."""
     import base64
     auth = base64.b64encode(f"{HOST_USER}:{HOST_PASS}".encode()).decode()
     req = urllib.request.Request(
-        f"{BASE}/api/{session_id}/qa/clear",
+        f"{DAEMON_BASE}/api/{session_id}/qa/clear",
         method="POST",
         headers={"Authorization": f"Basic {auth}", "Content-Length": "0"},
         data=b""
@@ -64,7 +65,7 @@ def _get_or_create_session() -> str:
             http_credentials={"username": HOST_USER, "password": HOST_PASS}
         )
         page = ctx.new_page()
-        page.goto(f"{BASE}/host", wait_until="networkidle")
+        page.goto(f"{DAEMON_BASE}/host", wait_until="networkidle")
         if re.search(r"/host/[a-zA-Z0-9]+", page.url):
             sid = page.url.split("/host/")[-1].split("?")[0]
             browser.close()
@@ -93,7 +94,7 @@ def test_qa_submit_and_host_sees():
             http_credentials={"username": HOST_USER, "password": HOST_PASS}
         )
         host_page = host_ctx.new_page()
-        host_page.goto(f"{BASE}/host/{session_id}", wait_until="networkidle")
+        host_page.goto(f"{DAEMON_BASE}/host/{session_id}", wait_until="networkidle")
         host = HostPage(host_page)
 
         pax_ctx = browser.new_context()
@@ -137,7 +138,7 @@ def test_qa_host_edits_participant_sees():
             http_credentials={"username": HOST_USER, "password": HOST_PASS}
         )
         host_page = host_ctx.new_page()
-        host_page.goto(f"{BASE}/host/{session_id}", wait_until="networkidle")
+        host_page.goto(f"{DAEMON_BASE}/host/{session_id}", wait_until="networkidle")
         host = HostPage(host_page)
 
         pax_ctx = browser.new_context()
@@ -183,7 +184,7 @@ def test_qa_host_deletes_question():
             http_credentials={"username": HOST_USER, "password": HOST_PASS}
         )
         host_page = host_ctx.new_page()
-        host_page.goto(f"{BASE}/host/{session_id}", wait_until="networkidle")
+        host_page.goto(f"{DAEMON_BASE}/host/{session_id}", wait_until="networkidle")
         host = HostPage(host_page)
 
         pax_ctx = browser.new_context()
@@ -220,7 +221,7 @@ def test_qa_host_marks_answered():
             http_credentials={"username": HOST_USER, "password": HOST_PASS}
         )
         host_page = host_ctx.new_page()
-        host_page.goto(f"{BASE}/host/{session_id}", wait_until="networkidle")
+        host_page.goto(f"{DAEMON_BASE}/host/{session_id}", wait_until="networkidle")
         expect(host_page.locator("#tab-poll")).to_be_visible(timeout=10000)
         host = HostPage(host_page)
 
@@ -263,7 +264,7 @@ def test_qa_upvoting_and_sort_order():
             http_credentials={"username": HOST_USER, "password": HOST_PASS}
         )
         host_page = host_ctx.new_page()
-        host_page.goto(f"{BASE}/host/{session_id}", wait_until="networkidle")
+        host_page.goto(f"{DAEMON_BASE}/host/{session_id}", wait_until="networkidle")
         host = HostPage(host_page)
         host.open_qa_tab()
 
@@ -337,7 +338,7 @@ def test_leaderboard_show_and_hide():
             http_credentials={"username": HOST_USER, "password": HOST_PASS}
         )
         host_page = host_ctx.new_page()
-        host_page.goto(f"{BASE}/host/{session_id}", wait_until="networkidle")
+        host_page.goto(f"{DAEMON_BASE}/host/{session_id}", wait_until="networkidle")
         host = HostPage(host_page)
 
         pax_ctx = browser.new_context()
@@ -354,11 +355,11 @@ def test_leaderboard_show_and_hide():
             timeout_ms=5000, msg="Participant did not get score"
         )
 
-        # Show leaderboard via API (host panel uses this)
+        # Show leaderboard via API (daemon endpoint)
         import base64
         auth = base64.b64encode(f"{HOST_USER}:{HOST_PASS}".encode()).decode()
         req = urllib.request.Request(
-            f"{BASE}/api/{session_id}/leaderboard/show",
+            f"{DAEMON_BASE}/api/{session_id}/leaderboard/show",
             method="POST",
             headers={"Authorization": f"Basic {auth}", "Content-Length": "0"},
             data=b""
@@ -374,7 +375,7 @@ def test_leaderboard_show_and_hide():
 
         # Hide leaderboard
         req2 = urllib.request.Request(
-            f"{BASE}/api/{session_id}/leaderboard/hide",
+            f"{DAEMON_BASE}/api/{session_id}/leaderboard/hide",
             method="POST",
             headers={"Authorization": f"Basic {auth}", "Content-Length": "0"},
             data=b""
@@ -405,7 +406,7 @@ def test_wordcloud_submit_appears_in_my_words():
             http_credentials={"username": HOST_USER, "password": HOST_PASS}
         )
         host_page = host_ctx.new_page()
-        host_page.goto(f"{BASE}/host/{session_id}", wait_until="networkidle")
+        host_page.goto(f"{DAEMON_BASE}/host/{session_id}", wait_until="networkidle")
         host = HostPage(host_page)
 
         pax_ctx = browser.new_context()

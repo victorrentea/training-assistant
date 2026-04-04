@@ -27,6 +27,7 @@ from pages.participant_page import ParticipantPage
 
 
 BASE = "http://localhost:8000"
+DAEMON_BASE = os.environ.get("DAEMON_BASE", "http://localhost:8081")
 MOCK_DRIVE = "http://localhost:9090"
 HOST_USER = os.environ.get("HOST_USERNAME", "host")
 HOST_PASS = os.environ.get("HOST_PASSWORD", "testpass")
@@ -68,7 +69,7 @@ def _get_or_create_session() -> str:
             http_credentials={"username": HOST_USER, "password": HOST_PASS}
         )
         page = ctx.new_page()
-        page.goto(f"{BASE}/host", wait_until="networkidle")
+        page.goto(f"{DAEMON_BASE}/host", wait_until="networkidle")
         if re.search(r"/host/[a-zA-Z0-9]+", page.url):
             sid = page.url.split("/host/")[-1].split("?")[0]
             browser.close()

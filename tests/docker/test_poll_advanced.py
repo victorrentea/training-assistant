@@ -29,6 +29,7 @@ from pages.host_page import HostPage
 
 
 BASE = "http://localhost:8000"
+DAEMON_BASE = os.environ.get("DAEMON_BASE", "http://localhost:8081")
 HOST_USER = os.environ.get("HOST_USERNAME", "host")
 HOST_PASS = os.environ.get("HOST_PASSWORD", "testpass")
 
@@ -43,11 +44,13 @@ def _await_condition(fn, timeout_ms=10000, poll_ms=300, msg=""):
     raise AssertionError(msg or f"Condition not met within {timeout_ms}ms")
 
 
-def _api_call(method, path, data=None):
+def _api_call(method, path, data=None, base=None):
+    """Make API call. Defaults to BASE (Railway). Pass base=DAEMON_BASE for daemon endpoints."""
+    target = base or BASE
     auth = base64.b64encode(f"{HOST_USER}:{HOST_PASS}".encode()).decode()
     body = json.dumps(data).encode() if data else (b"" if method == "POST" else None)
     req = urllib.request.Request(
-        f"{BASE}{path}", method=method,
+        f"{target}{path}", method=method,
         headers={"Authorization": f"Basic {auth}", "Content-Type": "application/json"},
         data=body,
     )
@@ -68,7 +71,7 @@ def _open_browser_trio(p, session_id):
     browser = p.chromium.launch(headless=True)
     host_ctx = browser.new_context(http_credentials={"username": HOST_USER, "password": HOST_PASS})
     host_page = host_ctx.new_page()
-    host_page.goto(f"{BASE}/host/{session_id}", wait_until="networkidle")
+    host_page.goto(f"{DAEMON_BASE}/host/{session_id}", wait_until="networkidle")
     expect(host_page.locator("#tab-poll")).to_be_visible(timeout=10000)
     host = HostPage(host_page)
 
@@ -229,8 +232,8 @@ def test_timer_countdown_visible():
         # Wait for poll to appear on participant
         expect(pax_page.locator(".option-btn").first).to_be_visible(timeout=5000)
 
-        # Start a 10-second timer via API
-        _api_call("POST", f"/api/{session_id}/poll/timer", {"seconds": 10})
+        # Start a 10-second timer via API (daemon endpoint)
+        _api_call("POST", f"/api/{session_id}/poll/timer", {"seconds": 10}, base=DAEMON_BASE)
 
         # Participant should see countdown element with text containing "s"
         countdown = pax_page.locator("#pax-countdown")
@@ -261,8 +264,8 @@ def test_timer_cleared_on_close():
 
         expect(pax_page.locator(".option-btn").first).to_be_visible(timeout=5000)
 
-        # Start timer
-        _api_call("POST", f"/api/{session_id}/poll/timer", {"seconds": 30})
+        # Start timer (daemon endpoint)
+        _api_call("POST", f"/api/{session_id}/poll/timer", {"seconds": 30}, base=DAEMON_BASE)
 
         # Verify countdown is active
         countdown = pax_page.locator("#pax-countdown")
@@ -274,7 +277,8 @@ def test_timer_cleared_on_close():
         print(f"Countdown before close: '{countdown.inner_text().strip()}'")
 
         # Close the poll via API — the "Close voting" button is hidden while timer is active
-        _api_call("PUT", f"/api/{session_id}/poll/status", {"open": False})
+        # Daemon has /poll/close endpoint (not /poll/status)
+        _api_call("POST", f"/api/{session_id}/poll/close", base=DAEMON_BASE)
 
         # Timer should be cleared (empty text or element gone)
         _await_condition(

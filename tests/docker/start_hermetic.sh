@@ -91,7 +91,7 @@ BACKEND_PID=$!
 
 # Wait for backend to be ready
 for i in $(seq 1 60); do
-    if curl -sf http://localhost:8000/api/status >/dev/null 2>&1; then
+    if curl -sf http://localhost:8000/api/session/active >/dev/null 2>&1; then
         echo "[startup] Backend ready after ${i}s"
         break
     fi
@@ -102,9 +102,19 @@ done
 python -m daemon &
 DAEMON_PID=$!
 
-# Give daemon time to connect WS
+# Give daemon time to connect WS and start host server on port 8081
 sleep 2
 echo "[startup] Daemon started (PID=$DAEMON_PID)"
+
+# Wait for daemon host server (port 8081) to be ready
+export DAEMON_BASE=http://localhost:8081
+for i in $(seq 1 20); do
+    if curl -sf http://localhost:8081/host >/dev/null 2>&1; then
+        echo "[startup] Daemon host server ready after ${i} polls"
+        break
+    fi
+    sleep 0.5
+done
 
 # Run tests
 cd /tests

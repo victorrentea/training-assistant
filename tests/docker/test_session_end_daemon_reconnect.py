@@ -90,7 +90,7 @@ def backend():
     # Wait until healthy
     for _ in range(60):
         try:
-            urllib.request.urlopen(f"{BASE}/api/status")
+            urllib.request.urlopen(f"{BASE}/api/session/active")
             break
         except Exception:
             time.sleep(0.3)

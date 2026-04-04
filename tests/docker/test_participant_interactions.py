@@ -23,6 +23,7 @@ from pages.host_page import HostPage
 
 
 BASE = "http://localhost:8000"
+DAEMON_BASE = os.environ.get("DAEMON_BASE", "http://localhost:8081")
 HOST_USER = os.environ.get("HOST_USERNAME", "host")
 HOST_PASS = os.environ.get("HOST_PASSWORD", "testpass")
 
@@ -51,7 +52,7 @@ def _get_or_create_session() -> str:
             http_credentials={"username": HOST_USER, "password": HOST_PASS}
         )
         page = ctx.new_page()
-        page.goto(f"{BASE}/host", wait_until="networkidle")
+        page.goto(f"{DAEMON_BASE}/host", wait_until="networkidle")
         if re.search(r"/host/[a-zA-Z0-9]+", page.url):
             sid = page.url.split("/host/")[-1].split("?")[0]
             browser.close()
@@ -78,7 +79,7 @@ def test_participant_rename_visible_to_host():
             http_credentials={"username": HOST_USER, "password": HOST_PASS}
         )
         host_page = host_ctx.new_page()
-        host_page.goto(f"{BASE}/host/{session_id}", wait_until="networkidle")
+        host_page.goto(f"{DAEMON_BASE}/host/{session_id}", wait_until="networkidle")
         expect(host_page.locator("#tab-poll")).to_be_visible(timeout=10000)
 
         # Participant joins with auto-name
@@ -125,7 +126,7 @@ def test_emoji_reaction_visible_to_host():
             http_credentials={"username": HOST_USER, "password": HOST_PASS}
         )
         host_page = host_ctx.new_page()
-        host_page.goto(f"{BASE}/host/{session_id}", wait_until="networkidle")
+        host_page.goto(f"{DAEMON_BASE}/host/{session_id}", wait_until="networkidle")
         expect(host_page.locator("#tab-poll")).to_be_visible(timeout=10000)
 
         # Participant joins
