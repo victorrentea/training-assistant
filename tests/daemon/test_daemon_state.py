@@ -238,8 +238,9 @@ def test_sync_session_includes_session_state_when_file_exists():
         finally:
             session_state_mod._ws_client = original_ws
 
-        assert "session_state" in captured["payload"]
-        assert captured["payload"]["session_state"]["mode"] == "workshop"
+        # Now sends set_session_id instead of session_sync
+        assert captured["payload"]["type"] == "set_session_id"
+        assert "session_name" in captured["payload"]
 
 
 def test_sync_session_no_session_state_key_when_none():
