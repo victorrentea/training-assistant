@@ -5,6 +5,7 @@ from fastapi.responses import JSONResponse
 from daemon.scores import scores
 from daemon.participant.state import participant_state
 from daemon.host_ws import send_to_host
+from daemon.leaderboard.state import leaderboard_state
 
 _ws_client = None
 
@@ -30,6 +31,7 @@ async def show_leaderboard():
         if sc > 0
     ][:5]
     total = len([s for s in all_scores.values() if s > 0])
+    leaderboard_state.show(entries, total)
     payload = {"type": "leaderboard_revealed", "entries": entries, "total_participants": total}
     if _ws_client:
         _ws_client.send({"type": "broadcast", "event": payload})
@@ -39,6 +41,7 @@ async def show_leaderboard():
 
 @router.post("/leaderboard/hide")
 async def hide_leaderboard():
+    leaderboard_state.hide()
     payload = {"type": "leaderboard_hide"}
     if _ws_client:
         _ws_client.send({"type": "broadcast", "event": payload})

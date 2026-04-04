@@ -12,6 +12,111 @@ from daemon.participant.state import participant_state
 
 logger = logging.getLogger(__name__)
 
+
+def _build_qa_for_participant(pid: str) -> list[dict]:
+    """Build QA question list personalised for participant pid."""
+    from daemon.qa.state import qa_state
+    ps = participant_state
+    questions = []
+    for qid, q in sorted(
+        qa_state.questions.items(),
+        key=lambda item: (-len(item[1]["upvoters"]), item[1]["timestamp"]),
+    ):
+        questions.append({
+            "id": qid,
+            "text": q["text"],
+            "author": ps.participant_names.get(q["author"], "Unknown"),
+            "author_avatar": ps.participant_avatars.get(q["author"], ""),
+            "upvote_count": len(q["upvoters"]),
+            "answered": q["answered"],
+            "timestamp": q["timestamp"],
+            "is_own": q["author"] == pid,
+            "has_upvoted": pid in q["upvoters"],
+        })
+    return questions
+
+
+def _build_codereview_for_participant(pid: str) -> dict:
+    """Build codereview state personalised for participant pid."""
+    from daemon.codereview.state import codereview_state
+    cr = codereview_state
+    result = {
+        "snippet": cr.snippet,
+        "language": cr.language,
+        "phase": cr.phase,
+        "confirmed_lines": sorted(cr.confirmed),
+        "my_selections": sorted(cr.selections.get(pid, set())),
+    }
+    # Compute line_percentages in reviewing phase
+    if cr.phase == "reviewing" and cr.snippet:
+        line_count = len(cr.snippet.splitlines())
+        total_participants = max(1, len([
+            p for p in cr.selections if not p.startswith("__")
+        ]))
+        line_percentages: dict[int, int] = {}
+        for line_idx in range(line_count):
+            sel_count = sum(1 for sels in cr.selections.values() if line_idx in sels)
+            line_percentages[line_idx] = round(sel_count * 100 / total_participants)
+        result["line_percentages"] = line_percentages
+    return result
+
+
+def _build_debate_for_participant(pid: str) -> dict:
+    """Build debate state personalised for participant pid."""
+    from daemon.debate.state import debate_state
+    ds = debate_state
+    snap = ds.snapshot()
+    # Add personalised fields
+    my_side = ds.sides.get(pid)
+    snap["debate_my_side"] = my_side
+    my_champion_side = None
+    for side, champ_pid in ds.champions.items():
+        if champ_pid == pid:
+            my_champion_side = side
+            break
+    snap["debate_my_is_champion"] = my_champion_side is not None
+    snap["debate_side_counts"] = {"for": 0, "against": 0}
+    for s in ds.sides.values():
+        if s in snap["debate_side_counts"]:
+            snap["debate_side_counts"][s] += 1
+    # Personalise arguments
+    snap["arguments"] = [
+        {
+            **a,
+            "is_own": a["author_uuid"] == pid,
+            "has_upvoted": pid in a["upvoters"],
+        }
+        for a in snap["arguments"]
+    ]
+    return snap
+
+
+def _build_poll_for_participant(pid: str) -> dict:
+    """Build poll state personalised for participant pid."""
+    from daemon.poll.state import poll_state
+    ps = poll_state
+    result: dict = {
+        "poll": ps.poll,
+        "poll_active": ps.poll_active,
+        "vote_counts": ps.vote_counts() if ps.poll else {},
+        "poll_timer_seconds": ps.poll_timer_seconds,
+        "poll_timer_started_at": ps.poll_timer_started_at.isoformat() if ps.poll_timer_started_at else None,
+        "poll_correct_ids": ps.poll_correct_ids,
+    }
+    # Personalise vote
+    my_vote = ps.votes.get(pid)
+    if my_vote is not None:
+        if isinstance(my_vote, list):
+            result["my_vote"] = my_vote
+            result["my_voted_ids"] = my_vote
+        else:
+            result["my_vote"] = my_vote
+            result["my_voted_ids"] = [my_vote]
+    else:
+        result["my_vote"] = None
+        result["my_voted_ids"] = None
+    return result
+
 router = APIRouter(prefix="/api/participant", tags=["participant"])
 
 
@@ -149,3 +254,81 @@ async def set_location(request: Request):
     }]
 
     return JSONResponse({"ok": True})
+
+
+@router.get("/state")
+async def get_participant_state(request: Request):
+    """Return full personalised state for a participant — used on page load and WS reconnect."""
+    from daemon.wordcloud.state import wordcloud_state
+    from daemon.misc.state import misc_state
+    from daemon.leaderboard.state import leaderboard_state
+
+    pid = request.headers.get("x-participant-id", "")
+    ps = participant_state
+
+    # Count non-system participants
+    participant_count = len([p for p in ps.participant_names if not p.startswith("__")])
+
+    poll_data = _build_poll_for_participant(pid)
+    wc = wordcloud_state
+    cr = _build_codereview_for_participant(pid)
+    debate = _build_debate_for_participant(pid)
+    session_id = _get_current_session_id()
+
+    state_msg = {
+        "type": "state",
+        # Core identity / session
+        "mode": ps.mode,
+        "my_score": 0 if ps.mode == "conference" else ps.scores.get(pid, 0),
+        "my_name": ps.participant_names.get(pid, ""),
+        "my_avatar": ps.participant_avatars.get(pid, ""),
+        "current_activity": ps.current_activity,
+        "participant_count": participant_count,
+        "host_connected": True,   # daemon is the host server; if they reached us, host is connected
+        "screen_share_active": True,
+        "daemon_connected": True,
+        # Wordcloud
+        "wordcloud_words": wc.words,
+        "wordcloud_word_order": wc.word_order,
+        "wordcloud_topic": wc.topic,
+        # QA (personalised)
+        "qa_questions": _build_qa_for_participant(pid),
+        # Poll (personalised)
+        **poll_data,
+        # Codereview (personalised)
+        "codereview": cr,
+        # Debate (personalised, flattened from snapshot)
+        "debate_statement": debate.get("statement"),
+        "debate_phase": debate.get("phase"),
+        "debate_my_side": debate.get("debate_my_side"),
+        "debate_my_is_champion": debate.get("debate_my_is_champion"),
+        "debate_side_counts": debate.get("debate_side_counts"),
+        "debate_arguments": debate.get("arguments", []),
+        "debate_champions": debate.get("champions", {}),
+        "debate_auto_assigned": debate.get("auto_assigned", []),
+        "debate_first_side": debate.get("first_side"),
+        "debate_round_index": debate.get("round_index"),
+        "debate_round_timer_seconds": debate.get("round_timer_seconds"),
+        "debate_round_timer_started_at": debate.get("round_timer_started_at"),
+        # Slides (from misc state — synced from Railway)
+        "slides_current": misc_state.slides_current,
+        "session_main": misc_state.session_main,
+        "session_name": misc_state.session_name,
+        # Leaderboard
+        "leaderboard_active": leaderboard_state.active,
+        "leaderboard_data": leaderboard_state.data,
+        # Summary / notes
+        "summary_points": misc_state.summary_points,
+        "notes_content": misc_state.notes_content,
+    }
+
+    return JSONResponse(state_msg)
+
+
+def _get_current_session_id() -> str | None:
+    """Safely get the current session ID from session_state module."""
+    try:
+        from daemon.session_state import get_current_session_id
+        return get_current_session_id()
+    except Exception:
+        return None
