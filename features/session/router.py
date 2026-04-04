@@ -187,18 +187,6 @@ def _clear_activity_state():
     state.codereview_phase = "idle"
     state.codereview_selections.clear()
     state.codereview_confirmed.clear()
-    # Debate
-    state.debate_statement = None
-    state.debate_phase = None
-    state.debate_sides.clear()
-    state.debate_arguments.clear()
-    state.debate_champions.clear()
-    state.debate_auto_assigned.clear()
-    state.debate_first_side = None
-    state.debate_round_index = None
-    state.debate_round_timer_seconds = None
-    state.debate_round_timer_started_at = None
-    state.debate_ai_request = None
     # Scores are owned by daemon — send reset signal; local mirror will be updated via scores_updated broadcast
     # (fire-and-forget; daemon_ws may not be connected yet during startup)
     # Scores and participants
@@ -412,20 +400,6 @@ def _restore_activity_blocks_from_snapshot(snap: dict):
     if hasattr(state, "wordcloud_word_order"):
         state.wordcloud_word_order = wc.get("word_order") or []
 
-    debate = snap.get("debate") or {}
-    state.debate_statement = debate.get("statement")
-    state.debate_phase = debate.get("phase")
-    state.debate_sides = debate.get("sides") or {}
-    state.debate_arguments = [{**a, "upvoters": set(a.get("upvoters") or [])} for a in (debate.get("arguments") or [])]
-    state.debate_champions = debate.get("champions") or {}
-    state.debate_auto_assigned = set(debate.get("auto_assigned") or [])
-    state.debate_first_side = debate.get("first_side")
-    state.debate_round_index = debate.get("round_index")
-    state.debate_round_timer_seconds = debate.get("round_timer_seconds")
-    state.debate_round_timer_started_at = None
-    if debate.get("round_timer_started_at"):
-        state.debate_round_timer_started_at = datetime.fromisoformat(debate["round_timer_started_at"])
-
     cr = snap.get("codereview") or {}
     state.codereview_snippet = cr.get("snippet")
     state.codereview_language = cr.get("language")
@@ -583,19 +557,6 @@ async def get_session_snapshot():
     for q in state.qa_questions.values():
         qa_questions.append({**q, "upvoters": list(q.get("upvoters", set()))})
 
-    debate_data = {
-        "statement": state.debate_statement,
-        "phase": state.debate_phase,
-        "sides": state.debate_sides,
-        "arguments": [{**a, "upvoters": list(a.get("upvoters", set()))} for a in state.debate_arguments],
-        "champions": state.debate_champions,
-        "auto_assigned": list(state.debate_auto_assigned),
-        "first_side": state.debate_first_side,
-        "round_index": state.debate_round_index,
-        "round_timer_seconds": state.debate_round_timer_seconds,
-        "round_timer_started_at": state.debate_round_timer_started_at.isoformat() if state.debate_round_timer_started_at else None,
-    }
-
     codereview_data = {
         "snippet": state.codereview_snippet,
         "language": state.codereview_language,
@@ -617,7 +578,6 @@ async def get_session_snapshot():
             "words": state.wordcloud_words,
             "word_order": getattr(state, 'wordcloud_word_order', []),
         },
-        "debate": debate_data,
         "codereview": codereview_data,
         "leaderboard_active": state.leaderboard_active,
         "token_usage": state.token_usage,

@@ -49,14 +49,6 @@ def _serialize_state() -> dict:
         uuid: sorted(lines) for uuid, lines in state.codereview_selections.items()
     }
 
-    # Debate — convert sets to sorted lists, datetimes to ISO
-    debate_arguments = []
-    for arg in state.debate_arguments:
-        debate_arguments.append({
-            **arg,
-            "upvoters": sorted(arg.get("upvoters", set())),
-        })
-
     return {
         # Participants
         "participant_names": participant_names,
@@ -88,17 +80,6 @@ def _serialize_state() -> dict:
         "codereview_phase": state.codereview_phase,
         "codereview_selections": codereview_selections,
         "codereview_confirmed": sorted(state.codereview_confirmed),
-        # Debate
-        "debate_statement": state.debate_statement,
-        "debate_phase": state.debate_phase,
-        "debate_sides": state.debate_sides,
-        "debate_arguments": debate_arguments,
-        "debate_champions": state.debate_champions,
-        "debate_auto_assigned": sorted(state.debate_auto_assigned),
-        "debate_first_side": state.debate_first_side,
-        "debate_round_index": state.debate_round_index,
-        "debate_round_timer_seconds": state.debate_round_timer_seconds,
-        "debate_round_timer_started_at": _iso_or_none(state.debate_round_timer_started_at),
         # Summary
         "summary_points": state.summary_points,
         "slides_current": state.slides_current,
@@ -178,34 +159,6 @@ def restore_state_from_dict(data: dict):
         }
     if "codereview_confirmed" in data:
         state.codereview_confirmed = set(data["codereview_confirmed"])
-
-    # Debate — convert lists back to sets, ISO strings back to datetimes
-    if "debate_statement" in data:
-        state.debate_statement = data["debate_statement"]
-    if "debate_phase" in data:
-        state.debate_phase = data["debate_phase"]
-    if "debate_sides" in data:
-        state.debate_sides = data["debate_sides"]
-    if "debate_champions" in data:
-        state.debate_champions = data["debate_champions"]
-    if "debate_auto_assigned" in data:
-        state.debate_auto_assigned = set(data["debate_auto_assigned"])
-    if "debate_first_side" in data:
-        state.debate_first_side = data["debate_first_side"]
-    if "debate_round_index" in data:
-        state.debate_round_index = data["debate_round_index"]
-    if "debate_round_timer_seconds" in data:
-        state.debate_round_timer_seconds = data["debate_round_timer_seconds"]
-    if "debate_round_timer_started_at" in data:
-        state.debate_round_timer_started_at = _parse_iso_or_none(data["debate_round_timer_started_at"])
-    if "debate_arguments" in data:
-        debate_arguments = []
-        for arg in data["debate_arguments"]:
-            debate_arguments.append({
-                **arg,
-                "upvoters": set(arg.get("upvoters", [])),
-            })
-        state.debate_arguments = debate_arguments
 
     # Summary
     if "summary_points" in data:

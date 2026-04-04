@@ -30,11 +30,10 @@ from core.metrics import (
 )
 from core.state import state, ActivityType, assign_avatar, refresh_avatar
 from core.messaging import participant_ids
-from features.debate.router import auto_assign_remaining
 from features.ws.daemon_protocol import (
     MSG_SLIDES_CATALOG, MSG_SLIDE_INVALIDATED, MSG_DAEMON_PING,
     MSG_QUIZ_PREVIEW, MSG_QUIZ_STATUS,
-    MSG_DEBATE_AI_RESULT, MSG_SESSION_SYNC, MSG_TRANSCRIPT_STATUS,
+    MSG_SESSION_SYNC, MSG_TRANSCRIPT_STATUS,
     MSG_TOKEN_USAGE, MSG_NOTES_CONTENT, MSG_SLIDES_CURRENT, MSG_SLIDES_CLEAR,
     MSG_TRANSCRIPTION_LANGUAGE_STATUS, MSG_TIMING_EVENT, MSG_STATE_RESTORE,
     MSG_ACTIVITY_LOG, MSG_SESSION_FOLDERS,
@@ -150,46 +149,6 @@ async def _handle_quiz_status(data):
         sync_slides_updated_at()
     await broadcast({"type": "quiz_status", **state.quiz_status})
 
-
-async def _handle_debate_ai_result(data):
-    """Daemon sends AI cleanup results — replicate POST /api/debate/ai-result."""
-    if state.debate_phase != "ai_cleanup":
-        logger.warning("debate_ai_result: not in ai_cleanup phase (current: %s)", state.debate_phase)
-        return
-
-    merges = data.get("merges", [])
-    cleaned = data.get("cleaned", [])
-    new_arguments = data.get("new_arguments", [])
-
-    for merge in merges:
-        keep_id = merge.get("keep_id")
-        for remove_id in merge.get("remove_ids", []):
-            for arg in state.debate_arguments:
-                if arg["id"] == remove_id:
-                    arg["merged_into"] = keep_id
-                    kept = next((a for a in state.debate_arguments if a["id"] == keep_id), None)
-                    if kept:
-                        kept["upvoters"] = kept["upvoters"] | arg["upvoters"]
-
-    for c in cleaned:
-        for arg in state.debate_arguments:
-            if arg["id"] == c.get("id"):
-                arg["text"] = c["text"]
-
-    for new_arg in new_arguments:
-        state.debate_arguments.append({
-            "id": str(uuid_mod.uuid4()),
-            "author_uuid": "__ai__",
-            "side": new_arg["side"],
-            "text": new_arg["text"],
-            "upvoters": set(),
-            "ai_generated": True,
-            "merged_into": None,
-        })
-
-    logger.info("AI result via WS: %d merges, %d new args", len(merges), len(new_arguments))
-    state.debate_phase = "prep"
-    await broadcast_state()
 
 
 async def _handle_session_sync(data):
@@ -358,26 +317,6 @@ async def _handle_state_restore(data):
         state.codereview_selections = {uid: set(lines) for uid, lines in restore_data["codereview_selections"].items()}
     if "codereview_confirmed" in restore_data:
         state.codereview_confirmed = set(restore_data["codereview_confirmed"])
-    if "debate_statement" in restore_data:
-        state.debate_statement = restore_data["debate_statement"]
-    if "debate_phase" in restore_data:
-        state.debate_phase = restore_data["debate_phase"]
-    if "debate_sides" in restore_data:
-        state.debate_sides = restore_data["debate_sides"]
-    if "debate_champions" in restore_data:
-        state.debate_champions = restore_data["debate_champions"]
-    if "debate_auto_assigned" in restore_data:
-        state.debate_auto_assigned = set(restore_data["debate_auto_assigned"])
-    if "debate_first_side" in restore_data:
-        state.debate_first_side = restore_data["debate_first_side"]
-    if "debate_round_index" in restore_data:
-        state.debate_round_index = restore_data["debate_round_index"]
-    if "debate_round_timer_seconds" in restore_data:
-        state.debate_round_timer_seconds = restore_data["debate_round_timer_seconds"]
-    if "debate_round_timer_started_at" in restore_data:
-        state.debate_round_timer_started_at = _parse_iso_or_none(restore_data["debate_round_timer_started_at"])
-    if "debate_arguments" in restore_data:
-        state.debate_arguments = [{**arg, "upvoters": set(arg.get("upvoters", []))} for arg in restore_data["debate_arguments"]]
     if "summary_points" in restore_data:
         state.summary_points = restore_data["summary_points"]
     if "slides_current" in restore_data:
@@ -504,9 +443,6 @@ async def _handle_participant_registered(data: dict):
     if "score" in data:
         state.scores.setdefault(pid, data["score"])
         state.base_scores.setdefault(pid, 0)
-    if "debate_side" in data and data["debate_side"]:
-        state.debate_sides[pid] = data["debate_side"]
-        state.debate_auto_assigned.add(pid)
     # Send full state to this participant if connected
     ws = state.participants.get(pid)
     if ws:
@@ -515,8 +451,6 @@ async def _handle_participant_registered(data: dict):
         except Exception:
             pass
     await broadcast_participant_update()
-    if state.debate_phase:
-        await broadcast_state()
 
 
 async def _handle_participant_location(data: dict):
@@ -562,7 +496,6 @@ _DAEMON_MSG_HANDLERS = {
     MSG_DAEMON_PING: None,  # heartbeat only — last_seen already updated
     MSG_QUIZ_PREVIEW: _handle_quiz_preview,
     MSG_QUIZ_STATUS: _handle_quiz_status,
-    MSG_DEBATE_AI_RESULT: _handle_debate_ai_result,
     MSG_SESSION_SYNC: _handle_session_sync,
     MSG_TRANSCRIPT_STATUS: _handle_transcript_status,
     MSG_TOKEN_USAGE: _handle_token_usage,
@@ -623,8 +556,6 @@ async def daemon_websocket_endpoint(websocket: WebSocket):
             "participant_universes": state.participant_universes,
             "locations": dict(state.locations),
             "mode": state.mode,
-            "debate_phase": state.debate_phase,
-            "debate_sides": dict(state.debate_sides),
             "current_activity": state.current_activity.value if hasattr(state.current_activity, 'value') else str(state.current_activity),
             "wordcloud_words": state.wordcloud_words,
             "wordcloud_word_order": state.wordcloud_word_order,
@@ -753,8 +684,6 @@ async def _handle_participant_connection(websocket: WebSocket, pid: str, is_host
                     await send_state_to_participant(websocket, pid)
                     await _send_content_messages(websocket)
                     await broadcast_participant_update()
-                    if not is_host and state.debate_phase:
-                        await broadcast_state()
                     continue
                 name = str(data.get("name", "")).strip()[:32]
                 if not name:
@@ -768,20 +697,9 @@ async def _handle_participant_connection(websocket: WebSocket, pid: str, is_host
                     assign_avatar(state, pid, name)
                 named = True
                 logger.info(f"Named: {pid} -> {name} ({len(state.participants)} total)")
-                # Auto-assign late joiner to debate if past side_selection
-                if (not is_host
-                    and state.debate_phase
-                    and state.debate_phase != "side_selection"
-                    and pid not in state.debate_sides):
-                    for_count, against_count = state.debate_side_counts()
-                    state.debate_sides[pid] = "for" if for_count <= against_count else "against"
-                    state.debate_auto_assigned.add(pid)
-                    logger.info(f"Late joiner {name} auto-assigned to {state.debate_sides[pid]}")
                 await send_state_to_participant(websocket, pid)
                 await _send_content_messages(websocket)
                 await broadcast_participant_update()
-                if not is_host and state.debate_phase:
-                    await broadcast_state()
                 continue
 
             if msg_type == "set_name":
@@ -849,84 +767,6 @@ async def _handle_participant_connection(websocket: WebSocket, pid: str, is_host
                     state.add_score(pid, 25)
                     qa_upvotes_total.inc()
                     await broadcast_state()
-
-            elif msg_type == "debate_pick_side":
-                side = data.get("side")
-                if (
-                    state.current_activity == ActivityType.DEBATE
-                    and state.debate_phase == "side_selection"
-                    and side in ("for", "against")
-                    and pid not in state.debate_sides
-                    and not is_host
-                ):
-                    state.debate_sides[pid] = side
-
-                    # Auto-assign remaining when at least half have picked
-                    all_pids = [p for p in participant_ids() if p != "__host__"]
-                    newly = auto_assign_remaining(all_pids, state.debate_sides)
-                    if newly:
-                        state.debate_auto_assigned.update(newly)
-                        logger.info(f"Auto-assigned {len(newly)} participants (≥50% picked)")
-
-                    # Auto-advance if all participants now have sides and both sides have members
-                    if all(p in state.debate_sides for p in all_pids):
-                        fc, ac = state.debate_side_counts()
-                        if fc > 0 and ac > 0:
-                            state.debate_phase = "arguments"
-                            logger.info("All participants assigned — auto-advancing to arguments phase")
-
-                    await broadcast_state()
-
-            elif msg_type == "debate_argument":
-                text = str(data.get("text", "")).strip()
-                if (
-                    state.current_activity == ActivityType.DEBATE
-                    and state.debate_phase == "arguments"
-                    and text
-                    and len(text) <= 280
-                    and pid in state.debate_sides
-                    and not is_host
-                ):
-                    arg_id = str(uuid_mod.uuid4())
-                    state.debate_arguments.append({
-                        "id": arg_id,
-                        "author_uuid": pid,
-                        "side": state.debate_sides[pid],
-                        "text": text,
-                        "upvoters": set(),
-                        "ai_generated": False,
-                        "merged_into": None,
-                    })
-                    state.add_score(pid, 100)
-                    await broadcast_state()
-
-            elif msg_type == "debate_upvote":
-                arg_id = data.get("argument_id")
-                if (
-                    state.current_activity == ActivityType.DEBATE
-                    and state.debate_phase in ("arguments", "ai_cleanup", "prep")
-                    and not is_host
-                ):
-                    arg = next((a for a in state.debate_arguments if a["id"] == arg_id), None)
-                    if arg and pid not in arg["upvoters"] and arg["author_uuid"] != pid:
-                        arg["upvoters"].add(pid)
-                        if arg["author_uuid"] != "__ai__":
-                            state.add_score(arg["author_uuid"], 50)
-                        state.add_score(pid, 25)
-                        await broadcast_state()
-
-            elif msg_type == "debate_volunteer":
-                if (
-                    state.current_activity == ActivityType.DEBATE
-                    and state.debate_phase == "prep"
-                    and pid in state.debate_sides
-                    and not is_host
-                ):
-                    my_side = state.debate_sides[pid]
-                    if my_side not in state.debate_champions:
-                        state.debate_champions[my_side] = pid
-                        state.add_score(pid, 2500)
-                        await broadcast_state()
 
             elif msg_type == "emoji_reaction":
                 emoji = str(data.get("emoji", "")).strip()

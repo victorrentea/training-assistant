@@ -86,18 +86,6 @@ async def set_name(request: Request):
     # Initialize score
     ps.scores.setdefault(pid, 0)
 
-    # Debate late-joiner auto-assign
-    debate_side = None
-    if (ps.debate_phase
-            and ps.debate_phase != "side_selection"
-            and pid not in ps.debate_sides):
-        for_count = sum(1 for s in ps.debate_sides.values() if s == "for")
-        against_count = sum(1 for s in ps.debate_sides.values() if s == "against")
-        side = "for" if for_count <= against_count else "against"
-        ps.debate_sides[pid] = side
-        debate_side = side
-        logger.info("Late joiner %s auto-assigned to %s", raw_name, side)
-
     # Build write-back event (sent by proxy_handler BEFORE proxy_response)
     request.state.write_back_events = [{
         "type": "participant_registered",
@@ -106,7 +94,7 @@ async def set_name(request: Request):
         "avatar": avatar,
         "universe": ps.participant_universes.get(pid, ""),
         "score": ps.scores.get(pid, 0),
-        "debate_side": debate_side,
+        "debate_side": None,
     }]
 
     return JSONResponse({"ok": True, "name": raw_name, "avatar": avatar})

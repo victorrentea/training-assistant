@@ -31,9 +31,7 @@ def _participant_display_name(pid: str) -> str:
 
 def _build_host_participants_list() -> list[dict]:
     from core.messaging import historical_participant_ids
-    from core.state import ActivityType
 
-    include_debate_side = state.current_activity == ActivityType.DEBATE and state.debate_phase
     participants_list: list[dict] = []
     for pid in historical_participant_ids():
         participant = {
@@ -55,8 +53,6 @@ def _build_host_participants_list() -> list[dict]:
                  "downloaded_at": e.get("downloaded_at")}
                 for e in upload_entries
             ]
-        if include_debate_side:
-            participant["debate_side"] = state.debate_sides.get(pid)
         participants_list.append(participant)
     return participants_list
 

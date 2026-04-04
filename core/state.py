@@ -90,19 +90,6 @@ class AppState:
         self.session_type: str = "workshop"     # "workshop" | "conference"
         self.session_name: str | None = None    # display name for current session
         self.session_request: dict | None = None
-        # Debate state
-        self.debate_statement: Optional[str] = None
-        self.debate_phase: Optional[str] = None  # "side_selection"|"arguments"|"ai_cleanup"|"prep"|"live_debate"|"ended"
-        self.debate_sides: dict[str, str] = {}  # uuid → "for"|"against"
-        self.debate_arguments: list[dict] = []  # [{id, author_uuid, side, text, upvoters: set, ai_generated: bool, merged_into: str|None}]
-        self.debate_champions: dict[str, str] = {}  # "for" → uuid, "against" → uuid
-        self.debate_auto_assigned: set[str] = set()  # uuids that were auto-assigned a side
-        # Debate live rounds
-        self.debate_first_side: Optional[str] = None  # "for"|"against" — which side speaks first
-        self.debate_round_index: Optional[int] = None  # 0-3 index, None = not started
-        self.debate_round_timer_seconds: Optional[int] = None
-        self.debate_round_timer_started_at: Optional[datetime] = None
-        self.debate_ai_request: Optional[dict] = None  # pending AI cleanup payload for daemon
         self.token_usage: dict = {"input_tokens": 0, "output_tokens": 0, "estimated_cost_usd": 0.0}
         self.mode: str = "workshop"  # "workshop" | "conference"
         self.screen_share_active: bool = True
@@ -132,12 +119,6 @@ class AppState:
         taken_names = set(self.participant_names.values())
         available = [n for n in LOTR_NAMES if n not in taken_names]
         return available[0] if available else None
-
-    def debate_side_counts(self) -> tuple[int, int]:
-        """Return (for_count, against_count) from debate_sides."""
-        for_count = sum(1 for s in self.debate_sides.values() if s == "for")
-        against_count = sum(1 for s in self.debate_sides.values() if s == "against")
-        return for_count, against_count
 
     def ensure_activity_available(self, allowed: 'ActivityType'):
         """Raise HTTPException if another activity is active."""

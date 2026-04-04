@@ -3769,26 +3769,42 @@ ${html}
 
   // ── Debate WS senders ──
   function debatePickSide(side) {
-    sendWS('debate_pick_side', { side });
+    fetch(apiBase + '/api/participant/debate/pick-side', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ side })
+    }).catch(err => console.error('Debate pick side failed:', err));
   }
 
   function debateSubmitArg() {
     const input = document.getElementById('debate-arg-input');
     if (!input) return;
     const text = input.value.trim();
-    if (!text || !ws) return;
-    sendWS('debate_argument', { text });
+    if (!text) return;
+    fetch(apiBase + '/api/participant/debate/argument', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ text })
+    }).catch(err => console.error('Debate argument failed:', err));
     input.value = '';
     const btn = document.getElementById('debate-arg-submit');
     if (btn) btn.disabled = true;
   }
 
   function debateUpvote(argId) {
-    sendWS('debate_upvote', { argument_id: argId });
+    fetch(apiBase + '/api/participant/debate/upvote', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ argument_id: argId })
+    }).catch(err => console.error('Debate upvote failed:', err));
   }
 
   function debateVolunteer() {
-    sendWS('debate_volunteer', {});
+    fetch(apiBase + '/api/participant/debate/volunteer', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({})
+    }).catch(err => console.error('Debate volunteer failed:', err));
   }
 
   // ── Render ──
