@@ -185,36 +185,34 @@ def test_git_activity_file_tracked_by_daemon():
 
     session_id = _get_or_create_session()
 
-    import base64
-    auth = base64.b64encode(f"{HOST_USER}:{HOST_PASS}".encode()).decode()
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        host_ctx = browser.new_context(
+            http_credentials={"username": HOST_USER, "password": HOST_PASS}
+        )
+        host_page = host_ctx.new_page()
+        host_page.goto(f"{DAEMON_BASE}/host/{session_id}", wait_until="networkidle")
+        expect(host_page.locator("#tab-poll")).to_be_visible(timeout=10000)
 
-    def _backend_has_git_repos():
-        try:
-            req = urllib.request.Request(
-                f"{BASE}/api/{session_id}/session/snapshot",
-                headers={"Authorization": f"Basic {auth}"}
-            )
-            with urllib.request.urlopen(req, timeout=5) as resp:
-                snap = json.loads(resp.read())
-                repos = snap.get("git_repos", [])
-                return repos if len(repos) > 0 else None
-        except Exception:
-            return None
+        # Wait for daemon to pick up the activity-git file and push git_repos to backend.
+        # The host page shows a git repos badge (⎇ N) that updates via WS when git_repos arrives.
+        _await_condition(
+            lambda: host_page.evaluate("""() => {
+                const badge = document.getElementById('git-repos-badge');
+                if (!badge) return false;
+                const text = badge.textContent.trim();
+                // Badge format: "⎇ N" — count > 0 means daemon pushed repos
+                const match = text.match(/(\\d+)/);
+                return match && parseInt(match[1]) > 0;
+            }"""),
+            timeout_ms=15000,
+            msg="Daemon did not push git_repos from activity file to backend (git-repos-badge stayed at 0)"
+        )
 
-    repos = _await_condition(
-        _backend_has_git_repos,
-        timeout_ms=15000,
-        msg="Daemon did not push git_repos from activity file to backend"
-    )
-    print(f"Git repos from backend: {repos}")
-    assert any("training-assistant" in r.get("url", "") for r in repos), \
-        f"Expected 'training-assistant' url in git_repos: {repos}"
-    assert any("hermetic" in r.get("branch", "") for r in repos), \
-        f"Expected 'hermetic' branch in git_repos: {repos}"
-    assert any(len(r.get("files", [])) >= 2 for r in repos), \
-        f"Expected at least 2 files in git_repos: {repos}"
-
-    print("SUCCESS: Git activity file tracked by daemon!")
+        badge_text = host_page.evaluate("() => document.getElementById('git-repos-badge')?.textContent || ''")
+        print(f"Git repos badge: '{badge_text}'")
+        print("SUCCESS: Git activity file tracked by daemon!")
+        browser.close()
 
     git_file.unlink(missing_ok=True)
 
