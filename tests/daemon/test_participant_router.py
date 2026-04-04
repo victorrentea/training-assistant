@@ -25,64 +25,77 @@ def client(fresh_state):
     return TestClient(app)
 
 
-class TestSetName:
+class TestRegister:
     def test_new_participant_gets_name_and_avatar(self, client, fresh_state):
-        resp = client.post("/api/participant/name",
-                           json={"name": "Alice"},
+        resp = client.post("/api/participant/register",
+                           json={},
                            headers={"X-Participant-ID": "uuid1"})
         assert resp.status_code == 200
         data = resp.json()
-        assert data["ok"] is True
-        assert data["name"] == "Alice"
+        assert data["name"]  # non-empty auto-assigned LOTR name
         assert data["avatar"]  # non-empty
-        assert fresh_state.participant_names["uuid1"] == "Alice"
+        assert fresh_state.participant_names["uuid1"] == data["name"]
 
-    def test_returning_participant_fast_path(self, client, fresh_state):
+    def test_returning_participant_gets_same_identity(self, client, fresh_state):
         fresh_state.participant_names["uuid1"] = "Bob"
         fresh_state.participant_avatars["uuid1"] = "letter:BO:#abc"
-        resp = client.post("/api/participant/name",
-                           json={"name": ""},
+        resp = client.post("/api/participant/register",
+                           json={},
                            headers={"X-Participant-ID": "uuid1"})
         assert resp.status_code == 200
         data = resp.json()
-        assert data["returning"] is True
         assert data["name"] == "Bob"
+        assert data["avatar"] == "letter:BO:#abc"
 
-    def test_duplicate_name_gets_alternative(self, client, fresh_state):
-        fresh_state.participant_names["other"] = "Alice"
-        resp = client.post("/api/participant/name",
-                           json={"name": "Alice"},
-                           headers={"X-Participant-ID": "uuid1"})
-        assert resp.status_code == 200
-        data = resp.json()
-        assert data["name"] != "Alice"  # got an alternative
-
-    def test_empty_name_rejected_in_workshop_mode(self, client, fresh_state):
-        resp = client.post("/api/participant/name",
-                           json={"name": ""},
-                           headers={"X-Participant-ID": "uuid1"})
-        assert resp.status_code == 400
+    def test_two_participants_get_different_names(self, client, fresh_state):
+        resp1 = client.post("/api/participant/register", json={},
+                            headers={"X-Participant-ID": "uuid1"})
+        resp2 = client.post("/api/participant/register", json={},
+                            headers={"X-Participant-ID": "uuid2"})
+        assert resp1.json()["name"] != resp2.json()["name"]
 
     def test_conference_mode_auto_assigns_name(self, client, fresh_state):
         fresh_state.mode = "conference"
-        resp = client.post("/api/participant/name",
-                           json={"name": ""},
+        resp = client.post("/api/participant/register",
+                           json={},
                            headers={"X-Participant-ID": "uuid1"})
         assert resp.status_code == 200
-        data = resp.json()
-        assert data["name"]  # non-empty auto-assigned name
+        assert resp.json()["name"]  # non-empty auto-assigned name
 
     def test_missing_participant_id_returns_400(self, client):
-        resp = client.post("/api/participant/name", json={"name": "Alice"})
+        resp = client.post("/api/participant/register", json={})
         assert resp.status_code == 400
 
-    def test_name_truncated_to_32_chars(self, client, fresh_state):
+
+class TestRename:
+    def test_rename_updates_name(self, client, fresh_state):
+        # Register first
+        fresh_state.participant_names["uuid1"] = "Gandalf"
+        fresh_state.participant_avatars["uuid1"] = "gandalf.png"
+        resp = client.put("/api/participant/name",
+                          json={"name": "CustomName"},
+                          headers={"X-Participant-ID": "uuid1"})
+        assert resp.status_code == 200
+        assert fresh_state.participant_names["uuid1"] == "CustomName"
+
+    def test_rename_rejects_unregistered(self, client, fresh_state):
+        resp = client.put("/api/participant/name",
+                          json={"name": "Alice"},
+                          headers={"X-Participant-ID": "unknown-uuid"})
+        assert resp.status_code == 400
+
+    def test_rename_truncated_to_32_chars(self, client, fresh_state):
+        fresh_state.participant_names["uuid1"] = "Gandalf"
         long_name = "A" * 50
-        resp = client.post("/api/participant/name",
-                           json={"name": long_name},
-                           headers={"X-Participant-ID": "uuid1"})
+        resp = client.put("/api/participant/name",
+                          json={"name": long_name},
+                          headers={"X-Participant-ID": "uuid1"})
         assert resp.status_code == 200
         assert len(fresh_state.participant_names["uuid1"]) <= 32
+
+    def test_missing_participant_id_returns_400(self, client):
+        resp = client.put("/api/participant/name", json={"name": "Alice"})
+        assert resp.status_code == 400
 
 
 class TestRefreshAvatar:
