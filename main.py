@@ -146,3 +146,29 @@ session_participant.include_router(participant_proxy_router)  # /api/participant
 app.include_router(session_participant)
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
+
+
+# ── Public status endpoint (version probe + session state) ──
+
+@app.get("/api/status")
+async def get_status():
+    """Public endpoint: backend version, active session info, and current slides."""
+    from core.version import get_backend_version
+    return {
+        "backend_version": get_backend_version(),
+        "session_active": state.session_id is not None,
+        "session_id": state.session_id,
+        "slides_current": state.slides_current,
+    }
+
+
+@app.get("/{session_id}/api/status")
+async def get_session_status(session_id: str, _=Depends(require_valid_session)):
+    """Session-scoped public status endpoint — returns 200 for valid session, 404 for invalid."""
+    from core.version import get_backend_version
+    return {
+        "backend_version": get_backend_version(),
+        "session_active": True,
+        "session_id": state.session_id,
+        "slides_current": state.slides_current,
+    }
