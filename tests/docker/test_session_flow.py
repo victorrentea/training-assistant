@@ -53,11 +53,11 @@ def backend_server():
         stderr=subprocess.PIPE,
     )
 
-    # Wait for server to be ready (use /api/session/active which always returns 200)
+    # Wait for server to be ready (use root path which always returns 200)
     import urllib.request
     for _ in range(60):
         try:
-            urllib.request.urlopen(f"{BASE}/api/session/active")
+            urllib.request.urlopen(f"{BASE}/")
             break
         except Exception:
             time.sleep(0.3)

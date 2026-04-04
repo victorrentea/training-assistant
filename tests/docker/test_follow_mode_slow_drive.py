@@ -86,7 +86,7 @@ def _create_session(name: str) -> str:
     import base64
     auth = base64.b64encode(f"{HOST_USER}:{HOST_PASS}".encode()).decode()
     req = urllib.request.Request(
-        f"{BASE}/api/session/create",
+        f"{DAEMON_BASE}/api/session/create",
         method="POST",
         headers={
             "Authorization": f"Basic {auth}",
