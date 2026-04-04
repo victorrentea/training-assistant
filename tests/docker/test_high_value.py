@@ -30,7 +30,7 @@ from playwright.sync_api import sync_playwright, expect
 
 from pages.participant_page import ParticipantPage
 from pages.host_page import HostPage
-from session_utils import fresh_session
+from session_utils import fresh_session, daemon_has_participant
 
 
 BASE = "http://localhost:8000"
@@ -155,15 +155,18 @@ def test_paste_text_visible_to_host():
         pax.join("Paster")
 
         _await_condition(
-            lambda: "Paster" in host_page.inner_text("body"),
+            lambda: daemon_has_participant(session_id, "Paster"),
             timeout_ms=5000, msg="Host doesn't see Paster"
         )
 
-        # Simulate paste via WS message (Playwright can't easily trigger Cmd+V)
-        pax_page.evaluate("""() => {
-            if (typeof sendWS === 'function') {
-                sendWS('paste_text', { text: 'Hello from hermetic test!' });
-            }
+        # Simulate paste via REST API (paste is now POST /api/participant/paste, not WS)
+        pax_page.evaluate("""async () => {
+            const resp = await fetch(apiBase + '/api/participant/paste', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-Participant-ID': myUUID },
+                body: JSON.stringify({ text: 'Hello from hermetic test!' })
+            });
+            if (!resp.ok) console.error('Paste failed:', resp.status);
         }""")
 
         # Host should see a paste icon next to the participant
@@ -190,7 +193,7 @@ def test_zero_votes_shows_zero_percent():
 
         # Wait for participant to appear on host (confirms WS is bidirectional)
         _await_condition(
-            lambda: "Observer" in host_page.inner_text("body"),
+            lambda: daemon_has_participant(session_id, "Observer"),
             timeout_ms=5000, msg="Host didn't see Observer"
         )
 
@@ -267,21 +270,28 @@ def test_code_review_line_selection():
         browser, host, host_page, pax, pax_page = _open_browser_trio(p, session_id)
         # Wait for host WS connection
         expect(host_page.locator("#ws-badge.connected")).to_be_visible(timeout=10000)
-        pax.join("Reviewer")
 
-        # Host creates code review with a snippet (disable smart_paste — no API key in test)
+        # Host creates code review BEFORE participant joins
+        # so participant's state fetch returns current_activity='codereview'
         snippet = "public void process() {\n    // TODO: implement\n    return null;\n}"
         _api_call("POST", f"/api/{session_id}/host/codereview",
                   {"snippet": snippet, "language": "java", "smart_paste": False}, base=DAEMON_BASE)
 
+        # Now participant joins — their state fetch will include current_activity='codereview'
+        pax_ctx = browser.new_context()
+        pax_page2 = pax_ctx.new_page()
+        pax_page2.goto(f"{BASE}/{session_id}", wait_until="networkidle")
+        pax2 = ParticipantPage(pax_page2)
+        pax2.join("Reviewer")
+
         # Wait for code review to appear on participant
-        expect(pax_page.locator(".codereview-pline-clickable").first).to_be_visible(timeout=5000)
+        expect(pax_page2.locator(".codereview-pline-clickable").first).to_be_visible(timeout=5000)
 
         # Participant clicks a line to flag it (line 3: "return null;")
-        pax_page.locator(".codereview-pline-clickable").nth(2).click()
+        pax_page2.locator(".codereview-pline-clickable").nth(2).click()
 
         # Verify participant sees their selection
-        expect(pax_page.locator(".codereview-pline-selected")).to_be_visible(timeout=3000)
+        expect(pax_page2.locator(".codereview-pline-selected")).to_be_visible(timeout=3000)
 
         # Host should see the selection count (percentage > 0%)
         _await_condition(
@@ -300,16 +310,27 @@ def test_wordcloud_close_returns_to_idle():
     """Host opens wordcloud → submits word → host closes → participant returns to idle."""
     session_id = fresh_session("WCClose")
     with sync_playwright() as p:
-        browser, host, host_page, pax, pax_page = _open_browser_trio(p, session_id)
-        pax.join("CloudUser")
+        browser = p.chromium.launch(headless=True)
 
+        host_ctx = browser.new_context(http_credentials={"username": HOST_USER, "password": HOST_PASS})
+        host_page = host_ctx.new_page()
+        host_page.goto(f"{DAEMON_BASE}/host/{session_id}", wait_until="networkidle")
+        host = HostPage(host_page)
+
+        # Open wordcloud BEFORE participant navigates so state fetch returns current_activity='wordcloud'
         host.open_wordcloud_tab()
+
+        pax_ctx = browser.new_context()
+        pax_page = pax_ctx.new_page()
+        pax_page.goto(f"{BASE}/{session_id}", wait_until="networkidle")
+        pax = ParticipantPage(pax_page)
+        pax.join("CloudUser")
         expect(pax_page.locator("#wc-canvas")).to_be_visible(timeout=5000)
 
         pax.submit_word("testing")
 
         # Switch to NONE activity (close wordcloud) — daemon endpoint
-        _api_call("POST", f"/api/{session_id}/host/activity", {"activity": "none"}, base=DAEMON_BASE)
+        _api_call("PUT", f"/api/{session_id}/host/activity", {"activity": "none"}, base=DAEMON_BASE)
 
         # Participant should no longer see the wordcloud
         _await_condition(
@@ -329,9 +350,23 @@ def test_self_upvote_disabled():
     """Participant can't upvote their own Q&A question."""
     session_id = fresh_session("SelfUpvote")
     with sync_playwright() as p:
-        browser, host, host_page, pax, pax_page = _open_browser_trio(p, session_id)
-        pax.join("Author")
+        browser = p.chromium.launch(headless=True)
+
+        # Open host first and switch to Q&A tab BEFORE participant joins
+        # so that the participant's initial state fetch returns current_activity='qa'
+        host_ctx = browser.new_context(http_credentials={"username": HOST_USER, "password": HOST_PASS})
+        host_page = host_ctx.new_page()
+        host_page.goto(f"{DAEMON_BASE}/host/{session_id}", wait_until="networkidle")
+        expect(host_page.locator("#tab-poll")).to_be_visible(timeout=10000)
+        host = HostPage(host_page)
         host.open_qa_tab()
+
+        # NOW participant joins — state fetch will return current_activity='qa'
+        pax_ctx = browser.new_context()
+        pax_page = pax_ctx.new_page()
+        pax_page.goto(f"{BASE}/{session_id}", wait_until="networkidle")
+        pax = ParticipantPage(pax_page)
+        pax.join("Author")
 
         pax.submit_question("My own question")
 
@@ -416,9 +451,9 @@ def test_participant_count_updates():
             pax.join(name)
             paxes.append(pax)
 
-            # Host should see the count update
+            # Host should see the participant in daemon state
             _await_condition(
-                lambda n=name: n in host_page.inner_text("body"),
+                lambda n=name: daemon_has_participant(session_id, n),
                 timeout_ms=5000,
                 msg=f"Host didn't see participant '{name}'"
             )

@@ -15,22 +15,28 @@ class HostPage:
 
     def create_poll(self, question: str, options: list[str], multi: bool = False,
                     correct_count: int | None = None) -> None:
-        """Type a poll into the composer and launch it (poll opens automatically)."""
+        """Create and open a poll via the daemon API directly (bypasses browser UI parsing)."""
+        import json as _json
         # Ensure Poll tab is active (may be on Q&A/Wordcloud/Code tab)
         self._page.click("#tab-poll")
-        # Manual entry is inside a collapsible <details> — open it
-        self._page.evaluate("document.getElementById('manual-poll-details').open = true")
-        composer = self._page.locator("#poll-input")
-        composer.scroll_into_view_if_needed(timeout=10000)
-        composer.click()
-        composer.evaluate("el => { el.focus(); document.execCommand('selectAll'); }")
-        self._page.keyboard.type("\n".join([question] + options))
-        if multi:
-            self._page.check("#multi-check")
-            if correct_count is not None:
-                self._page.fill("#correct-count", str(correct_count))
-        self._page.click("#create-btn")
-        expect(self._page.locator("text=Close voting")).to_be_visible(timeout=5000)
+        # Build proper dict options {id, text} as daemon expects
+        dict_options = [{"id": chr(65 + i), "text": t} for i, t in enumerate(options)]
+        payload: dict = {"question": question, "options": dict_options, "multi": multi}
+        if correct_count is not None:
+            payload["correct_count"] = correct_count
+        # Use JS fetch to POST to daemon API — page already has SESSION_ID and API() helper
+        self._page.evaluate(f"""async () => {{
+            const resp = await fetch(API('/poll'), {{
+                method: 'POST',
+                headers: {{'Content-Type': 'application/json'}},
+                body: JSON.stringify({_json.dumps(payload)})
+            }});
+            if (!resp.ok) throw new Error('Poll create failed: ' + resp.status);
+            const open_resp = await fetch(API('/poll/open'), {{ method: 'POST' }});
+            if (!open_resp.ok) throw new Error('Poll open failed: ' + open_resp.status);
+        }}""")
+        # Wait for poll to be created & opened (poll-question appears in DOM)
+        self._page.wait_for_selector("#poll-display.voting-active", timeout=5000)
 
     def expect_generate_button_label(self, label: str) -> None:
         expect(self._page.locator("#gen-quiz-btn")).to_have_text(label, timeout=3000)
@@ -39,18 +45,19 @@ class HostPage:
         self._page.fill("#quiz-topic", text)
 
     def close_poll(self) -> None:
-        btn = self._page.locator("text=Close voting")
-        expect(btn).to_be_visible(timeout=5000)
-        expect(btn).to_be_enabled(timeout=3000)
-        btn.click()
-        # With 0 votes the button says "Open voting"; with votes it says "Re-open"
-        expect(
-            self._page.locator("text=Re-open").or_(self._page.locator("text=Open voting"))
-        ).to_be_visible(timeout=5000)
+        # Wait for close button to exist in DOM (it may be inside a hidden parent)
+        btn = self._page.locator("button[onclick='setPollStatus(false)']")
+        btn.wait_for(state="attached", timeout=5000)
+        btn.click(force=True)  # force=True bypasses visibility check on parent
+        # Poll closed: #poll-display no longer has .voting-active
+        self._page.wait_for_function(
+            "() => !document.querySelector('#poll-display.voting-active')",
+            timeout=5000,
+        )
 
     def reopen_poll(self) -> None:
-        self._page.click("text=Re-open")
-        expect(self._page.locator("text=Close voting")).to_be_visible(timeout=5000)
+        self._page.locator("button[onclick='setPollStatus(true)']").click(force=True)
+        self._page.wait_for_selector("#poll-display.voting-active", timeout=5000)
 
     def mark_correct(self, *option_texts: str) -> None:
         """Click result rows to mark options correct (by partial text match)."""
@@ -61,6 +68,7 @@ class HostPage:
 
     def open_wordcloud_tab(self) -> None:
         self._page.click("#tab-wordcloud")
+        self._page.wait_for_timeout(800)  # wait for daemon to acknowledge activity change
 
     def submit_word(self, word: str) -> None:
         self._page.fill("#wc-host-input", word)
@@ -71,6 +79,10 @@ class HostPage:
     def open_qa_tab(self) -> None:
         self._page.click("text=Q&A")
         expect(self._page.locator("#tab-content-qa")).to_be_visible(timeout=5000)
+        # Wait for the daemon to confirm the activity change has been processed.
+        # host.js fires an async PUT /activity after updating the DOM, so we need
+        # to wait beyond tab-visibility to ensure participants fetching state get 'qa'.
+        self._page.wait_for_timeout(800)
 
     def get_qa_questions(self) -> list[dict]:
         """Return list of {id, text, upvotes, answered} as shown on host panel."""

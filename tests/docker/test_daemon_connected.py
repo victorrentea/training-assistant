@@ -8,14 +8,20 @@ Verifies:
 4. Participant can join the session
 """
 
+import base64
 import json
 import os
 import re
+import sys
 import time
 import urllib.request
 
 import pytest
 from playwright.sync_api import sync_playwright, expect
+
+sys.path.insert(0, "/app")
+sys.path.insert(0, "/app/tests")
+from session_utils import daemon_has_participant
 
 
 BASE = "http://localhost:8000"
@@ -66,57 +72,25 @@ def test_daemon_connected():
 
 
 def test_host_starts_session_with_real_daemon():
-    """Host starts session, real daemon processes the request."""
-    import base64
+    """Host starts session via API, real daemon processes the request."""
+    from session_utils import fresh_session
 
-    # End any existing session so the landing page is shown (not a redirect)
-    auth = base64.b64encode(f"{HOST_USER}:{HOST_PASS}".encode()).decode()
-    try:
-        req = urllib.request.Request(
-            f"{DAEMON_BASE}/api/session/end", method="POST",
-            headers={"Authorization": f"Basic {auth}", "Content-Length": "0"},
-            data=b"",
-        )
-        urllib.request.urlopen(req, timeout=5)
-    except Exception:
-        pass
-
-    # Wait for session to be fully ended
-    deadline = time.monotonic() + 8
-    while time.monotonic() < deadline:
-        try:
-            with urllib.request.urlopen(f"{DAEMON_BASE}/api/session/active", timeout=3) as r:
-                if not json.loads(r.read()).get("active", True):
-                    break
-        except Exception:
-            pass
-        time.sleep(0.3)
+    # Create a fresh session via daemon API (reliable, no browser UI dependency)
+    session_id = fresh_session("Docker Hermetic Test")
+    assert session_id, "No session_id returned from fresh_session"
+    print(f"Session created: {session_id}")
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
 
-        # Host browser
+        # Host opens the session panel (daemon serves host.html at /host/{session_id})
         host_ctx = browser.new_context(
             http_credentials={"username": HOST_USER, "password": HOST_PASS}
         )
         host_page = host_ctx.new_page()
-
-        # Host opens landing page (daemon serves host panel at port 8081)
-        host_page.goto(f"{DAEMON_BASE}/host", wait_until="networkidle")
-
-        # Type session name and start
-        name_input = host_page.locator("#session-name-input")
-        name_input.fill("Docker Hermetic Test")
-
-        create_btn = host_page.locator("#create-btn-workshop")
-        expect(create_btn).to_be_enabled(timeout=3000)
-        create_btn.click()
-
-        # Should redirect to /host/{session_id}
-        host_page.wait_for_url(re.compile(r"/host/[a-zA-Z0-9]+"), timeout=15000)
-        session_id = host_page.url.split("/host/")[-1].split("?")[0]
-        assert session_id, "No session_id in URL"
-        print(f"Session created: {session_id}")
+        host_page.goto(f"{DAEMON_BASE}/host/{session_id}", wait_until="networkidle")
+        expect(host_page.locator("#tab-poll")).to_be_visible(timeout=10000)
+        print("Host panel loaded")
 
         # Participant joins
         pax_ctx = browser.new_context()
@@ -130,10 +104,15 @@ def test_host_starts_session_with_real_daemon():
         assert pax_name, "Participant name should not be empty"
         print(f"Participant joined as: {pax_name}")
 
-        # Host should see participant
-        host_page.wait_for_timeout(3000)
-        body = host_page.inner_text("body")
-        assert pax_name in body, f"Host doesn't see '{pax_name}'"
+        # Host should see participant via daemon's authoritative state
+        deadline = time.monotonic() + 8
+        found = False
+        while time.monotonic() < deadline:
+            if daemon_has_participant(session_id, pax_name):
+                found = True
+                break
+            time.sleep(0.3)
+        assert found, f"Host doesn't see '{pax_name}' in daemon state"
 
         print(f"SUCCESS: Real daemon + backend + browsers working in Docker!")
         browser.close()

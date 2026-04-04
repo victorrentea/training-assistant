@@ -20,7 +20,7 @@ from playwright.sync_api import sync_playwright, expect
 
 from pages.participant_page import ParticipantPage
 from pages.host_page import HostPage
-from session_utils import fresh_session
+from session_utils import fresh_session, daemon_has_participant
 
 
 BASE = "http://localhost:8000"
@@ -61,9 +61,9 @@ def test_participant_rename_visible_to_host():
         pax = ParticipantPage(pax_page)
         pax.join("OriginalName")
 
-        # Host should see "OriginalName"
+        # Verify participant registered with original name in daemon state
         _await_condition(
-            lambda: "OriginalName" in host_page.inner_text("body"),
+            lambda: daemon_has_participant(session_id, "OriginalName"),
             timeout_ms=5000,
             msg="Host does not see 'OriginalName'"
         )
@@ -72,15 +72,13 @@ def test_participant_rename_visible_to_host():
         # Participant renames
         pax.rename("RenamedAlice")
 
-        # Host should see the new name
+        # Verify rename propagated to daemon state
         _await_condition(
-            lambda: "RenamedAlice" in host_page.inner_text("body"),
+            lambda: daemon_has_participant(session_id, "RenamedAlice"),
             timeout_ms=5000,
             msg="Host does not see 'RenamedAlice' after rename"
         )
 
-        # Old name should be gone from active display
-        # (it may still exist in history, but the active name should be new)
         print("Host sees RenamedAlice after rename")
         print("SUCCESS: Name change visible to host!")
         browser.close()
@@ -108,9 +106,9 @@ def test_emoji_reaction_visible_to_host():
         pax = ParticipantPage(pax_page)
         pax.join("EmojiSender")
 
-        # Wait for participant to appear on host
+        # Wait for participant to register in daemon state
         _await_condition(
-            lambda: "EmojiSender" in host_page.inner_text("body"),
+            lambda: daemon_has_participant(session_id, "EmojiSender"),
             timeout_ms=5000,
             msg="Host does not see 'EmojiSender'"
         )

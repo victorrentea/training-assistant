@@ -50,7 +50,7 @@ def _api_call(method, path, data=None, base=None):
 def _clear_qa(session_id: str) -> None:
     auth = base64.b64encode(f"{HOST_USER}:{HOST_PASS}".encode()).decode()
     req = urllib.request.Request(
-        f"{DAEMON_BASE}/api/{session_id}/qa/clear",
+        f"{DAEMON_BASE}/api/{session_id}/host/qa/clear",
         method="POST",
         headers={"Authorization": f"Basic {auth}", "Content-Length": "0"},
         data=b""

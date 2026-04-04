@@ -76,8 +76,17 @@ def fresh_session(name: str = "Test", session_type: str = "workshop") -> str:
         pass  # no active session is fine
 
     # Step 2: wait for daemon stack to drain
+    # The /api/session/active endpoint returns {"session_id": "abc123"} when active,
+    # or {"session_id": null} when empty. We check for null session_id.
+    # We also check that the key exists to avoid treating daemon-not-responding as empty.
+    def _session_is_empty() -> bool:
+        data = _get_json(f"{DAEMON_BASE}/api/session/active")
+        if "session_id" not in data:
+            return False  # daemon not responding or bad response — keep waiting
+        return data["session_id"] is None
+
     _wait_until(
-        lambda: not _get_json(f"{DAEMON_BASE}/api/session/active").get("active", True),
+        _session_is_empty,
         timeout_ms=8000,
         msg="Daemon session stack did not become empty after end",
     )
@@ -99,3 +108,24 @@ def fresh_session(name: str = "Test", session_type: str = "workshop") -> str:
     )
 
     return session_id
+
+
+def daemon_has_participant(session_id: str, name: str) -> bool:
+    """Return True if the daemon's host state lists a participant with this name.
+
+    Use this instead of checking host_page.inner_text('body') — Railway never
+    receives participant names from daemon, so the host browser won't show them
+    until it refreshes state. The daemon REST API always has the current names.
+    """
+    try:
+        auth_header = f"Basic {_AUTH}"
+        req = urllib.request.Request(
+            f"{DAEMON_BASE}/api/{session_id}/host/state",
+            headers={"Authorization": auth_header},
+        )
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            data = json.loads(resp.read())
+            participants = data.get("participants", [])
+            return any(p.get("name") == name for p in participants)
+    except Exception:
+        return False

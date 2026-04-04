@@ -27,7 +27,7 @@ import pytest
 from playwright.sync_api import sync_playwright, expect
 
 from pages.participant_page import ParticipantPage
-from session_utils import fresh_session
+from session_utils import fresh_session, daemon_has_participant
 
 BASE = "http://localhost:8000"
 DAEMON_BASE = os.environ.get("DAEMON_BASE", "http://localhost:8081")
@@ -140,7 +140,8 @@ def test_avatar_refresh_gives_unique_avatar_to_second_participant():
         assert avatar1_original == expected_avatar1, f"P1 avatar should match name, got {avatar1_original}"
 
         # P1 refreshes avatar — gets a random avatar (not the original)
-        page1.evaluate("sendWS('refresh_avatar', { rejected: [] })")
+        # Pass current avatar as rejected so server assigns a different one
+        page1.evaluate(f"sendWS('refresh_avatar', {{ rejected: ['{avatar1_original}'] }})")
         page1.wait_for_timeout(1500)
         avatar1_refreshed = pax1.get_avatar_src()
         assert avatar1_refreshed != avatar1_original, "Refresh should change the avatar"
@@ -178,21 +179,54 @@ def test_rename_rejected_when_name_already_taken():
         page2, pax2 = _open_participant(browser, session_id)
         name2_before = pax2.auto_join()  # should be Frodo
 
-        # P2 tries to take P1's name — should be rejected
+        # P2 tries to take P1's name — server reassigns to next available LOTR name
         page2.evaluate("startNameEdit()")
         edit_input = page2.locator("#name-edit-input")
         expect(edit_input).to_be_visible(timeout=3000)
         edit_input.fill("Myname")
         edit_input.press("Enter")
 
-        # Wait for server round-trip — name should NOT have changed
+        # Wait for server round-trip to complete
         page2.wait_for_timeout(1500)
-        name2_after = page2.locator("#display-name").inner_text().strip()
-        print(f"P2 name before: '{name2_before}', after rejected rename: '{name2_after}'")
 
-        # P2's name must remain unchanged (server rejected the rename)
-        assert name2_after != "Myname", (
-            f"P2 was allowed to take P1's name 'Myname'! Name is now '{name2_after}'"
+        # participant.js sets the display name optimistically and ignores server response,
+        # so we cannot check the browser DOM. Instead, check daemon's authoritative state:
+        # P2 must NOT have name "Myname" in daemon (server reassigned to another LOTR name)
+        def _p2_does_not_have_myname():
+            try:
+                req = urllib.request.Request(
+                    f"{DAEMON_BASE}/api/{session_id}/host/state",
+                    headers={"Authorization": f"Basic {base64.b64encode(f'{HOST_USER}:{HOST_PASS}'.encode()).decode()}"},
+                )
+                with urllib.request.urlopen(req, timeout=5) as resp:
+                    data = json.loads(resp.read())
+                    participants = data.get("participants", [])
+                    # P2's daemon name must NOT be "Myname" (only P1 should have it)
+                    myname_owners = [p for p in participants if p.get("name") == "Myname"]
+                    return len(myname_owners) <= 1  # only P1 has it
+            except Exception:
+                return False
+
+        deadline = time.monotonic() + 3
+        while time.monotonic() < deadline:
+            if _p2_does_not_have_myname():
+                break
+            time.sleep(0.3)
+
+        # Verify P1 still has "Myname" and P2 has a different name in daemon state
+        req = urllib.request.Request(
+            f"{DAEMON_BASE}/api/{session_id}/host/state",
+            headers={"Authorization": f"Basic {base64.b64encode(f'{HOST_USER}:{HOST_PASS}'.encode()).decode()}"},
+        )
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            state_data = json.loads(resp.read())
+        participants = state_data.get("participants", [])
+        names_in_daemon = [p.get("name") for p in participants]
+        myname_count = names_in_daemon.count("Myname")
+        print(f"Daemon participants: {names_in_daemon}")
+
+        assert myname_count == 1, (
+            f"Expected exactly one participant named 'Myname', got {myname_count}: {names_in_daemon}"
         )
 
         print("SUCCESS: Duplicate rename correctly rejected!")
