@@ -24,8 +24,6 @@ class ParticipantState:
         self.scores: dict[str, int] = {}
         self.locations: dict[str, str] = {}
         self.mode: str = "workshop"
-        self.debate_phase: str | None = None
-        self.debate_sides: dict[str, str] = {}
         self.current_activity: str = "none"
 
     def sync_from_restore(self, data: dict):
@@ -53,11 +51,6 @@ class ParticipantState:
                 self.locations.update(data["locations"])
             if "mode" in data:
                 self.mode = data["mode"]
-            if "debate_phase" in data:
-                self.debate_phase = data["debate_phase"]
-            if "debate_sides" in data:
-                self.debate_sides.clear()
-                self.debate_sides.update(data["debate_sides"])
             if "current_activity" in data:
                 self.current_activity = str(data["current_activity"])
 
@@ -71,8 +64,6 @@ class ParticipantState:
                 "scores": dict(self.scores),
                 "locations": dict(self.locations),
                 "mode": self.mode,
-                "debate_phase": self.debate_phase,
-                "debate_sides": dict(self.debate_sides),
                 "current_activity": self.current_activity,
             }
 
