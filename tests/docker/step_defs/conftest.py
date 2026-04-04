@@ -68,7 +68,7 @@ def _await_condition(fn, timeout_ms=10000, poll_ms=300, msg=""):
     raise AssertionError(msg or f"Condition not met within {timeout_ms}ms")
 
 
-from pytest_bdd import given, when
+from pytest_bdd import given, when, parsers
 
 
 @pytest.fixture
@@ -80,7 +80,7 @@ def session_id():
 # ── Shared Given steps ─────────────────────────────────────────────────────
 
 @given("a fresh session", target_fixture="session_id")
-def fresh_session(session_id):
+def given_fresh_session(session_id):
     """session_id fixture from conftest provides a fresh session."""
     return session_id
 
@@ -106,6 +106,47 @@ def host_opens_qa(request):
         except pytest.FixtureLookupError:
             continue
     raise RuntimeError("No connected context fixture found")
+
+
+@given("the host has opened the Q&A tab", target_fixture="host_with_qa")
+def host_has_opened_qa_tab(browser, session_id):
+    """Open host panel and switch to Q&A tab BEFORE any participant joins.
+    Returns a HostPage object. The Q&A activity is now set on the daemon,
+    so participants who join next will see QA on their initial state fetch."""
+    ctx = browser.new_context(
+        http_credentials={"username": HOST_USER, "password": HOST_PASS}
+    )
+    page = ctx.new_page()
+    page.goto(f"{DAEMON_BASE}/host/{session_id}", wait_until="networkidle")
+    expect(page.locator("#tab-poll")).to_be_visible(timeout=10000)
+    host = HostPage(page)
+    host.open_qa_tab()
+    return host
+
+
+@given(parsers.parse('a participant joins as "{name}"'), target_fixture="connected")
+def participant_joins_as(host_with_qa, browser, session_id, name):
+    """Join a participant AFTER host has opened Q&A tab."""
+    ctx = browser.new_context()
+    page = ctx.new_page()
+    page.goto(f"{BASE}/{session_id}", wait_until="networkidle")
+    pax = ParticipantPage(page)
+    pax.join(name)
+    return {"host": host_with_qa, "pax": pax}
+
+
+@given("3 participants have joined", target_fixture="connected_multi")
+def three_participants_joined(host_with_qa, browser, session_id):
+    """Join 3 participants AFTER host has opened Q&A tab."""
+    participants = []
+    for name in ["P1", "P2", "P3"]:
+        ctx = browser.new_context()
+        page = ctx.new_page()
+        page.goto(f"{BASE}/{session_id}", wait_until="networkidle")
+        pax = ParticipantPage(page)
+        pax.join(name)
+        participants.append(pax)
+    return {"host": host_with_qa, "pax_list": participants}
 
 
 @pytest.fixture
