@@ -20,7 +20,7 @@ from railway.shared.metrics import (
 )
 from railway.shared.state import state
 from railway.features.ws.daemon_protocol import (
-    MSG_SLIDES_CATALOG, MSG_DAEMON_PING,
+    MSG_DAEMON_PING,
     MSG_PROXY_RESPONSE,
     MSG_BROADCAST, MSG_SEND_TO_HOST, MSG_SET_SESSION_ID, MSG_CODE_TIMESTAMP,
     MSG_DOWNLOAD_PDF, MSG_PDF_DOWNLOAD_COMPLETE,
@@ -62,11 +62,6 @@ def _is_host_authorized_for_ws(websocket: WebSocket) -> bool:
         secrets.compare_digest(username.encode(), expected_user.encode())
         and secrets.compare_digest(password.encode(), expected_pass.encode())
     )
-
-
-async def _handle_daemon_slides_catalog(data):
-    from railway.features.slides.cache import handle_slides_catalog
-    await handle_slides_catalog(data.get("entries", []))
 
 
 async def _handle_send_to_host(data: dict):
@@ -156,19 +151,10 @@ async def _handle_broadcast(data: dict):
 
 async def _run_download_pdf(slug: str, drive_export_url: str) -> None:
     """Background task: download PDF for slug and notify daemon of result."""
-    import asyncio
-    from railway.features.slides.cache import download_or_wait_cached
-    # Ensure the catalog entry exists so download_or_wait_cached can find the URL
-    if slug not in state.slides_catalog:
-        state.slides_catalog[slug] = {"drive_export_url": drive_export_url}
-    elif not state.slides_catalog[slug].get("drive_export_url"):
-        state.slides_catalog[slug]["drive_export_url"] = drive_export_url
+    from railway.features.slides.cache import do_download
     try:
-        path = await download_or_wait_cached(slug)
-        if path is not None:
-            await push_to_daemon({"type": MSG_PDF_DOWNLOAD_COMPLETE, "slug": slug, "status": "ok"})
-        else:
-            await push_to_daemon({"type": MSG_PDF_DOWNLOAD_COMPLETE, "slug": slug, "status": "error", "error": "download returned None"})
+        await do_download(slug, drive_export_url)
+        await push_to_daemon({"type": MSG_PDF_DOWNLOAD_COMPLETE, "slug": slug, "status": "ok"})
     except Exception as exc:
         await push_to_daemon({"type": MSG_PDF_DOWNLOAD_COMPLETE, "slug": slug, "status": "error", "error": str(exc)})
 
@@ -192,7 +178,6 @@ _DAEMON_MSG_HANDLERS = {
     MSG_SET_SESSION_ID: _handle_set_session_id,
     MSG_CODE_TIMESTAMP: _handle_code_timestamp,
     MSG_DAEMON_PING: None,  # heartbeat only — last_seen already updated
-    MSG_SLIDES_CATALOG: _handle_daemon_slides_catalog,
     MSG_DOWNLOAD_PDF: _handle_download_pdf,
 }
 

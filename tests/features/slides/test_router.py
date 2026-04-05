@@ -307,31 +307,21 @@ def test_api_slides_includes_missing_local_slides_when_daemon_offline(monkeypatc
     assert slides[0]["slug"] == "performance-introduction"
 
 
-def test_api_slides_marks_catalog_entries_available_when_in_slides_catalog(monkeypatch, tmp_path):
-    # Slides in state.slides_catalog are downloadable on demand, so available_on_server=True
-    catalog = tmp_path / "catalog.json"
-    catalog.write_text(json.dumps({
-        "decks": [
-            {"title": "Performance Intro", "target_pdf": "Performance Introduction.pdf"},
-        ]
-    }), encoding="utf-8")
-    monkeypatch.setenv("PPTX_CATALOG_FILE", str(catalog))
+def test_api_slides_returns_ok_when_daemon_offline(monkeypatch, tmp_path):
+    # Railway proxies /api/slides to daemon; if daemon is offline, returns empty slides list
     monkeypatch.setenv("TRAINING_ASSISTANT_SLIDES_DIR", str(tmp_path / "missing-slides"))
     monkeypatch.setenv("TRAINING_ASSISTANT_UPLOADED_SLIDES_DIR", str(tmp_path / "uploaded"))
 
-    original_catalog = state.slides_catalog
-    try:
-        state.slides_catalog = {"performance-introduction": {"slug": "performance-introduction", "title": "Performance Intro", "drive_export_url": "https://example.com/perf.pdf"}}
+    from unittest.mock import AsyncMock, MagicMock, patch
+    mock_response = MagicMock()
+    mock_response.status_code = 503
+    with patch("railway.features.slides.router.proxy_to_daemon", new_callable=AsyncMock, return_value=mock_response):
         client = TestClient(app)
         resp = client.get(f"/{state.session_id}/api/slides")
-    finally:
-        state.slides_catalog = original_catalog
 
     assert resp.status_code == 200
-    slides = resp.json()["slides"]
-    assert len(slides) == 1
-    assert slides[0]["slug"] == "performance-introduction"
-    assert slides[0]["available_on_server"] is True
+    body = resp.json()
+    assert body["slides"] == []
 
 
 def test_api_slides_respects_catalog_order_for_topics(monkeypatch, tmp_path):

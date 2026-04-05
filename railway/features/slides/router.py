@@ -100,20 +100,16 @@ async def get_slides(request: Request):
 @public_router.api_route("/api/slides/download/{slug}", methods=["GET", "HEAD"], include_in_schema=False)
 @public_router.get("/api/slides/download/{slug}", operation_id="get_slide_download")
 async def get_slide_file(slug: str, request: Request):
-    from railway.features.slides.cache import _cache_path, download_or_wait_cached
+    from railway.features.slides.cache import _cache_path
 
     # 1. Check local / uploaded
     path = _resolve_slide_path(slug)
 
-    # 2. Check cache dir
+    # 2. Check cache dir (populated by daemon-instructed downloads)
     if not path:
         cached = _cache_path(slug)
         if cached.exists():
             path = cached
-
-    # 3. On-demand GDrive download
-    if not path:
-        path = await download_or_wait_cached(slug)
 
     if not path or not path.exists():
         raise HTTPException(status_code=404, detail="Slide not found")
