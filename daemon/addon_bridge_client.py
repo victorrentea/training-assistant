@@ -103,7 +103,7 @@ class AddonBridgeClient:
 
         with self._ws_lock:
             self._ws = ws
-        log.info(_NAME, f"Connected to {url}")
+        log.info(_NAME, f"Connected to macos addons at {url}")
         self._fire_connection_change(True)
 
         try:
