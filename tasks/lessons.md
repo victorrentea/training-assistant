@@ -10,3 +10,4 @@
 - 2026-03-19: After finishing any backlog item, provide proof artifacts before marking done (screenshots by default; test/log captures for non-visual work).
 - 2026-03-19: After finishing a task or when blocked and needing user attention, play a completion/attention sound automatically.
 - 2026-03-26: For PowerPoint automation during live sessions, avoid UI focus theft: do not use `activate` or force-open files; export only already-open presentations in background-safe mode.
+- 2026-04-06: In daemon routers, never send raw WS dicts to host/participants; always use typed Pydantic message models via `daemon.ws_publish` (`broadcast`/`notify_host`) to satisfy contract tests and keep AsyncAPI parity.

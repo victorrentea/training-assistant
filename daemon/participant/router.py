@@ -11,7 +11,8 @@ from starlette.responses import Response
 from railway.shared.names import assign_conference_name
 from railway.shared.state import assign_avatar, refresh_avatar as _refresh_avatar_logic, LOTR_NAMES
 from daemon.participant.state import participant_state
-from daemon.host_ws import send_to_host
+from daemon.ws_publish import notify_host
+from daemon.ws_messages import ParticipantListUpdatedMsg
 from daemon.host_state_router import _build_host_participants_list
 from daemon.session import state as session_shared_state
 
@@ -127,10 +128,11 @@ def _build_poll_for_participant(pid: str) -> dict:
 
 async def _notify_host_participant_list():
     """Push the current participant list to the host browser directly."""
-    await send_to_host({
-        "type": "participant_list_updated",
-        "participants": _build_host_participants_list(),
-    })
+    await notify_host(
+        ParticipantListUpdatedMsg(
+            participants=_build_host_participants_list(),
+        )
+    )
 
 
 router = APIRouter(prefix="/api/participant", tags=["participant"])
