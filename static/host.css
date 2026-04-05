@@ -1725,34 +1725,6 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
   font-size: 24rem;
 }
 
-/* ── Host heart fullscreen overlay ── */
-.host-heart-fullscreen {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.75);
-  z-index: 10000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.35s ease-in;
-}
-.host-heart-fullscreen.host-heart-fullscreen-visible {
-  opacity: 1;
-}
-.host-heart-fullscreen-emoji {
-  font-size: clamp(12rem, 35vw, 22rem);
-  line-height: 1;
-  filter: drop-shadow(0 0 4rem rgba(255, 60, 80, 0.7));
-  animation: host-heart-pulse 0.6s ease-out;
-}
-@keyframes host-heart-pulse {
-  0%   { transform: scale(0.4); }
-  60%  { transform: scale(1.08); }
-  100% { transform: scale(1); }
-}
-
 /* ── Light mode overrides ── */
 @media (prefers-color-scheme: light) {
   .session-row {

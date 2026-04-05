@@ -246,3 +246,4 @@ Host broadcasts a statement: "Have you ever shipped code that violated what we j
 
 - [x] BUGFIX slides: participant now calls /api/slides/check/{slug} first and only downloads /api/slides/download/{slug} after check returns 200; added Railway proxy endpoint and contract tests.
 - [x] BUGFIX slides: daemon `/check` no longer trusts local `cached` blindly; it verifies Railway can serve `/{sid}/api/slides/download/{slug}` before returning 200, re-triggers `download_pdf` when missing, and participant list-download click now gates on `/check` with retry feedback.
+- [x] Direct request: host ❤️ footer badge click no longer animates in host browser; it only sends the reaction to backend/addons overlay flow.
