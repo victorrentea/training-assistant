@@ -1,5 +1,17 @@
 # Todo
 
+## Follow-up direct request: feedback sending bubble while request in flight
+
+- [x] Close feedback text dialog immediately on submit
+- [x] Show persistent `Sending...` feedback bubble until API response arrives
+- [x] Convert same bubble to success/error after response
+- [x] Run syntax check and capture proof in review section
+
+### Review: feedback sending bubble while request in flight
+
+- Proof: `node --check static/participant.js`
+- Result: syntax OK
+
 ## Follow-up direct request: feedback email still shows UUID
 
 - [x] Send participant display name from participant frontend in feedback payload
