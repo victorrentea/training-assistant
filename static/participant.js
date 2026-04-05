@@ -225,7 +225,6 @@ function closeEmojiPopup(ev) {
   let summaryPoints = [];
   let summaryUpdatedAt = null;
   let summaryRawMarkdown = null;
-  const SLIDES_REFRESH_MS = 30000;
   const LS_SLIDE_PAGE_PREFIX = 'workshop_slide_page:';
   const LS_SLIDE_VIEW_PREFIX = 'workshop_slide_view:';
   const LS_SLIDE_SELECTED_ID = 'workshop_slide_selected_id';
@@ -246,7 +245,6 @@ function closeEmojiPopup(ev) {
   let slidesSelectedSlug = null;
   let slidesSelectedId = null;
   let slidesLastFingerprint = null;
-  let slidesRefreshTimer = null;
   let slidesPdfModulesPromise = null;
   let slidesPdfLib = null;
   let slidesPdfViewerModule = null;
@@ -1767,12 +1765,13 @@ ${html}
     const seen = new Set();
     for (const raw of (Array.isArray(rawSlides) ? rawSlides : [])) {
       if (!raw || typeof raw !== 'object') continue;
-      const name = String(raw.name || '').trim();
+      const name = String(raw.name || raw.title || '').trim();
+      const slug = String(raw.slug || '').trim() || 'slide';
       let url = String(raw.url || '').trim();
-      if (!_isDisplayableSlideName(name) || !url) continue;
+      if (!url && slug) url = apiBase + '/api/slides/download/' + slug;
       // Prefix relative slide URLs with session base path
       if (url.startsWith('/api/')) url = apiBase + url;
-      const slug = String(raw.slug || '').trim() || 'slide';
+      if (!_isDisplayableSlideName(name) || !url) continue;
       const key = `${slug}|${url}`;
       if (seen.has(key)) continue;
       seen.add(key);
@@ -2277,20 +2276,6 @@ ${html}
     }
   }
 
-  function _startSlidesRefreshLoop() {
-    _stopSlidesRefreshLoop();
-    slidesRefreshTimer = setInterval(() => {
-      const overlay = document.getElementById('slides-overlay');
-      const autoLoadSelected = Boolean(overlay?.classList.contains('open'));
-      _refreshSlidesCatalog({ autoLoadSelected }).catch(() => {});
-    }, SLIDES_REFRESH_MS);
-  }
-
-  function _stopSlidesRefreshLoop() {
-    if (!slidesRefreshTimer) return;
-    clearInterval(slidesRefreshTimer);
-    slidesRefreshTimer = null;
-  }
 
   function toggleSlidesModal() {
     const overlay = document.getElementById('slides-overlay');
@@ -2304,7 +2289,6 @@ ${html}
     _refreshSlidesCatalog({ autoLoadSelected: true })
       .then(() => { _queueHostSlideCurrent(); })
       .catch(() => {});
-    _startSlidesRefreshLoop();
   }
 
   function closeSlidesModal() {
@@ -2334,7 +2318,6 @@ ${html}
       overlay.classList.add('open');
     }
     _refreshSlidesCatalog({ autoLoadSelected: shouldRestoreOpen }).catch(() => {});
-    _startSlidesRefreshLoop();
     // Pre-warm hostSlidesCurrent so follow button works immediately before first WS state message.
     _prefetchHostSlidesCurrent();
   }
