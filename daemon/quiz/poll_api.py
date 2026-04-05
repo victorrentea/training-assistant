@@ -36,8 +36,8 @@ def post_poll(quiz: dict, config: Config) -> None:
         multi=len(quiz.get("correct_indices", [])) > 1,
     )
     if _pub._ws_client and _pub._ws_client.connected:
-        # TODO: no model yet — poll_created is not in ws_messages registry
-        _pub._ws_client.send({"type": "broadcast", "event": {"type": "poll_created", "poll": poll}})
+        # TODO: no model yet — poll_ai_generated is not in ws_messages registry
+        _pub._ws_client.send({"type": "broadcast", "event": {"type": "poll_ai_generated", "poll": poll}})
     else:
         log.error("daemon", "Cannot broadcast poll: WS not connected")
 

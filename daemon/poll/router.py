@@ -11,7 +11,7 @@ from daemon.scores import scores
 from daemon.participant.state import participant_state
 from daemon.ws_publish import broadcast, notify_host
 from daemon.ws_messages import (
-    PollCreatedMsg, PollOpenedMsg, PollClosedMsg, PollCorrectRevealedMsg,
+    PollAiGeneratedMsg, PollOpenedMsg, PollClosedMsg, PollCorrectRevealedMsg,
     PollClearedMsg, PollTimerStartedMsg, ScoresUpdatedMsg, ActivityUpdatedMsg,
 )
 
@@ -83,7 +83,7 @@ async def create_poll(body: CreatePollRequest):
     participant_state.current_activity = "poll"
 
     # Only notify host — participants see nothing until opened
-    await notify_host(PollCreatedMsg(poll=poll))
+    await notify_host(PollAiGeneratedMsg(poll=poll))
     return CreatePollResponse(poll=poll)
 
 

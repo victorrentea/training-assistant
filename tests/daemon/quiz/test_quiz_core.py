@@ -636,7 +636,7 @@ class TestServerHelpers:
         self.mock_ws.send.assert_called_once()
         payload = self.mock_ws.send.call_args[0][0]
         assert payload["type"] == "broadcast"
-        assert payload["event"]["type"] == "poll_created"
+        assert payload["event"]["type"] == "poll_ai_generated"
         assert payload["event"]["poll"]["question"] == "Q?"
         assert payload["event"]["poll"]["multi"] is False
 

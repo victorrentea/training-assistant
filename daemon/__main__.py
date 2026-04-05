@@ -90,13 +90,6 @@ def _read_session_id_from_session_folder(folder: Path) -> str | None:
     return None
 
 
-def _build_session_folders_payload(sessions_root: Path) -> list[dict[str, str | None]]:
-    return [
-        {"name": folder.name, "session_id": _read_session_id_from_session_folder(folder)}
-        for folder in sorted((f for f in sessions_root.iterdir() if f.is_dir()), key=lambda p: p.name, reverse=True)
-    ]
-
-
 def _sessions_root_from_env() -> Path:
     return Path(
         os.environ.get(
@@ -537,10 +530,6 @@ def run() -> None:
     _SLIDE_FILE_READ_INTERVAL: float = 0.5
     last_slide_file_read_at: float = 0.0
     last_slide_file_pointer: str | None = None  # "deckname:slide_number"
-    _GIT_FILE_READ_INTERVAL: float = 1.0
-    last_git_file_read_at: float = 0.0
-    last_git_repos_hash: str = ""
-
     # Sync initial state to server — include session_state.json if present in the active folder
     try:
         startup_session_state: dict | None = None
@@ -561,13 +550,7 @@ def run() -> None:
     last_snapshot_hash: str | None = None  # hash of last saved state snapshot
     last_state_backup_log: str | None = None  # last emitted state-backup log line (dedupe consecutive repeats)
     transcript_state = TranscriptStateManager()
-    # Push session folders list to backend on every (re)connect
-    def _push_session_folders():
-        if not sessions_root.exists():
-            return
-        folders = _build_session_folders_payload(sessions_root)
-        ws_client.send({"type": "send_to_host", "event": {"type": "session_folders", "folders": folders}})
-    ws_client.on_connect(_push_session_folders)
+    # Session folders push removed — host.js does not handle session_folders messages
 
     # Re-sync active session state to backend on every (re)connect (e.g. after backend restart)
     def _sync_session_on_reconnect():
@@ -693,68 +676,6 @@ def run() -> None:
                                 log.info("slides", "No active slide pointer")
 
                 # ── Read git activity from file ──
-                if now - last_git_file_read_at >= _GIT_FILE_READ_INTERVAL:
-                    last_git_file_read_at = now
-                    today_str = datetime.now().strftime("%Y-%m-%d")
-                    git_file = config.folder / f"activity-git-{today_str}.md"
-                    git_repos_payload = []
-                    if git_file.exists():
-                        try:
-                            # Determine session start time for filtering
-                            session_start_hhmm = "00:00:00"
-                            if session_stack:
-                                current_session = session_stack[-1]
-                                started_at_str = current_session.get("started_at")
-                                if started_at_str:
-                                    try:
-                                        session_start_hhmm = datetime.fromisoformat(started_at_str).strftime("%H:%M:%S")
-                                    except (ValueError, TypeError):
-                                        pass
-
-                            lines = git_file.read_text(encoding="utf-8").splitlines()
-                            # Parse lines: "HH:MM:SS url branch:name file:filename"
-                            repos_map: dict[tuple[str, str], set[str]] = {}
-                            for line in lines:
-                                line = line.strip()
-                                if not line:
-                                    continue
-                                parts = line.split(" ", 1)
-                                if len(parts) < 2:
-                                    continue
-                                timestamp = parts[0]
-                                if timestamp < session_start_hhmm:
-                                    continue
-
-                                rest = parts[1]
-                                tokens = rest.split(" ")
-                                url = tokens[0] if tokens else ""
-                                branch = ""
-                                filename = ""
-                                for token in tokens[1:]:
-                                    if token.startswith("branch:"):
-                                        branch = token[7:]
-                                    elif token.startswith("file:"):
-                                        filename = token[5:]
-
-                                if url:
-                                    key = (url, branch)
-                                    if key not in repos_map:
-                                        repos_map[key] = set()
-                                    if filename:
-                                        repos_map[key].add(filename)
-
-                            git_repos_payload = [
-                                {"url": url, "branch": branch, "files": sorted(files)}
-                                for (url, branch), files in repos_map.items()
-                            ]
-                        except Exception:
-                            pass
-
-                    repos_hash = hashlib.md5(str(git_repos_payload).encode()).hexdigest()
-                    if repos_hash != last_git_repos_hash and ws_client.connected:
-                        last_git_repos_hash = repos_hash
-                        ws_client.send({"type": "send_to_host", "event": {"type": "activity_log", "git_repos": git_repos_payload}})
-
                 # ── Check for session management requests ──
                 try:
                     session_req = session_pending.pop("session_request")
@@ -785,10 +706,8 @@ def run() -> None:
                             config = dc_replace(config, session_folder=folder, session_notes=notes_file)
                             new_mode = "conference" if session_type == "talk" else "workshop"
                             sync_session_to_server(config, session_stack, current_key_points, session_id=_active_session_id, file_time=get_ai_summary_mtime(folder), raw_markdown=get_ai_summary_raw(folder))
-                            # Broadcast mode change to participants
-                            ws_client.send({"type": "broadcast", "event": {"type": "mode_changed", "mode": new_mode}})
+                            # mode_changed removed — host.js/participant.js don't handle it; mode is in full state on reconnect
                             transcript_state.reset()
-                        _push_session_folders()
                         participant_join_link = (
                             f"{config.server_url}/{_active_session_id}"
                             if _active_session_id
@@ -819,7 +738,6 @@ def run() -> None:
                         config = dc_replace(config, session_folder=folder, session_notes=notes_file)
                         sync_session_to_server(config, session_stack, current_key_points, file_time=get_ai_summary_mtime(folder), raw_markdown=get_ai_summary_raw(folder))
                         transcript_state.reset()
-                        last_git_repos_hash = ""
                         log.info("session", f"Started: {name}")
 
                     elif action == "end" and session_stack:
@@ -858,7 +776,6 @@ def run() -> None:
                             current_key_points = []
                             summary_watermark = 0
                             config = dc_replace(config, session_folder=None, session_notes=None)
-                            last_git_repos_hash = ""
                             _active_session_id = None
                             log.info("session", f"Ended: {ended['name']}")
                         _do_save_daemon_state()
@@ -1049,22 +966,12 @@ def run() -> None:
                             latest_time = None
                         if line_count != last_transcript_line_count:
                             last_transcript_line_count = line_count
-                        ws_client.send({"type": "send_to_host", "event": {
-                            "type": "transcript_status",
-                            "line_count": line_count,
-                            "total_lines": total_lines,
-                            "latest_ts": latest_time,
-                        }})
+                        # transcript_status and token_usage sends removed — host.js does not handle them
+                        pass
                     except SystemExit:
                         pass
                     except Exception as e:
                         log.error("transcript", f"Error: {e}")
-
-                    # ── Push token usage alongside transcript stats ──
-                    try:
-                        ws_client.send({"type": "send_to_host", "event": {"type": "token_usage", **get_usage().to_dict()}})
-                    except Exception as e:
-                        log.error("daemon", f"Token usage push failed: {e}")
 
                 # ── Process state snapshot result (pushed by backend every 7s) ──
                 snapshot_result = _pending_requests.pop("state_snapshot_result", None)
