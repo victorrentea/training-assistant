@@ -545,7 +545,7 @@ def run() -> None:
                 except Exception as e:
                     log.error("session", f"Failed to read .session-state.json: {e}")
         _startup_folder = (config.session_folder or (sessions_root / session_stack[-1]["name"])) if session_stack else None
-        sync_session_to_server(config, session_stack, current_key_points, startup_session_state, file_time=get_ai_summary_mtime(_startup_folder) if _startup_folder else None, raw_markdown=get_ai_summary_raw(_startup_folder) if _startup_folder else None)
+        sync_session_to_server(config, session_stack, current_key_points, startup_session_state, session_id=_active_session_id, file_time=get_ai_summary_mtime(_startup_folder) if _startup_folder else None, raw_markdown=get_ai_summary_raw(_startup_folder) if _startup_folder else None)
     except Exception as e:
         log.error("session", f"Initial sync failed: {e}")
 
@@ -594,7 +594,7 @@ def run() -> None:
                 log.error("session", f"Failed to read .session-state.json on reconnect: {e}")
         try:
             _reconnect_folder = sessions_root / session_stack[-1]["name"] if session_stack else None
-            sync_session_to_server(config, session_stack, current_key_points, reconnect_session_state, file_time=get_ai_summary_mtime(_reconnect_folder) if _reconnect_folder else None, raw_markdown=get_ai_summary_raw(_reconnect_folder) if _reconnect_folder else None)
+            sync_session_to_server(config, session_stack, current_key_points, reconnect_session_state, session_id=_active_session_id, file_time=get_ai_summary_mtime(_reconnect_folder) if _reconnect_folder else None, raw_markdown=get_ai_summary_raw(_reconnect_folder) if _reconnect_folder else None)
             log.info("session", f"Re-synced session '{session_stack[-1]['name']}' to backend on reconnect")
         except Exception as e:
             log.error("session", f"Session re-sync on reconnect failed: {e}")
