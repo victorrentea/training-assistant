@@ -2,8 +2,8 @@ from typing import Optional
 from datetime import datetime
 from fastapi import WebSocket
 from enum import Enum
-import random
 import asyncio
+import random
 
 
 class ActivityType(str, Enum):

@@ -1,5 +1,6 @@
 """SlidesPollingRunner — runs PPTX change detection from inside the main daemon."""
 
+import asyncio
 import threading
 import time
 from types import SimpleNamespace
@@ -12,7 +13,9 @@ from daemon.slides.catalog import (
     ensure_slug,
     resolve_tracked_sources,
 )
+from daemon.slides.convert import poll_fingerprint_until_changed, _fingerprints
 from daemon.slides.daemon import save_daemon_state
+from daemon.slides.router import get_event_loop
 
 
 class SlidesPollingRunner:
@@ -74,6 +77,20 @@ class SlidesPollingRunner:
                         log.error("slides", f"slide_invalidated not sent (WS not connected) for slug={slug}")
                 else:
                     log.error("slides", f"slide_invalidated: no WS sender configured for slug={slug}")
+
+                # Schedule fingerprint polling to detect when GDrive PDF changes
+                drive_export_url = metadata.get(key, {}).get("drive_export_url", "").strip()
+                if drive_export_url:
+                    event_loop = get_event_loop()
+                    if event_loop is not None:
+                        baseline = _fingerprints.get(slug, "")
+                        coro = poll_fingerprint_until_changed(slug, drive_export_url, baseline)
+                        asyncio.run_coroutine_threadsafe(coro, event_loop)
+                        log.info("slides", f"fingerprint polling scheduled for slug={slug}")
+                    else:
+                        log.info("slides", f"fingerprint polling skipped for slug={slug}: event loop not available yet")
+                else:
+                    log.info("slides", f"fingerprint polling skipped for slug={slug}: no drive_export_url in metadata")
         except Exception as exc:
             log.error("slides", f"Slides watcher error: {exc}")
 
