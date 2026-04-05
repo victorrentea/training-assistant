@@ -4,7 +4,7 @@ from pathlib import Path
 def _load_slide_function_source() -> str:
     source = Path("static/participant.js").read_text(encoding="utf-8")
     start = source.index("async function _loadSlideIntoViewer")
-    end = source.index("async function _reloadCurrentSlideAfterUpdate")
+    end = source.index("async function _refreshSlidesCatalog")
     return source[start:end]
 
 

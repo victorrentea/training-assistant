@@ -64,8 +64,7 @@ Current slide is included in the initial state from `GET /{sid}/api/participant/
 
 **Daemon → Participant Browser WS:**
 - `slides_current` — `{slides_current}` — when host navigates slides
-- `slides_cache_status` — `{slides[]}` where each slide embeds `status` (+ cache fields)
-- `slides_updated` — single refresh trigger; participant re-fetches `GET /api/slides`
+- `slides_cache_status` — `{slides[]}` where each slide embeds `status` (+ cache fields); for backward compatibility Railway may also include `slides_cache_status` map in the same event
 
 ### Host
 **Host Browser → Daemon REST:**
@@ -77,8 +76,7 @@ Current slide is included in the initial state from `GET /{sid}/api/participant/
 Host uses the same slides list contract as participant (embedded cache fields in each slide item).
 
 **Daemon → Host Browser WS:**
-- `slides_cache_status` — `{slides[]}` where each slide embeds `status` (+ cache fields)
-- `slides_updated` — single refresh trigger; host re-fetches `GET /api/slides`
+- `slides_cache_status` — same message as participant (`{slides[]}` + optional legacy map); host uses it directly for catalog/cache refresh
 
 ### Internal: Daemon ↔ Railway WS messages
 
