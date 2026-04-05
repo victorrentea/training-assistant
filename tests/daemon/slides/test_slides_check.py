@@ -42,9 +42,10 @@ def client(fresh_misc_state):
     return TestClient(app, raise_server_exceptions=False)
 
 
-def test_check_returns_200_when_cached(client, fresh_misc_state):
-    """When cache status is already 'cached', /check returns 200 immediately."""
+def test_check_returns_200_when_cached_and_available_on_railway(client, fresh_misc_state, monkeypatch):
+    """When cache status is cached and Railway serves the slug, /check returns 200 immediately."""
     fresh_misc_state.slides_cache_status["myslug"] = {"status": "cached"}
+    monkeypatch.setattr(slides_router, "_is_cached_on_railway", lambda *_: True)
 
     resp = client.get("/test-session/api/slides/check/myslug")
 
@@ -108,6 +109,39 @@ def test_check_triggers_download_and_returns_200_on_success(fresh_misc_state, mo
     assert any(m.get("type") == "download_pdf" and m.get("slug") == "myslug" for m in sent_msgs)
 
 
+def test_check_cached_local_but_missing_on_railway_triggers_download(fresh_misc_state, monkeypatch):
+    """Local cached status alone is insufficient: /check re-triggers download when Railway misses."""
+    fresh_misc_state.slides_cache_status["myslug"] = {"status": "cached"}
+    monkeypatch.setattr(slides_router, "_is_cached_on_railway", lambda *_: False)
+    sent_msgs = []
+
+    def fake_send_to_railway(msg):
+        sent_msgs.append(msg)
+        return True
+
+    monkeypatch.setattr("daemon.ws_publish.send_to_railway", fake_send_to_railway)
+
+    with patch("daemon.ws_publish.broadcast"), \
+         patch("daemon.ws_messages.SlidesCacheStatusMsg"):
+        app = FastAPI()
+        app.include_router(participant_router)
+        client = TestClient(app, raise_server_exceptions=False)
+
+        def resolve_after_delay():
+            import time
+            time.sleep(0.05)
+            handle_pdf_download_complete({"slug": "myslug", "status": "ok"})
+
+        t = threading.Thread(target=resolve_after_delay, daemon=True)
+        t.start()
+        resp = client.get("/test-session/api/slides/check/myslug")
+        t.join(timeout=5.0)
+
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "cached"
+    assert any(m.get("type") == "download_pdf" and m.get("slug") == "myslug" for m in sent_msgs)
+
+
 def test_check_returns_503_on_timeout(fresh_misc_state, monkeypatch):
     """No cached entry + no download completion → 503 after timeout."""
     monkeypatch.setattr(slides_router, "_CHECK_TIMEOUT_S", 0.1)
@@ -125,6 +159,7 @@ def test_check_returns_503_on_timeout(fresh_misc_state, monkeypatch):
 
     assert resp.status_code == 503
     assert resp.json()["status"] == "timeout"
+    assert fresh_misc_state.slides_cache_status["myslug"]["status"] == "poll_timeout"
 
 
 def test_check_coalesces_concurrent_requests(fresh_misc_state, monkeypatch):
