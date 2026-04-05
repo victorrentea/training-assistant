@@ -328,28 +328,7 @@ def run() -> None:
     set_poll_ws(ws_client)
     set_session_ws(ws_client)
 
-    from daemon.wordcloud.router import set_ws_client as set_wc_ws
-    set_wc_ws(ws_client)
-
-    from daemon.qa.router import set_ws_client as set_qa_ws
-    set_qa_ws(ws_client)
-
-    from daemon.poll.router import set_ws_client as set_poll_router_ws
-    from daemon.leaderboard.router import set_ws_client as set_lb_ws
     from daemon.scores import scores as daemon_scores
-    set_poll_router_ws(ws_client)
-    set_lb_ws(ws_client)
-
-    from daemon.misc.router import set_ws_client as set_misc_ws
-    set_misc_ws(ws_client)
-
-    from daemon.codereview.router import set_ws_client as set_codereview_ws
-    from daemon.activity.router import set_ws_client as set_activity_ws
-    set_codereview_ws(ws_client)
-    set_activity_ws(ws_client)
-
-    from daemon.debate.router import set_ws_client as set_debate_ws
-    set_debate_ws(ws_client)
 
     from daemon.quiz.router import set_ws_client as set_quiz_ws
     set_quiz_ws(ws_client)

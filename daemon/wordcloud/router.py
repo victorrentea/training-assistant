@@ -8,17 +8,10 @@ from pydantic import BaseModel
 from daemon.participant.state import participant_state
 from daemon.scores import scores
 from daemon.wordcloud.state import wordcloud_state
+from daemon.ws_messages import WordcloudUpdatedMsg, ScoresUpdatedMsg
+from daemon.ws_publish import broadcast_event, broadcast
 
 logger = logging.getLogger(__name__)
-
-# Set by __main__.py during daemon startup
-_ws_client = None
-
-
-def set_ws_client(client):
-    """Set the WebSocket client for broadcasting events."""
-    global _ws_client
-    _ws_client = client
 
 
 class OkResponse(BaseModel):
@@ -57,8 +50,8 @@ async def submit_word(request: Request, body: SubmitWordBody):
 
     scores.add_score(pid, 200)
     request.state.write_back_events = [
-        {"type": "broadcast", "event": {"type": "wordcloud_updated", **snapshot}},
-        {"type": "broadcast", "event": {"type": "scores_updated", "scores": scores.snapshot()}},
+        broadcast_event(WordcloudUpdatedMsg(**snapshot)),
+        broadcast_event(ScoresUpdatedMsg(scores=scores.snapshot())),
     ]
 
     return OkResponse()
@@ -101,10 +94,5 @@ async def clear_wordcloud():
 
 
 def _send_wordcloud_events(snapshot: dict):
-    """Send broadcast directly via ws_client (host-direct path)."""
-    if _ws_client is None:
-        return
-    _ws_client.send({
-        "type": "broadcast",
-        "event": {"type": "wordcloud_updated", **snapshot},
-    })
+    """Send broadcast directly via publisher (host-direct path)."""
+    broadcast(WordcloudUpdatedMsg(**snapshot))

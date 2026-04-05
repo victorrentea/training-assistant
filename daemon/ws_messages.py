@@ -49,6 +49,11 @@ class ParticipantUpdatedHostMsg(BaseModel):
 
 # ── Poll ──────────────────────────────────────────────────────────────────────
 
+class PollCreatedMsg(BaseModel):
+    type: Literal["poll_created"] = "poll_created"
+    poll: dict[str, Any]  # {id, question, options[], multi}
+
+
 class PollOpenedMsg(BaseModel):
     type: Literal["poll_opened"] = "poll_opened"
     poll: dict[str, Any]  # {id, question, options[], multi}
@@ -192,6 +197,13 @@ class EmojiReactionMsg(BaseModel):
     emoji: str
 
 
+# ── Transcription ─────────────────────────────────────────────────────────────
+
+class TranscriptionLanguagePendingMsg(BaseModel):
+    type: Literal["transcription_language_pending"] = "transcription_language_pending"
+    language: str
+
+
 # ── Host-only: Paste & Upload ─────────────────────────────────────────────────
 
 class PasteReceivedMsg(BaseModel):
@@ -217,6 +229,8 @@ PARTICIPANT_MESSAGES: dict[str, type[BaseModel]] = {
     "slides_cache_status": SlidesCacheStatusMsg,
     # Activity
     "activity_updated": ActivityUpdatedMsg,
+    # Transcription
+    "transcription_language_pending": TranscriptionLanguagePendingMsg,
     # Identity
     "participant_updated": ParticipantUpdatedParticipantMsg,
     # Poll
@@ -249,6 +263,7 @@ PARTICIPANT_MESSAGES: dict[str, type[BaseModel]] = {
 
 HOST_MESSAGES: dict[str, type[BaseModel]] = {
     # Poll
+    "poll_created": PollCreatedMsg,
     "vote_update": VoteUpdateMsg,
     # Word Cloud
     "wordcloud_updated": WordcloudUpdatedMsg,
