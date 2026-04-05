@@ -37,6 +37,18 @@ def clear_host_ws():
     _host_ws = None
 
 
+def send_to_railway(msg: dict) -> bool:
+    """Send a raw dict message to the Railway backend (daemon→Railway protocol messages).
+
+    Use this for daemon-internal protocol messages (e.g. download_pdf, code_timestamp).
+    For participant/host broadcasts use broadcast() / notify_host() instead.
+    Returns True if sent, False if not connected.
+    """
+    if _ws_client is None:
+        return False
+    return _ws_client.send(msg)
+
+
 def broadcast(msg: BaseModel):
     """Send typed message to all participants via Railway broadcast."""
     if _ws_client is None:

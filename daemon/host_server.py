@@ -117,6 +117,9 @@ def create_app(backend_url: str) -> FastAPI:
     from daemon.host_state_router import router as host_state_router
     app.include_router(host_state_router)          # /api/{session_id}/host/state
 
+    from daemon.slides.router import participant_router as slides_participant_router
+    app.include_router(slides_participant_router)  # /{session_id}/api/slides, /{session_id}/api/slides/check/{slug}
+
     from daemon.session.router import global_router as session_global_router
     from daemon.session.router import public_router as session_public_router
     from daemon.session.router import session_router as session_scoped_router
