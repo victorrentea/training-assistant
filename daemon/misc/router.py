@@ -8,6 +8,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from daemon.email_notify import notify as email_notify
+from daemon.misc.content_files import read_notes_content, read_summary_payload
 from daemon.misc.state import misc_state
 from daemon.participant.state import participant_state
 from daemon.session import state as session_shared_state
@@ -110,16 +111,17 @@ def _get_session_name_for_feedback() -> str | None:
 @participant_router.get("/notes")
 async def get_notes():
     """Get session notes content."""
-    return NotesResponse(notes_content=misc_state.notes_content)
+    return NotesResponse(notes_content=read_notes_content())
 
 
 @participant_router.get("/summary")
 async def get_summary():
     """Get summary points and raw markdown."""
+    summary = read_summary_payload()
     return SummaryResponse(
-        points=misc_state.summary_points,
-        raw_markdown=misc_state.summary_raw_markdown,
-        updated_at=misc_state.summary_updated_at,
+        points=summary["points"],
+        raw_markdown=summary["raw_markdown"],
+        updated_at=summary["updated_at"],
     )
 
 
@@ -143,16 +145,17 @@ async def get_pastes():
 @host_router.get("/notes")
 async def get_host_notes():
     """Return current session notes content."""
-    return NotesResponse(notes_content=misc_state.notes_content)
+    return NotesResponse(notes_content=read_notes_content())
 
 
 @host_router.get("/summary")
 async def get_host_summary():
     """Return summary points, raw markdown, and updated_at timestamp."""
+    summary = read_summary_payload()
     return SummaryResponse(
-        points=misc_state.summary_points,
-        raw_markdown=misc_state.summary_raw_markdown,
-        updated_at=misc_state.summary_updated_at,
+        points=summary["points"],
+        raw_markdown=summary["raw_markdown"],
+        updated_at=summary["updated_at"],
     )
 
 

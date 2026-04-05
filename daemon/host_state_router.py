@@ -12,6 +12,7 @@ from daemon.qa.state import qa_state
 from daemon.codereview.state import codereview_state
 from daemon.debate.state import debate_state
 from daemon.misc.state import misc_state
+from daemon.misc.content_files import read_notes_content, read_summary_payload
 from daemon.leaderboard.state import leaderboard_state
 from daemon.session import state as session_shared_state
 
@@ -143,6 +144,8 @@ async def get_host_state(request: Request, session_id: str):
     poll_data = _build_poll_for_host()
     cr = _build_codereview_for_host()
     debate = _build_debate_for_host()
+    summary = read_summary_payload()
+    notes_content = read_notes_content()
 
     state_msg = {
         "type": "state",
@@ -187,8 +190,8 @@ async def get_host_state(request: Request, session_id: str):
         # Leaderboard
         "leaderboard_data": leaderboard_state.data,
         # Summary / notes
-        "summary_points": misc_state.summary_points,
-        "notes_content": misc_state.notes_content,
+        "summary_points": summary["points"],
+        "notes_content": notes_content,
         # Token usage
         "token_usage": _get_token_usage(),
         # Transcript info

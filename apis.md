@@ -561,8 +561,8 @@ Host can open notes/summary in the host panel UI.
 
 ### State
 None persisted in memory — read from disk:
-- `{session_folder}/notes.md` — session notes
-- `{session_folder}/summary.json` — key points + raw markdown
+- `{session_folder}/*.txt` — session notes (latest modified text file)
+- `{session_folder}/ai-summary.md` — key points + raw markdown
 
 ---
 
