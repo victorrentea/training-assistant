@@ -552,6 +552,32 @@ def run() -> None:
     transcript_state = TranscriptStateManager()
     # Session folders push removed — host.js does not handle session_folders messages
 
+    # ── Git code timestamp ──
+    import subprocess as _subprocess
+    def _get_git_commit_timestamp() -> str | None:
+        try:
+            result = _subprocess.run(
+                ["git", "log", "-1", "--format=%aI"],
+                capture_output=True, text=True, timeout=5,
+                cwd=Path(__file__).resolve().parent.parent,
+            )
+            ts = result.stdout.strip()
+            return ts if ts else None
+        except Exception:
+            return None
+
+    _code_timestamp: str | None = _get_git_commit_timestamp()
+    if _code_timestamp:
+        log.info("daemon", f"Code timestamp: {_code_timestamp}")
+    import daemon.host_server as _host_server_mod
+    _host_server_mod.code_timestamp = _code_timestamp
+
+    def _push_code_timestamp():
+        if _code_timestamp:
+            ws_client.send({"type": "code_timestamp", "timestamp": _code_timestamp})
+
+    ws_client.on_connect(_push_code_timestamp)
+
     # Re-sync active session state to backend on every (re)connect (e.g. after backend restart)
     def _sync_session_on_reconnect():
         if not session_stack:
