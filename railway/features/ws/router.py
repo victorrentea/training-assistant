@@ -20,7 +20,7 @@ from railway.shared.metrics import (
 )
 from railway.shared.state import state
 from railway.features.ws.daemon_protocol import (
-    MSG_SLIDES_CATALOG, MSG_SLIDE_INVALIDATED, MSG_DAEMON_PING,
+    MSG_SLIDES_CATALOG, MSG_DAEMON_PING,
     MSG_PROXY_RESPONSE,
     MSG_BROADCAST, MSG_SEND_TO_HOST, MSG_SET_SESSION_ID, MSG_CODE_TIMESTAMP,
     MSG_DOWNLOAD_PDF, MSG_PDF_DOWNLOAD_COMPLETE,
@@ -67,12 +67,6 @@ def _is_host_authorized_for_ws(websocket: WebSocket) -> bool:
 async def _handle_daemon_slides_catalog(data):
     from railway.features.slides.cache import handle_slides_catalog
     await handle_slides_catalog(data.get("entries", []))
-
-async def _handle_daemon_slide_invalidated(data):
-    from railway.features.slides.cache import handle_slide_invalidated
-    slug = data.get("slug", "").strip()
-    if slug:
-        await handle_slide_invalidated(slug)
 
 
 async def _handle_send_to_host(data: dict):
@@ -198,7 +192,6 @@ _DAEMON_MSG_HANDLERS = {
     MSG_CODE_TIMESTAMP: _handle_code_timestamp,
     MSG_DAEMON_PING: None,  # heartbeat only — last_seen already updated
     MSG_SLIDES_CATALOG: _handle_daemon_slides_catalog,
-    MSG_SLIDE_INVALIDATED: _handle_daemon_slide_invalidated,
     MSG_DOWNLOAD_PDF: _handle_download_pdf,
 }
 
