@@ -3,6 +3,11 @@ name: Deploy Info
 on:
   push:
     branches: [master]
+    paths:
+      - 'railway/**'
+      - 'pyproject.toml'
+      - 'uv.lock'
+      - '.python-version'
 
 permissions:
   contents: read
