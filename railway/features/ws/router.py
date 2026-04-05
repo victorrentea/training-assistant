@@ -126,7 +126,7 @@ def _build_static_hashes() -> dict[str, str]:
 
 
 async def _handle_broadcast(data: dict):
-    """Fan out a daemon broadcast event to all connected participant WSs."""
+    """Fan out a daemon broadcast event to participants and host WSs."""
     event = data.get("event")
     if not event:
         return
@@ -141,7 +141,7 @@ async def _handle_broadcast(data: dict):
             state.slides_current = {k: v for k, v in event.items() if k != "type"}
     msg = json.dumps(event)
     for pid, ws in list(state.participants.items()):
-        if pid.startswith("__"):  # skip __host__ and other special keys
+        if pid.startswith("__") and pid != "__host__":  # keep host, skip other special keys
             continue
         try:
             await ws.send_text(msg)

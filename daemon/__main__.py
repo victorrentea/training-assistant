@@ -1119,13 +1119,15 @@ def run() -> None:
                     from daemon.static_sync import sync_static_files
                     static_dir = Path(__file__).resolve().parent.parent / "static"
                     remote_hashes = sync_files_data.get("static_hashes", {})
-                    changed = sync_static_files(
+                    changed_files = sync_static_files(
                         static_dir, remote_hashes,
                         config.server_url, config.host_username, config.host_password,
                     )
-                    if changed > 0:
+                    if changed_files:
+                        changed = len(changed_files)
+                        changed_names = ", ".join(changed_files)
                         ws_client.send({"type": "broadcast", "event": {"type": "reload"}})
-                        log.info("static-sync", f"Synced {changed} file(s), triggered browser reload")
+                        log.info("static-sync", f"Triggered browser reload after sync {changed} file(s): {changed_names}")
 
                 # ── Process session snapshot result (pushed by backend every 7s) ──
                 session_snapshot = _pending_requests.pop("session_snapshot_result", None)

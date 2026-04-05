@@ -226,3 +226,6 @@ Host presents 4–6 items (patterns, approaches, technologies). Participants dra
 
 ## Anonymous Reaction / Confession Box
 Host broadcasts a statement: "Have you ever shipped code that violated what we just discussed?" Participants react with a single emoji or yes/no. Aggregated reactions are shown live. Creates psychological safety and honest discussion starters.
+
+- [x] daemon static-sync log: changed reload message to `Triggered browser reload after sync N file(s): file1, file2` with actual changed filenames.
+- [x] daemon reload broadcast: include host WebSocket in reload fan-out so both host and participant browsers auto-reload after static sync.
