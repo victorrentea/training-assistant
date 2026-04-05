@@ -19,6 +19,7 @@
   let summaryUpdatedAt = null;
   let sessionMain = null;
   let sessionTalk = null;
+  let _sessionName = null;  // from state.session_name (fallback title when sessionMain is null)
   let daemonLastSeen = null;
   let daemonSessionFolder = null;
   let _sessionIntervalsEditing = false;
@@ -363,13 +364,7 @@
         }
         if (msg.session_main !== undefined) sessionMain = msg.session_main;
         if (msg.session_talk !== undefined) sessionTalk = msg.session_talk;
-        if (msg.session_name !== undefined) {
-          const el = document.getElementById('host-top-title');
-          if (el) {
-            const name = (msg.session_name || '').replace(/^\d{4}-\d{2}-\d{2}(?:\.\.\S+)?\s*/, '');
-            el.textContent = name;
-          }
-        }
+        if (msg.session_name !== undefined) _sessionName = msg.session_name || null;
         if (msg.daemon_last_seen !== undefined) daemonLastSeen = msg.daemon_last_seen;
         if (msg.join_base_url) _joinBaseUrl = msg.join_base_url;
         if (!msg.session_id && msg.needs_restore === false) {
@@ -3425,7 +3420,10 @@ function renderSessionPanel() {
 
   // Session title in top bar center
   const titleEl = document.getElementById('host-top-title');
-  if (titleEl) titleEl.textContent = main ? (main.name || '').replace(/^\d{4}-\d{2}-\d{2}(?:\.\.\S+)?\s*/, '') : '';
+  if (titleEl) {
+    const rawName = main ? (main.name || '') : (_sessionName || '');
+    titleEl.textContent = rawName.replace(/^\d{4}-\d{2}-\d{2}(?:\.\.\S+)?\s*/, '');
+  }
   // Stop button is always enabled (host can always request session end).
   const stopBtn = document.getElementById('stop-session-btn-left');
   if (stopBtn) {
