@@ -31,7 +31,7 @@ def test_create_session_reuses_existing_folder_session_id():
     state.session_folder_ids["2026-03-30 Demo"] = "abc123"
 
     resp = client.post(
-        "/api/session/create",
+        "/api/session/start",
         json={"name": "2026-03-30 Demo", "type": "workshop"},
     )
 
@@ -183,7 +183,7 @@ def test_create_session_sends_request_id_and_consumes_daemon_ack(monkeypatch):
 
     monkeypatch.setattr(session_router_mod, "push_to_daemon", _fake_push_to_daemon)
 
-    resp = client.post("/api/session/create", json={"name": "2026-03-30 Demo", "type": "workshop"})
+    resp = client.post("/api/session/start", json={"name": "2026-03-30 Demo", "type": "workshop"})
     assert resp.status_code == 200
     assert sent_messages, "session request should be sent to daemon"
     assert sent_messages[0].get("type") == "session_request"

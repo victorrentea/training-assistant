@@ -68,7 +68,7 @@ def server_url():
 
     # Create a session so session-scoped participant routes are accessible
     r = requests.post(
-        f"{base_url}/api/session/create",
+        f"{base_url}/api/session/start",
         auth=(HOST_USER, HOST_PASS),
         json={"name": "load-test", "type": "workshop"},
     )

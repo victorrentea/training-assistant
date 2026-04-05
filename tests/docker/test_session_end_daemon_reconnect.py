@@ -127,9 +127,9 @@ def test_session_end_survives_daemon_reconnect_reactivation(backend):
     session_name = f"end-reconnect-{int(time.time())}"
 
     # ── 1. Create session and mark it as active via HTTP sync ─────────────────
-    result = _api("POST", "/api/session/create", {"name": session_name, "type": "workshop"})
+    result = _api("POST", "/api/session/start", {"name": session_name, "type": "workshop"})
     session_id = result["session_id"]
-    assert session_id, "Expected a session_id from /api/session/create"
+    assert session_id, "Expected a session_id from /api/session/start"
 
     _api("POST", f"/api/{session_id}/session/sync", {
         "main": {
