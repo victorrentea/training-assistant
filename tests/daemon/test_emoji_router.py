@@ -16,13 +16,11 @@ def emoji_client():
 
 @pytest.fixture(autouse=True)
 def mock_externals():
-    """Mock notify_host and httpx for all emoji tests."""
+    """Mock notify_host and addon_bridge_client for all emoji tests."""
+    import daemon.addon_bridge_client  # ensure module is loaded before patching
     with patch("daemon.emoji.router.notify_host", new_callable=AsyncMock) as mock_host, \
-         patch("daemon.emoji.router.httpx") as mock_httpx:
-        mock_client = AsyncMock()
-        mock_httpx.AsyncClient.return_value.__aenter__ = AsyncMock(return_value=mock_client)
-        mock_httpx.AsyncClient.return_value.__aexit__ = AsyncMock(return_value=False)
-        yield {"host": mock_host, "httpx_client": mock_client}
+         patch("daemon.addon_bridge_client.send_emoji", return_value=True) as mock_send_emoji:
+        yield {"host": mock_host, "send_emoji": mock_send_emoji}
 
 
 class TestEmojiReaction:
@@ -49,9 +47,9 @@ class TestEmojiReaction:
                                   headers={"X-Participant-ID": "uuid1"})
         assert resp.status_code == 400
 
-    def test_overlay_failure_does_not_break(self, emoji_client, mock_externals):
-        """Overlay at localhost:56789 not running — should not fail."""
-        mock_externals["httpx_client"].post.side_effect = Exception("Connection refused")
+    def test_bridge_down_does_not_break(self, emoji_client, mock_externals):
+        """Addon bridge not running — best-effort, should not fail."""
+        mock_externals["send_emoji"].return_value = False
         resp = emoji_client.post("/api/participant/emoji/reaction",
                                   json={"emoji": "❤️"},
                                   headers={"X-Participant-ID": "uuid1"})
@@ -67,3 +65,9 @@ class TestEmojiReaction:
         assert isinstance(call_msg, EmojiReactionMsg)
         assert call_msg.model_dump()["type"] == "emoji_reaction"
         assert call_msg.model_dump()["emoji"] == "🎉"
+
+    def test_sends_emoji_to_bridge(self, emoji_client, mock_externals):
+        emoji_client.post("/api/participant/emoji/reaction",
+                           json={"emoji": "🎉"},
+                           headers={"X-Participant-ID": "uuid1"})
+        mock_externals["send_emoji"].assert_called_once_with("🎉")
