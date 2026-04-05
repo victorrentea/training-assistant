@@ -141,6 +141,10 @@ async def _handle_broadcast(data: dict):
             state.slides_current = event["slides_current"]  # may be None
         else:
             state.slides_current = {k: v for k, v in event.items() if k != "type"}
+    elif event_type == "notes_updated":
+        state.notes_line_count = event.get("count", 0)
+    elif event_type == "summary_updated":
+        state.summary_line_count = event.get("count", 0)
     msg = json.dumps(event)
     for pid, ws in list(state.participants.items()):
         if pid.startswith("__") and pid != "__host__":  # keep host, skip other special keys
@@ -266,6 +270,15 @@ async def _handle_participant_connection(websocket: WebSocket, pid: str, is_host
         name = state.participant_names.get(pid, "")
         logger.info(f"WS connected: {pid} name={name!r} ({len(state.participants)} total)")
         await broadcast_participant_update()
+
+    # Send current notes/summary counts to the newly connected participant/host
+    try:
+        if state.notes_line_count > 0:
+            await websocket.send_text(json.dumps({"type": "notes_updated", "count": state.notes_line_count}))
+        if state.summary_line_count > 0:
+            await websocket.send_text(json.dumps({"type": "summary_updated", "count": state.summary_line_count}))
+    except Exception:
+        pass
 
     try:
         while True:

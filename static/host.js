@@ -382,6 +382,10 @@
         }
       } else if (msg.type === 'notes') {
         updateHostNotes(msg.notes_content);
+      } else if (msg.type === 'notes_updated') {
+        updateNotesLineCount(msg.count);
+      } else if (msg.type === 'summary_updated') {
+        updateSummaryLineCount(msg.count);
       } else if (msg.type === 'summary') {
         updateSummary(msg.points, msg.updated_at);
       } else if (msg.type === 'slides_cache_status') {
@@ -1308,6 +1312,8 @@
   }
 
   let hostNotesContent = '';
+  let _notesLineCount = 0;
+  let _summaryLineCount = 0;
   let _notesSessionFolder = null;
   let _notesSessionNotes = null;
 
@@ -1317,12 +1323,30 @@
     _renderNotesBadge();
   }
 
+  function updateNotesLineCount(count) {
+    _notesLineCount = count || 0;
+    _renderNotesBadge();
+  }
+
+  function updateSummaryLineCount(count) {
+    _summaryLineCount = count || 0;
+    const badge = document.getElementById('summary-badge');
+    if (!badge) return;
+    if (_summaryLineCount > 0) {
+      badge.classList.remove('empty');
+      const current = badge.textContent;
+      if (!summaryPoints.length) {
+        badge.textContent = `🧠 (${_summaryLineCount}) Key Points`;
+      }
+    }
+  }
+
   function _renderNotesBadge() {
     const el = document.getElementById('notes-badge');
     if (!el) return;
     const nonEmptyLines = hostNotesContent
       ? hostNotesContent.split('\n').filter(l => l.trim()).length
-      : 0;
+      : _notesLineCount;
     el.style.cssText = 'cursor:pointer;';
     if (_notesSessionFolder && _notesSessionNotes) {
       el.textContent = nonEmptyLines > 0 ? `📝 (${nonEmptyLines}) Notes.txt` : `📝 Notes.txt`;
