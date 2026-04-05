@@ -1,5 +1,17 @@
 # Todo
 
+## Direct request: participant header missing session name
+
+- [x] Find where participant top header renders session title
+- [x] Trace `session_name` flow in daemon participant state payload
+- [x] Add fallback to active session stack when `misc_state.session_name` is missing
+- [x] Add daemon participant-router regression test for fallback behavior
+- [x] Run targeted daemon tests and capture proof in review section
+
+### Review: participant header missing session name
+
+- Proof: `pytest -q tests/daemon/test_participant_router.py`
+
 ## Backlog item: GH#67 participant slides viewer (PDF)
 
 - [x] Add backend slide metadata endpoint `GET /api/slides`

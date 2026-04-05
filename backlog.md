@@ -1,5 +1,6 @@
 # Tasks
 
+- [x] bug: participant top header shows session name again (fallback to active session stack when `session_name` cache is missing).
 - [x] diagrams: updated C3 host daemon component and persisted-state class diagram to reflect `training-assistant-global-state.json` as global state.
 - [x] session activation persistence: backend now sends `session_request` with `request_id` over daemon websocket and waits for daemon `global_state_saved` ack; daemon persists active session to `training-assistant-global-state.json` (legacy `daemon_state.json` still readable).
 - [x] host landing: when a host removes `/host/{session_id}` to `/host` while a session is still active (including pending-create state), auto-redirect back to the active session URL.

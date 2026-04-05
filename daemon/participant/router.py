@@ -13,6 +13,7 @@ from railway.shared.state import assign_avatar, refresh_avatar as _refresh_avata
 from daemon.participant.state import participant_state
 from daemon.host_ws import send_to_host
 from daemon.host_state_router import _build_host_participants_list
+from daemon.session import state as session_shared_state
 
 logger = logging.getLogger(__name__)
 
@@ -354,7 +355,7 @@ async def get_participant_state(request: Request):
         # Slides (from misc state — synced from Railway)
         "slides_current": misc_state.slides_current,
         "session_main": misc_state.session_main,
-        "session_name": misc_state.session_name,
+        "session_name": _get_session_name(),
         # Leaderboard
         "leaderboard_data": leaderboard_state.data,
         # Summary / notes
@@ -372,3 +373,12 @@ def _get_current_session_id() -> str | None:
         return get_current_session_id()
     except Exception:
         return None
+
+
+def _get_session_name() -> str | None:
+    """Return session name from misc cache, with stack fallback."""
+    from daemon.misc.state import misc_state
+    if misc_state.session_name:
+        return misc_state.session_name
+    stack = session_shared_state.get_session_stack()
+    return stack[-1]["name"] if stack else None
