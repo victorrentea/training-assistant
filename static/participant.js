@@ -1758,6 +1758,15 @@ ${html}
     }
   }
 
+  function _showSlidesDownloadToast(message) {
+    const toast = document.createElement('div');
+    toast.textContent = message;
+    toast.style.cssText = 'position:fixed;bottom:3.5rem;right:calc(var(--slides-overlay-width) + .75rem);background:var(--danger, #f44336);color:#fff;padding:.45rem .95rem;border-radius:8px;font-weight:600;font-size:.85rem;z-index:9999;opacity:1;transition:opacity .5s;';
+    document.body.appendChild(toast);
+    setTimeout(() => { toast.style.opacity = '0'; }, 1600);
+    setTimeout(() => toast.remove(), 2200);
+  }
+
   function _slideFingerprint(slide, headers) {
     // Use ETag/Last-Modified from HEAD request (authoritative for PDF content).
     // Avoid slide.updated_at — it reflects PPTX source mtime and changes when the
@@ -1952,7 +1961,35 @@ ${html}
       );
       dl.title = `Download ${slide.name}`;
       dl.setAttribute('aria-label', `Download ${slide.name}`);
-      dl.addEventListener('click', (evt) => evt.stopPropagation());
+      dl.addEventListener('click', async (evt) => {
+        evt.preventDefault();
+        evt.stopPropagation();
+        if (dl.dataset.busy === '1') return;
+        dl.dataset.busy = '1';
+        dl.setAttribute('aria-disabled', 'true');
+        try {
+          const urls = _resolveSlideAssetUrls(slide);
+          if (!urls) {
+            _showSlidesDownloadToast('Slide metadata is invalid. Please refresh and retry.');
+            return;
+          }
+          await _checkSlideReady(urls.checkUrl);
+          const forceDownloadUrl = `${urls.downloadBaseUrl}?download=1`;
+          const tmp = document.createElement('a');
+          tmp.href = forceDownloadUrl;
+          tmp.setAttribute('download', '');
+          tmp.style.display = 'none';
+          document.body.appendChild(tmp);
+          tmp.click();
+          tmp.remove();
+        } catch (_) {
+          _setSlidesError('Slide is still preparing on the server. Please retry in a few seconds.');
+          _showSlidesDownloadToast('Slide is still preparing on the server. Please retry in a few seconds.');
+        } finally {
+          delete dl.dataset.busy;
+          dl.removeAttribute('aria-disabled');
+        }
+      });
       item.appendChild(dl);
     }
     return item;

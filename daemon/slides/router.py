@@ -1,6 +1,11 @@
 """Daemon slides router — participant endpoints for slides list and PDF cache check."""
 import asyncio
 import logging
+import os
+import socket
+import ssl
+import urllib.error
+import urllib.request
 
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
@@ -14,11 +19,41 @@ logger = logging.getLogger(__name__)
 _pending_checks: dict[str, list[asyncio.Future]] = {}
 _event_loop: asyncio.AbstractEventLoop | None = None
 _CHECK_TIMEOUT_S: float = 30.0
+_RAILWAY_CHECK_TIMEOUT_S: float = 3.0
 
 
 def get_event_loop() -> asyncio.AbstractEventLoop | None:
     """Return the daemon's FastAPI event loop (set on first /check request)."""
     return _event_loop
+
+
+def _railway_download_url(session_id: str, slug: str) -> str:
+    base = os.environ.get("WORKSHOP_SERVER_URL", "http://localhost:8000").rstrip("/")
+    return f"{base}/{session_id}/api/slides/download/{slug}"
+
+
+def _is_cached_on_railway(session_id: str, slug: str) -> bool:
+    url = _railway_download_url(session_id, slug)
+    req = urllib.request.Request(url, method="HEAD")
+    try:
+        with urllib.request.urlopen(req, timeout=_RAILWAY_CHECK_TIMEOUT_S, context=ssl.create_default_context()) as resp:
+            return 200 <= int(resp.status) < 300
+    except urllib.error.HTTPError as exc:
+        if exc.code == 404:
+            return False
+        logger.warning("slides/check: railway HEAD failed for slug=%s code=%s", slug, exc.code)
+        return False
+    except (urllib.error.URLError, TimeoutError, socket.timeout, OSError) as exc:
+        logger.warning("slides/check: railway HEAD failed for slug=%s error=%s", slug, exc)
+        return False
+
+
+def _mark_cache_status(slug: str, status: str, **extra) -> None:
+    misc_state.slides_cache_status[slug] = {
+        **misc_state.slides_cache_status.get(slug, {}),
+        "status": status,
+        **extra,
+    }
 
 
 # ── Response models ──
@@ -57,9 +92,14 @@ async def check_slide_cache(session_id: str, slug: str):
     """
     global _event_loop
 
-    # Already cached — return immediately
-    if misc_state.slides_cache_status.get(slug, {}).get("status") == "cached":
+    # Fast path: cached in daemon state AND currently downloadable on Railway.
+    if (
+        misc_state.slides_cache_status.get(slug, {}).get("status") == "cached"
+        and _is_cached_on_railway(session_id, slug)
+    ):
         return JSONResponse({"status": "cached"}, status_code=200)
+    if misc_state.slides_cache_status.get(slug, {}).get("status") == "cached":
+        _mark_cache_status(slug, "not_cached", reason="railway_miss_after_cached")
 
     # Capture event loop for thread-safe future resolution from ws handler
     _event_loop = asyncio.get_event_loop()
@@ -89,10 +129,12 @@ async def check_slide_cache(session_id: str, slug: str):
             pending.remove(future)
         if not pending:
             _pending_checks.pop(slug, None)
+        _mark_cache_status(slug, "poll_timeout", reason="timeout_waiting_pdf_download_complete")
         return JSONResponse({"status": "timeout"}, status_code=503)
 
     if result == "ok":
         return JSONResponse({"status": "cached"}, status_code=200)
+    _mark_cache_status(slug, "download_failed", reason="railway_reported_error")
     return JSONResponse({"status": "error"}, status_code=503)
 
 
@@ -118,10 +160,7 @@ def handle_pdf_download_complete(data: dict):
             "status": "cached",
         }
     else:
-        misc_state.slides_cache_status[slug] = {
-            **misc_state.slides_cache_status.get(slug, {}),
-            "status": "error",
-        }
+        _mark_cache_status(slug, "download_failed", reason="railway_reported_error")
 
     # Broadcast updated cache status to all participants
     from daemon.ws_publish import broadcast
