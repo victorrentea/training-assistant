@@ -29,6 +29,10 @@ MSG_CODE_TIMESTAMP = "code_timestamp"
 # --- Static file sync (backend → daemon) ---
 MSG_SYNC_FILES = "sync_files"
 
+# --- PDF download (daemon → backend → daemon) ---
+MSG_DOWNLOAD_PDF = "download_pdf"
+MSG_PDF_DOWNLOAD_COMPLETE = "pdf_download_complete"
+
 
 async def push_to_daemon(msg: dict) -> bool:
     """Send a JSON message to the daemon via WebSocket. Returns True if sent."""

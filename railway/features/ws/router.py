@@ -23,6 +23,8 @@ from railway.features.ws.daemon_protocol import (
     MSG_SLIDES_CATALOG, MSG_SLIDE_INVALIDATED, MSG_DAEMON_PING,
     MSG_PROXY_RESPONSE,
     MSG_BROADCAST, MSG_SEND_TO_HOST, MSG_SET_SESSION_ID, MSG_CODE_TIMESTAMP,
+    MSG_DOWNLOAD_PDF, MSG_PDF_DOWNLOAD_COMPLETE,
+    push_to_daemon,
 )
 from railway.features.ws.proxy_bridge import handle_proxy_response
 
@@ -158,6 +160,36 @@ async def _handle_broadcast(data: dict):
             pass
 
 
+async def _run_download_pdf(slug: str, drive_export_url: str) -> None:
+    """Background task: download PDF for slug and notify daemon of result."""
+    import asyncio
+    from railway.features.slides.cache import download_or_wait_cached
+    # Ensure the catalog entry exists so download_or_wait_cached can find the URL
+    if slug not in state.slides_catalog:
+        state.slides_catalog[slug] = {"drive_export_url": drive_export_url}
+    elif not state.slides_catalog[slug].get("drive_export_url"):
+        state.slides_catalog[slug]["drive_export_url"] = drive_export_url
+    try:
+        path = await download_or_wait_cached(slug)
+        if path is not None:
+            await push_to_daemon({"type": MSG_PDF_DOWNLOAD_COMPLETE, "slug": slug, "status": "ok"})
+        else:
+            await push_to_daemon({"type": MSG_PDF_DOWNLOAD_COMPLETE, "slug": slug, "status": "error", "error": "download returned None"})
+    except Exception as exc:
+        await push_to_daemon({"type": MSG_PDF_DOWNLOAD_COMPLETE, "slug": slug, "status": "error", "error": str(exc)})
+
+
+async def _handle_download_pdf(data: dict) -> None:
+    """Handle download_pdf message from daemon — start download in background."""
+    import asyncio
+    slug = data.get("slug", "").strip()
+    drive_export_url = data.get("drive_export_url", "").strip()
+    if not slug or not drive_export_url:
+        logger.warning("[ws] download_pdf missing slug or drive_export_url")
+        return
+    asyncio.create_task(_run_download_pdf(slug, drive_export_url))
+
+
 _DAEMON_MSG_HANDLERS = {
     MSG_BROADCAST: _handle_broadcast,
     MSG_SEND_TO_HOST: _handle_send_to_host,
@@ -167,6 +199,7 @@ _DAEMON_MSG_HANDLERS = {
     MSG_DAEMON_PING: None,  # heartbeat only — last_seen already updated
     MSG_SLIDES_CATALOG: _handle_daemon_slides_catalog,
     MSG_SLIDE_INVALIDATED: _handle_daemon_slide_invalidated,
+    MSG_DOWNLOAD_PDF: _handle_download_pdf,
 }
 
 
