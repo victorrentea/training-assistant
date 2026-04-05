@@ -13,6 +13,7 @@ from daemon.codereview.state import codereview_state
 from daemon.debate.state import debate_state
 from daemon.misc.state import misc_state
 from daemon.misc.content_files import read_notes_content, read_summary_payload
+from daemon.slides.activity_reader import read_slides_log
 from daemon.leaderboard.state import leaderboard_state
 from daemon.session import state as session_shared_state
 
@@ -134,6 +135,30 @@ def _get_join_base_url() -> str:
     return os.environ.get("WORKSHOP_SERVER_URL", "http://localhost:8000").rstrip("/")
 
 
+def _build_slides_log_fields() -> dict:
+    """Read activity-slides file and compute slides_log, slides_log_deep_count, slides_log_topic."""
+    import os
+    from datetime import date
+    from pathlib import Path
+
+    folder = Path(os.environ.get("TRANSCRIPTION_FOLDER", "/Users/victorrentea/Documents/transcriptions"))
+    stack = session_shared_state.get_session_stack()
+    session_entry = stack[0] if stack else None
+    slides_log = read_slides_log(folder, date.today(), session_entry)
+    deep_count = len({(e["file"], e["slide"]) for e in slides_log})
+    if misc_state.slides_current and misc_state.slides_current.get("presentation_name"):
+        topic = misc_state.slides_current["presentation_name"]
+    elif slides_log:
+        topic = max(slides_log, key=lambda e: e["seconds_spent"])["file"]
+    else:
+        topic = None
+    return {
+        "slides_log": slides_log,
+        "slides_log_deep_count": deep_count,
+        "slides_log_topic": topic,
+    }
+
+
 @router.get("/state")
 async def get_host_state(request: Request, session_id: str):
     """Return full state for host page load — replicates Railway build_for_host()."""
@@ -180,6 +205,7 @@ async def get_host_state(request: Request, session_id: str):
         "debate_round_timer_started_at": debate.get("round_timer_started_at"),
         # Slides + session info (from misc state)
         "slides_current": misc_state.slides_current,
+        **_build_slides_log_fields(),
         "session_main": misc_state.session_main,
         "session_name": _get_session_name(),
         # Session tracking
