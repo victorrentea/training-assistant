@@ -10,6 +10,8 @@ from daemon.quiz.generator import generate_quiz, print_quiz, refine_quiz
 from daemon.quiz import poll_api
 from daemon.quiz.poll_api import fetch_quiz_history, fetch_summary_points, post_status
 from daemon.transcript.loader import extract_last_n_minutes, load_transcription_files
+from daemon.ws_publish import broadcast
+from daemon.ws_messages import QuizPreviewMsg
 
 try:
     from dataclasses import replace
@@ -87,18 +89,12 @@ def auto_generate(minutes: int, config: Config) -> Optional[tuple]:
     print_quiz(quiz)
 
     try:
-        if poll_api._ws_client and poll_api._ws_client.connected:
-            poll_api._ws_client.send({"type": "broadcast", "event": {"type": "quiz_preview", "quiz": {
-                "question": quiz["question"],
-                "options": quiz["options"],
-                "multi": len(quiz.get("correct_indices", [])) > 1,
-                "correct_indices": quiz.get("correct_indices", []),
-                "source": quiz.get("source"),
-                "page": quiz.get("page"),
-            }}})
-        else:
-            post_status("error", "Failed to post preview: WS not connected", config)
-            return None
+        broadcast(QuizPreviewMsg(
+            question=quiz["question"],
+            options=quiz["options"],
+            multi=len(quiz.get("correct_indices", [])) > 1,
+            correct_indices=quiz.get("correct_indices", []),
+        ))
     except Exception as e:
         post_status("error", f"Failed to post preview: {e}", config)
         return None
@@ -130,18 +126,12 @@ def auto_generate_topic(topic: str, config: Config) -> Optional[tuple]:
     print_quiz(quiz)
     topic_context = f"TOPIC: {topic}"
     try:
-        if poll_api._ws_client and poll_api._ws_client.connected:
-            poll_api._ws_client.send({"type": "broadcast", "event": {"type": "quiz_preview", "quiz": {
-                "question": quiz["question"],
-                "options": quiz["options"],
-                "multi": len(quiz.get("correct_indices", [])) > 1,
-                "correct_indices": quiz.get("correct_indices", []),
-                "source": quiz.get("source"),
-                "page": quiz.get("page"),
-            }}})
-        else:
-            post_status("error", "Failed to post preview: WS not connected", config)
-            return None
+        broadcast(QuizPreviewMsg(
+            question=quiz["question"],
+            options=quiz["options"],
+            multi=len(quiz.get("correct_indices", [])) > 1,
+            correct_indices=quiz.get("correct_indices", []),
+        ))
     except Exception as e:
         post_status("error", f"Failed to post preview: {e}", config)
         return None
@@ -161,18 +151,12 @@ def auto_refine(target: str, current_quiz: dict, original_text: str, config: Con
 
     print_quiz(updated)
     try:
-        if poll_api._ws_client and poll_api._ws_client.connected:
-            poll_api._ws_client.send({"type": "broadcast", "event": {"type": "quiz_preview", "quiz": {
-                "question": updated["question"],
-                "options": updated["options"],
-                "multi": len(updated.get("correct_indices", [])) > 1,
-                "correct_indices": updated.get("correct_indices", []),
-                "source": updated.get("source"),
-                "page": updated.get("page"),
-            }}})
-        else:
-            post_status("error", "Failed to post updated preview: WS not connected", config)
-            return None
+        broadcast(QuizPreviewMsg(
+            question=updated["question"],
+            options=updated["options"],
+            multi=len(updated.get("correct_indices", [])) > 1,
+            correct_indices=updated.get("correct_indices", []),
+        ))
     except Exception as e:
         post_status("error", f"Failed to post updated preview: {e}", config)
         return None

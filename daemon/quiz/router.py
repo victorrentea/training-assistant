@@ -9,17 +9,10 @@ from pydantic import BaseModel
 from daemon import quiz as _quiz_pkg  # noqa: ensure package is importable
 from daemon.quiz import pending as quiz_pending
 from daemon.config import DEFAULT_TRANSCRIPT_MINUTES
+from daemon.ws_publish import broadcast
+from daemon.ws_messages import QuizStatusMsg, QuizPreviewMsg
 
 logger = logging.getLogger(__name__)
-
-# Set by __main__.py during daemon startup
-_ws_client = None
-
-
-def set_ws_client(client):
-    """Set the WebSocket client for broadcasting events."""
-    global _ws_client
-    _ws_client = client
 
 
 # ── Pydantic models ──
@@ -67,8 +60,7 @@ async def request_quiz(body: QuizRequestBody):
 
     quiz_pending.put("quiz_request", {"request": req})
 
-    if _ws_client:
-        _ws_client.send({"type": "broadcast", "event": {"type": "quiz_status", "status": "requested", "message": msg}})
+    broadcast(QuizStatusMsg(status="requested", message=msg))
 
     return OkResponse()
 
@@ -76,8 +68,10 @@ async def request_quiz(body: QuizRequestBody):
 @host_router.delete("/quiz-preview")
 async def clear_quiz_preview():
     """Host clears the current quiz preview."""
-    if _ws_client:
-        _ws_client.send({"type": "broadcast", "event": {"type": "quiz_preview", "quiz": None}})
+    # TODO: no model yet — QuizPreviewMsg requires question/options but clearing sends quiz=None
+    from daemon import ws_publish as _pub
+    if _pub._ws_client:
+        _pub._ws_client.send({"type": "broadcast", "event": {"type": "quiz_preview", "quiz": None}})
     return OkResponse()
 
 
@@ -92,7 +86,6 @@ async def request_quiz_refine(body: QuizRefineRequest):
     label = "question" if body.target == "question" else "option"
     msg = f"Regenerating {label}…"
 
-    if _ws_client:
-        _ws_client.send({"type": "broadcast", "event": {"type": "quiz_status", "status": "generating", "message": msg}})
+    broadcast(QuizStatusMsg(status="generating", message=msg))
 
     return OkResponse()
