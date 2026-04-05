@@ -2,7 +2,7 @@
 # Quick verification: imports + daemon tests + contract tests
 set -e
 echo "=== Import check ==="
-python3 -c "import main; print('Railway OK')"
+python3 -c "import railway.app; print('Railway OK')"
 echo ""
 echo "=== Daemon tests ==="
 python3 -m pytest tests/daemon/ -q \

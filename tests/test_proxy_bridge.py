@@ -3,7 +3,7 @@ import asyncio
 import pytest
 from unittest.mock import AsyncMock, patch
 
-from features.ws.proxy_bridge import (
+from railway.features.ws.proxy_bridge import (
     proxy_to_daemon,
     handle_proxy_response,
     _pending_requests,
@@ -21,7 +21,7 @@ def clear_pending():
 class TestProxyToDaemon:
     @pytest.mark.anyio
     async def test_returns_503_when_daemon_disconnected(self):
-        with patch("features.ws.proxy_bridge.state") as mock_state:
+        with patch("railway.features.ws.proxy_bridge.state") as mock_state:
             mock_state.daemon_ws = None
             resp = await proxy_to_daemon("POST", "/api/participant/name", b'{"name":"Alice"}', {}, "uuid1")
             assert resp.status_code == 503
@@ -42,7 +42,7 @@ class TestProxyToDaemon:
 
         mock_ws.send_json = fake_send_json
 
-        with patch("features.ws.proxy_bridge.state") as mock_state:
+        with patch("railway.features.ws.proxy_bridge.state") as mock_state:
             mock_state.daemon_ws = mock_ws
             resp = await proxy_to_daemon("POST", "/api/participant/name", b'{"name":"Alice"}',
                                          {"x-participant-id": "uuid1"}, "uuid1")
@@ -54,8 +54,8 @@ class TestProxyToDaemon:
         mock_ws = AsyncMock()
         # send_json succeeds but no response ever comes
 
-        with patch("features.ws.proxy_bridge.state") as mock_state, \
-             patch("features.ws.proxy_bridge.PROXY_TIMEOUT", 0.1):
+        with patch("railway.features.ws.proxy_bridge.state") as mock_state, \
+             patch("railway.features.ws.proxy_bridge.PROXY_TIMEOUT", 0.1):
             mock_state.daemon_ws = mock_ws
             resp = await proxy_to_daemon("POST", "/api/participant/name", b'{}', {}, "uuid1")
             assert resp.status_code == 503

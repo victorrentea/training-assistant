@@ -46,7 +46,7 @@ def backend_server():
     os.makedirs("/tmp/test-transcriptions", exist_ok=True)
 
     proc = subprocess.Popen(
-        ["python", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", BACKEND_PORT],
+        ["python", "-m", "uvicorn", "railway.app:app", "--host", "0.0.0.0", "--port", BACKEND_PORT],
         cwd="/app",
         env=env,
         stdout=subprocess.PIPE,

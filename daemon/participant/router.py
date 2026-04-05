@@ -8,8 +8,8 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from starlette.responses import Response
 
-from core.names import assign_conference_name
-from core.state import assign_avatar, refresh_avatar as _refresh_avatar_logic, LOTR_NAMES
+from railway.shared.names import assign_conference_name
+from railway.shared.state import assign_avatar, refresh_avatar as _refresh_avatar_logic, LOTR_NAMES
 from daemon.participant.state import participant_state
 
 logger = logging.getLogger(__name__)

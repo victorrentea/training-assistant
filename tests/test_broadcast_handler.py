@@ -3,7 +3,7 @@ import json
 import pytest
 from unittest.mock import AsyncMock, patch, MagicMock
 
-from features.ws.router import _handle_broadcast
+from railway.features.ws.router import _handle_broadcast
 
 
 class TestHandleBroadcast:
@@ -14,7 +14,7 @@ class TestHandleBroadcast:
         mock_state = MagicMock()
         mock_state.participants = {"uuid1": ws1, "uuid2": ws2}
 
-        with patch("features.ws.router.state", mock_state):
+        with patch("railway.features.ws.router.state", mock_state):
             await _handle_broadcast({"event": {"type": "wordcloud_updated", "words": {"hello": 1}}})
 
         ws1.send_text.assert_called_once()
@@ -35,7 +35,7 @@ class TestHandleBroadcast:
             "__overlay__": overlay_ws,
         }
 
-        with patch("features.ws.router.state", mock_state):
+        with patch("railway.features.ws.router.state", mock_state):
             await _handle_broadcast({"event": {"type": "test"}})
 
         participant_ws.send_text.assert_called_once()
@@ -50,7 +50,7 @@ class TestHandleBroadcast:
         mock_state = MagicMock()
         mock_state.participants = {"uuid1": good_ws, "uuid2": bad_ws}
 
-        with patch("features.ws.router.state", mock_state):
+        with patch("railway.features.ws.router.state", mock_state):
             await _handle_broadcast({"event": {"type": "test"}})
 
         good_ws.send_text.assert_called_once()
@@ -60,7 +60,7 @@ class TestHandleBroadcast:
         mock_state = MagicMock()
         mock_state.participants = {"uuid1": AsyncMock()}
 
-        with patch("features.ws.router.state", mock_state):
+        with patch("railway.features.ws.router.state", mock_state):
             await _handle_broadcast({})  # no event key
 
         mock_state.participants["uuid1"].send_text.assert_not_called()

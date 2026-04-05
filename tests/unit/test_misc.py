@@ -3,7 +3,7 @@ import os
 import pytest
 from unittest.mock import MagicMock, patch, AsyncMock
 
-from core.state import AppState, LOTR_NAMES, assign_avatar, get_avatar_filename
+from railway.shared.state import AppState, LOTR_NAMES, assign_avatar, get_avatar_filename
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -76,7 +76,7 @@ class TestAuth:
             os.environ["HOST_PASSWORD"] = orig_pass
 
     def test_correct_credentials(self):
-        from core.auth import require_host_auth
+        from railway.shared.auth import require_host_auth
         from fastapi.security import HTTPBasicCredentials
         os.environ["HOST_USERNAME"] = "testuser"
         os.environ["HOST_PASSWORD"] = "testpass"
@@ -85,7 +85,7 @@ class TestAuth:
         require_host_auth(creds)
 
     def test_wrong_username(self):
-        from core.auth import require_host_auth
+        from railway.shared.auth import require_host_auth
         from fastapi.security import HTTPBasicCredentials
         from fastapi import HTTPException
         os.environ["HOST_USERNAME"] = "testuser"
@@ -96,7 +96,7 @@ class TestAuth:
         assert exc_info.value.status_code == 401
 
     def test_wrong_password(self):
-        from core.auth import require_host_auth
+        from railway.shared.auth import require_host_auth
         from fastapi.security import HTTPBasicCredentials
         from fastapi import HTTPException
         os.environ["HOST_USERNAME"] = "testuser"

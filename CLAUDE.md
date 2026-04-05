@@ -89,7 +89,7 @@ Build a **self-hosted, real-time audience interaction tool** for use during onli
 | Framework | **FastAPI** | Async, WebSocket support native, auto Swagger UI at `/docs` |
 | Real-time transport | **WebSockets** (native FastAPI) | One persistent WS connection per participant; server broadcasts state changes |
 | State storage | **In-memory Python dict** | Sufficient for single-room, short-duration live sessions |
-| ASGI server | **Uvicorn** | `python3 -m uvicorn main:app --host 127.0.0.1 --port 8000` |
+| ASGI server | **Uvicorn** | `python3 -m uvicorn railway.app:app --host 127.0.0.1 --port 8000` |
 
 ### Frontend
 | Concern | Choice | Notes |
@@ -115,30 +115,24 @@ Build a **self-hosted, real-time audience interaction tool** for use during onli
 
 ```
 training-assistant/
-├── main.py                  ← FastAPI application (entry point, mounts all feature routers)
-├── core/                    ← Shared infrastructure
-│   ├── state.py             ← AppState singleton (all dicts UUID-keyed)
-│   ├── messaging.py         ← WebSocket broadcast + state-builder registry
-│   ├── state_builder.py     ← Core participant/host state fields (mode, scores, participants)
-│   ├── auth.py              ← HTTP Basic Auth middleware
-│   ├── names.py             ← Character name pool for conference mode (251 names)
-│   ├── metrics.py           ← Prometheus custom metrics (connections, votes, Q&A)
-│   └── version.py           ← Backend version detection from static/version.js
-├── features/                ← One sub-package per feature; each has router.py + optional state_builder.py
-│   ├── ws/                  ← WebSocket endpoint /ws/{uuid}, /ws/daemon
-│   ├── poll/                ← Poll CRUD, voting, timer, correct answers, scoring
-│   ├── qa/                  ← Q&A moderation (edit, delete, mark answered, clear)
-│   ├── wordcloud/           ← Word cloud topic/clear
-│   ├── codereview/          ← Code review (smart paste, line selection, confirm)
-│   ├── debate/              ← Debate lifecycle (10 endpoints, AI cleanup via daemon)
-│   ├── quiz/                ← Quiz request/status/preview/refine (daemon integration)
-│   ├── summary/             ← Summary, notes, transcript-status, token-usage
-│   ├── leaderboard/         ← Leaderboard show/hide + score reset
-│   ├── slides/              ← Slides navigation, Drive sync, upload/publish
-│   ├── session/             ← Session lifecycle + snapshot/restore for daemon persistence
-│   ├── snapshot/            ← Low-level state serialize/restore (diagnostic)
-│   ├── activity/            ← Activity type switching (none|poll|wordcloud|qa|debate|codereview)
-│   └── pages/               ← HTML page serving (/, /host, /notes)
+├── railway/                 ← Railway backend (FastAPI app deployed to Railway)
+│   ├── app.py               ← FastAPI application (entry point, mounts all feature routers)
+│   ├── healthcheck.py       ← Health check endpoint
+│   ├── shared/              ← Shared infrastructure
+│   │   ├── state.py         ← AppState singleton (all dicts UUID-keyed)
+│   │   ├── messaging.py     ← WebSocket broadcast + state-builder registry
+│   │   ├── state_builder.py ← Core participant/host state fields (mode, scores, participants)
+│   │   ├── auth.py          ← HTTP Basic Auth middleware
+│   │   ├── names.py         ← Character name pool for conference mode (251 names)
+│   │   ├── metrics.py       ← Prometheus custom metrics (connections, votes, Q&A)
+│   │   └── version.py       ← Backend version detection from static/version.js
+│   └── features/            ← One sub-package per feature; each has router.py + optional state_builder.py
+│       ├── internal/        ← Internal/admin endpoints
+│       ├── pages/           ← HTML page serving (/, /host, /notes)
+│       ├── session/         ← Session lifecycle + snapshot/restore for daemon persistence
+│       ├── slides/          ← Slides navigation, Drive sync, upload/publish
+│       ├── upload/          ← File upload handling
+│       └── ws/              ← WebSocket endpoint /ws/{uuid}, /ws/daemon
 ├── daemon/                  ← Training daemon (runs on host's Mac)
 │   ├── __main__.py          ← Daemon entry point + orchestrator loop
 │   ├── config.py            ← Env vars and defaults
@@ -317,7 +311,7 @@ Manual rebuild utility (run only on demand):
 
 ```bash
 pip3 install fastapi "uvicorn[standard]" websockets python-multipart anthropic
-python3 -m uvicorn main:app --reload --port 8000
+python3 -m uvicorn railway.app:app --reload --port 8000
 ```
 
 - Host panel:   http://localhost:8000/host

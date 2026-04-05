@@ -6,8 +6,8 @@ import json
 import pytest
 from fastapi.testclient import TestClient
 
-from main import app
-from core.state import state
+from railway.app import app
+from railway.shared.state import state
 
 
 @pytest.fixture(autouse=True)

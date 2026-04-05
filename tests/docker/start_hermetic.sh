@@ -86,7 +86,7 @@ echo "[startup] Mock Drive server started (PID=$MOCK_DRIVE_PID)"
 
 # Start FastAPI backend
 cd /app
-python -m uvicorn main:app --host 0.0.0.0 --port 8000 &
+python -m uvicorn railway.app:app --host 0.0.0.0 --port 8000 &
 BACKEND_PID=$!
 
 # Wait for backend to be ready (use root landing page — session/active moved to daemon)
