@@ -46,8 +46,7 @@
   const TODAY_KEY = `host_polls_${new Date().toISOString().slice(0, 10)}`;
   const _FOOTER_BADGE_TOOLTIP_DEFAULTS = {
     'ws-badge': 'Server connection status',
-    'daemon-badge': 'AI assistant status',
-    'overlay-badge': 'Desktop Overlay app',
+'overlay-badge': 'Desktop Overlay app',
     'notes-badge': 'Session notes',
     'summary-badge': 'Key points summary',
     'btn-transcription-lang': 'Toggle transcription language',
@@ -327,7 +326,6 @@
         updatePaxBadge(msg.participant_count);
         renderParticipantList(cachedParticipantIds);
         updateLeaderboardButton();
-        renderDaemonStatus(msg.daemon_connected, msg.daemon_last_seen);
         document.getElementById('restore-banner').style.display =
           (msg.needs_restore && !msg.daemon_connected) ? '' : 'none';
         updateTokenBadge(msg.token_usage);
@@ -1172,37 +1170,6 @@
     }
   }
 
-  function renderDaemonStatus(connected, lastSeenIso) {
-    const el = document.getElementById('daemon-badge');
-
-    if (!lastSeenIso) {
-      if (el) {
-        el.textContent = '🤖';
-        el.className = 'badge disconnected';
-        _setFooterBadgeTooltip(el, 'Never connected — start with ./start.sh');
-      }
-      return;
-    }
-
-    const ago = Math.round((Date.now() - new Date(lastSeenIso)) / 1000);
-    const agoText = ago < 60 ? `${ago}s ago` : `${Math.round(ago/60)}m ago`;
-
-    if (connected) {
-      if (el) {
-        el.textContent = '🤖';
-        el.className = 'badge connected';
-        el.style.cssText = '';
-        _setFooterBadgeTooltip(el, `Connected (last seen ${agoText})`);
-      }
-    } else {
-      if (el) {
-        el.textContent = '🤖';
-        el.className = 'badge';
-        el.style.cssText = 'color:var(--warn);border:1px solid var(--warn);';
-        _setFooterBadgeTooltip(el, `Connection lost (last seen ${agoText})`);
-      }
-    }
-  }
 
   function renderTranscriptStatus(lineCount, totalLines, latestTs, lastContentAt) {
     _transcriptLineCount = lineCount || 0;
