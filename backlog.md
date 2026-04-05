@@ -252,3 +252,4 @@ Host broadcasts a statement: "Have you ever shipped code that violated what we j
 - [x] BUGFIX slides: daemon `/check` no longer trusts local `cached` blindly; it verifies Railway can serve `/{sid}/api/slides/download/{slug}` before returning 200, re-triggers `download_pdf` when missing, and participant list-download click now gates on `/check` with retry feedback.
 - [x] Direct request: host ❤️ footer badge click no longer animates in host browser; it only sends the reaction to backend/addons overlay flow.
 - [x] Bugfix participant: removed hover tooltip from the bottom-right deploy/version tag (`deployed ... ago`) while keeping the deploy age text visible.
+- [x] Bugfix notes/summary source of truth: daemon now serves notes from latest `*.txt` and summary from `ai-summary.md` (including host/participant state + REST endpoints), and `apis.md` state docs were updated accordingly.

@@ -8,7 +8,7 @@ class MiscState:
         self.paste_texts: dict[str, list[dict]] = {}  # uuid → [{id, text}]
         # TODO: notes_content, summary_points, summary_raw_markdown, summary_updated_at
         #  are currently synced from Railway state (via sync_from_restore).
-        #  They should be read from disk files (ai-summary.md, notes.md) instead of stored in state.
+        #  They should be read from disk files (ai-summary.md, *.txt) instead of stored in state.
         #  Deferred until summary/notes pipeline is refactored to write to known disk paths.
         self.notes_content: str | None = None
         self.summary_points: list[dict] = []
