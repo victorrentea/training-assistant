@@ -1,5 +1,16 @@
 # Todo
 
+## Direct request: hermetic E2E for participant session title
+
+- [x] Add a hermetic regression test that validates participant top header shows current session name
+- [x] Mark direct request as done in `backlog.md`
+- [x] Run targeted hermetic Docker test and capture proof in review section
+
+### Review: hermetic E2E for participant session title
+
+- Proof: `bash tests/docker/build-daemon.sh test_regressions.py -k participant_header_shows_session_name -v --tb=short`
+- Result: `1 passed, 3 deselected in 4.27s`
+
 ## Direct request: participant header missing session name
 
 - [x] Find where participant top header renders session title
