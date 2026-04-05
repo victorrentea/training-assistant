@@ -15,6 +15,7 @@ class MiscState:
         self.summary_raw_markdown: str | None = None
         self.summary_updated_at: str | None = None  # ISO string
         self.slides_cache_status: dict[str, dict] = {}
+        self.slides_catalog: dict[str, dict] = {}   # slug → catalog entry (drive_export_url, title, etc.)
         # Synced from Railway state (slides + session info)
         self.slides_current: dict | None = None
         self.session_main: dict | None = None
@@ -60,6 +61,15 @@ class MiscState:
         if not self.paste_texts[target_uuid]:
             del self.paste_texts[target_uuid]
         return True
+
+    def update_slides_catalog(self, entries: list[dict]) -> None:
+        """Replace the slides catalog with a new list of entries (keyed by slug)."""
+        with self._lock:
+            self.slides_catalog.clear()
+            for entry in entries:
+                slug = entry.get("slug")
+                if slug:
+                    self.slides_catalog[slug] = entry
 
     def snapshot(self) -> dict:
         return {

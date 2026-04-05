@@ -334,6 +334,9 @@ def run() -> None:
 
     ws_client.register_handler("scores_reset", _handle_scores_reset)
 
+    from daemon.slides.router import handle_pdf_download_complete
+    ws_client.register_handler("pdf_download_complete", handle_pdf_download_complete)
+
     # State push handler — daemon receives current state from Railway on connect
     from daemon.participant.state import participant_state
     from daemon.wordcloud.state import wordcloud_state
