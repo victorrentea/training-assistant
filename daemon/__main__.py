@@ -539,7 +539,7 @@ def run() -> None:
         # Restore from persisted stack
         current_folder = config.session_folder or (sessions_root / session_stack[-1]["name"])
         current_key_points, summary_watermark = load_key_points(current_folder)
-        log.info("session", f"Active session: {session_stack[-1]['name']}, {len(current_key_points)} key points")
+        log.info("session", f"Active session found: {session_stack[-1]['name']}")
     elif config.session_folder:
         # Auto-start from today's detected session folder
         session_stack = [{
