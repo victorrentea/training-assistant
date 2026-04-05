@@ -5,6 +5,8 @@ import os
 import socket
 import urllib.error
 import urllib.request
+import json
+from pathlib import Path
 
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
@@ -68,6 +70,7 @@ class SlidesCheckResponse(BaseModel):
 
 def _slides_with_embedded_cache_status() -> list[dict]:
     slides: list[dict] = []
+    seen_slugs: set[str] = set()
     for raw in list(misc_state.slides_catalog.values()):
         if not isinstance(raw, dict):
             continue
@@ -79,7 +82,52 @@ def _slides_with_embedded_cache_status() -> list[dict]:
         if "status" not in entry:
             entry["status"] = "not_cached"
         slides.append(entry)
+        if slug:
+            seen_slugs.add(slug)
+
+    # Include runtime-uploaded slides (.server-data/uploaded-slides/*.pdf)
+    # so participant catalog updates immediately after /api/slides/upload.
+    uploaded_dir = _uploaded_slides_dir()
+    if uploaded_dir.exists() and uploaded_dir.is_dir():
+        for pdf in sorted(uploaded_dir.glob("*.pdf")):
+            slug = pdf.stem.strip()
+            if not slug or slug in seen_slugs:
+                continue
+            meta_name, meta_updated_at = _uploaded_slide_meta(slug)
+            slides.append(
+                {
+                    "slug": slug,
+                    "name": meta_name or slug,
+                    "title": meta_name or slug,
+                    "url": f"/api/slides/download/{slug}",
+                    "updated_at": meta_updated_at,
+                    "status": "cached",
+                }
+            )
+            seen_slugs.add(slug)
     return slides
+
+
+def _uploaded_slides_dir() -> Path:
+    configured = os.environ.get("TRAINING_ASSISTANT_UPLOADED_SLIDES_DIR")
+    if configured:
+        return Path(configured).expanduser()
+    return Path(".server-data") / "uploaded-slides"
+
+
+def _uploaded_slide_meta(slug: str) -> tuple[str, str | None]:
+    meta_path = _uploaded_slides_dir() / f"{slug}.json"
+    if not meta_path.exists():
+        return "", None
+    try:
+        payload = json.loads(meta_path.read_text(encoding="utf-8"))
+    except Exception:
+        return "", None
+    if not isinstance(payload, dict):
+        return "", None
+    name = str(payload.get("name") or "").strip()
+    updated_at = payload.get("updated_at")
+    return name, str(updated_at) if updated_at else None
 
 
 def _broadcast_slides_cache_status() -> None:

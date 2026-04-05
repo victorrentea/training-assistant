@@ -467,7 +467,7 @@ function closeEmojiPopup(ev) {
     refreshBtn.className = 'avatar-refresh-btn';
     refreshBtn.innerHTML = '\u{1F3B2}';
     refreshBtn.title = 'Click to draw another one';
-    refreshBtn.onclick = function(e) {
+    refreshBtn.onclick = async function(e) {
         e.stopPropagation();
         // Track the current avatar as rejected
         const currentSrc = img.src;
@@ -475,7 +475,12 @@ function closeEmojiPopup(ev) {
         if (filename && !rejectedAvatars.includes(filename)) {
             rejectedAvatars.push(filename);
         }
-        participantApi('avatar', { rejected: rejectedAvatars });
+        try {
+            const resp = await participantApi('avatar', { rejected: rejectedAvatars });
+            if (resp.ok) {
+                await refreshParticipantState();
+            }
+        } catch (_) {}
         // Roll the dice button
         refreshBtn.classList.add('rolling');
         setTimeout(function() { refreshBtn.classList.remove('rolling'); }, 600);
@@ -2623,6 +2628,20 @@ ${html}
 
   // ── WebSocket ──
   let pendingRedirect = null;
+  async function refreshParticipantState() {
+    try {
+      const r = await fetch(apiBase + '/api/participant/state', {
+        headers: { 'X-Participant-ID': myUUID },
+      });
+      if (!r.ok) return;
+      const state = await r.json();
+      state.type = 'state';
+      handleMessage(state);
+    } catch (err) {
+      console.error('Failed to fetch state:', err);
+    }
+  }
+
   function connectWS(name) {
     pendingRedirect = null;
     _stateInitialised = false;
@@ -2638,12 +2657,7 @@ ${html}
       document.getElementById('display-name').textContent = myName;
 
       // Fetch initial state via REST (daemon no longer pushes state via WS)
-      fetch(apiBase + '/api/participant/state', {
-        headers: { 'X-Participant-ID': myUUID },
-      })
-        .then(r => r.json())
-        .then(state => { state.type = 'state'; handleMessage(state); })
-        .catch(err => console.error('Failed to fetch state:', err));
+      refreshParticipantState();
 
       // Fetch slides catalog directly from daemon (Railway no longer owns slides state)
       _refreshSlidesCatalog({ autoLoadSelected: true }).catch(() => {});
@@ -2929,6 +2943,8 @@ const sessionTitleEl = document.getElementById('session-title');
           if (prevActivity !== 'debate' && newActivity === 'debate') notifyIfHidden('⚔️ Debate started', 'Choose your side!');
           if (prevActivity !== 'codereview' && newActivity === 'codereview') notifyIfHidden('📝 Code Review', 'Spot bugs and earn points!');
           _prevActivity = newActivity;
+          // Activity changes require full state (poll/qa/wordcloud/debate payloads are stateful).
+          refreshParticipantState();
         }
         break;
       }
@@ -2961,7 +2977,22 @@ const sessionTitleEl = document.getElementById('session-title');
         updateNotes(msg.notes_content);
         break;
       case 'slides_cache_status':
-        _applySlidesCacheStatus(_buildSlidesCacheStatusMapFromSlides(msg.slides || []));
+        if (Array.isArray(msg.slides)) {
+          const nextCatalog = _normalizeSlidesCatalog(msg.slides);
+          if (nextCatalog.length) {
+            slidesCatalog = nextCatalog;
+            _initSlidesCatalogBaseline(slidesCatalog);
+            if (slidesSelectedId && !slidesCatalog.some((s) => s._id === slidesSelectedId)) {
+              slidesSelectedId = null;
+              _setStoredSelectedSlideId(null);
+            }
+          }
+        }
+        const wsStatus = _buildSlidesCacheStatusMapFromSlides(msg.slides || []);
+        const legacyWsStatus = (msg.slides_cache_status && typeof msg.slides_cache_status === 'object')
+          ? msg.slides_cache_status
+          : {};
+        _applySlidesCacheStatus({ ..._slidesCacheStatus, ...legacyWsStatus, ...wsStatus });
         if (document.getElementById('slides-list')) _renderSlidesList(slidesSelectedId || null);
         break;
       case 'leaderboard_revealed': {

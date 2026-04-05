@@ -124,11 +124,18 @@ components:
       summary: Voting closed by host
       payload:
         type: object
-        required: [type]
+        required: [type, vote_counts, total_votes]
         properties:
           type:
             type: string
             enum: [poll_closed]
+          vote_counts:
+            type: object
+            additionalProperties:
+              type: integer
+            description: option_id → vote count
+          total_votes:
+            type: integer
 
     poll_correct_revealed:
       summary: Host revealed correct answers

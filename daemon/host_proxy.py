@@ -68,7 +68,7 @@ async def proxy_websocket(client_ws: WebSocket, path: str, backend_ws_url: str):
 
     is_host = path.endswith("__host__")
     if is_host:
-        from daemon.host_ws import set_host_ws
+        from daemon.ws_publish import set_host_ws
         set_host_ws(client_ws)
 
     url = f"{backend_ws_url}/ws/{path}"
@@ -117,7 +117,7 @@ async def proxy_websocket(client_ws: WebSocket, path: str, backend_ws_url: str):
         logger.warning("WS proxy error for /ws/%s: %s", path, e)
     finally:
         if is_host:
-            from daemon.host_ws import clear_host_ws
+            from daemon.ws_publish import clear_host_ws
             clear_host_ws()
         try:
             await client_ws.close()

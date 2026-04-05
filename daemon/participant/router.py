@@ -268,6 +268,7 @@ async def refresh_avatar_endpoint(request: Request, body: AvatarRequest):
 
     # Sync back to cache
     participant_state.participant_avatars[pid] = new_avatar
+    await _notify_host_participant_list()
 
     request.state.write_back_events = [{
         "type": "participant_avatar_updated",

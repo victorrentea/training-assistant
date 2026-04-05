@@ -67,6 +67,17 @@ class ParticipantState:
                 "current_activity": self.current_activity,
             }
 
+    def reset(self, *, mode: str = "workshop") -> None:
+        """Reset participant-related runtime state for a fresh session."""
+        with self._lock:
+            self.participant_names.clear()
+            self.participant_avatars.clear()
+            self.participant_universes.clear()
+            self.scores.clear()
+            self.locations.clear()
+            self.mode = mode
+            self.current_activity = "none"
+
 
 # Module-level singleton
 participant_state = ParticipantState()

@@ -606,8 +606,8 @@ def run() -> None:
                             if misc_state.slides_current != _sc:
                                 misc_state.slides_current = _sc
                                 from daemon.ws_messages import SlidesCurrentMsg
-                                ws_publish.broadcast(SlidesCurrentMsg(**_sc))
-                                log.info("addon-bridge", f"Current slide: {_deck}:{_slide_num}")
+                                ws_publish.broadcast(SlidesCurrentMsg(slides_current=_sc))
+                                log.info("addon-bridge", f"Slide: {_deck}:{_slide_num}")
                         elif _target and not _target.get("matched", True):
                             if misc_state.slides_current is not None:
                                 misc_state.slides_current = None
@@ -618,7 +618,7 @@ def run() -> None:
                         if misc_state.slides_current != _sc:
                             misc_state.slides_current = _sc
                             from daemon.ws_messages import SlidesCurrentMsg
-                            ws_publish.broadcast(SlidesCurrentMsg(**_sc))
+                            ws_publish.broadcast(SlidesCurrentMsg(slides_current=_sc))
 
             # ── Push overlay_connected state change to host ──
             _curr_overlay = _bridge.connected
@@ -710,7 +710,7 @@ def run() -> None:
                                         if misc_state.slides_current != sc:
                                             misc_state.slides_current = sc
                                             from daemon.ws_messages import SlidesCurrentMsg
-                                            ws_publish.broadcast(SlidesCurrentMsg(**sc))
+                                            ws_publish.broadcast(SlidesCurrentMsg(slides_current=sc))
                                             log.info("slides", f"Slide: {deck}:{slide_num}")
                             elif ws_client.connected:
                                 # No slides config — send minimal info
@@ -721,7 +721,7 @@ def run() -> None:
                                 if misc_state.slides_current != sc:
                                     misc_state.slides_current = sc
                                     from daemon.ws_messages import SlidesCurrentMsg
-                                    ws_publish.broadcast(SlidesCurrentMsg(**sc))
+                                    ws_publish.broadcast(SlidesCurrentMsg(slides_current=sc))
                                     log.info("slides", f"Slide: {deck}:{slide_num} (no catalog)")
                         else:
                             if ws_client.connected and misc_state.slides_current is not None:
@@ -740,6 +740,9 @@ def run() -> None:
                         name = session_req["name"]
                         sid = session_req.get("session_id")
                         session_type = session_req.get("type", "workshop")
+                        # Force re-evaluation of activity-slides pointer for every fresh session.
+                        # Without this, a stale identical pointer value can suppress slides_current push.
+                        last_slide_file_pointer = None
                         if sid:
                             set_current_session_id(sid)
                             _active_session_id = sid
@@ -748,6 +751,28 @@ def run() -> None:
                         folder.mkdir(parents=True, exist_ok=True)
                         log.info("session", f"{'Found' if existed else 'Created'} folder: {folder}")
                         if not session_stack:
+                            # Fresh main session: clear runtime caches so participants/avatars/
+                            # count and activity artifacts don't leak from previous sessions.
+                            from daemon.participant.state import participant_state as _participant_state
+                            from daemon.wordcloud.state import wordcloud_state as _wordcloud_state
+                            from daemon.qa.state import qa_state as _qa_state
+                            from daemon.misc.state import misc_state as _misc_state
+                            from daemon.poll.state import poll_state as _poll_state
+                            from daemon.codereview.state import codereview_state as _codereview_state
+                            from daemon.debate.state import debate_state as _debate_state
+                            from daemon.leaderboard.state import leaderboard_state as _leaderboard_state
+                            from daemon.scores import scores as _scores_state
+
+                            _participant_state.reset(mode="conference" if session_type == "talk" else "workshop")
+                            _wordcloud_state.clear()
+                            _qa_state.clear()
+                            _misc_state.reset_for_new_session()
+                            _poll_state.clear()
+                            _codereview_state.clear()
+                            _debate_state.reset()
+                            _leaderboard_state.reset()
+                            _scores_state.reset()
+
                             new_session = {
                                 "name": name,
                                 "started_at": datetime.now().isoformat(),
