@@ -2222,6 +2222,7 @@ ${html}
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       slidesCatalog = _normalizeSlidesCatalog(data.slides);
+      _slidesCacheStatus = data.cache_status || {};
       _initSlidesCatalogBaseline(slidesCatalog);
       if (!slidesCatalog.length) {
         _renderSlidesList(null);
@@ -2551,6 +2552,9 @@ ${html}
         .then(r => r.json())
         .then(state => { state.type = 'state'; handleMessage(state); })
         .catch(err => console.error('Failed to fetch state:', err));
+
+      // Fetch slides catalog directly from daemon (Railway no longer owns slides state)
+      _refreshSlidesCatalog({ autoLoadSelected: true }).catch(() => {});
 
       // Show 🔔 button for auto-joiners who haven't been asked for permission yet
       if ('Notification' in window && Notification.permission === 'default' && !_notifBtnBound) {
