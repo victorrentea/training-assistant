@@ -264,7 +264,7 @@ def save_session_meta(session_folder: Path, meta: dict) -> None:
 
 def find_session_folder_by_id(sessions_root: Path, session_id: str) -> Path | None:
     """Scan session folders and return the one whose session_id matches.
-    Checks session_meta.json first (fast), then session_state.json (server snapshot)."""
+    Checks session_meta.json first (fast), then .session-state.json (server snapshot)."""
     if not sessions_root.exists() or not session_id:
         return None
     try:
@@ -280,8 +280,8 @@ def find_session_folder_by_id(sessions_root: Path, session_id: str) -> Path | No
         meta = load_session_meta(folder)
         if meta.get("session_id") == session_id:
             return folder
-        # Fall back to session_state.json (server snapshot, may lag)
-        ss_path = folder / "session_state.json"
+        # Fall back to .session-state.json (server snapshot, may lag)
+        ss_path = folder / ".session-state.json"
         if ss_path.exists():
             try:
                 data = json.loads(ss_path.read_text(encoding="utf-8"))
@@ -366,9 +366,9 @@ def session_start_date(session_entry: dict) -> date | None:
 # ── Session state file I/O ─────────────────────────────────────────────────────
 
 def save_session_state(session_folder: Path, snapshot: dict) -> None:
-    """Atomically writes session_state.json to the session folder."""
-    path = session_folder / "session_state.json"
-    tmp = path.with_suffix(".tmp")
+    """Atomically writes .session-state.json to the session folder."""
+    path = session_folder / ".session-state.json"
+    tmp = path.with_name(".session-state.json.tmp")
     tmp.write_text(json.dumps(snapshot, default=str, indent=2))
     tmp.replace(path)
 

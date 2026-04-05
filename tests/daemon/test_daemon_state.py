@@ -114,7 +114,7 @@ def test_find_session_folder_by_id_via_session_state(tmp_path):
     from daemon.session_state import find_session_folder_by_id
     folder = tmp_path / "2026-03-25 WS"
     folder.mkdir()
-    (folder / "session_state.json").write_text(json.dumps({"session_id": "server-id-456"}))
+    (folder / ".session-state.json").write_text(json.dumps({"session_id": "server-id-456"}))
 
     result = find_session_folder_by_id(tmp_path, "server-id-456")
     assert result == folder
@@ -193,10 +193,10 @@ def test_daemon_state_to_stack_active_sessions_included():
     assert len(result) == 2
 
 
-# ── Issue 1: startup restore includes session_state.json ─────────────────────
+# ── Issue 1: startup restore includes .session-state.json ─────────────────────
 
 def test_sync_session_includes_session_state_when_file_exists():
-    """When session_state.json exists in the session folder, sync_session_to_server
+    """When .session-state.json exists in the session folder, sync_session_to_server
     is called with the contents in the payload."""
     import daemon.session_state as session_state_mod
     from daemon.session_state import sync_session_to_server
@@ -208,7 +208,7 @@ def test_sync_session_includes_session_state_when_file_exists():
         session_name = "2026-03-25 WS"
         session_folder = sessions_root / session_name
         session_folder.mkdir()
-        (session_folder / "session_state.json").write_text(
+        (session_folder / ".session-state.json").write_text(
             json.dumps(session_state_data), encoding="utf-8"
         )
 

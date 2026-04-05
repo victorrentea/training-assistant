@@ -5,6 +5,20 @@ info:
     REST endpoints for the host (trainer). These are called directly on the
     daemon running at `localhost:8081` under `/api/{session_id}/...`.
     No proxy is involved — the host browser connects to the daemon directly.
+
+    ## Session Management (global, no session_id prefix)
+
+    These endpoints are at `http://localhost:8081/api/session/` and manage the
+    session lifecycle. State is stored in `.session-state.json` (hidden file) in
+    each session folder.
+
+    | Method | Path | Description |
+    |--------|------|-------------|
+    | POST | `/api/session/start` | Create a new session folder with clean slate. Body: `{name, type}`. Returns `{ok, session_name, session_id}`. |
+    | POST | `/api/session/resume` | Resume an existing session folder. Body: `{folder}`. Reads `.session-state.json` to restore state. Returns `{ok, session_name, session_id}`. |
+    | POST | `/api/session/end` | End the current session. Returns `{ok}`. |
+    | GET | `/api/session/folders` | List available session folders for current year. Returns `{folders: string[]}`. |
+    | GET | `/api/session/active` | Get active session_id or null. Public (no auth). Returns `{session_id: string|null}`. |
   version: "1.0"
 
 servers:
