@@ -5,6 +5,8 @@ from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
+from daemon import log as daemon_log
+from daemon.participant.state import participant_state
 from daemon.ws_messages import EmojiReactionMsg
 from daemon.ws_publish import notify_host
 
@@ -37,8 +39,14 @@ async def emoji_reaction(request: Request, body: EmojiReactionRequest):
     # Forward to desktop overlay via addons bridge WS — fire and forget
     from daemon import addon_bridge_client
     sent = addon_bridge_client.send_emoji(emoji)
+    participant_name = participant_state.participant_names.get(
+        pid, "Host" if pid == "__host__" else pid
+    )
     if not sent:
         logger.warning("Overlay emoji drop: bridge disconnected pid=%s emoji=%r", pid, emoji)
+        daemon_log.info("addon-bridge", f"Dropped reaction from {participant_name!r}: {emoji!r} (bridge unavailable)")
+    else:
+        daemon_log.info("addon-bridge", f"{participant_name!r} reacted {emoji!r}")
 
     # Forward to host browser (local WS)
     await notify_host(EmojiReactionMsg(emoji=emoji))
