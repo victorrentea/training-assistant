@@ -229,3 +229,5 @@ Host broadcasts a statement: "Have you ever shipped code that violated what we j
 
 - [x] daemon static-sync log: changed reload message to `Triggered browser reload after sync N file(s): file1, file2` with actual changed filenames.
 - [x] daemon reload broadcast: include host WebSocket in reload fan-out so both host and participant browsers auto-reload after static sync.
+
+- [x] BUGFIX slides: participant now calls /api/slides/check/{slug} first and only downloads /api/slides/download/{slug} after check returns 200; added Railway proxy endpoint and contract tests.
