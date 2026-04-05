@@ -29,7 +29,7 @@ from daemon.quiz.poll_api import post_status
 from daemon.summary.loop import run_summary_cycle, load_key_points, save_key_points, get_ai_summary_mtime, get_ai_summary_raw
 from daemon.transcript.loader import load_transcription_files
 from daemon.transcript.state import TranscriptStateManager
-from daemon.slides.loop import SlidesPollingRunner
+from daemon.slides.loop import SlidesRunner
 from daemon.ws_client import DaemonWsClient
 from daemon.session import pending as session_pending
 from daemon.session import state as session_shared_state
@@ -475,7 +475,7 @@ def run() -> None:
         _do_save_daemon_state()
     # Publish initial session state to daemon REST router
     session_shared_state.set_active_session(_active_session_id, session_stack)
-    slides_runner = SlidesPollingRunner(config)
+    slides_runner = SlidesRunner(config)
     slides_runner.start()
 
     # ── Addon bridge client (connects to wispr-flow WS server at localhost:8765) ──
