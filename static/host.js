@@ -1193,10 +1193,20 @@
 
   let _suppressHeartEcho = false;
   function triggerHostHeart() {
-    if (!ws) return;
+    showHostHeartFullscreen();
     _suppressHeartEcho = true;
     setTimeout(() => { _suppressHeartEcho = false; }, 500);
-    sendWS('emoji_reaction', { emoji: '❤️' });
+    fetch(`/${SESSION_ID}/api/participant/emoji/reaction`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Participant-ID': '__host__',
+      },
+      body: JSON.stringify({ emoji: '❤️' }),
+    }).catch(() => {
+      // Keep old WS path as best-effort fallback.
+      sendWS('emoji_reaction', { emoji: '❤️' });
+    });
   }
 
   function renderPendingDeploy(pendingDeploy) {

@@ -39,6 +39,8 @@ async def emoji_reaction(request: Request, body: EmojiReactionRequest):
 
     # Forward to desktop overlay via addons bridge WS — fire and forget
     from daemon import addon_bridge_client
-    addon_bridge_client.send_emoji(emoji)
+    sent = addon_bridge_client.send_emoji(emoji)
+    if not sent:
+        logger.warning("Overlay emoji drop: bridge disconnected pid=%s emoji=%r", pid, emoji)
 
     return OkResponse()
