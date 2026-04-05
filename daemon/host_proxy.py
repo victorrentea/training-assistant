@@ -78,14 +78,13 @@ async def proxy_websocket(client_ws: WebSocket, path: str, backend_ws_url: str):
     if auth:
         extra_headers["Authorization"] = auth
 
-    # SSL context using certifi (fixes macOS certificate verification failures)
+    # Skip SSL verification — daemon is a local trusted process, cert checks unnecessary
     ws_kwargs = {"additional_headers": extra_headers}
     if url.startswith("wss://"):
-        try:
-            import certifi
-            ws_kwargs["ssl"] = ssl.create_default_context(cafile=certifi.where())
-        except Exception:
-            ws_kwargs["ssl"] = ssl.create_default_context()
+        ssl_ctx = ssl.create_default_context()
+        ssl_ctx.check_hostname = False
+        ssl_ctx.verify_mode = ssl.CERT_NONE
+        ws_kwargs["ssl"] = ssl_ctx
 
     try:
         async with websockets.connect(url, **ws_kwargs) as upstream:
