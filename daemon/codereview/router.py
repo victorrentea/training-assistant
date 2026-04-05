@@ -12,6 +12,16 @@ from pydantic import BaseModel
 from daemon.codereview.state import codereview_state
 from daemon.participant.state import participant_state
 from daemon.scores import scores
+from daemon.ws_publish import broadcast, broadcast_event, host_event
+from daemon.ws_messages import (
+    ActivityUpdatedMsg,
+    CodereviewOpenedMsg,
+    CodereviewSelectionClosedMsg,
+    CodereviewSelectionsUpdatedMsg,
+    CodereviewLineConfirmedMsg,
+    CodereviewClearedMsg,
+    ScoresUpdatedMsg,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -46,16 +56,6 @@ class OkWithPhaseResponse(BaseModel):
 class ConfirmLineResponse(BaseModel):
     ok: bool = True
     confirmed_line: int
-
-
-# Set by __main__.py during daemon startup
-_ws_client = None
-
-
-def set_ws_client(client):
-    """Set the WebSocket client for broadcasting events."""
-    global _ws_client
-    _ws_client = client
 
 
 # ── Smart paste logic (copied from features/codereview/router.py) ──
@@ -140,7 +140,7 @@ async def update_selection(request: Request, body: SelectionRequest):
         for ln in pid_sel
     }
     request.state.write_back_events = [
-        {"type": "send_to_host", "event": {"type": "codereview_selections_updated", "line_counts": line_counts}},
+        host_event(CodereviewSelectionsUpdatedMsg(line_counts=line_counts)),
     ]
 
     return OkResponse()
@@ -181,8 +181,8 @@ async def create_codereview(body: CreateCodeReviewRequest):
     participant_state.current_activity = "codereview"
     codereview_state.create(snippet, final_language)
 
-    _broadcast({"type": "codereview_opened", "snippet": snippet, "language": final_language})
-    _broadcast({"type": "activity_updated", "current_activity": "codereview"})
+    broadcast(CodereviewOpenedMsg(snippet=snippet, language=final_language))
+    broadcast(ActivityUpdatedMsg(current_activity="codereview"))
 
     return OkResponse()
 
@@ -192,7 +192,7 @@ async def set_codereview_status(body: SetCodeReviewStatusRequest):
     """Host closes the selection phase."""
     if not body.open:
         codereview_state.close_selection()
-        _broadcast({"type": "codereview_selection_closed"})
+        broadcast(CodereviewSelectionClosedMsg())
 
     return OkWithPhaseResponse(phase=codereview_state.phase)
 
@@ -215,8 +215,8 @@ async def confirm_line(body: ConfirmLineRequest):
     for pid in awarded_pids:
         scores.add_score(pid, 200)
 
-    _broadcast({"type": "codereview_line_confirmed", "line": body.line})
-    _broadcast({"type": "scores_updated", "scores": scores.snapshot()})
+    broadcast(CodereviewLineConfirmedMsg(line=body.line))
+    broadcast(ScoresUpdatedMsg(scores=scores.snapshot()))
 
     return ConfirmLineResponse(confirmed_line=body.line)
 
@@ -227,14 +227,7 @@ async def clear_codereview():
     codereview_state.clear()
     participant_state.current_activity = "none"
 
-    _broadcast({"type": "codereview_cleared"})
-    _broadcast({"type": "activity_updated", "current_activity": "none"})
+    broadcast(CodereviewClearedMsg())
+    broadcast(ActivityUpdatedMsg(current_activity="none"))
 
     return OkResponse()
-
-
-def _broadcast(event: dict):
-    """Send broadcast directly via ws_client (host-direct path)."""
-    if _ws_client is None:
-        return
-    _ws_client.send({"type": "broadcast", "event": event})

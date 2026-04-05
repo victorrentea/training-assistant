@@ -10,17 +10,16 @@ from typing import Optional
 from daemon.debate.state import debate_state
 from daemon.participant.state import participant_state
 from daemon.scores import scores
+from daemon.ws_publish import broadcast, broadcast_event
+from daemon.ws_messages import (
+    ActivityUpdatedMsg,
+    DebateUpdatedMsg,
+    DebateTimerMsg,
+    DebateRoundEndedMsg,
+    ScoresUpdatedMsg,
+)
 
 logger = logging.getLogger(__name__)
-
-# Set by __main__.py during daemon startup
-_ws_client = None
-
-
-def set_ws_client(client):
-    """Set the WebSocket client for broadcasting events."""
-    global _ws_client
-    _ws_client = client
 
 
 # ── Pydantic models ──
@@ -92,7 +91,7 @@ async def pick_side(request: Request, body: PickSideRequest):
             debate_state.advance_phase("arguments")
 
     request.state.write_back_events = [
-        {"type": "broadcast", "event": {"type": "debate_updated", **debate_state.snapshot()}},
+        broadcast_event(DebateUpdatedMsg(**debate_state.snapshot())),
     ]
     return OkResponse()
 
@@ -117,8 +116,8 @@ async def submit_argument(request: Request, body: ArgumentRequest):
     scores.add_score(pid, 100)
 
     request.state.write_back_events = [
-        {"type": "broadcast", "event": {"type": "debate_updated", **debate_state.snapshot()}},
-        {"type": "broadcast", "event": {"type": "scores_updated", "scores": scores.snapshot()}},
+        broadcast_event(DebateUpdatedMsg(**debate_state.snapshot())),
+        broadcast_event(ScoresUpdatedMsg(scores=scores.snapshot())),
     ]
     return OkResponse()
 
@@ -144,8 +143,8 @@ async def upvote_argument(request: Request, body: UpvoteRequest):
     scores.add_score(pid, 25)
 
     request.state.write_back_events = [
-        {"type": "broadcast", "event": {"type": "debate_updated", **debate_state.snapshot()}},
-        {"type": "broadcast", "event": {"type": "scores_updated", "scores": scores.snapshot()}},
+        broadcast_event(DebateUpdatedMsg(**debate_state.snapshot())),
+        broadcast_event(ScoresUpdatedMsg(scores=scores.snapshot())),
     ]
     return OkResponse()
 
@@ -168,8 +167,8 @@ async def volunteer_champion(request: Request):
     scores.add_score(pid, 2500)
 
     request.state.write_back_events = [
-        {"type": "broadcast", "event": {"type": "debate_updated", **debate_state.snapshot()}},
-        {"type": "broadcast", "event": {"type": "scores_updated", "scores": scores.snapshot()}},
+        broadcast_event(DebateUpdatedMsg(**debate_state.snapshot())),
+        broadcast_event(ScoresUpdatedMsg(scores=scores.snapshot())),
     ]
     return OkResponse()
 
@@ -192,8 +191,8 @@ async def launch_debate(body: LaunchDebateRequest):
     participant_state.current_activity = "debate"
     debate_state.launch(statement)
 
-    _broadcast({"type": "debate_updated", **debate_state.snapshot()})
-    _broadcast({"type": "activity_updated", "current_activity": "debate"})
+    broadcast(DebateUpdatedMsg(**debate_state.snapshot()))
+    broadcast(ActivityUpdatedMsg(current_activity="debate"))
     return OkResponse()
 
 
@@ -203,8 +202,8 @@ async def reset_debate():
     debate_state.reset()
     participant_state.current_activity = "none"
 
-    _broadcast({"type": "debate_updated", **debate_state.snapshot()})
-    _broadcast({"type": "activity_updated", "current_activity": "none"})
+    broadcast(DebateUpdatedMsg(**debate_state.snapshot()))
+    broadcast(ActivityUpdatedMsg(current_activity="none"))
     return OkResponse()
 
 
@@ -214,7 +213,7 @@ async def close_selection():
     all_pids = list(participant_state.participant_names.keys())
     debate_state.close_selection(all_pids)
 
-    _broadcast({"type": "debate_updated", **debate_state.snapshot()})
+    broadcast(DebateUpdatedMsg(**debate_state.snapshot()))
     return OkResponse()
 
 
@@ -224,7 +223,7 @@ async def force_assign():
     all_pids = list(participant_state.participant_names.keys())
     debate_state.force_assign(all_pids)
 
-    _broadcast({"type": "debate_updated", **debate_state.snapshot()})
+    broadcast(DebateUpdatedMsg(**debate_state.snapshot()))
     return OkResponse()
 
 
@@ -235,7 +234,7 @@ async def advance_phase(body: AdvancePhaseRequest):
         return JSONResponse({"error": f"Invalid phase: {body.phase}"}, status_code=400)
 
     debate_state.advance_phase(body.phase)
-    _broadcast({"type": "debate_updated", **debate_state.snapshot()})
+    broadcast(DebateUpdatedMsg(**debate_state.snapshot()))
     return OkPhaseResponse(phase=body.phase)
 
 
@@ -246,7 +245,7 @@ async def set_first_side(body: SetFirstSideRequest):
         return JSONResponse({"error": "Side must be 'for' or 'against'"}, status_code=400)
 
     debate_state.set_first_side(body.side)
-    _broadcast({"type": "debate_updated", **debate_state.snapshot()})
+    broadcast(DebateUpdatedMsg(**debate_state.snapshot()))
     return OkResponse()
 
 
@@ -256,8 +255,8 @@ async def start_round_timer(body: RoundTimerRequest):
     debate_state.start_round(body.round_index, body.seconds)
 
     started_at = debate_state.round_timer_started_at.isoformat() if debate_state.round_timer_started_at else None
-    _broadcast({"type": "debate_timer", "round_index": body.round_index, "seconds": body.seconds, "started_at": started_at})
-    _broadcast({"type": "debate_updated", **debate_state.snapshot()})
+    broadcast(DebateTimerMsg(round_index=body.round_index, seconds=body.seconds, started_at=started_at))
+    broadcast(DebateUpdatedMsg(**debate_state.snapshot()))
     return OkResponse()
 
 
@@ -267,8 +266,8 @@ async def end_round():
     ended_index = debate_state.round_index
     debate_state.end_round()
 
-    _broadcast({"type": "debate_round_ended", "round_index": ended_index})
-    _broadcast({"type": "debate_updated", **debate_state.snapshot()})
+    broadcast(DebateRoundEndedMsg())
+    broadcast(DebateUpdatedMsg(**debate_state.snapshot()))
     return OkResponse()
 
 
@@ -283,7 +282,7 @@ async def end_arguments():
     # No arguments submitted — already advanced to prep
     if not ai_request.get("for_args") and not ai_request.get("against_args"):
         debate_state.advance_phase("prep")
-        _broadcast({"type": "debate_updated", **debate_state.snapshot()})
+        broadcast(DebateUpdatedMsg(**debate_state.snapshot()))
         return OkResponse()
 
     # Run AI cleanup in background
@@ -301,12 +300,12 @@ async def end_arguments():
         except Exception:
             logger.exception("Debate AI cleanup failed — advancing to prep with empty result")
             debate_state.apply_ai_result([], [], [])
-        _broadcast({"type": "debate_updated", **debate_state.snapshot()})
+        broadcast(DebateUpdatedMsg(**debate_state.snapshot()))
 
     asyncio.create_task(_run_ai_cleanup(ai_request))
 
     # Return immediately — broadcast with ai_cleanup phase
-    _broadcast({"type": "debate_updated", **debate_state.snapshot()})
+    broadcast(DebateUpdatedMsg(**debate_state.snapshot()))
     return OkResponse()
 
 
@@ -314,12 +313,5 @@ async def end_arguments():
 async def receive_ai_result(body: AiResultRequest):
     """Manual/skip AI result — host posts AI cleanup results directly."""
     debate_state.apply_ai_result(body.merges, body.cleaned, body.new_arguments)
-    _broadcast({"type": "debate_updated", **debate_state.snapshot()})
+    broadcast(DebateUpdatedMsg(**debate_state.snapshot()))
     return OkResponse()
-
-
-def _broadcast(event: dict):
-    """Send broadcast directly via ws_client (host-direct path)."""
-    if _ws_client is None:
-        return
-    _ws_client.send({"type": "broadcast", "event": event})
