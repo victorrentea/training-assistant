@@ -336,8 +336,8 @@ def run() -> None:
 
     def _handle_scores_reset(data):
         daemon_scores.reset()
-        payload = {"type": "scores_updated", "scores": daemon_scores.snapshot()}
-        ws_client.send({"type": "broadcast", "event": payload})
+        from daemon.ws_messages import ScoresUpdatedMsg
+        ws_publish.broadcast(ScoresUpdatedMsg(scores=daemon_scores.snapshot()))
 
     ws_client.register_handler("scores_reset", _handle_scores_reset)
 
@@ -655,10 +655,12 @@ def run() -> None:
                                             _PPT_UNMAPPED_PRESENTATIONS_ALERTED.add(alert_key)
                                             _platform.beep()
                                             message = f"Presentation inaccessible for participants. ({deck})"
-                                            ws_client.send({"type": "broadcast", "event": {"type": "quiz_status", "status": "error", "message": message}})
+                                            from daemon.ws_messages import QuizStatusMsg
+                                            ws_publish.broadcast(QuizStatusMsg(status="error", message=message))
                                             log.error("slides", message)
                                         misc_state.slides_current = None
-                                        ws_client.send({"type": "broadcast", "event": {"type": "slides_current", "slides_current": None}})
+                                        from daemon.ws_messages import SlidesCurrentMsg
+                                        ws_publish.broadcast(SlidesCurrentMsg(slides_current=None))
                                     else:
                                         if alert_key:
                                             _PPT_UNMAPPED_PRESENTATIONS_ALERTED.discard(alert_key)
@@ -670,7 +672,8 @@ def run() -> None:
                                             "current_page": slide_num,
                                         }
                                         misc_state.slides_current = sc
-                                        ws_client.send({"type": "broadcast", "event": {"type": "slides_current", **sc}})
+                                        from daemon.ws_messages import SlidesCurrentMsg
+                                        ws_publish.broadcast(SlidesCurrentMsg(**sc))
                                         log.info("slides", f"Slide: {deck}:{slide_num}")
                             elif ws_client.connected:
                                 # No slides config — send minimal info
@@ -679,12 +682,14 @@ def run() -> None:
                                     "current_page": slide_num,
                                 }
                                 misc_state.slides_current = sc
-                                ws_client.send({"type": "broadcast", "event": {"type": "slides_current", **sc}})
+                                from daemon.ws_messages import SlidesCurrentMsg
+                                ws_publish.broadcast(SlidesCurrentMsg(**sc))
                                 log.info("slides", f"Slide: {deck}:{slide_num} (no catalog)")
                         else:
                             if ws_client.connected:
                                 misc_state.slides_current = None
-                                ws_client.send({"type": "broadcast", "event": {"type": "slides_current", "slides_current": None}})
+                                from daemon.ws_messages import SlidesCurrentMsg
+                                ws_publish.broadcast(SlidesCurrentMsg(slides_current=None))
                                 log.info("slides", "No active slide pointer")
 
                 # ── Read git activity from file ──

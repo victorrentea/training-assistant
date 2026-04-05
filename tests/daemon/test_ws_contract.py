@@ -4,6 +4,7 @@ Verifies that:
 1. Every message type defined in the YAML channel is present in the registry (and vice versa).
 2. Every field in each YAML message payload is present in the corresponding Pydantic model
    (and vice versa).
+3. No daemon code sends raw WS dicts outside the typed publisher (guard test).
 
 Meta messages ('state', 'kicked') are intentionally excluded from the registries because
 they are not incremental broadcast events.
@@ -91,7 +92,6 @@ class TestParticipantWsContract:
                 continue  # type mismatch caught by test_message_types_match
 
             yaml_fields = _extract_message_fields(spec, msg_name)
-            # Get Pydantic model fields, excluding 'type'
             model_fields = {k for k in model_cls.model_fields.keys() if k != "type"}
 
             missing = yaml_fields - model_fields
@@ -160,3 +160,50 @@ class TestHostWsContract:
                 errors.append(f"  {msg_name}: fields in model but not in YAML: {sorted(extra)}")
 
         assert not errors, "Field mismatches:\n" + "\n".join(errors)
+
+
+class TestNoRawWsSends:
+    """Guard: feature routers must use the typed publisher, not raw WS sends."""
+
+    # Infrastructure files allowed to use raw WS sends:
+    ALLOWLIST = {
+        "ws_publish.py",      # the publisher itself
+        "ws_client.py",       # the WS client transport
+        "host_ws.py",         # host WS connection management (used by publisher)
+        "host_proxy.py",      # WebSocket proxy passthrough
+        "proxy_handler.py",   # Railway proxy request handler
+        "session_state.py",   # session sync (internal daemon↔Railway protocol)
+        "__main__.py",        # orchestrator loop (infrastructure messages)
+        "poll_api.py",        # quiz→poll bridge (TODO: model edge cases)
+    }
+
+    # Patterns that indicate raw WS sends
+    RAW_SEND_PATTERNS = [
+        "_ws_client.send(",
+        "ws_client.send(",
+        ".send_json(",
+        ".send_text(",
+        "send_to_host(",
+    ]
+
+    def test_no_raw_ws_sends_in_routers(self):
+        """Feature routers must use ws_publish (broadcast/notify_host), not raw sends."""
+        daemon_dir = Path(__file__).parent.parent.parent / "daemon"
+        violations = []
+
+        for py_file in sorted(daemon_dir.rglob("*.py")):
+            if py_file.name in self.ALLOWLIST:
+                continue
+            text = py_file.read_text()
+            for pattern in self.RAW_SEND_PATTERNS:
+                if pattern in text:
+                    for i, line in enumerate(text.splitlines(), 1):
+                        stripped = line.strip()
+                        if pattern in stripped and not stripped.startswith("#") and not stripped.startswith('"""'):
+                            violations.append(f"  {py_file.relative_to(daemon_dir)}:{i}: {stripped[:80]}")
+
+        assert not violations, (
+            "Raw WS sends found outside the typed publisher:\n"
+            + "\n".join(violations)
+            + "\n\nUse broadcast()/notify_host() from daemon.ws_publish instead."
+        )

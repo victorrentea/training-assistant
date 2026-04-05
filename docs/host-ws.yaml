@@ -157,14 +157,17 @@ components:
             type: string
 
     quiz_preview:
-      summary: Generated quiz ready for host review before publishing
+      summary: Generated quiz ready for host review (quiz=null to clear)
       payload:
         type: object
-        required: [type, question, options, multi, correct_indices]
+        required: [type]
         properties:
           type:
             type: string
             enum: [quiz_preview]
+          quiz:
+            nullable: true
+            description: Set to null to clear the preview
           question:
             type: string
           options:
