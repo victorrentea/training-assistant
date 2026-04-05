@@ -670,9 +670,10 @@ def run() -> None:
                                             from daemon.ws_messages import QuizStatusMsg
                                             ws_publish.broadcast(QuizStatusMsg(status="error", message=message))
                                             log.error("slides", message)
-                                        misc_state.slides_current = None
-                                        from daemon.ws_messages import SlidesCurrentMsg
-                                        ws_publish.broadcast(SlidesCurrentMsg(slides_current=None))
+                                        if misc_state.slides_current is not None:
+                                            misc_state.slides_current = None
+                                            from daemon.ws_messages import SlidesCurrentMsg
+                                            ws_publish.broadcast(SlidesCurrentMsg(slides_current=None))
                                     else:
                                         if alert_key:
                                             _PPT_UNMAPPED_PRESENTATIONS_ALERTED.discard(alert_key)
@@ -683,22 +684,24 @@ def run() -> None:
                                             "presentation_name": deck,
                                             "current_page": slide_num,
                                         }
-                                        misc_state.slides_current = sc
-                                        from daemon.ws_messages import SlidesCurrentMsg
-                                        ws_publish.broadcast(SlidesCurrentMsg(**sc))
-                                        log.info("slides", f"Slide: {deck}:{slide_num}")
+                                        if misc_state.slides_current != sc:
+                                            misc_state.slides_current = sc
+                                            from daemon.ws_messages import SlidesCurrentMsg
+                                            ws_publish.broadcast(SlidesCurrentMsg(**sc))
+                                            log.info("slides", f"Slide: {deck}:{slide_num}")
                             elif ws_client.connected:
                                 # No slides config — send minimal info
                                 sc = {
                                     "presentation_name": deck,
                                     "current_page": slide_num,
                                 }
-                                misc_state.slides_current = sc
-                                from daemon.ws_messages import SlidesCurrentMsg
-                                ws_publish.broadcast(SlidesCurrentMsg(**sc))
-                                log.info("slides", f"Slide: {deck}:{slide_num} (no catalog)")
+                                if misc_state.slides_current != sc:
+                                    misc_state.slides_current = sc
+                                    from daemon.ws_messages import SlidesCurrentMsg
+                                    ws_publish.broadcast(SlidesCurrentMsg(**sc))
+                                    log.info("slides", f"Slide: {deck}:{slide_num} (no catalog)")
                         else:
-                            if ws_client.connected:
+                            if ws_client.connected and misc_state.slides_current is not None:
                                 misc_state.slides_current = None
                                 from daemon.ws_messages import SlidesCurrentMsg
                                 ws_publish.broadcast(SlidesCurrentMsg(slides_current=None))
