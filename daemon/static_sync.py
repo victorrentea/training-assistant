@@ -57,7 +57,7 @@ def sync_static_files(
                 {"path": name, "content_b64": content_b64},
                 username, password,
             )
-            log.info("static-sync", f"Uploaded: {name} ({filepath.stat().st_size} bytes)")
+            log.info("static-sync", f"↑ Uploaded: {name} ({filepath.stat().st_size // 1024} kb)")
             changed_files.append(name)
         except RuntimeError as e:
             log.error("static-sync", f"Failed to upload {name}: {e}")
