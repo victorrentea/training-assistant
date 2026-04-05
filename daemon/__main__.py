@@ -223,6 +223,77 @@ def _broadcast_notes_summary_counts(probe: dict) -> None:
 
 
 
+def _read_non_empty_line_count(path: Path | None) -> int:
+    if path is None or not path.exists() or not path.is_file():
+        return 0
+    try:
+        content = path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return 0
+    return sum(1 for line in content.splitlines() if line.strip())
+
+
+def _file_mtime_ns(path: Path | None) -> int | None:
+    if path is None or not path.exists() or not path.is_file():
+        return None
+    try:
+        return path.stat().st_mtime_ns
+    except OSError:
+        return None
+
+
+def _build_notes_summary_probe(session_folder: Path | None) -> dict:
+    notes_file = find_notes_in_folder(session_folder) if session_folder else None
+    summary_file = (session_folder / "ai-summary.md") if session_folder else None
+    if summary_file and not summary_file.exists():
+        summary_file = None
+    return {
+        "session_folder": str(session_folder) if session_folder else None,
+        "notes_file": str(notes_file) if notes_file else None,
+        "notes_mtime_ns": _file_mtime_ns(notes_file),
+        "notes_non_empty_lines": _read_non_empty_line_count(notes_file),
+        "summary_file": str(summary_file) if summary_file else None,
+        "summary_mtime_ns": _file_mtime_ns(summary_file),
+        "summary_non_empty_lines": _read_non_empty_line_count(summary_file),
+    }
+
+
+def _probe_change_parts(previous: dict | None, current: dict) -> str:
+    if previous is None:
+        return "initial"
+    parts: list[str] = []
+    if previous.get("session_folder") != current.get("session_folder"):
+        parts.append("session")
+    notes_changed = (
+        previous.get("notes_file") != current.get("notes_file")
+        or previous.get("notes_mtime_ns") != current.get("notes_mtime_ns")
+        or previous.get("notes_non_empty_lines") != current.get("notes_non_empty_lines")
+    )
+    summary_changed = (
+        previous.get("summary_file") != current.get("summary_file")
+        or previous.get("summary_mtime_ns") != current.get("summary_mtime_ns")
+        or previous.get("summary_non_empty_lines") != current.get("summary_non_empty_lines")
+    )
+    if notes_changed:
+        parts.append("notes")
+    if summary_changed:
+        parts.append("summary")
+    return ",".join(parts) if parts else "none"
+
+
+def _log_notes_summary_probe(reason: str, probe: dict, change_parts: str | None = None) -> None:
+    session_label = probe.get("session_folder") or "<none>"
+    notes_label = Path(probe["notes_file"]).name if probe.get("notes_file") else "MISSING"
+    summary_label = Path(probe["summary_file"]).name if probe.get("summary_file") else "MISSING"
+    suffix = f" changed={change_parts}" if change_parts else ""
+    log.info(
+        "notes-summary",
+        f"{reason}:{suffix} session={session_label} "
+        f"notes_file={notes_label} notes_non_empty_lines={probe['notes_non_empty_lines']} "
+        f"summary_file={summary_label} summary_non_empty_lines={probe['summary_non_empty_lines']}",
+    )
+
+
 def _bind_initial_session_folder(config, sessions_root: Path, session_stack: list[dict]) -> tuple[object, str]:
     """Resolve and log session folder binding at daemon startup."""
     today_folder = today_notes = None
@@ -522,6 +593,8 @@ def run() -> None:
         log.error("session", f"Initial sync failed: {e}")
 
     last_summary_at = 0.0  # monotonic time of last summary run
+    notes_summary_probe_prev: dict | None = _build_notes_summary_probe(config.session_folder)
+    _log_notes_summary_probe("startup", notes_summary_probe_prev)
     last_snapshot_hash: str | None = None  # hash of last saved state snapshot
     last_state_backup_log: str | None = None  # last emitted state-backup log line (dedupe consecutive repeats)
     transcript_state = TranscriptStateManager()
