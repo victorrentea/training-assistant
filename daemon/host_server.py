@@ -17,6 +17,9 @@ logger = logging.getLogger(__name__)
 
 _STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
 
+# Set by __main__ after startup so /api/status can expose it
+code_timestamp: str | None = None
+
 
 def create_app(backend_url: str) -> FastAPI:
     """Create the host panel FastAPI application.
@@ -120,6 +123,13 @@ def create_app(backend_url: str) -> FastAPI:
     app.include_router(session_global_router)      # /api/session/* (host-only: start/end/pause/resume/create/rename/resume-folder/folders/start_talk/end_talk)
     app.include_router(session_public_router)      # /api/session/active (public)
     app.include_router(session_scoped_router)      # /api/{session_id}/session/interval-lines.txt
+
+    # --- Daemon status endpoint (exposes code_timestamp directly, not proxied) ---
+    from fastapi.responses import JSONResponse
+    @app.get("/api/daemon-status")
+    async def daemon_status():
+        import daemon.host_server as _hs
+        return JSONResponse({"code_timestamp": _hs.code_timestamp})
 
     # --- WebSocket proxy ---
     @app.websocket("/ws/{path:path}")

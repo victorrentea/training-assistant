@@ -23,6 +23,9 @@ MSG_PROXY_RESPONSE = "proxy_response"
 # --- Session identity (daemon → backend) ---
 MSG_SET_SESSION_ID = "set_session_id"
 
+# --- Code timestamp (daemon → backend) ---
+MSG_CODE_TIMESTAMP = "code_timestamp"
+
 # --- Static file sync (backend → daemon) ---
 MSG_SYNC_FILES = "sync_files"
 

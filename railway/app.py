@@ -1,6 +1,7 @@
 """Workshop Live Interaction Tool — FastAPI + WebSocket backend."""
 
 import logging
+import os
 from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
@@ -155,6 +156,8 @@ async def get_status():
     from railway.shared.version import get_backend_version
     return {
         "backend_version": get_backend_version(),
+        "git_sha": os.environ.get("RAILWAY_GIT_COMMIT_SHA", ""),
+        "daemon_code_timestamp": state.daemon_code_timestamp,
         "session_active": state.session_id is not None,
         "session_id": state.session_id,
         "slides_current": state.slides_current,
@@ -167,6 +170,8 @@ async def get_session_status(session_id: str, _=Depends(require_valid_session)):
     from railway.shared.version import get_backend_version
     return {
         "backend_version": get_backend_version(),
+        "git_sha": os.environ.get("RAILWAY_GIT_COMMIT_SHA", ""),
+        "daemon_code_timestamp": state.daemon_code_timestamp,
         "session_active": True,
         "session_id": state.session_id,
         "slides_current": state.slides_current,

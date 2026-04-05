@@ -22,7 +22,7 @@ from railway.shared.state import state
 from railway.features.ws.daemon_protocol import (
     MSG_SLIDES_CATALOG, MSG_SLIDE_INVALIDATED, MSG_DAEMON_PING,
     MSG_PROXY_RESPONSE,
-    MSG_BROADCAST, MSG_SEND_TO_HOST, MSG_SET_SESSION_ID,
+    MSG_BROADCAST, MSG_SEND_TO_HOST, MSG_SET_SESSION_ID, MSG_CODE_TIMESTAMP,
 )
 from railway.features.ws.proxy_bridge import handle_proxy_response
 
@@ -84,6 +84,13 @@ async def _handle_send_to_host(data: dict):
             await ws.send_text(json.dumps(event))
         except Exception:
             pass
+
+
+async def _handle_code_timestamp(data: dict):
+    """Daemon pushes the git timestamp of its last commit."""
+    ts = data.get("timestamp")
+    if ts:
+        state.daemon_code_timestamp = ts
 
 
 async def _handle_set_session_id(data: dict):
@@ -156,6 +163,7 @@ _DAEMON_MSG_HANDLERS = {
     MSG_SEND_TO_HOST: _handle_send_to_host,
     MSG_PROXY_RESPONSE: handle_proxy_response,
     MSG_SET_SESSION_ID: _handle_set_session_id,
+    MSG_CODE_TIMESTAMP: _handle_code_timestamp,
     MSG_DAEMON_PING: None,  # heartbeat only — last_seen already updated
     MSG_SLIDES_CATALOG: _handle_daemon_slides_catalog,
     MSG_SLIDE_INVALIDATED: _handle_daemon_slide_invalidated,
