@@ -28,10 +28,8 @@ def fresh_participant_state():
 
 @pytest.fixture
 def mock_ws_client():
-    """Mock ws_client for host-direct path."""
-    mock = MagicMock()
-    mock.send.return_value = True
-    with patch("daemon.wordcloud.router._ws_client", mock):
+    """Mock broadcast for host-direct path."""
+    with patch("daemon.wordcloud.router.broadcast") as mock:
         yield mock
 
 
@@ -110,13 +108,13 @@ class TestHostEndpoints:
         assert resp.status_code == 200
         assert fresh_wc_state.words.get("hello") == 1
         # Verify WS broadcast event was sent
-        assert mock_ws_client.send.call_count == 1  # broadcast only
+        assert mock_ws_client.call_count == 1  # broadcast only
 
     def test_set_topic(self, host_client, fresh_wc_state, mock_ws_client):
         resp = host_client.post("/api/test-session/host/wordcloud/topic", json={"topic": "AI trends"})
         assert resp.status_code == 200
         assert fresh_wc_state.topic == "AI trends"
-        assert mock_ws_client.send.call_count == 1
+        assert mock_ws_client.call_count == 1
 
     def test_clear(self, host_client, fresh_wc_state, mock_ws_client):
         fresh_wc_state.words = {"hello": 1}
@@ -129,9 +127,10 @@ class TestHostEndpoints:
         assert fresh_wc_state.topic == ""
 
     def test_host_word_sends_broadcast_event(self, host_client, mock_ws_client):
+        from daemon.ws_messages import WordcloudUpdatedMsg
         host_client.post("/api/test-session/host/wordcloud/word", json={"word": "test"})
-        broadcast_call = mock_ws_client.send.call_args_list[0]
-        msg = broadcast_call[0][0]
-        assert msg["type"] == "broadcast"
-        assert msg["event"]["type"] == "wordcloud_updated"
-        assert msg["event"]["words"] == {"test": 1}
+        assert mock_ws_client.call_count >= 1
+        broadcast_msg = mock_ws_client.call_args_list[0][0][0]
+        assert isinstance(broadcast_msg, WordcloudUpdatedMsg)
+        assert broadcast_msg.model_dump()["type"] == "wordcloud_updated"
+        assert broadcast_msg.model_dump()["words"] == {"test": 1}

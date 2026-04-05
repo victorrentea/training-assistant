@@ -16,8 +16,8 @@ def emoji_client():
 
 @pytest.fixture(autouse=True)
 def mock_externals():
-    """Mock send_to_host and httpx for all emoji tests."""
-    with patch("daemon.emoji.router.send_to_host", new_callable=AsyncMock) as mock_host, \
+    """Mock notify_host and httpx for all emoji tests."""
+    with patch("daemon.emoji.router.notify_host", new_callable=AsyncMock) as mock_host, \
          patch("daemon.emoji.router.httpx") as mock_httpx:
         mock_client = AsyncMock()
         mock_httpx.AsyncClient.return_value.__aenter__ = AsyncMock(return_value=mock_client)
@@ -58,10 +58,12 @@ class TestEmojiReaction:
         assert resp.status_code == 200
 
     def test_sends_to_host_ws(self, emoji_client, mock_externals):
+        from daemon.ws_messages import EmojiReactionMsg
         emoji_client.post("/api/participant/emoji/reaction",
                            json={"emoji": "🎉"},
                            headers={"X-Participant-ID": "uuid1"})
         mock_externals["host"].assert_called_once()
         call_msg = mock_externals["host"].call_args[0][0]
-        assert call_msg["type"] == "emoji_reaction"
-        assert call_msg["emoji"] == "🎉"
+        assert isinstance(call_msg, EmojiReactionMsg)
+        assert call_msg.model_dump()["type"] == "emoji_reaction"
+        assert call_msg.model_dump()["emoji"] == "🎉"
