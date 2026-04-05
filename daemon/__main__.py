@@ -32,7 +32,6 @@ from daemon.transcript.query import load_normalized_entries
 from daemon.transcript.session import compute_active_windows, format_startup_log
 from daemon.transcript.state import TranscriptStateManager
 from daemon.slides.loop import SlidesPollingRunner
-from daemon.materials.mirror import MaterialsMirrorRunner
 from daemon.ws_client import DaemonWsClient
 from daemon.session import pending as session_pending
 from daemon.session import state as session_shared_state
@@ -516,8 +515,6 @@ def run() -> None:
 
     slides_runner = SlidesPollingRunner(config)
     slides_runner.start()
-    materials_mirror = MaterialsMirrorRunner(config)
-    materials_mirror.start()
     slides_runner.set_ws_sender(lambda msg: ws_client.send(msg))
 
     # ── Addon bridge client (connects to wispr-flow WS server at localhost:8765) ──
@@ -684,8 +681,6 @@ def run() -> None:
                     last_heartbeat_at = now
 
                 slides_runner.tick()
-                materials_mirror.tick()
-
                 # ── Read PowerPoint state from activity-slides file ──
                 if now - last_slide_file_read_at >= _SLIDE_FILE_READ_INTERVAL:
                     last_slide_file_read_at = now

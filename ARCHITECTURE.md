@@ -265,10 +265,6 @@ Container_Boundary(daemon_pkg, "Daemon (Python 3.12, host's Mac)") {
 
   Component(slides_daemon, "daemon/slides/daemon", "Slides daemon main", "Manages slide WS connection to backend.\nHandles upload requests and results.")
 
-  Component(materials_mirror, "daemon/materials/mirror", "Materials mirror", "Mirrors project files to server_materials/.\nKeeps backend's RAG index fresh.")
-
-  Component(materials_ws, "daemon/materials/ws_runner", "Materials WS runner", "WebSocket runner for materials upload.")
-
   Component(rag_indexer, "daemon/rag/indexer", "RAG indexer", "Indexes project files into vector store.")
 
   Component(rag_retriever, "daemon/rag/retriever", "RAG retriever", "Retrieves relevant context for quiz generation.")
@@ -285,7 +281,6 @@ Container_Boundary(daemon_pkg, "Daemon (Python 3.12, host's Mac)") {
 ' Orchestration
 Rel(main, summary_loop, "starts")
 Rel(main, slides_loop, "starts")
-Rel(main, materials_mirror, "starts")
 Rel(main, session_state, "starts polling loop")
 
 ' Transcript reading
@@ -523,7 +518,6 @@ All periodic timers, polling loops, and autonomous background jobs across the sy
 | **Slides file watcher** — polls PPTX mtime, sends `slide_invalidated` on change | 5s | `daemon/slides/loop.py:51` | `SLIDES_POLL_INTERVAL_SECONDS` |
 | **IntelliJ probe** — detects current project + branch via stub/osascript | 5s | `daemon/__main__.py:~761` | `_INTELLIJ_PROBE_INTERVAL` |
 | **Slide activity logger** — accumulates time spent on each slide (foreground) | 5s | `daemon/__main__.py:~737` | `_PPT_TRACK_INTERVAL` |
-| **Materials mirror** — syncs local files to backend via HTTP | 5s | `daemon/materials/mirror.py:109` | `MATERIALS_MIRROR_INTERVAL_SECONDS` |
 | **RAG indexer** — watches materials folder for file changes | 0.5s poll + 2s debounce | `daemon/rag/indexer.py:355` | `DEBOUNCE_SECONDS` |
 | **WS reconnect** — reconnects daemon WS on disconnect | 3s retry | `daemon/ws_client.py:14` | `_RECONNECT_INTERVAL` |
 | **WS ping** — keepalive ping to backend | 20s | `daemon/ws_client.py:117` | `ping_interval` param |

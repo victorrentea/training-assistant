@@ -1,5 +1,17 @@
 # Todo
 
+## Direct request: remove materials mirror cleanup
+
+- [x] Remove daemon `MaterialsMirrorRunner` startup/tick wiring and obsolete mirror module
+- [x] Remove backend `/api/materials/upsert` and `/api/materials/delete` endpoints
+- [x] Clean tests/config/docs that referenced materials mirror endpoints/flags
+- [x] Run project test script and capture proof in review section
+
+### Review: remove materials mirror cleanup
+
+- Proof: `bash tests/check-all.sh`
+- Result: daemon tests `322 passed`; contract tests `11 passed`
+
 ## Direct request: hermetic E2E for participant session title
 
 - [x] Add a hermetic regression test that validates participant top header shows current session name
