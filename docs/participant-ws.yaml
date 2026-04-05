@@ -20,6 +20,8 @@ channels:
         oneOf:
           - $ref: '#/components/messages/slides_current'
           - $ref: '#/components/messages/slides_cache_status'
+          - $ref: '#/components/messages/slides_updated'
+          - $ref: '#/components/messages/slides_catalog_changed'
           - $ref: '#/components/messages/activity_updated'
           - $ref: '#/components/messages/participant_count_updated'
           - $ref: '#/components/messages/poll_opened'
@@ -66,16 +68,47 @@ components:
       summary: Download progress for a slide PDF
       payload:
         type: object
-        required: [type, slides_cache_status]
+        required: [type, slides]
         properties:
           type:
             type: string
             enum: [slides_cache_status]
+          slides:
+            type: array
+            items:
+              $ref: '#/components/schemas/SlideWithCacheStatus'
+            description: Slides list with embedded cache status fields
           slides_cache_status:
             type: object
             additionalProperties:
               $ref: '#/components/schemas/CacheStatusEntry'
-            description: slug → cache status entry
+            description: Legacy slug → cache status map (backward compatibility)
+
+    slides_updated:
+      summary: Slide PDF content updated for one slug
+      payload:
+        type: object
+        required: [type, slug]
+        properties:
+          type:
+            type: string
+            enum: [slides_updated]
+          slug:
+            type: string
+          updated_at:
+            type: string
+            format: date-time
+            nullable: true
+
+    slides_catalog_changed:
+      summary: Slides catalog changed; client should refresh GET /api/slides
+      payload:
+        type: object
+        required: [type]
+        properties:
+          type:
+            type: string
+            enum: [slides_catalog_changed]
 
     # ── Activity ──────────────────────────────────────────────────────────────
 
@@ -449,6 +482,32 @@ components:
           type: integer
           nullable: true
         updated_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    SlideWithCacheStatus:
+      type: object
+      required: [slug, status]
+      properties:
+        slug:
+          type: string
+        name:
+          type: string
+          nullable: true
+        title:
+          type: string
+          nullable: true
+        drive_export_url:
+          type: string
+          nullable: true
+        status:
+          type: string
+          description: '"not_cached"|"downloading"|"cached"|"stale"|"poll_timeout"|"download_failed"'
+        size_bytes:
+          type: integer
+          nullable: true
+        downloaded_at:
           type: string
           format: date-time
           nullable: true

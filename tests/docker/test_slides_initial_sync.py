@@ -1,8 +1,8 @@
 """
 Hermetic E2E regression test: participant sees slides list on first connect.
 
-Bug: after PDF-caching-moved-to-daemon refactoring, Railway never populates
-slides_cache_status, so participants received an empty slides list on connect.
+Bug: after PDF-caching-moved-to-daemon refactoring, Railway showed an empty
+slides list on connect even though daemon had catalog data.
 
 Fix: daemon initializes misc_state from catalog on startup; participant JS
 fetches GET /api/slides on WS connect (proxied to daemon).
@@ -51,22 +51,23 @@ def test_slides_list_nonempty_after_connect():
     )
 
 
-def test_slides_cache_status_included():
-    """GET /api/slides includes cache_status for each slug in the catalog."""
+def test_slides_status_embedded_in_slides_entries():
+    """GET /api/slides embeds cache status directly in each slide entry."""
     session_id = fresh_session("SlidesCacheStatus")
 
     url = f"{BASE}/{session_id}/api/slides"
     with urllib.request.urlopen(url, timeout=10) as resp:
         data = json.loads(resp.read())
 
-    cache_status = data.get("cache_status", {})
-    assert len(cache_status) > 0, (
-        f"Expected non-empty cache_status from GET /api/slides — "
-        f"daemon may not have initialized misc_state.slides_cache_status on startup"
+    slides = data.get("slides", [])
+    assert len(slides) > 0, (
+        f"Expected non-empty slides from GET /api/slides — "
+        f"daemon may not have initialized misc_state.slides_catalog on startup"
     )
+    by_slug = {s.get("slug"): s for s in slides}
     for slug in EXPECTED_SLUGS:
-        assert slug in cache_status, f"Expected slug '{slug}' in cache_status, got {cache_status.keys()}"
-        status = cache_status[slug].get("status")
-        assert status in ("cached", "not_cached", "error"), (
+        assert slug in by_slug, f"Expected slug '{slug}' in slides list, got {by_slug.keys()}"
+        status = by_slug[slug].get("status")
+        assert status in ("cached", "not_cached", "error", "download_failed", "stale", "downloading"), (
             f"Unexpected cache status for slug '{slug}': {status}"
         )

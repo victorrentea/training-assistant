@@ -25,7 +25,22 @@ def get_event_loop() -> asyncio.AbstractEventLoop | None:
 
 class SlidesListResponse(BaseModel):
     slides: list[dict]
-    cache_status: dict
+
+
+def _slides_with_embedded_cache_status() -> list[dict]:
+    slides: list[dict] = []
+    for raw in list(misc_state.slides_catalog.values()):
+        if not isinstance(raw, dict):
+            continue
+        entry = dict(raw)
+        slug = str(entry.get("slug", "")).strip()
+        status_entry = misc_state.slides_cache_status.get(slug, {}) if slug else {}
+        if isinstance(status_entry, dict):
+            entry.update(status_entry)
+        if "status" not in entry:
+            entry["status"] = "not_cached"
+        slides.append(entry)
+    return slides
 
 
 # ── Participant router ──
@@ -83,10 +98,9 @@ async def check_slide_cache(session_id: str, slug: str):
 
 @participant_router.get("/{session_id}/api/slides")
 async def list_slides(session_id: str):
-    """Return the slides catalog with current cache status."""
+    """Return slides catalog with cache status embedded per slide."""
     return SlidesListResponse(
-        slides=list(misc_state.slides_catalog.values()),
-        cache_status=misc_state.slides_cache_status,
+        slides=_slides_with_embedded_cache_status(),
     )
 
 
@@ -112,7 +126,12 @@ def handle_pdf_download_complete(data: dict):
     # Broadcast updated cache status to all participants
     from daemon.ws_publish import broadcast
     from daemon.ws_messages import SlidesCacheStatusMsg
-    broadcast(SlidesCacheStatusMsg(slides_cache_status=misc_state.slides_cache_status))
+    broadcast(
+        SlidesCacheStatusMsg(
+            slides=_slides_with_embedded_cache_status(),
+            slides_cache_status=misc_state.slides_cache_status,
+        )
+    )
 
     # Resolve pending /check futures for this slug (thread-safe)
     futures = _pending_checks.pop(slug, [])

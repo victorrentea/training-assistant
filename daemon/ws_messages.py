@@ -22,7 +22,18 @@ class SlidesCurrentMsg(BaseModel):
 
 class SlidesCacheStatusMsg(BaseModel):
     type: Literal["slides_cache_status"] = "slides_cache_status"
+    slides: Optional[list[dict[str, Any]]] = None
     slides_cache_status: Optional[dict[str, Any]] = None
+
+
+class SlidesUpdatedMsg(BaseModel):
+    type: Literal["slides_updated"] = "slides_updated"
+    slug: str
+    updated_at: Optional[str] = None
+
+
+class SlidesCatalogChangedMsg(BaseModel):
+    type: Literal["slides_catalog_changed"] = "slides_catalog_changed"
 
 
 # ── Activity ──────────────────────────────────────────────────────────────────
@@ -242,6 +253,8 @@ PARTICIPANT_MESSAGES: dict[str, type[BaseModel]] = {
     # Slides
     "slides_current": SlidesCurrentMsg,
     "slides_cache_status": SlidesCacheStatusMsg,
+    "slides_updated": SlidesUpdatedMsg,
+    "slides_catalog_changed": SlidesCatalogChangedMsg,
     # Activity
     "activity_updated": ActivityUpdatedMsg,
     # Transcription
@@ -279,6 +292,10 @@ PARTICIPANT_MESSAGES: dict[str, type[BaseModel]] = {
 }
 
 HOST_MESSAGES: dict[str, type[BaseModel]] = {
+    # Slides
+    "slides_cache_status": SlidesCacheStatusMsg,
+    "slides_updated": SlidesUpdatedMsg,
+    "slides_catalog_changed": SlidesCatalogChangedMsg,
     # Poll
     "poll_ai_generated": PollAiGeneratedMsg,
     "vote_update": VoteUpdateMsg,

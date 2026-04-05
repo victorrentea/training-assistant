@@ -1,5 +1,6 @@
 import logging
 import os
+import json
 from datetime import timezone
 from email.utils import formatdate, parsedate_to_datetime
 from pathlib import Path
@@ -16,6 +17,31 @@ from railway.features.ws.proxy_bridge import proxy_to_daemon
 router = APIRouter()
 public_router = APIRouter()
 logger = logging.getLogger(__name__)
+
+
+def _merge_embedded_slide_status(payload: dict) -> dict:
+    raw_slides = payload.get("slides")
+    slides = raw_slides if isinstance(raw_slides, list) else []
+    cache_status = payload.get("cache_status")
+    cache_map = cache_status if isinstance(cache_status, dict) else {}
+
+    merged_slides: list[dict] = []
+    for raw in slides:
+        if not isinstance(raw, dict):
+            continue
+        slide = dict(raw)
+        slug = str(slide.get("slug", "")).strip()
+        status_entry = cache_map.get(slug) if slug else None
+        if isinstance(status_entry, dict):
+            slide.update(status_entry)
+        if "status" not in slide:
+            slide["status"] = "not_cached"
+        merged_slides.append(slide)
+
+    merged = dict(payload)
+    merged["slides"] = merged_slides
+    merged.pop("cache_status", None)
+    return merged
 
 
 def _resolve_local_slides_dir() -> Path | None:
@@ -93,8 +119,18 @@ async def get_slides(request: Request):
         participant_id=None,
     )
     if response.status_code != 200:
-        return {"slides": [], "cache_status": {}}
-    return response
+        return {"slides": []}
+    try:
+        raw_body = response.body or b"{}"
+        if isinstance(raw_body, str):
+            raw_body = raw_body.encode("utf-8")
+        payload = json.loads(raw_body.decode("utf-8"))
+        if not isinstance(payload, dict):
+            return {"slides": []}
+        return _merge_embedded_slide_status(payload)
+    except Exception:
+        logger.exception("Failed to normalize /api/slides payload from daemon")
+        return {"slides": []}
 
 
 @public_router.get("/api/slides/check/{slug}")
