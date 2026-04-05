@@ -21,6 +21,15 @@ _STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
 code_timestamp: str | None = None
 
 
+def _stamp_version_js():
+    """Generate static/version.js with 'dev' marker so the daemon can serve it locally."""
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    ts = datetime.now(ZoneInfo("Europe/Bucharest")).strftime("%Y-%m-%d %H:%M")
+    version_js = _STATIC_DIR / "version.js"
+    version_js.write_text(f"window.APP_VERSION = '{ts}';\n", encoding="utf-8")
+
+
 def create_app(backend_url: str) -> FastAPI:
     """Create the host panel FastAPI application.
 
@@ -35,6 +44,7 @@ def create_app(backend_url: str) -> FastAPI:
 
     @asynccontextmanager
     async def lifespan(app):
+        _stamp_version_js()
         yield
         await http_client.aclose()
 
