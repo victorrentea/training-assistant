@@ -1142,8 +1142,10 @@
   function _fmtSecs(s) {
     s = Math.round(s);
     if (s < 60) return s + 's';
-    const m = Math.floor(s / 60), r = s % 60;
-    return r > 0 ? m + 'm ' + r + 's' : m + 'm';
+    const totalMin = Math.floor(s / 60);
+    if (totalMin < 60) { const r = s % 60; return r > 0 ? totalMin + 'm ' + r + 's' : totalMin + 'm'; }
+    const h = Math.floor(totalMin / 60), m = totalMin % 60;
+    return m > 0 ? h + 'h ' + m + 'm' : h + 'h';
   }
 
   function _renderGitReposPopover() {
