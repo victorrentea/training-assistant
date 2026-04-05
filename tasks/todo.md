@@ -388,3 +388,6 @@
 - WS contracts synced in `daemon/ws_messages.py`, `docs/participant-ws.yaml`, and `docs/host-ws.yaml`.
 - Verified with `python3 -m pytest -q tests/daemon/slides/test_slides_check.py` (5 passed), `python3 -m pytest -q tests/features/slides/test_router.py -k api_slides_embeds_status_per_slide` (1 passed), and `node --check static/host.js`.
 - Note: `python3 -m pytest -q tests/daemon/test_ws_contract.py` has one existing unrelated failure in `TestNoRawWsSends` (`participant/router.py` uses `send_to_host`).
+- Clarification done: removed host `/api/slides/download/{slug}` from `apis.md` host section; host only documents `GET /{sid}/api/slides` for catalog/status refresh.
+- Clarification done: `slides_updated` is now the single WS refresh trigger used by both host and participant; `slides_catalog_changed` removed from active code/docs/contracts.
+- Verified with `node --check static/participant.js`, `node --check static/host.js`, and `python3 -m pytest -q tests/daemon/slides/test_slides_check.py` (5 passed).

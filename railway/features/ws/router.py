@@ -202,7 +202,7 @@ async def daemon_websocket_endpoint(websocket: WebSocket):
     state.daemon_ws = websocket
     state.daemon_last_seen = datetime.now(timezone.utc)
     logger.info("Daemon WS connected")
-    await broadcast({"type": "slides_catalog_changed"})
+    await broadcast({"type": "slides_updated"})
 
     # Send static file inventory for daemon to diff and upload changes
     try:
@@ -230,7 +230,7 @@ async def daemon_websocket_endpoint(websocket: WebSocket):
         if state.daemon_ws is websocket:
             state.daemon_ws = None
         logger.info("Daemon WS disconnected")
-        await broadcast({"type": "slides_catalog_changed"})
+        await broadcast({"type": "slides_updated"})
 
 
 async def _handle_participant_connection(websocket: WebSocket, pid: str, is_host: bool):

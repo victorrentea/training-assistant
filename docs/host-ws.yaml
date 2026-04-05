@@ -23,7 +23,6 @@ channels:
         oneOf:
           - $ref: '#/components/messages/slides_cache_status'
           - $ref: '#/components/messages/slides_updated'
-          - $ref: '#/components/messages/slides_catalog_changed'
           - $ref: '#/components/messages/poll_ai_generated'
           - $ref: '#/components/messages/vote_update'
           - $ref: '#/components/messages/wordcloud_updated'
@@ -65,27 +64,18 @@ components:
       summary: Slide PDF content updated for one slug
       payload:
         type: object
-        required: [type, slug]
+        required: [type]
         properties:
           type:
             type: string
             enum: [slides_updated]
           slug:
             type: string
+            nullable: true
           updated_at:
             type: string
             format: date-time
             nullable: true
-
-    slides_catalog_changed:
-      summary: Slides catalog changed; host should refresh GET /api/slides
-      payload:
-        type: object
-        required: [type]
-        properties:
-          type:
-            type: string
-            enum: [slides_catalog_changed]
 
     # ── Poll ─────────────────────────────────────────────────────────────────
 
