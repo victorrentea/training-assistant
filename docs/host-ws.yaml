@@ -34,6 +34,8 @@ channels:
           - $ref: '#/components/messages/paste_received'
           - $ref: '#/components/messages/file_uploaded'
           - $ref: '#/components/messages/participant_list_updated'
+          - $ref: '#/components/messages/notes_updated'
+          - $ref: '#/components/messages/summary_updated'
           - $ref: '#/components/messages/reload'
 
 components:
@@ -276,6 +278,34 @@ components:
             type: array
             items:
               $ref: '#/components/schemas/HostParticipant'
+
+    # ── Notes & Summary ──────────────────────────────────────────────────────
+
+    notes_updated:
+      summary: Notes file changed — non-empty line count updated
+      payload:
+        type: object
+        required: [type, count]
+        properties:
+          type:
+            type: string
+            enum: [notes_updated]
+          count:
+            type: integer
+            description: Number of non-empty lines in the notes file
+
+    summary_updated:
+      summary: AI summary file changed — non-empty line count updated
+      payload:
+        type: object
+        required: [type, count]
+        properties:
+          type:
+            type: string
+            enum: [summary_updated]
+          count:
+            type: integer
+            description: Number of non-empty lines in ai-summary.md
 
     # ── Cross-cutting ────────────────────────────────────────────────────────
 
