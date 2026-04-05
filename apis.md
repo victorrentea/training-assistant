@@ -547,7 +547,7 @@ Notes and summary are files on disk in the session folder. Daemon reads them on 
 
 **Daemon → Participant Browser WS:**
 - `notes_updated` — `{count}` — notes file changed; `count` = non-empty lines in the txt file. Sent on file change and on WS connect (if count > 0). Enables the Notes button without fetching full content.
-- `summary_updated` — `{count}` — ai-summary.md changed; `count` = non-empty lines. Same delivery pattern. Enables the Key Points button and flashes it when content first appears.
+- `summary_updated` — `{count}` — ai-summary.md changed; `count` = parsed bullet-point objects (same value as `/state.summary_count`). Same delivery pattern. Enables the Key Points button and flashes it when content first appears.
 
 ### Host
 **Host Browser → Daemon REST:**
@@ -561,7 +561,7 @@ Host can open notes/summary in the host panel UI.
 
 **Daemon → Host Browser WS:**
 - `notes_updated` — `{count}` — same as participant; host notes badge shows `📝 (N) Notes.txt`
-- `summary_updated` — `{count}` — host summary badge shows `🧠 (N) Key Points` when full points not yet loaded
+- `summary_updated` — `{count}` — same as participant; host summary badge shows `🧠 (N) Key Points` when full points not yet loaded
 
 ### State
 Daemon reads from disk on demand — not held in memory:

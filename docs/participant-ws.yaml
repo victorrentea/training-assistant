@@ -444,7 +444,7 @@ components:
             description: Number of non-empty lines in the notes file
 
     summary_updated:
-      summary: AI summary file changed — non-empty line count updated
+      summary: AI summary file changed — parsed point count updated
       payload:
         type: object
         required: [type, count]
@@ -454,7 +454,7 @@ components:
             enum: [summary_updated]
           count:
             type: integer
-            description: Number of non-empty lines in ai-summary.md
+            description: Number of parsed bullet-point objects in ai-summary.md
 
     # ── Cross-cutting ────────────────────────────────────────────────────────
 

@@ -219,7 +219,7 @@ def _broadcast_notes_summary_counts(probe: dict) -> None:
     from daemon.ws_messages import NotesUpdatedMsg, SummaryUpdatedMsg
     from daemon.ws_publish import broadcast
     broadcast(NotesUpdatedMsg(count=probe["notes_non_empty_lines"]))
-    broadcast(SummaryUpdatedMsg(count=probe["summary_non_empty_lines"]))
+    broadcast(SummaryUpdatedMsg(count=probe["summary_point_count"]))
 
 
 
@@ -243,10 +243,17 @@ def _file_mtime_ns(path: Path | None) -> int | None:
 
 
 def _build_notes_summary_probe(session_folder: Path | None) -> dict:
+    from daemon.misc.content_files import _parse_summary_points
     notes_file = find_notes_in_folder(session_folder) if session_folder else None
     summary_file = (session_folder / "ai-summary.md") if session_folder else None
     if summary_file and not summary_file.exists():
         summary_file = None
+    summary_raw: str | None = None
+    if summary_file:
+        try:
+            summary_raw = summary_file.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            summary_raw = None
     return {
         "session_folder": str(session_folder) if session_folder else None,
         "notes_file": str(notes_file) if notes_file else None,
@@ -254,7 +261,7 @@ def _build_notes_summary_probe(session_folder: Path | None) -> dict:
         "notes_non_empty_lines": _read_non_empty_line_count(notes_file),
         "summary_file": str(summary_file) if summary_file else None,
         "summary_mtime_ns": _file_mtime_ns(summary_file),
-        "summary_non_empty_lines": _read_non_empty_line_count(summary_file),
+        "summary_point_count": len(_parse_summary_points(summary_raw)),
     }
 
 
@@ -272,7 +279,7 @@ def _probe_change_parts(previous: dict | None, current: dict) -> str:
     summary_changed = (
         previous.get("summary_file") != current.get("summary_file")
         or previous.get("summary_mtime_ns") != current.get("summary_mtime_ns")
-        or previous.get("summary_non_empty_lines") != current.get("summary_non_empty_lines")
+        or previous.get("summary_point_count") != current.get("summary_point_count")
     )
     if notes_changed:
         parts.append("notes")
@@ -290,7 +297,7 @@ def _log_notes_summary_probe(reason: str, probe: dict, change_parts: str | None 
         "notes-summary",
         f"{reason}:{suffix} session={session_label} "
         f"notes_file={notes_label} notes_non_empty_lines={probe['notes_non_empty_lines']} "
-        f"summary_file={summary_label} summary_non_empty_lines={probe['summary_non_empty_lines']}",
+        f"summary_file={summary_label} summary_point_count={probe['summary_point_count']}",
     )
 
 
