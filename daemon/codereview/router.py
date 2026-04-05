@@ -3,15 +3,50 @@ import asyncio
 import json
 import logging
 import os
+from typing import Optional
 
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel
 
 from daemon.codereview.state import codereview_state
 from daemon.participant.state import participant_state
 from daemon.scores import scores
 
 logger = logging.getLogger(__name__)
+
+
+class OkResponse(BaseModel):
+    ok: bool = True
+
+
+class SelectionRequest(BaseModel):
+    lines: list[int] = []
+
+
+class CreateCodeReviewRequest(BaseModel):
+    snippet: str
+    language: Optional[str] = None
+    smart_paste: bool = True
+
+
+class SetCodeReviewStatusRequest(BaseModel):
+    open: bool = True
+
+
+class ConfirmLineRequest(BaseModel):
+    line: int
+
+
+class OkWithPhaseResponse(BaseModel):
+    ok: bool = True
+    phase: str
+
+
+class ConfirmLineResponse(BaseModel):
+    ok: bool = True
+    confirmed_line: int
+
 
 # Set by __main__.py during daemon startup
 _ws_client = None
@@ -82,7 +117,7 @@ participant_router = APIRouter(prefix="/api/participant/codereview", tags=["code
 
 
 @participant_router.put("/selection")
-async def update_selection(request: Request):
+async def update_selection(request: Request, body: SelectionRequest):
     """Participant sets their selected lines (full replacement)."""
     pid = request.headers.get("x-participant-id")
     if not pid:
@@ -96,12 +131,7 @@ async def update_selection(request: Request):
     if codereview_state.phase != "selecting":
         return JSONResponse({"error": "Selection phase is closed"}, status_code=409)
 
-    body = await request.json()
-    lines = body.get("lines", [])
-    if not isinstance(lines, list):
-        return JSONResponse({"error": "lines must be a list"}, status_code=400)
-
-    codereview_state.select_lines(pid, lines)
+    codereview_state.select_lines(pid, body.lines)
 
     # Send selection update only to host (line counts are host-only)
     line_counts = {
@@ -113,7 +143,7 @@ async def update_selection(request: Request):
         {"type": "send_to_host", "event": {"type": "codereview_selections_updated", "line_counts": line_counts}},
     ]
 
-    return JSONResponse({"ok": True})
+    return OkResponse()
 
 
 # ── Host router (called directly on daemon localhost) ──
@@ -126,12 +156,11 @@ _MAX_LINES = 50
 
 
 @host_router.post("")
-async def create_codereview(request: Request):
+async def create_codereview(body: CreateCodeReviewRequest):
     """Host creates a code review session."""
-    body = await request.json()
-    snippet = str(body.get("snippet", "")).strip()
-    language = body.get("language")  # None means auto-detect
-    smart_paste = body.get("smart_paste", True)
+    snippet = body.snippet.strip()
+    language = body.language  # None means auto-detect
+    smart_paste = body.smart_paste
 
     if not snippet:
         return JSONResponse({"error": "Snippet cannot be empty"}, status_code=400)
@@ -155,53 +184,45 @@ async def create_codereview(request: Request):
     _broadcast({"type": "codereview_opened", "snippet": snippet, "language": final_language})
     _broadcast({"type": "activity_updated", "current_activity": "codereview"})
 
-    return JSONResponse({"ok": True})
+    return OkResponse()
 
 
 @host_router.put("/status")
-async def set_codereview_status(request: Request):
+async def set_codereview_status(body: SetCodeReviewStatusRequest):
     """Host closes the selection phase."""
-    body = await request.json()
-    is_open = body.get("open", True)
-
-    if not is_open:
+    if not body.open:
         codereview_state.close_selection()
         _broadcast({"type": "codereview_selection_closed"})
 
-    return JSONResponse({"ok": True, "phase": codereview_state.phase})
+    return OkWithPhaseResponse(phase=codereview_state.phase)
 
 
 @host_router.put("/confirm-line")
-async def confirm_line(request: Request):
+async def confirm_line(body: ConfirmLineRequest):
     """Host confirms a line as problematic and awards points."""
     if not codereview_state.snippet:
         return JSONResponse({"error": "No code review created yet"}, status_code=400)
 
-    body = await request.json()
-    line = body.get("line")
-    if line is None:
-        return JSONResponse({"error": "Missing line"}, status_code=400)
-
     line_count = len(codereview_state.snippet.splitlines())
-    if line < 0 or line >= line_count:
-        return JSONResponse({"error": f"Line {line} is out of range (0–{line_count - 1})"}, status_code=400)
+    if body.line < 0 or body.line >= line_count:
+        return JSONResponse({"error": f"Line {body.line} is out of range (0–{line_count - 1})"}, status_code=400)
 
-    if line in codereview_state.confirmed:
-        return JSONResponse({"error": f"Line {line} is already confirmed"}, status_code=409)
+    if body.line in codereview_state.confirmed:
+        return JSONResponse({"error": f"Line {body.line} is already confirmed"}, status_code=409)
 
-    awarded_pids = codereview_state.confirm_line(line)
+    awarded_pids = codereview_state.confirm_line(body.line)
 
     for pid in awarded_pids:
         scores.add_score(pid, 200)
 
-    _broadcast({"type": "codereview_line_confirmed", "line": line})
+    _broadcast({"type": "codereview_line_confirmed", "line": body.line})
     _broadcast({"type": "scores_updated", "scores": scores.snapshot()})
 
-    return JSONResponse({"ok": True, "confirmed_line": line})
+    return ConfirmLineResponse(confirmed_line=body.line)
 
 
 @host_router.delete("")
-async def clear_codereview(request: Request):
+async def clear_codereview():
     """Host clears the code review."""
     codereview_state.clear()
     participant_state.current_activity = "none"
@@ -209,7 +230,7 @@ async def clear_codereview(request: Request):
     _broadcast({"type": "codereview_cleared"})
     _broadcast({"type": "activity_updated", "current_activity": "none"})
 
-    return JSONResponse({"ok": True})
+    return OkResponse()
 
 
 def _broadcast(event: dict):

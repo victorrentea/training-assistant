@@ -1,9 +1,11 @@
 """Daemon misc router — participant + host endpoints for paste, notes, summary, slides cache."""
 import logging
 import threading
+from typing import Optional, Any
 
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel
 
 from daemon.misc.state import misc_state
 
@@ -23,20 +25,45 @@ def set_ws_client(client):
     _ws_client = client
 
 
+# ── Pydantic models ──
+
+class OkResponse(BaseModel):
+    ok: bool = True
+
+class PasteRequest(BaseModel):
+    text: str
+
+class NotesResponse(BaseModel):
+    notes_content: Optional[str] = None
+
+class SummaryResponse(BaseModel):
+    points: list = []
+    raw_markdown: Optional[str] = None
+    updated_at: Optional[str] = None
+
+class SlidesCacheStatusResponse(BaseModel):
+    slides_cache_status: Any = None
+
+class TranscriptionLanguageRequest(BaseModel):
+    language: str
+
+class TranscriptionLanguageResponse(BaseModel):
+    request: Optional[str] = None
+
+
 # ── Participant router (proxied via Railway) ──
 
 participant_router = APIRouter(prefix="/api/participant", tags=["misc"])
 
 
 @participant_router.post("/paste")
-async def paste_text(request: Request):
+async def paste_text(request: Request, body: PasteRequest):
     """Participant pastes text to be seen by host."""
     pid = request.headers.get("x-participant-id")
     if not pid:
         return JSONResponse({"error": "Missing X-Participant-ID"}, status_code=400)
 
-    body = await request.json()
-    text = str(body.get("text", ""))
+    text = body.text
     if not text or len(text) > 102400:  # 100KB limit
         return JSONResponse({"error": "Invalid text"}, status_code=400)
 
@@ -49,29 +76,29 @@ async def paste_text(request: Request):
         {"type": "send_to_host", "event": {"type": "paste_received", "uuid": pid, **entry}},
     ]
 
-    return JSONResponse({"ok": True})
+    return OkResponse()
 
 
 @participant_router.get("/notes")
-async def get_notes(request: Request):
+async def get_notes():
     """Get session notes content."""
-    return JSONResponse({"notes_content": misc_state.notes_content})
+    return NotesResponse(notes_content=misc_state.notes_content)
 
 
 @participant_router.get("/summary")
-async def get_summary(request: Request):
+async def get_summary():
     """Get summary points and raw markdown."""
-    return JSONResponse({
-        "points": misc_state.summary_points,
-        "raw_markdown": misc_state.summary_raw_markdown,
-        "updated_at": misc_state.summary_updated_at,
-    })
+    return SummaryResponse(
+        points=misc_state.summary_points,
+        raw_markdown=misc_state.summary_raw_markdown,
+        updated_at=misc_state.summary_updated_at,
+    )
 
 
 @participant_router.get("/slides-cache-status")
-async def get_slides_cache_status(request: Request):
+async def get_slides_cache_status():
     """Get slides cache status."""
-    return JSONResponse({"slides_cache_status": misc_state.slides_cache_status})
+    return SlidesCacheStatusResponse(slides_cache_status=misc_state.slides_cache_status)
 
 
 # ── Host router (called directly on daemon localhost) ──
@@ -88,17 +115,17 @@ async def get_pastes():
 @host_router.get("/notes")
 async def get_host_notes():
     """Return current session notes content."""
-    return JSONResponse({"notes_content": misc_state.notes_content})
+    return NotesResponse(notes_content=misc_state.notes_content)
 
 
 @host_router.get("/summary")
 async def get_host_summary():
     """Return summary points, raw markdown, and updated_at timestamp."""
-    return JSONResponse({
-        "points": misc_state.summary_points,
-        "raw_markdown": misc_state.summary_raw_markdown,
-        "updated_at": misc_state.summary_updated_at,
-    })
+    return SummaryResponse(
+        points=misc_state.summary_points,
+        raw_markdown=misc_state.summary_raw_markdown,
+        updated_at=misc_state.summary_updated_at,
+    )
 
 
 # ── Global router (no session_id prefix) — used for transcription language ──
@@ -109,18 +136,17 @@ VALID_LANGUAGES = {"ro", "en", "auto"}
 
 
 @global_router.post("/transcription-language")
-async def set_transcription_language(request: Request):
+async def set_transcription_language(body: TranscriptionLanguageRequest):
     """Host sets the transcription language — stores pending request for daemon/macos-addons."""
     global _transcription_language_pending
-    body = await request.json()
-    lang = str(body.get("language", "")).lower().strip()
+    lang = body.language.lower().strip()
     if lang not in VALID_LANGUAGES:
         return JSONResponse({"error": "language must be 'ro', 'en', or 'auto'"}, status_code=400)
     with _transcription_language_lock:
         _transcription_language_pending = lang
     if _ws_client:
         _ws_client.send({"type": "broadcast", "event": {"type": "transcription_language_pending", "language": lang}})
-    return JSONResponse({"ok": True})
+    return OkResponse()
 
 
 @global_router.get("/transcription-language/request")
@@ -130,4 +156,4 @@ async def poll_transcription_language_request():
     with _transcription_language_lock:
         req = _transcription_language_pending
         _transcription_language_pending = None
-    return JSONResponse({"request": req})
+    return TranscriptionLanguageResponse(request=req)

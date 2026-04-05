@@ -1,6 +1,7 @@
 """Leaderboard show/hide and score reset — host-facing endpoints."""
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel
 
 from daemon.scores import scores
 from daemon.participant.state import participant_state
@@ -13,6 +14,10 @@ _ws_client = None
 def set_ws_client(client):
     global _ws_client
     _ws_client = client
+
+
+class OkResponse(BaseModel):
+    ok: bool = True
 
 
 router = APIRouter(prefix="/api/{session_id}/host", tags=["leaderboard"])
@@ -36,7 +41,7 @@ async def show_leaderboard():
     if _ws_client:
         _ws_client.send({"type": "broadcast", "event": payload})
     await send_to_host(payload)
-    return JSONResponse({"ok": True})
+    return OkResponse()
 
 
 @router.delete("/scores")
@@ -46,4 +51,4 @@ async def reset_scores():
     if _ws_client:
         _ws_client.send({"type": "broadcast", "event": payload})
     await send_to_host(payload)
-    return JSONResponse({"ok": True})
+    return OkResponse()
