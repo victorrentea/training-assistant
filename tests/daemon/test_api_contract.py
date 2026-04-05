@@ -152,6 +152,28 @@ class TestOpenApiSnapshot:
             + "\n\nRegenerate: python3 -m tests.daemon.test_api_contract --regenerate"
         )
 
+    def test_all_request_bodies_use_pydantic(self, live_openapi):
+        """Every endpoint with a request body must reference a named Pydantic schema."""
+        errors = []
+        for path, methods in sorted(live_openapi["paths"].items()):
+            for method, details in methods.items():
+                if method not in ("post", "put", "delete", "patch"):
+                    continue
+                body = details.get("requestBody")
+                if not body:
+                    continue  # no body is fine (e.g. DELETE, no-body POST)
+                # Check that the body content references a named schema ($ref)
+                content = body.get("content", {})
+                json_schema = content.get("application/json", {}).get("schema", {})
+                if "$ref" not in json_schema:
+                    errors.append(f"  {method.upper()} {path}: request body has no $ref (missing Pydantic model?)")
+
+        assert not errors, (
+            "Endpoints with raw request bodies (not Pydantic models):\n"
+            + "\n".join(errors)
+            + "\n\nAll request bodies must use Pydantic BaseModel classes."
+        )
+
     def test_component_schemas_match(self, live_openapi, snapshot_openapi):
         """Pydantic model schemas in components must match."""
         live_schemas = live_openapi.get("components", {}).get("schemas", {})
@@ -176,6 +198,24 @@ class TestOpenApiSnapshot:
         assert not errors, (
             "\n".join(errors)
             + "\n\nRegenerate: python3 -m tests.daemon.test_api_contract --regenerate"
+        )
+
+
+class TestNoPydanticBypasses:
+    """Guard: no endpoint should bypass Pydantic by calling request.json() directly."""
+
+    def test_no_raw_request_json(self):
+        """No daemon router should use `await request.json()` — use Pydantic body params instead."""
+        from pathlib import Path
+        daemon_dir = Path(__file__).parent.parent.parent / "daemon"
+        violations = []
+        for py_file in sorted(daemon_dir.rglob("*.py")):
+            text = py_file.read_text()
+            if "request.json()" in text:
+                violations.append(str(py_file.relative_to(daemon_dir.parent)))
+        assert not violations, (
+            "Files using raw request.json() instead of Pydantic models:\n"
+            + "\n".join(f"  - {f}" for f in violations)
         )
 
 

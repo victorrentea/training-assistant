@@ -170,13 +170,15 @@ training-assistant/
 │   ├── version-age.js       ← Version age display in corner
 │   ├── version-reload.js    ← Auto-reload on version change
 │   └── work-hours.js        ← Work hours utility (do not auto-edit)
-├── adoc/                    ← Sequence diagrams (PlantUML)
-│   ├── seq_debate_flow.puml ← Debate sequence flow
-│   ├── seq_quiz_flow.puml   ← Quiz sequence flow
-│   ├── seq_slides_*.puml    ← Slides sequence flows
-│   └── seq_summary_flow.puml ← Summary sequence flow
 └── docs/
-    └── messaging-registry.md ← Registry pattern architecture doc
+    ├── seq/                     ← Sequence diagrams (PlantUML)
+    │   ├── seq_debate_flow.puml
+    │   ├── seq_quiz_flow.puml
+    │   ├── seq_slides_*.puml
+    │   └── seq_summary_flow.puml
+    ├── participant-ws.yaml      ← AsyncAPI spec: participant WS events (contract-tested)
+    ├── host-ws.yaml             ← AsyncAPI spec: host WS events (contract-tested)
+    └── openapi-generated.yaml   ← OpenAPI snapshot: daemon REST endpoints (contract-tested)
 ```
 - All C4 diagrams (C1, C2, C3) and the system interactions sequence diagram are inlined in [ARCHITECTURE.md](ARCHITECTURE.md).
 ---
