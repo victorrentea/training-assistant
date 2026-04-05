@@ -313,7 +313,8 @@ def run() -> None:
 
     from daemon.proxy_handler import handle_proxy_request
     ws_client.register_handler("proxy_request",
-        lambda data: handle_proxy_request(data, ws_client))
+        lambda data: handle_proxy_request(data, ws_client),
+        inline=True)
 
     # Set ws_client on modules that send results back via WS
     from daemon import ws_publish
