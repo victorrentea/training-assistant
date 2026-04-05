@@ -71,7 +71,7 @@ Slides managed via daemon's session tooling, not direct host REST calls.
 | Direction | Type | Payload | Purpose |
 |-----------|------|---------|---------|
 | Daemon → Railway | `download_pdf` | `{slug, drive_export_url}` | Daemon instructs Railway to pull PDF from GDrive |
-| Railway → Daemon | `pdf_download_complete` | `{slug, status: "ok"\|"error"}` | Railway notifies daemon download finished |
+| Railway → Daemon | `pdf_download_complete` | `{slug, status: "ok"/"error"}` | Railway notifies daemon download finished |
 
 ### State
 ```
