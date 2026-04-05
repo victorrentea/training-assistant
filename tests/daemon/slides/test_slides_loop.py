@@ -35,6 +35,7 @@ def test_init_catalog_cache_status_uses_railway_availability():
             "source": Path("/tmp/Caching.pptx"),
             "target_pdf": "Caching.pdf",
             "title": "Caching",
+            "group": "Architecture",
             "drive_export_url": "https://docs.google.com/presentation/d/2/export/pdf",
         },
     ]
@@ -47,6 +48,7 @@ def test_init_catalog_cache_status_uses_railway_availability():
 
     assert ms.slides_catalog["reactive-webflux"]["title"] == "Reactive/WebFlux"
     assert ms.slides_catalog["caching"]["title"] == "Caching"
+    assert ms.slides_catalog["caching"]["group"] == "Architecture"
     assert ms.slides_cache_status["reactive-webflux"]["status"] == "cached"
     assert ms.slides_cache_status["caching"]["status"] == "not_cached"
 

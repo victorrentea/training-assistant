@@ -1,16 +1,21 @@
 (function () {
-  function formatElapsed(deployDate, now) {
+  function formatElapsed(label, deployDate, now) {
     const deltaSec = Math.max(0, Math.floor((now.getTime() - deployDate.getTime()) / 1000));
-    if (deltaSec < 60) return 'deployed ' + deltaSec + 's ago';
-    if (deltaSec < 3600) return 'deployed ' + Math.floor(deltaSec / 60) + 'm ago';
-    if (deltaSec < 86400) return 'deployed ' + Math.floor(deltaSec / 3600) + 'h ago';
-    return 'deployed ' + Math.floor(deltaSec / 86400) + 'd ago';
+    if (deltaSec < 60) return label + ' ' + deltaSec + 's ago';
+    if (deltaSec < 3600) return label + ' ' + Math.floor(deltaSec / 60) + 'm ago';
+    if (deltaSec < 86400) return label + ' ' + Math.floor(deltaSec / 3600) + 'h ago';
+    return label + ' ' + Math.floor(deltaSec / 86400) + 'd ago';
   }
 
-  function startUpdating(el, deployDate) {
+  function startUpdating(el, deployDate, railwayDate) {
     function update() {
       const prefix = window.__deployIncoming ? '\u26a0\ufe0f \uD83D\uDE80 | ' : '';
-      el.textContent = prefix + formatElapsed(deployDate, new Date());
+      const now = new Date();
+      const parts = [formatElapsed('deployed', deployDate, now)];
+      if (railwayDate instanceof Date && !isNaN(railwayDate.getTime())) {
+        parts.push(formatElapsed('railway', railwayDate, now));
+      }
+      el.textContent = prefix + parts.join(' | ');
     }
     window.__updateDeployAge = update;
     update();
@@ -25,10 +30,11 @@
     schedule();
   }
 
-  function setTimestamp(el, isoTimestamp) {
+  function setTimestamp(el, isoTimestamp, railwayIsoTimestamp) {
     const d = new Date(isoTimestamp);
     if (isNaN(d.getTime())) return;
-    startUpdating(el, d);
+    const railwayDate = railwayIsoTimestamp ? new Date(railwayIsoTimestamp) : null;
+    startUpdating(el, d, railwayDate);
   }
 
   let _deployInfoCache = null;
@@ -125,8 +131,11 @@
       .then(r => r.json())
       .then(data => {
         const ts = data.daemon_code_timestamp || data.code_timestamp;
+        const railwayTs = data.railway_started_at || null;
         if (ts) {
-          setTimestamp(el, ts);
+          setTimestamp(el, ts, railwayTs);
+        } else if (railwayTs) {
+          setTimestamp(el, railwayTs, railwayTs);
         } else if (window.APP_VERSION) {
           el.textContent = window.APP_VERSION || 'dev';
         } else {

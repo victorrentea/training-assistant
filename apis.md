@@ -56,6 +56,7 @@ session_name: str | null         # display name
 | GET | `/{sid}/api/slides/download/{slug}` | — | PDF binary served directly by Railway from disk (max 100MB) — only call after /check returns 200 |
 
 The same `GET /{sid}/api/slides` shape is used by host UI (via daemon host server), with cache fields embedded per slide entry.
+Slides catalog metadata is pulled via this REST endpoint (not via WS), including optional `group` used for participant grouped rendering.
 
 `/check` flow: daemon responds 200 immediately only if cache says `cached` and a Railway HEAD confirms PDF availability. If daemon says `cached` but Railway HEAD misses, daemon downgrades slug to `not_cached`, broadcasts status, then sends `download_pdf` to Railway and marks status `downloading` (broadcasted to host+participants). If Railway confirms download complete in time, daemon returns 200 and broadcasts `cached`; if 30s timeout elapses daemon returns 503 and broadcasts `poll_timeout` (download may still finish later, then `pdf_download_complete` flips to `cached`).
 
@@ -63,7 +64,7 @@ Current slide is included in the initial state from `GET /{sid}/api/participant/
 
 **Daemon → Participant Browser WS:**
 - `slides_current` — `{slides_current}` — when host navigates slides
-- `slides_cache_status` — `{slides[]}` where each slide embeds `status` (+ cache fields); for backward compatibility Railway may also include `slides_cache_status` map in the same event
+- `slides_cache_status` — `{slides[]}` where each slide embeds `status` (+ cache fields)
 - `slides_updated` — single refresh trigger; participant re-fetches `GET /api/slides`
 
 ### Host
@@ -86,9 +87,12 @@ Host uses the same slides list contract as participant (embedded cache fields in
 | Daemon → Railway | `download_pdf` | `{slug, drive_export_url}` | Daemon instructs Railway to pull PDF from GDrive |
 | Railway → Daemon | `pdf_download_complete` | `{slug, status: "ok"/"error"}` | Railway notifies daemon download finished |
 
+`pdf_download_complete` is daemon-only (not broadcast directly to participant/host). Daemon updates cache state and then broadcasts `slides_cache_status`.
+
 ### State
 ```
 slides_cache_status: dict[str, dict]   # slug → {status: "not_cached"|"downloading"|"cached"|"stale"|"poll_timeout"|"download_failed", size_bytes, downloaded_at}
+slides_catalog: dict[str, dict]        # slug → {slug, title, drive_export_url, group?}
 ```
 
 **Daemon** owns this state and all caching decisions (fingerprint polling, staleness detection, download coordination). Railway executes GDrive HTTP pulls on daemon's instruction and stores PDFs on disk. Railway cannot self-initiate downloads.

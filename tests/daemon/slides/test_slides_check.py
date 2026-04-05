@@ -82,6 +82,11 @@ def test_check_triggers_download_and_returns_200_on_success(fresh_misc_state, mo
         return True
 
     monkeypatch.setattr("daemon.ws_publish.send_to_railway", fake_send_to_railway)
+    fresh_misc_state.slides_catalog["myslug"] = {
+        "slug": "myslug",
+        "title": "My Slide",
+        "drive_export_url": "https://docs.google.com/presentation/d/xyz/export/pdf",
+    }
 
     broadcasts = []
 
@@ -110,7 +115,12 @@ def test_check_triggers_download_and_returns_200_on_success(fresh_misc_state, mo
     assert resp.json()["status"] == "cached"
     # Verify download_pdf was sent to Railway
     assert any(m.get("type") == "download_pdf" and m.get("slug") == "myslug" for m in sent_msgs)
-    statuses = [m.model_dump()["slides_cache_status"]["myslug"]["status"] for m in broadcasts]
+    statuses = []
+    for m in broadcasts:
+        slides = m.model_dump().get("slides") or []
+        match = next((s for s in slides if s.get("slug") == "myslug"), None)
+        if match:
+            statuses.append(match.get("status"))
     assert "downloading" in statuses
     assert "cached" in statuses
 
@@ -118,6 +128,11 @@ def test_check_triggers_download_and_returns_200_on_success(fresh_misc_state, mo
 def test_check_cached_local_but_missing_on_railway_triggers_download(fresh_misc_state, monkeypatch):
     """Local cached status alone is insufficient: /check re-triggers download when Railway misses."""
     fresh_misc_state.slides_cache_status["myslug"] = {"status": "cached"}
+    fresh_misc_state.slides_catalog["myslug"] = {
+        "slug": "myslug",
+        "title": "My Slide",
+        "drive_export_url": "https://docs.google.com/presentation/d/xyz/export/pdf",
+    }
     monkeypatch.setattr(slides_router, "_is_cached_on_railway", lambda *_: False)
     sent_msgs = []
 
@@ -150,7 +165,12 @@ def test_check_cached_local_but_missing_on_railway_triggers_download(fresh_misc_
     assert resp.status_code == 200
     assert resp.json()["status"] == "cached"
     assert any(m.get("type") == "download_pdf" and m.get("slug") == "myslug" for m in sent_msgs)
-    statuses = [m.model_dump()["slides_cache_status"]["myslug"]["status"] for m in broadcasts]
+    statuses = []
+    for m in broadcasts:
+        slides = m.model_dump().get("slides") or []
+        match = next((s for s in slides if s.get("slug") == "myslug"), None)
+        if match:
+            statuses.append(match.get("status"))
     assert "not_cached" in statuses
     assert "downloading" in statuses
     assert "cached" in statuses
@@ -159,6 +179,11 @@ def test_check_cached_local_but_missing_on_railway_triggers_download(fresh_misc_
 def test_check_returns_503_on_timeout(fresh_misc_state, monkeypatch):
     """No cached entry + no download completion → 503 after timeout."""
     monkeypatch.setattr(slides_router, "_CHECK_TIMEOUT_S", 0.1)
+    fresh_misc_state.slides_catalog["myslug"] = {
+        "slug": "myslug",
+        "title": "My Slide",
+        "drive_export_url": "https://docs.google.com/presentation/d/xyz/export/pdf",
+    }
 
     def fake_send_to_railway(msg):
         return True
@@ -180,7 +205,12 @@ def test_check_returns_503_on_timeout(fresh_misc_state, monkeypatch):
     assert resp.status_code == 503
     assert resp.json()["status"] == "timeout"
     assert fresh_misc_state.slides_cache_status["myslug"]["status"] == "poll_timeout"
-    statuses = [m.model_dump()["slides_cache_status"]["myslug"]["status"] for m in broadcasts]
+    statuses = []
+    for m in broadcasts:
+        slides = m.model_dump().get("slides") or []
+        match = next((s for s in slides if s.get("slug") == "myslug"), None)
+        if match:
+            statuses.append(match.get("status"))
     assert "downloading" in statuses
     assert statuses[-1] == "poll_timeout"
 

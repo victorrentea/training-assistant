@@ -31,6 +31,7 @@ from railway.features.ws.proxy_bridge import participant_proxy_router
 logging.basicConfig(level=logging.INFO)
 
 PROJECT_ROOT = Path(__file__).parent.parent
+_RAILWAY_STARTED_AT_ISO: str | None = None
 
 
 def _stamp_version_js():
@@ -63,6 +64,8 @@ def _stamp_deploy_info():
 
 @asynccontextmanager
 async def lifespan(app_: FastAPI):
+    global _RAILWAY_STARTED_AT_ISO
+    _RAILWAY_STARTED_AT_ISO = datetime.now(ZoneInfo("Europe/Bucharest")).isoformat()
     _stamp_version_js()
     _stamp_deploy_info()
     yield
@@ -156,6 +159,7 @@ async def get_status():
         "backend_version": get_backend_version(),
         "git_sha": os.environ.get("RAILWAY_GIT_COMMIT_SHA", ""),
         "daemon_code_timestamp": state.daemon_code_timestamp,
+        "railway_started_at": _RAILWAY_STARTED_AT_ISO,
         "session_active": state.session_id is not None,
         "session_id": state.session_id,
         "slides_current": state.slides_current,
@@ -170,6 +174,7 @@ async def get_session_status(session_id: str, _=Depends(require_valid_session)):
         "backend_version": get_backend_version(),
         "git_sha": os.environ.get("RAILWAY_GIT_COMMIT_SHA", ""),
         "daemon_code_timestamp": state.daemon_code_timestamp,
+        "railway_started_at": _RAILWAY_STARTED_AT_ISO,
         "session_active": True,
         "session_id": state.session_id,
         "slides_current": state.slides_current,
