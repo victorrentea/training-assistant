@@ -9,6 +9,8 @@ from pydantic import BaseModel
 
 from daemon.email_notify import notify as email_notify
 from daemon.misc.state import misc_state
+from daemon.participant.state import participant_state
+from daemon.session import state as session_shared_state
 from daemon.ws_messages import PasteReceivedMsg, TranscriptionLanguagePendingMsg
 from daemon.ws_publish import host_event, broadcast
 
@@ -87,13 +89,22 @@ async def participant_feedback(request: Request, body: FeedbackRequest):
     if not text or len(text) > 5000:
         return JSONResponse({"error": "Invalid feedback text"}, status_code=400)
 
-    session_name = misc_state.session_name or "unknown"
+    session_name = _get_session_name_for_feedback() or "unknown"
+    participant_name = participant_state.participant_names.get(pid, pid)
     email_notify(
         f"Participant Feedback ({session_name})",
-        f"Participant: {pid}\nSession: {session_name}\n\n{text}",
+        f"Participant: {participant_name}\nSession: {session_name}\n\n{text}",
     )
     logger.info("Feedback received from participant %s", pid)
     return OkResponse()
+
+
+def _get_session_name_for_feedback() -> str | None:
+    """Return session name from misc cache, with session stack fallback."""
+    if misc_state.session_name:
+        return misc_state.session_name
+    stack = session_shared_state.get_session_stack()
+    return stack[-1]["name"] if stack else None
 
 
 @participant_router.get("/notes")

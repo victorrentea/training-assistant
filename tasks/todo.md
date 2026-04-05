@@ -1,5 +1,18 @@
 # Todo
 
+## Follow-up direct request: feedback email should show participant name + session name
+
+- [x] Use participant display name in feedback email body (fallback to UUID when missing)
+- [x] Use current session name with session-stack fallback instead of `unknown` when available
+- [x] Add/extend daemon misc router tests for participant-name and session-name behavior
+- [x] Run targeted tests and capture proof in review section
+- [x] Mark follow-up done in `backlog.md`
+
+### Review: feedback email should show participant name + session name
+
+- Proof: `python3 -m pytest -q tests/daemon/test_misc_router.py`
+- Result: `2 passed`
+
 ## Direct request: participant upload 400 + hermetic e2e
 
 - [x] Add hermetic regression test for participant file upload (`POST /{sid}/api/upload`) that fails on non-2xx responses
