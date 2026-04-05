@@ -95,24 +95,30 @@ tests/
 
 ## Running Tests
 
-### Unit tests (fast, no server)
+### Convenience scripts (preferred — single command, minimal prompts)
+
 ```bash
-pytest tests/unit/ -v
+bash tests/check-all.sh                 # Quick: imports + daemon tests + contract tests (~30s)
+bash tests/run-daemon-tests.sh          # Daemon unit tests only (~10s)
+bash tests/docker/run-hermetic.sh       # Full hermetic Docker tests (~10 min), output → logs/hermetic-latest.txt
 ```
 
-### Local e2e tests (Playwright, spins up local server)
+Output from hermetic tests is saved to `logs/` (gitignored) to avoid permission prompts when reading results.
+
+### Manual commands (if needed)
+
 ```bash
+# Unit tests (fast, no server)
+pytest tests/unit/ -v
+
+# Local e2e tests (Playwright, spins up local server)
 pytest tests/e2e/ -v
 pytest tests/e2e/ -v --headed  # watch the browsers
-```
 
-### Hermetic Docker tests (full system in one container)
-```bash
+# Hermetic Docker tests (full system in one container)
 bash tests/docker/build-daemon.sh
-```
 
-### Daemon unit tests
-```bash
+# Daemon unit tests
 pytest tests/daemon/ -v
 ```
 
