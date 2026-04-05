@@ -249,6 +249,37 @@
 - Result: `6 passed in 0.44s`
 - Proof: `python3 -m pytest tests/daemon/test_ws_contract.py -q`
 - Result: `5 passed in 0.14s`
+
+## Direct request: dedupe slides cache WS + restore grouped catalog metadata
+
+- [x] Ensure only daemon emits `slides_cache_status` updates (remove duplicate Railway-side broadcasts)
+- [x] Remove legacy `slides_cache_status` map from typed WS payload/docs; keep embedded per-slide status only
+- [x] Preserve `group` field in daemon slides catalog so participant grouped rendering works again
+- [x] Update `apis.md` slides state to include `slides_catalog` mapping
+- [x] Run targeted slides + WS contract tests
+
+### Review: dedupe slides cache WS + restore grouped catalog metadata
+
+- Proof: `bash tests/run-daemon-tests.sh tests/daemon/slides/test_slides_check.py tests/daemon/slides/test_slides_loop.py tests/daemon/test_ws_contract.py`
+- Result: `13 passed in 0.69s`
+- Proof: `python3 -m pytest tests/features/slides/test_download_pdf_ws.py -q`
+- Result: `3 passed in 0.21s`
+
+## Direct request: enforce daemon-only PDF completion fanout + startup railway timestamp
+
+- [x] Keep slides catalog on participant path as REST (`GET /{sid}/api/slides`) and ensure `group` is preserved from catalog metadata
+- [x] Ensure Railway sends PDF completion only to daemon (`pdf_download_complete`), with no direct participant/host `slides_cache_status` broadcasts from Railway
+- [x] Expose Railway process startup timestamp in Railway `/api/status` and `/{sid}/api/status` as `railway_started_at`
+- [x] Update participant deploy-age rendering to show `deployed ... | railway ...` when both timestamps are available
+- [x] Remove obsolete WS protocol leftover for `slides_catalog` message type constant
+- [x] Run targeted daemon+slides tests
+
+### Review: enforce daemon-only PDF completion fanout + startup railway timestamp
+
+- Proof: `bash tests/run-daemon-tests.sh tests/daemon/slides/test_slides_check.py tests/daemon/slides/test_slides_loop.py tests/daemon/test_ws_contract.py`
+- Result: `13 passed in 1.16s`
+- Proof: `python3 -m pytest tests/features/slides/test_download_pdf_ws.py tests/features/slides/test_cache.py -q`
+- Result: `8 passed in 0.66s`
 - [x] Mark item done in `backlog.md`
 - [x] Capture non-visual proof via test output
 

@@ -2962,11 +2962,7 @@ const sessionTitleEl = document.getElementById('session-title');
         updateNotes(msg.notes_content);
         break;
       case 'slides_cache_status':
-        _applySlidesCacheStatus(
-          (msg.slides_cache_status && typeof msg.slides_cache_status === 'object')
-            ? msg.slides_cache_status
-            : _buildSlidesCacheStatusMapFromSlides(msg.slides || [])
-        );
+        _applySlidesCacheStatus(_buildSlidesCacheStatusMapFromSlides(msg.slides || []));
         if (document.getElementById('slides-list')) _renderSlidesList(slidesSelectedId || null);
         break;
       case 'leaderboard_revealed': {

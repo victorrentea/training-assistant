@@ -77,11 +77,6 @@ components:
             items:
               $ref: '#/components/schemas/SlideWithCacheStatus'
             description: Slides list with embedded cache status fields
-          slides_cache_status:
-            type: object
-            additionalProperties:
-              $ref: '#/components/schemas/CacheStatusEntry'
-            description: Legacy slug → cache status map (backward compatibility)
 
     slides_updated:
       summary: Slide PDF content updated for one slug

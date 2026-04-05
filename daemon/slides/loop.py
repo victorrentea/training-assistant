@@ -76,6 +76,7 @@ class SlidesPollingRunner:
                 "slug": slug,
                 "title": entry["title"],
                 "drive_export_url": entry["drive_export_url"],
+                "group": entry.get("group"),
             })
         misc_state.update_slides_catalog(catalog_entries)
 

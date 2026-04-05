@@ -23,7 +23,6 @@ class SlidesCurrentMsg(BaseModel):
 class SlidesCacheStatusMsg(BaseModel):
     type: Literal["slides_cache_status"] = "slides_cache_status"
     slides: Optional[list[dict[str, Any]]] = None
-    slides_cache_status: Optional[dict[str, Any]] = None
 
 
 class SlidesUpdatedMsg(BaseModel):

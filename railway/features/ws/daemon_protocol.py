@@ -6,7 +6,6 @@ from railway.shared.state import state
 logger = logging.getLogger(__name__)
 
 # --- Inbound message types (daemon → backend) ---
-MSG_SLIDES_CATALOG = "slides_catalog"
 MSG_SLIDE_INVALIDATED = "slide_invalidated"
 MSG_DAEMON_PING = "daemon_ping"
 

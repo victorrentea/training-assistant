@@ -88,7 +88,6 @@ def _broadcast_slides_cache_status() -> None:
     broadcast(
         SlidesCacheStatusMsg(
             slides=_slides_with_embedded_cache_status(),
-            slides_cache_status=misc_state.slides_cache_status,
         )
     )
 

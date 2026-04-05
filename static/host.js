@@ -385,11 +385,8 @@
       } else if (msg.type === 'summary') {
         updateSummary(msg.points, msg.updated_at);
       } else if (msg.type === 'slides_cache_status') {
-        const legacyMap = (msg.slides_cache_status && typeof msg.slides_cache_status === 'object')
-          ? msg.slides_cache_status
-          : {};
         const embeddedMap = _buildSlidesCacheStatusMapFromSlides(msg.slides || []);
-        _slidesCacheStatus = { ...embeddedMap, ...legacyMap };
+        _slidesCacheStatus = embeddedMap;
         if (Array.isArray(msg.slides) && msg.slides.length) {
           _slidesCatalog = msg.slides;
         }
