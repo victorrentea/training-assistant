@@ -12,3 +12,4 @@ python3 -m pytest tests/daemon/ -q \
 echo ""
 echo "=== Contract tests ==="
 python3 -m pytest tests/daemon/test_api_contract.py tests/daemon/test_ws_contract.py -v
+
