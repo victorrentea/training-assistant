@@ -1,5 +1,6 @@
 # Tasks
 
+- [x] bugfix: host `❤️` badge now calls local daemon endpoint `/api/participant/emoji/reaction` (not `/{sid}/...`) and falls back to WS send when HTTP response is non-OK or network fails.
 - [x] start.sh: daemon stdout/stderr is now tee'd to hardcoded log file `/Users/victorrentea/workspace/training-assistant/logs/daemon.log` (auto-creates parent dir).
 - [x] test: add hermetic e2e regression that verifies participant top header displays current session name.
 - [x] bug: participant top header shows session name again (fallback to active session stack when `session_name` cache is missing).
