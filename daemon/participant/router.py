@@ -11,6 +11,7 @@ from starlette.responses import Response
 from railway.shared.names import assign_conference_name
 from railway.shared.state import assign_avatar, refresh_avatar as _refresh_avatar_logic, LOTR_NAMES
 from daemon.participant.state import participant_state
+from daemon.ws_publish import send_to_railway
 
 logger = logging.getLogger(__name__)
 
@@ -187,6 +188,14 @@ async def register_participant(request: Request):
     # Initialize score
     ps.scores.setdefault(pid, 0)
 
+    # Sync participant identity to Railway so broadcasts use the real name
+    send_to_railway({
+        "type": "participant_registered",
+        "participant_id": pid,
+        "name": raw_name,
+        "avatar": avatar,
+    })
+
     # Broadcast participant registered event
     request.state.write_back_events = [{
         "type": "participant_registered",
@@ -223,6 +232,13 @@ async def rename_participant(request: Request, body: RenameRequest):
         return Response(status_code=409)
 
     ps.participant_names[pid] = raw_name
+
+    # Sync rename to Railway so broadcasts use the updated name
+    send_to_railway({
+        "type": "participant_renamed",
+        "participant_id": pid,
+        "name": raw_name,
+    })
 
     request.state.write_back_events = [{
         "type": "participant_renamed",
@@ -272,6 +288,13 @@ async def set_location(request: Request, body: LocationRequest):
         return JSONResponse({"error": "Location required"}, status_code=400)
 
     participant_state.locations[pid] = loc
+
+    # Sync location to Railway
+    send_to_railway({
+        "type": "participant_location",
+        "participant_id": pid,
+        "location": loc,
+    })
 
     request.state.write_back_events = [{
         "type": "participant_location",
