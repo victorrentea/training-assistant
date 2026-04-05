@@ -14,8 +14,15 @@
     }
     window.__updateDeployAge = update;
     update();
-    const ageSec = Math.floor((Date.now() - deployDate.getTime()) / 1000);
-    if (ageSec < 86400) setInterval(update, 60000);
+
+    // Tick every second while under 1h, then every minute while under 24h
+    function schedule() {
+      const ageSec = Math.floor((Date.now() - deployDate.getTime()) / 1000);
+      if (ageSec >= 86400) return;
+      const interval = ageSec < 3600 ? 1000 : 60000;
+      setTimeout(() => { update(); schedule(); }, interval);
+    }
+    schedule();
   }
 
   function setTimestamp(el, isoTimestamp) {
