@@ -254,3 +254,4 @@ Host broadcasts a statement: "Have you ever shipped code that violated what we j
 - [x] Direct request: host ❤️ footer badge click no longer animates in host browser; it only sends the reaction to backend/addons overlay flow.
 - [x] Bugfix participant: removed hover tooltip from the bottom-right deploy/version tag (`deployed ... ago`) while keeping the deploy age text visible.
 - [x] Bugfix notes/summary source of truth: daemon now serves notes from latest `*.txt` and summary from `ai-summary.md` (including host/participant state + REST endpoints), and `apis.md` state docs were updated accordingly.
+- [x] Daemon logging: at startup and on notes/summary file changes, log non-empty line counts for latest `*.txt` notes + `ai-summary.md` (with session/file diagnostics).

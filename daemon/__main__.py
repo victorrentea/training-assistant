@@ -216,6 +216,77 @@ def _send_global_state_saved_ack(
     pass  # global_state_saved removed: Railway no longer tracks ACKs
 
 
+def _read_non_empty_line_count(path: Path | None) -> int:
+    if path is None or not path.exists() or not path.is_file():
+        return 0
+    try:
+        content = path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return 0
+    return sum(1 for line in content.splitlines() if line.strip())
+
+
+def _file_mtime_ns(path: Path | None) -> int | None:
+    if path is None or not path.exists() or not path.is_file():
+        return None
+    try:
+        return path.stat().st_mtime_ns
+    except OSError:
+        return None
+
+
+def _build_notes_summary_probe(session_folder: Path | None) -> dict:
+    notes_file = find_notes_in_folder(session_folder) if session_folder else None
+    summary_file = (session_folder / "ai-summary.md") if session_folder else None
+    if summary_file and not summary_file.exists():
+        summary_file = None
+    return {
+        "session_folder": str(session_folder) if session_folder else None,
+        "notes_file": str(notes_file) if notes_file else None,
+        "notes_mtime_ns": _file_mtime_ns(notes_file),
+        "notes_non_empty_lines": _read_non_empty_line_count(notes_file),
+        "summary_file": str(summary_file) if summary_file else None,
+        "summary_mtime_ns": _file_mtime_ns(summary_file),
+        "summary_non_empty_lines": _read_non_empty_line_count(summary_file),
+    }
+
+
+def _probe_change_parts(previous: dict | None, current: dict) -> str:
+    if previous is None:
+        return "initial"
+    parts: list[str] = []
+    if previous.get("session_folder") != current.get("session_folder"):
+        parts.append("session")
+    notes_changed = (
+        previous.get("notes_file") != current.get("notes_file")
+        or previous.get("notes_mtime_ns") != current.get("notes_mtime_ns")
+        or previous.get("notes_non_empty_lines") != current.get("notes_non_empty_lines")
+    )
+    summary_changed = (
+        previous.get("summary_file") != current.get("summary_file")
+        or previous.get("summary_mtime_ns") != current.get("summary_mtime_ns")
+        or previous.get("summary_non_empty_lines") != current.get("summary_non_empty_lines")
+    )
+    if notes_changed:
+        parts.append("notes")
+    if summary_changed:
+        parts.append("summary")
+    return ",".join(parts) if parts else "none"
+
+
+def _log_notes_summary_probe(reason: str, probe: dict, change_parts: str | None = None) -> None:
+    session_label = probe.get("session_folder") or "<none>"
+    notes_label = Path(probe["notes_file"]).name if probe.get("notes_file") else "MISSING"
+    summary_label = Path(probe["summary_file"]).name if probe.get("summary_file") else "MISSING"
+    suffix = f" changed={change_parts}" if change_parts else ""
+    log.info(
+        "notes-summary",
+        f"{reason}:{suffix} session={session_label} "
+        f"notes_file={notes_label} notes_non_empty_lines={probe['notes_non_empty_lines']} "
+        f"summary_file={summary_label} summary_non_empty_lines={probe['summary_non_empty_lines']}",
+    )
+
+
 def _bind_initial_session_folder(config, sessions_root: Path, session_stack: list[dict]) -> tuple[object, str]:
     """Resolve and log session folder binding at daemon startup."""
     today_folder = today_notes = None
@@ -485,6 +556,8 @@ def run() -> None:
         log.info("session", "Found active session: <NONE>")
     # Publish initial session state to daemon REST router
     session_shared_state.set_active_session(_active_session_id, session_stack)
+    notes_summary_probe_prev: dict | None = _build_notes_summary_probe(config.session_folder)
+    _log_notes_summary_probe("startup", notes_summary_probe_prev)
 
     # ── Log transcription time ranges at startup ──
     try:
@@ -532,7 +605,6 @@ def run() -> None:
     last_session_check_at = 0.0
     last_transcript_stats_at = 0.0
     last_transcript_line_count = -1
-    last_notes_mtime: float = 0.0  # track notes file mtime for re-push on change
     last_slides_payload_hash: str | None = None
     _SLIDE_FILE_READ_INTERVAL: float = 0.5
     last_slide_file_read_at: float = 0.0
@@ -955,6 +1027,14 @@ def run() -> None:
                         now_mono=now,
                     )
                 )
+                notes_summary_probe = _build_notes_summary_probe(config.session_folder)
+                if notes_summary_probe_prev != notes_summary_probe:
+                    _log_notes_summary_probe(
+                        "change-detected",
+                        notes_summary_probe,
+                        _probe_change_parts(notes_summary_probe_prev, notes_summary_probe),
+                    )
+                    notes_summary_probe_prev = notes_summary_probe
 
                 sf_name = config.session_folder.name if config.session_folder else None
                 sn_name = config.session_notes.name if config.session_notes else None
