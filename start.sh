@@ -1,27 +1,24 @@
 #!/bin/bash
 # ═══════════════════════════════════════════════════════════════════
-# start.sh — Unified launcher for all workshop companion processes
+# start.sh — Launcher for the training daemon
 # ═══════════════════════════════════════════════════════════════════
 #
-# Starts two processes:
-#   1. Training daemon  — polls server for quiz/debate/summary requests
-#   2. Desktop overlay  — macOS overlay app rendering participant emoji reactions
+# Starts the training daemon which polls the Railway backend for
+# quiz/debate/summary requests.
 #
+# NOTE: Desktop overlay has moved to victor-macos-addons repo.
 # NOTE: Wispr cleanup (wispr-addons/app.py) is NOT started here — run it separately.
 #
 # Auto-updates: every 2s, `git fetch` checks for new commits on master.
 # When new code is detected (or daemon exits with code 42), the daemon is
-# stopped, code is pulled, overlay is rebuilt, and the outer loop restarts both.
-# The old overlay keeps running until the new instance self-replaces it via PID file.
+# stopped, code is pulled, and the outer loop restarts it.
 #
 # PREREQUISITES
 #   - Python 3.12+ with project dependencies installed
 #   - ~/.training-assistants-secrets.env with ANTHROPIC_API_KEY and TRANSCRIPTION_FOLDER
-#   - Swift toolchain (for desktop overlay)
 #
 # USAGE
-#   ./start.sh                    # default server: https://interact.victorrentea.ro
-#   ./start.sh ws://localhost:8000 # local dev server
+#   ./start.sh
 #
 # ═══════════════════════════════════════════════════════════════════
 
@@ -36,7 +33,6 @@ _on_exit() {
 }
 trap _on_exit EXIT
 
-OVERLAY_SERVER="${1:-wss://interact.victorrentea.ro}"
 SECRETS_FILE="${TRAINING_ASSISTANTS_SECRETS_FILE:-$HOME/.training-assistants-secrets.env}"
 
 # ── Preflight checks ──
@@ -47,15 +43,9 @@ if [ ! -f "$SECRETS_FILE" ]; then
   exit 1
 fi
 
-if ! command -v swift &>/dev/null; then
-  _log "start" "info" "Swift not found — desktop overlay will not start"
-  NO_OVERLAY=1
-fi
-
 # ── PID tracking ──
 
 DAEMON_PID=""
-OVERLAY_PID=""
 
 cleanup() {
   echo ""
@@ -64,55 +54,29 @@ cleanup() {
     kill "$DAEMON_PID" 2>/dev/null || true
     DAEMON_PID=""
   fi
-  if [ -n "$OVERLAY_PID" ]; then
-    _log "start" "info" "💀 overlay (pid $OVERLAY_PID)"
-    kill "$OVERLAY_PID" 2>/dev/null || true
-    OVERLAY_PID=""
-  fi
   wait 2>/dev/null || true
   EXIT_REASON="interrupted (SIGINT/SIGTERM)"
   exit 0
 }
 trap cleanup INT TERM
 
-# ── Build desktop overlay ──
-
-build_overlay() {
-  if [ -n "$NO_OVERLAY" ]; then return; fi
-  _log "start" "info" "Building desktop overlay..."
-  if (cd ~/workspace/victor-macos-addons/desktop-overlay && swift build 2>&1 | tail -1); then
-    _log "start" "info" "Overlay built"
-  else
-    _log "start" "error" "Overlay build failed — skipping"
-    NO_OVERLAY=1
-  fi
-}
-
-# ── Process launchers ──
+# ── Process launcher ──
 
 start_daemon() {
   python3 -m daemon &
   DAEMON_PID=$!
 }
 
-start_overlay() {
-  if [ -n "$NO_OVERLAY" ]; then return; fi
-  (cd ~/workspace/victor-macos-addons/desktop-overlay && .build/arm64-apple-macosx/debug/DesktopOverlay "$OVERLAY_SERVER") &
-  OVERLAY_PID=$!
-}
-
-# ── Git auto-update (fallback when watcher unavailable) ──
+# ── Git auto-update ──
 
 LAST_KNOWN_REMOTE_HEAD=""
 
 check_git_updates() {
-  # Fetch quietly, compare origin/master before vs after fetch (branch-independent)
   git fetch origin master --quiet 2>/dev/null || return 1
   local new_remote_head
   new_remote_head=$(git rev-parse origin/master 2>/dev/null)
   [ -z "$new_remote_head" ] && return 1
 
-  # Initialize on first call
   if [ -z "$LAST_KNOWN_REMOTE_HEAD" ]; then
     LAST_KNOWN_REMOTE_HEAD="$new_remote_head"
     return 1
@@ -123,9 +87,9 @@ check_git_updates() {
     msg=$(git log --oneline "$LAST_KNOWN_REMOTE_HEAD".."$new_remote_head" 2>/dev/null | head -3)
     _log "start" "info" "♻️  New commits — will restart: $msg"
     LAST_KNOWN_REMOTE_HEAD="$new_remote_head"
-    return 0  # update available
+    return 0
   fi
-  return 1  # no update
+  return 1
 }
 
 stop_all_processes() {
@@ -133,11 +97,6 @@ stop_all_processes() {
     _log "start" "info" "💀 daemon (pid $DAEMON_PID)"
     kill -9 "$DAEMON_PID" 2>/dev/null || true
     DAEMON_PID=""
-  fi
-  if [ -n "$OVERLAY_PID" ]; then
-    _log "start" "info" "💀 overlay (pid $OVERLAY_PID)"
-    kill "$OVERLAY_PID" 2>/dev/null || true
-    OVERLAY_PID=""
   fi
 }
 
@@ -148,29 +107,23 @@ pull_and_rebuild() {
   if ! git pull --ff-only 2>&1; then
     _log "start" "warn" "git pull failed — continuing with existing code"
   fi
-  build_overlay
 }
 
 # ── Main loop ──
 
-build_overlay
-
 while true; do
   start_daemon
-  start_overlay
 
   echo ""
-  _log "start" "info" "🟢 daemon  🟢 overlay"
+  _log "start" "info" "🟢 daemon"
   echo ""
 
-  # Poll loop: check daemon health + git updates every 10s
   RESTART_REASON=""
   GIT_CHECK_COUNTER=0
   while true; do
     sleep 0.5
     GIT_CHECK_COUNTER=$((GIT_CHECK_COUNTER + 1))
 
-    # Check if daemon exited
     if [ -n "$DAEMON_PID" ] && ! kill -0 "$DAEMON_PID" 2>/dev/null; then
       wait "$DAEMON_PID" 2>/dev/null && DAEMON_EXIT=0 || DAEMON_EXIT=$?
       DAEMON_PID=""
@@ -190,7 +143,6 @@ while true; do
       fi
     fi
 
-    # Git-based update detection (every 2s)
     if [ $((GIT_CHECK_COUNTER % 4)) -eq 0 ]; then
       if check_git_updates; then
         RESTART_REASON="git-update"
@@ -199,7 +151,6 @@ while true; do
     fi
   done
 
-  # Stop everything, update, and loop back to restart
   stop_all_processes
   pull_and_rebuild
 

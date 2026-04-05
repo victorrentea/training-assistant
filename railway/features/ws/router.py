@@ -74,18 +74,16 @@ async def _handle_daemon_slide_invalidated(data):
 
 
 async def _handle_send_to_host(data: dict):
-    """Forward event to __host__ and __overlay__ WSs."""
+    """Forward event to __host__ WS."""
     event = data.get("event")
     if not event:
         return
-    msg = json.dumps(event)
-    for special_pid in ("__host__", "__overlay__"):
-        ws = state.participants.get(special_pid)
-        if ws:
-            try:
-                await ws.send_text(msg)
-            except Exception:
-                pass
+    ws = state.participants.get("__host__")
+    if ws:
+        try:
+            await ws.send_text(json.dumps(event))
+        except Exception:
+            pass
 
 
 async def _handle_set_session_id(data: dict):
@@ -223,17 +221,13 @@ async def _send_initial_messages(websocket: WebSocket) -> None:
         pass
 
 
-async def _handle_participant_connection(websocket: WebSocket, pid: str, is_host: bool, is_overlay: bool):
-    """Shared logic for participant/host/overlay WebSocket connections.
+async def _handle_participant_connection(websocket: WebSocket, pid: str, is_host: bool):
+    """Shared logic for participant/host WebSocket connections.
 
-    Handles: paused check, accept, name registration, message loop, disconnect cleanup.
+    Handles: accept, name registration, message loop, disconnect cleanup.
     Caller must have already validated auth and session_id as appropriate.
     """
-    role = "host" if is_host else ("overlay" if is_overlay else "participant")
-
-    # Overlay reconnect: kick old overlay connection
-    if is_overlay:
-        await _kick_old_connection("__overlay__")
+    role = "host" if is_host else "participant"
 
     # Host reconnect: kick old host connection
     if is_host:
@@ -242,18 +236,14 @@ async def _handle_participant_connection(websocket: WebSocket, pid: str, is_host
     await websocket.accept()
 
     state.participants[pid] = websocket
-    if not is_host and not is_overlay:
+    if not is_host:
         state.participant_history.add(pid)
         forwarded = websocket.headers.get("x-forwarded-for", "")
         ip = forwarded.split(",")[0].strip() if forwarded else (websocket.client.host if websocket.client else "")
         state.participant_ips[pid] = ip
     ws_connections_active.labels(role=role).inc()
 
-    if is_overlay:
-        state.participant_names["__overlay__"] = "Overlay"
-        logger.info(f"Overlay connected ({len(state.participants)} total)")
-        await broadcast_participant_update()
-    elif is_host:
+    if is_host:
         state.participant_names["__host__"] = "Host"
         logger.info(f"Host connected ({len(state.participants)} total)")
         await _send_initial_messages(websocket)
@@ -284,7 +274,7 @@ async def _handle_participant_connection(websocket: WebSocket, pid: str, is_host
 
 @session_router.websocket("/ws/{session_id}/{participant_id}")
 async def session_websocket_endpoint(websocket: WebSocket, session_id: str, participant_id: str):
-    """WebSocket endpoint for participants, host (__host__), and overlay (__overlay__), requiring a valid session_id."""
+    """WebSocket endpoint for participants and host (__host__), requiring a valid session_id."""
     # Validate session_id — accept first so client gets a clean close code
     if not state.session_id or session_id.lower() != state.session_id.lower():
         is_host_attempt = participant_id.strip() == "__host__"
@@ -304,11 +294,10 @@ async def session_websocket_endpoint(websocket: WebSocket, session_id: str, part
 
     pid = participant_id.strip()
     is_host = (pid == "__host__")
-    is_overlay = (pid == "__overlay__")
 
-    if not is_host and not is_overlay and (not pid or pid.startswith("__")):
+    if not is_host and (not pid or pid.startswith("__")):
         await websocket.accept()
         await websocket.close(code=1008)
         return
 
-    await _handle_participant_connection(websocket, pid, is_host=is_host, is_overlay=is_overlay)
+    await _handle_participant_connection(websocket, pid, is_host=is_host)

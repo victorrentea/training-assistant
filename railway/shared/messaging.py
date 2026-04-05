@@ -13,7 +13,7 @@ from railway.shared.state import state
 
 logger = logging.getLogger(__name__)
 
-SPECIAL_PIDS = {"__host__", "__overlay__"}
+SPECIAL_PIDS = {"__host__"}
 
 
 def participant_ids() -> list[str]:
@@ -132,20 +132,8 @@ async def _send_to_special(key: str, message: dict):
 
 
 async def send_to_host(message: dict):
-    """Send to __host__ and __overlay__."""
-    msg = json.dumps(message) if isinstance(message, dict) else message
-    for special in ("__host__", "__overlay__"):
-        ws = state.participants.get(special)
-        if ws:
-            try:
-                await ws.send_text(msg)
-            except Exception:
-                state.participants.pop(special, None)
-
-
-async def send_emoji_to_overlay(emoji: str):
-    """Forward an emoji reaction to the overlay client if connected."""
-    await _send_to_special("__overlay__", {"type": "emoji_reaction", "emoji": emoji})
+    """Send to __host__."""
+    await _send_to_special("__host__", message)
 
 
 async def send_emoji_to_host(emoji: str):

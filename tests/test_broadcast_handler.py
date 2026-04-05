@@ -24,15 +24,13 @@ class TestHandleBroadcast:
         assert sent["words"] == {"hello": 1}
 
     @pytest.mark.anyio
-    async def test_skips_host_and_overlay(self):
+    async def test_skips_host(self):
         participant_ws = AsyncMock()
         host_ws = AsyncMock()
-        overlay_ws = AsyncMock()
         mock_state = MagicMock()
         mock_state.participants = {
             "uuid1": participant_ws,
             "__host__": host_ws,
-            "__overlay__": overlay_ws,
         }
 
         with patch("railway.features.ws.router.state", mock_state):
@@ -40,7 +38,6 @@ class TestHandleBroadcast:
 
         participant_ws.send_text.assert_called_once()
         host_ws.send_text.assert_not_called()
-        overlay_ws.send_text.assert_not_called()
 
     @pytest.mark.anyio
     async def test_handles_dead_connections(self):
