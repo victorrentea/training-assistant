@@ -2,7 +2,7 @@
 
 from prometheus_client import Counter, Gauge, Histogram
 
-# WebSocket connections (host, overlay, participant)
+# WebSocket connections (host, participant)
 ws_connections_active = Gauge(
     "ws_connections_active",
     "Currently open WebSocket connections",

@@ -13,7 +13,7 @@ MSG_DAEMON_PING = "daemon_ping"
 # --- Generic broadcast (daemon → all participants via backend) ---
 MSG_BROADCAST = "broadcast"
 
-# --- Send to host/overlay only (daemon → backend → host/overlay) ---
+# --- Send to host only (daemon → backend → host) ---
 MSG_SEND_TO_HOST = "send_to_host"
 
 # --- Proxy (bidirectional) ---
