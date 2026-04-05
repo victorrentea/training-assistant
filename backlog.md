@@ -1,5 +1,6 @@
 # Tasks
 
+- [x] ui tweak: on feedback submit, close input dialog immediately and show a persistent `Sending...` bubble until request completes, then switch to success/error.
 - [x] follow-up bugfix: feedback email now prioritizes participant name sent by frontend payload (`participant_name`), with cache/UUID fallback.
 - [x] ui tweak: participant feedback toast (`Sent!` / error) now appears on the left side near the feedback action button area.
 - [x] follow-up bugfix: feedback email now includes participant display name (not UUID) and resolves current session name via session-stack fallback when misc cache is empty.

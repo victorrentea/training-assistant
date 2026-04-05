@@ -749,6 +749,8 @@ ${html}
     const ta = document.getElementById('feedback-textarea');
     const text = ta ? ta.value.trim() : '';
     if (!text || !ws) return;
+    closeFeedbackModal();
+    const pendingToast = showFeedbackPendingToast();
     try {
       const resp = await fetch(apiBase + '/api/participant/misc/feedback', {
         method: 'POST',
@@ -756,11 +758,10 @@ ${html}
         body: JSON.stringify({ text, participant_name: myName || '' }),
       });
       if (!resp.ok) throw new Error(`feedback_submit_failed_${resp.status}`);
-      closeFeedbackModal();
-      showFeedbackToast('Sent!');
+      showFeedbackToast('Sent!', false, pendingToast);
     } catch (err) {
       console.error('Feedback submit failed:', err);
-      showFeedbackToast('Could not send. Please retry.', true);
+      showFeedbackToast('Could not send. Please retry.', true, pendingToast);
     }
   }
 
@@ -773,12 +774,23 @@ ${html}
     setTimeout(() => toast.remove(), 1500);
   }
 
-  function showFeedbackToast(message, isError = false) {
+  function showFeedbackPendingToast() {
     const toast = document.createElement('div');
+    toast.textContent = 'Sending...';
+    toast.style.cssText = 'position:fixed;bottom:3.5rem;left:.75rem;background:var(--muted,#6b7280);color:#fff;padding:.4rem .9rem;border-radius:8px;font-weight:600;font-size:.85rem;z-index:9999;opacity:1;transition:opacity .5s;';
+    document.body.appendChild(toast);
+    return toast;
+  }
+
+  function showFeedbackToast(message, isError = false, existingToast = null) {
+    const toast = existingToast || document.createElement('div');
     toast.textContent = message;
     const bg = isError ? 'var(--danger, #f44336)' : 'var(--accent)';
-    toast.style.cssText = `position:fixed;bottom:3.5rem;left:.75rem;background:${bg};color:#fff;padding:.4rem .9rem;border-radius:8px;font-weight:600;font-size:.85rem;z-index:9999;opacity:1;transition:opacity .5s;`;
-    document.body.appendChild(toast);
+    toast.style.background = bg;
+    if (!existingToast) {
+      toast.style.cssText = `position:fixed;bottom:3.5rem;left:.75rem;background:${bg};color:#fff;padding:.4rem .9rem;border-radius:8px;font-weight:600;font-size:.85rem;z-index:9999;opacity:1;transition:opacity .5s;`;
+      document.body.appendChild(toast);
+    }
     setTimeout(() => { toast.style.opacity = '0'; }, 1200);
     setTimeout(() => toast.remove(), 1800);
   }
