@@ -26,6 +26,7 @@
   let _sessionIntervalsDraft = '';
   let _sessionIntervalsError = '';
   let _slidesCacheStatus = {};
+  let _slidesCatalog = [];
   let _currentSessionId = null;
   let _joinBaseUrl = null;   // set from state.join_base_url (daemon config URL)
   let _slidesCatalogHideTimer = null;
@@ -200,6 +201,7 @@
         .then(r => r.json())
         .then(state => { state.type = 'state'; handleWSMessage(state); })
         .catch(err => console.error('Failed to fetch host state:', err));
+      _refreshHostSlidesCatalog().catch(() => {});
     };
     ws.onclose = () => { setBadge(false); if (!_kicked) setTimeout(connectWS, 3000); };
     ws.onmessage = (e) => {
@@ -383,8 +385,19 @@
       } else if (msg.type === 'summary') {
         updateSummary(msg.points, msg.updated_at);
       } else if (msg.type === 'slides_cache_status') {
-        _slidesCacheStatus = msg.slides_cache_status || {};
+        const legacyMap = (msg.slides_cache_status && typeof msg.slides_cache_status === 'object')
+          ? msg.slides_cache_status
+          : {};
+        const embeddedMap = _buildSlidesCacheStatusMapFromSlides(msg.slides || []);
+        _slidesCacheStatus = { ...embeddedMap, ...legacyMap };
+        if (Array.isArray(msg.slides) && msg.slides.length) {
+          _slidesCatalog = msg.slides;
+        }
         _renderSlidesCatalogPopover();
+      } else if (msg.type === 'slides_updated') {
+        _refreshHostSlidesCatalog().catch(() => {});
+      } else if (msg.type === 'slides_catalog_changed') {
+        _refreshHostSlidesCatalog().catch(() => {});
       } else if (msg.type === 'vote_update') {
         voteCounts = msg.vote_counts || {};
         totalVotes = msg.total_votes || 0;
@@ -974,10 +987,51 @@
     el.style.color = cost > 3 ? 'var(--danger)' : cost > 1 ? 'var(--warn)' : 'var(--muted)';
   }
 
+  function _buildSlidesCacheStatusMapFromSlides(slides) {
+    const map = {};
+    for (const slide of (Array.isArray(slides) ? slides : [])) {
+      if (!slide || typeof slide !== 'object') continue;
+      const slug = String(slide.slug || '').trim();
+      if (!slug) continue;
+      const status = String(slide.status || '').trim() || 'not_cached';
+      const entry = { status };
+      if (slide.size_bytes != null) entry.size_bytes = slide.size_bytes;
+      if (slide.downloaded_at) entry.downloaded_at = slide.downloaded_at;
+      if (slide.error) entry.error = slide.error;
+      if (slide.title) entry.title = slide.title;
+      if (slide.name) entry.name = slide.name;
+      map[slug] = entry;
+    }
+    return map;
+  }
+
+  async function _refreshHostSlidesCatalog() {
+    try {
+      const res = await fetch(`/${SESSION_ID}/api/slides`, { cache: 'no-store' });
+      if (!res.ok) return;
+      const data = await res.json();
+      _slidesCatalog = Array.isArray(data.slides) ? data.slides : [];
+      const embeddedMap = _buildSlidesCacheStatusMapFromSlides(_slidesCatalog);
+      const legacyMap = (data.cache_status && typeof data.cache_status === 'object')
+        ? data.cache_status
+        : {};
+      _slidesCacheStatus = { ...embeddedMap, ...legacyMap };
+      _renderSlidesCatalogPopover();
+    } catch (_) {
+      // Keep previous host slides catalog state on transient fetch errors.
+    }
+  }
+
   function _renderSlidesCatalogPopover() {
     const el = document.getElementById('slides-catalog-content');
     if (!el) return;
-    const entries = Object.values(_slidesCacheStatus);
+    const baseEntries = Array.isArray(_slidesCatalog)
+      ? _slidesCatalog.map((slide) => {
+          const bySlug = _slidesCacheStatus[String(slide?.slug || '').trim()] || {};
+          return { ...slide, ...bySlug };
+        })
+      : [];
+    const entries = baseEntries.length ? baseEntries : Object.values(_slidesCacheStatus);
 
     const countEl = document.getElementById('slides-catalog-count');
     if (countEl) countEl.textContent = entries.length ? ' ' + entries.length : '';
@@ -1004,7 +1058,7 @@
 
     for (const entry of entries) {
       const cfg = statusConfig[entry.status] || statusConfig['not_cached'];
-      const title = entry.title || entry.slug || '';
+      const title = entry.title || entry.name || entry.slug || '';
       const sizePart = entry.size_bytes ? (entry.size_bytes / 1048576).toFixed(1) + ' MB' : '';
       const agePart = entry.downloaded_at ? _formatSlideAge(entry.downloaded_at)
                     : entry.updated_at    ? 'pptx ' + _formatSlideAge(entry.updated_at)

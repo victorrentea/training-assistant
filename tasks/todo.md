@@ -23,6 +23,20 @@
 
 - Proof: `pytest -q tests/daemon/test_participant_router.py`
 
+## Direct request: embed slide cache status per slide entry
+
+- [x] Update `GET /api/slides` response shaping to include cache `status` directly in each `slides[]` entry
+- [x] Update participant + host UI consumers to use embedded slide status
+- [x] Update async payload/docs for `slides_cache_status` and API docs in `apis.md`
+- [x] Run targeted slides tests and record outcome
+
+## Follow-up: same shape on daemon host endpoint + host WS slide updates
+
+- [x] Return embedded slide status from daemon `/{session_id}/api/slides` (host-side endpoint too)
+- [x] Extend host WS handling for `slides_updated` and `slides_catalog_changed` refresh behavior
+- [x] Sync WS models/specs for slide update events on host and participant channels
+- [x] Run targeted daemon/host slides checks and WS contract tests
+
 ## Backlog item: GH#67 participant slides viewer (PDF)
 
 - [x] Add backend slide metadata endpoint `GET /api/slides`
@@ -364,3 +378,13 @@
 - Verified with `pytest -q tests/test_slides_api.py` (8 passed).
 - Verified with `pytest -q tests/test_main.py -k "slides"` (4 passed, 120 deselected).
 - Added detection log line in daemon: `✏️ppt update detected => regenerating ppf: <file>`.
+- Direct request done: `/api/slides` now returns `slides[]` with embedded cache status fields per entry (`status`, `size_bytes`, `downloaded_at`) instead of relying on separate client-side joins.
+- Host and participant UIs now consume embedded status; host footer catalog repopulates from `GET /api/slides` on WS connect/reconnect.
+- Async/API docs updated: `apis.md`, `docs/participant-ws.yaml`, `docs/host-ws.yaml`, plus architecture sequence in `ARCHITECTURE.md`.
+- Verified with `python3 -m pytest -q tests/features/slides/test_router.py -k "api_slides_returns_ok_when_daemon_offline or api_slides_embeds_status_per_slide"` (2 passed) and `python3 -m pytest -q tests/features/slides/test_cache.py` (5 passed).
+- Frontend syntax checks: `node --check static/participant.js` and `node --check static/host.js`.
+- Follow-up implemented: daemon `/{sid}/api/slides` now returns slides with embedded cache status fields (same shape used by Railway participant endpoint).
+- Follow-up implemented: host WS now handles `slides_updated` and `slides_catalog_changed` by refreshing catalog from `GET /api/slides`, mirroring participant behavior.
+- WS contracts synced in `daemon/ws_messages.py`, `docs/participant-ws.yaml`, and `docs/host-ws.yaml`.
+- Verified with `python3 -m pytest -q tests/daemon/slides/test_slides_check.py` (5 passed), `python3 -m pytest -q tests/features/slides/test_router.py -k api_slides_embeds_status_per_slide` (1 passed), and `node --check static/host.js`.
+- Note: `python3 -m pytest -q tests/daemon/test_ws_contract.py` has one existing unrelated failure in `TestNoRawWsSends` (`participant/router.py` uses `send_to_host`).

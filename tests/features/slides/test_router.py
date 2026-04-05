@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 
 from fastapi.testclient import TestClient
 from fastapi.responses import JSONResponse
+from fastapi.responses import Response
 
 from railway.app import app, state
 
@@ -316,7 +317,7 @@ def test_api_slides_returns_ok_when_daemon_offline(monkeypatch, tmp_path):
     from unittest.mock import AsyncMock, MagicMock, patch
     mock_response = MagicMock()
     mock_response.status_code = 503
-    with patch("railway.features.slides.router.proxy_to_daemon", new_callable=AsyncMock, return_value=mock_response):
+    with patch("railway.features.ws.proxy_bridge.proxy_to_daemon", new_callable=AsyncMock, return_value=mock_response):
         client = TestClient(app)
         resp = client.get(f"/{state.session_id}/api/slides")
 
@@ -324,12 +325,11 @@ def test_api_slides_returns_ok_when_daemon_offline(monkeypatch, tmp_path):
     body = resp.json()
     assert body["slides"] == []
 
-
 def test_api_slides_check_proxies_to_daemon_with_participant_id():
     from unittest.mock import AsyncMock, patch
 
     mock_response = JSONResponse({"status": "cached"}, status_code=200)
-    with patch("railway.features.slides.router.proxy_to_daemon", new_callable=AsyncMock, return_value=mock_response) as mock_proxy:
+    with patch("railway.features.ws.proxy_bridge.proxy_to_daemon", new_callable=AsyncMock, return_value=mock_response) as mock_proxy:
         client = TestClient(app)
         resp = client.get(
             f"/{state.session_id}/api/slides/check/demo",
@@ -349,12 +349,40 @@ def test_api_slides_check_propagates_non_200_status():
     from unittest.mock import AsyncMock, patch
 
     mock_response = JSONResponse({"status": "timeout"}, status_code=503)
-    with patch("railway.features.slides.router.proxy_to_daemon", new_callable=AsyncMock, return_value=mock_response):
+    with patch("railway.features.ws.proxy_bridge.proxy_to_daemon", new_callable=AsyncMock, return_value=mock_response):
         client = TestClient(app)
         resp = client.get(f"/{state.session_id}/api/slides/check/demo")
 
     assert resp.status_code == 503
     assert resp.json() == {"status": "timeout"}
+
+
+def test_api_slides_embeds_status_per_slide(monkeypatch):
+    async def _fake_proxy(**_kwargs):
+        return Response(
+            content=json.dumps(
+                {
+                    "slides": [
+                        {"slug": "reactive", "title": "Reactive/WebFlux", "drive_export_url": "https://example/export.pdf"},
+                    ],
+                    "cache_status": {
+                        "reactive": {"status": "cached", "size_bytes": 1234},
+                    },
+                }
+            ),
+            status_code=200,
+            media_type="application/json",
+        )
+
+    monkeypatch.setattr("railway.features.ws.proxy_bridge.proxy_to_daemon", _fake_proxy)
+    client = TestClient(app)
+    resp = client.get(f"/{state.session_id}/api/slides")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert "cache_status" not in body
+    assert body["slides"][0]["slug"] == "reactive"
+    assert body["slides"][0]["status"] == "cached"
+    assert body["slides"][0]["size_bytes"] == 1234
 
 
 def test_api_slides_respects_catalog_order_for_topics(monkeypatch, tmp_path):

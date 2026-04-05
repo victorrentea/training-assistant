@@ -220,6 +220,8 @@ Host posts a provocative statement (e.g. "Microservices are always a mistake for
 - [x] Follow-up GH#67 (UX): removed manual refresh icon from participant Slides preview header; auto-refresh loop remains active while modal is open.
 - [x] Follow-up GH#67 (bugfix): filtered non-displayable slide names (blank/punctuation-only) in backend/frontend to avoid empty entries in participant Slides dropdown.
 - [x] Follow-up GH#67 (production bootstrap): added host-auth slide PDF upload endpoint and server-backed slide storage so production can be populated without relying on local trainer filesystem paths.
+- [x] Direct request: `/api/slides` now embeds cache status per slide entry (`slides[].status`) for both participant and host consumers; docs updated in `apis.md` and AsyncAPI specs.
+- [x] Follow-up: daemon host-side `/{sid}/api/slides` now uses the same embedded-status shape, and host UI now listens to `slides_updated` / `slides_catalog_changed` WS events to refresh catalog like participant UI.
 - [ ] can daemon REPLACE the last line with a new one isntead of appending lines that log time spent -- they pollute the daemon log. so  22:44:44.1 75888  [intellij  ] info    Git +5s: java-memory @ main (total: 70s) wouldchange to ... total: 75s)
 
 

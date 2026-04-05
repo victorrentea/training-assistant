@@ -51,9 +51,11 @@ session_name: str | null         # display name
 
 | Method | Path | Body | Response |
 |--------|------|------|----------|
-| GET | `/{sid}/api/slides` | — | `{slides[], cache_status: {slug→{status, size_bytes}}}` — daemon is source of truth; each deck includes `size_mb: float` |
+| GET | `/{sid}/api/slides` | — | `{slides[]}` where each slide embeds cache fields directly (e.g. `{slug, title/name, drive_export_url, status, size_bytes, downloaded_at}`); daemon is source of truth |
 | GET | `/{sid}/api/slides/check/{slug}` | — | 200 OK (PDF is fresh and on Railway disk) or 503 (timed out after 30s) — participant MUST call this before downloading |
 | GET | `/{sid}/api/slides/download/{slug}` | — | PDF binary served directly by Railway from disk (max 100MB) — only call after /check returns 200 |
+
+The same `GET /{sid}/api/slides` shape is used by host UI (via daemon host server), with cache fields embedded per slide entry.
 
 `/check` flow: daemon responds 200 immediately if PDF is fresh; otherwise sends `download_pdf` to Railway via WS and holds the response open until Railway confirms download complete (or 30s → 503). Participant shows "Retry" on 503 — no auto-retry. If Railway finishes after the timeout, daemon still receives `pdf_download_complete` and broadcasts `slides_cache_status` to all participants — participant UI clears the "Retry" state and shows the green cached indicator automatically.
 
@@ -61,13 +63,22 @@ Current slide is included in the initial state from `GET /{sid}/api/participant/
 
 **Daemon → Participant Browser WS:**
 - `slides_current` — `{slides_current}` — when host navigates slides
-- `slides_cache_status` — `{slides_cache_status: {slug→{status, size_bytes}}}` — download progress updates
+- `slides_cache_status` — `{slides[]}` where each slide embeds `status` (+ cache fields); for backward compatibility Railway may also include `slides_cache_status` map in the same event
+- `slides_updated` / `slides_catalog_changed` — participant refreshes slide catalog from `GET /api/slides`
 
 ### Host
 **Host Browser → Daemon REST:**
-Slides managed via daemon's session tooling, not direct host REST calls.
 
-**Daemon → Host Browser WS:** (none relevant)
+| Method | Path | Body | Response |
+|--------|------|------|----------|
+| GET | `/{sid}/api/slides` | — | `{slides[]}` with embedded cache fields per slide entry (`status`, `size_bytes`, `downloaded_at`) |
+| GET | `/{sid}/api/slides/download/{slug}` | — | PDF binary served from Railway cache/disk (same semantics as participant download endpoint) |
+
+Host uses the same slides list contract as participant (embedded cache fields in each slide item).
+
+**Daemon → Host Browser WS:**
+- `slides_cache_status` — `{slides[]}` where each slide embeds `status` (+ cache fields)
+- `slides_updated` / `slides_catalog_changed` — host refreshes slide catalog from `GET /api/slides`
 
 ### Internal: Daemon ↔ Railway WS messages
 

@@ -65,9 +65,41 @@ def _cache_path(slug: str) -> Path:
     return CACHE_DIR / f"{slug}.pdf"
 
 
+def _slides_with_embedded_cache_status() -> list[dict]:
+    """Build slides list where cache status fields are embedded per slide."""
+    status_map = state.slides_cache_status if isinstance(state.slides_cache_status, dict) else {}
+    slides = state.slides if isinstance(state.slides, list) else []
+    merged: list[dict] = []
+    seen_slugs: set[str] = set()
+
+    for raw in slides:
+        if not isinstance(raw, dict):
+            continue
+        entry = dict(raw)
+        slug = str(entry.get("slug", "")).strip()
+        if slug and slug in status_map and isinstance(status_map[slug], dict):
+            entry.update(status_map[slug])
+            seen_slugs.add(slug)
+        if "status" not in entry:
+            entry["status"] = "not_cached"
+        merged.append(entry)
+
+    for slug, status_entry in status_map.items():
+        if slug in seen_slugs or not isinstance(status_entry, dict):
+            continue
+        merged.append({"slug": slug, **status_entry})
+    return merged
+
+
 async def broadcast_slides_cache_status() -> None:
-    """Broadcast slides_cache_status as a dedicated message (separate from full state)."""
-    await broadcast({"type": "slides_cache_status", "slides_cache_status": state.slides_cache_status})
+    """Broadcast cache status update with embedded slide statuses."""
+    await broadcast(
+        {
+            "type": "slides_cache_status",
+            "slides": _slides_with_embedded_cache_status(),
+            "slides_cache_status": state.slides_cache_status,
+        }
+    )
 
 
 # ---------------------------------------------------------------------------

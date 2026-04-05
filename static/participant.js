@@ -1805,6 +1805,32 @@ ${html}
     return normalized;
   }
 
+  function _buildSlidesCacheStatusMapFromSlides(slides) {
+    const map = {};
+    for (const slide of (Array.isArray(slides) ? slides : [])) {
+      if (!slide || typeof slide !== 'object') continue;
+      const slug = String(slide.slug || '').trim();
+      if (!slug) continue;
+      const status = String(slide.status || '').trim() || 'not_cached';
+      const entry = { status };
+      if (slide.size_bytes != null) entry.size_bytes = slide.size_bytes;
+      if (slide.downloaded_at) entry.downloaded_at = slide.downloaded_at;
+      if (slide.error) entry.error = slide.error;
+      map[slug] = entry;
+    }
+    return map;
+  }
+
+  function _applySlidesCacheStatus(statusMap) {
+    _slidesCacheStatus = (statusMap && typeof statusMap === 'object') ? statusMap : {};
+    if (!slidesCatalog.length) return;
+    slidesCatalog = slidesCatalog.map((slide) => {
+      const entry = _slidesCacheStatus[slide.slug];
+      if (!entry || typeof entry !== 'object') return slide;
+      return { ...slide, ...entry };
+    });
+  }
+
   function _renderSlidesMeta(slide) {
     _syncSlidesPageControls(slide || null);
     _markSelectedSlideInList();
@@ -1888,7 +1914,7 @@ ${html}
       item.appendChild(badge);
     }
     // Status indicator — spinner while loading, dot once done
-    const _cacheEntry = (_slidesCacheStatus || {})[slide.slug];
+    const _cacheEntry = slide?.status ? slide : (_slidesCacheStatus || {})[slide.slug];
     if (_cacheEntry && _cacheEntry.status) {
       const _dotCfg = {
         'cached':          { color: '#4caf50', tip: 'Available on server' },
@@ -2266,7 +2292,9 @@ ${html}
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       slidesCatalog = _normalizeSlidesCatalog(data.slides);
-      _slidesCacheStatus = data.cache_status || {};
+      const embeddedStatus = _buildSlidesCacheStatusMapFromSlides(slidesCatalog);
+      const legacyStatus = (data.cache_status && typeof data.cache_status === 'object') ? data.cache_status : {};
+      _applySlidesCacheStatus({ ...embeddedStatus, ...legacyStatus });
       _initSlidesCatalogBaseline(slidesCatalog);
       if (!slidesCatalog.length) {
         _renderSlidesList(null);
@@ -2897,7 +2925,11 @@ const sessionTitleEl = document.getElementById('session-title');
         updateNotes(msg.notes_content);
         break;
       case 'slides_cache_status':
-        _slidesCacheStatus = msg.slides_cache_status || {};
+        _applySlidesCacheStatus(
+          (msg.slides_cache_status && typeof msg.slides_cache_status === 'object')
+            ? msg.slides_cache_status
+            : _buildSlidesCacheStatusMapFromSlides(msg.slides || [])
+        );
         if (document.getElementById('slides-list')) _renderSlidesList(slidesSelectedId || null);
         break;
       case 'leaderboard_revealed': {

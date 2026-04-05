@@ -52,6 +52,25 @@ def test_check_returns_200_when_cached(client, fresh_misc_state):
     assert resp.json()["status"] == "cached"
 
 
+def test_list_slides_embeds_cache_status(client, fresh_misc_state):
+    fresh_misc_state.slides_catalog = {
+        "reactive": {
+            "slug": "reactive",
+            "title": "Reactive/WebFlux",
+            "drive_export_url": "https://docs.google.com/presentation/d/abc/export/pdf",
+        }
+    }
+    fresh_misc_state.slides_cache_status["reactive"] = {"status": "cached", "size_bytes": 42}
+
+    resp = client.get("/test-session/api/slides")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert "cache_status" not in body
+    assert body["slides"][0]["slug"] == "reactive"
+    assert body["slides"][0]["status"] == "cached"
+    assert body["slides"][0]["size_bytes"] == 42
+
+
 def test_check_triggers_download_and_returns_200_on_success(fresh_misc_state, monkeypatch):
     """Not cached: triggers download, resolves future with 'ok' → 200."""
     # Mock send_to_railway to do nothing but record the call

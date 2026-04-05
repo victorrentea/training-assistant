@@ -824,8 +824,13 @@ end note
 
 == 9. Slide Loading Flow ==
 
+P -> B : GET /api/slides
+B --> P : HTTP 200 {slides:[{slug, title, drive_export_url, status, ...}]}
+
 P -> B : GET /api/slides/check/{slug}
 B --> D : WS proxy_request (GET /{sid}/api/slides/check/{slug})
+
+P -> B : GET /api/slides/file/{slug}
 
 alt PDF already cached
   D --> B : WS proxy_response (200)
@@ -847,6 +852,8 @@ P -> B : GET /api/slides/download/{slug}
 B --> P : HTTP 200 (PDF bytes)
 
 P -> P : PDF.js renders in iframe
+B --> P : WS slides_cache_status {slides:[{slug, status, ...}]}
+B --> H : WS slides_cache_status {slides:[{slug, status, ...}]}
 
 == 10. Follow Trainer (Slides) ==
 
