@@ -76,5 +76,18 @@ class MiscState:
             "paste_texts": {k: list(v) for k, v in self.paste_texts.items()},
         }
 
+    def reset_for_new_session(self) -> None:
+        """Reset session-scoped misc runtime state when a new session starts."""
+        with self._lock:
+            self.paste_texts.clear()
+            self.notes_content = None
+            self.summary_points = []
+            self.summary_raw_markdown = None
+            self.summary_updated_at = None
+            self.slides_cache_status.clear()
+            self.slides_current = None
+            self.session_main = None
+            self.session_name = None
+
 
 misc_state = MiscState()

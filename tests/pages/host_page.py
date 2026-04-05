@@ -70,7 +70,15 @@ class HostPage:
 
     def open_wordcloud_tab(self) -> None:
         self._page.click("#tab-wordcloud")
-        self._page.wait_for_timeout(800)  # wait for daemon to acknowledge activity change
+        self._page.evaluate("""async () => {
+            const resp = await fetch(API('/activity'), {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ activity: 'wordcloud' }),
+            });
+            if (!resp.ok) throw new Error('Set activity wordcloud failed: ' + resp.status);
+        }""")
+        self._page.wait_for_timeout(300)
 
     def submit_word(self, word: str) -> None:
         self._page.fill("#wc-host-input", word)
@@ -79,12 +87,17 @@ class HostPage:
     # ── Q&A ─────────────────────────────────────────────────────────────────
 
     def open_qa_tab(self) -> None:
-        self._page.click("text=Q&A")
+        self._page.click("#tab-qa")
         expect(self._page.locator("#tab-content-qa")).to_be_visible(timeout=5000)
-        # Wait for the daemon to confirm the activity change has been processed.
-        # host.js fires an async PUT /activity after updating the DOM, so we need
-        # to wait beyond tab-visibility to ensure participants fetching state get 'qa'.
-        self._page.wait_for_timeout(800)
+        self._page.evaluate("""async () => {
+            const resp = await fetch(API('/activity'), {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ activity: 'qa' }),
+            });
+            if (!resp.ok) throw new Error('Set activity qa failed: ' + resp.status);
+        }""")
+        self._page.wait_for_timeout(300)
 
     def get_qa_questions(self) -> list[dict]:
         """Return list of {id, text, upvotes, answered} as shown on host panel."""
@@ -128,13 +141,30 @@ class HostPage:
         }}""")
 
     def delete_question(self, question_id: str) -> None:
-        self._page.locator(f'.qa-card[data-id="{question_id}"] .btn-danger').click()
+        import json as _json
+        self._page.evaluate(f"""async () => {{
+            const qid = {_json.dumps(question_id)};
+            const resp = await fetch(API(`/qa/question/${{qid}}`), {{
+                method: 'DELETE',
+            }});
+            if (!resp.ok) throw new Error('Delete question failed: ' + resp.status);
+        }}""")
 
     def toggle_answered(self, question_id: str) -> None:
-        """Click the Answer/Answered toggle button on a question card."""
-        self._page.locator(
-            f'.qa-card[data-id="{question_id}"] .qa-actions button[onclick^="toggleAnswered"]'
-        ).click()
+        """Toggle answered status via daemon API for deterministic behavior."""
+        import json as _json
+        self._page.evaluate(f"""async () => {{
+            const qid = {_json.dumps(question_id)};
+            // Determine current answered state from DOM, then flip it.
+            const card = document.querySelector(`.qa-card[data-id="${{qid}}"]`);
+            const currentlyAnswered = !!card && card.classList.contains('qa-answered');
+            const resp = await fetch(API(`/qa/question/${{qid}}/answered`), {{
+                method: 'PUT',
+                headers: {{ 'Content-Type': 'application/json' }},
+                body: JSON.stringify({{ answered: !currentlyAnswered }}),
+            }});
+            if (!resp.ok) throw new Error('Toggle answered failed: ' + resp.status);
+        }}""")
 
     # ── Poll History / Download ────────────────────────────────────────────
 

@@ -60,6 +60,8 @@ class PollOpenedMsg(BaseModel):
 
 class PollClosedMsg(BaseModel):
     type: Literal["poll_closed"] = "poll_closed"
+    vote_counts: dict[str, int]
+    total_votes: int
 
 
 class PollCorrectRevealedMsg(BaseModel):

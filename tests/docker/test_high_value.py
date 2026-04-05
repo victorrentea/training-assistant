@@ -174,26 +174,8 @@ def test_paste_text_visible_to_host():
         }""")
         pax_page.wait_for_timeout(500)
 
-        # Check daemon's authoritative paste state (host.js has no paste_received WS handler
-        # so we can't reliably check the host browser DOM — check daemon REST state instead)
-        def _daemon_has_paste():
-            try:
-                req = urllib.request.Request(
-                    f"{DAEMON_BASE}/api/{session_id}/host/pastes",
-                    headers={"Authorization": f"Basic {base64.b64encode(f'{HOST_USER}:{HOST_PASS}'.encode()).decode()}"},
-                )
-                with urllib.request.urlopen(req, timeout=5) as resp:
-                    data = json.loads(resp.read())
-                    pastes = data.get("pastes", {})
-                    return any(len(entries) > 0 for entries in pastes.values())
-            except Exception:
-                return False
-
-        _await_condition(
-            _daemon_has_paste,
-            timeout_ms=5000,
-            msg="Daemon did not record paste"
-        )
+        # Host UI should update live (no reload) and render the clipboard icon.
+        expect(host_page.locator("#pax-list .paste-icon")).to_be_visible(timeout=8000)
 
         print("SUCCESS: Paste text visible to host!")
         browser.close()
@@ -554,33 +536,7 @@ def test_participant_count_updates():
             pax.join(name)
             paxes.append(pax)
 
-            # Host should see the participant in daemon state
-            _await_condition(
-                lambda n=name: daemon_has_participant(session_id, n),
-                timeout_ms=5000,
-                msg=f"Host didn't see participant '{name}'"
-            )
-
-        # Verify daemon state records all 3 participants
-        # (Railway doesn't forward participant_registered write_back events to host browser,
-        # so #pax-count DOM check is unreliable — check daemon REST state instead)
-        def _daemon_has_all_three():
-            try:
-                req = urllib.request.Request(
-                    f"{DAEMON_BASE}/api/{session_id}/host/state",
-                    headers={"Authorization": f"Basic {base64.b64encode(f'{HOST_USER}:{HOST_PASS}'.encode()).decode()}"},
-                )
-                with urllib.request.urlopen(req, timeout=5) as resp:
-                    data = json.loads(resp.read())
-                    return data.get("participant_count", 0) >= 3
-            except Exception:
-                return False
-
-        _await_condition(
-            _daemon_has_all_three,
-            timeout_ms=5000,
-            msg="Daemon participant count didn't reach 3"
-        )
+            expect(host_page.locator("#pax-count")).to_have_text(str(len(paxes)), timeout=8000)
 
         print("SUCCESS: Participant count updates on host!")
         browser.close()

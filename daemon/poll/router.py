@@ -106,8 +106,12 @@ async def close_poll():
         return JSONResponse({"error": "No poll"}, status_code=400)
 
     result = poll_state.close_poll()
-    broadcast(PollClosedMsg())
-    await notify_host(PollClosedMsg())
+    closed_msg = PollClosedMsg(
+        vote_counts=result["vote_counts"],
+        total_votes=result["total_votes"],
+    )
+    broadcast(closed_msg)
+    await notify_host(closed_msg)
     return JSONResponse({"ok": True, **result})
 
 

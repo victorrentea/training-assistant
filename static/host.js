@@ -357,7 +357,7 @@
           renderHostWordCloud(msg.wordcloud_words || {});
         }
         if (currentActivity === 'qa') {
-          renderQAList(msg.qa_questions || []);
+          renderQAList(normalizeHostQAQuestions(msg.qa_questions || []));
         }
         if (currentActivity === 'codereview' && msg.codereview) {
           renderHostCodeReview(msg.codereview);
@@ -392,8 +392,10 @@
         }
         _renderSlidesCatalogPopover();
       } else if (msg.type === 'vote_update') {
-        voteCounts = msg.vote_counts || {};
-        totalVotes = msg.total_votes || 0;
+        voteCounts = msg.vote_counts || msg.votes || {};
+        totalVotes = (msg.total_votes !== undefined && msg.total_votes !== null)
+          ? msg.total_votes
+          : Object.values(voteCounts).reduce((a, b) => a + (Number(b) || 0), 0);
         renderBars();
       } else if (msg.type === 'participant_list_updated') {
         ingestParticipants(msg.participants || []);
@@ -442,9 +444,45 @@
         renderOverlayStatus(msg.overlay_connected);
       } else if (msg.type === 'emoji_reaction') {
         showHostEmoji(msg.emoji);
+      } else if (msg.type === 'paste_received') {
+        const pid = msg.uuid;
+        if (pid) {
+          if (!participantDataById[pid]) {
+            participantDataById[pid] = { uuid: pid, name: 'Unknown', score: 0 };
+          }
+          const entries = Array.isArray(participantDataById[pid].paste_texts)
+            ? participantDataById[pid].paste_texts
+            : [];
+          const alreadyPresent = entries.some((e) => String(e.id) === String(msg.id));
+          if (!alreadyPresent) {
+            entries.push({ id: msg.id, text: msg.text || '' });
+            participantDataById[pid].paste_texts = entries;
+          }
+          if (!cachedParticipantIds.includes(pid)) {
+            cachedParticipantIds.push(pid);
+          }
+          renderParticipantList(cachedParticipantIds);
+        }
       } else if (msg.type === 'qa_updated') {
-        renderQAList(msg.questions || []);
+        renderQAList(normalizeHostQAQuestions(msg.questions || []));
       }
+  }
+
+  function normalizeHostQAQuestions(questions) {
+    return (questions || []).map((q) => {
+      const upvoteCount = (q.upvote_count !== undefined && q.upvote_count !== null)
+        ? q.upvote_count
+        : Array.isArray(q.upvoter_uuids)
+          ? q.upvoter_uuids.length
+          : Array.isArray(q.upvoters)
+            ? q.upvoters.length
+            : 0;
+      return {
+        ...q,
+        author: q.author || q.author_name || 'Unknown',
+        upvote_count: upvoteCount,
+      };
+    });
   }
 
   function showHostEmoji(emoji) {

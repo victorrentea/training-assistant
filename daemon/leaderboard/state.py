@@ -8,6 +8,9 @@ class LeaderboardState:
     def show(self, entries: list[dict], total_participants: int):
         self.data = {"entries": entries, "total_participants": total_participants}
 
+    def reset(self):
+        self.data = None
+
 
 # Module-level singleton
 leaderboard_state = LeaderboardState()
