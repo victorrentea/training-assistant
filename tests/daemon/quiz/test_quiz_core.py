@@ -618,15 +618,15 @@ class TestServerHelpers:
     @pytest.fixture(autouse=True)
     def _setup_ws_client(self):
         """Set up a mock ws_client for all tests in this class."""
-        import daemon.quiz.poll_api as poll_api
+        import daemon.ws_publish as ws_publish
         from daemon.poll.state import poll_state
         self.mock_ws = MagicMock()
         self.mock_ws.connected = True
         self.mock_ws.send = MagicMock(return_value=True)
-        poll_api._ws_client = self.mock_ws
+        ws_publish._ws_client = self.mock_ws
         poll_state.clear()
         yield
-        poll_api._ws_client = None
+        ws_publish._ws_client = None
         poll_state.clear()
 
     def test_post_poll(self, tmp_path):
