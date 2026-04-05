@@ -198,7 +198,7 @@ def _resolve_presentation_slide_target(
                 if normalized_name and normalized_name in normalized_aliases:
                     return {
                         "slug": slug,
-                        "url": f"{server_base}/api/slides/file/{slug}",
+                        "url": f"{server_base}/api/slides/download/{slug}",
                         "target_pdf": target_pdf,
                         "matched": True,
                     }
@@ -208,7 +208,7 @@ def _resolve_presentation_slide_target(
     fallback_slug = _slugify(Path(presentation_name).stem)
     return {
         "slug": fallback_slug,
-        "url": f"{server_base}/api/slides/file/{fallback_slug}",
+        "url": f"{server_base}/api/slides/download/{fallback_slug}",
         "target_pdf": f"{Path(presentation_name).stem}.pdf",
         "matched": False,
     }
