@@ -35,12 +35,17 @@ class DaemonWsClient:
         self._stop = threading.Event()
         self._thread = None
         self._handlers: dict[str, callable] = {}
+        self._inline_handlers: set[str] = set()
         self._on_connect_callbacks: list[callable] = []
         self._work_queue: queue.Queue = queue.Queue()
 
-    def register_handler(self, msg_type: str, handler: callable):
+    def register_handler(self, msg_type: str, handler: callable, *, inline: bool = False):
         """Register a handler for a backend-pushed message type."""
         self._handlers[msg_type] = handler
+        if inline:
+            self._inline_handlers.add(msg_type)
+        else:
+            self._inline_handlers.discard(msg_type)
 
     def on_connect(self, callback: callable):
         """Register a callback invoked on each (re)connect. Runs on WS thread."""
@@ -157,8 +162,15 @@ class DaemonWsClient:
                     log.info("ws-client", "Kicked by server (new daemon connected)")
                     break
                 if msg_type in self._handlers:
-                    # Enqueue for main thread processing
-                    self._work_queue.put((msg_type, data))
+                    if msg_type in self._inline_handlers:
+                        # Latency-sensitive handlers (eg. proxy_request) can run directly on WS thread.
+                        try:
+                            self._handlers[msg_type](data)
+                        except Exception as e:
+                            log.error("ws-client", f"Inline handler error for {msg_type}: {e}")
+                    else:
+                        # Enqueue for main thread processing
+                        self._work_queue.put((msg_type, data))
                 elif msg_type == "slide_log":
                     # Logging can happen on WS thread (no shared state mutation)
                     log.info("ws-client", f"slide_log: {data.get('event')} {data.get('slug')}")

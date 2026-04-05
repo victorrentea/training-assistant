@@ -34,13 +34,13 @@ async def emoji_reaction(request: Request, body: EmojiReactionRequest):
     if not emoji or len(emoji) > 4:
         return JSONResponse({"error": "Invalid emoji"}, status_code=400)
 
-    # Forward to host browser (local WS)
-    await notify_host(EmojiReactionMsg(emoji=emoji))
-
     # Forward to desktop overlay via addons bridge WS — fire and forget
     from daemon import addon_bridge_client
     sent = addon_bridge_client.send_emoji(emoji)
     if not sent:
         logger.warning("Overlay emoji drop: bridge disconnected pid=%s emoji=%r", pid, emoji)
+
+    # Forward to host browser (local WS)
+    await notify_host(EmojiReactionMsg(emoji=emoji))
 
     return OkResponse()
