@@ -1,2 +1,2 @@
 [build]
-watchPatterns = ["/railway/**", "/pyproject.toml", "/uv.lock", "/.python-version"]
+watchPatterns = ["/railway/**", "/pyproject.toml", "/uv.lock", "/.python-version", "/railway.toml"]

@@ -1,7 +1,4 @@
-"""
-Workshop Live Interaction Tool
-FastAPI + WebSocket backend
-"""
+"""Workshop Live Interaction Tool — FastAPI + WebSocket backend."""
 
 import logging
 from contextlib import asynccontextmanager
