@@ -135,26 +135,11 @@ class TestDaemonWsProtocol:
                     continue
             assert found, "Daemon did not receive sync_files on connect"
 
-    def test_slides_catalog_via_ws(self, server_url, session_id):
-        """Daemon sends slides_catalog → backend accepts it; slides endpoint responds."""
-        with ws_connect(_daemon_ws_url(server_url), additional_headers=_auth_headers()) as ws:
-            ws.send(json.dumps({
-                "type": "slides_catalog",
-                "entries": [
-                    {
-                        "slug": "ws-test-deck",
-                        "name": "WS Test Deck",
-                        "target_pdf": "ws-test-deck.pdf",
-                        "drive_export_url": None,
-                    }
-                ]
-            }))
-
-            time.sleep(0.3)
-
-            # GET /api/slides is a public endpoint mounted under /{session_id}
-            resp = requests.get(f"{server_url}/{session_id}/api/slides")
-            assert resp.status_code == 200
+    def test_slides_endpoint_responds(self, server_url, session_id):
+        """GET /{session_id}/api/slides returns 200 (proxied to daemon)."""
+        # Railway no longer handles slides_catalog WS messages — daemon is source of truth
+        resp = requests.get(f"{server_url}/{session_id}/api/slides")
+        assert resp.status_code == 200
 
 
 def test_host_server_proxies_api_to_backend(server_url):
