@@ -66,7 +66,7 @@ async def broadcast_participant_update():
 
 
 async def _send_to_special(key: str, message: dict):
-    """Send a message to a special client (e.g. __host__, __overlay__), cleaning up on failure."""
+    """Send a message to a special client (e.g. __host__), cleaning up on failure."""
     ws = state.participants.get(key)
     if ws is None:
         return

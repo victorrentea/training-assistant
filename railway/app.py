@@ -94,7 +94,7 @@ Instrumentator().instrument(app).expose(
 
 # ── Root-level routes (registered FIRST to prevent /{session_id} catch-all conflicts) ──
 
-# WebSocket: daemon + host/overlay (no session prefix)
+# WebSocket: daemon + host (no session prefix)
 app.include_router(ws.router)
 # WebSocket: session-scoped participant connections
 app.include_router(ws_session_router)

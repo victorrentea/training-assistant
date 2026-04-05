@@ -141,7 +141,7 @@ async def _handle_broadcast(data: dict):
             state.slides_current = {k: v for k, v in event.items() if k != "type"}
     msg = json.dumps(event)
     for pid, ws in list(state.participants.items()):
-        if pid.startswith("__"):  # skip __host__, __overlay__
+        if pid.startswith("__"):  # skip __host__ and other special keys
             continue
         try:
             await ws.send_text(msg)
