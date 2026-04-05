@@ -21,6 +21,7 @@ channels:
       summary: Events received by host browser
       message:
         oneOf:
+          - $ref: '#/components/messages/poll_created'
           - $ref: '#/components/messages/vote_update'
           - $ref: '#/components/messages/wordcloud_updated'
           - $ref: '#/components/messages/qa_updated'
@@ -37,6 +38,19 @@ components:
   messages:
 
     # ── Poll ─────────────────────────────────────────────────────────────────
+
+    poll_created:
+      summary: Host-only notification when a new poll is created (before opening)
+      payload:
+        type: object
+        required: [type, poll]
+        properties:
+          type:
+            type: string
+            enum: [poll_created]
+          poll:
+            type: object
+            description: Poll data {id, question, options[], multi}
 
     vote_update:
       summary: Real-time vote tally while poll is open

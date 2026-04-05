@@ -5,15 +5,9 @@ from pydantic import BaseModel
 
 from daemon.scores import scores
 from daemon.participant.state import participant_state
-from daemon.host_ws import send_to_host
 from daemon.leaderboard.state import leaderboard_state
-
-_ws_client = None
-
-
-def set_ws_client(client):
-    global _ws_client
-    _ws_client = client
+from daemon.ws_publish import broadcast, notify_host
+from daemon.ws_messages import LeaderboardRevealedMsg, ScoresUpdatedMsg
 
 
 class OkResponse(BaseModel):
@@ -26,7 +20,7 @@ router = APIRouter(prefix="/api/{session_id}/host", tags=["leaderboard"])
 @router.post("/leaderboard/show")
 async def show_leaderboard():
     all_scores = scores.snapshot()
-    entries = [
+    raw_entries = [
         {
             "uuid": pid,
             "name": participant_state.participant_names.get(pid, "???"),
@@ -36,19 +30,21 @@ async def show_leaderboard():
         if sc > 0
     ][:5]
     total = len([s for s in all_scores.values() if s > 0])
-    leaderboard_state.show(entries, total)
-    payload = {"type": "leaderboard_revealed", "entries": entries, "total_participants": total}
-    if _ws_client:
-        _ws_client.send({"type": "broadcast", "event": payload})
-    await send_to_host(payload)
+    leaderboard_state.show(raw_entries, total)
+    positions = [
+        {"rank": i + 1, "name": e["name"], "score": e["score"]}
+        for i, e in enumerate(raw_entries)
+    ]
+    msg = LeaderboardRevealedMsg(positions=positions)
+    broadcast(msg)
+    await notify_host(msg)
     return OkResponse()
 
 
 @router.delete("/scores")
 async def reset_scores():
     scores.reset()
-    payload = {"type": "scores_updated", "scores": scores.snapshot()}
-    if _ws_client:
-        _ws_client.send({"type": "broadcast", "event": payload})
-    await send_to_host(payload)
+    msg = ScoresUpdatedMsg(scores=scores.snapshot())
+    broadcast(msg)
+    await notify_host(msg)
     return OkResponse()
