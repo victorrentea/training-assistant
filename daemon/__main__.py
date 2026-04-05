@@ -28,8 +28,6 @@ from daemon.quiz.history import auto_generate, auto_generate_topic, auto_refine
 from daemon.quiz.poll_api import post_status
 from daemon.summary.loop import run_summary_cycle, load_key_points, save_key_points, get_ai_summary_mtime, get_ai_summary_raw
 from daemon.transcript.loader import load_transcription_files
-from daemon.transcript.query import load_normalized_entries
-from daemon.transcript.session import compute_active_windows, format_startup_log
 from daemon.transcript.state import TranscriptStateManager
 from daemon.slides.loop import SlidesPollingRunner
 from daemon.ws_client import DaemonWsClient
@@ -554,33 +552,6 @@ def run() -> None:
     session_shared_state.set_active_session(_active_session_id, session_stack)
     notes_summary_probe_prev: dict | None = _build_notes_summary_probe(config.session_folder)
     _log_notes_summary_probe("startup", notes_summary_probe_prev)
-
-    # ── Log transcription time ranges at startup ──
-    try:
-        since_date = session_start_date(session_stack[-1]) if session_stack else None
-        entries_dt = load_normalized_entries(config.folder, since_date=since_date)
-        if entries_dt:
-            entries = [(dt, txt) for dt, txt in entries_dt]
-            if session_stack:
-                current_session = session_stack[-1]
-                now = datetime.now()
-                windows = compute_active_windows(current_session, now)
-                is_ongoing = (
-                    current_session.get("ended_at") is None
-                    and all(p.get("to") for p in current_session.get("paused_intervals", []))
-                )
-                log.info("transcript", format_startup_log(
-                    entries, windows, summary_watermark, is_ongoing,
-                    session_start_date(current_session) or now.date(),
-                    now.date(),
-                ))
-            else:
-                non_empty = sum(1 for _, txt in entries if txt.strip())
-                log.info("transcript", f"{non_empty} lines (no active session)")
-        else:
-            log.error("transcript", "No normalized transcription file found")
-    except Exception as e:
-        log.error("transcript", f"Could not read transcription: {e}")
 
     slides_runner = SlidesPollingRunner(config)
     slides_runner.start()
