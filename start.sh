@@ -46,6 +46,7 @@ fi
 # ── PID tracking ──
 
 DAEMON_PID=""
+DAEMON_LOG_FILE="/Users/victorrentea/workspace/training-assistant/logs/daemon.log"
 
 cleanup() {
   echo ""
@@ -63,7 +64,8 @@ trap cleanup INT TERM
 # ── Process launcher ──
 
 start_daemon() {
-  python3 -m daemon &
+  mkdir -p "$(dirname "$DAEMON_LOG_FILE")"
+  python3 -m daemon > >(tee -a "$DAEMON_LOG_FILE") 2>&1 &
   DAEMON_PID=$!
 }
 

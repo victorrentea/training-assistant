@@ -1,5 +1,6 @@
 # Tasks
 
+- [x] start.sh: daemon stdout/stderr is now tee'd to hardcoded log file `/Users/victorrentea/workspace/training-assistant/logs/daemon.log` (auto-creates parent dir).
 - [x] test: add hermetic e2e regression that verifies participant top header displays current session name.
 - [x] bug: participant top header shows session name again (fallback to active session stack when `session_name` cache is missing).
 - [x] Bugfix + debug: emoji overlay flow validated with local WS experiment; host ❤️ click now uses participant emoji endpoint (`/{session_id}/api/participant/emoji/reaction`) so it reaches daemon overlay bridge; daemon logs warning when bridge is disconnected and emoji is dropped.
