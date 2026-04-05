@@ -7,6 +7,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
+from daemon.email_notify import notify as email_notify
 from daemon.misc.state import misc_state
 from daemon.ws_messages import PasteReceivedMsg, TranscriptionLanguagePendingMsg
 from daemon.ws_publish import host_event, broadcast
@@ -24,6 +25,9 @@ class OkResponse(BaseModel):
     ok: bool = True
 
 class PasteRequest(BaseModel):
+    text: str
+
+class FeedbackRequest(BaseModel):
     text: str
 
 class NotesResponse(BaseModel):
@@ -69,6 +73,26 @@ async def paste_text(request: Request, body: PasteRequest):
         host_event(PasteReceivedMsg(uuid=pid, **entry)),
     ]
 
+    return OkResponse()
+
+
+@participant_router.post("/misc/feedback")
+async def participant_feedback(request: Request, body: FeedbackRequest):
+    """Participant feedback submitted from floating feedback modal."""
+    pid = request.headers.get("x-participant-id")
+    if not pid:
+        return JSONResponse({"error": "Missing X-Participant-ID"}, status_code=400)
+
+    text = (body.text or "").strip()
+    if not text or len(text) > 5000:
+        return JSONResponse({"error": "Invalid feedback text"}, status_code=400)
+
+    session_name = misc_state.session_name or "unknown"
+    email_notify(
+        f"Participant Feedback ({session_name})",
+        f"Participant: {pid}\nSession: {session_name}\n\n{text}",
+    )
+    logger.info("Feedback received from participant %s", pid)
     return OkResponse()
 
 
