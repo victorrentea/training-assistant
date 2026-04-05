@@ -7,7 +7,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from daemon import log
-from daemon.http import get_active_session_id
+from daemon.session.state import get_active_session_id
 from daemon.slides import daemon as slides_daemon
 from daemon.misc.state import misc_state
 from daemon.slides.catalog import (
@@ -81,11 +81,11 @@ class SlidesPollingRunner:
         misc_state.update_slides_catalog(catalog_entries)
 
         # Initialize cache status from Railway availability (source of truth), not local files.
-        session_id = get_active_session_id(cfg.server_url)
+        session_id = get_active_session_id()
         if session_id:
-            log.info("slides", f"Initializing cache status from Railway for session={session_id}")
+            log.info("slides", f"Checking Railway cache for session={session_id}")
         else:
-            log.info("slides", "No active session at startup; initializing all slides as not_cached")
+            log.info("slides", "No session at startup — slides marked as not_cached")
 
         for catalog_entry in catalog_entries:
             slug = catalog_entry["slug"]
