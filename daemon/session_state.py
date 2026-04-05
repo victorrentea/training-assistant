@@ -419,8 +419,7 @@ def sync_session_to_server(
         if session_name:
             msg["session_name"] = session_name
         _ws_client.send(msg)
-    else:
-        log.error("session", "Cannot sync session: WS not connected")
+    # else: WS not connected yet — session will sync on reconnect
 
 
 # ── Slides manifest helpers ────────────────────────────────────────────────────
