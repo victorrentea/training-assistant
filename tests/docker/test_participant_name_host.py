@@ -35,7 +35,7 @@ def test_participant_name_shown_in_host_ui():
     This tests the full pipeline:
     1. Daemon registers participant and assigns a LOTR name
     2. Daemon syncs name to Railway via WS (participant_registered message)
-    3. Participant opens WS to Railway → Railway broadcasts participant_updated
+    3. Daemon sends participant_list_updated directly to host browser
     4. Host browser receives broadcast and renders participant list
     5. Name shown must be the real name, not the 'Guest <uuid[:8]>' fallback
     """

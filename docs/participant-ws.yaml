@@ -21,7 +21,7 @@ channels:
           - $ref: '#/components/messages/slides_current'
           - $ref: '#/components/messages/slides_cache_status'
           - $ref: '#/components/messages/activity_updated'
-          - $ref: '#/components/messages/participant_updated'
+          - $ref: '#/components/messages/participant_count_updated'
           - $ref: '#/components/messages/poll_opened'
           - $ref: '#/components/messages/poll_closed'
           - $ref: '#/components/messages/poll_correct_revealed'
@@ -94,7 +94,7 @@ components:
 
     # ── Identity ──────────────────────────────────────────────────────────────
 
-    participant_updated:
+    participant_count_updated:
       summary: Participant count changed
       payload:
         type: object
@@ -102,7 +102,7 @@ components:
         properties:
           type:
             type: string
-            enum: [participant_updated]
+            enum: [participant_count_updated]
           count:
             type: integer
 

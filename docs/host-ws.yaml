@@ -32,7 +32,7 @@ channels:
           - $ref: '#/components/messages/leaderboard_revealed'
           - $ref: '#/components/messages/paste_received'
           - $ref: '#/components/messages/file_uploaded'
-          - $ref: '#/components/messages/participant_updated'
+          - $ref: '#/components/messages/participant_list_updated'
           - $ref: '#/components/messages/reload'
 
 components:
@@ -247,17 +247,15 @@ components:
 
     # ── Participants ──────────────────────────────────────────────────────────
 
-    participant_updated:
-      summary: Participant list changed (join/leave/rename/location)
+    participant_list_updated:
+      summary: Participant list changed (join/register/rename/location) — sent by daemon directly
       payload:
         type: object
-        required: [type, count, participants]
+        required: [type, participants]
         properties:
           type:
             type: string
-            enum: [participant_updated]
-          count:
-            type: integer
+            enum: [participant_list_updated]
           participants:
             type: array
             items:

@@ -24,7 +24,6 @@ from railway.features.ws.daemon_protocol import (
     MSG_PROXY_RESPONSE,
     MSG_BROADCAST, MSG_SEND_TO_HOST, MSG_SET_SESSION_ID, MSG_CODE_TIMESTAMP,
     MSG_DOWNLOAD_PDF, MSG_PDF_DOWNLOAD_COMPLETE,
-    MSG_PARTICIPANT_REGISTERED, MSG_PARTICIPANT_RENAMED, MSG_PARTICIPANT_LOCATION,
     push_to_daemon,
 )
 from railway.features.ws.proxy_bridge import handle_proxy_response
@@ -174,40 +173,6 @@ async def _run_download_pdf(slug: str, drive_export_url: str) -> None:
         await push_to_daemon({"type": MSG_PDF_DOWNLOAD_COMPLETE, "slug": slug, "status": "error", "error": str(exc)})
 
 
-async def _handle_participant_registered(data: dict):
-    """Daemon notifies backend of new participant name+avatar so broadcasts use real name."""
-    pid = data.get("participant_id")
-    if not pid:
-        return
-    name = data.get("name", "")
-    avatar = data.get("avatar", "")
-    if name:
-        state.participant_names[pid] = name
-    if avatar:
-        state.participant_avatars[pid] = avatar
-
-
-async def _handle_participant_renamed(data: dict):
-    """Daemon notifies backend of participant rename → update name and broadcast."""
-    pid = data.get("participant_id")
-    if not pid:
-        return
-    name = data.get("name", "")
-    if name:
-        state.participant_names[pid] = name
-    await broadcast_participant_update()
-
-
-async def _handle_participant_location(data: dict):
-    """Daemon notifies backend of participant location → update and broadcast."""
-    pid = data.get("participant_id")
-    if not pid:
-        return
-    location = data.get("location", "")
-    if location:
-        state.locations[pid] = location
-    await broadcast_participant_update()
-
 
 async def _handle_download_pdf(data: dict) -> None:
     """Handle download_pdf message from daemon — start download in background."""
@@ -229,9 +194,6 @@ _DAEMON_MSG_HANDLERS = {
     MSG_DAEMON_PING: None,  # heartbeat only — last_seen already updated
     MSG_SLIDES_CATALOG: _handle_daemon_slides_catalog,
     MSG_DOWNLOAD_PDF: _handle_download_pdf,
-    MSG_PARTICIPANT_REGISTERED: _handle_participant_registered,
-    MSG_PARTICIPANT_RENAMED: _handle_participant_renamed,
-    MSG_PARTICIPANT_LOCATION: _handle_participant_location,
 }
 
 
