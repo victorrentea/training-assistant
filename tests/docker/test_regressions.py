@@ -1,10 +1,11 @@
 """
 Hermetic E2E regression tests.
 
-3 tests covering previously-reported regressions:
+4 tests covering previously-reported regressions:
 1. Auto-join with saved name causes no JS errors
 2. Q&A action labels correct + edit with quotes works
 3. QR fullscreen overlay opens/closes on click
+4. Participant top header shows session name
 """
 
 import base64
@@ -228,4 +229,33 @@ def test_qr_fullscreen_on_click():
         expect(qr_overlay).not_to_have_class(re.compile(r"open"), timeout=5000)
 
         print("SUCCESS: QR fullscreen overlay opens and closes on click!")
+        browser.close()
+
+
+# ── 4. Participant top header shows session name ──────────────────────────
+
+def test_participant_header_shows_session_name():
+    """Participant top header should display the current session name."""
+    session_prefix = "SessionTitle"
+    session_id = fresh_session(session_prefix)
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        pax_ctx = browser.new_context()
+        pax_page = pax_ctx.new_page()
+        pax_page.goto(f"{BASE}/{session_id}", wait_until="networkidle")
+
+        pax = ParticipantPage(pax_page)
+        pax.auto_join()
+
+        session_title = pax_page.locator("#session-title")
+        expect(session_title).to_be_visible(timeout=10000)
+
+        title_text = session_title.inner_text().strip()
+        assert title_text, "Expected non-empty session title in participant header"
+        assert session_prefix in title_text, (
+            f"Expected participant header session title to contain '{session_prefix}', got: '{title_text}'"
+        )
+
+        print(f"SUCCESS: Participant header shows session title: {title_text!r}")
         browser.close()
