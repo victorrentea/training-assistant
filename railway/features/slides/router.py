@@ -377,24 +377,19 @@ async def get_slides_catalog_map():
 
 @public_router.get("/api/slides")
 async def get_slides(request: Request):
-    from railway.features.slides.cache import _cache_path
+    from railway.features.ws.proxy_bridge import proxy_to_daemon
     sid = request.path_params.get("session_id", "")
-    prefix = f"/{sid}" if sid else ""
-    slides = _collect_participant_slides()
-    _, local_index = _build_local_slides_index()
-    _, uploaded_index = _build_uploaded_slides_index()
-    for slide in slides:
-        slug = str(slide.get("slug") or "")
-        has_local_pdf = bool(local_index.get(slug) or uploaded_index.get(slug))
-        in_cache = _cache_path(slug).exists()
-        in_catalog = slug in state.slides_catalog
-        is_catalog_source = slide.get("source") == "catalog"  # has GDrive URL, on-demand fetch works
-        slide["available_on_server"] = has_local_pdf or in_cache or in_catalog or is_catalog_source
-        # Rewrite local file URLs to include session prefix
-        url = str(slide.get("url") or "")
-        if url.startswith("/api/slides/download/"):
-            slide["url"] = f"{prefix}{url}"
-    return {"slides": slides}
+    path = f"/{sid}/api/slides" if sid else "/api/slides"
+    response = await proxy_to_daemon(
+        method="GET",
+        path=path,
+        body=None,
+        headers=dict(request.headers),
+        participant_id=None,
+    )
+    if response.status_code != 200:
+        return {"slides": [], "cache_status": {}}
+    return response
 
 
 @public_router.api_route("/api/slides/download/{slug}", methods=["GET", "HEAD"], include_in_schema=False)

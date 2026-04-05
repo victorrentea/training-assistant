@@ -65,8 +65,6 @@ def _stamp_deploy_info():
 async def lifespan(app_: FastAPI):
     _stamp_version_js()
     _stamp_deploy_info()
-    from railway.features.slides.cache import seed_catalog_from_file
-    seed_catalog_from_file()
     yield
 
 
