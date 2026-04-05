@@ -2955,9 +2955,6 @@ const sessionTitleEl = document.getElementById('session-title');
       case 'slides_updated':
         _onSlidesUpdated(msg.slug, msg.updated_at).catch(() => {});
         break;
-      case 'slides_catalog_changed':
-        _refreshSlidesCatalog({ autoLoadSelected: false }).catch(() => {});
-        break;
       case 'wordcloud_updated':
         renderWordCloudScreen(msg.words || {}, msg.word_order || [], msg.topic || '');
         break;

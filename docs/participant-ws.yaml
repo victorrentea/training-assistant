@@ -21,7 +21,6 @@ channels:
           - $ref: '#/components/messages/slides_current'
           - $ref: '#/components/messages/slides_cache_status'
           - $ref: '#/components/messages/slides_updated'
-          - $ref: '#/components/messages/slides_catalog_changed'
           - $ref: '#/components/messages/activity_updated'
           - $ref: '#/components/messages/participant_count_updated'
           - $ref: '#/components/messages/poll_opened'
@@ -88,27 +87,18 @@ components:
       summary: Slide PDF content updated for one slug
       payload:
         type: object
-        required: [type, slug]
+        required: [type]
         properties:
           type:
             type: string
             enum: [slides_updated]
           slug:
             type: string
+            nullable: true
           updated_at:
             type: string
             format: date-time
             nullable: true
-
-    slides_catalog_changed:
-      summary: Slides catalog changed; client should refresh GET /api/slides
-      payload:
-        type: object
-        required: [type]
-        properties:
-          type:
-            type: string
-            enum: [slides_catalog_changed]
 
     # ── Activity ──────────────────────────────────────────────────────────────
 
