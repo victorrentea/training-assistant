@@ -343,9 +343,7 @@ def _refresh_session_folder_binding(
         config = dc_replace(config, session_folder=sf, session_notes=sn)
         last_detected_date = today
         if sf:
-            if source == "stack":
-                log.info("session", f"Active session folder: {sf.name} / notes: {sn.name if sn else 'none'}")
-            else:
+            if source != "stack":
                 log.info("session", f"Detected: {sf.name} / notes: {sn.name if sn else 'none'}")
         else:
             log.info("session", "No session folder for today")
@@ -863,6 +861,9 @@ def run() -> None:
                             _do_save_daemon_state()
                             global_state_persisted = True
                             notes_file = find_notes_in_folder(folder)
+                            if notes_file:
+                                notes_lines = len(notes_file.read_text(encoding="utf-8", errors="replace").splitlines())
+                                log.info("session", f"Notes found ({notes_lines} lines): {notes_file.name}")
                             config = dc_replace(config, session_folder=folder, session_notes=notes_file)
                             new_mode = "conference" if session_type == "talk" else "workshop"
                             sync_session_to_server(config, session_stack, current_key_points, session_id=_active_session_id, file_time=get_ai_summary_mtime(folder), raw_markdown=get_ai_summary_raw(folder))
@@ -895,6 +896,9 @@ def run() -> None:
                         _do_save_daemon_state()
                         global_state_persisted = True
                         notes_file = find_notes_in_folder(folder)
+                        if notes_file:
+                            notes_lines = len(notes_file.read_text(encoding="utf-8", errors="replace").splitlines())
+                            log.info("session", f"Notes found ({notes_lines} lines): {notes_file.name}")
                         config = dc_replace(config, session_folder=folder, session_notes=notes_file)
                         sync_session_to_server(config, session_stack, current_key_points, file_time=get_ai_summary_mtime(folder), raw_markdown=get_ai_summary_raw(folder))
                         transcript_state.reset()
