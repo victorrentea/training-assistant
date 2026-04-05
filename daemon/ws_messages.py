@@ -175,12 +175,15 @@ class QuizStatusMsg(BaseModel):
 
 
 class QuizPreviewMsg(BaseModel):
-    """Same structure for both participants and host."""
+    """Same structure for both participants and host.
+    Normal: top-level question/options/multi/correct_indices.
+    Clear: quiz=None (all other fields absent)."""
     type: Literal["quiz_preview"] = "quiz_preview"
-    question: str
-    options: list[Any]
-    multi: bool
-    correct_indices: list[int]
+    quiz: Optional[Any] = None
+    question: Optional[str] = None
+    options: Optional[list[Any]] = None
+    multi: Optional[bool] = None
+    correct_indices: Optional[list[int]] = None
 
 
 # ── Host-only: Poll vote tally ────────────────────────────────────────────────

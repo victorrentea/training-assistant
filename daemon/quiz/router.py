@@ -68,10 +68,9 @@ async def request_quiz(body: QuizRequestBody):
 @host_router.delete("/quiz-preview")
 async def clear_quiz_preview():
     """Host clears the current quiz preview."""
-    # TODO: no model yet — QuizPreviewMsg requires question/options but clearing sends quiz=None
-    from daemon import ws_publish as _pub
-    if _pub._ws_client:
-        _pub._ws_client.send({"type": "broadcast", "event": {"type": "quiz_preview", "quiz": None}})
+    from daemon.ws_publish import broadcast
+    from daemon.ws_messages import QuizPreviewMsg
+    broadcast(QuizPreviewMsg(quiz=None))
     return OkResponse()
 
 
