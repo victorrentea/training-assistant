@@ -62,11 +62,11 @@ def create_app(backend_url: str) -> FastAPI:
 
     @app.get("/host")
     async def serve_host_page_no_session():
-        """Serve host.html without session ID."""
-        host_html = _STATIC_DIR / "host.html"
-        if not host_html.exists():
-            return {"error": "host.html not found"}
-        return FileResponse(host_html, media_type="text/html")
+        """Serve host-landing.html — lets JS check for active session and redirect to /host/{session_id}."""
+        landing_html = _STATIC_DIR / "host-landing.html"
+        if not landing_html.exists():
+            return {"error": "host-landing.html not found"}
+        return FileResponse(landing_html, media_type="text/html")
 
     # --- Participant identity router (must come BEFORE catch-all to avoid infinite loop) ---
     app.include_router(participant_router)
