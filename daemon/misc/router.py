@@ -32,6 +32,7 @@ class PasteRequest(BaseModel):
 
 class FeedbackRequest(BaseModel):
     text: str
+    participant_name: str | None = None
 
 class NotesResponse(BaseModel):
     notes_content: Optional[str] = None
@@ -91,7 +92,11 @@ async def participant_feedback(request: Request, body: FeedbackRequest):
         return JSONResponse({"error": "Invalid feedback text"}, status_code=400)
 
     session_name = _get_session_name_for_feedback() or "unknown"
-    participant_name = participant_state.participant_names.get(pid, pid)
+    participant_name = (body.participant_name or "").strip()
+    if participant_name:
+        participant_name = participant_name[:64]
+    else:
+        participant_name = participant_state.participant_names.get(pid, pid)
     email_notify(
         f"Participant Feedback ({session_name})",
         f"Participant: {participant_name}\nSession: {session_name}\n\n{text}",

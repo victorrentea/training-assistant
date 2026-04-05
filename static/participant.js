@@ -753,7 +753,7 @@ ${html}
       const resp = await fetch(apiBase + '/api/participant/misc/feedback', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Participant-ID': myUUID },
-        body: JSON.stringify({ text }),
+        body: JSON.stringify({ text, participant_name: myName || '' }),
       });
       if (!resp.ok) throw new Error(`feedback_submit_failed_${resp.status}`);
       closeFeedbackModal();

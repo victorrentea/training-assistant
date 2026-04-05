@@ -1,5 +1,19 @@
 # Todo
 
+## Follow-up direct request: feedback email still shows UUID
+
+- [x] Send participant display name from participant frontend in feedback payload
+- [x] Prioritize payload `participant_name` server-side with cache/UUID fallback
+- [x] Add regression tests for payload-name and fallback-name behavior
+- [x] Run targeted tests and capture proof in review section
+
+### Review: feedback email still shows UUID
+
+- Proof: `python3 -m pytest -q tests/daemon/test_misc_router.py`
+- Result: `3 passed`
+- Proof: `node --check static/participant.js`
+- Result: syntax OK
+
 ## Follow-up direct request: feedback email should show participant name + session name
 
 - [x] Use participant display name in feedback email body (fallback to UUID when missing)
