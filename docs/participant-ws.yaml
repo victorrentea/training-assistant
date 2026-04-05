@@ -41,6 +41,8 @@ channels:
           - $ref: '#/components/messages/quiz_status'
           - $ref: '#/components/messages/quiz_preview'
           - $ref: '#/components/messages/transcription_language_pending'
+          - $ref: '#/components/messages/notes_updated'
+          - $ref: '#/components/messages/summary_updated'
           - $ref: '#/components/messages/reload'
 
 components:
@@ -425,6 +427,34 @@ components:
             enum: [transcription_language_pending]
           language:
             type: string
+
+    # ── Notes & Summary ──────────────────────────────────────────────────────
+
+    notes_updated:
+      summary: Notes file changed — non-empty line count updated
+      payload:
+        type: object
+        required: [type, count]
+        properties:
+          type:
+            type: string
+            enum: [notes_updated]
+          count:
+            type: integer
+            description: Number of non-empty lines in the notes file
+
+    summary_updated:
+      summary: AI summary file changed — non-empty line count updated
+      payload:
+        type: object
+        required: [type, count]
+        properties:
+          type:
+            type: string
+            enum: [summary_updated]
+          count:
+            type: integer
+            description: Number of non-empty lines in ai-summary.md
 
     # ── Cross-cutting ────────────────────────────────────────────────────────
 

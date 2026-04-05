@@ -232,6 +232,18 @@ class FileUploadedMsg(BaseModel):
     size: int
 
 
+# ── Notes & Summary ───────────────────────────────────────────────────────────
+
+class NotesUpdatedMsg(BaseModel):
+    type: Literal["notes_updated"] = "notes_updated"
+    count: int  # non-empty lines in the notes file
+
+
+class SummaryUpdatedMsg(BaseModel):
+    type: Literal["summary_updated"] = "summary_updated"
+    count: int  # non-empty lines in ai-summary.md
+
+
 # ── Cross-cutting ────────────────────────────────────────────────────────────
 
 class ReloadMsg(BaseModel):
@@ -276,6 +288,9 @@ PARTICIPANT_MESSAGES: dict[str, type[BaseModel]] = {
     # Quiz
     "quiz_status": QuizStatusMsg,
     "quiz_preview": QuizPreviewMsg,
+    # Notes & Summary
+    "notes_updated": NotesUpdatedMsg,
+    "summary_updated": SummaryUpdatedMsg,
     # Cross-cutting
     "reload": ReloadMsg,
 }
@@ -304,6 +319,9 @@ HOST_MESSAGES: dict[str, type[BaseModel]] = {
     "file_uploaded": FileUploadedMsg,
     # Participants
     "participant_list_updated": ParticipantListUpdatedMsg,
+    # Notes & Summary
+    "notes_updated": NotesUpdatedMsg,
+    "summary_updated": SummaryUpdatedMsg,
     # Cross-cutting
     "reload": ReloadMsg,
 }

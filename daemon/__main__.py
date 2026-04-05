@@ -214,6 +214,15 @@ def _send_global_state_saved_ack(
     pass  # global_state_saved removed: Railway no longer tracks ACKs
 
 
+def _broadcast_notes_summary_counts(probe: dict) -> None:
+    """Broadcast notes and summary line counts to participants and host via WS."""
+    from daemon.ws_messages import NotesUpdatedMsg, SummaryUpdatedMsg
+    from daemon.ws_publish import broadcast
+    broadcast(NotesUpdatedMsg(count=probe["notes_non_empty_lines"]))
+    broadcast(SummaryUpdatedMsg(count=probe["summary_non_empty_lines"]))
+
+
+
 def _bind_initial_session_folder(config, sessions_root: Path, session_stack: list[dict]) -> tuple[object, str]:
     """Resolve and log session folder binding at daemon startup."""
     today_folder = today_notes = None
@@ -561,6 +570,7 @@ def run() -> None:
             log.info("session", f"Re-synced session '{session_stack[-1]['name']}' to backend on reconnect")
         except Exception as e:
             log.error("session", f"Session re-sync on reconnect failed: {e}")
+        _broadcast_notes_summary_counts(notes_summary_probe_prev)
     ws_client.on_connect(_sync_session_on_reconnect)
 
     ws_client.start()
@@ -856,6 +866,17 @@ def run() -> None:
                         now_mono=now,
                     )
                 )
+                notes_summary_probe = _build_notes_summary_probe(config.session_folder)
+                if notes_summary_probe_prev != notes_summary_probe:
+                    _log_notes_summary_probe(
+                        "change-detected",
+                        notes_summary_probe,
+                        _probe_change_parts(notes_summary_probe_prev, notes_summary_probe),
+                    )
+                    notes_summary_probe_prev = notes_summary_probe
+                    _broadcast_notes_summary_counts(notes_summary_probe)
+
+
                 sf_name = config.session_folder.name if config.session_folder else None
                 sn_name = config.session_notes.name if config.session_notes else None
 

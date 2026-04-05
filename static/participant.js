@@ -560,6 +560,27 @@ function closeEmojiPopup(ev) {
     }
   }
 
+  function updateNotesCount(count) {
+    const btn = document.getElementById('notes-btn');
+    if (btn) {
+      btn.disabled = !count;
+      btn.dataset.tooltip = count ? 'Session notes' : '(none yet)';
+    }
+  }
+
+  function updateSummaryCount(count) {
+    const btn = document.getElementById('summary-btn');
+    if (!btn) return;
+    const hadContent = !btn.disabled;
+    btn.disabled = !count;
+    btn.dataset.tooltip = count ? 'Key points discussed so far' : '(none yet)';
+    if (count && !hadContent) {
+      btn.classList.remove('summary-btn-flash');
+      void btn.offsetWidth;
+      btn.classList.add('summary-btn-flash');
+    }
+  }
+
   function downloadParticipantNotes() {
     if (!notesContent) return;
     const blob = new Blob([notesContent], { type: 'text/plain' });
@@ -2975,6 +2996,12 @@ const sessionTitleEl = document.getElementById('session-title');
         break;
       case 'notes':
         updateNotes(msg.notes_content);
+        break;
+      case 'notes_updated':
+        updateNotesCount(msg.count);
+        break;
+      case 'summary_updated':
+        updateSummaryCount(msg.count);
         break;
       case 'slides_cache_status':
         if (Array.isArray(msg.slides)) {
