@@ -300,9 +300,12 @@ def _bind_initial_session_folder(config, sessions_root: Path, session_stack: lis
     )
     config = dc_replace(config, session_folder=resolved_folder, session_notes=resolved_notes)
     if resolved_folder:
-        source_msg = "daemon state" if resolved_source == "stack" else "today detection"
-        log.info("session", f"Session folder from {source_msg}: {resolved_folder.name}")
-        log.info("session", f"Notes file: {resolved_notes.name if resolved_notes else 'NOT FOUND'}")
+        log.info("session", f"Session: {resolved_folder.name}")
+        if resolved_notes:
+            notes_lines = len(resolved_notes.read_text(encoding="utf-8", errors="replace").splitlines())
+            log.info("session", f"Notes found ({notes_lines} lines): {resolved_notes.name}")
+        else:
+            log.info("session", "Notes file: NOT FOUND")
     else:
         log.info("session", "No session folder found for today")
     return config, resolved_source
@@ -431,16 +434,14 @@ def run() -> None:
         if not os.path.isdir(config.project_folder):
             log.error("daemon", f"PROJECT_FOLDER does not exist: {config.project_folder}")
     else:
-        log.info("daemon", "PROJECT_FOLDER not set — project file tools disabled")
+        pass  # PROJECT_FOLDER is optional
 
     # ── Fetch server version at startup for auto-update detection ──
     _startup_version = None
     try:
         status = _get_json(f"{config.server_url}/api/status")
         _startup_version = status.get("backend_version")
-        if _startup_version:
-            log.info("daemon", f"Server version at startup: {_startup_version}")
-        else:
+        if not _startup_version:
             log.error("daemon", "Server /api/status did not return backend_version")
     except RuntimeError as e:
         log.error("daemon", f"Could not fetch server version at startup: {e}")
@@ -454,8 +455,6 @@ def run() -> None:
                 # Deferred: restore will be sent via WS after ws_client connects
             else:
                 log.error("daemon", f"Server needs state restore but no backup file found at {_BACKUP_FILE}")
-        else:
-            log.info("daemon", "Server does not need state restore")
     except Exception as e:
         log.error("daemon", f"State restore check failed: {e}")
 

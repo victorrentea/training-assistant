@@ -402,15 +402,14 @@ def _make_handler(folder: Path):
 # ---------------------------------------------------------------------------
 
 def start_indexer(folder: Path) -> None:
-    """Start background thread: initial full index + watchdog for changes."""
+    """Start background thread: watchdog for changes."""
     def _run():
-        indexed, unchanged, removed = index_all(folder)
         from watchdog.observers import Observer
         handler = _make_handler(folder)
         observer = Observer()
         observer.schedule(handler, str(folder), recursive=True)
         observer.start()
-        log.info("indexer", f"Watching {folder.name} · {indexed} new, {unchanged} unchanged")
+        log.info("indexer", f"Watching {folder.name}")
         try:
             while True:
                 time.sleep(1)
