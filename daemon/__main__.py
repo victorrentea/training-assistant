@@ -519,6 +519,12 @@ def run() -> None:
     materials_mirror.start()
     slides_runner.set_ws_sender(lambda msg: ws_client.send(msg))
 
+    # ── Addon bridge client (connects to wispr-flow WS server at localhost:8765) ──
+    from daemon.addon_bridge_client import AddonBridgeClient, set_client as _set_bridge_client
+    _bridge = AddonBridgeClient()
+    _set_bridge_client(_bridge)
+    _bridge.start()
+
     # Session state: the transcript text used to generate the current preview
     last_text: str | None = None
     last_quiz: dict | None = None
@@ -533,6 +539,7 @@ def run() -> None:
     _SLIDE_FILE_READ_INTERVAL: float = 0.5
     last_slide_file_read_at: float = 0.0
     last_slide_file_pointer: str | None = None  # "deckname:slide_number"
+    _prev_overlay_connected: bool = False
     # Sync initial state to server — include session_state.json if present in the active folder
     try:
         startup_session_state: dict | None = None
@@ -612,6 +619,61 @@ def run() -> None:
         while True:
             # ── Drain pending WS messages (handlers run on main thread) ──
             ws_client.drain_queue()
+
+            # ── Process slide events from addon bridge ──
+            for _slide_event in _bridge.drain_slides():
+                _deck = _slide_event.get("deck")
+                _slide_num = _slide_event.get("slide")
+                if _deck and _slide_num:
+                    if slides_runner and slides_runner._slides_config:
+                        catalog_file = getattr(slides_runner._slides_config, "catalog_file", None)
+                        _target = _resolve_presentation_slide_target(
+                            presentation_name=_deck,
+                            server_url=config.server_url,
+                            catalog_file=catalog_file,
+                        )
+                        if _target and _target.get("matched", True):
+                            _sc = {
+                                "url": _target["url"],
+                                "slug": _target["slug"],
+                                "source_file": _deck,
+                                "presentation_name": _deck,
+                                "current_page": _slide_num,
+                            }
+                            if misc_state.slides_current != _sc:
+                                misc_state.slides_current = _sc
+                                from daemon.ws_messages import SlidesCurrentMsg
+                                ws_publish.broadcast(SlidesCurrentMsg(**_sc))
+                                log.info("addon-bridge", f"Slide: {_deck}:{_slide_num}")
+                        elif _target and not _target.get("matched", True):
+                            if misc_state.slides_current is not None:
+                                misc_state.slides_current = None
+                                from daemon.ws_messages import SlidesCurrentMsg
+                                ws_publish.broadcast(SlidesCurrentMsg(slides_current=None))
+                    else:
+                        _sc = {"presentation_name": _deck, "current_page": _slide_num}
+                        if misc_state.slides_current != _sc:
+                            misc_state.slides_current = _sc
+                            from daemon.ws_messages import SlidesCurrentMsg
+                            ws_publish.broadcast(SlidesCurrentMsg(**_sc))
+
+            # ── Push overlay_connected state change to host ──
+            _curr_overlay = _bridge.connected
+            if _curr_overlay != _prev_overlay_connected:
+                _prev_overlay_connected = _curr_overlay
+                try:
+                    from daemon.slides.router import get_event_loop as _get_event_loop
+                    import asyncio as _asyncio
+                    _loop = _get_event_loop()
+                    if _loop and _loop.is_running():
+                        from daemon.ws_messages import OverlayConnectedMsg
+                        from daemon.ws_publish import notify_host as _notify_host
+                        _asyncio.run_coroutine_threadsafe(
+                            _notify_host(OverlayConnectedMsg(overlay_connected=_curr_overlay)),
+                            _loop,
+                        )
+                except Exception:
+                    pass
 
             # ── Heartbeat: update lock file so other instances know we're alive ──
             try:

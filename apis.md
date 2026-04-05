@@ -561,3 +561,34 @@ None persisted in memory — read from disk:
 
 **Daemon → Host Browser WS:**
 - `reload` — `{}` — same as participant
+
+---
+
+## Daemon ↔ Addons Bridge WS
+
+The training daemon connects as a **client** to the WebSocket server exposed by `victor-macos-addons` (default port `8765`, env: `WS_SERVER_PORT`). This is a separate local connection from the daemon↔Railway link.
+
+```
+Daemon (client) ──── ws://127.0.0.1:8765 ────> victor-macos-addons (server)
+```
+
+### Connection lifecycle
+- Daemon initiates connection on startup; reconnects every 5s on disconnect (silent retry — no log noise)
+- On connect, server immediately sends the last known slide state as a welcome message
+- File-based slide polling (`slides_runner`) continues in parallel; WS push takes precedence when bridge is connected
+
+### Daemon → Addons (send)
+| Type | Payload | Purpose |
+|------|---------|---------|
+| `emoji` | `{type, emoji, count: 1}` | Forward participant emoji reaction to desktop overlay for animation |
+
+### Addons → Daemon (receive)
+| Type | Payload | Purpose |
+|------|---------|---------|
+| `slide` | `{type, deck, slide, presenting}` | Current PowerPoint deck/slide number; daemon updates `slides_current` and broadcasts to all participants |
+
+### Effect on Host UI
+- `overlay_connected` field in host REST state (`GET /api/{sid}/host/state`) reflects whether the bridge is connected
+- Daemon pushes `overlay_connected` WS message to host browser on every connect/disconnect event:
+  - **Host WS:** `overlay_connected` — `{overlay_connected: bool}`
+- Host footer ❤️ badge turns red when connected, gray when disconnected

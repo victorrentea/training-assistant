@@ -199,6 +199,13 @@ class EmojiReactionMsg(BaseModel):
     emoji: str
 
 
+# ── Host-only: Addon bridge status ────────────────────────────────────────────
+
+class OverlayConnectedMsg(BaseModel):
+    type: Literal["overlay_connected"] = "overlay_connected"
+    overlay_connected: bool
+
+
 # ── Transcription ─────────────────────────────────────────────────────────────
 
 class TranscriptionLanguagePendingMsg(BaseModel):

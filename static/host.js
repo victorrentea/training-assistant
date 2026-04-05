@@ -432,6 +432,8 @@
         renderQuizStatus(msg.status, msg.message);
       } else if (msg.type === 'quiz_preview') {
         renderPreview(msg.quiz || null);
+      } else if (msg.type === 'overlay_connected') {
+        renderOverlayStatus(msg.overlay_connected);
       } else if (msg.type === 'emoji_reaction') {
         showHostEmoji(msg.emoji);
       } else if (msg.type === 'qa_updated') {

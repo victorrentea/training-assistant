@@ -152,6 +152,7 @@ async def get_host_state(request: Request, session_id: str):
         "participant_count": participant_count,
         "participants": _build_host_participants_list(),
         "daemon_connected": True,
+        "overlay_connected": _get_overlay_connected(),
         # Wordcloud
         "wordcloud_words": wc.words,
         "wordcloud_word_order": wc.word_order,
@@ -199,6 +200,14 @@ async def get_host_state(request: Request, session_id: str):
     }
 
     return JSONResponse(state_msg)
+
+
+def _get_overlay_connected() -> bool:
+    try:
+        from daemon import addon_bridge_client
+        return addon_bridge_client.is_connected()
+    except Exception:
+        return False
 
 
 def _get_token_usage() -> dict:
