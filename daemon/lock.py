@@ -69,7 +69,7 @@ def check_and_acquire_lock() -> None:
 
     if not alive:
         # Process is dead — stale lock file from a crash
-        log.info("daemon", f"Previous instance (PID {pid}) is dead (crashed?). Cleaning up lock file.")
+        log.info("daemon", f"Previous instance (PID {pid}) is dead. Cleaning up lock file.")
 
     _LOCK_FILE.unlink(missing_ok=True)
 
