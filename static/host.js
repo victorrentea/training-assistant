@@ -389,12 +389,7 @@
       } else if (msg.type === 'summary') {
         updateSummary(msg.points, msg.updated_at);
       } else if (msg.type === 'slides_cache_status') {
-        const embeddedMap = _buildSlidesCacheStatusMapFromSlides(msg.slides || []);
-        _slidesCacheStatus = embeddedMap;
-        if (Array.isArray(msg.slides) && msg.slides.length) {
-          _slidesCatalog = msg.slides;
-        }
-        _renderSlidesCatalogPopover();
+        _refreshHostSlidesCatalog();
       } else if (msg.type === 'vote_update') {
         voteCounts = msg.vote_counts || msg.votes || {};
         totalVotes = (msg.total_votes !== undefined && msg.total_votes !== null)

@@ -1974,9 +1974,7 @@ ${html}
     if (slide._id === targetId) item.classList.add('active');
     item.appendChild(openBtn);
     // Timestamp — shown to the left of the status dot, outside openBtn so both align across rows
-    const updated = _formatSlideUpdatedCompact(
-      slide.updated_at || slide.last_modified || slide.lastModified || slide.updatedAt
-    );
+    const updated = _formatSlideUpdatedCompact(slide.modified_at);
     if (updated) {
       const badge = document.createElement('span');
       badge.className = 'slides-list-updated has-tooltip';
@@ -3013,23 +3011,7 @@ const sessionTitleEl = document.getElementById('session-title');
         updateSummaryCount(msg.count, true);
         break;
       case 'slides_cache_status':
-        if (Array.isArray(msg.slides)) {
-          const nextCatalog = _normalizeSlidesCatalog(msg.slides);
-          if (nextCatalog.length) {
-            slidesCatalog = nextCatalog;
-            _initSlidesCatalogBaseline(slidesCatalog);
-            if (slidesSelectedId && !slidesCatalog.some((s) => s._id === slidesSelectedId)) {
-              slidesSelectedId = null;
-              _setStoredSelectedSlideId(null);
-            }
-          }
-        }
-        const wsStatus = _buildSlidesCacheStatusMapFromSlides(msg.slides || []);
-        const legacyWsStatus = (msg.slides_cache_status && typeof msg.slides_cache_status === 'object')
-          ? msg.slides_cache_status
-          : {};
-        _applySlidesCacheStatus({ ..._slidesCacheStatus, ...legacyWsStatus, ...wsStatus });
-        if (document.getElementById('slides-list')) _renderSlidesList(slidesSelectedId || null);
+        _refreshSlidesCatalog();
         break;
       case 'leaderboard_revealed': {
         const lbEntries = msg.entries || [];

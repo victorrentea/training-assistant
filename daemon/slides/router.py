@@ -133,11 +133,7 @@ def _uploaded_slide_meta(slug: str) -> tuple[str, str | None]:
 def _broadcast_slides_cache_status() -> None:
     from daemon.ws_publish import broadcast
     from daemon.ws_messages import SlidesCacheStatusMsg
-    broadcast(
-        SlidesCacheStatusMsg(
-            slides=_slides_with_embedded_cache_status(),
-        )
-    )
+    broadcast(SlidesCacheStatusMsg())
 
 
 # ── Participant router ──

@@ -581,6 +581,7 @@ def run() -> None:
     last_transcript_stats_at = 0.0
     last_transcript_line_count = -1
     last_slides_payload_hash: str | None = None
+    last_slides_mtime_scan_at = 0.0
 
     _prev_overlay_connected: bool = False
     # Sync initial state to server — include session_state.json if present in the active folder
@@ -1032,6 +1033,13 @@ def run() -> None:
                                 last_quiz = updated
                         else:
                             post_status("error", "No conversation context — please generate a question first.", config)
+
+                # ── Scan PPTX mtimes every 60s — keeps modified_at current for participants ──
+                if slides_runner and now - last_slides_mtime_scan_at >= 60.0:
+                    last_slides_mtime_scan_at = now
+                    if slides_runner.scan_pptx_mtimes():
+                        from daemon.slides.router import _broadcast_slides_cache_status
+                        _broadcast_slides_cache_status()
 
                 # ── Push transcript stats every 10s ──
                 if now - last_transcript_stats_at >= 10.0:

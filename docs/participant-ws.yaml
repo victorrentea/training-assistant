@@ -65,19 +65,14 @@ components:
             description: null means no active slide
 
     slides_cache_status:
-      summary: Download progress for a slide PDF
+      summary: Invalidation signal — participant must call GET /api/slides to refresh
       payload:
         type: object
-        required: [type, slides]
+        required: [type]
         properties:
           type:
             type: string
             enum: [slides_cache_status]
-          slides:
-            type: array
-            items:
-              $ref: '#/components/schemas/SlideWithCacheStatus'
-            description: Slides list with embedded cache status fields
 
     # ── Activity ──────────────────────────────────────────────────────────────
 

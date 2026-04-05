@@ -174,6 +174,7 @@ def _slides_from_state(config: SlidesDaemonConfig, daemon_state: dict, metadata:
             "slug": slug or _slugify(slide_name),
             "url": _slide_url(config, target_pdf),
             "updated_at": _iso_utc(entry.get("last_exported_mtime")),
+            "modified_at": _iso_utc(entry.get("pptx_mtime")),
             "sync_status": "out_of_sync" if entry.get("out_of_sync") else "ok",
             "sync_message": entry.get("out_of_sync_message"),
         })
@@ -196,6 +197,7 @@ def _merge_slides(primary: list[dict], secondary: list[dict]) -> list[dict]:
                 "slug": str(slide.get("slug") or _slugify(name)).strip() or _slugify(name),
                 "url": url,
                 "updated_at": slide.get("updated_at"),
+                "modified_at": slide.get("modified_at"),
             })
     return merged
 
@@ -211,8 +213,10 @@ def detect_changed_files(
     metadata = metadata or {}
     for pptx in files:
         key = _abs_key(pptx)
-        exported_mtime = float(tracked.get(key, {}).get("last_exported_mtime", 0))
+        entry = tracked.setdefault(key, {})
+        exported_mtime = float(entry.get("last_exported_mtime", 0))
         current_mtime = pptx.stat().st_mtime
+        entry["pptx_mtime"] = current_mtime
         target_pdf = metadata.get(key, {}).get("target_pdf")
         marker_mtime = read_material_last_modified(publish_dir, target_pdf)
         known_mtime = max(exported_mtime, marker_mtime)
@@ -220,6 +224,25 @@ def detect_changed_files(
             changed.append((current_mtime, pptx))
     changed.sort(key=lambda x: x[0])
     return [p for _, p in changed]
+
+
+def refresh_pptx_mtimes(files: list[Path], daemon_state: dict) -> bool:
+    """Read st_mtime for all tracked PPTX files and update pptx_mtime in state.
+
+    Returns True if any mtime changed.
+    """
+    tracked = daemon_state.setdefault("files", {})
+    changed = False
+    for pptx in files:
+        if not pptx.exists():
+            continue
+        key = _abs_key(pptx)
+        entry = tracked.setdefault(key, {})
+        current_mtime = pptx.stat().st_mtime
+        if current_mtime != entry.get("pptx_mtime"):
+            entry["pptx_mtime"] = current_mtime
+            changed = True
+    return changed
 
 
 def ensure_slug(daemon_state: dict, pptx_path: Path) -> str:

@@ -22,7 +22,6 @@ class SlidesCurrentMsg(BaseModel):
 
 class SlidesCacheStatusMsg(BaseModel):
     type: Literal["slides_cache_status"] = "slides_cache_status"
-    slides: Optional[list[dict[str, Any]]] = None
 
 
 # ── Activity ──────────────────────────────────────────────────────────────────

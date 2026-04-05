@@ -51,7 +51,7 @@ session_name: str | null         # display name
 
 | Method | Path | Body | Response |
 |--------|------|------|----------|
-| GET | `/{sid}/api/slides` | — | `{slides[]}` where each slide embeds cache fields directly (e.g. `{slug, title/name, drive_export_url, status, size_bytes, downloaded_at}`); daemon is source of truth |
+| GET | `/{sid}/api/slides` | — | `{slides[]}` where each slide embeds cache fields directly (e.g. `{slug, title/name, drive_export_url, status, size_bytes, downloaded_at, modified_at}`); `modified_at` is the ISO 8601 UTC `st_mtime` of the PPTX file on the daemon's disk (null for uploaded slides); daemon is source of truth |
 | GET | `/{sid}/api/slides/check/{slug}` | — | 200 OK (`{status:"cached"}`) when Railway has PDF; 503 (`{status:"timeout"}` or `{status:"error"}`) otherwise — participant MUST call this before downloading |
 | GET | `/{sid}/api/slides/download/{slug}` | — | PDF binary served directly by Railway from disk (max 100MB) — only call after /check returns 200 |
 
@@ -64,19 +64,19 @@ Current slide is included in the initial state from `GET /{sid}/api/participant/
 
 **Daemon → Participant Browser WS:**
 - `slides_current` — `{slides_current}` — when host navigates slides
-- `slides_cache_status` — `{slides[]}` where each slide embeds `status` (+ cache fields); for backward compatibility Railway may also include `slides_cache_status` map in the same event
+- `slides_cache_status` — `{type: "slides_cache_status"}` (no payload) — invalidation signal; participant UI MUST call `GET /api/slides` on receipt
 
 ### Host
 **Host Browser → Daemon REST:**
 
 | Method | Path | Body | Response |
 |--------|------|------|----------|
-| GET | `/{sid}/api/slides` | — | `{slides[]}` with embedded cache fields per slide entry (`status`, `size_bytes`, `downloaded_at`) |
+| GET | `/{sid}/api/slides` | — | `{slides[]}` with embedded cache fields per slide entry (`status`, `size_bytes`, `downloaded_at`, `modified_at`) |
 
 Host uses the same slides list contract as participant (embedded cache fields in each slide item).
 
 **Daemon → Host Browser WS:**
-- `slides_cache_status` — same message as participant (`{slides[]}` + optional legacy map); host uses it directly for catalog/cache refresh
+- `slides_cache_status` — `{type: "slides_cache_status"}` (no payload) — invalidation signal; host UI MUST call `GET /api/slides` on receipt
 
 ### Internal: Daemon ↔ Railway WS messages
 
@@ -89,7 +89,7 @@ Host uses the same slides list contract as participant (embedded cache fields in
 
 ### State
 ```
-slides_cache_status: dict[str, dict]   # slug → {status: "not_cached"|"downloading"|"cached"|"stale"|"poll_timeout"|"download_failed", size_bytes, downloaded_at}
+slides_cache_status: dict[str, dict]   # slug → {status: "not_cached"|"downloading"|"cached"|"stale"|"poll_timeout"|"download_failed", size_bytes, downloaded_at, modified_at}
 slides_catalog: dict[str, dict]        # slug → {slug, title, drive_export_url, group?}
 ```
 

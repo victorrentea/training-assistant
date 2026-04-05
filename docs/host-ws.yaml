@@ -42,19 +42,14 @@ components:
   messages:
 
     slides_cache_status:
-      summary: Slides catalog cache status update
+      summary: Invalidation signal — host must call GET /api/slides to refresh
       payload:
         type: object
-        required: [type, slides]
+        required: [type]
         properties:
           type:
             type: string
             enum: [slides_cache_status]
-          slides:
-            type: array
-            items:
-              $ref: '#/components/schemas/SlideWithCacheStatus'
-            description: Slides list with embedded cache status fields
 
     # ── Poll ─────────────────────────────────────────────────────────────────
 

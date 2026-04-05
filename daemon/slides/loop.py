@@ -9,8 +9,11 @@ from daemon.slides import daemon as slides_daemon
 from daemon.misc.state import misc_state
 from daemon.slides.catalog import (
     _abs_key,
+    _iso_utc,
     _slugify,
     load_catalog_entries,
+    refresh_pptx_mtimes,
+    resolve_tracked_sources,
 )
 from daemon.slides.router import _is_cached_on_railway
 
@@ -75,4 +78,33 @@ class SlidesRunner:
                 "status": status,
             }
         log.info("slides", f"Initialized catalog: {len(catalog_entries)} entries")
+
+    def scan_pptx_mtimes(self) -> bool:
+        """Read st_mtime for all tracked PPTX files; update misc_state.slides_cache_status.
+
+        Returns True if any modified_at changed (caller should broadcast slides_cache_status).
+        Called every ~60s from the main loop.
+        """
+        if not self._slides_config:
+            return False
+        files, metadata = resolve_tracked_sources(self._slides_config)
+        if not files:
+            return False
+        changed = refresh_pptx_mtimes(files, self._slides_state)
+        if not changed:
+            return False
+        # Propagate updated modified_at into misc_state so REST /api/slides picks it up.
+        tracked = self._slides_state.get("files", {})
+        for key, entry in tracked.items():
+            slug = str(entry.get("slug") or "").strip()
+            if not slug:
+                continue
+            pptx_mtime = entry.get("pptx_mtime")
+            if pptx_mtime is None:
+                continue
+            existing = misc_state.slides_cache_status.get(slug, {})
+            iso = _iso_utc(pptx_mtime)
+            if existing.get("modified_at") != iso:
+                misc_state.slides_cache_status[slug] = {**existing, "modified_at": iso}
+        return True
 
