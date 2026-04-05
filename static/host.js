@@ -389,11 +389,11 @@
         voteCounts = msg.vote_counts || {};
         totalVotes = msg.total_votes || 0;
         renderBars();
-      } else if (msg.type === 'participant_updated') {
-        totalParticipants = msg.count || 0;
-        document.getElementById('pax-count').textContent = msg.count;
-        updatePaxBadge(msg.count);
+      } else if (msg.type === 'participant_list_updated') {
         ingestParticipants(msg.participants || []);
+        totalParticipants = (msg.participants || []).length;
+        document.getElementById('pax-count').textContent = totalParticipants;
+        updatePaxBadge(totalParticipants);
         renderParticipantList(cachedParticipantIds);
         if (pollActive && currentPoll) renderBars();
         updateLeaderboardButton();

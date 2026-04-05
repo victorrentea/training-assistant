@@ -33,11 +33,6 @@ MSG_SYNC_FILES = "sync_files"
 MSG_DOWNLOAD_PDF = "download_pdf"
 MSG_PDF_DOWNLOAD_COMPLETE = "pdf_download_complete"
 
-# --- Participant identity sync (daemon → backend) ---
-MSG_PARTICIPANT_REGISTERED = "participant_registered"
-MSG_PARTICIPANT_RENAMED = "participant_renamed"
-MSG_PARTICIPANT_LOCATION = "participant_location"
-
 
 async def push_to_daemon(msg: dict) -> bool:
     """Send a JSON message to the daemon via WebSocket. Returns True if sent."""

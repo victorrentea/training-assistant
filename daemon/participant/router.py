@@ -11,7 +11,8 @@ from starlette.responses import Response
 from railway.shared.names import assign_conference_name
 from railway.shared.state import assign_avatar, refresh_avatar as _refresh_avatar_logic, LOTR_NAMES
 from daemon.participant.state import participant_state
-from daemon.ws_publish import send_to_railway
+from daemon.host_ws import send_to_host
+from daemon.host_state_router import _build_host_participants_list
 
 logger = logging.getLogger(__name__)
 
@@ -123,6 +124,14 @@ def _build_poll_for_participant(pid: str) -> dict:
         result["my_voted_ids"] = None
     return result
 
+async def _notify_host_participant_list():
+    """Push the current participant list to the host browser directly."""
+    await send_to_host({
+        "type": "participant_list_updated",
+        "participants": _build_host_participants_list(),
+    })
+
+
 router = APIRouter(prefix="/api/participant", tags=["participant"])
 
 
@@ -188,13 +197,7 @@ async def register_participant(request: Request):
     # Initialize score
     ps.scores.setdefault(pid, 0)
 
-    # Sync participant identity to Railway so broadcasts use the real name
-    send_to_railway({
-        "type": "participant_registered",
-        "participant_id": pid,
-        "name": raw_name,
-        "avatar": avatar,
-    })
+    await _notify_host_participant_list()
 
     # Broadcast participant registered event
     request.state.write_back_events = [{
@@ -233,12 +236,7 @@ async def rename_participant(request: Request, body: RenameRequest):
 
     ps.participant_names[pid] = raw_name
 
-    # Sync rename to Railway so broadcasts use the updated name
-    send_to_railway({
-        "type": "participant_renamed",
-        "participant_id": pid,
-        "name": raw_name,
-    })
+    await _notify_host_participant_list()
 
     request.state.write_back_events = [{
         "type": "participant_renamed",
@@ -289,12 +287,7 @@ async def set_location(request: Request, body: LocationRequest):
 
     participant_state.locations[pid] = loc
 
-    # Sync location to Railway
-    send_to_railway({
-        "type": "participant_location",
-        "participant_id": pid,
-        "location": loc,
-    })
+    await _notify_host_participant_list()
 
     request.state.write_back_events = [{
         "type": "participant_location",

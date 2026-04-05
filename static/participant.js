@@ -2819,7 +2819,7 @@ const sessionTitleEl = document.getElementById('session-title');
         }
         _onIncomingHostSlidesCurrent(msg.slides_current || null);
         break;
-      case 'participant_updated':
+      case 'participant_count_updated':
         updateParticipantCount(msg.count);
         updateHostDot(msg.host_connected);
         break;

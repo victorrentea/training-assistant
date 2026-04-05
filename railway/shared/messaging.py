@@ -2,7 +2,7 @@
 Broadcast infrastructure.
 
 broadcast() sends semantic events to all connected clients.
-broadcast_participant_update() sends participant count to participants, full details to host.
+broadcast_participant_update() sends participant count to all connected participants.
 """
 import json
 import logging
@@ -17,28 +17,8 @@ SPECIAL_PIDS = {"__host__"}
 
 
 def participant_ids() -> list[str]:
-    """Return sorted UUIDs of named participants, excluding special clients."""
-    return sorted(
-        pid for pid in state.participants
-        if pid not in SPECIAL_PIDS and pid in state.participant_names
-    )
-
-
-def historical_participant_ids() -> list[str]:
-    """Return UUIDs seen in this session (online or offline), excluding special clients."""
-    known = (
-        set(state.participant_history)
-        | set(state.participant_names.keys())
-        | set(state.scores.keys())
-        | set(state.participant_avatars.keys())
-        | set(state.locations.keys())
-        | set(state.participant_ips.keys())
-    )
-    known = [pid for pid in known if pid not in SPECIAL_PIDS]
-    return sorted(
-        known,
-        key=lambda pid: (-state.scores.get(pid, 0), state.participant_names.get(pid, ""), pid),
-    )
+    """Return sorted UUIDs of non-special connected participants."""
+    return sorted(pid for pid in state.participants if pid not in SPECIAL_PIDS)
 
 
 async def _broadcast_foreach(sender):
@@ -67,56 +47,21 @@ async def broadcast(message: dict, exclude: Optional[str] = None):
     await _broadcast_foreach(_send)
 
 
-def _build_host_participants_list() -> list[dict]:
-    """Build the list of all historical participants for the host."""
-    participants_list: list[dict] = []
-    for pid in historical_participant_ids():
-        name = state.participant_names.get(pid, "").strip()
-        participant = {
-            "uuid": pid,
-            "name": name if name else f"Guest {pid[:8]}",
-            "score": state.scores.get(pid, 0),
-            "location": state.locations.get(pid, ""),
-            "avatar": state.participant_avatars.get(pid, ""),
-            "ip": state.participant_ips.get(pid, ""),
-            "online": pid in state.participants,
-        }
-        paste_entries = state.paste_texts.get(pid, [])
-        if paste_entries:
-            participant["paste_texts"] = paste_entries
-        upload_entries = state.uploaded_files.get(pid, [])
-        if upload_entries:
-            participant["uploaded_files"] = [
-                {"id": e["id"], "filename": e["filename"], "size": e["size"],
-                 "downloaded_at": e.get("downloaded_at")}
-                for e in upload_entries
-            ]
-        participants_list.append(participant)
-    return participants_list
-
-
 async def broadcast_participant_update():
-    """Send participant update: simple count to participants, full details to host."""
+    """Send participant count update to all connected participants (not host)."""
     pids = participant_ids()
     count = len(pids)
 
-    participant_msg = json.dumps({
-        "type": "participant_updated",
+    msg = json.dumps({
+        "type": "participant_count_updated",
         "count": count,
         "host_connected": "__host__" in state.participants,
     })
 
-    host_msg = json.dumps({
-        "type": "participant_updated",
-        "count": count,
-        "participants": _build_host_participants_list(),
-    })
-
     async def _send(pid, ws):
         if pid == "__host__":
-            await ws.send_text(host_msg)
-        else:
-            await ws.send_text(participant_msg)
+            return
+        await ws.send_text(msg)
     await _broadcast_foreach(_send)
 
 

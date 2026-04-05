@@ -34,16 +34,15 @@ class ActivityUpdatedMsg(BaseModel):
 
 # ── Identity / Participants ───────────────────────────────────────────────────
 
-class ParticipantUpdatedParticipantMsg(BaseModel):
+class ParticipantCountUpdatedMsg(BaseModel):
     """Participant-only: count only."""
-    type: Literal["participant_updated"] = "participant_updated"
+    type: Literal["participant_count_updated"] = "participant_count_updated"
     count: int
 
 
-class ParticipantUpdatedHostMsg(BaseModel):
-    """Host-only: count + full participant list."""
-    type: Literal["participant_updated"] = "participant_updated"
-    count: int
+class ParticipantListUpdatedMsg(BaseModel):
+    """Host-only: full participant list."""
+    type: Literal["participant_list_updated"] = "participant_list_updated"
     participants: list[dict[str, Any]]  # [{uuid, name, score, location, avatar}]
 
 
@@ -241,7 +240,7 @@ PARTICIPANT_MESSAGES: dict[str, type[BaseModel]] = {
     # Transcription
     "transcription_language_pending": TranscriptionLanguagePendingMsg,
     # Identity
-    "participant_updated": ParticipantUpdatedParticipantMsg,
+    "participant_count_updated": ParticipantCountUpdatedMsg,
     # Poll
     "poll_opened": PollOpenedMsg,
     "poll_closed": PollClosedMsg,
@@ -293,7 +292,7 @@ HOST_MESSAGES: dict[str, type[BaseModel]] = {
     "paste_received": PasteReceivedMsg,
     "file_uploaded": FileUploadedMsg,
     # Participants
-    "participant_updated": ParticipantUpdatedHostMsg,
+    "participant_list_updated": ParticipantListUpdatedMsg,
     # Cross-cutting
     "reload": ReloadMsg,
 }
