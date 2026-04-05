@@ -777,7 +777,7 @@ ${html}
     const toast = document.createElement('div');
     toast.textContent = message;
     const bg = isError ? 'var(--danger, #f44336)' : 'var(--accent)';
-    toast.style.cssText = `position:fixed;bottom:3.5rem;right:calc(var(--slides-overlay-width) + .75rem + 104px);background:${bg};color:#fff;padding:.4rem .9rem;border-radius:8px;font-weight:600;font-size:.85rem;z-index:9999;opacity:1;transition:opacity .5s;`;
+    toast.style.cssText = `position:fixed;bottom:3.5rem;left:.75rem;background:${bg};color:#fff;padding:.4rem .9rem;border-radius:8px;font-weight:600;font-size:.85rem;z-index:9999;opacity:1;transition:opacity .5s;`;
     document.body.appendChild(toast);
     setTimeout(() => { toast.style.opacity = '0'; }, 1200);
     setTimeout(() => toast.remove(), 1800);
