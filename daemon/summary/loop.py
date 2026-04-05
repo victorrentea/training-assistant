@@ -16,7 +16,6 @@ from daemon.session_state import (
     sync_session_to_server,
     session_start_date,
 )
-# from daemon.summary.summarizer import generate_summary  # disabled: using ai-summary.md file instead
 
 __all__ = [
     "load_key_points",
@@ -110,30 +109,6 @@ def run_summary_cycle(
     current_session = session_stack[-1]
     session_folder = sessions_root / current_session["name"]
     s_date = session_start_date(current_session)
-
-    # -- Claude API summarization disabled (using ai-summary.md file instead) --
-    # incremental = summary_watermark > 0 and bool(current_key_points)
-    # try:
-    #     result = generate_summary(
-    #         config,
-    #         existing_points=current_key_points if incremental else None,
-    #         since_entry=summary_watermark if incremental else 0,
-    #         session_start_date=s_date,
-    #         course_title=current_session.get("name"),
-    #     )
-    #     if result is not None:
-    #         new_pts = result["new"]
-    #         summary_watermark = result["watermark"]
-    #         if incremental:
-    #             current_key_points = current_key_points + new_pts
-    #         else:
-    #             current_key_points = new_pts
-    #         save_key_points(session_folder, current_key_points, summary_watermark, s_date)
-    #         save_daemon_state(sessions_root, stack_to_daemon_state(session_stack))
-    #         sync_session_to_server(config, session_stack, current_key_points)
-    #         log.info("summarizer", f"Key points: {len(current_key_points)} total (+{len(new_pts)} new)")
-    # except Exception as e:
-    #     log.error("summarizer", f"Error: {e}")
 
     # Read from ai-summary.md file in session folder
     try:
