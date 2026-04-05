@@ -1332,13 +1332,13 @@ h1 { display: none; }
   animation: score-highlight 1.4s ease-out forwards;
 }
 
-/* ── Key Points button flash ── */
-@keyframes summary-btn-highlight {
+/* ── Notes/Summary count flash (WS update) ── */
+@keyframes count-highlight {
   0%   { background: rgba(255, 230, 80, 0.55); }
   100% { background: transparent; }
 }
-#summary-btn.summary-btn-flash {
-  animation: summary-btn-highlight 1.4s ease-out forwards;
+.count-flash {
+  animation: count-highlight 1.4s ease-out forwards;
   border-radius: 4px;
 }
 

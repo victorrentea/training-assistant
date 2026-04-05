@@ -560,24 +560,31 @@ function closeEmojiPopup(ev) {
     }
   }
 
-  function updateNotesCount(count) {
+  function updateNotesCount(count, flash = false) {
     const btn = document.getElementById('notes-btn');
-    if (btn) {
-      btn.disabled = !count;
-      btn.dataset.tooltip = count ? 'Session notes' : '(none yet)';
+    if (!btn) return;
+    btn.disabled = !count;
+    btn.dataset.tooltip = count ? 'Session notes' : '(none yet)';
+    const span = document.getElementById('notes-count');
+    if (span) span.textContent = count ? `(${count}) ` : '';
+    if (flash && count) {
+      btn.classList.remove('count-flash');
+      void btn.offsetWidth;
+      btn.classList.add('count-flash');
     }
   }
 
-  function updateSummaryCount(count) {
+  function updateSummaryCount(count, flash = false) {
     const btn = document.getElementById('summary-btn');
     if (!btn) return;
-    const hadContent = !btn.disabled;
     btn.disabled = !count;
     btn.dataset.tooltip = count ? 'Key points discussed so far' : '(none yet)';
-    if (count && !hadContent) {
-      btn.classList.remove('summary-btn-flash');
+    const span = document.getElementById('summary-count');
+    if (span) span.textContent = count ? `(${count}) ` : '';
+    if (flash && count) {
+      btn.classList.remove('count-flash');
       void btn.offsetWidth;
-      btn.classList.add('summary-btn-flash');
+      btn.classList.add('count-flash');
     }
   }
 
@@ -624,9 +631,9 @@ function closeEmojiPopup(ev) {
     if (summaryPoints.length > prevCount) {
       const summaryBtn = document.getElementById('summary-btn');
       if (summaryBtn) {
-        summaryBtn.classList.remove('summary-btn-flash');
+        summaryBtn.classList.remove('count-flash');
         void summaryBtn.offsetWidth;
-        summaryBtn.classList.add('summary-btn-flash');
+        summaryBtn.classList.add('count-flash');
       }
     }
     renderSummaryList();
@@ -3000,10 +3007,10 @@ const sessionTitleEl = document.getElementById('session-title');
         updateNotes(msg.notes_content);
         break;
       case 'notes_updated':
-        updateNotesCount(msg.count);
+        updateNotesCount(msg.count, true);
         break;
       case 'summary_updated':
-        updateSummaryCount(msg.count);
+        updateSummaryCount(msg.count, true);
         break;
       case 'slides_cache_status':
         if (Array.isArray(msg.slides)) {
