@@ -3,7 +3,6 @@ import asyncio
 import logging
 import os
 import socket
-import ssl
 import urllib.error
 import urllib.request
 
@@ -12,6 +11,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from daemon.misc.state import misc_state
+from daemon.slides.daemon import _ssl_context
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +36,7 @@ def _is_cached_on_railway(session_id: str, slug: str) -> bool:
     url = _railway_download_url(session_id, slug)
     req = urllib.request.Request(url, method="HEAD")
     try:
-        with urllib.request.urlopen(req, timeout=_RAILWAY_CHECK_TIMEOUT_S, context=ssl.create_default_context()) as resp:
+        with urllib.request.urlopen(req, timeout=_RAILWAY_CHECK_TIMEOUT_S, context=_ssl_context()) as resp:
             return 200 <= int(resp.status) < 300
     except urllib.error.HTTPError as exc:
         if exc.code == 404:
