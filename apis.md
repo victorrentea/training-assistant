@@ -545,7 +545,9 @@ uploads: dict[str, list[dict]]        # uuid → [{id, filename, size, path}] �
 
 Notes and summary are files on disk in the session folder. Daemon reads them on request.
 
-**Daemon → Participant Browser WS:** (none — participant fetches on demand)
+**Daemon → Participant Browser WS:**
+- `notes_updated` — `{count}` — notes file changed; `count` = non-empty lines in the txt file. Sent on file change and on WS connect (if count > 0). Enables the Notes button without fetching full content.
+- `summary_updated` — `{count}` — ai-summary.md changed; `count` = non-empty lines. Same delivery pattern. Enables the Key Points button and flashes it when content first appears.
 
 ### Host
 **Host Browser → Daemon REST:**
@@ -557,12 +559,16 @@ Notes and summary are files on disk in the session folder. Daemon reads them on 
 
 Host can open notes/summary in the host panel UI.
 
-**Daemon → Host Browser WS:** (none)
+**Daemon → Host Browser WS:**
+- `notes_updated` — `{count}` — same as participant; host notes badge shows `📝 (N) Notes.txt`
+- `summary_updated` — `{count}` — host summary badge shows `🧠 (N) Key Points` when full points not yet loaded
 
 ### State
 None persisted in memory — read from disk:
 - `{session_folder}/*.txt` — session notes (latest modified text file)
 - `{session_folder}/ai-summary.md` — key points + raw markdown
+
+Railway caches `notes_line_count` and `summary_line_count` (from daemon broadcasts) to send on new WS connections.
 
 ---
 
