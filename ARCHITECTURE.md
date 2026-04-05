@@ -812,34 +812,39 @@ B --> H : WS debate_timer
 D -> D : Watch PPTX folders\nfor mtime changes
 D --> B : WS slide_invalidated {slug}
 
-B -> B : Clear cached PDF fingerprint
-B -> GD : HTTP GET (download updated PDF)
-GD --> B : PDF bytes
-B -> B : Cache PDF in /tmp/slides-cache/
-
+B -> B : Mark slug stale in cache_status
 B --> P : WS broadcast (slides_cache_status updated)
 B --> H : WS broadcast
 
-note over B
-  Slide catalog is pre-loaded from static catalog
-  file at backend startup. Daemon sends
-  slide_invalidated when PPTX files change.
+note over D,B
+  Daemon is source-of-truth for freshness.
+  No proactive PDF download happens on invalidation.
+  Download is triggered only by participant /check calls.
 end note
 
 == 9. Slide Loading Flow ==
 
-P -> B : GET /api/slides/file/{slug}
+P -> B : GET /api/slides/check/{slug}
+B --> D : WS proxy_request (GET /{sid}/api/slides/check/{slug})
 
-alt PDF cached locally
-  B --> P : HTTP 200 (PDF bytes)
-else Not cached, Drive URL known
+alt PDF already cached
+  D --> B : WS proxy_response (200)
+  B --> P : HTTP 200 (check ok)
+else PDF missing/stale
+  D --> B : WS download_pdf {slug, drive_export_url}
   B -> GD : HTTP GET (download PDF)
   GD --> B : PDF bytes
   B -> B : Cache to /tmp/slides-cache/
-  B --> P : HTTP 200 (PDF bytes)
-else Not cached, no Drive URL
-  B --> P : HTTP 404
+  B --> D : WS pdf_download_complete {slug, status:"ok"}
+  D --> B : WS proxy_response (200)
+  B --> P : HTTP 200 (check ok)
+else Download timeout/error
+  D --> B : WS proxy_response (503)
+  B --> P : HTTP 503 (check failed)
 end
+
+P -> B : GET /api/slides/download/{slug}
+B --> P : HTTP 200 (PDF bytes)
 
 P -> P : PDF.js renders in iframe
 

@@ -1733,6 +1733,31 @@ ${html}
     }
   }
 
+  function _resolveSlideAssetUrls(slide) {
+    const slug = String(slide?.slug || '').trim();
+    if (!slug) return null;
+    const encodedSlug = encodeURIComponent(slug);
+    const downloadBaseUrl = `${apiBase}/api/slides/download/${encodedSlug}`;
+    return {
+      slug,
+      checkUrl: `${apiBase}/api/slides/check/${encodedSlug}`,
+      downloadBaseUrl,
+    };
+  }
+
+  async function _checkSlideReady(checkUrl) {
+    const resp = await fetch(checkUrl, {
+      method: 'GET',
+      cache: 'no-store',
+      headers: { 'X-Participant-ID': myUUID },
+    });
+    if (!resp.ok) {
+      const err = new Error(`slides_check_failed_${resp.status}`);
+      err.status = resp.status;
+      throw err;
+    }
+  }
+
   function _slideFingerprint(slide, headers) {
     // Use ETag/Last-Modified from HEAD request (authoritative for PDF content).
     // Avoid slide.updated_at — it reflects PPTX source mtime and changes when the
@@ -2006,6 +2031,26 @@ ${html}
     _setSlidesError('');
     _setSlidesLoading({ visible: true, loaded: 0, total: 0, label: 'Checking cache...' });
     try {
+      const slideUrls = _resolveSlideAssetUrls(slide);
+      if (!slideUrls) {
+        _setSlidesDownload('', true);
+        _renderSlidesMeta(null);
+        _setSlidesError('Slide metadata is invalid. Please refresh and try again.');
+        _setSlidesLoading({ visible: false });
+        return;
+      }
+      const slideDownloadUrl = slideUrls.downloadBaseUrl;
+      try {
+        _setSlidesLoading({ visible: true, loaded: 0, total: 0, label: 'Preparing slide...' });
+        await _checkSlideReady(slideUrls.checkUrl);
+      } catch (_) {
+        _setSlidesDownload('', true);
+        _renderSlidesMeta({ ...slide, url: slideDownloadUrl });
+        _setSlidesError('Slide is still preparing on the server. Please retry in a few seconds.');
+        _setSlidesLoading({ visible: false });
+        return;
+      }
+
       const shell = document.getElementById('slides-viewer-shell');
       const empty = document.getElementById('slides-empty');
       const pdfContainer = document.getElementById('slides-pdf-container');
@@ -2017,10 +2062,10 @@ ${html}
       document.getElementById('slides-fit-width')?.style.removeProperty('display');
       renderEmojiBar();
 
-      const headers = await _fetchSlideHeaders(slide.url);
+      const headers = await _fetchSlideHeaders(slideDownloadUrl);
       const effectiveUpdatedAt = slide.updated_at || headers.lastModified || null;
       if (effectiveUpdatedAt && !slide.updated_at) slide.updated_at = effectiveUpdatedAt;
-      const fingerprint = _slideFingerprint(slide, headers);
+      const fingerprint = _slideFingerprint({ ...slide, url: slideDownloadUrl }, headers);
 
       if (slidesViewMode === 'native') {
         await _clearSlidesDocument();
@@ -2030,13 +2075,13 @@ ${html}
           const pendingCacheV = _nativePendingReloadSlugs[slide.slug];
           if (pendingCacheV) delete _nativePendingReloadSlugs[slide.slug];
           const effectiveCacheV = cacheVersion || pendingCacheV;
-          const nativeLoadUrl = effectiveCacheV ? (slide.url.split('?')[0] + '?v=' + effectiveCacheV) : slide.url;
+          const nativeLoadUrl = effectiveCacheV ? (slideDownloadUrl + '?v=' + effectiveCacheV) : slideDownloadUrl;
           nativeFrame.data = _buildNativeSlideUrl(nativeLoadUrl, savedPage);
           nativeFrame.style.display = 'block';
           _setStoredSlidePage(slide.slug, savedPage);
         }
         slidesLastFingerprint = fingerprint;
-        _setSlidesDownload(slide.url, false);
+        _setSlidesDownload(slideDownloadUrl, false);
         _renderSlidesMeta({ ...slide, updated_at: effectiveUpdatedAt });
         _setSlidesLoading({ visible: false });
         return;
@@ -2090,7 +2135,7 @@ ${html}
       try {
         await _getSlidesPdfModules();
         await _initSlidesViewer();
-        const pdfLoadUrl = cacheVersion ? (slide.url.split('?')[0] + '?v=' + cacheVersion) : slide.url;
+        const pdfLoadUrl = cacheVersion ? (slideDownloadUrl + '?v=' + cacheVersion) : slideDownloadUrl;
         const loadingTask = slidesPdfLib.getDocument({ url: pdfLoadUrl });
         loadingTask.onProgress = (progress) => {
           _setSlidesLoading({
@@ -2162,7 +2207,7 @@ ${html}
         }
 
         slidesLastFingerprint = fingerprint;
-        _setSlidesDownload(slide.url, false);
+        _setSlidesDownload(slideDownloadUrl, false);
         _renderSlidesMeta({ ...slide, updated_at: effectiveUpdatedAt });
         _setSlidesLoading({ visible: false });
         _scheduleTestAutoScroll(slide);
@@ -2174,7 +2219,7 @@ ${html}
         slidesLastFingerprint = null;
         _setSlidesDownload('', true);
         _renderSlidesMeta(null);
-        _setSlidesError('', slide.url + '?download=1');
+        _setSlidesError('', slideDownloadUrl + '?download=1');
         _setSlidesLoading({ visible: false });
       }
     } finally {

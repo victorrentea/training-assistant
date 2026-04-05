@@ -11,6 +11,7 @@ from railway.features.slides.upload import (
     _slugify,
     _uploaded_slides_dir,
 )
+from railway.features.ws.proxy_bridge import proxy_to_daemon
 
 router = APIRouter()
 public_router = APIRouter()
@@ -82,7 +83,6 @@ def _is_not_modified(request: Request, etag: str, path: Path) -> bool:
 
 @public_router.get("/api/slides")
 async def get_slides(request: Request):
-    from railway.features.ws.proxy_bridge import proxy_to_daemon
     sid = request.path_params.get("session_id", "")
     path = f"/{sid}/api/slides" if sid else "/api/slides"
     response = await proxy_to_daemon(
@@ -95,6 +95,19 @@ async def get_slides(request: Request):
     if response.status_code != 200:
         return {"slides": [], "cache_status": {}}
     return response
+
+
+@public_router.get("/api/slides/check/{slug}")
+async def check_slide(slug: str, request: Request):
+    sid = request.path_params.get("session_id", "")
+    path = f"/{sid}/api/slides/check/{slug}" if sid else f"/api/slides/check/{slug}"
+    return await proxy_to_daemon(
+        method="GET",
+        path=path,
+        body=None,
+        headers=dict(request.headers),
+        participant_id=request.headers.get("x-participant-id"),
+    )
 
 
 @public_router.api_route("/api/slides/download/{slug}", methods=["GET", "HEAD"], include_in_schema=False)

@@ -5,6 +5,7 @@ import threading
 from datetime import datetime, timezone
 
 from fastapi.testclient import TestClient
+from fastapi.responses import JSONResponse
 
 from railway.app import app, state
 
@@ -324,6 +325,38 @@ def test_api_slides_returns_ok_when_daemon_offline(monkeypatch, tmp_path):
     assert body["slides"] == []
 
 
+def test_api_slides_check_proxies_to_daemon_with_participant_id():
+    from unittest.mock import AsyncMock, patch
+
+    mock_response = JSONResponse({"status": "cached"}, status_code=200)
+    with patch("railway.features.slides.router.proxy_to_daemon", new_callable=AsyncMock, return_value=mock_response) as mock_proxy:
+        client = TestClient(app)
+        resp = client.get(
+            f"/{state.session_id}/api/slides/check/demo",
+            headers={"X-Participant-ID": "participant-123"},
+        )
+
+    assert resp.status_code == 200
+    assert resp.json() == {"status": "cached"}
+    mock_proxy.assert_awaited_once()
+    kwargs = mock_proxy.await_args.kwargs
+    assert kwargs["method"] == "GET"
+    assert kwargs["path"] == f"/{state.session_id}/api/slides/check/demo"
+    assert kwargs["participant_id"] == "participant-123"
+
+
+def test_api_slides_check_propagates_non_200_status():
+    from unittest.mock import AsyncMock, patch
+
+    mock_response = JSONResponse({"status": "timeout"}, status_code=503)
+    with patch("railway.features.slides.router.proxy_to_daemon", new_callable=AsyncMock, return_value=mock_response):
+        client = TestClient(app)
+        resp = client.get(f"/{state.session_id}/api/slides/check/demo")
+
+    assert resp.status_code == 503
+    assert resp.json() == {"status": "timeout"}
+
+
 def test_api_slides_respects_catalog_order_for_topics(monkeypatch, tmp_path):
     slides_dir = tmp_path / "slides"
     slides_dir.mkdir(parents=True, exist_ok=True)
@@ -476,4 +509,3 @@ def test_api_slides_file_defaults_to_inline_and_supports_explicit_download(monke
 
 
 # NOTE: /api/slides/upload-status/{slug} endpoint removed in Task 10 (drive_status.py cleanup)
-
