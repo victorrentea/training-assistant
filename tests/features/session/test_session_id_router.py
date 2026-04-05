@@ -7,8 +7,8 @@ from types import SimpleNamespace
 import pytest
 from fastapi.testclient import TestClient
 
-from main import app, state
-import features.session.router as session_router_mod
+from railway.app import app, state
+import railway.features.session.router as session_router_mod
 
 
 _HOST_AUTH_HEADERS = {

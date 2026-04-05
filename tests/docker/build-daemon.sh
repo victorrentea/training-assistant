@@ -11,10 +11,8 @@ BUILD_DIR=$(mktemp -d)
 echo "=== Preparing build context in $BUILD_DIR ==="
 
 # Copy app code
-mkdir -p "$BUILD_DIR/app/static" "$BUILD_DIR/app/core" "$BUILD_DIR/app/features" "$BUILD_DIR/app/daemon"
-cp "$REPO_ROOT/main.py" "$BUILD_DIR/app/"
-cp -r "$REPO_ROOT/core" "$BUILD_DIR/app/"
-cp -r "$REPO_ROOT/features" "$BUILD_DIR/app/"
+mkdir -p "$BUILD_DIR/app/static" "$BUILD_DIR/app/railway" "$BUILD_DIR/app/daemon"
+cp -r "$REPO_ROOT/railway" "$BUILD_DIR/app/"
 cp -r "$REPO_ROOT/daemon" "$BUILD_DIR/app/"
 cp -r "$REPO_ROOT/static" "$BUILD_DIR/app/"
 

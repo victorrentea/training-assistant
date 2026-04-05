@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 
 from fastapi.testclient import TestClient
 
-from main import app, state
+from railway.app import app, state
 
 
 _HOST_AUTH_HEADERS = {
@@ -439,7 +439,7 @@ def test_api_slides_file_missing_returns_404_when_not_in_cache_or_catalog(monkey
 
 def test_api_slides_file_served_from_cache_dir(monkeypatch, tmp_path):
     # New behavior: file found in cache dir (/tmp/slides-cache/{slug}.pdf) is served
-    from features.slides.cache import CACHE_DIR
+    from railway.features.slides.cache import CACHE_DIR
 
     slides_dir = tmp_path / "server_materials" / "slides"
     slides_dir.mkdir(parents=True, exist_ok=True)

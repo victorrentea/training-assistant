@@ -78,7 +78,7 @@ def backend():
 
     proc = subprocess.Popen(
         [
-            sys.executable, "-m", "uvicorn", "main:app",
+            sys.executable, "-m", "uvicorn", "railway.app:app",
             "--host", "0.0.0.0", "--port", BACKEND_PORT,
         ],
         cwd=APP_ROOT,

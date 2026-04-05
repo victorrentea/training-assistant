@@ -16,7 +16,7 @@ from unittest.mock import MagicMock, patch, AsyncMock
 import pytest
 
 # Import state singleton first so we can manipulate it in tests
-from core.state import state
+from railway.shared.state import state
 
 
 def _reset_state():
@@ -64,7 +64,7 @@ class TestProbeFingerprintSync(unittest.TestCase):
 
     def test_probe_fingerprint_uses_head(self):
         """HEAD returns ETag → fingerprint is 'hdr:...' format."""
-        from features.slides.cache import _probe_fingerprint_sync
+        from railway.features.slides.cache import _probe_fingerprint_sync
 
         head_resp = _make_http_response(b"", headers={"ETag": '"abc123"', "Last-Modified": "", "Content-Length": ""})
 
@@ -80,7 +80,7 @@ class TestProbeFingerprintSync(unittest.TestCase):
 
     def test_probe_fingerprint_uses_head_with_last_modified(self):
         """HEAD returns Last-Modified but no ETag → still hdr: format."""
-        from features.slides.cache import _probe_fingerprint_sync
+        from railway.features.slides.cache import _probe_fingerprint_sync
 
         head_resp = _make_http_response(b"", headers={
             "ETag": "",
@@ -96,7 +96,7 @@ class TestProbeFingerprintSync(unittest.TestCase):
 
     def test_probe_fingerprint_fallback_get_on_405(self):
         """HEAD returns 405 → fall back to GET + SHA256 fingerprint."""
-        from features.slides.cache import _probe_fingerprint_sync
+        from railway.features.slides.cache import _probe_fingerprint_sync
 
         pdf_data = b"%PDF-1.4 test content"
         expected_hash = hashlib.sha256(pdf_data).hexdigest()
@@ -115,7 +115,7 @@ class TestProbeFingerprintSync(unittest.TestCase):
 
     def test_probe_fingerprint_raises_on_non_405_error(self):
         """Non-405 HTTP errors should propagate."""
-        from features.slides.cache import _probe_fingerprint_sync
+        from railway.features.slides.cache import _probe_fingerprint_sync
 
         with patch("urllib.request.urlopen", side_effect=_make_http_error(403)):
             with pytest.raises(urllib.error.HTTPError):
@@ -123,7 +123,7 @@ class TestProbeFingerprintSync(unittest.TestCase):
 
     def test_probe_fingerprint_fallback_get_when_no_headers(self):
         """HEAD returns 200 but no ETag/LM/CL → fall back to GET + SHA256."""
-        from features.slides.cache import _probe_fingerprint_sync
+        from railway.features.slides.cache import _probe_fingerprint_sync
 
         pdf_data = b"%PDF-1.4 no-headers content"
         expected_hash = hashlib.sha256(pdf_data).hexdigest()
@@ -154,7 +154,7 @@ class TestDownloadPdfSync(unittest.TestCase):
     def test_download_pdf_saves_file(self, tmp_path=None):
         """Valid PDF data is written to the destination file."""
         import tempfile
-        from features.slides.cache import _download_pdf_sync
+        from railway.features.slides.cache import _download_pdf_sync
 
         pdf_content = b"%PDF-1.4 test content for download"
         resp = _make_http_response(pdf_content)
@@ -171,7 +171,7 @@ class TestDownloadPdfSync(unittest.TestCase):
     def test_download_pdf_rejects_non_pdf(self):
         """Content not starting with %PDF raises RuntimeError."""
         import tempfile
-        from features.slides.cache import _download_pdf_sync
+        from railway.features.slides.cache import _download_pdf_sync
 
         html_content = b"<html><body>Not a PDF</body></html>"
         resp = _make_http_response(html_content)
@@ -188,7 +188,7 @@ class TestDownloadPdfSync(unittest.TestCase):
     def test_download_pdf_creates_parent_dirs(self):
         """download_pdf_sync creates missing parent directories."""
         import tempfile
-        from features.slides.cache import _download_pdf_sync
+        from railway.features.slides.cache import _download_pdf_sync
 
         pdf_content = b"%PDF-1.4 nested dir test"
         resp = _make_http_response(pdf_content)
@@ -214,7 +214,7 @@ class TestConcurrentRequestDedup(unittest.TestCase):
         The 4 waiters are unblocked by the asyncio.Event after the first download completes.
         """
         import tempfile
-        from features.slides import cache as cache_mod
+        from railway.features.slides import cache as cache_mod
 
         with tempfile.TemporaryDirectory() as tmpdir:
             cache_dir = Path(tmpdir) / "slides-cache"
@@ -245,7 +245,7 @@ class TestConcurrentRequestDedup(unittest.TestCase):
                     patch.object(cache_mod, "CACHE_DIR", cache_dir),
                     patch.object(cache_mod, "_download_pdf_sync", side_effect=_mock_download),
                     patch.object(cache_mod, "_probe_fingerprint_sync", return_value="hdr:test|test|test"),
-                    patch("core.messaging.broadcast", new_callable=AsyncMock),
+                    patch("railway.shared.messaging.broadcast", new_callable=AsyncMock),
                 ):
                     tasks = [
                         asyncio.create_task(cache_mod.download_or_wait_cached(slug))
@@ -271,7 +271,7 @@ class TestHandleSlidesCatalog(unittest.TestCase):
     def test_handle_slides_catalog(self):
         """Catalog entries are stored in state.slides_catalog and status is initialized."""
         import tempfile
-        from features.slides import cache as cache_mod
+        from railway.features.slides import cache as cache_mod
 
         with tempfile.TemporaryDirectory() as tmpdir:
             cache_dir = Path(tmpdir) / "slides-cache"
@@ -285,7 +285,7 @@ class TestHandleSlidesCatalog(unittest.TestCase):
                 ]
                 with (
                     patch.object(cache_mod, "CACHE_DIR", cache_dir),
-                    patch("core.messaging.broadcast", new_callable=AsyncMock),
+                    patch("railway.shared.messaging.broadcast", new_callable=AsyncMock),
                 ):
                     await cache_mod.handle_slides_catalog(entries)
 
@@ -305,7 +305,7 @@ class TestHandleSlidesCatalog(unittest.TestCase):
     def test_handle_slides_catalog_detects_existing_cache(self):
         """Slugs with PDF already on disk get 'cached' status."""
         import tempfile
-        from features.slides import cache as cache_mod
+        from railway.features.slides import cache as cache_mod
 
         with tempfile.TemporaryDirectory() as tmpdir:
             cache_dir = Path(tmpdir) / "slides-cache"
@@ -320,7 +320,7 @@ class TestHandleSlidesCatalog(unittest.TestCase):
                 ]
                 with (
                     patch.object(cache_mod, "CACHE_DIR", cache_dir),
-                    patch("core.messaging.broadcast", new_callable=AsyncMock),
+                    patch("railway.shared.messaging.broadcast", new_callable=AsyncMock),
                 ):
                     await cache_mod.handle_slides_catalog(entries)
 
@@ -331,7 +331,7 @@ class TestHandleSlidesCatalog(unittest.TestCase):
     def test_handle_slides_catalog_ignores_empty_slugs(self):
         """Entries with empty slug are silently ignored."""
         import tempfile
-        from features.slides import cache as cache_mod
+        from railway.features.slides import cache as cache_mod
 
         with tempfile.TemporaryDirectory() as tmpdir:
             cache_dir = Path(tmpdir) / "slides-cache"
@@ -345,7 +345,7 @@ class TestHandleSlidesCatalog(unittest.TestCase):
                 ]
                 with (
                     patch.object(cache_mod, "CACHE_DIR", cache_dir),
-                    patch("core.messaging.broadcast", new_callable=AsyncMock),
+                    patch("railway.shared.messaging.broadcast", new_callable=AsyncMock),
                 ):
                     await cache_mod.handle_slides_catalog(entries)
 
@@ -364,7 +364,7 @@ class TestDownloadOrWaitCached(unittest.TestCase):
     def test_returns_none_when_no_catalog_entry(self):
         """Returns None when slug is not in catalog."""
         import tempfile
-        from features.slides import cache as cache_mod
+        from railway.features.slides import cache as cache_mod
 
         with tempfile.TemporaryDirectory() as tmpdir:
             cache_dir = Path(tmpdir) / "slides-cache"
@@ -382,7 +382,7 @@ class TestDownloadOrWaitCached(unittest.TestCase):
     def test_returns_existing_cached_path(self):
         """Returns cached file path immediately without downloading."""
         import tempfile
-        from features.slides import cache as cache_mod
+        from railway.features.slides import cache as cache_mod
 
         with tempfile.TemporaryDirectory() as tmpdir:
             cache_dir = Path(tmpdir) / "slides-cache"

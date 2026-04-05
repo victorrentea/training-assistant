@@ -80,12 +80,12 @@ def server_url(tmp_path_factory):
             sys.executable, "-m", "coverage", "run",
             "--source=.,routers",
             f"--data-file={cov_data_file}",
-            "-m", "uvicorn", "main:app",
+            "-m", "uvicorn", "railway.app:app",
             "--host", "127.0.0.1", "--port", "0",
         ]
     else:
         cmd = [
-            sys.executable, "-m", "uvicorn", "main:app",
+            sys.executable, "-m", "uvicorn", "railway.app:app",
             "--host", "127.0.0.1", "--port", "0",
         ]
 

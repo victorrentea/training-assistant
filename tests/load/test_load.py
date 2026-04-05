@@ -44,7 +44,7 @@ def server_url():
     server_env["HOST_USERNAME"] = HOST_USER
     server_env["HOST_PASSWORD"] = HOST_PASS
     proc = subprocess.Popen(
-        [sys.executable, "-m", "uvicorn", "main:app", "--host", "127.0.0.1", "--port", "0"],
+        [sys.executable, "-m", "uvicorn", "railway.app:app", "--host", "127.0.0.1", "--port", "0"],
         stdout=subprocess.DEVNULL,
         stderr=subprocess.PIPE,
         cwd=os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
