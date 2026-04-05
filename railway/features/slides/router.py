@@ -10,14 +10,11 @@ from fastapi.responses import FileResponse, Response
 from railway.features.slides.upload import (
     _slugify,
     _uploaded_slides_dir,
-    router as upload_router,
 )
 
 router = APIRouter()
 public_router = APIRouter()
 logger = logging.getLogger(__name__)
-# Note: upload_router (daemon-facing /api/materials/* and /api/slides/upload) is mounted globally
-# in main.py so it is NOT included here (would conflict with /api/{session_id} prefix).
 
 
 def _resolve_local_slides_dir() -> Path | None:

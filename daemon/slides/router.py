@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 # Module-level state for pending /check futures
 _pending_checks: dict[str, list[asyncio.Future]] = {}
 _event_loop: asyncio.AbstractEventLoop | None = None
+_CHECK_TIMEOUT_S: float = 30.0
 
 
 def get_event_loop() -> asyncio.AbstractEventLoop | None:
@@ -65,7 +66,7 @@ async def check_slide_cache(session_id: str, slug: str):
             logger.warning("slides/check: ws_client not available, cannot request download for slug=%s", slug)
 
     try:
-        result = await asyncio.wait_for(future, timeout=30.0)
+        result = await asyncio.wait_for(future, timeout=_CHECK_TIMEOUT_S)
     except asyncio.TimeoutError:
         # Remove timed-out future from pending list
         pending = _pending_checks.get(slug, [])
