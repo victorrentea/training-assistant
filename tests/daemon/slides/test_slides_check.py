@@ -83,9 +83,12 @@ def test_check_triggers_download_and_returns_200_on_success(fresh_misc_state, mo
 
     monkeypatch.setattr("daemon.ws_publish.send_to_railway", fake_send_to_railway)
 
-    # Also mock broadcast and SlidesCacheStatusMsg since handle_pdf_download_complete uses them
-    with patch("daemon.ws_publish.broadcast"), \
-         patch("daemon.ws_messages.SlidesCacheStatusMsg"):
+    broadcasts = []
+
+    def _capture_broadcast(msg):
+        broadcasts.append(msg)
+
+    with patch("daemon.ws_publish.broadcast", side_effect=_capture_broadcast):
 
         app = FastAPI()
         app.include_router(participant_router)
@@ -107,6 +110,9 @@ def test_check_triggers_download_and_returns_200_on_success(fresh_misc_state, mo
     assert resp.json()["status"] == "cached"
     # Verify download_pdf was sent to Railway
     assert any(m.get("type") == "download_pdf" and m.get("slug") == "myslug" for m in sent_msgs)
+    statuses = [m.model_dump()["slides_cache_status"]["myslug"]["status"] for m in broadcasts]
+    assert "downloading" in statuses
+    assert "cached" in statuses
 
 
 def test_check_cached_local_but_missing_on_railway_triggers_download(fresh_misc_state, monkeypatch):
@@ -121,8 +127,12 @@ def test_check_cached_local_but_missing_on_railway_triggers_download(fresh_misc_
 
     monkeypatch.setattr("daemon.ws_publish.send_to_railway", fake_send_to_railway)
 
-    with patch("daemon.ws_publish.broadcast"), \
-         patch("daemon.ws_messages.SlidesCacheStatusMsg"):
+    broadcasts = []
+
+    def _capture_broadcast(msg):
+        broadcasts.append(msg)
+
+    with patch("daemon.ws_publish.broadcast", side_effect=_capture_broadcast):
         app = FastAPI()
         app.include_router(participant_router)
         client = TestClient(app, raise_server_exceptions=False)
@@ -140,6 +150,10 @@ def test_check_cached_local_but_missing_on_railway_triggers_download(fresh_misc_
     assert resp.status_code == 200
     assert resp.json()["status"] == "cached"
     assert any(m.get("type") == "download_pdf" and m.get("slug") == "myslug" for m in sent_msgs)
+    statuses = [m.model_dump()["slides_cache_status"]["myslug"]["status"] for m in broadcasts]
+    assert "not_cached" in statuses
+    assert "downloading" in statuses
+    assert "cached" in statuses
 
 
 def test_check_returns_503_on_timeout(fresh_misc_state, monkeypatch):
@@ -151,15 +165,24 @@ def test_check_returns_503_on_timeout(fresh_misc_state, monkeypatch):
 
     monkeypatch.setattr("daemon.ws_publish.send_to_railway", fake_send_to_railway)
 
+    broadcasts = []
+
+    def _capture_broadcast(msg):
+        broadcasts.append(msg)
+
     app = FastAPI()
     app.include_router(participant_router)
     client = TestClient(app, raise_server_exceptions=False)
 
-    resp = client.get("/test-session/api/slides/check/myslug")
+    with patch("daemon.ws_publish.broadcast", side_effect=_capture_broadcast):
+        resp = client.get("/test-session/api/slides/check/myslug")
 
     assert resp.status_code == 503
     assert resp.json()["status"] == "timeout"
     assert fresh_misc_state.slides_cache_status["myslug"]["status"] == "poll_timeout"
+    statuses = [m.model_dump()["slides_cache_status"]["myslug"]["status"] for m in broadcasts]
+    assert "downloading" in statuses
+    assert statuses[-1] == "poll_timeout"
 
 
 def test_check_coalesces_concurrent_requests(fresh_misc_state, monkeypatch):
@@ -188,8 +211,7 @@ def test_check_coalesces_concurrent_requests(fresh_misc_state, monkeypatch):
         from httpx import AsyncClient
         transport = httpx.ASGITransport(app=_app)
         async with AsyncClient(transport=transport, base_url="http://test") as ac:
-            with patch("daemon.ws_publish.broadcast"), \
-                 patch("daemon.ws_messages.SlidesCacheStatusMsg"):
+            with patch("daemon.ws_publish.broadcast"):
                 # Fire two concurrent requests before resolving
                 t1 = _asyncio.create_task(
                     ac.get("/test-session/api/slides/check/myslug")

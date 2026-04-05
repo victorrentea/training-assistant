@@ -1425,6 +1425,15 @@ components:
       required:
       - topic
       title: SetTopicBody
+    SlidesCheckResponse:
+      properties:
+        status:
+          type: string
+          title: Status
+      type: object
+      required:
+      - status
+      title: SlidesCheckResponse
     StartSessionRequest:
       properties:
         name:

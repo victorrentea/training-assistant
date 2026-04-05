@@ -218,6 +218,25 @@
 - [x] Verify host and participant both initialize shared reload guard (`static/version-reload.js`)
 - [x] Verify mismatch check is executed from websocket `state` updates in both UIs
 - [x] Run focused e2e regression for mismatch banner + stop action
+
+## Direct request: fix slides cache status accuracy + propagation
+
+- [x] Initialize daemon slides cache status from Railway availability at startup (no local publish-dir inferred green)
+- [x] Harden `/api/slides/check/{slug}` transitions with immediate `downloading` + downgrade false cached + timeout/failure broadcasts
+- [x] Add startup and `/check` broadcast regression tests
+- [x] Update `apis.md` + daemon OpenAPI snapshot for typed slides check response
+- [x] Run targeted slides and contract checks
+
+### Review: fix slides cache status accuracy + propagation
+
+- Proof: `bash tests/run-daemon-tests.sh tests/daemon/slides/test_slides_check.py tests/daemon/slides/test_slides_loop.py`
+- Result: `8 passed in 0.50s`
+- Proof: `python3 -m pytest tests/features/slides/test_download_pdf_ws.py -q`
+- Result: `3 passed in 0.21s`
+- Proof: `python3 -m pytest tests/daemon/test_api_contract.py -q`
+- Result: `6 passed in 0.44s`
+- Proof: `python3 -m pytest tests/daemon/test_ws_contract.py -q`
+- Result: `5 passed in 0.14s`
 - [x] Mark item done in `backlog.md`
 - [x] Capture non-visual proof via test output
 
