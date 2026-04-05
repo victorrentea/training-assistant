@@ -123,3 +123,16 @@ class TestSetLocation:
                            json={"location": ""},
                            headers={"X-Participant-ID": "uuid1"})
         assert resp.status_code == 400
+
+
+class TestParticipantState:
+    def test_state_uses_session_stack_name_fallback(self, client, fresh_state):
+        fresh_state.participant_names["uuid1"] = "Alice"
+        with patch("daemon.misc.state.misc_state.session_name", None):
+            with patch(
+                "daemon.participant.router.session_shared_state.get_session_stack",
+                return_value=[{"name": "2026-04-06 Productive Session"}],
+            ):
+                resp = client.get("/api/participant/state", headers={"X-Participant-ID": "uuid1"})
+        assert resp.status_code == 200
+        assert resp.json()["session_name"] == "2026-04-06 Productive Session"
