@@ -3,14 +3,18 @@
 import asyncio
 import threading
 import time
+from pathlib import Path
 from types import SimpleNamespace
 
 from daemon import log
 from daemon.slides import daemon as slides_daemon
+from daemon.misc.state import misc_state
 from daemon.slides.catalog import (
     _abs_key,
+    _slugify,
     detect_changed_files,
     ensure_slug,
+    load_catalog_entries,
     resolve_tracked_sources,
 )
 from daemon.slides.convert import poll_fingerprint_until_changed, _fingerprints
@@ -55,6 +59,34 @@ class SlidesPollingRunner:
         self._next_run_at = time.monotonic()
         self.enabled = True
         log.info("slides", f"Slides watcher enabled ({self.poll_interval_seconds:.0f}s)")
+        self._init_misc_state_from_catalog(cfg)
+
+    def _init_misc_state_from_catalog(self, cfg) -> None:
+        """Populate misc_state.slides_catalog and slides_cache_status from the catalog file."""
+        entries = load_catalog_entries(cfg.catalog_file)
+        if not entries:
+            return
+        tracked = self._slides_state.get("files", {})
+        catalog_entries = []
+        for entry in entries:
+            key = _abs_key(entry["source"])
+            slug = tracked.get(key, {}).get("slug") or _slugify(Path(entry["target_pdf"]).stem)
+            catalog_entries.append({
+                "slug": slug,
+                "title": entry["title"],
+                "drive_export_url": entry["drive_export_url"],
+            })
+        misc_state.update_slides_catalog(catalog_entries)
+
+        # Initialize cache status by checking on-disk PDFs
+        for raw_entry, catalog_entry in zip(entries, catalog_entries):
+            slug = catalog_entry["slug"]
+            if slug not in misc_state.slides_cache_status:
+                pdf_exists = (cfg.publish_dir / raw_entry["target_pdf"]).exists()
+                misc_state.slides_cache_status[slug] = {
+                    "status": "cached" if pdf_exists else "not_cached"
+                }
+        log.info("slides", f"Initialized catalog: {len(catalog_entries)} entries")
 
     def _run_once_bg(self) -> None:
         try:

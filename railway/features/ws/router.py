@@ -233,14 +233,6 @@ async def daemon_websocket_endpoint(websocket: WebSocket):
         await broadcast({"type": "slides_catalog_changed"})
 
 
-async def _send_initial_messages(websocket: WebSocket) -> None:
-    """Send slides_cache_status as a separate initial message after state."""
-    try:
-        await websocket.send_text(json.dumps({"type": "slides_cache_status", "slides_cache_status": state.slides_cache_status}))
-    except Exception:
-        pass
-
-
 async def _handle_participant_connection(websocket: WebSocket, pid: str, is_host: bool):
     """Shared logic for participant/host WebSocket connections.
 
@@ -266,13 +258,11 @@ async def _handle_participant_connection(websocket: WebSocket, pid: str, is_host
     if is_host:
         state.participant_names["__host__"] = "Host"
         logger.info(f"Host connected ({len(state.participants)} total)")
-        await _send_initial_messages(websocket)
         await broadcast_participant_update()
     else:
-        # Participant registered via daemon REST — send initial state and broadcast presence
+        # Participant registered via daemon REST — broadcast presence
         name = state.participant_names.get(pid, "")
         logger.info(f"WS connected: {pid} name={name!r} ({len(state.participants)} total)")
-        await _send_initial_messages(websocket)
         await broadcast_participant_update()
 
     try:
