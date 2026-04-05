@@ -159,7 +159,7 @@ def _build_catalog_slides_index() -> list[dict]:
         slides.append({
             "name": name,
             "slug": slug,
-            "url": f"/api/slides/file/{slug}",
+            "url": f"/api/slides/download/{slug}",
             "updated_at": updated_at,
             "group": str(entry.get("group") or "").strip() or None,
             "source": "catalog",
@@ -192,7 +192,7 @@ def _build_local_slides_index() -> tuple[list[dict], dict[str, Path]]:
         slides.append({
             "name": pdf.stem,
             "slug": slug,
-            "url": f"/api/slides/file/{slug}",
+            "url": f"/api/slides/download/{slug}",
             "updated_at": source_updated_at or mtime,
             "source": "local_materials",
         })
@@ -227,7 +227,7 @@ def _build_uploaded_slides_index() -> tuple[list[dict], dict[str, Path]]:
         slides.append({
             "name": display_name,
             "slug": slug,
-            "url": f"/api/slides/file/{slug}",
+            "url": f"/api/slides/download/{slug}",
             "updated_at": updated,
             "source": "uploaded",
         })
@@ -265,7 +265,7 @@ def _merge_slide_sources(
             participant_url = url
             if participant_url.startswith(("http://", "https://")):
                 # Serve external URLs through local endpoint to enforce inline PDF rendering.
-                participant_url = f"/api/slides/file/{slug}"
+                participant_url = f"/api/slides/download/{slug}"
             merged.append({
                 "name": name,
                 "slug": slug,
@@ -375,16 +375,6 @@ async def get_slides_catalog_map():
     }
 
 
-@public_router.get("/api/slides/current")
-async def get_current_slides(request: Request):
-    sid = request.path_params.get("session_id", "")
-    prefix = f"/{sid}" if sid else ""
-    sc = state.slides_current
-    if sc and isinstance(sc.get("url"), str) and sc["url"].startswith("/api/slides/file/"):
-        sc = {**sc, "url": f"{prefix}{sc['url']}"}
-    return {"slides_current": sc}
-
-
 @public_router.get("/api/slides")
 async def get_slides(request: Request):
     from features.slides.cache import _cache_path
@@ -402,13 +392,13 @@ async def get_slides(request: Request):
         slide["available_on_server"] = has_local_pdf or in_cache or in_catalog or is_catalog_source
         # Rewrite local file URLs to include session prefix
         url = str(slide.get("url") or "")
-        if url.startswith("/api/slides/file/"):
+        if url.startswith("/api/slides/download/"):
             slide["url"] = f"{prefix}{url}"
     return {"slides": slides}
 
 
-@public_router.api_route("/api/slides/file/{slug}", methods=["GET", "HEAD"], include_in_schema=False)
-@public_router.get("/api/slides/file/{slug}", operation_id="get_slide_file")
+@public_router.api_route("/api/slides/download/{slug}", methods=["GET", "HEAD"], include_in_schema=False)
+@public_router.get("/api/slides/download/{slug}", operation_id="get_slide_download")
 async def get_slide_file(slug: str, request: Request):
     from features.slides.cache import _cache_path, download_or_wait_cached
 

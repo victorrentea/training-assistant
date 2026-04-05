@@ -1185,18 +1185,10 @@ ${html}
     }
   }
 
-  // Queues a follow using the current hostSlidesCurrent, fetching from API first if not yet known.
+  // Queues a follow using the current hostSlidesCurrent (set via WS slides_current events).
   function _queueHostSlideCurrent() {
     if (hostSlidesCurrent) {
       _queueHostSlideFollow(hostSlidesCurrent);
-    } else {
-      fetch(apiBase + '/api/slides/current')
-        .then(r => r.ok ? r.json() : null)
-        .then(data => {
-          if (data) _onIncomingHostSlidesCurrent(data.slides_current || null);
-          if (hostSlidesCurrent) _queueHostSlideFollow(hostSlidesCurrent);
-        })
-        .catch(() => {});
     }
   }
 
@@ -2347,10 +2339,8 @@ ${html}
   }
 
   function _prefetchHostSlidesCurrent() {
-    fetch(apiBase + '/api/slides/current')
-      .then(r => r.ok ? r.json() : null)
-      .then(data => { if (data) _onIncomingHostSlidesCurrent(data.slides_current || null); })
-      .catch(() => {});
+    // slides_current is delivered via WS state message and slides_current events;
+    // no separate REST fetch needed.
   }
 
   async function requestNotificationPermission() {
@@ -2829,10 +2819,23 @@ const sessionTitleEl = document.getElementById('session-title');
         }
         _onIncomingHostSlidesCurrent(msg.slides_current || null);
         break;
-      case 'participant_count':
+      case 'participant_updated':
         updateParticipantCount(msg.count);
         updateHostDot(msg.host_connected);
         break;
+      case 'activity_updated': {
+        const newActivity = msg.current_activity || 'none';
+        const prevActivity = String(_prevActivity || 'none');
+        if (newActivity !== prevActivity) {
+          if (newActivity !== 'none' && newActivity !== prevActivity) closeSlidesModal();
+          if (prevActivity !== 'qa' && newActivity === 'qa') notifyIfHidden('❓ Q&A is open', 'Tap to ask or upvote questions');
+          if (prevActivity !== 'wordcloud' && newActivity === 'wordcloud') notifyIfHidden('☁️ Word cloud is open', 'Tap to share your thoughts');
+          if (prevActivity !== 'debate' && newActivity === 'debate') notifyIfHidden('⚔️ Debate started', 'Choose your side!');
+          if (prevActivity !== 'codereview' && newActivity === 'codereview') notifyIfHidden('📝 Code Review', 'Spot bugs and earn points!');
+          _prevActivity = newActivity;
+        }
+        break;
+      }
       case 'scores':
         break;
       case 'timer':
@@ -4003,7 +4006,7 @@ const sessionTitleEl = document.getElementById('session-title');
     } else {
       if (myVote === optionId) return;
       myVote = optionId;
-      participantApi('poll/vote', { option_id: optionId });
+      participantApi('poll/vote', { option_ids: [optionId] });
     }
     saveVote();
     updateSelectionUI();
