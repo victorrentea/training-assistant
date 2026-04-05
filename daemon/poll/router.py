@@ -8,18 +8,14 @@ from pydantic import BaseModel
 
 from daemon.poll.state import poll_state
 from daemon.scores import scores
-from daemon.host_ws import send_to_host
 from daemon.participant.state import participant_state
+from daemon.ws_publish import broadcast, notify_host
+from daemon.ws_messages import (
+    PollCreatedMsg, PollOpenedMsg, PollClosedMsg, PollCorrectRevealedMsg,
+    PollClearedMsg, PollTimerStartedMsg, ScoresUpdatedMsg, ActivityUpdatedMsg,
+)
 
 logger = logging.getLogger(__name__)
-
-_ws_client = None
-
-
-def set_ws_client(client):
-    """Set the WebSocket client for broadcasting events."""
-    global _ws_client
-    _ws_client = client
 
 
 # ── Pydantic models ──
@@ -87,7 +83,7 @@ async def create_poll(body: CreatePollRequest):
     participant_state.current_activity = "poll"
 
     # Only notify host — participants see nothing until opened
-    await send_to_host({"type": "poll_created", "poll": poll})
+    await notify_host(PollCreatedMsg(poll=poll))
     return CreatePollResponse(poll=poll)
 
 
@@ -98,8 +94,8 @@ async def open_poll():
         return JSONResponse({"error": "No poll"}, status_code=400)
 
     poll_state.open_poll(scores.snapshot_base)
-    _broadcast({"type": "poll_opened", "poll": poll_state.poll})
-    await send_to_host({"type": "poll_opened", "poll": poll_state.poll})
+    broadcast(PollOpenedMsg(poll=poll_state.poll))
+    await notify_host(PollOpenedMsg(poll=poll_state.poll))
     return OkResponse()
 
 
@@ -110,8 +106,8 @@ async def close_poll():
         return JSONResponse({"error": "No poll"}, status_code=400)
 
     result = poll_state.close_poll()
-    _broadcast({"type": "poll_closed", **result})
-    await send_to_host({"type": "poll_closed", **result})
+    broadcast(PollClosedMsg())
+    await notify_host(PollClosedMsg())
     return JSONResponse({"ok": True, **result})
 
 
@@ -122,10 +118,10 @@ async def reveal_correct(body: RevealCorrectRequest):
         return JSONResponse({"error": "No poll"}, status_code=400)
 
     result = poll_state.reveal_correct(body.correct_ids, scores)
-    _broadcast({"type": "poll_correct_revealed", **result})
-    _broadcast({"type": "scores_updated", "scores": result["scores"]})
-    await send_to_host({"type": "poll_correct_revealed", **result})
-    await send_to_host({"type": "scores_updated", "scores": result["scores"]})
+    broadcast(PollCorrectRevealedMsg(correct_ids=result["correct_ids"]))
+    broadcast(ScoresUpdatedMsg(scores=result["scores"]))
+    await notify_host(PollCorrectRevealedMsg(correct_ids=result["correct_ids"]))
+    await notify_host(ScoresUpdatedMsg(scores=result["scores"]))
     return OkResponse()
 
 
@@ -136,8 +132,8 @@ async def start_timer(body: StartTimerRequest):
         return JSONResponse({"error": "No poll"}, status_code=400)
 
     result = poll_state.start_timer(body.seconds)
-    _broadcast({"type": "poll_timer_started", **result})
-    await send_to_host({"type": "poll_timer_started", **result})
+    broadcast(PollTimerStartedMsg(seconds=result["seconds"]))
+    await notify_host(PollTimerStartedMsg(seconds=result["seconds"]))
     return OkResponse()
 
 
@@ -146,9 +142,9 @@ async def delete_poll():
     """Host deletes the current poll."""
     poll_state.clear()
     participant_state.current_activity = "none"
-    _broadcast({"type": "poll_cleared"})
-    _broadcast({"type": "activity_updated", "current_activity": "none"})
-    await send_to_host({"type": "poll_cleared"})
+    broadcast(PollClearedMsg())
+    broadcast(ActivityUpdatedMsg(current_activity="none"))
+    await notify_host(PollClearedMsg())
     return OkResponse()
 
 
@@ -161,10 +157,3 @@ quiz_md_router = APIRouter(tags=["quiz"])
 async def get_quiz_md():
     """Return the accumulated quiz markdown history."""
     return QuizMdResponse(content=poll_state.quiz_md_content)
-
-
-# ── Broadcast helper ──
-
-def _broadcast(event: dict):
-    if _ws_client:
-        _ws_client.send({"type": "broadcast", "event": event})

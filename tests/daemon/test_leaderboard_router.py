@@ -24,28 +24,26 @@ def fresh_participant_state():
 
 
 @pytest.fixture
-def mock_ws_client():
-    mock = MagicMock()
-    mock.send.return_value = True
-    with patch("daemon.leaderboard.router._ws_client", mock):
+def mock_broadcast():
+    with patch("daemon.leaderboard.router.broadcast") as mock:
         yield mock
 
 
 @pytest.fixture
-def mock_host_ws():
-    with patch("daemon.leaderboard.router.send_to_host", new_callable=AsyncMock) as mock:
+def mock_notify_host():
+    with patch("daemon.leaderboard.router.notify_host", new_callable=AsyncMock) as mock:
         yield mock
 
 
 @pytest.fixture
-def client(fresh_scores, fresh_participant_state, mock_ws_client, mock_host_ws):
+def client(fresh_scores, fresh_participant_state, mock_broadcast, mock_notify_host):
     app = FastAPI()
     app.include_router(router)
     return TestClient(app)
 
 
 class TestShowLeaderboard:
-    def test_show_leaderboard(self, client, fresh_scores, mock_ws_client, mock_host_ws):
+    def test_show_leaderboard(self, client, fresh_scores, mock_broadcast, mock_notify_host):
         fresh_scores.add_score("p1", 300)
         fresh_scores.add_score("p2", 100)
         fresh_scores.add_score("p3", 200)
@@ -54,22 +52,19 @@ class TestShowLeaderboard:
 
         assert resp.status_code == 200
         assert resp.json() == {"ok": True}
-        # ws_client.send called with broadcast containing leaderboard_revealed
-        mock_ws_client.send.assert_called_once()
-        call_arg = mock_ws_client.send.call_args[0][0]
-        assert call_arg["type"] == "broadcast"
-        assert call_arg["event"]["type"] == "leaderboard_revealed"
-        # Entries sorted by score desc
-        entries = call_arg["event"]["entries"]
-        assert entries[0]["score"] == 300
-        assert entries[1]["score"] == 200
-        assert entries[2]["score"] == 100
-        # send_to_host called
-        mock_host_ws.assert_called_once()
-        # total_participants is correct
-        assert call_arg["event"]["total_participants"] == 3
+        # broadcast called with LeaderboardRevealedMsg
+        mock_broadcast.assert_called_once()
+        msg = mock_broadcast.call_args[0][0]
+        assert msg.type == "leaderboard_revealed"
+        # Positions sorted by score desc
+        positions = msg.positions
+        assert positions[0]["score"] == 300
+        assert positions[1]["score"] == 200
+        assert positions[2]["score"] == 100
+        # notify_host called
+        mock_notify_host.assert_called_once()
 
-    def test_show_leaderboard_with_names(self, client, fresh_scores, fresh_participant_state, mock_ws_client, mock_host_ws):
+    def test_show_leaderboard_with_names(self, client, fresh_scores, fresh_participant_state, mock_broadcast, mock_notify_host):
         fresh_scores.add_score("p1", 500)
         fresh_scores.add_score("p2", 300)
         fresh_participant_state.participant_names["p1"] = "Alice"
@@ -78,45 +73,56 @@ class TestShowLeaderboard:
         resp = client.post("/api/test-session/host/leaderboard/show")
 
         assert resp.status_code == 200
-        call_arg = mock_ws_client.send.call_args[0][0]
-        entries = call_arg["event"]["entries"]
-        assert entries[0]["name"] == "Alice"
-        assert entries[1]["name"] == "Bob"
+        msg = mock_broadcast.call_args[0][0]
+        positions = msg.positions
+        assert positions[0]["name"] == "Alice"
+        assert positions[1]["name"] == "Bob"
 
-    def test_show_leaderboard_empty(self, client, fresh_scores, mock_ws_client, mock_host_ws):
+    def test_show_leaderboard_empty(self, client, fresh_scores, mock_broadcast, mock_notify_host):
         resp = client.post("/api/test-session/host/leaderboard/show")
 
         assert resp.status_code == 200
-        call_arg = mock_ws_client.send.call_args[0][0]
-        assert call_arg["event"]["entries"] == []
-        assert call_arg["event"]["total_participants"] == 0
+        msg = mock_broadcast.call_args[0][0]
+        assert msg.positions == []
 
-    def test_show_leaderboard_top5_only(self, client, fresh_scores, mock_ws_client, mock_host_ws):
+    def test_show_leaderboard_top5_only(self, client, fresh_scores, mock_broadcast, mock_notify_host):
         for i in range(7):
             fresh_scores.add_score(f"p{i}", (i + 1) * 100)
 
         resp = client.post("/api/test-session/host/leaderboard/show")
 
         assert resp.status_code == 200
-        call_arg = mock_ws_client.send.call_args[0][0]
-        entries = call_arg["event"]["entries"]
-        assert len(entries) == 5
+        msg = mock_broadcast.call_args[0][0]
+        positions = msg.positions
+        assert len(positions) == 5
         # Top score is 700 (p6)
-        assert entries[0]["score"] == 700
+        assert positions[0]["score"] == 700
 
-    def test_show_leaderboard_unknown_name_fallback(self, client, fresh_scores, mock_ws_client, mock_host_ws):
+    def test_show_leaderboard_unknown_name_fallback(self, client, fresh_scores, mock_broadcast, mock_notify_host):
         fresh_scores.add_score("unknown-uuid", 100)
 
         resp = client.post("/api/test-session/host/leaderboard/show")
 
         assert resp.status_code == 200
-        call_arg = mock_ws_client.send.call_args[0][0]
-        entries = call_arg["event"]["entries"]
-        assert entries[0]["name"] == "???"
+        msg = mock_broadcast.call_args[0][0]
+        positions = msg.positions
+        assert positions[0]["name"] == "???"
+
+    def test_show_leaderboard_rank_assigned(self, client, fresh_scores, mock_broadcast, mock_notify_host):
+        fresh_scores.add_score("p1", 500)
+        fresh_scores.add_score("p2", 300)
+
+        resp = client.post("/api/test-session/host/leaderboard/show")
+
+        assert resp.status_code == 200
+        msg = mock_broadcast.call_args[0][0]
+        positions = msg.positions
+        assert positions[0]["rank"] == 1
+        assert positions[1]["rank"] == 2
 
 
 class TestResetScores:
-    def test_reset_scores(self, client, fresh_scores, mock_ws_client, mock_host_ws):
+    def test_reset_scores(self, client, fresh_scores, mock_broadcast, mock_notify_host):
         fresh_scores.add_score("p1", 500)
         fresh_scores.add_score("p2", 300)
 
@@ -126,11 +132,10 @@ class TestResetScores:
         assert resp.json() == {"ok": True}
         # Scores cleared
         assert fresh_scores.snapshot() == {}
-        # Broadcast scores_updated with empty scores
-        mock_ws_client.send.assert_called_once()
-        call_arg = mock_ws_client.send.call_args[0][0]
-        assert call_arg["type"] == "broadcast"
-        assert call_arg["event"]["type"] == "scores_updated"
-        assert call_arg["event"]["scores"] == {}
-        # send_to_host called
-        mock_host_ws.assert_called_once()
+        # broadcast called with ScoresUpdatedMsg with empty scores
+        mock_broadcast.assert_called_once()
+        msg = mock_broadcast.call_args[0][0]
+        assert msg.type == "scores_updated"
+        assert msg.scores == {}
+        # notify_host called
+        mock_notify_host.assert_called_once()

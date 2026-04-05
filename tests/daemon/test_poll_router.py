@@ -33,18 +33,16 @@ def fresh_scores():
 
 
 @pytest.fixture
-def mock_ws_client():
-    """Mock ws_client for broadcast path."""
-    mock = MagicMock()
-    mock.send.return_value = True
-    with patch("daemon.poll.router._ws_client", mock):
+def mock_broadcast():
+    """Mock ws_publish.broadcast for participant broadcast path."""
+    with patch("daemon.poll.router.broadcast") as mock:
         yield mock
 
 
 @pytest.fixture
-def mock_host_ws():
-    """Mock send_to_host for host WS path."""
-    with patch("daemon.poll.router.send_to_host", new_callable=AsyncMock) as mock:
+def mock_notify_host():
+    """Mock ws_publish.notify_host for host WS path."""
+    with patch("daemon.poll.router.notify_host", new_callable=AsyncMock) as mock:
         yield mock
 
 
@@ -66,7 +64,7 @@ def participant_client(fresh_poll_state, fresh_scores):
 
 
 @pytest.fixture
-def host_client(fresh_poll_state, fresh_scores, mock_ws_client, mock_host_ws, mock_participant_state):
+def host_client(fresh_poll_state, fresh_scores, mock_broadcast, mock_notify_host, mock_participant_state):
     """TestClient with host poll router + quiz-md router."""
     app = FastAPI()
     app.include_router(host_router)
@@ -147,7 +145,7 @@ class TestParticipantVote:
 # ──────────────────────────────────────────────
 
 class TestHostCreatePoll:
-    def test_create_poll(self, host_client, fresh_poll_state, mock_host_ws):
+    def test_create_poll(self, host_client, fresh_poll_state, mock_notify_host):
         """Create poll returns created poll and notifies host."""
         resp = host_client.post("/api/test-session/host/poll", json={
             "question": "Best framework?",
@@ -157,11 +155,11 @@ class TestHostCreatePoll:
         data = resp.json()
         assert data["ok"] is True
         assert data["poll"]["question"] == "Best framework?"
-        # send_to_host called with poll_created
-        mock_host_ws.assert_called_once()
-        call_args = mock_host_ws.call_args[0][0]
-        assert call_args["type"] == "poll_created"
-        assert "poll" in call_args
+        # notify_host called with poll_created msg
+        mock_notify_host.assert_called_once()
+        msg = mock_notify_host.call_args[0][0]
+        assert msg.type == "poll_created"
+        assert "question" in msg.poll
 
     def test_create_poll_activity_gate(self, host_client, mock_participant_state):
         """Cannot create poll when another activity (debate) is active."""
@@ -174,7 +172,7 @@ class TestHostCreatePoll:
 
 
 class TestHostOpenPoll:
-    def test_open_poll(self, host_client, fresh_poll_state, mock_ws_client, mock_host_ws):
+    def test_open_poll(self, host_client, fresh_poll_state, mock_broadcast, mock_notify_host):
         """Opening a poll broadcasts to participants and notifies host."""
         fresh_poll_state.create_poll("Q?", _SAMPLE_OPTIONS)
 
@@ -182,15 +180,14 @@ class TestHostOpenPoll:
         assert resp.status_code == 200
 
         # Broadcast to participants
-        assert mock_ws_client.send.call_count >= 1
-        broadcast_msg = mock_ws_client.send.call_args_list[0][0][0]
-        assert broadcast_msg["type"] == "broadcast"
-        assert broadcast_msg["event"]["type"] == "poll_opened"
+        assert mock_broadcast.call_count >= 1
+        broadcast_msg = mock_broadcast.call_args_list[0][0][0]
+        assert broadcast_msg.type == "poll_opened"
 
         # Notify host
-        mock_host_ws.assert_called()
-        host_call = mock_host_ws.call_args[0][0]
-        assert host_call["type"] == "poll_opened"
+        mock_notify_host.assert_called()
+        host_msg = mock_notify_host.call_args[0][0]
+        assert host_msg.type == "poll_opened"
 
     def test_open_poll_no_poll(self, host_client):
         """Open when no poll exists returns 400."""
@@ -199,8 +196,8 @@ class TestHostOpenPoll:
 
 
 class TestHostClosePoll:
-    def test_close_poll(self, host_client, fresh_poll_state, fresh_scores, mock_ws_client, mock_host_ws):
-        """Closing a poll broadcasts vote_counts and notifies host."""
+    def test_close_poll(self, host_client, fresh_poll_state, fresh_scores, mock_broadcast, mock_notify_host):
+        """Closing a poll broadcasts poll_closed and notifies host."""
         _create_and_open_poll(host_client, fresh_poll_state, fresh_scores)
 
         resp = host_client.post("/api/test-session/host/poll/close", json={})
@@ -210,10 +207,7 @@ class TestHostClosePoll:
         assert "vote_counts" in data
 
         # Participants receive poll_closed broadcast
-        broadcast_types = [
-            call[0][0].get("event", {}).get("type")
-            for call in mock_ws_client.send.call_args_list
-        ]
+        broadcast_types = [call[0][0].type for call in mock_broadcast.call_args_list]
         assert "poll_closed" in broadcast_types
 
     def test_close_poll_no_poll(self, host_client):
@@ -223,7 +217,7 @@ class TestHostClosePoll:
 
 
 class TestHostRevealCorrect:
-    def test_reveal_correct(self, host_client, fresh_poll_state, fresh_scores, mock_ws_client, mock_host_ws):
+    def test_reveal_correct(self, host_client, fresh_poll_state, fresh_scores, mock_broadcast, mock_notify_host):
         """Revealing correct answers broadcasts correct_revealed + scores_updated."""
         _create_and_open_poll(host_client, fresh_poll_state, fresh_scores)
 
@@ -231,18 +225,14 @@ class TestHostRevealCorrect:
         assert resp.status_code == 200
 
         # Two broadcasts: poll_correct_revealed + scores_updated
-        broadcast_events = [
-            call[0][0].get("event", {}).get("type")
-            for call in mock_ws_client.send.call_args_list
-            if call[0][0].get("type") == "broadcast"
-        ]
-        assert "poll_correct_revealed" in broadcast_events
-        assert "scores_updated" in broadcast_events
+        broadcast_types = [call[0][0].type for call in mock_broadcast.call_args_list]
+        assert "poll_correct_revealed" in broadcast_types
+        assert "scores_updated" in broadcast_types
 
         # Host also notified twice (correct_revealed + scores_updated)
-        host_call_types = [call[0][0]["type"] for call in mock_host_ws.call_args_list]
-        assert "poll_correct_revealed" in host_call_types
-        assert "scores_updated" in host_call_types
+        host_msg_types = [call[0][0].type for call in mock_notify_host.call_args_list]
+        assert "poll_correct_revealed" in host_msg_types
+        assert "scores_updated" in host_msg_types
 
     def test_reveal_correct_no_poll(self, host_client):
         """Reveal correct when no poll returns 400."""
@@ -251,20 +241,20 @@ class TestHostRevealCorrect:
 
 
 class TestHostStartTimer:
-    def test_start_timer(self, host_client, fresh_poll_state, mock_ws_client, mock_host_ws):
+    def test_start_timer(self, host_client, fresh_poll_state, mock_broadcast, mock_notify_host):
         """Starting timer broadcasts timer_started with seconds."""
         fresh_poll_state.create_poll("Q?", _SAMPLE_OPTIONS)
 
         resp = host_client.post("/api/test-session/host/poll/timer", json={"seconds": 45})
         assert resp.status_code == 200
 
-        broadcast_msg = mock_ws_client.send.call_args_list[0][0][0]
-        assert broadcast_msg["event"]["type"] == "poll_timer_started"
-        assert broadcast_msg["event"]["seconds"] == 45
+        broadcast_msg = mock_broadcast.call_args_list[0][0][0]
+        assert broadcast_msg.type == "poll_timer_started"
+        assert broadcast_msg.seconds == 45
 
-        host_call = mock_host_ws.call_args[0][0]
-        assert host_call["type"] == "poll_timer_started"
-        assert host_call["seconds"] == 45
+        host_msg = mock_notify_host.call_args[0][0]
+        assert host_msg.type == "poll_timer_started"
+        assert host_msg.seconds == 45
 
     def test_start_timer_no_poll(self, host_client):
         """Start timer with no poll returns 400."""
@@ -273,7 +263,7 @@ class TestHostStartTimer:
 
 
 class TestHostDeletePoll:
-    def test_delete_poll(self, host_client, fresh_poll_state, mock_participant_state, mock_ws_client, mock_host_ws):
+    def test_delete_poll(self, host_client, fresh_poll_state, mock_participant_state, mock_broadcast, mock_notify_host):
         """Deleting a poll clears state and broadcasts poll_cleared + activity_updated."""
         fresh_poll_state.create_poll("Q?", _SAMPLE_OPTIONS)
 
@@ -282,11 +272,7 @@ class TestHostDeletePoll:
         assert fresh_poll_state.poll is None
         assert mock_participant_state.current_activity == "none"
 
-        broadcast_types = [
-            call[0][0].get("event", {}).get("type")
-            for call in mock_ws_client.send.call_args_list
-            if call[0][0].get("type") == "broadcast"
-        ]
+        broadcast_types = [call[0][0].type for call in mock_broadcast.call_args_list]
         assert "poll_cleared" in broadcast_types
         assert "activity_updated" in broadcast_types
 

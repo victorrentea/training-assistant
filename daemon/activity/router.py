@@ -6,19 +6,12 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from daemon.participant.state import participant_state
+from daemon.ws_publish import broadcast
+from daemon.ws_messages import ActivityUpdatedMsg
 
 logger = logging.getLogger(__name__)
 
-# Set by __main__.py during daemon startup
-_ws_client = None
-
 _VALID_ACTIVITIES = {"none", "poll", "wordcloud", "qa", "codereview", "debate"}
-
-
-def set_ws_client(client):
-    """Set the WebSocket client for broadcasting events."""
-    global _ws_client
-    _ws_client = client
 
 
 # ── Pydantic models ──
@@ -50,10 +43,6 @@ async def set_activity(body: SetActivityRequest):
 
     participant_state.current_activity = activity
 
-    if _ws_client:
-        _ws_client.send({
-            "type": "broadcast",
-            "event": {"type": "activity_updated", "current_activity": activity},
-        })
+    broadcast(ActivityUpdatedMsg(current_activity=activity))
 
     return SetActivityResponse(current_activity=activity)
