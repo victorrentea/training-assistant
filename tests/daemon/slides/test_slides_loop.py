@@ -4,7 +4,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from daemon.misc.state import MiscState
-from daemon.slides.loop import SlidesPollingRunner
+from daemon.slides.loop import SlidesRunner
 
 
 class _MainCfg:
@@ -13,8 +13,8 @@ class _MainCfg:
     host_password = "pass"
 
 
-def _runner_with_state() -> SlidesPollingRunner:
-    runner = SlidesPollingRunner(_MainCfg())
+def _runner_with_state() -> SlidesRunner:
+    runner = SlidesRunner(_MainCfg())
     runner._slides_state = {"files": {}}
     return runner
 

@@ -494,9 +494,7 @@ def run() -> None:
     last_transcript_stats_at = 0.0
     last_transcript_line_count = -1
     last_slides_payload_hash: str | None = None
-    _SLIDE_FILE_READ_INTERVAL: float = 0.5
-    last_slide_file_read_at: float = 0.0
-    last_slide_file_pointer: str | None = None  # "deckname:slide_number"
+
     _prev_overlay_connected: bool = False
     # Sync initial state to server — include session_state.json if present in the active folder
     try:
@@ -640,90 +638,6 @@ def run() -> None:
                     write_lock()
                     last_heartbeat_at = now
 
-                # ── Read PowerPoint state from activity-slides file ──
-                if now - last_slide_file_read_at >= _SLIDE_FILE_READ_INTERVAL:
-                    last_slide_file_read_at = now
-                    today = datetime.now().strftime("%Y-%m-%d")
-                    slide_file = config.folder / f"activity-slides-{today}.md"
-                    pointer = None
-                    if slide_file.exists():
-                        try:
-                            # Read only the last line efficiently
-                            with slide_file.open("r", encoding="utf-8") as f:
-                                lines = f.readlines()
-                                if lines:
-                                    last_line = lines[-1].strip()
-                                    if ":" in last_line and not last_line.startswith("#"):
-                                        pointer = last_line
-                        except Exception:
-                            pass
-
-                    if pointer != last_slide_file_pointer:
-                        last_slide_file_pointer = pointer
-                        if pointer:
-                            # Parse "deckname:slide_number"
-                            deck, _, slide_str = pointer.rpartition(":")
-                            try:
-                                slide_num = max(1, int(slide_str))
-                            except ValueError:
-                                slide_num = 1
-
-                            # Resolve to PDF URL using existing catalog logic
-                            if slides_runner and slides_runner._slides_config:
-                                catalog_file = getattr(slides_runner._slides_config, "catalog_file", None)
-                                target = _resolve_presentation_slide_target(
-                                    presentation_name=deck,
-                                    server_url=config.server_url,
-                                    catalog_file=catalog_file,
-                                )
-                                if target and ws_client.connected:
-                                    is_matched = bool(target.get("matched", True))
-                                    alert_key = _presentation_alert_key(deck)
-                                    if not is_matched:
-                                        if alert_key and alert_key not in _PPT_UNMAPPED_PRESENTATIONS_ALERTED:
-                                            _PPT_UNMAPPED_PRESENTATIONS_ALERTED.add(alert_key)
-                                            _platform.beep()
-                                            message = f"Presentation inaccessible for participants. ({deck})"
-                                            from daemon.ws_messages import QuizStatusMsg
-                                            ws_publish.broadcast(QuizStatusMsg(status="error", message=message))
-                                            log.error("slides", message)
-                                        if misc_state.slides_current is not None:
-                                            misc_state.slides_current = None
-                                            from daemon.ws_messages import SlidesCurrentMsg
-                                            ws_publish.broadcast(SlidesCurrentMsg(slides_current=None))
-                                    else:
-                                        if alert_key:
-                                            _PPT_UNMAPPED_PRESENTATIONS_ALERTED.discard(alert_key)
-                                        sc = {
-                                            "url": target["url"],
-                                            "slug": target["slug"],
-                                            "source_file": deck,
-                                            "presentation_name": deck,
-                                            "current_page": slide_num,
-                                        }
-                                        if misc_state.slides_current != sc:
-                                            misc_state.slides_current = sc
-                                            from daemon.ws_messages import SlidesCurrentMsg
-                                            ws_publish.broadcast(SlidesCurrentMsg(slides_current=sc))
-                                            log.info("slides", f"Slide: {deck}:{slide_num}")
-                            elif ws_client.connected:
-                                # No slides config — send minimal info
-                                sc = {
-                                    "presentation_name": deck,
-                                    "current_page": slide_num,
-                                }
-                                if misc_state.slides_current != sc:
-                                    misc_state.slides_current = sc
-                                    from daemon.ws_messages import SlidesCurrentMsg
-                                    ws_publish.broadcast(SlidesCurrentMsg(slides_current=sc))
-                                    log.info("slides", f"Slide: {deck}:{slide_num} (no catalog)")
-                        else:
-                            if ws_client.connected and misc_state.slides_current is not None:
-                                misc_state.slides_current = None
-                                from daemon.ws_messages import SlidesCurrentMsg
-                                ws_publish.broadcast(SlidesCurrentMsg(slides_current=None))
-                                log.info("slides", "No active slide pointer")
-
                 # ── Read git activity from file ──
                 # ── Check for session management requests ──
                 try:
@@ -734,9 +648,6 @@ def run() -> None:
                         name = session_req["name"]
                         sid = session_req.get("session_id")
                         session_type = session_req.get("type", "workshop")
-                        # Force re-evaluation of activity-slides pointer for every fresh session.
-                        # Without this, a stale identical pointer value can suppress slides_current push.
-                        last_slide_file_pointer = None
                         if sid:
                             set_current_session_id(sid)
                             _active_session_id = sid
