@@ -1,5 +1,6 @@
 # Tasks
 
+- [x] follow-up bugfix: feedback email now prioritizes participant name sent by frontend payload (`participant_name`), with cache/UUID fallback.
 - [x] ui tweak: participant feedback toast (`Sent!` / error) now appears on the left side near the feedback action button area.
 - [x] follow-up bugfix: feedback email now includes participant display name (not UUID) and resolves current session name via session-stack fallback when misc cache is empty.
 - [x] Direct request: participant file upload returning `400 Unknown participant` now has hermetic regression coverage and upload endpoint validation accepts connected participant UUIDs in sessionized flow.

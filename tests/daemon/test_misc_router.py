@@ -16,16 +16,11 @@ def _client() -> TestClient:
 def test_feedback_route_sends_email_notification():
     client = _client()
     with patch("daemon.misc.router.email_notify", create=True) as notify:
-        with patch.dict(
-            "daemon.misc.router.participant_state.participant_names",
-            {"p1": "Alice"},
-            clear=True,
-        ):
-            resp = client.post(
-                "/api/participant/misc/feedback",
-                json={"text": "Please add dark mode toggle."},
-                headers={"X-Participant-ID": "p1"},
-            )
+        resp = client.post(
+            "/api/participant/misc/feedback",
+            json={"text": "Please add dark mode toggle.", "participant_name": "Alice"},
+            headers={"X-Participant-ID": "p1"},
+        )
     assert resp.status_code == 200
     assert resp.json() == {"ok": True}
     notify.assert_called_once()
@@ -33,6 +28,24 @@ def test_feedback_route_sends_email_notification():
     assert "Participant Feedback" in subject
     assert "Alice" in body
     assert "Please add dark mode toggle." in body
+
+
+def test_feedback_route_falls_back_to_cached_participant_name():
+    client = _client()
+    with patch("daemon.misc.router.email_notify", create=True) as notify:
+        with patch.dict(
+            "daemon.misc.router.participant_state.participant_names",
+            {"p3": "Bob"},
+            clear=True,
+        ):
+            resp = client.post(
+                "/api/participant/misc/feedback",
+                json={"text": "Fallback name should work."},
+                headers={"X-Participant-ID": "p3"},
+            )
+    assert resp.status_code == 200
+    _, body = notify.call_args.args
+    assert "Participant: Bob" in body
 
 
 def test_feedback_route_uses_session_stack_name_fallback():
