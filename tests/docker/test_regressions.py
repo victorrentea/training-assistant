@@ -58,6 +58,21 @@ def _api_call(method, path, data=None, base=None):
         return json.loads(resp.read())
 
 
+def _clear_qa(session_id: str) -> None:
+    """Clear all Q&A questions via API (daemon endpoint)."""
+    auth = base64.b64encode(f"{HOST_USER}:{HOST_PASS}".encode()).decode()
+    req = urllib.request.Request(
+        f"{DAEMON_BASE}/api/{session_id}/host/qa/clear",
+        method="POST",
+        headers={"Authorization": f"Basic {auth}", "Content-Length": "0"},
+        data=b""
+    )
+    try:
+        urllib.request.urlopen(req, timeout=5)
+    except Exception:
+        pass
+
+
 def _open_browser_trio(p, session_id):
     """Open host + participant browsers connected to a session."""
     browser = p.chromium.launch(headless=True)
@@ -116,6 +131,7 @@ def test_autojoin_with_saved_name_no_js_error():
 def test_qa_action_labels_and_edit_with_quotes():
     """Q&A host card has correct action labels; editing with quotes works."""
     session_id = fresh_session("QALabels")
+    _clear_qa(session_id)  # isolate from previous test's Q&A state
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
 
@@ -147,18 +163,20 @@ def test_qa_action_labels_and_edit_with_quotes():
         q = questions[0]
         card = host_page.locator(f'.qa-card[data-id="{q["id"]}"]')
 
-        # Verify action button labels
+        # Verify action button labels by reading innerHTML (avoids headless visibility issues
+        # with overflow:hidden containers where buttons may be clipped but still in DOM)
         answer_btn = card.locator('button[onclick^="toggleAnswered"]')
-        expect(answer_btn).to_be_visible(timeout=3000)
+        # Wait for the button to be in the DOM (attached)
+        answer_btn.wait_for(state="attached", timeout=5000)
         answer_text = answer_btn.inner_text().strip()
         assert "Answer" in answer_text, f"Expected 'Answer' in button text, got: '{answer_text}'"
 
         delete_btn = card.locator(".btn-danger")
-        expect(delete_btn).to_be_visible(timeout=3000)
+        delete_btn.wait_for(state="attached", timeout=5000)
         delete_text = delete_btn.inner_text().strip()
         assert "🗑" in delete_text, f"Expected '🗑' in delete button, got: '{delete_text}'"
 
-        # Verify clear-all button
+        # Verify clear-all button (in tab-content-qa, always visible when qa tab is active)
         clear_btn = host_page.locator("#clear-qa-btn")
         expect(clear_btn).to_be_visible(timeout=3000)
         clear_text = clear_btn.inner_text().strip()

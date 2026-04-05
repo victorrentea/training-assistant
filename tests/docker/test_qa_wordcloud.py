@@ -58,6 +58,7 @@ def _clear_qa(session_id: str) -> None:
 def test_qa_submit_and_host_sees():
     """Participant submits a question → host sees it in Q&A panel."""
     session_id = fresh_session("QATest")
+    _clear_qa(session_id)  # isolate from previous test's Q&A state
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
@@ -148,6 +149,7 @@ def test_qa_host_edits_participant_sees():
 def test_qa_host_deletes_question():
     """Host deletes question → both host and participant lists are empty."""
     session_id = fresh_session("QADeleteTest")
+    _clear_qa(session_id)  # isolate from previous test's Q&A state
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
@@ -226,6 +228,7 @@ def test_qa_host_marks_answered():
 def test_qa_upvoting_and_sort_order():
     """3 participants upvote questions → sorted by upvotes descending."""
     session_id = fresh_session("QAUpvoteTest")
+    _clear_qa(session_id)  # isolate from previous test's Q&A state
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
@@ -325,11 +328,11 @@ def test_leaderboard_show_and_hide():
             timeout_ms=5000, msg="Participant did not get score"
         )
 
-        # Show leaderboard via API (daemon endpoint)
+        # Show leaderboard via API (daemon endpoint: /host/leaderboard/show)
         import base64
         auth = base64.b64encode(f"{HOST_USER}:{HOST_PASS}".encode()).decode()
         req = urllib.request.Request(
-            f"{DAEMON_BASE}/api/{session_id}/leaderboard/show",
+            f"{DAEMON_BASE}/api/{session_id}/host/leaderboard/show",
             method="POST",
             headers={"Authorization": f"Basic {auth}", "Content-Length": "0"},
             data=b""

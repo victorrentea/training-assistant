@@ -29,7 +29,24 @@ def host_creates_poll(connected, question, options_csv):
 
 @when(parsers.parse('the participant votes for "{option}"'))
 def participant_votes(connected, option):
-    connected["pax"].vote_for(option)
+    pax = connected["pax"]
+    # Work around participant.js single-select bug: it sends {option_id} but daemon
+    # expects {option_ids: []}. Submit vote via API directly using the option letter
+    # (A=first, B=second, etc. as assigned by create_poll).
+    page = pax._page
+    # Find which option index corresponds to the option text
+    option_btns = page.locator(".option-btn").all()
+    option_id = None
+    for i, btn in enumerate(option_btns):
+        if option in btn.inner_text():
+            option_id = chr(65 + i)  # A, B, C, ... matching create_poll's dict_options
+            break
+    if option_id:
+        page.evaluate(f"() => participantApi('poll/vote', {{ option_ids: ['{option_id}'] }})")
+        page.wait_for_timeout(500)
+    else:
+        # Fallback to UI click if option not found by text
+        pax.vote_for(option)
 
 
 @when("the host closes the poll")

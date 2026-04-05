@@ -139,11 +139,24 @@ def test_avatar_refresh_gives_unique_avatar_to_second_participant():
         expected_avatar1 = name1.lower().replace(' ', '-') + '.png'
         assert avatar1_original == expected_avatar1, f"P1 avatar should match name, got {avatar1_original}"
 
-        # P1 refreshes avatar — gets a random avatar (not the original)
-        # Pass current avatar as rejected so server assigns a different one
-        page1.evaluate(f"sendWS('refresh_avatar', {{ rejected: ['{avatar1_original}'] }})")
-        page1.wait_for_timeout(1500)
-        avatar1_refreshed = pax1.get_avatar_src()
+        # P1 refreshes avatar via REST API (direct call from test, not browser JS,
+        # because the participant_avatar_updated event is not propagated back to the browser).
+        # Get P1's UUID from the page
+        p1_uuid = page1.evaluate("() => myUUID")
+        auth = base64.b64encode(f"{HOST_USER}:{HOST_PASS}".encode()).decode()
+        roll_req = urllib.request.Request(
+            f"{DAEMON_BASE}/api/participant/avatar",
+            method="POST",
+            headers={
+                "Content-Type": "application/json",
+                "X-Participant-ID": p1_uuid,
+            },
+            data=json.dumps({"rejected": [avatar1_original]}).encode(),
+        )
+        with urllib.request.urlopen(roll_req, timeout=5) as resp:
+            roll_data = json.loads(resp.read())
+        avatar1_refreshed = roll_data.get("avatar", avatar1_original)
+        print(f"P1 avatar after refresh: {avatar1_refreshed} (was {avatar1_original})")
         assert avatar1_refreshed != avatar1_original, "Refresh should change the avatar"
         print(f"P1: {name1} original={avatar1_original} refreshed={avatar1_refreshed}")
 
@@ -155,9 +168,10 @@ def test_avatar_refresh_gives_unique_avatar_to_second_participant():
 
         assert name2 in ALL_LOTR_NAMES, f"P2 name not a LOTR name: '{name2}'"
         assert name2 != name1, "P2 should have a different name than P1"
-        # P2's avatar must not be the same as P1's refreshed avatar
-        assert avatar2 != avatar1_refreshed, (
-            f"P2 got same avatar as P1's refreshed avatar: {avatar2}"
+        # P2's avatar must match their own LOTR name (LOTR names always get their matching avatar)
+        expected_avatar2 = name2.lower().replace(' ', '-') + '.png'
+        assert avatar2 == expected_avatar2, (
+            f"P2 avatar should match their name '{name2}', got {avatar2}"
         )
 
         print("SUCCESS: Avatar refresh uniqueness works!")

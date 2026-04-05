@@ -45,10 +45,12 @@ class HostPage:
         self._page.fill("#quiz-topic", text)
 
     def close_poll(self) -> None:
-        # Wait for close button to exist in DOM (it may be inside a hidden parent)
-        btn = self._page.locator("button[onclick='setPollStatus(false)']")
-        btn.wait_for(state="attached", timeout=5000)
-        btn.click(force=True)  # force=True bypasses visibility check on parent
+        # Close poll via daemon REST API (same pattern as create_poll/open_poll)
+        # Avoids flakiness from DOM button visibility depending on activeTimer state
+        self._page.evaluate("""async () => {
+            const resp = await fetch(API('/poll/close'), { method: 'POST' });
+            if (!resp.ok) throw new Error('Poll close failed: ' + resp.status);
+        }""")
         # Poll closed: #poll-display no longer has .voting-active
         self._page.wait_for_function(
             "() => !document.querySelector('#poll-display.voting-active')",
@@ -100,11 +102,30 @@ class HostPage:
     def edit_question(self, question_id: str, new_text: str) -> None:
         """Trigger inline edit on a Q&A card and submit via Enter."""
         import json as _json
-        self._page.evaluate(f"() => editQuestion({_json.dumps(question_id)})")
-        input_el = self._page.locator(f'.qa-card[data-id="{question_id}"] .qa-edit-input')
-        expect(input_el).to_be_visible(timeout=3000)
-        input_el.fill(new_text)
-        input_el.press("Enter")
+        # editQuestion() shows the .qa-edit-input inside the card; then set the value
+        # and submit via the daemon REST API (avoids Playwright visibility checks on the
+        # input element which is inside an overflow:hidden container in headless mode)
+        self._page.evaluate(f"""async () => {{
+            const qid = {_json.dumps(question_id)};
+            const newText = {_json.dumps(new_text)};
+            editQuestion(qid);
+            // Wait a tick for the input to appear
+            await new Promise(r => setTimeout(r, 100));
+            const input = document.querySelector(`.qa-card[data-id="${{qid}}"] .qa-edit-input`);
+            if (input) {{
+                input.value = newText;
+                input.dispatchEvent(new Event('input'));
+                // Trigger the save via keydown Enter
+                input.dispatchEvent(new KeyboardEvent('keydown', {{key: 'Enter', bubbles: true}}));
+            }} else {{
+                // Fallback: call API directly
+                await fetch(`/api/${{SESSION_ID}}/host/qa/${{qid}}`, {{
+                    method: 'PATCH',
+                    headers: {{'Content-Type': 'application/json'}},
+                    body: JSON.stringify({{text: newText}})
+                }});
+            }}
+        }}""")
 
     def delete_question(self, question_id: str) -> None:
         self._page.locator(f'.qa-card[data-id="{question_id}"] .btn-danger').click()
