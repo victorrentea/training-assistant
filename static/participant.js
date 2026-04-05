@@ -2949,6 +2949,8 @@ const sessionTitleEl = document.getElementById('session-title');
           sessionTitleEl.style.display = topic ? '' : 'none';
         }
         _onIncomingHostSlidesCurrent(msg.slides_current || null);
+        if (msg.notes_count != null) updateNotesCount(msg.notes_count);
+        if (msg.summary_count != null) updateSummaryCount(msg.summary_count);
         break;
       case 'participant_count_updated':
         updateParticipantCount(msg.count);

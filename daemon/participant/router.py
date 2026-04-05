@@ -323,6 +323,7 @@ async def get_participant_state(request: Request):
     session_id = _get_current_session_id()
     summary = read_summary_payload()
     notes_content = read_notes_content()
+    notes_count = sum(1 for line in (notes_content or "").splitlines() if line.strip())
 
     state_msg = {
         "type": "state",
@@ -364,9 +365,9 @@ async def get_participant_state(request: Request):
         "session_name": _get_session_name(),
         # Leaderboard
         "leaderboard_data": leaderboard_state.data,
-        # Summary / notes
-        "summary_points": summary["points"],
-        "notes_content": notes_content,
+        # Summary / notes (counts only — full content fetched on demand)
+        "summary_count": len(summary["points"]),
+        "notes_count": notes_count,
     }
 
     return JSONResponse(state_msg)
