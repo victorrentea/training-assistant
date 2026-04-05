@@ -44,12 +44,7 @@ class AddonBridgeClient:
 
     def send_emoji(self, emoji: str) -> bool:
         """Forward an emoji reaction to the overlay. Best-effort; never raises."""
-        ok = self._send({"type": "emoji", "emoji": emoji, "count": 1})
-        if ok:
-            log.info(_NAME, f"Sent emoji to addons: {emoji!r}")
-        else:
-            log.info(_NAME, f"Dropped emoji (bridge unavailable): {emoji!r}")
-        return ok
+        return self._send({"type": "emoji", "emoji": emoji, "count": 1})
 
     def drain_slides(self) -> list[dict]:
         """Return all pending slide events. Call from the main thread each loop."""
