@@ -27,16 +27,14 @@ def fresh_participant_state():
 
 @pytest.fixture
 def mock_ws_client():
-    mock = MagicMock()
-    mock.send.return_value = True
-    with patch("daemon.qa.router._ws_client", mock):
+    with patch("daemon.qa.router.broadcast") as mock:
         yield mock
 
 
 @pytest.fixture
 def mock_host_ws():
-    """Mock send_to_host — imported at module level in daemon.qa.router."""
-    with patch("daemon.qa.router.send_to_host", new_callable=AsyncMock) as mock:
+    """Mock notify_host in qa.router."""
+    with patch("daemon.qa.router.notify_host", new_callable=AsyncMock) as mock:
         yield mock
 
 
@@ -84,9 +82,9 @@ class TestParticipantSubmit:
                                 json={"text": "Question?"},
                                 headers={"X-Participant-ID": "uuid1"})
         assert mock_host_ws.call_count == 2
-        first_msg = mock_host_ws.call_args_list[0][0][0]
+        first_msg = mock_host_ws.call_args_list[0][0][0].model_dump()
         assert first_msg["type"] == "qa_updated"
-        second_msg = mock_host_ws.call_args_list[1][0][0]
+        second_msg = mock_host_ws.call_args_list[1][0][0].model_dump()
         assert second_msg["type"] == "scores_updated"
 
 
@@ -162,9 +160,9 @@ class TestHostEndpoints:
         assert resp.status_code == 404
 
     def test_host_submit_sends_broadcast(self, host_client, mock_ws_client):
+        from daemon.ws_messages import QaUpdatedMsg
         host_client.post("/api/test-session/host/qa/submit",
                          json={"text": "Question"})
-        assert mock_ws_client.send.call_count >= 1
-        broadcast = mock_ws_client.send.call_args_list[0][0][0]
-        assert broadcast["type"] == "broadcast"
-        assert broadcast["event"]["type"] == "qa_updated"
+        assert mock_ws_client.call_count >= 1
+        broadcast_msg = mock_ws_client.call_args_list[0][0][0]
+        assert isinstance(broadcast_msg, QaUpdatedMsg)
