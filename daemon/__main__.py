@@ -464,7 +464,6 @@ def run() -> None:
         # Restore from persisted stack
         current_folder = config.session_folder or (sessions_root / session_stack[-1]["name"])
         current_key_points, summary_watermark = load_key_points(current_folder)
-        log.info("session", f"Active session found: {session_stack[-1]['name']}")
     elif config.session_folder:
         # Auto-start from today's detected session folder
         session_stack = [{
@@ -474,9 +473,6 @@ def run() -> None:
         }]
         current_key_points, summary_watermark = load_key_points(config.session_folder)
         _do_save_daemon_state()
-        log.info("session", f"Found active session: {config.session_folder.name}")
-    else:
-        log.info("session", "Found active session: <NONE>")
     # Publish initial session state to daemon REST router
     session_shared_state.set_active_session(_active_session_id, session_stack)
     slides_runner = SlidesPollingRunner(config)
@@ -798,7 +794,7 @@ def run() -> None:
                         )
                         log.info(
                             "session",
-                            f"Session started: {name} (stack size: {len(session_stack)}) | participant join: {participant_join_link}",
+                            f"Session: {name}",
                         )
 
                     elif action == "start":
@@ -824,7 +820,7 @@ def run() -> None:
                         config = dc_replace(config, session_folder=folder, session_notes=notes_file)
                         sync_session_to_server(config, session_stack, current_key_points, file_time=get_ai_summary_mtime(folder), raw_markdown=get_ai_summary_raw(folder))
                         transcript_state.reset()
-                        log.info("session", f"Started: {name}")
+                        log.info("session", f"Session: {name}")
 
                     elif action == "end" and session_stack:
                         ended = session_stack.pop()
@@ -905,7 +901,7 @@ def run() -> None:
                         global_state_persisted = True
                         sync_session_to_server(config, session_stack, current_key_points)
                         transcript_state.reset()
-                        log.info("session", f"Resumed: {session_stack[-1]['name']}")
+                        log.info("session", f"Session: {session_stack[-1]['name']}")
 
                     elif action == "create_talk_folder":
                         _now = datetime.now()
