@@ -2,7 +2,6 @@ import base64
 import json
 import os
 import threading
-from datetime import datetime, timezone
 
 from fastapi.testclient import TestClient
 from fastapi.responses import JSONResponse
@@ -407,73 +406,6 @@ def test_api_slides_respects_catalog_order_for_topics(monkeypatch, tmp_path):
     assert resp.status_code == 200
     slides = resp.json()["slides"]
     assert [s["slug"] for s in slides[:2]] == ["clean-code", "architecture"]
-
-
-def test_materials_upsert_and_delete_roundtrip(monkeypatch, tmp_path):
-    target_dir = tmp_path / "server_materials"
-    monkeypatch.setenv("SERVER_MATERIALS_DIR", str(target_dir))
-    client = TestClient(app, headers=_HOST_AUTH_HEADERS)
-
-    upsert = client.post(
-        "/api/materials/upsert",
-        data={"relative_path": "slides/AI Coding.pdf"},
-        files={"file": ("AI Coding.pdf", b"%PDF-1.4\n%mirror\n", "application/pdf")},
-    )
-    assert upsert.status_code == 200
-    assert upsert.json()["ok"] is True
-
-    mirrored = target_dir / "slides" / "AI Coding.pdf"
-    assert mirrored.exists()
-    assert mirrored.read_bytes().startswith(b"%PDF-1.4")
-
-    delete = client.post("/api/materials/delete", json={"relative_path": "slides/AI Coding.pdf"})
-    assert delete.status_code == 200
-    assert delete.json()["ok"] is True
-    assert delete.json()["deleted"] is True
-    assert not mirrored.exists()
-
-
-def test_materials_upsert_slide_uses_source_mtime_for_updated_at(monkeypatch, tmp_path):
-    target_dir = tmp_path / "server_materials"
-    monkeypatch.setenv("SERVER_MATERIALS_DIR", str(target_dir))
-    monkeypatch.setenv("TRAINING_ASSISTANT_SLIDES_DIR", str(target_dir / "slides"))
-    monkeypatch.chdir(tmp_path)
-    client = TestClient(app, headers=_HOST_AUTH_HEADERS)
-
-    source_mtime = 1700000000.0
-    upsert = client.post(
-        "/api/materials/upsert",
-        data={"relative_path": "slides/Clean Code.pdf", "source_mtime": str(source_mtime)},
-        files={"file": ("Clean Code.pdf", b"%PDF-1.4\n%mirror\n", "application/pdf")},
-    )
-    assert upsert.status_code == 200
-    body = upsert.json()
-    assert body["ok"] is True
-    expected = datetime.fromtimestamp(source_mtime, tz=timezone.utc).isoformat()
-    assert body["updated_at"] == expected
-
-    slides = client.get(f"/{state.session_id}/api/slides").json()["slides"]
-    clean = next(s for s in slides if s["slug"] == "clean-code")
-    assert clean["updated_at"] == expected
-
-    meta = tmp_path / ".server-data" / "local-slides-meta" / "clean-code.json"
-    assert meta.exists()
-
-    delete = client.post("/api/materials/delete", json={"relative_path": "slides/Clean Code.pdf"})
-    assert delete.status_code == 200
-    assert not meta.exists()
-
-
-def test_materials_upsert_rejects_traversal(monkeypatch, tmp_path):
-    monkeypatch.setenv("SERVER_MATERIALS_DIR", str(tmp_path / "server_materials"))
-    client = TestClient(app, headers=_HOST_AUTH_HEADERS)
-
-    resp = client.post(
-        "/api/materials/upsert",
-        data={"relative_path": "../escape.txt"},
-        files={"file": ("escape.txt", b"bad", "text/plain")},
-    )
-    assert resp.status_code == 400
 
 
 def test_api_slides_file_missing_returns_404_when_not_in_cache_or_catalog(monkeypatch, tmp_path):

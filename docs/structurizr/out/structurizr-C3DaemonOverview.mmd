@@ -51,8 +51,6 @@ graph LR
         style 49 fill:#d6e8c8,stroke:#95a28c,color:#10210f
         50["<div style='font-weight: bold'>Slides Daemon</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/slides/daemon.py]</div><div style='font-size: 80%; margin-top:10px'>Coordinates slide upload<br />workflow over WebSocket.</div>"]
         style 50 fill:#d6e8c8,stroke:#95a28c,color:#10210f
-        51["<div style='font-weight: bold'>Materials Mirror</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/materials/mirror.py]</div><div style='font-size: 80%; margin-top:10px'>Mirrors project files for<br />backend-side materials<br />access.</div>"]
-        style 51 fill:#d6e8c8,stroke:#95a28c,color:#10210f
         52["<div style='font-weight: bold'>RAG Indexer</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/rag/indexer.py]</div><div style='font-size: 80%; margin-top:10px'>Indexes local project files<br />for retrieval.</div>"]
         style 52 fill:#d6e8c8,stroke:#95a28c,color:#10210f
         53["<div style='font-weight: bold'>RAG Retriever</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/rag/retriever.py]</div><div style='font-size: 80%; margin-top:10px'>Retrieves relevant context<br />for quiz generation.</div>"]
@@ -99,8 +97,6 @@ graph LR
     46-. "<div>Coordinates upload flow with</div><div style='font-size: 70%'></div>" .->50
     50-. "<div>Delegates uploads to</div><div style='font-size: 70%'></div>" .->49
     49-. "<div>Streams slide artifacts<br />through</div><div style='font-size: 70%'></div>" .->34
-    51-. "<div>Scans repository through</div><div style='font-size: 70%'></div>" .->54
-    51-. "<div>Synchronizes mirrored<br />materials</div><div style='font-size: 70%'></div>" .->10
     52-. "<div>Indexes files from</div><div style='font-size: 70%'></div>" .->54
     53-. "<div>Queries</div><div style='font-size: 70%'></div>" .->52
     55-. "<div>Calls</div><div style='font-size: 70%'></div>" .->4

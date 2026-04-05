@@ -39,20 +39,10 @@ def _upload_slide(server_url: str) -> None:
     assert resp.status_code == 200, resp.text
 
 
-def _delete_uploaded_slide(server_url: str) -> None:
-    requests.post(
-        f"{server_url}/api/materials/delete",
-        auth=(HOST_USER, HOST_PASS),
-        json={"relative_path": f"slides/{_SLUG}.pdf"},
-    )
-
-
 class TestSlidesAvailability:
     @pytest.fixture(autouse=True)
     def ensure_slide_deleted(self, server_url):
-        _delete_uploaded_slide(server_url)
         yield
-        _delete_uploaded_slide(server_url)
 
     def test_unavailable_slide_is_crossed_out_and_disabled(self, server_url, playwright):
         browser, ctx = pax_browser_ctx(server_url, playwright)

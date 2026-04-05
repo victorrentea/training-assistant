@@ -54,14 +54,6 @@ def _upload(server_url: str) -> None:
     assert resp.status_code == 200, resp.text
 
 
-def _delete(server_url: str) -> None:
-    requests.post(
-        f"{server_url}/api/materials/delete",
-        auth=(HOST_USER, HOST_PASS),
-        json={"relative_path": f"slides/{_SLUG}.pdf"},
-    )
-
-
 def _open_slide(page: Page) -> None:
     """Click the slide open-button so it is marked visited and the overlay opens."""
     page.locator(f"{_ITEM_SEL} button.slides-list-open").click()
@@ -79,10 +71,8 @@ def _close_overlay(page: Page) -> None:
 class TestSlidesNewBadge:
     @pytest.fixture(autouse=True)
     def setup_and_teardown(self, server_url):
-        _delete(server_url)
         _upload(server_url)   # v1 always present before each test
         yield
-        _delete(server_url)
 
     # ── 1. Badge does NOT appear before first visit ───────────────────────────
     def test_no_badge_before_first_visit(self, server_url, playwright):

@@ -54,7 +54,6 @@ workspace "Workshop Live Interaction Tool" "Structurizr DSL model aligned to the
                 slidesConvert = component "Slides Convert" "Converts PPTX to PDF via host tooling." "daemon/slides/convert.py"
                 slidesUpload = component "Slides Upload" "Uploads converted slide PDFs to the backend." "daemon/slides/upload.py"
                 slidesDaemon = component "Slides Daemon" "Coordinates slide upload workflow over WebSocket." "daemon/slides/daemon.py"
-                materialsMirror = component "Materials Mirror" "Mirrors project files for backend-side materials access." "daemon/materials/mirror.py"
                 ragIndexer = component "RAG Indexer" "Indexes local project files for retrieval." "daemon/rag/indexer.py"
                 ragRetriever = component "RAG Retriever" "Retrieves relevant context for quiz generation." "daemon/rag/retriever.py"
                 projectFiles = component "Project Files Scanner" "Scans repository files for RAG and tooling." "daemon/rag/project_files.py"
@@ -163,8 +162,6 @@ workspace "Workshop Live Interaction Tool" "Structurizr DSL model aligned to the
         slidesDaemon -> slidesUpload "Delegates uploads to"
         slidesUpload -> wsClient "Streams slide artifacts through"
 
-        materialsMirror -> projectFiles "Scans repository through"
-        materialsMirror -> fastapi "Synchronizes mirrored materials"
         ragIndexer -> projectFiles "Indexes files from"
         ragRetriever -> ragIndexer "Queries"
         llmAdapter -> claudeApi "Calls"

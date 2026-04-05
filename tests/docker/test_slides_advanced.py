@@ -105,17 +105,8 @@ def _upload_slide(slug=_SLUG, name="Hermetic Badge Slide"):
 
 
 def _delete_slide(slug=_SLUG):
-    """Delete an uploaded slide."""
-    auth = base64.b64encode(f"{HOST_USER}:{HOST_PASS}".encode()).decode()
-    req = urllib.request.Request(
-        f"{BASE}/api/materials/delete", method="POST",
-        headers={"Authorization": f"Basic {auth}", "Content-Type": "application/json"},
-        data=json.dumps({"relative_path": f"slides/{slug}.pdf"}).encode(),
-    )
-    try:
-        urllib.request.urlopen(req, timeout=5)
-    except Exception:
-        pass
+    """No-op: uploaded slide cleanup endpoint was removed with materials mirror."""
+    _ = slug
 
 
 def _open_browser_trio(p, session_id):

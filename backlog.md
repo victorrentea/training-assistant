@@ -1,5 +1,6 @@
 # Tasks
 
+- [x] cleanup: removed daemon materials mirror flow (`daemon/materials/mirror.py`, runner wiring in `daemon/__main__.py`) and removed backend materials mirror endpoints (`/api/materials/upsert`, `/api/materials/delete`); slides remain GDrive/upload driven.
 - [x] logging: replaced addon emoji success log with participant-aware format `'<participant_name>' reacted '<emoji>'`; bridge-down log now includes participant name too.
 - [x] perf: reduced emoji latency path by handling daemon `proxy_request` WS messages inline (no main-loop queue delay) and prioritizing addons bridge send before host WS echo in emoji router.
 - [x] bugfix: slides cache status now reflects Railway availability at startup; daemon broadcasts `downloading`/`poll_timeout`/`download_failed`/`cached` transitions so participant and host indicators converge correctly.
