@@ -113,3 +113,20 @@ Railway SHALL NOT send `slides_cache_status` in the initial WS messages to parti
 #### Scenario: Participant WS connect
 - **WHEN** a participant WebSocket connects
 - **THEN** Railway does NOT send a `slides_cache_status` message as part of the initial state push
+
+---
+
+### Requirement: Current slide tracked via WS push from addons bridge
+The daemon SHALL update `slides_current` state when it receives a `slide_changed` message from the addon-bridge, replacing the previous `activity-slides-*.md` file-polling loop. The daemon SHALL broadcast `slides_current` to all connected participants and the host immediately upon receiving the event.
+
+#### Scenario: Slide navigation received over WS
+- **WHEN** daemon receives `{"type": "slide_changed", "deck": "AI Coding.pptx", "slide": 15}` from the bridge
+- **THEN** daemon updates `misc_state.slides_current` to `{deck: "AI Coding.pptx", slide: 15}` and broadcasts `slides_current` to all participants and host within 100 ms
+
+#### Scenario: PowerPoint closed — slides_current cleared
+- **WHEN** daemon receives `{"type": "slide_changed", "deck": null, "slide": null}`
+- **THEN** daemon sets `misc_state.slides_current = null` and broadcasts the update
+
+#### Scenario: Bridge not connected — slides_current unchanged
+- **WHEN** the addon-bridge WS client is disconnected
+- **THEN** daemon retains the last known `slides_current` value (no reset, no file-poll fallback)
