@@ -59,6 +59,7 @@ async def proxy_http(request: Request, path: str, http_client: httpx.AsyncClient
 
 async def proxy_websocket(client_ws: WebSocket, path: str, backend_ws_url: str):
     """Proxy a WebSocket connection bidirectionally between client and backend."""
+    import ssl
     import websockets
     from websockets.exceptions import ConnectionClosed
 
@@ -77,8 +78,17 @@ async def proxy_websocket(client_ws: WebSocket, path: str, backend_ws_url: str):
     if auth:
         extra_headers["Authorization"] = auth
 
+    # SSL context using certifi (fixes macOS certificate verification failures)
+    ws_kwargs = {"additional_headers": extra_headers}
+    if url.startswith("wss://"):
+        try:
+            import certifi
+            ws_kwargs["ssl"] = ssl.create_default_context(cafile=certifi.where())
+        except Exception:
+            ws_kwargs["ssl"] = ssl.create_default_context()
+
     try:
-        async with websockets.connect(url, additional_headers=extra_headers) as upstream:
+        async with websockets.connect(url, **ws_kwargs) as upstream:
 
             async def client_to_upstream():
                 try:
