@@ -130,7 +130,7 @@
 <div class="version-tag" id="version-tag"></div>
 <script>
   if (window.renderDeployAge) {
-    window.renderDeployAge('version-tag');
+    window.renderDeployAge('version-tag', { disableBranchTooltip: true });
     // Reformat into 3 lines: "deployed\n2h ago\nbuilt at 30 Mar 14:30"
     const _origUpdate = window.__updateDeployAge;
     if (_origUpdate) {

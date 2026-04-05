@@ -123,7 +123,10 @@
   window.renderDeployAge = function(tagId, opts) {
     const el = document.getElementById(tagId || 'version-tag');
     if (!el) return;
-    _attachBranchTooltip(el);
+    const showBranchTooltip = !(opts && opts.disableBranchTooltip);
+    if (showBranchTooltip) {
+      _attachBranchTooltip(el);
+    }
 
     const statusUrl = (opts && opts.statusUrl) || '/api/status';
 
