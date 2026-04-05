@@ -477,7 +477,6 @@ def run() -> None:
     session_shared_state.set_active_session(_active_session_id, session_stack)
     slides_runner = SlidesPollingRunner(config)
     slides_runner.start()
-    slides_runner.set_ws_sender(lambda msg: ws_client.send(msg))
 
     # ── Addon bridge client (connects to wispr-flow WS server at localhost:8765) ──
     from daemon.addon_bridge_client import AddonBridgeClient, set_client as _set_bridge_client
@@ -641,7 +640,6 @@ def run() -> None:
                     write_lock()
                     last_heartbeat_at = now
 
-                slides_runner.tick()
                 # ── Read PowerPoint state from activity-slides file ──
                 if now - last_slide_file_read_at >= _SLIDE_FILE_READ_INTERVAL:
                     last_slide_file_read_at = now
