@@ -51,8 +51,6 @@ class AppState:
         # Slides cache (server-side GDrive download)
         self.slides_cache_status: dict[str, dict] = {}      # slug -> {status, size_bytes, downloaded_at}
         self.notes_content: Optional[str] = None
-        self.notes_line_count: int = 0
-        self.summary_line_count: int = 0
         self.transcript_line_count: int = 0
         self.transcript_total_lines: int = 0
         self.transcript_latest_ts: Optional[str] = None

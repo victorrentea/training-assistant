@@ -568,13 +568,6 @@ Daemon reads from disk on demand — not held in memory:
 - `{session_folder}/*.txt` — session notes (latest modified text file)
 - `{session_folder}/ai-summary.md` — key points + raw markdown
 
-Railway caches:
-```
-notes_line_count: int       # non-empty lines in notes file (from daemon broadcast)
-summary_line_count: int     # non-empty lines in ai-summary.md (from daemon broadcast)
-```
-Used to send current counts to newly connecting participants/host without a round-trip to daemon.
-
 ---
 
 ## Cross-cutting: Reload
