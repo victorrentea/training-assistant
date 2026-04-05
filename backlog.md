@@ -1,6 +1,7 @@
 # Tasks
 
 - [x] Direct request: participant file upload returning `400 Unknown participant` now has hermetic regression coverage and upload endpoint validation accepts connected participant UUIDs in sessionized flow.
+- [x] bugfix: participant `Submit Feedback` works again; daemon now handles `POST /api/participant/misc/feedback` and sends best-effort email notifications; participant UI now shows success/error toast instead of silently ignoring non-OK responses.
 - [x] cleanup: removed daemon materials mirror flow (`daemon/materials/mirror.py`, runner wiring in `daemon/__main__.py`) and removed backend materials mirror endpoints (`/api/materials/upsert`, `/api/materials/delete`); slides remain GDrive/upload driven.
 - [x] slides WS unification: use a single `slides_cache_status` message (full `slides[]` catalog payload) for all slide updates to both participant and host; removed `slides_updated` handling from WS contracts and UIs.
 - [x] logging: replaced addon emoji success log with participant-aware format `'<participant_name>' reacted '<emoji>'`; bridge-down log now includes participant name too.

@@ -745,16 +745,23 @@ ${html}
   function closeFeedbackModal() {
     closeModal('feedback-overlay');
   }
-  function submitFeedback() {
+  async function submitFeedback() {
     const ta = document.getElementById('feedback-textarea');
     const text = ta ? ta.value.trim() : '';
     if (!text || !ws) return;
-    fetch(apiBase + '/api/participant/misc/feedback', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Participant-ID': myUUID },
-      body: JSON.stringify({ text }),
-    }).catch(err => console.error('Feedback submit failed:', err));
-    closeFeedbackModal();
+    try {
+      const resp = await fetch(apiBase + '/api/participant/misc/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Participant-ID': myUUID },
+        body: JSON.stringify({ text }),
+      });
+      if (!resp.ok) throw new Error(`feedback_submit_failed_${resp.status}`);
+      closeFeedbackModal();
+      showFeedbackToast('Sent!');
+    } catch (err) {
+      console.error('Feedback submit failed:', err);
+      showFeedbackToast('Could not send. Please retry.', true);
+    }
   }
 
   function showPasteToast() {
@@ -764,6 +771,16 @@ ${html}
     document.body.appendChild(toast);
     setTimeout(() => { toast.style.opacity = '0'; }, 1000);
     setTimeout(() => toast.remove(), 1500);
+  }
+
+  function showFeedbackToast(message, isError = false) {
+    const toast = document.createElement('div');
+    toast.textContent = message;
+    const bg = isError ? 'var(--danger, #f44336)' : 'var(--accent)';
+    toast.style.cssText = `position:fixed;bottom:3.5rem;right:calc(var(--slides-overlay-width) + .75rem + 104px);background:${bg};color:#fff;padding:.4rem .9rem;border-radius:8px;font-weight:600;font-size:.85rem;z-index:9999;opacity:1;transition:opacity .5s;`;
+    document.body.appendChild(toast);
+    setTimeout(() => { toast.style.opacity = '0'; }, 1200);
+    setTimeout(() => toast.remove(), 1800);
   }
 
   // ── File Upload ──

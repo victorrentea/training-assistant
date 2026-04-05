@@ -12,6 +12,22 @@
 - Proof: `bash tests/docker/build-daemon.sh test_high_value.py -k participant_file_upload_reaches_host -v --tb=short`
 - Result: `1 passed, 10 deselected in 5.70s`
 
+## Direct request: submit feedback email not received
+
+- [x] Reproduce and add a failing daemon test for `POST /api/participant/misc/feedback`
+- [x] Implement daemon feedback endpoint and wire best-effort email notification
+- [x] Add/adjust frontend feedback UX for failed submits (no silent failure)
+- [x] Mark request done in `backlog.md`
+- [x] Run targeted tests and capture proof in review section
+
+### Review: submit feedback email not received
+
+- Proof (red): `python3 -m pytest -q tests/daemon/test_misc_router.py` (before fix: `404 != 200`)
+- Proof (green): `python3 -m pytest -q tests/daemon/test_misc_router.py`
+- Result: `1 passed in 0.31s`
+- Proof: `node --check static/participant.js`
+- Result: syntax OK
+
 ## Direct request: remove materials mirror cleanup
 
 - [x] Remove daemon `MaterialsMirrorRunner` startup/tick wiring and obsolete mirror module
