@@ -51,7 +51,7 @@ async def upload_file(
 ):
     if not uuid or uuid.startswith("__"):
         raise HTTPException(400, "Invalid participant UUID")
-    if uuid not in state.participant_names:
+    if uuid not in state.participant_names and uuid not in state.participants:
         raise HTTPException(400, "Unknown participant")
 
     filename = (file.filename or "file").strip()

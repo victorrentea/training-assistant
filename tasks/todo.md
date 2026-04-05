@@ -1,5 +1,17 @@
 # Todo
 
+## Direct request: participant upload 400 + hermetic e2e
+
+- [x] Add hermetic regression test for participant file upload (`POST /{sid}/api/upload`) that fails on non-2xx responses
+- [x] Fix upload participant validation so connected participants are accepted in current sessionized flow
+- [x] Run targeted hermetic Docker test and capture proof in review section
+- [x] Mark direct request as done in `backlog.md`
+
+### Review: participant upload 400 + hermetic e2e
+
+- Proof: `bash tests/docker/build-daemon.sh test_high_value.py -k participant_file_upload_reaches_host -v --tb=short`
+- Result: `1 passed, 10 deselected in 5.70s`
+
 ## Direct request: remove materials mirror cleanup
 
 - [x] Remove daemon `MaterialsMirrorRunner` startup/tick wiring and obsolete mirror module
