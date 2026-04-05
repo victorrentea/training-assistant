@@ -680,29 +680,33 @@ def run() -> None:
                                             message = f"Presentation inaccessible for participants. ({deck})"
                                             ws_client.send({"type": "broadcast", "event": {"type": "quiz_status", "status": "error", "message": message}})
                                             log.error("slides", message)
+                                        misc_state.slides_current = None
                                         ws_client.send({"type": "broadcast", "event": {"type": "slides_current", "slides_current": None}})
                                     else:
                                         if alert_key:
                                             _PPT_UNMAPPED_PRESENTATIONS_ALERTED.discard(alert_key)
-                                        ws_client.send({"type": "broadcast", "event": {
-                                            "type": "slides_current",
+                                        sc = {
                                             "url": target["url"],
                                             "slug": target["slug"],
                                             "source_file": deck,
                                             "presentation_name": deck,
                                             "current_page": slide_num,
-                                        }})
+                                        }
+                                        misc_state.slides_current = sc
+                                        ws_client.send({"type": "broadcast", "event": {"type": "slides_current", **sc}})
                                         log.info("slides", f"Slide: {deck}:{slide_num}")
                             elif ws_client.connected:
                                 # No slides config — send minimal info
-                                ws_client.send({"type": "broadcast", "event": {
-                                    "type": "slides_current",
+                                sc = {
                                     "presentation_name": deck,
                                     "current_page": slide_num,
-                                }})
+                                }
+                                misc_state.slides_current = sc
+                                ws_client.send({"type": "broadcast", "event": {"type": "slides_current", **sc}})
                                 log.info("slides", f"Slide: {deck}:{slide_num} (no catalog)")
                         else:
                             if ws_client.connected:
+                                misc_state.slides_current = None
                                 ws_client.send({"type": "broadcast", "event": {"type": "slides_current", "slides_current": None}})
                                 log.info("slides", "No active slide pointer")
 
