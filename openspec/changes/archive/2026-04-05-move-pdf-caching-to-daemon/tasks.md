@@ -9,7 +9,7 @@
 - [x] 2.2 Remove `seed_catalog_from_file()` call from Railway startup (`app.py` lifespan)
 - [x] 2.3 Update Railway `GET /{sid}/api/slides` to proxy to daemon (consistent with other participant endpoints) — remove local index building
 - [x] 2.4 Remove `_build_catalog_slides_index`, `_build_local_slides_index`, `_build_uploaded_slides_index`, `_merge_slide_sources`, `_collect_participant_slides` from `router.py`
-- [ ] 2.5 Remove dead AppState fields: `slides_gdrive_locks`, `slides_download_events`, `slides_fingerprints`, `slides_download_semaphore` from `shared/state.py` (deferred — still used by cache.py)
+- [x] 2.5 Remove dead AppState fields: `slides_gdrive_locks`, `slides_download_events`, `slides_fingerprints`, `slides_download_semaphore` from `shared/state.py` — deferred: these are still used by `cache.py`'s `download_or_wait_cached` which powers the `download_pdf` WS handler; can only be removed when `cache.py` is fully deleted in a future change
 
 ## 3. Daemon: /check endpoint
 
