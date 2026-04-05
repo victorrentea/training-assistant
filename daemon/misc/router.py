@@ -79,31 +79,26 @@ async def get_slides_cache_status(request: Request):
 host_router = APIRouter(prefix="/api/{session_id}/host", tags=["misc"])
 
 
-@host_router.post("/paste-dismiss")
-async def paste_dismiss(request: Request):
-    """Host dismisses a paste entry by participant uuid and paste id."""
-    body = await request.json()
-    target_uuid = str(body.get("uuid", ""))
-    paste_id = body.get("paste_id")
-
-    if not target_uuid or paste_id is None:
-        return JSONResponse({"error": "Missing uuid or paste_id"}, status_code=400)
-
-    misc_state.dismiss_paste(target_uuid, str(paste_id))
-
-    if _ws_client is not None:
-        _ws_client.send({
-            "type": "broadcast",
-            "event": {"type": "paste_dismissed", "uuid": target_uuid, "paste_id": paste_id},
-        })
-
-    return JSONResponse({"ok": True})
-
-
 @host_router.get("/pastes")
 async def get_pastes():
     """Return all pending paste entries grouped by participant uuid."""
     return JSONResponse({"pastes": misc_state.paste_texts})
+
+
+@host_router.get("/notes")
+async def get_host_notes():
+    """Return current session notes content."""
+    return JSONResponse({"notes_content": misc_state.notes_content})
+
+
+@host_router.get("/summary")
+async def get_host_summary():
+    """Return summary points, raw markdown, and updated_at timestamp."""
+    return JSONResponse({
+        "points": misc_state.summary_points,
+        "raw_markdown": misc_state.summary_raw_markdown,
+        "updated_at": misc_state.summary_updated_at,
+    })
 
 
 # ── Global router (no session_id prefix) — used for transcription language ──

@@ -672,26 +672,6 @@ paths:
 
   # ── Misc (host) ──
 
-  /host/paste-dismiss:
-    post:
-      summary: Dismiss a participant paste entry
-      tags: [misc]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/PasteDismissRequest'
-      responses:
-        '200':
-          description: Paste dismissed
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/OkResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-
   /host/pastes:
     get:
       summary: Get all pending paste entries grouped by participant UUID
@@ -715,6 +695,45 @@ paths:
                             type: string
                           text:
                             type: string
+
+  /host/notes:
+    get:
+      summary: Get current session notes content
+      tags: [misc]
+      responses:
+        '200':
+          description: Notes content
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  notes_content:
+                    type: string
+                    nullable: true
+
+  /host/summary:
+    get:
+      summary: Get AI summary points and raw markdown
+      tags: [misc]
+      responses:
+        '200':
+          description: Summary data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  points:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SummaryPoint'
+                  raw_markdown:
+                    type: string
+                    nullable: true
+                  updated_at:
+                    type: string
+                    nullable: true
 
 # ── Global (no session_id prefix) ──
 # Note: these live under /api (not /api/{session_id})

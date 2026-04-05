@@ -225,8 +225,9 @@ class TestHostApiContract:
             ("POST",   "/api/{session_id}/host/quiz-request"),
             ("DELETE", "/api/{session_id}/host/quiz-preview"),
             ("POST",   "/api/{session_id}/host/quiz-refine"),
-            ("POST",   "/api/{session_id}/host/paste-dismiss"),
             ("GET",    "/api/{session_id}/host/pastes"),
+            ("GET",    "/api/{session_id}/host/notes"),
+            ("GET",    "/api/{session_id}/host/summary"),
         ]
         missing = [
             f"{m} {p}" for m, p in required

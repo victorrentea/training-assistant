@@ -101,13 +101,13 @@ async def broadcast_participant_update():
     count = len(pids)
 
     participant_msg = json.dumps({
-        "type": "participant_count",
+        "type": "participant_updated",
         "count": count,
         "host_connected": "__host__" in state.participants,
     })
 
     host_msg = json.dumps({
-        "type": "participant_count",
+        "type": "participant_updated",
         "count": count,
         "participants": _build_host_participants_list(),
     })

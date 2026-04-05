@@ -394,7 +394,7 @@
         voteCounts = msg.vote_counts || {};
         totalVotes = msg.total_votes || 0;
         renderBars();
-      } else if (msg.type === 'participant_count') {
+      } else if (msg.type === 'participant_updated') {
         totalParticipants = msg.count || 0;
         document.getElementById('pax-count').textContent = msg.count;
         updatePaxBadge(msg.count);
@@ -3569,11 +3569,6 @@ function copyAndDismissPaste(el) {
       setTimeout(() => el.remove(), 300);
     });
   }
-  fetch(API('/paste-dismiss'), {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ uuid, paste_id: pasteId }),
-  }).catch(err => console.error('Paste dismiss failed:', err));
 }
 
 function downloadUploadedFile(el) {
