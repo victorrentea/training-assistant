@@ -334,6 +334,7 @@ Only add memories when explicitly asked, or after the user has confirmed the inf
 - `daemon_state.json` is the source of truth for which session is currently active.
 - Session links must remain stable across days: each session has a unique persistent `session_id`, and participants can reuse the same link whenever host restarts/resumes that session (today, tomorrow, or weeks later).
 - Slow hermetic tests (>5s) must be tagged `@pytest.mark.nightly` so they are excluded from every-push CI (`-m "not nightly"` is the default Docker CMD) and run only in the nightly build (`.github/workflows/nightly.yml`, 03:00 UTC, also triggerable via `workflow_dispatch`). To run manually: `bash tests/docker/build-daemon.sh -m nightly -v --tb=long -s`.
+- Use strict FastAPI + Pydantic contracts for daemon APIs and WS messages; avoid raw dict payload sends when a typed message model exists.
 
 ---
 
