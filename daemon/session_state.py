@@ -97,7 +97,7 @@ def load_key_points(session_folder: Path) -> tuple[list[dict], int]:
                     text_content = line
                 if text_content:
                     points.append({"text": text_content, "source": "notes"})
-            log.info("session", f"Loaded {len(points)} key points from {_AI_SUMMARY_FILE} in {session_folder.name}")
+            log.info("session", f"Summary ({len(points)} lines): {_AI_SUMMARY_FILE}")
             return points, 0
         except Exception as e:
             log.error("session", f"Failed to load {_AI_SUMMARY_FILE}: {e}")
@@ -134,7 +134,7 @@ def load_key_points(session_folder: Path) -> tuple[list[dict], int]:
                     points.append({"text": m.group(3), "time": m.group(2), "source": "discussion"})
                 else:
                     points.append({"text": stripped, "source": "discussion"})
-            log.info("session", f"Loaded {len(points)} key points{label} from {session_folder.name}")
+            log.info("session", f"Summary ({len(points)} points{label})")
             return points, watermark
         except Exception as e:
             log.error("session", f"Failed to load key points: {e}")
@@ -151,7 +151,7 @@ def load_key_points(session_folder: Path) -> tuple[list[dict], int]:
             data = json.loads(json_file.read_text(encoding="utf-8"))
             points = data.get("points", data.get("locked", []) + data.get("draft", []))
             watermark = data.get("watermark", 0)
-            log.info("session", f"Loaded {len(points)} key points (legacy) from {session_folder.name}")
+            log.info("session", f"Summary ({len(points)} points, legacy)")
             return points, watermark
         except Exception as e:
             log.error("session", f"Failed to load key points: {e}")
