@@ -41,6 +41,7 @@ channels:
           - $ref: '#/components/messages/quiz_status'
           - $ref: '#/components/messages/quiz_preview'
           - $ref: '#/components/messages/transcription_language_pending'
+          - $ref: '#/components/messages/reload'
 
 components:
   messages:
@@ -417,6 +418,18 @@ components:
             enum: [transcription_language_pending]
           language:
             type: string
+
+    # ── Cross-cutting ────────────────────────────────────────────────────────
+
+    reload:
+      summary: Daemon synced static files — browser should reload
+      payload:
+        type: object
+        required: [type]
+        properties:
+          type:
+            type: string
+            enum: [reload]
 
   schemas:
 

@@ -246,7 +246,7 @@
         renderLeaderboard(msg);
         return;
       }
-      if (msg.type === 'poll_created') {
+      if (msg.type === 'poll_ai_generated') {
         currentPoll = msg.poll;
         pollActive = false;
         voteCounts = {};

@@ -49,8 +49,8 @@ class ParticipantUpdatedHostMsg(BaseModel):
 
 # ── Poll ──────────────────────────────────────────────────────────────────────
 
-class PollCreatedMsg(BaseModel):
-    type: Literal["poll_created"] = "poll_created"
+class PollAiGeneratedMsg(BaseModel):
+    type: Literal["poll_ai_generated"] = "poll_ai_generated"
     poll: dict[str, Any]  # {id, question, options[], multi}
 
 
@@ -224,6 +224,12 @@ class FileUploadedMsg(BaseModel):
     size: int
 
 
+# ── Cross-cutting ────────────────────────────────────────────────────────────
+
+class ReloadMsg(BaseModel):
+    type: Literal["reload"] = "reload"
+
+
 # ── Registries ────────────────────────────────────────────────────────────────
 
 PARTICIPANT_MESSAGES: dict[str, type[BaseModel]] = {
@@ -262,11 +268,13 @@ PARTICIPANT_MESSAGES: dict[str, type[BaseModel]] = {
     # Quiz
     "quiz_status": QuizStatusMsg,
     "quiz_preview": QuizPreviewMsg,
+    # Cross-cutting
+    "reload": ReloadMsg,
 }
 
 HOST_MESSAGES: dict[str, type[BaseModel]] = {
     # Poll
-    "poll_created": PollCreatedMsg,
+    "poll_ai_generated": PollAiGeneratedMsg,
     "vote_update": VoteUpdateMsg,
     # Word Cloud
     "wordcloud_updated": WordcloudUpdatedMsg,
@@ -286,4 +294,6 @@ HOST_MESSAGES: dict[str, type[BaseModel]] = {
     "file_uploaded": FileUploadedMsg,
     # Participants
     "participant_updated": ParticipantUpdatedHostMsg,
+    # Cross-cutting
+    "reload": ReloadMsg,
 }

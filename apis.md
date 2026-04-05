@@ -177,6 +177,7 @@ mode: str                       # "workshop" | "conference"
 | POST | `/api/{sid}/host/poll/timer` | `{seconds}` | `{ok}` |
 
 **Daemon → Host Browser WS:**
+- `poll_ai_generated` — `{poll}` — AI quiz generator created a poll (host sees it before opening)
 - `vote_update` — `{votes: {option_id→count}}` — real-time tally
 
 ### State
@@ -518,3 +519,13 @@ Host can open notes/summary in the host panel UI.
 None persisted in memory — read from disk:
 - `{session_folder}/notes.md` — session notes
 - `{session_folder}/summary.json` — key points + raw markdown
+
+---
+
+## Cross-cutting: Reload
+
+**Daemon → Participant Browser WS:**
+- `reload` — `{}` — daemon synced static files, browser should reload
+
+**Daemon → Host Browser WS:**
+- `reload` — `{}` — same as participant

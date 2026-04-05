@@ -155,10 +155,10 @@ class TestHostCreatePoll:
         data = resp.json()
         assert data["ok"] is True
         assert data["poll"]["question"] == "Best framework?"
-        # notify_host called with poll_created msg
+        # notify_host called with poll_ai_generated msg
         mock_notify_host.assert_called_once()
         msg = mock_notify_host.call_args[0][0]
-        assert msg.type == "poll_created"
+        assert msg.type == "poll_ai_generated"
         assert "question" in msg.poll
 
     def test_create_poll_activity_gate(self, host_client, mock_participant_state):
