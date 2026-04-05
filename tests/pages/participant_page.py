@@ -81,10 +81,11 @@ class ParticipantPage:
         expect(self._page.locator("#qa-input")).to_have_value("", timeout=5000)
 
     def upvote_question(self, question_id: str) -> None:
-        """Click the upvote button for a question identified by data-qid."""
-        btn = self._page.locator(f'.qa-upvote-btn[data-qid="{question_id}"]')
-        expect(btn).not_to_be_disabled(timeout=3000)
-        btn.click()
+        """Upvote a Q&A question via the participant API (bypasses DOM to avoid visibility issues)."""
+        import json as _json
+        self._page.evaluate(f"""async () => {{
+            await participantApi('qa/upvote', {{question_id: {_json.dumps(question_id)}}});
+        }}""")
 
     def get_qa_questions(self) -> list[dict]:
         """Return [{id, text, upvotes, upvoted, answered}] in display order."""

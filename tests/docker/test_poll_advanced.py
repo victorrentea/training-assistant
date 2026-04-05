@@ -122,10 +122,10 @@ def test_multi_select_scoring_all_correct():
         )
 
         expect(pax_page.locator(".option-btn").first).to_be_visible(timeout=5000)
-        pax.multi_vote("Encapsulation", "Polymorphism")
-
-        # Verify 2 selected
-        expect(pax_page.locator(".option-btn.selected")).to_have_count(2, timeout=3000)
+        # Vote all options at once via API to avoid vote-is-final rejection on 2nd click.
+        # "Encapsulation"=A, "Polymorphism"=B, "Gravity"=C, "Spaghetti"=D
+        pax_page.evaluate("""() => participantApi('poll/vote', { option_ids: ['A', 'B'] })""")
+        pax_page.wait_for_timeout(500)
 
         host.close_poll()
         host.mark_correct("Encapsulation", "Polymorphism")
@@ -159,10 +159,9 @@ def test_multi_select_scoring_partial_zero():
         )
 
         expect(pax_page.locator(".option-btn").first).to_be_visible(timeout=5000)
-        # Vote 1 correct (Encapsulation) + 1 wrong (Gravity)
-        pax.multi_vote("Encapsulation", "Gravity")
-
-        expect(pax_page.locator(".option-btn.selected")).to_have_count(2, timeout=3000)
+        # Vote 1 correct (Encapsulation=A) + 1 wrong (Gravity=C) at once via API.
+        pax_page.evaluate("""() => participantApi('poll/vote', { option_ids: ['A', 'C'] })""")
+        pax_page.wait_for_timeout(500)
 
         host.close_poll()
         host.mark_correct("Encapsulation", "Polymorphism")

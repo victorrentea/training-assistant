@@ -107,6 +107,12 @@ def fresh_session(name: str = "Test", session_type: str = "workshop") -> str:
         msg=f"Railway did not activate session_id={session_id!r}",
     )
 
+    # Step 5: reset scores on daemon so previous test's score accumulation doesn't bleed in
+    try:
+        _req("DELETE", f"{DAEMON_BASE}/api/{session_id}/host/scores")
+    except Exception:
+        pass  # non-critical; test may still fail on score assertions but won't crash
+
     return session_id
 
 

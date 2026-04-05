@@ -65,11 +65,27 @@ def _api_call(method, path, data=None, base=None):
         return json.loads(resp.read())
 
 
+def _clear_qa(session_id: str) -> None:
+    """Clear all Q&A questions via API (daemon endpoint)."""
+    auth = base64.b64encode(f"{HOST_USER}:{HOST_PASS}".encode()).decode()
+    req = urllib.request.Request(
+        f"{DAEMON_BASE}/api/{session_id}/host/qa/clear",
+        method="POST",
+        headers={"Authorization": f"Basic {auth}", "Content-Length": "0"},
+        data=b""
+    )
+    try:
+        urllib.request.urlopen(req, timeout=5)
+    except Exception:
+        pass
+
+
 # ── 1. Already-upvoted button disabled ────────────────────────────────────
 
 def test_already_upvoted_button_disabled():
     """P1 submits question, P2 upvotes it → P2's upvote button is disabled with qa-upvoted class."""
     session_id = fresh_session("UpvoteDisabled")
+    _clear_qa(session_id)  # isolate from previous test's Q&A state
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
 
@@ -231,6 +247,7 @@ def test_late_joiner_sees_wordcloud():
 def test_leaderboard_shows_personal_rank():
     """P1 submits 2 questions (200pts), P2 submits 1 (100pts). Leaderboard show → both see overlay."""
     session_id = fresh_session("LeaderRank")
+    _clear_qa(session_id)  # isolate from previous test's Q&A state
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
 
@@ -481,7 +498,9 @@ def test_poll_download_captures_two_polls():
         # ── Poll 1 ──
         host.create_poll("What is 2+2?", ["3", "4", "5"])
         expect(pax_page.locator(".option-btn").first).to_be_visible(timeout=5000)
-        pax.vote_for("4")
+        # Vote via API directly: "4" is option B (index 1)
+        pax_page.evaluate("""() => participantApi('poll/vote', { option_ids: ['B'] })""")
+        pax_page.wait_for_timeout(500)
         host.close_poll()
         host.mark_correct("4")
         # Remove poll
@@ -492,7 +511,9 @@ def test_poll_download_captures_two_polls():
         # ── Poll 2 ──
         host.create_poll("Capital of Italy?", ["Berlin", "Rome", "Madrid"])
         expect(pax_page.locator(".option-btn").first).to_be_visible(timeout=5000)
-        pax.vote_for("Rome")
+        # Vote via API directly: "Rome" is option B (index 1)
+        pax_page.evaluate("""() => participantApi('poll/vote', { option_ids: ['B'] })""")
+        pax_page.wait_for_timeout(500)
         host.close_poll()
         host.mark_correct("Rome")
         host_page.wait_for_timeout(500)

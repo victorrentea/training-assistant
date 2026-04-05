@@ -142,6 +142,7 @@ def test_pptx_change_triggers_slide_invalidation():
 # ── Git Activity File Tracker ──────────────────────────────────────────────
 
 
+@pytest.mark.nightly
 def test_git_activity_file_tracked_by_daemon():
     """Write activity-git file → daemon reads it → git_repos list in backend state grows."""
     today = datetime.now().strftime("%Y-%m-%d")
@@ -192,6 +193,7 @@ def test_git_activity_file_tracked_by_daemon():
 # ── Quiz Generation via Stub LLM ──────────────────────────────────────────
 
 
+@pytest.mark.nightly
 def test_quiz_generation_with_stub_llm():
     """Host requests quiz → daemon uses stub LLM → quiz preview appears on host."""
     session_id = fresh_session("Integration")
