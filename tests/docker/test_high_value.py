@@ -1,7 +1,7 @@
 """
 Hermetic E2E tests: high-value user scenarios.
 
-10 tests covering key user flows and integration points:
+11 tests covering key user flows and integration points:
 1. Correct answer scoring (speed-based)
 2. Conference mode with character names
 3. Paste text flow (participant → host)
@@ -199,7 +199,53 @@ def test_paste_text_visible_to_host():
         browser.close()
 
 
-# ── 4. Zero votes show 0% ─────────────────────────────────────────────────
+# ── 4. File upload flow ────────────────────────────────────────────────────
+
+def test_participant_file_upload_reaches_host():
+    """Participant uploads a file via UI → /api/upload returns 2xx with upload id."""
+    session_id = fresh_session("UploadFlow")
+    with sync_playwright() as p:
+        browser, _, _, pax, pax_page = _open_browser_trio(p, session_id)
+        pax.join("Uploader")
+
+        _await_condition(
+            lambda: daemon_has_participant(session_id, "Uploader"),
+            timeout_ms=5000, msg="Host doesn't see Uploader"
+        )
+
+        # Open upload modal and attach a small in-memory file.
+        pax_page.click("#upload-btn")
+        pax_page.set_input_files(
+            "#upload-file-input",
+            {
+                "name": "hermetic-upload.txt",
+                "mimeType": "text/plain",
+                "buffer": b"upload from hermetic e2e",
+            },
+        )
+        expect(pax_page.locator("#upload-send-btn")).to_be_enabled(timeout=3000)
+
+        # Assert upload endpoint responds with success (regression target: 400 errors).
+        with pax_page.expect_response(
+            lambda r: r.request.method == "POST" and r.url.endswith("/api/upload"),
+            timeout=10000,
+        ) as upload_response_info:
+            pax_page.locator("#upload-send-btn").click(force=True)
+
+        upload_response = upload_response_info.value
+        assert upload_response.status == 200, (
+            f"Upload request failed with HTTP {upload_response.status}; "
+            f"body={upload_response.text()}"
+        )
+        payload = upload_response.json()
+        assert payload.get("ok") is True, f"Unexpected upload payload: {payload}"
+        assert isinstance(payload.get("id"), int), f"Missing upload id in payload: {payload}"
+
+        print("SUCCESS: Participant upload request accepted!")
+        browser.close()
+
+
+# ── 5. Zero votes show 0% ─────────────────────────────────────────────────
 
 def test_zero_votes_shows_zero_percent():
     """Close poll with zero votes → all options show 0%."""
@@ -229,7 +275,7 @@ def test_zero_votes_shows_zero_percent():
         browser.close()
 
 
-# ── 5. Late joiner sees Q&A questions ──────────────────────────────────────
+# ── 6. Late joiner sees Q&A questions ──────────────────────────────────────
 
 def test_late_joiner_sees_existing_qa():
     """Participant joins after questions were submitted → sees them."""
@@ -280,7 +326,7 @@ def test_late_joiner_sees_existing_qa():
         browser.close()
 
 
-# ── 6. Code review: snippet + line selection ───────────────────────────────
+# ── 7. Code review: snippet + line selection ───────────────────────────────
 
 def test_code_review_line_selection():
     """Host pastes code snippet → participant selects lines → host sees selection."""
@@ -339,7 +385,7 @@ def test_code_review_line_selection():
         browser.close()
 
 
-# ── 7. Wordcloud close returns to idle ─────────────────────────────────────
+# ── 8. Wordcloud close returns to idle ─────────────────────────────────────
 
 def test_wordcloud_close_returns_to_idle():
     """Host opens wordcloud → submits word → host closes → participant returns to idle."""
@@ -385,7 +431,7 @@ def test_wordcloud_close_returns_to_idle():
         browser.close()
 
 
-# ── 8. Self-upvote disabled ────────────────────────────────────────────────
+# ── 9. Self-upvote disabled ────────────────────────────────────────────────
 
 def _clear_qa(session_id: str) -> None:
     """Clear all Q&A questions via API (daemon endpoint)."""
@@ -443,7 +489,7 @@ def test_self_upvote_disabled():
         browser.close()
 
 
-# ── 9. Multi-select poll enforces cap ──────────────────────────────────────
+# ── 10. Multi-select poll enforces cap ─────────────────────────────────────
 
 def test_multi_select_cap_enforced():
     """Multi-select poll: participant can't select more options than correct_count."""
