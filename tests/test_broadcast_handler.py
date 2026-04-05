@@ -24,7 +24,7 @@ class TestHandleBroadcast:
         assert sent["words"] == {"hello": 1}
 
     @pytest.mark.anyio
-    async def test_skips_host(self):
+    async def test_includes_host(self):
         participant_ws = AsyncMock()
         host_ws = AsyncMock()
         mock_state = MagicMock()
@@ -37,7 +37,26 @@ class TestHandleBroadcast:
             await _handle_broadcast({"event": {"type": "test"}})
 
         participant_ws.send_text.assert_called_once()
-        host_ws.send_text.assert_not_called()
+        host_ws.send_text.assert_called_once()
+
+    @pytest.mark.anyio
+    async def test_skips_other_special_connections(self):
+        participant_ws = AsyncMock()
+        host_ws = AsyncMock()
+        daemon_ws = AsyncMock()
+        mock_state = MagicMock()
+        mock_state.participants = {
+            "uuid1": participant_ws,
+            "__host__": host_ws,
+            "__daemon_mirror__": daemon_ws,
+        }
+
+        with patch("railway.features.ws.router.state", mock_state):
+            await _handle_broadcast({"event": {"type": "test"}})
+
+        participant_ws.send_text.assert_called_once()
+        host_ws.send_text.assert_called_once()
+        daemon_ws.send_text.assert_not_called()
 
     @pytest.mark.anyio
     async def test_handles_dead_connections(self):
@@ -61,4 +80,3 @@ class TestHandleBroadcast:
             await _handle_broadcast({})  # no event key
 
         mock_state.participants["uuid1"].send_text.assert_not_called()
-

@@ -36,16 +36,16 @@ def sync_static_files(
     server_url: str,
     username: str,
     password: str,
-) -> int:
-    """Sync local static/ to backend. Returns number of files changed."""
+) -> list[str]:
+    """Sync local static/ to backend. Returns successfully changed file paths."""
     local_hashes = compute_local_hashes(static_dir)
     to_upload, to_delete = diff_hashes(local_hashes, remote_hashes)
 
     if not to_upload and not to_delete:
         log.info("static-sync", "Static files in sync — no changes")
-        return 0
+        return []
 
-    changed = 0
+    changed_files: list[str] = []
     for name in to_upload:
         filepath = static_dir / name
         if not filepath.exists():
@@ -58,7 +58,7 @@ def sync_static_files(
                 username, password,
             )
             log.info("static-sync", f"Uploaded: {name} ({filepath.stat().st_size} bytes)")
-            changed += 1
+            changed_files.append(name)
         except RuntimeError as e:
             log.error("static-sync", f"Failed to upload {name}: {e}")
 
@@ -70,8 +70,8 @@ def sync_static_files(
                 username, password,
             )
             log.info("static-sync", f"Deleted remote: {name}")
-            changed += 1
+            changed_files.append(name)
         except RuntimeError as e:
             log.error("static-sync", f"Failed to delete {name}: {e}")
 
-    return changed
+    return changed_files
