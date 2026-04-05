@@ -11,15 +11,9 @@ from daemon.http import _get_json
 from daemon.poll.state import poll_state
 from daemon.scores import scores
 from daemon.session_state import get_current_session_id
-
-# Module-level ws_client reference, set by daemon/__main__.py at startup
-_ws_client = None
-
-
-def set_ws_client(client) -> None:
-    """Set the module-level ws_client reference."""
-    global _ws_client
-    _ws_client = client
+import daemon.ws_publish as _pub
+from daemon.ws_publish import broadcast
+from daemon.ws_messages import QuizStatusMsg
 
 
 def post_poll(quiz: dict, config: Config) -> None:
@@ -41,8 +35,9 @@ def post_poll(quiz: dict, config: Config) -> None:
         options=options,
         multi=len(quiz.get("correct_indices", [])) > 1,
     )
-    if _ws_client and _ws_client.connected:
-        _ws_client.send({"type": "broadcast", "event": {"type": "poll_created", "poll": poll}})
+    if _pub._ws_client and _pub._ws_client.connected:
+        # TODO: no model yet — poll_created is not in ws_messages registry
+        _pub._ws_client.send({"type": "broadcast", "event": {"type": "poll_created", "poll": poll}})
     else:
         log.error("daemon", "Cannot broadcast poll: WS not connected")
 
@@ -50,8 +45,9 @@ def post_poll(quiz: dict, config: Config) -> None:
 def open_poll(config: Config) -> None:
     """Open voting on current poll."""
     poll_state.open_poll(scores.snapshot_base)
-    if _ws_client and _ws_client.connected:
-        _ws_client.send({"type": "broadcast", "event": {"type": "poll_opened", "poll": poll_state.poll}})
+    if _pub._ws_client and _pub._ws_client.connected:
+        # TODO: no model yet — poll_opened is not in ws_messages registry
+        _pub._ws_client.send({"type": "broadcast", "event": {"type": "poll_opened", "poll": poll_state.poll}})
     else:
         log.error("daemon", "Cannot broadcast poll open: WS not connected")
 
@@ -60,19 +56,27 @@ def post_status(status: str, message: str, config: Config,
                 session_folder: Optional[str] = None,
                 session_notes: Optional[str] = None,
                 slides: Optional[list[dict]] = None) -> None:
-    event: dict = {"type": "quiz_status", "status": status, "message": message}
-    if session_folder is not None or session_notes is not None:
-        event["session_folder"] = session_folder
-        event["session_notes"] = session_notes
-    if slides is not None:
-        event["slides"] = slides
-    try:
-        if _ws_client and _ws_client.connected:
-            _ws_client.send({"type": "broadcast", "event": event})
-        else:
-            log.error("daemon", f"Could not post status: WS not connected")
-    except Exception as e:
-        log.error("daemon", f"Could not post status: {e}")
+    if session_folder is not None or session_notes is not None or slides is not None:
+        # Extended payload not covered by QuizStatusMsg — keep raw send
+        # TODO: no model yet — QuizStatusMsg doesn't support session_folder/session_notes/slides fields
+        event: dict = {"type": "quiz_status", "status": status, "message": message}
+        if session_folder is not None or session_notes is not None:
+            event["session_folder"] = session_folder
+            event["session_notes"] = session_notes
+        if slides is not None:
+            event["slides"] = slides
+        try:
+            if _pub._ws_client and _pub._ws_client.connected:
+                _pub._ws_client.send({"type": "broadcast", "event": event})
+            else:
+                log.error("daemon", f"Could not post status: WS not connected")
+        except Exception as e:
+            log.error("daemon", f"Could not post status: {e}")
+    else:
+        try:
+            broadcast(QuizStatusMsg(status=status, message=message))
+        except Exception as e:
+            log.error("daemon", f"Could not post status: {e}")
 
 
 def fetch_quiz_history(config: Config) -> str:

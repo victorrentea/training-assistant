@@ -323,15 +323,13 @@ def run() -> None:
         lambda data: handle_proxy_request(data, ws_client))
 
     # Set ws_client on modules that send results back via WS
-    from daemon.quiz.poll_api import set_ws_client as set_poll_ws
+    from daemon import ws_publish
+    ws_publish.set_ws_client(ws_client)
+
     from daemon.session_state import set_ws_client as set_session_ws
-    set_poll_ws(ws_client)
     set_session_ws(ws_client)
 
     from daemon.scores import scores as daemon_scores
-
-    from daemon.quiz.router import set_ws_client as set_quiz_ws
-    set_quiz_ws(ws_client)
 
     from daemon.session.router import set_ws_client as set_session_router_ws
     set_session_router_ws(ws_client)
