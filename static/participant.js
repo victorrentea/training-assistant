@@ -2291,36 +2291,6 @@ ${html}
     }
   }
 
-  async function _reloadCurrentSlideAfterUpdate(slide) {
-    const savedFollowing = slidesFollowTrainerEnabled;
-    _suppressSlidesFollowAutoUncheck(3000);
-    slidesLastFingerprint = null;
-    await _loadSlideIntoViewer(slide, { forceReload: false, withUiBlocker: false, cacheVersion: Date.now() });
-    if (savedFollowing && !slidesFollowTrainerEnabled) {
-      _setSlidesFollowTrainerEnabled(true, { persist: false, applyHost: false });
-      _renderSlidesFollowTrainerToggle();
-    }
-  }
-
-  async function _onSlidesUpdated(slug, updatedAt) {
-    const overlay = document.getElementById('slides-overlay');
-    const overlayOpen = Boolean(overlay?.classList.contains('open'));
-    await _refreshSlidesCatalog({ forceReloadCurrent: false, autoLoadSelected: false });
-    if (overlayOpen && slidesSelectedSlug === slug && !_slidesViewerBusy) {
-      const entry = slidesCatalog.find(s => s.slug === slug);
-      if (entry) {
-        if (slidesViewMode === 'native') {
-          // Don't auto-reload native viewer — it loses scroll position.
-          // Store a cache-buster so the user's next manual click loads the new version.
-          _nativePendingReloadSlugs[slug] = Date.now();
-          _showSlidesNativeUpdateBanner();
-        } else {
-          await _reloadCurrentSlideAfterUpdate(entry);
-        }
-      }
-    }
-  }
-
   async function _refreshSlidesCatalog({ forceReloadCurrent = false, autoLoadSelected = false } = {}) {
     const shell = document.getElementById('slides-viewer-shell');
     try {
@@ -2984,9 +2954,6 @@ const sessionTitleEl = document.getElementById('session-title');
         break;
       case 'slides_current':
         _onIncomingHostSlidesCurrent(msg.slides_current || null);
-        break;
-      case 'slides_updated':
-        _onSlidesUpdated(msg.slug, msg.updated_at).catch(() => {});
         break;
       case 'wordcloud_updated':
         renderWordCloudScreen(msg.words || {}, msg.word_order || [], msg.topic || '');

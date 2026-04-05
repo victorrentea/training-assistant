@@ -27,6 +27,7 @@ from railway.features.ws.daemon_protocol import (
     push_to_daemon,
 )
 from railway.features.ws.proxy_bridge import handle_proxy_response
+from railway.features.slides.cache import broadcast_slides_cache_status
 
 router = APIRouter()
 session_router = APIRouter()
@@ -130,11 +131,12 @@ async def _handle_broadcast(data: dict):
     event = data.get("event")
     if not event:
         return
+    event_type = event.get("type")
     # Mirror slides_current into Railway state so /api/status can return it.
     # Two event shapes from daemon:
     #   {type:"slides_current", slug:..., url:..., ...}  — active slide
     #   {type:"slides_current", slides_current: null}    — no active slide
-    if event.get("type") == "slides_current":
+    if event_type == "slides_current":
         if "slides_current" in event:
             state.slides_current = event["slides_current"]  # may be None
         else:
@@ -202,7 +204,7 @@ async def daemon_websocket_endpoint(websocket: WebSocket):
     state.daemon_ws = websocket
     state.daemon_last_seen = datetime.now(timezone.utc)
     logger.info("Daemon WS connected")
-    await broadcast({"type": "slides_updated"})
+    await broadcast_slides_cache_status()
 
     # Send static file inventory for daemon to diff and upload changes
     try:
@@ -230,7 +232,7 @@ async def daemon_websocket_endpoint(websocket: WebSocket):
         if state.daemon_ws is websocket:
             state.daemon_ws = None
         logger.info("Daemon WS disconnected")
-        await broadcast({"type": "slides_updated"})
+        await broadcast_slides_cache_status()
 
 
 async def _handle_participant_connection(websocket: WebSocket, pid: str, is_host: bool):

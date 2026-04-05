@@ -20,7 +20,6 @@ channels:
         oneOf:
           - $ref: '#/components/messages/slides_current'
           - $ref: '#/components/messages/slides_cache_status'
-          - $ref: '#/components/messages/slides_updated'
           - $ref: '#/components/messages/activity_updated'
           - $ref: '#/components/messages/participant_count_updated'
           - $ref: '#/components/messages/poll_opened'
@@ -77,23 +76,6 @@ components:
             items:
               $ref: '#/components/schemas/SlideWithCacheStatus'
             description: Slides list with embedded cache status fields
-
-    slides_updated:
-      summary: Slide PDF content updated for one slug
-      payload:
-        type: object
-        required: [type]
-        properties:
-          type:
-            type: string
-            enum: [slides_updated]
-          slug:
-            type: string
-            nullable: true
-          updated_at:
-            type: string
-            format: date-time
-            nullable: true
 
     # ── Activity ──────────────────────────────────────────────────────────────
 

@@ -808,7 +808,7 @@ D --> B : WS slide_invalidated {slug}
 
 B -> B : Mark slug stale in cache_status
 B --> P : WS broadcast (slides_cache_status updated)
-B --> H : WS broadcast
+B --> H : WS broadcast (slides_cache_status updated)
 
 note over D,B
   Daemon is source-of-truth for freshness.

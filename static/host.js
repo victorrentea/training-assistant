@@ -391,8 +391,6 @@
           _slidesCatalog = msg.slides;
         }
         _renderSlidesCatalogPopover();
-      } else if (msg.type === 'slides_updated') {
-        _refreshHostSlidesCatalog().catch(() => {});
       } else if (msg.type === 'vote_update') {
         voteCounts = msg.vote_counts || {};
         totalVotes = msg.total_votes || 0;

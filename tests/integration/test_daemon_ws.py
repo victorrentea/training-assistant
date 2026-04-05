@@ -42,7 +42,7 @@ class TestDaemonWsProtocol:
     def test_quiz_request_pushed_to_daemon(self, server_url):
         """Host requests quiz → backend pushes quiz_request to daemon WS."""
         with ws_connect(_daemon_ws_url(server_url), additional_headers=_auth_headers()) as ws:
-            # Drain initial messages (sync_files, slides_updated, etc.)
+            # Drain initial messages (sync_files, slides_cache_status, etc.)
             time.sleep(0.3)
             while True:
                 try:

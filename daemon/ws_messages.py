@@ -25,12 +25,6 @@ class SlidesCacheStatusMsg(BaseModel):
     slides: Optional[list[dict[str, Any]]] = None
 
 
-class SlidesUpdatedMsg(BaseModel):
-    type: Literal["slides_updated"] = "slides_updated"
-    slug: Optional[str] = None
-    updated_at: Optional[str] = None
-
-
 # ── Activity ──────────────────────────────────────────────────────────────────
 
 class ActivityUpdatedMsg(BaseModel):
@@ -248,7 +242,6 @@ PARTICIPANT_MESSAGES: dict[str, type[BaseModel]] = {
     # Slides
     "slides_current": SlidesCurrentMsg,
     "slides_cache_status": SlidesCacheStatusMsg,
-    "slides_updated": SlidesUpdatedMsg,
     # Activity
     "activity_updated": ActivityUpdatedMsg,
     # Transcription
@@ -288,7 +281,6 @@ PARTICIPANT_MESSAGES: dict[str, type[BaseModel]] = {
 HOST_MESSAGES: dict[str, type[BaseModel]] = {
     # Slides
     "slides_cache_status": SlidesCacheStatusMsg,
-    "slides_updated": SlidesUpdatedMsg,
     # Poll
     "poll_ai_generated": PollAiGeneratedMsg,
     "vote_update": VoteUpdateMsg,

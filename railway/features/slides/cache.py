@@ -15,6 +15,7 @@ from pathlib import Path
 
 from railway.shared.messaging import broadcast
 from railway.shared.state import state
+from railway.features.ws.proxy_bridge import proxy_to_daemon
 
 logger = logging.getLogger(__name__)
 
@@ -91,12 +92,82 @@ def _slides_with_embedded_cache_status() -> list[dict]:
     return merged
 
 
+def _merge_embedded_slide_status(payload: dict) -> list[dict]:
+    raw_slides = payload.get("slides")
+    slides = raw_slides if isinstance(raw_slides, list) else []
+    cache_status = payload.get("cache_status")
+    cache_map = cache_status if isinstance(cache_status, dict) else {}
+    merged: list[dict] = []
+    for raw in slides:
+        if not isinstance(raw, dict):
+            continue
+        slide = dict(raw)
+        slug = str(slide.get("slug", "")).strip()
+        status_entry = cache_map.get(slug) if slug else None
+        if isinstance(status_entry, dict):
+            slide.update(status_entry)
+        if "status" not in slide:
+            slide["status"] = "not_cached"
+        merged.append(slide)
+    return merged
+
+
+async def _fetch_latest_slides_from_daemon() -> list[dict] | None:
+    sid = (state.session_id or "").strip()
+    path = f"/{sid}/api/slides" if sid else "/api/slides"
+    response = await proxy_to_daemon(
+        method="GET",
+        path=path,
+        body=None,
+        headers={},
+        participant_id=None,
+    )
+    if response.status_code != 200:
+        return None
+    try:
+        raw_body = response.body or b"{}"
+        if isinstance(raw_body, str):
+            raw_body = raw_body.encode("utf-8")
+        payload = json.loads(raw_body.decode("utf-8"))
+        if not isinstance(payload, dict):
+            return None
+        return _merge_embedded_slide_status(payload)
+    except Exception:
+        logger.exception("Failed to parse daemon /api/slides payload")
+        return None
+
+
+def _cache_map_from_slides(slides: list[dict]) -> dict[str, dict]:
+    cache_map: dict[str, dict] = {}
+    for raw in slides:
+        if not isinstance(raw, dict):
+            continue
+        slug = str(raw.get("slug", "")).strip()
+        if not slug:
+            continue
+        entry = {"status": str(raw.get("status", "not_cached") or "not_cached")}
+        if raw.get("size_bytes") is not None:
+            entry["size_bytes"] = raw.get("size_bytes")
+        if raw.get("downloaded_at"):
+            entry["downloaded_at"] = raw.get("downloaded_at")
+        if raw.get("error"):
+            entry["error"] = raw.get("error")
+        cache_map[slug] = entry
+    return cache_map
+
+
 async def broadcast_slides_cache_status() -> None:
     """Broadcast cache status update with embedded slide statuses."""
+    slides = await _fetch_latest_slides_from_daemon()
+    if slides is None:
+        slides = _slides_with_embedded_cache_status()
+    else:
+        state.slides = slides
+        state.slides_cache_status = _cache_map_from_slides(slides)
     await broadcast(
         {
             "type": "slides_cache_status",
-            "slides": _slides_with_embedded_cache_status(),
+            "slides": slides,
             "slides_cache_status": state.slides_cache_status,
         }
     )

@@ -6,7 +6,7 @@ from pathlib import Path
 
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 
-from railway.shared.messaging import broadcast
+from railway.features.slides.cache import broadcast_slides_cache_status
 
 router = APIRouter()
 
@@ -34,8 +34,6 @@ def _uploaded_slides_dir() -> Path:
 
 def _uploaded_slide_meta_path(slug: str) -> Path:
     return _uploaded_slides_dir() / f"{slug}.json"
-
-
 @router.post("/api/slides/upload")
 async def upload_slide_pdf(
     file: UploadFile = File(...),
@@ -64,7 +62,7 @@ async def upload_slide_pdf(
         "updated_at": datetime.now(timezone.utc).isoformat(),
     }
     _uploaded_slide_meta_path(target_slug).write_text(json.dumps(meta), encoding="utf-8")
-    await broadcast({"type": "slides_updated", "slug": target_slug, "updated_at": meta["updated_at"]})
+    await broadcast_slides_cache_status()
 
     slide = {
         "name": display_name,

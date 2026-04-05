@@ -70,7 +70,7 @@ class TestSlidesAvailability:
 
             _upload_slide(server_url)
 
-            # WebSocket broadcasts slides_updated → participant refreshes catalog
+            # WebSocket broadcasts slides_cache_status with updated catalog
             available = page.locator(f"{_ITEM_SEL}:not(.unavailable)")
             expect(available).to_be_visible(timeout=8_000)
             expect(available.locator("button.slides-list-open")).to_be_enabled()
