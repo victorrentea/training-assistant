@@ -564,11 +564,16 @@ Host can open notes/summary in the host panel UI.
 - `summary_updated` — `{count}` — host summary badge shows `🧠 (N) Key Points` when full points not yet loaded
 
 ### State
-None persisted in memory — read from disk:
+Daemon reads from disk on demand — not held in memory:
 - `{session_folder}/*.txt` — session notes (latest modified text file)
 - `{session_folder}/ai-summary.md` — key points + raw markdown
 
-Railway caches `notes_line_count` and `summary_line_count` (from daemon broadcasts) to send on new WS connections.
+Railway caches:
+```
+notes_line_count: int       # non-empty lines in notes file (from daemon broadcast)
+summary_line_count: int     # non-empty lines in ai-summary.md (from daemon broadcast)
+```
+Used to send current counts to newly connecting participants/host without a round-trip to daemon.
 
 ---
 
