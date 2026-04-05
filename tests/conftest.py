@@ -117,7 +117,7 @@ def server_url(tmp_path_factory):
 
     # Start a session so participant routes are accessible
     r = requests.post(
-        f"{base_url}/api/session/create",
+        f"{base_url}/api/session/start",
         auth=(HOST_USER, HOST_PASS),
         json={"name": "e2e-test", "type": "workshop"},
     )

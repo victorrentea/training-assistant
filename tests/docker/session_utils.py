@@ -95,7 +95,7 @@ def fresh_session(name: str = "Test", session_type: str = "workshop") -> str:
     session_name = f"{name} {int(time.time())}"
     result = _req(
         "POST",
-        f"{DAEMON_BASE}/api/session/create",
+        f"{DAEMON_BASE}/api/session/start",
         json.dumps({"name": session_name, "type": session_type}).encode(),
     )
     session_id: str = result["session_id"]
