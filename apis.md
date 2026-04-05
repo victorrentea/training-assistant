@@ -25,13 +25,13 @@ All host REST: `/api/{sid}/host/...` on daemon localhost.
 **Host Browser → Daemon REST:**
 | Method | Path | Body | Response |
 |--------|------|------|----------|
-| POST | `/api/session/create` | `{name, type}` | `{ok, session_id}` |
-| POST | `/api/session/start` | `{name}` | `{ok, session_id}` |
+| POST | `/api/session/start` | `{name, type}` | `{ok, session_id}` |
+| POST | `/api/session/resume` | `{folder}` | `{ok, session_id}` |
 | POST | `/api/session/end` | — | `{ok}` |
 | GET | `/api/session/folders` | — | `{folders[]}` |
 | GET | `/api/session/active` | — | `{session_id}` or `null` |
 
-Session endpoints are global (no `{sid}` prefix). On end, daemon sends `set_session_id` with null to Railway, which drops all participant WS connections for that sid.
+`start` creates a new session folder (empty slate). `resume` resumes an existing folder, restoring state from `.session-state.json`. Session endpoints are global (no `{sid}` prefix). On end, daemon sends `set_session_id` with null to Railway, which drops all participant WS connections for that sid.
 
 **Daemon → Host Browser WS:** (none — host triggered the actions)
 
@@ -49,7 +49,7 @@ session_name: str | null         # display name
 **Participant Browser → Daemon REST:**
 | Method | Path | Body | Response |
 |--------|------|------|----------|
-| GET | `/{sid}/api/slides` | — | `{slides[]}` — each deck includes `size_mb: float` so participants see expected download size |
+| GET | `/{sid}/api/slides` | — | `{slides[], cache_status}` — each deck includes `size_mb: float`; `cache_status: {slug→{status, size_bytes}}` for initial download state |
 | GET | `/{sid}/api/slides/download/{slug}` | — | PDF binary (max upload size: 100MB) |
 
 Current slide is included in the initial state from `GET /{sid}/api/participant/state` and tracked via WS events continuously — no separate current-slide endpoint needed.
