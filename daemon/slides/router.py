@@ -15,6 +15,11 @@ _pending_checks: dict[str, list[asyncio.Future]] = {}
 _event_loop: asyncio.AbstractEventLoop | None = None
 
 
+def get_event_loop() -> asyncio.AbstractEventLoop | None:
+    """Return the daemon's FastAPI event loop (set on first /check request)."""
+    return _event_loop
+
+
 # ── Response models ──
 
 class SlidesListResponse(BaseModel):

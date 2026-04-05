@@ -5,11 +5,11 @@
 
 ## 2. Railway: Remove autonomous download triggering
 
-- [ ] 2.1 Remove autonomous `handle_slide_invalidated` call from Railway's WS handler — Railway no longer self-triggers downloads on `slide_invalidated`
-- [ ] 2.2 Remove `seed_catalog_from_file()` call from Railway startup (`app.py` lifespan)
-- [ ] 2.3 Update Railway `GET /{sid}/api/slides` to proxy to daemon (consistent with other participant endpoints) — remove local index building
-- [ ] 2.4 Remove `_build_catalog_slides_index`, `_build_local_slides_index`, `_build_uploaded_slides_index`, `_merge_slide_sources`, `_collect_participant_slides` from `router.py`
-- [ ] 2.5 Remove dead AppState fields: `slides_gdrive_locks`, `slides_download_events`, `slides_fingerprints`, `slides_download_semaphore` from `shared/state.py`
+- [x] 2.1 Remove autonomous `handle_slide_invalidated` call from Railway's WS handler — Railway no longer self-triggers downloads on `slide_invalidated`
+- [x] 2.2 Remove `seed_catalog_from_file()` call from Railway startup (`app.py` lifespan)
+- [x] 2.3 Update Railway `GET /{sid}/api/slides` to proxy to daemon (consistent with other participant endpoints) — remove local index building
+- [x] 2.4 Remove `_build_catalog_slides_index`, `_build_local_slides_index`, `_build_uploaded_slides_index`, `_merge_slide_sources`, `_collect_participant_slides` from `router.py`
+- [ ] 2.5 Remove dead AppState fields: `slides_gdrive_locks`, `slides_download_events`, `slides_fingerprints`, `slides_download_semaphore` from `shared/state.py` (deferred — still used by cache.py)
 
 ## 3. Daemon: /check endpoint
 
@@ -22,13 +22,13 @@
 ## 4. Daemon: GET /{sid}/api/slides
 
 - [x] 4.1 Add `GET /{sid}/api/slides` on daemon — returns `{slides[], cache_status: {slug→{status, size_bytes}}}` from daemon state
-- [ ] 4.2 Ensure Railway proxies `GET /{sid}/api/slides` to daemon (remove or replace local handler)
+- [x] 4.2 Ensure Railway proxies `GET /{sid}/api/slides` to daemon (remove or replace local handler)
 
 ## 5. Daemon: Fingerprint polling
 
-- [ ] 5.1 Port `_probe_fingerprint_sync` + async wrapper from `railway/features/slides/cache.py` into `daemon/slides/convert.py`
-- [ ] 5.2 Port `_poll_fingerprint_loop` into `daemon/slides/convert.py` — on fingerprint change, mark slug stale in daemon cache-status dict
-- [ ] 5.3 Connect existing `slide_invalidated` handler in `daemon/slides/loop.py` to start fingerprint polling via updated `convert.py`
+- [x] 5.1 Port `_probe_fingerprint_sync` + async wrapper from `railway/features/slides/cache.py` into `daemon/slides/convert.py`
+- [x] 5.2 Port `_poll_fingerprint_loop` into `daemon/slides/convert.py` — on fingerprint change, mark slug stale in daemon cache-status dict
+- [x] 5.3 Connect existing `slide_invalidated` handler in `daemon/slides/loop.py` to start fingerprint polling via updated `convert.py`
 
 ## 6. Daemon: Broadcast on download complete
 
