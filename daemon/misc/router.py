@@ -8,21 +8,14 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from daemon.misc.state import misc_state
+from daemon.ws_messages import PasteReceivedMsg, TranscriptionLanguagePendingMsg
+from daemon.ws_publish import host_event, broadcast
 
 logger = logging.getLogger(__name__)
-
-# Set by __main__.py during daemon startup
-_ws_client = None
 
 # Pending transcription language request (read by daemon loop or macos-addons polling)
 _transcription_language_lock = threading.Lock()
 _transcription_language_pending: str | None = None
-
-
-def set_ws_client(client):
-    """Set the WebSocket client for broadcasting events."""
-    global _ws_client
-    _ws_client = client
 
 
 # ── Pydantic models ──
@@ -73,7 +66,7 @@ async def paste_text(request: Request, body: PasteRequest):
 
     # Send only to host (not broadcast to all participants)
     request.state.write_back_events = [
-        {"type": "send_to_host", "event": {"type": "paste_received", "uuid": pid, **entry}},
+        host_event(PasteReceivedMsg(uuid=pid, **entry)),
     ]
 
     return OkResponse()
@@ -144,8 +137,7 @@ async def set_transcription_language(body: TranscriptionLanguageRequest):
         return JSONResponse({"error": "language must be 'ro', 'en', or 'auto'"}, status_code=400)
     with _transcription_language_lock:
         _transcription_language_pending = lang
-    if _ws_client:
-        _ws_client.send({"type": "broadcast", "event": {"type": "transcription_language_pending", "language": lang}})
+    broadcast(TranscriptionLanguagePendingMsg(language=lang))
     return OkResponse()
 
 

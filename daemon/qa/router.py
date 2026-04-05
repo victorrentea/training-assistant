@@ -5,19 +5,13 @@ from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-from daemon.host_ws import send_to_host
 from daemon.participant.state import participant_state
 from daemon.qa.state import qa_state
 from daemon.scores import scores
+from daemon.ws_messages import QaUpdatedMsg, ScoresUpdatedMsg
+from daemon.ws_publish import broadcast_event, broadcast, notify_host
 
 logger = logging.getLogger(__name__)
-
-_ws_client = None
-
-
-def set_ws_client(client):
-    global _ws_client
-    _ws_client = client
 
 
 class OkResponse(BaseModel):
@@ -77,12 +71,12 @@ async def submit_question(request: Request, body: SubmitQuestionBody):
 
     scores.add_score(pid, 100)
     request.state.write_back_events = [
-        {"type": "broadcast", "event": {"type": "qa_updated", "questions": raw_questions}},
-        {"type": "broadcast", "event": {"type": "scores_updated", "scores": scores.snapshot()}},
+        broadcast_event(QaUpdatedMsg(questions=raw_questions)),
+        broadcast_event(ScoresUpdatedMsg(scores=scores.snapshot())),
     ]
 
-    await send_to_host({"type": "qa_updated", "questions": host_questions})
-    await send_to_host({"type": "scores_updated", "scores": scores.snapshot()})
+    await notify_host(QaUpdatedMsg(questions=host_questions))
+    await notify_host(ScoresUpdatedMsg(scores=scores.snapshot()))
 
     return OkResponse()
 
@@ -108,12 +102,12 @@ async def upvote_question(request: Request, body: UpvoteQuestionBody):
     scores.add_score(author_pid, 50)
     scores.add_score(pid, 25)
     request.state.write_back_events = [
-        {"type": "broadcast", "event": {"type": "qa_updated", "questions": raw_questions}},
-        {"type": "broadcast", "event": {"type": "scores_updated", "scores": scores.snapshot()}},
+        broadcast_event(QaUpdatedMsg(questions=raw_questions)),
+        broadcast_event(ScoresUpdatedMsg(scores=scores.snapshot())),
     ]
 
-    await send_to_host({"type": "qa_updated", "questions": host_questions})
-    await send_to_host({"type": "scores_updated", "scores": scores.snapshot()})
+    await notify_host(QaUpdatedMsg(questions=host_questions))
+    await notify_host(ScoresUpdatedMsg(scores=scores.snapshot()))
 
     return OkResponse()
 
@@ -178,9 +172,5 @@ async def _send_qa_events():
     """Send broadcast to participants (via Railway) and to host (local WS)."""
     raw_questions = _build_questions_for_broadcast()
     host_questions = _build_questions_for_host()
-    if _ws_client:
-        _ws_client.send({
-            "type": "broadcast",
-            "event": {"type": "qa_updated", "questions": raw_questions},
-        })
-    await send_to_host({"type": "qa_updated", "questions": host_questions})
+    broadcast(QaUpdatedMsg(questions=raw_questions))
+    await notify_host(QaUpdatedMsg(questions=host_questions))

@@ -6,7 +6,8 @@ from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-from daemon.host_ws import send_to_host
+from daemon.ws_messages import EmojiReactionMsg
+from daemon.ws_publish import notify_host
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +36,7 @@ async def emoji_reaction(request: Request, body: EmojiReactionRequest):
         return JSONResponse({"error": "Invalid emoji"}, status_code=400)
 
     # Forward to host browser (local WS)
-    await send_to_host({"type": "emoji_reaction", "emoji": emoji})
+    await notify_host(EmojiReactionMsg(emoji=emoji))
 
     # Forward to desktop overlay (victor-macos-addons) — fire and forget
     try:
