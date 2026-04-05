@@ -40,4 +40,4 @@
 - [x] 7.1 Remove unused imports from `railway/features/slides/router.py` and `railway/features/ws/router.py` after removing autonomous download logic
 - [x] 7.2 Add unit tests for daemon `/check`: immediate 200 when fresh, blocks then 200 on `pdf_download_complete`, 503 on timeout, coalescing of concurrent calls
 - [x] 7.3 Add unit tests for Railway `download_pdf` handler: deduplication of in-flight downloads, sends `pdf_download_complete` on success and failure
-- [ ] 7.4 Hermetic E2E test: participant calls /check/{slug} → daemon sends download_pdf to Railway → Railway fetches from mock GDrive → pdf_download_complete to daemon → /check returns 200 → participant downloads PDF binary
+- [x] 7.4 Hermetic E2E test: participant calls /check/{slug} → daemon sends download_pdf to Railway → Railway fetches from mock GDrive → pdf_download_complete to daemon → /check returns 200 → participant downloads PDF binary
