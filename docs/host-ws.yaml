@@ -9,11 +9,6 @@ info:
     **Host WS is receive-only.** All host actions are REST calls to the daemon.
     Full state is fetched via `GET /api/{session_id}/host/state` on connect/reconnect.
 
-    The host WS is a direct connection to the daemon local server (port 8081),
-    not through Railway. Events come from:
-    - `send_to_host()` called by daemon feature routers
-    - Daemon orchestrator loop (transcript status, token usage, etc.)
-
 servers:
   daemon:
     url: ws://localhost:8081/{session_id}/__host__
@@ -26,386 +21,66 @@ channels:
       summary: Events received by host browser
       message:
         oneOf:
-          - $ref: '#/components/messages/state'
-          - $ref: '#/components/messages/kicked'
-          - $ref: '#/components/messages/reload'
-          - $ref: '#/components/messages/redirect'
-          - $ref: '#/components/messages/poll_created'
-          - $ref: '#/components/messages/poll_opened'
-          - $ref: '#/components/messages/poll_closed'
-          - $ref: '#/components/messages/poll_correct_revealed'
-          - $ref: '#/components/messages/poll_cleared'
-          - $ref: '#/components/messages/poll_timer_started'
-          - $ref: '#/components/messages/scores_updated'
           - $ref: '#/components/messages/vote_update'
-          - $ref: '#/components/messages/participant_count'
+          - $ref: '#/components/messages/wordcloud_updated'
           - $ref: '#/components/messages/qa_updated'
-          - $ref: '#/components/messages/leaderboard_revealed'
-          - $ref: '#/components/messages/leaderboard_hide'
+          - $ref: '#/components/messages/codereview_selections_updated'
           - $ref: '#/components/messages/emoji_reaction'
-          - $ref: '#/components/messages/debate_timer'
-          - $ref: '#/components/messages/debate_round_ended'
           - $ref: '#/components/messages/quiz_status'
           - $ref: '#/components/messages/quiz_preview'
-          - $ref: '#/components/messages/notes'
-          - $ref: '#/components/messages/summary'
-          - $ref: '#/components/messages/slides_cache_status'
-          - $ref: '#/components/messages/transcription_language'
-          - $ref: '#/components/messages/transcription_language_pending'
-          - $ref: '#/components/messages/timer'
+          - $ref: '#/components/messages/leaderboard_revealed'
+          - $ref: '#/components/messages/paste_received'
+          - $ref: '#/components/messages/file_uploaded'
+          - $ref: '#/components/messages/participant_updated'
 
 components:
   messages:
 
-    # ── Core / Session ────────────────────────────────────────────────────────
-
-    state:
-      summary: Full host state — synthesised from REST response on connect/reconnect
-      description: |
-        The host page loads state via `GET /api/{session_id}/host/state` on each
-        WS connect. The REST response JSON is injected as `{type: "state"}` by
-        the host JS — it is not pushed over the WS.
-      payload:
-        type: object
-        required: [type]
-        properties:
-          type:
-            type: string
-            enum: [state]
-          mode:
-            type: string
-            enum: [workshop, conference]
-          current_activity:
-            type: string
-            enum: [none, poll, wordcloud, qa, debate, codereview]
-          participant_count:
-            type: integer
-          participants:
-            type: array
-            items:
-              $ref: '#/components/schemas/HostParticipant'
-          daemon_connected:
-            type: boolean
-          daemon_last_seen:
-            type: string
-            format: date-time
-            nullable: true
-          session_id:
-            type: string
-            nullable: true
-          session_name:
-            type: string
-            nullable: true
-          session_main:
-            type: object
-            nullable: true
-          poll:
-            $ref: '#/components/schemas/Poll'
-            nullable: true
-          poll_active:
-            type: boolean
-          vote_counts:
-            type: object
-            additionalProperties:
-              type: integer
-          votes:
-            type: object
-            additionalProperties:
-              description: uuid → option_id or list of option_ids
-          poll_timer_seconds:
-            type: integer
-            nullable: true
-          poll_timer_started_at:
-            type: string
-            format: date-time
-            nullable: true
-          poll_correct_ids:
-            type: array
-            items:
-              type: string
-            nullable: true
-          wordcloud_words:
-            type: object
-            additionalProperties:
-              type: integer
-          wordcloud_word_order:
-            type: array
-            items:
-              type: string
-          wordcloud_topic:
-            type: string
-          qa_questions:
-            type: array
-            items:
-              $ref: '#/components/schemas/HostQAQuestion'
-          codereview:
-            $ref: '#/components/schemas/HostCodeReview'
-          debate_statement:
-            type: string
-            nullable: true
-          debate_phase:
-            type: string
-            nullable: true
-          debate_side_counts:
-            type: object
-            properties:
-              for:
-                type: integer
-              against:
-                type: integer
-          debate_sides:
-            type: object
-            additionalProperties:
-              type: string
-            description: uuid → "for"|"against"
-          debate_arguments:
-            type: array
-            items:
-              $ref: '#/components/schemas/DebateArgument'
-          debate_champions:
-            type: object
-            additionalProperties:
-              type: string
-          debate_auto_assigned:
-            type: array
-            items:
-              type: string
-          debate_first_side:
-            type: string
-            nullable: true
-          debate_round_index:
-            type: integer
-            nullable: true
-          debate_round_timer_seconds:
-            type: integer
-            nullable: true
-          debate_round_timer_started_at:
-            type: string
-            format: date-time
-            nullable: true
-          leaderboard_active:
-            type: boolean
-          leaderboard_data:
-            nullable: true
-          summary_points:
-            type: array
-            items:
-              $ref: '#/components/schemas/SummaryPoint'
-          notes_content:
-            type: string
-            nullable: true
-          token_usage:
-            $ref: '#/components/schemas/TokenUsage'
-          quiz_preview:
-            nullable: true
-          transcript_line_count:
-            type: integer
-          transcript_total_lines:
-            type: integer
-          transcript_latest_ts:
-            type: string
-            nullable: true
-          transcription_language:
-            type: string
-            nullable: true
-          slides_current:
-            nullable: true
-          overlay_connected:
-            type: boolean
-          pending_deploy:
-            type: boolean
-          git_repos:
-            type: array
-            items:
-              $ref: '#/components/schemas/GitRepo'
-
-    kicked:
-      summary: Another host tab connected — this tab is being kicked
-      payload:
-        type: object
-        properties:
-          type:
-            type: string
-            enum: [kicked]
-
-    reload:
-      summary: Daemon synced static files — browser should reload
-      payload:
-        type: object
-        properties:
-          type:
-            type: string
-            enum: [reload]
-
-    redirect:
-      summary: Session changed — host should navigate to new URL
-      payload:
-        type: object
-        required: [type, url]
-        properties:
-          type:
-            type: string
-            enum: [redirect]
-          url:
-            type: string
-
     # ── Poll ─────────────────────────────────────────────────────────────────
 
-    poll_created:
-      summary: Host created a new poll (self-notification)
-      payload:
-        type: object
-        required: [type, poll]
-        properties:
-          type:
-            type: string
-            enum: [poll_created]
-          poll:
-            $ref: '#/components/schemas/Poll'
-
-    poll_opened:
-      summary: Poll opened for voting
-      payload:
-        type: object
-        required: [type, poll]
-        properties:
-          type:
-            type: string
-            enum: [poll_opened]
-          poll:
-            $ref: '#/components/schemas/Poll'
-
-    poll_closed:
-      summary: Voting closed
-      payload:
-        type: object
-        required: [type]
-        properties:
-          type:
-            type: string
-            enum: [poll_closed]
-          vote_counts:
-            type: object
-            additionalProperties:
-              type: integer
-          total_votes:
-            type: integer
-
-    poll_correct_revealed:
-      summary: Correct answers revealed and scores awarded
-      payload:
-        type: object
-        required: [type, correct_ids, scores, votes]
-        properties:
-          type:
-            type: string
-            enum: [poll_correct_revealed]
-          correct_ids:
-            type: array
-            items:
-              type: string
-          scores:
-            type: object
-            additionalProperties:
-              type: integer
-          votes:
-            type: object
-            additionalProperties:
-              description: uuid → option_id or list of option_ids
-
-    poll_cleared:
-      summary: Poll deleted
-      payload:
-        type: object
-        properties:
-          type:
-            type: string
-            enum: [poll_cleared]
-
-    poll_timer_started:
-      summary: Countdown timer started
-      payload:
-        type: object
-        required: [type, seconds, started_at]
-        properties:
-          type:
-            type: string
-            enum: [poll_timer_started]
-          seconds:
-            type: integer
-          started_at:
-            type: string
-            format: date-time
-
-    timer:
-      summary: Generic timer (legacy fallback)
-      payload:
-        type: object
-        required: [type, seconds, started_at]
-        properties:
-          type:
-            type: string
-            enum: [timer]
-          seconds:
-            type: integer
-          started_at:
-            type: string
-            format: date-time
-
     vote_update:
-      summary: Real-time vote count update while poll is open
+      summary: Real-time vote tally while poll is open
       payload:
         type: object
-        required: [type]
+        required: [type, votes]
         properties:
           type:
             type: string
             enum: [vote_update]
-          vote_counts:
+          votes:
             type: object
-            additionalProperties:
-              type: integer
-          total_votes:
-            type: integer
-
-    # ── Scores ────────────────────────────────────────────────────────────────
-
-    scores_updated:
-      summary: Scores changed
-      payload:
-        type: object
-        required: [type, scores]
-        properties:
-          type:
-            type: string
-            enum: [scores_updated]
-          scores:
-            type: object
+            description: option_id → vote count
             additionalProperties:
               type: integer
 
-    # ── Participants ──────────────────────────────────────────────────────────
+    # ── Word Cloud ────────────────────────────────────────────────────────────
 
-    participant_count:
-      summary: Participant list changed (join/leave/rename)
+    wordcloud_updated:
+      summary: Word cloud updated (same payload as participant)
       payload:
         type: object
-        required: [type, count]
+        required: [type, words, word_order, topic]
         properties:
           type:
             type: string
-            enum: [participant_count]
-          count:
-            type: integer
-          participants:
+            enum: [wordcloud_updated]
+          words:
+            type: object
+            description: word → count
+            additionalProperties:
+              type: integer
+          word_order:
             type: array
+            description: Words ordered newest first
             items:
-              $ref: '#/components/schemas/HostParticipant'
+              type: string
+          topic:
+            type: string
 
     # ── Q&A ───────────────────────────────────────────────────────────────────
 
     qa_updated:
-      summary: Q&A list changed
+      summary: Q&A list changed (same structure as participant)
       payload:
         type: object
         required: [type, questions]
@@ -416,43 +91,29 @@ components:
           questions:
             type: array
             items:
-              $ref: '#/components/schemas/HostQAQuestion'
+              $ref: '#/components/schemas/QAQuestion'
 
-    # ── Leaderboard ──────────────────────────────────────────────────────────
+    # ── Code Review ───────────────────────────────────────────────────────────
 
-    leaderboard_revealed:
-      summary: Host revealed leaderboard — self notification
+    codereview_selections_updated:
+      summary: Aggregated line selection counts (host-only)
       payload:
         type: object
-        required: [type, entries, total_participants]
+        required: [type, line_counts]
         properties:
           type:
             type: string
-            enum: [leaderboard_revealed]
-          entries:
-            type: array
-            items:
-              $ref: '#/components/schemas/LeaderboardEntry'
-            maxItems: 5
-          total_participants:
-            type: integer
-
-    leaderboard_hide:
-      summary: Leaderboard hidden — self notification
-      payload:
-        type: object
-        properties:
-          type:
-            type: string
-            enum: [leaderboard_hide]
+            enum: [codereview_selections_updated]
+          line_counts:
+            type: object
+            description: line number → count of participants who selected it
+            additionalProperties:
+              type: integer
 
     # ── Emoji ─────────────────────────────────────────────────────────────────
 
     emoji_reaction:
-      summary: Participant sent an emoji reaction
-      description: |
-        Emoji events go directly to host (via `send_to_host()`) and to the
-        desktop overlay. They are NOT broadcast to other participants.
+      summary: Participant sent an emoji reaction — floating animation on host screen
       payload:
         type: object
         required: [type, emoji]
@@ -464,43 +125,10 @@ components:
             type: string
             maxLength: 4
 
-    # ── Debate ────────────────────────────────────────────────────────────────
-
-    debate_timer:
-      summary: Debate round timer started
-      payload:
-        type: object
-        required: [type, round_index, seconds, started_at]
-        properties:
-          type:
-            type: string
-            enum: [debate_timer]
-          round_index:
-            type: integer
-          seconds:
-            type: integer
-          started_at:
-            type: string
-            format: date-time
-            nullable: true
-
-    debate_round_ended:
-      summary: Current debate round ended early
-      payload:
-        type: object
-        required: [type]
-        properties:
-          type:
-            type: string
-            enum: [debate_round_ended]
-          round_index:
-            type: integer
-            nullable: true
-
-    # ── Quiz ─────────────────────────────────────────────────────────────────
+    # ── Quiz Generation ───────────────────────────────────────────────────────
 
     quiz_status:
-      summary: Daemon quiz generation status update
+      summary: Quiz generation progress update
       payload:
         type: object
         required: [type, status]
@@ -510,156 +138,150 @@ components:
             enum: [quiz_status]
           status:
             type: string
-            enum: [requested, generating, error]
+            description: '"generating" | "ready" | "error"'
           message:
             type: string
 
     quiz_preview:
-      summary: Daemon generated a quiz preview
+      summary: Generated quiz ready for host review before publishing
       payload:
         type: object
-        required: [type]
+        required: [type, question, options, multi, correct_indices]
         properties:
           type:
             type: string
             enum: [quiz_preview]
-          quiz:
-            nullable: true
-            type: object
-            properties:
-              question:
-                type: string
-              options:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    id:
-                      type: string
-                    text:
-                      type: string
-              multi:
-                type: boolean
-              correct_indices:
-                type: array
-                items:
-                  type: integer
-              source:
-                type: string
-                nullable: true
-              page:
-                type: string
-                nullable: true
-
-    # ── Summary / Notes ───────────────────────────────────────────────────────
-
-    notes:
-      summary: Session notes content changed
-      payload:
-        type: object
-        required: [type]
-        properties:
-          type:
+          question:
             type: string
-            enum: [notes]
-          notes_content:
-            type: string
-            nullable: true
-
-    summary:
-      summary: AI-generated summary updated
-      payload:
-        type: object
-        required: [type]
-        properties:
-          type:
-            type: string
-            enum: [summary]
-          points:
+          options:
             type: array
             items:
-              $ref: '#/components/schemas/SummaryPoint'
-          updated_at:
-            type: string
-            format: date-time
-            nullable: true
-
-    # ── Slides ────────────────────────────────────────────────────────────────
-
-    slides_cache_status:
-      summary: Slide PDF cache status changed
-      payload:
-        type: object
-        required: [type]
-        properties:
-          type:
-            type: string
-            enum: [slides_cache_status]
-          slides_cache_status:
-            type: object
-            additionalProperties:
               type: object
+              required: [id, text]
+              properties:
+                id:
+                  type: string
+                text:
+                  type: string
+          multi:
+            type: boolean
+          correct_indices:
+            type: array
+            items:
+              type: integer
 
-    # ── Transcription ─────────────────────────────────────────────────────────
+    # ── Leaderboard ───────────────────────────────────────────────────────────
 
-    transcription_language:
-      summary: Daemon confirmed transcription language change
+    leaderboard_revealed:
+      summary: Leaderboard revealed (same payload as participant)
       payload:
         type: object
-        required: [type, language]
+        required: [type, positions]
         properties:
           type:
             type: string
-            enum: [transcription_language]
-          language:
-            type: string
-            enum: [ro, en, auto]
+            enum: [leaderboard_revealed]
+          positions:
+            type: array
+            items:
+              $ref: '#/components/schemas/LeaderboardPosition'
 
-    transcription_language_pending:
-      summary: Transcription language change pending (waiting for macos-addons)
+    # ── Paste & File Upload ───────────────────────────────────────────────────
+
+    paste_received:
+      summary: Participant submitted a text paste
       payload:
         type: object
-        required: [type, language]
+        required: [type, uuid, id, text]
         properties:
           type:
             type: string
-            enum: [transcription_language_pending]
-          language:
+            enum: [paste_received]
+          uuid:
             type: string
-            enum: [ro, en, auto]
+            description: Participant UUID who submitted the paste
+          id:
+            type: string
+            description: Paste ID
+          text:
+            type: string
+
+    file_uploaded:
+      summary: Participant uploaded a file (daemon has downloaded it to session folder)
+      payload:
+        type: object
+        required: [type, uuid, id, filename, size]
+        properties:
+          type:
+            type: string
+            enum: [file_uploaded]
+          uuid:
+            type: string
+            description: Participant UUID who uploaded the file
+          id:
+            type: string
+            description: File ID
+          filename:
+            type: string
+          size:
+            type: integer
+            description: File size in bytes
+
+    # ── Participants ──────────────────────────────────────────────────────────
+
+    participant_updated:
+      summary: Participant list changed (join/leave/rename/location)
+      payload:
+        type: object
+        required: [type, count, participants]
+        properties:
+          type:
+            type: string
+            enum: [participant_updated]
+          count:
+            type: integer
+          participants:
+            type: array
+            items:
+              $ref: '#/components/schemas/HostParticipant'
 
   schemas:
-    Poll:
+
+    QAQuestion:
       type: object
-      required: [id, question, options, multi]
+      required: [id, text, author_uuid, upvoter_uuids, answered, timestamp]
       properties:
         id:
           type: string
-        question:
+        text:
           type: string
-        options:
+        author_uuid:
+          type: string
+        upvoter_uuids:
           type: array
           items:
-            type: object
-            properties:
-              id:
-                type: string
-              text:
-                type: string
-        multi:
+            type: string
+        answered:
           type: boolean
-        correct_count:
+        timestamp:
+          type: number
+
+    LeaderboardPosition:
+      type: object
+      required: [rank, name, score, avatar]
+      properties:
+        rank:
           type: integer
-          nullable: true
-        source:
+        name:
           type: string
-          nullable: true
-        page:
+        score:
+          type: integer
+        avatar:
           type: string
-          nullable: true
 
     HostParticipant:
       type: object
+      required: [uuid, name, score, avatar]
       properties:
         uuid:
           type: string
@@ -669,138 +291,6 @@ components:
           type: integer
         location:
           type: string
+          nullable: true
         avatar:
           type: string
-        paste_texts:
-          type: array
-          items:
-            type: object
-            properties:
-              id:
-                type: integer
-              text:
-                type: string
-          description: Only present if participant has pending paste entries
-
-    HostQAQuestion:
-      type: object
-      properties:
-        id:
-          type: string
-        text:
-          type: string
-        author:
-          type: string
-        author_uuid:
-          type: string
-        author_avatar:
-          type: string
-        upvote_count:
-          type: integer
-        upvoters:
-          type: array
-          items:
-            type: string
-        answered:
-          type: boolean
-        timestamp:
-          type: number
-
-    HostCodeReview:
-      type: object
-      properties:
-        snippet:
-          type: string
-          nullable: true
-        language:
-          type: string
-          nullable: true
-        phase:
-          type: string
-          enum: [idle, selecting, reviewing]
-        confirmed_lines:
-          type: array
-          items:
-            type: integer
-        selections:
-          type: object
-          additionalProperties:
-            type: array
-            items:
-              type: integer
-          description: uuid → sorted list of selected line numbers
-        line_percentages:
-          type: object
-          additionalProperties:
-            type: integer
-          description: line_index → % (reviewing phase only)
-        line_counts:
-          type: object
-          additionalProperties:
-            type: integer
-          description: line_index → absolute count (reviewing phase only)
-
-    DebateArgument:
-      type: object
-      properties:
-        id:
-          type: string
-        author_uuid:
-          type: string
-        side:
-          type: string
-          enum: [for, against]
-        text:
-          type: string
-        upvoters:
-          type: array
-          items:
-            type: string
-        ai_generated:
-          type: boolean
-        merged_into:
-          type: string
-          nullable: true
-
-    LeaderboardEntry:
-      type: object
-      properties:
-        uuid:
-          type: string
-        name:
-          type: string
-        score:
-          type: integer
-
-    SummaryPoint:
-      type: object
-      properties:
-        text:
-          type: string
-        source:
-          type: string
-          enum: [notes, discussion]
-        time:
-          type: string
-
-    TokenUsage:
-      type: object
-      properties:
-        input_tokens:
-          type: integer
-        output_tokens:
-          type: integer
-        estimated_cost_usd:
-          type: number
-
-    GitRepo:
-      type: object
-      properties:
-        url:
-          type: string
-        branch:
-          type: string
-        files:
-          type: array
-          items:
-            type: string
