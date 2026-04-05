@@ -528,16 +528,20 @@ These are sent by the daemon to Railway over the daemon WS connection (not to pa
 
 ## Feature: Session Management
 
-### Host REST API
+### Host REST API (daemon localhost:8081)
 
-Session endpoints are called via Railway or daemon depending on the operation.
+Session lifecycle endpoints are called directly on the daemon (not Railway).
 
 | Method | Path | Description |
 |--------|------|-------------|
 | GET | `/api/{session_id}/host/state` | Full host state |
-| POST | `/api/session/request` | Create/start/stop/rename a session (triggers daemon via WS) |
-| GET | `/api/session/folders` | List available session folders |
-| POST | `/api/session/sync` | Daemon pushes session state to Railway |
+| POST | `/api/session/start` | Create a new session folder with clean slate. Body: `{name, type}`. Returns `{ok, session_name, session_id}`. |
+| POST | `/api/session/resume` | Resume an existing session folder. Body: `{folder}`. Reads `.session-state.json` to restore state. Returns `{ok, session_name, session_id}`. |
+| POST | `/api/session/end` | End the current session. Returns `{ok}`. |
+| GET | `/api/session/folders` | List available session folders for current year |
+| GET | `/api/session/active` | Returns active `{session_id}` or `null` (public, no auth) |
+
+**Session state file**: `.session-state.json` (hidden dot-file) in each session folder — written every ~5s by daemon, used to restore state on resume or daemon restart.
 
 ### Daemon-to-Railway WS messages (internal)
 

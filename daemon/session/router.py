@@ -121,19 +121,26 @@ session_router = APIRouter(prefix="/api/{session_id}/session", tags=["session"])
 
 class StartSessionRequest(BaseModel):
     name: str
-
-
-class SessionCreateBody(BaseModel):
-    name: str
     type: str = "workshop"
+
+
+class ResumeSessionRequest(BaseModel):
+    folder: str
 
 
 @global_router.post("/start")
 async def start_session(body: StartSessionRequest):
-    """Host starts a new (nested) session."""
+    """Host starts a new session (creates folder, assigns session_id, clean slate)."""
     name = normalize_session_name(body.name)
-    session_pending.put("session_request", {"action": "start", "name": name})
-    return JSONResponse({"ok": True})
+    session_id = _generate_session_id()
+
+    session_pending.put("session_request", {
+        "action": "create",
+        "name": name,
+        "type": body.type,
+        "session_id": session_id,
+    })
+    return JSONResponse({"ok": True, "session_name": name, "session_id": session_id})
 
 
 @global_router.post("/end")
@@ -143,19 +150,19 @@ async def end_session():
     return JSONResponse({"ok": True})
 
 
-@global_router.post("/create")
-async def create_session(body: SessionCreateBody):
-    """Host creates a new session folder (full reset)."""
-    name = normalize_session_name(body.name)
-    session_id = _resolve_session_id_for_folder(name)
+@global_router.post("/resume")
+async def resume_session(body: ResumeSessionRequest):
+    """Host resumes an existing session folder. Reads .session-state.json to restore state."""
+    folder_name = normalize_session_name(body.folder)
+    session_id = _resolve_session_id_for_folder(folder_name)
 
     session_pending.put("session_request", {
         "action": "create",
-        "name": name,
-        "type": body.type,
+        "name": folder_name,
+        "type": "workshop",
         "session_id": session_id,
     })
-    return JSONResponse({"ok": True, "session_name": name, "session_id": session_id})
+    return JSONResponse({"ok": True, "session_name": folder_name, "session_id": session_id})
 
 
 @global_router.get("/folders")

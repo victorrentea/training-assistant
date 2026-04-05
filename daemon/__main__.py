@@ -77,7 +77,7 @@ _PPT_UNMAPPED_PRESENTATIONS_ALERTED: set[str] = set()
 
 
 def _read_session_id_from_session_folder(folder: Path) -> str | None:
-    path = folder / "session_state.json"
+    path = folder / ".session-state.json"
     if not path.exists() or not path.is_file():
         return None
     try:
@@ -568,13 +568,13 @@ def run() -> None:
     try:
         startup_session_state: dict | None = None
         if session_stack:
-            state_file = sessions_root / session_stack[-1]["name"] / "session_state.json"
+            state_file = sessions_root / session_stack[-1]["name"] / ".session-state.json"
             if state_file.exists():
                 try:
                     startup_session_state = json.loads(state_file.read_text(encoding="utf-8"))
-                    log.info("session", f"Loaded session_state.json for restore ({len(startup_session_state)} keys)")
+                    log.info("session", f"Loaded .session-state.json for restore ({len(startup_session_state)} keys)")
                 except Exception as e:
-                    log.error("session", f"Failed to read session_state.json: {e}")
+                    log.error("session", f"Failed to read .session-state.json: {e}")
         _startup_folder = (config.session_folder or (sessions_root / session_stack[-1]["name"])) if session_stack else None
         sync_session_to_server(config, session_stack, current_key_points, startup_session_state, file_time=get_ai_summary_mtime(_startup_folder) if _startup_folder else None, raw_markdown=get_ai_summary_raw(_startup_folder) if _startup_folder else None)
     except Exception as e:
@@ -597,12 +597,12 @@ def run() -> None:
         if not session_stack:
             return
         reconnect_session_state: dict | None = None
-        state_file = sessions_root / session_stack[-1]["name"] / "session_state.json"
+        state_file = sessions_root / session_stack[-1]["name"] / ".session-state.json"
         if state_file.exists():
             try:
                 reconnect_session_state = json.loads(state_file.read_text(encoding="utf-8"))
             except Exception as e:
-                log.error("session", f"Failed to read session_state.json on reconnect: {e}")
+                log.error("session", f"Failed to read .session-state.json on reconnect: {e}")
         try:
             _reconnect_folder = sessions_root / session_stack[-1]["name"] if session_stack else None
             sync_session_to_server(config, session_stack, current_key_points, reconnect_session_state, file_time=get_ai_summary_mtime(_reconnect_folder) if _reconnect_folder else None, raw_markdown=get_ai_summary_raw(_reconnect_folder) if _reconnect_folder else None)
@@ -859,7 +859,7 @@ def run() -> None:
                             notes_file = find_notes_in_folder(parent_folder)
                             config = dc_replace(config, session_folder=parent_folder, session_notes=notes_file)
                             # Load saved activity state from parent session snapshot
-                            parent_ss_path = parent_folder / "session_state.json"
+                            parent_ss_path = parent_folder / ".session-state.json"
                             if parent_ss_path.exists():
                                 try:
                                     parent_snapshot = json.loads(parent_ss_path.read_text(encoding="utf-8"))

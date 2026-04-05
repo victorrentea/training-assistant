@@ -141,7 +141,7 @@ async function doCreate(type) {
   if (errEl) errEl.style.display = 'none';
 
   try {
-    const r = await fetch('/api/session/create', {
+    const r = await fetch('/api/session/start', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       credentials: 'include',
@@ -168,11 +168,11 @@ async function doCreate(type) {
 async function doResumeFolder(folder_name) {
   showSessionBlocker('Resuming session…');
   try {
-    const r = await fetch('/api/session/create', {
+    const r = await fetch('/api/session/resume', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       credentials: 'include',
-      body: JSON.stringify({name: folder_name, type: 'workshop'}),
+      body: JSON.stringify({folder: folder_name}),
     });
     const data = await r.json();
     if (r.ok && data.session_id) {
