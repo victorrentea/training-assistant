@@ -490,18 +490,6 @@
     anim.onfinish = () => el.remove();
   }
 
-  function showHostHeartFullscreen() {
-    const overlay = document.createElement('div');
-    overlay.className = 'host-heart-fullscreen';
-    overlay.innerHTML = '<div class="host-heart-fullscreen-emoji">❤️</div>';
-    document.body.appendChild(overlay);
-    requestAnimationFrame(() => overlay.classList.add('host-heart-fullscreen-visible'));
-    setTimeout(() => {
-      overlay.classList.remove('host-heart-fullscreen-visible');
-      setTimeout(() => overlay.remove(), 600);
-    }, 2200);
-  }
-
   // escHtml is now in utils.js
 
   function normalizeSlideDisplayName(name, slug) {
@@ -1240,7 +1228,6 @@
 
   let _suppressHeartEcho = false;
   function triggerHostHeart() {
-    showHostHeartFullscreen();
     _suppressHeartEcho = true;
     setTimeout(() => { _suppressHeartEcho = false; }, 500);
     fetch(`/api/participant/emoji/reaction`, {
