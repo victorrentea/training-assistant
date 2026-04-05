@@ -15,7 +15,7 @@ from daemon.slides.catalog import (
 from daemon.slides.router import _is_cached_on_railway
 
 
-class SlidesPollingRunner:
+class SlidesRunner:
     """Initialize slide catalog and cache status at daemon startup."""
 
     def __init__(self, main_config):
