@@ -7,6 +7,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from daemon import log
+from daemon.http import get_active_session_id
 from daemon.slides import daemon as slides_daemon
 from daemon.misc.state import misc_state
 from daemon.slides.catalog import (
@@ -19,7 +20,7 @@ from daemon.slides.catalog import (
 )
 from daemon.slides.convert import poll_fingerprint_until_changed, _fingerprints
 from daemon.slides.daemon import save_daemon_state
-from daemon.slides.router import get_event_loop
+from daemon.slides.router import get_event_loop, _is_cached_on_railway
 
 
 class SlidesPollingRunner:
@@ -78,14 +79,22 @@ class SlidesPollingRunner:
             })
         misc_state.update_slides_catalog(catalog_entries)
 
-        # Initialize cache status by checking on-disk PDFs
-        for raw_entry, catalog_entry in zip(entries, catalog_entries):
+        # Initialize cache status from Railway availability (source of truth), not local files.
+        session_id = get_active_session_id(cfg.server_url)
+        if session_id:
+            log.info("slides", f"Initializing cache status from Railway for session={session_id}")
+        else:
+            log.info("slides", "No active session at startup; initializing all slides as not_cached")
+
+        for catalog_entry in catalog_entries:
             slug = catalog_entry["slug"]
-            if slug not in misc_state.slides_cache_status:
-                pdf_exists = (cfg.publish_dir / raw_entry["target_pdf"]).exists()
-                misc_state.slides_cache_status[slug] = {
-                    "status": "cached" if pdf_exists else "not_cached"
-                }
+            status = "not_cached"
+            if session_id:
+                status = "cached" if _is_cached_on_railway(session_id, slug) else "not_cached"
+            misc_state.slides_cache_status[slug] = {
+                **misc_state.slides_cache_status.get(slug, {}),
+                "status": status,
+            }
         log.info("slides", f"Initialized catalog: {len(catalog_entries)} entries")
 
     def _run_once_bg(self) -> None:

@@ -62,6 +62,10 @@ class SlidesListResponse(BaseModel):
     slides: list[dict]
 
 
+class SlidesCheckResponse(BaseModel):
+    status: str
+
+
 def _slides_with_embedded_cache_status() -> list[dict]:
     slides: list[dict] = []
     for raw in list(misc_state.slides_catalog.values()):
@@ -78,12 +82,23 @@ def _slides_with_embedded_cache_status() -> list[dict]:
     return slides
 
 
+def _broadcast_slides_cache_status() -> None:
+    from daemon.ws_publish import broadcast
+    from daemon.ws_messages import SlidesCacheStatusMsg
+    broadcast(
+        SlidesCacheStatusMsg(
+            slides=_slides_with_embedded_cache_status(),
+            slides_cache_status=misc_state.slides_cache_status,
+        )
+    )
+
+
 # ── Participant router ──
 
 participant_router = APIRouter(tags=["slides"])
 
 
-@participant_router.get("/{session_id}/api/slides/check/{slug}")
+@participant_router.get("/{session_id}/api/slides/check/{slug}", response_model=SlidesCheckResponse)
 async def check_slide_cache(session_id: str, slug: str):
     """Check if a PDF is cached; trigger download if not.
 
@@ -97,9 +112,10 @@ async def check_slide_cache(session_id: str, slug: str):
         misc_state.slides_cache_status.get(slug, {}).get("status") == "cached"
         and _is_cached_on_railway(session_id, slug)
     ):
-        return JSONResponse({"status": "cached"}, status_code=200)
+        return SlidesCheckResponse(status="cached")
     if misc_state.slides_cache_status.get(slug, {}).get("status") == "cached":
         _mark_cache_status(slug, "not_cached", reason="railway_miss_after_cached")
+        _broadcast_slides_cache_status()
 
     # Capture event loop for thread-safe future resolution from ws handler
     _event_loop = asyncio.get_event_loop()
@@ -111,6 +127,8 @@ async def check_slide_cache(session_id: str, slug: str):
     # Only send download_pdf once per slug (coalesce concurrent requests)
     if not already_pending:
         drive_export_url = misc_state.slides_catalog.get(slug, {}).get("drive_export_url")
+        _mark_cache_status(slug, "downloading")
+        _broadcast_slides_cache_status()
         from daemon.ws_publish import send_to_railway
         sent = send_to_railway({
             "type": "download_pdf",
@@ -119,6 +137,13 @@ async def check_slide_cache(session_id: str, slug: str):
         })
         if not sent:
             logger.warning("slides/check: ws_client not available, cannot request download for slug=%s", slug)
+            _mark_cache_status(slug, "download_failed", reason="daemon_ws_unavailable")
+            _broadcast_slides_cache_status()
+            # Fail all pending /check calls for this slug immediately.
+            futures = _pending_checks.pop(slug, [])
+            for fut in futures:
+                if not fut.done():
+                    fut.set_result("error")
 
     try:
         result = await asyncio.wait_for(future, timeout=_CHECK_TIMEOUT_S)
@@ -130,20 +155,20 @@ async def check_slide_cache(session_id: str, slug: str):
         if not pending:
             _pending_checks.pop(slug, None)
         _mark_cache_status(slug, "poll_timeout", reason="timeout_waiting_pdf_download_complete")
+        _broadcast_slides_cache_status()
         return JSONResponse({"status": "timeout"}, status_code=503)
 
     if result == "ok":
-        return JSONResponse({"status": "cached"}, status_code=200)
+        return SlidesCheckResponse(status="cached")
     _mark_cache_status(slug, "download_failed", reason="railway_reported_error")
+    _broadcast_slides_cache_status()
     return JSONResponse({"status": "error"}, status_code=503)
 
 
 @participant_router.get("/{session_id}/api/slides")
 async def list_slides(session_id: str):
     """Return slides catalog with cache status embedded per slide."""
-    return SlidesListResponse(
-        slides=_slides_with_embedded_cache_status(),
-    )
+    return SlidesListResponse(slides=_slides_with_embedded_cache_status())
 
 
 # ── WS handler: called from main thread via drain_queue() ──
@@ -162,15 +187,8 @@ def handle_pdf_download_complete(data: dict):
     else:
         _mark_cache_status(slug, "download_failed", reason="railway_reported_error")
 
-    # Broadcast updated cache status to all participants
-    from daemon.ws_publish import broadcast
-    from daemon.ws_messages import SlidesCacheStatusMsg
-    broadcast(
-        SlidesCacheStatusMsg(
-            slides=_slides_with_embedded_cache_status(),
-            slides_cache_status=misc_state.slides_cache_status,
-        )
-    )
+    # Broadcast updated cache status to host and participants.
+    _broadcast_slides_cache_status()
 
     # Resolve pending /check futures for this slug (thread-safe)
     futures = _pending_checks.pop(slug, [])

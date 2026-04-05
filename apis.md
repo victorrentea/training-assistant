@@ -52,12 +52,12 @@ session_name: str | null         # display name
 | Method | Path | Body | Response |
 |--------|------|------|----------|
 | GET | `/{sid}/api/slides` | — | `{slides[]}` where each slide embeds cache fields directly (e.g. `{slug, title/name, drive_export_url, status, size_bytes, downloaded_at}`); daemon is source of truth |
-| GET | `/{sid}/api/slides/check/{slug}` | — | 200 OK (PDF is fresh and on Railway disk) or 503 (timed out after 30s) — participant MUST call this before downloading |
+| GET | `/{sid}/api/slides/check/{slug}` | — | 200 OK (`{status:"cached"}`) when Railway has PDF; 503 (`{status:"timeout"}` or `{status:"error"}`) otherwise — participant MUST call this before downloading |
 | GET | `/{sid}/api/slides/download/{slug}` | — | PDF binary served directly by Railway from disk (max 100MB) — only call after /check returns 200 |
 
 The same `GET /{sid}/api/slides` shape is used by host UI (via daemon host server), with cache fields embedded per slide entry.
 
-`/check` flow: daemon responds 200 immediately if PDF is fresh; otherwise sends `download_pdf` to Railway via WS and holds the response open until Railway confirms download complete (or 30s → 503). Participant shows "Retry" on 503 — no auto-retry. If Railway finishes after the timeout, daemon still receives `pdf_download_complete` and broadcasts `slides_cache_status` to all participants — participant UI clears the "Retry" state and shows the green cached indicator automatically.
+`/check` flow: daemon responds 200 immediately only if cache says `cached` and a Railway HEAD confirms PDF availability. If daemon says `cached` but Railway HEAD misses, daemon downgrades slug to `not_cached`, broadcasts status, then sends `download_pdf` to Railway and marks status `downloading` (broadcasted to host+participants). If Railway confirms download complete in time, daemon returns 200 and broadcasts `cached`; if 30s timeout elapses daemon returns 503 and broadcasts `poll_timeout` (download may still finish later, then `pdf_download_complete` flips to `cached`).
 
 Current slide is included in the initial state from `GET /{sid}/api/participant/state` and tracked via WS events continuously — no separate current-slide endpoint needed.
 
@@ -88,7 +88,7 @@ Host uses the same slides list contract as participant (embedded cache fields in
 
 ### State
 ```
-slides_cache_status: dict[str, dict]   # slug → {status: "not_cached"|"downloading"|"cached"|"stale"|"error", size_bytes, downloaded_at}
+slides_cache_status: dict[str, dict]   # slug → {status: "not_cached"|"downloading"|"cached"|"stale"|"poll_timeout"|"download_failed", size_bytes, downloaded_at}
 ```
 
 **Daemon** owns this state and all caching decisions (fingerprint polling, staleness detection, download coordination). Railway executes GDrive HTTP pulls on daemon's instruction and stores PDFs on disk. Railway cannot self-initiate downloads.

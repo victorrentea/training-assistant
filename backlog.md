@@ -2,6 +2,7 @@
 
 - [x] logging: replaced addon emoji success log with participant-aware format `'<participant_name>' reacted '<emoji>'`; bridge-down log now includes participant name too.
 - [x] perf: reduced emoji latency path by handling daemon `proxy_request` WS messages inline (no main-loop queue delay) and prioritizing addons bridge send before host WS echo in emoji router.
+- [x] bugfix: slides cache status now reflects Railway availability at startup; daemon broadcasts `downloading`/`poll_timeout`/`download_failed`/`cached` transitions so participant and host indicators converge correctly.
 - [x] bugfix: host `❤️` badge now calls local daemon endpoint `/api/participant/emoji/reaction` (not `/{sid}/...`) and falls back to WS send when HTTP response is non-OK or network fails.
 - [x] start.sh: daemon stdout/stderr is now tee'd to hardcoded log file `/Users/victorrentea/workspace/training-assistant/logs/daemon.log` (auto-creates parent dir).
 - [x] test: add hermetic e2e regression that verifies participant top header displays current session name.
