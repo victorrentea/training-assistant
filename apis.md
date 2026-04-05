@@ -46,17 +46,20 @@ session_name: str | null         # display name
 ## Feature: Slides
 
 ### Participant
-**Participant Browser → Daemon REST:**
+**Participant Browser → Daemon REST** (proxied by Railway):
 | Method | Path | Body | Response |
 |--------|------|------|----------|
-| GET | `/{sid}/api/slides` | — | `{slides[], cache_status}` — each deck includes `size_mb: float`; `cache_status: {slug→{status, size_bytes}}` for initial download state |
-| GET | `/{sid}/api/slides/download/{slug}` | — | PDF binary (max upload size: 100MB) |
+| GET | `/{sid}/api/slides` | — | `{slides[], cache_status: {slug→{status, size_bytes}}}` — daemon is source of truth; each deck includes `size_mb: float` |
+| GET | `/{sid}/api/slides/check/{slug}` | — | 200 OK (PDF is fresh and on Railway disk) or 503 (timed out after 30s) — participant MUST call this before downloading |
+| GET | `/{sid}/api/slides/download/{slug}` | — | PDF binary served directly by Railway from disk (max 100MB) — only call after /check returns 200 |
+
+`/check` flow: daemon responds 200 immediately if PDF is fresh; otherwise sends `download_pdf` to Railway via WS and holds the response open until Railway confirms download complete (or 30s → 503). Participant shows "Retry" on 503 — no auto-retry. If Railway finishes after the timeout, daemon still receives `pdf_download_complete` and broadcasts `slides_cache_status` to all participants — participant UI clears the "Retry" state and shows the green cached indicator automatically.
 
 Current slide is included in the initial state from `GET /{sid}/api/participant/state` and tracked via WS events continuously — no separate current-slide endpoint needed.
 
 **Daemon → Participant Browser WS:**
 - `slides_current` — `{slides_current}` — when host navigates slides
-- `slides_cache_status` — `{slides_cache_status: {slug→{status, size_bytes}}}` — download progress
+- `slides_cache_status` — `{slides_cache_status: {slug→{status, size_bytes}}}` — download progress updates
 
 ### Host
 **Host Browser → Daemon REST:**
@@ -64,12 +67,18 @@ Slides managed via daemon's session tooling, not direct host REST calls.
 
 **Daemon → Host Browser WS:** (none relevant)
 
+### Internal: Daemon ↔ Railway WS messages
+| Direction | Type | Payload | Purpose |
+|-----------|------|---------|---------|
+| Daemon → Railway | `download_pdf` | `{slug, drive_export_url}` | Daemon instructs Railway to pull PDF from GDrive |
+| Railway → Daemon | `pdf_download_complete` | `{slug, status: "ok"\|"error"}` | Railway notifies daemon download finished |
+
 ### State
 ```
-slides_cache_status: dict[str, dict]   # slug → {status: "downloading"|"ready"|"error", size_bytes, downloaded_at}
+slides_cache_status: dict[str, dict]   # slug → {status: "not_cached"|"downloading"|"cached"|"stale"|"error", size_bytes, downloaded_at}
 ```
 
-Railway owns this state (GDrive downloads + PDF serving). Daemon tells Railway which decks exist via `slides_catalog` WS message.
+**Daemon** owns this state and all caching decisions (fingerprint polling, staleness detection, download coordination). Railway executes GDrive HTTP pulls on daemon's instruction and stores PDFs on disk. Railway cannot self-initiate downloads.
 
 Note: slide list includes `size_mb` for each deck so participants see expected download size and traffic.
 
