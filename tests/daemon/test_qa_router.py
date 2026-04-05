@@ -117,7 +117,7 @@ class TestParticipantUpvote:
         resp = participant_client.post("/api/participant/qa/upvote",
                                        json={},
                                        headers={"X-Participant-ID": "uuid1"})
-        assert resp.status_code == 400
+        assert resp.status_code == 422  # Pydantic rejects missing required field
 
 
 class TestHostEndpoints:

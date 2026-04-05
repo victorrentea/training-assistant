@@ -3,6 +3,7 @@ import logging
 
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel
 
 from daemon.participant.state import participant_state
 from daemon.scores import scores
@@ -20,20 +21,31 @@ def set_ws_client(client):
     _ws_client = client
 
 
+class OkResponse(BaseModel):
+    ok: bool = True
+
+
+class SubmitWordBody(BaseModel):
+    word: str
+
+
+class SetTopicBody(BaseModel):
+    topic: str
+
+
 # ── Participant router (proxied via Railway) ──
 
 participant_router = APIRouter(prefix="/api/participant/wordcloud", tags=["wordcloud"])
 
 
 @participant_router.post("/word")
-async def submit_word(request: Request):
+async def submit_word(request: Request, body: SubmitWordBody):
     """Participant submits a word to the word cloud."""
     pid = request.headers.get("x-participant-id")
     if not pid:
         return JSONResponse({"error": "Missing X-Participant-ID"}, status_code=400)
 
-    body = await request.json()
-    word = str(body.get("word", "")).strip()
+    word = body.word.strip()
     if not word or len(word) > 40:
         return JSONResponse({"error": "Invalid word"}, status_code=400)
 
@@ -49,7 +61,7 @@ async def submit_word(request: Request):
         {"type": "broadcast", "event": {"type": "scores_updated", "scores": scores.snapshot()}},
     ]
 
-    return JSONResponse({"ok": True})
+    return OkResponse()
 
 
 # ── Host router (called directly on daemon localhost) ──
@@ -60,34 +72,32 @@ host_router = APIRouter(prefix="/api/{session_id}/host/wordcloud", tags=["wordcl
 
 
 @host_router.post("/word")
-async def host_submit_word(request: Request):
+async def host_submit_word(body: SubmitWordBody):
     """Host submits a word — same as participant but no scoring."""
-    body = await request.json()
-    word = str(body.get("word", "")).strip()
+    word = body.word.strip()
     if not word or len(word) > 40:
         return JSONResponse({"error": "Invalid word"}, status_code=400)
 
     snapshot = wordcloud_state.add_word(word)
     _send_wordcloud_events(snapshot)
-    return JSONResponse({"ok": True})
+    return OkResponse()
 
 
 @host_router.post("/topic")
-async def set_topic(request: Request):
+async def set_topic(body: SetTopicBody):
     """Host sets the word cloud topic."""
-    body = await request.json()
-    topic = str(body.get("topic", "")).strip()
+    topic = body.topic.strip()
     snapshot = wordcloud_state.set_topic(topic)
     _send_wordcloud_events(snapshot)
-    return JSONResponse({"ok": True})
+    return OkResponse()
 
 
 @host_router.post("/clear")
-async def clear_wordcloud(request: Request):
+async def clear_wordcloud():
     """Host clears the word cloud."""
     snapshot = wordcloud_state.clear()
     _send_wordcloud_events(snapshot)
-    return JSONResponse({"ok": True})
+    return OkResponse()
 
 
 def _send_wordcloud_events(snapshot: dict):

@@ -5,6 +5,7 @@ from types import SimpleNamespace
 
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel
 from starlette.responses import Response
 
 from core.names import assign_conference_name
@@ -12,6 +13,29 @@ from core.state import assign_avatar, refresh_avatar as _refresh_avatar_logic, L
 from daemon.participant.state import participant_state
 
 logger = logging.getLogger(__name__)
+
+
+# ── Pydantic models ──
+
+class OkResponse(BaseModel):
+    ok: bool = True
+
+class RegisterResponse(BaseModel):
+    name: str
+    avatar: str
+
+class RenameRequest(BaseModel):
+    name: str
+
+class AvatarRequest(BaseModel):
+    rejected: list[str] = []
+
+class AvatarResponse(BaseModel):
+    ok: bool = True
+    avatar: str
+
+class LocationRequest(BaseModel):
+    location: str
 
 
 def _build_qa_for_participant(pid: str) -> list[dict]:
@@ -133,10 +157,10 @@ async def register_participant(request: Request):
 
     # Returning participant — return stored identity unchanged
     if pid in ps.participant_names:
-        return JSONResponse({
-            "name": ps.participant_names[pid],
-            "avatar": ps.participant_avatars.get(pid, ""),
-        })
+        return RegisterResponse(
+            name=ps.participant_names[pid],
+            avatar=ps.participant_avatars.get(pid, ""),
+        )
 
     # New participant — assign identity
     raw_name: str
@@ -174,11 +198,11 @@ async def register_participant(request: Request):
         "debate_side": None,
     }]
 
-    return JSONResponse({"name": raw_name, "avatar": avatar})
+    return RegisterResponse(name=raw_name, avatar=avatar)
 
 
 @router.put("/name")
-async def rename_participant(request: Request):
+async def rename_participant(request: Request, body: RenameRequest):
     """Rename a registered participant. Returns 400 if not yet registered."""
     pid = request.headers.get("x-participant-id")
     if not pid:
@@ -189,8 +213,7 @@ async def rename_participant(request: Request):
     if pid not in ps.participant_names:
         return JSONResponse({"error": "Participant not registered — call /register first"}, status_code=400)
 
-    body = await request.json()
-    raw_name = str(body.get("name", "")).strip()[:32]
+    raw_name = body.name.strip()[:32]
     if not raw_name:
         return JSONResponse({"error": "Name required"}, status_code=400)
 
@@ -211,14 +234,13 @@ async def rename_participant(request: Request):
 
 
 @router.post("/avatar")
-async def refresh_avatar_endpoint(request: Request):
+async def refresh_avatar_endpoint(request: Request, body: AvatarRequest):
     """Re-roll avatar (conference mode only)."""
     pid = request.headers.get("x-participant-id")
     if not pid:
         return JSONResponse({"error": "Missing X-Participant-ID"}, status_code=400)
 
-    body = await request.json()
-    rejected = set(body.get("rejected", []))
+    rejected = set(body.rejected)
 
     fake_state = _build_mini_state()
     new_avatar = _refresh_avatar_logic(fake_state, pid, rejected)
@@ -235,18 +257,17 @@ async def refresh_avatar_endpoint(request: Request):
         "avatar": new_avatar,
     }]
 
-    return JSONResponse({"ok": True, "avatar": new_avatar})
+    return AvatarResponse(avatar=new_avatar)
 
 
 @router.post("/location")
-async def set_location(request: Request):
+async def set_location(request: Request, body: LocationRequest):
     """Store participant city/timezone."""
     pid = request.headers.get("x-participant-id")
     if not pid:
         return JSONResponse({"error": "Missing X-Participant-ID"}, status_code=400)
 
-    body = await request.json()
-    loc = str(body.get("location", "")).strip()[:80]
+    loc = body.location.strip()[:80]
     if not loc:
         return JSONResponse({"error": "Location required"}, status_code=400)
 
@@ -258,7 +279,7 @@ async def set_location(request: Request):
         "location": loc,
     }]
 
-    return JSONResponse({"ok": True})
+    return OkResponse()
 
 
 @router.get("/state")

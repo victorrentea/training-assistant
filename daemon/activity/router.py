@@ -1,8 +1,9 @@
 """Daemon activity router — host-only endpoint for switching current activity."""
 import logging
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel
 
 from daemon.participant.state import participant_state
 
@@ -20,6 +21,16 @@ def set_ws_client(client):
     _ws_client = client
 
 
+# ── Pydantic models ──
+
+class SetActivityRequest(BaseModel):
+    activity: str
+
+class SetActivityResponse(BaseModel):
+    ok: bool = True
+    current_activity: str
+
+
 # ── Host router (called directly on daemon localhost) ──
 # NOTE: Host JS calls API('/activity') which expands to /api/{session_id}/activity.
 
@@ -27,10 +38,9 @@ host_router = APIRouter(prefix="/api/{session_id}/host/activity", tags=["activit
 
 
 @host_router.put("")
-async def set_activity(request: Request):
+async def set_activity(body: SetActivityRequest):
     """Host switches the current activity."""
-    body = await request.json()
-    activity = str(body.get("activity", "")).strip().lower()
+    activity = body.activity.strip().lower()
 
     if activity not in _VALID_ACTIVITIES:
         return JSONResponse(
@@ -46,4 +56,4 @@ async def set_activity(request: Request):
             "event": {"type": "activity_updated", "current_activity": activity},
         })
 
-    return JSONResponse({"ok": True, "current_activity": activity})
+    return SetActivityResponse(current_activity=activity)

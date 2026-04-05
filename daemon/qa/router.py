@@ -3,6 +3,7 @@ import logging
 
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel
 
 from daemon.host_ws import send_to_host
 from daemon.participant.state import participant_state
@@ -17,6 +18,26 @@ _ws_client = None
 def set_ws_client(client):
     global _ws_client
     _ws_client = client
+
+
+class OkResponse(BaseModel):
+    ok: bool = True
+
+
+class SubmitQuestionBody(BaseModel):
+    text: str
+
+
+class UpvoteQuestionBody(BaseModel):
+    question_id: str
+
+
+class EditQuestionTextBody(BaseModel):
+    text: str
+
+
+class ToggleAnsweredBody(BaseModel):
+    answered: bool = False
 
 
 def _build_questions_for_host():
@@ -38,14 +59,13 @@ participant_router = APIRouter(prefix="/api/participant/qa", tags=["qa"])
 
 
 @participant_router.post("/submit")
-async def submit_question(request: Request):
+async def submit_question(request: Request, body: SubmitQuestionBody):
     """Participant submits a Q&A question."""
     pid = request.headers.get("x-participant-id")
     if not pid:
         return JSONResponse({"error": "Missing X-Participant-ID"}, status_code=400)
 
-    body = await request.json()
-    text = str(body.get("text", "")).strip()
+    text = body.text.strip()
     if not text or len(text) > 280:
         return JSONResponse({"error": "Invalid text"}, status_code=400)
 
@@ -64,18 +84,17 @@ async def submit_question(request: Request):
     await send_to_host({"type": "qa_updated", "questions": host_questions})
     await send_to_host({"type": "scores_updated", "scores": scores.snapshot()})
 
-    return JSONResponse({"ok": True})
+    return OkResponse()
 
 
 @participant_router.post("/upvote")
-async def upvote_question(request: Request):
+async def upvote_question(request: Request, body: UpvoteQuestionBody):
     """Participant upvotes a Q&A question."""
     pid = request.headers.get("x-participant-id")
     if not pid:
         return JSONResponse({"error": "Missing X-Participant-ID"}, status_code=400)
 
-    body = await request.json()
-    question_id = str(body.get("question_id", ""))
+    question_id = body.question_id
     if not question_id:
         return JSONResponse({"error": "Missing question_id"}, status_code=400)
 
@@ -96,7 +115,7 @@ async def upvote_question(request: Request):
     await send_to_host({"type": "qa_updated", "questions": host_questions})
     await send_to_host({"type": "scores_updated", "scores": scores.snapshot()})
 
-    return JSONResponse({"ok": True})
+    return OkResponse()
 
 
 # ── Host router (called directly on daemon localhost) ──
@@ -106,29 +125,27 @@ host_router = APIRouter(prefix="/api/{session_id}/host/qa", tags=["qa"])
 
 
 @host_router.post("/submit")
-async def host_submit_question(request: Request):
+async def host_submit_question(body: SubmitQuestionBody):
     """Host submits a Q&A question — no scoring."""
-    body = await request.json()
-    text = str(body.get("text", "")).strip()
+    text = body.text.strip()
     if not text or len(text) > 280:
         return JSONResponse({"error": "Invalid text"}, status_code=400)
 
     qa_state.submit("__host__", text)
     await _send_qa_events()
-    return JSONResponse({"ok": True})
+    return OkResponse()
 
 
 @host_router.put("/question/{question_id}/text")
-async def edit_question_text(question_id: str, request: Request):
+async def edit_question_text(question_id: str, body: EditQuestionTextBody):
     """Host edits a question's text."""
-    body = await request.json()
-    text = str(body.get("text", "")).strip()
+    text = body.text.strip()
     if not text or len(text) > 280:
         return JSONResponse({"error": "Invalid text"}, status_code=400)
     if not qa_state.edit_text(question_id, text):
         return JSONResponse({"error": "Not found"}, status_code=404)
     await _send_qa_events()
-    return JSONResponse({"ok": True})
+    return OkResponse()
 
 
 @host_router.delete("/question/{question_id}")
@@ -137,18 +154,16 @@ async def delete_question(question_id: str):
     if not qa_state.delete(question_id):
         return JSONResponse({"error": "Not found"}, status_code=404)
     await _send_qa_events()
-    return JSONResponse({"ok": True})
+    return OkResponse()
 
 
 @host_router.put("/question/{question_id}/answered")
-async def toggle_answered(question_id: str, request: Request):
+async def toggle_answered(question_id: str, body: ToggleAnsweredBody):
     """Host toggles a question's answered flag."""
-    body = await request.json()
-    answered = bool(body.get("answered", False))
-    if not qa_state.toggle_answered(question_id, answered):
+    if not qa_state.toggle_answered(question_id, body.answered):
         return JSONResponse({"error": "Not found"}, status_code=404)
     await _send_qa_events()
-    return JSONResponse({"ok": True})
+    return OkResponse()
 
 
 @host_router.post("/clear")
@@ -156,7 +171,7 @@ async def clear_qa():
     """Host clears all Q&A questions."""
     qa_state.clear()
     await _send_qa_events()
-    return JSONResponse({"ok": True})
+    return OkResponse()
 
 
 async def _send_qa_events():

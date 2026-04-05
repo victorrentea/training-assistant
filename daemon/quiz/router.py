@@ -1,8 +1,10 @@
 """Daemon quiz router — host-only endpoints for quiz request/refine/preview."""
 import logging
+from typing import Optional, Any
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel
 
 from daemon import quiz as _quiz_pkg  # noqa: ensure package is importable
 from daemon.quiz import pending as quiz_pending
@@ -20,6 +22,20 @@ def set_ws_client(client):
     _ws_client = client
 
 
+# ── Pydantic models ──
+
+class OkResponse(BaseModel):
+    ok: bool = True
+
+class QuizRequestBody(BaseModel):
+    minutes: Optional[int] = None
+    topic: Optional[str] = None
+
+class QuizRefineRequest(BaseModel):
+    target: str
+    preview: Optional[Any] = None
+
+
 # ── Host router (called directly on daemon localhost) ──
 # Host JS calls API('/quiz-request') which expands to /api/{session_id}/quiz-request.
 
@@ -27,11 +43,10 @@ host_router = APIRouter(prefix="/api/{session_id}/host", tags=["quiz"])
 
 
 @host_router.post("/quiz-request")
-async def request_quiz(request: Request):
+async def request_quiz(body: QuizRequestBody):
     """Host requests a quiz — stores request for the orchestrator loop to pick up."""
-    body = await request.json()
-    topic = body.get("topic")
-    minutes = body.get("minutes")
+    topic = body.topic
+    minutes = body.minutes
 
     has_topic = bool(topic and str(topic).strip())
     has_minutes = minutes is not None and int(minutes) > 0
@@ -55,7 +70,7 @@ async def request_quiz(request: Request):
     if _ws_client:
         _ws_client.send({"type": "broadcast", "event": {"type": "quiz_status", "status": "requested", "message": msg}})
 
-    return JSONResponse({"ok": True})
+    return OkResponse()
 
 
 @host_router.delete("/quiz-preview")
@@ -63,25 +78,21 @@ async def clear_quiz_preview():
     """Host clears the current quiz preview."""
     if _ws_client:
         _ws_client.send({"type": "broadcast", "event": {"type": "quiz_preview", "quiz": None}})
-    return JSONResponse({"ok": True})
+    return OkResponse()
 
 
 @host_router.post("/quiz-refine")
-async def request_quiz_refine(request: Request):
+async def request_quiz_refine(body: QuizRefineRequest):
     """Host requests regeneration of a specific question or option."""
-    body = await request.json()
-    target = body.get("target")
-    preview = body.get("preview")
-
-    if not target:
+    if not body.target:
         return JSONResponse({"error": "Missing 'target'"}, status_code=400)
 
-    quiz_pending.put("quiz_refine", {"request": {"target": str(target)}, "preview": preview})
+    quiz_pending.put("quiz_refine", {"request": {"target": str(body.target)}, "preview": body.preview})
 
-    label = "question" if target == "question" else "option"
+    label = "question" if body.target == "question" else "option"
     msg = f"Regenerating {label}…"
 
     if _ws_client:
         _ws_client.send({"type": "broadcast", "event": {"type": "quiz_status", "status": "generating", "message": msg}})
 
-    return JSONResponse({"ok": True})
+    return OkResponse()
