@@ -353,7 +353,7 @@ def test_resolve_presentation_slide_target_uses_catalog_mapping(tmp_path):
         catalog_file=catalog,
     )
     assert target["slug"] == "about-victor"
-    assert target["url"] == "https://interact.victorrentea.ro/api/slides/file/about-victor"
+    assert target["url"] == "https://interact.victorrentea.ro/api/slides/download/about-victor"
     assert target["matched"] is True
 
 
@@ -366,7 +366,7 @@ def test_resolve_presentation_slide_target_fallback_when_not_mapped(tmp_path):
         catalog_file=tmp_path / "missing-catalog.json",
     )
     assert target["slug"] == "unmapped-deck"
-    assert target["url"] == "http://localhost:8000/api/slides/file/unmapped-deck"
+    assert target["url"] == "http://localhost:8000/api/slides/download/unmapped-deck"
     assert target["matched"] is False
 
 

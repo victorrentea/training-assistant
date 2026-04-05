@@ -93,7 +93,7 @@ def test_participant_views_slide_from_catalog():
         # from mock Drive before this test runs — that's fine, it proves the
         # end-to-end flow works.
         slug = "clean-code"  # first in catalog
-        pdf_url = f"{BASE}/{session_id}/api/slides/file/{slug}"
+        pdf_url = f"{BASE}/{session_id}/api/slides/download/{slug}"
         req = urllib.request.Request(pdf_url)
         with urllib.request.urlopen(req, timeout=15) as resp:
             pdf_data = resp.read()
@@ -137,7 +137,7 @@ def test_second_participant_gets_cached_pdf():
 
         # Verify the PDF endpoint still works (from cache)
         slug = "clean-code"
-        pdf_url = f"{BASE}/{session_id}/api/slides/file/{slug}"
+        pdf_url = f"{BASE}/{session_id}/api/slides/download/{slug}"
         with urllib.request.urlopen(pdf_url, timeout=10) as resp:
             pdf_data = resp.read()
         assert pdf_data[:5] == b"%PDF-", "Cached PDF not served"

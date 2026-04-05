@@ -81,7 +81,7 @@ def test_slides_upload_is_listed_and_served(monkeypatch, tmp_path):
     slides = resp.json()["slides"]
     assert any(s["slug"] == "demo-deck" and s["name"] == "Demo Deck" for s in slides)
 
-    file_resp = public.get(f"/{state.session_id}/api/slides/file/demo-deck")
+    file_resp = public.get(f"/{state.session_id}/api/slides/download/demo-deck")
     assert file_resp.status_code == 200
     assert file_resp.content.startswith(b"%PDF-1.4")
 
@@ -115,7 +115,7 @@ def test_api_slides_lists_local_materials_and_serves_pdf(monkeypatch, tmp_path):
     slides = resp.json()["slides"]
     assert len(slides) == 1
     assert slides[0]["name"] == "Architecture"
-    assert slides[0]["url"].startswith(f"/{state.session_id}/api/slides/file/")
+    assert slides[0]["url"].startswith(f"/{state.session_id}/api/slides/download/")
 
     file_resp = client.get(slides[0]["url"])
     assert file_resp.status_code == 200
@@ -150,7 +150,7 @@ def test_api_slides_uses_publish_dir_when_local_dir_not_set(monkeypatch, tmp_pat
     slides = resp.json()["slides"]
     assert any(s["slug"] == "fca" and s["name"] == "FCA" for s in slides)
 
-    file_resp = client.get(f"/{state.session_id}/api/slides/file/fca")
+    file_resp = client.get(f"/{state.session_id}/api/slides/download/fca")
     assert file_resp.status_code == 200
     assert file_resp.headers.get("content-type", "").startswith("application/pdf")
     assert file_resp.content.startswith(b"%PDF-1.4")
@@ -171,7 +171,7 @@ def test_api_slides_defaults_to_server_materials_dir(monkeypatch, tmp_path):
     slides = resp.json()["slides"]
     assert any(s["slug"] == "fca" and s["name"] == "FCA" for s in slides)
 
-    file_resp = client.get(f"/{state.session_id}/api/slides/file/fca")
+    file_resp = client.get(f"/{state.session_id}/api/slides/download/fca")
     assert file_resp.status_code == 200
     assert file_resp.headers.get("content-type", "").startswith("application/pdf")
     assert file_resp.content.startswith(b"%PDF-1.4")
@@ -209,7 +209,7 @@ def test_api_slides_includes_slides_current_when_present(monkeypatch, tmp_path):
     resp = client.get(f"/{state.session_id}/api/slides")
     assert resp.status_code == 200
     slides = resp.json()["slides"]
-    assert any(s["slug"] == "current-123" and s["url"] == f"/{state.session_id}/api/slides/file/current-123" for s in slides)
+    assert any(s["slug"] == "current-123" and s["url"] == f"/{state.session_id}/api/slides/download/current-123" for s in slides)
 
 
 def test_api_slides_ignores_non_displayable_names(monkeypatch, tmp_path):
@@ -433,7 +433,7 @@ def test_api_slides_file_missing_returns_404_when_not_in_cache_or_catalog(monkey
     monkeypatch.setenv("SERVER_MATERIALS_DIR", str(tmp_path / "server_materials"))
 
     client = TestClient(app)
-    resp = client.get(f"/{state.session_id}/api/slides/file/fca")
+    resp = client.get(f"/{state.session_id}/api/slides/download/fca")
     assert resp.status_code == 404
 
 
@@ -452,7 +452,7 @@ def test_api_slides_file_served_from_cache_dir(monkeypatch, tmp_path):
 
     try:
         client = TestClient(app)
-        resp = client.get(f"/{state.session_id}/api/slides/file/fca")
+        resp = client.get(f"/{state.session_id}/api/slides/download/fca")
         assert resp.status_code == 200
         assert resp.content.startswith(b"%PDF-1.4")
     finally:
@@ -465,7 +465,7 @@ def test_api_slides_file_inline_query_sets_inline_disposition(monkeypatch, tmp_p
     pdf.write_bytes(b"%PDF-1.4\n%inline\n")
 
     client = TestClient(app)
-    resp = client.get(f"/{state.session_id}/api/slides/file/inline?inline=1")
+    resp = client.get(f"/{state.session_id}/api/slides/download/inline?inline=1")
     assert resp.status_code == 200
     assert resp.headers.get("content-disposition", "").startswith('inline; filename="Inline.pdf"')
 
@@ -476,11 +476,11 @@ def test_api_slides_file_defaults_to_inline_and_supports_explicit_download(monke
     pdf.write_bytes(b"%PDF-1.4\n%deck\n")
 
     client = TestClient(app)
-    inline_resp = client.get(f"/{state.session_id}/api/slides/file/deck")
+    inline_resp = client.get(f"/{state.session_id}/api/slides/download/deck")
     assert inline_resp.status_code == 200
     assert inline_resp.headers.get("content-disposition", "").startswith('inline; filename="Deck.pdf"')
 
-    download_resp = client.get(f"/{state.session_id}/api/slides/file/deck?download=1")
+    download_resp = client.get(f"/{state.session_id}/api/slides/download/deck?download=1")
     assert download_resp.status_code == 200
     assert download_resp.headers.get("content-disposition", "").startswith('attachment; filename="Deck.pdf"')
 

@@ -140,7 +140,7 @@ def test_follow_me_basic():
 
         # Verify the PDF was fetched (from mock Drive or cache)
         slug = "clean-code"
-        pdf_url = f"{BASE}/{session_id}/api/slides/file/{slug}"
+        pdf_url = f"{BASE}/{session_id}/api/slides/download/{slug}"
 
         _await_condition(
             lambda: _try_fetch_pdf(pdf_url),
