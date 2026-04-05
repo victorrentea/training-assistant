@@ -26,6 +26,7 @@
   let _sessionIntervalsError = '';
   let _slidesCacheStatus = {};
   let _currentSessionId = null;
+  let _joinBaseUrl = null;   // set from state.join_base_url (daemon config URL)
   let _slidesCatalogHideTimer = null;
   let _gitRepos = [];
   let _slidesLog = [];
@@ -370,6 +371,7 @@
           }
         }
         if (msg.daemon_last_seen !== undefined) daemonLastSeen = msg.daemon_last_seen;
+        if (msg.join_base_url) _joinBaseUrl = msg.join_base_url;
         if (!msg.session_id && msg.needs_restore === false) {
           window.location = '/host';
           return;
@@ -3350,11 +3352,12 @@ function onFooterJoinLinkClick(event) {
 }
 
 function _getJoinUrl() {
-  return _currentSessionId ? `${location.origin}/${_currentSessionId}` : `${location.origin}`;
+  const base = _joinBaseUrl || location.origin;
+  return _currentSessionId ? `${base}/${_currentSessionId}` : base;
 }
 
 function _buildUrlHtml() {
-  const base = 'https://' + location.host;
+  const base = _joinBaseUrl || ('https://' + location.host);
   const full = _currentSessionId ? base + '/' + _currentSessionId : base;
   const yellowFrom = _currentSessionId ? base.length + 1 : full.length; // after the '/'
   return full.split('').map((ch, i) => {

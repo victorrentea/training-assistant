@@ -13,6 +13,7 @@ from daemon.codereview.state import codereview_state
 from daemon.debate.state import debate_state
 from daemon.misc.state import misc_state
 from daemon.leaderboard.state import leaderboard_state
+from daemon.session import state as session_shared_state
 
 logger = logging.getLogger(__name__)
 
@@ -117,11 +118,19 @@ def _build_poll_for_host() -> dict:
 
 
 def _get_current_session_id() -> str | None:
-    try:
-        from daemon.session_state import get_current_session_id
-        return get_current_session_id()
-    except Exception:
-        return None
+    return session_shared_state.get_active_session_id()
+
+
+def _get_session_name() -> str | None:
+    if misc_state.session_name:
+        return misc_state.session_name
+    stack = session_shared_state.get_session_stack()
+    return stack[-1]["name"] if stack else None
+
+
+def _get_join_base_url() -> str:
+    import os
+    return os.environ.get("WORKSHOP_SERVER_URL", "http://localhost:8000").rstrip("/")
 
 
 @router.get("/state")
@@ -168,9 +177,10 @@ async def get_host_state(request: Request, session_id: str):
         # Slides + session info (from misc state)
         "slides_current": misc_state.slides_current,
         "session_main": misc_state.session_main,
-        "session_name": misc_state.session_name,
+        "session_name": _get_session_name(),
         # Session tracking
         "session_id": _get_current_session_id(),
+        "join_base_url": _get_join_base_url(),
         "daemon_session_folder": None,   # daemon doesn't currently expose this via state endpoint
         "daemon_session_notes": None,
         # Leaderboard
