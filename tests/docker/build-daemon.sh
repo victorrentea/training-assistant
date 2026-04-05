@@ -52,7 +52,8 @@ docker rmi hermetic-daemon 2>/dev/null || true
 docker build -f "$BUILD_DIR/Dockerfile.daemon" -t hermetic-daemon "$BUILD_DIR"
 
 echo "=== Running tests ==="
-docker run --rm hermetic-daemon "$@"
+# Always exclude nightly tests; additional args are appended
+docker run --rm hermetic-daemon -m "not nightly" "$@"
 
 # Cleanup
 rm -rf "$BUILD_DIR"
