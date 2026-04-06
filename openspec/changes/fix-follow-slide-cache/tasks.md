@@ -33,7 +33,7 @@
 
 ## 5. Commit, push, and verify deploy
 
-- [ ] 5.1 Run full test suite: `bash tests/check-all.sh`
-- [ ] 5.2 Commit all changes with a descriptive message
-- [ ] 5.3 Push to master and wait for Railway deploy using `wait-for-deploy` skill
+- [x] 5.1 Run full test suite: `bash tests/check-all.sh`
+- [x] 5.2 Commit all changes with a descriptive message
+- [x] 5.3 Push to master and wait for Railway deploy using `wait-for-deploy` skill
 - [ ] 5.4 Manually verify: open two browser tabs (host + participant), set a slide as current, open participant in incognito, click Follow — confirm slide loads seamlessly
