@@ -3082,6 +3082,9 @@ const sessionTitleEl = document.getElementById('session-title');
         });
         break;
       }
+      case 'leaderboard_hidden':
+        hideParticipantLeaderboard();
+        break;
       case 'deploy_pending':
         showDeployPending();
         break;

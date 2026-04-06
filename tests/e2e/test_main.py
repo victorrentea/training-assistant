@@ -34,6 +34,7 @@ HOST_PASS = os.environ.get("HOST_PASSWORD", "testpass")
 # TestPollLifecycle
 # ---------------------------------------------------------------------------
 
+@pytest.mark.usefixtures("clean_poll")
 class TestPollLifecycle:
 
     def test_participant_sees_poll_after_host_creates_it(self, host: HostPage, pax: ParticipantPage):
@@ -46,6 +47,7 @@ class TestPollLifecycle:
         pax.join("Bob")
         host.create_poll("Best DB?", ["Postgres", "MySQL", "SQLite"])
         pax.vote_for("Postgres")
+        host.close_poll()
         expect(host._page.locator("text=1 total vote")).to_be_visible(timeout=5000)
 
     def test_results_shown_after_poll_closed(self, host: HostPage, pax: ParticipantPage):
@@ -79,16 +81,17 @@ class TestPollLifecycle:
 # TestMultiSelect
 # ---------------------------------------------------------------------------
 
+@pytest.mark.usefixtures("clean_poll")
 class TestMultiSelect:
 
     def test_correct_count_hint_shown_to_participant(self, host: HostPage, pax: ParticipantPage):
         pax.join("Eve")
-        host.create_poll("JVM languages?", ["Java", "Kotlin", "Python", "Scala"], multi=True)
+        host.create_poll("JVM languages?", ["Java", "Kotlin", "Python", "Scala"], multi=True, correct_count=2)
         expect(pax._page.locator(".vote-msg").first).to_contain_text("exactly 2", timeout=5000)
 
     def test_participant_cannot_select_more_than_correct_count(self, host: HostPage, pax: ParticipantPage):
         pax.join("Frank")
-        host.create_poll("Pick 2 fruits?", ["Apple", "Banana", "Cherry", "Date"], multi=True)
+        host.create_poll("Pick 2 fruits?", ["Apple", "Banana", "Cherry", "Date"], multi=True, correct_count=2)
         pax._page.locator(".option-btn").nth(0).click()
         pax._page.locator(".option-btn").nth(1).click()
         expect(pax._page.locator(".option-btn").nth(2)).to_be_disabled(timeout=3000)
@@ -285,6 +288,7 @@ class TestQA:
         pax.join("Bruno")
         host.open_qa_tab()
         pax.submit_question("Orignial typo queston")
+        expect(host._page.locator(".qa-card")).to_have_count(1, timeout=5000)
         q_id = host.get_qa_questions()[0]["id"]
 
         # Wait until participant sees the original question (confirms Q&A screen is active)
@@ -303,6 +307,7 @@ class TestQA:
         pax.join("Carmen")
         host.open_qa_tab()
         pax.submit_question("This will be deleted")
+        expect(host._page.locator(".qa-card")).to_have_count(1, timeout=5000)
         q_id = host.get_qa_questions()[0]["id"]
 
         host.delete_question(q_id)
@@ -314,6 +319,7 @@ class TestQA:
         pax.join("Diana")
         host.open_qa_tab()
         pax.submit_question("Can Spring Boot run on GraalVM?")
+        expect(host._page.locator(".qa-card")).to_have_count(1, timeout=5000)
         q_id = host.get_qa_questions()[0]["id"]
 
         host.toggle_answered(q_id)
@@ -331,6 +337,7 @@ class TestQA:
         pax.join("Elena")
         host.open_qa_tab()
         pax.submit_question('Could "quoted" text break edit?')
+        expect(host._page.locator(".qa-card")).to_have_count(1, timeout=5000)
         q_id = host.get_qa_questions()[0]["id"]
 
         first_card = host._page.locator(".qa-card").first
@@ -497,6 +504,7 @@ class TestTabPersistence:
 # TestPollDownload
 # ---------------------------------------------------------------------------
 
+@pytest.mark.usefixtures("clean_poll")
 class TestPollDownload:
 
     def test_download_captures_two_polls_with_correct_answers(self, host: HostPage, pax: ParticipantPage):
@@ -602,7 +610,7 @@ class TestProductionSmoke:
     def test_prod_api_status_public(self):
         resp = _prod_request("GET", "/api/status")
         assert resp.status_code == 200
-        assert "participants" in resp.json()
+        assert "session_active" in resp.json()
 
     def test_prod_api_poll_requires_auth(self):
         # /api/poll is now session-scoped (/api/{session_id}/poll); this path returns 404

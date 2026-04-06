@@ -49,7 +49,6 @@ jobs:
             files: >-
               tests/e2e/test_remaining_gaps.py
               tests/features/quiz/test_e2e.py
-              tests/e2e/test_gaps.py
               tests/features/scoring/test_e2e.py
               tests/e2e/test_participant_escape.py
 

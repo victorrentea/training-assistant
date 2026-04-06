@@ -9,10 +9,11 @@ from pydantic import BaseModel
 from daemon.poll.state import poll_state
 from daemon.scores import scores
 from daemon.participant.state import participant_state
-from daemon.ws_publish import broadcast, notify_host
+from daemon.ws_publish import broadcast, notify_host, broadcast_event
 from daemon.ws_messages import (
     PollAiGeneratedMsg, PollOpenedMsg, PollClosedMsg, PollCorrectRevealedMsg,
     PollClearedMsg, PollTimerStartedMsg, ScoresUpdatedMsg, ActivityUpdatedMsg,
+    VoteUpdateMsg,
 )
 
 logger = logging.getLogger(__name__)
@@ -42,6 +43,9 @@ class RevealCorrectRequest(BaseModel):
 class StartTimerRequest(BaseModel):
     seconds: int = 30
 
+class SetPollStatusRequest(BaseModel):
+    open: bool
+
 class QuizMdResponse(BaseModel):
     content: str
 
@@ -62,6 +66,9 @@ async def cast_vote(request: Request, body: VoteRequest):
     if not accepted:
         return JSONResponse({"error": "Vote rejected"}, status_code=409)
 
+    vote_msg = VoteUpdateMsg(votes=poll_state.vote_counts())
+    request.state.write_back_events = [broadcast_event(vote_msg)]
+    await notify_host(vote_msg)
     return OkResponse()
 
 
@@ -139,6 +146,15 @@ async def start_timer(body: StartTimerRequest):
     broadcast(PollTimerStartedMsg(seconds=result["seconds"]))
     await notify_host(PollTimerStartedMsg(seconds=result["seconds"]))
     return OkResponse()
+
+
+@host_router.put("/status")
+async def set_poll_status(body: SetPollStatusRequest):
+    """Compatibility: {open: true} → open_poll, {open: false} → close_poll."""
+    if body.open:
+        return await open_poll()
+    else:
+        return await close_poll()
 
 
 @host_router.delete("")

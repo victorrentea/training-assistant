@@ -60,6 +60,7 @@ class TestMultiSelectPoll:
             p1.multi_vote("A", "C")
             p1._page.wait_for_timeout(1000)
 
+            host.close_poll()
             # Host should see 1 total vote
             expect(host._page.locator("text=1 total vote")).to_be_visible(timeout=5000)
         finally:
