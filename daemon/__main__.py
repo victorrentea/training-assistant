@@ -584,7 +584,7 @@ def run() -> None:
             active_id = session_state.get_active_session_id()
             if active_id:
                 participant_join_link = f"{config.server_url}/{active_id}"
-                log.info("addon-brid", f"ws active session on (re)connect: active {participant_join_link}")
+                log.info("addons   ", f"ws active session on (re)connect: active {participant_join_link}")
                 from daemon import addon_bridge_client
                 addon_bridge_client.send_session_started(participant_join_link)
 

@@ -19,7 +19,7 @@ from daemon import log
 _PORT = int(os.environ.get("WS_SERVER_PORT", "8765"))
 _RECONNECT_INTERVAL = 5.0  # seconds between reconnect attempts
 _OPEN_TIMEOUT = 5.0
-_NAME = "addon-bridge"
+_NAME = "addons   "
 
 
 class AddonBridgeClient:
@@ -51,7 +51,7 @@ class AddonBridgeClient:
         msg = {"type": "session_started", "participant_url": participant_url}
         sent = self._send(msg)
         if sent:
-            log.info(_NAME, f"→ [addons   ] ws started session: {participant_url}")
+            log.info(_NAME, f"ws started session: {participant_url}")
         return sent
 
     def send_session_ended(self) -> bool:
@@ -59,7 +59,7 @@ class AddonBridgeClient:
         msg = {"type": "session_ended"}
         sent = self._send(msg)
         if sent:
-            log.info(_NAME, "→ [addons   ] ws ended session")
+            log.info(_NAME, "ws ended session")
         return sent
 
     def drain_slides(self) -> list[dict]:
