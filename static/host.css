@@ -369,9 +369,25 @@ body {
 
 #center-qr.link-only #center-qr-url {
   font-size: clamp(1.5rem, 3.9vw, 3.9rem);
-  white-space: normal;
-  overflow-wrap: anywhere;
+  white-space: nowrap;
   text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .2em;
+}
+
+.center-url-domain {
+  color: var(--text);
+  opacity: .75;
+}
+
+.center-url-code {
+  color: #f0c040;
+  font-size: 1.5em;
+  font-family: monospace;
+  font-weight: 800;
+  letter-spacing: .1em;
 }
 
 #center-qr .qr-code {

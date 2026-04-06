@@ -3513,7 +3513,14 @@ function _regenerateAllQRCodes() {
   const confUrl = document.getElementById('conference-qr-url');
   if (confUrl && confUrl.offsetParent !== null) confUrl.innerHTML = _buildUrlHtml();
   const centerUrl = document.getElementById('center-qr-url');
-  if (centerUrl) centerUrl.innerHTML = _buildUrlHtml({ stripProtocol: true });
+  if (centerUrl) {
+    const base = (_joinBaseUrl || location.origin).replace(/^https?:\/\//i, '');
+    if (_currentSessionId) {
+      centerUrl.innerHTML = `<span class="center-url-domain">${base}/</span><span class="center-url-code">${_currentSessionId}</span>`;
+    } else {
+      centerUrl.innerHTML = `<span class="center-url-domain">${base}</span>`;
+    }
+  }
 }
 
 function renderSessionPanel() {
