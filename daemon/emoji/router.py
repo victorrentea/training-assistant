@@ -44,9 +44,9 @@ async def emoji_reaction(request: Request, body: EmojiReactionRequest):
     )
     if not sent:
         logger.warning("Overlay emoji drop: bridge disconnected pid=%s emoji=%r", pid, emoji)
-        daemon_log.info("addons   ", f"Dropped reaction from {participant_name!r}: {emoji!r} (bridge unavailable)")
+        daemon_log.info("addons   ", f"✗ reaction from {participant_name!r}: {emoji!r} (bridge unavailable)")
     else:
-        daemon_log.info("addons   ", f"{participant_name!r} reacted {emoji!r}")
+        daemon_log.info("addons   ", f"→ {participant_name!r} reacted {emoji!r}")
 
     # Forward to host browser (local WS)
     await notify_host(EmojiReactionMsg(emoji=emoji))
