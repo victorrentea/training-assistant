@@ -1600,6 +1600,7 @@
       closeMap();
       closeQR();
       closeSummaryModal();
+      closeHostNotesModal();
     }
   });
 
