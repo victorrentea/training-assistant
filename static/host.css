@@ -368,8 +368,9 @@ body {
 }
 
 #center-qr.link-only #center-qr-url {
-  font-size: clamp(2rem, 4.5vw, 5rem);
+  font-size: clamp(1.5rem, 3.5vw, 3.5rem);
   color: #e03030;
+  white-space: nowrap;
 }
 
 #center-qr.link-only #center-qr-url .wave-char {
