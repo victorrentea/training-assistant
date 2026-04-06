@@ -217,6 +217,7 @@ async def get_host_state(request: Request, session_id: str):
         "leaderboard_data": leaderboard_state.data,
         # Summary / notes
         "summary_points": summary["points"],
+        "summary_updated_at": summary["updated_at"],
         "notes_content": notes_content,
         # Token usage
         "token_usage": _get_token_usage(),

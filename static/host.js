@@ -380,6 +380,8 @@
         if (msg.transcription_language) {
           updateTranscriptionLangBtn(msg.transcription_language);
         }
+        if (msg.summary_points) updateSummary(msg.summary_points, msg.summary_updated_at);
+        if (msg.notes_content) updateHostNotes(msg.notes_content);
       } else if (msg.type === 'notes') {
         updateHostNotes(msg.notes_content);
       } else if (msg.type === 'notes_updated') {
