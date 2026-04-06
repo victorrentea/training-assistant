@@ -409,7 +409,7 @@ def start_indexer(folder: Path) -> None:
         observer = Observer()
         observer.schedule(handler, str(folder), recursive=True)
         observer.start()
-        log.info("indexer", f"Watching {folder.name}")
+        log.info("indexer", f"Watching materials at: {folder}")
         try:
             while True:
                 time.sleep(1)
