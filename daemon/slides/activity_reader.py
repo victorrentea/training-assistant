@@ -1,4 +1,4 @@
-"""Parse activity-slides-<date>.md files to extract per-slide time data.
+"""Parse <date>-slides.txt files to extract per-slide time data.
 
 File format (one or more lines per activity period):
     HH:MM:SS DeckName.pptx - s<num>:<duration>[, s<num>:<duration> ...]
@@ -61,7 +61,7 @@ def read_slides_log(
     session_date: date,
     session_entry: dict | None,
 ) -> list[dict]:
-    """Read activity-slides-<date>.md and return a flat slides log.
+    """Read <date>-slides.txt and return a flat slides log.
 
     Args:
         folder: TRANSCRIPTION_FOLDER path.
@@ -72,7 +72,7 @@ def read_slides_log(
     Returns:
         List of {file, slide, seconds_spent} dicts.
     """
-    activity_file = folder / f"activity-slides-{session_date.isoformat()}.md"
+    activity_file = folder / f"{session_date.isoformat()}-slides.txt"
     if not activity_file.exists():
         return []
 

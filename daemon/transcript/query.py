@@ -1,7 +1,7 @@
 """Query normalized transcript lines by time range.
 
 Reads normalized files produced by `daemon.transcript.normalizer`:
-  YYYY-MM-DD transcription.txt with lines like: [HH:MM] Speaker: text
+  YYYY-MM-DD-transcription.txt with lines like: [HH:MM] Speaker: text
 """
 
 from __future__ import annotations
@@ -13,9 +13,9 @@ from dataclasses import dataclass
 from datetime import datetime, date, time
 from pathlib import Path
 
-_NORMALIZED_FILE_RE = re.compile(r"^(\d{4}-\d{2}-\d{2})\s+transcription\.txt$", re.IGNORECASE)
+_NORMALIZED_FILE_RE = re.compile(r"^(\d{4}-\d{2}-\d{2})-transcription\.txt$", re.IGNORECASE)
 _LINE_RE = re.compile(r"^\[(\d{2}):(\d{2})\]\s*(.*)$")
-_DEFAULT_FOLDER = Path(os.environ.get("TRANSCRIPTION_FOLDER", "/Users/victorrentea/Documents/transcriptions"))
+_DEFAULT_FOLDER = Path(os.environ.get("TRANSCRIPTION_FOLDER", "/Users/victorrentea/workspace/victor-macos-addons/addons-output"))
 
 
 @dataclass

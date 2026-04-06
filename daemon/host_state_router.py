@@ -141,7 +141,7 @@ def _build_slides_log_fields() -> dict:
     from datetime import date
     from pathlib import Path
 
-    folder = Path(os.environ.get("TRANSCRIPTION_FOLDER", "/Users/victorrentea/Documents/transcriptions"))
+    folder = Path(os.environ.get("TRANSCRIPTION_FOLDER", "/Users/victorrentea/workspace/victor-macos-addons/addons-output"))
     stack = session_shared_state.get_session_stack()
     session_entry = stack[0] if stack else None
     slides_log = read_slides_log(folder, date.today(), session_entry)

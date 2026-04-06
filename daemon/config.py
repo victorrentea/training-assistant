@@ -64,7 +64,7 @@ def load_secrets_env() -> None:
 def config_from_env(minutes: int = DEFAULT_MINUTES) -> "Config":
     """Build a Config from environment variables (after loading shared secrets)."""
     load_secrets_env()
-    folder = Path(os.environ.get("TRANSCRIPTION_FOLDER", "/Users/victorrentea/Documents/transcriptions"))
+    folder = Path(os.environ.get("TRANSCRIPTION_FOLDER", "/Users/victorrentea/workspace/victor-macos-addons/addons-output"))
     api_key = os.environ.get("ANTHROPIC_API_KEY", "")
     if not api_key:
         log.error("daemon", "ANTHROPIC_API_KEY is not set")

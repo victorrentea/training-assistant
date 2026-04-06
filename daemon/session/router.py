@@ -72,7 +72,7 @@ def _get_sessions_root() -> Path | None:
 def _get_transcription_root() -> Path | None:
     folder_str = os.environ.get(
         "TRANSCRIPTION_FOLDER",
-        "/Users/victorrentea/Documents/transcriptions",
+        "/Users/victorrentea/workspace/victor-macos-addons/addons-output",
     )
     p = Path(folder_str).expanduser()
     return p if p.exists() and p.is_dir() else None
@@ -244,7 +244,7 @@ async def get_interval_lines_txt(
         lines.append(f"[{dt.strftime('%Y-%m-%d %H:%M:%S')}] {normalized}")
 
     if not lines:
-        normalized_files = list(root.glob("* transcription.txt"))
+        normalized_files = list(root.glob("*-transcription.txt"))
         if not normalized_files:
             return PlainTextResponse("No normalized transcript files found", status_code=404)
 
