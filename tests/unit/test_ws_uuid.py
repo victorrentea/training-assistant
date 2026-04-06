@@ -13,21 +13,20 @@ from railway.shared.state import state
 @pytest.fixture(autouse=True)
 def clean_state():
     """Reset relevant state fields before each test."""
-    state.participant_names = {}
-    state.participants = {}
+    state.reset()
+    state.generate_session_id()
     yield
-    state.participant_names = {}
+    state.reset()
 
 
 def test_ws_unknown_uuid_allowed_through():
-    """Unknown UUID is allowed to proceed normally."""
+    """Unknown UUID is allowed to proceed normally — receives participant_count_updated on connect."""
     client = TestClient(app)
-    with client.websocket_connect("/ws/brand-new-uuid") as ws:
-        # Send set_name to trigger normal flow
-        ws.send_json({"type": "set_name", "name": "Dave"})
-        # Receive a message — it should be state (not an error/paused message)
+    with client.websocket_connect(f"/ws/{state.session_id}/brand-new-uuid") as ws:
+        # On connect, server sends participant_count_updated broadcast
         msg = ws.receive_json()
         assert msg.get("type") != "session_paused"
+        assert msg.get("type") == "participant_count_updated"
 
 
 def test_ws_known_participant_allowed_through():
@@ -35,7 +34,7 @@ def test_ws_known_participant_allowed_through():
     state.participant_names = {"active-uuid": "Alice"}
 
     client = TestClient(app)
-    with client.websocket_connect("/ws/active-uuid") as ws:
-        ws.send_json({"type": "set_name", "name": "Alice"})
+    with client.websocket_connect(f"/ws/{state.session_id}/active-uuid") as ws:
         msg = ws.receive_json()
         assert msg.get("type") != "session_paused"
+        assert msg.get("type") == "participant_count_updated"

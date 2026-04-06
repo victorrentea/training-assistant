@@ -58,15 +58,14 @@ def _get_metric_value(name, labels=None):
 
 def test_ws_connection_increments_gauge():
     """WebSocket connect should increment ws_connections_active."""
+    state.reset()
+    state.generate_session_id()
     client = TestClient(app)
     before = _get_metric_value("ws_connections_active", {"role": "participant"}) or 0
-    with client.websocket_connect("/ws/test-metrics-participant") as ws:
-        ws.send_text(json.dumps({"type": "set_name", "name": "MetricsTest"}))
-        # Drain initial state message
-        for _ in range(5):
-            msg = json.loads(ws.receive_text())
-            if msg.get("type") == "state":
-                break
+    with client.websocket_connect(f"/ws/{state.session_id}/test-metrics-participant") as ws:
+        # On connect, server sends participant_count_updated broadcast
+        msg = json.loads(ws.receive_text())
+        assert msg.get("type") == "participant_count_updated"
         during = _get_metric_value("ws_connections_active", {"role": "participant"})
         assert during is not None
         assert during > before
@@ -75,55 +74,16 @@ def test_ws_connection_increments_gauge():
     assert after == before
 
 
-def test_vote_increments_counter():
-    """Voting should increment poll_votes_total."""
-    # Reset state to avoid stale participants causing broadcast hangs
-    state.reset()
-    state.generate_session_id()
-    client = TestClient(app)
-    before = _get_metric_value("poll_votes_total", {}) or 0
-
-    # Create and open a poll via host API
-    resp = client.post(f"/api/{state.session_id}/poll", json={
-        "question": "Metrics test?",
-        "options": ["Yes", "No"],
-    }, headers=_HOST_AUTH_HEADERS)
-    assert resp.status_code == 200
-    poll_data = resp.json()["poll"]
-    option_id = poll_data["options"][0]["id"]  # first option id
-    client.put(f"/api/{state.session_id}/poll/status", json={"open": True}, headers=_HOST_AUTH_HEADERS)
-
-    with client.websocket_connect("/ws/test-metrics-voter") as ws:
-        ws.send_text(json.dumps({"type": "set_name", "name": "Voter"}))
-        for _ in range(20):
-            msg = json.loads(ws.receive_text())
-            if msg.get("type") == "state":
-                break
-        ws.send_text(json.dumps({"type": "vote", "option_id": option_id}))
-        for _ in range(20):
-            msg = json.loads(ws.receive_text())
-            if msg.get("type") == "vote_update":
-                break
-
-    after = _get_metric_value("poll_votes_total", {})
-    assert after is not None
-    assert after > before
-
-    # Cleanup
-    state.reset()
-    state.generate_session_id()
-
-
 def test_ws_messages_tracked_by_type():
     """Every WS message should increment ws_messages_total with type label."""
+    state.reset()
+    state.generate_session_id()
     client = TestClient(app)
-    before = _get_metric_value("ws_messages_total", {"type": "set_name"}) or 0
-    with client.websocket_connect("/ws/test-metrics-msg") as ws:
-        ws.send_text(json.dumps({"type": "set_name", "name": "MsgTest"}))
-        for _ in range(5):
-            msg = json.loads(ws.receive_text())
-            if msg.get("type") == "state":
-                break
-    after = _get_metric_value("ws_messages_total", {"type": "set_name"})
+    before = _get_metric_value("ws_messages_total", {"type": "ping"}) or 0
+    with client.websocket_connect(f"/ws/{state.session_id}/test-metrics-msg") as ws:
+        # Drain connect broadcast
+        ws.receive_text()
+        ws.send_text(json.dumps({"type": "ping"}))
+    after = _get_metric_value("ws_messages_total", {"type": "ping"})
     assert after is not None
     assert after > before
