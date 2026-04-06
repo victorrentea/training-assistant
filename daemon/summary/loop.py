@@ -73,7 +73,7 @@ def _read_ai_summary_file(session_folder: Path) -> list[dict] | None:
         points = []
         for line in text.splitlines():
             line = line.strip()
-            if not line or line.startswith("#"):
+            if not line or line.startswith("#") or line.startswith("<!--"):
                 continue
             if line.startswith("- ") or line.startswith("* "):
                 text_content = line[2:].strip()

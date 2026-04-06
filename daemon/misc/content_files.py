@@ -44,7 +44,7 @@ def _parse_summary_points(raw_markdown: str | None) -> list[dict]:
     points: list[dict] = []
     for line in raw_markdown.splitlines():
         row = line.strip()
-        if not row or row.startswith("#"):
+        if not row or row.startswith("#") or row.startswith("<!--"):
             continue
         if row.startswith("- ") or row.startswith("* "):
             text = row[2:].strip()
