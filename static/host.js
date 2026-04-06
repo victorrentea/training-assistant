@@ -3513,7 +3513,7 @@ function _regenerateAllQRCodes() {
   const confUrl = document.getElementById('conference-qr-url');
   if (confUrl && confUrl.offsetParent !== null) confUrl.innerHTML = _buildUrlHtml();
   const centerUrl = document.getElementById('center-qr-url');
-  if (centerUrl) centerUrl.innerHTML = _buildUrlHtml({ stripProtocol: true, plain: true });
+  if (centerUrl) centerUrl.innerHTML = _buildUrlHtml({ stripProtocol: true });
 }
 
 function renderSessionPanel() {
