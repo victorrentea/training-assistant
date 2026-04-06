@@ -46,6 +46,14 @@ class AddonBridgeClient:
         """Forward an emoji reaction to the overlay. Best-effort; never raises."""
         return self._send({"type": "emoji", "emoji": emoji, "count": 1})
 
+    def send_session_started(self, participant_url: str) -> bool:
+        """Notify addons that a session has started with the participant join URL."""
+        return self._send({"type": "session_started", "participant_url": participant_url})
+
+    def send_session_ended(self) -> bool:
+        """Notify addons that the session has ended."""
+        return self._send({"type": "session_ended"})
+
     def drain_slides(self) -> list[dict]:
         """Return all pending slide events. Call from the main thread each loop."""
         events: list[dict] = []
@@ -153,3 +161,13 @@ def is_connected() -> bool:
 def send_emoji(emoji: str) -> bool:
     """Best-effort emoji send to addons overlay. Returns True if sent."""
     return _client is not None and _client.send_emoji(emoji)
+
+
+def send_session_started(participant_url: str) -> bool:
+    """Best-effort session_started message to addons. Returns True if sent."""
+    return _client is not None and _client.send_session_started(participant_url)
+
+
+def send_session_ended() -> bool:
+    """Best-effort session_ended message to addons. Returns True if sent."""
+    return _client is not None and _client.send_session_ended()

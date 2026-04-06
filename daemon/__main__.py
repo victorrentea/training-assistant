@@ -575,6 +575,20 @@ def run() -> None:
     from daemon.addon_bridge_client import AddonBridgeClient, set_client as _set_bridge_client
     _bridge = AddonBridgeClient()
     _set_bridge_client(_bridge)
+
+    # Set up connection callback to send session state on reconnect
+    def _on_addon_connection_change(connected: bool) -> None:
+        if connected:
+            # Addons just connected — check if there's an active session
+            from daemon.session import state as session_state
+            active_id = session_state.get_active_session_id()
+            if active_id:
+                participant_join_link = f"{config.server_url}/{active_id}"
+                from daemon import addon_bridge_client
+                addon_bridge_client.send_session_started(participant_join_link)
+                log.info("addon-bridge", f"Sent session_started on reconnect: {participant_join_link}")
+
+    _bridge.set_on_connection_change(_on_addon_connection_change)
     _bridge.start()
 
     # Session state: the transcript text used to generate the current preview
@@ -797,6 +811,9 @@ def run() -> None:
                             if _active_session_id
                             else f"{config.server_url}/"
                         )
+                        # Notify addons of session start
+                        from daemon import addon_bridge_client
+                        addon_bridge_client.send_session_started(participant_join_link)
                         log.info(
                             "session",
                             f"Session: {name}",
@@ -857,6 +874,14 @@ def run() -> None:
                                     log.info("session", f"Loaded parent snapshot from {parent_ss_path}")
                                 except Exception as e:
                                     log.error("session", f"Failed to load parent snapshot: {e}")
+                            # Notify addons: parent session resumed (send session_started)
+                            participant_join_link = (
+                                f"{config.server_url}/{_active_session_id}"
+                                if _active_session_id
+                                else f"{config.server_url}/"
+                            )
+                            from daemon import addon_bridge_client
+                            addon_bridge_client.send_session_started(participant_join_link)
                             log.info("session", f"Ended: {ended['name']}, restored: {parent['name']}")
                         else:
                             # Main session ended — clear everything
@@ -864,6 +889,9 @@ def run() -> None:
                             summary_watermark = 0
                             config = dc_replace(config, session_folder=None, session_notes=None)
                             _active_session_id = None
+                            # Notify addons that session ended
+                            from daemon import addon_bridge_client
+                            addon_bridge_client.send_session_ended()
                             log.info("session", f"Ended: {ended['name']}")
                         _do_save_daemon_state()
                         global_state_persisted = True
@@ -906,6 +934,14 @@ def run() -> None:
                         global_state_persisted = True
                         sync_session_to_server(config, session_stack, current_key_points)
                         transcript_state.reset()
+                        # Notify addons of session resume
+                        participant_join_link = (
+                            f"{config.server_url}/{_active_session_id}"
+                            if _active_session_id
+                            else f"{config.server_url}/"
+                        )
+                        from daemon import addon_bridge_client
+                        addon_bridge_client.send_session_started(participant_join_link)
                         log.info("session", f"Session: {session_stack[-1]['name']}")
 
                     elif action == "create_talk_folder":
