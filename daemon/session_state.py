@@ -97,7 +97,7 @@ def load_key_points(session_folder: Path) -> tuple[list[dict], int]:
                     text_content = line
                 if text_content:
                     points.append({"text": text_content, "source": "notes"})
-            log.info("session", f"Summary ({len(points)} lines): {_AI_SUMMARY_FILE}")
+            log.info("session", f"Summary found ({len(points)} lines): {_AI_SUMMARY_FILE}")
             return points, 0
         except Exception as e:
             log.error("session", f"Failed to load {_AI_SUMMARY_FILE}: {e}")
