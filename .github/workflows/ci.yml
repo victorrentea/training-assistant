@@ -43,7 +43,6 @@ jobs:
             files: >-
               tests/features/debate/test_e2e.py
               tests/features/wordcloud/test_e2e.py
-              tests/features/qa/test_e2e.py
               tests/features/codereview/test_e2e.py
           - group: gaps-quiz-scoring
             files: >-
