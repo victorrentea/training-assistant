@@ -1,19 +1,5 @@
 # API Reference (Reviewed)
 
-Architecture:
-```
-Participant Browser ── REST ──> Railway (proxy) ── WS ──> Daemon
-                    <── WS (receive-only) ──────────────<
-
-Host Browser ── REST ──────────────────────────────────> Daemon localhost:8081
-             <── WS (receive-only) ────────────────────<
-```
-
-All participant REST: `/{sid}/api/participant/...` with `X-Participant-ID` header.
-All host REST: `/api/{sid}/host/...` on daemon localhost.
-
----
-
 ## Table of Contents
 
 - [Session Management](#feature-session-management)
@@ -32,6 +18,20 @@ All host REST: `/api/{sid}/host/...` on daemon localhost.
 - [Notes & Summary](#feature-notes--summary)
 - [Cross-cutting: Reload](#cross-cutting-reload)
 - [Daemon ↔ Addons Bridge WS](#daemon--addons-bridge-ws)
+
+---
+
+Architecture:
+```
+Participant Browser ── REST ──> Railway (proxy) ── WS ──> Daemon
+                    <── WS (receive-only) ──────────────<
+
+Host Browser ── REST ──────────────────────────────────> Daemon localhost:8081
+             <── WS (receive-only) ────────────────────<
+```
+
+All participant REST: `/{sid}/api/participant/...` with `X-Participant-ID` header.
+All host REST: `/api/{sid}/host/...` on daemon localhost.
 
 ---
 
