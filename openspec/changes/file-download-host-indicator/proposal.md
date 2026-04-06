@@ -1,0 +1,27 @@
+## Why
+
+When a participant uploads a file to Railway, the daemon downloads it to the session folder on the host's disk — but the host has no way to know where to find it without checking the terminal. This change closes that gap by surfacing the local disk path directly in the host UI next to the participant who sent the file.
+
+## What Changes
+
+- Railway → daemon upload flow: after the daemon downloads the file, it sends a `file_uploaded` WS event back to the host browser so the host panel knows the local path
+- Host participant list: a blinking download icon appears next to the uploading participant's name, showing the full local disk path on hover; clicking the icon copies the path to clipboard and the icon disappears
+- The download icon style matches the upload icon on the participant screen (SVG arrow, same stroke style)
+- No "download via host UI" button — the file is already on the host's disk, so the path copy is the only action needed
+
+## Capabilities
+
+### New Capabilities
+
+- `file-download-host-indicator`: Blinking download icon in the host participant list after a file is downloaded to the session folder; hover shows full disk path; click copies path to clipboard and dismisses the icon
+
+### Modified Capabilities
+
+- `sharing`: The existing file upload protocol changes — Railway notifies the daemon via WS, daemon downloads the file and replies with `file_uploaded` event including the local `disk_path`; Railway deletes the temp file after confirmation
+
+## Impact
+
+- **Backend (Railway):** `railway/features/upload/router.py` — after storing the file, broadcast a `file_uploaded` WS message to the daemon; on daemon ack, delete the temp file
+- **Daemon:** add a handler for the `file_uploaded` WS message from Railway; download the file to `{session_folder}/uploads/`; send `file_uploaded` event to host browser WS with `disk_path`
+- **Host WS state:** `host-ws.yaml` — add/update `file_uploaded` message schema with `disk_path` field
+- **Host UI:** `static/host.js` — handle `file_uploaded` WS message; render blinking download icon per participant; copy-to-clipboard + dismiss on click

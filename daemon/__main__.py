@@ -30,6 +30,7 @@ from daemon.summary.loop import run_summary_cycle, load_key_points, save_key_poi
 from daemon.transcript.loader import load_transcription_files
 from daemon.transcript.state import TranscriptStateManager
 from daemon.slides.loop import SlidesRunner
+from daemon.upload import handle_file_ready_for_download as _handle_file_download
 from daemon.ws_client import DaemonWsClient
 from daemon.session import pending as session_pending
 from daemon.session import state as session_shared_state
@@ -422,6 +423,11 @@ def run() -> None:
 
     from daemon.slides.router import handle_pdf_download_complete
     ws_client.register_handler("pdf_download_complete", handle_pdf_download_complete)
+
+    ws_client.register_handler(
+        "file_ready_for_download",
+        lambda data: _handle_file_download(data, config),
+    )
 
     # State push handler — daemon receives current state from Railway on connect
     from daemon.participant.state import participant_state

@@ -489,6 +489,25 @@ paths:
           content:
             application/json:
               schema: {}
+  /api/participant/misc/feedback:
+    post:
+      tags:
+      - misc
+      summary: Participant Feedback
+      description: Participant feedback submitted from floating feedback modal.
+      operationId: participant_feedback_api_participant_misc_feedback_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FeedbackRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
   /api/participant/notes:
     get:
       tags:
@@ -1275,6 +1294,20 @@ components:
       required:
       - emoji
       title: EmojiReactionRequest
+    FeedbackRequest:
+      properties:
+        text:
+          type: string
+          title: Text
+        participant_name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Participant Name
+      type: object
+      required:
+      - text
+      title: FeedbackRequest
     LaunchDebateRequest:
       properties:
         statement:

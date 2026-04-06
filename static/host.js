@@ -462,6 +462,25 @@
           }
           renderParticipantList(cachedParticipantIds);
         }
+      } else if (msg.type === 'file_uploaded') {
+        const pid = msg.uuid;
+        if (pid) {
+          if (!participantDataById[pid]) {
+            participantDataById[pid] = { uuid: pid, name: 'Unknown', score: 0 };
+          }
+          const existing = Array.isArray(participantDataById[pid].received_files)
+            ? participantDataById[pid].received_files
+            : [];
+          const alreadyPresent = existing.some(e => String(e.id) === String(msg.id));
+          if (!alreadyPresent) {
+            existing.push({ id: String(msg.id), filename: msg.filename, disk_path: msg.disk_path });
+            participantDataById[pid].received_files = existing;
+          }
+          if (!cachedParticipantIds.includes(pid)) {
+            cachedParticipantIds.push(pid);
+          }
+          renderParticipantList(cachedParticipantIds);
+        }
       } else if (msg.type === 'qa_updated') {
         renderQAList(normalizeHostQAQuestions(msg.questions || []));
       }
@@ -1457,20 +1476,9 @@
         const preview = (entry.text.length > 100 ? entry.text.substring(0, 100) + '…' : entry.text).replace(/\n/g, ' ');
         return `<span class="paste-icon" title="${escHtml(preview)}" data-uuid="${escHtml(pid)}" data-paste-id="${entry.id}" onclick="copyAndDismissPaste(this)"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5.5" y="5.5" width="9" height="9" rx="2"/><path d="M3 10.5H2.5a1.5 1.5 0 0 1-1.5-1.5V2.5A1.5 1.5 0 0 1 2.5 1h6.5A1.5 1.5 0 0 1 11 2.5V3"/></svg></span>`;
       }).join('');
-      const uploadedFiles = (participant.uploaded_files || []).filter(entry => {
-        // Hide icons after UPLOAD_CLEANUP_MINUTES
-        if (entry.downloaded_at != null) {
-          const elapsed = Date.now() / 1000 - entry.downloaded_at;
-          if (elapsed >= UPLOAD_CLEANUP_MINUTES * 60) return false;
-        }
-        return true;
-      });
-      const uploadIcons = uploadedFiles.map(entry => {
-        const sizeMB = (entry.size / (1024 * 1024)).toFixed(1);
-        const sizeStr = entry.size < 1024 * 1024 ? `${(entry.size / 1024).toFixed(0)} KB` : `${sizeMB} MB`;
-        const downloaded = entry.downloaded_at != null;
-        const title = downloaded ? `${entry.filename} (${sizeStr}) — downloaded` : `${entry.filename} (${sizeStr}) — click to download`;
-        return `<span class="upload-icon${downloaded ? ' downloaded' : ''}" title="${escHtml(title)}" data-uuid="${escHtml(pid)}" data-upload-id="${entry.id}" onclick="downloadUploadedFile(this)"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 4v9"/><path d="M6 9.5L10 13.5L14 9.5"/><path d="M4.5 13.5v1a2 2 0 0 0 2 2h7a2 2 0 0 0 2-2v-1"/></svg></span>`;
+      const receivedFiles = participant.received_files || [];
+      const uploadIcons = receivedFiles.map(entry => {
+        return `<span class="upload-icon" title="${escHtml(entry.disk_path)}" data-uuid="${escHtml(pid)}" data-file-id="${escHtml(String(entry.id))}" onclick="copyDiskPath(this)"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 4v9"/><path d="M6 9.5L10 13.5L14 9.5"/><path d="M4.5 13.5v1a2 2 0 0 0 2 2h7a2 2 0 0 0 2-2v-1"/></svg></span>`;
       }).join('');
       return `<li class="${online ? 'online' : 'offline'}"><span class="pax-name" title="${ip ? 'IP: ' + ip : ''}">${debateIcon}${avatarHtml}<span class="pax-name-text truncate">${escHtml(name)}</span>${pasteIcons}${uploadIcons}</span>${scoreTag}${locLabel ? `<span class="pax-location" onclick="openMap()">${escHtml(locLabel)}<div class="footer-badge-tooltip">View all on map</div></span>` : ''}</li>`;
     }).join('');
@@ -3651,47 +3659,27 @@ function copyAndDismissPaste(el) {
   }
 }
 
-function downloadUploadedFile(el) {
-  const uploadId = parseInt(el.dataset.uploadId, 10);
-  // Fetch with credentials (Basic Auth) then trigger browser download
-  fetch(API(`/upload/${uploadId}`), { credentials: 'same-origin' })
-    .then(resp => {
-      if (!resp.ok) throw new Error('Download failed');
-      const cd = resp.headers.get('content-disposition') || '';
-      const match = cd.match(/filename="?([^";\n]+)"?/);
-      const filename = match ? match[1] : 'file';
-      return resp.blob().then(blob => ({ blob, filename }));
-    })
-    .then(({ blob, filename }) => {
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-      // Show "Downloaded!" tip
+function copyDiskPath(el) {
+  const uuid = el.dataset.uuid;
+  const fileId = el.dataset.fileId;
+  const participant = participantDataById[uuid];
+  const entry = (participant?.received_files || []).find(e => String(e.id) === String(fileId));
+  if (entry) {
+    navigator.clipboard.writeText(entry.disk_path).then(() => {
+      // Show "Copied!" tooltip
       const tip = document.createElement('span');
-      tip.textContent = 'Downloaded!';
+      tip.textContent = 'Copied!';
       tip.className = 'paste-copied-tip';
       const rect = el.getBoundingClientRect();
       tip.style.left = rect.left + rect.width / 2 + 'px';
       tip.style.top = rect.top - 4 + 'px';
       document.body.appendChild(tip);
       setTimeout(() => tip.remove(), 1200);
-    })
-    .catch(() => {
-      const tip = document.createElement('span');
-      tip.textContent = 'Failed!';
-      tip.className = 'paste-copied-tip';
-      tip.style.background = '#ef4444';
-      const rect = el.getBoundingClientRect();
-      tip.style.left = rect.left + rect.width / 2 + 'px';
-      tip.style.top = rect.top - 4 + 'px';
-      document.body.appendChild(tip);
-      setTimeout(() => tip.remove(), 1200);
+      // Remove from client-side state and re-render
+      participant.received_files = participant.received_files.filter(e => String(e.id) !== String(fileId));
+      renderParticipantList(cachedParticipantIds);
     });
+  }
 }
 
 

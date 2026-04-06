@@ -229,6 +229,7 @@ class FileUploadedMsg(BaseModel):
     id: str
     filename: str
     size: int
+    disk_path: str
 
 
 # ── Notes & Summary ───────────────────────────────────────────────────────────

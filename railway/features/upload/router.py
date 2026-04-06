@@ -3,18 +3,16 @@ import time
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
-from fastapi.responses import FileResponse
+from pydantic import BaseModel as _BaseModel
 
 from railway.shared.auth import require_host_auth
-from railway.shared.messaging import broadcast_participant_update
 from railway.shared.state import state
 
-router = APIRouter()  # host-auth endpoints (download)
+router = APIRouter()  # host-auth endpoints
 public_router = APIRouter()  # participant-facing endpoints (upload), mounted under session prefix
 
-MAX_UPLOAD_SIZE = 500 * 1024 * 1024  # 500MB
+MAX_UPLOAD_SIZE = 100 * 1024 * 1024  # 100MB
 UPLOAD_DIR = Path(".server-data") / "uploads"
-CLEANUP_DELAY_SECONDS = 5 * 60  # 5 minutes after download
 
 
 def _upload_dir() -> Path:
@@ -28,20 +26,6 @@ def _find_entry(file_id: int) -> tuple[str, dict] | None:
             if entry["id"] == file_id:
                 return uuid, entry
     return None
-
-
-async def _cleanup_after_delay(file_id: int):
-    """Delete file from disk and state after CLEANUP_DELAY_SECONDS."""
-    await asyncio.sleep(CLEANUP_DELAY_SECONDS)
-    for uuid, entries in list(state.uploaded_files.items()):
-        for entry in entries:
-            if entry["id"] == file_id:
-                Path(entry["disk_path"]).unlink(missing_ok=True)
-                state.uploaded_files[uuid] = [e for e in entries if e["id"] != file_id]
-                if not state.uploaded_files[uuid]:
-                    del state.uploaded_files[uuid]
-                await broadcast_participant_update()
-                return
 
 
 @public_router.post("/api/upload")
@@ -94,31 +78,49 @@ async def upload_file(
         "id": file_id,
         "filename": filename,
         "size": total,
-        "disk_path": str(dest),
-        "downloaded_at": None,  # epoch seconds, set on first host download
+        "disk_path": "",  # filled by daemon ack
+        "railway_path": str(dest),  # temp file on Railway
+        "downloaded_at": None,
     }
     state.uploaded_files.setdefault(uuid, []).append(entry)
-    await broadcast_participant_update()
+
+    # Notify daemon to download the file
+    from railway.features.ws.daemon_protocol import MSG_FILE_READY_FOR_DOWNLOAD, push_to_daemon
+    asyncio.create_task(push_to_daemon({
+        "type": MSG_FILE_READY_FOR_DOWNLOAD,
+        "file_id": file_id,
+        "uuid": uuid,
+        "filename": filename,
+        "size": total,
+        "session_id": state.session_id or "",
+    }))
+
     return {"ok": True, "id": file_id, "filename": filename, "size": total}
 
 
-@router.get("/upload/{file_id}", dependencies=[Depends(require_host_auth)])
-async def download_file(file_id: int):
+class _AckBody(_BaseModel):
+    disk_path: str
+
+@router.post("/upload/{file_id}/ack", dependencies=[Depends(require_host_auth)])
+async def ack_upload(file_id: int, body: _AckBody):
     result = _find_entry(file_id)
     if not result:
         raise HTTPException(404, "File not found")
     uuid, entry = result
-    path = Path(entry["disk_path"])
-    if not path.exists():
-        raise HTTPException(404, "File no longer available")
-    # Mark as downloaded and schedule cleanup
-    if entry["downloaded_at"] is None:
-        entry["downloaded_at"] = time.time()
-        asyncio.create_task(_cleanup_after_delay(file_id))
-        # Broadcast so host UI shows the fade
-        await broadcast_participant_update()
-    return FileResponse(
-        path,
-        filename=entry["filename"],
-        media_type="application/octet-stream",
-    )
+    entry["disk_path"] = body.disk_path
+    entry["downloaded_at"] = time.time()
+    # Delete temp file from Railway
+    railway_path = Path(entry.get("railway_path", ""))
+    if railway_path.exists():
+        railway_path.unlink(missing_ok=True)
+    # Notify host browser
+    from railway.shared.messaging import send_to_host
+    await send_to_host({
+        "type": "file_uploaded",
+        "uuid": uuid,
+        "id": str(file_id),
+        "filename": entry["filename"],
+        "size": entry["size"],
+        "disk_path": body.disk_path,
+    })
+    return {"ok": True}

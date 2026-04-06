@@ -241,7 +241,7 @@ components:
       summary: Participant uploaded a file (daemon has downloaded it to session folder)
       payload:
         type: object
-        required: [type, uuid, id, filename, size]
+        required: [type, uuid, id, filename, size, disk_path]
         properties:
           type:
             type: string
@@ -257,6 +257,9 @@ components:
           size:
             type: integer
             description: File size in bytes
+          disk_path:
+            type: string
+            description: Absolute path on the host's disk where the file was saved by the daemon
 
     # ── Participants ──────────────────────────────────────────────────────────
 
