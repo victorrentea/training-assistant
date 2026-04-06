@@ -653,7 +653,7 @@ def run() -> None:
         try:
             _reconnect_folder = sessions_root / session_stack[-1]["name"] if session_stack else None
             sync_session_to_server(config, session_stack, current_key_points, reconnect_session_state, session_id=_active_session_id, file_time=get_ai_summary_mtime(_reconnect_folder) if _reconnect_folder else None, raw_markdown=get_ai_summary_raw(_reconnect_folder) if _reconnect_folder else None)
-            log.info("session", f"Sent session_id to backend on reconnect: '{session_stack[-1]['name']}'")
+            log.info("session", f"Sent active session to backend: '{session_stack[-1]['name']}'")
         except Exception as e:
             log.error("session", f"Session re-sync on reconnect failed: {e}")
         _broadcast_notes_summary_counts(notes_summary_probe_prev)
