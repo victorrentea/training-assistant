@@ -149,6 +149,20 @@ app.include_router(session_participant)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
+# ── Minimal session bootstrap endpoints (used by e2e test setup when daemon is not running) ──
+
+@app.post("/api/session/start", dependencies=[Depends(require_host_auth)])
+async def session_start():
+    """Generate a session_id. Used by conftest when daemon is not running."""
+    return {"session_id": state.generate_session_id()}
+
+
+@app.get("/api/session/active")
+async def session_active():
+    """Return current session_id. Fallback used by conftest."""
+    return {"session_id": state.session_id}
+
+
 # ── Public status endpoint (version probe + session state) ──
 
 @app.get("/api/status")

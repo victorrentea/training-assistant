@@ -2570,9 +2570,10 @@ ${html}
         body: '{}',
       });
       if (regResp.status === 404) { window.location.href = '/?error=invalid'; return; }
+      if (!regResp.ok) { myName = myName || 'Guest'; connectWS(myName); return; }
       const { name, avatar } = await regResp.json();
       _assignedName = name;
-      myName = applyHostSuffix(name);
+      myName = applyHostSuffix(name || 'Guest');
       // If user has a custom name stored locally, that overrides the assigned name for display
       // but the server keeps the assigned name until they explicitly rename
       const isCustom = localStorage.getItem(LS_CUSTOM_NAME_KEY);

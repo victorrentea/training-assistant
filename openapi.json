@@ -681,6 +681,45 @@
         }
       }
     },
+    "/api/session/start": {
+      "post": {
+        "summary": "Session Start",
+        "description": "Generate a session_id. Used by conftest when daemon is not running.",
+        "operationId": "session_start_api_session_start_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBasic": []
+          }
+        ]
+      }
+    },
+    "/api/session/active": {
+      "get": {
+        "summary": "Session Active",
+        "description": "Return current session_id. Fallback used by conftest.",
+        "operationId": "session_active_api_session_active_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/status": {
       "get": {
         "summary": "Get Status",
