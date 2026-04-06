@@ -51,7 +51,7 @@ class AddonBridgeClient:
         msg = {"type": "session_started", "participant_url": participant_url}
         sent = self._send(msg)
         if sent:
-            log.info(_NAME, f"ws started session: {participant_url}")
+            log.info(_NAME, f"→ started session {participant_url}")
         return sent
 
     def send_session_ended(self) -> bool:
@@ -59,7 +59,7 @@ class AddonBridgeClient:
         msg = {"type": "session_ended"}
         sent = self._send(msg)
         if sent:
-            log.info(_NAME, "ws ended session")
+            log.info(_NAME, "→ ended session")
         return sent
 
     def drain_slides(self) -> list[dict]:
