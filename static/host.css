@@ -385,9 +385,8 @@ body {
 .center-url-code {
   color: #f0c040;
   font-size: 1.5em;
-  font-family: monospace;
   font-weight: 800;
-  letter-spacing: .1em;
+  letter-spacing: .02em;
 }
 
 #center-qr .qr-code {
