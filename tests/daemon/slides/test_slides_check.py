@@ -115,14 +115,9 @@ def test_check_triggers_download_and_returns_200_on_success(fresh_misc_state, mo
     assert resp.json()["status"] == "cached"
     # Verify download_pdf was sent to Railway
     assert any(m.get("type") == "download_pdf" and m.get("slug") == "myslug" for m in sent_msgs)
-    statuses = []
-    for m in broadcasts:
-        slides = m.model_dump().get("slides") or []
-        match = next((s for s in slides if s.get("slug") == "myslug"), None)
-        if match:
-            statuses.append(match.get("status"))
-    assert "downloading" in statuses
-    assert "cached" in statuses
+    # slides_cache_status is now a zero-payload invalidation signal: expect at least 2 broadcasts
+    # (one for "downloading", one for "cached")
+    assert len(broadcasts) >= 2
 
 
 def test_check_cached_local_but_missing_on_railway_triggers_download(fresh_misc_state, monkeypatch):
@@ -165,15 +160,9 @@ def test_check_cached_local_but_missing_on_railway_triggers_download(fresh_misc_
     assert resp.status_code == 200
     assert resp.json()["status"] == "cached"
     assert any(m.get("type") == "download_pdf" and m.get("slug") == "myslug" for m in sent_msgs)
-    statuses = []
-    for m in broadcasts:
-        slides = m.model_dump().get("slides") or []
-        match = next((s for s in slides if s.get("slug") == "myslug"), None)
-        if match:
-            statuses.append(match.get("status"))
-    assert "not_cached" in statuses
-    assert "downloading" in statuses
-    assert "cached" in statuses
+    # slides_cache_status is a zero-payload invalidation signal: expect at least 3 broadcasts
+    # (not_cached, downloading, cached)
+    assert len(broadcasts) >= 3
 
 
 def test_check_returns_503_on_timeout(fresh_misc_state, monkeypatch):
@@ -205,14 +194,9 @@ def test_check_returns_503_on_timeout(fresh_misc_state, monkeypatch):
     assert resp.status_code == 503
     assert resp.json()["status"] == "timeout"
     assert fresh_misc_state.slides_cache_status["myslug"]["status"] == "poll_timeout"
-    statuses = []
-    for m in broadcasts:
-        slides = m.model_dump().get("slides") or []
-        match = next((s for s in slides if s.get("slug") == "myslug"), None)
-        if match:
-            statuses.append(match.get("status"))
-    assert "downloading" in statuses
-    assert statuses[-1] == "poll_timeout"
+    # slides_cache_status is a zero-payload invalidation signal: expect at least 2 broadcasts
+    # (downloading, poll_timeout)
+    assert len(broadcasts) >= 2
 
 
 def test_check_coalesces_concurrent_requests(fresh_misc_state, monkeypatch):
