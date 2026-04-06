@@ -368,7 +368,7 @@ body {
 }
 
 #center-qr.link-only #center-qr-url {
-  font-size: clamp(1.5rem, 3.5vw, 3.5rem);
+  font-size: clamp(1.5rem, 3vw, 3rem);
   color: #e03030;
   white-space: nowrap;
 }
