@@ -171,6 +171,8 @@ async def get_host_state(request: Request, session_id: str):
     debate = _build_debate_for_host()
     summary = read_summary_payload()
     notes_content = read_notes_content()
+    notes_count = sum(1 for line in (notes_content or "").splitlines() if line.strip())
+    summary_count = len(summary["points"])
 
     state_msg = {
         "type": "state",
@@ -215,10 +217,10 @@ async def get_host_state(request: Request, session_id: str):
         "daemon_session_notes": None,
         # Leaderboard
         "leaderboard_data": leaderboard_state.data,
-        # Summary / notes
-        "summary_points": summary["points"],
+        # Summary / notes (counts only — full content fetched on modal open)
+        "summary_count": summary_count,
         "summary_updated_at": summary["updated_at"],
-        "notes_content": notes_content,
+        "notes_count": notes_count,
         # Token usage
         "token_usage": _get_token_usage(),
         # Transcript info

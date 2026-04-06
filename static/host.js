@@ -380,8 +380,9 @@
         if (msg.transcription_language) {
           updateTranscriptionLangBtn(msg.transcription_language);
         }
-        if (msg.summary_points) updateSummary(msg.summary_points, msg.summary_updated_at);
-        if (msg.notes_content) updateHostNotes(msg.notes_content);
+        if (msg.summary_updated_at) summaryUpdatedAt = msg.summary_updated_at;
+        if (msg.summary_count) updateSummaryLineCount(msg.summary_count);
+        if (msg.notes_count) updateNotesLineCount(msg.notes_count);
       } else if (msg.type === 'notes') {
         updateHostNotes(msg.notes_content);
       } else if (msg.type === 'notes_updated') {
@@ -913,7 +914,7 @@
       return d.toDateString() === today.toDateString() ? hhmm : '📅 ' + hhmm;
     };
     const timeLabel = _fmtSummaryTime(summaryUpdatedAt);
-    if (summaryPoints.length) {
+    if (summaryPoints.length || _summaryLineCount > 0) {
       badge.textContent = timeLabel ? `🧠 ${timeLabel} Key Points` : `🧠 Key Points`;
       badge.className = 'badge connected';
       badge.style.cssText = 'cursor:pointer;';
@@ -1356,15 +1357,7 @@
 
   function updateSummaryLineCount(count) {
     _summaryLineCount = count || 0;
-    const badge = document.getElementById('summary-badge');
-    if (!badge) return;
-    if (_summaryLineCount > 0) {
-      badge.classList.remove('empty');
-      const current = badge.textContent;
-      if (!summaryPoints.length) {
-        badge.textContent = `🧠 (${_summaryLineCount}) Key Points`;
-      }
-    }
+    renderSummaryBadge();
   }
 
   function _renderNotesBadge() {
