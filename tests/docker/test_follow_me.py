@@ -2,23 +2,23 @@
 Hermetic E2E test: Follow Me — participant follows host's slide.
 
 Flow:
-1. Test writes to activity-slides-YYYY-MM-DD.md to simulate host on "Clean Code" slide 3
-2. Daemon picks it up (reads every ~0.5s) and sends slides_current to backend
-3. Participant clicks "Follow" button
-4. Participant is navigated to "Clean Code" topic, page 3
+1. Test runs a mock addon-bridge WS server at port 8765
+2. Daemon's addon bridge connects and receives a slide event {"deck": "Clean Code.pptx", "slide": 3}
+3. Daemon processes the event and sends slides_current to backend
+4. Participant clicks "Follow" button
+5. Participant is navigated to "Clean Code" topic, page 3
 
 Infrastructure:
-- Daemon reads the last line of activity-slides-YYYY-MM-DD.md in TRANSCRIPTION_FOLDER
+- Daemon AddonBridgeClient connects to ws://127.0.0.1:8765 and drains slide events each loop
 - Backend broadcasts slides_current to participant via WS
 """
 
 import json
 import os
-import re
 import sys
+import threading
 import time
 import urllib.request
-from datetime import datetime
 from pathlib import Path
 
 sys.path.insert(0, "/app")
@@ -36,12 +36,7 @@ DAEMON_BASE = os.environ.get("DAEMON_BASE", "http://localhost:8081")
 HOST_USER = os.environ.get("HOST_USERNAME", "host")
 HOST_PASS = os.environ.get("HOST_PASSWORD", "testpass")
 
-TRANSCRIPTION_FOLDER = Path(os.environ.get("TRANSCRIPTION_FOLDER", "/tmp/test-transcriptions"))
-
-
-def _activity_slides_file() -> Path:
-    today = datetime.now().strftime("%Y-%m-%d")
-    return TRANSCRIPTION_FOLDER / f"activity-slides-{today}.md"
+_ADDON_BRIDGE_PORT = int(os.environ.get("WS_SERVER_PORT", "8765"))
 
 
 def _await_condition(fn, timeout_ms=10000, poll_ms=300, msg=""):
@@ -54,24 +49,37 @@ def _await_condition(fn, timeout_ms=10000, poll_ms=300, msg=""):
     raise AssertionError(msg or f"Condition not met within {timeout_ms}ms")
 
 
-def _set_slide_pointer(deck: str, slide: int):
-    """Write slide pointer for the daemon to pick up."""
-    f = _activity_slides_file()
-    f.parent.mkdir(parents=True, exist_ok=True)
-    with f.open("a", encoding="utf-8") as fh:
-        fh.write(f"{deck}:{slide}\n")
+def _run_mock_addon_bridge(deck: str, slide: int, stop_event: threading.Event):
+    """Run a mock addon-bridge WS server that sends one slide event to each connecting client."""
+    import asyncio
+    import websockets
 
+    async def handle(websocket):
+        await websocket.send(json.dumps({"type": "slide", "deck": deck, "slide": slide, "presenting": True}))
+        # Hold the connection open until the test is done
+        await asyncio.get_event_loop().run_in_executor(None, stop_event.wait, 30)
 
-def _clear_slide_pointer():
-    _activity_slides_file().unlink(missing_ok=True)
+    async def serve():
+        async with websockets.serve(handle, "127.0.0.1", _ADDON_BRIDGE_PORT):
+            await asyncio.get_event_loop().run_in_executor(None, stop_event.wait, 30)
+
+    asyncio.run(serve())
 
 
 def test_follow_me_basic():
     """Participant clicks Follow → sees the host's current slide + page."""
     session_id = fresh_session("FollowMe")
 
-    # Simulate host on "Clean Code.pptx" slide 3
-    _set_slide_pointer("Clean Code.pptx", slide=3)
+    # Start mock addon-bridge WS server so the daemon picks up the slide event
+    stop_event = threading.Event()
+    bridge_thread = threading.Thread(
+        target=_run_mock_addon_bridge,
+        args=("Clean Code.pptx", 3, stop_event),
+        daemon=True,
+    )
+    bridge_thread.start()
+    # Give the server a moment to bind, then the daemon reconnects within ~5s
+    time.sleep(0.5)
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
@@ -164,7 +172,7 @@ def test_follow_me_basic():
 
         print("SUCCESS: Follow Me navigated participant to host's 'Clean Code' slide!")
 
-        _clear_slide_pointer()
+        stop_event.set()
         browser.close()
 
 
