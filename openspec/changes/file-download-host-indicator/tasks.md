@@ -28,4 +28,4 @@
 
 ## 5. Cleanup
 
-- [ ] 5.1 Close GitHub issue #105 (`gh issue close 105`)
+- [x] 5.1 Close GitHub issue #105 (`gh issue close 105`)
