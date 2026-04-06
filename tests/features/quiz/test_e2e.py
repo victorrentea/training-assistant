@@ -14,11 +14,11 @@ class TestQuizRequest:
 
     def test_request_neither(self, server_url):
         resp = sapi(server_url, "post", "/quiz-request", json={})
-        assert resp.status_code == 422
+        assert resp.status_code == 400
 
     def test_request_both(self, server_url):
         resp = sapi(server_url, "post", "/quiz-request", json={"minutes": 30, "topic": "X"})
-        assert resp.status_code == 422
+        assert resp.status_code == 400
 
 
 class TestQuizClearPreview:

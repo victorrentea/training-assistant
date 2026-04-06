@@ -198,7 +198,11 @@ def sapi(server_url, method, path, **kwargs):
     a free port started alongside Railway in the server_url fixture.
     """
     sid = _get_session_id()
-    daemon = _daemon_url[0] or server_url
+    # Use DAEMON_HOST_PORT env var (process-global) to avoid cross-module
+    # _daemon_url[] issues when tests/__init__.py causes pytest to load conftest
+    # as both 'conftest' and 'tests.conftest' (two separate module instances).
+    _daemon_port = os.environ.get("DAEMON_HOST_PORT")
+    daemon = f"http://127.0.0.1:{_daemon_port}" if _daemon_port else (_daemon_url[0] or server_url)
     # daemon routes have /host/ between session_id and the feature path
     return getattr(requests, method)(
         f"{daemon}/api/{sid}/host{path}",

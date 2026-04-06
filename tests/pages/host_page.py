@@ -17,8 +17,8 @@ class HostPage:
                     correct_count: int | None = None) -> None:
         """Create and open a poll via the daemon API directly (bypasses browser UI parsing)."""
         import json as _json
-        # Ensure Poll tab is active (may be on Q&A/Wordcloud/Code tab)
-        self._page.click("#tab-poll")
+        # Ensure Poll tab is active and activity set on daemon (awaited via JS)
+        self._page.evaluate("async () => { await switchTab('poll'); }")
         # Build proper dict options {id, text} as daemon expects
         dict_options = [{"id": chr(65 + i), "text": t} for i, t in enumerate(options)]
         payload: dict = {"question": question, "options": dict_options, "multi": multi}
