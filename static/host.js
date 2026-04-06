@@ -1367,22 +1367,21 @@
       ? hostNotesContent.split('\n').filter(l => l.trim()).length
       : _notesLineCount;
     el.style.cssText = 'cursor:pointer;';
-    if (_notesSessionFolder && _notesSessionNotes) {
-      el.textContent = nonEmptyLines > 0 ? `📝 (${nonEmptyLines}) Notes.txt` : `📝 Notes.txt`;
+    if (nonEmptyLines > 0) {
+      el.textContent = `📝 (${nonEmptyLines}) Notes.txt`;
       el.className = 'badge connected';
-      _setFooterBadgeTooltip(
-        el,
-        `${_notesSessionFolder}/${_notesSessionNotes}${nonEmptyLines > 0 ? `\n${nonEmptyLines} non-empty lines` : ''}\nClick to view`,
-      );
-    } else if (_notesSessionFolder) {
-      el.textContent = nonEmptyLines > 0 ? `📝 (${nonEmptyLines}) Notes.txt` : `📝 Notes.txt`;
+      const folderTip = (_notesSessionFolder && _notesSessionNotes)
+        ? `${_notesSessionFolder}/${_notesSessionNotes}\n` : '';
+      _setFooterBadgeTooltip(el, `${folderTip}${nonEmptyLines} non-empty lines\nClick to view`);
+    } else if (_notesSessionFolder && !_notesSessionNotes) {
+      el.textContent = '📝 Notes.txt';
       el.className = 'badge';
       el.style.cssText = 'cursor:pointer; color:var(--warn); border:1px solid var(--warn); --badge-fill:#ffd16644;';
       _setFooterBadgeTooltip(el, 'Session folder found but no notes file inside');
     } else {
       el.textContent = '📝 Notes.txt';
       el.className = 'badge empty';
-      _setFooterBadgeTooltip(el, 'No session folder found for today');
+      _setFooterBadgeTooltip(el, 'No notes yet');
     }
   }
 
