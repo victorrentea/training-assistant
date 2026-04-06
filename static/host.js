@@ -953,7 +953,15 @@
 
   function toggleSummaryModal() {
     const overlay = document.getElementById('summary-overlay');
-    if (overlay) overlay.classList.toggle('open');
+    if (!overlay) return;
+    const opening = !overlay.classList.contains('open');
+    overlay.classList.toggle('open');
+    if (opening) {
+      fetch(API('/summary'))
+        .then(r => r.ok ? r.json() : null)
+        .then(data => { if (data) updateSummary(data.points, data.updated_at); })
+        .catch(() => {});
+    }
   }
 
   function closeSummaryModal() {
@@ -1383,12 +1391,19 @@
     }
   }
 
+  function _linkifyText(text) {
+    const urlRegex = /(https?:\/\/[^\s<>"]+)/g;
+    return escHtml(text).replace(urlRegex, url =>
+      `<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`
+    );
+  }
+
   function updateHostNotes(content) {
     hostNotesContent = content || '';
     const el = document.getElementById('host-notes-content');
     if (el) {
       if (hostNotesContent) {
-        el.textContent = hostNotesContent;
+        el.innerHTML = _linkifyText(hostNotesContent);
         el.style.cssText = '';
         const dlBtn = document.getElementById('host-notes-download');
         if (dlBtn) dlBtn.style.display = '';
@@ -1429,7 +1444,16 @@
   }
 
   function toggleHostNotesModal() {
+    const overlay = document.getElementById('host-notes-overlay');
+    if (!overlay) return;
+    const opening = !overlay.classList.contains('open');
     toggleModal('host-notes-overlay');
+    if (opening) {
+      fetch(API('/notes'))
+        .then(r => r.ok ? r.json() : null)
+        .then(data => { if (data) updateHostNotes(data.notes_content); })
+        .catch(() => {});
+    }
   }
 
   function closeHostNotesModal() {

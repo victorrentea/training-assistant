@@ -600,7 +600,16 @@ function closeEmojiPopup(ev) {
   }
 
   function toggleNotesModal() {
-    toggleModal('notes-overlay');
+    const overlay = document.getElementById('notes-overlay');
+    if (!overlay) return;
+    const opening = !overlay.classList.contains('open');
+    overlay.classList.toggle('open');
+    if (opening) {
+      fetch(apiBase + '/api/participant/notes')
+        .then(r => r.ok ? r.json() : null)
+        .then(data => { if (data) updateNotes(data.notes_content); })
+        .catch(() => {});
+    }
   }
 
   function closeNotesModal() {
@@ -716,7 +725,15 @@ ${html}
 
   function toggleSummaryModal() {
     const overlay = document.getElementById('summary-overlay');
-    if (overlay) overlay.classList.toggle('open');
+    if (!overlay) return;
+    const opening = !overlay.classList.contains('open');
+    overlay.classList.toggle('open');
+    if (opening) {
+      fetch(apiBase + '/api/participant/summary')
+        .then(r => r.ok ? r.json() : null)
+        .then(data => { if (data) updateSummary(data.points, data.updated_at, data.raw_markdown); })
+        .catch(() => {});
+    }
   }
 
   function closeSummaryModal() {
