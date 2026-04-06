@@ -2275,6 +2275,8 @@
   function updateCenterPanel(currentActivity) {
     _currentActivity = currentActivity;
     _resetInactivityTimer();
+    const centerQrPanel = document.getElementById('center-qr');
+    if (centerQrPanel) centerQrPanel.classList.toggle('link-only', currentActivity === 'none');
     ['qr', 'poll', 'wordcloud', 'qa', 'debate', 'codereview'].forEach(id => {
       const el = document.getElementById('center-' + id);
       if (id === 'qr') {

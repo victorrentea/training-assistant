@@ -1,6 +1,7 @@
 # Tasks
 
 - [x] ui tweak: on feedback submit, close input dialog immediately and show a persistent `Sending...` bubble until request completes, then switch to success/error.
+- [x] direct request: in host `Slides` mode, hide center QR and copy icon; show only the centered join link.
 - [x] bugfix: host `Slides` mode (`activity=none`) now shows the center join panel again (`center-qr`) instead of incorrectly showing/hiding the poll center panel.
 - [x] direct request: in host `Slides` mode, show centered join link using footer font styling (larger size) and hide `https://` from the center display.
 - [x] follow-up bugfix: feedback email now prioritizes participant name sent by frontend payload (`participant_name`), with cache/UUID fallback.

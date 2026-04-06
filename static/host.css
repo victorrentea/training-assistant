@@ -352,6 +352,21 @@ body {
   text-overflow: ellipsis;
 }
 
+#center-qr.link-only {
+  justify-content: center;
+}
+
+#center-qr.link-only #qr-code,
+#center-qr.link-only #copy-link-icon {
+  display: none !important;
+}
+
+#center-qr.link-only > div:first-child {
+  width: 100%;
+  justify-content: center;
+  padding: 0;
+}
+
 #center-qr .qr-code {
   opacity: .35;
   transition: opacity .4s ease;
