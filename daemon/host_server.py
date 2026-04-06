@@ -7,6 +7,7 @@ from pathlib import Path
 
 import uvicorn
 from fastapi import FastAPI, Request, WebSocket
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -49,6 +50,14 @@ def create_app(backend_url: str) -> FastAPI:
         await http_client.aclose()
 
     app = FastAPI(title="Daemon Host Panel", docs_url=None, redoc_url=None, lifespan=lifespan)
+
+    # Allow the Railway participant landing page to fetch session info from localhost
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["https://interact.victorrentea.ro"],
+        allow_methods=["GET"],
+        allow_headers=[],
+    )
 
     # --- Write-back middleware (collects events set by participant router handlers) ---
     @app.middleware("http")

@@ -165,46 +165,56 @@
       }
     })();
 
-    // Auto-join from host cookie (same machine) — poll every 3s for changes
-    (function pollHostCookie() {
+    // Auto-join when running on host's machine — poll localhost:8081 for active session
+    (function pollLocalDaemon() {
+      const MAX_ATTEMPTS = 7;
+      let attempts = 0;
       let lastCode = null;
       let countdownInterval = null;
-      function readCookie() {
-        const m = document.cookie.match(/(?:^|;\s*)host_session_id=([a-z0-9]{4,8})/);
-        return m ? m[1] : null;
-      }
-      function startAutoJoinCountdown() {
+
+      function startAutoJoinCountdown(code) {
         const statusEl = document.getElementById('status-msg');
         const joinBtn = document.getElementById('join-btn');
-        const AUTO_JOIN_SECONDS = 3;
-        let remaining = AUTO_JOIN_SECONDS;
+        let remaining = 1;
         if (countdownInterval) clearInterval(countdownInterval);
         statusEl.style.color = 'var(--danger)';
         statusEl.style.animation = 'blink-fast .3s linear infinite';
-        statusEl.textContent = `Host machine: auto-login in ${remaining}s (Join auto-click)`;
+        statusEl.textContent = `Host machine detected — joining in ${remaining}s…`;
         countdownInterval = setInterval(() => {
           remaining -= 1;
           if (remaining <= 0) {
             clearInterval(countdownInterval);
             countdownInterval = null;
-            statusEl.textContent = 'Host machine: auto-login now';
+            statusEl.textContent = 'Host machine detected — joining now';
             joinBtn.click();
             return;
           }
-          statusEl.textContent = `Host machine: auto-login in ${remaining}s (Join auto-click)`;
+          statusEl.textContent = `Host machine detected — joining in ${remaining}s…`;
         }, 1000);
       }
-      function tryAutoJoin() {
-        const code = readCookie();
-        if (!code || code === lastCode) return;
-        lastCode = code;
-        const input = document.getElementById('code-input');
-        input.value = code.toUpperCase();
-        onCodeInput();
-        startAutoJoinCountdown();
+
+      function tryFetch() {
+        if (attempts >= MAX_ATTEMPTS) return;
+        attempts++;
+        fetch('http://localhost:8081/api/session/active', { signal: AbortSignal.timeout(800) })
+          .then(r => r.ok ? r.json() : null)
+          .then(data => {
+            const code = data && data.session_id;
+            if (!code || code === lastCode) return;
+            lastCode = code;
+            const input = document.getElementById('code-input');
+            input.value = code.toUpperCase();
+            onCodeInput();
+            startAutoJoinCountdown(code);
+          })
+          .catch(() => { /* daemon not running or unreachable — silent skip */ });
       }
-      tryAutoJoin();
-      setInterval(tryAutoJoin, 3000);
+
+      tryFetch();
+      const timer = setInterval(() => {
+        if (attempts >= MAX_ATTEMPTS) { clearInterval(timer); return; }
+        tryFetch();
+      }, 1000);
     })();
 
   </script>
