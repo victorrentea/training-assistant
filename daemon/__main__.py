@@ -814,6 +814,7 @@ def run() -> None:
                         # Notify addons of session start
                         from daemon import addon_bridge_client
                         addon_bridge_client.send_session_started(participant_join_link)
+                        log.info("addons   ", f"→ started session {participant_join_link}")
                         log.info(
                             "session",
                             f"Session: {name}",
@@ -882,6 +883,7 @@ def run() -> None:
                             )
                             from daemon import addon_bridge_client
                             addon_bridge_client.send_session_started(participant_join_link)
+                            log.info("addons   ", f"→ started session {participant_join_link}")
                             log.info("session", f"Ended: {ended['name']}, restored: {parent['name']}")
                         else:
                             # Main session ended — clear everything
@@ -942,6 +944,7 @@ def run() -> None:
                         )
                         from daemon import addon_bridge_client
                         addon_bridge_client.send_session_started(participant_join_link)
+                        log.info("addons   ", f"→ started session {participant_join_link}")
                         log.info("session", f"Session: {session_stack[-1]['name']}")
 
                     elif action == "create_talk_folder":

@@ -49,10 +49,7 @@ class AddonBridgeClient:
     def send_session_started(self, participant_url: str) -> bool:
         """Notify addons that a session has started with the participant join URL."""
         msg = {"type": "session_started", "participant_url": participant_url}
-        sent = self._send(msg)
-        if sent:
-            log.info(_NAME, f"→ started session {participant_url}")
-        return sent
+        return self._send(msg)
 
     def send_session_ended(self) -> bool:
         """Notify addons that the session has ended."""
