@@ -51,9 +51,7 @@ class AddonBridgeClient:
         msg = {"type": "session_started", "participant_url": participant_url}
         sent = self._send(msg)
         if sent:
-            log.info(_NAME, f"→ session_started: {participant_url}")
-        else:
-            log.info(_NAME, f"✗ session_started (not connected): {participant_url}")
+            log.info(_NAME, f"→ [addons   ] ws started session: {participant_url}")
         return sent
 
     def send_session_ended(self) -> bool:
@@ -61,9 +59,7 @@ class AddonBridgeClient:
         msg = {"type": "session_ended"}
         sent = self._send(msg)
         if sent:
-            log.info(_NAME, "→ session_ended")
-        else:
-            log.info(_NAME, "✗ session_ended (not connected)")
+            log.info(_NAME, "→ [addons   ] ws ended session")
         return sent
 
     def drain_slides(self) -> list[dict]:
@@ -123,7 +119,7 @@ class AddonBridgeClient:
 
         with self._ws_lock:
             self._ws = ws
-        log.info(_NAME, f"Connected to macos addons at {url}")
+        log.info(_NAME, f"ws connected to {url}")
         self._fire_connection_change(True)
 
         try:
@@ -141,7 +137,7 @@ class AddonBridgeClient:
         finally:
             with self._ws_lock:
                 self._ws = None
-            log.info(_NAME, "Disconnected")
+            log.info(_NAME, "ws disconnected")
             self._fire_connection_change(False)
 
     def _fire_connection_change(self, connected: bool) -> None:
