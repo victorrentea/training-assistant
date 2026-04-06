@@ -4,7 +4,7 @@ Strategy:
   1. Build the daemon app and extract its OpenAPI schema via app.openapi().
   2. Filter to /api/ routes only (skip static, WS, proxy catch-all).
   3. Clean FastAPI noise (422 validation errors, internal schemas).
-  4. Compare against the committed snapshot docs/openapi-generated.yaml.
+  4. Compare against the committed snapshot docs/openapi.yaml.
   5. If they differ, the test fails with a helpful diff and regeneration command.
 
 To regenerate the snapshot after intentional changes:
@@ -19,7 +19,7 @@ import pytest
 import yaml
 
 DOCS_DIR = Path(__file__).parent.parent.parent / "docs"
-SNAPSHOT_PATH = DOCS_DIR / "openapi-generated.yaml"
+SNAPSHOT_PATH = DOCS_DIR / "openapi.yaml"
 
 
 def _extract_clean_openapi() -> dict:
