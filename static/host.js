@@ -1639,7 +1639,7 @@
       const overlay = document.getElementById('qr-overlay');
       const availW = overlay && overlay.classList.contains('open') ? overlay.clientWidth : window.innerWidth;
       const availH = overlay && overlay.classList.contains('open') ? overlay.clientHeight : window.innerHeight;
-      const qrFullSize = Math.max(120, Math.floor(Math.min(availW, availH) * 0.98));
+      const qrFullSize = Math.max(120, Math.floor(Math.min(availW, availH * 0.82)));
       if (typeof QRCode !== 'undefined') {
         new QRCode(qrFull, { text: joinUrl, width: qrFullSize, height: qrFullSize, colorDark: '#000000', colorLight: '#ffffff' });
       }
