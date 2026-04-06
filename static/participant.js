@@ -262,6 +262,7 @@ function closeEmojiPopup(ev) {
   let _pdfResizeTimer = null;
   let hostSlidesCurrent = null;   // what host is showing NOW
   let lastHostSlidesCurrentKey = '';
+  let _pendingFollowRetry = false; // retry follow when next slides_cache_status arrives
   let slidesFollowQueue = Promise.resolve();
 
   // escHtml is now in utils.js
@@ -1274,6 +1275,7 @@ ${html}
   function _setSlidesFollowTrainerEnabled(enabled, { persist = true, applyHost = true } = {}) {
     const next = Boolean(enabled);
     slidesFollowTrainerEnabled = next;
+    if (!next) _pendingFollowRetry = false;
     if (persist) _setStoredSlidesFollowTrainer(next);
     _renderSlidesFollowTrainerToggle();
     if (applyHost && _isSlidesFollowActive()) {
@@ -2199,15 +2201,26 @@ ${html}
         return;
       }
       const slideDownloadUrl = slideUrls.downloadBaseUrl;
+      let _checkLabelTimer = null;
       try {
         _setSlidesLoading({ visible: true, loaded: 0, total: 0, label: 'Preparing slide...' });
+        _checkLabelTimer = setTimeout(() => {
+          _setSlidesLoading({ visible: true, loaded: 0, total: 0, label: 'Downloading slide from trainer\u2019s library\u2026' });
+        }, 1500);
         await _checkSlideReady(slideUrls.checkUrl);
       } catch (_) {
         _setSlidesDownload('', true);
         _renderSlidesMeta({ ...slide, url: slideDownloadUrl });
-        _setSlidesError('Slide is still preparing on the server. Please retry in a few seconds.');
-        _setSlidesLoading({ visible: false });
+        if (_isSlidesFollowActive()) {
+          _pendingFollowRetry = true;
+          _setSlidesLoading({ visible: false });
+        } else {
+          _setSlidesError('Slide is still preparing on the server. Please retry in a few seconds.');
+          _setSlidesLoading({ visible: false });
+        }
         return;
+      } finally {
+        clearTimeout(_checkLabelTimer);
       }
 
       const shell = document.getElementById('slides-viewer-shell');
@@ -3047,7 +3060,12 @@ const sessionTitleEl = document.getElementById('session-title');
         updateSummaryCount(msg.count, true);
         break;
       case 'slides_cache_status':
-        _refreshSlidesCatalog();
+        _refreshSlidesCatalog().then(() => {
+          if (_pendingFollowRetry) {
+            _pendingFollowRetry = false;
+            _queueHostSlideCurrent();
+          }
+        }).catch(() => {});
         break;
       case 'leaderboard_revealed': {
         const lbEntries = msg.entries || [];

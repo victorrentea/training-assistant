@@ -18,7 +18,8 @@ PROXY_TIMEOUT = 5.0
 
 
 async def proxy_to_daemon(method: str, path: str, body: bytes | None,
-                          headers: dict, participant_id: str | None) -> Response:
+                          headers: dict, participant_id: str | None,
+                          timeout: float = PROXY_TIMEOUT) -> Response:
     """Forward a participant REST call to daemon via WS proxy_request/proxy_response."""
     ws = state.daemon_ws
     if ws is None:
@@ -48,7 +49,7 @@ async def proxy_to_daemon(method: str, path: str, body: bytes | None,
         return JSONResponse({"error": "Trainer not connected"}, status_code=503)
 
     try:
-        result = await asyncio.wait_for(future, timeout=PROXY_TIMEOUT)
+        result = await asyncio.wait_for(future, timeout=timeout)
     except asyncio.TimeoutError:
         _pending_requests.pop(req_id, None)
         logger.warning("Proxy request timed out: %s %s", method, path)

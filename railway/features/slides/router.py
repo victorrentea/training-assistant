@@ -143,6 +143,7 @@ async def check_slide(slug: str, request: Request):
         body=None,
         headers=dict(request.headers),
         participant_id=request.headers.get("x-participant-id"),
+        timeout=35.0,
     )
 
 
