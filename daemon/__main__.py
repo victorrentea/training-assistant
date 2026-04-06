@@ -710,7 +710,7 @@ def run() -> None:
                                 misc_state.slides_current = _sc
                                 from daemon.ws_messages import SlidesCurrentMsg
                                 ws_publish.broadcast(SlidesCurrentMsg(slides_current=_sc))
-                                log.info("addon-bridge", f"Slide: {_deck}:{_slide_num}")
+                                log.info("addons   ", f"Slide: {_deck}:{_slide_num}")
                         elif _target and not _target.get("matched", True):
                             if misc_state.slides_current is not None:
                                 misc_state.slides_current = None
