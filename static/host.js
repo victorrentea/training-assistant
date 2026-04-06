@@ -3459,10 +3459,18 @@ function _getJoinUrl() {
   return _currentSessionId ? `${base}/${_currentSessionId}` : base;
 }
 
-function _buildUrlHtml({ stripProtocol = false } = {}) {
+function _buildUrlHtml({ stripProtocol = false, plain = false } = {}) {
   const base = _joinBaseUrl || ('https://' + location.host);
   const displayBase = stripProtocol ? base.replace(/^https?:\/\//i, '') : base;
   const display = _currentSessionId ? `${displayBase}/${_currentSessionId}` : displayBase;
+  if (plain) {
+    return display
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
   const displayYellowFrom = _currentSessionId ? displayBase.length + 1 : display.length; // after the '/'
   return display.split('').map((ch, i) => {
     const yellow = i >= displayYellowFrom;
@@ -3507,7 +3515,7 @@ function _regenerateAllQRCodes() {
   const confUrl = document.getElementById('conference-qr-url');
   if (confUrl && confUrl.offsetParent !== null) confUrl.innerHTML = _buildUrlHtml();
   const centerUrl = document.getElementById('center-qr-url');
-  if (centerUrl) centerUrl.innerHTML = _buildUrlHtml({ stripProtocol: true });
+  if (centerUrl) centerUrl.innerHTML = _buildUrlHtml({ stripProtocol: true, plain: true });
 }
 
 function renderSessionPanel() {
