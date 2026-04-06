@@ -3457,12 +3457,13 @@ function _getJoinUrl() {
   return _currentSessionId ? `${base}/${_currentSessionId}` : base;
 }
 
-function _buildUrlHtml() {
+function _buildUrlHtml({ stripProtocol = false } = {}) {
   const base = _joinBaseUrl || ('https://' + location.host);
-  const full = _currentSessionId ? base + '/' + _currentSessionId : base;
-  const yellowFrom = _currentSessionId ? base.length + 1 : full.length; // after the '/'
-  return full.split('').map((ch, i) => {
-    const yellow = i >= yellowFrom;
+  const displayBase = stripProtocol ? base.replace(/^https?:\/\//i, '') : base;
+  const display = _currentSessionId ? `${displayBase}/${_currentSessionId}` : displayBase;
+  const displayYellowFrom = _currentSessionId ? displayBase.length + 1 : display.length; // after the '/'
+  return display.split('').map((ch, i) => {
+    const yellow = i >= displayYellowFrom;
     const style = `animation-delay:${(i * 0.12).toFixed(2)}s${yellow ? '; --wave-dim:#f0c040aa; --wave-bright:#f0c040;' : ''}`;
     return `<span class="wave-char" style="${style}">${ch}</span>`;
   }).join('');
@@ -3504,7 +3505,7 @@ function _regenerateAllQRCodes() {
   const confUrl = document.getElementById('conference-qr-url');
   if (confUrl && confUrl.offsetParent !== null) confUrl.innerHTML = _buildUrlHtml();
   const centerUrl = document.getElementById('center-qr-url');
-  if (centerUrl) centerUrl.innerHTML = _buildUrlHtml();
+  if (centerUrl) centerUrl.innerHTML = _buildUrlHtml({ stripProtocol: true });
 }
 
 function renderSessionPanel() {

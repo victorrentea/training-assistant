@@ -338,6 +338,20 @@ body {
   justify-content: center;
 }
 
+.center-join-link {
+  cursor: pointer;
+  position: relative;
+  text-align: center;
+  font-size: clamp(3.1rem, 6vw, 5.4rem);
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: .02em;
+  white-space: nowrap;
+  max-width: min(96vw, 1700px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 #center-qr .qr-code {
   opacity: .35;
   transition: opacity .4s ease;
