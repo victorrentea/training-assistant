@@ -357,7 +357,7 @@ The user frequently uses a dictation tool. Messages may contain misheard or mist
 - **Document direct request**: Every time the human requests a feature change or bug fix after you do it, keep track of it in backlog.md in a concise way as being done.
 
 
-## Workflow Orchestration
+## Workflow Orchestration (from Boris)
 ### 1. Plan Mode Default
 - Enter plan mode for ANY non-trivial task (3+ steps or architectural decisions)
 - If something goes sideways, STOP and re-plan immediately
