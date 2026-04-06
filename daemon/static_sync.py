@@ -42,7 +42,7 @@ def sync_static_files(
     to_upload, to_delete = diff_hashes(local_hashes, remote_hashes)
 
     if not to_upload and not to_delete:
-        log.info("static-sync", "Static files in sync — no changes")
+        log.info("static-sync", "Railway static files in sync — no changes")
         return []
 
     changed_files: list[str] = []
