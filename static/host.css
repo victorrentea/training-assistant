@@ -370,7 +370,7 @@ body {
 #center-qr.link-only #center-qr-url {
   font-size: clamp(1.5rem, 3.9vw, 3.9rem);
   white-space: normal;
-  word-break: break-all;
+  overflow-wrap: anywhere;
   text-align: center;
 }
 
