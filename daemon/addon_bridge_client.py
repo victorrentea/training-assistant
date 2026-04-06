@@ -48,11 +48,23 @@ class AddonBridgeClient:
 
     def send_session_started(self, participant_url: str) -> bool:
         """Notify addons that a session has started with the participant join URL."""
-        return self._send({"type": "session_started", "participant_url": participant_url})
+        msg = {"type": "session_started", "participant_url": participant_url}
+        sent = self._send(msg)
+        if sent:
+            log.info(_NAME, f"→ session_started: {participant_url}")
+        else:
+            log.info(_NAME, f"✗ session_started (not connected): {participant_url}")
+        return sent
 
     def send_session_ended(self) -> bool:
         """Notify addons that the session has ended."""
-        return self._send({"type": "session_ended"})
+        msg = {"type": "session_ended"}
+        sent = self._send(msg)
+        if sent:
+            log.info(_NAME, "→ session_ended")
+        else:
+            log.info(_NAME, "✗ session_ended (not connected)")
+        return sent
 
     def drain_slides(self) -> list[dict]:
         """Return all pending slide events. Call from the main thread each loop."""
