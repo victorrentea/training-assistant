@@ -367,9 +367,14 @@ body {
   padding: 0;
 }
 
+#center-qr.link-only #center-qr-url {
+  font-size: clamp(2rem, 4.5vw, 5rem);
+  color: #e03030;
+}
+
 #center-qr.link-only #center-qr-url .wave-char {
   animation: none;
-  color: var(--wave-bright, var(--text));
+  color: #e03030;
 }
 
 #center-qr .qr-code {
