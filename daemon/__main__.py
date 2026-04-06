@@ -602,7 +602,6 @@ def run() -> None:
 
     last_summary_at = 0.0  # monotonic time of last summary run
     notes_summary_probe_prev: dict | None = _build_notes_summary_probe(config.session_folder)
-    _log_notes_summary_probe("startup", notes_summary_probe_prev)
     last_snapshot_hash: str | None = None  # hash of last saved state snapshot
     last_state_backup_log: str | None = None  # last emitted state-backup log line (dedupe consecutive repeats)
     transcript_state = TranscriptStateManager()
