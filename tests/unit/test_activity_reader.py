@@ -69,7 +69,7 @@ def test_should_include_open_pause_not_excluded():
 
 def _write_activity_file(tmp_path: Path, content: str) -> Path:
     folder = tmp_path
-    f = folder / f"activity-slides-{_SESSION_DATE.isoformat()}.md"
+    f = folder / f"{_SESSION_DATE.isoformat()}-slides.txt"
     f.write_text(textwrap.dedent(content), encoding="utf-8")
     return folder
 

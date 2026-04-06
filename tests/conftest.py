@@ -41,6 +41,7 @@ HOST_USER = os.environ.get("HOST_USERNAME", "host")
 HOST_PASS = os.environ.get("HOST_PASSWORD", "testpass")
 
 _server_port = {"port": None}  # set by server_url fixture, read by pax_url()
+_daemon_url: list[str | None] = [None]  # set by server_url fixture after daemon starts
 
 
 # ---------------------------------------------------------------------------
@@ -126,6 +127,44 @@ def server_url(tmp_path_factory):
 
     _server_port["port"] = port
 
+    # ── Start daemon host server alongside Railway ──
+    import socket as _socket
+    with _socket.socket() as _s:
+        _s.bind(("127.0.0.1", 0))
+        daemon_port = _s.getsockname()[1]
+
+    # Set env vars BEFORE importing daemon modules (config reads at import time)
+    os.environ["DAEMON_HOST_PORT"] = str(daemon_port)
+    os.environ["WORKSHOP_SERVER_URL"] = base_url
+
+    from daemon.host_server import start_host_server
+    start_host_server(backend_url=base_url, port=daemon_port)
+
+    # Wait for daemon host server to be ready
+    _daemon_base = f"http://127.0.0.1:{daemon_port}"
+    _deadline = time.time() + 10
+    while time.time() < _deadline:
+        try:
+            requests.get(f"{_daemon_base}/api/daemon-status", timeout=1)
+            break
+        except Exception:
+            time.sleep(0.2)
+
+    # Start WS client so daemon↔Railway broadcasts and proxy work
+    from daemon.ws_client import DaemonWsClient
+    from daemon.proxy_handler import handle_proxy_request
+    import daemon.ws_publish as _ws_publish
+    _ws_client = DaemonWsClient()
+    _ws_client.register_handler(
+        "proxy_request",
+        lambda data: handle_proxy_request(data, _ws_client),
+        inline=True,
+    )
+    _ws_client.start()
+    _ws_publish.set_ws_client(_ws_client)
+
+    _daemon_url[0] = _daemon_base
+
     yield base_url
 
     # Send SIGINT (KeyboardInterrupt) so coverage.py gets to flush data
@@ -152,9 +191,19 @@ def api(server_url, method, path, **kwargs):
 
 
 def sapi(server_url, method, path, **kwargs):
-    """Session-scoped authenticated API call (prepends /api/{session_id})."""
+    """Session-scoped host API call — routes to daemon with /host/ prefix.
+
+    All host feature endpoints (poll, qa, wordcloud, scores, activity, etc.)
+    live in daemon since the session management migration. The daemon listens on
+    a free port started alongside Railway in the server_url fixture.
+    """
     sid = _get_session_id()
-    return api(server_url, method, f"/api/{sid}{path}", **kwargs)
+    daemon = _daemon_url[0] or server_url
+    # daemon routes have /host/ between session_id and the feature path
+    return getattr(requests, method)(
+        f"{daemon}/api/{sid}/host{path}",
+        **kwargs,
+    )
 
 
 def papi(server_url, method, path, **kwargs):
@@ -211,9 +260,16 @@ def host_url():
 
 
 def host_browser_ctx(server_url, playwright):
+    # Host panel is served by daemon; point browser context at daemon so JS
+    # API calls (API('/poll') etc.) resolve to daemon host routes directly.
+    # Use DAEMON_HOST_PORT env var (process-global) to avoid cross-module
+    # _daemon_url[] reference issues when tests/__init__.py causes pytest to
+    # load conftest.py as two separate module instances (conftest vs tests.conftest).
+    _daemon_port = os.environ.get("DAEMON_HOST_PORT")
+    daemon = f"http://127.0.0.1:{_daemon_port}" if _daemon_port else (_daemon_url[0] or server_url)
     browser = playwright.chromium.launch()
     ctx = browser.new_context(
-        base_url=server_url,
+        base_url=daemon,
         http_credentials={"username": HOST_USER, "password": HOST_PASS},
         viewport={"width": 1440, "height": 900},
     )
@@ -263,6 +319,16 @@ pax3 = _make_pax_fixture()
 # ---------------------------------------------------------------------------
 # Cleanup fixtures
 # ---------------------------------------------------------------------------
+
+@pytest.fixture(autouse=False)
+def clean_poll(server_url):
+    """Clear poll state before and after each test that uses it."""
+    sapi(server_url, "put", "/poll/status", json={"open": False})
+    sapi(server_url, "delete", "/poll")
+    yield
+    sapi(server_url, "put", "/poll/status", json={"open": False})
+    sapi(server_url, "delete", "/poll")
+
 
 @pytest.fixture(autouse=False)
 def clean_qa(server_url):

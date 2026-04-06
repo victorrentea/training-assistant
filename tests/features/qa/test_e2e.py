@@ -427,6 +427,8 @@ class TestEdgeCases:
             p2.vote_for("Alpha")
             p3.vote_for("Alpha")
 
+            # Close poll so "N total vote" text becomes visible
+            sapi(server_url, "put", "/poll/status", json={"open": False})
             # Host should show 3 total votes
             expect(host._page.locator("text=3 total vote")).to_be_visible(timeout=5000)
         finally:

@@ -7,7 +7,7 @@ from daemon.scores import scores
 from daemon.participant.state import participant_state
 from daemon.leaderboard.state import leaderboard_state
 from daemon.ws_publish import broadcast, notify_host
-from daemon.ws_messages import LeaderboardRevealedMsg, ScoresUpdatedMsg
+from daemon.ws_messages import LeaderboardRevealedMsg, LeaderboardHiddenMsg, ScoresUpdatedMsg
 
 
 class OkResponse(BaseModel):
@@ -36,6 +36,15 @@ async def show_leaderboard():
         for i, e in enumerate(raw_entries)
     ]
     msg = LeaderboardRevealedMsg(positions=positions)
+    broadcast(msg)
+    await notify_host(msg)
+    return OkResponse()
+
+
+@router.post("/leaderboard/hide")
+async def hide_leaderboard():
+    leaderboard_state.reset()
+    msg = LeaderboardHiddenMsg()
     broadcast(msg)
     await notify_host(msg)
     return OkResponse()

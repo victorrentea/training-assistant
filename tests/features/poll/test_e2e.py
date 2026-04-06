@@ -142,7 +142,8 @@ class TestPollEdgeCases:
         pax._page.locator(".option-btn:has-text('Beta')").click()
         pax._page.wait_for_timeout(500)
 
-        # Host should still show only 1 vote total
+        # Close poll so results are visible, then verify only 1 vote total
+        host.close_poll()
         expect(host._page.locator("text=1 total vote")).to_be_visible(timeout=3000)
 
     def test_multiple_participants_vote_correct_counts(self, server_url, playwright):
@@ -172,9 +173,9 @@ class TestPollEdgeCases:
             p2.vote_for("B")
             p3.vote_for("A")
 
+            host.close_poll()
             expect(host._page.locator("text=3 total vote")).to_be_visible(timeout=5000)
 
-            host.close_poll()
             # Check percentages from any participant
             pcts = p1.get_percentages()
             # A=2/3≈67%, B=1/3≈33%, C=0%
@@ -306,8 +307,8 @@ class TestIdentityEdgeCases:
             p1.join("Frodo")
             p2.join("Frodo")
 
-            host._page.wait_for_timeout(1000)
-            # Count "Frodo" occurrences in participant list
+            # Wait for both Frodo entries to appear in the host participant list
+            expect(host._page.locator("#pax-list li .pax-name:has-text('Frodo')")).to_have_count(2, timeout=5000)
             frodo_count = host._page.locator("#pax-list li .pax-name:has-text('Frodo')").count()
             assert frodo_count == 2, f"Expected 2 entries for 'Frodo', got {frodo_count}"
         finally:
