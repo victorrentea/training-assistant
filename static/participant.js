@@ -599,6 +599,25 @@ function closeEmojiPopup(ev) {
     URL.revokeObjectURL(url);
   }
 
+  let notesFontSize = 0.9; // rem, matches .notes-content CSS default
+
+  function applyNotesFontSize() {
+    const el = document.getElementById('notes-content');
+    if (el) el.style.fontSize = notesFontSize + 'rem';
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const overlay = document.getElementById('notes-overlay');
+    if (overlay) {
+      overlay.addEventListener('wheel', (e) => {
+        if (!e.metaKey) return;
+        e.preventDefault();
+        notesFontSize = Math.min(3, Math.max(0.5, notesFontSize - e.deltaY * 0.005));
+        applyNotesFontSize();
+      }, { passive: false });
+    }
+  });
+
   function toggleNotesModal() {
     const overlay = document.getElementById('notes-overlay');
     if (!overlay) return;
