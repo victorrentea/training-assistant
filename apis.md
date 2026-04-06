@@ -14,6 +14,27 @@ All host REST: `/api/{sid}/host/...` on daemon localhost.
 
 ---
 
+## Table of Contents
+
+- [Session Management](#feature-session-management)
+- [Slides](#feature-slides)
+- [Activity Switching](#feature-activity-switching)
+- [Identity](#feature-identity)
+- [Poll](#feature-poll)
+- [Word Cloud](#feature-word-cloud)
+- [Q&A](#feature-qa)
+- [Code Review](#feature-code-review)
+- [Debate](#feature-debate)
+- [Scores & Leaderboard](#feature-scores--leaderboard)
+- [Emoji Reactions](#feature-emoji-reactions)
+- [Quiz Generation](#feature-quiz-generation)
+- [Paste & File Upload](#feature-paste--file-upload)
+- [Notes & Summary](#feature-notes--summary)
+- [Cross-cutting: Reload](#cross-cutting-reload)
+- [Daemon ↔ Addons Bridge WS](#daemon--addons-bridge-ws)
+
+---
+
 ## Feature: Session Management
 
 ### Participant
