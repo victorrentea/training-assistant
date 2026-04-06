@@ -2278,15 +2278,15 @@
     ['qr', 'poll', 'wordcloud', 'qa', 'debate', 'codereview'].forEach(id => {
       const el = document.getElementById('center-' + id);
       if (id === 'qr') {
-        el.style.display = 'none';
+        el.style.display = currentActivity === 'none' ? 'flex' : 'none';
       } else if (id === 'poll') {
-        // Show poll panel when activity is 'poll' OR 'none' (for quiz gen controls)
-        const show = currentActivity === 'poll' || currentActivity === 'none';
+        // Show poll panel only when poll is the active participant activity.
+        const show = currentActivity === 'poll';
         el.style.display = show ? 'flex' : 'none';
-        // Hide the poll results section when no poll is active
+        // Hide the poll results section when no poll is active.
         const pollResults = document.getElementById('poll-results-section');
         if (pollResults) pollResults.style.display = currentActivity === 'poll' ? '' : 'none';
-        // Change divider text based on whether a poll exists
+        // Change divider text based on whether a poll exists.
         const divider = el.querySelector('.or-divider span');
         if (divider) divider.textContent = currentActivity === 'poll' ? 'generate next' : 'generate question';
       } else {
