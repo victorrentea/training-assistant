@@ -1662,7 +1662,6 @@
     const overlay = document.getElementById('qr-overlay');
     if (overlay) {
       overlay.classList.add('open');
-      _positionQROverlayBetweenHeaderAndFooter();
       renderFullscreenQR();
     }
   }
@@ -1697,7 +1696,6 @@
   window.addEventListener('resize', () => {
     const overlay = document.getElementById('qr-overlay');
     if (overlay && overlay.classList.contains('open')) {
-      _positionQROverlayBetweenHeaderAndFooter();
       renderFullscreenQR();
     }
   });
