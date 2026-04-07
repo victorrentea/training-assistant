@@ -367,7 +367,7 @@
         if (msg.session_name !== undefined) _sessionName = msg.session_name || null;
         if (msg.daemon_last_seen !== undefined) daemonLastSeen = msg.daemon_last_seen;
         if (msg.join_base_url) _joinBaseUrl = msg.join_base_url;
-        if (!msg.session_id && msg.needs_restore === false) {
+        if (!msg.session_id && msg.needs_restore === false && !SESSION_ID) {
           window.location = '/host';
           return;
         }
