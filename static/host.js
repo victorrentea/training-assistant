@@ -3523,6 +3523,10 @@ function _regenerateAllQRCodes() {
   }
 }
 
+function formatSessionTitle(name) {
+  return (name || '').replace(/@/g, ' @ ').toUpperCase();
+}
+
 function renderSessionPanel() {
   const main = sessionMain;
   const talk = sessionTalk;
@@ -3559,7 +3563,7 @@ function renderSessionPanel() {
   if (mainRow) mainRow.style.display = main ? 'flex' : 'none';
   if (main) {
     const nameEl = document.getElementById('session-main-name');
-    if (nameEl) nameEl.textContent = main.name;
+    if (nameEl) nameEl.textContent = formatSessionTitle(main.name);
     const paused = main.status === 'paused';
     const statusEl = document.getElementById('session-status');
     if (statusEl) {
@@ -3629,7 +3633,7 @@ function renderSessionPanel() {
   if (talkRow) talkRow.style.display = talk ? 'flex' : 'none';
   if (talk) {
     const nameEl = document.getElementById('session-talk-name');
-    if (nameEl) nameEl.textContent = talk.name;
+    if (nameEl) nameEl.textContent = formatSessionTitle(talk.name);
   }
 
   // START TALK: show inline only when main exists and no talk active
