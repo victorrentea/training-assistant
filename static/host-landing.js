@@ -63,7 +63,7 @@ function buildFolderList(folders, today) {
 
   const items = folders.map(f => {
     const {dateStr, dates, topic} = parseFolderDates(f);
-    const isToday = today && dates[0] === today;
+    const isToday = today && dates.includes(today);
     const todayTag = isToday ? `<span class="folder-today-tag">TODAY</span>` : '';
     return `
     <li class="folder-row${isToday ? ' folder-row-today' : ''}" onclick='doResumeFolder(${JSON.stringify(f)})'>
@@ -83,6 +83,9 @@ function buildFolderList(folders, today) {
 function parseFolderDates(f) {
   // Range: YYYY-MM-DD..DD topic (same month)
   let m = f.match(/^((\d{4}-\d{2})-(\d{2})\.\.(\d{2}))\s+(.+)$/);
+  if (m) return {dateStr: m[1], dates: [m[2] + '-' + m[3], m[2] + '-' + m[4]], topic: m[5]};
+  // Two days: YYYY-MM-DD+DD topic (same month, non-consecutive)
+  m = f.match(/^((\d{4}-\d{2})-(\d{2})\+(\d{2}))\s+(.+)$/);
   if (m) return {dateStr: m[1], dates: [m[2] + '-' + m[3], m[2] + '-' + m[4]], topic: m[5]};
   // Range: YYYY-MM-DD..YYYY-MM-DD topic
   m = f.match(/^((\d{4}-\d{2}-\d{2})\.\.(\d{4}-\d{2}-\d{2}))\s+(.+)$/);
