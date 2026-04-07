@@ -616,6 +616,17 @@ function closeEmojiPopup(ev) {
         notesFontSize = Math.min(3, Math.max(0.5, notesFontSize - e.deltaY * 0.005));
         applyNotesFontSize();
       }, { passive: false });
+
+      // Close only when both mousedown AND mouseup land on the overlay backdrop,
+      // so dragging text out of the dialog doesn't accidentally close the modal.
+      let mouseDownOnOverlay = false;
+      overlay.addEventListener('mousedown', e => {
+        mouseDownOnOverlay = (e.target === overlay);
+      });
+      overlay.addEventListener('mouseup', e => {
+        if (mouseDownOnOverlay && e.target === overlay) closeNotesModal();
+        mouseDownOnOverlay = false;
+      });
     }
   });
 
