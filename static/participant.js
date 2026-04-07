@@ -771,6 +771,20 @@ ${html}
     closeModal('summary-overlay');
   }
 
+  document.addEventListener('DOMContentLoaded', () => {
+    const summaryOverlay = document.getElementById('summary-overlay');
+    if (summaryOverlay) {
+      let mouseDownOnOverlay = false;
+      summaryOverlay.addEventListener('mousedown', e => {
+        mouseDownOnOverlay = (e.target === summaryOverlay);
+      });
+      summaryOverlay.addEventListener('mouseup', e => {
+        if (mouseDownOnOverlay && e.target === summaryOverlay) closeSummaryModal();
+        mouseDownOnOverlay = false;
+      });
+    }
+  });
+
   function positionDialogAboveBtn(bubble, btn) {
     const rect = btn.getBoundingClientRect();
     const bubW = bubble.offsetWidth || 360;
