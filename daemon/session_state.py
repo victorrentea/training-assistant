@@ -33,7 +33,8 @@ _KEY_POINTS_FILE = "transcript_discussion.md"
 _KEY_POINTS_FILE_LEGACY_MD = "transcript_keypoints.md"
 _KEY_POINTS_FILE_LEGACY = "key_points.json"
 _AI_SUMMARY_FILE = "ai-summary.md"
-GLOBAL_STATE_FILENAME = "training-assistant-global-state.json"
+GLOBAL_STATE_FILENAME = "global-state.json"
+_LEGACY_GLOBAL_STATE_FILENAME = "training-assistant-global-state.json"
 _LEGACY_DAEMON_STATE_FILENAME = "daemon_state.json"
 
 _SLIDES_MANIFEST_CANDIDATES = (
@@ -214,9 +215,16 @@ def load_daemon_state(sessions_root: Path) -> dict:
     Old formats (main/talk, stack) are returned as-is for caller to handle."""
     state_file = sessions_root / GLOBAL_STATE_FILENAME
     if not state_file.exists():
-        legacy_file = sessions_root / _LEGACY_DAEMON_STATE_FILENAME
-        if legacy_file.exists():
-            state_file = legacy_file
+        legacy_global = sessions_root / _LEGACY_GLOBAL_STATE_FILENAME
+        if legacy_global.exists():
+            try:
+                legacy_global.replace(state_file)
+            except Exception:
+                state_file = legacy_global
+        else:
+            legacy_file = sessions_root / _LEGACY_DAEMON_STATE_FILENAME
+            if legacy_file.exists():
+                state_file = legacy_file
     if not state_file.exists():
         return {}
     try:
@@ -235,6 +243,7 @@ def save_daemon_state(sessions_root: Path, daemon_state: dict) -> None:
         tmp = path.with_suffix(".tmp")
         tmp.write_text(json.dumps(daemon_state, default=str, indent=2), encoding="utf-8")
         tmp.replace(path)
+        log.info("session", f"💾 {GLOBAL_STATE_FILENAME}")
     except Exception as e:
         log.error("session", f"Failed to save daemon state: {e}")
 
@@ -398,7 +407,7 @@ def save_session_state(session_folder: Path, snapshot: dict) -> None:
     tmp = path.with_name(f"{SESSION_STATE_FILENAME}.tmp")
     tmp.write_text(json.dumps(snapshot, default=str, indent=2), encoding="utf-8")
     tmp.replace(path)
-    log.debug("session", f"Persisted {SESSION_STATE_FILENAME}: {path}")
+    log.info("session", f"💾 {SESSION_STATE_FILENAME} in {session_folder.name}")
 
 
 # ── Notes file helper ──────────────────────────────────────────────────────────

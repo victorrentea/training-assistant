@@ -88,7 +88,7 @@ def _read_session_id_from_session_folder(folder: Path) -> str | None:
     return None
 
 
-def _session_state_hash(snapshot: dict | None) -> str | None:
+def _state_hash(snapshot: dict | None) -> str | None:
     if not isinstance(snapshot, dict):
         return None
     payload = json.dumps(
@@ -116,7 +116,7 @@ def _flush_session_state_backup(
     if not folder_name:
         return last_flushed_hash, False
     target_folder = sessions_root / folder_name
-    current_hash = _session_state_hash(session_snapshot)
+    current_hash = _state_hash(session_snapshot)
     if current_hash is None:
         return last_flushed_hash, False
     if not force and current_hash == last_flushed_hash:
@@ -142,6 +142,28 @@ def _ensure_session_state_file_for_resume(
     seed_snapshot = session_snapshot if isinstance(session_snapshot, dict) else {}
     save_session_state(session_folder, seed_snapshot)
     return True
+
+
+def _flush_global_state_backup(
+    *,
+    sessions_root: Path,
+    global_state: dict | None,
+    last_flushed_hash: str | None,
+    force: bool = False,
+) -> tuple[str | None, bool]:
+    if not isinstance(global_state, dict):
+        return last_flushed_hash, False
+    current_hash = _state_hash(global_state)
+    if current_hash is None:
+        return last_flushed_hash, False
+    if not force and current_hash == last_flushed_hash:
+        return last_flushed_hash, False
+    try:
+        save_daemon_state(sessions_root, global_state)
+        return current_hash, True
+    except Exception as e:
+        log.error("session", f"Failed to persist {GLOBAL_STATE_FILENAME}: {e}")
+        return last_flushed_hash, False
 
 
 def _sessions_root_from_env() -> Path:
@@ -571,13 +593,19 @@ def run() -> None:
     current_key_points: list[dict] = []
     summary_watermark: int = 0
 
-    def _do_save_daemon_state():
-        """Save global state (active_session_id + log_level) and session metadata to folder."""
-        nonlocal _active_session_id
-        global_state = {"log_level": log.get_level()}
+    pending_global_state: dict | None = None
+
+    def _build_global_state() -> dict:
+        state = {"log_level": log.get_level()}
         if _active_session_id:
-            global_state["active_session_id"] = _active_session_id
-        save_daemon_state(sessions_root, global_state)
+            state["active_session_id"] = _active_session_id
+        return state
+
+    def _do_save_daemon_state():
+        """Queue global-state.json write and persist session metadata immediately."""
+        nonlocal pending_global_state
+        nonlocal _active_session_id
+        pending_global_state = _build_global_state()
         if session_stack:
             _main_folder = sessions_root / session_stack[0]["name"]
             _meta = {
@@ -597,7 +625,7 @@ def run() -> None:
 
     def _persist_log_level(level: str) -> None:
         _do_save_daemon_state()
-        log.info("daemon", f"Persisted log level in global state: {level}")
+        log.info("daemon", f"Queued log level persist in {GLOBAL_STATE_FILENAME}: {level}")
 
     import daemon.host_server as _host_server_mod
     _host_server_mod.set_log_level_persist_callback(_persist_log_level)
@@ -681,8 +709,9 @@ def run() -> None:
         _startup_snapshot_sid = runtime_session_snapshot.get("session_id")
         if isinstance(_startup_snapshot_sid, str) and _startup_snapshot_sid:
             session_snapshots_by_id[_startup_snapshot_sid] = runtime_session_snapshot
-    last_session_state_flush_at: float = 0.0
-    last_session_state_hash: str | None = _session_state_hash(runtime_session_snapshot)
+    last_persist_poll_at: float = 0.0
+    last_session_state_hash: str | None = _state_hash(runtime_session_snapshot)
+    last_global_state_hash: str | None = None
     last_snapshot_hash: str | None = None  # hash of last saved state snapshot
     last_state_backup_log: str | None = None  # last emitted state-backup log line (dedupe consecutive repeats)
     transcript_state = TranscriptStateManager()
@@ -826,7 +855,7 @@ def run() -> None:
                                     session_folder=folder,
                                     session_snapshot=runtime_session_snapshot,
                                 ):
-                                    last_session_state_hash = _session_state_hash(
+                                    last_session_state_hash = _state_hash(
                                         runtime_session_snapshot if isinstance(runtime_session_snapshot, dict) else {}
                                     )
                                     log.info("session", f"Self-healed missing/empty {SESSION_STATE_FILENAME} for create")
@@ -860,7 +889,7 @@ def run() -> None:
                                 else None
                             )
                             runtime_session_snapshot = restore_snapshot
-                            last_session_state_hash = _session_state_hash(runtime_session_snapshot)
+                            last_session_state_hash = _state_hash(runtime_session_snapshot)
 
                             new_session = {
                                 "name": name,
@@ -960,7 +989,7 @@ def run() -> None:
                             parent_snapshot = load_session_state(parent_folder)
                             if parent_snapshot:
                                 runtime_session_snapshot = parent_snapshot
-                                last_session_state_hash = _session_state_hash(parent_snapshot)
+                                last_session_state_hash = _state_hash(parent_snapshot)
                                 log.info("session", f"Loaded parent snapshot from {session_state_path(parent_folder)}")
                             # Notify addons: parent session resumed (send session_started)
                             participant_join_link = (
@@ -984,6 +1013,14 @@ def run() -> None:
                             log.info("session", f"Ended: {ended['name']}")
                         _do_save_daemon_state()
                         global_state_persisted = True
+                        if pending_global_state is None:
+                            pending_global_state = _build_global_state()
+                        last_global_state_hash, _ = _flush_global_state_backup(
+                            sessions_root=sessions_root,
+                            global_state=pending_global_state,
+                            last_flushed_hash=last_global_state_hash,
+                            force=True,
+                        )
                         sync_session_to_server(
                             config, session_stack, current_key_points,
                             session_state=parent_snapshot,
@@ -1027,7 +1064,7 @@ def run() -> None:
                                 session_folder=resume_folder,
                                 session_snapshot=runtime_session_snapshot,
                             ):
-                                last_session_state_hash = _session_state_hash(
+                                last_session_state_hash = _state_hash(
                                     runtime_session_snapshot if isinstance(runtime_session_snapshot, dict) else {}
                                 )
                                 log.info("session", f"Self-healed missing/empty {SESSION_STATE_FILENAME} for resume")
@@ -1100,8 +1137,16 @@ def run() -> None:
                     notes_summary_probe_prev = notes_summary_probe
                     _broadcast_notes_summary_counts(notes_summary_probe)
 
-                if now - last_session_state_flush_at >= 3.0:
-                    last_session_state_flush_at = now
+                if now - last_persist_poll_at >= 3.0:
+                    last_persist_poll_at = now
+                    if pending_global_state is None:
+                        pending_global_state = _build_global_state()
+                    last_global_state_hash, _ = _flush_global_state_backup(
+                        sessions_root=sessions_root,
+                        global_state=pending_global_state,
+                        last_flushed_hash=last_global_state_hash,
+                        force=False,
+                    )
                     last_session_state_hash, wrote = _flush_session_state_backup(
                         sessions_root=sessions_root,
                         session_stack=session_stack,
@@ -1109,8 +1154,6 @@ def run() -> None:
                         last_flushed_hash=last_session_state_hash,
                         force=False,
                     )
-                    if wrote and session_stack:
-                        log.info("session", f"Flushed {SESSION_STATE_FILENAME} for {session_stack[-1]['name']}")
 
 
                 sf_name = config.session_folder.name if config.session_folder else None

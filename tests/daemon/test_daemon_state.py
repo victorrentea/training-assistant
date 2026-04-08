@@ -74,6 +74,18 @@ def test_load_daemon_state_reads_legacy_filename():
         assert result["active_session_id"] == "legacy123"
 
 
+def test_load_daemon_state_renames_training_assistant_global_state():
+    with tempfile.TemporaryDirectory() as d:
+        root = Path(d)
+        legacy = root / "training-assistant-global-state.json"
+        legacy.write_text(json.dumps({"active_session_id": "legacy-global"}), encoding="utf-8")
+        from daemon.session_state import load_daemon_state as _load_daemon_state
+        result = _load_daemon_state(root)
+        assert result["active_session_id"] == "legacy-global"
+        assert (root / GLOBAL_STATE_FILENAME).exists()
+        assert not legacy.exists()
+
+
 # ── Session meta I/O ──────────────────────────────────────────────────────────
 
 def test_save_and_load_session_meta():
@@ -371,12 +383,12 @@ def test_resolve_presentation_slide_target_fallback_when_not_mapped(tmp_path):
 
 
 def test_session_state_hash_is_stable_for_key_order():
-    from daemon.__main__ import _session_state_hash
+    from daemon.__main__ import _state_hash
 
     a = {"x": 1, "nested": {"b": 2, "a": 1}}
     b = {"nested": {"a": 1, "b": 2}, "x": 1}
 
-    assert _session_state_hash(a) == _session_state_hash(b)
+    assert _state_hash(a) == _state_hash(b)
 
 
 def test_flush_session_state_backup_writes_when_hash_changed(tmp_path):
@@ -461,6 +473,30 @@ def test_flush_session_state_backup_force_writes_even_when_hash_unchanged(tmp_pa
     )
 
     assert second_wrote is True
+    assert second_hash == first_hash
+
+
+def test_flush_global_state_backup_writes_when_hash_changed(tmp_path):
+    from daemon.__main__ import _flush_global_state_backup
+    from daemon.session_state import GLOBAL_STATE_FILENAME
+
+    first_hash, first_wrote = _flush_global_state_backup(
+        sessions_root=tmp_path,
+        global_state={"active_session_id": "abc123", "log_level": "debug"},
+        last_flushed_hash=None,
+        force=False,
+    )
+    assert first_wrote is True
+    assert isinstance(first_hash, str)
+    assert (tmp_path / GLOBAL_STATE_FILENAME).exists()
+
+    second_hash, second_wrote = _flush_global_state_backup(
+        sessions_root=tmp_path,
+        global_state={"active_session_id": "abc123", "log_level": "debug"},
+        last_flushed_hash=first_hash,
+        force=False,
+    )
+    assert second_wrote is False
     assert second_hash == first_hash
 
 

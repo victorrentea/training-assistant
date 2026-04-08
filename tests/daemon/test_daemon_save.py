@@ -42,17 +42,12 @@ def test_load_session_state_returns_empty_when_invalid_json():
         assert _load_session_state(folder) == {}
 
 
-def test_save_session_state_logs_debug_when_enabled(capsys):
+def test_save_session_state_logs_compact_write_line(capsys):
     with tempfile.TemporaryDirectory() as d:
-        from daemon import log as daemon_log
         from daemon.session_state import save_session_state as _save_session_state
 
-        previous_level = daemon_log.get_level()
-        daemon_log.set_level("debug")
-        try:
-            _save_session_state(Path(d), {"mode": "new"})
-            out = capsys.readouterr().out
-            assert "debug" in out
-            assert "Persisted session-state.json" in out
-        finally:
-            daemon_log.set_level(previous_level)
+        folder = Path(d) / "2026-04-07..09 AI@Globex"
+        folder.mkdir(parents=True, exist_ok=True)
+        _save_session_state(folder, {"mode": "new"})
+        out = capsys.readouterr().out
+        assert "💾 session-state.json in 2026-04-07..09 AI@Globex" in out
