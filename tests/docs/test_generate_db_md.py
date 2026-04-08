@@ -41,7 +41,8 @@ def test_generator_renders_list_and_dict_shapes():
     session_row = re.search(r"^\| `PersistedSessionState` \| .* \|$", output, re.MULTILINE)
     assert session_row, "Missing PersistedSessionState row"
     assert "`poll_correct_ids?: list[string]`" in session_row.group(0)
-    assert "`participant_names?: dict[str, string]`" in session_row.group(0)
+    assert "`participants?: dict[str, PersistedParticipant {`" in session_row.group(0)
+    assert "&nbsp;&nbsp;&nbsp;&nbsp;`name?:string`" in session_row.group(0)
 
 
 def test_db_md_is_fresh_with_generator_output():

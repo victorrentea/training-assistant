@@ -31,12 +31,12 @@ def test_save_session_state_preserves_existing_session_id():
     with tempfile.TemporaryDirectory() as d:
         folder = Path(d)
         state_file = folder / "session-state.json"
-        state_file.write_text(json.dumps({"session_id": "abc123", "participant_names": {"p1": "Alice"}}))
+        state_file.write_text(json.dumps({"session_id": "abc123", "participants": {"p1": {"name": "Alice"}}}))
         from daemon.session_state import save_session_state as _save_session_state
-        _save_session_state(folder, {"session_id": None, "participant_names": {"p1": "Bob"}})
+        _save_session_state(folder, {"session_id": None, "participants": {"p1": {"name": "Bob"}}})
         written = json.loads(state_file.read_text())
         assert written["session_id"] == "abc123"
-        assert written["participant_names"]["p1"] == "Bob"
+        assert written["participants"]["p1"]["name"] == "Bob"
 
 
 def test_load_session_state_returns_empty_when_missing():
@@ -67,6 +67,26 @@ def test_load_session_state_normalizes_null_poll_correct_ids():
         from daemon.session_state import load_session_state as _load_session_state
         loaded = _load_session_state(folder)
         assert loaded["poll_correct_ids"] == []
+
+
+def test_load_session_state_normalizes_legacy_participant_maps():
+    with tempfile.TemporaryDirectory() as d:
+        folder = Path(d)
+        (folder / "session-state.json").write_text(
+            json.dumps({
+                "participant_names": {"u1": "Gandalf"},
+                "participant_avatars": {"u1": "gandalf.png"},
+                "scores": {"u1": 0},
+                "locations": {"u1": "🕐 America/Mexico_City"},
+            }),
+            encoding="utf-8",
+        )
+        from daemon.session_state import load_session_state as _load_session_state
+        loaded = _load_session_state(folder)
+        assert loaded["participants"]["u1"]["name"] == "Gandalf"
+        assert loaded["participants"]["u1"]["avatar"] == "gandalf.png"
+        assert loaded["participants"]["u1"]["score"] == 0
+        assert loaded["participants"]["u1"]["location"] == "🕐 America/Mexico_City"
 
 
 def test_save_session_state_logs_compact_write_line(capsys):

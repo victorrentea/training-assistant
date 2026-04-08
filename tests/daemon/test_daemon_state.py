@@ -31,8 +31,14 @@ def test_persisted_session_state_model_validates_runtime_snapshot_shape():
         "session_id": "session-1",
         "mode": "workshop",
         "current_activity": "qa",
-        "participant_names": {"u1": "Alice"},
-        "scores": {"u1": 100},
+        "participants": {
+            "u1": {
+                "name": "Alice",
+                "avatar": "gandalf.png",
+                "score": 100,
+                "location": "🕐 America/Mexico_City",
+            }
+        },
         "qa_questions": {
             "q1": {
                 "id": "q1",
@@ -46,8 +52,10 @@ def test_persisted_session_state_model_validates_runtime_snapshot_shape():
     })
     dumped = snapshot.model_dump()
     assert dumped["session_id"] == "session-1"
-    assert dumped["participant_names"]["u1"] == "Alice"
-    assert dumped["scores"]["u1"] == 100
+    assert dumped["participants"]["u1"]["name"] == "Alice"
+    assert dumped["participants"]["u1"]["avatar"] == "gandalf.png"
+    assert dumped["participants"]["u1"]["score"] == 100
+    assert dumped["participants"]["u1"]["location"] == "🕐 America/Mexico_City"
     assert dumped["qa_questions"]["q1"]["text"] == "Question?"
 
 
@@ -449,9 +457,9 @@ def test_session_state_hash_is_stable_for_key_order():
 def test_without_session_id_strips_only_session_id():
     from daemon.__main__ import _without_session_id
 
-    src = {"session_id": "abc123", "participant_names": {"p1": "Alice"}}
+    src = {"session_id": "abc123", "participants": {"p1": {"name": "Alice"}}}
     out = _without_session_id(src)
-    assert out == {"participant_names": {"p1": "Alice"}}
+    assert out == {"participants": {"p1": {"name": "Alice"}}}
     assert src["session_id"] == "abc123"
 
 
@@ -463,7 +471,7 @@ def test_flush_session_state_backup_writes_when_hash_changed(tmp_path):
     folder.mkdir()
     stack = [{"name": folder.name}]
 
-    snapshot = {"participant_names": {"u1": "Alice"}, "session_id": "sid-1"}
+    snapshot = {"participants": {"u1": {"name": "Alice"}}, "session_id": "sid-1"}
     last_hash, wrote = _flush_session_state_backup(
         sessions_root=sessions_root,
         session_stack=stack,
@@ -484,7 +492,7 @@ def test_flush_session_state_backup_skips_when_hash_unchanged(tmp_path):
     folder = sessions_root / "2026-03-25 WS"
     folder.mkdir()
     stack = [{"name": folder.name}]
-    snapshot = {"participant_names": {"u1": "Alice"}, "session_id": "sid-1"}
+    snapshot = {"participants": {"u1": {"name": "Alice"}}, "session_id": "sid-1"}
 
     first_hash, first_wrote = _flush_session_state_backup(
         sessions_root=sessions_root,
@@ -517,7 +525,7 @@ def test_flush_session_state_backup_force_writes_even_when_hash_unchanged(tmp_pa
     folder = sessions_root / "2026-03-25 WS"
     folder.mkdir()
     stack = [{"name": folder.name}]
-    snapshot = {"participant_names": {"u1": "Alice"}, "session_id": "sid-1"}
+    snapshot = {"participants": {"u1": {"name": "Alice"}}, "session_id": "sid-1"}
 
     first_hash, first_wrote = _flush_session_state_backup(
         sessions_root=sessions_root,
@@ -543,7 +551,7 @@ def test_flush_session_state_backup_force_writes_even_when_hash_unchanged(tmp_pa
 def test_flush_session_state_backup_skips_without_active_session(tmp_path):
     from daemon.__main__ import _flush_session_state_backup
 
-    snapshot = {"participant_names": {"u1": "Alice"}}
+    snapshot = {"participants": {"u1": {"name": "Alice"}}}
     out_hash, wrote = _flush_session_state_backup(
         sessions_root=tmp_path,
         session_stack=[],
@@ -588,7 +596,7 @@ def test_ensure_session_state_file_for_resume_creates_missing_file(tmp_path):
     folder.mkdir()
     wrote = _ensure_session_state_file_for_resume(
         session_folder=folder,
-        session_snapshot={"participant_names": {"u1": "Alice"}},
+        session_snapshot={"participants": {"u1": {"name": "Alice"}}},
     )
     assert wrote is True
     assert (folder / "session-state.json").exists()
@@ -602,11 +610,11 @@ def test_ensure_session_state_file_for_resume_rewrites_empty_file(tmp_path):
     (folder / "session-state.json").write_text("", encoding="utf-8")
     wrote = _ensure_session_state_file_for_resume(
         session_folder=folder,
-        session_snapshot={"participant_names": {"u1": "Alice"}},
+        session_snapshot={"participants": {"u1": {"name": "Alice"}}},
     )
     assert wrote is True
     data = json.loads((folder / "session-state.json").read_text(encoding="utf-8"))
-    assert data["participant_names"]["u1"] == "Alice"
+    assert data["participants"]["u1"]["name"] == "Alice"
 
 
 def test_ensure_session_state_file_for_resume_keeps_existing_file(tmp_path):
@@ -615,14 +623,14 @@ def test_ensure_session_state_file_for_resume_keeps_existing_file(tmp_path):
     folder = tmp_path / "resume-folder"
     folder.mkdir()
     state_file = folder / "session-state.json"
-    state_file.write_text(json.dumps({"participant_names": {"u1": "Old"}}), encoding="utf-8")
+    state_file.write_text(json.dumps({"participants": {"u1": {"name": "Old"}}}), encoding="utf-8")
     wrote = _ensure_session_state_file_for_resume(
         session_folder=folder,
-        session_snapshot={"participant_names": {"u1": "New"}},
+        session_snapshot={"participants": {"u1": {"name": "New"}}},
     )
     assert wrote is False
     data = json.loads(state_file.read_text(encoding="utf-8"))
-    assert data["participant_names"]["u1"] == "Old"
+    assert data["participants"]["u1"]["name"] == "Old"
 
 
 def test_apply_snapshot_restore_updates_participant_names():
@@ -631,15 +639,27 @@ def test_apply_snapshot_restore_updates_participant_names():
 
     participant_state.reset()
     participant_state.participant_names["u-old"] = "ShouldBeCleared"
+    participant_state.participant_avatars["u-old"] = "old.png"
+    participant_state.scores["u-old"] = 5
+    participant_state.locations["u-old"] = "Old"
 
     _apply_runtime_snapshot_restore({
-        "participant_names": {"u1": "Persisted Tester"},
-        "participant_avatars": {"u1": "gandalf.png"},
+        "participants": {
+            "u1": {
+                "name": "Persisted Tester",
+                "avatar": "gandalf.png",
+                "score": 100,
+                "location": "🕐 America/Mexico_City",
+            }
+        },
         "mode": "workshop",
         "current_activity": "none",
     })
 
     assert participant_state.participant_names == {"u1": "Persisted Tester"}
+    assert participant_state.participant_avatars == {"u1": "gandalf.png"}
+    assert participant_state.scores == {"u1": 100}
+    assert participant_state.locations == {"u1": "🕐 America/Mexico_City"}
 
 
 def test_apply_snapshot_restore_ignores_participant_universes():
@@ -661,6 +681,9 @@ def test_runtime_session_snapshot_excludes_participant_universes():
 
     participant_state.reset()
     participant_state.participant_names["u1"] = "Alice"
+    participant_state.participant_avatars["u1"] = "gandalf.png"
+    participant_state.scores["u1"] = 0
+    participant_state.locations["u1"] = "🕐 America/Mexico_City"
     participant_state.participant_universes["u1"] = "Star Wars"
 
     snapshot = _build_runtime_session_snapshot(
@@ -669,4 +692,11 @@ def test_runtime_session_snapshot_excludes_participant_universes():
     )
 
     assert "participant_universes" not in snapshot
-    assert snapshot["participant_names"] == {"u1": "Alice"}
+    assert snapshot["participants"] == {
+        "u1": {
+            "name": "Alice",
+            "avatar": "gandalf.png",
+            "score": 0,
+            "location": "🕐 America/Mexico_City",
+        }
+    }

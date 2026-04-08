@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 class PersistedModel(BaseModel):
@@ -41,6 +41,15 @@ class PersistedSessionMeta(PersistedModel):
     talk: PersistedSessionRef | None = None
 
 
+class PersistedParticipant(PersistedModel):
+    """Participant identity persisted in session snapshots."""
+
+    name: str | None = None
+    avatar: str | None = None
+    score: int | float | None = None
+    location: str | None = None
+
+
 class PersistedSessionState(PersistedModel):
     """Runtime session snapshot persisted in `session-state.json`."""
 
@@ -51,12 +60,13 @@ class PersistedSessionState(PersistedModel):
     activity: str | None = None
     current_activity: str | None = None
 
-    participants: dict[str, dict[str, Any]] = Field(default_factory=dict)
-    participant_names: dict[str, str] = Field(default_factory=dict)
-    participant_avatars: dict[str, str] = Field(default_factory=dict)
-    participant_universes: dict[str, str] = Field(default_factory=dict)
-    scores: dict[str, int | float] = Field(default_factory=dict)
-    locations: dict[str, str] = Field(default_factory=dict)
+    participants: dict[str, PersistedParticipant] = Field(default_factory=dict)
+    # Legacy split maps: accepted on read, omitted on write.
+    participant_names: dict[str, str] = Field(default_factory=dict, exclude=True)
+    participant_avatars: dict[str, str] = Field(default_factory=dict, exclude=True)
+    participant_universes: dict[str, str] = Field(default_factory=dict, exclude=True)
+    scores: dict[str, int | float] = Field(default_factory=dict, exclude=True)
+    locations: dict[str, str] = Field(default_factory=dict, exclude=True)
 
     poll: dict[str, Any] | None = None
     poll_active: bool | None = None
@@ -97,6 +107,56 @@ class PersistedSessionState(PersistedModel):
     summary_points: list[dict[str, Any]] = Field(default_factory=list)
     leaderboard_active: bool | None = None
     token_usage: dict[str, Any] | None = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def _normalize_legacy_participant_maps(cls, value):
+        if not isinstance(value, dict):
+            return value
+
+        data = dict(value)
+        participants_raw = data.get("participants")
+        participants: dict[str, dict[str, Any]] = {}
+        if isinstance(participants_raw, dict):
+            for pid, entry in participants_raw.items():
+                pid_str = str(pid)
+                if isinstance(entry, PersistedParticipant):
+                    participants[pid_str] = entry.model_dump(mode="json", exclude_unset=True)
+                elif isinstance(entry, dict):
+                    participants[pid_str] = dict(entry)
+
+        names = data.get("participant_names") if isinstance(data.get("participant_names"), dict) else {}
+        avatars = data.get("participant_avatars") if isinstance(data.get("participant_avatars"), dict) else {}
+        scores = data.get("scores") if isinstance(data.get("scores"), dict) else {}
+        locations = data.get("locations") if isinstance(data.get("locations"), dict) else {}
+
+        all_ids = set(participants) | {str(pid) for pid in names} | {str(pid) for pid in avatars}
+        all_ids |= {str(pid) for pid in scores} | {str(pid) for pid in locations}
+        for pid in all_ids:
+            row = participants.get(pid, {})
+            if not isinstance(row, dict):
+                row = {}
+
+            name = names.get(pid)
+            if isinstance(name, str) and name:
+                row.setdefault("name", name)
+
+            avatar = avatars.get(pid)
+            if isinstance(avatar, str) and avatar:
+                row.setdefault("avatar", avatar)
+
+            score = scores.get(pid)
+            if isinstance(score, (int, float)):
+                row.setdefault("score", score)
+
+            location = locations.get(pid)
+            if isinstance(location, str) and location:
+                row.setdefault("location", location)
+
+            participants[pid] = row
+
+        data["participants"] = participants
+        return data
 
     @field_validator("poll_correct_ids", mode="before")
     @classmethod

@@ -201,14 +201,28 @@ def _build_runtime_session_snapshot(
     )
     session_name = session_stack[-1]["name"] if session_stack else None
 
+    participants_payload: dict[str, dict[str, object]] = {}
+    participant_ids = set(participant_state.participant_names)
+    participant_ids |= set(participant_state.participant_avatars)
+    participant_ids |= set(participant_state.scores)
+    participant_ids |= set(participant_state.locations)
+    for pid in participant_ids:
+        row: dict[str, object] = {}
+        if pid in participant_state.participant_names:
+            row["name"] = participant_state.participant_names[pid]
+        if pid in participant_state.participant_avatars:
+            row["avatar"] = participant_state.participant_avatars[pid]
+        if pid in participant_state.scores:
+            row["score"] = participant_state.scores[pid]
+        if pid in participant_state.locations:
+            row["location"] = participant_state.locations[pid]
+        participants_payload[pid] = row
+
     return {
         "session_name": session_name,
         "mode": participant_state.mode,
         "current_activity": participant_state.current_activity,
-        "participant_names": dict(participant_state.participant_names),
-        "participant_avatars": dict(participant_state.participant_avatars),
-        "scores": dict(participant_state.scores),
-        "locations": dict(participant_state.locations),
+        "participants": participants_payload,
         "poll": poll_state.poll,
         "poll_active": poll_state.poll_active,
         "poll_correct_ids": poll_state.poll_correct_ids,

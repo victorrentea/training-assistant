@@ -34,18 +34,40 @@ class ParticipantState:
         silently lose their writes.
         """
         with self._lock:
-            if "participant_names" in data:
+            participants = data.get("participants")
+            if isinstance(participants, dict):
                 self.participant_names.clear()
-                self.participant_names.update(data["participant_names"])
-            if "participant_avatars" in data:
                 self.participant_avatars.clear()
-                self.participant_avatars.update(data["participant_avatars"])
-            if "scores" in data:
                 self.scores.clear()
-                self.scores.update(data["scores"])
-            if "locations" in data:
                 self.locations.clear()
-                self.locations.update(data["locations"])
+                for pid, raw in participants.items():
+                    if not isinstance(raw, dict):
+                        continue
+                    name = raw.get("name")
+                    if isinstance(name, str):
+                        self.participant_names[str(pid)] = name
+                    avatar = raw.get("avatar")
+                    if isinstance(avatar, str):
+                        self.participant_avatars[str(pid)] = avatar
+                    score = raw.get("score")
+                    if isinstance(score, (int, float)):
+                        self.scores[str(pid)] = int(score)
+                    location = raw.get("location")
+                    if isinstance(location, str):
+                        self.locations[str(pid)] = location
+            else:
+                if "participant_names" in data:
+                    self.participant_names.clear()
+                    self.participant_names.update(data["participant_names"])
+                if "participant_avatars" in data:
+                    self.participant_avatars.clear()
+                    self.participant_avatars.update(data["participant_avatars"])
+                if "scores" in data:
+                    self.scores.clear()
+                    self.scores.update(data["scores"])
+                if "locations" in data:
+                    self.locations.clear()
+                    self.locations.update(data["locations"])
             if "mode" in data:
                 self.mode = data["mode"]
             if "current_activity" in data:
