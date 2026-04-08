@@ -7,6 +7,7 @@ When a participant uploads a file, the system SHALL complete the delivery pipeli
 - **WHEN** a participant uploads a file (≤ 100 MB) via `/api/upload`
 - **THEN** Railway stores the file, sends `file_ready_for_download` WS message to the daemon with `file_id`, `filename`, `size`, and `download_url`
 - **THEN** the daemon downloads the file to `{session_folder}/uploads/{filename}` and calls `POST /api/upload/{file_id}/ack` with `{"disk_path": "<abs_path>"}`
+- **THEN** daemon stores `disk_path` and file indicator metadata in active daemon session state for host resume/reconnect
 - **THEN** Railway broadcasts `file_uploaded` host WS message with `uuid`, `filename`, `size`, and `disk_path`
 - **THEN** Railway deletes the temporary file
 

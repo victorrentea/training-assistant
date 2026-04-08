@@ -11,6 +11,7 @@ The architecture has an important constraint: Railway cannot initiate REST calls
 - Show a blinking download icon next to the uploading participant in the host list
 - Hover tooltip shows full local disk path
 - Click copies path to clipboard and dismisses the icon
+- Persist uploaded file indicators in session state so host reconnect/resume restores them
 - Icon style matches the upload SVG on the participant screen
 
 **Non-Goals:**
@@ -30,12 +31,20 @@ After successfully saving the file to `{session_folder}/uploads/{filename}`, the
 
 **Alternative considered:** Daemon sends host WS message directly. Rejected — the daemon only speaks to Railway, not directly to host browsers.
 
-### D3: Host UI — icon disappears on click (not on timeout)
-Once the host clicks to copy the path, the icon is dismissed client-side and no server call is needed. The state is ephemeral (not persisted). The icon blinks (CSS animation) until clicked to draw attention.
+### D3: Daemon session-state persistence for indicator lifecycle
+Daemon stores each uploaded file indicator in session state with `uuid`, `file_id`, `filename`, `disk_path`, and `dismissed` flag. Host clients render from this persisted state (plus live WS events), and Railway only proxies this state to host browsers, so closing and reopening host UI for the same session keeps indicators visible until dismissed.
 
-### D4: Icon style
+**Alternative considered:** Keep indicator state client-only. Rejected — host reconnect/resume loses context and forces terminal checks again.
+
+### D4: Dismissal is persisted for the session
+When host clicks the icon, host UI sends a dismiss action through Railway proxy (REST or WS). Daemon marks that file indicator as dismissed in session state and Railway relays the updated host snapshot.
+
+**Alternative considered:** Auto-timeout without explicit dismiss. Rejected — host can miss uploads during active facilitation.
+
+### D5: Icon style
 Reuse the same SVG stroke style as the participant upload button (viewBox 0 0 20 20, stroke-width 1.5, round caps) but with a downward arrow (same as existing download arrow icon already in host.js). Blink via a CSS `@keyframes` opacity animation.
 
 ## Risks / Trade-offs
 
 - **Large files block daemon download** → Mitigated: file size is capped at 100 MB on upload. Async download (asyncio) prevents blocking the event loop.
+- **Session state growth for long workshops** → Mitigated: keep only minimal metadata per uploaded file and keep dismissed entries scoped to current session lifetime.
