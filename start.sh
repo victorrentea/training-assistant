@@ -111,7 +111,26 @@ pull_and_rebuild() {
   fi
 }
 
+initial_pull() {
+  _log "start" "info" "🔎 Checking for initial updates..."
+
+  if ! git fetch origin master --quiet 2>/dev/null; then
+    _log "start" "warn" "initial git fetch failed — starting with existing code"
+    return
+  fi
+
+  LAST_KNOWN_REMOTE_HEAD=$(git rev-parse origin/master 2>/dev/null || true)
+  if [ -z "$LAST_KNOWN_REMOTE_HEAD" ]; then
+    _log "start" "warn" "cannot read origin/master — starting with existing code"
+    return
+  fi
+
+  pull_and_rebuild
+}
+
 # ── Main loop ──
+
+initial_pull
 
 while true; do
   start_daemon
