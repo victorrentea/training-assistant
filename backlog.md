@@ -1,5 +1,6 @@
 # Tasks
 
+- [x] bugfix: daemon session-state storage now uses visible `session-state.json` with 3-second hash-based flush, explicit flush on session end, startup restore, and hermetic acceptance coverage for participant-name restore after close/reopen.
 - [x] bugfix: host footer join link no longer renders base domain before `session_id` arrives (prevents entry flicker/flash without session suffix).
 - [x] direct request: Host footer now has compact daemon log-level toggle badge (`info/debug`), turns bright red on `debug`, persists level in global state across daemon restarts, and debug logs now include HTTP verb+path plus WS direction+message type (including Railway communication).
 - [x] direct request: daemon local API now supports dynamic runtime log level switching (`GET/POST /api/log-level`) between `info` and `debug`, without restart.

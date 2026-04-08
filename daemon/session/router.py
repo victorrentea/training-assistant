@@ -152,7 +152,7 @@ async def end_session():
 
 @global_router.post("/resume")
 async def resume_session(body: ResumeSessionRequest):
-    """Host resumes an existing session folder. Reads .session-state.json to restore state."""
+    """Host resumes an existing session folder. Uses session-state.json as persisted storage."""
     folder_name = normalize_session_name(body.folder)
     session_id = _resolve_session_id_for_folder(folder_name)
 
@@ -261,5 +261,4 @@ async def get_interval_lines_txt(
         "Cache-Control": "no-store",
     }
     return PlainTextResponse(content=payload, headers=headers)
-
 
