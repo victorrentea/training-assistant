@@ -398,6 +398,7 @@ def save_session_state(session_folder: Path, snapshot: dict) -> None:
     tmp = path.with_name(f"{SESSION_STATE_FILENAME}.tmp")
     tmp.write_text(json.dumps(snapshot, default=str, indent=2), encoding="utf-8")
     tmp.replace(path)
+    log.debug("session", f"Persisted {SESSION_STATE_FILENAME}: {path}")
 
 
 # ── Notes file helper ──────────────────────────────────────────────────────────

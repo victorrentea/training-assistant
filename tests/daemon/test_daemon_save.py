@@ -40,3 +40,19 @@ def test_load_session_state_returns_empty_when_invalid_json():
         (folder / "session-state.json").write_text("{invalid", encoding="utf-8")
         from daemon.session_state import load_session_state as _load_session_state
         assert _load_session_state(folder) == {}
+
+
+def test_save_session_state_logs_debug_when_enabled(capsys):
+    with tempfile.TemporaryDirectory() as d:
+        from daemon import log as daemon_log
+        from daemon.session_state import save_session_state as _save_session_state
+
+        previous_level = daemon_log.get_level()
+        daemon_log.set_level("debug")
+        try:
+            _save_session_state(Path(d), {"mode": "new"})
+            out = capsys.readouterr().out
+            assert "debug" in out
+            assert "Persisted session-state.json" in out
+        finally:
+            daemon_log.set_level(previous_level)
