@@ -52,6 +52,18 @@ def test_generator_cli_outputs_feature_sections_and_examples():
     assert "## Feature: Poll" in output
     assert "`POST /api/participant/poll/vote`" in output
     assert "`poll_opened`" in output
+    assert "| Endpoint | Request | Response |" in output
+
+
+def test_generator_skips_empty_subsections_and_old_none_markers():
+    output = _run_generator()
+    assert "- (none)" not in output
+
+
+def test_generator_rest_responses_do_not_include_status_code_prefix():
+    output = _run_generator()
+    assert "response: `200:" not in output
+    assert "`200:" not in output
 
 
 def test_generator_includes_all_openapi_operations():

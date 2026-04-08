@@ -23,84 +23,28 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
 
 ## Feature: Session Management
 
-### Participant REST
-- (none)
-
-### Participant WS
-- (none)
-
 ### Host REST
-- `GET /api/daemon-status`
-  - request: `none`
-  - response: `200: any`
-  - note: Daemon Status
-- `GET /api/log-level`
-  - request: `none`
-  - response: `200: {level: 'info' | 'debug'  # enum: 'info' | 'debug'}`
-  - note: Get Log Level
-- `POST /api/log-level`
-  - request: `application/json: {level: 'info' | 'debug'  # enum: 'info' | 'debug'}`
-  - response: `200: {level: 'info' | 'debug'  # enum: 'info' | 'debug'}`
-  - note: Set Log Level
-- `GET /api/session/active`
-  - request: `none`
-  - response: `200: any`
-  - note: Get Session Active
-  - note: Public endpoint: returns the active session_id or null.
-- `POST /api/session/end`
-  - request: `none`
-  - response: `200: any`
-  - note: End Session
-  - note: Host ends the current session. Railway closes WS connections on session end.
-- `POST /api/session/end_talk`
-  - request: `none`
-  - response: `200: any`
-  - note: End Talk
-  - note: Host ends the nested talk.
-- `GET /api/session/folders`
-  - request: `none`
-  - response: `200: any`
-  - note: List Session Folders
-  - note: List available session folders.
-- `POST /api/session/resume`
-  - request: `application/json: {folder: string}`
-  - response: `200: any`
-  - note: Resume Session
-  - note: Host resumes an existing session folder. Uses session-state.json as persisted storage.
-- `POST /api/session/start`
-  - request: `application/json: {name: string, type?: string}`
-  - response: `200: any`
-  - note: Start Session
-  - note: Host starts a new session (creates folder, assigns session_id, clean slate).
-- `POST /api/session/start_talk`
-  - request: `none`
-  - response: `200: any`
-  - note: Start Talk
-  - note: Host starts a nested talk (conference mode).
-- `POST /api/{session_id}/host/mode`
-  - request: `application/json: {mode: string}`
-  - response: `200: any`
-  - note: Set Mode
-  - note: Host switches session mode (workshop/conference).
-- `GET /api/{session_id}/session/interval-lines.txt`
-  - request: `none`
-  - response: `200 (text/plain): string`
-  - note: Get Interval Lines Txt
-  - note: Return raw transcript lines for a time window.
-  - note: Returns text/plain interval lines for session export/inspection.
-
-### Host WS
-- (none)
+| Endpoint | Request | Response |
+| --- | --- | --- |
+| Daemon Status<br>`GET /api/daemon-status` | `none` | `any` |
+| Get Log Level<br>`GET /api/log-level` | `none` | `{level: 'info' \| 'debug'  # enum: 'info' \| 'debug'}` |
+| Set Log Level<br>`POST /api/log-level` | `application/json: {level: 'info' \| 'debug'  # enum: 'info' \| 'debug'}` | `{level: 'info' \| 'debug'  # enum: 'info' \| 'debug'}` |
+| Get Session Active<br>`GET /api/session/active` | `none` | `any`<br>Note: Public endpoint: returns the active session_id or null. |
+| End Session<br>`POST /api/session/end` | `none` | `any`<br>Note: Host ends the current session. Railway closes WS connections on session end. |
+| End Talk<br>`POST /api/session/end_talk` | `none` | `any`<br>Note: Host ends the nested talk. |
+| List Session Folders<br>`GET /api/session/folders` | `none` | `any`<br>Note: List available session folders. |
+| Resume Session<br>`POST /api/session/resume` | `application/json: {folder: string}` | `any`<br>Note: Host resumes an existing session folder. Uses session-state.json as persisted storage. |
+| Start Session<br>`POST /api/session/start` | `application/json: {name: string, type?: string}` | `any`<br>Note: Host starts a new session (creates folder, assigns session_id, clean slate). |
+| Start Talk<br>`POST /api/session/start_talk` | `none` | `any`<br>Note: Host starts a nested talk (conference mode). |
+| Set Mode<br>`POST /api/{session_id}/host/mode` | `application/json: {mode: string}` | `any`<br>Note: Host switches session mode (workshop/conference). |
+| Get Interval Lines Txt<br>`GET /api/{session_id}/session/interval-lines.txt` | `none` | `text/plain: string`<br>Note: Return raw transcript lines for a time window.<br>Note: Returns text/plain interval lines for session export/inspection. |
 
 ## Feature: Slides
 
 ### Participant REST
-- `GET /api/participant/slides-cache-status`
-  - request: `none`
-  - response: `200: any`
-  - note: Get Slides Cache Status
-  - note: Get slides cache status.
-  - note: Primarily for diagnostics; UI cache invalidation is event-driven via slides_cache_status WS.
+| Endpoint | Request | Response |
+| --- | --- | --- |
+| Get Slides Cache Status<br>`GET /api/participant/slides-cache-status` | `none` | `any`<br>Note: Get slides cache status.<br>Note: Primarily for diagnostics; UI cache invalidation is event-driven via slides_cache_status WS. |
 
 ### Participant WS
 - `slides_current`
@@ -111,9 +55,6 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
   - note: Invalidation signal — participant must call GET /api/slides to refresh
   - note: Client must refetch slide list; payload intentionally carries no cache map.
 
-### Host REST
-- (none)
-
 ### Host WS
 - `slides_cache_status`
   - payload: `{type: 'slides_cache_status'  # enum: 'slides_cache_status'}`
@@ -122,58 +63,27 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
 
 ## Feature: Activity Switching
 
-### Participant REST
-- (none)
-
 ### Participant WS
 - `activity_updated`
   - payload: `{type: 'activity_updated'  # enum: 'activity_updated', current_activity: 'none' | 'poll' | 'wordcloud' | 'qa' | 'codereview' | 'debate'  # enum: 'none' | 'poll' | 'wordcloud' | 'qa' | 'codereview' | 'debate'}`
   - note: Current activity type changed by host
 
 ### Host REST
-- `POST /api/{session_id}/host/activity`
-  - request: `application/json: {activity: string}`
-  - response: `200: any`
-  - note: Set Activity
-  - note: Host switches the current activity.
-- `PUT /api/{session_id}/host/activity`
-  - request: `application/json: {activity: string}`
-  - response: `200: any`
-  - note: Set Activity
-  - note: Host switches the current activity.
-
-### Host WS
-- (none)
+| Endpoint | Request | Response |
+| --- | --- | --- |
+| Set Activity<br>`POST /api/{session_id}/host/activity` | `application/json: {activity: string}` | `any`<br>Note: Host switches the current activity. |
+| Set Activity<br>`PUT /api/{session_id}/host/activity` | `application/json: {activity: string}` | `any`<br>Note: Host switches the current activity. |
 
 ## Feature: Identity
 
 ### Participant REST
-- `POST /api/participant/avatar`
-  - request: `application/json: {rejected?: list[string]}`
-  - response: `200: any`
-  - note: Refresh Avatar Endpoint
-  - note: Re-roll avatar (conference mode only).
-- `POST /api/participant/location`
-  - request: `application/json: {location: string}`
-  - response: `200: any`
-  - note: Set Location
-  - note: Store participant city/timezone.
-- `PUT /api/participant/name`
-  - request: `application/json: {name: string}`
-  - response: `200: any`
-  - note: Rename Participant
-  - note: Rename a registered participant. Returns 400 if not yet registered.
-- `POST /api/participant/register`
-  - request: `none`
-  - response: `200: any`
-  - note: Register Participant
-  - note: Register participant — assign name+avatar. Idempotent for returning participants.
-- `GET /api/participant/state`
-  - request: `none`
-  - response: `200: any`
-  - note: Get Participant State
-  - note: Return full personalised state for a participant — used on page load and WS reconnect.
-  - note: Returns participant-personalized full state snapshot.
+| Endpoint | Request | Response |
+| --- | --- | --- |
+| Refresh Avatar Endpoint<br>`POST /api/participant/avatar` | `application/json: {rejected?: list[string]}` | `any`<br>Note: Re-roll avatar (conference mode only). |
+| Set Location<br>`POST /api/participant/location` | `application/json: {location: string}` | `any`<br>Note: Store participant city/timezone. |
+| Rename Participant<br>`PUT /api/participant/name` | `application/json: {name: string}` | `any`<br>Note: Rename a registered participant. Returns 400 if not yet registered. |
+| Register Participant<br>`POST /api/participant/register` | `none` | `any`<br>Note: Register participant — assign name+avatar. Idempotent for returning participants. |
+| Get Participant State<br>`GET /api/participant/state` | `none` | `any`<br>Note: Return full personalised state for a participant — used on page load and WS reconnect.<br>Note: Returns participant-personalized full state snapshot. |
 
 ### Participant WS
 - `participant_count_updated`
@@ -181,12 +91,9 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
   - note: Participant count changed
 
 ### Host REST
-- `GET /api/{session_id}/host/state`
-  - request: `none`
-  - response: `200: any`
-  - note: Get Host State
-  - note: Return full state for host page load — replicates Railway build_for_host().
-  - note: Returns host-facing full state snapshot.
+| Endpoint | Request | Response |
+| --- | --- | --- |
+| Get Host State<br>`GET /api/{session_id}/host/state` | `none` | `any`<br>Note: Return full state for host page load — replicates Railway build_for_host().<br>Note: Returns host-facing full state snapshot. |
 
 ### Host WS
 - `participant_list_updated`
@@ -196,12 +103,9 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
 ## Feature: Poll
 
 ### Participant REST
-- `POST /api/participant/poll/vote`
-  - request: `application/json: {option_ids: list[string]}`
-  - response: `200: any`
-  - note: Cast Vote
-  - note: Participant casts a vote.
-  - note: Votes are final once submitted; re-vote is rejected.
+| Endpoint | Request | Response |
+| --- | --- | --- |
+| Cast Vote<br>`POST /api/participant/poll/vote` | `application/json: {option_ids: list[string]}` | `any`<br>Note: Participant casts a vote.<br>Note: Votes are final once submitted; re-vote is rejected. |
 
 ### Participant WS
 - `poll_opened`
@@ -222,41 +126,15 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
   - note: Host started a countdown timer for the poll
 
 ### Host REST
-- `DELETE /api/{session_id}/host/poll`
-  - request: `none`
-  - response: `200: any`
-  - note: Delete Poll
-  - note: Host deletes the current poll.
-- `POST /api/{session_id}/host/poll`
-  - request: `application/json: {question?: string, options?: list[dict[str, any]], multi?: bool, correct_count?: int | null}`
-  - response: `200: any`
-  - note: Create Poll
-  - note: Host creates a new poll.
-- `POST /api/{session_id}/host/poll/close`
-  - request: `none`
-  - response: `200: any`
-  - note: Close Poll
-  - note: Host closes the poll.
-- `PUT /api/{session_id}/host/poll/correct`
-  - request: `application/json: {correct_ids?: list[string]}`
-  - response: `200: any`
-  - note: Reveal Correct
-  - note: Host reveals correct answers and awards scores.
-- `POST /api/{session_id}/host/poll/open`
-  - request: `none`
-  - response: `200: any`
-  - note: Open Poll
-  - note: Host opens the poll for voting.
-- `PUT /api/{session_id}/host/poll/status`
-  - request: `application/json: {open: bool}`
-  - response: `200: any`
-  - note: Set Poll Status
-  - note: Compatibility: {open: true} → open_poll, {open: false} → close_poll.
-- `POST /api/{session_id}/host/poll/timer`
-  - request: `application/json: {seconds?: int}`
-  - response: `200: any`
-  - note: Start Timer
-  - note: Host starts a countdown timer for the poll.
+| Endpoint | Request | Response |
+| --- | --- | --- |
+| Delete Poll<br>`DELETE /api/{session_id}/host/poll` | `none` | `any`<br>Note: Host deletes the current poll. |
+| Create Poll<br>`POST /api/{session_id}/host/poll` | `application/json: {question?: string, options?: list[dict[str, any]], multi?: bool, correct_count?: int \| null}` | `any`<br>Note: Host creates a new poll. |
+| Close Poll<br>`POST /api/{session_id}/host/poll/close` | `none` | `any`<br>Note: Host closes the poll. |
+| Reveal Correct<br>`PUT /api/{session_id}/host/poll/correct` | `application/json: {correct_ids?: list[string]}` | `any`<br>Note: Host reveals correct answers and awards scores. |
+| Open Poll<br>`POST /api/{session_id}/host/poll/open` | `none` | `any`<br>Note: Host opens the poll for voting. |
+| Set Poll Status<br>`PUT /api/{session_id}/host/poll/status` | `application/json: {open: bool}` | `any`<br>Note: Compatibility: {open: true} → open_poll, {open: false} → close_poll. |
+| Start Timer<br>`POST /api/{session_id}/host/poll/timer` | `application/json: {seconds?: int}` | `any`<br>Note: Host starts a countdown timer for the poll. |
 
 ### Host WS
 - `poll_ai_generated`
@@ -270,11 +148,9 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
 ## Feature: Word Cloud
 
 ### Participant REST
-- `POST /api/participant/wordcloud/word`
-  - request: `application/json: {word: string}`
-  - response: `200: any`
-  - note: Submit Word
-  - note: Participant submits a word to the word cloud.
+| Endpoint | Request | Response |
+| --- | --- | --- |
+| Submit Word<br>`POST /api/participant/wordcloud/word` | `application/json: {word: string}` | `any`<br>Note: Participant submits a word to the word cloud. |
 
 ### Participant WS
 - `wordcloud_updated`
@@ -282,21 +158,11 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
   - note: Word cloud state changed (new word or topic update)
 
 ### Host REST
-- `POST /api/{session_id}/host/wordcloud/clear`
-  - request: `none`
-  - response: `200: any`
-  - note: Clear Wordcloud
-  - note: Host clears the word cloud.
-- `POST /api/{session_id}/host/wordcloud/topic`
-  - request: `application/json: {topic: string}`
-  - response: `200: any`
-  - note: Set Topic
-  - note: Host sets the word cloud topic.
-- `POST /api/{session_id}/host/wordcloud/word`
-  - request: `application/json: {word: string}`
-  - response: `200: any`
-  - note: Host Submit Word
-  - note: Host submits a word — same as participant but no scoring.
+| Endpoint | Request | Response |
+| --- | --- | --- |
+| Clear Wordcloud<br>`POST /api/{session_id}/host/wordcloud/clear` | `none` | `any`<br>Note: Host clears the word cloud. |
+| Set Topic<br>`POST /api/{session_id}/host/wordcloud/topic` | `application/json: {topic: string}` | `any`<br>Note: Host sets the word cloud topic. |
+| Host Submit Word<br>`POST /api/{session_id}/host/wordcloud/word` | `application/json: {word: string}` | `any`<br>Note: Host submits a word — same as participant but no scoring. |
 
 ### Host WS
 - `wordcloud_updated`
@@ -306,16 +172,10 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
 ## Feature: Q&A
 
 ### Participant REST
-- `POST /api/participant/qa/submit`
-  - request: `application/json: {text: string}`
-  - response: `200: any`
-  - note: Submit Question
-  - note: Participant submits a Q&A question.
-- `POST /api/participant/qa/upvote`
-  - request: `application/json: {question_id: string}`
-  - response: `200: any`
-  - note: Upvote Question
-  - note: Participant upvotes a Q&A question.
+| Endpoint | Request | Response |
+| --- | --- | --- |
+| Submit Question<br>`POST /api/participant/qa/submit` | `application/json: {text: string}` | `any`<br>Note: Participant submits a Q&A question. |
+| Upvote Question<br>`POST /api/participant/qa/upvote` | `application/json: {question_id: string}` | `any`<br>Note: Participant upvotes a Q&A question. |
 
 ### Participant WS
 - `qa_updated`
@@ -323,31 +183,13 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
   - note: Q&A list changed (new question, upvote, edit, delete)
 
 ### Host REST
-- `POST /api/{session_id}/host/qa/clear`
-  - request: `none`
-  - response: `200: any`
-  - note: Clear Qa
-  - note: Host clears all Q&A questions.
-- `DELETE /api/{session_id}/host/qa/question/{question_id}`
-  - request: `none`
-  - response: `200: any`
-  - note: Delete Question
-  - note: Host deletes a question.
-- `PUT /api/{session_id}/host/qa/question/{question_id}/answered`
-  - request: `application/json: {answered?: bool}`
-  - response: `200: any`
-  - note: Toggle Answered
-  - note: Host toggles a question's answered flag.
-- `PUT /api/{session_id}/host/qa/question/{question_id}/text`
-  - request: `application/json: {text: string}`
-  - response: `200: any`
-  - note: Edit Question Text
-  - note: Host edits a question's text.
-- `POST /api/{session_id}/host/qa/submit`
-  - request: `application/json: {text: string}`
-  - response: `200: any`
-  - note: Host Submit Question
-  - note: Host submits a Q&A question — no scoring.
+| Endpoint | Request | Response |
+| --- | --- | --- |
+| Clear Qa<br>`POST /api/{session_id}/host/qa/clear` | `none` | `any`<br>Note: Host clears all Q&A questions. |
+| Delete Question<br>`DELETE /api/{session_id}/host/qa/question/{question_id}` | `none` | `any`<br>Note: Host deletes a question. |
+| Toggle Answered<br>`PUT /api/{session_id}/host/qa/question/{question_id}/answered` | `application/json: {answered?: bool}` | `any`<br>Note: Host toggles a question's answered flag. |
+| Edit Question Text<br>`PUT /api/{session_id}/host/qa/question/{question_id}/text` | `application/json: {text: string}` | `any`<br>Note: Host edits a question's text. |
+| Host Submit Question<br>`POST /api/{session_id}/host/qa/submit` | `application/json: {text: string}` | `any`<br>Note: Host submits a Q&A question — no scoring. |
 
 ### Host WS
 - `qa_updated`
@@ -357,11 +199,9 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
 ## Feature: Code Review
 
 ### Participant REST
-- `PUT /api/participant/codereview/selection`
-  - request: `application/json: {lines?: list[int]}`
-  - response: `200: any`
-  - note: Update Selection
-  - note: Participant sets their selected lines (full replacement).
+| Endpoint | Request | Response |
+| --- | --- | --- |
+| Update Selection<br>`PUT /api/participant/codereview/selection` | `application/json: {lines?: list[int]}` | `any`<br>Note: Participant sets their selected lines (full replacement). |
 
 ### Participant WS
 - `codereview_opened`
@@ -378,26 +218,12 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
   - note: Code review removed by host
 
 ### Host REST
-- `DELETE /api/{session_id}/host/codereview`
-  - request: `none`
-  - response: `200: any`
-  - note: Clear Codereview
-  - note: Host clears the code review.
-- `POST /api/{session_id}/host/codereview`
-  - request: `application/json: {snippet: string, language?: string | null, smart_paste?: bool}`
-  - response: `200: any`
-  - note: Create Codereview
-  - note: Host creates a code review session.
-- `PUT /api/{session_id}/host/codereview/confirm-line`
-  - request: `application/json: {line: int}`
-  - response: `200: any`
-  - note: Confirm Line
-  - note: Host confirms a line as problematic and awards points.
-- `PUT /api/{session_id}/host/codereview/status`
-  - request: `application/json: {open?: bool}`
-  - response: `200: any`
-  - note: Set Codereview Status
-  - note: Host closes the selection phase.
+| Endpoint | Request | Response |
+| --- | --- | --- |
+| Clear Codereview<br>`DELETE /api/{session_id}/host/codereview` | `none` | `any`<br>Note: Host clears the code review. |
+| Create Codereview<br>`POST /api/{session_id}/host/codereview` | `application/json: {snippet: string, language?: string \| null, smart_paste?: bool}` | `any`<br>Note: Host creates a code review session. |
+| Confirm Line<br>`PUT /api/{session_id}/host/codereview/confirm-line` | `application/json: {line: int}` | `any`<br>Note: Host confirms a line as problematic and awards points. |
+| Set Codereview Status<br>`PUT /api/{session_id}/host/codereview/status` | `application/json: {open?: bool}` | `any`<br>Note: Host closes the selection phase. |
 
 ### Host WS
 - `codereview_selections_updated`
@@ -407,26 +233,12 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
 ## Feature: Debate
 
 ### Participant REST
-- `POST /api/participant/debate/argument`
-  - request: `application/json: {text: string}`
-  - response: `200: any`
-  - note: Submit Argument
-  - note: Participant submits a debate argument.
-- `POST /api/participant/debate/pick-side`
-  - request: `application/json: {side: string}`
-  - response: `200: any`
-  - note: Pick Side
-  - note: Participant picks a side (for/against).
-- `POST /api/participant/debate/upvote`
-  - request: `application/json: {argument_id: string}`
-  - response: `200: any`
-  - note: Upvote Argument
-  - note: Participant upvotes a debate argument.
-- `POST /api/participant/debate/volunteer`
-  - request: `none`
-  - response: `200: any`
-  - note: Volunteer Champion
-  - note: Participant volunteers as champion for their side.
+| Endpoint | Request | Response |
+| --- | --- | --- |
+| Submit Argument<br>`POST /api/participant/debate/argument` | `application/json: {text: string}` | `any`<br>Note: Participant submits a debate argument. |
+| Pick Side<br>`POST /api/participant/debate/pick-side` | `application/json: {side: string}` | `any`<br>Note: Participant picks a side (for/against). |
+| Upvote Argument<br>`POST /api/participant/debate/upvote` | `application/json: {argument_id: string}` | `any`<br>Note: Participant upvotes a debate argument. |
+| Volunteer Champion<br>`POST /api/participant/debate/volunteer` | `none` | `any`<br>Note: Participant volunteers as champion for their side. |
 
 ### Participant WS
 - `debate_updated`
@@ -440,64 +252,20 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
   - note: Current debate round ended
 
 ### Host REST
-- `POST /api/{session_id}/host/debate`
-  - request: `application/json: {statement: string}`
-  - response: `200: any`
-  - note: Launch Debate
-  - note: Host launches a debate with a statement.
-- `POST /api/{session_id}/host/debate/ai-result`
-  - request: `application/json: {merges?: list[any], cleaned?: list[any], new_arguments?: list[any]}`
-  - response: `200: any`
-  - note: Receive Ai Result
-  - note: Manual/skip AI result — host posts AI cleanup results directly.
-- `POST /api/{session_id}/host/debate/close-selection`
-  - request: `none`
-  - response: `200: any`
-  - note: Close Selection
-  - note: Host closes side selection; auto-assigns remaining participants.
-- `POST /api/{session_id}/host/debate/end-arguments`
-  - request: `none`
-  - response: `200: any`
-  - note: End Arguments
-  - note: Host ends arguments phase; triggers AI cleanup in background.
-- `POST /api/{session_id}/host/debate/end-round`
-  - request: `none`
-  - response: `200: any`
-  - note: End Round
-  - note: Host ends the current round early.
-- `POST /api/{session_id}/host/debate/first-side`
-  - request: `application/json: {side: string}`
-  - response: `200: any`
-  - note: Set First Side
-  - note: Host picks which side speaks first in live debate.
-- `POST /api/{session_id}/host/debate/force-assign`
-  - request: `none`
-  - response: `200: any`
-  - note: Force Assign
-  - note: Host force-assigns all unassigned participants.
-- `POST /api/{session_id}/host/debate/phase`
-  - request: `application/json: {phase: string}`
-  - response: `200: any`
-  - note: Advance Phase
-  - note: Host advances the debate to a specific phase.
-- `POST /api/{session_id}/host/debate/reset`
-  - request: `none`
-  - response: `200: any`
-  - note: Reset Debate
-  - note: Host resets all debate state.
-- `POST /api/{session_id}/host/debate/round-timer`
-  - request: `application/json: {round_index: int, seconds: int}`
-  - response: `200: any`
-  - note: Start Round Timer
-  - note: Host starts a timed round.
-
-### Host WS
-- (none)
+| Endpoint | Request | Response |
+| --- | --- | --- |
+| Launch Debate<br>`POST /api/{session_id}/host/debate` | `application/json: {statement: string}` | `any`<br>Note: Host launches a debate with a statement. |
+| Receive Ai Result<br>`POST /api/{session_id}/host/debate/ai-result` | `application/json: {merges?: list[any], cleaned?: list[any], new_arguments?: list[any]}` | `any`<br>Note: Manual/skip AI result — host posts AI cleanup results directly. |
+| Close Selection<br>`POST /api/{session_id}/host/debate/close-selection` | `none` | `any`<br>Note: Host closes side selection; auto-assigns remaining participants. |
+| End Arguments<br>`POST /api/{session_id}/host/debate/end-arguments` | `none` | `any`<br>Note: Host ends arguments phase; triggers AI cleanup in background. |
+| End Round<br>`POST /api/{session_id}/host/debate/end-round` | `none` | `any`<br>Note: Host ends the current round early. |
+| Set First Side<br>`POST /api/{session_id}/host/debate/first-side` | `application/json: {side: string}` | `any`<br>Note: Host picks which side speaks first in live debate. |
+| Force Assign<br>`POST /api/{session_id}/host/debate/force-assign` | `none` | `any`<br>Note: Host force-assigns all unassigned participants. |
+| Advance Phase<br>`POST /api/{session_id}/host/debate/phase` | `application/json: {phase: string}` | `any`<br>Note: Host advances the debate to a specific phase. |
+| Reset Debate<br>`POST /api/{session_id}/host/debate/reset` | `none` | `any`<br>Note: Host resets all debate state. |
+| Start Round Timer<br>`POST /api/{session_id}/host/debate/round-timer` | `application/json: {round_index: int, seconds: int}` | `any`<br>Note: Host starts a timed round. |
 
 ## Feature: Scores & Leaderboard
-
-### Participant REST
-- (none)
 
 ### Participant WS
 - `scores_updated`
@@ -508,18 +276,11 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
   - note: Leaderboard overlay shown with top positions
 
 ### Host REST
-- `POST /api/{session_id}/host/leaderboard/hide`
-  - request: `none`
-  - response: `200: any`
-  - note: Hide Leaderboard
-- `POST /api/{session_id}/host/leaderboard/show`
-  - request: `none`
-  - response: `200: any`
-  - note: Show Leaderboard
-- `DELETE /api/{session_id}/host/scores`
-  - request: `none`
-  - response: `200: any`
-  - note: Reset Scores
+| Endpoint | Request | Response |
+| --- | --- | --- |
+| Hide Leaderboard<br>`POST /api/{session_id}/host/leaderboard/hide` | `none` | `any` |
+| Show Leaderboard<br>`POST /api/{session_id}/host/leaderboard/show` | `none` | `any` |
+| Reset Scores<br>`DELETE /api/{session_id}/host/scores` | `none` | `any` |
 
 ### Host WS
 - `leaderboard_revealed`
@@ -529,17 +290,9 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
 ## Feature: Emoji Reactions
 
 ### Participant REST
-- `POST /api/participant/emoji/reaction`
-  - request: `application/json: {emoji: string}`
-  - response: `200: any`
-  - note: Emoji Reaction
-  - note: Participant sends an emoji reaction.
-
-### Participant WS
-- (none)
-
-### Host REST
-- (none)
+| Endpoint | Request | Response |
+| --- | --- | --- |
+| Emoji Reaction<br>`POST /api/participant/emoji/reaction` | `application/json: {emoji: string}` | `any`<br>Note: Participant sends an emoji reaction. |
 
 ### Host WS
 - `emoji_reaction`
@@ -547,9 +300,6 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
   - note: Participant sent an emoji reaction — floating animation on host screen
 
 ## Feature: Quiz Generation
-
-### Participant REST
-- (none)
 
 ### Participant WS
 - `quiz_status`
@@ -560,26 +310,12 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
   - note: Quiz preview for host review before publishing (quiz=null to clear)
 
 ### Host REST
-- `DELETE /api/{session_id}/host/quiz-preview`
-  - request: `none`
-  - response: `200: any`
-  - note: Clear Quiz Preview
-  - note: Host clears the current quiz preview.
-- `POST /api/{session_id}/host/quiz-refine`
-  - request: `application/json: {target: string, preview?: any | null}`
-  - response: `200: any`
-  - note: Request Quiz Refine
-  - note: Host requests regeneration of a specific question or option.
-- `POST /api/{session_id}/host/quiz-request`
-  - request: `application/json: {minutes?: int | null, topic?: string | null}`
-  - response: `200: any`
-  - note: Request Quiz
-  - note: Host requests a quiz — stores request for the orchestrator loop to pick up.
-- `GET /api/{session_id}/quiz-md`
-  - request: `none`
-  - response: `200: any`
-  - note: Get Quiz Md
-  - note: Return the accumulated quiz markdown history.
+| Endpoint | Request | Response |
+| --- | --- | --- |
+| Clear Quiz Preview<br>`DELETE /api/{session_id}/host/quiz-preview` | `none` | `any`<br>Note: Host clears the current quiz preview. |
+| Request Quiz Refine<br>`POST /api/{session_id}/host/quiz-refine` | `application/json: {target: string, preview?: any \| null}` | `any`<br>Note: Host requests regeneration of a specific question or option. |
+| Request Quiz<br>`POST /api/{session_id}/host/quiz-request` | `application/json: {minutes?: int \| null, topic?: string \| null}` | `any`<br>Note: Host requests a quiz — stores request for the orchestrator loop to pick up. |
+| Get Quiz Md<br>`GET /api/{session_id}/quiz-md` | `none` | `any`<br>Note: Return the accumulated quiz markdown history. |
 
 ### Host WS
 - `quiz_status`
@@ -592,26 +328,15 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
 ## Feature: Paste & File Upload
 
 ### Participant REST
-- `POST /api/participant/paste`
-  - request: `application/json: {text: string}`
-  - response: `200: any`
-  - note: Paste Text
-  - note: Participant pastes text to be seen by host.
-
-### Participant WS
-- (none)
+| Endpoint | Request | Response |
+| --- | --- | --- |
+| Paste Text<br>`POST /api/participant/paste` | `application/json: {text: string}` | `any`<br>Note: Participant pastes text to be seen by host. |
 
 ### Host REST
-- `GET /api/{session_id}/host/pastes`
-  - request: `none`
-  - response: `200: any`
-  - note: Get Pastes
-  - note: Return all pending paste entries grouped by participant uuid.
-- `POST /api/{session_id}/host/uploads/seen`
-  - request: `application/json: {uuid: string, file_id: string}`
-  - response: `200: any`
-  - note: Mark Uploaded File Seen
-  - note: Mark an uploaded-file indicator as seen by host in daemon session state.
+| Endpoint | Request | Response |
+| --- | --- | --- |
+| Get Pastes<br>`GET /api/{session_id}/host/pastes` | `none` | `any`<br>Note: Return all pending paste entries grouped by participant uuid. |
+| Mark Uploaded File Seen<br>`POST /api/{session_id}/host/uploads/seen` | `application/json: {uuid: string, file_id: string}` | `any`<br>Note: Mark an uploaded-file indicator as seen by host in daemon session state. |
 
 ### Host WS
 - `paste_received`
@@ -624,16 +349,10 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
 ## Feature: Notes & Summary
 
 ### Participant REST
-- `GET /api/participant/notes`
-  - request: `none`
-  - response: `200: any`
-  - note: Get Notes
-  - note: Get session notes content.
-- `GET /api/participant/summary`
-  - request: `none`
-  - response: `200: any`
-  - note: Get Summary
-  - note: Get summary points and raw markdown.
+| Endpoint | Request | Response |
+| --- | --- | --- |
+| Get Notes<br>`GET /api/participant/notes` | `none` | `any`<br>Note: Get session notes content. |
+| Get Summary<br>`GET /api/participant/summary` | `none` | `any`<br>Note: Get summary points and raw markdown. |
 
 ### Participant WS
 - `notes_updated`
@@ -644,16 +363,10 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
   - note: AI summary file changed — parsed point count updated
 
 ### Host REST
-- `GET /api/{session_id}/host/notes`
-  - request: `none`
-  - response: `200: any`
-  - note: Get Host Notes
-  - note: Return current session notes content.
-- `GET /api/{session_id}/host/summary`
-  - request: `none`
-  - response: `200: any`
-  - note: Get Host Summary
-  - note: Return summary points, raw markdown, and updated_at timestamp.
+| Endpoint | Request | Response |
+| --- | --- | --- |
+| Get Host Notes<br>`GET /api/{session_id}/host/notes` | `none` | `any`<br>Note: Return current session notes content. |
+| Get Host Summary<br>`GET /api/{session_id}/host/summary` | `none` | `any`<br>Note: Return summary points, raw markdown, and updated_at timestamp. |
 
 ### Host WS
 - `notes_updated`
@@ -666,25 +379,11 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
 ## Feature: Feedback
 
 ### Participant REST
-- `POST /api/participant/misc/feedback`
-  - request: `application/json: {text: string, participant_name?: string | null}`
-  - response: `200: any`
-  - note: Participant Feedback
-  - note: Participant feedback submitted from floating feedback modal.
-
-### Participant WS
-- (none)
-
-### Host REST
-- (none)
-
-### Host WS
-- (none)
+| Endpoint | Request | Response |
+| --- | --- | --- |
+| Participant Feedback<br>`POST /api/participant/misc/feedback` | `application/json: {text: string, participant_name?: string \| null}` | `any`<br>Note: Participant feedback submitted from floating feedback modal. |
 
 ## Feature: Transcription
-
-### Participant REST
-- (none)
 
 ### Participant WS
 - `transcription_language_pending`
@@ -692,35 +391,18 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
   - note: Daemon detected a transcription language change
 
 ### Host REST
-- `POST /api/transcription-language`
-  - request: `application/json: {language: string}`
-  - response: `200: any`
-  - note: Set Transcription Language
-  - note: Host sets the transcription language — stores pending request for daemon/macos-addons.
-  - note: Accepted values: ro, en, auto.
-- `GET /api/transcription-language/request`
-  - request: `none`
-  - response: `200: any`
-  - note: Poll Transcription Language Request
-  - note: Daemon/macos-addons polls for a pending language change request (clears on read).
-  - note: Consumes and clears the pending transcription language request.
-
-### Host WS
-- (none)
+| Endpoint | Request | Response |
+| --- | --- | --- |
+| Set Transcription Language<br>`POST /api/transcription-language` | `application/json: {language: string}` | `any`<br>Note: Host sets the transcription language — stores pending request for daemon/macos-addons.<br>Note: Accepted values: ro, en, auto. |
+| Poll Transcription Language Request<br>`GET /api/transcription-language/request` | `none` | `any`<br>Note: Daemon/macos-addons polls for a pending language change request (clears on read).<br>Note: Consumes and clears the pending transcription language request. |
 
 ## Feature: Cross-cutting: Reload
-
-### Participant REST
-- (none)
 
 ### Participant WS
 - `reload`
   - payload: `{type: 'reload'  # enum: 'reload'}`
   - note: Daemon synced static files — browser should reload
   - note: Client should trigger full page reload to pick up new static assets.
-
-### Host REST
-- (none)
 
 ### Host WS
 - `reload`

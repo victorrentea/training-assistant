@@ -74,6 +74,7 @@ HTTP_METHODS = {"get", "post", "put", "delete", "patch"}
 class RestOp:
     method: str
     path: str
+    title: str
     notes: list[str]
     request_shape: str
     response_shape: str
@@ -150,6 +151,18 @@ def _collect_notes(spec: dict[str, Any]) -> list[str]:
         seen.add(note)
         unique.append(note)
     return unique
+
+
+def _collect_rest_doc(spec: dict[str, Any]) -> tuple[str, list[str]]:
+    summary = spec.get("summary")
+    summary_text = " ".join(summary.strip().split()) if isinstance(summary, str) and summary.strip() else ""
+    notes = _collect_notes(spec)
+    if summary_text:
+        filtered = [note for note in notes if note != summary_text]
+        return summary_text, filtered
+    if notes:
+        return notes[0], notes[1:]
+    return "Endpoint", []
 
 
 def _shape(schema: dict[str, Any] | bool | Any | None, root: dict[str, Any], depth: int = 0) -> str:
@@ -257,22 +270,22 @@ def _rest_response_shape(op: dict[str, Any], openapi: dict[str, Any]) -> str:
 
     resp = responses.get(status, {})
     if not isinstance(resp, dict):
-        return f"{status}: unknown"
+        return "unknown"
 
     content = resp.get("content", {})
     if not isinstance(content, dict) or not content:
         desc = resp.get("description")
         if isinstance(desc, str) and desc.strip():
-            return f"{status}: {desc.strip()}"
-        return f"{status}: no content"
+            return desc.strip()
+        return "no content"
 
     if "application/json" in content:
         schema = content["application/json"].get("schema", {}) if isinstance(content["application/json"], dict) else {}
-        return f"{status}: {_shape(schema, openapi)}"
+        return _shape(schema, openapi)
 
     ctype = sorted(content.keys())[0]
     schema = content[ctype].get("schema", {}) if isinstance(content[ctype], dict) else {}
-    return f"{status} ({ctype}): {_shape(schema, openapi)}"
+    return f"{ctype}: {_shape(schema, openapi)}"
 
 
 def _feature_for_misc_path(path: str) -> str:
@@ -329,10 +342,12 @@ def _extract_rest(openapi: dict[str, Any], sections: dict[str, FeatureSection]) 
             feature = str(op.get("x-feature") or _normalize_rest_feature(tag, path))
             section = sections.setdefault(feature, FeatureSection([], [], [], []))
 
+            title, notes = _collect_rest_doc(op)
             rest = RestOp(
                 method=method.upper(),
                 path=path,
-                notes=_collect_notes(op),
+                title=title,
+                notes=notes,
                 request_shape=_rest_request_shape(op, openapi),
                 response_shape=_rest_response_shape(op, openapi),
             )
@@ -387,22 +402,24 @@ def _feature_title(feature_id: str) -> str:
     return FEATURE_LABELS.get(feature_id, feature_id.replace("_", " ").title())
 
 
+def _escape_md_cell(value: str) -> str:
+    return value.replace("|", "\\|")
+
+
 def _render_rest(items: list[RestOp]) -> list[str]:
-    if not items:
-        return ["- (none)"]
-    lines: list[str] = []
+    lines: list[str] = ["| Endpoint | Request | Response |", "| --- | --- | --- |"]
     for op in sorted(items, key=lambda i: (i.path, i.method)):
-        lines.append(f"- `{op.method} {op.path}`")
-        lines.append(f"  - request: `{op.request_shape}`")
-        lines.append(f"  - response: `{op.response_shape}`")
+        endpoint = _escape_md_cell(f"{op.title}<br>`{op.method} {op.path}`")
+        request = _escape_md_cell(f"`{op.request_shape}`")
+        response_parts = [f"`{op.response_shape}`"]
         for note in op.notes:
-            lines.append(f"  - note: {note}")
+            response_parts.append(f"Note: {note}")
+        response = _escape_md_cell("<br>".join(response_parts))
+        lines.append(f"| {endpoint} | {request} | {response} |")
     return lines
 
 
 def _render_ws(items: list[WsMsg]) -> list[str]:
-    if not items:
-        return ["- (none)"]
     lines: list[str] = []
     for msg in items:
         lines.append(f"- `{msg.name}`")
@@ -446,25 +463,25 @@ def generate_api_reference(
     for feature_id in feature_ids:
         title = _feature_title(feature_id)
         section = sections[feature_id]
+        subsections: list[tuple[str, list[str]]] = []
+        if section.participant_rest:
+            subsections.append(("Participant REST", _render_rest(section.participant_rest)))
+        if section.participant_ws:
+            subsections.append(("Participant WS", _render_ws(section.participant_ws)))
+        if section.host_rest:
+            subsections.append(("Host REST", _render_rest(section.host_rest)))
+        if section.host_ws:
+            subsections.append(("Host WS", _render_ws(section.host_ws)))
+
+        if not subsections:
+            continue
 
         lines.append(f"## Feature: {title}")
         lines.append("")
-
-        lines.append("### Participant REST")
-        lines.extend(_render_rest(section.participant_rest))
-        lines.append("")
-
-        lines.append("### Participant WS")
-        lines.extend(_render_ws(section.participant_ws))
-        lines.append("")
-
-        lines.append("### Host REST")
-        lines.extend(_render_rest(section.host_rest))
-        lines.append("")
-
-        lines.append("### Host WS")
-        lines.extend(_render_ws(section.host_ws))
-        lines.append("")
+        for subsection_title, subsection_lines in subsections:
+            lines.append(f"### {subsection_title}")
+            lines.extend(subsection_lines)
+            lines.append("")
 
     return "\n".join(lines).rstrip() + "\n"
 
