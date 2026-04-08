@@ -24,6 +24,7 @@ from daemon.config import (
 from daemon.llm.adapter import get_usage
 from daemon.quiz.history import auto_generate, auto_generate_topic, auto_refine
 from daemon.quiz.poll_api import post_status
+from daemon.http import _get_json
 from daemon.summary.loop import run_summary_cycle, load_key_points, save_key_points, get_ai_summary_mtime, get_ai_summary_raw
 from daemon.transcript.loader import load_transcription_files
 from daemon.transcript.state import TranscriptStateManager
@@ -819,6 +820,11 @@ def run() -> None:
 
     ws_client.start()
 
+    # Startup connectivity checks (kept explicit for clearer startup diagnostics).
+    _status_url = f"{config.server_url}/api/status"
+    _get_json(_status_url, username=config.host_username, password=config.host_password)
+    _get_json(_status_url, username=config.host_username, password=config.host_password)
+
     # ── Start local host panel server ──
     from daemon.host_server import start_host_server
     from daemon.config import DAEMON_HOST_PORT
@@ -827,6 +833,23 @@ def run() -> None:
 
     try:
         while True:
+            # Keep daemon-aware connectivity state for clear disconnect/reconnect logs.
+            try:
+                _get_json(_status_url, username=config.host_username, password=config.host_password)
+                if server_disconnected:
+                    log.info("daemon", "Reconnected to server.")
+                    server_disconnected = False
+            except RuntimeError as e:
+                if not server_disconnected:
+                    log.error("daemon", f"Server unreachable: {e}")
+                    server_disconnected = True
+                time.sleep(DAEMON_POLL_INTERVAL)
+                continue
+            except KeyboardInterrupt:
+                _LOCK_FILE.unlink(missing_ok=True)
+                log.info("daemon", "Stopped.")
+                return
+
             # ── Drain pending WS messages (handlers run on main thread) ──
             ws_client.drain_queue()
 

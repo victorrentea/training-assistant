@@ -53,7 +53,8 @@ def _urlopen_json(req: urllib.request.Request, url: str) -> dict:
     log.debug("railway", f"→ HTTP {method} {target}")
     try:
         with urllib.request.urlopen(req, timeout=_HTTP_TIMEOUT_SECONDS, context=_ssl_context()) as resp:
-            log.debug("railway", f"← HTTP {resp.status} {method} {target}")
+            status = getattr(resp, "status", 200)
+            log.debug("railway", f"← HTTP {status} {method} {target}")
             try:
                 return json.loads(resp.read())
             except json.JSONDecodeError as e:
