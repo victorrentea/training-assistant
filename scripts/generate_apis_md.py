@@ -14,6 +14,7 @@ Feature grouping source:
 from __future__ import annotations
 
 import argparse
+import copy
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -393,7 +394,7 @@ def _extract_ws(
             ws = WsMsg(
                 name=msg_name,
                 notes=_collect_notes(msg_spec),
-                payload_shape=_shape(payload if isinstance(payload, dict) else {}, spec),
+                payload_shape=_ws_payload_shape(payload if isinstance(payload, dict) else {}, spec),
             )
             if audience == "participant":
                 section.participant_ws.append(ws)
@@ -423,13 +424,40 @@ def _render_rest(items: list[RestOp]) -> list[str]:
 
 
 def _render_ws(items: list[WsMsg]) -> list[str]:
-    lines: list[str] = []
+    lines: list[str] = ["| Message | Payload |", "| --- | --- |"]
     for msg in items:
-        lines.append(f"- `{msg.name}`")
-        lines.append(f"  - payload: `{msg.payload_shape}`")
+        message_parts = [f"`{msg.name}`"]
         for note in msg.notes:
-            lines.append(f"  - note: {note}")
+            message_parts.append(f"Note: {note}")
+        message = _escape_md_cell("<br>".join(message_parts))
+        payload = "-" if msg.payload_shape == "-" else f"`{msg.payload_shape}`"
+        lines.append(f"| {message} | {_escape_md_cell(payload)} |")
     return lines
+
+
+def _ws_payload_shape(payload: dict[str, Any], root: dict[str, Any]) -> str:
+    schema = payload
+    if "$ref" in schema:
+        resolved = _resolve_ref(root, str(schema["$ref"]))
+        if isinstance(resolved, dict):
+            schema = resolved
+
+    if isinstance(schema, dict):
+        props = schema.get("properties")
+        if isinstance(props, dict) and "type" in props:
+            stripped = copy.deepcopy(schema)
+            stripped_props = stripped.get("properties", {})
+            if isinstance(stripped_props, dict):
+                stripped_props.pop("type", None)
+                stripped["properties"] = stripped_props
+            required = stripped.get("required")
+            if isinstance(required, list):
+                stripped["required"] = [field for field in required if field != "type"]
+            if isinstance(stripped.get("properties"), dict) and not stripped["properties"] and "additionalProperties" not in stripped:
+                return "-"
+            return _shape(stripped, root)
+
+    return _shape(schema, root)
 
 
 def generate_api_reference(

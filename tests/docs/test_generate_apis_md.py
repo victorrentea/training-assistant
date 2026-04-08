@@ -77,6 +77,15 @@ def test_generator_does_not_emit_redundant_enum_comments():
     assert "# enum:" not in output
 
 
+def test_generator_renders_ws_as_table_and_omits_type_field_in_payload():
+    output = _run_generator()
+    assert "| Message | Payload |" in output
+    activity_row = re.search(r"^\| .*`activity_updated`.*\|$", output, re.MULTILINE)
+    assert activity_row, "Missing WS table row for activity_updated"
+    assert "type:" not in activity_row.group(0)
+    assert "current_activity:" in activity_row.group(0)
+
+
 def test_participant_identity_rows_have_expected_response_shapes():
     output = _run_generator()
     register_row = re.search(r"^\| .*`POST /api/participant/register`.*\|$", output, re.MULTILINE)
