@@ -47,7 +47,6 @@ async def proxy_http(request: Request, path: str, http_client: httpx.AsyncClient
             headers=headers,
             content=body,
         )
-        daemon_log.debug("railway", f"↓ HTTP {resp.status_code} /{path}")
     except httpx.ConnectError:
         return Response(content='{"error": "Backend unreachable"}', status_code=502,
                         media_type="application/json")
