@@ -34,7 +34,7 @@ def _generate_session_id() -> str:
 
 
 def _resolve_session_id_for_folder(folder_name: str) -> str:
-    """Return stable session_id for a folder, loading from session_meta.json or generating a new one."""
+    """Return stable session_id for a folder, loading from session-state.json or generating a new one."""
     root = _get_sessions_root()
     if root:
         folder = root / folder_name
@@ -261,4 +261,3 @@ async def get_interval_lines_txt(
         "Cache-Control": "no-store",
     }
     return PlainTextResponse(content=payload, headers=headers)
-

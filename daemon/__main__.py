@@ -556,7 +556,7 @@ def run() -> None:
     session_stack: list[dict] = []
 
     if "main" in _raw_state or "stack" in _raw_state:
-        # Old format — migrate: write session_meta.json per folder, then use new format going forward
+        # Old format — migrate: write session metadata into session-state.json per folder
         if "stack" in _raw_state:
             _stack_items = _raw_state["stack"]
             _active = [s for s in _stack_items if not s.get("ended_at")]
@@ -579,9 +579,9 @@ def run() -> None:
                 if len(session_stack) >= 2:
                     _meta["talk"] = session_stack[1]
                 save_session_meta(_main_folder, _meta)
-        log.info("session", "Migrated old daemon state format to session_meta.json")
+        log.info("session", "Migrated old daemon state format to session-state.json metadata")
     elif "active_session_id" in _raw_state:
-        # New format — find folder by session_id, load session_meta.json
+        # New format — find folder by session_id, load metadata from session-state.json
         _active_session_id = _raw_state.get("active_session_id")
         if _active_session_id:
             _active_folder = find_session_folder_by_id(sessions_root, _active_session_id)

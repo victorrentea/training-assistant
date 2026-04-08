@@ -204,9 +204,11 @@ def save_key_points(
 
 # ── Daemon state persistence ────────────────────────────────────────────────────
 
-SESSION_META_FILENAME = "session_meta.json"
 SESSION_STATE_FILENAME = "session-state.json"
 _LEGACY_SESSION_STATE_FILENAME = ".session-state.json"
+SESSION_META_FILENAME = SESSION_STATE_FILENAME
+_LEGACY_SESSION_META_FILENAME = "session_meta.json"
+_SESSION_META_KEYS = ("session_id", "started_at", "paused_intervals", "talk")
 
 
 def load_daemon_state(sessions_root: Path) -> dict:
@@ -249,33 +251,31 @@ def save_daemon_state(sessions_root: Path, daemon_state: dict) -> None:
 
 
 def load_session_meta(session_folder: Path) -> dict:
-    """Load session_meta.json from a session folder.
-    Returns {session_id, started_at, paused_intervals, talk?} or {} if not found."""
-    path = session_folder / SESSION_META_FILENAME
-    if not path.exists():
+    """Load session metadata from session-state.json.
+    Returns {session_id, started_at, paused_intervals, talk?} or {} if missing."""
+    data = load_session_state(session_folder)
+    if not isinstance(data, dict):
         return {}
-    try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except Exception as e:
-        log.error("session", f"Failed to load session meta from {session_folder.name}: {e}")
-        return {}
+    meta = {k: data[k] for k in _SESSION_META_KEYS if k in data}
+    return meta if "session_id" in meta else {}
 
 
 def save_session_meta(session_folder: Path, meta: dict) -> None:
-    """Atomically write session_meta.json to a session folder."""
+    """Persist session metadata into session-state.json."""
     try:
-        session_folder.mkdir(parents=True, exist_ok=True)
-        path = session_folder / SESSION_META_FILENAME
-        tmp = path.with_suffix(".tmp")
-        tmp.write_text(json.dumps(meta, default=str, indent=2), encoding="utf-8")
-        tmp.replace(path)
+        current = load_session_state(session_folder)
+        merged = dict(current) if isinstance(current, dict) else {}
+        for key in _SESSION_META_KEYS:
+            if key in meta:
+                merged[key] = meta[key]
+        save_session_state(session_folder, merged)
     except Exception as e:
         log.error("session", f"Failed to save session meta to {session_folder.name}: {e}")
 
 
 def find_session_folder_by_id(sessions_root: Path, session_id: str) -> Path | None:
     """Scan session folders and return the one whose session_id matches.
-    Checks session_meta.json first (fast), then session-state snapshots."""
+    Checks metadata in session-state.json first (fast), then legacy snapshots."""
     if not sessions_root.exists() or not session_id:
         return None
     try:
@@ -287,7 +287,7 @@ def find_session_folder_by_id(sessions_root: Path, session_id: str) -> Path | No
     except Exception:
         return None
     for folder in folders:
-        # Check session_meta.json first (daemon-owned, always up to date)
+        # Check metadata in session-state.json first (daemon-owned, always up to date)
         meta = load_session_meta(folder)
         if meta.get("session_id") == session_id:
             return folder
@@ -305,7 +305,7 @@ def find_session_folder_by_id(sessions_root: Path, session_id: str) -> Path | No
 
 
 def session_meta_to_stack(meta: dict, folder_name: str) -> list[dict]:
-    """Build an in-memory session stack from session_meta.json data and folder name."""
+    """Build an in-memory session stack from session-state.json metadata and folder name."""
     if not meta:
         return []
     main_entry = {
@@ -385,6 +385,20 @@ def load_session_state(session_folder: Path) -> dict:
     """Load session-state.json and return a dict snapshot; returns {} on missing/invalid."""
     path = session_state_path(session_folder)
     if not path.exists():
+        legacy_meta = session_folder / _LEGACY_SESSION_META_FILENAME
+        if legacy_meta.exists():
+            try:
+                data = json.loads(legacy_meta.read_text(encoding="utf-8"))
+                if isinstance(data, dict):
+                    session_folder.mkdir(parents=True, exist_ok=True)
+                    tmp = path.with_name(f"{SESSION_STATE_FILENAME}.tmp")
+                    tmp.write_text(json.dumps(data, default=str, indent=2), encoding="utf-8")
+                    tmp.replace(path)
+                    legacy_meta.unlink(missing_ok=True)
+                    log.info("session", f"💾 {SESSION_STATE_FILENAME} in {session_folder.name}")
+                    return data
+            except Exception:
+                pass
         return {}
     try:
         raw = path.read_text(encoding="utf-8").strip()
@@ -403,9 +417,16 @@ def load_session_state(session_folder: Path) -> dict:
 def save_session_state(session_folder: Path, snapshot: dict) -> None:
     """Atomically writes session-state.json to the session folder."""
     session_folder.mkdir(parents=True, exist_ok=True)
+    payload = dict(snapshot) if isinstance(snapshot, dict) else {}
+    # Preserve session metadata fields that may have been written separately.
+    existing = load_session_state(session_folder)
+    if isinstance(existing, dict):
+        for key in _SESSION_META_KEYS:
+            if key in existing and key not in payload:
+                payload[key] = existing[key]
     path = session_state_path(session_folder)
     tmp = path.with_name(f"{SESSION_STATE_FILENAME}.tmp")
-    tmp.write_text(json.dumps(snapshot, default=str, indent=2), encoding="utf-8")
+    tmp.write_text(json.dumps(payload, default=str, indent=2), encoding="utf-8")
     tmp.replace(path)
     log.info("session", f"💾 {SESSION_STATE_FILENAME} in {session_folder.name}")
 
