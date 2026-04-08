@@ -1040,6 +1040,19 @@
     badge.textContent = level.toUpperCase();
     badge.classList.remove('log-level-info', 'log-level-debug', 'log-level-pending');
     badge.classList.add(level === 'debug' ? 'log-level-debug' : 'log-level-info');
+    if (level === 'info') {
+      badge.style.color = '#9aa0b5';
+      badge.style.borderColor = '#9aa0b5';
+      badge.style.background = '#9aa0b522';
+      badge.style.boxShadow = 'none';
+      badge.style.animation = 'none';
+    } else {
+      badge.style.color = '#ff6b6b';
+      badge.style.borderColor = '#ff6b6b';
+      badge.style.background = '#ff6b6b22';
+      badge.style.boxShadow = '0 0 12px rgba(255, 45, 45, 0.35)';
+      badge.style.animation = 'log-debug-blink 1.8s ease-in-out infinite';
+    }
     if (_logLevelBusy) badge.classList.add('log-level-pending');
     const verb = level === 'debug' ? 'high-volume debug logging is ON' : 'normal logging (info)';
     _setFooterBadgeTooltip(badge, `Daemon log level: ${level}\nClick to switch to ${level === 'debug' ? 'info' : 'debug'}\n${verb}`);
