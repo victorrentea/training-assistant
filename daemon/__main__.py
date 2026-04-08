@@ -65,7 +65,6 @@ from daemon.lock import (
     _HEARTBEAT_INTERVAL,
 )
 from daemon.email_notify import notify as email_notify
-from daemon.adapters.loader import adapter as _platform
 
 # ── PowerPoint helpers ─────────────────────────────────────────────────────────
 
@@ -396,7 +395,6 @@ def _send_global_state_saved_ack(
     ws_client,
     session_req: dict | None,
     action: str | None,
-    persisted: bool,
     session_id: str | None,
 ) -> None:
     pass  # global_state_saved removed: Railway no longer tracks ACKs
@@ -1221,7 +1219,7 @@ def run() -> None:
                         )
                         log.info("session", f"Created talk folder: {talk_name}")
                     if action:
-                        _send_global_state_saved_ack(ws_client, session_req, action, global_state_persisted, _active_session_id)
+                        _send_global_state_saved_ack(ws_client, session_req, action, _active_session_id)
 
                 except Exception as e:
                     log.error("session", f"Request error: {e}")

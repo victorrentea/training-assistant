@@ -18,7 +18,7 @@ import urllib.request
 from pathlib import Path
 
 from daemon import log
-from daemon.http import _get_json as _http_get_json, session_api_url, get_active_session_id
+from daemon.http import session_api_url, get_active_session_id
 from daemon.slides.catalog import (
     _abs_key,
     _merge_slides,
