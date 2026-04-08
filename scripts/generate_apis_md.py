@@ -26,7 +26,7 @@ FEATURE_LABELS: dict[str, str] = {
     "session": "Session",
     "session_management": "Session",
     "slides": "Slides",
-    "activity": "Activity Switching",
+    "activity": "Activity",
     "participant": "Identity",
     "identity": "Identity",
     "poll": "Poll",

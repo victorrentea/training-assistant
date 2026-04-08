@@ -6,7 +6,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
 - [Session](#feature-session)
 - [Identity](#feature-identity)
 - [Slides](#feature-slides)
-- [Activity Switching](#feature-activity-switching)
+- [Activity](#feature-activity)
 - [Poll](#feature-poll)
 - [Word Cloud](#feature-word-cloud)
 - [Q&A](#feature-qa)
@@ -80,7 +80,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
 | --- | --- |
 | Invalidation signal — host must call GET /api/slides to refresh<br>Host should refetch slides list; payload intentionally carries no cache map.<br>`slides_cache_status` | - |
 
-## Feature: Activity Switching
+## Feature: Activity
 
 ### Participant WS
 | Message | Payload |
