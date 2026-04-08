@@ -16,12 +16,18 @@ from __future__ import annotations
 import argparse
 import copy
 import re
+import subprocess
+import sys
 import textwrap
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 import yaml
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 FEATURE_LABELS: dict[str, str] = {
     "session": "Session",
@@ -991,6 +997,7 @@ def main() -> int:
     parser.add_argument("--participant-ws", default="docs/participant-ws.yaml")
     parser.add_argument("--host-ws", default="docs/host-ws.yaml")
     parser.add_argument("--output", default="API.generated.md")
+    parser.add_argument("--db-output", default="DB.md")
     parser.add_argument("--stdout", action="store_true", help="Print markdown to stdout instead of writing file")
     args = parser.parse_args()
 
@@ -1007,6 +1014,32 @@ def main() -> int:
     out_path = Path(args.output)
     out_path.write_text(content)
     print(f"Wrote {out_path}")
+
+    # Keep DB reference in sync when generating canonical API.md.
+    if out_path.name == "API.md":
+        db_path = Path(args.db_output)
+        try:
+            from scripts.generate_db_md import generate_db_reference
+
+            db_content = generate_db_reference()
+            db_path.write_text(db_content)
+        except Exception:
+            # Some git-hook environments run under x86 Python, while local deps are arm64.
+            # Fall back to subprocess generators with runtime-specific retries.
+            script_path = str(PROJECT_ROOT / "scripts" / "generate_db_md.py")
+            attempts = [
+                [sys.executable, script_path, "--output", str(db_path)],
+                ["arch", "-arm64", "uv", "run", "--extra", "dev", "--extra", "daemon", "python3", script_path, "--output", str(db_path)],
+            ]
+            last_err = ""
+            for cmd in attempts:
+                completed = subprocess.run(cmd, check=False, capture_output=True, text=True)
+                if completed.returncode == 0:
+                    break
+                last_err = completed.stderr or completed.stdout or "(no output)"
+            else:
+                raise RuntimeError(f"Failed to regenerate DB.md:\n{last_err}") from None
+        print(f"Wrote {db_path}")
     return 0
 
 

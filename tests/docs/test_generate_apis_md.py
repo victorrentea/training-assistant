@@ -232,3 +232,23 @@ def test_api_md_is_fresh_with_generator_output():
         "API.md is stale compared to generator output.\n"
         "Run: python3 scripts/generate_apis_md.py --output API.md"
     )
+
+
+def test_generating_api_md_also_regenerates_db_md():
+    db_path = ROOT / "DB.md"
+    original = db_path.read_text()
+    try:
+        db_path.write_text("# stale\n", encoding="utf-8")
+        completed = subprocess.run(
+            ["python3", str(SCRIPT), "--output", str(API_MD_PATH)],
+            check=False,
+            capture_output=True,
+            text=True,
+            cwd=ROOT,
+        )
+        assert completed.returncode == 0, completed.stderr
+        assert "Wrote" in completed.stdout
+        assert "DB.md" in completed.stdout
+        assert db_path.read_text(encoding="utf-8") != "# stale\n"
+    finally:
+        db_path.write_text(original, encoding="utf-8")
