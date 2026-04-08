@@ -3,6 +3,7 @@ import time
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi.responses import FileResponse
 from pydantic import BaseModel as _BaseModel
 
 from railway.shared.auth import require_host_auth
@@ -100,6 +101,21 @@ async def upload_file(
 
 class _AckBody(_BaseModel):
     disk_path: str
+
+
+@router.get("/upload/{file_id}", dependencies=[Depends(require_host_auth)])
+async def download_for_daemon(file_id: int):
+    """Daemon fetches uploaded temp file before persisting it locally."""
+    result = _find_entry(file_id)
+    if not result:
+        raise HTTPException(404, "File not found")
+    _, entry = result
+    railway_path = Path(entry.get("railway_path", ""))
+    if not railway_path.exists():
+        raise HTTPException(404, "File content missing")
+    filename = entry.get("filename") or railway_path.name
+    return FileResponse(path=railway_path, filename=filename, media_type="application/octet-stream")
+
 
 @router.post("/upload/{file_id}/ack", dependencies=[Depends(require_host_auth)])
 async def ack_upload(file_id: int, body: _AckBody):
