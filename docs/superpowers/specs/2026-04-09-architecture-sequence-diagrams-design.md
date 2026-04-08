@@ -2,22 +2,31 @@
 
 ## Problem
 
-`ARCHITECTURE.md` used to contain a single large PlantUML sequence diagram covering 19 flows. That diagram is no longer present in the current document, so the sequence-flow view has effectively disappeared. The user wants that interaction view restored, but split into smaller source files that are easier to maintain.
+`ARCHITECTURE.md` used to contain a single large PlantUML sequence diagram covering many flows. That diagram is no longer present in the current document, so the sequence-flow view has effectively disappeared. The user wants that interaction view restored, but split into smaller source files that are easier to maintain.
 
 The updated workflow also needs generated SVGs committed in the repo and referenced from `ARCHITECTURE.md`, plus automation so changing any `.puml` updates the matching `.svg`. The important constraint is not just convenience; the repository must also reject stale generated SVGs.
 
+Just as importantly, the diagrams must describe the system as it works today. The old monolith is useful as a coverage inventory, but the new split diagrams must be re-authored from the current code in `daemon/`, `railway/`, and `static/`, not copied forward blindly.
+
 ## Goal
 
-- Restore the historical sequence-flow coverage from the old monolithic diagram.
+- Restore the sequence-flow view in `ARCHITECTURE.md`.
 - Split that content into focused `.puml` files under `docs/sequences/`.
 - Add a top-level table of contents to `ARCHITECTURE.md`.
 - Add titled sequence-diagram sections in `ARCHITECTURE.md` that embed generated SVGs, not raw PlantUML.
 - Provide one repository script that can render, watch, and verify the diagrams.
 - Enforce `.puml`/`.svg` sync locally before push.
+- Reconcile every split diagram with the current implementation before it is committed.
 
 ## Source of Truth
 
-The split is based on the old monolithic sequence diagram from `ARCHITECTURE.md` in commit `18dadf10`, under the section `System Interactions (Sequence Flows)`. That source covered 19 numbered flows, so the new split preserves those flows and only changes packaging, not intent.
+The source of truth is the current implementation in:
+
+- `daemon/`
+- `railway/`
+- `static/`
+
+The old monolithic sequence diagram from `ARCHITECTURE.md` in commit `18dadf10`, under `System Interactions (Sequence Flows)`, is only a recovery aid. It provides a candidate list of flows that previously mattered, but each split diagram must be validated and updated against the current code before being rendered and referenced.
 
 ## Diagram Split
 
@@ -50,7 +59,9 @@ The eight diagrams map to the old numbered flows like this:
 | `07-participant-to-host-inputs-and-emoji.puml` | 11, 12, 13 |
 | `08-activity-summary-and-leaderboard.puml` | 14, 15, 16, 17 |
 
-This is the recommended split because it keeps each diagram readable while preserving the legacy flow coverage. One file per original flow would be mechanically simple but would make `ARCHITECTURE.md` too fragmented.
+This is the recommended split because it keeps each diagram readable while preserving coverage of the previously documented flows. One file per original flow would be mechanically simple but would make `ARCHITECTURE.md` too fragmented.
+
+The mapping is a starting point, not a freeze on historical behavior. During implementation, each diagram must be corrected to match the current architecture. If one of the old numbered flows no longer exists or has materially changed shape, the split diagram should reflect the current behavior and note the updated scope in `ARCHITECTURE.md`.
 
 ## ARCHITECTURE.md Structure
 
@@ -71,14 +82,14 @@ Expected sequence-diagram headings:
 Each subsection will contain:
 
 1. A one-sentence summary of what the diagram covers.
-2. The legacy flow numbers it corresponds to.
+2. The current code path or behavior family it corresponds to, with optional mention of the legacy flow numbers when that mapping is still useful.
 3. A markdown image reference to the generated SVG, for example:
 
 ```md
 ![Session lifecycle and recovery](docs/sequences/svg/01-session-lifecycle-and-recovery.svg)
 ```
 
-The current C4 sections stay inline and unchanged for now. This change is only for the old sequence-flow content.
+The current C4 sections stay inline and unchanged for now. This change is only for the split sequence-flow content, and those sections must reference generated SVGs rather than embedding raw PlantUML blocks.
 
 ## Rendering Script
 
@@ -178,5 +189,6 @@ Implementation should prove the workflow with:
 3. `sh -n hooks/pre-commit`
 4. `sh -n hooks/pre-push`
 5. `git diff --check`
+6. Targeted code-to-doc verification for each sequence diagram by inspecting the live code paths it claims to describe
 
 The resulting `ARCHITECTURE.md` should show a visible TOC and embed all generated SVGs from `docs/sequences/svg/`.
