@@ -28,7 +28,7 @@ def create_http_client(backend_url: str) -> httpx.AsyncClient:
 
 async def proxy_http(request: Request, path: str, http_client: httpx.AsyncClient) -> Response:
     """Forward an HTTP request to the backend and return the response."""
-    daemon_log.debug("railway", f"→ HTTP {request.method} /{path}")
+    daemon_log.debug("railway", f"↑ HTTP {request.method} /{path}")
     url = f"/{path}"
     if request.url.query:
         url = f"{url}?{request.url.query}"
@@ -47,7 +47,7 @@ async def proxy_http(request: Request, path: str, http_client: httpx.AsyncClient
             headers=headers,
             content=body,
         )
-        daemon_log.debug("railway", f"← HTTP {resp.status_code} /{path}")
+        daemon_log.debug("railway", f"↓ HTTP {resp.status_code} /{path}")
     except httpx.ConnectError:
         return Response(content='{"error": "Backend unreachable"}', status_code=502,
                         media_type="application/json")
@@ -94,7 +94,7 @@ async def proxy_websocket(client_ws: WebSocket, path: str, backend_ws_url: str):
 
     try:
         async with websockets.connect(url, **ws_kwargs) as upstream:
-            daemon_log.debug("ws-proxy", f"↔ open /ws/{path}")
+            daemon_log.debug("railway", f"↕ open /ws/{path}")
 
             def _msg_name(raw: str) -> str:
                 try:
@@ -111,7 +111,7 @@ async def proxy_websocket(client_ws: WebSocket, path: str, backend_ws_url: str):
                 try:
                     while True:
                         data = await client_ws.receive_text()
-                        daemon_log.debug("ws-proxy", f"→ /ws/{path} {_msg_name(data)}")
+                        daemon_log.debug("railway", f"↑ /ws/{path} {_msg_name(data)}")
                         await upstream.send(data)
                 except WebSocketDisconnect:
                     pass
@@ -119,7 +119,7 @@ async def proxy_websocket(client_ws: WebSocket, path: str, backend_ws_url: str):
             async def upstream_to_client():
                 try:
                     async for message in upstream:
-                        daemon_log.debug("ws-proxy", f"← /ws/{path} {_msg_name(message)}")
+                        daemon_log.debug("railway", f"↓ /ws/{path} {_msg_name(message)}")
                         await client_ws.send_text(message)
                 except ConnectionClosed:
                     pass

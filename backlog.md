@@ -1,5 +1,6 @@
 # Tasks
 
+- [x] direct request: unified daemon directional logs by endpoint geography (host `→/←`, railway+participants `↑/↓`, addons `→/←`), including host REST inbound as `[host] →`.
 - [x] direct request: enforce INFO badge gray via JS inline styles to override any residual debug red state.
 - [x] direct request: DEBUG log-level badge now blinks slowly with a light red background.
 - [x] direct request: INFO log-level badge color set to explicit gray (`#9aa0b5`) to avoid theme-dependent color drift.

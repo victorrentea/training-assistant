@@ -8,11 +8,9 @@ The CI guard test (test_ws_contract.py::test_no_raw_ws_sends) ensures no code
 bypasses this module by calling _ws_client.send() or send_to_host() directly.
 """
 import json
-import logging
 
+from daemon import log
 from pydantic import BaseModel
-
-logger = logging.getLogger(__name__)
 
 # Set by __main__.py during daemon startup
 _ws_client = None
@@ -49,7 +47,7 @@ def send_to_railway(msg: dict) -> bool:
     msg_type = str(msg.get("type") or "unknown")
     if msg_type == "broadcast" and isinstance(msg.get("event"), dict):
         msg_type = f"broadcast:{msg['event'].get('type', 'unknown')}"
-    logger.debug("WS → railway: %s", msg_type)
+    log.debug("railway", f"↑ {msg_type}")
     return _ws_client.send(msg)
 
 
@@ -57,7 +55,8 @@ def broadcast(msg: BaseModel):
     """Send typed message to all participants via Railway broadcast."""
     if _ws_client is None:
         return
-    logger.debug("WS → railway: broadcast:%s", msg.model_dump().get("type", "unknown"))
+    event_type = msg.model_dump().get("type", "unknown")
+    log.debug("railway", f"↑ broadcast:{event_type}")
     _ws_client.send({"type": "broadcast", "event": msg.model_dump()})
 
 
@@ -66,10 +65,11 @@ async def notify_host(msg: BaseModel):
     if _host_ws is None:
         return
     try:
-        logger.debug("WS → host: %s", msg.model_dump().get("type", "unknown"))
+        msg_type = msg.model_dump().get("type", "unknown")
+        log.debug("host", f"← {msg_type}")
         await _host_ws.send_text(json.dumps(msg.model_dump()))
     except Exception:
-        logger.debug("Failed to send to host WS")
+        log.debug("host", "Failed to send WS message")
 
 
 def broadcast_event(msg: BaseModel) -> dict:

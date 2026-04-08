@@ -64,7 +64,7 @@ class DaemonWsClient:
                 return False
             try:
                 if self._should_trace_msg(msg):
-                    log.debug("ws-client", f"→ {self._msg_name(msg)}")
+                    log.debug("railway", f"↑ {self._msg_name(msg)}")
                 self._ws.send(json.dumps(msg))
                 return True
             except Exception:
@@ -82,7 +82,7 @@ class DaemonWsClient:
                 try:
                     handler(data)
                 except Exception as e:
-                    log.error("ws-client", f"Handler error for {msg_type}: {e}")
+                    log.error("railway", f"Handler error for {msg_type}: {e}")
 
     def start(self):
         """Start the WS connection thread."""
@@ -111,7 +111,7 @@ class DaemonWsClient:
             try:
                 self._connect_and_listen()
             except Exception as e:
-                log.error("ws-client", f"Connection error: {e}")
+                log.error("railway", f"Connection error: {e}")
             if not self._stop.is_set():
                 self._stop.wait(_RECONNECT_INTERVAL)
 
@@ -143,14 +143,14 @@ class DaemonWsClient:
         with self._ws_lock:
             self._ws = ws
 
-        log.info("ws-client", f"Connected to {url}")
+        log.info("railway", f"Connected to {url}")
 
         # Fire on_connect callbacks
         for cb in self._on_connect_callbacks:
             try:
                 cb()
             except Exception as e:
-                log.error("ws-client", f"on_connect error: {e}")
+                log.error("railway", f"on_connect error: {e}")
 
         try:
             for raw in ws:
@@ -162,9 +162,9 @@ class DaemonWsClient:
                     continue
                 msg_type = data.get("type")
                 if self._should_trace_msg(data):
-                    log.debug("ws-client", f"← {self._msg_name(data)}")
+                    log.debug("railway", f"↓ {self._msg_name(data)}")
                 if msg_type == "kicked":
-                    log.info("ws-client", "Kicked by server (new daemon connected)")
+                    log.info("railway", "Kicked by server (new daemon connected)")
                     break
                 if msg_type in self._handlers:
                     if msg_type in self._inline_handlers:
@@ -172,19 +172,19 @@ class DaemonWsClient:
                         try:
                             self._handlers[msg_type](data)
                         except Exception as e:
-                            log.error("ws-client", f"Inline handler error for {msg_type}: {e}")
+                            log.error("railway", f"Inline handler error for {msg_type}: {e}")
                     else:
                         # Enqueue for main thread processing
                         self._work_queue.put((msg_type, data))
                 elif msg_type == "slide_log":
                     # Logging can happen on WS thread (no shared state mutation)
-                    log.info("ws-client", f"slide_log: {data.get('event')} {data.get('slug')}")
+                    log.info("railway", f"slide_log: {data.get('event')} {data.get('slug')}")
         except ConnectionClosed:
             pass
         finally:
             with self._ws_lock:
                 self._ws = None
-            log.info("ws-client", "Disconnected")
+            log.info("railway", "Disconnected")
 
     @staticmethod
     def _msg_name(msg: dict) -> str:
