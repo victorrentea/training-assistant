@@ -1425,18 +1425,18 @@
       : _notesLineCount;
     el.style.cssText = 'cursor:pointer;';
     if (nonEmptyLines > 0) {
-      el.textContent = `${nonEmptyLines} Notes`;
+      el.textContent = `📝 ${nonEmptyLines}`;
       el.className = 'badge connected';
       const folderTip = (_notesSessionFolder && _notesSessionNotes)
         ? `${_notesSessionFolder}/${_notesSessionNotes}\n` : '';
       _setFooterBadgeTooltip(el, `${folderTip}${nonEmptyLines} non-empty lines\nClick to view`);
     } else if (_notesSessionFolder && !_notesSessionNotes) {
-      el.textContent = 'Notes';
+      el.textContent = '📝';
       el.className = 'badge';
       el.style.cssText = 'cursor:pointer; color:var(--warn); border:1px solid var(--warn); --badge-fill:#ffd16644;';
       _setFooterBadgeTooltip(el, 'Session folder found but no notes file inside');
     } else {
-      el.textContent = 'Notes';
+      el.textContent = '📝';
       el.className = 'badge empty';
       _setFooterBadgeTooltip(el, 'No notes yet');
     }
