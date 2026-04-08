@@ -1,968 +1,343 @@
 # Architecture Reference
 
-> **This is the go-to document for understanding the system architecture.**
-> For product requirements, tech stack, AppState schema, and workflow rules, see [CLAUDE.md](CLAUDE.md).
+> Current runtime architecture for this repository as of 2026-04-09.
+> This document is intentionally grounded in the code that runs today, not older plans or retired modules.
+
+For product goals, workflow rules, and operational conventions, see [CLAUDE.md](CLAUDE.md).
 
 ---
 
-## C1 — System Context
+## Reality Today
 
-Who uses the system and what external systems it touches.
+- Participant traffic is served from Railway. The participant journey is `landing.html` -> `/{session_id}` -> session-scoped REST and WebSocket calls.
+- The host control plane is daemon-first. `python3 -m daemon` starts a local host panel at `http://127.0.0.1:8081/host`, serves the same static host assets there, mounts most live feature routers locally, and proxies the rest to Railway.
+- Railway is now a thin session-aware bridge: page serving, session validation, browser WebSockets, daemon WebSocket, slide cache/downloads, temporary file uploads, and daemon-driven static sync.
+- Most live workshop behavior lives in the daemon: session lifecycle, participant and host snapshots, poll/word cloud/Q&A/code review/debate state, quiz generation, slide orchestration, upload handoff, and local persistence.
+- There is no standalone database in the current runtime. Railway keeps in-memory state plus temp files; the daemon persists session files on disk.
+- Summary publication is currently file-driven from `ai-summary.md`. Claude is currently used for quiz generation/refinement and debate cleanup.
+
+---
+
+## C1 - System Context
 
 ```plantuml
 @startuml C1_SystemContext
 !include <C4/C4_Context>
-title Workshop Live Interaction Tool — C1: System Context
+
+title Workshop Live Interaction Tool - C1 System Context
 LAYOUT_WITH_LEGEND()
 
-Person(host, "Host", "Manages activities, views results,\ncontrols debate and code review.")
-Person(participant, "Participant", "Trainee.")
-System(workshop, "Workshop Live Interaction Tool", "Real-time trainee interaction platform\nfor live workshops.")
-System_Ext(macos_addons, "victor-macos-addons", "Whisper transcription on trainer's Mac.\nCaptures audio and writes normalized\ntranscript files to local disk.")
-System_Ext(claude_api, "Anthropic Claude API", "LLM for quiz generation, debate cleanup, summaries.")
-System_Ext(nominatim, "Nominatim (OpenStreetMap)", "GPS → city + country.")
-System_Ext(google_drive, "Google Drive", "Hosts public PDF exports\nof presentation slides.")
+Person(host, "Host", "Runs the workshop and controls the live session.")
+Person(participant, "Participant", "Joins from a browser and interacts live.")
 
-Rel(macos_addons, workshop, "Transcript file written to disk", "Local file")
-Rel(host, workshop, "Manages activities and participants", "HTTPS / WebSocket")
-Rel(participant, workshop, "Votes, Q&A, word cloud, debate, code review", "HTTPS / WebSocket")
-Rel(workshop, claude_api, "Quiz generation, debate AI cleanup, session summaries", "HTTPS REST")
-Rel(workshop, nominatim, "Resolves participant GPS to city (client-side)", "HTTPS REST")
-Rel(workshop, google_drive, "Downloads PDF exports of presentation slides", "HTTPS")
+System(workshop, "Workshop Live Interaction Tool", "Session-aware audience interaction tool for workshops and talks.")
+
+System_Ext(claude_api, "Anthropic Claude API", "Used by the daemon for quiz generation/refinement and debate cleanup.")
+System_Ext(macos_addons, "victor-macos-addons", "Local Mac helper exposing slide events and overlay/session notifications over WebSocket.")
+System_Ext(nominatim, "Nominatim", "Optional reverse geocoding for participant location sharing.")
+System_Ext(google_drive, "Google Drive", "Source of slide PDF exports that Railway caches for participants.")
+
+Rel(host, workshop, "Controls sessions, activities, slides, and participant state", "Browser + localhost daemon")
+Rel(participant, workshop, "Votes, reacts, uploads, follows slides, reads notes/key points", "HTTPS / WSS")
+
+Rel(workshop, claude_api, "Quiz generation/refinement and debate AI cleanup", "HTTPS")
+Rel(workshop, macos_addons, "Receives slide events; sends emoji and session notifications", "Local WSS")
+Rel(participant, nominatim, "Shares optional location", "HTTPS")
+Rel(workshop, google_drive, "Downloads slide PDFs into Railway cache", "HTTPS")
 @enduml
 ```
 
 ---
 
-## C2 — Containers
-
-The five runtime processes and how they communicate.
+## C2 - Runtime Containers
 
 ```plantuml
 @startuml C2_Containers
 !include <C4/C4_Container>
 
-title Workshop Live Interaction Tool — C2: Container Diagram
-
+title Workshop Live Interaction Tool - C2 Containers
 LAYOUT_LEFT_RIGHT()
 
-' ── left: trainees ───────────────────────────────────────────────
-Person(participant, "Participant", "Trainee.")
+Person(host, "Host")
+Person(participant, "Participant")
 
-' ── centre: the system ───────────────────────────────────────────
 System_Boundary(workshop, "Workshop Tool") {
-
-    Container(participant_spa, "Participant SPA", "Vanilla JS (trainee's browser)", "Voting, Q&A, word cloud,\ndebate, code review,\ngeolocation, emoji reactions.")
-
-    Container(fastapi, "FastAPI Backend", "Python 3.12 / FastAPI / Uvicorn", "REST endpoints + WebSocket.\nHTTP Basic Auth via middleware.\nTLS handled by Railway.")
-
-    Container(host_spa, "Host SPA", "Vanilla JS (host's browser)", "Poll/activity management,\nparticipant list, map view (Leaflet),\nquiz preview, debate control.")
-
-    Container(training_daemon, "Daemon", "Python 3.12 CLI (host's machine)", "Long-polls backend for quiz requests\nand debate AI cleanup.\nPosts AI-generated content to backend.\nPeriodically synthesizes session key points.\nManages slides PPTX→PDF conversion and upload.")
-
-    Container(emoji_overlay, "Emoji Overlay", "Swift / AppKit (host's Mac)", "Transparent always-on-top window.\nReceives emoji reactions via WebSocket\nand animates them over the screen.\nPID lock file ensures single instance.")
-
+    Container(participant_spa, "Participant SPA", "Vanilla HTML/CSS/JS served by Railway", "Join flow, participant UI, slides dock, notes/key points, uploads, emoji, live updates.")
+    Container(host_spa, "Host SPA", "Vanilla HTML/CSS/JS served by the daemon host server", "Session creation/resume and live control panel.")
+    Container(railway_backend, "Railway Backend", "FastAPI on Railway", "Session validation, browser/daemon WebSockets, slide cache, temporary uploads, static sync endpoints, public participant pages.")
+    Container(training_daemon, "Training Daemon", "Python CLI with embedded FastAPI", "Local host control plane, state ownership, persistence, quiz/debate/slides jobs, Railway bridge.")
 }
 
-' ── right: host + external AI ────────────────────────────────────
-Person(host, "Host", "Workshop facilitator.")
-System_Ext(macos_addons, "victor-macos-addons", "Whisper transcription on trainer's Mac.\nWrites normalized transcript files to disk.")
-System_Ext(claude_api, "Anthropic Claude API", "LLM for quiz generation,\ndebate argument cleanup,\nand session summaries.")
-System_Ext(nominatim, "Nominatim", "GPS coords → city + country.")
-System_Ext(google_drive, "Google Drive", "Hosts public PDF exports\nof presentation slides.")
+System_Ext(macos_addons, "victor-macos-addons", "Local WebSocket bridge for slide and overlay events.")
+System_Ext(claude_api, "Anthropic Claude API", "LLM used by the daemon.")
+System_Ext(nominatim, "Nominatim", "Optional client-side reverse geocoding.")
+System_Ext(google_drive, "Google Drive", "Slide PDF origin.")
+System_Ext(host_files, "Host session files", "Session folders, normalized transcripts, ai-summary.md, uploaded files, slide manifests.")
+System_Ext(local_rag, "Local ChromaDB store", "~/.workshop-rag/chroma")
 
-' layout hints — keep host cluster top-right, nominatim bottom-right
-Lay_L(participant, participant_spa)
-Lay_R(host, host_spa)
-Lay_D(host, macos_addons)
-Lay_D(macos_addons, training_daemon)
-Lay_R(claude_api, training_daemon)
-Lay_D(nominatim, participant_spa)
-Lay_D(claude_api, google_drive)
-Lay_D(training_daemon, emoji_overlay)
+Rel(participant, participant_spa, "Uses", "Browser")
+Rel(participant_spa, railway_backend, "Session-scoped REST + WebSocket", "HTTPS / WSS")
+Rel(participant_spa, nominatim, "Reverse geocodes GPS to city/country", "HTTPS")
 
-' relationships
-Rel(participant, participant_spa, "Votes, sees live results", "Browser")
-Rel(participant_spa, fastapi, "Vote API, WebSocket", "HTTPS / WSS")
-Rel(host, host_spa, "Manages polls, views results", "Browser")
-Rel(host_spa, fastapi, "Poll API, WebSocket", "HTTPS / WSS")
-Rel(participant_spa, nominatim, "Reverse geocodes GPS → city+country", "HTTPS REST")
-Rel(host, training_daemon, "Starts/stops", "Local terminal")
-Rel(macos_addons, training_daemon, "Writes normalized transcript files\nto local disk (daemon reads them)", "Local file")
-Rel(training_daemon, fastapi, "Polls for requests, posts preview\nand slides upload", "HTTPS REST + WSS")
-Rel(training_daemon, claude_api, "Generates quiz, debate AI cleanup, summary", "HTTPS REST")
-Rel(fastapi, google_drive, "Downloads PDF exports\nof presentation slides", "HTTPS")
+Rel(host, host_spa, "Uses", "Browser")
+Rel(host_spa, training_daemon, "Host REST + proxied WebSocket", "HTTP / WSS on 127.0.0.1:8081")
 
-Rel(host, emoji_overlay, "Starts/stops", "start.sh")
-Rel(emoji_overlay, fastapi, "Connects as __overlay__ participant", "WSS /ws/__overlay__")
+Rel(training_daemon, railway_backend, "Daemon WS, host-auth REST, static sync, upload handoff", "WSS /ws/daemon + HTTPS")
+Rel(training_daemon, claude_api, "Quiz generation/refinement and debate cleanup", "HTTPS")
+Rel(training_daemon, macos_addons, "Receives slide events; sends emoji/session notifications", "Local WSS")
+Rel(training_daemon, host_files, "Reads and writes session files", "Local filesystem")
+Rel(training_daemon, local_rag, "Indexes and queries local materials", "Local filesystem")
 
+Rel(railway_backend, google_drive, "Downloads slide PDFs into cache", "HTTPS")
 @enduml
 ```
 
+### Container split
+
+| Container | Primary entrypoint | What it owns |
+| --- | --- | --- |
+| Participant SPA | [`static/landing.html`](static/landing.html), [`static/participant.html`](static/participant.html), [`static/participant.js`](static/participant.js) | Participant join flow and live UI rendered from Railway paths such as `/{session_id}` and `/{session_id}/api/*`. |
+| Host SPA | [`static/host-landing.html`](static/host-landing.html), [`static/host-landing.js`](static/host-landing.js), [`static/host.html`](static/host.html), [`static/host.js`](static/host.js) | Host-only session creation/resume and live admin UI. The daemon advertises the local entrypoint `http://127.0.0.1:8081/host`. |
+| Railway Backend | [`railway/app.py`](railway/app.py) | Session gating, browser and daemon WebSockets, slide cache/download serving, temporary uploads, public notes/key-points endpoints, and daemon-driven static file sync. |
+| Training Daemon | [`daemon/__main__.py`](daemon/__main__.py) | Embedded host FastAPI server, feature state machines, session persistence, LLM jobs, addons bridge, upload handoff, and Railway bridge. |
+
 ---
 
-## C3 — Backend Components
-
-All FastAPI routers, the core infrastructure package, and how they connect.
+## C3 - Railway Backend
 
 ```plantuml
-@startuml c3_backend
-!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+@startuml C3_RailwayBackend
+!include <C4/C4_Component>
 
-title Backend — C3 Component Diagram
-
+title Railway Backend - C3 Component Diagram
 LAYOUT_WITH_LEGEND()
 
-Container_Ext(participant_spa, "Participant SPA", "Vanilla JS in trainee's browser")
-Container_Ext(host_spa, "Host SPA", "Vanilla JS in host's browser")
-Container_Ext(daemon, "Daemon", "Python CLI on host's Mac")
-Container_Ext(emoji_overlay, "Emoji Overlay", "Swift app on host's Mac")
-ContainerDb_Ext(sqlite_db, "SQLite Database", "data/state.db")
+Container_Ext(participant_spa, "Participant SPA", "Vanilla JS in participant browser")
+Container_Ext(host_spa, "Host SPA", "Vanilla JS in host browser")
+Container_Ext(training_daemon, "Training Daemon", "Local Python daemon")
+System_Ext(google_drive, "Google Drive", "Slide PDF source")
 
-Container_Boundary(backend, "FastAPI Backend") {
-
-  Component(core, "core/", "Python package", "Shared infrastructure:\nstate.py (AppState singleton),\nauth.py (HTTP Basic Auth),\nmetrics.py (Prometheus),\nnames.py (conference mode names),\nmessaging.py (registry + broadcast),\nstate_builder.py (core WS state)")
-
-  Component(ws, "features/ws", "FastAPI router", "WebSocket endpoints:\n/ws/{uuid} — participant, host, overlay\n/ws/daemon — daemon heartbeat + slide upload\nDispatches all real-time messages.\nSends personalized state on connect.")
-
-  Component(poll, "features/poll", "FastAPI router", "POST /api/poll\nPUT /api/poll/status\nPUT /api/poll/correct\nPOST /api/poll/timer\nDELETE /api/poll\nGET /api/quiz-md\nGET /api/suggest-name\nGET /api/status\nPOST /api/pending-deploy")
-
-  Component(qa, "features/qa", "FastAPI router", "PUT /api/qa/question/{id}/text\nDELETE /api/qa/question/{id}\nPUT /api/qa/question/{id}/answered\nPOST /api/qa/clear")
-
-  Component(wordcloud, "features/wordcloud", "FastAPI router", "POST /api/wordcloud/topic\nPOST /api/wordcloud/clear")
-
-  Component(codereview, "features/codereview", "FastAPI router", "POST /api/codereview (smart paste)\nPUT /api/codereview/status\nPUT /api/codereview/confirm-line\nDELETE /api/codereview")
-
-  Component(debate, "features/debate", "FastAPI router", "POST /api/debate\nPOST /api/debate/reset\nPOST /api/debate/close-selection\nPOST /api/debate/force-assign\nPOST /api/debate/phase\nPOST /api/debate/first-side\nPOST /api/debate/round-timer\nPOST /api/debate/end-round\nPOST /api/debate/end-arguments\nGET /api/debate/ai-request\nPOST /api/debate/ai-result")
-
-  Component(quiz, "features/quiz", "FastAPI router", "POST/GET /api/quiz-request\nPOST /api/quiz-status\nPOST/DELETE /api/quiz-preview\nPOST/GET /api/quiz-refine")
-
-  Component(summary, "features/summary", "FastAPI router", "POST /api/summary\nGET /api/summary\nPOST /api/notes\nGET /api/notes\nPOST /api/transcript-status\nPOST/GET /api/summary/force\nPOST/GET /api/summary/full-reset\nPOST /api/token-usage")
-
-  Component(leaderboard, "features/leaderboard", "FastAPI router", "POST /api/leaderboard/show\nPOST /api/leaderboard/hide\nDELETE /api/scores")
-
-  Component(slides, "features/slides", "FastAPI router", "POST /api/slides/current\nDELETE /api/slides/current\nGET /api/slides (public)\nGET /api/slides/file/{slug} (public)\nGET /api/slides/catalog-map\nPOST /api/slides/upload\nGET /api/slides/drive-status")
-
-  Component(session, "features/session", "FastAPI router", "POST /api/session/start|end|pause|resume\nPOST /api/session/start_talk|end_talk\nPOST /api/session/create\nPATCH /api/session/rename\nGET /api/session/request\nPOST /api/session/sync\nGET /api/session/snapshot\nGET /api/session/folders\nGET /api/session/interval-lines.txt\nPOST /api/session/timing_event")
-
-  Component(snapshot, "features/snapshot", "FastAPI router", "GET /api/state-snapshot\nPOST /api/state-restore")
-
-  Component(pages, "features/pages", "FastAPI router", "GET / → participant.html\nGET /host → host.html\nGET /notes → notes.html")
-
-  Component(activity, "features/activity", "FastAPI router", "POST /api/activity\n(switches current_activity)")
+Container_Boundary(railway, "Railway Backend") {
+    Component(app, "railway/app.py", "Bootstrap", "Registers root routes first, session-scoped host routes, and catch-all participant routes last.")
+    Component(core, "railway/shared/*", "Core runtime services", "AppState, auth, session guard/registry, metrics, participant-count fan-out, version helpers.")
+    Component(ws, "railway/features/ws/*", "WebSocket bridge", "Daemon auth, session-scoped browser connections, broadcast fan-out, proxy response handling.")
+    Component(pages, "railway/features/pages/router.py", "Page routes", "Serves landing, participant, notes, quiz history, and host static pages.")
+    Component(notes, "railway/features/session/notes_router.py", "Public notes/key points", "Session-scoped `/{session_id}/api/summary` and `/{session_id}/api/notes`.")
+    Component(slides, "railway/features/slides/*", "Slides cache and file serving", "Public slide catalog, cache status fan-out, `/tmp/slides-cache`, upload/invalidate helpers.")
+    Component(uploads, "railway/features/upload/router.py", "Temporary file upload bridge", "Streams uploads into `.server-data/uploads`, lets the daemon fetch and ack them.")
+    Component(proxy, "railway/features/ws/proxy_bridge.py", "Participant REST proxy", "Forwards `/{session_id}/api/participant/*` calls to the daemon over `/ws/daemon`.")
+    Component(internal, "railway/features/internal/router.py", "Static sync endpoints", "Allows the daemon to upload/delete files under `static/`.")
 }
 
-' External → Backend
-Rel(participant_spa, ws, "WS connect, vote, Q&A,\ndebate, codereview, emoji", "WSS /ws/{uuid}")
-Rel(participant_spa, pages, "GET /", "HTTPS")
-Rel(participant_spa, poll, "GET /api/status, /api/suggest-name", "HTTPS")
+Rel(participant_spa, pages, "Loads participant pages", "HTTPS")
+Rel(participant_spa, ws, "Connects with `/ws/{session_id}/{participant_id}`", "WSS")
+Rel(participant_spa, proxy, "Calls `/{session_id}/api/participant/*`", "HTTPS")
+Rel(participant_spa, notes, "Reads public notes and key points", "HTTPS")
+Rel(participant_spa, slides, "Reads slide catalog/check/download endpoints", "HTTPS")
+Rel(participant_spa, uploads, "Uploads participant files", "HTTPS")
 
-Rel(host_spa, ws, "Host WS connection", "WSS /ws/__host__")
-Rel(host_spa, pages, "GET /host, /notes", "HTTPS")
-Rel(host_spa, poll, "Manage polls", "HTTPS")
-Rel(host_spa, activity, "Switch activity", "HTTPS")
-Rel(host_spa, wordcloud, "Word cloud lifecycle", "HTTPS")
-Rel(host_spa, qa, "Manage Q&A", "HTTPS")
-Rel(host_spa, codereview, "Code review lifecycle", "HTTPS")
-Rel(host_spa, debate, "Manage debate", "HTTPS")
-Rel(host_spa, leaderboard, "Show/hide leaderboard, reset scores", "HTTPS")
-Rel(host_spa, summary, "Summary, notes, transcript", "HTTPS")
-Rel(host_spa, slides, "Set/clear current slides", "HTTPS")
-Rel(host_spa, session, "Session lifecycle", "HTTPS")
+Rel(host_spa, pages, "Same host static files also mounted remotely", "HTTPS")
 
-Rel(daemon, quiz, "Quiz pipeline (long-poll + preview)", "HTTPS")
-Rel(daemon, summary, "Summary + transcript status", "HTTPS")
-Rel(daemon, session, "Session sync + snapshot", "HTTPS")
-Rel(daemon, ws, "Daemon WS (heartbeat + slide upload)", "WSS /ws/daemon")
-Rel(daemon, slides, "Upload converted PDFs", "HTTPS")
+Rel(training_daemon, ws, "Connects as `/ws/daemon`", "WSS")
+Rel(training_daemon, uploads, "Downloads temp files and acks them", "HTTPS")
+Rel(training_daemon, internal, "Syncs `static/` changes to Railway", "HTTPS")
+Rel(training_daemon, slides, "Uses upload/invalidate helpers", "HTTPS")
 
-Rel(emoji_overlay, ws, "WS /ws/__overlay__\n(emoji reactions)", "WSS")
+Rel(ws, core, "Tracks participants, host, daemon, session id")
+Rel(pages, core, "Reads host cookie/session state")
+Rel(notes, core, "Reads in-memory notes and summary state")
+Rel(slides, core, "Reads slides list/current slide/cache status")
+Rel(uploads, core, "Associates uploads with connected participants")
+Rel(proxy, ws, "Uses daemon WS for request/response correlation")
 
-' Internal relationships
-Rel(ws, core, "Reads/writes state, dispatches\npersonalized broadcast", "")
-Rel(poll, core, "Poll lifecycle, scoring")
-Rel(qa, core, "Q&A questions lifecycle")
-Rel(wordcloud, core, "Word cloud state")
-Rel(codereview, core, "Code review lifecycle")
-Rel(debate, core, "Debate lifecycle")
-Rel(quiz, core, "Quiz pipeline state")
-Rel(summary, core, "Summary points, notes, transcript")
-Rel(leaderboard, core, "Leaderboard visibility, score reset")
-Rel(slides, core, "Slides list, slides_current")
-Rel(session, core, "Full state snapshot + restore")
-Rel(snapshot, core, "Serialize/deserialize AppState")
-
+Rel(slides, google_drive, "Downloads PDF exports on cache miss", "HTTPS")
 @enduml
 ```
 
+### What Railway does today
+
+- [`railway/app.py`](railway/app.py) is intentionally small. It mounts only the page routers, the daemon/browser WebSocket routers, slides, uploads, internal static-sync routes, public notes/key-points routes, and status/session helpers.
+- Browser WebSockets are session-scoped: `"/ws/{session_id}/{participant_id}"` for participants and host, plus `"/ws/daemon"` for the daemon.
+- Participant REST commands do not execute business logic inside Railway. They are forwarded by [`railway/features/ws/proxy_bridge.py`](railway/features/ws/proxy_bridge.py) to the daemon over the daemon WebSocket and resolved by a correlation-id response path.
+- Railway state is in-memory only. [`railway/shared/state.py`](railway/shared/state.py) tracks connections, session metadata, slide cache status, temporary uploads, and a few mirrored UI fields.
+- Current Railway runtime files are:
+  - `.server-data/uploads` for temporary participant uploads waiting for daemon pickup
+  - `/tmp/slides-cache` for cached Google Drive PDFs
+  - `static/version.js` and `static/deploy-info.json`, stamped at startup
+- There is no current SQLite or server-side domain database in the Railway runtime.
+
 ---
 
-## C3 — Daemon Components
-
-All internal modules of the training daemon that runs on the host's Mac.
-
-Key sub-systems:
-
-| Sub-system | Modules | Role |
-|---|---|---|
-| **Orchestrator** | `daemon/__main__` | Starts all loops; exit code 42 triggers git pull + restart |
-| **Quiz pipeline** | `quiz/generator`, `quiz/history`, `quiz/poll_api` | Reads transcript → LLM → posts preview to backend |
-| **Debate AI** | `debate/ai_cleanup` | Deduplicates and suggests arguments via LLM |
-| **Summary** | `summary/summarizer`, `summary/loop` | Delta-based key-point extraction from transcript |
-| **Transcript** | `transcript/parser`, `loader`, `query`, `rebuild`, `session`, `state` | Reads normalized transcript files (produced by `victor-macos-addons`) |
-| **Slides** | `slides/catalog`, `convert`, `drive_sync`, `upload`, `loop`, `daemon` | PPTX→PDF via LibreOffice/PowerPoint; uploads to backend |
-| **RAG** | `rag/indexer`, `rag/retriever`, `rag/project_files` | Indexes project files; enriches quiz generation context |
-| **Session state** | `daemon/session_state` | Reads/writes global state + per-session JSON to disk |
-| **LLM adapter** | `daemon/llm/adapter` | Claude API wrapper with token counting |
+## C3 - Training Daemon and Local Host Runtime
 
 ```plantuml
-@startuml c3_host_daemon
-!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+@startuml C3_TrainingDaemon
+!include <C4/C4_Component>
 
-title Daemon — C3 Component Diagram
-
+title Training Daemon - C3 Component Diagram
 LAYOUT_WITH_LEGEND()
 
-Container_Ext(fastapi, "FastAPI Backend", "HTTPS REST + WSS")
-Container_Ext(claude_api, "Anthropic Claude API", "HTTPS REST")
-System_Ext(macos_addons, "victor-macos-addons", "Writes normalized transcript files to disk")
+Container_Ext(host_spa, "Host SPA", "Vanilla JS served from localhost")
+Container_Ext(railway_backend, "Railway Backend", "FastAPI on Railway")
+System_Ext(claude_api, "Anthropic Claude API", "LLM")
+System_Ext(macos_addons, "victor-macos-addons", "Local WebSocket bridge")
+ContainerDb_Ext(host_files, "Host session files", "SESSIONS_FOLDER, normalized transcripts, ai-summary.md, uploads")
+ContainerDb_Ext(local_rag, "Local ChromaDB store", "~/.workshop-rag/chroma")
 
-Container_Boundary(daemon_pkg, "Daemon (Python 3.12, host's Mac)") {
-
-  Component(main, "daemon/__main__", "Orchestrator", "Starts all background loops.\nGraceful shutdown on SIGTERM.\nExit code 42 triggers git pull + restart.\nOn WS reconnect: re-syncs active session\n(session_state.json) to backend.")
-
-  Component(config_http, "daemon/config + daemon/http", "Config & HTTP", "DEFAULT_TRANSCRIPT_MINUTES, SESSIONS_FOLDER,\nTRANSCRIPTION_FOLDER env vars.\nShared HTTP helper with Basic Auth headers.")
-
-  Component(quiz_gen, "daemon/quiz/generator", "Quiz generator", "Reads transcript or topic,\ncalls LLM, generates poll question + options.")
-
-  Component(quiz_hist, "daemon/quiz/history", "Quiz history", "Tracks previously generated questions\nto avoid repetition.")
-
-  Component(quiz_api, "daemon/quiz/poll_api", "Quiz poll API", "Posts quiz preview to backend.\nPolls /api/quiz-request and /api/quiz-refine.")
-
-  Component(debate_ai, "daemon/debate/ai_cleanup", "Debate AI cleanup", "Deduplicates, fixes typos, suggests\nnew arguments via LLM.\nPolls /api/debate/ai-request, posts result.")
-
-  Component(summarizer, "daemon/summary/summarizer", "Summarizer", "Delta-based key-point extraction from transcript.\nTwo-tier: notes + discussion points.")
-
-  Component(summary_loop, "daemon/summary/loop", "Summary loop", "Polls /api/summary/force every few seconds.\nTriggered by host or participant Key Points button.")
-
-  Component(transcript_parser, "daemon/transcript/parser", "Transcript parser", "Parses .txt, .vtt, .srt transcript formats.")
-
-  Component(transcript_loader, "daemon/transcript/loader", "Transcript loader", "Reads last N minutes from normalized files.")
-
-  Component(transcript_query, "daemon/transcript/query", "Transcript query", "CLI tool: query normalized transcripts\nby ISO datetime range.")
-
-  Component(transcript_session, "daemon/transcript/session", "Transcript session", "Session-scoped transcript windowing.")
-
-  Component(transcript_state, "daemon/transcript/state", "Transcript state", "Tracks transcript processing state.")
-
-  Component(slides_catalog, "daemon/slides/catalog", "Slides catalog", "Reads materials_slides_catalog.json.\nResolves PPTX → target PDF mappings.")
-
-  Component(slides_convert, "daemon/slides/convert", "PPTX converter", "Converts PPTX to PDF via LibreOffice or PowerPoint.")
-
-  Component(slides_upload, "daemon/slides/upload", "Slides uploader", "Uploads converted PDFs to backend via WSS.")
-
-  Component(slides_loop, "daemon/slides/loop", "Slides loop", "Watches catalog for changes, triggers\nconvert + upload pipeline.")
-
-  Component(slides_daemon, "daemon/slides/daemon", "Slides daemon main", "Manages slide WS connection to backend.\nHandles upload requests and results.")
-
-  Component(rag_indexer, "daemon/rag/indexer", "RAG indexer", "Indexes project files into vector store.")
-
-  Component(rag_retriever, "daemon/rag/retriever", "RAG retriever", "Retrieves relevant context for quiz generation.")
-
-  Component(rag_files, "daemon/rag/project_files", "Project files scanner", "Scans and lists project files.\nHandles Claude tool calls for file reading.")
-
-  Component(llm, "daemon/llm/adapter", "LLM adapter", "Claude API wrapper.\nToken counting & cost tracking.\ncreate_message() with timeout.")
-
-  Component(session_state, "daemon/session_state", "Session + global state", "Global state: training-assistant-global-state.json stores active_session_id only.\nSession metadata (started_at, paused_intervals) stored in session_meta.json per session folder.\nAt startup, scans session folders to find active session by ID.\nAlso persists full server snapshot to session_state.json per folder.")
-
-  Component(lock, "daemon/lock", "Process lock", "PID file ensures single daemon instance.")
+Container_Boundary(daemon_pkg, "Training Daemon") {
+    Component(main, "daemon/__main__.py", "Orchestrator", "Starts lock/heartbeat, local host server, daemon WS client, slides runner, addons bridge, and the 1-second main loop.")
+    Component(host_server, "daemon/host_server.py", "Embedded host FastAPI", "Serves `/host`, mounts local feature routers, and proxies remaining HTTP/WS traffic to Railway.")
+    Component(feature_routes, "participant|poll|wordcloud|qa|codereview|debate|activity|misc|slides|session|leaderboard routers", "Local application API", "Authoritative feature mutations for host actions and participant REST commands.")
+    Component(host_state, "daemon/host_state_router.py", "Host snapshot builder", "Builds the full host `state` payload from local state singletons and session files.")
+    Component(state_singletons, "*state.py modules", "Runtime state", "participant_state, poll_state, qa_state, wordcloud_state, codereview_state, debate_state, misc_state, leaderboard_state, session stack.")
+    Component(railway_bridge, "daemon/ws_client.py + daemon/proxy_handler.py + daemon/ws_publish.py", "Railway bridge", "Persistent `/ws/daemon` client, write-back event transport, typed broadcasts/send_to_host, static sync triggers.")
+    Component(session_state, "daemon/session_state.py", "Disk persistence", "Persists `global-state.json`, `session-state.json`, session metadata, key points, slide manifests, and uploads.")
+    Component(quiz, "daemon/quiz/* + daemon/llm/adapter.py + daemon/rag/*", "Quiz pipeline", "Generates/refines quiz suggestions from notes, key points, transcripts, and local materials.")
+    Component(debate_ai, "daemon/debate/ai_cleanup.py", "Debate AI cleanup", "Claude-backed argument dedupe/cleanup/new suggestions.")
+    Component(summary, "daemon/summary/loop.py", "Summary sync", "Reads `ai-summary.md`, rewrites key points, and republishes them.")
+    Component(slides, "daemon/slides/* + daemon/upload.py", "Slides and upload pipeline", "Catalog loading, Railway cache checks, PDF invalidation, participant upload handoff.")
+    Component(addons_bridge, "daemon/addon_bridge_client.py", "Local addons bridge", "Receives slide events and forwards emoji/session_started/session_ended messages.")
+    Component(static_sync, "daemon/static_sync.py", "Static sync", "Diffs local `static/` against Railway and uploads/deletes changed files.")
 }
 
-' Orchestration
-Rel(main, summary_loop, "starts")
-Rel(main, slides_loop, "starts")
-Rel(main, session_state, "starts polling loop")
+Rel(host_spa, host_server, "Loads host pages and calls host APIs", "HTTP / WSS on 127.0.0.1:8081")
 
-' Transcript reading
-Rel(transcript_loader, transcript_parser, "uses")
-Rel(transcript_loader, transcript_state, "uses")
+Rel(main, host_server, "Starts embedded Uvicorn thread")
+Rel(main, railway_bridge, "Starts daemon WS and drains incoming work")
+Rel(main, session_state, "Loads/saves global and per-session files")
+Rel(main, quiz, "Triggers quiz generation/refinement")
+Rel(main, debate_ai, "Triggers debate cleanup")
+Rel(main, summary, "Triggers summary republish from `ai-summary.md`")
+Rel(main, slides, "Starts slides runner and slide-related jobs")
+Rel(main, addons_bridge, "Starts local WebSocket bridge client")
+Rel(main, static_sync, "Handles Railway `sync_files` work")
 
-' Quiz pipeline
-Rel(quiz_api, fastapi, "GET /api/quiz-request\nGET /api/quiz-refine", "HTTPS")
-Rel(quiz_api, quiz_gen, "triggers on request")
-Rel(quiz_gen, transcript_loader, "reads last N minutes")
-Rel(quiz_gen, rag_retriever, "enriches context")
-Rel(quiz_gen, llm, "LLM call")
-Rel(quiz_gen, quiz_hist, "checks history")
-Rel(quiz_api, fastapi, "POST /api/quiz-preview\nPOST /api/quiz-status", "HTTPS")
+Rel(host_server, feature_routes, "Local routes are mounted before catch-all proxy")
+Rel(host_server, host_state, "Serves `/api/{session_id}/host/state`")
+Rel(feature_routes, state_singletons, "Mutates daemon-owned live state")
+Rel(host_state, state_singletons, "Reads current feature state")
+Rel(feature_routes, railway_bridge, "Emits broadcast/send_to_host write-back events")
 
-' Debate AI pipeline
-Rel(debate_ai, fastapi, "GET /api/debate/ai-request\nPOST /api/debate/ai-result", "HTTPS")
-Rel(debate_ai, llm, "LLM call")
+Rel(session_state, host_files, "Reads and writes persisted session files", "Local filesystem")
+Rel(summary, host_files, "Reads `ai-summary.md` and writes key points", "Local filesystem")
+Rel(slides, host_files, "Reads catalogs/manifests and stores uploads", "Local filesystem")
+Rel(quiz, host_files, "Reads notes, key points, and normalized transcripts", "Local filesystem")
+Rel(quiz, local_rag, "Indexes and queries local workshop materials")
 
-' Summary pipeline
-Rel(summary_loop, fastapi, "GET /api/summary/force\nPOST /api/summary", "HTTPS")
-Rel(summary_loop, summarizer, "triggers")
-Rel(summarizer, transcript_loader, "reads transcript")
-Rel(summarizer, llm, "LLM call")
-
-' Slides pipeline
-Rel(slides_loop, slides_catalog, "reads")
-Rel(slides_loop, slides_convert, "triggers conversion")
-Rel(slides_daemon, slides_upload, "triggers upload")
-Rel(slides_upload, fastapi, "uploads PDF via WSS", "WSS /ws/daemon")
-
-' Session
-Rel(session_state, fastapi, "GET /api/session/snapshot\nGET /api/session/request\nPOST /api/session/sync", "HTTPS")
-
-' RAG
-Rel(rag_indexer, rag_files, "uses")
-Rel(rag_retriever, rag_indexer, "queries")
-
-' victor-macos-addons → transcript files → daemon
-Rel(macos_addons, transcript_loader, "Writes normalized transcript files\n(daemon reads local disk)", "Local file")
-
-' External calls
-Rel(llm, claude_api, "claude-haiku / claude-sonnet\nAPI calls", "HTTPS")
-
+Rel(railway_bridge, railway_backend, "Daemon WS, static sync, upload handoff, slide cache coordination", "WSS /ws/daemon + HTTPS")
+Rel(quiz, claude_api, "Quiz generation/refinement", "HTTPS")
+Rel(debate_ai, claude_api, "Debate cleanup", "HTTPS")
+Rel(addons_bridge, macos_addons, "Slide and overlay/session events", "Local WSS")
 @enduml
 ```
 
----
+### What the daemon owns today
 
-## C3 — Desktop Overlay & Wispr Addons
-
-```plantuml
-@startuml c3_desktop_overlay
-!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
-
-title Desktop Overlay & Wispr Addons — C3 Component Diagram
-
-LAYOUT_WITH_LEGEND()
-
-Container_Ext(fastapi, "FastAPI Backend", "WSS /ws/__overlay__")
-Container_Ext(claude_api, "Anthropic Claude API", "HTTPS REST (Haiku)")
-
-Container_Boundary(overlay, "Emoji Overlay (Swift / AppKit, host's Mac)") {
-
-  Component(app_delegate, "AppDelegate", "Swift / AppKit", "App entry point.\nManages window lifecycle.\nConnects WebSocket to backend on launch.")
-
-  Component(overlay_panel, "OverlayPanel", "NSPanel subclass", "Transparent always-on-top window.\nCovers full screen, ignores mouse events.\nPID lock file ensures single instance.")
-
-  Component(emoji_animator, "EmojiAnimator", "Swift / AppKit", "Receives emoji reactions from WebSocket.\nAnimates emoji sprites flying up the screen.\nSelf-removing after animation completes.")
-
-  Component(button_bar, "ButtonBar", "Swift / AppKit", "Small floating button bar (not transparent).\nHost-triggered controls:\n• Sound effects\n• Overlay show/hide toggle")
-
-  Component(sound_manager, "SoundManager", "Swift / AVFoundation", "Plays applause, drum roll, fanfare sounds.\nTriggered by host via ButtonBar.")
-}
-
-Container_Boundary(wispr, "Wispr Addons (Python, host's Mac)") {
-
-  Component(clean_py, "wispr-addons/clean.py", "Python / pyobjc", "CGEventTap intercepts all keyboard & mouse events.")
-
-  Component(clipboard_capture, "Clipboard capture", "Python / pyobjc", "Cmd+V: stores clipboard at each paste.\nCmd+Ctrl+V: sends to Claude Haiku for cleanup,\nundoes original paste, re-pastes cleaned version.\nCmd+Ctrl+Opt+V: same but adds contextual emojis.")
-
-  Component(dictation_mute, "Dictation mute", "Python / pyobjc", "Mouse Button 5 (Wispr Flow dictation toggle):\nPauses media playback, lowers loopback volume.\nEscape while dictating: restores volume + media.")
-}
-
-' Overlay connections
-Rel(app_delegate, overlay_panel, "creates + manages")
-Rel(app_delegate, emoji_animator, "creates + starts")
-Rel(app_delegate, button_bar, "creates + shows")
-Rel(app_delegate, fastapi, "WS connect as __overlay__\nReceives emoji_reaction events", "WSS")
-Rel(emoji_animator, overlay_panel, "renders emoji sprites on")
-Rel(button_bar, sound_manager, "triggers sounds")
-
-' Wispr connections
-Rel(clean_py, clipboard_capture, "contains")
-Rel(clean_py, dictation_mute, "contains")
-Rel(clipboard_capture, claude_api, "POST to Claude Haiku\nfor grammar/filler cleanup", "HTTPS")
-
-@enduml
-```
+- [`daemon/__main__.py`](daemon/__main__.py) is a single-process orchestrator. It starts:
+  - the lock and heartbeat
+  - the embedded host server
+  - the persistent daemon WebSocket client
+  - `SlidesRunner`
+  - the local addons bridge client
+  - the 1-second loop that drains pending work and refreshes session state
+- [`daemon/host_server.py`](daemon/host_server.py) is the actual host control plane. It mounts local feature routers first and only then falls back to a reverse proxy for remaining `/api/*` and `/ws/*` paths.
+- Local feature routers are the authoritative live application surface:
+  - participant identity and personalised snapshots from [`daemon/participant/router.py`](daemon/participant/router.py)
+  - poll state from [`daemon/poll/router.py`](daemon/poll/router.py) and [`daemon/poll/state.py`](daemon/poll/state.py)
+  - word cloud, Q&A, code review, debate, activity switching, misc, leaderboard, slides, and session lifecycle from the matching `daemon/*/router.py` and `daemon/*/state.py` modules
+- The host page loads its full snapshot from [`daemon/host_state_router.py`](daemon/host_state_router.py), which aggregates local state plus file-backed notes, key points, slide logs, and session metadata.
+- Participant REST traffic forwarded by Railway lands on the same daemon routers. The daemon's write-back middleware stores semantic events in `X-Write-Back-Events`, and [`daemon/proxy_handler.py`](daemon/proxy_handler.py) converts those into daemon-WS `broadcast` or `send_to_host` messages so Railway can fan out updates.
+- Persistent daemon files are managed by [`daemon/session_state.py`](daemon/session_state.py):
+  - `global-state.json` for global daemon stack/session metadata
+  - `session-state.json` per session folder
+  - session artifacts such as `ai-summary.md`, `transcript_discussion.md`, slide manifests, uploads, and normalized transcripts
+- The current summary path is file-backed. [`daemon/summary/loop.py`](daemon/summary/loop.py) reads `ai-summary.md` and republishes key points; it does not currently call Claude itself.
+- Claude-backed paths are currently:
+  - [`daemon/quiz/generator.py`](daemon/quiz/generator.py) for quiz generation and refinement
+  - [`daemon/debate/ai_cleanup.py`](daemon/debate/ai_cleanup.py) for debate cleanup/suggestions
+- The daemon also performs two infrastructure jobs that are easy to miss:
+  - static asset sync via [`daemon/static_sync.py`](daemon/static_sync.py), driven by Railway's `sync_files` message on daemon WS connect
+  - participant upload handoff via [`daemon/upload.py`](daemon/upload.py), which downloads temp files from Railway into the current session folder and then acks Railway to delete them
 
 ---
 
-## Messaging Registry Pattern
+## Frontend Surfaces
 
-Source: [`docs/messaging-registry.md`](docs/messaging-registry.md)
+| Surface | Served from | Primary files | Runtime behavior |
+| --- | --- | --- | --- |
+| Participant join page | Railway | [`static/landing.html`](static/landing.html) | 6-character session code entry, retry/reconnect hints, redirect into `/{session_id}`. |
+| Participant app | Railway | [`static/participant.html`](static/participant.html), [`static/participant.js`](static/participant.js) | Connects to `/ws/{session_id}/{uuid}`, fetches personalised state from `/{session_id}/api/participant/state`, and drives voting, Q&A, debate, slides, uploads, notes, key points, and emoji. |
+| Host landing | Local daemon host server (same files also mounted on Railway) | [`static/host-landing.html`](static/host-landing.html), [`static/host-landing.js`](static/host-landing.js) | Creates or resumes sessions via local `/api/session/*` routes and redirects to `/host/{session_id}`. |
+| Host app | Local daemon host server (same files also mounted on Railway) | [`static/host.html`](static/host.html), [`static/host.js`](static/host.js) | Connects to `/ws/{session_id}/__host__` through the daemon proxy, loads `/api/{session_id}/host/state`, and performs host-only actions against local daemon APIs. |
+| Shared browser helpers | Both | [`static/utils.js`](static/utils.js), [`static/version-age.js`](static/version-age.js), [`static/version-reload.js`](static/version-reload.js) | Common REST/WS helpers, modal utilities, deploy-age rendering, and forced reload when static sync changes assets. |
 
-### Problem & Solution
+### Browser behavior worth remembering
 
-`core/messaging.py` owns only the WebSocket broadcast infrastructure. Each feature registers its own state-serialization logic at import time via `register_state_builder(name, for_participant_fn, for_host_fn)`. On every broadcast, the registry merges all feature contributions into one state payload.
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    core/messaging.py                        │
-│  register_state_builder(feature, for_participant, ...)      │
-│  build_participant_state(pid) → merges all builders         │
-│  build_host_state()          → merges all builders          │
-│  broadcast_state() / broadcast() / send_*()                 │
-└─────────────────────────────────────────────────────────────┘
-         ▲ registered at import time by each feature
-         │
-  ┌──────┴──────┬──────────────┬──────────────┬──────────────┐
-  │             │              │              │              │
-poll/       qa/          debate/       codereview/    leaderboard/
-state_      state_        state_        state_         state_
-builder.py  builder.py    builder.py    builder.py     builder.py
-  │             │              │              │              │
-wordcloud/  slides/        features/
-state_      state_         core_state_
-builder.py  builder.py     builder.py
-```
-
-### How to Add a New Feature
-
-1. Create `features/myfeature/state_builder.py` with `build_for_participant(pid)` and `build_for_host()`.
-2. At the bottom of the file: `from core.messaging import register_state_builder; register_state_builder("myfeature", build_for_participant, build_for_host)`.
-3. Import the file somewhere in the startup path (e.g. feature `__init__.py` or `main.py`).
-4. No changes to `core/messaging.py`.
-
-### State Builder Responsibilities
-
-| File | Participant keys | Host-only extras |
-|---|---|---|
-| `features/core_state_builder.py` | type, backend_version, mode, my_score, my_avatar, my_name, current_activity, participant_count, host_connected, summary_*, notes_content, screen_share_active | participants list, overlay_connected, daemon_*, quiz_preview, token_usage, transcript_*, needs_restore, pending_deploy |
-| `features/poll/state_builder.py` | poll, poll_active, poll_timer_*, vote_counts, my_vote, poll_correct_ids | same without my_vote |
-| `features/qa/state_builder.py` | qa_questions (with is_own, has_upvoted) | qa_questions (without personal fields) |
-| `features/wordcloud/state_builder.py` | wordcloud_words, wordcloud_word_order, wordcloud_topic | same |
-| `features/codereview/state_builder.py` | codereview (with my_selections, line_percentages) | codereview (with line_counts, line_participants) |
-| `features/debate/state_builder.py` | debate_* (with my_side, is_own, has_upvoted, my_is_champion, auto_assigned) | debate_* (without personal fields) |
-| `features/leaderboard/state_builder.py` | leaderboard_active, leaderboard_data (with your_rank, your_score) | leaderboard_active, top5 only |
-| `features/slides/state_builder.py` | slides_current, session_main, session_talk, session_name | same |
+- There is still no frontend build step. The repo ships plain HTML, CSS, and large controller-style JavaScript files.
+- Host and participant browser WebSockets are mostly receive-oriented; state mutations are performed over REST and then reflected back through Railway broadcast events.
+- The host browser still has one outbound WebSocket fallback path in [`static/host.js`](static/host.js) for `emoji_reaction` if the REST path fails.
 
 ---
 
-## Daemon Persisted State
+## State and Persistence
 
-Source: [`docs/daemon-persisted-state.md`](docs/daemon-persisted-state.md)
-
-### Disk Layout
-
-- `sessions_root` = `SESSIONS_FOLDER` env var, default: `~/My Drive/Cursuri/###sesiuni`
-- Global file: `${sessions_root}/training-assistant-global-state.json` — contains `session_id` of the currently active session
-- Per-session: `${sessions_root}/${session_name}/session_state.json` — full serialized backend snapshot
-
-```mermaid
-classDiagram
-    class SessionsRoot {
-      +path: SESSIONS_FOLDER
-    }
-    class GlobalStateFile {
-      +path: training-assistant-global-state.json
-      +main: SessionRef?
-      +talk: SessionRef?
-      +session_id: string?
-    }
-    class SessionRef {
-      +name: string
-      +started_at: iso-datetime
-      +ended_at: iso-datetime?
-      +status: active|paused|ended
-      +paused_intervals: PauseInterval[]
-    }
-    class PauseInterval {
-      +from: iso-datetime
-      +to: iso-datetime?
-      +reason: explicit|nested|day_end
-    }
-    class SessionFolder {
-      +name: string
-      +path: /sessions_root/{name}
-    }
-    class SessionStateFile {
-      +path: session_state.json
-      +saved_at: iso-datetime
-      +session_id: string
-      +mode: workshop|conference
-      +participants: map
-      +activity: none|poll|wordcloud|qa|debate|codereview
-      +poll: object?
-      +qa: object
-      +wordcloud: object
-      +debate: object
-      +codereview: object
-      +leaderboard_active: bool
-      +token_usage: object
-      +slides_log: list
-      +git_repos: list
-    }
-
-    SessionsRoot "1" o-- "1" GlobalStateFile : stores global
-    SessionsRoot "1" o-- "*" SessionFolder : contains
-    SessionFolder "1" o-- "1" SessionStateFile : stores per-session
-    GlobalStateFile "1" --> "0..1" SessionRef : main
-    GlobalStateFile "1" --> "0..1" SessionRef : talk
-    SessionRef "1" o-- "*" PauseInterval
-```
-
-### Session Restore on Backend Restart
-
-On daemon WS reconnect, the daemon re-sends `session_sync` with the full `session_state.json`. The backend restores all in-memory state (participants, scores, activity, poll/qa/debate/codereview) from this snapshot.
+| Layer | Current owner | Where it lives | Notes |
+| --- | --- | --- | --- |
+| Railway runtime bridge state | [`railway/shared/state.py`](railway/shared/state.py) | In memory inside the Railway process | Tracks connected participants/host/daemon, session id/name, slide cache status, temp uploads, and a few mirrored UI fields. Lost on Railway restart. |
+| Railway temp files | Railway | `.server-data/uploads`, `/tmp/slides-cache` | Temporary participant uploads and cached Google Drive PDFs. |
+| Startup-generated static metadata | Railway and local daemon host server | `static/version.js`, `static/deploy-info.json` | Stamped at startup; `version.js` is excluded from static sync. |
+| Daemon live feature state | `daemon/*/state.py` modules | In memory inside the daemon process | `participant_state`, `poll_state`, `wordcloud_state`, `qa_state`, `codereview_state`, `debate_state`, `misc_state`, `leaderboard_state`, and session stack helpers. |
+| Daemon persisted session state | [`daemon/session_state.py`](daemon/session_state.py) | Session folders under `SESSIONS_FOLDER` | `global-state.json`, `session-state.json`, session metadata, uploads, key points, slide manifests. |
+| Transcript inputs | Host filesystem | Normalized `YYYY-MM-DD transcription.txt` files under `TRANSCRIPTION_FOLDER` | Current consumers read normalized files only; raw transcript normalization is not implemented in this repo anymore. |
+| Summary inputs | Host filesystem | `ai-summary.md` and `transcript_discussion.md` in the session folder | Summary publication currently reads these files and republishes them. |
+| Local materials index | [`daemon/rag/indexer.py`](daemon/rag/indexer.py), [`daemon/rag/retriever.py`](daemon/rag/retriever.py) | `~/.workshop-rag/chroma` | Local ChromaDB index used to enrich quiz generation. |
 
 ---
 
-## Polling Loops & Background Jobs
+## Key Runtime Flows
 
-All periodic timers, polling loops, and autonomous background jobs across the system.
+1. Host session start or resume
+   - The host opens `http://127.0.0.1:8081/host`.
+   - [`static/host-landing.js`](static/host-landing.js) calls local `/api/session/create` or `/api/session/resume`.
+   - [`daemon/session/router.py`](daemon/session/router.py) queues a `session_request`; the main loop creates or restores the session folder and persists session metadata.
+   - [`daemon/session_state.py`](daemon/session_state.py) sends `set_session_id` over `/ws/daemon`, and Railway starts accepting the new `/{session_id}` participant route.
 
-### Daemon (Python, host's Mac)
+2. Participant state load and command round-trip
+   - The participant page on Railway opens `/ws/{session_id}/{uuid}` and fetches `/{session_id}/api/participant/state`.
+   - Railway forwards `/{session_id}/api/participant/*` to the daemon through [`railway/features/ws/proxy_bridge.py`](railway/features/ws/proxy_bridge.py).
+   - [`daemon/proxy_handler.py`](daemon/proxy_handler.py) calls the local daemon FastAPI route and forwards write-back events back through the daemon WebSocket.
+   - Railway fans those events out to connected participant and host browsers.
 
-| Job | Interval | File | Configurable? |
-|---|---|---|---|
-| **Main event loop** — orchestrates all sub-runners, processes WS messages | 1s | `daemon/config.py:24` | `DAEMON_POLL_INTERVAL` |
-| **Lock heartbeat** — updates PID lock file to prevent multiple instances | 1s | `daemon/lock.py:13` | No |
-| **PowerPoint probe** — detects active presentation + slide via stub/osascript | Every main loop tick (1s) | `daemon/__main__.py:~698` | No |
-| ~~Transcript normalization~~ | — | Moved to `victor-macos-addons` repo | — |
-| **Slides file watcher** — polls PPTX mtime, sends `slide_invalidated` on change | 5s | `daemon/slides/loop.py:51` | `SLIDES_POLL_INTERVAL_SECONDS` |
-| **IntelliJ probe** — detects current project + branch via stub/osascript | 5s | `daemon/__main__.py:~761` | `_INTELLIJ_PROBE_INTERVAL` |
-| **Slide activity logger** — accumulates time spent on each slide (foreground) | 5s | `daemon/__main__.py:~737` | `_PPT_TRACK_INTERVAL` |
-| **RAG indexer** — watches materials folder for file changes | 0.5s poll + 2s debounce | `daemon/rag/indexer.py:355` | `DEBOUNCE_SECONDS` |
-| **WS reconnect** — reconnects daemon WS on disconnect | 3s retry | `daemon/ws_client.py:14` | `_RECONNECT_INTERVAL` |
-| **WS ping** — keepalive ping to backend | 20s | `daemon/ws_client.py:117` | `ping_interval` param |
-| **Summary cycle** — on-demand only (triggered by WS `summary_force`) | Event-driven | `daemon/summary/loop.py:28` | N/A |
+3. Host action
+   - The host page calls local `/api/{session_id}/...` endpoints on the daemon host server.
+   - Local daemon routers mutate the authoritative feature state singletons.
+   - [`daemon/ws_publish.py`](daemon/ws_publish.py) emits typed `broadcast` or `send_to_host` messages through the daemon WebSocket.
+   - Railway mirrors the resulting events to participant browsers and the proxied host WebSocket.
 
-### FastAPI Backend (Python, Railway)
+4. Slide cache fill and participant download
+   - [`daemon/slides/loop.py`](daemon/slides/loop.py) loads the catalog into `misc_state`; participants list it through `/{session_id}/api/slides`.
+   - On cache miss, `/{session_id}/api/slides/check/{slug}` reaches the daemon, which sends a `download_pdf` message to Railway with the Google Drive export URL.
+   - Railway downloads the PDF into `/tmp/slides-cache`, broadcasts `slides_cache_status`, and then serves `/{session_id}/api/slides/download/{slug}`.
+   - Current slide changes arrive from [`daemon/addon_bridge_client.py`](daemon/addon_bridge_client.py) and are broadcast as `slides_current`.
 
-| Job | Interval | File | Configurable? |
-|---|---|---|---|
-| **State snapshot push** — pushes state + session snapshots to daemon for disk persistence | 7s | `features/ws/router.py:~460` | No (hardcoded `asyncio.sleep(7)`) |
+5. Participant upload handoff
+   - The participant posts a file to `/{session_id}/api/upload` on Railway.
+   - Railway streams the upload into `.server-data/uploads`, stores metadata in `AppState`, and sends `file_ready_for_download` to the daemon.
+   - [`daemon/upload.py`](daemon/upload.py) downloads the file into the current session folder, notifies the host UI, and then calls Railway's ack endpoint so Railway can delete the temp file.
 
-### Host UI (JavaScript, host's browser)
-
-| Job | Interval | File | Configurable? |
-|---|---|---|---|
-| **WS reconnect** | 3s retry | `static/host.js:196` | No |
-| **Summary badge refresh** | 30s | `static/host.js:837` | No |
-| **Poll timer countdown** | 200ms | `static/host.js:1747` | No |
-| **Debate round timer** | 200ms | `static/host.js:2716` | No |
-| **Inactivity counter** | 1s | `static/host.js:3626` | No |
-| **Version age updater** | 60s (if deployed < 24h) | `static/version-age.js:49` | No |
-| **Version reload guard** | 1s countdown (after mismatch detected) | `static/version-reload.js:93` | `countdownSeconds` (default 10) |
-
-### Participant UI (JavaScript, participant's browser)
-
-| Job | Interval | File | Configurable? |
-|---|---|---|---|
-| **WS reconnect** | 3s retry | `static/participant.js` | No |
-| **Slides catalog refresh** | 30s (when overlay open) | `static/participant.js:243` | `SLIDES_REFRESH_MS` |
-| **Q&A toast display** | 15s | `static/participant.js:3130` | No |
-| **Debate toast display** | 15s | `static/participant.js:3156` | No |
-| **Debate timer countdown** | 200ms | `static/participant.js:3431` | No |
-| **Version age updater** | 60s (if deployed < 24h) | `static/version-age.js:49` | No |
-
-### Landing Page (JavaScript)
-
-| Job | Interval | File | Configurable? |
-|---|---|---|---|
-| **Host cookie auto-join poller** | 3s | `static/landing.html:207` | No |
-| **Auto-join countdown** | 1s | `static/landing.html:185` | No |
-| **Version status poll** | 30s | `static/host-landing.html:~25` | No |
+6. Static asset sync
+   - On daemon WebSocket connect, Railway sends `sync_files` with hashes of its current `static/` tree.
+   - [`daemon/static_sync.py`](daemon/static_sync.py) diffs local `static/` content and calls `/internal/upload-static` or `/internal/delete-static` as needed.
+   - If files changed, the daemon broadcasts a `reload` event so open browsers refresh against the new synced assets.
 
 ---
 
-## System Interactions (Sequence Flows)
-
-The diagram covers 19 interaction flows:
-
-| # | Flow | Key participants |
-|---|---|---|
-| 1 | Session lifecycle (start / pause / resume / end) | Host UI → Backend → Daemon |
-| 2 | Participant join + geolocation | Participant UI → Backend → Host UI |
-| 3 | Poll / Quiz flow | Host → Backend ↔ Daemon → Claude API |
-| 4 | Q&A submit + upvote | Participant WS → Backend broadcast |
-| 5 | Word cloud | Host → Backend ← Participant WS |
-| 6 | Code review (smart paste, line select, confirm) | Host → Backend (→ Claude Haiku) ↔ Participant |
-| 7 | Debate (sides, arguments, AI cleanup, volunteers, round timer) | Participant WS → Backend ↔ Daemon → Claude |
-| 8 | Slide invalidation (PPTX change detected) | Daemon WS → Backend → Google Drive → Participant |
-| 9 | Slide loading (PDF serve / cache) | Participant HTTP → Backend (→ Google Drive) |
-| 10 | Follow trainer (PowerPoint probe) | Daemon WS → Backend → Participant |
-| 11 | Paste text (participant → host) | Participant WS → Backend → Host WS |
-| 12 | File upload | Participant HTTP → Backend → Host WS |
-| 13 | Emoji reaction | Participant WS → Backend → Desktop Overlay WS |
-| 14 | Activity switch | Host REST → Backend broadcast |
-| 15 | Mode switch (workshop / conference) | Host REST → Backend broadcast |
-| 16 | Summary / key points | Host or Participant → Backend WS → Daemon → Claude |
-| 17 | Leaderboard show/hide | Host REST → Backend → Participant (personalized rank) |
-| 18 | Daemon heartbeat & periodic state persistence | Daemon ↔ Backend every 7s |
-| 19 | Backend restart recovery | Daemon WS reconnect → session_sync → full restore |
-
-```plantuml
-@startuml System Interactions
-!pragma teoz true
-
-title Workshop Live Interaction Tool — System Interactions
-
-participant "Host UI" as H
-participant "Participant UI" as P
-participant "Backend\n(FastAPI)" as B
-participant "Daemon" as D
-participant "Desktop Overlay" as O
-participant "Google Drive" as GD
-participant "Claude API\n(Anthropic)" as AI
-
-== 1. Session Lifecycle ==
-
-H -> B : POST /api/session/start {name}
-B --> D : WS session_request {action:"start", name, request_id}
-D -> D : Create session folder\non disk
-D --> B : WS global_state_saved {request_id, persisted:true,\n  global_state_file:"training-assistant-global-state.json"}
-D --> B : WS session_sync {main, talk, key_points}
-B --> H : WS broadcast (session state)
-
-... (participants join, session running) ...
-
-H -> B : POST /api/session/pause
-B --> D : WS session_request {action:"pause", request_id}
-B <-- D : WS global_state_saved {request_id, persisted:true}
-B --> H : WS broadcast (status:"paused")
-B --> P : WS session_paused → disconnect
-
-H -> B : POST /api/session/resume
-B --> D : WS session_request {action:"resume", request_id}
-B <-- D : WS global_state_saved {request_id, persisted:true}
-B --> H : WS broadcast (status:"active")
-note right of P : Paused participants\nreconnect automatically
-
-H -> B : POST /api/session/end
-B --> D : WS session_request {action:"end", request_id}
-D -> D : Persist state to disk
-B <-- D : WS global_state_saved {request_id, persisted:true}
-
-note over D,B
-  Backend proactively pushes state and session snapshots
-  to daemon every 7s via WS for disk persistence.
-end note
-
-== 2. Participant Join ==
-
-P -> B : WS connect /ws/{uuid}
-B -> P : WS accept
-P --> B : WS set_name {name}
-B -> B : Store participant_names[uuid]
-B -> B : assign_avatar(uuid)
-B --> P : WS full state (poll, activity, scores...)
-B --> H : WS participant_update (list of participants)
-
-opt Geolocation granted
-  P -> P : Browser Geolocation API
-  P --> B : WS location {city, country}
-  B --> H : WS participant_update
-end
-
-opt Geolocation denied
-  P --> B : WS location {timezone from Intl API}
-end
-
-== 3. Poll / Quiz Flow ==
-
-group Host-created poll
-  H -> B : POST /api/poll {question, options[], multi}
-  B -> B : Store poll, set activity=POLL
-  B --> P : WS broadcast (poll state)
-  B --> H : WS broadcast (poll state)
-end
-
-group Quiz generation (daemon)
-  H -> B : POST /api/quiz-request {minutes, topic}
-  B --> D : WS quiz_request {minutes, topic}
-  D --> B : WS quiz_status {status:"generating"}
-  B --> H : WS broadcast quiz_status
-  D -> AI : Claude API (transcript + prompt)
-  AI --> D : Generated quiz JSON
-  D --> B : WS quiz_preview {quiz}
-  B --> H : WS broadcast quiz_preview
-  H -> H : Host reviews quiz
-  H -> B : POST /api/poll (accept quiz as poll)
-  B --> P : WS broadcast (poll created)
-end
-
-H -> B : PUT /api/poll/status {open:true}
-B -> B : poll_opened_at = now()
-B --> P : WS broadcast (poll active)
-
-P --> B : WS vote {option_id}
-B -> B : Store votes[uuid], record vote_time
-B --> P : WS vote_update {vote_counts, total_votes}
-B --> H : WS vote_update
-
-H -> B : PUT /api/poll/correct {correct_ids}
-B -> B : Calculate speed-based scores\n(1000 max, 500 min, linear decay)
-B --> P : WS result {correct_ids, voted_ids, score}
-B --> H : WS broadcast (scores updated)
-
-== 4. Q&A Flow ==
-
-P --> B : WS qa_submit {text}
-B -> B : Store qa_questions[qid]\nAward 100 pts to author
-B --> P : WS broadcast (qa state)
-B --> H : WS broadcast (qa state)
-
-P --> B : WS qa_upvote {question_id}
-B -> B : Add to upvoters set\n+50 pts to author, +25 pts to voter
-B --> P : WS broadcast
-B --> H : WS broadcast
-
-H -> B : PUT /api/qa/question/{id}/text {text}
-B --> P : WS broadcast
-H -> B : DELETE /api/qa/question/{id}
-B --> P : WS broadcast
-H -> B : PUT /api/qa/question/{id}/answered {true}
-B --> P : WS broadcast
-
-== 5. Word Cloud Flow ==
-
-H -> B : POST /api/wordcloud/topic {topic}
-B -> B : Set wordcloud_topic
-B --> P : WS broadcast (topic)
-
-P --> B : WS wordcloud_word {word}
-B -> B : Increment word count\n+200 pts to submitter
-B --> P : WS broadcast (words updated)
-B --> H : WS broadcast
-
-H -> B : POST /api/wordcloud/clear
-B --> P : WS broadcast (cleared)
-
-== 6. Code Review Flow ==
-
-H -> B : POST /api/codereview {snippet, language, smart_paste}
-
-opt smart_paste enabled
-  B -> AI : Claude Haiku: extract code
-  AI --> B : {code, language}
-end
-
-B -> B : Store snippet, phase="selecting"
-B --> P : WS broadcast (code review state)
-
-P --> B : WS codereview_select {line}
-B -> B : Add line to selections[uuid]
-B --> P : WS broadcast
-B --> H : WS broadcast
-
-P --> B : WS codereview_deselect {line}
-B -> B : Remove line from selections[uuid]
-B --> P : WS broadcast
-
-H -> B : PUT /api/codereview/status {open:false}
-B -> B : phase = "reviewing"
-B --> P : WS broadcast
-
-H -> B : PUT /api/codereview/confirm-line {line}
-B -> B : Add to confirmed set\n+200 pts per participant who flagged it
-B --> P : WS broadcast (confirmed lines, scores)
-B --> H : WS broadcast
-
-== 7. Debate Flow ==
-
-H -> B : POST /api/debate {statement}
-B -> B : Reset debate state\nphase = "side_selection"
-B --> P : WS broadcast
-
-P --> B : WS debate_pick_side {side: "for"|"against"}
-B -> B : Record side choice
-
-opt >= 50% picked
-  B -> B : Auto-assign remaining\nto balance teams
-end
-
-opt All assigned
-  B -> B : phase = "arguments"
-end
-
-B --> P : WS broadcast
-
-P --> B : WS debate_argument {text}
-B -> B : Store argument\n+100 pts to author
-B --> P : WS broadcast
-
-P --> B : WS debate_upvote {argument_id}
-B -> B : +50 pts to author\n+25 pts to voter
-B --> P : WS broadcast
-
-H -> B : POST /api/debate/end-arguments
-B -> B : phase = "ai_cleanup"
-B --> D : WS debate_ai_request {statement, for_args, against_args}
-B --> P : WS broadcast (ai_cleanup phase)
-
-D -> AI : Claude API (deduplicate, cleanup, suggest)
-AI --> D : {merges, cleaned, new_arguments}
-D --> B : WS debate_ai_result {merges, cleaned, new_arguments}
-B -> B : Apply merges, add AI args\nphase = "prep"
-B --> P : WS broadcast
-
-P --> B : WS debate_volunteer
-B -> B : Set champion for side\n+2500 pts
-B --> P : WS broadcast
-
-H -> B : POST /api/debate/round-timer {index, seconds}
-B --> P : WS debate_timer
-B --> H : WS debate_timer
-
-== 8. Slide Update Flow (PPTX change) ==
-
-D -> D : Watch PPTX folders\nfor mtime changes
-D --> B : WS slide_invalidated {slug}
-
-B -> B : Mark slug stale in cache_status
-B --> P : WS broadcast (slides_cache_status updated)
-B --> H : WS broadcast (slides_cache_status updated)
-
-note over D,B
-  Daemon is source-of-truth for freshness.
-  No proactive PDF download happens on invalidation.
-  Download is triggered only by participant /check calls.
-end note
-
-== 9. Slide Loading Flow ==
-
-P -> B : GET /api/slides
-B --> P : HTTP 200 {slides:[{slug, title, drive_export_url, status, ...}]}
-
-P -> B : GET /api/slides/check/{slug}
-B --> D : WS proxy_request (GET /{sid}/api/slides/check/{slug})
-
-P -> B : GET /api/slides/file/{slug}
-
-alt PDF already cached
-  D --> B : WS proxy_response (200)
-  B --> P : HTTP 200 (check ok)
-else PDF missing/stale
-  D --> B : WS download_pdf {slug, drive_export_url}
-  B -> GD : HTTP GET (download PDF)
-  GD --> B : PDF bytes
-  B -> B : Cache to /tmp/slides-cache/
-  B --> D : WS pdf_download_complete {slug, status:"ok"}
-  D --> B : WS proxy_response (200)
-  B --> P : HTTP 200 (check ok)
-else Download timeout/error
-  D --> B : WS proxy_response (503)
-  B --> P : HTTP 503 (check failed)
-end
-
-P -> B : GET /api/slides/download/{slug}
-B --> P : HTTP 200 (PDF bytes)
-
-P -> P : PDF.js renders in iframe
-B --> P : WS slides_cache_status {slides:[{slug, status, ...}]}
-B --> H : WS slides_cache_status {slides:[{slug, status, ...}]}
-
-== 10. Follow Trainer (Slides) ==
-
-D -> D : osascript probes PowerPoint\n(presentation name + slide number)
-D --> B : WS slides_current {slug, current_page, presentation_name}
-B -> B : Store slides_current
-B --> P : WS slides_current {slug, page}
-B --> H : WS broadcast
-
-P -> P : Auto-navigate to page\n(if "follow" enabled)
-
-note over D
-  When PowerPoint closes or no presentation open,
-  daemon sends slides_clear to remove current slide.
-end note
-
-== 11. Paste Text Flow ==
-
-P --> B : WS paste_text {text}
-B -> B : Store in paste_texts[uuid]\n(max 10 pending, 100KB limit)
-B --> H : WS participant_update (paste icon visible)
-
-H --> B : WS paste_dismiss {uuid, paste_id}
-B -> B : Remove paste entry
-B --> H : WS participant_update
-
-== 12. File Upload Flow ==
-
-P -> B : POST /api/upload (multipart file)
-B -> B : Store file on disk\n(max 100KB, max 10 per participant)
-B --> H : WS participant_update (upload icon visible)
-
-H -> B : GET /api/upload/{uuid}/{file_id}
-B --> H : HTTP 200 (file bytes)
-
-== 13. Emoji Reaction Flow ==
-
-P --> B : WS emoji_reaction {emoji}
-B --> O : WS broadcast emoji to overlay
-B --> H : WS broadcast emoji to host
-
-O -> O : Animate emoji on screen
-
-== 14. Activity Switch ==
-
-H -> B : POST /api/activity {type: POLL|WORDCLOUD|QA|DEBATE|CODEREVIEW|NONE}
-B -> B : Set current_activity
-B --> P : WS broadcast (activity changed)
-B --> H : WS broadcast
-
-== 15. Mode Switch ==
-
-H -> B : POST /api/mode {mode: "workshop"|"conference"}
-B -> B : Set mode, assign character names\nif switching to conference
-B --> P : WS broadcast (mode changed)
-B --> H : WS broadcast
-
-== 16. Summary / Key Points Flow ==
-
-H -> B : POST /api/summary/force
-note right: or participant triggers same endpoint\n(public, 30s cooldown)
-B --> D : WS summary_force
-D -> D : Read transcript from disk
-D -> AI : Claude API (transcript + existing key points)
-AI --> D : Diff (added/removed/edited points)
-D -> D : Save updated key points to disk
-D --> B : WS session_sync {key_points: [...]}
-B -> B : Update summary_points
-B --> P : WS broadcast (summary updated)
-B --> H : WS broadcast
-
-== 17. Leaderboard Flow ==
-
-H -> B : POST /api/leaderboard/show
-B -> B : leaderboard_active = true
-B --> P : WS leaderboard {top5[], my_rank, my_score}
-note right of P: Each participant receives\npersonalized rank
-B --> H : WS leaderboard {top5[]}
-
-H -> B : POST /api/leaderboard/hide
-B --> P : WS leaderboard_hide
-B --> H : WS leaderboard_hide
-
-== 18. Daemon Heartbeat & State Persistence ==
-
-D --> B : WS daemon_ping (periodic heartbeat)
-B -> B : Update daemon_last_seen
-
-B --> D : WS state_snapshot_result (periodic, every 7s)
-B --> D : WS session_snapshot_result (periodic, every 7s)
-D -> D : Write state-backup.json + session_state.json to disk
-
-D --> B : WS transcript_status {line_count, total_lines}
-B --> H : WS broadcast (transcript progress)
-
-D --> B : WS token_usage {input_tokens, output_tokens, cost}
-B --> H : WS broadcast (cost tracking)
-
-== 19. Backend Restart Recovery ==
-
-note over B : Backend restarts (deploy or crash)\nIn-memory state cleared
-
-D -> D : WS disconnect detected (3s timeout)
-D -> B : WS reconnect /ws/daemon
-B --> D : WS accept
-
-D --> B : WS session_folders {folders}
-note over D : on_connect: re-sync active session
-D -> D : Load session_state.json\nfrom active session folder
-D --> B : WS session_sync {main, key_points, session_state}
-B -> B : Restore session_main, scores,\nparticipants, activity state
-
-H -> B : GET /api/session/active
-B --> H : {auto_join:true, session_id}
-H -> H : Auto-redirect to /host/{session_id}
-
-@enduml
-```
+## Practical Implications
+
+- If a live feature changes participant or host behavior, the code probably belongs in `daemon/` first, not `railway/`.
+- If a change affects participant page bootstrapping, session validation, slide downloads, temporary uploads, or browser/daemon WebSocket transport, it probably belongs in `railway/`.
+- If a host bug reproduces only through `http://127.0.0.1:8081/host`, inspect [`daemon/host_server.py`](daemon/host_server.py), the local routers it mounts, and the `proxy_handler` / `ws_publish` bridge before touching Railway.
+- If participant behavior and host behavior disagree, check whether the issue is in:
+  - the daemon-owned source of truth (`daemon/*/state.py`, `host_state_router.py`, `participant/router.py`)
+  - the Railway fan-out layer (`railway/features/ws/*`)
+  - a stale static asset that was not synced yet

@@ -1,5 +1,23 @@
 # Todo
 
+## Direct request: refresh ARCHITECTURE.md to match current runtime
+
+- [x] Inspect the current runtime split across `railway/`, `daemon/`, and `static/`
+- [x] Compare the live entrypoints and state owners against the existing `ARCHITECTURE.md`
+- [x] Rewrite `ARCHITECTURE.md` around the current system context, container split, state ownership, and key flows
+- [x] Verify the rewritten document against the codebase and capture review proof
+
+### Review: refresh ARCHITECTURE.md to match current runtime
+
+- Proof: `git diff --check -- ARCHITECTURE.md tasks/todo.md`
+- Result: no output
+- Proof: `git diff --stat -- ARCHITECTURE.md tasks/todo.md`
+- Result: `2 files changed, 271 insertions(+), 889 deletions(-)`
+- Proof: `rg -n 'Host panel:|@router.websocket("/ws/daemon")|@session_router.websocket("/ws/{session_id}/{participant_id}")|participant_proxy_router|AI_SUMMARY_FILE = "ai-summary.md"|sync_files' daemon/__main__.py railway/features/ws/router.py railway/features/ws/proxy_bridge.py daemon/session/router.py daemon/summary/loop.py daemon/static_sync.py`
+- Result: confirmed the local host entrypoint, session-scoped browser WS paths, Railway participant proxying, file-backed summary input, and daemon-driven static sync in live code
+- Proof: `rg -n 'APIRouter(prefix="/api/participant|APIRouter(prefix="/api/{session_id}/host|app.include_router(participant_router)|app.include_router(activity_host_router)|@app.websocket("/ws/{path:path}")|@app.api_route("/api/{path:path}")' daemon/host_server.py daemon/participant/router.py daemon/host_state_router.py daemon/activity/router.py daemon/misc/router.py`
+- Result: confirmed the daemon host server mounts local participant/host routers before the catch-all HTTP and WS proxy paths
+
 ## Direct request: remove participant_universes from session state
 
 - [x] Remove `participant_universes` from daemon runtime snapshot persistence payload
