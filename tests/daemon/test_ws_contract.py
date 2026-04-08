@@ -13,7 +13,12 @@ import pytest
 import yaml
 from pathlib import Path
 
-from daemon.ws_messages import PARTICIPANT_MESSAGES, HOST_MESSAGES
+from daemon.ws_messages import (
+    PARTICIPANT_MESSAGES,
+    HOST_MESSAGES,
+    PARTICIPANT_MESSAGE_FEATURES,
+    HOST_MESSAGE_FEATURES,
+)
 
 DOCS_DIR = Path(__file__).parent.parent.parent / "docs"
 PARTICIPANT_YAML = DOCS_DIR / "participant-ws.yaml"
@@ -104,6 +109,18 @@ class TestParticipantWsContract:
 
         assert not errors, "Field mismatches:\n" + "\n".join(errors)
 
+    def test_all_messages_have_x_feature(self, spec):
+        messages = spec.get("components", {}).get("messages", {})
+        missing = []
+        for msg_name in sorted(messages):
+            feature = messages[msg_name].get("x-feature")
+            if not isinstance(feature, str) or not feature.strip():
+                missing.append(f"  - {msg_name}")
+        assert not missing, (
+            "Participant AsyncAPI messages missing x-feature:\n"
+            + "\n".join(missing)
+        )
+
 
 class TestHostWsContract:
     @pytest.fixture(scope="class")
@@ -161,6 +178,18 @@ class TestHostWsContract:
 
         assert not errors, "Field mismatches:\n" + "\n".join(errors)
 
+    def test_all_messages_have_x_feature(self, spec):
+        messages = spec.get("components", {}).get("messages", {})
+        missing = []
+        for msg_name in sorted(messages):
+            feature = messages[msg_name].get("x-feature")
+            if not isinstance(feature, str) or not feature.strip():
+                missing.append(f"  - {msg_name}")
+        assert not missing, (
+            "Host AsyncAPI messages missing x-feature:\n"
+            + "\n".join(missing)
+        )
+
 
 class TestNoRawWsSends:
     """Guard: feature routers must use the typed publisher, not raw WS sends."""
@@ -206,4 +235,22 @@ class TestNoRawWsSends:
             "Raw WS sends found outside the typed publisher:\n"
             + "\n".join(violations)
             + "\n\nUse broadcast()/notify_host() from daemon.ws_publish instead."
+        )
+
+
+class TestWsFeatureMaps:
+    def test_participant_feature_map_matches_registry(self):
+        assert set(PARTICIPANT_MESSAGE_FEATURES) == set(PARTICIPANT_MESSAGES), (
+            "PARTICIPANT_MESSAGE_FEATURES keys must exactly match PARTICIPANT_MESSAGES keys."
+        )
+        assert all(PARTICIPANT_MESSAGE_FEATURES.values()), (
+            "Every participant WS message must have a non-empty feature classification."
+        )
+
+    def test_host_feature_map_matches_registry(self):
+        assert set(HOST_MESSAGE_FEATURES) == set(HOST_MESSAGES), (
+            "HOST_MESSAGE_FEATURES keys must exactly match HOST_MESSAGES keys."
+        )
+        assert all(HOST_MESSAGE_FEATURES.values()), (
+            "Every host WS message must have a non-empty feature classification."
         )

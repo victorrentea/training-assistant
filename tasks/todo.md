@@ -1,5 +1,34 @@
 # Todo
 
+## Direct request: auto-generate API.md before commit
+
+- [x] Add repository pre-commit hook at `hooks/pre-commit` to regenerate `API.md`
+- [x] Preserve existing `stamp-work-hours` pre-commit behavior
+- [x] Auto-stage `API.md` so changed generated output is included in commit
+- [x] Verify hook syntax and active hooks path configuration
+
+### Review: auto-generate API.md before commit
+
+- Proof: `sh -n hooks/pre-commit`
+- Result: valid shell hook syntax
+- Proof: `git config --get core.hooksPath`
+- Result: `hooks` (new `hooks/pre-commit` is on active hook path)
+
+## Direct request: generate APIs markdown from OpenAPI + AsyncAPI
+
+- [x] Add a contract-driven generator script for API markdown (`scripts/generate_apis_md.py`)
+- [x] Keep feature grouping sourced from code/contracts (no external taxonomy file)
+- [x] Add tests that prove generated output includes all OpenAPI endpoints and all AsyncAPI messages
+- [x] Add WS feature-map consistency guard so classification cannot drift from WS registries
+- [x] Generate a sample output for migration analysis (`.context/apis.generated.md`)
+
+### Review: generate APIs markdown from OpenAPI + AsyncAPI
+
+- Proof: `pytest -q tests/docs/test_generate_apis_md.py tests/daemon/test_ws_contract.py`
+- Result: `10 passed`
+- Proof: `python3 scripts/generate_apis_md.py --output .context/apis.generated.md`
+- Result: generated markdown from contracts for side-by-side migration analysis
+
 ## Follow-up direct request: feedback sending bubble while request in flight
 
 - [x] Close feedback text dialog immediately on submit

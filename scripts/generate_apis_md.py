@@ -1,0 +1,498 @@
+#!/usr/bin/env python3
+"""Generate API Reference markdown from OpenAPI + AsyncAPI contracts.
+
+Primary sources:
+- docs/openapi.yaml
+- docs/participant-ws.yaml
+- docs/host-ws.yaml
+
+Feature grouping source:
+- REST: OpenAPI operation tags (with a small in-code split for tag 'misc')
+- WS: daemon.ws_messages feature metadata maps
+"""
+
+from __future__ import annotations
+
+import argparse
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
+
+import yaml
+
+FEATURE_LABELS: dict[str, str] = {
+    "session": "Session Management",
+    "session_management": "Session Management",
+    "slides": "Slides",
+    "activity": "Activity Switching",
+    "participant": "Identity",
+    "identity": "Identity",
+    "poll": "Poll",
+    "wordcloud": "Word Cloud",
+    "qa": "Q&A",
+    "codereview": "Code Review",
+    "debate": "Debate",
+    "leaderboard": "Scores & Leaderboard",
+    "scores_leaderboard": "Scores & Leaderboard",
+    "emoji": "Emoji Reactions",
+    "quiz": "Quiz Generation",
+    "misc": "Misc",
+    "paste_upload": "Paste & File Upload",
+    "notes_summary": "Notes & Summary",
+    "feedback": "Feedback",
+    "reload": "Cross-cutting: Reload",
+    "transcription": "Transcription",
+    "host-state": "Identity",
+    "_untagged": "Session Management",
+}
+
+FEATURE_ORDER = [
+    "session_management",
+    "slides",
+    "activity",
+    "identity",
+    "poll",
+    "wordcloud",
+    "qa",
+    "codereview",
+    "debate",
+    "scores_leaderboard",
+    "emoji",
+    "quiz",
+    "paste_upload",
+    "notes_summary",
+    "feedback",
+    "transcription",
+    "reload",
+    "misc",
+]
+
+HTTP_METHODS = {"get", "post", "put", "delete", "patch"}
+
+
+@dataclass
+class RestOp:
+    method: str
+    path: str
+    notes: list[str]
+    request_shape: str
+    response_shape: str
+
+
+@dataclass
+class WsMsg:
+    name: str
+    notes: list[str]
+    payload_shape: str
+
+
+@dataclass
+class FeatureSection:
+    participant_rest: list[RestOp]
+    participant_ws: list[WsMsg]
+    host_rest: list[RestOp]
+    host_ws: list[WsMsg]
+
+
+def _load_yaml(path: Path) -> dict[str, Any]:
+    return yaml.safe_load(path.read_text())
+
+
+def _resolve_ref(root: dict[str, Any], ref: str) -> dict[str, Any] | None:
+    if not ref.startswith("#/"):
+        return None
+    node: Any = root
+    for part in ref[2:].split("/"):
+        if not isinstance(node, dict):
+            return None
+        node = node.get(part)
+        if node is None:
+            return None
+    if isinstance(node, dict):
+        return node
+    return None
+
+
+def _schema_comment(schema: dict[str, Any] | Any) -> str:
+    if not isinstance(schema, dict):
+        return ""
+    parts: list[str] = []
+    enum = schema.get("enum")
+    if isinstance(enum, list) and enum:
+        enum_vals = " | ".join("null" if v is None else repr(v) for v in enum)
+        parts.append(f"enum: {enum_vals}")
+    desc = schema.get("description")
+    if isinstance(desc, str) and desc.strip():
+        cleaned = " ".join(desc.strip().split())
+        parts.append(cleaned)
+    return "; ".join(parts)
+
+
+def _collect_notes(spec: dict[str, Any]) -> list[str]:
+    notes: list[str] = []
+    for key in ("summary", "description"):
+        value = spec.get(key)
+        if isinstance(value, str) and value.strip():
+            notes.append(" ".join(value.strip().split()))
+    extra = spec.get("x-doc-notes")
+    if isinstance(extra, str) and extra.strip():
+        notes.append(" ".join(extra.strip().split()))
+    elif isinstance(extra, list):
+        for item in extra:
+            if isinstance(item, str) and item.strip():
+                notes.append(" ".join(item.strip().split()))
+    # preserve order, drop duplicates
+    seen: set[str] = set()
+    unique: list[str] = []
+    for note in notes:
+        if note in seen:
+            continue
+        seen.add(note)
+        unique.append(note)
+    return unique
+
+
+def _shape(schema: dict[str, Any] | bool | Any | None, root: dict[str, Any], depth: int = 0) -> str:
+    if schema is True:
+        return "any"
+    if schema is False:
+        return "never"
+    if not schema:
+        return "any"
+    if not isinstance(schema, dict):
+        return "any"
+
+    if "$ref" in schema:
+        ref = str(schema["$ref"])
+        ref_name = ref.split("/")[-1]
+        resolved = _resolve_ref(root, ref)
+        if resolved is None:
+            return ref_name
+        if depth > 0:
+            return ref_name
+        return _shape(resolved, root, depth + 1)
+
+    if "oneOf" in schema:
+        return " | ".join(_shape(s, root, depth + 1) for s in schema.get("oneOf", []))
+    if "anyOf" in schema:
+        return " | ".join(_shape(s, root, depth + 1) for s in schema.get("anyOf", []))
+    if "allOf" in schema:
+        return " & ".join(_shape(s, root, depth + 1) for s in schema.get("allOf", []))
+
+    typ = schema.get("type")
+
+    if isinstance(schema.get("enum"), list):
+        enum_vals = ["null" if v is None else repr(v) for v in schema["enum"]]
+        base = " | ".join(enum_vals)
+    elif typ == "null":
+        base = "null"
+    elif typ == "string":
+        base = "string"
+    elif typ == "integer":
+        base = "int"
+    elif typ == "number":
+        base = "number"
+    elif typ == "boolean":
+        base = "bool"
+    elif typ == "array":
+        base = f"list[{_shape(schema.get('items', {}), root, depth + 1)}]"
+    elif typ == "object" or "properties" in schema or "additionalProperties" in schema:
+        props = schema.get("properties", {})
+        required = set(schema.get("required", []))
+        if isinstance(props, dict) and props:
+            if depth >= 2:
+                base = "object"
+            else:
+                fields: list[str] = []
+                for name, child in props.items():
+                    if not isinstance(child, dict):
+                        continue
+                    optional = "" if name in required else "?"
+                    child_type = _shape(child, root, depth + 1)
+                    comment = _schema_comment(child)
+                    line = f"{name}{optional}: {child_type}"
+                    if comment:
+                        line += f"  # {comment}"
+                    fields.append(line)
+                base = "{" + ", ".join(fields) + "}"
+        elif "additionalProperties" in schema:
+            base = f"dict[str, {_shape(schema.get('additionalProperties', {}), root, depth + 1)}]"
+        else:
+            base = "dict"
+    else:
+        base = "any"
+
+    if schema.get("nullable"):
+        base = f"{base} | null"
+    return base
+
+
+def _rest_request_shape(op: dict[str, Any], openapi: dict[str, Any]) -> str:
+    body = op.get("requestBody")
+    if not isinstance(body, dict):
+        return "none"
+    content = body.get("content", {})
+    if not isinstance(content, dict) or not content:
+        return "none"
+
+    parts: list[str] = []
+    for ctype, spec in sorted(content.items()):
+        schema = spec.get("schema", {}) if isinstance(spec, dict) else {}
+        parts.append(f"{ctype}: {_shape(schema, openapi)}")
+    return "; ".join(parts)
+
+
+def _rest_response_shape(op: dict[str, Any], openapi: dict[str, Any]) -> str:
+    responses = op.get("responses", {})
+    if not isinstance(responses, dict) or not responses:
+        return "unknown"
+
+    status = None
+    for code in ("200", "201", "202", "204"):
+        if code in responses:
+            status = code
+            break
+    if status is None:
+        status = sorted(responses.keys())[0]
+
+    resp = responses.get(status, {})
+    if not isinstance(resp, dict):
+        return f"{status}: unknown"
+
+    content = resp.get("content", {})
+    if not isinstance(content, dict) or not content:
+        desc = resp.get("description")
+        if isinstance(desc, str) and desc.strip():
+            return f"{status}: {desc.strip()}"
+        return f"{status}: no content"
+
+    if "application/json" in content:
+        schema = content["application/json"].get("schema", {}) if isinstance(content["application/json"], dict) else {}
+        return f"{status}: {_shape(schema, openapi)}"
+
+    ctype = sorted(content.keys())[0]
+    schema = content[ctype].get("schema", {}) if isinstance(content[ctype], dict) else {}
+    return f"{status} ({ctype}): {_shape(schema, openapi)}"
+
+
+def _feature_for_misc_path(path: str) -> str:
+    if "paste" in path or "upload" in path:
+        return "paste_upload"
+    if "feedback" in path:
+        return "feedback"
+    if "/notes" in path or "/summary" in path:
+        return "notes_summary"
+    if "slides-cache-status" in path:
+        return "slides"
+    if "transcription-language" in path:
+        return "transcription"
+    if "/mode" in path:
+        return "session_management"
+    return "misc"
+
+
+def _normalize_rest_feature(tag: str, path: str) -> str:
+    tag = tag or "_untagged"
+    if tag == "_untagged":
+        return "session_management"
+    if tag == "session":
+        return "session_management"
+    if tag == "participant":
+        return "identity"
+    if tag == "host-state":
+        return "identity"
+    if tag == "leaderboard":
+        return "scores_leaderboard"
+    if tag == "misc":
+        return _feature_for_misc_path(path)
+    return tag
+
+
+def _audience_for_path(path: str) -> str:
+    if "/api/participant/" in path:
+        return "participant"
+    return "host"
+
+
+def _extract_rest(openapi: dict[str, Any], sections: dict[str, FeatureSection]) -> None:
+    for path, methods in sorted(openapi.get("paths", {}).items()):
+        if not isinstance(methods, dict):
+            continue
+        for method, op in sorted(methods.items()):
+            if method.lower() not in HTTP_METHODS:
+                continue
+            if not isinstance(op, dict):
+                continue
+
+            tags = op.get("tags") or ["_untagged"]
+            tag = str(tags[0])
+            feature = str(op.get("x-feature") or _normalize_rest_feature(tag, path))
+            section = sections.setdefault(feature, FeatureSection([], [], [], []))
+
+            rest = RestOp(
+                method=method.upper(),
+                path=path,
+                notes=_collect_notes(op),
+                request_shape=_rest_request_shape(op, openapi),
+                response_shape=_rest_response_shape(op, openapi),
+            )
+
+            audience = _audience_for_path(path)
+            if audience == "participant":
+                section.participant_rest.append(rest)
+            else:
+                section.host_rest.append(rest)
+
+
+def _extract_ws(
+    spec: dict[str, Any],
+    sections: dict[str, FeatureSection],
+    audience: str,
+) -> None:
+    components = spec.get("components", {})
+    messages = components.get("messages", {})
+
+    for channel in spec.get("channels", {}).values():
+        if not isinstance(channel, dict):
+            continue
+        subscribe = channel.get("subscribe", {})
+        message = subscribe.get("message", {})
+        one_of = message.get("oneOf", [])
+        for ref in one_of:
+            if not isinstance(ref, dict):
+                continue
+            ref_str = str(ref.get("$ref", ""))
+            if not ref_str.startswith("#/components/messages/"):
+                continue
+            msg_name = ref_str.split("/")[-1]
+            msg_spec = messages.get(msg_name, {})
+            if not isinstance(msg_spec, dict):
+                continue
+
+            feature = str(msg_spec.get("x-feature") or "misc")
+            section = sections.setdefault(feature, FeatureSection([], [], [], []))
+            payload = msg_spec.get("payload", {})
+            ws = WsMsg(
+                name=msg_name,
+                notes=_collect_notes(msg_spec),
+                payload_shape=_shape(payload if isinstance(payload, dict) else {}, spec),
+            )
+            if audience == "participant":
+                section.participant_ws.append(ws)
+            else:
+                section.host_ws.append(ws)
+
+
+def _feature_title(feature_id: str) -> str:
+    return FEATURE_LABELS.get(feature_id, feature_id.replace("_", " ").title())
+
+
+def _render_rest(items: list[RestOp]) -> list[str]:
+    if not items:
+        return ["- (none)"]
+    lines: list[str] = []
+    for op in sorted(items, key=lambda i: (i.path, i.method)):
+        lines.append(f"- `{op.method} {op.path}`")
+        lines.append(f"  - request: `{op.request_shape}`")
+        lines.append(f"  - response: `{op.response_shape}`")
+        for note in op.notes:
+            lines.append(f"  - note: {note}")
+    return lines
+
+
+def _render_ws(items: list[WsMsg]) -> list[str]:
+    if not items:
+        return ["- (none)"]
+    lines: list[str] = []
+    for msg in items:
+        lines.append(f"- `{msg.name}`")
+        lines.append(f"  - payload: `{msg.payload_shape}`")
+        for note in msg.notes:
+            lines.append(f"  - note: {note}")
+    return lines
+
+
+def generate_api_reference(
+    openapi_path: Path,
+    participant_ws_path: Path,
+    host_ws_path: Path,
+) -> str:
+    openapi = _load_yaml(openapi_path)
+    participant_ws = _load_yaml(participant_ws_path)
+    host_ws = _load_yaml(host_ws_path)
+
+    sections: dict[str, FeatureSection] = {}
+
+    _extract_rest(openapi, sections)
+    _extract_ws(participant_ws, sections, "participant")
+    _extract_ws(host_ws, sections, "host")
+
+    feature_ids = [f for f in FEATURE_ORDER if f in sections]
+    feature_ids.extend(sorted(f for f in sections.keys() if f not in feature_ids))
+
+    lines: list[str] = []
+    lines.append("# API Reference (Generated from Contracts)")
+    lines.append("")
+    lines.append("Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-ws.yaml`.")
+    lines.append("")
+
+    lines.append("## Table of Contents")
+    for feature_id in feature_ids:
+        title = _feature_title(feature_id)
+        anchor = "feature-" + title.lower().replace("&", "").replace(":", "").replace(" ", "-")
+        lines.append(f"- [{title}](#{anchor})")
+    lines.append("")
+
+    for feature_id in feature_ids:
+        title = _feature_title(feature_id)
+        section = sections[feature_id]
+
+        lines.append(f"## Feature: {title}")
+        lines.append("")
+
+        lines.append("### Participant REST")
+        lines.extend(_render_rest(section.participant_rest))
+        lines.append("")
+
+        lines.append("### Participant WS")
+        lines.extend(_render_ws(section.participant_ws))
+        lines.append("")
+
+        lines.append("### Host REST")
+        lines.extend(_render_rest(section.host_rest))
+        lines.append("")
+
+        lines.append("### Host WS")
+        lines.extend(_render_ws(section.host_ws))
+        lines.append("")
+
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Generate API markdown from API contracts")
+    parser.add_argument("--openapi", default="docs/openapi.yaml")
+    parser.add_argument("--participant-ws", default="docs/participant-ws.yaml")
+    parser.add_argument("--host-ws", default="docs/host-ws.yaml")
+    parser.add_argument("--output", default="API.generated.md")
+    parser.add_argument("--stdout", action="store_true", help="Print markdown to stdout instead of writing file")
+    args = parser.parse_args()
+
+    content = generate_api_reference(
+        Path(args.openapi),
+        Path(args.participant_ws),
+        Path(args.host_ws),
+    )
+
+    if args.stdout:
+        print(content, end="")
+        return 0
+
+    out_path = Path(args.output)
+    out_path.write_text(content)
+    print(f"Wrote {out_path}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

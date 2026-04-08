@@ -58,6 +58,7 @@ Whenever the user says “remember”, add it to this file (CLAUDE.md). Only add
 - Always push only to `master`; ignore requests to push to `main`.
 - Daemon log arrow geography is directional from daemon center: `railway/participants` vertical (`↑` out, `↓` in), `host` horizontal left (`←` out, `→` in), `addons` horizontal right (`→` out, `←` in)
 - When a task is done, commit and push directly to `master`.
+- All OpenSpec artifacts must be written in English.
 
 ---
 
@@ -76,6 +77,7 @@ The user frequently uses a dictation tool. Messages may contain misheard words (
 - **Running tests**: use convenience scripts: `bash tests/check-all.sh`, `bash tests/run-daemon-tests.sh`, `bash tests/docker/run-hermetic.sh`
 - **E2E = hermetic**: Docker tests in `tests/docker/` with real backend + daemon + Playwright. See [TESTING.md](TESTING.md)
 - **Document direct requests**: track feature changes and bug fixes in backlog.md
+- **API reference**: `API.md` is generated from contracts; regenerate with `python3 scripts/generate_apis_md.py --output API.md` (also enforced in pre-commit)
 
 
 ## Workflow Orchestration (from Boris)

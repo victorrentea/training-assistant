@@ -1,0 +1,11 @@
+#!/bin/sh
+
+# Regenerate API docs and stage generated file for the current commit.
+
+set -eu
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+
+# Regenerate contract-driven API reference and stage it.
+python3 "$REPO_ROOT/scripts/generate_apis_md.py" --output "$REPO_ROOT/API.md" >/dev/null
+git add "$REPO_ROOT/API.md"

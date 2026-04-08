@@ -43,6 +43,9 @@ components:
 
     slides_cache_status:
       summary: Invalidation signal — host must call GET /api/slides to refresh
+      x-feature: slides
+      x-doc-notes:
+        - Host should refetch slides list; payload intentionally carries no cache map.
       payload:
         type: object
         required: [type]
@@ -55,6 +58,7 @@ components:
 
     poll_ai_generated:
       summary: Host-only notification when a new poll is created (before opening)
+      x-feature: poll
       payload:
         type: object
         required: [type, poll]
@@ -68,6 +72,9 @@ components:
 
     vote_update:
       summary: Real-time vote tally while poll is open
+      x-feature: poll
+      x-doc-notes:
+        - Host-only event; participants do not receive live vote tallies.
       payload:
         type: object
         required: [type, votes]
@@ -85,6 +92,7 @@ components:
 
     wordcloud_updated:
       summary: Word cloud updated (same payload as participant)
+      x-feature: wordcloud
       payload:
         type: object
         required: [type, words, word_order, topic]
@@ -109,6 +117,7 @@ components:
 
     qa_updated:
       summary: Q&A list changed (same structure as participant)
+      x-feature: qa
       payload:
         type: object
         required: [type, questions]
@@ -125,6 +134,7 @@ components:
 
     codereview_selections_updated:
       summary: Aggregated line selection counts (host-only)
+      x-feature: codereview
       payload:
         type: object
         required: [type, line_counts]
@@ -142,6 +152,7 @@ components:
 
     emoji_reaction:
       summary: Participant sent an emoji reaction — floating animation on host screen
+      x-feature: emoji
       payload:
         type: object
         required: [type, emoji]
@@ -157,6 +168,7 @@ components:
 
     quiz_status:
       summary: Quiz generation progress update
+      x-feature: quiz
       payload:
         type: object
         required: [type, status]
@@ -172,6 +184,7 @@ components:
 
     quiz_preview:
       summary: Generated quiz ready for host review (quiz=null to clear)
+      x-feature: quiz
       payload:
         type: object
         required: [type]
@@ -205,6 +218,7 @@ components:
 
     leaderboard_revealed:
       summary: Leaderboard revealed (same payload as participant)
+      x-feature: scores_leaderboard
       payload:
         type: object
         required: [type, positions]
@@ -221,6 +235,7 @@ components:
 
     paste_received:
       summary: Participant submitted a text paste
+      x-feature: paste_upload
       payload:
         type: object
         required: [type, uuid, id, text]
@@ -239,6 +254,7 @@ components:
 
     file_uploaded:
       summary: Participant uploaded a file (daemon has downloaded it to session folder)
+      x-feature: paste_upload
       payload:
         type: object
         required: [type, uuid, id, filename, size, disk_path]
@@ -265,6 +281,7 @@ components:
 
     participant_list_updated:
       summary: Participant list changed (join/register/rename/location) — sent by daemon directly
+      x-feature: identity
       payload:
         type: object
         required: [type, participants]
@@ -281,6 +298,7 @@ components:
 
     notes_updated:
       summary: Notes file changed — non-empty line count updated
+      x-feature: notes_summary
       payload:
         type: object
         required: [type, count]
@@ -294,6 +312,7 @@ components:
 
     summary_updated:
       summary: AI summary file changed — parsed point count updated
+      x-feature: notes_summary
       payload:
         type: object
         required: [type, count]
@@ -309,6 +328,9 @@ components:
 
     reload:
       summary: Daemon synced static files — browser should reload
+      x-feature: reload
+      x-doc-notes:
+        - Host client should trigger full page reload to pick up new static assets.
       payload:
         type: object
         required: [type]

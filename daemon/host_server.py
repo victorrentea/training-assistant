@@ -15,6 +15,7 @@ from pydantic import BaseModel
 
 from daemon import log as daemon_log
 from daemon.host_proxy import create_http_client, proxy_http, proxy_websocket
+from daemon.openapi_contract_metadata import enrich_openapi_contract
 from daemon.participant.router import router as participant_router
 
 logger = logging.getLogger(__name__)
@@ -197,6 +198,19 @@ def create_app(backend_url: str) -> FastAPI:
     @app.api_route("/api/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"])
     async def api_proxy(request: Request, path: str):
         return await proxy_http(request, f"api/{path}", http_client)
+
+    # --- OpenAPI contract metadata (x-feature/x-doc-notes) ---
+    original_openapi = app.openapi
+
+    def custom_openapi():
+        if app.openapi_schema:
+            return app.openapi_schema
+        schema = original_openapi()
+        enrich_openapi_contract(schema)
+        app.openapi_schema = schema
+        return app.openapi_schema
+
+    app.openapi = custom_openapi
 
     # --- Static files (mounted last) ---
     if _STATIC_DIR.is_dir():

@@ -17,6 +17,7 @@ paths:
           content:
             application/json:
               schema: {}
+      x-feature: identity
   /api/participant/name:
     put:
       tags:
@@ -36,6 +37,7 @@ paths:
           content:
             application/json:
               schema: {}
+      x-feature: identity
   /api/participant/avatar:
     post:
       tags:
@@ -55,6 +57,7 @@ paths:
           content:
             application/json:
               schema: {}
+      x-feature: identity
   /api/participant/location:
     post:
       tags:
@@ -74,6 +77,7 @@ paths:
           content:
             application/json:
               schema: {}
+      x-feature: identity
   /api/participant/state:
     get:
       tags:
@@ -88,6 +92,9 @@ paths:
           content:
             application/json:
               schema: {}
+      x-feature: identity
+      x-doc-notes:
+      - Returns participant-personalized full state snapshot.
   /api/participant/wordcloud/word:
     post:
       tags:
@@ -107,6 +114,7 @@ paths:
           content:
             application/json:
               schema: {}
+      x-feature: wordcloud
   /api/{session_id}/host/wordcloud/word:
     post:
       tags:
@@ -126,6 +134,7 @@ paths:
           content:
             application/json:
               schema: {}
+      x-feature: wordcloud
   /api/{session_id}/host/wordcloud/topic:
     post:
       tags:
@@ -145,6 +154,7 @@ paths:
           content:
             application/json:
               schema: {}
+      x-feature: wordcloud
   /api/{session_id}/host/wordcloud/clear:
     post:
       tags:
@@ -158,6 +168,7 @@ paths:
           content:
             application/json:
               schema: {}
+      x-feature: wordcloud
   /api/participant/emoji/reaction:
     post:
       tags:
@@ -177,6 +188,7 @@ paths:
           content:
             application/json:
               schema: {}
+      x-feature: emoji
   /api/participant/qa/submit:
     post:
       tags:
@@ -196,6 +208,7 @@ paths:
           content:
             application/json:
               schema: {}
+      x-feature: qa
   /api/participant/qa/upvote:
     post:
       tags:
@@ -215,6 +228,7 @@ paths:
           content:
             application/json:
               schema: {}
+      x-feature: qa
   /api/{session_id}/host/qa/submit:
     post:
       tags:
@@ -234,6 +248,7 @@ paths:
           content:
             application/json:
               schema: {}
+      x-feature: qa
   /api/{session_id}/host/qa/question/{question_id}/text:
     put:
       tags:
@@ -260,6 +275,7 @@ paths:
           content:
             application/json:
               schema: {}
+      x-feature: qa
   /api/{session_id}/host/qa/question/{question_id}:
     delete:
       tags:
@@ -280,6 +296,7 @@ paths:
           content:
             application/json:
               schema: {}
+      x-feature: qa
   /api/{session_id}/host/qa/question/{question_id}/answered:
     put:
       tags:
@@ -306,6 +323,7 @@ paths:
           content:
             application/json:
               schema: {}
+      x-feature: qa
   /api/{session_id}/host/qa/clear:
     post:
       tags:
@@ -319,6 +337,7 @@ paths:
           content:
             application/json:
               schema: {}
+      x-feature: qa
   /api/participant/poll/vote:
     post:
       tags:
@@ -338,6 +357,9 @@ paths:
           content:
             application/json:
               schema: {}
+      x-feature: poll
+      x-doc-notes:
+      - Votes are final once submitted; re-vote is rejected.
   /api/{session_id}/host/poll:
     post:
       tags:
@@ -357,6 +379,7 @@ paths:
           content:
             application/json:
               schema: {}
+      x-feature: poll
     delete:
       tags:
       - poll
@@ -369,6 +392,7 @@ paths:
           content:
             application/json:
               schema: {}
+      x-feature: poll
   /api/{session_id}/host/poll/open:
     post:
       tags:
@@ -382,6 +406,7 @@ paths:
           content:
             application/json:
               schema: {}
+      x-feature: poll
   /api/{session_id}/host/poll/close:
     post:
       tags:
@@ -395,6 +420,7 @@ paths:
           content:
             application/json:
               schema: {}
+      x-feature: poll
   /api/{session_id}/host/poll/correct:
     put:
       tags:
@@ -414,6 +440,7 @@ paths:
           content:
             application/json:
               schema: {}
+      x-feature: poll
   /api/{session_id}/host/poll/timer:
     post:
       tags:
@@ -433,6 +460,7 @@ paths:
           content:
             application/json:
               schema: {}
+      x-feature: poll
   /api/{session_id}/host/poll/status:
     put:
       tags:
@@ -452,6 +480,7 @@ paths:
           content:
             application/json:
               schema: {}
+      x-feature: poll
   /api/{session_id}/quiz-md:
     get:
       tags:
@@ -465,6 +494,7 @@ paths:
           content:
             application/json:
               schema: {}
+      x-feature: quiz
   /api/{session_id}/host/leaderboard/show:
     post:
       tags:
@@ -477,6 +507,7 @@ paths:
           content:
             application/json:
               schema: {}
+      x-feature: scores_leaderboard
   /api/{session_id}/host/leaderboard/hide:
     post:
       tags:
@@ -489,6 +520,7 @@ paths:
           content:
             application/json:
               schema: {}
+      x-feature: scores_leaderboard
   /api/{session_id}/host/scores:
     delete:
       tags:
@@ -501,6 +533,7 @@ paths:
           content:
             application/json:
               schema: {}
+      x-feature: scores_leaderboard
   /api/participant/paste:
     post:
       tags:
@@ -520,6 +553,7 @@ paths:
           content:
             application/json:
               schema: {}
+      x-feature: paste_upload
   /api/participant/misc/feedback:
     post:
       tags:
@@ -539,6 +573,7 @@ paths:
           content:
             application/json:
               schema: {}
+      x-feature: feedback
   /api/participant/notes:
     get:
       tags:
@@ -552,6 +587,7 @@ paths:
           content:
             application/json:
               schema: {}
+      x-feature: notes_summary
   /api/participant/summary:
     get:
       tags:
@@ -565,6 +601,7 @@ paths:
           content:
             application/json:
               schema: {}
+      x-feature: notes_summary
   /api/participant/slides-cache-status:
     get:
       tags:
@@ -578,6 +615,10 @@ paths:
           content:
             application/json:
               schema: {}
+      x-feature: slides
+      x-doc-notes:
+      - Primarily for diagnostics; UI cache invalidation is event-driven via slides_cache_status
+        WS.
   /api/{session_id}/host/pastes:
     get:
       tags:
@@ -591,6 +632,7 @@ paths:
           content:
             application/json:
               schema: {}
+      x-feature: paste_upload
   /api/{session_id}/host/notes:
     get:
       tags:
@@ -604,6 +646,7 @@ paths:
           content:
             application/json:
               schema: {}
+      x-feature: notes_summary
   /api/{session_id}/host/summary:
     get:
       tags:
@@ -617,6 +660,7 @@ paths:
           content:
             application/json:
               schema: {}
+      x-feature: notes_summary
   /api/{session_id}/host/uploads/seen:
     post:
       tags:
@@ -637,6 +681,7 @@ paths:
           content:
             application/json:
               schema: {}
+      x-feature: paste_upload
   /api/{session_id}/host/mode:
     post:
       tags:
@@ -656,6 +701,7 @@ paths:
           content:
             application/json:
               schema: {}
+      x-feature: session_management
   /api/transcription-language:
     post:
       tags:
@@ -676,6 +722,9 @@ paths:
           content:
             application/json:
               schema: {}
+      x-feature: transcription
+      x-doc-notes:
+      - 'Accepted values: ro, en, auto.'
   /api/transcription-language/request:
     get:
       tags:
@@ -690,6 +739,9 @@ paths:
           content:
             application/json:
               schema: {}
+      x-feature: transcription
+      x-doc-notes:
+      - Consumes and clears the pending transcription language request.
   /api/{session_id}/host/quiz-request:
     post:
       tags:
@@ -710,6 +762,7 @@ paths:
           content:
             application/json:
               schema: {}
+      x-feature: quiz
   /api/{session_id}/host/quiz-preview:
     delete:
       tags:
@@ -723,6 +776,7 @@ paths:
           content:
             application/json:
               schema: {}
+      x-feature: quiz
   /api/{session_id}/host/quiz-refine:
     post:
       tags:
@@ -742,6 +796,7 @@ paths:
           content:
             application/json:
               schema: {}
+      x-feature: quiz
   /api/participant/codereview/selection:
     put:
       tags:
@@ -761,6 +816,7 @@ paths:
           content:
             application/json:
               schema: {}
+      x-feature: codereview
   /api/{session_id}/host/codereview:
     post:
       tags:
@@ -780,6 +836,7 @@ paths:
           content:
             application/json:
               schema: {}
+      x-feature: codereview
     delete:
       tags:
       - codereview
@@ -792,6 +849,7 @@ paths:
           content:
             application/json:
               schema: {}
+      x-feature: codereview
   /api/{session_id}/host/codereview/status:
     put:
       tags:
@@ -811,6 +869,7 @@ paths:
           content:
             application/json:
               schema: {}
+      x-feature: codereview
   /api/{session_id}/host/codereview/confirm-line:
     put:
       tags:
@@ -830,6 +889,7 @@ paths:
           content:
             application/json:
               schema: {}
+      x-feature: codereview
   /api/{session_id}/host/activity:
     put:
       tags:
@@ -849,6 +909,7 @@ paths:
           content:
             application/json:
               schema: {}
+      x-feature: activity
     post:
       tags:
       - activity
@@ -867,6 +928,7 @@ paths:
           content:
             application/json:
               schema: {}
+      x-feature: activity
   /api/participant/debate/pick-side:
     post:
       tags:
@@ -886,6 +948,7 @@ paths:
           content:
             application/json:
               schema: {}
+      x-feature: debate
   /api/participant/debate/argument:
     post:
       tags:
@@ -905,6 +968,7 @@ paths:
           content:
             application/json:
               schema: {}
+      x-feature: debate
   /api/participant/debate/upvote:
     post:
       tags:
@@ -924,6 +988,7 @@ paths:
           content:
             application/json:
               schema: {}
+      x-feature: debate
   /api/participant/debate/volunteer:
     post:
       tags:
@@ -937,6 +1002,7 @@ paths:
           content:
             application/json:
               schema: {}
+      x-feature: debate
   /api/{session_id}/host/debate:
     post:
       tags:
@@ -956,6 +1022,7 @@ paths:
           content:
             application/json:
               schema: {}
+      x-feature: debate
   /api/{session_id}/host/debate/reset:
     post:
       tags:
@@ -969,6 +1036,7 @@ paths:
           content:
             application/json:
               schema: {}
+      x-feature: debate
   /api/{session_id}/host/debate/close-selection:
     post:
       tags:
@@ -982,6 +1050,7 @@ paths:
           content:
             application/json:
               schema: {}
+      x-feature: debate
   /api/{session_id}/host/debate/force-assign:
     post:
       tags:
@@ -995,6 +1064,7 @@ paths:
           content:
             application/json:
               schema: {}
+      x-feature: debate
   /api/{session_id}/host/debate/phase:
     post:
       tags:
@@ -1014,6 +1084,7 @@ paths:
           content:
             application/json:
               schema: {}
+      x-feature: debate
   /api/{session_id}/host/debate/first-side:
     post:
       tags:
@@ -1033,6 +1104,7 @@ paths:
           content:
             application/json:
               schema: {}
+      x-feature: debate
   /api/{session_id}/host/debate/round-timer:
     post:
       tags:
@@ -1052,6 +1124,7 @@ paths:
           content:
             application/json:
               schema: {}
+      x-feature: debate
   /api/{session_id}/host/debate/end-round:
     post:
       tags:
@@ -1065,6 +1138,7 @@ paths:
           content:
             application/json:
               schema: {}
+      x-feature: debate
   /api/{session_id}/host/debate/end-arguments:
     post:
       tags:
@@ -1078,6 +1152,7 @@ paths:
           content:
             application/json:
               schema: {}
+      x-feature: debate
   /api/{session_id}/host/debate/ai-result:
     post:
       tags:
@@ -1097,6 +1172,7 @@ paths:
           content:
             application/json:
               schema: {}
+      x-feature: debate
   /api/{session_id}/host/state:
     get:
       tags:
@@ -1117,6 +1193,9 @@ paths:
           content:
             application/json:
               schema: {}
+      x-feature: identity
+      x-doc-notes:
+      - Returns host-facing full state snapshot.
   /api/session/start:
     post:
       tags:
@@ -1137,6 +1216,7 @@ paths:
           content:
             application/json:
               schema: {}
+      x-feature: session_management
   /api/session/end:
     post:
       tags:
@@ -1151,13 +1231,14 @@ paths:
           content:
             application/json:
               schema: {}
+      x-feature: session_management
   /api/session/resume:
     post:
       tags:
       - session
       summary: Resume Session
-      description: Host resumes an existing session folder. Reads .session-state.json
-        to restore state.
+      description: Host resumes an existing session folder. Uses session-state.json
+        as persisted storage.
       operationId: resume_session_api_session_resume_post
       requestBody:
         content:
@@ -1171,6 +1252,7 @@ paths:
           content:
             application/json:
               schema: {}
+      x-feature: session_management
   /api/session/folders:
     get:
       tags:
@@ -1184,6 +1266,7 @@ paths:
           content:
             application/json:
               schema: {}
+      x-feature: session_management
   /api/session/start_talk:
     post:
       tags:
@@ -1197,6 +1280,7 @@ paths:
           content:
             application/json:
               schema: {}
+      x-feature: session_management
   /api/session/end_talk:
     post:
       tags:
@@ -1210,6 +1294,7 @@ paths:
           content:
             application/json:
               schema: {}
+      x-feature: session_management
   /api/session/active:
     get:
       tags:
@@ -1223,6 +1308,7 @@ paths:
           content:
             application/json:
               schema: {}
+      x-feature: session_management
   /api/{session_id}/session/interval-lines.txt:
     get:
       tags:
@@ -1254,6 +1340,9 @@ paths:
             text/plain:
               schema:
                 type: string
+      x-feature: session_management
+      x-doc-notes:
+      - Returns text/plain interval lines for session export/inspection.
   /api/daemon-status:
     get:
       summary: Daemon Status
@@ -1264,6 +1353,7 @@ paths:
           content:
             application/json:
               schema: {}
+      x-feature: session_management
   /api/log-level:
     get:
       summary: Get Log Level
@@ -1275,6 +1365,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/LogLevelResponse'
+      x-feature: session_management
     post:
       summary: Set Log Level
       operationId: set_log_level_api_log_level_post
@@ -1291,6 +1382,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/LogLevelResponse'
+      x-feature: session_management
 components:
   schemas:
     AdvancePhaseRequest:

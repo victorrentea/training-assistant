@@ -3,6 +3,17 @@
 Real-time live poll tool for webinars/workshops.
 Built with **Python FastAPI + WebSockets** — no frontend build step required.
 
+## API Reference Workflow
+
+- `API.md` is generated from daemon contracts (`docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.yaml`).
+- Regenerate manually:
+
+```bash
+python3 scripts/generate_apis_md.py --output API.md
+```
+
+- Pre-commit hook regenerates and stages `API.md` automatically.
+
 ---
 
 ## Project structure

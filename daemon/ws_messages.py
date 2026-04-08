@@ -329,3 +329,78 @@ HOST_MESSAGES: dict[str, type[BaseModel]] = {
     # Cross-cutting
     "reload": ReloadMsg,
 }
+
+# Feature-classification metadata used by docs generators.
+# Keep these maps in sync with PARTICIPANT_MESSAGES / HOST_MESSAGES.
+PARTICIPANT_MESSAGE_FEATURES: dict[str, str] = {
+    # Slides
+    "slides_current": "slides",
+    "slides_cache_status": "slides",
+    # Activity
+    "activity_updated": "activity",
+    # Transcription
+    "transcription_language_pending": "transcription",
+    # Identity
+    "participant_count_updated": "identity",
+    # Poll
+    "poll_opened": "poll",
+    "poll_closed": "poll",
+    "poll_correct_revealed": "poll",
+    "poll_cleared": "poll",
+    "poll_timer_started": "poll",
+    # Scores & Leaderboard
+    "scores_updated": "scores_leaderboard",
+    "leaderboard_revealed": "scores_leaderboard",
+    # Word Cloud
+    "wordcloud_updated": "wordcloud",
+    # Q&A
+    "qa_updated": "qa",
+    # Code Review
+    "codereview_opened": "codereview",
+    "codereview_selection_closed": "codereview",
+    "codereview_line_confirmed": "codereview",
+    "codereview_cleared": "codereview",
+    # Debate
+    "debate_updated": "debate",
+    "debate_timer": "debate",
+    "debate_round_ended": "debate",
+    # Quiz
+    "quiz_status": "quiz",
+    "quiz_preview": "quiz",
+    # Notes & Summary
+    "notes_updated": "notes_summary",
+    "summary_updated": "notes_summary",
+    # Cross-cutting
+    "reload": "reload",
+}
+
+HOST_MESSAGE_FEATURES: dict[str, str] = {
+    # Slides
+    "slides_cache_status": "slides",
+    # Poll
+    "poll_ai_generated": "poll",
+    "vote_update": "poll",
+    # Word Cloud
+    "wordcloud_updated": "wordcloud",
+    # Q&A
+    "qa_updated": "qa",
+    # Code Review
+    "codereview_selections_updated": "codereview",
+    # Emoji
+    "emoji_reaction": "emoji",
+    # Quiz
+    "quiz_status": "quiz",
+    "quiz_preview": "quiz",
+    # Scores & Leaderboard
+    "leaderboard_revealed": "scores_leaderboard",
+    # Paste & Upload
+    "paste_received": "paste_upload",
+    "file_uploaded": "paste_upload",
+    # Identity
+    "participant_list_updated": "identity",
+    # Notes & Summary
+    "notes_updated": "notes_summary",
+    "summary_updated": "notes_summary",
+    # Cross-cutting
+    "reload": "reload",
+}

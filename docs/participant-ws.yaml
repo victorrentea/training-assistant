@@ -52,6 +52,7 @@ components:
 
     slides_current:
       summary: Host navigated to a new slide
+      x-feature: slides
       payload:
         type: object
         required: [type]
@@ -66,6 +67,9 @@ components:
 
     slides_cache_status:
       summary: Invalidation signal — participant must call GET /api/slides to refresh
+      x-feature: slides
+      x-doc-notes:
+        - Client must refetch slide list; payload intentionally carries no cache map.
       payload:
         type: object
         required: [type]
@@ -78,6 +82,7 @@ components:
 
     activity_updated:
       summary: Current activity type changed by host
+      x-feature: activity
       payload:
         type: object
         required: [type, current_activity]
@@ -93,6 +98,7 @@ components:
 
     participant_count_updated:
       summary: Participant count changed
+      x-feature: identity
       payload:
         type: object
         required: [type, count]
@@ -107,6 +113,9 @@ components:
 
     poll_opened:
       summary: Poll opened for voting
+      x-feature: poll
+      x-doc-notes:
+        - Participants can vote only while poll is open.
       payload:
         type: object
         required: [type, poll]
@@ -119,6 +128,7 @@ components:
 
     poll_closed:
       summary: Voting closed by host
+      x-feature: poll
       payload:
         type: object
         required: [type, vote_counts, total_votes]
@@ -136,6 +146,7 @@ components:
 
     poll_correct_revealed:
       summary: Host revealed correct answers
+      x-feature: poll
       payload:
         type: object
         required: [type, correct_ids]
@@ -150,6 +161,7 @@ components:
 
     poll_cleared:
       summary: Poll removed by host
+      x-feature: poll
       payload:
         type: object
         required: [type]
@@ -160,6 +172,7 @@ components:
 
     poll_timer_started:
       summary: Host started a countdown timer for the poll
+      x-feature: poll
       payload:
         type: object
         required: [type, seconds]
@@ -174,6 +187,7 @@ components:
 
     scores_updated:
       summary: One or more participants' scores changed
+      x-feature: scores_leaderboard
       payload:
         type: object
         required: [type, scores]
@@ -191,6 +205,7 @@ components:
 
     wordcloud_updated:
       summary: Word cloud state changed (new word or topic update)
+      x-feature: wordcloud
       payload:
         type: object
         required: [type, words, word_order, topic]
@@ -215,6 +230,7 @@ components:
 
     qa_updated:
       summary: Q&A list changed (new question, upvote, edit, delete)
+      x-feature: qa
       payload:
         type: object
         required: [type, questions]
@@ -231,6 +247,7 @@ components:
 
     codereview_opened:
       summary: Host opened a code snippet for review
+      x-feature: codereview
       payload:
         type: object
         required: [type, snippet, language]
@@ -246,6 +263,7 @@ components:
 
     codereview_selection_closed:
       summary: Host closed the line selection phase
+      x-feature: codereview
       payload:
         type: object
         required: [type]
@@ -256,6 +274,7 @@ components:
 
     codereview_line_confirmed:
       summary: Host confirmed a line as problematic
+      x-feature: codereview
       payload:
         type: object
         required: [type, line]
@@ -268,6 +287,7 @@ components:
 
     codereview_cleared:
       summary: Code review removed by host
+      x-feature: codereview
       payload:
         type: object
         required: [type]
@@ -280,6 +300,7 @@ components:
 
     debate_updated:
       summary: Full debate state snapshot
+      x-feature: debate
       payload:
         type: object
         required: [type]
@@ -328,6 +349,7 @@ components:
 
     debate_timer:
       summary: A timed debate round started
+      x-feature: debate
       payload:
         type: object
         required: [type, round_index, seconds, started_at]
@@ -345,6 +367,7 @@ components:
 
     debate_round_ended:
       summary: Current debate round ended
+      x-feature: debate
       payload:
         type: object
         required: [type]
@@ -357,6 +380,7 @@ components:
 
     leaderboard_revealed:
       summary: Leaderboard overlay shown with top positions
+      x-feature: scores_leaderboard
       payload:
         type: object
         required: [type, positions]
@@ -373,6 +397,7 @@ components:
 
     quiz_status:
       summary: Quiz generation progress update
+      x-feature: quiz
       payload:
         type: object
         required: [type, status, message]
@@ -388,6 +413,7 @@ components:
 
     quiz_preview:
       summary: Quiz preview for host review before publishing (quiz=null to clear)
+      x-feature: quiz
       payload:
         type: object
         required: [type]
@@ -413,6 +439,7 @@ components:
 
     transcription_language_pending:
       summary: Daemon detected a transcription language change
+      x-feature: transcription
       payload:
         type: object
         required: [type, language]
@@ -427,6 +454,7 @@ components:
 
     notes_updated:
       summary: Notes file changed — non-empty line count updated
+      x-feature: notes_summary
       payload:
         type: object
         required: [type, count]
@@ -440,6 +468,7 @@ components:
 
     summary_updated:
       summary: AI summary file changed — parsed point count updated
+      x-feature: notes_summary
       payload:
         type: object
         required: [type, count]
@@ -455,6 +484,9 @@ components:
 
     reload:
       summary: Daemon synced static files — browser should reload
+      x-feature: reload
+      x-doc-notes:
+        - Client should trigger full page reload to pick up new static assets.
       payload:
         type: object
         required: [type]

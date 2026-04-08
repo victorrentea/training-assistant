@@ -200,6 +200,25 @@ class TestOpenApiSnapshot:
             + "\n\nRegenerate: python3 -m tests.daemon.test_api_contract --regenerate"
         )
 
+    def test_all_operations_have_x_feature(self, live_openapi):
+        """Every exported API operation must declare x-feature for API.md grouping."""
+        missing = []
+        for path, methods in sorted(live_openapi["paths"].items()):
+            for method, details in sorted(methods.items()):
+                if method.lower() not in ("get", "post", "put", "delete", "patch"):
+                    continue
+                if not isinstance(details, dict):
+                    continue
+                feature = details.get("x-feature")
+                if not isinstance(feature, str) or not feature.strip():
+                    missing.append(f"  {method.upper()} {path}")
+
+        assert not missing, (
+            "Operations missing x-feature metadata:\n"
+            + "\n".join(missing)
+            + "\n\nAdd x-feature via OpenAPI metadata before regenerating docs/openapi.yaml."
+        )
+
 
 class TestNoPydanticBypasses:
     """Guard: no endpoint should bypass Pydantic by calling request.json() directly."""
