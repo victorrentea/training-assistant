@@ -117,7 +117,6 @@ while true; do
   start_daemon
 
   echo ""
-  _log "start" "info" "🟢 daemon"
   echo ""
 
   RESTART_REASON=""
@@ -156,6 +155,12 @@ while true; do
   stop_all_processes
   pull_and_rebuild
 
-  _log "start" "info" "♻️  Restarting (reason: $RESTART_REASON)..."
+  if [ "$RESTART_REASON" = "git-update" ]; then
+    RESTART_AT=$(date +"%H:%M:%S")
+    COMMIT_MESSAGE=$(git log -1 --pretty=%s 2>/dev/null || echo "unknown commit")
+    _log "start" "info" "♻️  Restarted for commit at $RESTART_AT: $COMMIT_MESSAGE"
+  else
+    _log "start" "info" "♻️  Restarting (reason: $RESTART_REASON)..."
+  fi
   echo ""
 done

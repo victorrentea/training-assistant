@@ -1084,7 +1084,6 @@
       const data = await resp.json();
       const level = String(data.level || '').toLowerCase();
       if (level === 'info' || level === 'debug') _daemonLogLevel = level;
-      toast(`Daemon logs: ${_daemonLogLevel}`);
     } catch (err) {
       console.warn('Failed to change daemon log level', err);
       toast('Failed to change daemon log level');

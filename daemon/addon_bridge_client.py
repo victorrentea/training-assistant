@@ -116,7 +116,7 @@ class AddonBridgeClient:
 
         with self._ws_lock:
             self._ws = ws
-        log.info(_NAME, f"ws connected to {url}")
+        log.info(_NAME, f"→ connected {url}")
         self._fire_connection_change(True)
 
         try:
