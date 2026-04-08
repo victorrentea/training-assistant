@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import os
 import json
@@ -7,16 +8,52 @@ from pathlib import Path
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import FileResponse, Response
+from pydantic import BaseModel
 
 from railway.features.slides.upload import (
     _slugify,
     _uploaded_slides_dir,
 )
 from railway.features.ws.proxy_bridge import proxy_to_daemon
+from railway.shared.state import state
 
 router = APIRouter()
 public_router = APIRouter()
 logger = logging.getLogger(__name__)
+
+
+class SlideInvalidateRequest(BaseModel):
+    drive_export_url: str = ""
+
+
+@router.post("/api/slides/invalidate/{slug}")
+async def invalidate_slide(slug: str, body: SlideInvalidateRequest = SlideInvalidateRequest()):
+    """Force Railway to re-download and cache-bust the PDF for slug.
+
+    Called by the slides upload daemon after it detects a PPTX was saved and
+    Google Drive has the updated PDF. Railway deletes the old cached file,
+    re-downloads from Drive, then broadcasts slides_cache_status with
+    refreshed_slugs so connected participants auto-reload the active slide.
+    """
+    from railway.features.slides.cache import _cache_path, _set_status, do_invalidate_download
+
+    drive_export_url = body.drive_export_url.strip()
+    if not drive_export_url:
+        for slide in (state.slides or []):
+            if isinstance(slide, dict) and slide.get("slug") == slug:
+                drive_export_url = str(slide.get("drive_export_url", "")).strip()
+                break
+    if not drive_export_url:
+        raise HTTPException(status_code=422, detail=f"No drive_export_url found for slug={slug!r}")
+
+    # Delete cached file and mark stale so any concurrent /check will re-download
+    cached = _cache_path(slug)
+    if cached.exists():
+        cached.unlink(missing_ok=True)
+    _set_status(slug, "stale")
+
+    asyncio.create_task(do_invalidate_download(slug, drive_export_url))
+    return {"status": "invalidating", "slug": slug}
 
 
 def _merge_embedded_slide_status(payload: dict) -> dict:
