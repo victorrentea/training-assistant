@@ -81,10 +81,10 @@ body {
   position: relative;
 }
 #log-level-badge.log-level-info {
-  color: var(--muted);
-  border-color: var(--muted);
-  background: #7b80a022;
-  --badge-fill: #7b80a044;
+  color: #9aa0b5;
+  border-color: #9aa0b5;
+  background: #9aa0b522;
+  --badge-fill: #9aa0b544;
 }
 #log-level-badge.log-level-debug {
   color: #ff5b5b;
