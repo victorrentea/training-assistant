@@ -137,6 +137,7 @@
     const SESSION_CODE_RE = /^[a-z0-9]{6}$/;
     const RETRY_INTERVAL_MS = 3000;
     const RETRY_DURATION_MS = 60000;
+    const LOCAL_DAEMON_POLL_MS = 1000;
     let retryTimer = null;
     let retryUiTimer = null;
     let retryStartedAt = 0;
@@ -311,13 +312,9 @@
 
     // Auto-detect active session when running on host's machine.
     (function pollLocalDaemon() {
-      const MAX_ATTEMPTS = 7;
-      let attempts = 0;
       let lastCode = null;
 
       function tryFetch() {
-        if (attempts >= MAX_ATTEMPTS) return;
-        attempts++;
         fetch('http://localhost:8081/api/session/active', { signal: AbortSignal.timeout(800) })
           .then(r => r.ok ? r.json() : null)
           .then(data => {
@@ -327,16 +324,16 @@
             const input = document.getElementById('code-input');
             input.value = code;
             onCodeInput();
-            startAutoRetryIfNeeded({ immediate: true });
+            stopAutoRetry('');
+            joinSession();
           })
           .catch(() => { /* daemon not running or unreachable — silent skip */ });
       }
 
       tryFetch();
-      const timer = setInterval(() => {
-        if (attempts >= MAX_ATTEMPTS) { clearInterval(timer); return; }
+      setInterval(() => {
         tryFetch();
-      }, 1000);
+      }, LOCAL_DAEMON_POLL_MS);
     })();
 
   </script>

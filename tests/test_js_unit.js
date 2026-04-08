@@ -300,6 +300,15 @@ assert(
   'join button is enabled only for complete 6-char alphanumeric codes',
   /const SESSION_CODE_RE = \/\^\[a-z0-9\]\{6\}\$\/;/.test(landingHtmlSource)
 );
+assert(
+  'local daemon polling never stops after fixed attempts',
+  !/MAX_ATTEMPTS/.test(landingHtmlSource)
+);
+assert(
+  'local daemon polling is continuous and joins immediately when session id appears',
+  /setInterval\(\(\) => \{\s*tryFetch\(\);\s*\}, LOCAL_DAEMON_POLL_MS\);/s.test(landingHtmlSource)
+    && /stopAutoRetry\(''\);\s*joinSession\(\);/s.test(landingHtmlSource)
+);
 
 // ═══════════════════════════════════════════════════════════════════════
 // Summary

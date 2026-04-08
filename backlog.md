@@ -1,5 +1,6 @@
 # Tasks
 
+- [x] follow-up: participant landing local-daemon detection now polls indefinitely (no max-attempt cutoff) and auto-joins immediately when `/api/session/active` returns a valid session id.
 - [x] feature: when participants are disconnected at session end, landing now preserves the disconnected session code in `code` query param and auto-retries reconnect every 3s for up to 1 minute with Join-button progress feedback.
 - [x] bugfix: host landing no longer shows the "New version detected" auto-reload banner after session end; version mismatch checks there now run only while `session_active` is true.
 - [x] bugfix: when a session ends (`set_session_id` without `session_id`), Railway now clears active session state and force-redirects/disconnects both host (`/host`) and all connected participants (`/`), preventing stale host UI on inactive sessions.
