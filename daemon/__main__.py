@@ -165,6 +165,88 @@ def _flush_global_state_backup(
         return last_flushed_hash, False
 
 
+def _build_runtime_session_snapshot(
+    *,
+    active_session_id: str | None,
+    session_stack: list[dict],
+) -> dict:
+    from daemon.participant.state import participant_state
+    from daemon.poll.state import poll_state
+    from daemon.wordcloud.state import wordcloud_state
+    from daemon.qa.state import qa_state
+    from daemon.codereview.state import codereview_state
+    from daemon.debate.state import debate_state
+    from daemon.leaderboard.state import leaderboard_state
+    from daemon.misc.state import misc_state
+
+    qa_payload: dict[str, dict] = {}
+    for qid, q in qa_state.questions.items():
+        qa_payload[qid] = {
+            "id": q.get("id", qid),
+            "text": q.get("text", ""),
+            "author": q.get("author", ""),
+            "upvoters": sorted(list(q.get("upvoters", set()))),
+            "answered": bool(q.get("answered", False)),
+            "timestamp": q.get("timestamp"),
+        }
+
+    debate_snapshot = debate_state.snapshot()
+    poll_timer_started_at = (
+        poll_state.poll_timer_started_at.isoformat()
+        if poll_state.poll_timer_started_at
+        else None
+    )
+    poll_opened_at = (
+        poll_state.poll_opened_at.isoformat()
+        if poll_state.poll_opened_at
+        else None
+    )
+    session_name = session_stack[-1]["name"] if session_stack else None
+
+    return {
+        "session_id": active_session_id,
+        "session_name": session_name,
+        "mode": participant_state.mode,
+        "current_activity": participant_state.current_activity,
+        "participant_names": dict(participant_state.participant_names),
+        "participant_avatars": dict(participant_state.participant_avatars),
+        "participant_universes": dict(participant_state.participant_universes),
+        "scores": dict(participant_state.scores),
+        "locations": dict(participant_state.locations),
+        "poll": poll_state.poll,
+        "poll_active": poll_state.poll_active,
+        "poll_correct_ids": poll_state.poll_correct_ids,
+        "poll_opened_at": poll_opened_at,
+        "poll_timer_seconds": poll_state.poll_timer_seconds,
+        "poll_timer_started_at": poll_timer_started_at,
+        "votes": dict(poll_state.votes),
+        "qa_questions": qa_payload,
+        "wordcloud_words": dict(wordcloud_state.words),
+        "wordcloud_word_order": list(wordcloud_state.word_order),
+        "wordcloud_topic": wordcloud_state.topic,
+        "codereview_snippet": codereview_state.snippet,
+        "codereview_language": codereview_state.language,
+        "codereview_phase": codereview_state.phase,
+        "codereview_selections": {
+            pid: sorted(list(lines)) for pid, lines in codereview_state.selections.items()
+        },
+        "codereview_confirmed": sorted(list(codereview_state.confirmed)),
+        "debate_statement": debate_snapshot.get("statement"),
+        "debate_phase": debate_snapshot.get("phase"),
+        "debate_sides": dict(debate_snapshot.get("sides", {})),
+        "debate_arguments": list(debate_snapshot.get("arguments", [])),
+        "debate_champions": dict(debate_snapshot.get("champions", {})),
+        "debate_auto_assigned": list(debate_snapshot.get("auto_assigned", [])),
+        "debate_first_side": debate_snapshot.get("first_side"),
+        "debate_round_index": debate_snapshot.get("round_index"),
+        "debate_round_timer_seconds": debate_snapshot.get("round_timer_seconds"),
+        "debate_round_timer_started_at": debate_snapshot.get("round_timer_started_at"),
+        "slides_current": misc_state.slides_current,
+        "summary_points": list(misc_state.summary_points),
+        "leaderboard_active": leaderboard_state.data is not None,
+    }
+
+
 def _sessions_root_from_env() -> Path:
     return Path(
         os.environ.get(
@@ -1119,6 +1201,11 @@ def run() -> None:
 
                 if now - last_persist_poll_at >= 3.0:
                     last_persist_poll_at = now
+                    if session_stack:
+                        runtime_session_snapshot = _build_runtime_session_snapshot(
+                            active_session_id=_active_session_id,
+                            session_stack=session_stack,
+                        )
                     if pending_global_state is None:
                         pending_global_state = _build_global_state()
                     last_global_state_hash, _ = _flush_global_state_backup(
