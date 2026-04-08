@@ -1,12 +1,12 @@
 """Shared log formatter for all training-assistant daemons.
 
-Format: HH:MM:SS.f PID [name] info message
-        HH:MM:SS.f PID [name] error message
-        HH:MM:SS.f PID [name] debug message  ← only when DAEMON_DEBUG=1
+Format: HH:MM:SS.f PID [name___] info message
+        HH:MM:SS.f PID [name___] error message
+        HH:MM:SS.f PID [name___] debug message  ← only when DAEMON_DEBUG=1
 
 Example:
-    18:49:41.4 66405 [daemon] info Started — polling https://...
-    18:49:41.7 66405 [transcript] info Mar 22 · 3127 lines
+    18:49:41.4 66405 [daemon ] info Started — polling https://...
+    18:49:41.7 66405 [ws-clie] info Connected to wss://...
     18:49:41.7 66405 [session] error Failed to load key points
 
 Usage:
@@ -32,7 +32,7 @@ def _ts() -> str:
 
 
 def _fmt(name: str, level: str, msg: str) -> str:
-    nm = str(name or "").strip() or "?"
+    nm = (str(name or "").strip() or "?")[:7].ljust(7)
     lvl = str(level or "").strip().lower() or "info"
     return f"{_ts()} {_PID} [{nm}] {lvl} {msg}"
 
