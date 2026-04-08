@@ -1,5 +1,5 @@
-## Reguli Persistente
+## Persistent Rules
 
-- La începutul fiecărei sesiuni, citește `CLAUDE.md`.
-- Când trebuie citite sau actualizate reguli, folosește `CLAUDE.md` ca sursă principală (nu Codem).
-- Dacă există diferențe între reguli locale și `CLAUDE.md`, aliniază regulile locale la `CLAUDE.md` înainte de task-uri de cod.
+- At the start of each session, read `CLAUDE.md`.
+- When rules need to be read or updated, use `CLAUDE.md` as the primary source of truth (not Codem).
+- If there are differences between local rules and `CLAUDE.md`, align the local rules to `CLAUDE.md` before any coding tasks.

@@ -59,6 +59,7 @@ Whenever the user says “remember”, add it to this file (CLAUDE.md). Only add
 - Daemon log arrow geography is directional from daemon center: `railway/participants` vertical (`↑` out, `↓` in), `host` horizontal left (`←` out, `→` in), `addons` horizontal right (`→` out, `←` in)
 - When a task is done, commit and push directly to `master`.
 - All OpenSpec artifacts must be written in English.
+- All code, comments, variable names, commit messages, and documentation must be written in English.
 
 ---
 
