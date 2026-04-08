@@ -45,7 +45,8 @@ def _fmt(name: str, level: str, msg: str) -> str:
 
 
 def _colorize(line: str, level: str, stream) -> str:
-    if not hasattr(stream, "isatty") or not stream.isatty():
+    force_color = os.environ.get("FORCE_COLOR", "").strip().lower() in {"1", "true", "yes", "on"}
+    if not force_color and (not hasattr(stream, "isatty") or not stream.isatty()):
         return line
     if os.environ.get("NO_COLOR"):
         return line
