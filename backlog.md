@@ -1,5 +1,6 @@
 # Tasks
 
+- [x] bugfix: restoring a previously closed session now reapplies persisted `session-state.json` into in-memory daemon caches (`participant_names` etc.) during startup/create/parent-restore paths, so returning UUIDs keep their prior names instead of being reassigned defaults.
 - [x] ui tweak: participant landing keeps Join button unchanged during auto-reconnect and renders a separate slim progress bar + “Auto reconnecting” label below the button.
 - [x] bugfix: session `resume/start` now force-syncs active session id to local shared state + Railway even when a session stack already exists in memory, preventing host landing from getting stuck on `/host` after resume.
 - [x] follow-up: participant landing local-daemon detection now polls indefinitely (no max-attempt cutoff) and auto-joins immediately when `/api/session/active` returns a valid session id.

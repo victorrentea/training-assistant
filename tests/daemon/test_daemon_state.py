@@ -485,6 +485,23 @@ def test_flush_session_state_backup_force_writes_even_when_hash_unchanged(tmp_pa
     assert second_hash == first_hash
 
 
+def test_flush_session_state_backup_skips_without_active_session(tmp_path):
+    from daemon.__main__ import _flush_session_state_backup
+
+    snapshot = {"participant_names": {"u1": "Alice"}}
+    out_hash, wrote = _flush_session_state_backup(
+        sessions_root=tmp_path,
+        session_stack=[],
+        session_snapshot=snapshot,
+        last_flushed_hash=None,
+        force=False,
+    )
+
+    assert wrote is False
+    assert out_hash is None
+    assert not (tmp_path / "session-state.json").exists()
+
+
 def test_flush_global_state_backup_writes_when_hash_changed(tmp_path):
     from daemon.__main__ import _flush_global_state_backup
     from daemon.session_state import GLOBAL_STATE_FILENAME
@@ -551,3 +568,20 @@ def test_ensure_session_state_file_for_resume_keeps_existing_file(tmp_path):
     assert wrote is False
     data = json.loads(state_file.read_text(encoding="utf-8"))
     assert data["participant_names"]["u1"] == "Old"
+
+
+def test_apply_snapshot_restore_updates_participant_names():
+    from daemon.__main__ import _apply_runtime_snapshot_restore
+    from daemon.participant.state import participant_state
+
+    participant_state.reset()
+    participant_state.participant_names["u-old"] = "ShouldBeCleared"
+
+    _apply_runtime_snapshot_restore({
+        "participant_names": {"u1": "Persisted Tester"},
+        "participant_avatars": {"u1": "gandalf.png"},
+        "mode": "workshop",
+        "current_activity": "none",
+    })
+
+    assert participant_state.participant_names == {"u1": "Persisted Tester"}

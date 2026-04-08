@@ -255,6 +255,26 @@ def _without_session_id(snapshot: dict | None) -> dict | None:
     return out
 
 
+def _apply_runtime_snapshot_restore(snapshot: dict | None) -> None:
+    """Apply a persisted session snapshot to in-memory daemon state caches."""
+    if not isinstance(snapshot, dict) or not snapshot:
+        return
+
+    from daemon.participant.state import participant_state
+    from daemon.wordcloud.state import wordcloud_state
+    from daemon.qa.state import qa_state
+    from daemon.misc.state import misc_state
+    from daemon.codereview.state import codereview_state
+    from daemon.debate.state import debate_state
+
+    participant_state.sync_from_restore(snapshot)
+    wordcloud_state.sync_from_restore(snapshot)
+    qa_state.sync_from_restore(snapshot)
+    misc_state.sync_from_restore(snapshot)
+    codereview_state.sync_from_restore(snapshot)
+    debate_state.sync_from_restore(snapshot)
+
+
 def _sessions_root_from_env() -> Path:
     return Path(
         os.environ.get(
@@ -608,12 +628,7 @@ def run() -> None:
     from daemon.debate.state import debate_state
 
     def _handle_daemon_state_push(data):
-        participant_state.sync_from_restore(data)
-        wordcloud_state.sync_from_restore(data)
-        qa_state.sync_from_restore(data)
-        misc_state.sync_from_restore(data)
-        codereview_state.sync_from_restore(data)
-        debate_state.sync_from_restore(data)
+        _apply_runtime_snapshot_restore(data)
 
     ws_client.register_handler("daemon_state_push", _handle_daemon_state_push)
 
@@ -755,6 +770,7 @@ def run() -> None:
             startup_session_state = load_session_state(sessions_root / session_stack[-1]["name"])
             if startup_session_state:
                 log.info("session", f"Loaded {SESSION_STATE_FILENAME} for restore ({len(startup_session_state)} keys)")
+                _apply_runtime_snapshot_restore(startup_session_state)
         _startup_folder = (config.session_folder or (sessions_root / session_stack[-1]["name"])) if session_stack else None
         sync_session_to_server(
             config,
@@ -970,6 +986,7 @@ def run() -> None:
                             _scores_state.reset()
                             restore_snapshot = _without_session_id(load_session_state(folder))
                             runtime_session_snapshot = restore_snapshot
+                            _apply_runtime_snapshot_restore(restore_snapshot)
                             last_session_state_hash = _state_hash(runtime_session_snapshot)
 
                             new_session = {
@@ -1083,6 +1100,7 @@ def run() -> None:
                             parent_snapshot = _without_session_id(load_session_state(parent_folder))
                             if parent_snapshot:
                                 runtime_session_snapshot = parent_snapshot
+                                _apply_runtime_snapshot_restore(parent_snapshot)
                                 last_session_state_hash = _state_hash(parent_snapshot)
                                 log.info("session", f"Loaded parent snapshot from {session_state_path(parent_folder)}")
                             # Notify addons: parent session resumed (send session_started)
