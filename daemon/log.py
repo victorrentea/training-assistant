@@ -33,7 +33,11 @@ def _ts() -> str:
 
 def _fmt(name: str, level: str, msg: str) -> str:
     nm = (str(name or "").strip() or "?")[:7].ljust(7)
-    lvl = str(level or "").strip().lower() or "info"
+    raw_level = str(level or "").strip().lower() or "info"
+    if raw_level in {"info", "error", "debug"}:
+        lvl = raw_level.ljust(5)
+    else:
+        lvl = raw_level[:5].ljust(5)
     return f"{_ts()} {_PID} [{nm}] {lvl} {msg}"
 
 
