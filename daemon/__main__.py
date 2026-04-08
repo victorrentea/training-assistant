@@ -41,7 +41,6 @@ from daemon.session_state import (
     stack_to_daemon_state,
     save_daemon_state,
     load_session_meta,
-    save_session_meta,
     find_session_folder_by_id,
     session_meta_to_stack,
     pause_session,
@@ -556,7 +555,7 @@ def run() -> None:
     session_stack: list[dict] = []
 
     if "main" in _raw_state or "stack" in _raw_state:
-        # Old format — migrate: write session metadata into session-state.json per folder
+        # Old format — migrate in-memory to stack and continue with new global-state flow
         if "stack" in _raw_state:
             _stack_items = _raw_state["stack"]
             _active = [s for s in _stack_items if not s.get("ended_at")]
@@ -568,18 +567,7 @@ def run() -> None:
             _old_state = _raw_state
         _active_session_id = _raw_state.get("session_id")
         session_stack = daemon_state_to_stack(_old_state)
-        if session_stack:
-            _main_folder = sessions_root / session_stack[0]["name"]
-            if _main_folder.exists() and _main_folder.is_dir():
-                _meta = {
-                    "session_id": _active_session_id,
-                    "started_at": session_stack[0].get("started_at"),
-                    "paused_intervals": session_stack[0].get("paused_intervals", []),
-                }
-                if len(session_stack) >= 2:
-                    _meta["talk"] = session_stack[1]
-                save_session_meta(_main_folder, _meta)
-        log.info("session", "Migrated old daemon state format to session-state.json metadata")
+        log.info("session", "Migrated old daemon state format")
     elif "active_session_id" in _raw_state:
         # New format — find folder by session_id, load metadata from session-state.json
         _active_session_id = _raw_state.get("active_session_id")
@@ -588,6 +576,12 @@ def run() -> None:
             if _active_folder:
                 _meta = load_session_meta(_active_folder)
                 session_stack = session_meta_to_stack(_meta, _active_folder.name)
+                if not session_stack:
+                    session_stack = [{
+                        "name": _active_folder.name,
+                        "started_at": datetime.now().isoformat(),
+                        "ended_at": None,
+                    }]
 
     config, _ = _bind_initial_session_folder(config, sessions_root, session_stack)
     current_key_points: list[dict] = []
@@ -606,20 +600,6 @@ def run() -> None:
         nonlocal pending_global_state
         nonlocal _active_session_id
         pending_global_state = _build_global_state()
-        if session_stack:
-            _main_folder = sessions_root / session_stack[0]["name"]
-            _meta = {
-                "session_id": _active_session_id,
-                "started_at": session_stack[0].get("started_at"),
-                "paused_intervals": session_stack[0].get("paused_intervals", []),
-            }
-            if len(session_stack) >= 2:
-                _talk = session_stack[1]
-                _meta["talk"] = {
-                    **_talk,
-                    "status": "paused" if any(p.get("to") is None for p in _talk.get("paused_intervals", [])) else "active",
-                }
-            save_session_meta(_main_folder, _meta)
         # Keep shared session state up to date for the daemon REST router
         session_shared_state.set_active_session(_active_session_id, session_stack)
 

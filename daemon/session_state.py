@@ -208,7 +208,7 @@ SESSION_STATE_FILENAME = "session-state.json"
 _LEGACY_SESSION_STATE_FILENAME = ".session-state.json"
 SESSION_META_FILENAME = SESSION_STATE_FILENAME
 _LEGACY_SESSION_META_FILENAME = "session_meta.json"
-_SESSION_META_KEYS = ("session_id", "started_at", "paused_intervals", "talk")
+_SESSION_META_KEYS = ("session_id",)
 
 
 def load_daemon_state(sessions_root: Path) -> dict:
@@ -252,7 +252,7 @@ def save_daemon_state(sessions_root: Path, daemon_state: dict) -> None:
 
 def load_session_meta(session_folder: Path) -> dict:
     """Load session metadata from session-state.json.
-    Returns {session_id, started_at, paused_intervals, talk?} or {} if missing."""
+    Returns {session_id} or {} if missing."""
     data = load_session_state(session_folder)
     if not isinstance(data, dict):
         return {}

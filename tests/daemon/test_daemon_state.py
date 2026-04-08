@@ -101,8 +101,8 @@ def test_save_and_load_session_meta():
         save_session_meta(folder, meta)
         result = load_session_meta(folder)
         assert result["session_id"] == "abc123"
-        assert result["started_at"] == "2026-03-25T09:00:00"
-        assert len(result["paused_intervals"]) == 1
+        assert "started_at" not in result
+        assert "paused_intervals" not in result
 
 
 def test_load_session_meta_returns_empty_when_no_file():
