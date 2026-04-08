@@ -110,7 +110,7 @@ class PersistedSessionState(PersistedModel):
 
     @model_validator(mode="before")
     @classmethod
-    def _normalize_legacy_participant_maps(cls, value):
+    def _normalize_legacy_participant_maps(_cls, value):
         if not isinstance(value, dict):
             return value
 
