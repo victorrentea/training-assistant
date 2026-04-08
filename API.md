@@ -3,7 +3,7 @@
 Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-ws.yaml`.
 
 ## Table of Contents
-- [Session Management](#feature-session-management)
+- [Session](#feature-session)
 - [Identity](#feature-identity)
 - [Slides](#feature-slides)
 - [Activity Switching](#feature-activity-switching)
@@ -20,7 +20,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
 - [Feedback](#feature-feedback)
 - [Cross-cutting: Reload](#feature-cross-cutting-reload)
 
-## Feature: Session Management
+## Feature: Session
 
 ### Host REST
 | Endpoint | Request | Response |

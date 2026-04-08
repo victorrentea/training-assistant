@@ -23,8 +23,8 @@ from typing import Any
 import yaml
 
 FEATURE_LABELS: dict[str, str] = {
-    "session": "Session Management",
-    "session_management": "Session Management",
+    "session": "Session",
+    "session_management": "Session",
     "slides": "Slides",
     "activity": "Activity Switching",
     "participant": "Identity",
@@ -45,7 +45,7 @@ FEATURE_LABELS: dict[str, str] = {
     "reload": "Cross-cutting: Reload",
     "transcription": "Transcription",
     "host-state": "Identity",
-    "_untagged": "Session Management",
+    "_untagged": "Session",
 }
 
 FEATURE_ORDER = [
