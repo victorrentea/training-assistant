@@ -3,7 +3,7 @@ import json
 import pytest
 from unittest.mock import AsyncMock, patch, MagicMock
 
-from railway.features.ws.router import _handle_broadcast
+from railway.features.ws.router import _handle_broadcast, _handle_set_session_id
 
 
 class TestHandleBroadcast:
@@ -80,3 +80,33 @@ class TestHandleBroadcast:
             await _handle_broadcast({})  # no event key
 
         mock_state.participants["uuid1"].send_text.assert_not_called()
+
+
+class TestHandleSetSessionId:
+    @pytest.mark.anyio
+    async def test_clears_session_disconnects_host_and_participants(self):
+        participant_ws = AsyncMock()
+        host_ws = AsyncMock()
+        daemon_mirror_ws = AsyncMock()
+        mock_state = MagicMock()
+        mock_state.session_id = "old123"
+        mock_state.session_name = "Old Session"
+        mock_state.participants = {
+            "uuid1": participant_ws,
+            "__host__": host_ws,
+            "__daemon_mirror__": daemon_mirror_ws,
+        }
+
+        with patch("railway.features.ws.router.state", mock_state):
+            await _handle_set_session_id({})
+
+        assert mock_state.session_id is None
+        assert mock_state.session_name is None
+        participant_ws.send_text.assert_called_once_with(json.dumps({"type": "redirect", "url": "/"}))
+        participant_ws.close.assert_called_once_with(1008)
+        host_ws.send_text.assert_called_once_with(json.dumps({"type": "redirect", "url": "/host"}))
+        host_ws.close.assert_called_once_with(1000)
+        daemon_mirror_ws.send_text.assert_not_called()
+        assert "uuid1" not in mock_state.participants
+        assert "__host__" not in mock_state.participants
+        assert "__daemon_mirror__" in mock_state.participants

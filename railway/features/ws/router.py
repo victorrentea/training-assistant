@@ -86,25 +86,39 @@ async def _handle_code_timestamp(data: dict):
 
 
 async def _handle_set_session_id(data: dict):
-    """Daemon sets/changes active session. Drop old participant connections."""
+    """Daemon sets/changes active session. Drop stale host/participant connections."""
     new_id = data.get("session_id")
     new_name = data.get("session_name")
     old_id = state.session_id
+    had_active_session = bool(old_id)
 
-    if new_id:
-        state.session_id = new_id
+    # Daemon omits session_id when no session is active.
+    state.session_id = new_id or None
+
     if new_name is not None:
         state.session_name = new_name
+    elif not state.session_id:
+        state.session_name = None
 
-    # If session_id changed, disconnect participants from old session
-    if old_id and new_id and old_id.lower() != new_id.lower():
-        redirect_msg = json.dumps({"type": "redirect", "url": f"/{new_id}"})
+    if old_id and state.session_id:
+        session_changed = old_id.lower() != state.session_id.lower()
+    else:
+        session_changed = old_id != state.session_id
+
+    # If active session changed (including ending it), disconnect old session clients.
+    if had_active_session and session_changed:
         for pid, ws in list(state.participants.items()):
-            if pid.startswith("__"):
+            if pid.startswith("__") and pid != "__host__":
                 continue
+            if pid == "__host__":
+                target_url = f"/host/{state.session_id}" if state.session_id else "/host"
+                close_code = 1000
+            else:
+                target_url = f"/{state.session_id}" if state.session_id else "/"
+                close_code = 1008
             try:
-                await ws.send_text(redirect_msg)
-                await ws.close(1008)
+                await ws.send_text(json.dumps({"type": "redirect", "url": target_url}))
+                await ws.close(close_code)
             except Exception:
                 pass
             state.participants.pop(pid, None)

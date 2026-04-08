@@ -1,5 +1,6 @@
 # Tasks
 
+- [x] bugfix: when a session ends (`set_session_id` without `session_id`), Railway now clears active session state and force-redirects/disconnects both host (`/host`) and all connected participants (`/`), preventing stale host UI on inactive sessions.
 - [x] direct request: unified daemon directional logs by endpoint geography (host `→/←`, railway+participants `↑/↓`, addons `→/←`), including host REST inbound as `[host] →`.
 - [x] direct request: enforce INFO badge gray via JS inline styles to override any residual debug red state.
 - [x] direct request: DEBUG log-level badge now blinks slowly with a light red background.
