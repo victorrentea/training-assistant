@@ -289,3 +289,4 @@ Host broadcasts a statement: "Have you ever shipped code that violated what we j
 - [x] Daemon logging: at startup and on notes/summary file changes, log non-empty line counts for latest `*.txt` notes + `ai-summary.md` (with session/file diagnostics).
 - [x] Direct request: host slides-mode left-pane QR now auto-resizes on window resize (using both width and height bounds) and remains vertically centered.
 - [x] Follow-up direct request: removed 400px cap on host slides-mode left QR so it expands correctly on small → large window resize.
+- [x] Follow-up direct request: center host slides-mode left QR against the full left panel height (not a sub-area), including after resize.

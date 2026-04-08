@@ -417,15 +417,19 @@ class TestHostPanelGeneral:
 
         metrics = host._page.evaluate("""() => {
             const container = document.getElementById('slides-left-qr');
+            const leftPanel = document.querySelector('.host-col-left');
             const qr = document.getElementById('slides-left-qr-code');
-            if (!container || !qr) return null;
+            if (!container || !leftPanel || !qr) return null;
             const c = container.getBoundingClientRect();
+            const p = leftPanel.getBoundingClientRect();
             const q = qr.getBoundingClientRect();
             return {
                 containerHeight: container.clientHeight,
                 qrHeight: q.height,
-                topGap: q.top - c.top,
-                bottomGap: c.bottom - q.bottom,
+                topGap: q.top - p.top,
+                bottomGap: p.bottom - q.bottom,
+                containerTopGap: q.top - c.top,
+                containerBottomGap: c.bottom - q.bottom,
             };
         }""")
         assert metrics is not None, "Expected slides left QR container metrics"
@@ -433,7 +437,10 @@ class TestHostPanelGeneral:
             f"QR should fit vertically after resize (qr={metrics['qrHeight']}, container={metrics['containerHeight']})"
         )
         assert abs(metrics["topGap"] - metrics["bottomGap"]) <= 10, (
-            f"QR should stay vertically centered (top={metrics['topGap']}, bottom={metrics['bottomGap']})"
+            f"QR should stay vertically centered in left panel (top={metrics['topGap']}, bottom={metrics['bottomGap']})"
+        )
+        assert abs(metrics["containerTopGap"] - metrics["containerBottomGap"]) <= 10, (
+            f"QR should stay centered inside QR container (top={metrics['containerTopGap']}, bottom={metrics['containerBottomGap']})"
         )
 
 
