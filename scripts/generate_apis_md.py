@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import argparse
 import copy
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -159,6 +160,152 @@ def _collect_rest_doc(spec: dict[str, Any]) -> tuple[str, list[str]]:
     if notes:
         return notes[0], notes[1:]
     return "Endpoint", []
+
+
+def _split_note_clauses(note: str) -> list[str]:
+    return [part.strip() for part in re.split(r"(?<=[.!?])\s+", note.strip()) if part.strip()]
+
+
+def _normalize_match_text(text: str) -> str:
+    cleaned = re.sub(r"[^a-z0-9]+", " ", text.lower())
+    return " ".join(cleaned.split())
+
+
+def _verb_root(word: str) -> str:
+    lowered = word.lower().strip()
+    irregular = {
+        "is": "be",
+        "are": "be",
+        "has": "have",
+        "does": "do",
+    }
+    if lowered in irregular:
+        return irregular[lowered]
+    if lowered.endswith("ies") and len(lowered) > 3:
+        return lowered[:-3] + "y"
+    if lowered.endswith(("ches", "shes", "sses", "xes", "zes", "oes")) and len(lowered) > 4:
+        return lowered[:-2]
+    if lowered.endswith("s") and len(lowered) > 2:
+        return lowered[:-1]
+    return lowered
+
+
+def _third_person_singular(verb: str) -> str:
+    base = _verb_root(verb)
+    if base == "be":
+        return "is"
+    if base == "have":
+        return "has"
+    if base == "do":
+        return "does"
+    if base.endswith("y") and len(base) > 1 and base[-2] not in "aeiou":
+        return base[:-1] + "ies"
+    if base.endswith(("s", "x", "z", "ch", "sh", "o")):
+        return base + "es"
+    return base + "s"
+
+
+def _extract_action_parts(text: str) -> tuple[str, set[str]] | None:
+    tokens = [token for token in re.findall(r"[A-Za-z0-9_]+", text.lower()) if token]
+    if not tokens:
+        return None
+    idx = 0
+    if tokens[idx] in {"host", "participant"}:
+        idx += 1
+    if idx >= len(tokens):
+        return None
+    verb = _verb_root(tokens[idx])
+    object_tokens = {token for token in tokens[idx + 1 :] if token not in {"a", "an", "the"}}
+    return verb, object_tokens
+
+
+def _is_redundant_clause(clause: str, title: str) -> bool:
+    title_norm = _normalize_match_text(title)
+    clause_norm = _normalize_match_text(clause)
+    if not title_norm or not clause_norm:
+        return False
+    if clause_norm == title_norm:
+        return True
+    if clause_norm.startswith(f"{title_norm} "):
+        return True
+    if clause_norm.startswith(f"host {title_norm} "):
+        return True
+    if clause_norm.startswith(f"participant {title_norm} "):
+        return True
+    title_action = _extract_action_parts(title)
+    clause_action = _extract_action_parts(clause)
+    if title_action and clause_action:
+        title_verb, title_objects = title_action
+        clause_verb, clause_objects = clause_action
+        if title_verb == clause_verb and title_objects and title_objects.issubset(clause_objects):
+            return True
+    return False
+
+
+def _rewrite_actor_action(title: str, note: str) -> str | None:
+    match = re.match(r"^(Host|Participant)\s+([A-Za-z_]+)\s+(.+?)[.!?]?$", note.strip())
+    if not match:
+        return None
+    actor, note_verb, note_object = match.groups()
+    title_words = [w for w in re.findall(r"[A-Za-z0-9_]+", title) if w]
+    if title_words and title_words[0].lower() in {"host", "participant"}:
+        title_words = title_words[1:]
+    if len(title_words) < 2:
+        return None
+    title_verb = _verb_root(title_words[0])
+    note_verb_root = _verb_root(note_verb)
+    synonyms: dict[str, set[str]] = {
+        "set": {"switch", "change", "update"},
+    }
+    allowed = {title_verb, *synonyms.get(title_verb, set())}
+    if note_verb_root not in allowed:
+        return None
+
+    object_text = note_object.strip().rstrip(" .")
+    if not object_text:
+        return None
+    return f"{actor} {_third_person_singular(title_verb)} {object_text}."
+
+
+def _merge_title_with_details(title: str, details: list[str]) -> str:
+    cleaned_details: list[str] = []
+    for detail in details:
+        text = detail.strip().rstrip(".")
+        if not text:
+            continue
+        if text and text[:1].isalpha() and len(text) > 1 and text[:2].isupper():
+            cleaned = text
+        else:
+            cleaned = text[0].lower() + text[1:] if text else text
+        cleaned_details.append(cleaned)
+    if not cleaned_details:
+        return title
+    return f"{title}, {'; '.join(cleaned_details)}."
+
+
+def _compose_rest_endpoint_text(op: RestOp) -> str:
+    details: list[str] = []
+    actor_rewrite: str | None = None
+    if op.notes:
+        actor_rewrite = _rewrite_actor_action(op.title, op.notes[0])
+
+    for idx, note in enumerate(op.notes):
+        if idx == 0 and actor_rewrite:
+            continue
+        for clause in _split_note_clauses(note):
+            if _is_redundant_clause(clause, op.title):
+                continue
+            details.append(clause)
+
+    if actor_rewrite:
+        if not details:
+            return actor_rewrite
+        details_text = " ".join(detail.strip() for detail in details if detail.strip())
+        if not details_text:
+            return actor_rewrite
+        return f"{actor_rewrite} {details_text}"
+
+    return _merge_title_with_details(op.title, details)
 
 
 def _shape(
@@ -430,7 +577,7 @@ def _render_shape_cell(shape: str) -> str:
 def _render_rest(items: list[RestOp]) -> list[str]:
     lines: list[str] = ["| Endpoint | Request | Response |", "| --- | --- | --- |"]
     for op in sorted(items, key=lambda i: (i.path, i.method)):
-        endpoint_parts = [op.title, *op.notes, f"`{op.method} {op.path}`"]
+        endpoint_parts = [_compose_rest_endpoint_text(op), f"`{op.method} {op.path}`"]
         endpoint = _escape_md_cell("<br>".join(endpoint_parts))
         request = _escape_md_cell(_render_shape_cell(op.request_shape))
         response = _escape_md_cell(_render_shape_cell(op.response_shape))

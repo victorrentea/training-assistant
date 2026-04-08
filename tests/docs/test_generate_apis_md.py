@@ -98,6 +98,7 @@ def test_participant_identity_rows_have_expected_response_shapes():
     output = _run_generator()
     register_row = re.search(r"^\| .*`POST /api/participant/register`.*\|$", output, re.MULTILINE)
     assert register_row, "Missing table row for POST /api/participant/register"
+    assert "Register Participant, idempotent for returning participants." in register_row.group(0)
     assert "any" not in register_row.group(0)
     assert "`name: string`<br>`avatar: string`" in register_row.group(0)
 
@@ -147,7 +148,7 @@ def test_rest_table_notes_do_not_use_note_prefix():
     session_active_row = re.search(r"^\| .*`GET /api/session/active`.*\|$", output, re.MULTILINE)
     assert session_active_row, "Missing table row for GET /api/session/active"
     assert "<br>Note:" not in session_active_row.group(0)
-    assert "Public endpoint: returns the active session_id or null." in session_active_row.group(0)
+    assert "public endpoint: returns the active session_id or null." in session_active_row.group(0).lower()
 
 
 def test_rest_table_notes_are_not_rendered_in_response_column():
@@ -155,6 +156,14 @@ def test_rest_table_notes_are_not_rendered_in_response_column():
     session_active_row = re.search(r"^\| .*`GET /api/session/active`.*\|$", output, re.MULTILINE)
     assert session_active_row, "Missing table row for GET /api/session/active"
     assert "| - | `{session_id: string \\| null}` |" in session_active_row.group(0)
+
+
+def test_rest_endpoint_blurb_rewrites_host_set_activity_without_redundancy():
+    output = _run_generator()
+    set_activity_row = re.search(r"^\| .*`POST /api/\{session_id\}/host/activity`.*\|$", output, re.MULTILINE)
+    assert set_activity_row, "Missing table row for POST /api/{session_id}/host/activity"
+    assert "Host sets the current activity." in set_activity_row.group(0)
+    assert "Set Activity<br>Host switches the current activity." not in set_activity_row.group(0)
 
 
 def test_generator_includes_all_openapi_operations():
