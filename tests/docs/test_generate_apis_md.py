@@ -72,6 +72,11 @@ def test_generator_rest_requests_do_not_include_media_type_prefix():
     assert "`application/json:" not in output
 
 
+def test_generator_does_not_emit_redundant_enum_comments():
+    output = _run_generator()
+    assert "# enum:" not in output
+
+
 def test_participant_identity_rows_have_expected_response_shapes():
     output = _run_generator()
     register_row = re.search(r"^\| .*`POST /api/participant/register`.*\|$", output, re.MULTILINE)

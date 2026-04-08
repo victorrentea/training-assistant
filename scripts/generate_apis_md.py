@@ -117,16 +117,11 @@ def _resolve_ref(root: dict[str, Any], ref: str) -> dict[str, Any] | None:
 def _schema_comment(schema: dict[str, Any] | Any) -> str:
     if not isinstance(schema, dict):
         return ""
-    parts: list[str] = []
-    enum = schema.get("enum")
-    if isinstance(enum, list) and enum:
-        enum_vals = " | ".join("null" if v is None else repr(v) for v in enum)
-        parts.append(f"enum: {enum_vals}")
     desc = schema.get("description")
     if isinstance(desc, str) and desc.strip():
         cleaned = " ".join(desc.strip().split())
-        parts.append(cleaned)
-    return "; ".join(parts)
+        return cleaned
+    return ""
 
 
 def _collect_notes(spec: dict[str, Any]) -> list[str]:

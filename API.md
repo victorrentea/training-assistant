@@ -27,8 +27,8 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
 | Endpoint | Request | Response |
 | --- | --- | --- |
 | Daemon Status<br>`GET /api/daemon-status` | `none` | `any` |
-| Get Log Level<br>`GET /api/log-level` | `none` | `{level: 'info' \| 'debug'  # enum: 'info' \| 'debug'}` |
-| Set Log Level<br>`POST /api/log-level` | `{level: 'info' \| 'debug'  # enum: 'info' \| 'debug'}` | `{level: 'info' \| 'debug'  # enum: 'info' \| 'debug'}` |
+| Get Log Level<br>`GET /api/log-level` | `none` | `{level: 'info' \| 'debug'}` |
+| Set Log Level<br>`POST /api/log-level` | `{level: 'info' \| 'debug'}` | `{level: 'info' \| 'debug'}` |
 | Get Session Active<br>`GET /api/session/active` | `none` | `any`<br>Note: Public endpoint: returns the active session_id or null. |
 | End Session<br>`POST /api/session/end` | `none` | `any`<br>Note: Host ends the current session. Railway closes WS connections on session end. |
 | End Talk<br>`POST /api/session/end_talk` | `none` | `any`<br>Note: Host ends the nested talk. |
@@ -48,16 +48,16 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
 
 ### Participant WS
 - `slides_current`
-  - payload: `{type: 'slides_current'  # enum: 'slides_current', slides_current?: SlidesCurrent  # null means no active slide}`
+  - payload: `{type: 'slides_current', slides_current?: SlidesCurrent  # null means no active slide}`
   - note: Host navigated to a new slide
 - `slides_cache_status`
-  - payload: `{type: 'slides_cache_status'  # enum: 'slides_cache_status'}`
+  - payload: `{type: 'slides_cache_status'}`
   - note: Invalidation signal — participant must call GET /api/slides to refresh
   - note: Client must refetch slide list; payload intentionally carries no cache map.
 
 ### Host WS
 - `slides_cache_status`
-  - payload: `{type: 'slides_cache_status'  # enum: 'slides_cache_status'}`
+  - payload: `{type: 'slides_cache_status'}`
   - note: Invalidation signal — host must call GET /api/slides to refresh
   - note: Host should refetch slides list; payload intentionally carries no cache map.
 
@@ -65,7 +65,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
 
 ### Participant WS
 - `activity_updated`
-  - payload: `{type: 'activity_updated'  # enum: 'activity_updated', current_activity: 'none' | 'poll' | 'wordcloud' | 'qa' | 'codereview' | 'debate'  # enum: 'none' | 'poll' | 'wordcloud' | 'qa' | 'codereview' | 'debate'}`
+  - payload: `{type: 'activity_updated', current_activity: 'none' | 'poll' | 'wordcloud' | 'qa' | 'codereview' | 'debate'}`
   - note: Current activity type changed by host
 
 ### Host REST
@@ -87,7 +87,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
 
 ### Participant WS
 - `participant_count_updated`
-  - payload: `{type: 'participant_count_updated'  # enum: 'participant_count_updated', count: int}`
+  - payload: `{type: 'participant_count_updated', count: int}`
   - note: Participant count changed
 
 ### Host REST
@@ -97,7 +97,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
 
 ### Host WS
 - `participant_list_updated`
-  - payload: `{type: 'participant_list_updated'  # enum: 'participant_list_updated', participants: list[HostParticipant]}`
+  - payload: `{type: 'participant_list_updated', participants: list[HostParticipant]}`
   - note: Participant list changed (join/register/rename/location) — sent by daemon directly
 
 ## Feature: Poll
@@ -109,20 +109,20 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
 
 ### Participant WS
 - `poll_opened`
-  - payload: `{type: 'poll_opened'  # enum: 'poll_opened', poll: Poll}`
+  - payload: `{type: 'poll_opened', poll: Poll}`
   - note: Poll opened for voting
   - note: Participants can vote only while poll is open.
 - `poll_closed`
-  - payload: `{type: 'poll_closed'  # enum: 'poll_closed', vote_counts: dict[str, int]  # option_id → vote count, total_votes: int}`
+  - payload: `{type: 'poll_closed', vote_counts: dict[str, int]  # option_id → vote count, total_votes: int}`
   - note: Voting closed by host
 - `poll_correct_revealed`
-  - payload: `{type: 'poll_correct_revealed'  # enum: 'poll_correct_revealed', correct_ids: list[string]}`
+  - payload: `{type: 'poll_correct_revealed', correct_ids: list[string]}`
   - note: Host revealed correct answers
 - `poll_cleared`
-  - payload: `{type: 'poll_cleared'  # enum: 'poll_cleared'}`
+  - payload: `{type: 'poll_cleared'}`
   - note: Poll removed by host
 - `poll_timer_started`
-  - payload: `{type: 'poll_timer_started'  # enum: 'poll_timer_started', seconds: int}`
+  - payload: `{type: 'poll_timer_started', seconds: int}`
   - note: Host started a countdown timer for the poll
 
 ### Host REST
@@ -138,10 +138,10 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
 
 ### Host WS
 - `poll_ai_generated`
-  - payload: `{type: 'poll_ai_generated'  # enum: 'poll_ai_generated', poll: dict  # Poll data {id, question, options[], multi}}`
+  - payload: `{type: 'poll_ai_generated', poll: dict  # Poll data {id, question, options[], multi}}`
   - note: Host-only notification when a new poll is created (before opening)
 - `vote_update`
-  - payload: `{type: 'vote_update'  # enum: 'vote_update', votes: dict[str, int]  # option_id → vote count}`
+  - payload: `{type: 'vote_update', votes: dict[str, int]  # option_id → vote count}`
   - note: Real-time vote tally while poll is open
   - note: Host-only event; participants do not receive live vote tallies.
 
@@ -154,7 +154,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
 
 ### Participant WS
 - `wordcloud_updated`
-  - payload: `{type: 'wordcloud_updated'  # enum: 'wordcloud_updated', words: dict[str, int]  # word → count, word_order: list[string]  # Newest-first insertion order, topic: string}`
+  - payload: `{type: 'wordcloud_updated', words: dict[str, int]  # word → count, word_order: list[string]  # Newest-first insertion order, topic: string}`
   - note: Word cloud state changed (new word or topic update)
 
 ### Host REST
@@ -166,7 +166,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
 
 ### Host WS
 - `wordcloud_updated`
-  - payload: `{type: 'wordcloud_updated'  # enum: 'wordcloud_updated', words: dict[str, int]  # word → count, word_order: list[string]  # Words ordered newest first, topic: string}`
+  - payload: `{type: 'wordcloud_updated', words: dict[str, int]  # word → count, word_order: list[string]  # Words ordered newest first, topic: string}`
   - note: Word cloud updated (same payload as participant)
 
 ## Feature: Q&A
@@ -179,7 +179,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
 
 ### Participant WS
 - `qa_updated`
-  - payload: `{type: 'qa_updated'  # enum: 'qa_updated', questions: list[QAQuestion]}`
+  - payload: `{type: 'qa_updated', questions: list[QAQuestion]}`
   - note: Q&A list changed (new question, upvote, edit, delete)
 
 ### Host REST
@@ -193,7 +193,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
 
 ### Host WS
 - `qa_updated`
-  - payload: `{type: 'qa_updated'  # enum: 'qa_updated', questions: list[QAQuestion]}`
+  - payload: `{type: 'qa_updated', questions: list[QAQuestion]}`
   - note: Q&A list changed (same structure as participant)
 
 ## Feature: Code Review
@@ -205,16 +205,16 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
 
 ### Participant WS
 - `codereview_opened`
-  - payload: `{type: 'codereview_opened'  # enum: 'codereview_opened', snippet: string, language: string | null}`
+  - payload: `{type: 'codereview_opened', snippet: string, language: string | null}`
   - note: Host opened a code snippet for review
 - `codereview_selection_closed`
-  - payload: `{type: 'codereview_selection_closed'  # enum: 'codereview_selection_closed'}`
+  - payload: `{type: 'codereview_selection_closed'}`
   - note: Host closed the line selection phase
 - `codereview_line_confirmed`
-  - payload: `{type: 'codereview_line_confirmed'  # enum: 'codereview_line_confirmed', line: int}`
+  - payload: `{type: 'codereview_line_confirmed', line: int}`
   - note: Host confirmed a line as problematic
 - `codereview_cleared`
-  - payload: `{type: 'codereview_cleared'  # enum: 'codereview_cleared'}`
+  - payload: `{type: 'codereview_cleared'}`
   - note: Code review removed by host
 
 ### Host REST
@@ -227,7 +227,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
 
 ### Host WS
 - `codereview_selections_updated`
-  - payload: `{type: 'codereview_selections_updated'  # enum: 'codereview_selections_updated', line_counts: dict[str, int]  # line number → count of participants who selected it}`
+  - payload: `{type: 'codereview_selections_updated', line_counts: dict[str, int]  # line number → count of participants who selected it}`
   - note: Aggregated line selection counts (host-only)
 
 ## Feature: Debate
@@ -242,13 +242,13 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
 
 ### Participant WS
 - `debate_updated`
-  - payload: `{type: 'debate_updated'  # enum: 'debate_updated', statement?: string | null, phase?: null | 'side_selection' | 'arguments' | 'ai_cleanup' | 'prep' | 'live_debate' | 'ended' | null  # enum: null | 'side_selection' | 'arguments' | 'ai_cleanup' | 'prep' | 'live_debate' | 'ended', sides?: dict[str, string]  # uuid → "for"|"against", arguments?: list[DebateArgument], champions?: dict[str, string]  # "for"|"against" → uuid, auto_assigned?: list[string], first_side?: string | null, round_index?: int | null, round_timer_seconds?: int | null, round_timer_started_at?: string | null}`
+  - payload: `{type: 'debate_updated', statement?: string | null, phase?: null | 'side_selection' | 'arguments' | 'ai_cleanup' | 'prep' | 'live_debate' | 'ended' | null, sides?: dict[str, string]  # uuid → "for"|"against", arguments?: list[DebateArgument], champions?: dict[str, string]  # "for"|"against" → uuid, auto_assigned?: list[string], first_side?: string | null, round_index?: int | null, round_timer_seconds?: int | null, round_timer_started_at?: string | null}`
   - note: Full debate state snapshot
 - `debate_timer`
-  - payload: `{type: 'debate_timer'  # enum: 'debate_timer', round_index: int, seconds: int, started_at: string}`
+  - payload: `{type: 'debate_timer', round_index: int, seconds: int, started_at: string}`
   - note: A timed debate round started
 - `debate_round_ended`
-  - payload: `{type: 'debate_round_ended'  # enum: 'debate_round_ended'}`
+  - payload: `{type: 'debate_round_ended'}`
   - note: Current debate round ended
 
 ### Host REST
@@ -269,10 +269,10 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
 
 ### Participant WS
 - `scores_updated`
-  - payload: `{type: 'scores_updated'  # enum: 'scores_updated', scores: dict[str, int]  # uuid → score (all participants)}`
+  - payload: `{type: 'scores_updated', scores: dict[str, int]  # uuid → score (all participants)}`
   - note: One or more participants' scores changed
 - `leaderboard_revealed`
-  - payload: `{type: 'leaderboard_revealed'  # enum: 'leaderboard_revealed', positions: list[LeaderboardPosition]}`
+  - payload: `{type: 'leaderboard_revealed', positions: list[LeaderboardPosition]}`
   - note: Leaderboard overlay shown with top positions
 
 ### Host REST
@@ -284,7 +284,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
 
 ### Host WS
 - `leaderboard_revealed`
-  - payload: `{type: 'leaderboard_revealed'  # enum: 'leaderboard_revealed', positions: list[LeaderboardPosition]}`
+  - payload: `{type: 'leaderboard_revealed', positions: list[LeaderboardPosition]}`
   - note: Leaderboard revealed (same payload as participant)
 
 ## Feature: Emoji Reactions
@@ -296,17 +296,17 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
 
 ### Host WS
 - `emoji_reaction`
-  - payload: `{type: 'emoji_reaction'  # enum: 'emoji_reaction', emoji: string}`
+  - payload: `{type: 'emoji_reaction', emoji: string}`
   - note: Participant sent an emoji reaction — floating animation on host screen
 
 ## Feature: Quiz Generation
 
 ### Participant WS
 - `quiz_status`
-  - payload: `{type: 'quiz_status'  # enum: 'quiz_status', status: string  # "generating"|"ready"|"error", message: string}`
+  - payload: `{type: 'quiz_status', status: string  # "generating"|"ready"|"error", message: string}`
   - note: Quiz generation progress update
 - `quiz_preview`
-  - payload: `{type: 'quiz_preview'  # enum: 'quiz_preview', quiz?: any | null  # Set to null to clear the preview, question?: string, options?: list[string], multi?: bool, correct_indices?: list[int]}`
+  - payload: `{type: 'quiz_preview', quiz?: any | null  # Set to null to clear the preview, question?: string, options?: list[string], multi?: bool, correct_indices?: list[int]}`
   - note: Quiz preview for host review before publishing (quiz=null to clear)
 
 ### Host REST
@@ -319,10 +319,10 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
 
 ### Host WS
 - `quiz_status`
-  - payload: `{type: 'quiz_status'  # enum: 'quiz_status', status: string  # "generating" | "ready" | "error", message?: string}`
+  - payload: `{type: 'quiz_status', status: string  # "generating" | "ready" | "error", message?: string}`
   - note: Quiz generation progress update
 - `quiz_preview`
-  - payload: `{type: 'quiz_preview'  # enum: 'quiz_preview', quiz?: any | null  # Set to null to clear the preview, question?: string, options?: list[object], multi?: bool, correct_indices?: list[int]}`
+  - payload: `{type: 'quiz_preview', quiz?: any | null  # Set to null to clear the preview, question?: string, options?: list[object], multi?: bool, correct_indices?: list[int]}`
   - note: Generated quiz ready for host review (quiz=null to clear)
 
 ## Feature: Paste & File Upload
@@ -340,10 +340,10 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
 
 ### Host WS
 - `paste_received`
-  - payload: `{type: 'paste_received'  # enum: 'paste_received', uuid: string  # Participant UUID who submitted the paste, id: string  # Paste ID, text: string}`
+  - payload: `{type: 'paste_received', uuid: string  # Participant UUID who submitted the paste, id: string  # Paste ID, text: string}`
   - note: Participant submitted a text paste
 - `file_uploaded`
-  - payload: `{type: 'file_uploaded'  # enum: 'file_uploaded', uuid: string  # Participant UUID who uploaded the file, id: string  # File ID, filename: string, size: int  # File size in bytes, disk_path: string  # Absolute path on the host's disk where the file was saved by the daemon}`
+  - payload: `{type: 'file_uploaded', uuid: string  # Participant UUID who uploaded the file, id: string  # File ID, filename: string, size: int  # File size in bytes, disk_path: string  # Absolute path on the host's disk where the file was saved by the daemon}`
   - note: Participant uploaded a file (daemon has downloaded it to session folder)
 
 ## Feature: Notes & Summary
@@ -356,10 +356,10 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
 
 ### Participant WS
 - `notes_updated`
-  - payload: `{type: 'notes_updated'  # enum: 'notes_updated', count: int  # Number of non-empty lines in the notes file}`
+  - payload: `{type: 'notes_updated', count: int  # Number of non-empty lines in the notes file}`
   - note: Notes file changed — non-empty line count updated
 - `summary_updated`
-  - payload: `{type: 'summary_updated'  # enum: 'summary_updated', count: int  # Number of parsed bullet-point objects in ai-summary.md}`
+  - payload: `{type: 'summary_updated', count: int  # Number of parsed bullet-point objects in ai-summary.md}`
   - note: AI summary file changed — parsed point count updated
 
 ### Host REST
@@ -370,10 +370,10 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
 
 ### Host WS
 - `notes_updated`
-  - payload: `{type: 'notes_updated'  # enum: 'notes_updated', count: int  # Number of non-empty lines in the notes file}`
+  - payload: `{type: 'notes_updated', count: int  # Number of non-empty lines in the notes file}`
   - note: Notes file changed — non-empty line count updated
 - `summary_updated`
-  - payload: `{type: 'summary_updated'  # enum: 'summary_updated', count: int  # Number of parsed bullet-point objects in ai-summary.md}`
+  - payload: `{type: 'summary_updated', count: int  # Number of parsed bullet-point objects in ai-summary.md}`
   - note: AI summary file changed — parsed point count updated
 
 ## Feature: Feedback
@@ -387,7 +387,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
 
 ### Participant WS
 - `transcription_language_pending`
-  - payload: `{type: 'transcription_language_pending'  # enum: 'transcription_language_pending', language: string}`
+  - payload: `{type: 'transcription_language_pending', language: string}`
   - note: Daemon detected a transcription language change
 
 ### Host REST
@@ -400,12 +400,12 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
 
 ### Participant WS
 - `reload`
-  - payload: `{type: 'reload'  # enum: 'reload'}`
+  - payload: `{type: 'reload'}`
   - note: Daemon synced static files — browser should reload
   - note: Client should trigger full page reload to pick up new static assets.
 
 ### Host WS
 - `reload`
-  - payload: `{type: 'reload'  # enum: 'reload'}`
+  - payload: `{type: 'reload'}`
   - note: Daemon synced static files — browser should reload
   - note: Host client should trigger full page reload to pick up new static assets.
