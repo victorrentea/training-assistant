@@ -85,9 +85,7 @@ def test_generator_does_not_emit_redundant_enum_comments():
 
 def test_generator_drops_redundant_null_for_optional_fields():
     output = _run_generator()
-    assert not re.search(r"`[^`]*\?:[^`]*\|\s*null`", output), (
-        "Optional fields should not include redundant '| null' in rendered shapes."
-    )
+    assert "\\| null`" not in output, "Rendered shapes should prefer '?' over '| null'."
 
 
 def test_generator_renders_ws_as_table_and_omits_type_field_in_payload():
@@ -179,7 +177,7 @@ def test_log_level_and_daemon_status_rows_have_expected_shapes():
     daemon_status_row = re.search(r"^\| .*`GET /api/daemon-status`.*\|$", output, re.MULTILINE)
     assert daemon_status_row, "Missing table row for GET /api/daemon-status"
     assert "any" not in daemon_status_row.group(0)
-    assert "`code_timestamp: string \\| null`" in daemon_status_row.group(0)
+    assert "`code_timestamp?: string`" in daemon_status_row.group(0)
 
 
 def test_rest_table_notes_do_not_use_note_prefix():
@@ -194,7 +192,7 @@ def test_rest_table_notes_are_not_rendered_in_response_column():
     output = _run_generator()
     session_active_row = re.search(r"^\| .*`GET /api/session/active`.*\|$", output, re.MULTILINE)
     assert session_active_row, "Missing table row for GET /api/session/active"
-    assert "| - | `session_id: string \\| null` |" in session_active_row.group(0)
+    assert "| - | `session_id?: string` |" in session_active_row.group(0)
 
 
 def test_rest_endpoint_blurb_rewrites_host_set_activity_without_redundancy():

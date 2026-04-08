@@ -368,9 +368,9 @@ def _shape(
                 for name, child in props.items():
                     if not isinstance(child, dict):
                         continue
-                    is_optional = name not in required
-                    optional = "?" if is_optional else ""
                     child_type = _shape(child, root, depth + 1, top_level=False)
+                    is_optional = name not in required or _type_includes_null(child_type)
+                    optional = "?" if is_optional else ""
                     child_type = _drop_null_for_optional(child_type, optional=is_optional)
                     comment = _schema_comment(child)
                     line = f"{name}{optional}: {child_type}"
@@ -402,6 +402,10 @@ def _drop_null_for_optional(type_repr: str, *, optional: bool) -> str:
     if not filtered:
         return type_repr
     return " | ".join(filtered)
+
+
+def _type_includes_null(type_repr: str) -> bool:
+    return any(part.strip() == "null" for part in type_repr.split("|"))
 
 
 def _rest_request_shape(op: dict[str, Any], openapi: dict[str, Any]) -> str:
@@ -672,9 +676,9 @@ def _schema_definition_lines(schema_name: str, root: dict[str, Any]) -> list[str
     for field_name, child in properties.items():
         if not isinstance(child, dict):
             continue
-        is_optional = field_name not in required
-        optional = "?" if is_optional else ""
         field_type = _shape(child, root, depth=1, top_level=False)
+        is_optional = field_name not in required or _type_includes_null(field_type)
+        optional = "?" if is_optional else ""
         field_type = _drop_null_for_optional(field_type, optional=is_optional)
         comment = _schema_comment(child)
         line = f"  {field_name}{optional}: {field_type}"
