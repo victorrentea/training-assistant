@@ -36,7 +36,6 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
 | List Session Folders<br>`GET /api/session/folders` | - | `{folders: list[string]}` |
 | Host resumes an existing session folder. Uses session-state.json as persisted storage.<br>`POST /api/session/resume` | `{folder: string}` | `session_name: string`<br>`session_id: string` |
 | Host starts a nested talk (conference mode).<br>`POST /api/session/start_talk` | - | - |
-| Get Interval Lines Txt, return raw transcript lines for a time window; returns text/plain interval lines for session export/inspection.<br>`GET /api/{session_id}/session/interval-lines.txt` | - | `text/plain: string` |
 
 ## Feature: Identity
 

@@ -27,8 +27,7 @@ flowchart LR
   E --> H[Transcript status push<br/>line_count/latest_ts]
 
   D --> I[transcript_query/load_normalized_entries]
-  I --> J[/api/session/interval-lines.txt]
-  I --> K[startup transcript log]
+  I --> J[startup transcript log]
 ```
 
 ## Polling/Periodic Loops
@@ -117,7 +116,6 @@ Outside the normalizer, transcript consumers now read **normalized** files:
 - summarizer uses `load_transcription_files()`
 - transcript status in `training_daemon.py` uses `load_transcription_files()`
 - startup session transcript log uses `load_normalized_entries()`
-- `/api/session/interval-lines.txt` uses `load_normalized_entries()`
 
 Raw transcript files are now operationally needed only for normalization (and optional timestamp heartbeat append).
 
@@ -128,7 +126,7 @@ Raw transcript files are now operationally needed only for normalization (and op
 - `daemon/transcript_query.py` — normalized transcript range reader (manual/utility + shared loader)
 - `quiz_core.py` — transcript loading and extraction for quiz/summarizer/status
 - `daemon/summarizer.py` — summary generation pipeline
-- `routers/session.py` — interval export endpoint from normalized transcripts
+- `daemon/session/router.py` — session lifecycle API endpoints
 
 ## Configuration
 

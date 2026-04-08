@@ -166,10 +166,8 @@ def create_app(backend_url: str) -> FastAPI:
 
     from daemon.session.router import global_router as session_global_router
     from daemon.session.router import public_router as session_public_router
-    from daemon.session.router import session_router as session_scoped_router
     app.include_router(session_global_router)      # /api/session/* (host-only: start/end/pause/resume/create/rename/resume-folder/folders/start_talk/end_talk)
     app.include_router(session_public_router)      # /api/session/active (public)
-    app.include_router(session_scoped_router)      # /api/{session_id}/session/interval-lines.txt
 
     # --- Daemon status endpoint (exposes code_timestamp directly, not proxied) ---
     @app.get("/api/daemon-status", response_model=DaemonStatusResponse)

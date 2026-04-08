@@ -13,15 +13,13 @@ from pathlib import Path
 from typing import Literal
 
 from fastapi import APIRouter, Response
-from fastapi.responses import JSONResponse, PlainTextResponse
-from fastapi.params import Query
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from daemon import log as daemon_log
 from daemon.session import pending as session_pending
 from daemon.session import state as session_state
 from daemon.session_state import load_session_meta
-from daemon.transcript.query import load_normalized_entries
 
 
 def normalize_session_name(name: str) -> str:
@@ -52,10 +50,6 @@ def set_ws_client(client) -> None:
     pass
 
 
-def _normalize_transcript_text(text: str) -> str:
-    return re.sub(r"\s+", " ", text.replace("\t", " ")).strip()
-
-
 def _get_sessions_root() -> Path | None:
     """Resolve sessions root from env or use the shared state."""
     root = session_state.get_sessions_root()
@@ -67,15 +61,6 @@ def _get_sessions_root() -> Path | None:
         str(Path.home() / "My Drive" / "Cursuri" / "###sesiuni"),
     )
     p = Path(sessions_root_str).expanduser()
-    return p if p.exists() and p.is_dir() else None
-
-
-def _get_transcription_root() -> Path | None:
-    folder_str = os.environ.get(
-        "TRANSCRIPTION_FOLDER",
-        "/Users/victorrentea/workspace/victor-macos-addons/addons-output",
-    )
-    p = Path(folder_str).expanduser()
     return p if p.exists() and p.is_dir() else None
 
 
@@ -114,10 +99,6 @@ def _is_session_active(stack: list[dict]) -> bool:
 global_router = APIRouter(prefix="/api/session", tags=["session"])
 # Public endpoint needs a separate router without auth
 public_router = APIRouter(prefix="/api/session", tags=["session"])
-
-# ── Session-scoped host endpoints ──
-
-session_router = APIRouter(prefix="/api/{session_id}/session", tags=["session"])
 
 
 class StartSessionRequest(BaseModel):
@@ -225,56 +206,3 @@ async def get_session_active():
     active_session_id = session_state.get_active_session_id()
     is_active = _is_session_active(stack) and active_session_id is not None
     return SessionActiveResponse(session_id=active_session_id if is_active else None)
-
-
-# ── Session-scoped endpoints ──
-
-@session_router.get(
-    "/interval-lines.txt",
-    response_class=PlainTextResponse,
-)
-async def get_interval_lines_txt(
-    start: str = Query(..., description="Interval start in ISO format"),
-    end: str = Query(..., description="Interval end in ISO format"),
-):
-    """Return raw transcript lines for a time window."""
-    try:
-        start_dt = datetime.fromisoformat(start)
-        end_dt = datetime.fromisoformat(end)
-    except ValueError:
-        return PlainTextResponse("Invalid start/end datetime format", status_code=400)
-
-    if end_dt <= start_dt:
-        return PlainTextResponse("End must be after start", status_code=400)
-
-    root = _get_transcription_root()
-    if root is None:
-        return PlainTextResponse("Transcription folder not found", status_code=404)
-
-    lines: list[str] = []
-    for dt, txt in load_normalized_entries(root, since_date=start_dt.date()):
-        if dt < start_dt or dt >= end_dt:
-            continue
-        normalized = _normalize_transcript_text(txt)
-        if not normalized:
-            continue
-        lines.append(f"[{dt.strftime('%Y-%m-%d %H:%M:%S')}] {normalized}")
-
-    if not lines:
-        normalized_files = list(root.glob("*-transcription.txt"))
-        if not normalized_files:
-            return PlainTextResponse("No normalized transcript files found", status_code=404)
-
-    payload = "\n".join(lines) + ("\n" if lines else "")
-    filename = (
-        "session-interval-"
-        + start_dt.strftime("%Y%m%d-%H%M")
-        + "-"
-        + end_dt.strftime("%Y%m%d-%H%M")
-        + ".txt"
-    )
-    headers = {
-        "Content-Disposition": f'inline; filename="{filename}"',
-        "Cache-Control": "no-store",
-    }
-    return PlainTextResponse(content=payload, headers=headers)

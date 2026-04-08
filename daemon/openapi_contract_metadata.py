@@ -49,9 +49,6 @@ _DOC_NOTES: dict[tuple[str, str], list[str]] = {
     ("GET", "/api/{session_id}/host/state"): [
         "Returns host-facing full state snapshot.",
     ],
-    ("GET", "/api/{session_id}/session/interval-lines.txt"): [
-        "Returns text/plain interval lines for session export/inspection.",
-    ],
     ("GET", "/api/transcription-language/request"): [
         "Consumes and clears the pending transcription language request.",
     ],

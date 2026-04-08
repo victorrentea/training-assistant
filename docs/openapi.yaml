@@ -1174,40 +1174,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/SessionActiveResponse'
       x-feature: session_management
-  /api/{session_id}/session/interval-lines.txt:
-    get:
-      tags:
-      - session
-      summary: Get Interval Lines Txt
-      description: Return raw transcript lines for a time window.
-      operationId: get_interval_lines_txt_api__session_id__session_interval_lines_txt_get
-      parameters:
-      - name: start
-        in: query
-        required: true
-        schema:
-          type: string
-          description: Interval start in ISO format
-          title: Start
-        description: Interval start in ISO format
-      - name: end
-        in: query
-        required: true
-        schema:
-          type: string
-          description: Interval end in ISO format
-          title: End
-        description: Interval end in ISO format
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            text/plain:
-              schema:
-                type: string
-      x-feature: session_management
-      x-doc-notes:
-      - Returns text/plain interval lines for session export/inspection.
   /api/daemon-status:
     get:
       summary: Daemon Status
