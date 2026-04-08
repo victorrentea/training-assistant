@@ -3575,7 +3575,7 @@ function _regenerateAllQRCodes() {
     const slidesQREl = document.getElementById('slides-left-qr');
     const availW = slidesQREl ? slidesQREl.clientWidth : 260;
     const availH = slidesQREl ? slidesQREl.clientHeight : 260;
-    const qrSize = Math.max(1, Math.floor(Math.min(availW, availH, 400)));
+    const qrSize = Math.max(1, Math.floor(Math.min(availW, availH)));
     slidesLeftQRCode.style.width = qrSize + 'px';
     slidesLeftQRCode.style.height = qrSize + 'px';
     if (typeof QRCode !== 'undefined') new QRCode(slidesLeftQRCode, { text: joinUrl, width: qrSize, height: qrSize, colorDark: '#000', colorLight: '#fff' });

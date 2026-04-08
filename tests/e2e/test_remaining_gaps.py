@@ -379,10 +379,38 @@ class TestHostPanelGeneral:
 
     def test_slides_left_qr_resizes_and_stays_vertically_centered_on_window_resize(self, host: HostPage):
         """Slides left QR should adapt to viewport resize and remain vertically centered."""
-        host._page.set_viewport_size({"width": 1400, "height": 900})
+        host._page.set_viewport_size({"width": 900, "height": 500})
         host._page.evaluate("async () => { await switchTab('none'); }")
         expect(host._page.locator("#slides-left-qr")).to_be_visible(timeout=5000)
         expect(host._page.locator("#slides-left-qr-code canvas, #slides-left-qr-code img")).to_have_count(1, timeout=5000)
+
+        initial_qr_height = host._page.evaluate("""() => {
+            const qr = document.getElementById('slides-left-qr-code');
+            if (!qr) return 0;
+            return qr.getBoundingClientRect().height;
+        }""")
+
+        host._page.set_viewport_size({"width": 2400, "height": 1200})
+        host._page.wait_for_timeout(250)
+
+        grown_metrics = host._page.evaluate("""() => {
+            const container = document.getElementById('slides-left-qr');
+            const qr = document.getElementById('slides-left-qr-code');
+            if (!container || !qr) return null;
+            return {
+                containerWidth: container.clientWidth,
+                containerHeight: container.clientHeight,
+                qrHeight: qr.getBoundingClientRect().height,
+            };
+        }""")
+        assert grown_metrics is not None, "Expected slides left QR metrics after growing viewport"
+        expected_size = min(grown_metrics["containerWidth"], grown_metrics["containerHeight"])
+        assert abs(grown_metrics["qrHeight"] - expected_size) <= 2, (
+            f"QR should grow to container-constrained size (qr={grown_metrics['qrHeight']}, expected={expected_size})"
+        )
+        assert grown_metrics["qrHeight"] > initial_qr_height + 20, (
+            f"QR should grow after small->large resize (initial={initial_qr_height}, now={grown_metrics['qrHeight']})"
+        )
 
         host._page.set_viewport_size({"width": 1400, "height": 360})
         host._page.wait_for_timeout(250)
