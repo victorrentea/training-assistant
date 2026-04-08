@@ -34,6 +34,14 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
   - request: `none`
   - response: `200: any`
   - note: Daemon Status
+- `GET /api/log-level`
+  - request: `none`
+  - response: `200: {level: 'info' | 'debug'  # enum: 'info' | 'debug'}`
+  - note: Get Log Level
+- `POST /api/log-level`
+  - request: `application/json: {level: 'info' | 'debug'  # enum: 'info' | 'debug'}`
+  - response: `200: {level: 'info' | 'debug'  # enum: 'info' | 'debug'}`
+  - note: Set Log Level
 - `GET /api/session/active`
   - request: `none`
   - response: `200: any`
@@ -58,7 +66,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
   - request: `application/json: {folder: string}`
   - response: `200: any`
   - note: Resume Session
-  - note: Host resumes an existing session folder. Reads .session-state.json to restore state.
+  - note: Host resumes an existing session folder. Uses session-state.json as persisted storage.
 - `POST /api/session/start`
   - request: `application/json: {name: string, type?: string}`
   - response: `200: any`
@@ -599,6 +607,11 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
   - response: `200: any`
   - note: Get Pastes
   - note: Return all pending paste entries grouped by participant uuid.
+- `POST /api/{session_id}/host/uploads/seen`
+  - request: `application/json: {uuid: string, file_id: string}`
+  - response: `200: any`
+  - note: Mark Uploaded File Seen
+  - note: Mark an uploaded-file indicator as seen by host in daemon session state.
 
 ### Host WS
 - `paste_received`
