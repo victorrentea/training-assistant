@@ -1302,6 +1302,7 @@
     const notesBadge = document.getElementById('notes-badge');
     const centerQR = document.getElementById('center-qr');
     const slidesLeftQR = document.getElementById('slides-left-qr');
+    const leftTabsWrapper = document.querySelector('.left-tabs-wrapper');
 
     // Detect light/dark mode for QR color adaptation
     const isLight = window.matchMedia('(prefers-color-scheme: light)').matches;
@@ -1311,6 +1312,7 @@
       rightCol.style.display = 'none';
       grid.style.gridTemplateColumns = '25% 1fr';
       leftCol.classList.add('conference-layout');
+      if (leftTabsWrapper) leftTabsWrapper.style.display = 'flex';
       if (slidesLeftQR) slidesLeftQR.style.display = 'none';
       // Show left QR only when an activity is active (center QR not visible)
       const centerQRVisible = document.getElementById('center-qr').style.display !== 'none';
@@ -1326,6 +1328,7 @@
       rightCol.style.display = '';
       grid.style.gridTemplateColumns = '25% 1fr 25%';
       leftCol.classList.remove('conference-layout');
+      if (leftTabsWrapper) leftTabsWrapper.style.display = _currentActivity === 'none' ? 'none' : 'flex';
       if (slidesLeftQR) slidesLeftQR.style.display = _currentActivity === 'none' ? 'flex' : 'none';
       confQR.style.display = 'none';
       if (debateTab) debateTab.style.display = '';
@@ -2358,8 +2361,12 @@
     });
     // In conference mode: always show the left QR
     const leftCol = document.querySelector('.host-col-left');
+    const leftTabsWrapper = document.querySelector('.left-tabs-wrapper');
     const slidesLeftQR = document.getElementById('slides-left-qr');
     const isConferenceLayout = !!(leftCol && leftCol.classList.contains('conference-layout'));
+    if (leftTabsWrapper) {
+      leftTabsWrapper.style.display = currentActivity === 'none' && !isConferenceLayout ? 'none' : 'flex';
+    }
     if (slidesLeftQR) slidesLeftQR.style.display = currentActivity === 'none' && !isConferenceLayout ? 'flex' : 'none';
     if (leftCol && leftCol.classList.contains('conference-layout')) {
       const confQR = document.getElementById('conference-qr');
@@ -3585,9 +3592,9 @@ function _regenerateAllQRCodes() {
   if (slidesLeftQRCode && slidesLeftQRCode.offsetParent !== null) {
     slidesLeftQRCode.innerHTML = '';
     const slidesQREl = document.getElementById('slides-left-qr');
-    const availH = slidesQREl ? slidesQREl.clientHeight - 40 : 200;
-    const availW = slidesQREl ? slidesQREl.clientWidth - 20 : 200;
-    const qrSize = Math.max(120, Math.min(availH, availW, 380));
+    const availH = slidesQREl ? slidesQREl.clientHeight - 56 : 260;
+    const availW = slidesQREl ? slidesQREl.clientWidth - 24 : 260;
+    const qrSize = Math.max(180, Math.floor(Math.min(availH, availW, 560)));
     slidesLeftQRCode.style.width = qrSize + 'px';
     slidesLeftQRCode.style.height = qrSize + 'px';
     if (typeof QRCode !== 'undefined') new QRCode(slidesLeftQRCode, { text: joinUrl, width: qrSize, height: qrSize, colorDark: '#000', colorLight: '#fff' });

@@ -1385,6 +1385,8 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
 }
 .side-qr-container {
   display: none;
+  flex: 1;
+  min-height: 0;
   flex-direction: column;
   align-items: center;
   justify-content: center;
