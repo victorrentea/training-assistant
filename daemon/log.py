@@ -1,13 +1,13 @@
 """Shared log formatter for all training-assistant daemons.
 
-Format: HH:MM:SS.f  PID  [name      ] info    message
-        HH:MM:SS.f  PID  [name      ] error   message
-        HH:MM:SS.f  PID  [name      ] debug   message  ← only when DAEMON_DEBUG=1
+Format: HH:MM:SS.f PID [name] info message
+        HH:MM:SS.f PID [name] error message
+        HH:MM:SS.f PID [name] debug message  ← only when DAEMON_DEBUG=1
 
 Example:
-    18:49:41.4 66405  [daemon    ] info    Started — polling https://...
-    18:49:41.7 66405  [transcript] info    Mar 22 · 3127 lines
-    18:49:41.7 66405  [session   ] error   Failed to load key points
+    18:49:41.4 66405 [daemon] info Started — polling https://...
+    18:49:41.7 66405 [transcript] info Mar 22 · 3127 lines
+    18:49:41.7 66405 [session] error Failed to load key points
 
 Usage:
     from daemon import log
@@ -32,10 +32,9 @@ def _ts() -> str:
 
 
 def _fmt(name: str, level: str, msg: str) -> str:
-    nm = name[:10].ljust(10)
-    # "info    " and "error   " both = 8 display cols → message column always aligned
-    lvl = "error   " if level == "error" else "info    " if level == "info" else "debug   "
-    return f"{_ts()} {_PID:5}  [{nm}] {lvl}{msg}"
+    nm = str(name or "").strip() or "?"
+    lvl = str(level or "").strip().lower() or "info"
+    return f"{_ts()} {_PID} [{nm}] {lvl} {msg}"
 
 
 def get_level() -> str:
