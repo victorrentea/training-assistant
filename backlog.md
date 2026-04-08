@@ -1,5 +1,6 @@
 # Tasks
 
+- [x] direct request: remove URL text next to left Slides QR; left panel now shows QR-only for Slides in workshop mode.
 - [x] direct request: Slides tab left QR enlarged and promoted as primary left-panel content in workshop mode (hide left controls while on Slides).
 - [x] direct request: on Slides tab in host workshop mode, show join QR in the left panel; move fullscreen QR trigger icon from footer to header next to session title.
 - [x] direct request: host Key Points badge now shows only `🧠` and appends count when available (`🧠 N`), no `Key Points` text in badge.

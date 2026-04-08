@@ -1420,6 +1420,9 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
   width: 100% !important;
   height: 100% !important;
 }
+#slides-left-qr-url {
+  display: none !important;
+}
 
 /* Conference mode: left column splits into tabs (top) + QR (bottom) + status bar */
 .host-col-left.conference-layout {
