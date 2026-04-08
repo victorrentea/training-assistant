@@ -207,9 +207,14 @@ async def start_talk():
     return Response(status_code=204)
 
 
-@global_router.post("/end_talk", status_code=204)
+@global_router.post(
+    "/end_talk",
+    status_code=204,
+    summary="End Session",
+    description="Host ends the current session. Railway closes WS connections on session end.",
+)
 async def end_talk():
-    """Host ends the nested talk."""
+    """Alias for /api/session/end kept for backward compatibility."""
     session_pending.put("session_request", {"action": "end"})
     return Response(status_code=204)
 

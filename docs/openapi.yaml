@@ -1168,8 +1168,9 @@ paths:
     post:
       tags:
       - session
-      summary: End Talk
-      description: Host ends the nested talk.
+      summary: End Session
+      description: Host ends the current session. Railway closes WS connections on
+        session end.
       operationId: end_talk_api_session_end_talk_post
       responses:
         '204':
