@@ -3603,8 +3603,6 @@ function _regenerateAllQRCodes() {
   // Update URL labels with session path
   const confUrl = document.getElementById('conference-qr-url');
   if (confUrl && confUrl.offsetParent !== null) confUrl.innerHTML = _buildUrlHtml();
-  const slidesLeftUrl = document.getElementById('slides-left-qr-url');
-  if (slidesLeftUrl && slidesLeftUrl.offsetParent !== null) slidesLeftUrl.innerHTML = _buildUrlHtml();
   const centerUrl = document.getElementById('center-qr-url');
   if (centerUrl) {
     const base = (_joinBaseUrl || location.origin).replace(/^https?:\/\//i, '');
