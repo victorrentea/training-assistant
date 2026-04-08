@@ -691,7 +691,8 @@ def _render_shape_cell(shape: str, root: dict[str, Any]) -> str:
 
     rendered_main: str
     if "\n" in shape:
-        lines = [line.strip() for line in shape.splitlines() if line.strip()]
+        # Preserve leading indentation in multiline shapes (type field alignment).
+        lines = [line.rstrip() for line in shape.splitlines() if line.strip()]
         rendered_main = "<br>".join(f"`{line}`" for line in lines)
     else:
         rendered_main = f"`{shape}`"
