@@ -17,16 +17,21 @@ Usage:
 """
 
 import os
+import re
 import sys
 import threading
 from datetime import datetime
 
 _PID = os.getpid()
 _level_lock = threading.Lock()
+_output_lock = threading.Lock()
 _level = "info"
 _ANSI_RESET = "\033[0m"
 _ANSI_RED = "\033[31m"
 _ANSI_LIGHT_GRAY = "\033[37m"
+_PROGRESS_RE = re.compile(r"\+\d+s: .* \(total:\s*\d+s\)\s*$")
+_progress_active = False
+_progress_len = 0
 
 
 def _ts() -> str:
@@ -72,17 +77,48 @@ def set_level(level: str) -> str:
         return _level
 
 
+def _flush_progress_line_if_needed() -> None:
+    global _progress_active, _progress_len
+    if not _progress_active:
+        return
+    sys.stdout.write("\n")
+    sys.stdout.flush()
+    _progress_active = False
+    _progress_len = 0
+
+
+def _is_progress_update(msg: str) -> bool:
+    return bool(_PROGRESS_RE.search(str(msg or "").strip()))
+
+
 def info(name: str, msg: str) -> None:
     line = _fmt(name, "info", msg)
-    print(_colorize(line, "info", sys.stdout), flush=True)
+    with _output_lock:
+        global _progress_active, _progress_len
+        if _is_progress_update(msg):
+            colorized = _colorize(line, "info", sys.stdout)
+            pad = ""
+            if _progress_active and len(line) < _progress_len:
+                pad = " " * (_progress_len - len(line))
+            sys.stdout.write("\r" + colorized + pad)
+            sys.stdout.flush()
+            _progress_active = True
+            _progress_len = len(line)
+            return
+        _flush_progress_line_if_needed()
+        print(_colorize(line, "info", sys.stdout), flush=True)
 
 
 def error(name: str, msg: str) -> None:
     line = _fmt(name, "error", msg)
-    print(_colorize(line, "error", sys.stderr), file=sys.stderr, flush=True)
+    with _output_lock:
+        _flush_progress_line_if_needed()
+        print(_colorize(line, "error", sys.stderr), file=sys.stderr, flush=True)
 
 
 def debug(name: str, msg: str) -> None:
     if get_level() == "debug":
         line = _fmt(name, "debug", msg)
-        print(_colorize(line, "debug", sys.stdout), flush=True)
+        with _output_lock:
+            _flush_progress_line_if_needed()
+            print(_colorize(line, "debug", sys.stdout), flush=True)

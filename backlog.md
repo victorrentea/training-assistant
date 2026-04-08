@@ -271,7 +271,7 @@ Host posts a provocative statement (e.g. "Microservices are always a mistake for
 - [x] Follow-up: daemon host-side `/{sid}/api/slides` now uses the same embedded-status shape, and host UI now listens to `slides_updated` / `slides_catalog_changed` WS events to refresh catalog like participant UI.
 - [x] Clarification: removed host download endpoint wording from `apis.md` (host does not download PDFs directly) and simplified WS refresh contract to a single trigger `slides_updated` for both host and participant.
 - [x] Bugfix: daemon Railway cache HEAD probe for slides now uses shared certifi-backed SSL context to avoid `CERTIFICATE_VERIFY_FAILED` false misses in `slides/check`.
-- [ ] can daemon REPLACE the last line with a new one isntead of appending lines that log time spent -- they pollute the daemon log. so  22:44:44.1 75888  [intellij  ] info    Git +5s: java-memory @ main (total: 70s) wouldchange to ... total: 75s)
+- [x] can daemon REPLACE the last line with a new one isntead of appending lines that log time spent -- they pollute the daemon log. so  22:44:44.1 75888  [intellij  ] info    Git +5s: java-memory @ main (total: 70s) wouldchange to ... total: 75s)
 
 
 
