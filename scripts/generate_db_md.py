@@ -20,7 +20,7 @@ from daemon.persisted_models import (
     PersistedSessionMeta,
     PersistedSessionState,
 )
-from scripts.generate_apis_md import _escape_md_cell, _render_shape_cell, _shape
+from scripts.generate_apis_md import _render_shape_cell, _shape
 
 
 @dataclass(frozen=True)
@@ -34,6 +34,18 @@ def _schema_root_for(model: type[BaseModel]) -> tuple[dict[str, Any], dict[str, 
     defs = dict(schema.get("$defs", {}))
     schema_title = str(schema.get("title") or model.__name__)
     root_schema = {k: v for k, v in schema.items() if k != "$defs"}
+
+    # Keep DB docs focused on serialized shape: hide fields marked exclude=True.
+    excluded = {name for name, field in model.model_fields.items() if field.exclude is True}
+    if excluded:
+        properties = root_schema.get("properties")
+        if isinstance(properties, dict):
+            for field_name in excluded:
+                properties.pop(field_name, None)
+        required = root_schema.get("required")
+        if isinstance(required, list):
+            root_schema["required"] = [name for name in required if name not in excluded]
+
     defs[schema_title] = root_schema
     root = {"$defs": defs}
     entry_ref = {"$ref": f"#/$defs/{schema_title}"}
@@ -45,12 +57,20 @@ def _shape_for_model(model: type[BaseModel]) -> str:
     return _shape(entry_ref, root)
 
 
-def _render_models_table(models: list[ModelDoc]) -> list[str]:
-    lines = ["| Structure | Shape |", "| --- | --- |"]
+def _shape_lines_for_model(model: type[BaseModel]) -> list[str]:
+    shape = _render_shape_cell(_shape_for_model(model), root={})
+    pieces = [piece for piece in shape.split("<br>") if piece]
+    return [piece.replace("&nbsp;", " ").strip() for piece in pieces]
+
+
+def _render_models(models: list[ModelDoc]) -> list[str]:
+    lines: list[str] = []
     for item in models:
-        model_cell = f"`{item.name}`"
-        shape = _render_shape_cell(_shape_for_model(item.model), root={})
-        lines.append(f"| {model_cell} | {_escape_md_cell(shape)} |")
+        lines.append(f"### `{item.name}`")
+        lines.append("")
+        for row in _shape_lines_for_model(item.model):
+            lines.append(f"- {row}")
+        lines.append("")
     return lines
 
 
@@ -74,12 +94,10 @@ def generate_db_reference() -> str:
     lines.append("")
 
     lines.append("## Global State")
-    lines.extend(_render_models_table(global_models))
-    lines.append("")
+    lines.extend(_render_models(global_models))
 
     lines.append("## Session State")
-    lines.extend(_render_models_table(session_models))
-    lines.append("")
+    lines.extend(_render_models(session_models))
 
     return "\n".join(lines).rstrip() + "\n"
 

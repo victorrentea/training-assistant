@@ -1,5 +1,7 @@
 # Tasks
 
+- [x] direct request: grouped persisted session activity fields into nested objects (`poll`, `wordcloud`, `codereview`, `debate`) with backward-compatible read migration from legacy flat `*_` keys and nested restore compatibility.
+- [x] direct request: `DB.md` generator no longer emits markdown tables; it now renders model sections as bullet lists (Global State first, Session State second) using the same shape-rendering helpers as API docs.
 - [x] direct request: migrated persisted participant identity fields into nested `participants[uuid]{name,avatar,score,location}` in `session-state.json`, with backward-compatible restore from legacy split maps.
 - [x] direct request: `scripts/generate_apis_md.py --output API.md` now also regenerates `DB.md`; pre-commit stages both docs; regression test ensures API generation refreshes stale DB docs.
 - [x] direct request: added `scripts/generate_db_md.py` to generate `DB.md` from persisted Pydantic models, reusing API.md data-structure formatting style (including nested/list shapes), with docs tests enforcing freshness.

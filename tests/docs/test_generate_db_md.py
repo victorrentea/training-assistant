@@ -30,19 +30,39 @@ def test_generator_outputs_expected_sections_in_order():
 
 def test_generator_reuses_api_shape_rendering_style_for_nested_models():
     output = _run_generator()
-    global_row = re.search(r"^\| `PersistedGlobalState` \| .* \|$", output, re.MULTILINE)
-    assert global_row, "Missing PersistedGlobalState row"
-    assert "`main?: PersistedSessionRef {`" in global_row.group(0)
-    assert "&nbsp;&nbsp;&nbsp;&nbsp;`name?:string`" in global_row.group(0)
+    global_block = re.search(
+        r"### `PersistedGlobalState`\n\n(?P<body>.*?)(?:\n### |\Z)",
+        output,
+        re.DOTALL,
+    )
+    assert global_block, "Missing PersistedGlobalState section"
+    body = global_block.group("body")
+    assert "`main?: PersistedSessionRef {`" in body
+    assert "`name?:string`" in body
 
 
 def test_generator_renders_list_and_dict_shapes():
     output = _run_generator()
-    session_row = re.search(r"^\| `PersistedSessionState` \| .* \|$", output, re.MULTILINE)
-    assert session_row, "Missing PersistedSessionState row"
-    assert "`poll_correct_ids?: list[string]`" in session_row.group(0)
-    assert "`participants?: dict[str, PersistedParticipant {`" in session_row.group(0)
-    assert "&nbsp;&nbsp;&nbsp;&nbsp;`name?:string`" in session_row.group(0)
+    session_block = re.search(
+        r"### `PersistedSessionState`\n\n(?P<body>.*?)(?:\n### |\Z)",
+        output,
+        re.DOTALL,
+    )
+    assert session_block, "Missing PersistedSessionState section"
+    body = session_block.group("body")
+    assert "`participants?: dict[str, PersistedParticipant {`" in body
+    assert "`name?:string`" in body
+    assert "`poll?: PersistedPollState {`" in body
+    assert "`correct_ids?:list[string]`" in body
+    assert "`wordcloud?: PersistedWordCloudState {`" in body
+    assert "`codereview?: PersistedCodeReviewState {`" in body
+    assert "`debate?: PersistedDebateState {`" in body
+
+
+def test_generator_does_not_use_markdown_tables():
+    output = _run_generator()
+    assert "| Structure | Shape |" not in output
+    assert not re.search(r"^\|.+\|$", output, re.MULTILINE)
 
 
 def test_db_md_is_fresh_with_generator_output():

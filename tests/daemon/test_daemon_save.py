@@ -66,7 +66,55 @@ def test_load_session_state_normalizes_null_poll_correct_ids():
         )
         from daemon.session_state import load_session_state as _load_session_state
         loaded = _load_session_state(folder)
-        assert loaded["poll_correct_ids"] == []
+        assert loaded["poll"]["correct_ids"] == []
+
+
+def test_load_session_state_normalizes_legacy_flat_activity_fields():
+    with tempfile.TemporaryDirectory() as d:
+        folder = Path(d)
+        (folder / "session-state.json").write_text(
+            json.dumps({
+                "wordcloud_words": {"python": 2},
+                "wordcloud_word_order": ["python"],
+                "wordcloud_topic": "Languages",
+                "codereview_snippet": "print('hi')",
+                "codereview_language": "python",
+                "codereview_phase": "selecting",
+                "codereview_selections": {"u1": [1, 2]},
+                "codereview_confirmed": [2],
+                "debate_statement": "Tabs vs spaces",
+                "debate_phase": "arguments",
+                "debate_sides": {"u1": "for"},
+                "debate_arguments": [{"id": "a1", "upvoters": []}],
+                "debate_champions": {"for": "u1"},
+                "debate_auto_assigned": ["u1"],
+                "debate_first_side": "for",
+                "debate_round_index": 1,
+                "debate_round_timer_seconds": 30,
+                "debate_round_timer_started_at": "2026-04-09T00:00:00+00:00",
+            }),
+            encoding="utf-8",
+        )
+        from daemon.session_state import load_session_state as _load_session_state
+        loaded = _load_session_state(folder)
+        assert loaded["wordcloud"]["words"] == {"python": 2}
+        assert loaded["wordcloud"]["word_order"] == ["python"]
+        assert loaded["wordcloud"]["topic"] == "Languages"
+        assert loaded["codereview"]["snippet"] == "print('hi')"
+        assert loaded["codereview"]["language"] == "python"
+        assert loaded["codereview"]["phase"] == "selecting"
+        assert loaded["codereview"]["selections"] == {"u1": [1, 2]}
+        assert loaded["codereview"]["confirmed"] == [2]
+        assert loaded["debate"]["statement"] == "Tabs vs spaces"
+        assert loaded["debate"]["phase"] == "arguments"
+        assert loaded["debate"]["sides"] == {"u1": "for"}
+        assert loaded["debate"]["arguments"] == [{"id": "a1", "upvoters": []}]
+        assert loaded["debate"]["champions"] == {"for": "u1"}
+        assert loaded["debate"]["auto_assigned"] == ["u1"]
+        assert loaded["debate"]["first_side"] == "for"
+        assert loaded["debate"]["round_index"] == 1
+        assert loaded["debate"]["round_timer_seconds"] == 30
+        assert loaded["debate"]["round_timer_started_at"] == "2026-04-09T00:00:00+00:00"
 
 
 def test_load_session_state_normalizes_legacy_participant_maps():

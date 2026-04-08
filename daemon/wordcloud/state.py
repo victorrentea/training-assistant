@@ -21,14 +21,26 @@ class WordCloudState:
     def sync_from_restore(self, data: dict):
         """Update from daemon_state_push. Called from main thread."""
         with self._lock:
-            if "wordcloud_words" in data:
+            payload = data.get("wordcloud")
+            if not isinstance(payload, dict):
+                payload = {}
+
+            has_words = "words" in payload or "wordcloud_words" in data
+            words = payload.get("words") if "words" in payload else data.get("wordcloud_words")
+            if has_words:
                 self.words.clear()
-                self.words.update(data["wordcloud_words"])
-            if "wordcloud_word_order" in data:
+                self.words.update(words or {})
+
+            has_word_order = "word_order" in payload or "wordcloud_word_order" in data
+            word_order = payload.get("word_order") if "word_order" in payload else data.get("wordcloud_word_order")
+            if has_word_order:
                 self.word_order.clear()
-                self.word_order.extend(data["wordcloud_word_order"])
-            if "wordcloud_topic" in data:
-                self.topic = data["wordcloud_topic"]
+                self.word_order.extend(word_order or [])
+
+            has_topic = "topic" in payload or "wordcloud_topic" in data
+            topic = payload.get("topic") if "topic" in payload else data.get("wordcloud_topic")
+            if has_topic:
+                self.topic = topic
 
     def add_word(self, word: str) -> dict:
         """Add a word, return current state for broadcast."""

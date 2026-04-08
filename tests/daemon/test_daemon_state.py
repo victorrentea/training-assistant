@@ -677,14 +677,55 @@ def test_apply_snapshot_restore_ignores_participant_universes():
 
 def test_runtime_session_snapshot_excludes_participant_universes():
     from daemon.__main__ import _build_runtime_session_snapshot
+    from daemon.codereview.state import codereview_state
+    from daemon.debate.state import debate_state
     from daemon.participant.state import participant_state
+    from daemon.poll.state import poll_state
+    from daemon.wordcloud.state import wordcloud_state
 
     participant_state.reset()
+    poll_state.clear()
+    wordcloud_state.clear()
+    codereview_state.clear()
+    debate_state.reset()
+
     participant_state.participant_names["u1"] = "Alice"
     participant_state.participant_avatars["u1"] = "gandalf.png"
     participant_state.scores["u1"] = 0
     participant_state.locations["u1"] = "🕐 America/Mexico_City"
     participant_state.participant_universes["u1"] = "Star Wars"
+    poll_state.poll = {"id": "p1", "question": "Q", "options": [], "multi": False}
+    poll_state.poll_active = True
+    poll_state.poll_correct_ids = ["a1"]
+    poll_state.votes = {"u1": {"option_ids": ["a1"], "voted_at": "2026-04-09T00:00:00+00:00"}}
+    wordcloud_state.words = {"python": 2}
+    wordcloud_state.word_order = ["python"]
+    wordcloud_state.topic = "Language"
+    codereview_state.snippet = "print('x')"
+    codereview_state.language = "python"
+    codereview_state.phase = "selecting"
+    codereview_state.selections = {"u1": {1}}
+    codereview_state.confirmed = {1}
+    debate_state.statement = "Tabs vs spaces"
+    debate_state.phase = "arguments"
+    debate_state.sides = {"u1": "for"}
+    debate_state.arguments = [
+        {
+            "id": "a1",
+            "author_uuid": "u1",
+            "side": "for",
+            "text": "Argument",
+            "upvoters": set(),
+            "ai_generated": False,
+            "merged_into": None,
+        }
+    ]
+    debate_state.champions = {"for": "u1"}
+    debate_state.auto_assigned = {"u1"}
+    debate_state.first_side = "for"
+    debate_state.round_index = 0
+    debate_state.round_timer_seconds = 45
+    debate_state.round_timer_started_at = None
 
     snapshot = _build_runtime_session_snapshot(
         active_session_id="sid-1",
@@ -700,3 +741,75 @@ def test_runtime_session_snapshot_excludes_participant_universes():
             "location": "🕐 America/Mexico_City",
         }
     }
+    assert "poll_active" not in snapshot
+    assert "wordcloud_words" not in snapshot
+    assert "codereview_snippet" not in snapshot
+    assert "debate_statement" not in snapshot
+    assert snapshot["poll"]["active"] is True
+    assert snapshot["poll"]["correct_ids"] == ["a1"]
+    assert snapshot["wordcloud"]["words"] == {"python": 2}
+    assert snapshot["codereview"]["snippet"] == "print('x')"
+    assert snapshot["debate"]["statement"] == "Tabs vs spaces"
+
+
+def test_apply_snapshot_restore_accepts_nested_activity_state():
+    from daemon.__main__ import _apply_runtime_snapshot_restore
+    from daemon.codereview.state import codereview_state
+    from daemon.debate.state import debate_state
+    from daemon.wordcloud.state import wordcloud_state
+
+    wordcloud_state.clear()
+    codereview_state.clear()
+    debate_state.reset()
+
+    _apply_runtime_snapshot_restore({
+        "wordcloud": {"words": {"python": 2}, "word_order": ["python"], "topic": "Lang"},
+        "codereview": {
+            "snippet": "print('ok')",
+            "language": "python",
+            "phase": "reviewing",
+            "selections": {"u1": [0, 1]},
+            "confirmed": [1],
+        },
+        "debate": {
+            "statement": "Tabs vs spaces",
+            "phase": "arguments",
+            "sides": {"u1": "for"},
+            "arguments": [
+                {
+                    "id": "a1",
+                    "author_uuid": "u1",
+                    "side": "for",
+                    "text": "Argument",
+                    "upvoters": [],
+                    "ai_generated": False,
+                    "merged_into": None,
+                }
+            ],
+            "champions": {"for": "u1"},
+            "auto_assigned": ["u1"],
+            "first_side": "for",
+            "round_index": 1,
+            "round_timer_seconds": 30,
+            "round_timer_started_at": "2026-04-09T00:00:00+00:00",
+        },
+    })
+
+    assert wordcloud_state.words == {"python": 2}
+    assert wordcloud_state.word_order == ["python"]
+    assert wordcloud_state.topic == "Lang"
+    assert codereview_state.snippet == "print('ok')"
+    assert codereview_state.language == "python"
+    assert codereview_state.phase == "reviewing"
+    assert codereview_state.selections == {"u1": {0, 1}}
+    assert codereview_state.confirmed == {1}
+    assert debate_state.statement == "Tabs vs spaces"
+    assert debate_state.phase == "arguments"
+    assert debate_state.sides == {"u1": "for"}
+    assert debate_state.arguments[0]["upvoters"] == set()
+    assert debate_state.champions == {"for": "u1"}
+    assert debate_state.auto_assigned == {"u1"}
+    assert debate_state.first_side == "for"
+    assert debate_state.round_index == 1
+    assert debate_state.round_timer_seconds == 30
+    assert debate_state.round_timer_started_at is not None

@@ -23,19 +23,45 @@ class CodeReviewState:
     def sync_from_restore(self, data: dict):
         """Update from daemon_state_push. Called from main thread."""
         with self._lock:
-            if "codereview_snippet" in data:
-                self.snippet = data["codereview_snippet"]
-            if "codereview_language" in data:
-                self.language = data["codereview_language"]
-            if "codereview_phase" in data:
-                self.phase = data["codereview_phase"]
-            if "codereview_selections" in data:
+            payload = data.get("codereview")
+            if not isinstance(payload, dict):
+                payload = {}
+
+            if "snippet" in payload or "codereview_snippet" in data:
+                self.snippet = (
+                    payload.get("snippet")
+                    if "snippet" in payload
+                    else data.get("codereview_snippet")
+                )
+            if "language" in payload or "codereview_language" in data:
+                self.language = (
+                    payload.get("language")
+                    if "language" in payload
+                    else data.get("codereview_language")
+                )
+            if "phase" in payload or "codereview_phase" in data:
+                self.phase = (
+                    payload.get("phase")
+                    if "phase" in payload
+                    else data.get("codereview_phase")
+                )
+            if "selections" in payload or "codereview_selections" in data:
                 self.selections.clear()
-                for pid, lines in data["codereview_selections"].items():
+                selections = (
+                    payload.get("selections")
+                    if "selections" in payload
+                    else data.get("codereview_selections")
+                ) or {}
+                for pid, lines in selections.items():
                     self.selections[pid] = set(lines)
-            if "codereview_confirmed" in data:
+            if "confirmed" in payload or "codereview_confirmed" in data:
                 self.confirmed.clear()
-                self.confirmed.update(data["codereview_confirmed"])
+                confirmed = (
+                    payload.get("confirmed")
+                    if "confirmed" in payload
+                    else data.get("codereview_confirmed")
+                ) or []
+                self.confirmed.update(confirmed)
 
     def create(self, snippet: str, language: str | None):
         """Set snippet+language, phase=selecting, clear selections+confirmed."""

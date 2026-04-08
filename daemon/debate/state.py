@@ -31,33 +31,77 @@ class DebateState:
     def sync_from_restore(self, data: dict):
         """Update from daemon_state_push. Called from main thread."""
         with self._lock:
-            if "debate_statement" in data:
-                self.statement = data["debate_statement"]
-            if "debate_phase" in data:
-                self.phase = data["debate_phase"]
-            if "debate_sides" in data:
+            payload = data.get("debate")
+            if not isinstance(payload, dict):
+                payload = {}
+
+            if "statement" in payload or "debate_statement" in data:
+                self.statement = (
+                    payload.get("statement")
+                    if "statement" in payload
+                    else data.get("debate_statement")
+                )
+            if "phase" in payload or "debate_phase" in data:
+                self.phase = (
+                    payload.get("phase")
+                    if "phase" in payload
+                    else data.get("debate_phase")
+                )
+            if "sides" in payload or "debate_sides" in data:
                 self.sides.clear()
-                self.sides.update(data["debate_sides"])
-            if "debate_arguments" in data:
+                sides = payload.get("sides") if "sides" in payload else data.get("debate_sides")
+                self.sides.update(sides or {})
+            if "arguments" in payload or "debate_arguments" in data:
                 self.arguments.clear()
-                for arg in data["debate_arguments"]:
+                arguments = (
+                    payload.get("arguments")
+                    if "arguments" in payload
+                    else data.get("debate_arguments")
+                ) or []
+                for arg in arguments:
                     a = dict(arg)
                     # upvoters comes as list from JSON — convert to set
                     a["upvoters"] = set(a.get("upvoters", []))
                     self.arguments.append(a)
-            if "debate_champions" in data:
+            if "champions" in payload or "debate_champions" in data:
                 self.champions.clear()
-                self.champions.update(data["debate_champions"])
-            if "debate_auto_assigned" in data:
-                self.auto_assigned = set(data["debate_auto_assigned"])
-            if "debate_first_side" in data:
-                self.first_side = data["debate_first_side"]
-            if "debate_round_index" in data:
-                self.round_index = data["debate_round_index"]
-            if "debate_round_timer_seconds" in data:
-                self.round_timer_seconds = data["debate_round_timer_seconds"]
-            if "debate_round_timer_started_at" in data:
-                val = data["debate_round_timer_started_at"]
+                champions = (
+                    payload.get("champions")
+                    if "champions" in payload
+                    else data.get("debate_champions")
+                )
+                self.champions.update(champions or {})
+            if "auto_assigned" in payload or "debate_auto_assigned" in data:
+                auto_assigned = (
+                    payload.get("auto_assigned")
+                    if "auto_assigned" in payload
+                    else data.get("debate_auto_assigned")
+                ) or []
+                self.auto_assigned = set(auto_assigned)
+            if "first_side" in payload or "debate_first_side" in data:
+                self.first_side = (
+                    payload.get("first_side")
+                    if "first_side" in payload
+                    else data.get("debate_first_side")
+                )
+            if "round_index" in payload or "debate_round_index" in data:
+                self.round_index = (
+                    payload.get("round_index")
+                    if "round_index" in payload
+                    else data.get("debate_round_index")
+                )
+            if "round_timer_seconds" in payload or "debate_round_timer_seconds" in data:
+                self.round_timer_seconds = (
+                    payload.get("round_timer_seconds")
+                    if "round_timer_seconds" in payload
+                    else data.get("debate_round_timer_seconds")
+                )
+            if "round_timer_started_at" in payload or "debate_round_timer_started_at" in data:
+                val = (
+                    payload.get("round_timer_started_at")
+                    if "round_timer_started_at" in payload
+                    else data.get("debate_round_timer_started_at")
+                )
                 if isinstance(val, str):
                     try:
                         self.round_timer_started_at = datetime.fromisoformat(val)
