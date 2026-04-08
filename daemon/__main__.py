@@ -65,9 +65,6 @@ from daemon.lock import (
 from daemon.email_notify import notify as email_notify
 from daemon.adapters.loader import adapter as _platform
 
-_BACKUP_DIR = Path.home() / ".training-assistant"
-_BACKUP_FILE = _BACKUP_DIR / "state-backup.json"
-
 # ── PowerPoint helpers ─────────────────────────────────────────────────────────
 
 _PPT_UNMAPPED_PRESENTATIONS_ALERTED: set[str] = set()
@@ -555,8 +552,6 @@ def run() -> None:
     # debate_ai_request handled directly by debate router (no longer via WS polling)
     ws_client.register_handler("summary_force", _ws_handler("summary_force"))
     ws_client.register_handler("summary_full_reset", _ws_handler("summary_full_reset"))
-    ws_client.register_handler("state_snapshot_result", _ws_handler("state_snapshot_result"))
-    ws_client.register_handler("session_snapshot_result", _ws_handler("session_snapshot_result"))
     # session_request is now served via daemon REST endpoint (daemon/session/router.py)
     # stored in daemon.session.pending — no longer via WS push from Railway
     # transcription_language_request is now served via daemon REST endpoint (daemon/misc/router.py)
@@ -766,16 +761,9 @@ def run() -> None:
     last_summary_at = 0.0  # monotonic time of last summary run
     notes_summary_probe_prev: dict | None = _build_notes_summary_probe(config.session_folder)
     runtime_session_snapshot: dict | None = startup_session_state if startup_session_state else None
-    session_snapshots_by_id: dict[str, dict] = {}
-    if isinstance(runtime_session_snapshot, dict):
-        _startup_snapshot_sid = runtime_session_snapshot.get("session_id")
-        if isinstance(_startup_snapshot_sid, str) and _startup_snapshot_sid:
-            session_snapshots_by_id[_startup_snapshot_sid] = runtime_session_snapshot
     last_persist_poll_at: float = 0.0
     last_session_state_hash: str | None = _state_hash(runtime_session_snapshot)
     last_global_state_hash: str | None = None
-    last_snapshot_hash: str | None = None  # hash of last saved state snapshot
-    last_state_backup_log: str | None = None  # last emitted state-backup log line (dedupe consecutive repeats)
     transcript_state = TranscriptStateManager()
     # Session folders push removed — host.js does not handle session_folders messages
 
@@ -945,11 +933,7 @@ def run() -> None:
                             _debate_state.reset()
                             _leaderboard_state.reset()
                             _scores_state.reset()
-                            restore_snapshot = (
-                                session_snapshots_by_id.get(sid)
-                                if isinstance(sid, str) and sid
-                                else None
-                            )
+                            restore_snapshot = load_session_state(folder)
                             runtime_session_snapshot = restore_snapshot
                             last_session_state_hash = _state_hash(runtime_session_snapshot)
 
@@ -1019,12 +1003,10 @@ def run() -> None:
                         log.info("session", f"Session: {name}")
 
                     elif action == "end" and session_stack:
-                        latest_snapshot_now = _pending_requests.pop("session_snapshot_result", None)
-                        if isinstance(latest_snapshot_now, dict):
-                            runtime_session_snapshot = latest_snapshot_now
-                            sid = latest_snapshot_now.get("session_id")
-                            if isinstance(sid, str) and sid:
-                                session_snapshots_by_id[sid] = latest_snapshot_now
+                        runtime_session_snapshot = _build_runtime_session_snapshot(
+                            active_session_id=_active_session_id,
+                            session_stack=session_stack,
+                        )
                         last_session_state_hash, wrote = _flush_session_state_backup(
                             sessions_root=sessions_root,
                             session_stack=session_stack,
@@ -1314,45 +1296,6 @@ def run() -> None:
                     except Exception as e:
                         log.error("transcript", f"Error: {e}")
 
-                # ── Process state snapshot result (pushed by backend every 7s) ──
-                snapshot_result = _pending_requests.pop("state_snapshot_result", None)
-                if snapshot_result:
-                    try:
-                        raw_state_snapshot = snapshot_result.get("state", snapshot_result)
-                        if isinstance(raw_state_snapshot, dict):
-                            runtime_session_snapshot = raw_state_snapshot
-                            snapshot_sid = raw_state_snapshot.get("session_id")
-                            if isinstance(snapshot_sid, str) and snapshot_sid:
-                                session_snapshots_by_id[snapshot_sid] = raw_state_snapshot
-                            s = raw_state_snapshot
-                        else:
-                            s = {}
-                        snapshot_json = json.dumps(snapshot_result, sort_keys=True)
-                        snapshot_hash = hashlib.sha256(snapshot_json.encode("utf-8")).hexdigest()
-                        if snapshot_hash != last_snapshot_hash:
-                            _BACKUP_DIR.mkdir(parents=True, exist_ok=True)
-                            tmp_file = _BACKUP_FILE.with_suffix(".tmp")
-                            tmp_file.write_text(snapshot_json, encoding="utf-8")
-                            os.rename(str(tmp_file), str(_BACKUP_FILE))
-                            last_snapshot_hash = snapshot_hash
-                            parts = [f"{len(s.get('participant_names', {}))} participants"]
-                            if s.get("qa_questions"):
-                                parts.append(f"{len(s['qa_questions'])} Q&As")
-                            if s.get("wordcloud_words"):
-                                parts.append(f"{len(s['wordcloud_words'])} words in cloud")
-                            if s.get("debate_arguments"):
-                                parts.append(f"{len(s['debate_arguments'])} debate args")
-                            if s.get("votes"):
-                                parts.append(f"{len(s['votes'])} votes")
-                            if s.get("summary_points"):
-                                parts.append(f"{len(s['summary_points'])} summary pts")
-                            backup_log = f"State backup: {', '.join(parts)}"
-                            if backup_log != last_state_backup_log:
-                                log.info("daemon", backup_log)
-                                last_state_backup_log = backup_log
-                    except Exception as e:
-                        log.error("daemon", f"State snapshot save failed: {e}")
-
                 # ── Check for full-reset / forced summary request (via WS) ──
                 full_reset_data = _pending_requests.pop("summary_full_reset", None)
                 if full_reset_data:
@@ -1383,17 +1326,6 @@ def run() -> None:
                         changed_names = ", ".join(changed_files)
                         ws_client.send({"type": "broadcast", "event": {"type": "reload"}})
                         log.info("static-sync", f"Triggered browser reload after sync {changed} file(s): {changed_names}")
-
-                # ── Process session snapshot result (pushed by backend every 7s) ──
-                session_snapshot = _pending_requests.pop("session_snapshot_result", None)
-                if session_snapshot:
-                    runtime_session_snapshot = session_snapshot if isinstance(session_snapshot, dict) else None
-                    snapshot_sid = session_snapshot.get("session_id")
-                    if isinstance(snapshot_sid, str) and snapshot_sid:
-                        session_snapshots_by_id[snapshot_sid] = session_snapshot
-                        if snapshot_sid != _active_session_id:
-                            _active_session_id = snapshot_sid
-                            _do_save_daemon_state()
 
             except RuntimeError as e:
                 if not server_disconnected:
