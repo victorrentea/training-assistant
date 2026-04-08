@@ -290,3 +290,4 @@ Host broadcasts a statement: "Have you ever shipped code that violated what we j
 - [x] Direct request: host slides-mode left-pane QR now auto-resizes on window resize (using both width and height bounds) and remains vertically centered.
 - [x] Follow-up direct request: removed 400px cap on host slides-mode left QR so it expands correctly on small → large window resize.
 - [x] Follow-up direct request: center host slides-mode left QR against the full left panel height (not a sub-area), including after resize.
+- [x] Follow-up direct request: enforce explicit 50%/50% absolute centering for host slides-mode left QR to keep vertical centering stable after any resize.

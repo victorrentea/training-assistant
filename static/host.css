@@ -1408,8 +1408,10 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
   justify-content: center;
 }
 .side-qr-container #slides-left-qr-code {
-  width: 100%;
-  max-width: 100%;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
   background: #fff;
   padding: 0;
   border-radius: 12px;

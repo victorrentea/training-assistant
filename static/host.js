@@ -3576,6 +3576,12 @@ function _regenerateAllQRCodes() {
     const availW = slidesQREl ? slidesQREl.clientWidth : 260;
     const availH = slidesQREl ? slidesQREl.clientHeight : 260;
     const qrSize = Math.max(1, Math.floor(Math.min(availW, availH)));
+    if (slidesQREl) slidesQREl.style.position = 'absolute';
+    if (slidesQREl) slidesQREl.style.inset = '0';
+    slidesLeftQRCode.style.position = 'absolute';
+    slidesLeftQRCode.style.left = '50%';
+    slidesLeftQRCode.style.top = '50%';
+    slidesLeftQRCode.style.transform = 'translate(-50%, -50%)';
     slidesLeftQRCode.style.width = qrSize + 'px';
     slidesLeftQRCode.style.height = qrSize + 'px';
     if (typeof QRCode !== 'undefined') new QRCode(slidesLeftQRCode, { text: joinUrl, width: qrSize, height: qrSize, colorDark: '#000', colorLight: '#fff' });
