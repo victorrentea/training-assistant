@@ -51,7 +51,7 @@ class TranscriptionLanguageRequest(BaseModel):
 class TranscriptionLanguageResponse(BaseModel):
     request: Optional[str] = None
 
-class UploadDismissRequest(BaseModel):
+class UploadSeenRequest(BaseModel):
     uuid: str
     file_id: str
 
@@ -168,14 +168,14 @@ async def get_host_summary():
     )
 
 
-@host_router.post("/uploads/dismiss")
-async def dismiss_uploaded_file(body: UploadDismissRequest):
-    """Mark an uploaded-file indicator as dismissed in daemon session state."""
+@host_router.post("/uploads/seen")
+async def mark_uploaded_file_seen(body: UploadSeenRequest):
+    """Mark an uploaded-file indicator as seen by host in daemon session state."""
     target_uuid = (body.uuid or "").strip()
     file_id = str(body.file_id or "").strip()
     if not target_uuid or not file_id:
         return JSONResponse({"error": "uuid and file_id are required"}, status_code=400)
-    if not misc_state.dismiss_uploaded_file(target_uuid, file_id):
+    if not misc_state.mark_uploaded_file_seen(target_uuid, file_id):
         return JSONResponse({"error": "Upload indicator not found"}, status_code=404)
     return OkResponse()
 

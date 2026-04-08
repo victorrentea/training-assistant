@@ -67,24 +67,25 @@ def test_upload_download_persists_indicator_and_notifies_host(tmp_path):
     _reset_runtime_state()
 
 
-def test_host_participant_list_uses_non_dismissed_uploaded_files():
+def test_host_participant_list_keeps_uploaded_files_and_seen_flag():
     _reset_runtime_state()
     participant_state.participant_names["uuid-1"] = "Alice"
     participant_state.scores["uuid-1"] = 50
     misc_state.uploaded_files["uuid-1"] = [
-        {"id": "f1", "filename": "one.txt", "size": 10, "disk_path": "/tmp/one.txt", "dismissed": False},
-        {"id": "f2", "filename": "two.txt", "size": 20, "disk_path": "/tmp/two.txt", "dismissed": True},
+        {"id": "f1", "filename": "one.txt", "size": 10, "disk_path": "/tmp/one.txt", "seen_by_host": False},
+        {"id": "f2", "filename": "two.txt", "size": 20, "disk_path": "/tmp/two.txt", "seen_by_host": True},
     ]
 
     participants = _build_host_participants_list()
     assert len(participants) == 1
     assert participants[0]["uuid"] == "uuid-1"
-    assert len(participants[0]["received_files"]) == 1
+    assert len(participants[0]["received_files"]) == 2
     assert participants[0]["received_files"][0]["id"] == "f1"
+    assert participants[0]["received_files"][1]["seen_by_host"] is True
     _reset_runtime_state()
 
 
-def test_dismiss_uploaded_file_endpoint_marks_state():
+def test_mark_uploaded_file_seen_endpoint_marks_state():
     _reset_runtime_state()
     app = FastAPI()
     app.include_router(host_router)
@@ -92,10 +93,12 @@ def test_dismiss_uploaded_file_endpoint_marks_state():
 
     misc_state.add_uploaded_file("uuid-1", "f1", "a.txt", 1, "/tmp/a.txt")
     resp = client.post(
-        "/api/session-1/host/uploads/dismiss",
+        "/api/session-1/host/uploads/seen",
         json={"uuid": "uuid-1", "file_id": "f1"},
     )
     assert resp.status_code == 200
     assert resp.json() == {"ok": True}
-    assert misc_state.visible_uploaded_files("uuid-1") == []
+    visible = misc_state.visible_uploaded_files("uuid-1")
+    assert len(visible) == 1
+    assert visible[0]["seen_by_host"] is True
     _reset_runtime_state()

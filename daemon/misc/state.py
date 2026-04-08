@@ -6,7 +6,7 @@ class MiscState:
     def __init__(self):
         self._lock = threading.Lock()
         self.paste_texts: dict[str, list[dict]] = {}  # uuid → [{id, text}]
-        self.uploaded_files: dict[str, list[dict]] = {}  # uuid -> [{id, filename, size, disk_path, dismissed}]
+        self.uploaded_files: dict[str, list[dict]] = {}  # uuid -> [{id, filename, size, disk_path, seen_by_host}]
         # TODO: notes_content, summary_points, summary_raw_markdown, summary_updated_at
         #  are currently synced from Railway state (via sync_from_restore).
         #  They should be read from disk files (ai-summary.md, *.txt) instead of stored in state.
@@ -38,7 +38,9 @@ class MiscState:
                             "filename": str(entry.get("filename", "")),
                             "size": int(entry.get("size", 0) or 0),
                             "disk_path": str(entry.get("disk_path", "")),
-                            "dismissed": bool(entry.get("dismissed", False)),
+                            # Backward compatibility: old snapshots may use dismissed=true
+                            # to represent "already acknowledged by host".
+                            "seen_by_host": bool(entry.get("seen_by_host", entry.get("dismissed", False))),
                         })
                     self.uploaded_files[str(pid)] = clean_entries
             if "notes_content" in data:
@@ -83,31 +85,32 @@ class MiscState:
                     entry["filename"] = filename
                     entry["size"] = int(size)
                     entry["disk_path"] = disk_path
-                    entry["dismissed"] = False
+                    # Keep seen status if already acknowledged on this file id.
+                    entry["seen_by_host"] = bool(entry.get("seen_by_host", False))
                     return dict(entry)
             created = {
                 "id": normalized_id,
                 "filename": filename,
                 "size": int(size),
                 "disk_path": disk_path,
-                "dismissed": False,
+                "seen_by_host": False,
             }
             entries.append(created)
             return dict(created)
 
-    def dismiss_uploaded_file(self, target_uuid: str, file_id: str) -> bool:
+    def mark_uploaded_file_seen(self, target_uuid: str, file_id: str) -> bool:
         with self._lock:
             entries = self.uploaded_files.get(target_uuid, [])
             for entry in entries:
                 if str(entry.get("id")) == str(file_id):
-                    entry["dismissed"] = True
+                    entry["seen_by_host"] = True
                     return True
             return False
 
     def visible_uploaded_files(self, pid: str) -> list[dict]:
         with self._lock:
             entries = self.uploaded_files.get(pid, [])
-            return [dict(e) for e in entries if not bool(e.get("dismissed", False))]
+            return [dict(e) for e in entries]
 
     def dismiss_paste(self, target_uuid: str, paste_id: str) -> bool:
         if target_uuid not in self.paste_texts:
