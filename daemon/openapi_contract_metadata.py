@@ -23,8 +23,6 @@ def _feature_for_misc_path(path: str) -> str:
         return "slides"
     if "transcription-language" in path:
         return "transcription"
-    if "/mode" in path:
-        return "session_management"
     return "misc"
 
 

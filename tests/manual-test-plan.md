@@ -577,25 +577,27 @@
 
 ## 17. Conference Mode
 
-### 17.1 Toggle conference/workshop mode
-- [H] POST `/api/mode` with `{"mode": "conference"}`.
+### 17.1 Start conference session
+- [H] POST `/api/session/create` with `{"name":"Conference Test","type":"conference"}`.
 - [V] Host panel switches to conference layout (wider center, hidden right column).
-- [H] POST `/api/mode` with `{"mode": "workshop"}`.
+
+### 17.2 Start workshop session
+- [H] POST `/api/session/create` with `{"name":"Workshop Test","type":"workshop"}`.
 - [V] Host panel returns to workshop layout.
 
-### 17.2 Auto-assigned character names
-- [H] Switch to conference mode.
+### 17.3 Auto-assigned character names
+- [H] Start a conference session.
 - [P] Open `/` in a fresh browser.
 - [V] Participant auto-joins with a character name from the pool (e.g., "Yoda", "Neo").
 - [V] Participant gets a letter-based avatar (2-letter code with deterministic color).
 
-### 17.3 Score hidden in conference mode
-- [H] Switch to conference mode.
+### 17.4 Score hidden in conference mode
+- [H] Start a conference session.
 - [P] Open `/`.
 - [V] `#my-score` element is hidden.
 - [V] Location prompt and notification button are also hidden.
 
-### 17.4 Conference mode rename
+### 17.5 Conference mode rename
 - [P] In conference mode, click on name to rename.
 - [V] Rename works but avatar stays as letter-based.
 

@@ -624,23 +624,6 @@ paths:
         '204':
           description: Successful Response
       x-feature: paste_upload
-  /api/{session_id}/host/mode:
-    post:
-      tags:
-      - misc
-      summary: Set Mode
-      description: Host switches session mode (workshop/conference).
-      operationId: set_mode_api__session_id__host_mode_post
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/SetModeRequest'
-        required: true
-      responses:
-        '204':
-          description: Successful Response
-      x-feature: session_management
   /api/transcription-language:
     post:
       tags:
@@ -2748,15 +2731,6 @@ components:
       required:
       - level
       title: SetLogLevelRequest
-    SetModeRequest:
-      properties:
-        mode:
-          type: string
-          title: Mode
-      type: object
-      required:
-      - mode
-      title: SetModeRequest
     SetPollStatusRequest:
       properties:
         open:

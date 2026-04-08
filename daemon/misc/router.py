@@ -200,20 +200,6 @@ async def mark_uploaded_file_seen(body: UploadSeenRequest):
     return Response(status_code=204)
 
 
-class SetModeRequest(BaseModel):
-    mode: str
-
-
-@host_router.post("/mode", status_code=204)
-async def set_mode(body: SetModeRequest):
-    """Host switches session mode (workshop/conference)."""
-    mode = body.mode.strip().lower()
-    if mode not in ("workshop", "conference"):
-        return JSONResponse({"error": f"Invalid mode '{mode}'"}, status_code=400)
-    participant_state.mode = mode
-    return Response(status_code=204)
-
-
 # ── Global router (no session_id prefix) — used for transcription language ──
 
 global_router = APIRouter(prefix="/api", tags=["misc"])
