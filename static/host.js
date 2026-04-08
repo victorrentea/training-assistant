@@ -3592,9 +3592,8 @@ function _regenerateAllQRCodes() {
   if (slidesLeftQRCode && slidesLeftQRCode.offsetParent !== null) {
     slidesLeftQRCode.innerHTML = '';
     const slidesQREl = document.getElementById('slides-left-qr');
-    const availH = slidesQREl ? slidesQREl.clientHeight : 260;
     const availW = slidesQREl ? slidesQREl.clientWidth : 260;
-    const qrSize = Math.max(120, Math.floor(Math.min(availH, availW)));
+    const qrSize = Math.max(120, Math.floor(availW));
     slidesLeftQRCode.style.width = qrSize + 'px';
     slidesLeftQRCode.style.height = qrSize + 'px';
     if (typeof QRCode !== 'undefined') new QRCode(slidesLeftQRCode, { text: joinUrl, width: qrSize, height: qrSize, colorDark: '#000', colorLight: '#fff' });

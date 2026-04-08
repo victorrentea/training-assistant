@@ -1,5 +1,6 @@
 # Tasks
 
+- [x] direct request: Slides left QR now renders at 100% of left container width.
 - [x] direct request: Slides left QR centered on Y axis and resized to fill host left panel width (full X fit).
 - [x] direct request: remove remaining join-link label next to Slides left QR in host UI (deleted from markup and render path).
 - [x] direct request: remove URL text next to left Slides QR; left panel now shows QR-only for Slides in workshop mode.
