@@ -147,7 +147,6 @@ body {
   border-bottom: 1px solid var(--border);
   padding: 0 1rem;
   flex-shrink: 0;
-  position: relative;
 }
 .host-top-bar .tab-bar {
   flex-shrink: 0;
@@ -155,19 +154,21 @@ body {
   margin-bottom: 0;
   padding-bottom: 0;
 }
+.host-top-spacer {
+  flex: 1;
+  min-width: 0;
+}
 .host-top-title-wrap {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  max-width: 40%;
+  max-width: min(40vw, 560px);
   display: flex;
   align-items: center;
   gap: .4rem;
-  pointer-events: none;
+  margin-right: .75rem;
+  min-width: 0;
 }
 .host-top-title {
   min-width: 0;
-  text-align: center;
+  text-align: right;
   font-size: 1.5rem;
   font-weight: 700;
   color: var(--text);
@@ -175,7 +176,6 @@ body {
   text-overflow: ellipsis;
   white-space: nowrap;
   letter-spacing: .01em;
-  pointer-events: none;
 }
 .host-top-pax {
   display: flex;
