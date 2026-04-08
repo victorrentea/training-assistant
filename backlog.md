@@ -292,3 +292,4 @@ Host broadcasts a statement: "Have you ever shipped code that violated what we j
 - [x] Follow-up direct request: center host slides-mode left QR against the full left panel height (not a sub-area), including after resize.
 - [x] Follow-up direct request: enforce explicit 50%/50% absolute centering for host slides-mode left QR to keep vertical centering stable after any resize.
 - [x] Follow-up direct request: constrain host left column with `min-height: 0` so slides QR centering is computed within visible grid height (prevents off-screen centering drift).
+- [x] Direct request: host footer join link display now omits the `https://` prefix (link behavior/copy URL unchanged).

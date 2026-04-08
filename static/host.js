@@ -182,7 +182,7 @@
   const pLink = document.getElementById('participant-link');
   _initFooterBadgeTooltips();
   if (pLink) {
-    pLink.innerHTML = _currentSessionId ? _buildUrlHtml() : '';
+    pLink.innerHTML = _currentSessionId ? _buildUrlHtml({ stripProtocol: true }) : '';
     if (_currentSessionId) {
       pLink.title = 'Click to copy • Ctrl/Cmd+Click to open';
     } else {
@@ -3433,7 +3433,7 @@ function updateSessionCodeBar(sessionId) {
   const pLink = document.getElementById('participant-link');
   if (pLink && changed) {
     if (sessionId) {
-      pLink.innerHTML = _buildUrlHtml();
+      pLink.innerHTML = _buildUrlHtml({ stripProtocol: true });
       pLink.title = 'Click to copy • Ctrl/Cmd+Click to open';
     } else {
       pLink.innerHTML = '';
