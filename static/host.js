@@ -3760,7 +3760,7 @@ function createSession() {
   const suffix = document.getElementById('session-create-input').value.trim();
   if (!suffix) return;
   const name = prefix + suffix;
-  fetch('/api/session/start', {
+  fetch('/api/session/create', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({name})

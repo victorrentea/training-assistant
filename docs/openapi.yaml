@@ -1082,14 +1082,14 @@ paths:
       x-feature: identity
       x-doc-notes:
       - Returns host-facing full state snapshot.
-  /api/session/start:
+  /api/session/create:
     post:
       tags:
       - session
       summary: Start Session
       description: Host starts a new session (creates folder, assigns session_id,
         clean slate).
-      operationId: start_session_api_session_start_post
+      operationId: start_session_api_session_create_post
       requestBody:
         content:
           application/json:
@@ -2686,10 +2686,6 @@ components:
       title: SessionMainPayload
     SessionStartResponse:
       properties:
-        ok:
-          type: boolean
-          title: Ok
-          default: true
         session_name:
           type: string
           title: Session Name

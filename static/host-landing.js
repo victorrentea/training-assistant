@@ -144,7 +144,7 @@ async function doCreate(type) {
   if (errEl) errEl.style.display = 'none';
 
   try {
-    const r = await fetch('/api/session/start', {
+    const r = await fetch('/api/session/create', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       credentials: 'include',

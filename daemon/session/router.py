@@ -128,11 +128,7 @@ class ResumeSessionRequest(BaseModel):
     folder: str
 
 
-class OkResponse(BaseModel):
-    ok: bool = True
-
-
-class SessionStartResponse(OkResponse):
+class SessionStartResponse(BaseModel):
     session_name: str
     session_id: str
 
@@ -145,7 +141,7 @@ class SessionActiveResponse(BaseModel):
     session_id: str | None
 
 
-@global_router.post("/start", response_model=SessionStartResponse)
+@global_router.post("/create", response_model=SessionStartResponse)
 async def start_session(body: StartSessionRequest):
     """Host starts a new session (creates folder, assigns session_id, clean slate)."""
     name = normalize_session_name(body.name)

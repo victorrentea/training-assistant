@@ -58,7 +58,7 @@ def test_participant_name_survives_close_reopen():
         pass
 
     session_name = f"Restore Name {int(time.time())}"
-    started = _req("POST", "/api/session/start", {"name": session_name, "type": "workshop"})
+    started = _req("POST", "/api/session/create", {"name": session_name, "type": "workshop"})
     session_id = started["session_id"]
     assert session_id
 
