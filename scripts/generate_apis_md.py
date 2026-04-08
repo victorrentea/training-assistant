@@ -705,6 +705,16 @@ def _schema_definition_lines(schema_name: str, root: dict[str, Any]) -> list[str
     return lines
 
 
+def _render_shape_line(line: str) -> str:
+    stripped = line.lstrip()
+    indent = len(line) - len(stripped)
+    rendered = stripped
+    if indent >= 2:
+        rendered = re.sub(r"\s*:\s*", ":", rendered, count=1)
+        return f"&nbsp;&nbsp;&nbsp;&nbsp;`{rendered}`"
+    return f"`{line}`"
+
+
 def _render_shape_cell(shape: str, root: dict[str, Any]) -> str:
     if shape.strip() in {"", "-", "none"}:
         return "-"
@@ -713,7 +723,7 @@ def _render_shape_cell(shape: str, root: dict[str, Any]) -> str:
     if "\n" in shape:
         # Preserve leading indentation in multiline shapes (type field alignment).
         lines = [line.rstrip() for line in shape.splitlines() if line.strip()]
-        rendered_main = "<br>".join(f"`{line}`" for line in lines)
+        rendered_main = "<br>".join(_render_shape_line(line) for line in lines)
     else:
         rendered_main = f"`{shape}`"
 
@@ -724,7 +734,7 @@ def _render_shape_cell(shape: str, root: dict[str, Any]) -> str:
     definition_blocks: list[str] = []
     for name in schema_names:
         definition_lines = _schema_definition_lines(name, root)
-        definition_blocks.append("<br>".join(f"`{line}`" for line in definition_lines))
+        definition_blocks.append("<br>".join(_render_shape_line(line) for line in definition_lines))
     return f"{rendered_main}<br><br>{'<br><br>'.join(definition_blocks)}"
 
 

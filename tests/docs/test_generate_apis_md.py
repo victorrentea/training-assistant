@@ -145,7 +145,7 @@ def test_generator_expands_referenced_response_types():
     assert slides_cache_row, "Missing table row for GET /api/participant/slides-cache-status"
     assert "`slides_cache_status?: dict[str, SlidesCacheStatusEntry]`" in slides_cache_row.group(0)
     assert "`SlidesCacheStatusEntry {`" in slides_cache_row.group(0)
-    assert "`  status: string`" in slides_cache_row.group(0)
+    assert "&nbsp;&nbsp;&nbsp;&nbsp;`status:string`" in slides_cache_row.group(0)
 
 
 def test_generator_expands_nested_referenced_types():
