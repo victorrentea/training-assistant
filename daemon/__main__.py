@@ -925,6 +925,7 @@ def run() -> None:
                         name = session_req["name"]
                         sid = session_req.get("session_id")
                         session_type = session_req.get("type", "workshop")
+                        did_sync_in_create = False
                         if sid:
                             set_current_session_id(sid)
                             _active_session_id = sid
@@ -996,8 +997,23 @@ def run() -> None:
                                 file_time=get_ai_summary_mtime(folder),
                                 raw_markdown=get_ai_summary_raw(folder),
                             )
+                            did_sync_in_create = True
                             # mode_changed removed — host.js/participant.js don't handle it; mode is in full state on reconnect
                             transcript_state.reset()
+                        if not did_sync_in_create:
+                            # Resume may arrive when a session stack is already in memory
+                            # (e.g. after daemon restart with stale stack restore). Ensure
+                            # active session id is persisted/broadcast even in that path.
+                            _do_save_daemon_state()
+                            sync_session_to_server(
+                                config,
+                                session_stack,
+                                current_key_points,
+                                session_state=runtime_session_snapshot if runtime_session_snapshot else None,
+                                session_id=_active_session_id,
+                                file_time=get_ai_summary_mtime(folder),
+                                raw_markdown=get_ai_summary_raw(folder),
+                            )
                         participant_join_link = (
                             f"{config.server_url}/{_active_session_id}"
                             if _active_session_id

@@ -1,5 +1,6 @@
 # Tasks
 
+- [x] bugfix: session `resume/start` now force-syncs active session id to local shared state + Railway even when a session stack already exists in memory, preventing host landing from getting stuck on `/host` after resume.
 - [x] follow-up: participant landing local-daemon detection now polls indefinitely (no max-attempt cutoff) and auto-joins immediately when `/api/session/active` returns a valid session id.
 - [x] feature: when participants are disconnected at session end, landing now preserves the disconnected session code in `code` query param and auto-retries reconnect every 3s for up to 1 minute with Join-button progress feedback.
 - [x] bugfix: host landing no longer shows the "New version detected" auto-reload banner after session end; version mismatch checks there now run only while `session_active` is true.
