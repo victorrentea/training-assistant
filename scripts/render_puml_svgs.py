@@ -55,3 +55,17 @@ def check_render_sync(
             if not expected.exists() or expected.read_bytes() != rendered.read_bytes():
                 stale.append(expected)
     return stale
+
+
+def main() -> int:
+    files = discover_puml_files(SEQUENCES_DIR)
+    if not files:
+        return 0
+
+    for output in render_puml_files(files, SVG_DIR):
+        print(f"rendered {output.relative_to(ROOT)}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

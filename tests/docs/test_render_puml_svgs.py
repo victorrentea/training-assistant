@@ -1,5 +1,8 @@
+import runpy
 import subprocess
 from pathlib import Path
+
+import pytest
 
 from scripts.render_puml_svgs import (
     check_render_sync,
@@ -88,3 +91,41 @@ def test_check_render_sync_reports_missing_and_stale_svgs(tmp_path, monkeypatch)
     stale = check_render_sync([first, second, third], svg_dir, plantuml_bin="plantuml")
 
     assert stale == [svg_dir / "02-b.svg", svg_dir / "03-c.svg"]
+
+
+def test_script_entrypoint_renders_all_discovered_svgs(tmp_path, monkeypatch, capsys):
+    repo_root = tmp_path
+    sequences_dir = repo_root / "docs" / "sequences"
+    svg_dir = sequences_dir / "svg"
+    first = sequences_dir / "01-a.puml"
+    second = sequences_dir / "02-b.puml"
+    _write_puml(first, "first")
+    _write_puml(second, "second")
+
+    original_resolve = Path.resolve
+
+    def fake_resolve(self, *args, **kwargs):
+        if self.name == "render_puml_svgs.py" and self.parent.name == "scripts":
+            return repo_root / "scripts" / "render_puml_svgs.py"
+        return original_resolve(self, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "resolve", fake_resolve)
+    monkeypatch.setattr("shutil.which", lambda _bin: "/usr/bin/plantuml")
+
+    def fake_run(cmd, check, capture_output, text):
+        output_dir = Path(cmd[cmd.index("-o") + 1])
+        source = Path(cmd[-1])
+        output_dir.mkdir(parents=True, exist_ok=True)
+        (output_dir / f"{source.stem}.svg").write_text(f"<svg>{source.stem}</svg>", encoding="utf-8")
+        return subprocess.CompletedProcess(cmd, 0, "", "")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+
+    with pytest.raises(SystemExit) as excinfo:
+        runpy.run_path("scripts/render_puml_svgs.py", run_name="__main__")
+
+    assert excinfo.value.code == 0
+    assert capsys.readouterr().out.splitlines() == [
+        "rendered docs/sequences/svg/01-a.svg",
+        "rendered docs/sequences/svg/02-b.svg",
+    ]
