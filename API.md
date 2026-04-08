@@ -4,9 +4,9 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
 
 ## Table of Contents
 - [Session Management](#feature-session-management)
+- [Identity](#feature-identity)
 - [Slides](#feature-slides)
 - [Activity Switching](#feature-activity-switching)
-- [Identity](#feature-identity)
 - [Poll](#feature-poll)
 - [Word Cloud](#feature-word-cloud)
 - [Q&A](#feature-qa)
@@ -39,6 +39,32 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
 | Host sets session mode (workshop/conference).<br>`POST /api/{session_id}/host/mode` | `{mode: string}` | `{ok?: bool}` |
 | Get Interval Lines Txt, return raw transcript lines for a time window; returns text/plain interval lines for session export/inspection.<br>`GET /api/{session_id}/session/interval-lines.txt` | - | `text/plain: string` |
 
+## Feature: Identity
+
+### Participant REST
+| Endpoint | Request | Response |
+| --- | --- | --- |
+| Refresh Avatar Endpoint, re-roll avatar (conference mode only).<br>`POST /api/participant/avatar` | `{rejected?: list[string]}` | `ok?: bool`<br>`avatar: string` |
+| Set Location, store participant city/timezone.<br>`POST /api/participant/location` | `{location: string}` | `{ok?: bool}` |
+| Rename Participant, returns 400 if not yet registered.<br>`PUT /api/participant/name` | `{name: string}` | - |
+| Register Participant, idempotent for returning participants.<br>`POST /api/participant/register` | - | `name: string`<br>`avatar: string` |
+| Get Participant State, return full personalised state for a participant — used on page load and WS reconnect; returns participant-personalized full state snapshot.<br>`GET /api/participant/state` | - | `type?: string`<br>`mode: string`<br>`my_score: int`<br>`my_name: string`<br>`my_avatar: string`<br>`current_activity: string`<br>`participant_count: int`<br>`host_connected: bool`<br>`daemon_connected: bool`<br>`wordcloud_words: dict[str, int]`<br>`wordcloud_word_order: list[string]`<br>`wordcloud_topic: string`<br>`qa_questions: list[QAQuestionRaw]`<br>`poll?: PollData \| null`<br>`poll_active: bool`<br>`vote_counts: dict[str, int]`<br>`poll_timer_seconds?: int \| null`<br>`poll_timer_started_at?: string \| null`<br>`poll_correct_ids?: list[string] \| null`<br>`my_vote?: string \| list[string] \| null`<br>`my_voted_ids?: list[string] \| null`<br>`codereview: CodeReviewParticipantState`<br>`debate_statement?: string \| null`<br>`debate_phase?: string \| null`<br>`debate_my_side?: string \| null`<br>`debate_my_is_champion: bool`<br>`debate_side_counts: dict[str, int]`<br>`debate_arguments: list[DebateArgumentParticipant]`<br>`debate_champions: dict[str, string]`<br>`debate_auto_assigned: list[string]`<br>`debate_first_side?: string \| null`<br>`debate_round_index?: int \| null`<br>`debate_round_timer_seconds?: int \| null`<br>`debate_round_timer_started_at?: string \| null`<br>`slides_current?: SlidesCurrentPayload \| null`<br>`session_main?: SessionMainPayload \| null`<br>`session_name?: string \| null`<br>`leaderboard_data?: LeaderboardData \| null`<br>`summary_count: int`<br>`notes_count: int` |
+
+### Participant WS
+| Message | Payload |
+| --- | --- |
+| `participant_count_updated` | `{count: int}` |
+
+### Host REST
+| Endpoint | Request | Response |
+| --- | --- | --- |
+| Get Host State, return full state for host page load — replicates Railway build_for_host(); returns host-facing full state snapshot.<br>`GET /api/{session_id}/host/state` | - | `type?: string`<br>`mode: string`<br>`current_activity: string`<br>`participant_count: int`<br>`participants: list[HostParticipant]`<br>`daemon_connected: bool`<br>`overlay_connected: bool`<br>`wordcloud_words: dict[str, int]`<br>`wordcloud_word_order: list[string]`<br>`wordcloud_topic: string`<br>`qa_questions: list[HostQAQuestion]`<br>`poll?: PollData \| null`<br>`poll_active: bool`<br>`vote_counts: dict[str, int]`<br>`votes: dict[str, HostPollVote]`<br>`poll_timer_seconds?: int \| null`<br>`poll_timer_started_at?: string \| null`<br>`poll_correct_ids?: list[string] \| null`<br>`codereview: HostCodeReviewState`<br>`debate_statement?: string \| null`<br>`debate_phase?: string \| null`<br>`debate_side_counts: dict[str, int]`<br>`debate_sides: dict[str, string]`<br>`debate_arguments: list[DebateArgumentHost]`<br>`debate_champions: dict[str, string]`<br>`debate_auto_assigned: list[string]`<br>`debate_first_side?: string \| null`<br>`debate_round_index?: int \| null`<br>`debate_round_timer_seconds?: int \| null`<br>`debate_round_timer_started_at?: string \| null`<br>`slides_current?: SlidesCurrentPayload \| null`<br>`slides_log: list[SlidesLogEntry]`<br>`slides_log_deep_count: int`<br>`slides_log_topic?: string \| null`<br>`session_main?: SessionMainPayload \| null`<br>`session_name?: string \| null`<br>`session_id?: string \| null`<br>`join_base_url: string`<br>`daemon_session_folder?: string \| null`<br>`daemon_session_notes?: string \| null`<br>`leaderboard_data?: LeaderboardData \| null`<br>`summary_count: int`<br>`summary_updated_at?: string \| null`<br>`notes_count: int`<br>`token_usage: TokenUsage`<br>`transcript_line_count: int`<br>`transcript_total_lines: int`<br>`transcript_latest_ts?: string \| null`<br>`quiz_preview?: QuizPreviewPayload-Output \| null` |
+
+### Host WS
+| Message | Payload |
+| --- | --- |
+| Participant list changed (join/register/rename/location) — sent by daemon directly<br>`participant_list_updated` | `{participants: list[HostParticipant]}` |
+
 ## Feature: Slides
 
 ### Participant REST
@@ -69,32 +95,6 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
 | --- | --- | --- |
 | Host sets the current activity.<br>`POST /api/{session_id}/host/activity` | `{activity: string}` | `ok?: bool`<br>`current_activity: string` |
 | Host sets the current activity.<br>`PUT /api/{session_id}/host/activity` | `{activity: string}` | `ok?: bool`<br>`current_activity: string` |
-
-## Feature: Identity
-
-### Participant REST
-| Endpoint | Request | Response |
-| --- | --- | --- |
-| Refresh Avatar Endpoint, re-roll avatar (conference mode only).<br>`POST /api/participant/avatar` | `{rejected?: list[string]}` | `ok?: bool`<br>`avatar: string` |
-| Set Location, store participant city/timezone.<br>`POST /api/participant/location` | `{location: string}` | `{ok?: bool}` |
-| Rename Participant, returns 400 if not yet registered.<br>`PUT /api/participant/name` | `{name: string}` | - |
-| Register Participant, idempotent for returning participants.<br>`POST /api/participant/register` | - | `name: string`<br>`avatar: string` |
-| Get Participant State, return full personalised state for a participant — used on page load and WS reconnect; returns participant-personalized full state snapshot.<br>`GET /api/participant/state` | - | `type?: string`<br>`mode: string`<br>`my_score: int`<br>`my_name: string`<br>`my_avatar: string`<br>`current_activity: string`<br>`participant_count: int`<br>`host_connected: bool`<br>`daemon_connected: bool`<br>`wordcloud_words: dict[str, int]`<br>`wordcloud_word_order: list[string]`<br>`wordcloud_topic: string`<br>`qa_questions: list[QAQuestionRaw]`<br>`poll?: PollData \| null`<br>`poll_active: bool`<br>`vote_counts: dict[str, int]`<br>`poll_timer_seconds?: int \| null`<br>`poll_timer_started_at?: string \| null`<br>`poll_correct_ids?: list[string] \| null`<br>`my_vote?: string \| list[string] \| null`<br>`my_voted_ids?: list[string] \| null`<br>`codereview: CodeReviewParticipantState`<br>`debate_statement?: string \| null`<br>`debate_phase?: string \| null`<br>`debate_my_side?: string \| null`<br>`debate_my_is_champion: bool`<br>`debate_side_counts: dict[str, int]`<br>`debate_arguments: list[DebateArgumentParticipant]`<br>`debate_champions: dict[str, string]`<br>`debate_auto_assigned: list[string]`<br>`debate_first_side?: string \| null`<br>`debate_round_index?: int \| null`<br>`debate_round_timer_seconds?: int \| null`<br>`debate_round_timer_started_at?: string \| null`<br>`slides_current?: SlidesCurrentPayload \| null`<br>`session_main?: SessionMainPayload \| null`<br>`session_name?: string \| null`<br>`leaderboard_data?: LeaderboardData \| null`<br>`summary_count: int`<br>`notes_count: int` |
-
-### Participant WS
-| Message | Payload |
-| --- | --- |
-| `participant_count_updated` | `{count: int}` |
-
-### Host REST
-| Endpoint | Request | Response |
-| --- | --- | --- |
-| Get Host State, return full state for host page load — replicates Railway build_for_host(); returns host-facing full state snapshot.<br>`GET /api/{session_id}/host/state` | - | `type?: string`<br>`mode: string`<br>`current_activity: string`<br>`participant_count: int`<br>`participants: list[HostParticipant]`<br>`daemon_connected: bool`<br>`overlay_connected: bool`<br>`wordcloud_words: dict[str, int]`<br>`wordcloud_word_order: list[string]`<br>`wordcloud_topic: string`<br>`qa_questions: list[HostQAQuestion]`<br>`poll?: PollData \| null`<br>`poll_active: bool`<br>`vote_counts: dict[str, int]`<br>`votes: dict[str, HostPollVote]`<br>`poll_timer_seconds?: int \| null`<br>`poll_timer_started_at?: string \| null`<br>`poll_correct_ids?: list[string] \| null`<br>`codereview: HostCodeReviewState`<br>`debate_statement?: string \| null`<br>`debate_phase?: string \| null`<br>`debate_side_counts: dict[str, int]`<br>`debate_sides: dict[str, string]`<br>`debate_arguments: list[DebateArgumentHost]`<br>`debate_champions: dict[str, string]`<br>`debate_auto_assigned: list[string]`<br>`debate_first_side?: string \| null`<br>`debate_round_index?: int \| null`<br>`debate_round_timer_seconds?: int \| null`<br>`debate_round_timer_started_at?: string \| null`<br>`slides_current?: SlidesCurrentPayload \| null`<br>`slides_log: list[SlidesLogEntry]`<br>`slides_log_deep_count: int`<br>`slides_log_topic?: string \| null`<br>`session_main?: SessionMainPayload \| null`<br>`session_name?: string \| null`<br>`session_id?: string \| null`<br>`join_base_url: string`<br>`daemon_session_folder?: string \| null`<br>`daemon_session_notes?: string \| null`<br>`leaderboard_data?: LeaderboardData \| null`<br>`summary_count: int`<br>`summary_updated_at?: string \| null`<br>`notes_count: int`<br>`token_usage: TokenUsage`<br>`transcript_line_count: int`<br>`transcript_total_lines: int`<br>`transcript_latest_ts?: string \| null`<br>`quiz_preview?: QuizPreviewPayload-Output \| null` |
-
-### Host WS
-| Message | Payload |
-| --- | --- |
-| Participant list changed (join/register/rename/location) — sent by daemon directly<br>`participant_list_updated` | `{participants: list[HostParticipant]}` |
 
 ## Feature: Poll
 

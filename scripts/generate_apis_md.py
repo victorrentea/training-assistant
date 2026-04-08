@@ -50,9 +50,9 @@ FEATURE_LABELS: dict[str, str] = {
 
 FEATURE_ORDER = [
     "session_management",
+    "identity",
     "slides",
     "activity",
-    "identity",
     "poll",
     "wordcloud",
     "qa",
