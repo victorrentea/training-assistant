@@ -14,3 +14,7 @@ fi
 echo "Running pre-push checks: ${RUNNER} bash tests/check-all.sh"
 # shellcheck disable=SC2086
 $RUNNER bash "$REPO_ROOT/tests/check-all.sh"
+
+echo "Running pre-push dead-code check: ${RUNNER} python3 -m vulture"
+# shellcheck disable=SC2086
+$RUNNER python3 -m vulture
