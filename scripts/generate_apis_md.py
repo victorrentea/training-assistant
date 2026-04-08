@@ -312,8 +312,8 @@ def _compose_rest_endpoint_text(op: RestOp) -> str:
 def _wrap_endpoint_text(text: str, width: int = 72) -> str:
     if len(text) <= width:
         return text
-    # Prefer breaks at semicolon separators, then wrap long fragments by width.
-    preferred = text.replace("; ", ";\n")
+    # Prefer breaks at em-dash and semicolon separators, then wrap by width.
+    preferred = text.replace(" — ", "\n— ").replace("; ", ";\n")
     lines: list[str] = []
     for raw in preferred.splitlines():
         chunk = raw.strip()
