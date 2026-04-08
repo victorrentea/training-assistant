@@ -74,7 +74,6 @@ The user frequently uses a dictation tool. Messages may contain misheard words (
 
 - **Push to master after each task**: create a git commit and push directly (no PR needed)
 - **Proof before done**: screenshot for visual changes; test output/logs for non-visual tasks
-- **Deploy monitoring**: `./watch-deploy.sh` writes heartbeat to `/tmp/watch_deploy.lock`. After creating a PR, verify it's running (fresh heartbeat <15s)
 - **Architecture docs**: after significant changes, update C4 diagrams and system interactions in [ARCHITECTURE.md](ARCHITECTURE.md)
 - **Running tests**: use convenience scripts: `bash tests/check-all.sh`, `bash tests/run-daemon-tests.sh`, `bash tests/docker/run-hermetic.sh`
 - **E2E = hermetic**: Docker tests in `tests/docker/` with real backend + daemon + Playwright. See [TESTING.md](TESTING.md)
