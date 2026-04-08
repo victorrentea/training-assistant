@@ -185,7 +185,8 @@ def test_rest_table_notes_do_not_use_note_prefix():
     session_active_row = re.search(r"^\| .*`GET /api/session/active`.*\|$", output, re.MULTILINE)
     assert session_active_row, "Missing table row for GET /api/session/active"
     assert "<br>Note:" not in session_active_row.group(0)
-    assert "public endpoint: returns the active session_id or null." in session_active_row.group(0).lower()
+    flattened = session_active_row.group(0).replace("<br>", " ").lower()
+    assert "public endpoint: returns the active session_id or null." in flattened
 
 
 def test_rest_table_notes_are_not_rendered_in_response_column():

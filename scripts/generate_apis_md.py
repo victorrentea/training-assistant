@@ -16,6 +16,7 @@ from __future__ import annotations
 import argparse
 import copy
 import re
+import textwrap
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -306,6 +307,21 @@ def _compose_rest_endpoint_text(op: RestOp) -> str:
         return f"{actor_rewrite} {details_text}"
 
     return _merge_title_with_details(op.title, details)
+
+
+def _wrap_endpoint_text(text: str, width: int = 72) -> str:
+    if len(text) <= width:
+        return text
+    # Prefer breaks at semicolon separators, then wrap long fragments by width.
+    preferred = text.replace("; ", ";\n")
+    lines: list[str] = []
+    for raw in preferred.splitlines():
+        chunk = raw.strip()
+        if not chunk:
+            continue
+        wrapped = textwrap.wrap(chunk, width=width, break_long_words=False, break_on_hyphens=False)
+        lines.extend(wrapped or [chunk])
+    return "<br>".join(lines)
 
 
 def _shape(
@@ -715,7 +731,8 @@ def _render_shape_cell(shape: str, root: dict[str, Any]) -> str:
 def _render_rest(items: list[RestOp], root: dict[str, Any]) -> list[str]:
     lines: list[str] = ["| Endpoint | Request | Response |", "| --- | --- | --- |"]
     for op in sorted(items, key=lambda i: (i.path, i.method)):
-        endpoint_parts = [_compose_rest_endpoint_text(op), f"`{op.method} {op.path}`"]
+        endpoint_desc = _wrap_endpoint_text(_compose_rest_endpoint_text(op))
+        endpoint_parts = [endpoint_desc, f"`{op.method} {op.path}`"]
         endpoint = _escape_md_cell("<br>".join(endpoint_parts))
         request = _escape_md_cell(_render_shape_cell(op.request_shape, root))
         response = _escape_md_cell(_render_shape_cell(op.response_shape, root))
