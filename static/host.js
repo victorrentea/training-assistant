@@ -3714,9 +3714,18 @@ function copyDiskPath(el) {
       tip.style.top = rect.top - 4 + 'px';
       document.body.appendChild(tip);
       setTimeout(() => tip.remove(), 1200);
-      // Remove from client-side state and re-render
-      participant.received_files = participant.received_files.filter(e => String(e.id) !== String(fileId));
-      renderParticipantList(cachedParticipantIds);
+      fetch(API('/uploads/dismiss'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ uuid, file_id: String(fileId) }),
+      }).then((resp) => {
+        if (!resp.ok) throw new Error('dismiss failed');
+        // Remove from client-side state and re-render (server already persisted)
+        participant.received_files = participant.received_files.filter(e => String(e.id) !== String(fileId));
+        renderParticipantList(cachedParticipantIds);
+      }).catch(() => {
+        toast('Path copied, but failed to dismiss icon');
+      });
     });
   }
 }

@@ -25,5 +25,5 @@ When a participant uploads a file to Railway, the daemon downloads it to the ses
 - **Backend (Railway):** `railway/features/upload/router.py` — after storing the file, broadcast a `file_ready_for_download` WS message to the daemon; on daemon ack, delete the temp file
 - **Daemon:** add a handler for the `file_ready_for_download` WS message from Railway; download the file to `{session_folder}/uploads/`; persist indicator state; send `file_uploaded` event to host browser WS with `disk_path` via Railway proxy
 - **Daemon session state:** persist per-file `disk_path` and dismissal status in active daemon session state, keyed by participant/file
-- **Host WS state:** `host-ws.yaml` — include daemon-backed pending file indicators in host state snapshots (proxied by Railway) and add/update `file_uploaded` message schema with `disk_path` field
-- **Host UI:** `static/host.js` — handle `file_uploaded` WS message; render blinking download icon per participant; copy-to-clipboard + dismiss on click
+- **Host WS state:** `host-ws.yaml` — include pending file indicators in host snapshots generated from daemon session state and delivered to the browser through Railway's WS relay; add/update `file_uploaded` message schema with `disk_path` field
+- **Host UI:** `static/host.js` — handle `file_uploaded` WS message; render blinking download icon per participant; on click copy the full absolute `disk_path` to clipboard and dismiss the icon

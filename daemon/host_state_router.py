@@ -44,6 +44,9 @@ def _build_host_participants_list() -> list[dict]:
         paste_entries = misc_state.paste_texts.get(pid, [])
         if paste_entries:
             entry["paste_texts"] = paste_entries
+        uploaded_entries = misc_state.visible_uploaded_files(pid)
+        if uploaded_entries:
+            entry["received_files"] = uploaded_entries
         result.append(entry)
     return result
 

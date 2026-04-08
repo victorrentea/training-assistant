@@ -32,8 +32,8 @@
 
 ## 6. Session-state persistence for host resume
 
-- [ ] 6.1 Persist uploaded file indicators in daemon session state with `uuid`, `file_id`, `filename`, `disk_path`, `dismissed`
-- [ ] 6.2 Include non-dismissed daemon-backed uploaded file indicators in host state snapshots (proxied by Railway) so reconnect/resume rehydrates UI
-- [ ] 6.3 Add host action (REST or WS via Railway proxy) to mark a file indicator dismissed in daemon session state after copy
-- [ ] 6.4 Update `static/host.js` to render from snapshot-backed indicators and keep dismissal behavior consistent after reconnect
-- [ ] 6.5 Add/extend tests for reconnect/resume behavior: indicator visible before dismiss, hidden after dismiss, both preserved across host reconnect
+- [x] 6.1 Persist uploaded file indicators in daemon session state with `uuid`, `file_id`, `filename`, `disk_path`, `dismissed`
+- [x] 6.2 Include non-dismissed daemon-backed uploaded file indicators in host state snapshots (proxied by Railway) so reconnect/resume rehydrates UI
+- [x] 6.3 Add host action (REST or WS via Railway proxy) to mark a file indicator dismissed in daemon session state after copy
+- [x] 6.4 Update `static/host.js` to render from snapshot-backed indicators and keep dismissal behavior consistent after reconnect
+- [x] 6.5 Add/extend tests for reconnect/resume behavior: indicator visible before dismiss, hidden after dismiss, both preserved across host reconnect

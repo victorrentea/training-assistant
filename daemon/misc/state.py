@@ -6,6 +6,7 @@ class MiscState:
     def __init__(self):
         self._lock = threading.Lock()
         self.paste_texts: dict[str, list[dict]] = {}  # uuid → [{id, text}]
+        self.uploaded_files: dict[str, list[dict]] = {}  # uuid -> [{id, filename, size, disk_path, dismissed}]
         # TODO: notes_content, summary_points, summary_raw_markdown, summary_updated_at
         #  are currently synced from Railway state (via sync_from_restore).
         #  They should be read from disk files (ai-summary.md, *.txt) instead of stored in state.
@@ -26,6 +27,20 @@ class MiscState:
             if "paste_texts" in data:
                 self.paste_texts.clear()
                 self.paste_texts.update(data["paste_texts"])
+            if "uploaded_files" in data:
+                self.uploaded_files.clear()
+                raw_uploaded = data["uploaded_files"] or {}
+                for pid, entries in raw_uploaded.items():
+                    clean_entries = []
+                    for entry in entries or []:
+                        clean_entries.append({
+                            "id": str(entry.get("id", "")),
+                            "filename": str(entry.get("filename", "")),
+                            "size": int(entry.get("size", 0) or 0),
+                            "disk_path": str(entry.get("disk_path", "")),
+                            "dismissed": bool(entry.get("dismissed", False)),
+                        })
+                    self.uploaded_files[str(pid)] = clean_entries
             if "notes_content" in data:
                 self.notes_content = data["notes_content"]
             if "summary_points" in data:
@@ -52,6 +67,48 @@ class MiscState:
         entries.append(entry)
         return entry
 
+    def add_uploaded_file(
+        self,
+        pid: str,
+        file_id: str,
+        filename: str,
+        size: int,
+        disk_path: str,
+    ) -> dict:
+        with self._lock:
+            entries = self.uploaded_files.setdefault(pid, [])
+            normalized_id = str(file_id)
+            for entry in entries:
+                if str(entry.get("id")) == normalized_id:
+                    entry["filename"] = filename
+                    entry["size"] = int(size)
+                    entry["disk_path"] = disk_path
+                    entry["dismissed"] = False
+                    return dict(entry)
+            created = {
+                "id": normalized_id,
+                "filename": filename,
+                "size": int(size),
+                "disk_path": disk_path,
+                "dismissed": False,
+            }
+            entries.append(created)
+            return dict(created)
+
+    def dismiss_uploaded_file(self, target_uuid: str, file_id: str) -> bool:
+        with self._lock:
+            entries = self.uploaded_files.get(target_uuid, [])
+            for entry in entries:
+                if str(entry.get("id")) == str(file_id):
+                    entry["dismissed"] = True
+                    return True
+            return False
+
+    def visible_uploaded_files(self, pid: str) -> list[dict]:
+        with self._lock:
+            entries = self.uploaded_files.get(pid, [])
+            return [dict(e) for e in entries if not bool(e.get("dismissed", False))]
+
     def dismiss_paste(self, target_uuid: str, paste_id: str) -> bool:
         if target_uuid not in self.paste_texts:
             return False
@@ -74,12 +131,14 @@ class MiscState:
     def snapshot(self) -> dict:
         return {
             "paste_texts": {k: list(v) for k, v in self.paste_texts.items()},
+            "uploaded_files": {k: [dict(e) for e in v] for k, v in self.uploaded_files.items()},
         }
 
     def reset_for_new_session(self) -> None:
         """Reset session-scoped misc runtime state when a new session starts."""
         with self._lock:
             self.paste_texts.clear()
+            self.uploaded_files.clear()
             self.notes_content = None
             self.summary_points = []
             self.summary_raw_markdown = None

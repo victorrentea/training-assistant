@@ -106,21 +106,11 @@ async def ack_upload(file_id: int, body: _AckBody):
     result = _find_entry(file_id)
     if not result:
         raise HTTPException(404, "File not found")
-    uuid, entry = result
+    _, entry = result
     entry["disk_path"] = body.disk_path
     entry["downloaded_at"] = time.time()
     # Delete temp file from Railway
     railway_path = Path(entry.get("railway_path", ""))
     if railway_path.exists():
         railway_path.unlink(missing_ok=True)
-    # Notify host browser
-    from railway.shared.messaging import send_to_host
-    await send_to_host({
-        "type": "file_uploaded",
-        "uuid": uuid,
-        "id": str(file_id),
-        "filename": entry["filename"],
-        "size": entry["size"],
-        "disk_path": body.disk_path,
-    })
     return {"ok": True}

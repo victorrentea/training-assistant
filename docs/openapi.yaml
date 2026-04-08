@@ -433,6 +433,25 @@ paths:
           content:
             application/json:
               schema: {}
+  /api/{session_id}/host/poll/status:
+    put:
+      tags:
+      - poll
+      summary: Set Poll Status
+      description: 'Compatibility: {open: true} → open_poll, {open: false} → close_poll.'
+      operationId: set_poll_status_api__session_id__host_poll_status_put
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetPollStatusRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
   /api/{session_id}/quiz-md:
     get:
       tags:
@@ -452,6 +471,18 @@ paths:
       - leaderboard
       summary: Show Leaderboard
       operationId: show_leaderboard_api__session_id__host_leaderboard_show_post
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+  /api/{session_id}/host/leaderboard/hide:
+    post:
+      tags:
+      - leaderboard
+      summary: Hide Leaderboard
+      operationId: hide_leaderboard_api__session_id__host_leaderboard_hide_post
       responses:
         '200':
           description: Successful Response
@@ -580,6 +611,45 @@ paths:
       summary: Get Host Summary
       description: Return summary points, raw markdown, and updated_at timestamp.
       operationId: get_host_summary_api__session_id__host_summary_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+  /api/{session_id}/host/uploads/dismiss:
+    post:
+      tags:
+      - misc
+      summary: Dismiss Uploaded File
+      description: Mark an uploaded-file indicator as dismissed in daemon session
+        state.
+      operationId: dismiss_uploaded_file_api__session_id__host_uploads_dismiss_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UploadDismissRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+  /api/{session_id}/host/mode:
+    post:
+      tags:
+      - misc
+      summary: Set Mode
+      description: Host switches session mode (workshop/conference).
+      operationId: set_mode_api__session_id__host_mode_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetModeRequest'
+        required: true
       responses:
         '200':
           description: Successful Response
@@ -767,6 +837,24 @@ paths:
       summary: Set Activity
       description: Host switches the current activity.
       operationId: set_activity_api__session_id__host_activity_put
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetActivityRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+    post:
+      tags:
+      - activity
+      summary: Set Activity
+      description: Host switches the current activity.
+      operationId: set_activity_api__session_id__host_activity_post
       requestBody:
         content:
           application/json:
@@ -1449,6 +1537,24 @@ components:
       required:
       - side
       title: SetFirstSideRequest
+    SetModeRequest:
+      properties:
+        mode:
+          type: string
+          title: Mode
+      type: object
+      required:
+      - mode
+      title: SetModeRequest
+    SetPollStatusRequest:
+      properties:
+        open:
+          type: boolean
+          title: Open
+      type: object
+      required:
+      - open
+      title: SetPollStatusRequest
     SetTopicBody:
       properties:
         topic:
@@ -1523,6 +1629,19 @@ components:
       required:
       - language
       title: TranscriptionLanguageRequest
+    UploadDismissRequest:
+      properties:
+        uuid:
+          type: string
+          title: Uuid
+        file_id:
+          type: string
+          title: File Id
+      type: object
+      required:
+      - uuid
+      - file_id
+      title: UploadDismissRequest
     UpvoteQuestionBody:
       properties:
         question_id:
