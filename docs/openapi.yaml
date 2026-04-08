@@ -2871,11 +2871,14 @@ components:
           title: Name
         type:
           type: string
+          enum:
+          - workshop
+          - conference
           title: Type
-          default: workshop
       type: object
       required:
       - name
+      - type
       title: StartSessionRequest
     StartTimerRequest:
       properties:

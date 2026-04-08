@@ -30,7 +30,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
 | Get Log Level<br>`GET /api/log-level` | - | `{level: 'info' \| 'debug'}` |
 | Set Log Level<br>`POST /api/log-level` | `{level: 'info' \| 'debug'}` | - |
 | Get Session Active, public endpoint: returns the active session_id or null.<br>`GET /api/session/active` | - | `{session_id: string \| null}` |
-| Host starts a new session (creates folder, assigns session_id, clean slate).<br>`POST /api/session/create` | `name: string`<br>`type?: string` | `session_name: string`<br>`session_id: string` |
+| Host starts a new session (creates folder, assigns session_id, clean slate).<br>`POST /api/session/create` | `name: string`<br>`type: 'workshop' \| 'conference'` | `session_name: string`<br>`session_id: string` |
 | Host ends the current session. Railway closes WS connections on session end.<br>`POST /api/session/end` | - | - |
 | Host ends the current session. Railway closes WS connections on session end.<br>`POST /api/session/end_talk` | - | - |
 | List Session Folders<br>`GET /api/session/folders` | - | `{folders: list[string]}` |

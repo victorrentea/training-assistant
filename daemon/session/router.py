@@ -10,6 +10,7 @@ import re
 import logging
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Literal
 
 from fastapi import APIRouter, Response
 from fastapi.responses import JSONResponse, PlainTextResponse
@@ -121,7 +122,7 @@ session_router = APIRouter(prefix="/api/{session_id}/session", tags=["session"])
 
 class StartSessionRequest(BaseModel):
     name: str
-    type: str = "workshop"
+    type: Literal["workshop", "conference"]
 
 
 class ResumeSessionRequest(BaseModel):

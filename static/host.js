@@ -3763,7 +3763,7 @@ function createSession() {
   fetch('/api/session/create', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({name})
+    body: JSON.stringify({name, type: 'workshop'})
   }).catch(e => console.error('createSession failed:', e));
 }
 
