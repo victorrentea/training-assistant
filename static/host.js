@@ -1037,7 +1037,7 @@
     const badge = document.getElementById('log-level-badge');
     if (!badge) return;
     const level = (_daemonLogLevel === 'debug') ? 'debug' : 'info';
-    badge.textContent = level;
+    badge.textContent = level.toUpperCase();
     badge.classList.remove('log-level-info', 'log-level-debug', 'log-level-pending');
     badge.classList.add(level === 'debug' ? 'log-level-debug' : 'log-level-info');
     if (_logLevelBusy) badge.classList.add('log-level-pending');

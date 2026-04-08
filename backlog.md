@@ -1,5 +1,6 @@
 # Tasks
 
+- [x] direct request: daemon log-level badge now uses uppercase labels (`INFO`/`DEBUG`) and gray styling for `INFO`.
 - [x] direct request: Slides left QR now renders at 100% of left container width.
 - [x] direct request: Slides left QR centered on Y axis and resized to fill host left panel width (full X fit).
 - [x] direct request: remove remaining join-link label next to Slides left QR in host UI (deleted from markup and render path).
