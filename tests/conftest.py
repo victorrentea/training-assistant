@@ -12,6 +12,7 @@ import subprocess
 import sys
 import time
 import threading
+from typing import TYPE_CHECKING
 
 # Ensure project root and tests dir are on sys.path
 _project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -24,8 +25,9 @@ import json
 import requests
 import pytest
 
-from pages.host_page import HostPage
-from pages.participant_page import ParticipantPage
+if TYPE_CHECKING:
+    from pages.host_page import HostPage
+    from pages.participant_page import ParticipantPage
 
 # Load secrets file early so HOST_USERNAME/HOST_PASSWORD are in env before being read
 _secrets_file = os.path.join(os.path.expanduser("~"), ".training-assistants-secrets.env")
@@ -293,7 +295,9 @@ def pax_browser_ctx(server_url, playwright):
 # ---------------------------------------------------------------------------
 
 @pytest.fixture()
-def host(server_url, playwright) -> HostPage:
+def host(server_url, playwright) -> "HostPage":
+    from pages.host_page import HostPage
+
     browser, ctx = host_browser_ctx(server_url, playwright)
     page = ctx.new_page()
     sid = _get_session_id()
@@ -305,7 +309,9 @@ def host(server_url, playwright) -> HostPage:
 
 def _make_pax_fixture():
     @pytest.fixture()
-    def pax(server_url, playwright) -> ParticipantPage:
+    def pax(server_url, playwright) -> "ParticipantPage":
+        from pages.participant_page import ParticipantPage
+
         browser, ctx = pax_browser_ctx(server_url, playwright)
         page = ctx.new_page()
         page.goto(pax_url())
