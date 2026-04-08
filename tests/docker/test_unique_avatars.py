@@ -145,7 +145,7 @@ def test_avatar_refresh_gives_unique_avatar_to_second_participant():
         p1_uuid = page1.evaluate("() => myUUID")
         auth = base64.b64encode(f"{HOST_USER}:{HOST_PASS}".encode()).decode()
         roll_req = urllib.request.Request(
-            f"{DAEMON_BASE}/api/participant/avatar",
+            f"{DAEMON_BASE}/api/participant/roll-avatar",
             method="POST",
             headers={
                 "Content-Type": "application/json",

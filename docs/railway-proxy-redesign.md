@@ -290,7 +290,7 @@ All current participant WS message types become REST endpoints on the daemon's p
 | Current WS Message | New REST Endpoint | Method |
 |-------------------|-------------------|--------|
 | `set_name` | `POST /api/participant/name` | POST |
-| `refresh_avatar` | `POST /api/participant/avatar` | POST |
+| `refresh_avatar` | `POST /api/participant/roll-avatar` | POST |
 | `location` | `POST /api/participant/location` | POST |
 | `vote` | `POST /api/poll/vote` | POST |
 | `multi_vote` | `POST /api/poll/vote` | POST |
@@ -468,7 +468,7 @@ All endpoints scoped under `/{session_id}/api/...`. Defined in daemon's FastAPI,
 |----------|--------|-------------|
 | `/api/session/state` | GET | Full current state on page load or WS reconnect |
 | `/api/participant/name` | POST | Set display name `{name}` |
-| `/api/participant/avatar` | POST | Request new random avatar `{rejected: []}` |
+| `/api/participant/roll-avatar` | POST | Request new random avatar `{rejected: []}` |
 | `/api/participant/location` | POST | Send geolocation or timezone `{location}` |
 | `/api/poll/vote` | POST | Cast vote `{option_id}` or `{option_ids}` for multi-select |
 | `/api/wordcloud/word` | POST | Submit a word `{word}` |

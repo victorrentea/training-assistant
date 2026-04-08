@@ -101,12 +101,11 @@ class TestRename:
 class TestRefreshAvatar:
     def test_refresh_returns_new_avatar(self, client, fresh_state):
         fresh_state.participant_avatars["uuid1"] = "letter:AB:#123"
-        resp = client.post("/api/participant/avatar",
+        resp = client.post("/api/participant/roll-avatar",
                            json={"rejected": []},
                            headers={"X-Participant-ID": "uuid1"})
         assert resp.status_code == 200
         data = resp.json()
-        assert data["ok"] is True
         assert data["avatar"]  # non-empty
 
 

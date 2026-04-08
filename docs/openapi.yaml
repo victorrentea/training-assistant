@@ -36,13 +36,13 @@ paths:
         '204':
           description: Successful Response
       x-feature: identity
-  /api/participant/avatar:
+  /api/participant/roll-avatar:
     post:
       tags:
       - participant
-      summary: Refresh Avatar Endpoint
+      summary: Roll Avatar Endpoint
       description: Re-roll avatar (conference mode only).
-      operationId: refresh_avatar_endpoint_api_participant_avatar_post
+      operationId: roll_avatar_endpoint_api_participant_roll_avatar_post
       requestBody:
         content:
           application/json:
@@ -1265,10 +1265,6 @@ components:
       title: AvatarRequest
     AvatarResponse:
       properties:
-        ok:
-          type: boolean
-          title: Ok
-          default: true
         avatar:
           type: string
           title: Avatar

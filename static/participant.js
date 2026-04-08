@@ -477,7 +477,7 @@ function closeEmojiPopup(ev) {
             rejectedAvatars.push(filename);
         }
         try {
-            const resp = await participantApi('avatar', { rejected: rejectedAvatars });
+            const resp = await participantApi('roll-avatar', { rejected: rejectedAvatars });
             if (resp.ok) {
                 await refreshParticipantState();
             }

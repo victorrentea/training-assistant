@@ -1,4 +1,4 @@
-"""Daemon participant router — identity endpoints (set_name, avatar, location)."""
+"""Daemon participant router — identity endpoints (set_name, roll-avatar, location)."""
 import logging
 import secrets
 from types import SimpleNamespace
@@ -23,9 +23,6 @@ logger = logging.getLogger(__name__)
 
 # ── Pydantic models ──
 
-class OkResponse(BaseModel):
-    ok: bool = True
-
 class RegisterResponse(BaseModel):
     name: str
     avatar: str
@@ -37,7 +34,6 @@ class AvatarRequest(BaseModel):
     rejected: list[str] = []
 
 class AvatarResponse(BaseModel):
-    ok: bool = True
     avatar: str
 
 class LocationRequest(BaseModel):
@@ -361,8 +357,8 @@ async def rename_participant(request: Request, body: RenameRequest):
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-@router.post("/avatar", response_model=AvatarResponse)
-async def refresh_avatar_endpoint(request: Request, body: AvatarRequest):
+@router.post("/roll-avatar", response_model=AvatarResponse)
+async def roll_avatar_endpoint(request: Request, body: AvatarRequest):
     """Re-roll avatar (conference mode only)."""
     pid = request.headers.get("x-participant-id")
     if not pid:
