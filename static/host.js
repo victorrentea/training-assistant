@@ -1301,6 +1301,7 @@
     const tokenCost = document.getElementById('token-cost');
     const notesBadge = document.getElementById('notes-badge');
     const centerQR = document.getElementById('center-qr');
+    const slidesLeftQR = document.getElementById('slides-left-qr');
 
     // Detect light/dark mode for QR color adaptation
     const isLight = window.matchMedia('(prefers-color-scheme: light)').matches;
@@ -1310,6 +1311,7 @@
       rightCol.style.display = 'none';
       grid.style.gridTemplateColumns = '25% 1fr';
       leftCol.classList.add('conference-layout');
+      if (slidesLeftQR) slidesLeftQR.style.display = 'none';
       // Show left QR only when an activity is active (center QR not visible)
       const centerQRVisible = document.getElementById('center-qr').style.display !== 'none';
       confQR.style.display = centerQRVisible ? 'none' : 'flex';
@@ -1324,6 +1326,7 @@
       rightCol.style.display = '';
       grid.style.gridTemplateColumns = '25% 1fr 25%';
       leftCol.classList.remove('conference-layout');
+      if (slidesLeftQR) slidesLeftQR.style.display = _currentActivity === 'none' ? 'flex' : 'none';
       confQR.style.display = 'none';
       if (debateTab) debateTab.style.display = '';
       if (tokenCost) tokenCost.style.display = '';
@@ -1725,14 +1728,14 @@
     }
   }
 
-  // Footer QR icon: open fullscreen join QR overlay
-  const footerQrIcon = document.getElementById('footer-qr-icon');
-  if (footerQrIcon) {
-    footerQrIcon.addEventListener('click', (event) => {
+  // Header QR icon: open fullscreen join QR overlay
+  const topQrIcon = document.getElementById('top-qr-icon');
+  if (topQrIcon) {
+    topQrIcon.addEventListener('click', (event) => {
       event.preventDefault();
       openQR();
     });
-    footerQrIcon.addEventListener('keydown', (event) => {
+    topQrIcon.addEventListener('keydown', (event) => {
       if (event.key === 'Enter' || event.key === ' ') {
         event.preventDefault();
         openQR();
@@ -2355,6 +2358,9 @@
     });
     // In conference mode: always show the left QR
     const leftCol = document.querySelector('.host-col-left');
+    const slidesLeftQR = document.getElementById('slides-left-qr');
+    const isConferenceLayout = !!(leftCol && leftCol.classList.contains('conference-layout'));
+    if (slidesLeftQR) slidesLeftQR.style.display = currentActivity === 'none' && !isConferenceLayout ? 'flex' : 'none';
     if (leftCol && leftCol.classList.contains('conference-layout')) {
       const confQR = document.getElementById('conference-qr');
       confQR.style.display = 'flex';
@@ -2373,6 +2379,7 @@
         document.getElementById('tab-' + t).classList.remove('active');
         document.getElementById('tab-content-' + t).style.display = 'none';
       });
+      requestAnimationFrame(() => _regenerateAllQRCodes());
     }
   }
 
@@ -3573,10 +3580,24 @@ function _regenerateAllQRCodes() {
     confQRCode.style.height = qrSize + 'px';
     if (typeof QRCode !== 'undefined') new QRCode(confQRCode, { text: joinUrl, width: qrSize, height: qrSize, colorDark: '#000', colorLight: '#fff' });
   }
+  // Slides left QR (workshop slides tab)
+  const slidesLeftQRCode = document.getElementById('slides-left-qr-code');
+  if (slidesLeftQRCode && slidesLeftQRCode.offsetParent !== null) {
+    slidesLeftQRCode.innerHTML = '';
+    const slidesQREl = document.getElementById('slides-left-qr');
+    const availH = slidesQREl ? slidesQREl.clientHeight - 40 : 200;
+    const availW = slidesQREl ? slidesQREl.clientWidth - 20 : 200;
+    const qrSize = Math.max(120, Math.min(availH, availW, 380));
+    slidesLeftQRCode.style.width = qrSize + 'px';
+    slidesLeftQRCode.style.height = qrSize + 'px';
+    if (typeof QRCode !== 'undefined') new QRCode(slidesLeftQRCode, { text: joinUrl, width: qrSize, height: qrSize, colorDark: '#000', colorLight: '#fff' });
+  }
 
   // Update URL labels with session path
   const confUrl = document.getElementById('conference-qr-url');
   if (confUrl && confUrl.offsetParent !== null) confUrl.innerHTML = _buildUrlHtml();
+  const slidesLeftUrl = document.getElementById('slides-left-qr-url');
+  if (slidesLeftUrl && slidesLeftUrl.offsetParent !== null) slidesLeftUrl.innerHTML = _buildUrlHtml();
   const centerUrl = document.getElementById('center-qr-url');
   if (centerUrl) {
     const base = (_joinBaseUrl || location.origin).replace(/^https?:\/\//i, '');

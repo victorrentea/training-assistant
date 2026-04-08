@@ -1,5 +1,6 @@
 # Tasks
 
+- [x] direct request: on Slides tab in host workshop mode, show join QR in the left panel; move fullscreen QR trigger icon from footer to header next to session title.
 - [x] direct request: host Key Points badge now shows only `🧠` and appends count when available (`🧠 N`), no `Key Points` text in badge.
 - [x] direct request: host notes badge now shows only `📝` and appends count only when available (`📝 N`), with no `Notes` text.
 - [x] direct request: host daemon log-level badge label simplified from `LOG info/debug` to plain `info` / `debug`.

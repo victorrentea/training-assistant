@@ -35,7 +35,29 @@
       <span class="tab-icon">🏆</span>Board
     </button>
   </div>
-  <div class="host-top-title" id="host-top-title"></div>
+  <div class="host-top-title-wrap">
+    <div class="host-top-title" id="host-top-title"></div>
+    <span id="top-qr-icon" title="Show join QR code" aria-label="Show join QR code" role="button" tabindex="0">
+      <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" fill="currentColor" width="20" height="20">
+        <rect x="5" y="5" width="35" height="35" rx="4"/>
+        <rect x="13" y="13" width="19" height="19" rx="2" fill="var(--bg,#1a1a2e)"/>
+        <rect x="18" y="18" width="9" height="9" rx="1"/>
+        <rect x="60" y="5" width="35" height="35" rx="4"/>
+        <rect x="68" y="13" width="19" height="19" rx="2" fill="var(--bg,#1a1a2e)"/>
+        <rect x="73" y="18" width="9" height="9" rx="1"/>
+        <rect x="5" y="60" width="35" height="35" rx="4"/>
+        <rect x="13" y="68" width="19" height="19" rx="2" fill="var(--bg,#1a1a2e)"/>
+        <rect x="18" y="73" width="9" height="9" rx="1"/>
+        <rect x="60" y="60" width="9" height="9" rx="1"/>
+        <rect x="73" y="60" width="9" height="9" rx="1"/>
+        <rect x="86" y="60" width="9" height="9" rx="1"/>
+        <rect x="60" y="73" width="9" height="9" rx="1"/>
+        <rect x="86" y="73" width="9" height="9" rx="1"/>
+        <rect x="60" y="86" width="9" height="9" rx="1"/>
+        <rect x="73" y="86" width="9" height="9" rx="1"/>
+      </svg>
+    </span>
+  </div>
   <div style="flex:1"></div>
   <div class="host-top-pax">
     <span class="stat" id="pax-count">0</span>
@@ -200,6 +222,11 @@
     </div>
     </div><!-- /left-tabs-wrapper -->
 
+    <div id="slides-left-qr" class="side-qr-container">
+      <div id="slides-left-qr-code"></div>
+      <div id="slides-left-qr-url" style="font-size:1.1rem; text-align:center;"></div>
+    </div>
+
     <!-- Conference mode: QR code shown in left column -->
     <div id="conference-qr" class="conference-qr-container">
       <div id="conference-qr-code"></div>
@@ -288,26 +315,6 @@
   </div>
   <div class="host-footer-center">
     <span id="participant-link" style="color:#fff; font-size:1.25rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; flex-shrink:1;"></span><span id="session-id-suffix" style="display:none; font-size:1.25rem; font-family:monospace; font-weight:bold; color:#f0c040; letter-spacing:2px; white-space:nowrap;"></span>
-    <span id="footer-qr-icon" title="Show join QR code" aria-label="Show join QR code" role="button" tabindex="0">
-      <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" fill="currentColor" width="22" height="22">
-        <rect x="5" y="5" width="35" height="35" rx="4"/>
-        <rect x="13" y="13" width="19" height="19" rx="2" fill="var(--bg,#1a1a2e)"/>
-        <rect x="18" y="18" width="9" height="9" rx="1"/>
-        <rect x="60" y="5" width="35" height="35" rx="4"/>
-        <rect x="68" y="13" width="19" height="19" rx="2" fill="var(--bg,#1a1a2e)"/>
-        <rect x="73" y="18" width="9" height="9" rx="1"/>
-        <rect x="5" y="60" width="35" height="35" rx="4"/>
-        <rect x="13" y="68" width="19" height="19" rx="2" fill="var(--bg,#1a1a2e)"/>
-        <rect x="18" y="73" width="9" height="9" rx="1"/>
-        <rect x="60" y="60" width="9" height="9" rx="1"/>
-        <rect x="73" y="60" width="9" height="9" rx="1"/>
-        <rect x="86" y="60" width="9" height="9" rx="1"/>
-        <rect x="60" y="73" width="9" height="9" rx="1"/>
-        <rect x="86" y="73" width="9" height="9" rx="1"/>
-        <rect x="60" y="86" width="9" height="9" rx="1"/>
-        <rect x="73" y="86" width="9" height="9" rx="1"/>
-      </svg>
-    </span>
   </div>
   <div class="host-footer-right">
     <span id="log-level-badge" class="badge footer-tooltip-target" onclick="toggleLogLevel()" style="cursor:pointer; font-size:0.76rem; letter-spacing:0.02em;">info</span>
