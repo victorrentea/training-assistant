@@ -287,3 +287,4 @@ Host broadcasts a statement: "Have you ever shipped code that violated what we j
 - [x] Bugfix participant: removed hover tooltip from the bottom-right deploy/version tag (`deployed ... ago`) while keeping the deploy age text visible.
 - [x] Bugfix notes/summary source of truth: daemon now serves notes from latest `*.txt` and summary from `ai-summary.md` (including host/participant state + REST endpoints), and `apis.md` state docs were updated accordingly.
 - [x] Daemon logging: at startup and on notes/summary file changes, log non-empty line counts for latest `*.txt` notes + `ai-summary.md` (with session/file diagnostics).
+- [x] Direct request: host slides-mode left-pane QR now auto-resizes on window resize (using both width and height bounds) and remains vertically centered.

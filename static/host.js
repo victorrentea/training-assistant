@@ -1760,11 +1760,14 @@
     closeModal('qr-overlay');
   }
 
+  let _qrResizeRaf = null;
   window.addEventListener('resize', () => {
-    const overlay = document.getElementById('qr-overlay');
-    if (overlay && overlay.classList.contains('open')) {
-      renderFullscreenQR();
-    }
+    if (_qrResizeRaf) cancelAnimationFrame(_qrResizeRaf);
+    _qrResizeRaf = requestAnimationFrame(() => {
+      _positionQROverlayBetweenHeaderAndFooter();
+      _regenerateAllQRCodes();
+      _qrResizeRaf = null;
+    });
   });
 
 
@@ -3571,7 +3574,8 @@ function _regenerateAllQRCodes() {
     slidesLeftQRCode.innerHTML = '';
     const slidesQREl = document.getElementById('slides-left-qr');
     const availW = slidesQREl ? slidesQREl.clientWidth : 260;
-    const qrSize = Math.max(120, Math.floor(availW));
+    const availH = slidesQREl ? slidesQREl.clientHeight : 260;
+    const qrSize = Math.max(1, Math.floor(Math.min(availW, availH, 400)));
     slidesLeftQRCode.style.width = qrSize + 'px';
     slidesLeftQRCode.style.height = qrSize + 'px';
     if (typeof QRCode !== 'undefined') new QRCode(slidesLeftQRCode, { text: joinUrl, width: qrSize, height: qrSize, colorDark: '#000', colorLight: '#fff' });

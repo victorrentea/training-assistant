@@ -377,6 +377,37 @@ class TestHostPanelGeneral:
             host._page.locator("#qr-overlay").click()
             expect(host._page.locator("#qr-overlay")).not_to_be_visible(timeout=3000)
 
+    def test_slides_left_qr_resizes_and_stays_vertically_centered_on_window_resize(self, host: HostPage):
+        """Slides left QR should adapt to viewport resize and remain vertically centered."""
+        host._page.set_viewport_size({"width": 1400, "height": 900})
+        host._page.evaluate("async () => { await switchTab('none'); }")
+        expect(host._page.locator("#slides-left-qr")).to_be_visible(timeout=5000)
+        expect(host._page.locator("#slides-left-qr-code canvas, #slides-left-qr-code img")).to_have_count(1, timeout=5000)
+
+        host._page.set_viewport_size({"width": 1400, "height": 360})
+        host._page.wait_for_timeout(250)
+
+        metrics = host._page.evaluate("""() => {
+            const container = document.getElementById('slides-left-qr');
+            const qr = document.getElementById('slides-left-qr-code');
+            if (!container || !qr) return null;
+            const c = container.getBoundingClientRect();
+            const q = qr.getBoundingClientRect();
+            return {
+                containerHeight: container.clientHeight,
+                qrHeight: q.height,
+                topGap: q.top - c.top,
+                bottomGap: c.bottom - q.bottom,
+            };
+        }""")
+        assert metrics is not None, "Expected slides left QR container metrics"
+        assert metrics["qrHeight"] <= metrics["containerHeight"] + 1, (
+            f"QR should fit vertically after resize (qr={metrics['qrHeight']}, container={metrics['containerHeight']})"
+        )
+        assert abs(metrics["topGap"] - metrics["bottomGap"]) <= 10, (
+            f"QR should stay vertically centered (top={metrics['topGap']}, bottom={metrics['bottomGap']})"
+        )
+
 
 # ---------------------------------------------------------------------------
 # Additional Edge Cases
