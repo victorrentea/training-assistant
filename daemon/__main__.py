@@ -874,6 +874,18 @@ def run() -> None:
                             )
                             runtime_session_snapshot = restore_snapshot
                             last_session_state_hash = _session_state_hash(runtime_session_snapshot)
+                            if existed:
+                                try:
+                                    if _ensure_session_state_file_for_resume(
+                                        session_folder=folder,
+                                        session_snapshot=runtime_session_snapshot,
+                                    ):
+                                        last_session_state_hash = _session_state_hash(
+                                            runtime_session_snapshot if isinstance(runtime_session_snapshot, dict) else {}
+                                        )
+                                        log.info("session", f"Self-healed missing/empty {SESSION_STATE_FILENAME} for create")
+                                except Exception as e:
+                                    log.error("session", f"Failed self-healing {SESSION_STATE_FILENAME}: {e}")
 
                             new_session = {
                                 "name": name,
