@@ -419,12 +419,10 @@ def _render_shape_cell(shape: str) -> str:
 def _render_rest(items: list[RestOp]) -> list[str]:
     lines: list[str] = ["| Endpoint | Request | Response |", "| --- | --- | --- |"]
     for op in sorted(items, key=lambda i: (i.path, i.method)):
-        endpoint = _escape_md_cell(f"{op.title}<br>`{op.method} {op.path}`")
+        endpoint_parts = [op.title, *op.notes, f"`{op.method} {op.path}`"]
+        endpoint = _escape_md_cell("<br>".join(endpoint_parts))
         request = _escape_md_cell(_render_shape_cell(op.request_shape))
-        response_parts = [_render_shape_cell(op.response_shape)]
-        for note in op.notes:
-            response_parts.append(note)
-        response = _escape_md_cell("<br>".join(response_parts))
+        response = _escape_md_cell(_render_shape_cell(op.response_shape))
         lines.append(f"| {endpoint} | {request} | {response} |")
     return lines
 
