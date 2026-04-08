@@ -277,13 +277,15 @@ def _rest_response_shape(op: dict[str, Any], openapi: dict[str, Any]) -> str:
     resp = responses.get(status, {})
     if not isinstance(resp, dict):
         return "unknown"
+    if status == "204":
+        return "-"
 
     content = resp.get("content", {})
     if not isinstance(content, dict) or not content:
         desc = resp.get("description")
-        if isinstance(desc, str) and desc.strip():
+        if isinstance(desc, str) and desc.strip() and desc.strip().lower() not in {"successful response", "no content"}:
             return desc.strip()
-        return "no content"
+        return "-"
 
     if "application/json" in content:
         schema = content["application/json"].get("schema", {}) if isinstance(content["application/json"], dict) else {}
@@ -417,7 +419,7 @@ def _render_rest(items: list[RestOp]) -> list[str]:
     for op in sorted(items, key=lambda i: (i.path, i.method)):
         endpoint = _escape_md_cell(f"{op.title}<br>`{op.method} {op.path}`")
         request = _escape_md_cell(f"`{op.request_shape}`")
-        response_parts = [f"`{op.response_shape}`"]
+        response_parts = ["-" if op.response_shape == "-" else f"`{op.response_shape}`"]
         for note in op.notes:
             response_parts.append(f"Note: {note}")
         response = _escape_md_cell("<br>".join(response_parts))

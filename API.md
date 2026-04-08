@@ -79,10 +79,10 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
 ### Participant REST
 | Endpoint | Request | Response |
 | --- | --- | --- |
-| Refresh Avatar Endpoint<br>`POST /api/participant/avatar` | `{rejected?: list[string]}` | `any`<br>Note: Re-roll avatar (conference mode only). |
-| Set Location<br>`POST /api/participant/location` | `{location: string}` | `any`<br>Note: Store participant city/timezone. |
-| Rename Participant<br>`PUT /api/participant/name` | `{name: string}` | `any`<br>Note: Rename a registered participant. Returns 400 if not yet registered. |
-| Register Participant<br>`POST /api/participant/register` | `none` | `any`<br>Note: Register participant — assign name+avatar. Idempotent for returning participants. |
+| Refresh Avatar Endpoint<br>`POST /api/participant/avatar` | `{rejected?: list[string]}` | `{ok?: bool, avatar: string}`<br>Note: Re-roll avatar (conference mode only). |
+| Set Location<br>`POST /api/participant/location` | `{location: string}` | `{ok?: bool}`<br>Note: Store participant city/timezone. |
+| Rename Participant<br>`PUT /api/participant/name` | `{name: string}` | -<br>Note: Rename a registered participant. Returns 400 if not yet registered. |
+| Register Participant<br>`POST /api/participant/register` | `none` | `{name: string, avatar: string}`<br>Note: Register participant — assign name+avatar. Idempotent for returning participants. |
 | Get Participant State<br>`GET /api/participant/state` | `none` | `any`<br>Note: Return full personalised state for a participant — used on page load and WS reconnect.<br>Note: Returns participant-personalized full state snapshot. |
 
 ### Participant WS

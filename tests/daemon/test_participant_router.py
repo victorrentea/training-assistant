@@ -75,7 +75,7 @@ class TestRename:
         resp = client.put("/api/participant/name",
                           json={"name": "CustomName"},
                           headers={"X-Participant-ID": "uuid1"})
-        assert resp.status_code == 200
+        assert resp.status_code == 204
         assert fresh_state.participant_names["uuid1"] == "CustomName"
 
     def test_rename_rejects_unregistered(self, client, fresh_state):
@@ -90,7 +90,7 @@ class TestRename:
         resp = client.put("/api/participant/name",
                           json={"name": long_name},
                           headers={"X-Participant-ID": "uuid1"})
-        assert resp.status_code == 200
+        assert resp.status_code == 204
         assert len(fresh_state.participant_names["uuid1"]) <= 32
 
     def test_missing_participant_id_returns_400(self, client):

@@ -16,7 +16,8 @@ paths:
           description: Successful Response
           content:
             application/json:
-              schema: {}
+              schema:
+                $ref: '#/components/schemas/RegisterResponse'
       x-feature: identity
   /api/participant/name:
     put:
@@ -32,11 +33,8 @@ paths:
               $ref: '#/components/schemas/RenameRequest'
         required: true
       responses:
-        '200':
+        '204':
           description: Successful Response
-          content:
-            application/json:
-              schema: {}
       x-feature: identity
   /api/participant/avatar:
     post:
@@ -56,7 +54,8 @@ paths:
           description: Successful Response
           content:
             application/json:
-              schema: {}
+              schema:
+                $ref: '#/components/schemas/AvatarResponse'
       x-feature: identity
   /api/participant/location:
     post:
@@ -76,7 +75,8 @@ paths:
           description: Successful Response
           content:
             application/json:
-              schema: {}
+              schema:
+                $ref: '#/components/schemas/OkResponse'
       x-feature: identity
   /api/participant/state:
     get:
@@ -1432,6 +1432,19 @@ components:
           default: []
       type: object
       title: AvatarRequest
+    AvatarResponse:
+      properties:
+        ok:
+          type: boolean
+          title: Ok
+          default: true
+        avatar:
+          type: string
+          title: Avatar
+      type: object
+      required:
+      - avatar
+      title: AvatarResponse
     ConfirmLineRequest:
       properties:
         line:
@@ -1545,6 +1558,14 @@ components:
       required:
       - level
       title: LogLevelResponse
+    OkResponse:
+      properties:
+        ok:
+          type: boolean
+          title: Ok
+          default: true
+      type: object
+      title: OkResponse
     PasteRequest:
       properties:
         text:
@@ -1591,6 +1612,19 @@ components:
           title: Topic
       type: object
       title: QuizRequestBody
+    RegisterResponse:
+      properties:
+        name:
+          type: string
+          title: Name
+        avatar:
+          type: string
+          title: Avatar
+      type: object
+      required:
+      - name
+      - avatar
+      title: RegisterResponse
     RenameRequest:
       properties:
         name:

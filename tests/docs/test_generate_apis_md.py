@@ -1,4 +1,5 @@
 import subprocess
+import re
 from pathlib import Path
 
 import yaml
@@ -69,6 +70,18 @@ def test_generator_rest_responses_do_not_include_status_code_prefix():
 def test_generator_rest_requests_do_not_include_media_type_prefix():
     output = _run_generator()
     assert "`application/json:" not in output
+
+
+def test_participant_identity_rows_have_expected_response_shapes():
+    output = _run_generator()
+    register_row = re.search(r"^\| .*`POST /api/participant/register`.*\|$", output, re.MULTILINE)
+    assert register_row, "Missing table row for POST /api/participant/register"
+    assert "any" not in register_row.group(0)
+    assert "{name: string, avatar: string}" in register_row.group(0)
+
+    rename_row = re.search(r"^\| .*`PUT /api/participant/name`.*\|$", output, re.MULTILINE)
+    assert rename_row, "Missing table row for PUT /api/participant/name"
+    assert "| `{name: string}` | -" in rename_row.group(0)
 
 
 def test_generator_includes_all_openapi_operations():

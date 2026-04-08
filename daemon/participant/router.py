@@ -3,7 +3,7 @@ import logging
 import secrets
 from types import SimpleNamespace
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Request, status
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from starlette.responses import Response
@@ -160,7 +160,7 @@ def _build_mini_state() -> SimpleNamespace:
     )
 
 
-@router.post("/register")
+@router.post("/register", response_model=RegisterResponse)
 async def register_participant(request: Request):
     """Register participant — assign name+avatar. Idempotent for returning participants."""
     pid = request.headers.get("x-participant-id")
@@ -217,7 +217,7 @@ async def register_participant(request: Request):
     return RegisterResponse(name=raw_name, avatar=avatar)
 
 
-@router.put("/name")
+@router.put("/name", status_code=status.HTTP_204_NO_CONTENT, response_class=Response)
 async def rename_participant(request: Request, body: RenameRequest):
     """Rename a registered participant. Returns 400 if not yet registered."""
     pid = request.headers.get("x-participant-id")
@@ -248,10 +248,10 @@ async def rename_participant(request: Request, body: RenameRequest):
         "name": raw_name,
     }]
 
-    return Response(status_code=200)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-@router.post("/avatar")
+@router.post("/avatar", response_model=AvatarResponse)
 async def refresh_avatar_endpoint(request: Request, body: AvatarRequest):
     """Re-roll avatar (conference mode only)."""
     pid = request.headers.get("x-participant-id")
@@ -279,7 +279,7 @@ async def refresh_avatar_endpoint(request: Request, body: AvatarRequest):
     return AvatarResponse(avatar=new_avatar)
 
 
-@router.post("/location")
+@router.post("/location", response_model=OkResponse)
 async def set_location(request: Request, body: LocationRequest):
     """Store participant city/timezone."""
     pid = request.headers.get("x-participant-id")
