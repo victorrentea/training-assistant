@@ -62,7 +62,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
 ### Participant WS
 | Message | Payload |
 | --- | --- |
-| Current activity type changed by host<br>`activity_updated` | `{current_activity: 'none' \| 'poll' \| 'wordcloud' \| 'qa' \| 'codereview' \| 'debate'}` |
+| `activity_updated` | `{current_activity: 'none' \| 'poll' \| 'wordcloud' \| 'qa' \| 'codereview' \| 'debate'}` |
 
 ### Host REST
 | Endpoint | Request | Response |
@@ -84,7 +84,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
 ### Participant WS
 | Message | Payload |
 | --- | --- |
-| Participant count changed<br>`participant_count_updated` | `{count: int}` |
+| `participant_count_updated` | `{count: int}` |
 
 ### Host REST
 | Endpoint | Request | Response |
@@ -223,7 +223,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
 | --- | --- |
 | Full debate state snapshot<br>`debate_updated` | `statement?: string \| null`<br>`phase?: null \| 'side_selection' \| 'arguments' \| 'ai_cleanup' \| 'prep' \| 'live_debate' \| 'ended' \| null`<br>`sides?: dict[str, string]  # uuid → "for"\|"against"`<br>`arguments?: list[DebateArgument]`<br>`champions?: dict[str, string]  # "for"\|"against" → uuid`<br>`auto_assigned?: list[string]`<br>`first_side?: string \| null`<br>`round_index?: int \| null`<br>`round_timer_seconds?: int \| null`<br>`round_timer_started_at?: string \| null` |
 | A timed debate round started<br>`debate_timer` | `round_index: int`<br>`seconds: int`<br>`started_at: string` |
-| Current debate round ended<br>`debate_round_ended` | - |
+| `debate_round_ended` | - |
 
 ### Host REST
 | Endpoint | Request | Response |

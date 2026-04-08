@@ -585,10 +585,76 @@ def _render_rest(items: list[RestOp]) -> list[str]:
     return lines
 
 
+def _normalize_ws_token(token: str) -> str:
+    base = token.lower().strip()
+    synonyms = {
+        "changed": "updated",
+        "change": "updated",
+        "updates": "updated",
+        "update": "updated",
+        "opens": "opened",
+        "open": "opened",
+        "closes": "closed",
+        "close": "closed",
+        "sets": "set",
+    }
+    return synonyms.get(base, base)
+
+
+def _ws_keywords_from_name(message_name: str) -> set[str]:
+    return {
+        _normalize_ws_token(token)
+        for token in message_name.lower().split("_")
+        if token and token not in {"msg", "message"}
+    }
+
+
+def _ws_keywords_from_note(note: str) -> set[str]:
+    stopwords = {
+        "a",
+        "an",
+        "the",
+        "for",
+        "of",
+        "and",
+        "or",
+        "by",
+        "to",
+        "in",
+        "on",
+        "from",
+        "with",
+        "host",
+        "participant",
+        "participants",
+        "current",
+        "type",
+        "client",
+        "browser",
+        "daemon",
+        "received",
+    }
+    words = re.findall(r"[a-z0-9_]+", note.lower())
+    return {
+        _normalize_ws_token(word)
+        for word in words
+        if word and word not in stopwords
+    }
+
+
+def _is_redundant_ws_note(note: str, message_name: str) -> bool:
+    note_keywords = _ws_keywords_from_note(note)
+    if not note_keywords:
+        return True
+    name_keywords = _ws_keywords_from_name(message_name)
+    return bool(name_keywords) and note_keywords.issubset(name_keywords)
+
+
 def _render_ws(items: list[WsMsg]) -> list[str]:
     lines: list[str] = ["| Message | Payload |", "| --- | --- |"]
     for msg in items:
-        message_parts = [*msg.notes, f"`{msg.name}`"]
+        filtered_notes = [note for note in msg.notes if not _is_redundant_ws_note(note, msg.name)]
+        message_parts = [*filtered_notes, f"`{msg.name}`"]
         message = _escape_md_cell("<br>".join(message_parts))
         payload = _render_shape_cell(msg.payload_shape)
         lines.append(f"| {message} | {_escape_md_cell(payload)} |")
