@@ -180,8 +180,12 @@
   const pLink = document.getElementById('participant-link');
   _initFooterBadgeTooltips();
   if (pLink) {
-    pLink.innerHTML = _buildUrlHtml();
-    pLink.title = 'Click to copy • Ctrl/Cmd+Click to open';
+    pLink.innerHTML = _currentSessionId ? _buildUrlHtml() : '';
+    if (_currentSessionId) {
+      pLink.title = 'Click to copy • Ctrl/Cmd+Click to open';
+    } else {
+      pLink.removeAttribute('title');
+    }
     pLink.addEventListener('click', onFooterJoinLinkClick);
   }
   _setupSlidesCatalogHover();
@@ -3379,8 +3383,13 @@ function updateSessionCodeBar(sessionId) {
   if (copyIcon) copyIcon.style.display = sessionId ? '' : 'none';
   const pLink = document.getElementById('participant-link');
   if (pLink && changed) {
-    pLink.innerHTML = _buildUrlHtml();
-    pLink.title = 'Click to copy • Ctrl/Cmd+Click to open';
+    if (sessionId) {
+      pLink.innerHTML = _buildUrlHtml();
+      pLink.title = 'Click to copy • Ctrl/Cmd+Click to open';
+    } else {
+      pLink.innerHTML = '';
+      pLink.removeAttribute('title');
+    }
   }
 
   // Regenerate all QR codes with the session-scoped join URL
@@ -3442,6 +3451,7 @@ function _showFooterCopiedTooltip(el, message = 'Link Copied') {
 }
 
 function onFooterJoinLinkClick(event) {
+  if (!_currentSessionId) return;
   const url = _getJoinUrl();
   if (event.ctrlKey || event.metaKey) {
     event.preventDefault();

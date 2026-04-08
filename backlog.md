@@ -1,5 +1,6 @@
 # Tasks
 
+- [x] bugfix: host footer join link no longer renders base domain before `session_id` arrives (prevents entry flicker/flash without session suffix).
 - [x] ui tweak: on feedback submit, close input dialog immediately and show a persistent `Sending...` bubble until request completes, then switch to success/error.
 - [x] direct request: in host `Slides` mode, hide center QR and copy icon; show only the centered join link.
 - [x] follow-up bugfix: in host `Slides` mode, center join link is rendered as plain text (no wave spans) to keep full URL readability.
