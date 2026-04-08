@@ -239,10 +239,10 @@ def _shape(schema: dict[str, Any] | bool | Any | None, root: dict[str, Any], dep
 def _rest_request_shape(op: dict[str, Any], openapi: dict[str, Any]) -> str:
     body = op.get("requestBody")
     if not isinstance(body, dict):
-        return "none"
+        return "-"
     content = body.get("content", {})
     if not isinstance(content, dict) or not content:
-        return "none"
+        return "-"
 
     parts: list[str] = []
     for spec in content.values():
@@ -251,7 +251,7 @@ def _rest_request_shape(op: dict[str, Any], openapi: dict[str, Any]) -> str:
         if shape not in parts:
             parts.append(shape)
     if not parts:
-        return "none"
+        return "-"
     if len(parts) == 1:
         return parts[0]
     return " | ".join(parts)
@@ -410,12 +410,18 @@ def _escape_md_cell(value: str) -> str:
     return value.replace("|", "\\|")
 
 
+def _render_shape_cell(shape: str) -> str:
+    if shape.strip() in {"", "-", "none"}:
+        return "-"
+    return f"`{shape}`"
+
+
 def _render_rest(items: list[RestOp]) -> list[str]:
     lines: list[str] = ["| Endpoint | Request | Response |", "| --- | --- | --- |"]
     for op in sorted(items, key=lambda i: (i.path, i.method)):
         endpoint = _escape_md_cell(f"{op.title}<br>`{op.method} {op.path}`")
-        request = _escape_md_cell(f"`{op.request_shape}`")
-        response_parts = ["-" if op.response_shape == "-" else f"`{op.response_shape}`"]
+        request = _escape_md_cell(_render_shape_cell(op.request_shape))
+        response_parts = [_render_shape_cell(op.response_shape)]
         for note in op.notes:
             response_parts.append(f"Note: {note}")
         response = _escape_md_cell("<br>".join(response_parts))
@@ -430,7 +436,7 @@ def _render_ws(items: list[WsMsg]) -> list[str]:
         for note in msg.notes:
             message_parts.append(f"Note: {note}")
         message = _escape_md_cell("<br>".join(message_parts))
-        payload = "-" if msg.payload_shape == "-" else f"`{msg.payload_shape}`"
+        payload = _render_shape_cell(msg.payload_shape)
         lines.append(f"| {message} | {_escape_md_cell(payload)} |")
     return lines
 

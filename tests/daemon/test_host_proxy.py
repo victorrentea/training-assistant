@@ -69,8 +69,8 @@ class TestHostServerCreation:
             app = create_app("http://localhost:9999")
             client = TestClient(app)
             resp = client.post("/api/log-level", json={"level": "debug"})
-            assert resp.status_code == 200
-            assert resp.json() == {"level": "debug"}
+            assert resp.status_code == 204
+            assert resp.text == ""
             assert daemon_log.get_level() == "debug"
         finally:
             daemon_log.set_level(previous)
@@ -84,7 +84,7 @@ class TestHostServerCreation:
                 app = create_app("http://localhost:9999")
                 client = TestClient(app)
                 resp = client.post("/api/log-level", json={"level": "debug"})
-            assert resp.status_code == 200
+            assert resp.status_code == 204
             assert called == ["debug"]
         finally:
             daemon_log.set_level(previous)

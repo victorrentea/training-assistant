@@ -7,9 +7,9 @@ from pathlib import Path
 from typing import Literal
 
 import uvicorn
-from fastapi import FastAPI, Request, WebSocket
+from fastapi import FastAPI, Request, WebSocket, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -29,6 +29,10 @@ _persist_log_level = None
 
 class LogLevelResponse(BaseModel):
     level: Literal["info", "debug"]
+
+
+class DaemonStatusResponse(BaseModel):
+    code_timestamp: str | None
 
 
 class SetLogLevelRequest(BaseModel):
@@ -168,16 +172,16 @@ def create_app(backend_url: str) -> FastAPI:
     app.include_router(session_scoped_router)      # /api/{session_id}/session/interval-lines.txt
 
     # --- Daemon status endpoint (exposes code_timestamp directly, not proxied) ---
-    @app.get("/api/daemon-status")
+    @app.get("/api/daemon-status", response_model=DaemonStatusResponse)
     async def daemon_status():
         import daemon.host_server as _hs
-        return JSONResponse({"code_timestamp": _hs.code_timestamp})
+        return DaemonStatusResponse(code_timestamp=_hs.code_timestamp)
 
     @app.get("/api/log-level", response_model=LogLevelResponse)
     async def get_log_level():
         return LogLevelResponse(level=daemon_log.get_level())
 
-    @app.post("/api/log-level", response_model=LogLevelResponse)
+    @app.post("/api/log-level", status_code=status.HTTP_204_NO_CONTENT, response_class=Response)
     async def set_log_level(body: SetLogLevelRequest):
         previous = daemon_log.get_level()
         current = daemon_log.set_level(body.level)
@@ -187,7 +191,7 @@ def create_app(backend_url: str) -> FastAPI:
             except Exception as e:
                 daemon_log.error("daemon", f"failed persisting log level: {e}")
         daemon_log.info("daemon", f"log level changed via local API: {previous} -> {current}")
-        return LogLevelResponse(level=current)
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
 
     # --- WebSocket proxy ---
     @app.websocket("/ws/{path:path}")

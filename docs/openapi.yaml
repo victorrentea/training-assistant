@@ -1352,7 +1352,8 @@ paths:
           description: Successful Response
           content:
             application/json:
-              schema: {}
+              schema:
+                $ref: '#/components/schemas/DaemonStatusResponse'
       x-feature: session_management
   /api/log-level:
     get:
@@ -1376,12 +1377,8 @@ paths:
               $ref: '#/components/schemas/SetLogLevelRequest'
         required: true
       responses:
-        '200':
+        '204':
           description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/LogLevelResponse'
       x-feature: session_management
 components:
   schemas:
@@ -1496,6 +1493,17 @@ components:
           title: Correct Count
       type: object
       title: CreatePollRequest
+    DaemonStatusResponse:
+      properties:
+        code_timestamp:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Code Timestamp
+      type: object
+      required:
+      - code_timestamp
+      title: DaemonStatusResponse
     EditQuestionTextBody:
       properties:
         text:

@@ -1081,9 +1081,7 @@
         body: JSON.stringify({ level: target }),
       });
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-      const data = await resp.json();
-      const level = String(data.level || '').toLowerCase();
-      if (level === 'info' || level === 'debug') _daemonLogLevel = level;
+      _daemonLogLevel = target;
     } catch (err) {
       console.warn('Failed to change daemon log level', err);
       toast('Failed to change daemon log level');

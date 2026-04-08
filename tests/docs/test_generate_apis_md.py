@@ -72,6 +72,12 @@ def test_generator_rest_requests_do_not_include_media_type_prefix():
     assert "`application/json:" not in output
 
 
+def test_generator_uses_dash_instead_of_none_cells():
+    output = _run_generator()
+    assert "`none`" not in output
+    assert "| - |" in output
+
+
 def test_generator_does_not_emit_redundant_enum_comments():
     output = _run_generator()
     assert "# enum:" not in output
@@ -96,6 +102,19 @@ def test_participant_identity_rows_have_expected_response_shapes():
     rename_row = re.search(r"^\| .*`PUT /api/participant/name`.*\|$", output, re.MULTILINE)
     assert rename_row, "Missing table row for PUT /api/participant/name"
     assert "| `{name: string}` | -" in rename_row.group(0)
+
+
+def test_log_level_and_daemon_status_rows_have_expected_shapes():
+    output = _run_generator()
+
+    set_log_level_row = re.search(r"^\| .*`POST /api/log-level`.*\|$", output, re.MULTILINE)
+    assert set_log_level_row, "Missing table row for POST /api/log-level"
+    assert "| `{level: 'info' \\| 'debug'}` | -" in set_log_level_row.group(0)
+
+    daemon_status_row = re.search(r"^\| .*`GET /api/daemon-status`.*\|$", output, re.MULTILINE)
+    assert daemon_status_row, "Missing table row for GET /api/daemon-status"
+    assert "any" not in daemon_status_row.group(0)
+    assert "{code_timestamp: string \\| null}" in daemon_status_row.group(0)
 
 
 def test_generator_includes_all_openapi_operations():
