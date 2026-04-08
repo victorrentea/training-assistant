@@ -60,6 +60,7 @@ Whenever the user says “remember”, add it to this file (CLAUDE.md). Only add
 - When a task is done, commit and push directly to `master`.
 - All OpenSpec artifacts must be written in English.
 - All code, comments, variable names, commit messages, and documentation must be written in English.
+- Never edit `API.md` directly; update source contracts (Pydantic models/OpenAPI/WS specs), regenerate `docs/openapi.yaml` and/or WS YAMLs as needed, then regenerate `API.md` via `python3 scripts/generate_apis_md.py --output API.md`.
 
 ---
 

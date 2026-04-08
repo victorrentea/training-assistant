@@ -77,6 +77,9 @@ class PollData(BaseModel):
     correct_count: int | None = None
     source: str | None = None
     page: str | None = None
+    timer_seconds: int | None = None
+    timer_started_at: str | None = None
+    correct_ids: list[str] | None = None
 
 
 class HostCodeReviewState(BaseModel):
@@ -157,9 +160,6 @@ class HostStateResponse(BaseModel):
     poll_active: bool
     vote_counts: dict[str, int]
     votes: dict[str, HostPollVote]
-    poll_timer_seconds: int | None = None
-    poll_timer_started_at: str | None = None
-    poll_correct_ids: list[str] | None = None
     codereview: HostCodeReviewState
     debate_statement: str | None = None
     debate_phase: str | None = None
@@ -282,14 +282,19 @@ def _build_debate_for_host() -> dict:
 def _build_poll_for_host() -> dict:
     """Build full poll state for host — includes all votes."""
     ps = poll_state
+    poll = dict(ps.poll) if ps.poll else None
+    if poll is not None:
+        poll["timer_seconds"] = ps.poll_timer_seconds
+        poll["timer_started_at"] = (
+            ps.poll_timer_started_at.isoformat() if ps.poll_timer_started_at else None
+        )
+        poll["correct_ids"] = ps.poll_correct_ids
+
     return {
-        "poll": ps.poll,
+        "poll": poll,
         "poll_active": ps.poll_active,
         "vote_counts": ps.vote_counts() if ps.poll else {},
         "votes": dict(ps.votes),
-        "poll_timer_seconds": ps.poll_timer_seconds,
-        "poll_timer_started_at": ps.poll_timer_started_at.isoformat() if ps.poll_timer_started_at else None,
-        "poll_correct_ids": ps.poll_correct_ids,
     }
 
 

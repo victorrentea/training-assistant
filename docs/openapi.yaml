@@ -1734,23 +1734,6 @@ components:
             $ref: '#/components/schemas/HostPollVote'
           type: object
           title: Votes
-        poll_timer_seconds:
-          anyOf:
-          - type: integer
-          - type: 'null'
-          title: Poll Timer Seconds
-        poll_timer_started_at:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Poll Timer Started At
-        poll_correct_ids:
-          anyOf:
-          - items:
-              type: string
-            type: array
-          - type: 'null'
-          title: Poll Correct Ids
         codereview:
           $ref: '#/components/schemas/HostCodeReviewState'
         debate_statement:
@@ -2080,23 +2063,6 @@ components:
             type: integer
           type: object
           title: Vote Counts
-        poll_timer_seconds:
-          anyOf:
-          - type: integer
-          - type: 'null'
-          title: Poll Timer Seconds
-        poll_timer_started_at:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Poll Timer Started At
-        poll_correct_ids:
-          anyOf:
-          - items:
-              type: string
-            type: array
-          - type: 'null'
-          title: Poll Correct Ids
         my_vote:
           anyOf:
           - type: string
@@ -2294,6 +2260,23 @@ components:
           - type: string
           - type: 'null'
           title: Page
+        timer_seconds:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Timer Seconds
+        timer_started_at:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Timer Started At
+        correct_ids:
+          anyOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+          title: Correct Ids
       type: object
       required:
       - id

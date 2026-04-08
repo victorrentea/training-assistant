@@ -329,7 +329,11 @@ def _shape(
     root: dict[str, Any],
     depth: int = 0,
     top_level: bool = True,
+    seen_refs: set[str] | None = None,
 ) -> str:
+    if seen_refs is None:
+        seen_refs = set()
+
     if schema is True:
         return "any"
     if schema is False:
@@ -346,15 +350,38 @@ def _shape(
         if resolved is None:
             return ref_name
         if depth > 0:
-            return ref_name
-        return _shape(resolved, root, depth + 1, top_level=top_level)
+            if ref_name in seen_refs:
+                return ref_name
+            return _inline_named_schema(
+                ref_name,
+                resolved,
+                root,
+                depth=depth,
+                seen_refs=seen_refs | {ref_name},
+            )
+        return _shape(
+            resolved,
+            root,
+            depth + 1,
+            top_level=top_level,
+            seen_refs=seen_refs | {ref_name},
+        )
 
     if "oneOf" in schema:
-        return " | ".join(_shape(s, root, depth + 1, top_level=False) for s in schema.get("oneOf", []))
+        return " | ".join(
+            _shape(s, root, depth + 1, top_level=False, seen_refs=seen_refs)
+            for s in schema.get("oneOf", [])
+        )
     if "anyOf" in schema:
-        return " | ".join(_shape(s, root, depth + 1, top_level=False) for s in schema.get("anyOf", []))
+        return " | ".join(
+            _shape(s, root, depth + 1, top_level=False, seen_refs=seen_refs)
+            for s in schema.get("anyOf", [])
+        )
     if "allOf" in schema:
-        return " & ".join(_shape(s, root, depth + 1, top_level=False) for s in schema.get("allOf", []))
+        return " & ".join(
+            _shape(s, root, depth + 1, top_level=False, seen_refs=seen_refs)
+            for s in schema.get("allOf", [])
+        )
 
     typ = schema.get("type")
 
@@ -372,7 +399,11 @@ def _shape(
     elif typ == "boolean":
         base = "bool"
     elif typ == "array":
-        base = f"list[{_shape(schema.get('items', {}), root, depth + 1, top_level=False)}]"
+        item = _shape(schema.get("items", {}), root, depth + 1, top_level=False, seen_refs=seen_refs)
+        if "\n" in item:
+            base = f"list[{item}\n]"
+        else:
+            base = f"list[{item}]"
     elif typ == "object" or "properties" in schema or "additionalProperties" in schema:
         props = schema.get("properties", {})
         required = set(schema.get("required", []))
@@ -384,7 +415,7 @@ def _shape(
                 for name, child in props.items():
                     if not isinstance(child, dict):
                         continue
-                    child_type = _shape(child, root, depth + 1, top_level=False)
+                    child_type = _shape(child, root, depth + 1, top_level=False, seen_refs=seen_refs)
                     is_optional = name not in required or _type_includes_null(child_type)
                     optional = "?" if is_optional else ""
                     child_type = _drop_null_for_optional(child_type, optional=is_optional)
@@ -398,7 +429,17 @@ def _shape(
                 else:
                     base = "{" + ", ".join(fields) + "}"
         elif "additionalProperties" in schema:
-            base = f"dict[str, {_shape(schema.get('additionalProperties', {}), root, depth + 1, top_level=False)}]"
+            value = _shape(
+                schema.get("additionalProperties", {}),
+                root,
+                depth + 1,
+                top_level=False,
+                seen_refs=seen_refs,
+            )
+            if "\n" in value:
+                base = f"dict[str, {value}\n]"
+            else:
+                base = f"dict[str, {value}]"
         else:
             base = "dict"
     else:
@@ -407,6 +448,36 @@ def _shape(
     if schema.get("nullable"):
         base = f"{base} | null"
     return base
+
+
+def _inline_named_schema(
+    name: str,
+    schema: dict[str, Any],
+    root: dict[str, Any],
+    depth: int,
+    seen_refs: set[str],
+) -> str:
+    properties = schema.get("properties")
+    if not isinstance(properties, dict) or not properties:
+        fallback = _shape(schema, root, depth + 1, top_level=False, seen_refs=seen_refs)
+        return f"{name}: {fallback}"
+
+    required = set(schema.get("required", []))
+    lines = [f"{name} {{"]
+    for field_name, child in properties.items():
+        if not isinstance(child, dict):
+            continue
+        field_type = _shape(child, root, depth + 1, top_level=False, seen_refs=seen_refs)
+        is_optional = field_name not in required or _type_includes_null(field_type)
+        optional = "?" if is_optional else ""
+        field_type = _drop_null_for_optional(field_type, optional=is_optional)
+        comment = _schema_comment(child)
+        line = f"  {field_name}{optional}: {field_type}"
+        if comment:
+            line += f"  # {comment}"
+        lines.append(line)
+    lines.append("}")
+    return "\n".join(lines)
 
 
 def _drop_null_for_optional(type_repr: str, *, optional: bool) -> str:
@@ -726,16 +797,7 @@ def _render_shape_cell(shape: str, root: dict[str, Any]) -> str:
         rendered_main = "<br>".join(_render_shape_line(line) for line in lines)
     else:
         rendered_main = f"`{shape}`"
-
-    schema_names = _related_schema_names(shape, root)
-    if not schema_names:
-        return rendered_main
-
-    definition_blocks: list[str] = []
-    for name in schema_names:
-        definition_lines = _schema_definition_lines(name, root)
-        definition_blocks.append("<br>".join(_render_shape_line(line) for line in definition_lines))
-    return f"{rendered_main}<br><br>{'<br><br>'.join(definition_blocks)}"
+    return rendered_main
 
 
 def _render_rest(items: list[RestOp], root: dict[str, Any]) -> list[str]:

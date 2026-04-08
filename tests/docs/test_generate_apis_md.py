@@ -143,8 +143,7 @@ def test_generator_expands_referenced_response_types():
 
     slides_cache_row = re.search(r"^\| .*`GET /api/participant/slides-cache-status`.*\|$", output, re.MULTILINE)
     assert slides_cache_row, "Missing table row for GET /api/participant/slides-cache-status"
-    assert "`slides_cache_status?: dict[str, SlidesCacheStatusEntry]`" in slides_cache_row.group(0)
-    assert "`SlidesCacheStatusEntry {`" in slides_cache_row.group(0)
+    assert "`slides_cache_status?: dict[str, SlidesCacheStatusEntry {`" in slides_cache_row.group(0)
     assert "&nbsp;&nbsp;&nbsp;&nbsp;`status:string`" in slides_cache_row.group(0)
 
 
@@ -153,8 +152,8 @@ def test_generator_expands_nested_referenced_types():
 
     create_poll_row = re.search(r"^\| .*`POST /api/\{session_id\}/host/poll`.*\|$", output, re.MULTILINE)
     assert create_poll_row, "Missing table row for POST /api/{session_id}/host/poll"
-    assert "`PollResponse {`" in create_poll_row.group(0)
-    assert "`PollOptionRequest {`" in create_poll_row.group(0)
+    assert "`poll: PollResponse {`" in create_poll_row.group(0)
+    assert "`options?: list[PollOptionRequest {`" in create_poll_row.group(0)
 
 
 def test_rest_rows_have_no_any_in_request_or_response_cells():

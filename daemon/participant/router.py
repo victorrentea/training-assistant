@@ -62,6 +62,9 @@ class PollData(BaseModel):
     correct_count: int | None = None
     source: str | None = None
     page: str | None = None
+    timer_seconds: int | None = None
+    timer_started_at: str | None = None
+    correct_ids: list[str] | None = None
 
 
 class CodeReviewParticipantState(BaseModel):
@@ -123,9 +126,6 @@ class ParticipantStateResponse(BaseModel):
     poll: PollData | None = None
     poll_active: bool
     vote_counts: dict[str, int]
-    poll_timer_seconds: int | None = None
-    poll_timer_started_at: str | None = None
-    poll_correct_ids: list[str] | None = None
     my_vote: str | list[str] | None = None
     my_voted_ids: list[str] | None = None
     codereview: CodeReviewParticipantState
@@ -214,13 +214,18 @@ def _build_poll_for_participant(pid: str) -> dict:
     """Build poll state personalised for participant pid."""
     from daemon.poll.state import poll_state
     ps = poll_state
+    poll = dict(ps.poll) if ps.poll else None
+    if poll is not None:
+        poll["timer_seconds"] = ps.poll_timer_seconds
+        poll["timer_started_at"] = (
+            ps.poll_timer_started_at.isoformat() if ps.poll_timer_started_at else None
+        )
+        poll["correct_ids"] = ps.poll_correct_ids
+
     result: dict = {
-        "poll": ps.poll,
+        "poll": poll,
         "poll_active": ps.poll_active,
         "vote_counts": ps.vote_counts() if ps.poll else {},
-        "poll_timer_seconds": ps.poll_timer_seconds,
-        "poll_timer_started_at": ps.poll_timer_started_at.isoformat() if ps.poll_timer_started_at else None,
-        "poll_correct_ids": ps.poll_correct_ids,
     }
     # Personalise vote
     my_vote_entry = ps.votes.get(pid)
