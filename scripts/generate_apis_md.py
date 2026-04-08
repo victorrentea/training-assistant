@@ -161,7 +161,12 @@ def _collect_rest_doc(spec: dict[str, Any]) -> tuple[str, list[str]]:
     return "Endpoint", []
 
 
-def _shape(schema: dict[str, Any] | bool | Any | None, root: dict[str, Any], depth: int = 0) -> str:
+def _shape(
+    schema: dict[str, Any] | bool | Any | None,
+    root: dict[str, Any],
+    depth: int = 0,
+    top_level: bool = True,
+) -> str:
     if schema is True:
         return "any"
     if schema is False:
@@ -179,14 +184,14 @@ def _shape(schema: dict[str, Any] | bool | Any | None, root: dict[str, Any], dep
             return ref_name
         if depth > 0:
             return ref_name
-        return _shape(resolved, root, depth + 1)
+        return _shape(resolved, root, depth + 1, top_level=top_level)
 
     if "oneOf" in schema:
-        return " | ".join(_shape(s, root, depth + 1) for s in schema.get("oneOf", []))
+        return " | ".join(_shape(s, root, depth + 1, top_level=False) for s in schema.get("oneOf", []))
     if "anyOf" in schema:
-        return " | ".join(_shape(s, root, depth + 1) for s in schema.get("anyOf", []))
+        return " | ".join(_shape(s, root, depth + 1, top_level=False) for s in schema.get("anyOf", []))
     if "allOf" in schema:
-        return " & ".join(_shape(s, root, depth + 1) for s in schema.get("allOf", []))
+        return " & ".join(_shape(s, root, depth + 1, top_level=False) for s in schema.get("allOf", []))
 
     typ = schema.get("type")
 
@@ -204,7 +209,7 @@ def _shape(schema: dict[str, Any] | bool | Any | None, root: dict[str, Any], dep
     elif typ == "boolean":
         base = "bool"
     elif typ == "array":
-        base = f"list[{_shape(schema.get('items', {}), root, depth + 1)}]"
+        base = f"list[{_shape(schema.get('items', {}), root, depth + 1, top_level=False)}]"
     elif typ == "object" or "properties" in schema or "additionalProperties" in schema:
         props = schema.get("properties", {})
         required = set(schema.get("required", []))
@@ -217,15 +222,18 @@ def _shape(schema: dict[str, Any] | bool | Any | None, root: dict[str, Any], dep
                     if not isinstance(child, dict):
                         continue
                     optional = "" if name in required else "?"
-                    child_type = _shape(child, root, depth + 1)
+                    child_type = _shape(child, root, depth + 1, top_level=False)
                     comment = _schema_comment(child)
                     line = f"{name}{optional}: {child_type}"
                     if comment:
                         line += f"  # {comment}"
                     fields.append(line)
-                base = "{" + ", ".join(fields) + "}"
+                if top_level and len(fields) >= 2:
+                    base = "\n".join(fields)
+                else:
+                    base = "{" + ", ".join(fields) + "}"
         elif "additionalProperties" in schema:
-            base = f"dict[str, {_shape(schema.get('additionalProperties', {}), root, depth + 1)}]"
+            base = f"dict[str, {_shape(schema.get('additionalProperties', {}), root, depth + 1, top_level=False)}]"
         else:
             base = "dict"
     else:
@@ -413,6 +421,9 @@ def _escape_md_cell(value: str) -> str:
 def _render_shape_cell(shape: str) -> str:
     if shape.strip() in {"", "-", "none"}:
         return "-"
+    if "\n" in shape:
+        lines = [line.strip() for line in shape.splitlines() if line.strip()]
+        return "<br>".join(f"`{line}`" for line in lines)
     return f"`{shape}`"
 
 

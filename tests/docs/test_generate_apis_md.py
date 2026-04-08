@@ -97,11 +97,24 @@ def test_participant_identity_rows_have_expected_response_shapes():
     register_row = re.search(r"^\| .*`POST /api/participant/register`.*\|$", output, re.MULTILINE)
     assert register_row, "Missing table row for POST /api/participant/register"
     assert "any" not in register_row.group(0)
-    assert "{name: string, avatar: string}" in register_row.group(0)
+    assert "`name: string`<br>`avatar: string`" in register_row.group(0)
 
     rename_row = re.search(r"^\| .*`PUT /api/participant/name`.*\|$", output, re.MULTILINE)
     assert rename_row, "Missing table row for PUT /api/participant/name"
     assert "| `{name: string}` | -" in rename_row.group(0)
+
+
+def test_generator_pretty_prints_multi_field_shapes_one_per_line():
+    output = _run_generator()
+
+    start_session_row = re.search(r"^\| .*`POST /api/session/start`.*\|$", output, re.MULTILINE)
+    assert start_session_row, "Missing table row for POST /api/session/start"
+    assert "`name: string`<br>`type?: string`" in start_session_row.group(0)
+    assert "{name: string, type?: string}" not in start_session_row.group(0)
+
+    poll_closed_row = re.search(r"^\| .*`poll_closed`.*\|$", output, re.MULTILINE)
+    assert poll_closed_row, "Missing WS table row for poll_closed"
+    assert "`vote_counts: dict[str, int]  # option_id → vote count`<br>`total_votes: int`" in poll_closed_row.group(0)
 
 
 def test_log_level_and_daemon_status_rows_have_expected_shapes():
