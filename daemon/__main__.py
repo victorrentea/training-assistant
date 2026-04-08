@@ -208,7 +208,6 @@ def _build_runtime_session_snapshot(
         "current_activity": participant_state.current_activity,
         "participant_names": dict(participant_state.participant_names),
         "participant_avatars": dict(participant_state.participant_avatars),
-        "participant_universes": dict(participant_state.participant_universes),
         "scores": dict(participant_state.scores),
         "locations": dict(participant_state.locations),
         "poll": poll_state.poll,

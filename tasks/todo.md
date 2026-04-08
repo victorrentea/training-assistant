@@ -1,5 +1,17 @@
 # Todo
 
+## Direct request: remove participant_universes from session state
+
+- [x] Remove `participant_universes` from daemon runtime snapshot persistence payload
+- [x] Remove restore/snapshot plumbing that depended on persisted `participant_universes`
+- [x] Add regression tests proving restore ignores `participant_universes` and snapshots exclude it
+- [x] Run targeted daemon tests and capture proof in review section
+
+### Review: remove participant_universes from session state
+
+- Proof: `python3 -m pytest -q tests/daemon/test_daemon_state.py tests/daemon/test_participant_router.py`
+- Result: `51 passed in 1.14s`
+
 ## Direct request: auto-generate API.md before commit
 
 - [x] Add repository pre-commit hook at `hooks/pre-commit` to regenerate `API.md`

@@ -265,7 +265,6 @@ def _build_mini_state() -> SimpleNamespace:
     return SimpleNamespace(
         participant_names=ps.participant_names,
         participant_avatars=ps.participant_avatars,
-        participant_universes=ps.participant_universes,
         participants={uid: None for uid in ps.participant_names},  # fake WS entries for name pool checks
         mode=ps.mode,
     )

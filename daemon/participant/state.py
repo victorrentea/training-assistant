@@ -40,9 +40,6 @@ class ParticipantState:
             if "participant_avatars" in data:
                 self.participant_avatars.clear()
                 self.participant_avatars.update(data["participant_avatars"])
-            if "participant_universes" in data:
-                self.participant_universes.clear()
-                self.participant_universes.update(data["participant_universes"])
             if "scores" in data:
                 self.scores.clear()
                 self.scores.update(data["scores"])
@@ -60,7 +57,6 @@ class ParticipantState:
             return {
                 "participant_names": dict(self.participant_names),
                 "participant_avatars": dict(self.participant_avatars),
-                "participant_universes": dict(self.participant_universes),
                 "scores": dict(self.scores),
                 "locations": dict(self.locations),
                 "mode": self.mode,

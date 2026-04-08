@@ -33,7 +33,6 @@ class AppState:
         self.participant_history: set[str] = set()  # uuids seen in this session (online or offline)
         self.participant_names: dict[str, str] = {}  # uuid -> display_name
         self.participant_avatars: dict[str, str] = {}
-        self.participant_universes: dict[str, str] = {}  # uuid → universe string
         self.participant_ips: dict[str, str] = {}  # uuid → IP address
         self.paste_texts: dict[str, list[dict]] = {}  # uuid → [{id: int, text: str}, ...]
         self.paste_next_id: int = 0

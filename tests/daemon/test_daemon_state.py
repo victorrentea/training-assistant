@@ -585,3 +585,33 @@ def test_apply_snapshot_restore_updates_participant_names():
     })
 
     assert participant_state.participant_names == {"u1": "Persisted Tester"}
+
+
+def test_apply_snapshot_restore_ignores_participant_universes():
+    from daemon.__main__ import _apply_runtime_snapshot_restore
+    from daemon.participant.state import participant_state
+
+    participant_state.reset()
+
+    _apply_runtime_snapshot_restore({
+        "participant_universes": {"u1": "Star Wars"},
+    })
+
+    assert participant_state.participant_universes == {}
+
+
+def test_runtime_session_snapshot_excludes_participant_universes():
+    from daemon.__main__ import _build_runtime_session_snapshot
+    from daemon.participant.state import participant_state
+
+    participant_state.reset()
+    participant_state.participant_names["u1"] = "Alice"
+    participant_state.participant_universes["u1"] = "Star Wars"
+
+    snapshot = _build_runtime_session_snapshot(
+        active_session_id="sid-1",
+        session_stack=[{"name": "2026-04-09 Demo Session"}],
+    )
+
+    assert "participant_universes" not in snapshot
+    assert snapshot["participant_names"] == {"u1": "Alice"}
