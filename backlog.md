@@ -1,5 +1,6 @@
 # Tasks
 
+- [x] direct request: host Key Points badge now shows only `🧠` and appends count when available (`🧠 N`), no `Key Points` text in badge.
 - [x] direct request: host notes badge now shows only `📝` and appends count only when available (`📝 N`), with no `Notes` text.
 - [x] direct request: host daemon log-level badge label simplified from `LOG info/debug` to plain `info` / `debug`.
 - [x] direct request: host notes badge label changed from `📝 (N) Notes.txt`/`📝 Notes.txt` to compact text-only format (`N Notes` when notes exist, gray `Notes` when none).

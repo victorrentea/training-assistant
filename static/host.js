@@ -923,8 +923,9 @@
       return d.toDateString() === today.toDateString() ? hhmm : '📅 ' + hhmm;
     };
     const timeLabel = _fmtSummaryTime(summaryUpdatedAt);
-    if (summaryPoints.length || _summaryLineCount > 0) {
-      badge.textContent = timeLabel ? `🧠 ${timeLabel} Key Points` : `🧠 Key Points`;
+    const keyPointCount = summaryPoints.length || _summaryLineCount || 0;
+    if (keyPointCount > 0) {
+      badge.textContent = `🧠 ${keyPointCount}`;
       badge.className = 'badge connected';
       badge.style.cssText = 'cursor:pointer;';
       _setFooterBadgeTooltip(
@@ -932,7 +933,7 @@
         noTranscriptTitle || `Key points from ${timeLabel || 'session'} — click to view`,
       );
     } else {
-      badge.textContent = `🧠 Key Points`;
+      badge.textContent = '🧠';
       badge.className = 'badge empty';
       badge.style.cssText = 'cursor:pointer;';
       _setFooterBadgeTooltip(badge, noTranscriptTitle || 'No key points yet');
