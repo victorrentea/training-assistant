@@ -441,9 +441,7 @@ def _render_rest(items: list[RestOp]) -> list[str]:
 def _render_ws(items: list[WsMsg]) -> list[str]:
     lines: list[str] = ["| Message | Payload |", "| --- | --- |"]
     for msg in items:
-        message_parts = [f"`{msg.name}`"]
-        for note in msg.notes:
-            message_parts.append(f"Note: {note}")
+        message_parts = [*msg.notes, f"`{msg.name}`"]
         message = _escape_md_cell("<br>".join(message_parts))
         payload = _render_shape_cell(msg.payload_shape)
         lines.append(f"| {message} | {_escape_md_cell(payload)} |")
