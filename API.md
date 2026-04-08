@@ -48,7 +48,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
 | Set Location, store participant city/timezone.<br>`POST /api/participant/location` | `{location: string}` | - |
 | Rename Participant, returns 400 if not yet registered.<br>`PUT /api/participant/name` | `{name: string}` | - |
 | Register Participant, idempotent for returning participants.<br>`POST /api/participant/register` | - | `name: string`<br>`avatar: string` |
-| Get Participant State, return full personalised state for a participant — used on page load and WS reconnect; returns participant-personalized full state snapshot.<br>`GET /api/participant/state` | - | `type?: string`<br>`mode: string`<br>`my_score: int`<br>`my_name: string`<br>`my_avatar: string`<br>`current_activity: string`<br>`participant_count: int`<br>`host_connected: bool`<br>`daemon_connected: bool`<br>`wordcloud_words: dict[str, int]`<br>`wordcloud_word_order: list[string]`<br>`wordcloud_topic: string`<br>`qa_questions: list[QAQuestionRaw]`<br>`poll?: PollData \| null`<br>`poll_active: bool`<br>`vote_counts: dict[str, int]`<br>`poll_timer_seconds?: int \| null`<br>`poll_timer_started_at?: string \| null`<br>`poll_correct_ids?: list[string] \| null`<br>`my_vote?: string \| list[string] \| null`<br>`my_voted_ids?: list[string] \| null`<br>`codereview: CodeReviewParticipantState`<br>`debate_statement?: string \| null`<br>`debate_phase?: string \| null`<br>`debate_my_side?: string \| null`<br>`debate_my_is_champion: bool`<br>`debate_side_counts: dict[str, int]`<br>`debate_arguments: list[DebateArgumentParticipant]`<br>`debate_champions: dict[str, string]`<br>`debate_auto_assigned: list[string]`<br>`debate_first_side?: string \| null`<br>`debate_round_index?: int \| null`<br>`debate_round_timer_seconds?: int \| null`<br>`debate_round_timer_started_at?: string \| null`<br>`slides_current?: SlidesCurrentPayload \| null`<br>`session_main?: SessionMainPayload \| null`<br>`session_name?: string \| null`<br>`leaderboard_data?: LeaderboardData \| null`<br>`summary_count: int`<br>`notes_count: int` |
+| Get Participant State, return full personalised state for a participant — used on page load and WS reconnect; returns participant-personalized full state snapshot.<br>`GET /api/participant/state` | - | `type?: string`<br>`mode: string`<br>`my_score: int`<br>`my_name: string`<br>`my_avatar: string`<br>`current_activity: string`<br>`participant_count: int`<br>`host_connected: bool`<br>`daemon_connected: bool`<br>`wordcloud_words: dict[str, int]`<br>`wordcloud_word_order: list[string]`<br>`wordcloud_topic: string`<br>`qa_questions: list[QAQuestionRaw]`<br>`poll?: PollData \| null`<br>`poll_active: bool`<br>`vote_counts: dict[str, int]`<br>`poll_timer_seconds?: int \| null`<br>`poll_timer_started_at?: string \| null`<br>`poll_correct_ids?: list[string] \| null`<br>`my_vote?: string \| list[string] \| null`<br>`my_voted_ids?: list[string] \| null`<br>`codereview: CodeReviewParticipantState`<br>`debate_statement?: string \| null`<br>`debate_phase?: string \| null`<br>`debate_my_side?: string \| null`<br>`debate_my_is_champion: bool`<br>`debate_side_counts: dict[str, int]`<br>`debate_arguments: list[DebateArgumentParticipant]`<br>`debate_champions: dict[str, string]`<br>`debate_auto_assigned: list[string]`<br>`debate_first_side?: string \| null`<br>`debate_round_index?: int \| null`<br>`debate_round_timer_seconds?: int \| null`<br>`debate_round_timer_started_at?: string \| null`<br>`slides_current?: SlidesCurrentPayload \| null`<br>`session_main?: SessionMainPayload \| null`<br>`session_name?: string \| null`<br>`leaderboard_data?: LeaderboardData \| null`<br>`summary_count: int`<br>`notes_count: int`<br><br>`QAQuestionRaw {`<br>`  id: string`<br>`  text: string`<br>`  author_uuid: string`<br>`  upvoter_uuids: list[string]`<br>`  answered: bool`<br>`  timestamp: number`<br>`}`<br><br>`PollData {`<br>`  id: string`<br>`  question: string`<br>`  options: list[PollOption]`<br>`  multi: bool`<br>`  correct_count?: int \| null`<br>`  source?: string \| null`<br>`  page?: string \| null`<br>`}`<br><br>`CodeReviewParticipantState {`<br>`  snippet?: string \| null`<br>`  language?: string \| null`<br>`  phase?: string \| null`<br>`  confirmed_lines?: list[int]`<br>`  my_selections?: list[int]`<br>`  line_percentages?: dict[str, int] \| null`<br>`}`<br><br>`DebateArgumentParticipant {`<br>`  id: string`<br>`  author_uuid: string`<br>`  side: string`<br>`  text: string`<br>`  upvoters: list[string]`<br>`  ai_generated: bool`<br>`  merged_into?: string \| null`<br>`  is_own: bool`<br>`  has_upvoted: bool`<br>`}`<br><br>`SlidesCurrentPayload {`<br>`  slug?: string \| null`<br>`}`<br><br>`SessionMainPayload {`<br>`  mode?: string \| null`<br>`}`<br><br>`LeaderboardData {`<br>`  entries: list[LeaderboardEntry]`<br>`  total_participants: int`<br>`}`<br><br>`PollOption {`<br>`  id: string`<br>`  text: string`<br>`}`<br><br>`LeaderboardEntry {`<br>`  uuid: string`<br>`  name: string`<br>`  score: int`<br>`}` |
 
 ### Participant WS
 | Message | Payload |
@@ -58,24 +58,24 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
 ### Host REST
 | Endpoint | Request | Response |
 | --- | --- | --- |
-| Get Host State, return full state for host page load — replicates Railway build_for_host(); returns host-facing full state snapshot.<br>`GET /api/{session_id}/host/state` | - | `type?: string`<br>`mode: string`<br>`current_activity: string`<br>`participant_count: int`<br>`participants: list[HostParticipant]`<br>`daemon_connected: bool`<br>`overlay_connected: bool`<br>`wordcloud_words: dict[str, int]`<br>`wordcloud_word_order: list[string]`<br>`wordcloud_topic: string`<br>`qa_questions: list[HostQAQuestion]`<br>`poll?: PollData \| null`<br>`poll_active: bool`<br>`vote_counts: dict[str, int]`<br>`votes: dict[str, HostPollVote]`<br>`poll_timer_seconds?: int \| null`<br>`poll_timer_started_at?: string \| null`<br>`poll_correct_ids?: list[string] \| null`<br>`codereview: HostCodeReviewState`<br>`debate_statement?: string \| null`<br>`debate_phase?: string \| null`<br>`debate_side_counts: dict[str, int]`<br>`debate_sides: dict[str, string]`<br>`debate_arguments: list[DebateArgumentHost]`<br>`debate_champions: dict[str, string]`<br>`debate_auto_assigned: list[string]`<br>`debate_first_side?: string \| null`<br>`debate_round_index?: int \| null`<br>`debate_round_timer_seconds?: int \| null`<br>`debate_round_timer_started_at?: string \| null`<br>`slides_current?: SlidesCurrentPayload \| null`<br>`slides_log: list[SlidesLogEntry]`<br>`slides_log_deep_count: int`<br>`slides_log_topic?: string \| null`<br>`session_main?: SessionMainPayload \| null`<br>`session_name?: string \| null`<br>`session_id?: string \| null`<br>`join_base_url: string`<br>`daemon_session_folder?: string \| null`<br>`daemon_session_notes?: string \| null`<br>`leaderboard_data?: LeaderboardData \| null`<br>`summary_count: int`<br>`summary_updated_at?: string \| null`<br>`notes_count: int`<br>`token_usage: TokenUsage`<br>`transcript_line_count: int`<br>`transcript_total_lines: int`<br>`transcript_latest_ts?: string \| null`<br>`quiz_preview?: QuizPreviewPayload-Output \| null` |
+| Get Host State, return full state for host page load — replicates Railway build_for_host(); returns host-facing full state snapshot.<br>`GET /api/{session_id}/host/state` | - | `type?: string`<br>`mode: string`<br>`current_activity: string`<br>`participant_count: int`<br>`participants: list[HostParticipant]`<br>`daemon_connected: bool`<br>`overlay_connected: bool`<br>`wordcloud_words: dict[str, int]`<br>`wordcloud_word_order: list[string]`<br>`wordcloud_topic: string`<br>`qa_questions: list[HostQAQuestion]`<br>`poll?: PollData \| null`<br>`poll_active: bool`<br>`vote_counts: dict[str, int]`<br>`votes: dict[str, HostPollVote]`<br>`poll_timer_seconds?: int \| null`<br>`poll_timer_started_at?: string \| null`<br>`poll_correct_ids?: list[string] \| null`<br>`codereview: HostCodeReviewState`<br>`debate_statement?: string \| null`<br>`debate_phase?: string \| null`<br>`debate_side_counts: dict[str, int]`<br>`debate_sides: dict[str, string]`<br>`debate_arguments: list[DebateArgumentHost]`<br>`debate_champions: dict[str, string]`<br>`debate_auto_assigned: list[string]`<br>`debate_first_side?: string \| null`<br>`debate_round_index?: int \| null`<br>`debate_round_timer_seconds?: int \| null`<br>`debate_round_timer_started_at?: string \| null`<br>`slides_current?: SlidesCurrentPayload \| null`<br>`slides_log: list[SlidesLogEntry]`<br>`slides_log_deep_count: int`<br>`slides_log_topic?: string \| null`<br>`session_main?: SessionMainPayload \| null`<br>`session_name?: string \| null`<br>`session_id?: string \| null`<br>`join_base_url: string`<br>`daemon_session_folder?: string \| null`<br>`daemon_session_notes?: string \| null`<br>`leaderboard_data?: LeaderboardData \| null`<br>`summary_count: int`<br>`summary_updated_at?: string \| null`<br>`notes_count: int`<br>`token_usage: TokenUsage`<br>`transcript_line_count: int`<br>`transcript_total_lines: int`<br>`transcript_latest_ts?: string \| null`<br>`quiz_preview?: QuizPreviewPayload-Output \| null`<br><br>`HostParticipant {`<br>`  uuid: string`<br>`  name: string`<br>`  score: int`<br>`  location: string`<br>`  avatar: string`<br>`  paste_texts?: list[PasteEntry]`<br>`  received_files?: list[UploadedFileEntry]`<br>`}`<br><br>`HostQAQuestion {`<br>`  id: string`<br>`  text: string`<br>`  author: string`<br>`  author_uuid: string`<br>`  author_avatar: string`<br>`  upvote_count: int`<br>`  upvoters: list[string]`<br>`  answered: bool`<br>`  timestamp: number`<br>`}`<br><br>`PollData {`<br>`  id: string`<br>`  question: string`<br>`  options: list[PollOption]`<br>`  multi: bool`<br>`  correct_count?: int \| null`<br>`  source?: string \| null`<br>`  page?: string \| null`<br>`}`<br><br>`HostPollVote {`<br>`  option_ids: list[string]`<br>`  voted_at: string`<br>`}`<br><br>`HostCodeReviewState {`<br>`  snippet?: string \| null`<br>`  language?: string \| null`<br>`  phase?: string \| null`<br>`  confirmed_lines?: list[int]`<br>`  selections?: dict[str, list[int]]`<br>`  line_percentages?: dict[str, int] \| null`<br>`  line_counts?: dict[str, int] \| null`<br>`}`<br><br>`DebateArgumentHost {`<br>`  id: string`<br>`  author_uuid: string`<br>`  side: string`<br>`  text: string`<br>`  upvoters: list[string]`<br>`  ai_generated: bool`<br>`  merged_into?: string \| null`<br>`}`<br><br>`SlidesCurrentPayload {`<br>`  slug?: string \| null`<br>`}`<br><br>`SlidesLogEntry {`<br>`  file: string`<br>`  slide: int`<br>`  seconds_spent: number`<br>`  timestamp: string`<br>`}`<br><br>`SessionMainPayload {`<br>`  mode?: string \| null`<br>`}`<br><br>`LeaderboardData {`<br>`  entries: list[LeaderboardEntry]`<br>`  total_participants: int`<br>`}`<br><br>`TokenUsage {`<br>`  input_tokens: int`<br>`  output_tokens: int`<br>`  estimated_cost_usd: number`<br>`}`<br><br>`QuizPreviewPayload-Output {`<br>`  question?: string \| null`<br>`  options?: list[string] \| null`<br>`  multi?: bool \| null`<br>`  correct_indices?: list[int] \| null`<br>`}`<br><br>`PasteEntry {`<br>`  id: string`<br>`  text: string`<br>`}`<br><br>`UploadedFileEntry {`<br>`  id: string`<br>`  filename: string`<br>`  size: int`<br>`  disk_path: string`<br>`  seen_by_host: bool`<br>`}`<br><br>`PollOption {`<br>`  id: string`<br>`  text: string`<br>`}`<br><br>`LeaderboardEntry {`<br>`  uuid: string`<br>`  name: string`<br>`  score: int`<br>`}` |
 
 ### Host WS
 | Message | Payload |
 | --- | --- |
-| Participant list changed (join/register/rename/location) — sent by daemon directly<br>`participant_list_updated` | `{participants: list[HostParticipant]}` |
+| Participant list changed (join/register/rename/location) — sent by daemon directly<br>`participant_list_updated` | `{participants: list[HostParticipant]}`<br><br>`HostParticipant {`<br>`  uuid: string`<br>`  name: string`<br>`  score: int`<br>`  location?: string \| null`<br>`  avatar: string`<br>`}` |
 
 ## Feature: Slides
 
 ### Participant REST
 | Endpoint | Request | Response |
 | --- | --- | --- |
-| Get Slides Cache Status, primarily for diagnostics; UI cache invalidation is event-driven via slides_cache_status WS.<br>`GET /api/participant/slides-cache-status` | - | `{slides_cache_status?: dict[str, SlidesCacheStatusEntry]}` |
+| Get Slides Cache Status, primarily for diagnostics; UI cache invalidation is event-driven via slides_cache_status WS.<br>`GET /api/participant/slides-cache-status` | - | `{slides_cache_status?: dict[str, SlidesCacheStatusEntry]}`<br><br>`SlidesCacheStatusEntry {`<br>`  status: string`<br>`  size_bytes?: int \| null`<br>`  downloaded_at?: string \| null`<br>`  modified_at?: string \| null`<br>`  title?: string \| null`<br>`  name?: string \| null`<br>`  error?: string \| null`<br>`}` |
 
 ### Participant WS
 | Message | Payload |
 | --- | --- |
-| Host navigated to a new slide<br>`slides_current` | `{slides_current?: SlidesCurrent  # null means no active slide}` |
+| Host navigated to a new slide<br>`slides_current` | `{slides_current?: SlidesCurrent  # null means no active slide}`<br><br>`SlidesCurrent {`<br>`  url?: string \| null`<br>`  slug?: string \| null`<br>`  presentation_name?: string \| null`<br>`  current_page?: int \| null`<br>`  updated_at?: string \| null`<br>`}` |
 | Invalidation signal — participant must call GET /api/slides to refresh<br>Client must refetch slide list; payload intentionally carries no cache map.<br>`slides_cache_status` | - |
 
 ### Host WS
@@ -106,7 +106,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
 ### Participant WS
 | Message | Payload |
 | --- | --- |
-| Poll opened for voting<br>Participants can vote only while poll is open.<br>`poll_opened` | `{poll: Poll}` |
+| Poll opened for voting<br>Participants can vote only while poll is open.<br>`poll_opened` | `{poll: Poll}`<br><br>`Poll {`<br>`  id: string`<br>`  question: string`<br>`  options: list[object]`<br>`  multi: bool`<br>`}` |
 | Voting closed by host<br>`poll_closed` | `vote_counts: dict[str, int]  # option_id → vote count`<br>`total_votes: int` |
 | Host revealed correct answers<br>`poll_correct_revealed` | `{correct_ids: list[string]}` |
 | Poll removed by host<br>`poll_cleared` | - |
@@ -116,11 +116,11 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
 | Endpoint | Request | Response |
 | --- | --- | --- |
 | Host deletes the current poll.<br>`DELETE /api/{session_id}/host/poll` | - | - |
-| Host creates a new poll.<br>`POST /api/{session_id}/host/poll` | `question?: string`<br>`options?: list[PollOptionRequest]`<br>`multi?: bool`<br>`correct_count?: int \| null` | `ok?: bool`<br>`poll: PollResponse` |
+| Host creates a new poll.<br>`POST /api/{session_id}/host/poll` | `question?: string`<br>`options?: list[PollOptionRequest]`<br>`multi?: bool`<br>`correct_count?: int \| null`<br><br>`PollOptionRequest {`<br>`  id: string`<br>`  text: string`<br>`}` | `ok?: bool`<br>`poll: PollResponse`<br><br>`PollResponse {`<br>`  id: string`<br>`  question: string`<br>`  options: list[PollOptionRequest]`<br>`  multi: bool`<br>`  correct_count?: int \| null`<br>`  source?: string \| null`<br>`  page?: string \| null`<br>`}`<br><br>`PollOptionRequest {`<br>`  id: string`<br>`  text: string`<br>`}` |
 | Host closes the poll.<br>`POST /api/{session_id}/host/poll/close` | - | `ok?: bool`<br>`vote_counts: dict[str, int]`<br>`total_votes: int` |
 | Host reveals correct answers and awards scores.<br>`PUT /api/{session_id}/host/poll/correct` | `{correct_ids?: list[string]}` | - |
 | Host opens the poll for voting.<br>`POST /api/{session_id}/host/poll/open` | - | - |
-| Set Poll Status, compatibility: {open: true} → open_poll, {open: false} → close_poll.<br>`PUT /api/{session_id}/host/poll/status` | `{open: bool}` | `OkResponse \| ClosePollResponse` |
+| Set Poll Status, compatibility: {open: true} → open_poll, {open: false} → close_poll.<br>`PUT /api/{session_id}/host/poll/status` | `{open: bool}` | `OkResponse \| ClosePollResponse`<br><br>`OkResponse {`<br>`  ok?: bool`<br>`}`<br><br>`ClosePollResponse {`<br>`  ok?: bool`<br>`  vote_counts: dict[str, int]`<br>`  total_votes: int`<br>`}` |
 | Host starts a countdown timer for the poll.<br>`POST /api/{session_id}/host/poll/timer` | `{seconds?: int}` | - |
 
 ### Host WS
@@ -164,7 +164,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
 ### Participant WS
 | Message | Payload |
 | --- | --- |
-| Q&A list changed (new question, upvote, edit, delete)<br>`qa_updated` | `{questions: list[QAQuestion]}` |
+| Q&A list changed (new question, upvote, edit, delete)<br>`qa_updated` | `{questions: list[QAQuestion]}`<br><br>`QAQuestion {`<br>`  id: string`<br>`  text: string`<br>`  author_uuid: string`<br>`  upvoter_uuids: list[string]  # Client computes is_own and has_upvoted locally from its own UUID`<br>`  answered: bool`<br>`  timestamp: number`<br>`}` |
 
 ### Host REST
 | Endpoint | Request | Response |
@@ -178,7 +178,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
 ### Host WS
 | Message | Payload |
 | --- | --- |
-| Q&A list changed (same structure as participant)<br>`qa_updated` | `{questions: list[QAQuestion]}` |
+| Q&A list changed (same structure as participant)<br>`qa_updated` | `{questions: list[QAQuestion]}`<br><br>`QAQuestion {`<br>`  id: string`<br>`  text: string`<br>`  author_uuid: string`<br>`  upvoter_uuids: list[string]`<br>`  answered: bool`<br>`  timestamp: number`<br>`}` |
 
 ## Feature: Code Review
 
@@ -221,7 +221,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
 ### Participant WS
 | Message | Payload |
 | --- | --- |
-| Full debate state snapshot<br>`debate_updated` | `statement?: string \| null`<br>`phase?: null \| 'side_selection' \| 'arguments' \| 'ai_cleanup' \| 'prep' \| 'live_debate' \| 'ended' \| null`<br>`sides?: dict[str, string]  # uuid → "for"\|"against"`<br>`arguments?: list[DebateArgument]`<br>`champions?: dict[str, string]  # "for"\|"against" → uuid`<br>`auto_assigned?: list[string]`<br>`first_side?: string \| null`<br>`round_index?: int \| null`<br>`round_timer_seconds?: int \| null`<br>`round_timer_started_at?: string \| null` |
+| Full debate state snapshot<br>`debate_updated` | `statement?: string \| null`<br>`phase?: null \| 'side_selection' \| 'arguments' \| 'ai_cleanup' \| 'prep' \| 'live_debate' \| 'ended' \| null`<br>`sides?: dict[str, string]  # uuid → "for"\|"against"`<br>`arguments?: list[DebateArgument]`<br>`champions?: dict[str, string]  # "for"\|"against" → uuid`<br>`auto_assigned?: list[string]`<br>`first_side?: string \| null`<br>`round_index?: int \| null`<br>`round_timer_seconds?: int \| null`<br>`round_timer_started_at?: string \| null`<br><br>`DebateArgument {`<br>`  id: string`<br>`  author_uuid: string`<br>`  side: 'for' \| 'against'`<br>`  text: string`<br>`  upvoters: list[string]`<br>`  ai_generated: bool`<br>`  merged_into?: string \| null`<br>`}` |
 | A timed debate round started<br>`debate_timer` | `round_index: int`<br>`seconds: int`<br>`started_at: string` |
 | `debate_round_ended` | - |
 
@@ -229,7 +229,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
 | Endpoint | Request | Response |
 | --- | --- | --- |
 | Host launches a debate with a statement.<br>`POST /api/{session_id}/host/debate` | `{statement: string}` | - |
-| Receive Ai Result, manual/skip AI result — host posts AI cleanup results directly.<br>`POST /api/{session_id}/host/debate/ai-result` | `merges?: list[DebateAiMerge]`<br>`cleaned?: list[DebateAiCleaned]`<br>`new_arguments?: list[DebateAiNewArgument]` | - |
+| Receive Ai Result, manual/skip AI result — host posts AI cleanup results directly.<br>`POST /api/{session_id}/host/debate/ai-result` | `merges?: list[DebateAiMerge]`<br>`cleaned?: list[DebateAiCleaned]`<br>`new_arguments?: list[DebateAiNewArgument]`<br><br>`DebateAiMerge {`<br>`  keep_id: string`<br>`  remove_ids?: list[string]`<br>`}`<br><br>`DebateAiCleaned {`<br>`  id: string`<br>`  text: string`<br>`}`<br><br>`DebateAiNewArgument {`<br>`  side: string`<br>`  text: string`<br>`}` | - |
 | Host closes side selection; auto-assigns remaining participants.<br>`POST /api/{session_id}/host/debate/close-selection` | - | - |
 | Host ends arguments phase; triggers AI cleanup in background.<br>`POST /api/{session_id}/host/debate/end-arguments` | - | - |
 | Host ends the current round early.<br>`POST /api/{session_id}/host/debate/end-round` | - | - |
@@ -245,7 +245,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
 | Message | Payload |
 | --- | --- |
 | One or more participants' scores changed<br>`scores_updated` | `{scores: dict[str, int]  # uuid → score (all participants)}` |
-| Leaderboard overlay shown with top positions<br>`leaderboard_revealed` | `{positions: list[LeaderboardPosition]}` |
+| Leaderboard overlay shown with top positions<br>`leaderboard_revealed` | `{positions: list[LeaderboardPosition]}`<br><br>`LeaderboardPosition {`<br>`  rank: int`<br>`  name: string`<br>`  score: int`<br>`  avatar: string`<br>`}` |
 
 ### Host REST
 | Endpoint | Request | Response |
@@ -257,7 +257,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
 ### Host WS
 | Message | Payload |
 | --- | --- |
-| Leaderboard revealed (same payload as participant)<br>`leaderboard_revealed` | `{positions: list[LeaderboardPosition]}` |
+| Leaderboard revealed (same payload as participant)<br>`leaderboard_revealed` | `{positions: list[LeaderboardPosition]}`<br><br>`LeaderboardPosition {`<br>`  rank: int`<br>`  name: string`<br>`  score: int`<br>`  avatar: string`<br>`}` |
 
 ## Feature: Emoji Reactions
 
@@ -283,7 +283,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
 | Endpoint | Request | Response |
 | --- | --- | --- |
 | Host clears the current quiz preview.<br>`DELETE /api/{session_id}/host/quiz-preview` | - | - |
-| Host requests regeneration of a specific question or option.<br>`POST /api/{session_id}/host/quiz-refine` | `target: string`<br>`preview?: QuizPreviewPayload-Input \| null` | - |
+| Host requests regeneration of a specific question or option.<br>`POST /api/{session_id}/host/quiz-refine` | `target: string`<br>`preview?: QuizPreviewPayload-Input \| null`<br><br>`QuizPreviewPayload-Input {`<br>`  quiz?: dict[str, any] \| null`<br>`  question?: string \| null`<br>`  options?: list[string] \| null`<br>`  multi?: bool \| null`<br>`  correct_indices?: list[int] \| null`<br>`}` | - |
 | Host requests a quiz — stores request for the orchestrator loop to pick up.<br>`POST /api/{session_id}/host/quiz-request` | `minutes?: int \| null`<br>`topic?: string \| null` | - |
 | Get Quiz Md, return the accumulated quiz markdown history.<br>`GET /api/{session_id}/quiz-md` | - | `{content: string}` |
 
@@ -303,7 +303,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
 ### Host REST
 | Endpoint | Request | Response |
 | --- | --- | --- |
-| Get Pastes, return all pending paste entries grouped by participant uuid.<br>`GET /api/{session_id}/host/pastes` | - | `{pastes?: dict[str, list[PasteEntry]]}` |
+| Get Pastes, return all pending paste entries grouped by participant uuid.<br>`GET /api/{session_id}/host/pastes` | - | `{pastes?: dict[str, list[PasteEntry]]}`<br><br>`PasteEntry {`<br>`  id: string`<br>`  text: string`<br>`}` |
 | Mark Uploaded File Seen<br>`POST /api/{session_id}/host/uploads/seen` | `uuid: string`<br>`file_id: string` | - |
 
 ### Host WS
@@ -318,7 +318,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
 | Endpoint | Request | Response |
 | --- | --- | --- |
 | Get Notes<br>`GET /api/participant/notes` | - | `{notes_content?: string \| null}` |
-| Get Summary<br>`GET /api/participant/summary` | - | `points?: list[SummaryPoint]`<br>`raw_markdown?: string \| null`<br>`updated_at?: string \| null` |
+| Get Summary<br>`GET /api/participant/summary` | - | `points?: list[SummaryPoint]`<br>`raw_markdown?: string \| null`<br>`updated_at?: string \| null`<br><br>`SummaryPoint {`<br>`  text: string`<br>`  source: string`<br>`}` |
 
 ### Participant WS
 | Message | Payload |
@@ -330,7 +330,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
 | Endpoint | Request | Response |
 | --- | --- | --- |
 | Get Host Notes, return current session notes content.<br>`GET /api/{session_id}/host/notes` | - | `{notes_content?: string \| null}` |
-| Get Host Summary, return summary points, raw markdown, and updated_at timestamp.<br>`GET /api/{session_id}/host/summary` | - | `points?: list[SummaryPoint]`<br>`raw_markdown?: string \| null`<br>`updated_at?: string \| null` |
+| Get Host Summary, return summary points, raw markdown, and updated_at timestamp.<br>`GET /api/{session_id}/host/summary` | - | `points?: list[SummaryPoint]`<br>`raw_markdown?: string \| null`<br>`updated_at?: string \| null`<br><br>`SummaryPoint {`<br>`  text: string`<br>`  source: string`<br>`}` |
 
 ### Host WS
 | Message | Payload |

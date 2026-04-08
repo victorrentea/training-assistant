@@ -565,22 +565,144 @@ def _escape_md_cell(value: str) -> str:
     return value.replace("|", "\\|")
 
 
-def _render_shape_cell(shape: str) -> str:
+def _component_schemas(root: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    components = root.get("components", {})
+    if not isinstance(components, dict):
+        return {}
+    schemas = components.get("schemas", {})
+    if not isinstance(schemas, dict):
+        return {}
+    return {name: schema for name, schema in schemas.items() if isinstance(schema, dict)}
+
+
+def _extract_schema_names_from_text(shape: str, schema_names: set[str]) -> list[str]:
+    names: list[str] = []
+    for match in re.finditer(r"\b[A-Za-z_][A-Za-z0-9_-]*\b", shape):
+        token = match.group(0)
+        if token in schema_names and token not in names:
+            names.append(token)
+    return names
+
+
+def _collect_ref_names_from_schema(
+    schema: dict[str, Any] | Any,
+    root: dict[str, Any],
+    refs: list[str],
+    stack: set[str],
+) -> None:
+    if not isinstance(schema, dict):
+        return
+
+    ref = schema.get("$ref")
+    if isinstance(ref, str) and ref.startswith("#/"):
+        ref_name = ref.split("/")[-1]
+        if ref_name not in refs:
+            refs.append(ref_name)
+        if ref_name in stack:
+            return
+        resolved = _resolve_ref(root, ref)
+        if isinstance(resolved, dict):
+            stack.add(ref_name)
+            _collect_ref_names_from_schema(resolved, root, refs, stack)
+            stack.remove(ref_name)
+
+    for key in ("oneOf", "anyOf", "allOf"):
+        branch = schema.get(key)
+        if isinstance(branch, list):
+            for item in branch:
+                _collect_ref_names_from_schema(item, root, refs, stack)
+
+    props = schema.get("properties")
+    if isinstance(props, dict):
+        for child in props.values():
+            _collect_ref_names_from_schema(child, root, refs, stack)
+
+    _collect_ref_names_from_schema(schema.get("items"), root, refs, stack)
+    _collect_ref_names_from_schema(schema.get("additionalProperties"), root, refs, stack)
+
+
+def _related_schema_names(shape: str, root: dict[str, Any]) -> list[str]:
+    schemas = _component_schemas(root)
+    if not schemas:
+        return []
+
+    roots = _extract_schema_names_from_text(shape, set(schemas))
+    ordered: list[str] = []
+    seen: set[str] = set()
+    queue = list(roots)
+
+    while queue:
+        name = queue.pop(0)
+        if name in seen:
+            continue
+        seen.add(name)
+        ordered.append(name)
+
+        nested: list[str] = []
+        _collect_ref_names_from_schema(schemas[name], root, nested, stack={name})
+        for child in nested:
+            if child in schemas and child not in seen and child not in queue:
+                queue.append(child)
+
+    return ordered
+
+
+def _schema_definition_lines(schema_name: str, root: dict[str, Any]) -> list[str]:
+    schemas = _component_schemas(root)
+    schema = schemas.get(schema_name)
+    if not isinstance(schema, dict):
+        return [f"{schema_name}: unknown"]
+
+    properties = schema.get("properties")
+    if not isinstance(properties, dict) or not properties:
+        fallback = _shape(schema, root, depth=0, top_level=False)
+        return [f"{schema_name}: {fallback}"]
+
+    required = set(schema.get("required", []))
+    lines = [f"{schema_name} {{"]
+    for field_name, child in properties.items():
+        if not isinstance(child, dict):
+            continue
+        optional = "" if field_name in required else "?"
+        field_type = _shape(child, root, depth=1, top_level=False)
+        comment = _schema_comment(child)
+        line = f"  {field_name}{optional}: {field_type}"
+        if comment:
+            line += f"  # {comment}"
+        lines.append(line)
+    lines.append("}")
+    return lines
+
+
+def _render_shape_cell(shape: str, root: dict[str, Any]) -> str:
     if shape.strip() in {"", "-", "none"}:
         return "-"
+
+    rendered_main: str
     if "\n" in shape:
         lines = [line.strip() for line in shape.splitlines() if line.strip()]
-        return "<br>".join(f"`{line}`" for line in lines)
-    return f"`{shape}`"
+        rendered_main = "<br>".join(f"`{line}`" for line in lines)
+    else:
+        rendered_main = f"`{shape}`"
+
+    schema_names = _related_schema_names(shape, root)
+    if not schema_names:
+        return rendered_main
+
+    definition_blocks: list[str] = []
+    for name in schema_names:
+        definition_lines = _schema_definition_lines(name, root)
+        definition_blocks.append("<br>".join(f"`{line}`" for line in definition_lines))
+    return f"{rendered_main}<br><br>{'<br><br>'.join(definition_blocks)}"
 
 
-def _render_rest(items: list[RestOp]) -> list[str]:
+def _render_rest(items: list[RestOp], root: dict[str, Any]) -> list[str]:
     lines: list[str] = ["| Endpoint | Request | Response |", "| --- | --- | --- |"]
     for op in sorted(items, key=lambda i: (i.path, i.method)):
         endpoint_parts = [_compose_rest_endpoint_text(op), f"`{op.method} {op.path}`"]
         endpoint = _escape_md_cell("<br>".join(endpoint_parts))
-        request = _escape_md_cell(_render_shape_cell(op.request_shape))
-        response = _escape_md_cell(_render_shape_cell(op.response_shape))
+        request = _escape_md_cell(_render_shape_cell(op.request_shape, root))
+        response = _escape_md_cell(_render_shape_cell(op.response_shape, root))
         lines.append(f"| {endpoint} | {request} | {response} |")
     return lines
 
@@ -650,13 +772,13 @@ def _is_redundant_ws_note(note: str, message_name: str) -> bool:
     return bool(name_keywords) and note_keywords.issubset(name_keywords)
 
 
-def _render_ws(items: list[WsMsg]) -> list[str]:
+def _render_ws(items: list[WsMsg], root: dict[str, Any]) -> list[str]:
     lines: list[str] = ["| Message | Payload |", "| --- | --- |"]
     for msg in items:
         filtered_notes = [note for note in msg.notes if not _is_redundant_ws_note(note, msg.name)]
         message_parts = [*filtered_notes, f"`{msg.name}`"]
         message = _escape_md_cell("<br>".join(message_parts))
-        payload = _render_shape_cell(msg.payload_shape)
+        payload = _render_shape_cell(msg.payload_shape, root)
         lines.append(f"| {message} | {_escape_md_cell(payload)} |")
     return lines
 
@@ -722,13 +844,13 @@ def generate_api_reference(
         section = sections[feature_id]
         subsections: list[tuple[str, list[str]]] = []
         if section.participant_rest:
-            subsections.append(("Participant REST", _render_rest(section.participant_rest)))
+            subsections.append(("Participant REST", _render_rest(section.participant_rest, openapi)))
         if section.participant_ws:
-            subsections.append(("Participant WS", _render_ws(section.participant_ws)))
+            subsections.append(("Participant WS", _render_ws(section.participant_ws, participant_ws)))
         if section.host_rest:
-            subsections.append(("Host REST", _render_rest(section.host_rest)))
+            subsections.append(("Host REST", _render_rest(section.host_rest, openapi)))
         if section.host_ws:
-            subsections.append(("Host WS", _render_ws(section.host_ws)))
+            subsections.append(("Host WS", _render_ws(section.host_ws, host_ws)))
 
         if not subsections:
             continue
