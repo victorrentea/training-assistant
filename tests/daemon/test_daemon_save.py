@@ -27,6 +27,18 @@ def test_save_session_state_overwrites_existing():
         assert json.loads(existing.read_text())["mode"] == "new"
 
 
+def test_save_session_state_preserves_existing_session_id():
+    with tempfile.TemporaryDirectory() as d:
+        folder = Path(d)
+        state_file = folder / "session-state.json"
+        state_file.write_text(json.dumps({"session_id": "abc123", "participant_names": {"p1": "Alice"}}))
+        from daemon.session_state import save_session_state as _save_session_state
+        _save_session_state(folder, {"session_id": None, "participant_names": {"p1": "Bob"}})
+        written = json.loads(state_file.read_text())
+        assert written["session_id"] == "abc123"
+        assert written["participant_names"]["p1"] == "Bob"
+
+
 def test_load_session_state_returns_empty_when_missing():
     with tempfile.TemporaryDirectory() as d:
         folder = Path(d)

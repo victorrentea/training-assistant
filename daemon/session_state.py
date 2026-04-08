@@ -421,6 +421,10 @@ def save_session_state(session_folder: Path, snapshot: dict) -> None:
     # Preserve session metadata fields that may have been written separately.
     existing = load_session_state(session_folder)
     if isinstance(existing, dict):
+        existing_session_id = existing.get("session_id")
+        # Session ID is immutable per folder once assigned.
+        if isinstance(existing_session_id, str) and existing_session_id.strip():
+            payload["session_id"] = existing_session_id.strip()
         for key in _SESSION_META_KEYS:
             if key in existing and key not in payload:
                 payload[key] = existing[key]
