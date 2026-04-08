@@ -249,10 +249,16 @@ def _rest_request_shape(op: dict[str, Any], openapi: dict[str, Any]) -> str:
         return "none"
 
     parts: list[str] = []
-    for ctype, spec in sorted(content.items()):
+    for spec in content.values():
         schema = spec.get("schema", {}) if isinstance(spec, dict) else {}
-        parts.append(f"{ctype}: {_shape(schema, openapi)}")
-    return "; ".join(parts)
+        shape = _shape(schema, openapi)
+        if shape not in parts:
+            parts.append(shape)
+    if not parts:
+        return "none"
+    if len(parts) == 1:
+        return parts[0]
+    return " | ".join(parts)
 
 
 def _rest_response_shape(op: dict[str, Any], openapi: dict[str, Any]) -> str:

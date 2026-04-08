@@ -66,6 +66,11 @@ def test_generator_rest_responses_do_not_include_status_code_prefix():
     assert "`200:" not in output
 
 
+def test_generator_rest_requests_do_not_include_media_type_prefix():
+    output = _run_generator()
+    assert "`application/json:" not in output
+
+
 def test_generator_includes_all_openapi_operations():
     output = _run_generator()
     missing = []
