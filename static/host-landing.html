@@ -24,7 +24,9 @@
       if (!guard) return;
       function poll() {
         fetch('/api/status').then(r => r.json()).then(d => {
-          guard.check(d.backend_version);
+          if (d && d.session_active) {
+            guard.check(d.backend_version);
+          }
         }).catch(() => {});
       }
       poll();

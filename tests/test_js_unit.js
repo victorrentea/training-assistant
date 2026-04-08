@@ -271,6 +271,15 @@ assert(
   !hostJsSource.includes('text: link,')
 );
 
+// ── host-landing regressions (source-level guards) ───────────────────
+suite('host-landing regressions');
+
+const hostLandingHtmlSource = fs.readFileSync('static/host-landing.html', 'utf8');
+assert(
+  'version reload check on host landing is gated by session_active',
+  /if\s*\(\s*d\s*&&\s*d\.session_active\s*\)\s*\{\s*guard\.check\(d\.backend_version\);/s.test(hostLandingHtmlSource)
+);
+
 // ═══════════════════════════════════════════════════════════════════════
 // Summary
 // ═══════════════════════════════════════════════════════════════════════
