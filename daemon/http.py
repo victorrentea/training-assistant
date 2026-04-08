@@ -8,6 +8,7 @@ import os
 import socket
 import ssl
 import urllib.error
+from urllib.parse import urlparse
 import urllib.request
 
 from daemon import log
@@ -47,8 +48,12 @@ def _http_error_message(code: int, url: str) -> str:
 
 def _urlopen_json(req: urllib.request.Request, url: str) -> dict:
     """Execute a prepared request, parse JSON, and wrap errors with helpful messages."""
+    method = req.get_method()
+    target = urlparse(url).path or "/"
+    log.debug("railway", f"→ HTTP {method} {target}")
     try:
         with urllib.request.urlopen(req, timeout=_HTTP_TIMEOUT_SECONDS, context=_ssl_context()) as resp:
+            log.debug("railway", f"← HTTP {resp.status} {method} {target}")
             try:
                 return json.loads(resp.read())
             except json.JSONDecodeError as e:

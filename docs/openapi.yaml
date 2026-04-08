@@ -1264,6 +1264,33 @@ paths:
           content:
             application/json:
               schema: {}
+  /api/log-level:
+    get:
+      summary: Get Log Level
+      operationId: get_log_level_api_log_level_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LogLevelResponse'
+    post:
+      summary: Set Log Level
+      operationId: set_log_level_api_log_level_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetLogLevelRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LogLevelResponse'
 components:
   schemas:
     AdvancePhaseRequest:
@@ -1414,6 +1441,18 @@ components:
       required:
       - location
       title: LocationRequest
+    LogLevelResponse:
+      properties:
+        level:
+          type: string
+          enum:
+          - info
+          - debug
+          title: Level
+      type: object
+      required:
+      - level
+      title: LogLevelResponse
     PasteRequest:
       properties:
         text:
@@ -1537,6 +1576,18 @@ components:
       required:
       - side
       title: SetFirstSideRequest
+    SetLogLevelRequest:
+      properties:
+        level:
+          type: string
+          enum:
+          - info
+          - debug
+          title: Level
+      type: object
+      required:
+      - level
+      title: SetLogLevelRequest
     SetModeRequest:
       properties:
         mode:

@@ -18,10 +18,12 @@ Usage:
 
 import os
 import sys
+import threading
 from datetime import datetime
 
 _PID = os.getpid()
-_DEBUG = os.environ.get("DAEMON_DEBUG", "").strip() == "1"
+_level_lock = threading.Lock()
+_level = "info"
 
 
 def _ts() -> str:
@@ -36,6 +38,21 @@ def _fmt(name: str, level: str, msg: str) -> str:
     return f"{_ts()} {_PID:5}  [{nm}] {lvl}{msg}"
 
 
+def get_level() -> str:
+    with _level_lock:
+        return _level
+
+
+def set_level(level: str) -> str:
+    normalized = str(level or "").strip().lower()
+    if normalized not in {"info", "debug"}:
+        raise ValueError("log level must be 'info' or 'debug'")
+    global _level
+    with _level_lock:
+        _level = normalized
+        return _level
+
+
 def info(name: str, msg: str) -> None:
     print(_fmt(name, "info", msg), flush=True)
 
@@ -45,5 +62,5 @@ def error(name: str, msg: str) -> None:
 
 
 def debug(name: str, msg: str) -> None:
-    if _DEBUG:
+    if get_level() == "debug":
         print(_fmt(name, "debug", msg), flush=True)

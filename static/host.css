@@ -80,6 +80,22 @@ body {
 .host-footer .badge {
   position: relative;
 }
+#log-level-badge.log-level-info {
+  color: var(--accent2);
+  border-color: var(--accent2);
+  background: #48cfad22;
+  --badge-fill: #48cfad44;
+}
+#log-level-badge.log-level-debug {
+  color: #ff5b5b;
+  border-color: #ff2d2d;
+  background: #ff2d2d30;
+  --badge-fill: #ff2d2d66;
+  box-shadow: 0 0 12px rgba(255, 45, 45, 0.35);
+}
+#log-level-badge.log-level-pending {
+  opacity: 0.65;
+}
 .footer-badge-tooltip {
   position: absolute;
   left: 50%;

@@ -32,6 +32,8 @@
   let _slidesCatalogHideTimer = null;
   let _gitRepos = [];
   let _slidesLog = [];
+  let _daemonLogLevel = 'info';
+  let _logLevelBusy = false;
   const _ZERO_WIDTH_RE = /[\u200B-\u200D\uFEFF]/g;
 
   let _hostWcDebounceTimer = null;
@@ -50,6 +52,7 @@
 'overlay-badge': 'Desktop Overlay app',
     'notes-badge': 'Session notes',
     'summary-badge': 'Key points summary',
+    'log-level-badge': 'Daemon log level (click to toggle)',
     'btn-transcription-lang': 'Toggle transcription language',
     'token-cost': 'Token usage and cost',
     'git-repos-badge': 'Git repos activity',
@@ -191,6 +194,7 @@
   _setupSlidesCatalogHover();
   _setupStopSessionHover();
   _setupActivityLogHovers();
+  refreshLogLevelBadge();
 
   // ── WebSocket (host monitors state too) ──
   function connectWS() {
@@ -200,6 +204,7 @@
     let _kicked = false;
     ws.onopen = () => {
       setBadge(true);
+      refreshLogLevelBadge();
       // Fetch initial state via REST (daemon no longer pushes state via WS)
       fetch(API('/state'))
         .then(r => r.json())
@@ -1024,6 +1029,54 @@
           }
         }, 8000);
       }
+    }
+  }
+
+  function renderLogLevelBadge() {
+    const badge = document.getElementById('log-level-badge');
+    if (!badge) return;
+    const level = (_daemonLogLevel === 'debug') ? 'debug' : 'info';
+    badge.textContent = `LOG ${level}`;
+    badge.classList.remove('log-level-info', 'log-level-debug', 'log-level-pending');
+    badge.classList.add(level === 'debug' ? 'log-level-debug' : 'log-level-info');
+    if (_logLevelBusy) badge.classList.add('log-level-pending');
+    const verb = level === 'debug' ? 'high-volume debug logging is ON' : 'normal logging (info)';
+    _setFooterBadgeTooltip(badge, `Daemon log level: ${level}\nClick to switch to ${level === 'debug' ? 'info' : 'debug'}\n${verb}`);
+  }
+
+  async function refreshLogLevelBadge() {
+    try {
+      const resp = await fetch('/api/log-level');
+      if (!resp.ok) return;
+      const data = await resp.json();
+      const level = String(data.level || '').toLowerCase();
+      if (level === 'info' || level === 'debug') _daemonLogLevel = level;
+    } catch (_) {}
+    renderLogLevelBadge();
+  }
+
+  async function toggleLogLevel() {
+    if (_logLevelBusy) return;
+    _logLevelBusy = true;
+    renderLogLevelBadge();
+    const target = _daemonLogLevel === 'debug' ? 'info' : 'debug';
+    try {
+      const resp = await fetch('/api/log-level', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ level: target }),
+      });
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const data = await resp.json();
+      const level = String(data.level || '').toLowerCase();
+      if (level === 'info' || level === 'debug') _daemonLogLevel = level;
+      toast(`Daemon logs: ${_daemonLogLevel}`);
+    } catch (err) {
+      console.warn('Failed to change daemon log level', err);
+      toast('Failed to change daemon log level');
+    } finally {
+      _logLevelBusy = false;
+      renderLogLevelBadge();
     }
   }
 

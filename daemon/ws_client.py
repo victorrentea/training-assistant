@@ -62,6 +62,7 @@ class DaemonWsClient:
             if self._ws is None:
                 return False
             try:
+                log.debug("ws-client", f"→ {self._msg_name(msg)}")
                 self._ws.send(json.dumps(msg))
                 return True
             except Exception:
@@ -158,6 +159,7 @@ class DaemonWsClient:
                 except (json.JSONDecodeError, TypeError):
                     continue
                 msg_type = data.get("type")
+                log.debug("ws-client", f"← {self._msg_name(data)}")
                 if msg_type == "kicked":
                     log.info("ws-client", "Kicked by server (new daemon connected)")
                     break
@@ -180,3 +182,11 @@ class DaemonWsClient:
             with self._ws_lock:
                 self._ws = None
             log.info("ws-client", "Disconnected")
+
+    @staticmethod
+    def _msg_name(msg: dict) -> str:
+        msg_type = str(msg.get("type") or "unknown")
+        if msg_type == "broadcast" and isinstance(msg.get("event"), dict):
+            event_type = str(msg["event"].get("type") or "unknown")
+            return f"broadcast:{event_type}"
+        return msg_type

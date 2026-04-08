@@ -374,6 +374,12 @@ def run() -> None:
     install_signal_handlers()
 
     config = config_from_env()
+    _boot_sessions_root = _sessions_root_from_env()
+    _boot_state = load_daemon_state(_boot_sessions_root)
+    _boot_level = str(_boot_state.get("log_level") or "").strip().lower()
+    if _boot_level in {"info", "debug"}:
+        log.set_level(_boot_level)
+        log.info("daemon", f"Restored persisted log level: {_boot_level}")
     log.info("daemon", f"🚀 Starting — connecting to {config.server_url}")
 
     # ── Initialize WebSocket client for backend communication ──
@@ -486,10 +492,10 @@ def run() -> None:
         log.error("daemon", f"MATERIALS_FOLDER not found (MATERIALS_FOLDER={raw}) — indexer disabled")
 
     # ── Session stack initialization (early — needed for transcript log) ──
-    sessions_root = _sessions_root_from_env()
+    sessions_root = _boot_sessions_root
     log.info("session", f"Sessions root: {sessions_root}")
     session_shared_state.set_sessions_root(sessions_root)
-    _raw_state = load_daemon_state(sessions_root)
+    _raw_state = _boot_state
     _active_session_id: str | None = None
     session_stack: list[dict] = []
 
@@ -532,9 +538,11 @@ def run() -> None:
     summary_watermark: int = 0
 
     def _do_save_daemon_state():
-        """Save global state (active_session_id only) and session metadata to folder."""
+        """Save global state (active_session_id + log_level) and session metadata to folder."""
         nonlocal _active_session_id
-        global_state = {"active_session_id": _active_session_id} if _active_session_id else {}
+        global_state = {"log_level": log.get_level()}
+        if _active_session_id:
+            global_state["active_session_id"] = _active_session_id
         save_daemon_state(sessions_root, global_state)
         if session_stack:
             _main_folder = sessions_root / session_stack[0]["name"]
@@ -552,6 +560,13 @@ def run() -> None:
             save_session_meta(_main_folder, _meta)
         # Keep shared session state up to date for the daemon REST router
         session_shared_state.set_active_session(_active_session_id, session_stack)
+
+    def _persist_log_level(level: str) -> None:
+        _do_save_daemon_state()
+        log.info("daemon", f"Persisted log level in global state: {level}")
+
+    import daemon.host_server as _host_server_mod
+    _host_server_mod.set_log_level_persist_callback(_persist_log_level)
 
     if session_stack:
         # Restore from persisted stack

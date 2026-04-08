@@ -1,6 +1,8 @@
 # Tasks
 
 - [x] bugfix: host footer join link no longer renders base domain before `session_id` arrives (prevents entry flicker/flash without session suffix).
+- [x] direct request: Host footer now has compact daemon log-level toggle badge (`info/debug`), turns bright red on `debug`, persists level in global state across daemon restarts, and debug logs now include HTTP verb+path plus WS direction+message type (including Railway communication).
+- [x] direct request: daemon local API now supports dynamic runtime log level switching (`GET/POST /api/log-level`) between `info` and `debug`, without restart.
 - [x] ui tweak: on feedback submit, close input dialog immediately and show a persistent `Sending...` bubble until request completes, then switch to success/error.
 - [x] direct request: in host `Slides` mode, hide center QR and copy icon; show only the centered join link.
 - [x] follow-up bugfix: in host `Slides` mode, center join link is rendered as plain text (no wave spans) to keep full URL readability.

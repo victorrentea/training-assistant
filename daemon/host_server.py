@@ -4,13 +4,16 @@ import logging
 import threading
 from contextlib import asynccontextmanager
 from pathlib import Path
+from typing import Literal
 
 import uvicorn
 from fastapi import FastAPI, Request, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
 
+from daemon import log as daemon_log
 from daemon.host_proxy import create_http_client, proxy_http, proxy_websocket
 from daemon.participant.router import router as participant_router
 
@@ -20,6 +23,21 @@ _STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
 
 # Set by __main__ after startup so /api/status can expose it
 code_timestamp: str | None = None
+_persist_log_level = None
+
+
+class LogLevelResponse(BaseModel):
+    level: Literal["info", "debug"]
+
+
+class SetLogLevelRequest(BaseModel):
+    level: Literal["info", "debug"]
+
+
+def set_log_level_persist_callback(callback) -> None:
+    """Register callback(level:str) invoked when log level changes via local API."""
+    global _persist_log_level
+    _persist_log_level = callback
 
 
 def _stamp_version_js():
@@ -63,6 +81,8 @@ def create_app(backend_url: str) -> FastAPI:
     @app.middleware("http")
     async def write_back_middleware(request: Request, call_next):
         request.state.write_back_events = []
+        if request.url.path.startswith("/api/"):
+            daemon_log.debug("http", f"← {request.method} {request.url.path}")
         response = await call_next(request)
         events = getattr(request.state, "write_back_events", [])
         if events:
@@ -147,11 +167,26 @@ def create_app(backend_url: str) -> FastAPI:
     app.include_router(session_scoped_router)      # /api/{session_id}/session/interval-lines.txt
 
     # --- Daemon status endpoint (exposes code_timestamp directly, not proxied) ---
-    from fastapi.responses import JSONResponse
     @app.get("/api/daemon-status")
     async def daemon_status():
         import daemon.host_server as _hs
         return JSONResponse({"code_timestamp": _hs.code_timestamp})
+
+    @app.get("/api/log-level", response_model=LogLevelResponse)
+    async def get_log_level():
+        return LogLevelResponse(level=daemon_log.get_level())
+
+    @app.post("/api/log-level", response_model=LogLevelResponse)
+    async def set_log_level(body: SetLogLevelRequest):
+        previous = daemon_log.get_level()
+        current = daemon_log.set_level(body.level)
+        if _persist_log_level is not None:
+            try:
+                _persist_log_level(current)
+            except Exception as e:
+                daemon_log.error("daemon", f"failed persisting log level: {e}")
+        daemon_log.info("daemon", f"log level changed via local API: {previous} -> {current}")
+        return LogLevelResponse(level=current)
 
     # --- WebSocket proxy ---
     @app.websocket("/ws/{path:path}")

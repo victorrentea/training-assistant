@@ -1,11 +1,14 @@
 # daemon/host_proxy.py
 """HTTP and WebSocket reverse proxy for host panel → Railway backend."""
 import asyncio
+import json
 import logging
 
 import httpx
 from fastapi import Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import Response
+
+from daemon import log as daemon_log
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +28,7 @@ def create_http_client(backend_url: str) -> httpx.AsyncClient:
 
 async def proxy_http(request: Request, path: str, http_client: httpx.AsyncClient) -> Response:
     """Forward an HTTP request to the backend and return the response."""
+    daemon_log.debug("railway", f"→ HTTP {request.method} /{path}")
     url = f"/{path}"
     if request.url.query:
         url = f"{url}?{request.url.query}"
@@ -43,6 +47,7 @@ async def proxy_http(request: Request, path: str, http_client: httpx.AsyncClient
             headers=headers,
             content=body,
         )
+        daemon_log.debug("railway", f"← HTTP {resp.status_code} /{path}")
     except httpx.ConnectError:
         return Response(content='{"error": "Backend unreachable"}', status_code=502,
                         media_type="application/json")
@@ -89,11 +94,24 @@ async def proxy_websocket(client_ws: WebSocket, path: str, backend_ws_url: str):
 
     try:
         async with websockets.connect(url, **ws_kwargs) as upstream:
+            daemon_log.debug("ws-proxy", f"↔ open /ws/{path}")
+
+            def _msg_name(raw: str) -> str:
+                try:
+                    payload = json.loads(raw)
+                except Exception:
+                    return "text"
+                kind = str(payload.get("type") or "unknown")
+                if kind == "broadcast" and isinstance(payload.get("event"), dict):
+                    event_type = str(payload["event"].get("type") or "unknown")
+                    return f"broadcast:{event_type}"
+                return kind
 
             async def client_to_upstream():
                 try:
                     while True:
                         data = await client_ws.receive_text()
+                        daemon_log.debug("ws-proxy", f"→ /ws/{path} {_msg_name(data)}")
                         await upstream.send(data)
                 except WebSocketDisconnect:
                     pass
@@ -101,6 +119,7 @@ async def proxy_websocket(client_ws: WebSocket, path: str, backend_ws_url: str):
             async def upstream_to_client():
                 try:
                     async for message in upstream:
+                        daemon_log.debug("ws-proxy", f"← /ws/{path} {_msg_name(message)}")
                         await client_ws.send_text(message)
                 except ConnectionClosed:
                     pass

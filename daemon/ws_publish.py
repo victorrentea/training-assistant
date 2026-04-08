@@ -46,6 +46,10 @@ def send_to_railway(msg: dict) -> bool:
     """
     if _ws_client is None:
         return False
+    msg_type = str(msg.get("type") or "unknown")
+    if msg_type == "broadcast" and isinstance(msg.get("event"), dict):
+        msg_type = f"broadcast:{msg['event'].get('type', 'unknown')}"
+    logger.debug("WS → railway: %s", msg_type)
     return _ws_client.send(msg)
 
 
@@ -53,6 +57,7 @@ def broadcast(msg: BaseModel):
     """Send typed message to all participants via Railway broadcast."""
     if _ws_client is None:
         return
+    logger.debug("WS → railway: broadcast:%s", msg.model_dump().get("type", "unknown"))
     _ws_client.send({"type": "broadcast", "event": msg.model_dump()})
 
 
@@ -61,6 +66,7 @@ async def notify_host(msg: BaseModel):
     if _host_ws is None:
         return
     try:
+        logger.debug("WS → host: %s", msg.model_dump().get("type", "unknown"))
         await _host_ws.send_text(json.dumps(msg.model_dump()))
     except Exception:
         logger.debug("Failed to send to host WS")
