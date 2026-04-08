@@ -54,7 +54,8 @@ class TestParticipantSubmitWord:
         resp = participant_client.post("/api/participant/wordcloud/word",
                                        json={"word": "Hello"},
                                        headers={"X-Participant-ID": "uuid1"})
-        assert resp.status_code == 200
+        assert resp.status_code == 204
+        assert resp.content == b""
         assert fresh_wc_state.words.get("hello") == 1  # lowercased
 
     def test_duplicate_word_increments(self, participant_client, fresh_wc_state):
@@ -105,14 +106,16 @@ class TestHostEndpoints:
     # Host router prefix is /api/{session_id}/wordcloud — use "test-session" as session_id
     def test_host_word_submission(self, host_client, fresh_wc_state, mock_ws_client):
         resp = host_client.post("/api/test-session/host/wordcloud/word", json={"word": "Hello"})
-        assert resp.status_code == 200
+        assert resp.status_code == 204
+        assert resp.content == b""
         assert fresh_wc_state.words.get("hello") == 1
         # Verify WS broadcast event was sent
         assert mock_ws_client.call_count == 1  # broadcast only
 
     def test_set_topic(self, host_client, fresh_wc_state, mock_ws_client):
         resp = host_client.post("/api/test-session/host/wordcloud/topic", json={"topic": "AI trends"})
-        assert resp.status_code == 200
+        assert resp.status_code == 204
+        assert resp.content == b""
         assert fresh_wc_state.topic == "AI trends"
         assert mock_ws_client.call_count == 1
 
@@ -121,7 +124,8 @@ class TestHostEndpoints:
         fresh_wc_state.word_order = ["hello"]
         fresh_wc_state.topic = "test"
         resp = host_client.post("/api/test-session/host/wordcloud/clear", json={})
-        assert resp.status_code == 200
+        assert resp.status_code == 204
+        assert resp.content == b""
         assert fresh_wc_state.words == {}
         assert fresh_wc_state.word_order == []
         assert fresh_wc_state.topic == ""

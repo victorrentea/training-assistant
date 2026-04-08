@@ -1,7 +1,7 @@
 """Daemon Q&A router — participant + host endpoints."""
 import logging
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Request, Response
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
@@ -52,7 +52,7 @@ def _build_questions_for_broadcast():
 participant_router = APIRouter(prefix="/api/participant/qa", tags=["qa"])
 
 
-@participant_router.post("/submit", response_model=OkResponse)
+@participant_router.post("/submit", status_code=204)
 async def submit_question(request: Request, body: SubmitQuestionBody):
     """Participant submits a Q&A question."""
     pid = request.headers.get("x-participant-id")
@@ -78,10 +78,10 @@ async def submit_question(request: Request, body: SubmitQuestionBody):
     await notify_host(QaUpdatedMsg(questions=host_questions))
     await notify_host(ScoresUpdatedMsg(scores=scores.snapshot()))
 
-    return OkResponse()
+    return Response(status_code=204)
 
 
-@participant_router.post("/upvote", response_model=OkResponse)
+@participant_router.post("/upvote", status_code=204)
 async def upvote_question(request: Request, body: UpvoteQuestionBody):
     """Participant upvotes a Q&A question."""
     pid = request.headers.get("x-participant-id")
@@ -109,7 +109,7 @@ async def upvote_question(request: Request, body: UpvoteQuestionBody):
     await notify_host(QaUpdatedMsg(questions=host_questions))
     await notify_host(ScoresUpdatedMsg(scores=scores.snapshot()))
 
-    return OkResponse()
+    return Response(status_code=204)
 
 
 # ── Host router (called directly on daemon localhost) ──
@@ -118,7 +118,7 @@ async def upvote_question(request: Request, body: UpvoteQuestionBody):
 host_router = APIRouter(prefix="/api/{session_id}/host/qa", tags=["qa"])
 
 
-@host_router.post("/submit", response_model=OkResponse)
+@host_router.post("/submit", status_code=204)
 async def host_submit_question(body: SubmitQuestionBody):
     """Host submits a Q&A question — no scoring."""
     text = body.text.strip()
@@ -127,10 +127,10 @@ async def host_submit_question(body: SubmitQuestionBody):
 
     qa_state.submit("__host__", text)
     await _send_qa_events()
-    return OkResponse()
+    return Response(status_code=204)
 
 
-@host_router.put("/question/{question_id}/text", response_model=OkResponse)
+@host_router.put("/question/{question_id}/text", status_code=204)
 async def edit_question_text(question_id: str, body: EditQuestionTextBody):
     """Host edits a question's text."""
     text = body.text.strip()
@@ -139,33 +139,33 @@ async def edit_question_text(question_id: str, body: EditQuestionTextBody):
     if not qa_state.edit_text(question_id, text):
         return JSONResponse({"error": "Not found"}, status_code=404)
     await _send_qa_events()
-    return OkResponse()
+    return Response(status_code=204)
 
 
-@host_router.delete("/question/{question_id}", response_model=OkResponse)
+@host_router.delete("/question/{question_id}", status_code=204)
 async def delete_question(question_id: str):
     """Host deletes a question."""
     if not qa_state.delete(question_id):
         return JSONResponse({"error": "Not found"}, status_code=404)
     await _send_qa_events()
-    return OkResponse()
+    return Response(status_code=204)
 
 
-@host_router.put("/question/{question_id}/answered", response_model=OkResponse)
+@host_router.put("/question/{question_id}/answered", status_code=204)
 async def toggle_answered(question_id: str, body: ToggleAnsweredBody):
     """Host toggles a question's answered flag."""
     if not qa_state.toggle_answered(question_id, body.answered):
         return JSONResponse({"error": "Not found"}, status_code=404)
     await _send_qa_events()
-    return OkResponse()
+    return Response(status_code=204)
 
 
-@host_router.post("/clear", response_model=OkResponse)
+@host_router.post("/clear", status_code=204)
 async def clear_qa():
     """Host clears all Q&A questions."""
     qa_state.clear()
     await _send_qa_events()
-    return OkResponse()
+    return Response(status_code=204)
 
 
 async def _send_qa_events():

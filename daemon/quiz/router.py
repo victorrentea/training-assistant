@@ -2,7 +2,7 @@
 import logging
 from typing import Optional
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Response
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
@@ -43,7 +43,7 @@ class QuizRefineRequest(BaseModel):
 host_router = APIRouter(prefix="/api/{session_id}/host", tags=["quiz"])
 
 
-@host_router.post("/quiz-request", response_model=OkResponse)
+@host_router.post("/quiz-request", status_code=204)
 async def request_quiz(body: QuizRequestBody):
     """Host requests a quiz — stores request for the orchestrator loop to pick up."""
     topic = body.topic
@@ -70,19 +70,19 @@ async def request_quiz(body: QuizRequestBody):
 
     broadcast(QuizStatusMsg(status="requested", message=msg))
 
-    return OkResponse()
+    return Response(status_code=204)
 
 
-@host_router.delete("/quiz-preview", response_model=OkResponse)
+@host_router.delete("/quiz-preview", status_code=204)
 async def clear_quiz_preview():
     """Host clears the current quiz preview."""
     from daemon.ws_publish import broadcast
     from daemon.ws_messages import QuizPreviewMsg
     broadcast(QuizPreviewMsg(quiz=None))
-    return OkResponse()
+    return Response(status_code=204)
 
 
-@host_router.post("/quiz-refine", response_model=OkResponse)
+@host_router.post("/quiz-refine", status_code=204)
 async def request_quiz_refine(body: QuizRefineRequest):
     """Host requests regeneration of a specific question or option."""
     if not body.target:
@@ -95,4 +95,4 @@ async def request_quiz_refine(body: QuizRefineRequest):
 
     broadcast(QuizStatusMsg(status="generating", message=msg))
 
-    return OkResponse()
+    return Response(status_code=204)

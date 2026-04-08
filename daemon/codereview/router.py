@@ -5,7 +5,7 @@ import logging
 import os
 from typing import Optional
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Request, Response
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
@@ -116,7 +116,7 @@ def _extract_code_with_ai(raw_snippet: str) -> tuple[str, str | None] | None:
 participant_router = APIRouter(prefix="/api/participant/codereview", tags=["codereview"])
 
 
-@participant_router.put("/selection", response_model=OkResponse)
+@participant_router.put("/selection", status_code=204)
 async def update_selection(request: Request, body: SelectionRequest):
     """Participant sets their selected lines (full replacement)."""
     pid = request.headers.get("x-participant-id")
@@ -143,7 +143,7 @@ async def update_selection(request: Request, body: SelectionRequest):
         host_event(CodereviewSelectionsUpdatedMsg(line_counts=line_counts)),
     ]
 
-    return OkResponse()
+    return Response(status_code=204)
 
 
 # ── Host router (called directly on daemon localhost) ──
@@ -155,7 +155,7 @@ host_router = APIRouter(prefix="/api/{session_id}/host/codereview", tags=["coder
 _MAX_LINES = 50
 
 
-@host_router.post("", response_model=OkResponse)
+@host_router.post("", status_code=204)
 async def create_codereview(body: CreateCodeReviewRequest):
     """Host creates a code review session."""
     snippet = body.snippet.strip()
@@ -184,7 +184,7 @@ async def create_codereview(body: CreateCodeReviewRequest):
     broadcast(CodereviewOpenedMsg(snippet=snippet, language=final_language))
     broadcast(ActivityUpdatedMsg(current_activity="codereview"))
 
-    return OkResponse()
+    return Response(status_code=204)
 
 
 @host_router.put("/status", response_model=OkWithPhaseResponse)
@@ -221,7 +221,7 @@ async def confirm_line(body: ConfirmLineRequest):
     return ConfirmLineResponse(confirmed_line=body.line)
 
 
-@host_router.delete("", response_model=OkResponse)
+@host_router.delete("", status_code=204)
 async def clear_codereview():
     """Host clears the code review."""
     codereview_state.clear()
@@ -230,4 +230,4 @@ async def clear_codereview():
     broadcast(CodereviewClearedMsg())
     broadcast(ActivityUpdatedMsg(current_activity="none"))
 
-    return OkResponse()
+    return Response(status_code=204)

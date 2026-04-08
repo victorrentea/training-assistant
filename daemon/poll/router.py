@@ -2,7 +2,7 @@
 import logging
 from typing import Optional
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Request, Response
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
@@ -73,7 +73,7 @@ class QuizMdResponse(BaseModel):
 participant_router = APIRouter(prefix="/api/participant/poll", tags=["poll"])
 
 
-@participant_router.post("/vote", response_model=OkResponse)
+@participant_router.post("/vote", status_code=204)
 async def cast_vote(request: Request, body: VoteRequest):
     """Participant casts a vote."""
     pid = request.headers.get("x-participant-id")
@@ -87,7 +87,7 @@ async def cast_vote(request: Request, body: VoteRequest):
     vote_msg = VoteUpdateMsg(votes=poll_state.vote_counts())
     request.state.write_back_events = [broadcast_event(vote_msg)]
     await notify_host(vote_msg)
-    return OkResponse()
+    return Response(status_code=204)
 
 
 # ── Host router (called directly on daemon localhost) ──
@@ -117,7 +117,7 @@ async def create_poll(body: CreatePollRequest):
     return CreatePollResponse(poll=poll)
 
 
-@host_router.post("/open", response_model=OkResponse)
+@host_router.post("/open", status_code=204)
 async def open_poll():
     """Host opens the poll for voting."""
     if not poll_state.poll:
@@ -126,7 +126,7 @@ async def open_poll():
     poll_state.open_poll(scores.snapshot_base)
     broadcast(PollOpenedMsg(poll=poll_state.poll))
     await notify_host(PollOpenedMsg(poll=poll_state.poll))
-    return OkResponse()
+    return Response(status_code=204)
 
 
 @host_router.post("/close", response_model=ClosePollResponse)
@@ -145,7 +145,7 @@ async def close_poll():
     return ClosePollResponse(**result)
 
 
-@host_router.put("/correct", response_model=OkResponse)
+@host_router.put("/correct", status_code=204)
 async def reveal_correct(body: RevealCorrectRequest):
     """Host reveals correct answers and awards scores."""
     if not poll_state.poll:
@@ -156,10 +156,10 @@ async def reveal_correct(body: RevealCorrectRequest):
     broadcast(ScoresUpdatedMsg(scores=result["scores"]))
     await notify_host(PollCorrectRevealedMsg(correct_ids=result["correct_ids"]))
     await notify_host(ScoresUpdatedMsg(scores=result["scores"]))
-    return OkResponse()
+    return Response(status_code=204)
 
 
-@host_router.post("/timer", response_model=OkResponse)
+@host_router.post("/timer", status_code=204)
 async def start_timer(body: StartTimerRequest):
     """Host starts a countdown timer for the poll."""
     if not poll_state.poll:
@@ -168,7 +168,7 @@ async def start_timer(body: StartTimerRequest):
     result = poll_state.start_timer(body.seconds)
     broadcast(PollTimerStartedMsg(seconds=result["seconds"]))
     await notify_host(PollTimerStartedMsg(seconds=result["seconds"]))
-    return OkResponse()
+    return Response(status_code=204)
 
 
 @host_router.put("/status", response_model=OkResponse | ClosePollResponse)
@@ -180,7 +180,7 @@ async def set_poll_status(body: SetPollStatusRequest):
         return await close_poll()
 
 
-@host_router.delete("", response_model=OkResponse)
+@host_router.delete("", status_code=204)
 async def delete_poll():
     """Host deletes the current poll."""
     poll_state.clear()
@@ -188,7 +188,7 @@ async def delete_poll():
     broadcast(PollClearedMsg())
     broadcast(ActivityUpdatedMsg(current_activity="none"))
     await notify_host(PollClearedMsg())
-    return OkResponse()
+    return Response(status_code=204)
 
 
 # ── Quiz history (public) ──

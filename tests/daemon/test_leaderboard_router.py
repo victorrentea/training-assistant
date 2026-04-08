@@ -50,8 +50,8 @@ class TestShowLeaderboard:
 
         resp = client.post("/api/test-session/host/leaderboard/show")
 
-        assert resp.status_code == 200
-        assert resp.json() == {"ok": True}
+        assert resp.status_code == 204
+        assert resp.content == b""
         # broadcast called with LeaderboardRevealedMsg
         mock_broadcast.assert_called_once()
         msg = mock_broadcast.call_args[0][0]
@@ -72,7 +72,8 @@ class TestShowLeaderboard:
 
         resp = client.post("/api/test-session/host/leaderboard/show")
 
-        assert resp.status_code == 200
+        assert resp.status_code == 204
+        assert resp.content == b""
         msg = mock_broadcast.call_args[0][0]
         positions = msg.positions
         assert positions[0]["name"] == "Alice"
@@ -81,7 +82,8 @@ class TestShowLeaderboard:
     def test_show_leaderboard_empty(self, client, fresh_scores, mock_broadcast, mock_notify_host):
         resp = client.post("/api/test-session/host/leaderboard/show")
 
-        assert resp.status_code == 200
+        assert resp.status_code == 204
+        assert resp.content == b""
         msg = mock_broadcast.call_args[0][0]
         assert msg.positions == []
 
@@ -91,7 +93,8 @@ class TestShowLeaderboard:
 
         resp = client.post("/api/test-session/host/leaderboard/show")
 
-        assert resp.status_code == 200
+        assert resp.status_code == 204
+        assert resp.content == b""
         msg = mock_broadcast.call_args[0][0]
         positions = msg.positions
         assert len(positions) == 5
@@ -103,7 +106,8 @@ class TestShowLeaderboard:
 
         resp = client.post("/api/test-session/host/leaderboard/show")
 
-        assert resp.status_code == 200
+        assert resp.status_code == 204
+        assert resp.content == b""
         msg = mock_broadcast.call_args[0][0]
         positions = msg.positions
         assert positions[0]["name"] == "???"
@@ -114,7 +118,8 @@ class TestShowLeaderboard:
 
         resp = client.post("/api/test-session/host/leaderboard/show")
 
-        assert resp.status_code == 200
+        assert resp.status_code == 204
+        assert resp.content == b""
         msg = mock_broadcast.call_args[0][0]
         positions = msg.positions
         assert positions[0]["rank"] == 1
@@ -128,8 +133,8 @@ class TestResetScores:
 
         resp = client.delete("/api/test-session/host/scores")
 
-        assert resp.status_code == 200
-        assert resp.json() == {"ok": True}
+        assert resp.status_code == 204
+        assert resp.content == b""
         # Scores cleared
         assert fresh_scores.snapshot() == {}
         # broadcast called with ScoresUpdatedMsg with empty scores

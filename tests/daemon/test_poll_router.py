@@ -100,8 +100,8 @@ class TestParticipantVote:
             json={"option_ids": ["a"]},
             headers={"X-Participant-ID": "pid1"},
         )
-        assert resp.status_code == 200
-        assert resp.json()["ok"] is True
+        assert resp.status_code == 204
+        assert resp.content == b""
 
     def test_cast_vote_multi(self, participant_client, fresh_poll_state):
         """Multi-select vote is accepted when poll is open."""
@@ -118,8 +118,8 @@ class TestParticipantVote:
             json={"option_ids": ["a", "b"]},
             headers={"X-Participant-ID": "pid1"},
         )
-        assert resp.status_code == 200
-        assert resp.json()["ok"] is True
+        assert resp.status_code == 204
+        assert resp.content == b""
 
     def test_cast_vote_rejected(self, participant_client, fresh_poll_state):
         """Vote on closed/no poll returns 409."""
@@ -177,7 +177,8 @@ class TestHostOpenPoll:
         fresh_poll_state.create_poll("Q?", _SAMPLE_OPTIONS)
 
         resp = host_client.post("/api/test-session/host/poll/open", json={})
-        assert resp.status_code == 200
+        assert resp.status_code == 204
+        assert resp.content == b""
 
         # Broadcast to participants
         assert mock_broadcast.call_count >= 1
@@ -222,7 +223,8 @@ class TestHostRevealCorrect:
         _create_and_open_poll(host_client, fresh_poll_state, fresh_scores)
 
         resp = host_client.put("/api/test-session/host/poll/correct", json={"correct_ids": ["a"]})
-        assert resp.status_code == 200
+        assert resp.status_code == 204
+        assert resp.content == b""
 
         # Two broadcasts: poll_correct_revealed + scores_updated
         broadcast_types = [call[0][0].type for call in mock_broadcast.call_args_list]
@@ -246,7 +248,8 @@ class TestHostStartTimer:
         fresh_poll_state.create_poll("Q?", _SAMPLE_OPTIONS)
 
         resp = host_client.post("/api/test-session/host/poll/timer", json={"seconds": 45})
-        assert resp.status_code == 200
+        assert resp.status_code == 204
+        assert resp.content == b""
 
         broadcast_msg = mock_broadcast.call_args_list[0][0][0]
         assert broadcast_msg.type == "poll_timer_started"
@@ -268,7 +271,8 @@ class TestHostDeletePoll:
         fresh_poll_state.create_poll("Q?", _SAMPLE_OPTIONS)
 
         resp = host_client.delete("/api/test-session/host/poll")
-        assert resp.status_code == 200
+        assert resp.status_code == 204
+        assert resp.content == b""
         assert fresh_poll_state.poll is None
         assert mock_participant_state.current_activity == "none"
 

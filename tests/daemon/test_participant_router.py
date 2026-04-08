@@ -115,7 +115,8 @@ class TestSetLocation:
         resp = client.post("/api/participant/location",
                            json={"location": "Bucharest, Romania"},
                            headers={"X-Participant-ID": "uuid1"})
-        assert resp.status_code == 200
+        assert resp.status_code == 204
+        assert resp.content == b""
         assert fresh_state.locations["uuid1"] == "Bucharest, Romania"
 
     def test_empty_location_rejected(self, client, fresh_state):

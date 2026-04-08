@@ -389,7 +389,7 @@ async def refresh_avatar_endpoint(request: Request, body: AvatarRequest):
     return AvatarResponse(avatar=new_avatar)
 
 
-@router.post("/location", response_model=OkResponse)
+@router.post("/location", status_code=204)
 async def set_location(request: Request, body: LocationRequest):
     """Store participant city/timezone."""
     pid = request.headers.get("x-participant-id")
@@ -410,7 +410,7 @@ async def set_location(request: Request, body: LocationRequest):
         "location": loc,
     }]
 
-    return OkResponse()
+    return Response(status_code=204)
 
 
 @router.get("/state", response_model=ParticipantStateResponse)

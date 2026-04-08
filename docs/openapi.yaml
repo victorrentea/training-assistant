@@ -71,12 +71,8 @@ paths:
               $ref: '#/components/schemas/LocationRequest'
         required: true
       responses:
-        '200':
+        '204':
           description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/OkResponse'
       x-feature: identity
   /api/participant/state:
     get:
@@ -110,12 +106,8 @@ paths:
               $ref: '#/components/schemas/SubmitWordBody'
         required: true
       responses:
-        '200':
+        '204':
           description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/OkResponse'
       x-feature: wordcloud
   /api/{session_id}/host/wordcloud/word:
     post:
@@ -131,12 +123,8 @@ paths:
               $ref: '#/components/schemas/SubmitWordBody'
         required: true
       responses:
-        '200':
+        '204':
           description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/OkResponse'
       x-feature: wordcloud
   /api/{session_id}/host/wordcloud/topic:
     post:
@@ -152,12 +140,8 @@ paths:
               $ref: '#/components/schemas/SetTopicBody'
         required: true
       responses:
-        '200':
+        '204':
           description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/OkResponse'
       x-feature: wordcloud
   /api/{session_id}/host/wordcloud/clear:
     post:
@@ -167,12 +151,8 @@ paths:
       description: Host clears the word cloud.
       operationId: clear_wordcloud_api__session_id__host_wordcloud_clear_post
       responses:
-        '200':
+        '204':
           description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/OkResponse'
       x-feature: wordcloud
   /api/participant/emoji/reaction:
     post:
@@ -188,12 +168,8 @@ paths:
               $ref: '#/components/schemas/EmojiReactionRequest'
         required: true
       responses:
-        '200':
+        '204':
           description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/OkResponse'
       x-feature: emoji
   /api/participant/qa/submit:
     post:
@@ -209,12 +185,8 @@ paths:
               $ref: '#/components/schemas/SubmitQuestionBody'
         required: true
       responses:
-        '200':
+        '204':
           description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/OkResponse'
       x-feature: qa
   /api/participant/qa/upvote:
     post:
@@ -230,12 +202,8 @@ paths:
               $ref: '#/components/schemas/UpvoteQuestionBody'
         required: true
       responses:
-        '200':
+        '204':
           description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/OkResponse'
       x-feature: qa
   /api/{session_id}/host/qa/submit:
     post:
@@ -251,12 +219,8 @@ paths:
               $ref: '#/components/schemas/SubmitQuestionBody'
         required: true
       responses:
-        '200':
+        '204':
           description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/OkResponse'
       x-feature: qa
   /api/{session_id}/host/qa/question/{question_id}/text:
     put:
@@ -279,12 +243,8 @@ paths:
             schema:
               $ref: '#/components/schemas/EditQuestionTextBody'
       responses:
-        '200':
+        '204':
           description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/OkResponse'
       x-feature: qa
   /api/{session_id}/host/qa/question/{question_id}:
     delete:
@@ -301,12 +261,8 @@ paths:
           type: string
           title: Question Id
       responses:
-        '200':
+        '204':
           description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/OkResponse'
       x-feature: qa
   /api/{session_id}/host/qa/question/{question_id}/answered:
     put:
@@ -329,12 +285,8 @@ paths:
             schema:
               $ref: '#/components/schemas/ToggleAnsweredBody'
       responses:
-        '200':
+        '204':
           description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/OkResponse'
       x-feature: qa
   /api/{session_id}/host/qa/clear:
     post:
@@ -344,12 +296,8 @@ paths:
       description: Host clears all Q&A questions.
       operationId: clear_qa_api__session_id__host_qa_clear_post
       responses:
-        '200':
+        '204':
           description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/OkResponse'
       x-feature: qa
   /api/participant/poll/vote:
     post:
@@ -365,12 +313,8 @@ paths:
               $ref: '#/components/schemas/VoteRequest'
         required: true
       responses:
-        '200':
+        '204':
           description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/OkResponse'
       x-feature: poll
       x-doc-notes:
       - Votes are final once submitted; re-vote is rejected.
@@ -402,12 +346,8 @@ paths:
       description: Host deletes the current poll.
       operationId: delete_poll_api__session_id__host_poll_delete
       responses:
-        '200':
+        '204':
           description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/OkResponse'
       x-feature: poll
   /api/{session_id}/host/poll/open:
     post:
@@ -417,12 +357,8 @@ paths:
       description: Host opens the poll for voting.
       operationId: open_poll_api__session_id__host_poll_open_post
       responses:
-        '200':
+        '204':
           description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/OkResponse'
       x-feature: poll
   /api/{session_id}/host/poll/close:
     post:
@@ -453,12 +389,8 @@ paths:
               $ref: '#/components/schemas/RevealCorrectRequest'
         required: true
       responses:
-        '200':
+        '204':
           description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/OkResponse'
       x-feature: poll
   /api/{session_id}/host/poll/timer:
     post:
@@ -474,12 +406,8 @@ paths:
               $ref: '#/components/schemas/StartTimerRequest'
         required: true
       responses:
-        '200':
+        '204':
           description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/OkResponse'
       x-feature: poll
   /api/{session_id}/host/poll/status:
     put:
@@ -528,12 +456,8 @@ paths:
       summary: Show Leaderboard
       operationId: show_leaderboard_api__session_id__host_leaderboard_show_post
       responses:
-        '200':
+        '204':
           description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/OkResponse'
       x-feature: scores_leaderboard
   /api/{session_id}/host/leaderboard/hide:
     post:
@@ -542,12 +466,8 @@ paths:
       summary: Hide Leaderboard
       operationId: hide_leaderboard_api__session_id__host_leaderboard_hide_post
       responses:
-        '200':
+        '204':
           description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/OkResponse'
       x-feature: scores_leaderboard
   /api/{session_id}/host/scores:
     delete:
@@ -556,12 +476,8 @@ paths:
       summary: Reset Scores
       operationId: reset_scores_api__session_id__host_scores_delete
       responses:
-        '200':
+        '204':
           description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/OkResponse'
       x-feature: scores_leaderboard
   /api/participant/paste:
     post:
@@ -577,12 +493,8 @@ paths:
               $ref: '#/components/schemas/PasteRequest'
         required: true
       responses:
-        '200':
+        '204':
           description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/OkResponse'
       x-feature: paste_upload
   /api/participant/misc/feedback:
     post:
@@ -598,12 +510,8 @@ paths:
               $ref: '#/components/schemas/FeedbackRequest'
         required: true
       responses:
-        '200':
+        '204':
           description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/OkResponse'
       x-feature: feedback
   /api/participant/notes:
     get:
@@ -713,12 +621,8 @@ paths:
               $ref: '#/components/schemas/UploadSeenRequest'
         required: true
       responses:
-        '200':
+        '204':
           description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/OkResponse'
       x-feature: paste_upload
   /api/{session_id}/host/mode:
     post:
@@ -734,12 +638,8 @@ paths:
               $ref: '#/components/schemas/SetModeRequest'
         required: true
       responses:
-        '200':
+        '204':
           description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/OkResponse'
       x-feature: session_management
   /api/transcription-language:
     post:
@@ -756,12 +656,8 @@ paths:
               $ref: '#/components/schemas/TranscriptionLanguageRequest'
         required: true
       responses:
-        '200':
+        '204':
           description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/OkResponse'
       x-feature: transcription
       x-doc-notes:
       - 'Accepted values: ro, en, auto.'
@@ -798,12 +694,8 @@ paths:
               $ref: '#/components/schemas/QuizRequestBody'
         required: true
       responses:
-        '200':
+        '204':
           description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/OkResponse'
       x-feature: quiz
   /api/{session_id}/host/quiz-preview:
     delete:
@@ -813,12 +705,8 @@ paths:
       description: Host clears the current quiz preview.
       operationId: clear_quiz_preview_api__session_id__host_quiz_preview_delete
       responses:
-        '200':
+        '204':
           description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/OkResponse'
       x-feature: quiz
   /api/{session_id}/host/quiz-refine:
     post:
@@ -834,12 +722,8 @@ paths:
               $ref: '#/components/schemas/QuizRefineRequest'
         required: true
       responses:
-        '200':
+        '204':
           description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/OkResponse'
       x-feature: quiz
   /api/participant/codereview/selection:
     put:
@@ -855,12 +739,8 @@ paths:
               $ref: '#/components/schemas/SelectionRequest'
         required: true
       responses:
-        '200':
+        '204':
           description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/OkResponse'
       x-feature: codereview
   /api/{session_id}/host/codereview:
     post:
@@ -876,12 +756,8 @@ paths:
               $ref: '#/components/schemas/CreateCodeReviewRequest'
         required: true
       responses:
-        '200':
+        '204':
           description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/OkResponse'
       x-feature: codereview
     delete:
       tags:
@@ -890,12 +766,8 @@ paths:
       description: Host clears the code review.
       operationId: clear_codereview_api__session_id__host_codereview_delete
       responses:
-        '200':
+        '204':
           description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/OkResponse'
       x-feature: codereview
   /api/{session_id}/host/codereview/status:
     put:
@@ -994,12 +866,8 @@ paths:
               $ref: '#/components/schemas/PickSideRequest'
         required: true
       responses:
-        '200':
+        '204':
           description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/OkResponse'
       x-feature: debate
   /api/participant/debate/argument:
     post:
@@ -1015,12 +883,8 @@ paths:
               $ref: '#/components/schemas/ArgumentRequest'
         required: true
       responses:
-        '200':
+        '204':
           description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/OkResponse'
       x-feature: debate
   /api/participant/debate/upvote:
     post:
@@ -1036,12 +900,8 @@ paths:
               $ref: '#/components/schemas/UpvoteRequest'
         required: true
       responses:
-        '200':
+        '204':
           description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/OkResponse'
       x-feature: debate
   /api/participant/debate/volunteer:
     post:
@@ -1051,12 +911,8 @@ paths:
       description: Participant volunteers as champion for their side.
       operationId: volunteer_champion_api_participant_debate_volunteer_post
       responses:
-        '200':
+        '204':
           description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/OkResponse'
       x-feature: debate
   /api/{session_id}/host/debate:
     post:
@@ -1072,12 +928,8 @@ paths:
               $ref: '#/components/schemas/LaunchDebateRequest'
         required: true
       responses:
-        '200':
+        '204':
           description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/OkResponse'
       x-feature: debate
   /api/{session_id}/host/debate/reset:
     post:
@@ -1087,12 +939,8 @@ paths:
       description: Host resets all debate state.
       operationId: reset_debate_api__session_id__host_debate_reset_post
       responses:
-        '200':
+        '204':
           description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/OkResponse'
       x-feature: debate
   /api/{session_id}/host/debate/close-selection:
     post:
@@ -1102,12 +950,8 @@ paths:
       description: Host closes side selection; auto-assigns remaining participants.
       operationId: close_selection_api__session_id__host_debate_close_selection_post
       responses:
-        '200':
+        '204':
           description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/OkResponse'
       x-feature: debate
   /api/{session_id}/host/debate/force-assign:
     post:
@@ -1117,12 +961,8 @@ paths:
       description: Host force-assigns all unassigned participants.
       operationId: force_assign_api__session_id__host_debate_force_assign_post
       responses:
-        '200':
+        '204':
           description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/OkResponse'
       x-feature: debate
   /api/{session_id}/host/debate/phase:
     post:
@@ -1159,12 +999,8 @@ paths:
               $ref: '#/components/schemas/SetFirstSideRequest'
         required: true
       responses:
-        '200':
+        '204':
           description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/OkResponse'
       x-feature: debate
   /api/{session_id}/host/debate/round-timer:
     post:
@@ -1180,12 +1016,8 @@ paths:
               $ref: '#/components/schemas/RoundTimerRequest'
         required: true
       responses:
-        '200':
+        '204':
           description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/OkResponse'
       x-feature: debate
   /api/{session_id}/host/debate/end-round:
     post:
@@ -1195,12 +1027,8 @@ paths:
       description: Host ends the current round early.
       operationId: end_round_api__session_id__host_debate_end_round_post
       responses:
-        '200':
+        '204':
           description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/OkResponse'
       x-feature: debate
   /api/{session_id}/host/debate/end-arguments:
     post:
@@ -1210,12 +1038,8 @@ paths:
       description: Host ends arguments phase; triggers AI cleanup in background.
       operationId: end_arguments_api__session_id__host_debate_end_arguments_post
       responses:
-        '200':
+        '204':
           description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/OkResponse'
       x-feature: debate
   /api/{session_id}/host/debate/ai-result:
     post:
@@ -1231,12 +1055,8 @@ paths:
               $ref: '#/components/schemas/AiResultRequest'
         required: true
       responses:
-        '200':
+        '204':
           description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/OkResponse'
       x-feature: debate
   /api/{session_id}/host/state:
     get:
@@ -1293,12 +1113,8 @@ paths:
         session end.
       operationId: end_session_api_session_end_post
       responses:
-        '200':
+        '204':
           description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/OkResponse'
       x-feature: session_management
   /api/session/resume:
     post:
@@ -1345,12 +1161,8 @@ paths:
       description: Host starts a nested talk (conference mode).
       operationId: start_talk_api_session_start_talk_post
       responses:
-        '200':
+        '204':
           description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/OkResponse'
       x-feature: session_management
   /api/session/end_talk:
     post:
@@ -1360,12 +1172,8 @@ paths:
       description: Host ends the nested talk.
       operationId: end_talk_api_session_end_talk_post
       responses:
-        '200':
+        '204':
           description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/OkResponse'
       x-feature: session_management
   /api/session/active:
     get:

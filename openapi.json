@@ -253,6 +253,122 @@
         ]
       }
     },
+    "/api/{session_id}/api/slides/invalidate/{slug}": {
+      "post": {
+        "summary": "Invalidate Slide",
+        "description": "Force Railway to re-download and cache-bust the PDF for slug.\n\nCalled by the slides upload daemon after it detects a PPTX was saved and\nGoogle Drive has the updated PDF. Railway deletes the old cached file,\nre-downloads from Drive, then broadcasts slides_cache_status with\nrefreshed_slugs so connected participants auto-reload the active slide.",
+        "operationId": "invalidate_slide_api__session_id__api_slides_invalidate__slug__post",
+        "security": [
+          {
+            "HTTPBasic": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Slug"
+            }
+          },
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SlideInvalidateRequest",
+                "default": {
+                  "drive_export_url": ""
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/{session_id}/upload/{file_id}": {
+      "get": {
+        "summary": "Download For Daemon",
+        "description": "Daemon fetches uploaded temp file before persisting it locally.",
+        "operationId": "download_for_daemon_api__session_id__upload__file_id__get",
+        "security": [
+          {
+            "HTTPBasic": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "File Id"
+            }
+          },
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/{session_id}/upload/{file_id}/ack": {
       "post": {
         "summary": "Ack Upload",
@@ -858,6 +974,17 @@
         },
         "type": "object",
         "title": "HTTPValidationError"
+      },
+      "SlideInvalidateRequest": {
+        "properties": {
+          "drive_export_url": {
+            "type": "string",
+            "title": "Drive Export Url",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "title": "SlideInvalidateRequest"
       },
       "UploadStaticRequest": {
         "properties": {

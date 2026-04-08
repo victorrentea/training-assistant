@@ -21,8 +21,8 @@ def test_feedback_route_sends_email_notification():
             json={"text": "Please add dark mode toggle.", "participant_name": "Alice"},
             headers={"X-Participant-ID": "p1"},
         )
-    assert resp.status_code == 200
-    assert resp.json() == {"ok": True}
+    assert resp.status_code == 204
+    assert resp.content == b""
     notify.assert_called_once()
     subject, body = notify.call_args.args
     assert "Participant Feedback" in subject
@@ -43,7 +43,8 @@ def test_feedback_route_falls_back_to_cached_participant_name():
                 json={"text": "Fallback name should work."},
                 headers={"X-Participant-ID": "p3"},
             )
-    assert resp.status_code == 200
+    assert resp.status_code == 204
+    assert resp.content == b""
     _, body = notify.call_args.args
     assert "Participant: Bob" in body
 
@@ -61,7 +62,8 @@ def test_feedback_route_uses_session_stack_name_fallback():
                     json={"text": "Need bigger poll buttons."},
                     headers={"X-Participant-ID": "p2"},
                 )
-    assert resp.status_code == 200
+    assert resp.status_code == 204
+    assert resp.content == b""
     subject, body = notify.call_args.args
     assert "2026-04-06 Architecture Masterclass" in subject
     assert "Session: 2026-04-06 Architecture Masterclass" in body

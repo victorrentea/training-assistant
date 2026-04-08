@@ -28,7 +28,8 @@ class TestEmojiReaction:
         resp = emoji_client.post("/api/participant/emoji/reaction",
                                   json={"emoji": "🎉"},
                                   headers={"X-Participant-ID": "uuid1"})
-        assert resp.status_code == 200
+        assert resp.status_code == 204
+        assert resp.content == b""
 
     def test_missing_participant_id(self, emoji_client):
         resp = emoji_client.post("/api/participant/emoji/reaction",
@@ -53,7 +54,8 @@ class TestEmojiReaction:
         resp = emoji_client.post("/api/participant/emoji/reaction",
                                   json={"emoji": "❤️"},
                                   headers={"X-Participant-ID": "uuid1"})
-        assert resp.status_code == 200
+        assert resp.status_code == 204
+        assert resp.content == b""
 
     def test_sends_to_host_ws(self, emoji_client, mock_externals):
         from daemon.ws_messages import EmojiReactionMsg

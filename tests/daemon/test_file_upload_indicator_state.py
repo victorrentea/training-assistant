@@ -96,8 +96,8 @@ def test_mark_uploaded_file_seen_endpoint_marks_state():
         "/api/session-1/host/uploads/seen",
         json={"uuid": "uuid-1", "file_id": "f1"},
     )
-    assert resp.status_code == 200
-    assert resp.json() == {"ok": True}
+    assert resp.status_code == 204
+    assert resp.content == b""
     visible = misc_state.visible_uploaded_files("uuid-1")
     assert len(visible) == 1
     assert visible[0]["seen_by_host"] is True

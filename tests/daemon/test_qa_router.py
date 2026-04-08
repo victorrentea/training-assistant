@@ -57,7 +57,8 @@ class TestParticipantSubmit:
         resp = participant_client.post("/api/participant/qa/submit",
                                        json={"text": "What is Python?"},
                                        headers={"X-Participant-ID": "uuid1"})
-        assert resp.status_code == 200
+        assert resp.status_code == 204
+        assert resp.content == b""
         assert len(fresh_qa_state.questions) == 1
 
     def test_submit_empty_text_rejected(self, participant_client):
@@ -94,7 +95,8 @@ class TestParticipantUpvote:
         resp = participant_client.post("/api/participant/qa/upvote",
                                        json={"question_id": qid},
                                        headers={"X-Participant-ID": "uuid2"})
-        assert resp.status_code == 200
+        assert resp.status_code == 204
+        assert resp.content == b""
 
     def test_upvote_self_rejected(self, participant_client, fresh_qa_state):
         qid = fresh_qa_state.submit("uuid1", "Question?")
@@ -122,7 +124,8 @@ class TestHostEndpoints:
     def test_host_submit(self, host_client, fresh_qa_state, mock_ws_client):
         resp = host_client.post("/api/test-session/host/qa/submit",
                                 json={"text": "Host question"})
-        assert resp.status_code == 200
+        assert resp.status_code == 204
+        assert resp.content == b""
         assert len(fresh_qa_state.questions) == 1
         q = list(fresh_qa_state.questions.values())[0]
         assert q["author"] == "__host__"
@@ -131,27 +134,31 @@ class TestHostEndpoints:
         qid = fresh_qa_state.submit("uuid1", "Original")
         resp = host_client.put(f"/api/test-session/host/qa/question/{qid}/text",
                                json={"text": "Edited"})
-        assert resp.status_code == 200
+        assert resp.status_code == 204
+        assert resp.content == b""
         assert fresh_qa_state.questions[qid]["text"] == "Edited"
 
     def test_delete_question(self, host_client, fresh_qa_state, mock_ws_client):
         qid = fresh_qa_state.submit("uuid1", "To delete")
         resp = host_client.delete(f"/api/test-session/host/qa/question/{qid}")
-        assert resp.status_code == 200
+        assert resp.status_code == 204
+        assert resp.content == b""
         assert qid not in fresh_qa_state.questions
 
     def test_toggle_answered(self, host_client, fresh_qa_state, mock_ws_client):
         qid = fresh_qa_state.submit("uuid1", "Question")
         resp = host_client.put(f"/api/test-session/host/qa/question/{qid}/answered",
                                json={"answered": True})
-        assert resp.status_code == 200
+        assert resp.status_code == 204
+        assert resp.content == b""
         assert fresh_qa_state.questions[qid]["answered"] is True
 
     def test_clear(self, host_client, fresh_qa_state, mock_ws_client):
         fresh_qa_state.submit("uuid1", "Q1")
         fresh_qa_state.submit("uuid2", "Q2")
         resp = host_client.post("/api/test-session/host/qa/clear", json={})
-        assert resp.status_code == 200
+        assert resp.status_code == 204
+        assert resp.content == b""
         assert fresh_qa_state.questions == {}
 
     def test_edit_nonexistent_404(self, host_client):

@@ -1,7 +1,7 @@
 """Daemon word cloud router — participant + host endpoints."""
 import logging
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Request, Response
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
@@ -31,7 +31,7 @@ class SetTopicBody(BaseModel):
 participant_router = APIRouter(prefix="/api/participant/wordcloud", tags=["wordcloud"])
 
 
-@participant_router.post("/word", response_model=OkResponse)
+@participant_router.post("/word", status_code=204)
 async def submit_word(request: Request, body: SubmitWordBody):
     """Participant submits a word to the word cloud."""
     pid = request.headers.get("x-participant-id")
@@ -54,7 +54,7 @@ async def submit_word(request: Request, body: SubmitWordBody):
         broadcast_event(ScoresUpdatedMsg(scores=scores.snapshot())),
     ]
 
-    return OkResponse()
+    return Response(status_code=204)
 
 
 # ── Host router (called directly on daemon localhost) ──
@@ -64,7 +64,7 @@ async def submit_word(request: Request, body: SubmitWordBody):
 host_router = APIRouter(prefix="/api/{session_id}/host/wordcloud", tags=["wordcloud"])
 
 
-@host_router.post("/word", response_model=OkResponse)
+@host_router.post("/word", status_code=204)
 async def host_submit_word(body: SubmitWordBody):
     """Host submits a word — same as participant but no scoring."""
     word = body.word.strip()
@@ -73,24 +73,24 @@ async def host_submit_word(body: SubmitWordBody):
 
     snapshot = wordcloud_state.add_word(word)
     _send_wordcloud_events(snapshot)
-    return OkResponse()
+    return Response(status_code=204)
 
 
-@host_router.post("/topic", response_model=OkResponse)
+@host_router.post("/topic", status_code=204)
 async def set_topic(body: SetTopicBody):
     """Host sets the word cloud topic."""
     topic = body.topic.strip()
     snapshot = wordcloud_state.set_topic(topic)
     _send_wordcloud_events(snapshot)
-    return OkResponse()
+    return Response(status_code=204)
 
 
-@host_router.post("/clear", response_model=OkResponse)
+@host_router.post("/clear", status_code=204)
 async def clear_wordcloud():
     """Host clears the word cloud."""
     snapshot = wordcloud_state.clear()
     _send_wordcloud_events(snapshot)
-    return OkResponse()
+    return Response(status_code=204)
 
 
 def _send_wordcloud_events(snapshot: dict):

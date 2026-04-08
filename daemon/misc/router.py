@@ -3,7 +3,7 @@ import logging
 import threading
 from typing import Optional, Any
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Request, Response
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
@@ -81,7 +81,7 @@ class UploadSeenRequest(BaseModel):
 participant_router = APIRouter(prefix="/api/participant", tags=["misc"])
 
 
-@participant_router.post("/paste", response_model=OkResponse)
+@participant_router.post("/paste", status_code=204)
 async def paste_text(request: Request, body: PasteRequest):
     """Participant pastes text to be seen by host."""
     pid = request.headers.get("x-participant-id")
@@ -101,10 +101,10 @@ async def paste_text(request: Request, body: PasteRequest):
         host_event(PasteReceivedMsg(uuid=pid, **entry)),
     ]
 
-    return OkResponse()
+    return Response(status_code=204)
 
 
-@participant_router.post("/misc/feedback", response_model=OkResponse)
+@participant_router.post("/misc/feedback", status_code=204)
 async def participant_feedback(request: Request, body: FeedbackRequest):
     """Participant feedback submitted from floating feedback modal."""
     pid = request.headers.get("x-participant-id")
@@ -126,7 +126,7 @@ async def participant_feedback(request: Request, body: FeedbackRequest):
         f"Participant: {participant_name}\nSession: {session_name}\n\n{text}",
     )
     logger.info("Feedback received from participant %s", pid)
-    return OkResponse()
+    return Response(status_code=204)
 
 
 def _get_session_name_for_feedback() -> str | None:
@@ -188,7 +188,7 @@ async def get_host_summary():
     )
 
 
-@host_router.post("/uploads/seen", response_model=OkResponse)
+@host_router.post("/uploads/seen", status_code=204)
 async def mark_uploaded_file_seen(body: UploadSeenRequest):
     """Mark an uploaded-file indicator as seen by host in daemon session state."""
     target_uuid = (body.uuid or "").strip()
@@ -197,21 +197,21 @@ async def mark_uploaded_file_seen(body: UploadSeenRequest):
         return JSONResponse({"error": "uuid and file_id are required"}, status_code=400)
     if not misc_state.mark_uploaded_file_seen(target_uuid, file_id):
         return JSONResponse({"error": "Upload indicator not found"}, status_code=404)
-    return OkResponse()
+    return Response(status_code=204)
 
 
 class SetModeRequest(BaseModel):
     mode: str
 
 
-@host_router.post("/mode", response_model=OkResponse)
+@host_router.post("/mode", status_code=204)
 async def set_mode(body: SetModeRequest):
     """Host switches session mode (workshop/conference)."""
     mode = body.mode.strip().lower()
     if mode not in ("workshop", "conference"):
         return JSONResponse({"error": f"Invalid mode '{mode}'"}, status_code=400)
     participant_state.mode = mode
-    return OkResponse()
+    return Response(status_code=204)
 
 
 # ── Global router (no session_id prefix) — used for transcription language ──
@@ -221,7 +221,7 @@ global_router = APIRouter(prefix="/api", tags=["misc"])
 VALID_LANGUAGES = {"ro", "en", "auto"}
 
 
-@global_router.post("/transcription-language", response_model=OkResponse)
+@global_router.post("/transcription-language", status_code=204)
 async def set_transcription_language(body: TranscriptionLanguageRequest):
     """Host sets the transcription language — stores pending request for daemon/macos-addons."""
     global _transcription_language_pending
@@ -231,7 +231,7 @@ async def set_transcription_language(body: TranscriptionLanguageRequest):
     with _transcription_language_lock:
         _transcription_language_pending = lang
     broadcast(TranscriptionLanguagePendingMsg(language=lang))
-    return OkResponse()
+    return Response(status_code=204)
 
 
 @global_router.get("/transcription-language/request", response_model=TranscriptionLanguageResponse)

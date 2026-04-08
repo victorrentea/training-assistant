@@ -30,13 +30,13 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
 | Get Log Level<br>`GET /api/log-level` | - | `{level: 'info' \| 'debug'}` |
 | Set Log Level<br>`POST /api/log-level` | `{level: 'info' \| 'debug'}` | - |
 | Get Session Active, public endpoint: returns the active session_id or null.<br>`GET /api/session/active` | - | `{session_id: string \| null}` |
-| Host ends the current session. Railway closes WS connections on session end.<br>`POST /api/session/end` | - | `{ok?: bool}` |
-| Host ends the nested talk.<br>`POST /api/session/end_talk` | - | `{ok?: bool}` |
+| Host ends the current session. Railway closes WS connections on session end.<br>`POST /api/session/end` | - | - |
+| Host ends the nested talk.<br>`POST /api/session/end_talk` | - | - |
 | List Session Folders<br>`GET /api/session/folders` | - | `{folders: list[string]}` |
 | Host resumes an existing session folder. Uses session-state.json as persisted storage.<br>`POST /api/session/resume` | `{folder: string}` | `ok?: bool`<br>`session_name: string`<br>`session_id: string` |
 | Host starts a new session (creates folder, assigns session_id, clean slate).<br>`POST /api/session/start` | `name: string`<br>`type?: string` | `ok?: bool`<br>`session_name: string`<br>`session_id: string` |
-| Host starts a nested talk (conference mode).<br>`POST /api/session/start_talk` | - | `{ok?: bool}` |
-| Host sets session mode (workshop/conference).<br>`POST /api/{session_id}/host/mode` | `{mode: string}` | `{ok?: bool}` |
+| Host starts a nested talk (conference mode).<br>`POST /api/session/start_talk` | - | - |
+| Host sets session mode (workshop/conference).<br>`POST /api/{session_id}/host/mode` | `{mode: string}` | - |
 | Get Interval Lines Txt, return raw transcript lines for a time window; returns text/plain interval lines for session export/inspection.<br>`GET /api/{session_id}/session/interval-lines.txt` | - | `text/plain: string` |
 
 ## Feature: Identity
@@ -45,7 +45,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
 | Endpoint | Request | Response |
 | --- | --- | --- |
 | Refresh Avatar Endpoint, re-roll avatar (conference mode only).<br>`POST /api/participant/avatar` | `{rejected?: list[string]}` | `ok?: bool`<br>`avatar: string` |
-| Set Location, store participant city/timezone.<br>`POST /api/participant/location` | `{location: string}` | `{ok?: bool}` |
+| Set Location, store participant city/timezone.<br>`POST /api/participant/location` | `{location: string}` | - |
 | Rename Participant, returns 400 if not yet registered.<br>`PUT /api/participant/name` | `{name: string}` | - |
 | Register Participant, idempotent for returning participants.<br>`POST /api/participant/register` | - | `name: string`<br>`avatar: string` |
 | Get Participant State, return full personalised state for a participant — used on page load and WS reconnect; returns participant-personalized full state snapshot.<br>`GET /api/participant/state` | - | `type?: string`<br>`mode: string`<br>`my_score: int`<br>`my_name: string`<br>`my_avatar: string`<br>`current_activity: string`<br>`participant_count: int`<br>`host_connected: bool`<br>`daemon_connected: bool`<br>`wordcloud_words: dict[str, int]`<br>`wordcloud_word_order: list[string]`<br>`wordcloud_topic: string`<br>`qa_questions: list[QAQuestionRaw]`<br>`poll?: PollData \| null`<br>`poll_active: bool`<br>`vote_counts: dict[str, int]`<br>`poll_timer_seconds?: int \| null`<br>`poll_timer_started_at?: string \| null`<br>`poll_correct_ids?: list[string] \| null`<br>`my_vote?: string \| list[string] \| null`<br>`my_voted_ids?: list[string] \| null`<br>`codereview: CodeReviewParticipantState`<br>`debate_statement?: string \| null`<br>`debate_phase?: string \| null`<br>`debate_my_side?: string \| null`<br>`debate_my_is_champion: bool`<br>`debate_side_counts: dict[str, int]`<br>`debate_arguments: list[DebateArgumentParticipant]`<br>`debate_champions: dict[str, string]`<br>`debate_auto_assigned: list[string]`<br>`debate_first_side?: string \| null`<br>`debate_round_index?: int \| null`<br>`debate_round_timer_seconds?: int \| null`<br>`debate_round_timer_started_at?: string \| null`<br>`slides_current?: SlidesCurrentPayload \| null`<br>`session_main?: SessionMainPayload \| null`<br>`session_name?: string \| null`<br>`leaderboard_data?: LeaderboardData \| null`<br>`summary_count: int`<br>`notes_count: int` |
@@ -101,7 +101,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
 ### Participant REST
 | Endpoint | Request | Response |
 | --- | --- | --- |
-| Participant casts a vote. Votes are final once submitted; re-vote is rejected.<br>`POST /api/participant/poll/vote` | `{option_ids: list[string]}` | `{ok?: bool}` |
+| Participant casts a vote. Votes are final once submitted; re-vote is rejected.<br>`POST /api/participant/poll/vote` | `{option_ids: list[string]}` | - |
 
 ### Participant WS
 | Message | Payload |
@@ -115,13 +115,13 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
 ### Host REST
 | Endpoint | Request | Response |
 | --- | --- | --- |
-| Host deletes the current poll.<br>`DELETE /api/{session_id}/host/poll` | - | `{ok?: bool}` |
+| Host deletes the current poll.<br>`DELETE /api/{session_id}/host/poll` | - | - |
 | Host creates a new poll.<br>`POST /api/{session_id}/host/poll` | `question?: string`<br>`options?: list[PollOptionRequest]`<br>`multi?: bool`<br>`correct_count?: int \| null` | `ok?: bool`<br>`poll: PollResponse` |
 | Host closes the poll.<br>`POST /api/{session_id}/host/poll/close` | - | `ok?: bool`<br>`vote_counts: dict[str, int]`<br>`total_votes: int` |
-| Host reveals correct answers and awards scores.<br>`PUT /api/{session_id}/host/poll/correct` | `{correct_ids?: list[string]}` | `{ok?: bool}` |
-| Host opens the poll for voting.<br>`POST /api/{session_id}/host/poll/open` | - | `{ok?: bool}` |
+| Host reveals correct answers and awards scores.<br>`PUT /api/{session_id}/host/poll/correct` | `{correct_ids?: list[string]}` | - |
+| Host opens the poll for voting.<br>`POST /api/{session_id}/host/poll/open` | - | - |
 | Set Poll Status, compatibility: {open: true} → open_poll, {open: false} → close_poll.<br>`PUT /api/{session_id}/host/poll/status` | `{open: bool}` | `OkResponse \| ClosePollResponse` |
-| Host starts a countdown timer for the poll.<br>`POST /api/{session_id}/host/poll/timer` | `{seconds?: int}` | `{ok?: bool}` |
+| Host starts a countdown timer for the poll.<br>`POST /api/{session_id}/host/poll/timer` | `{seconds?: int}` | - |
 
 ### Host WS
 | Message | Payload |
@@ -134,7 +134,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
 ### Participant REST
 | Endpoint | Request | Response |
 | --- | --- | --- |
-| Participant submits a word to the word cloud.<br>`POST /api/participant/wordcloud/word` | `{word: string}` | `{ok?: bool}` |
+| Participant submits a word to the word cloud.<br>`POST /api/participant/wordcloud/word` | `{word: string}` | - |
 
 ### Participant WS
 | Message | Payload |
@@ -144,9 +144,9 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
 ### Host REST
 | Endpoint | Request | Response |
 | --- | --- | --- |
-| Host clears the word cloud.<br>`POST /api/{session_id}/host/wordcloud/clear` | - | `{ok?: bool}` |
-| Host sets the word cloud topic.<br>`POST /api/{session_id}/host/wordcloud/topic` | `{topic: string}` | `{ok?: bool}` |
-| Host submits a word — same as participant but no scoring.<br>`POST /api/{session_id}/host/wordcloud/word` | `{word: string}` | `{ok?: bool}` |
+| Host clears the word cloud.<br>`POST /api/{session_id}/host/wordcloud/clear` | - | - |
+| Host sets the word cloud topic.<br>`POST /api/{session_id}/host/wordcloud/topic` | `{topic: string}` | - |
+| Host submits a word — same as participant but no scoring.<br>`POST /api/{session_id}/host/wordcloud/word` | `{word: string}` | - |
 
 ### Host WS
 | Message | Payload |
@@ -158,8 +158,8 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
 ### Participant REST
 | Endpoint | Request | Response |
 | --- | --- | --- |
-| Participant submits a Q&A question.<br>`POST /api/participant/qa/submit` | `{text: string}` | `{ok?: bool}` |
-| Participant upvotes a Q&A question.<br>`POST /api/participant/qa/upvote` | `{question_id: string}` | `{ok?: bool}` |
+| Participant submits a Q&A question.<br>`POST /api/participant/qa/submit` | `{text: string}` | - |
+| Participant upvotes a Q&A question.<br>`POST /api/participant/qa/upvote` | `{question_id: string}` | - |
 
 ### Participant WS
 | Message | Payload |
@@ -169,11 +169,11 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
 ### Host REST
 | Endpoint | Request | Response |
 | --- | --- | --- |
-| Host clears all Q&A questions.<br>`POST /api/{session_id}/host/qa/clear` | - | `{ok?: bool}` |
-| Host deletes a question.<br>`DELETE /api/{session_id}/host/qa/question/{question_id}` | - | `{ok?: bool}` |
-| Host toggles a question's answered flag.<br>`PUT /api/{session_id}/host/qa/question/{question_id}/answered` | `{answered?: bool}` | `{ok?: bool}` |
-| Host edits a question's text.<br>`PUT /api/{session_id}/host/qa/question/{question_id}/text` | `{text: string}` | `{ok?: bool}` |
-| Host submits a Q&A question — no scoring.<br>`POST /api/{session_id}/host/qa/submit` | `{text: string}` | `{ok?: bool}` |
+| Host clears all Q&A questions.<br>`POST /api/{session_id}/host/qa/clear` | - | - |
+| Host deletes a question.<br>`DELETE /api/{session_id}/host/qa/question/{question_id}` | - | - |
+| Host toggles a question's answered flag.<br>`PUT /api/{session_id}/host/qa/question/{question_id}/answered` | `{answered?: bool}` | - |
+| Host edits a question's text.<br>`PUT /api/{session_id}/host/qa/question/{question_id}/text` | `{text: string}` | - |
+| Host submits a Q&A question — no scoring.<br>`POST /api/{session_id}/host/qa/submit` | `{text: string}` | - |
 
 ### Host WS
 | Message | Payload |
@@ -185,7 +185,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
 ### Participant REST
 | Endpoint | Request | Response |
 | --- | --- | --- |
-| Update Selection, participant sets their selected lines (full replacement).<br>`PUT /api/participant/codereview/selection` | `{lines?: list[int]}` | `{ok?: bool}` |
+| Update Selection, participant sets their selected lines (full replacement).<br>`PUT /api/participant/codereview/selection` | `{lines?: list[int]}` | - |
 
 ### Participant WS
 | Message | Payload |
@@ -198,8 +198,8 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
 ### Host REST
 | Endpoint | Request | Response |
 | --- | --- | --- |
-| Host clears the code review.<br>`DELETE /api/{session_id}/host/codereview` | - | `{ok?: bool}` |
-| Host creates a code review session.<br>`POST /api/{session_id}/host/codereview` | `snippet: string`<br>`language?: string \| null`<br>`smart_paste?: bool` | `{ok?: bool}` |
+| Host clears the code review.<br>`DELETE /api/{session_id}/host/codereview` | - | - |
+| Host creates a code review session.<br>`POST /api/{session_id}/host/codereview` | `snippet: string`<br>`language?: string \| null`<br>`smart_paste?: bool` | - |
 | Host confirms a line as problematic and awards points.<br>`PUT /api/{session_id}/host/codereview/confirm-line` | `{line: int}` | `ok?: bool`<br>`confirmed_line: int` |
 | Set Codereview Status, host closes the selection phase.<br>`PUT /api/{session_id}/host/codereview/status` | `{open?: bool}` | `ok?: bool`<br>`phase: string` |
 
@@ -213,10 +213,10 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
 ### Participant REST
 | Endpoint | Request | Response |
 | --- | --- | --- |
-| Participant submits a debate argument.<br>`POST /api/participant/debate/argument` | `{text: string}` | `{ok?: bool}` |
-| Participant picks a side (for/against).<br>`POST /api/participant/debate/pick-side` | `{side: string}` | `{ok?: bool}` |
-| Participant upvotes a debate argument.<br>`POST /api/participant/debate/upvote` | `{argument_id: string}` | `{ok?: bool}` |
-| Participant volunteers as champion for their side.<br>`POST /api/participant/debate/volunteer` | - | `{ok?: bool}` |
+| Participant submits a debate argument.<br>`POST /api/participant/debate/argument` | `{text: string}` | - |
+| Participant picks a side (for/against).<br>`POST /api/participant/debate/pick-side` | `{side: string}` | - |
+| Participant upvotes a debate argument.<br>`POST /api/participant/debate/upvote` | `{argument_id: string}` | - |
+| Participant volunteers as champion for their side.<br>`POST /api/participant/debate/volunteer` | - | - |
 
 ### Participant WS
 | Message | Payload |
@@ -228,16 +228,16 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
 ### Host REST
 | Endpoint | Request | Response |
 | --- | --- | --- |
-| Host launches a debate with a statement.<br>`POST /api/{session_id}/host/debate` | `{statement: string}` | `{ok?: bool}` |
-| Receive Ai Result, manual/skip AI result — host posts AI cleanup results directly.<br>`POST /api/{session_id}/host/debate/ai-result` | `merges?: list[DebateAiMerge]`<br>`cleaned?: list[DebateAiCleaned]`<br>`new_arguments?: list[DebateAiNewArgument]` | `{ok?: bool}` |
-| Host closes side selection; auto-assigns remaining participants.<br>`POST /api/{session_id}/host/debate/close-selection` | - | `{ok?: bool}` |
-| Host ends arguments phase; triggers AI cleanup in background.<br>`POST /api/{session_id}/host/debate/end-arguments` | - | `{ok?: bool}` |
-| Host ends the current round early.<br>`POST /api/{session_id}/host/debate/end-round` | - | `{ok?: bool}` |
-| Set First Side, host picks which side speaks first in live debate.<br>`POST /api/{session_id}/host/debate/first-side` | `{side: string}` | `{ok?: bool}` |
-| Force Assign, host force-assigns all unassigned participants.<br>`POST /api/{session_id}/host/debate/force-assign` | - | `{ok?: bool}` |
+| Host launches a debate with a statement.<br>`POST /api/{session_id}/host/debate` | `{statement: string}` | - |
+| Receive Ai Result, manual/skip AI result — host posts AI cleanup results directly.<br>`POST /api/{session_id}/host/debate/ai-result` | `merges?: list[DebateAiMerge]`<br>`cleaned?: list[DebateAiCleaned]`<br>`new_arguments?: list[DebateAiNewArgument]` | - |
+| Host closes side selection; auto-assigns remaining participants.<br>`POST /api/{session_id}/host/debate/close-selection` | - | - |
+| Host ends arguments phase; triggers AI cleanup in background.<br>`POST /api/{session_id}/host/debate/end-arguments` | - | - |
+| Host ends the current round early.<br>`POST /api/{session_id}/host/debate/end-round` | - | - |
+| Set First Side, host picks which side speaks first in live debate.<br>`POST /api/{session_id}/host/debate/first-side` | `{side: string}` | - |
+| Force Assign, host force-assigns all unassigned participants.<br>`POST /api/{session_id}/host/debate/force-assign` | - | - |
 | Host advances the debate to a specific phase.<br>`POST /api/{session_id}/host/debate/phase` | `{phase: string}` | `ok?: bool`<br>`phase: string` |
-| Host resets all debate state.<br>`POST /api/{session_id}/host/debate/reset` | - | `{ok?: bool}` |
-| Host starts a timed round.<br>`POST /api/{session_id}/host/debate/round-timer` | `round_index: int`<br>`seconds: int` | `{ok?: bool}` |
+| Host resets all debate state.<br>`POST /api/{session_id}/host/debate/reset` | - | - |
+| Host starts a timed round.<br>`POST /api/{session_id}/host/debate/round-timer` | `round_index: int`<br>`seconds: int` | - |
 
 ## Feature: Scores & Leaderboard
 
@@ -250,9 +250,9 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
 ### Host REST
 | Endpoint | Request | Response |
 | --- | --- | --- |
-| Hide Leaderboard<br>`POST /api/{session_id}/host/leaderboard/hide` | - | `{ok?: bool}` |
-| Show Leaderboard<br>`POST /api/{session_id}/host/leaderboard/show` | - | `{ok?: bool}` |
-| Reset Scores<br>`DELETE /api/{session_id}/host/scores` | - | `{ok?: bool}` |
+| Hide Leaderboard<br>`POST /api/{session_id}/host/leaderboard/hide` | - | - |
+| Show Leaderboard<br>`POST /api/{session_id}/host/leaderboard/show` | - | - |
+| Reset Scores<br>`DELETE /api/{session_id}/host/scores` | - | - |
 
 ### Host WS
 | Message | Payload |
@@ -264,7 +264,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
 ### Participant REST
 | Endpoint | Request | Response |
 | --- | --- | --- |
-| Emoji Reaction, participant sends an emoji reaction.<br>`POST /api/participant/emoji/reaction` | `{emoji: string}` | `{ok?: bool}` |
+| Emoji Reaction, participant sends an emoji reaction.<br>`POST /api/participant/emoji/reaction` | `{emoji: string}` | - |
 
 ### Host WS
 | Message | Payload |
@@ -282,9 +282,9 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
 ### Host REST
 | Endpoint | Request | Response |
 | --- | --- | --- |
-| Host clears the current quiz preview.<br>`DELETE /api/{session_id}/host/quiz-preview` | - | `{ok?: bool}` |
-| Host requests regeneration of a specific question or option.<br>`POST /api/{session_id}/host/quiz-refine` | `target: string`<br>`preview?: QuizPreviewPayload-Input \| null` | `{ok?: bool}` |
-| Host requests a quiz — stores request for the orchestrator loop to pick up.<br>`POST /api/{session_id}/host/quiz-request` | `minutes?: int \| null`<br>`topic?: string \| null` | `{ok?: bool}` |
+| Host clears the current quiz preview.<br>`DELETE /api/{session_id}/host/quiz-preview` | - | - |
+| Host requests regeneration of a specific question or option.<br>`POST /api/{session_id}/host/quiz-refine` | `target: string`<br>`preview?: QuizPreviewPayload-Input \| null` | - |
+| Host requests a quiz — stores request for the orchestrator loop to pick up.<br>`POST /api/{session_id}/host/quiz-request` | `minutes?: int \| null`<br>`topic?: string \| null` | - |
 | Get Quiz Md, return the accumulated quiz markdown history.<br>`GET /api/{session_id}/quiz-md` | - | `{content: string}` |
 
 ### Host WS
@@ -298,13 +298,13 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
 ### Participant REST
 | Endpoint | Request | Response |
 | --- | --- | --- |
-| Participant pastes text to be seen by host.<br>`POST /api/participant/paste` | `{text: string}` | `{ok?: bool}` |
+| Participant pastes text to be seen by host.<br>`POST /api/participant/paste` | `{text: string}` | - |
 
 ### Host REST
 | Endpoint | Request | Response |
 | --- | --- | --- |
 | Get Pastes, return all pending paste entries grouped by participant uuid.<br>`GET /api/{session_id}/host/pastes` | - | `{pastes?: dict[str, list[PasteEntry]]}` |
-| Mark Uploaded File Seen<br>`POST /api/{session_id}/host/uploads/seen` | `uuid: string`<br>`file_id: string` | `{ok?: bool}` |
+| Mark Uploaded File Seen<br>`POST /api/{session_id}/host/uploads/seen` | `uuid: string`<br>`file_id: string` | - |
 
 ### Host WS
 | Message | Payload |
@@ -343,7 +343,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
 ### Participant REST
 | Endpoint | Request | Response |
 | --- | --- | --- |
-| Participant Feedback<br>`POST /api/participant/misc/feedback` | `text: string`<br>`participant_name?: string \| null` | `{ok?: bool}` |
+| Participant Feedback<br>`POST /api/participant/misc/feedback` | `text: string`<br>`participant_name?: string \| null` | - |
 
 ## Feature: Transcription
 
@@ -355,7 +355,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
 ### Host REST
 | Endpoint | Request | Response |
 | --- | --- | --- |
-| Host sets the transcription language — stores pending request for daemon/macos-addons. Accepted values: ro, en, auto.<br>`POST /api/transcription-language` | `{language: string}` | `{ok?: bool}` |
+| Host sets the transcription language — stores pending request for daemon/macos-addons. Accepted values: ro, en, auto.<br>`POST /api/transcription-language` | `{language: string}` | - |
 | Poll Transcription Language Request, daemon/macos-addons polls for a pending language change request (clears on read); consumes and clears the pending transcription language request.<br>`GET /api/transcription-language/request` | - | `{request?: string \| null}` |
 
 ## Feature: Cross-cutting: Reload

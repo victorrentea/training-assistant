@@ -1,5 +1,5 @@
 """Leaderboard show/hide and score reset — host-facing endpoints."""
-from fastapi import APIRouter
+from fastapi import APIRouter, Response
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
@@ -17,7 +17,7 @@ class OkResponse(BaseModel):
 router = APIRouter(prefix="/api/{session_id}/host", tags=["leaderboard"])
 
 
-@router.post("/leaderboard/show", response_model=OkResponse)
+@router.post("/leaderboard/show", status_code=204)
 async def show_leaderboard():
     all_scores = scores.snapshot()
     raw_entries = [
@@ -38,22 +38,22 @@ async def show_leaderboard():
     msg = LeaderboardRevealedMsg(positions=positions)
     broadcast(msg)
     await notify_host(msg)
-    return OkResponse()
+    return Response(status_code=204)
 
 
-@router.post("/leaderboard/hide", response_model=OkResponse)
+@router.post("/leaderboard/hide", status_code=204)
 async def hide_leaderboard():
     leaderboard_state.reset()
     msg = LeaderboardHiddenMsg()
     broadcast(msg)
     await notify_host(msg)
-    return OkResponse()
+    return Response(status_code=204)
 
 
-@router.delete("/scores", response_model=OkResponse)
+@router.delete("/scores", status_code=204)
 async def reset_scores():
     scores.reset()
     msg = ScoresUpdatedMsg(scores=scores.snapshot())
     broadcast(msg)
     await notify_host(msg)
-    return OkResponse()
+    return Response(status_code=204)

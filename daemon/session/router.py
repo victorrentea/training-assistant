@@ -11,7 +11,7 @@ import logging
 from datetime import datetime, timezone
 from pathlib import Path
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Response
 from fastapi.responses import JSONResponse, PlainTextResponse
 from fastapi.params import Query
 from pydantic import BaseModel
@@ -160,11 +160,11 @@ async def start_session(body: StartSessionRequest):
     return SessionStartResponse(session_name=name, session_id=session_id)
 
 
-@global_router.post("/end", response_model=OkResponse)
+@global_router.post("/end", status_code=204)
 async def end_session():
     """Host ends the current session. Railway closes WS connections on session end."""
     session_pending.put("session_request", {"action": "end"})
-    return OkResponse()
+    return Response(status_code=204)
 
 
 @global_router.post("/resume", response_model=SessionStartResponse)
@@ -200,18 +200,18 @@ async def list_session_folders():
 
 
 # Talk endpoints (conference mode nested talks)
-@global_router.post("/start_talk", response_model=OkResponse)
+@global_router.post("/start_talk", status_code=204)
 async def start_talk():
     """Host starts a nested talk (conference mode)."""
     session_pending.put("session_request", {"action": "create_talk_folder"})
-    return OkResponse()
+    return Response(status_code=204)
 
 
-@global_router.post("/end_talk", response_model=OkResponse)
+@global_router.post("/end_talk", status_code=204)
 async def end_talk():
     """Host ends the nested talk."""
     session_pending.put("session_request", {"action": "end"})
-    return OkResponse()
+    return Response(status_code=204)
 
 
 # ── Public endpoint (no auth) ──

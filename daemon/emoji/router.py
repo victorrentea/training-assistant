@@ -1,7 +1,7 @@
 """Daemon emoji reaction router — participant endpoint."""
 import logging
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Request, Response
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
@@ -25,7 +25,7 @@ class OkResponse(BaseModel):
 participant_router = APIRouter(prefix="/api/participant/emoji", tags=["emoji"])
 
 
-@participant_router.post("/reaction", response_model=OkResponse)
+@participant_router.post("/reaction", status_code=204)
 async def emoji_reaction(request: Request, body: EmojiReactionRequest):
     """Participant sends an emoji reaction."""
     pid = request.headers.get("x-participant-id")
@@ -51,4 +51,4 @@ async def emoji_reaction(request: Request, body: EmojiReactionRequest):
     # Forward to host browser (local WS)
     await notify_host(EmojiReactionMsg(emoji=emoji))
 
-    return OkResponse()
+    return Response(status_code=204)
