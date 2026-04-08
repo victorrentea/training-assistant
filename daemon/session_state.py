@@ -204,6 +204,8 @@ def save_key_points(
 # ── Daemon state persistence ────────────────────────────────────────────────────
 
 SESSION_META_FILENAME = "session_meta.json"
+SESSION_STATE_FILENAME = "session-state.json"
+_LEGACY_SESSION_STATE_FILENAME = ".session-state.json"
 
 
 def load_daemon_state(sessions_root: Path) -> dict:
@@ -264,7 +266,7 @@ def save_session_meta(session_folder: Path, meta: dict) -> None:
 
 def find_session_folder_by_id(sessions_root: Path, session_id: str) -> Path | None:
     """Scan session folders and return the one whose session_id matches.
-    Checks session_meta.json first (fast), then .session-state.json (server snapshot)."""
+    Checks session_meta.json first (fast), then session-state snapshots."""
     if not sessions_root.exists() or not session_id:
         return None
     try:
@@ -280,9 +282,10 @@ def find_session_folder_by_id(sessions_root: Path, session_id: str) -> Path | No
         meta = load_session_meta(folder)
         if meta.get("session_id") == session_id:
             return folder
-        # Fall back to .session-state.json (server snapshot, may lag)
-        ss_path = folder / ".session-state.json"
-        if ss_path.exists():
+        # Fall back to session-state snapshots (server snapshot, may lag)
+        for ss_path in (folder / SESSION_STATE_FILENAME, folder / _LEGACY_SESSION_STATE_FILENAME):
+            if not ss_path.exists():
+                continue
             try:
                 data = json.loads(ss_path.read_text(encoding="utf-8"))
                 if data.get("session_id") == session_id:
@@ -365,11 +368,35 @@ def session_start_date(session_entry: dict) -> date | None:
 
 # ── Session state file I/O ─────────────────────────────────────────────────────
 
+def session_state_path(session_folder: Path) -> Path:
+    return session_folder / SESSION_STATE_FILENAME
+
+
+def load_session_state(session_folder: Path) -> dict:
+    """Load session-state.json and return a dict snapshot; returns {} on missing/invalid."""
+    path = session_state_path(session_folder)
+    if not path.exists():
+        return {}
+    try:
+        raw = path.read_text(encoding="utf-8").strip()
+        if not raw:
+            return {}
+        data = json.loads(raw)
+        if isinstance(data, dict):
+            return data
+        log.error("session", f"Invalid {SESSION_STATE_FILENAME}: root must be object")
+        return {}
+    except Exception as e:
+        log.error("session", f"Failed to load {SESSION_STATE_FILENAME}: {e}")
+        return {}
+
+
 def save_session_state(session_folder: Path, snapshot: dict) -> None:
-    """Atomically writes .session-state.json to the session folder."""
-    path = session_folder / ".session-state.json"
-    tmp = path.with_name(".session-state.json.tmp")
-    tmp.write_text(json.dumps(snapshot, default=str, indent=2))
+    """Atomically writes session-state.json to the session folder."""
+    session_folder.mkdir(parents=True, exist_ok=True)
+    path = session_state_path(session_folder)
+    tmp = path.with_name(f"{SESSION_STATE_FILENAME}.tmp")
+    tmp.write_text(json.dumps(snapshot, default=str, indent=2), encoding="utf-8")
     tmp.replace(path)
 
 

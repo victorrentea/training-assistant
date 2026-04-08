@@ -114,7 +114,7 @@ def test_find_session_folder_by_id_via_session_state(tmp_path):
     from daemon.session_state import find_session_folder_by_id
     folder = tmp_path / "2026-03-25 WS"
     folder.mkdir()
-    (folder / ".session-state.json").write_text(json.dumps({"session_id": "server-id-456"}))
+    (folder / "session-state.json").write_text(json.dumps({"session_id": "server-id-456"}))
 
     result = find_session_folder_by_id(tmp_path, "server-id-456")
     assert result == folder
@@ -193,10 +193,10 @@ def test_daemon_state_to_stack_active_sessions_included():
     assert len(result) == 2
 
 
-# ── Issue 1: startup restore includes .session-state.json ─────────────────────
+# ── Issue 1: startup restore includes session-state.json ──────────────────────
 
 def test_sync_session_includes_session_state_when_file_exists():
-    """When .session-state.json exists in the session folder, sync_session_to_server
+    """When session-state.json exists in the session folder, sync_session_to_server
     is called with the contents in the payload."""
     import daemon.session_state as session_state_mod
     from daemon.session_state import sync_session_to_server
@@ -208,7 +208,7 @@ def test_sync_session_includes_session_state_when_file_exists():
         session_name = "2026-03-25 WS"
         session_folder = sessions_root / session_name
         session_folder.mkdir()
-        (session_folder / ".session-state.json").write_text(
+        (session_folder / "session-state.json").write_text(
             json.dumps(session_state_data), encoding="utf-8"
         )
 
@@ -370,3 +370,139 @@ def test_resolve_presentation_slide_target_fallback_when_not_mapped(tmp_path):
     assert target["matched"] is False
 
 
+def test_session_state_hash_is_stable_for_key_order():
+    from daemon.__main__ import _session_state_hash
+
+    a = {"x": 1, "nested": {"b": 2, "a": 1}}
+    b = {"nested": {"a": 1, "b": 2}, "x": 1}
+
+    assert _session_state_hash(a) == _session_state_hash(b)
+
+
+def test_flush_session_state_backup_writes_when_hash_changed(tmp_path):
+    from daemon.__main__ import _flush_session_state_backup
+
+    sessions_root = tmp_path
+    folder = sessions_root / "2026-03-25 WS"
+    folder.mkdir()
+    stack = [{"name": folder.name}]
+
+    snapshot = {"participant_names": {"u1": "Alice"}, "session_id": "sid-1"}
+    last_hash, wrote = _flush_session_state_backup(
+        sessions_root=sessions_root,
+        session_stack=stack,
+        session_snapshot=snapshot,
+        last_flushed_hash=None,
+        force=False,
+    )
+
+    assert wrote is True
+    assert isinstance(last_hash, str)
+    assert json.loads((folder / "session-state.json").read_text(encoding="utf-8")) == snapshot
+
+
+def test_flush_session_state_backup_skips_when_hash_unchanged(tmp_path):
+    from daemon.__main__ import _flush_session_state_backup
+
+    sessions_root = tmp_path
+    folder = sessions_root / "2026-03-25 WS"
+    folder.mkdir()
+    stack = [{"name": folder.name}]
+    snapshot = {"participant_names": {"u1": "Alice"}, "session_id": "sid-1"}
+
+    first_hash, first_wrote = _flush_session_state_backup(
+        sessions_root=sessions_root,
+        session_stack=stack,
+        session_snapshot=snapshot,
+        last_flushed_hash=None,
+        force=False,
+    )
+    assert first_wrote is True
+    mtime_1 = (folder / "session-state.json").stat().st_mtime_ns
+
+    second_hash, second_wrote = _flush_session_state_backup(
+        sessions_root=sessions_root,
+        session_stack=stack,
+        session_snapshot=snapshot,
+        last_flushed_hash=first_hash,
+        force=False,
+    )
+    mtime_2 = (folder / "session-state.json").stat().st_mtime_ns
+
+    assert second_wrote is False
+    assert second_hash == first_hash
+    assert mtime_2 == mtime_1
+
+
+def test_flush_session_state_backup_force_writes_even_when_hash_unchanged(tmp_path):
+    from daemon.__main__ import _flush_session_state_backup
+
+    sessions_root = tmp_path
+    folder = sessions_root / "2026-03-25 WS"
+    folder.mkdir()
+    stack = [{"name": folder.name}]
+    snapshot = {"participant_names": {"u1": "Alice"}, "session_id": "sid-1"}
+
+    first_hash, first_wrote = _flush_session_state_backup(
+        sessions_root=sessions_root,
+        session_stack=stack,
+        session_snapshot=snapshot,
+        last_flushed_hash=None,
+        force=False,
+    )
+    assert first_wrote is True
+
+    second_hash, second_wrote = _flush_session_state_backup(
+        sessions_root=sessions_root,
+        session_stack=stack,
+        session_snapshot=snapshot,
+        last_flushed_hash=first_hash,
+        force=True,
+    )
+
+    assert second_wrote is True
+    assert second_hash == first_hash
+
+
+def test_ensure_session_state_file_for_resume_creates_missing_file(tmp_path):
+    from daemon.__main__ import _ensure_session_state_file_for_resume
+
+    folder = tmp_path / "resume-folder"
+    folder.mkdir()
+    wrote = _ensure_session_state_file_for_resume(
+        session_folder=folder,
+        session_snapshot={"participant_names": {"u1": "Alice"}},
+    )
+    assert wrote is True
+    assert (folder / "session-state.json").exists()
+
+
+def test_ensure_session_state_file_for_resume_rewrites_empty_file(tmp_path):
+    from daemon.__main__ import _ensure_session_state_file_for_resume
+
+    folder = tmp_path / "resume-folder"
+    folder.mkdir()
+    (folder / "session-state.json").write_text("", encoding="utf-8")
+    wrote = _ensure_session_state_file_for_resume(
+        session_folder=folder,
+        session_snapshot={"participant_names": {"u1": "Alice"}},
+    )
+    assert wrote is True
+    data = json.loads((folder / "session-state.json").read_text(encoding="utf-8"))
+    assert data["participant_names"]["u1"] == "Alice"
+
+
+def test_ensure_session_state_file_for_resume_keeps_existing_file(tmp_path):
+    from daemon.__main__ import _ensure_session_state_file_for_resume
+
+    folder = tmp_path / "resume-folder"
+    folder.mkdir()
+    state_file = folder / "session-state.json"
+    state_file.write_text(json.dumps({"participant_names": {"u1": "Old"}}), encoding="utf-8")
+    wrote = _ensure_session_state_file_for_resume(
+        session_folder=folder,
+        session_snapshot={"participant_names": {"u1": "New"}},
+    )
+    assert wrote is False
+    data = json.loads(state_file.read_text(encoding="utf-8"))
+    assert data["participant_names"]["u1"] == "Old"

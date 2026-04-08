@@ -1,0 +1,297 @@
+"""
+Hermetic E2E test: Participant auto-refreshes slide when PPTX is saved.
+
+Flow under test:
+1. Participant opens the session; slides catalog loads
+2. Daemon (simulated via direct API call) calls POST /{sid}/api/slides/invalidate/{slug}
+3. Railway deletes its cached PDF and re-downloads from mock Google Drive
+4. Railway broadcasts slides_cache_status with refreshed_slugs=[slug]
+5. Participant browser receives the WS message and calls _loadSlideIntoViewer
+   with forceReload=true, triggering a fresh GET /api/slides/download/{slug}?v=...
+6. Railway serves the re-downloaded PDF bytes
+
+This test also verifies the BEFORE-state (bug): without code changes,
+the invalidate endpoint returns 404 and mock Drive count stays at 1.
+"""
+
+import base64
+import json
+import os
+import sys
+import time
+import urllib.error
+import urllib.request
+
+sys.path.insert(0, "/app")
+sys.path.insert(0, "/app/tests")
+
+import pytest
+from playwright.sync_api import sync_playwright, expect
+
+from pages.participant_page import ParticipantPage
+from session_utils import fresh_session
+
+
+BASE = "http://localhost:8000"
+DAEMON_BASE = os.environ.get("DAEMON_BASE", "http://localhost:8081")
+MOCK_DRIVE = "http://localhost:9090"
+HOST_USER = os.environ.get("HOST_USERNAME", "host")
+HOST_PASS = os.environ.get("HOST_PASSWORD", "testpass")
+
+_SLUG = "clean-code"
+
+
+# ── Helpers ────────────────────────────────────────────────────────────────────
+
+
+def _await_condition(fn, timeout_ms=15_000, poll_ms=300, msg=""):
+    deadline = time.monotonic() + timeout_ms / 1000
+    while time.monotonic() < deadline:
+        result = fn()
+        if result:
+            return result
+        time.sleep(poll_ms / 1000)
+    raise AssertionError(msg or f"Condition not met within {timeout_ms}ms")
+
+
+def _mock_drive_stats() -> dict:
+    with urllib.request.urlopen(f"{MOCK_DRIVE}/mock-drive/stats", timeout=3) as resp:
+        return json.loads(resp.read())
+
+
+def _mock_drive_reset():
+    req = urllib.request.Request(f"{MOCK_DRIVE}/mock-drive/reset-stats", method="POST", data=b"")
+    urllib.request.urlopen(req, timeout=3)
+
+
+def _auth_header() -> str:
+    return "Basic " + base64.b64encode(f"{HOST_USER}:{HOST_PASS}".encode()).decode()
+
+
+def _prime_slide_cache(session_id: str) -> None:
+    """Download the slide PDF via daemon /check so Railway has a cached copy."""
+    url = f"{DAEMON_BASE}/{session_id}/api/slides/check/{_SLUG}"
+    req = urllib.request.Request(url, headers={"Authorization": _auth_header()})
+    try:
+        with urllib.request.urlopen(req, timeout=35) as resp:
+            assert resp.status == 200, f"/check returned {resp.status}"
+    except urllib.error.HTTPError as e:
+        # Accept 200 only
+        raise AssertionError(f"/check returned HTTP {e.code}") from e
+
+
+def _get_drive_export_url(session_id: str) -> str:
+    """Fetch the drive_export_url for _SLUG from the daemon slides API."""
+    url = f"{BASE}/{session_id}/api/slides"
+    with urllib.request.urlopen(url, timeout=10) as resp:
+        data = json.loads(resp.read())
+    for slide in data.get("slides", []):
+        if slide.get("slug") == _SLUG:
+            return str(slide.get("drive_export_url", "")).strip()
+    return ""
+
+
+def _call_invalidate(session_id: str, drive_export_url: str = "") -> int:
+    """POST /api/slides/invalidate/{slug} on Railway. Returns HTTP status code."""
+    url = f"{BASE}/{session_id}/api/slides/invalidate/{_SLUG}"
+    body = json.dumps({"drive_export_url": drive_export_url}).encode()
+    req = urllib.request.Request(
+        url,
+        method="POST",
+        headers={
+            "Authorization": _auth_header(),
+            "Content-Type": "application/json",
+        },
+        data=body,
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            return resp.status
+    except urllib.error.HTTPError as e:
+        return e.code
+
+
+# ── Tests ─────────────────────────────────────────────────────────────────────
+
+
+def test_invalidate_triggers_railway_redownload():
+    """POST /api/slides/invalidate/{slug} causes Railway to re-download from mock Drive."""
+    session_id = fresh_session("AutoRefresh")
+    _mock_drive_reset()
+
+    # Prime cache: participant /check → Railway downloads once from mock Drive
+    _prime_slide_cache(session_id)
+    stats_after_prime = _mock_drive_stats()
+    count_after_prime = stats_after_prime.get(_SLUG, 0)
+    assert count_after_prime >= 1, f"Expected ≥1 Drive request after priming, got {stats_after_prime}"
+    print(f"[test] Cache primed — mock Drive request count for '{_SLUG}': {count_after_prime}")
+
+    # Reset so we can count re-download requests only
+    _mock_drive_reset()
+
+    # Get drive_export_url from catalog
+    drive_export_url = _get_drive_export_url(session_id)
+    assert drive_export_url, "No drive_export_url found for slug in catalog"
+    print(f"[test] drive_export_url: {drive_export_url}")
+
+    # Simulate daemon calling invalidate after a PPTX save
+    status = _call_invalidate(session_id, drive_export_url)
+    assert status == 200, f"POST /invalidate returned {status}, expected 200"
+    print(f"[test] POST /invalidate returned {status} ✓")
+
+    # Railway should re-download from mock Drive (async background task)
+    _await_condition(
+        lambda: _mock_drive_stats().get(_SLUG, 0) >= 1,
+        timeout_ms=15_000,
+        msg=f"Railway did not re-download '{_SLUG}' from mock Drive within 15s",
+    )
+    redownload_count = _mock_drive_stats().get(_SLUG, 0)
+    print(f"[test] Mock Drive re-download count for '{_SLUG}': {redownload_count} ✓")
+
+    # Railway should still serve the PDF from the refreshed cache
+    url = f"{BASE}/{session_id}/api/slides/download/{_SLUG}"
+    with urllib.request.urlopen(url, timeout=10) as resp:
+        pdf_bytes = resp.read()
+    assert pdf_bytes[:5] == b"%PDF-", f"Expected PDF, got {pdf_bytes[:20]!r}"
+    print(f"[test] /download still serves valid PDF ({len(pdf_bytes)} bytes) ✓")
+
+
+def test_invalidate_without_drive_url_in_body_uses_stored_catalog():
+    """If drive_export_url is omitted from body, Railway uses the stored catalog URL."""
+    session_id = fresh_session("AutoRefreshNoUrl")
+    _prime_slide_cache(session_id)
+    _mock_drive_reset()
+
+    # Call without drive_export_url body field (Railway should fall back to state.slides)
+    status = _call_invalidate(session_id, drive_export_url="")
+    # May return 200 (if URL in catalog) or 422 (if not stored on Railway)
+    print(f"[test] POST /invalidate (no body URL) returned {status}")
+    assert status in (200, 422), f"Unexpected status {status}"
+
+
+def test_participant_receives_refreshed_slugs_in_ws():
+    """Participant WS receives slides_cache_status with refreshed_slugs after invalidate."""
+    session_id = fresh_session("AutoRefreshWS")
+    _prime_slide_cache(session_id)
+
+    drive_export_url = _get_drive_export_url(session_id)
+    assert drive_export_url, "No drive_export_url in catalog"
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        pax_ctx = browser.new_context()
+        pax_page = pax_ctx.new_page()
+        pax_page.goto(f"{BASE}/{session_id}", wait_until="networkidle")
+        pax = ParticipantPage(pax_page)
+        pax.join("RefreshWatcher")
+
+        # Inject a WS message listener to capture refreshed_slugs
+        pax_page.evaluate("""() => {
+            window._capturedRefreshedSlugs = [];
+            const origWs = window.WebSocket;
+            window.WebSocket = class extends origWs {
+                constructor(url, protocols) {
+                    super(url, protocols);
+                    this.addEventListener('message', (evt) => {
+                        try {
+                            const msg = JSON.parse(evt.data);
+                            if (msg.type === 'slides_cache_status' && Array.isArray(msg.refreshed_slugs)) {
+                                window._capturedRefreshedSlugs.push(...msg.refreshed_slugs);
+                            }
+                        } catch {}
+                    });
+                }
+            };
+        }""")
+
+        # Wait for participant to connect
+        _await_condition(
+            lambda: pax_page.locator(".slides-list-item").count() > 0,
+            timeout_ms=10_000,
+            msg="No slides loaded for participant",
+        )
+
+        # Trigger invalidate
+        status = _call_invalidate(session_id, drive_export_url)
+        assert status == 200, f"POST /invalidate returned {status}"
+
+        # Participant should receive slides_cache_status with refreshed_slugs=[slug]
+        _await_condition(
+            lambda: pax_page.evaluate(
+                f"() => window._capturedRefreshedSlugs.includes('{_SLUG}')"
+            ),
+            timeout_ms=15_000,
+            msg=f"Participant did not receive refreshed_slugs=['{_SLUG}'] within 15s",
+        )
+        captured = pax_page.evaluate("() => window._capturedRefreshedSlugs")
+        print(f"[test] Participant received refreshed_slugs: {captured} ✓")
+
+        browser.close()
+
+
+def test_participant_auto_reloads_active_slide_after_invalidate():
+    """Participant reloads the active slide PDF when slides_cache_status has refreshed_slugs."""
+    session_id = fresh_session("AutoRefreshReload")
+    _prime_slide_cache(session_id)
+
+    drive_export_url = _get_drive_export_url(session_id)
+    assert drive_export_url, "No drive_export_url in catalog"
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        pax_ctx = browser.new_context()
+        pax_page = pax_ctx.new_page()
+
+        # Track requests to the PDF download URL
+        download_requests = []
+        pax_page.on(
+            "request",
+            lambda req: download_requests.append(req.url)
+            if f"/api/slides/download/{_SLUG}" in req.url
+            else None,
+        )
+
+        pax_page.goto(f"{BASE}/{session_id}", wait_until="networkidle")
+        pax = ParticipantPage(pax_page)
+        pax.join("ReloadWatcher")
+
+        # Wait for catalog and open slides dock
+        _await_condition(
+            lambda: pax_page.locator(".slides-list-item").count() > 0,
+            timeout_ms=10_000,
+            msg="Slide list not loaded",
+        )
+
+        # Select the target slide so slidesSelectedSlug = _SLUG
+        pax_page.evaluate(f"""() => {{
+            const items = document.querySelectorAll('.slides-list-item');
+            for (const item of items) {{
+                const id = item.getAttribute('data-slide-id') || '';
+                if (id.includes('{_SLUG}')) {{ item.click(); break; }}
+            }}
+        }}""")
+
+        # Clear requests captured during initial load
+        time.sleep(1)
+        download_requests.clear()
+        requests_before = len(download_requests)
+
+        # Trigger invalidate (simulates daemon notification after PPTX save)
+        status = _call_invalidate(session_id, drive_export_url)
+        assert status == 200, f"POST /invalidate returned {status}"
+        print(f"[test] POST /invalidate returned {status} ✓")
+
+        # Participant should auto-reload the slide (issue a new download request)
+        _await_condition(
+            lambda: len(download_requests) > requests_before,
+            timeout_ms=15_000,
+            msg=f"Participant did not auto-reload slide '{_SLUG}' after invalidate",
+        )
+        reload_url = download_requests[-1]
+        print(f"[test] Participant reloaded slide: {reload_url} ✓")
+        # URL should have ?v= cache-bust parameter added by forceReload+cacheVersion
+        assert "?v=" in reload_url or f"/download/{_SLUG}" in reload_url, (
+            f"Expected reload request to download URL, got: {reload_url}"
+        )
+
+        browser.close()

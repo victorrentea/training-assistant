@@ -142,6 +142,28 @@ def sync_slides_list(config: SlidesDaemonConfig, daemon_state: dict, metadata: d
     return True
 
 
+def _notify_railway_invalidate(config: SlidesDaemonConfig, slug: str, drive_export_url: str) -> None:
+    """Notify Railway to invalidate and re-download its cached PDF for slug.
+
+    Called after a fresh PDF has been confirmed on Google Drive.  Failure is
+    logged as a warning and never raises — the upload itself already succeeded.
+    """
+    try:
+        sid = get_active_session_id(config.server_url)
+        if not sid:
+            log.info("slides", f"No active session — skipping Railway PDF invalidate for slug={slug}")
+            return
+        _post_json(
+            f"{config.server_url}/{sid}/api/slides/invalidate/{slug}",
+            {"drive_export_url": drive_export_url},
+            config.host_username,
+            config.host_password,
+        )
+        log.info("slides", f"Railway PDF cache invalidated for slug={slug}")
+    except Exception as exc:
+        log.info("slides", f"Railway invalidate notification failed for slug={slug}: {exc}")
+
+
 def process_one_file(
     config: SlidesDaemonConfig,
     daemon_state: dict,
@@ -165,6 +187,12 @@ def process_one_file(
     save_daemon_state(config.state_file, daemon_state)
     write_material_last_modified(config.publish_dir, target_pdf, source_mtime)
     log.info("slides", f"Published {pptx_path.name} -> {public_ref}")
+
+    # Tell Railway to bust its cached copy so participants get the fresh PDF
+    drive_export_url = str((metadata or {}).get("drive_export_url") or "").strip()
+    if config.sync_backend and drive_export_url:
+        _notify_railway_invalidate(config, slug, drive_export_url)
+
     return True
 
 

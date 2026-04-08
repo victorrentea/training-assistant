@@ -173,6 +173,33 @@ async def broadcast_slides_cache_status() -> None:
     )
 
 
+async def do_invalidate_download(slug: str, drive_export_url: str) -> None:
+    """Background task: force re-download for slug, then broadcast with refreshed_slugs.
+
+    Called from the REST invalidate endpoint when the daemon reports a PPTX was saved.
+    Unlike the WS download_pdf flow, this broadcasts directly (no daemon round-trip).
+    The refreshed_slugs field signals participant browsers to auto-reload the active slide.
+    """
+    try:
+        await do_download(slug, drive_export_url)
+    except Exception:
+        logger.exception("[slides-invalidate] re-download failed for slug=%s", slug)
+    slides = await _fetch_latest_slides_from_daemon()
+    if slides is None:
+        slides = _slides_with_embedded_cache_status()
+    else:
+        state.slides = slides
+        state.slides_cache_status = _cache_map_from_slides(slides)
+    await broadcast(
+        {
+            "type": "slides_cache_status",
+            "slides": slides,
+            "slides_cache_status": state.slides_cache_status,
+            "refreshed_slugs": [slug],
+        }
+    )
+
+
 # ---------------------------------------------------------------------------
 # Sync download (run in executor)
 # ---------------------------------------------------------------------------

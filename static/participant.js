@@ -3085,14 +3085,23 @@ const sessionTitleEl = document.getElementById('session-title');
       case 'summary_updated':
         updateSummaryCount(msg.count, true);
         break;
-      case 'slides_cache_status':
+      case 'slides_cache_status': {
+        const _refreshedSlugs = Array.isArray(msg.refreshed_slugs) ? msg.refreshed_slugs : [];
         _refreshSlidesCatalog().then(() => {
           if (_pendingFollowRetry) {
             _pendingFollowRetry = false;
             _queueHostSlideCurrent();
           }
+          // Auto-reload the active slide if Railway just re-downloaded it (PPTX save flow)
+          if (_refreshedSlugs.length && slidesSelectedSlug && _refreshedSlugs.includes(slidesSelectedSlug)) {
+            const currentSlide = slidesCatalog.find(s => s.slug === slidesSelectedSlug);
+            if (currentSlide) {
+              _loadSlideIntoViewer(currentSlide, { forceReload: true, withUiBlocker: false, cacheVersion: String(Date.now()) }).catch(() => {});
+            }
+          }
         }).catch(() => {});
         break;
+      }
       case 'leaderboard_revealed': {
         const lbEntries = msg.entries || [];
         const myLbEntry = lbEntries.find(e => e.uuid === myUUID);
