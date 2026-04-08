@@ -55,6 +55,7 @@ Whenever the user says “remember”, add it to this file (CLAUDE.md). Only add
 - Slow hermetic tests (>5s) must be tagged `@pytest.mark.nightly` (excluded from every-push CI, run in nightly build)
 - There is a course catalog and a slides catalog file mapping course names to local PPTX paths
 - Daemon logs are available at `/Users/victorrentea/workspace/training-assistant/logs/daemon.log`
+- Always push only to `master`; ignore requests to push to `main`.
 
 ---
 
