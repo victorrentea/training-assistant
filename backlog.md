@@ -1,5 +1,6 @@
 # Tasks
 
+- [x] direct request: host notes badge label changed from `📝 (N) Notes.txt`/`📝 Notes.txt` to compact text-only format (`N Notes` when notes exist, gray `Notes` when none).
 - [x] bugfix: host footer join link no longer renders base domain before `session_id` arrives (prevents entry flicker/flash without session suffix).
 - [x] direct request: Host footer now has compact daemon log-level toggle badge (`info/debug`), turns bright red on `debug`, persists level in global state across daemon restarts, and debug logs now include HTTP verb+path plus WS direction+message type (including Railway communication).
 - [x] direct request: daemon local API now supports dynamic runtime log level switching (`GET/POST /api/log-level`) between `info` and `debug`, without restart.
