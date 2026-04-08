@@ -16,6 +16,7 @@ dev = [
     "pytest>=8.0",
     "pytest-bdd>=8.0",
     "httpx>=0.28",
+    "vulture>=2.14",
 ]
 daemon = [
     "anthropic>=0.85.0",
@@ -29,3 +30,10 @@ markers = [
     "load: load tests — connect many participants simultaneously",
     "nightly: slow tests run once per day in the nightly CI build, not on every push",
 ]
+
+[tool.vulture]
+paths = ["daemon", "railway"]
+exclude = ["*/__pycache__/*", "tests/*", "docs/*", "openspec/*", "_bmad/*", ".context/*"]
+ignore_decorators = ["@*"]
+min_confidence = 80
+sort_by_size = true
