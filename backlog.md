@@ -1,6 +1,7 @@
 # Tasks
 
 - [x] direct request: remove `participant_universes` from persisted daemon `session-state.json` payloads and cleanup unused restore/snapshot plumbing.
+- [x] direct request: added Pydantic persisted-data models for `global-state.json`, `session-state.json`, and session metadata; load/save paths now validate and normalize payloads while keeping legacy compatibility.
 - [x] bugfix: restoring a previously closed session now reapplies persisted `session-state.json` into in-memory daemon caches (`participant_names` etc.) during startup/create/parent-restore paths, so returning UUIDs keep their prior names instead of being reassigned defaults.
 - [x] ui tweak: participant landing keeps Join button unchanged during auto-reconnect and renders a separate slim progress bar + “Auto reconnecting” label below the button.
 - [x] bugfix: session `resume/start` now force-syncs active session id to local shared state + Railway even when a session stack already exists in memory, preventing host landing from getting stuck on `/host` after resume.

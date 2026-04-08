@@ -5,6 +5,52 @@ from types import SimpleNamespace
 from daemon.session_state import GLOBAL_STATE_FILENAME
 
 
+def test_persisted_global_state_model_validates_new_and_legacy_shapes():
+    from daemon.persisted_models import PersistedGlobalState
+
+    new_state = PersistedGlobalState.model_validate({
+        "active_session_id": "abc123",
+        "log_level": "debug",
+    })
+    assert new_state.active_session_id == "abc123"
+    assert new_state.log_level == "debug"
+
+    legacy_state = PersistedGlobalState.model_validate({
+        "main": {"name": "2026-03-25 WS", "started_at": "2026-03-25T09:00:00", "status": "active"},
+        "talk": None,
+    })
+    assert legacy_state.main is not None
+    assert legacy_state.main.name == "2026-03-25 WS"
+    assert legacy_state.main.status == "active"
+
+
+def test_persisted_session_state_model_validates_runtime_snapshot_shape():
+    from daemon.persisted_models import PersistedSessionState
+
+    snapshot = PersistedSessionState.model_validate({
+        "session_id": "session-1",
+        "mode": "workshop",
+        "current_activity": "qa",
+        "participant_names": {"u1": "Alice"},
+        "scores": {"u1": 100},
+        "qa_questions": {
+            "q1": {
+                "id": "q1",
+                "text": "Question?",
+                "author": "u1",
+                "upvoters": ["u1"],
+                "answered": False,
+            }
+        },
+        "leaderboard_active": False,
+    })
+    dumped = snapshot.model_dump()
+    assert dumped["session_id"] == "session-1"
+    assert dumped["participant_names"]["u1"] == "Alice"
+    assert dumped["scores"]["u1"] == 100
+    assert dumped["qa_questions"]["q1"]["text"] == "Question?"
+
+
 def test_load_daemon_state_new_format():
     """New format stores only active_session_id."""
     with tempfile.TemporaryDirectory() as d:
@@ -49,6 +95,15 @@ def test_load_daemon_state_returns_raw_old_stack_format():
 
 def test_load_daemon_state_returns_empty_when_no_file():
     with tempfile.TemporaryDirectory() as d:
+        from daemon.session_state import load_daemon_state as _load_daemon_state
+        result = _load_daemon_state(Path(d))
+        assert result == {}
+
+
+def test_load_daemon_state_returns_empty_for_non_object_root():
+    with tempfile.TemporaryDirectory() as d:
+        f = Path(d) / GLOBAL_STATE_FILENAME
+        f.write_text(json.dumps(["invalid-root"]), encoding="utf-8")
         from daemon.session_state import load_daemon_state as _load_daemon_state
         result = _load_daemon_state(Path(d))
         assert result == {}

@@ -7,6 +7,11 @@ from datetime import date, datetime, timedelta
 from pathlib import Path
 
 from daemon import log
+from daemon.persisted_models import (
+    PersistedGlobalState,
+    PersistedSessionMeta,
+    PersistedSessionState,
+)
 
 # Module-level ws_client reference, set by daemon/__main__.py at startup
 _ws_client = None
@@ -230,7 +235,17 @@ def load_daemon_state(sessions_root: Path) -> dict:
     if not state_file.exists():
         return {}
     try:
-        return json.loads(state_file.read_text(encoding="utf-8"))
+        raw = json.loads(state_file.read_text(encoding="utf-8"))
+        if not isinstance(raw, dict):
+            log.error("session", f"Invalid {GLOBAL_STATE_FILENAME}: root must be object")
+            return {}
+        try:
+            model = PersistedGlobalState.model_validate(raw)
+            return model.model_dump(mode="json", exclude_unset=True)
+        except Exception as e:
+            # Keep backward compatibility with unknown legacy fields.
+            log.error("session", f"Invalid {GLOBAL_STATE_FILENAME} payload; using raw data: {e}")
+            return raw
     except Exception as e:
         log.error("session", f"Failed to load daemon state: {e}")
         return {}
@@ -241,9 +256,11 @@ def save_daemon_state(sessions_root: Path, daemon_state: dict) -> None:
     New format: {active_session_id: str|None}."""
     try:
         sessions_root.mkdir(parents=True, exist_ok=True)
+        payload = daemon_state if isinstance(daemon_state, dict) else {}
+        payload = PersistedGlobalState.model_validate(payload).model_dump(mode="json", exclude_unset=True)
         path = sessions_root / GLOBAL_STATE_FILENAME
         tmp = path.with_suffix(".tmp")
-        tmp.write_text(json.dumps(daemon_state, default=str, indent=2), encoding="utf-8")
+        tmp.write_text(json.dumps(payload, default=str, indent=2), encoding="utf-8")
         tmp.replace(path)
         log.info("session", f"💾 {GLOBAL_STATE_FILENAME}")
     except Exception as e:
@@ -256,7 +273,12 @@ def load_session_meta(session_folder: Path) -> dict:
     data = load_session_state(session_folder)
     if not isinstance(data, dict):
         return {}
-    meta = {k: data[k] for k in _SESSION_META_KEYS if k in data}
+    try:
+        model = PersistedSessionMeta.model_validate(data)
+        validated = model.model_dump(mode="json", exclude_unset=True)
+    except Exception:
+        validated = data
+    meta = {k: validated[k] for k in _SESSION_META_KEYS if k in validated}
     return meta if "session_id" in meta else {}
 
 
@@ -265,9 +287,17 @@ def save_session_meta(session_folder: Path, meta: dict) -> None:
     try:
         current = load_session_state(session_folder)
         merged = dict(current) if isinstance(current, dict) else {}
+        validated_meta = meta if isinstance(meta, dict) else {}
+        try:
+            validated_meta = PersistedSessionMeta.model_validate(validated_meta).model_dump(
+                mode="json",
+                exclude_unset=True,
+            )
+        except Exception as e:
+            log.error("session", f"Invalid session meta payload in {session_folder.name}: {e}")
         for key in _SESSION_META_KEYS:
-            if key in meta:
-                merged[key] = meta[key]
+            if key in validated_meta:
+                merged[key] = validated_meta[key]
         save_session_state(session_folder, merged)
     except Exception as e:
         log.error("session", f"Failed to save session meta to {session_folder.name}: {e}")
@@ -406,7 +436,13 @@ def load_session_state(session_folder: Path) -> dict:
             return {}
         data = json.loads(raw)
         if isinstance(data, dict):
-            return data
+            try:
+                model = PersistedSessionState.model_validate(data)
+                return model.model_dump(mode="json", exclude_unset=True)
+            except Exception as e:
+                # Keep unknown legacy fields while still validating known structures where possible.
+                log.error("session", f"Invalid {SESSION_STATE_FILENAME} payload; using raw data: {e}")
+                return data
         log.error("session", f"Invalid {SESSION_STATE_FILENAME}: root must be object")
         return {}
     except Exception as e:
@@ -428,6 +464,7 @@ def save_session_state(session_folder: Path, snapshot: dict) -> None:
         for key in _SESSION_META_KEYS:
             if key in existing and key not in payload:
                 payload[key] = existing[key]
+    payload = PersistedSessionState.model_validate(payload).model_dump(mode="json", exclude_unset=True)
     path = session_state_path(session_folder)
     tmp = path.with_name(f"{SESSION_STATE_FILENAME}.tmp")
     tmp.write_text(json.dumps(payload, default=str, indent=2), encoding="utf-8")
