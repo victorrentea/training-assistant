@@ -63,7 +63,7 @@ def _stamp_deploy_info():
 
 
 @asynccontextmanager
-async def lifespan(app_: FastAPI):
+async def lifespan(_: FastAPI):
     global _RAILWAY_STARTED_AT_ISO
     _RAILWAY_STARTED_AT_ISO = datetime.now(ZoneInfo("Europe/Bucharest")).isoformat()
     _stamp_version_js()

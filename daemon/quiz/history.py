@@ -7,7 +7,6 @@ from typing import Optional
 from daemon import log
 from daemon.config import Config, read_session_notes
 from daemon.quiz.generator import generate_quiz, print_quiz, refine_quiz
-from daemon.quiz import poll_api
 from daemon.quiz.poll_api import fetch_quiz_history, fetch_summary_points, post_status
 from daemon.transcript.loader import extract_last_n_minutes, load_transcription_files
 from daemon.ws_publish import broadcast
