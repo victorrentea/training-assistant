@@ -54,6 +54,7 @@ Whenever the user says “remember”, add it to this file (CLAUDE.md). Only add
 - `daemon_state.json` is the source of truth for which session is currently active
 - Slow hermetic tests (>5s) must be tagged `@pytest.mark.nightly` (excluded from every-push CI, run in nightly build)
 - There is a course catalog and a slides catalog file mapping course names to local PPTX paths
+- Daemon logs are available at `/Users/victorrentea/workspace/training-assistant/logs/daemon.log`
 
 ---
 
