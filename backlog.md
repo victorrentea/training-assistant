@@ -1,5 +1,6 @@
 # Tasks
 
+- [x] direct request: DEBUG log-level badge now blinks slowly with a light red background.
 - [x] direct request: INFO log-level badge color set to explicit gray (`#9aa0b5`) to avoid theme-dependent color drift.
 - [x] direct request: daemon log-level badge now uses uppercase labels (`INFO`/`DEBUG`) and gray styling for `INFO`.
 - [x] direct request: Slides left QR now renders at 100% of left container width.

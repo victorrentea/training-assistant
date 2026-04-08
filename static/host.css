@@ -87,14 +87,19 @@ body {
   --badge-fill: #9aa0b544;
 }
 #log-level-badge.log-level-debug {
-  color: #ff5b5b;
-  border-color: #ff2d2d;
-  background: #ff2d2d30;
-  --badge-fill: #ff2d2d66;
+  color: #ff6b6b;
+  border-color: #ff6b6b;
+  background: #ff6b6b22;
+  --badge-fill: #ff6b6b55;
   box-shadow: 0 0 12px rgba(255, 45, 45, 0.35);
+  animation: log-debug-blink 1.8s ease-in-out infinite;
 }
 #log-level-badge.log-level-pending {
   opacity: 0.65;
+}
+@keyframes log-debug-blink {
+  0%, 100% { background: #ff6b6b22; }
+  50% { background: #ff6b6b55; }
 }
 .footer-badge-tooltip {
   position: absolute;
