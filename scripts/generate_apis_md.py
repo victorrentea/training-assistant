@@ -456,8 +456,6 @@ def _feature_for_misc_path(path: str) -> str:
         return "notes_summary"
     if "slides-cache-status" in path:
         return "slides"
-    if "transcription-language" in path:
-        return "transcription"
     return "misc"
 
 

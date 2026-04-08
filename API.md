@@ -18,7 +18,6 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
 - [Paste & File Upload](#feature-paste--file-upload)
 - [Notes & Summary](#feature-notes--summary)
 - [Feedback](#feature-feedback)
-- [Transcription](#feature-transcription)
 - [Cross-cutting: Reload](#feature-cross-cutting-reload)
 
 ## Feature: Session Management
@@ -342,19 +341,6 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
 | Endpoint | Request | Response |
 | --- | --- | --- |
 | Participant Feedback<br>`POST /api/participant/misc/feedback` | `text: string`<br>`participant_name?: string \| null` | - |
-
-## Feature: Transcription
-
-### Participant WS
-| Message | Payload |
-| --- | --- |
-| Daemon detected a transcription language change<br>`transcription_language_pending` | `{language: string}` |
-
-### Host REST
-| Endpoint | Request | Response |
-| --- | --- | --- |
-| Host sets the transcription language — stores pending request for daemon/macos-addons. Accepted values: ro, en, auto.<br>`POST /api/transcription-language` | `{language: string}` | - |
-| Poll Transcription Language Request, daemon/macos-addons polls for a pending language change request (clears on read); consumes and clears the pending transcription language request.<br>`GET /api/transcription-language/request` | - | `{request?: string \| null}` |
 
 ## Feature: Cross-cutting: Reload
 

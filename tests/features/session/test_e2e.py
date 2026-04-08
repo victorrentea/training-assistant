@@ -250,7 +250,6 @@ class TestHostSessionCode:
                     'overlay-badge',
                     'notes-badge',
                     'summary-badge',
-                    'btn-transcription-lang',
                     'token-cost',
                     'git-repos-badge',
                     'slides-log-badge',

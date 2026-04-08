@@ -21,8 +21,6 @@ def _feature_for_misc_path(path: str) -> str:
         return "notes_summary"
     if "slides-cache-status" in path:
         return "slides"
-    if "transcription-language" in path:
-        return "transcription"
     return "misc"
 
 
@@ -48,12 +46,6 @@ _DOC_NOTES: dict[tuple[str, str], list[str]] = {
     ],
     ("GET", "/api/{session_id}/host/state"): [
         "Returns host-facing full state snapshot.",
-    ],
-    ("GET", "/api/transcription-language/request"): [
-        "Consumes and clears the pending transcription language request.",
-    ],
-    ("POST", "/api/transcription-language"): [
-        "Accepted values: ro, en, auto.",
     ],
     ("GET", "/api/participant/slides-cache-status"): [
         "Primarily for diagnostics; UI cache invalidation is event-driven via slides_cache_status WS.",

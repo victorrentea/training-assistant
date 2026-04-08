@@ -211,13 +211,6 @@ class OverlayConnectedMsg(BaseModel):
     overlay_connected: bool
 
 
-# ── Transcription ─────────────────────────────────────────────────────────────
-
-class TranscriptionLanguagePendingMsg(BaseModel):
-    type: Literal["transcription_language_pending"] = "transcription_language_pending"
-    language: str
-
-
 # ── Host-only: Paste & Upload ─────────────────────────────────────────────────
 
 class PasteReceivedMsg(BaseModel):
@@ -262,8 +255,6 @@ PARTICIPANT_MESSAGES: dict[str, type[BaseModel]] = {
     "slides_cache_status": SlidesCacheStatusMsg,
     # Activity
     "activity_updated": ActivityUpdatedMsg,
-    # Transcription
-    "transcription_language_pending": TranscriptionLanguagePendingMsg,
     # Identity
     "participant_count_updated": ParticipantCountUpdatedMsg,
     # Poll
@@ -338,8 +329,6 @@ PARTICIPANT_MESSAGE_FEATURES: dict[str, str] = {
     "slides_cache_status": "slides",
     # Activity
     "activity_updated": "activity",
-    # Transcription
-    "transcription_language_pending": "transcription",
     # Identity
     "participant_count_updated": "identity",
     # Poll

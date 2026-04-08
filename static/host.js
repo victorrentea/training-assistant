@@ -49,11 +49,10 @@
   const TODAY_KEY = `host_polls_${new Date().toISOString().slice(0, 10)}`;
   const _FOOTER_BADGE_TOOLTIP_DEFAULTS = {
     'ws-badge': 'Server connection status',
-'overlay-badge': 'Desktop Overlay app',
+    'overlay-badge': 'Desktop Overlay app',
     'notes-badge': 'Session notes',
     'summary-badge': 'Key points summary',
     'log-level-badge': 'Daemon log level (click to toggle)',
-    'btn-transcription-lang': 'Toggle transcription language',
     'token-cost': 'Token usage and cost',
     'git-repos-badge': 'Git repos activity',
     'slides-log-badge': 'Slides activity',
@@ -386,9 +385,6 @@
           currentMode = msg.mode;
           renderMode(msg.mode);
         }
-        if (msg.transcription_language) {
-          updateTranscriptionLangBtn(msg.transcription_language);
-        }
         if (msg.summary_updated_at) summaryUpdatedAt = msg.summary_updated_at;
         if (msg.summary_count) updateSummaryLineCount(msg.summary_count);
         if (msg.notes_count) updateNotesLineCount(msg.notes_count);
@@ -443,10 +439,6 @@
           _lastDebateMsg.debate_round_timer_seconds = null;
           renderDebateHost(_lastDebateMsg);
         }
-      } else if (msg.type === 'transcription_language') {
-        updateTranscriptionLangBtn(msg.language);
-      } else if (msg.type === 'transcription_language_pending') {
-        updateTranscriptionLangBtn(msg.language, true);
       } else if (msg.type === 'quiz_status') {
         renderQuizStatus(msg.status, msg.message);
       } else if (msg.type === 'quiz_preview') {
@@ -2266,30 +2258,6 @@
     if (!confirm(`Reset ${name}'s score (${pts} pts) to zero?`)) return;
     await fetch(API(`/scores/${uuid}`), { method: 'DELETE' });
     toast(`${name}'s score reset ✓`);
-  }
-
-  const _LANG_FLAG = { ro: '🇷🇴', en: '🇬🇧', auto: '🌐' };
-
-  function updateTranscriptionLangBtn(lang, pending = false) {
-    const btn = document.getElementById('btn-transcription-lang');
-    if (!btn) return;
-    btn.textContent = `${_LANG_FLAG[lang] || lang} ${lang.toUpperCase()}`;
-    _setFooterBadgeTooltip(btn, `Transcription: ${lang.toUpperCase()}${pending ? ' (applying…)' : ''} — click to toggle`);
-    btn.style.opacity = pending ? '0.4' : '0.8';
-    btn.dataset.lang = lang;
-    btn.className = 'badge' + (pending ? ' disabled' : '');
-  }
-
-  async function toggleTranscriptionLanguage() {
-    const btn = document.getElementById('btn-transcription-lang');
-    const current = btn?.dataset.lang || 'ro';
-    const next = current === 'ro' ? 'en' : 'ro';
-    updateTranscriptionLangBtn(next, true);
-    await fetch('/api/transcription-language', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ language: next }),
-    });
   }
 
   function renderQuizStatus(status, message) {

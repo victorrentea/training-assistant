@@ -624,44 +624,6 @@ paths:
         '204':
           description: Successful Response
       x-feature: paste_upload
-  /api/transcription-language:
-    post:
-      tags:
-      - misc
-      summary: Set Transcription Language
-      description: Host sets the transcription language — stores pending request for
-        daemon/macos-addons.
-      operationId: set_transcription_language_api_transcription_language_post
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/TranscriptionLanguageRequest'
-        required: true
-      responses:
-        '204':
-          description: Successful Response
-      x-feature: transcription
-      x-doc-notes:
-      - 'Accepted values: ro, en, auto.'
-  /api/transcription-language/request:
-    get:
-      tags:
-      - misc
-      summary: Poll Transcription Language Request
-      description: Daemon/macos-addons polls for a pending language change request
-        (clears on read).
-      operationId: poll_transcription_language_request_api_transcription_language_request_get
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TranscriptionLanguageResponse'
-      x-feature: transcription
-      x-doc-notes:
-      - Consumes and clears the pending transcription language request.
   /api/{session_id}/host/quiz-request:
     post:
       tags:
@@ -2900,24 +2862,6 @@ components:
       - output_tokens
       - estimated_cost_usd
       title: TokenUsage
-    TranscriptionLanguageRequest:
-      properties:
-        language:
-          type: string
-          title: Language
-      type: object
-      required:
-      - language
-      title: TranscriptionLanguageRequest
-    TranscriptionLanguageResponse:
-      properties:
-        request:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Request
-      type: object
-      title: TranscriptionLanguageResponse
     UploadSeenRequest:
       properties:
         uuid:

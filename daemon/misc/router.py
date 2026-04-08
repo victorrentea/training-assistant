@@ -1,7 +1,6 @@
 """Daemon misc router — participant + host endpoints for paste, notes, summary, slides cache."""
 import logging
-import threading
-from typing import Optional, Any
+from typing import Optional
 
 from fastapi import APIRouter, Request, Response
 from fastapi.responses import JSONResponse
@@ -12,21 +11,13 @@ from daemon.misc.content_files import read_notes_content, read_summary_payload
 from daemon.misc.state import misc_state
 from daemon.participant.state import participant_state
 from daemon.session import state as session_shared_state
-from daemon.ws_messages import PasteReceivedMsg, TranscriptionLanguagePendingMsg
-from daemon.ws_publish import host_event, broadcast
+from daemon.ws_messages import PasteReceivedMsg
+from daemon.ws_publish import host_event
 
 logger = logging.getLogger(__name__)
 
-# Pending transcription language request (read by daemon loop or macos-addons polling)
-_transcription_language_lock = threading.Lock()
-_transcription_language_pending: str | None = None
-
 
 # ── Pydantic models ──
-
-class OkResponse(BaseModel):
-    ok: bool = True
-
 class PasteRequest(BaseModel):
     text: str
 
@@ -64,12 +55,6 @@ class PasteEntry(BaseModel):
 
 class PastsResponse(BaseModel):
     pastes: dict[str, list[PasteEntry]] = {}
-
-class TranscriptionLanguageRequest(BaseModel):
-    language: str
-
-class TranscriptionLanguageResponse(BaseModel):
-    request: Optional[str] = None
 
 class UploadSeenRequest(BaseModel):
     uuid: str
@@ -198,33 +183,3 @@ async def mark_uploaded_file_seen(body: UploadSeenRequest):
     if not misc_state.mark_uploaded_file_seen(target_uuid, file_id):
         return JSONResponse({"error": "Upload indicator not found"}, status_code=404)
     return Response(status_code=204)
-
-
-# ── Global router (no session_id prefix) — used for transcription language ──
-
-global_router = APIRouter(prefix="/api", tags=["misc"])
-
-VALID_LANGUAGES = {"ro", "en", "auto"}
-
-
-@global_router.post("/transcription-language", status_code=204)
-async def set_transcription_language(body: TranscriptionLanguageRequest):
-    """Host sets the transcription language — stores pending request for daemon/macos-addons."""
-    global _transcription_language_pending
-    lang = body.language.lower().strip()
-    if lang not in VALID_LANGUAGES:
-        return JSONResponse({"error": "language must be 'ro', 'en', or 'auto'"}, status_code=400)
-    with _transcription_language_lock:
-        _transcription_language_pending = lang
-    broadcast(TranscriptionLanguagePendingMsg(language=lang))
-    return Response(status_code=204)
-
-
-@global_router.get("/transcription-language/request", response_model=TranscriptionLanguageResponse)
-async def poll_transcription_language_request():
-    """Daemon/macos-addons polls for a pending language change request (clears on read)."""
-    global _transcription_language_pending
-    with _transcription_language_lock:
-        req = _transcription_language_pending
-        _transcription_language_pending = None
-    return TranscriptionLanguageResponse(request=req)

@@ -40,7 +40,6 @@ channels:
           - $ref: '#/components/messages/leaderboard_revealed'
           - $ref: '#/components/messages/quiz_status'
           - $ref: '#/components/messages/quiz_preview'
-          - $ref: '#/components/messages/transcription_language_pending'
           - $ref: '#/components/messages/notes_updated'
           - $ref: '#/components/messages/summary_updated'
           - $ref: '#/components/messages/reload'
@@ -436,19 +435,6 @@ components:
             type: array
             items:
               type: integer
-
-    transcription_language_pending:
-      summary: Daemon detected a transcription language change
-      x-feature: transcription
-      payload:
-        type: object
-        required: [type, language]
-        properties:
-          type:
-            type: string
-            enum: [transcription_language_pending]
-          language:
-            type: string
 
     # ── Notes & Summary ──────────────────────────────────────────────────────
 

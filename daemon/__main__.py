@@ -565,7 +565,6 @@ def run() -> None:
     ws_client.register_handler("summary_full_reset", _ws_handler("summary_full_reset"))
     # session_request is now served via daemon REST endpoint (daemon/session/router.py)
     # stored in daemon.session.pending — no longer via WS push from Railway
-    # transcription_language_request is now served via daemon REST endpoint (daemon/misc/router.py)
     ws_client.register_handler("sync_files", _ws_handler("sync_files"))
 
     from daemon.proxy_handler import handle_proxy_request
