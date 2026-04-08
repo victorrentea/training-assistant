@@ -6,9 +6,9 @@ set -eu
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 
 if arch -arm64 /usr/bin/true >/dev/null 2>&1; then
-  RUNNER="arch -arm64 uv run"
+  RUNNER="arch -arm64 uv run --extra dev --extra daemon"
 else
-  RUNNER="uv run"
+  RUNNER="uv run --extra dev --extra daemon"
 fi
 
 echo "Running pre-push checks: ${RUNNER} bash tests/check-all.sh"
