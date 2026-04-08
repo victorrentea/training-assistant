@@ -82,10 +82,18 @@
       font-weight: 700;
       cursor: pointer;
       transition: filter .15s, transform .1s;
+      position: relative;
+      overflow: hidden;
+      --retry-progress: 0%;
     }
     .landing-join-btn:hover:not(:disabled) { filter: brightness(1.25); }
     .landing-join-btn:active:not(:disabled) { transform: scale(.97); }
     .landing-join-btn:disabled { opacity: .35; cursor: default; }
+    .landing-join-btn.retrying {
+      background:
+        linear-gradient(90deg, #57bf88 0 var(--retry-progress), #2e3347 var(--retry-progress) 100%);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.12);
+    }
     .landing-error {
       color: var(--danger);
       font-size: .85rem;
@@ -126,12 +134,139 @@
   </div>
 
   <script>
+    const SESSION_CODE_RE = /^[a-z0-9]{6}$/;
+    const RETRY_INTERVAL_MS = 3000;
+    const RETRY_DURATION_MS = 60000;
+    let retryTimer = null;
+    let retryUiTimer = null;
+    let retryStartedAt = 0;
+    let retryNextAt = 0;
+    let retryCode = '';
+    let retryAttemptInFlight = false;
+
+    function getInputCode() {
+      return (document.getElementById('code-input').value || '').trim().toLowerCase();
+    }
+
+    function isCompleteCode(code) {
+      return SESSION_CODE_RE.test(String(code || '').toLowerCase());
+    }
+
+    function normalizeInputValue(raw) {
+      return String(raw || '').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 6);
+    }
+
+    function updateJoinButtonEnabled() {
+      const btn = document.getElementById('join-btn');
+      const code = getInputCode();
+      btn.disabled = !isCompleteCode(code);
+    }
+
+    function clearRetryUi() {
+      const btn = document.getElementById('join-btn');
+      const statusEl = document.getElementById('status-msg');
+      btn.classList.remove('retrying');
+      btn.style.setProperty('--retry-progress', '0%');
+      btn.textContent = 'Join';
+      statusEl.style.animation = '';
+    }
+
+    function stopAutoRetry(message) {
+      if (retryTimer) clearInterval(retryTimer);
+      if (retryUiTimer) clearInterval(retryUiTimer);
+      retryTimer = null;
+      retryUiTimer = null;
+      retryAttemptInFlight = false;
+      retryCode = '';
+      clearRetryUi();
+      if (message) {
+        const statusEl = document.getElementById('status-msg');
+        statusEl.textContent = message;
+      }
+    }
+
+    async function attemptAutoReconnect() {
+      if (retryAttemptInFlight) return;
+      retryAttemptInFlight = true;
+      const expectedCode = retryCode;
+      try {
+        const resp = await fetch('/api/status', { cache: 'no-store' });
+        const data = resp.ok ? await resp.json() : null;
+        if (data && data.session_active && String(data.session_id || '').toLowerCase() === expectedCode) {
+          window.location.href = '/' + expectedCode;
+          return;
+        }
+      } catch (_) {
+        // ignore network hiccups, keep retrying
+      } finally {
+        retryAttemptInFlight = false;
+      }
+    }
+
+    function renderRetryUi() {
+      const now = Date.now();
+      const btn = document.getElementById('join-btn');
+      const statusEl = document.getElementById('status-msg');
+      if (!retryStartedAt) return;
+      const elapsed = now - retryStartedAt;
+      const remaining = Math.max(0, RETRY_DURATION_MS - elapsed);
+      if (remaining <= 0) {
+        stopAutoRetry('Auto-reconnect stopped after 1 minute.');
+        return;
+      }
+
+      const cycleStart = retryNextAt - RETRY_INTERVAL_MS;
+      const cycleElapsed = Math.max(0, Math.min(RETRY_INTERVAL_MS, now - cycleStart));
+      const cycleProgress = Math.round((cycleElapsed / RETRY_INTERVAL_MS) * 100);
+      const nextAttemptInSec = Math.max(0, (retryNextAt - now) / 1000);
+      const remainingSec = Math.ceil(remaining / 1000);
+
+      btn.classList.add('retrying');
+      btn.style.setProperty('--retry-progress', `${cycleProgress}%`);
+      btn.textContent = `Reconnecting… ${remainingSec}s`;
+      statusEl.style.color = 'var(--muted)';
+      statusEl.textContent = `Trying in ${nextAttemptInSec.toFixed(1)}s`;
+    }
+
+    function startAutoRetryIfNeeded(opts) {
+      const options = opts || {};
+      const code = getInputCode();
+      if (!isCompleteCode(code)) {
+        stopAutoRetry('');
+        return;
+      }
+      if (retryCode === code && retryTimer) return;
+
+      if (retryTimer) stopAutoRetry('');
+      retryCode = code;
+      retryStartedAt = Date.now();
+      retryNextAt = Date.now() + RETRY_INTERVAL_MS;
+      renderRetryUi();
+      if (options.immediate) {
+        attemptAutoReconnect();
+      }
+
+      retryUiTimer = setInterval(renderRetryUi, 120);
+      retryTimer = setInterval(() => {
+        const now = Date.now();
+        if (now - retryStartedAt >= RETRY_DURATION_MS) {
+          stopAutoRetry('Auto-reconnect stopped after 1 minute.');
+          return;
+        }
+        if (now >= retryNextAt) {
+          retryNextAt = now + RETRY_INTERVAL_MS;
+          attemptAutoReconnect();
+        }
+      }, 150);
+    }
+
     function onCodeInput() {
       const input = document.getElementById('code-input');
-      const btn = document.getElementById('join-btn');
-      // Clear error when typing
+      const normalized = normalizeInputValue(input.value);
+      if (input.value !== normalized) input.value = normalized;
       document.getElementById('error-msg').textContent = '';
-      btn.disabled = !input.value.trim();
+      updateJoinButtonEnabled();
+      startAutoRetryIfNeeded();
     }
 
     function onCodePaste(event) {
@@ -141,57 +276,44 @@
       if (urlMatch) {
         event.preventDefault();
         const input = document.getElementById('code-input');
-        input.value = urlMatch[1];
+        input.value = normalizeInputValue(urlMatch[1]);
         onCodeInput();
       }
     }
 
     function joinSession() {
-      const input = document.getElementById('code-input');
-      const code = input.value.trim().toLowerCase();
+      const code = getInputCode();
       if (!code) return;
-      if (!/^[a-z0-9]{4,8}$/.test(code)) {
-        document.getElementById('error-msg').textContent = 'Code must be 4-8 alphanumeric characters.';
+      if (!isCompleteCode(code)) {
+        document.getElementById('error-msg').textContent = 'Code must be 6 alphanumeric characters.';
         return;
       }
       window.location.href = '/' + code;
     }
 
-    // Check for error redirect
-    (function checkError() {
+    // Check for error redirect and optional reconnect params
+    (function initFromQuery() {
       const params = new URLSearchParams(window.location.search);
       if (params.get('error') === 'invalid') {
         document.getElementById('error-msg').textContent = 'Invalid session code';
       }
+
+      const codeParam = normalizeInputValue(params.get('code') || '');
+      if (codeParam) {
+        const input = document.getElementById('code-input');
+        input.value = codeParam;
+        onCodeInput();
+        if (params.get('retry') === '1') {
+          startAutoRetryIfNeeded({ immediate: true });
+        }
+      }
     })();
 
-    // Auto-join when running on host's machine — poll localhost:8081 for active session
+    // Auto-detect active session when running on host's machine.
     (function pollLocalDaemon() {
       const MAX_ATTEMPTS = 7;
       let attempts = 0;
       let lastCode = null;
-      let countdownInterval = null;
-
-      function startAutoJoinCountdown(code) {
-        const statusEl = document.getElementById('status-msg');
-        const joinBtn = document.getElementById('join-btn');
-        let remaining = 1;
-        if (countdownInterval) clearInterval(countdownInterval);
-        statusEl.style.color = 'var(--danger)';
-        statusEl.style.animation = 'blink-fast .3s linear infinite';
-        statusEl.textContent = `Host machine detected — joining in ${remaining}s…`;
-        countdownInterval = setInterval(() => {
-          remaining -= 1;
-          if (remaining <= 0) {
-            clearInterval(countdownInterval);
-            countdownInterval = null;
-            statusEl.textContent = 'Host machine detected — joining now';
-            joinBtn.click();
-            return;
-          }
-          statusEl.textContent = `Host machine detected — joining in ${remaining}s…`;
-        }, 1000);
-      }
 
       function tryFetch() {
         if (attempts >= MAX_ATTEMPTS) return;
@@ -199,13 +321,13 @@
         fetch('http://localhost:8081/api/session/active', { signal: AbortSignal.timeout(800) })
           .then(r => r.ok ? r.json() : null)
           .then(data => {
-            const code = data && data.session_id;
-            if (!code || code === lastCode) return;
+            const code = normalizeInputValue(data && data.session_id);
+            if (!isCompleteCode(code) || code === lastCode) return;
             lastCode = code;
             const input = document.getElementById('code-input');
-            input.value = code.toUpperCase();
+            input.value = code;
             onCodeInput();
-            startAutoJoinCountdown(code);
+            startAutoRetryIfNeeded({ immediate: true });
           })
           .catch(() => { /* daemon not running or unreachable — silent skip */ });
       }

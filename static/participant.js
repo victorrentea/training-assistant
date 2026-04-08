@@ -2782,7 +2782,10 @@ ${html}
     };
 
     ws.onclose = (event) => {
-      if (event.code === 1008 && !pendingRedirect) { window.location.href = '/'; return; }
+      if (event.code === 1008 && !pendingRedirect) {
+        window.location.href = `/?code=${encodeURIComponent(sessionId)}&retry=1`;
+        return;
+      }
       if (!pendingRedirect) setTimeout(() => connectWS(myName), 3000);
     };
     // Note: state is fetched via REST in ws.onopen after each (re)connect

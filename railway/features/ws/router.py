@@ -7,6 +7,7 @@ import os
 import secrets
 from datetime import datetime, timezone
 from pathlib import Path
+from urllib.parse import quote
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
@@ -114,7 +115,10 @@ async def _handle_set_session_id(data: dict):
                 target_url = f"/host/{state.session_id}" if state.session_id else "/host"
                 close_code = 1000
             else:
-                target_url = f"/{state.session_id}" if state.session_id else "/"
+                if state.session_id:
+                    target_url = f"/{state.session_id}"
+                else:
+                    target_url = f"/?code={quote(str(old_id or ''))}&retry=1"
                 close_code = 1008
             try:
                 await ws.send_text(json.dumps({"type": "redirect", "url": target_url}))

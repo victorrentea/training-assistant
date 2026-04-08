@@ -280,6 +280,27 @@ assert(
   /if\s*\(\s*d\s*&&\s*d\.session_active\s*\)\s*\{\s*guard\.check\(d\.backend_version\);/s.test(hostLandingHtmlSource)
 );
 
+// ── participant landing regressions (source-level guards) ────────────
+suite('landing regressions');
+
+const landingHtmlSource = fs.readFileSync('static/landing.html', 'utf8');
+assert(
+  'landing supports retry params and prefills code from URL',
+  /params\.get\('code'\)/.test(landingHtmlSource) && /params\.get\('retry'\)\s*===\s*'1'/.test(landingHtmlSource)
+);
+assert(
+  'landing auto-retry interval is 3 seconds',
+  /const RETRY_INTERVAL_MS = 3000;/.test(landingHtmlSource)
+);
+assert(
+  'landing auto-retry timeout is 1 minute',
+  /const RETRY_DURATION_MS = 60000;/.test(landingHtmlSource)
+);
+assert(
+  'join button is enabled only for complete 6-char alphanumeric codes',
+  /const SESSION_CODE_RE = \/\^\[a-z0-9\]\{6\}\$\/;/.test(landingHtmlSource)
+);
+
 // ═══════════════════════════════════════════════════════════════════════
 // Summary
 // ═══════════════════════════════════════════════════════════════════════
