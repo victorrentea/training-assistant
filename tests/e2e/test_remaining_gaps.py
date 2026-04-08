@@ -418,13 +418,17 @@ class TestHostPanelGeneral:
         metrics = host._page.evaluate("""() => {
             const container = document.getElementById('slides-left-qr');
             const leftPanel = document.querySelector('.host-col-left');
+            const cols = document.querySelector('.host-columns');
             const qr = document.getElementById('slides-left-qr-code');
-            if (!container || !leftPanel || !qr) return null;
+            if (!container || !leftPanel || !cols || !qr) return null;
             const c = container.getBoundingClientRect();
             const p = leftPanel.getBoundingClientRect();
+            const g = cols.getBoundingClientRect();
             const q = qr.getBoundingClientRect();
             return {
                 containerHeight: container.clientHeight,
+                leftPanelHeight: p.height,
+                columnsHeight: g.height,
                 qrHeight: q.height,
                 topGap: q.top - p.top,
                 bottomGap: p.bottom - q.bottom,
@@ -433,6 +437,9 @@ class TestHostPanelGeneral:
             };
         }""")
         assert metrics is not None, "Expected slides left QR container metrics"
+        assert metrics["leftPanelHeight"] <= metrics["columnsHeight"] + 1, (
+            f"Left panel should stay constrained to host grid height (left={metrics['leftPanelHeight']}, grid={metrics['columnsHeight']})"
+        )
         assert metrics["qrHeight"] <= metrics["containerHeight"] + 1, (
             f"QR should fit vertically after resize (qr={metrics['qrHeight']}, container={metrics['containerHeight']})"
         )
