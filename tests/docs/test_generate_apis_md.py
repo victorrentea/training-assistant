@@ -124,7 +124,7 @@ def test_participant_identity_rows_have_expected_response_shapes():
 
     rename_row = re.search(r"^\| .*`PUT /api/participant/name`.*\|$", output, re.MULTILINE)
     assert rename_row, "Missing table row for PUT /api/participant/name"
-    assert "| `{name: string}` | -" in rename_row.group(0)
+    assert "| `name: string` | -" in rename_row.group(0)
 
 
 def test_generator_pretty_prints_multi_field_shapes_one_per_line():
@@ -145,7 +145,7 @@ def test_generator_expands_referenced_response_types():
 
     slides_cache_row = re.search(r"^\| .*`GET /api/participant/slides-cache-status`.*\|$", output, re.MULTILINE)
     assert slides_cache_row, "Missing table row for GET /api/participant/slides-cache-status"
-    assert "`{slides_cache_status?: dict[str, SlidesCacheStatusEntry]}`" in slides_cache_row.group(0)
+    assert "`slides_cache_status?: dict[str, SlidesCacheStatusEntry]`" in slides_cache_row.group(0)
     assert "`SlidesCacheStatusEntry {`" in slides_cache_row.group(0)
     assert "`  status: string`" in slides_cache_row.group(0)
 
@@ -174,12 +174,12 @@ def test_log_level_and_daemon_status_rows_have_expected_shapes():
 
     set_log_level_row = re.search(r"^\| .*`POST /api/log-level`.*\|$", output, re.MULTILINE)
     assert set_log_level_row, "Missing table row for POST /api/log-level"
-    assert "| `{level: 'info' \\| 'debug'}` | -" in set_log_level_row.group(0)
+    assert "| `level: 'info' \\| 'debug'` | -" in set_log_level_row.group(0)
 
     daemon_status_row = re.search(r"^\| .*`GET /api/daemon-status`.*\|$", output, re.MULTILINE)
     assert daemon_status_row, "Missing table row for GET /api/daemon-status"
     assert "any" not in daemon_status_row.group(0)
-    assert "{code_timestamp: string \\| null}" in daemon_status_row.group(0)
+    assert "`code_timestamp: string \\| null`" in daemon_status_row.group(0)
 
 
 def test_rest_table_notes_do_not_use_note_prefix():
@@ -194,7 +194,7 @@ def test_rest_table_notes_are_not_rendered_in_response_column():
     output = _run_generator()
     session_active_row = re.search(r"^\| .*`GET /api/session/active`.*\|$", output, re.MULTILINE)
     assert session_active_row, "Missing table row for GET /api/session/active"
-    assert "| - | `{session_id: string \\| null}` |" in session_active_row.group(0)
+    assert "| - | `session_id: string \\| null` |" in session_active_row.group(0)
 
 
 def test_rest_endpoint_blurb_rewrites_host_set_activity_without_redundancy():

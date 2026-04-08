@@ -377,7 +377,7 @@ def _shape(
                     if comment:
                         line += f"  # {comment}"
                     fields.append(line)
-                if top_level and len(fields) >= 2:
+                if top_level and fields:
                     base = "\n".join(fields)
                 else:
                     base = "{" + ", ".join(fields) + "}"
