@@ -41,6 +41,7 @@ from daemon.session_state import (
     stack_to_daemon_state,
     save_daemon_state,
     load_session_meta,
+    save_session_meta,
     find_session_folder_by_id,
     session_meta_to_stack,
     pause_session,
@@ -201,7 +202,6 @@ def _build_runtime_session_snapshot(
     session_name = session_stack[-1]["name"] if session_stack else None
 
     return {
-        "session_id": active_session_id,
         "session_name": session_name,
         "mode": participant_state.mode,
         "current_activity": participant_state.current_activity,
@@ -242,6 +242,16 @@ def _build_runtime_session_snapshot(
         "summary_points": list(misc_state.summary_points),
         "leaderboard_active": leaderboard_state.data is not None,
     }
+
+
+def _without_session_id(snapshot: dict | None) -> dict | None:
+    if not isinstance(snapshot, dict):
+        return None
+    if "session_id" not in snapshot:
+        return dict(snapshot)
+    out = dict(snapshot)
+    out.pop("session_id", None)
+    return out
 
 
 def _sessions_root_from_env() -> Path:
@@ -760,7 +770,7 @@ def run() -> None:
 
     last_summary_at = 0.0  # monotonic time of last summary run
     notes_summary_probe_prev: dict | None = _build_notes_summary_probe(config.session_folder)
-    runtime_session_snapshot: dict | None = startup_session_state if startup_session_state else None
+    runtime_session_snapshot: dict | None = _without_session_id(startup_session_state) if startup_session_state else None
     last_persist_poll_at: float = 0.0
     last_session_state_hash: str | None = _state_hash(runtime_session_snapshot)
     last_global_state_hash: str | None = None
@@ -898,6 +908,8 @@ def run() -> None:
                         folder = sessions_root / name
                         existed = folder.exists()
                         folder.mkdir(parents=True, exist_ok=True)
+                        if sid:
+                            save_session_meta(folder, {"session_id": sid})
                         log.info("session", f"{'Found' if existed else 'Created'} folder: {folder}")
                         if existed:
                             try:
@@ -933,7 +945,7 @@ def run() -> None:
                             _debate_state.reset()
                             _leaderboard_state.reset()
                             _scores_state.reset()
-                            restore_snapshot = load_session_state(folder)
+                            restore_snapshot = _without_session_id(load_session_state(folder))
                             runtime_session_snapshot = restore_snapshot
                             last_session_state_hash = _state_hash(runtime_session_snapshot)
 
@@ -1030,7 +1042,7 @@ def run() -> None:
                             notes_file = find_notes_in_folder(parent_folder)
                             config = dc_replace(config, session_folder=parent_folder, session_notes=notes_file)
                             # Load saved activity state from parent session snapshot
-                            parent_snapshot = load_session_state(parent_folder)
+                            parent_snapshot = _without_session_id(load_session_state(parent_folder))
                             if parent_snapshot:
                                 runtime_session_snapshot = parent_snapshot
                                 last_session_state_hash = _state_hash(parent_snapshot)

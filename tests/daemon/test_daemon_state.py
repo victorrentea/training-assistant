@@ -391,6 +391,15 @@ def test_session_state_hash_is_stable_for_key_order():
     assert _state_hash(a) == _state_hash(b)
 
 
+def test_without_session_id_strips_only_session_id():
+    from daemon.__main__ import _without_session_id
+
+    src = {"session_id": "abc123", "participant_names": {"p1": "Alice"}}
+    out = _without_session_id(src)
+    assert out == {"participant_names": {"p1": "Alice"}}
+    assert src["session_id"] == "abc123"
+
+
 def test_flush_session_state_backup_writes_when_hash_changed(tmp_path):
     from daemon.__main__ import _flush_session_state_backup
 
