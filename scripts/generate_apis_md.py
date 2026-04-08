@@ -401,7 +401,10 @@ def _shape(
     elif typ == "array":
         item = _shape(schema.get("items", {}), root, depth + 1, top_level=False, seen_refs=seen_refs)
         if "\n" in item:
-            base = f"list[{item}\n]"
+            item_lines = item.splitlines()
+            item_lines[0] = f"list[{item_lines[0]}"
+            item_lines[-1] = f"{item_lines[-1]}]"
+            base = "\n".join(item_lines)
         else:
             base = f"list[{item}]"
     elif typ == "object" or "properties" in schema or "additionalProperties" in schema:
@@ -437,7 +440,10 @@ def _shape(
                 seen_refs=seen_refs,
             )
             if "\n" in value:
-                base = f"dict[str, {value}\n]"
+                value_lines = value.splitlines()
+                value_lines[0] = f"dict[str, {value_lines[0]}"
+                value_lines[-1] = f"{value_lines[-1]}]"
+                base = "\n".join(value_lines)
             else:
                 base = f"dict[str, {value}]"
         else:
@@ -472,10 +478,18 @@ def _inline_named_schema(
         optional = "?" if is_optional else ""
         field_type = _drop_null_for_optional(field_type, optional=is_optional)
         comment = _schema_comment(child)
-        line = f"  {field_name}{optional}: {field_type}"
-        if comment:
-            line += f"  # {comment}"
-        lines.append(line)
+        if "\n" in field_type:
+            ft_lines = field_type.splitlines()
+            lines.append(f"  {field_name}{optional}:{ft_lines[0]}")
+            for sub_line in ft_lines[1:]:
+                lines.append(f"  {sub_line}")
+            if comment:
+                lines[-1] += f"  # {comment}"
+        else:
+            line = f"  {field_name}{optional}: {field_type}"
+            if comment:
+                line += f"  # {comment}"
+            lines.append(line)
     lines.append("}")
     return "\n".join(lines)
 
@@ -782,7 +796,8 @@ def _render_shape_line(line: str) -> str:
     rendered = stripped
     if indent >= 2:
         rendered = re.sub(r"\s*:\s*", ":", rendered, count=1)
-        return f"&nbsp;&nbsp;&nbsp;&nbsp;`{rendered}`"
+        levels = max(1, indent // 2)
+        return f"{'&nbsp;' * (4 * levels)}`{rendered}`"
     return f"`{line}`"
 
 
