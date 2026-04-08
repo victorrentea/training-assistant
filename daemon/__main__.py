@@ -1231,6 +1231,15 @@ def run() -> None:
                 snapshot_result = _pending_requests.pop("state_snapshot_result", None)
                 if snapshot_result:
                     try:
+                        raw_state_snapshot = snapshot_result.get("state", snapshot_result)
+                        if isinstance(raw_state_snapshot, dict):
+                            runtime_session_snapshot = raw_state_snapshot
+                            snapshot_sid = raw_state_snapshot.get("session_id")
+                            if isinstance(snapshot_sid, str) and snapshot_sid:
+                                session_snapshots_by_id[snapshot_sid] = raw_state_snapshot
+                            s = raw_state_snapshot
+                        else:
+                            s = {}
                         snapshot_json = json.dumps(snapshot_result, sort_keys=True)
                         snapshot_hash = hashlib.sha256(snapshot_json.encode("utf-8")).hexdigest()
                         if snapshot_hash != last_snapshot_hash:
@@ -1239,7 +1248,6 @@ def run() -> None:
                             tmp_file.write_text(snapshot_json, encoding="utf-8")
                             os.rename(str(tmp_file), str(_BACKUP_FILE))
                             last_snapshot_hash = snapshot_hash
-                            s = snapshot_result.get("state", snapshot_result)
                             parts = [f"{len(s.get('participant_names', {}))} participants"]
                             if s.get("qa_questions"):
                                 parts.append(f"{len(s['qa_questions'])} Q&As")
