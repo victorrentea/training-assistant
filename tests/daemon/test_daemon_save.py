@@ -137,6 +137,23 @@ def test_load_session_state_normalizes_legacy_participant_maps():
         assert loaded["participants"]["u1"]["location"] == "🕐 America/Mexico_City"
 
 
+def test_load_session_state_drops_non_persisted_transient_fields():
+    with tempfile.TemporaryDirectory() as d:
+        folder = Path(d)
+        (folder / "session-state.json").write_text(
+            json.dumps({
+                "mode": "workshop",
+                "summary_points": [{"text": "Old summary"}],
+                "leaderboard_active": True,
+            }),
+            encoding="utf-8",
+        )
+        from daemon.session_state import load_session_state as _load_session_state
+        loaded = _load_session_state(folder)
+        assert "summary_points" not in loaded
+        assert "leaderboard_active" not in loaded
+
+
 def test_save_session_state_logs_compact_write_line(capsys):
     with tempfile.TemporaryDirectory() as d:
         from daemon.session_state import save_session_state as _save_session_state

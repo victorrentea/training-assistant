@@ -85,8 +85,6 @@ Generated from `daemon/persisted_models.py`.
 - `round_timer_started_at?:string`
 - `}`
 - `slides_current?: dict[str, any]`
-- `summary_points?: list[dict[str, any]]`
-- `leaderboard_active?: bool`
 - `token_usage?: dict[str, any]`
 
 ### `PersistedSessionMeta`

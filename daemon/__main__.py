@@ -174,7 +174,6 @@ def _build_runtime_session_snapshot(
     from daemon.qa.state import qa_state
     from daemon.codereview.state import codereview_state
     from daemon.debate.state import debate_state
-    from daemon.leaderboard.state import leaderboard_state
     from daemon.misc.state import misc_state
 
     qa_payload: dict[str, dict] = {}
@@ -260,8 +259,6 @@ def _build_runtime_session_snapshot(
             "round_timer_started_at": debate_snapshot.get("round_timer_started_at"),
         },
         "slides_current": misc_state.slides_current,
-        "summary_points": list(misc_state.summary_points),
-        "leaderboard_active": leaderboard_state.data is not None,
     }
 
 

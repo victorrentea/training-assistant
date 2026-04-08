@@ -48,7 +48,6 @@ def test_persisted_session_state_model_validates_runtime_snapshot_shape():
                 "answered": False,
             }
         },
-        "leaderboard_active": False,
     })
     dumped = snapshot.model_dump()
     assert dumped["session_id"] == "session-1"

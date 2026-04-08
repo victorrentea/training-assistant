@@ -158,8 +158,6 @@ class PersistedSessionState(PersistedModel):
     debate_round_timer_started_at: str | None = Field(default=None, exclude=True)
 
     slides_current: dict[str, Any] | None = None
-    summary_points: list[dict[str, Any]] = Field(default_factory=list)
-    leaderboard_active: bool | None = None
     token_usage: dict[str, Any] | None = None
 
     @model_validator(mode="before")
@@ -169,6 +167,9 @@ class PersistedSessionState(PersistedModel):
             return value
 
         data = dict(value)
+        data.pop("summary_points", None)
+        data.pop("leaderboard_active", None)
+
         participants_raw = data.get("participants")
         participants: dict[str, dict[str, Any]] = {}
         if isinstance(participants_raw, dict):
