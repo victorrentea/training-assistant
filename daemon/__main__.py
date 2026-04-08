@@ -7,7 +7,6 @@ import hashlib
 import json
 import os
 import re
-import sys
 import time
 from dataclasses import replace as dc_replace
 from datetime import date, datetime, timedelta
@@ -22,7 +21,6 @@ from daemon.config import (
     DAEMON_POLL_INTERVAL,
     DEFAULT_TRANSCRIPT_MINUTES,
 )
-from daemon.http import _get_json
 from daemon.llm.adapter import get_usage
 from daemon.quiz.history import auto_generate, auto_generate_topic, auto_refine
 from daemon.quiz.poll_api import post_status
@@ -68,7 +66,6 @@ from daemon.lock import (
 from daemon.email_notify import notify as email_notify
 from daemon.adapters.loader import adapter as _platform
 
-EXIT_CODE_UPDATE = 42  # signals start.sh to git pull and restart
 _BACKUP_DIR = Path.home() / ".training-assistant"
 _BACKUP_FILE = _BACKUP_DIR / "state-backup.json"
 
@@ -518,28 +515,6 @@ def run() -> None:
             log.error("daemon", f"PROJECT_FOLDER does not exist: {config.project_folder}")
     else:
         pass  # PROJECT_FOLDER is optional
-
-    # ── Fetch server version at startup for auto-update detection ──
-    _startup_version = None
-    try:
-        status = _get_json(f"{config.server_url}/api/status")
-        _startup_version = status.get("backend_version")
-        if not _startup_version:
-            log.error("daemon", "Server /api/status did not return backend_version")
-    except RuntimeError as e:
-        log.error("daemon", f"Could not fetch server version at startup: {e}")
-
-    # ── Restore state from backup if server needs it ──
-    try:
-        status = _get_json(f"{config.server_url}/api/status")
-        if status.get("needs_restore"):
-            if _BACKUP_FILE.exists():
-                log.info("daemon", "Server needs state restore — sending backup (will use WS once connected)...")
-                # Deferred: restore will be sent via WS after ws_client connects
-            else:
-                log.error("daemon", f"Server needs state restore but no backup file found at {_BACKUP_FILE}")
-    except Exception as e:
-        log.error("daemon", f"State restore check failed: {e}")
 
     # Start background material indexer
     materials_folder = resolve_materials_folder()
@@ -1140,29 +1115,6 @@ def run() -> None:
 
                 sf_name = config.session_folder.name if config.session_folder else None
                 sn_name = config.session_notes.name if config.session_notes else None
-
-                # ── Auto-update + server connectivity check via /api/status ──
-                try:
-                    status_data = _get_json(f"{config.server_url}/api/status")
-                    if server_disconnected:
-                        log.info("daemon", "Reconnected to server.")
-                        server_disconnected = False
-                        _session_status_pending = True
-
-                    # Auto-update: exit if server version changed
-                    if _startup_version:
-                        current_version = status_data.get("backend_version")
-                        if current_version and current_version != _startup_version:
-                            log.info("daemon", f"Server version changed: {_startup_version} → {current_version}")
-                            log.info("daemon", "Exiting for auto-update (exit code 42)...")
-                            _LOCK_FILE.unlink(missing_ok=True)
-                            sys.exit(EXIT_CODE_UPDATE)
-
-                    # state_restore removed: Railway is no longer stateless proxy; no restore needed
-                except RuntimeError:
-                    if not server_disconnected:
-                        log.error("daemon", "Server unreachable (status check)")
-                        server_disconnected = True
 
                 # ── Push session info when changed, on reconnect, or periodically ──
                 current_slides = load_slides_manifest(config.session_folder)
