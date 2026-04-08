@@ -56,6 +56,7 @@ Whenever the user says “remember”, add it to this file (CLAUDE.md). Only add
 - There is a course catalog and a slides catalog file mapping course names to local PPTX paths
 - Daemon logs are available at `/Users/victorrentea/workspace/training-assistant/logs/daemon.log`
 - Always push only to `master`; ignore requests to push to `main`.
+- When a task is done, commit and push directly to `master`.
 
 ---
 

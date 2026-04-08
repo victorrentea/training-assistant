@@ -12,6 +12,7 @@ from daemon import log
 from daemon.config import DEFAULT_SERVER_URL
 
 _RECONNECT_INTERVAL = float(os.environ.get("DAEMON_WS_RECONNECT_INTERVAL_SECONDS", "3.0"))
+_NOISY_PROXY_MSG_TYPES = frozenset({"proxy_request", "proxy_response"})
 
 
 def _ssl_context() -> ssl.SSLContext:
@@ -62,7 +63,8 @@ class DaemonWsClient:
             if self._ws is None:
                 return False
             try:
-                log.debug("ws-client", f"→ {self._msg_name(msg)}")
+                if self._should_trace_msg(msg):
+                    log.debug("ws-client", f"→ {self._msg_name(msg)}")
                 self._ws.send(json.dumps(msg))
                 return True
             except Exception:
@@ -159,7 +161,8 @@ class DaemonWsClient:
                 except (json.JSONDecodeError, TypeError):
                     continue
                 msg_type = data.get("type")
-                log.debug("ws-client", f"← {self._msg_name(data)}")
+                if self._should_trace_msg(data):
+                    log.debug("ws-client", f"← {self._msg_name(data)}")
                 if msg_type == "kicked":
                     log.info("ws-client", "Kicked by server (new daemon connected)")
                     break
@@ -190,3 +193,7 @@ class DaemonWsClient:
             event_type = str(msg["event"].get("type") or "unknown")
             return f"broadcast:{event_type}"
         return msg_type
+
+    @staticmethod
+    def _should_trace_msg(msg: dict) -> bool:
+        return str(msg.get("type") or "unknown") not in _NOISY_PROXY_MSG_TYPES
