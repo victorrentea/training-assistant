@@ -423,7 +423,7 @@ def _render_rest(items: list[RestOp]) -> list[str]:
         request = _escape_md_cell(_render_shape_cell(op.request_shape))
         response_parts = [_render_shape_cell(op.response_shape)]
         for note in op.notes:
-            response_parts.append(f"Note: {note}")
+            response_parts.append(note)
         response = _escape_md_cell("<br>".join(response_parts))
         lines.append(f"| {endpoint} | {request} | {response} |")
     return lines

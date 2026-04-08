@@ -117,6 +117,14 @@ def test_log_level_and_daemon_status_rows_have_expected_shapes():
     assert "{code_timestamp: string \\| null}" in daemon_status_row.group(0)
 
 
+def test_rest_table_notes_do_not_use_note_prefix():
+    output = _run_generator()
+    session_active_row = re.search(r"^\| .*`GET /api/session/active`.*\|$", output, re.MULTILINE)
+    assert session_active_row, "Missing table row for GET /api/session/active"
+    assert "<br>Note:" not in session_active_row.group(0)
+    assert "Public endpoint: returns the active session_id or null." in session_active_row.group(0)
+
+
 def test_generator_includes_all_openapi_operations():
     output = _run_generator()
     missing = []
