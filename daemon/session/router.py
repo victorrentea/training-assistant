@@ -128,7 +128,24 @@ class ResumeSessionRequest(BaseModel):
     folder: str
 
 
-@global_router.post("/start")
+class OkResponse(BaseModel):
+    ok: bool = True
+
+
+class SessionStartResponse(OkResponse):
+    session_name: str
+    session_id: str
+
+
+class SessionFoldersResponse(BaseModel):
+    folders: list[str]
+
+
+class SessionActiveResponse(BaseModel):
+    session_id: str | None
+
+
+@global_router.post("/start", response_model=SessionStartResponse)
 async def start_session(body: StartSessionRequest):
     """Host starts a new session (creates folder, assigns session_id, clean slate)."""
     name = normalize_session_name(body.name)
@@ -140,17 +157,17 @@ async def start_session(body: StartSessionRequest):
         "type": body.type,
         "session_id": session_id,
     })
-    return JSONResponse({"ok": True, "session_name": name, "session_id": session_id})
+    return SessionStartResponse(session_name=name, session_id=session_id)
 
 
-@global_router.post("/end")
+@global_router.post("/end", response_model=OkResponse)
 async def end_session():
     """Host ends the current session. Railway closes WS connections on session end."""
     session_pending.put("session_request", {"action": "end"})
-    return JSONResponse({"ok": True})
+    return OkResponse()
 
 
-@global_router.post("/resume")
+@global_router.post("/resume", response_model=SessionStartResponse)
 async def resume_session(body: ResumeSessionRequest):
     """Host resumes an existing session folder. Uses session-state.json as persisted storage."""
     folder_name = normalize_session_name(body.folder)
@@ -162,52 +179,50 @@ async def resume_session(body: ResumeSessionRequest):
         "type": "workshop",
         "session_id": session_id,
     })
-    return JSONResponse({"ok": True, "session_name": folder_name, "session_id": session_id})
+    return SessionStartResponse(session_name=folder_name, session_id=session_id)
 
 
-@global_router.get("/folders")
+@global_router.get("/folders", response_model=SessionFoldersResponse)
 async def list_session_folders():
     """List available session folders."""
     root = _get_sessions_root()
     if not root:
-        return JSONResponse({"folders": []})
+        return SessionFoldersResponse(folders=[])
     try:
         deduped = _dedupe_normalized_folder_names(
             sorted([f.name for f in root.iterdir() if f.is_dir()], reverse=True)
         )
         filtered = _filter_folders_to_current_year(deduped)
-        return JSONResponse({"folders": filtered})
+        return SessionFoldersResponse(folders=filtered)
     except Exception as e:
         daemon_log.error("session", f"Failed to list session folders: {e}")
-        return JSONResponse({"folders": []})
+        return SessionFoldersResponse(folders=[])
 
 
 # Talk endpoints (conference mode nested talks)
-@global_router.post("/start_talk")
+@global_router.post("/start_talk", response_model=OkResponse)
 async def start_talk():
     """Host starts a nested talk (conference mode)."""
     session_pending.put("session_request", {"action": "create_talk_folder"})
-    return JSONResponse({"ok": True})
+    return OkResponse()
 
 
-@global_router.post("/end_talk")
+@global_router.post("/end_talk", response_model=OkResponse)
 async def end_talk():
     """Host ends the nested talk."""
     session_pending.put("session_request", {"action": "end"})
-    return JSONResponse({"ok": True})
+    return OkResponse()
 
 
 # ── Public endpoint (no auth) ──
 
-@public_router.get("/active")
+@public_router.get("/active", response_model=SessionActiveResponse)
 async def get_session_active():
     """Public endpoint: returns the active session_id or null."""
     stack = session_state.get_session_stack()
     active_session_id = session_state.get_active_session_id()
     is_active = _is_session_active(stack) and active_session_id is not None
-    return JSONResponse({
-        "session_id": active_session_id if is_active else None,
-    })
+    return SessionActiveResponse(session_id=active_session_id if is_active else None)
 
 
 # ── Session-scoped endpoints ──

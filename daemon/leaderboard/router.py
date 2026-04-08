@@ -17,7 +17,7 @@ class OkResponse(BaseModel):
 router = APIRouter(prefix="/api/{session_id}/host", tags=["leaderboard"])
 
 
-@router.post("/leaderboard/show")
+@router.post("/leaderboard/show", response_model=OkResponse)
 async def show_leaderboard():
     all_scores = scores.snapshot()
     raw_entries = [
@@ -41,7 +41,7 @@ async def show_leaderboard():
     return OkResponse()
 
 
-@router.post("/leaderboard/hide")
+@router.post("/leaderboard/hide", response_model=OkResponse)
 async def hide_leaderboard():
     leaderboard_state.reset()
     msg = LeaderboardHiddenMsg()
@@ -50,7 +50,7 @@ async def hide_leaderboard():
     return OkResponse()
 
 
-@router.delete("/scores")
+@router.delete("/scores", response_model=OkResponse)
 async def reset_scores():
     scores.reset()
     msg = ScoresUpdatedMsg(scores=scores.snapshot())

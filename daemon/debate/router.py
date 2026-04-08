@@ -53,10 +53,22 @@ class RoundTimerRequest(BaseModel):
     round_index: int
     seconds: int
 
+class DebateAiMerge(BaseModel):
+    keep_id: str
+    remove_ids: list[str] = []
+
+class DebateAiCleaned(BaseModel):
+    id: str
+    text: str
+
+class DebateAiNewArgument(BaseModel):
+    side: str
+    text: str
+
 class AiResultRequest(BaseModel):
-    merges: list = []
-    cleaned: list = []
-    new_arguments: list = []
+    merges: list[DebateAiMerge] = []
+    cleaned: list[DebateAiCleaned] = []
+    new_arguments: list[DebateAiNewArgument] = []
 
 
 # ── Participant router (proxied via Railway) ──
@@ -64,7 +76,7 @@ class AiResultRequest(BaseModel):
 participant_router = APIRouter(prefix="/api/participant/debate", tags=["debate"])
 
 
-@participant_router.post("/pick-side")
+@participant_router.post("/pick-side", response_model=OkResponse)
 async def pick_side(request: Request, body: PickSideRequest):
     """Participant picks a side (for/against)."""
     pid = request.headers.get("x-participant-id")
@@ -96,7 +108,7 @@ async def pick_side(request: Request, body: PickSideRequest):
     return OkResponse()
 
 
-@participant_router.post("/argument")
+@participant_router.post("/argument", response_model=OkResponse)
 async def submit_argument(request: Request, body: ArgumentRequest):
     """Participant submits a debate argument."""
     pid = request.headers.get("x-participant-id")
@@ -122,7 +134,7 @@ async def submit_argument(request: Request, body: ArgumentRequest):
     return OkResponse()
 
 
-@participant_router.post("/upvote")
+@participant_router.post("/upvote", response_model=OkResponse)
 async def upvote_argument(request: Request, body: UpvoteRequest):
     """Participant upvotes a debate argument."""
     pid = request.headers.get("x-participant-id")
@@ -149,7 +161,7 @@ async def upvote_argument(request: Request, body: UpvoteRequest):
     return OkResponse()
 
 
-@participant_router.post("/volunteer")
+@participant_router.post("/volunteer", response_model=OkResponse)
 async def volunteer_champion(request: Request):
     """Participant volunteers as champion for their side."""
     pid = request.headers.get("x-participant-id")
@@ -181,7 +193,7 @@ host_router = APIRouter(prefix="/api/{session_id}/host/debate", tags=["debate"])
 VALID_PHASES = {"arguments", "ai_cleanup", "prep", "live_debate", "ended"}
 
 
-@host_router.post("")
+@host_router.post("", response_model=OkResponse)
 async def launch_debate(body: LaunchDebateRequest):
     """Host launches a debate with a statement."""
     statement = body.statement.strip()
@@ -196,7 +208,7 @@ async def launch_debate(body: LaunchDebateRequest):
     return OkResponse()
 
 
-@host_router.post("/reset")
+@host_router.post("/reset", response_model=OkResponse)
 async def reset_debate():
     """Host resets all debate state."""
     debate_state.reset()
@@ -207,7 +219,7 @@ async def reset_debate():
     return OkResponse()
 
 
-@host_router.post("/close-selection")
+@host_router.post("/close-selection", response_model=OkResponse)
 async def close_selection():
     """Host closes side selection; auto-assigns remaining participants."""
     all_pids = list(participant_state.participant_names.keys())
@@ -217,7 +229,7 @@ async def close_selection():
     return OkResponse()
 
 
-@host_router.post("/force-assign")
+@host_router.post("/force-assign", response_model=OkResponse)
 async def force_assign():
     """Host force-assigns all unassigned participants."""
     all_pids = list(participant_state.participant_names.keys())
@@ -227,7 +239,7 @@ async def force_assign():
     return OkResponse()
 
 
-@host_router.post("/phase")
+@host_router.post("/phase", response_model=OkPhaseResponse)
 async def advance_phase(body: AdvancePhaseRequest):
     """Host advances the debate to a specific phase."""
     if body.phase not in VALID_PHASES:
@@ -238,7 +250,7 @@ async def advance_phase(body: AdvancePhaseRequest):
     return OkPhaseResponse(phase=body.phase)
 
 
-@host_router.post("/first-side")
+@host_router.post("/first-side", response_model=OkResponse)
 async def set_first_side(body: SetFirstSideRequest):
     """Host picks which side speaks first in live debate."""
     if body.side not in ("for", "against"):
@@ -249,7 +261,7 @@ async def set_first_side(body: SetFirstSideRequest):
     return OkResponse()
 
 
-@host_router.post("/round-timer")
+@host_router.post("/round-timer", response_model=OkResponse)
 async def start_round_timer(body: RoundTimerRequest):
     """Host starts a timed round."""
     debate_state.start_round(body.round_index, body.seconds)
@@ -260,7 +272,7 @@ async def start_round_timer(body: RoundTimerRequest):
     return OkResponse()
 
 
-@host_router.post("/end-round")
+@host_router.post("/end-round", response_model=OkResponse)
 async def end_round():
     """Host ends the current round early."""
     ended_index = debate_state.round_index
@@ -271,7 +283,7 @@ async def end_round():
     return OkResponse()
 
 
-@host_router.post("/end-arguments")
+@host_router.post("/end-arguments", response_model=OkResponse)
 async def end_arguments():
     """Host ends arguments phase; triggers AI cleanup in background."""
     if debate_state.phase != "arguments":
@@ -309,7 +321,7 @@ async def end_arguments():
     return OkResponse()
 
 
-@host_router.post("/ai-result")
+@host_router.post("/ai-result", response_model=OkResponse)
 async def receive_ai_result(body: AiResultRequest):
     """Manual/skip AI result — host posts AI cleanup results directly."""
     debate_state.apply_ai_result(body.merges, body.cleaned, body.new_arguments)

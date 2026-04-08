@@ -37,13 +37,33 @@ class FeedbackRequest(BaseModel):
 class NotesResponse(BaseModel):
     notes_content: Optional[str] = None
 
+class SummaryPoint(BaseModel):
+    text: str
+    source: str
+
 class SummaryResponse(BaseModel):
-    points: list = []
+    points: list[SummaryPoint] = []
     raw_markdown: Optional[str] = None
     updated_at: Optional[str] = None
 
+class SlidesCacheStatusEntry(BaseModel):
+    status: str
+    size_bytes: int | None = None
+    downloaded_at: str | None = None
+    modified_at: str | None = None
+    title: str | None = None
+    name: str | None = None
+    error: str | None = None
+
 class SlidesCacheStatusResponse(BaseModel):
-    slides_cache_status: Any = None
+    slides_cache_status: dict[str, SlidesCacheStatusEntry] = {}
+
+class PasteEntry(BaseModel):
+    id: str
+    text: str
+
+class PastsResponse(BaseModel):
+    pastes: dict[str, list[PasteEntry]] = {}
 
 class TranscriptionLanguageRequest(BaseModel):
     language: str
@@ -61,7 +81,7 @@ class UploadSeenRequest(BaseModel):
 participant_router = APIRouter(prefix="/api/participant", tags=["misc"])
 
 
-@participant_router.post("/paste")
+@participant_router.post("/paste", response_model=OkResponse)
 async def paste_text(request: Request, body: PasteRequest):
     """Participant pastes text to be seen by host."""
     pid = request.headers.get("x-participant-id")
@@ -84,7 +104,7 @@ async def paste_text(request: Request, body: PasteRequest):
     return OkResponse()
 
 
-@participant_router.post("/misc/feedback")
+@participant_router.post("/misc/feedback", response_model=OkResponse)
 async def participant_feedback(request: Request, body: FeedbackRequest):
     """Participant feedback submitted from floating feedback modal."""
     pid = request.headers.get("x-participant-id")
@@ -117,13 +137,13 @@ def _get_session_name_for_feedback() -> str | None:
     return stack[-1]["name"] if stack else None
 
 
-@participant_router.get("/notes")
+@participant_router.get("/notes", response_model=NotesResponse)
 async def get_notes():
     """Get session notes content."""
     return NotesResponse(notes_content=read_notes_content())
 
 
-@participant_router.get("/summary")
+@participant_router.get("/summary", response_model=SummaryResponse)
 async def get_summary():
     """Get summary points and raw markdown."""
     summary = read_summary_payload()
@@ -134,7 +154,7 @@ async def get_summary():
     )
 
 
-@participant_router.get("/slides-cache-status")
+@participant_router.get("/slides-cache-status", response_model=SlidesCacheStatusResponse)
 async def get_slides_cache_status():
     """Get slides cache status."""
     return SlidesCacheStatusResponse(slides_cache_status=misc_state.slides_cache_status)
@@ -145,19 +165,19 @@ async def get_slides_cache_status():
 host_router = APIRouter(prefix="/api/{session_id}/host", tags=["misc"])
 
 
-@host_router.get("/pastes")
+@host_router.get("/pastes", response_model=PastsResponse)
 async def get_pastes():
     """Return all pending paste entries grouped by participant uuid."""
-    return JSONResponse({"pastes": misc_state.paste_texts})
+    return PastsResponse(pastes=misc_state.paste_texts)
 
 
-@host_router.get("/notes")
+@host_router.get("/notes", response_model=NotesResponse)
 async def get_host_notes():
     """Return current session notes content."""
     return NotesResponse(notes_content=read_notes_content())
 
 
-@host_router.get("/summary")
+@host_router.get("/summary", response_model=SummaryResponse)
 async def get_host_summary():
     """Return summary points, raw markdown, and updated_at timestamp."""
     summary = read_summary_payload()
@@ -168,7 +188,7 @@ async def get_host_summary():
     )
 
 
-@host_router.post("/uploads/seen")
+@host_router.post("/uploads/seen", response_model=OkResponse)
 async def mark_uploaded_file_seen(body: UploadSeenRequest):
     """Mark an uploaded-file indicator as seen by host in daemon session state."""
     target_uuid = (body.uuid or "").strip()
@@ -184,7 +204,7 @@ class SetModeRequest(BaseModel):
     mode: str
 
 
-@host_router.post("/mode")
+@host_router.post("/mode", response_model=OkResponse)
 async def set_mode(body: SetModeRequest):
     """Host switches session mode (workshop/conference)."""
     mode = body.mode.strip().lower()
@@ -201,7 +221,7 @@ global_router = APIRouter(prefix="/api", tags=["misc"])
 VALID_LANGUAGES = {"ro", "en", "auto"}
 
 
-@global_router.post("/transcription-language")
+@global_router.post("/transcription-language", response_model=OkResponse)
 async def set_transcription_language(body: TranscriptionLanguageRequest):
     """Host sets the transcription language — stores pending request for daemon/macos-addons."""
     global _transcription_language_pending
@@ -214,7 +234,7 @@ async def set_transcription_language(body: TranscriptionLanguageRequest):
     return OkResponse()
 
 
-@global_router.get("/transcription-language/request")
+@global_router.get("/transcription-language/request", response_model=TranscriptionLanguageResponse)
 async def poll_transcription_language_request():
     """Daemon/macos-addons polls for a pending language change request (clears on read)."""
     global _transcription_language_pending

@@ -27,15 +27,33 @@ class OkResponse(BaseModel):
 class VoteRequest(BaseModel):
     option_ids: list[str]
 
+class PollOptionRequest(BaseModel):
+    id: str
+    text: str
+
 class CreatePollRequest(BaseModel):
     question: str = ""
-    options: list[dict] = []
+    options: list[PollOptionRequest] = []
     multi: bool = False
     correct_count: Optional[int] = None
 
+class PollResponse(BaseModel):
+    id: str
+    question: str
+    options: list[PollOptionRequest]
+    multi: bool
+    correct_count: int | None = None
+    source: str | None = None
+    page: str | None = None
+
 class CreatePollResponse(BaseModel):
     ok: bool = True
-    poll: dict
+    poll: PollResponse
+
+class ClosePollResponse(BaseModel):
+    ok: bool = True
+    vote_counts: dict[str, int]
+    total_votes: int
 
 class RevealCorrectRequest(BaseModel):
     correct_ids: list[str] = []
@@ -55,7 +73,7 @@ class QuizMdResponse(BaseModel):
 participant_router = APIRouter(prefix="/api/participant/poll", tags=["poll"])
 
 
-@participant_router.post("/vote")
+@participant_router.post("/vote", response_model=OkResponse)
 async def cast_vote(request: Request, body: VoteRequest):
     """Participant casts a vote."""
     pid = request.headers.get("x-participant-id")
@@ -78,7 +96,7 @@ async def cast_vote(request: Request, body: VoteRequest):
 host_router = APIRouter(prefix="/api/{session_id}/host/poll", tags=["poll"])
 
 
-@host_router.post("")
+@host_router.post("", response_model=CreatePollResponse)
 async def create_poll(body: CreatePollRequest):
     """Host creates a new poll."""
     # Activity gate
@@ -86,7 +104,12 @@ async def create_poll(body: CreatePollRequest):
     if activity and activity not in ("none", "poll"):
         return JSONResponse({"error": f"Activity {activity} is active"}, status_code=409)
 
-    poll = poll_state.create_poll(body.question, body.options, body.multi, body.correct_count)
+    poll = poll_state.create_poll(
+        body.question,
+        [option.model_dump() for option in body.options],
+        body.multi,
+        body.correct_count,
+    )
     participant_state.current_activity = "poll"
 
     # Only notify host — participants see nothing until opened
@@ -94,7 +117,7 @@ async def create_poll(body: CreatePollRequest):
     return CreatePollResponse(poll=poll)
 
 
-@host_router.post("/open")
+@host_router.post("/open", response_model=OkResponse)
 async def open_poll():
     """Host opens the poll for voting."""
     if not poll_state.poll:
@@ -106,7 +129,7 @@ async def open_poll():
     return OkResponse()
 
 
-@host_router.post("/close")
+@host_router.post("/close", response_model=ClosePollResponse)
 async def close_poll():
     """Host closes the poll."""
     if not poll_state.poll:
@@ -119,10 +142,10 @@ async def close_poll():
     )
     broadcast(closed_msg)
     await notify_host(closed_msg)
-    return JSONResponse({"ok": True, **result})
+    return ClosePollResponse(**result)
 
 
-@host_router.put("/correct")
+@host_router.put("/correct", response_model=OkResponse)
 async def reveal_correct(body: RevealCorrectRequest):
     """Host reveals correct answers and awards scores."""
     if not poll_state.poll:
@@ -136,7 +159,7 @@ async def reveal_correct(body: RevealCorrectRequest):
     return OkResponse()
 
 
-@host_router.post("/timer")
+@host_router.post("/timer", response_model=OkResponse)
 async def start_timer(body: StartTimerRequest):
     """Host starts a countdown timer for the poll."""
     if not poll_state.poll:
@@ -148,7 +171,7 @@ async def start_timer(body: StartTimerRequest):
     return OkResponse()
 
 
-@host_router.put("/status")
+@host_router.put("/status", response_model=OkResponse | ClosePollResponse)
 async def set_poll_status(body: SetPollStatusRequest):
     """Compatibility: {open: true} → open_poll, {open: false} → close_poll."""
     if body.open:
@@ -157,7 +180,7 @@ async def set_poll_status(body: SetPollStatusRequest):
         return await close_poll()
 
 
-@host_router.delete("")
+@host_router.delete("", response_model=OkResponse)
 async def delete_poll():
     """Host deletes the current poll."""
     poll_state.clear()
@@ -173,7 +196,7 @@ async def delete_poll():
 quiz_md_router = APIRouter(tags=["quiz"])
 
 
-@quiz_md_router.get("/api/{session_id}/quiz-md")
+@quiz_md_router.get("/api/{session_id}/quiz-md", response_model=QuizMdResponse)
 async def get_quiz_md():
     """Return the accumulated quiz markdown history."""
     return QuizMdResponse(content=poll_state.quiz_md_content)

@@ -116,7 +116,7 @@ def _extract_code_with_ai(raw_snippet: str) -> tuple[str, str | None] | None:
 participant_router = APIRouter(prefix="/api/participant/codereview", tags=["codereview"])
 
 
-@participant_router.put("/selection")
+@participant_router.put("/selection", response_model=OkResponse)
 async def update_selection(request: Request, body: SelectionRequest):
     """Participant sets their selected lines (full replacement)."""
     pid = request.headers.get("x-participant-id")
@@ -155,7 +155,7 @@ host_router = APIRouter(prefix="/api/{session_id}/host/codereview", tags=["coder
 _MAX_LINES = 50
 
 
-@host_router.post("")
+@host_router.post("", response_model=OkResponse)
 async def create_codereview(body: CreateCodeReviewRequest):
     """Host creates a code review session."""
     snippet = body.snippet.strip()
@@ -187,7 +187,7 @@ async def create_codereview(body: CreateCodeReviewRequest):
     return OkResponse()
 
 
-@host_router.put("/status")
+@host_router.put("/status", response_model=OkWithPhaseResponse)
 async def set_codereview_status(body: SetCodeReviewStatusRequest):
     """Host closes the selection phase."""
     if not body.open:
@@ -197,7 +197,7 @@ async def set_codereview_status(body: SetCodeReviewStatusRequest):
     return OkWithPhaseResponse(phase=codereview_state.phase)
 
 
-@host_router.put("/confirm-line")
+@host_router.put("/confirm-line", response_model=ConfirmLineResponse)
 async def confirm_line(body: ConfirmLineRequest):
     """Host confirms a line as problematic and awards points."""
     if not codereview_state.snippet:
@@ -221,7 +221,7 @@ async def confirm_line(body: ConfirmLineRequest):
     return ConfirmLineResponse(confirmed_line=body.line)
 
 
-@host_router.delete("")
+@host_router.delete("", response_model=OkResponse)
 async def clear_codereview():
     """Host clears the code review."""
     codereview_state.clear()

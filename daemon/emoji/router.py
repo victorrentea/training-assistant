@@ -25,7 +25,7 @@ class OkResponse(BaseModel):
 participant_router = APIRouter(prefix="/api/participant/emoji", tags=["emoji"])
 
 
-@participant_router.post("/reaction")
+@participant_router.post("/reaction", response_model=OkResponse)
 async def emoji_reaction(request: Request, body: EmojiReactionRequest):
     """Participant sends an emoji reaction."""
     pid = request.headers.get("x-participant-id")

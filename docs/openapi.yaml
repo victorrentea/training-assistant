@@ -91,7 +91,8 @@ paths:
           description: Successful Response
           content:
             application/json:
-              schema: {}
+              schema:
+                $ref: '#/components/schemas/ParticipantStateResponse'
       x-feature: identity
       x-doc-notes:
       - Returns participant-personalized full state snapshot.
@@ -113,7 +114,8 @@ paths:
           description: Successful Response
           content:
             application/json:
-              schema: {}
+              schema:
+                $ref: '#/components/schemas/OkResponse'
       x-feature: wordcloud
   /api/{session_id}/host/wordcloud/word:
     post:
@@ -133,7 +135,8 @@ paths:
           description: Successful Response
           content:
             application/json:
-              schema: {}
+              schema:
+                $ref: '#/components/schemas/OkResponse'
       x-feature: wordcloud
   /api/{session_id}/host/wordcloud/topic:
     post:
@@ -153,7 +156,8 @@ paths:
           description: Successful Response
           content:
             application/json:
-              schema: {}
+              schema:
+                $ref: '#/components/schemas/OkResponse'
       x-feature: wordcloud
   /api/{session_id}/host/wordcloud/clear:
     post:
@@ -167,7 +171,8 @@ paths:
           description: Successful Response
           content:
             application/json:
-              schema: {}
+              schema:
+                $ref: '#/components/schemas/OkResponse'
       x-feature: wordcloud
   /api/participant/emoji/reaction:
     post:
@@ -187,7 +192,8 @@ paths:
           description: Successful Response
           content:
             application/json:
-              schema: {}
+              schema:
+                $ref: '#/components/schemas/OkResponse'
       x-feature: emoji
   /api/participant/qa/submit:
     post:
@@ -207,7 +213,8 @@ paths:
           description: Successful Response
           content:
             application/json:
-              schema: {}
+              schema:
+                $ref: '#/components/schemas/OkResponse'
       x-feature: qa
   /api/participant/qa/upvote:
     post:
@@ -227,7 +234,8 @@ paths:
           description: Successful Response
           content:
             application/json:
-              schema: {}
+              schema:
+                $ref: '#/components/schemas/OkResponse'
       x-feature: qa
   /api/{session_id}/host/qa/submit:
     post:
@@ -247,7 +255,8 @@ paths:
           description: Successful Response
           content:
             application/json:
-              schema: {}
+              schema:
+                $ref: '#/components/schemas/OkResponse'
       x-feature: qa
   /api/{session_id}/host/qa/question/{question_id}/text:
     put:
@@ -274,7 +283,8 @@ paths:
           description: Successful Response
           content:
             application/json:
-              schema: {}
+              schema:
+                $ref: '#/components/schemas/OkResponse'
       x-feature: qa
   /api/{session_id}/host/qa/question/{question_id}:
     delete:
@@ -295,7 +305,8 @@ paths:
           description: Successful Response
           content:
             application/json:
-              schema: {}
+              schema:
+                $ref: '#/components/schemas/OkResponse'
       x-feature: qa
   /api/{session_id}/host/qa/question/{question_id}/answered:
     put:
@@ -322,7 +333,8 @@ paths:
           description: Successful Response
           content:
             application/json:
-              schema: {}
+              schema:
+                $ref: '#/components/schemas/OkResponse'
       x-feature: qa
   /api/{session_id}/host/qa/clear:
     post:
@@ -336,7 +348,8 @@ paths:
           description: Successful Response
           content:
             application/json:
-              schema: {}
+              schema:
+                $ref: '#/components/schemas/OkResponse'
       x-feature: qa
   /api/participant/poll/vote:
     post:
@@ -356,7 +369,8 @@ paths:
           description: Successful Response
           content:
             application/json:
-              schema: {}
+              schema:
+                $ref: '#/components/schemas/OkResponse'
       x-feature: poll
       x-doc-notes:
       - Votes are final once submitted; re-vote is rejected.
@@ -378,7 +392,8 @@ paths:
           description: Successful Response
           content:
             application/json:
-              schema: {}
+              schema:
+                $ref: '#/components/schemas/CreatePollResponse'
       x-feature: poll
     delete:
       tags:
@@ -391,7 +406,8 @@ paths:
           description: Successful Response
           content:
             application/json:
-              schema: {}
+              schema:
+                $ref: '#/components/schemas/OkResponse'
       x-feature: poll
   /api/{session_id}/host/poll/open:
     post:
@@ -405,7 +421,8 @@ paths:
           description: Successful Response
           content:
             application/json:
-              schema: {}
+              schema:
+                $ref: '#/components/schemas/OkResponse'
       x-feature: poll
   /api/{session_id}/host/poll/close:
     post:
@@ -419,7 +436,8 @@ paths:
           description: Successful Response
           content:
             application/json:
-              schema: {}
+              schema:
+                $ref: '#/components/schemas/ClosePollResponse'
       x-feature: poll
   /api/{session_id}/host/poll/correct:
     put:
@@ -439,7 +457,8 @@ paths:
           description: Successful Response
           content:
             application/json:
-              schema: {}
+              schema:
+                $ref: '#/components/schemas/OkResponse'
       x-feature: poll
   /api/{session_id}/host/poll/timer:
     post:
@@ -459,7 +478,8 @@ paths:
           description: Successful Response
           content:
             application/json:
-              schema: {}
+              schema:
+                $ref: '#/components/schemas/OkResponse'
       x-feature: poll
   /api/{session_id}/host/poll/status:
     put:
@@ -479,7 +499,12 @@ paths:
           description: Successful Response
           content:
             application/json:
-              schema: {}
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/OkResponse'
+                - $ref: '#/components/schemas/ClosePollResponse'
+                title: Response Set Poll Status Api  Session Id  Host Poll Status
+                  Put
       x-feature: poll
   /api/{session_id}/quiz-md:
     get:
@@ -493,7 +518,8 @@ paths:
           description: Successful Response
           content:
             application/json:
-              schema: {}
+              schema:
+                $ref: '#/components/schemas/QuizMdResponse'
       x-feature: quiz
   /api/{session_id}/host/leaderboard/show:
     post:
@@ -506,7 +532,8 @@ paths:
           description: Successful Response
           content:
             application/json:
-              schema: {}
+              schema:
+                $ref: '#/components/schemas/OkResponse'
       x-feature: scores_leaderboard
   /api/{session_id}/host/leaderboard/hide:
     post:
@@ -519,7 +546,8 @@ paths:
           description: Successful Response
           content:
             application/json:
-              schema: {}
+              schema:
+                $ref: '#/components/schemas/OkResponse'
       x-feature: scores_leaderboard
   /api/{session_id}/host/scores:
     delete:
@@ -532,7 +560,8 @@ paths:
           description: Successful Response
           content:
             application/json:
-              schema: {}
+              schema:
+                $ref: '#/components/schemas/OkResponse'
       x-feature: scores_leaderboard
   /api/participant/paste:
     post:
@@ -552,7 +581,8 @@ paths:
           description: Successful Response
           content:
             application/json:
-              schema: {}
+              schema:
+                $ref: '#/components/schemas/OkResponse'
       x-feature: paste_upload
   /api/participant/misc/feedback:
     post:
@@ -572,7 +602,8 @@ paths:
           description: Successful Response
           content:
             application/json:
-              schema: {}
+              schema:
+                $ref: '#/components/schemas/OkResponse'
       x-feature: feedback
   /api/participant/notes:
     get:
@@ -586,7 +617,8 @@ paths:
           description: Successful Response
           content:
             application/json:
-              schema: {}
+              schema:
+                $ref: '#/components/schemas/NotesResponse'
       x-feature: notes_summary
   /api/participant/summary:
     get:
@@ -600,7 +632,8 @@ paths:
           description: Successful Response
           content:
             application/json:
-              schema: {}
+              schema:
+                $ref: '#/components/schemas/SummaryResponse'
       x-feature: notes_summary
   /api/participant/slides-cache-status:
     get:
@@ -614,7 +647,8 @@ paths:
           description: Successful Response
           content:
             application/json:
-              schema: {}
+              schema:
+                $ref: '#/components/schemas/SlidesCacheStatusResponse'
       x-feature: slides
       x-doc-notes:
       - Primarily for diagnostics; UI cache invalidation is event-driven via slides_cache_status
@@ -631,7 +665,8 @@ paths:
           description: Successful Response
           content:
             application/json:
-              schema: {}
+              schema:
+                $ref: '#/components/schemas/PastsResponse'
       x-feature: paste_upload
   /api/{session_id}/host/notes:
     get:
@@ -645,7 +680,8 @@ paths:
           description: Successful Response
           content:
             application/json:
-              schema: {}
+              schema:
+                $ref: '#/components/schemas/NotesResponse'
       x-feature: notes_summary
   /api/{session_id}/host/summary:
     get:
@@ -659,7 +695,8 @@ paths:
           description: Successful Response
           content:
             application/json:
-              schema: {}
+              schema:
+                $ref: '#/components/schemas/SummaryResponse'
       x-feature: notes_summary
   /api/{session_id}/host/uploads/seen:
     post:
@@ -680,7 +717,8 @@ paths:
           description: Successful Response
           content:
             application/json:
-              schema: {}
+              schema:
+                $ref: '#/components/schemas/OkResponse'
       x-feature: paste_upload
   /api/{session_id}/host/mode:
     post:
@@ -700,7 +738,8 @@ paths:
           description: Successful Response
           content:
             application/json:
-              schema: {}
+              schema:
+                $ref: '#/components/schemas/OkResponse'
       x-feature: session_management
   /api/transcription-language:
     post:
@@ -721,7 +760,8 @@ paths:
           description: Successful Response
           content:
             application/json:
-              schema: {}
+              schema:
+                $ref: '#/components/schemas/OkResponse'
       x-feature: transcription
       x-doc-notes:
       - 'Accepted values: ro, en, auto.'
@@ -738,7 +778,8 @@ paths:
           description: Successful Response
           content:
             application/json:
-              schema: {}
+              schema:
+                $ref: '#/components/schemas/TranscriptionLanguageResponse'
       x-feature: transcription
       x-doc-notes:
       - Consumes and clears the pending transcription language request.
@@ -761,7 +802,8 @@ paths:
           description: Successful Response
           content:
             application/json:
-              schema: {}
+              schema:
+                $ref: '#/components/schemas/OkResponse'
       x-feature: quiz
   /api/{session_id}/host/quiz-preview:
     delete:
@@ -775,7 +817,8 @@ paths:
           description: Successful Response
           content:
             application/json:
-              schema: {}
+              schema:
+                $ref: '#/components/schemas/OkResponse'
       x-feature: quiz
   /api/{session_id}/host/quiz-refine:
     post:
@@ -795,7 +838,8 @@ paths:
           description: Successful Response
           content:
             application/json:
-              schema: {}
+              schema:
+                $ref: '#/components/schemas/OkResponse'
       x-feature: quiz
   /api/participant/codereview/selection:
     put:
@@ -815,7 +859,8 @@ paths:
           description: Successful Response
           content:
             application/json:
-              schema: {}
+              schema:
+                $ref: '#/components/schemas/OkResponse'
       x-feature: codereview
   /api/{session_id}/host/codereview:
     post:
@@ -835,7 +880,8 @@ paths:
           description: Successful Response
           content:
             application/json:
-              schema: {}
+              schema:
+                $ref: '#/components/schemas/OkResponse'
       x-feature: codereview
     delete:
       tags:
@@ -848,7 +894,8 @@ paths:
           description: Successful Response
           content:
             application/json:
-              schema: {}
+              schema:
+                $ref: '#/components/schemas/OkResponse'
       x-feature: codereview
   /api/{session_id}/host/codereview/status:
     put:
@@ -868,7 +915,8 @@ paths:
           description: Successful Response
           content:
             application/json:
-              schema: {}
+              schema:
+                $ref: '#/components/schemas/OkWithPhaseResponse'
       x-feature: codereview
   /api/{session_id}/host/codereview/confirm-line:
     put:
@@ -888,7 +936,8 @@ paths:
           description: Successful Response
           content:
             application/json:
-              schema: {}
+              schema:
+                $ref: '#/components/schemas/ConfirmLineResponse'
       x-feature: codereview
   /api/{session_id}/host/activity:
     put:
@@ -908,7 +957,8 @@ paths:
           description: Successful Response
           content:
             application/json:
-              schema: {}
+              schema:
+                $ref: '#/components/schemas/SetActivityResponse'
       x-feature: activity
     post:
       tags:
@@ -927,7 +977,8 @@ paths:
           description: Successful Response
           content:
             application/json:
-              schema: {}
+              schema:
+                $ref: '#/components/schemas/SetActivityResponse'
       x-feature: activity
   /api/participant/debate/pick-side:
     post:
@@ -947,7 +998,8 @@ paths:
           description: Successful Response
           content:
             application/json:
-              schema: {}
+              schema:
+                $ref: '#/components/schemas/OkResponse'
       x-feature: debate
   /api/participant/debate/argument:
     post:
@@ -967,7 +1019,8 @@ paths:
           description: Successful Response
           content:
             application/json:
-              schema: {}
+              schema:
+                $ref: '#/components/schemas/OkResponse'
       x-feature: debate
   /api/participant/debate/upvote:
     post:
@@ -987,7 +1040,8 @@ paths:
           description: Successful Response
           content:
             application/json:
-              schema: {}
+              schema:
+                $ref: '#/components/schemas/OkResponse'
       x-feature: debate
   /api/participant/debate/volunteer:
     post:
@@ -1001,7 +1055,8 @@ paths:
           description: Successful Response
           content:
             application/json:
-              schema: {}
+              schema:
+                $ref: '#/components/schemas/OkResponse'
       x-feature: debate
   /api/{session_id}/host/debate:
     post:
@@ -1021,7 +1076,8 @@ paths:
           description: Successful Response
           content:
             application/json:
-              schema: {}
+              schema:
+                $ref: '#/components/schemas/OkResponse'
       x-feature: debate
   /api/{session_id}/host/debate/reset:
     post:
@@ -1035,7 +1091,8 @@ paths:
           description: Successful Response
           content:
             application/json:
-              schema: {}
+              schema:
+                $ref: '#/components/schemas/OkResponse'
       x-feature: debate
   /api/{session_id}/host/debate/close-selection:
     post:
@@ -1049,7 +1106,8 @@ paths:
           description: Successful Response
           content:
             application/json:
-              schema: {}
+              schema:
+                $ref: '#/components/schemas/OkResponse'
       x-feature: debate
   /api/{session_id}/host/debate/force-assign:
     post:
@@ -1063,7 +1121,8 @@ paths:
           description: Successful Response
           content:
             application/json:
-              schema: {}
+              schema:
+                $ref: '#/components/schemas/OkResponse'
       x-feature: debate
   /api/{session_id}/host/debate/phase:
     post:
@@ -1083,7 +1142,8 @@ paths:
           description: Successful Response
           content:
             application/json:
-              schema: {}
+              schema:
+                $ref: '#/components/schemas/OkPhaseResponse'
       x-feature: debate
   /api/{session_id}/host/debate/first-side:
     post:
@@ -1103,7 +1163,8 @@ paths:
           description: Successful Response
           content:
             application/json:
-              schema: {}
+              schema:
+                $ref: '#/components/schemas/OkResponse'
       x-feature: debate
   /api/{session_id}/host/debate/round-timer:
     post:
@@ -1123,7 +1184,8 @@ paths:
           description: Successful Response
           content:
             application/json:
-              schema: {}
+              schema:
+                $ref: '#/components/schemas/OkResponse'
       x-feature: debate
   /api/{session_id}/host/debate/end-round:
     post:
@@ -1137,7 +1199,8 @@ paths:
           description: Successful Response
           content:
             application/json:
-              schema: {}
+              schema:
+                $ref: '#/components/schemas/OkResponse'
       x-feature: debate
   /api/{session_id}/host/debate/end-arguments:
     post:
@@ -1151,7 +1214,8 @@ paths:
           description: Successful Response
           content:
             application/json:
-              schema: {}
+              schema:
+                $ref: '#/components/schemas/OkResponse'
       x-feature: debate
   /api/{session_id}/host/debate/ai-result:
     post:
@@ -1171,7 +1235,8 @@ paths:
           description: Successful Response
           content:
             application/json:
-              schema: {}
+              schema:
+                $ref: '#/components/schemas/OkResponse'
       x-feature: debate
   /api/{session_id}/host/state:
     get:
@@ -1192,7 +1257,8 @@ paths:
           description: Successful Response
           content:
             application/json:
-              schema: {}
+              schema:
+                $ref: '#/components/schemas/HostStateResponse'
       x-feature: identity
       x-doc-notes:
       - Returns host-facing full state snapshot.
@@ -1215,7 +1281,8 @@ paths:
           description: Successful Response
           content:
             application/json:
-              schema: {}
+              schema:
+                $ref: '#/components/schemas/SessionStartResponse'
       x-feature: session_management
   /api/session/end:
     post:
@@ -1230,7 +1297,8 @@ paths:
           description: Successful Response
           content:
             application/json:
-              schema: {}
+              schema:
+                $ref: '#/components/schemas/OkResponse'
       x-feature: session_management
   /api/session/resume:
     post:
@@ -1251,7 +1319,8 @@ paths:
           description: Successful Response
           content:
             application/json:
-              schema: {}
+              schema:
+                $ref: '#/components/schemas/SessionStartResponse'
       x-feature: session_management
   /api/session/folders:
     get:
@@ -1265,7 +1334,8 @@ paths:
           description: Successful Response
           content:
             application/json:
-              schema: {}
+              schema:
+                $ref: '#/components/schemas/SessionFoldersResponse'
       x-feature: session_management
   /api/session/start_talk:
     post:
@@ -1279,7 +1349,8 @@ paths:
           description: Successful Response
           content:
             application/json:
-              schema: {}
+              schema:
+                $ref: '#/components/schemas/OkResponse'
       x-feature: session_management
   /api/session/end_talk:
     post:
@@ -1293,7 +1364,8 @@ paths:
           description: Successful Response
           content:
             application/json:
-              schema: {}
+              schema:
+                $ref: '#/components/schemas/OkResponse'
       x-feature: session_management
   /api/session/active:
     get:
@@ -1307,7 +1379,8 @@ paths:
           description: Successful Response
           content:
             application/json:
-              schema: {}
+              schema:
+                $ref: '#/components/schemas/SessionActiveResponse'
       x-feature: session_management
   /api/{session_id}/session/interval-lines.txt:
     get:
@@ -1394,17 +1467,20 @@ components:
     AiResultRequest:
       properties:
         merges:
-          items: {}
+          items:
+            $ref: '#/components/schemas/DebateAiMerge'
           type: array
           title: Merges
           default: []
         cleaned:
-          items: {}
+          items:
+            $ref: '#/components/schemas/DebateAiCleaned'
           type: array
           title: Cleaned
           default: []
         new_arguments:
-          items: {}
+          items:
+            $ref: '#/components/schemas/DebateAiNewArgument'
           type: array
           title: New Arguments
           default: []
@@ -1442,6 +1518,63 @@ components:
       required:
       - avatar
       title: AvatarResponse
+    ClosePollResponse:
+      properties:
+        ok:
+          type: boolean
+          title: Ok
+          default: true
+        vote_counts:
+          additionalProperties:
+            type: integer
+          type: object
+          title: Vote Counts
+        total_votes:
+          type: integer
+          title: Total Votes
+      type: object
+      required:
+      - vote_counts
+      - total_votes
+      title: ClosePollResponse
+    CodeReviewParticipantState:
+      properties:
+        snippet:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Snippet
+        language:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Language
+        phase:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Phase
+        confirmed_lines:
+          items:
+            type: integer
+          type: array
+          title: Confirmed Lines
+          default: []
+        my_selections:
+          items:
+            type: integer
+          type: array
+          title: My Selections
+          default: []
+        line_percentages:
+          anyOf:
+          - additionalProperties:
+              type: integer
+            type: object
+          - type: 'null'
+          title: Line Percentages
+      type: object
+      title: CodeReviewParticipantState
     ConfirmLineRequest:
       properties:
         line:
@@ -1451,6 +1584,19 @@ components:
       required:
       - line
       title: ConfirmLineRequest
+    ConfirmLineResponse:
+      properties:
+        ok:
+          type: boolean
+          title: Ok
+          default: true
+        confirmed_line:
+          type: integer
+          title: Confirmed Line
+      type: object
+      required:
+      - confirmed_line
+      title: ConfirmLineResponse
     CreateCodeReviewRequest:
       properties:
         snippet:
@@ -1477,8 +1623,7 @@ components:
           default: ''
         options:
           items:
-            additionalProperties: true
-            type: object
+            $ref: '#/components/schemas/PollOptionRequest'
           type: array
           title: Options
           default: []
@@ -1493,6 +1638,18 @@ components:
           title: Correct Count
       type: object
       title: CreatePollRequest
+    CreatePollResponse:
+      properties:
+        ok:
+          type: boolean
+          title: Ok
+          default: true
+        poll:
+          $ref: '#/components/schemas/PollResponse'
+      type: object
+      required:
+      - poll
+      title: CreatePollResponse
     DaemonStatusResponse:
       properties:
         code_timestamp:
@@ -1504,6 +1661,127 @@ components:
       required:
       - code_timestamp
       title: DaemonStatusResponse
+    DebateAiCleaned:
+      properties:
+        id:
+          type: string
+          title: Id
+        text:
+          type: string
+          title: Text
+      type: object
+      required:
+      - id
+      - text
+      title: DebateAiCleaned
+    DebateAiMerge:
+      properties:
+        keep_id:
+          type: string
+          title: Keep Id
+        remove_ids:
+          items:
+            type: string
+          type: array
+          title: Remove Ids
+          default: []
+      type: object
+      required:
+      - keep_id
+      title: DebateAiMerge
+    DebateAiNewArgument:
+      properties:
+        side:
+          type: string
+          title: Side
+        text:
+          type: string
+          title: Text
+      type: object
+      required:
+      - side
+      - text
+      title: DebateAiNewArgument
+    DebateArgumentHost:
+      properties:
+        id:
+          type: string
+          title: Id
+        author_uuid:
+          type: string
+          title: Author Uuid
+        side:
+          type: string
+          title: Side
+        text:
+          type: string
+          title: Text
+        upvoters:
+          items:
+            type: string
+          type: array
+          title: Upvoters
+        ai_generated:
+          type: boolean
+          title: Ai Generated
+        merged_into:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Merged Into
+      type: object
+      required:
+      - id
+      - author_uuid
+      - side
+      - text
+      - upvoters
+      - ai_generated
+      title: DebateArgumentHost
+    DebateArgumentParticipant:
+      properties:
+        id:
+          type: string
+          title: Id
+        author_uuid:
+          type: string
+          title: Author Uuid
+        side:
+          type: string
+          title: Side
+        text:
+          type: string
+          title: Text
+        upvoters:
+          items:
+            type: string
+          type: array
+          title: Upvoters
+        ai_generated:
+          type: boolean
+          title: Ai Generated
+        merged_into:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Merged Into
+        is_own:
+          type: boolean
+          title: Is Own
+        has_upvoted:
+          type: boolean
+          title: Has Upvoted
+      type: object
+      required:
+      - id
+      - author_uuid
+      - side
+      - text
+      - upvoters
+      - ai_generated
+      - is_own
+      - has_upvoted
+      title: DebateArgumentParticipant
     EditQuestionTextBody:
       properties:
         text:
@@ -1536,6 +1814,390 @@ components:
       required:
       - text
       title: FeedbackRequest
+    HostCodeReviewState:
+      properties:
+        snippet:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Snippet
+        language:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Language
+        phase:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Phase
+        confirmed_lines:
+          items:
+            type: integer
+          type: array
+          title: Confirmed Lines
+          default: []
+        selections:
+          additionalProperties:
+            items:
+              type: integer
+            type: array
+          type: object
+          title: Selections
+          default: {}
+        line_percentages:
+          anyOf:
+          - additionalProperties:
+              type: integer
+            type: object
+          - type: 'null'
+          title: Line Percentages
+        line_counts:
+          anyOf:
+          - additionalProperties:
+              type: integer
+            type: object
+          - type: 'null'
+          title: Line Counts
+      type: object
+      title: HostCodeReviewState
+    HostParticipant:
+      properties:
+        uuid:
+          type: string
+          title: Uuid
+        name:
+          type: string
+          title: Name
+        score:
+          type: integer
+          title: Score
+        location:
+          type: string
+          title: Location
+        avatar:
+          type: string
+          title: Avatar
+        paste_texts:
+          items:
+            $ref: '#/components/schemas/PasteEntry'
+          type: array
+          title: Paste Texts
+          default: []
+        received_files:
+          items:
+            $ref: '#/components/schemas/UploadedFileEntry'
+          type: array
+          title: Received Files
+          default: []
+      type: object
+      required:
+      - uuid
+      - name
+      - score
+      - location
+      - avatar
+      title: HostParticipant
+    HostPollVote:
+      properties:
+        option_ids:
+          items:
+            type: string
+          type: array
+          title: Option Ids
+        voted_at:
+          type: string
+          title: Voted At
+      type: object
+      required:
+      - option_ids
+      - voted_at
+      title: HostPollVote
+    HostQAQuestion:
+      properties:
+        id:
+          type: string
+          title: Id
+        text:
+          type: string
+          title: Text
+        author:
+          type: string
+          title: Author
+        author_uuid:
+          type: string
+          title: Author Uuid
+        author_avatar:
+          type: string
+          title: Author Avatar
+        upvote_count:
+          type: integer
+          title: Upvote Count
+        upvoters:
+          items:
+            type: string
+          type: array
+          title: Upvoters
+        answered:
+          type: boolean
+          title: Answered
+        timestamp:
+          type: number
+          title: Timestamp
+      type: object
+      required:
+      - id
+      - text
+      - author
+      - author_uuid
+      - author_avatar
+      - upvote_count
+      - upvoters
+      - answered
+      - timestamp
+      title: HostQAQuestion
+    HostStateResponse:
+      properties:
+        type:
+          type: string
+          const: state
+          title: Type
+          default: state
+        mode:
+          type: string
+          title: Mode
+        current_activity:
+          type: string
+          title: Current Activity
+        participant_count:
+          type: integer
+          title: Participant Count
+        participants:
+          items:
+            $ref: '#/components/schemas/HostParticipant'
+          type: array
+          title: Participants
+        daemon_connected:
+          type: boolean
+          title: Daemon Connected
+        overlay_connected:
+          type: boolean
+          title: Overlay Connected
+        wordcloud_words:
+          additionalProperties:
+            type: integer
+          type: object
+          title: Wordcloud Words
+        wordcloud_word_order:
+          items:
+            type: string
+          type: array
+          title: Wordcloud Word Order
+        wordcloud_topic:
+          type: string
+          title: Wordcloud Topic
+        qa_questions:
+          items:
+            $ref: '#/components/schemas/HostQAQuestion'
+          type: array
+          title: Qa Questions
+        poll:
+          anyOf:
+          - $ref: '#/components/schemas/PollData'
+          - type: 'null'
+        poll_active:
+          type: boolean
+          title: Poll Active
+        vote_counts:
+          additionalProperties:
+            type: integer
+          type: object
+          title: Vote Counts
+        votes:
+          additionalProperties:
+            $ref: '#/components/schemas/HostPollVote'
+          type: object
+          title: Votes
+        poll_timer_seconds:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Poll Timer Seconds
+        poll_timer_started_at:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Poll Timer Started At
+        poll_correct_ids:
+          anyOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+          title: Poll Correct Ids
+        codereview:
+          $ref: '#/components/schemas/HostCodeReviewState'
+        debate_statement:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Debate Statement
+        debate_phase:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Debate Phase
+        debate_side_counts:
+          additionalProperties:
+            type: integer
+          type: object
+          title: Debate Side Counts
+        debate_sides:
+          additionalProperties:
+            type: string
+          type: object
+          title: Debate Sides
+        debate_arguments:
+          items:
+            $ref: '#/components/schemas/DebateArgumentHost'
+          type: array
+          title: Debate Arguments
+        debate_champions:
+          additionalProperties:
+            type: string
+          type: object
+          title: Debate Champions
+        debate_auto_assigned:
+          items:
+            type: string
+          type: array
+          title: Debate Auto Assigned
+        debate_first_side:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Debate First Side
+        debate_round_index:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Debate Round Index
+        debate_round_timer_seconds:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Debate Round Timer Seconds
+        debate_round_timer_started_at:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Debate Round Timer Started At
+        slides_current:
+          anyOf:
+          - $ref: '#/components/schemas/SlidesCurrentPayload'
+          - type: 'null'
+        slides_log:
+          items:
+            $ref: '#/components/schemas/SlidesLogEntry'
+          type: array
+          title: Slides Log
+        slides_log_deep_count:
+          type: integer
+          title: Slides Log Deep Count
+        slides_log_topic:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Slides Log Topic
+        session_main:
+          anyOf:
+          - $ref: '#/components/schemas/SessionMainPayload'
+          - type: 'null'
+        session_name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Session Name
+        session_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Session Id
+        join_base_url:
+          type: string
+          title: Join Base Url
+        daemon_session_folder:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Daemon Session Folder
+        daemon_session_notes:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Daemon Session Notes
+        leaderboard_data:
+          anyOf:
+          - $ref: '#/components/schemas/LeaderboardData'
+          - type: 'null'
+        summary_count:
+          type: integer
+          title: Summary Count
+        summary_updated_at:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Summary Updated At
+        notes_count:
+          type: integer
+          title: Notes Count
+        token_usage:
+          $ref: '#/components/schemas/TokenUsage'
+        transcript_line_count:
+          type: integer
+          title: Transcript Line Count
+        transcript_total_lines:
+          type: integer
+          title: Transcript Total Lines
+        transcript_latest_ts:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Transcript Latest Ts
+        quiz_preview:
+          anyOf:
+          - $ref: '#/components/schemas/QuizPreviewPayload-Output'
+          - type: 'null'
+      type: object
+      required:
+      - mode
+      - current_activity
+      - participant_count
+      - participants
+      - daemon_connected
+      - overlay_connected
+      - wordcloud_words
+      - wordcloud_word_order
+      - wordcloud_topic
+      - qa_questions
+      - poll_active
+      - vote_counts
+      - votes
+      - codereview
+      - debate_side_counts
+      - debate_sides
+      - debate_arguments
+      - debate_champions
+      - debate_auto_assigned
+      - slides_log
+      - slides_log_deep_count
+      - join_base_url
+      - summary_count
+      - notes_count
+      - token_usage
+      - transcript_line_count
+      - transcript_total_lines
+      title: HostStateResponse
     LaunchDebateRequest:
       properties:
         statement:
@@ -1545,6 +2207,38 @@ components:
       required:
       - statement
       title: LaunchDebateRequest
+    LeaderboardData:
+      properties:
+        entries:
+          items:
+            $ref: '#/components/schemas/LeaderboardEntry'
+          type: array
+          title: Entries
+        total_participants:
+          type: integer
+          title: Total Participants
+      type: object
+      required:
+      - entries
+      - total_participants
+      title: LeaderboardData
+    LeaderboardEntry:
+      properties:
+        uuid:
+          type: string
+          title: Uuid
+        name:
+          type: string
+          title: Name
+        score:
+          type: integer
+          title: Score
+      type: object
+      required:
+      - uuid
+      - name
+      - score
+      title: LeaderboardEntry
     LocationRequest:
       properties:
         location:
@@ -1566,6 +2260,28 @@ components:
       required:
       - level
       title: LogLevelResponse
+    NotesResponse:
+      properties:
+        notes_content:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Notes Content
+      type: object
+      title: NotesResponse
+    OkPhaseResponse:
+      properties:
+        ok:
+          type: boolean
+          title: Ok
+          default: true
+        phase:
+          type: string
+          title: Phase
+      type: object
+      required:
+      - phase
+      title: OkPhaseResponse
     OkResponse:
       properties:
         ok:
@@ -1574,6 +2290,233 @@ components:
           default: true
       type: object
       title: OkResponse
+    OkWithPhaseResponse:
+      properties:
+        ok:
+          type: boolean
+          title: Ok
+          default: true
+        phase:
+          type: string
+          title: Phase
+      type: object
+      required:
+      - phase
+      title: OkWithPhaseResponse
+    ParticipantStateResponse:
+      properties:
+        type:
+          type: string
+          const: state
+          title: Type
+          default: state
+        mode:
+          type: string
+          title: Mode
+        my_score:
+          type: integer
+          title: My Score
+        my_name:
+          type: string
+          title: My Name
+        my_avatar:
+          type: string
+          title: My Avatar
+        current_activity:
+          type: string
+          title: Current Activity
+        participant_count:
+          type: integer
+          title: Participant Count
+        host_connected:
+          type: boolean
+          title: Host Connected
+        daemon_connected:
+          type: boolean
+          title: Daemon Connected
+        wordcloud_words:
+          additionalProperties:
+            type: integer
+          type: object
+          title: Wordcloud Words
+        wordcloud_word_order:
+          items:
+            type: string
+          type: array
+          title: Wordcloud Word Order
+        wordcloud_topic:
+          type: string
+          title: Wordcloud Topic
+        qa_questions:
+          items:
+            $ref: '#/components/schemas/QAQuestionRaw'
+          type: array
+          title: Qa Questions
+        poll:
+          anyOf:
+          - $ref: '#/components/schemas/PollData'
+          - type: 'null'
+        poll_active:
+          type: boolean
+          title: Poll Active
+        vote_counts:
+          additionalProperties:
+            type: integer
+          type: object
+          title: Vote Counts
+        poll_timer_seconds:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Poll Timer Seconds
+        poll_timer_started_at:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Poll Timer Started At
+        poll_correct_ids:
+          anyOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+          title: Poll Correct Ids
+        my_vote:
+          anyOf:
+          - type: string
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+          title: My Vote
+        my_voted_ids:
+          anyOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+          title: My Voted Ids
+        codereview:
+          $ref: '#/components/schemas/CodeReviewParticipantState'
+        debate_statement:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Debate Statement
+        debate_phase:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Debate Phase
+        debate_my_side:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Debate My Side
+        debate_my_is_champion:
+          type: boolean
+          title: Debate My Is Champion
+        debate_side_counts:
+          additionalProperties:
+            type: integer
+          type: object
+          title: Debate Side Counts
+        debate_arguments:
+          items:
+            $ref: '#/components/schemas/DebateArgumentParticipant'
+          type: array
+          title: Debate Arguments
+        debate_champions:
+          additionalProperties:
+            type: string
+          type: object
+          title: Debate Champions
+        debate_auto_assigned:
+          items:
+            type: string
+          type: array
+          title: Debate Auto Assigned
+        debate_first_side:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Debate First Side
+        debate_round_index:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Debate Round Index
+        debate_round_timer_seconds:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Debate Round Timer Seconds
+        debate_round_timer_started_at:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Debate Round Timer Started At
+        slides_current:
+          anyOf:
+          - $ref: '#/components/schemas/SlidesCurrentPayload'
+          - type: 'null'
+        session_main:
+          anyOf:
+          - $ref: '#/components/schemas/SessionMainPayload'
+          - type: 'null'
+        session_name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Session Name
+        leaderboard_data:
+          anyOf:
+          - $ref: '#/components/schemas/LeaderboardData'
+          - type: 'null'
+        summary_count:
+          type: integer
+          title: Summary Count
+        notes_count:
+          type: integer
+          title: Notes Count
+      type: object
+      required:
+      - mode
+      - my_score
+      - my_name
+      - my_avatar
+      - current_activity
+      - participant_count
+      - host_connected
+      - daemon_connected
+      - wordcloud_words
+      - wordcloud_word_order
+      - wordcloud_topic
+      - qa_questions
+      - poll_active
+      - vote_counts
+      - codereview
+      - debate_my_is_champion
+      - debate_side_counts
+      - debate_arguments
+      - debate_champions
+      - debate_auto_assigned
+      - summary_count
+      - notes_count
+      title: ParticipantStateResponse
+    PasteEntry:
+      properties:
+        id:
+          type: string
+          title: Id
+        text:
+          type: string
+          title: Text
+      type: object
+      required:
+      - id
+      - text
+      title: PasteEntry
     PasteRequest:
       properties:
         text:
@@ -1583,6 +2526,18 @@ components:
       required:
       - text
       title: PasteRequest
+    PastsResponse:
+      properties:
+        pastes:
+          additionalProperties:
+            items:
+              $ref: '#/components/schemas/PasteEntry'
+            type: array
+          type: object
+          title: Pastes
+          default: {}
+      type: object
+      title: PastsResponse
     PickSideRequest:
       properties:
         side:
@@ -1592,6 +2547,211 @@ components:
       required:
       - side
       title: PickSideRequest
+    PollData:
+      properties:
+        id:
+          type: string
+          title: Id
+        question:
+          type: string
+          title: Question
+        options:
+          items:
+            $ref: '#/components/schemas/PollOption'
+          type: array
+          title: Options
+        multi:
+          type: boolean
+          title: Multi
+        correct_count:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Correct Count
+        source:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Source
+        page:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Page
+      type: object
+      required:
+      - id
+      - question
+      - options
+      - multi
+      title: PollData
+    PollOption:
+      properties:
+        id:
+          type: string
+          title: Id
+        text:
+          type: string
+          title: Text
+      type: object
+      required:
+      - id
+      - text
+      title: PollOption
+    PollOptionRequest:
+      properties:
+        id:
+          type: string
+          title: Id
+        text:
+          type: string
+          title: Text
+      type: object
+      required:
+      - id
+      - text
+      title: PollOptionRequest
+    PollResponse:
+      properties:
+        id:
+          type: string
+          title: Id
+        question:
+          type: string
+          title: Question
+        options:
+          items:
+            $ref: '#/components/schemas/PollOptionRequest'
+          type: array
+          title: Options
+        multi:
+          type: boolean
+          title: Multi
+        correct_count:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Correct Count
+        source:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Source
+        page:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Page
+      type: object
+      required:
+      - id
+      - question
+      - options
+      - multi
+      title: PollResponse
+    QAQuestionRaw:
+      properties:
+        id:
+          type: string
+          title: Id
+        text:
+          type: string
+          title: Text
+        author_uuid:
+          type: string
+          title: Author Uuid
+        upvoter_uuids:
+          items:
+            type: string
+          type: array
+          title: Upvoter Uuids
+        answered:
+          type: boolean
+          title: Answered
+        timestamp:
+          type: number
+          title: Timestamp
+      type: object
+      required:
+      - id
+      - text
+      - author_uuid
+      - upvoter_uuids
+      - answered
+      - timestamp
+      title: QAQuestionRaw
+    QuizMdResponse:
+      properties:
+        content:
+          type: string
+          title: Content
+      type: object
+      required:
+      - content
+      title: QuizMdResponse
+    QuizPreviewPayload-Input:
+      properties:
+        quiz:
+          anyOf:
+          - additionalProperties: true
+            type: object
+          - type: 'null'
+          title: Quiz
+        question:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Question
+        options:
+          anyOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+          title: Options
+        multi:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Multi
+        correct_indices:
+          anyOf:
+          - items:
+              type: integer
+            type: array
+          - type: 'null'
+          title: Correct Indices
+      type: object
+      title: QuizPreviewPayload
+    QuizPreviewPayload-Output:
+      properties:
+        question:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Question
+        options:
+          anyOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+          title: Options
+        multi:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Multi
+        correct_indices:
+          anyOf:
+          - items:
+              type: integer
+            type: array
+          - type: 'null'
+          title: Correct Indices
+      additionalProperties: true
+      type: object
+      title: QuizPreviewPayload
     QuizRefineRequest:
       properties:
         target:
@@ -1599,9 +2759,8 @@ components:
           title: Target
         preview:
           anyOf:
-          - {}
+          - $ref: '#/components/schemas/QuizPreviewPayload-Input'
           - type: 'null'
-          title: Preview
       type: object
       required:
       - target
@@ -1684,6 +2843,55 @@ components:
           default: []
       type: object
       title: SelectionRequest
+    SessionActiveResponse:
+      properties:
+        session_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Session Id
+      type: object
+      required:
+      - session_id
+      title: SessionActiveResponse
+    SessionFoldersResponse:
+      properties:
+        folders:
+          items:
+            type: string
+          type: array
+          title: Folders
+      type: object
+      required:
+      - folders
+      title: SessionFoldersResponse
+    SessionMainPayload:
+      properties:
+        mode:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Mode
+      additionalProperties: true
+      type: object
+      title: SessionMainPayload
+    SessionStartResponse:
+      properties:
+        ok:
+          type: boolean
+          title: Ok
+          default: true
+        session_name:
+          type: string
+          title: Session Name
+        session_id:
+          type: string
+          title: Session Id
+      type: object
+      required:
+      - session_name
+      - session_id
+      title: SessionStartResponse
     SetActivityRequest:
       properties:
         activity:
@@ -1693,6 +2901,19 @@ components:
       required:
       - activity
       title: SetActivityRequest
+    SetActivityResponse:
+      properties:
+        ok:
+          type: boolean
+          title: Ok
+          default: true
+        current_activity:
+          type: string
+          title: Current Activity
+      type: object
+      required:
+      - current_activity
+      title: SetActivityResponse
     SetCodeReviewStatusRequest:
       properties:
         open:
@@ -1749,6 +2970,55 @@ components:
       required:
       - topic
       title: SetTopicBody
+    SlidesCacheStatusEntry:
+      properties:
+        status:
+          type: string
+          title: Status
+        size_bytes:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Size Bytes
+        downloaded_at:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Downloaded At
+        modified_at:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Modified At
+        title:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Title
+        name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Name
+        error:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Error
+      type: object
+      required:
+      - status
+      title: SlidesCacheStatusEntry
+    SlidesCacheStatusResponse:
+      properties:
+        slides_cache_status:
+          additionalProperties:
+            $ref: '#/components/schemas/SlidesCacheStatusEntry'
+          type: object
+          title: Slides Cache Status
+          default: {}
+      type: object
+      title: SlidesCacheStatusResponse
     SlidesCheckResponse:
       properties:
         status:
@@ -1758,6 +3028,37 @@ components:
       required:
       - status
       title: SlidesCheckResponse
+    SlidesCurrentPayload:
+      properties:
+        slug:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Slug
+      additionalProperties: true
+      type: object
+      title: SlidesCurrentPayload
+    SlidesLogEntry:
+      properties:
+        file:
+          type: string
+          title: File
+        slide:
+          type: integer
+          title: Slide
+        seconds_spent:
+          type: number
+          title: Seconds Spent
+        timestamp:
+          type: string
+          title: Timestamp
+      type: object
+      required:
+      - file
+      - slide
+      - seconds_spent
+      - timestamp
+      title: SlidesLogEntry
     StartSessionRequest:
       properties:
         name:
@@ -1797,6 +3098,39 @@ components:
       required:
       - word
       title: SubmitWordBody
+    SummaryPoint:
+      properties:
+        text:
+          type: string
+          title: Text
+        source:
+          type: string
+          title: Source
+      type: object
+      required:
+      - text
+      - source
+      title: SummaryPoint
+    SummaryResponse:
+      properties:
+        points:
+          items:
+            $ref: '#/components/schemas/SummaryPoint'
+          type: array
+          title: Points
+          default: []
+        raw_markdown:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Raw Markdown
+        updated_at:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Updated At
+      type: object
+      title: SummaryResponse
     ToggleAnsweredBody:
       properties:
         answered:
@@ -1805,6 +3139,23 @@ components:
           default: false
       type: object
       title: ToggleAnsweredBody
+    TokenUsage:
+      properties:
+        input_tokens:
+          type: integer
+          title: Input Tokens
+        output_tokens:
+          type: integer
+          title: Output Tokens
+        estimated_cost_usd:
+          type: number
+          title: Estimated Cost Usd
+      type: object
+      required:
+      - input_tokens
+      - output_tokens
+      - estimated_cost_usd
+      title: TokenUsage
     TranscriptionLanguageRequest:
       properties:
         language:
@@ -1814,6 +3165,15 @@ components:
       required:
       - language
       title: TranscriptionLanguageRequest
+    TranscriptionLanguageResponse:
+      properties:
+        request:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Request
+      type: object
+      title: TranscriptionLanguageResponse
     UploadSeenRequest:
       properties:
         uuid:
@@ -1827,6 +3187,31 @@ components:
       - uuid
       - file_id
       title: UploadSeenRequest
+    UploadedFileEntry:
+      properties:
+        id:
+          type: string
+          title: Id
+        filename:
+          type: string
+          title: Filename
+        size:
+          type: integer
+          title: Size
+        disk_path:
+          type: string
+          title: Disk Path
+        seen_by_host:
+          type: boolean
+          title: Seen By Host
+      type: object
+      required:
+      - id
+      - filename
+      - size
+      - disk_path
+      - seen_by_host
+      title: UploadedFileEntry
     UpvoteQuestionBody:
       properties:
         question_id:

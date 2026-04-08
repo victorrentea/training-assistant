@@ -52,7 +52,7 @@ def _build_questions_for_broadcast():
 participant_router = APIRouter(prefix="/api/participant/qa", tags=["qa"])
 
 
-@participant_router.post("/submit")
+@participant_router.post("/submit", response_model=OkResponse)
 async def submit_question(request: Request, body: SubmitQuestionBody):
     """Participant submits a Q&A question."""
     pid = request.headers.get("x-participant-id")
@@ -81,7 +81,7 @@ async def submit_question(request: Request, body: SubmitQuestionBody):
     return OkResponse()
 
 
-@participant_router.post("/upvote")
+@participant_router.post("/upvote", response_model=OkResponse)
 async def upvote_question(request: Request, body: UpvoteQuestionBody):
     """Participant upvotes a Q&A question."""
     pid = request.headers.get("x-participant-id")
@@ -118,7 +118,7 @@ async def upvote_question(request: Request, body: UpvoteQuestionBody):
 host_router = APIRouter(prefix="/api/{session_id}/host/qa", tags=["qa"])
 
 
-@host_router.post("/submit")
+@host_router.post("/submit", response_model=OkResponse)
 async def host_submit_question(body: SubmitQuestionBody):
     """Host submits a Q&A question — no scoring."""
     text = body.text.strip()
@@ -130,7 +130,7 @@ async def host_submit_question(body: SubmitQuestionBody):
     return OkResponse()
 
 
-@host_router.put("/question/{question_id}/text")
+@host_router.put("/question/{question_id}/text", response_model=OkResponse)
 async def edit_question_text(question_id: str, body: EditQuestionTextBody):
     """Host edits a question's text."""
     text = body.text.strip()
@@ -142,7 +142,7 @@ async def edit_question_text(question_id: str, body: EditQuestionTextBody):
     return OkResponse()
 
 
-@host_router.delete("/question/{question_id}")
+@host_router.delete("/question/{question_id}", response_model=OkResponse)
 async def delete_question(question_id: str):
     """Host deletes a question."""
     if not qa_state.delete(question_id):
@@ -151,7 +151,7 @@ async def delete_question(question_id: str):
     return OkResponse()
 
 
-@host_router.put("/question/{question_id}/answered")
+@host_router.put("/question/{question_id}/answered", response_model=OkResponse)
 async def toggle_answered(question_id: str, body: ToggleAnsweredBody):
     """Host toggles a question's answered flag."""
     if not qa_state.toggle_answered(question_id, body.answered):
@@ -160,7 +160,7 @@ async def toggle_answered(question_id: str, body: ToggleAnsweredBody):
     return OkResponse()
 
 
-@host_router.post("/clear")
+@host_router.post("/clear", response_model=OkResponse)
 async def clear_qa():
     """Host clears all Q&A questions."""
     qa_state.clear()

@@ -30,8 +30,8 @@ class SetActivityResponse(BaseModel):
 host_router = APIRouter(prefix="/api/{session_id}/host/activity", tags=["activity"])
 
 
-@host_router.post("")
-@host_router.put("")
+@host_router.post("", response_model=SetActivityResponse)
+@host_router.put("", response_model=SetActivityResponse)
 async def set_activity(body: SetActivityRequest):
     """Host switches the current activity."""
     activity = body.activity.strip().lower()

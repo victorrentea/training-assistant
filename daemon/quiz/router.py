@@ -1,6 +1,6 @@
 """Daemon quiz router — host-only endpoints for quiz request/refine/preview."""
 import logging
-from typing import Optional, Any
+from typing import Optional
 
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
@@ -24,9 +24,17 @@ class QuizRequestBody(BaseModel):
     minutes: Optional[int] = None
     topic: Optional[str] = None
 
+class QuizPreviewPayload(BaseModel):
+    quiz: dict | None = None
+    question: str | None = None
+    options: list[str] | None = None
+    multi: bool | None = None
+    correct_indices: list[int] | None = None
+
+
 class QuizRefineRequest(BaseModel):
     target: str
-    preview: Optional[Any] = None
+    preview: Optional[QuizPreviewPayload] = None
 
 
 # ── Host router (called directly on daemon localhost) ──
@@ -35,7 +43,7 @@ class QuizRefineRequest(BaseModel):
 host_router = APIRouter(prefix="/api/{session_id}/host", tags=["quiz"])
 
 
-@host_router.post("/quiz-request")
+@host_router.post("/quiz-request", response_model=OkResponse)
 async def request_quiz(body: QuizRequestBody):
     """Host requests a quiz — stores request for the orchestrator loop to pick up."""
     topic = body.topic
@@ -65,7 +73,7 @@ async def request_quiz(body: QuizRequestBody):
     return OkResponse()
 
 
-@host_router.delete("/quiz-preview")
+@host_router.delete("/quiz-preview", response_model=OkResponse)
 async def clear_quiz_preview():
     """Host clears the current quiz preview."""
     from daemon.ws_publish import broadcast
@@ -74,7 +82,7 @@ async def clear_quiz_preview():
     return OkResponse()
 
 
-@host_router.post("/quiz-refine")
+@host_router.post("/quiz-refine", response_model=OkResponse)
 async def request_quiz_refine(body: QuizRefineRequest):
     """Host requests regeneration of a specific question or option."""
     if not body.target:

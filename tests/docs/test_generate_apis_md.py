@@ -117,6 +117,16 @@ def test_generator_pretty_prints_multi_field_shapes_one_per_line():
     assert "`vote_counts: dict[str, int]  # option_id → vote count`<br>`total_votes: int`" in poll_closed_row.group(0)
 
 
+def test_rest_rows_have_no_any_in_request_or_response_cells():
+    output = _run_generator()
+    for line in output.splitlines():
+        if not line.startswith("| "):
+            continue
+        if "`/api/" not in line:
+            continue
+        assert "`any`" not in line, f"REST row still contains any: {line}"
+
+
 def test_log_level_and_daemon_status_rows_have_expected_shapes():
     output = _run_generator()
 
@@ -142,7 +152,7 @@ def test_rest_table_notes_are_not_rendered_in_response_column():
     output = _run_generator()
     session_active_row = re.search(r"^\| .*`GET /api/session/active`.*\|$", output, re.MULTILINE)
     assert session_active_row, "Missing table row for GET /api/session/active"
-    assert "| - | `any` |" in session_active_row.group(0)
+    assert "| - | `{session_id: string \\| null}` |" in session_active_row.group(0)
 
 
 def test_generator_includes_all_openapi_operations():

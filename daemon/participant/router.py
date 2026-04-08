@@ -2,10 +2,11 @@
 import logging
 import secrets
 from types import SimpleNamespace
+from typing import Literal
 
 from fastapi import APIRouter, Request, status
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from starlette.responses import Response
 
 from railway.shared.names import assign_conference_name
@@ -41,6 +42,115 @@ class AvatarResponse(BaseModel):
 
 class LocationRequest(BaseModel):
     location: str
+
+
+class QAQuestionRaw(BaseModel):
+    id: str
+    text: str
+    author_uuid: str
+    upvoter_uuids: list[str]
+    answered: bool
+    timestamp: float
+
+
+class PollOption(BaseModel):
+    id: str
+    text: str
+
+
+class PollData(BaseModel):
+    id: str
+    question: str
+    options: list[PollOption]
+    multi: bool
+    correct_count: int | None = None
+    source: str | None = None
+    page: str | None = None
+
+
+class CodeReviewParticipantState(BaseModel):
+    snippet: str | None = None
+    language: str | None = None
+    phase: str | None = None
+    confirmed_lines: list[int] = []
+    my_selections: list[int] = []
+    line_percentages: dict[int, int] | None = None
+
+
+class DebateArgumentParticipant(BaseModel):
+    id: str
+    author_uuid: str
+    side: str
+    text: str
+    upvoters: list[str]
+    ai_generated: bool
+    merged_into: str | None = None
+    is_own: bool
+    has_upvoted: bool
+
+
+class SlidesCurrentPayload(BaseModel):
+    slug: str | None = None
+    model_config = ConfigDict(extra="allow")
+
+
+class SessionMainPayload(BaseModel):
+    mode: str | None = None
+    model_config = ConfigDict(extra="allow")
+
+
+class LeaderboardEntry(BaseModel):
+    uuid: str
+    name: str
+    score: int
+
+
+class LeaderboardData(BaseModel):
+    entries: list[LeaderboardEntry]
+    total_participants: int
+
+
+class ParticipantStateResponse(BaseModel):
+    type: Literal["state"] = "state"
+    mode: str
+    my_score: int
+    my_name: str
+    my_avatar: str
+    current_activity: str
+    participant_count: int
+    host_connected: bool
+    daemon_connected: bool
+    wordcloud_words: dict[str, int]
+    wordcloud_word_order: list[str]
+    wordcloud_topic: str
+    qa_questions: list[QAQuestionRaw]
+    poll: PollData | None = None
+    poll_active: bool
+    vote_counts: dict[str, int]
+    poll_timer_seconds: int | None = None
+    poll_timer_started_at: str | None = None
+    poll_correct_ids: list[str] | None = None
+    my_vote: str | list[str] | None = None
+    my_voted_ids: list[str] | None = None
+    codereview: CodeReviewParticipantState
+    debate_statement: str | None = None
+    debate_phase: str | None = None
+    debate_my_side: str | None = None
+    debate_my_is_champion: bool
+    debate_side_counts: dict[str, int]
+    debate_arguments: list[DebateArgumentParticipant]
+    debate_champions: dict[str, str]
+    debate_auto_assigned: list[str]
+    debate_first_side: str | None = None
+    debate_round_index: int | None = None
+    debate_round_timer_seconds: int | None = None
+    debate_round_timer_started_at: str | None = None
+    slides_current: SlidesCurrentPayload | None = None
+    session_main: SessionMainPayload | None = None
+    session_name: str | None = None
+    leaderboard_data: LeaderboardData | None = None
+    summary_count: int
+    notes_count: int
 
 
 def _build_qa_for_participant(pid: str) -> list[dict]:
@@ -303,7 +413,7 @@ async def set_location(request: Request, body: LocationRequest):
     return OkResponse()
 
 
-@router.get("/state")
+@router.get("/state", response_model=ParticipantStateResponse)
 async def get_participant_state(request: Request):
     """Return full personalised state for a participant — used on page load and WS reconnect."""
     from daemon.wordcloud.state import wordcloud_state

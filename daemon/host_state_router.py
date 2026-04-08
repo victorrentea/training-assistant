@@ -1,8 +1,10 @@
 """Daemon host state router — full state for host page load and WS reconnect."""
 import logging
+from typing import Literal
 
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel, ConfigDict
 
 from daemon.participant.state import participant_state
 from daemon.scores import scores
@@ -20,6 +22,175 @@ from daemon.session import state as session_shared_state
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/{session_id}/host", tags=["host-state"])
+
+
+class PasteEntry(BaseModel):
+    id: str
+    text: str
+
+
+class UploadedFileEntry(BaseModel):
+    id: str
+    filename: str
+    size: int
+    disk_path: str
+    seen_by_host: bool
+
+
+class HostParticipant(BaseModel):
+    uuid: str
+    name: str
+    score: int
+    location: str
+    avatar: str
+    paste_texts: list[PasteEntry] = []
+    received_files: list[UploadedFileEntry] = []
+
+
+class HostQAQuestion(BaseModel):
+    id: str
+    text: str
+    author: str
+    author_uuid: str
+    author_avatar: str
+    upvote_count: int
+    upvoters: list[str]
+    answered: bool
+    timestamp: float
+
+
+class HostPollVote(BaseModel):
+    option_ids: list[str]
+    voted_at: str
+
+
+class PollOption(BaseModel):
+    id: str
+    text: str
+
+
+class PollData(BaseModel):
+    id: str
+    question: str
+    options: list[PollOption]
+    multi: bool
+    correct_count: int | None = None
+    source: str | None = None
+    page: str | None = None
+
+
+class HostCodeReviewState(BaseModel):
+    snippet: str | None = None
+    language: str | None = None
+    phase: str | None = None
+    confirmed_lines: list[int] = []
+    selections: dict[str, list[int]] = {}
+    line_percentages: dict[int, int] | None = None
+    line_counts: dict[int, int] | None = None
+
+
+class DebateArgumentHost(BaseModel):
+    id: str
+    author_uuid: str
+    side: str
+    text: str
+    upvoters: list[str]
+    ai_generated: bool
+    merged_into: str | None = None
+
+
+class SlidesLogEntry(BaseModel):
+    file: str
+    slide: int
+    seconds_spent: float
+    timestamp: str
+
+
+class LeaderboardEntry(BaseModel):
+    uuid: str
+    name: str
+    score: int
+
+
+class LeaderboardData(BaseModel):
+    entries: list[LeaderboardEntry]
+    total_participants: int
+
+
+class TokenUsage(BaseModel):
+    input_tokens: int
+    output_tokens: int
+    estimated_cost_usd: float
+
+
+class SlidesCurrentPayload(BaseModel):
+    slug: str | None = None
+    model_config = ConfigDict(extra="allow")
+
+
+class SessionMainPayload(BaseModel):
+    mode: str | None = None
+    model_config = ConfigDict(extra="allow")
+
+
+class QuizPreviewPayload(BaseModel):
+    question: str | None = None
+    options: list[str] | None = None
+    multi: bool | None = None
+    correct_indices: list[int] | None = None
+    model_config = ConfigDict(extra="allow")
+
+
+class HostStateResponse(BaseModel):
+    type: Literal["state"] = "state"
+    mode: str
+    current_activity: str
+    participant_count: int
+    participants: list[HostParticipant]
+    daemon_connected: bool
+    overlay_connected: bool
+    wordcloud_words: dict[str, int]
+    wordcloud_word_order: list[str]
+    wordcloud_topic: str
+    qa_questions: list[HostQAQuestion]
+    poll: PollData | None = None
+    poll_active: bool
+    vote_counts: dict[str, int]
+    votes: dict[str, HostPollVote]
+    poll_timer_seconds: int | None = None
+    poll_timer_started_at: str | None = None
+    poll_correct_ids: list[str] | None = None
+    codereview: HostCodeReviewState
+    debate_statement: str | None = None
+    debate_phase: str | None = None
+    debate_side_counts: dict[str, int]
+    debate_sides: dict[str, str]
+    debate_arguments: list[DebateArgumentHost]
+    debate_champions: dict[str, str]
+    debate_auto_assigned: list[str]
+    debate_first_side: str | None = None
+    debate_round_index: int | None = None
+    debate_round_timer_seconds: int | None = None
+    debate_round_timer_started_at: str | None = None
+    slides_current: SlidesCurrentPayload | None = None
+    slides_log: list[SlidesLogEntry]
+    slides_log_deep_count: int
+    slides_log_topic: str | None = None
+    session_main: SessionMainPayload | None = None
+    session_name: str | None = None
+    session_id: str | None = None
+    join_base_url: str
+    daemon_session_folder: str | None = None
+    daemon_session_notes: str | None = None
+    leaderboard_data: LeaderboardData | None = None
+    summary_count: int
+    summary_updated_at: str | None = None
+    notes_count: int
+    token_usage: TokenUsage
+    transcript_line_count: int
+    transcript_total_lines: int
+    transcript_latest_ts: str | None = None
+    quiz_preview: QuizPreviewPayload | None = None
 
 
 def _build_host_participants_list() -> list[dict]:
@@ -162,7 +333,7 @@ def _build_slides_log_fields() -> dict:
     }
 
 
-@router.get("/state")
+@router.get("/state", response_model=HostStateResponse)
 async def get_host_state(request: Request, session_id: str):
     """Return full state for host page load — replicates Railway build_for_host()."""
     ps = participant_state

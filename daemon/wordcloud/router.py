@@ -31,7 +31,7 @@ class SetTopicBody(BaseModel):
 participant_router = APIRouter(prefix="/api/participant/wordcloud", tags=["wordcloud"])
 
 
-@participant_router.post("/word")
+@participant_router.post("/word", response_model=OkResponse)
 async def submit_word(request: Request, body: SubmitWordBody):
     """Participant submits a word to the word cloud."""
     pid = request.headers.get("x-participant-id")
@@ -64,7 +64,7 @@ async def submit_word(request: Request, body: SubmitWordBody):
 host_router = APIRouter(prefix="/api/{session_id}/host/wordcloud", tags=["wordcloud"])
 
 
-@host_router.post("/word")
+@host_router.post("/word", response_model=OkResponse)
 async def host_submit_word(body: SubmitWordBody):
     """Host submits a word — same as participant but no scoring."""
     word = body.word.strip()
@@ -76,7 +76,7 @@ async def host_submit_word(body: SubmitWordBody):
     return OkResponse()
 
 
-@host_router.post("/topic")
+@host_router.post("/topic", response_model=OkResponse)
 async def set_topic(body: SetTopicBody):
     """Host sets the word cloud topic."""
     topic = body.topic.strip()
@@ -85,7 +85,7 @@ async def set_topic(body: SetTopicBody):
     return OkResponse()
 
 
-@host_router.post("/clear")
+@host_router.post("/clear", response_model=OkResponse)
 async def clear_wordcloud():
     """Host clears the word cloud."""
     snapshot = wordcloud_state.clear()
