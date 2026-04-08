@@ -83,6 +83,13 @@ def test_generator_does_not_emit_redundant_enum_comments():
     assert "# enum:" not in output
 
 
+def test_generator_drops_redundant_null_for_optional_fields():
+    output = _run_generator()
+    assert not re.search(r"`[^`]*\?:[^`]*\|\s*null`", output), (
+        "Optional fields should not include redundant '| null' in rendered shapes."
+    )
+
+
 def test_generator_renders_ws_as_table_and_omits_type_field_in_payload():
     output = _run_generator()
     assert "| Message | Payload |" in output
