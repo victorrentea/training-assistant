@@ -28,7 +28,7 @@ def create_http_client(backend_url: str) -> httpx.AsyncClient:
 
 async def proxy_http(request: Request, path: str, http_client: httpx.AsyncClient) -> Response:
     """Forward an HTTP request to the backend and return the response."""
-    daemon_log.debug("railway", f"↑ HTTP {request.method} /{path}")
+    daemon_log.debug("railway", f"↑ {request.method} /{path}")
     url = f"/{path}"
     if request.url.query:
         url = f"{url}?{request.url.query}"
