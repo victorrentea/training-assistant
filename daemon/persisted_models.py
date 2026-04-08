@@ -100,5 +100,5 @@ class PersistedSessionState(PersistedModel):
 
     @field_validator("poll_correct_ids", mode="before")
     @classmethod
-    def _normalize_poll_correct_ids(cls, value):
+    def _normalize_poll_correct_ids(_cls, value):
         return [] if value is None else value
