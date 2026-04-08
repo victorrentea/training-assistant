@@ -1,5 +1,6 @@
 # Tasks
 
+- [x] bugfix: persisted `session-state.json` now normalizes `poll_correct_ids: null` to `[]` during Pydantic validation to avoid noisy validation errors and raw-fallback loads.
 - [x] direct request: remove `participant_universes` from persisted daemon `session-state.json` payloads and cleanup unused restore/snapshot plumbing.
 - [x] direct request: added Pydantic persisted-data models for `global-state.json`, `session-state.json`, and session metadata; load/save paths now validate and normalize payloads while keeping legacy compatibility.
 - [x] bugfix: restoring a previously closed session now reapplies persisted `session-state.json` into in-memory daemon caches (`participant_names` etc.) during startup/create/parent-restore paths, so returning UUIDs keep their prior names instead of being reassigned defaults.

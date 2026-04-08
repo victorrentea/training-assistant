@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class PersistedModel(BaseModel):
@@ -98,3 +98,7 @@ class PersistedSessionState(PersistedModel):
     leaderboard_active: bool | None = None
     token_usage: dict[str, Any] | None = None
 
+    @field_validator("poll_correct_ids", mode="before")
+    @classmethod
+    def _normalize_poll_correct_ids(cls, value):
+        return [] if value is None else value

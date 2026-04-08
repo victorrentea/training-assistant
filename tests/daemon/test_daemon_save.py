@@ -54,6 +54,21 @@ def test_load_session_state_returns_empty_when_invalid_json():
         assert _load_session_state(folder) == {}
 
 
+def test_load_session_state_normalizes_null_poll_correct_ids():
+    with tempfile.TemporaryDirectory() as d:
+        folder = Path(d)
+        (folder / "session-state.json").write_text(
+            json.dumps({
+                "mode": "workshop",
+                "poll_correct_ids": None,
+            }),
+            encoding="utf-8",
+        )
+        from daemon.session_state import load_session_state as _load_session_state
+        loaded = _load_session_state(folder)
+        assert loaded["poll_correct_ids"] == []
+
+
 def test_save_session_state_logs_compact_write_line(capsys):
     with tempfile.TemporaryDirectory() as d:
         from daemon.session_state import save_session_state as _save_session_state
