@@ -24,6 +24,9 @@ from datetime import datetime
 _PID = os.getpid()
 _level_lock = threading.Lock()
 _level = "info"
+_ANSI_RESET = "\033[0m"
+_ANSI_RED = "\033[31m"
+_ANSI_LIGHT_GRAY = "\033[37m"
 
 
 def _ts() -> str:
@@ -39,6 +42,18 @@ def _fmt(name: str, level: str, msg: str) -> str:
     else:
         lvl = raw_level[:5].ljust(5)
     return f"{_ts()} {_PID} [{nm}] {lvl} {msg}"
+
+
+def _colorize(line: str, level: str, stream) -> str:
+    if not hasattr(stream, "isatty") or not stream.isatty():
+        return line
+    if os.environ.get("NO_COLOR"):
+        return line
+    if level == "error":
+        return f"{_ANSI_RED}{line}{_ANSI_RESET}"
+    if level == "debug":
+        return f"{_ANSI_LIGHT_GRAY}{line}{_ANSI_RESET}"
+    return line
 
 
 def get_level() -> str:
@@ -57,13 +72,16 @@ def set_level(level: str) -> str:
 
 
 def info(name: str, msg: str) -> None:
-    print(_fmt(name, "info", msg), flush=True)
+    line = _fmt(name, "info", msg)
+    print(_colorize(line, "info", sys.stdout), flush=True)
 
 
 def error(name: str, msg: str) -> None:
-    print(_fmt(name, "error", msg), file=sys.stderr, flush=True)
+    line = _fmt(name, "error", msg)
+    print(_colorize(line, "error", sys.stderr), file=sys.stderr, flush=True)
 
 
 def debug(name: str, msg: str) -> None:
     if get_level() == "debug":
-        print(_fmt(name, "debug", msg), flush=True)
+        line = _fmt(name, "debug", msg)
+        print(_colorize(line, "debug", sys.stdout), flush=True)
