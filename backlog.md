@@ -1,5 +1,6 @@
 # Tasks
 
+- [x] direct request: added `scripts/generate_db_md.py` to generate `DB.md` from persisted Pydantic models, reusing API.md data-structure formatting style (including nested/list shapes), with docs tests enforcing freshness.
 - [x] bugfix: persisted `session-state.json` now normalizes `poll_correct_ids: null` to `[]` during Pydantic validation to avoid noisy validation errors and raw-fallback loads.
 - [x] direct request: remove `participant_universes` from persisted daemon `session-state.json` payloads and cleanup unused restore/snapshot plumbing.
 - [x] direct request: added Pydantic persisted-data models for `global-state.json`, `session-state.json`, and session metadata; load/save paths now validate and normalize payloads while keeping legacy compatibility.
