@@ -1496,7 +1496,8 @@
       }).join('');
       const receivedFiles = participant.received_files || [];
       const uploadIcons = receivedFiles.map(entry => {
-        return `<span class="upload-icon" title="${escHtml(entry.disk_path)}" data-uuid="${escHtml(pid)}" data-file-id="${escHtml(String(entry.id))}" onclick="copyDiskPath(this)"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 4v9"/><path d="M6 9.5L10 13.5L14 9.5"/><path d="M4.5 13.5v1a2 2 0 0 0 2 2h7a2 2 0 0 0 2-2v-1"/></svg></span>`;
+        const copiedClass = entry.copied ? ' downloaded' : '';
+        return `<span class="upload-icon${copiedClass}" title="${escHtml(entry.disk_path)}" data-uuid="${escHtml(pid)}" data-file-id="${escHtml(String(entry.id))}" onclick="copyDiskPath(this)"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 4v9"/><path d="M6 9.5L10 13.5L14 9.5"/><path d="M4.5 13.5v1a2 2 0 0 0 2 2h7a2 2 0 0 0 2-2v-1"/></svg></span>`;
       }).join('');
       return `<li class="${online ? 'online' : 'offline'}"><span class="pax-name" title="${ip ? 'IP: ' + ip : ''}">${debateIcon}${avatarHtml}<span class="pax-name-text truncate">${escHtml(name)}</span>${pasteIcons}${uploadIcons}</span>${scoreTag}${locLabel ? `<span class="pax-location" onclick="openMap()">${escHtml(locLabel)}<div class="footer-badge-tooltip">View all on map</div></span>` : ''}</li>`;
     }).join('');
@@ -3705,27 +3706,17 @@ function copyDiskPath(el) {
   const entry = (participant?.received_files || []).find(e => String(e.id) === String(fileId));
   if (entry) {
     navigator.clipboard.writeText(entry.disk_path).then(() => {
-      // Show "Copied!" tooltip
+      // Show copy confirmation tooltip
       const tip = document.createElement('span');
-      tip.textContent = 'Copied!';
+      tip.textContent = 'Path copied to clipboard';
       tip.className = 'paste-copied-tip';
       const rect = el.getBoundingClientRect();
       tip.style.left = rect.left + rect.width / 2 + 'px';
       tip.style.top = rect.top - 4 + 'px';
       document.body.appendChild(tip);
       setTimeout(() => tip.remove(), 1200);
-      fetch(API('/uploads/dismiss'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ uuid, file_id: String(fileId) }),
-      }).then((resp) => {
-        if (!resp.ok) throw new Error('dismiss failed');
-        // Remove from client-side state and re-render (server already persisted)
-        participant.received_files = participant.received_files.filter(e => String(e.id) !== String(fileId));
-        renderParticipantList(cachedParticipantIds);
-      }).catch(() => {
-        toast('Path copied, but failed to dismiss icon');
-      });
+      entry.copied = true;
+      el.classList.add('downloaded');
     });
   }
 }
