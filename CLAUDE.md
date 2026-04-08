@@ -76,6 +76,8 @@ The user frequently uses a dictation tool. Messages may contain misheard words (
 - **Proof before done**: screenshot for visual changes; test output/logs for non-visual tasks
 - **Architecture docs**: after significant changes, update C4 diagrams and system interactions in [ARCHITECTURE.md](ARCHITECTURE.md)
 - **Running tests**: use convenience scripts: `bash tests/check-all.sh`, `bash tests/run-daemon-tests.sh`, `bash tests/docker/run-hermetic.sh`
+- **Hook parity**: to reproduce `hooks/pre-push`, run `uv run --extra dev --extra daemon bash tests/check-all.sh` (or `arch -arm64 uv run --extra dev --extra daemon ...` on Apple Silicon)
+- **Daemon test isolation**: daemon-only quick checks must pass `--confcutdir=tests/daemon` so repo-root `tests/conftest.py` browser fixtures do not leak into hook runs
 - **E2E = hermetic**: Docker tests in `tests/docker/` with real backend + daemon + Playwright. See [TESTING.md](TESTING.md)
 - **Document direct requests**: track feature changes and bug fixes in backlog.md
 - **API reference**: `API.md` is generated from contracts; regenerate with `python3 scripts/generate_apis_md.py --output API.md` (also enforced in pre-commit)
