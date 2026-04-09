@@ -56,6 +56,7 @@ Whenever the user says “remember”, add it to this file (CLAUDE.md). Only add
 - There is a course catalog and a slides catalog file mapping course names to local PPTX paths
 - Daemon logs are available at `/Users/victorrentea/workspace/training-assistant/logs/daemon.log`
 - Always push only to `master`; ignore requests to push to `main`.
+- By default, when a task is done, Codex should push directly to `master`.
 - Daemon log arrow geography is directional from daemon center: `railway/participants` vertical (`↑` out, `↓` in), `host` horizontal left (`←` out, `→` in), `addons` horizontal right (`→` out, `←` in)
 - When a task is done, commit and push directly to `master`.
 - All OpenSpec artifacts must be written in English.
