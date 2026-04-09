@@ -1,5 +1,6 @@
 # Tasks
 
+- [x] bugfix: Railway now handles daemon identity write-back events (`participant_registered`/`participant_renamed`/`participant_avatar_updated`/`participant_location`) and updates in-memory participant maps before broadcasting WS count/list updates.
 - [x] direct request: participant count is now WS-only in participant UI (removed `participant_count` from `GET /api/participant/state`), and WS `count` now reflects total known non-host participants.
 - [x] direct request: participant `GET /api/participant/state` now reports active connected non-host `participant_count` (from online presence), not total known participants.
 - [x] direct request: make participant Slides Follow button label `🎯 Follow` and match Slides menu title text size.

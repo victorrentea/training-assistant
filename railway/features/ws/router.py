@@ -195,6 +195,53 @@ async def _handle_download_pdf(data: dict) -> None:
     asyncio.create_task(_run_download_pdf(slug, drive_export_url))
 
 
+async def _handle_participant_registered(data: dict):
+    """Apply daemon identity write-back for a newly registered participant."""
+    pid = str(data.get("participant_id") or "").strip()
+    if not pid or pid.startswith("__"):
+        return
+    name = data.get("name")
+    avatar = data.get("avatar")
+    score = data.get("score")
+    if isinstance(name, str):
+        state.participant_names[pid] = name
+    if isinstance(avatar, str):
+        state.participant_avatars[pid] = avatar
+    if isinstance(score, (int, float)):
+        state.scores[pid] = int(score)
+    await broadcast_participant_update()
+
+
+async def _handle_participant_renamed(data: dict):
+    """Apply daemon identity write-back for participant rename."""
+    pid = str(data.get("participant_id") or "").strip()
+    name = data.get("name")
+    if not pid or pid.startswith("__") or not isinstance(name, str):
+        return
+    state.participant_names[pid] = name
+    await broadcast_participant_update()
+
+
+async def _handle_participant_avatar_updated(data: dict):
+    """Apply daemon identity write-back for participant avatar updates."""
+    pid = str(data.get("participant_id") or "").strip()
+    avatar = data.get("avatar")
+    if not pid or pid.startswith("__") or not isinstance(avatar, str):
+        return
+    state.participant_avatars[pid] = avatar
+    await broadcast_participant_update()
+
+
+async def _handle_participant_location(data: dict):
+    """Apply daemon identity write-back for participant location updates."""
+    pid = str(data.get("participant_id") or "").strip()
+    location = data.get("location")
+    if not pid or pid.startswith("__") or not isinstance(location, str):
+        return
+    state.locations[pid] = location
+    await broadcast_participant_update()
+
+
 _DAEMON_MSG_HANDLERS = {
     MSG_BROADCAST: _handle_broadcast,
     MSG_SEND_TO_HOST: _handle_send_to_host,
@@ -203,6 +250,10 @@ _DAEMON_MSG_HANDLERS = {
     MSG_CODE_TIMESTAMP: _handle_code_timestamp,
     MSG_DAEMON_PING: None,  # heartbeat only — last_seen already updated
     MSG_DOWNLOAD_PDF: _handle_download_pdf,
+    "participant_registered": _handle_participant_registered,
+    "participant_renamed": _handle_participant_renamed,
+    "participant_avatar_updated": _handle_participant_avatar_updated,
+    "participant_location": _handle_participant_location,
 }
 
 
