@@ -1,3 +1,5 @@
+import os
+import subprocess
 from pathlib import Path
 
 import scripts.render_puml_svgs as renderer
@@ -39,6 +41,123 @@ EXPECTED_SEQUENCE_SUMMARIES = [
     "This diagram covers participant paste and feedback actions, Railway-to-daemon upload handoff, and best-effort emoji delivery to both the host UI and desktop overlay.",
     "This diagram covers activity switching, file-backed notes and summary publication, participant state refreshes, and host-controlled leaderboard reveal and hide.",
 ]
+
+
+def _run_repo(
+    repo: Path,
+    args: list[str],
+    *,
+    env: dict[str, str] | None = None,
+) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(args, cwd=repo, env=env, check=False, capture_output=True, text=True)
+
+
+def _run_repo_ok(repo: Path, args: list[str], *, env: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
+    result = _run_repo(repo, args, env=env)
+    assert result.returncode == 0, result.stderr or result.stdout
+    return result
+
+
+def _write_text(path: Path, text: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text, encoding="utf-8")
+
+
+def _sequence_source_text(label: str) -> str:
+    return f"@startuml\nA -> B : {label}\n@enduml\n"
+
+
+def _sequence_svg_text(path: Path) -> str:
+    return f"<svg>{path.read_text(encoding='utf-8')}</svg>\n"
+
+
+def _write_sequence_source(path: Path, label: str) -> None:
+    _write_text(path, _sequence_source_text(label))
+
+
+def _write_matching_svg(source: Path, svg_path: Path) -> None:
+    _write_text(svg_path, _sequence_svg_text(source))
+
+
+def _write_fake_plantuml(bin_dir: Path) -> None:
+    _write_text(
+        bin_dir / "plantuml",
+        """#!/usr/bin/env python3
+import sys
+from pathlib import Path
+
+output_dir = Path(sys.argv[sys.argv.index("-o") + 1])
+source = Path(sys.argv[-1])
+output_dir.mkdir(parents=True, exist_ok=True)
+(output_dir / f"{source.stem}.svg").write_text(
+    f"<svg>{source.read_text(encoding='utf-8')}</svg>\\n",
+    encoding="utf-8",
+)
+""",
+    )
+    (bin_dir / "plantuml").chmod(0o755)
+
+
+def _write_failing_uv(bin_dir: Path) -> None:
+    _write_text(
+        bin_dir / "uv",
+        "#!/bin/sh\n"
+        "echo 'uv should not run' >&2\n"
+        "exit 99\n",
+    )
+    (bin_dir / "uv").chmod(0o755)
+
+
+def _create_hook_test_repo(tmp_path: Path) -> tuple[Path, dict[str, str]]:
+    repo = tmp_path / "repo"
+    _write_text(repo / "hooks" / "pre-commit", PRE_COMMIT_HOOK.read_text(encoding="utf-8"))
+    _write_text(repo / "hooks" / "pre-push", PRE_PUSH_HOOK.read_text(encoding="utf-8"))
+    _write_text(
+        repo / "scripts" / "render_puml_svgs.py",
+        (ROOT / "scripts" / "render_puml_svgs.py").read_text(encoding="utf-8"),
+    )
+    _write_text(
+        repo / "scripts" / "generate_apis_md.py",
+        """#!/usr/bin/env python3
+import argparse
+from pathlib import Path
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--output", required=True)
+args = parser.parse_args()
+Path(args.output).write_text("# API\\n", encoding="utf-8")
+""",
+    )
+    _write_text(repo / "API.md", "# API\n")
+    _write_text(repo / "DB.md", "# DB\n")
+
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir(parents=True, exist_ok=True)
+    _write_fake_plantuml(bin_dir)
+    _write_failing_uv(bin_dir)
+
+    env = os.environ.copy()
+    env["PATH"] = f"{bin_dir}:{env['PATH']}"
+
+    _run_repo_ok(repo, ["git", "init"])
+    _run_repo_ok(repo, ["git", "config", "user.name", "Hook Tests"])
+    _run_repo_ok(repo, ["git", "config", "user.email", "hook-tests@example.com"])
+    return repo, env
+
+
+def _commit_all(repo: Path) -> None:
+    _run_repo_ok(repo, ["git", "add", "."])
+    _run_repo_ok(repo, ["git", "commit", "-m", "initial"])
+
+
+def _seed_sequence_repo(tmp_path: Path, stem: str = "01-a", label: str = "first") -> tuple[Path, dict[str, str]]:
+    repo, env = _create_hook_test_repo(tmp_path)
+    source = repo / "docs" / "sequences" / f"{stem}.puml"
+    svg = repo / "docs" / "sequences" / "svg" / f"{stem}.svg"
+    _write_sequence_source(source, label)
+    _write_matching_svg(source, svg)
+    _commit_all(repo)
+    return repo, env
 
 
 def _section_lines(text: str, heading: str) -> list[str]:
@@ -102,11 +221,11 @@ def test_pre_commit_hook_renders_and_stages_sequence_svgs():
     assert 'python3 "$REPO_ROOT/scripts/generate_apis_md.py" --output "$REPO_ROOT/API.md" >/dev/null' in text
     assert 'git add "$REPO_ROOT/API.md" "$REPO_ROOT/DB.md"' in text
     assert "git diff --cached --name-only --diff-filter=ACMR -- scripts/render_puml_svgs.py" in text
-    assert "git diff --cached --name-only --diff-filter=ACMR -- 'docs/sequences/*.puml'" in text
-    assert 'python3 "$REPO_ROOT/scripts/render_puml_svgs.py" >/dev/null' in text
-    assert 'git add "$REPO_ROOT"/docs/sequences/svg/*.svg' in text
-    assert 'set -- "$@" "$REPO_ROOT/docs/sequences/svg/$stem.svg"' in text
-    assert 'git add "$@"' in text
+    assert "git diff --cached --name-only --diff-filter=ACMRD -- 'docs/sequences/*.puml'" in text
+    assert 'python3 "$REPO_ROOT/scripts/render_puml_svgs.py" --delete-orphans >/dev/null' in text
+    assert 'git add -A "$REPO_ROOT/docs/sequences/svg"' in text
+    assert 'set -- --delete-orphans' in text
+    assert 'if [ -f "$REPO_ROOT/$path" ]; then' in text
 
 
 def test_pre_push_hook_checks_rendered_sequence_svgs():
@@ -115,6 +234,73 @@ def test_pre_push_hook_checks_rendered_sequence_svgs():
     assert 'python3 "$REPO_ROOT/scripts/render_puml_svgs.py" --check' in text
     assert '$RUNNER bash "$REPO_ROOT/tests/check-all.sh"' in text
     assert '$RUNNER python3 -m vulture' in text
+
+
+def test_pre_commit_hook_stages_svg_deletion_for_staged_source_delete(tmp_path):
+    repo, env = _seed_sequence_repo(tmp_path)
+    svg = repo / "docs" / "sequences" / "svg" / "01-a.svg"
+
+    _run_repo_ok(repo, ["git", "rm", "docs/sequences/01-a.puml"])
+
+    result = _run_repo(repo, ["sh", "hooks/pre-commit"], env=env)
+
+    assert result.returncode == 0, result.stderr or result.stdout
+    assert not svg.exists()
+    assert _run_repo_ok(
+        repo,
+        ["git", "diff", "--cached", "--name-status", "--", "docs/sequences/svg"],
+    ).stdout.splitlines() == ["D\tdocs/sequences/svg/01-a.svg"]
+
+
+def test_pre_commit_hook_replaces_svg_for_staged_source_rename(tmp_path):
+    repo, env = _seed_sequence_repo(tmp_path)
+    old_svg = repo / "docs" / "sequences" / "svg" / "01-a.svg"
+    new_source = repo / "docs" / "sequences" / "02-b.puml"
+    new_svg = repo / "docs" / "sequences" / "svg" / "02-b.svg"
+
+    _run_repo_ok(repo, ["git", "mv", "docs/sequences/01-a.puml", "docs/sequences/02-b.puml"])
+
+    result = _run_repo(repo, ["sh", "hooks/pre-commit"], env=env)
+
+    assert result.returncode == 0, result.stderr or result.stdout
+    assert not old_svg.exists()
+    assert new_svg.read_text(encoding="utf-8") == _sequence_svg_text(new_source)
+    svg_status = _run_repo_ok(
+        repo,
+        ["git", "diff", "--cached", "--name-status", "--", "docs/sequences/svg"],
+    ).stdout.splitlines()
+    assert svg_status in [
+        ["D\tdocs/sequences/svg/01-a.svg", "A\tdocs/sequences/svg/02-b.svg"],
+        ["R100\tdocs/sequences/svg/01-a.svg\tdocs/sequences/svg/02-b.svg"],
+    ]
+
+
+def test_pre_push_hook_fails_for_stale_sequence_svg_before_other_checks(tmp_path):
+    repo, env = _seed_sequence_repo(tmp_path)
+    source = repo / "docs" / "sequences" / "01-a.puml"
+    _write_sequence_source(source, "changed")
+    _run_repo_ok(repo, ["git", "add", "docs/sequences/01-a.puml"])
+    _run_repo_ok(repo, ["git", "commit", "-m", "stale source"])
+
+    result = _run_repo(repo, ["sh", "hooks/pre-push"], env=env)
+
+    assert result.returncode == 1
+    assert "stale or missing: docs/sequences/svg/01-a.svg" in result.stdout
+    assert "Running pre-push checks:" not in result.stdout
+    assert "uv should not run" not in result.stderr
+
+
+def test_pre_push_hook_fails_for_orphaned_sequence_svg_before_other_checks(tmp_path):
+    repo, env = _seed_sequence_repo(tmp_path)
+    _run_repo_ok(repo, ["git", "rm", "docs/sequences/01-a.puml"])
+    _run_repo_ok(repo, ["git", "commit", "-m", "remove source only"])
+
+    result = _run_repo(repo, ["sh", "hooks/pre-push"], env=env)
+
+    assert result.returncode == 1
+    assert "orphaned: docs/sequences/svg/01-a.svg" in result.stdout
+    assert "Running pre-push checks:" not in result.stdout
+    assert "uv should not run" not in result.stderr
 
 
 def test_architecture_md_describes_ai_summary_as_primary_current_path():

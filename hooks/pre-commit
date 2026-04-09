@@ -11,23 +11,18 @@ python3 "$REPO_ROOT/scripts/generate_apis_md.py" --output "$REPO_ROOT/API.md" >/
 git add "$REPO_ROOT/API.md" "$REPO_ROOT/DB.md"
 
 # Keep sequence SVGs in sync when sequence sources or the renderer itself changes.
-staged_sequence_files="$(git diff --cached --name-only --diff-filter=ACMR -- 'docs/sequences/*.puml')"
+staged_sequence_changes="$(git diff --cached --name-only --diff-filter=ACMRD -- 'docs/sequences/*.puml')"
 
 if git diff --cached --name-only --diff-filter=ACMR -- scripts/render_puml_svgs.py | grep -q .; then
-  python3 "$REPO_ROOT/scripts/render_puml_svgs.py" >/dev/null
-  git add "$REPO_ROOT"/docs/sequences/svg/*.svg
-elif [ -n "$staged_sequence_files" ]; then
-  set --
-  for path in $staged_sequence_files; do
-    set -- "$@" "$REPO_ROOT/$path"
+  python3 "$REPO_ROOT/scripts/render_puml_svgs.py" --delete-orphans >/dev/null
+  git add -A "$REPO_ROOT/docs/sequences/svg"
+elif [ -n "$staged_sequence_changes" ]; then
+  set -- --delete-orphans
+  for path in $staged_sequence_changes; do
+    if [ -f "$REPO_ROOT/$path" ]; then
+      set -- "$@" "$REPO_ROOT/$path"
+    fi
   done
   python3 "$REPO_ROOT/scripts/render_puml_svgs.py" "$@" >/dev/null
-
-  set --
-  for path in $staged_sequence_files; do
-    stem=${path##*/}
-    stem=${stem%.puml}
-    set -- "$@" "$REPO_ROOT/docs/sequences/svg/$stem.svg"
-  done
-  git add "$@"
+  git add -A "$REPO_ROOT/docs/sequences/svg"
 fi

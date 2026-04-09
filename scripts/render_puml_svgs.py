@@ -81,6 +81,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument("--check", action="store_true")
     mode.add_argument("--watch", action="store_true")
+    parser.add_argument("--delete-orphans", action="store_true")
     parser.add_argument("--plantuml-bin", default="plantuml")
     return parser.parse_args(argv)
 
@@ -98,6 +99,14 @@ def _resolve_files(paths: list[str]) -> list[Path]:
 
 def _current_watch_files(explicit_files: list[Path]) -> list[Path]:
     return explicit_files if explicit_files else discover_puml_files(SEQUENCES_DIR)
+
+
+def _sync_source_files(explicit_files: list[Path]) -> list[Path]:
+    source_files = {path.resolve(): path.resolve() for path in discover_puml_files(SEQUENCES_DIR)}
+    for path in explicit_files:
+        if path.exists():
+            source_files[path] = path
+    return sorted(source_files.values())
 
 
 def _find_orphaned_svgs(source_files: list[Path], output_dir: Path) -> list[Path]:
@@ -120,18 +129,35 @@ def _delete_outputs(outputs: list[Path]) -> list[Path]:
     return deleted_outputs
 
 
+def _render_with_orphan_cleanup(
+    files_to_render: list[Path],
+    source_files: list[Path],
+    output_dir: Path,
+    plantuml_bin: str = "plantuml",
+) -> tuple[list[Path], list[Path]]:
+    rendered_outputs = (
+        render_puml_files(files_to_render, output_dir, plantuml_bin=plantuml_bin)
+        if files_to_render
+        else []
+    )
+    deleted_outputs = _delete_outputs(_find_orphaned_svgs(source_files, output_dir))
+    return rendered_outputs, deleted_outputs
+
+
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(sys.argv[1:] if argv is None else argv)
     explicit_files = _resolve_files(args.paths)
 
     if args.check:
+        source_files = _sync_source_files(explicit_files)
         files = explicit_files or discover_puml_files(SEQUENCES_DIR)
-        if not files:
-            return 0
         stale = check_render_sync(files, SVG_DIR, plantuml_bin=args.plantuml_bin)
+        orphaned = _find_orphaned_svgs(source_files, SVG_DIR)
         for path in stale:
             print(f"stale or missing: {_display_path(path)}")
-        return 1 if stale else 0
+        for path in orphaned:
+            print(f"orphaned: {_display_path(path)}")
+        return 1 if stale or orphaned else 0
 
     if args.watch:
         snapshot = build_input_snapshot(_current_watch_files(explicit_files))
@@ -155,11 +181,25 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     files = explicit_files or discover_puml_files(SEQUENCES_DIR)
-    if not files:
+    if not files and not args.delete_orphans:
         return 0
 
-    for output in render_puml_files(files, SVG_DIR, plantuml_bin=args.plantuml_bin):
+    if args.delete_orphans:
+        source_files = _sync_source_files(explicit_files)
+        rendered_outputs, deleted_outputs = _render_with_orphan_cleanup(
+            files,
+            source_files,
+            SVG_DIR,
+            plantuml_bin=args.plantuml_bin,
+        )
+    else:
+        rendered_outputs = render_puml_files(files, SVG_DIR, plantuml_bin=args.plantuml_bin)
+        deleted_outputs = []
+
+    for output in rendered_outputs:
         print(f"rendered {_display_path(output)}")
+    for output in deleted_outputs:
+        print(f"deleted {_display_path(output)}")
     return 0
 
 

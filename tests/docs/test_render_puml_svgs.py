@@ -198,6 +198,42 @@ def test_main_check_mode_returns_zero_when_svg_matches(tmp_path, monkeypatch, ca
     assert capsys.readouterr().out == ""
 
 
+def test_main_check_mode_reports_orphaned_svgs(tmp_path, monkeypatch, capsys):
+    sequences_dir = tmp_path / "docs" / "sequences"
+    svg_dir = sequences_dir / "svg"
+    orphan_svg = svg_dir / "orphan.svg"
+    orphan_svg.parent.mkdir(parents=True, exist_ok=True)
+    orphan_svg.write_text("<svg>orphan</svg>", encoding="utf-8")
+
+    monkeypatch.setattr(renderer, "ROOT", tmp_path)
+    monkeypatch.setattr(renderer, "SEQUENCES_DIR", sequences_dir)
+    monkeypatch.setattr(renderer, "SVG_DIR", svg_dir)
+
+    assert renderer.main(["--check"]) == 1
+    assert capsys.readouterr().out.splitlines() == ["orphaned: docs/sequences/svg/orphan.svg"]
+
+
+def test_main_delete_orphans_mode_keeps_orphans_when_render_fails(tmp_path, monkeypatch, capsys):
+    sequences_dir = tmp_path / "docs" / "sequences"
+    svg_dir = sequences_dir / "svg"
+    source = sequences_dir / "01-a.puml"
+    orphan_svg = svg_dir / "orphan.svg"
+    _write_puml(source, "first")
+    orphan_svg.parent.mkdir(parents=True, exist_ok=True)
+    orphan_svg.write_text("<svg>orphan</svg>", encoding="utf-8")
+
+    monkeypatch.setattr(renderer, "ROOT", tmp_path)
+    monkeypatch.setattr(renderer, "SEQUENCES_DIR", sequences_dir)
+    monkeypatch.setattr(renderer, "SVG_DIR", svg_dir)
+    monkeypatch.setattr(renderer, "render_puml_files", lambda *args, **kwargs: (_ for _ in ()).throw(SystemExit("plantuml failed")))
+
+    with pytest.raises(SystemExit, match="plantuml failed"):
+        renderer.main(["--delete-orphans"])
+
+    assert orphan_svg.exists()
+    assert capsys.readouterr().out == ""
+
+
 def test_main_watch_mode_rediscovers_new_files_when_starting_empty(tmp_path, monkeypatch, capsys):
     sequences_dir = tmp_path / "docs" / "sequences"
     svg_dir = sequences_dir / "svg"
