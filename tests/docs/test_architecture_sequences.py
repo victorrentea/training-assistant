@@ -1,5 +1,7 @@
 from pathlib import Path
 
+import scripts.render_puml_svgs as renderer
+
 
 ROOT = Path(__file__).resolve().parents[2]
 SEQUENCES_DIR = ROOT / "docs" / "sequences"
@@ -20,9 +22,17 @@ def _sorted_stems(directory: Path, suffix: str) -> list[str]:
     return sorted(path.stem for path in directory.glob(f"*{suffix}"))
 
 
+def _expected_sequence_sources() -> list[Path]:
+    return [SEQUENCES_DIR / f"{stem}.puml" for stem in EXPECTED_SEQUENCE_STEMS]
+
+
 def test_expected_sequence_source_files_exist():
     assert _sorted_stems(SEQUENCES_DIR, ".puml") == EXPECTED_SEQUENCE_STEMS
 
 
 def test_expected_sequence_svg_files_exist():
     assert _sorted_stems(SVG_DIR, ".svg") == EXPECTED_SEQUENCE_STEMS
+
+
+def test_expected_sequence_svgs_are_in_sync():
+    assert renderer.check_render_sync(_expected_sequence_sources(), SVG_DIR) == []
