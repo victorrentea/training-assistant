@@ -15,7 +15,8 @@ actor "Host browser\nhost-landing.js" as Host
 participant "Daemon session router\n/api/session/*" as SessionAPI
 collections "Pending request\nsession.pending" as Pending
 participant "Daemon main loop\n__main__.py" as Loop
-database "Session files\nsession-state.json\nglobal-state.json" as Disk
+database "Sessions root\nglobal-state.json" as GlobalState
+database "Active session folder\nsession-state.json" as SessionState
 participant "Railway daemon WS\nfeatures/ws/router.py" as RailwayWS
 participant "Existing host / participant\nsession WS clients" as Clients
 
@@ -33,27 +34,27 @@ alt Start a brand new session
   SessionAPI --> Host: return generated session_id
 else Resume an existing folder
   Host -> SessionAPI: POST /api/session/resume {folder}
-  SessionAPI -> Disk: load stable session_id from session-state.json
+  SessionAPI -> SessionState: load stable session_id from selected folder's\nsession-state.json
   SessionAPI -> Pending: put(session_request=create with existing session_id)
   SessionAPI --> Host: return stable session_id
 end
 
 Loop -> Pending: pop(session_request)
-Loop -> Disk: create/find session folder\npersist session_id metadata
-Loop -> Disk: load existing session snapshot or seed a new one
-Loop -> Disk: persist global-state.json
+Loop -> SessionState: create/find active session folder\npersist session_id metadata into session-state.json
+Loop -> SessionState: load existing session snapshot or seed a new\nsession-state.json
+Loop -> GlobalState: persist global-state.json at sessions root
 Loop -> RailwayWS: send set_session_id {session_id, session_name}
 RailwayWS -> Clients: redirect + close stale sockets\nwhen the active session changed
 
-note over Loop, Disk
+note over Loop, GlobalState
 The main loop keeps writing the daemon lock heartbeat and
-periodically flushes session/global state backups while active.
+periodically flushes both backups while a session stays active.
 end note
 
 == Backend or daemon recovery ==
 
-Loop -> Disk: load global-state.json at startup
-Loop -> Disk: load session-state.json for the active folder
+Loop -> GlobalState: load global-state.json from sessions root at startup
+Loop -> SessionState: load session-state.json from the active session folder
 Loop -> Loop: restore in-memory session caches from disk
 Loop -> RailwayWS: on_connect -> resend set_session_id
 RailwayWS -> Clients: allow reconnects for the restored session_id
@@ -68,7 +69,8 @@ end note
 Host -> SessionAPI: POST /api/session/end
 SessionAPI -> Pending: put(session_request=end)
 Loop -> Pending: pop(end)
-Loop -> Disk: force-flush session snapshot\nsave key points\npersist empty active_session_id
+Loop -> SessionState: force-flush session-state.json\nsave key points in the active session folder
+Loop -> GlobalState: persist global-state.json with empty active_session_id
 Loop -> RailwayWS: send set_session_id with no session_id
 RailwayWS -> Clients: redirect host to /host\nredirect participants to /?code=<old>&retry=1
 @enduml

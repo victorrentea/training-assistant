@@ -16,21 +16,13 @@ EXPECTED_SEQUENCE_STEMS = [
 ]
 
 
-def test_expected_sequence_source_files_exist():
-    missing = [
-        SEQUENCES_DIR / f"{stem}.puml"
-        for stem in EXPECTED_SEQUENCE_STEMS
-        if not (SEQUENCES_DIR / f"{stem}.puml").is_file()
-    ]
+def _sorted_stems(directory: Path, suffix: str) -> list[str]:
+    return sorted(path.stem for path in directory.glob(f"*{suffix}"))
 
-    assert missing == []
+
+def test_expected_sequence_source_files_exist():
+    assert _sorted_stems(SEQUENCES_DIR, ".puml") == EXPECTED_SEQUENCE_STEMS
 
 
 def test_expected_sequence_svg_files_exist():
-    missing = [
-        SVG_DIR / f"{stem}.svg"
-        for stem in EXPECTED_SEQUENCE_STEMS
-        if not (SVG_DIR / f"{stem}.svg").is_file()
-    ]
-
-    assert missing == []
+    assert _sorted_stems(SVG_DIR, ".svg") == EXPECTED_SEQUENCE_STEMS
