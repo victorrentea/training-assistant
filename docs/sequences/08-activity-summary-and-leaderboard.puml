@@ -14,6 +14,7 @@ skinparam RoundCorner 8
 actor "Host browser\nstatic/host.js" as Host
 actor "Participant browser\nstatic/participant.js" as Participant
 participant "Daemon activity router" as ActivityAPI
+participant "Daemon participant state router" as ParticipantStateAPI
 participant "Daemon main loop\nsummary probe" as Loop
 database "Session folder\nai-summary.md + notes" as SessionFiles
 participant "Daemon summary / misc APIs" as SummaryAPI
@@ -25,7 +26,8 @@ Host -> ActivityAPI: POST /host/activity {activity}
 ActivityAPI -> ActivityAPI: set participant_state.current_activity
 ActivityAPI -> RailwayWS: broadcast activity_updated
 RailwayWS --> Participant: activity_updated
-Participant -> SummaryAPI: refresh /api/participant/state\nwhen stateful activity changes
+Participant -> ParticipantStateAPI: refresh /api/participant/state\nwhen stateful activity changes
+ParticipantStateAPI --> Participant: full personalised state payload
 RailwayWS --> Host: activity_updated
 end
 
