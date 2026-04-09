@@ -3,12 +3,12 @@
 Run as: python3 -m daemon
 """
 
+import asyncio
 import hashlib
 import json
 import os
 import re
 import time
-import asyncio
 from dataclasses import replace as dc_replace
 from datetime import date, datetime
 from pathlib import Path
