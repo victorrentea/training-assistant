@@ -2,11 +2,11 @@
 Hermetic E2E test: participant name correctly shown in host UI.
 
 Regression for: participant name shown as 'Guest <uuid[:8]>' in host UI immediately
-after joining, because Railway's state.participant_names was empty when participant
-connected WS (daemon assigns names via REST, not via Railway).
+after joining, when identity ownership moved to the daemon and host-side participant
+rendering depended on delayed updates.
 
-Fix: daemon sends 'participant_registered' WS message to Railway on registration
-so Railway has the real name before the participant opens WS.
+Current behavior: daemon is source of truth for identity and pushes
+`participant_list_updated` directly to the host browser.
 """
 
 import os
@@ -34,10 +34,9 @@ def test_participant_name_shown_in_host_ui():
 
     This tests the full pipeline:
     1. Daemon registers participant and assigns a LOTR name
-    2. Daemon syncs name to Railway via WS (participant_registered message)
-    3. Daemon sends participant_list_updated directly to host browser
-    4. Host browser receives broadcast and renders participant list
-    5. Name shown must be the real name, not the 'Guest <uuid[:8]>' fallback
+    2. Daemon sends participant_list_updated directly to host browser
+    3. Host browser receives the update and renders participant list
+    4. Name shown must be the real name, not the 'Guest <uuid[:8]>' fallback
     """
     session_id = fresh_session("NameDisplayTest")
 

@@ -1,4 +1,5 @@
 """Tests for daemon participant router."""
+import json
 from unittest.mock import patch
 
 import pytest
@@ -22,6 +23,24 @@ def fresh_state():
 def client(fresh_state):
     """TestClient with participant router mounted."""
     app = FastAPI()
+    app.include_router(router)
+    return TestClient(app)
+
+
+@pytest.fixture
+def client_with_writeback_header(fresh_state):
+    """TestClient that mirrors host_server write-back header behavior."""
+    app = FastAPI()
+
+    @app.middleware("http")
+    async def write_back_middleware(request, call_next):
+        request.state.write_back_events = []
+        response = await call_next(request)
+        events = getattr(request.state, "write_back_events", [])
+        if events:
+            response.headers["X-Write-Back-Events"] = json.dumps(events)
+        return response
+
     app.include_router(router)
     return TestClient(app)
 
@@ -144,3 +163,45 @@ class TestParticipantState:
         resp = client.get("/api/participant/state", headers={"X-Participant-ID": "uuid1"})
         assert resp.status_code == 200
         assert "participant_count" not in resp.json()
+
+
+class TestNoParticipantWriteBackEvents:
+    def test_register_does_not_emit_write_back_events(self, client_with_writeback_header):
+        resp = client_with_writeback_header.post(
+            "/api/participant/register",
+            json={},
+            headers={"X-Participant-ID": "uuid1"},
+        )
+        assert resp.status_code == 200
+        assert "X-Write-Back-Events" not in resp.headers
+
+    def test_rename_does_not_emit_write_back_events(self, client_with_writeback_header, fresh_state):
+        fresh_state.participant_names["uuid1"] = "Gandalf"
+        fresh_state.participant_avatars["uuid1"] = "gandalf.png"
+        resp = client_with_writeback_header.put(
+            "/api/participant/name",
+            json={"name": "CustomName"},
+            headers={"X-Participant-ID": "uuid1"},
+        )
+        assert resp.status_code == 204
+        assert "X-Write-Back-Events" not in resp.headers
+
+    def test_roll_avatar_does_not_emit_write_back_events(self, client_with_writeback_header, fresh_state):
+        fresh_state.participant_names["uuid1"] = "Gandalf"
+        fresh_state.participant_avatars["uuid1"] = "gandalf.png"
+        resp = client_with_writeback_header.post(
+            "/api/participant/roll-avatar",
+            json={"rejected": []},
+            headers={"X-Participant-ID": "uuid1"},
+        )
+        assert resp.status_code == 200
+        assert "X-Write-Back-Events" not in resp.headers
+
+    def test_location_does_not_emit_write_back_events(self, client_with_writeback_header):
+        resp = client_with_writeback_header.post(
+            "/api/participant/location",
+            json={"location": "Bucharest, Romania"},
+            headers={"X-Participant-ID": "uuid1"},
+        )
+        assert resp.status_code == 204
+        assert "X-Write-Back-Events" not in resp.headers

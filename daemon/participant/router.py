@@ -380,17 +380,6 @@ async def register_participant(request: Request):
 
     await _notify_host_participant_list()
 
-    # Broadcast participant registered event
-    request.state.write_back_events = [{
-        "type": "participant_registered",
-        "participant_id": pid,
-        "name": raw_name,
-        "avatar": avatar,
-        "universe": ps.participant_universes.get(pid, ""),
-        "score": ps.scores.get(pid, 0),
-        "debate_side": None,
-    }]
-
     return RegisterResponse(name=raw_name, avatar=avatar)
 
 
@@ -419,12 +408,6 @@ async def rename_participant(request: Request, body: RenameRequest):
 
     await _notify_host_participant_list()
 
-    request.state.write_back_events = [{
-        "type": "participant_renamed",
-        "participant_id": pid,
-        "name": raw_name,
-    }]
-
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
@@ -446,12 +429,6 @@ async def roll_avatar_endpoint(request: Request, body: AvatarRequest):
     # Sync back to cache
     participant_state.participant_avatars[pid] = new_avatar
     await _notify_host_participant_list()
-
-    request.state.write_back_events = [{
-        "type": "participant_avatar_updated",
-        "participant_id": pid,
-        "avatar": new_avatar,
-    }]
 
     return AvatarResponse(avatar=new_avatar)
 
@@ -479,14 +456,6 @@ async def set_location(request: Request, body: LocationRequest):
         participant_state.location_countries.pop(pid, None)
 
     await _notify_host_participant_list()
-
-    request.state.write_back_events = [{
-        "type": "participant_location",
-        "participant_id": pid,
-        "location": loc,
-        "location_tz": tz,
-        "location_country": country,
-    }]
 
     return Response(status_code=204)
 

@@ -139,8 +139,8 @@ def test_avatar_refresh_gives_unique_avatar_to_second_participant():
         expected_avatar1 = name1.lower().replace(' ', '-') + '.png'
         assert avatar1_original == expected_avatar1, f"P1 avatar should match name, got {avatar1_original}"
 
-        # P1 refreshes avatar via REST API (direct call from test, not browser JS,
-        # because the participant_avatar_updated event is not propagated back to the browser).
+        # P1 refreshes avatar via REST API (direct call from test, not browser JS),
+        # then validates the resulting identity assignment for the next participant.
         # Get P1's UUID from the page
         p1_uuid = page1.evaluate("() => myUUID")
         auth = base64.b64encode(f"{HOST_USER}:{HOST_PASS}".encode()).decode()
