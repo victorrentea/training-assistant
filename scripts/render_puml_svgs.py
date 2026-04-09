@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import argparse
+import hashlib
 import shutil
 import subprocess
+import sys
 import tempfile
+import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -57,13 +61,56 @@ def check_render_sync(
     return stale
 
 
-def main() -> int:
-    files = discover_puml_files(SEQUENCES_DIR)
+def build_input_snapshot(files: list[Path]) -> dict[Path, str]:
+    return {path: hashlib.sha256(path.read_bytes()).hexdigest() for path in files}
+
+
+def changed_puml_files(before: dict[Path, str], after: dict[Path, str]) -> list[Path]:
+    return sorted(path for path, digest in after.items() if before.get(path) != digest)
+
+
+def parse_args(argv: list[str]) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Render PlantUML sequence diagrams to SVG")
+    parser.add_argument("paths", nargs="*")
+    parser.add_argument("--check", action="store_true")
+    parser.add_argument("--watch", action="store_true")
+    parser.add_argument("--plantuml-bin", default="plantuml")
+    return parser.parse_args(argv)
+
+
+def _display_path(path: Path) -> str:
+    try:
+        return str(path.relative_to(ROOT))
+    except ValueError:
+        return str(path)
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = parse_args(sys.argv[1:] if argv is None else argv)
+    files = [Path(path).resolve() for path in args.paths] if args.paths else discover_puml_files(SEQUENCES_DIR)
     if not files:
         return 0
 
-    for output in render_puml_files(files, SVG_DIR):
-        print(f"rendered {output.relative_to(ROOT)}")
+    if args.check:
+        stale = check_render_sync(files, SVG_DIR, plantuml_bin=args.plantuml_bin)
+        for path in stale:
+            print(f"stale or missing: {_display_path(path)}")
+        return 1 if stale else 0
+
+    if args.watch:
+        snapshot = build_input_snapshot(files)
+        while True:
+            time.sleep(1)
+            current = build_input_snapshot(files)
+            changed = changed_puml_files(snapshot, current)
+            if changed:
+                for output in render_puml_files(changed, SVG_DIR, plantuml_bin=args.plantuml_bin):
+                    print(f"rendered {_display_path(output)}")
+                snapshot = current
+        return 0
+
+    for output in render_puml_files(files, SVG_DIR, plantuml_bin=args.plantuml_bin):
+        print(f"rendered {_display_path(output)}")
     return 0
 
 
