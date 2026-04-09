@@ -795,7 +795,6 @@ def run() -> None:
     except Exception as e:
         log.error("session", f"Initial sync failed: {e}")
 
-    last_summary_at = 0.0  # monotonic time of last summary run
     notes_summary_probe_prev: dict | None = _build_notes_summary_probe(config.session_folder)
     runtime_session_snapshot: dict | None = _without_session_id(startup_session_state) if startup_session_state else None
     last_persist_poll_at: float = 0.0
@@ -854,7 +853,7 @@ def run() -> None:
     # ── Start local host panel server ──
     from daemon.config import DAEMON_HOST_PORT
     from daemon.host_server import start_host_server
-    host_server_thread = start_host_server(config.server_url, port=DAEMON_HOST_PORT)
+    start_host_server(config.server_url, port=DAEMON_HOST_PORT)
     log.info("daemon", f"Host panel: http://127.0.0.1:{DAEMON_HOST_PORT}/host")
 
     try:
@@ -947,7 +946,6 @@ def run() -> None:
                 try:
                     session_req = session_pending.pop("session_request")
                     action = session_req.get("action") if session_req else None
-                    global_state_persisted = False
                     if action == "create":
                         name = session_req["name"]
                         sid = session_req.get("session_id")
@@ -1015,13 +1013,11 @@ def run() -> None:
                             session_stack.append(new_session)
                             current_key_points, summary_watermark = load_key_points(folder)
                             _do_save_daemon_state()
-                            global_state_persisted = True
                             notes_file = find_notes_in_folder(folder)
                             if notes_file:
                                 notes_lines = len(notes_file.read_text(encoding="utf-8", errors="replace").splitlines())
                                 log.info("session", f"Notes found ({notes_lines} lines): {notes_file.name}")
                             config = dc_replace(config, session_folder=folder, session_notes=notes_file)
-                            new_mode = "conference" if session_type == "talk" else "workshop"
                             sync_session_to_server(
                                 config,
                                 session_stack,
@@ -1077,7 +1073,6 @@ def run() -> None:
                         session_stack.append(new_session)
                         current_key_points, summary_watermark = load_key_points(folder)
                         _do_save_daemon_state()
-                        global_state_persisted = True
                         notes_file = find_notes_in_folder(folder)
                         if notes_file:
                             notes_lines = len(notes_file.read_text(encoding="utf-8", errors="replace").splitlines())
@@ -1142,7 +1137,6 @@ def run() -> None:
                             addon_bridge_client.send_session_ended()
                             log.info("session", f"Ended: {ended['name']}")
                         _do_save_daemon_state()
-                        global_state_persisted = True
                         if pending_global_state is None:
                             pending_global_state = _build_global_state()
                         last_global_state_hash, _ = _flush_global_state_backup(
@@ -1171,7 +1165,6 @@ def run() -> None:
                                 save_key_points(new_folder, current_key_points, summary_watermark, session_start_date(session_stack[-1]))
                             session_stack[-1]["name"] = new_name
                             _do_save_daemon_state()
-                            global_state_persisted = True
                             notes_file = find_notes_in_folder(new_folder)
                             config = dc_replace(config, session_folder=new_folder, session_notes=notes_file)
                             sync_session_to_server(config, session_stack, current_key_points)
@@ -1180,14 +1173,12 @@ def run() -> None:
                     elif action == "pause" and session_stack:
                         pause_session(session_stack[-1], datetime.now(), reason="explicit")
                         _do_save_daemon_state()
-                        global_state_persisted = True
                         sync_session_to_server(config, session_stack, current_key_points)
                         log.info("session", f"Paused: {session_stack[-1]['name']}")
 
                     elif action == "resume" and session_stack:
                         resume_session(session_stack[-1], datetime.now())
                         _do_save_daemon_state()
-                        global_state_persisted = True
                         resume_folder = sessions_root / session_stack[-1]["name"]
                         try:
                             if _ensure_session_state_file_for_resume(
@@ -1228,7 +1219,6 @@ def run() -> None:
                         talk_points, talk_wm = load_key_points(talk_folder)
                         current_key_points, summary_watermark = talk_points, talk_wm
                         _do_save_daemon_state()
-                        global_state_persisted = True
                         notes_file = find_notes_in_folder(talk_folder)
                         config = dc_replace(config, session_folder=talk_folder, session_notes=notes_file)
 
@@ -1357,22 +1347,13 @@ def run() -> None:
                     try:
                         entries = load_transcription_files(config.folder)
                         timed = [(ts, txt) for ts, txt in entries if ts is not None]
-                        total_lines = len(entries)
                         if timed:
                             max_ts = max(ts for ts, _ in timed)
                             cutoff = max_ts - DEFAULT_TRANSCRIPT_MINUTES * 60
                             recent = [(ts, txt) for ts, txt in timed if ts >= cutoff and txt.strip()]
                             line_count = len(recent)
-                            if max_ts >= 86400:
-                                # Elapsed-style VTT timestamp exceeds 24 h — use current wall-clock time
-                                latest_time = datetime.now().strftime("%H:%M:%S")
-                            else:
-                                h, rem = divmod(int(max_ts), 3600)
-                                m, s = divmod(rem, 60)
-                                latest_time = f"{h:02d}:{m:02d}:{s:02d}"
                         else:
                             line_count = 0
-                            latest_time = None
                         if line_count != last_transcript_line_count:
                             last_transcript_line_count = line_count
                         # transcript_status and token_usage sends removed — host.js does not handle them
