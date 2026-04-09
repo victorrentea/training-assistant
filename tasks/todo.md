@@ -1,5 +1,21 @@
 # Todo
 
+## Direct request: fix GH#114 host title `@` styling
+
+- [x] Reproduce current host-title rendering behavior and add a failing regression test for `@` formatting
+- [x] Implement host top-title rendering that wraps `@` in spaced, gray styling (without unsafe HTML injection)
+- [x] Add CSS for the gray `@` token styling in host top bar
+- [x] Run targeted JS tests and record proof in review section
+
+### Review: fix GH#114 host title `@` styling
+
+- Proof (red): `node tests/test_js_unit.js`
+- Result: `69 passed, 1 failed` (`host top title rendering uses \`host-top-title-at\` token styling`)
+- Proof (green): `node tests/test_js_unit.js`
+- Result: `70 passed, 0 failed`
+- Proof: `node --check static/host.js`
+- Result: syntax OK
+
 ## Direct request: update Structurizr DSL and add daemon-only view
 
 - [x] Push the sequence-diagram architecture work to `master`

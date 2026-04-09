@@ -118,6 +118,22 @@ function recordPollInHistory_logic(history, poll, correctIds) {
   return result;
 }
 
+// --- from host.js: top title formatting ---
+function escHtmlHostTitle(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function formatHostTopTitleHtml(rawName) {
+  const cleaned = String(rawName || '').replace(/^\d{4}-\d{2}-\d{2}(?:\.\.\S+)?\s*/, '');
+  if (!cleaned.includes('@')) return escHtmlHostTitle(cleaned);
+  return escHtmlHostTitle(cleaned).replace(/@/g, '<span class="host-top-title-at"> @ </span>');
+}
+
 // ═══════════════════════════════════════════════════════════════════════
 // Tests
 // ═══════════════════════════════════════════════════════════════════════
@@ -269,6 +285,15 @@ const hostJsSource = fs.readFileSync('static/host.js', 'utf8');
 assert(
   'center QR does not reference undefined `link` variable',
   !hostJsSource.includes('text: link,')
+);
+assertEq(
+  'host top title formats @ with spacing and gray-token span',
+  formatHostTopTitleHtml('2026-04-10 CleanCode@Acme'),
+  'CleanCode<span class="host-top-title-at"> @ </span>Acme'
+);
+assert(
+  'host top title rendering uses `host-top-title-at` token styling',
+  hostJsSource.includes('host-top-title-at')
 );
 
 // ── host-landing regressions (source-level guards) ───────────────────

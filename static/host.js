@@ -3605,6 +3605,12 @@ function formatSessionTitle(name) {
   return (name || '').replace(/@/g, ' @ ').toUpperCase();
 }
 
+function formatHostTopTitleHtml(name) {
+  const cleaned = String(name || '').replace(/^\d{4}-\d{2}-\d{2}(?:\.\.\S+)?\s*/, '');
+  if (!cleaned.includes('@')) return _esc(cleaned);
+  return _esc(cleaned).replace(/@/g, '<span class="host-top-title-at"> @ </span>');
+}
+
 function renderSessionPanel() {
   const main = sessionMain;
   const talk = sessionTalk;
@@ -3626,7 +3632,7 @@ function renderSessionPanel() {
   const titleEl = document.getElementById('host-top-title');
   if (titleEl) {
     const rawName = main ? (main.name || '') : (_sessionName || '');
-    titleEl.textContent = rawName.replace(/^\d{4}-\d{2}-\d{2}(?:\.\.\S+)?\s*/, '');
+    titleEl.innerHTML = formatHostTopTitleHtml(rawName);
   }
   // Stop button is always enabled (host can always request session end).
   const stopBtn = document.getElementById('stop-session-btn-left');
