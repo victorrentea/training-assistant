@@ -175,6 +175,7 @@ workspace "Workshop Live Interaction Tool" "Structurizr DSL model aligned to the
 
         component trainingDaemon "C3DaemonOverview" "Main daemon subsystems aligned to the daemon-first runtime." {
             include *
+            exclude orchestrator
             autoLayout lr
         }
 
