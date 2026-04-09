@@ -243,16 +243,71 @@ def test_main_watch_mode_cleans_startup_orphans_without_rendering(tmp_path, monk
     monkeypatch.setattr(renderer, "ROOT", tmp_path)
     monkeypatch.setattr(renderer, "SEQUENCES_DIR", sequences_dir)
     monkeypatch.setattr(renderer, "SVG_DIR", svg_dir)
+    delete_calls: list[int] = []
+    original_delete_outputs = renderer._delete_outputs
+
+    def tracked_delete(outputs):
+        delete_calls.append(sleep_calls["count"])
+        return original_delete_outputs(outputs)
+
     monkeypatch.setattr(
         renderer,
         "render_puml_files",
         lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("render_puml_files should not be called")),
     )
-    monkeypatch.setattr(renderer.time, "sleep", lambda _seconds: (_ for _ in ()).throw(KeyboardInterrupt()))
+    sleep_calls = {"count": 0}
+
+    def fake_sleep(_seconds: float):
+        sleep_calls["count"] += 1
+        if sleep_calls["count"] == 1:
+            return
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(renderer, "_delete_outputs", tracked_delete)
+    monkeypatch.setattr(renderer.time, "sleep", fake_sleep)
 
     with pytest.raises(KeyboardInterrupt):
         renderer.main(["--watch"])
 
+    assert not orphan_svg.exists()
+    assert delete_calls and delete_calls[0] == 1
+    assert capsys.readouterr().out.splitlines() == ["deleted docs/sequences/svg/orphan.svg"]
+
+
+def test_main_watch_mode_preserves_explicit_external_source_output(tmp_path, monkeypatch, capsys):
+    sequences_dir = tmp_path / "docs" / "sequences"
+    svg_dir = sequences_dir / "svg"
+    external_source = tmp_path / "external" / "external-flow.puml"
+    _write_puml(external_source, "external")
+    svg_dir.mkdir(parents=True, exist_ok=True)
+    external_svg = svg_dir / "external-flow.svg"
+    external_svg.write_text("<svg>keep</svg>", encoding="utf-8")
+    orphan_svg = svg_dir / "orphan.svg"
+    orphan_svg.write_text("<svg>delete</svg>", encoding="utf-8")
+
+    monkeypatch.setattr(renderer, "ROOT", tmp_path)
+    monkeypatch.setattr(renderer, "SEQUENCES_DIR", sequences_dir)
+    monkeypatch.setattr(renderer, "SVG_DIR", svg_dir)
+    monkeypatch.setattr(
+        renderer,
+        "render_puml_files",
+        lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("render_puml_files should not be called")),
+    )
+
+    sleep_calls = {"count": 0}
+
+    def fake_sleep(_seconds: float):
+        sleep_calls["count"] += 1
+        if sleep_calls["count"] == 1:
+            return
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(renderer.time, "sleep", fake_sleep)
+
+    with pytest.raises(KeyboardInterrupt):
+        renderer.main(["--watch", str(external_source)])
+
+    assert external_svg.exists()
     assert not orphan_svg.exists()
     assert capsys.readouterr().out.splitlines() == ["deleted docs/sequences/svg/orphan.svg"]
 
@@ -305,13 +360,11 @@ def test_main_watch_mode_rerenders_only_changed_files(tmp_path, monkeypatch, cap
 def test_main_watch_mode_keeps_orphan_svg_when_render_fails(tmp_path, monkeypatch, capsys):
     sequences_dir = tmp_path / "docs" / "sequences"
     svg_dir = sequences_dir / "svg"
-    first = sequences_dir / "01-a.puml"
-    second = sequences_dir / "02-b.puml"
-    _write_puml(first, "first")
-    _write_puml(second, "second")
+    external_source = tmp_path / "external" / "01-a.puml"
+    _write_puml(external_source, "first")
     svg_dir.mkdir(parents=True, exist_ok=True)
-    orphan_svg = svg_dir / "01-a.svg"
-    orphan_svg.write_text("<svg>still-here</svg>", encoding="utf-8")
+    external_svg = svg_dir / "01-a.svg"
+    external_svg.write_text("<svg>still-here</svg>", encoding="utf-8")
 
     monkeypatch.setattr(renderer, "ROOT", tmp_path)
     monkeypatch.setattr(renderer, "SEQUENCES_DIR", sequences_dir)
@@ -322,8 +375,7 @@ def test_main_watch_mode_keeps_orphan_svg_when_render_fails(tmp_path, monkeypatc
     def fake_sleep(_seconds: float):
         sleep_calls["count"] += 1
         if sleep_calls["count"] == 1:
-            first.unlink()
-            _write_puml(second, "changed")
+            _write_puml(external_source, "changed")
             return
         raise KeyboardInterrupt
 
@@ -334,7 +386,7 @@ def test_main_watch_mode_keeps_orphan_svg_when_render_fails(tmp_path, monkeypatc
     monkeypatch.setattr(renderer.time, "sleep", fake_sleep)
 
     with pytest.raises(SystemExit, match="plantuml failed"):
-        renderer.main(["--watch", str(first), str(second)])
+        renderer.main(["--watch", str(external_source)])
 
-    assert orphan_svg.exists()
+    assert external_svg.exists()
     assert capsys.readouterr().out == ""

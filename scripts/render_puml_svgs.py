@@ -135,17 +135,17 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.watch:
         snapshot = build_input_snapshot(_current_watch_files(explicit_files))
-        for output in _delete_outputs(_find_orphaned_svgs(discover_puml_files(SEQUENCES_DIR), SVG_DIR)):
-            print(f"deleted {_display_path(output)}")
         while True:
             time.sleep(1)
-            files = _current_watch_files(explicit_files)
-            current = build_input_snapshot(files)
+            watch_files = _current_watch_files(explicit_files)
+            current = build_input_snapshot(watch_files)
+            live_source_files = sorted(current.keys())
             changed = changed_puml_files(snapshot, current)
+            orphaned_outputs = _find_orphaned_svgs(live_source_files, SVG_DIR)
             if changed:
                 for output in render_puml_files(changed, SVG_DIR, plantuml_bin=args.plantuml_bin):
                     print(f"rendered {_display_path(output)}")
-            for output in _delete_outputs(_find_orphaned_svgs(discover_puml_files(SEQUENCES_DIR), SVG_DIR)):
+            for output in _delete_outputs(orphaned_outputs):
                 print(f"deleted {_display_path(output)}")
             snapshot = current
         return 0
