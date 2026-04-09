@@ -14,9 +14,6 @@ import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
 
-from daemon import log
-
-
 DEFAULT_SERVER_URL = "http://localhost:8000"
 DEFAULT_POLL_SECONDS = 5.0
 DEFAULT_MIN_CPU_FREE = 25.0

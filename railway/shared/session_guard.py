@@ -1,8 +1,8 @@
 """Session ID validation for participant-facing routes."""
 from fastapi import HTTPException, Request
-from fastapi.responses import RedirectResponse
-from railway.shared.state import state
+
 from railway.shared.session_registry import session_registry
+from railway.shared.state import state
 
 
 class InvalidSessionRedirect(Exception):

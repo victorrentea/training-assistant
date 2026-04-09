@@ -7,14 +7,8 @@ This module provides the real macOS-specific functionality:
 For Docker/Linux testing, swap this with daemon.adapters.stub.
 """
 
-import os
-import re
 import subprocess
 import sys
-from pathlib import Path
-
-from daemon import log
-
 
 # ── Beep ────────────────────────────────────────────────────────────────────
 

@@ -7,26 +7,24 @@ from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-from fastapi import APIRouter, FastAPI, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request
 from fastapi.staticfiles import StaticFiles
 from prometheus_fastapi_instrumentator import Instrumentator
 
-from railway.shared.auth import require_host_auth
-from railway.shared.session_guard import require_valid_session, InvalidSessionRedirect
-from railway.shared.state import state  # re-exported for tests: from railway.app import app, state
-import railway.shared.metrics as metrics  # noqa: registers custom Prometheus metrics
-
-from railway.features.ws import router as ws
-from railway.features.ws.router import session_router as ws_session_router
-from railway.features.pages.router import landing_router, host_router, participant_router
+import railway.shared.metrics as metrics  # noqa: F401 - import for Prometheus metric registration side effects
+from railway.features.internal.router import router as internal_router
+from railway.features.pages.router import host_router, landing_router, participant_router
 from railway.features.session.notes_router import public_router as session_public_router
 from railway.features.slides import router as slides
 from railway.features.slides.upload import router as slides_upload_router
 from railway.features.upload import router as upload
 from railway.features.upload.router import public_router as upload_public_router
-from railway.features.internal.router import router as internal_router
+from railway.features.ws import router as ws
 from railway.features.ws.proxy_bridge import participant_proxy_router
-
+from railway.features.ws.router import session_router as ws_session_router
+from railway.shared.auth import require_host_auth
+from railway.shared.session_guard import InvalidSessionRedirect, require_valid_session
+from railway.shared.state import state  # re-exported for tests: from railway.app import app, state
 
 logging.basicConfig(level=logging.INFO)
 
@@ -44,7 +42,8 @@ def _stamp_version_js():
 
 def _stamp_deploy_info():
     """Generate static/deploy-info.json from Railway env vars at startup (no git needed)."""
-    import json, os
+    import json
+
     sha = os.environ.get("RAILWAY_GIT_COMMIT_SHA", "")
     if not sha:
         return  # local dev — skip, file may be stale or absent
@@ -77,6 +76,7 @@ app = FastAPI(title="Workshop Tool", lifespan=lifespan)
 @app.exception_handler(InvalidSessionRedirect)
 async def _redirect_invalid_session(request: Request, exc: InvalidSessionRedirect):
     from fastapi.responses import RedirectResponse
+
     from railway.shared.state import state as _state
     if _state.session_id:
         return RedirectResponse(f"/{_state.session_id}")

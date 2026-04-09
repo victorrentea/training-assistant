@@ -15,6 +15,24 @@ echo "Running pre-push checks: ${RUNNER} bash tests/check-all.sh"
 # shellcheck disable=SC2086
 $RUNNER bash "$REPO_ROOT/tests/check-all.sh"
 
+UPSTREAM_REF="$(git rev-parse --abbrev-ref --symbolic-full-name @{upstream} 2>/dev/null || true)"
+if [ -n "${UPSTREAM_REF}" ]; then
+  LINT_BASE="${UPSTREAM_REF}"
+elif git rev-parse --verify origin/master >/dev/null 2>&1; then
+  LINT_BASE="origin/master"
+else
+  LINT_BASE="HEAD~1"
+fi
+
+CHANGED_PY_FILES="$(git diff --name-only --diff-filter=ACMR "${LINT_BASE}...HEAD" -- '*.py' || true)"
+if [ -n "${CHANGED_PY_FILES}" ]; then
+  echo "Running pre-push lint on changed Python files (base: ${LINT_BASE})"
+  # shellcheck disable=SC2086
+  $RUNNER ruff check ${CHANGED_PY_FILES}
+else
+  echo "Skipping pre-push lint (no changed Python files vs ${LINT_BASE})"
+fi
+
 echo "Running pre-push dead-code check: ${RUNNER} python3 -m vulture"
 # shellcheck disable=SC2086
 $RUNNER python3 -m vulture

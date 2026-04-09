@@ -5,19 +5,18 @@ import logging
 from fastapi import APIRouter, Request, Response
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-from typing import Optional
 
 from daemon.debate.state import debate_state
 from daemon.participant.state import participant_state
 from daemon.scores import scores
-from daemon.ws_publish import broadcast, broadcast_event
 from daemon.ws_messages import (
     ActivityUpdatedMsg,
-    DebateUpdatedMsg,
-    DebateTimerMsg,
     DebateRoundEndedMsg,
+    DebateTimerMsg,
+    DebateUpdatedMsg,
     ScoresUpdatedMsg,
 )
+from daemon.ws_publish import broadcast, broadcast_event
 
 logger = logging.getLogger(__name__)
 
@@ -275,7 +274,6 @@ async def start_round_timer(body: RoundTimerRequest):
 @host_router.post("/end-round", status_code=204)
 async def end_round():
     """Host ends the current round early."""
-    ended_index = debate_state.round_index
     debate_state.end_round()
 
     broadcast(DebateRoundEndedMsg())
@@ -300,8 +298,8 @@ async def end_arguments():
     # Run AI cleanup in background
     async def _run_ai_cleanup(req: dict):
         try:
-            from daemon.debate.ai_cleanup import run_debate_ai_cleanup
             from daemon.config import config_from_env
+            from daemon.debate.ai_cleanup import run_debate_ai_cleanup
             cfg = config_from_env()
             result = await asyncio.to_thread(run_debate_ai_cleanup, req, cfg.api_key, cfg.model)
             debate_state.apply_ai_result(

@@ -6,8 +6,6 @@ Used when DAEMON_ADAPTER=stub.
 import json
 from pathlib import Path
 
-from daemon import log
-
 _CALLS_LOG_FILE = Path("/tmp/stub-calls.jsonl")
 
 

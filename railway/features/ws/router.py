@@ -11,8 +11,20 @@ from urllib.parse import quote
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
+from railway.features.slides.cache import broadcast_slides_cache_status
+from railway.features.ws.daemon_protocol import (
+    MSG_BROADCAST,
+    MSG_CODE_TIMESTAMP,
+    MSG_DAEMON_PING,
+    MSG_DOWNLOAD_PDF,
+    MSG_PDF_DOWNLOAD_COMPLETE,
+    MSG_PROXY_RESPONSE,
+    MSG_SEND_TO_HOST,
+    MSG_SET_SESSION_ID,
+    push_to_daemon,
+)
+from railway.features.ws.proxy_bridge import handle_proxy_response
 from railway.shared.messaging import (
-    broadcast,
     broadcast_participant_update,
 )
 from railway.shared.metrics import (
@@ -20,15 +32,6 @@ from railway.shared.metrics import (
     ws_messages_total,
 )
 from railway.shared.state import state
-from railway.features.ws.daemon_protocol import (
-    MSG_DAEMON_PING,
-    MSG_PROXY_RESPONSE,
-    MSG_BROADCAST, MSG_SEND_TO_HOST, MSG_SET_SESSION_ID, MSG_CODE_TIMESTAMP,
-    MSG_DOWNLOAD_PDF, MSG_PDF_DOWNLOAD_COMPLETE,
-    push_to_daemon,
-)
-from railway.features.ws.proxy_bridge import handle_proxy_response
-from railway.features.slides.cache import broadcast_slides_cache_status
 
 router = APIRouter()
 session_router = APIRouter()

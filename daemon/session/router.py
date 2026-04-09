@@ -4,16 +4,15 @@ Migrated from features/session/router.py on Railway.
 Instead of queuing requests for Railway to forward via WS, endpoints now
 put requests directly into daemon/session/pending.py for the orchestrator loop.
 """
+import logging
 import os
 import random
 import re
-import logging
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Literal
 
 from fastapi import APIRouter, Response
-from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from daemon import log as daemon_log
@@ -89,7 +88,6 @@ def _is_session_active(stack: list[dict]) -> bool:
     top = stack[-1]
     if top.get("ended_at"):
         return False
-    paused = any(p.get("to") is None for p in top.get("paused_intervals", []))
     # Active includes paused sessions (they're still "open")
     return True
 

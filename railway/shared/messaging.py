@@ -7,7 +7,6 @@ broadcast_participant_update() sends participant count to all connected particip
 import json
 import logging
 from typing import Optional
-from fastapi import WebSocket
 
 from railway.shared.state import state
 

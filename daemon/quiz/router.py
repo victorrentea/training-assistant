@@ -6,11 +6,11 @@ from fastapi import APIRouter, Response
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-from daemon import quiz as _quiz_pkg  # noqa: ensure package is importable
-from daemon.quiz import pending as quiz_pending
+from daemon import quiz as _quiz_pkg  # noqa: F401 - ensure package is importable
 from daemon.config import DEFAULT_TRANSCRIPT_MINUTES
+from daemon.quiz import pending as quiz_pending
+from daemon.ws_messages import QuizPreviewMsg, QuizStatusMsg
 from daemon.ws_publish import broadcast
-from daemon.ws_messages import QuizStatusMsg, QuizPreviewMsg
 
 logger = logging.getLogger(__name__)
 
@@ -77,7 +77,6 @@ async def request_quiz(body: QuizRequestBody):
 async def clear_quiz_preview():
     """Host clears the current quiz preview."""
     from daemon.ws_publish import broadcast
-    from daemon.ws_messages import QuizPreviewMsg
     broadcast(QuizPreviewMsg(quiz=None))
     return Response(status_code=204)
 
