@@ -102,6 +102,14 @@ def test_changed_puml_files_returns_only_modified_sources(tmp_path):
     assert renderer.changed_puml_files(before, after) == [second]
 
 
+def test_parse_args_rejects_check_and_watch_together(capsys):
+    with pytest.raises(SystemExit) as excinfo:
+        renderer.parse_args(["--check", "--watch"])
+
+    assert excinfo.value.code == 2
+    assert "--watch" in capsys.readouterr().err
+
+
 def test_main_default_mode_renders_discovered_files(tmp_path, monkeypatch, capsys):
     sequences_dir = tmp_path / "docs" / "sequences"
     svg_dir = sequences_dir / "svg"
@@ -190,6 +198,41 @@ def test_main_check_mode_returns_zero_when_svg_matches(tmp_path, monkeypatch, ca
     assert capsys.readouterr().out == ""
 
 
+def test_main_watch_mode_rediscovers_new_files_when_starting_empty(tmp_path, monkeypatch, capsys):
+    sequences_dir = tmp_path / "docs" / "sequences"
+    svg_dir = sequences_dir / "svg"
+    sequences_dir.mkdir(parents=True, exist_ok=True)
+    new_file = sequences_dir / "01-a.puml"
+
+    monkeypatch.setattr(renderer, "ROOT", tmp_path)
+    monkeypatch.setattr(renderer, "SEQUENCES_DIR", sequences_dir)
+    monkeypatch.setattr(renderer, "SVG_DIR", svg_dir)
+
+    rendered: list[tuple[list[Path], Path, str]] = []
+
+    def fake_render(files, output_dir, plantuml_bin="plantuml"):
+        rendered.append((list(files), output_dir, plantuml_bin))
+        return [output_dir / f"{path.stem}.svg" for path in files]
+
+    sleep_calls = {"count": 0}
+
+    def fake_sleep(_seconds: float):
+        sleep_calls["count"] += 1
+        if sleep_calls["count"] == 1:
+            _write_puml(new_file, "new")
+            return
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(renderer, "render_puml_files", fake_render)
+    monkeypatch.setattr(renderer.time, "sleep", fake_sleep)
+
+    with pytest.raises(KeyboardInterrupt):
+        renderer.main(["--watch"])
+
+    assert rendered == [([new_file], svg_dir, "plantuml")]
+    assert capsys.readouterr().out.splitlines() == ["rendered docs/sequences/svg/01-a.svg"]
+
+
 def test_main_watch_mode_rerenders_only_changed_files(tmp_path, monkeypatch, capsys):
     sequences_dir = tmp_path / "docs" / "sequences"
     svg_dir = sequences_dir / "svg"
@@ -213,6 +256,7 @@ def test_main_watch_mode_rerenders_only_changed_files(tmp_path, monkeypatch, cap
     def fake_sleep(_seconds: float):
         sleep_calls["count"] += 1
         if sleep_calls["count"] == 1:
+            first.unlink()
             _write_puml(second, "changed")
             return
         raise KeyboardInterrupt
