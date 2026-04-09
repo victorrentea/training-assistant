@@ -49,7 +49,6 @@ async def broadcast(message: dict, exclude: Optional[str] = None):
 
 async def broadcast_participant_update():
     """Send total known participant count update to all connected participants (not host)."""
-    pids = participant_ids()
     count = len([pid for pid in state.participant_names if pid not in SPECIAL_PIDS])
 
     msg = json.dumps({
