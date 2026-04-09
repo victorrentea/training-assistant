@@ -91,3 +91,17 @@ docker run --rm -p 8080:8080 \
 ```
 
 Then open `http://localhost:8080`.
+
+## Export Import Linter Contracts
+
+Generate Import Linter contracts directly from the Structurizr DSL relationships:
+
+```bash
+python3 scripts/generate_importlinter_from_structurizr.py
+```
+
+Then run Import Linter on the generated config:
+
+```bash
+uv run --extra dev lint-imports --config docs/structurizr/out/importlinter.ini
+```

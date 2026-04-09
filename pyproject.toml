@@ -17,6 +17,7 @@ dev = [
     "pytest-bdd>=8.0",
     "httpx>=0.28",
     "requests>=2.32",
+    "import-linter>=2.5",
     "vulture>=2.14",
     "ruff>=0.6",
 ]

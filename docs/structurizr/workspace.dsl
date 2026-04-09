@@ -111,6 +111,7 @@ workspace "Workshop Live Interaction Tool" "Structurizr DSL model aligned to the
         uploadRouter -> corePlatform "Associates uploads with active state"
         pagesRouter -> corePlatform "Reads active mode and session state"
         wsRouter -> corePlatform "Builds and broadcasts state"
+        wsRouter -> slidesRouter "Reads slide cache status helpers"
         pollRouter -> corePlatform "Mutates poll state and scores"
         qaRouter -> corePlatform "Mutates Q&A state"
         wordcloudRouter -> corePlatform "Mutates word cloud state"
@@ -123,7 +124,9 @@ workspace "Workshop Live Interaction Tool" "Structurizr DSL model aligned to the
         sessionRouter -> corePlatform "Serializes and restores session state"
         snapshotRouter -> corePlatform "Serializes and restores diagnostic snapshots"
         slidesRouter -> corePlatform "Stores slide catalog and current slide"
+        slidesRouter -> wsRouter "Uses daemon proxy helpers"
         scoresRouter -> corePlatform "Resets score state"
+        uploadRouter -> wsRouter "Uses daemon protocol helpers"
 
         orchestrator -> configHttp "Uses"
         orchestrator -> wsClient "Maintains daemon WebSocket"
