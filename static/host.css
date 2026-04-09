@@ -7,12 +7,15 @@ body {
   margin: 0;
 }
 
-/* version-tag: bottom-right of main content area, just above the footer */
+/* version-tag: centered above the footer within the main content area */
 #version-tag {
   position: absolute;
   top: auto;
   bottom: 4px;
-  right: .5rem;
+  left: 50%;
+  right: auto;
+  transform: translateX(-50%);
+  text-align: center;
   z-index: 2;
 }
 

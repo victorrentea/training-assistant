@@ -2,6 +2,7 @@
 
 - [x] direct request: make participant Slides Follow button label `🎯 Follow` and match Slides menu title text size.
 - [x] direct request: temporarily hide the participant slides renderer toggle (PDF.js/Native) and force participant viewer mode to PDF.js.
+- [x] direct request: host UI deploy/version tag (`deployed ...`) is now horizontally centered above the footer line instead of bottom-right aligned.
 - [x] bugfix GH#111 follow-up: host top participant counter now renders active/total (`active` green, `total` normal), and participant status dots are rendered via row-class CSS pseudo-elements for reliable visibility.
 - [x] bugfix GH#111: host participant list now always shows all known participants with presence dots (online = pulsing green, offline = red), driven by Railway→daemon participant presence events.
 - [x] bugfix: host UI participant names/scores now use theme-aware text color (`var(--text)`) instead of hardcoded white, fixing unreadable names in light mode.
