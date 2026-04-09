@@ -1,5 +1,12 @@
 # Todo
 
+## Direct request: update Structurizr DSL and add daemon-only view
+
+- [x] Push the sequence-diagram architecture work to `master`
+- [x] Update `docs/structurizr/workspace.dsl` to match the daemon-first architecture documented in `ARCHITECTURE.md`
+- [x] Add a daemon-only Structurizr view and refresh generated Structurizr artifacts
+- [x] Verify the Structurizr/import-linter contracts and record proof
+
 ## Direct request: split architecture sequence diagrams and generated SVGs
 
 - [x] Add a repository PlantUML renderer with render, watch, and check modes
@@ -24,6 +31,15 @@
 - Result: confirmed the local host entrypoint, session-scoped browser WS paths, Railway participant proxying, file-backed summary input, and daemon-driven static sync in live code
 - Proof: `rg -n 'APIRouter(prefix="/api/participant|APIRouter(prefix="/api/{session_id}/host|app.include_router(participant_router)|app.include_router(activity_host_router)|@app.websocket("/ws/{path:path}")|@app.api_route("/api/{path:path}")' daemon/host_server.py daemon/participant/router.py daemon/host_state_router.py daemon/activity/router.py daemon/misc/router.py`
 - Result: confirmed the daemon host server mounts local participant/host routers before the catch-all HTTP and WS proxy paths
+
+### Review: update Structurizr DSL and add daemon-only view
+
+- Proof: `docker run --rm -v "$PWD":/usr/local/structurizr structurizr/cli validate -workspace docs/structurizr/workspace.dsl`
+- Result: DSL validated successfully
+- Proof: `python3 scripts/generate_importlinter_from_structurizr.py`
+- Result: regenerated `docs/structurizr/out/importlinter.ini` and `docs/structurizr/out/importlinter-report.json` from the updated DSL
+- Proof: `python3 -m pytest -q tests/docs/test_structurizr_import_linter.py tests/docs/test_render_puml_svgs.py tests/docs/test_architecture_sequences.py`
+- Result: `33 passed in 15.94s`
 
 ## Direct request: remove participant_universes from session state
 

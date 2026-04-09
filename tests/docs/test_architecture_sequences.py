@@ -4,7 +4,6 @@ from pathlib import Path
 
 import scripts.render_puml_svgs as renderer
 
-
 ROOT = Path(__file__).resolve().parents[2]
 SEQUENCES_DIR = ROOT / "docs" / "sequences"
 SVG_DIR = SEQUENCES_DIR / "svg"

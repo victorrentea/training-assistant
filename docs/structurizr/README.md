@@ -5,8 +5,8 @@ This folder contains a Structurizr DSL workspace aligned to the current reposito
 Sources used for the model:
 
 - `ARCHITECTURE.md`
-- `main.py`
-- the current `core/`, `features/`, and `daemon/` packages
+- `railway/app.py`
+- the current `railway/shared/*`, `railway/features/*`, and `daemon/*` packages
 
 It shows that Structurizr can render both:
 
@@ -24,6 +24,7 @@ Examples included in [workspace.dsl](/Users/victorrentea/conductor/workspaces/tr
 - `C3BackendRealtime`
 - `C3BackendSessionAndSlides`
 - `C3DaemonOverview`
+- `C3DaemonOnly`
 - `C3DaemonQuiz`
 - `C3DaemonSlides`
 - `C3DaemonSummary`

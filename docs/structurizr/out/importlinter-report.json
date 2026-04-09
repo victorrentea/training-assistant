@@ -1,114 +1,114 @@
 {
   "dsl_relationships_used": [
     {
-      "source_component": "wsRouter",
-      "source_module": "railway.features.ws",
-      "target_component": "slidesRouter",
-      "target_module": "railway.features.slides"
-    },
-    {
-      "source_component": "slidesRouter",
+      "source_component": "slidesBridge",
       "source_module": "railway.features.slides",
-      "target_component": "wsRouter",
+      "target_component": "wsBridge",
       "target_module": "railway.features.ws"
     },
     {
-      "source_component": "uploadRouter",
+      "source_component": "uploadsBridge",
       "source_module": "railway.features.upload",
-      "target_component": "wsRouter",
+      "target_component": "wsBridge",
       "target_module": "railway.features.ws"
+    },
+    {
+      "source_component": "wsBridge",
+      "source_module": "railway.features.ws",
+      "target_component": "slidesBridge",
+      "target_module": "railway.features.slides"
     }
   ],
   "generated_contract_count": 27,
   "generated_contracts": [
     {
-      "source_module": "railway.features.internal",
-      "target_module": "railway.features.pages",
+      "source_module": "railway.features.internal.router",
+      "target_module": "railway.features.pages.router",
       "type": "forbidden"
     },
     {
-      "source_module": "railway.features.internal",
-      "target_module": "railway.features.session",
+      "source_module": "railway.features.internal.router",
+      "target_module": "railway.features.session.notes_router",
       "type": "forbidden"
     },
     {
-      "source_module": "railway.features.internal",
+      "source_module": "railway.features.internal.router",
       "target_module": "railway.features.slides",
       "type": "forbidden"
     },
     {
-      "source_module": "railway.features.internal",
+      "source_module": "railway.features.internal.router",
       "target_module": "railway.features.upload",
       "type": "forbidden"
     },
     {
-      "source_module": "railway.features.internal",
+      "source_module": "railway.features.internal.router",
       "target_module": "railway.features.ws",
       "type": "forbidden"
     },
     {
-      "source_module": "railway.features.pages",
-      "target_module": "railway.features.internal",
+      "source_module": "railway.features.pages.router",
+      "target_module": "railway.features.internal.router",
       "type": "forbidden"
     },
     {
-      "source_module": "railway.features.pages",
-      "target_module": "railway.features.session",
+      "source_module": "railway.features.pages.router",
+      "target_module": "railway.features.session.notes_router",
       "type": "forbidden"
     },
     {
-      "source_module": "railway.features.pages",
+      "source_module": "railway.features.pages.router",
       "target_module": "railway.features.slides",
       "type": "forbidden"
     },
     {
-      "source_module": "railway.features.pages",
+      "source_module": "railway.features.pages.router",
       "target_module": "railway.features.upload",
       "type": "forbidden"
     },
     {
-      "source_module": "railway.features.pages",
+      "source_module": "railway.features.pages.router",
       "target_module": "railway.features.ws",
       "type": "forbidden"
     },
     {
-      "source_module": "railway.features.session",
-      "target_module": "railway.features.internal",
+      "source_module": "railway.features.session.notes_router",
+      "target_module": "railway.features.internal.router",
       "type": "forbidden"
     },
     {
-      "source_module": "railway.features.session",
-      "target_module": "railway.features.pages",
+      "source_module": "railway.features.session.notes_router",
+      "target_module": "railway.features.pages.router",
       "type": "forbidden"
     },
     {
-      "source_module": "railway.features.session",
+      "source_module": "railway.features.session.notes_router",
       "target_module": "railway.features.slides",
       "type": "forbidden"
     },
     {
-      "source_module": "railway.features.session",
+      "source_module": "railway.features.session.notes_router",
       "target_module": "railway.features.upload",
       "type": "forbidden"
     },
     {
-      "source_module": "railway.features.session",
+      "source_module": "railway.features.session.notes_router",
       "target_module": "railway.features.ws",
       "type": "forbidden"
     },
     {
       "source_module": "railway.features.slides",
-      "target_module": "railway.features.internal",
+      "target_module": "railway.features.internal.router",
       "type": "forbidden"
     },
     {
       "source_module": "railway.features.slides",
-      "target_module": "railway.features.pages",
+      "target_module": "railway.features.pages.router",
       "type": "forbidden"
     },
     {
       "source_module": "railway.features.slides",
-      "target_module": "railway.features.session",
+      "target_module": "railway.features.session.notes_router",
       "type": "forbidden"
     },
     {
@@ -118,17 +118,17 @@
     },
     {
       "source_module": "railway.features.upload",
-      "target_module": "railway.features.internal",
+      "target_module": "railway.features.internal.router",
       "type": "forbidden"
     },
     {
       "source_module": "railway.features.upload",
-      "target_module": "railway.features.pages",
+      "target_module": "railway.features.pages.router",
       "type": "forbidden"
     },
     {
       "source_module": "railway.features.upload",
-      "target_module": "railway.features.session",
+      "target_module": "railway.features.session.notes_router",
       "type": "forbidden"
     },
     {
@@ -138,17 +138,17 @@
     },
     {
       "source_module": "railway.features.ws",
-      "target_module": "railway.features.internal",
+      "target_module": "railway.features.internal.router",
       "type": "forbidden"
     },
     {
       "source_module": "railway.features.ws",
-      "target_module": "railway.features.pages",
+      "target_module": "railway.features.pages.router",
       "type": "forbidden"
     },
     {
       "source_module": "railway.features.ws",
-      "target_module": "railway.features.session",
+      "target_module": "railway.features.session.notes_router",
       "type": "forbidden"
     },
     {
@@ -159,119 +159,41 @@
   ],
   "resolved_components": [
     {
-      "code_path": "features/internal/*",
-      "id": "internalRouter",
-      "module": "railway.features.internal"
+      "code_path": "features/pages/router.py",
+      "id": "pageRoutes",
+      "module": "railway.features.pages.router"
     },
     {
-      "code_path": "features/pages/*",
-      "id": "pagesRouter",
-      "module": "railway.features.pages"
-    },
-    {
-      "code_path": "features/session/*",
-      "id": "sessionRouter",
-      "module": "railway.features.session"
+      "code_path": "features/session/notes_router.py",
+      "id": "publicNotes",
+      "module": "railway.features.session.notes_router"
     },
     {
       "code_path": "features/slides/*",
-      "id": "slidesRouter",
+      "id": "slidesBridge",
       "module": "railway.features.slides"
     },
     {
+      "code_path": "features/internal/router.py",
+      "id": "staticSync",
+      "module": "railway.features.internal.router"
+    },
+    {
       "code_path": "features/upload/*",
-      "id": "uploadRouter",
+      "id": "uploadsBridge",
       "module": "railway.features.upload"
     },
     {
       "code_path": "features/ws/*",
-      "id": "wsRouter",
+      "id": "wsBridge",
       "module": "railway.features.ws"
     }
   ],
   "unresolved_components": [
     {
-      "code_path": "features/activity/*",
-      "id": "activityRouter",
-      "module": "railway.features.activity",
-      "reason": "module_not_found"
-    },
-    {
-      "code_path": "features/codereview/*",
-      "id": "codeReviewRouter",
-      "module": "railway.features.codereview",
-      "reason": "module_not_found"
-    },
-    {
-      "code_path": "core/*",
-      "id": "corePlatform",
+      "code_path": "shared/*",
+      "id": "sharedCore",
       "reason": "unsupported_code_path"
-    },
-    {
-      "code_path": "features/debate/*",
-      "id": "debateRouter",
-      "module": "railway.features.debate",
-      "reason": "module_not_found"
-    },
-    {
-      "code_path": "features/feedback/*",
-      "id": "feedbackRouter",
-      "module": "railway.features.feedback",
-      "reason": "module_not_found"
-    },
-    {
-      "code_path": "features/leaderboard/*",
-      "id": "leaderboardRouter",
-      "module": "railway.features.leaderboard",
-      "reason": "module_not_found"
-    },
-    {
-      "code_path": "features/poll/*",
-      "id": "pollRouter",
-      "module": "railway.features.poll",
-      "reason": "module_not_found"
-    },
-    {
-      "code_path": "features/qa/*",
-      "id": "qaRouter",
-      "module": "railway.features.qa",
-      "reason": "module_not_found"
-    },
-    {
-      "code_path": "features/quiz/*",
-      "id": "quizRouter",
-      "module": "railway.features.quiz",
-      "reason": "module_not_found"
-    },
-    {
-      "code_path": "features/scores/*",
-      "id": "scoresRouter",
-      "module": "railway.features.scores",
-      "reason": "module_not_found"
-    },
-    {
-      "code_path": "features/snapshot/*",
-      "id": "snapshotRouter",
-      "module": "railway.features.snapshot",
-      "reason": "module_not_found"
-    },
-    {
-      "code_path": "features/summary/*",
-      "id": "summaryRouter",
-      "module": "railway.features.summary",
-      "reason": "module_not_found"
-    },
-    {
-      "code_path": "features/transcription_language/*",
-      "id": "transcriptionLanguageRouter",
-      "module": "railway.features.transcription_language",
-      "reason": "module_not_found"
-    },
-    {
-      "code_path": "features/wordcloud/*",
-      "id": "wordcloudRouter",
-      "module": "railway.features.wordcloud",
-      "reason": "module_not_found"
     }
   ]
 }
