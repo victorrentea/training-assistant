@@ -243,34 +243,17 @@ def test_main_watch_mode_cleans_startup_orphans_without_rendering(tmp_path, monk
     monkeypatch.setattr(renderer, "ROOT", tmp_path)
     monkeypatch.setattr(renderer, "SEQUENCES_DIR", sequences_dir)
     monkeypatch.setattr(renderer, "SVG_DIR", svg_dir)
-    delete_calls: list[int] = []
-    original_delete_outputs = renderer._delete_outputs
-
-    def tracked_delete(outputs):
-        delete_calls.append(sleep_calls["count"])
-        return original_delete_outputs(outputs)
-
     monkeypatch.setattr(
         renderer,
         "render_puml_files",
         lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("render_puml_files should not be called")),
     )
-    sleep_calls = {"count": 0}
-
-    def fake_sleep(_seconds: float):
-        sleep_calls["count"] += 1
-        if sleep_calls["count"] == 1:
-            return
-        raise KeyboardInterrupt
-
-    monkeypatch.setattr(renderer, "_delete_outputs", tracked_delete)
-    monkeypatch.setattr(renderer.time, "sleep", fake_sleep)
+    monkeypatch.setattr(renderer.time, "sleep", lambda _seconds: (_ for _ in ()).throw(KeyboardInterrupt()))
 
     with pytest.raises(KeyboardInterrupt):
         renderer.main(["--watch"])
 
     assert not orphan_svg.exists()
-    assert delete_calls and delete_calls[0] == 1
     assert capsys.readouterr().out.splitlines() == ["deleted docs/sequences/svg/orphan.svg"]
 
 

@@ -135,8 +135,12 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.watch:
         snapshot = build_input_snapshot(_current_watch_files(explicit_files))
+        first_cycle = True
         while True:
-            time.sleep(1)
+            if first_cycle:
+                first_cycle = False
+            else:
+                time.sleep(1)
             watch_files = _current_watch_files(explicit_files)
             current = build_input_snapshot(watch_files)
             live_source_files = sorted(current.keys())
