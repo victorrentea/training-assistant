@@ -100,6 +100,16 @@ def _current_watch_files(explicit_files: list[Path]) -> list[Path]:
     return explicit_files if explicit_files else discover_puml_files(SEQUENCES_DIR)
 
 
+def _delete_orphaned_svgs(previous: dict[Path, str], current: dict[Path, str], output_dir: Path) -> list[Path]:
+    deleted_outputs: list[Path] = []
+    for source in sorted(path for path in previous if path not in current):
+        output = output_dir / f"{source.stem}.svg"
+        if output.exists():
+            output.unlink()
+            deleted_outputs.append(output)
+    return deleted_outputs
+
+
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(sys.argv[1:] if argv is None else argv)
     explicit_files = _resolve_files(args.paths)
@@ -119,6 +129,8 @@ def main(argv: list[str] | None = None) -> int:
             time.sleep(1)
             files = _current_watch_files(explicit_files)
             current = build_input_snapshot(files)
+            for output in _delete_orphaned_svgs(snapshot, current, SVG_DIR):
+                print(f"deleted {_display_path(output)}")
             changed = changed_puml_files(snapshot, current)
             if changed:
                 for output in render_puml_files(changed, SVG_DIR, plantuml_bin=args.plantuml_bin):

@@ -240,6 +240,9 @@ def test_main_watch_mode_rerenders_only_changed_files(tmp_path, monkeypatch, cap
     second = sequences_dir / "02-b.puml"
     _write_puml(first, "first")
     _write_puml(second, "second")
+    svg_dir.mkdir(parents=True, exist_ok=True)
+    orphan_svg = svg_dir / "01-a.svg"
+    orphan_svg.write_text("<svg>orphan</svg>", encoding="utf-8")
 
     monkeypatch.setattr(renderer, "ROOT", tmp_path)
     monkeypatch.setattr(renderer, "SEQUENCES_DIR", sequences_dir)
@@ -267,5 +270,9 @@ def test_main_watch_mode_rerenders_only_changed_files(tmp_path, monkeypatch, cap
     with pytest.raises(KeyboardInterrupt):
         renderer.main(["--watch", str(first), str(second)])
 
+    assert not orphan_svg.exists()
     assert rendered == [([second.resolve()], svg_dir, "plantuml")]
-    assert capsys.readouterr().out.splitlines() == ["rendered docs/sequences/svg/02-b.svg"]
+    assert capsys.readouterr().out.splitlines() == [
+        "deleted docs/sequences/svg/01-a.svg",
+        "rendered docs/sequences/svg/02-b.svg",
+    ]
