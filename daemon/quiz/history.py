@@ -9,13 +9,8 @@ from daemon.config import Config, read_session_notes
 from daemon.quiz.generator import generate_quiz, print_quiz, refine_quiz
 from daemon.quiz.poll_api import fetch_quiz_history, fetch_summary_points, post_status
 from daemon.transcript.loader import extract_last_n_minutes, load_transcription_files
-from daemon.ws_publish import broadcast
 from daemon.ws_messages import QuizPreviewMsg
-
-try:
-    from dataclasses import replace
-except ImportError:
-    from copy import copy as replace  # type: ignore
+from daemon.ws_publish import broadcast
 
 
 def auto_generate(minutes: int, config: Config) -> Optional[tuple]:
@@ -74,7 +69,7 @@ def auto_generate(minutes: int, config: Config) -> Optional[tuple]:
     if key_points_text:
         status_detail = f"{len(summary_points)} key points"
     else:
-        line_count = len([l for l in text.splitlines() if l.strip()])
+        line_count = len([line for line in text.splitlines() if line.strip()])
         status_detail = f"{len(text):,} chars ({line_count} lines, last {minutes} min)"
     notes_info = f" + {len(notes):,} chars notes" if notes else ""
     post_status("generating", f"Sending {status_detail}{notes_info} to Claude...", config)

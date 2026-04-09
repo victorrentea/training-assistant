@@ -9,8 +9,9 @@ bypasses this module by calling _ws_client.send() or send_to_host() directly.
 """
 import json
 
-from daemon import log
 from pydantic import BaseModel
+
+from daemon import log
 
 # Set by __main__.py during daemon startup
 _ws_client = None

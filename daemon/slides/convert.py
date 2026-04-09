@@ -12,7 +12,7 @@ import urllib.request
 from pathlib import Path
 
 from daemon import log
-from daemon.http import session_api_url, get_active_session_id
+from daemon.http import get_active_session_id, session_api_url
 from daemon.misc.state import misc_state
 from daemon.slides.daemon import SlidesDaemonConfig, _post_json, _ssl_context
 from daemon.slides.drive_sync import _beep_local, _download_pdf_from_url, _is_google_drive_running

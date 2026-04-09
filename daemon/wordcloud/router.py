@@ -8,8 +8,8 @@ from pydantic import BaseModel
 from daemon.participant.state import participant_state
 from daemon.scores import scores
 from daemon.wordcloud.state import wordcloud_state
-from daemon.ws_messages import WordcloudUpdatedMsg, ScoresUpdatedMsg
-from daemon.ws_publish import broadcast_event, broadcast
+from daemon.ws_messages import ScoresUpdatedMsg, WordcloudUpdatedMsg
+from daemon.ws_publish import broadcast, broadcast_event
 
 logger = logging.getLogger(__name__)
 

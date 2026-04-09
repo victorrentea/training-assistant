@@ -7,11 +7,10 @@ import urllib.request
 from pathlib import Path
 
 from daemon import log
-from daemon.http import session_api_url, _post_json
+from daemon.http import _post_json, session_api_url
 from daemon.misc.state import misc_state
 from daemon.ws_messages import FileUploadedMsg
 from daemon.ws_publish import host_event, send_to_railway
-
 
 _HTTP_TIMEOUT = 60  # seconds, file downloads can be large
 

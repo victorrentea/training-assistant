@@ -4,17 +4,17 @@ Key-points I/O is provided by session_state; this module re-exports for convenie
 and provides the run_summary_cycle() helper used by the main orchestrator loop.
 """
 
-from datetime import date, datetime
+from datetime import datetime
 from pathlib import Path
 
 from daemon import log
 from daemon.session_state import (
     load_key_points,
-    save_key_points,
     save_daemon_state,
+    save_key_points,
+    session_start_date,
     stack_to_daemon_state,
     sync_session_to_server,
-    session_start_date,
 )
 
 __all__ = [

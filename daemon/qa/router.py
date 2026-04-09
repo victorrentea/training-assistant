@@ -9,7 +9,7 @@ from daemon.participant.state import participant_state
 from daemon.qa.state import qa_state
 from daemon.scores import scores
 from daemon.ws_messages import QaUpdatedMsg, ScoresUpdatedMsg
-from daemon.ws_publish import broadcast_event, broadcast, notify_host
+from daemon.ws_publish import broadcast, broadcast_event, notify_host
 
 logger = logging.getLogger(__name__)
 

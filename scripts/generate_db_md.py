@@ -15,12 +15,12 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from daemon.persisted_models import (
+from daemon.persisted_models import (  # noqa: E402
     PersistedGlobalState,
     PersistedSessionMeta,
     PersistedSessionState,
 )
-from scripts.generate_apis_md import _render_shape_cell, _shape
+from scripts.generate_apis_md import _render_shape_cell, _shape  # noqa: E402
 
 
 @dataclass(frozen=True)

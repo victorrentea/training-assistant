@@ -5,15 +5,15 @@ Falls back to HTTP for read-only fetches (summary points).
 
 from typing import Optional
 
+import daemon.ws_publish as _pub
 from daemon import log
 from daemon.config import Config
 from daemon.http import _get_json
 from daemon.poll.state import poll_state
 from daemon.scores import scores
 from daemon.session_state import get_current_session_id
-import daemon.ws_publish as _pub
-from daemon.ws_publish import broadcast
 from daemon.ws_messages import QuizStatusMsg
+from daemon.ws_publish import broadcast
 
 
 def post_poll(quiz: dict, config: Config) -> None:
@@ -69,7 +69,7 @@ def post_status(status: str, message: str, config: Config,
             if _pub._ws_client and _pub._ws_client.connected:
                 _pub._ws_client.send({"type": "broadcast", "event": event})
             else:
-                log.error("daemon", f"Could not post status: WS not connected")
+                log.error("daemon", "Could not post status: WS not connected")
         except Exception as e:
             log.error("daemon", f"Could not post status: {e}")
     else:

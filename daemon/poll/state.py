@@ -1,5 +1,4 @@
 """Poll state singleton — daemon owns all poll lifecycle."""
-import threading
 from datetime import datetime, timezone
 
 _MAX_POINTS = 1000

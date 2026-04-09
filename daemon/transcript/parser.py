@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import re
 
-
 _SPEAKER_RE = re.compile(r"^([^:\t\n\r]{1,40}):\s*(.*)$")
 _PARENS_ONLY_RE = re.compile(r"^(?:\([^)]*\)\s*)+$")
 

@@ -1,11 +1,11 @@
 """Daemon slides router — participant endpoints for slides list and PDF cache check."""
 import asyncio
+import json
 import logging
 import os
 import socket
 import urllib.error
 import urllib.request
-import json
 from pathlib import Path
 
 from fastapi import APIRouter
@@ -131,8 +131,8 @@ def _uploaded_slide_meta(slug: str) -> tuple[str, str | None]:
 
 
 def _broadcast_slides_cache_status() -> None:
-    from daemon.ws_publish import broadcast
     from daemon.ws_messages import SlidesCacheStatusMsg
+    from daemon.ws_publish import broadcast
     broadcast(SlidesCacheStatusMsg())
 
 

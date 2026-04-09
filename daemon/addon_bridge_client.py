@@ -106,8 +106,8 @@ class AddonBridgeClient:
                 self._stop.wait(_RECONNECT_INTERVAL)
 
     def _connect_and_listen(self) -> None:
-        from websockets.sync.client import connect as ws_connect
         from websockets.exceptions import ConnectionClosed
+        from websockets.sync.client import connect as ws_connect
 
         url = f"ws://127.0.0.1:{_PORT}"
         try:

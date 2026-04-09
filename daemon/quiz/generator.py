@@ -157,7 +157,11 @@ def generate_quiz(text: str, config: Config) -> dict:
             }
         }
     ]
-    from daemon.rag.project_files import get_project_tools, handle_project_tool_call, PROJECT_TOOL_NAMES
+    from daemon.rag.project_files import (
+        PROJECT_TOOL_NAMES,
+        get_project_tools,
+        handle_project_tool_call,
+    )
     tools.extend(get_project_tools(config.project_folder))
 
     messages = [{"role": "user", "content": prompt_content}]

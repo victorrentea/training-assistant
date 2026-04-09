@@ -2,12 +2,14 @@
 """Unified WebSocket client for daemon↔backend communication."""
 import base64
 import json
+import os
 import queue
 import ssl
 import threading
-from websockets.sync.client import connect as ws_connect
+
 from websockets.exceptions import ConnectionClosed
-import os
+from websockets.sync.client import connect as ws_connect
+
 from daemon import log
 from daemon.config import DEFAULT_SERVER_URL
 

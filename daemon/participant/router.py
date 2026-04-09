@@ -9,14 +9,15 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict
 from starlette.responses import Response
 
-from railway.shared.names import assign_conference_name
-from railway.shared.state import assign_avatar, refresh_avatar as _refresh_avatar_logic, LOTR_NAMES
-from daemon.participant.state import participant_state
-from daemon.ws_publish import notify_host
-from daemon.ws_messages import ParticipantListUpdatedMsg
 from daemon.host_state_router import _build_host_participants_list
 from daemon.misc.content_files import read_notes_content, read_summary_payload
+from daemon.participant.state import participant_state
 from daemon.session import state as session_shared_state
+from daemon.ws_messages import ParticipantListUpdatedMsg
+from daemon.ws_publish import notify_host
+from railway.shared.names import assign_conference_name
+from railway.shared.state import LOTR_NAMES, assign_avatar
+from railway.shared.state import refresh_avatar as _refresh_avatar_logic
 
 logger = logging.getLogger(__name__)
 
@@ -416,9 +417,9 @@ async def set_location(request: Request, body: LocationRequest):
 @router.get("/state", response_model=ParticipantStateResponse)
 async def get_participant_state(request: Request):
     """Return full personalised state for a participant — used on page load and WS reconnect."""
-    from daemon.wordcloud.state import wordcloud_state
     from daemon.leaderboard.state import leaderboard_state
     from daemon.misc.state import misc_state
+    from daemon.wordcloud.state import wordcloud_state
 
     pid = request.headers.get("x-participant-id", "")
     ps = participant_state
@@ -430,7 +431,6 @@ async def get_participant_state(request: Request):
     wc = wordcloud_state
     cr = _build_codereview_for_participant(pid)
     debate = _build_debate_for_participant(pid)
-    session_id = _get_current_session_id()
     summary = read_summary_payload()
     notes_content = read_notes_content()
     notes_count = sum(1 for line in (notes_content or "").splitlines() if line.strip())

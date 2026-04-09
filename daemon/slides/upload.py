@@ -18,13 +18,12 @@ import urllib.request
 from pathlib import Path
 
 from daemon import log
-from daemon.http import session_api_url, get_active_session_id
+from daemon.http import get_active_session_id, session_api_url
 from daemon.slides.catalog import (
     _abs_key,
     _merge_slides,
     _slides_from_publish_dir,
     _slides_from_state,
-    _slugify,
     detect_changed_files,
     ensure_slug,
     resolve_tracked_sources,
@@ -33,6 +32,7 @@ from daemon.slides.catalog import (
 from daemon.slides.convert import convert_pptx_to_pdf
 from daemon.slides.daemon import (
     DEFAULT_POST_EXPORT_COOLDOWN_SECONDS,
+    TITLE_ALIASES,
     SlidesDaemonConfig,
     _post_json,
     _ssl_context,
@@ -41,7 +41,6 @@ from daemon.slides.daemon import (
     save_daemon_state,
 )
 from daemon.slides.drive_sync import _read_url_text, extract_drive_export_links
-from daemon.slides.daemon import TITLE_ALIASES
 
 
 def upload_pdf(pdf_path: Path, slug: str, config: SlidesDaemonConfig, target_name: str | None = None) -> str:

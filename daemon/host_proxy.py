@@ -65,6 +65,7 @@ async def proxy_http(request: Request, path: str, http_client: httpx.AsyncClient
 async def proxy_websocket(client_ws: WebSocket, path: str, backend_ws_url: str):
     """Proxy a WebSocket connection bidirectionally between client and backend."""
     import ssl
+
     import websockets
     from websockets.exceptions import ConnectionClosed
 

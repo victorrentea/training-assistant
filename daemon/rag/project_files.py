@@ -1,6 +1,7 @@
 """Utilities for exposing project source files to LLM tool-use loops."""
 import os
 from pathlib import Path
+
 from daemon import log
 
 INCLUDED_EXTENSIONS = frozenset({

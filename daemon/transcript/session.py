@@ -6,9 +6,8 @@ a human-readable summary for the daemon startup log.
 """
 
 import re
-from datetime import datetime, date
+from datetime import date, datetime
 from typing import Optional
-
 
 # Matches full datetime timestamps: [2026-03-24 09:30:15.00] text
 _DATETIME_TS_RE = re.compile(

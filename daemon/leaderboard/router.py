@@ -1,13 +1,12 @@
 """Leaderboard show/hide and score reset — host-facing endpoints."""
 from fastapi import APIRouter, Response
-from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-from daemon.scores import scores
-from daemon.participant.state import participant_state
 from daemon.leaderboard.state import leaderboard_state
+from daemon.participant.state import participant_state
+from daemon.scores import scores
+from daemon.ws_messages import LeaderboardHiddenMsg, LeaderboardRevealedMsg, ScoresUpdatedMsg
 from daemon.ws_publish import broadcast, notify_host
-from daemon.ws_messages import LeaderboardRevealedMsg, LeaderboardHiddenMsg, ScoresUpdatedMsg
 
 
 class OkResponse(BaseModel):

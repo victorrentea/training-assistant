@@ -1,7 +1,9 @@
-from dataclasses import dataclass
-from typing import Optional
-import anthropic
+import os as _os
 import time
+from dataclasses import dataclass
+
+import anthropic
+
 from daemon import log
 
 # Pricing per 1M tokens (USD)
@@ -133,8 +135,6 @@ def _stub_create_message(
         usage=anthropic.types.Usage(input_tokens=100, output_tokens=50),
     )
 
-
-import os as _os
 if _os.environ.get("LLM_ADAPTER") == "stub":
     create_message = _stub_create_message
     log.info("llm", "🧪 Using STUB LLM adapter (no real API calls)")

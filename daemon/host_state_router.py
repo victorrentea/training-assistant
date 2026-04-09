@@ -6,18 +6,17 @@ from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict
 
-from daemon.participant.state import participant_state
-from daemon.scores import scores
-from daemon.poll.state import poll_state
-from daemon.wordcloud.state import wordcloud_state
-from daemon.qa.state import qa_state
 from daemon.codereview.state import codereview_state
 from daemon.debate.state import debate_state
-from daemon.misc.state import misc_state
-from daemon.misc.content_files import read_notes_content, read_summary_payload
-from daemon.slides.activity_reader import read_slides_log
 from daemon.leaderboard.state import leaderboard_state
+from daemon.misc.content_files import read_notes_content, read_summary_payload
+from daemon.misc.state import misc_state
+from daemon.participant.state import participant_state
+from daemon.poll.state import poll_state
+from daemon.qa.state import qa_state
 from daemon.session import state as session_shared_state
+from daemon.slides.activity_reader import read_slides_log
+from daemon.wordcloud.state import wordcloud_state
 
 logger = logging.getLogger(__name__)
 

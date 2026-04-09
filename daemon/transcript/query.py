@@ -10,7 +10,7 @@ import argparse
 import os
 import re
 from dataclasses import dataclass
-from datetime import datetime, date, time
+from datetime import date, datetime, time
 from pathlib import Path
 
 _NORMALIZED_FILE_RE = re.compile(r"^(\d{4}-\d{2}-\d{2})-transcription\.txt$", re.IGNORECASE)

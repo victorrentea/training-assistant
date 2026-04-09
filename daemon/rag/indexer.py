@@ -5,13 +5,13 @@ and keeps the ChromaDB collection up to date.
 
 import hashlib
 import json
-import time
 import threading
-from daemon import log
+import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
-from daemon.rag.retriever import _get_collection, _get_embedder, COLLECTION_NAME
+from daemon import log
+from daemon.rag.retriever import _get_collection, _get_embedder
 
 SUPPORTED_EXTENSIONS = {".pdf", ".epub", ".mobi", ".txt", ".md", ".html"}
 CHUNK_SIZE = 2000        # ~500 tokens at ~4 chars/token
@@ -37,9 +37,10 @@ def _extract_pdf(path: Path) -> list[tuple[int, str]]:
 
 
 def _extract_epub(path: Path) -> list[tuple[int, str]]:
+    from html.parser import HTMLParser
+
     import ebooklib
     from ebooklib import epub
-    from html.parser import HTMLParser
 
     class _TextExtractor(HTMLParser):
         def __init__(self):

@@ -4,9 +4,9 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from daemon import log
+from daemon.misc.state import misc_state
 from daemon.session.state import get_active_session_id
 from daemon.slides import daemon as slides_daemon
-from daemon.misc.state import misc_state
 from daemon.slides.catalog import (
     _abs_key,
     _iso_utc,

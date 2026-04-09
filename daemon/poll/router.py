@@ -6,15 +6,21 @@ from fastapi import APIRouter, Request, Response
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
+from daemon.participant.state import participant_state
 from daemon.poll.state import poll_state
 from daemon.scores import scores
-from daemon.participant.state import participant_state
-from daemon.ws_publish import broadcast, notify_host, broadcast_event
 from daemon.ws_messages import (
-    PollAiGeneratedMsg, PollOpenedMsg, PollClosedMsg, PollCorrectRevealedMsg,
-    PollClearedMsg, PollTimerStartedMsg, ScoresUpdatedMsg, ActivityUpdatedMsg,
+    ActivityUpdatedMsg,
+    PollAiGeneratedMsg,
+    PollClearedMsg,
+    PollClosedMsg,
+    PollCorrectRevealedMsg,
+    PollOpenedMsg,
+    PollTimerStartedMsg,
+    ScoresUpdatedMsg,
     VoteUpdateMsg,
 )
+from daemon.ws_publish import broadcast, broadcast_event, notify_host
 
 logger = logging.getLogger(__name__)
 

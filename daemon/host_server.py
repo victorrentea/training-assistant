@@ -115,44 +115,44 @@ def create_app(backend_url: str) -> FastAPI:
     # --- Participant identity router (must come BEFORE catch-all to avoid infinite loop) ---
     app.include_router(participant_router)
 
-    from daemon.wordcloud.router import participant_router as wc_participant_router
     from daemon.wordcloud.router import host_router as wc_host_router
+    from daemon.wordcloud.router import participant_router as wc_participant_router
     app.include_router(wc_participant_router)  # /api/participant/wordcloud/*
     app.include_router(wc_host_router)         # /api/{session_id}/wordcloud/*
 
     from daemon.emoji.router import participant_router as emoji_participant_router
-    from daemon.qa.router import participant_router as qa_participant_router
     from daemon.qa.router import host_router as qa_host_router
+    from daemon.qa.router import participant_router as qa_participant_router
     app.include_router(emoji_participant_router)  # /api/participant/emoji/*
     app.include_router(qa_participant_router)      # /api/participant/qa/*
     app.include_router(qa_host_router)             # /api/{session_id}/qa/*
 
-    from daemon.poll.router import participant_router as poll_participant_router
-    from daemon.poll.router import host_router as poll_host_router
-    from daemon.poll.router import quiz_md_router
     from daemon.leaderboard.router import router as leaderboard_router
+    from daemon.poll.router import host_router as poll_host_router
+    from daemon.poll.router import participant_router as poll_participant_router
+    from daemon.poll.router import quiz_md_router
     app.include_router(poll_participant_router)   # /api/participant/poll/*
     app.include_router(poll_host_router)          # /api/{session_id}/poll/*
     app.include_router(quiz_md_router)            # /api/{session_id}/quiz-md
     app.include_router(leaderboard_router)        # /api/{session_id}/leaderboard/*
 
-    from daemon.misc.router import participant_router as misc_participant_router
     from daemon.misc.router import host_router as misc_host_router
+    from daemon.misc.router import participant_router as misc_participant_router
     app.include_router(misc_participant_router)   # /api/participant/misc/*
     app.include_router(misc_host_router)          # /api/{session_id}/misc/*
 
     from daemon.quiz.router import host_router as quiz_host_router
     app.include_router(quiz_host_router)          # /api/{session_id}/quiz-request, /quiz-preview, /quiz-refine
 
-    from daemon.codereview.router import participant_router as codereview_participant_router
-    from daemon.codereview.router import host_router as codereview_host_router
     from daemon.activity.router import host_router as activity_host_router
+    from daemon.codereview.router import host_router as codereview_host_router
+    from daemon.codereview.router import participant_router as codereview_participant_router
     app.include_router(codereview_participant_router)  # /api/participant/codereview/*
     app.include_router(codereview_host_router)         # /api/{session_id}/codereview/*
     app.include_router(activity_host_router)           # /api/{session_id}/activity
 
-    from daemon.debate.router import participant_router as debate_participant_router
     from daemon.debate.router import host_router as debate_host_router
+    from daemon.debate.router import participant_router as debate_participant_router
     app.include_router(debate_participant_router)  # /api/participant/debate/*
     app.include_router(debate_host_router)         # /api/{session_id}/debate/*
 
