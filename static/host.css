@@ -256,7 +256,8 @@ body {
   text-decoration: none;
   position: relative;
 }
-#top-qr-icon {
+#top-qr-icon,
+#map-icon {
   pointer-events: auto;
   display: inline-flex;
   align-items: center;
@@ -268,7 +269,9 @@ body {
   transition: opacity .2s ease;
 }
 #top-qr-icon:hover,
-#top-qr-icon:focus-visible {
+#top-qr-icon:focus-visible,
+#map-icon:hover,
+#map-icon:focus-visible {
   opacity: 1;
 }
 
@@ -445,14 +448,6 @@ body {
   height: 100% !important;
   max-width: 100%;
   display: block;
-}
-
-#map-icon {
-  line-height: 0;
-  transition: opacity .2s;
-}
-#map-icon:hover {
-  opacity: 1 !important;
 }
 
 .slides-catalog-hover {

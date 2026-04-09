@@ -310,3 +310,4 @@ Host broadcasts a statement: "Have you ever shipped code that violated what we j
 - [x] Follow-up direct request: constrain host left column with `min-height: 0` so slides QR centering is computed within visible grid height (prevents off-screen centering drift).
 - [x] Direct request: host footer join link display now omits the `https://` prefix (link behavior/copy URL unchanged).
 - [x] Direct request: host header session title + QR icon moved to right side, aligned next to participant count.
+- [x] GH#112 direct request: host header now shows a map icon next to QR, participant-row location labels are no longer clickable links/tooltips, and the "participants" label next to the count was removed.
