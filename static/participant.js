@@ -239,6 +239,7 @@ function closeEmojiPopup(ev) {
   const SLIDES_TEST_AUTO_SCROLL_PAGE = 2;
   const SLIDES_TEST_AUTO_SCROLL_DELAY_MS = 3000;
   const SLIDES_DISABLE_VIEW_PERSISTENCE = false;
+  const SLIDES_RENDERER_TOGGLE_ENABLED = false; // Temporary: participants should use PDF.js only.
   let slidesCatalog = [];
   let _slidesCacheStatus = {};
   let _slidesViewerBusy = false; // true while _loadSlideIntoViewer is executing
@@ -1245,11 +1246,16 @@ ${html}
   }
 
   function _getStoredSlidesViewMode() {
+    if (!SLIDES_RENDERER_TOGGLE_ENABLED) return 'pdfjs';
     const raw = String(localStorage.getItem(LS_SLIDES_VIEW_MODE) || '').trim().toLowerCase();
     return raw === 'native' ? 'native' : 'pdfjs';
   }
 
   function _setStoredSlidesViewMode(mode) {
+    if (!SLIDES_RENDERER_TOGGLE_ENABLED) {
+      localStorage.setItem(LS_SLIDES_VIEW_MODE, 'pdfjs');
+      return;
+    }
     localStorage.setItem(LS_SLIDES_VIEW_MODE, mode === 'native' ? 'native' : 'pdfjs');
   }
 
