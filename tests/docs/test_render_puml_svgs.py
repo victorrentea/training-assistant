@@ -233,6 +233,30 @@ def test_main_watch_mode_rediscovers_new_files_when_starting_empty(tmp_path, mon
     assert capsys.readouterr().out.splitlines() == ["rendered docs/sequences/svg/01-a.svg"]
 
 
+def test_main_watch_mode_cleans_startup_orphans_without_rendering(tmp_path, monkeypatch, capsys):
+    sequences_dir = tmp_path / "docs" / "sequences"
+    svg_dir = sequences_dir / "svg"
+    svg_dir.mkdir(parents=True, exist_ok=True)
+    orphan_svg = svg_dir / "orphan.svg"
+    orphan_svg.write_text("<svg>orphan</svg>", encoding="utf-8")
+
+    monkeypatch.setattr(renderer, "ROOT", tmp_path)
+    monkeypatch.setattr(renderer, "SEQUENCES_DIR", sequences_dir)
+    monkeypatch.setattr(renderer, "SVG_DIR", svg_dir)
+    monkeypatch.setattr(
+        renderer,
+        "render_puml_files",
+        lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("render_puml_files should not be called")),
+    )
+    monkeypatch.setattr(renderer.time, "sleep", lambda _seconds: (_ for _ in ()).throw(KeyboardInterrupt()))
+
+    with pytest.raises(KeyboardInterrupt):
+        renderer.main(["--watch"])
+
+    assert not orphan_svg.exists()
+    assert capsys.readouterr().out.splitlines() == ["deleted docs/sequences/svg/orphan.svg"]
+
+
 def test_main_watch_mode_rerenders_only_changed_files(tmp_path, monkeypatch, capsys):
     sequences_dir = tmp_path / "docs" / "sequences"
     svg_dir = sequences_dir / "svg"
@@ -273,6 +297,44 @@ def test_main_watch_mode_rerenders_only_changed_files(tmp_path, monkeypatch, cap
     assert not orphan_svg.exists()
     assert rendered == [([second.resolve()], svg_dir, "plantuml")]
     assert capsys.readouterr().out.splitlines() == [
-        "deleted docs/sequences/svg/01-a.svg",
         "rendered docs/sequences/svg/02-b.svg",
+        "deleted docs/sequences/svg/01-a.svg",
     ]
+
+
+def test_main_watch_mode_keeps_orphan_svg_when_render_fails(tmp_path, monkeypatch, capsys):
+    sequences_dir = tmp_path / "docs" / "sequences"
+    svg_dir = sequences_dir / "svg"
+    first = sequences_dir / "01-a.puml"
+    second = sequences_dir / "02-b.puml"
+    _write_puml(first, "first")
+    _write_puml(second, "second")
+    svg_dir.mkdir(parents=True, exist_ok=True)
+    orphan_svg = svg_dir / "01-a.svg"
+    orphan_svg.write_text("<svg>still-here</svg>", encoding="utf-8")
+
+    monkeypatch.setattr(renderer, "ROOT", tmp_path)
+    monkeypatch.setattr(renderer, "SEQUENCES_DIR", sequences_dir)
+    monkeypatch.setattr(renderer, "SVG_DIR", svg_dir)
+
+    sleep_calls = {"count": 0}
+
+    def fake_sleep(_seconds: float):
+        sleep_calls["count"] += 1
+        if sleep_calls["count"] == 1:
+            first.unlink()
+            _write_puml(second, "changed")
+            return
+        raise KeyboardInterrupt
+
+    def failing_render(files, output_dir, plantuml_bin="plantuml"):
+        raise SystemExit("plantuml failed")
+
+    monkeypatch.setattr(renderer, "render_puml_files", failing_render)
+    monkeypatch.setattr(renderer.time, "sleep", fake_sleep)
+
+    with pytest.raises(SystemExit, match="plantuml failed"):
+        renderer.main(["--watch", str(first), str(second)])
+
+    assert orphan_svg.exists()
+    assert capsys.readouterr().out == ""
