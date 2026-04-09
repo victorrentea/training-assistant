@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# Regenerate API docs and stage generated file for the current commit.
+# Regenerate maintained generated docs and stage them for the current commit.
 
 set -eu
 
@@ -9,3 +9,25 @@ REPO_ROOT="$(git rev-parse --show-toplevel)"
 # Regenerate contract-driven API reference and stage it.
 python3 "$REPO_ROOT/scripts/generate_apis_md.py" --output "$REPO_ROOT/API.md" >/dev/null
 git add "$REPO_ROOT/API.md" "$REPO_ROOT/DB.md"
+
+# Keep sequence SVGs in sync when sequence sources or the renderer itself changes.
+staged_sequence_files="$(git diff --cached --name-only --diff-filter=ACMR -- 'docs/sequences/*.puml')"
+
+if git diff --cached --name-only --diff-filter=ACMR -- scripts/render_puml_svgs.py | grep -q .; then
+  python3 "$REPO_ROOT/scripts/render_puml_svgs.py" >/dev/null
+  git add "$REPO_ROOT"/docs/sequences/svg/*.svg
+elif [ -n "$staged_sequence_files" ]; then
+  set --
+  for path in $staged_sequence_files; do
+    set -- "$@" "$REPO_ROOT/$path"
+  done
+  python3 "$REPO_ROOT/scripts/render_puml_svgs.py" "$@" >/dev/null
+
+  set --
+  for path in $staged_sequence_files; do
+    stem=${path##*/}
+    stem=${stem%.puml}
+    set -- "$@" "$REPO_ROOT/docs/sequences/svg/$stem.svg"
+  done
+  git add "$@"
+fi

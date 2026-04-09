@@ -5,7 +5,7 @@
 - [ ] Add a repository PlantUML renderer with render, watch, and check modes
 - [ ] Split current-code sequence flows into `docs/sequences/*.puml`
 - [ ] Update `ARCHITECTURE.md` TOC and reference generated SVGs
-- [ ] Enforce `.puml`/`.svg` sync in hooks and verify the generated assets
+- [x] Enforce `.puml`/`.svg` sync in hooks and verify the generated assets
 
 ## Direct request: refresh ARCHITECTURE.md to match current runtime
 

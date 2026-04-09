@@ -7,6 +7,8 @@ ROOT = Path(__file__).resolve().parents[2]
 SEQUENCES_DIR = ROOT / "docs" / "sequences"
 SVG_DIR = SEQUENCES_DIR / "svg"
 ARCHITECTURE_MD = ROOT / "ARCHITECTURE.md"
+PRE_COMMIT_HOOK = ROOT / "hooks" / "pre-commit"
+PRE_PUSH_HOOK = ROOT / "hooks" / "pre-push"
 EXPECTED_SEQUENCE_STEMS = [
     "01-session-lifecycle-and-recovery",
     "02-participant-join-and-geolocation",
@@ -92,6 +94,27 @@ def test_expected_sequence_svg_files_exist():
 
 def test_expected_sequence_svgs_are_in_sync():
     assert renderer.check_render_sync(_expected_sequence_sources(), SVG_DIR) == []
+
+
+def test_pre_commit_hook_renders_and_stages_sequence_svgs():
+    text = PRE_COMMIT_HOOK.read_text(encoding="utf-8")
+
+    assert 'python3 "$REPO_ROOT/scripts/generate_apis_md.py" --output "$REPO_ROOT/API.md" >/dev/null' in text
+    assert 'git add "$REPO_ROOT/API.md" "$REPO_ROOT/DB.md"' in text
+    assert "git diff --cached --name-only --diff-filter=ACMR -- scripts/render_puml_svgs.py" in text
+    assert "git diff --cached --name-only --diff-filter=ACMR -- 'docs/sequences/*.puml'" in text
+    assert 'python3 "$REPO_ROOT/scripts/render_puml_svgs.py" >/dev/null' in text
+    assert 'git add "$REPO_ROOT"/docs/sequences/svg/*.svg' in text
+    assert 'set -- "$@" "$REPO_ROOT/docs/sequences/svg/$stem.svg"' in text
+    assert 'git add "$@"' in text
+
+
+def test_pre_push_hook_checks_rendered_sequence_svgs():
+    text = PRE_PUSH_HOOK.read_text(encoding="utf-8")
+
+    assert 'python3 "$REPO_ROOT/scripts/render_puml_svgs.py" --check' in text
+    assert '$RUNNER bash "$REPO_ROOT/tests/check-all.sh"' in text
+    assert '$RUNNER python3 -m vulture' in text
 
 
 def test_architecture_md_describes_ai_summary_as_primary_current_path():
