@@ -11,15 +11,13 @@ Current behavior: daemon is source of truth for identity and pushes
 
 import os
 import sys
-import time
 
 sys.path.insert(0, "/app")
 sys.path.insert(0, "/app/tests")
 
 import pytest
-from playwright.sync_api import sync_playwright, expect
-
 from pages.participant_page import ParticipantPage
+from playwright.sync_api import expect, sync_playwright
 from session_utils import fresh_session
 
 BASE = "http://localhost:8000"

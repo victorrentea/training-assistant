@@ -23,11 +23,9 @@ import urllib.request
 sys.path.insert(0, "/app")
 sys.path.insert(0, "/app/tests")
 
-import pytest
-from playwright.sync_api import sync_playwright, expect
-
 from pages.participant_page import ParticipantPage
-from session_utils import fresh_session, daemon_has_participant
+from playwright.sync_api import expect, sync_playwright
+from session_utils import fresh_session
 
 BASE = "http://localhost:8000"
 DAEMON_BASE = os.environ.get("DAEMON_BASE", "http://localhost:8081")
@@ -143,7 +141,6 @@ def test_avatar_refresh_gives_unique_avatar_to_second_participant():
         # then validates the resulting identity assignment for the next participant.
         # Get P1's UUID from the page
         p1_uuid = page1.evaluate("() => myUUID")
-        auth = base64.b64encode(f"{HOST_USER}:{HOST_PASS}".encode()).decode()
         roll_req = urllib.request.Request(
             f"{DAEMON_BASE}/api/participant/roll-avatar",
             method="POST",
@@ -191,7 +188,7 @@ def test_rename_rejected_when_name_already_taken():
         pax1.rename("Myname")
 
         page2, pax2 = _open_participant(browser, session_id)
-        name2_before = pax2.auto_join()  # should be Frodo
+        pax2.auto_join()  # should be Frodo
 
         # P2 tries to take P1's name — server reassigns to next available LOTR name
         page2.evaluate("startNameEdit()")
