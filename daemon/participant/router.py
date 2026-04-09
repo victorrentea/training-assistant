@@ -1,6 +1,11 @@
 """Daemon participant router — identity endpoints (set_name, roll-avatar, location)."""
+import asyncio
+import json
 import logging
+import re
 import secrets
+import urllib.parse
+import urllib.request
 from types import SimpleNamespace
 from typing import Literal
 
@@ -20,6 +25,8 @@ from railway.shared.state import LOTR_NAMES, assign_avatar
 from railway.shared.state import refresh_avatar as _refresh_avatar_logic
 
 logger = logging.getLogger(__name__)
+_COORDS_RE = re.compile(r"^(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?)$")
+_TIMEZONE_RE = re.compile(r"^🕐\s+(.+)$")
 
 
 # ── Pydantic models ──
@@ -39,6 +46,66 @@ class AvatarResponse(BaseModel):
 
 class LocationRequest(BaseModel):
     location: str
+
+
+def _http_get_json(url: str, *, timeout: float = 2.5):
+    req = urllib.request.Request(url, method="GET")
+    with urllib.request.urlopen(req, timeout=timeout) as response:
+        return json.loads(response.read().decode("utf-8"))
+
+
+def _country_from_coords(lat: str, lon: str) -> str:
+    url = (
+        "https://nominatim.openstreetmap.org/reverse"
+        f"?lat={urllib.parse.quote(lat)}&lon={urllib.parse.quote(lon)}&format=json&addressdetails=1"
+    )
+    data = _http_get_json(url)
+    code = str((data.get("address") or {}).get("country_code") or "").strip().upper()
+    return code if len(code) == 2 else ""
+
+
+def _timezone_from_coords(lat: str, lon: str) -> str:
+    url = (
+        "https://api.open-meteo.com/v1/forecast"
+        f"?latitude={urllib.parse.quote(lat)}&longitude={urllib.parse.quote(lon)}&current=temperature_2m"
+    )
+    data = _http_get_json(url)
+    tz = str(data.get("timezone") or "").strip()
+    return tz
+
+
+def _country_from_timezone(tz: str) -> str:
+    city_hint = tz.split("/")[-1].replace("_", " ").strip() or tz
+    url = (
+        "https://nominatim.openstreetmap.org/search"
+        f"?q={urllib.parse.quote(city_hint)}&format=json&limit=1&addressdetails=1"
+    )
+    rows = _http_get_json(url)
+    if not isinstance(rows, list) or not rows:
+        return ""
+    address = rows[0].get("address") if isinstance(rows[0], dict) else {}
+    code = str((address or {}).get("country_code") or "").strip().upper()
+    return code if len(code) == 2 else ""
+
+
+async def _resolve_location_metadata(loc: str) -> tuple[str, str]:
+    coord_match = _COORDS_RE.match(loc)
+    if coord_match:
+        lat = coord_match.group(1)
+        lon = coord_match.group(2)
+        tz_task = asyncio.to_thread(_timezone_from_coords, lat, lon)
+        cc_task = asyncio.to_thread(_country_from_coords, lat, lon)
+        tz, country = await asyncio.gather(tz_task, cc_task, return_exceptions=True)
+        resolved_tz = "" if isinstance(tz, Exception) else str(tz or "").strip()
+        resolved_country = "" if isinstance(country, Exception) else str(country or "").strip().upper()
+        return resolved_tz, resolved_country
+
+    tz_match = _TIMEZONE_RE.match(loc)
+    if not tz_match:
+        return "", ""
+    tz = tz_match.group(1).strip()
+    country = await asyncio.to_thread(_country_from_timezone, tz)
+    return tz, str(country or "").strip().upper()
 
 
 class QAQuestionRaw(BaseModel):
@@ -402,6 +469,15 @@ async def set_location(request: Request, body: LocationRequest):
         return JSONResponse({"error": "Location required"}, status_code=400)
 
     participant_state.locations[pid] = loc
+    tz, country = await _resolve_location_metadata(loc)
+    if tz:
+        participant_state.location_timezones[pid] = tz
+    else:
+        participant_state.location_timezones.pop(pid, None)
+    if country:
+        participant_state.location_countries[pid] = country
+    else:
+        participant_state.location_countries.pop(pid, None)
 
     await _notify_host_participant_list()
 
@@ -409,6 +485,8 @@ async def set_location(request: Request, body: LocationRequest):
         "type": "participant_location",
         "participant_id": pid,
         "location": loc,
+        "location_tz": tz,
+        "location_country": country,
     }]
 
     return Response(status_code=204)

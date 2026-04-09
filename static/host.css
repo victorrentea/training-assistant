@@ -1220,15 +1220,6 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
 }
 .toast.show { opacity: 1; }
 
-/* ── Participant location pin ── */
-.pax-location {
-  cursor: pointer;
-  text-decoration: underline dotted;
-  position: relative;
-}
-.pax-location:hover { color: var(--accent); }
-.pax-location:hover .footer-badge-tooltip { opacity: 1; }
-
 /* ── Map modal ── */
 #map-overlay {
   background: rgba(0,0,0,.7);

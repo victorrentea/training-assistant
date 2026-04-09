@@ -1610,6 +1610,14 @@ components:
         location:
           type: string
           title: Location
+        location_tz:
+          type: string
+          title: Location Tz
+          default: ''
+        location_country:
+          type: string
+          title: Location Country
+          default: ''
         avatar:
           type: string
           title: Avatar

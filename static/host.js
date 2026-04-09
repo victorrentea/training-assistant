@@ -11,7 +11,6 @@
   let participantDataById = {};     // uuid -> participant payload
   let participantDebateSides = {};  // uuid -> "for"|"against"|undefined
   let _debateActive = false;
-  const resolvedLocationMeta = {};   // raw location string -> resolved metadata cache
   let correctOptIds = new Set(); // host-marked correct options for current poll
   let scores = {};               // uuid -> score
   let cachedParticipantIds = []; // last known participant uuids
@@ -139,22 +138,21 @@
     return String.fromCodePoint(...cc.split('').map((ch) => 127397 + ch.charCodeAt(0)));
   }
 
-  function _formatParticipantLocation(rawLoc) {
+  function _formatParticipantLocation(participant) {
+    const rawLoc = participant?.location || '';
     if (!rawLoc) return '';
-    const meta = resolvedLocationMeta[rawLoc];
-    const tz = _extractTimezone(rawLoc);
+    const tz = String(participant?.location_tz || _extractTimezone(rawLoc) || '').trim();
+    const cc = String(participant?.location_country || '').trim().toUpperCase();
     if (tz) {
       const hhmm = _formatClockForTimezone(tz);
-      const cc = (meta && meta.countryCode) ? String(meta.countryCode).toUpperCase() : '';
       if (hhmm && cc) {
         return `⏱️${hhmm} in ${_countryCodeToFlag(cc)}${cc}`;
       }
       if (hhmm) {
-        return `⏱️${hhmm} in ${tz}`;
+        return `⏱️${hhmm}`;
       }
       return rawLoc;
     }
-    if (meta && meta.label) return meta.label;
     return rawLoc;
   }
 
@@ -1590,7 +1588,7 @@
       const loc = participant.location || '';
       const pts = scores[pid] || 0;
       const scoreTag = pts > 0 ? `<span class="pax-score" title="Click to reset score" onclick="resetOneScore('${escHtml(pid)}','${escHtml(name)}',${pts})">⭐ ${pts} pts</span>` : '';
-      const locLabel = loc ? _formatParticipantLocation(loc) : null;
+      const locLabel = loc ? _formatParticipantLocation(participant) : null;
       const avatar = participant.avatar || '';
       let avatarHtml = '';
       if (avatar && avatar.startsWith('letter:')) {
@@ -1620,45 +1618,6 @@
       return `<li class="${online ? 'online' : 'offline'}"><span class="pax-name" title="${ip ? 'IP: ' + ip : ''}">${debateIcon}${avatarHtml}<span class="pax-name-text truncate">${escHtml(name)}</span>${pasteIcons}${uploadIcons}</span>${scoreTag}${locLabel ? `<span class="pax-location">${escHtml(locLabel)}</span>` : ''}</li>`;
     }).join('');
 
-    // Lazily resolve any raw "lat, lon" strings to city names
-    sorted.forEach(pid => {
-      const loc = participantDataById[pid]?.location || '';
-      if (!loc || resolvedLocationMeta[loc]) return;
-      const tz = _extractTimezone(loc);
-      if (tz) {
-        const cityHint = tz.split('/').pop()?.replace(/_/g, ' ') || tz;
-        resolvedLocationMeta[loc] = { countryCode: '', label: loc }; // placeholder to avoid duplicate requests
-        fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(cityHint)}&format=json&limit=1&addressdetails=1`,
-          { headers: { 'Accept-Language': 'en' } })
-          .then(r => r.json())
-          .then(rows => {
-            const first = Array.isArray(rows) ? rows[0] : null;
-            const cc = first && first.address && first.address.country_code
-              ? String(first.address.country_code).toUpperCase()
-              : '';
-            resolvedLocationMeta[loc] = { countryCode: cc, label: loc };
-            renderParticipantList(cachedParticipantIds);
-          })
-          .catch(() => { resolvedLocationMeta[loc] = { countryCode: '', label: loc }; });
-        return;
-      }
-      const coordMatch = loc.match(/^(-?\d+\.?\d*),\s*(-?\d+\.?\d*)$/);
-      if (!coordMatch) return;
-      resolvedLocationMeta[loc] = { countryCode: '', label: loc }; // placeholder to avoid duplicate requests
-      fetch(`https://nominatim.openstreetmap.org/reverse?lat=${coordMatch[1]}&lon=${coordMatch[2]}&format=json`,
-        { headers: { 'Accept-Language': 'en' } })
-        .then(r => r.json())
-        .then(data => {
-          const city = data.address?.city || data.address?.town || data.address?.village || data.address?.county || '';
-          const country = data.address?.country_code?.toUpperCase() || data.address?.country || '';
-          resolvedLocationMeta[loc] = {
-            countryCode: country,
-            label: [city, country].filter(Boolean).join(', ') || loc,
-          };
-          renderParticipantList(cachedParticipantIds);
-        })
-        .catch(() => { resolvedLocationMeta[loc] = { countryCode: '', label: loc }; });
-    });
   }
 
   // ── Participant map ──

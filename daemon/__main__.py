@@ -205,6 +205,8 @@ def _build_runtime_session_snapshot(
     participant_ids |= set(participant_state.participant_avatars)
     participant_ids |= set(participant_state.scores)
     participant_ids |= set(participant_state.locations)
+    participant_ids |= set(participant_state.location_timezones)
+    participant_ids |= set(participant_state.location_countries)
     for pid in participant_ids:
         row: dict[str, object] = {}
         if pid in participant_state.participant_names:
@@ -215,6 +217,10 @@ def _build_runtime_session_snapshot(
             row["score"] = participant_state.scores[pid]
         if pid in participant_state.locations:
             row["location"] = participant_state.locations[pid]
+        if pid in participant_state.location_timezones:
+            row["location_tz"] = participant_state.location_timezones[pid]
+        if pid in participant_state.location_countries:
+            row["location_country"] = participant_state.location_countries[pid]
         if pid in participant_state.online_participants:
             row["online"] = True
         participants_payload[pid] = row

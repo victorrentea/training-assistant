@@ -24,6 +24,8 @@ class ParticipantState:
         self.online_participants: set[str] = set()
         self.scores: dict[str, int] = {}
         self.locations: dict[str, str] = {}
+        self.location_timezones: dict[str, str] = {}
+        self.location_countries: dict[str, str] = {}
         self.mode: str = "workshop"
         self.current_activity: str = "none"
 
@@ -42,6 +44,8 @@ class ParticipantState:
                 self.online_participants.clear()
                 self.scores.clear()
                 self.locations.clear()
+                self.location_timezones.clear()
+                self.location_countries.clear()
                 for pid, raw in participants.items():
                     if not isinstance(raw, dict):
                         continue
@@ -59,6 +63,12 @@ class ParticipantState:
                     location = raw.get("location")
                     if isinstance(location, str):
                         self.locations[str(pid)] = location
+                    location_tz = raw.get("location_tz")
+                    if isinstance(location_tz, str):
+                        self.location_timezones[str(pid)] = location_tz
+                    location_country = raw.get("location_country")
+                    if isinstance(location_country, str):
+                        self.location_countries[str(pid)] = location_country
             else:
                 self.online_participants.clear()
                 if "participant_names" in data:
@@ -76,6 +86,12 @@ class ParticipantState:
                 if "locations" in data:
                     self.locations.clear()
                     self.locations.update(data["locations"])
+                if "location_timezones" in data:
+                    self.location_timezones.clear()
+                    self.location_timezones.update(data["location_timezones"])
+                if "location_countries" in data:
+                    self.location_countries.clear()
+                    self.location_countries.update(data["location_countries"])
             if "mode" in data:
                 self.mode = data["mode"]
             if "current_activity" in data:
@@ -90,6 +106,8 @@ class ParticipantState:
                 "online_participants": sorted(self.online_participants),
                 "scores": dict(self.scores),
                 "locations": dict(self.locations),
+                "location_timezones": dict(self.location_timezones),
+                "location_countries": dict(self.location_countries),
                 "mode": self.mode,
                 "current_activity": self.current_activity,
             }
@@ -103,6 +121,8 @@ class ParticipantState:
             self.online_participants.clear()
             self.scores.clear()
             self.locations.clear()
+            self.location_timezones.clear()
+            self.location_countries.clear()
             self.mode = mode
             self.current_activity = "none"
 

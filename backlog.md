@@ -315,3 +315,4 @@ Host broadcasts a statement: "Have you ever shipped code that violated what we j
 - [x] Direct request: host footer join link display now omits the `https://` prefix (link behavior/copy URL unchanged).
 - [x] Direct request: host header session title + QR icon moved to right side, aligned next to participant count.
 - [x] GH#112 direct request: host header now shows a map icon next to QR, participant-row location labels are no longer clickable links/tooltips, and the "participants" label next to the count was removed.
+- [x] GH#112 follow-up: participant list location is plain text (no link styling), host row now shows `⏱️HH:MM in 🇨🇨CC` when country is known or `⏱️HH:MM` otherwise, and daemon caches `location_tz` + `location_country` in session state (including lat/lon resolution).

@@ -45,6 +45,8 @@ class HostParticipant(BaseModel):
     name: str
     score: int
     location: str
+    location_tz: str = ""
+    location_country: str = ""
     avatar: str
     paste_texts: list[PasteEntry] = []
     received_files: list[UploadedFileEntry] = []
@@ -220,6 +222,8 @@ def _build_host_participants_list() -> list[dict]:
             "name": ps.participant_names.get(pid, f"Guest {pid[:8]}"),
             "score": ps.scores.get(pid, 0),
             "location": ps.locations.get(pid, ""),
+            "location_tz": ps.location_timezones.get(pid, ""),
+            "location_country": ps.location_countries.get(pid, ""),
             "avatar": ps.participant_avatars.get(pid, ""),
             "online": pid in ps.online_participants,
         }
