@@ -17,6 +17,7 @@ from railway.features.ws.daemon_protocol import (
     MSG_CODE_TIMESTAMP,
     MSG_DAEMON_PING,
     MSG_DOWNLOAD_PDF,
+    MSG_PARTICIPANT_PRESENCE,
     MSG_PDF_DOWNLOAD_COMPLETE,
     MSG_PROXY_RESPONSE,
     MSG_SEND_TO_HOST,
@@ -286,6 +287,7 @@ async def _handle_participant_connection(websocket: WebSocket, pid: str, is_host
         # Participant registered via daemon REST — broadcast presence
         name = state.participant_names.get(pid, "")
         logger.info(f"WS connected: {pid} name={name!r} ({len(state.participants)} total)")
+        await push_to_daemon({"type": MSG_PARTICIPANT_PRESENCE, "uuid": pid, "online": True})
         await broadcast_participant_update()
 
     try:
@@ -302,6 +304,8 @@ async def _handle_participant_connection(websocket: WebSocket, pid: str, is_host
         state.participant_ips.pop(pid, None)
         ws_connections_active.labels(role=role).dec()
         logger.info(f"Disconnected: {pid} ({len(state.participants)} remaining)")
+        if not is_host:
+            await push_to_daemon({"type": MSG_PARTICIPANT_PRESENCE, "uuid": pid, "online": False})
         await broadcast_participant_update()
 
 

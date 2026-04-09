@@ -1126,6 +1126,20 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
   min-width: 0;
   overflow: hidden;
 }
+.pax-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+.pax-status-dot.online {
+  background: #4caf50;
+  animation: pulse 1.4s infinite;
+}
+.pax-status-dot.offline {
+  background: #e53935;
+}
 .pax-name-text {
   min-width: 0;
 }

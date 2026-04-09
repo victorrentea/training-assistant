@@ -4,6 +4,7 @@ Tests for WS UUID resolution: participants can connect normally.
 """
 import json
 import pytest
+from unittest.mock import AsyncMock, patch
 from fastapi.testclient import TestClient
 
 from railway.app import app
@@ -38,3 +39,14 @@ def test_ws_known_participant_allowed_through():
         msg = ws.receive_json()
         assert msg.get("type") != "session_paused"
         assert msg.get("type") == "participant_count_updated"
+
+
+def test_ws_notifies_daemon_about_presence_changes():
+    client = TestClient(app)
+    with patch("railway.features.ws.router.push_to_daemon", new=AsyncMock(return_value=True)) as push_mock:
+        with client.websocket_connect(f"/ws/{state.session_id}/presence-uuid") as ws:
+            assert ws.receive_json().get("type") == "participant_count_updated"
+
+        sent_messages = [call.args[0] for call in push_mock.await_args_list]
+        assert {"type": "participant_presence", "uuid": "presence-uuid", "online": True} in sent_messages
+        assert {"type": "participant_presence", "uuid": "presence-uuid", "online": False} in sent_messages

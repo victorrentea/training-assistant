@@ -221,6 +221,7 @@ def _build_host_participants_list() -> list[dict]:
             "score": ps.scores.get(pid, 0),
             "location": ps.locations.get(pid, ""),
             "avatar": ps.participant_avatars.get(pid, ""),
+            "online": pid in ps.online_participants,
         }
         # Include paste texts if present (from misc_state)
         paste_entries = misc_state.paste_texts.get(pid, [])

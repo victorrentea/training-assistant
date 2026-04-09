@@ -215,6 +215,8 @@ def _build_runtime_session_snapshot(
             row["score"] = participant_state.scores[pid]
         if pid in participant_state.locations:
             row["location"] = participant_state.locations[pid]
+        if pid in participant_state.online_participants:
+            row["online"] = True
         participants_payload[pid] = row
 
     return {
@@ -633,6 +635,43 @@ def run() -> None:
         "file_ready_for_download",
         lambda data: _handle_file_download(data, config),
     )
+
+    def _push_host_participant_list() -> None:
+        try:
+            import asyncio as _asyncio
+
+            from daemon.host_state_router import _build_host_participants_list
+            from daemon.slides.router import get_event_loop as _get_event_loop
+            from daemon.ws_messages import ParticipantListUpdatedMsg
+            from daemon.ws_publish import notify_host as _notify_host
+
+            _loop = _get_event_loop()
+            if _loop and _loop.is_running():
+                _asyncio.run_coroutine_threadsafe(
+                    _notify_host(
+                        ParticipantListUpdatedMsg(
+                            participants=_build_host_participants_list(),
+                        )
+                    ),
+                    _loop,
+                )
+        except Exception:
+            pass
+
+    def _handle_participant_presence(data: dict) -> None:
+        from daemon.participant.state import participant_state as _participant_state
+
+        pid = str(data.get("uuid", "")).strip()
+        if not pid or pid.startswith("__"):
+            return
+
+        if bool(data.get("online")):
+            _participant_state.online_participants.add(pid)
+        else:
+            _participant_state.online_participants.discard(pid)
+        _push_host_participant_list()
+
+    ws_client.register_handler("participant_presence", _handle_participant_presence)
 
     # State push handler — daemon receives current state from Railway on connect
     from daemon.misc.state import misc_state

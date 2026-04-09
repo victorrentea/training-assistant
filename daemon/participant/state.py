@@ -21,6 +21,7 @@ class ParticipantState:
         self.participant_names: dict[str, str] = {}
         self.participant_avatars: dict[str, str] = {}
         self.participant_universes: dict[str, str] = {}
+        self.online_participants: set[str] = set()
         self.scores: dict[str, int] = {}
         self.locations: dict[str, str] = {}
         self.mode: str = "workshop"
@@ -38,6 +39,7 @@ class ParticipantState:
             if isinstance(participants, dict):
                 self.participant_names.clear()
                 self.participant_avatars.clear()
+                self.online_participants.clear()
                 self.scores.clear()
                 self.locations.clear()
                 for pid, raw in participants.items():
@@ -46,6 +48,8 @@ class ParticipantState:
                     name = raw.get("name")
                     if isinstance(name, str):
                         self.participant_names[str(pid)] = name
+                    if raw.get("online") is True:
+                        self.online_participants.add(str(pid))
                     avatar = raw.get("avatar")
                     if isinstance(avatar, str):
                         self.participant_avatars[str(pid)] = avatar
@@ -56,12 +60,16 @@ class ParticipantState:
                     if isinstance(location, str):
                         self.locations[str(pid)] = location
             else:
+                self.online_participants.clear()
                 if "participant_names" in data:
                     self.participant_names.clear()
                     self.participant_names.update(data["participant_names"])
                 if "participant_avatars" in data:
                     self.participant_avatars.clear()
                     self.participant_avatars.update(data["participant_avatars"])
+                if "online_participants" in data and isinstance(data["online_participants"], (list, set, tuple)):
+                    self.online_participants.clear()
+                    self.online_participants.update(str(pid) for pid in data["online_participants"])
                 if "scores" in data:
                     self.scores.clear()
                     self.scores.update(data["scores"])
@@ -79,6 +87,7 @@ class ParticipantState:
             return {
                 "participant_names": dict(self.participant_names),
                 "participant_avatars": dict(self.participant_avatars),
+                "online_participants": sorted(self.online_participants),
                 "scores": dict(self.scores),
                 "locations": dict(self.locations),
                 "mode": self.mode,
@@ -91,6 +100,7 @@ class ParticipantState:
             self.participant_names.clear()
             self.participant_avatars.clear()
             self.participant_universes.clear()
+            self.online_participants.clear()
             self.scores.clear()
             self.locations.clear()
             self.mode = mode

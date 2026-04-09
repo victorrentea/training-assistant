@@ -85,6 +85,20 @@ def test_host_participant_list_keeps_uploaded_files_and_seen_flag():
     _reset_runtime_state()
 
 
+def test_host_participant_list_exposes_online_presence_flag():
+    _reset_runtime_state()
+    participant_state.participant_names["uuid-online"] = "Alice"
+    participant_state.participant_names["uuid-offline"] = "Bob"
+    participant_state.online_participants.add("uuid-online")
+
+    participants = _build_host_participants_list()
+    by_id = {p["uuid"]: p for p in participants}
+
+    assert by_id["uuid-online"]["online"] is True
+    assert by_id["uuid-offline"]["online"] is False
+    _reset_runtime_state()
+
+
 def test_mark_uploaded_file_seen_endpoint_marks_state():
     _reset_runtime_state()
     app = FastAPI()

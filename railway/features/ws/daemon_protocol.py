@@ -36,6 +36,9 @@ MSG_PDF_DOWNLOAD_COMPLETE = "pdf_download_complete"
 # --- File upload (backend → daemon) ---
 MSG_FILE_READY_FOR_DOWNLOAD = "file_ready_for_download"
 
+# --- Participant presence (backend → daemon) ---
+MSG_PARTICIPANT_PRESENCE = "participant_presence"
+
 
 async def push_to_daemon(msg: dict) -> bool:
     """Send a JSON message to the daemon via WebSocket. Returns True if sent."""
