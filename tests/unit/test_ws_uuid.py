@@ -2,9 +2,9 @@
 Tests for WS UUID resolution: participants can connect normally.
 (Note: paused_participant_uuids concept has been removed in Phase 0 refactor)
 """
-import json
-import pytest
 from unittest.mock import AsyncMock, patch
+
+import pytest
 from fastapi.testclient import TestClient
 
 from railway.app import app
