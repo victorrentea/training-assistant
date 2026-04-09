@@ -1131,7 +1131,7 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
 }
 .pax-list li.online .pax-name-text,
 .pax-list li.online .pax-score {
-  color: #fff;
+  color: var(--text);
 }
 .pax-list li.offline .pax-name-text,
 .pax-list li.offline .pax-score {

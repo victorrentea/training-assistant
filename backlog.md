@@ -1,5 +1,6 @@
 # Tasks
 
+- [x] bugfix: host UI participant names/scores now use theme-aware text color (`var(--text)`) instead of hardcoded white, fixing unreadable names in light mode.
 - [x] bugfix: participant white mode now styles the bottom-left feedback/paste/upload buttons with light theme colors instead of hardcoded black backgrounds.
 - [x] bugfix GH#114: host top title now renders `@` as a spaced gray token (` @ `) when session names contain `@`.
 - [x] direct request: added Structurizr DSL -> generated Import Linter contracts pipeline (`scripts/generate_importlinter_from_structurizr.py`), committed generated artifacts under `docs/structurizr/out/`, and enforced it in tests/check-all.
