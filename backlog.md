@@ -1,5 +1,6 @@
 # Tasks
 
+- [x] direct request: participant `GET /api/participant/state` now reports active connected non-host `participant_count` (from online presence), not total known participants.
 - [x] direct request: make participant Slides Follow button label `🎯 Follow` and match Slides menu title text size.
 - [x] direct request: temporarily hide the participant slides renderer toggle (PDF.js/Native) and force participant viewer mode to PDF.js.
 - [x] direct request: host UI deploy/version tag (`deployed ...`) is now horizontally centered above the footer line instead of bottom-right aligned.

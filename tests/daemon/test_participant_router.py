@@ -136,3 +136,13 @@ class TestParticipantState:
                 resp = client.get("/api/participant/state", headers={"X-Participant-ID": "uuid1"})
         assert resp.status_code == 200
         assert resp.json()["session_name"] == "2026-04-06 Productive Session"
+
+    def test_state_participant_count_uses_active_connected_participants(self, client, fresh_state):
+        fresh_state.participant_names["uuid1"] = "Alice"
+        fresh_state.participant_names["uuid2"] = "Bob"
+        fresh_state.participant_names["uuid-offline"] = "Charlie"
+        fresh_state.online_participants.update({"uuid1", "uuid2", "__host__"})
+
+        resp = client.get("/api/participant/state", headers={"X-Participant-ID": "uuid1"})
+        assert resp.status_code == 200
+        assert resp.json()["participant_count"] == 2

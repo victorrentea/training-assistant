@@ -502,8 +502,8 @@ async def get_participant_state(request: Request):
     pid = request.headers.get("x-participant-id", "")
     ps = participant_state
 
-    # Count non-system participants
-    participant_count = len([p for p in ps.participant_names if not p.startswith("__")])
+    # Count only active connected non-system participants.
+    participant_count = len([p for p in ps.online_participants if not p.startswith("__")])
 
     poll_data = _build_poll_for_participant(pid)
     wc = wordcloud_state
