@@ -1,8 +1,9 @@
 """Tests for daemon participant router."""
-import pytest
 from unittest.mock import patch
-from starlette.testclient import TestClient
+
+import pytest
 from fastapi import FastAPI
+from starlette.testclient import TestClient
 
 from daemon.participant.router import router
 from daemon.participant.state import ParticipantState
