@@ -607,6 +607,12 @@ function closeEmojiPopup(ev) {
     if (el) el.style.fontSize = notesFontSize + 'rem';
   }
 
+  function _syncSlidesModalBlocking() {
+    const notesOpen = document.getElementById('notes-overlay')?.classList.contains('open');
+    const summaryOpen = document.getElementById('summary-overlay')?.classList.contains('open');
+    document.body.classList.toggle('modal-blocks-slides', Boolean(notesOpen || summaryOpen));
+  }
+
   document.addEventListener('DOMContentLoaded', () => {
     const overlay = document.getElementById('notes-overlay');
     if (overlay) {
@@ -635,6 +641,7 @@ function closeEmojiPopup(ev) {
     if (!overlay) return;
     const opening = !overlay.classList.contains('open');
     overlay.classList.toggle('open');
+    _syncSlidesModalBlocking();
     if (opening) {
       fetch(apiBase + '/api/participant/notes')
         .then(r => r.ok ? r.json() : null)
@@ -645,6 +652,7 @@ function closeEmojiPopup(ev) {
 
   function closeNotesModal() {
     closeModal('notes-overlay');
+    _syncSlidesModalBlocking();
   }
 
   function updateSummary(points, updatedAt, rawMarkdown) {
@@ -658,7 +666,9 @@ function closeEmojiPopup(ev) {
         const d = new Date(summaryUpdatedAt);
         const hhmm = d.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit', hour12: false});
         const today = new Date();
-        countEl.textContent = d.toDateString() === today.toDateString() ? hhmm : '📅 ' + hhmm;
+        countEl.textContent = d.toDateString() === today.toDateString()
+          ? hhmm
+          : d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + ' ' + hhmm;
       } else {
         countEl.textContent = '';
       }
@@ -759,6 +769,7 @@ ${html}
     if (!overlay) return;
     const opening = !overlay.classList.contains('open');
     overlay.classList.toggle('open');
+    _syncSlidesModalBlocking();
     if (opening) {
       fetch(apiBase + '/api/participant/summary')
         .then(r => r.ok ? r.json() : null)
@@ -769,6 +780,7 @@ ${html}
 
   function closeSummaryModal() {
     closeModal('summary-overlay');
+    _syncSlidesModalBlocking();
   }
 
   document.addEventListener('DOMContentLoaded', () => {

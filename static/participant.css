@@ -245,6 +245,16 @@ h1 { display: none; }
   z-index: 7003;
 }
 
+/* Notes + Key Points must be above the slides dock and its controls. */
+.summary-overlay {
+  z-index: 8000;
+}
+
+/* When summary/notes is open, hard-block slide dock interactions. */
+body.modal-blocks-slides #slides-dock {
+  pointer-events: none;
+}
+
 .slides-dock-head {
   display: flex;
   align-items: center;
