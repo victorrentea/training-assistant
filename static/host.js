@@ -11,7 +11,7 @@
   let participantDataById = {};     // uuid -> participant payload
   let participantDebateSides = {};  // uuid -> "for"|"against"|undefined
   let _debateActive = false;
-  const resolvedCities = {};   // raw "lat, lon" -> resolved city string cache
+  const resolvedLocationMeta = {};   // raw location string -> resolved metadata cache
   let correctOptIds = new Set(); // host-marked correct options for current poll
   let scores = {};               // uuid -> score
   let cachedParticipantIds = []; // last known participant uuids
@@ -112,6 +112,50 @@
     const el = document.getElementById('pax-count');
     if (!el) return;
     el.innerHTML = `<span class="pax-active-count">${active}</span><span class="pax-count-sep">/</span><span class="pax-total-count">${total}</span>`;
+  }
+
+  function _extractTimezone(loc) {
+    const match = String(loc || '').match(/^🕐\s+(.+)$/);
+    return match ? match[1].trim() : '';
+  }
+
+  function _formatClockForTimezone(tz) {
+    if (!tz) return '';
+    try {
+      return new Intl.DateTimeFormat('en-GB', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+        timeZone: tz,
+      }).format(new Date());
+    } catch {
+      return '';
+    }
+  }
+
+  function _countryCodeToFlag(countryCode) {
+    const cc = String(countryCode || '').trim().toUpperCase();
+    if (!/^[A-Z]{2}$/.test(cc)) return '';
+    return String.fromCodePoint(...cc.split('').map((ch) => 127397 + ch.charCodeAt(0)));
+  }
+
+  function _formatParticipantLocation(rawLoc) {
+    if (!rawLoc) return '';
+    const meta = resolvedLocationMeta[rawLoc];
+    const tz = _extractTimezone(rawLoc);
+    if (tz) {
+      const hhmm = _formatClockForTimezone(tz);
+      const cc = (meta && meta.countryCode) ? String(meta.countryCode).toUpperCase() : '';
+      if (hhmm && cc) {
+        return `⏱️${hhmm} in ${_countryCodeToFlag(cc)}${cc}`;
+      }
+      if (hhmm) {
+        return `⏱️${hhmm} in ${tz}`;
+      }
+      return rawLoc;
+    }
+    if (meta && meta.label) return meta.label;
+    return rawLoc;
   }
 
   function loadPollHistory() {
@@ -1546,7 +1590,7 @@
       const loc = participant.location || '';
       const pts = scores[pid] || 0;
       const scoreTag = pts > 0 ? `<span class="pax-score" title="Click to reset score" onclick="resetOneScore('${escHtml(pid)}','${escHtml(name)}',${pts})">⭐ ${pts} pts</span>` : '';
-      const locLabel = loc ? resolvedCities[loc] || loc : null;
+      const locLabel = loc ? _formatParticipantLocation(loc) : null;
       const avatar = participant.avatar || '';
       let avatarHtml = '';
       if (avatar && avatar.startsWith('letter:')) {
@@ -1579,20 +1623,41 @@
     // Lazily resolve any raw "lat, lon" strings to city names
     sorted.forEach(pid => {
       const loc = participantDataById[pid]?.location || '';
-      if (!loc || resolvedCities[loc]) return;
+      if (!loc || resolvedLocationMeta[loc]) return;
+      const tz = _extractTimezone(loc);
+      if (tz) {
+        const cityHint = tz.split('/').pop()?.replace(/_/g, ' ') || tz;
+        resolvedLocationMeta[loc] = { countryCode: '', label: loc }; // placeholder to avoid duplicate requests
+        fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(cityHint)}&format=json&limit=1&addressdetails=1`,
+          { headers: { 'Accept-Language': 'en' } })
+          .then(r => r.json())
+          .then(rows => {
+            const first = Array.isArray(rows) ? rows[0] : null;
+            const cc = first && first.address && first.address.country_code
+              ? String(first.address.country_code).toUpperCase()
+              : '';
+            resolvedLocationMeta[loc] = { countryCode: cc, label: loc };
+            renderParticipantList(cachedParticipantIds);
+          })
+          .catch(() => { resolvedLocationMeta[loc] = { countryCode: '', label: loc }; });
+        return;
+      }
       const coordMatch = loc.match(/^(-?\d+\.?\d*),\s*(-?\d+\.?\d*)$/);
       if (!coordMatch) return;
-      resolvedCities[loc] = loc; // placeholder to avoid duplicate requests
+      resolvedLocationMeta[loc] = { countryCode: '', label: loc }; // placeholder to avoid duplicate requests
       fetch(`https://nominatim.openstreetmap.org/reverse?lat=${coordMatch[1]}&lon=${coordMatch[2]}&format=json`,
         { headers: { 'Accept-Language': 'en' } })
         .then(r => r.json())
         .then(data => {
           const city = data.address?.city || data.address?.town || data.address?.village || data.address?.county || '';
           const country = data.address?.country_code?.toUpperCase() || data.address?.country || '';
-          resolvedCities[loc] = [city, country].filter(Boolean).join(', ') || loc;
+          resolvedLocationMeta[loc] = {
+            countryCode: country,
+            label: [city, country].filter(Boolean).join(', ') || loc,
+          };
           renderParticipantList(cachedParticipantIds);
         })
-        .catch(() => { resolvedCities[loc] = loc; });
+        .catch(() => { resolvedLocationMeta[loc] = { countryCode: '', label: loc }; });
     });
   }
 
