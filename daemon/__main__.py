@@ -9,62 +9,62 @@ import os
 import re
 import time
 from dataclasses import replace as dc_replace
-from datetime import date, datetime, timedelta
+from datetime import date, datetime
 from pathlib import Path
-from types import SimpleNamespace
 
 from daemon import log
 from daemon.config import (
-    config_from_env,
-    find_session_folder,
-    read_session_notes,
     DAEMON_POLL_INTERVAL,
     DEFAULT_TRANSCRIPT_MINUTES,
+    config_from_env,
+    find_session_folder,
 )
-from daemon.llm.adapter import get_usage
+from daemon.http import _get_json
+from daemon.lock import (
+    _HEARTBEAT_INTERVAL,
+    _LOCK_FILE,
+    check_and_acquire_lock,
+    install_signal_handlers,
+    write_lock,
+)
 from daemon.quiz.history import auto_generate, auto_generate_topic, auto_refine
 from daemon.quiz.poll_api import post_status
-from daemon.http import _get_json
-from daemon.summary.loop import run_summary_cycle, load_key_points, save_key_points, get_ai_summary_mtime, get_ai_summary_raw
-from daemon.transcript.loader import load_transcription_files
-from daemon.transcript.state import TranscriptStateManager
-from daemon.slides.loop import SlidesRunner
-from daemon.upload import handle_file_ready_for_download as _handle_file_download
-from daemon.ws_client import DaemonWsClient
 from daemon.session import pending as session_pending
 from daemon.session import state as session_shared_state
 from daemon.session_state import (
     GLOBAL_STATE_FILENAME,
     SESSION_STATE_FILENAME,
-    resolve_materials_folder,
-    load_daemon_state,
     daemon_state_to_stack,
-    stack_to_daemon_state,
-    save_daemon_state,
-    load_session_meta,
-    save_session_meta,
-    find_session_folder_by_id,
-    session_meta_to_stack,
-    pause_session,
-    resume_session,
-    session_start_date,
-    load_session_state,
-    save_session_state,
-    session_state_path,
     find_notes_in_folder,
-    sync_session_to_server,
+    find_session_folder_by_id,
+    load_daemon_state,
+    load_session_meta,
+    load_session_state,
     load_slides_manifest,
+    pause_session,
+    resolve_materials_folder,
+    resume_session,
+    save_daemon_state,
+    save_session_meta,
+    save_session_state,
+    session_meta_to_stack,
+    session_start_date,
+    session_state_path,
     set_current_session_id,
+    sync_session_to_server,
 )
-from daemon.lock import (
-    check_and_acquire_lock,
-    write_lock,
-    install_signal_handlers,
-    cleanup_lock,
-    _LOCK_FILE,
-    _HEARTBEAT_INTERVAL,
+from daemon.slides.loop import SlidesRunner
+from daemon.summary.loop import (
+    get_ai_summary_mtime,
+    get_ai_summary_raw,
+    load_key_points,
+    run_summary_cycle,
+    save_key_points,
 )
-from daemon.email_notify import notify as email_notify
+from daemon.transcript.loader import load_transcription_files
+from daemon.transcript.state import TranscriptStateManager
+from daemon.upload import handle_file_ready_for_download as _handle_file_download
+from daemon.ws_client import DaemonWsClient
 
 # ── PowerPoint helpers ─────────────────────────────────────────────────────────
 
@@ -168,13 +168,13 @@ def _build_runtime_session_snapshot(
     active_session_id: str | None,
     session_stack: list[dict],
 ) -> dict:
-    from daemon.participant.state import participant_state
-    from daemon.poll.state import poll_state
-    from daemon.wordcloud.state import wordcloud_state
-    from daemon.qa.state import qa_state
     from daemon.codereview.state import codereview_state
     from daemon.debate.state import debate_state
     from daemon.misc.state import misc_state
+    from daemon.participant.state import participant_state
+    from daemon.poll.state import poll_state
+    from daemon.qa.state import qa_state
+    from daemon.wordcloud.state import wordcloud_state
 
     qa_payload: dict[str, dict] = {}
     for qid, q in qa_state.questions.items():
@@ -277,12 +277,12 @@ def _apply_runtime_snapshot_restore(snapshot: dict | None) -> None:
     if not isinstance(snapshot, dict) or not snapshot:
         return
 
-    from daemon.participant.state import participant_state
-    from daemon.wordcloud.state import wordcloud_state
-    from daemon.qa.state import qa_state
-    from daemon.misc.state import misc_state
     from daemon.codereview.state import codereview_state
     from daemon.debate.state import debate_state
+    from daemon.misc.state import misc_state
+    from daemon.participant.state import participant_state
+    from daemon.qa.state import qa_state
+    from daemon.wordcloud.state import wordcloud_state
 
     participant_state.sync_from_restore(snapshot)
     wordcloud_state.sync_from_restore(snapshot)
@@ -616,7 +616,6 @@ def run() -> None:
     set_session_ws(ws_client)
 
     from daemon.scores import scores as daemon_scores
-
     from daemon.session.router import set_ws_client as set_session_router_ws
     set_session_router_ws(ws_client)
 
@@ -636,12 +635,7 @@ def run() -> None:
     )
 
     # State push handler — daemon receives current state from Railway on connect
-    from daemon.participant.state import participant_state
-    from daemon.wordcloud.state import wordcloud_state
-    from daemon.qa.state import qa_state
     from daemon.misc.state import misc_state
-    from daemon.codereview.state import codereview_state
-    from daemon.debate.state import debate_state
 
     def _handle_daemon_state_push(data):
         _apply_runtime_snapshot_restore(data)
@@ -747,7 +741,8 @@ def run() -> None:
     slides_runner.start()
 
     # ── Addon bridge client (connects to wispr-flow WS server at localhost:8765) ──
-    from daemon.addon_bridge_client import AddonBridgeClient, set_client as _set_bridge_client
+    from daemon.addon_bridge_client import AddonBridgeClient
+    from daemon.addon_bridge_client import set_client as _set_bridge_client
     _bridge = AddonBridgeClient()
     _set_bridge_client(_bridge)
 
@@ -857,8 +852,8 @@ def run() -> None:
     _get_json(_status_url, username=config.host_username, password=config.host_password)
 
     # ── Start local host panel server ──
-    from daemon.host_server import start_host_server
     from daemon.config import DAEMON_HOST_PORT
+    from daemon.host_server import start_host_server
     host_server_thread = start_host_server(config.server_url, port=DAEMON_HOST_PORT)
     log.info("daemon", f"Host panel: http://127.0.0.1:{DAEMON_HOST_PORT}/host")
 
@@ -926,8 +921,9 @@ def run() -> None:
             if _curr_overlay != _prev_overlay_connected:
                 _prev_overlay_connected = _curr_overlay
                 try:
-                    from daemon.slides.router import get_event_loop as _get_event_loop
                     import asyncio as _asyncio
+
+                    from daemon.slides.router import get_event_loop as _get_event_loop
                     _loop = _get_event_loop()
                     if _loop and _loop.is_running():
                         from daemon.ws_messages import OverlayConnectedMsg
@@ -981,15 +977,21 @@ def run() -> None:
                         if not session_stack:
                             # Fresh main session: clear runtime caches so participants/avatars/
                             # count and activity artifacts don't leak from previous sessions.
-                            from daemon.participant.state import participant_state as _participant_state
-                            from daemon.wordcloud.state import wordcloud_state as _wordcloud_state
-                            from daemon.qa.state import qa_state as _qa_state
-                            from daemon.misc.state import misc_state as _misc_state
-                            from daemon.poll.state import poll_state as _poll_state
-                            from daemon.codereview.state import codereview_state as _codereview_state
+                            from daemon.codereview.state import (
+                                codereview_state as _codereview_state,
+                            )
                             from daemon.debate.state import debate_state as _debate_state
-                            from daemon.leaderboard.state import leaderboard_state as _leaderboard_state
+                            from daemon.leaderboard.state import (
+                                leaderboard_state as _leaderboard_state,
+                            )
+                            from daemon.misc.state import misc_state as _misc_state
+                            from daemon.participant.state import (
+                                participant_state as _participant_state,
+                            )
+                            from daemon.poll.state import poll_state as _poll_state
+                            from daemon.qa.state import qa_state as _qa_state
                             from daemon.scores import scores as _scores_state
+                            from daemon.wordcloud.state import wordcloud_state as _wordcloud_state
 
                             _participant_state.reset(mode="conference" if session_type == "talk" else "workshop")
                             _wordcloud_state.clear()

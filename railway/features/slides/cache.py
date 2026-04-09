@@ -13,9 +13,9 @@ import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
+from railway.features.ws.proxy_bridge import proxy_to_daemon
 from railway.shared.messaging import broadcast
 from railway.shared.state import state
-from railway.features.ws.proxy_bridge import proxy_to_daemon
 
 logger = logging.getLogger(__name__)
 

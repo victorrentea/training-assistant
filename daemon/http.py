@@ -8,8 +8,8 @@ import os
 import socket
 import ssl
 import urllib.error
-from urllib.parse import urlparse
 import urllib.request
+from urllib.parse import urlparse
 
 from daemon import log
 

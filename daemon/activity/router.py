@@ -6,8 +6,8 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from daemon.participant.state import participant_state
-from daemon.ws_publish import broadcast
 from daemon.ws_messages import ActivityUpdatedMsg
+from daemon.ws_publish import broadcast
 
 logger = logging.getLogger(__name__)
 

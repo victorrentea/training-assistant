@@ -1,5 +1,5 @@
 """In-memory registry of valid session IDs for read-only access to past sessions."""
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 
 REGISTRY_TTL_DAYS = 90  # 3 months
 

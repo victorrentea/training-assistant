@@ -6,6 +6,7 @@ Failures are logged but never raise — notifications are best-effort.
 """
 
 import os
+
 from daemon import log
 
 _INBOX_ID = "claude-victor-dispatch@agentmail.to"

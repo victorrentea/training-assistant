@@ -1,6 +1,7 @@
 # features/ws/daemon_protocol.py
 """Daemon WebSocket protocol — message types and push helpers."""
 import logging
+
 from railway.shared.state import state
 
 logger = logging.getLogger(__name__)

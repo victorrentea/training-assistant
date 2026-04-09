@@ -1,8 +1,9 @@
-from typing import Optional
-from datetime import datetime
-from fastapi import WebSocket
-from enum import Enum
 import random
+from datetime import datetime
+from enum import Enum
+from typing import Optional
+
+from fastapi import WebSocket
 
 
 class ActivityType(str, Enum):
