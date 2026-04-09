@@ -102,10 +102,11 @@ def test_generator_renders_ws_as_table_and_omits_type_field_in_payload():
 def test_generator_drops_redundant_ws_summary_notes_but_keeps_extra_notes():
     output = _run_generator()
 
-    participant_count_row = re.search(r"^\| .*`participant_count_updated`.*\|$", output, re.MULTILINE)
-    assert participant_count_row, "Missing WS table row for participant_count_updated"
-    assert "Participant count changed" not in participant_count_row.group(0)
-    assert "| `participant_count_updated` |" in participant_count_row.group(0)
+    participant_count_row = re.search(r"^\| .*`active_participants_count_updated`.*\|$", output, re.MULTILINE)
+    assert participant_count_row, "Missing WS table row for active_participants_count_updated"
+    assert "Active connected participant count changed" in participant_count_row.group(0)
+    assert "currently connected non-host participants" in participant_count_row.group(0)
+    assert "`active_participants_count_updated`" in participant_count_row.group(0)
 
     poll_opened_row = re.search(r"^\| .*`poll_opened`.*\|$", output, re.MULTILINE)
     assert poll_opened_row, "Missing WS table row for poll_opened"

@@ -63,9 +63,9 @@ def test_ws_connection_increments_gauge():
     client = TestClient(app)
     before = _get_metric_value("ws_connections_active", {"role": "participant"}) or 0
     with client.websocket_connect(f"/ws/{state.session_id}/test-metrics-participant") as ws:
-        # On connect, server sends participant_count_updated broadcast
+        # On connect, server sends active_participants_count_updated broadcast
         msg = json.loads(ws.receive_text())
-        assert msg.get("type") == "participant_count_updated"
+        assert msg.get("type") == "active_participants_count_updated"
         during = _get_metric_value("ws_connections_active", {"role": "participant"})
         assert during is not None
         assert during > before

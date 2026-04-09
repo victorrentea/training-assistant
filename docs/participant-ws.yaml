@@ -21,7 +21,7 @@ channels:
           - $ref: '#/components/messages/slides_current'
           - $ref: '#/components/messages/slides_cache_status'
           - $ref: '#/components/messages/activity_updated'
-          - $ref: '#/components/messages/participant_count_updated'
+          - $ref: '#/components/messages/active_participants_count_updated'
           - $ref: '#/components/messages/poll_opened'
           - $ref: '#/components/messages/poll_closed'
           - $ref: '#/components/messages/poll_correct_revealed'
@@ -95,16 +95,18 @@ components:
 
     # ── Identity ──────────────────────────────────────────────────────────────
 
-    participant_count_updated:
-      summary: Participant count changed
+    active_participants_count_updated:
+      summary: Active connected participant count changed
       x-feature: identity
+      x-doc-notes:
+        - "'count' includes only currently connected non-host participants."
       payload:
         type: object
         required: [type, count]
         properties:
           type:
             type: string
-            enum: [participant_count_updated]
+            enum: [active_participants_count_updated]
           count:
             type: integer
 

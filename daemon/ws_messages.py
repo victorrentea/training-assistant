@@ -33,9 +33,9 @@ class ActivityUpdatedMsg(BaseModel):
 
 # ── Identity / Participants ───────────────────────────────────────────────────
 
-class ParticipantCountUpdatedMsg(BaseModel):
-    """Participant-only: count only."""
-    type: Literal["participant_count_updated"] = "participant_count_updated"
+class ActiveParticipantsCountUpdatedMsg(BaseModel):
+    """Participant-only: active connected participant count only."""
+    type: Literal["active_participants_count_updated"] = "active_participants_count_updated"
     count: int
 
 
@@ -256,7 +256,7 @@ PARTICIPANT_MESSAGES: dict[str, type[BaseModel]] = {
     # Activity
     "activity_updated": ActivityUpdatedMsg,
     # Identity
-    "participant_count_updated": ParticipantCountUpdatedMsg,
+    "active_participants_count_updated": ActiveParticipantsCountUpdatedMsg,
     # Poll
     "poll_opened": PollOpenedMsg,
     "poll_closed": PollClosedMsg,
@@ -330,7 +330,7 @@ PARTICIPANT_MESSAGE_FEATURES: dict[str, str] = {
     # Activity
     "activity_updated": "activity",
     # Identity
-    "participant_count_updated": "identity",
+    "active_participants_count_updated": "identity",
     # Poll
     "poll_opened": "poll",
     "poll_closed": "poll",

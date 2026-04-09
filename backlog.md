@@ -5,6 +5,7 @@
 - [x] direct request: host UI deploy/version tag (`deployed ...`) is now horizontally centered above the footer line instead of bottom-right aligned.
 - [x] bugfix GH#111 follow-up: host top participant counter now renders active/total (`active` green, `total` normal), and participant status dots are rendered via row-class CSS pseudo-elements for reliable visibility.
 - [x] bugfix GH#111: host participant list now always shows all known participants with presence dots (online = pulsing green, offline = red), driven by Railway→daemon participant presence events.
+- [x] direct request: renamed participant WS event to `active_participants_count_updated`, documented it as connected-non-host-only, and kept emitted `count` based on active WS participants.
 - [x] bugfix: host UI participant names/scores now use theme-aware text color (`var(--text)`) instead of hardcoded white, fixing unreadable names in light mode.
 - [x] bugfix GH#113: daemon host-state now exposes viewed git repos/branches (`git_repos`) and reads slides/git activity using the active session entry/date, so host footer popovers show current activity data.
 - [x] bugfix: participant white mode now styles the bottom-left feedback/paste/upload buttons with light theme colors instead of hardcoded black backgrounds.

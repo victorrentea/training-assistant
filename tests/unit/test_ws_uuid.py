@@ -21,13 +21,13 @@ def clean_state():
 
 
 def test_ws_unknown_uuid_allowed_through():
-    """Unknown UUID is allowed to proceed normally — receives participant_count_updated on connect."""
+    """Unknown UUID is allowed to proceed normally — receives active_participants_count_updated on connect."""
     client = TestClient(app)
     with client.websocket_connect(f"/ws/{state.session_id}/brand-new-uuid") as ws:
-        # On connect, server sends participant_count_updated broadcast
+        # On connect, server sends active_participants_count_updated broadcast
         msg = ws.receive_json()
         assert msg.get("type") != "session_paused"
-        assert msg.get("type") == "participant_count_updated"
+        assert msg.get("type") == "active_participants_count_updated"
 
 
 def test_ws_known_participant_allowed_through():
@@ -38,15 +38,30 @@ def test_ws_known_participant_allowed_through():
     with client.websocket_connect(f"/ws/{state.session_id}/active-uuid") as ws:
         msg = ws.receive_json()
         assert msg.get("type") != "session_paused"
-        assert msg.get("type") == "participant_count_updated"
+        assert msg.get("type") == "active_participants_count_updated"
 
 
 def test_ws_notifies_daemon_about_presence_changes():
     client = TestClient(app)
     with patch("railway.features.ws.router.push_to_daemon", new=AsyncMock(return_value=True)) as push_mock:
         with client.websocket_connect(f"/ws/{state.session_id}/presence-uuid") as ws:
-            assert ws.receive_json().get("type") == "participant_count_updated"
+            assert ws.receive_json().get("type") == "active_participants_count_updated"
 
         sent_messages = [call.args[0] for call in push_mock.await_args_list]
         assert {"type": "participant_presence", "uuid": "presence-uuid", "online": True} in sent_messages
         assert {"type": "participant_presence", "uuid": "presence-uuid", "online": False} in sent_messages
+
+
+def test_ws_active_participant_count_uses_connected_clients_only():
+    """Count reflects currently connected non-host participants, not all historical identities."""
+    state.participant_names = {
+        "offline-1": "Alice",
+        "offline-2": "Bob",
+        "offline-3": "Charlie",
+    }
+
+    client = TestClient(app)
+    with client.websocket_connect(f"/ws/{state.session_id}/only-live-client") as ws:
+        msg = ws.receive_json()
+        assert msg.get("type") == "active_participants_count_updated"
+        assert msg.get("count") == 1

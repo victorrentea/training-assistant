@@ -50,7 +50,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
 ### Participant WS
 | Message | Payload |
 | --- | --- |
-| `participant_count_updated` | `count: int` |
+| Active connected participant count changed<br>'count' includes only currently connected non-host participants.<br>`active_participants_count_updated` | `count: int` |
 
 ### Host REST
 | Endpoint | Request | Response |

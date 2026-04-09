@@ -2,7 +2,8 @@
 Broadcast infrastructure.
 
 broadcast() sends semantic events to all connected clients.
-broadcast_participant_update() sends participant count to all connected participants.
+broadcast_participant_update() sends active connected participant count
+to all connected participants.
 """
 import json
 import logging
@@ -52,7 +53,7 @@ async def broadcast_participant_update():
     count = len(pids)
 
     msg = json.dumps({
-        "type": "participant_count_updated",
+        "type": "active_participants_count_updated",
         "count": count,
         "host_connected": "__host__" in state.participants,
     })
