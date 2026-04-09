@@ -1,5 +1,6 @@
 # Tasks
 
+- [x] bugfix: participant white mode now styles the bottom-left feedback/paste/upload buttons with light theme colors instead of hardcoded black backgrounds.
 - [x] direct request: added Structurizr DSL -> generated Import Linter contracts pipeline (`scripts/generate_importlinter_from_structurizr.py`), committed generated artifacts under `docs/structurizr/out/`, and enforced it in tests/check-all.
 - [x] direct request: removed `summary_points` and `leaderboard_active` from persisted `session-state.json` model/snapshot output; both keys are now stripped during load normalization so they are never re-persisted.
 - [x] direct request: grouped persisted session activity fields into nested objects (`poll`, `wordcloud`, `codereview`, `debate`) with backward-compatible read migration from legacy flat `*_` keys and nested restore compatibility.

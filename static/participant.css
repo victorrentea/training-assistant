@@ -2306,6 +2306,16 @@ h1 { display: none; }
     background: rgba(0, 0, 0, 0.08);
   }
 
+  /* Left action buttons (feedback, paste, upload) in white mode */
+  #upload-btn, #paste-btn, #feedback-btn {
+    background: var(--bg);
+    border-color: var(--border);
+  }
+  #upload-btn:hover, #paste-btn:hover, #feedback-btn:hover {
+    background: rgba(0, 0, 0, 0.08);
+    border-color: var(--accent);
+  }
+
   /* QA / code review toast */
   .qa-toast {
     background: rgba(240, 242, 250, 0.97);
