@@ -1530,6 +1530,25 @@ components:
       required:
       - text
       title: FeedbackRequest
+    GitRepoActivity:
+      properties:
+        url:
+          type: string
+          title: Url
+        branch:
+          type: string
+          title: Branch
+        files:
+          items:
+            type: string
+          type: array
+          title: Files
+      type: object
+      required:
+      - url
+      - branch
+      - files
+      title: GitRepoActivity
     HostCodeReviewState:
       properties:
         snippet:
@@ -1808,6 +1827,16 @@ components:
           - type: string
           - type: 'null'
           title: Slides Log Topic
+        git_repos:
+          items:
+            $ref: '#/components/schemas/GitRepoActivity'
+          type: array
+          title: Git Repos
+          default: []
+        git_repos_count:
+          type: integer
+          title: Git Repos Count
+          default: 0
         session_main:
           anyOf:
           - $ref: '#/components/schemas/SessionMainPayload'

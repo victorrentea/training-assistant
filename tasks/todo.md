@@ -1,5 +1,24 @@
 # Todo
 
+## Direct request: fix GH#113 host activity badges for slides/git
+
+- [x] Reproduce and test that host-state uses the active session entry when reading slides activity
+- [x] Add daemon host-state support for git repo activity payload (`git_repos`, `git_repos_count`)
+- [x] Ensure host-state reads session-day activity files (slides/git) based on active session start date
+- [x] Regenerate OpenAPI snapshot after host-state schema change
+- [x] Run targeted daemon and JS regression tests and record proof
+
+### Review: fix GH#113 host activity badges for slides/git
+
+- Proof (red): `python3 -m pytest -q tests/daemon/test_host_state_router.py`
+- Result: `2 failed` (active session entry selection + missing `_build_git_repos_fields`)
+- Proof: `python3 -m tests.daemon.test_api_contract --regenerate`
+- Result: regenerated `docs/openapi.yaml` (`69 paths, 86 schemas`)
+- Proof (green): `python3 -m pytest -q tests/daemon/test_host_state_router.py tests/daemon/test_api_contract.py`
+- Result: `9 passed in 0.68s`
+- Proof: `node tests/test_js_unit.js`
+- Result: `70 passed, 0 failed`
+
 ## Direct request: fix GH#114 host title `@` styling
 
 - [x] Reproduce current host-title rendering behavior and add a failing regression test for `@` formatting
