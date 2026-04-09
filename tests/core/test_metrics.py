@@ -1,12 +1,13 @@
 """Tests for Prometheus metrics endpoint."""
 
 import base64
+import json
 import os
-import pytest
 from fastapi.testclient import TestClient
+from prometheus_client import REGISTRY
 
+import railway.shared.auth  # noqa: F401 - ensure shared secrets are loaded
 from railway.app import app, state
-import railway.shared.auth as auth  # noqa: ensure shared secrets are loaded
 
 _HOST_AUTH_HEADERS = {
     "Authorization": "Basic " + base64.b64encode(
@@ -32,11 +33,6 @@ def test_metrics_endpoint_returns_prometheus_format():
     assert "ws_connections_active" in body
     assert "poll_votes_total" in body
     assert "qa_questions_total" in body
-
-
-import json
-from prometheus_client import REGISTRY
-
 
 def _get_metric_value(name, labels=None):
     """Get current value of a Prometheus metric by sample name.
