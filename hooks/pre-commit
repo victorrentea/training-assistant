@@ -6,6 +6,51 @@ set -eu
 
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 
+stage_index_sequence_svgs() {
+  render_mode="$1"
+  tmp_dir="$(mktemp -d)"
+  trap 'rm -rf "$tmp_dir"' EXIT HUP INT TERM
+
+  if [ "$render_mode" = all ]; then
+    render_paths="$(git ls-files --cached -- 'docs/sequences/*.puml')"
+  else
+    render_paths="$(git diff --cached --name-only --diff-filter=ACMR -- 'docs/sequences/*.puml')"
+  fi
+
+  set --
+  while IFS= read -r path; do
+    [ -n "$path" ] || continue
+    tmp_path="$tmp_dir/$(basename "$path")"
+    git show ":$path" > "$tmp_path"
+    set -- "$@" "$tmp_path"
+  done <<EOF
+$render_paths
+EOF
+
+  if [ "$#" -gt 0 ]; then
+    python3 "$REPO_ROOT/scripts/render_puml_svgs.py" "$@" >/dev/null
+    for path in "$@"; do
+      git add "$REPO_ROOT/docs/sequences/svg/$(basename "${path%.puml}").svg"
+    done
+  fi
+
+  while IFS="$(printf '\t')" read -r status old_path new_path; do
+    [ -n "$status" ] || continue
+    case "$status" in
+      D|R*)
+        old_svg="$REPO_ROOT/docs/sequences/svg/$(basename "${old_path%.puml}").svg"
+        rm -f "$old_svg"
+        git add -A -- "$old_svg"
+        ;;
+    esac
+  done <<EOF
+$(git diff --cached --name-status --find-renames --diff-filter=DR -- 'docs/sequences/*.puml')
+EOF
+
+  rm -rf "$tmp_dir"
+  trap - EXIT HUP INT TERM
+}
+
 # Regenerate contract-driven API reference and stage it.
 python3 "$REPO_ROOT/scripts/generate_apis_md.py" --output "$REPO_ROOT/API.md" >/dev/null
 git add "$REPO_ROOT/API.md" "$REPO_ROOT/DB.md"
@@ -14,15 +59,7 @@ git add "$REPO_ROOT/API.md" "$REPO_ROOT/DB.md"
 staged_sequence_changes="$(git diff --cached --name-only --diff-filter=ACMRD -- 'docs/sequences/*.puml')"
 
 if git diff --cached --name-only --diff-filter=ACMR -- scripts/render_puml_svgs.py | grep -q .; then
-  python3 "$REPO_ROOT/scripts/render_puml_svgs.py" --delete-orphans >/dev/null
-  git add -A "$REPO_ROOT/docs/sequences/svg"
+  stage_index_sequence_svgs all
 elif [ -n "$staged_sequence_changes" ]; then
-  set -- --delete-orphans
-  for path in $staged_sequence_changes; do
-    if [ -f "$REPO_ROOT/$path" ]; then
-      set -- "$@" "$REPO_ROOT/$path"
-    fi
-  done
-  python3 "$REPO_ROOT/scripts/render_puml_svgs.py" "$@" >/dev/null
-  git add -A "$REPO_ROOT/docs/sequences/svg"
+  stage_index_sequence_svgs staged
 fi

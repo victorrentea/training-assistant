@@ -160,6 +160,17 @@ def _seed_sequence_repo(tmp_path: Path, stem: str = "01-a", label: str = "first"
     return repo, env
 
 
+def _seed_two_sequence_repo(tmp_path: Path) -> tuple[Path, dict[str, str]]:
+    repo, env = _create_hook_test_repo(tmp_path)
+    for stem, label in [("01-a", "first"), ("02-b", "second")]:
+        source = repo / "docs" / "sequences" / f"{stem}.puml"
+        svg = repo / "docs" / "sequences" / "svg" / f"{stem}.svg"
+        _write_sequence_source(source, label)
+        _write_matching_svg(source, svg)
+    _commit_all(repo)
+    return repo, env
+
+
 def _section_lines(text: str, heading: str) -> list[str]:
     lines = text.splitlines()
     start = lines.index(heading)
@@ -222,10 +233,13 @@ def test_pre_commit_hook_renders_and_stages_sequence_svgs():
     assert 'git add "$REPO_ROOT/API.md" "$REPO_ROOT/DB.md"' in text
     assert "git diff --cached --name-only --diff-filter=ACMR -- scripts/render_puml_svgs.py" in text
     assert "git diff --cached --name-only --diff-filter=ACMRD -- 'docs/sequences/*.puml'" in text
-    assert 'python3 "$REPO_ROOT/scripts/render_puml_svgs.py" --delete-orphans >/dev/null' in text
-    assert 'git add -A "$REPO_ROOT/docs/sequences/svg"' in text
-    assert 'set -- --delete-orphans' in text
-    assert 'if [ -f "$REPO_ROOT/$path" ]; then' in text
+    assert 'stage_index_sequence_svgs() {' in text
+    assert "git ls-files --cached -- 'docs/sequences/*.puml'" in text
+    assert 'git show ":$path" > "$tmp_path"' in text
+    assert "git diff --cached --name-status --find-renames --diff-filter=DR -- 'docs/sequences/*.puml'" in text
+    assert 'git add -A -- "$old_svg"' in text
+    assert "stage_index_sequence_svgs all" in text
+    assert "stage_index_sequence_svgs staged" in text
 
 
 def test_pre_push_hook_checks_rendered_sequence_svgs():
@@ -273,6 +287,47 @@ def test_pre_commit_hook_replaces_svg_for_staged_source_rename(tmp_path):
         ["D\tdocs/sequences/svg/01-a.svg", "A\tdocs/sequences/svg/02-b.svg"],
         ["R100\tdocs/sequences/svg/01-a.svg\tdocs/sequences/svg/02-b.svg"],
     ]
+
+
+def test_pre_commit_hook_ignores_unstaged_sequence_delete_when_sync_runs(tmp_path):
+    repo, env = _seed_two_sequence_repo(tmp_path)
+    kept_svg = repo / "docs" / "sequences" / "svg" / "02-b.svg"
+    updated_source = repo / "docs" / "sequences" / "01-a.puml"
+
+    _write_sequence_source(updated_source, "updated")
+    _run_repo_ok(repo, ["git", "add", "docs/sequences/01-a.puml"])
+    (repo / "docs" / "sequences" / "02-b.puml").unlink()
+
+    result = _run_repo(repo, ["sh", "hooks/pre-commit"], env=env)
+
+    assert result.returncode == 0, result.stderr or result.stdout
+    assert kept_svg.exists()
+    assert _run_repo_ok(
+        repo,
+        ["git", "diff", "--cached", "--name-status", "--", "docs/sequences/svg"],
+    ).stdout.splitlines() == ["M\tdocs/sequences/svg/01-a.svg"]
+
+
+def test_pre_commit_hook_ignores_unstaged_sequence_delete_when_renderer_is_staged(tmp_path):
+    repo, env = _seed_two_sequence_repo(tmp_path)
+    kept_svg = repo / "docs" / "sequences" / "svg" / "02-b.svg"
+    renderer_script = repo / "scripts" / "render_puml_svgs.py"
+
+    renderer_script.write_text(
+        renderer_script.read_text(encoding="utf-8") + "\n# staged hook test\n",
+        encoding="utf-8",
+    )
+    _run_repo_ok(repo, ["git", "add", "scripts/render_puml_svgs.py"])
+    (repo / "docs" / "sequences" / "02-b.puml").unlink()
+
+    result = _run_repo(repo, ["sh", "hooks/pre-commit"], env=env)
+
+    assert result.returncode == 0, result.stderr or result.stdout
+    assert kept_svg.exists()
+    assert _run_repo_ok(
+        repo,
+        ["git", "diff", "--cached", "--name-status", "--", "docs/sequences/svg"],
+    ).stdout.splitlines() == []
 
 
 def test_pre_push_hook_fails_for_stale_sequence_svg_before_other_checks(tmp_path):
