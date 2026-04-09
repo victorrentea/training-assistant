@@ -9,7 +9,7 @@ Usage:
 """
 from __future__ import annotations
 
-from typing import Any, Literal, Optional
+from typing import Any, Literal
 
 from pydantic import BaseModel
 
@@ -17,7 +17,7 @@ from pydantic import BaseModel
 
 class SlidesCurrentMsg(BaseModel):
     type: Literal["slides_current"] = "slides_current"
-    slides_current: Optional[dict[str, Any]] = None
+    slides_current: dict[str, Any] | None = None
 
 
 class SlidesCacheStatusMsg(BaseModel):
@@ -107,7 +107,7 @@ class QaUpdatedMsg(BaseModel):
 class CodereviewOpenedMsg(BaseModel):
     type: Literal["codereview_opened"] = "codereview_opened"
     snippet: str
-    language: Optional[str] = None
+    language: str | None = None
 
 
 class CodereviewSelectionClosedMsg(BaseModel):
@@ -134,23 +134,23 @@ class CodereviewSelectionsUpdatedMsg(BaseModel):
 class DebateUpdatedMsg(BaseModel):
     """Full debate state snapshot broadcast to participants."""
     type: Literal["debate_updated"] = "debate_updated"
-    statement: Optional[str] = None
-    phase: Optional[str] = None
+    statement: str | None = None
+    phase: str | None = None
     sides: dict[str, str] = {}
     arguments: list[dict[str, Any]] = []
     champions: dict[str, str] = {}
     auto_assigned: list[str] = []
-    first_side: Optional[str] = None
-    round_index: Optional[int] = None
-    round_timer_seconds: Optional[int] = None
-    round_timer_started_at: Optional[str] = None
+    first_side: str | None = None
+    round_index: int | None = None
+    round_timer_seconds: int | None = None
+    round_timer_started_at: str | None = None
 
 
 class DebateTimerMsg(BaseModel):
     type: Literal["debate_timer"] = "debate_timer"
     round_index: int
     seconds: int
-    started_at: Optional[str] = None
+    started_at: str | None = None
 
 
 class DebateRoundEndedMsg(BaseModel):
@@ -183,11 +183,11 @@ class QuizPreviewMsg(BaseModel):
     Normal: top-level question/options/multi/correct_indices.
     Clear: quiz=None (all other fields absent)."""
     type: Literal["quiz_preview"] = "quiz_preview"
-    quiz: Optional[Any] = None
-    question: Optional[str] = None
-    options: Optional[list[Any]] = None
-    multi: Optional[bool] = None
-    correct_indices: Optional[list[int]] = None
+    quiz: Any | None = None
+    question: str | None = None
+    options: list[Any] | None = None
+    multi: bool | None = None
+    correct_indices: list[int] | None = None
 
 
 # ── Host-only: Poll vote tally ────────────────────────────────────────────────

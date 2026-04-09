@@ -67,9 +67,9 @@ async def upload_file(
                 out.write(chunk)
     except HTTPException:
         raise
-    except Exception:
+    except Exception as exc:
         dest.unlink(missing_ok=True)
-        raise HTTPException(500, "Upload failed")
+        raise HTTPException(500, "Upload failed") from exc
 
     if total == 0:
         dest.unlink(missing_ok=True)

@@ -27,7 +27,7 @@ class SlideInvalidateRequest(BaseModel):
 
 
 @router.post("/api/slides/invalidate/{slug}")
-async def invalidate_slide(slug: str, body: SlideInvalidateRequest = SlideInvalidateRequest()):
+async def invalidate_slide(slug: str, body: SlideInvalidateRequest | None = None):
     """Force Railway to re-download and cache-bust the PDF for slug.
 
     Called by the slides upload daemon after it detects a PPTX was saved and
@@ -37,7 +37,7 @@ async def invalidate_slide(slug: str, body: SlideInvalidateRequest = SlideInvali
     """
     from railway.features.slides.cache import _cache_path, _set_status, do_invalidate_download
 
-    drive_export_url = body.drive_export_url.strip()
+    drive_export_url = (body.drive_export_url if body else "").strip()
     if not drive_export_url:
         for slide in (state.slides or []):
             if isinstance(slide, dict) and slide.get("slug") == slug:

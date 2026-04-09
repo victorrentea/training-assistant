@@ -95,7 +95,7 @@ class SlidesRunner:
             return False
         # Propagate updated modified_at into misc_state so REST /api/slides picks it up.
         tracked = self._slides_state.get("files", {})
-        for key, entry in tracked.items():
+        for _, entry in tracked.items():
             slug = str(entry.get("slug") or "").strip()
             if not slug:
                 continue
@@ -107,4 +107,3 @@ class SlidesRunner:
             if existing.get("modified_at") != iso:
                 misc_state.slides_cache_status[slug] = {**existing, "modified_at": iso}
         return True
-

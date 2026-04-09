@@ -47,8 +47,8 @@ async def upload_static(req: UploadStaticRequest):
     target = _validate_path(req.path)
     try:
         content = base64.b64decode(req.content_b64)
-    except Exception:
-        raise HTTPException(status_code=400, detail="Invalid base64 content")
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail="Invalid base64 content") from exc
     if len(content) > _MAX_UPLOAD_SIZE:
         raise HTTPException(status_code=400, detail=f"File too large ({len(content)} bytes, max {_MAX_UPLOAD_SIZE})")
     target.parent.mkdir(parents=True, exist_ok=True)
