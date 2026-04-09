@@ -2061,9 +2061,6 @@ components:
         current_activity:
           type: string
           title: Current Activity
-        participant_count:
-          type: integer
-          title: Participant Count
         host_connected:
           type: boolean
           title: Host Connected
@@ -2205,7 +2202,6 @@ components:
       - my_name
       - my_avatar
       - current_activity
-      - participant_count
       - host_connected
       - daemon_connected
       - wordcloud_words

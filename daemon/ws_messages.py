@@ -34,7 +34,7 @@ class ActivityUpdatedMsg(BaseModel):
 # ── Identity / Participants ───────────────────────────────────────────────────
 
 class ActiveParticipantsCountUpdatedMsg(BaseModel):
-    """Participant-only: active connected participant count only."""
+    """Participant-only: total known non-host participant count."""
     type: Literal["active_participants_count_updated"] = "active_participants_count_updated"
     count: int
 

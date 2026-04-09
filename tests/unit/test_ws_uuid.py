@@ -52,8 +52,8 @@ def test_ws_notifies_daemon_about_presence_changes():
         assert {"type": "participant_presence", "uuid": "presence-uuid", "online": False} in sent_messages
 
 
-def test_ws_active_participant_count_uses_connected_clients_only():
-    """Count reflects currently connected non-host participants, not all historical identities."""
+def test_ws_participant_count_uses_total_known_participants():
+    """Count reflects total known non-host participants in the session."""
     state.participant_names = {
         "offline-1": "Alice",
         "offline-2": "Bob",
@@ -64,4 +64,4 @@ def test_ws_active_participant_count_uses_connected_clients_only():
     with client.websocket_connect(f"/ws/{state.session_id}/only-live-client") as ws:
         msg = ws.receive_json()
         assert msg.get("type") == "active_participants_count_updated"
-        assert msg.get("count") == 1
+        assert msg.get("count") == 3

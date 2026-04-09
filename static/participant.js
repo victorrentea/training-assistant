@@ -2934,7 +2934,6 @@ ${html}
         }
         currentPoll = msg.poll;
         pollActive = msg.poll_active;
-        updateParticipantCount(msg.participant_count);
         updateHostDot(msg.host_connected);
         updateDaemonDot(msg.daemon_connected);
         updateScore(msg.my_score);

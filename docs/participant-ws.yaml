@@ -96,10 +96,10 @@ components:
     # ── Identity ──────────────────────────────────────────────────────────────
 
     active_participants_count_updated:
-      summary: Active connected participant count changed
+      summary: Participant total count changed
       x-feature: identity
       x-doc-notes:
-        - "'count' includes only currently connected non-host participants."
+        - "'count' includes all known non-host participants in the active session."
       payload:
         type: object
         required: [type, count]

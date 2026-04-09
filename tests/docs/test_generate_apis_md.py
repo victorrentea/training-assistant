@@ -104,8 +104,8 @@ def test_generator_drops_redundant_ws_summary_notes_but_keeps_extra_notes():
 
     participant_count_row = re.search(r"^\| .*`active_participants_count_updated`.*\|$", output, re.MULTILINE)
     assert participant_count_row, "Missing WS table row for active_participants_count_updated"
-    assert "Active connected participant count changed" in participant_count_row.group(0)
-    assert "currently connected non-host participants" in participant_count_row.group(0)
+    assert "Participant total count changed" in participant_count_row.group(0)
+    assert "all known non-host participants in the active session" in participant_count_row.group(0)
     assert "`active_participants_count_updated`" in participant_count_row.group(0)
 
     poll_opened_row = re.search(r"^\| .*`poll_opened`.*\|$", output, re.MULTILINE)

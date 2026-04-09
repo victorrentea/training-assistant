@@ -184,7 +184,6 @@ class ParticipantStateResponse(BaseModel):
     my_name: str
     my_avatar: str
     current_activity: str
-    participant_count: int
     host_connected: bool
     daemon_connected: bool
     wordcloud_words: dict[str, int]
@@ -502,9 +501,6 @@ async def get_participant_state(request: Request):
     pid = request.headers.get("x-participant-id", "")
     ps = participant_state
 
-    # Count only active connected non-system participants.
-    participant_count = len([p for p in ps.online_participants if not p.startswith("__")])
-
     poll_data = _build_poll_for_participant(pid)
     wc = wordcloud_state
     cr = _build_codereview_for_participant(pid)
@@ -521,7 +517,6 @@ async def get_participant_state(request: Request):
         "my_name": ps.participant_names.get(pid, ""),
         "my_avatar": ps.participant_avatars.get(pid, ""),
         "current_activity": ps.current_activity,
-        "participant_count": participant_count,
         "host_connected": True,   # daemon is the host server; if they reached us, host is connected
         "daemon_connected": True,
         # Wordcloud
