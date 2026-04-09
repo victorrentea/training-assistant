@@ -132,6 +132,14 @@
     }
   }
 
+  function _isOffHoursHHMM(hhmm) {
+    const m = String(hhmm || '').match(/^(\d{2}):(\d{2})$/);
+    if (!m) return false;
+    const h = Number(m[1]);
+    const min = Number(m[2]);
+    return h < 8 || h > 18 || (h === 18 && min > 0);
+  }
+
   function _countryCodeToFlag(countryCode) {
     const cc = String(countryCode || '').trim().toUpperCase();
     if (!/^[A-Z]{2}$/.test(cc)) return '';
@@ -1589,6 +1597,9 @@
       const pts = scores[pid] || 0;
       const scoreTag = pts > 0 ? `<span class="pax-score" title="Click to reset score" onclick="resetOneScore('${escHtml(pid)}','${escHtml(name)}',${pts})">⭐ ${pts} pts</span>` : '';
       const locLabel = loc ? _formatParticipantLocation(participant) : null;
+      const tzForColor = String(participant?.location_tz || _extractTimezone(loc) || '').trim();
+      const hhmmForColor = tzForColor ? _formatClockForTimezone(tzForColor) : '';
+      const locClass = _isOffHoursHHMM(hhmmForColor) ? 'pax-location offhours' : 'pax-location';
       const avatar = participant.avatar || '';
       let avatarHtml = '';
       if (avatar && avatar.startsWith('letter:')) {
@@ -1615,7 +1626,7 @@
         const copiedClass = (entry.copied || entry.seen_by_host) ? ' downloaded' : '';
         return `<span class="upload-icon${copiedClass}" title="${escHtml(entry.disk_path)}" data-uuid="${escHtml(pid)}" data-file-id="${escHtml(String(entry.id))}" onclick="copyDiskPath(this)"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 4v9"/><path d="M6 9.5L10 13.5L14 9.5"/><path d="M4.5 13.5v1a2 2 0 0 0 2 2h7a2 2 0 0 0 2-2v-1"/></svg></span>`;
       }).join('');
-      return `<li class="${online ? 'online' : 'offline'}"><span class="pax-name" title="${ip ? 'IP: ' + ip : ''}">${debateIcon}${avatarHtml}<span class="pax-name-text truncate">${escHtml(name)}</span>${pasteIcons}${uploadIcons}</span>${scoreTag}${locLabel ? `<span class="pax-location">${escHtml(locLabel)}</span>` : ''}</li>`;
+      return `<li class="${online ? 'online' : 'offline'}"><span class="pax-name" title="${ip ? 'IP: ' + ip : ''}">${debateIcon}${avatarHtml}<span class="pax-name-text truncate">${escHtml(name)}</span>${pasteIcons}${uploadIcons}</span>${scoreTag}${locLabel ? `<span class="${locClass}">${escHtml(locLabel)}</span>` : ''}</li>`;
     }).join('');
 
   }

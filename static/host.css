@@ -1180,6 +1180,9 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
   max-width: 6rem;
   text-align: right;
 }
+.pax-location.offhours {
+  color: var(--danger);
+}
 
 .qr-code {
   cursor: pointer;
