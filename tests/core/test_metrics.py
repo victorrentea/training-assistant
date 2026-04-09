@@ -6,8 +6,8 @@ import os
 from fastapi.testclient import TestClient
 from prometheus_client import REGISTRY
 
-import railway.shared.auth  # noqa: F401 - ensure shared secrets are loaded
 from railway.app import app, state
+import railway.shared.auth  # noqa: F401 - ensure shared secrets are loaded
 
 _HOST_AUTH_HEADERS = {
     "Authorization": "Basic " + base64.b64encode(
