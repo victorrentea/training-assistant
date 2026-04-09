@@ -1,0 +1,81 @@
+@startuml
+title Poll and Quiz
+hide footbox
+autonumber
+
+skinparam BackgroundColor transparent
+skinparam SequenceMessageAlign center
+skinparam ParticipantPadding 20
+skinparam BoxPadding 10
+skinparam MaxMessageSize 110
+skinparam WrapWidth 220
+skinparam RoundCorner 8
+
+actor "Host browser\nstatic/host.js" as Host
+actor "Participant browser" as Participant
+participant "Daemon quiz router\n/api/{session}/host/quiz-*" as QuizAPI
+collections "Quiz pending queue" as QuizPending
+participant "Daemon main loop\nquiz.history" as Loop
+participant "Claude API" as Claude
+participant "Daemon poll router\n/api/.../poll" as PollAPI
+participant "Railway HTTP proxy" as RailwayHTTP
+participant "Railway session WS" as RailwayWS
+
+group AI quiz generation
+Host -> QuizAPI: POST /quiz-request {minutes|topic}
+QuizAPI -> QuizPending: put(quiz_request)
+QuizAPI -> RailwayWS: broadcast quiz_status=requested
+
+Loop -> QuizPending: pop quiz_request
+Loop -> Loop: load summary points / notes / quiz history
+Loop -> Claude: generate_quiz(...) or refine_quiz(...)
+Claude --> Loop: quiz JSON
+Loop -> RailwayWS: broadcast quiz_preview
+Loop -> RailwayWS: broadcast quiz_status=done
+
+opt Host regenerates one field
+  Host -> QuizAPI: POST /quiz-refine {target}
+  QuizAPI -> QuizPending: put(quiz_refine)
+  QuizAPI -> RailwayWS: broadcast quiz_status=generating
+  Loop -> QuizPending: pop quiz_refine
+  Loop -> Claude: refine current preview
+  Claude --> Loop: updated quiz JSON
+  Loop -> RailwayWS: broadcast updated quiz_preview
+  Loop -> RailwayWS: broadcast quiz_status=done
+end
+end
+
+group Draft -> open -> vote -> reveal
+Host -> PollAPI: POST /host/poll
+PollAPI -> PollAPI: create draft poll\nset current_activity="poll"
+PollAPI -> Host: notify_host poll_ai_generated
+
+Host -> PollAPI: POST /host/poll/open
+PollAPI -> RailwayWS: broadcast poll_opened
+PollAPI -> Host: notify_host poll_opened
+
+Participant -> RailwayHTTP: POST /api/participant/poll/vote
+RailwayHTTP -> PollAPI: proxy vote request
+PollAPI -> PollAPI: cast_vote once for this participant
+PollAPI -> RailwayWS: write_back vote_update
+PollAPI -> Host: notify_host vote_update
+
+opt Host starts a countdown
+  Host -> PollAPI: POST /host/poll/timer
+  PollAPI -> RailwayWS: broadcast poll_timer_started
+  PollAPI -> Host: notify_host poll_timer_started
+end
+
+Host -> PollAPI: POST /host/poll/close
+PollAPI -> RailwayWS: broadcast poll_closed with tallies
+PollAPI -> Host: notify_host poll_closed
+
+opt Host reveals correct answers after closing
+  Host -> PollAPI: PUT /host/poll/correct
+  PollAPI -> PollAPI: reveal correct_ids\naward scores
+  PollAPI -> RailwayWS: broadcast poll_correct_revealed
+  PollAPI -> RailwayWS: broadcast scores_updated
+  PollAPI -> Host: notify_host scores_updated
+end
+end
+@enduml

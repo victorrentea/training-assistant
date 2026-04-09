@@ -1,0 +1,74 @@
+@startuml
+title Slides Cache and Follow Trainer
+hide footbox
+autonumber
+
+skinparam BackgroundColor transparent
+skinparam SequenceMessageAlign center
+skinparam ParticipantPadding 20
+skinparam BoxPadding 10
+skinparam MaxMessageSize 110
+skinparam WrapWidth 220
+skinparam RoundCorner 8
+
+actor "Participant browser\nstatic/participant.js" as Participant
+participant "Railway slides HTTP + WS" as Railway
+participant "Daemon slides API\nslides/router.py" as SlidesAPI
+participant "Daemon main loop + SlidesRunner" as Loop
+participant "Addons bridge\nPowerPoint events" as Addons
+database "Railway PDF cache" as Cache
+participant "Google Drive export URL" as Drive
+
+group Catalog bootstrap
+Loop -> Loop: load slides catalog from disk at startup
+Loop -> Railway: HEAD /api/slides/download/{slug}\nfor each known slide when session is active
+Railway -> Cache: check cached PDF presence
+Railway --> Loop: cached or not_cached
+Loop -> SlidesAPI: populate misc_state.slides_catalog\nand slides_cache_status
+
+Participant -> Railway: GET /{session}/api/slides
+Railway -> SlidesAPI: proxy daemon list request
+SlidesAPI --> Railway: slides with embedded cache status
+Railway --> Participant: normalized catalog
+end
+
+group On-demand cache check before opening a slide
+Participant -> Railway: GET /{session}/api/slides/check/{slug}
+Railway -> SlidesAPI: proxy check request
+
+alt Already cached on Railway
+  SlidesAPI -> Railway: HEAD /api/slides/download/{slug}
+  Railway -> Cache: verify cached PDF exists
+  SlidesAPI --> Railway: 200 cached
+else Cache miss
+  SlidesAPI -> SlidesAPI: mark status=downloading
+  SlidesAPI -> Railway: broadcast slides_cache_status
+  SlidesAPI -> Railway: daemon WS send download_pdf {slug, drive_export_url}
+  Railway -> Drive: download PDF in background
+  Drive --> Railway: PDF bytes
+  Railway -> Cache: store cached PDF
+  Railway -> SlidesAPI: daemon WS send pdf_download_complete
+  SlidesAPI -> SlidesAPI: mark status=cached\nresolve pending /check futures
+  SlidesAPI -> Railway: broadcast slides_cache_status
+  SlidesAPI --> Railway: 200 cached
+end
+
+Participant -> Railway: GET /{session}/api/slides/download/{slug}
+Railway -> Cache: serve inline PDF with ETag / Last-Modified
+Railway --> Participant: PDF document
+end
+
+group Follow trainer from live PowerPoint
+Addons -> Loop: slide {deck, slide, presenting}
+Loop -> Loop: map presentation name to catalog slug + participant URL
+Loop -> Railway: broadcast slides_current {slug, url, current_page}
+Railway -> Railway: mirror slides_current in server state
+Railway --> Participant: slides_current event
+Participant -> Participant: if follow is enabled,\nopen overlay and jump to the host page
+end
+
+note over Railway, Participant
+When Railway later broadcasts slides_cache_status with refreshed_slugs,
+the participant viewer reloads the active slide without a full page refresh.
+end note
+@enduml

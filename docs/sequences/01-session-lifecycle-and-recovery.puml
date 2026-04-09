@@ -1,0 +1,74 @@
+@startuml
+title Session Lifecycle and Recovery
+hide footbox
+autonumber
+
+skinparam BackgroundColor transparent
+skinparam SequenceMessageAlign center
+skinparam ParticipantPadding 20
+skinparam BoxPadding 10
+skinparam MaxMessageSize 110
+skinparam WrapWidth 220
+skinparam RoundCorner 8
+
+actor "Host browser\nhost-landing.js" as Host
+participant "Daemon session router\n/api/session/*" as SessionAPI
+collections "Pending request\nsession.pending" as Pending
+participant "Daemon main loop\n__main__.py" as Loop
+database "Session files\nsession-state.json\nglobal-state.json" as Disk
+participant "Railway daemon WS\nfeatures/ws/router.py" as RailwayWS
+participant "Existing host / participant\nsession WS clients" as Clients
+
+Host -> SessionAPI: GET /api/session/active
+SessionAPI -> Loop: read shared active session_id
+Loop --> SessionAPI: active id or null
+SessionAPI --> Host: {session_id|null}
+
+Host -> SessionAPI: GET /api/session/folders
+SessionAPI --> Host: current-year session folders
+
+alt Start a brand new session
+  Host -> SessionAPI: POST /api/session/create {name, type}
+  SessionAPI -> Pending: put(session_request=create)
+  SessionAPI --> Host: return generated session_id
+else Resume an existing folder
+  Host -> SessionAPI: POST /api/session/resume {folder}
+  SessionAPI -> Disk: load stable session_id from session-state.json
+  SessionAPI -> Pending: put(session_request=create with existing session_id)
+  SessionAPI --> Host: return stable session_id
+end
+
+Loop -> Pending: pop(session_request)
+Loop -> Disk: create/find session folder\npersist session_id metadata
+Loop -> Disk: load existing session snapshot or seed a new one
+Loop -> Disk: persist global-state.json
+Loop -> RailwayWS: send set_session_id {session_id, session_name}
+RailwayWS -> Clients: redirect + close stale sockets\nwhen the active session changed
+
+note over Loop, Disk
+The main loop keeps writing the daemon lock heartbeat and
+periodically flushes session/global state backups while active.
+end note
+
+== Backend or daemon recovery ==
+
+Loop -> Disk: load global-state.json at startup
+Loop -> Disk: load session-state.json for the active folder
+Loop -> Loop: restore in-memory session caches from disk
+Loop -> RailwayWS: on_connect -> resend set_session_id
+RailwayWS -> Clients: allow reconnects for the restored session_id
+
+note over RailwayWS, Clients
+Current recovery no longer replays the old monolithic session_sync payload.
+Clients reconnect, then fetch fresh state from the daemon-owned REST endpoints.
+end note
+
+== End the current session ==
+
+Host -> SessionAPI: POST /api/session/end
+SessionAPI -> Pending: put(session_request=end)
+Loop -> Pending: pop(end)
+Loop -> Disk: force-flush session snapshot\nsave key points\npersist empty active_session_id
+Loop -> RailwayWS: send set_session_id with no session_id
+RailwayWS -> Clients: redirect host to /host\nredirect participants to /?code=<old>&retry=1
+@enduml

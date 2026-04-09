@@ -1,0 +1,59 @@
+@startuml
+title Participant-to-Host Inputs and Emoji
+hide footbox
+autonumber
+
+skinparam BackgroundColor transparent
+skinparam SequenceMessageAlign center
+skinparam ParticipantPadding 20
+skinparam BoxPadding 10
+skinparam MaxMessageSize 110
+skinparam WrapWidth 220
+skinparam RoundCorner 8
+
+actor "Participant browser\nstatic/participant.js" as Participant
+participant "Railway upload router" as UploadRailway
+participant "Daemon misc router" as MiscAPI
+participant "Daemon emoji router" as EmojiAPI
+participant "Daemon upload handler" as UploadDaemon
+participant "Host browser" as Host
+participant "Desktop overlay\naddons bridge" as Overlay
+participant "Email notifications" as Email
+
+group Paste text to host
+Participant -> MiscAPI: POST /api/participant/paste
+MiscAPI -> MiscAPI: add_paste(uuid, text)
+MiscAPI -> Host: host_event paste_received
+end
+
+group Feedback email
+Participant -> MiscAPI: POST /api/participant/misc/feedback
+MiscAPI -> Email: send feedback email with session + participant name
+Email --> MiscAPI: accepted
+end
+
+group File upload handoff
+Participant -> UploadRailway: POST /{session}/api/upload (multipart + uuid)
+UploadRailway -> UploadRailway: stream temp file to .server-data/uploads
+UploadRailway -> UploadDaemon: daemon WS push file_ready_for_download
+
+UploadDaemon -> UploadRailway: GET /upload/{file_id} (host-auth download)
+UploadRailway --> UploadDaemon: temp file bytes
+UploadDaemon -> UploadDaemon: save file into session_folder/uploads
+UploadDaemon -> UploadRailway: daemon WS send_to_host file_uploaded
+UploadRailway -> Host: forward file_uploaded to host WS
+UploadDaemon -> UploadRailway: POST /upload/{file_id}/ack {disk_path}
+UploadRailway -> UploadRailway: delete Railway temp file
+
+opt Host dismisses the upload indicator
+  Host -> MiscAPI: POST /host/uploads/seen
+  MiscAPI -> MiscAPI: mark uploaded file as seen
+end
+end
+
+group Emoji reaction
+Participant -> EmojiAPI: POST /api/participant/emoji/reaction
+EmojiAPI -> Overlay: send_emoji best-effort over addons bridge
+EmojiAPI -> Host: notify_host emoji_reaction
+end
+@enduml

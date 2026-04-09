@@ -1,0 +1,65 @@
+@startuml
+title Participant Join and Geolocation
+hide footbox
+autonumber
+
+skinparam BackgroundColor transparent
+skinparam SequenceMessageAlign center
+skinparam ParticipantPadding 20
+skinparam BoxPadding 10
+skinparam MaxMessageSize 110
+skinparam WrapWidth 220
+skinparam RoundCorner 8
+
+actor "Participant browser\nstatic/participant.js" as Participant
+participant "Railway HTTP proxy" as RailwayHTTP
+participant "Daemon participant router\n/api/participant/*" as ParticipantAPI
+participant "Railway session WS\nfeatures/ws/router.py" as RailwayWS
+participant "Host browser\nparticipant list / map" as Host
+
+Participant -> RailwayHTTP: POST /{session}/api/participant/register\nX-Participant-ID: uuid
+RailwayHTTP -> ParticipantAPI: proxy register request
+
+alt Returning UUID
+  ParticipantAPI -> ParticipantAPI: reuse stored name + avatar
+else First time in this session
+  ParticipantAPI -> ParticipantAPI: assign workshop/conference name\nassign avatar\ninitialize score
+  ParticipantAPI -> Host: notify_host(updated participant list)
+end
+
+ParticipantAPI --> RailwayHTTP: {name, avatar}
+RailwayHTTP --> Participant: assigned identity
+
+Participant -> RailwayWS: connect /ws/{session_id}/{uuid}
+RailwayWS -> RailwayWS: validate active session_id
+RailwayWS -> RailwayWS: store socket + participant IP
+RailwayWS -> Host: broadcast participant presence update
+RailwayWS --> Participant: WS open
+
+Participant -> RailwayHTTP: GET /{session}/api/participant/state
+RailwayHTTP -> ParticipantAPI: proxy state request
+ParticipantAPI --> RailwayHTTP: personalized state snapshot
+RailwayHTTP --> Participant: state + activity + score + slides
+
+Participant -> RailwayHTTP: POST /{session}/api/participant/location\nstored GPS or timezone fallback
+RailwayHTTP -> ParticipantAPI: proxy location update
+ParticipantAPI -> ParticipantAPI: save participant_state.locations[uuid]
+ParticipantAPI -> Host: notify_host(updated participant list)
+ParticipantAPI --> RailwayHTTP: 204
+
+opt User accepts browser geolocation later
+  Participant -> Participant: navigator.geolocation.getCurrentPosition()
+  Participant -> RailwayHTTP: POST /{session}/api/participant/location {lat,lon}
+  RailwayHTTP -> ParticipantAPI: proxy precise location
+  ParticipantAPI -> Host: notify_host(updated participant list)
+end
+
+alt Session id is stale or ended
+  RailwayWS --> Participant: redirect + close (1008/1000)
+end
+
+note over RailwayWS
+Participant actions now go through daemon REST endpoints.
+The session WebSocket stays focused on presence, redirects, and broadcasts.
+end note
+@enduml

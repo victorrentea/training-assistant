@@ -1,0 +1,66 @@
+@startuml
+title Q&A and Word Cloud
+hide footbox
+autonumber
+
+skinparam BackgroundColor transparent
+skinparam SequenceMessageAlign center
+skinparam ParticipantPadding 20
+skinparam BoxPadding 10
+skinparam MaxMessageSize 110
+skinparam WrapWidth 220
+skinparam RoundCorner 8
+
+actor "Host browser" as Host
+actor "Participant browser\nstatic/participant.js" as Participant
+participant "Railway HTTP proxy" as RailwayHTTP
+participant "Daemon QA router" as QAAPI
+participant "Daemon wordcloud router" as WordcloudAPI
+participant "Railway session WS" as RailwayWS
+participant "Host local WS\nresolved names / scores" as HostWS
+
+group Word cloud
+Host -> WordcloudAPI: POST /host/wordcloud/topic
+WordcloudAPI -> RailwayWS: broadcast wordcloud_updated(topic)
+
+Participant -> RailwayHTTP: POST /api/participant/wordcloud/word
+RailwayHTTP -> WordcloudAPI: proxy word submission
+WordcloudAPI -> WordcloudAPI: require current_activity == wordcloud\nadd word\nadd 200 points
+WordcloudAPI -> RailwayWS: write_back wordcloud_updated
+WordcloudAPI -> RailwayWS: write_back scores_updated
+
+opt Host clears the cloud or adds a seed word
+  Host -> WordcloudAPI: POST /host/wordcloud/clear or /word
+  WordcloudAPI -> RailwayWS: broadcast wordcloud_updated
+end
+end
+
+group Q&A
+Participant -> RailwayHTTP: POST /api/participant/qa/submit
+RailwayHTTP -> QAAPI: proxy question submission
+QAAPI -> QAAPI: save question\nadd 100 points to author
+QAAPI -> RailwayWS: write_back qa_updated(raw questions)
+QAAPI -> RailwayWS: write_back scores_updated
+QAAPI -> HostWS: notify_host qa_updated(with names + avatars)
+QAAPI -> HostWS: notify_host scores_updated
+
+Participant -> RailwayHTTP: POST /api/participant/qa/upvote
+RailwayHTTP -> QAAPI: proxy upvote request
+QAAPI -> QAAPI: add upvote\nadd 50 points to author\nadd 25 points to voter
+QAAPI -> RailwayWS: write_back qa_updated(raw questions)
+QAAPI -> RailwayWS: write_back scores_updated
+QAAPI -> HostWS: notify_host qa_updated(with names + avatars)
+QAAPI -> HostWS: notify_host scores_updated
+
+opt Host moderates the queue
+  Host -> QAAPI: edit / delete / answered / clear
+  QAAPI -> RailwayWS: broadcast qa_updated(raw questions)
+  QAAPI -> HostWS: notify_host qa_updated(with names + avatars)
+end
+end
+
+note over QAAPI, HostWS
+Participants receive anonymous/raw question payloads.
+The host gets a richer version with resolved participant names and avatars.
+end note
+@enduml

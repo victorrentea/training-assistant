@@ -1,0 +1,80 @@
+@startuml
+title Code Review and Debate
+hide footbox
+autonumber
+
+skinparam BackgroundColor transparent
+skinparam SequenceMessageAlign center
+skinparam ParticipantPadding 20
+skinparam BoxPadding 10
+skinparam MaxMessageSize 110
+skinparam WrapWidth 220
+skinparam RoundCorner 8
+
+actor "Host browser" as Host
+actor "Participant browser" as Participant
+participant "Railway HTTP proxy" as RailwayHTTP
+participant "Daemon code review router" as CodeReviewAPI
+participant "Daemon debate router" as DebateAPI
+participant "Host local WS" as HostWS
+participant "Railway session WS" as RailwayWS
+participant "Claude API" as Claude
+
+group Code review
+Host -> CodeReviewAPI: POST /host/codereview {snippet, smart_paste}
+opt Smart paste enabled
+  CodeReviewAPI -> Claude: extract code + detect language
+  Claude --> CodeReviewAPI: cleaned snippet, language
+end
+CodeReviewAPI -> CodeReviewAPI: create review\nset current_activity="codereview"
+CodeReviewAPI -> RailwayWS: broadcast codereview_opened
+CodeReviewAPI -> RailwayWS: broadcast activity_updated=codereview
+
+Participant -> RailwayHTTP: PUT /api/participant/codereview/selection
+RailwayHTTP -> CodeReviewAPI: proxy line selections
+CodeReviewAPI -> CodeReviewAPI: require activity=codereview\nrequire phase=selecting
+CodeReviewAPI -> HostWS: host_event codereview_selections_updated
+
+Host -> CodeReviewAPI: PUT /host/codereview/status {open:false}
+CodeReviewAPI -> RailwayWS: broadcast codereview_selection_closed
+
+Host -> CodeReviewAPI: PUT /host/codereview/confirm-line
+CodeReviewAPI -> CodeReviewAPI: confirm line\naward 200 points to matching participants
+CodeReviewAPI -> RailwayWS: broadcast codereview_line_confirmed
+CodeReviewAPI -> RailwayWS: broadcast scores_updated
+end
+
+group Debate
+Host -> DebateAPI: POST /host/debate {statement}
+DebateAPI -> DebateAPI: launch debate\nset current_activity="debate"
+DebateAPI -> RailwayWS: broadcast debate_updated
+DebateAPI -> RailwayWS: broadcast activity_updated=debate
+
+Participant -> RailwayHTTP: POST /api/participant/debate/pick-side
+RailwayHTTP -> DebateAPI: proxy side pick
+DebateAPI -> DebateAPI: auto-assign remaining participants when needed
+DebateAPI -> RailwayWS: write_back debate_updated
+
+Participant -> RailwayHTTP: POST /api/participant/debate/argument or /upvote or /volunteer
+RailwayHTTP -> DebateAPI: proxy debate action
+DebateAPI -> DebateAPI: mutate debate state\naward submit/upvote/champion points
+DebateAPI -> RailwayWS: write_back debate_updated
+DebateAPI -> RailwayWS: write_back scores_updated
+
+Host -> DebateAPI: POST /host/debate/end-arguments
+alt No participant arguments yet
+  DebateAPI -> DebateAPI: advance directly to prep
+  DebateAPI -> RailwayWS: broadcast debate_updated
+else Run AI cleanup in background
+  DebateAPI -> RailwayWS: broadcast debate_updated phase=ai_cleanup
+  DebateAPI -> Claude: run_debate_ai_cleanup(statement, for_args, against_args)
+  Claude --> DebateAPI: merges + cleaned text + new arguments
+  DebateAPI -> DebateAPI: apply AI result and advance to prep
+  DebateAPI -> RailwayWS: broadcast debate_updated
+end
+
+Host -> DebateAPI: POST /phase /first-side /round-timer /end-round
+DebateAPI -> RailwayWS: broadcast debate_updated
+DebateAPI -> RailwayWS: broadcast debate_timer / debate_round_ended
+end
+@enduml

@@ -1,0 +1,59 @@
+@startuml
+title Activity, Summary, and Leaderboard
+hide footbox
+autonumber
+
+skinparam BackgroundColor transparent
+skinparam SequenceMessageAlign center
+skinparam ParticipantPadding 20
+skinparam BoxPadding 10
+skinparam MaxMessageSize 110
+skinparam WrapWidth 220
+skinparam RoundCorner 8
+
+actor "Host browser\nstatic/host.js" as Host
+actor "Participant browser\nstatic/participant.js" as Participant
+participant "Daemon activity router" as ActivityAPI
+participant "Daemon main loop\nsummary probe" as Loop
+database "Session folder\nai-summary.md + notes" as SessionFiles
+participant "Daemon summary / misc APIs" as SummaryAPI
+participant "Daemon leaderboard router" as LeaderboardAPI
+participant "Railway session WS" as RailwayWS
+
+group Activity switching
+Host -> ActivityAPI: POST /host/activity {activity}
+ActivityAPI -> ActivityAPI: set participant_state.current_activity
+ActivityAPI -> RailwayWS: broadcast activity_updated
+RailwayWS --> Participant: activity_updated
+Participant -> SummaryAPI: refresh /api/participant/state\nwhen stateful activity changes
+RailwayWS --> Host: activity_updated
+end
+
+group Summary counts and modal fetch
+Loop -> SessionFiles: poll notes + ai-summary.md metadata
+alt Notes or summary counts changed
+  Loop -> RailwayWS: broadcast notes_updated
+  Loop -> RailwayWS: broadcast summary_updated
+end
+
+Host -> SummaryAPI: GET /host/summary
+SummaryAPI -> SessionFiles: read ai-summary.md via read_summary_payload()
+SummaryAPI --> Host: points + updated_at
+
+Participant -> SummaryAPI: GET /api/participant/summary
+SummaryAPI -> SessionFiles: read ai-summary.md via read_summary_payload()
+SummaryAPI --> Participant: points + raw_markdown + updated_at
+end
+
+group Leaderboard reveal / hide
+Host -> LeaderboardAPI: POST /host/leaderboard/show
+LeaderboardAPI -> LeaderboardAPI: compute top positive scores\nstore leaderboard_state
+LeaderboardAPI -> RailwayWS: broadcast leaderboard_revealed
+RailwayWS --> Host: reveal top 5 overlay
+RailwayWS --> Participant: reveal leaderboard + personal rank
+
+Host -> LeaderboardAPI: POST /host/leaderboard/hide
+LeaderboardAPI -> LeaderboardAPI: clear leaderboard_state
+LeaderboardAPI -> RailwayWS: broadcast leaderboard_hidden
+end
+@enduml
