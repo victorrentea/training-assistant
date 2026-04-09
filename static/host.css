@@ -190,10 +190,20 @@ body {
 .host-top-pax .stat {
   font-size: 1.8rem;
   line-height: 1;
+  display: inline-flex;
+  align-items: baseline;
+  gap: .12em;
 }
 .host-top-pax .stat-label {
   font-size: .8rem;
   margin-top: 0;
+}
+.pax-active-count {
+  color: #4caf50;
+}
+.pax-total-count,
+.pax-count-sep {
+  color: var(--text);
 }
 
 /* 3-column host layout */
@@ -1126,19 +1136,23 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
   min-width: 0;
   overflow: hidden;
 }
-.pax-status-dot {
-  width: 8px;
-  height: 8px;
+.pax-name::before {
+  content: '';
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
   display: inline-block;
   flex-shrink: 0;
+  margin-right: .1rem;
 }
-.pax-status-dot.online {
+.pax-list li.online .pax-name::before {
   background: #4caf50;
+  box-shadow: 0 0 0 1px rgba(76, 175, 80, 0.3), 0 0 8px rgba(76, 175, 80, 0.55);
   animation: pulse 1.4s infinite;
 }
-.pax-status-dot.offline {
+.pax-list li.offline .pax-name::before {
   background: #e53935;
+  box-shadow: 0 0 0 1px rgba(229, 57, 53, 0.25);
 }
 .pax-name-text {
   min-width: 0;
