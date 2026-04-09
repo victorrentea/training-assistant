@@ -2,9 +2,9 @@
 
 ## Direct request: split architecture sequence diagrams and generated SVGs
 
-- [ ] Add a repository PlantUML renderer with render, watch, and check modes
-- [ ] Split current-code sequence flows into `docs/sequences/*.puml`
-- [ ] Update `ARCHITECTURE.md` TOC and reference generated SVGs
+- [x] Add a repository PlantUML renderer with render, watch, and check modes
+- [x] Split current-code sequence flows into `docs/sequences/*.puml`
+- [x] Update `ARCHITECTURE.md` TOC and reference generated SVGs
 - [x] Enforce `.puml`/`.svg` sync in hooks and verify the generated assets
 
 ## Direct request: refresh ARCHITECTURE.md to match current runtime
