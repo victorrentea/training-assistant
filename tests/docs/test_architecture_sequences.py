@@ -27,6 +27,16 @@ EXPECTED_SEQUENCE_TITLES = [
     "Participant-to-Host Inputs and Emoji",
     "Activity, Summary, and Leaderboard",
 ]
+EXPECTED_SEQUENCE_SUMMARIES = [
+    "This diagram covers the daemon-first session start, folder resume, disk restore, and Railway reconnect path for the active `session_id`.",
+    "This diagram covers UUID-based participant registration, session-scoped state bootstrap, presence updates, and optional location sharing back to the host view.",
+    "This diagram covers Claude-backed quiz draft generation plus the live poll lifecycle from host draft/open through participant votes, close, and score reveal.",
+    "This diagram covers participant word submissions, anonymous question and upvote flows, host moderation, and the score updates emitted alongside those actions.",
+    "This diagram covers host-launched code review and debate activities, participant submissions, scoring, and the Claude cleanup step that now only applies to debate arguments.",
+    "This diagram covers slide catalog loading, Railway PDF cache fill and refresh, and the live follow-trainer flow driven by PowerPoint events from the local addons bridge.",
+    "This diagram covers participant paste and feedback actions, Railway-to-daemon upload handoff, and best-effort emoji delivery to both the host UI and desktop overlay.",
+    "This diagram covers activity switching, file-backed notes and summary publication, participant state refreshes, and host-controlled leaderboard reveal and hide.",
+]
 
 
 def _section_lines(text: str, heading: str) -> list[str]:
@@ -84,6 +94,14 @@ def test_expected_sequence_svgs_are_in_sync():
     assert renderer.check_render_sync(_expected_sequence_sources(), SVG_DIR) == []
 
 
+def test_architecture_md_describes_ai_summary_as_primary_current_path():
+    reality_today = _section_lines(ARCHITECTURE_MD.read_text(encoding="utf-8"), "## Reality Today")
+    summary_line = next(line for line in reality_today if line.startswith("- Summary publication is currently file-driven"))
+
+    assert "`ai-summary.md` as the primary current path" in summary_line
+    assert "legacy/fallback summary content can still exist in the session folder" in summary_line
+
+
 def test_architecture_md_has_sequence_toc_and_svg_refs():
     text = ARCHITECTURE_MD.read_text(encoding="utf-8")
     toc_lines = _section_lines(text, "## Table of Contents")
@@ -115,10 +133,16 @@ def test_architecture_md_has_sequence_toc_and_svg_refs():
 
     assert [title for title, _ in subsections] == EXPECTED_SEQUENCE_TITLES
 
-    for (title, lines), stem in zip(subsections, EXPECTED_SEQUENCE_STEMS, strict=True):
+    for (title, lines), stem, summary in zip(
+        subsections,
+        EXPECTED_SEQUENCE_STEMS,
+        EXPECTED_SEQUENCE_SUMMARIES,
+        strict=True,
+    ):
         body_lines = [line for line in lines if line and line != "---"]
         image_line = f"![{title.lower()}](docs/sequences/svg/{stem}.svg)"
+        summary_line, code_path_line, image_line_in_doc = body_lines
 
-        assert body_lines[0]
-        assert body_lines[1].startswith("Current code path / behavior family: ")
-        assert body_lines[-1] == image_line
+        assert summary_line == summary
+        assert "Current code path / behavior family:" in code_path_line
+        assert image_line_in_doc == image_line

@@ -35,7 +35,7 @@ For product goals, workflow rules, and operational conventions, see [CLAUDE.md](
 - Railway is now a thin session-aware bridge: page serving, session validation, browser WebSockets, daemon WebSocket, slide cache/downloads, temporary file uploads, and daemon-driven static sync.
 - Most live workshop behavior lives in the daemon: session lifecycle, participant and host snapshots, poll/word cloud/Q&A/code review/debate state, quiz generation, slide orchestration, upload handoff, and local persistence.
 - There is no standalone database in the current runtime. Railway keeps in-memory state plus temp files; the daemon persists session files on disk.
-- Summary publication is currently file-driven from `ai-summary.md`. Claude is currently used for quiz generation/refinement and debate cleanup.
+- Summary publication is currently file-driven, with `ai-summary.md` as the primary current path while legacy/fallback summary content can still exist in the session folder. Claude is currently used for quiz generation/refinement and debate cleanup.
 
 ---
 
@@ -272,7 +272,7 @@ Rel(addons_bridge, macos_addons, "Slide and overlay/session events", "Local WSS"
   - `global-state.json` for global daemon stack/session metadata
   - `session-state.json` per session folder
   - session artifacts such as `ai-summary.md`, `transcript_discussion.md`, slide manifests, uploads, and normalized transcripts
-- The current summary path is file-backed. [`daemon/summary/loop.py`](daemon/summary/loop.py) reads `ai-summary.md` and republishes key points; it does not currently call Claude itself.
+- The current summary path is file-backed. [`daemon/summary/loop.py`](daemon/summary/loop.py) primarily republishes key points from `ai-summary.md`, while legacy/fallback summary content can still exist in the session folder; it does not currently call Claude itself.
 - Claude-backed paths are currently:
   - [`daemon/quiz/generator.py`](daemon/quiz/generator.py) for quiz generation and refinement
   - [`daemon/debate/ai_cleanup.py`](daemon/debate/ai_cleanup.py) for debate cleanup/suggestions
@@ -310,7 +310,7 @@ Rel(addons_bridge, macos_addons, "Slide and overlay/session events", "Local WSS"
 | Daemon live feature state | `daemon/*/state.py` modules | In memory inside the daemon process | `participant_state`, `poll_state`, `wordcloud_state`, `qa_state`, `codereview_state`, `debate_state`, `misc_state`, `leaderboard_state`, and session stack helpers. |
 | Daemon persisted session state | [`daemon/session_state.py`](daemon/session_state.py) | Session folders under `SESSIONS_FOLDER` | `global-state.json`, `session-state.json`, session metadata, uploads, key points, slide manifests. |
 | Transcript inputs | Host filesystem | Normalized `YYYY-MM-DD transcription.txt` files under `TRANSCRIPTION_FOLDER` | Current consumers read normalized files only; raw transcript normalization is not implemented in this repo anymore. |
-| Summary inputs | Host filesystem | `ai-summary.md` and `transcript_discussion.md` in the session folder | Summary publication currently reads these files and republishes them. |
+| Summary inputs | Host filesystem | `ai-summary.md` and `transcript_discussion.md` in the session folder | Summary publication primarily reads `ai-summary.md` today, while legacy/fallback summary content can still exist in the session folder. |
 | Local materials index | [`daemon/rag/indexer.py`](daemon/rag/indexer.py), [`daemon/rag/retriever.py`](daemon/rag/retriever.py) | `~/.workshop-rag/chroma` | Local ChromaDB index used to enrich quiz generation. |
 
 ---
