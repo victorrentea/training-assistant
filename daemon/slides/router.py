@@ -191,7 +191,9 @@ async def check_slide_cache(session_id: str, slug: str):
     except Exception as exc:
         logger.warning("slides/check: Railway download failed for slug=%s: %s", slug, exc)
         _mark_cache_status(slug, "download_failed", reason=str(exc))
-        _broadcast_slides_cache_status()
+        # Do NOT broadcast on failure — the 503 response tells the requesting
+        # participant. Broadcasting would trigger follow-retry storms in all
+        # connected participants.
         return JSONResponse({"status": "error"}, status_code=503)
 
 
