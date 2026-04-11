@@ -1,15 +1,15 @@
 """Unit tests for daemon slides /check endpoint (daemon/slides/router.py)."""
 import asyncio
 import threading
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 import daemon.slides.router as slides_router
-from daemon.slides.router import participant_router, handle_pdf_download_complete
 from daemon.misc.state import MiscState
+from daemon.slides.router import handle_pdf_download_complete, participant_router
 
 
 @pytest.fixture(autouse=True)

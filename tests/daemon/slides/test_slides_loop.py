@@ -1,6 +1,6 @@
 """Unit tests for startup slides catalog/cache initialization (daemon/slides/loop.py)."""
-from types import SimpleNamespace
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from daemon.misc.state import MiscState
