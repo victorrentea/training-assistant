@@ -702,11 +702,12 @@ def run() -> None:
             pass
 
     def _broadcast_active_count(ps) -> None:
-        """Broadcast active (online) participant count to Railway so participants see it."""
+        """Broadcast active (online named) participant count to Railway so participants see it."""
         try:
             from daemon.ws_messages import ActiveParticipantsCountUpdatedMsg
             from daemon.ws_publish import broadcast as _broadcast
-            count = len([p for p in ps.online_participants if not p.startswith("__")])
+            count = len([p for p in ps.online_participants
+                         if not p.startswith("__") and p in ps.participant_names])
             _broadcast(ActiveParticipantsCountUpdatedMsg(count=count))
         except Exception:
             pass
