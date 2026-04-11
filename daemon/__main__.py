@@ -20,7 +20,6 @@ from daemon.config import (
     config_from_env,
     find_session_folder,
 )
-from daemon.http import _get_json
 from daemon.lock import (
     _HEARTBEAT_INTERVAL,
     _LOCK_FILE,
@@ -404,9 +403,34 @@ def _resolve_presentation_slide_target(
     server_url: str,
     catalog_file: Path | None,
 ) -> dict:
+    """Resolve a PowerPoint deck name to a slide slug and download URL.
+
+    Uses misc_state.slides_catalog first (has runtime UUID slugs), then
+    falls back to the JSON catalog file. This ensures the slug matches
+    what participants see in their catalog.
+    """
+    from daemon.misc.state import misc_state
+
     normalized_name = _normalize_slide_match_key(presentation_name)
     server_base = server_url.rstrip("/")
 
+    # Primary: match against misc_state.slides_catalog (runtime, has correct UUID slugs)
+    for slug, entry in misc_state.slides_catalog.items():
+        if not isinstance(entry, dict):
+            continue
+        aliases = {
+            str(entry.get("title") or "").strip(),
+            str(entry.get("name") or "").strip(),
+        }
+        normalized_aliases = {_normalize_slide_match_key(a) for a in aliases if a}
+        if normalized_name and normalized_name in normalized_aliases:
+            return {
+                "slug": slug,
+                "url": f"{server_base}/api/slides/download/{slug}",
+                "matched": True,
+            }
+
+    # Fallback: match against catalog JSON file (for entries not yet in misc_state)
     if catalog_file and catalog_file.exists():
         try:
             raw = json.loads(catalog_file.read_text(encoding="utf-8"))
@@ -862,7 +886,6 @@ def run() -> None:
     # Session state: the transcript text used to generate the current preview
     last_text: str | None = None
     last_quiz: dict | None = None
-    server_disconnected = False
     last_detected_date: date | None = None
     last_heartbeat_at = 0.0
     last_session_check_at = 0.0
@@ -946,11 +969,6 @@ def run() -> None:
 
     ws_client.start()
 
-    # Startup connectivity checks (kept explicit for clearer startup diagnostics).
-    _status_url = f"{config.server_url}/api/status"
-    _get_json(_status_url, username=config.host_username, password=config.host_password)
-    _get_json(_status_url, username=config.host_username, password=config.host_password)
-
     # ── Start local host panel server ──
     from daemon.config import DAEMON_HOST_PORT
     from daemon.host_server import start_host_server
@@ -959,22 +977,9 @@ def run() -> None:
 
     try:
         while True:
-            # Keep daemon-aware connectivity state for clear disconnect/reconnect logs.
-            try:
-                _get_json(_status_url, username=config.host_username, password=config.host_password)
-                if server_disconnected:
-                    log.info("daemon", "Reconnected to server.")
-                    server_disconnected = False
-            except RuntimeError as e:
-                if not server_disconnected:
-                    log.error("daemon", f"Server unreachable: {e}")
-                    server_disconnected = True
+            if not ws_client.connected:
                 time.sleep(DAEMON_POLL_INTERVAL)
                 continue
-            except KeyboardInterrupt:
-                _LOCK_FILE.unlink(missing_ok=True)
-                log.info("daemon", "Stopped.")
-                return
 
             # ── Drain pending WS messages (handlers run on main thread) ──
             ws_client.drain_queue()
@@ -1496,9 +1501,7 @@ def run() -> None:
                         log.info("static-sync", f"Triggered browser reload after sync {changed} file(s): {changed_names}")
 
             except RuntimeError as e:
-                if not server_disconnected:
-                    log.error("daemon", f"Server unreachable: {e}")
-                    server_disconnected = True
+                log.error("daemon", f"Error in main loop: {e}")
             except KeyboardInterrupt:
                 _LOCK_FILE.unlink(missing_ok=True)
                 log.info("daemon", "Stopped.")
