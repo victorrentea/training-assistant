@@ -151,16 +151,14 @@
     if (!rawLoc) return '';
     const tz = String(participant?.location_tz || _extractTimezone(rawLoc) || '').trim();
     const cc = String(participant?.location_country || '').trim().toUpperCase();
+    const flagStr = cc ? `${_countryCodeToFlag(cc)}${cc}` : '';
     if (tz) {
       const hhmm = _formatClockForTimezone(tz);
-      if (hhmm && cc) {
-        return `⏱️${hhmm} in ${_countryCodeToFlag(cc)}${cc}`;
-      }
-      if (hhmm) {
-        return `⏱️${hhmm}`;
-      }
+      if (hhmm && flagStr) return `⏱️${hhmm} in ${flagStr}`;
+      if (hhmm) return `⏱️${hhmm}`;
       return rawLoc;
     }
+    if (flagStr) return `${rawLoc} ${flagStr}`;
     return rawLoc;
   }
 

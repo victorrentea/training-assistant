@@ -627,18 +627,12 @@ host_router = APIRouter(prefix="/api/{session_id}/host", tags=["participant"])
 
 @host_router.post("/participants/resolve-locations", status_code=204)
 async def resolve_participant_locations(session_id: str):
-    """Backfill city name + timezone + country for participants whose location is still raw lat/lon."""
+    """Backfill city name + timezone + country for all participants missing geo metadata."""
     from daemon import log as _log
 
     ps = participant_state
-    coord_pids = [
-        pid for pid, loc in ps.locations.items()
-        if _COORDS_RE.match(str(loc or "").strip())
-    ]
-    if not coord_pids:
-        return Response(status_code=204)
 
-    async def _resolve_one(pid: str, loc: str) -> None:
+    async def _resolve_coords(pid: str, loc: str) -> None:
         try:
             tz, country, city = await _resolve_location_metadata(loc)
         except Exception as exc:
@@ -655,6 +649,24 @@ async def resolve_participant_locations(session_id: str):
         else:
             ps.location_countries.pop(pid, None)
 
-    await asyncio.gather(*[_resolve_one(pid, str(ps.locations[pid])) for pid in coord_pids])
-    await _notify_host_participant_list()
+    async def _resolve_country_from_tz(pid: str, tz: str) -> None:
+        try:
+            country = await asyncio.to_thread(_country_from_timezone, tz)
+        except Exception as exc:
+            _log.warning("participant", f"resolve-country failed for {pid}: {exc}")
+            return
+        if country:
+            ps.location_countries[pid] = country
+
+    tasks = []
+    for pid, loc in list(ps.locations.items()):
+        loc = str(loc or "").strip()
+        if _COORDS_RE.match(loc):
+            tasks.append(_resolve_coords(pid, loc))
+        elif ps.location_timezones.get(pid) and not ps.location_countries.get(pid):
+            tasks.append(_resolve_country_from_tz(pid, ps.location_timezones[pid]))
+
+    if tasks:
+        await asyncio.gather(*tasks)
+        await _notify_host_participant_list()
     return Response(status_code=204)
