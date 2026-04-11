@@ -1,7 +1,8 @@
 """Tests for the Railway broadcast fan-out handler."""
 import json
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
-from unittest.mock import AsyncMock, patch, MagicMock
 
 from railway.features.ws.router import _handle_broadcast, _handle_set_session_id
 
