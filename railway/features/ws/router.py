@@ -26,6 +26,7 @@ from railway.features.ws.daemon_protocol import (
 )
 from railway.features.ws.proxy_bridge import handle_proxy_response
 from railway.shared.messaging import (
+    SPECIAL_PIDS,
     broadcast_participant_update,
 )
 from railway.shared.metrics import (
@@ -277,6 +278,14 @@ async def daemon_websocket_endpoint(websocket: WebSocket):
     state.daemon_ws = websocket
     state.daemon_last_seen = datetime.now(timezone.utc)
     logger.info("Daemon WS connected")
+
+    # Sync current online participants to daemon — resets stale daemon state after Railway restart
+    current_online = [pid for pid in state.participants if pid not in SPECIAL_PIDS]
+    try:
+        await websocket.send_json({"type": "daemon_state_push", "online_participants": current_online})
+    except Exception:
+        logger.warning("Failed to sync online participants to daemon on connect")
+
     await broadcast_slides_cache_status()
 
     # Send static file inventory for daemon to diff and upload changes
