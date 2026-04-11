@@ -721,6 +721,8 @@ def run() -> None:
 
     def _handle_daemon_state_push(data):
         _apply_runtime_snapshot_restore(data)
+        if "online_participants" in data:
+            _push_host_participant_list()
 
     ws_client.register_handler("daemon_state_push", _handle_daemon_state_push)
 
