@@ -45,10 +45,6 @@ def send_to_railway(msg: dict) -> bool:
     """
     if _ws_client is None:
         return False
-    msg_type = str(msg.get("type") or "unknown")
-    if msg_type == "broadcast" and isinstance(msg.get("event"), dict):
-        msg_type = f"broadcast:{msg['event'].get('type', 'unknown')}"
-    log.debug("railway", f"↑ {msg_type}")
     return _ws_client.send(msg)
 
 
@@ -56,8 +52,6 @@ def broadcast(msg: BaseModel):
     """Send typed message to all participants via Railway broadcast."""
     if _ws_client is None:
         return
-    event_type = msg.model_dump().get("type", "unknown")
-    log.debug("railway", f"↑ broadcast:{event_type}")
     _ws_client.send({"type": "broadcast", "event": msg.model_dump()})
 
 
