@@ -33,7 +33,11 @@ def _run_redownload_poller(slug: str, drive_export_url: str) -> None:
     On success (hash changed): marks cached, broadcasts refreshed_slugs.
     On exhaustion (hash unchanged after retries): logs warning, beeps.
     """
-    from daemon.slides.router import download_on_railway, _mark_cache_status, _broadcast_slides_cache_status
+    from daemon.slides.router import (
+        _broadcast_slides_cache_status,
+        _mark_cache_status,
+        download_on_railway,
+    )
 
     prev_hash = misc_state.slides_cache_status.get(slug, {}).get("last_sha256", "")
 
@@ -161,7 +165,7 @@ class SlidesRunner:
             return False
         # Propagate updated modified_at and start redownload poller for changed cached slides.
         tracked = self._slides_state.get("files", {})
-        for key, entry in tracked.items():
+        for _key, entry in tracked.items():
             slug = str(entry.get("slug") or "").strip()
             if not slug:
                 continue

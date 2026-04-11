@@ -20,6 +20,15 @@ logger = logging.getLogger(__name__)
 _RAILWAY_CHECK_TIMEOUT_S: float = 3.0
 _RAILWAY_DOWNLOAD_TIMEOUT_S: float = 120.0  # Railway downloads can take 10-15s from Drive
 
+# Module-level event loop reference — used by __main__.py for async scheduling
+# from the main (sync) thread (e.g. backfill location metadata, overlay notifications).
+_event_loop: asyncio.AbstractEventLoop | None = None
+
+
+def get_event_loop() -> asyncio.AbstractEventLoop | None:
+    """Return the daemon's FastAPI event loop."""
+    return _event_loop
+
 
 def _railway_base_url() -> str:
     return os.environ.get("WORKSHOP_SERVER_URL", "http://localhost:8000").rstrip("/")
@@ -160,6 +169,9 @@ async def check_slide_cache(session_id: str, slug: str):
     Returns 200 immediately if already cached.
     Otherwise calls Railway REST to download from Google Drive (blocking).
     """
+    global _event_loop
+    _event_loop = asyncio.get_event_loop()
+
     # Fast path: trust daemon-side cache status (kept in sync via WS reconnect probing).
     if misc_state.slides_cache_status.get(slug, {}).get("status") == "cached":
         return SlidesCheckResponse(status="cached")

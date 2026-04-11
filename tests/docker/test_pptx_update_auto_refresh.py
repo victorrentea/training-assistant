@@ -21,14 +21,14 @@ import urllib.request
 from datetime import datetime
 from pathlib import Path
 
-sys.path.insert(0, "/app")
-sys.path.insert(0, "/app/tests")
-
 import pytest
 from playwright.sync_api import expect, sync_playwright
 
-from pages.participant_page import ParticipantPage
-from session_utils import fresh_session
+sys.path.insert(0, "/app")
+sys.path.insert(0, "/app/tests")
+
+from pages.participant_page import ParticipantPage  # noqa: E402
+from session_utils import fresh_session  # noqa: E402
 
 BASE = "http://localhost:8000"
 DAEMON_BASE = os.environ.get("DAEMON_BASE", "http://localhost:8081")
@@ -266,7 +266,7 @@ def test_pptx_update_triggers_participant_refresh():
                 poll_ms=500,
                 msg=f"Participant did not auto-refresh slide '{SLUG}' after PPTX update within 60s",
             )
-            print(f"[test] Participant re-downloaded slide ✓")
+            print("[test] Participant re-downloaded slide ✓")
 
             # Verify participant still on the correct page with updated page count
             expect(pax_page.locator("#slides-page-inline")).to_contain_text(

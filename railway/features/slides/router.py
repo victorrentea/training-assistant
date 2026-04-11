@@ -73,7 +73,7 @@ async def download_from_gdrive(slug: str, body: DownloadFromGdriveRequest):
     Called by the daemon to populate or refresh Railway's PDF cache.
     The daemon uses the returned hash to detect content changes.
     """
-    from railway.features.slides.cache import do_download, _file_sha256, _cache_path
+    from railway.features.slides.cache import _file_sha256, do_download
 
     drive_export_url = body.drive_export_url.strip()
     if not drive_export_url:
@@ -86,7 +86,7 @@ async def download_from_gdrive(slug: str, body: DownloadFromGdriveRequest):
         return DownloadFromGdriveResponse(status="cached", sha256=sha, size=size)
     except Exception as exc:
         logger.exception("[slides] download-from-gdrive failed for slug=%s", slug)
-        raise HTTPException(status_code=502, detail=str(exc))
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
 
 
 def _merge_embedded_slide_status(payload: dict) -> dict:
