@@ -3,11 +3,12 @@ import os
 from pathlib import Path
 
 import pytest
-import daemon.slides.daemon as slides_daemon
+
 import daemon.slides.catalog as _slides_catalog
-import daemon.slides.upload as _slides_upload
 import daemon.slides.convert as _slides_convert
+import daemon.slides.daemon as slides_daemon
 import daemon.slides.drive_sync as _slides_drive_sync
+import daemon.slides.upload as _slides_upload
 
 
 def _cfg(tmp_path: Path) -> slides_daemon.SlidesDaemonConfig:
