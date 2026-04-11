@@ -316,6 +316,23 @@ async def daemon_websocket_endpoint(websocket: WebSocket):
         if state.daemon_ws is websocket:
             state.daemon_ws = None
         logger.info("Daemon WS disconnected")
+        # Kick all participant/host connections — daemon is gone, session is effectively dead
+        old_id = state.session_id
+        for pid, ws in list(state.participants.items()):
+            if pid.startswith("__") and pid != "__host__":
+                continue
+            if pid == "__host__":
+                target_url = f"/host/{state.session_id}" if state.session_id else "/host"
+                close_code = 1000
+            else:
+                target_url = f"/?session_id={quote(str(old_id or ''))}"
+                close_code = 1008
+            try:
+                await ws.send_text(json.dumps({"type": "redirect", "url": target_url}))
+                await ws.close(close_code)
+            except Exception:
+                pass
+            state.participants.pop(pid, None)
         await broadcast_slides_cache_status()
 
 

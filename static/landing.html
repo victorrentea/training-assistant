@@ -182,11 +182,13 @@
       font-size: .9rem;
       font-weight: 600;
       z-index: 9999;
-      transition: transform .3s ease;
+      transition: transform .3s ease, opacity .3s ease;
       pointer-events: none;
+      opacity: 0;
     }
     .toaster.visible {
       transform: translateX(-50%) translateY(0);
+      opacity: 1;
     }
 
     /* Mismatch link */
@@ -520,11 +522,14 @@
           if (data.active) {
             return true;  // session is active, proceed
           }
-          // active=false
           showScreen('error');
-          document.getElementById('error-title').textContent = 'No session started';
+          if (!data.daemon_connected) {
+            document.getElementById('error-title').textContent = 'Host not connected';
+          } else {
+            document.getElementById('error-title').textContent = 'No session started';
+          }
         } catch (e) {
-          // request failed
+          // request failed (Railway itself is down)
           showScreen('error');
           document.getElementById('error-title').textContent = 'Host not connected';
         }
