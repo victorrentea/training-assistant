@@ -89,8 +89,6 @@ class AddonBridgeClient:
             if self._ws is None:
                 return False
             try:
-                msg_type = str(msg.get("type") or "unknown")
-                log.debug(_NAME, f"→ {msg_type}")
                 self._ws.send(json.dumps(msg))
                 return True
             except Exception:
