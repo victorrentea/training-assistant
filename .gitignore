@@ -23,7 +23,7 @@ daemon/.venv/
 /.deploy.log
 deploy-history.txt
 .server-data/
-
+.idea
 
 # Screenshots and documentation build artifacts
 *.png
@@ -48,3 +48,4 @@ load-tests/results/report/
 static/deploy-info.json
 logs/
 /claude-remote.sh
+/.claude/worktrees/hardcore-driscoll/
