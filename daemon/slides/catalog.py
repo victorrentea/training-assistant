@@ -253,6 +253,7 @@ def ensure_slug(daemon_state: dict, pptx_path: Path) -> str:
     slug = entry.get("slug")
     if slug:
         return slug
-    slug = uuid.uuid4().hex
+    prefix = _slugify(pptx_path.stem)
+    slug = f"{prefix}-{uuid.uuid4().hex}"
     entry["slug"] = slug
     return slug
