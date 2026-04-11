@@ -106,9 +106,11 @@ pull_and_rebuild() {
   local new_commits
   new_commits=$(git log --oneline HEAD..origin/master 2>/dev/null)
   _log "start" "info" "⬇  Pulling: $new_commits"
-  if ! git pull --ff-only 2>&1; then
-    _log "start" "warn" "git pull failed — continuing with existing code"
-  fi
+  while ! git pull --ff-only 2>&1; do
+    _log "start" "error" "git pull failed — fix local changes, retrying in 5s..."
+    afplay /System/Library/Sounds/Basso.aiff &
+    sleep 5
+  done
 }
 
 initial_pull() {
