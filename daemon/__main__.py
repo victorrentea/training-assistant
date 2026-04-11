@@ -701,6 +701,16 @@ def run() -> None:
         except Exception:
             pass
 
+    def _broadcast_active_count(ps) -> None:
+        """Broadcast active (online) participant count to Railway so participants see it."""
+        try:
+            from daemon.ws_messages import ActiveParticipantsCountUpdatedMsg
+            from daemon.ws_publish import broadcast as _broadcast
+            count = len([p for p in ps.online_participants if not p.startswith("__")])
+            _broadcast(ActiveParticipantsCountUpdatedMsg(count=count))
+        except Exception:
+            pass
+
     def _handle_participant_presence(data: dict) -> None:
         from daemon.participant.state import participant_state as _participant_state
 
@@ -713,6 +723,7 @@ def run() -> None:
         else:
             _participant_state.online_participants.discard(pid)
         _push_host_participant_list()
+        _broadcast_active_count(_participant_state)
 
     ws_client.register_handler("participant_presence", _handle_participant_presence)
 
@@ -722,7 +733,9 @@ def run() -> None:
     def _handle_daemon_state_push(data):
         _apply_runtime_snapshot_restore(data)
         if "online_participants" in data:
+            from daemon.participant.state import participant_state as _ps
             _push_host_participant_list()
+            _broadcast_active_count(_ps)
 
     ws_client.register_handler("daemon_state_push", _handle_daemon_state_push)
 

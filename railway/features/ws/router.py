@@ -164,6 +164,8 @@ async def _handle_broadcast(data: dict):
             state.slides_current = event["slides_current"]  # may be None
         else:
             state.slides_current = {k: v for k, v in event.items() if k != "type"}
+    if event_type == "active_participants_count_updated" and "host_connected" not in event:
+        event = {**event, "host_connected": "__host__" in state.participants}
     msg = json.dumps(event)
     for pid, ws in list(state.participants.items()):
         if pid.startswith("__") and pid != "__host__":  # keep host, skip other special keys
