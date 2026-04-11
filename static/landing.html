@@ -247,7 +247,7 @@
         statusEl.textContent = '';
         return;
       }
-      statusEl.style.display = '';
+      statusEl.style.display = 'inline';
       if (!lastLocalDaemonRetryAt) {
         statusEl.textContent = 'No active session yet (last retry: waiting...)';
         return;

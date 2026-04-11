@@ -342,6 +342,10 @@ assert(
   'landing host toggle status reports no active session and last retry time',
   /No active session yet/.test(landingHtmlSource) && /last retry/.test(landingHtmlSource)
 );
+assert(
+  'landing host toggle explicitly shows status element when cookie is enabled',
+  /statusEl\.style\.display\s*=\s*'inline';/.test(landingHtmlSource)
+);
 
 // ═══════════════════════════════════════════════════════════════════════
 // Summary

@@ -25,6 +25,10 @@
 - Result: `70 passed, 2 failed` (missing host-toggle status node + last-retry text on landing)
 - Proof (green): `node tests/test_js_unit.js`
 - Result: `72 passed, 0 failed`
+- Proof (red): `node tests/test_js_unit.js`
+- Result: `72 passed, 1 failed` (status element remained hidden when cookie enabled)
+- Proof (green): `node tests/test_js_unit.js`
+- Result: `73 passed, 0 failed`
 - Proof: `bash tests/docker/run-hermetic.sh`
 - Result: blocked in this environment (`docker.sock` unavailable: `connect: no such file or directory`)
 
