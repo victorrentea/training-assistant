@@ -55,19 +55,24 @@ class LocationRequest(BaseModel):
 
 
 def _http_get_json(url: str, *, timeout: float = 2.5):
-    req = urllib.request.Request(url, method="GET")
+    req = urllib.request.Request(url, method="GET", headers={"User-Agent": "TrainingAssistant/1.0"})
     with urllib.request.urlopen(req, timeout=timeout) as response:
         return json.loads(response.read().decode("utf-8"))
 
 
-def _country_from_coords(lat: str, lon: str) -> str:
+def _country_from_coords(lat: str, lon: str) -> tuple[str, str]:
+    """Return (country_code, city_name) from reverse geocoding."""
     url = (
         "https://nominatim.openstreetmap.org/reverse"
         f"?lat={urllib.parse.quote(lat)}&lon={urllib.parse.quote(lon)}&format=json&addressdetails=1"
     )
     data = _http_get_json(url)
-    code = str((data.get("address") or {}).get("country_code") or "").strip().upper()
-    return code if len(code) == 2 else ""
+    address = data.get("address") or {}
+    code = str(address.get("country_code") or "").strip().upper()
+    city = str(
+        address.get("city") or address.get("town") or address.get("village") or address.get("county") or ""
+    ).strip()
+    return (code if len(code) == 2 else ""), city
 
 
 def _timezone_from_coords(lat: str, lon: str) -> str:
@@ -94,24 +99,29 @@ def _country_from_timezone(tz: str) -> str:
     return code if len(code) == 2 else ""
 
 
-async def _resolve_location_metadata(loc: str) -> tuple[str, str]:
+async def _resolve_location_metadata(loc: str) -> tuple[str, str, str]:
+    """Return (tz, country_code, city_name). city_name is non-empty only for lat/lon inputs."""
     coord_match = _COORDS_RE.match(loc)
     if coord_match:
         lat = coord_match.group(1)
         lon = coord_match.group(2)
         tz_task = asyncio.to_thread(_timezone_from_coords, lat, lon)
         cc_task = asyncio.to_thread(_country_from_coords, lat, lon)
-        tz, country = await asyncio.gather(tz_task, cc_task, return_exceptions=True)
+        tz, country_city = await asyncio.gather(tz_task, cc_task, return_exceptions=True)
         resolved_tz = "" if isinstance(tz, Exception) else str(tz or "").strip()
-        resolved_country = "" if isinstance(country, Exception) else str(country or "").strip().upper()
-        return resolved_tz, resolved_country
+        if isinstance(country_city, Exception):
+            resolved_country, resolved_city = "", ""
+        else:
+            resolved_country, resolved_city = country_city
+            resolved_country = str(resolved_country or "").strip().upper()
+        return resolved_tz, resolved_country, resolved_city
 
     tz_match = _TIMEZONE_RE.match(loc)
     if not tz_match:
-        return "", ""
+        return "", "", ""
     tz = tz_match.group(1).strip()
     country = await asyncio.to_thread(_country_from_timezone, tz)
-    return tz, str(country or "").strip().upper()
+    return tz, str(country or "").strip().upper(), ""
 
 
 class QAQuestionRaw(BaseModel):
@@ -506,7 +516,9 @@ async def set_location(request: Request, body: LocationRequest):
         return JSONResponse({"error": "Location required"}, status_code=400)
 
     participant_state.locations[pid] = loc
-    tz, country = await _resolve_location_metadata(loc)
+    tz, country, city = await _resolve_location_metadata(loc)
+    display_loc = city if city else loc
+    participant_state.locations[pid] = display_loc
     if tz:
         participant_state.location_timezones[pid] = tz
     else:
@@ -602,3 +614,43 @@ def _get_session_name() -> str | None:
         return misc_state.session_name
     stack = session_shared_state.get_session_stack()
     return stack[-1]["name"] if stack else None
+
+
+# ── Host-only router ──
+
+host_router = APIRouter(prefix="/api/{session_id}/host", tags=["participant"])
+
+
+@host_router.post("/participants/resolve-locations", status_code=204)
+async def resolve_participant_locations(session_id: str):
+    """Backfill city name + timezone + country for participants whose location is still raw lat/lon."""
+    from daemon.log import log as _log
+
+    ps = participant_state
+    coord_pids = [
+        pid for pid, loc in ps.locations.items()
+        if _COORDS_RE.match(str(loc or "").strip())
+    ]
+    if not coord_pids:
+        return Response(status_code=204)
+
+    async def _resolve_one(pid: str, loc: str) -> None:
+        try:
+            tz, country, city = await _resolve_location_metadata(loc)
+        except Exception as exc:
+            _log.warning("participant", f"resolve-locations failed for {pid}: {exc}")
+            return
+        if city:
+            ps.locations[pid] = city
+        if tz:
+            ps.location_timezones[pid] = tz
+        else:
+            ps.location_timezones.pop(pid, None)
+        if country:
+            ps.location_countries[pid] = country
+        else:
+            ps.location_countries.pop(pid, None)
+
+    await asyncio.gather(*[_resolve_one(pid, str(ps.locations[pid])) for pid in coord_pids])
+    await _notify_host_participant_list()
+    return Response(status_code=204)

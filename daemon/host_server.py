@@ -16,6 +16,7 @@ from pydantic import BaseModel
 from daemon import log as daemon_log
 from daemon.host_proxy import create_http_client, proxy_http, proxy_websocket
 from daemon.openapi_contract_metadata import enrich_openapi_contract
+from daemon.participant.router import host_router as participant_host_router
 from daemon.participant.router import router as participant_router
 
 logger = logging.getLogger(__name__)
@@ -114,6 +115,7 @@ def create_app(backend_url: str) -> FastAPI:
 
     # --- Participant identity router (must come BEFORE catch-all to avoid infinite loop) ---
     app.include_router(participant_router)
+    app.include_router(participant_host_router)  # /api/{session_id}/host/participants/*
 
     from daemon.wordcloud.router import host_router as wc_host_router
     from daemon.wordcloud.router import participant_router as wc_participant_router

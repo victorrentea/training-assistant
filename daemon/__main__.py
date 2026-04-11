@@ -294,7 +294,7 @@ def _apply_runtime_snapshot_restore(snapshot: dict | None) -> None:
     from daemon.wordcloud.state import wordcloud_state
 
     participant_state.sync_from_restore(snapshot)
-    _backfill_participant_location_metadata()
+    _schedule_backfill_location_metadata()
     wordcloud_state.sync_from_restore(snapshot)
     qa_state.sync_from_restore(snapshot)
     misc_state.sync_from_restore(snapshot)
@@ -302,25 +302,39 @@ def _apply_runtime_snapshot_restore(snapshot: dict | None) -> None:
     debate_state.sync_from_restore(snapshot)
 
 
-def _backfill_participant_location_metadata() -> None:
-    """Best-effort backfill for legacy snapshots missing location_tz/location_country."""
-    from daemon.participant.router import _resolve_location_metadata
+def _schedule_backfill_location_metadata() -> None:
+    """Schedule best-effort async backfill for snapshots missing location_tz/location_country/city."""
+    from daemon.slides.router import get_event_loop as _get_event_loop
+
+    loop = _get_event_loop()
+    if loop and loop.is_running():
+        asyncio.run_coroutine_threadsafe(_backfill_participant_location_metadata(), loop)
+
+
+async def _backfill_participant_location_metadata() -> None:
+    """Best-effort backfill for legacy snapshots missing location_tz/location_country/city."""
+    from daemon.participant.router import _COORDS_RE, _resolve_location_metadata
     from daemon.participant.state import participant_state
 
-    for pid, raw_loc in list(participant_state.locations.items()):
+    ps = participant_state
+    for pid, raw_loc in list(ps.locations.items()):
         loc = str(raw_loc or "").strip()
         if not loc:
             continue
-        if participant_state.location_timezones.get(pid) and participant_state.location_countries.get(pid):
+        already_resolved = ps.location_timezones.get(pid) and ps.location_countries.get(pid)
+        is_raw_coords = bool(_COORDS_RE.match(loc))
+        if already_resolved and not is_raw_coords:
             continue
         try:
-            tz, country = asyncio.run(_resolve_location_metadata(loc))
+            tz, country, city = await _resolve_location_metadata(loc)
         except Exception:
             continue
+        if city:
+            ps.locations[pid] = city
         if tz:
-            participant_state.location_timezones[pid] = tz
+            ps.location_timezones[pid] = tz
         if country:
-            participant_state.location_countries[pid] = country
+            ps.location_countries[pid] = country
 
 
 def _sessions_root_from_env() -> Path:
