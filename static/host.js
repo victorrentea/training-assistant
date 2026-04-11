@@ -158,7 +158,7 @@
     const flagHtml = cc ? `<span title="${escHtml(_countryCodeToName(cc))}">${_countryCodeToFlag(cc)}</span>` : '';
     if (tz) {
       const hhmm = _formatClockForTimezone(tz);
-      if (hhmm && flagHtml) return `⏱️${hhmm} in ${flagHtml}`;
+      if (hhmm && flagHtml) return `⏱️${hhmm} ${flagHtml}`;
       if (hhmm) return `⏱️${hhmm}`;
       return escHtml(rawLoc);
     }
