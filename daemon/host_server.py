@@ -94,7 +94,9 @@ def create_app(backend_url: str) -> FastAPI:
     @app.middleware("http")
     async def write_back_middleware(request: Request, call_next):
         request.state.write_back_events = []
-        if request.url.path.startswith("/api/"):
+        if request.url.path.startswith("/api/participant/"):
+            daemon_log.debug("railway", f"↓ {request.method} {request.url.path}")
+        elif request.url.path.startswith("/api/"):
             daemon_log.debug("host", f"→ {request.method} {request.url.path}")
         response = await call_next(request)
         events = getattr(request.state, "write_back_events", [])
