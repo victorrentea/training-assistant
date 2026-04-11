@@ -9,20 +9,17 @@ Verifies:
 - Host panel displays session code
 - Direct access without session code redirects to landing
 """
-import requests
 import pytest
-from playwright.sync_api import expect
-
+import requests
 from conftest import (
-    HOST_USER,
     HOST_PASS,
-    api,
+    HOST_USER,
     host_browser_ctx,
-    pax_browser_ctx,
     host_url,
+    pax_browser_ctx,
 )
 from pages.participant_page import ParticipantPage
-from pages.host_page import HostPage
+from playwright.sync_api import expect
 
 
 class TestLandingPage:
@@ -342,7 +339,7 @@ class TestWebSocketSessionGating:
         try:
             ws = wsc.connect(f"{ws_url}/ws/zzzzzz/test-uuid", close_timeout=3)
             # If connection succeeds, it should close with 1008
-            msg = ws.recv()  # might get close frame
+            ws.recv()  # might get close frame
             ws.close()
             # If we get here without error, the server accepted (shouldn't happen)
             pytest.fail("Expected WebSocket rejection for invalid session")
@@ -361,7 +358,6 @@ class TestParticipantInteractionWithSession:
 
         host_page = ctx_host.new_page()
         host_page.goto(host_url())
-        host = HostPage(host_page)
 
         pax_page = ctx_pax.new_page()
         pax_page.goto(f"/{session_id}")
