@@ -43,7 +43,8 @@ def test_ensure_slug_is_persistent_for_same_file(tmp_path):
     slug2 = _slides_catalog.ensure_slug(state, path)
 
     assert slug1 == slug2
-    assert len(slug1) == 32
+    assert slug1.startswith("deck-")
+    assert len(slug1) == len("deck-") + 32
 
 
 def test_detect_changed_files_uses_last_exported_mtime(tmp_path):
