@@ -123,7 +123,7 @@ async def _handle_set_session_id(data: dict):
                 if state.session_id:
                     target_url = f"/{state.session_id}"
                 else:
-                    target_url = f"/?code={quote(str(old_id or ''))}&retry=1"
+                    target_url = f"/?session_id={quote(str(old_id or ''))}"
                 close_code = 1008
             try:
                 await ws.send_text(json.dumps({"type": "redirect", "url": target_url}))

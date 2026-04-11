@@ -102,7 +102,7 @@ class TestHandleSetSessionId:
 
         assert mock_state.session_id is None
         assert mock_state.session_name is None
-        participant_ws.send_text.assert_called_once_with(json.dumps({"type": "redirect", "url": "/?code=old123&retry=1"}))
+        participant_ws.send_text.assert_called_once_with(json.dumps({"type": "redirect", "url": "/?session_id=old123"}))
         participant_ws.close.assert_called_once_with(1008)
         host_ws.send_text.assert_called_once_with(json.dumps({"type": "redirect", "url": "/host"}))
         host_ws.close.assert_called_once_with(1000)
