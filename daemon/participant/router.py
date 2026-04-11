@@ -73,7 +73,8 @@ def _country_from_coords(lat: str, lon: str) -> tuple[str, str]:
     address = data.get("address") or {}
     code = str(address.get("country_code") or "").strip().upper()
     city = str(
-        address.get("city") or address.get("town") or address.get("village") or address.get("county") or ""
+        address.get("city") or address.get("town") or address.get("village")
+        or address.get("county") or address.get("suburb") or address.get("state") or ""
     ).strip()
     return (code if len(code) == 2 else ""), city
 
