@@ -624,7 +624,7 @@ host_router = APIRouter(prefix="/api/{session_id}/host", tags=["participant"])
 @host_router.post("/participants/resolve-locations", status_code=204)
 async def resolve_participant_locations(session_id: str):
     """Backfill city name + timezone + country for participants whose location is still raw lat/lon."""
-    from daemon.log import log as _log
+    from daemon import log as _log
 
     ps = participant_state
     coord_pids = [
