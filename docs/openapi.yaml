@@ -113,6 +113,25 @@ paths:
       x-feature: identity
       x-doc-notes:
       - Returns participant-personalized full state snapshot.
+  /api/{session_id}/host/participants/resolve-locations:
+    post:
+      tags:
+      - participant
+      summary: Resolve Participant Locations
+      description: Backfill city name + timezone + country for participants whose
+        location is still raw lat/lon.
+      operationId: resolve_participant_locations_api__session_id__host_participants_resolve_locations_post
+      parameters:
+      - name: session_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Session Id
+      responses:
+        '204':
+          description: Successful Response
+      x-feature: identity
   /api/participant/wordcloud/word:
     post:
       tags:
