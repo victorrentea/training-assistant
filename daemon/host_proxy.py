@@ -119,8 +119,6 @@ async def proxy_websocket(client_ws: WebSocket, path: str, backend_ws_url: str):
             async def upstream_to_client():
                 try:
                     async for message in upstream:
-                        arrow = "↑" if path.endswith("/__host__") else "↓"
-                        daemon_log.debug("railway", f"{arrow} /ws/{path} {_msg_name(message)}")
                         await client_ws.send_text(message)
                 except ConnectionClosed:
                     pass
