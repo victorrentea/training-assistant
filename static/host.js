@@ -132,12 +132,15 @@
     }
   }
 
-  function _isOffHoursHHMM(hhmm) {
+  function _offHoursClass(hhmm) {
     const m = String(hhmm || '').match(/^(\d{2}):(\d{2})$/);
-    if (!m) return false;
-    const h = Number(m[1]);
-    const min = Number(m[2]);
-    return h < 8 || h > 18 || (h === 18 && min > 0);
+    if (!m) return null;
+    const totalMin = Number(m[1]) * 60 + Number(m[2]);
+    // Night: 20:00–07:00
+    if (totalMin >= 20 * 60 || totalMin < 7 * 60) return 'night';
+    // Twilight: 07:00–08:30 or 17:30–20:00
+    if (totalMin < 8 * 60 + 30 || totalMin >= 17 * 60 + 30) return 'twilight';
+    return null;
   }
 
   function _countryCodeToFlag(countryCode) {
@@ -1601,7 +1604,8 @@
       const locLabel = loc ? _formatParticipantLocation(participant) : null;
       const tzForColor = String(participant?.location_tz || _extractTimezone(loc) || '').trim();
       const hhmmForColor = tzForColor ? _formatClockForTimezone(tzForColor) : '';
-      const locClass = _isOffHoursHHMM(hhmmForColor) ? 'pax-location offhours' : 'pax-location';
+      const _ohc = _offHoursClass(hhmmForColor);
+      const locClass = _ohc ? `pax-location offhours ${_ohc}` : 'pax-location';
       const avatar = participant.avatar || '';
       let avatarHtml = '';
       if (avatar && avatar.startsWith('letter:')) {
