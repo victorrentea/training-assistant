@@ -992,9 +992,17 @@ def run() -> None:
 
     try:
         while True:
-            if not ws_client.connected:
+            # Connectivity state derived from WS connection (no HTTP polling needed).
+            ws_connected = ws_client.connected
+            if not ws_connected:
+                if not server_disconnected:
+                    log.error("daemon", "Server unreachable.")
+                    server_disconnected = True
                 time.sleep(DAEMON_POLL_INTERVAL)
                 continue
+            if server_disconnected:
+                log.info("daemon", "Reconnected to server.")
+                server_disconnected = False
 
             # ── Drain pending WS messages (handlers run on main thread) ──
             ws_client.drain_queue()
@@ -1422,7 +1430,7 @@ def run() -> None:
                         log.info("static-sync", f"Triggered browser reload after sync {changed} file(s): {changed_names}")
 
             except RuntimeError as e:
-                log.error("daemon", f"Error in main loop: {e}")
+                log.error("daemon", f"Server error: {e}")
             except KeyboardInterrupt:
                 _LOCK_FILE.unlink(missing_ok=True)
                 log.info("daemon", "Stopped.")
