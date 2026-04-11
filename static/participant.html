@@ -16,7 +16,17 @@
 </head>
 <body>
 
-  <!-- Main screen (auto-join, no join screen) -->
+  <div id="prejoin-screen" class="prejoin-screen" style="display:none;">
+    <div class="prejoin-card">
+      <div class="prejoin-title">Choose your name</div>
+      <p class="prejoin-subtitle">You can pick one now, or get one assigned randomly.</p>
+      <input id="prejoin-name-input" class="prejoin-name-input" type="text" maxlength="32" placeholder="Your name" autocomplete="name" />
+      <button id="prejoin-join-btn" class="prejoin-join-btn" type="button" disabled>Join with this name</button>
+      <button id="prejoin-random-btn" class="prejoin-random-btn" type="button">Assign randomly (you can change later)</button>
+      <div id="prejoin-error" class="prejoin-error"></div>
+    </div>
+  </div>
+
   <div id="main-screen">
     <div class="status-bar tooltip-below">
       <span class="status-left">

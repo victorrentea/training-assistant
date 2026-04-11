@@ -8,6 +8,7 @@ from starlette.testclient import TestClient
 
 from daemon.participant.router import router
 from daemon.participant.state import ParticipantState
+from railway.shared.state import get_avatar_filename
 
 
 @pytest.fixture
@@ -85,6 +86,77 @@ class TestRegister:
     def test_missing_participant_id_returns_400(self, client):
         resp = client.post("/api/participant/register", json={})
         assert resp.status_code == 400
+
+    def test_new_participant_can_register_with_explicit_name(self, client, fresh_state):
+        resp = client.post(
+            "/api/participant/register",
+            json={"name": "Alice"},
+            headers={"X-Participant-ID": "uuid-explicit"},
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["name"] == "Alice"
+        assert data["avatar"]
+        assert fresh_state.participant_names["uuid-explicit"] == "Alice"
+
+    def test_explicit_name_duplicate_returns_409(self, client, fresh_state):
+        fresh_state.participant_names["uuid1"] = "Alice"
+        fresh_state.participant_avatars["uuid1"] = "gandalf.png"
+
+        resp = client.post(
+            "/api/participant/register",
+            json={"name": "Alice"},
+            headers={"X-Participant-ID": "uuid2"},
+        )
+        assert resp.status_code == 409
+
+    def test_returning_participant_register_ignores_new_name(self, client, fresh_state):
+        fresh_state.participant_names["uuid1"] = "Persisted Name"
+        fresh_state.participant_avatars["uuid1"] = "persisted-avatar.png"
+
+        resp = client.post(
+            "/api/participant/register",
+            json={"name": "New Name"},
+            headers={"X-Participant-ID": "uuid1"},
+        )
+        assert resp.status_code == 200
+        assert resp.json() == {"name": "Persisted Name", "avatar": "persisted-avatar.png"}
+
+    def test_explicit_name_gets_available_avatar_not_used_by_others(self, client, fresh_state):
+        fresh_state.participant_names["uuid1"] = "Gandalf"
+        fresh_state.participant_avatars["uuid1"] = "gandalf.png"
+
+        resp = client.post(
+            "/api/participant/register",
+            json={"name": "Alice"},
+            headers={"X-Participant-ID": "uuid2"},
+        )
+        assert resp.status_code == 200
+        assert resp.json()["avatar"] != "gandalf.png"
+
+    def test_random_register_keeps_name_avatar_in_sync_when_available(self, client, fresh_state):
+        resp = client.post(
+            "/api/participant/register",
+            json={},
+            headers={"X-Participant-ID": "uuid-random"},
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["avatar"] == get_avatar_filename(data["name"])
+
+
+class TestRejoin:
+    def test_rejoin_returns_existing_identity(self, client, fresh_state):
+        fresh_state.participant_names["uuid1"] = "Bob"
+        fresh_state.participant_avatars["uuid1"] = "letter:BO:#abc"
+
+        resp = client.post("/api/participant/rejoin", headers={"X-Participant-ID": "uuid1"})
+        assert resp.status_code == 200
+        assert resp.json() == {"name": "Bob", "avatar": "letter:BO:#abc"}
+
+    def test_rejoin_unknown_uuid_returns_404(self, client, fresh_state):
+        resp = client.post("/api/participant/rejoin", headers={"X-Participant-ID": "missing"})
+        assert resp.status_code == 404
 
 
 class TestRename:

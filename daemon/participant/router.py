@@ -3,6 +3,7 @@ import asyncio
 import json
 import logging
 import re
+import random
 import secrets
 import urllib.parse
 import urllib.request
@@ -21,7 +22,7 @@ from daemon.session import state as session_shared_state
 from daemon.ws_messages import ParticipantListUpdatedMsg
 from daemon.ws_publish import notify_host
 from railway.shared.names import assign_conference_name
-from railway.shared.state import LOTR_NAMES, assign_avatar
+from railway.shared.state import LOTR_NAMES, get_avatar_filename
 from railway.shared.state import refresh_avatar as _refresh_avatar_logic
 
 logger = logging.getLogger(__name__)
@@ -34,6 +35,11 @@ _TIMEZONE_RE = re.compile(r"^🕐\s+(.+)$")
 class RegisterResponse(BaseModel):
     name: str
     avatar: str
+
+
+class RegisterRequest(BaseModel):
+    name: str | None = None
+
 
 class RenameRequest(BaseModel):
     name: str
@@ -337,8 +343,40 @@ def _build_mini_state() -> SimpleNamespace:
     )
 
 
+def _pick_random_available_avatar(pid: str) -> str:
+    """Pick a random avatar, preferring ones unused by other participants in session."""
+    ps = participant_state
+    taken_by_others = {
+        avatar
+        for uid, avatar in ps.participant_avatars.items()
+        if uid != pid and not uid.startswith("__")
+    }
+    all_avatars = [get_avatar_filename(name) for name in LOTR_NAMES]
+    available = [avatar for avatar in all_avatars if avatar not in taken_by_others]
+    if not available:
+        available = all_avatars
+    return random.choice(available)
+
+
+@router.post("/rejoin", response_model=RegisterResponse)
+async def rejoin_participant(request: Request):
+    """Lookup-only identity restore for returning UUIDs in current session."""
+    pid = request.headers.get("x-participant-id")
+    if not pid:
+        return JSONResponse({"error": "Missing X-Participant-ID"}, status_code=400)
+
+    ps = participant_state
+    if pid not in ps.participant_names:
+        return JSONResponse({"error": "Participant not found in current session"}, status_code=404)
+
+    return RegisterResponse(
+        name=ps.participant_names[pid],
+        avatar=ps.participant_avatars.get(pid, ""),
+    )
+
+
 @router.post("/register", response_model=RegisterResponse)
-async def register_participant(request: Request):
+async def register_participant(request: Request, body: RegisterRequest):
     """Register participant — assign name+avatar. Idempotent for returning participants."""
     pid = request.headers.get("x-participant-id")
     if not pid:
@@ -355,24 +393,47 @@ async def register_participant(request: Request):
 
     # New participant — assign identity
     raw_name: str
+    explicit_name = (body.name or "").strip()[:32]
 
-    if ps.mode == "conference":
+    if explicit_name:
+        taken = {v for k, v in ps.participant_names.items() if k != pid}
+        if explicit_name in taken:
+            return Response(status_code=409)
+        raw_name = explicit_name
+    elif ps.mode == "conference":
         # Conference mode: auto-assign character name
         fake_state = _build_mini_state()
         char_name, universe = assign_conference_name(fake_state)
         raw_name = char_name
         ps.participant_universes[pid] = universe
     else:
-        # Workshop mode: assign next available LOTR name, skip taken ones
+        # Workshop mode: random LOTR name while trying to keep name/avatar in sync
         taken_names = set(ps.participant_names.values())
-        lotr_name = next((n for n in LOTR_NAMES if n not in taken_names), None)
-        raw_name = lotr_name if lotr_name else f"Guest-{secrets.token_hex(3)}"
+        taken_avatars = {a for uid, a in ps.participant_avatars.items() if uid != pid and not uid.startswith("__")}
+        sync_candidates = [
+            name for name in LOTR_NAMES
+            if name not in taken_names and get_avatar_filename(name) not in taken_avatars
+        ]
+        if sync_candidates:
+            raw_name = random.choice(sync_candidates)
+        else:
+            remaining = [name for name in LOTR_NAMES if name not in taken_names]
+            raw_name = random.choice(remaining) if remaining else f"Guest-{secrets.token_hex(3)}"
 
     ps.participant_names[pid] = raw_name
 
-    # Assign avatar
-    fake_state = _build_mini_state()
-    avatar = assign_avatar(fake_state, pid, raw_name)
+    # Avatar rules:
+    # - explicit name path: random available avatar across session participants
+    # - random workshop path: keep name/avatar synced when the chosen LOTR avatar is available
+    if explicit_name:
+        avatar = _pick_random_available_avatar(pid)
+    else:
+        mapped_avatar = get_avatar_filename(raw_name) if raw_name in LOTR_NAMES else None
+        taken_by_others = {a for uid, a in ps.participant_avatars.items() if uid != pid and not uid.startswith("__")}
+        if mapped_avatar and mapped_avatar not in taken_by_others:
+            avatar = mapped_avatar
+        else:
+            avatar = _pick_random_available_avatar(pid)
     ps.participant_avatars[pid] = avatar
 
     # Initialize score

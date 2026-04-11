@@ -12,3 +12,4 @@
 - 2026-03-26: For PowerPoint automation during live sessions, avoid UI focus theft: do not use `activate` or force-open files; export only already-open presentations in background-safe mode.
 - 2026-04-06: In daemon routers, never send raw WS dicts to host/participants; always use typed Pydantic message models via `daemon.ws_publish` (`broadcast`/`notify_host`) to satisfy contract tests and keep AsyncAPI parity.
 - 2026-04-08: In specs and designs, treat Railway as a stateless proxy for this project; daemon owns session persistence and authoritative session state.
+- 2026-04-11: When one endpoint currently mixes lookup and creation semantics, split them into explicit APIs (`/rejoin` for lookup-only, `/register` for create) instead of adding ambiguous mode flags.

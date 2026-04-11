@@ -3,6 +3,21 @@ info:
   title: Daemon Host Panel
   version: 0.1.0
 paths:
+  /api/participant/rejoin:
+    post:
+      tags:
+      - participant
+      summary: Rejoin Participant
+      description: Lookup-only identity restore for returning UUIDs in current session.
+      operationId: rejoin_participant_api_participant_rejoin_post
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegisterResponse'
+      x-feature: identity
   /api/participant/register:
     post:
       tags:
@@ -11,6 +26,12 @@ paths:
       description: Register participant — assign name+avatar. Idempotent for returning
         participants.
       operationId: register_participant_api_participant_register_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+        required: true
       responses:
         '200':
           description: Successful Response
@@ -2511,6 +2532,15 @@ components:
           title: Topic
       type: object
       title: QuizRequestBody
+    RegisterRequest:
+      properties:
+        name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Name
+      type: object
+      title: RegisterRequest
     RegisterResponse:
       properties:
         name:

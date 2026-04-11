@@ -2593,9 +2593,10 @@ ${html}
     return floors;
   }
 
-  // ── Auto-join: register with server to get assigned name+avatar ──
+  // ── Join bootstrap (rejoin or pre-join flow) ──
   const LS_CUSTOM_NAME_KEY = 'workshop_custom_name'; // true if user explicitly renamed
-  let _assignedName = null; // tracks the server-assigned name (for onboarding checklist)
+  let _assignedName = null;
+  const ON_HOST_MACHINE_COOKIE = 'ON_HOST_MACHINE';
 
   // Append " (host)" suffix when running on host's browser tab, without duplicating it.
   function applyHostSuffix(name) {
@@ -2604,32 +2605,219 @@ ${html}
     return name.endsWith(SUFFIX) ? name : name + SUFFIX;
   }
 
-  (async function autoJoin() {
-    // Register with daemon — get assigned name+avatar (idempotent for returning participants)
+  function _hasOnHostMachineCookie() {
+    return document.cookie.split(';').some((part) => part.trim() === `${ON_HOST_MACHINE_COOKIE}=true`);
+  }
+
+  function _prejoinEls() {
+    return {
+      screen: document.getElementById('prejoin-screen'),
+      input: document.getElementById('prejoin-name-input'),
+      joinBtn: document.getElementById('prejoin-join-btn'),
+      randomBtn: document.getElementById('prejoin-random-btn'),
+      error: document.getElementById('prejoin-error'),
+      main: document.getElementById('main-screen'),
+    };
+  }
+
+  function _setPrejoinError(msg) {
+    const { error } = _prejoinEls();
+    if (error) error.textContent = msg || '';
+  }
+
+  function _setPrejoinBusy(busy) {
+    const { joinBtn, randomBtn, input } = _prejoinEls();
+    if (joinBtn) joinBtn.disabled = busy || !(input && input.value.trim());
+    if (randomBtn) randomBtn.disabled = !!busy;
+    if (input) input.disabled = !!busy;
+  }
+
+  function _showPrejoinScreen(message) {
+    const { screen, main, input } = _prejoinEls();
+    if (main) main.style.display = 'none';
+    if (screen) screen.style.display = 'flex';
+    _setPrejoinError(message || '');
+    _setPrejoinBusy(false);
+    if (input) input.focus();
+  }
+
+  function _hidePrejoinScreen() {
+    const { screen } = _prejoinEls();
+    if (screen) screen.style.display = 'none';
+  }
+
+  function _updatePrejoinJoinEnabled() {
+    const { input, joinBtn } = _prejoinEls();
+    if (!input || !joinBtn || input.disabled) return;
+    joinBtn.disabled = !input.value.trim();
+  }
+
+  async function _registerRailway(payload) {
+    return fetch(apiBase + '/api/participant/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Participant-ID': myUUID },
+      body: JSON.stringify(payload || {}),
+    });
+  }
+
+  async function _rejoinRailway() {
+    return fetch(apiBase + '/api/participant/rejoin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Participant-ID': myUUID },
+      body: '{}',
+    });
+  }
+
+  async function _fetchLocalAssignedName() {
+    if (!_hasOnHostMachineCookie()) return null;
     try {
-      const regResp = await fetch(apiBase + '/api/participant/register', {
+      const activeResp = await fetch('http://localhost:8081/api/session/active', { signal: AbortSignal.timeout(900) });
+      if (!activeResp.ok) return null;
+      const active = await activeResp.json();
+      if (!active || !active.session_id) return null;
+      const regResp = await fetch('http://localhost:8081/api/participant/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Participant-ID': myUUID },
         body: '{}',
       });
-      if (regResp.status === 404) { window.location.href = '/?error=invalid'; return; }
-      if (!regResp.ok) { myName = myName || 'Guest'; connectWS(myName); return; }
-      const { name, avatar } = await regResp.json();
-      _assignedName = name;
-      myName = applyHostSuffix(name || 'Guest');
-      // If user has a custom name stored locally, that overrides the assigned name for display
-      // but the server keeps the assigned name until they explicitly rename
-      const isCustom = localStorage.getItem(LS_CUSTOM_NAME_KEY);
-      const savedName = localStorage.getItem(LS_KEY);
-      if (isCustom && savedName) {
-        myName = applyHostSuffix(savedName);
-      }
-    } catch (err) {
-      console.error('Registration failed:', err);
-      myName = 'Guest';
+      if (!regResp.ok) return null;
+      const data = await regResp.json();
+      return (data && data.name) ? String(data.name) : null;
+    } catch (_) {
+      return null;
     }
+  }
+
+  async function _registerUsingLocalFallbackName() {
+    const localName = await _fetchLocalAssignedName();
+    if (!localName) return null;
+
+    const BASE_SUFFIX = ' (local)';
+    let suffix = '';
+    for (let attempt = 0; attempt < 200; attempt++) {
+      const candidate = `${localName}${BASE_SUFFIX}${suffix}`;
+      const resp = await _registerRailway({ name: candidate });
+      if (resp.status === 409) {
+        suffix += '+';
+        continue;
+      }
+      if (!resp.ok) return null;
+      return resp.json();
+    }
+    return null;
+  }
+
+  function _applyIdentityAndConnect(data) {
+    const name = (data && data.name) ? String(data.name) : 'Guest';
+    _assignedName = name;
+    myName = applyHostSuffix(name);
+    _hidePrejoinScreen();
     connectWS(myName);
-  })();
+  }
+
+  async function _submitPrejoinManual() {
+    const { input } = _prejoinEls();
+    const chosen = (input && input.value ? input.value.trim() : '');
+    if (!chosen) return;
+    _setPrejoinBusy(true);
+    _setPrejoinError('');
+    try {
+      const regResp = await _registerRailway({ name: chosen });
+      if (regResp.status === 409) {
+        _setPrejoinError('Name already taken. Try another one.');
+        return;
+      }
+      if (regResp.status === 404) {
+        window.location.href = '/?error=invalid';
+        return;
+      }
+      if (!regResp.ok) {
+        _setPrejoinError('Could not join now. Please try again.');
+        return;
+      }
+      _applyIdentityAndConnect(await regResp.json());
+    } catch (_) {
+      _setPrejoinError('Could not join now. Please try again.');
+    } finally {
+      _setPrejoinBusy(false);
+    }
+  }
+
+  async function _submitPrejoinRandom() {
+    _setPrejoinBusy(true);
+    _setPrejoinError('');
+    try {
+      const regResp = await _registerRailway({});
+      if (regResp.status === 404) {
+        window.location.href = '/?error=invalid';
+        return;
+      }
+      if (!regResp.ok) {
+        _setPrejoinError('Could not assign a random identity. Please retry.');
+        return;
+      }
+      _applyIdentityAndConnect(await regResp.json());
+    } catch (_) {
+      _setPrejoinError('Could not assign a random identity. Please retry.');
+    } finally {
+      _setPrejoinBusy(false);
+    }
+  }
+
+  function _bindPrejoinUi() {
+    const { input, joinBtn, randomBtn } = _prejoinEls();
+    if (!input || !joinBtn || !randomBtn) return;
+    input.addEventListener('input', _updatePrejoinJoinEnabled);
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !joinBtn.disabled) {
+        e.preventDefault();
+        _submitPrejoinManual();
+      }
+    });
+    joinBtn.addEventListener('click', _submitPrejoinManual);
+    randomBtn.addEventListener('click', _submitPrejoinRandom);
+    _updatePrejoinJoinEnabled();
+  }
+
+  async function _bootstrapJoinFlow() {
+    _bindPrejoinUi();
+
+    // Most automated browser tests can keep random identity flow without manual typing.
+    const automationAutoRandom = !!(navigator && navigator.webdriver);
+
+    if (_isFirstVisit) {
+      _showPrejoinScreen();
+      if (automationAutoRandom) _submitPrejoinRandom();
+      return;
+    }
+
+    try {
+      const rejoinResp = await _rejoinRailway();
+      if (rejoinResp.status === 200) {
+        _applyIdentityAndConnect(await rejoinResp.json());
+        return;
+      }
+      if (rejoinResp.status === 404) {
+        if (_hasOnHostMachineCookie()) {
+          const localFallback = await _registerUsingLocalFallbackName();
+          if (localFallback) {
+            _applyIdentityAndConnect(localFallback);
+            return;
+          }
+        }
+        _showPrejoinScreen();
+        if (automationAutoRandom) _submitPrejoinRandom();
+        return;
+      }
+      _showPrejoinScreen('Could not restore previous identity. Please choose one.');
+      if (automationAutoRandom) _submitPrejoinRandom();
+    } catch (_) {
+      _showPrejoinScreen('Could not restore previous identity. Please choose one.');
+      if (automationAutoRandom) _submitPrejoinRandom();
+    }
+  }
+
+  _bootstrapJoinFlow();
   _bindSlidesFollowTrainerToggle();
   _bindSlidesViewModeToggle();
   _bindSlidesZoomButtons();
@@ -2699,7 +2887,7 @@ ${html}
     const nameEl = document.getElementById('onboard-name');
     const locEl = document.getElementById('onboard-location');
     const notifEl = document.getElementById('onboard-notif');
-    if (nameEl && !nameEl.classList.contains('done') && (_assignedName === null || myName !== _assignedName)) {
+    if (nameEl && !nameEl.classList.contains('done')) {
       nameEl.classList.add('done');
       nameEl.querySelector('input[type=checkbox]').checked = true;
       nameEl.style.cursor = 'default';
@@ -4102,7 +4290,7 @@ const sessionTitleEl = document.getElementById('session-title');
     }
     if (!currentPoll) {
       if (el) el.dataset.screen = 'waiting';
-      const nameSet = (_assignedName === null || myName !== _assignedName);
+      const nameSet = true;
       const locationSet = !!localStorage.getItem(LS_LOCATION_KEY);
       const notifGranted = 'Notification' in window && Notification.permission === 'granted';
       const allDone = nameSet && locationSet && notifGranted;

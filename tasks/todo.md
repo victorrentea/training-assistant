@@ -1,5 +1,28 @@
 # Todo
 
+## Direct request: GH#110 ask for a name before join
+
+- [x] Add daemon participant `POST /api/participant/rejoin` endpoint (lookup-only by UUID, no side effects)
+- [x] Extend daemon participant `POST /api/participant/register` to accept optional explicit `name` and return `409` on duplicates
+- [x] Update participant UI to gate join behind pre-join choices (manual name or random) and remove post-join "name set" checklist tracking
+- [x] Add landing-page `ON_HOST_MACHINE` checkbox/cookie and gate localhost active-session probing behind that cookie
+- [x] Implement testing-only local-name retry suffix (` (local)`, then `+` retries on `409`)
+- [x] Update/expand daemon, frontend, and e2e/hermetic tests (default random join path for most flows)
+- [ ] Run hermetic e2e suite and record proof in review section
+
+### Review: GH#110 ask for a name before join
+
+- Proof (red): `python3 -m pytest -q tests/daemon/test_participant_router.py`
+- Result: `3 failed` before implementation (`/rejoin` missing, explicit-name register not honored)
+- Proof (green): `python3 -m pytest -q tests/daemon/test_participant_router.py`
+- Result: `20 passed in 0.48s`
+- Proof: `python3 -m pytest -q tests/docs/test_generate_apis_md.py tests/daemon/test_participant_router.py tests/daemon/test_api_contract.py tests/daemon/test_ws_contract.py`
+- Result: `58 passed in 5.58s`
+- Proof: `bash tests/check-all.sh`
+- Result: daemon tests `374 passed`; contract tests `16 passed`; architecture contracts `4 passed`
+- Proof: `bash tests/docker/run-hermetic.sh`
+- Result: blocked in this environment (`docker.sock` unavailable: `connect: no such file or directory`)
+
 ## Direct request: fix GH#113 host activity badges for slides/git
 
 - [x] Reproduce and test that host-state uses the active session entry when reading slides activity

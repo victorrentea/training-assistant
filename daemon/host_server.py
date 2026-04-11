@@ -78,8 +78,8 @@ def create_app(backend_url: str) -> FastAPI:
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["https://interact.victorrentea.ro"],
-        allow_methods=["GET"],
-        allow_headers=[],
+        allow_methods=["GET", "POST"],
+        allow_headers=["Content-Type", "X-Participant-ID"],
     )
 
     # --- Write-back middleware (collects events set by participant router handlers) ---

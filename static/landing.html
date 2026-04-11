@@ -125,6 +125,30 @@
       margin-top: 1.2rem;
       min-height: 1.2em;
     }
+    .landing-host-toggle {
+      position: fixed;
+      left: .75rem;
+      bottom: .55rem;
+      display: inline-flex;
+      align-items: center;
+      gap: .38rem;
+      font-size: .72rem;
+      color: var(--muted);
+      opacity: .85;
+      user-select: none;
+      z-index: 20;
+      background: color-mix(in srgb, var(--surface) 78%, transparent);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: .18rem .52rem;
+      backdrop-filter: blur(2px);
+    }
+    .landing-host-toggle input {
+      margin: 0;
+      accent-color: var(--accent);
+      width: .86rem;
+      height: .86rem;
+    }
     @keyframes blink-fast { 0%,49%{opacity:1} 50%,100%{opacity:0} }
   </style>
 </head>
@@ -156,18 +180,46 @@
     <div id="error-msg" class="landing-error"></div>
     <div id="status-msg" class="landing-status"></div>
   </div>
+  <label class="landing-host-toggle" for="host-machine-toggle">
+    <input id="host-machine-toggle" type="checkbox" />
+    ON_HOST_MACHINE
+  </label>
 
   <script>
     const SESSION_CODE_RE = /^[a-z0-9]{6}$/;
     const RETRY_INTERVAL_MS = 3000;
     const RETRY_DURATION_MS = 60000;
     const LOCAL_DAEMON_POLL_MS = 1000;
+    const ON_HOST_MACHINE_COOKIE = 'ON_HOST_MACHINE';
     let retryTimer = null;
     let retryUiTimer = null;
     let retryStartedAt = 0;
     let retryNextAt = 0;
     let retryCode = '';
     let retryAttemptInFlight = false;
+    let pollLocalDaemonNow = null;
+
+    function hasOnHostMachineCookie() {
+      return document.cookie.split(';').some((part) => part.trim() === `${ON_HOST_MACHINE_COOKIE}=true`);
+    }
+
+    function setOnHostMachineCookie(enabled) {
+      if (enabled) {
+        document.cookie = `${ON_HOST_MACHINE_COOKIE}=true; path=/; SameSite=Lax; max-age=31536000`;
+      } else {
+        document.cookie = `${ON_HOST_MACHINE_COOKIE}=; path=/; max-age=0`;
+      }
+    }
+
+    function initHostMachineToggle() {
+      const toggle = document.getElementById('host-machine-toggle');
+      if (!toggle) return;
+      toggle.checked = hasOnHostMachineCookie();
+      toggle.addEventListener('change', () => {
+        setOnHostMachineCookie(toggle.checked);
+        if (toggle.checked && pollLocalDaemonNow) pollLocalDaemonNow();
+      });
+    }
 
     function getInputCode() {
       return (document.getElementById('code-input').value || '').trim().toLowerCase();
@@ -339,12 +391,14 @@
         }
       }
     })();
+    initHostMachineToggle();
 
     // Auto-detect active session when running on host's machine.
     (function pollLocalDaemon() {
       let lastCode = null;
 
       function tryFetch() {
+        if (!hasOnHostMachineCookie()) return;
         fetch('http://localhost:8081/api/session/active', { signal: AbortSignal.timeout(800) })
           .then(r => r.ok ? r.json() : null)
           .then(data => {
@@ -360,6 +414,7 @@
           .catch(() => { /* daemon not running or unreachable — silent skip */ });
       }
 
+      pollLocalDaemonNow = tryFetch;
       tryFetch();
       setInterval(() => {
         tryFetch();

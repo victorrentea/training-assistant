@@ -62,6 +62,96 @@ body {
 
 h1 { display: none; }
 
+/* ── Pre-join screen ── */
+.prejoin-screen {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background:
+    radial-gradient(circle at 15% 20%, rgba(72, 119, 255, 0.12), transparent 38%),
+    radial-gradient(circle at 85% 80%, rgba(87, 191, 136, 0.1), transparent 36%),
+    var(--bg);
+  z-index: 12000;
+}
+
+.prejoin-card {
+  width: min(420px, 100%);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.28);
+  padding: 1.2rem 1.15rem 1rem;
+}
+
+.prejoin-title {
+  font-size: 1.28rem;
+  font-weight: 800;
+  margin-bottom: 0.2rem;
+}
+
+.prejoin-subtitle {
+  font-size: 0.88rem;
+  color: var(--muted);
+  margin: 0 0 0.85rem;
+}
+
+.prejoin-name-input {
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--surface2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.7rem 0.8rem;
+  font-size: 1rem;
+  margin-bottom: 0.6rem;
+  outline: none;
+}
+
+.prejoin-name-input:focus {
+  border-color: var(--accent);
+}
+
+.prejoin-join-btn,
+.prejoin-random-btn {
+  width: 100%;
+  border: none;
+  border-radius: 10px;
+  padding: 0.67rem 0.85rem;
+  font-weight: 700;
+  font-size: 0.94rem;
+  cursor: pointer;
+}
+
+.prejoin-join-btn {
+  background: var(--accent);
+  color: #fff;
+}
+
+.prejoin-random-btn {
+  margin-top: 0.46rem;
+  background: var(--surface2);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.prejoin-join-btn:disabled,
+.prejoin-random-btn:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.prejoin-error {
+  min-height: 1.15rem;
+  margin-top: 0.5rem;
+  color: var(--danger);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
 /* ── Main screen ── */
 #main-screen {
   width: min(1350px, 100%);

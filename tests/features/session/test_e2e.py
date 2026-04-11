@@ -148,6 +148,51 @@ class TestSessionScopedAPIs:
         assert "name" in data
         assert "avatar" in data
 
+    def test_register_with_explicit_name_and_rejoin(self, server_url, session_id):
+        import uuid
+        pid = str(uuid.uuid4())
+        register_resp = requests.post(
+            f"{server_url}/{session_id}/api/participant/register",
+            headers={"X-Participant-ID": pid, "Content-Type": "application/json"},
+            json={"name": "SessionTestUser"},
+        )
+        assert register_resp.status_code == 200
+        assert register_resp.json()["name"] == "SessionTestUser"
+
+        rejoin_resp = requests.post(
+            f"{server_url}/{session_id}/api/participant/rejoin",
+            headers={"X-Participant-ID": pid, "Content-Type": "application/json"},
+            json={},
+        )
+        assert rejoin_resp.status_code == 200
+        assert rejoin_resp.json()["name"] == "SessionTestUser"
+        assert rejoin_resp.json()["avatar"] == register_resp.json()["avatar"]
+
+    def test_register_duplicate_explicit_name_returns_409(self, server_url, session_id):
+        import uuid
+        first = requests.post(
+            f"{server_url}/{session_id}/api/participant/register",
+            headers={"X-Participant-ID": str(uuid.uuid4()), "Content-Type": "application/json"},
+            json={"name": "DuplicateName"},
+        )
+        assert first.status_code == 200
+
+        second = requests.post(
+            f"{server_url}/{session_id}/api/participant/register",
+            headers={"X-Participant-ID": str(uuid.uuid4()), "Content-Type": "application/json"},
+            json={"name": "DuplicateName"},
+        )
+        assert second.status_code == 409
+
+    def test_rejoin_unknown_uuid_returns_404(self, server_url, session_id):
+        import uuid
+        r = requests.post(
+            f"{server_url}/{session_id}/api/participant/rejoin",
+            headers={"X-Participant-ID": str(uuid.uuid4()), "Content-Type": "application/json"},
+            json={},
+        )
+        assert r.status_code == 404
+
     def test_register_with_invalid_session_404(self, server_url):
         import uuid
         r = requests.post(

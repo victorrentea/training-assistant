@@ -3,6 +3,7 @@
 - [x] bugfix: Railway now handles daemon identity write-back events (`participant_registered`/`participant_renamed`/`participant_avatar_updated`/`participant_location`) and updates in-memory participant maps before broadcasting WS count/list updates.
 - [x] direct request: participant count is now WS-only in participant UI (removed `participant_count` from `GET /api/participant/state`), and WS `count` now reflects total known non-host participants.
 - [x] direct request: participant `GET /api/participant/state` now reports active connected non-host `participant_count` (from online presence), not total known participants.
+- [x] GH#110: participant join flow now asks for identity first (manual name or random), adds lookup-only `/api/participant/rejoin`, gates localhost active-session probing behind landing cookie `ON_HOST_MACHINE`, and supports testing-only local-name retry suffixes (` (local)`, then `+` on duplicate).
 - [x] direct request: make participant Slides Follow button label `🎯 Follow` and match Slides menu title text size.
 - [x] direct request: temporarily hide the participant slides renderer toggle (PDF.js/Native) and force participant viewer mode to PDF.js.
 - [x] direct request: host UI deploy/version tag (`deployed ...`) is now horizontally centered above the footer line instead of bottom-right aligned.
