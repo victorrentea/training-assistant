@@ -165,10 +165,15 @@ async def session_active():
 
 @app.get("/api/is-active-session")
 async def is_active_session():
-    """Public endpoint: returns whether daemon is connected and any session is active."""
+    """Public endpoint: returns whether daemon is connected and any session is active.
+
+    A session is only considered active when BOTH session_id exists AND daemon is connected.
+    When daemon disconnects, session_id may linger in state but the session is not usable.
+    """
+    daemon_connected = state.daemon_ws is not None
     return {
-        "active": state.session_id is not None,
-        "daemon_connected": state.daemon_ws is not None,
+        "active": daemon_connected and state.session_id is not None,
+        "daemon_connected": daemon_connected,
     }
 
 
