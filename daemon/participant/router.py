@@ -55,8 +55,11 @@ class LocationRequest(BaseModel):
 
 
 def _http_get_json(url: str, *, timeout: float = 2.5):
+    import ssl
+    import certifi
+    ctx = ssl.create_default_context(cafile=certifi.where())
     req = urllib.request.Request(url, method="GET", headers={"User-Agent": "TrainingAssistant/1.0"})
-    with urllib.request.urlopen(req, timeout=timeout) as response:
+    with urllib.request.urlopen(req, timeout=timeout, context=ctx) as response:
         return json.loads(response.read().decode("utf-8"))
 
 
