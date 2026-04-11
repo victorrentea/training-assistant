@@ -1432,8 +1432,8 @@ def run() -> None:
                         else:
                             post_status("error", "No conversation context — please generate a question first.", config)
 
-                # ── Scan PPTX mtimes every 60s — keeps modified_at current for participants ──
-                if slides_runner and now - last_slides_mtime_scan_at >= 60.0:
+                # ── Scan PPTX mtimes every 10s — keeps modified_at current for participants ──
+                if slides_runner and now - last_slides_mtime_scan_at >= 10.0:
                     last_slides_mtime_scan_at = now
                     if slides_runner.scan_pptx_mtimes():
                         from daemon.slides.router import _broadcast_slides_cache_status
