@@ -2989,7 +2989,7 @@ ${html}
 
     ws.onclose = (event) => {
       if (event.code === 1008 && !pendingRedirect) {
-        window.location.href = `/?code=${encodeURIComponent(sessionId)}&retry=1`;
+        window.location.href = `/?session_id=${encodeURIComponent(sessionId)}`;
         return;
       }
       if (!pendingRedirect) setTimeout(() => connectWS(myName), 3000);
