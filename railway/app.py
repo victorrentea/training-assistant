@@ -163,6 +163,12 @@ async def session_active():
     return {"session_id": state.session_id}
 
 
+@app.get("/api/is-active-session")
+async def is_active_session():
+    """Public endpoint: returns whether any session is currently active (boolean only, no session_id)."""
+    return {"active": state.session_id is not None}
+
+
 # ── Public status endpoint (version probe + session state) ──
 
 @app.get("/api/status")
