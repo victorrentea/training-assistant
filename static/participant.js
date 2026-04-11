@@ -261,7 +261,6 @@ function closeEmojiPopup(ev) {
   let slidesFollowUncheckSuppressedUntil = 0;
   let slidesZoomInProgressUntil = 0;
   let _pdfResizeTimer = null;
-  let _pdfResizeFollowRestoreTimer = null;
   let hostSlidesCurrent = null;   // what host is showing NOW
   let lastHostSlidesCurrentKey = '';
   let _pendingFollowRetry = false; // retry follow when next slides_cache_status arrives
@@ -1752,26 +1751,12 @@ ${html}
     });
     slidesPdfLinkService.setViewer(slidesPdfViewer);
 
-    // Auto-fit to page width on container resize (debounced).
-    // Rescaling fires updateviewarea/pagechanging which auto-disables follow.
-    // We remember the follow state before resize and restore it after settling.
+    // Auto-fit to page width on container resize (debounced)
     new ResizeObserver(() => {
       if (!slidesPdfViewer || slidesViewMode !== 'pdfjs') return;
-      const wasFollowOn = slidesFollowTrainerEnabled;
       clearTimeout(_pdfResizeTimer);
-      clearTimeout(_pdfResizeFollowRestoreTimer);
       _pdfResizeTimer = setTimeout(() => {
-        if (slidesPdfViewer && slidesViewMode === 'pdfjs') {
-          slidesPdfViewer.currentScaleValue = 'page-width';
-        }
-        if (wasFollowOn) {
-          clearTimeout(_pdfResizeFollowRestoreTimer);
-          _pdfResizeFollowRestoreTimer = setTimeout(() => {
-            if (!slidesFollowTrainerEnabled) {
-              _setSlidesFollowTrainerEnabled(true, { persist: true, applyHost: false });
-            }
-          }, 1500);
-        }
+        if (slidesPdfViewer && slidesViewMode === 'pdfjs') slidesPdfViewer.currentScaleValue = 'page-width';
       }, 120);
     }).observe(container);
 
