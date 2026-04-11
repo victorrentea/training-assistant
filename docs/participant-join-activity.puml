@@ -1,0 +1,134 @@
+@startuml participant-join
+title Participant Joining a Session
+
+start
+
+:Participant opens
+interact.victorrentea.ro[?session_id=X];
+note right
+  On WS disconnect, participant UI
+  auto-redirects here with ?session_id=
+  set to the previous session ID
+end note
+
+if (ON_HOST_MACHINE?) then (yes)
+  repeat
+    :GET /api/is-active-session;
+
+    if (Response?) then (request failed)
+      :Show "Host not connected";
+    elseif (false) then
+      :Show "No session started";
+    else (true)
+    endif
+
+    backward :Wait 3s;
+  repeat while (not true?) is (yes)
+  ->true;
+else (no)
+  repeat
+    :GET /api/is-active-session;
+    note right: returns true / false
+
+    if (Response?) then (request failed)
+      :Show "Host not connected";
+    elseif (false) then
+      :Show "No session started";
+    else (true)
+    endif
+
+    backward :Wait (1,2,3,5,5s);
+  repeat while (not true AND\nretries < 5?) is (yes)
+  ->true or retries exhausted;
+
+  if (Retries exhausted?) then (yes)
+    stop
+  else (no: true)
+  endif
+endif
+
+if (ON_HOST_MACHINE?) then (yes)
+  :GET localhost:8081/api/session/active;
+  note right: returns session_id
+  :Set session_id query param;
+else (no)
+endif
+
+if (session_id query param?) then (no - **Case A**)
+  :Show input requesting
+  6-digit session ID;
+  repeat
+    :Participant enters 6 digits
+    (auto-submit, checked == active_session_id);
+    backward :Shake input, red font,\ntoaster "Invalid session code";
+  repeat while (Valid?) is (no)
+  ->yes;
+  :Redirect to ?session_id={id};
+else (yes - has session_id)
+endif
+
+if (session_id == active_session_id?) then (yes - **Case C**)
+else (no - **Case B**)
+  :Show "Session not started";
+  note right
+    Also show gray link:
+    "click here to enter
+    another session id"
+    -> clears ?session_id from URL
+  end note
+  stop
+endif
+
+if (session.type?) then (conference)
+  :Throw error "NOT SUPPORTED YET";
+  stop
+else (workshop)
+endif
+
+if (UUID in localStorage?) then (yes)
+  :Attempt /rejoin with stored UUID;
+  if (UUID in session.participants?) then (yes)
+    :Restore name & avatar;
+    :ENTER the app;
+    stop
+  else (no)
+    floating note left
+      UUID not in this session
+      (e.g. joined another session).
+      **Keep the same UUID!**
+    end note
+  endif
+else (no)
+  :Generate new UUID, store in localStorage;
+endif
+
+if (ON_HOST_MACHINE?) then (yes)
+  :Request random name from backend;
+  :Set display name to
+  received_name + " (host)";
+  :ENTER the app;
+  stop
+else (no)
+endif
+
+:Show session_id (read-only) above name input;
+:Show name input + "Random name" button;
+
+if (User action?) then (Submit entered name)
+else (Generate random name)
+  :Request random name from backend;
+  note left: never fails
+  :ENTER the app;
+  stop
+endif
+
+repeat
+  :Submit name to backend;
+  backward :Shake name input, toaster "Name taken";
+repeat while (Name taken?) is (yes)
+->no;
+
+:ENTER the app;
+stop
+
+@enduml
