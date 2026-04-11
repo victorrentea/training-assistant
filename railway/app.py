@@ -106,8 +106,9 @@ app.include_router(ws_session_router)
 app.include_router(landing_router)
 app.include_router(host_router)
 
-# Daemon-facing slides upload endpoints (global — daemon doesn't know session_id)
+# Daemon-facing slides endpoints (global — daemon doesn't know session_id)
 app.include_router(slides_upload_router, dependencies=[Depends(require_host_auth)])
+app.include_router(slides.daemon_router, dependencies=[Depends(require_host_auth)])
 
 # Internal daemon → backend file management endpoints
 app.include_router(internal_router)

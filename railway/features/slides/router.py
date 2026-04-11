@@ -19,6 +19,7 @@ from railway.shared.state import state
 
 router = APIRouter()
 public_router = APIRouter()
+daemon_router = APIRouter()  # global daemon-facing endpoints (no session prefix)
 logger = logging.getLogger(__name__)
 
 
@@ -66,7 +67,7 @@ class DownloadFromGdriveResponse(BaseModel):
     size: int = 0
 
 
-@router.post("/api/slides/download-from-gdrive/{slug}", response_model=DownloadFromGdriveResponse)
+@daemon_router.post("/api/slides/download-from-gdrive/{slug}", response_model=DownloadFromGdriveResponse)
 async def download_from_gdrive(slug: str, body: DownloadFromGdriveRequest):
     """Download PDF from Google Drive, cache it, return SHA256 hash.
 

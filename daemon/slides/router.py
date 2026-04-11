@@ -54,6 +54,14 @@ def _is_cached_on_railway(session_id: str, slug: str) -> bool:
         return False
 
 
+def _railway_auth_header() -> str:
+    """Build Basic Auth header for daemon→Railway HTTP calls."""
+    import base64
+    user = os.environ.get("HOST_USERNAME", "host")
+    password = os.environ.get("HOST_PASSWORD", "")
+    return "Basic " + base64.b64encode(f"{user}:{password}".encode()).decode()
+
+
 def download_on_railway(slug: str, drive_export_url: str) -> dict:
     """Call Railway REST to download PDF from Google Drive and cache it.
 
@@ -64,7 +72,10 @@ def download_on_railway(slug: str, drive_export_url: str) -> dict:
     body = json.dumps({"drive_export_url": drive_export_url}).encode()
     req = urllib.request.Request(
         url, method="POST",
-        headers={"Content-Type": "application/json"},
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": _railway_auth_header(),
+        },
         data=body,
     )
     with urllib.request.urlopen(req, timeout=_RAILWAY_DOWNLOAD_TIMEOUT_S, context=_ssl_context()) as resp:
