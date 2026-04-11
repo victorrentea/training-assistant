@@ -40,6 +40,8 @@
       margin-bottom: .7rem;
       display: block;
     }
+
+    /* Shared input style */
     .landing-input {
       width: 100%;
       max-width: 260px;
@@ -55,7 +57,7 @@
       text-transform: uppercase;
       box-sizing: border-box;
       outline: none;
-      transition: border-color .15s;
+      transition: border-color .15s, color .15s;
     }
     .landing-input:focus {
       border-color: var(--accent);
@@ -68,7 +70,27 @@
       color: var(--muted);
       opacity: .7;
     }
-    .landing-join-btn {
+    .landing-input.input-error {
+      color: var(--danger);
+      border-color: var(--danger);
+    }
+    .landing-input.readonly-code {
+      opacity: .6;
+      cursor: default;
+      font-size: 1rem;
+      padding: .55rem 1rem;
+      margin-bottom: .5rem;
+    }
+
+    /* Name input — normal casing */
+    .landing-name-input {
+      text-transform: none;
+      letter-spacing: normal;
+      font-size: 1.1rem;
+    }
+
+    /* Button styles */
+    .landing-btn {
       display: block;
       width: 100%;
       max-width: 260px;
@@ -83,35 +105,24 @@
       cursor: pointer;
       transition: filter .15s, transform .1s;
     }
-    .landing-join-btn:hover:not(:disabled) { filter: brightness(1.25); }
-    .landing-join-btn:active:not(:disabled) { transform: scale(.97); }
-    .landing-join-btn:disabled { opacity: .35; cursor: default; }
-    .landing-reconnect-wrap {
-      width: 100%;
-      max-width: 260px;
-      margin: .45rem auto 0;
-      display: none;
+    .landing-btn:hover:not(:disabled) { filter: brightness(1.25); }
+    .landing-btn:active:not(:disabled) { transform: scale(.97); }
+    .landing-btn:disabled { opacity: .35; cursor: default; }
+
+    .landing-btn-secondary {
+      background: var(--surface2);
+      color: var(--text);
+      border: 1px solid var(--border);
+      font-size: .95rem;
+      font-weight: 600;
+      margin-top: .6rem;
     }
-    .landing-reconnect-label {
-      font-size: .72rem;
-      color: var(--muted);
-      text-align: center;
-      margin-bottom: .25rem;
-      letter-spacing: .01em;
-    }
-    .landing-reconnect-track {
-      width: 100%;
-      height: 4px;
-      border-radius: 999px;
-      background: rgba(255,255,255,.14);
-      overflow: hidden;
-    }
-    .landing-reconnect-fill {
-      width: 0%;
-      height: 100%;
-      background: #57bf88;
-      transition: width .12s linear;
-    }
+
+    /* Screen visibility */
+    .screen { display: none; }
+    .screen.active { display: block; }
+
+    /* Status / error text */
     .landing-error {
       color: var(--danger);
       font-size: .85rem;
@@ -121,10 +132,77 @@
     }
     .landing-status {
       color: var(--muted);
-      font-size: .8rem;
-      margin-top: 1.2rem;
+      font-size: .85rem;
+      margin-top: 1rem;
       min-height: 1.2em;
     }
+    .landing-status-large {
+      font-size: 1.1rem;
+      color: var(--muted);
+      margin-top: 1.5rem;
+    }
+
+    /* Spinner */
+    .landing-spinner {
+      width: 2.5rem;
+      height: 2.5rem;
+      border: 3px solid var(--surface2);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.75s linear infinite;
+      margin: 1.5rem auto;
+    }
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    /* Shake animation */
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20% { transform: translateX(-8px); }
+      40% { transform: translateX(8px); }
+      60% { transform: translateX(-6px); }
+      80% { transform: translateX(6px); }
+    }
+    .shake {
+      animation: shake .4s ease-in-out;
+    }
+
+    /* Toaster */
+    .toaster {
+      position: fixed;
+      top: 1rem;
+      left: 50%;
+      transform: translateX(-50%) translateY(-120%);
+      background: var(--danger);
+      color: #fff;
+      padding: .6rem 1.4rem;
+      border-radius: var(--radius);
+      font-size: .9rem;
+      font-weight: 600;
+      z-index: 9999;
+      transition: transform .3s ease;
+      pointer-events: none;
+    }
+    .toaster.visible {
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* Mismatch link */
+    .landing-mismatch-link {
+      display: inline-block;
+      margin-top: 1.2rem;
+      color: var(--muted);
+      font-size: .85rem;
+      text-decoration: underline;
+      cursor: pointer;
+    }
+    .landing-mismatch-link:hover {
+      color: var(--text);
+    }
+
+    /* Host toggle (bottom-left) */
     .landing-host-toggle {
       position: fixed;
       left: .75rem;
@@ -156,37 +234,87 @@
       width: .86rem;
       height: .86rem;
     }
-    @keyframes blink-fast { 0%,49%{opacity:1} 50%,100%{opacity:0} }
   </style>
 </head>
 <body>
   <div class="landing-card">
-    <div class="landing-logo">Join a Session</div>
 
-    <label class="landing-label" for="code-input">Enter session code</label>
-    <input
-      id="code-input"
-      class="landing-input"
-      type="text"
-      maxlength="6"
-      autocomplete="off"
-      autocapitalize="none"
-      spellcheck="false"
-      placeholder="e.g. k7m2xp"
-      oninput="onCodeInput()"
-      onpaste="onCodePaste(event)"
-      onkeydown="if(event.key==='Enter' && !document.getElementById('join-btn').disabled) joinSession();"
-    />
-    <button id="join-btn" class="landing-join-btn" disabled onclick="joinSession()">Join</button>
-    <div id="reconnect-wrap" class="landing-reconnect-wrap" aria-live="polite">
-      <div id="reconnect-label" class="landing-reconnect-label">Auto reconnecting</div>
-      <div class="landing-reconnect-track">
-        <div id="reconnect-fill" class="landing-reconnect-fill"></div>
-      </div>
+    <!-- Screen: checking -->
+    <div id="screen-checking" class="screen active">
+      <div class="landing-logo">Interact</div>
+      <div class="landing-spinner"></div>
+      <div class="landing-status-large">Connecting...</div>
     </div>
-    <div id="error-msg" class="landing-error"></div>
-    <div id="status-msg" class="landing-status"></div>
+
+    <!-- Screen: error -->
+    <div id="screen-error" class="screen">
+      <div class="landing-logo">Interact</div>
+      <div class="landing-status-large" id="error-title">Host not connected</div>
+      <div class="landing-status" id="error-retry-status"></div>
+    </div>
+
+    <!-- Screen: code-entry (Case A) -->
+    <div id="screen-code-entry" class="screen">
+      <div class="landing-logo">Join a Session</div>
+      <label class="landing-label" for="code-input">Enter session code</label>
+      <input
+        id="code-input"
+        class="landing-input"
+        type="text"
+        maxlength="6"
+        autocomplete="off"
+        autocapitalize="none"
+        spellcheck="false"
+        placeholder="e.g. k7m2xp"
+      />
+      <button id="join-btn" class="landing-btn" disabled>Join</button>
+      <div id="code-error-msg" class="landing-error"></div>
+    </div>
+
+    <!-- Screen: mismatch (Case B) -->
+    <div id="screen-mismatch" class="screen">
+      <div class="landing-logo">Interact</div>
+      <div class="landing-status-large">Session not started</div>
+      <a class="landing-mismatch-link" href="/">Click here to enter another session code</a>
+    </div>
+
+    <!-- Screen: name-entry -->
+    <div id="screen-name-entry" class="screen">
+      <div class="landing-logo">Welcome!</div>
+      <input
+        id="name-session-code"
+        class="landing-input readonly-code"
+        type="text"
+        readonly
+        tabindex="-1"
+      />
+      <label class="landing-label" for="name-input">Choose your name</label>
+      <input
+        id="name-input"
+        class="landing-input landing-name-input"
+        type="text"
+        maxlength="32"
+        autocomplete="off"
+        placeholder="Your name"
+      />
+      <button id="name-join-btn" class="landing-btn" disabled>Join</button>
+      <button id="random-name-btn" class="landing-btn landing-btn-secondary">Random name</button>
+      <div id="name-error-msg" class="landing-error"></div>
+    </div>
+
+    <!-- Screen: entering -->
+    <div id="screen-entering" class="screen">
+      <div class="landing-logo">Interact</div>
+      <div class="landing-spinner"></div>
+      <div class="landing-status-large">Joining...</div>
+    </div>
+
   </div>
+
+  <!-- Toaster -->
+  <div id="toaster" class="toaster"></div>
+
+  <!-- ON_HOST_MACHINE toggle -->
   <label class="landing-host-toggle" for="host-machine-toggle">
     <input id="host-machine-toggle" type="checkbox" />
     <span>ON_HOST_MACHINE</span>
@@ -194,25 +322,28 @@
   </label>
 
   <script>
+    // ── Constants ──
     const SESSION_CODE_RE = /^[a-z0-9]{6}$/;
-    const RETRY_INTERVAL_MS = 3000;
-    const RETRY_DURATION_MS = 60000;
     const LOCAL_DAEMON_POLL_MS = 1000;
+    const RETRY_DELAYS = [1000, 2000, 3000, 5000, 5000];  // 5 attempts
+    const LS_UUID_KEY = 'workshop_participant_uuid';
+    const LS_NAME_KEY = 'workshop_participant_name';
+    const LS_CUSTOM_NAME_KEY = 'workshop_custom_name';
     const ON_HOST_MACHINE_COOKIE = 'ON_HOST_MACHINE';
-    let retryTimer = null;
-    let retryUiTimer = null;
-    let retryStartedAt = 0;
-    let retryNextAt = 0;
-    let retryCode = '';
-    let retryAttemptInFlight = false;
-    let pollLocalDaemonNow = null;
-    let lastLocalDaemonRetryAt = 0;
-    let lastLocalDaemonRetryState = 'no_active_session';
 
-    function hasOnHostMachineCookie() {
-      return document.cookie.split(';').some((part) => part.trim() === `${ON_HOST_MACHINE_COOKIE}=true`);
+    // ── Host detection ──
+    function isHostCookie() {
+      return document.cookie.includes('is_host=1');
     }
 
+    function getStorage() {
+      return isHostCookie() ? sessionStorage : localStorage;
+    }
+
+    // ── ON_HOST_MACHINE cookie ──
+    function hasOnHostMachineCookie() {
+      return document.cookie.split(';').some(p => p.trim() === `${ON_HOST_MACHINE_COOKIE}=true`);
+    }
     function setOnHostMachineCookie(enabled) {
       if (enabled) {
         document.cookie = `${ON_HOST_MACHINE_COOKIE}=true; path=/; SameSite=Lax; max-age=31536000`;
@@ -221,6 +352,92 @@
       }
     }
 
+    // ── Screen management ──
+    function showScreen(id) {
+      document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
+      const screen = document.getElementById('screen-' + id);
+      if (screen) screen.classList.add('active');
+    }
+
+    // ── Toaster ──
+    let toasterTimeout = null;
+    function showToast(msg) {
+      const el = document.getElementById('toaster');
+      el.textContent = msg;
+      el.classList.add('visible');
+      clearTimeout(toasterTimeout);
+      toasterTimeout = setTimeout(() => el.classList.remove('visible'), 3000);
+    }
+
+    // ── Shake animation ──
+    function shakeElement(el) {
+      el.classList.remove('shake');
+      void el.offsetWidth; // force reflow
+      el.classList.add('shake');
+    }
+
+    // ── URL helpers ──
+    function getSessionIdFromUrl() {
+      return new URLSearchParams(window.location.search).get('session_id') || '';
+    }
+
+    function normalizeCode(raw) {
+      return String(raw || '').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 6);
+    }
+
+    function isCompleteCode(code) {
+      return SESSION_CODE_RE.test(String(code || ''));
+    }
+
+    // ── API helpers ──
+    function apiUrl(sessionId, path) {
+      return '/' + sessionId + path;
+    }
+
+    async function checkActiveSession() {
+      const resp = await fetch('/api/is-active-session', { cache: 'no-store' });
+      if (!resp.ok) throw new Error('Request failed');
+      return await resp.json();
+    }
+
+    async function validateSessionCode(code) {
+      const resp = await fetch(apiUrl(code, '/api/status'), { cache: 'no-store' });
+      return resp.ok;
+    }
+
+    async function registerParticipant(sessionId, uuid, name) {
+      const body = name ? { name } : {};
+      const resp = await fetch(apiUrl(sessionId, '/api/participant/register'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Participant-ID': uuid,
+        },
+        body: JSON.stringify(body),
+      });
+      return resp;
+    }
+
+    async function renameParticipant(sessionId, uuid, name) {
+      const resp = await fetch(apiUrl(sessionId, '/api/participant/name'), {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Participant-ID': uuid,
+        },
+        body: JSON.stringify({ name }),
+      });
+      return resp;
+    }
+
+    // ── Enter the app ──
+    function enterApp(sessionId, name) {
+      const storage = getStorage();
+      storage.setItem(LS_NAME_KEY, name);
+      window.location.href = '/' + sessionId;
+    }
+
+    // ── ON_HOST_MACHINE toggle ──
     function initHostMachineToggle() {
       const toggle = document.getElementById('host-machine-toggle');
       if (!toggle) return;
@@ -228,252 +445,336 @@
       renderHostMachineStatus();
       toggle.addEventListener('change', () => {
         setOnHostMachineCookie(toggle.checked);
-        if (!toggle.checked) {
-          lastLocalDaemonRetryAt = 0;
-          lastLocalDaemonRetryState = 'no_active_session';
-        }
         renderHostMachineStatus();
-        if (toggle.checked && pollLocalDaemonNow) pollLocalDaemonNow();
+        if (toggle.checked) pollLocalDaemonOnce();
       });
     }
 
-    function formatLocalRetryTime(timestampMs) {
-      return new Date(timestampMs).toLocaleTimeString([], { hour12: false });
-    }
+    let lastLocalRetryAt = 0;
+    let lastLocalRetryState = 'no_active_session';
 
     function renderHostMachineStatus() {
-      const statusEl = document.getElementById('host-machine-status');
-      if (!statusEl) return;
+      const el = document.getElementById('host-machine-status');
+      if (!el) return;
       if (!hasOnHostMachineCookie()) {
-        statusEl.style.display = 'none';
-        statusEl.textContent = '';
+        el.style.display = 'none';
         return;
       }
-      statusEl.style.display = 'inline';
-      if (!lastLocalDaemonRetryAt) {
-        statusEl.textContent = 'No active session yet (last retry: waiting...)';
+      el.style.display = 'inline';
+      if (!lastLocalRetryAt) {
+        el.textContent = 'Waiting...';
         return;
       }
-      if (lastLocalDaemonRetryState === 'daemon_offline') {
-        statusEl.textContent = `Daemon offline (last retry: ${formatLocalRetryTime(lastLocalDaemonRetryAt)})`;
-        return;
-      }
-      statusEl.textContent = `No active session yet (last retry: ${formatLocalRetryTime(lastLocalDaemonRetryAt)})`;
-    }
-
-    function markLocalDaemonRetry(state) {
-      lastLocalDaemonRetryAt = Date.now();
-      lastLocalDaemonRetryState = state || 'no_active_session';
-      renderHostMachineStatus();
-    }
-
-    function getInputCode() {
-      return (document.getElementById('code-input').value || '').trim().toLowerCase();
-    }
-
-    function isCompleteCode(code) {
-      return SESSION_CODE_RE.test(String(code || '').toLowerCase());
-    }
-
-    function normalizeInputValue(raw) {
-      return String(raw || '').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 6);
-    }
-
-    function updateJoinButtonEnabled() {
-      const btn = document.getElementById('join-btn');
-      const code = getInputCode();
-      btn.disabled = !isCompleteCode(code);
-    }
-
-    function clearRetryUi() {
-      const btn = document.getElementById('join-btn');
-      const wrap = document.getElementById('reconnect-wrap');
-      const fill = document.getElementById('reconnect-fill');
-      const statusEl = document.getElementById('status-msg');
-      btn.textContent = 'Join';
-      wrap.style.display = 'none';
-      fill.style.width = '0%';
-      statusEl.style.animation = '';
-    }
-
-    function stopAutoRetry(message) {
-      if (retryTimer) clearInterval(retryTimer);
-      if (retryUiTimer) clearInterval(retryUiTimer);
-      retryTimer = null;
-      retryUiTimer = null;
-      retryAttemptInFlight = false;
-      retryCode = '';
-      clearRetryUi();
-      if (message) {
-        const statusEl = document.getElementById('status-msg');
-        statusEl.textContent = message;
+      const time = new Date(lastLocalRetryAt).toLocaleTimeString([], { hour12: false });
+      if (lastLocalRetryState === 'daemon_offline') {
+        el.textContent = 'Daemon offline (' + time + ')';
+      } else {
+        el.textContent = 'No session (' + time + ')';
       }
     }
 
-    async function attemptAutoReconnect() {
-      if (retryAttemptInFlight) return;
-      retryAttemptInFlight = true;
-      const expectedCode = retryCode;
-      try {
-        const resp = await fetch('/api/status', { cache: 'no-store' });
-        const data = resp.ok ? await resp.json() : null;
-        if (data && data.session_active && String(data.session_id || '').toLowerCase() === expectedCode) {
-          window.location.href = '/' + expectedCode;
-          return;
+    // ── Local daemon polling (ON_HOST_MACHINE background) ──
+    let localDaemonInterval = null;
+
+    function pollLocalDaemonOnce() {
+      if (!hasOnHostMachineCookie()) return;
+      fetch('http://localhost:8081/api/session/active', { signal: AbortSignal.timeout(800) })
+        .then(r => r.ok ? r.json() : null)
+        .then(data => {
+          const code = normalizeCode(data && data.session_id);
+          if (!isCompleteCode(code)) {
+            lastLocalRetryAt = Date.now();
+            lastLocalRetryState = 'no_active_session';
+            renderHostMachineStatus();
+            return;
+          }
+          // Found an active session on the local daemon
+          const currentSessionId = getSessionIdFromUrl();
+          if (currentSessionId !== code) {
+            window.location.href = '/?session_id=' + code;
+          }
+        })
+        .catch(() => {
+          lastLocalRetryAt = Date.now();
+          lastLocalRetryState = 'daemon_offline';
+          renderHostMachineStatus();
+        });
+    }
+
+    function startLocalDaemonPolling() {
+      pollLocalDaemonOnce();
+      if (localDaemonInterval) clearInterval(localDaemonInterval);
+      localDaemonInterval = setInterval(pollLocalDaemonOnce, LOCAL_DAEMON_POLL_MS);
+    }
+
+    // ── Step 1: is-active-session check with retries ──
+    async function checkActiveWithRetries() {
+      showScreen('checking');
+      const isOnHost = hasOnHostMachineCookie();
+      let attempt = 0;
+      const maxAttempts = isOnHost ? Infinity : RETRY_DELAYS.length;
+
+      while (true) {
+        try {
+          const data = await checkActiveSession();
+          if (data.active) {
+            return true;  // session is active, proceed
+          }
+          // active=false
+          showScreen('error');
+          document.getElementById('error-title').textContent = 'No session started';
+        } catch (e) {
+          // request failed
+          showScreen('error');
+          document.getElementById('error-title').textContent = 'Host not connected';
         }
-      } catch (_) {
-        // ignore network hiccups, keep retrying
-      } finally {
-        retryAttemptInFlight = false;
-      }
-    }
 
-    function renderRetryUi() {
-      const now = Date.now();
-      const btn = document.getElementById('join-btn');
-      const wrap = document.getElementById('reconnect-wrap');
-      const fill = document.getElementById('reconnect-fill');
-      const label = document.getElementById('reconnect-label');
-      const statusEl = document.getElementById('status-msg');
-      if (!retryStartedAt) return;
-      const elapsed = now - retryStartedAt;
-      const remaining = Math.max(0, RETRY_DURATION_MS - elapsed);
-      if (remaining <= 0) {
-        stopAutoRetry('Auto-reconnect stopped after 1 minute.');
-        return;
-      }
-
-      const cycleStart = retryNextAt - RETRY_INTERVAL_MS;
-      const cycleElapsed = Math.max(0, Math.min(RETRY_INTERVAL_MS, now - cycleStart));
-      const cycleProgress = Math.round((cycleElapsed / RETRY_INTERVAL_MS) * 100);
-      const nextAttemptInSec = Math.max(0, (retryNextAt - now) / 1000);
-      const remainingSec = Math.ceil(remaining / 1000);
-
-      btn.textContent = 'Join';
-      wrap.style.display = '';
-      fill.style.width = `${cycleProgress}%`;
-      label.textContent = `Auto reconnecting (${remainingSec}s left)`;
-      statusEl.style.color = 'var(--muted)';
-      statusEl.textContent = `Trying in ${nextAttemptInSec.toFixed(1)}s`;
-    }
-
-    function startAutoRetryIfNeeded(opts) {
-      const options = opts || {};
-      const code = getInputCode();
-      if (!isCompleteCode(code)) {
-        stopAutoRetry('');
-        return;
-      }
-      if (retryCode === code && retryTimer) return;
-
-      if (retryTimer) stopAutoRetry('');
-      retryCode = code;
-      retryStartedAt = Date.now();
-      retryNextAt = Date.now() + RETRY_INTERVAL_MS;
-      renderRetryUi();
-      if (options.immediate) {
-        attemptAutoReconnect();
-      }
-
-      retryUiTimer = setInterval(renderRetryUi, 120);
-      retryTimer = setInterval(() => {
-        const now = Date.now();
-        if (now - retryStartedAt >= RETRY_DURATION_MS) {
-          stopAutoRetry('Auto-reconnect stopped after 1 minute.');
-          return;
+        attempt++;
+        if (!isOnHost && attempt >= maxAttempts) {
+          document.getElementById('error-retry-status').textContent =
+            'Could not connect. Reload to try again.';
+          return false;  // exhausted
         }
-        if (now >= retryNextAt) {
-          retryNextAt = now + RETRY_INTERVAL_MS;
-          attemptAutoReconnect();
-        }
-      }, 150);
+
+        // Show retry countdown
+        const delayMs = isOnHost ? 3000 : RETRY_DELAYS[Math.min(attempt, RETRY_DELAYS.length - 1)];
+        document.getElementById('error-retry-status').textContent =
+          'Retrying (' + attempt + '/' + (isOnHost ? '...' : maxAttempts) + ')...';
+
+        await new Promise(resolve => setTimeout(resolve, delayMs));
+      }
     }
 
-    function onCodeInput() {
-      const input = document.getElementById('code-input');
-      const normalized = normalizeInputValue(input.value);
-      if (input.value !== normalized) input.value = normalized;
-      document.getElementById('error-msg').textContent = '';
-      updateJoinButtonEnabled();
-      startAutoRetryIfNeeded();
+    // ── Step 2: Resolve session_id ──
+    async function resolveSessionId() {
+      const sessionId = getSessionIdFromUrl();
+
+      if (!sessionId) {
+        // Case A: no session_id — show code entry
+        return await codeEntryFlow();
+      }
+
+      // Has session_id — validate it
+      const valid = await validateSessionCode(sessionId);
+      if (!valid) {
+        // Case B: mismatch
+        showScreen('mismatch');
+        return null;  // dead end
+      }
+
+      // Case C: valid session
+      return sessionId;
     }
 
-    function onCodePaste(event) {
-      // Smart paste: extract session code from full URL
-      const pasted = (event.clipboardData || window.clipboardData).getData('text').trim();
-      const urlMatch = pasted.match(/^https?:\/\/[^/]+\/([a-zA-Z0-9]{4,8})\/?$/);
-      if (urlMatch) {
-        event.preventDefault();
+    // ── Case A: Code entry screen ──
+    function codeEntryFlow() {
+      return new Promise((resolve) => {
+        showScreen('code-entry');
         const input = document.getElementById('code-input');
-        input.value = normalizeInputValue(urlMatch[1]);
-        onCodeInput();
-      }
+        const btn = document.getElementById('join-btn');
+        const errorMsg = document.getElementById('code-error-msg');
+
+        function updateBtn() {
+          const code = normalizeCode(input.value);
+          btn.disabled = !isCompleteCode(code);
+        }
+
+        async function submit() {
+          const code = normalizeCode(input.value);
+          if (!isCompleteCode(code)) return;
+          btn.disabled = true;
+          errorMsg.textContent = '';
+
+          const valid = await validateSessionCode(code);
+          if (valid) {
+            // Redirect with session_id — page reloads, continues from Case C
+            window.location.href = '/?session_id=' + code;
+            // resolve won't fire because we're navigating away
+          } else {
+            input.classList.add('input-error');
+            shakeElement(input);
+            showToast('Invalid session code');
+            btn.disabled = false;
+            setTimeout(() => input.classList.remove('input-error'), 1500);
+          }
+        }
+
+        input.addEventListener('input', () => {
+          const normalized = normalizeCode(input.value);
+          if (input.value !== normalized) input.value = normalized;
+          errorMsg.textContent = '';
+          input.classList.remove('input-error');
+          updateBtn();
+          // Auto-submit when 6 chars entered
+          if (isCompleteCode(normalized)) {
+            submit();
+          }
+        });
+
+        input.addEventListener('paste', (event) => {
+          const pasted = (event.clipboardData || window.clipboardData).getData('text').trim();
+          // Smart paste: extract code from full URL
+          const urlMatch = pasted.match(/^https?:\/\/[^/]+\/([a-zA-Z0-9]{4,8})\/?$/);
+          if (urlMatch) {
+            event.preventDefault();
+            input.value = normalizeCode(urlMatch[1]);
+            input.dispatchEvent(new Event('input'));
+          }
+        });
+
+        input.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' && !btn.disabled) submit();
+        });
+
+        btn.addEventListener('click', submit);
+        input.focus();
+        updateBtn();
+      });
     }
 
-    function joinSession() {
-      const code = getInputCode();
-      if (!code) return;
-      if (!isCompleteCode(code)) {
-        document.getElementById('error-msg').textContent = 'Code must be 6 alphanumeric characters.';
+    // ── Registration + name entry flow ──
+    async function registrationFlow(sessionId) {
+      const storage = getStorage();
+      const isHost = isHostCookie();
+
+      // Get or create UUID
+      let uuid = storage.getItem(LS_UUID_KEY);
+      if (!uuid) {
+        uuid = crypto.randomUUID();
+        storage.setItem(LS_UUID_KEY, uuid);
+      }
+
+      // Check if returning participant with stored custom name
+      const hasStoredCustomName = storage.getItem(LS_CUSTOM_NAME_KEY) === '1';
+
+      // Register (idempotent for returning participants)
+      showScreen('entering');
+      const regResp = await registerParticipant(sessionId, uuid);
+      if (!regResp.ok) {
+        // Unexpected error — just show name entry as fallback
+        return await nameEntryFlow(sessionId, uuid);
+      }
+      const regData = await regResp.json();
+
+      // Returning participant with a custom name — enter directly
+      if (hasStoredCustomName) {
+        enterApp(sessionId, regData.name);
         return;
       }
-      window.location.href = '/' + code;
+
+      // Host flow: append " (host)" and enter immediately
+      if (isHost) {
+        const hostName = regData.name + ' (host)';
+        // Rename to add (host) suffix
+        await renameParticipant(sessionId, uuid, hostName);
+        storage.setItem(LS_CUSTOM_NAME_KEY, '1');
+        enterApp(sessionId, hostName);
+        return;
+      }
+
+      // New participant — show name entry
+      await nameEntryFlow(sessionId, uuid);
     }
 
-    // Check for error redirect and optional reconnect params
-    (function initFromQuery() {
-      const params = new URLSearchParams(window.location.search);
-      if (params.get('error') === 'invalid') {
-        document.getElementById('error-msg').textContent = 'Invalid session code';
-      }
+    // ── Name entry screen ──
+    function nameEntryFlow(sessionId, uuid) {
+      return new Promise((resolve) => {
+        showScreen('name-entry');
+        const sessionCodeInput = document.getElementById('name-session-code');
+        const nameInput = document.getElementById('name-input');
+        const joinBtn = document.getElementById('name-join-btn');
+        const randomBtn = document.getElementById('random-name-btn');
+        const errorMsg = document.getElementById('name-error-msg');
 
-      const codeParam = normalizeInputValue(params.get('code') || '');
-      if (codeParam) {
-        const input = document.getElementById('code-input');
-        input.value = codeParam;
-        onCodeInput();
-        if (params.get('retry') === '1') {
-          startAutoRetryIfNeeded({ immediate: true });
+        sessionCodeInput.value = sessionId.toUpperCase();
+
+        function updateBtn() {
+          joinBtn.disabled = !nameInput.value.trim();
         }
-      }
-    })();
-    initHostMachineToggle();
 
-    // Auto-detect active session when running on host's machine.
-    (function pollLocalDaemon() {
-      let lastCode = null;
+        nameInput.addEventListener('input', () => {
+          errorMsg.textContent = '';
+          updateBtn();
+        });
 
-      function tryFetch() {
-        if (!hasOnHostMachineCookie()) return;
-        fetch('http://localhost:8081/api/session/active', { signal: AbortSignal.timeout(800) })
-          .then(r => r.ok ? r.json() : null)
-          .then(data => {
-            const code = normalizeInputValue(data && data.session_id);
-            if (!isCompleteCode(code)) {
-              markLocalDaemonRetry('no_active_session');
-              return;
-            }
-            if (code === lastCode) return;
-            lastCode = code;
-            const input = document.getElementById('code-input');
-            input.value = code;
-            onCodeInput();
-            stopAutoRetry('');
-            joinSession();
-          })
-          .catch(() => {
-            // daemon not running or unreachable — keep retrying
-            markLocalDaemonRetry('daemon_offline');
-          });
-      }
+        nameInput.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' && !joinBtn.disabled) submitName();
+        });
 
-      pollLocalDaemonNow = tryFetch;
-      tryFetch();
-      setInterval(() => {
-        tryFetch();
-      }, LOCAL_DAEMON_POLL_MS);
-    })();
+        async function submitName() {
+          const name = nameInput.value.trim();
+          if (!name) return;
+          joinBtn.disabled = true;
+          randomBtn.disabled = true;
+          errorMsg.textContent = '';
 
+          // Register first (idempotent), then rename
+          await registerParticipant(sessionId, uuid);
+          const renameResp = await renameParticipant(sessionId, uuid, name);
+
+          if (renameResp.status === 409) {
+            shakeElement(nameInput);
+            showToast('Name taken');
+            joinBtn.disabled = false;
+            randomBtn.disabled = false;
+            return;
+          }
+
+          if (renameResp.status === 204 || renameResp.ok) {
+            const storage = getStorage();
+            storage.setItem(LS_CUSTOM_NAME_KEY, '1');
+            enterApp(sessionId, name);
+            return;
+          }
+
+          // Other error
+          errorMsg.textContent = 'Something went wrong. Please try again.';
+          joinBtn.disabled = false;
+          randomBtn.disabled = false;
+        }
+
+        async function submitRandomName() {
+          joinBtn.disabled = true;
+          randomBtn.disabled = true;
+          errorMsg.textContent = '';
+
+          const resp = await registerParticipant(sessionId, uuid);
+          if (resp.ok) {
+            const data = await resp.json();
+            enterApp(sessionId, data.name);
+            return;
+          }
+
+          errorMsg.textContent = 'Something went wrong. Please try again.';
+          joinBtn.disabled = false;
+          randomBtn.disabled = false;
+        }
+
+        joinBtn.addEventListener('click', submitName);
+        randomBtn.addEventListener('click', submitRandomName);
+        nameInput.focus();
+        updateBtn();
+      });
+    }
+
+    // ── Main flow ──
+    async function main() {
+      initHostMachineToggle();
+      startLocalDaemonPolling();
+
+      // Step 1: Check if backend is active
+      const active = await checkActiveWithRetries();
+      if (!active) return;  // stuck on error screen
+
+      // Step 2: Resolve session_id
+      const sessionId = await resolveSessionId();
+      if (!sessionId) return;  // stuck on mismatch or code entry (navigating away)
+
+      // Step 3: Registration + name
+      await registrationFlow(sessionId);
+    }
+
+    main();
   </script>
 
   <script src="/static/version.js"></script>
