@@ -46,12 +46,12 @@ alt Already cached (trusted from WS-connect probe)
 else Cache miss
   SlidesAPI -> SlidesAPI: mark status=downloading
   SlidesAPI -> Railway: broadcast slides_cache_status
-  SlidesAPI -> Railway: daemon WS send download_pdf {slug, drive_export_url}
-  Railway -> Drive: download PDF in background
+  SlidesAPI -> Railway: POST /api/slides/download-from-gdrive/{slug}\n(REST, blocks until done)
+  Railway -> Drive: download PDF
   Drive --> Railway: PDF bytes
   Railway -> Cache: store cached PDF
-  Railway -> SlidesAPI: daemon WS send pdf_download_complete
-  SlidesAPI -> SlidesAPI: mark status=cached\nresolve pending /check futures
+  Railway --> SlidesAPI: {sha256, size, status: cached}
+  SlidesAPI -> SlidesAPI: mark status=cached\nstore last_sha256
   SlidesAPI -> Railway: broadcast slides_cache_status
   SlidesAPI --> Railway: 200 cached
 end
@@ -61,28 +61,28 @@ Railway -> Cache: serve inline PDF with ETag / Last-Modified
 Railway --> Participant: PDF document
 end
 
-group PPTX updated — Railway retries until Google Drive publishes new PDF
+group PPTX updated — daemon retries until Google Drive publishes new PDF
 Loop -> Loop: scan PPTX files every ~10s\ndetect mtime change
-Loop -> Railway: daemon WS send download_pdf\n{slug, drive_export_url, check_changed: true}
+Loop -> Loop: start background redownload\npoller thread for slug
 
-loop up to 5 retries, 5s apart
+loop up to 5 retries, 5s apart (daemon thread)
+  Loop -> Railway: POST /api/slides/download-from-gdrive/{slug}
   Railway -> Drive: download PDF
   Drive --> Railway: PDF bytes
-  Railway -> Railway: compare SHA256 hash\nwith cached version
+  Railway -> Cache: store PDF
+  Railway --> Loop: {sha256, size}
+  Loop -> Loop: compare SHA256 hash\nwith stored last_sha256
   alt Hash changed — new version available
-    Railway -> Cache: store new PDF
-    Railway -> SlidesAPI: pdf_download_complete\n{changed: true}
-    SlidesAPI -> SlidesAPI: mark status=cached
+    Loop -> SlidesAPI: mark status=cached\nstore new last_sha256
     SlidesAPI -> Railway: broadcast slides_cache_status\nwith refreshed_slugs=[slug]
     Railway --> Participant: slides_cache_status event
   else Hash unchanged — Google Drive not ready yet
-    Railway -> Railway: wait 5s before next attempt
+    Loop -> Loop: wait 5s before next attempt
   end
 end
 
 alt All retries exhausted
-  Railway -> SlidesAPI: gdrive_pdf_not_updated {slug}
-  SlidesAPI -> SlidesAPI: log warning + beep
+  Loop -> Loop: log warning + beep\n(gdrive_pdf_not_updated)
 end
 
 alt Participant is displaying the refreshed slide
