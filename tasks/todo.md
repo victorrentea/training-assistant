@@ -7,6 +7,7 @@
 - [x] Update participant UI to gate join behind pre-join choices (manual name or random) and remove post-join "name set" checklist tracking
 - [x] Add landing-page `ON_HOST_MACHINE` checkbox/cookie and gate localhost active-session probing behind that cookie
 - [x] Show a bottom-left host-cookie status (`No active session yet` + `last retry` time) on participant landing
+- [x] Distinguish landing host-cookie status between `No active session yet` and `Daemon offline`
 - [x] Implement testing-only local-name retry suffix (` (local)`, then `+` retries on `409`)
 - [x] Update/expand daemon, frontend, and e2e/hermetic tests (default random join path for most flows)
 - [ ] Run hermetic e2e suite and record proof in review section
@@ -29,6 +30,10 @@
 - Result: `72 passed, 1 failed` (status element remained hidden when cookie enabled)
 - Proof (green): `node tests/test_js_unit.js`
 - Result: `73 passed, 0 failed`
+- Proof (red): `node tests/test_js_unit.js`
+- Result: `73 passed, 2 failed` (missing explicit daemon-offline text and catch-path marker)
+- Proof (green): `node tests/test_js_unit.js`
+- Result: `75 passed, 0 failed`
 - Proof: `bash tests/docker/run-hermetic.sh`
 - Result: blocked in this environment (`docker.sock` unavailable: `connect: no such file or directory`)
 

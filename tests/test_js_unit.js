@@ -343,8 +343,16 @@ assert(
   /No active session yet/.test(landingHtmlSource) && /last retry/.test(landingHtmlSource)
 );
 assert(
+  'landing host toggle status includes explicit daemon-offline text',
+  /Daemon offline/.test(landingHtmlSource)
+);
+assert(
   'landing host toggle explicitly shows status element when cookie is enabled',
   /statusEl\.style\.display\s*=\s*'inline';/.test(landingHtmlSource)
+);
+assert(
+  'landing marks daemon-offline retries in fetch error path',
+  /catch\(\(\)\s*=>\s*\{[\s\S]*markLocalDaemonRetry\('daemon_offline'\);/s.test(landingHtmlSource)
 );
 
 // ═══════════════════════════════════════════════════════════════════════
