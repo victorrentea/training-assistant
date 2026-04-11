@@ -242,6 +242,7 @@ def refresh_pptx_mtimes(files: list[Path], daemon_state: dict) -> bool:
         if current_mtime != entry.get("pptx_mtime"):
             entry["pptx_mtime"] = current_mtime
             changed = True
+            log.info("slides", f"⚡️PPTX Updated: {pptx.name}")
     return changed
 
 
