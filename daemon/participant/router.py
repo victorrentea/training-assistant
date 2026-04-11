@@ -8,10 +8,10 @@ import secrets
 import ssl
 import urllib.parse
 import urllib.request
-
-import certifi
 from types import SimpleNamespace
 from typing import Literal
+
+import certifi
 
 from fastapi import APIRouter, Request, status
 from fastapi.responses import JSONResponse
