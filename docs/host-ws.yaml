@@ -53,6 +53,11 @@ components:
           type:
             type: string
             enum: [slides_cache_status]
+          refreshed_slugs:
+            type: array
+            items:
+              type: string
+            default: []
 
     # ── Poll ─────────────────────────────────────────────────────────────────
 

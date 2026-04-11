@@ -56,6 +56,39 @@ async def invalidate_slide(slug: str, body: SlideInvalidateRequest | None = None
     return {"status": "invalidating", "slug": slug}
 
 
+class DownloadFromGdriveRequest(BaseModel):
+    drive_export_url: str
+
+
+class DownloadFromGdriveResponse(BaseModel):
+    status: str
+    sha256: str = ""
+    size: int = 0
+
+
+@router.post("/api/slides/download-from-gdrive/{slug}", response_model=DownloadFromGdriveResponse)
+async def download_from_gdrive(slug: str, body: DownloadFromGdriveRequest):
+    """Download PDF from Google Drive, cache it, return SHA256 hash.
+
+    Called by the daemon to populate or refresh Railway's PDF cache.
+    The daemon uses the returned hash to detect content changes.
+    """
+    from railway.features.slides.cache import do_download, _file_sha256, _cache_path
+
+    drive_export_url = body.drive_export_url.strip()
+    if not drive_export_url:
+        raise HTTPException(status_code=422, detail="drive_export_url is required")
+
+    try:
+        path = await do_download(slug, drive_export_url)
+        sha = _file_sha256(path)
+        size = path.stat().st_size
+        return DownloadFromGdriveResponse(status="cached", sha256=sha, size=size)
+    except Exception as exc:
+        logger.exception("[slides] download-from-gdrive failed for slug=%s", slug)
+        raise HTTPException(status_code=502, detail=str(exc))
+
+
 def _merge_embedded_slide_status(payload: dict) -> dict:
     raw_slides = payload.get("slides")
     slides = raw_slides if isinstance(raw_slides, list) else []

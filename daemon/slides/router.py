@@ -17,21 +17,16 @@ from daemon.slides.daemon import _ssl_context
 
 logger = logging.getLogger(__name__)
 
-# Module-level state for pending /check futures
-_pending_checks: dict[str, list[asyncio.Future]] = {}
-_event_loop: asyncio.AbstractEventLoop | None = None
-_CHECK_TIMEOUT_S: float = 30.0
 _RAILWAY_CHECK_TIMEOUT_S: float = 3.0
+_RAILWAY_DOWNLOAD_TIMEOUT_S: float = 120.0  # Railway downloads can take 10-15s from Drive
 
 
-def get_event_loop() -> asyncio.AbstractEventLoop | None:
-    """Return the daemon's FastAPI event loop (set on first /check request)."""
-    return _event_loop
+def _railway_base_url() -> str:
+    return os.environ.get("WORKSHOP_SERVER_URL", "http://localhost:8000").rstrip("/")
 
 
 def _railway_download_url(session_id: str, slug: str) -> str:
-    base = os.environ.get("WORKSHOP_SERVER_URL", "http://localhost:8000").rstrip("/")
-    return f"{base}/{session_id}/api/slides/download/{slug}"
+    return f"{_railway_base_url()}/{session_id}/api/slides/download/{slug}"
 
 
 def _is_cached_on_railway(session_id: str, slug: str) -> bool:
@@ -48,6 +43,23 @@ def _is_cached_on_railway(session_id: str, slug: str) -> bool:
     except (urllib.error.URLError, TimeoutError, socket.timeout, OSError) as exc:
         logger.warning("slides/check: railway HEAD failed for slug=%s error=%s", slug, exc)
         return False
+
+
+def download_on_railway(slug: str, drive_export_url: str) -> dict:
+    """Call Railway REST to download PDF from Google Drive and cache it.
+
+    Returns dict with {status, sha256, size} on success.
+    Raises on failure (HTTP error, timeout, etc.).
+    """
+    url = f"{_railway_base_url()}/api/slides/download-from-gdrive/{slug}"
+    body = json.dumps({"drive_export_url": drive_export_url}).encode()
+    req = urllib.request.Request(
+        url, method="POST",
+        headers={"Content-Type": "application/json"},
+        data=body,
+    )
+    with urllib.request.urlopen(req, timeout=_RAILWAY_DOWNLOAD_TIMEOUT_S, context=_ssl_context()) as resp:
+        return json.loads(resp.read())
 
 
 def _mark_cache_status(slug: str, status: str, **extra) -> None:
@@ -130,10 +142,10 @@ def _uploaded_slide_meta(slug: str) -> tuple[str, str | None]:
     return name, str(updated_at) if updated_at else None
 
 
-def _broadcast_slides_cache_status() -> None:
+def _broadcast_slides_cache_status(refreshed_slugs: list[str] | None = None) -> None:
     from daemon.ws_messages import SlidesCacheStatusMsg
     from daemon.ws_publish import broadcast
-    broadcast(SlidesCacheStatusMsg())
+    broadcast(SlidesCacheStatusMsg(refreshed_slugs=refreshed_slugs or []))
 
 
 # ── Participant router ──
@@ -146,60 +158,29 @@ async def check_slide_cache(session_id: str, slug: str):
     """Check if a PDF is cached; trigger download if not.
 
     Returns 200 immediately if already cached.
-    Otherwise sends a download_pdf request to Railway and waits up to 30s.
+    Otherwise calls Railway REST to download from Google Drive (blocking).
     """
-    global _event_loop
-
     # Fast path: trust daemon-side cache status (kept in sync via WS reconnect probing).
     if misc_state.slides_cache_status.get(slug, {}).get("status") == "cached":
         return SlidesCheckResponse(status="cached")
 
-    # Capture event loop for thread-safe future resolution from ws handler
-    _event_loop = asyncio.get_event_loop()
-    future: asyncio.Future = _event_loop.create_future()
+    drive_export_url = misc_state.slides_catalog.get(slug, {}).get("drive_export_url")
+    if not drive_export_url:
+        return JSONResponse({"status": "error", "detail": "no drive_export_url"}, status_code=404)
 
-    already_pending = slug in _pending_checks
-    _pending_checks.setdefault(slug, []).append(future)
-
-    # Only send download_pdf once per slug (coalesce concurrent requests)
-    if not already_pending:
-        drive_export_url = misc_state.slides_catalog.get(slug, {}).get("drive_export_url")
-        _mark_cache_status(slug, "downloading")
-        _broadcast_slides_cache_status()
-        from daemon.ws_publish import send_to_railway
-        sent = send_to_railway({
-            "type": "download_pdf",
-            "slug": slug,
-            "drive_export_url": drive_export_url,
-        })
-        if not sent:
-            logger.warning("slides/check: ws_client not available, cannot request download for slug=%s", slug)
-            _mark_cache_status(slug, "download_failed", reason="daemon_ws_unavailable")
-            _broadcast_slides_cache_status()
-            # Fail all pending /check calls for this slug immediately.
-            futures = _pending_checks.pop(slug, [])
-            for fut in futures:
-                if not fut.done():
-                    fut.set_result("error")
+    _mark_cache_status(slug, "downloading")
+    _broadcast_slides_cache_status()
 
     try:
-        result = await asyncio.wait_for(future, timeout=_CHECK_TIMEOUT_S)
-    except asyncio.TimeoutError:
-        # Remove timed-out future from pending list
-        pending = _pending_checks.get(slug, [])
-        if future in pending:
-            pending.remove(future)
-        if not pending:
-            _pending_checks.pop(slug, None)
-        _mark_cache_status(slug, "poll_timeout", reason="timeout_waiting_pdf_download_complete")
+        result = await asyncio.to_thread(download_on_railway, slug, drive_export_url)
+        _mark_cache_status(slug, "cached", last_sha256=result.get("sha256", ""))
         _broadcast_slides_cache_status()
-        return JSONResponse({"status": "timeout"}, status_code=503)
-
-    if result == "ok":
         return SlidesCheckResponse(status="cached")
-    _mark_cache_status(slug, "download_failed", reason="railway_reported_error")
-    _broadcast_slides_cache_status()
-    return JSONResponse({"status": "error"}, status_code=503)
+    except Exception as exc:
+        logger.warning("slides/check: Railway download failed for slug=%s: %s", slug, exc)
+        _mark_cache_status(slug, "download_failed", reason=str(exc))
+        _broadcast_slides_cache_status()
+        return JSONResponse({"status": "error"}, status_code=503)
 
 
 @participant_router.get("/{session_id}/api/slides")
@@ -208,28 +189,3 @@ async def list_slides(session_id: str):
     return SlidesListResponse(slides=_slides_with_embedded_cache_status())
 
 
-# ── WS handler: called from main thread via drain_queue() ──
-
-def handle_pdf_download_complete(data: dict):
-    """Handle pdf_download_complete message from Railway."""
-    slug = data.get("slug", "").strip()
-    status = data.get("status", "error")
-
-    # Update cache status
-    if status == "ok":
-        misc_state.slides_cache_status[slug] = {
-            **misc_state.slides_cache_status.get(slug, {}),
-            "status": "cached",
-        }
-    else:
-        _mark_cache_status(slug, "download_failed", reason="railway_reported_error")
-
-    # Broadcast updated cache status to host and participants.
-    _broadcast_slides_cache_status()
-
-    # Resolve pending /check futures for this slug (thread-safe)
-    futures = _pending_checks.pop(slug, [])
-    if _event_loop is not None:
-        for fut in futures:
-            if not fut.done():
-                _event_loop.call_soon_threadsafe(fut.set_result, status)

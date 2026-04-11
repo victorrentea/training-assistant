@@ -1,29 +1,16 @@
-"""Unit tests for daemon slides /check endpoint (daemon/slides/router.py)."""
-import asyncio
-import threading
+"""Unit tests for daemon slides /check endpoint (daemon/slides/router.py).
+
+The /check endpoint now calls Railway REST POST /api/slides/download-from-gdrive/{slug}
+instead of using WS download_pdf + pdf_download_complete.
+"""
 from unittest.mock import patch
 
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-import daemon.slides.router as slides_router
 from daemon.misc.state import MiscState
-from daemon.slides.router import handle_pdf_download_complete, participant_router
-
-
-@pytest.fixture(autouse=True)
-def reset_module_state():
-    """Reset module-level state between tests."""
-    old_pending = slides_router._pending_checks
-    old_loop = slides_router._event_loop
-    old_timeout = slides_router._CHECK_TIMEOUT_S
-    slides_router._pending_checks = {}
-    slides_router._event_loop = None
-    yield
-    slides_router._pending_checks = old_pending
-    slides_router._event_loop = old_loop
-    slides_router._CHECK_TIMEOUT_S = old_timeout
+from daemon.slides.router import participant_router
 
 
 @pytest.fixture
@@ -71,69 +58,18 @@ def test_list_slides_embeds_cache_status(client, fresh_misc_state):
     assert body["slides"][0]["size_bytes"] == 42
 
 
-def test_check_triggers_download_and_returns_200_on_success(fresh_misc_state, monkeypatch):
-    """Not cached: triggers download, resolves future with 'ok' → 200."""
-    # Mock send_to_railway to do nothing but record the call
-    sent_msgs = []
-
-    def fake_send_to_railway(msg):
-        sent_msgs.append(msg)
-        return True
-
-    monkeypatch.setattr("daemon.ws_publish.send_to_railway", fake_send_to_railway)
+def test_check_calls_railway_rest_and_returns_200(fresh_misc_state, monkeypatch):
+    """Not cached: calls Railway REST to download, returns 200 on success."""
     fresh_misc_state.slides_catalog["myslug"] = {
         "slug": "myslug",
         "title": "My Slide",
         "drive_export_url": "https://docs.google.com/presentation/d/xyz/export/pdf",
     }
 
-    broadcasts = []
+    def fake_download_on_railway(slug, drive_export_url):
+        return {"status": "cached", "sha256": "abc123", "size": 1024}
 
-    def _capture_broadcast(msg):
-        broadcasts.append(msg)
-
-    with patch("daemon.ws_publish.broadcast", side_effect=_capture_broadcast):
-
-        app = FastAPI()
-        app.include_router(participant_router)
-        client = TestClient(app, raise_server_exceptions=False)
-
-        def resolve_after_delay():
-            # Small delay to let the endpoint register the future
-            import time
-            time.sleep(0.05)
-            handle_pdf_download_complete({"slug": "myslug", "status": "ok"})
-
-        t = threading.Thread(target=resolve_after_delay, daemon=True)
-        t.start()
-
-        resp = client.get("/test-session/api/slides/check/myslug")
-        t.join(timeout=5.0)
-
-    assert resp.status_code == 200
-    assert resp.json()["status"] == "cached"
-    # Verify download_pdf was sent to Railway
-    assert any(m.get("type") == "download_pdf" and m.get("slug") == "myslug" for m in sent_msgs)
-    # slides_cache_status is now a zero-payload invalidation signal: expect at least 2 broadcasts
-    # (one for "downloading", one for "cached")
-    assert len(broadcasts) >= 2
-
-
-def test_check_not_cached_triggers_download(fresh_misc_state, monkeypatch):
-    """When status is not_cached, /check triggers a download via WS."""
-    fresh_misc_state.slides_cache_status["myslug"] = {"status": "not_cached"}
-    fresh_misc_state.slides_catalog["myslug"] = {
-        "slug": "myslug",
-        "title": "My Slide",
-        "drive_export_url": "https://docs.google.com/presentation/d/xyz/export/pdf",
-    }
-    sent_msgs = []
-
-    def fake_send_to_railway(msg):
-        sent_msgs.append(msg)
-        return True
-
-    monkeypatch.setattr("daemon.ws_publish.send_to_railway", fake_send_to_railway)
+    monkeypatch.setattr("daemon.slides.router.download_on_railway", fake_download_on_railway)
 
     broadcasts = []
 
@@ -144,107 +80,43 @@ def test_check_not_cached_triggers_download(fresh_misc_state, monkeypatch):
         app = FastAPI()
         app.include_router(participant_router)
         client = TestClient(app, raise_server_exceptions=False)
-
-        def resolve_after_delay():
-            import time
-            time.sleep(0.05)
-            handle_pdf_download_complete({"slug": "myslug", "status": "ok"})
-
-        t = threading.Thread(target=resolve_after_delay, daemon=True)
-        t.start()
         resp = client.get("/test-session/api/slides/check/myslug")
-        t.join(timeout=5.0)
 
     assert resp.status_code == 200
     assert resp.json()["status"] == "cached"
-    assert any(m.get("type") == "download_pdf" and m.get("slug") == "myslug" for m in sent_msgs)
+    assert fresh_misc_state.slides_cache_status["myslug"]["status"] == "cached"
+    assert fresh_misc_state.slides_cache_status["myslug"]["last_sha256"] == "abc123"
+    assert len(broadcasts) >= 2  # downloading + cached
 
 
-def test_check_returns_503_on_timeout(fresh_misc_state, monkeypatch):
-    """No cached entry + no download completion → 503 after timeout."""
-    monkeypatch.setattr(slides_router, "_CHECK_TIMEOUT_S", 0.1)
+def test_check_returns_503_on_railway_failure(fresh_misc_state, monkeypatch):
+    """Railway download failure → 503."""
     fresh_misc_state.slides_catalog["myslug"] = {
         "slug": "myslug",
         "title": "My Slide",
         "drive_export_url": "https://docs.google.com/presentation/d/xyz/export/pdf",
     }
 
-    def fake_send_to_railway(msg):
-        return True
+    def fake_download_on_railway(slug, drive_export_url):
+        raise RuntimeError("Connection refused")
 
-    monkeypatch.setattr("daemon.ws_publish.send_to_railway", fake_send_to_railway)
+    monkeypatch.setattr("daemon.slides.router.download_on_railway", fake_download_on_railway)
 
-    broadcasts = []
-
-    def _capture_broadcast(msg):
-        broadcasts.append(msg)
-
-    app = FastAPI()
-    app.include_router(participant_router)
-    client = TestClient(app, raise_server_exceptions=False)
-
-    with patch("daemon.ws_publish.broadcast", side_effect=_capture_broadcast):
+    with patch("daemon.ws_publish.broadcast"):
+        app = FastAPI()
+        app.include_router(participant_router)
+        client = TestClient(app, raise_server_exceptions=False)
         resp = client.get("/test-session/api/slides/check/myslug")
 
     assert resp.status_code == 503
-    assert resp.json()["status"] == "timeout"
-    assert fresh_misc_state.slides_cache_status["myslug"]["status"] == "poll_timeout"
-    # slides_cache_status is a zero-payload invalidation signal: expect at least 2 broadcasts
-    # (downloading, poll_timeout)
-    assert len(broadcasts) >= 2
+    assert fresh_misc_state.slides_cache_status["myslug"]["status"] == "download_failed"
 
 
-def test_check_coalesces_concurrent_requests(fresh_misc_state, monkeypatch):
-    """Two concurrent /check requests for the same slug send only one download_pdf message.
-
-    We verify the coalescing behavior directly: the second request that arrives while the
-    first is pending skips sending another download_pdf message.
-    """
-    import asyncio as _asyncio
-
-    sent_msgs = []
-
-    def fake_send_to_railway(msg):
-        sent_msgs.append(msg)
-        return True
-
-    monkeypatch.setattr("daemon.ws_publish.send_to_railway", fake_send_to_railway)
-
-    async def _run():
-        # Build a minimal ASGI app with the router
-        from fastapi import FastAPI as _FastAPI
-        _app = _FastAPI()
-        _app.include_router(participant_router)
-
-        import httpx
-        from httpx import AsyncClient
-        transport = httpx.ASGITransport(app=_app)
-        async with AsyncClient(transport=transport, base_url="http://test") as ac:
-            with patch("daemon.ws_publish.broadcast"):
-                # Fire two concurrent requests before resolving
-                t1 = _asyncio.create_task(
-                    ac.get("/test-session/api/slides/check/myslug")
-                )
-                t2 = _asyncio.create_task(
-                    ac.get("/test-session/api/slides/check/myslug")
-                )
-
-                # Let both tasks get to the await point
-                await _asyncio.sleep(0.05)
-
-                # Resolve: both futures should be resolved via the event loop
-                handle_pdf_download_complete({"slug": "myslug", "status": "ok"})
-
-                r1, r2 = await _asyncio.gather(t1, t2)
-
-        return r1, r2
-
-    r1, r2 = asyncio.run(_run())
-
-    # Both requests should return 200
-    assert r1.status_code == 200, f"Request 1 returned {r1.status_code}"
-    assert r2.status_code == 200, f"Request 2 returned {r2.status_code}"
-
-    # Only one download_pdf message should have been sent (coalescing)
-    download_msgs = [m for m in sent_msgs if m.get("type") == "download_pdf"]
-    assert len(download_msgs) == 1, f"Expected 1 download_pdf, got {len(download_msgs)}: {download_msgs}"
+def test_check_returns_404_when_no_drive_url(client, fresh_misc_state):
+    """No drive_export_url in catalog → 404."""
+    fresh_misc_state.slides_catalog["myslug"] = {
+        "slug": "myslug",
+        "title": "My Slide",
+    }
+    resp = client.get("/test-session/api/slides/check/myslug")
+    assert resp.status_code == 404

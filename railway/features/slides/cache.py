@@ -6,6 +6,7 @@ The daemon instructs Railway to fetch a PDF via the download_pdf WS message,
 providing the drive_export_url inline. Railway does not maintain a slides catalog.
 """
 import asyncio
+import hashlib
 import json
 import logging
 import ssl
@@ -252,3 +253,12 @@ async def do_download(slug: str, url: str) -> Path:
         _set_status(slug, "download_failed", error=str(exc))
         await _push_log(slug, "download_failed", str(exc))
         raise
+
+
+def _file_sha256(path: Path) -> str:
+    """Compute SHA256 hex digest of a file."""
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(65536), b""):
+            h.update(chunk)
+    return h.hexdigest()

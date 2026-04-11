@@ -1,5 +1,7 @@
 """SlidesRunner — initializes slide catalog from disk for the main daemon."""
 
+import threading
+import time
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -16,6 +18,51 @@ from daemon.slides.catalog import (
     resolve_tracked_sources,
 )
 from daemon.slides.router import _is_cached_on_railway
+
+_REDOWNLOAD_RETRY_INTERVAL_S = 5.0
+_REDOWNLOAD_MAX_RETRIES = 5
+
+# Track which slugs have an active redownload poller to avoid duplicates.
+_active_redownload_slugs: set[str] = set()
+_active_redownload_lock = threading.Lock()
+
+
+def _run_redownload_poller(slug: str, drive_export_url: str) -> None:
+    """Background thread: call Railway REST to re-download PDF, compare hashes, retry if unchanged.
+
+    On success (hash changed): marks cached, broadcasts refreshed_slugs.
+    On exhaustion (hash unchanged after retries): logs warning, beeps.
+    """
+    from daemon.slides.router import download_on_railway, _mark_cache_status, _broadcast_slides_cache_status
+
+    prev_hash = misc_state.slides_cache_status.get(slug, {}).get("last_sha256", "")
+
+    try:
+        for attempt in range(1, _REDOWNLOAD_MAX_RETRIES + 1):
+            try:
+                result = download_on_railway(slug, drive_export_url)
+                new_hash = result.get("sha256", "")
+
+                if new_hash != prev_hash:
+                    log.info("slides", f"Google Drive PDF updated for slug={slug} (attempt {attempt})")
+                    _mark_cache_status(slug, "cached", last_sha256=new_hash)
+                    _broadcast_slides_cache_status(refreshed_slugs=[slug])
+                    return
+
+                log.info("slides", f"Google Drive PDF unchanged for slug={slug} (attempt {attempt}/{_REDOWNLOAD_MAX_RETRIES})")
+            except Exception as exc:
+                log.error("slides", f"Railway download failed for slug={slug} (attempt {attempt}): {exc}")
+
+            if attempt < _REDOWNLOAD_MAX_RETRIES:
+                time.sleep(_REDOWNLOAD_RETRY_INTERVAL_S)
+
+        # Exhausted retries
+        log.error("slides", f"Google Drive PDF not updated for slug={slug} after {_REDOWNLOAD_MAX_RETRIES} attempts")
+        from daemon.slides.drive_sync import _beep_local
+        _beep_local()
+    finally:
+        with _active_redownload_lock:
+            _active_redownload_slugs.discard(slug)
 
 
 class SlidesRunner:
@@ -97,12 +144,12 @@ class SlidesRunner:
     def scan_pptx_mtimes(self) -> bool:
         """Read st_mtime for all tracked PPTX files; update misc_state.slides_cache_status.
 
-        When a PPTX mtime changes and the slide was previously cached, the cache
-        is invalidated (status → not_cached) so the next /check triggers a fresh
-        download from Google Drive.
+        When a PPTX mtime changes and the slide was previously cached, starts
+        a background poller thread that calls Railway REST to re-download the PDF,
+        comparing hashes until Google Drive publishes the new version.
 
         Returns True if any modified_at changed (caller should broadcast slides_cache_status).
-        Called every ~60s from the main loop.
+        Called every ~10s from the main loop.
         """
         if not self._slides_config:
             return False
@@ -112,9 +159,9 @@ class SlidesRunner:
         changed = refresh_pptx_mtimes(files, self._slides_state)
         if not changed:
             return False
-        # Propagate updated modified_at and invalidate Railway cache for changed slides.
+        # Propagate updated modified_at and start redownload poller for changed cached slides.
         tracked = self._slides_state.get("files", {})
-        for _, entry in tracked.items():
+        for key, entry in tracked.items():
             slug = str(entry.get("slug") or "").strip()
             if not slug:
                 continue
@@ -124,9 +171,21 @@ class SlidesRunner:
             existing = misc_state.slides_cache_status.get(slug, {})
             iso = _iso_utc(pptx_mtime)
             if existing.get("modified_at") != iso:
-                updates = {"modified_at": iso}
+                misc_state.slides_cache_status[slug] = {**existing, "modified_at": iso}
                 if existing.get("status") == "cached":
-                    updates["status"] = "not_cached"
-                    log.info("slides", f"PPTX updated for slug={slug} — Railway cache invalidated")
-                misc_state.slides_cache_status[slug] = {**existing, **updates}
+                    drive_url = misc_state.slides_catalog.get(slug, {}).get("drive_export_url", "")
+                    if drive_url:
+                        with _active_redownload_lock:
+                            if slug in _active_redownload_slugs:
+                                log.info("slides", f"PPTX updated for slug={slug} — redownload already in progress")
+                                continue
+                            _active_redownload_slugs.add(slug)
+                        log.info("slides", f"PPTX updated for slug={slug} — starting redownload poller")
+                        t = threading.Thread(
+                            target=_run_redownload_poller,
+                            args=(slug, drive_url),
+                            daemon=True,
+                            name=f"redownload-{slug}",
+                        )
+                        t.start()
         return True

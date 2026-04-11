@@ -75,12 +75,12 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
 | Message | Payload |
 | --- | --- |
 | Host navigated to a new slide<br>`slides_current` | `slides_current?: SlidesCurrent {`<br>&nbsp;&nbsp;&nbsp;&nbsp;`url?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`slug?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`presentation_name?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`current_page?:int`<br>&nbsp;&nbsp;&nbsp;&nbsp;`updated_at?:string`<br>`}  # null means no active slide` |
-| Invalidation signal — participant must call GET /api/slides to refresh<br>Client must refetch slide list; payload intentionally carries no cache map.<br>`slides_cache_status` | - |
+| Invalidation signal — participant must call GET /api/slides to refresh<br>Client must refetch slide list; payload intentionally carries no cache map.<br>`slides_cache_status` | `refreshed_slugs?: list[string]` |
 
 ### Host WS
 | Message | Payload |
 | --- | --- |
-| Invalidation signal — host must call GET /api/slides to refresh<br>Host should refetch slides list; payload intentionally carries no cache map.<br>`slides_cache_status` | - |
+| Invalidation signal — host must call GET /api/slides to refresh<br>Host should refetch slides list; payload intentionally carries no cache map.<br>`slides_cache_status` | `refreshed_slugs?: list[string]` |
 
 ## Feature: Activity
 

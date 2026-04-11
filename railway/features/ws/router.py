@@ -177,14 +177,17 @@ async def _handle_broadcast(data: dict):
 
 
 async def _run_download_pdf(slug: str, drive_export_url: str) -> None:
-    """Background task: download PDF for slug and notify daemon of result."""
+    """Background task: download PDF for slug and notify daemon of result.
+
+    LEGACY: kept for backward compatibility. New code uses the REST endpoint
+    POST /api/slides/download-from-gdrive/{slug} instead.
+    """
     from railway.features.slides.cache import do_download
     try:
         await do_download(slug, drive_export_url)
         await push_to_daemon({"type": MSG_PDF_DOWNLOAD_COMPLETE, "slug": slug, "status": "ok"})
     except Exception as exc:
         await push_to_daemon({"type": MSG_PDF_DOWNLOAD_COMPLETE, "slug": slug, "status": "error", "error": str(exc)})
-
 
 
 async def _handle_download_pdf(data: dict) -> None:

@@ -671,8 +671,8 @@ def run() -> None:
 
     ws_client.register_handler("scores_reset", _handle_scores_reset)
 
-    from daemon.slides.router import handle_pdf_download_complete
-    ws_client.register_handler("pdf_download_complete", handle_pdf_download_complete)
+    # NOTE: pdf_download_complete WS handler removed — /check now uses REST
+    # POST /api/slides/download-from-gdrive/{slug} on Railway instead.
 
     ws_client.register_handler(
         "file_ready_for_download",
