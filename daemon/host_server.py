@@ -83,6 +83,13 @@ def create_app(backend_url: str) -> FastAPI:
         allow_headers=["Content-Type", "X-Participant-ID"],
     )
 
+    # --- No-cache middleware for local dev (prevents stale JS/HTML after daemon restart) ---
+    @app.middleware("http")
+    async def no_cache_middleware(request: Request, call_next):
+        response = await call_next(request)
+        response.headers["Cache-Control"] = "no-store"
+        return response
+
     # --- Write-back middleware (collects events set by participant router handlers) ---
     @app.middleware("http")
     async def write_back_middleware(request: Request, call_next):
