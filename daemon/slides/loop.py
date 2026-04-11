@@ -163,6 +163,7 @@ class SlidesRunner:
         changed = refresh_pptx_mtimes(files, self._slides_state)
         if not changed:
             return False
+        slides_daemon.save_daemon_state(self._slides_config.state_file, self._slides_state)
         # Propagate updated modified_at and start redownload poller for changed cached slides.
         tracked = self._slides_state.get("files", {})
         for _key, entry in tracked.items():
