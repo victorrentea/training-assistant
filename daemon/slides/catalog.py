@@ -94,6 +94,7 @@ def load_catalog_entries(path: Path | None) -> list[dict]:
             "target_pdf": target_pdf,
             "drive_export_url": str(entry.get("drive_export_url", "")).strip(),
             "drive_probe_url": str(entry.get("drive_probe_url", "")).strip(),
+            "group": str(entry.get("group", "")).strip() or None,
         })
     return valid_entries
 
