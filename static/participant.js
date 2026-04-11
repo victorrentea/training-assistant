@@ -1756,7 +1756,10 @@ ${html}
       if (!slidesPdfViewer || slidesViewMode !== 'pdfjs') return;
       clearTimeout(_pdfResizeTimer);
       _pdfResizeTimer = setTimeout(() => {
-        if (slidesPdfViewer && slidesViewMode === 'pdfjs') slidesPdfViewer.currentScaleValue = 'page-width';
+        if (slidesPdfViewer && slidesViewMode === 'pdfjs') {
+          _suppressSlidesFollowAutoUncheck(1500);
+          slidesPdfViewer.currentScaleValue = 'page-width';
+        }
       }, 120);
     }).observe(container);
 
