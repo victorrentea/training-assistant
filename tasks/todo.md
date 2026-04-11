@@ -6,6 +6,7 @@
 - [x] Extend daemon participant `POST /api/participant/register` to accept optional explicit `name` and return `409` on duplicates
 - [x] Update participant UI to gate join behind pre-join choices (manual name or random) and remove post-join "name set" checklist tracking
 - [x] Add landing-page `ON_HOST_MACHINE` checkbox/cookie and gate localhost active-session probing behind that cookie
+- [x] Show a bottom-left host-cookie status (`No active session yet` + `last retry` time) on participant landing
 - [x] Implement testing-only local-name retry suffix (` (local)`, then `+` retries on `409`)
 - [x] Update/expand daemon, frontend, and e2e/hermetic tests (default random join path for most flows)
 - [ ] Run hermetic e2e suite and record proof in review section
@@ -20,6 +21,10 @@
 - Result: `58 passed in 5.58s`
 - Proof: `bash tests/check-all.sh`
 - Result: daemon tests `374 passed`; contract tests `16 passed`; architecture contracts `4 passed`
+- Proof (red): `node tests/test_js_unit.js`
+- Result: `70 passed, 2 failed` (missing host-toggle status node + last-retry text on landing)
+- Proof (green): `node tests/test_js_unit.js`
+- Result: `72 passed, 0 failed`
 - Proof: `bash tests/docker/run-hermetic.sh`
 - Result: blocked in this environment (`docker.sock` unavailable: `connect: no such file or directory`)
 

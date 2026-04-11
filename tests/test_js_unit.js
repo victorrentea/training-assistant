@@ -334,6 +334,14 @@ assert(
   /setInterval\(\(\) => \{\s*tryFetch\(\);\s*\}, LOCAL_DAEMON_POLL_MS\);/s.test(landingHtmlSource)
     && /stopAutoRetry\(''\);\s*joinSession\(\);/s.test(landingHtmlSource)
 );
+assert(
+  'landing host toggle includes inline status node for localhost polling',
+  /id="host-machine-status"/.test(landingHtmlSource)
+);
+assert(
+  'landing host toggle status reports no active session and last retry time',
+  /No active session yet/.test(landingHtmlSource) && /last retry/.test(landingHtmlSource)
+);
 
 // ═══════════════════════════════════════════════════════════════════════
 // Summary

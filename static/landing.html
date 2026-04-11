@@ -143,6 +143,13 @@
       padding: .18rem .52rem;
       backdrop-filter: blur(2px);
     }
+    .landing-host-status {
+      display: none;
+      margin-left: .22rem;
+      padding-left: .34rem;
+      border-left: 1px solid var(--border);
+      white-space: nowrap;
+    }
     .landing-host-toggle input {
       margin: 0;
       accent-color: var(--accent);
@@ -182,7 +189,8 @@
   </div>
   <label class="landing-host-toggle" for="host-machine-toggle">
     <input id="host-machine-toggle" type="checkbox" />
-    ON_HOST_MACHINE
+    <span>ON_HOST_MACHINE</span>
+    <span id="host-machine-status" class="landing-host-status" aria-live="polite"></span>
   </label>
 
   <script>
@@ -198,6 +206,7 @@
     let retryCode = '';
     let retryAttemptInFlight = false;
     let pollLocalDaemonNow = null;
+    let lastLocalDaemonRetryAt = 0;
 
     function hasOnHostMachineCookie() {
       return document.cookie.split(';').some((part) => part.trim() === `${ON_HOST_MACHINE_COOKIE}=true`);
@@ -215,10 +224,40 @@
       const toggle = document.getElementById('host-machine-toggle');
       if (!toggle) return;
       toggle.checked = hasOnHostMachineCookie();
+      renderHostMachineStatus();
       toggle.addEventListener('change', () => {
         setOnHostMachineCookie(toggle.checked);
+        if (!toggle.checked) {
+          lastLocalDaemonRetryAt = 0;
+        }
+        renderHostMachineStatus();
         if (toggle.checked && pollLocalDaemonNow) pollLocalDaemonNow();
       });
+    }
+
+    function formatLocalRetryTime(timestampMs) {
+      return new Date(timestampMs).toLocaleTimeString([], { hour12: false });
+    }
+
+    function renderHostMachineStatus() {
+      const statusEl = document.getElementById('host-machine-status');
+      if (!statusEl) return;
+      if (!hasOnHostMachineCookie()) {
+        statusEl.style.display = 'none';
+        statusEl.textContent = '';
+        return;
+      }
+      statusEl.style.display = '';
+      if (!lastLocalDaemonRetryAt) {
+        statusEl.textContent = 'No active session yet (last retry: waiting...)';
+        return;
+      }
+      statusEl.textContent = `No active session yet (last retry: ${formatLocalRetryTime(lastLocalDaemonRetryAt)})`;
+    }
+
+    function markNoActiveSessionRetry() {
+      lastLocalDaemonRetryAt = Date.now();
+      renderHostMachineStatus();
     }
 
     function getInputCode() {
@@ -403,7 +442,11 @@
           .then(r => r.ok ? r.json() : null)
           .then(data => {
             const code = normalizeInputValue(data && data.session_id);
-            if (!isCompleteCode(code) || code === lastCode) return;
+            if (!isCompleteCode(code)) {
+              markNoActiveSessionRetry();
+              return;
+            }
+            if (code === lastCode) return;
             lastCode = code;
             const input = document.getElementById('code-input');
             input.value = code;
@@ -411,7 +454,10 @@
             stopAutoRetry('');
             joinSession();
           })
-          .catch(() => { /* daemon not running or unreachable — silent skip */ });
+          .catch(() => {
+            // daemon not running or unreachable — keep retrying
+            markNoActiveSessionRetry();
+          });
       }
 
       pollLocalDaemonNow = tryFetch;
