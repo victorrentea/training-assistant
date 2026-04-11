@@ -150,15 +150,9 @@ async def check_slide_cache(session_id: str, slug: str):
     """
     global _event_loop
 
-    # Fast path: cached in daemon state AND currently downloadable on Railway.
-    if (
-        misc_state.slides_cache_status.get(slug, {}).get("status") == "cached"
-        and _is_cached_on_railway(session_id, slug)
-    ):
-        return SlidesCheckResponse(status="cached")
+    # Fast path: trust daemon-side cache status (kept in sync via WS reconnect probing).
     if misc_state.slides_cache_status.get(slug, {}).get("status") == "cached":
-        _mark_cache_status(slug, "not_cached", reason="railway_miss_after_cached")
-        _broadcast_slides_cache_status()
+        return SlidesCheckResponse(status="cached")
 
     # Capture event loop for thread-safe future resolution from ws handler
     _event_loop = asyncio.get_event_loop()

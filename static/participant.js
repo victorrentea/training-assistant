@@ -3294,16 +3294,23 @@ const sessionTitleEl = document.getElementById('session-title');
         updateSummaryCount(msg.count, true);
         break;
       case 'slides_cache_status': {
+        // Snapshot old status for the active slide before catalog refresh.
+        const _prevActiveStatus = slidesSelectedSlug
+          ? (slidesCatalog.find(s => s.slug === slidesSelectedSlug) || {}).status
+          : null;
         const _refreshedSlugs = Array.isArray(msg.refreshed_slugs) ? msg.refreshed_slugs : [];
         _refreshSlidesCatalog().then(() => {
           if (_pendingFollowRetry) {
             _pendingFollowRetry = false;
             _queueHostSlideCurrent();
           }
-          // Auto-reload the active slide if Railway just re-downloaded it (PPTX save flow)
-          if (_refreshedSlugs.length && slidesSelectedSlug && _refreshedSlugs.includes(slidesSelectedSlug)) {
+          // Auto-reload the active slide when its cache was invalidated (PPTX updated)
+          // or when Railway just re-downloaded it (refreshed_slugs).
+          if (slidesSelectedSlug) {
             const currentSlide = slidesCatalog.find(s => s.slug === slidesSelectedSlug);
-            if (currentSlide) {
+            const wasInvalidated = _prevActiveStatus === 'cached' && currentSlide && currentSlide.status !== 'cached';
+            const wasRefreshed = _refreshedSlugs.length && _refreshedSlugs.includes(slidesSelectedSlug);
+            if (currentSlide && (wasInvalidated || wasRefreshed)) {
               _loadSlideIntoViewer(currentSlide, { forceReload: true, withUiBlocker: false, cacheVersion: String(Date.now()) }).catch(() => {});
             }
           }

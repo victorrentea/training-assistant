@@ -44,7 +44,7 @@ class SlidesRunner:
         self._init_misc_state_from_catalog(cfg)
 
     def _init_misc_state_from_catalog(self, cfg) -> None:
-        """Populate misc_state.slides_catalog and slides_cache_status from the catalog file."""
+        """Populate misc_state.slides_catalog from the catalog file (no Railway probing)."""
         entries = load_catalog_entries(cfg.catalog_file)
         if not entries:
             return
@@ -61,26 +61,45 @@ class SlidesRunner:
             })
         misc_state.update_slides_catalog(catalog_entries)
 
-        # Initialize cache status from Railway availability (source of truth), not local files.
-        session_id = get_active_session_id()
-        if session_id:
-            log.info("slides", f"Checking Railway cache for session={session_id}")
-        else:
-            log.info("slides", "No session at startup — slides marked as not_cached")
-
+        # Mark all slides as not_cached at startup; actual cache status
+        # is probed on WS (re)connect via probe_railway_cache().
         for catalog_entry in catalog_entries:
             slug = catalog_entry["slug"]
-            status = "not_cached"
-            if session_id:
-                status = "cached" if _is_cached_on_railway(session_id, slug) else "not_cached"
+            misc_state.slides_cache_status[slug] = {
+                **misc_state.slides_cache_status.get(slug, {}),
+                "status": "not_cached",
+            }
+        log.info("slides", f"Initialized catalog: {len(catalog_entries)} entries")
+
+    def probe_railway_cache(self) -> None:
+        """Check Railway cache status for all catalog slugs via HEAD requests.
+
+        Called on every WS (re)connect so the daemon has an accurate picture
+        of what Railway currently has cached (survives Railway redeploys).
+        """
+        session_id = get_active_session_id()
+        if not session_id:
+            return
+        slugs = list(misc_state.slides_catalog.keys())
+        if not slugs:
+            return
+        log.info("slides", f"Probing Railway cache for {len(slugs)} slugs (session={session_id})")
+        for slug in slugs:
+            status = "cached" if _is_cached_on_railway(session_id, slug) else "not_cached"
             misc_state.slides_cache_status[slug] = {
                 **misc_state.slides_cache_status.get(slug, {}),
                 "status": status,
             }
-        log.info("slides", f"Initialized catalog: {len(catalog_entries)} entries")
+        from daemon.slides.router import _broadcast_slides_cache_status
+        _broadcast_slides_cache_status()
+        log.info("slides", "Railway cache probe complete")
 
     def scan_pptx_mtimes(self) -> bool:
         """Read st_mtime for all tracked PPTX files; update misc_state.slides_cache_status.
+
+        When a PPTX mtime changes and the slide was previously cached, the cache
+        is invalidated (status → not_cached) so the next /check triggers a fresh
+        download from Google Drive.
 
         Returns True if any modified_at changed (caller should broadcast slides_cache_status).
         Called every ~60s from the main loop.
@@ -93,7 +112,7 @@ class SlidesRunner:
         changed = refresh_pptx_mtimes(files, self._slides_state)
         if not changed:
             return False
-        # Propagate updated modified_at into misc_state so REST /api/slides picks it up.
+        # Propagate updated modified_at and invalidate Railway cache for changed slides.
         tracked = self._slides_state.get("files", {})
         for _, entry in tracked.items():
             slug = str(entry.get("slug") or "").strip()
@@ -105,5 +124,9 @@ class SlidesRunner:
             existing = misc_state.slides_cache_status.get(slug, {})
             iso = _iso_utc(pptx_mtime)
             if existing.get("modified_at") != iso:
-                misc_state.slides_cache_status[slug] = {**existing, "modified_at": iso}
+                updates = {"modified_at": iso}
+                if existing.get("status") == "cached":
+                    updates["status"] = "not_cached"
+                    log.info("slides", f"PPTX updated for slug={slug} — Railway cache invalidated")
+                misc_state.slides_cache_status[slug] = {**existing, **updates}
         return True

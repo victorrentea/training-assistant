@@ -941,6 +941,9 @@ def run() -> None:
         _broadcast_notes_summary_counts(notes_summary_probe_prev)
     ws_client.on_connect(_sync_session_on_reconnect)
 
+    # Re-probe Railway slide cache on every (re)connect (e.g. after Railway redeploy)
+    ws_client.on_connect(slides_runner.probe_railway_cache)
+
     ws_client.start()
 
     # Startup connectivity checks (kept explicit for clearer startup diagnostics).
@@ -1432,7 +1435,7 @@ def run() -> None:
                         else:
                             post_status("error", "No conversation context — please generate a question first.", config)
 
-                # ── Scan PPTX mtimes every 10s — keeps modified_at current for participants ──
+                # ── Scan PPTX mtimes every 10s — detect slide updates quickly ──
                 if slides_runner and now - last_slides_mtime_scan_at >= 10.0:
                     last_slides_mtime_scan_at = now
                     if slides_runner.scan_pptx_mtimes():

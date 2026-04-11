@@ -42,10 +42,9 @@ def client(fresh_misc_state):
     return TestClient(app, raise_server_exceptions=False)
 
 
-def test_check_returns_200_when_cached_and_available_on_railway(client, fresh_misc_state, monkeypatch):
-    """When cache status is cached and Railway serves the slug, /check returns 200 immediately."""
+def test_check_returns_200_when_cached(client, fresh_misc_state):
+    """When cache status is cached, /check returns 200 immediately (trusts daemon state)."""
     fresh_misc_state.slides_cache_status["myslug"] = {"status": "cached"}
-    monkeypatch.setattr(slides_router, "_is_cached_on_railway", lambda *_: True)
 
     resp = client.get("/test-session/api/slides/check/myslug")
 
@@ -120,15 +119,14 @@ def test_check_triggers_download_and_returns_200_on_success(fresh_misc_state, mo
     assert len(broadcasts) >= 2
 
 
-def test_check_cached_local_but_missing_on_railway_triggers_download(fresh_misc_state, monkeypatch):
-    """Local cached status alone is insufficient: /check re-triggers download when Railway misses."""
-    fresh_misc_state.slides_cache_status["myslug"] = {"status": "cached"}
+def test_check_not_cached_triggers_download(fresh_misc_state, monkeypatch):
+    """When status is not_cached, /check triggers a download via WS."""
+    fresh_misc_state.slides_cache_status["myslug"] = {"status": "not_cached"}
     fresh_misc_state.slides_catalog["myslug"] = {
         "slug": "myslug",
         "title": "My Slide",
         "drive_export_url": "https://docs.google.com/presentation/d/xyz/export/pdf",
     }
-    monkeypatch.setattr(slides_router, "_is_cached_on_railway", lambda *_: False)
     sent_msgs = []
 
     def fake_send_to_railway(msg):
@@ -160,9 +158,6 @@ def test_check_cached_local_but_missing_on_railway_triggers_download(fresh_misc_
     assert resp.status_code == 200
     assert resp.json()["status"] == "cached"
     assert any(m.get("type") == "download_pdf" and m.get("slug") == "myslug" for m in sent_msgs)
-    # slides_cache_status is a zero-payload invalidation signal: expect at least 3 broadcasts
-    # (not_cached, downloading, cached)
-    assert len(broadcasts) >= 3
 
 
 def test_check_returns_503_on_timeout(fresh_misc_state, monkeypatch):

@@ -17,14 +17,19 @@ participant "Daemon slides API\nslides/router.py" as SlidesAPI
 participant "Daemon main loop + SlidesRunner" as Loop
 participant "Addons bridge\nPowerPoint events" as Addons
 database "Railway PDF cache" as Cache
-participant "Google Drive export URL" as Drive
+participant "Google Drive" as Drive
 
-group Catalog bootstrap
-Loop -> Loop: load slides catalog from disk at startup
-Loop -> Railway: HEAD /api/slides/download/{slug}\nfor each known slide when session is active
+group Catalog bootstrap (daemon startup)
+Loop -> Loop: load slides catalog from disk\nmark all slugs as not_cached
+Loop -> SlidesAPI: populate misc_state.slides_catalog
+end
+
+group Cache probe on WS (re)connect
+Loop -> Railway: HEAD /api/slides/download/{slug}\nfor each catalog slug
 Railway -> Cache: check cached PDF presence
 Railway --> Loop: cached or not_cached
-Loop -> SlidesAPI: populate misc_state.slides_catalog\nand slides_cache_status
+Loop -> SlidesAPI: update slides_cache_status
+SlidesAPI -> Railway: broadcast slides_cache_status
 
 Participant -> Railway: GET /{session}/api/slides
 Railway -> SlidesAPI: proxy daemon list request
@@ -32,15 +37,13 @@ SlidesAPI --> Railway: slides with embedded cache status
 Railway --> Participant: normalized catalog
 end
 
-group On-demand cache check before opening a slide
+group Participant opens a slide
 Participant -> Railway: GET /{session}/api/slides/check/{slug}
 Railway -> SlidesAPI: proxy check request
 
-alt Already cached on Railway
-  SlidesAPI -> Railway: HEAD /api/slides/download/{slug}
-  Railway -> Cache: verify cached PDF exists
+alt Already cached (trusted from WS-connect probe)
   SlidesAPI --> Railway: 200 cached
-else Cache miss
+else Cache miss or slide cache invalidated
   SlidesAPI -> SlidesAPI: mark status=downloading
   SlidesAPI -> Railway: broadcast slides_cache_status
   SlidesAPI -> Railway: daemon WS send download_pdf {slug, drive_export_url}
@@ -58,6 +61,22 @@ Railway -> Cache: serve inline PDF with ETag / Last-Modified
 Railway --> Participant: PDF document
 end
 
+group PPTX mtime polling (every ~10s)
+Loop -> Loop: scan PPTX files for mtime changes
+Loop -> SlidesAPI: update modified_at for changed slides\nmark status=not_cached if was cached
+SlidesAPI -> Railway: broadcast slides_cache_status
+Railway --> Participant: slides_cache_status event
+
+alt Participant is displaying the invalidated slide
+  Participant -> Participant: detect active slide status\nchanged from cached to not_cached
+  Participant -> Railway: GET /{session}/api/slides/check/{slug}
+  note right: triggers fresh download\nfrom Google Drive (same as\n"cache miss" flow above)
+  Railway --> Participant: 200 cached
+  Participant -> Railway: GET /{session}/api/slides/download/{slug}
+  Railway --> Participant: refreshed PDF
+end
+end
+
 group Follow trainer from live PowerPoint
 Addons -> Loop: slide {deck, slide, presenting}
 Loop -> Loop: map presentation name to catalog slug + participant URL
@@ -66,9 +85,4 @@ Railway -> Railway: mirror slides_current in server state
 Railway --> Participant: slides_current event
 Participant -> Participant: if follow is enabled,\nopen overlay and jump to the host page
 end
-
-note over Railway, Participant
-When Railway later broadcasts slides_cache_status with refreshed_slugs,
-the participant viewer reloads the active slide without a full page refresh.
-end note
 @enduml
