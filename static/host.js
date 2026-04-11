@@ -155,7 +155,7 @@
     if (!rawLoc) return '';
     const tz = String(participant?.location_tz || _extractTimezone(rawLoc) || '').trim();
     const cc = String(participant?.location_country || '').trim().toUpperCase();
-    const flagHtml = cc ? `<span title="${escHtml(_countryCodeToName(cc))}">${_countryCodeToFlag(cc)}</span>` : '';
+    const flagHtml = cc ? `<span title="${escHtml(_countryCodeToName(cc))}" style="cursor:default">${_countryCodeToFlag(cc)}</span>` : '';
     if (tz) {
       const hhmm = _formatClockForTimezone(tz);
       if (hhmm && flagHtml) return `${flagHtml} ⏱️${hhmm}`;
