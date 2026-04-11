@@ -30,6 +30,16 @@ def set_current_session_id(session_id: str | None) -> None:
     _current_session_id = session_id
 
 
+def announce_session_id(session_id: str, session_name: str) -> None:
+    """Immediately notify Railway of a new session_id via WS.
+
+    Called right after generating a session_id so Railway accepts the host WS
+    connection before the main loop processes the session_pending queue.
+    """
+    if _ws_client and _ws_client.connected:
+        _ws_client.send({"type": "set_session_id", "session_id": session_id, "session_name": session_name})
+
+
 def get_current_session_id() -> str | None:
     return _current_session_id
 

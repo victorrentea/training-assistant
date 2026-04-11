@@ -18,7 +18,7 @@ from pydantic import BaseModel
 from daemon import log as daemon_log
 from daemon.session import pending as session_pending
 from daemon.session import state as session_state
-from daemon.session_state import load_session_meta
+from daemon.session_state import announce_session_id, load_session_meta
 
 
 def normalize_session_name(name: str) -> str:
@@ -133,6 +133,9 @@ async def start_session(body: StartSessionRequest):
         "type": body.type,
         "session_id": session_id,
     })
+    # Pre-register session_id with Railway immediately so host WS validates on first connect
+    # (avoids race condition where host navigates before session_pending queue is processed)
+    announce_session_id(session_id, name)
     return SessionStartResponse(session_name=name, session_id=session_id)
 
 
@@ -155,6 +158,7 @@ async def resume_session(body: ResumeSessionRequest):
         "type": "workshop",
         "session_id": session_id,
     })
+    announce_session_id(session_id, folder_name)
     return SessionStartResponse(session_name=folder_name, session_id=session_id)
 
 
