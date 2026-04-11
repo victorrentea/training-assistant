@@ -1754,6 +1754,7 @@ ${html}
     // Auto-fit to page width on container resize (debounced)
     new ResizeObserver(() => {
       if (!slidesPdfViewer || slidesViewMode !== 'pdfjs') return;
+      _suppressSlidesFollowAutoUncheck(1500);
       clearTimeout(_pdfResizeTimer);
       _pdfResizeTimer = setTimeout(() => {
         if (slidesPdfViewer && slidesViewMode === 'pdfjs') {
