@@ -10,31 +10,22 @@ Covers every screen in the landing page join flow:
 6. Rejoin: returning participant auto-enters with stored UUID
 """
 
-import json
-import os
 import re
 import sys
 import time
-import urllib.request
-import urllib.error
 
 sys.path.insert(0, "/app")
 sys.path.insert(0, "/app/tests")
 
 import pytest
-from playwright.sync_api import sync_playwright, expect
-
+from playwright.sync_api import expect, sync_playwright
 from session_utils import (
     BASE,
     DAEMON_BASE,
-    HOST_USER,
-    HOST_PASS,
-    fresh_session,
-    daemon_has_participant,
     _get_json,
     _req,
+    fresh_session,
 )
-
 
 # ── Fixtures ────────────────────────────────────────────────────────────────
 
