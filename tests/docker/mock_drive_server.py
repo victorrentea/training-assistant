@@ -17,9 +17,8 @@ import os
 import sys
 import threading
 import time
-from http.server import HTTPServer, BaseHTTPRequestHandler
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
-
 
 FIXTURE_DIR = os.environ.get("FIXTURE_PDF_DIR", "/tmp/fixture-pdfs")
 MOCK_DRIVE_PORT = int(os.environ.get("MOCK_DRIVE_PORT", "9090"))
