@@ -178,37 +178,40 @@ def generate_puml(traces_path: str, family: str, output: str,
     edges.sort(key=lambda e: e[3])  # sort by start_time
     edges = _collapse_proxy(edges)
     edges = _collapse_broadcast(edges)
-    edges = _deduplicate_edges(edges)
+    if not scenarios:
+        edges = _deduplicate_edges(edges)
 
-    # Assign phases from scenario trace IDs
+    # Assign phases from scenario boundaries (trace IDs or timestamps)
     if scenarios:
-        # Build span → trace_id index
-        span_to_trace: dict[str, str] = {}
-        for span in spans:
-            sid = _span_id(span)
-            tid = span.get("context", {}).get("trace_id", "")
-            if sid and tid:
-                span_to_trace[sid] = tid
-        # Collect all when-phase trace IDs across scenarios
+        # Try trace_id-based assignment first, fall back to timestamps
         all_when_traces: set[str] = set()
         for sc in scenarios:
             all_when_traces.update(sc.get("when_trace_ids", set()))
-        # Match edges to traces via timestamp proximity to spans
+
         phased = []
         for f, t, label, ts, phase in edges:
             if not phase:
-                # Find the trace_id of the span that produced this edge
-                matched_tid = ""
-                for span in spans:
-                    svc = _service_name(span)
-                    name = span.get("name", "")
-                    start = span.get("start_time", 0)
-                    # Edge labels transform "broadcast:X" → "broadcast X", "notify_host:X" → "notify_host X"
-                    name_normalized = name.replace(":", " ", 1) if name.startswith(("broadcast:", "notify_host:")) else name
-                    if (svc in (f, t)) and name_normalized == label and abs(start - ts) < 2_000_000_000:
-                        matched_tid = span.get("context", {}).get("trace_id", "")
-                        break
-                phase = "when" if matched_tid in all_when_traces else "given"
+                if all_when_traces:
+                    # Match edge to span by label + timestamp, then check trace_id
+                    matched_tid = ""
+                    for span in spans:
+                        svc = _service_name(span)
+                        name = span.get("name", "")
+                        start = span.get("start_time", 0)
+                        name_normalized = name.replace(":", " ", 1) if name.startswith(("broadcast:", "notify_host:")) else name
+                        if (svc in (f, t)) and name_normalized == label and abs(start - ts) < 2_000_000_000:
+                            matched_tid = span.get("context", {}).get("trace_id", "")
+                            break
+                    phase = "when" if matched_tid in all_when_traces else "given"
+                else:
+                    # Fallback: timestamp-based assignment
+                    phase = "given"
+                    for sc in scenarios:
+                        when_ns = sc.get("when_start_ns", 0)
+                        end_ns = sc.get("end_ns", float("inf"))
+                        if when_ns and when_ns <= ts <= end_ns:
+                            phase = "when"
+                            break
             phased.append((f, t, label, ts, phase))
         edges = phased
 
@@ -232,10 +235,11 @@ def generate_puml(traces_path: str, family: str, output: str,
     lines.append("")
 
     if scenarios:
-        # Render edges grouped by scenario with separators
+        # Render edges grouped by scenario with separators (dedup per scenario)
         for i, sc in enumerate(scenarios):
             sc_edges = [e for e in edges if e[3] <= sc["end_ns"]
                         and (i == 0 or e[3] > scenarios[i - 1]["end_ns"])]
+            sc_edges = _deduplicate_edges(sc_edges)
             if not sc_edges:
                 continue
             lines.append(f'== {sc["name"]} ==')
