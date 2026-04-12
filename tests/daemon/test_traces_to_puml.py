@@ -251,8 +251,8 @@ def test_no_phase_renders_default():
     assert "[#gray]" not in content
 
 
-def test_trace_phases_map_colors_by_trace_id():
-    """trace_phases parameter colors edges by trace_id mapping."""
+def test_scenarios_parameter_colors_by_time_boundary():
+    """scenarios parameter colors edges by time boundaries and adds separators."""
     from scripts.traces_to_puml import generate_puml
 
     with tempfile.NamedTemporaryFile(suffix=".jsonl", delete=False, mode="w") as f:
@@ -260,32 +260,24 @@ def test_trace_phases_map_colors_by_trace_id():
     out = path + ".puml"
 
     _write_spans(path, [
-        # Given-phase trace (setup)
+        # Given-phase spans (before when_start_ns=1500)
         _make_span("POST /api/participant/register", "Participant", span_id="s1",
-                    start_time=1000, attributes={"trace.family": ""}),
+                    start_time=1000),
         _make_span("POST /api/participant/register", "Daemon", span_id="s2", parent_span_id="s1",
-                    start_time=1001, attributes={"trace.family": ""}),
-        # When-phase trace (action)
-        _make_span("GET /api/slides/check/clean-code", "Participant",
-                    span_id="s3", start_time=2000,
-                    attributes={"trace.family": ""}),
-        _make_span("GET /api/slides/check/clean-code", "Daemon",
-                    span_id="s4", parent_span_id="s3", start_time=2001,
-                    attributes={"trace.family": ""}),
+                    start_time=1001),
+        # When-phase spans (after when_start_ns=1500)
+        _make_span("broadcast:slides_cache_status", "Daemon", span_id="s3",
+                    start_time=2000),
     ])
 
-    # Map trace IDs to phases
-    trace_phases = {
-        "aaa": "given",  # all spans use trace_id="aaa" by default in _make_span
-    }
-
-    # With all traces as "given", all arrows should be gray
-    generate_puml(path, family="", output=out, trace_phases=trace_phases)
+    scenarios = [{"name": "Open slide", "when_start_ns": 1500, "end_ns": 3000}]
+    generate_puml(path, family="", output=out, scenarios=scenarios)
     content = Path(out).read_text()
-    assert "[#gray]" in content
 
-    # Now mark the same trace as "when" — no gray arrows
-    trace_phases2 = {"aaa": "when"}
-    generate_puml(path, family="", output=out, trace_phases=trace_phases2)
-    content2 = Path(out).read_text()
-    assert "[#gray]" not in content2
+    # Given-phase arrow should be gray
+    assert "[#gray]" in content
+    # When-phase arrow should NOT be gray
+    broadcast_line = [line for line in content.split("\n") if "broadcast" in line][0]
+    assert "[#gray]" not in broadcast_line
+    # Scenario separator should be present
+    assert "== Open slide ==" in content

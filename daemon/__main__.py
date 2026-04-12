@@ -10,7 +10,7 @@ import os
 import re
 import time
 from dataclasses import replace as dc_replace
-from datetime import date, datetime
+from datetime import date
 from pathlib import Path
 
 from daemon import log
@@ -50,8 +50,6 @@ from daemon.session_state import (
 )
 from daemon.slides.loop import SlidesRunner
 from daemon.summary.loop import (
-    get_ai_summary_mtime,
-    get_ai_summary_raw,
     load_key_points,
     run_summary_cycle,
     save_key_points,
