@@ -229,9 +229,10 @@ def generate_puml(traces_path: str, family: str, output: str,
     lines = ["@startuml"]
     lines.append("hide footbox")
     if title:
-        from datetime import datetime, timezone
+        from datetime import datetime
         lines.append(f"title {title}")
-        lines.append(f"caption Generated {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}")
+        local_time = datetime.now().strftime("%Y-%m-%d %H:%M")
+        lines.append(f"caption <color:gray>Generated {local_time}</color>")
     lines.append("")
     for p in participants:
         lines.append(f'participant "{p}"')
