@@ -3,41 +3,38 @@ hide footbox
 
 participant "Host"
 participant "Participant"
+participant "Railway"
 participant "Daemon"
 
 == Participant opens a slide ==
-"Daemon" [#gray]--> "Participant": broadcast notes_updated
-"Daemon" [#gray]--> "Participant": broadcast summary_updated
-"Host" [#gray]-> "Daemon": DELETE /api/{session_id}/host/scores
-"Daemon" [#gray]--> "Participant": broadcast scores_updated
-"Host" [#gray]-> "Daemon": GET /host/{session_id}
-"Host" [#gray]-> "Daemon": GET /api/{session_id}/host/state
-"Participant" [#gray]-> "Daemon": POST /api/participant/register
-"Daemon" [#gray]--> "Host": notify_host participant_list_updated
-"Participant" [#gray]-> "Daemon": GET /{session_id}/api/slides
-"Participant" [#gray]-> "Daemon": GET /api/participant/state
-"Participant" [#gray]-> "Daemon": POST /api/participant/location
-"Daemon" [#gray]--> "Participant": broadcast active_participants_count_updated
-"Participant" -> "Daemon": PUT /api/participant/name
-"Participant" -> "Daemon": GET /{session_id}/api/slides/check/{slug}
-"Daemon" --> "Participant": broadcast slides_cache_status
+"Host" [#gray]-> "Daemon": [92] DELETE /api/{session_id}/host/scores
+"Host" [#gray]-> "Daemon": [89] GET /host/{session_id}
+"Host" [#gray]-> "Daemon": [74] GET /api/{session_id}/host/state
+"Participant" [#gray]-> "Daemon": [54] GET /{session_id}/api/slides
+"Participant" [#gray]-> "Daemon": [54] POST /api/participant/register
+"Daemon" [#gray]--> "Host": [54] participant_list_updated
+"Participant" [#gray]-> "Daemon": [82] GET /api/participant/state
+"Participant" [#gray]-> "Daemon": [94] POST /api/participant/location
+"Daemon" [#gray]--> "Participant": [75] active_participants_count_updated
+"Participant" -> "Daemon": [42] PUT /api/participant/name
+"Participant" -> "Daemon": [96] GET /{session_id}/api/slides/check/{slug}
+"Daemon" --> "Participant": [96] slides_cache_status
+"Daemon" -> "Railway": [96] POST /api/slides/download-from-gdrive/{slug}
 
 == Second participant gets cached slide ==
-"Daemon" [#gray]--> "Participant": broadcast active_participants_count_updated
-"Daemon" [#gray]--> "Participant": broadcast notes_updated
-"Daemon" [#gray]--> "Participant": broadcast summary_updated
-"Host" [#gray]-> "Daemon": DELETE /api/{session_id}/host/scores
-"Daemon" [#gray]--> "Participant": broadcast scores_updated
-"Host" [#gray]-> "Daemon": GET /host/{session_id}
-"Host" [#gray]-> "Daemon": GET /api/{session_id}/host/state
-"Participant" [#gray]-> "Daemon": GET /{session_id}/api/slides
-"Participant" [#gray]-> "Daemon": POST /api/participant/register
-"Daemon" [#gray]--> "Host": notify_host participant_list_updated
-"Participant" [#gray]-> "Daemon": GET /api/participant/state
-"Participant" [#gray]-> "Daemon": POST /api/participant/location
-"Participant" [#gray]-> "Daemon": PUT /api/participant/name
-"Participant" -> "Daemon": GET /{session_id}/api/slides/check/{slug}
-"Daemon" --> "Participant": broadcast slides_cache_status
+"Daemon" [#gray]--> "Participant": [63] active_participants_count_updated
+"Host" [#gray]-> "Daemon": [67] DELETE /api/{session_id}/host/scores
+"Host" [#gray]-> "Daemon": [17] GET /host/{session_id}
+"Host" [#gray]-> "Daemon": [23] GET /api/{session_id}/host/state
+"Participant" [#gray]-> "Daemon": [41] GET /{session_id}/api/slides
+"Participant" [#gray]-> "Daemon": [32] POST /api/participant/register
+"Daemon" [#gray]--> "Host": [32] participant_list_updated
+"Participant" [#gray]-> "Daemon": [20] GET /api/participant/state
+"Participant" [#gray]-> "Daemon": [68] POST /api/participant/location
+"Participant" [#gray]-> "Daemon": [17] PUT /api/participant/name
+"Participant" -> "Daemon": [09] GET /{session_id}/api/slides/check/{slug}
+"Daemon" --> "Participant": [09] slides_cache_status
+"Daemon" -> "Railway": [09] POST /api/slides/download-from-gdrive/{slug}
 
 
 @enduml
