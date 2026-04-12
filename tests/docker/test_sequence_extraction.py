@@ -73,7 +73,7 @@ def test_poll_sequence_diagram_extraction():
     sys.path.insert(0, "/app")
     from scripts.traces_to_puml import generate_puml
 
-    output_path = "/app/docs/sequences/generated/03-poll-and-quiz.puml"
+    output_path = "/app/docs/sequences/extracted/03-poll-and-quiz.puml"
     generate_puml(TRACES_FILE, family="", output=output_path)  # no family filter — capture all spans
 
     # Debug: show raw traces
@@ -184,7 +184,7 @@ def test_qa_sequence_diagram_extraction():
 
         browser.close()
 
-    output_path = "/app/docs/sequences/generated/04-qa-and-wordcloud.puml"
+    output_path = "/app/docs/sequences/extracted/04-qa-and-wordcloud.puml"
     _generate_and_print(output_path)
     print("SUCCESS: QA sequence diagram extracted from traces")
 
@@ -296,7 +296,7 @@ def test_slides_sequence_diagram_extraction():
     sys.path.insert(0, "/app")
     from scripts.traces_to_puml import generate_puml
 
-    output_path = "/app/docs/sequences/generated/06-slides.puml"
+    output_path = "/app/docs/sequences/extracted/06-slides.puml"
     generate_puml(TRACES_FILE, family="", output=output_path, scenarios=scenarios)
 
     generated = Path(output_path).read_text()
