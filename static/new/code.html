@@ -106,6 +106,20 @@
             background: #a9b4b9;
         }
     </style>
+<script src="/static/version.js"></script>
+<script src="/static/version-reload.js"></script>
+<script>
+  (function () {
+    var guard = window.createVersionReloadGuard ? window.createVersionReloadGuard({ countdownSeconds: 5 }) : null;
+    if (!guard) return;
+    setInterval(function () {
+      fetch('/api/status', { cache: 'no-store' })
+        .then(function (r) { return r.json(); })
+        .then(function (d) { guard.check(d.backend_version); })
+        .catch(function () {});
+    }, 10000);
+  })();
+</script>
 </head>
 <body class="bg-surface text-on-surface overflow-hidden">
 <div class="flex h-screen w-full">
