@@ -256,6 +256,7 @@ def _build_runtime_session_snapshot(
             "round_timer_started_at": debate_snapshot.get("round_timer_started_at"),
         },
         "slides_current": misc_state.slides_current,
+        "slides_viewed": [dict(sv) for sv in misc_state.slides_viewed],
     }
 
 
