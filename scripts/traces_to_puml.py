@@ -116,8 +116,9 @@ def _collapse_proxy(edges: list[tuple]) -> list[tuple]:
                     break
             else:
                 result.append((f, t, label, ts, phase))
-        # Railway->Daemon for participant-initiated calls => Participant->Daemon
-        elif f == "Railway" and t == "Daemon" and "/participant" in label:
+        # Railway->Daemon calls are always participant-initiated (Railway proxies
+        # participant REST to daemon). Host calls go directly to daemon, not via Railway.
+        elif f == "Railway" and t == "Daemon":
             result.append(("Participant", "Daemon", label, ts, phase))
         else:
             result.append((f, t, label, ts, phase))

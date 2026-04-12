@@ -3,7 +3,6 @@ hide footbox
 
 participant "Host"
 participant "Participant"
-participant "Railway"
 participant "Daemon"
 
 == Participant opens a slide ==
@@ -13,14 +12,14 @@ participant "Daemon"
 "Daemon" [#gray]--> "Participant": broadcast scores_updated
 "Host" [#gray]-> "Daemon": GET /host/{session_id}
 "Host" [#gray]-> "Daemon": GET /api/{session_id}/host/state
-"Railway" [#gray]-> "Daemon": GET /{session_id}/api/slides
+"Participant" [#gray]-> "Daemon": GET /{session_id}/api/slides
 "Participant" [#gray]-> "Daemon": POST /api/participant/register
 "Daemon" [#gray]--> "Host": notify_host participant_list_updated
 "Participant" [#gray]-> "Daemon": GET /api/participant/state
 "Participant" [#gray]-> "Daemon": POST /api/participant/location
 "Daemon" [#gray]--> "Participant": broadcast active_participants_count_updated
 "Participant" -> "Daemon": PUT /api/participant/name
-"Railway" -> "Daemon": GET /{session_id}/api/slides/check/{slug}
+"Participant" -> "Daemon": GET /{session_id}/api/slides/check/{slug}
 "Daemon" --> "Participant": broadcast slides_cache_status
 
 == Second participant gets cached slide ==
@@ -31,13 +30,13 @@ participant "Daemon"
 "Daemon" [#gray]--> "Participant": broadcast scores_updated
 "Host" [#gray]-> "Daemon": GET /host/{session_id}
 "Host" [#gray]-> "Daemon": GET /api/{session_id}/host/state
-"Railway" [#gray]-> "Daemon": GET /{session_id}/api/slides
+"Participant" [#gray]-> "Daemon": GET /{session_id}/api/slides
 "Participant" [#gray]-> "Daemon": POST /api/participant/register
 "Daemon" [#gray]--> "Host": notify_host participant_list_updated
 "Participant" [#gray]-> "Daemon": GET /api/participant/state
 "Participant" [#gray]-> "Daemon": POST /api/participant/location
 "Participant" [#gray]-> "Daemon": PUT /api/participant/name
-"Railway" -> "Daemon": GET /{session_id}/api/slides/check/{slug}
+"Participant" -> "Daemon": GET /{session_id}/api/slides/check/{slug}
 "Daemon" --> "Participant": broadcast slides_cache_status
 
 
