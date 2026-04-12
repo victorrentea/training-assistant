@@ -133,13 +133,18 @@ body{visibility:hidden}
 <aside class="w-[16%] shrink-0 h-full bg-surface-container flex flex-col p-6 pb-2 space-y-2 z-10">
 <!-- Header Section -->
 <div class="space-y-4">
-<div class="flex items-center gap-3">
-<div>
-<h1 class="text-lg font-extrabold text-on-surface leading-tight tracking-tight">Event-Driven Architectures</h1>
+<div class="flex items-center gap-1 min-w-0">
+<div class="flex-1 min-w-0">
+<div class="flex items-center gap-1 min-w-0">
+<h1 class="text-xl font-extrabold text-on-surface leading-tight tracking-tight truncate">Event-Driven Architectures</h1>
+<button onclick="toggleProfileCard()" class="flex-shrink-0 text-on-surface-variant hover:text-on-surface transition-colors">
+<span class="material-symbols-outlined" id="header-chevron" style="font-size:18px;transition:transform 0.2s">expand_more</span>
+</button>
+</div>
 <p class="text-xs font-semibold text-primary uppercase tracking-widest">12 Participants Live</p>
 </div>
 </div>
-<div class="p-3 bg-surface-container-low rounded-xl group cursor-pointer hover:bg-surface-bright transition-all duration-300">
+<div id="profile-card" class="p-3 bg-surface-container-low rounded-xl group cursor-pointer hover:bg-surface-bright transition-all duration-300">
 <div class="flex items-center gap-2">
 <div class="w-8 h-8 rounded-full bg-primary-container flex-shrink-0 overflow-hidden">
 <img alt="Alex Morgan" class="w-full h-full rounded-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDsIg32gG_GENTnmWJQc1NZelOivfXVIxPJrVLUyWsf6mUfeAA8kiaJBQ91b-vZyRexsS0iFDkMUwc-2X5mLaA0rsJ9Sn45nLYDEdfbSt3okj_StwE4WnC8btqj2wN1h3OBgIKQvMZ1F8LQO1Kj9amvOic3vKSbYphLAAsu7y9S6Mex0ku0SKEjrteq6chaZv-UB_GA84aYFdQjOzCu1PvNgxAFVD8pHfe2Pi9j1eXaZsXRrXE38w9Kj4SBtMHePFH5A97HPyPXQX41"/>
@@ -537,6 +542,13 @@ function closeRepos() {
   if (!list) return;
   list.style.maxHeight = '0px';
   arrow.style.transform = 'rotate(0deg)';
+}
+function toggleProfileCard() {
+  var card = document.getElementById('profile-card');
+  var chevron = document.getElementById('header-chevron');
+  var collapsed = card.style.display === 'none';
+  card.style.display = collapsed ? '' : 'none';
+  chevron.style.transform = collapsed ? '' : 'rotate(-90deg)';
 }
 function scheduleHideOverflow() {
   window._emojiHideTimer = setTimeout(function() {
