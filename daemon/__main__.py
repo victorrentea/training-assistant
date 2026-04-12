@@ -1034,6 +1034,11 @@ def run() -> None:
                             from daemon.ws_messages import SlidesCurrentMsg
                             ws_publish.broadcast(SlidesCurrentMsg(slides_current=_sc))
 
+            # ── Process slides_viewed deltas from addon bridge ──
+            for _sv_batch in _bridge.drain_slides_viewed():
+                from daemon.slides.merge_viewed import merge_slides_viewed
+                merge_slides_viewed(misc_state.slides_viewed, _sv_batch)
+
             # ── Push overlay_connected state change to host ──
             _curr_overlay = _bridge.connected
             if _curr_overlay != _prev_overlay_connected:
