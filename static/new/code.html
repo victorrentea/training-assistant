@@ -211,7 +211,7 @@ body{visibility:hidden}
 <a data-nav="notes" onclick="showView('notes')" class="nav-item rounded-full px-2 py-2 flex items-center gap-3 transition-all cursor-pointer" style="display:none">
 <span class="material-symbols-outlined">description</span>
 <span class="text-base">Notes</span>
-<span class="badge-new">UPDATE</span>
+<span id="notes-badge" class="badge-new"></span>
 </a>
 <a id="gdrive-nav" href="#" target="_blank" rel="noopener" class="nav-item rounded-full px-2 py-2 flex items-center gap-3 transition-all cursor-pointer" style="display:none">
 <span class="material-symbols-outlined">folder_open</span>
@@ -685,6 +685,7 @@ let _sessionId = null;
     console.log('[participant] state:', state);
     document.querySelector('[data-nav="agenda"]').style.display = state.has_agenda ? '' : 'none';
     document.querySelector('[data-nav="notes"]').style.display = state.notes_count > 0 ? '' : 'none';
+    document.getElementById('notes-badge').textContent = state.notes_count || '';
     var summaryNav = document.querySelector('[data-nav="summary"]');
     summaryNav.style.display = state.summary_count > 0 ? '' : 'none';
     var summaryBadge = document.getElementById('summary-badge');
