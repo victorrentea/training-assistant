@@ -25,7 +25,6 @@ channels:
           - $ref: '#/components/messages/participant_presence'
           - $ref: '#/components/messages/daemon_state_push'
           - $ref: '#/components/messages/sync_files'
-          - $ref: '#/components/messages/pdf_download_complete'
           - $ref: '#/components/messages/file_ready_for_download'
           - $ref: '#/components/messages/summary_force'
           - $ref: '#/components/messages/summary_full_reset'
@@ -41,8 +40,6 @@ channels:
           - $ref: '#/components/messages/send_to_host'
           - $ref: '#/components/messages/proxy_response'
           - $ref: '#/components/messages/daemon_ping'
-          - $ref: '#/components/messages/slide_invalidated'
-          - $ref: '#/components/messages/download_pdf'
 
 components:
   messages:
@@ -103,41 +100,6 @@ components:
             additionalProperties:
               type: string
             description: slug → drive_export_url for known PDF slides
-
-    download_pdf:
-      summary: Railway instructs daemon to download a PDF from Google Drive
-      x-feature: slides
-      payload:
-        type: object
-        required: [type, slug, drive_export_url]
-        properties:
-          type:
-            type: string
-            enum: [download_pdf]
-          slug:
-            type: string
-          drive_export_url:
-            type: string
-
-    pdf_download_complete:
-      summary: Railway notifies daemon that a PDF download has finished (ok or error)
-      x-feature: slides
-      payload:
-        type: object
-        required: [type, slug, status]
-        properties:
-          type:
-            type: string
-            enum: [pdf_download_complete]
-          slug:
-            type: string
-          status:
-            type: string
-            enum: [ok, error]
-          error:
-            type: string
-            nullable: true
-            description: Error message when status is "error"
 
     # ── Paste & File Upload ───────────────────────────────────────────────────
 
@@ -334,17 +296,3 @@ components:
             type: string
             enum: [daemon_ping]
 
-    # ── Slides ────────────────────────────────────────────────────────────────
-
-    slide_invalidated:
-      summary: Daemon notifies Railway that a slide PDF has been invalidated and must be re-served
-      x-feature: slides
-      payload:
-        type: object
-        required: [type, slug]
-        properties:
-          type:
-            type: string
-            enum: [slide_invalidated]
-          slug:
-            type: string

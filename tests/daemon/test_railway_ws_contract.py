@@ -142,9 +142,8 @@ class TestRailwayWsSubscribe:
           daemon now polls via REST POST /api/slides/download-from-gdrive/{slug} instead.
           Kept in YAML for documentation completeness.
         """
-        # Messages documented in YAML subscribe that no longer have active daemon handlers
-        # (deprecated or migrated to REST polling)
-        known_deprecated = {"pdf_download_complete"}
+        # Messages still in Railway code but dead — replaced by REST POST /api/slides/download-from-gdrive
+        known_deprecated: set[str] = set()
 
         daemon_handlers = _parse_daemon_register_handlers()
         yaml_subscribe = self.subscribe_names - known_deprecated
@@ -226,12 +225,14 @@ class TestRailwayWsPublish:
         # but are not documented as standalone protocol messages in the YAML:
         # - participant_registered, participant_renamed, participant_avatar_updated,
         #   participant_location: daemon identity write-backs that piggyback on broadcast
+        # Dead code in Railway — replaced by REST /api/slides/download-from-gdrive
+        dead_protocol = {"download_pdf", "slide_invalidated"}
         internal_only = {
             "participant_registered",
             "participant_renamed",
             "participant_avatar_updated",
             "participant_location",
-        }
+        } | dead_protocol
 
         handler_types = _parse_railway_daemon_msg_handler_keys() - internal_only
         yaml_publish = self.publish_names
@@ -252,8 +253,10 @@ class TestRailwayWsPublish:
         """
         push_types = _parse_push_to_daemon_types()
         yaml_subscribe = _extract_channel_message_names(self.spec, "subscribe")
+        # Dead code in Railway — replaced by REST /api/slides/download-from-gdrive
+        dead_protocol = {"pdf_download_complete"}
 
-        missing_from_yaml = push_types - yaml_subscribe
+        missing_from_yaml = push_types - yaml_subscribe - dead_protocol
         errors = []
         if missing_from_yaml:
             errors.append(

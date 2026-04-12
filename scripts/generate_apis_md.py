@@ -734,10 +734,9 @@ def _extract_railway_ws(
                 feature = str(msg_spec.get("x-feature") or "infrastructure")
                 section = sections.setdefault(feature, FeatureSection([], [], [], [], [], []))
                 payload = msg_spec.get("payload", {})
-                direction_label = "Railway → Daemon" if direction == "subscribe" else "Daemon → Railway"
                 ws = WsMsg(
                     name=msg_name,
-                    notes=[f"Direction: {direction_label}"] + _collect_notes(msg_spec),
+                    notes=_collect_notes(msg_spec),
                     payload_shape=_ws_payload_shape(payload if isinstance(payload, dict) else {}, spec),
                 )
                 section.daemon_ws.append(ws)

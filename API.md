@@ -45,7 +45,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 ### Railway WS
 | Message | Payload |
 | --- | --- |
-| Direction: Daemon → Railway<br>Daemon announces current active session to Railway on connect or session change<br>`set_session_id` | `session_id?: string`<br>`session_name?: string` |
+| Daemon announces current active session to Railway on connect or session change<br>`set_session_id` | `session_id?: string`<br>`session_name?: string` |
 
 ## Feature: Identity
 
@@ -78,8 +78,8 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 ### Railway WS
 | Message | Payload |
 | --- | --- |
-| Direction: Railway → Daemon<br>Participant connected or disconnected from Railway<br>`participant_presence` | `uuid: string  # Participant UUID`<br>`online: bool` |
-| Direction: Railway → Daemon<br>Railway pushes current online participant list to newly connected daemon<br>`daemon_state_push` | `online_participants: list[string]  # UUIDs of currently online participants` |
+| Participant connected or disconnected from Railway<br>`participant_presence` | `uuid: string  # Participant UUID`<br>`online: bool` |
+| Railway pushes current online participant list to newly connected daemon<br>`daemon_state_push` | `online_participants: list[string]  # UUIDs of currently online participants` |
 
 ## Feature: Slides
 
@@ -107,10 +107,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 ### Railway WS
 | Message | Payload |
 | --- | --- |
-| Direction: Railway → Daemon<br>Railway requests daemon to sync static files and PDF cache<br>`sync_files` | `static_hashes: dict[str, string]  # filename → hash of current Railway-served static file`<br>`pdf_slugs: dict[str, string]  # slug → drive_export_url for known PDF slides` |
-| Direction: Railway → Daemon<br>Railway notifies daemon that a PDF download has finished (ok or error)<br>`pdf_download_complete` | `slug: string`<br>`status: 'ok' \| 'error'`<br>`error?: string  # Error message when status is "error"` |
-| Direction: Daemon → Railway<br>Daemon notifies Railway that a slide PDF has been invalidated and must be re-served<br>`slide_invalidated` | `slug: string` |
-| Direction: Daemon → Railway<br>Railway instructs daemon to download a PDF from Google Drive<br>`download_pdf` | `slug: string`<br>`drive_export_url: string` |
+| Railway requests daemon to sync static files and PDF cache<br>`sync_files` | `static_hashes: dict[str, string]  # filename → hash of current Railway-served static file`<br>`pdf_slugs: dict[str, string]  # slug → drive_export_url for known PDF slides` |
 
 ## Feature: Activity
 
@@ -291,7 +288,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 ### Railway WS
 | Message | Payload |
 | --- | --- |
-| Direction: Railway → Daemon<br>Railway instructs daemon to reset all participant scores<br>`scores_reset` | - |
+| Railway instructs daemon to reset all participant scores<br>`scores_reset` | - |
 
 ## Feature: Emoji Reactions
 
@@ -355,7 +352,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 ### Railway WS
 | Message | Payload |
 | --- | --- |
-| Direction: Railway → Daemon<br>Railway notifies daemon that a participant has uploaded a file<br>`file_ready_for_download` | `file_id: int`<br>`uuid: string  # Participant UUID who uploaded the file`<br>`filename: string`<br>`size: int  # File size in bytes`<br>`session_id: string` |
+| Railway notifies daemon that a participant has uploaded a file<br>`file_ready_for_download` | `file_id: int`<br>`uuid: string  # Participant UUID who uploaded the file`<br>`filename: string`<br>`size: int  # File size in bytes`<br>`session_id: string` |
 
 ## Feature: Notes & Summary
 
@@ -386,8 +383,8 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 ### Railway WS
 | Message | Payload |
 | --- | --- |
-| Direction: Railway → Daemon<br>Railway instructs daemon to force-generate a summary immediately<br>`summary_force` | - |
-| Direction: Railway → Daemon<br>Railway instructs daemon to reset summary state entirely<br>`summary_full_reset` | - |
+| Railway instructs daemon to force-generate a summary immediately<br>`summary_force` | - |
+| Railway instructs daemon to reset summary state entirely<br>`summary_full_reset` | - |
 
 ## Feature: Feedback
 
@@ -413,9 +410,9 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 ### Railway WS
 | Message | Payload |
 | --- | --- |
-| Direction: Railway → Daemon<br>Railway proxies a participant REST request to the daemon for processing<br>`proxy_request` | `id: string  # Correlation ID to match with proxy_response`<br>`method: string  # HTTP method (GET, POST, etc.)`<br>`path: string  # Request path forwarded from the participant`<br>`body?: string  # JSON-encoded request body`<br>`headers?: dict[str, string]  # Forwarded request headers`<br>`participant_id?: string  # UUID of the participant who made the original request` |
-| Direction: Daemon → Railway<br>Daemon sends its build timestamp so Railway can detect version drift<br>`code_timestamp` | `timestamp: int  # Unix timestamp of the daemon build` |
-| Direction: Daemon → Railway<br>Daemon asks Railway to forward an event to all participants in the session<br>Wrapper message — inner event payload is a participant WS message<br>`broadcast` | `event: dict  # Participant WS message payload to broadcast` |
-| Direction: Daemon → Railway<br>Daemon asks Railway to forward an event to the host browser<br>Wrapper message — inner event payload is a host WS message<br>`send_to_host` | `event: dict  # Host WS message payload to deliver` |
-| Direction: Daemon → Railway<br>Daemon returns the result of a proxied participant REST request<br>`proxy_response` | `id: string  # Correlation ID matching the original proxy_request`<br>`status: int  # HTTP status code`<br>`body: string  # Response body (JSON or plain text)`<br>`content_type: string  # MIME type of the response body` |
-| Direction: Daemon → Railway<br>Daemon keepalive ping to Railway<br>`daemon_ping` | - |
+| Railway proxies a participant REST request to the daemon for processing<br>`proxy_request` | `id: string  # Correlation ID to match with proxy_response`<br>`method: string  # HTTP method (GET, POST, etc.)`<br>`path: string  # Request path forwarded from the participant`<br>`body?: string  # JSON-encoded request body`<br>`headers?: dict[str, string]  # Forwarded request headers`<br>`participant_id?: string  # UUID of the participant who made the original request` |
+| Daemon sends its build timestamp so Railway can detect version drift<br>`code_timestamp` | `timestamp: int  # Unix timestamp of the daemon build` |
+| Daemon asks Railway to forward an event to all participants in the session<br>Wrapper message — inner event payload is a participant WS message<br>`broadcast` | `event: dict  # Participant WS message payload to broadcast` |
+| Daemon asks Railway to forward an event to the host browser<br>Wrapper message — inner event payload is a host WS message<br>`send_to_host` | `event: dict  # Host WS message payload to deliver` |
+| Daemon returns the result of a proxied participant REST request<br>`proxy_response` | `id: string  # Correlation ID matching the original proxy_request`<br>`status: int  # HTTP status code`<br>`body: string  # Response body (JSON or plain text)`<br>`content_type: string  # MIME type of the response body` |
+| Daemon keepalive ping to Railway<br>`daemon_ping` | - |
