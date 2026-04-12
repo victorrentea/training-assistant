@@ -1,0 +1,116 @@
+import json
+import tempfile
+from pathlib import Path
+
+
+def _write_spans(path, spans):
+    Path(path).write_text("\n".join(json.dumps(s) for s in spans) + "\n")
+
+
+def _make_span(name, service, trace_id="aaa", span_id="s1", parent_span_id="",
+               attributes=None, start_time=1000, end_time=2000):
+    return {
+        "name": name,
+        "resource": {"service.name": service},
+        "context": {"trace_id": trace_id, "span_id": span_id},
+        "parent_id": parent_span_id,
+        "start_time": start_time,
+        "end_time": end_time,
+        "attributes": attributes or {},
+    }
+
+
+def test_basic_cross_service_arrows():
+    from scripts.traces_to_puml import generate_puml
+
+    with tempfile.NamedTemporaryFile(suffix=".jsonl", delete=False, mode="w") as f:
+        path = f.name
+    out = path + ".puml"
+
+    _write_spans(path, [
+        _make_span("POST /api/poll/vote", "Participant", span_id="s1",
+                    start_time=1000, attributes={"trace.family": "poll"}),
+        _make_span("POST /api/poll/vote", "Daemon", span_id="s2", parent_span_id="s1",
+                    start_time=1001, attributes={"trace.family": "poll"}),
+    ])
+
+    generate_puml(path, family="poll", output=out)
+    content = Path(out).read_text()
+
+    assert "Participant" in content
+    assert "Daemon" in content
+    assert "POST /api/poll/vote" in content
+    assert "@startuml" in content
+    assert "@enduml" in content
+
+
+def test_skip_internal_spans():
+    from scripts.traces_to_puml import generate_puml
+
+    with tempfile.NamedTemporaryFile(suffix=".jsonl", delete=False, mode="w") as f:
+        path = f.name
+    out = path + ".puml"
+
+    _write_spans(path, [
+        _make_span("POST /api/poll", "Host", span_id="s1",
+                    start_time=1000, attributes={"trace.family": "test"}),
+        _make_span("POST /api/poll", "Daemon", span_id="s2", parent_span_id="s1",
+                    start_time=1001, attributes={"trace.family": "test"}),
+        _make_span("create_poll", "Daemon", span_id="s3", parent_span_id="s2",
+                    start_time=1002, attributes={"trace.family": "test"}),
+    ])
+
+    generate_puml(path, family="test", output=out)
+    content = Path(out).read_text()
+
+    assert "create_poll" not in content
+    assert "POST /api/poll" in content
+
+
+def test_collapse_proxy_chain():
+    from scripts.traces_to_puml import generate_puml
+
+    with tempfile.NamedTemporaryFile(suffix=".jsonl", delete=False, mode="w") as f:
+        path = f.name
+    out = path + ".puml"
+
+    _write_spans(path, [
+        _make_span("POST /api/participant/poll/vote", "Participant", span_id="s1",
+                    start_time=1000, attributes={"trace.family": "proxy"}),
+        _make_span("proxy_request", "Railway", span_id="s2", parent_span_id="s1",
+                    start_time=1001, attributes={"proxy.path": "/api/participant/poll/vote",
+                                                  "trace.family": "proxy"}),
+        _make_span("POST /api/participant/poll/vote", "Daemon", span_id="s3", parent_span_id="s2",
+                    start_time=1002, attributes={"trace.family": "proxy"}),
+    ])
+
+    generate_puml(path, family="proxy", output=out)
+    content = Path(out).read_text()
+
+    assert "Railway" not in content
+    assert "Participant" in content
+    assert "Daemon" in content
+
+
+def test_collapse_broadcast_relay():
+    from scripts.traces_to_puml import generate_puml
+
+    with tempfile.NamedTemporaryFile(suffix=".jsonl", delete=False, mode="w") as f:
+        path = f.name
+    out = path + ".puml"
+
+    _write_spans(path, [
+        _make_span("broadcast:poll_opened", "Daemon", span_id="s1",
+                    start_time=1000, attributes={"trace.family": "bcast"}),
+        _make_span("broadcast_fanout", "Railway", span_id="s2", parent_span_id="s1",
+                    start_time=1001, attributes={"trace.family": "bcast"}),
+        _make_span("ws_receive:poll_opened", "Participant", span_id="s3", parent_span_id="s2",
+                    start_time=1002, attributes={"trace.family": "bcast"}),
+    ])
+
+    generate_puml(path, family="bcast", output=out)
+    content = Path(out).read_text()
+
+    assert "Railway" not in content
+    assert "Daemon" in content
+    assert "Participant" in content
