@@ -21,6 +21,7 @@ body{visibility:hidden}
 <script>document.fonts.ready.then(function(){document.body.style.visibility='visible'})</script>
 <script src="/static/emoji-float.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mammoth@1/mammoth.browser.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked@9/marked.min.js"></script>
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 <script id="tailwind-config">
         tailwind.config = {
@@ -216,10 +217,10 @@ body{visibility:hidden}
 <span class="material-symbols-outlined">folder_open</span>
 <span class="text-base">Google Drive</span>
 </a>
-<a data-nav="summary" onclick="showView('summary')" class="nav-item rounded-full px-2 py-2 flex items-center gap-3 transition-all cursor-pointer">
+<a data-nav="summary" onclick="showView('summary')" class="nav-item rounded-full px-2 py-2 flex items-center gap-3 transition-all cursor-pointer" style="display:none">
 <span class="material-symbols-outlined">psychology</span>
 <span class="text-base">AI Summary</span>
-<span class="badge-new">UPDATE</span>
+<span id="summary-badge" class="badge-new" style="display:none"></span>
 </a>
 <div>
 <a data-nav="topics" onclick="toggleTopics()" class="nav-item rounded-full px-2 h-10 flex items-center gap-3 transition-all cursor-pointer">
@@ -304,45 +305,7 @@ refactoring-kata<span class="material-symbols-outlined text-sm flex-shrink-0">op
   <div id="notes-content" class="text-on-surface leading-relaxed whitespace-pre-wrap">Loading…</div>
 </div>
 <div id="summary-view" style="display:none;font-size:120%" class="h-full overflow-y-auto px-16 py-12" onscroll="saveScroll('summary',this)">
-  <h1 class="text-3xl font-extrabold text-on-surface mb-6">Session Summary</h1>
-  <h2 class="text-xl font-bold text-on-surface mb-3">Key Concepts Covered</h2>
-  <h3 class="text-base font-semibold text-on-surface-variant mb-2">Architecture Principles</h3>
-  <ul class="list-disc pl-6 space-y-1 text-sm text-on-surface-variant mb-6">
-    <li>Single Responsibility and separation of concerns</li>
-    <li>Dependency inversion keeps modules decoupled</li>
-    <li>Hexagonal architecture isolates domain logic from infrastructure</li>
-    <li>Ports and adapters enable testability</li>
-  </ul>
-  <h3 class="text-base font-semibold text-on-surface-variant mb-2">Design Patterns</h3>
-  <ul class="list-disc pl-6 space-y-1 text-sm text-on-surface-variant mb-6">
-    <li>Repository pattern abstracts persistence</li>
-    <li>Command/Query separation improves clarity</li>
-    <li>Factory methods encapsulate object creation</li>
-    <li>Observer pattern drives reactive pipelines</li>
-  </ul>
-  <h2 class="text-xl font-bold text-on-surface mb-3">Discussion Highlights</h2>
-  <h3 class="text-base font-semibold text-on-surface-variant mb-2">Open Questions from Participants</h3>
-  <ul class="list-disc pl-6 space-y-1 text-sm text-on-surface-variant mb-6">
-    <li>When does eventual consistency outweigh strong consistency?</li>
-    <li>How do you migrate a monolith incrementally without downtime?</li>
-    <li>Is clean architecture overkill for small services?</li>
-    <li>How do you enforce architecture rules in CI?</li>
-  </ul>
-  <h3 class="text-base font-semibold text-on-surface-variant mb-2">Takeaways by Vote</h3>
-  <ul class="list-disc pl-6 space-y-1 text-sm text-on-surface-variant mb-6">
-    <li>12 participants flagged Hexagonal Architecture as most valuable</li>
-    <li>8 participants want a deeper dive on Event Sourcing</li>
-    <li>TDD resonated most with junior developers in the room</li>
-  </ul>
-  <h2 class="text-xl font-bold text-on-surface mb-3">Action Items</h2>
-  <h3 class="text-base font-semibold text-on-surface-variant mb-2">For the Team</h3>
-  <ul class="list-disc pl-6 space-y-1 text-sm text-on-surface-variant mb-6">
-    <li>Set up ArchUnit checks in the build pipeline</li>
-    <li>Schedule a refactoring kata session next sprint</li>
-    <li>Review existing service boundaries against DDD aggregates</li>
-    <li>Introduce ADR template in the repo wiki</li>
-    <li>Run a legacy code audit on the billing module</li>
-  </ul>
+  <div id="summary-content" class="text-on-surface leading-relaxed prose max-w-none">Loading…</div>
 </div>
 <!-- Agenda View -->
 <div id="agenda-view" style="display:none;font-size:120%" class="h-full overflow-y-auto px-16 py-12" onscroll="saveScroll('agenda',this)">
@@ -692,6 +655,7 @@ function showView(name) {
   LS.setView(name);
   if (name === 'agenda') loadAgenda();
   if (name === 'notes') loadNotes();
+  if (name === 'summary') loadSummary();
   VIEWS.forEach(function(v) {
     var el = document.getElementById(v + '-view');
     el.style.display = v === name ? '' : 'none';
@@ -721,12 +685,23 @@ let _sessionId = null;
     console.log('[participant] state:', state);
     document.querySelector('[data-nav="agenda"]').style.display = state.has_agenda ? '' : 'none';
     document.querySelector('[data-nav="notes"]').style.display = state.notes_count > 0 ? '' : 'none';
+    var summaryNav = document.querySelector('[data-nav="summary"]');
+    summaryNav.style.display = state.summary_count > 0 ? '' : 'none';
+    var summaryBadge = document.getElementById('summary-badge');
+    if (state.summary_count > 0 && state.summary_updated_at) {
+      var d = new Date(state.summary_updated_at);
+      summaryBadge.textContent = d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+      summaryBadge.style.display = '';
+    } else {
+      summaryBadge.style.display = 'none';
+    }
     var gdriveNav = document.getElementById('gdrive-nav');
     if (state.gdrive_url) { gdriveNav.href = state.gdrive_url; gdriveNav.style.display = ''; }
     else { gdriveNav.style.display = 'none'; }
     var saved = LS.getView();
     if (saved === 'agenda' && !state.has_agenda) saved = 'slides';
     if (saved === 'notes' && !(state.notes_count > 0)) saved = 'slides';
+    if (saved === 'summary' && !(state.summary_count > 0)) saved = 'slides';
     showView(saved);
   } catch (e) {
     console.error('[participant] failed to load state:', e);
@@ -765,6 +740,23 @@ async function loadNotes() {
     }
   } catch (e) {
     el.textContent = 'Failed to load notes.';
+  }
+}
+
+async function loadSummary() {
+  const el = document.getElementById('summary-content');
+  el.textContent = 'Loading…';
+  try {
+    const data = await fetch(`/${_sessionId}/api/participant/summary`).then(r => r.ok ? r.json() : Promise.reject('not found'));
+    if (data) {
+      const md = data.raw_markdown ||
+        (data.points || []).map(p => '- ' + (typeof p === 'string' ? p : p.text)).join('\n');
+      el.innerHTML = md ? marked.parse(md) : 'No summary yet.';
+    } else {
+      el.textContent = 'No summary yet.';
+    }
+  } catch (e) {
+    el.textContent = 'Failed to load summary.';
   }
 }
 </script>
