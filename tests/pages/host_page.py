@@ -66,6 +66,18 @@ class HostPage:
         for text in option_texts:
             self._page.locator(f".result-row:has-text('{text}')").click()
 
+    def reveal_correct(self, correct_ids: list[str]) -> None:
+        """Reveal correct answers and award scores via daemon API."""
+        import json as _json
+        self._page.evaluate(f"""async () => {{
+            const resp = await fetch(API('/poll/correct'), {{
+                method: 'PUT',
+                headers: {{'Content-Type': 'application/json'}},
+                body: JSON.stringify({{correct_ids: {_json.dumps(correct_ids)}}})
+            }});
+            if (!resp.ok) throw new Error('Reveal correct failed: ' + resp.status);
+        }}""")
+
     # ── Word Cloud ──────────────────────────────────────────────────────────
 
     def open_wordcloud_tab(self) -> None:
