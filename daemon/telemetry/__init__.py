@@ -2,10 +2,10 @@
 
 When OTEL_TRACES_FILE is set, configures tracing programmatically:
 - Creates a TracerProvider with FileSpanExporter
-- Instruments FastAPI and urllib automatically
-- No need for the `opentelemetry-instrument` CLI wrapper
+- Call setup_tracing() once at startup
 
-Call setup_tracing() once at startup, BEFORE creating FastAPI apps.
+FastAPI app instrumentation should be done separately per-app
+via instrument_fastapi_app(app).
 """
 import os
 
@@ -29,16 +29,11 @@ def setup_tracing():
     provider.add_span_processor(SimpleSpanProcessor(FileSpanExporter(traces_file)))
     trace.set_tracer_provider(provider)
 
-    # Auto-instrument FastAPI (will instrument any app created after this)
+
+def instrument_fastapi_app(app):
+    """Instrument a specific FastAPI app instance for OTel tracing."""
     try:
         from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
-        FastAPIInstrumentor().instrument()
-    except ImportError:
-        pass
-
-    # Auto-instrument urllib
-    try:
-        from opentelemetry.instrumentation.urllib import URLLibInstrumentor
-        URLLibInstrumentor().instrument()
+        FastAPIInstrumentor.instrument_app(app)
     except ImportError:
         pass

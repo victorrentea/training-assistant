@@ -75,6 +75,13 @@ def create_app(backend_url: str) -> FastAPI:
 
     app = FastAPI(title="Daemon Host Panel", docs_url=None, redoc_url=None, lifespan=lifespan)
 
+    # OTel: instrument this FastAPI app instance
+    try:
+        from daemon.telemetry import instrument_fastapi_app
+        instrument_fastapi_app(app)
+    except ImportError:
+        pass
+
     # Allow the Railway participant landing page to fetch session info from localhost
     app.add_middleware(
         CORSMiddleware,

@@ -28,11 +28,13 @@ from railway.shared.state import state  # re-exported for tests: from railway.ap
 
 logging.basicConfig(level=logging.INFO)
 
-# OTel tracing — must run before FastAPI app creation
+# OTel tracing — provider setup (before app creation, instrumentor applied after)
+_otel_active = False
 if os.environ.get("OTEL_TRACES_FILE"):
     try:
         from daemon.telemetry import setup_tracing
         setup_tracing()
+        _otel_active = True
     except Exception as _otel_err:
         logging.getLogger(__name__).warning("OTel setup failed: %s", _otel_err)
 
@@ -79,6 +81,14 @@ async def lifespan(_: FastAPI):
 
 
 app = FastAPI(title="Workshop Tool", lifespan=lifespan)
+
+# Instrument this specific app instance for OTel
+if _otel_active:
+    try:
+        from daemon.telemetry import instrument_fastapi_app
+        instrument_fastapi_app(app)
+    except Exception:
+        pass
 
 
 @app.exception_handler(InvalidSessionRedirect)
