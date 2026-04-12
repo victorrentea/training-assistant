@@ -1,5 +1,6 @@
 import threading
 import uuid
+from pathlib import Path
 
 
 class MiscState:
@@ -22,6 +23,7 @@ class MiscState:
         self.session_main: dict | None = None
         self.session_name: str | None = None
         self.gdrive_url: str | None = None
+        self.agenda_docx_path: Path | None = None
 
     def sync_from_restore(self, data: dict):
         with self._lock:
