@@ -3948,41 +3948,7 @@ function closeAgendaModal() {
   }
 
   function showDesktopEmojiFloat(emoji, btn) {
-    const el = document.createElement('div');
-    el.textContent = emoji;
-    el.style.cssText = 'position:fixed;font-size:8rem;z-index:10000;pointer-events:none';
-    let startX, startY;
-    if (btn) {
-      const rect = btn.getBoundingClientRect();
-      startX = rect.left + rect.width / 2;
-      startY = rect.top;
-    } else {
-      startX = 80;
-      startY = window.innerHeight - 100;
-    }
-    el.style.left = startX + 'px';
-    el.style.top = startY + 'px';
-    document.body.appendChild(el);
-
-    const duration = 2500 + Math.random() * 1500;
-    const riseHeight = 500;
-    const driftX = (Math.random() * 2 - 1) * 50; // -50..+50 px total lateral drift at top
-    const steps = 20;
-    const keyframes = [];
-    for (let i = 0; i <= steps; i++) {
-      const t = i / steps;
-      const y = -riseHeight * t;
-      const wobble = t * driftX;
-      const scale = 1 + t * 0.3;
-      const opacity = t < 0.4 ? 1 : 1 - (t - 0.4) / 0.6;
-      keyframes.push({
-        transform: `translate(calc(-50% + ${wobble}px), calc(-50% + ${y}px)) scale(${scale})`,
-        opacity: opacity,
-        offset: t
-      });
-    }
-    const anim = el.animate(keyframes, { duration, easing: 'ease-out', fill: 'forwards' });
-    anim.onfinish = () => el.remove();
+    window.showDesktopEmojiFloat(emoji, btn);
   }
 
   function submitQuestion() {

@@ -15,6 +15,7 @@ body{visibility:hidden}
 .nav-active:hover{background-color:var(--color-primary-container,#dfe0ff)!important;color:var(--color-on-primary-container,#3747ac)!important}
 </style>
 <script>document.fonts.ready.then(function(){document.body.style.visibility='visible'})</script>
+<script src="/static/emoji-float.js"></script>
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 <script id="tailwind-config">
         tailwind.config = {
@@ -395,13 +396,13 @@ body{visibility:hidden}
 <!-- Floating Reaction UI (Bottom Right) — always on top across all views -->
 <div class="absolute bottom-12 right-12 flex flex-col items-end gap-4 z-30">
 <div class="flex items-center gap-2 p-2 bg-surface-container-lowest whisper-shadow rounded-full glass border border-outline-variant border-opacity-10">
-<button class="w-10 h-10 flex items-center justify-center hover:bg-surface-container rounded-full text-xl transition-transform hover:scale-110" title="Genuinely love this.">❤️</button>
-<button class="w-10 h-10 flex items-center justify-center hover:bg-surface-container rounded-full text-xl transition-transform hover:scale-110" title="I need a break. Now.">☕</button>
-<button class="w-10 h-10 flex items-center justify-center hover:bg-surface-container rounded-full text-xl transition-transform hover:scale-110" title="Yes. More of this.">👍</button>
-<button class="w-10 h-10 flex items-center justify-center hover:bg-surface-container rounded-full text-xl transition-transform hover:scale-110" title="This is absolute fire.">🔥</button>
-<button class="w-10 h-10 flex items-center justify-center hover:bg-surface-container rounded-full text-xl transition-transform hover:scale-110" title="Hmm... not convinced yet.">🤔</button>
+<button onclick="showDesktopEmojiFloat(this.textContent.trim(), this)" class="w-[3.25rem] h-[3.25rem] flex items-center justify-center hover:bg-surface-container rounded-full text-[1.625rem] transition-transform hover:scale-110" title="Genuinely love this.">❤️</button>
+<button onclick="showDesktopEmojiFloat(this.textContent.trim(), this)" class="w-[3.25rem] h-[3.25rem] flex items-center justify-center hover:bg-surface-container rounded-full text-[1.625rem] transition-transform hover:scale-110" title="I need a break. Now.">☕</button>
+<button onclick="showDesktopEmojiFloat(this.textContent.trim(), this)" class="w-[3.25rem] h-[3.25rem] flex items-center justify-center hover:bg-surface-container rounded-full text-[1.625rem] transition-transform hover:scale-110" title="Yes. More of this.">👍</button>
+<button onclick="showDesktopEmojiFloat(this.textContent.trim(), this)" class="w-[3.25rem] h-[3.25rem] flex items-center justify-center hover:bg-surface-container rounded-full text-[1.625rem] transition-transform hover:scale-110" title="This is absolute fire.">🔥</button>
+<button onclick="showDesktopEmojiFloat(this.textContent.trim(), this)" class="w-[3.25rem] h-[3.25rem] flex items-center justify-center hover:bg-surface-container rounded-full text-[1.625rem] transition-transform hover:scale-110" title="Hmm... not convinced yet.">🤔</button>
 <div class="w-[1px] h-6 bg-outline-variant opacity-20"></div>
-<button class="w-10 h-10 flex items-center justify-center hover:bg-surface-container rounded-full text-xl transition-transform hover:scale-110" title="I can't see your screen.">🖥️</button>
+<button onclick="showDesktopEmojiFloat(this.textContent.trim(), this)" class="w-[3.25rem] h-[3.25rem] flex items-center justify-center hover:bg-surface-container rounded-full text-[1.625rem] transition-transform hover:scale-110" title="I can't see your screen.">🖥️</button>
 <div class="w-[1px] h-6 bg-outline-variant opacity-20"></div>
 <!-- Plus button with hover overflow popup -->
 <div class="relative" id="emoji-more-wrap">
@@ -416,13 +417,13 @@ body{visibility:hidden}
   class="absolute bottom-full right-0 mb-3 opacity-0 pointer-events-none translate-y-1 transition-all duration-200"
   onmouseenter="clearTimeout(window._emojiHideTimer)"
   onmouseleave="scheduleHideOverflow()">
-  <div class="flex items-center gap-2 p-2 bg-surface-container-lowest whisper-shadow rounded-full glass border border-outline-variant border-opacity-10 whitespace-nowrap">
-    <button class="w-10 h-10 flex items-center justify-center hover:bg-surface-container rounded-full text-xl transition-transform hover:scale-110" title="Fight me on this.">⚔️</button>
-    <button class="w-10 h-10 flex items-center justify-center hover:bg-surface-container rounded-full text-xl transition-transform hover:scale-110" title="I'm dead 💀">😂</button>
-    <button class="w-10 h-10 flex items-center justify-center hover:bg-surface-container rounded-full text-xl transition-transform hover:scale-110" title="My brain just exploded.">🤯</button>
-    <button class="w-10 h-10 flex items-center justify-center hover:bg-surface-container rounded-full text-xl transition-transform hover:scale-110" title="Wait, I have an idea!">💡</button>
-    <button class="w-10 h-10 flex items-center justify-center hover:bg-surface-container rounded-full text-xl transition-transform hover:scale-110" title="Agreed. 100%.">✅</button>
-    <button class="w-10 h-10 flex items-center justify-center hover:bg-surface-container rounded-full text-xl transition-transform hover:scale-110" title="Nope. Hard disagree.">❌</button>
+  <div class="flex flex-col-reverse items-center gap-2 p-2 bg-surface-container-lowest whisper-shadow rounded-full glass border border-outline-variant border-opacity-10">
+    <button onclick="showDesktopEmojiFloat(this.textContent.trim(), this)" class="w-[3.25rem] h-[3.25rem] flex items-center justify-center hover:bg-surface-container rounded-full text-[1.625rem] transition-transform hover:scale-110" title="Fight me on this.">⚔️</button>
+    <button onclick="showDesktopEmojiFloat(this.textContent.trim(), this)" class="w-[3.25rem] h-[3.25rem] flex items-center justify-center hover:bg-surface-container rounded-full text-[1.625rem] transition-transform hover:scale-110" title="I'm dead 💀">😂</button>
+    <button onclick="showDesktopEmojiFloat(this.textContent.trim(), this)" class="w-[3.25rem] h-[3.25rem] flex items-center justify-center hover:bg-surface-container rounded-full text-[1.625rem] transition-transform hover:scale-110" title="My brain just exploded.">🤯</button>
+    <button onclick="showDesktopEmojiFloat(this.textContent.trim(), this)" class="w-[3.25rem] h-[3.25rem] flex items-center justify-center hover:bg-surface-container rounded-full text-[1.625rem] transition-transform hover:scale-110" title="Wait, I have an idea!">💡</button>
+    <button onclick="showDesktopEmojiFloat(this.textContent.trim(), this)" class="w-[3.25rem] h-[3.25rem] flex items-center justify-center hover:bg-surface-container rounded-full text-[1.625rem] transition-transform hover:scale-110" title="Agreed. 100%.">✅</button>
+    <button onclick="showDesktopEmojiFloat(this.textContent.trim(), this)" class="w-[3.25rem] h-[3.25rem] flex items-center justify-center hover:bg-surface-container rounded-full text-[1.625rem] transition-transform hover:scale-110" title="Nope. Hard disagree.">❌</button>
   </div>
 </div>
 </div>
