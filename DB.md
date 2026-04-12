@@ -11,39 +11,16 @@ Generated from `daemon/persisted_models.py`.
 
 ```
 active_session_id?: string
-session_id?: string
 log_level?: string
-main?: PersistedSessionRef {
-  name?:string
-  started_at?:string
-  status?:string
-  ended_at?:string
-  paused_intervals?:list[dict[str, any]]
-}
-talk?: PersistedSessionRef {
-  name?:string
-  started_at?:string
-  status?:string
-  ended_at?:string
-  paused_intervals?:list[dict[str, any]]
-}
-stack?: list[PersistedSessionRef {
-  name?:string
-  started_at?:string
-  status?:string
-  ended_at?:string
-  paused_intervals?:list[dict[str, any]]
-}]
 ```
 
 ## Session State
 ### `PersistedSessionState`
 
 ```
-session_id?: string
-session_name?: string
-saved_at?: string
-mode?: string
+session_id?: string  # 6-char alphanumeric join code
+saved_at?: string  # ISO timestamp of last snapshot write
+mode?: string  # workshop | conference
 activity?: string
 current_activity?: string
 participants?: dict[str, PersistedParticipant {
@@ -51,57 +28,47 @@ participants?: dict[str, PersistedParticipant {
   avatar?:string
   score?:int | number
   location?:string
-}]
+}]  # participant_uuid → identity/score
 poll?: PersistedPollState {
-  definition?:dict[str, any]
+  definition?:dict[str, any]  # Poll question and options as shown to participants
   active?:bool
-  correct_ids?:list[string]
+  correct_ids?:list[string]  # Option IDs marked as correct answers
   opened_at?:string
   timer_seconds?:int
   timer_started_at?:string
-  votes?:dict[str, any]
+  votes?:dict[str, any]  # participant_uuid → chosen option ID(s)
 }
 qa?: dict[str, any]
-qa_questions?: dict[str, dict[str, any]]
+qa_questions?: dict[str, dict[str, any]]  # question_id → {text, author, upvoters, answered}
 wordcloud?: PersistedWordCloudState {
-  words?:dict[str, int]
-  word_order?:list[string]
+  words?:dict[str, int]  # word → submission count
+  word_order?:list[string]  # Words in submission order
   topic?:string
 }
 codereview?: PersistedCodeReviewState {
   snippet?:string
   language?:string
-  phase?:string
-  selections?:dict[str, list[int]]
-  confirmed?:list[int]
+  phase?:string  # reviewing | revealed
+  selections?:dict[str, list[int]]  # participant_uuid → selected line indices
+  confirmed?:list[int]  # Host-confirmed bug line indices
 }
 debate?: PersistedDebateState {
   statement?:string
-  phase?:string
-  sides?:dict[str, string]
-  arguments?:list[dict[str, any]]
-  champions?:dict[str, string]
-  auto_assigned?:list[string]
-  first_side?:string
+  phase?:string  # side_selection | arguments | ai_cleanup | prep | live_debate | ended
+  sides?:dict[str, string]  # participant_uuid → for | against
+  arguments?:list[dict[str, any]]  # Submitted arguments [{participant_uuid, side, text}]
+  champions?:dict[str, string]  # side → champion participant_uuid
+  auto_assigned?:list[string]  # UUIDs auto-assigned to a side
+  first_side?:string  # Which side speaks first in live debate
   round_index?:int
   round_timer_seconds?:int
   round_timer_started_at?:string
 }
-slides_current?: dict[str, any]
-token_usage?: dict[str, any]
+slides_current?: dict[str, any]  # {presentation_name, current_page}
 ```
 
 ### `PersistedSessionMeta`
 
 ```
 session_id?: string
-started_at?: string
-paused_intervals?: list[dict[str, any]]
-talk?: PersistedSessionRef {
-  name?:string
-  started_at?:string
-  status?:string
-  ended_at?:string
-  paused_intervals?:list[dict[str, any]]
-}
 ```

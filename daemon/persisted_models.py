@@ -11,34 +11,17 @@ class PersistedModel(BaseModel):
     model_config = ConfigDict(extra="allow")
 
 
-class PersistedSessionRef(PersistedModel):
-    """Session entry persisted in global-state legacy formats."""
-
-    name: str | None = None
-    started_at: str | None = None
-    status: str | None = None
-    ended_at: str | None = None
-    paused_intervals: list[dict[str, Any]] = Field(default_factory=list)
-
-
 class PersistedGlobalState(PersistedModel):
     """Global daemon state persisted in `global-state.json`."""
 
     active_session_id: str | None = None
-    session_id: str | None = None
     log_level: str | None = None
-    main: PersistedSessionRef | None = None
-    talk: PersistedSessionRef | None = None
-    stack: list[PersistedSessionRef] | None = None
 
 
 class PersistedSessionMeta(PersistedModel):
-    """Session metadata subset persisted in `session-state.json`."""
+    """Read-only projection: extracts session identity from `session-state.json`."""
 
     session_id: str | None = None
-    started_at: str | None = None
-    paused_intervals: list[dict[str, Any]] = Field(default_factory=list)
-    talk: PersistedSessionRef | None = None
 
 
 class PersistedParticipant(PersistedModel):
@@ -53,13 +36,13 @@ class PersistedParticipant(PersistedModel):
 class PersistedPollState(PersistedModel):
     """Poll snapshot persisted in session state."""
 
-    definition: dict[str, Any] | None = None
+    definition: dict[str, Any] | None = Field(default=None, description="Poll question and options as shown to participants")
     active: bool | None = None
-    correct_ids: list[str] = Field(default_factory=list)
+    correct_ids: list[str] = Field(default_factory=list, description="Option IDs marked as correct answers")
     opened_at: str | None = None
     timer_seconds: int | None = None
     timer_started_at: str | None = None
-    votes: dict[str, Any] = Field(default_factory=dict)
+    votes: dict[str, Any] = Field(default_factory=dict, description="participant_uuid → chosen option ID(s)")
 
     @field_validator("correct_ids", mode="before")
     @classmethod
@@ -70,8 +53,8 @@ class PersistedPollState(PersistedModel):
 class PersistedWordCloudState(PersistedModel):
     """Word cloud snapshot persisted in session state."""
 
-    words: dict[str, int] = Field(default_factory=dict)
-    word_order: list[str] = Field(default_factory=list)
+    words: dict[str, int] = Field(default_factory=dict, description="word → submission count")
+    word_order: list[str] = Field(default_factory=list, description="Words in submission order")
     topic: str | None = None
 
 
@@ -80,21 +63,21 @@ class PersistedCodeReviewState(PersistedModel):
 
     snippet: str | None = None
     language: str | None = None
-    phase: str | None = None
-    selections: dict[str, list[int]] = Field(default_factory=dict)
-    confirmed: list[int] = Field(default_factory=list)
+    phase: str | None = Field(default=None, description="reviewing | revealed")
+    selections: dict[str, list[int]] = Field(default_factory=dict, description="participant_uuid → selected line indices")
+    confirmed: list[int] = Field(default_factory=list, description="Host-confirmed bug line indices")
 
 
 class PersistedDebateState(PersistedModel):
     """Debate snapshot persisted in session state."""
 
     statement: str | None = None
-    phase: str | None = None
-    sides: dict[str, str] = Field(default_factory=dict)
-    arguments: list[dict[str, Any]] = Field(default_factory=list)
-    champions: dict[str, str] = Field(default_factory=dict)
-    auto_assigned: list[str] = Field(default_factory=list)
-    first_side: str | None = None
+    phase: str | None = Field(default=None, description="side_selection | arguments | ai_cleanup | prep | live_debate | ended")
+    sides: dict[str, str] = Field(default_factory=dict, description="participant_uuid → for | against")
+    arguments: list[dict[str, Any]] = Field(default_factory=list, description="Submitted arguments [{participant_uuid, side, text}]")
+    champions: dict[str, str] = Field(default_factory=dict, description="side → champion participant_uuid")
+    auto_assigned: list[str] = Field(default_factory=list, description="UUIDs auto-assigned to a side")
+    first_side: str | None = Field(default=None, description="Which side speaks first in live debate")
     round_index: int | None = None
     round_timer_seconds: int | None = None
     round_timer_started_at: str | None = None
@@ -103,14 +86,13 @@ class PersistedDebateState(PersistedModel):
 class PersistedSessionState(PersistedModel):
     """Runtime session snapshot persisted in `session-state.json`."""
 
-    session_id: str | None = None
-    session_name: str | None = None
-    saved_at: str | None = None
-    mode: str | None = None
+    session_id: str | None = Field(default=None, description="6-char alphanumeric join code")
+    saved_at: str | None = Field(default=None, description="ISO timestamp of last snapshot write")
+    mode: str | None = Field(default=None, description="workshop | conference")
     activity: str | None = None
     current_activity: str | None = None
 
-    participants: dict[str, PersistedParticipant] = Field(default_factory=dict)
+    participants: dict[str, PersistedParticipant] = Field(default_factory=dict, description="participant_uuid → identity/score")
     # Legacy split maps: accepted on read, omitted on write.
     participant_names: dict[str, str] = Field(default_factory=dict, exclude=True)
     participant_avatars: dict[str, str] = Field(default_factory=dict, exclude=True)
@@ -128,7 +110,7 @@ class PersistedSessionState(PersistedModel):
     votes: dict[str, Any] = Field(default_factory=dict, exclude=True)
 
     qa: dict[str, Any] | None = None
-    qa_questions: dict[str, dict[str, Any]] = Field(default_factory=dict)
+    qa_questions: dict[str, dict[str, Any]] = Field(default_factory=dict, description="question_id → {text, author, upvoters, answered}")
 
     wordcloud: PersistedWordCloudState | None = None
     # Legacy flat word cloud fields: accepted on read, omitted on write.
@@ -157,8 +139,7 @@ class PersistedSessionState(PersistedModel):
     debate_round_timer_seconds: int | None = Field(default=None, exclude=True)
     debate_round_timer_started_at: str | None = Field(default=None, exclude=True)
 
-    slides_current: dict[str, Any] | None = None
-    token_usage: dict[str, Any] | None = None
+    slides_current: dict[str, Any] | None = Field(default=None, description="{presentation_name, current_page}")
 
     @model_validator(mode="before")
     @classmethod
