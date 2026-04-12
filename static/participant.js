@@ -3180,8 +3180,6 @@ function closeAgendaModal() {
         }
         currentPoll = msg.poll;
         pollActive = msg.poll_active;
-        updateHostDot(msg.host_connected);
-        updateDaemonDot(msg.daemon_connected);
         updateScore(msg.my_score);
         window._myScore = msg.my_score || 0;
         window._myUuid = myUUID;
@@ -3310,7 +3308,6 @@ function closeAgendaModal() {
         break;
       case 'active_participants_count_updated':
         updateParticipantCount(msg.count);
-        updateHostDot(msg.host_connected);
         break;
       case 'activity_updated': {
         const newActivity = msg.current_activity || 'none';
@@ -3497,22 +3494,6 @@ function closeAgendaModal() {
 
   function updateParticipantCount(n) {
     document.getElementById('pax-count').textContent = `👥 ${n}`;
-  }
-
-  function updateHostDot(connected) {
-    const el = document.getElementById('host-dot');
-    if (!el) return;
-    const dot = el.querySelector('.dot');
-    if (dot) dot.className = connected ? 'dot dot-green' : 'dot dot-red';
-    el.dataset.tooltip = connected ? 'Host is live' : 'Host is offline';
-  }
-
-  function updateDaemonDot(connected) {
-    const el = document.getElementById('daemon-dot');
-    if (!el) return;
-    const dot = el.querySelector('.dot');
-    if (dot) { dot.classList.toggle('dot-green', connected); dot.classList.toggle('dot-red', !connected); }
-    el.dataset.tooltip = connected ? 'AI assistant connected' : 'AI assistant offline';
   }
 
   function updateScore(pts) {

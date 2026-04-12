@@ -209,8 +209,6 @@ class ParticipantStateResponse(BaseModel):
     my_name: str
     my_avatar: str
     current_activity: str
-    host_connected: bool
-    daemon_connected: bool
     wordcloud: WordcloudData
     qa_questions: list[QAQuestionRaw]
     poll: PollData | None = None
@@ -575,8 +573,6 @@ async def get_participant_state(request: Request):
         "my_name": ps.participant_names.get(pid, ""),
         "my_avatar": ps.participant_avatars.get(pid, ""),
         "current_activity": ps.current_activity,
-        "host_connected": True,   # daemon is the host server; if they reached us, host is connected
-        "daemon_connected": True,
         # Wordcloud
         "wordcloud": {
             "words": wc.words,

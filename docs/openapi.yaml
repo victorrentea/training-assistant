@@ -2169,12 +2169,6 @@ components:
         current_activity:
           type: string
           title: Current Activity
-        host_connected:
-          type: boolean
-          title: Host Connected
-        daemon_connected:
-          type: boolean
-          title: Daemon Connected
         wordcloud:
           $ref: '#/components/schemas/WordcloudData'
         qa_questions:
@@ -2236,8 +2230,6 @@ components:
       - my_name
       - my_avatar
       - current_activity
-      - host_connected
-      - daemon_connected
       - wordcloud
       - qa_questions
       - poll_active
