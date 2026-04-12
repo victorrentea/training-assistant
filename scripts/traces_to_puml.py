@@ -182,13 +182,16 @@ def generate_puml(traces_path: str, family: str, output: str,
         for e in edges:
             f, t, label, ts, phase, tid, is_async = e
             if not phase:
-                phase = "given"
+                phase = ""
                 for sc in scenarios:
+                    start_ns = sc.get("start_ns", 0)
                     when_ns = sc.get("when_start_ns", 0)
                     end_ns = sc.get("end_ns", float("inf"))
-                    if when_ns and when_ns <= ts <= end_ns:
-                        phase = "when"
+                    if start_ns <= ts <= end_ns:
+                        phase = "when" if when_ns and ts >= when_ns else "given"
                         break
+                if not phase:
+                    phase = "given"  # unmatched = setup noise
             phased.append((f, t, label, ts, phase, tid, is_async))
         edges = phased
 
@@ -237,8 +240,9 @@ def generate_puml(traces_path: str, family: str, output: str,
 
     if scenarios:
         for i, sc in enumerate(scenarios):
-            sc_edges = [e for e in edges if e[3] <= sc["end_ns"]
-                        and (i == 0 or e[3] > scenarios[i - 1]["end_ns"])]
+            start = sc.get("start_ns", 0)
+            end = sc["end_ns"]
+            sc_edges = [e for e in edges if start <= e[3] <= end]
             sc_edges = _deduplicate_edges(sc_edges)
             if not sc_edges:
                 continue

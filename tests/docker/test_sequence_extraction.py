@@ -75,6 +75,7 @@ class ScenarioRunner:
         self._when_ns = 0
 
     def __enter__(self):
+        self._start_ns = _ns_now()
         self.session_id = fresh_session(f"Seq-{self._name[:20]}")
         # Host
         ctx = self._browser.new_context(
@@ -108,7 +109,12 @@ class ScenarioRunner:
 
     @property
     def result(self) -> dict:
-        return {"name": self._name, "when_start_ns": self._when_ns, "end_ns": _ns_now()}
+        return {
+            "name": self._name,
+            "start_ns": self._start_ns,
+            "when_start_ns": self._when_ns,
+            "end_ns": _ns_now(),
+        }
 
 
 # ── Sequence extraction tests ──────────────────────────────────────────
