@@ -1,9 +1,6 @@
 """Daemon host state router — full state for host page load and WS reconnect."""
 import logging
 import os
-import re
-from datetime import date, datetime
-from pathlib import Path
 from typing import Literal
 
 from fastapi import APIRouter, Request
@@ -15,7 +12,7 @@ from daemon.debate.state import debate_state
 from daemon.leaderboard.state import leaderboard_state
 from daemon.misc.content_files import read_notes_content, read_summary_payload
 from daemon.misc.state import misc_state
-from daemon.participant.state import participant_state
+from daemon.participant.state import GitRepoActivity, participant_state
 from daemon.poll.state import poll_state
 from daemon.qa.state import qa_state
 from daemon.session import state as session_shared_state
@@ -111,12 +108,6 @@ class SlidesLogEntry(BaseModel):
     slide: int
     seconds_spent: float
     timestamp: str
-
-
-class GitRepoActivity(BaseModel):
-    url: str
-    branch: str
-    files: list[str]
 
 
 class LeaderboardEntry(BaseModel):
@@ -320,22 +311,6 @@ def _get_join_base_url() -> str:
     return os.environ.get("WORKSHOP_SERVER_URL", "http://localhost:8000").rstrip("/")
 
 
-def _get_active_session_entry() -> dict | None:
-    name = session_shared_state.get_active_session_name()
-    if not name:
-        return None
-    return {"name": name}
-
-
-def _session_date_from_entry(session_entry: dict | None) -> date:
-    if session_entry and session_entry.get("started_at"):
-        try:
-            return datetime.fromisoformat(str(session_entry["started_at"])).date()
-        except (TypeError, ValueError):
-            pass
-    return date.today()
-
-
 def _build_slides_log_fields() -> dict:
     """Compute slides_log, slides_log_deep_count, slides_log_topic from in-memory slides_viewed."""
 
@@ -355,38 +330,6 @@ def _build_slides_log_fields() -> dict:
         "slides_log_deep_count": deep_count,
         "slides_log_topic": topic,
     }
-
-
-_GIT_LINE_RE = re.compile(
-    r"^\d{2}:\d{2}:\d{2}\s+(?P<url>\S+)\s+branch:(?P<branch>\S+)\s+file:(?P<file>\S+)\s*$"
-)
-
-
-def _build_git_repos_fields() -> dict:
-    """Read activity-git file and return grouped repos/branches/files for host UI."""
-    folder = Path(os.environ.get("TRANSCRIPTION_FOLDER", "/Users/victorrentea/workspace/victor-macos-addons/addons-output"))
-    session_entry = _get_active_session_entry()
-    session_date = _session_date_from_entry(session_entry)
-    activity_file = folder / f"activity-git-{session_date.isoformat()}.md"
-    if not activity_file.exists():
-        return {"git_repos": [], "git_repos_count": 0}
-
-    grouped: dict[tuple[str, str], set[str]] = {}
-    try:
-        for raw in activity_file.read_text(encoding="utf-8", errors="replace").splitlines():
-            m = _GIT_LINE_RE.match(raw.strip())
-            if not m:
-                continue
-            key = (m.group("url"), m.group("branch"))
-            grouped.setdefault(key, set()).add(m.group("file"))
-    except Exception:
-        return {"git_repos": [], "git_repos_count": 0}
-
-    git_repos = [
-        {"url": url, "branch": branch, "files": sorted(files)}
-        for (url, branch), files in sorted(grouped.items())
-    ]
-    return {"git_repos": git_repos, "git_repos_count": len(git_repos)}
 
 
 @router.get("/state", response_model=HostStateResponse)
@@ -439,7 +382,8 @@ async def get_host_state(request: Request, session_id: str):
         # Slides + session info (from misc state)
         "slides_current": misc_state.slides_current,
         **_build_slides_log_fields(),
-        **_build_git_repos_fields(),
+        "git_repos": [r.model_dump() for r in participant_state.git_repos],
+        "git_repos_count": len(participant_state.git_repos),
         # Session tracking
         "session_id": _get_current_session_id(),
         "join_base_url": _get_join_base_url(),
