@@ -26,6 +26,10 @@ export PYTHONUNBUFFERED=1
 export FIXTURE_PDF_DIR=/tmp/fixture-pdfs
 export MOCK_DRIVE_PORT=9090
 
+# OpenTelemetry
+export OTEL_TRACES_FILE=/tmp/traces.jsonl
+export OTEL_SDK_DISABLED=false
+
 # Create fixture directories
 mkdir -p "$SESSIONS_FOLDER" "$TRANSCRIPTION_FOLDER" "$FIXTURE_PDF_DIR" /tmp/test-pptx
 
@@ -84,7 +88,7 @@ echo "[startup] Mock Drive server started (PID=$MOCK_DRIVE_PID)"
 
 # Start FastAPI backend
 cd /app
-python -m uvicorn railway.app:app --host 0.0.0.0 --port 8000 &
+OTEL_SERVICE_NAME=Railway opentelemetry-instrument python -m uvicorn railway.app:app --host 0.0.0.0 --port 8000 &
 BACKEND_PID=$!
 
 # Wait for backend to be ready (use root landing page — session/active moved to daemon)
@@ -97,7 +101,7 @@ for i in $(seq 1 60); do
 done
 
 # Start real daemon
-python -m daemon &
+OTEL_SERVICE_NAME=Daemon opentelemetry-instrument python -m daemon &
 DAEMON_PID=$!
 
 # Give daemon time to connect WS and start host server on port 8081
