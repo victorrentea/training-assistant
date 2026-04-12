@@ -1,9 +1,8 @@
-from daemon.telemetry.ws_propagation import inject_trace_context, extract_trace_context
+from daemon.telemetry.ws_propagation import extract_trace_context, inject_trace_context
 
 
 def test_inject_adds_traceparent_to_dict():
     """inject_trace_context adds _traceparent to a dict when a span is active."""
-    from opentelemetry import trace
     from opentelemetry.sdk.trace import TracerProvider
 
     provider = TracerProvider()

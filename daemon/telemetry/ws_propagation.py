@@ -4,7 +4,7 @@ Convention: trace context is carried in the `_traceparent` field
 (underscore-prefixed) of JSON message payloads. This field is ignored
 by all existing message handlers.
 """
-from opentelemetry import context, propagate, trace
+from opentelemetry import propagate
 
 _FIELD = "_traceparent"
 

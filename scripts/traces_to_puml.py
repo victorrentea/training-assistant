@@ -116,7 +116,7 @@ def generate_puml(traces_path: str, family: str, output: str) -> None:
     spans = _load_spans(traces_path, family)
     if not spans:
         Path(output).write_text(
-            "@startuml\nnote over Daemon: No traces found for family '{}'\n@enduml\n".format(family)
+            f"@startuml\nnote over Daemon: No traces found for family '{family}'\n@enduml\n"
         )
         return
 

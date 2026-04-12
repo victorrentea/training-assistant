@@ -21,5 +21,5 @@ class FileSpanExporter(SpanExporter):
     def shutdown(self):
         pass
 
-    def force_flush(self, timeout_millis=None):
+    def force_flush(self, _timeout_millis=None):
         return True
