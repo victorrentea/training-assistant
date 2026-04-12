@@ -92,6 +92,31 @@ def test_collapse_proxy_chain():
     assert "Daemon" in content
 
 
+def test_collapse_proxy_chain_railway_source():
+    """When Railway is the proxy source (no browser span), rename to Participant."""
+    from scripts.traces_to_puml import generate_puml
+
+    with tempfile.NamedTemporaryFile(suffix=".jsonl", delete=False, mode="w") as f:
+        path = f.name
+    out = path + ".puml"
+
+    _write_spans(path, [
+        _make_span("POST /api/participant/poll/vote", "Railway", span_id="s1",
+                    start_time=1000),
+        _make_span("proxy_request", "Railway", span_id="s2", parent_span_id="s1",
+                    start_time=1001),
+        _make_span("POST /api/participant/poll/vote", "Daemon", span_id="s3", parent_span_id="s2",
+                    start_time=1002),
+    ])
+
+    generate_puml(path, family="", output=out)
+    content = Path(out).read_text()
+
+    assert "Railway" not in content
+    assert "Participant" in content
+    assert "Daemon" in content
+
+
 def test_infer_host_origin():
     """Daemon root spans with /host/ path become Host -> Daemon arrows."""
     from scripts.traces_to_puml import generate_puml

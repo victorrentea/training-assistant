@@ -90,21 +90,34 @@ def _extract_edges(spans: list[dict]) -> list[tuple[str, str, str, int]]:
 
 
 def _collapse_proxy(edges: list[tuple]) -> list[tuple]:
-    """Rule 1: Collapse A->Railway->Daemon into A->Daemon when Railway is pure proxy."""
+    """Rule 1: Railway->Daemon edges for participant API calls become Participant->Daemon.
+
+    Railway proxies all participant REST traffic to the daemon. When the trace shows
+    Railway->Daemon for a /participant/ or /api/participant/ path, replace Railway
+    with Participant to show the logical caller.
+
+    Also handles the explicit proxy_request pattern: A->Railway(proxy_request)->Daemon
+    collapses to A->Daemon.
+    """
     result = []
     skip = set()
     for i, (f, t, label, ts) in enumerate(edges):
         if i in skip:
             continue
+        # Explicit proxy_request pattern
         if t == "Railway" and label == "proxy_request":
             for j in range(i + 1, len(edges)):
                 f2, t2, label2, ts2 = edges[j]
                 if f2 == "Railway" and t2 == "Daemon":
-                    result.append((f, "Daemon", label2, ts))
+                    source = "Participant" if f == "Railway" else f
+                    result.append((source, "Daemon", label2, ts))
                     skip.add(j)
                     break
             else:
                 result.append((f, t, label, ts))
+        # Railway->Daemon with participant path => Participant->Daemon
+        elif f == "Railway" and t == "Daemon" and "participant" in label.lower():
+            result.append(("Participant", "Daemon", label, ts))
         else:
             result.append((f, t, label, ts))
     return result
