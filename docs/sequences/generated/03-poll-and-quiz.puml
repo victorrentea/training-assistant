@@ -13,26 +13,26 @@ participant "Daemon"
 "Host" -> "Daemon": GET /host/{session_id}
 "Host" -> "Daemon": GET /api/{session_id}/host/state
 "Participant" -> "Daemon": POST /api/participant/register
-"Daemon" -> "Host": notify_host participant_list_updated
 "Railway" -> "Daemon": GET /{session_id}/api/slides
+"Daemon" --> "Host": notify_host participant_list_updated
 "Participant" -> "Daemon": GET /api/participant/state
 "Participant" -> "Daemon": POST /api/participant/location
+"Daemon" --> "Participant": broadcast active_participants_count_updated
 "Host" -> "Daemon": PUT /api/{session_id}/host/activity
 "Daemon" --> "Participant": broadcast activity_updated
 "Host" -> "Daemon": POST /api/{session_id}/host/poll
+"Daemon" --> "Host": notify_host poll_ai_generated
 "Participant" -> "Daemon": PUT /api/participant/name
-"Daemon" -> "Host": notify_host poll_ai_generated
 "Host" -> "Daemon": POST /api/{session_id}/host/poll/open
 "Daemon" --> "Participant": broadcast poll_opened
-"Daemon" -> "Host": notify_host poll_opened
+"Daemon" --> "Host": notify_host poll_opened
 "Host" -> "Daemon": POST /api/{session_id}/host/poll/close
 "Daemon" --> "Participant": broadcast poll_closed
-"Daemon" -> "Host": notify_host poll_closed
+"Daemon" --> "Host": notify_host poll_closed
 "Participant" -> "Daemon": POST /api/participant/poll/vote
 "Host" -> "Daemon": PUT /api/{session_id}/host/poll/correct
 "Daemon" --> "Participant": broadcast poll_correct_revealed
-"Daemon" -> "Host": notify_host poll_correct_revealed
-"Daemon" -> "Host": notify_host scores_updated
-"Daemon" --> "Participant": broadcast active_participants_count_updated
+"Daemon" --> "Host": notify_host poll_correct_revealed
+"Daemon" --> "Host": notify_host scores_updated
 
 @enduml
