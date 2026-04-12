@@ -8,6 +8,7 @@ Generic transformation rules:
 5. Skip internal spans (same service parent->child)
 6. Infer host origin from /host/ path patterns in root daemon spans
 7. Infer broadcast/notify targets from span name prefixes
+8. Railway root spans (browser parent missing) => Participant -> Railway
 """
 import json
 import re
@@ -80,6 +81,12 @@ def _extract_edges(spans: list[dict]) -> list[tuple[str, str, str, int, str, str
         if svc == "Daemon" and (not pid or pid not in index):
             if _HOST_PATH_RE.match(name):
                 edges.append(("Host", "Daemon", name, start, phase, tid, False))
+                continue
+
+        # Rule 8: Railway root HTTP spans (browser parent not in traces) => Participant -> Railway
+        if svc == "Railway" and (not pid or pid not in index):
+            if not _HOST_PATH_RE.match(name):
+                edges.append(("Participant", "Railway", name, start, phase, tid, False))
                 continue
 
         # Standard: cross-service parent->child edge
