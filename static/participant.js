@@ -2071,6 +2071,7 @@ function closeAgendaModal() {
     const item = document.createElement('div');
     item.className = 'slides-list-item' + (slide.available_on_server === false ? ' unavailable' : '') + (_isSlideVisited(slide._id) ? ' visited' : '');
     item.setAttribute('data-slide-id', slide._id);
+    item.setAttribute('data-slug', slide.slug);
     const openBtn = document.createElement('button');
     openBtn.type = 'button';
     openBtn.className = 'slides-list-open';

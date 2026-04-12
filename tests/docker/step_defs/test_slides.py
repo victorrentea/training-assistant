@@ -68,23 +68,23 @@ def _api(method, path, data=None, base=None, timeout=10):
 
 
 def _mock_drive_stats():
-    req = urllib.request.Request(f"http://localhost:{MOCK_DRIVE_PORT}/stats")
+    req = urllib.request.Request(f"http://localhost:{MOCK_DRIVE_PORT}/mock-drive/stats")
     with urllib.request.urlopen(req, timeout=5) as resp:
         return json.loads(resp.read())
 
 
 def _reset_mock_drive():
-    req = urllib.request.Request(f"http://localhost:{MOCK_DRIVE_PORT}/reset-stats", method="POST",
+    req = urllib.request.Request(f"http://localhost:{MOCK_DRIVE_PORT}/mock-drive/reset-stats", method="POST",
                                  data=b"", headers={"Content-Length": "0"})
     urllib.request.urlopen(req, timeout=5)
 
 
 def _set_drive_delay(slug, seconds):
     req = urllib.request.Request(
-        f"http://localhost:{MOCK_DRIVE_PORT}/set-delay",
+        f"http://localhost:{MOCK_DRIVE_PORT}/mock-drive/set-delay",
         method="POST",
         headers={"Content-Type": "application/json"},
-        data=json.dumps({"slug": slug, "delay": seconds}).encode(),
+        data=json.dumps({"slug": slug, "delay_s": seconds}).encode(),
     )
     urllib.request.urlopen(req, timeout=5)
 
@@ -239,7 +239,8 @@ def host_updates_slide(session_id, slug):
     """Invalidate a slide to trigger re-download (simulates host updating the Google Drive file).
     This is infra/cache management — API call is appropriate here."""
     _, body = _api("GET", f"/{session_id}/api/slides")
-    slides = json.loads(body)
+    data = json.loads(body)
+    slides = data.get("slides", data) if isinstance(data, dict) else data
     drive_url = None
     for s in slides:
         if s.get("slug") == slug:
@@ -340,8 +341,9 @@ def sees_page_of_slide(name, page_num, slug):
 @then(parsers.parse("Google Drive was called {n:d} times"))
 def drive_called_n_times(n):
     stats = _mock_drive_stats()
-    actual = stats.get("total_requests", 0)
-    assert actual == n, f"Expected {n} Drive call(s), got {actual}"
+    # Stats is {slug: count} — sum all counts for total
+    actual = sum(stats.values()) if isinstance(stats, dict) else 0
+    assert actual == n, f"Expected {n} Drive call(s), got {actual}. Stats: {stats}"
 
 
 @then("the slides overlay opens")
