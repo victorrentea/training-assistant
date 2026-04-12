@@ -191,10 +191,11 @@ def generate_puml(traces_path: str, family: str, output: str,
         for f, t, label, ts, phase, tid, is_async in edges:
             name = trace_to_name.get(tid)
             if name:
+                actor = f"Participant\\n{name}"
                 if f == "Participant":
-                    f = name
+                    f = actor
                 if t == "Participant":
-                    t = name
+                    t = actor
             named.append((f, t, label, ts, phase, tid, is_async))
         edges = named
 
