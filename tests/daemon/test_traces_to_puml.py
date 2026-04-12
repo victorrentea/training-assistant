@@ -249,3 +249,43 @@ def test_no_phase_renders_default():
     content = Path(out).read_text()
 
     assert "[#gray]" not in content
+
+
+def test_trace_phases_map_colors_by_trace_id():
+    """trace_phases parameter colors edges by trace_id mapping."""
+    from scripts.traces_to_puml import generate_puml
+
+    with tempfile.NamedTemporaryFile(suffix=".jsonl", delete=False, mode="w") as f:
+        path = f.name
+    out = path + ".puml"
+
+    _write_spans(path, [
+        # Given-phase trace (setup)
+        _make_span("POST /api/participant/register", "Participant", span_id="s1",
+                    start_time=1000, attributes={"trace.family": ""}),
+        _make_span("POST /api/participant/register", "Daemon", span_id="s2", parent_span_id="s1",
+                    start_time=1001, attributes={"trace.family": ""}),
+        # When-phase trace (action)
+        _make_span("GET /api/slides/check/clean-code", "Participant",
+                    span_id="s3", start_time=2000,
+                    attributes={"trace.family": ""}),
+        _make_span("GET /api/slides/check/clean-code", "Daemon",
+                    span_id="s4", parent_span_id="s3", start_time=2001,
+                    attributes={"trace.family": ""}),
+    ])
+
+    # Map trace IDs to phases
+    trace_phases = {
+        "aaa": "given",  # all spans use trace_id="aaa" by default in _make_span
+    }
+
+    # With all traces as "given", all arrows should be gray
+    generate_puml(path, family="", output=out, trace_phases=trace_phases)
+    content = Path(out).read_text()
+    assert "[#gray]" in content
+
+    # Now mark the same trace as "when" — no gray arrows
+    trace_phases2 = {"aaa": "when"}
+    generate_puml(path, family="", output=out, trace_phases=trace_phases2)
+    content2 = Path(out).read_text()
+    assert "[#gray]" not in content2

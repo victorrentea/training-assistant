@@ -1153,29 +1153,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/SessionFoldersResponse'
       x-feature: session_management
-  /api/session/start_talk:
-    post:
-      tags:
-      - session
-      summary: Start Talk
-      description: Host starts a nested talk (conference mode).
-      operationId: start_talk_api_session_start_talk_post
-      responses:
-        '204':
-          description: Successful Response
-      x-feature: session_management
-  /api/session/end_talk:
-    post:
-      tags:
-      - session
-      summary: End Session
-      description: Host ends the current session. Railway closes WS connections on
-        session end.
-      operationId: end_talk_api_session_end_talk_post
-      responses:
-        '204':
-          description: Successful Response
-      x-feature: session_management
   /api/session/active:
     get:
       tags:
@@ -1916,15 +1893,6 @@ components:
           type: integer
           title: Git Repos Count
           default: 0
-        session_main:
-          anyOf:
-          - $ref: '#/components/schemas/SessionMainPayload'
-          - type: 'null'
-        session_name:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Session Name
         session_id:
           anyOf:
           - type: string
@@ -2248,15 +2216,6 @@ components:
           anyOf:
           - $ref: '#/components/schemas/SlidesCurrentPayload'
           - type: 'null'
-        session_main:
-          anyOf:
-          - $ref: '#/components/schemas/SessionMainPayload'
-          - type: 'null'
-        session_name:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Session Name
         leaderboard_data:
           anyOf:
           - $ref: '#/components/schemas/LeaderboardData'
@@ -2692,16 +2651,6 @@ components:
       required:
       - folders
       title: SessionFoldersResponse
-    SessionMainPayload:
-      properties:
-        mode:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Mode
-      additionalProperties: true
-      type: object
-      title: SessionMainPayload
     SessionStartResponse:
       properties:
         session_name:

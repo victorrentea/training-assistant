@@ -49,19 +49,18 @@ def test_feedback_route_falls_back_to_cached_participant_name():
     assert "Participant: Bob" in body
 
 
-def test_feedback_route_uses_session_stack_name_fallback():
+def test_feedback_route_uses_active_session_name():
     client = _client()
     with patch("daemon.misc.router.email_notify", create=True) as notify:
-        with patch("daemon.misc.router.misc_state.session_name", None):
-            with patch(
-                "daemon.misc.router.session_shared_state.get_session_stack",
-                return_value=[{"name": "2026-04-06 Architecture Masterclass"}],
-            ):
-                resp = client.post(
-                    "/api/participant/misc/feedback",
-                    json={"text": "Need bigger poll buttons."},
-                    headers={"X-Participant-ID": "p2"},
-                )
+        with patch(
+            "daemon.session.state.get_active_session_name",
+            return_value="2026-04-06 Architecture Masterclass",
+        ):
+            resp = client.post(
+                "/api/participant/misc/feedback",
+                json={"text": "Need bigger poll buttons."},
+                headers={"X-Participant-ID": "p2"},
+            )
     assert resp.status_code == 204
     assert resp.content == b""
     subject, body = notify.call_args.args

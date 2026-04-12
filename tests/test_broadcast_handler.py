@@ -91,7 +91,6 @@ class TestHandleSetSessionId:
         daemon_mirror_ws = AsyncMock()
         mock_state = MagicMock()
         mock_state.session_id = "old123"
-        mock_state.session_name = "Old Session"
         mock_state.participants = {
             "uuid1": participant_ws,
             "__host__": host_ws,
@@ -102,7 +101,6 @@ class TestHandleSetSessionId:
             await _handle_set_session_id({})
 
         assert mock_state.session_id is None
-        assert mock_state.session_name is None
         participant_ws.send_text.assert_called_once_with(json.dumps({"type": "redirect", "url": "/?session_id=old123"}))
         participant_ws.close.assert_called_once_with(1008)
         host_ws.send_text.assert_called_once_with(json.dumps({"type": "redirect", "url": "/host"}))

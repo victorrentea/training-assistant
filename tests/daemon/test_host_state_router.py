@@ -4,20 +4,18 @@ from daemon import host_state_router
 
 
 def test_build_slides_log_fields_uses_active_session_entry(monkeypatch):
-    older = {"name": "older", "started_at": "2026-04-08T09:00:00"}
-    active = {"name": "active", "started_at": "2026-04-09T09:00:00"}
     captured = {}
 
     def _fake_read(folder, session_date, session_entry):
         captured["session_entry"] = session_entry
         return []
 
-    monkeypatch.setattr(host_state_router.session_shared_state, "get_session_stack", lambda: [older, active])
+    monkeypatch.setattr(host_state_router.session_shared_state, "get_active_session_name", lambda: "active")
     monkeypatch.setattr(host_state_router, "read_slides_log", _fake_read)
 
     host_state_router._build_slides_log_fields()
 
-    assert captured["session_entry"] == active
+    assert captured["session_entry"] == {"name": "active"}
 
 
 def test_build_git_repos_fields_parses_activity_git_file(monkeypatch, tmp_path):
@@ -32,9 +30,9 @@ def test_build_git_repos_fields_parses_activity_git_file(monkeypatch, tmp_path):
 
     monkeypatch.setenv("TRANSCRIPTION_FOLDER", str(tmp_path))
     monkeypatch.setattr(
-        host_state_router.session_shared_state,
-        "get_session_stack",
-        lambda: [{"name": "active", "started_at": "2026-04-09T08:00:00"}],
+        host_state_router,
+        "_get_active_session_entry",
+        lambda: {"name": "active", "started_at": "2026-04-09T08:00:00"},
     )
 
     fields = host_state_router._build_git_repos_fields()

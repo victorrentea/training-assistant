@@ -5,7 +5,7 @@ from pathlib import Path
 from daemon.session_state import GLOBAL_STATE_FILENAME
 
 
-def test_persisted_global_state_model_validates_new_and_legacy_shapes():
+def test_persisted_global_state_model_validates_new_shape():
     from daemon.persisted_models import PersistedGlobalState
 
     new_state = PersistedGlobalState.model_validate({
@@ -14,14 +14,6 @@ def test_persisted_global_state_model_validates_new_and_legacy_shapes():
     })
     assert new_state.active_session_id == "abc123"
     assert new_state.log_level == "debug"
-
-    legacy_state = PersistedGlobalState.model_validate({
-        "main": {"name": "2026-03-25 WS", "started_at": "2026-03-25T09:00:00", "status": "active"},
-        "talk": None,
-    })
-    assert legacy_state.main is not None
-    assert legacy_state.main.name == "2026-03-25 WS"
-    assert legacy_state.main.status == "active"
 
 
 def test_persisted_session_state_model_validates_runtime_snapshot_shape():
@@ -69,35 +61,6 @@ def test_load_daemon_state_new_format():
         assert "main" not in result
         assert "talk" not in result
 
-
-def test_load_daemon_state_returns_raw_old_main_talk_format():
-    """Old {main, talk} format is returned as-is for caller to migrate."""
-    with tempfile.TemporaryDirectory() as d:
-        f = Path(d) / GLOBAL_STATE_FILENAME
-        f.write_text(json.dumps({
-            "main": {"name": "2026-03-25 WS", "started_at": "2026-03-25T09:00:00", "status": "active"},
-            "talk": None
-        }))
-        from daemon.session_state import load_daemon_state as _load_daemon_state
-        result = _load_daemon_state(Path(d))
-        assert result["main"]["name"] == "2026-03-25 WS"
-        assert result["talk"] is None
-
-
-def test_load_daemon_state_returns_raw_old_stack_format():
-    """Old {stack:[...]} format is returned as-is for caller to migrate."""
-    with tempfile.TemporaryDirectory() as d:
-        f = Path(d) / GLOBAL_STATE_FILENAME
-        f.write_text(json.dumps({
-            "stack": [
-                {"name": "2026-03-25 WS", "started_at": "2026-03-25T09:00:00"},
-                {"name": "2026-03-25 12:30 talk", "started_at": "2026-03-25T12:30:00"}
-            ]
-        }))
-        from daemon.session_state import load_daemon_state as _load_daemon_state
-        result = _load_daemon_state(Path(d))
-        assert "stack" in result
-        assert len(result["stack"]) == 2
 
 
 def test_load_daemon_state_returns_empty_when_no_file():
@@ -200,127 +163,11 @@ def test_find_session_folder_by_id_returns_none_when_not_found(tmp_path):
     assert result is None
 
 
-def test_session_meta_to_stack_with_talk():
-    from daemon.session_state import session_meta_to_stack
-    meta = {
-        "session_id": "abc123",
-        "started_at": "2026-03-25T09:00:00",
-        "paused_intervals": [],
-        "talk": {"name": "2026-03-25 12:30 talk", "started_at": "2026-03-25T12:30:00", "status": "active"},
-    }
-    stack = session_meta_to_stack(meta, "2026-03-25 WS")
-    assert len(stack) == 2
-    assert stack[0]["name"] == "2026-03-25 WS"
-    assert stack[1]["name"] == "2026-03-25 12:30 talk"
+# ── announce_session_id ──────────────────────────────────────────────────────
 
-
-def test_session_meta_to_stack_without_talk():
-    from daemon.session_state import session_meta_to_stack
-    meta = {"session_id": "abc123", "started_at": "2026-03-25T09:00:00", "paused_intervals": []}
-    stack = session_meta_to_stack(meta, "2026-03-25 WS")
-    assert len(stack) == 1
-    assert stack[0]["name"] == "2026-03-25 WS"
-
-
-def test_session_meta_to_stack_ignores_ended_talk():
-    from daemon.session_state import session_meta_to_stack
-    meta = {
-        "session_id": "abc123",
-        "started_at": "2026-03-25T09:00:00",
-        "paused_intervals": [],
-        "talk": {"name": "2026-03-25 12:30 talk", "status": "ended"},
-    }
-    stack = session_meta_to_stack(meta, "2026-03-25 WS")
-    assert len(stack) == 1
-
-
-# ── Issue 2: status "ended" filtering ────────────────────────────────────────
-
-def test_daemon_state_to_stack_filters_ended_main():
-    """Main session with status 'ended' should produce an empty stack."""
-    from daemon.session_state import daemon_state_to_stack as _daemon_state_to_stack
-    result = _daemon_state_to_stack({
-        "main": {"name": "2026-03-25 WS", "started_at": "2026-03-25T09:00:00", "status": "ended"},
-        "talk": None,
-    })
-    assert result == []
-
-
-def test_daemon_state_to_stack_filters_ended_talk_keeps_main():
-    """Talk session with status 'ended' is discarded; main is kept."""
-    from daemon.session_state import daemon_state_to_stack as _daemon_state_to_stack
-    result = _daemon_state_to_stack({
-        "main": {"name": "2026-03-25 WS", "started_at": "2026-03-25T09:00:00", "status": "active"},
-        "talk": {"name": "2026-03-25 12:30 talk", "started_at": "2026-03-25T12:30:00", "status": "ended"},
-    })
-    assert len(result) == 1
-    assert result[0]["name"] == "2026-03-25 WS"
-
-
-def test_daemon_state_to_stack_active_sessions_included():
-    """Active and paused sessions are included in the stack."""
-    from daemon.session_state import daemon_state_to_stack as _daemon_state_to_stack
-    result = _daemon_state_to_stack({
-        "main": {"name": "2026-03-25 WS", "started_at": "2026-03-25T09:00:00", "status": "active"},
-        "talk": {"name": "2026-03-25 12:30 talk", "started_at": "2026-03-25T12:30:00", "status": "paused"},
-    })
-    assert len(result) == 2
-
-
-# ── Issue 1: startup restore includes session-state.json ──────────────────────
-
-def test_sync_session_includes_session_state_when_file_exists():
-    """When session-state.json exists in the session folder, sync_session_to_server
-    is called with the contents in the payload."""
+def test_announce_session_id_sends_ws_message():
+    """announce_session_id sends set_session_id WS message."""
     import daemon.session_state as session_state_mod
-    from daemon.session_state import sync_session_to_server
-
-    session_state_data = {"mode": "workshop", "activity": "poll", "token_usage": {}}
-
-    with tempfile.TemporaryDirectory() as d:
-        sessions_root = Path(d)
-        session_name = "2026-03-25 WS"
-        session_folder = sessions_root / session_name
-        session_folder.mkdir()
-        (session_folder / "session-state.json").write_text(
-            json.dumps(session_state_data), encoding="utf-8"
-        )
-
-        # Build minimal stack referencing the folder we just created
-        stack = [{"name": session_name, "started_at": "2026-03-25T09:00:00", "status": "active"}]
-
-        captured = {}
-
-        class FakeWsClient:
-            connected = True
-            def send(self, payload):
-                captured["payload"] = payload
-
-        original_ws = session_state_mod._ws_client
-        session_state_mod._ws_client = FakeWsClient()
-        try:
-            sync_session_to_server(
-                type("C", (), {
-                    "server_url": "http://test",
-                    "host_username": "u",
-                    "host_password": "p",
-                })(),
-                stack,
-                [],
-                session_state_data,
-            )
-        finally:
-            session_state_mod._ws_client = original_ws
-
-        # Now sends set_session_id instead of session_sync
-        assert captured["payload"]["type"] == "set_session_id"
-        assert "session_name" in captured["payload"]
-
-
-def test_sync_session_no_session_state_key_when_none():
-    """When session_state is None, the payload should not include the key."""
-    import daemon.session_state as session_state_mod
-    from daemon.session_state import sync_session_to_server
 
     captured = {}
 
@@ -332,20 +179,14 @@ def test_sync_session_no_session_state_key_when_none():
     original_ws = session_state_mod._ws_client
     session_state_mod._ws_client = FakeWsClient()
     try:
-        sync_session_to_server(
-            type("C", (), {
-                "server_url": "http://test",
-                "host_username": "u",
-                "host_password": "p",
-            })(),
-            [],
-            [],
-            None,
-        )
+        from daemon.session_state import announce_session_id
+        announce_session_id("abc123")
     finally:
         session_state_mod._ws_client = original_ws
 
-    assert "session_state" not in captured["payload"]
+    assert captured["payload"]["type"] == "set_session_id"
+    assert captured["payload"]["session_id"] == "abc123"
+    assert "session_name" not in captured["payload"]
 
 
 def test_normalize_slides_manifest_accepts_slug_mapping():
@@ -380,7 +221,7 @@ def test_load_slides_manifest_reads_candidate_file():
         assert slides[0]["url"] == "https://cdn.example.com/intro.pdf"
 
 
-def test_resolve_session_folder_prefers_active_stack_folder(tmp_path):
+def test_resolve_session_folder_prefers_active_session_name(tmp_path):
     from daemon.__main__ import _resolve_session_folder_from_state
 
     sessions_root = tmp_path
@@ -394,10 +235,9 @@ def test_resolve_session_folder_prefers_active_stack_folder(tmp_path):
     detected_notes = detected_folder / "detected-notes.txt"
     detected_notes.write_text("detected")
 
-    stack = [{"name": active_folder.name, "started_at": "2026-03-29T10:00:00", "status": "active"}]
     sf, sn, source = _resolve_session_folder_from_state(
         sessions_root=sessions_root,
-        session_stack=stack,
+        session_name=active_folder.name,
         detected_folder=detected_folder,
         detected_notes=detected_notes,
     )
@@ -468,12 +308,11 @@ def test_flush_session_state_backup_writes_when_hash_changed(tmp_path):
     sessions_root = tmp_path
     folder = sessions_root / "2026-03-25 WS"
     folder.mkdir()
-    stack = [{"name": folder.name}]
 
     snapshot = {"participants": {"u1": {"name": "Alice"}}, "session_id": "sid-1"}
     last_hash, wrote = _flush_session_state_backup(
         sessions_root=sessions_root,
-        session_stack=stack,
+        session_name=folder.name,
         session_snapshot=snapshot,
         last_flushed_hash=None,
         force=False,
@@ -490,12 +329,11 @@ def test_flush_session_state_backup_skips_when_hash_unchanged(tmp_path):
     sessions_root = tmp_path
     folder = sessions_root / "2026-03-25 WS"
     folder.mkdir()
-    stack = [{"name": folder.name}]
     snapshot = {"participants": {"u1": {"name": "Alice"}}, "session_id": "sid-1"}
 
     first_hash, first_wrote = _flush_session_state_backup(
         sessions_root=sessions_root,
-        session_stack=stack,
+        session_name=folder.name,
         session_snapshot=snapshot,
         last_flushed_hash=None,
         force=False,
@@ -505,7 +343,7 @@ def test_flush_session_state_backup_skips_when_hash_unchanged(tmp_path):
 
     second_hash, second_wrote = _flush_session_state_backup(
         sessions_root=sessions_root,
-        session_stack=stack,
+        session_name=folder.name,
         session_snapshot=snapshot,
         last_flushed_hash=first_hash,
         force=False,
@@ -523,12 +361,11 @@ def test_flush_session_state_backup_force_writes_even_when_hash_unchanged(tmp_pa
     sessions_root = tmp_path
     folder = sessions_root / "2026-03-25 WS"
     folder.mkdir()
-    stack = [{"name": folder.name}]
     snapshot = {"participants": {"u1": {"name": "Alice"}}, "session_id": "sid-1"}
 
     first_hash, first_wrote = _flush_session_state_backup(
         sessions_root=sessions_root,
-        session_stack=stack,
+        session_name=folder.name,
         session_snapshot=snapshot,
         last_flushed_hash=None,
         force=False,
@@ -537,7 +374,7 @@ def test_flush_session_state_backup_force_writes_even_when_hash_unchanged(tmp_pa
 
     second_hash, second_wrote = _flush_session_state_backup(
         sessions_root=sessions_root,
-        session_stack=stack,
+        session_name=folder.name,
         session_snapshot=snapshot,
         last_flushed_hash=first_hash,
         force=True,
@@ -553,7 +390,7 @@ def test_flush_session_state_backup_skips_without_active_session(tmp_path):
     snapshot = {"participants": {"u1": {"name": "Alice"}}}
     out_hash, wrote = _flush_session_state_backup(
         sessions_root=tmp_path,
-        session_stack=[],
+        session_name=None,
         session_snapshot=snapshot,
         last_flushed_hash=None,
         force=False,
@@ -730,7 +567,7 @@ def test_runtime_session_snapshot_excludes_participant_universes():
 
     snapshot = _build_runtime_session_snapshot(
         active_session_id="sid-1",
-        session_stack=[{"name": "2026-04-09 Demo Session"}],
+        session_name="2026-04-09 Demo Session",
     )
 
     assert "participant_universes" not in snapshot
