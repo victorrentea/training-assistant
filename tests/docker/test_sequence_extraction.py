@@ -187,3 +187,41 @@ def test_qa_sequence_diagram_extraction():
     output_path = "/app/docs/sequences/generated/04-qa-and-wordcloud.puml"
     _generate_and_print(output_path)
     print("SUCCESS: QA sequence diagram extracted from traces")
+
+
+@pytest.mark.nightly
+def test_slides_sequence_diagram_extraction():
+    """Exercise slides follow-mode flow, extract sequence diagram from traces."""
+    Path(TRACES_FILE).write_text("")
+
+    session_id = fresh_session("SeqSlides")
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+
+        # Host
+        host_ctx = browser.new_context(
+            http_credentials={"username": HOST_USER, "password": HOST_PASS}
+        )
+        host_raw = host_ctx.new_page()
+        host_raw.goto(f"{DAEMON_BASE}/host/{session_id}", wait_until="networkidle")
+        expect(host_raw.locator("#tab-poll")).to_be_visible(timeout=10000)
+
+        # Participant
+        pax_ctx = browser.new_context()
+        pax_raw = pax_ctx.new_page()
+        pax_raw.goto(f"{BASE}/{session_id}", wait_until="networkidle")
+        pax = ParticipantPage(pax_raw)
+        pax.join("Alice")
+
+        # Open a slide (triggers check + download flow)
+        pax.expand_slides_dock()
+        pax_raw.locator('.slides-list-item[data-slug="clean-code"] .slides-list-open').click()
+        pax_raw.wait_for_selector("#slides-pdf-viewer canvas", timeout=30000)
+        pax_raw.wait_for_timeout(1000)
+
+        browser.close()
+
+    output_path = "/app/docs/sequences/generated/06-slides.puml"
+    generated = _generate_and_print(output_path)
+    print("SUCCESS: Slides sequence diagram extracted from traces")
