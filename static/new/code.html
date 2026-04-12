@@ -781,12 +781,8 @@ function resetStatePrompt() {
     const sessionId = status.session_id;
     console.log('[participant] session_id:', sessionId);
     if (!sessionId) return;
-    const [slides, notes] = await Promise.all([
-      fetch(`/${sessionId}/api/slides`).then(r => r.json()),
-      fetch(`/${sessionId}/api/notes`).then(r => r.json()),
-    ]);
-    console.log('[participant] slides:', slides);
-    console.log('[participant] notes:', notes);
+    const state = await fetch(`/${sessionId}/api/participant/state`).then(r => r.json());
+    console.log('[participant] state:', state);
   } catch (e) {
     console.error('[participant] failed to load state:', e);
   }
