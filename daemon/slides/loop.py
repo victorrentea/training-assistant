@@ -93,6 +93,8 @@ class SlidesRunner:
         self._slides_config = cfg
         self._slides_state = slides_daemon.load_daemon_state(cfg.state_file)
         self._init_misc_state_from_catalog(cfg)
+        # Run initial PPTX mtime scan so modified_at is available immediately
+        self.scan_pptx_mtimes()
 
     def _init_misc_state_from_catalog(self, cfg) -> None:
         """Populate misc_state.slides_catalog from the catalog file (no Railway probing)."""

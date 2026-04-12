@@ -195,6 +195,10 @@ class ParticipantPage:
             if (typeof slidesPdfViewer !== 'undefined' && slidesPdfViewer) {{
                 slidesPdfViewer.currentPageNumber = {target_page};
             }}
+            // Also persist the page so reopening the slide resumes here
+            if (typeof slidesSelectedSlug !== 'undefined' && slidesSelectedSlug) {{
+                _setStoredSlidePage(slidesSelectedSlug, {target_page});
+            }}
         }}""")
         self._page.wait_for_timeout(500)  # allow PDF.js to render
 
