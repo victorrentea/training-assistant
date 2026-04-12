@@ -157,7 +157,7 @@ def test_infer_broadcast_target():
 
     assert "Daemon" in content
     assert "Participant" in content
-    assert "broadcast poll_opened" in content
+    assert "poll_opened" in content
 
 
 def test_infer_notify_host_target():
@@ -177,7 +177,7 @@ def test_infer_notify_host_target():
 
     assert "Daemon" in content
     assert "Host" in content
-    assert "notify_host poll_ai_generated" in content
+    assert "poll_ai_generated" in content
 
 
 def test_collapse_broadcast_relay():
@@ -226,9 +226,9 @@ def test_given_phase_renders_gray():
 
     # Given phase arrow should be gray
     assert "[#gray]" in content
-    # When phase arrow should NOT be gray
+    # When phase arrow should NOT be gray (broadcast prefix removed, just "poll_opened")
     lines = content.split("\n")
-    broadcast_line = [line for line in lines if "broadcast poll_opened" in line][0]
+    broadcast_line = [line for line in lines if "poll_opened" in line][0]
     assert "[#gray]" not in broadcast_line
 
 
@@ -278,7 +278,7 @@ def test_scenarios_parameter_colors_by_trace_id():
     register_line = [line for line in content.split("\n") if "register" in line][0]
     assert "[#gray]" in register_line
     # When-phase arrow should NOT be gray
-    broadcast_line = [line for line in content.split("\n") if "broadcast" in line][0]
+    broadcast_line = [line for line in content.split("\n") if "slides_cache_status" in line][0]
     assert "[#gray]" not in broadcast_line
     # Scenario separator should be present
     assert "== Open slide ==" in content

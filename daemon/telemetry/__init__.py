@@ -37,3 +37,12 @@ def instrument_fastapi_app(app):
         FastAPIInstrumentor.instrument_app(app)
     except ImportError:
         pass
+
+
+def instrument_urllib():
+    """Instrument urllib so outgoing HTTP calls (e.g. daemon→Railway) generate spans."""
+    try:
+        from opentelemetry.instrumentation.urllib import URLLibInstrumentor
+        URLLibInstrumentor().instrument()
+    except ImportError:
+        pass

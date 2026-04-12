@@ -50,8 +50,12 @@ def _build_span_index(spans: list[dict]) -> dict[str, dict]:
 _HOST_PATH_RE = re.compile(r"(GET|POST|PUT|DELETE|PATCH) /.*host")
 
 
-def _extract_edges(spans: list[dict]) -> list[tuple[str, str, str, int, str]]:
-    """Extract (from_service, to_service, label, start_time, bdd_phase) edges from spans."""
+def _extract_edges(spans: list[dict]) -> list[tuple[str, str, str, int, str, str, bool]]:
+    """Extract edges from spans.
+
+    Returns (from_svc, to_svc, label, start_time, bdd_phase, trace_id, is_async).
+    is_async=True for broadcast/notify_host (rendered as dashed arrows).
+    """
     index = _build_span_index(spans)
     edges = []
     for span in spans:
@@ -60,21 +64,22 @@ def _extract_edges(spans: list[dict]) -> list[tuple[str, str, str, int, str]]:
         start = span.get("start_time", 0)
         pid = _parent_id(span)
         phase = span.get("attributes", {}).get("bdd.phase", "")
+        tid = span.get("context", {}).get("trace_id", "")
 
         # Rule 7: broadcast:* and notify_host:* root spans from Daemon
         if svc == "Daemon" and name.startswith("broadcast:"):
             msg_type = name.split(":", 1)[1]
-            edges.append(("Daemon", "Participant", f"broadcast {msg_type}", start, phase))
+            edges.append(("Daemon", "Participant", msg_type, start, phase, tid, True))
             continue
         if svc == "Daemon" and name.startswith("notify_host:"):
             msg_type = name.split(":", 1)[1]
-            edges.append(("Daemon", "Host", f"notify_host {msg_type}", start, phase))
+            edges.append(("Daemon", "Host", msg_type, start, phase, tid, True))
             continue
 
         # Rule 6: Daemon root HTTP spans with /host/ path => Host -> Daemon
         if svc == "Daemon" and (not pid or pid not in index):
             if _HOST_PATH_RE.match(name):
-                edges.append(("Host", "Daemon", name, start, phase))
+                edges.append(("Host", "Daemon", name, start, phase, tid, False))
                 continue
 
         # Standard: cross-service parent->child edge
@@ -86,42 +91,32 @@ def _extract_edges(spans: list[dict]) -> list[tuple[str, str, str, int, str]]:
         if from_svc == to_svc:
             continue  # Rule 5: skip internal spans
         label = name or "unknown"
-        edges.append((from_svc, to_svc, label, start, phase))
+        edges.append((from_svc, to_svc, label, start, phase, tid, False))
     return edges
 
 
 def _collapse_proxy(edges: list[tuple]) -> list[tuple]:
-    """Rule 1: Railway->Daemon edges for participant API calls become Participant->Daemon.
-
-    Railway proxies all participant REST traffic to the daemon. When the trace shows
-    Railway->Daemon for a /participant/ or /api/participant/ path, replace Railway
-    with Participant to show the logical caller.
-
-    Also handles the explicit proxy_request pattern: A->Railway(proxy_request)->Daemon
-    collapses to A->Daemon.
-    """
+    """Rule 1: Railway->Daemon edges become Participant->Daemon (Railway is a proxy)."""
     result = []
     skip = set()
-    for i, (f, t, label, ts, phase) in enumerate(edges):
+    for i, e in enumerate(edges):
+        f, t, label, ts, phase, tid, is_async = e
         if i in skip:
             continue
-        # Explicit proxy_request pattern
         if t == "Railway" and label == "proxy_request":
             for j in range(i + 1, len(edges)):
-                f2, t2, label2, ts2, phase2 = edges[j]
-                if f2 == "Railway" and t2 == "Daemon":
+                e2 = edges[j]
+                if e2[0] == "Railway" and e2[1] == "Daemon":
                     source = "Participant" if f == "Railway" else f
-                    result.append((source, "Daemon", label2, ts, phase))
+                    result.append((source, "Daemon", e2[2], ts, phase, tid, is_async))
                     skip.add(j)
                     break
             else:
-                result.append((f, t, label, ts, phase))
-        # Railway->Daemon calls are always participant-initiated (Railway proxies
-        # participant REST to daemon). Host calls go directly to daemon, not via Railway.
+                result.append(e)
         elif f == "Railway" and t == "Daemon":
-            result.append(("Participant", "Daemon", label, ts, phase))
+            result.append(("Participant", "Daemon", label, ts, phase, tid, is_async))
         else:
-            result.append((f, t, label, ts, phase))
+            result.append(e)
     return result
 
 
@@ -129,20 +124,21 @@ def _collapse_broadcast(edges: list[tuple]) -> list[tuple]:
     """Rule 2: Collapse Daemon->Railway->Browser into Daemon->Browser for broadcasts."""
     result = []
     skip = set()
-    for i, (f, t, label, ts, phase) in enumerate(edges):
+    for i, e in enumerate(edges):
+        f, t, label = e[0], e[1], e[2]
         if i in skip:
             continue
         if f == "Daemon" and t == "Railway" and "broadcast" in label:
             for j in range(i + 1, len(edges)):
-                f2, t2, label2, ts2, phase2 = edges[j]
-                if f2 == "Railway" and t2 not in ("Daemon", "Railway"):
-                    result.append(("Daemon", t2, label, ts, phase))
+                e2 = edges[j]
+                if e2[0] == "Railway" and e2[1] not in ("Daemon", "Railway"):
+                    result.append(("Daemon", e2[1], label, e[3], e[4], e[5], e[6]))
                     skip.add(j)
                     break
             else:
-                result.append((f, t, label, ts, phase))
+                result.append(e)
         else:
-            result.append((f, t, label, ts, phase))
+            result.append(e)
     return result
 
 
@@ -150,11 +146,11 @@ def _deduplicate_edges(edges: list[tuple]) -> list[tuple]:
     """Remove duplicate (from, to, label) tuples, keeping first occurrence order."""
     seen = set()
     result = []
-    for f, t, label, ts, phase in edges:
-        key = (f, t, label)
+    for e in edges:
+        key = (e[0], e[1], e[2])  # (from, to, label)
         if key not in seen:
             seen.add(key)
-            result.append((f, t, label, ts, phase))
+            result.append(e)
     return result
 
 
@@ -182,51 +178,41 @@ def generate_puml(traces_path: str, family: str, output: str,
     if not scenarios:
         edges = _deduplicate_edges(edges)
 
-    # Assign phases from scenario boundaries (trace IDs or timestamps)
+    # Assign phases from scenario timestamp boundaries
     if scenarios:
-        # Try trace_id-based assignment first, fall back to timestamps
-        all_when_traces: set[str] = set()
-        for sc in scenarios:
-            all_when_traces.update(sc.get("when_trace_ids", set()))
-
         phased = []
-        for f, t, label, ts, phase in edges:
+        for e in edges:
+            f, t, label, ts, phase, tid, is_async = e
             if not phase:
-                if all_when_traces:
-                    # Match edge to span by label + timestamp, then check trace_id
-                    matched_tid = ""
-                    for span in spans:
-                        svc = _service_name(span)
-                        name = span.get("name", "")
-                        start = span.get("start_time", 0)
-                        name_normalized = name.replace(":", " ", 1) if name.startswith(("broadcast:", "notify_host:")) else name
-                        if (svc in (f, t)) and name_normalized == label and abs(start - ts) < 2_000_000_000:
-                            matched_tid = span.get("context", {}).get("trace_id", "")
-                            break
-                    phase = "when" if matched_tid in all_when_traces else "given"
-                else:
-                    # Fallback: timestamp-based assignment
-                    phase = "given"
-                    for sc in scenarios:
-                        when_ns = sc.get("when_start_ns", 0)
-                        end_ns = sc.get("end_ns", float("inf"))
-                        if when_ns and when_ns <= ts <= end_ns:
-                            phase = "when"
-                            break
-            phased.append((f, t, label, ts, phase))
+                phase = "given"
+                for sc in scenarios:
+                    when_ns = sc.get("when_start_ns", 0)
+                    end_ns = sc.get("end_ns", float("inf"))
+                    if when_ns and when_ns <= ts <= end_ns:
+                        phase = "when"
+                        break
+            phased.append((f, t, label, ts, phase, tid, is_async))
         edges = phased
 
     # Collect participant names in canonical order
     _CANONICAL_ORDER = ["Host", "Participant", "Railway", "Daemon", "Addons"]
     all_actors = set()
-    for f, t, _, _, _ in edges:
-        all_actors.add(f)
-        all_actors.add(t)
+    for e in edges:
+        all_actors.add(e[0])
+        all_actors.add(e[1])
     participants = [p for p in _CANONICAL_ORDER if p in all_actors]
-    for f, t, _, _, _ in edges:
-        for p in (f, t):
+    for e in edges:
+        for p in (e[0], e[1]):
             if p not in participants:
                 participants.append(p)
+
+    def _render_edge(e: tuple) -> str:
+        f, t, label, _ts, phase, tid, is_async = e
+        arrow = "-->" if is_async else "->"
+        color = "[#gray]" if phase == "given" else ""
+        # Prefix with trace hash for correlation: [XX]
+        trace_hash = f"[{hash(tid) % 100:02d}] " if tid else ""
+        return f'"{f}" {color}{arrow} "{t}": {trace_hash}{label}'
 
     lines = ["@startuml"]
     lines.append("hide footbox")
@@ -236,7 +222,6 @@ def generate_puml(traces_path: str, family: str, output: str,
     lines.append("")
 
     if scenarios:
-        # Render edges grouped by scenario with separators (dedup per scenario)
         for i, sc in enumerate(scenarios):
             sc_edges = [e for e in edges if e[3] <= sc["end_ns"]
                         and (i == 0 or e[3] > scenarios[i - 1]["end_ns"])]
@@ -244,16 +229,12 @@ def generate_puml(traces_path: str, family: str, output: str,
             if not sc_edges:
                 continue
             lines.append(f'== {sc["name"]} ==')
-            for f, t, label, _, phase in sc_edges:
-                arrow = "-->" if label.startswith("broadcast ") or label.startswith("notify_host ") else "->"
-                color = "[#gray]" if phase == "given" else ""
-                lines.append(f'"{f}" {color}{arrow} "{t}": {label}')
+            for e in sc_edges:
+                lines.append(_render_edge(e))
             lines.append("")
     else:
-        for f, t, label, _, phase in edges:
-            arrow = "-->" if label.startswith("broadcast ") or label.startswith("notify_host ") else "->"
-            color = "[#gray]" if phase == "given" else ""
-            lines.append(f'"{f}" {color}{arrow} "{t}": {label}')
+        for e in edges:
+            lines.append(_render_edge(e))
     lines.append("")
     lines.append("@enduml")
 

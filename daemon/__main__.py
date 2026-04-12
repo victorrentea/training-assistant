@@ -658,8 +658,9 @@ def _refresh_session_folder_binding(
 
 def run() -> None:
     try:
-        from daemon.telemetry import setup_tracing
+        from daemon.telemetry import instrument_urllib, setup_tracing
         setup_tracing()
+        instrument_urllib()
     except ImportError:
         pass
 
