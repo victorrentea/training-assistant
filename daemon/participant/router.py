@@ -235,6 +235,7 @@ class ParticipantStateResponse(BaseModel):
     summary_count: int
     notes_count: int
     gdrive_url: str | None = None
+    has_agenda: bool = False
 
 
 def _build_qa_for_participant(pid: str) -> list[dict]:
@@ -600,6 +601,8 @@ async def get_participant_state(request: Request):
         "notes_count": notes_count,
         # Google Drive folder link for session materials
         "gdrive_url": misc_state.gdrive_url,
+        # Agenda .docx availability
+        "has_agenda": misc_state.agenda_docx_path is not None and misc_state.agenda_docx_path.exists(),
     }
 
     return JSONResponse(state_msg)
