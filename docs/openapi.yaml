@@ -601,6 +601,20 @@ paths:
       x-doc-notes:
       - Primarily for diagnostics; UI cache invalidation is event-driven via slides_cache_status
         WS.
+  /api/participant/agenda:
+    get:
+      tags:
+      - misc
+      summary: Get Agenda
+      description: Serve the agenda .docx as base64-encoded JSON (survives WS proxy).
+      operationId: get_agenda_api_participant_agenda_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+      x-feature: misc
   /api/{session_id}/host/pastes:
     get:
       tags:
@@ -2236,6 +2250,11 @@ components:
         summary_count:
           type: integer
           title: Summary Count
+        summary_updated_at:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Summary Updated At
         notes_count:
           type: integer
           title: Notes Count
@@ -2244,6 +2263,10 @@ components:
           - type: string
           - type: 'null'
           title: Gdrive Url
+        has_agenda:
+          type: boolean
+          title: Has Agenda
+          default: false
       type: object
       required:
       - mode

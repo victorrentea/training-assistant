@@ -472,6 +472,11 @@ components:
           count:
             type: integer
             description: Number of parsed bullet-point objects in ai-summary.md
+          updated_at:
+            type: string
+            format: date-time
+            nullable: true
+            description: ISO timestamp of ai-summary.md mtime
 
     # ── Cross-cutting ────────────────────────────────────────────────────────
 
