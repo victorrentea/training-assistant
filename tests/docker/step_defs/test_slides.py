@@ -241,14 +241,14 @@ def host_updates_slide(session_id, slug):
     This is infra/cache management — API call is appropriate here."""
     _, body = _api("GET", f"/{session_id}/api/slides")
     data = json.loads(body)
-    slides = data.get("slides", data) if isinstance(data, dict) else data
+    slides_list = data.get("slides", data) if isinstance(data, dict) else data
     drive_url = None
-    for s in slides:
+    for s in slides_list:
         if s.get("slug") == slug:
             drive_url = s.get("drive_export_url")
             break
-    data = {"drive_export_url": drive_url} if drive_url else {}
-    _api("POST", f"/api/slides/invalidate/{slug}", data=data, base=BASE, timeout=10)
+    payload = {"drive_export_url": drive_url} if drive_url else {}
+    _api("POST", f"/api/{session_id}/api/slides/invalidate/{slug}", data=payload, base=BASE, timeout=10)
 
 
 @when("the slide content is visually rendered")
