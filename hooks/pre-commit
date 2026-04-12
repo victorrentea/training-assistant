@@ -1,10 +1,31 @@
 #!/bin/sh
 
-# Regenerate maintained generated docs and stage them for the current commit.
+# Regenerate maintained generated docs, stage them, and block secret leaks.
 
 set -eu
 
 REPO_ROOT="$(git rev-parse --show-toplevel)"
+
+# Block commits that contain secret values from secrets.env
+SECRETS_FILE="$REPO_ROOT/secrets.env"
+if [ -f "$SECRETS_FILE" ]; then
+  staged_diff="$(git diff --cached --diff-filter=ACMR -U0 -- . ':!secrets.env' ':!*.svg' || true)"
+  if [ -n "$staged_diff" ]; then
+    while IFS='=' read -r key value; do
+      # Skip comments and empty lines
+      case "$key" in
+        '#'*|'') continue ;;
+      esac
+      [ -n "$value" ] || continue
+      # Skip values shorter than 6 chars — too noisy (e.g. "host" matches filenames)
+      [ "${#value}" -ge 6 ] || continue
+      if printf '%s\n' "$staged_diff" | grep -qF "$value"; then
+        echo "ERROR: Secret value for $key found in staged changes. Aborting commit." >&2
+        exit 1
+      fi
+    done < "$SECRETS_FILE"
+  fi
+fi
 
 stage_index_sequence_svgs() {
   render_mode="$1"
@@ -12,39 +33,43 @@ stage_index_sequence_svgs() {
   trap 'rm -rf "$tmp_dir"' EXIT HUP INT TERM
 
   if [ "$render_mode" = all ]; then
-    render_paths="$(git ls-files --cached -- 'docs/sequences/*.puml')"
+    render_paths="$(git ls-files --cached -- 'docs/sequences/manual/*.puml' 'docs/sequences/extracted/*.puml')"
   else
-    render_paths="$(git diff --cached --name-only --diff-filter=ACMR -- 'docs/sequences/*.puml')"
+    render_paths="$(git diff --cached --name-only --diff-filter=ACMR -- 'docs/sequences/manual/*.puml' 'docs/sequences/extracted/*.puml')"
   fi
 
-  set --
   while IFS= read -r path; do
     [ -n "$path" ] || continue
+    # Determine the svg/ sibling of whichever subdir the source came from
+    case "$path" in
+      */manual/*) svg_dir="$REPO_ROOT/docs/sequences/manual/svg" ;;
+      */extracted/*) svg_dir="$REPO_ROOT/docs/sequences/extracted/svg" ;;
+      *) svg_dir="$REPO_ROOT/docs/sequences/manual/svg" ;;
+    esac
     tmp_path="$tmp_dir/$(basename "$path")"
     git show ":$path" > "$tmp_path"
-    set -- "$@" "$tmp_path"
+    python3 "$REPO_ROOT/scripts/render_puml_svgs.py" --output-dir "$svg_dir" "$tmp_path" >/dev/null
+    git add "$svg_dir/$(basename "${path%.puml}").svg"
   done <<EOF
 $render_paths
 EOF
-
-  if [ "$#" -gt 0 ]; then
-    python3 "$REPO_ROOT/scripts/render_puml_svgs.py" "$@" >/dev/null
-    for path in "$@"; do
-      git add "$REPO_ROOT/docs/sequences/svg/$(basename "${path%.puml}").svg"
-    done
-  fi
 
   while IFS="$(printf '\t')" read -r status old_path new_path; do
     [ -n "$status" ] || continue
     case "$status" in
       D|R*)
-        old_svg="$REPO_ROOT/docs/sequences/svg/$(basename "${old_path%.puml}").svg"
+        case "$old_path" in
+          */manual/*) svg_dir="$REPO_ROOT/docs/sequences/manual/svg" ;;
+          */extracted/*) svg_dir="$REPO_ROOT/docs/sequences/extracted/svg" ;;
+          *) svg_dir="$REPO_ROOT/docs/sequences/manual/svg" ;;
+        esac
+        old_svg="$svg_dir/$(basename "${old_path%.puml}").svg"
         rm -f "$old_svg"
         git add -A -- "$old_svg"
         ;;
     esac
   done <<EOF
-$(git diff --cached --name-status --find-renames --diff-filter=DR -- 'docs/sequences/*.puml')
+$(git diff --cached --name-status --find-renames --diff-filter=DR -- 'docs/sequences/manual/*.puml' 'docs/sequences/extracted/*.puml')
 EOF
 
   rm -rf "$tmp_dir"
@@ -56,7 +81,7 @@ python3 "$REPO_ROOT/scripts/generate_apis_md.py" --output "$REPO_ROOT/API.md" >/
 git add "$REPO_ROOT/API.md" "$REPO_ROOT/DB.md"
 
 # Keep sequence SVGs in sync when sequence sources or the renderer itself changes.
-staged_sequence_changes="$(git diff --cached --name-only --diff-filter=ACMRD -- 'docs/sequences/*.puml')"
+staged_sequence_changes="$(git diff --cached --name-only --diff-filter=ACMRD -- 'docs/sequences/manual/*.puml' 'docs/sequences/extracted/*.puml')"
 
 if git diff --cached --name-only --diff-filter=ACMR -- scripts/render_puml_svgs.py | grep -q .; then
   stage_index_sequence_svgs all

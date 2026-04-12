@@ -25,19 +25,19 @@ channels:
       summary: Messages the daemon sends to addons
       message:
         oneOf:
-          - $ref: '#/components/messages/emoji'
+          - $ref: '#/components/messages/display_emoji'
           - $ref: '#/components/messages/session_started'
           - $ref: '#/components/messages/session_ended'
     publish:
       summary: Messages addons sends to the daemon
       message:
         oneOf:
-          - $ref: '#/components/messages/slide'
+          - $ref: '#/components/messages/slide_presenting_now'
           - $ref: '#/components/messages/slides_viewed'
 
 components:
   messages:
-    emoji:
+    display_emoji:
       summary: Relay emoji reaction to desktop overlay for animation
       x-feature: emoji
       payload:
@@ -46,7 +46,7 @@ components:
         properties:
           type:
             type: string
-            enum: [emoji]
+            enum: [display_emoji]
           emoji:
             type: string
             description: Emoji character to animate
@@ -79,7 +79,7 @@ components:
             type: string
             enum: [session_ended]
 
-    slide:
+    slide_presenting_now:
       summary: Current PowerPoint slide changed
       x-feature: slides
       payload:
@@ -88,7 +88,7 @@ components:
         properties:
           type:
             type: string
-            enum: [slide]
+            enum: [slide_presenting_now]
           deck:
             type: string
             description: PowerPoint file name

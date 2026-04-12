@@ -11,9 +11,6 @@ else
   RUNNER="uv run --extra dev --extra daemon"
 fi
 
-echo "Running pre-push sequence-diagram sync check: python3 $REPO_ROOT/scripts/render_puml_svgs.py --check"
-python3 "$REPO_ROOT/scripts/render_puml_svgs.py" --check
-
 echo "Running pre-push checks: ${RUNNER} bash tests/check-all.sh"
 # shellcheck disable=SC2086
 $RUNNER bash "$REPO_ROOT/tests/check-all.sh"

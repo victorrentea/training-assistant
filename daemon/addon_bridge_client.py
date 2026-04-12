@@ -3,9 +3,9 @@
 The addons server runs at ws://127.0.0.1:<WS_SERVER_PORT> (default 8765).
 
 Protocol:
-  Daemon → Addons: {"type": "emoji", "emoji": "<char>", "count": 1}
+  Daemon → Addons: {"type": "display_emoji", "emoji": "<char>", "count": 1}
               — relayed by addons to the desktop overlay for animation
-  Addons → Daemon: {"type": "slide", "deck": "<name>", "slide": <n>, "presenting": <bool>}
+  Addons → Daemon: {"type": "slide_presenting_now", "deck": "<name>", "slide": <n>, "presenting": <bool>}
               — pushed on every PowerPoint slide/deck change (no message when unchanged)
   Addons → Daemon: {"type": "slides_viewed", "slides": [{"fileName": "<name>", "page": <n>, "seconds": <n>}, ...]}
               — periodic (60s) delta of per-slide viewing durations
@@ -47,7 +47,7 @@ class AddonBridgeClient:
 
     def send_emoji(self, emoji: str) -> bool:
         """Forward an emoji reaction to the overlay. Best-effort; never raises."""
-        return self._send({"type": "emoji", "emoji": emoji, "count": 1})
+        return self._send({"type": "display_emoji", "emoji": emoji, "count": 1})
 
     def send_session_started(self, participant_url: str) -> bool:
         """Notify addons that a session has started with the participant join URL."""
@@ -156,7 +156,7 @@ class AddonBridgeClient:
                         _token = context.attach(_ctx)
                 except ImportError:
                     pass
-                if data.get("type") == "slide":
+                if data.get("type") == "slide_presenting_now":
                     self._slide_queue.put(data)
                 elif data.get("type") == "slides_viewed":
                     slides = data.get("slides", [])

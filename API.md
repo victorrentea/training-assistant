@@ -117,7 +117,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 ### Addons WS
 | Message | Payload |
 | --- | --- |
-| Current PowerPoint slide changed<br>`slide` | `deck: string  # PowerPoint file name`<br>`slide: int  # 1-based slide number`<br>`presenting: bool  # Whether slideshow mode is active` |
+| Current PowerPoint slide changed<br>`slide_presenting_now` | `deck: string  # PowerPoint file name`<br>`slide: int  # 1-based slide number`<br>`presenting: bool  # Whether slideshow mode is active` |
 | Periodic delta of per-slide viewing durations (sent every 60s)<br>`slides_viewed` | `slides: list[object]  # Delta viewing durations since last send` |
 
 ## Feature: Activity
@@ -316,7 +316,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 ### Addons WS
 | Message | Payload |
 | --- | --- |
-| Relay emoji reaction to desktop overlay for animation<br>`emoji` | `emoji: string  # Emoji character to animate`<br>`count: int  # Number of times to show the animation` |
+| Relay emoji reaction to desktop overlay for animation<br>`display_emoji` | `emoji: string  # Emoji character to animate`<br>`count: int  # Number of times to show the animation` |
 
 ## Feature: Quiz Generation
 

@@ -361,7 +361,7 @@ This diagram covers the daemon-first session start, folder resume, disk restore,
 
 Current code path / behavior family: [`daemon/session/router.py`](daemon/session/router.py), [`daemon/session/state.py`](daemon/session/state.py), [`daemon/__main__.py`](daemon/__main__.py), [`daemon/session_state.py`](daemon/session_state.py), [`railway/features/ws/router.py`](railway/features/ws/router.py)
 
-![session lifecycle and recovery](docs/sequences/svg/01-session-lifecycle-and-recovery.svg)
+![session lifecycle and recovery](docs/sequences/manual/svg/01-session-lifecycle-and-recovery.svg)
 
 ### Participant Join and Geolocation
 
@@ -369,7 +369,7 @@ This diagram covers UUID-based participant registration, session-scoped state bo
 
 Current code path / behavior family: [`static/participant.js`](static/participant.js), [`daemon/participant/router.py`](daemon/participant/router.py), [`daemon/participant/state.py`](daemon/participant/state.py), [`railway/features/ws/proxy_bridge.py`](railway/features/ws/proxy_bridge.py), [`railway/features/ws/router.py`](railway/features/ws/router.py)
 
-![participant join and geolocation](docs/sequences/svg/02-participant-join-and-geolocation.svg)
+![participant join and geolocation](docs/sequences/manual/svg/02-participant-join-and-geolocation.svg)
 
 ### Poll and Quiz
 
@@ -377,7 +377,7 @@ This diagram covers Claude-backed quiz draft generation plus the live poll lifec
 
 Current code path / behavior family: [`daemon/quiz/router.py`](daemon/quiz/router.py), [`daemon/quiz/generator.py`](daemon/quiz/generator.py), [`daemon/quiz/history.py`](daemon/quiz/history.py), [`daemon/poll/router.py`](daemon/poll/router.py), [`daemon/poll/state.py`](daemon/poll/state.py)
 
-![poll and quiz](docs/sequences/svg/03-poll-and-quiz.svg)
+![poll and quiz](docs/sequences/manual/svg/03-poll-and-quiz.svg)
 
 ### Q&A and Word Cloud
 
@@ -385,7 +385,7 @@ This diagram covers participant word submissions, anonymous question and upvote 
 
 Current code path / behavior family: [`daemon/wordcloud/router.py`](daemon/wordcloud/router.py), [`daemon/wordcloud/state.py`](daemon/wordcloud/state.py), [`daemon/qa/router.py`](daemon/qa/router.py), [`daemon/qa/state.py`](daemon/qa/state.py), [`daemon/ws_publish.py`](daemon/ws_publish.py)
 
-![q&a and word cloud](docs/sequences/svg/04-qa-and-wordcloud.svg)
+![q&a and word cloud](docs/sequences/manual/svg/04-qa-and-wordcloud.svg)
 
 ### Code Review and Debate
 
@@ -393,7 +393,7 @@ This diagram covers host-launched code review and debate activities, participant
 
 Current code path / behavior family: [`daemon/codereview/router.py`](daemon/codereview/router.py), [`daemon/codereview/state.py`](daemon/codereview/state.py), [`daemon/debate/router.py`](daemon/debate/router.py), [`daemon/debate/state.py`](daemon/debate/state.py), [`daemon/debate/ai_cleanup.py`](daemon/debate/ai_cleanup.py)
 
-![code review and debate](docs/sequences/svg/05-code-review-and-debate.svg)
+![code review and debate](docs/sequences/manual/svg/05-code-review-and-debate.svg)
 
 ### Slides Cache and Follow Trainer
 
@@ -401,7 +401,7 @@ This diagram covers slide catalog loading, Railway PDF cache fill and refresh, a
 
 Current code path / behavior family: [`daemon/slides/loop.py`](daemon/slides/loop.py), [`daemon/slides/router.py`](daemon/slides/router.py), [`daemon/addon_bridge_client.py`](daemon/addon_bridge_client.py), [`railway/features/slides/router.py`](railway/features/slides/router.py), [`railway/features/slides/cache.py`](railway/features/slides/cache.py)
 
-![slides cache and follow trainer](docs/sequences/svg/06-slides-cache-and-follow-trainer.svg)
+![slides cache and follow trainer](docs/sequences/manual/svg/06-slides.svg)
 
 ### Participant-to-Host Inputs and Emoji
 
@@ -409,7 +409,7 @@ This diagram covers participant paste and feedback actions, Railway-to-daemon up
 
 Current code path / behavior family: [`daemon/misc/router.py`](daemon/misc/router.py), [`daemon/misc/state.py`](daemon/misc/state.py), [`daemon/emoji/router.py`](daemon/emoji/router.py), [`daemon/upload.py`](daemon/upload.py), [`railway/features/upload/router.py`](railway/features/upload/router.py)
 
-![participant-to-host inputs and emoji](docs/sequences/svg/07-participant-to-host-inputs-and-emoji.svg)
+![participant-to-host inputs and emoji](docs/sequences/manual/svg/07-participant-to-host-inputs-and-emoji.svg)
 
 ### Activity, Summary, and Leaderboard
 
@@ -417,7 +417,7 @@ This diagram covers activity switching, file-backed notes and summary publicatio
 
 Current code path / behavior family: [`daemon/activity/router.py`](daemon/activity/router.py), [`daemon/participant/router.py`](daemon/participant/router.py), [`daemon/misc/router.py`](daemon/misc/router.py), [`daemon/summary/loop.py`](daemon/summary/loop.py), [`daemon/leaderboard/router.py`](daemon/leaderboard/router.py)
 
-![activity, summary, and leaderboard](docs/sequences/svg/08-activity-summary-and-leaderboard.svg)
+![activity, summary, and leaderboard](docs/sequences/manual/svg/08-activity-summary-and-leaderboard.svg)
 
 ---
 
