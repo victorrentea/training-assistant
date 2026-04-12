@@ -1102,6 +1102,7 @@ function closeAgendaModal() {
     closePasteModal();
     closeSlidesModal();
     closeAvatarModal();
+    closeAgendaModal();
   }
 
   function _normalizeSlideMatchToken(value) {
