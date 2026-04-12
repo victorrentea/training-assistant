@@ -156,7 +156,7 @@
 <span class="material-symbols-outlined">description</span>
 <span class="text-base">Notes</span>
 </a>
-<a class="text-on-surface-variant px-4 py-3 hover:text-on-surface hover:bg-surface-container-high rounded-full flex items-center gap-3 transition-colors duration-200" href="#">
+<a onclick="showView('summary')" class="text-on-surface-variant px-4 py-3 hover:text-on-surface hover:bg-surface-container-high rounded-full flex items-center gap-3 transition-colors duration-200 cursor-pointer">
 <span class="material-symbols-outlined">psychology</span>
 <span class="text-base">AI Summary</span>
 </a>
@@ -217,6 +217,34 @@
 </aside>
 <!-- MAIN CONTENT (80%) -->
 <main class="flex-1 h-full relative flex flex-col overflow-hidden bg-surface">
+<!-- AI Summary View -->
+<div id="summary-view" style="display:none" class="h-full overflow-y-auto px-16 py-12">
+  <h1 class="text-3xl font-extrabold text-on-surface mb-6">Session Summary</h1>
+  <h2 class="text-xl font-bold text-on-surface mb-3">Key Concepts Covered</h2>
+  <h3 class="text-base font-semibold text-on-surface-variant mb-2">Architecture Principles</h3>
+  <ul class="list-disc pl-6 space-y-1 text-sm text-on-surface-variant mb-6">
+    <li>Single Responsibility and separation of concerns</li>
+    <li>Dependency inversion keeps modules decoupled</li>
+    <li>Hexagonal architecture isolates domain logic from infrastructure</li>
+    <li>Ports and adapters enable testability</li>
+  </ul>
+  <h3 class="text-base font-semibold text-on-surface-variant mb-2">Design Patterns</h3>
+  <ul class="list-disc pl-6 space-y-1 text-sm text-on-surface-variant mb-6">
+    <li>Repository pattern abstracts persistence</li>
+    <li>Command/Query separation improves clarity</li>
+    <li>Factory methods encapsulate object creation</li>
+    <li>Observer pattern drives reactive pipelines</li>
+  </ul>
+  <h2 class="text-xl font-bold text-on-surface mb-3">Discussion Highlights</h2>
+  <h3 class="text-base font-semibold text-on-surface-variant mb-2">Open Questions from Participants</h3>
+  <ul class="list-disc pl-6 space-y-1 text-sm text-on-surface-variant mb-6">
+    <li>When does eventual consistency outweigh strong consistency?</li>
+    <li>How do you migrate a monolith incrementally without downtime?</li>
+    <li>Is clean architecture overkill for small services?</li>
+  </ul>
+</div>
+<!-- Slides View -->
+<div id="slides-view">
 <!-- PDF Viewer Toolbar (Minimalist) -->
 <div class="absolute top-8 left-1/2 -translate-x-1/2 z-20 flex items-center gap-4 px-6 py-3 rounded-full glass whisper-shadow">
 <button class="p-2 hover:bg-primary-container rounded-full text-on-surface-variant hover:text-primary transition-all">
@@ -326,6 +354,13 @@
                 Live Content Sync Active
             </div>
 </div>
+</div><!-- end slides-view -->
 </main>
 </div>
+<script>
+function showView(name) {
+  document.getElementById('slides-view').style.display = name === 'slides' ? '' : 'none';
+  document.getElementById('summary-view').style.display = name === 'summary' ? '' : 'none';
+}
+</script>
 </body></html>
