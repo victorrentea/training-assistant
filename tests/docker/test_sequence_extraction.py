@@ -78,7 +78,7 @@ def test_poll_sequence_diagram_extraction():
 
     # Debug: show raw traces
     traces_content = Path(TRACES_FILE).read_text()
-    trace_lines = [l for l in traces_content.strip().split("\n") if l.strip()]
+    trace_lines = [line for line in traces_content.strip().split("\n") if line.strip()]
     print(f"=== Raw traces: {len(trace_lines)} spans ===")
     import json as _json
     services = set()
