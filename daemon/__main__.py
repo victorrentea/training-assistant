@@ -492,7 +492,12 @@ def _broadcast_notes_summary_counts(probe: dict) -> None:
     from daemon.ws_messages import NotesUpdatedMsg, SummaryUpdatedMsg
     from daemon.ws_publish import broadcast
     broadcast(NotesUpdatedMsg(count=probe["notes_non_empty_lines"]))
-    broadcast(SummaryUpdatedMsg(count=probe["summary_point_count"]))
+    mtime_ns = probe.get("summary_mtime_ns")
+    updated_at: str | None = None
+    if mtime_ns:
+        from datetime import datetime, timezone
+        updated_at = datetime.fromtimestamp(mtime_ns / 1e9, tz=timezone.utc).isoformat()
+    broadcast(SummaryUpdatedMsg(count=probe["summary_point_count"], updated_at=updated_at))
 
 
 

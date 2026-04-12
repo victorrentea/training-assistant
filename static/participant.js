@@ -576,13 +576,22 @@ function closeEmojiPopup(ev) {
     }
   }
 
-  function updateSummaryCount(count, flash = false) {
+  function updateSummaryCount(count, flash = false, updatedAt = null) {
     const btn = document.getElementById('summary-btn');
     if (!btn) return;
     btn.disabled = !count;
     btn.dataset.tooltip = count ? 'Key points discussed so far' : '(none yet)';
     const span = document.getElementById('summary-count');
-    if (span) span.textContent = count ? `${count} ` : '';
+    if (span) {
+      if (updatedAt) {
+        const d = new Date(updatedAt);
+        const hh = String(d.getHours()).padStart(2, '0');
+        const mm = String(d.getMinutes()).padStart(2, '0');
+        span.innerHTML = `<sup>${hh}:${mm}</sup> `;
+      } else {
+        span.innerHTML = count ? `${count} ` : '';
+      }
+    }
     if (flash && count) {
       btn.classList.remove('count-flash');
       void btn.offsetWidth;
@@ -665,13 +674,11 @@ function closeEmojiPopup(ev) {
     if (countEl) {
       if (summaryUpdatedAt) {
         const d = new Date(summaryUpdatedAt);
-        const hhmm = d.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit', hour12: false});
-        const today = new Date();
-        countEl.textContent = d.toDateString() === today.toDateString()
-          ? hhmm
-          : d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + ' ' + hhmm;
+        const hh = String(d.getHours()).padStart(2, '0');
+        const mm = String(d.getMinutes()).padStart(2, '0');
+        countEl.innerHTML = `<sup>${hh}:${mm}</sup> `;
       } else {
-        countEl.textContent = '';
+        countEl.innerHTML = '';
       }
     }
     const summaryBtnEl = document.getElementById('summary-btn');
@@ -3286,7 +3293,7 @@ const sessionTitleEl = document.getElementById('session-title');
         }
         _onIncomingHostSlidesCurrent(msg.slides_current || null);
         if (msg.notes_count != null) updateNotesCount(msg.notes_count);
-        if (msg.summary_count != null) updateSummaryCount(msg.summary_count);
+        if (msg.summary_count != null) updateSummaryCount(msg.summary_count, false, msg.summary_updated_at);
         // Google Drive link
         if (msg.gdrive_url !== undefined) {
           const gdriveBtn = document.getElementById('gdrive-btn');
@@ -3355,7 +3362,7 @@ const sessionTitleEl = document.getElementById('session-title');
         updateNotesCount(msg.count, true);
         break;
       case 'summary_updated':
-        updateSummaryCount(msg.count, true);
+        updateSummaryCount(msg.count, true, msg.updated_at);
         break;
       case 'slides_cache_status': {
         // Snapshot old status for the active slide before catalog refresh.
