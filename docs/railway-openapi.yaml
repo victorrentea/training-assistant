@@ -1,0 +1,183 @@
+openapi: 3.1.0
+info:
+  title: Daemon ↔ Railway Internal REST API
+  version: 0.1.0
+  description: >
+    Internal REST endpoints called by the training daemon against the Railway
+    backend. All endpoints require HTTP Basic Auth (HOST_USERNAME / HOST_PASSWORD).
+    This spec is separate from the host/participant-facing API (docs/openapi.yaml).
+paths:
+  /api/session/active:
+    get:
+      tags:
+      - session
+      summary: Get Active Session ID
+      description: >
+        Daemon calls on startup to discover if a session is already active on
+        Railway. Returns the current session_id or null if no session is active.
+      operationId: get_active_session_id
+      security:
+      - basicAuth: []
+      responses:
+        '200':
+          description: Active session info
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActiveSessionResponse'
+      x-feature: session_management
+  /api/slides/download-from-gdrive/{slug}:
+    post:
+      tags:
+      - slides
+      summary: Download Slide PDF from Google Drive
+      description: >
+        Daemon asks Railway to fetch a PDF export from Google Drive and cache
+        it locally on Railway. Railway downloads the file, caches it, and
+        returns the SHA-256 hash so the daemon can detect content changes.
+      operationId: download_from_gdrive
+      security:
+      - basicAuth: []
+      parameters:
+      - name: slug
+        in: path
+        required: true
+        schema:
+          type: string
+        description: URL-safe identifier for the slide deck.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DownloadFromGdriveRequest'
+      responses:
+        '200':
+          description: PDF cached successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DownloadFromGdriveResponse'
+        '422':
+          description: drive_export_url missing or invalid
+        '502':
+          description: Google Drive download failed
+      x-feature: slides
+  /upload/{file_id}:
+    get:
+      tags:
+      - upload
+      summary: Download Uploaded File
+      description: >
+        Daemon downloads a participant-uploaded file from Railway's temporary
+        storage. Called after Railway notifies the daemon via WebSocket that a
+        new file is ready for download.
+      operationId: download_uploaded_file
+      security:
+      - basicAuth: []
+      parameters:
+      - name: file_id
+        in: path
+        required: true
+        schema:
+          type: integer
+        description: Numeric ID assigned to the uploaded file by Railway.
+      responses:
+        '200':
+          description: Raw file content
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: File not found or content missing
+      x-feature: paste_upload
+  /upload/{file_id}/ack:
+    post:
+      tags:
+      - upload
+      summary: Acknowledge File Download
+      description: >
+        Daemon confirms it has downloaded and persisted the file to local disk.
+        Railway deletes its temporary copy upon receiving this acknowledgement.
+      operationId: ack_file_download
+      security:
+      - basicAuth: []
+      parameters:
+      - name: file_id
+        in: path
+        required: true
+        schema:
+          type: integer
+        description: Numeric ID of the file being acknowledged.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FileDownloadAck'
+      responses:
+        '200':
+          description: Acknowledged
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+        '404':
+          description: File not found
+      x-feature: paste_upload
+components:
+  securitySchemes:
+    basicAuth:
+      type: http
+      scheme: basic
+      description: >
+        HTTP Basic Auth using HOST_USERNAME and HOST_PASSWORD from
+        ~/.training-assistants-secrets.env.
+  schemas:
+    ActiveSessionResponse:
+      type: object
+      properties:
+        session_id:
+          type:
+          - string
+          - 'null'
+          description: Current active session ID, or null if no session is active.
+      required:
+      - session_id
+    DownloadFromGdriveRequest:
+      type: object
+      properties:
+        drive_export_url:
+          type: string
+          description: Google Drive PDF export URL for the slide deck.
+      required:
+      - drive_export_url
+    DownloadFromGdriveResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          description: Always "cached" on success.
+        sha256:
+          type: string
+          description: SHA-256 hex digest of the cached PDF file.
+        size:
+          type: integer
+          description: File size in bytes.
+      required:
+      - status
+      - sha256
+      - size
+    FileDownloadAck:
+      type: object
+      properties:
+        disk_path:
+          type: string
+          description: Absolute local path where the daemon saved the file.
+      required:
+      - disk_path
