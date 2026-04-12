@@ -160,12 +160,12 @@ body{visibility:hidden}
 <nav class="flex flex-col space-y-2 flex-1 overflow-y-auto min-h-0">
 <!-- Slides - ACTIVE -->
 <div>
-<button data-nav="slides" onclick="toggleSlides()" class="nav-item nav-active w-full h-10 rounded-full px-2 font-semibold flex items-center gap-3 transition-all">
+<a data-nav="slides" onclick="toggleSlides()" class="nav-item nav-active rounded-full px-2 py-2 font-semibold flex items-center gap-3 transition-all cursor-pointer">
 <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">slideshow</span>
 <span class="text-base">Slides</span>
 <span class="material-symbols-outlined slides-arrow text-xl transition-transform duration-300">chevron_right</span>
 <span class="badge-new ml-auto">LIVE</span>
-</button>
+</a>
 <div style="max-height:0;overflow:hidden;transition:max-height 0.6s ease" class="slides-list mx-2 mt-1 rounded-xl">
 <div class="slides-list-inner overflow-y-auto py-1 space-y-1.5">
 <div class="px-4 py-0.5 text-xs leading-relaxed">
@@ -217,11 +217,11 @@ body{visibility:hidden}
 <span class="badge-new">UPDATE</span>
 </a>
 <div>
-<button data-nav="topics" onclick="toggleTopics()" class="nav-item w-full h-10 rounded-full px-2 flex items-center gap-3 transition-all">
+<a data-nav="topics" onclick="toggleTopics()" class="nav-item rounded-full px-2 py-2 flex items-center gap-3 transition-all cursor-pointer">
 <span class="material-symbols-outlined">topic</span>
 <span class="text-base">All Topics</span>
 <span class="material-symbols-outlined topics-arrow text-xl transition-transform duration-300">chevron_right</span>
-</button>
+</a>
 <div style="max-height:0;overflow:hidden;transition:max-height 0.6s ease" class="topics-list mx-2 mb-1 rounded-xl">
 <div class="overflow-y-auto h-full">
 <div class="py-1">
@@ -250,12 +250,12 @@ body{visibility:hidden}
 </div>
 </div>
 <div>
-<button data-nav="gitrepos" onclick="toggleRepos()" class="nav-item w-full h-10 rounded-full px-2 flex items-center gap-3 transition-all">
+<a data-nav="gitrepos" onclick="toggleRepos()" class="nav-item rounded-full px-2 py-2 flex items-center gap-3 transition-all cursor-pointer">
 <span class="material-symbols-outlined">terminal</span>
 <span class="text-base">Git Repos</span>
 <span class="material-symbols-outlined repos-arrow text-xl transition-transform duration-300">chevron_right</span>
 <span class="badge-new ml-auto">NEW</span>
-</button>
+</a>
 <div style="max-height:0;overflow:hidden;transition:max-height 0.6s ease" class="repos-list mx-2 rounded-xl">
 <div class="overflow-y-auto max-h-48 py-1">
 <a href="https://github.com/victorrentea/clean-code" target="_blank" class="px-4 py-1.5 text-sm text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high cursor-pointer rounded-lg flex items-center gap-2 truncate">
