@@ -10,11 +10,7 @@ from pathlib import Path
 from daemon import log
 from daemon.session_state import (
     load_key_points,
-    save_daemon_state,
     save_key_points,
-    session_start_date,
-    stack_to_daemon_state,
-    sync_session_to_server,
 )
 
 __all__ = [
@@ -92,8 +88,8 @@ def _read_ai_summary_file(session_folder: Path) -> list[dict] | None:
 
 def run_summary_cycle(
     config,
-    session_stack: list[dict],
     sessions_root: Path,
+    session_name: str,
     current_key_points: list[dict],
     summary_watermark: int,
 ) -> tuple[list[dict], int]:
@@ -101,25 +97,16 @@ def run_summary_cycle(
 
     Returns updated (current_key_points, summary_watermark).
     Reads ai-summary.md from session folder instead of generating via Claude API.
-    Saves key points to disk and syncs to server on success.
+    Saves key points to disk on success.
     """
-    if not session_stack:
-        return current_key_points, summary_watermark
-
-    current_session = session_stack[-1]
-    session_folder = sessions_root / current_session["name"]
-    s_date = session_start_date(current_session)
+    session_folder = sessions_root / session_name
 
     # Read from ai-summary.md file in session folder
     try:
         new_points = _read_ai_summary_file(session_folder)
-        raw_markdown = _read_ai_summary_raw(session_folder)
-        file_time = get_ai_summary_mtime(session_folder)
         if new_points is not None:
             current_key_points = new_points
-            save_key_points(session_folder, current_key_points, 0, s_date)
-            save_daemon_state(sessions_root, stack_to_daemon_state(session_stack))
-            sync_session_to_server(config, session_stack, current_key_points, raw_markdown=raw_markdown, file_time=file_time)
+            save_key_points(session_folder, current_key_points, 0)
             log.info("summarizer", f"Key points: {len(current_key_points)} total (from {AI_SUMMARY_FILE})")
     except Exception as e:
         log.error("summarizer", f"Error reading {AI_SUMMARY_FILE}: {e}")

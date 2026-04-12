@@ -81,17 +81,6 @@ def _dedupe_normalized_folder_names(folders: list[str]) -> list[str]:
     return result
 
 
-def _is_session_active(stack: list[dict]) -> bool:
-    """Return True if session stack has an active (non-ended) session."""
-    if not stack:
-        return False
-    top = stack[-1]
-    if top.get("ended_at"):
-        return False
-    # Active includes paused sessions (they're still "open")
-    return True
-
-
 # ── Global host session endpoints (no session_id prefix) ──
 
 global_router = APIRouter(prefix="/api/session", tags=["session"])
@@ -135,7 +124,7 @@ async def start_session(body: StartSessionRequest):
     })
     # Pre-register session_id with Railway immediately so host WS validates on first connect
     # (avoids race condition where host navigates before session_pending queue is processed)
-    announce_session_id(session_id, name)
+    announce_session_id(session_id)
     return SessionStartResponse(session_name=name, session_id=session_id)
 
 
@@ -158,7 +147,7 @@ async def resume_session(body: ResumeSessionRequest):
         "type": "workshop",
         "session_id": session_id,
     })
-    announce_session_id(session_id, folder_name)
+    announce_session_id(session_id)
     return SessionStartResponse(session_name=folder_name, session_id=session_id)
 
 
@@ -204,7 +193,5 @@ async def end_talk():
 @public_router.get("/active", response_model=SessionActiveResponse)
 async def get_session_active():
     """Public endpoint: returns the active session_id or null."""
-    stack = session_state.get_session_stack()
     active_session_id = session_state.get_active_session_id()
-    is_active = _is_session_active(stack) and active_session_id is not None
-    return SessionActiveResponse(session_id=active_session_id if is_active else None)
+    return SessionActiveResponse(session_id=active_session_id)

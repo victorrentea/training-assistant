@@ -30,14 +30,16 @@ def set_current_session_id(session_id: str | None) -> None:
     _current_session_id = session_id
 
 
-def announce_session_id(session_id: str, session_name: str) -> None:
-    """Immediately notify Railway of a new session_id via WS.
-
-    Called right after generating a session_id so Railway accepts the host WS
-    connection before the main loop processes the session_pending queue.
-    """
+def announce_session_id(session_id: str) -> None:
+    """Immediately notify Railway of a new session_id via WS."""
     if _ws_client and _ws_client.connected:
-        _ws_client.send({"type": "set_session_id", "session_id": session_id, "session_name": session_name})
+        _ws_client.send({"type": "set_session_id", "session_id": session_id})
+
+
+def announce_session_cleared() -> None:
+    """Notify Railway that no session is active."""
+    if _ws_client and _ws_client.connected:
+        _ws_client.send({"type": "set_session_id"})
 
 
 def get_current_session_id() -> str | None:
@@ -344,50 +346,6 @@ def find_session_folder_by_id(sessions_root: Path, session_id: str) -> Path | No
     return None
 
 
-def session_meta_to_stack(meta: dict, folder_name: str) -> list[dict]:
-    """Build an in-memory session stack from session-state.json metadata and folder name."""
-    if not meta:
-        return []
-    main_entry = {
-        "name": folder_name,
-        "started_at": meta.get("started_at", datetime.now().isoformat()),
-        "paused_intervals": meta.get("paused_intervals", []),
-    }
-    talk = meta.get("talk")
-    if talk and talk.get("status") != "ended":
-        return [main_entry, talk]
-    return [main_entry]
-
-
-def daemon_state_to_stack(daemon_state: dict) -> list[dict]:
-    """Convert {main, talk} daemon state dict to the in-memory session stack list.
-    Sessions with status 'ended' are excluded — they are not restored.
-    Used for migrating old global state format."""
-    main = daemon_state.get("main")
-    talk = daemon_state.get("talk")
-    # If main session is ended, treat as no session at all
-    if main and main.get("status") == "ended":
-        return []
-    stack = []
-    if main:
-        stack.append(main)
-    # If talk session is ended, keep main but discard talk
-    if talk and talk.get("status") != "ended":
-        stack.append(talk)
-    return stack
-
-
-def stack_to_daemon_state(stack: list[dict]) -> dict:
-    """Convert in-memory session stack list to {main, talk} dict for server sync."""
-    def _with_status(s: dict) -> dict:
-        paused = any(p.get("to") is None for p in s.get("paused_intervals", []))
-        return {**s, "status": "paused" if paused else "active"}
-    return {
-        "main": _with_status(stack[0]) if len(stack) >= 1 else None,
-        "talk": _with_status(stack[1]) if len(stack) >= 2 else None,
-    }
-
-
 # ── Session pause/resume helpers ───────────────────────────────────────────────
 
 def pause_session(session: dict, now: datetime, reason: str = "explicit") -> None:
@@ -493,42 +451,6 @@ def find_notes_in_folder(folder: Path) -> Path | None:
         key=lambda f: f.stat().st_mtime,
     )
     return txt_files[-1] if txt_files else None
-
-
-# ── Server sync helper ─────────────────────────────────────────────────────────
-
-def sync_session_to_server(
-    config, stack: list[dict], key_points: list[dict],
-    session_state: dict | None = None,
-    **extra_fields,
-) -> None:
-    """Push session stack and key points to server via WS (falls back to HTTP).
-    If session_state is provided, it is included for a plain restore (no participant disconnect).
-    Extra keyword arguments (e.g. action, discussion_points) are merged into the payload."""
-    daemon_state = stack_to_daemon_state(stack)
-    raw_markdown = extra_fields.pop("raw_markdown", None)
-    file_time = extra_fields.pop("file_time", None)
-    payload: dict = {"main": daemon_state["main"], "talk": daemon_state["talk"], "key_points": key_points}
-    if raw_markdown is not None:
-        payload["raw_markdown"] = raw_markdown
-    if file_time is not None:
-        payload["file_time"] = file_time
-    if session_state is not None:
-        payload["session_state"] = session_state
-        if session_state.get("session_id"):
-            payload["session_id"] = session_state["session_id"]
-    payload.update(extra_fields)
-
-    if _ws_client and _ws_client.connected:
-        session_id = payload.get("session_id") or (stack[-1].get("session_id") if stack else None)
-        session_name = stack[-1].get("name") if stack else None
-        msg: dict = {"type": "set_session_id"}
-        if session_id:
-            msg["session_id"] = session_id
-        if session_name:
-            msg["session_name"] = session_name
-        _ws_client.send(msg)
-    # else: WS not connected yet — session will sync on reconnect
 
 
 # ── Slides manifest helpers ────────────────────────────────────────────────────

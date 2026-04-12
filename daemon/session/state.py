@@ -9,18 +9,17 @@ from pathlib import Path
 
 _lock = threading.Lock()
 
-# Set by daemon/__main__.py after initialization
-_session_stack: list[dict] = []   # reference to the live session stack (shallow copy on read)
 _active_session_id: str | None = None
+_active_session_name: str | None = None  # folder name of active session
 _sessions_root: Path | None = None
 
 
-def set_active_session(session_id: str | None, stack: list[dict]) -> None:
-    """Called by main loop whenever session stack or active_session_id changes."""
-    global _active_session_id, _session_stack
+def set_active_session(session_id: str | None, session_name: str | None) -> None:
+    """Called by main loop whenever active session changes."""
+    global _active_session_id, _active_session_name
     with _lock:
         _active_session_id = session_id
-        _session_stack = list(stack)  # snapshot copy
+        _active_session_name = session_name
 
 
 def set_sessions_root(root: Path) -> None:
@@ -35,9 +34,9 @@ def get_active_session_id() -> str | None:
         return _active_session_id
 
 
-def get_session_stack() -> list[dict]:
+def get_active_session_name() -> str | None:
     with _lock:
-        return list(_session_stack)
+        return _active_session_name
 
 
 def get_sessions_root() -> Path | None:
