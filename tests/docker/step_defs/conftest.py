@@ -16,10 +16,9 @@ sys.path.insert(0, "/app")
 sys.path.insert(0, "/app/tests")
 
 import pytest
-from playwright.sync_api import sync_playwright, expect
-
 from pages.host_page import HostPage
 from pages.participant_page import ParticipantPage
+from playwright.sync_api import expect, sync_playwright
 
 sys.path.insert(0, "/tests")
 from session_utils import fresh_session
@@ -68,7 +67,7 @@ def _await_condition(fn, timeout_ms=10000, poll_ms=300, msg=""):
     raise AssertionError(msg or f"Condition not met within {timeout_ms}ms")
 
 
-from pytest_bdd import given, when, parsers
+from pytest_bdd import given, parsers
 
 
 # ── BDD phase tracking for OTel ──────────────────────────────────────────

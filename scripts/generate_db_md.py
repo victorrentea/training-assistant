@@ -66,7 +66,9 @@ def _shape_lines_for_model(model: type[BaseModel]) -> list[str]:
         # Remove surrounding backticks while preserving leading indentation
         indent = len(line) - len(line.lstrip())
         content = line.lstrip().strip("`")
-        cleaned.append(" " * indent + content)
+        # Convert 4-space indentation (from HTML &nbsp;) to 2-space
+        level = indent // 4
+        cleaned.append("  " * level + content)
     return cleaned
 
 
