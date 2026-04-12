@@ -3,16 +3,18 @@ Hermetic E2E tests: daemon integration points.
 
 Tests that verify each daemon external integration works through the stub adapters:
 - PPTX file change detection → slide_invalidated → backend re-downloads
-- Git activity file tracking → host sees repos + branches
+- Git activity WS tracking → host sees repos + branches
 - Quiz generation via stub LLM → host sees quiz preview
 - Session folder creation + state persistence on disk
 """
 
 import json
 import os
+import queue
 import re
 import subprocess
 import sys
+import threading
 import time
 import urllib.request
 from datetime import datetime
@@ -139,55 +141,72 @@ def test_pptx_change_triggers_slide_invalidation():
         browser.close()
 
 
-# ── Git Activity File Tracker ──────────────────────────────────────────────
+# ── Git Activity WS Tracker ────────────────────────────────────────────────
 
 
 @pytest.mark.nightly
-def test_git_activity_file_tracked_by_daemon():
-    """Write activity-git file → daemon reads it → git_repos list in backend state grows."""
-    today = datetime.now().strftime("%Y-%m-%d")
-    git_file = TRANSCRIPTION_FOLDER / f"activity-git-{today}.md"
-    TRANSCRIPTION_FOLDER.mkdir(parents=True, exist_ok=True)
+def test_git_file_opened_tracked_by_daemon():
+    """Send git_file_opened via addon bridge WS → daemon accumulates it → host badge updates."""
+    from websockets.sync.server import serve as ws_serve
 
-    now_hhmm = datetime.now().strftime("%H:%M:%S")
-    git_file.write_text(
-        f"{now_hhmm} https://github.com/victorrentea/training-assistant branch:feature/hermetic-tests file:main.py\n"
-        f"{now_hhmm} https://github.com/victorrentea/training-assistant branch:feature/hermetic-tests file:test.py\n",
-        encoding="utf-8",
-    )
+    _ADDON_BRIDGE_PORT = int(os.environ.get("WS_SERVER_PORT", "8765"))
+    connection_event = threading.Event()
+    send_queue: queue.Queue = queue.Queue()
 
-    session_id = fresh_session("Integration")
+    def _addon_handler(ws):
+        connection_event.set()
+        try:
+            msg = send_queue.get(timeout=15)
+            ws.send(json.dumps(msg))
+            # Keep open so daemon processes it before we close
+            time.sleep(3)
+        except Exception:
+            pass
 
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
-        host_ctx = browser.new_context(
-            http_credentials={"username": HOST_USER, "password": HOST_PASS}
-        )
-        host_page = host_ctx.new_page()
-        host_page.goto(f"{DAEMON_BASE}/host/{session_id}", wait_until="networkidle")
-        expect(host_page.locator("#tab-poll")).to_be_visible(timeout=10000)
+    server = ws_serve(_addon_handler, "127.0.0.1", _ADDON_BRIDGE_PORT)
+    server_thread = threading.Thread(target=server.serve_forever, daemon=True)
+    server_thread.start()
 
-        # Wait for daemon to pick up the activity-git file and push git_repos to backend.
-        # The host page shows a git repos badge (⎇ N) that updates via WS when git_repos arrives.
-        _await_condition(
-            lambda: host_page.evaluate("""() => {
-                const badge = document.getElementById('git-repos-badge');
-                if (!badge) return false;
-                const text = badge.textContent.trim();
-                // Badge format: "⎇ N" — count > 0 means daemon pushed repos
-                const match = text.match(/(\\d+)/);
-                return match && parseInt(match[1]) > 0;
-            }"""),
-            timeout_ms=15000,
-            msg="Daemon did not push git_repos from activity file to backend (git-repos-badge stayed at 0)"
-        )
+    try:
+        # Daemon retries addon bridge every 5 s — wait for it to connect
+        assert connection_event.wait(timeout=12), "Daemon did not connect to addon bridge WS server"
 
-        badge_text = host_page.evaluate("() => document.getElementById('git-repos-badge')?.textContent || ''")
-        print(f"Git repos badge: '{badge_text}'")
-        print("SUCCESS: Git activity file tracked by daemon!")
-        browser.close()
+        send_queue.put({
+            "type": "git_file_opened",
+            "url": "https://github.com/victorrentea/training-assistant",
+            "branch": "feature/hermetic-tests",
+            "file": "main.py",
+        })
 
-    git_file.unlink(missing_ok=True)
+        session_id = fresh_session("Integration")
+
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=True)
+            host_ctx = browser.new_context(
+                http_credentials={"username": HOST_USER, "password": HOST_PASS}
+            )
+            host_page = host_ctx.new_page()
+            host_page.goto(f"{DAEMON_BASE}/host/{session_id}", wait_until="networkidle")
+            expect(host_page.locator("#tab-poll")).to_be_visible(timeout=10000)
+
+            _await_condition(
+                lambda: host_page.evaluate("""() => {
+                    const badge = document.getElementById('git-repos-badge');
+                    if (!badge) return false;
+                    const text = badge.textContent.trim();
+                    const match = text.match(/(\\d+)/);
+                    return match && parseInt(match[1]) > 0;
+                }"""),
+                timeout_ms=15000,
+                msg="Daemon did not push git_repos from WS message to backend (git-repos-badge stayed at 0)"
+            )
+
+            badge_text = host_page.evaluate("() => document.getElementById('git-repos-badge')?.textContent || ''")
+            print(f"Git repos badge: '{badge_text}'")
+            print("SUCCESS: Git activity tracked via addon bridge WS!")
+            browser.close()
+    finally:
+        server.shutdown()
 
 
 # ── Quiz Generation via Stub LLM ──────────────────────────────────────────

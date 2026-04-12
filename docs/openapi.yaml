@@ -113,6 +113,21 @@ paths:
       x-feature: participant_state
       x-doc-notes:
       - Returns participant-personalized full state snapshot.
+  /api/participant/git-activity:
+    get:
+      tags:
+      - participant
+      summary: Get Git Activity
+      description: Return accumulated git file-open activity for the current session.
+      operationId: get_git_activity_api_participant_git_activity_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GitActivityResponse'
+      x-feature: identity
   /api/{session_id}/host/participants/resolve-locations:
     post:
       tags:
@@ -1643,6 +1658,17 @@ components:
       required:
       - text
       title: FeedbackRequest
+    GitActivityResponse:
+      properties:
+        git_repos:
+          items:
+            $ref: '#/components/schemas/GitRepoActivity'
+          type: array
+          title: Git Repos
+      type: object
+      required:
+      - git_repos
+      title: GitActivityResponse
     GitRepoActivity:
       properties:
         url:
@@ -1656,11 +1682,11 @@ components:
             type: string
           type: array
           title: Files
+          default: []
       type: object
       required:
       - url
       - branch
-      - files
       title: GitRepoActivity
     HostCodeReviewState:
       properties:
