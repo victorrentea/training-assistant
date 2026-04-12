@@ -774,4 +774,22 @@ function resetStatePrompt() {
 </script>
 <script src="/static/version-age.js"></script>
 <script>renderDeployAge('version-tag-new', {disableBranchTooltip: true});</script>
+<script>
+(async function loadParticipantState() {
+  try {
+    const status = await fetch('/api/status').then(r => r.json());
+    const sessionId = status.session_id;
+    console.log('[participant] session_id:', sessionId);
+    if (!sessionId) return;
+    const [slides, notes] = await Promise.all([
+      fetch(`/${sessionId}/api/slides`).then(r => r.json()),
+      fetch(`/${sessionId}/api/notes`).then(r => r.json()),
+    ]);
+    console.log('[participant] slides:', slides);
+    console.log('[participant] notes:', notes);
+  } catch (e) {
+    console.error('[participant] failed to load state:', e);
+  }
+})();
+</script>
 </body></html>
