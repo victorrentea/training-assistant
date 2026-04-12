@@ -144,11 +144,11 @@
 <!-- Navigation Cluster -->
 <nav class="flex-grow flex flex-col space-y-1">
 <!-- Slides - ACTIVE -->
-<a class="bg-primary-container text-on-primary-container rounded-full px-4 py-3 font-semibold flex items-center gap-3 transition-all" href="#">
+<a onclick="closeTopics()" class="bg-primary-container text-on-primary-container rounded-full px-4 py-3 font-semibold flex items-center gap-3 transition-all cursor-pointer">
 <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">slideshow</span>
 <span class="text-base">Slides</span>
 </a>
-<a class="text-on-surface-variant px-4 py-3 hover:text-on-surface hover:bg-surface-container-high rounded-full flex items-center gap-3 transition-colors duration-200" href="#">
+<a onclick="closeTopics()" class="text-on-surface-variant px-4 py-3 hover:text-on-surface hover:bg-surface-container-high rounded-full flex items-center gap-3 transition-colors duration-200 cursor-pointer">
 <span class="material-symbols-outlined">event_note</span>
 <span class="text-base">Agenda</span>
 </a>
@@ -160,12 +160,12 @@
 <span class="material-symbols-outlined">psychology</span>
 <span class="text-base">AI Summary</span>
 </a>
-<button onclick="(function(btn){var list=btn.nextElementSibling;var arrow=btn.querySelector('.topics-arrow');var open=list.style.maxHeight==='0px'||list.style.maxHeight==='';list.style.maxHeight=open?'12rem':'0px';arrow.style.transform=open?'rotate(90deg)':'rotate(0deg)';})(this)" class="w-full text-on-surface-variant px-4 py-3 hover:text-on-surface hover:bg-surface-container-high rounded-full flex items-center gap-3 transition-colors duration-200">
+<button onclick="openTopics()" class="w-full text-on-surface-variant px-4 py-3 hover:text-on-surface hover:bg-surface-container-high rounded-full flex items-center gap-3 transition-colors duration-200">
 <span class="material-symbols-outlined">topic</span>
 <span class="text-base flex-1 text-left">Topics</span>
-<span class="material-symbols-outlined topics-arrow text-sm transition-transform duration-300">chevron_right</span>
+<span class="material-symbols-outlined topics-arrow text-xl transition-transform duration-300">chevron_right</span>
 </button>
-<div style="max-height:0;overflow:hidden;transition:max-height 0.3s ease" class="mx-2 mb-1 rounded-xl bg-surface-container-low">
+<div style="max-height:0;overflow:hidden;transition:max-height 0.3s ease" class="topics-list mx-2 mb-1 rounded-xl bg-surface-container-low">
 <div class="overflow-y-auto max-h-48">
 <div class="py-1">
 <div class="px-4 py-1.5 text-sm text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high cursor-pointer rounded-lg">Clean Code Principles</div>
@@ -191,19 +191,19 @@
 </div>
 </div>
 </div>
-<a class="text-on-surface-variant px-4 py-3 hover:text-on-surface hover:bg-surface-container-high rounded-full flex items-center gap-3 transition-colors duration-200" href="#">
+<a onclick="closeTopics()" class="text-on-surface-variant px-4 py-3 hover:text-on-surface hover:bg-surface-container-high rounded-full flex items-center gap-3 transition-colors duration-200 cursor-pointer">
 <span class="material-symbols-outlined">terminal</span>
 <span class="text-base">Git Repos</span>
 </a>
-<a class="text-on-surface-variant px-4 py-3 hover:text-on-surface hover:bg-surface-container-high rounded-full flex items-center gap-3 transition-colors duration-200" href="#">
+<a onclick="closeTopics()" class="text-on-surface-variant px-4 py-3 hover:text-on-surface hover:bg-surface-container-high rounded-full flex items-center gap-3 transition-colors duration-200 cursor-pointer">
 <span class="material-symbols-outlined">cloud</span>
 <span class="text-base">Drive</span>
 </a>
-<a class="text-on-surface-variant px-4 py-3 hover:text-on-surface hover:bg-surface-container-high rounded-full flex items-center gap-3 transition-colors duration-200" href="#">
+<a onclick="closeTopics()" class="text-on-surface-variant px-4 py-3 hover:text-on-surface hover:bg-surface-container-high rounded-full flex items-center gap-3 transition-colors duration-200 cursor-pointer">
 <span class="material-symbols-outlined">content_paste</span>
 <span class="text-base">Paste</span>
 </a>
-<a class="text-on-surface-variant px-4 py-3 hover:text-on-surface hover:bg-surface-container-high rounded-full flex items-center gap-3 transition-colors duration-200" href="#">
+<a onclick="closeTopics()" class="text-on-surface-variant px-4 py-3 hover:text-on-surface hover:bg-surface-container-high rounded-full flex items-center gap-3 transition-colors duration-200 cursor-pointer">
 <span class="material-symbols-outlined">upload</span>
 <span class="text-base">Upload</span>
 </a>
@@ -381,7 +381,20 @@
 </main>
 </div>
 <script>
+function openTopics() {
+  var list = document.querySelector('.topics-list');
+  var arrow = document.querySelector('.topics-arrow');
+  list.style.maxHeight = '12rem';
+  arrow.style.transform = 'rotate(90deg)';
+}
+function closeTopics() {
+  var list = document.querySelector('.topics-list');
+  var arrow = document.querySelector('.topics-arrow');
+  list.style.maxHeight = '0px';
+  arrow.style.transform = 'rotate(0deg)';
+}
 function showView(name) {
+  closeTopics();
   document.getElementById('slides-view').style.display = name === 'slides' ? '' : 'none';
   document.getElementById('summary-view').style.display = name === 'summary' ? '' : 'none';
   document.getElementById('notes-view').style.display = name === 'notes' ? '' : 'none';
