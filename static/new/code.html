@@ -234,11 +234,28 @@
     <li>Small steps, always green tests</li>
   </ul>
   <h2 class="text-xl font-bold text-on-surface mb-3">Afternoon Session</h2>
-  <h3 class="text-base font-semibold text-on-surface-variant mb-2">Questions to Follow Up</h3>
+  <h3 class="text-base font-semibold text-on-surface-variant mb-2">Testing Strategy</h3>
+  <ul class="list-disc pl-6 space-y-1 text-sm text-on-surface-variant mb-6">
+    <li>Unit tests for domain logic, integration tests for adapters</li>
+    <li>Avoid testing implementation details</li>
+    <li>Test pyramid: many unit, fewer integration, few E2E</li>
+    <li>Mutation testing reveals gaps in coverage</li>
+  </ul>
+  <h3 class="text-base font-semibold text-on-surface-variant mb-2">Code Smells Identified</h3>
+  <ul class="list-disc pl-6 space-y-1 text-sm text-on-surface-variant mb-6">
+    <li>Long parameter lists → introduce parameter objects</li>
+    <li>Feature envy → move method closer to data</li>
+    <li>Primitive obsession → wrap with value objects</li>
+    <li>Data clumps → extract into cohesive classes</li>
+  </ul>
+  <h2 class="text-xl font-bold text-on-surface mb-3">Questions to Follow Up</h2>
+  <h3 class="text-base font-semibold text-on-surface-variant mb-2">Reading List</h3>
   <ul class="list-disc pl-6 space-y-1 text-sm text-on-surface-variant mb-6">
     <li>Read "Working Effectively with Legacy Code"</li>
     <li>Try the strangler fig pattern on the payments module</li>
     <li>Ask team about adopting ADRs</li>
+    <li>Explore ArchUnit for architecture fitness functions</li>
+    <li>Look into contract testing with Pact</li>
   </ul>
 </div>
 <div id="summary-view" style="display:none" class="h-full overflow-y-auto px-16 py-12">
@@ -264,6 +281,22 @@
     <li>When does eventual consistency outweigh strong consistency?</li>
     <li>How do you migrate a monolith incrementally without downtime?</li>
     <li>Is clean architecture overkill for small services?</li>
+    <li>How do you enforce architecture rules in CI?</li>
+  </ul>
+  <h3 class="text-base font-semibold text-on-surface-variant mb-2">Takeaways by Vote</h3>
+  <ul class="list-disc pl-6 space-y-1 text-sm text-on-surface-variant mb-6">
+    <li>12 participants flagged Hexagonal Architecture as most valuable</li>
+    <li>8 participants want a deeper dive on Event Sourcing</li>
+    <li>TDD resonated most with junior developers in the room</li>
+  </ul>
+  <h2 class="text-xl font-bold text-on-surface mb-3">Action Items</h2>
+  <h3 class="text-base font-semibold text-on-surface-variant mb-2">For the Team</h3>
+  <ul class="list-disc pl-6 space-y-1 text-sm text-on-surface-variant mb-6">
+    <li>Set up ArchUnit checks in the build pipeline</li>
+    <li>Schedule a refactoring kata session next sprint</li>
+    <li>Review existing service boundaries against DDD aggregates</li>
+    <li>Introduce ADR template in the repo wiki</li>
+    <li>Run a legacy code audit on the billing module</li>
   </ul>
 </div>
 <!-- Slides View -->
