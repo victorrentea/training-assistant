@@ -188,11 +188,8 @@ class ParticipantPage:
         self.expand_slides_dock()
         self._page.locator(f'.slides-list-item[data-slug="{slug}"] .slides-list-open').click()
         expect(self._page.locator("#slides-overlay")).to_have_class(re.compile(r"open"), timeout=15000)
-        # Wait for PDF.js to fully load — page indicator or canvas must appear
-        self._page.wait_for_selector(
-            "#slides-page-inline:not([style*='display: none']), #slides-pdf-viewer canvas",
-            timeout=30000,
-        )
+        # Wait for PDF.js to render at least one canvas (fast-polls via Playwright)
+        self._page.wait_for_selector("#slides-pdf-viewer canvas", timeout=30000)
 
     def navigate_to_page(self, target_page: int) -> None:
         """Navigate to a specific page in the currently open slide via PDF.js."""

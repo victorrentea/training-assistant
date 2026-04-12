@@ -152,14 +152,16 @@ def slide_is_cached(session_id, slug):
 
 
 @given("there is no PDF cached on Railway")
-def no_pdf_cached():
-    """Clear Railway PDF cache and reset mock drive stats."""
-    from pathlib import Path
-    cache_dir = Path("/tmp/slides-cache")
-    if cache_dir.exists():
-        for pdf in cache_dir.glob("*.pdf"):
-            pdf.unlink(missing_ok=True)
+def no_pdf_cached(session_id):
+    """Clear Railway PDF cache for all slugs and reset mock drive stats."""
     _reset_mock_drive()
+    # Invalidate each known slug so Railway re-downloads from Drive
+    for slug in ("clean-code", "design-patterns", "architecture"):
+        try:
+            _api("POST", f"/api/{session_id}/api/slides/invalidate/{slug}",
+                 data={}, base=BASE, timeout=5)
+        except Exception:
+            pass  # Slug might not exist in this session
 
 
 @given(parsers.parse('{name} joins as a participant with follow mode on'),
