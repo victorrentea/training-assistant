@@ -51,5 +51,3 @@ logs/
 /claude-remote.sh
 /.claude/worktrees/hardcore-driscoll/
 
-# Generated sequence diagrams (from OTel traces)
-docs/sequences/generated/*.puml

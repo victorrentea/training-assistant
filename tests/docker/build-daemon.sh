@@ -55,8 +55,11 @@ docker rmi hermetic-daemon 2>/dev/null || true
 docker build -f "$BUILD_DIR/Dockerfile.daemon" -t hermetic-daemon "$BUILD_DIR"
 
 echo "=== Running tests ==="
+# Mount generated sequences dir so test-produced .puml files persist on host
+GENERATED_DIR="$REPO_ROOT/docs/sequences/generated"
+mkdir -p "$GENERATED_DIR"
 # Always exclude nightly tests; additional args are appended
-docker run --rm hermetic-daemon -m "not nightly" "$@"
+docker run --rm -v "$GENERATED_DIR:/app/docs/sequences/generated" hermetic-daemon -m "not nightly" "$@"
 
 # Cleanup
 rm -rf "$BUILD_DIR"
