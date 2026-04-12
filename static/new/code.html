@@ -703,7 +703,7 @@ function _formatSlideAge(updatedAt) {
 }
 function _buildTopicItem(slide) {
   var el = document.createElement('div');
-  el.className = 'topic-item px-4 py-1.5 text-sm text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high cursor-pointer rounded-lg flex items-center gap-1 min-w-0';
+  el.className = 'topic-item pl-4 pr-1 py-1.5 text-sm text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high cursor-pointer rounded-lg flex items-center gap-1 min-w-0';
   el.title = slide.name;
   el.addEventListener('click', function(e) { selectTopic(el, e, slide); });
   var nameSpan = document.createElement('span');
@@ -784,6 +784,7 @@ async function loadSlidesCatalog() {
         // Color accent: left border
         item.style.borderLeft = '2px solid ' + (_SLIDES_GROUP_COLORS[slide.group] || '#888');
         item.style.paddingLeft = '10px';
+        item.style.paddingRight = '4px';
         currentGroupEl.appendChild(item);
       } else {
         currentGroup = null; currentGroupEl = null;
