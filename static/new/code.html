@@ -702,11 +702,14 @@ function _loadSlideHistory() {
         }
         if (row) {
           row.classList.add('bg-surface-container-high', 'text-on-surface');
+          if (!row.hasAttribute('tabindex')) row.setAttribute('tabindex', '-1');
           _historySelectedRowEl = row;
         }
+        var currentSlideNav = document.querySelector('[data-nav="slides"]');
+        if (currentSlideNav) currentSlideNav.classList.remove('nav-active');
         var fileName = link.getAttribute('data-history-file-name') || '';
         var page = Number(link.getAttribute('data-history-page') || '1');
-        _openSlideFromHistory(fileName, page, link);
+        _openSlideFromHistory(fileName, page, row || link);
         _restartSlideHistoryAutoHideTimer();
       };
       el.onmouseenter = _restartSlideHistoryAutoHideTimer;
