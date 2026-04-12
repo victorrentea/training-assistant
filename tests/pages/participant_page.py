@@ -195,10 +195,11 @@ class ParticipantPage:
             if (typeof slidesPdfViewer !== 'undefined' && slidesPdfViewer) {{
                 slidesPdfViewer.currentPageNumber = {target_page};
             }}
-            // Persist page to localStorage so reopening the slide resumes here
-            // _setStoredSlidePage is inside a closure, so use localStorage directly
-            if (typeof slidesSelectedSlug !== 'undefined' && slidesSelectedSlug) {{
-                localStorage.setItem('workshop_slide_page:' + slidesSelectedSlug, String({target_page}));
+            // Persist page to localStorage — find slug from the active list item
+            const activeItem = document.querySelector('.slides-list-item.active');
+            const slug = activeItem ? activeItem.getAttribute('data-slug') : null;
+            if (slug) {{
+                localStorage.setItem('workshop_slide_page:' + slug, String({target_page}));
             }}
         }}""")
         self._page.wait_for_timeout(500)  # allow PDF.js to render
