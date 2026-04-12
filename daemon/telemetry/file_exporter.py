@@ -1,7 +1,27 @@
 """FileSpanExporter — writes spans as JSONL to a file on disk."""
+import json
 import threading
 
 from opentelemetry.sdk.trace.export import SpanExporter, SpanExportResult
+
+
+def _span_to_dict(span) -> dict:
+    """Convert an OTel ReadableSpan to a plain dict for JSONL export."""
+    ctx = span.get_span_context()
+    parent = span.parent
+    resource = span.resource
+    return {
+        "name": span.name,
+        "context": {
+            "trace_id": format(ctx.trace_id, "032x"),
+            "span_id": format(ctx.span_id, "016x"),
+        },
+        "parent_id": format(parent.span_id, "016x") if parent else "",
+        "start_time": span.start_time,
+        "end_time": span.end_time,
+        "attributes": dict(span.attributes) if span.attributes else {},
+        "resource": dict(resource.attributes) if resource else {},
+    }
 
 
 class FileSpanExporter(SpanExporter):
@@ -15,7 +35,7 @@ class FileSpanExporter(SpanExporter):
         with self._lock:
             with open(self._path, "a", encoding="utf-8") as f:
                 for span in spans:
-                    f.write(span.to_json() + "\n")
+                    f.write(json.dumps(_span_to_dict(span)) + "\n")
         return SpanExportResult.SUCCESS
 
     def shutdown(self):
