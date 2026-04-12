@@ -717,14 +717,22 @@ function _buildTopicItem(slide) {
     ageSpan.textContent = age;
     el.appendChild(ageSpan);
   }
-  var dlBtn = document.createElement('a');
-  dlBtn.href = slide.url;
-  dlBtn.setAttribute('download', '');
-  dlBtn.className = 'material-symbols-outlined flex-shrink-0 rounded p-0.5 bg-surface-container-highest hover:text-on-primary-container hover:bg-primary-container transition-colors';
+  var dlBtn = document.createElement('span');
+  dlBtn.className = 'material-symbols-outlined flex-shrink-0 rounded p-0.5 bg-surface-container-highest hover:text-on-primary-container hover:bg-primary-container transition-colors cursor-pointer';
   dlBtn.style.cssText = 'font-size:14px;font-family:"Material Symbols Outlined"';
   dlBtn.textContent = 'download';
   dlBtn.title = 'Download ' + slide.name;
-  dlBtn.addEventListener('click', function(e) { e.stopPropagation(); });
+  dlBtn.addEventListener('click', function(e) {
+    e.stopPropagation();
+    var dlUrl = slide.url + (slide.url.includes('?') ? '&' : '?') + 'download=1';
+    var tmp = document.createElement('a');
+    tmp.href = dlUrl;
+    tmp.setAttribute('download', slide.name || '');
+    tmp.style.display = 'none';
+    document.body.appendChild(tmp);
+    tmp.click();
+    tmp.remove();
+  });
   el.appendChild(dlBtn);
   return el;
 }
