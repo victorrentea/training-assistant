@@ -190,10 +190,13 @@ class ParticipantPage:
         expect(self._page.locator("#slides-overlay")).to_have_class(re.compile(r"open"), timeout=15000)
 
     def navigate_to_page(self, target_page: int) -> None:
-        """Navigate to a specific page in the currently open slide."""
-        for _ in range(target_page - 1):
-            self._page.locator("#slides-page-next").click()
-            self._page.wait_for_timeout(300)
+        """Navigate to a specific page in the currently open slide via PDF.js."""
+        self._page.evaluate(f"""() => {{
+            if (typeof slidesPdfViewer !== 'undefined' && slidesPdfViewer) {{
+                slidesPdfViewer.currentPageNumber = {target_page};
+            }}
+        }}""")
+        self._page.wait_for_timeout(500)  # allow PDF.js to render
 
     def click_follow(self) -> None:
         self._page.locator("#slides-follow-btn").click()

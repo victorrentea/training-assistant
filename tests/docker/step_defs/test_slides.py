@@ -339,8 +339,9 @@ def overlay_visible(connected):
 @then(parsers.parse('{name} sees page {page_num:d} of "{slug}"'))
 def sees_page_of_slide(name, page_num, slug):
     pax = _pax(name)
-    page_indicator = pax._page.locator("#slides-page-inline, .slides-page-indicator")
-    expect(page_indicator).to_contain_text(f"{page_num}", timeout=5000)
+    # PDF.js page indicator in the emoji bar
+    page_indicator = pax._page.locator("#slides-page-inline")
+    expect(page_indicator).to_contain_text(f"Page {page_num}/", timeout=5000)
 
 
 @then(parsers.parse("Google Drive was called {n:d} time"))
