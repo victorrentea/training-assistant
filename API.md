@@ -310,11 +310,6 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 | --- | --- |
 | Leaderboard revealed (same payload as participant)<br>`leaderboard_revealed` | `positions: list[LeaderboardPosition {`<br>&nbsp;&nbsp;&nbsp;&nbsp;`rank:int`<br>&nbsp;&nbsp;&nbsp;&nbsp;`name:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`score:int`<br>&nbsp;&nbsp;&nbsp;&nbsp;`avatar:string`<br>`}]` |
 
-### Railway WS
-| Message | Payload |
-| --- | --- |
-| Railway instructs daemon to reset all participant scores<br>`scores_reset` | - |
-
 ## Feature: Emoji Reactions
 
 ### Participant REST

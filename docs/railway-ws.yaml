@@ -28,7 +28,6 @@ channels:
           - $ref: '#/components/messages/file_ready_for_download'
           - $ref: '#/components/messages/summary_force'
           - $ref: '#/components/messages/summary_full_reset'
-          - $ref: '#/components/messages/scores_reset'
           - $ref: '#/components/messages/proxy_request'
     publish:
       summary: Messages the daemon sends to Railway
@@ -148,19 +147,6 @@ components:
           type:
             type: string
             enum: [summary_full_reset]
-
-    # ── Scores ────────────────────────────────────────────────────────────────
-
-    scores_reset:
-      summary: Railway instructs daemon to reset all participant scores
-      x-feature: scores_leaderboard
-      payload:
-        type: object
-        required: [type]
-        properties:
-          type:
-            type: string
-            enum: [scores_reset]
 
     # ── Infrastructure ────────────────────────────────────────────────────────
 

@@ -706,16 +706,8 @@ def run() -> None:
     from daemon.session_state import set_ws_client as set_session_ws
     set_session_ws(ws_client)
 
-    from daemon.scores import scores as daemon_scores
     from daemon.session.router import set_ws_client as set_session_router_ws
     set_session_router_ws(ws_client)
-
-    def _handle_scores_reset(data):
-        daemon_scores.reset()
-        from daemon.ws_messages import ScoresUpdatedMsg
-        ws_publish.broadcast(ScoresUpdatedMsg(scores=daemon_scores.snapshot()))
-
-    ws_client.register_handler("scores_reset", _handle_scores_reset)
 
     # NOTE: pdf_download_complete WS handler removed — /check now uses REST
     # POST /api/slides/download-from-gdrive/{slug} on Railway instead.
