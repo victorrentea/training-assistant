@@ -60,7 +60,7 @@ def _shape_for_model(model: type[BaseModel]) -> str:
 def _shape_lines_for_model(model: type[BaseModel]) -> list[str]:
     shape = _render_shape_cell(_shape_for_model(model), root={})
     pieces = [piece for piece in shape.split("<br>") if piece]
-    return [piece.replace("&nbsp;", " ").strip() for piece in pieces]
+    return [piece.replace("&nbsp;", " ").strip().strip("`") for piece in pieces]
 
 
 def _render_models(models: list[ModelDoc]) -> list[str]:
@@ -68,8 +68,10 @@ def _render_models(models: list[ModelDoc]) -> list[str]:
     for item in models:
         lines.append(f"### `{item.name}`")
         lines.append("")
+        lines.append("```")
         for row in _shape_lines_for_model(item.model):
-            lines.append(f"- {row}")
+            lines.append(row)
+        lines.append("```")
         lines.append("")
     return lines
 
