@@ -217,7 +217,7 @@ class ParticipantPage:
 
     def screenshot_viewer(self) -> bytes:
         """Take a screenshot of the slides viewer area."""
-        viewer = self._page.locator("#slides-pdf-viewer, #slides-native-frame")
+        viewer = self._page.locator("#slides-pdf-viewer")
         expect(viewer).to_be_visible(timeout=15000)
         self._page.wait_for_timeout(1000)
         return viewer.screenshot()

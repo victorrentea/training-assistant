@@ -99,11 +99,14 @@ class SlidesRunner:
         entries = load_catalog_entries(cfg.catalog_file)
         if not entries:
             return
-        tracked = self._slides_state.get("files", {})
+        tracked = self._slides_state.setdefault("files", {})
         catalog_entries = []
         for entry in entries:
             key = _abs_key(entry["source"])
-            slug = tracked.get(key, {}).get("slug") or _slugify(Path(entry["target_pdf"]).stem)
+            state_entry = tracked.setdefault(key, {})
+            slug = state_entry.get("slug") or _slugify(Path(entry["target_pdf"]).stem)
+            # Ensure slug is persisted in tracked state so scan_pptx_mtimes can propagate modified_at
+            state_entry["slug"] = slug
             catalog_entries.append({
                 "slug": slug,
                 "title": entry["title"],

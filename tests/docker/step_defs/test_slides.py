@@ -257,9 +257,9 @@ def slide_content_rendered(request, connected):
     """Screenshot the PDF viewer and verify it has non-trivial content (not blank).
     Also stores screenshot for later comparison in 'the slide content has changed'."""
     pax = connected["pax"]
-    viewer = pax._page.locator("#slides-pdf-viewer, #slides-native-frame")
+    viewer = pax._page.locator("#slides-pdf-viewer")
     expect(viewer).to_be_visible(timeout=15000)
-    pax._page.wait_for_selector("#slides-pdf-viewer canvas, #slides-native-frame", timeout=15000)
+    pax._page.wait_for_selector("#slides-pdf-viewer canvas", timeout=15000)
     pax._page.wait_for_timeout(1000)  # allow render to complete
     screenshot = viewer.screenshot()
     unique_bytes = len(set(screenshot))
@@ -288,10 +288,12 @@ def slide_automatically_reloaded():
 def catalog_contains_with_timestamp(connected, slug):
     pax = connected["pax"]
     pax.expand_slides_dock()
+    # Wait for catalog to be populated (daemon scan may need time to propagate modified_at)
+    pax._page.wait_for_timeout(3000)
     item = pax._page.locator(f'.slides-list-item[data-slug="{slug}"]')
     expect(item).to_be_visible(timeout=10000)
     timestamp = item.locator(".slides-list-updated")
-    expect(timestamp).to_be_visible(timeout=5000)
+    expect(timestamp).to_be_visible(timeout=10000)
     text = timestamp.inner_text().strip()
     assert len(text) > 0, f"Timestamp for '{slug}' is empty"
 
@@ -384,7 +386,7 @@ def active_slide_is(request, slug):
 def slide_content_changed(request, connected):
     """Compare current viewer screenshot with the one stored before the host update."""
     pax = connected["pax"]
-    viewer = pax._page.locator("#slides-pdf-viewer, #slides-native-frame")
+    viewer = pax._page.locator("#slides-pdf-viewer")
     expect(viewer).to_be_visible(timeout=15000)
     pax._page.wait_for_timeout(1000)
     after_screenshot = viewer.screenshot()
