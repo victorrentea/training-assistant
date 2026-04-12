@@ -117,7 +117,7 @@
         .then(function (r) { return r.json(); })
         .then(function (d) { guard.check(d.backend_version); })
         .catch(function () {});
-    }, 10000);
+    }, 1000);
   })();
 </script>
 </head>
