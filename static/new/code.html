@@ -863,7 +863,7 @@ function toggleRepos() {
   var list = document.querySelector('.repos-list');
   if (!list.style.maxHeight || list.style.maxHeight === '0px') { openRepos(); } else { closeRepos(); }
 }
-function selectTopic(el, event, slide) {
+async function selectTopic(el, event, slide) {
   if (event) event.stopPropagation();
   document.querySelectorAll('.nav-item').forEach(function(n) { n.classList.remove('nav-active'); });
   document.querySelectorAll('.topic-item').forEach(function(n) { n.classList.remove('topic-active'); });
@@ -871,7 +871,19 @@ function selectTopic(el, event, slide) {
   VIEWS.forEach(function(v) {
     document.getElementById(v + '-view').style.display = v === 'slides' ? '' : 'none';
   });
-  if (slide && slide.url && window.loadPdf) window.loadPdf(slide.url);
+  if (slide && slide.url && window.loadPdf) {
+    if (slide.slug && _sessionId) {
+      try {
+        var checkUrl = '/' + _sessionId + '/api/slides/check/' + encodeURIComponent(slide.slug);
+        var resp = await fetch(checkUrl, { cache: 'no-store', headers: { 'X-Participant-ID': _myUUID } });
+        if (!resp.ok) throw new Error(resp.status);
+      } catch(e) {
+        showToast('Slide not ready on server yet. Try again in a few seconds.');
+        return;
+      }
+    }
+    window.loadPdf(slide.url);
+  }
 }
 function showView(name) {
   if (name !== 'slides') closeSlides();
