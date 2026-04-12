@@ -169,7 +169,7 @@ class AddonBridgeClient:
                     file = data.get("file", "")
                     if url and branch and file:
                         participant_state.accumulate_git_file(url, branch, file)
-                        log.info(_NAME, f"← git {url.split('/')[-1]}:{branch} {file}")
+                        log.debug(_NAME, f"← git {url.split('/')[-1]}:{branch} {file}")
                 if _ctx and _token:
                     context.detach(_token)
         except ConnectionClosed:
