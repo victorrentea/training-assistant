@@ -192,6 +192,7 @@ body{visibility:hidden}
 </div>
 </div>
 </div>
+<div id="slide-history-list" class="mx-2 mt-1 rounded-xl overflow-hidden" style="display:none"></div>
 </div>
 <a data-nav="agenda" onclick="showView('agenda')" class="nav-item rounded-full px-2 py-2 flex items-center gap-3 transition-all cursor-pointer" style="display:none">
 <span class="material-symbols-outlined">event_note</span>
@@ -492,6 +493,7 @@ function openSlides() {
   });
   arrow.style.transform = 'rotate(90deg)';
   showView('slides');
+  _loadSlideHistory();
 }
 function closeSlides() {
   var list = document.querySelector('.slides-list');
@@ -500,6 +502,38 @@ function closeSlides() {
   list.style.overflowY = 'hidden';
   list.style.maxHeight = '0px';
   arrow.style.transform = 'rotate(0deg)';
+  _hideSlideHistory();
+}
+var _slideHistoryTimer = null;
+function _hideSlideHistory() {
+  clearTimeout(_slideHistoryTimer);
+  _slideHistoryTimer = null;
+  var el = document.getElementById('slide-history-list');
+  if (el) el.style.display = 'none';
+}
+function _loadSlideHistory() {
+  if (!_sessionId) return;
+  clearTimeout(_slideHistoryTimer);
+  _slideHistoryTimer = null;
+  fetch('/' + _sessionId + '/api/participant/slide-history')
+    .then(function(r) { return r.ok ? r.json() : Promise.reject(r.status); })
+    .then(function(data) {
+      var slides = data.slides || [];
+      var el = document.getElementById('slide-history-list');
+      if (!el) return;
+      if (!slides.length) { el.style.display = 'none'; return; }
+      el.innerHTML = '<div class="px-4 pt-1 pb-0.5 text-xs font-semibold text-on-surface-variant opacity-50 uppercase tracking-wide">Slide history</div>' +
+        slides.map(function(s) {
+          return '<div class="px-4 py-0.5 text-xs text-on-surface-variant">' +
+            '<span class="font-semibold mr-1">' + s.file_name + '</span>' +
+            'p.' + s.page +
+            '<span class="opacity-50 ml-2">' + s.seconds + 's</span>' +
+            '</div>';
+        }).join('');
+      el.style.display = 'block';
+      _slideHistoryTimer = setTimeout(_hideSlideHistory, 30000);
+    })
+    .catch(function() { var el = document.getElementById('slide-history-list'); if (el) el.style.display = 'none'; });
 }
 function toggleSlides() {
   var list = document.querySelector('.slides-list');
