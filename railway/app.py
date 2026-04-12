@@ -32,8 +32,9 @@ logging.basicConfig(level=logging.INFO)
 _otel_active = False
 if os.environ.get("OTEL_TRACES_FILE"):
     try:
-        from daemon.telemetry import setup_tracing
+        from daemon.telemetry import instrument_urllib, setup_tracing
         setup_tracing()
+        instrument_urllib()
         _otel_active = True
     except Exception as _otel_err:
         logging.getLogger(__name__).warning("OTel setup failed: %s", _otel_err)
