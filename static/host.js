@@ -49,6 +49,7 @@
   const _FOOTER_BADGE_TOOLTIP_DEFAULTS = {
     'ws-badge': 'Server connection status',
     'overlay-badge': 'Desktop Overlay app',
+    'gdrive-badge': 'Google Drive status',
     'notes-badge': 'Session notes',
     'summary-badge': 'Key points summary',
     'log-level-badge': 'Daemon log level (click to toggle)',
@@ -416,6 +417,7 @@
         }
         renderTranscriptStatus(msg.transcript_line_count, msg.transcript_total_lines, msg.transcript_latest_ts, msg.transcript_last_content_at);
         renderOverlayStatus(msg.overlay_connected);
+        renderGdriveStatus(msg.gdrive_running);
         renderPendingDeploy(msg.pending_deploy);
         daemonSessionFolder = msg.daemon_session_folder || null;
         renderNotesStatus(msg.daemon_session_folder, msg.daemon_session_notes);
@@ -1421,6 +1423,16 @@
     _setFooterBadgeTooltip(
       el,
       connected ? 'Desktop Overlay connected — click to fire a heart' : 'Desktop Overlay not connected — click to fire a heart',
+    );
+  }
+
+  function renderGdriveStatus(running) {
+    const el = document.getElementById('gdrive-badge');
+    if (!el) return;
+    el.className = `badge ${running ? 'connected' : 'disconnected'}`;
+    _setFooterBadgeTooltip(
+      el,
+      running ? 'Google Drive is running' : 'Google Drive is NOT running',
     );
   }
 

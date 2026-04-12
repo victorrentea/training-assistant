@@ -1766,6 +1766,9 @@ components:
         overlay_connected:
           type: boolean
           title: Overlay Connected
+        gdrive_running:
+          type: boolean
+          title: Gdrive Running
         wordcloud_words:
           additionalProperties:
             type: integer
@@ -1952,6 +1955,7 @@ components:
       - participants
       - daemon_connected
       - overlay_connected
+      - gdrive_running
       - wordcloud_words
       - wordcloud_word_order
       - wordcloud_topic

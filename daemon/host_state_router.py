@@ -163,6 +163,7 @@ class HostStateResponse(BaseModel):
     participants: list[HostParticipant]
     daemon_connected: bool
     overlay_connected: bool
+    gdrive_running: bool
     wordcloud_words: dict[str, int]
     wordcloud_word_order: list[str]
     wordcloud_topic: str
@@ -420,6 +421,7 @@ async def get_host_state(request: Request, session_id: str):
         "participants": _build_host_participants_list(),
         "daemon_connected": True,
         "overlay_connected": _get_overlay_connected(),
+        "gdrive_running": _get_gdrive_running(),
         # Wordcloud
         "wordcloud_words": wc.words,
         "wordcloud_word_order": wc.word_order,
@@ -470,6 +472,14 @@ async def get_host_state(request: Request, session_id: str):
     }
 
     return JSONResponse(state_msg)
+
+
+def _get_gdrive_running() -> bool:
+    try:
+        from daemon.slides.drive_sync import _is_google_drive_running
+        return _is_google_drive_running()
+    except Exception:
+        return False
 
 
 def _get_overlay_connected() -> bool:
