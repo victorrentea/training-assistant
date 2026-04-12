@@ -240,6 +240,12 @@ body{visibility:hidden}
 <span class="material-symbols-outlined">chat_bubble</span>
 <span class="text-base">Feedback</span>
 </a>
+<div id="deploy-age-line" onclick="resetStatePrompt()" title="Click to reset local state"
+  class="px-3 py-1 text-center cursor-pointer select-none"
+  style="font-size:0.65rem;line-height:1.4;color:var(--color-outline);opacity:0.6;transition:opacity 0.15s"
+  onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.6'">
+  <span id="version-tag-new">loading…</span>
+</div>
 </aside>
 <!-- MAIN CONTENT (80%) -->
 <main class="flex-1 h-full relative flex flex-col overflow-hidden bg-surface">
@@ -645,5 +651,13 @@ function showView(name) {
   var saved = localStorage.getItem('scroll_' + name);
   if (saved) el.scrollTop = parseInt(saved, 10);
 }
+function resetStatePrompt() {
+  if (confirm('Reset local state? This will clear your saved emojis and preferences.')) {
+    localStorage.clear();
+    location.reload();
+  }
+}
 </script>
+<script src="/static/version-age.js"></script>
+<script>renderDeployAge('version-tag-new', {disableBranchTooltip: true});</script>
 </body></html>
