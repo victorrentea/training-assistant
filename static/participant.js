@@ -2931,7 +2931,14 @@ function closeAgendaModal() {
   }
 
   function sendLocation(locationStr) {
-    participantApi('location', { location: locationStr });
+    fetch(`/${sessionId}/api/participant/location`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Participant-ID': myUUID
+      },
+      body: JSON.stringify({ location: locationStr })
+    });
   }
 
   function updateLocationPrompt() {

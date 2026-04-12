@@ -509,7 +509,7 @@ async def roll_avatar_endpoint(request: Request, body: AvatarRequest):
     return AvatarResponse(avatar=new_avatar)
 
 
-@router.post("/location", status_code=204)
+@router.put("/location", status_code=204)
 async def set_location(request: Request, body: LocationRequest):
     """Store participant city/timezone."""
     pid = request.headers.get("x-participant-id")
