@@ -57,7 +57,7 @@ Official CLI documentation:
 From the repository root:
 
 ```bash
-docker run --rm -v "$PWD":/usr/local/structurizr structurizr/cli validate \
+docker run --rm -v "$PWD":/usr/local/structurizr structurizr/structurizr validate \
   -workspace docs/c4model.dsl
 ```
 
@@ -66,7 +66,7 @@ docker run --rm -v "$PWD":/usr/local/structurizr structurizr/cli validate \
 PlantUML / C4-PlantUML export:
 
 ```bash
-docker run --rm -v "$PWD":/usr/local/structurizr structurizr/cli export \
+docker run --rm -v "$PWD":/usr/local/structurizr structurizr/structurizr export \
   -workspace docs/c4model.dsl \
   -format plantuml/c4plantuml \
   -output docs/c4views
@@ -75,7 +75,7 @@ docker run --rm -v "$PWD":/usr/local/structurizr structurizr/cli export \
 Mermaid export:
 
 ```bash
-docker run --rm -v "$PWD":/usr/local/structurizr structurizr/cli export \
+docker run --rm -v "$PWD":/usr/local/structurizr structurizr/structurizr export \
   -workspace docs/c4model.dsl \
   -format mermaid \
   -output docs/c4views
@@ -88,7 +88,7 @@ Structurizr Lite serves the DSL locally in a browser:
 ```bash
 docker run --rm -p 8080:8080 \
   -v "$PWD/docs":/usr/local/structurizr \
-  structurizr/lite
+  structurizr/structurizr lite
 ```
 
 Then open `http://localhost:8080`.

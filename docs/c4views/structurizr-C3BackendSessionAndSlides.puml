@@ -1,5 +1,5 @@
 @startuml
-title <size:24>Component View: Workshop Live Interaction Tool - FastAPI Backend</size>\n<size:24>Session, snapshot, slides, upload, and summary slice.</size>
+title <size:24>Component View: Workshop Live Interaction Tool - Railway Backend</size>\n<size:24>Public notes, slides, uploads, and static sync slice.</size>
 
 set separator none
 left to right direction
@@ -17,42 +17,31 @@ left to right direction
 !include <C4/C4_Component>
 
 System_Boundary("WorkshopLiveInteractionTool_boundary", "Workshop Live Interaction Tool", $tags="") {
-  Container_Boundary("WorkshopLiveInteractionTool.FastAPIBackend_boundary", "FastAPI Backend", $tags="") {
-    Component(WorkshopLiveInteractionTool.FastAPIBackend.CorePlatform, "Core Platform", $techn="core/*", $descr="AppState, auth, metrics, versioning, session guards, and messaging registry.", $tags="", $link="")
-    Component(WorkshopLiveInteractionTool.FastAPIBackend.SummaryRouter, "Summary Router", $techn="features/summary/*", $descr="Summaries, notes, transcript status, and token usage.", $tags="", $link="")
-    Component(WorkshopLiveInteractionTool.FastAPIBackend.SessionRouter, "Session Router", $techn="features/session/*", $descr="Global and session-scoped lifecycle, sync, snapshots, and timing events.", $tags="", $link="")
-    Component(WorkshopLiveInteractionTool.FastAPIBackend.SnapshotRouter, "Snapshot Router", $techn="features/snapshot/*", $descr="Diagnostic state snapshot and restore endpoints.", $tags="", $link="")
-    Component(WorkshopLiveInteractionTool.FastAPIBackend.SlidesRouter, "Slides Router", $techn="features/slides/*", $descr="Slides publishing, public file serving, upload, and catalog management.", $tags="", $link="")
-    Component(WorkshopLiveInteractionTool.FastAPIBackend.UploadRouter, "Upload Router", $techn="features/upload/*", $descr="Participant and host file upload endpoints.", $tags="", $link="")
-    Component(WorkshopLiveInteractionTool.FastAPIBackend.PagesRouter, "Pages Router", $techn="features/pages/*", $descr="Landing, participant, host, and notes pages.", $tags="", $link="")
-    Component(WorkshopLiveInteractionTool.FastAPIBackend.InternalRouter, "Internal Router", $techn="features/internal/*", $descr="Daemon-facing internal file-management endpoints.", $tags="", $link="")
-    Component(WorkshopLiveInteractionTool.FastAPIBackend.TranscriptionLanguageRouter, "Transcription Language Router", $techn="features/transcription_language/*", $descr="Global transcription language endpoint.", $tags="", $link="")
+  Container_Boundary("WorkshopLiveInteractionTool.RailwayBackend_boundary", "Railway Backend", $tags="") {
+    Component(WorkshopLiveInteractionTool.RailwayBackend.Bootstrap, "Bootstrap", $techn="railway/app.py", $descr="Registers route ordering, session guards, and startup stamping.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.RailwayBackend.SharedCore, "Shared Core", $techn="shared/*", $descr="AppState, auth, session registry/guard, metrics, messaging, and version helpers.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.RailwayBackend.Publicnotesandkeypoints, "Public notes and key points", $techn="features/session/notes_router.py", $descr="Session-scoped summary and notes endpoints.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.RailwayBackend.Slidescacheandfileserving, "Slides cache and file serving", $techn="features/slides/*", $descr="Public slide catalog/current slide, Google Drive cache, and host upload/invalidate helpers.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.RailwayBackend.Temporaryuploadbridge, "Temporary upload bridge", $techn="features/upload/*", $descr="Streams participant uploads into temporary storage and lets the daemon fetch and acknowledge them.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.RailwayBackend.Staticsyncendpoints, "Static sync endpoints", $techn="features/internal/router.py", $descr="Allows the daemon to upload and delete generated files under static/.", $tags="", $link="")
   }
 
-  Container(WorkshopLiveInteractionTool.TrainingDaemon, "Training Daemon", $techn="Python 3.12 CLI", $descr="Background worker running on the host machine.", $tags="", $link="")
-  Container(WorkshopLiveInteractionTool.ParticipantSPA, "Participant SPA", $techn="HTML/CSS/JavaScript", $descr="Participant-facing UI served from static files.", $tags="", $link="")
-  Container(WorkshopLiveInteractionTool.HostSPA, "Host SPA", $techn="HTML/CSS/JavaScript", $descr="Host control panel served from static files.", $tags="", $link="")
+  Container(WorkshopLiveInteractionTool.ParticipantSPA, "Participant SPA", $techn="HTML/CSS/JavaScript", $descr="Participant-facing UI served from Railway session routes.", $tags="", $link="")
+  Container(WorkshopLiveInteractionTool.TrainingDaemon, "Training Daemon", $techn="Python 3.12 CLI + embedded FastAPI", $descr="Local source of truth for host control, live state, persistence, and AI-assisted jobs.", $tags="", $link="")
 }
 
-Rel(WorkshopLiveInteractionTool.FastAPIBackend.InternalRouter, WorkshopLiveInteractionTool.FastAPIBackend.CorePlatform, "Uses shared backend state", $techn="", $tags="", $link="")
-Rel(WorkshopLiveInteractionTool.FastAPIBackend.TranscriptionLanguageRouter, WorkshopLiveInteractionTool.FastAPIBackend.CorePlatform, "Reads current session context", $techn="", $tags="", $link="")
-Rel(WorkshopLiveInteractionTool.FastAPIBackend.UploadRouter, WorkshopLiveInteractionTool.FastAPIBackend.CorePlatform, "Associates uploads with active state", $techn="", $tags="", $link="")
-Rel(WorkshopLiveInteractionTool.FastAPIBackend.PagesRouter, WorkshopLiveInteractionTool.FastAPIBackend.CorePlatform, "Reads active mode and session state", $techn="", $tags="", $link="")
-Rel(WorkshopLiveInteractionTool.FastAPIBackend.SummaryRouter, WorkshopLiveInteractionTool.FastAPIBackend.CorePlatform, "Reads and updates summaries and notes", $techn="", $tags="", $link="")
-Rel(WorkshopLiveInteractionTool.FastAPIBackend.SessionRouter, WorkshopLiveInteractionTool.FastAPIBackend.CorePlatform, "Serializes and restores session state", $techn="", $tags="", $link="")
-Rel(WorkshopLiveInteractionTool.FastAPIBackend.SnapshotRouter, WorkshopLiveInteractionTool.FastAPIBackend.CorePlatform, "Serializes and restores diagnostic snapshots", $techn="", $tags="", $link="")
-Rel(WorkshopLiveInteractionTool.FastAPIBackend.SlidesRouter, WorkshopLiveInteractionTool.FastAPIBackend.CorePlatform, "Stores slide catalog and current slide", $techn="", $tags="", $link="")
-Rel(WorkshopLiveInteractionTool.ParticipantSPA, WorkshopLiveInteractionTool.FastAPIBackend.PagesRouter, "Loads participant and notes pages", $techn="", $tags="", $link="")
-Rel(WorkshopLiveInteractionTool.ParticipantSPA, WorkshopLiveInteractionTool.FastAPIBackend.SummaryRouter, "Reads public notes and summaries", $techn="", $tags="", $link="")
-Rel(WorkshopLiveInteractionTool.ParticipantSPA, WorkshopLiveInteractionTool.FastAPIBackend.SlidesRouter, "Reads public slides", $techn="", $tags="", $link="")
-Rel(WorkshopLiveInteractionTool.ParticipantSPA, WorkshopLiveInteractionTool.FastAPIBackend.UploadRouter, "Uploads participant files", $techn="", $tags="", $link="")
-Rel(WorkshopLiveInteractionTool.HostSPA, WorkshopLiveInteractionTool.FastAPIBackend.PagesRouter, "Loads host page", $techn="", $tags="", $link="")
-Rel(WorkshopLiveInteractionTool.HostSPA, WorkshopLiveInteractionTool.FastAPIBackend.SummaryRouter, "Reads notes and summaries", $techn="", $tags="", $link="")
-Rel(WorkshopLiveInteractionTool.HostSPA, WorkshopLiveInteractionTool.FastAPIBackend.SlidesRouter, "Publishes current slides", $techn="", $tags="", $link="")
-Rel(WorkshopLiveInteractionTool.HostSPA, WorkshopLiveInteractionTool.FastAPIBackend.SessionRouter, "Controls session lifecycle", $techn="", $tags="", $link="")
-Rel(WorkshopLiveInteractionTool.HostSPA, WorkshopLiveInteractionTool.FastAPIBackend.SnapshotRouter, "Requests snapshot/restore", $techn="", $tags="", $link="")
-Rel(WorkshopLiveInteractionTool.HostSPA, WorkshopLiveInteractionTool.FastAPIBackend.UploadRouter, "Uploads host files", $techn="", $tags="", $link="")
-Rel(WorkshopLiveInteractionTool.HostSPA, WorkshopLiveInteractionTool.FastAPIBackend.TranscriptionLanguageRouter, "Changes transcription language", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.ParticipantSPA, WorkshopLiveInteractionTool.RailwayBackend.Publicnotesandkeypoints, "Reads notes and key points", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.ParticipantSPA, WorkshopLiveInteractionTool.RailwayBackend.Slidescacheandfileserving, "Reads slides and downloads PDFs", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.ParticipantSPA, WorkshopLiveInteractionTool.RailwayBackend.Temporaryuploadbridge, "Uploads participant files", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.RailwayBackend.Bootstrap, WorkshopLiveInteractionTool.RailwayBackend.SharedCore, "Initializes", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.RailwayBackend.Bootstrap, WorkshopLiveInteractionTool.RailwayBackend.Publicnotesandkeypoints, "Registers", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.RailwayBackend.Bootstrap, WorkshopLiveInteractionTool.RailwayBackend.Slidescacheandfileserving, "Registers", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.RailwayBackend.Bootstrap, WorkshopLiveInteractionTool.RailwayBackend.Temporaryuploadbridge, "Registers", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.RailwayBackend.Bootstrap, WorkshopLiveInteractionTool.RailwayBackend.Staticsyncendpoints, "Registers", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.RailwayBackend.Publicnotesandkeypoints, WorkshopLiveInteractionTool.RailwayBackend.SharedCore, "Reads mirrored summary state from", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.RailwayBackend.Slidescacheandfileserving, WorkshopLiveInteractionTool.RailwayBackend.SharedCore, "Reads slide/current-session state from", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.RailwayBackend.Temporaryuploadbridge, WorkshopLiveInteractionTool.RailwayBackend.SharedCore, "Associates uploads with active participants from", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.RailwayBackend.Staticsyncendpoints, WorkshopLiveInteractionTool.RailwayBackend.SharedCore, "Uses host auth from", $techn="", $tags="", $link="")
 
 SHOW_LEGEND(true)
 hide stereotypes

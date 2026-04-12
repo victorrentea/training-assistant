@@ -1,5 +1,5 @@
 @startuml
-title <size:24>Component View: Workshop Live Interaction Tool - FastAPI Backend</size>\n<size:24>Realtime-focused backend slice.</size>
+title <size:24>Component View: Workshop Live Interaction Tool - Railway Backend</size>\n<size:24>Session-aware browser and daemon bridge slice.</size>
 
 set separator none
 left to right direction
@@ -17,40 +17,30 @@ left to right direction
 !include <C4/C4_Component>
 
 System_Boundary("WorkshopLiveInteractionTool_boundary", "Workshop Live Interaction Tool", $tags="") {
-  Container_Boundary("WorkshopLiveInteractionTool.FastAPIBackend_boundary", "FastAPI Backend", $tags="") {
-    Component(WorkshopLiveInteractionTool.FastAPIBackend.CorePlatform, "Core Platform", $techn="core/*", $descr="AppState, auth, metrics, versioning, session guards, and messaging registry.", $tags="", $link="")
-    Component(WorkshopLiveInteractionTool.FastAPIBackend.WSRouter, "WS Router", $techn="features/ws/*", $descr="Host, participant, overlay, and daemon WebSocket endpoints plus proxy bridge.", $tags="", $link="")
-    Component(WorkshopLiveInteractionTool.FastAPIBackend.PollRouter, "Poll Router", $techn="features/poll/*", $descr="Poll lifecycle, status, correct answers, scoring, and public helpers.", $tags="", $link="")
-    Component(WorkshopLiveInteractionTool.FastAPIBackend.QARouter, "Q&A Router", $techn="features/qa/*", $descr="Question edit, delete, answer, and clear lifecycle.", $tags="", $link="")
-    Component(WorkshopLiveInteractionTool.FastAPIBackend.WordCloudRouter, "Word Cloud Router", $techn="features/wordcloud/*", $descr="Topic changes and reset operations.", $tags="", $link="")
-    Component(WorkshopLiveInteractionTool.FastAPIBackend.CodeReviewRouter, "Code Review Router", $techn="features/codereview/*", $descr="Snippet lifecycle, selections, and line confirmation.", $tags="", $link="")
-    Component(WorkshopLiveInteractionTool.FastAPIBackend.DebateRouter, "Debate Router", $techn="features/debate/*", $descr="Debate phases, AI request lifecycle, and round orchestration.", $tags="", $link="")
-    Component(WorkshopLiveInteractionTool.FastAPIBackend.LeaderboardRouter, "Leaderboard Router", $techn="features/leaderboard/*", $descr="Leaderboard reveal and score reset endpoints.", $tags="", $link="")
-    Component(WorkshopLiveInteractionTool.FastAPIBackend.ActivityRouter, "Activity Router", $techn="features/activity/*", $descr="Switches the currently active participant experience.", $tags="", $link="")
+  Container_Boundary("WorkshopLiveInteractionTool.RailwayBackend_boundary", "Railway Backend", $tags="") {
+    Component(WorkshopLiveInteractionTool.RailwayBackend.Bootstrap, "Bootstrap", $techn="railway/app.py", $descr="Registers route ordering, session guards, and startup stamping.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.RailwayBackend.SharedCore, "Shared Core", $techn="shared/*", $descr="AppState, auth, session registry/guard, metrics, messaging, and version helpers.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.RailwayBackend.WebSocketbridge, "WebSocket bridge", $techn="features/ws/*", $descr="Daemon auth, session-scoped browser sockets, participant proxy bridge, and broadcast fan-out.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.RailwayBackend.Pageroutes, "Page routes", $techn="features/pages/router.py", $descr="Landing, participant, notes, quiz history, and remote host pages.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.RailwayBackend.Publicnotesandkeypoints, "Public notes and key points", $techn="features/session/notes_router.py", $descr="Session-scoped summary and notes endpoints.", $tags="", $link="")
   }
 
-  Container(WorkshopLiveInteractionTool.ParticipantSPA, "Participant SPA", $techn="HTML/CSS/JavaScript", $descr="Participant-facing UI served from static files.", $tags="", $link="")
-  Container(WorkshopLiveInteractionTool.HostSPA, "Host SPA", $techn="HTML/CSS/JavaScript", $descr="Host control panel served from static files.", $tags="", $link="")
+  Container(WorkshopLiveInteractionTool.ParticipantSPA, "Participant SPA", $techn="HTML/CSS/JavaScript", $descr="Participant-facing UI served from Railway session routes.", $tags="", $link="")
+  Container(WorkshopLiveInteractionTool.HostSPA, "Host SPA", $techn="HTML/CSS/JavaScript", $descr="Host control panel served from the daemon host server on localhost.", $tags="", $link="")
+  Container(WorkshopLiveInteractionTool.TrainingDaemon, "Training Daemon", $techn="Python 3.12 CLI + embedded FastAPI", $descr="Local source of truth for host control, live state, persistence, and AI-assisted jobs.", $tags="", $link="")
 }
 
-Rel(WorkshopLiveInteractionTool.FastAPIBackend.WSRouter, WorkshopLiveInteractionTool.FastAPIBackend.CorePlatform, "Builds and broadcasts state", $techn="", $tags="", $link="")
-Rel(WorkshopLiveInteractionTool.FastAPIBackend.PollRouter, WorkshopLiveInteractionTool.FastAPIBackend.CorePlatform, "Mutates poll state and scores", $techn="", $tags="", $link="")
-Rel(WorkshopLiveInteractionTool.FastAPIBackend.QARouter, WorkshopLiveInteractionTool.FastAPIBackend.CorePlatform, "Mutates Q&A state", $techn="", $tags="", $link="")
-Rel(WorkshopLiveInteractionTool.FastAPIBackend.WordCloudRouter, WorkshopLiveInteractionTool.FastAPIBackend.CorePlatform, "Mutates word cloud state", $techn="", $tags="", $link="")
-Rel(WorkshopLiveInteractionTool.FastAPIBackend.CodeReviewRouter, WorkshopLiveInteractionTool.FastAPIBackend.CorePlatform, "Mutates code review state", $techn="", $tags="", $link="")
-Rel(WorkshopLiveInteractionTool.FastAPIBackend.DebateRouter, WorkshopLiveInteractionTool.FastAPIBackend.CorePlatform, "Mutates debate state", $techn="", $tags="", $link="")
-Rel(WorkshopLiveInteractionTool.FastAPIBackend.LeaderboardRouter, WorkshopLiveInteractionTool.FastAPIBackend.CorePlatform, "Updates leaderboard visibility and scores", $techn="", $tags="", $link="")
-Rel(WorkshopLiveInteractionTool.FastAPIBackend.ActivityRouter, WorkshopLiveInteractionTool.FastAPIBackend.CorePlatform, "Updates current activity", $techn="", $tags="", $link="")
-Rel(WorkshopLiveInteractionTool.ParticipantSPA, WorkshopLiveInteractionTool.FastAPIBackend.WSRouter, "Connects as participant", $techn="", $tags="", $link="")
-Rel(WorkshopLiveInteractionTool.ParticipantSPA, WorkshopLiveInteractionTool.FastAPIBackend.PollRouter, "Reads status and identity helpers", $techn="", $tags="", $link="")
-Rel(WorkshopLiveInteractionTool.HostSPA, WorkshopLiveInteractionTool.FastAPIBackend.WSRouter, "Connects as host", $techn="", $tags="", $link="")
-Rel(WorkshopLiveInteractionTool.HostSPA, WorkshopLiveInteractionTool.FastAPIBackend.PollRouter, "Creates polls and manages poll state", $techn="", $tags="", $link="")
-Rel(WorkshopLiveInteractionTool.HostSPA, WorkshopLiveInteractionTool.FastAPIBackend.QARouter, "Moderates questions", $techn="", $tags="", $link="")
-Rel(WorkshopLiveInteractionTool.HostSPA, WorkshopLiveInteractionTool.FastAPIBackend.WordCloudRouter, "Sets topic and clears cloud", $techn="", $tags="", $link="")
-Rel(WorkshopLiveInteractionTool.HostSPA, WorkshopLiveInteractionTool.FastAPIBackend.CodeReviewRouter, "Manages code review activity", $techn="", $tags="", $link="")
-Rel(WorkshopLiveInteractionTool.HostSPA, WorkshopLiveInteractionTool.FastAPIBackend.DebateRouter, "Controls debate phases and cleanup", $techn="", $tags="", $link="")
-Rel(WorkshopLiveInteractionTool.HostSPA, WorkshopLiveInteractionTool.FastAPIBackend.LeaderboardRouter, "Reveals leaderboard", $techn="", $tags="", $link="")
-Rel(WorkshopLiveInteractionTool.HostSPA, WorkshopLiveInteractionTool.FastAPIBackend.ActivityRouter, "Switches activity", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.HostSPA, WorkshopLiveInteractionTool.TrainingDaemon, "Calls host REST and proxied WebSocket APIs on localhost", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.ParticipantSPA, WorkshopLiveInteractionTool.RailwayBackend.Pageroutes, "Loads participant and notes pages", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.ParticipantSPA, WorkshopLiveInteractionTool.RailwayBackend.WebSocketbridge, "Connects as participant", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.ParticipantSPA, WorkshopLiveInteractionTool.RailwayBackend.Publicnotesandkeypoints, "Reads notes and key points", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.RailwayBackend.Bootstrap, WorkshopLiveInteractionTool.RailwayBackend.SharedCore, "Initializes", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.RailwayBackend.Bootstrap, WorkshopLiveInteractionTool.RailwayBackend.WebSocketbridge, "Registers", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.RailwayBackend.Bootstrap, WorkshopLiveInteractionTool.RailwayBackend.Pageroutes, "Registers", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.RailwayBackend.Bootstrap, WorkshopLiveInteractionTool.RailwayBackend.Publicnotesandkeypoints, "Registers", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.RailwayBackend.WebSocketbridge, WorkshopLiveInteractionTool.RailwayBackend.SharedCore, "Reads auth, session, and connection state from", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.RailwayBackend.Pageroutes, WorkshopLiveInteractionTool.RailwayBackend.SharedCore, "Uses auth/session helpers from", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.RailwayBackend.Publicnotesandkeypoints, WorkshopLiveInteractionTool.RailwayBackend.SharedCore, "Reads mirrored summary state from", $techn="", $tags="", $link="")
 
 SHOW_LEGEND(true)
 hide stereotypes

@@ -17,15 +17,19 @@ left to right direction
 
 Person(Participant, "Participant", $descr="Joins from a browser, votes, reacts, uploads, and follows the session.", $tags="", $link="")
 System(Nominatim, "Nominatim", $descr="Reverse geocodes GPS coordinates into city and country.", $tags="", $link="")
+System(GoogleDrive, "Google Drive", $descr="Hosts exported slide PDFs consumed by the Railway cache.", $tags="", $link="")
 
 System_Boundary("WorkshopLiveInteractionTool_boundary", "Workshop Live Interaction Tool", $tags="") {
-  Container(WorkshopLiveInteractionTool.FastAPIBackend, "FastAPI Backend", $techn="Python 3.12 / FastAPI / Uvicorn", $descr="REST endpoints, WebSocket hub, session routing, and in-memory state.", $tags="", $link="")
-  Container(WorkshopLiveInteractionTool.ParticipantSPA, "Participant SPA", $techn="HTML/CSS/JavaScript", $descr="Participant-facing UI served from static files.", $tags="", $link="")
+  Container(WorkshopLiveInteractionTool.ParticipantSPA, "Participant SPA", $techn="HTML/CSS/JavaScript", $descr="Participant-facing UI served from Railway session routes.", $tags="", $link="")
+  Container(WorkshopLiveInteractionTool.RailwayBackend, "Railway Backend", $techn="Python 3.12 / FastAPI / Uvicorn", $descr="Thin session-aware bridge for participants, slides, uploads, and daemon sync.", $tags="", $link="")
+  Container(WorkshopLiveInteractionTool.TrainingDaemon, "Training Daemon", $techn="Python 3.12 CLI + embedded FastAPI", $descr="Local source of truth for host control, live state, persistence, and AI-assisted jobs.", $tags="", $link="")
 }
 
 Rel(Participant, WorkshopLiveInteractionTool.ParticipantSPA, "Uses in browser", $techn="", $tags="", $link="")
-Rel(WorkshopLiveInteractionTool.ParticipantSPA, WorkshopLiveInteractionTool.FastAPIBackend, "Calls public REST and WebSocket APIs", $techn="", $tags="", $link="")
-Rel(WorkshopLiveInteractionTool.ParticipantSPA, Nominatim, "Reverse geocodes location", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.ParticipantSPA, WorkshopLiveInteractionTool.RailwayBackend, "Calls session-scoped REST and WebSocket APIs", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.ParticipantSPA, Nominatim, "Reverse geocodes optional location", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon, WorkshopLiveInteractionTool.RailwayBackend, "Synchronizes active session, participant events, uploads, and generated static assets", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.RailwayBackend, GoogleDrive, "Downloads slide PDFs into cache", $techn="", $tags="", $link="")
 
 SHOW_LEGEND(true)
 hide stereotypes

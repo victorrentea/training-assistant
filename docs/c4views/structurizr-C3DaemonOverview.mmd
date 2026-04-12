@@ -4,101 +4,82 @@ graph LR
   subgraph diagram ["Component View: Workshop Live Interaction Tool - Training Daemon"]
     style diagram fill:#ffffff,stroke:#ffffff
 
-    4["<div style='font-weight: bold'>Anthropic Claude API</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>LLM used for quiz generation,<br />debate cleanup, and<br />summaries.</div>"]
+    3["<div style='font-weight: bold'>Anthropic Claude API</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>LLM used by the daemon for<br />quiz generation/refinement<br />and debate cleanup.</div>"]
+    style 3 fill:#1d6f42,stroke:#144d2e,color:#ffffff
+    4["<div style='font-weight: bold'>victor-macos-addons</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Local Mac bridge that emits<br />slide events and receives<br />emoji/session notifications.</div>"]
     style 4 fill:#1d6f42,stroke:#144d2e,color:#ffffff
+    7["<div style='font-weight: bold'>Host session files</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Session folders, normalized<br />transcripts, ai-summary.md,<br />uploaded files, and slide<br />manifests on the trainer's<br />Mac.</div>"]
+    style 7 fill:#1d6f42,stroke:#144d2e,color:#ffffff
+    8["<div style='font-weight: bold'>Local ChromaDB store</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>~/.workshop-rag/chroma</div>"]
+    style 8 fill:#1d6f42,stroke:#144d2e,color:#ffffff
 
-    subgraph 7 ["Workshop Live Interaction Tool"]
-      style 7 fill:#ffffff,stroke:#144d2e,color:#144d2e
+    subgraph 9 ["Workshop Live Interaction Tool"]
+      style 9 fill:#ffffff,stroke:#144d2e,color:#144d2e
 
-      subgraph 31 ["Training Daemon"]
-        style 31 fill:#ffffff,stroke:#3e703e,color:#3e703e
+      subgraph 21 ["Training Daemon"]
+        style 21 fill:#ffffff,stroke:#3e703e,color:#3e703e
 
-        32["<div style='font-weight: bold'>Orchestrator</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/__main__.py]</div><div style='font-size: 80%; margin-top:10px'>Main loop, startup binding,<br />polling, and restart<br />coordination.</div>"]
+        23["<div style='font-weight: bold'>Embedded host server</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/host_server.py + daemon/host_proxy.py + daemon/host_ws.py]</div><div style='font-size: 80%; margin-top:10px'>Serves /host, mounts local<br />feature routers, and proxies<br />remaining HTTP/WS traffic to<br />Railway.</div>"]
+        style 23 fill:#d6e8c8,stroke:#95a28c,color:#10210f
+        24["<div style='font-weight: bold'>Participant APIs</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/participant/router.py + daemon/poll/router.py + daemon/qa/router.py + daemon/debate/router.py + daemon/codereview/router.py + daemon/misc/router.py + daemon/slides/router.py + daemon/emoji/router.py + daemon/wordcloud/router.py]</div><div style='font-size: 80%; margin-top:10px'>Authoritative participant<br />REST handlers for identity,<br />polls, Q&A, debate, code<br />review, misc actions, slides,<br />emoji, and word cloud.</div>"]
+        style 24 fill:#d6e8c8,stroke:#95a28c,color:#10210f
+        25["<div style='font-weight: bold'>Host APIs</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/session/router.py + daemon/activity/router.py + daemon/quiz/router.py + daemon/leaderboard/router.py + daemon/host_state_router.py + daemon/misc/router.py + daemon/poll/router.py + daemon/qa/router.py + daemon/debate/router.py + daemon/codereview/router.py + daemon/wordcloud/router.py]</div><div style='font-size: 80%; margin-top:10px'>Local host-side routers for<br />session lifecycle, activity<br />switching, quiz requests,<br />leaderboard control, host<br />state, uploads, and feature<br />administration.</div>"]
+        style 25 fill:#d6e8c8,stroke:#95a28c,color:#10210f
+        26["<div style='font-weight: bold'>Runtime state modules</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/*/state.py]</div><div style='font-size: 80%; margin-top:10px'>In-memory feature state for<br />participants, polls, Q&A,<br />debate, code review, misc<br />data, leaderboard, session<br />stack, and word cloud.</div>"]
+        style 26 fill:#d6e8c8,stroke:#95a28c,color:#10210f
+        27["<div style='font-weight: bold'>Railway bridge</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/ws_client.py + daemon/proxy_handler.py + daemon/ws_publish.py + daemon/upload.py + daemon/static_sync.py]</div><div style='font-size: 80%; margin-top:10px'>Persistent /ws/daemon client,<br />proxy response handling,<br />typed broadcasts, upload<br />handoff, and static sync.</div>"]
+        style 27 fill:#d6e8c8,stroke:#95a28c,color:#10210f
+        28["<div style='font-weight: bold'>Session persistence</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/session_state.py + daemon/persisted_models.py]</div><div style='font-size: 80%; margin-top:10px'>Persists global-state.json,<br />session-state.json, session<br />metadata, key points, and<br />slide manifests.</div>"]
+        style 28 fill:#d6e8c8,stroke:#95a28c,color:#10210f
+        29["<div style='font-weight: bold'>Quiz pipeline</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/quiz/* + daemon/llm/adapter.py + daemon/rag/*]</div><div style='font-size: 80%; margin-top:10px'>Generates and refines quiz<br />suggestions from notes, key<br />points, transcripts, and<br />local materials.</div>"]
+        style 29 fill:#d6e8c8,stroke:#95a28c,color:#10210f
+        30["<div style='font-weight: bold'>Debate AI cleanup</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/debate/ai_cleanup.py]</div><div style='font-size: 80%; margin-top:10px'>Claude-backed argument<br />dedupe, cleanup, and new<br />suggestion generation.</div>"]
+        style 30 fill:#d6e8c8,stroke:#95a28c,color:#10210f
+        31["<div style='font-weight: bold'>Summary loop</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/summary/loop.py + daemon/transcript/*]</div><div style='font-size: 80%; margin-top:10px'>Reads ai-summary.md,<br />refreshes key points, and<br />republishes summary state.</div>"]
+        style 31 fill:#d6e8c8,stroke:#95a28c,color:#10210f
+        32["<div style='font-weight: bold'>Slides and upload pipeline</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/slides/*]</div><div style='font-size: 80%; margin-top:10px'>Loads catalogs, tracks<br />current slide, converts<br />decks, invalidates Railway<br />cache, and pushes slide<br />metadata/files.</div>"]
         style 32 fill:#d6e8c8,stroke:#95a28c,color:#10210f
-        33["<div style='font-weight: bold'>Config + HTTP</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/config.py + daemon/http.py]</div><div style='font-size: 80%; margin-top:10px'>Environment config and shared<br />HTTP helpers.</div>"]
+        33["<div style='font-weight: bold'>Addons bridge</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/addon_bridge_client.py + daemon/adapters/*]</div><div style='font-size: 80%; margin-top:10px'>Receives slide events from<br />victor-macos-addons and<br />forwards emoji/session<br />notifications back.</div>"]
         style 33 fill:#d6e8c8,stroke:#95a28c,color:#10210f
-        34["<div style='font-weight: bold'>Daemon WS Client</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/ws_client.py]</div><div style='font-size: 80%; margin-top:10px'>WebSocket channel used for<br />daemon sync and uploads.</div>"]
+        34["<div style='font-weight: bold'>Lock and heartbeat</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/lock.py]</div><div style='font-size: 80%; margin-top:10px'>Single-instance PID lock and<br />heartbeat maintenance.</div>"]
         style 34 fill:#d6e8c8,stroke:#95a28c,color:#10210f
-        35["<div style='font-weight: bold'>Session State</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/session_state.py]</div><div style='font-size: 80%; margin-top:10px'>Persists daemon stack and<br />synchronizes session<br />snapshots with backend.</div>"]
-        style 35 fill:#d6e8c8,stroke:#95a28c,color:#10210f
-        36["<div style='font-weight: bold'>Quiz Generator</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/quiz/generator.py]</div><div style='font-size: 80%; margin-top:10px'>Builds quiz suggestions from<br />transcript or topic context.</div>"]
-        style 36 fill:#d6e8c8,stroke:#95a28c,color:#10210f
-        37["<div style='font-weight: bold'>Quiz History</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/quiz/history.py]</div><div style='font-size: 80%; margin-top:10px'>Prevents repeated quiz<br />questions.</div>"]
-        style 37 fill:#d6e8c8,stroke:#95a28c,color:#10210f
-        38["<div style='font-weight: bold'>Quiz Poll API</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/quiz/poll_api.py]</div><div style='font-size: 80%; margin-top:10px'>Polls quiz requests and posts<br />previews/status.</div>"]
-        style 38 fill:#d6e8c8,stroke:#95a28c,color:#10210f
-        39["<div style='font-weight: bold'>Debate AI Cleanup</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/debate/ai_cleanup.py]</div><div style='font-size: 80%; margin-top:10px'>Cleans up debate arguments<br />and posts AI suggestions.</div>"]
-        style 39 fill:#d6e8c8,stroke:#95a28c,color:#10210f
-        40["<div style='font-weight: bold'>Summary Loop</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/summary/loop.py]</div><div style='font-size: 80%; margin-top:10px'>Triggers summary generation<br />cycles and publishes results.</div>"]
-        style 40 fill:#d6e8c8,stroke:#95a28c,color:#10210f
-        41["<div style='font-weight: bold'>Summarizer</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/summary/summarizer.py]</div><div style='font-size: 80%; margin-top:10px'>Extracts discussion points<br />and notes from transcript<br />deltas.</div>"]
-        style 41 fill:#d6e8c8,stroke:#95a28c,color:#10210f
-        42["<div style='font-weight: bold'>Transcript Loader</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/transcript/loader.py]</div><div style='font-size: 80%; margin-top:10px'>Loads and filters normalized<br />transcript windows.</div>"]
-        style 42 fill:#d6e8c8,stroke:#95a28c,color:#10210f
-        43["<div style='font-weight: bold'>Transcript Parser</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/transcript/parser.py]</div><div style='font-size: 80%; margin-top:10px'>Parses transcript files such<br />as txt, vtt, and srt.</div>"]
-        style 43 fill:#d6e8c8,stroke:#95a28c,color:#10210f
-        44["<div style='font-weight: bold'>Transcript Session</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/transcript/session.py]</div><div style='font-size: 80%; margin-top:10px'>Computes active transcript<br />windows per session.</div>"]
-        style 44 fill:#d6e8c8,stroke:#95a28c,color:#10210f
-        45["<div style='font-weight: bold'>Transcript State</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/transcript/state.py]</div><div style='font-size: 80%; margin-top:10px'>Tracks transcript processing<br />state.</div>"]
-        style 45 fill:#d6e8c8,stroke:#95a28c,color:#10210f
-        46["<div style='font-weight: bold'>Slides Loop</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/slides/loop.py]</div><div style='font-size: 80%; margin-top:10px'>Polls for slide work and<br />orchestrates<br />conversions/uploads.</div>"]
-        style 46 fill:#d6e8c8,stroke:#95a28c,color:#10210f
-        47["<div style='font-weight: bold'>Slides Catalog</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/slides/catalog.py]</div><div style='font-size: 80%; margin-top:10px'>Reads and resolves slide<br />catalog entries.</div>"]
-        style 47 fill:#d6e8c8,stroke:#95a28c,color:#10210f
-        48["<div style='font-weight: bold'>Slides Convert</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/slides/convert.py]</div><div style='font-size: 80%; margin-top:10px'>Converts PPTX to PDF via host<br />tooling.</div>"]
-        style 48 fill:#d6e8c8,stroke:#95a28c,color:#10210f
-        49["<div style='font-weight: bold'>Slides Upload</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/slides/upload.py]</div><div style='font-size: 80%; margin-top:10px'>Uploads converted slide PDFs<br />to the backend.</div>"]
-        style 49 fill:#d6e8c8,stroke:#95a28c,color:#10210f
-        50["<div style='font-weight: bold'>Slides Daemon</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/slides/daemon.py]</div><div style='font-size: 80%; margin-top:10px'>Coordinates slide upload<br />workflow over WebSocket.</div>"]
-        style 50 fill:#d6e8c8,stroke:#95a28c,color:#10210f
-        52["<div style='font-weight: bold'>RAG Indexer</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/rag/indexer.py]</div><div style='font-size: 80%; margin-top:10px'>Indexes local project files<br />for retrieval.</div>"]
-        style 52 fill:#d6e8c8,stroke:#95a28c,color:#10210f
-        53["<div style='font-weight: bold'>RAG Retriever</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/rag/retriever.py]</div><div style='font-size: 80%; margin-top:10px'>Retrieves relevant context<br />for quiz generation.</div>"]
-        style 53 fill:#d6e8c8,stroke:#95a28c,color:#10210f
-        54["<div style='font-weight: bold'>Project Files Scanner</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/rag/project_files.py]</div><div style='font-size: 80%; margin-top:10px'>Scans repository files for<br />RAG and tooling.</div>"]
-        style 54 fill:#d6e8c8,stroke:#95a28c,color:#10210f
-        55["<div style='font-weight: bold'>LLM Adapter</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/llm/adapter.py]</div><div style='font-size: 80%; margin-top:10px'>Claude client wrapper with<br />token accounting.</div>"]
-        style 55 fill:#d6e8c8,stroke:#95a28c,color:#10210f
-        56["<div style='font-weight: bold'>Process Lock</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/lock.py]</div><div style='font-size: 80%; margin-top:10px'>Single-instance PID lock and<br />heartbeat.</div>"]
-        style 56 fill:#d6e8c8,stroke:#95a28c,color:#10210f
       end
 
-      10["<div style='font-weight: bold'>FastAPI Backend</div><div style='font-size: 70%; margin-top: 0px'>[Container: Python 3.12 / FastAPI / Uvicorn]</div><div style='font-size: 80%; margin-top:10px'>REST endpoints, WebSocket<br />hub, session routing, and<br />in-memory state.</div>"]
-      style 10 fill:#5aa05a,stroke:#3e703e,color:#ffffff
+      11["<div style='font-weight: bold'>Host SPA</div><div style='font-size: 70%; margin-top: 0px'>[Container: HTML/CSS/JavaScript]</div><div style='font-size: 80%; margin-top:10px'>Host control panel served<br />from the daemon host server<br />on localhost.</div>"]
+      style 11 fill:#5aa05a,stroke:#3e703e,color:#ffffff
+      12["<div style='font-weight: bold'>Railway Backend</div><div style='font-size: 70%; margin-top: 0px'>[Container: Python 3.12 / FastAPI / Uvicorn]</div><div style='font-size: 80%; margin-top:10px'>Thin session-aware bridge for<br />participants, slides,<br />uploads, and daemon sync.</div>"]
+      style 12 fill:#5aa05a,stroke:#3e703e,color:#ffffff
     end
 
-    32-. "<div>Uses</div><div style='font-size: 70%'></div>" .->33
-    32-. "<div>Maintains daemon WebSocket</div><div style='font-size: 70%'></div>" .->34
-    32-. "<div>Loads and saves<br />daemon/session state</div><div style='font-size: 70%'></div>" .->35
-    32-. "<div>Triggers</div><div style='font-size: 70%'></div>" .->40
-    32-. "<div>Triggers</div><div style='font-size: 70%'></div>" .->46
-    32-. "<div>Triggers</div><div style='font-size: 70%'></div>" .->51
-    32-. "<div>Maintains</div><div style='font-size: 70%'></div>" .->56
-    32-. "<div>Computes active windows with</div><div style='font-size: 70%'></div>" .->44
-    33-. "<div>Calls host-protected HTTP<br />endpoints</div><div style='font-size: 70%'></div>" .->10
-    34-. "<div>Connects to daemon WebSocket<br />endpoint</div><div style='font-size: 70%'></div>" .->10
-    35-. "<div>Synchronizes snapshots and<br />active session</div><div style='font-size: 70%'></div>" .->10
-    38-. "<div>Polls quiz endpoints and<br />posts preview/status</div><div style='font-size: 70%'></div>" .->10
-    38-. "<div>Triggers generation</div><div style='font-size: 70%'></div>" .->36
-    36-. "<div>Reads transcript context from</div><div style='font-size: 70%'></div>" .->42
-    36-. "<div>Retrieves project context<br />from</div><div style='font-size: 70%'></div>" .->53
-    36-. "<div>Checks against</div><div style='font-size: 70%'></div>" .->37
-    36-. "<div>Requests quiz suggestions<br />from</div><div style='font-size: 70%'></div>" .->55
-    39-. "<div>Polls AI cleanup endpoints</div><div style='font-size: 70%'></div>" .->10
-    39-. "<div>Requests cleanup suggestions<br />from</div><div style='font-size: 70%'></div>" .->55
-    40-. "<div>Triggers</div><div style='font-size: 70%'></div>" .->41
-    40-. "<div>Posts summaries and<br />transcript status</div><div style='font-size: 70%'></div>" .->10
-    41-. "<div>Reads transcript deltas from</div><div style='font-size: 70%'></div>" .->42
-    41-. "<div>Requests summary output from</div><div style='font-size: 70%'></div>" .->55
-    42-. "<div>Parses files through</div><div style='font-size: 70%'></div>" .->43
-    42-. "<div>Tracks processing through</div><div style='font-size: 70%'></div>" .->45
-    46-. "<div>Reads catalog from</div><div style='font-size: 70%'></div>" .->47
-    46-. "<div>Triggers PDF conversion in</div><div style='font-size: 70%'></div>" .->48
-    46-. "<div>Coordinates upload flow with</div><div style='font-size: 70%'></div>" .->50
-    50-. "<div>Delegates uploads to</div><div style='font-size: 70%'></div>" .->49
-    49-. "<div>Streams slide artifacts<br />through</div><div style='font-size: 70%'></div>" .->34
-    52-. "<div>Indexes files from</div><div style='font-size: 70%'></div>" .->54
-    53-. "<div>Queries</div><div style='font-size: 70%'></div>" .->52
-    55-. "<div>Calls</div><div style='font-size: 70%'></div>" .->4
+    29-. "<div>Requests quiz drafts and<br />refinements from</div><div style='font-size: 70%'></div>" .->3
+    29-. "<div>Publishes quiz status through</div><div style='font-size: 70%'></div>" .->27
+    30-. "<div>Requests cleanup suggestions<br />from</div><div style='font-size: 70%'></div>" .->3
+    30-. "<div>Publishes cleanup results<br />through</div><div style='font-size: 70%'></div>" .->27
+    31-. "<div>Reads ai-summary.md and key<br />points from</div><div style='font-size: 70%'></div>" .->7
+    31-. "<div>Publishes summary state<br />through</div><div style='font-size: 70%'></div>" .->27
+    32-. "<div>Reads slide catalogs and<br />generated PDFs from</div><div style='font-size: 70%'></div>" .->7
+    32-. "<div>Publishes slide<br />metadata/files through</div><div style='font-size: 70%'></div>" .->27
+    32-. "<div>Uses cache and upload helpers<br />on</div><div style='font-size: 70%'></div>" .->12
+    33-. "<div>Connects over local WebSocket</div><div style='font-size: 70%'></div>" .->4
+    33-. "<div>Forwards slide events to</div><div style='font-size: 70%'></div>" .->32
+    33-. "<div>Forwards emoji/session<br />notifications through</div><div style='font-size: 70%'></div>" .->27
+    11-. "<div>Loads host pages and local<br />APIs</div><div style='font-size: 70%'></div>" .->23
+    23-. "<div>Mounts</div><div style='font-size: 70%'></div>" .->24
+    23-. "<div>Mounts</div><div style='font-size: 70%'></div>" .->25
+    23-. "<div>Proxies unmatched HTTP and<br />WebSocket traffic to</div><div style='font-size: 70%'></div>" .->12
+    24-. "<div>Mutates</div><div style='font-size: 70%'></div>" .->26
+    24-. "<div>Publishes participant updates<br />through</div><div style='font-size: 70%'></div>" .->27
+    24-. "<div>Reads current session<br />metadata from</div><div style='font-size: 70%'></div>" .->28
+    25-. "<div>Mutates</div><div style='font-size: 70%'></div>" .->26
+    25-. "<div>Publishes host-driven updates<br />through</div><div style='font-size: 70%'></div>" .->27
+    25-. "<div>Persists and restores session<br />files through</div><div style='font-size: 70%'></div>" .->28
+    25-. "<div>Triggers</div><div style='font-size: 70%'></div>" .->29
+    25-. "<div>Triggers</div><div style='font-size: 70%'></div>" .->32
+    25-. "<div>Triggers</div><div style='font-size: 70%'></div>" .->30
+    26-. "<div>Is snapshotted by</div><div style='font-size: 70%'></div>" .->28
+    27-. "<div>Connects over /ws/daemon and<br />host-auth REST</div><div style='font-size: 70%'></div>" .->12
+    27-. "<div>Reads session metadata for<br />sync payloads from</div><div style='font-size: 70%'></div>" .->28
+    29-. "<div>Reads notes, transcripts, and<br />local materials from</div><div style='font-size: 70%'></div>" .->7
+    29-. "<div>Retrieves indexed local<br />context from</div><div style='font-size: 70%'></div>" .->8
 
   end

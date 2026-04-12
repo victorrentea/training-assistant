@@ -6,6 +6,7 @@ __pycache__/
 *.pyc
 .playwright-mcp/
 .superpowers/
+.c4views-tmp/
 
 /materials/
 /faiss_index/

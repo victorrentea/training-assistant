@@ -4,47 +4,36 @@ graph LR
   subgraph diagram ["Component View: Workshop Live Interaction Tool - Training Daemon"]
     style diagram fill:#ffffff,stroke:#ffffff
 
-    3["<div style='font-weight: bold'>victor-macos-addons</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Produces normalized<br />transcript files on the<br />trainer's Mac.</div>"]
-    style 3 fill:#1d6f42,stroke:#144d2e,color:#ffffff
-    4["<div style='font-weight: bold'>Anthropic Claude API</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>LLM used for quiz generation,<br />debate cleanup, and<br />summaries.</div>"]
-    style 4 fill:#1d6f42,stroke:#144d2e,color:#ffffff
+    7["<div style='font-weight: bold'>Host session files</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Session folders, normalized<br />transcripts, ai-summary.md,<br />uploaded files, and slide<br />manifests on the trainer's<br />Mac.</div>"]
+    style 7 fill:#1d6f42,stroke:#144d2e,color:#ffffff
 
-    subgraph 7 ["Workshop Live Interaction Tool"]
-      style 7 fill:#ffffff,stroke:#144d2e,color:#144d2e
+    subgraph 9 ["Workshop Live Interaction Tool"]
+      style 9 fill:#ffffff,stroke:#144d2e,color:#144d2e
 
-      subgraph 31 ["Training Daemon"]
-        style 31 fill:#ffffff,stroke:#3e703e,color:#3e703e
+      subgraph 21 ["Training Daemon"]
+        style 21 fill:#ffffff,stroke:#3e703e,color:#3e703e
 
-        32["<div style='font-weight: bold'>Orchestrator</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/__main__.py]</div><div style='font-size: 80%; margin-top:10px'>Main loop, startup binding,<br />polling, and restart<br />coordination.</div>"]
-        style 32 fill:#d6e8c8,stroke:#95a28c,color:#10210f
-        40["<div style='font-weight: bold'>Summary Loop</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/summary/loop.py]</div><div style='font-size: 80%; margin-top:10px'>Triggers summary generation<br />cycles and publishes results.</div>"]
-        style 40 fill:#d6e8c8,stroke:#95a28c,color:#10210f
-        41["<div style='font-weight: bold'>Summarizer</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/summary/summarizer.py]</div><div style='font-size: 80%; margin-top:10px'>Extracts discussion points<br />and notes from transcript<br />deltas.</div>"]
-        style 41 fill:#d6e8c8,stroke:#95a28c,color:#10210f
-        42["<div style='font-weight: bold'>Transcript Loader</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/transcript/loader.py]</div><div style='font-size: 80%; margin-top:10px'>Loads and filters normalized<br />transcript windows.</div>"]
-        style 42 fill:#d6e8c8,stroke:#95a28c,color:#10210f
-        43["<div style='font-weight: bold'>Transcript Parser</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/transcript/parser.py]</div><div style='font-size: 80%; margin-top:10px'>Parses transcript files such<br />as txt, vtt, and srt.</div>"]
-        style 43 fill:#d6e8c8,stroke:#95a28c,color:#10210f
-        44["<div style='font-weight: bold'>Transcript Session</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/transcript/session.py]</div><div style='font-size: 80%; margin-top:10px'>Computes active transcript<br />windows per session.</div>"]
-        style 44 fill:#d6e8c8,stroke:#95a28c,color:#10210f
-        45["<div style='font-weight: bold'>Transcript State</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/transcript/state.py]</div><div style='font-size: 80%; margin-top:10px'>Tracks transcript processing<br />state.</div>"]
-        style 45 fill:#d6e8c8,stroke:#95a28c,color:#10210f
-        55["<div style='font-weight: bold'>LLM Adapter</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/llm/adapter.py]</div><div style='font-size: 80%; margin-top:10px'>Claude client wrapper with<br />token accounting.</div>"]
-        style 55 fill:#d6e8c8,stroke:#95a28c,color:#10210f
+        22["<div style='font-weight: bold'>Orchestrator</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/__main__.py]</div><div style='font-size: 80%; margin-top:10px'>Starts the lock/heartbeat,<br />host server, daemon WS<br />client, addons bridge, slide<br />runner, summary loop, and the<br />1-second main loop.</div>"]
+        style 22 fill:#d6e8c8,stroke:#95a28c,color:#10210f
+        25["<div style='font-weight: bold'>Host APIs</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/session/router.py + daemon/activity/router.py + daemon/quiz/router.py + daemon/leaderboard/router.py + daemon/host_state_router.py + daemon/misc/router.py + daemon/poll/router.py + daemon/qa/router.py + daemon/debate/router.py + daemon/codereview/router.py + daemon/wordcloud/router.py]</div><div style='font-size: 80%; margin-top:10px'>Local host-side routers for<br />session lifecycle, activity<br />switching, quiz requests,<br />leaderboard control, host<br />state, uploads, and feature<br />administration.</div>"]
+        style 25 fill:#d6e8c8,stroke:#95a28c,color:#10210f
+        27["<div style='font-weight: bold'>Railway bridge</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/ws_client.py + daemon/proxy_handler.py + daemon/ws_publish.py + daemon/upload.py + daemon/static_sync.py]</div><div style='font-size: 80%; margin-top:10px'>Persistent /ws/daemon client,<br />proxy response handling,<br />typed broadcasts, upload<br />handoff, and static sync.</div>"]
+        style 27 fill:#d6e8c8,stroke:#95a28c,color:#10210f
+        28["<div style='font-weight: bold'>Session persistence</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/session_state.py + daemon/persisted_models.py]</div><div style='font-size: 80%; margin-top:10px'>Persists global-state.json,<br />session-state.json, session<br />metadata, key points, and<br />slide manifests.</div>"]
+        style 28 fill:#d6e8c8,stroke:#95a28c,color:#10210f
+        31["<div style='font-weight: bold'>Summary loop</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/summary/loop.py + daemon/transcript/*]</div><div style='font-size: 80%; margin-top:10px'>Reads ai-summary.md,<br />refreshes key points, and<br />republishes summary state.</div>"]
+        style 31 fill:#d6e8c8,stroke:#95a28c,color:#10210f
       end
 
-      10["<div style='font-weight: bold'>FastAPI Backend</div><div style='font-size: 70%; margin-top: 0px'>[Container: Python 3.12 / FastAPI / Uvicorn]</div><div style='font-size: 80%; margin-top:10px'>REST endpoints, WebSocket<br />hub, session routing, and<br />in-memory state.</div>"]
-      style 10 fill:#5aa05a,stroke:#3e703e,color:#ffffff
     end
 
-    32-. "<div>Triggers</div><div style='font-size: 70%'></div>" .->40
-    32-. "<div>Computes active windows with</div><div style='font-size: 70%'></div>" .->44
-    40-. "<div>Triggers</div><div style='font-size: 70%'></div>" .->41
-    40-. "<div>Posts summaries and<br />transcript status</div><div style='font-size: 70%'></div>" .->10
-    41-. "<div>Reads transcript deltas from</div><div style='font-size: 70%'></div>" .->42
-    41-. "<div>Requests summary output from</div><div style='font-size: 70%'></div>" .->55
-    42-. "<div>Parses files through</div><div style='font-size: 70%'></div>" .->43
-    42-. "<div>Tracks processing through</div><div style='font-size: 70%'></div>" .->45
-    55-. "<div>Calls</div><div style='font-size: 70%'></div>" .->4
+    31-. "<div>Reads ai-summary.md and key<br />points from</div><div style='font-size: 70%'></div>" .->7
+    31-. "<div>Publishes summary state<br />through</div><div style='font-size: 70%'></div>" .->27
+    22-. "<div>Maintains</div><div style='font-size: 70%'></div>" .->27
+    22-. "<div>Loads and flushes state<br />through</div><div style='font-size: 70%'></div>" .->28
+    22-. "<div>Triggers</div><div style='font-size: 70%'></div>" .->31
+    25-. "<div>Publishes host-driven updates<br />through</div><div style='font-size: 70%'></div>" .->27
+    25-. "<div>Persists and restores session<br />files through</div><div style='font-size: 70%'></div>" .->28
+    27-. "<div>Reads session metadata for<br />sync payloads from</div><div style='font-size: 70%'></div>" .->28
 
   end
