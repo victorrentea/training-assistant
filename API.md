@@ -1,6 +1,6 @@
 # API Reference (Generated from Contracts)
 
-Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-ws.yaml`.
+Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.yaml`, `docs/railway-openapi.yaml`, `docs/railway-ws.yaml`.
 
 ## Table of Contents
 - [Session](#feature-session)
@@ -19,6 +19,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
 - [Notes & Summary](#feature-notes--summary)
 - [Feedback](#feature-feedback)
 - [Cross-cutting: Reload](#feature-cross-cutting-reload)
+- [Infrastructure](#feature-infrastructure)
 
 ## Feature: Session
 
@@ -35,6 +36,16 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
 | List Session Folders<br>`GET /api/session/folders` | - | `folders: list[string]` |
 | Host resumes an existing session folder. Uses session-state.json as<br>persisted storage.<br>`POST /api/session/resume` | `folder: string` | `session_name: string`<br>`session_id: string` |
 | Host starts a nested talk (conference mode).<br>`POST /api/session/start_talk` | - | - |
+
+### Daemon REST
+| Endpoint | Request | Response |
+| --- | --- | --- |
+| Get Active Session ID, daemon calls on startup to discover if a session<br>is already active on Railway;<br>returns the current session_id or null if no session is active.<br>`GET /api/session/active` | - | `session_id: any  # Current active session ID, or null if no session is active.` |
+
+### Daemon WS
+| Message | Payload |
+| --- | --- |
+| Direction: Daemon → Railway<br>Daemon announces current active session to Railway on connect or session change<br>`set_session_id` | `session_id?: string`<br>`session_name?: string` |
 
 ## Feature: Identity
 
@@ -64,6 +75,12 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
 | --- | --- |
 | Participant list changed (join/register/rename/location) — sent by daemon directly<br>`participant_list_updated` | `participants: list[HostParticipant {`<br>&nbsp;&nbsp;&nbsp;&nbsp;`uuid:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`name:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`score:int`<br>&nbsp;&nbsp;&nbsp;&nbsp;`location?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`avatar:string`<br>`}]` |
 
+### Daemon WS
+| Message | Payload |
+| --- | --- |
+| Direction: Railway → Daemon<br>Participant connected or disconnected from Railway<br>`participant_presence` | `uuid: string  # Participant UUID`<br>`online: bool` |
+| Direction: Railway → Daemon<br>Railway pushes current online participant list to newly connected daemon<br>`daemon_state_push` | `online_participants: list[string]  # UUIDs of currently online participants` |
+
 ## Feature: Slides
 
 ### Participant REST
@@ -81,6 +98,19 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
 | Message | Payload |
 | --- | --- |
 | Invalidation signal — host must call GET /api/slides to refresh<br>Host should refetch slides list; payload intentionally carries no cache map.<br>`slides_cache_status` | `refreshed_slugs?: list[string]` |
+
+### Daemon REST
+| Endpoint | Request | Response |
+| --- | --- | --- |
+| Download Slide PDF from Google Drive, daemon asks Railway to fetch a PDF<br>export from Google Drive and cache it locally on Railway;<br>railway downloads the file, caches it, and returns the SHA-256 hash so<br>the daemon can detect content changes.<br>`POST /api/slides/download-from-gdrive/{slug}` | `drive_export_url: string  # Google Drive PDF export URL for the slide deck.` | `status: string  # Always "cached" on success.`<br>`sha256: string  # SHA-256 hex digest of the cached PDF file.`<br>`size: int  # File size in bytes.` |
+
+### Daemon WS
+| Message | Payload |
+| --- | --- |
+| Direction: Railway → Daemon<br>Railway requests daemon to sync static files and PDF cache<br>`sync_files` | `static_hashes: dict[str, string]  # filename → hash of current Railway-served static file`<br>`pdf_slugs: dict[str, string]  # slug → drive_export_url for known PDF slides` |
+| Direction: Railway → Daemon<br>Railway notifies daemon that a PDF download has finished (ok or error)<br>`pdf_download_complete` | `slug: string`<br>`status: 'ok' \| 'error'`<br>`error?: string  # Error message when status is "error"` |
+| Direction: Daemon → Railway<br>Daemon notifies Railway that a slide PDF has been invalidated and must be re-served<br>`slide_invalidated` | `slug: string` |
+| Direction: Daemon → Railway<br>Railway instructs daemon to download a PDF from Google Drive<br>`download_pdf` | `slug: string`<br>`drive_export_url: string` |
 
 ## Feature: Activity
 
@@ -258,6 +288,11 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
 | --- | --- |
 | Leaderboard revealed (same payload as participant)<br>`leaderboard_revealed` | `positions: list[LeaderboardPosition {`<br>&nbsp;&nbsp;&nbsp;&nbsp;`rank:int`<br>&nbsp;&nbsp;&nbsp;&nbsp;`name:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`score:int`<br>&nbsp;&nbsp;&nbsp;&nbsp;`avatar:string`<br>`}]` |
 
+### Daemon WS
+| Message | Payload |
+| --- | --- |
+| Direction: Railway → Daemon<br>Railway instructs daemon to reset all participant scores<br>`scores_reset` | - |
+
 ## Feature: Emoji Reactions
 
 ### Participant REST
@@ -311,6 +346,17 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
 | Participant submitted a text paste<br>`paste_received` | `uuid: string  # Participant UUID who submitted the paste`<br>`id: string  # Paste ID`<br>`text: string` |
 | Participant uploaded a file (daemon has downloaded it to session folder)<br>`file_uploaded` | `uuid: string  # Participant UUID who uploaded the file`<br>`id: string  # File ID`<br>`filename: string`<br>`size: int  # File size in bytes`<br>`disk_path: string  # Absolute path on the host's disk where the file was saved by the daemon` |
 
+### Daemon REST
+| Endpoint | Request | Response |
+| --- | --- | --- |
+| Download Uploaded File, daemon downloads a participant-uploaded file<br>from Railway's temporary storage;<br>called after Railway notifies the daemon via WebSocket that a new file<br>is ready for download.<br>`GET /upload/{file_id}` | - | `application/octet-stream: string` |
+| Acknowledge File Download, daemon confirms it has downloaded and<br>persisted the file to local disk;<br>railway deletes its temporary copy upon receiving this acknowledgement.<br>`POST /upload/{file_id}/ack` | `disk_path: string  # Absolute local path where the daemon saved the file.` | `ok?: bool` |
+
+### Daemon WS
+| Message | Payload |
+| --- | --- |
+| Direction: Railway → Daemon<br>Railway notifies daemon that a participant has uploaded a file<br>`file_ready_for_download` | `file_id: int`<br>`uuid: string  # Participant UUID who uploaded the file`<br>`filename: string`<br>`size: int  # File size in bytes`<br>`session_id: string` |
+
 ## Feature: Notes & Summary
 
 ### Participant REST
@@ -337,6 +383,12 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
 | Notes file changed — non-empty line count updated<br>`notes_updated` | `count: int  # Number of non-empty lines in the notes file` |
 | AI summary file changed — parsed point count updated<br>`summary_updated` | `count: int  # Number of parsed bullet-point objects in ai-summary.md` |
 
+### Daemon WS
+| Message | Payload |
+| --- | --- |
+| Direction: Railway → Daemon<br>Railway instructs daemon to force-generate a summary immediately<br>`summary_force` | - |
+| Direction: Railway → Daemon<br>Railway instructs daemon to reset summary state entirely<br>`summary_full_reset` | - |
+
 ## Feature: Feedback
 
 ### Participant REST
@@ -355,3 +407,15 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-w
 | Message | Payload |
 | --- | --- |
 | Daemon synced static files — browser should reload<br>Host client should trigger full page reload to pick up new static assets.<br>`reload` | - |
+
+## Feature: Infrastructure
+
+### Daemon WS
+| Message | Payload |
+| --- | --- |
+| Direction: Railway → Daemon<br>Railway proxies a participant REST request to the daemon for processing<br>`proxy_request` | `id: string  # Correlation ID to match with proxy_response`<br>`method: string  # HTTP method (GET, POST, etc.)`<br>`path: string  # Request path forwarded from the participant`<br>`body?: string  # JSON-encoded request body`<br>`headers?: dict[str, string]  # Forwarded request headers`<br>`participant_id?: string  # UUID of the participant who made the original request` |
+| Direction: Daemon → Railway<br>Daemon sends its build timestamp so Railway can detect version drift<br>`code_timestamp` | `timestamp: int  # Unix timestamp of the daemon build` |
+| Direction: Daemon → Railway<br>Daemon asks Railway to forward an event to all participants in the session<br>Wrapper message — inner event payload is a participant WS message<br>`broadcast` | `event: dict  # Participant WS message payload to broadcast` |
+| Direction: Daemon → Railway<br>Daemon asks Railway to forward an event to the host browser<br>Wrapper message — inner event payload is a host WS message<br>`send_to_host` | `event: dict  # Host WS message payload to deliver` |
+| Direction: Daemon → Railway<br>Daemon returns the result of a proxied participant REST request<br>`proxy_response` | `id: string  # Correlation ID matching the original proxy_request`<br>`status: int  # HTTP status code`<br>`body: string  # Response body (JSON or plain text)`<br>`content_type: string  # MIME type of the response body` |
+| Direction: Daemon → Railway<br>Daemon keepalive ping to Railway<br>`daemon_ping` | - |

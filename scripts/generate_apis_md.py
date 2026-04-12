@@ -51,6 +51,7 @@ FEATURE_LABELS: dict[str, str] = {
     "feedback": "Feedback",
     "reload": "Cross-cutting: Reload",
     "transcription": "Transcription",
+    "infrastructure": "Infrastructure",
     "host-state": "Identity",
     "_untagged": "Session",
 }
@@ -73,6 +74,7 @@ FEATURE_ORDER = [
     "feedback",
     "transcription",
     "reload",
+    "infrastructure",
     "misc",
 ]
 
@@ -102,6 +104,8 @@ class FeatureSection:
     participant_ws: list[WsMsg]
     host_rest: list[RestOp]
     host_ws: list[WsMsg]
+    daemon_rest: list[RestOp]
+    daemon_ws: list[WsMsg]
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:
@@ -619,7 +623,7 @@ def _extract_rest(openapi: dict[str, Any], sections: dict[str, FeatureSection]) 
             tags = op.get("tags") or ["_untagged"]
             tag = str(tags[0])
             feature = str(op.get("x-feature") or _normalize_rest_feature(tag, path))
-            section = sections.setdefault(feature, FeatureSection([], [], [], []))
+            section = sections.setdefault(feature, FeatureSection([], [], [], [], [], []))
 
             title, notes = _collect_rest_doc(op)
             rest = RestOp(
@@ -664,7 +668,7 @@ def _extract_ws(
                 continue
 
             feature = str(msg_spec.get("x-feature") or "misc")
-            section = sections.setdefault(feature, FeatureSection([], [], [], []))
+            section = sections.setdefault(feature, FeatureSection([], [], [], [], [], []))
             payload = msg_spec.get("payload", {})
             ws = WsMsg(
                 name=msg_name,
@@ -675,6 +679,68 @@ def _extract_ws(
                 section.participant_ws.append(ws)
             else:
                 section.host_ws.append(ws)
+
+
+def _extract_railway_rest(openapi: dict[str, Any], sections: dict[str, FeatureSection]) -> None:
+    for path, methods in sorted(openapi.get("paths", {}).items()):
+        if not isinstance(methods, dict):
+            continue
+        for method, op in sorted(methods.items()):
+            if method.lower() not in HTTP_METHODS:
+                continue
+            if not isinstance(op, dict):
+                continue
+
+            feature = str(op.get("x-feature") or "infrastructure")
+            section = sections.setdefault(feature, FeatureSection([], [], [], [], [], []))
+
+            title, notes = _collect_rest_doc(op)
+            rest = RestOp(
+                method=method.upper(),
+                path=path,
+                title=title,
+                notes=notes,
+                request_shape=_rest_request_shape(op, openapi),
+                response_shape=_rest_response_shape(op, openapi),
+            )
+            section.daemon_rest.append(rest)
+
+
+def _extract_railway_ws(
+    spec: dict[str, Any],
+    sections: dict[str, FeatureSection],
+) -> None:
+    components = spec.get("components", {})
+    messages = components.get("messages", {})
+
+    for channel in spec.get("channels", {}).values():
+        if not isinstance(channel, dict):
+            continue
+        for direction in ("subscribe", "publish"):
+            dir_spec = channel.get(direction, {})
+            message = dir_spec.get("message", {})
+            one_of = message.get("oneOf", [])
+            for ref in one_of:
+                if not isinstance(ref, dict):
+                    continue
+                ref_str = str(ref.get("$ref", ""))
+                if not ref_str.startswith("#/components/messages/"):
+                    continue
+                msg_name = ref_str.split("/")[-1]
+                msg_spec = messages.get(msg_name, {})
+                if not isinstance(msg_spec, dict):
+                    continue
+
+                feature = str(msg_spec.get("x-feature") or "infrastructure")
+                section = sections.setdefault(feature, FeatureSection([], [], [], [], [], []))
+                payload = msg_spec.get("payload", {})
+                direction_label = "Railway → Daemon" if direction == "subscribe" else "Daemon → Railway"
+                ws = WsMsg(
+                    name=msg_name,
+                    notes=[f"Direction: {direction_label}"] + _collect_notes(msg_spec),
+                    payload_shape=_ws_payload_shape(payload if isinstance(payload, dict) else {}, spec),
+                )
+                section.daemon_ws.append(ws)
 
 
 def _feature_title(feature_id: str) -> str:
@@ -938,6 +1004,8 @@ def generate_api_reference(
     openapi_path: Path,
     participant_ws_path: Path,
     host_ws_path: Path,
+    railway_openapi_path: Path | None = None,
+    railway_ws_path: Path | None = None,
 ) -> str:
     openapi = _load_yaml(openapi_path)
     participant_ws = _load_yaml(participant_ws_path)
@@ -949,13 +1017,29 @@ def generate_api_reference(
     _extract_ws(participant_ws, sections, "participant")
     _extract_ws(host_ws, sections, "host")
 
+    railway_openapi = None
+    if railway_openapi_path and railway_openapi_path.exists():
+        railway_openapi = _load_yaml(railway_openapi_path)
+        _extract_railway_rest(railway_openapi, sections)
+
+    railway_ws = None
+    if railway_ws_path and railway_ws_path.exists():
+        railway_ws = _load_yaml(railway_ws_path)
+        _extract_railway_ws(railway_ws, sections)
+
     feature_ids = [f for f in FEATURE_ORDER if f in sections]
     feature_ids.extend(sorted(f for f in sections.keys() if f not in feature_ids))
+
+    source_files = "`docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.yaml`"
+    if railway_openapi_path and railway_openapi:
+        source_files += ", `docs/railway-openapi.yaml`"
+    if railway_ws_path and railway_ws:
+        source_files += ", `docs/railway-ws.yaml`"
 
     lines: list[str] = []
     lines.append("# API Reference (Generated from Contracts)")
     lines.append("")
-    lines.append("Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, and `docs/host-ws.yaml`.")
+    lines.append(f"Generated from {source_files}.")
     lines.append("")
 
     lines.append("## Table of Contents")
@@ -977,6 +1061,10 @@ def generate_api_reference(
             subsections.append(("Host REST", _render_rest(section.host_rest, openapi)))
         if section.host_ws:
             subsections.append(("Host WS", _render_ws(section.host_ws, host_ws)))
+        if section.daemon_rest and railway_openapi:
+            subsections.append(("Daemon REST", _render_rest(section.daemon_rest, railway_openapi)))
+        if section.daemon_ws and railway_ws:
+            subsections.append(("Daemon WS", _render_ws(section.daemon_ws, railway_ws)))
 
         if not subsections:
             continue
@@ -996,6 +1084,8 @@ def main() -> int:
     parser.add_argument("--openapi", default="docs/openapi.yaml")
     parser.add_argument("--participant-ws", default="docs/participant-ws.yaml")
     parser.add_argument("--host-ws", default="docs/host-ws.yaml")
+    parser.add_argument("--railway-openapi", default="docs/railway-openapi.yaml")
+    parser.add_argument("--railway-ws", default="docs/railway-ws.yaml")
     parser.add_argument("--output", default="API.generated.md")
     parser.add_argument("--db-output", default="DB.md")
     parser.add_argument("--stdout", action="store_true", help="Print markdown to stdout instead of writing file")
@@ -1005,6 +1095,8 @@ def main() -> int:
         Path(args.openapi),
         Path(args.participant_ws),
         Path(args.host_ws),
+        railway_openapi_path=Path(args.railway_openapi),
+        railway_ws_path=Path(args.railway_ws),
     )
 
     if args.stdout:
