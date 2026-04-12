@@ -2624,13 +2624,6 @@ function closeAgendaModal() {
     try { new Notification(title, { body }); } catch (_) {}
   }
 
-  function showDeployPending() {
-    const el = document.getElementById('version-tag');
-    if (!el) return;
-    el.textContent = '⚠️ 🚀 Deploy incoming';
-    el.style.cssText = 'color:#f5a623;opacity:1;font-weight:600;';
-  }
-
   // Largest-remainder rounding: ensures integer percentages sum to exactly 100
   function largestRemainder(floats) {
     const total = floats.reduce((a, b) => a + b, 0);
@@ -3400,9 +3393,6 @@ function closeAgendaModal() {
       }
       case 'leaderboard_hidden':
         hideParticipantLeaderboard();
-        break;
-      case 'deploy_pending':
-        showDeployPending();
         break;
       case 'slides_current':
         _onIncomingHostSlidesCurrent(msg.slides_current || null);

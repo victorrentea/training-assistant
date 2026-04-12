@@ -1010,7 +1010,6 @@ function _handleWsMessage(msg) {
   switch (msg.type) {
     case 'reload': location.reload(); break;
     case 'redirect': window.location.href = msg.url || '/'; break;
-    case 'deploy_pending': window.__deployIncoming = true; if (window.__updateDeployAge) window.__updateDeployAge(); break;
     case 'state': _applyState(msg); break;
     case 'notes_updated':
       document.querySelector('[data-nav="notes"]').style.display = msg.count > 0 ? '' : 'none';

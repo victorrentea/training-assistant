@@ -9,13 +9,12 @@
 
   function startUpdating(el, deployDate, railwayDate) {
     function update() {
-      const prefix = window.__deployIncoming ? '\u26a0\ufe0f \uD83D\uDE80 | ' : '';
       const now = new Date();
       const parts = [formatElapsed('deployed', deployDate, now)];
       if (railwayDate instanceof Date && !isNaN(railwayDate.getTime())) {
         parts.push(formatElapsed('railway', railwayDate, now));
       }
-      el.textContent = prefix + parts.join(' | ');
+      el.textContent = parts.join(' | ');
     }
     window.__updateDeployAge = update;
     update();
