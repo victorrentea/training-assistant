@@ -31,6 +31,11 @@ async def landing_page():
     return FileResponse("static/landing.html")
 
 
+@landing_router.get("/new", response_class=HTMLResponse)
+async def new_page():
+    return FileResponse("static/new/code.html")
+
+
 @host_router.get("/host/", response_class=HTMLResponse)
 async def host_landing_redirect():
     return RedirectResponse(url="/host", status_code=301)
