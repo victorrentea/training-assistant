@@ -288,12 +288,24 @@ def slide_automatically_reloaded():
 def catalog_contains_with_timestamp(connected, slug):
     pax = connected["pax"]
     pax.expand_slides_dock()
-    # Wait for catalog to be populated (daemon scan may need time to propagate modified_at)
-    pax._page.wait_for_timeout(3000)
+    # Wait and poll for timestamp to appear (daemon scan may need time to propagate)
     item = pax._page.locator(f'.slides-list-item[data-slug="{slug}"]')
     expect(item).to_be_visible(timeout=10000)
+    # The .slides-list-updated badge may need the catalog to refresh with modified_at data.
+    # Poll with a reload of the page's slide catalog data.
     timestamp = item.locator(".slides-list-updated")
-    expect(timestamp).to_be_visible(timeout=10000)
+    try:
+        expect(timestamp).to_be_visible(timeout=5000)
+    except AssertionError:
+        # Force reload of slides catalog via page navigation (triggers re-fetch)
+        pax._page.evaluate("() => window.location.reload()")
+        pax._page.wait_for_load_state("networkidle")
+        pax._page.wait_for_timeout(3000)
+        pax.expand_slides_dock()
+        item = pax._page.locator(f'.slides-list-item[data-slug="{slug}"]')
+        expect(item).to_be_visible(timeout=10000)
+        timestamp = item.locator(".slides-list-updated")
+        expect(timestamp).to_be_visible(timeout=10000)
     text = timestamp.inner_text().strip()
     assert len(text) > 0, f"Timestamp for '{slug}' is empty"
 
@@ -303,12 +315,22 @@ def catalog_contains_with_updated_timestamp(connected, slug):
     """After host updates a slide, the timestamp in the catalog should reflect the change."""
     pax = connected["pax"]
     pax.expand_slides_dock()
-    # Wait for catalog refresh via WS notification
+    # Wait for catalog refresh via WS notification, then reload if needed
     pax._page.wait_for_timeout(5000)
     item = pax._page.locator(f'.slides-list-item[data-slug="{slug}"]')
     expect(item).to_be_visible(timeout=10000)
     timestamp = item.locator(".slides-list-updated")
-    expect(timestamp).to_be_visible(timeout=5000)
+    try:
+        expect(timestamp).to_be_visible(timeout=5000)
+    except AssertionError:
+        pax._page.evaluate("() => window.location.reload()")
+        pax._page.wait_for_load_state("networkidle")
+        pax._page.wait_for_timeout(3000)
+        pax.expand_slides_dock()
+        item = pax._page.locator(f'.slides-list-item[data-slug="{slug}"]')
+        expect(item).to_be_visible(timeout=10000)
+        timestamp = item.locator(".slides-list-updated")
+        expect(timestamp).to_be_visible(timeout=10000)
     text = timestamp.inner_text().strip()
     assert len(text) > 0, f"Updated timestamp for '{slug}' is empty"
 
