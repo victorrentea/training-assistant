@@ -127,7 +127,7 @@ body{visibility:hidden}
 <body class="bg-surface text-on-surface overflow-hidden">
 <div class="flex h-screen w-full">
 <!-- SIDEBAR (20%) -->
-<aside class="w-64 shrink-0 h-full bg-surface-container flex flex-col px-4 pt-6 pb-6 space-y-2 z-10 relative" style="width: calc(16rem * 1.01);">
+<aside class="w-64 shrink-0 h-full bg-surface-container flex flex-col px-4 pt-6 pb-6 space-y-2 z-10 relative" style="width: calc(16rem * 1.02);">
 <!-- Header Section -->
 <div class="space-y-4">
 <div class="flex items-center gap-1 min-w-0">
@@ -572,7 +572,7 @@ function _getCurrentSlidesPage() {
   var n = Number(m[1]);
   return Number.isFinite(n) ? n : null;
 }
-async function _openSlideFromHistory(fileName, page) {
+async function _openSlideFromHistory(fileName, page, focusEl) {
   var slide = _findSlideByHistoryFileName(fileName);
   if (!slide) {
     showToast('Could not match that history item to an available topic.');
@@ -591,6 +591,15 @@ async function _openSlideFromHistory(fileName, page) {
   if (!_scrollSlidesToPage(targetPage)) {
     // If rendering is still settling, retry briefly.
     setTimeout(function() { _scrollSlidesToPage(targetPage); }, 200);
+  }
+  if (focusEl && typeof focusEl.focus === 'function') {
+    setTimeout(function() {
+      try {
+        focusEl.focus({ preventScroll: true });
+      } catch (_) {
+        focusEl.focus();
+      }
+    }, 0);
   }
   return true;
 }
@@ -693,7 +702,7 @@ function _loadSlideHistory() {
         }
         var fileName = link.getAttribute('data-history-file-name') || '';
         var page = Number(link.getAttribute('data-history-page') || '1');
-        _openSlideFromHistory(fileName, page);
+        _openSlideFromHistory(fileName, page, link);
       };
       el.style.display = 'block';
       _slideHistoryTimer = setTimeout(_autoHideSlideHistoryAndCloseSlides, 30000);
