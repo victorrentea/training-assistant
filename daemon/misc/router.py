@@ -12,7 +12,7 @@ from daemon.misc.state import misc_state
 from daemon.participant.state import participant_state
 from daemon.session import state as session_shared_state
 from daemon.ws_messages import PasteReceivedMsg
-from daemon.ws_publish import host_event
+from daemon.ws_publish import notify_host
 
 logger = logging.getLogger(__name__)
 
@@ -82,9 +82,7 @@ async def paste_text(request: Request, body: PasteRequest):
         return JSONResponse({"error": "Paste limit reached (max 10)"}, status_code=409)
 
     # Send only to host (not broadcast to all participants)
-    request.state.write_back_events = [
-        host_event(PasteReceivedMsg(uuid=pid, **entry)),
-    ]
+    await notify_host(PasteReceivedMsg(uuid=pid, **entry))
 
     return Response(status_code=204)
 
@@ -143,6 +141,21 @@ async def get_summary():
 async def get_slides_cache_status():
     """Get slides cache status."""
     return SlidesCacheStatusResponse(slides_cache_status=misc_state.slides_cache_status)
+
+
+@participant_router.get("/agenda")
+async def get_agenda():
+    """Serve the agenda .docx as base64-encoded JSON (survives WS proxy)."""
+    import base64
+    path = misc_state.agenda_docx_path
+    if not path or not path.exists():
+        return JSONResponse({"error": "No agenda available"}, status_code=404)
+    try:
+        raw = path.read_bytes()
+        encoded = base64.b64encode(raw).decode("ascii")
+        return JSONResponse({"data": encoded, "filename": path.name})
+    except OSError:
+        return JSONResponse({"error": "Failed to read agenda file"}, status_code=500)
 
 
 # ── Host router (called directly on daemon localhost) ──
