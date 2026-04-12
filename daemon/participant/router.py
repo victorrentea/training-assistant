@@ -18,7 +18,7 @@ from starlette.responses import Response
 
 from daemon.host_state_router import _build_host_participants_list
 from daemon.misc.content_files import read_notes_content, read_summary_payload
-from daemon.participant.state import participant_state
+from daemon.participant.state import GitRepoActivity, participant_state
 from daemon.ws_messages import ParticipantListUpdatedMsg
 from daemon.ws_publish import notify_host
 from railway.shared.names import assign_conference_name
@@ -53,6 +53,10 @@ class AvatarResponse(BaseModel):
 
 class LocationRequest(BaseModel):
     location: str
+
+
+class GitActivityResponse(BaseModel):
+    git_repos: list[GitRepoActivity]
 
 
 def _http_get_json(url: str, *, timeout: float = 2.5):
@@ -610,6 +614,12 @@ async def get_participant_state(request: Request):
     }
 
     return JSONResponse(state_msg)
+
+
+@router.get("/git-activity", response_model=GitActivityResponse)
+async def get_git_activity():
+    """Return accumulated git file-open activity for the current session."""
+    return GitActivityResponse(git_repos=participant_state.git_repos)
 
 
 def _get_current_session_id() -> str | None:

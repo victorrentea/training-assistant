@@ -91,6 +91,13 @@ class ViewedSlide(PersistedModel):
     seconds: int = Field(default=0, description="Cumulative seconds viewed")
 
 
+class PersistedGitRepoActivity(PersistedModel):
+    """Single git repo+branch entry with accumulated file paths."""
+    url: str = ""
+    branch: str = ""
+    files: list[str] = Field(default_factory=list, description="File paths opened in this repo+branch")
+
+
 class PersistedSessionState(PersistedModel):
     """Runtime session snapshot persisted in `session-state.json`."""
 
@@ -148,6 +155,7 @@ class PersistedSessionState(PersistedModel):
 
     slides_current: dict[str, Any] | None = Field(default=None, description="{presentation_name, current_page}")
     slides_viewed: list[ViewedSlide] = Field(default_factory=list, description="Accumulated per-slide viewing durations from addons")
+    git_repos: list[PersistedGitRepoActivity] = Field(default_factory=list, description="Accumulated git file-open events for this session")
 
     @model_validator(mode="before")
     @classmethod

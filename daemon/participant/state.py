@@ -6,6 +6,14 @@ Initial data comes from session_sync/state_restore on WS connect.
 """
 import threading
 
+from pydantic import BaseModel
+
+
+class GitRepoActivity(BaseModel):
+    url: str
+    branch: str
+    files: list[str] = []
+
 
 def _sync_score_to_daemon(pid: str, score: int):
     """Sync a single restored score to the authoritative daemon.scores singleton."""
@@ -41,6 +49,16 @@ class ParticipantState:
         self.location_countries: dict[str, str] = {}
         self.mode: str = "workshop"
         self.current_activity: str = "none"
+        self.git_repos: list[GitRepoActivity] = []
+
+    def accumulate_git_file(self, url: str, branch: str, file: str) -> None:
+        """Add a git file-open event to the session's accumulated git activity."""
+        for entry in self.git_repos:
+            if entry.url == url and entry.branch == branch:
+                if file not in entry.files:
+                    entry.files.append(file)
+                return
+        self.git_repos.append(GitRepoActivity(url=url, branch=branch, files=[file]))
 
     def sync_from_restore(self, data: dict):
         """Update cache from state_restore or session_sync data.
@@ -111,6 +129,15 @@ class ParticipantState:
                 self.mode = data["mode"]
             if "current_activity" in data:
                 self.current_activity = str(data["current_activity"])
+            raw_git_repos = data.get("git_repos")
+            if isinstance(raw_git_repos, list):
+                self.git_repos.clear()
+                for item in raw_git_repos:
+                    if isinstance(item, dict):
+                        try:
+                            self.git_repos.append(GitRepoActivity.model_validate(item))
+                        except Exception:
+                            pass
 
     def snapshot(self) -> dict:
         """Return a copy of all state (for testing/debugging)."""
@@ -125,6 +152,7 @@ class ParticipantState:
                 "location_countries": dict(self.location_countries),
                 "mode": self.mode,
                 "current_activity": self.current_activity,
+                "git_repos": [r.model_dump() for r in self.git_repos],
             }
 
     def reset(self, *, mode: str = "workshop") -> None:
@@ -140,6 +168,7 @@ class ParticipantState:
             self.location_countries.clear()
             self.mode = mode
             self.current_activity = "none"
+            self.git_repos.clear()
 
 
 # Module-level singleton

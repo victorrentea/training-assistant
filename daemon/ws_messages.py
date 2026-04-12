@@ -243,6 +243,16 @@ class SummaryUpdatedMsg(BaseModel):
     updated_at: str | None = None  # ISO timestamp of ai-summary.md mtime
 
 
+# ── Addons inbound ───────────────────────────────────────────────────────────
+
+class GitFileOpenedMsg(BaseModel):
+    """Inbound message from macOS addon when user opens a file in IntelliJ."""
+    type: Literal["git_file_opened"]
+    url: str
+    branch: str
+    file: str
+
+
 # ── Cross-cutting ────────────────────────────────────────────────────────────
 
 class ReloadMsg(BaseModel):

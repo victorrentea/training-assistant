@@ -162,6 +162,13 @@ class AddonBridgeClient:
                     slides = data.get("slides", [])
                     if slides:
                         self._slides_viewed_queue.put(slides)
+                elif data.get("type") == "git_file_opened":
+                    from daemon.participant.state import participant_state
+                    url = data.get("url", "")
+                    branch = data.get("branch", "")
+                    file = data.get("file", "")
+                    if url and branch and file:
+                        participant_state.accumulate_git_file(url, branch, file)
                 if _ctx and _token:
                     context.detach(_token)
         except ConnectionClosed:
