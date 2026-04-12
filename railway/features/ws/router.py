@@ -78,17 +78,11 @@ async def _handle_code_timestamp(data: dict):
 async def _handle_set_session_id(data: dict):
     """Daemon sets/changes active session. Drop stale host/participant connections."""
     new_id = data.get("session_id")
-    new_name = data.get("session_name")
     old_id = state.session_id
     had_active_session = bool(old_id)
 
     # Daemon omits session_id when no session is active.
     state.session_id = new_id or None
-
-    if new_name is not None:
-        state.session_name = new_name
-    elif not state.session_id:
-        state.session_name = None
 
     if old_id and state.session_id:
         session_changed = old_id.lower() != state.session_id.lower()

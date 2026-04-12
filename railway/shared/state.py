@@ -69,7 +69,6 @@ class AppState:
         self.summary_updated_at: Optional[datetime] = None
         # Session state
         self.session_type: str = "workshop"     # "workshop" | "conference"
-        self.session_name: str | None = None    # display name for current session
         self.token_usage: dict = {"input_tokens": 0, "output_tokens": 0, "estimated_cost_usd": 0.0}
         self.mode: str = "workshop"  # "workshop" | "conference"
         self.pending_deploy: dict | None = None  # {sha, message} set by watcher when push detected
