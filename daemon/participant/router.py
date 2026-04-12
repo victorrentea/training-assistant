@@ -192,6 +192,27 @@ class LeaderboardData(BaseModel):
     total_participants: int
 
 
+class WordcloudData(BaseModel):
+    words: dict[str, int]
+    word_order: list[str]
+    topic: str
+
+
+class DebateData(BaseModel):
+    statement: str | None = None
+    phase: str | None = None
+    my_side: str | None = None
+    my_is_champion: bool
+    side_counts: dict[str, int]
+    arguments: list[DebateArgumentParticipant]
+    champions: dict[str, str]
+    auto_assigned: list[str]
+    first_side: str | None = None
+    round_index: int | None = None
+    round_timer_seconds: int | None = None
+    round_timer_started_at: str | None = None
+
+
 class ParticipantStateResponse(BaseModel):
     type: Literal["state"] = "state"
     mode: str
@@ -201,9 +222,7 @@ class ParticipantStateResponse(BaseModel):
     current_activity: str
     host_connected: bool
     daemon_connected: bool
-    wordcloud_words: dict[str, int]
-    wordcloud_word_order: list[str]
-    wordcloud_topic: str
+    wordcloud: WordcloudData
     qa_questions: list[QAQuestionRaw]
     poll: PollData | None = None
     poll_active: bool
@@ -211,18 +230,7 @@ class ParticipantStateResponse(BaseModel):
     my_vote: str | list[str] | None = None
     my_voted_ids: list[str] | None = None
     codereview: CodeReviewParticipantState
-    debate_statement: str | None = None
-    debate_phase: str | None = None
-    debate_my_side: str | None = None
-    debate_my_is_champion: bool
-    debate_side_counts: dict[str, int]
-    debate_arguments: list[DebateArgumentParticipant]
-    debate_champions: dict[str, str]
-    debate_auto_assigned: list[str]
-    debate_first_side: str | None = None
-    debate_round_index: int | None = None
-    debate_round_timer_seconds: int | None = None
-    debate_round_timer_started_at: str | None = None
+    debate: DebateData
     slides_current: SlidesCurrentPayload | None = None
     leaderboard_data: LeaderboardData | None = None
     summary_count: int
@@ -585,28 +593,32 @@ async def get_participant_state(request: Request):
         "host_connected": True,   # daemon is the host server; if they reached us, host is connected
         "daemon_connected": True,
         # Wordcloud
-        "wordcloud_words": wc.words,
-        "wordcloud_word_order": wc.word_order,
-        "wordcloud_topic": wc.topic,
+        "wordcloud": {
+            "words": wc.words,
+            "word_order": wc.word_order,
+            "topic": wc.topic,
+        },
         # QA (personalised)
         "qa_questions": _build_qa_for_participant(pid),
         # Poll (personalised)
         **poll_data,
         # Codereview (personalised)
         "codereview": cr,
-        # Debate (personalised, flattened from snapshot)
-        "debate_statement": debate.get("statement"),
-        "debate_phase": debate.get("phase"),
-        "debate_my_side": debate.get("debate_my_side"),
-        "debate_my_is_champion": debate.get("debate_my_is_champion"),
-        "debate_side_counts": debate.get("debate_side_counts"),
-        "debate_arguments": debate.get("arguments", []),
-        "debate_champions": debate.get("champions", {}),
-        "debate_auto_assigned": debate.get("auto_assigned", []),
-        "debate_first_side": debate.get("first_side"),
-        "debate_round_index": debate.get("round_index"),
-        "debate_round_timer_seconds": debate.get("round_timer_seconds"),
-        "debate_round_timer_started_at": debate.get("round_timer_started_at"),
+        # Debate (personalised, grouped)
+        "debate": {
+            "statement": debate.get("statement"),
+            "phase": debate.get("phase"),
+            "my_side": debate.get("debate_my_side"),
+            "my_is_champion": debate.get("debate_my_is_champion"),
+            "side_counts": debate.get("debate_side_counts"),
+            "arguments": debate.get("arguments", []),
+            "champions": debate.get("champions", {}),
+            "auto_assigned": debate.get("auto_assigned", []),
+            "first_side": debate.get("first_side"),
+            "round_index": debate.get("round_index"),
+            "round_timer_seconds": debate.get("round_timer_seconds"),
+            "round_timer_started_at": debate.get("round_timer_started_at"),
+        },
         # Slides (from misc state — synced from Railway)
         "slides_current": misc_state.slides_current,
         # Leaderboard

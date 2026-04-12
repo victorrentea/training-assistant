@@ -1543,6 +1543,74 @@ components:
       - is_own
       - has_upvoted
       title: DebateArgumentParticipant
+    DebateData:
+      properties:
+        statement:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Statement
+        phase:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Phase
+        my_side:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: My Side
+        my_is_champion:
+          type: boolean
+          title: My Is Champion
+        side_counts:
+          additionalProperties:
+            type: integer
+          type: object
+          title: Side Counts
+        arguments:
+          items:
+            $ref: '#/components/schemas/DebateArgumentParticipant'
+          type: array
+          title: Arguments
+        champions:
+          additionalProperties:
+            type: string
+          type: object
+          title: Champions
+        auto_assigned:
+          items:
+            type: string
+          type: array
+          title: Auto Assigned
+        first_side:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: First Side
+        round_index:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Round Index
+        round_timer_seconds:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Round Timer Seconds
+        round_timer_started_at:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Round Timer Started At
+      type: object
+      required:
+      - my_is_champion
+      - side_counts
+      - arguments
+      - champions
+      - auto_assigned
+      title: DebateData
     EditQuestionTextBody:
       properties:
         text:
@@ -2107,19 +2175,8 @@ components:
         daemon_connected:
           type: boolean
           title: Daemon Connected
-        wordcloud_words:
-          additionalProperties:
-            type: integer
-          type: object
-          title: Wordcloud Words
-        wordcloud_word_order:
-          items:
-            type: string
-          type: array
-          title: Wordcloud Word Order
-        wordcloud_topic:
-          type: string
-          title: Wordcloud Topic
+        wordcloud:
+          $ref: '#/components/schemas/WordcloudData'
         qa_questions:
           items:
             $ref: '#/components/schemas/QAQuestionRaw'
@@ -2154,64 +2211,8 @@ components:
           title: My Voted Ids
         codereview:
           $ref: '#/components/schemas/CodeReviewParticipantState'
-        debate_statement:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Debate Statement
-        debate_phase:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Debate Phase
-        debate_my_side:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Debate My Side
-        debate_my_is_champion:
-          type: boolean
-          title: Debate My Is Champion
-        debate_side_counts:
-          additionalProperties:
-            type: integer
-          type: object
-          title: Debate Side Counts
-        debate_arguments:
-          items:
-            $ref: '#/components/schemas/DebateArgumentParticipant'
-          type: array
-          title: Debate Arguments
-        debate_champions:
-          additionalProperties:
-            type: string
-          type: object
-          title: Debate Champions
-        debate_auto_assigned:
-          items:
-            type: string
-          type: array
-          title: Debate Auto Assigned
-        debate_first_side:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Debate First Side
-        debate_round_index:
-          anyOf:
-          - type: integer
-          - type: 'null'
-          title: Debate Round Index
-        debate_round_timer_seconds:
-          anyOf:
-          - type: integer
-          - type: 'null'
-          title: Debate Round Timer Seconds
-        debate_round_timer_started_at:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Debate Round Timer Started At
+        debate:
+          $ref: '#/components/schemas/DebateData'
         slides_current:
           anyOf:
           - $ref: '#/components/schemas/SlidesCurrentPayload'
@@ -2249,18 +2250,12 @@ components:
       - current_activity
       - host_connected
       - daemon_connected
-      - wordcloud_words
-      - wordcloud_word_order
-      - wordcloud_topic
+      - wordcloud
       - qa_questions
       - poll_active
       - vote_counts
       - codereview
-      - debate_my_is_champion
-      - debate_side_counts
-      - debate_arguments
-      - debate_champions
-      - debate_auto_assigned
+      - debate
       - summary_count
       - notes_count
       title: ParticipantStateResponse
@@ -2994,3 +2989,24 @@ components:
       required:
       - option_ids
       title: VoteRequest
+    WordcloudData:
+      properties:
+        words:
+          additionalProperties:
+            type: integer
+          type: object
+          title: Words
+        word_order:
+          items:
+            type: string
+          type: array
+          title: Word Order
+        topic:
+          type: string
+          title: Topic
+      type: object
+      required:
+      - words
+      - word_order
+      - topic
+      title: WordcloudData

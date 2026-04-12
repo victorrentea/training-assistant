@@ -3267,7 +3267,7 @@ function closeAgendaModal() {
         if (msg.current_activity === 'wordcloud') {
           const confGrid = document.getElementById('conference-emoji-grid');
           if (confGrid) confGrid.style.display = 'none';
-          renderWordCloudScreen(msg.wordcloud_words || {}, msg.wordcloud_word_order || [], msg.wordcloud_topic || '');
+          renderWordCloudScreen((msg.wordcloud || {}).words || {}, (msg.wordcloud || {}).word_order || [], (msg.wordcloud || {}).topic || '');
         } else if (msg.current_activity === 'qa') {
           const confGrid = document.getElementById('conference-emoji-grid');
           if (confGrid) confGrid.style.display = 'none';
@@ -3344,8 +3344,10 @@ function closeAgendaModal() {
         clearInterval(_debateTimerInterval);
         _stopBeeping();
         if (_lastDebateMsg) {
-          _lastDebateMsg.debate_round_timer_started_at = null;
-          _lastDebateMsg.debate_round_timer_seconds = null;
+          if (_lastDebateMsg.debate) {
+            _lastDebateMsg.debate.round_timer_started_at = null;
+            _lastDebateMsg.debate.round_timer_seconds = null;
+          }
           renderDebateScreen(_lastDebateMsg);
         }
         break;
@@ -4081,13 +4083,14 @@ function closeAgendaModal() {
     content.dataset.screen = 'debate';
     _stopQAToasts();
 
-    const phase = msg.debate_phase;
+    const debate = msg.debate || {};
+    const phase = debate.phase;
     const displayPhase = phase;
-    const mySide = msg.debate_my_side;
-    const statement = msg.debate_statement || '';
-    const sideCounts = msg.debate_side_counts || { for: 0, against: 0 };
-    const args = (msg.debate_arguments || []).filter(a => !a.merged_into);
-    const champions = msg.debate_champions || {};
+    const mySide = debate.my_side;
+    const statement = debate.statement || '';
+    const sideCounts = debate.side_counts || { for: 0, against: 0 };
+    const args = (debate.arguments || []).filter(a => !a.merged_into);
+    const champions = debate.champions || {};
 
     if (!statement) {
       content.innerHTML = '<div class="debate-waiting">Waiting for debate to start…</div>';
@@ -4108,7 +4111,7 @@ function closeAgendaModal() {
 
     if (phase === 'side_selection') {
       if (mySide) {
-        if (msg.debate_auto_assigned) {
+        if (debate.auto_assigned) {
           html += `<div class="debate-auto-assigned">You were automatically assigned to ${sideIcon}</div>`;
         } else {
           html += `<div class="debate-chosen">You chose ${sideIcon} ✓</div>`;
@@ -4146,14 +4149,14 @@ function closeAgendaModal() {
       if (mySide && !champions[mySide]) {
         html += `<button class="btn btn-warn debate-volunteer-btn" onclick="debateVolunteer()">🏆 I'll be our champion!</button>`;
       } else if (mySide && champions[mySide]) {
-        const isMe = msg.debate_my_is_champion;
+        const isMe = debate.my_is_champion;
         html += `<div class="debate-champion-info">${isMe ? '🏆 You are your team\'s champion!' : '🏆 Champion: ' + escHtml(champions[mySide])}</div>`;
       }
     } else if (phase === 'live_debate') {
-      const rounds = getDebateRounds(msg.debate_first_side);
-      const roundIdx = msg.debate_round_index;
-      const timerActive = !!msg.debate_round_timer_started_at;
-      if (!msg.debate_first_side) {
+      const rounds = getDebateRounds(debate.first_side);
+      const roundIdx = debate.round_index;
+      const timerActive = !!debate.round_timer_started_at;
+      if (!debate.first_side) {
         html += `<div style="text-align:center; margin:.5rem 0; color:var(--muted);">Host is picking who speaks first…</div>`;
       } else if (roundIdx != null && roundIdx >= 0 && roundIdx < rounds.length) {
         const sub = rounds[roundIdx];
@@ -4186,12 +4189,12 @@ function closeAgendaModal() {
     }
 
     // Reconstruct timer on reconnect from state
-    if (phase === 'live_debate' && msg.debate_round_timer_started_at && msg.debate_round_index != null) {
-      if (!_debateRoundTimer || _debateRoundTimer.roundIndex !== msg.debate_round_index) {
+    if (phase === 'live_debate' && debate.round_timer_started_at && debate.round_index != null) {
+      if (!_debateRoundTimer || _debateRoundTimer.roundIndex !== debate.round_index) {
         _debateRoundTimer = {
-          roundIndex: msg.debate_round_index,
-          seconds: msg.debate_round_timer_seconds,
-          startedAt: new Date(msg.debate_round_timer_started_at).getTime()
+          roundIndex: debate.round_index,
+          seconds: debate.round_timer_seconds,
+          startedAt: new Date(debate.round_timer_started_at).getTime()
         };
       }
       _startDebateParticipantCountdown();
@@ -4201,7 +4204,7 @@ function closeAgendaModal() {
   function renderDebateArgColumns(args, mySide, msg, readOnly) {
     const forArgs = args.filter(a => a.side === 'for').sort((a, b) => (b.upvote_count || 0) - (a.upvote_count || 0));
     const againstArgs = args.filter(a => a.side === 'against').sort((a, b) => (b.upvote_count || 0) - (a.upvote_count || 0));
-    const mergedArgs = (msg.debate_arguments || []).filter(a => a.merged_into);
+    const mergedArgs = ((msg.debate || {}).arguments || []).filter(a => a.merged_into);
     const mergedForCount = mergedArgs.filter(a => a.side === 'for').length;
     const mergedAgainstCount = mergedArgs.filter(a => a.side === 'against').length;
 
