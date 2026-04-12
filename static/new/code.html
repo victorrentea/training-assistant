@@ -296,8 +296,6 @@ body{visibility:hidden}
 <div id="slides-view" class="relative h-full flex flex-col">
 <!-- PDF Viewer Toolbar (Minimalist) -->
 <div class="absolute top-6 right-6 z-20 flex items-center gap-2 p-2 rounded-full glass whisper-shadow border border-outline-variant border-opacity-10">
-<div id="pdf-page-info" class="text-sm font-bold tracking-tight text-on-surface">— / —</div>
-<div class="w-[1px] h-4 bg-outline-variant opacity-20"></div>
 <a id="pdf-download" href="/static/new/demo.pdf" download class="p-2 hover:bg-primary-container rounded-full text-on-surface-variant hover:text-primary transition-all flex">
 <span class="material-symbols-outlined">download</span>
 </a>
@@ -373,6 +371,8 @@ body{visibility:hidden}
   }
 
   function updatePageInfo() {
+    const infoEl = document.getElementById('pdf-page-info');
+    if (!infoEl) return;
     const container = document.getElementById('pdf-pages');
     const sections = container.querySelectorAll('section[data-page]');
     const scrollTop = container.scrollTop;
@@ -381,7 +381,7 @@ body{visibility:hidden}
     sections.forEach(function(s) {
       if (s.offsetTop <= midY) current = parseInt(s.dataset.page);
     });
-    document.getElementById('pdf-page-info').textContent = current + ' / ' + totalPages;
+    infoEl.textContent = current + ' / ' + totalPages;
   }
 
   (async function init() {
