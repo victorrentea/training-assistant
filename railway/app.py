@@ -147,6 +147,11 @@ session_participant.include_router(upload_public_router)     # /api/upload (part
 session_participant.include_router(participant_proxy_router)  # /api/participant/* → daemon proxy
 app.include_router(session_participant)
 
+import os as _os
+if _os.environ.get("OTEL_TRACES_FILE"):
+    from railway.features.telemetry.router import router as telemetry_router
+    app.include_router(telemetry_router)
+
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
