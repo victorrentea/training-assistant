@@ -83,6 +83,14 @@ class PersistedDebateState(PersistedModel):
     round_timer_started_at: str | None = None
 
 
+class ViewedSlide(PersistedModel):
+    """Single slide viewing record: cumulative seconds on one (file, page) pair."""
+
+    file_name: str = Field(description="PowerPoint file name, e.g. 'AI Coding.pptx'")
+    page: int = Field(description="1-based slide number")
+    seconds: int = Field(default=0, description="Cumulative seconds viewed")
+
+
 class PersistedSessionState(PersistedModel):
     """Runtime session snapshot persisted in `session-state.json`."""
 
@@ -139,6 +147,7 @@ class PersistedSessionState(PersistedModel):
     debate_round_timer_started_at: str | None = Field(default=None, exclude=True)
 
     slides_current: dict[str, Any] | None = Field(default=None, description="{presentation_name, current_page}")
+    slides_viewed: list[ViewedSlide] = Field(default_factory=list, description="Accumulated per-slide viewing durations from addons")
 
     @model_validator(mode="before")
     @classmethod

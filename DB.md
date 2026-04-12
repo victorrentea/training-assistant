@@ -64,6 +64,11 @@ debate?: PersistedDebateState {
   round_timer_started_at?:string
 }
 slides_current?: dict[str, any]  # {presentation_name, current_page}
+slides_viewed?: list[ViewedSlide {
+  file_name:string  # PowerPoint file name, e.g. 'AI Coding.pptx'
+  page:int  # 1-based slide number
+  seconds?:int  # Cumulative seconds viewed
+}]  # Accumulated per-slide viewing durations from addons
 ```
 
 ### `PersistedSessionMeta`
