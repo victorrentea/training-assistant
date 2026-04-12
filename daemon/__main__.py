@@ -538,6 +538,21 @@ def _build_notes_summary_probe(session_folder: Path | None) -> dict:
     }
 
 
+def _find_agenda_docx(session_folder: Path | None) -> Path | None:
+    """Find a .docx agenda file in the session folder.
+    Prefers 'agenda.docx', falls back to first .docx alphabetically."""
+    if not session_folder or not session_folder.is_dir():
+        return None
+    docx_files = sorted(f for f in session_folder.iterdir()
+                        if f.suffix.lower() == ".docx" and f.is_file())
+    if not docx_files:
+        return None
+    for f in docx_files:
+        if f.name.lower() == "agenda.docx":
+            return f
+    return docx_files[0]
+
+
 def _probe_change_parts(previous: dict | None, current: dict) -> str:
     if previous is None:
         return "initial"
@@ -877,6 +892,11 @@ def run() -> None:
         if _gdrive_url:
             misc_state.gdrive_url = _gdrive_url
             log.info("session", f"Google Drive: {_gdrive_url}")
+    # Detect agenda .docx in session folder
+    _agenda_path = _find_agenda_docx(config.session_folder)
+    if _agenda_path:
+        misc_state.agenda_docx_path = _agenda_path
+        log.info("session", f"Agenda: {_agenda_path.name}")
     # Publish initial session state to daemon REST router
     session_shared_state.set_active_session(_active_session_id, session_stack)
     slides_runner = SlidesRunner(config)
