@@ -151,7 +151,8 @@ class MiscState:
             self.summary_points = []
             self.summary_raw_markdown = None
             self.summary_updated_at = None
-            self.slides_cache_status.clear()
+            # slides_cache_status is NOT cleared — it's infrastructure state
+            # (PDF cache + PPTX file timestamps) that survives session changes.
             self.slides_current = None
             self.session_main = None
             self.session_name = None
