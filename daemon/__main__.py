@@ -663,8 +663,8 @@ def _refresh_session_folder_binding(
 
 def run() -> None:
     try:
-        from daemon.telemetry import setup_file_exporter
-        setup_file_exporter()
+        from daemon.telemetry import setup_tracing
+        setup_tracing()
     except ImportError:
         pass
 

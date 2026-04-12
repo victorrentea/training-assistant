@@ -88,7 +88,7 @@ echo "[startup] Mock Drive server started (PID=$MOCK_DRIVE_PID)"
 
 # Start FastAPI backend
 cd /app
-OTEL_SERVICE_NAME=Railway opentelemetry-instrument python -m uvicorn railway.app:app --host 0.0.0.0 --port 8000 &
+OTEL_SERVICE_NAME=Railway python -m uvicorn railway.app:app --host 0.0.0.0 --port 8000 &
 BACKEND_PID=$!
 
 # Wait for backend to be ready (use root landing page — session/active moved to daemon)
@@ -101,7 +101,7 @@ for i in $(seq 1 60); do
 done
 
 # Start real daemon
-OTEL_SERVICE_NAME=Daemon opentelemetry-instrument python -m daemon &
+OTEL_SERVICE_NAME=Daemon python -m daemon &
 DAEMON_PID=$!
 
 # Give daemon time to connect WS and start host server on port 8081
