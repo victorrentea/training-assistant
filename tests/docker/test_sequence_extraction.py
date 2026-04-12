@@ -102,3 +102,89 @@ def test_poll_sequence_diagram_extraction():
     assert "->" in generated, f"No arrows in diagram. {len(trace_lines)} spans but no cross-service edges."
 
     print("SUCCESS: Sequence diagram extracted from traces")
+
+
+def _generate_and_print(output_path):
+    """Helper: generate PlantUML from traces file and print debug info."""
+    import json as _json
+    import time
+
+    time.sleep(2)  # wait for spans to flush
+
+    sys.path.insert(0, "/app")
+    from scripts.traces_to_puml import generate_puml
+
+    generate_puml(TRACES_FILE, family="", output=output_path)
+
+    traces_content = Path(TRACES_FILE).read_text()
+    trace_lines = [line for line in traces_content.strip().split("\n") if line.strip()]
+    print(f"=== Raw traces: {len(trace_lines)} spans ===")
+
+    generated = Path(output_path).read_text()
+    print("=== Generated PlantUML ===")
+    print(generated)
+
+    assert "@startuml" in generated
+    assert len(trace_lines) > 0, "No spans collected"
+    assert "->" in generated, f"No arrows in diagram. {len(trace_lines)} spans but no cross-service edges."
+    return generated
+
+
+@pytest.mark.nightly
+def test_qa_sequence_diagram_extraction():
+    """Exercise Q&A flow, extract sequence diagram from traces."""
+    Path(TRACES_FILE).write_text("")
+
+    session_id = fresh_session("SeqQA")
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+
+        # Host
+        host_ctx = browser.new_context(
+            http_credentials={"username": HOST_USER, "password": HOST_PASS}
+        )
+        host_raw = host_ctx.new_page()
+        host_raw.goto(f"{DAEMON_BASE}/host/{session_id}", wait_until="networkidle")
+        expect(host_raw.locator("#tab-poll")).to_be_visible(timeout=10000)
+        host = HostPage(host_raw)
+
+        # Participant 1
+        pax1_ctx = browser.new_context()
+        pax1_raw = pax1_ctx.new_page()
+        pax1_raw.goto(f"{BASE}/{session_id}", wait_until="networkidle")
+        pax1 = ParticipantPage(pax1_raw)
+        pax1.join("Alice")
+
+        # Participant 2
+        pax2_ctx = browser.new_context()
+        pax2_raw = pax2_ctx.new_page()
+        pax2_raw.goto(f"{BASE}/{session_id}", wait_until="networkidle")
+        pax2 = ParticipantPage(pax2_raw)
+        pax2.join("Bob")
+
+        # Host opens Q&A (use evaluate to ensure switchTab runs)
+        host_raw.evaluate("async () => { await switchTab('qa'); }")
+        host_raw.wait_for_timeout(1000)
+
+        # Alice submits a question
+        pax1.submit_question("What is dependency injection?")
+        pax1_raw.wait_for_timeout(500)
+
+        # Bob upvotes Alice's question
+        questions = pax2.get_qa_questions()
+        if questions:
+            pax2.upvote_question(questions[0]["id"])
+            pax2_raw.wait_for_timeout(500)
+
+        # Host marks question as answered
+        host_questions = host.get_qa_questions()
+        if host_questions:
+            host.toggle_answered(host_questions[0]["id"])
+            host_raw.wait_for_timeout(500)
+
+        browser.close()
+
+    output_path = "/app/docs/sequences/generated/04-qa-and-wordcloud.puml"
+    generated = _generate_and_print(output_path)
+    print("SUCCESS: QA sequence diagram extracted from traces")
