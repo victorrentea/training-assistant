@@ -160,12 +160,13 @@
 <span class="material-symbols-outlined">psychology</span>
 <span class="text-base">AI Summary</span>
 </a>
-<button onclick="(function(btn){var list=btn.nextElementSibling;var arrow=btn.querySelector('.topics-arrow');var open=list.style.display==='block';list.style.display=open?'none':'block';arrow.textContent=open?'chevron_right':'expand_more';})(this)" class="w-full text-on-surface-variant px-4 py-3 hover:text-on-surface hover:bg-surface-container-high rounded-full flex items-center gap-3 transition-colors duration-200">
+<button onclick="(function(btn){var list=btn.nextElementSibling;var arrow=btn.querySelector('.topics-arrow');var open=list.style.maxHeight==='0px'||list.style.maxHeight==='';list.style.maxHeight=open?'12rem':'0px';arrow.style.transform=open?'rotate(90deg)':'rotate(0deg)';})(this)" class="w-full text-on-surface-variant px-4 py-3 hover:text-on-surface hover:bg-surface-container-high rounded-full flex items-center gap-3 transition-colors duration-200">
 <span class="material-symbols-outlined">topic</span>
 <span class="text-base flex-1 text-left">Topics</span>
-<span class="material-symbols-outlined topics-arrow text-sm">chevron_right</span>
+<span class="material-symbols-outlined topics-arrow text-sm transition-transform duration-300">chevron_right</span>
 </button>
-<div style="display:none" class="mx-2 mb-1 max-h-48 overflow-y-auto rounded-xl bg-surface-container-low">
+<div style="max-height:0;overflow:hidden;transition:max-height 0.3s ease" class="mx-2 mb-1 rounded-xl bg-surface-container-low">
+<div class="overflow-y-auto max-h-48">
 <div class="py-1">
 <div class="px-4 py-1.5 text-sm text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high cursor-pointer rounded-lg">Clean Code Principles</div>
 <div class="px-4 py-1.5 text-sm text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high cursor-pointer rounded-lg">SOLID Design</div>
@@ -187,6 +188,7 @@
 <div class="px-4 py-1.5 text-sm text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high cursor-pointer rounded-lg">Cloud Native</div>
 <div class="px-4 py-1.5 text-sm text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high cursor-pointer rounded-lg">Legacy Modernization</div>
 <div class="px-4 py-1.5 text-sm text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high cursor-pointer rounded-lg">Team Topologies</div>
+</div>
 </div>
 </div>
 <a class="text-on-surface-variant px-4 py-3 hover:text-on-surface hover:bg-surface-container-high rounded-full flex items-center gap-3 transition-colors duration-200" href="#">
