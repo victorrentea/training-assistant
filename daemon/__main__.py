@@ -34,24 +34,19 @@ from daemon.session import state as session_shared_state
 from daemon.session_state import (
     GLOBAL_STATE_FILENAME,
     SESSION_STATE_FILENAME,
-    daemon_state_to_stack,
+    announce_session_cleared,
+    announce_session_id,
     find_notes_in_folder,
     find_session_folder_by_id,
     load_daemon_state,
-    load_session_meta,
     load_session_state,
     load_slides_manifest,
-    pause_session,
     resolve_materials_folder,
-    resume_session,
     save_daemon_state,
     save_session_meta,
     save_session_state,
-    session_meta_to_stack,
-    session_start_date,
     session_state_path,
     set_current_session_id,
-    sync_session_to_server,
 )
 from daemon.slides.loop import SlidesRunner
 from daemon.summary.loop import (
@@ -101,18 +96,15 @@ def _state_hash(snapshot: dict | None) -> str | None:
 def _flush_session_state_backup(
     *,
     sessions_root: Path,
-    session_stack: list[dict],
+    session_name: str | None,
     session_snapshot: dict | None,
     last_flushed_hash: str | None,
     force: bool = False,
 ) -> tuple[str | None, bool]:
     """Persist active session snapshot if changed (or forced)."""
-    if not session_stack or not isinstance(session_snapshot, dict):
+    if not session_name or not isinstance(session_snapshot, dict):
         return last_flushed_hash, False
-    folder_name = session_stack[-1].get("name")
-    if not folder_name:
-        return last_flushed_hash, False
-    target_folder = sessions_root / folder_name
+    target_folder = sessions_root / session_name
     current_hash = _state_hash(session_snapshot)
     if current_hash is None:
         return last_flushed_hash, False
@@ -166,7 +158,7 @@ def _flush_global_state_backup(
 def _build_runtime_session_snapshot(
     *,
     active_session_id: str | None,
-    session_stack: list[dict],
+    session_name: str | None,
 ) -> dict:
     from daemon.codereview.state import codereview_state
     from daemon.debate.state import debate_state
@@ -198,8 +190,6 @@ def _build_runtime_session_snapshot(
         if poll_state.poll_opened_at
         else None
     )
-    session_name = session_stack[-1]["name"] if session_stack else None
-
     participants_payload: dict[str, dict[str, object]] = {}
     participant_ids = set(participant_state.participant_names)
     participant_ids |= set(participant_state.participant_avatars)
@@ -348,21 +338,19 @@ def _sessions_root_from_env() -> Path:
 
 def _resolve_session_folder_from_state(
     sessions_root: Path,
-    session_stack: list[dict],
+    session_name: str | None,
     detected_folder: Path | None,
     detected_notes: Path | None,
 ) -> tuple[Path | None, Path | None, str]:
-    """Resolve active session folder source: daemon stack first, then today detection fallback."""
-    if session_stack:
-        active_name = session_stack[-1].get("name")
-        if active_name:
-            active_folder = sessions_root / active_name
-            if active_folder.exists() and active_folder.is_dir():
-                return active_folder, find_notes_in_folder(active_folder), "stack"
-            log.error(
-                "session",
-                f"Active session folder missing on disk: {active_name}; fallback to today detection",
-            )
+    """Resolve active session folder source: active session_name first, then today detection fallback."""
+    if session_name:
+        active_folder = sessions_root / session_name
+        if active_folder.exists() and active_folder.is_dir():
+            return active_folder, find_notes_in_folder(active_folder), "stack"
+        log.error(
+            "session",
+            f"Active session folder missing on disk: {session_name}; fallback to today detection",
+        )
     if detected_folder:
         return detected_folder, detected_notes, "today"
     return None, None, "none"
@@ -595,14 +583,14 @@ def _log_notes_summary_probe(reason: str, probe: dict, change_parts: str | None 
     )
 
 
-def _bind_initial_session_folder(config, sessions_root: Path, session_stack: list[dict]) -> tuple[object, str]:
+def _bind_initial_session_folder(config, sessions_root: Path, session_name: str | None) -> tuple[object, str]:
     """Resolve and log session folder binding at daemon startup."""
     today_folder = today_notes = None
-    if not session_stack:
+    if not session_name:
         today_folder, today_notes = find_session_folder(date.today())
     resolved_folder, resolved_notes, resolved_source = _resolve_session_folder_from_state(
         sessions_root=sessions_root,
-        session_stack=session_stack,
+        session_name=session_name,
         detected_folder=today_folder,
         detected_notes=today_notes,
     )
@@ -622,13 +610,13 @@ def _bind_initial_session_folder(config, sessions_root: Path, session_stack: lis
 def _refresh_session_folder_binding(
     config,
     sessions_root: Path,
-    session_stack: list[dict],
+    session_name: str | None,
     today: date,
     last_detected_date: date | None,
     last_session_check_at: float,
     now_mono: float,
 ) -> tuple[object, date | None, float, bool]:
-    """Periodic session-folder refresh: prefer active stack, fallback to today detection when stack is empty."""
+    """Periodic session-folder refresh: prefer active session_name, fallback to today detection when none."""
     notes_missing = config.session_notes is None
     date_changed = today != last_detected_date
     session_recheck_due = notes_missing and (now_mono - last_session_check_at >= 5.0)
@@ -637,12 +625,12 @@ def _refresh_session_folder_binding(
 
     last_session_check_at = now_mono
     detected_sf = detected_sn = None
-    if not session_stack:
+    if not session_name:
         detected_sf, detected_sn = find_session_folder(today)
 
     sf, sn, source = _resolve_session_folder_from_state(
         sessions_root=sessions_root,
-        session_stack=session_stack,
+        session_name=session_name,
         detected_folder=detected_sf,
         detected_notes=detected_sn,
     )
@@ -813,38 +801,24 @@ def run() -> None:
     session_shared_state.set_sessions_root(sessions_root)
     _raw_state = _boot_state
     _active_session_id: str | None = None
-    session_stack: list[dict] = []
+    session_name: str | None = None  # folder name of active session
 
     if "main" in _raw_state or "stack" in _raw_state:
-        # Old format — migrate in-memory to stack and continue with new global-state flow
-        if "stack" in _raw_state:
-            _stack_items = _raw_state["stack"]
-            _active = [s for s in _stack_items if not s.get("ended_at")]
-            _old_state = {
-                "main": {**_active[0], "status": "active"} if len(_active) >= 1 else None,
-                "talk": {**_active[1], "status": "active"} if len(_active) >= 2 else None,
-            }
-        else:
-            _old_state = _raw_state
+        # Legacy format — extract session_id only, ignore stack
         _active_session_id = _raw_state.get("session_id")
-        session_stack = daemon_state_to_stack(_old_state)
+        if _active_session_id:
+            _active_folder = find_session_folder_by_id(sessions_root, _active_session_id)
+            if _active_folder:
+                session_name = _active_folder.name
         log.info("session", "Migrated old daemon state format")
     elif "active_session_id" in _raw_state:
-        # New format — find folder by session_id, load metadata from session-state.json
         _active_session_id = _raw_state.get("active_session_id")
         if _active_session_id:
             _active_folder = find_session_folder_by_id(sessions_root, _active_session_id)
             if _active_folder:
-                _meta = load_session_meta(_active_folder)
-                session_stack = session_meta_to_stack(_meta, _active_folder.name)
-                if not session_stack:
-                    session_stack = [{
-                        "name": _active_folder.name,
-                        "started_at": datetime.now().isoformat(),
-                        "ended_at": None,
-                    }]
+                session_name = _active_folder.name
 
-    config, _ = _bind_initial_session_folder(config, sessions_root, session_stack)
+    config, _ = _bind_initial_session_folder(config, sessions_root, session_name)
     current_key_points: list[dict] = []
     summary_watermark: int = 0
 
@@ -862,7 +836,7 @@ def run() -> None:
         nonlocal _active_session_id
         pending_global_state = _build_global_state()
         # Keep shared session state up to date for the daemon REST router
-        session_shared_state.set_active_session(_active_session_id, session_stack)
+        session_shared_state.set_active_session(_active_session_id, session_name)
 
     def _persist_log_level(level: str) -> None:
         _do_save_daemon_state()
@@ -885,17 +859,13 @@ def run() -> None:
             log.error("session", f"Failed to resolve Google Drive link: {e}")
             return None
 
-    if session_stack:
-        # Restore from persisted stack
-        current_folder = config.session_folder or (sessions_root / session_stack[-1]["name"])
+    if session_name:
+        # Restore from persisted session_name
+        current_folder = config.session_folder or (sessions_root / session_name)
         current_key_points, summary_watermark = load_key_points(current_folder)
     elif config.session_folder:
         # Auto-start from today's detected session folder
-        session_stack = [{
-            "name": config.session_folder.name,
-            "started_at": datetime.now().isoformat(),
-            "ended_at": None,
-        }]
+        session_name = config.session_folder.name
         current_key_points, summary_watermark = load_key_points(config.session_folder)
         _do_save_daemon_state()
     # Resolve Google Drive folder URL for the active session folder
@@ -910,7 +880,7 @@ def run() -> None:
         misc_state.agenda_docx_path = _agenda_path
         log.info("session", f"Agenda: {_agenda_path.name}")
     # Publish initial session state to daemon REST router
-    session_shared_state.set_active_session(_active_session_id, session_stack)
+    session_shared_state.set_active_session(_active_session_id, session_name)
     slides_runner = SlidesRunner(config)
     slides_runner.start()
 
@@ -947,24 +917,17 @@ def run() -> None:
     last_slides_mtime_scan_at = 0.0
 
     _prev_overlay_connected: bool = False
-    # Sync initial state to server — include session-state.json if present in the active folder
+    # Restore session state from persisted snapshot if active session exists
     startup_session_state: dict = {}
     try:
-        if session_stack:
-            startup_session_state = load_session_state(sessions_root / session_stack[-1]["name"])
+        if session_name:
+            startup_session_state = load_session_state(sessions_root / session_name)
             if startup_session_state:
                 log.info("session", f"Loaded {SESSION_STATE_FILENAME} for restore ({len(startup_session_state)} keys)")
                 _apply_runtime_snapshot_restore(startup_session_state)
-        _startup_folder = (config.session_folder or (sessions_root / session_stack[-1]["name"])) if session_stack else None
-        sync_session_to_server(
-            config,
-            session_stack,
-            current_key_points,
-            startup_session_state if startup_session_state else None,
-            session_id=_active_session_id,
-            file_time=get_ai_summary_mtime(_startup_folder) if _startup_folder else None,
-            raw_markdown=get_ai_summary_raw(_startup_folder) if _startup_folder else None,
-        )
+        _startup_folder = (config.session_folder or (sessions_root / session_name)) if session_name else None
+        if _active_session_id:
+            announce_session_id(_active_session_id)
     except Exception as e:
         log.error("session", f"Initial sync failed: {e}")
 
@@ -1004,13 +967,12 @@ def run() -> None:
 
     # Re-sync active session state to backend on every (re)connect (e.g. after backend restart)
     def _sync_session_on_reconnect():
-        if not session_stack:
+        if not session_name:
             return
-        reconnect_session_state = runtime_session_snapshot if runtime_session_snapshot else None
         try:
-            _reconnect_folder = sessions_root / session_stack[-1]["name"] if session_stack else None
-            sync_session_to_server(config, session_stack, current_key_points, reconnect_session_state, session_id=_active_session_id, file_time=get_ai_summary_mtime(_reconnect_folder) if _reconnect_folder else None, raw_markdown=get_ai_summary_raw(_reconnect_folder) if _reconnect_folder else None)
-            log.info("session", f"Sent active session to backend: '{session_stack[-1]['name']}'")
+            if _active_session_id:
+                announce_session_id(_active_session_id)
+            log.info("session", f"Sent active session to backend: '{session_name}'")
         except Exception as e:
             log.error("session", f"Session re-sync on reconnect failed: {e}")
         _broadcast_notes_summary_counts(notes_summary_probe_prev)
@@ -1130,7 +1092,7 @@ def run() -> None:
                                     log.info("session", f"Self-healed missing/empty {SESSION_STATE_FILENAME} for create")
                             except Exception as e:
                                 log.error("session", f"Failed self-healing {SESSION_STATE_FILENAME}: {e}")
-                        if not session_stack:
+                        if not session_name:
                             # Fresh main session: clear runtime caches so participants/avatars/
                             # count and activity artifacts don't leak from previous sessions.
                             from daemon.codereview.state import (
@@ -1163,12 +1125,7 @@ def run() -> None:
                             _apply_runtime_snapshot_restore(restore_snapshot)
                             last_session_state_hash = _state_hash(runtime_session_snapshot)
 
-                            new_session = {
-                                "name": name,
-                                "started_at": datetime.now().isoformat(),
-                                "ended_at": None,
-                            }
-                            session_stack.append(new_session)
+                            session_name = name
                             current_key_points, summary_watermark = load_key_points(folder)
                             _do_save_daemon_state()
                             notes_file = find_notes_in_folder(folder)
@@ -1176,32 +1133,18 @@ def run() -> None:
                                 notes_lines = len(notes_file.read_text(encoding="utf-8", errors="replace").splitlines())
                                 log.info("session", f"Notes found ({notes_lines} lines): {notes_file.name}")
                             config = dc_replace(config, session_folder=folder, session_notes=notes_file)
-                            sync_session_to_server(
-                                config,
-                                session_stack,
-                                current_key_points,
-                                session_state=runtime_session_snapshot if runtime_session_snapshot else None,
-                                session_id=_active_session_id,
-                                file_time=get_ai_summary_mtime(folder),
-                                raw_markdown=get_ai_summary_raw(folder),
-                            )
+                            if _active_session_id:
+                                announce_session_id(_active_session_id)
                             did_sync_in_create = True
                             # mode_changed removed — host.js/participant.js don't handle it; mode is in full state on reconnect
                             transcript_state.reset()
                         if not did_sync_in_create:
-                            # Resume may arrive when a session stack is already in memory
-                            # (e.g. after daemon restart with stale stack restore). Ensure
+                            # Resume may arrive when session_name is already set in memory
+                            # (e.g. after daemon restart with stale state restore). Ensure
                             # active session id is persisted/broadcast even in that path.
                             _do_save_daemon_state()
-                            sync_session_to_server(
-                                config,
-                                session_stack,
-                                current_key_points,
-                                session_state=runtime_session_snapshot if runtime_session_snapshot else None,
-                                session_id=_active_session_id,
-                                file_time=get_ai_summary_mtime(folder),
-                                raw_markdown=get_ai_summary_raw(folder),
-                            )
+                            if _active_session_id:
+                                announce_session_id(_active_session_id)
                         participant_join_link = (
                             f"{config.server_url}/{_active_session_id}"
                             if _active_session_id
@@ -1216,84 +1159,33 @@ def run() -> None:
                             f"Session: {name}",
                         )
 
-                    elif action == "start":
-                        name = session_req["name"]
-                        folder = sessions_root / name
-                        folder.mkdir(parents=True, exist_ok=True)
-                        # Pause the current session while the nested one is active
-                        if session_stack:
-                            pause_session(session_stack[-1], datetime.now(), reason="nested")
-                        new_session = {
-                            "name": name,
-                            "started_at": datetime.now().isoformat(),
-                            "ended_at": None,
-                        }
-                        session_stack.append(new_session)
-                        current_key_points, summary_watermark = load_key_points(folder)
-                        _do_save_daemon_state()
-                        notes_file = find_notes_in_folder(folder)
-                        if notes_file:
-                            notes_lines = len(notes_file.read_text(encoding="utf-8", errors="replace").splitlines())
-                            log.info("session", f"Notes found ({notes_lines} lines): {notes_file.name}")
-                        config = dc_replace(config, session_folder=folder, session_notes=notes_file)
-                        sync_session_to_server(config, session_stack, current_key_points, file_time=get_ai_summary_mtime(folder), raw_markdown=get_ai_summary_raw(folder))
-                        transcript_state.reset()
-                        log.info("session", f"Session: {name}")
-
-                    elif action == "end" and session_stack:
+                    elif action == "end" and session_name:
                         runtime_session_snapshot = _build_runtime_session_snapshot(
                             active_session_id=_active_session_id,
-                            session_stack=session_stack,
+                            session_name=session_name,
                         )
                         last_session_state_hash, wrote = _flush_session_state_backup(
                             sessions_root=sessions_root,
-                            session_stack=session_stack,
+                            session_name=session_name,
                             session_snapshot=runtime_session_snapshot,
                             last_flushed_hash=last_session_state_hash,
                             force=True,
                         )
-                        if wrote and session_stack:
-                            log.info("session", f"Forced flush {SESSION_STATE_FILENAME} for {session_stack[-1]['name']}")
-                        ended = session_stack.pop()
-                        ended["ended_at"] = datetime.now().isoformat()
-                        ended_folder = sessions_root / ended["name"]
-                        save_key_points(ended_folder, current_key_points, summary_watermark, session_start_date(ended))
-                        parent_snapshot = None
-                        if session_stack:
-                            # Nested session ended — restore parent
-                            parent = session_stack[-1]
-                            resume_session(parent, datetime.now())
-                            parent_folder = sessions_root / parent["name"]
-                            current_key_points, summary_watermark = load_key_points(parent_folder)
-                            notes_file = find_notes_in_folder(parent_folder)
-                            config = dc_replace(config, session_folder=parent_folder, session_notes=notes_file)
-                            # Load saved activity state from parent session snapshot
-                            parent_snapshot = _without_session_id(load_session_state(parent_folder))
-                            if parent_snapshot:
-                                runtime_session_snapshot = parent_snapshot
-                                _apply_runtime_snapshot_restore(parent_snapshot)
-                                last_session_state_hash = _state_hash(parent_snapshot)
-                                log.info("session", f"Loaded parent snapshot from {session_state_path(parent_folder)}")
-                            # Notify addons: parent session resumed (send session_started)
-                            participant_join_link = (
-                                f"{config.server_url}/{_active_session_id}"
-                                if _active_session_id
-                                else f"{config.server_url}/"
-                            )
-                            from daemon import addon_bridge_client
-                            addon_bridge_client.send_session_started(participant_join_link)
-                            log.info("addons   ", f"→ started session {participant_join_link}")
-                            log.info("session", f"Ended: {ended['name']}, restored: {parent['name']}")
-                        else:
-                            # Main session ended — clear everything
-                            current_key_points = []
-                            summary_watermark = 0
-                            config = dc_replace(config, session_folder=None, session_notes=None)
-                            _active_session_id = None
-                            # Notify addons that session ended
-                            from daemon import addon_bridge_client
-                            addon_bridge_client.send_session_ended()
-                            log.info("session", f"Ended: {ended['name']}")
+                        if wrote:
+                            log.info("session", f"Forced flush {SESSION_STATE_FILENAME} for {session_name}")
+                        old_session_name = session_name
+                        ended_folder = sessions_root / old_session_name
+                        save_key_points(ended_folder, current_key_points, summary_watermark, date.today())
+                        # Main session ended — clear everything
+                        session_name = None
+                        current_key_points = []
+                        summary_watermark = 0
+                        config = dc_replace(config, session_folder=None, session_notes=None)
+                        _active_session_id = None
+                        # Notify addons that session ended
+                        from daemon import addon_bridge_client
+                        addon_bridge_client.send_session_ended()
+                        log.info("session", f"Ended: {old_session_name}")
                         _do_save_daemon_state()
                         if pending_global_state is None:
                             pending_global_state = _build_global_state()
@@ -1303,16 +1195,13 @@ def run() -> None:
                             last_flushed_hash=last_global_state_hash,
                             force=True,
                         )
-                        sync_session_to_server(
-                            config, session_stack, current_key_points,
-                            session_state=parent_snapshot,
-                        )
+                        announce_session_cleared()
                         transcript_state.reset()
 
                     elif action == "rename":
                         new_name = session_req["name"]
-                        if session_stack:
-                            old_name = session_stack[-1]["name"]
+                        if session_name:
+                            old_name = session_name
                             new_folder = sessions_root / new_name
                             # Load existing points from new folder FIRST (before overwriting)
                             existing_pts, existing_wm = load_key_points(new_folder) if new_folder.exists() else ([], 0)
@@ -1320,24 +1209,22 @@ def run() -> None:
                             if existing_pts:
                                 current_key_points, summary_watermark = existing_pts, existing_wm
                             else:
-                                save_key_points(new_folder, current_key_points, summary_watermark, session_start_date(session_stack[-1]))
-                            session_stack[-1]["name"] = new_name
+                                save_key_points(new_folder, current_key_points, summary_watermark, date.today())
+                            session_name = new_name
                             _do_save_daemon_state()
                             notes_file = find_notes_in_folder(new_folder)
                             config = dc_replace(config, session_folder=new_folder, session_notes=notes_file)
-                            sync_session_to_server(config, session_stack, current_key_points)
+                            if _active_session_id:
+                                announce_session_id(_active_session_id)
                             log.info("session", f"Renamed: {old_name} → {new_name}")
 
-                    elif action == "pause" and session_stack:
-                        pause_session(session_stack[-1], datetime.now(), reason="explicit")
+                    elif action == "pause" and session_name:
                         _do_save_daemon_state()
-                        sync_session_to_server(config, session_stack, current_key_points)
-                        log.info("session", f"Paused: {session_stack[-1]['name']}")
+                        log.info("session", f"Paused: {session_name}")
 
-                    elif action == "resume" and session_stack:
-                        resume_session(session_stack[-1], datetime.now())
+                    elif action == "resume" and session_name:
                         _do_save_daemon_state()
-                        resume_folder = sessions_root / session_stack[-1]["name"]
+                        resume_folder = sessions_root / session_name
                         try:
                             if _ensure_session_state_file_for_resume(
                                 session_folder=resume_folder,
@@ -1349,7 +1236,8 @@ def run() -> None:
                                 log.info("session", f"Self-healed missing/empty {SESSION_STATE_FILENAME} for resume")
                         except Exception as e:
                             log.error("session", f"Failed self-healing {SESSION_STATE_FILENAME}: {e}")
-                        sync_session_to_server(config, session_stack, current_key_points)
+                        if _active_session_id:
+                            announce_session_id(_active_session_id)
                         transcript_state.reset()
                         # Notify addons of session resume
                         participant_join_link = (
@@ -1360,32 +1248,7 @@ def run() -> None:
                         from daemon import addon_bridge_client
                         addon_bridge_client.send_session_started(participant_join_link)
                         log.info("addons   ", f"→ started session {participant_join_link}")
-                        log.info("session", f"Session: {session_stack[-1]['name']}")
-
-                    elif action == "create_talk_folder":
-                        _now = datetime.now()
-                        talk_name = f"{_now.strftime('%Y-%m-%d %H:%M')} talk"
-                        talk_folder = sessions_root / talk_name
-                        talk_folder.mkdir(parents=True, exist_ok=True)
-
-                        # Push talk onto stack without disconnecting participants
-                        session_stack.append({
-                            "name": talk_name,
-                            "started_at": _now.isoformat(),
-                            "status": "active",
-                        })
-                        talk_points, talk_wm = load_key_points(talk_folder)
-                        current_key_points, summary_watermark = talk_points, talk_wm
-                        _do_save_daemon_state()
-                        notes_file = find_notes_in_folder(talk_folder)
-                        config = dc_replace(config, session_folder=talk_folder, session_notes=notes_file)
-
-                        # Sync to server without disconnecting participants (no "action" key)
-                        sync_session_to_server(
-                            config, session_stack, talk_points,
-                            discussion_points=talk_points,
-                        )
-                        log.info("session", f"Created talk folder: {talk_name}")
+                        log.info("session", f"Session: {session_name}")
                     if action:
                         _send_global_state_saved_ack(ws_client, session_req, action, _active_session_id)
 
@@ -1398,7 +1261,7 @@ def run() -> None:
                     _refresh_session_folder_binding(
                         config=config,
                         sessions_root=sessions_root,
-                        session_stack=session_stack,
+                        session_name=session_name,
                         today=today,
                         last_detected_date=last_detected_date,
                         last_session_check_at=last_session_check_at,
@@ -1417,10 +1280,10 @@ def run() -> None:
 
                 if now - last_persist_poll_at >= 3.0:
                     last_persist_poll_at = now
-                    if session_stack:
+                    if session_name:
                         runtime_session_snapshot = _build_runtime_session_snapshot(
                             active_session_id=_active_session_id,
-                            session_stack=session_stack,
+                            session_name=session_name,
                         )
                     if pending_global_state is None:
                         pending_global_state = _build_global_state()
@@ -1432,7 +1295,7 @@ def run() -> None:
                     )
                     last_session_state_hash, wrote = _flush_session_state_backup(
                         sessions_root=sessions_root,
-                        session_stack=session_stack,
+                        session_name=session_name,
                         session_snapshot=runtime_session_snapshot,
                         last_flushed_hash=last_session_state_hash,
                         force=False,
@@ -1530,9 +1393,9 @@ def run() -> None:
                 force_summary = bool(force_data) or bool(full_reset_data)
 
                 # ── On-demand summary generation (incremental when possible) ──
-                if force_summary and session_stack:
+                if force_summary and session_name:
                     current_key_points, summary_watermark = run_summary_cycle(
-                        config, session_stack, sessions_root,
+                        config, sessions_root, session_name,
                         current_key_points, summary_watermark,
                     )
 
