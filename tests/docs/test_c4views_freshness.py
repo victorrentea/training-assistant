@@ -5,7 +5,6 @@ Requires Docker (structurizr/structurizr image).  Skipped when Docker is unavail
 
 import shutil
 import subprocess
-import tempfile
 from pathlib import Path
 
 import pytest
