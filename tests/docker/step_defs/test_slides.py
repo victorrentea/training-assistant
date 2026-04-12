@@ -208,6 +208,7 @@ def named_overlay_visible(name):
 @given(parsers.parse('the slides catalog does not contain "{slug}"'))
 def catalog_does_not_contain(connected, slug):
     pax = connected["pax"]
+    pax.expand_slides_dock()
     items = pax._page.locator(f'.slides-list-item[data-slug="{slug}"]')
     expect(items).to_have_count(0, timeout=3000)
 
@@ -286,6 +287,7 @@ def slide_automatically_reloaded():
 @then(parsers.parse('the slides catalog contains "{slug}" with a last modified timestamp'))
 def catalog_contains_with_timestamp(connected, slug):
     pax = connected["pax"]
+    pax.expand_slides_dock()
     item = pax._page.locator(f'.slides-list-item[data-slug="{slug}"]')
     expect(item).to_be_visible(timeout=10000)
     timestamp = item.locator(".slides-list-updated")
@@ -298,6 +300,7 @@ def catalog_contains_with_timestamp(connected, slug):
 def catalog_contains_with_updated_timestamp(connected, slug):
     """After host updates a slide, the timestamp in the catalog should reflect the change."""
     pax = connected["pax"]
+    pax.expand_slides_dock()
     # Wait for catalog refresh via WS notification
     pax._page.wait_for_timeout(5000)
     item = pax._page.locator(f'.slides-list-item[data-slug="{slug}"]')
@@ -321,6 +324,7 @@ def catalog_contains(request, slug):
     except pytest.FixtureLookupError:
         connected = request.getfixturevalue("connected")
         pax = connected["pax"]
+    pax.expand_slides_dock()
     expect(pax._page.locator(f'.slides-list-item[data-slug="{slug}"]')).to_be_visible(timeout=10000)
 
 
@@ -370,6 +374,7 @@ def active_slide_is(request, slug):
     except pytest.FixtureLookupError:
         connected = request.getfixturevalue("connected")
         pax = connected["pax"]
+    pax.expand_slides_dock()
     expect(pax._page.locator(f'.slides-list-item.active[data-slug="{slug}"]')).to_be_visible(
         timeout=10000
     )

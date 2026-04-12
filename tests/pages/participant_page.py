@@ -173,8 +173,19 @@ class ParticipantPage:
 
     # ── Slides ─────────────────────────────────────────────────────────────
 
+    def expand_slides_dock(self) -> None:
+        """Expand the slides dock so list items are visible and clickable."""
+        self._page.evaluate("""() => {
+            const dock = document.getElementById('slides-dock');
+            const list = document.getElementById('slides-list');
+            if (dock) dock.classList.add('expanded');
+            if (list) list.classList.add('expanded');
+        }""")
+        self._page.wait_for_timeout(400)  # allow CSS transition
+
     def open_slide(self, slug: str) -> None:
         """Click a slide in the catalog to open it in the viewer."""
+        self.expand_slides_dock()
         self._page.locator(f'.slides-list-item[data-slug="{slug}"] .slides-list-open').click()
         expect(self._page.locator("#slides-overlay")).to_have_class(re.compile(r"open"), timeout=15000)
 
