@@ -13,9 +13,9 @@ logger = logging.getLogger(__name__)
 
 _STATIC_DIR = Path(__file__).resolve().parent.parent.parent.parent / "static"
 
-_ALLOWED_EXTENSIONS = {".html", ".js", ".css", ".png", ".jpg", ".svg", ".ico", ".json", ".woff", ".woff2", ".ttf"}
+_ALLOWED_EXTENSIONS = {".html", ".js", ".css", ".png", ".jpg", ".svg", ".ico", ".json", ".woff", ".woff2", ".ttf", ".pdf"}
 _EXCLUDED_FILES = {"version.js", "deploy-info.json", "work-hours.js"}
-_MAX_UPLOAD_SIZE = 5 * 1024 * 1024  # 5MB decoded
+_MAX_UPLOAD_SIZE = 20 * 1024 * 1024  # 20MB decoded
 
 
 class UploadStaticRequest(BaseModel):
