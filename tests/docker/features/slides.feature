@@ -37,6 +37,10 @@ Feature: Slides Catalog, Viewing, and Follow Mode
     And Alice opens slide "clean-code"
     Then Alice sees page 3 of "clean-code"
 
+  Scenario: Participant downloads a slide PDF from the catalog
+    When Alice clicks the download button for "clean-code"
+    Then Alice receives a valid PDF file
+
   # ── Slides updated by host ───────────────────────────────────────────
 
   Scenario: Updated slide shows refreshed timestamp

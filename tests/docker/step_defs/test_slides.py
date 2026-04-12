@@ -229,6 +229,30 @@ def navigate_to_page(name, page_num):
     _pax(name).navigate_to_page(page_num)
 
 
+@when(parsers.parse('{name} clicks the download button for "{slug}"'))
+def click_download_button(request, name, slug):
+    """Click the download link for a slide and intercept the response."""
+    pax = _pax(name)
+    pax.expand_slides_dock()
+    # Use Playwright's download event to capture the file
+    with pax._page.expect_download(timeout=30000) as download_info:
+        pax._page.locator(
+            f'.slides-list-item[data-slug="{slug}"] .slides-list-download'
+        ).click()
+    download = download_info.value
+    request.config._slides_download = download
+
+
+@then(parsers.parse('{name} receives a valid PDF file'))
+def receives_valid_pdf(request, name):
+    """Verify the downloaded file starts with %PDF."""
+    download = getattr(request.config, "_slides_download", None)
+    assert download is not None, "No download captured — did the download step run?"
+    path = download.path()
+    content = open(path, "rb").read(5)
+    assert content == b"%PDF-", f"Downloaded file is not a valid PDF: {content!r}"
+
+
 @when(parsers.parse('the host updates the slide "{slug}"'))
 def host_updates_slide(session_id, slug):
     """Invalidate a slide to trigger re-download (simulates host updating the Google Drive file).
