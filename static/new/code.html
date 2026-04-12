@@ -530,13 +530,17 @@ refactoring-kata<span class="material-symbols-outlined text-sm flex-shrink-0">op
 // ── Local-storage namespace ───────────────────────────────────────────────────
 var LS = {
   EMOJI_PROMOTED: 'new:emoji_bar_promoted',
+  VIEW: 'new:current_view',
   scrollKey: function(view) { return 'new:scroll_' + view; },
   getEmoji:  function()     { return JSON.parse(localStorage.getItem(LS.EMOJI_PROMOTED) || '[]'); },
   setEmoji:  function(arr)  { localStorage.setItem(LS.EMOJI_PROMOTED, JSON.stringify(arr)); },
   getScroll: function(view) { return localStorage.getItem(LS.scrollKey(view)); },
   setScroll: function(view, val) { localStorage.setItem(LS.scrollKey(view), val); },
+  getView:   function()     { return localStorage.getItem(LS.VIEW) || 'slides'; },
+  setView:   function(name) { localStorage.setItem(LS.VIEW, name); },
   clear:     function()     {
     localStorage.removeItem(LS.EMOJI_PROMOTED);
+    localStorage.removeItem(LS.VIEW);
     LS._scrollViews().forEach(function(k) { localStorage.removeItem(k); });
   },
   _scrollViews: function() {
@@ -718,6 +722,7 @@ function showView(name) {
   if (name !== 'slides') closeSlides();
   document.querySelectorAll('.topic-item').forEach(function(n) { n.classList.remove('topic-active'); });
   setActive(name);
+  LS.setView(name);
   if (name === 'agenda') loadAgenda();
   VIEWS.forEach(function(v) {
     var el = document.getElementById(v + '-view');
@@ -747,6 +752,9 @@ let _sessionId = null;
     const state = await fetch(`/${_sessionId}/api/participant/state`).then(r => r.json());
     console.log('[participant] state:', state);
     document.querySelector('[data-nav="agenda"]').style.display = state.has_agenda ? '' : 'none';
+    var saved = LS.getView();
+    if (saved === 'agenda' && !state.has_agenda) saved = 'slides';
+    showView(saved);
   } catch (e) {
     console.error('[participant] failed to load state:', e);
   }
