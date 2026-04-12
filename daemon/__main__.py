@@ -844,6 +844,20 @@ def run() -> None:
     import daemon.host_server as _host_server_mod
     _host_server_mod.set_log_level_persist_callback(_persist_log_level)
 
+    def _resolve_gdrive_url(session_folder) -> str | None:
+        """Resolve Google Drive web URL for a session folder."""
+        try:
+            import sys as _sys
+            import os as _os
+            _scripts_dir = _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))
+            if _scripts_dir not in _sys.path:
+                _sys.path.insert(0, _scripts_dir)
+            from scripts.resolve_gdrive_link import resolve_gdrive_url as _resolve_fn
+            return _resolve_fn(str(session_folder))
+        except Exception as e:
+            log.error("session", f"Failed to resolve Google Drive link: {e}")
+            return None
+
     if session_stack:
         # Restore from persisted stack
         current_folder = config.session_folder or (sessions_root / session_stack[-1]["name"])
@@ -857,6 +871,12 @@ def run() -> None:
         }]
         current_key_points, summary_watermark = load_key_points(config.session_folder)
         _do_save_daemon_state()
+    # Resolve Google Drive folder URL for the active session folder
+    if config.session_folder:
+        _gdrive_url = _resolve_gdrive_url(config.session_folder)
+        if _gdrive_url:
+            misc_state.gdrive_url = _gdrive_url
+            log.info("session", f"Google Drive: {_gdrive_url}")
     # Publish initial session state to daemon REST router
     session_shared_state.set_active_session(_active_session_id, session_stack)
     slides_runner = SlidesRunner(config)

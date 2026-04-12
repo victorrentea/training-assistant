@@ -21,6 +21,7 @@ class MiscState:
         self.slides_current: dict | None = None
         self.session_main: dict | None = None
         self.session_name: str | None = None
+        self.gdrive_url: str | None = None
 
     def sync_from_restore(self, data: dict):
         with self._lock:
@@ -60,6 +61,8 @@ class MiscState:
                 self.session_main = data["session_main"]
             if "session_name" in data:
                 self.session_name = data["session_name"]
+            if "gdrive_url" in data:
+                self.gdrive_url = data["gdrive_url"]
 
     def add_paste(self, pid: str, text: str) -> dict | None:
         entries = self.paste_texts.setdefault(pid, [])
@@ -150,6 +153,7 @@ class MiscState:
             self.slides_current = None
             self.session_main = None
             self.session_name = None
+            self.gdrive_url = None
 
 
 misc_state = MiscState()

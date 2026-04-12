@@ -234,6 +234,7 @@ class ParticipantStateResponse(BaseModel):
     leaderboard_data: LeaderboardData | None = None
     summary_count: int
     notes_count: int
+    gdrive_url: str | None = None
 
 
 def _build_qa_for_participant(pid: str) -> list[dict]:
@@ -597,6 +598,8 @@ async def get_participant_state(request: Request):
         # Summary / notes (counts only — full content fetched on demand)
         "summary_count": len(summary["points"]),
         "notes_count": notes_count,
+        # Google Drive folder link for session materials
+        "gdrive_url": misc_state.gdrive_url,
     }
 
     return JSONResponse(state_msg)
