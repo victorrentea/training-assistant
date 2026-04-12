@@ -587,7 +587,7 @@ function closeEmojiPopup(ev) {
         const d = new Date(updatedAt);
         const hh = String(d.getHours()).padStart(2, '0');
         const mm = String(d.getMinutes()).padStart(2, '0');
-        span.innerHTML = `<sup>${hh}:${mm}</sup> `;
+        span.innerHTML = `${hh}<sup>${mm}</sup> `;
       } else {
         span.innerHTML = count ? `${count} ` : '';
       }
@@ -676,7 +676,7 @@ function closeEmojiPopup(ev) {
         const d = new Date(summaryUpdatedAt);
         const hh = String(d.getHours()).padStart(2, '0');
         const mm = String(d.getMinutes()).padStart(2, '0');
-        countEl.innerHTML = `<sup>${hh}:${mm}</sup> `;
+        countEl.innerHTML = `${hh}<sup>${mm}</sup> `;
       } else {
         countEl.innerHTML = '';
       }
