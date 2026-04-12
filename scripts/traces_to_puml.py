@@ -207,13 +207,24 @@ def generate_puml(traces_path: str, family: str, output: str,
             if p not in participants:
                 participants.append(p)
 
+    # 10 distinct PlantUML colors for trace hash correlation
+    _TRACE_COLORS = [
+        "#E74C3C", "#2E86C1", "#27AE60", "#F39C12", "#8E44AD",
+        "#D35400", "#1ABC9C", "#C0392B", "#2980B9", "#16A085",
+    ]
+
     def _render_edge(e: tuple) -> str:
         f, t, label, _ts, phase, tid, is_async = e
         arrow = "-->" if is_async else "->"
         color = "[#gray]" if phase == "given" else ""
-        # Prefix with trace hash for correlation: [XX]
-        trace_hash = f"[{hash(tid) % 100:02d}] " if tid else ""
-        return f'"{f}" {color}{arrow} "{t}": {trace_hash}{label}'
+        # Append colored trace hash after label for visual correlation
+        if tid:
+            h = hash(tid) % 100
+            c = _TRACE_COLORS[h % len(_TRACE_COLORS)]
+            trace_tag = f" <color:{c}>[{h:02d}]</color>"
+        else:
+            trace_tag = ""
+        return f'"{f}" {color}{arrow} "{t}": {label}{trace_tag}'
 
     lines = ["@startuml"]
     lines.append("hide footbox")
