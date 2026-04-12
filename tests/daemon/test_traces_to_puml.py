@@ -228,7 +228,7 @@ def test_given_phase_renders_gray():
     assert "[#gray]" in content
     # When phase arrow should NOT be gray
     lines = content.split("\n")
-    broadcast_line = [l for l in lines if "broadcast poll_opened" in l][0]
+    broadcast_line = [line for line in lines if "broadcast poll_opened" in line][0]
     assert "[#gray]" not in broadcast_line
 
 

@@ -5,6 +5,7 @@ All interactions go through the real browser UI.
 from __future__ import annotations
 
 import re
+
 from playwright.sync_api import Page, expect
 
 

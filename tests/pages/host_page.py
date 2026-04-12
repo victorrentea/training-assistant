@@ -274,7 +274,8 @@ class HostPage:
 
     def upload_slide(self, slug: str, pdf_bytes: bytes) -> None:
         """Upload a slide PDF via the host UI."""
-        import tempfile, os
+        import os
+        import tempfile
         with tempfile.NamedTemporaryFile(suffix=".pdf", prefix=slug + "-", delete=False) as f:
             f.write(pdf_bytes)
             tmp_path = f.name
