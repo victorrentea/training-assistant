@@ -2606,14 +2606,7 @@ function closeAgendaModal() {
     if (shouldRestoreOpen && overlay) {
       overlay.classList.add('open');
     }
-    _refreshSlidesCatalog({ autoLoadSelected: shouldRestoreOpen }).catch(() => {});
-    // Pre-warm hostSlidesCurrent so follow button works immediately before first WS state message.
-    _prefetchHostSlidesCurrent();
-  }
-
-  function _prefetchHostSlidesCurrent() {
-    // slides_current is delivered via WS state message and slides_current events;
-    // no separate REST fetch needed.
+    // Catalog fetch deferred to ws.onopen to avoid duplicate request.
   }
 
   async function requestNotificationPermission() {
