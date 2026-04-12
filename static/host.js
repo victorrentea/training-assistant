@@ -171,8 +171,8 @@
     const flagHtml = cc ? `<span title="${escHtml(_countryCodeToName(cc))}" style="cursor:default">${_countryCodeToFlag(cc)}</span>` : '';
     if (tz) {
       const hhmm = _formatClockForTimezone(tz);
-      if (hhmm && flagHtml) return `${flagHtml} ${hhmm}`;
-      if (hhmm) return hhmm;
+      if (hhmm && flagHtml) return `${flagHtml} ⏱️${hhmm}`;
+      if (hhmm) return `⏱️${hhmm}`;
       return escHtml(rawLoc);
     }
     if (flagHtml) return `${escHtml(rawLoc)} ${flagHtml}`;
