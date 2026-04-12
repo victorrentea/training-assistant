@@ -190,7 +190,7 @@ h1 { display: none; }
   padding: .25rem .9rem;
   height: 44px;
   box-sizing: border-box;
-  width: 66%;
+  width: 53%;
   margin: 0 auto .35rem;
   background: var(--surface);
   border: 1px solid var(--border);
@@ -2482,3 +2482,24 @@ body.modal-blocks-slides #slides-dock {
   outline: none;
   border-color: var(--accent);
 }
+
+/* ── Agenda .docx viewer ─────────────────────────────────────────────── */
+.agenda-content h1, .agenda-content h2, .agenda-content h3,
+.agenda-content h4, .agenda-content h5, .agenda-content h6 {
+  margin: .8em 0 .3em;
+  color: var(--text);
+}
+.agenda-content p { margin: .4em 0; line-height: 1.5; }
+.agenda-content ul, .agenda-content ol { padding-left: 1.5em; margin: .4em 0; }
+.agenda-content table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: .5em 0;
+}
+.agenda-content th, .agenda-content td {
+  border: 1px solid var(--border);
+  padding: .3em .5em;
+  text-align: left;
+}
+.agenda-content th { background: var(--surface-alt, var(--surface)); font-weight: 600; }
+.agenda-content img { max-width: 100%; height: auto; }
