@@ -209,10 +209,11 @@ class HostStateResponse(BaseModel):
 
 def _build_host_participants_list() -> list[dict]:
     """Build participant list for host — all named, including offline."""
+    from daemon.scores import scores as daemon_scores
     ps = participant_state
     all_pids = sorted(
         ps.participant_names.keys(),
-        key=lambda pid: (-ps.scores.get(pid, 0), ps.participant_names.get(pid, ""), pid),
+        key=lambda pid: (-daemon_scores.scores.get(pid, 0), ps.participant_names.get(pid, ""), pid),
     )
     result = []
     for pid in all_pids:
@@ -221,7 +222,7 @@ def _build_host_participants_list() -> list[dict]:
         entry = {
             "uuid": pid,
             "name": ps.participant_names.get(pid, f"Guest {pid[:8]}"),
-            "score": ps.scores.get(pid, 0),
+            "score": daemon_scores.scores.get(pid, 0),
             "location": ps.locations.get(pid, ""),
             "location_tz": ps.location_timezones.get(pid, ""),
             "location_country": ps.location_countries.get(pid, ""),

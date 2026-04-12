@@ -7,6 +7,19 @@ Initial data comes from session_sync/state_restore on WS connect.
 import threading
 
 
+def _sync_score_to_daemon(pid: str, score: int):
+    """Sync a single restored score to the authoritative daemon.scores singleton."""
+    from daemon.scores import scores as daemon_scores
+    daemon_scores.scores[pid] = score
+
+
+def _sync_scores_to_daemon(scores_dict: dict):
+    """Sync all restored scores to the authoritative daemon.scores singleton."""
+    from daemon.scores import scores as daemon_scores
+    daemon_scores.scores.clear()
+    daemon_scores.scores.update(scores_dict)
+
+
 class ParticipantState:
     """Participant state cache for daemon identity logic.
 
@@ -60,6 +73,7 @@ class ParticipantState:
                     score = raw.get("score")
                     if isinstance(score, (int, float)):
                         self.scores[str(pid)] = int(score)
+                        _sync_score_to_daemon(str(pid), int(score))
                     location = raw.get("location")
                     if isinstance(location, str):
                         self.locations[str(pid)] = location
@@ -83,6 +97,7 @@ class ParticipantState:
                 if "scores" in data:
                     self.scores.clear()
                     self.scores.update(data["scores"])
+                    _sync_scores_to_daemon(data["scores"])
                 if "locations" in data:
                     self.locations.clear()
                     self.locations.update(data["locations"])

@@ -300,6 +300,12 @@ def _build_debate_for_participant(pid: str) -> dict:
     return snap
 
 
+def _get_score(pid: str) -> int:
+    """Read score from the authoritative daemon.scores singleton."""
+    from daemon.scores import scores
+    return scores.scores.get(pid, 0)
+
+
 def _build_poll_for_participant(pid: str) -> dict:
     """Build poll state personalised for participant pid."""
     from daemon.poll.state import poll_state
@@ -562,7 +568,7 @@ async def get_participant_state(request: Request):
         "type": "state",
         # Core identity / session
         "mode": ps.mode,
-        "my_score": 0 if ps.mode == "conference" else ps.scores.get(pid, 0),
+        "my_score": 0 if ps.mode == "conference" else _get_score(pid),
         "my_name": ps.participant_names.get(pid, ""),
         "my_avatar": ps.participant_avatars.get(pid, ""),
         "current_activity": ps.current_activity,

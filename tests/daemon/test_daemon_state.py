@@ -680,9 +680,10 @@ def test_runtime_session_snapshot_excludes_participant_universes():
     from daemon.debate.state import debate_state
     from daemon.participant.state import participant_state
     from daemon.poll.state import poll_state
+    from daemon.scores import scores as daemon_scores
     from daemon.wordcloud.state import wordcloud_state
-
     participant_state.reset()
+    daemon_scores.reset()
     poll_state.clear()
     wordcloud_state.clear()
     codereview_state.clear()
@@ -691,6 +692,7 @@ def test_runtime_session_snapshot_excludes_participant_universes():
     participant_state.participant_names["u1"] = "Alice"
     participant_state.participant_avatars["u1"] = "gandalf.png"
     participant_state.scores["u1"] = 0
+    daemon_scores.scores["u1"] = 0
     participant_state.locations["u1"] = "🕐 America/Mexico_City"
     participant_state.participant_universes["u1"] = "Star Wars"
     poll_state.poll = {"id": "p1", "question": "Q", "options": [], "multi": False}

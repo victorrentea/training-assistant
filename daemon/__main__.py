@@ -203,7 +203,8 @@ def _build_runtime_session_snapshot(
     participants_payload: dict[str, dict[str, object]] = {}
     participant_ids = set(participant_state.participant_names)
     participant_ids |= set(participant_state.participant_avatars)
-    participant_ids |= set(participant_state.scores)
+    from daemon.scores import scores as daemon_scores
+    participant_ids |= set(daemon_scores.scores)
     participant_ids |= set(participant_state.locations)
     participant_ids |= set(participant_state.location_timezones)
     participant_ids |= set(participant_state.location_countries)
@@ -213,8 +214,8 @@ def _build_runtime_session_snapshot(
             row["name"] = participant_state.participant_names[pid]
         if pid in participant_state.participant_avatars:
             row["avatar"] = participant_state.participant_avatars[pid]
-        if pid in participant_state.scores:
-            row["score"] = participant_state.scores[pid]
+        if pid in daemon_scores.scores:
+            row["score"] = daemon_scores.scores[pid]
         if pid in participant_state.locations:
             row["location"] = participant_state.locations[pid]
         if pid in participant_state.location_timezones:
