@@ -29,11 +29,12 @@ from railway.shared.state import state  # re-exported for tests: from railway.ap
 logging.basicConfig(level=logging.INFO)
 
 # OTel tracing — must run before FastAPI app creation
-try:
-    from daemon.telemetry import setup_tracing
-    setup_tracing()
-except ImportError:
-    pass
+if os.environ.get("OTEL_TRACES_FILE"):
+    try:
+        from daemon.telemetry import setup_tracing
+        setup_tracing()
+    except Exception as _otel_err:
+        logging.getLogger(__name__).warning("OTel setup failed: %s", _otel_err)
 
 PROJECT_ROOT = Path(__file__).parent.parent
 _RAILWAY_STARTED_AT_ISO: str | None = None
