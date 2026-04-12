@@ -122,11 +122,20 @@
   function _formatClockForTimezone(tz) {
     if (!tz) return '';
     try {
+      const now = new Date();
+      const hh = new Intl.DateTimeFormat('en-GB', { hour: '2-digit', hour12: false, timeZone: tz }).format(now);
+      const mm = new Intl.DateTimeFormat('en-GB', { minute: '2-digit', timeZone: tz }).format(now);
+      return `${hh}<sup>${mm.padStart(2, '0')}</sup>`;
+    } catch {
+      return '';
+    }
+  }
+
+  function _rawHhmmForTimezone(tz) {
+    if (!tz) return '';
+    try {
       return new Intl.DateTimeFormat('en-GB', {
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false,
-        timeZone: tz,
+        hour: '2-digit', minute: '2-digit', hour12: false, timeZone: tz,
       }).format(new Date());
     } catch {
       return '';
@@ -162,8 +171,8 @@
     const flagHtml = cc ? `<span title="${escHtml(_countryCodeToName(cc))}" style="cursor:default">${_countryCodeToFlag(cc)}</span>` : '';
     if (tz) {
       const hhmm = _formatClockForTimezone(tz);
-      if (hhmm && flagHtml) return `${flagHtml} ⏱️${hhmm}`;
-      if (hhmm) return `⏱️${hhmm}`;
+      if (hhmm && flagHtml) return `${flagHtml} ${hhmm}`;
+      if (hhmm) return hhmm;
       return escHtml(rawLoc);
     }
     if (flagHtml) return `${escHtml(rawLoc)} ${flagHtml}`;
@@ -1616,7 +1625,7 @@
       const scoreTag = pts > 0 ? `<span class="pax-score" title="Click to reset score" onclick="resetOneScore('${escHtml(pid)}','${escHtml(name)}',${pts})">⭐ ${pts} pts</span>` : '';
       const locLabel = loc ? _formatParticipantLocation(participant) : null;
       const tzForColor = String(participant?.location_tz || _extractTimezone(loc) || '').trim();
-      const hhmmForColor = tzForColor ? _formatClockForTimezone(tzForColor) : '';
+      const hhmmForColor = tzForColor ? _rawHhmmForTimezone(tzForColor) : '';
       const _ohc = _offHoursClass(hhmmForColor);
       const locClass = _ohc ? `pax-location offhours ${_ohc}` : 'pax-location';
       const avatar = participant.avatar || '';
