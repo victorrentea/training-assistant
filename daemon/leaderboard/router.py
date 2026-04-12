@@ -51,8 +51,10 @@ async def hide_leaderboard():
 
 @router.delete("/scores", status_code=204)
 async def reset_scores():
+    was_empty = not scores.snapshot()
     scores.reset()
-    msg = ScoresUpdatedMsg(scores=scores.snapshot())
-    broadcast(msg)
-    await notify_host(msg)
+    if not was_empty:
+        msg = ScoresUpdatedMsg(scores=scores.snapshot())
+        broadcast(msg)
+        await notify_host(msg)
     return Response(status_code=204)

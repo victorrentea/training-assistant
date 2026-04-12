@@ -476,16 +476,24 @@ def _send_global_state_saved_ack(
 
 
 def _broadcast_notes_summary_counts(probe: dict) -> None:
-    """Broadcast notes and summary line counts to participants and host via WS."""
+    """Broadcast notes and summary line counts to participants and host via WS.
+
+    Skips broadcasting when both counts are 0 (e.g., fresh session start) —
+    participants already get zeros from GET /api/participant/state.
+    """
+    notes = probe["notes_non_empty_lines"]
+    summary = probe["summary_point_count"]
+    if notes == 0 and summary == 0:
+        return
     from daemon.ws_messages import NotesUpdatedMsg, SummaryUpdatedMsg
     from daemon.ws_publish import broadcast
-    broadcast(NotesUpdatedMsg(count=probe["notes_non_empty_lines"]))
+    broadcast(NotesUpdatedMsg(count=notes))
     mtime_ns = probe.get("summary_mtime_ns")
     updated_at: str | None = None
     if mtime_ns:
         from datetime import datetime, timezone
         updated_at = datetime.fromtimestamp(mtime_ns / 1e9, tz=timezone.utc).isoformat()
-    broadcast(SummaryUpdatedMsg(count=probe["summary_point_count"], updated_at=updated_at))
+    broadcast(SummaryUpdatedMsg(count=summary, updated_at=updated_at))
 
 
 
