@@ -70,8 +70,3 @@ async def notify_host(msg: BaseModel):
 def broadcast_event(msg: BaseModel) -> dict:
     """Build a write_back_events entry for participant broadcast."""
     return {"type": "broadcast", "event": msg.model_dump()}
-
-
-def host_event(msg: BaseModel) -> dict:
-    """Build a write_back_events entry for host notification."""
-    return {"type": "send_to_host", "event": msg.model_dump()}

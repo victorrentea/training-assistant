@@ -7,14 +7,10 @@ from railway.shared.state import state
 logger = logging.getLogger(__name__)
 
 # --- Inbound message types (daemon → backend) ---
-MSG_SLIDE_INVALIDATED = "slide_invalidated"
 MSG_DAEMON_PING = "daemon_ping"
 
 # --- Generic broadcast (daemon → all participants via backend) ---
 MSG_BROADCAST = "broadcast"
-
-# --- Send to host only (daemon → backend → host) ---
-MSG_SEND_TO_HOST = "send_to_host"
 
 # --- Proxy (bidirectional) ---
 MSG_PROXY_REQUEST = "proxy_request"
@@ -28,10 +24,6 @@ MSG_CODE_TIMESTAMP = "code_timestamp"
 
 # --- Static file sync (backend → daemon) ---
 MSG_SYNC_FILES = "sync_files"
-
-# --- PDF download (daemon → backend → daemon) ---
-MSG_DOWNLOAD_PDF = "download_pdf"
-MSG_PDF_DOWNLOAD_COMPLETE = "pdf_download_complete"
 
 # --- File upload (backend → daemon) ---
 MSG_FILE_READY_FOR_DOWNLOAD = "file_ready_for_download"

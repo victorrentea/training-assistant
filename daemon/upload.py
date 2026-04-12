@@ -6,11 +6,13 @@ import threading
 import urllib.request
 from pathlib import Path
 
+import asyncio
+
 from daemon import log
 from daemon.http import _post_json, session_api_url
 from daemon.misc.state import misc_state
 from daemon.ws_messages import FileUploadedMsg
-from daemon.ws_publish import host_event, send_to_railway
+from daemon.ws_publish import notify_host
 
 _HTTP_TIMEOUT = 60  # seconds, file downloads can be large
 
@@ -66,17 +68,23 @@ def _do_download(server_url: str, username: str, password: str,
     )
 
     try:
-        send_to_railway(
-            host_event(
-                FileUploadedMsg(
-                    uuid=participant_uuid,
-                    id=str(file_id),
-                    filename=filename,
-                    size=int(size),
-                    disk_path=disk_path,
-                )
+        from daemon.slides.router import get_event_loop
+        loop = get_event_loop()
+        if loop and loop.is_running():
+            asyncio.run_coroutine_threadsafe(
+                notify_host(
+                    FileUploadedMsg(
+                        uuid=participant_uuid,
+                        id=str(file_id),
+                        filename=filename,
+                        size=int(size),
+                        disk_path=disk_path,
+                    )
+                ),
+                loop,
             )
-        )
+        else:
+            log.error("upload", f"No event loop available to notify host for {filename}")
     except Exception as e:
         log.error("upload", f"Failed to notify host for {filename}: {e}")
 

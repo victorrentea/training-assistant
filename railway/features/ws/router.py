@@ -16,11 +16,8 @@ from railway.features.ws.daemon_protocol import (
     MSG_BROADCAST,
     MSG_CODE_TIMESTAMP,
     MSG_DAEMON_PING,
-    MSG_DOWNLOAD_PDF,
     MSG_PARTICIPANT_PRESENCE,
-    MSG_PDF_DOWNLOAD_COMPLETE,
     MSG_PROXY_RESPONSE,
-    MSG_SEND_TO_HOST,
     MSG_SET_SESSION_ID,
     push_to_daemon,
 )
@@ -69,19 +66,6 @@ def _is_host_authorized_for_ws(websocket: WebSocket) -> bool:
         secrets.compare_digest(username.encode(), expected_user.encode())
         and secrets.compare_digest(password.encode(), expected_pass.encode())
     )
-
-
-async def _handle_send_to_host(data: dict):
-    """Forward event to __host__ WS."""
-    event = data.get("event")
-    if not event:
-        return
-    ws = state.participants.get("__host__")
-    if ws:
-        try:
-            await ws.send_text(json.dumps(event))
-        except Exception:
-            pass
 
 
 async def _handle_code_timestamp(data: dict):
@@ -176,31 +160,6 @@ async def _handle_broadcast(data: dict):
             pass
 
 
-async def _run_download_pdf(slug: str, drive_export_url: str) -> None:
-    """Background task: download PDF for slug and notify daemon of result.
-
-    LEGACY: kept for backward compatibility. New code uses the REST endpoint
-    POST /api/slides/download-from-gdrive/{slug} instead.
-    """
-    from railway.features.slides.cache import do_download
-    try:
-        await do_download(slug, drive_export_url)
-        await push_to_daemon({"type": MSG_PDF_DOWNLOAD_COMPLETE, "slug": slug, "status": "ok"})
-    except Exception as exc:
-        await push_to_daemon({"type": MSG_PDF_DOWNLOAD_COMPLETE, "slug": slug, "status": "error", "error": str(exc)})
-
-
-async def _handle_download_pdf(data: dict) -> None:
-    """Handle download_pdf message from daemon — start download in background."""
-    import asyncio
-    slug = data.get("slug", "").strip()
-    drive_export_url = data.get("drive_export_url", "").strip()
-    if not slug or not drive_export_url:
-        logger.warning("[ws] download_pdf missing slug or drive_export_url")
-        return
-    asyncio.create_task(_run_download_pdf(slug, drive_export_url))
-
-
 async def _handle_participant_registered(data: dict):
     """Apply daemon identity write-back for a newly registered participant."""
     pid = str(data.get("participant_id") or "").strip()
@@ -250,12 +209,10 @@ async def _handle_participant_location(data: dict):
 
 _DAEMON_MSG_HANDLERS = {
     MSG_BROADCAST: _handle_broadcast,
-    MSG_SEND_TO_HOST: _handle_send_to_host,
     MSG_PROXY_RESPONSE: handle_proxy_response,
     MSG_SET_SESSION_ID: _handle_set_session_id,
     MSG_CODE_TIMESTAMP: _handle_code_timestamp,
     MSG_DAEMON_PING: None,  # heartbeat only — last_seen already updated
-    MSG_DOWNLOAD_PDF: _handle_download_pdf,
     "participant_registered": _handle_participant_registered,
     "participant_renamed": _handle_participant_renamed,
     "participant_avatar_updated": _handle_participant_avatar_updated,

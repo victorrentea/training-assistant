@@ -37,7 +37,6 @@ channels:
           - $ref: '#/components/messages/set_session_id'
           - $ref: '#/components/messages/code_timestamp'
           - $ref: '#/components/messages/broadcast'
-          - $ref: '#/components/messages/send_to_host'
           - $ref: '#/components/messages/proxy_response'
           - $ref: '#/components/messages/daemon_ping'
 
@@ -245,22 +244,6 @@ components:
           event:
             type: object
             description: Participant WS message payload to broadcast
-
-    send_to_host:
-      summary: Daemon asks Railway to forward an event to the host browser
-      x-feature: infrastructure
-      x-doc-notes:
-        - Wrapper message — inner event payload is a host WS message
-      payload:
-        type: object
-        required: [type, event]
-        properties:
-          type:
-            type: string
-            enum: [send_to_host]
-          event:
-            type: object
-            description: Host WS message payload to deliver
 
     proxy_response:
       summary: Daemon returns the result of a proxied participant REST request

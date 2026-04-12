@@ -37,9 +37,30 @@ def test_upload_download_persists_indicator_and_notifies_host(tmp_path):
             self._sent = True
             return self._payload
 
+    import asyncio
+    from unittest.mock import AsyncMock, MagicMock
+
+    mock_notify_host = AsyncMock()
+    mock_loop = MagicMock()
+    futures = []
+    def fake_run_coroutine_threadsafe(coro, loop):
+        # Run the coroutine synchronously to capture the call
+        asyncio.get_event_loop_policy().get_event_loop()
+        loop_for_test = asyncio.new_event_loop()
+        try:
+            loop_for_test.run_until_complete(coro)
+        finally:
+            loop_for_test.close()
+        future = MagicMock()
+        futures.append(future)
+        return future
+    mock_loop.is_running.return_value = True
+
     with patch("daemon.upload.urllib.request.urlopen", return_value=_Resp(b"abc")), \
          patch("daemon.upload._post_json", side_effect=lambda *args, **kwargs: ack_calls.append((args, kwargs))), \
-         patch("daemon.upload.send_to_railway", side_effect=lambda msg: sent.append(msg) or True):
+         patch("daemon.upload.notify_host", mock_notify_host), \
+         patch("daemon.slides.router.get_event_loop", return_value=mock_loop), \
+         patch("daemon.upload.asyncio.run_coroutine_threadsafe", side_effect=fake_run_coroutine_threadsafe):
         _do_download(
             "http://server",
             "host",
@@ -60,9 +81,10 @@ def test_upload_download_persists_indicator_and_notifies_host(tmp_path):
     assert visible[0]["id"] == "42"
     assert visible[0]["filename"] == "report.pdf"
     assert visible[0]["disk_path"] == str(saved_file.resolve())
-    assert sent and sent[0]["type"] == "send_to_host"
-    assert sent[0]["event"]["type"] == "file_uploaded"
-    assert sent[0]["event"]["id"] == "42"
+    assert mock_notify_host.call_count == 1
+    notified_msg = mock_notify_host.call_args[0][0]
+    assert notified_msg.model_dump()["type"] == "file_uploaded"
+    assert notified_msg.model_dump()["id"] == "42"
     assert ack_calls, "Daemon should ack upload back to Railway"
     _reset_runtime_state()
 

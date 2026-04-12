@@ -75,11 +75,6 @@ async def _send_to_special(key: str, message: dict):
         state.participants.pop(key, None)
 
 
-async def send_to_host(message: dict):
-    """Send to __host__."""
-    await _send_to_special("__host__", message)
-
-
 async def send_emoji_to_host(emoji: str):
     """Forward an emoji reaction to the host client if connected."""
     await _send_to_special("__host__", {"type": "emoji_reaction", "emoji": emoji})

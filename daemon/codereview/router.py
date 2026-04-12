@@ -21,7 +21,7 @@ from daemon.ws_messages import (
     CodereviewSelectionsUpdatedMsg,
     ScoresUpdatedMsg,
 )
-from daemon.ws_publish import broadcast, host_event
+from daemon.ws_publish import broadcast, notify_host
 
 logger = logging.getLogger(__name__)
 
@@ -139,9 +139,7 @@ async def update_selection(request: Request, body: SelectionRequest):
         for pid_sel in codereview_state.selections.values()
         for ln in pid_sel
     }
-    request.state.write_back_events = [
-        host_event(CodereviewSelectionsUpdatedMsg(line_counts=line_counts)),
-    ]
+    await notify_host(CodereviewSelectionsUpdatedMsg(line_counts=line_counts))
 
     return Response(status_code=204)
 
