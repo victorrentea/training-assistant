@@ -125,7 +125,7 @@
       const now = new Date();
       const hh = new Intl.DateTimeFormat('en-GB', { hour: '2-digit', hour12: false, timeZone: tz }).format(now);
       const mm = new Intl.DateTimeFormat('en-GB', { minute: '2-digit', timeZone: tz }).format(now);
-      return `${hh}<sup>${mm.padStart(2, '0')}</sup>`;
+      return `<span style="font-family:monospace">${hh}<sup>${mm.padStart(2, '0')}</sup></span>`;
     } catch {
       return '';
     }
