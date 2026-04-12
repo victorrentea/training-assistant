@@ -228,13 +228,8 @@ body{visibility:hidden}
 <span class="badge-new ml-auto">NEW</span>
 </a>
 <div style="max-height:0;overflow:hidden;transition:max-height 0.6s ease" class="repos-list mx-2 rounded-xl">
-<div class="overflow-y-auto max-h-48 py-1">
-<a href="https://github.com/victorrentea/clean-code" target="_blank" class="px-4 py-1.5 text-sm text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high cursor-pointer rounded-lg flex items-center gap-2 truncate">
-clean-code<span class="material-symbols-outlined text-sm flex-shrink-0">open_in_new</span></a>
-<a href="https://github.com/victorrentea/ddd-workshop" target="_blank" class="px-4 py-1.5 text-sm text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high cursor-pointer rounded-lg flex items-center gap-2 truncate">
-ddd-workshop<span class="material-symbols-outlined text-sm flex-shrink-0">open_in_new</span></a>
-<a href="https://github.com/victorrentea/refactoring-kata" target="_blank" class="px-4 py-1.5 text-sm text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high cursor-pointer rounded-lg flex items-center gap-2 truncate">
-refactoring-kata<span class="material-symbols-outlined text-sm flex-shrink-0">open_in_new</span></a>
+<div id="repos-content" class="overflow-y-auto max-h-96 py-1">
+<p class="px-4 py-2 text-sm text-on-surface-variant">Loading…</p>
 </div>
 </div>
 </div>
@@ -539,8 +534,37 @@ function openRepos() {
   closeSlides(); closeTopics();
   var list = document.querySelector('.repos-list');
   var arrow = document.querySelector('.repos-arrow');
-  list.style.maxHeight = '12rem';
+  list.style.maxHeight = '500px';
   arrow.style.transform = 'rotate(90deg)';
+  fetch('/api/participant/git-activity')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var repos = data.git_repos || [];
+      var el = document.getElementById('repos-content');
+      if (!repos.length) {
+        el.innerHTML = '<p class="px-4 py-2 text-sm text-on-surface-variant">No repos tracked yet.</p>';
+        return;
+      }
+      el.innerHTML = repos.map(function(repo) {
+        var base = repo.url.replace(/\.git$/, '');
+        var name = base.split('/').pop();
+        var branchUrl = base + '/tree/' + repo.branch;
+        var files = repo.files.map(function(f) {
+          return '<li class="truncate">' + f + '</li>';
+        }).join('');
+        return '<div class="px-4 py-1.5">'
+          + '<a href="' + branchUrl + '" target="_blank" class="text-sm font-medium text-on-surface hover:underline flex items-center gap-1">'
+          + name
+          + '<span class="text-xs text-on-surface-variant ml-1">:' + repo.branch + '</span>'
+          + '<span class="material-symbols-outlined text-xs flex-shrink-0 ml-1">open_in_new</span>'
+          + '</a>'
+          + '<ul class="mt-0.5 ml-4 text-xs text-on-surface-variant list-disc space-y-0.5">' + files + '</ul>'
+          + '</div>';
+      }).join('');
+    })
+    .catch(function() {
+      document.getElementById('repos-content').innerHTML = '<p class="px-4 py-2 text-sm text-on-surface-variant">Failed to load.</p>';
+    });
 }
 function closeRepos() {
   var list = document.querySelector('.repos-list');
