@@ -106,7 +106,6 @@ def test_poll_sequence_diagram_extraction():
 
 def _generate_and_print(output_path):
     """Helper: generate PlantUML from traces file and print debug info."""
-    import json as _json
     import time
 
     time.sleep(2)  # wait for spans to flush
@@ -186,5 +185,5 @@ def test_qa_sequence_diagram_extraction():
         browser.close()
 
     output_path = "/app/docs/sequences/generated/04-qa-and-wordcloud.puml"
-    generated = _generate_and_print(output_path)
+    _generate_and_print(output_path)
     print("SUCCESS: QA sequence diagram extracted from traces")
