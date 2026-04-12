@@ -65,6 +65,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 | Register Participant, idempotent for returning participants.<br>`POST /api/participant/register` | `name?: string`<br>`location?: string` | `name: string`<br>`avatar: string` |
 | Rejoin Participant, lookup-only identity restore for returning UUIDs in<br>current session.<br>`POST /api/participant/rejoin` | - | `name: string`<br>`avatar: string` |
 | Roll Avatar Endpoint, re-roll avatar (conference mode only).<br>`POST /api/participant/roll-avatar` | `rejected?: list[string]` | `avatar: string` |
+| Get Slide History, return accumulated per-slide viewing history for the<br>current session.<br>`GET /api/participant/slide-history` | - | `slides: list[dict[str, any]]` |
 
 ### Participant WS
 | Message | Payload |
