@@ -12,6 +12,7 @@ body{visibility:hidden}
 .badge-new{margin-left:auto;font-size:.6rem;font-weight:700;letter-spacing:.05em;background:#ef4444;color:#fff;padding:.1rem .35rem;border-radius:999px;line-height:1.4}
 .badge-live{font-size:.6rem;font-weight:700;letter-spacing:.05em;background:#ef4444;color:#fff;padding:.1rem .35rem;border-radius:999px;line-height:1.4;animation:live-blink 2s ease-in-out infinite}
 @keyframes live-blink{0%,100%{opacity:1}50%{opacity:0.2}}
+@keyframes spin{to{transform:rotate(360deg)}}
 .nav-item{color:var(--color-on-surface-variant,#5e6b70)}
 .nav-item:hover{color:var(--color-on-surface,#161d1f);background-color:var(--color-surface-container-high,#dde3e5)}
 .nav-active{background-color:var(--color-primary-container,#dfe0ff)!important;color:var(--color-on-primary-container,#3747ac)!important;font-weight:600}
@@ -717,6 +718,25 @@ function _buildTopicItem(slide) {
     ageSpan.textContent = age;
     el.appendChild(ageSpan);
   }
+  var _dotCfg = {
+    'cached':          { color: '#4caf50', tip: 'Available on server' },
+    'downloading':     { spinner: true,    tip: 'Downloading PDF...' },
+    'polling_drive':   { spinner: true,    tip: 'Waiting for Google Drive...' },
+    'stale':           { color: '#ff9800', tip: 'Update available, syncing...' },
+    'not_cached':      { color: '#f44336', tip: 'Not yet on server' },
+    'poll_timeout':    { color: '#ff9800', tip: 'Sync timed out' },
+    'download_failed': { color: '#f44336', tip: 'Download failed' },
+  };
+  var status = slide.status || 'not_cached';
+  var cfg = _dotCfg[status] || _dotCfg['not_cached'];
+  var dotEl = document.createElement('span');
+  dotEl.title = cfg.tip;
+  if (cfg.spinner) {
+    dotEl.style.cssText = 'display:inline-block;width:8px;height:8px;border-radius:50%;border:2px solid currentColor;border-top-color:transparent;flex-shrink:0;animation:spin .7s linear infinite;opacity:0.6';
+  } else {
+    dotEl.style.cssText = 'display:inline-block;width:7px;height:7px;border-radius:50%;background:' + cfg.color + ';flex-shrink:0';
+  }
+  el.appendChild(dotEl);
   var dlBtn = document.createElement('span');
   dlBtn.className = 'material-symbols-outlined flex-shrink-0 rounded p-0.5 bg-surface-container-highest hover:text-on-primary-container hover:bg-primary-container transition-colors cursor-pointer';
   dlBtn.style.cssText = 'font-size:14px;font-family:"Material Symbols Outlined"';
