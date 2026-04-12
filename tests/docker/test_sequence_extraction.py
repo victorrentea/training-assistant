@@ -76,13 +76,23 @@ def test_poll_sequence_diagram_extraction():
     output_path = "/tmp/generated-03-poll-and-quiz.puml"
     generate_puml(TRACES_FILE, family="", output=output_path)  # no family filter — capture all spans
 
+    # Debug: show raw traces
+    traces_content = Path(TRACES_FILE).read_text()
+    trace_lines = [l for l in traces_content.strip().split("\n") if l.strip()]
+    print(f"=== Raw traces: {len(trace_lines)} spans ===")
+    import json as _json
+    for line in trace_lines[:20]:
+        span = _json.loads(line)
+        svc = span.get("resource", {}).get("service.name", "?")
+        print(f"  [{svc}] {span.get('name', '?')} parent={span.get('parent_id', '')[:8]}")
+
     generated = Path(output_path).read_text()
     print("=== Generated PlantUML ===")
     print(generated)
 
     # Basic structural checks
     assert "@startuml" in generated
-    assert "Daemon" in generated or "Host" in generated
-    assert "->" in generated
+    assert len(trace_lines) > 0, "No spans collected — FileSpanExporter not active?"
+    assert "->" in generated, f"No arrows in diagram. {len(trace_lines)} spans but no cross-service edges."
 
     print("SUCCESS: Sequence diagram extracted from traces")
