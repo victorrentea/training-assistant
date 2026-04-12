@@ -42,6 +42,13 @@ async def proxy_to_daemon(method: str, path: str, body: bytes | None,
         "participant_id": participant_id,
     }
 
+    # Inject trace context from the current HTTP request span
+    try:
+        from daemon.telemetry.ws_propagation import inject_trace_context
+        inject_trace_context(msg)
+    except ImportError:
+        pass
+
     try:
         await ws.send_json(msg)
     except Exception:
