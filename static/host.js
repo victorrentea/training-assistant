@@ -16,14 +16,8 @@
   let cachedParticipantIds = []; // last known participant uuids
   let summaryPoints = [];
   let summaryUpdatedAt = null;
-  let sessionMain = null;
-  let sessionTalk = null;
-  let _sessionName = null;  // from state.session_name (fallback title when sessionMain is null)
   let daemonLastSeen = null;
   let daemonSessionFolder = null;
-  let _sessionIntervalsEditing = false;
-  let _sessionIntervalsDraft = '';
-  let _sessionIntervalsError = '';
   let _slidesCacheStatus = {};
   let _slidesCatalog = [];
   let _currentSessionId = null;
@@ -447,9 +441,6 @@
         if (currentActivity === 'codereview' && msg.codereview) {
           renderHostCodeReview(msg.codereview);
         }
-        if (msg.session_main !== undefined) sessionMain = msg.session_main;
-        if (msg.session_talk !== undefined) sessionTalk = msg.session_talk;
-        if (msg.session_name !== undefined) _sessionName = msg.session_name || null;
         if (msg.daemon_last_seen !== undefined) daemonLastSeen = msg.daemon_last_seen;
         if (msg.join_base_url) _joinBaseUrl = msg.join_base_url;
         if (!msg.session_id && msg.needs_restore === false && !SESSION_ID) {
@@ -637,326 +628,12 @@
     return 'Unnamed slide';
   }
 
-  function _fmtSessionTime(dt) {
-    return dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
-  }
-
-  function _isSessionPaused(session) {
-    return Array.isArray(session?.paused_intervals) && session.paused_intervals.some(p => !p?.to);
-  }
-
-  function _computeSessionWindows(session) {
-    if (!session?.started_at) return [];
-    const startedAt = new Date(session.started_at);
-    if (Number.isNaN(startedAt.getTime())) return [];
-
-    const windows = [];
-    let cursor = startedAt;
-    const pauses = Array.isArray(session.paused_intervals)
-      ? [...session.paused_intervals].sort((a, b) => {
-          const aTs = new Date(a?.from || 0).getTime();
-          const bTs = new Date(b?.from || 0).getTime();
-          return aTs - bTs;
-        })
-      : [];
-
-    for (const pause of pauses) {
-      const pauseFrom = new Date(pause?.from || 0);
-      if (Number.isNaN(pauseFrom.getTime())) continue;
-      if (pauseFrom > cursor) windows.push([new Date(cursor), pauseFrom]);
-
-      if (!pause?.to) return windows;
-      const pauseTo = new Date(pause.to);
-      if (Number.isNaN(pauseTo.getTime())) return windows;
-      if (pauseTo > cursor) cursor = pauseTo;
-    }
-
-    let end = session.ended_at ? new Date(session.ended_at) : new Date();
-    if (Number.isNaN(end.getTime())) end = new Date();
-    if (cursor < end) windows.push([new Date(cursor), end]);
-    return windows;
-  }
-
-  function _startOfDayLocal(dt) {
-    return new Date(dt.getFullYear(), dt.getMonth(), dt.getDate());
-  }
-
-  function _dayOffset(baseDay, dt) {
-    return Math.floor((_startOfDayLocal(dt) - baseDay) / 86400000) + 1;
-  }
-
-  function _minuteKey(dt) {
-    return `${dt.getFullYear()}-${dt.getMonth()}-${dt.getDate()}-${dt.getHours()}-${dt.getMinutes()}`;
-  }
-
-  function _dayBaseFromSession(session) {
-    const windows = _computeSessionWindows(session);
-    if (windows.length) return _startOfDayLocal(windows[0][0]);
-    const startedAt = new Date(session?.started_at || Date.now());
-    return Number.isNaN(startedAt.getTime()) ? _startOfDayLocal(new Date()) : _startOfDayLocal(startedAt);
-  }
-
-  function _formatSessionWindows(session) {
-    const windows = _computeSessionWindows(session);
-    if (!windows.length) return '';
-
-    const firstStart = windows[0][0];
-    const firstDayStart = _startOfDayLocal(firstStart);
-    const dayKeys = new Set(windows.map(([start]) => `${start.getFullYear()}-${start.getMonth()}-${start.getDate()}`));
-    const isMultiDay = dayKeys.size > 1;
-    const ongoing = !session?.ended_at && !_isSessionPaused(session);
-
-    return windows.map(([start, end], idx) => {
-      if (_minuteKey(start) === _minuteKey(end)) return null;
-      const dayNum = _dayOffset(firstDayStart, start);
-      const prefix = isMultiDay ? `Day${dayNum} ` : '';
-      const endLabel = ongoing && idx === windows.length - 1 ? 'now' : _fmtSessionTime(end);
-      return `${prefix}${_fmtSessionTime(start)}→${endLabel}`;
-    }).filter(Boolean).join(', ');
-  }
-
-  function _sessionWindowsForDisplay(session) {
-    const windows = _computeSessionWindows(session);
-    if (!windows.length) return [];
-
-    const firstStart = windows[0][0];
-    const firstDayStart = _startOfDayLocal(firstStart);
-    const ongoing = !session?.ended_at && !_isSessionPaused(session);
-
-    return windows.map(([start, end], idx) => {
-      const dayNum = _dayOffset(firstDayStart, start);
-      const isOngoingWindow = ongoing && idx === windows.length - 1;
-      const endLabel = isOngoingWindow ? 'now' : _fmtSessionTime(end);
-      if (_minuteKey(start) === _minuteKey(end)) return null;
-      return {
-        dayNum,
-        label: `${_fmtSessionTime(start)}→${endLabel}`,
-        start: new Date(start),
-        end: new Date(end),
-        startIso: start.toISOString(),
-        endIso: end.toISOString(),
-        isOngoing: isOngoingWindow
-      };
-    }).filter(Boolean);
-  }
-
-  function openSessionIntervalLines(startIso, endIso) {
-    if (!startIso || !endIso) return;
-    const qs = new URLSearchParams({ start: startIso, end: endIso });
-    const url = API(`/session/interval-lines.txt?${qs.toString()}`);
-    window.open(url, '_blank', 'noopener');
-  }
-
-  function _groupSessionWindowsByDay(session) {
-    const grouped = new Map();
-    for (const w of _sessionWindowsForDisplay(session)) {
-      if (!grouped.has(w.dayNum)) grouped.set(w.dayNum, []);
-      grouped.get(w.dayNum).push(w);
-    }
-    return [...grouped.entries()]
-      .sort((a, b) => a[0] - b[0])
-      .map(([dayNum, windows]) => ({ dayNum, windows }));
-  }
-
-  function _sessionIntervalsToEditableText(session) {
-    const rows = _groupSessionWindowsByDay(session);
-    if (!rows.length) return '';
-    return rows.map((row) => `Day${row.dayNum}: ${row.windows.map(w => w.label).join(', ')}`).join('\n');
-  }
-
-  function _parseHhMm(value) {
-    const m = /^(\d{2}):(\d{2})$/.exec(value);
-    if (!m) return null;
-    const hh = Number(m[1]);
-    const mm = Number(m[2]);
-    if (hh < 0 || hh > 23 || mm < 0 || mm > 59) return null;
-    return { hh, mm };
-  }
-
-  function _addDays(baseDay, daysToAdd) {
-    const d = new Date(baseDay);
-    d.setDate(d.getDate() + daysToAdd);
-    return d;
-  }
-
-  function _atTime(baseDay, dayNum, hhmm) {
-    const t = _parseHhMm(hhmm);
-    if (!t) return null;
-    const d = _addDays(baseDay, dayNum - 1);
-    d.setHours(t.hh, t.mm, 0, 0);
-    return d;
-  }
-
-  function _buildSessionFromIntervalsText(session, text) {
-    const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
-    if (!lines.length) return { ok: false, error: 'Add at least one DayN line.' };
-
-    const segments = [];
-    const dayNums = new Set();
-    const baseDay = _dayBaseFromSession(session);
-
-    for (const line of lines) {
-      const m = /^Day\s*([0-9]+)\s*:\s*(.+)$/i.exec(line);
-      if (!m) return { ok: false, error: `Invalid line: "${line}". Use "Day1: 09:30→12:40, 13:40→17:30".` };
-      const dayNum = Number(m[1]);
-      if (!Number.isInteger(dayNum) || dayNum < 1) return { ok: false, error: `Invalid day number in "${line}".` };
-      dayNums.add(dayNum);
-
-      const ranges = m[2].split(',').map(s => s.trim()).filter(Boolean);
-      if (!ranges.length) return { ok: false, error: `No time ranges on Day${dayNum}.` };
-
-      for (const range of ranges) {
-        const r = /^(\d{2}:\d{2})\s*(?:→|->|-)\s*(\d{2}:\d{2}|now)$/i.exec(range);
-        if (!r) return { ok: false, error: `Invalid range "${range}". Use HH:MM→HH:MM.` };
-        const start = _atTime(baseDay, dayNum, r[1]);
-        if (!start) return { ok: false, error: `Invalid start time "${r[1]}".` };
-
-        const endRaw = r[2].toLowerCase();
-        const end = endRaw === 'now' ? new Date() : _atTime(baseDay, dayNum, endRaw);
-        if (!end) return { ok: false, error: `Invalid end time "${r[2]}".` };
-        if (end <= start) return { ok: false, error: `End must be after start in "${range}".` };
-        if (_minuteKey(start) === _minuteKey(end)) {
-          return { ok: false, error: `End minute must be after start minute in "${range}".` };
-        }
-        segments.push({ dayNum, start, end, isNow: endRaw === 'now' });
-      }
-    }
-
-    if (!dayNums.has(1)) return { ok: false, error: 'Day1 is required.' };
-    const maxDay = Math.max(...dayNums);
-    for (let d = 1; d <= maxDay; d += 1) {
-      if (!dayNums.has(d)) return { ok: false, error: `Missing Day${d}. Use consecutive days.` };
-    }
-
-    segments.sort((a, b) => a.start - b.start);
-    for (let i = 1; i < segments.length; i += 1) {
-      if (segments[i].start < segments[i - 1].end) {
-        return { ok: false, error: `Overlapping ranges near Day${segments[i].dayNum}.` };
-      }
-    }
-
-    const nowSegments = segments.filter(s => s.isNow);
-    if (nowSegments.length > 1) return { ok: false, error: 'Use "now" only once.' };
-    if (nowSegments.length === 1 && !segments[segments.length - 1].isNow) {
-      return { ok: false, error: '"now" can appear only in the last range.' };
-    }
-
-    const pauses = [];
-    for (let i = 0; i < segments.length - 1; i += 1) {
-      if (segments[i].end < segments[i + 1].start) {
-        pauses.push({
-          from: segments[i].end.toISOString(),
-          to: segments[i + 1].start.toISOString(),
-          reason: 'explicit',
-        });
-      }
-    }
-
-    const hasNow = !!segments[segments.length - 1].isNow;
-    if (!hasNow) {
-      pauses.push({
-        from: segments[segments.length - 1].end.toISOString(),
-        to: null,
-        reason: 'explicit',
-      });
-    }
-
-    return {
-      ok: true,
-      main: {
-        ...session,
-        started_at: segments[0].start.toISOString(),
-        ended_at: null,
-        paused_intervals: pauses,
-        status: hasNow ? 'active' : 'paused',
-      },
-    };
-  }
-
-  async function _syncSessionMain(main) {
-    const resp = await fetch(API('/session/sync'), {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ main, talk: sessionTalk }),
-    });
-    if (!resp.ok) throw new Error(`sync failed: ${resp.status}`);
-  }
-
-  function _renderSessionIntervalsEditor(container) {
-    const val = _esc(_sessionIntervalsDraft);
-    const err = _sessionIntervalsError ? `<div class="session-main-intervals-error">${_esc(_sessionIntervalsError)}</div>` : '';
-    container.innerHTML = `<textarea id="session-intervals-editor" class="session-main-intervals-editor">${val}</textarea>${err}`;
-    container.style.display = 'block';
-
-    const input = document.getElementById('session-intervals-editor');
-    if (!input) return;
-    input.focus();
-    input.setSelectionRange(input.value.length, input.value.length);
-    input.addEventListener('input', () => {
-      _sessionIntervalsDraft = input.value;
-      if (_sessionIntervalsError) {
-        _sessionIntervalsError = '';
-        renderSessionPanel();
-      }
-    });
-    input.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        _sessionIntervalsEditing = false;
-        _sessionIntervalsError = '';
-        renderSessionPanel();
-      }
-      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-        e.preventDefault();
-        input.blur();
-      }
-    });
-    input.addEventListener('blur', async () => {
-      if (!sessionMain) return;
-      const parsed = _buildSessionFromIntervalsText(sessionMain, input.value);
-      if (!parsed.ok) {
-        _sessionIntervalsEditing = true;
-        _sessionIntervalsDraft = input.value;
-        _sessionIntervalsError = parsed.error;
-        renderSessionPanel();
-        return;
-      }
-      try {
-        await _syncSessionMain(parsed.main);
-        sessionMain = parsed.main;
-        _sessionIntervalsEditing = false;
-        _sessionIntervalsError = '';
-        _sessionIntervalsDraft = '';
-        renderSessionPanel();
-      } catch {
-        _sessionIntervalsEditing = true;
-        _sessionIntervalsDraft = input.value;
-        _sessionIntervalsError = 'Failed to save session intervals.';
-        renderSessionPanel();
-      }
-    });
-  }
-
   function renderSummarySessionWindows() {
     const el = document.getElementById('summary-session-windows');
     if (!el) return;
-    const activeSession = sessionTalk || sessionMain;
-    if (!activeSession) {
-      el.textContent = '';
-      el.style.display = 'none';
-      el.title = '';
-      return;
-    }
-    const windows = _formatSessionWindows(activeSession);
-    if (!windows) {
-      el.textContent = '';
-      el.style.display = 'none';
-      el.title = '';
-      return;
-    }
-    el.textContent = `Frames: ${windows}`;
-    el.style.display = '';
-    el.title = `Transcript frames included in "Regenerate Entire Session": ${windows}`;
+    el.textContent = '';
+    el.style.display = 'none';
+    el.title = '';
   }
 
   let _transcriptLineCount = 0;
@@ -3699,12 +3376,10 @@ function formatHostTopTitleHtml(name) {
 }
 
 function renderSessionPanel() {
-  const main = sessionMain;
-  const talk = sessionTalk;
   const daemonOnline = daemonLastSeen && (Date.now() - new Date(daemonLastSeen).getTime() < 30000);
 
-  // FRAGILE: daemon connected, no main session folder
-  const fragile = daemonOnline && !main;
+  // FRAGILE: daemon connected but no session folder active
+  const fragile = daemonOnline && !daemonSessionFolder;
   const fragileRow = document.getElementById('session-fragile-row');
   if (fragileRow) fragileRow.style.display = fragile ? 'flex' : 'none';
   if (fragile) {
@@ -3718,9 +3393,9 @@ function renderSessionPanel() {
   // Session title in top bar center
   const titleEl = document.getElementById('host-top-title');
   if (titleEl) {
-    const rawName = main ? (main.name || '') : (_sessionName || '');
-    titleEl.innerHTML = formatHostTopTitleHtml(rawName);
+    titleEl.innerHTML = formatHostTopTitleHtml(daemonSessionFolder || '');
   }
+
   // Stop button is always enabled (host can always request session end).
   const stopBtn = document.getElementById('stop-session-btn-left');
   if (stopBtn) {
@@ -3728,92 +3403,6 @@ function renderSessionPanel() {
     stopBtn.style.pointerEvents = '';
     stopBtn.classList.remove('disabled');
   }
-
-  // Main session row
-  const mainRow = document.getElementById('session-main-row');
-  if (mainRow) mainRow.style.display = main ? 'flex' : 'none';
-  if (main) {
-    const nameEl = document.getElementById('session-main-name');
-    if (nameEl) nameEl.textContent = formatSessionTitle(main.name);
-    const paused = main.status === 'paused';
-    const statusEl = document.getElementById('session-status');
-    if (statusEl) {
-      statusEl.textContent = paused ? 'paused' : 'running';
-      statusEl.className = 'session-status-badge' + (paused ? ' session-status-paused' : ' wave-char');
-    }
-    const pauseBtn = document.getElementById('btn-pause-session');
-    if (pauseBtn) {
-      pauseBtn.textContent = paused ? '▶️' : '⏸️';
-      pauseBtn.title = paused ? 'Resume transcription' : 'Pause transcription';
-      pauseBtn.classList.toggle('session-pause-blinking', paused);
-    }
-
-    const intervalsEl = document.getElementById('session-main-intervals');
-    if (intervalsEl) {
-      if (_sessionIntervalsEditing) {
-        _renderSessionIntervalsEditor(intervalsEl);
-      } else {
-        const rows = _groupSessionWindowsByDay(main);
-        if (rows.length) {
-          const parts = rows.map((row) => {
-            const chips = row.windows
-              .map((w) => (
-                `<span class="session-main-interval-chip${w.isOngoing ? ' session-main-interval-chip-live' : ''}" ` +
-                `data-start="${_esc(w.startIso)}" data-end="${_esc(w.endIso)}" ` +
-                `title="Open normalized transcript lines for this interval in a new tab">${_esc(w.label)}</span>`
-              ))
-              .join('');
-            return `<div class="session-main-interval-day-row"><span class="session-main-interval-day-label">Day${row.dayNum}:</span><span class="session-main-interval-day-chips">${chips}</span></div>`;
-          });
-          intervalsEl.innerHTML = parts.join('');
-          intervalsEl.querySelectorAll('.session-main-interval-chip').forEach((chip) => {
-            chip.addEventListener('click', (event) => {
-              event.stopPropagation();
-              openSessionIntervalLines(chip.dataset.start, chip.dataset.end);
-            });
-          });
-          intervalsEl.style.display = 'flex';
-          intervalsEl.classList.add('session-main-intervals-editable');
-          intervalsEl.title = 'Click to edit intervals';
-          intervalsEl.onclick = () => {
-            _sessionIntervalsEditing = true;
-            _sessionIntervalsDraft = _sessionIntervalsToEditableText(main);
-            _sessionIntervalsError = '';
-            renderSessionPanel();
-          };
-        } else {
-          intervalsEl.innerHTML = '';
-          intervalsEl.style.display = 'none';
-          intervalsEl.onclick = null;
-          intervalsEl.title = '';
-        }
-      }
-    }
-  } else {
-    const intervalsEl = document.getElementById('session-main-intervals');
-    if (intervalsEl) {
-      intervalsEl.innerHTML = '';
-      intervalsEl.style.display = 'none';
-      intervalsEl.onclick = null;
-      intervalsEl.title = '';
-    }
-  }
-
-  // Talk row
-  const talkRow = document.getElementById('session-talk-row');
-  if (talkRow) talkRow.style.display = talk ? 'flex' : 'none';
-  if (talk) {
-    const nameEl = document.getElementById('session-talk-name');
-    if (nameEl) nameEl.textContent = formatSessionTitle(talk.name);
-  }
-
-  // START TALK: show inline only when main exists and no talk active
-  const startTalkBtn = document.getElementById('btn-start-talk');
-  const controlsSeparator = document.getElementById('session-controls-separator');
-  const showStartTalk = !!(main && !talk);
-  if (startTalkBtn) startTalkBtn.style.display = showStartTalk ? '' : 'none';
-  if (controlsSeparator) controlsSeparator.style.display = showStartTalk ? '' : 'none';
-  renderSummarySessionWindows();
 }
 
 function startTalk() {

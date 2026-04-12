@@ -3288,12 +3288,6 @@ function closeAgendaModal() {
           _stopDebateToasts();
           renderContent(msg.vote_counts);
         }
-const sessionTitleEl = document.getElementById('session-title');
-        if (sessionTitleEl && msg.session_name !== undefined) {
-          const topic = (msg.session_name || '').replace(/^\d{4}-\d{2}-\d{2}(?:\.\.\S+)?\s*/, '');
-          sessionTitleEl.textContent = topic;
-          sessionTitleEl.style.display = topic ? '' : 'none';
-        }
         _onIncomingHostSlidesCurrent(msg.slides_current || null);
         if (msg.notes_count != null) updateNotesCount(msg.notes_count);
         if (msg.summary_count != null) updateSummaryCount(msg.summary_count, false, msg.summary_updated_at);
