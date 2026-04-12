@@ -155,7 +155,8 @@ def _deduplicate_edges(edges: list[tuple]) -> list[tuple]:
 
 
 def generate_puml(traces_path: str, family: str, output: str,
-                  scenarios: list[dict] | None = None) -> None:
+                  scenarios: list[dict] | None = None,
+                  title: str | None = None) -> None:
     """Generate a PlantUML sequence diagram from collected traces.
 
     scenarios: optional list of scenario descriptors, each with:
@@ -216,6 +217,10 @@ def generate_puml(traces_path: str, family: str, output: str,
 
     lines = ["@startuml"]
     lines.append("hide footbox")
+    if title:
+        from datetime import datetime, timezone
+        lines.append(f"title {title}")
+        lines.append(f"caption Generated {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}")
     lines.append("")
     for p in participants:
         lines.append(f'participant "{p}"')

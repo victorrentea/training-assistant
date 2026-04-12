@@ -297,7 +297,8 @@ def test_slides_sequence_diagram_extraction():
     from scripts.traces_to_puml import generate_puml
 
     output_path = "/app/docs/sequences/extracted/06-slides.puml"
-    generate_puml(TRACES_FILE, family="", output=output_path, scenarios=scenarios)
+    generate_puml(TRACES_FILE, family="", output=output_path, scenarios=scenarios,
+                  title="Feature: Slides Catalog, Viewing, and Follow Mode")
 
     generated = Path(output_path).read_text()
     print("=== Generated PlantUML ===")
