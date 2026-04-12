@@ -115,8 +115,8 @@ def _collapse_proxy(edges: list[tuple]) -> list[tuple]:
                     break
             else:
                 result.append((f, t, label, ts))
-        # Railway->Daemon: all Railway-proxied traffic is participant-initiated
-        elif f == "Railway" and t == "Daemon":
+        # Railway->Daemon for participant-initiated calls => Participant->Daemon
+        elif f == "Railway" and t == "Daemon" and "/participant" in label:
             result.append(("Participant", "Daemon", label, ts))
         else:
             result.append((f, t, label, ts))
@@ -171,13 +171,17 @@ def generate_puml(traces_path: str, family: str, output: str) -> None:
     edges = _collapse_broadcast(edges)
     edges = _deduplicate_edges(edges)
 
-    # Collect participant names in order of first appearance
-    participants = []
-    seen_p = set()
+    # Collect participant names in canonical order
+    _CANONICAL_ORDER = ["Host", "Participant", "Railway", "Daemon", "Addons"]
+    all_actors = set()
+    for f, t, _, _ in edges:
+        all_actors.add(f)
+        all_actors.add(t)
+    participants = [p for p in _CANONICAL_ORDER if p in all_actors]
+    # Append any actors not in the canonical list (in order of first appearance)
     for f, t, _, _ in edges:
         for p in (f, t):
-            if p not in seen_p:
-                seen_p.add(p)
+            if p not in participants:
                 participants.append(p)
 
     lines = ["@startuml"]

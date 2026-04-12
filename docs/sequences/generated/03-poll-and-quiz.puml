@@ -4,7 +4,6 @@ hide footbox
 participant "Daemon"
 participant "Participant"
 participant "Host"
-participant "Railway"
 
 "Daemon" -> "Participant": broadcast notes_updated
 "Daemon" -> "Participant": broadcast summary_updated
@@ -12,7 +11,7 @@ participant "Railway"
 "Daemon" -> "Participant": broadcast scores_updated
 "Host" -> "Daemon": GET /host/{session_id}
 "Host" -> "Daemon": GET /api/{session_id}/host/state
-"Railway" -> "Daemon": GET /{session_id}/api/slides
+"Participant" -> "Daemon": GET /{session_id}/api/slides
 "Participant" -> "Daemon": POST /api/participant/register
 "Daemon" -> "Host": notify_host participant_list_updated
 "Participant" -> "Daemon": GET /api/participant/state
@@ -21,8 +20,8 @@ participant "Railway"
 "Host" -> "Daemon": PUT /api/{session_id}/host/activity
 "Daemon" -> "Participant": broadcast activity_updated
 "Host" -> "Daemon": POST /api/{session_id}/host/poll
-"Participant" -> "Daemon": PUT /api/participant/name
 "Daemon" -> "Host": notify_host poll_ai_generated
+"Participant" -> "Daemon": PUT /api/participant/name
 "Host" -> "Daemon": POST /api/{session_id}/host/poll/open
 "Daemon" -> "Participant": broadcast poll_opened
 "Daemon" -> "Host": notify_host poll_opened
