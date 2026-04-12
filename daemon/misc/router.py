@@ -11,7 +11,6 @@ from daemon.email_notify import notify as email_notify
 from daemon.misc.content_files import read_notes_content, read_summary_payload
 from daemon.misc.state import misc_state
 from daemon.participant.state import participant_state
-from daemon.session import state as session_shared_state
 from daemon.ws_messages import PasteReceivedMsg
 from daemon.ws_publish import notify_host
 
@@ -118,11 +117,9 @@ async def participant_feedback(request: Request, body: FeedbackRequest):
 
 
 def _get_session_name_for_feedback() -> str | None:
-    """Return session name from misc cache, with session stack fallback."""
-    if misc_state.session_name:
-        return misc_state.session_name
-    stack = session_shared_state.get_session_stack()
-    return stack[-1]["name"] if stack else None
+    """Return the active session name."""
+    from daemon.session import state as session_shared_state
+    return session_shared_state.get_active_session_name()
 
 
 @participant_router.get("/notes", response_model=NotesResponse)

@@ -168,26 +168,6 @@ async def list_session_folders():
         return SessionFoldersResponse(folders=[])
 
 
-# Talk endpoints (conference mode nested talks)
-@global_router.post("/start_talk", status_code=204)
-async def start_talk():
-    """Host starts a nested talk (conference mode)."""
-    session_pending.put("session_request", {"action": "create_talk_folder"})
-    return Response(status_code=204)
-
-
-@global_router.post(
-    "/end_talk",
-    status_code=204,
-    summary="End Session",
-    description="Host ends the current session. Railway closes WS connections on session end.",
-)
-async def end_talk():
-    """Alias for /api/session/end kept for backward compatibility."""
-    session_pending.put("session_request", {"action": "end"})
-    return Response(status_code=204)
-
-
 # ── Public endpoint (no auth) ──
 
 @public_router.get("/active", response_model=SessionActiveResponse)

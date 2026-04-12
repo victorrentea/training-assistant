@@ -20,7 +20,6 @@ from starlette.responses import Response
 from daemon.host_state_router import _build_host_participants_list
 from daemon.misc.content_files import read_notes_content, read_summary_payload
 from daemon.participant.state import participant_state
-from daemon.session import state as session_shared_state
 from daemon.ws_messages import ParticipantListUpdatedMsg
 from daemon.ws_publish import notify_host
 from railway.shared.names import assign_conference_name
@@ -181,11 +180,6 @@ class SlidesCurrentPayload(BaseModel):
     model_config = ConfigDict(extra="allow")
 
 
-class SessionMainPayload(BaseModel):
-    mode: str | None = None
-    model_config = ConfigDict(extra="allow")
-
-
 class LeaderboardEntry(BaseModel):
     uuid: str
     name: str
@@ -229,8 +223,6 @@ class ParticipantStateResponse(BaseModel):
     debate_round_timer_seconds: int | None = None
     debate_round_timer_started_at: str | None = None
     slides_current: SlidesCurrentPayload | None = None
-    session_main: SessionMainPayload | None = None
-    session_name: str | None = None
     leaderboard_data: LeaderboardData | None = None
     summary_count: int
     summary_updated_at: str | None = None
@@ -599,8 +591,6 @@ async def get_participant_state(request: Request):
         "debate_round_timer_started_at": debate.get("round_timer_started_at"),
         # Slides (from misc state — synced from Railway)
         "slides_current": misc_state.slides_current,
-        "session_main": misc_state.session_main,
-        "session_name": _get_session_name(),
         # Leaderboard
         "leaderboard_data": leaderboard_state.data,
         # Summary / notes (counts only — full content fetched on demand)
@@ -623,15 +613,6 @@ def _get_current_session_id() -> str | None:
         return get_current_session_id()
     except Exception:
         return None
-
-
-def _get_session_name() -> str | None:
-    """Return session name from misc cache, with stack fallback."""
-    from daemon.misc.state import misc_state
-    if misc_state.session_name:
-        return misc_state.session_name
-    stack = session_shared_state.get_session_stack()
-    return stack[-1]["name"] if stack else None
 
 
 # ── Host-only router ──

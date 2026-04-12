@@ -12,11 +12,8 @@ AI_SUMMARY_FILE = "ai-summary.md"
 
 def get_active_session_folder() -> Path | None:
     root = session_shared_state.get_sessions_root()
-    stack = session_shared_state.get_session_stack()
-    if root is None or not stack:
-        return None
-    name = stack[-1].get("name")
-    if not name:
+    name = session_shared_state.get_active_session_name()
+    if root is None or not name:
         return None
     folder = root / str(name)
     if not folder.exists() or not folder.is_dir():

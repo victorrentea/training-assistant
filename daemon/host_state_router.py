@@ -142,11 +142,6 @@ class SlidesCurrentPayload(BaseModel):
     model_config = ConfigDict(extra="allow")
 
 
-class SessionMainPayload(BaseModel):
-    mode: str | None = None
-    model_config = ConfigDict(extra="allow")
-
-
 class QuizPreviewPayload(BaseModel):
     question: str | None = None
     options: list[str] | None = None
@@ -190,8 +185,6 @@ class HostStateResponse(BaseModel):
     slides_log_topic: str | None = None
     git_repos: list[GitRepoActivity] = []
     git_repos_count: int = 0
-    session_main: SessionMainPayload | None = None
-    session_name: str | None = None
     session_id: str | None = None
     join_base_url: str
     daemon_session_folder: str | None = None
@@ -321,10 +314,7 @@ def _get_current_session_id() -> str | None:
 
 
 def _get_session_name() -> str | None:
-    if misc_state.session_name:
-        return misc_state.session_name
-    stack = session_shared_state.get_session_stack()
-    return stack[-1]["name"] if stack else None
+    return session_shared_state.get_active_session_name()
 
 
 def _get_join_base_url() -> str:
@@ -332,8 +322,10 @@ def _get_join_base_url() -> str:
 
 
 def _get_active_session_entry() -> dict | None:
-    stack = session_shared_state.get_session_stack()
-    return stack[-1] if stack else None
+    name = session_shared_state.get_active_session_name()
+    if not name:
+        return None
+    return {"name": name}
 
 
 def _session_date_from_entry(session_entry: dict | None) -> date:
@@ -449,8 +441,6 @@ async def get_host_state(request: Request, session_id: str):
         "slides_current": misc_state.slides_current,
         **_build_slides_log_fields(),
         **_build_git_repos_fields(),
-        "session_main": misc_state.session_main,
-        "session_name": _get_session_name(),
         # Session tracking
         "session_id": _get_current_session_id(),
         "join_base_url": _get_join_base_url(),
