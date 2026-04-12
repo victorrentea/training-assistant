@@ -92,6 +92,69 @@ def test_collapse_proxy_chain():
     assert "Daemon" in content
 
 
+def test_infer_host_origin():
+    """Daemon root spans with /host/ path become Host -> Daemon arrows."""
+    from scripts.traces_to_puml import generate_puml
+
+    with tempfile.NamedTemporaryFile(suffix=".jsonl", delete=False, mode="w") as f:
+        path = f.name
+    out = path + ".puml"
+
+    _write_spans(path, [
+        _make_span("POST /api/{session_id}/host/poll", "Daemon", span_id="s1",
+                    start_time=1000),
+        _make_span("POST /api/{session_id}/host/poll/open", "Daemon", span_id="s2",
+                    start_time=2000),
+    ])
+
+    generate_puml(path, family="", output=out)
+    content = Path(out).read_text()
+
+    assert "Host" in content
+    assert "Daemon" in content
+    assert "POST /api/{session_id}/host/poll" in content
+
+
+def test_infer_broadcast_target():
+    """broadcast:* spans produce Daemon -> Participant arrows."""
+    from scripts.traces_to_puml import generate_puml
+
+    with tempfile.NamedTemporaryFile(suffix=".jsonl", delete=False, mode="w") as f:
+        path = f.name
+    out = path + ".puml"
+
+    _write_spans(path, [
+        _make_span("broadcast:poll_opened", "Daemon", span_id="s1", start_time=1000),
+    ])
+
+    generate_puml(path, family="", output=out)
+    content = Path(out).read_text()
+
+    assert "Daemon" in content
+    assert "Participant" in content
+    assert "broadcast poll_opened" in content
+
+
+def test_infer_notify_host_target():
+    """notify_host:* spans produce Daemon -> Host arrows."""
+    from scripts.traces_to_puml import generate_puml
+
+    with tempfile.NamedTemporaryFile(suffix=".jsonl", delete=False, mode="w") as f:
+        path = f.name
+    out = path + ".puml"
+
+    _write_spans(path, [
+        _make_span("notify_host:poll_ai_generated", "Daemon", span_id="s1", start_time=1000),
+    ])
+
+    generate_puml(path, family="", output=out)
+    content = Path(out).read_text()
+
+    assert "Daemon" in content
+    assert "Host" in content
+    assert "notify_host poll_ai_generated" in content
+
+
 def test_collapse_broadcast_relay():
     from scripts.traces_to_puml import generate_puml
 

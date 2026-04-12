@@ -6,8 +6,11 @@ Generic transformation rules:
 3. Participant names from service.name attribute
 4. Arrow labels from span names
 5. Skip internal spans (same service parent->child)
+6. Infer host origin from /host/ path patterns in root daemon spans
+7. Infer broadcast/notify targets from span name prefixes
 """
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -43,25 +46,51 @@ def _build_span_index(spans: list[dict]) -> dict[str, dict]:
     return {_span_id(s): s for s in spans if _span_id(s)}
 
 
+# Pattern: /api/{session_id}/host/... or /host/{session_id}
+_HOST_PATH_RE = re.compile(r"(GET|POST|PUT|DELETE|PATCH) /.*host")
+
+
 def _extract_edges(spans: list[dict]) -> list[tuple[str, str, str, int]]:
+    """Extract (from_service, to_service, label, start_time) edges from spans."""
     index = _build_span_index(spans)
     edges = []
     for span in spans:
+        name = span.get("name", "")
+        svc = _service_name(span)
+        start = span.get("start_time", 0)
         pid = _parent_id(span)
+
+        # Rule 7: broadcast:* and notify_host:* root spans from Daemon
+        if svc == "Daemon" and name.startswith("broadcast:"):
+            msg_type = name.split(":", 1)[1]
+            edges.append(("Daemon", "Participant", f"broadcast {msg_type}", start))
+            continue
+        if svc == "Daemon" and name.startswith("notify_host:"):
+            msg_type = name.split(":", 1)[1]
+            edges.append(("Daemon", "Host", f"notify_host {msg_type}", start))
+            continue
+
+        # Rule 6: Daemon root HTTP spans with /host/ path => Host -> Daemon
+        if svc == "Daemon" and (not pid or pid not in index):
+            if _HOST_PATH_RE.match(name):
+                edges.append(("Host", "Daemon", name, start))
+                continue
+
+        # Standard: cross-service parent->child edge
         if not pid or pid not in index:
             continue
         parent = index[pid]
         from_svc = _service_name(parent)
         to_svc = _service_name(span)
         if from_svc == to_svc:
-            continue
-        label = span.get("name", "unknown")
-        start = span.get("start_time", 0)
+            continue  # Rule 5: skip internal spans
+        label = name or "unknown"
         edges.append((from_svc, to_svc, label, start))
     return edges
 
 
 def _collapse_proxy(edges: list[tuple]) -> list[tuple]:
+    """Rule 1: Collapse A->Railway->Daemon into A->Daemon when Railway is pure proxy."""
     result = []
     skip = set()
     for i, (f, t, label, ts) in enumerate(edges):
@@ -82,6 +111,7 @@ def _collapse_proxy(edges: list[tuple]) -> list[tuple]:
 
 
 def _collapse_broadcast(edges: list[tuple]) -> list[tuple]:
+    """Rule 2: Collapse Daemon->Railway->Browser into Daemon->Browser for broadcasts."""
     result = []
     skip = set()
     for i, (f, t, label, ts) in enumerate(edges):
@@ -102,6 +132,7 @@ def _collapse_broadcast(edges: list[tuple]) -> list[tuple]:
 
 
 def _deduplicate_edges(edges: list[tuple]) -> list[tuple]:
+    """Remove duplicate (from, to, label) tuples, keeping first occurrence order."""
     seen = set()
     result = []
     for f, t, label, ts in edges:
@@ -113,6 +144,7 @@ def _deduplicate_edges(edges: list[tuple]) -> list[tuple]:
 
 
 def generate_puml(traces_path: str, family: str, output: str) -> None:
+    """Generate a PlantUML sequence diagram from collected traces."""
     spans = _load_spans(traces_path, family)
     if not spans:
         Path(output).write_text(
@@ -121,11 +153,12 @@ def generate_puml(traces_path: str, family: str, output: str) -> None:
         return
 
     edges = _extract_edges(spans)
-    edges.sort(key=lambda e: e[3])
+    edges.sort(key=lambda e: e[3])  # sort by start_time
     edges = _collapse_proxy(edges)
     edges = _collapse_broadcast(edges)
     edges = _deduplicate_edges(edges)
 
+    # Collect participant names in order of first appearance
     participants = []
     seen_p = set()
     for f, t, _, _ in edges:
