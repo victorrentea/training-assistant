@@ -559,7 +559,7 @@
         return await codeEntryFlow();
       }
 
-      // Has session_id — validate it
+      // Has session_id — validate and redirect to session page
       const valid = await validateSessionCode(sessionId);
       if (!valid) {
         // Case B: mismatch
@@ -567,8 +567,9 @@
         return null;  // dead end
       }
 
-      // Case C: valid session
-      return sessionId;
+      // Case C: valid session — redirect to participant page
+      window.location.href = '/' + sessionId + '/';
+      return null;  // navigating away
     }
 
     // ── Case A: Code entry screen ──
@@ -592,8 +593,8 @@
 
           const valid = await validateSessionCode(code);
           if (valid) {
-            // Redirect with session_id — page reloads, continues from Case C
-            window.location.href = '/?session_id=' + code;
+            // Redirect to session participant page
+            window.location.href = '/' + code + '/';
             // resolve won't fire because we're navigating away
           } else {
             input.classList.add('input-error');
