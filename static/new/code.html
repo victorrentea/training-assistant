@@ -373,7 +373,8 @@ body{visibility:hidden}
 <div id="upload-view" style="display:none" class="h-full flex flex-col px-16 py-12">
   <input type="file" id="upload-input" class="hidden" onchange="uploadFileSelected(this.files)"/>
   <div id="upload-dropzone"
-    class="flex-1 flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-outline-variant cursor-pointer hover:border-primary hover:bg-surface-container-low transition-all duration-200 text-on-surface-variant hover:text-primary"
+    class="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-outline-variant cursor-pointer hover:border-primary hover:bg-surface-container-low transition-all duration-200 text-on-surface-variant hover:text-primary"
+    style="min-height:18rem"
     onclick="document.getElementById('upload-input').click()"
     ondragover="event.preventDefault();this.classList.add('border-primary','bg-surface-container-low','text-primary')"
     ondragleave="this.classList.remove('border-primary','bg-surface-container-low','text-primary')"
@@ -382,8 +383,8 @@ body{visibility:hidden}
     <p class="text-base font-semibold">Drop files to send to host</p>
     <p class="text-sm mt-1 opacity-60">or click to browse</p>
   </div>
-  <div id="upload-ready" class="hidden mt-6 flex flex-col items-center gap-4">
-    <p id="upload-filename" class="text-sm font-medium text-on-surface-variant truncate max-w-full"></p>
+  <div id="upload-ready" class="hidden mt-6 flex flex-col gap-3">
+    <p id="upload-filename" class="text-sm font-medium text-on-surface-variant truncate"></p>
     <button onclick="uploadSend()" class="w-full py-4 bg-primary text-on-primary text-lg font-bold rounded-2xl hover:bg-primary-dim transition-all shadow-lg shadow-primary/20">
       Send to Host
     </button>
@@ -566,14 +567,12 @@ function showUpload() {
     _viewBeforeUpload = current.dataset.nav;
   }
   document.getElementById('upload-ready').classList.add('hidden');
-  document.getElementById('upload-dropzone').classList.remove('hidden');
   document.getElementById('upload-input').value = '';
   showView('upload');
 }
 function uploadFileSelected(files) {
   if (!files || !files.length) return;
   document.getElementById('upload-filename').textContent = files[0].name;
-  document.getElementById('upload-dropzone').classList.add('hidden');
   document.getElementById('upload-ready').classList.remove('hidden');
 }
 function uploadSend() {
