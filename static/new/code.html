@@ -123,17 +123,6 @@ body{visibility:hidden}
             background: #a9b4b9;
         }
     </style>
-<script>
-  setInterval(function () {
-    fetch('/api/status', { cache: 'no-store' })
-      .then(function (r) { return r.json(); })
-      .then(function (d) {
-        if (window._knownTs === undefined) window._knownTs = d.daemon_code_timestamp;
-        else if (d.daemon_code_timestamp && d.daemon_code_timestamp !== window._knownTs) window.location.reload();
-      })
-      .catch(function () {});
-  }, 1000);
-</script>
 </head>
 <body class="bg-surface text-on-surface overflow-hidden">
 <div class="flex h-screen w-full">
