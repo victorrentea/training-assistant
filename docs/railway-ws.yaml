@@ -1,0 +1,350 @@
+asyncapi: '2.6.0'
+info:
+  title: Training Assistant — Daemon ↔ Railway WebSocket Protocol
+  version: '1.0'
+  description: |
+    Internal control channel between the training daemon (Mac) and the Railway backend.
+    Connection: `WS wss://interact.victorrentea.ro/ws/daemon`
+
+    **Direction convention:**
+    - `subscribe` = messages Railway sends TO the daemon
+    - `publish` = messages the daemon sends TO Railway
+
+servers:
+  production:
+    url: wss://interact.victorrentea.ro/ws/daemon
+    protocol: wss
+    description: Railway backend WebSocket endpoint (daemon connects as client)
+
+channels:
+  /ws/daemon:
+    subscribe:
+      summary: Messages Railway sends to the daemon
+      message:
+        oneOf:
+          - $ref: '#/components/messages/participant_presence'
+          - $ref: '#/components/messages/daemon_state_push'
+          - $ref: '#/components/messages/sync_files'
+          - $ref: '#/components/messages/download_pdf'
+          - $ref: '#/components/messages/pdf_download_complete'
+          - $ref: '#/components/messages/file_ready_for_download'
+          - $ref: '#/components/messages/summary_force'
+          - $ref: '#/components/messages/summary_full_reset'
+          - $ref: '#/components/messages/scores_reset'
+          - $ref: '#/components/messages/proxy_request'
+    publish:
+      summary: Messages the daemon sends to Railway
+      message:
+        oneOf:
+          - $ref: '#/components/messages/set_session_id'
+          - $ref: '#/components/messages/code_timestamp'
+          - $ref: '#/components/messages/broadcast'
+          - $ref: '#/components/messages/send_to_host'
+          - $ref: '#/components/messages/proxy_response'
+          - $ref: '#/components/messages/daemon_ping'
+          - $ref: '#/components/messages/slide_invalidated'
+
+components:
+  messages:
+
+    # ── Identity ──────────────────────────────────────────────────────────────
+
+    participant_presence:
+      summary: Participant connected or disconnected from Railway
+      x-feature: identity
+      payload:
+        type: object
+        required: [type, uuid, online]
+        properties:
+          type:
+            type: string
+            enum: [participant_presence]
+          uuid:
+            type: string
+            description: Participant UUID
+          online:
+            type: boolean
+
+    daemon_state_push:
+      summary: Railway pushes current online participant list to newly connected daemon
+      x-feature: identity
+      payload:
+        type: object
+        required: [type, online_participants]
+        properties:
+          type:
+            type: string
+            enum: [daemon_state_push]
+          online_participants:
+            type: array
+            items:
+              type: string
+            description: UUIDs of currently online participants
+
+    # ── Slides ────────────────────────────────────────────────────────────────
+
+    sync_files:
+      summary: Railway requests daemon to sync static files and PDF cache
+      x-feature: slides
+      payload:
+        type: object
+        required: [type, static_hashes, pdf_slugs]
+        properties:
+          type:
+            type: string
+            enum: [sync_files]
+          static_hashes:
+            type: object
+            additionalProperties:
+              type: string
+            description: filename → hash of current Railway-served static file
+          pdf_slugs:
+            type: object
+            additionalProperties:
+              type: string
+            description: slug → drive_export_url for known PDF slides
+
+    download_pdf:
+      summary: Railway instructs daemon to download a PDF from Google Drive
+      x-feature: slides
+      payload:
+        type: object
+        required: [type, slug, drive_export_url]
+        properties:
+          type:
+            type: string
+            enum: [download_pdf]
+          slug:
+            type: string
+          drive_export_url:
+            type: string
+
+    pdf_download_complete:
+      summary: Railway notifies daemon that a PDF download has finished (ok or error)
+      x-feature: slides
+      payload:
+        type: object
+        required: [type, slug, status]
+        properties:
+          type:
+            type: string
+            enum: [pdf_download_complete]
+          slug:
+            type: string
+          status:
+            type: string
+            enum: [ok, error]
+          error:
+            type: string
+            nullable: true
+            description: Error message when status is "error"
+
+    # ── Paste & File Upload ───────────────────────────────────────────────────
+
+    file_ready_for_download:
+      summary: Railway notifies daemon that a participant has uploaded a file
+      x-feature: paste_upload
+      payload:
+        type: object
+        required: [type, file_id, uuid, filename, size, session_id]
+        properties:
+          type:
+            type: string
+            enum: [file_ready_for_download]
+          file_id:
+            type: integer
+          uuid:
+            type: string
+            description: Participant UUID who uploaded the file
+          filename:
+            type: string
+          size:
+            type: integer
+            description: File size in bytes
+          session_id:
+            type: string
+
+    # ── Notes & Summary ──────────────────────────────────────────────────────
+
+    summary_force:
+      summary: Railway instructs daemon to force-generate a summary immediately
+      x-feature: notes_summary
+      payload:
+        type: object
+        required: [type]
+        properties:
+          type:
+            type: string
+            enum: [summary_force]
+
+    summary_full_reset:
+      summary: Railway instructs daemon to reset summary state entirely
+      x-feature: notes_summary
+      payload:
+        type: object
+        required: [type]
+        properties:
+          type:
+            type: string
+            enum: [summary_full_reset]
+
+    # ── Scores ────────────────────────────────────────────────────────────────
+
+    scores_reset:
+      summary: Railway instructs daemon to reset all participant scores
+      x-feature: scores_leaderboard
+      payload:
+        type: object
+        required: [type]
+        properties:
+          type:
+            type: string
+            enum: [scores_reset]
+
+    # ── Infrastructure ────────────────────────────────────────────────────────
+
+    proxy_request:
+      summary: Railway proxies a participant REST request to the daemon for processing
+      x-feature: infrastructure
+      payload:
+        type: object
+        required: [type, id, method, path]
+        properties:
+          type:
+            type: string
+            enum: [proxy_request]
+          id:
+            type: string
+            description: Correlation ID to match with proxy_response
+          method:
+            type: string
+            description: HTTP method (GET, POST, etc.)
+          path:
+            type: string
+            description: Request path forwarded from the participant
+          body:
+            type: string
+            nullable: true
+            description: JSON-encoded request body
+          headers:
+            type: object
+            nullable: true
+            additionalProperties:
+              type: string
+            description: Forwarded request headers
+          participant_id:
+            type: string
+            nullable: true
+            description: UUID of the participant who made the original request
+
+    set_session_id:
+      summary: Daemon announces current active session to Railway on connect or session change
+      x-feature: session_management
+      payload:
+        type: object
+        required: [type]
+        properties:
+          type:
+            type: string
+            enum: [set_session_id]
+          session_id:
+            type: string
+            nullable: true
+          session_name:
+            type: string
+            nullable: true
+
+    code_timestamp:
+      summary: Daemon sends its build timestamp so Railway can detect version drift
+      x-feature: infrastructure
+      payload:
+        type: object
+        required: [type, timestamp]
+        properties:
+          type:
+            type: string
+            enum: [code_timestamp]
+          timestamp:
+            type: integer
+            description: Unix timestamp of the daemon build
+
+    broadcast:
+      summary: Daemon asks Railway to forward an event to all participants in the session
+      x-feature: infrastructure
+      x-doc-notes:
+        - Wrapper message — inner event payload is a participant WS message
+      payload:
+        type: object
+        required: [type, event]
+        properties:
+          type:
+            type: string
+            enum: [broadcast]
+          event:
+            type: object
+            description: Participant WS message payload to broadcast
+
+    send_to_host:
+      summary: Daemon asks Railway to forward an event to the host browser
+      x-feature: infrastructure
+      x-doc-notes:
+        - Wrapper message — inner event payload is a host WS message
+      payload:
+        type: object
+        required: [type, event]
+        properties:
+          type:
+            type: string
+            enum: [send_to_host]
+          event:
+            type: object
+            description: Host WS message payload to deliver
+
+    proxy_response:
+      summary: Daemon returns the result of a proxied participant REST request
+      x-feature: infrastructure
+      payload:
+        type: object
+        required: [type, id, status, body, content_type]
+        properties:
+          type:
+            type: string
+            enum: [proxy_response]
+          id:
+            type: string
+            description: Correlation ID matching the original proxy_request
+          status:
+            type: integer
+            description: HTTP status code
+          body:
+            type: string
+            description: Response body (JSON or plain text)
+          content_type:
+            type: string
+            description: MIME type of the response body
+
+    daemon_ping:
+      summary: Daemon keepalive ping to Railway
+      x-feature: infrastructure
+      payload:
+        type: object
+        required: [type]
+        properties:
+          type:
+            type: string
+            enum: [daemon_ping]
+
+    # ── Slides ────────────────────────────────────────────────────────────────
+
+    slide_invalidated:
+      summary: Daemon notifies Railway that a slide PDF has been invalidated and must be re-served
+      x-feature: slides
+      payload:
+        type: object
+        required: [type, slug]
+        properties:
+          type:
+            type: string
+            enum: [slide_invalidated]
+          slug:
+            type: string
