@@ -207,7 +207,7 @@ body{visibility:hidden}
 <span class="text-base">Agenda</span>
 <span class="badge-new">UPDATE</span>
 </a>
-<a data-nav="notes" onclick="showView('notes')" class="nav-item rounded-full px-2 py-2 flex items-center gap-3 transition-all cursor-pointer">
+<a data-nav="notes" onclick="showView('notes')" class="nav-item rounded-full px-2 py-2 flex items-center gap-3 transition-all cursor-pointer" style="display:none">
 <span class="material-symbols-outlined">description</span>
 <span class="text-base">Notes</span>
 <span class="badge-new">UPDATE</span>
@@ -297,44 +297,7 @@ refactoring-kata<span class="material-symbols-outlined text-sm flex-shrink-0">op
 <main class="flex-1 h-full relative flex flex-col overflow-hidden bg-surface">
 <!-- AI Summary View -->
 <div id="notes-view" style="display:none;font-size:120%" class="h-full overflow-y-auto px-16 py-12" onscroll="saveScroll('notes',this)">
-  <h1 class="text-3xl font-extrabold text-on-surface mb-6">My Notes</h1>
-  <h2 class="text-xl font-bold text-on-surface mb-3">Morning Session</h2>
-  <h3 class="text-base font-semibold text-on-surface-variant mb-2">Architecture Talk</h3>
-  <ul class="list-disc pl-6 space-y-1 text-sm text-on-surface-variant mb-6">
-    <li>Layered architecture leads to tight coupling over time</li>
-    <li>Ports and adapters keep the domain pure</li>
-    <li>Don't let frameworks bleed into business logic</li>
-  </ul>
-  <h3 class="text-base font-semibold text-on-surface-variant mb-2">Refactoring Exercise</h3>
-  <ul class="list-disc pl-6 space-y-1 text-sm text-on-surface-variant mb-6">
-    <li>Extract method before extract class</li>
-    <li>Name reveals intent, not implementation</li>
-    <li>Small steps, always green tests</li>
-  </ul>
-  <h2 class="text-xl font-bold text-on-surface mb-3">Afternoon Session</h2>
-  <h3 class="text-base font-semibold text-on-surface-variant mb-2">Testing Strategy</h3>
-  <ul class="list-disc pl-6 space-y-1 text-sm text-on-surface-variant mb-6">
-    <li>Unit tests for domain logic, integration tests for adapters</li>
-    <li>Avoid testing implementation details</li>
-    <li>Test pyramid: many unit, fewer integration, few E2E</li>
-    <li>Mutation testing reveals gaps in coverage</li>
-  </ul>
-  <h3 class="text-base font-semibold text-on-surface-variant mb-2">Code Smells Identified</h3>
-  <ul class="list-disc pl-6 space-y-1 text-sm text-on-surface-variant mb-6">
-    <li>Long parameter lists → introduce parameter objects</li>
-    <li>Feature envy → move method closer to data</li>
-    <li>Primitive obsession → wrap with value objects</li>
-    <li>Data clumps → extract into cohesive classes</li>
-  </ul>
-  <h2 class="text-xl font-bold text-on-surface mb-3">Questions to Follow Up</h2>
-  <h3 class="text-base font-semibold text-on-surface-variant mb-2">Reading List</h3>
-  <ul class="list-disc pl-6 space-y-1 text-sm text-on-surface-variant mb-6">
-    <li>Read "Working Effectively with Legacy Code"</li>
-    <li>Try the strangler fig pattern on the payments module</li>
-    <li>Ask team about adopting ADRs</li>
-    <li>Explore ArchUnit for architecture fitness functions</li>
-    <li>Look into contract testing with Pact</li>
-  </ul>
+  <div id="notes-content" class="text-on-surface leading-relaxed whitespace-pre-wrap">Loading…</div>
 </div>
 <div id="summary-view" style="display:none;font-size:120%" class="h-full overflow-y-auto px-16 py-12" onscroll="saveScroll('summary',this)">
   <h1 class="text-3xl font-extrabold text-on-surface mb-6">Session Summary</h1>
@@ -724,6 +687,7 @@ function showView(name) {
   setActive(name);
   LS.setView(name);
   if (name === 'agenda') loadAgenda();
+  if (name === 'notes') loadNotes();
   VIEWS.forEach(function(v) {
     var el = document.getElementById(v + '-view');
     el.style.display = v === name ? '' : 'none';
@@ -752,8 +716,10 @@ let _sessionId = null;
     const state = await fetch(`/${_sessionId}/api/participant/state`).then(r => r.json());
     console.log('[participant] state:', state);
     document.querySelector('[data-nav="agenda"]').style.display = state.has_agenda ? '' : 'none';
+    document.querySelector('[data-nav="notes"]').style.display = state.notes_count > 0 ? '' : 'none';
     var saved = LS.getView();
     if (saved === 'agenda' && !state.has_agenda) saved = 'slides';
+    if (saved === 'notes' && !(state.notes_count > 0)) saved = 'slides';
     showView(saved);
   } catch (e) {
     console.error('[participant] failed to load state:', e);
@@ -772,6 +738,26 @@ async function loadAgenda() {
     el.innerHTML = result.value.replace(/<a /g, '<a target="_blank" rel="noopener" ');
   } catch (e) {
     el.textContent = 'Failed to load agenda.';
+  }
+}
+
+function linkifyText(text) {
+  var escaped = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  return escaped.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" rel="noopener" class="underline text-primary">$1</a>');
+}
+
+async function loadNotes() {
+  const el = document.getElementById('notes-content');
+  el.textContent = 'Loading…';
+  try {
+    const data = await fetch(`/${_sessionId}/api/participant/notes`).then(r => r.ok ? r.json() : Promise.reject('not found'));
+    if (data && data.notes_content) {
+      el.innerHTML = linkifyText(data.notes_content);
+    } else {
+      el.textContent = 'No notes yet.';
+    }
+  } catch (e) {
+    el.textContent = 'Failed to load notes.';
   }
 }
 </script>
