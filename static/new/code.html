@@ -570,7 +570,7 @@ function openRepos() {
   var arrow = document.querySelector('.repos-arrow');
   list.style.maxHeight = '500px';
   arrow.style.transform = 'rotate(90deg)';
-  fetch('/api/participant/git-activity')
+  fetch('/' + _sessionId + '/api/participant/git-activity')
     .then(function(r) { return r.json(); })
     .then(function(data) {
       var repos = data.git_repos || [];
