@@ -4766,6 +4766,46 @@ function closeAgendaModal() {
       });
     })();
 
+    // ── Slide history drop-down ──
+    (function () {
+      let _historyTimer = null;
+
+      function hideHistory() {
+        clearTimeout(_historyTimer);
+        _historyTimer = null;
+        const el = document.getElementById('slide-history-list');
+        if (el) el.style.display = 'none';
+      }
+
+      async function showHistory() {
+        clearTimeout(_historyTimer);
+        const el = document.getElementById('slide-history-list');
+        if (!el) return;
+
+        let slides = [];
+        try {
+          const res = await fetch('/api/participant/slide-history');
+          if (res.ok) ({ slides } = await res.json());
+        } catch (_) { /* ignore network errors */ }
+
+        if (!slides.length) {
+          el.style.display = 'none';
+          _historyTimer = setTimeout(hideHistory, 30000);
+          return;
+        }
+
+        el.innerHTML = slides.map(s =>
+          `<div class="slide-history-item">${s.file_name} — p.${s.page}<span class="slide-history-seconds">${s.seconds}s</span></div>`
+        ).join('');
+        el.style.display = 'block';
+        _historyTimer = setTimeout(hideHistory, 30000);
+      }
+
+      document.addEventListener('click', (e) => {
+        if (e.target.closest('.slides-list-item')) showHistory();
+      });
+    })();
+
     // Wire buttons inside #emoji-bar
     document.getElementById('emoji-ping-btn').onclick = (ev) => sendEmoji('🖥️', ev);
     document.getElementById('upload-btn').onclick = openUploadModal;
