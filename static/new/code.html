@@ -418,8 +418,7 @@ body{visibility:hidden}
 <div id="upload-view" style="display:none" class="h-full flex flex-col px-16 py-12">
   <input type="file" id="upload-input" class="hidden" onchange="uploadFileSelected(this.files)"/>
   <div id="upload-dropzone"
-    class="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-outline-variant cursor-pointer hover:border-primary hover:bg-surface-container-low transition-all duration-200 text-on-surface-variant hover:text-primary"
-    style="min-height:18rem"
+    class="flex-1 flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-outline-variant cursor-pointer hover:border-primary hover:bg-surface-container-low transition-all duration-200 text-on-surface-variant hover:text-primary"
     onclick="document.getElementById('upload-input').click()"
     ondragover="event.preventDefault();this.classList.add('border-primary','bg-surface-container-low','text-primary')"
     ondragleave="this.classList.remove('border-primary','bg-surface-container-low','text-primary')"
@@ -428,9 +427,10 @@ body{visibility:hidden}
     <p class="text-base font-semibold">Drop files to send to host</p>
     <p class="text-sm mt-1 opacity-60">or click to browse</p>
   </div>
-  <div id="upload-ready" class="hidden mt-6 flex flex-col gap-3">
-    <p id="upload-filename" class="text-sm font-medium text-on-surface-variant truncate"></p>
-    <button onclick="uploadSend()" class="w-full py-4 bg-primary text-on-primary text-lg font-bold rounded-2xl hover:bg-primary-dim transition-all shadow-lg shadow-primary/20">
+  <div id="upload-ready" class="hidden mt-4">
+    <p id="upload-filename" class="text-sm font-medium text-on-surface-variant truncate mb-3"></p>
+    <button onclick="uploadSend()" class="flex items-center gap-2 px-6 py-3 bg-primary text-on-primary font-semibold rounded-full hover:bg-primary-dim transition-all shadow-lg shadow-primary/20">
+      <span class="material-symbols-outlined" style="transform:rotate(-45deg)">send</span>
       Send to Host
     </button>
   </div>
