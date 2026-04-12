@@ -203,7 +203,9 @@ def generate_puml(traces_path: str, family: str, output: str,
                     svc = _service_name(span)
                     name = span.get("name", "")
                     start = span.get("start_time", 0)
-                    if (svc in (f, t)) and name == label and abs(start - ts) < 2_000_000_000:
+                    # Edge labels transform "broadcast:X" → "broadcast X", "notify_host:X" → "notify_host X"
+                    name_normalized = name.replace(":", " ", 1) if name.startswith(("broadcast:", "notify_host:")) else name
+                    if (svc in (f, t)) and name_normalized == label and abs(start - ts) < 2_000_000_000:
                         matched_tid = span.get("context", {}).get("trace_id", "")
                         break
                 phase = "when" if matched_tid in all_when_traces else "given"
