@@ -150,6 +150,11 @@ app.include_router(session_participant)
 if os.environ.get("OTEL_TRACES_FILE"):
     from railway.features.telemetry.router import router as telemetry_router
     app.include_router(telemetry_router)
+    try:
+        from daemon.telemetry import setup_file_exporter
+        setup_file_exporter()
+    except ImportError:
+        pass
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 

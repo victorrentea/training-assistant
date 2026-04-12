@@ -662,6 +662,12 @@ def _refresh_session_folder_binding(
 # ── Main run loop ──────────────────────────────────────────────────────────────
 
 def run() -> None:
+    try:
+        from daemon.telemetry import setup_file_exporter
+        setup_file_exporter()
+    except ImportError:
+        pass
+
     check_and_acquire_lock()
     write_lock()
     install_signal_handlers()
