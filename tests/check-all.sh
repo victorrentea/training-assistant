@@ -13,7 +13,8 @@ python3 -m pytest tests/daemon/ -q \
   --confcutdir=tests/daemon
 echo ""
 echo "=== Contract tests ==="
-python3 -m pytest tests/daemon/test_api_contract.py tests/daemon/test_ws_contract.py -v \
+python3 -m pytest tests/daemon/test_api_contract.py tests/daemon/test_ws_contract.py \
+  tests/daemon/test_railway_ws_contract.py tests/daemon/test_railway_rest_contract.py -v \
   --confcutdir=tests/daemon
 echo ""
 echo "=== Architecture contracts (Structurizr -> Import Linter) ==="
