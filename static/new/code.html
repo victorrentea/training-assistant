@@ -462,7 +462,7 @@ body{visibility:hidden}
 </a>
 </div>
 <!-- Slides Container -->
-<div id="pdf-pages" class="flex-grow overflow-y-auto scroll-smooth py-24 px-16 lg:px-32 xl:px-48 space-y-24 h-full"></div>
+<div id="pdf-pages" class="flex-grow overflow-y-auto scroll-smooth py-8 px-8 space-y-8 h-full"></div>
 </div><!-- end slides-view -->
 <!-- Floating Reaction UI (Bottom Right) — always on top across all views -->
 <div class="absolute bottom-12 right-12 flex flex-col items-end gap-4 z-30">
@@ -524,10 +524,6 @@ body{visibility:hidden}
       canvas.height = viewport.height;
       canvas.className = 'w-full whisper-shadow rounded-2xl';
       section.appendChild(canvas);
-      const label = document.createElement('div');
-      label.className = 'absolute -left-12 top-0 text-[10px] font-bold text-outline uppercase tracking-widest opacity-40';
-      label.textContent = 'Slide ' + String(i).padStart(2, '0');
-      section.appendChild(label);
       if (i === totalPages) section.classList.add('pb-32');
       container.appendChild(section);
       await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
