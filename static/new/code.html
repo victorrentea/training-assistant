@@ -952,6 +952,7 @@ var _myUUID = (function() {
     console.log('[participant] session_id:', _sessionId);
     if (!_sessionId) return;
     loadSlidesCatalog();
+    _connectWS();
     const state = await fetch(`/${_sessionId}/api/participant/state`).then(r => r.json());
     console.log('[participant] state:', state);
     document.querySelector('[data-nav="agenda"]').style.display = state.has_agenda ? '' : 'none';
@@ -979,6 +980,67 @@ var _myUUID = (function() {
     console.error('[participant] failed to load state:', e);
   }
 })();
+
+function _applyState(msg) {
+  if (msg.notes_count != null) {
+    document.querySelector('[data-nav="notes"]').style.display = msg.notes_count > 0 ? '' : 'none';
+    document.getElementById('notes-badge').textContent = msg.notes_count || '';
+  }
+  if (msg.summary_count != null) {
+    var summaryNav = document.querySelector('[data-nav="summary"]');
+    summaryNav.style.display = msg.summary_count > 0 ? '' : 'none';
+    var badge = document.getElementById('summary-badge');
+    if (msg.summary_count > 0 && msg.summary_updated_at) {
+      var d = new Date(msg.summary_updated_at);
+      badge.textContent = d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+      badge.style.display = '';
+    } else { badge.style.display = 'none'; }
+  }
+  if (msg.gdrive_url !== undefined) {
+    var gdriveNav = document.getElementById('gdrive-nav');
+    if (msg.gdrive_url) { gdriveNav.href = msg.gdrive_url; gdriveNav.style.display = ''; }
+    else { gdriveNav.style.display = 'none'; }
+  }
+  if (msg.has_agenda !== undefined) {
+    document.querySelector('[data-nav="agenda"]').style.display = msg.has_agenda ? '' : 'none';
+  }
+}
+
+function _handleWsMessage(msg) {
+  switch (msg.type) {
+    case 'reload': location.reload(); break;
+    case 'redirect': window.location.href = msg.url || '/'; break;
+    case 'deploy_pending': window.__deployIncoming = true; if (window.__updateDeployAge) window.__updateDeployAge(); break;
+    case 'state': _applyState(msg); break;
+    case 'notes_updated':
+      document.querySelector('[data-nav="notes"]').style.display = msg.count > 0 ? '' : 'none';
+      document.getElementById('notes-badge').textContent = msg.count || '';
+      break;
+    case 'summary_updated': {
+      var summaryNav = document.querySelector('[data-nav="summary"]');
+      summaryNav.style.display = msg.count > 0 ? '' : 'none';
+      var badge = document.getElementById('summary-badge');
+      if (msg.count > 0 && msg.updated_at) {
+        var d = new Date(msg.updated_at);
+        badge.textContent = d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+        badge.style.display = '';
+      } else { badge.style.display = 'none'; }
+      break;
+    }
+    case 'slides_cache_status': loadSlidesCatalog(); break;
+  }
+}
+
+var _ws = null;
+function _connectWS() {
+  if (!_sessionId) return;
+  var proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  var url = proto + '://' + location.host + '/ws/' + _sessionId + '/' + encodeURIComponent(_myUUID);
+  _ws = new WebSocket(url);
+  _ws.onmessage = function(e) { try { _handleWsMessage(JSON.parse(e.data)); } catch(err) { console.error('ws msg error', err); } };
+  _ws.onclose = function(e) { if (e.code !== 1008) setTimeout(_connectWS, 3000); };
+  _ws.onerror = function(e) { console.error('ws error', e); };
+}
 
 async function loadAgenda() {
   const el = document.getElementById('agenda-content');
