@@ -812,7 +812,7 @@ function toggleAgendaModal() {
         return mammoth.convertToHtml({ arrayBuffer: bytes.buffer });
       })
       .then(result => {
-        _agendaHtml = result.value;
+        _agendaHtml = result.value.replace(/<a /g, '<a target="_blank" rel="noopener" ');
         el.innerHTML = _agendaHtml;
       })
       .catch(() => {
