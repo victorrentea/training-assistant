@@ -118,8 +118,8 @@ paths:
       tags:
       - participant
       summary: Resolve Participant Locations
-      description: Backfill city name + timezone + country for participants whose
-        location is still raw lat/lon.
+      description: Backfill city name + timezone + country for all participants missing
+        geo metadata.
       operationId: resolve_participant_locations_api__session_id__host_participants_resolve_locations_post
       parameters:
       - name: session_id
@@ -2235,6 +2235,11 @@ components:
         notes_count:
           type: integer
           title: Notes Count
+        gdrive_url:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Gdrive Url
       type: object
       required:
       - mode
