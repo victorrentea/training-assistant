@@ -61,6 +61,13 @@ def _extract_edges(spans: list[dict]) -> list[tuple[str, str, str, int, str, str
     _SKIP_PATTERNS = {"/api/status", "/static", "/favicon"}
 
     index = _build_span_index(spans)
+    # Railway spans that have children are proxy parents — handled by _collapse_proxy
+    _railway_with_children = set()
+    for s in spans:
+        p = _parent_id(s)
+        if p and p in index and _service_name(index[p]) == "Railway":
+            _railway_with_children.add(p)
+
     edges = []
     for span in spans:
         name = span.get("name", "")
@@ -86,6 +93,16 @@ def _extract_edges(spans: list[dict]) -> list[tuple[str, str, str, int, str, str
         if svc == "Daemon" and (not pid or pid not in index):
             if _HOST_PATH_RE.match(name):
                 edges.append(("Host", "Daemon", name, start, phase, tid, False))
+                continue
+
+        # Rule 8: Railway root HTTP spans (browser parent not in traces) => Participant -> Railway
+        # Skip proxy parents (they have children and are handled by _collapse_proxy).
+        if svc == "Railway" and (not pid or pid not in index):
+            sid = _span_id(span)
+            if (sid not in _railway_with_children
+                    and re.match(r"(GET|POST|PUT|DELETE|PATCH|HEAD) /\S", name)
+                    and "/ws/" not in name):
+                edges.append(("Participant", "Railway", name, start, phase, tid, False))
                 continue
 
         # Standard: cross-service parent->child edge
@@ -192,16 +209,24 @@ def generate_puml(traces_path: str, family: str, output: str,
                 tid = span.get("context", {}).get("trace_id", "")
                 if tid:
                     trace_to_name[tid] = participant_names[pid]
-        # Replace "Participant" with the resolved name
+        # Replace "Participant" with named actor from trace_id mapping.
+        # For unresolved edges (no trace match), keep "Participant" for broadcasts
+        # (they target all participants) but try to assign to a known participant
+        # for request edges (from="Participant").
+        all_names = sorted(set(participant_names.values()))
+        default_actor = f"Participant\\n{all_names[0]}" if len(all_names) == 1 else "Participant"
         named = []
         for f, t, label, ts, phase, tid, is_async in edges:
-            name = trace_to_name.get(tid)
-            if name:
-                actor = f"Participant\\n{name}"
+            resolved = trace_to_name.get(tid)
+            if resolved:
+                actor = f"Participant\\n{resolved}"
                 if f == "Participant":
                     f = actor
                 if t == "Participant":
                     t = actor
+            elif f == "Participant" and not is_async:
+                # Unresolved request from participant — use default
+                f = default_actor
             named.append((f, t, label, ts, phase, tid, is_async))
         edges = named
 
