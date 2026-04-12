@@ -558,7 +558,7 @@ function closeEmojiPopup(ev) {
     const btn = document.getElementById('notes-btn');
     if (btn) {
       btn.disabled = !notesContent;
-      btn.dataset.tooltip = notesContent ? 'Session notes' : '(none yet)';
+      btn.dataset.tooltip = notesContent ? 'Notes we wrote' : '(none yet)';
     }
   }
 
@@ -566,7 +566,7 @@ function closeEmojiPopup(ev) {
     const btn = document.getElementById('notes-btn');
     if (!btn) return;
     btn.disabled = !count;
-    btn.dataset.tooltip = count ? 'Session notes' : '(none yet)';
+    btn.dataset.tooltip = count ? 'Notes we wrote' : '(none yet)';
     const span = document.getElementById('notes-count');
     if (span) span.textContent = count ? `${count} ` : '';
     if (flash && count) {
@@ -580,7 +580,7 @@ function closeEmojiPopup(ev) {
     const btn = document.getElementById('summary-btn');
     if (!btn) return;
     btn.disabled = !count;
-    btn.dataset.tooltip = count ? 'Key points discussed so far' : '(none yet)';
+    btn.dataset.tooltip = count ? 'AI-generated summary' : '(none yet)';
     const span = document.getElementById('summary-count');
     if (span) {
       if (updatedAt) {
@@ -684,7 +684,7 @@ function closeEmojiPopup(ev) {
     const summaryBtnEl = document.getElementById('summary-btn');
     if (summaryBtnEl) {
       summaryBtnEl.disabled = !summaryPoints.length && !summaryRawMarkdown;
-      summaryBtnEl.dataset.tooltip = (summaryPoints.length || summaryRawMarkdown) ? 'Key points discussed so far' : '(none yet)';
+      summaryBtnEl.dataset.tooltip = (summaryPoints.length || summaryRawMarkdown) ? 'AI-generated summary' : '(none yet)';
     }
     if (summaryPoints.length > prevCount) {
       const summaryBtn = document.getElementById('summary-btn');
