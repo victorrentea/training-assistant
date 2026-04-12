@@ -287,6 +287,106 @@ def test_slides_sequence_diagram_extraction():
         alice_ctx.close()
         bob_ctx.close()
 
+        # ═══════════════════════════════════════════════════════════
+        # Scenario 3: Navigate to page and resume
+        # ═══════════════════════════════════════════════════════════
+        session_id3 = fresh_session("SeqSlides3")
+
+        host_ctx3 = browser.new_context(
+            http_credentials={"username": HOST_USER, "password": HOST_PASS}
+        )
+        host_raw3 = host_ctx3.new_page()
+        host_raw3.goto(f"{DAEMON_BASE}/host/{session_id3}", wait_until="networkidle")
+        expect(host_raw3.locator("#tab-poll")).to_be_visible(timeout=10000)
+
+        pax3_ctx = browser.new_context()
+        pax3_raw = pax3_ctx.new_page()
+        pax3_raw.goto(f"{BASE}/{session_id3}", wait_until="networkidle")
+        pax3 = ParticipantPage(pax3_raw)
+        pax3.join("Alice")
+
+        when_start3 = _ns_now()
+
+        # WHEN: open slide, navigate to page 3, switch slide, come back
+        pax3.expand_slides_dock()
+        pax3_raw.locator('.slides-list-item[data-slug="clean-code"] .slides-list-open').click()
+        pax3_raw.wait_for_selector("#slides-pdf-viewer canvas", timeout=30000)
+        pax3.navigate_to_page(3)
+        pax3_raw.locator('.slides-list-item[data-slug="design-patterns"] .slides-list-open').click()
+        pax3_raw.wait_for_selector("#slides-pdf-viewer canvas", timeout=30000)
+        pax3_raw.wait_for_timeout(500)
+
+        scenarios.append({
+            "name": "Navigate to page and resume",
+            "when_start_ns": when_start3,
+            "end_ns": _ns_now(),
+        })
+        host_ctx3.close()
+        pax3_ctx.close()
+
+        # ═══════════════════════════════════════════════════════════
+        # Scenario 4: Host updates a slide (invalidation flow)
+        # ═══════════════════════════════════════════════════════════
+        session_id4 = fresh_session("SeqSlides4")
+
+        host_ctx4 = browser.new_context(
+            http_credentials={"username": HOST_USER, "password": HOST_PASS}
+        )
+        host_raw4 = host_ctx4.new_page()
+        host_raw4.goto(f"{DAEMON_BASE}/host/{session_id4}", wait_until="networkidle")
+        expect(host_raw4.locator("#tab-poll")).to_be_visible(timeout=10000)
+
+        pax4_ctx = browser.new_context()
+        pax4_raw = pax4_ctx.new_page()
+        pax4_raw.goto(f"{BASE}/{session_id4}", wait_until="networkidle")
+        pax4 = ParticipantPage(pax4_raw)
+        pax4.join("Alice")
+
+        # Open slide first so it's cached
+        pax4.expand_slides_dock()
+        pax4_raw.locator('.slides-list-item[data-slug="architecture"] .slides-list-open').click()
+        pax4_raw.wait_for_selector("#slides-pdf-viewer canvas", timeout=30000)
+        pax4_raw.wait_for_timeout(500)
+
+        when_start4 = _ns_now()
+
+        # WHEN: host invalidates the slide (simulates updating the Google Drive file)
+        import json as _json
+        import urllib.request as _ur
+        import base64 as _b64
+        auth = _b64.b64encode(f"{HOST_USER}:{HOST_PASS}".encode()).decode()
+        # Get drive_export_url from catalog
+        req = _ur.Request(
+            f"{DAEMON_BASE}/{session_id4}/api/slides",
+            headers={"Authorization": f"Basic {auth}", "Content-Type": "application/json"},
+        )
+        with _ur.urlopen(req, timeout=10) as resp:
+            data = _json.loads(resp.read())
+        slides_list = data.get("slides", data) if isinstance(data, dict) else data
+        drive_url = ""
+        for s in slides_list:
+            if s.get("slug") == "architecture":
+                drive_url = s.get("drive_export_url", "")
+                break
+        # Invalidate
+        inv_body = _json.dumps({"drive_export_url": drive_url}).encode()
+        inv_req = _ur.Request(
+            f"{BASE}/api/{session_id4}/api/slides/invalidate/architecture",
+            method="POST",
+            headers={"Authorization": f"Basic {auth}", "Content-Type": "application/json"},
+            data=inv_body,
+        )
+        _ur.urlopen(inv_req, timeout=10)
+        pax4_raw.wait_for_timeout(3000)  # wait for re-download + broadcast
+
+        scenarios.append({
+            "name": "Host updates a slide",
+            "when_start_ns": when_start4,
+            "end_ns": _ns_now(),
+        })
+        host_ctx4.close()
+        pax4_ctx.close()
+
         browser.close()
 
     # Wait for spans to flush
@@ -309,5 +409,9 @@ def test_slides_sequence_diagram_extraction():
     # Verify scenario separators
     assert "== Participant opens a slide ==" in generated
     assert "== Second participant gets cached slide ==" in generated
+    assert "== Navigate to page and resume ==" in generated
+    assert "== Host updates a slide ==" in generated
+    # Verify init blocks
+    assert "group init" in generated
 
-    print("SUCCESS: Slides sequence diagram with scenarios and phase coloring")
+    print("SUCCESS: Slides sequence diagram with 4 scenarios and phase coloring")

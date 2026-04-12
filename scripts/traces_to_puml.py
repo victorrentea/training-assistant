@@ -243,8 +243,19 @@ def generate_puml(traces_path: str, family: str, output: str,
             if not sc_edges:
                 continue
             lines.append(f'== {sc["name"]} ==')
-            for e in sc_edges:
-                lines.append(_render_edge(e))
+            # Group Given-phase edges into a collapsed "init" block
+            given_edges = [e for e in sc_edges if e[4] == "given"]
+            when_edges = [e for e in sc_edges if e[4] != "given"]
+            if given_edges and when_edges:
+                lines.append("group init")
+                for e in given_edges:
+                    lines.append(f"  {_render_edge(e)}")
+                lines.append("end")
+                for e in when_edges:
+                    lines.append(_render_edge(e))
+            else:
+                for e in sc_edges:
+                    lines.append(_render_edge(e))
             lines.append("")
     else:
         for e in edges:

@@ -82,6 +82,7 @@ The user frequently uses a dictation tool. Messages may contain misheard words (
 - **E2E = hermetic**: Docker tests in `tests/docker/` with real backend + daemon + Playwright. See [TESTING.md](TESTING.md)
 - **Document direct requests**: track feature changes and bug fixes in backlog.md
 - **API reference**: `API.md` is generated from contracts; regenerate with `python3 scripts/generate_apis_md.py --output API.md` (also enforced in pre-commit)
+- **Sequence diagrams from traces**: hermetic tests generate OTel traces → `scripts/traces_to_puml.py` converts them to PlantUML with BDD phase coloring (Given=gray, When/Then=black), scenario separators (`== Name ==`), and colored trace hash suffixes (`[XX]`). Output: `docs/sequences/extracted/`. Run: `bash tests/docker/run-hermetic.sh -k test_slides_sequence_diagram_extraction -m nightly -s`. Rendered SVGs go to `docs/sequences/extracted/svg/` (auto-rendered by pre-commit hook).
 
 
 ## Workflow Orchestration (from Boris)
