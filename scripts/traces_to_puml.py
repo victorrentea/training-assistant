@@ -58,7 +58,7 @@ def _extract_edges(spans: list[dict]) -> list[tuple[str, str, str, int, str, str
     is_async=True for broadcast/notify_host (rendered as dashed arrows).
     """
     # Noise: spans that add no useful info to sequence diagrams
-    _SKIP_PATTERNS = {"/api/status", "/static/", "/favicon"}
+    _SKIP_PATTERNS = {"/api/status", "/static", "/favicon"}
 
     index = _build_span_index(spans)
     edges = []
@@ -86,15 +86,6 @@ def _extract_edges(spans: list[dict]) -> list[tuple[str, str, str, int, str, str
         if svc == "Daemon" and (not pid or pid not in index):
             if _HOST_PATH_RE.match(name):
                 edges.append(("Host", "Daemon", name, start, phase, tid, False))
-                continue
-
-        # Rule 8: Railway root HTTP spans (browser parent not in traces) => Participant -> Railway
-        # Only match actual REST calls (GET/POST/etc + path), skip WS frames, static assets, and noise.
-        if svc == "Railway" and (not pid or pid not in index):
-            if (re.match(r"(GET|POST|PUT|DELETE|PATCH|HEAD) /\S", name)
-                    and "/ws/" not in name
-                    and not any(p in name for p in _SKIP_PATTERNS)):
-                edges.append(("Participant", "Railway", name, start, phase, tid, False))
                 continue
 
         # Standard: cross-service parent->child edge
