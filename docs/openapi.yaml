@@ -613,7 +613,8 @@ paths:
           description: Successful Response
           content:
             application/json:
-              schema: {}
+              schema:
+                $ref: '#/components/schemas/AgendaResponse'
       x-feature: misc
   /api/{session_id}/host/pastes:
     get:
@@ -1238,6 +1239,19 @@ components:
       required:
       - phase
       title: AdvancePhaseRequest
+    AgendaResponse:
+      properties:
+        data:
+          type: string
+          title: Data
+        filename:
+          type: string
+          title: Filename
+      type: object
+      required:
+      - data
+      - filename
+      title: AgendaResponse
     AiResultRequest:
       properties:
         merges:

@@ -32,7 +32,7 @@
     <div class="status-bar tooltip-below">
       <span class="status-left">
         <img id="my-avatar" class="avatar has-tooltip" style="display:none" alt="" data-tooltip="Click to view or change">
-        <span>
+        <span><span class="dot"></span>
             <strong id="display-name" class="editable-name has-tooltip" data-tooltip="Click to change your name"></strong>
 
             <span id="name-edit-wrap" style="display:none;">
@@ -50,6 +50,9 @@
         <button id="summary-btn" class="header-link-btn has-tooltip" data-tooltip="(none yet)" onclick="toggleSummaryModal()" disabled>🧠 <span id="summary-count"></span> Key Points</button>
         <button id="notif-btn" style="display:none" class="has-tooltip" data-tooltip="Enable notifications">🔔</button>
         <span id="location-prompt" class="location-prompt tooltip-below has-tooltip" onclick="requestLocation()" data-tooltip="Share your location (optional)">📍 Location?</span>
+        <span id="host-dot" class="has-tooltip" data-tooltip="Host is live"><span class="dot dot-red"></span>🧑‍🏫</span>
+        <span id="daemon-dot" class="has-tooltip" data-tooltip="AI assistant offline"><span class="dot dot-red"></span>🤖</span>
+        <span id="pax-count" class="has-tooltip" data-tooltip="Participants connected"></span>
       </span>
     </div>
 <div id="content"></div>

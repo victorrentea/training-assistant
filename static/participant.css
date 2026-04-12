@@ -190,7 +190,7 @@ h1 { display: none; }
   padding: .25rem .9rem;
   height: 44px;
   box-sizing: border-box;
-  width: 53%;
+  width: 66%;
   margin: 0 auto .35rem;
   background: var(--surface);
   border: 1px solid var(--border);
@@ -217,7 +217,7 @@ h1 { display: none; }
 .status-right {
   display: flex;
   align-items: center;
-  gap: .75rem;
+  gap: .35rem;
 }
 
 /* Header tooltips render below — handled by .tooltip-below in common.css */

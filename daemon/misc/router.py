@@ -1,4 +1,5 @@
 """Daemon misc router — participant + host endpoints for paste, notes, summary, slides cache."""
+import base64
 import logging
 from typing import Optional
 
@@ -36,6 +37,10 @@ class SummaryResponse(BaseModel):
     points: list[SummaryPoint] = []
     raw_markdown: Optional[str] = None
     updated_at: Optional[str] = None
+
+class AgendaResponse(BaseModel):
+    data: str  # base64-encoded .docx content
+    filename: str
 
 class SlidesCacheStatusEntry(BaseModel):
     status: str
@@ -143,17 +148,16 @@ async def get_slides_cache_status():
     return SlidesCacheStatusResponse(slides_cache_status=misc_state.slides_cache_status)
 
 
-@participant_router.get("/agenda")
+@participant_router.get("/agenda", response_model=AgendaResponse)
 async def get_agenda():
     """Serve the agenda .docx as base64-encoded JSON (survives WS proxy)."""
-    import base64
     path = misc_state.agenda_docx_path
     if not path or not path.exists():
         return JSONResponse({"error": "No agenda available"}, status_code=404)
     try:
         raw = path.read_bytes()
         encoded = base64.b64encode(raw).decode("ascii")
-        return JSONResponse({"data": encoded, "filename": path.name})
+        return AgendaResponse(data=encoded, filename=path.name)
     except OSError:
         return JSONResponse({"error": "Failed to read agenda file"}, status_code=500)
 

@@ -422,4 +422,4 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 ### Participant REST
 | Endpoint | Request | Response |
 | --- | --- | --- |
-| Get Agenda, serve the agenda .docx as base64-encoded JSON (survives WS<br>proxy).<br>`GET /api/participant/agenda` | - | `any` |
+| Get Agenda, serve the agenda .docx as base64-encoded JSON (survives WS<br>proxy).<br>`GET /api/participant/agenda` | - | `data: string`<br>`filename: string` |
