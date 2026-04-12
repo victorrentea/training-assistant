@@ -25,7 +25,6 @@ channels:
           - $ref: '#/components/messages/participant_presence'
           - $ref: '#/components/messages/daemon_state_push'
           - $ref: '#/components/messages/sync_files'
-          - $ref: '#/components/messages/download_pdf'
           - $ref: '#/components/messages/pdf_download_complete'
           - $ref: '#/components/messages/file_ready_for_download'
           - $ref: '#/components/messages/summary_force'
@@ -43,6 +42,7 @@ channels:
           - $ref: '#/components/messages/proxy_response'
           - $ref: '#/components/messages/daemon_ping'
           - $ref: '#/components/messages/slide_invalidated'
+          - $ref: '#/components/messages/download_pdf'
 
 components:
   messages:
