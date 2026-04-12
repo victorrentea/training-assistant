@@ -6,7 +6,13 @@
 <title>Workshop Session | Digital Sanctuary</title>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200;300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
-<style>body{visibility:hidden}</style>
+<style>
+body{visibility:hidden}
+.nav-item{color:var(--color-on-surface-variant,#5e6b70)}
+.nav-item:hover{color:var(--color-on-surface,#161d1f);background-color:var(--color-surface-container-high,#dde3e5)}
+.nav-active{background-color:var(--color-primary-container,#dfe0ff)!important;color:var(--color-on-primary-container,#3747ac)!important;font-weight:600}
+.nav-active:hover{background-color:var(--color-primary-container,#dfe0ff)!important;color:var(--color-on-primary-container,#3747ac)!important}
+</style>
 <script>document.fonts.ready.then(function(){document.body.style.visibility='visible'})</script>
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 <script id="tailwind-config">
@@ -144,23 +150,23 @@
 <!-- Navigation Cluster -->
 <nav class="flex-grow flex flex-col space-y-1">
 <!-- Slides - ACTIVE -->
-<a onclick="closeTopics()" class="bg-primary-container text-on-primary-container rounded-full px-4 py-3 font-semibold flex items-center gap-3 transition-all cursor-pointer">
+<a data-nav="slides" onclick="closeTopics();setActive('slides')" class="nav-item nav-active rounded-full px-4 py-3 font-semibold flex items-center gap-3 transition-all cursor-pointer">
 <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">slideshow</span>
 <span class="text-base">Slides</span>
 </a>
-<a onclick="showView('agenda')" class="text-on-surface-variant px-4 py-3 hover:text-on-surface hover:bg-surface-container-high rounded-full flex items-center gap-3 transition-colors duration-200 cursor-pointer">
+<a data-nav="agenda" onclick="showView('agenda')" class="nav-item rounded-full px-4 py-3 flex items-center gap-3 transition-all cursor-pointer">
 <span class="material-symbols-outlined">event_note</span>
 <span class="text-base">Agenda</span>
 </a>
-<a onclick="showView('notes')" class="text-on-surface-variant px-4 py-3 hover:text-on-surface hover:bg-surface-container-high rounded-full flex items-center gap-3 transition-colors duration-200 cursor-pointer">
+<a data-nav="notes" onclick="showView('notes')" class="nav-item rounded-full px-4 py-3 flex items-center gap-3 transition-all cursor-pointer">
 <span class="material-symbols-outlined">description</span>
 <span class="text-base">Notes</span>
 </a>
-<a onclick="showView('summary')" class="text-on-surface-variant px-4 py-3 hover:text-on-surface hover:bg-surface-container-high rounded-full flex items-center gap-3 transition-colors duration-200 cursor-pointer">
+<a data-nav="summary" onclick="showView('summary')" class="nav-item rounded-full px-4 py-3 flex items-center gap-3 transition-all cursor-pointer">
 <span class="material-symbols-outlined">psychology</span>
 <span class="text-base">AI Summary</span>
 </a>
-<button onclick="openTopics()" class="w-full text-on-surface-variant px-4 py-3 hover:text-on-surface hover:bg-surface-container-high rounded-full flex items-center gap-3 transition-colors duration-200">
+<button data-nav="topics" onclick="openTopics()" class="nav-item w-full rounded-full px-4 py-3 flex items-center gap-3 transition-all">
 <span class="material-symbols-outlined">topic</span>
 <span class="text-base flex-1 text-left">Topics</span>
 <span class="material-symbols-outlined topics-arrow text-xl transition-transform duration-300">chevron_right</span>
@@ -191,20 +197,20 @@
 </div>
 </div>
 </div>
-<a onclick="closeTopics()" class="text-on-surface-variant px-4 py-3 hover:text-on-surface hover:bg-surface-container-high rounded-full flex items-center gap-3 transition-colors duration-200 cursor-pointer">
+<a data-nav="gitrepos" onclick="closeTopics();setActive('gitrepos')" class="nav-item rounded-full px-4 py-3 flex items-center gap-3 transition-all cursor-pointer">
 <span class="material-symbols-outlined">terminal</span>
 <span class="text-base">Git Repos</span>
 </a>
-<a onclick="closeTopics()" class="text-on-surface-variant px-4 py-3 hover:text-on-surface hover:bg-surface-container-high rounded-full flex items-center gap-3 transition-colors duration-200 cursor-pointer">
+<a data-nav="drive" onclick="closeTopics();setActive('drive')" class="nav-item rounded-full px-4 py-3 flex items-center gap-3 transition-all cursor-pointer">
 <span class="material-symbols-outlined">cloud</span>
 <span class="text-base">Drive</span>
 <span class="material-symbols-outlined text-sm opacity-50">open_in_new</span>
 </a>
-<a onclick="closeTopics()" class="text-on-surface-variant px-4 py-3 hover:text-on-surface hover:bg-surface-container-high rounded-full flex items-center gap-3 transition-colors duration-200 cursor-pointer">
+<a data-nav="paste" onclick="closeTopics();setActive('paste')" class="nav-item rounded-full px-4 py-3 flex items-center gap-3 transition-all cursor-pointer">
 <span class="material-symbols-outlined">content_paste</span>
 <span class="text-base">Paste</span>
 </a>
-<a onclick="closeTopics()" class="text-on-surface-variant px-4 py-3 hover:text-on-surface hover:bg-surface-container-high rounded-full flex items-center gap-3 transition-colors duration-200 cursor-pointer">
+<a data-nav="upload" onclick="closeTopics();setActive('upload')" class="nav-item rounded-full px-4 py-3 flex items-center gap-3 transition-all cursor-pointer">
 <span class="material-symbols-outlined">upload</span>
 <span class="text-base">Upload</span>
 </a>
@@ -459,7 +465,13 @@
 </main>
 </div>
 <script>
+function setActive(name) {
+  document.querySelectorAll('.nav-item').forEach(function(el) { el.classList.remove('nav-active'); });
+  var el = document.querySelector('[data-nav="' + name + '"]');
+  if (el) el.classList.add('nav-active');
+}
 function openTopics() {
+  setActive('topics');
   var list = document.querySelector('.topics-list');
   var arrow = document.querySelector('.topics-arrow');
   list.style.maxHeight = '12rem';
@@ -477,6 +489,7 @@ function saveScroll(name, el) {
 }
 function showView(name) {
   closeTopics();
+  setActive(name);
   VIEWS.forEach(function(v) {
     var el = document.getElementById(v + '-view');
     el.style.display = v === name ? '' : 'none';
