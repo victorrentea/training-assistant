@@ -61,12 +61,12 @@ def _extract_edges(spans: list[dict]) -> list[tuple[str, str, str, int, str, str
     _SKIP_PATTERNS = {"/api/status", "/static", "/favicon"}
 
     index = _build_span_index(spans)
-    # Railway spans that have children are proxy parents — handled by _collapse_proxy
-    _railway_with_children = set()
+    # Railway spans whose children include a different service are proxy parents
+    _railway_proxy_parents = set()
     for s in spans:
         p = _parent_id(s)
-        if p and p in index and _service_name(index[p]) == "Railway":
-            _railway_with_children.add(p)
+        if p and p in index and _service_name(index[p]) == "Railway" and _service_name(s) != "Railway":
+            _railway_proxy_parents.add(p)
 
     edges = []
     for span in spans:
@@ -99,7 +99,7 @@ def _extract_edges(spans: list[dict]) -> list[tuple[str, str, str, int, str, str
         # Skip proxy parents (they have children and are handled by _collapse_proxy).
         if svc == "Railway" and (not pid or pid not in index):
             sid = _span_id(span)
-            if (sid not in _railway_with_children
+            if (sid not in _railway_proxy_parents
                     and re.match(r"(GET|POST|PUT|DELETE|PATCH|HEAD) /\S", name)
                     and "/ws/" not in name):
                 edges.append(("Participant", "Railway", name, start, phase, tid, False))
@@ -229,6 +229,9 @@ def generate_puml(traces_path: str, family: str, output: str,
                 f = default_actor
             named.append((f, t, label, ts, phase, tid, is_async))
         edges = named
+        # Drop edges still referencing generic "Participant" — they're noise
+        # (broadcasts to all, unresolvable proxy calls)
+        edges = [e for e in edges if e[0] != "Participant" and e[1] != "Participant"]
 
     if not scenarios:
         edges = _deduplicate_edges(edges)
