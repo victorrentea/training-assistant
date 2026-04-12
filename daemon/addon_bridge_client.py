@@ -7,6 +7,8 @@ Protocol:
               — relayed by addons to the desktop overlay for animation
   Addons → Daemon: {"type": "slide", "deck": "<name>", "slide": <n>, "presenting": <bool>}
               — pushed on every PowerPoint slide/deck change (no message when unchanged)
+  Addons → Daemon: {"type": "slides_viewed", "slides": [{"fileName": "<name>", "page": <n>, "seconds": <n>}, ...]}
+              — periodic (60s) delta of per-slide viewing durations
   On connect:  server immediately sends the last known slide state as a welcome message.
 """
 import json
@@ -29,6 +31,7 @@ class AddonBridgeClient:
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
         self._slide_queue: queue.Queue = queue.Queue()
+        self._slides_viewed_queue: queue.Queue = queue.Queue()
         self._on_connection_change: callable | None = None
 
     # ── Public API (callable from any thread) ─────────────────────────────────
@@ -68,6 +71,16 @@ class AddonBridgeClient:
             except queue.Empty:
                 break
         return events
+
+    def drain_slides_viewed(self) -> list[list[dict]]:
+        """Return all pending slides_viewed batches. Call from the main thread each loop."""
+        batches: list[list[dict]] = []
+        while True:
+            try:
+                batches.append(self._slides_viewed_queue.get_nowait())
+            except queue.Empty:
+                break
+        return batches
 
     def start(self) -> None:
         self._thread = threading.Thread(target=self._run_loop, daemon=True, name=_NAME)
@@ -145,6 +158,10 @@ class AddonBridgeClient:
                     pass
                 if data.get("type") == "slide":
                     self._slide_queue.put(data)
+                elif data.get("type") == "slides_viewed":
+                    slides = data.get("slides", [])
+                    if slides:
+                        self._slides_viewed_queue.put(slides)
                 if _ctx and _token:
                     context.detach(_token)
         except ConnectionClosed:
