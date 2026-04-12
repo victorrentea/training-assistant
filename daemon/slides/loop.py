@@ -119,18 +119,20 @@ class SlidesRunner:
 
         # Mark all slides as not_cached at startup; actual cache status
         # is probed on WS (re)connect via probe_railway_cache().
-        # Also propagate modified_at from tracked pptx_mtime if available.
-        for catalog_entry in catalog_entries:
+        # Also set modified_at from source PPTX file mtime if available.
+        for entry, catalog_entry in zip(entries, catalog_entries):
             slug = catalog_entry["slug"]
-            status = {
+            status: dict = {
                 **misc_state.slides_cache_status.get(slug, {}),
                 "status": "not_cached",
             }
-            # Find pptx_mtime from tracked state for this slug
-            for _key, state_entry in tracked.items():
-                if state_entry.get("slug") == slug and state_entry.get("pptx_mtime") is not None:
-                    status["modified_at"] = _iso_utc(state_entry["pptx_mtime"])
-                    break
+            # Read mtime from the actual PPTX source file
+            source = entry["source"]
+            try:
+                if source.exists():
+                    status["modified_at"] = _iso_utc(source.stat().st_mtime)
+            except OSError:
+                pass
             misc_state.slides_cache_status[slug] = status
         log.info("slides", f"Initialized catalog: {len(catalog_entries)} entries")
 

@@ -285,19 +285,27 @@ def slide_automatically_reloaded():
 # ── Then steps ─────────────────────────────────────────────────────────
 
 @then(parsers.parse('the slides catalog contains "{slug}" with a last modified timestamp'))
-def catalog_contains_with_timestamp(connected, slug):
+def catalog_contains_with_timestamp(request, connected, slug):
     pax = connected["pax"]
+    session_id = request.getfixturevalue("session_id")
+    # Debug: check what the daemon API returns
+    _, body = _api("GET", f"/{session_id}/api/slides")
+    data = json.loads(body)
+    slides_list = data.get("slides", data) if isinstance(data, dict) else data
+    for s in slides_list:
+        if s.get("slug") == slug:
+            print(f"[DEBUG] Daemon API slide '{slug}': modified_at={s.get('modified_at')}, status={s.get('status')}")
+            break
+    else:
+        print(f"[DEBUG] Slug '{slug}' not found in daemon API response: {[s.get('slug') for s in slides_list]}")
+
     pax.expand_slides_dock()
-    # Wait and poll for timestamp to appear (daemon scan may need time to propagate)
     item = pax._page.locator(f'.slides-list-item[data-slug="{slug}"]')
     expect(item).to_be_visible(timeout=10000)
-    # The .slides-list-updated badge may need the catalog to refresh with modified_at data.
-    # Poll with a reload of the page's slide catalog data.
     timestamp = item.locator(".slides-list-updated")
     try:
         expect(timestamp).to_be_visible(timeout=5000)
     except AssertionError:
-        # Force reload of slides catalog via page navigation (triggers re-fetch)
         pax._page.evaluate("() => window.location.reload()")
         pax._page.wait_for_load_state("networkidle")
         pax._page.wait_for_timeout(3000)
