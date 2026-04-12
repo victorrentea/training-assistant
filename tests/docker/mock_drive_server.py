@@ -14,6 +14,7 @@ Routes:
 import hashlib
 import json
 import os
+import sys
 import threading
 import time
 from http.server import HTTPServer, BaseHTTPRequestHandler
@@ -80,27 +81,34 @@ class MockDriveHandler(BaseHTTPRequestHandler):
             self.send_error(404, f"No fixture PDF for slug: {slug}")
             return
 
-        # Track request and capture delay under lock
-        with _lock:
-            _request_counts[slug] = _request_counts.get(slug, 0) + 1
-            count = _request_counts[slug]
-            delay = _delays.get(slug, 0.0)
+        from opentelemetry import trace
+        from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
 
-        if delay > 0:
-            print(f"[mock-drive] GET {slug}.pdf — sleeping {delay}s to simulate slow Drive")
-            time.sleep(delay)
+        carrier = dict(self.headers)
+        ctx = TraceContextTextMapPropagator().extract(carrier=carrier)
+        tracer = trace.get_tracer("mock-drive")
+        with tracer.start_as_current_span(f"GET {slug}.pdf", context=ctx):
+            # Track request and capture delay under lock
+            with _lock:
+                _request_counts[slug] = _request_counts.get(slug, 0) + 1
+                count = _request_counts[slug]
+                delay = _delays.get(slug, 0.0)
 
-        data = pdf_path.read_bytes()
-        etag = hashlib.md5(data).hexdigest()
+            if delay > 0:
+                print(f"[mock-drive] GET {slug}.pdf — sleeping {delay}s to simulate slow Drive")
+                time.sleep(delay)
 
-        print(f"[mock-drive] GET {slug}.pdf ({len(data)} bytes, request #{count})")
+            data = pdf_path.read_bytes()
+            etag = hashlib.md5(data).hexdigest()
 
-        self.send_response(200)
-        self.send_header("Content-Type", "application/pdf")
-        self.send_header("Content-Length", str(len(data)))
-        self.send_header("ETag", f'"{etag}"')
-        self.end_headers()
-        self.wfile.write(data)
+            print(f"[mock-drive] GET {slug}.pdf ({len(data)} bytes, request #{count})")
+
+            self.send_response(200)
+            self.send_header("Content-Type", "application/pdf")
+            self.send_header("Content-Length", str(len(data)))
+            self.send_header("ETag", f'"{etag}"')
+            self.end_headers()
+            self.wfile.write(data)
 
     def do_POST(self):
         if self.path == "/mock-drive/reset-stats":
@@ -151,6 +159,15 @@ def start_mock_drive(port: int = MOCK_DRIVE_PORT) -> HTTPServer:
 
 
 if __name__ == "__main__":
+    # Ensure daemon package is importable for telemetry setup
+    _app_dir = "/app"
+    if _app_dir not in sys.path:
+        sys.path.insert(0, _app_dir)
+
+    os.environ.setdefault("OTEL_SERVICE_NAME", "GDrive")
+    from daemon.telemetry import setup_tracing
+    setup_tracing()
+
     server = start_mock_drive()
     print(f"[mock-drive] Running on http://0.0.0.0:{MOCK_DRIVE_PORT}")
     try:

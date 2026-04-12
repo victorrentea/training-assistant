@@ -80,8 +80,8 @@ CATALOG
 # Overwrite the production catalog with our test catalog (backend hardcodes this path)
 cp /tmp/test-slides-catalog.json /app/daemon/materials_slides_catalog.json
 
-# Start mock Google Drive server
-python /tests/mock_drive_server.py &
+# Start mock Google Drive server (needs /app on path for daemon.telemetry)
+PYTHONPATH=/app python /tests/mock_drive_server.py &
 MOCK_DRIVE_PID=$!
 sleep 0.5
 echo "[startup] Mock Drive server started (PID=$MOCK_DRIVE_PID)"
