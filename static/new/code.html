@@ -156,11 +156,43 @@ body{visibility:hidden}
 <!-- Navigation Cluster -->
 <nav class="flex flex-col space-y-2 flex-1 overflow-y-auto min-h-0">
 <!-- Slides - ACTIVE -->
-<a data-nav="slides" onclick="showView('slides')" class="nav-item nav-active rounded-full px-2 py-2 font-semibold flex items-center gap-3 transition-all cursor-pointer">
+<div>
+<button data-nav="slides" onclick="toggleSlides()" class="nav-item nav-active w-full rounded-full px-2 py-2 font-semibold flex items-center gap-3 transition-all">
 <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">slideshow</span>
 <span class="text-base">Slides</span>
 <span class="badge-new">LIVE SYNC</span>
-</a>
+<span class="material-symbols-outlined slides-arrow text-xl transition-transform duration-300 ml-auto">chevron_right</span>
+</button>
+<div style="max-height:0;overflow:hidden;transition:max-height 0.6s ease" class="slides-list mx-2 mt-1 rounded-xl">
+<div class="slides-list-inner overflow-y-auto py-1 space-y-2">
+<div>
+  <div class="px-4 pt-1 pb-0.5 text-xs font-semibold text-on-surface-variant opacity-60 uppercase tracking-wide">slideA</div>
+  <div class="px-4 flex flex-wrap gap-1.5 py-1">
+    <button onclick="" class="text-xs px-2 py-0.5 rounded-full bg-surface-container-highest text-on-surface-variant hover:bg-primary-container hover:text-on-primary-container transition-colors">1</button>
+    <button onclick="" class="text-xs px-2 py-0.5 rounded-full bg-surface-container-highest text-on-surface-variant hover:bg-primary-container hover:text-on-primary-container transition-colors">2</button>
+    <button onclick="" class="text-xs px-2 py-0.5 rounded-full bg-surface-container-highest text-on-surface-variant hover:bg-primary-container hover:text-on-primary-container transition-colors">3</button>
+    <button onclick="" class="text-xs px-2 py-0.5 rounded-full bg-surface-container-highest text-on-surface-variant hover:bg-primary-container hover:text-on-primary-container transition-colors">5</button>
+    <button onclick="" class="text-xs px-2 py-0.5 rounded-full bg-surface-container-highest text-on-surface-variant hover:bg-primary-container hover:text-on-primary-container transition-colors">7</button>
+  </div>
+</div>
+<div>
+  <div class="px-4 pt-1 pb-0.5 text-xs font-semibold text-on-surface-variant opacity-60 uppercase tracking-wide">slideB</div>
+  <div class="px-4 flex flex-wrap gap-1.5 py-1">
+    <button onclick="" class="text-xs px-2 py-0.5 rounded-full bg-surface-container-highest text-on-surface-variant hover:bg-primary-container hover:text-on-primary-container transition-colors">7</button>
+    <button onclick="" class="text-xs px-2 py-0.5 rounded-full bg-surface-container-highest text-on-surface-variant hover:bg-primary-container hover:text-on-primary-container transition-colors">10</button>
+    <button onclick="" class="text-xs px-2 py-0.5 rounded-full bg-surface-container-highest text-on-surface-variant hover:bg-primary-container hover:text-on-primary-container transition-colors">20</button>
+  </div>
+</div>
+<div>
+  <div class="px-4 pt-1 pb-0.5 text-xs font-semibold text-on-surface-variant opacity-60 uppercase tracking-wide">slideA</div>
+  <div class="px-4 flex flex-wrap gap-1.5 py-1">
+    <button onclick="" class="text-xs px-2 py-0.5 rounded-full bg-surface-container-highest text-on-surface-variant hover:bg-primary-container hover:text-on-primary-container transition-colors">8</button>
+    <button onclick="" class="text-xs px-2 py-0.5 rounded-full bg-surface-container-highest text-on-surface-variant hover:bg-primary-container hover:text-on-primary-container transition-colors">9</button>
+  </div>
+</div>
+</div>
+</div>
+</div>
 <a data-nav="agenda" onclick="showView('agenda')" class="nav-item rounded-full px-2 py-2 flex items-center gap-3 transition-all cursor-pointer">
 <span class="material-symbols-outlined">event_note</span>
 <span class="text-base">Agenda</span>
@@ -557,8 +589,40 @@ function setActive(name) {
   var el = document.querySelector('[data-nav="' + name + '"]');
   if (el) el.classList.add('nav-active');
 }
+function openSlides() {
+  closeTopics(); closeRepos();
+  var list = document.querySelector('.slides-list');
+  var arrow = document.querySelector('.slides-arrow');
+  list.style.maxHeight = '0px';
+  requestAnimationFrame(function() {
+    var aside = document.querySelector('aside');
+    var sendFeedback = aside.lastElementChild;
+    var available = aside.getBoundingClientRect().bottom
+      - list.getBoundingClientRect().top
+      - sendFeedback.offsetHeight - 8;
+    list.style.maxHeight = Math.max(available, 0) + 'px';
+    // scroll to bottom after transition
+    setTimeout(function() {
+      var inner = list.querySelector('.slides-list-inner');
+      if (inner) inner.scrollTop = inner.scrollHeight;
+    }, 650);
+  });
+  arrow.style.transform = 'rotate(90deg)';
+  showView('slides');
+}
+function closeSlides() {
+  var list = document.querySelector('.slides-list');
+  var arrow = document.querySelector('.slides-arrow');
+  if (!list) return;
+  list.style.maxHeight = '0px';
+  arrow.style.transform = 'rotate(0deg)';
+}
+function toggleSlides() {
+  var list = document.querySelector('.slides-list');
+  if (!list.style.maxHeight || list.style.maxHeight === '0px') { openSlides(); } else { closeSlides(); showView('slides'); }
+}
 function openTopics() {
-  closeRepos();
+  closeSlides(); closeRepos();
   var list = document.querySelector('.topics-list');
   var arrow = document.querySelector('.topics-arrow');
   list.style.maxHeight = '0px';
@@ -580,7 +644,7 @@ function closeTopics() {
   arrow.style.transform = 'rotate(0deg)';
 }
 function openRepos() {
-  closeTopics();
+  closeSlides(); closeTopics();
   var list = document.querySelector('.repos-list');
   var arrow = document.querySelector('.repos-arrow');
   list.style.maxHeight = '12rem';
@@ -677,6 +741,7 @@ function selectTopic(el, event) {
   });
 }
 function showView(name) {
+  if (name !== 'slides') closeSlides();
   document.querySelectorAll('.topic-item').forEach(function(n) { n.classList.remove('topic-active'); });
   setActive(name);
   VIEWS.forEach(function(v) {
