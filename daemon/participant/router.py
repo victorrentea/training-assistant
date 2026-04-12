@@ -181,17 +181,6 @@ class SlidesCurrentPayload(BaseModel):
     model_config = ConfigDict(extra="allow")
 
 
-class LeaderboardEntry(BaseModel):
-    uuid: str
-    name: str
-    score: int
-
-
-class LeaderboardData(BaseModel):
-    entries: list[LeaderboardEntry]
-    total_participants: int
-
-
 class WordcloudData(BaseModel):
     words: dict[str, int]
     word_order: list[str]
@@ -231,7 +220,6 @@ class ParticipantStateResponse(BaseModel):
     codereview: CodeReviewParticipantState
     debate: DebateData
     slides_current: SlidesCurrentPayload | None = None
-    leaderboard_data: LeaderboardData | None = None
     summary_count: int
     summary_updated_at: str | None = None
     notes_count: int
@@ -565,7 +553,6 @@ async def set_location(request: Request, body: LocationRequest):
 @router.get("/state", response_model=ParticipantStateResponse)
 async def get_participant_state(request: Request):
     """Return full personalised state for a participant — used on page load and WS reconnect."""
-    from daemon.leaderboard.state import leaderboard_state
     from daemon.misc.state import misc_state
     from daemon.wordcloud.state import wordcloud_state
 
@@ -619,8 +606,6 @@ async def get_participant_state(request: Request):
         },
         # Slides (from misc state — synced from Railway)
         "slides_current": misc_state.slides_current,
-        # Leaderboard
-        "leaderboard_data": leaderboard_state.data,
         # Summary / notes (counts only — full content fetched on demand)
         "summary_count": len(summary["points"]),
         "summary_updated_at": summary["updated_at"],

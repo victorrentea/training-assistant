@@ -2209,10 +2209,6 @@ components:
           anyOf:
           - $ref: '#/components/schemas/SlidesCurrentPayload'
           - type: 'null'
-        leaderboard_data:
-          anyOf:
-          - $ref: '#/components/schemas/LeaderboardData'
-          - type: 'null'
         summary_count:
           type: integer
           title: Summary Count
