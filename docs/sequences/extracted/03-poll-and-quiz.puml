@@ -6,33 +6,34 @@ participant "Participant"
 participant "Railway"
 participant "Daemon"
 
-"Daemon" --> "Participant": broadcast notes_updated
-"Daemon" --> "Participant": broadcast summary_updated
-"Host" -> "Daemon": DELETE /api/{session_id}/host/scores
-"Daemon" --> "Participant": broadcast scores_updated
-"Host" -> "Daemon": GET /host/{session_id}
-"Host" -> "Daemon": GET /api/{session_id}/host/state
-"Participant" -> "Daemon": POST /api/participant/register
-"Railway" -> "Daemon": GET /{session_id}/api/slides
-"Daemon" --> "Host": notify_host participant_list_updated
-"Participant" -> "Daemon": GET /api/participant/state
-"Participant" -> "Daemon": POST /api/participant/location
-"Daemon" --> "Participant": broadcast active_participants_count_updated
-"Host" -> "Daemon": PUT /api/{session_id}/host/activity
-"Daemon" --> "Participant": broadcast activity_updated
-"Host" -> "Daemon": POST /api/{session_id}/host/poll
-"Daemon" --> "Host": notify_host poll_ai_generated
-"Participant" -> "Daemon": PUT /api/participant/name
-"Host" -> "Daemon": POST /api/{session_id}/host/poll/open
-"Daemon" --> "Participant": broadcast poll_opened
-"Daemon" --> "Host": notify_host poll_opened
-"Host" -> "Daemon": POST /api/{session_id}/host/poll/close
-"Daemon" --> "Participant": broadcast poll_closed
-"Daemon" --> "Host": notify_host poll_closed
-"Participant" -> "Daemon": POST /api/participant/poll/vote
-"Host" -> "Daemon": PUT /api/{session_id}/host/poll/correct
-"Daemon" --> "Participant": broadcast poll_correct_revealed
-"Daemon" --> "Host": notify_host poll_correct_revealed
-"Daemon" --> "Host": notify_host scores_updated
+"Host" -> "Daemon": DELETE /api/{session_id}/host/scores <color:#1ABC9C>[86]</color>
+"Host" -> "Daemon": GET /host/{session_id} <color:#F39C12>[03]</color>
+"Host" -> "Daemon": GET /api/{session_id}/host/state <color:#1ABC9C>[46]</color>
+"Participant" -> "Railway": GET /{session_id}/ <color:#16A085>[59]</color>
+"Participant" -> "Daemon": POST /api/participant/register <color:#16A085>[69]</color>
+"Daemon" --> "Host": participant_list_updated <color:#16A085>[69]</color>
+"Participant" -> "Daemon": GET /api/participant/state <color:#1ABC9C>[86]</color>
+"Participant" -> "Daemon": GET /{session_id}/api/slides <color:#C0392B>[97]</color>
+"Daemon" --> "Participant": active_participants_count_updated <color:#E74C3C>[50]</color>
+"Host" -> "Daemon": PUT /api/{session_id}/host/activity <color:#F39C12>[73]</color>
+"Daemon" --> "Participant": activity_updated <color:#F39C12>[73]</color>
+"Host" -> "Daemon": POST /api/{session_id}/host/poll <color:#8E44AD>[84]</color>
+"Daemon" --> "Host": poll_ai_generated <color:#8E44AD>[84]</color>
+"Participant" -> "Daemon": PUT /api/participant/name <color:#2E86C1>[31]</color>
+"Host" -> "Daemon": POST /api/{session_id}/host/poll/open <color:#D35400>[45]</color>
+"Daemon" --> "Participant": poll_opened <color:#D35400>[45]</color>
+"Daemon" --> "Host": poll_opened <color:#D35400>[45]</color>
+"Daemon" --> "Host": participant_list_updated <color:#2E86C1>[31]</color>
+"Participant" -> "Daemon": GET /api/participant/state <color:#27AE60>[02]</color>
+"Host" -> "Daemon": POST /api/{session_id}/host/poll/close <color:#2E86C1>[31]</color>
+"Daemon" --> "Participant": poll_closed <color:#2E86C1>[31]</color>
+"Daemon" --> "Host": poll_closed <color:#2E86C1>[31]</color>
+"Participant" -> "Daemon": POST /api/participant/poll/vote <color:#C0392B>[87]</color>
+"Host" -> "Daemon": PUT /api/{session_id}/host/poll/correct <color:#C0392B>[17]</color>
+"Daemon" --> "Participant": poll_correct_revealed <color:#C0392B>[17]</color>
+"Daemon" --> "Participant": scores_updated <color:#C0392B>[17]</color>
+"Daemon" --> "Host": poll_correct_revealed <color:#C0392B>[17]</color>
+"Daemon" --> "Host": scores_updated <color:#C0392B>[17]</color>
+"Daemon" --> "Participant": active_participants_count_updated <color:#16A085>[09]</color>
 
 @enduml

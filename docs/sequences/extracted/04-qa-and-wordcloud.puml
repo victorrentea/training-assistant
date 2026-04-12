@@ -6,26 +6,39 @@ participant "Participant"
 participant "Railway"
 participant "Daemon"
 
-"Daemon" --> "Participant": broadcast notes_updated
-"Daemon" --> "Participant": broadcast summary_updated
-"Host" -> "Daemon": DELETE /api/{session_id}/host/scores
-"Daemon" --> "Participant": broadcast scores_updated
-"Host" -> "Daemon": GET /host/{session_id}
-"Host" -> "Daemon": GET /api/{session_id}/host/state
-"Participant" -> "Daemon": POST /api/participant/register
-"Railway" -> "Daemon": GET /{session_id}/api/slides
-"Daemon" --> "Host": notify_host participant_list_updated
-"Participant" -> "Daemon": GET /api/participant/state
-"Participant" -> "Daemon": POST /api/participant/location
-"Daemon" --> "Participant": broadcast active_participants_count_updated
-"Participant" -> "Daemon": PUT /api/participant/name
-"Host" -> "Daemon": PUT /api/{session_id}/host/activity
-"Daemon" --> "Participant": broadcast activity_updated
-"Participant" -> "Daemon": POST /api/participant/qa/submit
-"Daemon" --> "Host": notify_host qa_updated
-"Daemon" --> "Host": notify_host scores_updated
-"Participant" -> "Daemon": POST /api/participant/qa/upvote
-"Host" -> "Daemon": PUT /api/{session_id}/host/qa/question/{question_id}/answered
-"Daemon" --> "Participant": broadcast qa_updated
+"Host" -> "Daemon": DELETE /api/{session_id}/host/scores <color:#C0392B>[07]</color>
+"Host" -> "Daemon": GET /host/{session_id} <color:#8E44AD>[44]</color>
+"Host" -> "Daemon": GET /api/{session_id}/host/state <color:#27AE60>[32]</color>
+"Participant" -> "Railway": GET /{session_id}/ <color:#F39C12>[83]</color>
+"Participant" -> "Daemon": POST /api/participant/register <color:#8E44AD>[14]</color>
+"Daemon" --> "Host": participant_list_updated <color:#8E44AD>[14]</color>
+"Participant" -> "Daemon": GET /{session_id}/api/slides <color:#F39C12>[53]</color>
+"Participant" -> "Daemon": GET /api/participant/state <color:#2980B9>[48]</color>
+"Daemon" --> "Participant": active_participants_count_updated <color:#C0392B>[97]</color>
+"Participant" -> "Daemon": PUT /api/participant/name <color:#1ABC9C>[96]</color>
+"Daemon" --> "Host": participant_list_updated <color:#1ABC9C>[96]</color>
+"Participant" -> "Railway": GET /{session_id}/ <color:#8E44AD>[24]</color>
+"Participant" -> "Daemon": POST /api/participant/register <color:#2980B9>[78]</color>
+"Daemon" --> "Host": participant_list_updated <color:#2980B9>[78]</color>
+"Participant" -> "Daemon": GET /api/participant/state <color:#D35400>[25]</color>
+"Participant" -> "Daemon": GET /{session_id}/api/slides <color:#2980B9>[88]</color>
+"Host" -> "Daemon": PUT /api/{session_id}/host/activity <color:#16A085>[49]</color>
+"Daemon" --> "Participant": activity_updated <color:#16A085>[49]</color>
+"Participant" -> "Daemon": PUT /api/participant/name <color:#8E44AD>[94]</color>
+"Daemon" --> "Host": participant_list_updated <color:#8E44AD>[94]</color>
+"Participant" -> "Daemon": GET /api/participant/state <color:#E74C3C>[20]</color>
+"Participant" -> "Daemon": GET /api/participant/state <color:#E74C3C>[10]</color>
+"Daemon" --> "Participant": active_participants_count_updated <color:#2980B9>[18]</color>
+"Participant" -> "Daemon": POST /api/participant/qa/submit <color:#16A085>[69]</color>
+"Daemon" --> "Host": qa_updated <color:#16A085>[69]</color>
+"Daemon" --> "Host": scores_updated <color:#16A085>[69]</color>
+"Participant" -> "Daemon": POST /api/participant/qa/upvote <color:#D35400>[25]</color>
+"Daemon" --> "Host": qa_updated <color:#D35400>[25]</color>
+"Daemon" --> "Host": scores_updated <color:#D35400>[25]</color>
+"Host" -> "Daemon": PUT /api/{session_id}/host/qa/question/{question_id}/answered <color:#16A085>[29]</color>
+"Daemon" --> "Participant": qa_updated <color:#16A085>[29]</color>
+"Daemon" --> "Host": qa_updated <color:#16A085>[29]</color>
+"Daemon" --> "Participant": active_participants_count_updated <color:#F39C12>[33]</color>
+"Daemon" --> "Participant": active_participants_count_updated <color:#D35400>[35]</color>
 
 @enduml
