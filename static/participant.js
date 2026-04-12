@@ -568,7 +568,7 @@ function closeEmojiPopup(ev) {
     btn.disabled = !count;
     btn.dataset.tooltip = count ? 'Session notes' : '(none yet)';
     const span = document.getElementById('notes-count');
-    if (span) span.textContent = count ? `(${count}) ` : '';
+    if (span) span.textContent = count ? `${count} ` : '';
     if (flash && count) {
       btn.classList.remove('count-flash');
       void btn.offsetWidth;
@@ -582,7 +582,7 @@ function closeEmojiPopup(ev) {
     btn.disabled = !count;
     btn.dataset.tooltip = count ? 'Key points discussed so far' : '(none yet)';
     const span = document.getElementById('summary-count');
-    if (span) span.textContent = count ? `(${count}) ` : '';
+    if (span) span.textContent = count ? `${count} ` : '';
     if (flash && count) {
       btn.classList.remove('count-flash');
       void btn.offsetWidth;
@@ -784,6 +784,43 @@ ${html}
     _syncSlidesModalBlocking();
   }
 
+// ── Agenda modal ──────────────────────────────────────────────────────────────
+let _agendaHtml = null;
+
+function toggleAgendaModal() {
+  const overlay = document.getElementById('agenda-overlay');
+  if (!overlay) return;
+  const opening = !overlay.classList.contains('open');
+  overlay.classList.toggle('open');
+  _syncSlidesModalBlocking();
+  if (opening && !_agendaHtml) {
+    const el = document.getElementById('agenda-content');
+    el.textContent = 'Loading…';
+    fetch(apiBase + '/api/participant/agenda')
+      .then(r => r.ok ? r.json() : Promise.reject('not found'))
+      .then(data => {
+        const binary = atob(data.data);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+        return mammoth.convertToHtml({ arrayBuffer: bytes.buffer });
+      })
+      .then(result => {
+        _agendaHtml = result.value;
+        el.innerHTML = _agendaHtml;
+      })
+      .catch(() => {
+        el.textContent = 'Failed to load agenda.';
+      });
+  } else if (opening && _agendaHtml) {
+    document.getElementById('agenda-content').innerHTML = _agendaHtml;
+  }
+}
+
+function closeAgendaModal() {
+  closeModal('agenda-overlay');
+  _syncSlidesModalBlocking();
+}
+
   document.addEventListener('DOMContentLoaded', () => {
     const summaryOverlay = document.getElementById('summary-overlay');
     if (summaryOverlay) {
@@ -796,6 +833,17 @@ ${html}
         mouseDownOnOverlay = false;
       });
     }
+  const agendaOverlay = document.getElementById('agenda-overlay');
+  if (agendaOverlay) {
+    let mouseDownOnOverlay = false;
+    agendaOverlay.addEventListener('mousedown', e => {
+      mouseDownOnOverlay = (e.target === agendaOverlay);
+    });
+    agendaOverlay.addEventListener('mouseup', e => {
+      if (mouseDownOnOverlay && e.target === agendaOverlay) closeAgendaModal();
+      mouseDownOnOverlay = false;
+    });
+  }
   });
 
   function positionDialogAboveBtn(bubble, btn) {
@@ -3248,6 +3296,12 @@ const sessionTitleEl = document.getElementById('session-title');
           } else {
             gdriveBtn.style.display = 'none';
           }
+        }
+        // Agenda .docx availability
+        if (msg.has_agenda !== undefined) {
+          const agendaBtn = document.getElementById('agenda-btn');
+          agendaBtn.style.display = msg.has_agenda ? '' : 'none';
+          if (!msg.has_agenda) _agendaHtml = null;
         }
         break;
       case 'active_participants_count_updated':
