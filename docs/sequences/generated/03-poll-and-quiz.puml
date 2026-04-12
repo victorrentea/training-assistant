@@ -1,14 +1,38 @@
 @startuml
 hide footbox
 
-participant "Railway"
 participant "Daemon"
+participant "Participant"
+participant "Host"
+participant "Railway"
 
+"Daemon" -> "Participant": broadcast notes_updated
+"Daemon" -> "Participant": broadcast summary_updated
+"Host" -> "Daemon": DELETE /api/{session_id}/host/scores
+"Daemon" -> "Participant": broadcast scores_updated
+"Host" -> "Daemon": GET /host/{session_id}
+"Host" -> "Daemon": GET /api/{session_id}/host/state
 "Railway" -> "Daemon": POST /api/participant/register
 "Railway" -> "Daemon": GET /{session_id}/api/slides
-"Railway" -> "Daemon": POST /api/participant/location
+"Daemon" -> "Host": notify_host participant_list_updated
 "Railway" -> "Daemon": GET /api/participant/state
+"Railway" -> "Daemon": POST /api/participant/location
+"Host" -> "Daemon": PUT /api/{session_id}/host/activity
+"Daemon" -> "Participant": broadcast activity_updated
+"Host" -> "Daemon": POST /api/{session_id}/host/poll
+"Daemon" -> "Host": notify_host poll_ai_generated
 "Railway" -> "Daemon": PUT /api/participant/name
+"Host" -> "Daemon": POST /api/{session_id}/host/poll/open
+"Daemon" -> "Participant": broadcast poll_opened
+"Daemon" -> "Host": notify_host poll_opened
+"Host" -> "Daemon": POST /api/{session_id}/host/poll/close
+"Daemon" -> "Participant": broadcast poll_closed
+"Daemon" -> "Host": notify_host poll_closed
 "Railway" -> "Daemon": POST /api/participant/poll/vote
+"Host" -> "Daemon": PUT /api/{session_id}/host/poll/correct
+"Daemon" -> "Participant": broadcast poll_correct_revealed
+"Daemon" -> "Host": notify_host poll_correct_revealed
+"Daemon" -> "Host": notify_host scores_updated
+"Daemon" -> "Participant": broadcast active_participants_count_updated
 
 @enduml
