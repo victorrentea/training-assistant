@@ -212,6 +212,10 @@ body{visibility:hidden}
 <span class="text-base">Notes</span>
 <span class="badge-new">UPDATE</span>
 </a>
+<a id="gdrive-nav" href="#" target="_blank" rel="noopener" class="nav-item rounded-full px-2 py-2 flex items-center gap-3 transition-all cursor-pointer" style="display:none">
+<span class="material-symbols-outlined">folder_open</span>
+<span class="text-base">Google Drive</span>
+</a>
 <a data-nav="summary" onclick="showView('summary')" class="nav-item rounded-full px-2 py-2 flex items-center gap-3 transition-all cursor-pointer">
 <span class="material-symbols-outlined">psychology</span>
 <span class="text-base">AI Summary</span>
@@ -717,6 +721,9 @@ let _sessionId = null;
     console.log('[participant] state:', state);
     document.querySelector('[data-nav="agenda"]').style.display = state.has_agenda ? '' : 'none';
     document.querySelector('[data-nav="notes"]').style.display = state.notes_count > 0 ? '' : 'none';
+    var gdriveNav = document.getElementById('gdrive-nav');
+    if (state.gdrive_url) { gdriveNav.href = state.gdrive_url; gdriveNav.style.display = ''; }
+    else { gdriveNav.style.display = 'none'; }
     var saved = LS.getView();
     if (saved === 'agenda' && !state.has_agenda) saved = 'slides';
     if (saved === 'notes' && !(state.notes_count > 0)) saved = 'slides';
