@@ -2149,11 +2149,6 @@ components:
       title: OkWithPhaseResponse
     ParticipantStateResponse:
       properties:
-        type:
-          type: string
-          const: state
-          title: Type
-          default: state
         mode:
           type: string
           title: Mode

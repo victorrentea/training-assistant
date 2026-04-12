@@ -9,7 +9,6 @@ import ssl
 import urllib.parse
 import urllib.request
 from types import SimpleNamespace
-from typing import Literal
 
 import certifi
 from fastapi import APIRouter, Request, status
@@ -203,7 +202,6 @@ class DebateData(BaseModel):
 
 
 class ParticipantStateResponse(BaseModel):
-    type: Literal["state"] = "state"
     mode: str
     my_score: int
     my_name: str
@@ -566,7 +564,6 @@ async def get_participant_state(request: Request):
     notes_count = sum(1 for line in (notes_content or "").splitlines() if line.strip())
 
     state_msg = {
-        "type": "state",
         # Core identity / session
         "mode": ps.mode,
         "my_score": 0 if ps.mode == "conference" else _get_score(pid),
