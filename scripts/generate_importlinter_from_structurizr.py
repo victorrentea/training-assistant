@@ -1,7 +1,7 @@
 """Generate Import Linter contracts from Structurizr DSL relationships.
 
 This focuses on Railway feature packages and turns component dependencies
-declared in `docs/structurizr/workspace.dsl` into forbidden-import contracts.
+declared in `docs/structurizr/c4model.dsl` into forbidden-import contracts.
 """
 
 from __future__ import annotations
@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_WORKSPACE = PROJECT_ROOT / "docs" / "structurizr" / "workspace.dsl"
+DEFAULT_WORKSPACE = PROJECT_ROOT / "docs" / "structurizr" / "c4model.dsl"
 DEFAULT_OUTPUT = PROJECT_ROOT / "docs" / "structurizr" / "out" / "importlinter.ini"
 DEFAULT_REPORT = PROJECT_ROOT / "docs" / "structurizr" / "out" / "importlinter-report.json"
 
@@ -164,7 +164,7 @@ def build_importlinter_config(
         )
 
     lines: list[str] = []
-    lines.append("# Generated from docs/structurizr/workspace.dsl")
+    lines.append("# Generated from docs/structurizr/c4model.dsl")
     lines.append("# Do not edit by hand. Regenerate via scripts/generate_importlinter_from_structurizr.py")
     lines.append("")
     lines.append("[importlinter]")

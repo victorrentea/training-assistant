@@ -5,7 +5,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = ROOT / "scripts" / "generate_importlinter_from_structurizr.py"
-WORKSPACE_DSL = ROOT / "docs" / "structurizr" / "workspace.dsl"
+WORKSPACE_DSL = ROOT / "docs" / "structurizr" / "c4model.dsl"
 CONFIG_PATH = ROOT / "docs" / "structurizr" / "out" / "importlinter.ini"
 REPORT_PATH = ROOT / "docs" / "structurizr" / "out" / "importlinter-report.json"
 

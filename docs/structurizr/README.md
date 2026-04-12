@@ -58,7 +58,7 @@ From the repository root:
 
 ```bash
 docker run --rm -v "$PWD":/usr/local/structurizr structurizr/cli validate \
-  -workspace docs/structurizr/workspace.dsl
+  -workspace docs/structurizr/c4model.dsl
 ```
 
 ## Export locally
@@ -67,7 +67,7 @@ PlantUML / C4-PlantUML export:
 
 ```bash
 docker run --rm -v "$PWD":/usr/local/structurizr structurizr/cli export \
-  -workspace docs/structurizr/workspace.dsl \
+  -workspace docs/structurizr/c4model.dsl \
   -format plantuml/c4plantuml \
   -output docs/structurizr/out
 ```
@@ -76,7 +76,7 @@ Mermaid export:
 
 ```bash
 docker run --rm -v "$PWD":/usr/local/structurizr structurizr/cli export \
-  -workspace docs/structurizr/workspace.dsl \
+  -workspace docs/structurizr/c4model.dsl \
   -format mermaid \
   -output docs/structurizr/out
 ```
