@@ -152,7 +152,7 @@
 <span class="material-symbols-outlined">event_note</span>
 <span class="text-base">Agenda</span>
 </a>
-<a class="text-on-surface-variant px-4 py-3 hover:text-on-surface hover:bg-surface-container-high rounded-full flex items-center gap-3 transition-colors duration-200" href="#">
+<a onclick="showView('notes')" class="text-on-surface-variant px-4 py-3 hover:text-on-surface hover:bg-surface-container-high rounded-full flex items-center gap-3 transition-colors duration-200 cursor-pointer">
 <span class="material-symbols-outlined">description</span>
 <span class="text-base">Notes</span>
 </a>
@@ -218,6 +218,29 @@
 <!-- MAIN CONTENT (80%) -->
 <main class="flex-1 h-full relative flex flex-col overflow-hidden bg-surface">
 <!-- AI Summary View -->
+<div id="notes-view" style="display:none" class="h-full overflow-y-auto px-16 py-12">
+  <h1 class="text-3xl font-extrabold text-on-surface mb-6">My Notes</h1>
+  <h2 class="text-xl font-bold text-on-surface mb-3">Morning Session</h2>
+  <h3 class="text-base font-semibold text-on-surface-variant mb-2">Architecture Talk</h3>
+  <ul class="list-disc pl-6 space-y-1 text-sm text-on-surface-variant mb-6">
+    <li>Layered architecture leads to tight coupling over time</li>
+    <li>Ports and adapters keep the domain pure</li>
+    <li>Don't let frameworks bleed into business logic</li>
+  </ul>
+  <h3 class="text-base font-semibold text-on-surface-variant mb-2">Refactoring Exercise</h3>
+  <ul class="list-disc pl-6 space-y-1 text-sm text-on-surface-variant mb-6">
+    <li>Extract method before extract class</li>
+    <li>Name reveals intent, not implementation</li>
+    <li>Small steps, always green tests</li>
+  </ul>
+  <h2 class="text-xl font-bold text-on-surface mb-3">Afternoon Session</h2>
+  <h3 class="text-base font-semibold text-on-surface-variant mb-2">Questions to Follow Up</h3>
+  <ul class="list-disc pl-6 space-y-1 text-sm text-on-surface-variant mb-6">
+    <li>Read "Working Effectively with Legacy Code"</li>
+    <li>Try the strangler fig pattern on the payments module</li>
+    <li>Ask team about adopting ADRs</li>
+  </ul>
+</div>
 <div id="summary-view" style="display:none" class="h-full overflow-y-auto px-16 py-12">
   <h1 class="text-3xl font-extrabold text-on-surface mb-6">Session Summary</h1>
   <h2 class="text-xl font-bold text-on-surface mb-3">Key Concepts Covered</h2>
@@ -361,6 +384,7 @@
 function showView(name) {
   document.getElementById('slides-view').style.display = name === 'slides' ? '' : 'none';
   document.getElementById('summary-view').style.display = name === 'summary' ? '' : 'none';
+  document.getElementById('notes-view').style.display = name === 'notes' ? '' : 'none';
 }
 </script>
 </body></html>
