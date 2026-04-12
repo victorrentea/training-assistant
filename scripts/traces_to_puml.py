@@ -115,8 +115,8 @@ def _collapse_proxy(edges: list[tuple]) -> list[tuple]:
                     break
             else:
                 result.append((f, t, label, ts))
-        # Railway->Daemon with participant path => Participant->Daemon
-        elif f == "Railway" and t == "Daemon" and "participant" in label.lower():
+        # Railway->Daemon: all Railway-proxied traffic is participant-initiated
+        elif f == "Railway" and t == "Daemon":
             result.append(("Participant", "Daemon", label, ts))
         else:
             result.append((f, t, label, ts))
