@@ -193,7 +193,7 @@ class DaemonWsClient:
         msg_type = str(msg.get("type") or "unknown")
         if msg_type == "broadcast" and isinstance(msg.get("event"), dict):
             event_type = str(msg["event"].get("type") or "unknown")
-            return f"broadcast:{event_type}"
+            return event_type
         return msg_type
 
     @staticmethod

@@ -104,7 +104,7 @@ async def proxy_websocket(client_ws: WebSocket, path: str, backend_ws_url: str):
                 kind = str(payload.get("type") or "unknown")
                 if kind == "broadcast" and isinstance(payload.get("event"), dict):
                     event_type = str(payload["event"].get("type") or "unknown")
-                    return f"broadcast:{event_type}"
+                    return event_type
                 return kind
 
             async def client_to_upstream():
