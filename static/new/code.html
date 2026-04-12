@@ -8,6 +8,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
 <style>
 body{visibility:hidden}
+.badge-new{margin-left:auto;font-size:.6rem;font-weight:700;letter-spacing:.05em;background:#ef4444;color:#fff;padding:.1rem .35rem;border-radius:999px;line-height:1.4}
 .nav-item{color:var(--color-on-surface-variant,#5e6b70)}
 .nav-item:hover{color:var(--color-on-surface,#161d1f);background-color:var(--color-surface-container-high,#dde3e5)}
 .nav-active{background-color:var(--color-primary-container,#dfe0ff)!important;color:var(--color-on-primary-container,#3747ac)!important;font-weight:600}
@@ -157,14 +158,17 @@ body{visibility:hidden}
 <a data-nav="agenda" onclick="showView('agenda')" class="nav-item rounded-full px-2 py-3 flex items-center gap-3 transition-all cursor-pointer">
 <span class="material-symbols-outlined">event_note</span>
 <span class="text-base">Agenda</span>
+<span class="badge-new">NEW</span>
 </a>
 <a data-nav="notes" onclick="showView('notes')" class="nav-item rounded-full px-2 py-3 flex items-center gap-3 transition-all cursor-pointer">
 <span class="material-symbols-outlined">description</span>
 <span class="text-base">Notes</span>
+<span class="badge-new">NEW</span>
 </a>
 <a data-nav="summary" onclick="showView('summary')" class="nav-item rounded-full px-2 py-3 flex items-center gap-3 transition-all cursor-pointer">
 <span class="material-symbols-outlined">psychology</span>
 <span class="text-base">AI Summary</span>
+<span class="badge-new">NEW</span>
 </a>
 <button data-nav="topics" onclick="openTopics()" class="nav-item w-full rounded-full px-2 py-3 flex items-center gap-3 transition-all">
 <span class="material-symbols-outlined">topic</span>
@@ -200,6 +204,7 @@ body{visibility:hidden}
 <a data-nav="gitrepos" onclick="closeTopics();setActive('gitrepos')" class="nav-item rounded-full px-2 py-3 flex items-center gap-3 transition-all cursor-pointer">
 <span class="material-symbols-outlined">terminal</span>
 <span class="text-base">Git Repos</span>
+<span class="badge-new">NEW</span>
 </a>
 <a data-nav="drive" onclick="closeTopics();setActive('drive')" class="nav-item rounded-full px-2 py-3 flex items-center gap-3 transition-all cursor-pointer">
 <span class="material-symbols-outlined">cloud</span>
