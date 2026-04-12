@@ -30,11 +30,20 @@ def setup_tracing():
     trace.set_tracer_provider(provider)
 
 
+def _server_request_hook(span, scope):
+    """Capture X-Participant-ID from request headers as a span attribute."""
+    if span and span.is_recording():
+        headers = dict(scope.get("headers", []))
+        pid = headers.get(b"x-participant-id", b"").decode()
+        if pid:
+            span.set_attribute("participant.id", pid)
+
+
 def instrument_fastapi_app(app):
     """Instrument a specific FastAPI app instance for OTel tracing."""
     try:
         from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
-        FastAPIInstrumentor.instrument_app(app)
+        FastAPIInstrumentor.instrument_app(app, server_request_hook=_server_request_hook)
     except ImportError:
         pass
 

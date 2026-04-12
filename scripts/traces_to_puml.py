@@ -153,7 +153,8 @@ def _deduplicate_edges(edges: list[tuple]) -> list[tuple]:
 
 def generate_puml(traces_path: str, family: str, output: str,
                   scenarios: list[dict] | None = None,
-                  title: str | None = None) -> None:
+                  title: str | None = None,
+                  participant_names: dict[str, str] | None = None) -> None:
     """Generate a PlantUML sequence diagram from collected traces.
 
     scenarios: optional list of scenario descriptors, each with:
@@ -173,6 +174,30 @@ def generate_puml(traces_path: str, family: str, output: str,
     edges.sort(key=lambda e: e[3])  # sort by start_time
     edges = _collapse_proxy(edges)
     edges = _collapse_broadcast(edges)
+
+    # Resolve "Participant" to named actors (e.g., "Alice", "Bob") using
+    # participant.id span attribute matched against the participant_names map.
+    if participant_names:
+        # Build trace_id → participant name from spans with participant.id attribute
+        trace_to_name: dict[str, str] = {}
+        for span in spans:
+            pid = span.get("attributes", {}).get("participant.id", "")
+            if pid and pid in participant_names:
+                tid = span.get("context", {}).get("trace_id", "")
+                if tid:
+                    trace_to_name[tid] = participant_names[pid]
+        # Replace "Participant" with the resolved name
+        named = []
+        for f, t, label, ts, phase, tid, is_async in edges:
+            name = trace_to_name.get(tid)
+            if name:
+                if f == "Participant":
+                    f = name
+                if t == "Participant":
+                    t = name
+            named.append((f, t, label, ts, phase, tid, is_async))
+        edges = named
+
     if not scenarios:
         edges = _deduplicate_edges(edges)
 

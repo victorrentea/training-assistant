@@ -86,6 +86,7 @@ class ScenarioRunner:
         self.host_page.goto(f"{DAEMON_BASE}/host/{self.session_id}", wait_until="networkidle")
         expect(self.host_page.locator("#tab-poll")).to_be_visible(timeout=10000)
         # Participants
+        self._uuid_to_name: dict[str, str] = {}
         for name in self._pax_names:
             ctx = self._browser.new_context()
             self._contexts.append(ctx)
@@ -94,6 +95,10 @@ class ScenarioRunner:
             pax = ParticipantPage(page)
             pax.join(name)
             self._participants[name] = pax
+            # Capture UUID for trace→name resolution
+            uid = page.evaluate("() => localStorage.getItem('workshop_participant_uuid')")
+            if uid:
+                self._uuid_to_name[uid] = name
         return self
 
     def __exit__(self, *_):
@@ -106,6 +111,11 @@ class ScenarioRunner:
     def when(self):
         """Mark the Given→When boundary."""
         self._when_ns = _ns_now()
+
+    @property
+    def uuid_to_name(self) -> dict[str, str]:
+        """UUID→name mapping for all participants in this scenario."""
+        return dict(self._uuid_to_name)
 
     @property
     def result(self) -> dict:
@@ -229,6 +239,7 @@ def test_slides_sequence_diagram_extraction():
     """Exercise slides scenarios using ScenarioRunner, generate diagram with phase coloring."""
     Path(TRACES_FILE).write_text("")
     scenarios = []
+    all_participant_names: dict[str, str] = {}  # UUID → name across all scenarios
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
@@ -239,6 +250,7 @@ def test_slides_sequence_diagram_extraction():
             sc.when()
             alice.open_slide("clean-code")
         scenarios.append(sc.result)
+        all_participant_names.update(sc.uuid_to_name)
 
         # Scenario 2: Two participants open the same (cached) slide
         with ScenarioRunner(browser, "Second participant gets cached slide",
@@ -247,6 +259,7 @@ def test_slides_sequence_diagram_extraction():
             sc.participant("Alice").open_slide("design-patterns")
             sc.participant("Bob").open_slide("design-patterns")
         scenarios.append(sc.result)
+        all_participant_names.update(sc.uuid_to_name)
 
         # Scenario 3: Navigate between slides
         with ScenarioRunner(browser, "Navigate to page and resume") as sc:
@@ -256,6 +269,7 @@ def test_slides_sequence_diagram_extraction():
             alice.navigate_to_page(3)
             alice.open_slide("design-patterns")
         scenarios.append(sc.result)
+        all_participant_names.update(sc.uuid_to_name)
 
         # Scenario 4: Host updates a slide (invalidation → re-download)
         with ScenarioRunner(browser, "Host updates a slide") as sc:
@@ -269,16 +283,19 @@ def test_slides_sequence_diagram_extraction():
                  data={"drive_export_url": drive_url}, base_url=BASE)
             sc.participant()._page.wait_for_timeout(3000)
         scenarios.append(sc.result)
+        all_participant_names.update(sc.uuid_to_name)
 
         browser.close()
 
+    print(f"[participant-names] {len(all_participant_names)} UUIDs mapped")
     time.sleep(2)
     sys.path.insert(0, "/app")
     from scripts.traces_to_puml import generate_puml
 
     output_path = "/app/docs/sequences/extracted/06-slides.puml"
     generate_puml(TRACES_FILE, family="", output=output_path, scenarios=scenarios,
-                  title="Feature: Slides Catalog, Viewing, and Follow Mode")
+                  title="Feature: Slides Catalog, Viewing, and Follow Mode",
+                  participant_names=all_participant_names)
 
     generated = Path(output_path).read_text()
     print("=== Generated PlantUML ===")
