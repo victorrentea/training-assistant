@@ -847,8 +847,8 @@ def run() -> None:
     def _resolve_gdrive_url(session_folder) -> str | None:
         """Resolve Google Drive web URL for a session folder."""
         try:
-            import sys as _sys
             import os as _os
+            import sys as _sys
             _scripts_dir = _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))
             if _scripts_dir not in _sys.path:
                 _sys.path.insert(0, _scripts_dir)
