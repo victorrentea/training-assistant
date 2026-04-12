@@ -3,6 +3,7 @@
 Requires Docker (structurizr/structurizr image).  Skipped when Docker is unavailable.
 """
 
+import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -25,6 +26,14 @@ def _docker_available() -> bool:
         return False
 
 
+def _to_kebab(name: str) -> str:
+    """Strip structurizr- prefix and convert PascalCase to kebab-case."""
+    name = re.sub(r"^structurizr-", "", name)
+    name = re.sub(r"([a-z0-9])([A-Z])", r"\1-\2", name)
+    name = re.sub(r"([A-Z])([A-Z][a-z])", r"\1-\2", name)
+    return name
+
+
 def _export(fmt: str, output_dir: Path) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
     subprocess.run(
@@ -42,6 +51,9 @@ def _export(fmt: str, output_dir: Path) -> None:
         text=True,
         cwd=ROOT,
     )
+    # Rename to match committed kebab-case names
+    for f in output_dir.glob("structurizr-*"):
+        f.rename(output_dir / _to_kebab(f.name))
 
 
 @pytest.fixture(autouse=True)
@@ -55,7 +67,7 @@ def _cleanup_temp():
 class TestC4ViewsFreshness:
     def test_puml_exports_are_fresh(self):
         _export("plantuml/c4plantuml", _TEMP_EXPORT)
-        for generated in sorted(_TEMP_EXPORT.glob("structurizr-*.puml")):
+        for generated in sorted(_TEMP_EXPORT.glob("C*.puml")):
             committed = VIEWS_DIR / generated.name
             assert committed.exists(), (
                 f"Missing committed file: docs/c4views/{generated.name}\n"
@@ -68,7 +80,7 @@ class TestC4ViewsFreshness:
 
     def test_mermaid_exports_are_fresh(self):
         _export("mermaid", _TEMP_EXPORT)
-        for generated in sorted(_TEMP_EXPORT.glob("structurizr-*.mmd")):
+        for generated in sorted(_TEMP_EXPORT.glob("C*.mmd")):
             committed = VIEWS_DIR / generated.name
             assert committed.exists(), (
                 f"Missing committed file: docs/c4views/{generated.name}\n"
