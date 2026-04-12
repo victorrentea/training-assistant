@@ -631,7 +631,12 @@ function _onIncomingHostSlidesCurrent(slidesCurrent) {
 }
 function _focusCurrentTopicInAllTopics() {
   openTopics({ skipCloseSlides: true });
-  var target = document.querySelector('.topic-item.topic-active') || document.querySelector('.topic-item');
+  var target = document.querySelector('.topic-item.topic-active');
+  if (!target && _activeSlideId) {
+    target = document.querySelector('.topic-item[data-slide-id="' + _activeSlideId + '"]');
+    if (target) target.classList.add('topic-active');
+  }
+  if (!target) target = document.querySelector('.topic-item');
   if (!target) return;
   if (!target.hasAttribute('tabindex')) target.setAttribute('tabindex', '-1');
   setTimeout(function() {
