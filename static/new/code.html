@@ -429,7 +429,7 @@ body{visibility:hidden}
 <button onclick="showDesktopEmojiFloat(this.textContent.trim(), this)" class="w-[3.25rem] h-[3.25rem] flex items-center justify-center hover:bg-surface-container rounded-full text-[1.625rem] transition-transform hover:scale-110" title="Hmm... not convinced yet.">🤔</button>
 <div id="emoji-tv-sep" class="w-[1px] h-6 bg-outline-variant opacity-20"></div>
 <button onclick="showDesktopEmojiFloat(this.textContent.trim(), this)" class="w-[3.25rem] h-[3.25rem] flex items-center justify-center hover:bg-surface-container rounded-full text-[1.625rem] transition-transform hover:scale-110" title="I can't see your screen.">🖥️</button>
-<div class="w-[1px] h-6 bg-outline-variant opacity-20"></div>
+<div id="emoji-plus-sep" class="w-[1px] h-6 bg-outline-variant opacity-20"></div>
 <!-- Plus button with hover overflow popup -->
 <div class="relative" id="emoji-more-wrap">
 <button
@@ -583,19 +583,40 @@ function downloadTopic(topicName) {
   // TODO: implement topic file download
   console.log('Download topic:', topicName);
 }
-function addEmojiToBar(btn) {
-  var emoji = btn.textContent.trim();
-  showDesktopEmojiFloat(emoji, btn);
+function _promoteEmoji(emoji, title, animate, sourceBtn) {
   var newBtn = document.createElement('button');
   newBtn.textContent = emoji;
-  newBtn.title = btn.title;
-  newBtn.className = btn.className;
+  newBtn.title = title;
+  newBtn.className = 'w-[3.25rem] h-[3.25rem] flex items-center justify-center hover:bg-surface-container rounded-full text-[1.625rem] transition-transform hover:scale-110';
   newBtn.setAttribute('onclick', 'showDesktopEmojiFloat(this.textContent.trim(), this)');
   var sep = document.getElementById('emoji-tv-sep');
   sep.parentNode.insertBefore(newBtn, sep);
-  btn.parentNode.removeChild(btn);
+  if (animate && sourceBtn) showDesktopEmojiFloat(emoji, sourceBtn);
+  // remove from overflow
+  var overflow = document.getElementById('emoji-overflow');
+  overflow.querySelectorAll('button').forEach(function(b) {
+    if (b.textContent.trim() === emoji) b.parentNode.removeChild(b);
+  });
+  // hide + and separator if overflow is now empty
+  if (!overflow.querySelector('button')) {
+    document.getElementById('emoji-plus-sep').style.display = 'none';
+    document.getElementById('emoji-more-wrap').style.display = 'none';
+  }
+}
+function addEmojiToBar(btn) {
+  var emoji = btn.textContent.trim();
+  var promoted = JSON.parse(localStorage.getItem('emoji_bar_promoted') || '[]');
+  if (!promoted.find(function(e) { return e.emoji === emoji; })) {
+    promoted.push({ emoji: emoji, title: btn.title });
+    localStorage.setItem('emoji_bar_promoted', JSON.stringify(promoted));
+  }
+  _promoteEmoji(emoji, btn.title, true, btn);
   scheduleHideOverflow();
 }
+(function restorePromotedEmojis() {
+  var promoted = JSON.parse(localStorage.getItem('emoji_bar_promoted') || '[]');
+  promoted.forEach(function(e) { _promoteEmoji(e.emoji, e.title, false, null); });
+})();
 function scheduleHideOverflow() {
   window._emojiHideTimer = setTimeout(function() {
     var el = document.getElementById('emoji-overflow');
