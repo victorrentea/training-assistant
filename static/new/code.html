@@ -175,7 +175,7 @@ body{visibility:hidden}
 <span class="text-base">AI Summary</span>
 <span class="badge-new">UPDATE</span>
 </a>
-<button data-nav="topics" onclick="openTopics()" class="nav-item w-full rounded-full px-2 py-2 flex items-center gap-3 transition-all">
+<button data-nav="topics" onclick="toggleTopics()" class="nav-item w-full rounded-full px-2 py-2 flex items-center gap-3 transition-all">
 <span class="material-symbols-outlined">topic</span>
 <span class="text-base flex-1 text-left">All Topics</span>
 <span class="material-symbols-outlined topics-arrow text-xl transition-transform duration-300">chevron_right</span>
@@ -206,7 +206,7 @@ body{visibility:hidden}
 </div>
 </div>
 </div>
-<button data-nav="gitrepos" onclick="openRepos()" class="nav-item w-full rounded-full px-2 py-2 flex items-center gap-3 transition-all">
+<button data-nav="gitrepos" onclick="toggleRepos()" class="nav-item w-full rounded-full px-2 py-2 flex items-center gap-3 transition-all">
 <span class="material-symbols-outlined">terminal</span>
 <span class="text-base flex-1 text-left">Git Repos</span>
 <span class="badge-new">NEW</span>
@@ -222,7 +222,7 @@ body{visibility:hidden}
 <span class="material-symbols-outlined text-sm">open_in_new</span>refactoring-kata</a>
 </div>
 </div>
-<a href="https://victorrentea.ro/slides/" target="_blank" onclick="closeTopics();closeRepos()" class="nav-item rounded-full px-2 py-2 flex items-center gap-3 transition-all cursor-pointer">
+<a href="https://victorrentea.ro/slides/" target="_blank" class="nav-item rounded-full px-2 py-2 flex items-center gap-3 transition-all cursor-pointer">
 <span class="material-symbols-outlined">cloud</span>
 <span class="text-base">Google Drive</span>
 <span class="material-symbols-outlined text-base text-on-surface">open_in_new</span>
@@ -627,9 +627,15 @@ var VIEWS = ['slides', 'summary', 'notes', 'agenda', 'paste', 'upload'];
 function saveScroll(name, el) {
   localStorage.setItem('scroll_' + name, el.scrollTop);
 }
+function toggleTopics() {
+  var list = document.querySelector('.topics-list');
+  if (!list.style.maxHeight || list.style.maxHeight === '0px') { openTopics(); } else { closeTopics(); }
+}
+function toggleRepos() {
+  var list = document.querySelector('.repos-list');
+  if (!list.style.maxHeight || list.style.maxHeight === '0px') { openRepos(); } else { closeRepos(); }
+}
 function showView(name) {
-  closeTopics();
-  closeRepos();
   setActive(name);
   VIEWS.forEach(function(v) {
     var el = document.getElementById(v + '-view');
