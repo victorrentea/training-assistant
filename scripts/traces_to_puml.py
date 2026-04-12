@@ -157,8 +157,16 @@ def _deduplicate_edges(edges: list[tuple]) -> list[tuple]:
     return result
 
 
-def generate_puml(traces_path: str, family: str, output: str) -> None:
-    """Generate a PlantUML sequence diagram from collected traces."""
+def generate_puml(traces_path: str, family: str, output: str,
+                  scenarios: list[dict] | None = None) -> None:
+    """Generate a PlantUML sequence diagram from collected traces.
+
+    scenarios: optional list of scenario descriptors, each with:
+        - name: str (scenario title, rendered as PlantUML separator)
+        - when_trace_ids: set[str] (trace IDs captured from browser requests
+          during When/Then phases — edges matching these are black, rest gray)
+        - end_ns: int (nanosecond timestamp when scenario ended)
+    """
     spans = _load_spans(traces_path, family)
     if not spans:
         Path(output).write_text(
@@ -172,6 +180,36 @@ def generate_puml(traces_path: str, family: str, output: str) -> None:
     edges = _collapse_broadcast(edges)
     edges = _deduplicate_edges(edges)
 
+    # Assign phases from scenario trace IDs
+    if scenarios:
+        # Build span → trace_id index
+        span_to_trace: dict[str, str] = {}
+        for span in spans:
+            sid = _span_id(span)
+            tid = span.get("context", {}).get("trace_id", "")
+            if sid and tid:
+                span_to_trace[sid] = tid
+        # Collect all when-phase trace IDs across scenarios
+        all_when_traces: set[str] = set()
+        for sc in scenarios:
+            all_when_traces.update(sc.get("when_trace_ids", set()))
+        # Match edges to traces via timestamp proximity to spans
+        phased = []
+        for f, t, label, ts, phase in edges:
+            if not phase:
+                # Find the trace_id of the span that produced this edge
+                matched_tid = ""
+                for span in spans:
+                    svc = _service_name(span)
+                    name = span.get("name", "")
+                    start = span.get("start_time", 0)
+                    if (svc in (f, t)) and name == label and abs(start - ts) < 2_000_000_000:
+                        matched_tid = span.get("context", {}).get("trace_id", "")
+                        break
+                phase = "when" if matched_tid in all_when_traces else "given"
+            phased.append((f, t, label, ts, phase))
+        edges = phased
+
     # Collect participant names in canonical order
     _CANONICAL_ORDER = ["Host", "Participant", "Railway", "Daemon", "Addons"]
     all_actors = set()
@@ -179,7 +217,6 @@ def generate_puml(traces_path: str, family: str, output: str) -> None:
         all_actors.add(f)
         all_actors.add(t)
     participants = [p for p in _CANONICAL_ORDER if p in all_actors]
-    # Append any actors not in the canonical list (in order of first appearance)
     for f, t, _, _, _ in edges:
         for p in (f, t):
             if p not in participants:
@@ -191,10 +228,25 @@ def generate_puml(traces_path: str, family: str, output: str) -> None:
     for p in participants:
         lines.append(f'participant "{p}"')
     lines.append("")
-    for f, t, label, _, phase in edges:
-        arrow = "-->" if label.startswith("broadcast ") or label.startswith("notify_host ") else "->"
-        color = "[#gray]" if phase == "given" else ""
-        lines.append(f'"{f}" {color}{arrow} "{t}": {label}')
+
+    if scenarios:
+        # Render edges grouped by scenario with separators
+        for i, sc in enumerate(scenarios):
+            sc_edges = [e for e in edges if e[3] <= sc["end_ns"]
+                        and (i == 0 or e[3] > scenarios[i - 1]["end_ns"])]
+            if not sc_edges:
+                continue
+            lines.append(f'== {sc["name"]} ==')
+            for f, t, label, _, phase in sc_edges:
+                arrow = "-->" if label.startswith("broadcast ") or label.startswith("notify_host ") else "->"
+                color = "[#gray]" if phase == "given" else ""
+                lines.append(f'"{f}" {color}{arrow} "{t}": {label}')
+            lines.append("")
+    else:
+        for f, t, label, _, phase in edges:
+            arrow = "-->" if label.startswith("broadcast ") or label.startswith("notify_host ") else "->"
+            color = "[#gray]" if phase == "given" else ""
+            lines.append(f'"{f}" {color}{arrow} "{t}": {label}')
     lines.append("")
     lines.append("@enduml")
 

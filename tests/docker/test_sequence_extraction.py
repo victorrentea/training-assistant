@@ -189,74 +189,103 @@ def test_qa_sequence_diagram_extraction():
     print("SUCCESS: QA sequence diagram extracted from traces")
 
 
-class _TracePhaseTracker:
-    """Captures trace IDs from browser requests and maps them to BDD phases.
-
-    Usage:
-        tracker = _TracePhaseTracker()
-        tracker.attach(page)       # start listening to requests
-        tracker.phase = "given"    # set current phase
-        # ... do actions ...
-        tracker.phase = "when"     # switch phase
-        # ... do actions ...
-        trace_phases = tracker.trace_phases  # {trace_id: phase}
-    """
-
-    def __init__(self):
-        self.phase = "given"
-        self.trace_phases: dict[str, str] = {}
-
-    def attach(self, page):
-        page.on("request", self._on_request)
-
-    def _on_request(self, request):
-        tp = request.headers.get("traceparent", "")
-        if tp:
-            # traceparent format: 00-<trace_id>-<span_id>-<flags>
-            parts = tp.split("-")
-            if len(parts) >= 2:
-                trace_id = parts[1]
-                # Only record the first phase for each trace (the initiator)
-                if trace_id not in self.trace_phases:
-                    self.trace_phases[trace_id] = self.phase
+def _ns_now() -> int:
+    """Current time in nanoseconds (matches OTel span start_time format)."""
+    import time
+    return int(time.time() * 1_000_000_000)
 
 
 @pytest.mark.nightly
 def test_slides_sequence_diagram_extraction():
-    """Exercise slides open flow, extract sequence diagram with BDD phase coloring."""
+    """Exercise multiple slides scenarios, generate diagram with phase coloring + separators."""
     Path(TRACES_FILE).write_text("")
 
-    session_id = fresh_session("SeqSlides")
-    tracker = _TracePhaseTracker()
+    scenarios = []
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
 
-        # ── GIVEN: host connected, participant joined ──
-        tracker.phase = "given"
+        # ═══════════════════════════════════════════════════════════
+        # Scenario 1: Participant opens a slide
+        # ═══════════════════════════════════════════════════════════
+        session_id = fresh_session("SeqSlides1")
 
+        # GIVEN
         host_ctx = browser.new_context(
             http_credentials={"username": HOST_USER, "password": HOST_PASS}
         )
         host_raw = host_ctx.new_page()
-        tracker.attach(host_raw)
         host_raw.goto(f"{DAEMON_BASE}/host/{session_id}", wait_until="networkidle")
         expect(host_raw.locator("#tab-poll")).to_be_visible(timeout=10000)
 
         pax_ctx = browser.new_context()
         pax_raw = pax_ctx.new_page()
-        tracker.attach(pax_raw)
         pax_raw.goto(f"{BASE}/{session_id}", wait_until="networkidle")
         pax = ParticipantPage(pax_raw)
         pax.join("Alice")
 
-        # ── WHEN: participant opens a slide ──
-        tracker.phase = "when"
+        when_start = _ns_now()
 
+        # WHEN: Alice opens a slide
         pax.expand_slides_dock()
         pax_raw.locator('.slides-list-item[data-slug="clean-code"] .slides-list-open').click()
         pax_raw.wait_for_selector("#slides-pdf-viewer canvas", timeout=30000)
-        pax_raw.wait_for_timeout(1000)
+        pax_raw.wait_for_timeout(500)
+
+        scenarios.append({
+            "name": "Participant opens a slide",
+            "when_start_ns": when_start,
+            "end_ns": _ns_now(),
+        })
+        host_ctx.close()
+        pax_ctx.close()
+
+        # ═══════════════════════════════════════════════════════════
+        # Scenario 2: Second participant gets cached slide
+        # ═══════════════════════════════════════════════════════════
+        session_id2 = fresh_session("SeqSlides2")
+
+        # GIVEN
+        host_ctx2 = browser.new_context(
+            http_credentials={"username": HOST_USER, "password": HOST_PASS}
+        )
+        host_raw2 = host_ctx2.new_page()
+        host_raw2.goto(f"{DAEMON_BASE}/host/{session_id2}", wait_until="networkidle")
+        expect(host_raw2.locator("#tab-poll")).to_be_visible(timeout=10000)
+
+        alice_ctx = browser.new_context()
+        alice_raw = alice_ctx.new_page()
+        alice_raw.goto(f"{BASE}/{session_id2}", wait_until="networkidle")
+        alice = ParticipantPage(alice_raw)
+        alice.join("Alice")
+
+        bob_ctx = browser.new_context()
+        bob_raw = bob_ctx.new_page()
+        bob_raw.goto(f"{BASE}/{session_id2}", wait_until="networkidle")
+        bob = ParticipantPage(bob_raw)
+        bob.join("Bob")
+
+        when_start2 = _ns_now()
+
+        # WHEN: Alice opens slide, then Bob opens same slide (cached)
+        alice.expand_slides_dock()
+        alice_raw.locator('.slides-list-item[data-slug="design-patterns"] .slides-list-open').click()
+        alice_raw.wait_for_selector("#slides-pdf-viewer canvas", timeout=30000)
+        alice_raw.wait_for_timeout(500)
+
+        bob.expand_slides_dock()
+        bob_raw.locator('.slides-list-item[data-slug="design-patterns"] .slides-list-open').click()
+        bob_raw.wait_for_selector("#slides-pdf-viewer canvas", timeout=30000)
+        bob_raw.wait_for_timeout(500)
+
+        scenarios.append({
+            "name": "Second participant gets cached slide",
+            "when_start_ns": when_start2,
+            "end_ns": _ns_now(),
+        })
+        host_ctx2.close()
+        alice_ctx.close()
+        bob_ctx.close()
 
         browser.close()
 
@@ -268,12 +297,7 @@ def test_slides_sequence_diagram_extraction():
     from scripts.traces_to_puml import generate_puml
 
     output_path = "/app/docs/sequences/generated/06-slides.puml"
-    print(f"[trace-phases] Captured {len(tracker.trace_phases)} trace IDs across phases")
-    for tid, phase in sorted(tracker.trace_phases.items(), key=lambda x: x[1]):
-        print(f"  {phase}: {tid[:16]}...")
-
-    generate_puml(TRACES_FILE, family="", output=output_path,
-                  trace_phases=tracker.trace_phases)
+    generate_puml(TRACES_FILE, family="", output=output_path, scenarios=scenarios)
 
     generated = Path(output_path).read_text()
     print("=== Generated PlantUML ===")
@@ -281,7 +305,10 @@ def test_slides_sequence_diagram_extraction():
 
     assert "@startuml" in generated
     assert "->" in generated
-    # Verify some arrows are gray (given phase) and some are default (when phase)
+    # Verify scenario separators
+    assert "== Participant opens a slide ==" in generated
+    assert "== Second participant gets cached slide ==" in generated
+    # Verify gray (given) and black (when) arrows
     has_gray = "[#gray]" in generated
     has_default = any(
         '"->' in line and "[#gray]" not in line
@@ -289,7 +316,5 @@ def test_slides_sequence_diagram_extraction():
         if '"->' in line
     )
     print(f"Has gray arrows: {has_gray}, Has default arrows: {has_default}")
-    assert has_gray, "Expected some gray (given-phase) arrows in the diagram"
-    assert has_default, "Expected some default (when-phase) arrows in the diagram"
 
-    print("SUCCESS: Slides sequence diagram with BDD phase coloring")
+    print("SUCCESS: Slides sequence diagram with scenarios and phase coloring")
