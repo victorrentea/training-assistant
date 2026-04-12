@@ -148,7 +148,7 @@
 <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">slideshow</span>
 <span class="text-base">Slides</span>
 </a>
-<a onclick="closeTopics()" class="text-on-surface-variant px-4 py-3 hover:text-on-surface hover:bg-surface-container-high rounded-full flex items-center gap-3 transition-colors duration-200 cursor-pointer">
+<a onclick="showView('agenda')" class="text-on-surface-variant px-4 py-3 hover:text-on-surface hover:bg-surface-container-high rounded-full flex items-center gap-3 transition-colors duration-200 cursor-pointer">
 <span class="material-symbols-outlined">event_note</span>
 <span class="text-base">Agenda</span>
 </a>
@@ -218,7 +218,7 @@
 <!-- MAIN CONTENT (80%) -->
 <main class="flex-1 h-full relative flex flex-col overflow-hidden bg-surface">
 <!-- AI Summary View -->
-<div id="notes-view" style="display:none" class="h-full overflow-y-auto px-16 py-12">
+<div id="notes-view" style="display:none" class="h-full overflow-y-auto px-16 py-12" onscroll="saveScroll('notes',this)">
   <h1 class="text-3xl font-extrabold text-on-surface mb-6">My Notes</h1>
   <h2 class="text-xl font-bold text-on-surface mb-3">Morning Session</h2>
   <h3 class="text-base font-semibold text-on-surface-variant mb-2">Architecture Talk</h3>
@@ -258,7 +258,7 @@
     <li>Look into contract testing with Pact</li>
   </ul>
 </div>
-<div id="summary-view" style="display:none" class="h-full overflow-y-auto px-16 py-12">
+<div id="summary-view" style="display:none" class="h-full overflow-y-auto px-16 py-12" onscroll="saveScroll('summary',this)">
   <h1 class="text-3xl font-extrabold text-on-surface mb-6">Session Summary</h1>
   <h2 class="text-xl font-bold text-on-surface mb-3">Key Concepts Covered</h2>
   <h3 class="text-base font-semibold text-on-surface-variant mb-2">Architecture Principles</h3>
@@ -297,6 +297,50 @@
     <li>Review existing service boundaries against DDD aggregates</li>
     <li>Introduce ADR template in the repo wiki</li>
     <li>Run a legacy code audit on the billing module</li>
+  </ul>
+</div>
+<!-- Agenda View -->
+<div id="agenda-view" style="display:none" class="h-full overflow-y-auto px-16 py-12" onscroll="saveScroll('agenda',this)">
+  <h1 class="text-3xl font-extrabold text-on-surface mb-6">Session Agenda</h1>
+  <h2 class="text-xl font-bold text-on-surface mb-3">Morning Block — 09:00 to 12:30</h2>
+  <h3 class="text-base font-semibold text-on-surface-variant mb-2">Opening & Context Setting</h3>
+  <ul class="list-disc pl-6 space-y-1 text-sm text-on-surface-variant mb-6">
+    <li>Welcome and introductions — 09:00</li>
+    <li>Workshop goals and structure overview — 09:15</li>
+    <li>Pre-assessment quiz — 09:30</li>
+  </ul>
+  <h3 class="text-base font-semibold text-on-surface-variant mb-2">Clean Architecture Deep Dive</h3>
+  <ul class="list-disc pl-6 space-y-1 text-sm text-on-surface-variant mb-6">
+    <li>Layered vs hexagonal architecture — 09:45</li>
+    <li>Dependency rule and the domain layer — 10:15</li>
+    <li>Live coding: ports and adapters — 10:45</li>
+    <li>Coffee break — 11:15</li>
+  </ul>
+  <h3 class="text-base font-semibold text-on-surface-variant mb-2">Refactoring in Practice</h3>
+  <ul class="list-disc pl-6 space-y-1 text-sm text-on-surface-variant mb-6">
+    <li>Identifying smells in existing code — 11:30</li>
+    <li>Hands-on kata: extract and rename — 11:50</li>
+    <li>Group debrief — 12:20</li>
+  </ul>
+  <h2 class="text-xl font-bold text-on-surface mb-3">Lunch Break — 12:30 to 13:30</h2>
+  <h2 class="text-xl font-bold text-on-surface mb-3">Afternoon Block — 13:30 to 17:00</h2>
+  <h3 class="text-base font-semibold text-on-surface-variant mb-2">Testing Strategy</h3>
+  <ul class="list-disc pl-6 space-y-1 text-sm text-on-surface-variant mb-6">
+    <li>Test pyramid revisited — 13:30</li>
+    <li>TDD red-green-refactor cycle — 14:00</li>
+    <li>Integration vs unit: when to use which — 14:30</li>
+    <li>Coffee break — 15:00</li>
+  </ul>
+  <h3 class="text-base font-semibold text-on-surface-variant mb-2">Domain-Driven Design Essentials</h3>
+  <ul class="list-disc pl-6 space-y-1 text-sm text-on-surface-variant mb-6">
+    <li>Bounded contexts and ubiquitous language — 15:15</li>
+    <li>Aggregates, entities, value objects — 15:45</li>
+    <li>Event storming mini-session — 16:15</li>
+  </ul>
+  <h3 class="text-base font-semibold text-on-surface-variant mb-2">Closing</h3>
+  <ul class="list-disc pl-6 space-y-1 text-sm text-on-surface-variant mb-6">
+    <li>Retrospective and Q&A — 16:40</li>
+    <li>Post-assessment and wrap-up — 17:00</li>
   </ul>
 </div>
 <!-- Slides View -->
@@ -426,11 +470,19 @@ function closeTopics() {
   list.style.maxHeight = '0px';
   arrow.style.transform = 'rotate(0deg)';
 }
+var VIEWS = ['slides', 'summary', 'notes', 'agenda'];
+function saveScroll(name, el) {
+  localStorage.setItem('scroll_' + name, el.scrollTop);
+}
 function showView(name) {
   closeTopics();
-  document.getElementById('slides-view').style.display = name === 'slides' ? '' : 'none';
-  document.getElementById('summary-view').style.display = name === 'summary' ? '' : 'none';
-  document.getElementById('notes-view').style.display = name === 'notes' ? '' : 'none';
+  VIEWS.forEach(function(v) {
+    var el = document.getElementById(v + '-view');
+    el.style.display = v === name ? '' : 'none';
+  });
+  var el = document.getElementById(name + '-view');
+  var saved = localStorage.getItem('scroll_' + name);
+  if (saved) el.scrollTop = parseInt(saved, 10);
 }
 </script>
 </body></html>
