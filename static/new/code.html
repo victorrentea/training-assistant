@@ -154,7 +154,7 @@ body{visibility:hidden}
 <div>
 <a data-nav="slides" onclick="toggleSlides()" class="nav-item nav-active rounded-full px-2 h-10 font-semibold flex items-center gap-3 transition-all cursor-pointer">
 <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">slideshow</span>
-<span class="text-base">Slides</span>
+<span class="text-base">Current Slide</span>
 <span class="material-symbols-outlined slides-arrow text-xl transition-transform duration-300">chevron_right</span>
 <span class="badge-new ml-auto">LIVE</span>
 </a>
@@ -441,6 +441,8 @@ var LS = {
 var _slidesCatalog = [];
 var _activeSlideId = null;
 var _historySelectedRowEl = null;
+var _hostSlidesCurrent = null;
+var _lastHostSlidesCurrentKey = '';
 
 function setActive(name) {
   document.querySelectorAll('.nav-item').forEach(function(el) { el.classList.remove('nav-active'); });
@@ -490,6 +492,52 @@ function _normalizeSlideMatchToken(value) {
     .replace(/\s+/g, ' ')
     .trim()
     .toLowerCase();
+}
+function _isSlidesViewSelected() {
+  return document.querySelector('[data-nav="slides"].nav-active') != null;
+}
+function _getHostCurrentPage(slidesCurrent) {
+  var page = slidesCurrent
+    ? (slidesCurrent.current_page ?? slidesCurrent.slide ?? slidesCurrent.slide_number)
+    : null;
+  var n = Number(page);
+  return Number.isFinite(n) ? Math.max(1, n) : 1;
+}
+function _hostSlidesCurrentKey(slidesCurrent) {
+  if (!slidesCurrent) return 'none';
+  return [
+    String(slidesCurrent.slug || ''),
+    String(slidesCurrent.url || ''),
+    String(_getHostCurrentPage(slidesCurrent)),
+    String(slidesCurrent.presentation_name || ''),
+    String(slidesCurrent.source_file || ''),
+    String(slidesCurrent.updated_at || ''),
+  ].join('|');
+}
+function _findSlideForHostCurrent(slidesCurrent) {
+  if (!slidesCurrent || !_slidesCatalog.length) return null;
+  var targetSlug = String(slidesCurrent.slug || '').trim();
+  var targetUrl = String(slidesCurrent.url || '').trim();
+  if (targetSlug) {
+    var bySlugAndUrl = _slidesCatalog.find(function(slide) {
+      return slide.slug === targetSlug && (!targetUrl || slide.url === targetUrl);
+    });
+    if (bySlugAndUrl) return bySlugAndUrl;
+    var bySlug = _slidesCatalog.find(function(slide) { return slide.slug === targetSlug; });
+    if (bySlug) return bySlug;
+  }
+  if (targetUrl) {
+    var byUrl = _slidesCatalog.find(function(slide) { return slide.url === targetUrl; });
+    if (byUrl) return byUrl;
+  }
+  var hostToken = _normalizeSlideMatchToken(slidesCurrent.presentation_name || slidesCurrent.source_file || '');
+  if (!hostToken) return null;
+  return _slidesCatalog.find(function(slide) {
+    var nameToken = _normalizeSlideMatchToken(slide.name);
+    var slugToken = _normalizeSlideMatchToken(slide.slug);
+    return (nameToken && (nameToken.indexOf(hostToken) >= 0 || hostToken.indexOf(nameToken) >= 0))
+      || (slugToken && (slugToken.indexOf(hostToken) >= 0 || hostToken.indexOf(slugToken) >= 0));
+  }) || null;
 }
 function _findSlideByHistoryFileName(fileName) {
   var token = _normalizeSlideMatchToken(fileName);
@@ -546,6 +594,32 @@ async function _openSlideFromHistory(fileName, page) {
   }
   return true;
 }
+async function _applyHostSlideFollow(slidesCurrent) {
+  if (!slidesCurrent || !_isSlidesViewSelected()) return;
+  if (!_slidesCatalog.length) {
+    await loadSlidesCatalog();
+  }
+  var targetSlide = _findSlideForHostCurrent(slidesCurrent);
+  if (!targetSlide) return;
+  var targetPage = _getHostCurrentPage(slidesCurrent);
+  var topicEl = document.querySelector('.topic-item[data-slide-id="' + targetSlide._id + '"]');
+  if (_activeSlideId !== targetSlide._id) {
+    await selectTopic(topicEl || document.querySelector('.topic-item'), null, targetSlide);
+  }
+  var currentPage = _getCurrentSlidesPage();
+  if (currentPage === targetPage) return;
+  if (!_scrollSlidesToPage(targetPage)) {
+    setTimeout(function() { _scrollSlidesToPage(targetPage); }, 200);
+  }
+}
+function _onIncomingHostSlidesCurrent(slidesCurrent) {
+  _hostSlidesCurrent = slidesCurrent || null;
+  if (!_isSlidesViewSelected()) return;
+  var key = _hostSlidesCurrentKey(_hostSlidesCurrent);
+  if (key === _lastHostSlidesCurrentKey) return;
+  _lastHostSlidesCurrentKey = key;
+  _applyHostSlideFollow(_hostSlidesCurrent).catch(function() {});
+}
 function _focusCurrentTopicInAllTopics() {
   openTopics({ skipCloseSlides: true });
   var target = document.querySelector('.topic-item.topic-active') || document.querySelector('.topic-item');
@@ -573,7 +647,11 @@ function _hideSlideHistory() {
   }
 }
 function _autoHideSlideHistoryAndCloseSlides() {
-  closeSlides({ focusAllTopics: true });
+  if (_historySelectedRowEl) {
+    closeSlides({ focusAllTopics: true });
+  } else {
+    _hideSlideHistory();
+  }
 }
 function _loadSlideHistory() {
   if (!_sessionId) return;
@@ -624,7 +702,12 @@ function _loadSlideHistory() {
 }
 function toggleSlides() {
   var list = document.querySelector('.slides-list');
-  if (!list.style.maxHeight || list.style.maxHeight === '0px') { openSlides(); } else { closeSlides({ focusAllTopics: true }); showView('slides'); }
+  if (!list.style.maxHeight || list.style.maxHeight === '0px') {
+    openSlides();
+  } else {
+    closeSlides({ focusAllTopics: Boolean(_historySelectedRowEl) });
+    showView('slides');
+  }
 }
 function openTopics(options) {
   options = options || {};
@@ -1065,6 +1148,9 @@ function showView(name) {
   var el = document.getElementById(name + '-view');
   var saved = LS.getScroll(name);
   if (saved) el.scrollTop = parseInt(saved, 10);
+  if (name === 'slides') {
+    _applyHostSlideFollow(_hostSlidesCurrent).catch(function() {});
+  }
 }
 function resetStatePrompt() {
   if (confirm('Reset local state? This will clear your saved emojis and preferences.')) {
@@ -1114,6 +1200,7 @@ var _myUUID = (function() {
     if (saved === 'agenda' && !state.has_agenda) saved = 'slides';
     if (saved === 'notes' && !(state.notes_count > 0)) saved = 'slides';
     if (saved === 'summary' && !(state.summary_count > 0)) saved = 'slides';
+    _hostSlidesCurrent = state.slides_current || null;
     showView(saved);
   } catch (e) {
     console.error('[participant] failed to load state:', e);
@@ -1165,7 +1252,12 @@ function _handleWsMessage(msg) {
       } else { badge.style.display = 'none'; }
       break;
     }
-    case 'slides_cache_status': loadSlidesCatalog(); break;
+    case 'slides_cache_status':
+      loadSlidesCatalog().then(function() {
+        _applyHostSlideFollow(_hostSlidesCurrent).catch(function() {});
+      }).catch(function() {});
+      break;
+    case 'slides_current': _onIncomingHostSlidesCurrent(msg.slides_current || null); break;
   }
 }
 
