@@ -604,11 +604,10 @@ function openSlides() {
     while (sib) { siblingsH += sib.getBoundingClientRect().height + 8; sib = sib.nextElementSibling; }
     var available = nav.getBoundingClientRect().bottom - list.getBoundingClientRect().top - siblingsH - 4;
     list.style.maxHeight = Math.max(available, 0) + 'px';
-    // scroll to bottom after transition
     setTimeout(function() {
-      var inner = list.querySelector('.slides-list-inner');
-      if (inner) inner.scrollTop = inner.scrollHeight;
-    }, 650);
+      list.style.overflowY = 'auto';
+      list.scrollTop = list.scrollHeight;
+    }, 620);
   });
   arrow.style.transform = 'rotate(90deg)';
   showView('slides');
@@ -617,6 +616,7 @@ function closeSlides() {
   var list = document.querySelector('.slides-list');
   var arrow = document.querySelector('.slides-arrow');
   if (!list) return;
+  list.style.overflowY = 'hidden';
   list.style.maxHeight = '0px';
   arrow.style.transform = 'rotate(0deg)';
 }
@@ -637,6 +637,7 @@ function openTopics() {
     while (sib) { siblingsH += sib.getBoundingClientRect().height + 8; sib = sib.nextElementSibling; }
     var available = nav.getBoundingClientRect().bottom - list.getBoundingClientRect().top - siblingsH - 4;
     list.style.maxHeight = Math.max(available, 0) + 'px';
+    setTimeout(function() { list.style.overflowY = 'auto'; }, 620);
   });
   arrow.style.transform = 'rotate(90deg)';
 }
@@ -644,6 +645,7 @@ function closeTopics() {
   var list = document.querySelector('.topics-list');
   var arrow = document.querySelector('.topics-arrow');
   if (!list) return;
+  list.style.overflowY = 'hidden';
   list.style.maxHeight = '0px';
   arrow.style.transform = 'rotate(0deg)';
 }
