@@ -20,6 +20,7 @@ body{visibility:hidden}
 </style>
 <script>document.fonts.ready.then(function(){document.body.style.visibility='visible'})</script>
 <script src="/static/emoji-float.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mammoth@1/mammoth.browser.min.js"></script>
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 <script id="tailwind-config">
         tailwind.config = {
@@ -378,47 +379,7 @@ refactoring-kata<span class="material-symbols-outlined text-sm flex-shrink-0">op
 </div>
 <!-- Agenda View -->
 <div id="agenda-view" style="display:none" class="h-full overflow-y-auto px-16 py-12" onscroll="saveScroll('agenda',this)">
-  <h1 class="text-3xl font-extrabold text-on-surface mb-6">Session Agenda</h1>
-  <h2 class="text-xl font-bold text-on-surface mb-3">Morning Block — 09:00 to 12:30</h2>
-  <h3 class="text-base font-semibold text-on-surface-variant mb-2">Opening & Context Setting</h3>
-  <ul class="list-disc pl-6 space-y-1 text-sm text-on-surface-variant mb-6">
-    <li>Welcome and introductions — 09:00</li>
-    <li>Workshop goals and structure overview — 09:15</li>
-    <li>Pre-assessment quiz — 09:30</li>
-  </ul>
-  <h3 class="text-base font-semibold text-on-surface-variant mb-2">Clean Architecture Deep Dive</h3>
-  <ul class="list-disc pl-6 space-y-1 text-sm text-on-surface-variant mb-6">
-    <li>Layered vs hexagonal architecture — 09:45</li>
-    <li>Dependency rule and the domain layer — 10:15</li>
-    <li>Live coding: ports and adapters — 10:45</li>
-    <li>Coffee break — 11:15</li>
-  </ul>
-  <h3 class="text-base font-semibold text-on-surface-variant mb-2">Refactoring in Practice</h3>
-  <ul class="list-disc pl-6 space-y-1 text-sm text-on-surface-variant mb-6">
-    <li>Identifying smells in existing code — 11:30</li>
-    <li>Hands-on kata: extract and rename — 11:50</li>
-    <li>Group debrief — 12:20</li>
-  </ul>
-  <h2 class="text-xl font-bold text-on-surface mb-3">Lunch Break — 12:30 to 13:30</h2>
-  <h2 class="text-xl font-bold text-on-surface mb-3">Afternoon Block — 13:30 to 17:00</h2>
-  <h3 class="text-base font-semibold text-on-surface-variant mb-2">Testing Strategy</h3>
-  <ul class="list-disc pl-6 space-y-1 text-sm text-on-surface-variant mb-6">
-    <li>Test pyramid revisited — 13:30</li>
-    <li>TDD red-green-refactor cycle — 14:00</li>
-    <li>Integration vs unit: when to use which — 14:30</li>
-    <li>Coffee break — 15:00</li>
-  </ul>
-  <h3 class="text-base font-semibold text-on-surface-variant mb-2">Domain-Driven Design Essentials</h3>
-  <ul class="list-disc pl-6 space-y-1 text-sm text-on-surface-variant mb-6">
-    <li>Bounded contexts and ubiquitous language — 15:15</li>
-    <li>Aggregates, entities, value objects — 15:45</li>
-    <li>Event storming mini-session — 16:15</li>
-  </ul>
-  <h3 class="text-base font-semibold text-on-surface-variant mb-2">Closing</h3>
-  <ul class="list-disc pl-6 space-y-1 text-sm text-on-surface-variant mb-6">
-    <li>Retrospective and Q&A — 16:40</li>
-    <li>Post-assessment and wrap-up — 17:00</li>
-  </ul>
+  <div id="agenda-content" class="text-on-surface text-sm leading-relaxed prose max-w-none">Loading…</div>
 </div>
 <!-- Upload View -->
 <div id="upload-view" style="display:none" class="h-full flex flex-col px-16 py-12">
@@ -757,6 +718,7 @@ function showView(name) {
   if (name !== 'slides') closeSlides();
   document.querySelectorAll('.topic-item').forEach(function(n) { n.classList.remove('topic-active'); });
   setActive(name);
+  if (name === 'agenda') loadAgenda();
   VIEWS.forEach(function(v) {
     var el = document.getElementById(v + '-view');
     el.style.display = v === name ? '' : 'none';
@@ -775,18 +737,38 @@ function resetStatePrompt() {
 <script src="/static/version-age.js"></script>
 <script>renderDeployAge('version-tag-new', {disableBranchTooltip: true});</script>
 <script>
+let _sessionId = null;
+let _agendaHtml = null;
+
 (async function loadParticipantState() {
   try {
     const status = await fetch('/api/status').then(r => r.json());
-    const sessionId = status.session_id;
-    console.log('[participant] session_id:', sessionId);
-    if (!sessionId) return;
-    const state = await fetch(`/${sessionId}/api/participant/state`).then(r => r.json());
+    _sessionId = status.session_id;
+    console.log('[participant] session_id:', _sessionId);
+    if (!_sessionId) return;
+    const state = await fetch(`/${_sessionId}/api/participant/state`).then(r => r.json());
     console.log('[participant] state:', state);
     document.querySelector('[data-nav="agenda"]').style.display = state.has_agenda ? '' : 'none';
   } catch (e) {
     console.error('[participant] failed to load state:', e);
   }
 })();
+
+async function loadAgenda() {
+  const el = document.getElementById('agenda-content');
+  if (_agendaHtml) { el.innerHTML = _agendaHtml; return; }
+  el.textContent = 'Loading…';
+  try {
+    const data = await fetch(`/${_sessionId}/api/participant/agenda`).then(r => r.ok ? r.json() : Promise.reject('not found'));
+    const binary = atob(data.data);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    const result = await mammoth.convertToHtml({ arrayBuffer: bytes.buffer });
+    _agendaHtml = result.value.replace(/<a /g, '<a target="_blank" rel="noopener" ');
+    el.innerHTML = _agendaHtml;
+  } catch (e) {
+    el.textContent = 'Failed to load agenda.';
+  }
+}
 </script>
 </body></html>
