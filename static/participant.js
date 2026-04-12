@@ -3169,8 +3169,8 @@ function closeAgendaModal() {
           clearInterval(_timerInterval);
         }
         // Restore vote from server state (authoritative), falling back to localStorage
-        if (msg.my_vote != null) {
-          myVote = msg.poll?.multi ? new Set(msg.my_vote) : msg.my_vote;
+        if (msg.my_voted_ids != null) {
+          myVote = msg.poll?.multi ? new Set(msg.my_voted_ids) : (msg.my_voted_ids[0] ?? null);
         } else if (msg.poll?.id !== currentPoll?.id) {
           restoreVote(msg.poll);
         }

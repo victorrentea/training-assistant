@@ -2194,14 +2194,6 @@ components:
             type: integer
           type: object
           title: Vote Counts
-        my_vote:
-          anyOf:
-          - type: string
-          - items:
-              type: string
-            type: array
-          - type: 'null'
-          title: My Vote
         my_voted_ids:
           anyOf:
           - items:

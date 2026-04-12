@@ -227,7 +227,6 @@ class ParticipantStateResponse(BaseModel):
     poll: PollData | None = None
     poll_active: bool
     vote_counts: dict[str, int]
-    my_vote: str | list[str] | None = None
     my_voted_ids: list[str] | None = None
     codereview: CodeReviewParticipantState
     debate: DebateData
@@ -328,7 +327,6 @@ def _build_poll_for_participant(pid: str) -> dict:
     my_vote_entry = ps.votes.get(pid)
     if my_vote_entry is not None:
         option_ids = my_vote_entry["option_ids"]
-        result["my_vote"] = option_ids[0] if len(option_ids) == 1 else option_ids
         result["my_voted_ids"] = option_ids
     else:
         result["my_vote"] = None
