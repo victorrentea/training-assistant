@@ -420,13 +420,13 @@ body{visibility:hidden}
 </div><!-- end slides-view -->
 <!-- Floating Reaction UI (Bottom Right) — always on top across all views -->
 <div class="absolute bottom-12 right-12 flex flex-col items-end gap-4 z-30">
-<div class="flex items-center gap-2 p-2 bg-surface-container-lowest whisper-shadow rounded-full glass border border-outline-variant border-opacity-10">
+<div id="emoji-main-bar" class="flex items-center gap-2 p-2 bg-surface-container-lowest whisper-shadow rounded-full glass border border-outline-variant border-opacity-10">
 <button onclick="showDesktopEmojiFloat(this.textContent.trim(), this)" class="w-[3.25rem] h-[3.25rem] flex items-center justify-center hover:bg-surface-container rounded-full text-[1.625rem] transition-transform hover:scale-110" title="Genuinely love this.">❤️</button>
 <button onclick="showDesktopEmojiFloat(this.textContent.trim(), this)" class="w-[3.25rem] h-[3.25rem] flex items-center justify-center hover:bg-surface-container rounded-full text-[1.625rem] transition-transform hover:scale-110" title="I need a break. Now.">☕</button>
 <button onclick="showDesktopEmojiFloat(this.textContent.trim(), this)" class="w-[3.25rem] h-[3.25rem] flex items-center justify-center hover:bg-surface-container rounded-full text-[1.625rem] transition-transform hover:scale-110" title="Yes. More of this.">👍</button>
 <button onclick="showDesktopEmojiFloat(this.textContent.trim(), this)" class="w-[3.25rem] h-[3.25rem] flex items-center justify-center hover:bg-surface-container rounded-full text-[1.625rem] transition-transform hover:scale-110" title="This is absolute fire.">🔥</button>
 <button onclick="showDesktopEmojiFloat(this.textContent.trim(), this)" class="w-[3.25rem] h-[3.25rem] flex items-center justify-center hover:bg-surface-container rounded-full text-[1.625rem] transition-transform hover:scale-110" title="Hmm... not convinced yet.">🤔</button>
-<div class="w-[1px] h-6 bg-outline-variant opacity-20"></div>
+<div id="emoji-tv-sep" class="w-[1px] h-6 bg-outline-variant opacity-20"></div>
 <button onclick="showDesktopEmojiFloat(this.textContent.trim(), this)" class="w-[3.25rem] h-[3.25rem] flex items-center justify-center hover:bg-surface-container rounded-full text-[1.625rem] transition-transform hover:scale-110" title="I can't see your screen.">🖥️</button>
 <div class="w-[1px] h-6 bg-outline-variant opacity-20"></div>
 <!-- Plus button with hover overflow popup -->
@@ -439,16 +439,16 @@ body{visibility:hidden}
 </button>
 <!-- Overflow leaf popup -->
 <div id="emoji-overflow"
-  class="absolute bottom-full right-0 mb-3 opacity-0 pointer-events-none translate-y-1 transition-all duration-200"
+  class="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 opacity-0 pointer-events-none translate-y-1 transition-all duration-200"
   onmouseenter="clearTimeout(window._emojiHideTimer)"
   onmouseleave="scheduleHideOverflow()">
   <div class="flex flex-col-reverse items-center gap-2 p-2 bg-surface-container-lowest whisper-shadow rounded-full glass border border-outline-variant border-opacity-10">
-    <button onclick="showDesktopEmojiFloat(this.textContent.trim(), this)" class="w-[3.25rem] h-[3.25rem] flex items-center justify-center hover:bg-surface-container rounded-full text-[1.625rem] transition-transform hover:scale-110" title="Fight me on this.">⚔️</button>
-    <button onclick="showDesktopEmojiFloat(this.textContent.trim(), this)" class="w-[3.25rem] h-[3.25rem] flex items-center justify-center hover:bg-surface-container rounded-full text-[1.625rem] transition-transform hover:scale-110" title="I'm dead 💀">😂</button>
-    <button onclick="showDesktopEmojiFloat(this.textContent.trim(), this)" class="w-[3.25rem] h-[3.25rem] flex items-center justify-center hover:bg-surface-container rounded-full text-[1.625rem] transition-transform hover:scale-110" title="My brain just exploded.">🤯</button>
-    <button onclick="showDesktopEmojiFloat(this.textContent.trim(), this)" class="w-[3.25rem] h-[3.25rem] flex items-center justify-center hover:bg-surface-container rounded-full text-[1.625rem] transition-transform hover:scale-110" title="Wait, I have an idea!">💡</button>
-    <button onclick="showDesktopEmojiFloat(this.textContent.trim(), this)" class="w-[3.25rem] h-[3.25rem] flex items-center justify-center hover:bg-surface-container rounded-full text-[1.625rem] transition-transform hover:scale-110" title="Agreed. 100%.">✅</button>
-    <button onclick="showDesktopEmojiFloat(this.textContent.trim(), this)" class="w-[3.25rem] h-[3.25rem] flex items-center justify-center hover:bg-surface-container rounded-full text-[1.625rem] transition-transform hover:scale-110" title="Nope. Hard disagree.">❌</button>
+    <button onclick="addEmojiToBar(this)" class="w-[3.25rem] h-[3.25rem] flex items-center justify-center hover:bg-surface-container rounded-full text-[1.625rem] transition-transform hover:scale-110" title="Fight me on this.">⚔️</button>
+    <button onclick="addEmojiToBar(this)" class="w-[3.25rem] h-[3.25rem] flex items-center justify-center hover:bg-surface-container rounded-full text-[1.625rem] transition-transform hover:scale-110" title="I'm dead 💀">😂</button>
+    <button onclick="addEmojiToBar(this)" class="w-[3.25rem] h-[3.25rem] flex items-center justify-center hover:bg-surface-container rounded-full text-[1.625rem] transition-transform hover:scale-110" title="My brain just exploded.">🤯</button>
+    <button onclick="addEmojiToBar(this)" class="w-[3.25rem] h-[3.25rem] flex items-center justify-center hover:bg-surface-container rounded-full text-[1.625rem] transition-transform hover:scale-110" title="Wait, I have an idea!">💡</button>
+    <button onclick="addEmojiToBar(this)" class="w-[3.25rem] h-[3.25rem] flex items-center justify-center hover:bg-surface-container rounded-full text-[1.625rem] transition-transform hover:scale-110" title="Agreed. 100%.">✅</button>
+    <button onclick="addEmojiToBar(this)" class="w-[3.25rem] h-[3.25rem] flex items-center justify-center hover:bg-surface-container rounded-full text-[1.625rem] transition-transform hover:scale-110" title="Nope. Hard disagree.">❌</button>
   </div>
 </div>
 </div>
@@ -579,6 +579,19 @@ function uploadFileSelected(files) {
 function uploadSend() {
   document.getElementById('upload-input').value = '';
   showView(_viewBeforeUpload);
+}
+function addEmojiToBar(btn) {
+  var emoji = btn.textContent.trim();
+  showDesktopEmojiFloat(emoji, btn);
+  var newBtn = document.createElement('button');
+  newBtn.textContent = emoji;
+  newBtn.title = btn.title;
+  newBtn.className = btn.className;
+  newBtn.setAttribute('onclick', 'showDesktopEmojiFloat(this.textContent.trim(), this)');
+  var sep = document.getElementById('emoji-tv-sep');
+  sep.parentNode.insertBefore(newBtn, sep);
+  btn.parentNode.removeChild(btn);
+  scheduleHideOverflow();
 }
 function scheduleHideOverflow() {
   window._emojiHideTimer = setTimeout(function() {
