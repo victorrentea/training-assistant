@@ -129,7 +129,7 @@ body{visibility:hidden}
 <body class="bg-surface text-on-surface overflow-hidden">
 <div class="flex h-screen w-full">
 <!-- SIDEBAR (20%) -->
-<aside class="w-[16%] h-full bg-surface-container flex flex-col p-6 pb-2 space-y-8 z-10">
+<aside class="w-[16%] h-full bg-surface-container flex flex-col p-6 pb-2 space-y-2 z-10">
 <!-- Header Section -->
 <div class="space-y-4">
 <div class="flex items-center gap-3">
@@ -150,23 +150,23 @@ body{visibility:hidden}
 <!-- Navigation Cluster -->
 <nav class="flex-grow flex flex-col space-y-1">
 <!-- Slides - ACTIVE -->
-<a data-nav="slides" onclick="closeTopics();setActive('slides')" class="nav-item nav-active rounded-full px-4 py-3 font-semibold flex items-center gap-3 transition-all cursor-pointer">
+<a data-nav="slides" onclick="closeTopics();setActive('slides')" class="nav-item nav-active rounded-full px-2 py-3 font-semibold flex items-center gap-3 transition-all cursor-pointer">
 <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">slideshow</span>
 <span class="text-base">Slides</span>
 </a>
-<a data-nav="agenda" onclick="showView('agenda')" class="nav-item rounded-full px-4 py-3 flex items-center gap-3 transition-all cursor-pointer">
+<a data-nav="agenda" onclick="showView('agenda')" class="nav-item rounded-full px-2 py-3 flex items-center gap-3 transition-all cursor-pointer">
 <span class="material-symbols-outlined">event_note</span>
 <span class="text-base">Agenda</span>
 </a>
-<a data-nav="notes" onclick="showView('notes')" class="nav-item rounded-full px-4 py-3 flex items-center gap-3 transition-all cursor-pointer">
+<a data-nav="notes" onclick="showView('notes')" class="nav-item rounded-full px-2 py-3 flex items-center gap-3 transition-all cursor-pointer">
 <span class="material-symbols-outlined">description</span>
 <span class="text-base">Notes</span>
 </a>
-<a data-nav="summary" onclick="showView('summary')" class="nav-item rounded-full px-4 py-3 flex items-center gap-3 transition-all cursor-pointer">
+<a data-nav="summary" onclick="showView('summary')" class="nav-item rounded-full px-2 py-3 flex items-center gap-3 transition-all cursor-pointer">
 <span class="material-symbols-outlined">psychology</span>
 <span class="text-base">AI Summary</span>
 </a>
-<button data-nav="topics" onclick="openTopics()" class="nav-item w-full rounded-full px-4 py-3 flex items-center gap-3 transition-all">
+<button data-nav="topics" onclick="openTopics()" class="nav-item w-full rounded-full px-2 py-3 flex items-center gap-3 transition-all">
 <span class="material-symbols-outlined">topic</span>
 <span class="text-base flex-1 text-left">Topics</span>
 <span class="material-symbols-outlined topics-arrow text-xl transition-transform duration-300">chevron_right</span>
@@ -197,26 +197,26 @@ body{visibility:hidden}
 </div>
 </div>
 </div>
-<a data-nav="gitrepos" onclick="closeTopics();setActive('gitrepos')" class="nav-item rounded-full px-4 py-3 flex items-center gap-3 transition-all cursor-pointer">
+<a data-nav="gitrepos" onclick="closeTopics();setActive('gitrepos')" class="nav-item rounded-full px-2 py-3 flex items-center gap-3 transition-all cursor-pointer">
 <span class="material-symbols-outlined">terminal</span>
 <span class="text-base">Git Repos</span>
 </a>
-<a data-nav="drive" onclick="closeTopics();setActive('drive')" class="nav-item rounded-full px-4 py-3 flex items-center gap-3 transition-all cursor-pointer">
+<a data-nav="drive" onclick="closeTopics();setActive('drive')" class="nav-item rounded-full px-2 py-3 flex items-center gap-3 transition-all cursor-pointer">
 <span class="material-symbols-outlined">cloud</span>
 <span class="text-base">Drive</span>
 <span class="material-symbols-outlined text-sm opacity-50">open_in_new</span>
 </a>
-<a data-nav="paste" onclick="closeTopics();setActive('paste')" class="nav-item rounded-full px-4 py-3 flex items-center gap-3 transition-all cursor-pointer">
+<a data-nav="paste" onclick="closeTopics();setActive('paste')" class="nav-item rounded-full px-2 py-3 flex items-center gap-3 transition-all cursor-pointer">
 <span class="material-symbols-outlined">content_paste</span>
 <span class="text-base">Paste</span>
 </a>
-<a data-nav="upload" onclick="closeTopics();setActive('upload')" class="nav-item rounded-full px-4 py-3 flex items-center gap-3 transition-all cursor-pointer">
+<a data-nav="upload" onclick="closeTopics();setActive('upload')" class="nav-item rounded-full px-2 py-3 flex items-center gap-3 transition-all cursor-pointer">
 <span class="material-symbols-outlined">upload</span>
 <span class="text-base">Upload</span>
 </a>
 </nav>
 <div class="mt-auto">
-<a class="text-on-surface-variant px-4 py-3 hover:text-on-surface hover:bg-surface-container-high rounded-full flex items-center gap-3 transition-colors duration-200 cursor-pointer">
+<a class="text-on-surface-variant px-2 py-3 hover:text-on-surface hover:bg-surface-container-high rounded-full flex items-center gap-3 transition-colors duration-200 cursor-pointer">
 <span class="material-symbols-outlined">chat_bubble</span>
 <span class="text-base">Send Feedback</span>
 </a>
