@@ -320,6 +320,9 @@ refactoring-kata<span class="material-symbols-outlined text-sm flex-shrink-0">op
     <p class="text-base font-semibold">Drop files to send to host</p>
     <p id="upload-filename" class="text-sm mt-1 opacity-60 truncate max-w-full px-4">or click to browse</p>
   </div>
+  <div id="upload-progress-bar" style="display:none" class="mt-3 h-2 rounded-full bg-surface-container-highest overflow-hidden">
+    <div id="upload-progress-fill" class="h-full bg-primary rounded-full transition-all" style="width:0%"></div>
+  </div>
   <div class="mt-4">
     <button id="upload-send-btn" onclick="uploadSend()" disabled
       class="flex items-center gap-2 px-6 py-3 font-semibold rounded-full transition-all opacity-40 cursor-not-allowed bg-surface-container-highest text-on-surface-variant">
@@ -330,9 +333,12 @@ refactoring-kata<span class="material-symbols-outlined text-sm flex-shrink-0">op
 </div>
 <!-- Paste View -->
 <div id="paste-view" style="display:none" class="h-full flex flex-col px-16 py-12">
-  <textarea class="flex-1 w-full resize-none rounded-2xl bg-surface-container-low text-on-surface text-base p-6 outline-none focus:ring-2 focus:ring-primary placeholder:text-on-surface-variant" placeholder="Paste any large text"></textarea>
+  <textarea id="paste-textarea" class="flex-1 w-full resize-none rounded-2xl bg-surface-container-low text-on-surface text-base p-6 outline-none focus:ring-2 focus:ring-primary placeholder:text-on-surface-variant" placeholder="Paste any large text"
+    oninput="document.getElementById('paste-send-btn').disabled = !this.value.trim()"
+    onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendPaste();}"></textarea>
   <div class="mt-4">
-    <button class="flex items-center gap-2 px-6 py-3 bg-primary text-on-primary font-semibold rounded-full hover:bg-primary-dim transition-all shadow-lg shadow-primary/20">
+    <button id="paste-send-btn" onclick="sendPaste()" disabled
+      class="flex items-center gap-2 px-6 py-3 bg-primary text-on-primary font-semibold rounded-full hover:bg-primary-dim transition-all shadow-lg shadow-primary/20 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none">
       Send to Host
       <span class="material-symbols-outlined" style="transform:rotate(-45deg)">send</span>
     </button>
@@ -557,6 +563,7 @@ function closeRepos() {
   arrow.style.transform = 'rotate(0deg)';
 }
 var _viewBeforeUpload = 'slides';
+var _uploadSelectedFile = null;
 function showUpload() {
   var current = document.querySelector('.nav-active');
   if (current && current.dataset.nav && current.dataset.nav !== 'upload') {
@@ -564,6 +571,10 @@ function showUpload() {
   }
   document.getElementById('upload-input').value = '';
   document.getElementById('upload-filename').textContent = 'or click to browse';
+  document.getElementById('upload-filename').style.color = '';
+  document.getElementById('upload-progress-bar').style.display = 'none';
+  document.getElementById('upload-progress-fill').style.width = '0%';
+  _uploadSelectedFile = null;
   var btn = document.getElementById('upload-send-btn');
   btn.disabled = true;
   btn.className = 'flex items-center gap-2 px-6 py-3 font-semibold rounded-full transition-all opacity-40 cursor-not-allowed bg-surface-container-highest text-on-surface-variant';
@@ -571,15 +582,92 @@ function showUpload() {
 }
 function uploadFileSelected(files) {
   if (!files || !files.length) return;
-  document.getElementById('upload-filename').textContent = files[0].name;
+  var file = files[0];
+  var maxSize = 500 * 1024 * 1024;
+  var infoEl = document.getElementById('upload-filename');
   var btn = document.getElementById('upload-send-btn');
+  if (file.size > maxSize) {
+    infoEl.textContent = 'File too large (max 500MB)';
+    infoEl.style.color = '#ef4444';
+    btn.disabled = true;
+    btn.className = 'flex items-center gap-2 px-6 py-3 font-semibold rounded-full transition-all opacity-40 cursor-not-allowed bg-surface-container-highest text-on-surface-variant';
+    _uploadSelectedFile = null;
+    return;
+  }
+  _uploadSelectedFile = file;
+  var sizeTxt = file.size > 1024 * 1024
+    ? (file.size / 1024 / 1024).toFixed(1) + ' MB'
+    : Math.round(file.size / 1024) + ' KB';
+  infoEl.textContent = file.name + ' (' + sizeTxt + ')';
+  infoEl.style.color = '';
   btn.disabled = false;
   btn.className = 'flex items-center gap-2 px-6 py-3 bg-primary text-on-primary font-semibold rounded-full hover:bg-primary-dim transition-all shadow-lg shadow-primary/20 cursor-pointer';
 }
 function uploadSend() {
-  document.getElementById('upload-input').value = '';
-  showView(_viewBeforeUpload);
+  if (!_uploadSelectedFile || !_sessionId) return;
+  var progressBar = document.getElementById('upload-progress-bar');
+  var progressFill = document.getElementById('upload-progress-fill');
+  var infoEl = document.getElementById('upload-filename');
+  var btn = document.getElementById('upload-send-btn');
+  btn.disabled = true;
+  progressBar.style.display = '';
+  progressFill.style.width = '0%';
+  var formData = new FormData();
+  formData.append('file', _uploadSelectedFile);
+  formData.append('uuid', _myUUID);
+  var xhr = new XMLHttpRequest();
+  xhr.open('POST', '/' + _sessionId + '/api/upload');
+  xhr.upload.onprogress = function(e) {
+    if (e.lengthComputable) progressFill.style.width = Math.round(e.loaded / e.total * 100) + '%';
+  };
+  xhr.onload = function() {
+    if (xhr.status >= 200 && xhr.status < 300) {
+      showView(_viewBeforeUpload);
+      showToast('File sent!');
+    } else {
+      var msg = 'Upload failed';
+      try { msg = JSON.parse(xhr.responseText).detail || msg; } catch(e) {}
+      infoEl.textContent = msg;
+      infoEl.style.color = '#ef4444';
+      progressBar.style.display = 'none';
+      btn.disabled = false;
+    }
+  };
+  xhr.onerror = function() {
+    infoEl.textContent = 'Network error';
+    infoEl.style.color = '#ef4444';
+    progressBar.style.display = 'none';
+    btn.disabled = false;
+  };
+  xhr.send(formData);
 }
+function sendPaste() {
+  var ta = document.getElementById('paste-textarea');
+  var text = ta ? ta.value : '';
+  if (!text.trim()) return;
+  if (text.length > 102400) { alert('Text too large (max 100KB)'); return; }
+  fetch('/' + _sessionId + '/api/participant/paste', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Participant-ID': _myUUID },
+    body: JSON.stringify({ text: text })
+  }).then(function() {
+    ta.value = '';
+    document.getElementById('paste-send-btn').disabled = true;
+    showToast('Sent!');
+  }).catch(function(e) { console.error('paste failed', e); });
+}
+function showToast(msg) {
+  var t = document.createElement('div');
+  t.textContent = msg;
+  t.style.cssText = 'position:fixed;bottom:1.5rem;right:1.5rem;background:var(--color-primary,#4555ba);color:#fff;padding:.5rem 1.2rem;border-radius:999px;font-weight:600;font-size:.875rem;z-index:9999;pointer-events:none;opacity:1;transition:opacity .4s';
+  document.body.appendChild(t);
+  setTimeout(function() { t.style.opacity = '0'; setTimeout(function() { t.remove(); }, 400); }, 1200);
+}
+window.addEventListener('dragenter', function(e) {
+  if (e.dataTransfer && e.dataTransfer.types && Array.from(e.dataTransfer.types).includes('Files')) {
+    showUpload();
+  }
+});
 function downloadTopic(topicName) {
   // TODO: implement topic file download
   console.log('Download topic:', topicName);
@@ -671,6 +759,13 @@ function resetStatePrompt() {
 <script>renderDeployAge('version-tag-new', {disableBranchTooltip: true});</script>
 <script>
 let _sessionId = null;
+var _myUUID = (function() {
+  var key = 'workshop_participant_uuid';
+  var store = document.cookie.indexOf('is_host=1') >= 0 ? sessionStorage : localStorage;
+  var uid = store.getItem(key);
+  if (!uid) { uid = crypto.randomUUID(); store.setItem(key, uid); }
+  return uid;
+})();
 (async function loadParticipantState() {
   try {
     const status = await fetch('/api/status').then(r => r.json());
