@@ -223,5 +223,5 @@ def test_slides_sequence_diagram_extraction():
         browser.close()
 
     output_path = "/app/docs/sequences/generated/06-slides.puml"
-    generated = _generate_and_print(output_path)
+    _generate_and_print(output_path)
     print("SUCCESS: Slides sequence diagram extracted from traces")
