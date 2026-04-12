@@ -53,12 +53,16 @@ def broadcast(msg: BaseModel):
     if _ws_client is None:
         return
     event = msg.model_dump()
+    msg_type = event.get("type", "unknown")
     try:
-        from daemon.telemetry.ws_propagation import inject_trace_context
-        inject_trace_context(event)
+        from opentelemetry import trace
+        tracer = trace.get_tracer("daemon.ws_publish")
+        with tracer.start_as_current_span(f"broadcast:{msg_type}"):
+            from daemon.telemetry.ws_propagation import inject_trace_context
+            inject_trace_context(event)
+            _ws_client.send({"type": "broadcast", "event": event})
     except ImportError:
-        pass
-    _ws_client.send({"type": "broadcast", "event": event})
+        _ws_client.send({"type": "broadcast", "event": event})
 
 
 async def notify_host(msg: BaseModel):
@@ -70,15 +74,24 @@ async def notify_host(msg: BaseModel):
         msg_type = event.get("type", "unknown")
         log.debug("host", f"← {msg_type}")
         try:
-            from daemon.telemetry.ws_propagation import inject_trace_context
-            inject_trace_context(event)
+            from opentelemetry import trace
+            tracer = trace.get_tracer("daemon.ws_publish")
+            with tracer.start_as_current_span(f"notify_host:{msg_type}"):
+                from daemon.telemetry.ws_propagation import inject_trace_context
+                inject_trace_context(event)
+                await _host_ws.send_text(json.dumps(event))
         except ImportError:
-            pass
-        await _host_ws.send_text(json.dumps(event))
+            await _host_ws.send_text(json.dumps(event))
     except Exception:
         log.debug("host", "Failed to send WS message")
 
 
 def broadcast_event(msg: BaseModel) -> dict:
     """Build a write_back_events entry for participant broadcast."""
-    return {"type": "broadcast", "event": msg.model_dump()}
+    event = msg.model_dump()
+    try:
+        from daemon.telemetry.ws_propagation import inject_trace_context
+        inject_trace_context(event)
+    except ImportError:
+        pass
+    return {"type": "broadcast", "event": event}
