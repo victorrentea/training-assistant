@@ -193,8 +193,7 @@ class ParticipantPage:
 
     def navigate_to_page(self, target_page: int) -> None:
         """Navigate to a specific page in the currently open slide via PDF.js."""
-        result = self._page.evaluate(f"""() => {{
-            let saved = false;
+        self._page.evaluate(f"""() => {{
             if (typeof slidesPdfViewer !== 'undefined' && slidesPdfViewer) {{
                 slidesPdfViewer.currentPageNumber = {target_page};
             }}
@@ -203,11 +202,8 @@ class ParticipantPage:
             const slug = activeItem ? activeItem.getAttribute('data-slug') : null;
             if (slug) {{
                 localStorage.setItem('workshop_slide_page:' + slug, String({target_page}));
-                saved = true;
             }}
-            return {{ slug, saved, activeCount: document.querySelectorAll('.slides-list-item.active').length }};
         }}""")
-        print(f"[navigate_to_page] target={target_page}, result={result}")
         self._page.wait_for_timeout(500)  # allow PDF.js to render
 
     def click_follow(self) -> None:

@@ -285,20 +285,8 @@ def slide_automatically_reloaded():
 # ── Then steps ─────────────────────────────────────────────────────────
 
 @then(parsers.parse('the slides catalog contains "{slug}" with a last modified timestamp'))
-def catalog_contains_with_timestamp(request, connected, slug):
+def catalog_contains_with_timestamp(connected, slug):
     pax = connected["pax"]
-    session_id = request.getfixturevalue("session_id")
-    # Debug: check what the daemon API returns
-    _, body = _api("GET", f"/{session_id}/api/slides")
-    data = json.loads(body)
-    slides_list = data.get("slides", data) if isinstance(data, dict) else data
-    for s in slides_list:
-        if s.get("slug") == slug:
-            print(f"[DEBUG] Daemon API slide '{slug}': modified_at={s.get('modified_at')}, status={s.get('status')}")
-            break
-    else:
-        print(f"[DEBUG] Slug '{slug}' not found in daemon API response: {[s.get('slug') for s in slides_list]}")
-
     pax.expand_slides_dock()
     item = pax._page.locator(f'.slides-list-item[data-slug="{slug}"]')
     expect(item).to_be_visible(timeout=10000)
