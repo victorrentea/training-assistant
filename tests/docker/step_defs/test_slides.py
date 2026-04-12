@@ -153,7 +153,7 @@ def slide_is_cached(session_id, slug):
 
 @given("there is no PDF cached on Railway")
 def no_pdf_cached():
-    """Clear Railway PDF cache files and reset mock drive stats."""
+    """Clear Railway PDF cache files and update daemon's cache status."""
     from pathlib import Path
     _reset_mock_drive()
     # Delete cached PDF files directly (test and Railway share the container)
@@ -164,6 +164,17 @@ def no_pdf_cached():
                 f.unlink()
             except OSError:
                 pass
+    # Force the daemon to re-check Railway (bypassing in-memory fast path)
+    # so it discovers the cache is empty and updates its internal status.
+    # The force check triggers a download — the stats are already reset so
+    # only post-Given drive calls will be counted.
+    for slug in ("clean-code", "design-patterns", "architecture"):
+        try:
+            _api("GET", f"/api/slides/check/{slug}?force=true", timeout=35)
+        except Exception:
+            pass
+    # Reset stats AFTER the forced checks so Given-phase downloads aren't counted
+    _reset_mock_drive()
 
 
 @given(parsers.parse('{name} joins as a participant with follow mode on'),

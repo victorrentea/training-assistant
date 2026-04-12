@@ -174,17 +174,18 @@ participant_router = APIRouter(tags=["slides"])
 
 
 @participant_router.get("/{session_id}/api/slides/check/{slug}", response_model=SlidesCheckResponse)
-async def check_slide_cache(session_id: str, slug: str):
+async def check_slide_cache(session_id: str, slug: str, force: bool = False):
     """Check if a PDF is cached; trigger download if not.
 
     Returns 200 immediately if already cached.
     Otherwise calls Railway REST to download from Google Drive (blocking).
+    Pass ?force=true to bypass the fast-path cache check and verify with Railway.
     """
     global _event_loop
     _event_loop = asyncio.get_event_loop()
 
     # Fast path: trust daemon-side cache status (kept in sync via WS reconnect probing).
-    if misc_state.slides_cache_status.get(slug, {}).get("status") == "cached":
+    if not force and misc_state.slides_cache_status.get(slug, {}).get("status") == "cached":
         return SlidesCheckResponse(status="cached")
 
     drive_export_url = misc_state.slides_catalog.get(slug, {}).get("drive_export_url")
