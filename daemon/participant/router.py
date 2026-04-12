@@ -59,6 +59,10 @@ class GitActivityResponse(BaseModel):
     git_repos: list[GitRepoActivity]
 
 
+class SlideHistoryResponse(BaseModel):
+    slides: list[dict]
+
+
 def _http_get_json(url: str, *, timeout: float = 2.5):
     ctx = ssl.create_default_context(cafile=certifi.where())
     req = urllib.request.Request(url, method="GET", headers={"User-Agent": "TrainingAssistant/1.0"})
@@ -629,6 +633,13 @@ def _get_current_session_id() -> str | None:
         return get_current_session_id()
     except Exception:
         return None
+
+
+@router.get("/slide-history", response_model=SlideHistoryResponse)
+async def get_slide_history():
+    """Return accumulated per-slide viewing history for the current session."""
+    from daemon.misc.state import misc_state
+    return SlideHistoryResponse(slides=misc_state.slides_viewed)
 
 
 # ── Host-only router ──
