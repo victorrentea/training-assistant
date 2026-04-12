@@ -188,10 +188,13 @@ class ParticipantPage:
         self.expand_slides_dock()
         self._page.locator(f'.slides-list-item[data-slug="{slug}"] .slides-list-open').click()
         expect(self._page.locator("#slides-overlay")).to_have_class(re.compile(r"open"), timeout=15000)
+        # Wait for PDF.js to fully load (page indicator becomes visible)
+        expect(self._page.locator("#slides-page-inline")).to_be_visible(timeout=15000)
 
     def navigate_to_page(self, target_page: int) -> None:
         """Navigate to a specific page in the currently open slide via PDF.js."""
-        self._page.evaluate(f"""() => {{
+        result = self._page.evaluate(f"""() => {{
+            let saved = false;
             if (typeof slidesPdfViewer !== 'undefined' && slidesPdfViewer) {{
                 slidesPdfViewer.currentPageNumber = {target_page};
             }}
@@ -200,8 +203,11 @@ class ParticipantPage:
             const slug = activeItem ? activeItem.getAttribute('data-slug') : null;
             if (slug) {{
                 localStorage.setItem('workshop_slide_page:' + slug, String({target_page}));
+                saved = true;
             }}
+            return {{ slug, saved, activeCount: document.querySelectorAll('.slides-list-item.active').length }};
         }}""")
+        print(f"[navigate_to_page] target={target_page}, result={result}")
         self._page.wait_for_timeout(500)  # allow PDF.js to render
 
     def click_follow(self) -> None:
