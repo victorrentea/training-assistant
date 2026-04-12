@@ -425,13 +425,13 @@ body{visibility:hidden}
     ondrop="event.preventDefault();this.classList.remove('border-primary','bg-surface-container-low','text-primary');uploadFileSelected(event.dataTransfer.files)">
     <span class="material-symbols-outlined text-6xl mb-4">cloud_upload</span>
     <p class="text-base font-semibold">Drop files to send to host</p>
-    <p class="text-sm mt-1 opacity-60">or click to browse</p>
+    <p id="upload-filename" class="text-sm mt-1 opacity-60 truncate max-w-full px-4">or click to browse</p>
   </div>
-  <div id="upload-ready" class="hidden mt-4">
-    <p id="upload-filename" class="text-sm font-medium text-on-surface-variant truncate mb-3"></p>
-    <button onclick="uploadSend()" class="flex items-center gap-2 px-6 py-3 bg-primary text-on-primary font-semibold rounded-full hover:bg-primary-dim transition-all shadow-lg shadow-primary/20">
-      <span class="material-symbols-outlined" style="transform:rotate(-45deg)">send</span>
+  <div class="mt-4">
+    <button id="upload-send-btn" onclick="uploadSend()" disabled
+      class="flex items-center gap-2 px-6 py-3 font-semibold rounded-full transition-all opacity-40 cursor-not-allowed bg-surface-container-highest text-on-surface-variant">
       Send to Host
+      <span class="material-symbols-outlined" style="transform:rotate(-45deg)">send</span>
     </button>
   </div>
 </div>
@@ -661,14 +661,19 @@ function showUpload() {
   if (current && current.dataset.nav && current.dataset.nav !== 'upload') {
     _viewBeforeUpload = current.dataset.nav;
   }
-  document.getElementById('upload-ready').classList.add('hidden');
   document.getElementById('upload-input').value = '';
+  document.getElementById('upload-filename').textContent = 'or click to browse';
+  var btn = document.getElementById('upload-send-btn');
+  btn.disabled = true;
+  btn.className = 'flex items-center gap-2 px-6 py-3 font-semibold rounded-full transition-all opacity-40 cursor-not-allowed bg-surface-container-highest text-on-surface-variant';
   showView('upload');
 }
 function uploadFileSelected(files) {
   if (!files || !files.length) return;
   document.getElementById('upload-filename').textContent = files[0].name;
-  document.getElementById('upload-ready').classList.remove('hidden');
+  var btn = document.getElementById('upload-send-btn');
+  btn.disabled = false;
+  btn.className = 'flex items-center gap-2 px-6 py-3 bg-primary text-on-primary font-semibold rounded-full hover:bg-primary-dim transition-all shadow-lg shadow-primary/20 cursor-pointer';
 }
 function uploadSend() {
   document.getElementById('upload-input').value = '';
