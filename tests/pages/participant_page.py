@@ -170,6 +170,46 @@ class ParticipantPage:
             for el in self._page.locator("#wc-my-words .wc-my-word").all()
         ]
 
+    # ── Slides ─────────────────────────────────────────────────────────────
+
+    def open_slide(self, slug: str) -> None:
+        """Click a slide in the catalog to open it in the viewer."""
+        self._page.locator(f'.slides-list-item[data-slug="{slug}"] .slides-list-open').click()
+        expect(self._page.locator("#slides-overlay")).to_have_class(re.compile(r"open"), timeout=15000)
+
+    def navigate_to_page(self, target_page: int) -> None:
+        """Navigate to a specific page in the currently open slide."""
+        for _ in range(target_page - 1):
+            self._page.locator("#slides-page-next").click()
+            self._page.wait_for_timeout(300)
+
+    def click_follow(self) -> None:
+        self._page.locator("#slides-follow-btn").click()
+
+    def get_page_indicator(self) -> str:
+        """Return current page indicator text, e.g. 'Page 3/5'."""
+        return self._page.locator("#slides-page-inline").inner_text()
+
+    def get_catalog_slugs(self) -> list[str]:
+        """Return list of slide slugs visible in the catalog."""
+        items = self._page.locator(".slides-list-item").all()
+        return [item.get_attribute("data-slug") for item in items if item.get_attribute("data-slug")]
+
+    def get_catalog_timestamp(self, slug: str) -> str:
+        """Return the last-modified timestamp label for a catalog item."""
+        item = self._page.locator(f'.slides-list-item[data-slug="{slug}"] .slides-list-updated')
+        return item.inner_text() if item.count() > 0 else ""
+
+    def is_overlay_open(self) -> bool:
+        return "open" in (self._page.locator("#slides-overlay").get_attribute("class") or "")
+
+    def screenshot_viewer(self) -> bytes:
+        """Take a screenshot of the slides viewer area."""
+        viewer = self._page.locator("#slides-pdf-viewer, #slides-native-frame")
+        expect(viewer).to_be_visible(timeout=15000)
+        self._page.wait_for_timeout(1000)
+        return viewer.screenshot()
+
     # ── Assertions ─────────────────────────────────────────────────────────
 
     def expect_question_answered(self, question_id: str, timeout: int = 5000) -> None:

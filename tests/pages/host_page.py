@@ -266,6 +266,25 @@ class HostPage:
             result[name_clean] = score
         return result
 
+    # ── Slides ─────────────────────────────────────────────────────────────
+
+    def open_slides_tab(self) -> None:
+        """Switch to slides tab (the default 'none' activity shows slides)."""
+        self._page.evaluate("async () => { await switchTab('none'); }")
+
+    def upload_slide(self, slug: str, pdf_bytes: bytes) -> None:
+        """Upload a slide PDF via the host UI."""
+        import tempfile, os
+        with tempfile.NamedTemporaryFile(suffix=".pdf", prefix=slug + "-", delete=False) as f:
+            f.write(pdf_bytes)
+            tmp_path = f.name
+        try:
+            file_input = self._page.locator('input[type="file"][accept*="pdf"]')
+            file_input.set_input_files(tmp_path)
+            self._page.wait_for_timeout(2000)  # wait for upload + WS broadcast
+        finally:
+            os.unlink(tmp_path)
+
     # ── Assertions ────────────────────────────────────────────────────────
 
     def expect_question_answered(self, question_id: str, answered: bool = True) -> None:

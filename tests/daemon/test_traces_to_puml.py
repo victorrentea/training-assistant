@@ -202,3 +202,50 @@ def test_collapse_broadcast_relay():
     assert "Railway" not in content
     assert "Daemon" in content
     assert "Participant" in content
+
+
+def test_given_phase_renders_gray():
+    """Spans with bdd.phase=given produce gray arrows."""
+    from scripts.traces_to_puml import generate_puml
+
+    with tempfile.NamedTemporaryFile(suffix=".jsonl", delete=False, mode="w") as f:
+        path = f.name
+    out = path + ".puml"
+
+    _write_spans(path, [
+        _make_span("POST /api/participant/poll/vote", "Participant", span_id="s1",
+                    start_time=1000, attributes={"bdd.phase": "given"}),
+        _make_span("POST /api/participant/poll/vote", "Daemon", span_id="s2", parent_span_id="s1",
+                    start_time=1001, attributes={"bdd.phase": "given"}),
+        _make_span("broadcast:poll_opened", "Daemon", span_id="s3",
+                    start_time=2000, attributes={"bdd.phase": "when"}),
+    ])
+
+    generate_puml(path, family="", output=out)
+    content = Path(out).read_text()
+
+    # Given phase arrow should be gray
+    assert "[#gray]" in content
+    # When phase arrow should NOT be gray
+    lines = content.split("\n")
+    broadcast_line = [l for l in lines if "broadcast poll_opened" in l][0]
+    assert "[#gray]" not in broadcast_line
+
+
+def test_no_phase_renders_default():
+    """Spans without bdd.phase produce default (black) arrows."""
+    from scripts.traces_to_puml import generate_puml
+
+    with tempfile.NamedTemporaryFile(suffix=".jsonl", delete=False, mode="w") as f:
+        path = f.name
+    out = path + ".puml"
+
+    _write_spans(path, [
+        _make_span("POST /api/poll/vote", "Participant", span_id="s1", start_time=1000),
+        _make_span("POST /api/poll/vote", "Daemon", span_id="s2", parent_span_id="s1", start_time=1001),
+    ])
+
+    generate_puml(path, family="", output=out)
+    content = Path(out).read_text()
+
+    assert "[#gray]" not in content
