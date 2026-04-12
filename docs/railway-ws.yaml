@@ -211,9 +211,6 @@ components:
           session_id:
             type: string
             nullable: true
-          session_name:
-            type: string
-            nullable: true
 
     code_timestamp:
       summary: Daemon sends its build timestamp so Railway can detect version drift

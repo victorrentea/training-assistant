@@ -27,7 +27,7 @@ def test_generator_outputs_expected_sections_in_order():
     assert output.index("## Global State") < output.index("## Session State")
 
 
-def test_generator_reuses_api_shape_rendering_style_for_nested_models():
+def test_generator_renders_global_state_fields():
     output = _run_generator()
     global_block = re.search(
         r"### `PersistedGlobalState`\n\n(?P<body>.*?)(?:\n### |\Z)",
@@ -36,8 +36,8 @@ def test_generator_reuses_api_shape_rendering_style_for_nested_models():
     )
     assert global_block, "Missing PersistedGlobalState section"
     body = global_block.group("body")
-    assert "main?: PersistedSessionRef {" in body
-    assert "  name?:string" in body
+    assert "active_session_id?:" in body
+    assert "log_level?:" in body
 
 
 def test_generator_renders_list_and_dict_shapes():

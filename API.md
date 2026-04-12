@@ -44,7 +44,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 ### Railway WS
 | Message | Payload |
 | --- | --- |
-| Daemon announces current active session to Railway on connect or session change<br>`set_session_id` | `session_id?: string`<br>`session_name?: string` |
+| Daemon announces current active session to Railway on connect or session change<br>`set_session_id` | `session_id?: string` |
 
 ## Feature: Identity
 
