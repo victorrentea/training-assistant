@@ -19,7 +19,6 @@ from daemon.participant.state import participant_state
 from daemon.poll.state import poll_state
 from daemon.qa.state import qa_state
 from daemon.session import state as session_shared_state
-from daemon.slides.activity_reader import read_slides_log
 from daemon.wordcloud.state import wordcloud_state
 
 logger = logging.getLogger(__name__)
@@ -338,12 +337,12 @@ def _session_date_from_entry(session_entry: dict | None) -> date:
 
 
 def _build_slides_log_fields() -> dict:
-    """Read activity-slides file and compute slides_log, slides_log_deep_count, slides_log_topic."""
+    """Compute slides_log, slides_log_deep_count, slides_log_topic from in-memory slides_viewed."""
 
-    folder = Path(os.environ.get("TRANSCRIPTION_FOLDER", "/Users/victorrentea/workspace/victor-macos-addons/addons-output"))
-    session_entry = _get_active_session_entry()
-    session_date = _session_date_from_entry(session_entry)
-    slides_log = read_slides_log(folder, session_date, session_entry)
+    slides_log = [
+        {"file": sv["file_name"], "slide": sv["page"], "seconds_spent": sv["seconds"]}
+        for sv in misc_state.slides_viewed
+    ]
     deep_count = len({(e["file"], e["slide"]) for e in slides_log})
     if misc_state.slides_current and misc_state.slides_current.get("presentation_name"):
         topic = misc_state.slides_current["presentation_name"]

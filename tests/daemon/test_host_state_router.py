@@ -3,19 +3,21 @@ import datetime as dt
 from daemon import host_state_router
 
 
-def test_build_slides_log_fields_uses_active_session_entry(monkeypatch):
-    captured = {}
-
-    def _fake_read(folder, session_date, session_entry):
-        captured["session_entry"] = session_entry
-        return []
-
-    monkeypatch.setattr(host_state_router.session_shared_state, "get_active_session_name", lambda: "active")
-    monkeypatch.setattr(host_state_router, "read_slides_log", _fake_read)
-
-    host_state_router._build_slides_log_fields()
-
-    assert captured["session_entry"] == {"name": "active"}
+def test_build_slides_log_fields_reads_from_misc_state(monkeypatch):
+    from daemon.misc.state import misc_state
+    misc_state.slides_viewed = [
+        {"file_name": "AI.pptx", "page": 3, "seconds": 120},
+        {"file_name": "AI.pptx", "page": 4, "seconds": 30},
+    ]
+    misc_state.slides_current = None
+    from daemon.host_state_router import _build_slides_log_fields
+    result = _build_slides_log_fields()
+    assert result["slides_log_deep_count"] == 2
+    assert len(result["slides_log"]) == 2
+    assert result["slides_log"][0]["file"] == "AI.pptx"
+    assert result["slides_log"][0]["seconds_spent"] == 120
+    # Cleanup
+    misc_state.slides_viewed = []
 
 
 def test_build_git_repos_fields_parses_activity_git_file(monkeypatch, tmp_path):
