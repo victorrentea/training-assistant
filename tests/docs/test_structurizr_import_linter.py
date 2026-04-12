@@ -5,9 +5,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = ROOT / "scripts" / "generate_importlinter_from_structurizr.py"
-WORKSPACE_DSL = ROOT / "docs" / "structurizr" / "c4model.dsl"
-CONFIG_PATH = ROOT / "docs" / "structurizr" / "out" / "importlinter.ini"
-REPORT_PATH = ROOT / "docs" / "structurizr" / "out" / "importlinter-report.json"
+WORKSPACE_DSL = ROOT / "docs" / "c4model.dsl"
+CONFIG_PATH = ROOT / "docs" / "c4views" / "importlinter.ini"
+REPORT_PATH = ROOT / "docs" / "c4views" / "importlinter-report.json"
 
 
 def _run_generator(*extra_args: str) -> subprocess.CompletedProcess[str]:
@@ -63,13 +63,13 @@ def test_generated_importlinter_artifacts_are_fresh():
         committed_config = CONFIG_PATH.read_text(encoding="utf-8")
         generated_config = tmp_config.read_text(encoding="utf-8")
         assert committed_config == generated_config, (
-            "docs/structurizr/out/importlinter.ini is stale.\n"
+            "docs/c4views/importlinter.ini is stale.\n"
             "Run: python3 scripts/generate_importlinter_from_structurizr.py"
         )
 
         committed_report = json.loads(REPORT_PATH.read_text(encoding="utf-8"))
         generated_report = json.loads(tmp_report.read_text(encoding="utf-8"))
         assert committed_report == generated_report, (
-            "docs/structurizr/out/importlinter-report.json is stale.\n"
+            "docs/c4views/importlinter-report.json is stale.\n"
             "Run: python3 scripts/generate_importlinter_from_structurizr.py"
         )
