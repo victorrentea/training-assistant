@@ -71,6 +71,20 @@ def _await_condition(fn, timeout_ms=10000, poll_ms=300, msg=""):
 from pytest_bdd import given, when, parsers
 
 
+# ── BDD phase tracking for OTel ──────────────────────────────────────────
+
+@pytest.hookimpl
+def pytest_bdd_before_step(request, feature, scenario, step, step_func):
+    """Set bdd.phase attribute on current OTel span for PlantUML gray/black arrows."""
+    try:
+        from opentelemetry import trace
+        span = trace.get_current_span()
+        if span and span.is_recording():
+            span.set_attribute("bdd.phase", step.keyword.lower().strip())
+    except ImportError:
+        pass
+
+
 @pytest.fixture
 def session_id():
     """Create a fresh session for each scenario."""

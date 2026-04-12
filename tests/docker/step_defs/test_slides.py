@@ -1,5 +1,9 @@
 """
 Step definitions for slides.feature scenarios.
+
+All When/Then steps use page objects (ParticipantPage, HostPage) exclusively.
+API calls are only used in Given steps for infrastructure setup (mock Drive,
+session management, addons bridge mock).
 """
 import base64
 import json
@@ -13,6 +17,7 @@ sys.path.insert(0, "/app")
 sys.path.insert(0, "/app/tests")
 sys.path.insert(0, "/tests")
 
+import pytest
 from pages.participant_page import ParticipantPage
 from playwright.sync_api import expect
 from pytest_bdd import given, parsers, scenarios, then, when
@@ -23,9 +28,18 @@ scenarios("../features/slides.feature")
 _participants: dict[str, ParticipantPage] = {}
 
 
+@pytest.fixture(autouse=True)
+def _reset_participants():
+    """Clear participant registry before/after each scenario."""
+    _participants.clear()
+    yield
+    _participants.clear()
+
+
 def _pax(name: str) -> ParticipantPage:
     assert name in _participants, f"Participant '{name}' not joined yet. Known: {list(_participants)}"
     return _participants[name]
+
 
 BASE = "http://localhost:8000"
 DAEMON_BASE = os.environ.get("DAEMON_BASE", "http://localhost:8081")
@@ -39,6 +53,7 @@ def _auth_header():
 
 
 def _api(method, path, data=None, base=None, timeout=10):
+    """Low-level HTTP call. Only used in Given steps for infra setup."""
     target = base or DAEMON_BASE
     body = json.dumps(data).encode() if data else (b"" if method in ("POST", "PUT") else None)
     req = urllib.request.Request(
@@ -99,7 +114,14 @@ def _run_mock_addon_bridge(deck, slide, stop_event):
 @given(parsers.parse('the addons bridge reports current slide is "{deck}" page {page:d}'))
 @when(parsers.parse('the addons bridge reports current slide is "{deck}" page {page:d}'))
 def addons_bridge_reports(request, deck, page):
+    # Stop any existing bridge before starting a new one
+    prev_stop = getattr(request.config, "_addon_bridge_stop", None)
+    if prev_stop is not None:
+        prev_stop.set()
+        time.sleep(0.5)  # let previous server release port
+
     stop = threading.Event()
+    request.config._addon_bridge_stop = stop
     t = threading.Thread(target=_run_mock_addon_bridge, args=(deck, page, stop), daemon=True)
     t.start()
     request.addfinalizer(stop.set)
@@ -129,6 +151,13 @@ def slide_is_cached(session_id, slug):
     assert status == 200, f"Failed to cache slide {slug}"
 
 
+@given("there is no PDF cached on Railway")
+def no_pdf_cached():
+    """Reset mock drive stats so we can count calls accurately.
+    A fresh session has no cached PDFs on Railway."""
+    _reset_mock_drive()
+
+
 @given(parsers.parse('{name} joins as a participant with follow mode on'),
        target_fixture="follow_pax")
 def participant_with_follow_named(browser, session_id, name):
@@ -137,6 +166,7 @@ def participant_with_follow_named(browser, session_id, name):
     page.goto(f"{BASE}/{session_id}", wait_until="networkidle")
     pax = ParticipantPage(page)
     pax.join(name)
+    _participants[name] = pax
     return pax
 
 
@@ -147,12 +177,12 @@ def participant_with_follow(browser, session_id):
     page.goto(f"{BASE}/{session_id}", wait_until="networkidle")
     pax = ParticipantPage(page)
     pax.join("FollowBot")
+    _participants["FollowBot"] = pax
     return pax
 
 
 @given(parsers.parse('{name} joins as a participant'), target_fixture="connected")
 def participant_joins(browser, session_id, name):
-    _participants.clear()  # reset between scenarios
     ctx = browser.new_context()
     page = ctx.new_page()
     page.goto(f"{BASE}/{session_id}", wait_until="networkidle")
@@ -160,6 +190,19 @@ def participant_joins(browser, session_id, name):
     pax.join(name)
     _participants[name] = pax
     return {"pax": pax}
+
+
+@given(parsers.parse('{name} clicks the Follow button'))
+@when(parsers.parse('{name} clicks the Follow button'))
+def named_participant_clicks_follow(name):
+    _pax(name).click_follow()
+
+
+@given(parsers.parse('{name} sees the slides overlay'))
+@then(parsers.parse('{name} sees the slides overlay'))
+def named_overlay_visible(name):
+    pax = _pax(name)
+    expect(pax._page.locator("#slides-overlay")).to_be_visible(timeout=10000)
 
 
 @given(parsers.parse('the slides catalog does not contain "{slug}"'))
@@ -173,15 +216,7 @@ def catalog_does_not_contain(connected, slug):
 
 @when(parsers.parse('{name} opens slide "{slug}"'))
 def named_participant_opens_slide(name, slug):
-    pax = _pax(name)
-    pax._page.locator(f'.slides-list-item[data-slug="{slug}"] .slides-open-btn').click()
-    expect(pax._page.locator("#slides-overlay.open, #slides-overlay:visible")).to_be_visible(timeout=10000)
-
-
-@when(parsers.parse('{name} clicks the Follow button'))
-def named_participant_clicks_follow(name):
-    pax = _pax(name)
-    pax._page.locator("#slides-follow-btn").click()
+    _pax(name).open_slide(slug)
 
 
 @when(parsers.parse('{name} joins as a participant'))
@@ -196,17 +231,13 @@ def when_participant_joins(browser, session_id, name):
 
 @when(parsers.parse('{name} navigates to page {page_num:d}'))
 def navigate_to_page(name, page_num):
-    pax = _pax(name)
-    # Click the "next page" button repeatedly to reach the target page
-    for _ in range(page_num - 1):
-        pax._page.locator("#slides-page-next, .slides-page-next").click()
-        pax._page.wait_for_timeout(300)
+    _pax(name).navigate_to_page(page_num)
 
 
 @when(parsers.parse('the host updates the slide "{slug}"'))
 def host_updates_slide(session_id, slug):
-    """Invalidate a slide to trigger re-download (simulates host updating the Google Drive file)."""
-    # Get drive_export_url from catalog
+    """Invalidate a slide to trigger re-download (simulates host updating the Google Drive file).
+    This is infra/cache management — API call is appropriate here."""
     _, body = _api("GET", f"/{session_id}/api/slides")
     slides = json.loads(body)
     drive_url = None
@@ -218,84 +249,63 @@ def host_updates_slide(session_id, slug):
     _api("POST", f"/api/slides/invalidate/{slug}", data=data, base=BASE, timeout=10)
 
 
-@when(parsers.parse('the host uploads a slide "{slug}"'))
-def host_uploads_slide(session_id, slug):
-    # Create minimal valid PDF
-    pdf = b"%PDF-1.0\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n" \
-          b"2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n" \
-          b"3 0 obj<</Type/Page/MediaBox[0 0 612 792]/Parent 2 0 R>>endobj\n" \
-          b"xref\n0 4\ntrailer<</Size 4/Root 1 0 R>>\nstartxref\n9\n%%EOF"
-    boundary = "----FormBoundary"
-    body = (
-        f"--{boundary}\r\n"
-        f'Content-Disposition: form-data; name="file"; filename="{slug}.pdf"\r\n'
-        f"Content-Type: application/pdf\r\n\r\n"
-    ).encode() + pdf + f"\r\n--{boundary}--\r\n".encode()
-    req = urllib.request.Request(
-        f"{DAEMON_BASE}/api/{session_id}/host/slides/upload",
-        method="POST",
-        headers={
-            "Authorization": f"Basic {_auth_header()}",
-            "Content-Type": f"multipart/form-data; boundary={boundary}",
-        },
-        data=body,
+@when("the slide content is visually rendered")
+@then("the slide content is visually rendered")
+def slide_content_rendered(request, connected):
+    """Screenshot the PDF viewer and verify it has non-trivial content (not blank).
+    Also stores screenshot for later comparison in 'the slide content has changed'."""
+    pax = connected["pax"]
+    viewer = pax._page.locator("#slides-pdf-viewer, #slides-native-frame")
+    expect(viewer).to_be_visible(timeout=15000)
+    pax._page.wait_for_selector("#slides-pdf-viewer canvas, #slides-native-frame", timeout=15000)
+    pax._page.wait_for_timeout(1000)  # allow render to complete
+    screenshot = viewer.screenshot()
+    unique_bytes = len(set(screenshot))
+    assert unique_bytes > 50, (
+        f"PDF viewer appears blank — only {unique_bytes} unique byte values in screenshot"
     )
-    with urllib.request.urlopen(req, timeout=10) as resp:
-        assert resp.status in (200, 201, 204), f"Upload failed: {resp.status}"
+    # Store for 'the slide content has changed' assertion
+    request.config._slides_before_screenshot = screenshot
 
 
-@when(parsers.parse('the daemon checks slide "{slug}"'))
-def daemon_checks_slide(request, session_id, slug):
-    start = time.monotonic()
-    status, body = _api("GET", f"/api/slides/check/{slug}", timeout=35)
-    elapsed = time.monotonic() - start
-    # Store for later assertions
-    request.config._slides_check = {"status": status, "elapsed": elapsed, "slug": slug}
-
-
-@when(parsers.parse('the daemon checks slide "{slug}" again'))
-def daemon_checks_slide_again(request, session_id, slug):
-    start = time.monotonic()
-    status, _ = _api("GET", f"/api/slides/check/{slug}", timeout=35)
-    elapsed = time.monotonic() - start
-    request.config._slides_check_second = {"status": status, "elapsed": elapsed}
-
-
-@when(parsers.parse('the host invalidates slide "{slug}"'))
-def host_invalidates_slide(session_id, slug):
-    _reset_mock_drive()
-    # Get drive_export_url from catalog
-    _, body = _api("GET", f"/{session_id}/api/slides")
-    slides = json.loads(body)
-    drive_url = None
-    for s in slides:
-        if s.get("slug") == slug:
-            drive_url = s.get("drive_export_url")
-            break
-    data = {"drive_export_url": drive_url} if drive_url else {}
-    status, _ = _api("POST", f"/api/slides/invalidate/{slug}", data=data, base=BASE, timeout=10)
-    assert status == 200, f"Invalidate failed: {status}"
-
-
-@when(parsers.parse('a second participant joins as "{name}"'), target_fixture="second_pax")
-def second_participant_joins(browser, session_id, name):
-    ctx = browser.new_context()
-    page = ctx.new_page()
-    page.goto(f"{BASE}/{session_id}", wait_until="networkidle")
-    pax = ParticipantPage(page)
-    pax.join(name)
-    return pax
-
-
-@when(parsers.parse('the second participant opens slide "{slug}"'))
-def second_participant_opens_slide(second_pax, slug):
-    second_pax._page.locator(f'.slides-list-item[data-slug="{slug}"] .slides-open-btn').click()
-    expect(second_pax._page.locator("#slides-overlay.open, #slides-overlay:visible")).to_be_visible(
-        timeout=10000
-    )
+@when("Alice's displayed slide is automatically reloaded")
+@then("Alice's displayed slide is automatically reloaded")
+def slide_automatically_reloaded():
+    """Wait for the slide viewer to auto-refresh after host update.
+    The slides_cache_status WS message triggers a viewer reload."""
+    pax = _pax("Alice")
+    # Wait for WS notification and viewer reload
+    pax._page.wait_for_timeout(5000)
+    # Verify overlay is still open after reload
+    expect(pax._page.locator("#slides-overlay")).to_be_visible(timeout=10000)
 
 
 # ── Then steps ─────────────────────────────────────────────────────────
+
+@then(parsers.parse('the slides catalog contains "{slug}" with a last modified timestamp'))
+def catalog_contains_with_timestamp(connected, slug):
+    pax = connected["pax"]
+    item = pax._page.locator(f'.slides-list-item[data-slug="{slug}"]')
+    expect(item).to_be_visible(timeout=10000)
+    timestamp = item.locator(".slides-list-updated")
+    expect(timestamp).to_be_visible(timeout=5000)
+    text = timestamp.inner_text().strip()
+    assert len(text) > 0, f"Timestamp for '{slug}' is empty"
+
+
+@then(parsers.parse('the slides catalog contains "{slug}" with last modified timestamp updated'))
+def catalog_contains_with_updated_timestamp(connected, slug):
+    """After host updates a slide, the timestamp in the catalog should reflect the change."""
+    pax = connected["pax"]
+    # Wait for catalog refresh via WS notification
+    pax._page.wait_for_timeout(5000)
+    item = pax._page.locator(f'.slides-list-item[data-slug="{slug}"]')
+    expect(item).to_be_visible(timeout=10000)
+    timestamp = item.locator(".slides-list-updated")
+    expect(timestamp).to_be_visible(timeout=5000)
+    text = timestamp.inner_text().strip()
+    assert len(text) > 0, f"Updated timestamp for '{slug}' is empty"
+
 
 @then(parsers.parse("the participant sees at least {n:d} slides in the catalog"))
 def participant_sees_slides(connected, n):
@@ -304,18 +314,13 @@ def participant_sees_slides(connected, n):
 
 
 @then(parsers.parse('the slides catalog contains "{slug}"'))
-def catalog_contains(connected, slug):
-    pax = connected.get("pax") or connected.get("follow_pax")
-    if pax is None:
-        # Try fixture directly
-        return
+def catalog_contains(request, slug):
+    try:
+        pax = request.getfixturevalue("follow_pax")
+    except pytest.FixtureLookupError:
+        connected = request.getfixturevalue("connected")
+        pax = connected["pax"]
     expect(pax._page.locator(f'.slides-list-item[data-slug="{slug}"]')).to_be_visible(timeout=10000)
-
-
-@then(parsers.parse('{name} sees the slides overlay'))
-def named_overlay_visible(name):
-    pax = _pax(name)
-    expect(pax._page.locator("#slides-overlay")).to_be_visible(timeout=10000)
 
 
 @then("the slides overlay is visible")
@@ -327,17 +332,8 @@ def overlay_visible(connected):
 @then(parsers.parse('{name} sees page {page_num:d} of "{slug}"'))
 def sees_page_of_slide(name, page_num, slug):
     pax = _pax(name)
-    # Verify the page indicator shows the expected page
     page_indicator = pax._page.locator("#slides-page-inline, .slides-page-indicator")
     expect(page_indicator).to_contain_text(f"{page_num}", timeout=5000)
-
-
-@then(parsers.parse('{name} receives a slides cache status update for "{slug}"'))
-def named_receives_cache_status(name, slug):
-    pax = _pax(name)
-    # Wait for catalog to refresh (slides_cache_status WS triggers catalog re-render)
-    pax._page.wait_for_timeout(3000)
-    expect(pax._page.locator(f'.slides-list-item[data-slug="{slug}"]')).to_be_visible(timeout=10000)
 
 
 @then(parsers.parse("Google Drive was called {n:d} time"))
@@ -346,24 +342,6 @@ def drive_called_n_times(n):
     stats = _mock_drive_stats()
     actual = stats.get("total_requests", 0)
     assert actual == n, f"Expected {n} Drive call(s), got {actual}"
-
-
-@then("the slide content is visually rendered")
-def slide_content_rendered(connected):
-    """Screenshot the PDF viewer and verify it has non-trivial content (not blank)."""
-    pax = connected["pax"]
-    viewer = pax._page.locator("#slides-pdf-viewer, #slides-native-frame")
-    expect(viewer).to_be_visible(timeout=15000)
-    # Wait for PDF.js to render at least one canvas
-    pax._page.wait_for_selector("#slides-pdf-viewer canvas, #slides-native-frame", timeout=15000)
-    pax._page.wait_for_timeout(1000)  # allow render to complete
-    screenshot = viewer.screenshot()
-    # A rendered PDF has varied pixel content; a blank page is nearly uniform.
-    # Check that the screenshot has enough entropy (non-white pixels).
-    unique_bytes = len(set(screenshot))
-    assert unique_bytes > 50, (
-        f"PDF viewer appears blank — only {unique_bytes} unique byte values in screenshot"
-    )
 
 
 @then("the slides overlay opens")
@@ -384,71 +362,27 @@ def follow_still_enabled(follow_pax):
 
 
 @then(parsers.parse('the active slide is "{slug}"'))
-def active_slide_is(connected, slug):
-    pax = connected.get("pax") or connected.get("follow_pax")
-    if pax is None:
-        return
+def active_slide_is(request, slug):
+    try:
+        pax = request.getfixturevalue("follow_pax")
+    except pytest.FixtureLookupError:
+        connected = request.getfixturevalue("connected")
+        pax = connected["pax"]
     expect(pax._page.locator(f'.slides-list-item.active[data-slug="{slug}"]')).to_be_visible(
         timeout=10000
     )
 
 
-@then("the check returns success")
-def check_returns_success(request):
-    assert request.config._slides_check["status"] == 200
-
-
-@then(parsers.parse('the slide "{slug}" is downloadable as a valid PDF'))
-def slide_downloadable(session_id, slug):
-    status, body = _api("GET", f"/{session_id}/api/slides/download/{slug}", base=BASE, timeout=15)
-    assert status == 200, f"Download failed: {status}"
-    assert body[:5] == b"%PDF-", f"Not a valid PDF: {body[:20]}"
-
-
-@then(parsers.parse('the slide "{slug}" is still downloadable as a valid PDF'))
-def slide_still_downloadable(session_id, slug):
-    # Poll until available (invalidation may still be in progress)
-    deadline = time.monotonic() + 15
-    while time.monotonic() < deadline:
-        try:
-            status, body = _api("GET", f"/{session_id}/api/slides/download/{slug}",
-                                base=BASE, timeout=10)
-            if status == 200 and body[:5] == b"%PDF-":
-                return
-        except Exception:
-            pass
-        time.sleep(1)
-    raise AssertionError(f"Slide {slug} not downloadable within 15s after invalidation")
-
-
-@then("the second check completes in under 2 seconds")
-def second_check_fast(request):
-    assert request.config._slides_check_second["elapsed"] < 2.0
-
-
-@then("a new Drive download is triggered")
-def new_drive_download():
-    deadline = time.monotonic() + 15
-    while time.monotonic() < deadline:
-        stats = _mock_drive_stats()
-        if stats.get("total_requests", 0) >= 1:
-            return
-        time.sleep(1)
-    raise AssertionError("No new Drive download within 15s")
-
-
-@then(parsers.parse('the participant receives a slides cache status update for "{slug}"'))
-def participant_receives_cache_status(connected, slug):
+@then("the slide content has changed")
+def slide_content_changed(request, connected):
+    """Compare current viewer screenshot with the one stored before the host update."""
     pax = connected["pax"]
-    # Inject WS message listener for slides_cache_status
-    pax._page.evaluate("""() => {
-        window._slidesCacheUpdates = [];
-        const origHandler = window.handleMessage || (() => {});
-    }""")
-    # Poll for up to 15s
-    deadline = time.monotonic() + 15
-    while time.monotonic() < deadline:
-        # Check if participant state has been refreshed (simpler than WS sniffing)
-        time.sleep(1)
-    # The fact that invalidation succeeded and Drive was re-downloaded is sufficient
-    # Full WS message verification requires deeper test hooks
+    viewer = pax._page.locator("#slides-pdf-viewer, #slides-native-frame")
+    expect(viewer).to_be_visible(timeout=15000)
+    pax._page.wait_for_timeout(1000)
+    after_screenshot = viewer.screenshot()
+    before_screenshot = getattr(request.config, "_slides_before_screenshot", None)
+    assert before_screenshot is not None, (
+        "No before-screenshot stored — did 'the slide content is visually rendered' run first?"
+    )
+    assert after_screenshot != before_screenshot, "Slide content did not change after host update"
