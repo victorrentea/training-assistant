@@ -154,11 +154,11 @@ def slide_is_cached(session_id, slug):
 @given("there is no PDF cached on Railway")
 def no_pdf_cached():
     """Clear Railway PDF cache and reset mock drive stats."""
-    import shutil
     from pathlib import Path
     cache_dir = Path("/tmp/slides-cache")
     if cache_dir.exists():
-        shutil.rmtree(cache_dir)
+        for pdf in cache_dir.glob("*.pdf"):
+            pdf.unlink(missing_ok=True)
     _reset_mock_drive()
 
 
