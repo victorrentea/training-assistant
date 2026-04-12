@@ -24,6 +24,13 @@ dev = [
 daemon = [
     "anthropic>=0.85.0",
 ]
+telemetry = [
+    "opentelemetry-api>=1.20",
+    "opentelemetry-sdk>=1.20",
+    "opentelemetry-instrumentation-fastapi>=0.41b0",
+    "opentelemetry-instrumentation-urllib>=0.41b0",
+    "opentelemetry-distro>=0.41b0",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
