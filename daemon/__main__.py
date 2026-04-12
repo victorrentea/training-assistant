@@ -908,6 +908,7 @@ def run() -> None:
     # Session state: the transcript text used to generate the current preview
     last_text: str | None = None
     last_quiz: dict | None = None
+    server_disconnected = False
     last_detected_date: date | None = None
     last_heartbeat_at = 0.0
     last_session_check_at = 0.0
