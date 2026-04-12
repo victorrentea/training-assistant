@@ -283,7 +283,7 @@ refactoring-kata<span class="material-symbols-outlined text-sm flex-shrink-0">op
 <span class="text-base">Upload</span>
 </a>
 </nav>
-<a class="nav-item rounded-full px-2 py-2 flex items-center gap-3 transition-all cursor-pointer">
+<a data-nav="feedback" onclick="showView('feedback')" class="nav-item rounded-full px-2 py-2 flex items-center gap-3 transition-all cursor-pointer">
   <span class="material-symbols-outlined">chat_bubble</span>
   <span class="text-base">Feedback</span>
 </a>
@@ -327,6 +327,19 @@ refactoring-kata<span class="material-symbols-outlined text-sm flex-shrink-0">op
     <button id="upload-send-btn" onclick="uploadSend()" disabled
       class="flex items-center gap-2 px-6 py-3 font-semibold rounded-full transition-all opacity-40 cursor-not-allowed bg-surface-container-highest text-on-surface-variant">
       Send to Host
+      <span class="material-symbols-outlined" style="transform:rotate(-45deg)">send</span>
+    </button>
+  </div>
+</div>
+<!-- Feedback View -->
+<div id="feedback-view" style="display:none" class="h-full flex flex-col px-16 py-12">
+  <textarea id="feedback-textarea" class="flex-1 w-full resize-none rounded-2xl bg-surface-container-low text-on-surface text-base p-6 outline-none focus:ring-2 focus:ring-primary placeholder:text-on-surface-variant" placeholder="Share your feedback about this tool…"
+    oninput="document.getElementById('feedback-send-btn').disabled = !this.value.trim()"
+    onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendFeedback();}"></textarea>
+  <div class="mt-4">
+    <button id="feedback-send-btn" onclick="sendFeedback()" disabled
+      class="flex items-center gap-2 px-6 py-3 bg-primary text-on-primary font-semibold rounded-full hover:bg-primary-dim transition-all shadow-lg shadow-primary/20 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none">
+      Send
       <span class="material-symbols-outlined" style="transform:rotate(-45deg)">send</span>
     </button>
   </div>
@@ -641,6 +654,21 @@ function uploadSend() {
   };
   xhr.send(formData);
 }
+function sendFeedback() {
+  var ta = document.getElementById('feedback-textarea');
+  var text = ta ? ta.value.trim() : '';
+  if (!text) return;
+  fetch('/' + _sessionId + '/api/participant/misc/feedback', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Participant-ID': _myUUID },
+    body: JSON.stringify({ text: text, participant_name: '' })
+  }).then(function(r) {
+    if (!r.ok) throw new Error(r.status);
+    ta.value = '';
+    document.getElementById('feedback-send-btn').disabled = true;
+    showToast('Sent!');
+  }).catch(function(e) { console.error('feedback failed', e); });
+}
 function sendPaste() {
   var ta = document.getElementById('paste-textarea');
   var text = ta ? ta.value : '';
@@ -711,7 +739,7 @@ function scheduleHideOverflow() {
     el.classList.add('opacity-0', 'pointer-events-none', 'translate-y-1');
   }, 120);
 }
-var VIEWS = ['slides', 'summary', 'notes', 'agenda', 'paste', 'upload'];
+var VIEWS = ['slides', 'summary', 'notes', 'agenda', 'feedback', 'paste', 'upload'];
 function saveScroll(name, el) {
   LS.setScroll(name, el.scrollTop);
 }
