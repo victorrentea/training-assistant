@@ -191,7 +191,8 @@ def generate_puml(traces_path: str, family: str, output: str) -> None:
         lines.append(f'participant "{p}"')
     lines.append("")
     for f, t, label, _ in edges:
-        lines.append(f'"{f}" -> "{t}": {label}')
+        arrow = "-->" if label.startswith("broadcast ") else "->"
+        lines.append(f'"{f}" {arrow} "{t}": {label}')
     lines.append("")
     lines.append("@enduml")
 
