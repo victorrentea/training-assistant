@@ -74,7 +74,7 @@ def test_poll_sequence_diagram_extraction():
     from scripts.traces_to_puml import generate_puml
 
     output_path = "/tmp/generated-03-poll-and-quiz.puml"
-    generate_puml(TRACES_FILE, family="poll", output=output_path)
+    generate_puml(TRACES_FILE, family="", output=output_path)  # no family filter — capture all spans
 
     generated = Path(output_path).read_text()
     print("=== Generated PlantUML ===")

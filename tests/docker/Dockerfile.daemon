@@ -11,7 +11,13 @@ RUN pip install \
     pytest \
     pytest-bdd \
     pytest-playwright \
-    playwright==1.50.0
+    playwright==1.50.0 \
+    opentelemetry-distro \
+    opentelemetry-api \
+    opentelemetry-sdk \
+    opentelemetry-instrumentation-fastapi \
+    opentelemetry-instrumentation-urllib \
+    && opentelemetry-bootstrap -a install
 
 # Install curl for health checks
 RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
@@ -41,6 +47,8 @@ COPY tests/docker/test_unique_avatars.py .
 COPY tests/docker/test_follow_mode_slow_drive.py .
 COPY tests/docker/test_slides_check_flow.py .
 COPY tests/docker/test_notes_summary_counts.py .
+COPY tests/docker/test_sequence_extraction.py .
+COPY tests/docker/test_poll_scoring.py .
 COPY tests/docker/features/ ./features/
 COPY tests/docker/step_defs/ ./step_defs/
 COPY tests/docker/generate_fixture_pdfs.py .

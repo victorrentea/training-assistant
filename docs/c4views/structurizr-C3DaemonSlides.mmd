@@ -1,0 +1,42 @@
+graph LR
+  linkStyle default fill:#ffffff
+
+  subgraph diagram ["Component View: Workshop Live Interaction Tool - Training Daemon"]
+    style diagram fill:#ffffff,stroke:#ffffff
+
+    subgraph 7 ["Workshop Live Interaction Tool"]
+      style 7 fill:#ffffff,stroke:#144d2e,color:#144d2e
+
+      subgraph 31 ["Training Daemon"]
+        style 31 fill:#ffffff,stroke:#3e703e,color:#3e703e
+
+        32["<div style='font-weight: bold'>Orchestrator</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/__main__.py]</div><div style='font-size: 80%; margin-top:10px'>Main loop, startup binding,<br />polling, and restart<br />coordination.</div>"]
+        style 32 fill:#d6e8c8,stroke:#95a28c,color:#10210f
+        34["<div style='font-weight: bold'>Daemon WS Client</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/ws_client.py]</div><div style='font-size: 80%; margin-top:10px'>WebSocket channel used for<br />daemon sync and uploads.</div>"]
+        style 34 fill:#d6e8c8,stroke:#95a28c,color:#10210f
+        46["<div style='font-weight: bold'>Slides Loop</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/slides/loop.py]</div><div style='font-size: 80%; margin-top:10px'>Polls for slide work and<br />orchestrates<br />conversions/uploads.</div>"]
+        style 46 fill:#d6e8c8,stroke:#95a28c,color:#10210f
+        47["<div style='font-weight: bold'>Slides Catalog</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/slides/catalog.py]</div><div style='font-size: 80%; margin-top:10px'>Reads and resolves slide<br />catalog entries.</div>"]
+        style 47 fill:#d6e8c8,stroke:#95a28c,color:#10210f
+        48["<div style='font-weight: bold'>Slides Convert</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/slides/convert.py]</div><div style='font-size: 80%; margin-top:10px'>Converts PPTX to PDF via host<br />tooling.</div>"]
+        style 48 fill:#d6e8c8,stroke:#95a28c,color:#10210f
+        49["<div style='font-weight: bold'>Slides Upload</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/slides/upload.py]</div><div style='font-size: 80%; margin-top:10px'>Uploads converted slide PDFs<br />to the backend.</div>"]
+        style 49 fill:#d6e8c8,stroke:#95a28c,color:#10210f
+        50["<div style='font-weight: bold'>Slides Daemon</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/slides/daemon.py]</div><div style='font-size: 80%; margin-top:10px'>Coordinates slide upload<br />workflow over WebSocket.</div>"]
+        style 50 fill:#d6e8c8,stroke:#95a28c,color:#10210f
+      end
+
+      10["<div style='font-weight: bold'>FastAPI Backend</div><div style='font-size: 70%; margin-top: 0px'>[Container: Python 3.12 / FastAPI / Uvicorn]</div><div style='font-size: 80%; margin-top:10px'>REST endpoints, WebSocket<br />hub, session routing, and<br />in-memory state.</div>"]
+      style 10 fill:#5aa05a,stroke:#3e703e,color:#ffffff
+    end
+
+    32-. "<div>Maintains daemon WebSocket</div><div style='font-size: 70%'></div>" .->34
+    32-. "<div>Triggers</div><div style='font-size: 70%'></div>" .->46
+    34-. "<div>Connects to daemon WebSocket<br />endpoint</div><div style='font-size: 70%'></div>" .->10
+    46-. "<div>Reads catalog from</div><div style='font-size: 70%'></div>" .->47
+    46-. "<div>Triggers PDF conversion in</div><div style='font-size: 70%'></div>" .->48
+    46-. "<div>Coordinates upload flow with</div><div style='font-size: 70%'></div>" .->50
+    50-. "<div>Delegates uploads to</div><div style='font-size: 70%'></div>" .->49
+    49-. "<div>Streams slide artifacts<br />through</div><div style='font-size: 70%'></div>" .->34
+
+  end

@@ -1,0 +1,32 @@
+@startuml
+title <size:24>Container View: Workshop Live Interaction Tool</size>\n<size:24>Focused container view around the participant journey.</size>
+
+set separator none
+left to right direction
+
+<style>
+  root {
+    BackgroundColor: #ffffff
+    FontColor: #444444
+  }
+</style>
+
+!include <C4/C4>
+!include <C4/C4_Context>
+!include <C4/C4_Container>
+
+Person(Participant, "Participant", $descr="Joins from a browser, votes, reacts, uploads, and follows the session.", $tags="", $link="")
+System(Nominatim, "Nominatim", $descr="Reverse geocodes GPS coordinates into city and country.", $tags="", $link="")
+
+System_Boundary("WorkshopLiveInteractionTool_boundary", "Workshop Live Interaction Tool", $tags="") {
+  Container(WorkshopLiveInteractionTool.FastAPIBackend, "FastAPI Backend", $techn="Python 3.12 / FastAPI / Uvicorn", $descr="REST endpoints, WebSocket hub, session routing, and in-memory state.", $tags="", $link="")
+  Container(WorkshopLiveInteractionTool.ParticipantSPA, "Participant SPA", $techn="HTML/CSS/JavaScript", $descr="Participant-facing UI served from static files.", $tags="", $link="")
+}
+
+Rel(Participant, WorkshopLiveInteractionTool.ParticipantSPA, "Uses in browser", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.ParticipantSPA, WorkshopLiveInteractionTool.FastAPIBackend, "Calls public REST and WebSocket APIs", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.ParticipantSPA, Nominatim, "Reverse geocodes location", $techn="", $tags="", $link="")
+
+SHOW_LEGEND(true)
+hide stereotypes
+@enduml

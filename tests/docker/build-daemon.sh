@@ -11,10 +11,11 @@ BUILD_DIR=$(mktemp -d)
 echo "=== Preparing build context in $BUILD_DIR ==="
 
 # Copy app code
-mkdir -p "$BUILD_DIR/app/static" "$BUILD_DIR/app/railway" "$BUILD_DIR/app/daemon"
+mkdir -p "$BUILD_DIR/app/static" "$BUILD_DIR/app/railway" "$BUILD_DIR/app/daemon" "$BUILD_DIR/app/scripts"
 cp -r "$REPO_ROOT/railway" "$BUILD_DIR/app/"
 cp -r "$REPO_ROOT/daemon" "$BUILD_DIR/app/"
 cp -r "$REPO_ROOT/static" "$BUILD_DIR/app/"
+cp -r "$REPO_ROOT/scripts" "$BUILD_DIR/app/"
 
 # Copy test page objects
 mkdir -p "$BUILD_DIR/tests/pages"
@@ -39,6 +40,8 @@ cp "$DOCKER_DIR/test_unique_avatars.py" "$BUILD_DIR/tests/docker/"
 cp "$DOCKER_DIR/test_follow_mode_slow_drive.py" "$BUILD_DIR/tests/docker/"
 cp "$DOCKER_DIR/test_slides_check_flow.py" "$BUILD_DIR/tests/docker/"
 cp "$DOCKER_DIR/test_notes_summary_counts.py" "$BUILD_DIR/tests/docker/"
+cp "$DOCKER_DIR/test_sequence_extraction.py" "$BUILD_DIR/tests/docker/"
+cp "$DOCKER_DIR/test_poll_scoring.py" "$BUILD_DIR/tests/docker/"
 cp -r "$DOCKER_DIR/features" "$BUILD_DIR/tests/docker/"
 cp -r "$DOCKER_DIR/step_defs" "$BUILD_DIR/tests/docker/"
 cp "$DOCKER_DIR/generate_fixture_pdfs.py" "$BUILD_DIR/tests/docker/"
