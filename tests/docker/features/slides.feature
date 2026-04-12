@@ -23,7 +23,7 @@ Feature: Slides Catalog, Viewing, and Follow Mode
     And Google Drive was called at most 1 time
 
   Scenario: Second participant gets cached slide with at most 1 Drive call
-    And Bob joins as a participant
+    Given Bob joins as a participant
     When Alice opens slide "clean-code"
     And Bob opens slide "clean-code"
     Then Bob sees the slides overlay
