@@ -2710,10 +2710,13 @@ function closeAgendaModal() {
   }
 
   async function _registerRailway(payload) {
+    const body = Object.assign({}, payload || {});
+    const location = localStorage.getItem(LS_LOCATION_KEY) || getTimezoneLocation();
+    if (location) body.location = location;
     return fetch(apiBase + '/api/participant/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Participant-ID': myUUID },
-      body: JSON.stringify(payload || {}),
+      body: JSON.stringify(body),
     });
   }
 
@@ -3040,9 +3043,6 @@ function closeAgendaModal() {
         if (btn) { btn.style.display = ''; btn.onclick = requestNotificationPermission; }
       }
 
-      // Send stored GPS location if available, otherwise silent timezone fallback
-      const storedLocation = localStorage.getItem(LS_LOCATION_KEY);
-      sendLocation(storedLocation || getTimezoneLocation());
       updateLocationPrompt();
     };
 

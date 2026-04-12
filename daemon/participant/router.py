@@ -40,6 +40,7 @@ class RegisterResponse(BaseModel):
 
 class RegisterRequest(BaseModel):
     name: str | None = None
+    location: str | None = None
 
 
 class RenameRequest(BaseModel):
@@ -453,6 +454,23 @@ async def register_participant(request: Request, body: RegisterRequest):
 
     # Initialize score
     ps.scores.setdefault(pid, 0)
+
+    # Store location if provided at registration time
+    if body.location:
+        loc = body.location.strip()[:80]
+        if loc:
+            ps.locations[pid] = loc
+            tz, country, city = await _resolve_location_metadata(loc)
+            display_loc = city if city else loc
+            ps.locations[pid] = display_loc
+            if tz:
+                ps.location_timezones[pid] = tz
+            else:
+                ps.location_timezones.pop(pid, None)
+            if country:
+                ps.location_countries[pid] = country
+            else:
+                ps.location_countries.pop(pid, None)
 
     await _notify_host_participant_list()
 

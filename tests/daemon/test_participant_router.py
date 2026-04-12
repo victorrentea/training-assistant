@@ -203,17 +203,17 @@ class TestRefreshAvatar:
 
 class TestSetLocation:
     def test_location_stored(self, client, fresh_state):
-        resp = client.post("/api/participant/location",
-                           json={"location": "Bucharest, Romania"},
-                           headers={"X-Participant-ID": "uuid1"})
+        resp = client.put("/api/participant/location",
+                          json={"location": "Bucharest, Romania"},
+                          headers={"X-Participant-ID": "uuid1"})
         assert resp.status_code == 204
         assert resp.content == b""
         assert fresh_state.locations["uuid1"] == "Bucharest, Romania"
 
     def test_empty_location_rejected(self, client, fresh_state):
-        resp = client.post("/api/participant/location",
-                           json={"location": ""},
-                           headers={"X-Participant-ID": "uuid1"})
+        resp = client.put("/api/participant/location",
+                          json={"location": ""},
+                          headers={"X-Participant-ID": "uuid1"})
         assert resp.status_code == 400
 
 
@@ -259,7 +259,7 @@ class TestNoParticipantWriteBackEvents:
         assert "X-Write-Back-Events" not in resp.headers
 
     def test_location_does_not_emit_write_back_events(self, client_with_writeback_header):
-        resp = client_with_writeback_header.post(
+        resp = client_with_writeback_header.put(
             "/api/participant/location",
             json={"location": "Bucharest, Romania"},
             headers={"X-Participant-ID": "uuid1"},

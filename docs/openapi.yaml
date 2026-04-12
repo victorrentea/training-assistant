@@ -79,12 +79,12 @@ paths:
                 $ref: '#/components/schemas/AvatarResponse'
       x-feature: identity
   /api/participant/location:
-    post:
+    put:
       tags:
       - participant
       summary: Set Location
       description: Store participant city/timezone.
-      operationId: set_location_api_participant_location_post
+      operationId: set_location_api_participant_location_put
       requestBody:
         content:
           application/json:
@@ -2563,6 +2563,11 @@ components:
           - type: string
           - type: 'null'
           title: Name
+        location:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Location
       type: object
       title: RegisterRequest
     RegisterResponse:

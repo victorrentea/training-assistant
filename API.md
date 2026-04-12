@@ -59,9 +59,9 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 ### Participant REST
 | Endpoint | Request | Response |
 | --- | --- | --- |
-| Set Location, store participant city/timezone.<br>`POST /api/participant/location` | `location: string` | - |
+| Set Location, store participant city/timezone.<br>`PUT /api/participant/location` | `location: string` | - |
 | Rename Participant, returns 400 if not yet registered.<br>`PUT /api/participant/name` | `name: string` | - |
-| Register Participant, idempotent for returning participants.<br>`POST /api/participant/register` | `name?: string` | `name: string`<br>`avatar: string` |
+| Register Participant, idempotent for returning participants.<br>`POST /api/participant/register` | `name?: string`<br>`location?: string` | `name: string`<br>`avatar: string` |
 | Rejoin Participant, lookup-only identity restore for returning UUIDs in<br>current session.<br>`POST /api/participant/rejoin` | - | `name: string`<br>`avatar: string` |
 | Roll Avatar Endpoint, re-roll avatar (conference mode only).<br>`POST /api/participant/roll-avatar` | `rejected?: list[string]` | `avatar: string` |
 
