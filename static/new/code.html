@@ -386,7 +386,7 @@ body{visibility:hidden}
 <span class="material-symbols-outlined">zoom_in</span>
 </button>
 <div class="w-[1px] h-4 bg-outline-variant opacity-20"></div>
-<a id="pdf-download" href="demo.pdf" download class="p-2 hover:bg-primary-container rounded-full text-on-surface-variant hover:text-primary transition-all flex">
+<a id="pdf-download" href="/static/new/demo.pdf" download class="p-2 hover:bg-primary-container rounded-full text-on-surface-variant hover:text-primary transition-all flex">
 <span class="material-symbols-outlined">download</span>
 </a>
 </div>
@@ -488,7 +488,7 @@ body{visibility:hidden}
 
   (async function init() {
     try {
-      pdfDoc = await pdfjsLib.getDocument('demo.pdf').promise;
+      pdfDoc = await pdfjsLib.getDocument('/static/new/demo.pdf').promise;
       totalPages = pdfDoc.numPages;
       await renderAllPages(currentScale);
       document.getElementById('pdf-pages').addEventListener('scroll', updatePageInfo);
