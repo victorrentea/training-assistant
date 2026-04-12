@@ -1,0 +1,14 @@
+@startuml
+hide footbox
+
+participant "Railway"
+participant "Daemon"
+
+"Railway" -> "Daemon": POST /api/participant/register
+"Railway" -> "Daemon": GET /{session_id}/api/slides
+"Railway" -> "Daemon": POST /api/participant/location
+"Railway" -> "Daemon": GET /api/participant/state
+"Railway" -> "Daemon": PUT /api/participant/name
+"Railway" -> "Daemon": POST /api/participant/poll/vote
+
+@enduml
