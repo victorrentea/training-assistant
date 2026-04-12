@@ -17,7 +17,6 @@ def _reset_runtime_state() -> None:
 
 def test_upload_download_persists_indicator_and_notifies_host(tmp_path):
     _reset_runtime_state()
-    sent = []
     ack_calls = []
 
     class _Resp:

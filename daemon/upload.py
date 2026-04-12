@@ -1,12 +1,11 @@
 """File download handler: processes file_ready_for_download from Railway."""
+import asyncio
 import base64
 import os
 import ssl
 import threading
 import urllib.request
 from pathlib import Path
-
-import asyncio
 
 from daemon import log
 from daemon.http import _post_json, session_api_url
