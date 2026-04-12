@@ -201,7 +201,7 @@ body{visibility:hidden}
 </div>
 </div>
 </div>
-<a data-nav="agenda" onclick="showView('agenda')" class="nav-item rounded-full px-2 py-2 flex items-center gap-3 transition-all cursor-pointer">
+<a data-nav="agenda" onclick="showView('agenda')" class="nav-item rounded-full px-2 py-2 flex items-center gap-3 transition-all cursor-pointer" style="display:none">
 <span class="material-symbols-outlined">event_note</span>
 <span class="text-base">Agenda</span>
 <span class="badge-new">UPDATE</span>
@@ -783,6 +783,7 @@ function resetStatePrompt() {
     if (!sessionId) return;
     const state = await fetch(`/${sessionId}/api/participant/state`).then(r => r.json());
     console.log('[participant] state:', state);
+    document.querySelector('[data-nav="agenda"]').style.display = state.has_agenda ? '' : 'none';
   } catch (e) {
     console.error('[participant] failed to load state:', e);
   }
