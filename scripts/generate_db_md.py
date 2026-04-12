@@ -60,7 +60,14 @@ def _shape_for_model(model: type[BaseModel]) -> str:
 def _shape_lines_for_model(model: type[BaseModel]) -> list[str]:
     shape = _render_shape_cell(_shape_for_model(model), root={})
     pieces = [piece for piece in shape.split("<br>") if piece]
-    return [piece.replace("&nbsp;", " ").strip().strip("`") for piece in pieces]
+    cleaned = []
+    for piece in pieces:
+        line = piece.replace("&nbsp;", " ").rstrip()
+        # Remove surrounding backticks while preserving leading indentation
+        indent = len(line) - len(line.lstrip())
+        content = line.lstrip().strip("`")
+        cleaned.append(" " * indent + content)
+    return cleaned
 
 
 def _render_models(models: list[ModelDoc]) -> list[str]:

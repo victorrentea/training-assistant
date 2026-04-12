@@ -2,7 +2,6 @@ import re
 import subprocess
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = ROOT / "scripts" / "generate_db_md.py"
 DB_MD_PATH = ROOT / "DB.md"
@@ -38,7 +37,7 @@ def test_generator_reuses_api_shape_rendering_style_for_nested_models():
     assert global_block, "Missing PersistedGlobalState section"
     body = global_block.group("body")
     assert "main?: PersistedSessionRef {" in body
-    assert "name?:string" in body
+    assert "    name?:string" in body
 
 
 def test_generator_renders_list_and_dict_shapes():
@@ -51,9 +50,9 @@ def test_generator_renders_list_and_dict_shapes():
     assert session_block, "Missing PersistedSessionState section"
     body = session_block.group("body")
     assert "participants?: dict[str, PersistedParticipant {" in body
-    assert "name?:string" in body
+    assert "    name?:string" in body
     assert "poll?: PersistedPollState {" in body
-    assert "correct_ids?:list[string]" in body
+    assert "    correct_ids?:list[string]" in body
     assert "wordcloud?: PersistedWordCloudState {" in body
     assert "codereview?: PersistedCodeReviewState {" in body
     assert "debate?: PersistedDebateState {" in body
