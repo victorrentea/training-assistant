@@ -30,6 +30,19 @@ def _process_proxy_request(data: dict, ws_client):
 
     url = f"http://127.0.0.1:{DAEMON_HOST_PORT}{path}"
 
+    # Extract trace context from proxy_request (injected by Railway)
+    _otel_ctx = None
+    try:
+        from daemon.telemetry.ws_propagation import extract_trace_context
+        _otel_ctx = extract_trace_context(data)
+    except ImportError:
+        pass
+
+    # If trace context is present, inject it as HTTP headers for the internal call
+    if _otel_ctx:
+        from opentelemetry import propagate as _propagate
+        _propagate.inject(headers, context=_otel_ctx)
+
     try:
         resp = httpx.request(
             method=method,

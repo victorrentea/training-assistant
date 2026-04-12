@@ -85,6 +85,11 @@ class AddonBridgeClient:
     # ── Internal ──────────────────────────────────────────────────────────────
 
     def _send(self, msg: dict) -> bool:
+        try:
+            from daemon.telemetry.ws_propagation import inject_trace_context
+            inject_trace_context(msg)
+        except ImportError:
+            pass
         with self._ws_lock:
             if self._ws is None:
                 return False
@@ -127,8 +132,21 @@ class AddonBridgeClient:
                     data = json.loads(raw)
                 except (json.JSONDecodeError, TypeError):
                     continue
+                # Extract trace context from addons messages
+                _ctx = None
+                _token = None
+                try:
+                    from daemon.telemetry.ws_propagation import extract_trace_context
+                    _ctx = extract_trace_context(data)
+                    if _ctx:
+                        from opentelemetry import context
+                        _token = context.attach(_ctx)
+                except ImportError:
+                    pass
                 if data.get("type") == "slide":
                     self._slide_queue.put(data)
+                if _ctx and _token:
+                    context.detach(_token)
         except ConnectionClosed:
             pass
         finally:

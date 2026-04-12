@@ -52,7 +52,13 @@ def broadcast(msg: BaseModel):
     """Send typed message to all participants via Railway broadcast."""
     if _ws_client is None:
         return
-    _ws_client.send({"type": "broadcast", "event": msg.model_dump()})
+    event = msg.model_dump()
+    try:
+        from daemon.telemetry.ws_propagation import inject_trace_context
+        inject_trace_context(event)
+    except ImportError:
+        pass
+    _ws_client.send({"type": "broadcast", "event": event})
 
 
 async def notify_host(msg: BaseModel):
@@ -60,9 +66,15 @@ async def notify_host(msg: BaseModel):
     if _host_ws is None:
         return
     try:
-        msg_type = msg.model_dump().get("type", "unknown")
+        event = msg.model_dump()
+        msg_type = event.get("type", "unknown")
         log.debug("host", f"← {msg_type}")
-        await _host_ws.send_text(json.dumps(msg.model_dump()))
+        try:
+            from daemon.telemetry.ws_propagation import inject_trace_context
+            inject_trace_context(event)
+        except ImportError:
+            pass
+        await _host_ws.send_text(json.dumps(event))
     except Exception:
         log.debug("host", "Failed to send WS message")
 
