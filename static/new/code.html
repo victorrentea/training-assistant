@@ -494,7 +494,6 @@ function setActive(name) {
   if (el) el.classList.add('nav-active');
 }
 function openTopics() {
-  setActive('topics');
   closeRepos();
   var list = document.querySelector('.topics-list');
   var arrow = document.querySelector('.topics-arrow');
@@ -517,7 +516,6 @@ function closeTopics() {
   arrow.style.transform = 'rotate(0deg)';
 }
 function openRepos() {
-  setActive('gitrepos');
   closeTopics();
   var list = document.querySelector('.repos-list');
   var arrow = document.querySelector('.repos-arrow');
