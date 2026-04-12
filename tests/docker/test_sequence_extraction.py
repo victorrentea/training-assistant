@@ -81,7 +81,13 @@ def test_poll_sequence_diagram_extraction():
     trace_lines = [l for l in traces_content.strip().split("\n") if l.strip()]
     print(f"=== Raw traces: {len(trace_lines)} spans ===")
     import json as _json
-    for line in trace_lines[:20]:
+    services = set()
+    for line in trace_lines:
+        span = _json.loads(line)
+        svc = span.get("resource", {}).get("service.name", "?")
+        services.add(svc)
+    print(f"  Services: {sorted(services)}")
+    for line in trace_lines[:30]:
         span = _json.loads(line)
         svc = span.get("resource", {}).get("service.name", "?")
         print(f"  [{svc}] {span.get('name', '?')} parent={span.get('parent_id', '')[:8]}")
