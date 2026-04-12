@@ -1062,9 +1062,9 @@ def generate_api_reference(
         if section.host_ws:
             subsections.append(("Host WS", _render_ws(section.host_ws, host_ws)))
         if section.daemon_rest and railway_openapi:
-            subsections.append(("Daemon REST", _render_rest(section.daemon_rest, railway_openapi)))
+            subsections.append(("Railway REST", _render_rest(section.daemon_rest, railway_openapi)))
         if section.daemon_ws and railway_ws:
-            subsections.append(("Daemon WS", _render_ws(section.daemon_ws, railway_ws)))
+            subsections.append(("Railway WS", _render_ws(section.daemon_ws, railway_ws)))
 
         if not subsections:
             continue
