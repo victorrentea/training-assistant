@@ -151,31 +151,6 @@ def slide_is_cached(session_id, slug):
     assert status == 200, f"Failed to cache slide {slug}"
 
 
-@given("there is no PDF cached on Railway")
-def no_pdf_cached():
-    """Clear Railway PDF cache files and update daemon's cache status."""
-    from pathlib import Path
-    _reset_mock_drive()
-    # Delete cached PDF files directly (test and Railway share the container)
-    cache_dir = Path("/tmp/slides-cache")
-    if cache_dir.exists():
-        for f in cache_dir.iterdir():
-            try:
-                f.unlink()
-            except OSError:
-                pass
-    # Force the daemon to re-check Railway (bypassing in-memory fast path)
-    # so it discovers the cache is empty and updates its internal status.
-    # The force check triggers a download — the stats are already reset so
-    # only post-Given drive calls will be counted.
-    for slug in ("clean-code", "design-patterns", "architecture"):
-        try:
-            _api("GET", f"/api/slides/check/{slug}?force=true", timeout=35)
-        except Exception:
-            pass
-    # Reset stats AFTER the forced checks so Given-phase downloads aren't counted
-    _reset_mock_drive()
-
 
 @given(parsers.parse('{name} joins as a participant with follow mode on'),
        target_fixture="follow_pax")
@@ -385,9 +360,16 @@ def sees_page_of_slide(name, page_num, slug):
 @then(parsers.parse("Google Drive was called {n:d} times"))
 def drive_called_n_times(n):
     stats = _mock_drive_stats()
-    # Stats is {slug: count} — sum all counts for total
     actual = sum(stats.values()) if isinstance(stats, dict) else 0
     assert actual == n, f"Expected {n} Drive call(s), got {actual}. Stats: {stats}"
+
+
+@then(parsers.parse("Google Drive was called at most {n:d} time"))
+@then(parsers.parse("Google Drive was called at most {n:d} times"))
+def drive_called_at_most_n_times(n):
+    stats = _mock_drive_stats()
+    actual = sum(stats.values()) if isinstance(stats, dict) else 0
+    assert actual <= n, f"Expected at most {n} Drive call(s), got {actual}. Stats: {stats}"
 
 
 @then("the slides overlay opens")
