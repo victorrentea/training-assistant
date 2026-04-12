@@ -8,8 +8,9 @@ Verifies that:
 5. All push_to_daemon() call sites use message types documented in YAML subscribe.
 """
 import re
-import yaml
 from pathlib import Path
+
+import yaml
 
 REPO_ROOT = Path(__file__).parent.parent.parent
 DOCS_DIR = REPO_ROOT / "docs"
