@@ -1,6 +1,6 @@
-import json, tempfile
+import json
+import tempfile
 from pathlib import Path
-from types import SimpleNamespace
 
 from daemon.session_state import GLOBAL_STATE_FILENAME
 
@@ -151,7 +151,7 @@ def test_load_daemon_state_renames_training_assistant_global_state():
 # ── Session meta I/O ──────────────────────────────────────────────────────────
 
 def test_save_and_load_session_meta():
-    from daemon.session_state import save_session_meta, load_session_meta
+    from daemon.session_state import load_session_meta, save_session_meta
     with tempfile.TemporaryDirectory() as d:
         folder = Path(d) / "2026-03-25 WS"
         folder.mkdir()
@@ -175,7 +175,7 @@ def test_load_session_meta_returns_empty_when_no_file():
 
 
 def test_find_session_folder_by_id_via_meta(tmp_path):
-    from daemon.session_state import save_session_meta, find_session_folder_by_id
+    from daemon.session_state import find_session_folder_by_id, save_session_meta
     folder = tmp_path / "2026-03-25 WS"
     folder.mkdir()
     save_session_meta(folder, {"session_id": "target-id-123", "started_at": "2026-03-25T09:00:00"})
