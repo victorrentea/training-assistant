@@ -127,7 +127,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/GitActivityResponse'
-      x-feature: identity
+      x-feature: activity
   /api/participant/slide-history:
     get:
       tags:
