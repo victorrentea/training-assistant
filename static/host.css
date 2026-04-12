@@ -1186,6 +1186,9 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
 .pax-location.offhours.twilight {
   color: #e67e22;
 }
+.pax-location.offhours.lunch {
+  color: #f1c40f;
+}
 
 .qr-code {
   cursor: pointer;

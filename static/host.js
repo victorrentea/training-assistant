@@ -148,6 +148,8 @@
     const totalMin = Number(m[1]) * 60 + Number(m[2]);
     // Night: 20:00–07:00
     if (totalMin >= 20 * 60 || totalMin < 7 * 60) return 'night';
+    // Lunch: 12:00–13:00
+    if (totalMin >= 12 * 60 && totalMin < 13 * 60) return 'lunch';
     // Twilight: 07:00–08:30 or 17:30–20:00
     if (totalMin < 8 * 60 + 30 || totalMin >= 17 * 60 + 30) return 'twilight';
     return null;
