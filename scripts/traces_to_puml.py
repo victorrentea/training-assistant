@@ -221,12 +221,14 @@ def generate_puml(traces_path: str, family: str, output: str,
             phased.append((f, t, label, ts, phase, tid, is_async))
         edges = phased
 
-    # Collect participant names in canonical order
-    _CANONICAL_ORDER = ["Host", "Participant", "Railway", "Daemon", "Addons"]
+    # Collect actor names in canonical order
     all_actors = set()
     for e in edges:
         all_actors.add(e[0])
         all_actors.add(e[1])
+    # Named participants (Participant\nAlice) replace generic "Participant"
+    named_pax = sorted(a for a in all_actors if a.startswith("Participant\n"))
+    _CANONICAL_ORDER = ["Host"] + (named_pax or (["Participant"] if "Participant" in all_actors else [])) + ["Railway", "Daemon", "GDrive", "Addons"]
     participants = [p for p in _CANONICAL_ORDER if p in all_actors]
     for e in edges:
         for p in (e[0], e[1]):
