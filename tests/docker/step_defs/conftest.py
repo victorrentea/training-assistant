@@ -21,7 +21,7 @@ from pages.participant_page import ParticipantPage
 from playwright.sync_api import expect, sync_playwright
 
 sys.path.insert(0, "/tests")
-from session_utils import fresh_session
+from session_utils import fresh_session  # noqa: E402, I001
 
 
 BASE = "http://localhost:8000"
@@ -67,7 +67,7 @@ def _await_condition(fn, timeout_ms=10000, poll_ms=300, msg=""):
     raise AssertionError(msg or f"Condition not met within {timeout_ms}ms")
 
 
-from pytest_bdd import given, parsers
+from pytest_bdd import given, parsers  # noqa: E402, I001
 
 
 # ── BDD phase tracking for OTel ──────────────────────────────────────────
