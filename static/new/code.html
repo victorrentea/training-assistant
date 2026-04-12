@@ -227,7 +227,7 @@ body{visibility:hidden}
 <span class="text-base">Google Drive</span>
 <span class="material-symbols-outlined text-base text-on-surface">open_in_new</span>
 </a>
-<a data-nav="paste" onclick="closeTopics();closeRepos();setActive('paste')" class="nav-item rounded-full px-2 py-3 flex items-center gap-3 transition-all cursor-pointer">
+<a data-nav="paste" onclick="showView('paste')" class="nav-item rounded-full px-2 py-3 flex items-center gap-3 transition-all cursor-pointer">
 <span class="material-symbols-outlined">content_paste</span>
 <span class="text-base">Paste</span>
 </a>
@@ -368,6 +368,16 @@ body{visibility:hidden}
     <li>Retrospective and Q&A — 16:40</li>
     <li>Post-assessment and wrap-up — 17:00</li>
   </ul>
+</div>
+<!-- Paste View -->
+<div id="paste-view" style="display:none" class="h-full flex flex-col px-16 py-12">
+  <textarea class="flex-1 w-full resize-none rounded-2xl bg-surface-container-low text-on-surface text-base p-6 outline-none focus:ring-2 focus:ring-primary placeholder:text-on-surface-variant" placeholder="Paste any large text"></textarea>
+  <div class="mt-4">
+    <button class="flex items-center gap-2 px-6 py-3 bg-primary text-on-primary font-semibold rounded-full hover:bg-primary-dim transition-all shadow-lg shadow-primary/20">
+      Send to Host
+      <span class="material-symbols-outlined" style="transform:rotate(45deg)">send</span>
+    </button>
+  </div>
 </div>
 <!-- Slides View -->
 <div id="slides-view" class="relative h-full flex flex-col">
@@ -535,7 +545,7 @@ function scheduleHideOverflow() {
     el.classList.add('opacity-0', 'pointer-events-none', 'translate-y-1');
   }, 120);
 }
-var VIEWS = ['slides', 'summary', 'notes', 'agenda'];
+var VIEWS = ['slides', 'summary', 'notes', 'agenda', 'paste'];
 function saveScroll(name, el) {
   localStorage.setItem('scroll_' + name, el.scrollTop);
 }
