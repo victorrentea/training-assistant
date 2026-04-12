@@ -83,7 +83,7 @@ class MockDriveHandler(BaseHTTPRequestHandler):
         from opentelemetry import trace
         from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
 
-        carrier = dict(self.headers)
+        carrier = {k.lower(): v for k, v in self.headers.items()}
         ctx = TraceContextTextMapPropagator().extract(carrier=carrier)
         tracer = trace.get_tracer("mock-drive")
         with tracer.start_as_current_span(f"GET {slug}.pdf", context=ctx):
