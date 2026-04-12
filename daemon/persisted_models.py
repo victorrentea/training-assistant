@@ -89,8 +89,7 @@ class PersistedSessionState(PersistedModel):
     session_id: str | None = Field(default=None, description="6-char alphanumeric join code")
     saved_at: str | None = Field(default=None, description="ISO timestamp of last snapshot write")
     mode: str | None = Field(default=None, description="workshop | conference")
-    activity: str | None = None
-    current_activity: str | None = None
+    current_activity: str | None = Field(default=None, description="none | poll | wordcloud | qa | codereview | debate")
 
     participants: dict[str, PersistedParticipant] = Field(default_factory=dict, description="participant_uuid → identity/score")
     # Legacy split maps: accepted on read, omitted on write.

@@ -2,8 +2,6 @@ import json
 import tempfile
 from pathlib import Path
 
-import pytest
-
 
 def _write_spans(path, spans):
     Path(path).write_text("\n".join(json.dumps(s) for s in spans) + "\n")
@@ -279,10 +277,10 @@ def test_scenarios_parameter_colors_by_trace_id():
     content = Path(out).read_text()
 
     # Given-phase arrow (trace "aaa") should be gray
-    register_line = [l for l in content.split("\n") if "register" in l][0]
+    register_line = [line for line in content.split("\n") if "register" in line][0]
     assert "[#gray]" in register_line
     # When-phase arrow (trace "bbb") should NOT be gray
-    broadcast_line = [l for l in content.split("\n") if "broadcast" in l][0]
+    broadcast_line = [line for line in content.split("\n") if "broadcast" in line][0]
     assert "[#gray]" not in broadcast_line
     # Scenario separator should be present
     assert "== Open slide ==" in content

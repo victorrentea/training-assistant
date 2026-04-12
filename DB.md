@@ -21,8 +21,7 @@ log_level?: string
 session_id?: string  # 6-char alphanumeric join code
 saved_at?: string  # ISO timestamp of last snapshot write
 mode?: string  # workshop | conference
-activity?: string
-current_activity?: string
+current_activity?: string  # none | poll | wordcloud | qa | codereview | debate
 participants?: dict[str, PersistedParticipant {
   name?:string
   avatar?:string
