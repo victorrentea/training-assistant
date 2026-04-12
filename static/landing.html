@@ -490,11 +490,8 @@
             renderHostMachineStatus();
             return;
           }
-          // Found an active session on the local daemon
-          const currentSessionId = getSessionIdFromUrl();
-          if (currentSessionId !== code) {
-            window.location.href = '/?session_id=' + code;
-          }
+          // Found an active session on the local daemon — redirect to participant page
+          window.location.href = '/' + code + '/';
         })
         .catch(() => {
           lastLocalRetryAt = Date.now();
