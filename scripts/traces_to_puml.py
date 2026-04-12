@@ -143,15 +143,12 @@ def _collapse_broadcast(edges: list[tuple]) -> list[tuple]:
 
 
 def _deduplicate_edges(edges: list[tuple]) -> list[tuple]:
-    """Remove duplicate (from, to, label) tuples, keeping first occurrence order."""
-    seen = set()
-    result = []
-    for e in edges:
-        key = (e[0], e[1], e[2])  # (from, to, label)
-        if key not in seen:
-            seen.add(key)
-            result.append(e)
-    return result
+    """No-op: kept for API compatibility but dedup is disabled.
+
+    Every trace edge is preserved to show the full flow (e.g., two
+    participants both registering appear as two separate arrows).
+    """
+    return edges
 
 
 def generate_puml(traces_path: str, family: str, output: str,
