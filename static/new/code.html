@@ -127,7 +127,7 @@ body{visibility:hidden}
 <body class="bg-surface text-on-surface overflow-hidden">
 <div class="flex h-screen w-full">
 <!-- SIDEBAR (20%) -->
-<aside class="w-64 shrink-0 h-full bg-surface-container flex flex-col px-4 pt-6 pb-6 space-y-2 z-10 relative" style="width: calc(16rem * 1.02);">
+<aside class="w-64 shrink-0 h-full bg-surface-container flex flex-col px-4 pt-6 pb-6 space-y-2 z-10 relative" style="width: calc(16rem * 1.03);">
 <!-- Header Section -->
 <div class="space-y-4">
 <div class="flex items-center gap-1 min-w-0">
@@ -662,6 +662,10 @@ function _autoHideSlideHistoryAndCloseSlides() {
     _hideSlideHistory();
   }
 }
+function _restartSlideHistoryAutoHideTimer() {
+  clearTimeout(_slideHistoryTimer);
+  _slideHistoryTimer = setTimeout(_autoHideSlideHistoryAndCloseSlides, 30000);
+}
 function _loadSlideHistory() {
   if (!_sessionId) return;
   clearTimeout(_slideHistoryTimer);
@@ -703,9 +707,12 @@ function _loadSlideHistory() {
         var fileName = link.getAttribute('data-history-file-name') || '';
         var page = Number(link.getAttribute('data-history-page') || '1');
         _openSlideFromHistory(fileName, page, link);
+        _restartSlideHistoryAutoHideTimer();
       };
+      el.onmouseenter = _restartSlideHistoryAutoHideTimer;
+      el.onmousemove = _restartSlideHistoryAutoHideTimer;
       el.style.display = 'block';
-      _slideHistoryTimer = setTimeout(_autoHideSlideHistoryAndCloseSlides, 30000);
+      _restartSlideHistoryAutoHideTimer();
     })
     .catch(function() { var el = document.getElementById('slide-history-list'); if (el) el.style.display = 'none'; });
 }
@@ -714,7 +721,8 @@ function toggleSlides() {
   if (!list.style.maxHeight || list.style.maxHeight === '0px') {
     openSlides();
   } else {
-    closeSlides({ focusAllTopics: Boolean(_historySelectedRowEl) });
+    // User explicitly clicked Current Slide again: keep focus there, do not move to All Topics.
+    closeSlides({ focusAllTopics: false });
     showView('slides');
   }
 }
