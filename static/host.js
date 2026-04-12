@@ -278,6 +278,7 @@
     ws.onclose = () => { setBadge(false); if (!_kicked) setTimeout(connectWS, 3000); };
     ws.onmessage = (e) => {
       const msg = JSON.parse(e.data);
+      if (window._otelExtractWsTrace) window._otelExtractWsTrace(msg);
       if (msg.type === 'kicked') {
         _kicked = true;
         setKickedFavicon();

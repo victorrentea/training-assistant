@@ -3040,6 +3040,7 @@ function closeAgendaModal() {
 
     ws.onmessage = (event) => {
       const msg = JSON.parse(event.data);
+      if (window._otelExtractWsTrace) window._otelExtractWsTrace(msg);
       handleMessage(msg);
     };
 
