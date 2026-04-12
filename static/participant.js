@@ -3239,6 +3239,16 @@ const sessionTitleEl = document.getElementById('session-title');
         _onIncomingHostSlidesCurrent(msg.slides_current || null);
         if (msg.notes_count != null) updateNotesCount(msg.notes_count);
         if (msg.summary_count != null) updateSummaryCount(msg.summary_count);
+        // Google Drive link
+        if (msg.gdrive_url !== undefined) {
+          const gdriveBtn = document.getElementById('gdrive-btn');
+          if (msg.gdrive_url) {
+            gdriveBtn.href = msg.gdrive_url;
+            gdriveBtn.style.display = '';
+          } else {
+            gdriveBtn.style.display = 'none';
+          }
+        }
         break;
       case 'active_participants_count_updated':
         updateParticipantCount(msg.count);
