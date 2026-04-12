@@ -1,6 +1,6 @@
 # API Reference (Generated from Contracts)
 
-Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.yaml`, `docs/railway-openapi.yaml`, `docs/railway-ws.yaml`.
+Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.yaml`, `docs/railway-openapi.yaml`, `docs/railway-ws.yaml`, `docs/addons-ws.yaml`.
 
 ## Table of Contents
 - [Session](#feature-session)
@@ -45,6 +45,12 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 | Message | Payload |
 | --- | --- |
 | Daemon announces current active session to Railway on connect or session change<br>`set_session_id` | `session_id?: string` |
+
+### Addons WS
+| Message | Payload |
+| --- | --- |
+| Notify addons that a workshop session has started<br>`session_started` | `participant_url: string  # Full URL for participants to join the session` |
+| Notify addons that the workshop session has ended<br>`session_ended` | - |
 
 ## Feature: Identity
 
@@ -107,6 +113,12 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 | Message | Payload |
 | --- | --- |
 | Railway requests daemon to sync static files and PDF cache<br>`sync_files` | `static_hashes: dict[str, string]  # filename → hash of current Railway-served static file`<br>`pdf_slugs: dict[str, string]  # slug → drive_export_url for known PDF slides` |
+
+### Addons WS
+| Message | Payload |
+| --- | --- |
+| Current PowerPoint slide changed<br>`slide` | `deck: string  # PowerPoint file name`<br>`slide: int  # 1-based slide number`<br>`presenting: bool  # Whether slideshow mode is active` |
+| Periodic delta of per-slide viewing durations (sent every 60s)<br>`slides_viewed` | `slides: list[object]  # Delta viewing durations since last send` |
 
 ## Feature: Activity
 
@@ -300,6 +312,11 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 | Message | Payload |
 | --- | --- |
 | Participant sent an emoji reaction — floating animation on host screen<br>`emoji_reaction` | `emoji: string` |
+
+### Addons WS
+| Message | Payload |
+| --- | --- |
+| Relay emoji reaction to desktop overlay for animation<br>`emoji` | `emoji: string  # Emoji character to animate`<br>`count: int  # Number of times to show the animation` |
 
 ## Feature: Quiz Generation
 

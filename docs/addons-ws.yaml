@@ -1,0 +1,127 @@
+asyncapi: '2.6.0'
+info:
+  title: Training Assistant — Addons ↔ Daemon WebSocket Protocol
+  version: '1.0'
+  description: |
+    Local WebSocket channel between the macOS addons app (server) and the training daemon (client).
+    Connection: `WS ws://127.0.0.1:8765`
+
+    The addons app runs a WebSocket server on port 8765.
+    The daemon connects as a client via `AddonBridgeClient`.
+
+    **Direction convention:**
+    - `subscribe` = messages the daemon sends TO addons
+    - `publish` = messages addons sends TO the daemon
+
+servers:
+  local:
+    url: ws://127.0.0.1:8765
+    protocol: ws
+    description: Addons local WebSocket server (daemon connects as client)
+
+channels:
+  /:
+    subscribe:
+      summary: Messages the daemon sends to addons
+      message:
+        oneOf:
+          - $ref: '#/components/messages/emoji'
+          - $ref: '#/components/messages/session_started'
+          - $ref: '#/components/messages/session_ended'
+    publish:
+      summary: Messages addons sends to the daemon
+      message:
+        oneOf:
+          - $ref: '#/components/messages/slide'
+          - $ref: '#/components/messages/slides_viewed'
+
+components:
+  messages:
+    emoji:
+      summary: Relay emoji reaction to desktop overlay for animation
+      x-feature: emoji
+      payload:
+        type: object
+        required: [type, emoji, count]
+        properties:
+          type:
+            type: string
+            enum: [emoji]
+          emoji:
+            type: string
+            description: Emoji character to animate
+          count:
+            type: integer
+            description: Number of times to show the animation
+
+    session_started:
+      summary: Notify addons that a workshop session has started
+      x-feature: session_management
+      payload:
+        type: object
+        required: [type, participant_url]
+        properties:
+          type:
+            type: string
+            enum: [session_started]
+          participant_url:
+            type: string
+            description: Full URL for participants to join the session
+
+    session_ended:
+      summary: Notify addons that the workshop session has ended
+      x-feature: session_management
+      payload:
+        type: object
+        required: [type]
+        properties:
+          type:
+            type: string
+            enum: [session_ended]
+
+    slide:
+      summary: Current PowerPoint slide changed
+      x-feature: slides
+      payload:
+        type: object
+        required: [type, deck, slide, presenting]
+        properties:
+          type:
+            type: string
+            enum: [slide]
+          deck:
+            type: string
+            description: PowerPoint file name
+          slide:
+            type: integer
+            description: 1-based slide number
+          presenting:
+            type: boolean
+            description: Whether slideshow mode is active
+
+    slides_viewed:
+      summary: Periodic delta of per-slide viewing durations (sent every 60s)
+      x-feature: slides
+      payload:
+        type: object
+        required: [type, slides]
+        properties:
+          type:
+            type: string
+            enum: [slides_viewed]
+          slides:
+            type: array
+            description: Delta viewing durations since last send
+            items:
+              type: object
+              required: [fileName, page, seconds]
+              properties:
+                fileName:
+                  type: string
+                  description: PowerPoint file name
+                page:
+                  type: integer
+                  description: 1-based slide number
+                seconds:
+                  type: integer
+                  description: Seconds viewed since last report (delta)

@@ -106,6 +106,7 @@ class FeatureSection:
     host_ws: list[WsMsg]
     daemon_rest: list[RestOp]
     daemon_ws: list[WsMsg]
+    addons_ws: list[WsMsg]
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:
@@ -623,7 +624,7 @@ def _extract_rest(openapi: dict[str, Any], sections: dict[str, FeatureSection]) 
             tags = op.get("tags") or ["_untagged"]
             tag = str(tags[0])
             feature = str(op.get("x-feature") or _normalize_rest_feature(tag, path))
-            section = sections.setdefault(feature, FeatureSection([], [], [], [], [], []))
+            section = sections.setdefault(feature, FeatureSection([], [], [], [], [], [], []))
 
             title, notes = _collect_rest_doc(op)
             rest = RestOp(
@@ -668,7 +669,7 @@ def _extract_ws(
                 continue
 
             feature = str(msg_spec.get("x-feature") or "misc")
-            section = sections.setdefault(feature, FeatureSection([], [], [], [], [], []))
+            section = sections.setdefault(feature, FeatureSection([], [], [], [], [], [], []))
             payload = msg_spec.get("payload", {})
             ws = WsMsg(
                 name=msg_name,
@@ -692,7 +693,7 @@ def _extract_railway_rest(openapi: dict[str, Any], sections: dict[str, FeatureSe
                 continue
 
             feature = str(op.get("x-feature") or "infrastructure")
-            section = sections.setdefault(feature, FeatureSection([], [], [], [], [], []))
+            section = sections.setdefault(feature, FeatureSection([], [], [], [], [], [], []))
 
             title, notes = _collect_rest_doc(op)
             rest = RestOp(
@@ -732,7 +733,7 @@ def _extract_railway_ws(
                     continue
 
                 feature = str(msg_spec.get("x-feature") or "infrastructure")
-                section = sections.setdefault(feature, FeatureSection([], [], [], [], [], []))
+                section = sections.setdefault(feature, FeatureSection([], [], [], [], [], [], []))
                 payload = msg_spec.get("payload", {})
                 ws = WsMsg(
                     name=msg_name,
@@ -740,6 +741,42 @@ def _extract_railway_ws(
                     payload_shape=_ws_payload_shape(payload if isinstance(payload, dict) else {}, spec),
                 )
                 section.daemon_ws.append(ws)
+
+
+def _extract_addons_ws(
+    spec: dict[str, Any],
+    sections: dict[str, FeatureSection],
+) -> None:
+    components = spec.get("components", {})
+    messages = components.get("messages", {})
+
+    for channel in spec.get("channels", {}).values():
+        if not isinstance(channel, dict):
+            continue
+        for direction in ("subscribe", "publish"):
+            dir_spec = channel.get(direction, {})
+            message = dir_spec.get("message", {})
+            one_of = message.get("oneOf", [])
+            for ref in one_of:
+                if not isinstance(ref, dict):
+                    continue
+                ref_str = str(ref.get("$ref", ""))
+                if not ref_str.startswith("#/components/messages/"):
+                    continue
+                msg_name = ref_str.split("/")[-1]
+                msg_spec = messages.get(msg_name, {})
+                if not isinstance(msg_spec, dict):
+                    continue
+
+                feature = str(msg_spec.get("x-feature") or "infrastructure")
+                section = sections.setdefault(feature, FeatureSection([], [], [], [], [], [], []))
+                payload = msg_spec.get("payload", {})
+                ws = WsMsg(
+                    name=msg_name,
+                    notes=_collect_notes(msg_spec),
+                    payload_shape=_ws_payload_shape(payload if isinstance(payload, dict) else {}, spec),
+                )
+                section.addons_ws.append(ws)
 
 
 def _feature_title(feature_id: str) -> str:
@@ -1005,6 +1042,7 @@ def generate_api_reference(
     host_ws_path: Path,
     railway_openapi_path: Path | None = None,
     railway_ws_path: Path | None = None,
+    addons_ws_path: Path | None = None,
 ) -> str:
     openapi = _load_yaml(openapi_path)
     participant_ws = _load_yaml(participant_ws_path)
@@ -1026,6 +1064,11 @@ def generate_api_reference(
         railway_ws = _load_yaml(railway_ws_path)
         _extract_railway_ws(railway_ws, sections)
 
+    addons_ws = None
+    if addons_ws_path and addons_ws_path.exists():
+        addons_ws = _load_yaml(addons_ws_path)
+        _extract_addons_ws(addons_ws, sections)
+
     feature_ids = [f for f in FEATURE_ORDER if f in sections]
     feature_ids.extend(sorted(f for f in sections.keys() if f not in feature_ids))
 
@@ -1034,6 +1077,8 @@ def generate_api_reference(
         source_files += ", `docs/railway-openapi.yaml`"
     if railway_ws_path and railway_ws:
         source_files += ", `docs/railway-ws.yaml`"
+    if addons_ws_path and addons_ws:
+        source_files += ", `docs/addons-ws.yaml`"
 
     lines: list[str] = []
     lines.append("# API Reference (Generated from Contracts)")
@@ -1064,6 +1109,8 @@ def generate_api_reference(
             subsections.append(("Railway REST", _render_rest(section.daemon_rest, railway_openapi)))
         if section.daemon_ws and railway_ws:
             subsections.append(("Railway WS", _render_ws(section.daemon_ws, railway_ws)))
+        if section.addons_ws and addons_ws:
+            subsections.append(("Addons WS", _render_ws(section.addons_ws, addons_ws)))
 
         if not subsections:
             continue
@@ -1085,6 +1132,7 @@ def main() -> int:
     parser.add_argument("--host-ws", default="docs/host-ws.yaml")
     parser.add_argument("--railway-openapi", default="docs/railway-openapi.yaml")
     parser.add_argument("--railway-ws", default="docs/railway-ws.yaml")
+    parser.add_argument("--addons-ws", default="docs/addons-ws.yaml")
     parser.add_argument("--output", default="API.generated.md")
     parser.add_argument("--db-output", default="DB.md")
     parser.add_argument("--stdout", action="store_true", help="Print markdown to stdout instead of writing file")
@@ -1096,6 +1144,7 @@ def main() -> int:
         Path(args.host_ws),
         railway_openapi_path=Path(args.railway_openapi),
         railway_ws_path=Path(args.railway_ws),
+        addons_ws_path=Path(args.addons_ws),
     )
 
     if args.stdout:
