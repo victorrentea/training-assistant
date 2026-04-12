@@ -52,6 +52,8 @@ FEATURE_LABELS: dict[str, str] = {
     "reload": "Cross-cutting: Reload",
     "transcription": "Transcription",
     "infrastructure": "Infrastructure",
+    "participant_state": "Participant State",
+    "host_state": "Host State",
     "host-state": "Identity",
     "_untagged": "Session",
 }
@@ -59,6 +61,8 @@ FEATURE_LABELS: dict[str, str] = {
 FEATURE_ORDER = [
     "session_management",
     "identity",
+    "participant_state",
+    "host_state",
     "slides",
     "activity",
     "poll",
@@ -594,10 +598,12 @@ def _normalize_rest_feature(tag: str, path: str) -> str:
         return "session_management"
     if tag == "session":
         return "session_management"
+    if tag == "participant-state":
+        return "participant_state"
     if tag == "participant":
         return "identity"
     if tag == "host-state":
-        return "identity"
+        return "host_state"
     if tag == "leaderboard":
         return "scores_leaderboard"
     if tag == "misc":

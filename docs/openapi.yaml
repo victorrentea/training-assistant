@@ -110,7 +110,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ParticipantStateResponse'
-      x-feature: identity
+      x-feature: participant_state
       x-doc-notes:
       - Returns participant-personalized full state snapshot.
   /api/{session_id}/host/participants/resolve-locations:
@@ -1079,7 +1079,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HostStateResponse'
-      x-feature: identity
+      x-feature: host_state
       x-doc-notes:
       - Returns host-facing full state snapshot.
   /api/session/create:
