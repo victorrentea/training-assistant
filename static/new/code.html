@@ -151,7 +151,7 @@ body{visibility:hidden}
 <!-- Navigation Cluster -->
 <nav class="flex flex-col space-y-1">
 <!-- Slides - ACTIVE -->
-<a data-nav="slides" onclick="closeTopics();setActive('slides')" class="nav-item nav-active rounded-full px-2 py-3 font-semibold flex items-center gap-3 transition-all cursor-pointer">
+<a data-nav="slides" onclick="closeTopics();closeRepos();setActive('slides')" class="nav-item nav-active rounded-full px-2 py-3 font-semibold flex items-center gap-3 transition-all cursor-pointer">
 <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">slideshow</span>
 <span class="text-base">Slides</span>
 </a>
@@ -201,21 +201,32 @@ body{visibility:hidden}
 </div>
 </div>
 </div>
-<a data-nav="gitrepos" onclick="closeTopics();setActive('gitrepos')" class="nav-item rounded-full px-2 py-3 flex items-center gap-3 transition-all cursor-pointer">
+<button data-nav="gitrepos" onclick="openRepos()" class="nav-item w-full rounded-full px-2 py-3 flex items-center gap-3 transition-all">
 <span class="material-symbols-outlined">terminal</span>
-<span class="text-base">Git Repos</span>
+<span class="text-base flex-1 text-left">Git Repos</span>
 <span class="badge-new">UPDATE</span>
-</a>
-<a data-nav="drive" onclick="closeTopics();setActive('drive')" class="nav-item rounded-full px-2 py-3 flex items-center gap-3 transition-all cursor-pointer">
+<span class="material-symbols-outlined repos-arrow text-xl transition-transform duration-300">chevron_right</span>
+</button>
+<div style="max-height:0;overflow:hidden;transition:max-height 0.6s ease" class="repos-list mx-2 mb-1 rounded-xl">
+<div class="overflow-y-auto max-h-48 py-1">
+<a href="https://github.com/victorrentea/clean-code" target="_blank" class="px-4 py-1.5 text-sm text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high cursor-pointer rounded-lg flex items-center gap-2 truncate">
+<span class="material-symbols-outlined text-sm">link</span>github.com/victorrentea/clean-code</a>
+<a href="https://github.com/victorrentea/ddd-workshop" target="_blank" class="px-4 py-1.5 text-sm text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high cursor-pointer rounded-lg flex items-center gap-2 truncate">
+<span class="material-symbols-outlined text-sm">link</span>github.com/victorrentea/ddd-workshop</a>
+<a href="https://github.com/victorrentea/refactoring-kata" target="_blank" class="px-4 py-1.5 text-sm text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high cursor-pointer rounded-lg flex items-center gap-2 truncate">
+<span class="material-symbols-outlined text-sm">link</span>github.com/victorrentea/refactoring-kata</a>
+</div>
+</div>
+<a data-nav="drive" onclick="closeTopics();closeRepos();setActive('drive')" class="nav-item rounded-full px-2 py-3 flex items-center gap-3 transition-all cursor-pointer">
 <span class="material-symbols-outlined">cloud</span>
 <span class="text-base">Google Drive</span>
 <span class="material-symbols-outlined text-base text-on-surface">open_in_new</span>
 </a>
-<a data-nav="paste" onclick="closeTopics();setActive('paste')" class="nav-item rounded-full px-2 py-3 flex items-center gap-3 transition-all cursor-pointer">
+<a data-nav="paste" onclick="closeTopics();closeRepos();setActive('paste')" class="nav-item rounded-full px-2 py-3 flex items-center gap-3 transition-all cursor-pointer">
 <span class="material-symbols-outlined">content_paste</span>
 <span class="text-base">Paste</span>
 </a>
-<a data-nav="upload" onclick="closeTopics();setActive('upload')" class="nav-item rounded-full px-2 py-3 flex items-center gap-3 transition-all cursor-pointer">
+<a data-nav="upload" onclick="closeTopics();closeRepos();setActive('upload')" class="nav-item rounded-full px-2 py-3 flex items-center gap-3 transition-all cursor-pointer">
 <span class="material-symbols-outlined">upload</span>
 <span class="text-base">Upload</span>
 </a>
@@ -476,6 +487,7 @@ function setActive(name) {
 }
 function openTopics() {
   setActive('topics');
+  closeRepos();
   var list = document.querySelector('.topics-list');
   var arrow = document.querySelector('.topics-arrow');
   list.style.maxHeight = '12rem';
@@ -484,6 +496,22 @@ function openTopics() {
 function closeTopics() {
   var list = document.querySelector('.topics-list');
   var arrow = document.querySelector('.topics-arrow');
+  if (!list) return;
+  list.style.maxHeight = '0px';
+  arrow.style.transform = 'rotate(0deg)';
+}
+function openRepos() {
+  setActive('gitrepos');
+  closeTopics();
+  var list = document.querySelector('.repos-list');
+  var arrow = document.querySelector('.repos-arrow');
+  list.style.maxHeight = '12rem';
+  arrow.style.transform = 'rotate(90deg)';
+}
+function closeRepos() {
+  var list = document.querySelector('.repos-list');
+  var arrow = document.querySelector('.repos-arrow');
+  if (!list) return;
   list.style.maxHeight = '0px';
   arrow.style.transform = 'rotate(0deg)';
 }
@@ -493,6 +521,7 @@ function saveScroll(name, el) {
 }
 function showView(name) {
   closeTopics();
+  closeRepos();
   setActive(name);
   VIEWS.forEach(function(v) {
     var el = document.getElementById(v + '-view');
