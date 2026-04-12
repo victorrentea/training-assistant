@@ -728,6 +728,14 @@ function _buildTopicItem(slide) {
   el.appendChild(dlBtn);
   return el;
 }
+var _SLIDES_GROUP_COLORS = {
+  'AI':               '#e91e63',
+  'Architecture':     '#ff9800',
+  'Coding Practices': '#4caf50',
+  'Testing':          '#2196f3',
+  'Java Performance': '#9c27b0',
+  'Java Frameworks':  '#00bcd4',
+};
 async function loadSlidesCatalog() {
   if (!_sessionId) return;
   try {
@@ -747,7 +755,41 @@ async function loadSlidesCatalog() {
     });
     var container = document.getElementById('topics-inner');
     container.innerHTML = '';
-    slides.forEach(function(slide) { container.appendChild(_buildTopicItem(slide)); });
+    var hasGroups = slides.some(function(s) { return s.group; });
+    if (!hasGroups) {
+      slides.forEach(function(slide) { container.appendChild(_buildTopicItem(slide)); });
+      return;
+    }
+    // Count per group to decide whether to show header
+    var groupCounts = {};
+    slides.forEach(function(s) { if (s.group) groupCounts[s.group] = (groupCounts[s.group] || 0) + 1; });
+    var currentGroup = null;
+    var currentGroupEl = null;
+    slides.forEach(function(slide) {
+      if (slide.group && slide.group !== currentGroup) {
+        currentGroup = slide.group;
+        currentGroupEl = document.createElement('div');
+        currentGroupEl.style.cssText = 'margin-top:4px';
+        var color = _SLIDES_GROUP_COLORS[slide.group] || '#888';
+        if (groupCounts[slide.group] > 1) {
+          var header = document.createElement('div');
+          header.textContent = slide.group;
+          header.style.cssText = 'font-size:0.65rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;padding:2px 16px 2px 16px;color:' + color + ';opacity:0.85';
+          currentGroupEl.appendChild(header);
+        }
+        container.appendChild(currentGroupEl);
+      }
+      var item = _buildTopicItem(slide);
+      if (slide.group) {
+        // Color accent: left border
+        item.style.borderLeft = '2px solid ' + (_SLIDES_GROUP_COLORS[slide.group] || '#888');
+        item.style.paddingLeft = '10px';
+        currentGroupEl.appendChild(item);
+      } else {
+        currentGroup = null; currentGroupEl = null;
+        container.appendChild(item);
+      }
+    });
   } catch(e) {
     console.error('Failed to load slides catalog', e);
   }
