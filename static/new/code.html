@@ -384,7 +384,8 @@ body{visibility:hidden}
 </div>
 <!-- Slides Container -->
 <div id="pdf-pages" class="flex-grow overflow-y-auto scroll-smooth py-24 px-16 lg:px-32 xl:px-48 space-y-24 h-full"></div>
-<!-- Floating Reaction UI (Bottom Right) -->
+</div><!-- end slides-view -->
+<!-- Floating Reaction UI (Bottom Right) — always on top across all views -->
 <div class="absolute bottom-12 right-12 flex flex-col items-end gap-4 z-30">
 <div class="flex items-center gap-2 p-2 bg-surface-container-lowest whisper-shadow rounded-full glass border border-outline-variant border-opacity-10">
 <button class="w-10 h-10 flex items-center justify-center hover:bg-surface-container rounded-full text-xl transition-transform hover:scale-110" title="Genuinely love this.">❤️</button>
@@ -420,8 +421,8 @@ body{visibility:hidden}
 </div>
 </div>
 </div>
-<!-- Focus Status Indicator (Subtle) -->
-<div class="absolute bottom-6 left-12">
+<!-- Focus Status Indicator (Subtle) — always on top across all views -->
+<div class="absolute bottom-6 left-12 z-30">
 <div class="flex items-center gap-2 text-[10px] font-bold text-on-surface-variant opacity-40 uppercase tracking-widest">
 <span class="relative flex h-2 w-2">
 <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
@@ -430,7 +431,6 @@ body{visibility:hidden}
                 Live Content Sync Active
             </div>
 </div>
-</div><!-- end slides-view -->
 </main>
 </div>
 <script type="module">
