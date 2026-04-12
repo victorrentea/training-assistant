@@ -1,7 +1,7 @@
 @startuml
 hide footbox
 title Feature: Slides Catalog, Viewing, and Follow Mode
-caption <color:gray>Generated 2026-04-12 17:21</color>
+caption <color:gray>Generated 2026-04-12 17:43</color>
 
 participant "Host"
 participant "Participant"
@@ -9,34 +9,106 @@ participant "Railway"
 participant "Daemon"
 
 == Participant opens a slide ==
-"Host" [#gray]-> "Daemon": DELETE /api/{session_id}/host/scores <color:#8E44AD>[14]</color>
-"Host" [#gray]-> "Daemon": GET /host/{session_id} <color:#2980B9>[08]</color>
-"Host" [#gray]-> "Daemon": GET /api/{session_id}/host/state <color:#2980B9>[88]</color>
-"Participant" [#gray]-> "Daemon": POST /api/participant/register <color:#F39C12>[93]</color>
-"Participant" [#gray]-> "Daemon": GET /{session_id}/api/slides <color:#C0392B>[27]</color>
-"Daemon" [#gray]--> "Host": participant_list_updated <color:#F39C12>[93]</color>
-"Participant" [#gray]-> "Daemon": GET /api/participant/state <color:#1ABC9C>[66]</color>
-"Participant" [#gray]-> "Daemon": POST /api/participant/location <color:#C0392B>[37]</color>
-"Daemon" [#gray]--> "Participant": active_participants_count_updated <color:#27AE60>[32]</color>
-"Participant" -> "Daemon": PUT /api/participant/name <color:#2980B9>[18]</color>
-"Participant" -> "Daemon": GET /{session_id}/api/slides/check/{slug} <color:#1ABC9C>[06]</color>
-"Daemon" --> "Participant": slides_cache_status <color:#1ABC9C>[06]</color>
-"Daemon" -> "Railway": POST /api/slides/download-from-gdrive/{slug} <color:#1ABC9C>[06]</color>
+group init
+  "Host" [#gray]-> "Daemon": DELETE /api/{session_id}/host/scores <color:#1ABC9C>[86]</color>
+  "Host" [#gray]-> "Daemon": GET /host/{session_id} <color:#2980B9>[68]</color>
+  "Host" [#gray]-> "Daemon": GET /api/{session_id}/host/state <color:#1ABC9C>[26]</color>
+  "Participant" [#gray]-> "Daemon": GET /{session_id}/api/slides <color:#16A085>[29]</color>
+  "Participant" [#gray]-> "Daemon": POST /api/participant/register <color:#8E44AD>[54]</color>
+  "Daemon" [#gray]--> "Host": participant_list_updated <color:#8E44AD>[54]</color>
+  "Participant" [#gray]-> "Daemon": GET /{session_id}/api/slides <color:#8E44AD>[94]</color>
+  "Participant" [#gray]-> "Daemon": GET /api/participant/state <color:#2E86C1>[31]</color>
+  "Daemon" [#gray]--> "Participant": active_participants_count_updated <color:#27AE60>[72]</color>
+end
+"Participant" -> "Daemon": PUT /api/participant/name <color:#2980B9>[28]</color>
+"Daemon" --> "Host": participant_list_updated <color:#2980B9>[28]</color>
+"Participant" -> "Daemon": GET /{session_id}/api/slides/check/{slug} <color:#C0392B>[07]</color>
+"Daemon" --> "Participant": slides_cache_status <color:#C0392B>[07]</color>
+"Daemon" -> "Railway": POST /api/slides/download-from-gdrive/{slug} <color:#C0392B>[07]</color>
+"Participant" -> "Daemon": GET /{session_id}/api/slides <color:#E74C3C>[40]</color>
+"Daemon" --> "Participant": slides_cache_status <color:#C0392B>[07]</color>
+"Participant" -> "Daemon": GET /{session_id}/api/slides <color:#F39C12>[73]</color>
 
 == Second participant gets cached slide ==
-"Daemon" [#gray]--> "Participant": active_participants_count_updated <color:#E74C3C>[60]</color>
-"Host" [#gray]-> "Daemon": DELETE /api/{session_id}/host/scores <color:#2980B9>[28]</color>
-"Host" [#gray]-> "Daemon": GET /host/{session_id} <color:#2E86C1>[91]</color>
-"Host" [#gray]-> "Daemon": GET /api/{session_id}/host/state <color:#E74C3C>[80]</color>
-"Participant" [#gray]-> "Daemon": POST /api/participant/register <color:#16A085>[09]</color>
-"Participant" [#gray]-> "Daemon": GET /{session_id}/api/slides <color:#F39C12>[83]</color>
-"Daemon" [#gray]--> "Host": participant_list_updated <color:#16A085>[09]</color>
-"Participant" [#gray]-> "Daemon": GET /api/participant/state <color:#C0392B>[67]</color>
-"Participant" [#gray]-> "Daemon": POST /api/participant/location <color:#2980B9>[18]</color>
-"Participant" [#gray]-> "Daemon": PUT /api/participant/name <color:#27AE60>[42]</color>
-"Participant" -> "Daemon": GET /{session_id}/api/slides/check/{slug} <color:#8E44AD>[14]</color>
-"Daemon" --> "Participant": slides_cache_status <color:#8E44AD>[14]</color>
-"Daemon" -> "Railway": POST /api/slides/download-from-gdrive/{slug} <color:#8E44AD>[14]</color>
+group init
+  "Daemon" [#gray]--> "Participant": active_participants_count_updated <color:#2980B9>[78]</color>
+  "Host" [#gray]-> "Daemon": DELETE /api/{session_id}/host/scores <color:#2E86C1>[11]</color>
+  "Host" [#gray]-> "Daemon": GET /host/{session_id} <color:#27AE60>[52]</color>
+  "Host" [#gray]-> "Daemon": GET /api/{session_id}/host/state <color:#16A085>[09]</color>
+  "Participant" [#gray]-> "Daemon": GET /{session_id}/api/slides <color:#F39C12>[43]</color>
+  "Participant" [#gray]-> "Daemon": POST /api/participant/register <color:#16A085>[49]</color>
+  "Daemon" [#gray]--> "Host": participant_list_updated <color:#16A085>[49]</color>
+  "Participant" [#gray]-> "Daemon": GET /{session_id}/api/slides <color:#E74C3C>[60]</color>
+  "Participant" [#gray]-> "Daemon": GET /api/participant/state <color:#D35400>[45]</color>
+  "Daemon" [#gray]--> "Participant": active_participants_count_updated <color:#1ABC9C>[86]</color>
+  "Daemon" [#gray]--> "Host": participant_list_updated <color:#8E44AD>[14]</color>
+  "Participant" [#gray]-> "Daemon": PUT /api/participant/name <color:#2E86C1>[81]</color>
+  "Daemon" [#gray]--> "Host": participant_list_updated <color:#2E86C1>[81]</color>
+  "Participant" [#gray]-> "Daemon": GET /{session_id}/api/slides <color:#F39C12>[53]</color>
+  "Participant" [#gray]-> "Daemon": POST /api/participant/register <color:#E74C3C>[30]</color>
+  "Daemon" [#gray]--> "Host": participant_list_updated <color:#E74C3C>[30]</color>
+  "Participant" [#gray]-> "Daemon": GET /{session_id}/api/slides <color:#8E44AD>[44]</color>
+  "Participant" [#gray]-> "Daemon": GET /api/participant/state <color:#2980B9>[18]</color>
+  "Daemon" [#gray]--> "Participant": active_participants_count_updated <color:#1ABC9C>[76]</color>
+  "Daemon" [#gray]--> "Host": participant_list_updated <color:#8E44AD>[04]</color>
+end
+"Participant" -> "Daemon": PUT /api/participant/name <color:#2980B9>[88]</color>
+"Daemon" --> "Host": participant_list_updated <color:#2980B9>[88]</color>
+"Participant" -> "Daemon": GET /{session_id}/api/slides/check/{slug} <color:#2980B9>[38]</color>
+"Daemon" --> "Participant": slides_cache_status <color:#2980B9>[38]</color>
+"Daemon" -> "Railway": POST /api/slides/download-from-gdrive/{slug} <color:#2980B9>[38]</color>
+"Participant" -> "Daemon": GET /{session_id}/api/slides <color:#2980B9>[78]</color>
+"Participant" -> "Daemon": GET /{session_id}/api/slides <color:#27AE60>[22]</color>
+"Daemon" --> "Participant": slides_cache_status <color:#2980B9>[38]</color>
+"Participant" -> "Daemon": GET /{session_id}/api/slides <color:#2E86C1>[01]</color>
+"Participant" -> "Daemon": GET /{session_id}/api/slides <color:#F39C12>[83]</color>
+"Participant" -> "Daemon": GET /{session_id}/api/slides/check/{slug} <color:#27AE60>[12]</color>
+
+== Navigate to page and resume ==
+group init
+  "Daemon" [#gray]--> "Participant": active_participants_count_updated <color:#C0392B>[47]</color>
+  "Daemon" [#gray]--> "Participant": active_participants_count_updated <color:#16A085>[09]</color>
+  "Host" [#gray]-> "Daemon": DELETE /api/{session_id}/host/scores <color:#8E44AD>[04]</color>
+  "Host" [#gray]-> "Daemon": GET /host/{session_id} <color:#8E44AD>[54]</color>
+  "Host" [#gray]-> "Daemon": GET /api/{session_id}/host/state <color:#2980B9>[78]</color>
+  "Participant" [#gray]-> "Daemon": GET /{session_id}/api/slides <color:#16A085>[79]</color>
+  "Participant" [#gray]-> "Daemon": POST /api/participant/register <color:#27AE60>[22]</color>
+  "Daemon" [#gray]--> "Host": participant_list_updated <color:#27AE60>[22]</color>
+  "Participant" [#gray]-> "Daemon": GET /api/participant/state <color:#C0392B>[67]</color>
+  "Participant" [#gray]-> "Daemon": GET /{session_id}/api/slides <color:#D35400>[15]</color>
+end
+"Participant" -> "Daemon": PUT /api/participant/name <color:#E74C3C>[50]</color>
+"Daemon" --> "Host": participant_list_updated <color:#E74C3C>[50]</color>
+"Daemon" --> "Participant": active_participants_count_updated <color:#2E86C1>[61]</color>
+"Daemon" --> "Host": participant_list_updated <color:#E74C3C>[30]</color>
+"Participant" -> "Daemon": GET /{session_id}/api/slides/check/{slug} <color:#D35400>[45]</color>
+"Participant" -> "Daemon": GET /{session_id}/api/slides/check/{slug} <color:#8E44AD>[34]</color>
+
+== Host updates a slide ==
+group init
+  "Daemon" [#gray]--> "Participant": active_participants_count_updated <color:#2980B9>[98]</color>
+  "Host" [#gray]-> "Daemon": DELETE /api/{session_id}/host/scores <color:#C0392B>[47]</color>
+  "Host" [#gray]-> "Daemon": GET /host/{session_id} <color:#F39C12>[13]</color>
+  "Host" [#gray]-> "Daemon": GET /api/{session_id}/host/state <color:#27AE60>[32]</color>
+  "Participant" [#gray]-> "Daemon": GET /{session_id}/api/slides <color:#8E44AD>[94]</color>
+  "Participant" [#gray]-> "Daemon": POST /api/participant/register <color:#E74C3C>[20]</color>
+  "Daemon" [#gray]--> "Host": participant_list_updated <color:#E74C3C>[20]</color>
+  "Participant" [#gray]-> "Daemon": GET /{session_id}/api/slides <color:#2980B9>[48]</color>
+  "Participant" [#gray]-> "Daemon": GET /api/participant/state <color:#C0392B>[37]</color>
+  "Daemon" [#gray]--> "Participant": active_participants_count_updated <color:#2E86C1>[41]</color>
+  "Daemon" [#gray]--> "Host": participant_list_updated <color:#16A085>[59]</color>
+  "Participant" [#gray]-> "Daemon": PUT /api/participant/name <color:#2980B9>[38]</color>
+  "Daemon" [#gray]--> "Host": participant_list_updated <color:#2980B9>[38]</color>
+  "Participant" [#gray]-> "Daemon": GET /{session_id}/api/slides/check/{slug} <color:#2E86C1>[81]</color>
+  "Daemon" [#gray]--> "Participant": slides_cache_status <color:#2E86C1>[81]</color>
+  "Daemon" [#gray]-> "Railway": POST /api/slides/download-from-gdrive/{slug} <color:#2E86C1>[81]</color>
+  "Participant" [#gray]-> "Daemon": GET /{session_id}/api/slides <color:#E74C3C>[00]</color>
+  "Daemon" [#gray]--> "Participant": slides_cache_status <color:#2E86C1>[81]</color>
+  "Participant" [#gray]-> "Daemon": GET /{session_id}/api/slides <color:#C0392B>[37]</color>
+end
+"Participant" -> "Daemon": GET /{session_id}/api/slides <color:#F39C12>[33]</color>
+"Participant" -> "Daemon": GET /{session_id}/api/slides <color:#27AE60>[42]</color>
+"Participant" -> "Daemon": GET /{session_id}/api/slides/check/{slug} <color:#2980B9>[78]</color>
 
 
 @enduml

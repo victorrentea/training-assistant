@@ -239,7 +239,7 @@ def generate_puml(traces_path: str, family: str, output: str,
     lines.append("")
 
     if scenarios:
-        for i, sc in enumerate(scenarios):
+        for sc in scenarios:
             start = sc.get("start_ns", 0)
             end = sc["end_ns"]
             sc_edges = [e for e in edges if start <= e[3] <= end]
