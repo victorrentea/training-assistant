@@ -974,7 +974,8 @@ def run() -> None:
             log.info("session", f"Sent active session to backend: '{session_name}'")
         except Exception as e:
             log.error("session", f"Session re-sync on reconnect failed: {e}")
-        _broadcast_notes_summary_counts(notes_summary_probe_prev)
+        # notes/summary counts are already included in GET /api/participant/state
+        # so no broadcast needed on reconnect — participants fetch state on load.
     ws_client.on_connect(_sync_session_on_reconnect)
 
     # Re-probe Railway slide cache on every (re)connect (e.g. after Railway redeploy)
