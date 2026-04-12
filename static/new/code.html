@@ -896,6 +896,9 @@ async function selectTopic(el, event, slide) {
         return;
       }
     }
+    var dlUrl = slide.url + (slide.url.includes('?') ? '&' : '?') + 'download=1';
+    var dlBtn = document.getElementById('pdf-download');
+    if (dlBtn) { dlBtn.href = dlUrl; dlBtn.setAttribute('download', slide.name || ''); }
     window.loadPdf(slide.url);
   }
 }
