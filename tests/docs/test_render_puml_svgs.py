@@ -184,7 +184,6 @@ def test_main_check_mode_returns_one_and_prints_stale_paths(tmp_path, monkeypatc
 
 def test_main_check_mode_returns_zero_when_svg_matches(tmp_path, monkeypatch, capsys):
     manual_dir = tmp_path / "docs" / "sequences" / "manual"
-    svg_dir = manual_dir / "svg"
     source = manual_dir / "01-a.puml"
     _write_puml(source, "first")
 
