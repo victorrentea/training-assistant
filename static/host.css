@@ -1414,6 +1414,21 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
     min-width: 48px;
 }
 
+.talk-pptx-drop {
+  display: none;
+  cursor: pointer;
+  border: 2px dashed #f5a623;
+  border-radius: 6px;
+  padding: .5rem 1rem;
+  color: #f5a623;
+  font-size: .8rem;
+  text-align: center;
+  margin-bottom: .4rem;
+  transition: background .15s;
+}
+.talk-pptx-drop:hover {
+  background: rgba(245, 166, 35, .12);
+}
 .conference-qr-container {
   display: none;
   flex-direction: column;
@@ -1705,15 +1720,6 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
   border: 2px solid #f5a623;
   border-radius: 4px;
   padding: 4px 8px;
-}
-.host-layout.pptx-drop-hover::after {
-  content: '';
-  position: fixed;
-  inset: 0;
-  border: 3px dashed #f5a623;
-  border-radius: 6px;
-  pointer-events: none;
-  z-index: 9999;
 }
 .session-fragile-blink {
   animation: blink-yellow 0.7s ease-in-out infinite;

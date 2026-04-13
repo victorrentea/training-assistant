@@ -237,6 +237,12 @@
       <div id="slides-left-qr-code"></div>
     </div>
 
+    <!-- Conference mode: PPTX drop zone (above QR) -->
+    <label id="talk-pptx-drop" class="talk-pptx-drop" title="Drop PPTX or click to browse">
+      <input type="file" accept=".pptx,.ppt" style="display:none" onchange="onTalkPptxSelected(this)">
+      <span>Drop PPTX or click to browse</span>
+    </label>
+
     <!-- Conference mode: QR code shown in left column -->
     <div id="conference-qr" class="conference-qr-container">
       <div id="conference-qr-code"></div>

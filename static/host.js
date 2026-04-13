@@ -1063,6 +1063,7 @@
     // Detect light/dark mode for QR color adaptation
     const isLight = window.matchMedia('(prefers-color-scheme: light)').matches;
 
+    const pptxDrop = document.getElementById('talk-pptx-drop');
     const leftCol = document.querySelector('.host-col-left');
     if (isConference) {
       rightCol.style.display = 'none';
@@ -1070,6 +1071,7 @@
       leftCol.classList.add('conference-layout');
       if (leftTabsWrapper) leftTabsWrapper.style.display = 'none';
       if (slidesLeftQR) slidesLeftQR.style.display = 'flex';
+      if (pptxDrop) pptxDrop.style.display = 'block';
       confQR.style.display = 'none';
       if (debateTab) debateTab.style.display = 'none';
       if (tokenCost) tokenCost.style.display = 'none';
@@ -1084,6 +1086,7 @@
       leftCol.classList.remove('conference-layout');
       if (leftTabsWrapper) leftTabsWrapper.style.display = _currentActivity === 'none' ? 'none' : 'flex';
       if (slidesLeftQR) slidesLeftQR.style.display = _currentActivity === 'none' ? 'flex' : 'none';
+      if (pptxDrop) pptxDrop.style.display = 'none';
       confQR.style.display = 'none';
       if (debateTab) debateTab.style.display = '';
       if (tokenCost) tokenCost.style.display = '';
@@ -3586,42 +3589,18 @@ function stopInactivityTracking() {
   );
 }
 
-// ── Talk mode: drag-and-drop PPTX to log Google Drive URL ──
-(function () {
-  const layout = document.querySelector('.host-layout');
-  if (!layout) return;
-
-  layout.addEventListener('dragover', (e) => {
-    if (currentMode !== 'talk') return;
-    e.preventDefault();
-    layout.classList.add('pptx-drop-hover');
+// ── Talk mode: PPTX file picker / drop zone ──
+function onTalkPptxSelected(input) {
+  const file = input.files[0];
+  if (!file) return;
+  input.value = '';  // reset so same file can be re-selected
+  fetch('/api/session/talk-presentation-path', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({path: file.name}),
+  }).then(r => {
+    if (!r.ok) r.text().then(t => console.warn('talk-presentation-path failed:', r.status, t));
   });
-
-  layout.addEventListener('dragleave', (e) => {
-    if (!layout.contains(e.relatedTarget)) {
-      layout.classList.remove('pptx-drop-hover');
-    }
-  });
-
-  window.addEventListener('drop', (e) => {
-    layout.classList.remove('pptx-drop-hover');
-    if (currentMode !== 'talk') return;
-    if (!layout.contains(e.target) && e.target !== layout) return;
-    e.preventDefault();
-
-    const file = e.dataTransfer.files[0];
-    if (!file) return;
-    const path = file.name;
-    if (!path.endsWith('.pptx') && !path.endsWith('.ppt')) return;
-
-    fetch('/api/session/talk-presentation-path', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({path}),
-    }).then(r => {
-      if (!r.ok) console.warn('talk-presentation-path failed:', r.status);
-    });
-  }, true);
-})();
+}
 
 startInactivityTracking();
