@@ -127,6 +127,13 @@
         body {
           min-height: max(884px, 100dvh);
         }
+        @keyframes slide-highlight {
+          0%   { box-shadow: inset 0 0 0 3px #a3a6ff; }
+          100% { box-shadow: inset 0 0 0 3px transparent; }
+        }
+        .slide-highlight {
+          animation: slide-highlight 1s ease-out forwards;
+        }
     </style>
 </head>
 <body class="bg-background text-on-background font-body min-h-screen flex flex-col">
@@ -284,7 +291,10 @@
         _renderedPages = _pdfDoc.numPages;
         // Scroll to current slide after initial render
         const initialTarget = container.querySelector(`section[data-page="${pageNum}"]`);
-        if (initialTarget) initialTarget.scrollIntoView({ block: 'end' });
+        if (initialTarget) {
+          initialTarget.scrollIntoView({ block: 'end' });
+          initialTarget.classList.add('slide-highlight');
+        }
       }
       if (placeholder) placeholder.style.display = 'none';
     } catch (e) {
@@ -304,7 +314,11 @@
   function scrollToCurrentSlide() {
     var container = document.getElementById('pdf-pages');
     var target = container && container.querySelector('section[data-page="' + _currentPage + '"]');
-    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    if (!target) return;
+    target.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    target.classList.remove('slide-highlight');
+    void target.offsetWidth; // restart animation
+    target.classList.add('slide-highlight');
   }
 
   function _getPage(sc) { return sc.page ?? sc.current_page ?? sc.slide ?? 1; }
