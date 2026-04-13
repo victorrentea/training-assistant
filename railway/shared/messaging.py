@@ -3,13 +3,14 @@ Broadcast infrastructure.
 
 broadcast() sends semantic events to all connected clients.
 broadcast_participant_update() sends total known participant count
-to all connected participants.
+to all connected participants (throttled to max 1/sec).
 """
 import json
 import logging
 from typing import Optional
 
 from railway.shared.state import state
+from railway.shared.throttle import AsyncThrottle
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +48,7 @@ async def broadcast(message: dict, exclude: Optional[str] = None):
     await _broadcast_foreach(_send)
 
 
-async def broadcast_participant_update():
+async def _broadcast_participant_update_now():
     """Send active (currently connected) participant count update to all connected participants (not host)."""
     count = len([pid for pid in state.participants if pid not in SPECIAL_PIDS])
 
@@ -61,6 +62,14 @@ async def broadcast_participant_update():
             return
         await ws.send_text(msg)
     await _broadcast_foreach(_send)
+
+
+_participant_update_throttle = AsyncThrottle(1.0, _broadcast_participant_update_now)
+
+
+def broadcast_participant_update():
+    """Schedule a throttled participant count broadcast (max 1/sec)."""
+    _participant_update_throttle.schedule()
 
 
 async def _send_to_special(key: str, message: dict):

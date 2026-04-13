@@ -167,7 +167,7 @@ async def _handle_participant_registered(data: dict):
         state.participant_avatars[pid] = avatar
     if isinstance(score, (int, float)):
         state.scores[pid] = int(score)
-    await broadcast_participant_update()
+    broadcast_participant_update()
 
 
 async def _handle_participant_renamed(data: dict):
@@ -177,7 +177,7 @@ async def _handle_participant_renamed(data: dict):
     if not pid or pid.startswith("__") or not isinstance(name, str):
         return
     state.participant_names[pid] = name
-    await broadcast_participant_update()
+    broadcast_participant_update()
 
 
 async def _handle_participant_avatar_updated(data: dict):
@@ -187,7 +187,7 @@ async def _handle_participant_avatar_updated(data: dict):
     if not pid or pid.startswith("__") or not isinstance(avatar, str):
         return
     state.participant_avatars[pid] = avatar
-    await broadcast_participant_update()
+    broadcast_participant_update()
 
 
 async def _handle_participant_location(data: dict):
@@ -197,7 +197,7 @@ async def _handle_participant_location(data: dict):
     if not pid or pid.startswith("__") or not isinstance(location, str):
         return
     state.locations[pid] = location
-    await broadcast_participant_update()
+    broadcast_participant_update()
 
 
 _DAEMON_MSG_HANDLERS = {
@@ -319,7 +319,7 @@ async def _handle_participant_connection(websocket: WebSocket, pid: str, is_host
         name = state.participant_names.get(pid, "")
         logger.info(f"WS connected: {pid} name={name!r} ({len(state.participants)} total)")
         await push_to_daemon({"type": MSG_PARTICIPANT_PRESENCE, "uuid": pid, "online": True})
-        await broadcast_participant_update()
+        broadcast_participant_update()
 
     try:
         while True:
@@ -337,7 +337,7 @@ async def _handle_participant_connection(websocket: WebSocket, pid: str, is_host
         logger.info(f"Disconnected: {pid} ({len(state.participants)} remaining)")
         if not is_host:
             await push_to_daemon({"type": MSG_PARTICIPANT_PRESENCE, "uuid": pid, "online": False})
-            await broadcast_participant_update()
+            broadcast_participant_update()
 
 
 @session_router.websocket("/ws/{session_id}/{participant_id}")

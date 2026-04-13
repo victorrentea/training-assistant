@@ -1,4 +1,4 @@
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -16,7 +16,7 @@ def clean_state():
 
 @pytest.mark.anyio
 async def test_participant_registered_write_back_updates_state_and_broadcasts():
-    with patch("railway.features.ws.router.broadcast_participant_update", new=AsyncMock()) as broadcast_mock:
+    with patch("railway.features.ws.router.broadcast_participant_update", new=MagicMock()) as broadcast_mock:
         await ws_router._handle_participant_registered(
             {
                 "type": "participant_registered",
@@ -31,12 +31,12 @@ async def test_participant_registered_write_back_updates_state_and_broadcasts():
     assert state.participant_names["uuid-1"] == "Alice"
     assert state.participant_avatars["uuid-1"] == "gandalf.png"
     assert state.scores["uuid-1"] == 5
-    broadcast_mock.assert_awaited_once()
+    broadcast_mock.assert_called_once()
 
 
 @pytest.mark.anyio
 async def test_participant_registered_ignores_invalid_id():
-    with patch("railway.features.ws.router.broadcast_participant_update", new=AsyncMock()) as broadcast_mock:
+    with patch("railway.features.ws.router.broadcast_participant_update", new=MagicMock()) as broadcast_mock:
         await ws_router._handle_participant_registered(
             {
                 "type": "participant_registered",
@@ -46,4 +46,4 @@ async def test_participant_registered_ignores_invalid_id():
         )
 
     assert "__host__" not in state.participant_names
-    broadcast_mock.assert_not_awaited()
+    broadcast_mock.assert_not_called()
