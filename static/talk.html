@@ -485,6 +485,7 @@ function _renderSpeaker() {
         var msg = JSON.parse(e.data);
         if (msg.type === 'slides_current' && msg.slides_current) _applySlidesCurrent(msg.slides_current).catch(function() {});
         if (msg.type === 'announce' && msg.slides_current) _applySlidesCurrent(msg.slides_current).catch(function() {});
+        if (msg.type === 'talk_pdf_ready' && msg.slug) _loadCatalog().then(function() { _applySlidesCurrent({ slug: msg.slug, page: 1 }).catch(function() {}); });
         if (msg.type === 'emoji_counters_updated' && msg.counters) _applyEmojiCounters(msg.counters);
         if (msg.type === 'active_participants_count_updated') {
           document.getElementById('pax-count').textContent = msg.count;
@@ -524,7 +525,8 @@ function _renderSpeaker() {
         headers: { 'X-Participant-ID': _uuid }
       }).then(function(r) { return r.json(); }).catch(function() { return {}; });
       console.log('[talk] state:', state);
-      if (state.slides_current) await _applySlidesCurrent(state.slides_current);
+      var sc = state.slides_current || (state.talk_presentation_slug ? { slug: state.talk_presentation_slug, page: 1 } : null);
+      if (sc) await _applySlidesCurrent(sc);
       if (state.emoji_counters) _applyEmojiCounters(state.emoji_counters);
       if (state.last_git_url) {
         var gitBtn = document.getElementById('btn-git-repo');
