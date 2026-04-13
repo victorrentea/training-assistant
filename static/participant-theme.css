@@ -9,6 +9,7 @@
 /* ── Light palette (matches hardcoded values in tailwind.css) ── */
 :root {
   --color-primary:                    rgb(69 85 186);
+  --color-primary-dim:                rgb(56 72 173);
   --color-primary-container:          rgb(223 224 255);
   --color-on-primary:                 rgb(249 246 255);
   --color-on-primary-container:       rgb(55 71 172);
@@ -27,6 +28,7 @@
 @media (prefers-color-scheme: dark) {
   :root {
     --color-primary:                    rgb(188 196 255);
+    --color-primary-dim:                rgb(160 168 230);
     --color-primary-container:          rgb(39 54 154);
     --color-on-primary:                 rgb(17 35 120);
     --color-on-primary-container:       rgb(223 224 255);
@@ -53,7 +55,7 @@
   .bg-surface-container-high   { background-color: var(--color-surface-container-high); }
   .bg-surface-container-highest{ background-color: var(--color-surface-container-highest); }
   .bg-primary                  { background-color: var(--color-primary); }
-  .bg-primary-dim              { background-color: rgb(160 168 230); }
+  .bg-primary-dim              { background-color: var(--color-primary-dim); }
   .bg-primary-container        { background-color: var(--color-primary-container); }
   .bg-outline-variant          { background-color: var(--color-outline-variant); }
 
