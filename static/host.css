@@ -520,6 +520,10 @@ body {
   opacity: 1;
   pointer-events: auto;
 }
+.compile-confirm-open .activity-log-popover {
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
 .activity-log-popover.slides-catalog-popover {
   padding: 5px 11px;
 }

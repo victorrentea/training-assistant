@@ -3158,22 +3158,31 @@ function hideStopConfirm() {
   const bubble = document.getElementById('stop-confirm-bubble-left');
   if (bubble) bubble.style.display = 'none';
 }
+let _slidesCompileCloseHandler = null;
+
 function toggleSlidesCompileConfirm(evt) {
   if (evt) evt.stopPropagation();
   const bubble = document.getElementById('slides-compile-confirm');
+  const wrapper = document.getElementById('slides-log-hover');
   if (!bubble) return;
   const opening = bubble.style.display === 'none';
+  // Always clean up any existing listener first
+  if (_slidesCompileCloseHandler) {
+    document.removeEventListener('click', _slidesCompileCloseHandler);
+    _slidesCompileCloseHandler = null;
+  }
   bubble.style.display = opening ? '' : 'none';
+  if (wrapper) wrapper.classList.toggle('compile-confirm-open', opening);
   if (opening) {
-    // Close when clicking anywhere outside
-    setTimeout(() => {
-      document.addEventListener('click', function _close(e) {
-        if (!bubble.contains(e.target)) {
-          bubble.style.display = 'none';
-          document.removeEventListener('click', _close);
-        }
-      });
-    }, 0);
+    _slidesCompileCloseHandler = function(e) {
+      if (!bubble.contains(e.target)) {
+        bubble.style.display = 'none';
+        if (wrapper) wrapper.classList.remove('compile-confirm-open');
+        document.removeEventListener('click', _slidesCompileCloseHandler);
+        _slidesCompileCloseHandler = null;
+      }
+    };
+    setTimeout(() => document.addEventListener('click', _slidesCompileCloseHandler), 0);
   }
 }
 function triggerSlidesCompilationDownload() {
