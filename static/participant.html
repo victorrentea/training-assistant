@@ -617,46 +617,20 @@ function _isSlidesFollowEnabled() {
 }
 function _getHostCurrentPage(slidesCurrent) {
   var page = slidesCurrent
-    ? (slidesCurrent.current_page ?? slidesCurrent.slide ?? slidesCurrent.slide_number)
+    ? (slidesCurrent.page ?? slidesCurrent.current_page ?? slidesCurrent.slide)
     : null;
   var n = Number(page);
   return Number.isFinite(n) ? Math.max(1, n) : 1;
 }
 function _hostSlidesCurrentKey(slidesCurrent) {
   if (!slidesCurrent) return 'none';
-  return [
-    String(slidesCurrent.slug || ''),
-    String(slidesCurrent.url || ''),
-    String(_getHostCurrentPage(slidesCurrent)),
-    String(slidesCurrent.presentation_name || ''),
-    String(slidesCurrent.source_file || ''),
-    String(slidesCurrent.updated_at || ''),
-  ].join('|');
+  return (slidesCurrent.slug || '') + '|' + _getHostCurrentPage(slidesCurrent);
 }
 function _findSlideForHostCurrent(slidesCurrent) {
   if (!slidesCurrent || !_slidesCatalog.length) return null;
   var targetSlug = String(slidesCurrent.slug || '').trim();
-  var targetUrl = String(slidesCurrent.url || '').trim();
-  if (targetSlug) {
-    var bySlugAndUrl = _slidesCatalog.find(function(slide) {
-      return slide.slug === targetSlug && (!targetUrl || slide.url === targetUrl);
-    });
-    if (bySlugAndUrl) return bySlugAndUrl;
-    var bySlug = _slidesCatalog.find(function(slide) { return slide.slug === targetSlug; });
-    if (bySlug) return bySlug;
-  }
-  if (targetUrl) {
-    var byUrl = _slidesCatalog.find(function(slide) { return slide.url === targetUrl; });
-    if (byUrl) return byUrl;
-  }
-  var hostToken = _normalizeSlideMatchToken(slidesCurrent.presentation_name || slidesCurrent.source_file || '');
-  if (!hostToken) return null;
-  return _slidesCatalog.find(function(slide) {
-    var nameToken = _normalizeSlideMatchToken(slide.name);
-    var slugToken = _normalizeSlideMatchToken(slide.slug);
-    return (nameToken && (nameToken.indexOf(hostToken) >= 0 || hostToken.indexOf(nameToken) >= 0))
-      || (slugToken && (slugToken.indexOf(hostToken) >= 0 || hostToken.indexOf(slugToken) >= 0));
-  }) || null;
+  if (!targetSlug) return null;
+  return _slidesCatalog.find(function(slide) { return slide.slug === targetSlug; }) || null;
 }
 function _findSlideByHistoryFileName(fileName) {
   var token = _normalizeSlideMatchToken(fileName);

@@ -1031,11 +1031,8 @@ def run() -> None:
                         )
                         if _target and _target.get("matched", True):
                             _sc = {
-                                "url": _target["url"],
                                 "slug": _target["slug"],
-                                "source_file": _deck,
-                                "presentation_name": _deck,
-                                "current_page": _slide_num,
+                                "page": _slide_num,
                             }
                             if misc_state.slides_current != _sc:
                                 misc_state.slides_current = _sc
@@ -1048,7 +1045,7 @@ def run() -> None:
                                 from daemon.ws_messages import SlidesCurrentMsg
                                 ws_publish.broadcast(SlidesCurrentMsg(slides_current=None))
                     else:
-                        _sc = {"presentation_name": _deck, "current_page": _slide_num}
+                        _sc = {"page": _slide_num}
                         if misc_state.slides_current != _sc:
                             misc_state.slides_current = _sc
                             from daemon.ws_messages import SlidesCurrentMsg

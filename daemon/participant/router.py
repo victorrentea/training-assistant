@@ -13,7 +13,7 @@ from types import SimpleNamespace
 import certifi
 from fastapi import APIRouter, Request, status
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel
 from starlette.responses import Response
 
 from daemon.host_state_router import _build_host_participants_list
@@ -185,7 +185,7 @@ class DebateArgumentParticipant(BaseModel):
 
 class SlidesCurrentPayload(BaseModel):
     slug: str | None = None
-    model_config = ConfigDict(extra="allow")
+    page: int | None = None
 
 
 class WordcloudData(BaseModel):

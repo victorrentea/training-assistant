@@ -2824,7 +2824,11 @@ components:
           - type: string
           - type: 'null'
           title: Slug
-      additionalProperties: true
+        page:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Page
       type: object
       title: SlidesCurrentPayload
     SlidesLogEntry:
