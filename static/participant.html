@@ -1,246 +1,1414 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Workshop - Interact</title>
-  <link rel="icon" type="image/svg+xml" href="/static/favicon-participant.svg" />
-  <link rel="stylesheet" href="/static/common.css" />
-  <link rel="stylesheet" href="/static/participant.css" />
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.149/web/pdf_viewer.min.css" />
-  <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/d3-cloud@1/build/d3.layout.cloud.js"></script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/marked@9/marked.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/mammoth@1/mammoth.browser.min.js"></script>
-  <!-- OpenTelemetry (conditional — activated by meta tag) -->
-  <script src="/static/vendor/opentelemetry-browser.min.js"></script>
-  <script src="/static/otel-init.js"></script>
-</head>
-<body>
 
-  <div id="prejoin-screen" class="prejoin-screen" style="display:none;">
-    <div class="prejoin-card">
-      <div class="prejoin-title">Choose your name</div>
-      <p class="prejoin-subtitle">You can pick one now, or get one assigned randomly.</p>
-      <input id="prejoin-name-input" class="prejoin-name-input" type="text" maxlength="32" placeholder="Your name" autocomplete="name" />
-      <button id="prejoin-join-btn" class="prejoin-join-btn" type="button" disabled>Join with this name</button>
-      <button id="prejoin-random-btn" class="prejoin-random-btn" type="button">Assign randomly (you can change later)</button>
-      <div id="prejoin-error" class="prejoin-error"></div>
-    </div>
-  </div>
-
-  <div id="main-screen">
-    <div class="status-bar tooltip-below">
-      <span class="status-left">
-        <img id="my-avatar" class="avatar has-tooltip" style="display:none" alt="" data-tooltip="Click to view or change">
-        <span>
-            <strong id="display-name" class="editable-name has-tooltip" data-tooltip="Click to change your name"></strong>
-
-            <span id="name-edit-wrap" style="display:none;">
-                <input id="name-edit-input" type="text" maxlength="32" />
-            </span>
-        </span>
-        <span id="my-score" class="has-tooltip" data-tooltip="Your score" style="display:none; color:var(--accent2); font-weight:700; font-size:.85rem;"></span>
-      </span>
-      <span class="status-center"></span>
-      <span class="status-right">
-        <span id="session-title" style="display:none; font-size:.85rem; color:var(--muted); font-weight:600; white-space:nowrap;"></span>
-        <button id="agenda-btn" class="header-link-btn has-tooltip" data-tooltip="View agenda" onclick="toggleAgendaModal()" style="display:none"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 16 16" fill="currentColor" style="vertical-align:middle"><path d="M4 1h8a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2zm0 1a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1H4zm1 2h6v1H5V4zm0 2.5h6v1H5v-1zm0 2.5h4v1H5V9z"/></svg> Agenda</button>
-        <button id="notes-btn" class="header-link-btn has-tooltip" data-tooltip="(none yet)" onclick="toggleNotesModal()" disabled>📝 <span id="notes-count"></span> Notes</button>
-        <button id="summary-btn" class="header-link-btn has-tooltip" data-tooltip="(none yet)" onclick="toggleSummaryModal()" disabled>🧠 <span id="summary-count"></span> Key Points</button>
-        <a id="gdrive-btn" class="header-link-btn" href="#" target="_blank" style="display:none; text-decoration:none;" title="Open session folder in Google Drive"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 87.3 78" style="vertical-align:middle"><path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8H0c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/><path d="m43.65 25-13.75-23.8c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44a9.06 9.06 0 0 0-1.2 4.5h27.5z" fill="#00ac47"/><path d="M73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5H59.85l5.85 10.15z" fill="#ea4335"/><path d="M43.65 25 57.4 1.2C56.05.4 54.5 0 52.85 0H34.44c-1.65 0-3.2.45-4.55 1.2z" fill="#00832d"/><path d="M59.85 53h27.45c0-1.55-.4-3.1-1.2-4.5L73.55 27.8c-.8-1.4-1.95-2.5-3.3-3.3L57.5 48.3z" fill="#2684fc"/><path d="m27.6 53-13.75 23.8c1.35.8 2.9 1.2 4.55 1.2h50.9c1.65 0 3.2-.45 4.55-1.2L59.85 53z" fill="#ffba00"/></svg> Drive</a>
-        <button id="notif-btn" style="display:none" class="has-tooltip" data-tooltip="Enable notifications">🔔</button>
-        <span id="location-prompt" class="location-prompt tooltip-below has-tooltip" onclick="requestLocation()" data-tooltip="Share your location (optional)">📍 Location?</span>
-      </span>
-    </div>
-<div id="content"></div>
-  </div>
-  <aside id="slides-dock" class="slides-dock" aria-label="Available slides">
-    <div class="slides-dock-head">
-      <span class="slides-dock-title">Slides</span>
-      <div class="slides-dock-controls">
-        <button id="slides-follow-btn" type="button" class="slides-follow-btn" data-tooltip="Follow trainer slide" data-tooltip-emoji="🎯">🎯 Follow</button>
-        <div class="slides-view-toggle" role="group" aria-label="Slides viewer mode" style="display:none">
-          <button id="slides-view-pdfjs" type="button" class="slides-view-btn" data-tooltip="Renders slides in-browser — works in all browsers." data-tooltip-emoji="📄">PDF.js</button>
-          <button id="slides-view-native" type="button" class="slides-view-btn" data-tooltip="Uses your browser's built-in PDF viewer." data-tooltip-emoji="🖥️">Native</button>
-        </div>
-      </div>
-    </div>
-    <div id="slides-list" class="slides-list" aria-label="Available slides"></div>
-    <div id="slide-history-list" class="slide-history-list" style="display:none"></div>
-  </aside>
-
-    <div id="agenda-overlay" class="modal-overlay summary-overlay">
-      <div class="modal-dialog summary-dialog" onclick="event.stopPropagation()">
-        <div class="summary-header">
-          <span><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="currentColor" style="vertical-align:middle"><path d="M4 1h8a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2zm0 1a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1H4zm1 2h6v1H5V4zm0 2.5h6v1H5v-1zm0 2.5h4v1H5V9z"/></svg> Agenda</span>
-          <button class="summary-close" onclick="closeAgendaModal()">✕</button>
-        </div>
-        <div id="agenda-content" class="agenda-content" style="padding:1rem; overflow-y:auto; flex:1;"></div>
-      </div>
-    </div>
-<div id="notes-overlay" class="modal-overlay summary-overlay">
-  <div class="modal-dialog summary-dialog" onclick="event.stopPropagation()">
-    <div class="summary-header">
-      <span>📝 Session Notes</span>
-      <span>
-        <button id="participant-notes-download" class="notes-download-btn" style="display:none" onclick="downloadParticipantNotes()"><svg viewBox="0 0 20 20" aria-hidden="true" focusable="false" style="width:1em;height:1em;fill:currentColor;vertical-align:-.15em;margin-right:.3em;"><path d="M10 3.25a.75.75 0 0 1 .75.75v6.19l2.22-2.22a.75.75 0 1 1 1.06 1.06l-3.5 3.5a.75.75 0 0 1-1.06 0l-3.5-3.5a.75.75 0 1 1 1.06-1.06l2.22 2.22V4a.75.75 0 0 1 .75-.75Z"></path><path d="M4.5 13.75a.75.75 0 0 1 .75.75v1h9.5v-1a.75.75 0 0 1 1.5 0V16A1.5 1.5 0 0 1 14.75 17.5h-9.5A1.5 1.5 0 0 1 3.75 16v-1.5a.75.75 0 0 1 .75-.75Z"></path></svg> Download .txt</button>
-        <a id="notes-newtab" href="/notes" target="_blank" class="modal-newtab-btn" title="Open in new tab">↗</a>
-        <button class="summary-close" onclick="closeNotesModal()">✕</button>
-      </span>
-    </div>
-    <pre id="notes-content" class="notes-content"></pre>
-  </div>
-</div>
-
-<div id="summary-overlay" class="modal-overlay summary-overlay">
-  <div class="modal-dialog summary-dialog" onclick="event.stopPropagation()">
-    <div class="summary-header">
-      <span>🧠 Key Points</span>
-      <span>
-
-        <button id="keypoints-download-md" class="notes-download-btn" style="display:none" onclick="downloadKeyPoints()" title="Download as Markdown"><svg viewBox="0 0 20 20" aria-hidden="true" focusable="false" style="width:1em;height:1em;fill:currentColor;vertical-align:-.15em;margin-right:.3em;"><path d="M10 3.25a.75.75 0 0 1 .75.75v6.19l2.22-2.22a.75.75 0 1 1 1.06 1.06l-3.5 3.5a.75.75 0 0 1-1.06 0l-3.5-3.5a.75.75 0 1 1 1.06-1.06l2.22 2.22V4a.75.75 0 0 1 .75-.75Z"></path><path d="M4.5 13.75a.75.75 0 0 1 .75.75v1h9.5v-1a.75.75 0 0 1 1.5 0V16A1.5 1.5 0 0 1 14.75 17.5h-9.5A1.5 1.5 0 0 1 3.75 16v-1.5a.75.75 0 0 1 .75-.75Z"></path></svg> Download .md</button>
-        <button id="keypoints-download-pdf" class="notes-download-btn" style="display:none" onclick="downloadKeyPointsPDF()" title="Save as PDF"><svg viewBox="0 0 20 20" aria-hidden="true" focusable="false" style="width:1em;height:1em;fill:currentColor;vertical-align:-.15em;margin-right:.3em;"><path d="M10 3.25a.75.75 0 0 1 .75.75v6.19l2.22-2.22a.75.75 0 1 1 1.06 1.06l-3.5 3.5a.75.75 0 0 1-1.06 0l-3.5-3.5a.75.75 0 1 1 1.06-1.06l2.22 2.22V4a.75.75 0 0 1 .75-.75Z"></path><path d="M4.5 13.75a.75.75 0 0 1 .75.75v1h9.5v-1a.75.75 0 0 1 1.5 0V16A1.5 1.5 0 0 1 14.75 17.5h-9.5A1.5 1.5 0 0 1 3.75 16v-1.5a.75.75 0 0 1 .75-.75Z"></path></svg> Download PDF</button>
-        <a href="/notes" target="_blank" class="modal-newtab-btn" title="Open in new tab">↗</a>
-        <button class="summary-close" onclick="closeSummaryModal()">✕</button>
-      </span>
-    </div>
-    <div id="summary-content" class="summary-md-content"></div>
-    <div id="summary-time" class="summary-time"></div>
-  </div>
-</div>
-
-<div id="slides-overlay" class="slides-preview-overlay" onclick="closeSlidesModal()">
-  <div class="slides-preview-shell" onclick="event.stopPropagation()">
-    <div class="slides-viewer-area">
-      <div id="slides-empty" class="slides-empty" style="display:none;">No slides published yet.</div>
-      <div id="slides-error" class="slides-error" style="display:none;"></div>
-      <div id="slides-viewer-shell" class="slides-viewer-shell" style="display:none;">
-        <div id="slides-pdf-container" class="pdfViewerContainer">
-          <div id="slides-pdf-viewer" class="pdfViewer"></div>
-        </div>
-        <object id="slides-native-frame" type="application/pdf" aria-label="Slides preview"><p>PDF preview not supported by your browser.</p></object>
-        <div id="slides-native-overlay" class="slides-native-overlay"></div>
-        <div id="slides-native-update-banner" class="slides-native-update-banner" style="display:none">📄 New version available — click to reload</div>
-      </div>
-    </div>
-  </div>
-</div>
-<div id="slides-zoom-corner">
-  <button id="slides-zoom-out" class="slides-ctrl-btn slides-zoom-btn" type="button" data-tooltip="Zoom out" style="display:none">−</button>
-  <button id="slides-fit-width" class="slides-ctrl-btn slides-zoom-btn" type="button" data-tooltip="Fit to width" style="display:none"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg></button>
-  <button id="slides-zoom-in" class="slides-ctrl-btn slides-zoom-btn" type="button" data-tooltip="Zoom in" style="display:none">+</button>
-  <span id="slides-page-inline" class="slides-page-inline" style="display:none"></span>
-  <button id="slides-close-btn" class="slides-ctrl-btn slides-close-btn" type="button" data-tooltip="Close slides" onclick="closeSlidesModal()" style="display:none">✕</button>
-</div>
-<div id="slides-ui-blocker" class="slides-ui-blocker" style="display:none;" aria-live="polite" aria-busy="true">
-  <div class="slides-ui-blocker-card">
-    <div class="spinner slides-ui-spinner" aria-hidden="true"></div>
-    <div class="slides-progress-track" role="progressbar" aria-label="Slide download progress">
-      <div id="slides-ui-blocker-progress-fill" class="slides-progress-fill"></div>
-    </div>
-  </div>
-</div>
-
-<script src="/static/version.js"></script>
-<script src="/static/work-hours.js"></script>
-<script src="/static/version-age.js"></script>
-<script src="/static/version-reload.js"></script>
-<script src="/static/utils.js"></script>
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Event-Driven Architectures | Digital Sanctuary</title>
+<link rel="icon" type="image/svg+xml" href="/static/favicon-new.svg" />
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200;300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+body{visibility:hidden}
+.badge-new{margin-left:auto;font-size:.6rem;font-weight:700;letter-spacing:.05em;background:#ef4444;color:#fff;padding:.1rem .35rem;border-radius:999px;line-height:1.4}
+.badge-live{font-size:.6rem;font-weight:700;letter-spacing:.05em;background:#ef4444;color:#fff;padding:.1rem .35rem;border-radius:999px;line-height:1.4;animation:live-blink 2s ease-in-out infinite}
+@keyframes live-blink{0%,100%{opacity:1}50%{opacity:0.2}}
+@keyframes spin{to{transform:rotate(360deg)}}
+.nav-item{color:var(--color-on-surface-variant,#5e6b70)}
+.nav-item:hover{color:var(--color-on-surface,#161d1f);background-color:var(--color-surface-container-high,#dde3e5)}
+.nav-active{background-color:var(--color-primary-container,#dfe0ff)!important;color:var(--color-on-primary-container,#3747ac)!important;font-weight:600}
+.nav-active:hover{background-color:var(--color-primary-container,#dfe0ff)!important;color:var(--color-on-primary-container,#3747ac)!important}
+.topic-active{background-color:var(--color-primary-container,#dfe0ff)!important;color:var(--color-on-primary-container,#3747ac)!important;font-weight:600}
+</style>
+<script>document.fonts.ready.then(function(){document.body.style.visibility='visible'})</script>
 <script src="/static/emoji-float.js"></script>
-<script src="/static/participant.js"></script>
-<div class="version-tag" id="version-tag"></div>
-<script>
-  if (window.renderDeployAge) {
-    window.renderDeployAge('version-tag', { disableBranchTooltip: true });
-    // Reformat into 3 lines: "deployed\n2h ago\nbuilt at 30 Mar 14:30"
-    const _origUpdate = window.__updateDeployAge;
-    if (_origUpdate) {
-      window.__updateDeployAge = function() {
-        _origUpdate();
-        const el = document.getElementById('version-tag');
-        if (!el) return;
-        // "deployed 2h ago | built at 30 Mar 14:30" → 2 lines (session code added as 3rd line by participant.js)
-        el.textContent = el.textContent.replace(/^(.+?) \| (.+)$/, '$1\n$2');
-      };
-      window.__updateDeployAge();
-    }
-  }
-</script>
-<div id="qa-toast" class="qa-toast"></div>
-<div id="emoji-bar">
-  <!-- PDF slide controls — moved here so renderEmojiBar() can measure them as part of the single flex row -->
-  <div id="slides-ctrl-group" style="display:flex; gap:.4rem; align-items:center; pointer-events:auto;">
-    <button id="feedback-btn" class="slides-ctrl-btn slides-action-btn" data-tooltip="Got feedback for this tool?" data-tooltip-emoji="💬">💬</button>
-    <button id="paste-btn" class="slides-ctrl-btn slides-action-btn" data-tooltip="Got code or text? Paste it here." data-tooltip-emoji="📋">📋</button>
-    <button id="upload-btn" class="slides-ctrl-btn slides-action-btn" data-tooltip="Got a file? Send it to the host." data-tooltip-emoji="📤"><svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13V4"/><path d="M6 7.5L10 3.5L14 7.5"/><path d="M4.5 13.5v1a2 2 0 0 0 2 2h7a2 2 0 0 0 2-2v-1"/></svg></button>
-  </div>
-  <!-- Dynamic emoji buttons + dots + ping injected/centered here -->
-  <div id="emoji-center">
-    <div id="emoji-dots-wrap" style="display:none; position:relative; pointer-events:auto; flex-shrink:0;">
-      <button id="emoji-dots-btn" class="emoji-btn emoji-btn-dots">•••</button>
-      <div id="emoji-popup" class="emoji-popup" style="display:none;">
-        <!-- Dynamic overflow buttons injected here by renderEmojiBar() -->
-      </div>
-    </div>
-    <button id="emoji-ping-btn" class="emoji-btn emoji-btn-ping" data-tooltip="I can't see your screen." style="flex-shrink:0; pointer-events:auto;"><span style="position:relative;display:inline-block;">🖥️<span style="position:absolute;font-size:0.55em;top:50%;left:50%;transform:translate(-50%,-50%);line-height:1;pointer-events:none;">❌</span></span></button>
-  </div>
-  <div id="emoji-bar-right"></div>
+<script src="https://cdn.jsdelivr.net/npm/mammoth@1/mammoth.browser.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked@9/marked.min.js"></script>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries,typography"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-primary-container": "#3747ac",
+                        "on-primary-fixed-variant": "#4252b7",
+                        "surface-variant": "#d9e4ea",
+                        "surface": "#f7f9fb",
+                        "primary-container": "#dfe0ff",
+                        "secondary-container": "#d5e3fc",
+                        "on-surface-variant": "#566166",
+                        "primary-fixed": "#dfe0ff",
+                        "on-tertiary-fixed-variant": "#4d5870",
+                        "surface-container": "#e8eff3",
+                        "error-dim": "#4f0116",
+                        "outline-variant": "#a9b4b9",
+                        "secondary-fixed-dim": "#c7d5ed",
+                        "primary": "#4555ba",
+                        "primary-fixed-dim": "#cdd1ff",
+                        "secondary-fixed": "#d5e3fc",
+                        "secondary-dim": "#465468",
+                        "tertiary-dim": "#48536b",
+                        "surface-tint": "#4555ba",
+                        "outline": "#717c82",
+                        "primary-dim": "#3848ad",
+                        "surface-container-highest": "#d9e4ea",
+                        "surface-container-lowest": "#ffffff",
+                        "on-primary-fixed": "#223399",
+                        "on-secondary-fixed": "#324053",
+                        "tertiary-fixed-dim": "#c3cfeb",
+                        "on-tertiary-container": "#434e66",
+                        "inverse-surface": "#0b0f10",
+                        "on-tertiary-fixed": "#303c53",
+                        "on-error-container": "#782232",
+                        "on-secondary-fixed-variant": "#4e5c71",
+                        "error": "#9e3f4e",
+                        "on-surface": "#2a3439",
+                        "inverse-primary": "#7e8ef7",
+                        "on-tertiary": "#f9f8ff",
+                        "surface-dim": "#cfdce3",
+                        "on-error": "#fff7f7",
+                        "surface-bright": "#f7f9fb",
+                        "background": "#f7f9fb",
+                        "on-primary": "#f9f6ff",
+                        "tertiary": "#545f78",
+                        "on-secondary-container": "#455367",
+                        "error-container": "#ff8b9a",
+                        "surface-container-high": "#e1e9ee",
+                        "on-background": "#2a3439",
+                        "secondary": "#526074",
+                        "surface-container-low": "#f0f4f7",
+                        "inverse-on-surface": "#9a9d9f",
+                        "tertiary-fixed": "#d1ddfa",
+                        "tertiary-container": "#d1ddfa",
+                        "on-secondary": "#f8f8ff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "fontFamily": {
+                        "headline": ["Manrope"],
+                        "body": ["Manrope"],
+                        "label": ["Manrope"]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body { font-family: 'Manrope', sans-serif; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .whisper-shadow {
+            box-shadow: 0px 12px 32px rgba(42, 52, 57, 0.06);
+        }
+        .glass {
+            background: rgba(247, 249, 251, 0.8);
+            backdrop-filter: blur(20px);
+        }
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #d9e4ea;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #a9b4b9;
+        }
+    </style>
+</head>
+<body class="bg-surface text-on-surface overflow-hidden">
+<div class="flex h-screen w-full">
+<!-- SIDEBAR (20%) -->
+<aside class="w-64 shrink-0 h-full bg-surface-container flex flex-col px-4 pt-6 pb-6 space-y-2 z-10 relative" style="width: calc(16rem * 1.03);">
+<!-- Header Section -->
+<div class="space-y-4">
+<div class="flex items-center gap-1 min-w-0">
+<div class="flex-1 min-w-0">
+<h1 class="text-xl font-extrabold text-on-surface leading-tight tracking-tight truncate">Event-Driven Architectures</h1>
+<p class="text-xl font-medium text-primary flex items-center justify-between">
+<span>orange.ro</span>
+<span class="flex items-center gap-1">👥 30</span>
+</p>
 </div>
-<div id="conference-emoji-grid" style="display:none;">
-  <div id="conference-url-display" class="conference-url-display"></div>
-  <div class="emoji-grid">
-    <button class="emoji-grid-btn" onclick="sendEmoji('❤️', event)">❤️</button>
-    <button class="emoji-grid-btn" onclick="sendEmoji('🔥', event)">🔥</button>
-    <button class="emoji-grid-btn" onclick="sendEmoji('👏', event)">👏</button>
-    <button class="emoji-grid-btn" onclick="sendEmoji('😂', event)">😂</button>
-    <button class="emoji-grid-btn" onclick="sendEmoji('🤯', event)">🤯</button>
-    <button class="emoji-grid-btn" onclick="sendEmoji('💡', event)">💡</button>
-    <button class="emoji-grid-btn" onclick="sendEmoji('👍', event)">👍</button>
-    <button class="emoji-grid-btn" onclick="sendEmoji('🤔', event)">🤔</button>
-    <button class="emoji-grid-btn" onclick="sendEmoji('💪', event)">💪</button>
-    <button class="emoji-grid-btn" onclick="sendEmoji('✅', event)">✅</button>
-    <button class="emoji-grid-btn" onclick="sendEmoji('❌', event)">❌</button>
+</div>
+<div id="profile-card" class="p-3 bg-surface-container-low rounded-xl group cursor-pointer hover:bg-surface-bright transition-all duration-300">
+<div class="flex items-center gap-2">
+<div class="w-8 h-8 rounded-full bg-primary-container flex-shrink-0 overflow-hidden">
+<img alt="Alex Morgan" class="w-full h-full rounded-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDsIg32gG_GENTnmWJQc1NZelOivfXVIxPJrVLUyWsf6mUfeAA8kiaJBQ91b-vZyRexsS0iFDkMUwc-2X5mLaA0rsJ9Sn45nLYDEdfbSt3okj_StwE4WnC8btqj2wN1h3OBgIKQvMZ1F8LQO1Kj9amvOic3vKSbYphLAAsu7y9S6Mex0ku0SKEjrteq6chaZv-UB_GA84aYFdQjOzCu1PvNgxAFVD8pHfe2Pi9j1eXaZsXRrXE38w9Kj4SBtMHePFH5A97HPyPXQX41"/>
+</div>
+<span class="text-base font-medium text-on-surface cursor-pointer hover:underline" title="Edit name">Alex Morgan <span style="display:inline-block;transform:rotate(90deg)">✏️</span></span>
+</div>
+</div>
+</div>
+<!-- Navigation Cluster -->
+<nav class="flex flex-col space-y-2 flex-1 overflow-y-hidden min-h-0" style="row-gap:0.425rem;">
+<a data-nav="slides" onclick="showView('slides')" class="nav-item nav-active rounded-full px-2 py-2 font-semibold flex items-center gap-3 transition-all cursor-pointer">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">slideshow</span>
+<span class="text-base">Slides</span>
+<span onclick="event.stopPropagation()" class="ml-auto inline-flex items-center gap-1 text-xs font-medium">
+<input id="slides-follow-checkbox" type="checkbox" checked style="width:0.8rem;height:0.8rem;accent-color:var(--color-primary,#4555ba);" />
+<span>Follow</span>
+</span>
+<span class="badge-new">LIVE</span>
+</a>
+<!-- Past Slides (never active) -->
+<div>
+<a onclick="togglePastSlides()" class="nav-item rounded-full px-2 h-10 flex items-center gap-3 transition-all cursor-pointer">
+<span class="material-symbols-outlined">history</span>
+<span class="text-base">Past Slides</span>
+<span id="past-slides-badge" class="badge-new ml-auto" style="display:none"></span>
+<span class="material-symbols-outlined past-slides-arrow text-xl transition-transform duration-300">chevron_right</span>
+</a>
+<div id="slide-history-list" class="mx-2 mt-1 rounded-xl overflow-hidden" style="display:none"></div>
+</div>
+<a data-nav="agenda" onclick="showView('agenda')" class="nav-item rounded-full px-2 py-2 flex items-center gap-3 transition-all cursor-pointer" style="display:none">
+<span class="material-symbols-outlined">event_note</span>
+<span class="text-base">Agenda</span>
+<span class="badge-new">UPDATE</span>
+</a>
+<a data-nav="notes" onclick="showView('notes')" class="nav-item rounded-full px-2 py-2 flex items-center gap-3 transition-all cursor-pointer" style="display:none">
+<span class="material-symbols-outlined">description</span>
+<span class="text-base">Notes</span>
+<span id="notes-badge" class="badge-new"></span>
+</a>
+<a data-nav="summary" onclick="showView('summary')" class="nav-item rounded-full px-2 py-2 flex items-center gap-3 transition-all cursor-pointer" style="display:none">
+<span class="material-symbols-outlined">psychology</span>
+<span class="text-base">AI Summary</span>
+<span id="summary-badge" class="badge-new" style="display:none"></span>
+</a>
+<div>
+<a data-nav="topics" onclick="toggleTopics()" class="nav-item rounded-full px-2 h-10 flex items-center gap-3 transition-all cursor-pointer">
+<span class="material-symbols-outlined">topic</span>
+<span class="text-base">All Topics</span>
+<span class="material-symbols-outlined topics-arrow text-xl transition-transform duration-300">chevron_right</span>
+</a>
+<div style="max-height:0;overflow:hidden;transition:max-height 0.6s ease" class="topics-list mx-2 mb-1 rounded-xl">
+<div class="overflow-y-auto h-full">
+<div id="topics-inner" class="py-1"></div>
+</div>
+</div>
+</div>
+<div>
+<a data-nav="gitrepos" onclick="toggleRepos()" class="nav-item rounded-full px-2 h-10 flex items-center gap-3 transition-all cursor-pointer">
+<span class="material-symbols-outlined">terminal</span>
+<span class="text-base">Git Repos</span>
+<span class="material-symbols-outlined repos-arrow text-xl transition-transform duration-300">chevron_right</span>
+<span class="badge-new ml-auto">NEW</span>
+</a>
+<div style="max-height:0;overflow:hidden;transition:max-height 0.6s ease" class="repos-list mx-2 rounded-xl">
+<div id="repos-content" class="overflow-y-auto max-h-96 py-1">
+<p class="px-4 py-2 text-sm text-on-surface-variant">Loading…</p>
+</div>
+</div>
+</div>
+<a id="gdrive-nav" href="#" target="_blank" rel="noopener" class="nav-item rounded-full px-2 py-2 flex items-center gap-3 transition-all cursor-pointer" style="display:none">
+<span class="material-symbols-outlined">cloud</span>
+<span class="text-base">Google Drive</span>
+<span class="material-symbols-outlined text-base text-on-surface">open_in_new</span>
+</a>
+<a data-nav="paste" onclick="showView('paste')" class="nav-item rounded-full px-2 py-2 flex items-center gap-3 transition-all cursor-pointer">
+<span class="material-symbols-outlined">content_paste</span>
+<span class="text-base">Paste</span>
+</a>
+<a data-nav="upload" onclick="showUpload()" class="nav-item rounded-full px-2 py-2 flex items-center gap-3 transition-all cursor-pointer">
+<span class="material-symbols-outlined">upload</span>
+<span class="text-base">Upload</span>
+</a>
+</nav>
+<a data-nav="feedback" onclick="showView('feedback')" class="nav-item rounded-full px-2 py-2 flex items-center gap-3 transition-all cursor-pointer">
+  <span class="material-symbols-outlined">chat_bubble</span>
+  <span class="text-base">Feedback</span>
+</a>
+<div id="deploy-age-line" onclick="resetStatePrompt()" title="Click to reset local state"
+  class="absolute bottom-0 left-0 right-0 px-2 py-1 text-center cursor-pointer select-none"
+  style="font-size:0.625rem;line-height:1.3;color:var(--color-outline);opacity:0.5;transition:opacity 0.15s"
+  onmouseenter="this.style.opacity='0.9'" onmouseleave="this.style.opacity='0.5'">
+  <span id="version-tag-new">loading…</span>
+</div>
+</aside>
+<!-- MAIN CONTENT (80%) -->
+<main class="flex-1 h-full relative flex flex-col overflow-hidden bg-surface">
+<!-- AI Summary View -->
+<div id="notes-view" style="display:none;font-size:120%" class="h-full overflow-y-auto px-16 py-12" onscroll="saveScroll('notes',this)">
+  <div id="notes-content" class="text-on-surface leading-relaxed whitespace-pre-wrap">Loading…</div>
+</div>
+<div id="summary-view" style="display:none;font-size:120%" class="h-full overflow-y-auto px-16 py-12" onscroll="saveScroll('summary',this)">
+  <div id="summary-content" class="text-on-surface leading-relaxed prose max-w-none">Loading…</div>
+</div>
+<!-- Agenda View -->
+<div id="agenda-view" style="display:none;font-size:120%" class="h-full overflow-y-auto px-16 py-12" onscroll="saveScroll('agenda',this)">
+  <div id="agenda-content" class="text-on-surface text-sm leading-relaxed prose max-w-none">Loading…</div>
+</div>
+<!-- Upload View -->
+<div id="upload-view" style="display:none" class="h-full flex flex-col px-16 py-12">
+  <input type="file" id="upload-input" class="hidden" onchange="uploadFileSelected(this.files)"/>
+  <div id="upload-dropzone"
+    class="flex-1 flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-outline-variant cursor-pointer hover:border-primary hover:bg-surface-container-low transition-all duration-200 text-on-surface-variant hover:text-primary"
+    onclick="document.getElementById('upload-input').click()"
+    ondragover="event.preventDefault();this.classList.add('border-primary','bg-surface-container-low','text-primary')"
+    ondragleave="this.classList.remove('border-primary','bg-surface-container-low','text-primary')"
+    ondrop="event.preventDefault();this.classList.remove('border-primary','bg-surface-container-low','text-primary');uploadFileSelected(event.dataTransfer.files)">
+    <span class="material-symbols-outlined text-6xl mb-4">cloud_upload</span>
+    <p class="text-base font-semibold">Drop files to send to host</p>
+    <p id="upload-filename" class="text-sm mt-1 opacity-60 truncate max-w-full px-4">or click to browse</p>
+  </div>
+  <div id="upload-progress-bar" style="display:none" class="mt-3 h-2 rounded-full bg-surface-container-highest overflow-hidden">
+    <div id="upload-progress-fill" class="h-full bg-primary rounded-full transition-all" style="width:0%"></div>
+  </div>
+  <div class="mt-4">
+    <button id="upload-send-btn" onclick="uploadSend()" disabled
+      class="flex items-center gap-2 px-6 py-3 font-semibold rounded-full transition-all opacity-40 cursor-not-allowed bg-surface-container-highest text-on-surface-variant">
+      Send to Host
+      <span class="material-symbols-outlined" style="transform:rotate(-45deg)">send</span>
+    </button>
   </div>
 </div>
-<div id="paste-overlay" class="paste-overlay" onclick="closePasteModal()">
-  <div class="paste-bubble" onclick="event.stopPropagation()">
-    <textarea id="paste-textarea" class="paste-textarea" placeholder="Paste your text here... (Enter to send, Shift+Enter for new line)" oninput="document.getElementById('paste-send-btn').disabled = !this.value.trim()" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendPasteText();}"></textarea>
-    <button id="paste-send-btn" class="paste-send-btn" disabled onclick="sendPasteText()">Send to host</button>
+<!-- Feedback View -->
+<div id="feedback-view" style="display:none" class="h-full flex flex-col px-16 py-12">
+  <textarea id="feedback-textarea" class="flex-1 w-full resize-none rounded-2xl bg-surface-container-low text-on-surface text-base p-6 outline-none focus:ring-2 focus:ring-primary placeholder:text-on-surface-variant" placeholder="Share your feedback about this tool…"
+    oninput="document.getElementById('feedback-send-btn').disabled = !this.value.trim()"
+    onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendFeedback();}"></textarea>
+  <div class="mt-4">
+    <button id="feedback-send-btn" onclick="sendFeedback()" disabled
+      class="flex items-center gap-2 px-6 py-3 bg-primary text-on-primary font-semibold rounded-full hover:bg-primary-dim transition-all shadow-lg shadow-primary/20 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none">
+      Send
+      <span class="material-symbols-outlined" style="transform:rotate(-45deg)">send</span>
+    </button>
   </div>
 </div>
-<div id="upload-overlay" class="paste-overlay" onclick="closeUploadModal()">
-  <div class="upload-bubble" onclick="event.stopPropagation()">
-    <div id="upload-dropzone" class="upload-dropzone" onclick="document.getElementById('upload-file-input').click()">
-      <svg width="32" height="32" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" style="opacity:.5;margin-bottom:.4rem"><path d="M10 13V4"/><path d="M6 7.5L10 3.5L14 7.5"/><path d="M4.5 13.5v1a2 2 0 0 0 2 2h7a2 2 0 0 0 2-2v-1"/></svg>
-      <div class="upload-dropzone-text">Click to browse or drag &amp; drop</div>
-      <div id="upload-file-info" class="upload-file-info"></div>
-    </div>
-    <input type="file" id="upload-file-input" style="display:none" onchange="onUploadFileSelected(this)">
-    <div id="upload-progress-bar" class="upload-progress-bar" style="display:none"><div id="upload-progress-fill" class="upload-progress-fill"></div></div>
-    <button id="upload-send-btn" class="paste-send-btn" disabled onclick="sendUploadFile()">Send to host</button>
+<!-- Paste View -->
+<div id="paste-view" style="display:none" class="h-full flex flex-col px-16 py-12">
+  <textarea id="paste-textarea" class="flex-1 w-full resize-none rounded-2xl bg-surface-container-low text-on-surface text-base p-6 outline-none focus:ring-2 focus:ring-primary placeholder:text-on-surface-variant" placeholder="Paste any large text"
+    oninput="document.getElementById('paste-send-btn').disabled = !this.value.trim()"
+    onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendPaste();}"></textarea>
+  <div class="mt-4">
+    <button id="paste-send-btn" onclick="sendPaste()" disabled
+      class="flex items-center gap-2 px-6 py-3 bg-primary text-on-primary font-semibold rounded-full hover:bg-primary-dim transition-all shadow-lg shadow-primary/20 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none">
+      Send to Host
+      <span class="material-symbols-outlined" style="transform:rotate(-45deg)">send</span>
+    </button>
   </div>
 </div>
-<!-- Feedback button — fixed top-left, always visible -->
-<div id="feedback-overlay" class="paste-overlay" onclick="closeFeedbackModal()">
-  <div class="feedback-bubble" onclick="event.stopPropagation()">
-    <textarea id="feedback-textarea" class="feedback-textarea" placeholder="Dream it up — what would you add to this app?" oninput="document.getElementById('feedback-send-btn').disabled = !this.value.trim()" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();submitFeedback();}"></textarea>
-    <button id="feedback-send-btn" class="paste-send-btn" disabled onclick="submitFeedback()">Submit Prompt</button>
+<!-- Slides View -->
+<div id="slides-view" class="relative h-full flex flex-col">
+<!-- PDF Viewer Toolbar (Minimalist) -->
+<div class="absolute top-6 right-6 z-20 flex items-center gap-2 p-2 rounded-full glass whisper-shadow border border-outline-variant border-opacity-10">
+<a id="pdf-download" href="/static/demo.pdf" download class="p-2 hover:bg-primary-container rounded-full text-on-surface-variant hover:text-primary transition-all flex">
+<span class="material-symbols-outlined">download</span>
+</a>
+</div>
+<!-- Slides Container -->
+<div id="pdf-pages" class="flex-grow overflow-y-auto scroll-smooth py-8 px-8 space-y-8 h-full"></div>
+</div><!-- end slides-view -->
+<!-- Floating Reaction UI (Bottom Right) — always on top across all views -->
+<div class="absolute bottom-6 right-6 flex flex-col items-end gap-4 z-30">
+<div id="emoji-main-bar" class="flex items-center gap-2 p-2 bg-surface-container-lowest whisper-shadow rounded-full glass border border-outline-variant border-opacity-10">
+<button onclick="sendEmoji(this.textContent.trim(), this)" class="w-[3.25rem] h-[3.25rem] flex items-center justify-center hover:bg-surface-container rounded-full text-[1.625rem] transition-transform hover:scale-110" title="Genuinely love this.">❤️</button>
+<button onclick="sendEmoji(this.textContent.trim(), this)" class="w-[3.25rem] h-[3.25rem] flex items-center justify-center hover:bg-surface-container rounded-full text-[1.625rem] transition-transform hover:scale-110" title="I need a break. Now.">☕</button>
+<button onclick="sendEmoji(this.textContent.trim(), this)" class="w-[3.25rem] h-[3.25rem] flex items-center justify-center hover:bg-surface-container rounded-full text-[1.625rem] transition-transform hover:scale-110" title="Yes. More of this.">👍</button>
+<button onclick="sendEmoji(this.textContent.trim(), this)" class="w-[3.25rem] h-[3.25rem] flex items-center justify-center hover:bg-surface-container rounded-full text-[1.625rem] transition-transform hover:scale-110" title="This is absolute fire.">🔥</button>
+<button onclick="sendEmoji(this.textContent.trim(), this)" class="w-[3.25rem] h-[3.25rem] flex items-center justify-center hover:bg-surface-container rounded-full text-[1.625rem] transition-transform hover:scale-110" title="Hmm... not convinced yet.">🤔</button>
+<div id="emoji-tv-sep" class="w-[1px] h-6 bg-outline-variant opacity-20"></div>
+<button onclick="sendEmoji(this.dataset.emoji, this)" data-emoji="🖥️" class="w-[3.25rem] h-[3.25rem] flex items-center justify-center hover:bg-surface-container rounded-full text-[1.625rem] transition-transform hover:scale-110" title="I can't see your screen."><span style="position:relative;display:inline-block;">🖥️<span style="position:absolute;font-size:0.55em;top:50%;left:50%;transform:translate(-50%,-50%);line-height:1;pointer-events:none;">❌</span></span></button>
+<div id="emoji-plus-sep" class="w-[1px] h-6 bg-outline-variant opacity-20"></div>
+<!-- Plus button with hover overflow popup -->
+<div class="relative" id="emoji-more-wrap">
+<button
+  class="w-10 h-10 flex items-center justify-center bg-primary text-on-primary rounded-full hover:bg-primary-dim transition-all shadow-lg shadow-primary/20"
+  onmouseenter="document.getElementById('emoji-overflow').classList.remove('opacity-0','pointer-events-none','translate-y-1')"
+  onmouseleave="scheduleHideOverflow()">
+  <span class="material-symbols-outlined">add</span>
+</button>
+<!-- Overflow leaf popup -->
+<div id="emoji-overflow"
+  class="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 opacity-0 pointer-events-none translate-y-1 transition-all duration-200"
+  onmouseenter="clearTimeout(window._emojiHideTimer)"
+  onmouseleave="scheduleHideOverflow()">
+  <div class="flex flex-col-reverse items-center gap-2 p-2 bg-surface-container-lowest whisper-shadow rounded-full glass border border-outline-variant border-opacity-10">
+    <button onclick="addEmojiToBar(this)" class="w-[3.25rem] h-[3.25rem] flex items-center justify-center hover:bg-surface-container rounded-full text-[1.625rem] transition-transform hover:scale-110" title="Fight me on this.">⚔️</button>
+    <button onclick="addEmojiToBar(this)" class="w-[3.25rem] h-[3.25rem] flex items-center justify-center hover:bg-surface-container rounded-full text-[1.625rem] transition-transform hover:scale-110" title="I'm dead 💀">😂</button>
+    <button onclick="addEmojiToBar(this)" class="w-[3.25rem] h-[3.25rem] flex items-center justify-center hover:bg-surface-container rounded-full text-[1.625rem] transition-transform hover:scale-110" title="My brain just exploded.">🤯</button>
+    <button onclick="addEmojiToBar(this)" class="w-[3.25rem] h-[3.25rem] flex items-center justify-center hover:bg-surface-container rounded-full text-[1.625rem] transition-transform hover:scale-110" title="Wait, I have an idea!">💡</button>
+    <button onclick="addEmojiToBar(this)" class="w-[3.25rem] h-[3.25rem] flex items-center justify-center hover:bg-surface-container rounded-full text-[1.625rem] transition-transform hover:scale-110" title="Agreed. 100%.">✅</button>
+    <button onclick="addEmojiToBar(this)" class="w-[3.25rem] h-[3.25rem] flex items-center justify-center hover:bg-surface-container rounded-full text-[1.625rem] transition-transform hover:scale-110" title="Nope. Hard disagree.">❌</button>
   </div>
 </div>
-<div id="leaderboard-overlay" class="leaderboard-overlay" style="display:none;">
-  <div class="leaderboard-content">
-    <div class="leaderboard-title">LEADERBOARD</div>
-    <div id="leaderboard-my-rank" class="leaderboard-my-rank"></div>
-    <div id="leaderboard-top5" class="leaderboard-top5"></div>
-  </div>
 </div>
+</div>
+</div>
+</main>
+</div>
+<script type="module">
+  import * as pdfjsLib from 'https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.149/build/pdf.min.mjs';
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.149/build/pdf.worker.min.mjs';
 
-<div id="session-paused-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:9999; align-items:center; justify-content:center; color:#fff; font-size:1.4rem; text-align:center; padding:2rem; flex-direction:column;">
-  <div id="session-paused-message">Session paused — you will reconnect automatically</div>
-  <div style="margin-top:1rem; font-size:0.9rem; color:#aaa;">Reconnecting...</div>
-</div>
-</body>
-</html>
+  let pdfDoc = null;
+  let currentScale = 1.5;
+  let totalPages = 0;
+
+  async function renderAllPages(scale) {
+    const container = document.getElementById('pdf-pages');
+    container.innerHTML = '';
+    for (let i = 1; i <= totalPages; i++) {
+      const page = await pdfDoc.getPage(i);
+      const viewport = page.getViewport({ scale });
+      const section = document.createElement('section');
+      section.className = 'relative group';
+      section.dataset.page = i;
+      const canvas = document.createElement('canvas');
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+      canvas.className = 'w-full whisper-shadow rounded-2xl';
+      section.appendChild(canvas);
+      if (i === totalPages) section.classList.add('pb-32');
+      container.appendChild(section);
+      await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+      const annotations = await page.getAnnotations({ intent: 'display' });
+      if (annotations && annotations.length) {
+        const annLayer = document.createElement('div');
+        annLayer.style.cssText = 'position:absolute;inset:0;pointer-events:none;';
+        section.appendChild(annLayer);
+        for (const ann of annotations) {
+          if (!ann || ann.subtype !== 'Link' || !Array.isArray(ann.rect)) continue;
+          const rect = viewport.convertToViewportRectangle(ann.rect);
+          const left = Math.min(rect[0], rect[2]);
+          const top = Math.min(rect[1], rect[3]);
+          const width = Math.abs(rect[0] - rect[2]);
+          const height = Math.abs(rect[1] - rect[3]);
+          if (!(width > 0 && height > 0)) continue;
+          const link = document.createElement('a');
+          link.style.cssText = [
+            'position:absolute',
+            `left:${left}px`,
+            `top:${top}px`,
+            `width:${width}px`,
+            `height:${height}px`,
+            'pointer-events:auto',
+            'cursor:pointer',
+            'background:transparent'
+          ].join(';');
+          if (ann.url || ann.unsafeUrl) {
+            link.href = ann.url || ann.unsafeUrl;
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
+          } else if (ann.dest) {
+            link.href = '#';
+            link.addEventListener('click', async (ev) => {
+              ev.preventDefault();
+              try {
+                const dest = Array.isArray(ann.dest) ? ann.dest : await pdfDoc.getDestination(ann.dest);
+                if (!dest || !dest[0]) return;
+                const pageRef = dest[0];
+                const pageIndex = await pdfDoc.getPageIndex(pageRef);
+                const targetPage = pageIndex + 1;
+                const targetSection = container.querySelector(`section[data-page="${targetPage}"]`);
+                if (targetSection) targetSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              } catch (_) {
+                // Ignore malformed destinations.
+              }
+            });
+          } else {
+            continue;
+          }
+          annLayer.appendChild(link);
+        }
+      }
+    }
+    updatePageInfo();
+  }
+
+  function updatePageInfo() {
+    const infoEl = document.getElementById('pdf-page-info');
+    if (!infoEl) return;
+    const container = document.getElementById('pdf-pages');
+    const sections = container.querySelectorAll('section[data-page]');
+    const scrollTop = container.scrollTop;
+    const midY = scrollTop + container.clientHeight / 2;
+    let current = 1;
+    sections.forEach(function(s) {
+      if (s.offsetTop <= midY) current = parseInt(s.dataset.page);
+    });
+    infoEl.textContent = current + ' / ' + totalPages;
+  }
+
+  (async function init() {
+    try {
+      pdfDoc = await pdfjsLib.getDocument('/static/demo.pdf').promise;
+      totalPages = pdfDoc.numPages;
+      await renderAllPages(currentScale);
+      document.getElementById('pdf-pages').addEventListener('scroll', updatePageInfo);
+    } catch (e) {
+      console.error('PDF load error', e);
+    }
+  })();
+
+  window.pdfZoom = async function(delta) {
+    currentScale = Math.max(0.5, Math.min(3, currentScale + delta));
+    await renderAllPages(currentScale);
+  };
+
+  window.loadPdf = async function(url) {
+    try {
+      pdfDoc = await pdfjsLib.getDocument(url).promise;
+      totalPages = pdfDoc.numPages;
+      document.getElementById('pdf-pages').scrollTop = 0;
+      await renderAllPages(currentScale);
+    } catch(e) {
+      console.error('PDF load error', e);
+    }
+  };
+</script>
+<script>
+// ── Local-storage namespace ───────────────────────────────────────────────────
+var LS = {
+  EMOJI_PROMOTED: 'new:emoji_bar_promoted',
+  VIEW: 'new:current_view',
+  scrollKey: function(view) { return 'new:scroll_' + view; },
+  getEmoji:  function()     { return JSON.parse(localStorage.getItem(LS.EMOJI_PROMOTED) || '[]'); },
+  setEmoji:  function(arr)  { localStorage.setItem(LS.EMOJI_PROMOTED, JSON.stringify(arr)); },
+  getScroll: function(view) { return localStorage.getItem(LS.scrollKey(view)); },
+  setScroll: function(view, val) { localStorage.setItem(LS.scrollKey(view), val); },
+  getView:   function()     { return localStorage.getItem(LS.VIEW) || 'slides'; },
+  setView:   function(name) { localStorage.setItem(LS.VIEW, name); },
+  clear:     function()     {
+    localStorage.removeItem(LS.EMOJI_PROMOTED);
+    localStorage.removeItem(LS.VIEW);
+    LS._scrollViews().forEach(function(k) { localStorage.removeItem(k); });
+  },
+  _scrollViews: function() {
+    var keys = [];
+    for (var i = 0; i < localStorage.length; i++) {
+      var k = localStorage.key(i);
+      if (k && k.startsWith('new:scroll_')) keys.push(k);
+    }
+    return keys;
+  }
+};
+// ─────────────────────────────────────────────────────────────────────────────
+var _slidesCatalog = [];
+var _activeSlideId = null;
+var _historySelectedRowEl = null;
+var _hostSlidesCurrent = null;
+var _lastHostSlidesCurrentKey = '';
+
+function setActive(name) {
+  document.querySelectorAll('.nav-item').forEach(function(el) { el.classList.remove('nav-active'); });
+  var el = document.querySelector('[data-nav="' + name + '"]');
+  if (el) el.classList.add('nav-active');
+}
+function openPastSlides() {
+  closeTopics(); closeRepos();
+  var arrow = document.querySelector('.past-slides-arrow');
+  if (arrow) arrow.style.transform = 'rotate(90deg)';
+  _loadSlideHistory();
+}
+function closePastSlides(options) {
+  options = options || {};
+  var arrow = document.querySelector('.past-slides-arrow');
+  if (arrow) arrow.style.transform = 'rotate(0deg)';
+  _hideSlideHistory();
+  if (options.focusAllTopics !== false) {
+    _focusCurrentTopicInAllTopics();
+  }
+}
+// Backward-compatible wrappers for existing calls.
+function openSlides() { openPastSlides(); }
+function closeSlides(options) { closePastSlides(options); }
+var _slideHistoryTimer = null;
+function _normalizeSlideMatchToken(value) {
+  return String(value || '')
+    .replace(/\.pptx$/i, '')
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+}
+function _isSlidesViewSelected() {
+  var slidesView = document.getElementById('slides-view');
+  return !!(slidesView && slidesView.style.display !== 'none');
+}
+function _isSlidesFollowEnabled() {
+  var cb = document.getElementById('slides-follow-checkbox');
+  return !cb || !!cb.checked;
+}
+function _getHostCurrentPage(slidesCurrent) {
+  var page = slidesCurrent
+    ? (slidesCurrent.current_page ?? slidesCurrent.slide ?? slidesCurrent.slide_number)
+    : null;
+  var n = Number(page);
+  return Number.isFinite(n) ? Math.max(1, n) : 1;
+}
+function _hostSlidesCurrentKey(slidesCurrent) {
+  if (!slidesCurrent) return 'none';
+  return [
+    String(slidesCurrent.slug || ''),
+    String(slidesCurrent.url || ''),
+    String(_getHostCurrentPage(slidesCurrent)),
+    String(slidesCurrent.presentation_name || ''),
+    String(slidesCurrent.source_file || ''),
+    String(slidesCurrent.updated_at || ''),
+  ].join('|');
+}
+function _findSlideForHostCurrent(slidesCurrent) {
+  if (!slidesCurrent || !_slidesCatalog.length) return null;
+  var targetSlug = String(slidesCurrent.slug || '').trim();
+  var targetUrl = String(slidesCurrent.url || '').trim();
+  if (targetSlug) {
+    var bySlugAndUrl = _slidesCatalog.find(function(slide) {
+      return slide.slug === targetSlug && (!targetUrl || slide.url === targetUrl);
+    });
+    if (bySlugAndUrl) return bySlugAndUrl;
+    var bySlug = _slidesCatalog.find(function(slide) { return slide.slug === targetSlug; });
+    if (bySlug) return bySlug;
+  }
+  if (targetUrl) {
+    var byUrl = _slidesCatalog.find(function(slide) { return slide.url === targetUrl; });
+    if (byUrl) return byUrl;
+  }
+  var hostToken = _normalizeSlideMatchToken(slidesCurrent.presentation_name || slidesCurrent.source_file || '');
+  if (!hostToken) return null;
+  return _slidesCatalog.find(function(slide) {
+    var nameToken = _normalizeSlideMatchToken(slide.name);
+    var slugToken = _normalizeSlideMatchToken(slide.slug);
+    return (nameToken && (nameToken.indexOf(hostToken) >= 0 || hostToken.indexOf(nameToken) >= 0))
+      || (slugToken && (slugToken.indexOf(hostToken) >= 0 || hostToken.indexOf(slugToken) >= 0));
+  }) || null;
+}
+function _findSlideByHistoryFileName(fileName) {
+  var token = _normalizeSlideMatchToken(fileName);
+  if (!token) return null;
+  var exactByName = _slidesCatalog.find(function(s) {
+    return _normalizeSlideMatchToken(s.name) === token;
+  });
+  if (exactByName) return exactByName;
+  var exactBySlug = _slidesCatalog.find(function(s) {
+    return _normalizeSlideMatchToken(s.slug) === token;
+  });
+  if (exactBySlug) return exactBySlug;
+  return _slidesCatalog.find(function(s) {
+    var nameToken = _normalizeSlideMatchToken(s.name);
+    return nameToken && (nameToken.indexOf(token) >= 0 || token.indexOf(nameToken) >= 0);
+  }) || null;
+}
+function _scrollSlidesToPage(page) {
+  var targetPage = Math.max(1, Number(page || 1));
+  var container = document.getElementById('pdf-pages');
+  if (!container) return false;
+  var section = container.querySelector('section[data-page="' + targetPage + '"]');
+  if (!section) return false;
+  section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  return true;
+}
+function _getCurrentSlidesPage() {
+  var info = document.getElementById('pdf-page-info');
+  if (!info || !info.textContent) return null;
+  var m = info.textContent.match(/^\s*(\d+)\s*\/\s*\d+\s*$/);
+  if (!m) return null;
+  var n = Number(m[1]);
+  return Number.isFinite(n) ? n : null;
+}
+async function _openSlideFromHistory(fileName, page, focusEl) {
+  var slide = _findSlideByHistoryFileName(fileName);
+  if (!slide) {
+    showToast('Could not match that history item to an available topic.');
+    return false;
+  }
+  var topicEl = document.querySelector('.topic-item[data-slide-id="' + slide._id + '"]');
+  var targetPage = Math.max(1, Number(page || 1));
+  var sameSlideAlreadyOpen = (_activeSlideId && slide._id === _activeSlideId);
+  if (!sameSlideAlreadyOpen) {
+    await selectTopic(topicEl || document.querySelector('.topic-item'), null, slide);
+  }
+  var currentPage = _getCurrentSlidesPage();
+  if (currentPage === targetPage) {
+    return true;
+  }
+  if (!_scrollSlidesToPage(targetPage)) {
+    // If rendering is still settling, retry briefly.
+    setTimeout(function() { _scrollSlidesToPage(targetPage); }, 200);
+  }
+  if (focusEl && typeof focusEl.focus === 'function') {
+    setTimeout(function() {
+      try {
+        focusEl.focus({ preventScroll: true });
+      } catch (_) {
+        focusEl.focus();
+      }
+    }, 0);
+  }
+  return true;
+}
+async function _applyHostSlideFollow(slidesCurrent) {
+  if (!slidesCurrent || !_isSlidesViewSelected() || !_isSlidesFollowEnabled()) return;
+  if (!_slidesCatalog.length) {
+    await loadSlidesCatalog();
+  }
+  var targetSlide = _findSlideForHostCurrent(slidesCurrent);
+  if (!targetSlide) return;
+  var targetPage = _getHostCurrentPage(slidesCurrent);
+  var topicEl = document.querySelector('.topic-item[data-slide-id="' + targetSlide._id + '"]');
+  if (_activeSlideId !== targetSlide._id) {
+    await selectTopic(topicEl || document.querySelector('.topic-item'), null, targetSlide);
+  }
+  var currentPage = _getCurrentSlidesPage();
+  if (currentPage === targetPage) return;
+  if (!_scrollSlidesToPage(targetPage)) {
+    setTimeout(function() { _scrollSlidesToPage(targetPage); }, 200);
+  }
+}
+function _onIncomingHostSlidesCurrent(slidesCurrent) {
+  _hostSlidesCurrent = slidesCurrent || null;
+  if (!_isSlidesViewSelected()) return;
+  var key = _hostSlidesCurrentKey(_hostSlidesCurrent);
+  if (key === _lastHostSlidesCurrentKey) return;
+  _lastHostSlidesCurrentKey = key;
+  _applyHostSlideFollow(_hostSlidesCurrent).catch(function() {});
+}
+function _focusCurrentTopicInAllTopics() {
+  openTopics({ skipCloseSlides: true });
+  var target = document.querySelector('.topic-item.topic-active');
+  if (!target && _activeSlideId) {
+    target = document.querySelector('.topic-item[data-slide-id="' + _activeSlideId + '"]');
+    if (target) target.classList.add('topic-active');
+  }
+  if (!target) target = document.querySelector('.topic-item');
+  if (!target) return;
+  if (!target.hasAttribute('tabindex')) target.setAttribute('tabindex', '-1');
+  setTimeout(function() {
+    try {
+      target.focus({ preventScroll: true });
+    } catch (_) {
+      target.focus();
+    }
+    if (typeof target.scrollIntoView === 'function') {
+      target.scrollIntoView({ block: 'nearest' });
+    }
+  }, 650);
+}
+function _hideSlideHistory() {
+  clearTimeout(_slideHistoryTimer);
+  _slideHistoryTimer = null;
+  var el = document.getElementById('slide-history-list');
+  if (el) el.style.display = 'none';
+  if (_historySelectedRowEl) {
+    _historySelectedRowEl.classList.remove('bg-primary-container', 'text-on-primary-container', 'font-semibold');
+    _historySelectedRowEl = null;
+  }
+}
+function _setPastSlidesBadge(total) {
+  var badge = document.getElementById('past-slides-badge');
+  if (!badge) return;
+  var n = Math.max(0, Number(total || 0));
+  badge.textContent = String(n);
+  badge.style.display = n > 0 ? '' : 'none';
+}
+function _refreshPastSlidesBadge() {
+  if (!_sessionId) return;
+  fetch('/' + _sessionId + '/api/participant/slide-history')
+    .then(function(r) { return r.ok ? r.json() : Promise.reject(r.status); })
+    .then(function(data) {
+      var slides = Array.isArray(data.slides) ? data.slides : [];
+      _setPastSlidesBadge(slides.length);
+    })
+    .catch(function() { _setPastSlidesBadge(0); });
+}
+function _autoHideSlideHistoryAndCloseSlides() {
+  if (_historySelectedRowEl) {
+    closeSlides({ focusAllTopics: true });
+  } else {
+    _hideSlideHistory();
+  }
+}
+function _restartSlideHistoryAutoHideTimer() {
+  clearTimeout(_slideHistoryTimer);
+  _slideHistoryTimer = setTimeout(_autoHideSlideHistoryAndCloseSlides, 30000);
+}
+function _loadSlideHistory() {
+  if (!_sessionId) return;
+  clearTimeout(_slideHistoryTimer);
+  _slideHistoryTimer = null;
+  fetch('/' + _sessionId + '/api/participant/slide-history')
+    .then(function(r) { return r.ok ? r.json() : Promise.reject(r.status); })
+    .then(function(data) {
+      var slides = data.slides || [];
+      _setPastSlidesBadge(slides.length);
+      var el = document.getElementById('slide-history-list');
+      if (!el) return;
+      if (!slides.length) { el.style.display = 'none'; return; }
+      // Group pages by file_name (strip .pptx extension for display)
+      var groups = {}, order = [];
+      slides.forEach(function(s) {
+        var name = (s.file_name || '').replace(/\.pptx$/i, '');
+        if (!groups[name]) { groups[name] = []; order.push(name); }
+        groups[name].push(s.page);
+      });
+      el.innerHTML = order.map(function(name) {
+        var pagesHtml = groups[name].map(function(p) {
+          return '<a href="#" onclick="return false" class="text-primary underline hover:text-primary-dim" data-history-file-name="' + name.replace(/"/g, '&quot;') + '" data-history-page="' + Number(p || 1) + '">' + p + '</a>';
+        }).join(', ');
+        return '<div class="slide-history-row px-4 py-0.5 text-xs leading-relaxed rounded transition-colors">' +
+          '<span class="font-semibold text-on-surface-variant opacity-60 mr-1">' + name + '</span>' +
+          pagesHtml + '</div>';
+      }).join('');
+      el.onclick = function(ev) {
+        var link = ev.target && ev.target.closest('a[data-history-file-name][data-history-page]');
+        if (!link) return;
+        ev.preventDefault();
+        var row = link.closest('.slide-history-row');
+        if (_historySelectedRowEl && _historySelectedRowEl !== row) {
+          _historySelectedRowEl.classList.remove('bg-primary-container', 'text-on-primary-container', 'font-semibold');
+        }
+        if (row) {
+          row.classList.add('bg-primary-container', 'text-on-primary-container', 'font-semibold');
+          if (!row.hasAttribute('tabindex')) row.setAttribute('tabindex', '-1');
+          _historySelectedRowEl = row;
+        }
+        var fileName = link.getAttribute('data-history-file-name') || '';
+        var page = Number(link.getAttribute('data-history-page') || '1');
+        _openSlideFromHistory(fileName, page, row || link);
+        _restartSlideHistoryAutoHideTimer();
+      };
+      el.onmouseenter = _restartSlideHistoryAutoHideTimer;
+      el.onmousemove = _restartSlideHistoryAutoHideTimer;
+      el.style.display = 'block';
+      _restartSlideHistoryAutoHideTimer();
+    })
+    .catch(function() { var el = document.getElementById('slide-history-list'); if (el) el.style.display = 'none'; });
+}
+function toggleSlides() {
+  togglePastSlides();
+}
+function togglePastSlides() {
+  var el = document.getElementById('slide-history-list');
+  var isOpen = !!(el && el.style.display !== 'none');
+  if (!isOpen) {
+    openPastSlides();
+  } else {
+    closePastSlides({ focusAllTopics: false });
+  }
+}
+function openTopics(options) {
+  options = options || {};
+  if (!options.skipCloseSlides) closeSlides({ focusAllTopics: false });
+  closeRepos();
+  var list = document.querySelector('.topics-list');
+  var arrow = document.querySelector('.topics-arrow');
+  list.style.maxHeight = '0px';
+  requestAnimationFrame(function() {
+    var nav = document.querySelector('nav');
+    var wrapper = list.parentElement;
+    var siblingsH = 0;
+    var sib = wrapper.nextElementSibling;
+    while (sib) { siblingsH += sib.getBoundingClientRect().height + 8; sib = sib.nextElementSibling; }
+    var available = nav.getBoundingClientRect().bottom - list.getBoundingClientRect().top - siblingsH - 4;
+    list.style.maxHeight = Math.max(available, 0) + 'px';
+    setTimeout(function() { list.style.overflowY = 'auto'; }, 620);
+  });
+  arrow.style.transform = 'rotate(90deg)';
+}
+function closeTopics() {
+  var list = document.querySelector('.topics-list');
+  var arrow = document.querySelector('.topics-arrow');
+  if (!list) return;
+  list.style.overflowY = 'hidden';
+  list.style.maxHeight = '0px';
+  arrow.style.transform = 'rotate(0deg)';
+}
+function openRepos() {
+  closeSlides({ focusAllTopics: false }); closeTopics();
+  var list = document.querySelector('.repos-list');
+  var arrow = document.querySelector('.repos-arrow');
+  list.style.maxHeight = '500px';
+  arrow.style.transform = 'rotate(90deg)';
+  fetch('/' + _sessionId + '/api/participant/git-activity')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var repos = data.git_repos || [];
+      var el = document.getElementById('repos-content');
+      if (!repos.length) {
+        el.innerHTML = '<p class="px-4 py-2 text-sm text-on-surface-variant">No repos tracked yet.</p>';
+        return;
+      }
+      el.innerHTML = repos.map(function(repo) {
+        var base = repo.url.replace(/\.git$/, '');
+        var name = base.split('/').pop();
+        var branchUrl = base + '/tree/' + repo.branch;
+        var files = repo.files.map(function(f) {
+          var fileUrl = base + '/blob/' + repo.branch + '/' + f;
+          return '<li class="truncate"><a href="' + fileUrl + '" target="_blank" class="hover:underline">' + f + '</a></li>';
+        }).join('');
+        return '<div class="px-4 py-1.5">'
+          + '<a href="' + branchUrl + '" target="_blank" class="text-sm font-medium text-on-surface hover:underline flex items-center gap-1">'
+          + name
+          + '<span class="material-symbols-outlined text-xs flex-shrink-0 ml-1">open_in_new</span>'
+          + '</a>'
+          + '<ul class="mt-0.5 ml-4 text-xs text-on-surface-variant list-disc space-y-0.5">' + files + '</ul>'
+          + '</div>';
+      }).join('');
+    })
+    .catch(function() {
+      document.getElementById('repos-content').innerHTML = '<p class="px-4 py-2 text-sm text-on-surface-variant">Failed to load.</p>';
+    });
+}
+function closeRepos() {
+  var list = document.querySelector('.repos-list');
+  var arrow = document.querySelector('.repos-arrow');
+  if (!list) return;
+  list.style.maxHeight = '0px';
+  arrow.style.transform = 'rotate(0deg)';
+}
+var _viewBeforeUpload = 'slides';
+var _uploadSelectedFile = null;
+function showUpload() {
+  var current = document.querySelector('.nav-active');
+  if (current && current.dataset.nav && current.dataset.nav !== 'upload') {
+    _viewBeforeUpload = current.dataset.nav;
+  }
+  document.getElementById('upload-input').value = '';
+  document.getElementById('upload-filename').textContent = 'or click to browse';
+  document.getElementById('upload-filename').style.color = '';
+  document.getElementById('upload-progress-bar').style.display = 'none';
+  document.getElementById('upload-progress-fill').style.width = '0%';
+  _uploadSelectedFile = null;
+  var btn = document.getElementById('upload-send-btn');
+  btn.disabled = true;
+  btn.className = 'flex items-center gap-2 px-6 py-3 font-semibold rounded-full transition-all opacity-40 cursor-not-allowed bg-surface-container-highest text-on-surface-variant';
+  showView('upload');
+}
+function uploadFileSelected(files) {
+  if (!files || !files.length) return;
+  var file = files[0];
+  var maxSize = 500 * 1024 * 1024;
+  var infoEl = document.getElementById('upload-filename');
+  var btn = document.getElementById('upload-send-btn');
+  if (file.size > maxSize) {
+    infoEl.textContent = 'File too large (max 500MB)';
+    infoEl.style.color = '#ef4444';
+    btn.disabled = true;
+    btn.className = 'flex items-center gap-2 px-6 py-3 font-semibold rounded-full transition-all opacity-40 cursor-not-allowed bg-surface-container-highest text-on-surface-variant';
+    _uploadSelectedFile = null;
+    return;
+  }
+  _uploadSelectedFile = file;
+  var sizeTxt = file.size > 1024 * 1024
+    ? (file.size / 1024 / 1024).toFixed(1) + ' MB'
+    : Math.round(file.size / 1024) + ' KB';
+  infoEl.textContent = file.name + ' (' + sizeTxt + ')';
+  infoEl.style.color = '';
+  btn.disabled = false;
+  btn.className = 'flex items-center gap-2 px-6 py-3 bg-primary text-on-primary font-semibold rounded-full hover:bg-primary-dim transition-all shadow-lg shadow-primary/20 cursor-pointer';
+}
+function uploadSend() {
+  if (!_uploadSelectedFile || !_sessionId) return;
+  var progressBar = document.getElementById('upload-progress-bar');
+  var progressFill = document.getElementById('upload-progress-fill');
+  var infoEl = document.getElementById('upload-filename');
+  var btn = document.getElementById('upload-send-btn');
+  btn.disabled = true;
+  progressBar.style.display = '';
+  progressFill.style.width = '0%';
+  var formData = new FormData();
+  formData.append('file', _uploadSelectedFile);
+  formData.append('uuid', _myUUID);
+  var xhr = new XMLHttpRequest();
+  xhr.open('POST', '/' + _sessionId + '/api/upload');
+  xhr.upload.onprogress = function(e) {
+    if (e.lengthComputable) progressFill.style.width = Math.round(e.loaded / e.total * 100) + '%';
+  };
+  xhr.onload = function() {
+    if (xhr.status >= 200 && xhr.status < 300) {
+      showView(_viewBeforeUpload);
+      showToast('File sent!');
+    } else {
+      var msg = 'Upload failed';
+      try { msg = JSON.parse(xhr.responseText).detail || msg; } catch(e) {}
+      infoEl.textContent = msg;
+      infoEl.style.color = '#ef4444';
+      progressBar.style.display = 'none';
+      btn.disabled = false;
+    }
+  };
+  xhr.onerror = function() {
+    infoEl.textContent = 'Network error';
+    infoEl.style.color = '#ef4444';
+    progressBar.style.display = 'none';
+    btn.disabled = false;
+  };
+  xhr.send(formData);
+}
+function sendEmoji(emoji, btn) {
+  showDesktopEmojiFloat(emoji, btn);
+  if (!_sessionId) return;
+  fetch('/' + _sessionId + '/api/participant/emoji/reaction', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Participant-ID': _myUUID },
+    body: JSON.stringify({ emoji: emoji })
+  }).catch(function(e) { console.error('emoji send failed', e); });
+}
+function sendFeedback() {
+  var ta = document.getElementById('feedback-textarea');
+  var text = ta ? ta.value.trim() : '';
+  if (!text) return;
+  fetch('/' + _sessionId + '/api/participant/misc/feedback', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Participant-ID': _myUUID },
+    body: JSON.stringify({ text: text, participant_name: '' })
+  }).then(function(r) {
+    if (!r.ok) throw new Error(r.status);
+    ta.value = '';
+    document.getElementById('feedback-send-btn').disabled = true;
+    showToast('Sent!');
+  }).catch(function(e) { console.error('feedback failed', e); });
+}
+function sendPaste() {
+  var ta = document.getElementById('paste-textarea');
+  var text = ta ? ta.value : '';
+  if (!text.trim()) return;
+  if (text.length > 102400) { alert('Text too large (max 100KB)'); return; }
+  fetch('/' + _sessionId + '/api/participant/paste', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Participant-ID': _myUUID },
+    body: JSON.stringify({ text: text })
+  }).then(function() {
+    ta.value = '';
+    document.getElementById('paste-send-btn').disabled = true;
+    showToast('Sent!');
+  }).catch(function(e) { console.error('paste failed', e); });
+}
+function showToast(msg) {
+  var t = document.createElement('div');
+  t.textContent = msg;
+  t.style.cssText = 'position:fixed;bottom:1.5rem;right:1.5rem;background:var(--color-primary,#4555ba);color:#fff;padding:.5rem 1.2rem;border-radius:999px;font-weight:600;font-size:.875rem;z-index:9999;pointer-events:none;opacity:1;transition:opacity .4s';
+  document.body.appendChild(t);
+  setTimeout(function() { t.style.opacity = '0'; setTimeout(function() { t.remove(); }, 400); }, 1200);
+}
+window.addEventListener('dragenter', function(e) {
+  if (e.dataTransfer && e.dataTransfer.types && Array.from(e.dataTransfer.types).includes('Files')) {
+    showUpload();
+  }
+});
+function _formatSlideAge(updatedAt) {
+  if (!updatedAt) return '';
+  var dt = new Date(updatedAt);
+  if (isNaN(dt.getTime())) return '';
+  var sec = Math.max(1, Math.floor((Date.now() - dt.getTime()) / 1000));
+  if (sec < 60) return Math.max(15, Math.ceil(sec / 15) * 15) + 's ago';
+  if (sec < 3600) return Math.ceil(sec / 60) + 'm ago';
+  if (sec < 86400) return Math.ceil(sec / 3600) + 'h ago';
+  var days = Math.ceil(sec / 86400);
+  if (days < 7) return days + 'd ago';
+  if (days < 45) return Math.ceil(days / 7) + 'w ago';
+  var nowYear = new Date().getFullYear();
+  if (dt.getFullYear() !== nowYear) return String(dt.getFullYear());
+  return dt.toLocaleString(undefined, { month: 'short' });
+}
+function _buildTopicItem(slide) {
+  var el = document.createElement('div');
+  el.className = 'topic-item pl-4 pr-1 py-1.5 text-sm text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high cursor-pointer rounded-lg flex items-center gap-1 min-w-0';
+  el.title = slide.name;
+  el.dataset.slideId = slide._id;
+  el.addEventListener('click', function(e) { selectTopic(el, e, slide); });
+  var nameSpan = document.createElement('span');
+  nameSpan.className = 'truncate flex-1';
+  nameSpan.textContent = slide.name;
+  el.appendChild(nameSpan);
+  var age = _formatSlideAge(slide.modified_at);
+  if (age) {
+    var ageSpan = document.createElement('span');
+    ageSpan.className = 'flex-shrink-0 text-xs opacity-50';
+    ageSpan.textContent = age;
+    el.appendChild(ageSpan);
+  }
+  var _dotCfg = {
+    'cached':          { color: '#4caf50', tip: 'Available on server' },
+    'downloading':     { spinner: true,    tip: 'Downloading PDF...' },
+    'polling_drive':   { spinner: true,    tip: 'Waiting for Google Drive...' },
+    'stale':           { color: '#ff9800', tip: 'Update available, syncing...' },
+    'not_cached':      { color: '#f44336', tip: 'Not yet on server' },
+    'poll_timeout':    { color: '#ff9800', tip: 'Sync timed out' },
+    'download_failed': { color: '#f44336', tip: 'Download failed' },
+  };
+  var status = slide.status || 'not_cached';
+  var cfg = _dotCfg[status] || _dotCfg['not_cached'];
+  var dotEl = document.createElement('span');
+  dotEl.title = cfg.tip;
+  if (cfg.spinner) {
+    dotEl.style.cssText = 'display:inline-block;width:8px;height:8px;border-radius:50%;border:2px solid currentColor;border-top-color:transparent;flex-shrink:0;animation:spin .7s linear infinite;opacity:0.6';
+  } else {
+    dotEl.style.cssText = 'display:inline-block;width:7px;height:7px;border-radius:50%;background:' + cfg.color + ';flex-shrink:0';
+  }
+  el.appendChild(dotEl);
+  var dlBtn = document.createElement('span');
+  dlBtn.className = 'material-symbols-outlined flex-shrink-0 rounded p-0.5 bg-surface-container-highest hover:text-on-primary-container hover:bg-primary-container transition-colors cursor-pointer';
+  dlBtn.style.cssText = 'font-size:14px;font-family:"Material Symbols Outlined"';
+  dlBtn.textContent = 'download';
+  dlBtn.title = 'Download ' + slide.name;
+  dlBtn.addEventListener('click', function(e) {
+    e.stopPropagation();
+    var dlUrl = slide.url + (slide.url.includes('?') ? '&' : '?') + 'download=1';
+    var tmp = document.createElement('a');
+    tmp.href = dlUrl;
+    tmp.setAttribute('download', slide.name || '');
+    tmp.style.display = 'none';
+    document.body.appendChild(tmp);
+    tmp.click();
+    tmp.remove();
+  });
+  el.appendChild(dlBtn);
+  return el;
+}
+var _SLIDES_GROUP_COLORS = {
+  'AI':               '#e91e63',
+  'Architecture':     '#ff9800',
+  'Coding Practices': '#4caf50',
+  'Testing':          '#2196f3',
+  'Java Performance': '#9c27b0',
+  'Java Frameworks':  '#00bcd4',
+};
+async function loadSlidesCatalog() {
+  if (!_sessionId) return;
+  try {
+    var data = await fetch('/' + _sessionId + '/api/slides', { cache: 'no-store' }).then(function(r) { return r.ok ? r.json() : Promise.reject(r.status); });
+    var seen = new Set();
+    var slides = (data.slides || []).filter(function(raw) {
+      if (!raw || typeof raw !== 'object') return false;
+      var name = String(raw.name || raw.title || '').trim();
+      var slug = String(raw.slug || '').trim() || 'slide';
+      var url = String(raw.url || '').trim() || ('/' + _sessionId + '/api/slides/download/' + encodeURIComponent(slug));
+      if (!name || !url) return false;
+      var key = slug + '|' + url;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      raw._id = key; raw.name = name; raw.url = url; raw.slug = slug;
+      return true;
+    });
+    _slidesCatalog = slides.slice();
+    var container = document.getElementById('topics-inner');
+    container.innerHTML = '';
+    var hasGroups = slides.some(function(s) { return s.group; });
+    if (!hasGroups) {
+      slides.forEach(function(slide) { container.appendChild(_buildTopicItem(slide)); });
+      return;
+    }
+    // Count per group to decide whether to show header
+    var groupCounts = {};
+    slides.forEach(function(s) { if (s.group) groupCounts[s.group] = (groupCounts[s.group] || 0) + 1; });
+    var currentGroup = null;
+    var currentGroupEl = null;
+    slides.forEach(function(slide) {
+      if (slide.group && slide.group !== currentGroup) {
+        currentGroup = slide.group;
+        currentGroupEl = document.createElement('div');
+        currentGroupEl.style.cssText = 'margin-top:4px';
+        var color = _SLIDES_GROUP_COLORS[slide.group] || '#888';
+        if (groupCounts[slide.group] > 1) {
+          var header = document.createElement('div');
+          header.textContent = slide.group;
+          header.style.cssText = 'font-size:0.65rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;padding:2px 16px 2px 16px;color:' + color + ';opacity:0.85';
+          currentGroupEl.appendChild(header);
+        }
+        container.appendChild(currentGroupEl);
+      }
+      var item = _buildTopicItem(slide);
+      if (slide.group) {
+        // Color accent: left border
+        item.style.borderLeft = '2px solid ' + (_SLIDES_GROUP_COLORS[slide.group] || '#888');
+        item.style.paddingLeft = '10px';
+        item.style.paddingRight = '4px';
+        currentGroupEl.appendChild(item);
+      } else {
+        currentGroup = null; currentGroupEl = null;
+        container.appendChild(item);
+      }
+    });
+  } catch(e) {
+    console.error('Failed to load slides catalog', e);
+  }
+}
+function downloadTopic(url, name) {
+  var a = document.createElement('a');
+  a.href = url;
+  a.setAttribute('download', name || '');
+  a.style.display = 'none';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
+function _promoteEmoji(emoji, title, animate, sourceBtn) {
+  var newBtn = document.createElement('button');
+  newBtn.textContent = emoji;
+  newBtn.title = title;
+  newBtn.className = 'w-[3.25rem] h-[3.25rem] flex items-center justify-center hover:bg-surface-container rounded-full text-[1.625rem] transition-transform hover:scale-110';
+  newBtn.setAttribute('onclick', 'sendEmoji(this.textContent.trim(), this)');
+  var sep = document.getElementById('emoji-tv-sep');
+  sep.parentNode.insertBefore(newBtn, sep);
+  if (animate && sourceBtn) showDesktopEmojiFloat(emoji, sourceBtn);
+  // remove from overflow
+  var overflow = document.getElementById('emoji-overflow');
+  overflow.querySelectorAll('button').forEach(function(b) {
+    if (b.textContent.trim() === emoji) b.parentNode.removeChild(b);
+  });
+  // hide + and separator if overflow is now empty
+  if (!overflow.querySelector('button')) {
+    document.getElementById('emoji-plus-sep').style.display = 'none';
+    document.getElementById('emoji-more-wrap').style.display = 'none';
+  }
+}
+function addEmojiToBar(btn) {
+  var emoji = btn.textContent.trim();
+  var promoted = LS.getEmoji();
+  if (!promoted.find(function(e) { return e.emoji === emoji; })) {
+    promoted.push({ emoji: emoji, title: btn.title });
+    LS.setEmoji(promoted);
+  }
+  _promoteEmoji(emoji, btn.title, true, btn);
+  scheduleHideOverflow();
+}
+(function restorePromotedEmojis() {
+  LS.getEmoji().forEach(function(e) { _promoteEmoji(e.emoji, e.title, false, null); });
+})();
+function scheduleHideOverflow() {
+  window._emojiHideTimer = setTimeout(function() {
+    var el = document.getElementById('emoji-overflow');
+    el.classList.add('opacity-0', 'pointer-events-none', 'translate-y-1');
+  }, 120);
+}
+var VIEWS = ['slides', 'summary', 'notes', 'agenda', 'feedback', 'paste', 'upload'];
+function saveScroll(name, el) {
+  LS.setScroll(name, el.scrollTop);
+}
+function toggleTopics() {
+  var list = document.querySelector('.topics-list');
+  if (!list.style.maxHeight || list.style.maxHeight === '0px') { openTopics(); } else { closeTopics(); }
+}
+function toggleRepos() {
+  var list = document.querySelector('.repos-list');
+  if (!list.style.maxHeight || list.style.maxHeight === '0px') { openRepos(); } else { closeRepos(); }
+}
+async function selectTopic(el, event, slide) {
+  if (event) event.stopPropagation();
+  document.querySelectorAll('.nav-item').forEach(function(n) { n.classList.remove('nav-active'); });
+  document.querySelectorAll('.topic-item').forEach(function(n) { n.classList.remove('topic-active'); });
+  if (el) el.classList.add('topic-active');
+  VIEWS.forEach(function(v) {
+    document.getElementById(v + '-view').style.display = v === 'slides' ? '' : 'none';
+  });
+  if (slide && slide.url && window.loadPdf) {
+    if (slide.slug && _sessionId) {
+      try {
+        var checkUrl = '/' + _sessionId + '/api/slides/check/' + encodeURIComponent(slide.slug);
+        var resp = await fetch(checkUrl, { cache: 'no-store', headers: { 'X-Participant-ID': _myUUID } });
+        if (!resp.ok) throw new Error(resp.status);
+      } catch(e) {
+        showToast('Slide not ready on server yet. Try again in a few seconds.');
+        return;
+      }
+    }
+    var dlUrl = slide.url + (slide.url.includes('?') ? '&' : '?') + 'download=1';
+    var dlBtn = document.getElementById('pdf-download');
+    if (dlBtn) { dlBtn.href = dlUrl; dlBtn.setAttribute('download', slide.name || ''); }
+    await window.loadPdf(slide.url);
+    _activeSlideId = slide._id || null;
+  }
+}
+function showView(name) {
+  if (name !== 'slides') closeSlides({ focusAllTopics: false });
+  document.querySelectorAll('.topic-item').forEach(function(n) { n.classList.remove('topic-active'); });
+  setActive(name);
+  LS.setView(name);
+  if (name === 'agenda') loadAgenda();
+  if (name === 'notes') loadNotes();
+  if (name === 'summary') loadSummary();
+  VIEWS.forEach(function(v) {
+    var el = document.getElementById(v + '-view');
+    el.style.display = v === name ? '' : 'none';
+  });
+  var el = document.getElementById(name + '-view');
+  var saved = LS.getScroll(name);
+  if (saved) el.scrollTop = parseInt(saved, 10);
+  if (name === 'slides') {
+    _applyHostSlideFollow(_hostSlidesCurrent).catch(function() {});
+  }
+}
+function resetStatePrompt() {
+  if (confirm('Reset local state? This will clear your saved emojis and preferences.')) {
+    LS.clear();
+    location.reload();
+  }
+}
+</script>
+<script src="/static/version-age.js"></script>
+<script>renderDeployAge('version-tag-new', {disableBranchTooltip: true});</script>
+<script>
+let _sessionId = null;
+var _myUUID = (function() {
+  var key = 'workshop_participant_uuid';
+  var store = document.cookie.indexOf('is_host=1') >= 0 ? sessionStorage : localStorage;
+  var uid = store.getItem(key);
+  if (!uid) { uid = crypto.randomUUID(); store.setItem(key, uid); }
+  return uid;
+})();
+(async function loadParticipantState() {
+  try {
+    const status = await fetch('/api/status').then(r => r.json());
+    _sessionId = status.session_id;
+    console.log('[participant] session_id:', _sessionId);
+    if (!_sessionId) return;
+    loadSlidesCatalog();
+    _refreshPastSlidesBadge();
+    _connectWS();
+    const state = await fetch(`/${_sessionId}/api/participant/state`).then(r => r.json());
+    console.log('[participant] state:', state);
+    document.querySelector('[data-nav="agenda"]').style.display = state.has_agenda ? '' : 'none';
+    document.querySelector('[data-nav="notes"]').style.display = state.notes_count > 0 ? '' : 'none';
+    document.getElementById('notes-badge').textContent = state.notes_count || '';
+    var summaryNav = document.querySelector('[data-nav="summary"]');
+    summaryNav.style.display = state.summary_count > 0 ? '' : 'none';
+    var summaryBadge = document.getElementById('summary-badge');
+    if (state.summary_count > 0 && state.summary_updated_at) {
+      var d = new Date(state.summary_updated_at);
+      summaryBadge.textContent = d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+      summaryBadge.style.display = '';
+    } else {
+      summaryBadge.style.display = 'none';
+    }
+    var gdriveNav = document.getElementById('gdrive-nav');
+    if (state.gdrive_url) { gdriveNav.href = state.gdrive_url; gdriveNav.style.display = ''; }
+    else { gdriveNav.style.display = 'none'; }
+    var saved = LS.getView();
+    if (saved === 'agenda' && !state.has_agenda) saved = 'slides';
+    if (saved === 'notes' && !(state.notes_count > 0)) saved = 'slides';
+    if (saved === 'summary' && !(state.summary_count > 0)) saved = 'slides';
+    _hostSlidesCurrent = state.slides_current || null;
+    showView(saved);
+  } catch (e) {
+    console.error('[participant] failed to load state:', e);
+  }
+})();
+
+function _applyState(msg) {
+  if (msg.notes_count != null) {
+    document.querySelector('[data-nav="notes"]').style.display = msg.notes_count > 0 ? '' : 'none';
+    document.getElementById('notes-badge').textContent = msg.notes_count || '';
+  }
+  if (msg.summary_count != null) {
+    var summaryNav = document.querySelector('[data-nav="summary"]');
+    summaryNav.style.display = msg.summary_count > 0 ? '' : 'none';
+    var badge = document.getElementById('summary-badge');
+    if (msg.summary_count > 0 && msg.summary_updated_at) {
+      var d = new Date(msg.summary_updated_at);
+      badge.textContent = d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+      badge.style.display = '';
+    } else { badge.style.display = 'none'; }
+  }
+  if (msg.gdrive_url !== undefined) {
+    var gdriveNav = document.getElementById('gdrive-nav');
+    if (msg.gdrive_url) { gdriveNav.href = msg.gdrive_url; gdriveNav.style.display = ''; }
+    else { gdriveNav.style.display = 'none'; }
+  }
+  if (msg.has_agenda !== undefined) {
+    document.querySelector('[data-nav="agenda"]').style.display = msg.has_agenda ? '' : 'none';
+  }
+}
+
+function _handleWsMessage(msg) {
+  switch (msg.type) {
+    case 'reload': location.reload(); break;
+    case 'redirect': window.location.href = msg.url || '/'; break;
+    case 'state': _applyState(msg); break;
+    case 'notes_updated':
+      document.querySelector('[data-nav="notes"]').style.display = msg.count > 0 ? '' : 'none';
+      document.getElementById('notes-badge').textContent = msg.count || '';
+      break;
+    case 'summary_updated': {
+      var summaryNav = document.querySelector('[data-nav="summary"]');
+      summaryNav.style.display = msg.count > 0 ? '' : 'none';
+      var badge = document.getElementById('summary-badge');
+      if (msg.count > 0 && msg.updated_at) {
+        var d = new Date(msg.updated_at);
+        badge.textContent = d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+        badge.style.display = '';
+      } else { badge.style.display = 'none'; }
+      break;
+    }
+    case 'slides_cache_status':
+      loadSlidesCatalog().then(function() {
+        _applyHostSlideFollow(_hostSlidesCurrent).catch(function() {});
+      }).catch(function() {});
+      break;
+    case 'slides_current': _onIncomingHostSlidesCurrent(msg.slides_current || null); break;
+  }
+}
+
+var _ws = null;
+function _connectWS() {
+  if (!_sessionId) return;
+  var proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  var url = proto + '://' + location.host + '/ws/' + _sessionId + '/' + encodeURIComponent(_myUUID);
+  _ws = new WebSocket(url);
+  _ws.onmessage = function(e) { try { _handleWsMessage(JSON.parse(e.data)); } catch(err) { console.error('ws msg error', err); } };
+  _ws.onclose = function(e) { if (e.code !== 1008) setTimeout(_connectWS, 3000); };
+  _ws.onerror = function(e) { console.error('ws error', e); };
+}
+
+async function loadAgenda() {
+  const el = document.getElementById('agenda-content');
+  el.textContent = 'Loading…';
+  try {
+    const data = await fetch(`/${_sessionId}/api/participant/agenda`).then(r => r.ok ? r.json() : Promise.reject('not found'));
+    const binary = atob(data.data);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    const result = await mammoth.convertToHtml({ arrayBuffer: bytes.buffer });
+    el.innerHTML = result.value.replace(/<a /g, '<a target="_blank" rel="noopener" ');
+  } catch (e) {
+    el.textContent = 'Failed to load agenda.';
+  }
+}
+
+function linkifyText(text) {
+  var escaped = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  return escaped.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" rel="noopener" class="underline text-primary">$1</a>');
+}
+
+async function loadNotes() {
+  const el = document.getElementById('notes-content');
+  el.textContent = 'Loading…';
+  try {
+    const data = await fetch(`/${_sessionId}/api/participant/notes`).then(r => r.ok ? r.json() : Promise.reject('not found'));
+    if (data && data.notes_content) {
+      el.innerHTML = linkifyText(data.notes_content);
+    } else {
+      el.textContent = 'No notes yet.';
+    }
+  } catch (e) {
+    el.textContent = 'Failed to load notes.';
+  }
+}
+
+async function loadSummary() {
+  const el = document.getElementById('summary-content');
+  el.textContent = 'Loading…';
+  try {
+    const data = await fetch(`/${_sessionId}/api/participant/summary`).then(r => r.ok ? r.json() : Promise.reject('not found'));
+    if (data) {
+      const md = data.raw_markdown ||
+        (data.points || []).map(p => '- ' + (typeof p === 'string' ? p : p.text)).join('\n');
+      el.innerHTML = md ? marked.parse(md) : 'No summary yet.';
+    } else {
+      el.textContent = 'No summary yet.';
+    }
+  } catch (e) {
+    el.textContent = 'Failed to load summary.';
+  }
+}
+</script>
+</body></html>
