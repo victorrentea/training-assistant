@@ -1790,7 +1790,7 @@ function _connectWS() {
   var url = proto + '://' + location.host + '/ws/' + _sessionId + '/' + encodeURIComponent(_myUUID);
   _ws = new WebSocket(url);
   _ws.onmessage = function(e) { try { _handleWsMessage(JSON.parse(e.data)); } catch(err) { console.error('ws msg error', err); } };
-  _ws.onclose = function(e) { if (e.code !== 1008) setTimeout(_connectWS, 3000); };
+  _ws.onclose = function(e) { if (e.code === 1008) { window.location.href = '/'; return; } setTimeout(_connectWS, 3000); };
   _ws.onerror = function(e) { console.error('ws error', e); };
 }
 
