@@ -163,7 +163,7 @@
     </style>
 <script src="/static/emoji-float.js"></script>
 </head>
-<body class="bg-background text-on-background font-body min-h-screen flex flex-col">
+<body class="bg-background text-on-background font-body h-[100dvh] flex flex-col overflow-hidden">
 <!-- Desktop Warning -->
 <div id="desktop-warning" class="hidden fixed inset-0 z-[100] bg-background flex flex-col items-center justify-center text-center p-8">
   <span class="material-symbols-outlined text-6xl text-primary mb-4">smartphone</span>
@@ -206,11 +206,11 @@
 </button>
 </div>
 </header>
-<main class="flex-1 flex flex-col w-full">
+<main class="flex-1 min-h-0 flex flex-col w-full">
 <!-- Content views -->
-<div class="relative flex-1">
+<div class="relative flex-1 min-h-0">
   <!-- Slides View (default active) -->
-  <div id="view-slides" class="absolute inset-0 overflow-y-auto flex flex-col gap-4 pb-32 scroll-smooth">
+  <div id="view-slides" class="absolute inset-0 overflow-y-auto overflow-x-hidden flex flex-col gap-4 pb-16 scroll-smooth">
     <div id="pdf-pages"></div>
   </div>
   <!-- Slide loading placeholder -->
@@ -221,12 +221,18 @@
   </div>
   </div>
   <!-- Summary View (hidden by default) -->
-  <div id="view-summary" class="absolute inset-0 hidden overflow-y-auto p-4 pb-32">
+  <div id="view-summary" class="absolute inset-0 hidden overflow-y-auto p-4 pb-16">
     <div id="summary-content" class="md-content text-sm"></div>
   </div>
   <!-- Speaker View (hidden by default) -->
-  <div id="view-speaker" class="absolute inset-0 hidden overflow-y-auto p-4 pb-32">
+  <div id="view-speaker" class="absolute inset-0 hidden overflow-y-auto p-4 pb-16">
     <div id="speaker-content" class="md-content text-sm"></div>
+  </div>
+  <!-- Floating Action Button (inside relative container) -->
+  <div id="fab-current-slide" class="absolute bottom-4 right-4 z-40" style="pointer-events:auto">
+    <button onclick="scrollToCurrentSlide()" class="kinetic-gradient text-on-primary font-bold py-3 px-5 rounded-full flex items-center gap-2 shadow-[0_8px_24px_rgba(163,166,255,0.4)] hover:scale-105 active:scale-95 transition-transform">
+      <span class="text-lg">Current Slide 🎯</span>
+    </button>
   </div>
 </div>
 <!-- Desktop Quick Controls (Emoji Bar) -->
@@ -243,14 +249,8 @@
 </div>
 </div>
 </main>
-<!-- Floating Action Button -->
-<div id="fab-current-slide" class="fixed bottom-20 right-4 z-50">
-<button onclick="scrollToCurrentSlide()" class="kinetic-gradient text-on-primary font-bold py-3 px-5 rounded-full flex items-center gap-2 shadow-[0_8px_24px_rgba(163,166,255,0.4)] hover:scale-105 active:scale-95 transition-transform">
-<span class="text-lg">Current Slide 🎯</span>
-</button>
-</div>
-<!-- Fixed Emoji Reaction Bar -->
-<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-center items-center px-4 py-2 bg-[#140b36]/80 backdrop-blur-2xl border-t border-white/5">
+<!-- Emoji Reaction Bar -->
+<nav class="flex-none w-full z-50 flex justify-center items-center px-4 py-2 bg-[#140b36] border-t border-white/5">
 <div class="flex justify-around items-center w-full max-w-lg gap-1">
 <!-- Clap -->
 <button onclick="sendEmoji('👏', this)" class="flex flex-col items-center relative group">
@@ -279,8 +279,6 @@
 </button>
 </div>
 </nav>
-<!-- Padding for Fixed Reaction Bar -->
-<div class="h-20"></div>
 <script type="module">
   import * as pdfjsLib from 'https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.149/build/pdf.min.mjs';
   pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.149/build/pdf.worker.min.mjs';
@@ -310,7 +308,7 @@
           const viewport = page.getViewport({ scale: 1.5 });
           const section = document.createElement('section');
           section.dataset.page = i;
-          section.style.cssText = 'position:relative;margin-bottom:7px';
+          section.style.cssText = 'position:relative;margin-bottom:7px;max-width:100%;overflow:hidden';
           const canvas = document.createElement('canvas');
           canvas.width = viewport.width;
           canvas.height = viewport.height;
@@ -331,11 +329,15 @@
               const width = Math.abs(rect[0] - rect[2]);
               const height = Math.abs(rect[1] - rect[3]);
               if (!(width > 0 && height > 0)) continue;
+              const leftPct = (left / viewport.width * 100).toFixed(3);
+              const topPct = (top / viewport.height * 100).toFixed(3);
+              const widthPct = (width / viewport.width * 100).toFixed(3);
+              const heightPct = (height / viewport.height * 100).toFixed(3);
               const link = document.createElement('a');
               link.href = ann.url || ann.unsafeUrl;
               link.target = '_blank';
               link.rel = 'noopener noreferrer';
-              link.style.cssText = `position:absolute;left:${left}px;top:${top}px;width:${width}px;height:${height}px;pointer-events:auto;cursor:pointer;background:transparent`;
+              link.style.cssText = `position:absolute;left:${leftPct}%;top:${topPct}%;width:${widthPct}%;height:${heightPct}%;pointer-events:auto;cursor:pointer;background:transparent`;
               annLayer.appendChild(link);
             }
           }
@@ -344,7 +346,7 @@
         // Scroll to current slide after initial render
         const initialTarget = container.querySelector(`section[data-page="${pageNum}"]`);
         if (initialTarget) {
-          initialTarget.scrollIntoView({ block: 'center' });
+          initialTarget.scrollIntoView({ block: 'end' });
           initialTarget.classList.add('slide-highlight');
         }
       }
@@ -427,7 +429,7 @@
     var container = document.getElementById('view-slides');
     var target = container && container.querySelector('section[data-page="' + _currentPage + '"]');
     if (!target) return;
-    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    target.scrollIntoView({ behavior: 'smooth', block: 'end' });
     var done = false;
     var fallbackTimer;
     function highlight() {
