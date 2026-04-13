@@ -148,7 +148,7 @@ async function doCreate(type) {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       credentials: 'include',
-      body: JSON.stringify({name, type}),
+      body: JSON.stringify({name, type: type === 'talk' ? 'conference' : type}),
     });
     const data = await r.json();
     if (r.ok && data.session_id) {
