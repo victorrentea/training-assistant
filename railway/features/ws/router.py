@@ -142,8 +142,6 @@ async def _handle_broadcast(data: dict):
             state.slides_current = event["slides_current"]  # may be None
         else:
             state.slides_current = {k: v for k, v in event.items() if k != "type"}
-    if event_type == "active_participants_count_updated" and "host_connected" not in event:
-        event = {**event, "host_connected": "__host__" in state.participants}
     msg = json.dumps(event)
     for pid, ws in list(state.participants.items()):
         if pid.startswith("__") and pid != "__host__":  # keep host, skip other special keys
@@ -315,7 +313,6 @@ async def _handle_participant_connection(websocket: WebSocket, pid: str, is_host
     if is_host:
         state.participant_names["__host__"] = "Host"
         logger.info(f"Host connected ({len(state.participants)} total)")
-        await broadcast_participant_update()
     else:
         # Participant registered via daemon REST — broadcast presence
         name = state.participant_names.get(pid, "")
@@ -339,7 +336,7 @@ async def _handle_participant_connection(websocket: WebSocket, pid: str, is_host
         logger.info(f"Disconnected: {pid} ({len(state.participants)} remaining)")
         if not is_host:
             await push_to_daemon({"type": MSG_PARTICIPANT_PRESENCE, "uuid": pid, "online": False})
-        await broadcast_participant_update()
+            await broadcast_participant_update()
 
 
 @session_router.websocket("/ws/{session_id}/{participant_id}")

@@ -54,7 +54,6 @@ async def broadcast_participant_update():
     msg = json.dumps({
         "type": "active_participants_count_updated",
         "count": count,
-        "host_connected": "__host__" in state.participants,
     })
 
     async def _send(pid, ws):
