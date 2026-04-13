@@ -152,8 +152,10 @@ body{visibility:hidden}
 <nav class="flex flex-col space-y-2 flex-1 overflow-y-hidden min-h-0" style="row-gap:0.425rem;">
 <a data-nav="slides" onclick="toggleSlidesMenu()" class="nav-item nav-active rounded-full px-2 py-2 font-semibold flex items-center gap-3 transition-all cursor-pointer">
 <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">slideshow</span>
+<span class="inline-flex items-center gap-1">
 <span class="text-base">Slides</span>
 <span class="material-symbols-outlined topics-arrow text-xl transition-transform duration-300">chevron_right</span>
+</span>
 <label for="slides-follow-checkbox" onclick="event.stopPropagation()" class="ml-auto inline-flex items-center gap-1 text-xs font-medium whitespace-nowrap cursor-pointer rounded-full px-2 py-1 transition-colors hover:bg-surface-container-high">
 <input id="slides-follow-checkbox" type="checkbox" checked tabindex="-1" onfocus="this.blur()" style="width:0.8rem;height:0.8rem;accent-color:var(--color-primary,#4555ba);outline:none;box-shadow:none;" />
 <span>Follow</span>
