@@ -185,9 +185,13 @@
 </div>
 <div class="flex items-center gap-2 overflow-x-auto no-scrollbar">
 <button id="btn-speaker" onclick="showView('speaker')" class="tab-btn flex flex-col items-center gap-1 p-2 bg-surface-container-highest/30 hover:bg-surface-container-highest rounded-lg transition-colors min-w-[64px]">
-<span class="material-symbols-outlined text-xl">face</span>
+<span class="material-symbols-outlined text-xl">mic</span>
 <span class="text-[10px] font-semibold uppercase tracking-tight">Speaker</span>
 </button>
+<div id="pax-count-display" class="hidden flex-col items-center gap-0.5 px-2 min-w-[48px]">
+<span class="text-base leading-none">👥</span>
+<span id="pax-count" class="text-xs font-bold leading-none">0</span>
+</div>
 <button id="btn-slides" onclick="showView('slides')" class="tab-btn active flex flex-col items-center gap-1 p-2 bg-surface-container-highest/30 hover:bg-surface-container-highest rounded-lg transition-colors min-w-[64px]">
 <span class="material-symbols-outlined text-xl">slideshow</span>
 <span class="text-[10px] font-semibold uppercase tracking-tight">Slides</span>
@@ -523,6 +527,11 @@
         if (msg.type === 'announce' && msg.slides_current) _applySlidesCurrent(msg.slides_current).catch(function() {});
         if (msg.type === 'emoji_counters_updated' && msg.counters) _applyEmojiCounters(msg.counters);
         if (msg.type === 'summary_updated' && msg.updated_at) _enableSummaryButton();
+        if (msg.type === 'active_participants_count_updated') {
+          document.getElementById('pax-count').textContent = msg.count;
+          document.getElementById('pax-count-display').classList.remove('hidden');
+          document.getElementById('pax-count-display').classList.add('flex');
+        }
       } catch (_) {}
     };
     _ws.onclose = function(e) { if (e.code === 1008) return; setTimeout(_connectWS, 3000); };
