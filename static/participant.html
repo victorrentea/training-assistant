@@ -1051,7 +1051,7 @@ function _buildTopicItem(slide) {
   el.dataset.slideId = slide._id;
   el.addEventListener('click', function(e) { selectTopic(el, e, slide); });
   var nameSpan = document.createElement('span');
-  nameSpan.className = 'truncate flex-1';
+  nameSpan.className = 'truncate flex-1 font-semibold';
   nameSpan.textContent = slide.name;
   el.appendChild(nameSpan);
   var age = _formatSlideAge(slide.modified_at);
