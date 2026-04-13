@@ -15,7 +15,7 @@ Participant Browser          Railway (BE)                    Daemon (Mac)
 │              │        │                  │          │ quiz/poll_api.py │
 └──────────────┘        └──────────────────┘          └──────────────────┘
 
-Host Browser ──── REST ──────────────────────────────> Daemon localhost:8081
+Host Browser ──── REST ──────────────────────────────> Daemon localhost:1234
 ```
 
 Daemon owns all poll state, all scoring, and leaderboard. Railway keeps a read-only score mirror (updated by daemon broadcasts) for unmigrated features that still read `state.scores`.
@@ -495,7 +495,7 @@ All events broadcast to participants via `_ws_client.send({"type": "broadcast", 
 - Remove old `leaderboard` message handler (replaced by `leaderboard_revealed`)
 
 ### `static/host.js`
-- Poll CRUD calls: change from Railway URLs to `daemonApi()` (localhost:8081)
+- Poll CRUD calls: change from Railway URLs to `daemonApi()` (localhost:1234)
 - Leaderboard calls: change from Railway URLs to `daemonApi()`
 - Score reset: change from Railway URL to `daemonApi()`
 - Add handlers for poll and leaderboard broadcast events pushed via host WS

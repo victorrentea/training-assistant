@@ -21,7 +21,7 @@ The main daemon holds the WS connection to Railway. Only it can send `download_p
 ## Decisions
 
 ### 1. Slides upload daemon notifies main daemon via REST
-After `process_one_file()` succeeds, the slides upload daemon POSTs to `POST /api/slides/invalidate/{slug}` on the main daemon (at `config.server_url`, which defaults to `http://localhost:8081` for local daemon-to-daemon calls). This endpoint requires host auth, marks the slug as `stale` in `misc_state.slides_cache_status`, and sends a `download_pdf` WS message to Railway.
+After `process_one_file()` succeeds, the slides upload daemon POSTs to `POST /api/slides/invalidate/{slug}` on the main daemon (at `config.server_url`, which defaults to `http://localhost:1234` for local daemon-to-daemon calls). This endpoint requires host auth, marks the slug as `stale` in `misc_state.slides_cache_status`, and sends a `download_pdf` WS message to Railway.
 
 This is consistent with the existing architecture where daemon-to-daemon REST is used (e.g. `push_slides_list`, `push_current_slides` already POST to the server).
 
@@ -38,4 +38,4 @@ A new spec file covers the invalidation + notification requirements. The modifie
 
 - **Race condition**: If slides upload daemon calls `/invalidate` while Railway is already downloading (from a participant `/check`), the second `download_pdf` will coalesce in the daemon's `_pending_checks` dict — no duplicate download.
 - **Main daemon not running**: If the main daemon is not running when the slides upload daemon calls `/invalidate`, the call silently fails (logged as warning). This is acceptable — the existing behavior was to do nothing.
-- **`config.server_url` in slides upload daemon**: Points to Railway in prod, localhost in dev. The invalidate call should go to the **main daemon** (port 8081), not Railway. A new `DAEMON_LOCAL_URL` config key (defaulting to `http://localhost:8081`) should be used for daemon-to-daemon calls.
+- **`config.server_url` in slides upload daemon**: Points to Railway in prod, localhost in dev. The invalidate call should go to the **main daemon** (port 1234), not Railway. A new `DAEMON_LOCAL_URL` config key (defaulting to `http://localhost:1234`) should be used for daemon-to-daemon calls.

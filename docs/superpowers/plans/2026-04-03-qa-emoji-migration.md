@@ -44,7 +44,7 @@ Phase 4a built the generic broadcast infrastructure (`_handle_broadcast` in Rail
 
 ### Host WS push
 
-The host browser connects to daemon's localhost:8081 directly (NOT through Railway). When daemon needs to push messages to the host (emoji reactions, Q&A updates), it sends directly over the host's local WS connection stored in `daemon/host_ws.py`. Single connection only — same pattern as Railway's `state.daemon_ws`.
+The host browser connects to daemon's localhost:1234 directly (NOT through Railway). When daemon needs to push messages to the host (emoji reactions, Q&A updates), it sends directly over the host's local WS connection stored in `daemon/host_ws.py`. Single connection only — same pattern as Railway's `state.daemon_ws`.
 
 ### Daemon-side name resolution
 
@@ -97,7 +97,7 @@ The daemon POSTs emoji reactions to `localhost:56789` (victor-macos-addons deskt
 ```python
 """Host browser WebSocket push — single connection stored at module level.
 
-The host browser connects to daemon's localhost:8081 via WebSocket.
+The host browser connects to daemon's localhost:1234 via WebSocket.
 This module stores that connection so daemon code can push messages
 directly to the host without going through Railway.
 """

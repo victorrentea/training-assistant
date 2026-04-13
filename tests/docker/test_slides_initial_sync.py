@@ -22,7 +22,7 @@ sys.path.insert(0, "/app/tests")
 from session_utils import fresh_session
 
 BASE = "http://localhost:8000"
-DAEMON_BASE = "http://localhost:8081"
+DAEMON_BASE = "http://localhost:1234"
 
 EXPECTED_SLUGS = {"clean-code", "design-patterns", "architecture"}
 

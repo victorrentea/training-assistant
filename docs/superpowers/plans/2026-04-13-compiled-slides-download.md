@@ -435,7 +435,7 @@ function triggerSlidesCompilationDownload() {
 
 - [ ] **Step 3: Verify manually**
 
-Start daemon (`python3 -m daemon`) and open `http://localhost:8081/` in the browser.
+Start daemon (`python3 -m daemon`) and open `http://localhost:1234/` in the browser.
 
 1. Click the "P" slides badge in the footer → confirm bubble appears
 2. Click anywhere outside → bubble dismisses

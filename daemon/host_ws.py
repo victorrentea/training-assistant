@@ -1,6 +1,6 @@
 """Host browser WebSocket push — single connection stored at module level.
 
-The host browser connects to daemon's localhost:8081 via WebSocket.
+The host browser connects to daemon's localhost:1234 via WebSocket.
 This module stores that connection so daemon code can push messages
 directly to the host without going through Railway.
 """

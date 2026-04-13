@@ -1,6 +1,6 @@
 ## Why
 
-The host browser currently calls Nominatim directly to reverse-geocode participant `lat,lon` coordinates into city names. This triggers CORS blocks from `localhost:8081` and 429 rate-limit errors because every page render re-issues calls for all visible participants. Moving geocoding to the daemon (server-side, once per participant) eliminates both problems.
+The host browser currently calls Nominatim directly to reverse-geocode participant `lat,lon` coordinates into city names. This triggers CORS blocks from `localhost:1234` and 429 rate-limit errors because every page render re-issues calls for all visible participants. Moving geocoding to the daemon (server-side, once per participant) eliminates both problems.
 
 ## What Changes
 

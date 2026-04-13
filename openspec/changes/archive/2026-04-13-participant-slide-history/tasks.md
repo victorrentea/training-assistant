@@ -20,6 +20,6 @@
 
 ## 5. Verification
 
-- [ ] 5.1 Start the daemon locally and call `GET http://localhost:8081/api/participant/slide-history` — confirm `{"slides": []}` when no slides have been viewed
+- [ ] 5.1 Start the daemon locally and call `GET http://localhost:1234/api/participant/slide-history` — confirm `{"slides": []}` when no slides have been viewed
 - [ ] 5.2 Open participant page in browser, click the slides item, confirm history list appears and disappears after 30 s
 - [ ] 5.3 Click again — confirm list re-fetches and timer resets

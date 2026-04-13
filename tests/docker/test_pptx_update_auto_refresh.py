@@ -31,7 +31,7 @@ from pages.participant_page import ParticipantPage  # noqa: E402
 from session_utils import fresh_session  # noqa: E402
 
 BASE = "http://localhost:8000"
-DAEMON_BASE = os.environ.get("DAEMON_BASE", "http://localhost:8081")
+DAEMON_BASE = os.environ.get("DAEMON_BASE", "http://localhost:1234")
 HOST_USER = os.environ.get("HOST_USERNAME", "host")
 HOST_PASS = os.environ.get("HOST_PASSWORD", "testpass")
 TRANSCRIPTION_FOLDER = Path(os.environ.get("TRANSCRIPTION_FOLDER", "/tmp/test-transcriptions"))

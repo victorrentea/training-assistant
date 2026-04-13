@@ -4,7 +4,7 @@
 
 Phase 4a proved the broadcast infrastructure with word cloud migration. Now we migrate two more features end-to-end: Q&A (stateful, personalized) and emoji reactions (stateless, fire-and-forget).
 
-Key architectural challenge: the host browser connects directly to daemon's localhost:8081, NOT through Railway. When daemon needs to push messages to the host (emoji reactions, Q&A updates), it must send them directly over the host's local WebSocket connection. This requires new infrastructure: a host WS push mechanism on the daemon side.
+Key architectural challenge: the host browser connects directly to daemon's localhost:1234, NOT through Railway. When daemon needs to push messages to the host (emoji reactions, Q&A updates), it must send them directly over the host's local WebSocket connection. This requires new infrastructure: a host WS push mechanism on the daemon side.
 
 ## Goal
 
@@ -18,9 +18,9 @@ Key architectural challenge: the host browser connects directly to daemon's loca
 ### Host WS Push
 
 ```
-Host Browser              Daemon localhost:8081
+Host Browser              Daemon localhost:1234
                           ┌──────────────────────────────────┐
-  ws://localhost:8081/     │  host_server.py                  │
+  ws://localhost:1234/     │  host_server.py                  │
   ws/{sid}/__host__   ←──→│    proxy_websocket()              │
                           │    ↕ stores client_ws in host_ws  │
                           │                                    │
@@ -30,7 +30,7 @@ Host Browser              Daemon localhost:8081
                           └──────────────────────────────────┘
 ```
 
-The host browser connects to `ws://localhost:8081/ws/{session_id}/__host__`. The WS proxy in `daemon/host_proxy.py` currently just shuttles frames between the host browser and Railway. We modify it to also store the `client_ws` reference in a `daemon/host_ws.py` module so daemon code can push messages directly.
+The host browser connects to `ws://localhost:1234/ws/{session_id}/__host__`. The WS proxy in `daemon/host_proxy.py` currently just shuttles frames between the host browser and Railway. We modify it to also store the `client_ws` reference in a `daemon/host_ws.py` module so daemon code can push messages directly.
 
 ### Emoji Flow
 
@@ -86,7 +86,7 @@ POST /api/participant/
 ### Q&A Flow — Host Actions
 
 ```
-Host Browser              Daemon localhost:8081
+Host Browser              Daemon localhost:1234
 
 POST /api/{sid}/qa/submit
   {text: "..."}      →   daemon qa host_router
@@ -125,7 +125,7 @@ async def send_to_host(msg: dict):
         pass
 ```
 
-Single connection. Set when host connects to the WS proxy on localhost:8081 (path ends with `__host__`). Cleared on disconnect.
+Single connection. Set when host connects to the WS proxy on localhost:1234 (path ends with `__host__`). Cleared on disconnect.
 
 **Threading note:** `send_to_host()` is async and runs on uvicorn's event loop (same thread as the WS proxy and daemon routers). No lock needed. The only cross-thread concern is if `_host_ws` is set/cleared from a different thread — but both `set_host_ws` and `clear_host_ws` are called from the WS proxy handler which runs on the same uvicorn event loop.
 

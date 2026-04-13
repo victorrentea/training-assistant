@@ -237,7 +237,7 @@ def create_app(backend_url: str) -> FastAPI:
     return app
 
 
-def start_host_server(backend_url: str, port: int = 8081) -> threading.Thread:
+def start_host_server(backend_url: str, port: int = 1234) -> threading.Thread:
     """Start the host panel server in a background daemon thread.
 
     Returns the thread object (for testing/shutdown).

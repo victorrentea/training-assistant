@@ -31,7 +31,7 @@ For product goals, workflow rules, and operational conventions, see [CLAUDE.md](
 ## Reality Today
 
 - Participant traffic is served from Railway. The participant journey is `landing.html` -> `/{session_id}` -> session-scoped REST and WebSocket calls.
-- The host control plane is daemon-first. `python3 -m daemon` starts a local host panel at `http://127.0.0.1:8081/host`, serves the same static host assets there, mounts most live feature routers locally, and proxies the rest to Railway.
+- The host control plane is daemon-first. `python3 -m daemon` starts a local host panel at `http://127.0.0.1:1234/host`, serves the same static host assets there, mounts most live feature routers locally, and proxies the rest to Railway.
 - Railway is now a thin session-aware bridge: page serving, session validation, browser WebSockets, daemon WebSocket, slide cache/downloads, temporary file uploads, and daemon-driven static sync.
 - Most live workshop behavior lives in the daemon: session lifecycle, participant and host snapshots, poll/word cloud/Q&A/code review/debate state, quiz generation, slide orchestration, upload handoff, and local persistence.
 - There is no standalone database in the current runtime. Railway keeps in-memory state plus temp files; the daemon persists session files on disk.
@@ -101,7 +101,7 @@ Rel(participant_spa, railway_backend, "Session-scoped REST + WebSocket", "HTTPS 
 Rel(participant_spa, nominatim, "Reverse geocodes GPS to city/country", "HTTPS")
 
 Rel(host, host_spa, "Uses", "Browser")
-Rel(host_spa, training_daemon, "Host REST + proxied WebSocket", "HTTP / WSS on 127.0.0.1:8081")
+Rel(host_spa, training_daemon, "Host REST + proxied WebSocket", "HTTP / WSS on 127.0.0.1:1234")
 
 Rel(training_daemon, railway_backend, "Daemon WS, host-auth REST, static sync, upload handoff", "WSS /ws/daemon + HTTPS")
 Rel(training_daemon, claude_api, "Quiz generation/refinement and debate cleanup", "HTTPS")
@@ -118,7 +118,7 @@ Rel(railway_backend, google_drive, "Downloads slide PDFs into cache", "HTTPS")
 | Container | Primary entrypoint | What it owns |
 | --- | --- | --- |
 | Participant SPA | [`static/landing.html`](static/landing.html), [`static/participant.html`](static/participant.html), [`static/participant.js`](static/participant.js) | Participant join flow and live UI rendered from Railway paths such as `/{session_id}` and `/{session_id}/api/*`. |
-| Host SPA | [`static/host-landing.html`](static/host-landing.html), [`static/host-landing.js`](static/host-landing.js), [`static/host.html`](static/host.html), [`static/host.js`](static/host.js) | Host-only session creation/resume and live admin UI. The daemon advertises the local entrypoint `http://127.0.0.1:8081/host`. |
+| Host SPA | [`static/host-landing.html`](static/host-landing.html), [`static/host-landing.js`](static/host-landing.js), [`static/host.html`](static/host.html), [`static/host.js`](static/host.js) | Host-only session creation/resume and live admin UI. The daemon advertises the local entrypoint `http://127.0.0.1:1234/host`. |
 | Railway Backend | [`railway/app.py`](railway/app.py) | Session gating, browser and daemon WebSockets, slide cache/download serving, temporary uploads, public notes/key-points endpoints, and daemon-driven static file sync. |
 | Training Daemon | [`daemon/__main__.py`](daemon/__main__.py) | Embedded host FastAPI server, feature state machines, session persistence, LLM jobs, addons bridge, upload handoff, and Railway bridge. |
 
@@ -221,7 +221,7 @@ Container_Boundary(daemon_pkg, "Training Daemon") {
     Component(static_sync, "daemon/static_sync.py", "Static sync", "Diffs local `static/` against Railway and uploads/deletes changed files.")
 }
 
-Rel(host_spa, host_server, "Loads host pages and calls host APIs", "HTTP / WSS on 127.0.0.1:8081")
+Rel(host_spa, host_server, "Loads host pages and calls host APIs", "HTTP / WSS on 127.0.0.1:1234")
 
 Rel(main, host_server, "Starts embedded Uvicorn thread")
 Rel(main, railway_bridge, "Starts daemon WS and drains incoming work")
@@ -318,7 +318,7 @@ Rel(addons_bridge, macos_addons, "Slide and overlay/session events", "Local WSS"
 ## Key Runtime Flows
 
 1. Host session start or resume
-   - The host opens `http://127.0.0.1:8081/host`.
+   - The host opens `http://127.0.0.1:1234/host`.
    - [`static/host-landing.js`](static/host-landing.js) calls local `/api/session/create` or `/api/session/resume`.
    - [`daemon/session/router.py`](daemon/session/router.py) queues a `session_request`; the main loop creates or restores the session folder and persists session metadata.
    - [`daemon/session_state.py`](daemon/session_state.py) sends `set_session_id` over `/ws/daemon`, and Railway starts accepting the new `/{session_id}` participant route.
@@ -425,7 +425,7 @@ Current code path / behavior family: [`daemon/activity/router.py`](daemon/activi
 
 - If a live feature changes participant or host behavior, the code probably belongs in `daemon/` first, not `railway/`.
 - If a change affects participant page bootstrapping, session validation, slide downloads, temporary uploads, or browser/daemon WebSocket transport, it probably belongs in `railway/`.
-- If a host bug reproduces only through `http://127.0.0.1:8081/host`, inspect [`daemon/host_server.py`](daemon/host_server.py), the local routers it mounts, and the `proxy_handler` / `ws_publish` bridge before touching Railway.
+- If a host bug reproduces only through `http://127.0.0.1:1234/host`, inspect [`daemon/host_server.py`](daemon/host_server.py), the local routers it mounts, and the `proxy_handler` / `ws_publish` bridge before touching Railway.
 - If participant behavior and host behavior disagree, check whether the issue is in:
   - the daemon-owned source of truth (`daemon/*/state.py`, `host_state_router.py`, `participant/router.py`)
   - the Railway fan-out layer (`railway/features/ws/*`)

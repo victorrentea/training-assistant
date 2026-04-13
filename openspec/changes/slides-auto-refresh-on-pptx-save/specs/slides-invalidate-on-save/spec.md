@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: Slides upload daemon triggers Railway cache invalidation after successful GDrive download
-After `process_one_file()` successfully downloads a fresh PDF from Google Drive, the slides upload daemon SHALL call `POST /api/slides/invalidate/{slug}` on the main daemon (at `DAEMON_LOCAL_URL`, defaulting to `http://localhost:8081`) with host authentication. Failure to reach the main daemon SHALL be logged as a warning and SHALL NOT cause the slides upload daemon to fail or retry.
+After `process_one_file()` successfully downloads a fresh PDF from Google Drive, the slides upload daemon SHALL call `POST /api/slides/invalidate/{slug}` on the main daemon (at `DAEMON_LOCAL_URL`, defaulting to `http://localhost:1234`) with host authentication. Failure to reach the main daemon SHALL be logged as a warning and SHALL NOT cause the slides upload daemon to fail or retry.
 
 #### Scenario: PPTX saved and new PDF downloaded from GDrive
 - **WHEN** the slides upload daemon completes `process_one_file()` for a slug

@@ -2,7 +2,7 @@
 Hermetic E2E test: PDF check/download flow via daemon ↔ Railway ↔ mock Drive.
 
 Flow under test:
-1. Participant calls GET /{sid}/api/slides/check/{slug} via daemon (port 8081)
+1. Participant calls GET /{sid}/api/slides/check/{slug} via daemon (port 1234)
 2. Daemon sends download_pdf WS message to Railway
 3. Railway downloads PDF from mock Google Drive
 4. Railway sends pdf_download_complete WS back to daemon
@@ -23,7 +23,7 @@ sys.path.insert(0, "/app/tests")
 from session_utils import fresh_session
 
 BASE = "http://localhost:8000"
-DAEMON_BASE = os.environ.get("DAEMON_BASE", "http://localhost:8081")
+DAEMON_BASE = os.environ.get("DAEMON_BASE", "http://localhost:1234")
 MOCK_DRIVE = "http://localhost:9090"
 
 # Hard-coded slug — first entry in the fixture catalog created by start_hermetic.sh

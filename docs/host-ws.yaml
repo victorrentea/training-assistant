@@ -4,14 +4,14 @@ info:
   version: '1.0'
   description: |
     Events received by the host panel browser over WebSocket.
-    Connection: `WS ws://localhost:8081/{session_id}/__host__`
+    Connection: `WS ws://localhost:1234/{session_id}/__host__`
 
     **Host WS is receive-only.** All host actions are REST calls to the daemon.
     Full state is fetched via `GET /api/{session_id}/host/state` on connect/reconnect.
 
 servers:
   daemon:
-    url: ws://localhost:8081/{session_id}/__host__
+    url: ws://localhost:1234/{session_id}/__host__
     protocol: ws
     description: Daemon host panel WebSocket (host browser → daemon direct)
 

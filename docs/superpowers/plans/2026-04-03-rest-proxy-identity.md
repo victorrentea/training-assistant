@@ -14,7 +14,7 @@
 
 ## Context
 
-This is **Phase 3** of the railway proxy redesign (`docs/railway-proxy-redesign.md`). Phase 1 (static file sync) and Phase 2 (daemon FastAPI scaffold on localhost:8081) are complete.
+This is **Phase 3** of the railway proxy redesign (`docs/railway-proxy-redesign.md`). Phase 1 (static file sync) and Phase 2 (daemon FastAPI scaffold on localhost:1234) are complete.
 
 Currently, all participant actions go through WebSocket messages handled inline in `features/ws/router.py`. This phase introduces a REST proxy so participant actions can be HTTP calls proxied through Railway to the daemon, where business logic lives.
 

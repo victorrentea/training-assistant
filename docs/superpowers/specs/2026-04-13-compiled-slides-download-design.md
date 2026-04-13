@@ -38,7 +38,7 @@ The reverse lookup is built on demand inside the compilation endpoint by scannin
 
 **Route:** `GET /api/{session_id}/host/slides-compilation`  
 **Router:** `daemon/misc/router.py :: host_router`  
-**Auth:** host-only (inherits from `host_router` prefix, called directly on localhost:8081)  
+**Auth:** host-only (inherits from `host_router` prefix, called directly on localhost:1234)  
 **Response:** `StreamingResponse`, `application/pdf`, `Content-Disposition: attachment; filename="slides-compilation.pdf"`
 
 ### Algorithm

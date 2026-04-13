@@ -1019,7 +1019,7 @@ git commit -m "feat: switch participant poll/leaderboard from WS to REST + broad
 
 - [ ] **Step 1: Switch poll API calls to daemon localhost**
 
-All poll API calls in host.js currently use `fetch(API('/poll/...'))` where `API()` builds Railway URLs. Change to use daemon localhost:8081 URLs.
+All poll API calls in host.js currently use `fetch(API('/poll/...'))` where `API()` builds Railway URLs. Change to use daemon localhost:1234 URLs.
 
 Check the host.js pattern — it may already have a `daemonApi()` helper or similar. If the host page loads from daemon localhost, the existing `API()` helper may already point to the right place. Verify and adjust.
 
@@ -1041,7 +1041,7 @@ These arrive via the host browser WS connection (daemon pushes directly via `sen
 
 - [ ] **Step 4: Test manually**
 
-Open host panel at `localhost:8081/host/{session}`, verify:
+Open host panel at `localhost:1234/host/{session}`, verify:
 - Create poll → broadcast to participants
 - Open/close/reveal/timer all work
 - Leaderboard show/hide works

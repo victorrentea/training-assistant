@@ -480,7 +480,7 @@
 
     function pollLocalDaemonOnce() {
       if (!hasOnHostMachineCookie()) return;
-      fetch('http://localhost:8081/api/session/active', { signal: AbortSignal.timeout(800) })
+      fetch('http://localhost:1234/api/session/active', { signal: AbortSignal.timeout(800) })
         .then(r => r.ok ? r.json() : null)
         .then(data => {
           const code = normalizeCode(data && data.session_id);

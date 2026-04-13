@@ -21,7 +21,7 @@ from playwright.sync_api import expect, sync_playwright
 from session_utils import fresh_session
 
 BASE = "http://localhost:8000"
-DAEMON_BASE = os.environ.get("DAEMON_BASE", "http://localhost:8081")
+DAEMON_BASE = os.environ.get("DAEMON_BASE", "http://localhost:1234")
 HOST_USER = os.environ.get("HOST_USERNAME", "host")
 HOST_PASS = os.environ.get("HOST_PASSWORD", "testpass")
 

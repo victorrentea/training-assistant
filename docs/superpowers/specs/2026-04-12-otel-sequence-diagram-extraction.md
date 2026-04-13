@@ -21,9 +21,9 @@ Five actors:
 | Actor | Process | Connection to others |
 |-------|---------|---------------------|
 | Participant browser | Playwright browser in tests | HTTP REST to Railway, WS from Railway |
-| Host browser | Playwright browser in tests | HTTP REST to Daemon (localhost:8081), WS from Railway |
+| Host browser | Playwright browser in tests | HTTP REST to Daemon (localhost:1234), WS from Railway |
 | Railway | FastAPI on port 8000 | HTTP from participants, WS to/from Daemon, WS to browsers |
-| Daemon | FastAPI on port 8081 | HTTP from host, WS to/from Railway, WS to/from Addons |
+| Daemon | FastAPI on port 1234 | HTTP from host, WS to/from Railway, WS to/from Addons |
 | macOS Addons | Mock WS server in tests | WS to/from Daemon on port 8765 |
 
 Six communication channels requiring trace propagation:

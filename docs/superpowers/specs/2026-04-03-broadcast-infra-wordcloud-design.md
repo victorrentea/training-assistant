@@ -62,7 +62,7 @@ POST /api/participant/
 **Host word cloud calls** (topic, clear, word submission) go directly to daemon localhost — no Railway proxy involved:
 
 ```
-Host Browser                 Daemon localhost:8081
+Host Browser                 Daemon localhost:1234
 
 POST /api/wordcloud/topic
   {topic: "AI"}         →   daemon wordcloud host router

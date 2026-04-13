@@ -104,14 +104,14 @@ done
 OTEL_SERVICE_NAME=Daemon python -m daemon &
 DAEMON_PID=$!
 
-# Give daemon time to connect WS and start host server on port 8081
+# Give daemon time to connect WS and start host server on port 1234
 sleep 2
 echo "[startup] Daemon started (PID=$DAEMON_PID)"
 
-# Wait for daemon host server (port 8081) to be ready
-export DAEMON_BASE=http://localhost:8081
+# Wait for daemon host server (port 1234) to be ready
+export DAEMON_BASE=http://localhost:1234
 for i in $(seq 1 20); do
-    if curl -sf http://localhost:8081/host >/dev/null 2>&1; then
+    if curl -sf http://localhost:1234/host >/dev/null 2>&1; then
         echo "[startup] Daemon host server ready after ${i} polls"
         break
     fi

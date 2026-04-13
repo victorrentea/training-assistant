@@ -178,7 +178,7 @@ In `get_participant_state`, add to `state_msg` dict:
 
 - [ ] **Step 4: Test — restart daemon, check participant state includes `gdrive_url`**
 
-Run daemon, then: `curl -s http://localhost:8081/api/participant/state -H 'X-Participant-Id: test' | python3 -m json.tool | grep gdrive`
+Run daemon, then: `curl -s http://localhost:1234/api/participant/state -H 'X-Participant-Id: test' | python3 -m json.tool | grep gdrive`
 Expected: `"gdrive_url": "https://drive.google.com/drive/folders/..."` (or `null` if no session folder)
 
 - [ ] **Step 5: Commit**
