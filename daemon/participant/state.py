@@ -139,6 +139,10 @@ class ParticipantState:
                             self.git_repos.append(GitRepoActivity.model_validate(item))
                         except Exception:
                             pass
+            raw_emoji_counters = data.get("emoji_counters")
+            if isinstance(raw_emoji_counters, dict):
+                self.emoji_counters.clear()
+                self.emoji_counters.update({k: v for k, v in raw_emoji_counters.items() if isinstance(v, int)})
 
     def snapshot(self) -> dict:
         """Return a copy of all state (for testing/debugging)."""
