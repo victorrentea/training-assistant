@@ -49,5 +49,9 @@ load-tests/results/report/
 static/deploy-info.json
 logs/
 /claude-remote.sh
+
+# Node.js (Tailwind CSS build)
+node_modules/
+package-lock.json
 /.claude/worktrees/hardcore-driscoll/
 
