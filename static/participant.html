@@ -1813,8 +1813,8 @@ function addAgendaProgress(container) {
 
   function makePieSvg(ratio) {
     const r = 7, cx = 8, cy = 8, size = 16;
-    const bg = 'var(--color-primary-container,#dfe0ff)';
-    const fg = 'var(--color-on-primary-container,#3747ac)';
+    const bg = '#d1d5db';
+    const fg = '#6b7280';
     if (ratio <= 0) return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"><circle cx="${cx}" cy="${cy}" r="${r}" fill="${bg}"/></svg>`;
     if (ratio >= 1) return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"><circle cx="${cx}" cy="${cy}" r="${r}" fill="${fg}"/></svg>`;
     const angle = ratio * 2 * Math.PI;
