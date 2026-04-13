@@ -444,12 +444,13 @@ def save_session_state(session_folder: Path, snapshot: dict) -> None:
         new_v = payload.get(k)
         if old_v != new_v:
             changed_keys.append(k)
-    changed_suffix = f": {', '.join(changed_keys)}" if changed_keys else ""
+    if not changed_keys:
+        return
     path = session_state_path(session_folder)
     tmp = path.with_name(f"{SESSION_STATE_FILENAME}.tmp")
     tmp.write_text(json.dumps(payload, default=str, indent=2), encoding="utf-8")
     tmp.replace(path)
-    log.info("session", f"💾 {SESSION_STATE_FILENAME} in {session_folder.name}{changed_suffix}")
+    log.info("session", f"💾 {SESSION_STATE_FILENAME} in {session_folder.name}: {', '.join(changed_keys)}")
 
 
 # ── Notes file helper ──────────────────────────────────────────────────────────
