@@ -128,8 +128,8 @@
           min-height: max(884px, 100dvh);
         }
         @keyframes slide-highlight {
-          0%   { box-shadow: inset 0 0 0 8px #a3a6ff; }
-          100% { box-shadow: inset 0 0 0 8px transparent; }
+          0%   { outline: 8px solid rgba(163,166,255,1); outline-offset: -8px; }
+          100% { outline: 8px solid rgba(163,166,255,0); outline-offset: -8px; }
         }
         .slide-highlight {
           animation: slide-highlight 2s ease-out forwards;
