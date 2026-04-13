@@ -746,7 +746,7 @@ function _loadSlideHistory() {
           return '<a href="#" onclick="return false" class="text-primary underline hover:text-primary-dim" data-history-file-name="' + name.replace(/"/g, '&quot;') + '" data-history-page="' + Number(p || 1) + '">' + p + '</a>';
         }).join(', ');
         var liveBadge = name === lastOrderName ? ' <span class="badge-live" style="vertical-align:middle">LIVE</span>' : '';
-        return '<div class="slide-history-row px-4 py-0.5 text-xs leading-relaxed rounded transition-colors">' +
+        return '<div class="slide-history-row px-4 py-0.5 text-sm leading-relaxed rounded transition-colors">' +
           '<span class="font-semibold text-on-surface-variant opacity-60 mr-1">' + name + '</span>' +
           pagesHtml + liveBadge + '</div>';
       }).join('');
@@ -881,7 +881,7 @@ function openRepos() {
           + '<span class="flex-1">' + name + ':</span>'
           + '<span class="material-symbols-outlined text-xs flex-shrink-0">open_in_new</span>'
           + '</a>'
-          + '<ul class="mt-0.5 ml-4 text-xs text-on-surface-variant list-inside list-disc space-y-0.5">' + files + '</ul>'
+          + '<ul class="mt-0.5 ml-4 text-sm text-on-surface-variant list-inside list-disc space-y-0.5">' + files + '</ul>'
           + '</div>';
       }).join('');
     })
