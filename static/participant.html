@@ -228,7 +228,7 @@ body{visibility:hidden}
 <span class="badge-new ml-auto">NEW</span>
 </a>
 <div style="max-height:0;overflow:hidden;transition:max-height 0.6s ease" class="repos-list mx-2 rounded-xl">
-<div id="repos-content" class="overflow-y-auto max-h-96 py-1">
+<div id="repos-content" class="overflow-y-auto h-full py-1">
 <p class="px-4 py-2 text-sm text-on-surface-variant">Loading…</p>
 </div>
 </div>
@@ -860,6 +860,33 @@ function togglePastSlides() {
     closePastSlides({ focusAllTopics: false });
   }
 }
+function _computeListHeight(list) {
+  var nav = document.querySelector('nav');
+  var wrapper = list.parentElement;
+  var siblingsH = 0;
+  var sib = wrapper.nextElementSibling;
+  while (sib) {
+    var h = sib.getBoundingClientRect().height;
+    if (h > 0) siblingsH += h + 8;
+    sib = sib.nextElementSibling;
+  }
+  return Math.max(nav.getBoundingClientRect().bottom - list.getBoundingClientRect().top - siblingsH - 4, 0);
+}
+function _recomputeOpenMenuHeights() {
+  var topics = document.querySelector('.topics-list');
+  if (topics && topics.style.maxHeight && topics.style.maxHeight !== '0px') {
+    topics.style.transition = 'none';
+    topics.style.maxHeight = _computeListHeight(topics) + 'px';
+    requestAnimationFrame(function() { topics.style.transition = ''; });
+  }
+  var repos = document.querySelector('.repos-list');
+  if (repos && repos.style.maxHeight && repos.style.maxHeight !== '0px') {
+    repos.style.transition = 'none';
+    repos.style.maxHeight = _computeListHeight(repos) + 'px';
+    requestAnimationFrame(function() { repos.style.transition = ''; });
+  }
+}
+window.addEventListener('resize', _recomputeOpenMenuHeights);
 function openTopics(options) {
   options = options || {};
   if (!options.skipCloseSlides) closeSlides({ focusAllTopics: false });
@@ -868,13 +895,7 @@ function openTopics(options) {
   var arrow = document.querySelector('.topics-arrow');
   list.style.maxHeight = '0px';
   requestAnimationFrame(function() {
-    var nav = document.querySelector('nav');
-    var wrapper = list.parentElement;
-    var siblingsH = 0;
-    var sib = wrapper.nextElementSibling;
-    while (sib) { siblingsH += sib.getBoundingClientRect().height + 8; sib = sib.nextElementSibling; }
-    var available = nav.getBoundingClientRect().bottom - list.getBoundingClientRect().top - siblingsH - 4;
-    list.style.maxHeight = Math.max(available, 0) + 'px';
+    list.style.maxHeight = _computeListHeight(list) + 'px';
     setTimeout(function() {
       list.style.overflowY = 'auto';
       var active = document.querySelector('.topic-item.topic-active');
@@ -901,7 +922,8 @@ function openRepos() {
   closeSlides({ focusAllTopics: false }); closeTopics();
   var list = document.querySelector('.repos-list');
   var arrow = document.querySelector('.repos-arrow');
-  list.style.maxHeight = '500px';
+  list.style.maxHeight = '0px';
+  requestAnimationFrame(function() { list.style.maxHeight = _computeListHeight(list) + 'px'; });
   arrow.style.transform = 'rotate(90deg)';
   fetch('/' + _sessionId + '/api/participant/git-activity')
     .then(function(r) { return r.json(); })
