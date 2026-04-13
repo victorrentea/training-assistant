@@ -166,11 +166,12 @@
 <!-- Presentation Slides Section -->
 <div class="flex flex-col gap-4">
 <!-- Current Slide -->
-<div class="relative w-full aspect-video rounded-xl overflow-hidden bg-surface-container-low shadow-2xl group ring-2 ring-primary">
-<div class="absolute top-4 left-4 z-10">
-<span class="bg-error px-2 py-1 rounded text-[10px] font-bold text-on-error uppercase tracking-wider">Live</span>
+<div class="relative w-full aspect-video rounded-xl overflow-hidden bg-surface-container-low shadow-2xl ring-2 ring-primary flex items-center justify-center">
+<canvas id="slide-canvas" class="w-full h-full object-contain" style="display:none"></canvas>
+<div id="slide-placeholder" class="flex flex-col items-center gap-3 text-on-surface-variant">
+<span class="material-symbols-outlined text-5xl">slideshow</span>
+<span class="text-sm">Waiting for slides…</span>
 </div>
-<img alt="Presentation Slide" class="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity duration-500" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCqg_swYg_PP9WtkWua-rtBt1Qmo50lSoKy_7hkIuZKHrK7dsnAK3j3sR0BKEtGTWr_UB8uzH0ldaQbJZrSpgjuId4Q1lcF9FQKXJcqqaDdP48FaBf3tEtkPbQkuH_PiTuWLKRhyAt-nNu3tKP5rJgFwbHiw75kOD2Ow702i2Gh7wwYRwV9IBJPDIAT2n08Yw2ZVLhbcqm1rlNwtI0UdzVw0fVT1U-yNowrsYJsWxt5SkoA1KYyp7h5Ip3X21O7Bo2iRZpavPiKr-A"/>
 <!-- Reaction Pulse Cloud (Floating Emojis) -->
 <div class="absolute inset-0 pointer-events-none flex items-end justify-center pb-24 overflow-hidden">
 <div class="flex gap-4">
@@ -242,4 +243,104 @@
 </nav>
 <!-- Padding for Fixed Reaction Bar -->
 <div class="h-24"></div>
+<script type="module">
+  import * as pdfjsLib from 'https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.149/build/pdf.min.mjs';
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.149/build/pdf.worker.min.mjs';
+
+  let _pdfDoc = null;
+  let _currentPdfUrl = null;
+
+  window.renderPage = async function(url, pageNum) {
+    const canvas = document.getElementById('slide-canvas');
+    const placeholder = document.getElementById('slide-placeholder');
+    try {
+      if (_currentPdfUrl !== url) {
+        _pdfDoc = await pdfjsLib.getDocument(url).promise;
+        _currentPdfUrl = url;
+      }
+      pageNum = Math.max(1, Math.min(pageNum || 1, _pdfDoc.numPages));
+      const page = await _pdfDoc.getPage(pageNum);
+      const viewport = page.getViewport({ scale: 1.5 });
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+      await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+      canvas.style.display = '';
+      if (placeholder) placeholder.style.display = 'none';
+    } catch (e) {
+      console.error('[talk] PDF render error', e);
+    }
+  };
+</script>
+<script>
+  var _sessionId = null;
+  var _slidesCatalog = [];
+  var _ws = null;
+  var _uuid = sessionStorage.getItem('talk_uuid') || (function() {
+    var u = crypto.randomUUID(); sessionStorage.setItem('talk_uuid', u); return u;
+  })();
+
+  function _getPage(sc) { return sc.page ?? sc.current_page ?? sc.slide ?? 1; }
+
+  function _findSlide(slug) {
+    return _slidesCatalog.find(function(s) { return s.slug === slug; }) || null;
+  }
+
+  async function _applySlidesCurrent(sc) {
+    if (!sc || !sc.slug) return;
+    var slide = _findSlide(sc.slug);
+    if (!slide || !slide.url) return;
+    if (window.renderPage) await window.renderPage(slide.url, _getPage(sc));
+  }
+
+  async function _loadCatalog() {
+    try {
+      var data = await fetch('/' + _sessionId + '/api/slides', { cache: 'no-store' }).then(function(r) { return r.ok ? r.json() : null; });
+      var seen = new Set();
+      _slidesCatalog = (data && data.slides || []).filter(function(raw) {
+        if (!raw || typeof raw !== 'object') return false;
+        var slug = String(raw.slug || '').trim() || 'slide';
+        var url = String(raw.url || '').trim() || ('/' + _sessionId + '/api/slides/download/' + encodeURIComponent(slug));
+        var key = slug + '|' + url;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        raw.slug = slug; raw.url = url;
+        return true;
+      });
+    } catch (e) { console.error('[talk] catalog error', e); }
+  }
+
+  function _connectWS() {
+    var proto = location.protocol === 'https:' ? 'wss' : 'ws';
+    _ws = new WebSocket(proto + '://' + location.host + '/ws/' + _sessionId + '/' + encodeURIComponent(_uuid));
+    _ws.onopen = function() { _ws.send(JSON.stringify({ type: 'set_name', name: 'Viewer' })); };
+    _ws.onmessage = function(e) {
+      try {
+        var msg = JSON.parse(e.data);
+        var sc = msg.slides_current || (msg.type === 'announce' && msg.slides_current);
+        if (msg.type === 'slides_current' && msg.slides_current) _applySlidesCurrent(msg.slides_current).catch(function() {});
+        if (msg.type === 'announce' && msg.slides_current) _applySlidesCurrent(msg.slides_current).catch(function() {});
+      } catch (_) {}
+    };
+    _ws.onclose = function(e) { if (e.code === 1008) return; setTimeout(_connectWS, 3000); };
+  }
+
+  (async function init() {
+    try {
+      var status = await fetch('/api/status').then(function(r) { return r.json(); });
+      _sessionId = status.session_id;
+      if (!_sessionId) return;
+      await fetch('/' + _sessionId + '/api/participant/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Participant-ID': _uuid },
+        body: JSON.stringify({ name: 'Viewer' })
+      }).catch(function() {});
+      await _loadCatalog();
+      _connectWS();
+      var state = await fetch('/' + _sessionId + '/api/participant/state', {
+        headers: { 'X-Participant-ID': _uuid }
+      }).then(function(r) { return r.json(); }).catch(function() { return {}; });
+      if (state.slides_current) await _applySlidesCurrent(state.slides_current);
+    } catch (e) { console.error('[talk] init error', e); }
+  })();
+</script>
 </body></html>
