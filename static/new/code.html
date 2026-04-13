@@ -656,7 +656,7 @@ function _hideSlideHistory() {
   var el = document.getElementById('slide-history-list');
   if (el) el.style.display = 'none';
   if (_historySelectedRowEl) {
-    _historySelectedRowEl.classList.remove('bg-surface-container-high', 'text-on-surface');
+    _historySelectedRowEl.classList.remove('bg-primary-container', 'text-on-primary-container', 'font-semibold');
     _historySelectedRowEl = null;
   }
 }
@@ -703,10 +703,10 @@ function _loadSlideHistory() {
         ev.preventDefault();
         var row = link.closest('.slide-history-row');
         if (_historySelectedRowEl && _historySelectedRowEl !== row) {
-          _historySelectedRowEl.classList.remove('bg-surface-container-high', 'text-on-surface');
+          _historySelectedRowEl.classList.remove('bg-primary-container', 'text-on-primary-container', 'font-semibold');
         }
         if (row) {
-          row.classList.add('bg-surface-container-high', 'text-on-surface');
+          row.classList.add('bg-primary-container', 'text-on-primary-container', 'font-semibold');
           if (!row.hasAttribute('tabindex')) row.setAttribute('tabindex', '-1');
           _historySelectedRowEl = row;
         }
