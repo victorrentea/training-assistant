@@ -63,7 +63,9 @@ debate?: PersistedDebateState {
   round_timer_seconds?:int
   round_timer_started_at?:string
 }
-slides_talk?: dict[str, any]  # Talk-mode PPTX info {pptx_name, gdrive_url, pdf_path}
+talk_presentation_name?: string  # Display name of the last PPTX dropped in talk mode (stem, no extension)
+talk_presentation_url?: string  # PDF export URL for talk PPTX (docs.google.com/presentation/d/.../export/pdf)
+talk_presentation_slug?: string  # Railway slug under which the talk PPTX PDF is cached
 slides_current?: dict[str, any]  # {presentation_name, current_page}
 slides_viewed?: list[ViewedSlide {
   file_name:string  # PowerPoint file name, e.g. 'AI Coding.pptx'

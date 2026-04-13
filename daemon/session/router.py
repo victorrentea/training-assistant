@@ -4,6 +4,7 @@ Migrated from features/session/router.py on Railway.
 Instead of queuing requests for Railway to forward via WS, endpoints now
 put requests directly into daemon/session/pending.py for the orchestrator loop.
 """
+import asyncio
 import logging
 import os
 import random
@@ -16,10 +17,18 @@ from fastapi import APIRouter, HTTPException, Response
 from pydantic import BaseModel
 
 from daemon import log as daemon_log
+from daemon import ws_publish
 from daemon.session import pending as session_pending
 from daemon.session import state as session_state
 from daemon.session_state import announce_session_id, load_session_meta, load_session_state, save_session_state
-from scripts.resolve_gdrive_link import resolve_gdrive_file_url
+from daemon.ws_messages import SlidesCurrentMsg
+from scripts.resolve_gdrive_link import resolve_gdrive_file_url, gdrive_view_url_to_presentation_export_url
+
+_SLUG_RE = re.compile(r"[^a-z0-9]+")
+
+
+def _slugify(value: str) -> str:
+    return _SLUG_RE.sub("-", value.strip().lower()).strip("-") or "slide"
 
 
 def normalize_session_name(name: str) -> str:
@@ -198,32 +207,43 @@ async def get_session_active():
 
 @global_router.post("/talk-presentation-path", status_code=204)
 async def talk_presentation_path(body: TalkPresentationPathRequest):
-    """Host drops a PPTX file during a talk — resolve Google Drive URL, compute PDF path, save to session-state."""
+    """Host drops a PPTX file during a talk — resolve GDrive URL, trigger Railway download, push slides_current."""
+    pptx_path = Path(body.path)
+    slug = _slugify(pptx_path.stem)
     gdrive_url = resolve_gdrive_file_url(body.path)
-    pptx_stem = Path(body.path).stem
-    publish_dir = Path(os.environ.get(
-        "PPTX_PUBLISH_DIR",
-        str(Path.home() / "Documents" / "workshop-materials" / "slides"),
-    ))
-    pdf_path = str(publish_dir / f"{pptx_stem}.pdf")
+    pdf_export_url = gdrive_view_url_to_presentation_export_url(gdrive_url) if gdrive_url else None
 
-    daemon_log.info("talk     ", f"pptx drop: {body.path}")
-    if gdrive_url:
-        daemon_log.info("talk     ", f"gdrive:    {gdrive_url}")
+    daemon_log.info("talk     ", f"pptx drop: {body.path} → slug={slug}")
+    if pdf_export_url:
+        daemon_log.info("talk     ", f"export:    {pdf_export_url}")
     else:
-        daemon_log.info("talk     ", "not in Google Drive")
-    daemon_log.info("talk     ", f"pdf_path:  {pdf_path}")
+        daemon_log.info("talk     ", "not in Google Drive — skipping Railway download")
 
     root = _get_sessions_root()
     active_name = session_state.get_active_session_name()
     if root and active_name:
         folder = root / active_name
         state = load_session_state(folder)
-        state["slides_talk"] = {
-            "pptx_name": Path(body.path).name,
-            "gdrive_url": gdrive_url,
-            "pdf_path": pdf_path,
-        }
+        state["talk_presentation_name"] = pptx_path.stem
+        state["talk_presentation_url"] = pdf_export_url
+        state["talk_presentation_slug"] = slug
         save_session_state(folder, state)
 
+    if pdf_export_url:
+        asyncio.create_task(_download_and_activate_talk_slides(slug, pdf_export_url))
+
     return Response(status_code=204)
+
+
+async def _download_and_activate_talk_slides(slug: str, pdf_export_url: str) -> None:
+    """Background: ask Railway to download the PDF, then push slides_current to all participants."""
+    from daemon.slides.router import download_on_railway
+    try:
+        daemon_log.info("talk     ", f"download→railway slug={slug}")
+        result = await asyncio.to_thread(download_on_railway, slug, pdf_export_url)
+        sha = result.get("sha256", "")[:8]
+        daemon_log.info("talk     ", f"download done slug={slug} sha={sha}")
+        ws_publish.broadcast(SlidesCurrentMsg(slides_current={"slug": slug, "page": 1}))
+        daemon_log.info("talk     ", f"slides_current pushed slug={slug}")
+    except Exception as e:
+        daemon_log.error("talk     ", f"download failed slug={slug}: {e}")

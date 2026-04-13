@@ -154,7 +154,9 @@ class PersistedSessionState(PersistedModel):
     debate_round_timer_seconds: int | None = Field(default=None, exclude=True)
     debate_round_timer_started_at: str | None = Field(default=None, exclude=True)
 
-    slides_talk: dict[str, Any] | None = Field(default=None, description="Talk-mode PPTX info {pptx_name, gdrive_url, pdf_path}")
+    talk_presentation_name: str | None = Field(default=None, description="Display name of the last PPTX dropped in talk mode (stem, no extension)")
+    talk_presentation_url: str | None = Field(default=None, description="PDF export URL for talk PPTX (docs.google.com/presentation/d/.../export/pdf)")
+    talk_presentation_slug: str | None = Field(default=None, description="Railway slug under which the talk PPTX PDF is cached")
     slides_current: dict[str, Any] | None = Field(default=None, description="{presentation_name, current_page}")
     slides_viewed: list[ViewedSlide] = Field(default_factory=list, description="Accumulated per-slide viewing durations from addons")
     git_repos: list[PersistedGitRepoActivity] = Field(default_factory=list, description="Accumulated git file-open events for this session")

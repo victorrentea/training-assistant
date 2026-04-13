@@ -68,6 +68,19 @@ def resolve_gdrive_url(local_path: str) -> str | None:
     return f"https://drive.google.com/drive/folders/{cloud_id}"
 
 
+def gdrive_view_url_to_presentation_export_url(gdrive_url: str) -> str | None:
+    """Convert a Drive file view URL to a Google Slides PDF export URL.
+
+    Input:  https://drive.google.com/file/d/{ID}/view
+    Output: https://docs.google.com/presentation/d/{ID}/export/pdf
+    """
+    import re
+    m = re.search(r"/file/d/([^/]+)", gdrive_url)
+    if m:
+        return f"https://docs.google.com/presentation/d/{m.group(1)}/export/pdf"
+    return None
+
+
 def resolve_gdrive_file_url(local_path: str) -> str | None:
     """Resolve a local Google Drive file path to a Google Drive web URL (view link)."""
     dbs = find_drive_dbs()

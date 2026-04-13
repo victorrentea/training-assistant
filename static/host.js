@@ -457,6 +457,10 @@
           currentMode = msg.mode;
           renderMode(msg.mode);
         }
+        if (msg.talk_presentation_name) {
+          const labelEl = document.getElementById('talk-pptx-label');
+          if (labelEl) labelEl.textContent = '▶ ' + msg.talk_presentation_name;
+        }
         if (msg.summary_updated_at) summaryUpdatedAt = msg.summary_updated_at;
         if (msg.summary_count) updateSummaryLineCount(msg.summary_count);
         if (msg.notes_count) updateNotesLineCount(msg.notes_count);
@@ -3611,7 +3615,7 @@ function onTalkPptxSelected(input) {
   if (!file) return;
   input.value = '';  // reset so same file can be re-selected
   const labelEl = document.getElementById('talk-pptx-label');
-  if (labelEl) labelEl.textContent = '📂 ' + file.name.replace(/\.pptx?$/i, '');
+  if (labelEl) labelEl.textContent = '▶ ' + file.name.replace(/\.pptx?$/i, '');
   fetch('/api/session/talk-presentation-path', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
