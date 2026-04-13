@@ -123,6 +123,18 @@ body{visibility:hidden}
         ::-webkit-scrollbar-thumb:hover {
             background: #a9b4b9;
         }
+        /* Avatar modal */
+        .avatar-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:9999}
+        .avatar-modal-container{position:relative;display:flex;flex-direction:column;align-items:center;gap:.75rem}
+        .avatar-modal-img{width:180px;height:180px;border-radius:50%;object-fit:cover;border:4px solid #fff;box-shadow:0 8px 32px rgba(0,0,0,.25)}
+        .avatar-modal-letter{width:180px;height:180px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-weight:800;font-size:4rem;color:#fff;border:4px solid #fff;box-shadow:0 8px 32px rgba(0,0,0,.25)}
+        .avatar-refresh-btn{background:#fff;border:none;border-radius:50%;width:48px;height:48px;font-size:1.5rem;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.15);transition:transform .2s}
+        .avatar-refresh-btn:hover{transform:scale(1.1)}
+        .avatar-refresh-btn.rolling{animation:spin .6s ease-in-out}
+        @keyframes avatar-changed{0%{transform:scale(1)}50%{transform:scale(1.15)}100%{transform:scale(1)}}
+        .avatar-changed{animation:avatar-changed .4s ease-in-out}
+        @keyframes avatar-swap{0%{opacity:0;transform:scale(.8)}100%{opacity:1;transform:scale(1)}}
+        .avatar-swap{animation:avatar-swap .3s ease-out}
     </style>
 </head>
 <body class="bg-surface text-on-surface overflow-hidden">
@@ -143,9 +155,13 @@ body{visibility:hidden}
 <div id="profile-card" class="p-3 bg-surface-container-low rounded-xl group cursor-pointer hover:bg-surface-bright transition-all duration-300">
 <div class="flex items-center gap-2">
 <div class="w-8 h-8 rounded-full bg-primary-container flex-shrink-0 overflow-hidden">
-<img alt="Alex Morgan" class="w-full h-full rounded-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDsIg32gG_GENTnmWJQc1NZelOivfXVIxPJrVLUyWsf6mUfeAA8kiaJBQ91b-vZyRexsS0iFDkMUwc-2X5mLaA0rsJ9Sn45nLYDEdfbSt3okj_StwE4WnC8btqj2wN1h3OBgIKQvMZ1F8LQO1Kj9amvOic3vKSbYphLAAsu7y9S6Mex0ku0SKEjrteq6chaZv-UB_GA84aYFdQjOzCu1PvNgxAFVD8pHfe2Pi9j1eXaZsXRrXE38w9Kj4SBtMHePFH5A97HPyPXQX41"/>
+<img id="my-avatar" alt="Avatar" class="w-full h-full rounded-full object-cover" style="display:none" src=""/>
+<span id="my-avatar-letter" class="w-full h-full rounded-full flex items-center justify-center text-white font-extrabold text-xs" style="display:none"></span>
 </div>
-<span class="text-base font-medium text-on-surface cursor-pointer hover:underline" title="Edit name">Alex Morgan <span style="display:inline-block;transform:rotate(90deg)">✏️</span></span>
+<span id="display-name" class="text-base font-medium text-on-surface cursor-pointer hover:underline" title="Click to edit name" style="display:none"></span>
+<span id="name-edit-wrap" style="display:none" class="flex-1">
+<input id="name-edit-input" type="text" maxlength="32" class="text-base font-medium text-on-surface bg-surface-container-high rounded px-1 py-0 w-full outline-none border border-primary" />
+</span>
 </div>
 </div>
 </div>
@@ -1266,23 +1282,284 @@ function resetStatePrompt() {
 <script>renderDeployAge('version-tag-new', {disableBranchTooltip: true});</script>
 <script>
 let _sessionId = null;
+var _isHostTab = document.cookie.indexOf('is_host=1') >= 0;
+var _uuidStore = _isHostTab ? sessionStorage : localStorage;
 var _myUUID = (function() {
   var key = 'workshop_participant_uuid';
-  var store = document.cookie.indexOf('is_host=1') >= 0 ? sessionStorage : localStorage;
-  var uid = store.getItem(key);
-  if (!uid) { uid = crypto.randomUUID(); store.setItem(key, uid); }
+  var uid = _uuidStore.getItem(key);
+  if (!uid) { uid = crypto.randomUUID(); _uuidStore.setItem(key, uid); }
   return uid;
 })();
+var _isFirstVisit = !_uuidStore.getItem('workshop_participant_uuid_seen');
+var _myName = '';
+var _rejectedAvatars = [];
+var LS_NAME_KEY = 'workshop_participant_name';
+var LS_CUSTOM_NAME_KEY = 'workshop_custom_name';
+
+function _avatarColorFromUuid(uuid) {
+  var hash = parseInt((uuid || '').replace(/-/g, '').slice(0, 8), 16);
+  return 'hsl(' + (hash % 360) + ', 60%, 40%)';
+}
+
+function _applyHostSuffix(name) {
+  if (!_isHostTab) return name;
+  var SUFFIX = ' (host)';
+  return name.endsWith(SUFFIX) ? name : name + SUFFIX;
+}
+
+function _updateProfileCard(name, avatarStr) {
+  if (name) {
+    _myName = name;
+    var el = document.getElementById('display-name');
+    if (el) { el.textContent = name; el.style.display = ''; }
+  }
+  if (avatarStr) _applyAvatar(avatarStr);
+}
+
+function _applyAvatar(avatarStr) {
+  var imgEl = document.getElementById('my-avatar');
+  var letterEl = document.getElementById('my-avatar-letter');
+  if (!imgEl || !letterEl) return;
+  if (avatarStr.startsWith('letter:')) {
+    var parts = avatarStr.split(':');
+    var lt = parts[1] || '??';
+    var clr = parts.slice(2).join(':') || 'var(--color-primary)';
+    imgEl.style.display = 'none';
+    letterEl.style.display = '';
+    letterEl.style.background = clr;
+    letterEl.textContent = lt;
+  } else {
+    var src = '/static/avatars/' + avatarStr;
+    var changed = !imgEl.src || !imgEl.src.endsWith('/' + avatarStr);
+    letterEl.style.display = 'none';
+    imgEl.style.display = '';
+    if (changed) {
+      imgEl.src = src;
+      imgEl.classList.remove('avatar-changed');
+      void imgEl.offsetWidth;
+      imgEl.classList.add('avatar-changed');
+    }
+    imgEl.onerror = function() {
+      imgEl.style.display = 'none';
+      letterEl.style.display = '';
+      letterEl.style.background = _avatarColorFromUuid(_myUUID);
+      letterEl.textContent = (_myName || '?')[0].toUpperCase();
+    };
+    // Update modal if open
+    if (window._avatarModalImg && changed) {
+      window._avatarModalImg.src = src;
+      window._avatarModalImg.classList.remove('avatar-swap');
+      void window._avatarModalImg.offsetWidth;
+      window._avatarModalImg.classList.add('avatar-swap');
+      var modalRef = window._avatarModal;
+      if (window._avatarModalCloseTimer) clearTimeout(window._avatarModalCloseTimer);
+      window._avatarModalCloseTimer = setTimeout(function() {
+        if (modalRef) modalRef.remove();
+        window._avatarModalImg = null;
+        window._avatarModal = null;
+      }, 1500);
+    }
+  }
+}
+
+// Avatar modal
+function _showAvatarModal(src) {
+  var existing = document.getElementById('avatar-modal');
+  if (existing) existing.remove();
+  var modal = document.createElement('div');
+  modal.id = 'avatar-modal';
+  modal.className = 'avatar-modal-overlay';
+  var container = document.createElement('div');
+  container.className = 'avatar-modal-container';
+  var img = document.createElement('img');
+  img.src = src;
+  img.className = 'avatar-modal-img';
+  var refreshBtn = document.createElement('button');
+  refreshBtn.className = 'avatar-refresh-btn';
+  refreshBtn.innerHTML = '\u{1F3B2}';
+  refreshBtn.title = 'Click to draw another one';
+  refreshBtn.onclick = async function(e) {
+    e.stopPropagation();
+    var currentSrc = img.src;
+    var filename = currentSrc.split('/').pop();
+    if (filename && _rejectedAvatars.indexOf(filename) < 0) _rejectedAvatars.push(filename);
+    try {
+      await fetch('/' + _sessionId + '/api/participant/roll-avatar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Participant-ID': _myUUID },
+        body: JSON.stringify({ rejected: _rejectedAvatars })
+      });
+      _refreshParticipantState();
+    } catch (_) {}
+    refreshBtn.classList.add('rolling');
+    setTimeout(function() { refreshBtn.classList.remove('rolling'); }, 600);
+    window._avatarModalImg = img;
+    window._avatarModal = modal;
+  };
+  container.appendChild(img);
+  container.appendChild(refreshBtn);
+  modal.appendChild(container);
+  modal.addEventListener('click', function() { _closeAvatarModal(); });
+  container.addEventListener('click', function(e) { e.stopPropagation(); });
+  document.body.appendChild(modal);
+}
+
+function _showLetterAvatarModal(letters, bgColor) {
+  var existing = document.getElementById('avatar-modal');
+  if (existing) existing.remove();
+  var modal = document.createElement('div');
+  modal.id = 'avatar-modal';
+  modal.className = 'avatar-modal-overlay';
+  var container = document.createElement('div');
+  container.className = 'avatar-modal-container';
+  var avatar = document.createElement('span');
+  avatar.className = 'avatar-modal-letter';
+  avatar.style.background = bgColor;
+  avatar.textContent = letters;
+  container.appendChild(avatar);
+  modal.appendChild(container);
+  modal.addEventListener('click', function() { _closeAvatarModal(); });
+  document.body.appendChild(modal);
+}
+
+function _closeAvatarModal() {
+  var modal = document.getElementById('avatar-modal');
+  if (!modal) return;
+  if (window._avatarModalCloseTimer) { clearTimeout(window._avatarModalCloseTimer); window._avatarModalCloseTimer = null; }
+  window._avatarModalImg = null;
+  window._avatarModal = null;
+  modal.remove();
+}
+
+// Bind avatar click
+function _bindAvatarClick() {
+  var imgEl = document.getElementById('my-avatar');
+  var letterEl = document.getElementById('my-avatar-letter');
+  if (imgEl) imgEl.addEventListener('click', function() {
+    if (imgEl.style.display !== 'none') _showAvatarModal(imgEl.src);
+  });
+  if (letterEl) letterEl.addEventListener('click', function() {
+    if (letterEl.style.display !== 'none') _showLetterAvatarModal(letterEl.textContent, letterEl.style.background);
+  });
+}
+
+// Name editing
+function _startNameEdit() {
+  var display = document.getElementById('display-name');
+  var editWrap = document.getElementById('name-edit-wrap');
+  var editInput = document.getElementById('name-edit-input');
+  editInput.value = _myName;
+  display.style.display = 'none';
+  editWrap.style.display = '';
+  editInput.focus();
+  editInput.select();
+}
+
+function _confirmNameEdit() {
+  var newName = _applyHostSuffix(document.getElementById('name-edit-input').value.trim());
+  if (newName && newName !== _myName) {
+    _myName = newName;
+    localStorage.setItem(LS_NAME_KEY, _myName);
+    localStorage.setItem(LS_CUSTOM_NAME_KEY, '1');
+    document.getElementById('display-name').textContent = _myName;
+    fetch('/' + _sessionId + '/api/participant/name', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'X-Participant-ID': _myUUID },
+      body: JSON.stringify({ name: _myName })
+    });
+  }
+  document.getElementById('display-name').style.display = '';
+  document.getElementById('name-edit-wrap').style.display = 'none';
+}
+
+function _bindNameEdit() {
+  document.getElementById('display-name').addEventListener('click', _startNameEdit);
+  document.getElementById('name-edit-input').addEventListener('blur', _confirmNameEdit);
+  document.getElementById('name-edit-input').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') document.getElementById('name-edit-input').blur();
+    if (e.key === 'Escape') {
+      document.getElementById('name-edit-input').value = _myName;
+      document.getElementById('name-edit-input').blur();
+    }
+  });
+}
+
+// Registration
+async function _registerRailway(payload) {
+  var body = Object.assign({}, payload || {});
+  return fetch('/' + _sessionId + '/api/participant/register', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Participant-ID': _myUUID },
+    body: JSON.stringify(body)
+  });
+}
+
+async function _rejoinRailway() {
+  return fetch('/' + _sessionId + '/api/participant/rejoin', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Participant-ID': _myUUID },
+    body: '{}'
+  });
+}
+
+async function _refreshParticipantState() {
+  try {
+    var r = await fetch('/' + _sessionId + '/api/participant/state', {
+      headers: { 'X-Participant-ID': _myUUID }
+    });
+    if (!r.ok) return;
+    var state = await r.json();
+    state.type = 'state';
+    _handleWsMessage(state);
+  } catch (err) {
+    console.error('[participant] Failed to fetch state:', err);
+  }
+}
+
 (async function loadParticipantState() {
   try {
-    const status = await fetch('/api/status').then(r => r.json());
+    var status = await fetch('/api/status').then(function(r) { return r.json(); });
     _sessionId = status.session_id;
     console.log('[participant] session_id:', _sessionId);
     if (!_sessionId) return;
+
+    // Register or rejoin
+    var identity = null;
+    if (_isFirstVisit) {
+      var regResp = await _registerRailway({});
+      if (regResp.ok) identity = await regResp.json();
+    } else {
+      var rejoinResp = await _rejoinRailway();
+      if (rejoinResp.status === 200) {
+        identity = await rejoinResp.json();
+      } else {
+        var regResp2 = await _registerRailway({});
+        if (regResp2.ok) identity = await regResp2.json();
+      }
+    }
+    _uuidStore.setItem('workshop_participant_uuid_seen', '1');
+
+    if (identity && identity.name) {
+      _myName = _applyHostSuffix(identity.name);
+      localStorage.setItem(LS_NAME_KEY, _myName);
+      _updateProfileCard(_myName, null);
+    }
+
+    _bindNameEdit();
+    _bindAvatarClick();
+
     loadSlidesCatalog();
     _connectWS();
-    const state = await fetch(`/${_sessionId}/api/participant/state`).then(r => r.json());
+
+    var state = await fetch('/' + _sessionId + '/api/participant/state', {
+      headers: { 'X-Participant-ID': _myUUID }
+    }).then(function(r) { return r.json(); });
     console.log('[participant] state:', state);
+
+    // Apply name/avatar from state
+    if (state.my_name) _updateProfileCard(_applyHostSuffix(state.my_name), null);
+    if (state.my_avatar) _applyAvatar(state.my_avatar);
+
     document.querySelector('[data-nav="agenda"]').style.display = state.has_agenda ? '' : 'none';
     document.querySelector('[data-nav="notes"]').style.display = state.notes_count > 0 ? '' : 'none';
     document.getElementById('notes-badge').textContent = state.notes_count || '';
@@ -1336,6 +1613,16 @@ function _applyState(msg) {
   }
   if (msg.slides_history_count != null) {
     _setPastSlidesBadge(msg.slides_history_count);
+  }
+  // Sync name from server
+  if (msg.my_name && msg.my_name !== _myName) {
+    _myName = _applyHostSuffix(msg.my_name);
+    localStorage.setItem(LS_NAME_KEY, _myName);
+    document.getElementById('display-name').textContent = _myName;
+  }
+  // Sync avatar from server
+  if (msg.my_avatar) {
+    _applyAvatar(msg.my_avatar);
   }
 }
 
