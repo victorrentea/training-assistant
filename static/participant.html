@@ -240,13 +240,9 @@ body{visibility:hidden}
 <span class="text-base">Google Drive</span>
 <span class="material-symbols-outlined text-base text-on-surface">open_in_new</span>
 </a>
-<a data-nav="paste" onclick="showView('paste')" class="nav-item rounded-full px-2 py-2 flex items-center gap-3 transition-all cursor-pointer">
-<span class="material-symbols-outlined">content_paste</span>
-<span class="text-base">Paste</span>
-</a>
-<a data-nav="upload" onclick="showUpload()" class="nav-item rounded-full px-2 py-2 flex items-center gap-3 transition-all cursor-pointer">
+<a data-nav="upload-paste" onclick="showView('upload-paste')" class="nav-item rounded-full px-2 py-2 flex items-center gap-3 transition-all cursor-pointer">
 <span class="material-symbols-outlined">upload</span>
-<span class="text-base">Upload</span>
+<span class="text-base">Upload / Paste</span>
 </a>
 </nav>
 <a data-nav="feedback" onclick="showView('feedback')" class="nav-item rounded-full px-2 py-2 flex items-center gap-3 transition-all cursor-pointer">
@@ -297,9 +293,19 @@ body{visibility:hidden}
 <div id="agenda-view" style="display:none;font-size:120%" class="h-full overflow-y-auto px-16 py-12" onscroll="saveScroll('agenda',this)">
   <div id="agenda-content" class="text-on-surface text-sm leading-relaxed prose max-w-none">Loading…</div>
 </div>
-<!-- Upload View -->
-<div id="upload-view" style="display:none" class="h-full flex flex-col px-16 py-12">
+<!-- Upload / Paste View -->
+<div id="upload-paste-view" style="display:none" class="h-full flex flex-col px-16 py-12">
   <input type="file" id="upload-input" class="hidden" onchange="uploadFileSelected(this.files)"/>
+  <textarea id="paste-textarea"
+    class="flex-1 w-full resize-none rounded-2xl bg-surface-container-low text-on-surface text-base p-6 outline-none focus:ring-2 focus:ring-primary placeholder:text-on-surface-variant"
+    placeholder="Paste any text, code snippet, or question here…"
+    oninput="updateUploadPasteBtn()"
+    onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendUploadPaste();}"></textarea>
+  <div class="flex items-center gap-3 my-3 text-on-surface-variant" style="font-size:0.75rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase">
+    <div class="flex-1 h-px bg-outline-variant"></div>
+    <span>or</span>
+    <div class="flex-1 h-px bg-outline-variant"></div>
+  </div>
   <div id="upload-dropzone"
     class="flex-1 flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-outline-variant cursor-pointer hover:border-primary hover:bg-surface-container-low transition-all duration-200 text-on-surface-variant hover:text-primary"
     onclick="document.getElementById('upload-input').click()"
@@ -313,8 +319,8 @@ body{visibility:hidden}
   <div id="upload-progress-bar" style="display:none" class="mt-3 h-2 rounded-full bg-surface-container-highest overflow-hidden">
     <div id="upload-progress-fill" class="h-full bg-primary rounded-full transition-all" style="width:0%"></div>
   </div>
-  <div class="mt-4">
-    <button id="upload-send-btn" onclick="uploadSend()" disabled
+  <div class="mt-4 flex justify-end">
+    <button id="upload-paste-send-btn" onclick="sendUploadPaste()" disabled
       class="flex items-center gap-2 px-6 py-3 font-semibold rounded-full transition-all opacity-40 cursor-not-allowed bg-surface-container-highest text-on-surface-variant">
       Send to Host
       <span class="material-symbols-outlined" style="transform:rotate(-45deg)">send</span>
@@ -330,19 +336,6 @@ body{visibility:hidden}
     <button id="feedback-send-btn" onclick="sendFeedback()" disabled
       class="flex items-center gap-2 px-6 py-3 bg-primary text-on-primary font-semibold rounded-full hover:bg-primary-dim transition-all shadow-lg shadow-primary/20 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none">
       Send
-      <span class="material-symbols-outlined" style="transform:rotate(-45deg)">send</span>
-    </button>
-  </div>
-</div>
-<!-- Paste View -->
-<div id="paste-view" style="display:none" class="h-full flex flex-col px-16 py-12">
-  <textarea id="paste-textarea" class="flex-1 w-full resize-none rounded-2xl bg-surface-container-low text-on-surface text-base p-6 outline-none focus:ring-2 focus:ring-primary placeholder:text-on-surface-variant" placeholder="Paste any large text"
-    oninput="document.getElementById('paste-send-btn').disabled = !this.value.trim()"
-    onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendPaste();}"></textarea>
-  <div class="mt-4">
-    <button id="paste-send-btn" onclick="sendPaste()" disabled
-      class="flex items-center gap-2 px-6 py-3 bg-primary text-on-primary font-semibold rounded-full hover:bg-primary-dim transition-all shadow-lg shadow-primary/20 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none">
-      Send to Host
       <span class="material-symbols-outlined" style="transform:rotate(-45deg)">send</span>
     </button>
   </div>
@@ -986,36 +979,26 @@ function closeRepos() {
   list.style.maxHeight = '0px';
   arrow.style.transform = 'rotate(0deg)';
 }
-var _viewBeforeUpload = 'slides';
 var _uploadSelectedFile = null;
-function showUpload() {
-  var current = document.querySelector('.nav-active');
-  if (current && current.dataset.nav && current.dataset.nav !== 'upload') {
-    _viewBeforeUpload = current.dataset.nav;
-  }
-  document.getElementById('upload-input').value = '';
-  document.getElementById('upload-filename').textContent = 'or click to browse';
-  document.getElementById('upload-filename').style.color = '';
-  document.getElementById('upload-progress-bar').style.display = 'none';
-  document.getElementById('upload-progress-fill').style.width = '0%';
-  _uploadSelectedFile = null;
-  var btn = document.getElementById('upload-send-btn');
-  btn.disabled = true;
-  btn.className = 'flex items-center gap-2 px-6 py-3 font-semibold rounded-full transition-all opacity-40 cursor-not-allowed bg-surface-container-highest text-on-surface-variant';
-  showView('upload');
+function updateUploadPasteBtn() {
+  var hasText = !!document.getElementById('paste-textarea').value.trim();
+  var hasFile = !!_uploadSelectedFile;
+  var btn = document.getElementById('upload-paste-send-btn');
+  btn.disabled = !(hasText || hasFile);
+  btn.className = btn.disabled
+    ? 'flex items-center gap-2 px-6 py-3 font-semibold rounded-full transition-all opacity-40 cursor-not-allowed bg-surface-container-highest text-on-surface-variant'
+    : 'flex items-center gap-2 px-6 py-3 bg-primary text-on-primary font-semibold rounded-full hover:bg-primary-dim transition-all shadow-lg shadow-primary/20 cursor-pointer';
 }
 function uploadFileSelected(files) {
   if (!files || !files.length) return;
   var file = files[0];
   var maxSize = 500 * 1024 * 1024;
   var infoEl = document.getElementById('upload-filename');
-  var btn = document.getElementById('upload-send-btn');
   if (file.size > maxSize) {
     infoEl.textContent = 'File too large (max 500MB)';
     infoEl.style.color = '#ef4444';
-    btn.disabled = true;
-    btn.className = 'flex items-center gap-2 px-6 py-3 font-semibold rounded-full transition-all opacity-40 cursor-not-allowed bg-surface-container-highest text-on-surface-variant';
     _uploadSelectedFile = null;
+    updateUploadPasteBtn();
     return;
   }
   _uploadSelectedFile = file;
@@ -1024,46 +1007,64 @@ function uploadFileSelected(files) {
     : Math.round(file.size / 1024) + ' KB';
   infoEl.textContent = file.name + ' (' + sizeTxt + ')';
   infoEl.style.color = '';
-  btn.disabled = false;
-  btn.className = 'flex items-center gap-2 px-6 py-3 bg-primary text-on-primary font-semibold rounded-full hover:bg-primary-dim transition-all shadow-lg shadow-primary/20 cursor-pointer';
+  updateUploadPasteBtn();
 }
-function uploadSend() {
-  if (!_uploadSelectedFile || !_sessionId) return;
+function sendUploadPaste() {
+  var ta = document.getElementById('paste-textarea');
+  var text = ta ? ta.value.trim() : '';
+  if (text.length > 102400) { alert('Text too large (max 100KB)'); return; }
+  var btn = document.getElementById('upload-paste-send-btn');
   var progressBar = document.getElementById('upload-progress-bar');
   var progressFill = document.getElementById('upload-progress-fill');
   var infoEl = document.getElementById('upload-filename');
-  var btn = document.getElementById('upload-send-btn');
   btn.disabled = true;
-  progressBar.style.display = '';
-  progressFill.style.width = '0%';
-  var formData = new FormData();
-  formData.append('file', _uploadSelectedFile);
-  formData.append('uuid', _myUUID);
-  var xhr = new XMLHttpRequest();
-  xhr.open('POST', '/' + _sessionId + '/api/upload');
-  xhr.upload.onprogress = function(e) {
-    if (e.lengthComputable) progressFill.style.width = Math.round(e.loaded / e.total * 100) + '%';
-  };
-  xhr.onload = function() {
-    if (xhr.status >= 200 && xhr.status < 300) {
-      showView(_viewBeforeUpload);
-      showToast('File sent!');
-    } else {
-      var msg = 'Upload failed';
-      try { msg = JSON.parse(xhr.responseText).detail || msg; } catch(e) {}
-      infoEl.textContent = msg;
-      infoEl.style.color = '#ef4444';
-      progressBar.style.display = 'none';
-      btn.disabled = false;
-    }
-  };
-  xhr.onerror = function() {
-    infoEl.textContent = 'Network error';
+  var pastePromise = text
+    ? fetch('/' + _sessionId + '/api/participant/paste', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Participant-ID': _myUUID },
+        body: JSON.stringify({ text: text })
+      })
+    : Promise.resolve();
+  var uploadPromise = _uploadSelectedFile
+    ? new Promise(function(resolve, reject) {
+        progressBar.style.display = '';
+        progressFill.style.width = '0%';
+        var formData = new FormData();
+        formData.append('file', _uploadSelectedFile);
+        formData.append('uuid', _myUUID);
+        var xhr = new XMLHttpRequest();
+        xhr.open('POST', '/' + _sessionId + '/api/upload');
+        xhr.upload.onprogress = function(e) {
+          if (e.lengthComputable) progressFill.style.width = Math.round(e.loaded / e.total * 100) + '%';
+        };
+        xhr.onload = function() {
+          if (xhr.status >= 200 && xhr.status < 300) { resolve(); }
+          else {
+            var msg = 'Upload failed';
+            try { msg = JSON.parse(xhr.responseText).detail || msg; } catch(e) {}
+            reject(new Error(msg));
+          }
+        };
+        xhr.onerror = function() { reject(new Error('Network error')); };
+        xhr.send(formData);
+      })
+    : Promise.resolve();
+  Promise.all([pastePromise, uploadPromise]).then(function() {
+    if (ta) ta.value = '';
+    _uploadSelectedFile = null;
+    document.getElementById('upload-input').value = '';
+    infoEl.textContent = 'or click to browse';
+    infoEl.style.color = '';
+    progressBar.style.display = 'none';
+    updateUploadPasteBtn();
+    showToast('Sent!');
+  }).catch(function(e) {
+    infoEl.textContent = e.message || 'Send failed';
     infoEl.style.color = '#ef4444';
     progressBar.style.display = 'none';
     btn.disabled = false;
-  };
-  xhr.send(formData);
+    updateUploadPasteBtn();
+  });
 }
 function sendEmoji(emoji, btn) {
   showDesktopEmojiFloat(emoji, btn);
@@ -1089,21 +1090,6 @@ function sendFeedback() {
     showToast('Sent!');
   }).catch(function(e) { console.error('feedback failed', e); });
 }
-function sendPaste() {
-  var ta = document.getElementById('paste-textarea');
-  var text = ta ? ta.value : '';
-  if (!text.trim()) return;
-  if (text.length > 102400) { alert('Text too large (max 100KB)'); return; }
-  fetch('/' + _sessionId + '/api/participant/paste', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-Participant-ID': _myUUID },
-    body: JSON.stringify({ text: text })
-  }).then(function() {
-    ta.value = '';
-    document.getElementById('paste-send-btn').disabled = true;
-    showToast('Sent!');
-  }).catch(function(e) { console.error('paste failed', e); });
-}
 function showToast(msg) {
   var t = document.createElement('div');
   t.textContent = msg;
@@ -1113,7 +1099,7 @@ function showToast(msg) {
 }
 window.addEventListener('dragenter', function(e) {
   if (e.dataTransfer && e.dataTransfer.types && Array.from(e.dataTransfer.types).includes('Files')) {
-    showUpload();
+    showView('upload-paste');
   }
 });
 function _formatSlideAge(updatedAt) {
@@ -1302,7 +1288,7 @@ function scheduleHideOverflow() {
     el.classList.add('opacity-0', 'pointer-events-none', 'translate-y-1');
   }, 120);
 }
-var VIEWS = ['activity', 'slides', 'summary', 'notes', 'agenda', 'feedback', 'paste', 'upload'];
+var VIEWS = ['activity', 'slides', 'summary', 'notes', 'agenda', 'feedback', 'upload-paste'];
 function saveScroll(name, el) {
   LS.setScroll(name, el.scrollTop);
 }
