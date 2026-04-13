@@ -164,16 +164,13 @@
 </button>
 </div>
 </header>
-<main class="flex-1 flex flex-col p-4 md:p-8 max-w-7xl mx-auto w-full gap-8">
-<!-- Presentation Slides Section -->
-<div class="flex flex-col gap-4">
+<main class="flex-1 flex flex-col w-full">
 <!-- Slides History -->
-<div class="relative w-full rounded-xl overflow-hidden bg-surface-container-low shadow-2xl ring-2 ring-primary" style="height:70vh">
-<div id="pdf-pages" class="h-full overflow-y-auto flex flex-col gap-4 p-4 scroll-smooth"></div>
+<div class="relative flex-1">
+<div id="pdf-pages" class="absolute inset-0 overflow-y-auto flex flex-col gap-4 pb-32 scroll-smooth"></div>
 <div id="slide-placeholder" class="absolute inset-0 flex flex-col items-center justify-center gap-3 text-on-surface-variant">
 <span class="material-symbols-outlined text-5xl">slideshow</span>
 <span class="text-sm">Waiting for slides…</span>
-</div>
 </div>
 </div>
 <!-- Desktop Quick Controls (Emoji Bar) -->
@@ -260,7 +257,7 @@
           const canvas = document.createElement('canvas');
           canvas.width = viewport.width;
           canvas.height = viewport.height;
-          canvas.className = 'w-full rounded-xl';
+          canvas.className = 'w-full';
           container.appendChild(canvas);
           await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
         }
