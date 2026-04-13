@@ -1873,9 +1873,47 @@ async function loadAgenda() {
     for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
     const result = await mammoth.convertToHtml({ arrayBuffer: bytes.buffer });
     el.innerHTML = result.value.replace(/<a /g, '<a target="_blank" rel="noopener" ');
+    addAgendaProgress(el);
   } catch (e) {
     el.textContent = 'Failed to load agenda.';
   }
+}
+
+function addAgendaProgress(container) {
+  const blocks = Array.from(container.querySelectorAll('p, h1, h2, h3, h4, h5, h6'));
+  let sectionEl = null, total = 0, crossed = 0;
+
+  function finishSection() {
+    if (!sectionEl) return;
+    const pct = total > 0 ? Math.round(crossed / total * 100) : 0;
+    const badge = document.createElement('span');
+    badge.textContent = pct + '%';
+    badge.style.cssText = 'display:inline-block;margin-left:10px;font-size:0.72rem;font-weight:700;padding:1px 9px;border-radius:999px;background:var(--color-primary-container,#dfe0ff);color:var(--color-on-primary-container,#3747ac);vertical-align:middle';
+    sectionEl.appendChild(badge);
+    sectionEl = null;
+  }
+
+  for (const block of blocks) {
+    const text = block.textContent.trim();
+    if (!text) continue;
+    const isSection = text.startsWith('§');
+    const strongEl = block.querySelector('strong, b');
+    const isBold = strongEl && strongEl.textContent.trim() === text;
+    if (isSection) {
+      finishSection();
+      sectionEl = block;
+      total = 0;
+      crossed = 0;
+    } else if (sectionEl) {
+      if (isBold) {
+        finishSection(); // bold non-§ line ends the section
+      } else {
+        total++;
+        if (block.querySelector('s, del')) crossed++;
+      }
+    }
+  }
+  finishSection();
 }
 
 function linkifyText(text) {
