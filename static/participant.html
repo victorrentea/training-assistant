@@ -276,6 +276,11 @@ body{visibility:hidden}
 </div>
 <!-- Slides View -->
 <div id="slides-view" class="relative h-full flex flex-col">
+<!-- PDF Check Loading Overlay -->
+<div id="pdf-check-overlay" style="display:none;position:absolute;inset:0;z-index:25;background:rgba(var(--color-surface-rgb,245,245,245),0.75);backdrop-filter:blur(2px);flex-direction:column;align-items:center;justify-content:center;gap:12px;">
+  <div style="width:36px;height:36px;border:3px solid var(--color-outline-variant,#ccc);border-top-color:var(--color-primary,#4555ba);border-radius:50%;animation:spin 0.8s linear infinite"></div>
+  <span style="font-size:0.9rem;color:var(--color-outline,#888)">Loading slides&hellip;</span>
+</div>
 <!-- PDF Viewer Toolbar (Minimalist) -->
 <div class="absolute top-6 right-6 z-20 flex items-center gap-2 p-2 rounded-full glass whisper-shadow border border-outline-variant border-opacity-10">
 <a id="pdf-download" href="#" download class="p-2 hover:bg-primary-container rounded-full text-on-surface-variant hover:text-primary transition-all flex">
@@ -1241,13 +1246,18 @@ async function selectTopic(el, event, slide) {
   });
   if (slide && slide.url && window.loadPdf) {
     if (slide.slug && _sessionId) {
+      var _checkOverlay = document.getElementById('pdf-check-overlay');
+      if (_checkOverlay) { _checkOverlay.style.display = 'flex'; }
       try {
         var checkUrl = '/' + _sessionId + '/api/slides/check/' + encodeURIComponent(slide.slug);
         var resp = await fetch(checkUrl, { cache: 'no-store', headers: { 'X-Participant-ID': _myUUID } });
         if (!resp.ok) throw new Error(resp.status);
       } catch(e) {
+        if (_checkOverlay) { _checkOverlay.style.display = 'none'; }
         showToast('Slide not ready on server yet. Try again in a few seconds.');
         return;
+      } finally {
+        if (_checkOverlay) { _checkOverlay.style.display = 'none'; }
       }
     }
     var dlUrl = slide.url + (slide.url.includes('?') ? '&' : '?') + 'download=1';
