@@ -1860,8 +1860,8 @@ function addAgendaProgress(container) {
 
   const navBadge = document.getElementById('agenda-progress-badge');
   if (navBadge && grandTotal > 0) {
-    navBadge.textContent = grandCrossed + '/' + grandTotal;
-    navBadge.style.display = '';
+    navBadge.innerHTML = makePieSvg(grandCrossed / grandTotal);
+    navBadge.style.cssText = 'display:inline-block;margin-left:auto;padding:0;background:none;line-height:0;vertical-align:middle';
   }
 }
 
