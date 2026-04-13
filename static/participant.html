@@ -158,7 +158,7 @@ body{visibility:hidden}
 <h1 id="session-title" class="text-xl font-extrabold text-on-surface leading-tight tracking-tight truncate">Event-Driven Architectures</h1>
 <p class="text-xl font-medium text-primary flex items-center justify-between">
 <span id="session-org">orange.ro</span>
-<span class="flex items-center gap-1">👥 <span id="pax-count">30</span></span>
+<span id="pax-count-display" class="flex items-center gap-1" style="display:none">👥 <span id="pax-count">0</span></span>
 </p>
 </div>
 </div>
@@ -1829,7 +1829,12 @@ function _handleWsMessage(msg) {
       break;
     case 'slides_current': _onIncomingHostSlidesCurrent(msg.slides_current || null); break;
     case 'slides_history_count_updated': _setPastSlidesBadge(msg.count); break;
-    case 'active_participants_count_updated': document.getElementById('pax-count').textContent = msg.count; break;
+    case 'active_participants_count_updated': {
+      var paxDisplay = document.getElementById('pax-count-display');
+      document.getElementById('pax-count').textContent = msg.count;
+      paxDisplay.style.display = '';
+      break;
+    }
   }
 }
 
