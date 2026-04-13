@@ -30,7 +30,7 @@ participant_router = APIRouter(prefix="/api/participant/emoji", tags=["emoji"])
 
 _last_broadcast_time: float = 0.0
 _pending_broadcast_handle: object | None = None  # asyncio.TimerHandle
-_BROADCAST_INTERVAL = 1.0  # seconds
+_BROADCAST_INTERVAL = 0.5  # seconds
 
 
 async def _broadcast_emoji_counters_now() -> None:
