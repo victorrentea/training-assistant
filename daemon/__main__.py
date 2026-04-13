@@ -253,6 +253,9 @@ def _build_runtime_session_snapshot(
         "slides_current": misc_state.slides_current,
         "slides_viewed": [dict(sv) for sv in misc_state.slides_viewed],
         "git_repos": [r.model_dump() for r in participant_state.git_repos],
+        "talk_presentation_name": misc_state.talk_presentation_name,
+        "talk_presentation_url": misc_state.talk_presentation_url,
+        "talk_presentation_slug": misc_state.talk_presentation_slug,
     }
 
 

@@ -231,6 +231,7 @@ async def talk_presentation_path(body: TalkPresentationPathRequest):
         save_session_state(folder, state)
 
     misc_state.talk_presentation_name = pptx_path.stem
+    misc_state.talk_presentation_url = pdf_export_url
     misc_state.talk_presentation_slug = None  # cleared until PDF is confirmed ready
 
     if pdf_export_url:
