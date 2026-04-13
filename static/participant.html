@@ -968,8 +968,8 @@ function openRepos() {
         }).join('');
         return '<div class="px-4 py-1.5">'
           + '<a href="' + branchUrl + '" target="_blank" class="text-sm font-medium text-on-surface hover:underline flex items-center gap-1">'
-          + name
-          + '<span class="material-symbols-outlined text-xs flex-shrink-0 ml-1">open_in_new</span>'
+          + '<span class="material-symbols-outlined text-xs flex-shrink-0">open_in_new</span>'
+          + name + ':'
           + '</a>'
           + '<ul class="mt-0.5 ml-4 text-xs text-on-surface-variant list-disc space-y-0.5">' + files + '</ul>'
           + '</div>';
