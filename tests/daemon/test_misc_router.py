@@ -66,3 +66,66 @@ def test_feedback_route_uses_active_session_name():
     subject, body = notify.call_args.args
     assert "2026-04-06 Architecture Masterclass" in subject
     assert "Session: 2026-04-06 Architecture Masterclass" in body
+
+
+def _host_client() -> TestClient:
+    from daemon.misc.router import host_router
+    app = FastAPI()
+    app.include_router(host_router)
+    return TestClient(app)
+
+
+def test_compilation_returns_204_when_no_slides_viewed():
+    client = _host_client()
+    with patch("daemon.misc.router.misc_state") as ms:
+        ms.slides_viewed = []
+        resp = client.get("/api/test-session/host/slides-compilation")
+    assert resp.status_code == 204
+
+
+def test_compilation_skips_file_with_no_catalog_entry():
+    """If a file_name from slides_viewed has no matching catalog entry, it is skipped."""
+    client = _host_client()
+    with patch("daemon.misc.router.misc_state") as ms:
+        ms.slides_viewed = [{"file_name": "Unknown.pptx", "page": 1, "seconds": 10}]
+        ms.slides_catalog = {}
+        ms.slides_cache_status = {}
+        resp = client.get("/api/test-session/host/slides-compilation")
+    assert resp.status_code == 204
+
+
+def test_compilation_returns_pdf_for_cached_slide():
+    """When all PDFs are already cached on Railway, returns a compiled PDF."""
+    import io
+    from pypdf import PdfWriter
+
+    # Build a minimal valid 2-page PDF
+    writer = PdfWriter()
+    writer.add_blank_page(width=100, height=100)
+    writer.add_blank_page(width=100, height=100)
+    buf = io.BytesIO()
+    writer.write(buf)
+    pdf_bytes = buf.getvalue()
+
+    client = _host_client()
+    with patch("daemon.misc.router.misc_state") as ms, \
+         patch("daemon.misc.router._fetch_pdf_bytes_from_railway", return_value=pdf_bytes) as fetch_mock, \
+         patch("daemon.misc.router.asyncio.to_thread", side_effect=lambda fn, *a, **kw: fn(*a, **kw)):
+        ms.slides_viewed = [
+            {"file_name": "AI Coding.pptx", "page": 1, "seconds": 30},
+            {"file_name": "AI Coding.pptx", "page": 2, "seconds": 20},
+        ]
+        ms.slides_catalog = {
+            "ai-coding-abc": {
+                "source_name": "AI Coding.pptx",
+                "drive_export_url": "https://gdrive.example.com/pdf",
+            }
+        }
+        ms.slides_cache_status = {"ai-coding-abc": {"status": "cached"}}
+        resp = client.get("/api/test-session/host/slides-compilation")
+
+    assert resp.status_code == 200
+    assert resp.headers["content-type"] == "application/pdf"
+    assert "attachment" in resp.headers["content-disposition"]
+    assert resp.content.startswith(b"%PDF")
+    fetch_mock.assert_called_once_with("test-session", "ai-coding-abc")

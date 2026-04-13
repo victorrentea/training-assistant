@@ -1,10 +1,14 @@
 """Daemon misc router — participant + host endpoints for paste, notes, summary, slides cache."""
+import asyncio
 import base64
 import logging
+import urllib.request
+from collections import defaultdict
+from io import BytesIO
 from typing import Optional
 
 from fastapi import APIRouter, Request, Response
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
 
 from daemon.email_notify import notify as email_notify
@@ -197,3 +201,121 @@ async def mark_uploaded_file_seen(body: UploadSeenRequest):
     if not misc_state.mark_uploaded_file_seen(target_uuid, file_id):
         return JSONResponse({"error": "Upload indicator not found"}, status_code=404)
     return Response(status_code=204)
+
+
+def _fetch_pdf_bytes_from_railway(session_id: str, slug: str) -> bytes:
+    """Fetch a cached PDF from Railway. The download endpoint is public (no auth needed)."""
+    from daemon.slides.router import _railway_base_url, _ssl_context
+    url = f"{_railway_base_url()}/{session_id}/api/slides/download/{slug}"
+    req = urllib.request.Request(url)
+    with urllib.request.urlopen(req, timeout=60.0, context=_ssl_context()) as resp:
+        return resp.read()
+
+
+@host_router.get("/slides-compilation")
+async def get_slides_compilation(session_id: str):
+    """Compile all viewed slide pages into one PDF and return as a download.
+
+    Long-running: may trigger Railway to download PDFs from Google Drive first.
+    Progress is logged to the daemon log.
+    """
+    from daemon import log
+    from daemon.slides.router import download_on_railway
+
+    try:
+        from pypdf import PdfReader, PdfWriter
+    except ImportError:
+        log.error("slides-compile", "pypdf not installed — add to [daemon] extras in pyproject.toml")
+        return JSONResponse({"error": "pypdf not available"}, status_code=500)
+
+    # 1. Build reverse index: source_name → {slug, drive_export_url}
+    source_index: dict[str, dict] = {
+        entry["source_name"]: {"slug": slug, "drive_export_url": entry.get("drive_export_url", "")}
+        for slug, entry in misc_state.slides_catalog.items()
+        if entry.get("source_name")
+    }
+
+    # 2. Group slides_viewed by file_name, preserving encounter order
+    pages_by_file: dict[str, set[int]] = defaultdict(set)
+    file_order: list[str] = []
+    for sv in misc_state.slides_viewed:
+        fn = sv.get("file_name", "")
+        if not fn:
+            continue
+        if fn not in pages_by_file:
+            file_order.append(fn)
+        page = sv.get("page", 0)
+        if page > 0:
+            pages_by_file[fn].add(page)
+
+    if not file_order:
+        return Response(status_code=204)
+
+    # 3. Resolve file names to catalog entries
+    needed: list[dict] = []  # each: {slug, drive_export_url, file_name, pages}
+    for fn in file_order:
+        entry = source_index.get(fn)
+        if not entry:
+            log.error("slides-compile", f"No catalog entry for {fn!r} — skipping")
+            continue
+        pages = pages_by_file[fn]
+        if pages:
+            needed.append({**entry, "file_name": fn, "pages": pages})
+
+    if not needed:
+        return Response(status_code=204)
+
+    # 4. Parallel prefetch of PDFs not yet cached on Railway
+    total = len(needed)
+    uncached = [
+        d for d in needed
+        if misc_state.slides_cache_status.get(d["slug"], {}).get("status") != "cached"
+    ]
+    done_count = total - len(uncached)
+    log.info("slides-compile", f"Starting: {total} decks, {len(uncached)} need GDrive download")
+
+    if uncached:
+        counter_lock = asyncio.Lock()
+
+        async def _prefetch(deck: dict) -> None:
+            nonlocal done_count
+            try:
+                await asyncio.to_thread(download_on_railway, deck["slug"], deck["drive_export_url"])
+            except Exception as exc:
+                log.error("slides-compile", f"GDrive download failed for {deck['file_name']!r}: {exc}")
+            async with counter_lock:
+                done_count += 1
+                pct = int(done_count * 100 / total)
+                log.info("slides-compile", f"Prefetch {done_count}/{total} ({pct}%)")
+
+        await asyncio.gather(*[_prefetch(d) for d in uncached])
+
+    # 5. Fetch PDFs from Railway and extract viewed pages
+    writer = PdfWriter()
+    total_pages = 0
+
+    for deck in needed:
+        slug = deck["slug"]
+        pages = sorted(deck["pages"])
+        try:
+            pdf_bytes = await asyncio.to_thread(_fetch_pdf_bytes_from_railway, session_id, slug)
+        except Exception as exc:
+            log.error("slides-compile", f"Failed to fetch PDF for {deck['file_name']!r}: {exc}")
+            continue
+        reader = PdfReader(BytesIO(pdf_bytes))
+        n = len(reader.pages)
+        for p in pages:
+            if 1 <= p <= n:
+                writer.add_page(reader.pages[p - 1])
+                total_pages += 1
+
+    log.info("slides-compile", f"Done — {total_pages} pages compiled from {len(needed)} decks")
+
+    buf = BytesIO()
+    writer.write(buf)
+    buf.seek(0)
+    return StreamingResponse(
+        buf,
+        media_type="application/pdf",
+        headers={"Content-Disposition": 'attachment; filename="slides-compilation.pdf"'},
+    )
