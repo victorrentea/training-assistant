@@ -169,7 +169,7 @@ def test_emoji_reaction_visible_to_host():
         )
 
         # Participant clicks an emoji — use the first emoji button (heart)
-        emoji_btn = pax_page.locator("#emoji-center button, .emoji-btn").first
+        emoji_btn = pax_page.locator("#emoji-main-bar button").first
         emoji_btn.wait_for(state="visible", timeout=5000)
         emoji_btn.click()
         print("Participant clicked emoji")
