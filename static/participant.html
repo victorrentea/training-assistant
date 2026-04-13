@@ -301,7 +301,7 @@ body{visibility:hidden}
 <div id="slides-view" class="relative h-full flex flex-col">
 <!-- PDF Viewer Toolbar (Minimalist) -->
 <div class="absolute top-6 right-6 z-20 flex items-center gap-2 p-2 rounded-full glass whisper-shadow border border-outline-variant border-opacity-10">
-<a id="pdf-download" href="/static/demo.pdf" download class="p-2 hover:bg-primary-container rounded-full text-on-surface-variant hover:text-primary transition-all flex">
+<a id="pdf-download" href="#" download class="p-2 hover:bg-primary-container rounded-full text-on-surface-variant hover:text-primary transition-all flex">
 <span class="material-symbols-outlined">download</span>
 </a>
 </div>
@@ -439,18 +439,14 @@ body{visibility:hidden}
     infoEl.textContent = current + ' / ' + totalPages;
   }
 
-  (async function init() {
-    try {
-      pdfDoc = await pdfjsLib.getDocument('/static/demo.pdf').promise;
-      totalPages = pdfDoc.numPages;
-      await renderAllPages(currentScale);
-      document.getElementById('pdf-pages').addEventListener('scroll', updatePageInfo);
-    } catch (e) {
-      console.error('PDF load error', e);
-    }
+  (function init() {
+    document.getElementById('pdf-pages').addEventListener('scroll', updatePageInfo);
+    const infoEl = document.getElementById('pdf-page-info');
+    if (infoEl) infoEl.textContent = '— / —';
   })();
 
   window.pdfZoom = async function(delta) {
+    if (!pdfDoc) return;
     currentScale = Math.max(0.5, Math.min(3, currentScale + delta));
     await renderAllPages(currentScale);
   };
