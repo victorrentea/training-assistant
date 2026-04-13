@@ -196,10 +196,6 @@
 <span class="material-symbols-outlined text-xl">slideshow</span>
 <span class="text-[10px] font-semibold uppercase tracking-tight">Slides</span>
 </button>
-<button id="btn-summary" onclick="showView('summary')" class="tab-btn flex flex-col items-center gap-1 p-2 bg-surface-container-highest/30 hover:bg-surface-container-highest rounded-lg transition-colors min-w-[64px]" disabled>
-<span class="material-symbols-outlined text-xl">auto_awesome</span>
-<span class="text-[10px] font-semibold uppercase tracking-tight">Summary</span>
-</button>
 <button id="btn-download-slides" class="tab-btn flex flex-col items-center gap-1 p-2 bg-surface-container-highest/30 hover:bg-surface-container-highest rounded-lg transition-colors min-w-[64px]" disabled>
 <span class="material-symbols-outlined text-xl">download</span>
 <span class="text-[10px] font-semibold uppercase tracking-tight">Download</span>
@@ -224,11 +220,7 @@
   <span class="text-sm">Loading slides…</span>
   </div>
   </div>
-  <!-- Summary View (hidden by default) -->
-  <div id="view-summary" class="absolute inset-0 hidden overflow-y-auto p-4 pb-16">
-    <div id="summary-content" class="md-content text-sm"></div>
-  </div>
-  <!-- Speaker View (hidden by default) -->
+<!-- Speaker View (hidden by default) -->
   <div id="view-speaker" class="absolute inset-0 hidden overflow-y-auto p-4 pb-16">
     <div id="speaker-content" class="md-content text-sm"></div>
   </div>
@@ -371,7 +363,7 @@
   })();
 
   // View names that have a tab button
-  var _viewNames = ['speaker', 'slides', 'summary'];
+  var _viewNames = ['speaker', 'slides'];
 
   function showView(name) {
     _viewNames.forEach(function(v) {
@@ -383,34 +375,10 @@
     var fab = document.getElementById('fab-current-slide');
     if (fab) fab.classList.toggle('hidden', name !== 'slides');
     _activeView = name;
-    if (name === 'summary') _loadSummary();
     if (name === 'speaker') _renderSpeaker();
   }
 
-  function _enableSummaryButton() {
-    var btn = document.getElementById('btn-summary');
-    if (btn) btn.disabled = false;
-  }
-
-  async function _loadSummary() {
-    if (!_sessionId) return;
-    var contentEl = document.getElementById('summary-content');
-    if (!contentEl) return;
-    try {
-      var data = await fetch('/' + _sessionId + '/api/participant/summary', {
-        headers: { 'X-Participant-ID': _uuid }
-      }).then(function(r) { return r.ok ? r.json() : null; });
-      if (data && data.raw_markdown) {
-        contentEl.innerHTML = marked.parse(data.raw_markdown);
-      } else {
-        contentEl.innerHTML = '<p style="color:#aea5d4">No summary available yet.</p>';
-      }
-    } catch (e) {
-      contentEl.innerHTML = '<p style="color:#aea5d4">Failed to load summary.</p>';
-    }
-  }
-
-  function _renderSpeaker() {
+function _renderSpeaker() {
     var contentEl = document.getElementById('speaker-content');
     if (!contentEl || contentEl._rendered) return;
     contentEl._rendered = true;
@@ -526,7 +494,6 @@
         if (msg.type === 'slides_current' && msg.slides_current) _applySlidesCurrent(msg.slides_current).catch(function() {});
         if (msg.type === 'announce' && msg.slides_current) _applySlidesCurrent(msg.slides_current).catch(function() {});
         if (msg.type === 'emoji_counters_updated' && msg.counters) _applyEmojiCounters(msg.counters);
-        if (msg.type === 'summary_updated' && msg.updated_at) _enableSummaryButton();
         if (msg.type === 'active_participants_count_updated') {
           document.getElementById('pax-count').textContent = msg.count;
           document.getElementById('pax-count-display').classList.remove('hidden');
@@ -567,7 +534,6 @@
       console.log('[talk] state:', state);
       if (state.slides_current) await _applySlidesCurrent(state.slides_current);
       if (state.emoji_counters) _applyEmojiCounters(state.emoji_counters);
-      if (state.summary_updated_at) _enableSummaryButton();
       if (state.last_git_url) {
         var gitBtn = document.getElementById('btn-git-repo');
         if (gitBtn) {
