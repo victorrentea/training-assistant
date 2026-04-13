@@ -3572,9 +3572,10 @@ function stopInactivityTracking() {
     }
   });
 
-  layout.addEventListener('drop', (e) => {
+  document.addEventListener('drop', (e) => {
     layout.classList.remove('pptx-drop-hover');
     if (currentMode !== 'talk') return;
+    if (!layout.contains(e.target) && e.target !== layout) return;
     e.preventDefault();
 
     const uriList = e.dataTransfer.getData('text/uri-list');
@@ -3593,7 +3594,7 @@ function stopInactivityTracking() {
     }).then(r => {
       if (!r.ok) console.warn('talk-presentation-path failed:', r.status);
     });
-  });
+  }, {capture: true});
 })();
 
 startInactivityTracking();
