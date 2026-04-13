@@ -1183,6 +1183,24 @@ paths:
               schema:
                 $ref: '#/components/schemas/SessionFoldersResponse'
       x-feature: session_management
+  /api/session/talk-presentation-path:
+    post:
+      tags:
+      - session
+      summary: Talk Presentation Path
+      description: Host drops a PPTX file during a talk — log its path and Google
+        Drive URL.
+      operationId: talk_presentation_path_api_session_talk_presentation_path_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TalkPresentationPathRequest'
+        required: true
+      responses:
+        '204':
+          description: Successful Response
+      x-feature: session_management
   /api/session/active:
     get:
       tags:
@@ -1673,6 +1691,20 @@ components:
       required:
       - text
       title: FeedbackRequest
+    FolderInfo:
+      properties:
+        name:
+          type: string
+          title: Name
+        session_type:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Session Type
+      type: object
+      required:
+      - name
+      title: FolderInfo
     GitActivityResponse:
       properties:
         git_repos:
@@ -2202,6 +2234,11 @@ components:
         current_activity:
           type: string
           title: Current Activity
+        session_name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Session Name
         wordcloud:
           $ref: '#/components/schemas/WordcloudData'
         qa_questions:
@@ -2658,7 +2695,7 @@ components:
       properties:
         folders:
           items:
-            type: string
+            $ref: '#/components/schemas/FolderInfo'
           type: array
           title: Folders
       type: object
@@ -2861,7 +2898,7 @@ components:
           type: string
           enum:
           - workshop
-          - conference
+          - talk
           title: Type
       type: object
       required:
@@ -2927,6 +2964,15 @@ components:
           title: Updated At
       type: object
       title: SummaryResponse
+    TalkPresentationPathRequest:
+      properties:
+        path:
+          type: string
+          title: Path
+      type: object
+      required:
+      - path
+      title: TalkPresentationPathRequest
     ToggleAnsweredBody:
       properties:
         answered:
