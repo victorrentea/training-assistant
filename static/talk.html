@@ -254,12 +254,36 @@
         for (let i = _renderedPages + 1; i <= pageNum; i++) {
           const page = await _pdfDoc.getPage(i);
           const viewport = page.getViewport({ scale: 1.5 });
+          const section = document.createElement('section');
+          section.style.cssText = 'position:relative';
           const canvas = document.createElement('canvas');
           canvas.width = viewport.width;
           canvas.height = viewport.height;
           canvas.className = 'w-full';
-          container.appendChild(canvas);
+          section.appendChild(canvas);
+          container.appendChild(section);
           await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+          const annotations = await page.getAnnotations({ intent: 'display' });
+          if (annotations && annotations.length) {
+            const annLayer = document.createElement('div');
+            annLayer.style.cssText = 'position:absolute;inset:0;pointer-events:none;';
+            section.appendChild(annLayer);
+            for (const ann of annotations) {
+              if (!ann || ann.subtype !== 'Link' || !(ann.url || ann.unsafeUrl)) continue;
+              const rect = viewport.convertToViewportRectangle(ann.rect);
+              const left = Math.min(rect[0], rect[2]);
+              const top = Math.min(rect[1], rect[3]);
+              const width = Math.abs(rect[0] - rect[2]);
+              const height = Math.abs(rect[1] - rect[3]);
+              if (!(width > 0 && height > 0)) continue;
+              const link = document.createElement('a');
+              link.href = ann.url || ann.unsafeUrl;
+              link.target = '_blank';
+              link.rel = 'noopener noreferrer';
+              link.style.cssText = `position:absolute;left:${left}px;top:${top}px;width:${width}px;height:${height}px;pointer-events:auto;cursor:pointer;background:transparent`;
+              annLayer.appendChild(link);
+            }
+          }
         }
         _renderedPages = Math.max(_renderedPages, pageNum);
       }
