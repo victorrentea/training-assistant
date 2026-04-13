@@ -875,13 +875,13 @@ function openRepos() {
         var files = repo.files.map(function(f) {
           return '<li class="truncate">' + f + '</li>';
         }).join('');
-        return '<div class="px-4 py-1.5">'
-          + '<a href="' + branchUrl + '" target="_blank" class="text-sm font-medium text-on-surface hover:underline flex items-center gap-1">'
-          + '<span class="material-symbols-outlined text-xs flex-shrink-0">commit</span>'
-          + '<span class="flex-1">' + name + ':</span>'
-          + '<span class="material-symbols-outlined text-xs flex-shrink-0">open_in_new</span>'
+        return '<div class="text-sm">'
+          + '<a href="' + branchUrl + '" target="_blank" class="nav-item rounded-lg px-3 py-1.5 flex items-center gap-2 transition-all cursor-pointer mx-1 hover:underline">'
+          + '<span class="material-symbols-outlined text-lg flex-shrink-0">commit</span>'
+          + '<span class="flex-1">' + name + '</span>'
+          + '<span class="material-symbols-outlined text-sm flex-shrink-0">open_in_new</span>'
           + '</a>'
-          + '<ul class="mt-0.5 ml-4 text-sm text-on-surface-variant list-inside list-disc space-y-0.5">' + files + '</ul>'
+          + (files ? '<ul class="mt-0.5 ml-4 text-sm text-on-surface-variant list-inside list-disc space-y-0.5 px-3 pb-1">' + files + '</ul>' : '')
           + '</div>';
       }).join('');
     })
