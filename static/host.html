@@ -36,14 +36,14 @@
     <button class="tab-btn" id="tab-qa" onclick="switchTab('qa')"><span class="tab-icon">❓</span>Q&A</button>
     <button class="tab-btn" id="tab-codereview" onclick="switchTab('codereview')"><span class="tab-icon">🕵️</span>Code</button>
     <button class="tab-btn" id="tab-debate" onclick="switchTab('debate')"><span class="tab-icon">⚔️</span>Debate</button>
-    <!-- Talk mode: PPTX file picker (shown only in conference layout) -->
-    <label id="talk-pptx-drop" class="talk-pptx-tab" title="Pick PPTX file">
-      <input type="file" accept=".pptx,.ppt" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%" onchange="onTalkPptxSelected(this)">
-      <span>📂 PPTX</span>
-    </label>
     <button class="tab-btn leaderboard-btn" id="btn-leaderboard" onclick="toggleLeaderboard()" title="Show Leaderboard">
       <span class="tab-icon">🏆</span>Board
     </button>
+    <!-- Talk mode: PPTX file picker (shown only in conference layout) -->
+    <label id="talk-pptx-drop" class="talk-pptx-tab" title="Click to pick PPTX file">
+      <input type="file" accept=".pptx,.ppt" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%" onchange="onTalkPptxSelected(this)">
+      <span id="talk-pptx-label">Drop pptx here</span>
+    </label>
   </div>
   <div class="host-top-spacer"></div>
   <div class="host-top-title-wrap">
@@ -241,9 +241,6 @@
     <div id="slides-left-qr" class="side-qr-container">
       <div id="slides-left-qr-code"></div>
     </div>
-
-    <!-- Conference mode: current PPTX name (below QR) -->
-    <div id="talk-pptx-name" style="display:none; text-align:center; font-size:.85rem; color:var(--text-muted,#aaa); padding:.3rem .5rem; word-break:break-word;"></div>
 
     <!-- Conference mode: QR code shown in left column -->
     <div id="conference-qr" class="conference-qr-container">

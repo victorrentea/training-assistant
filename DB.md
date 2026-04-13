@@ -63,6 +63,7 @@ debate?: PersistedDebateState {
   round_timer_seconds?:int
   round_timer_started_at?:string
 }
+slides_talk?: dict[str, any]  # Talk-mode PPTX info {pptx_name, gdrive_url, pdf_path}
 slides_current?: dict[str, any]  # {presentation_name, current_page}
 slides_viewed?: list[ViewedSlide {
   file_name:string  # PowerPoint file name, e.g. 'AI Coding.pptx'

@@ -1088,8 +1088,6 @@
       if (leftTabsWrapper) leftTabsWrapper.style.display = 'none';
       if (slidesLeftQR) slidesLeftQR.style.display = 'flex';
       if (pptxDrop) pptxDrop.style.display = 'inline-flex';
-      const pptxName = document.getElementById('talk-pptx-name');
-      if (pptxName) pptxName.style.display = 'block';
       confQR.style.display = 'none';
       if (debateTab) debateTab.style.display = 'none';
       if (tokenCost) tokenCost.style.display = 'none';
@@ -1105,8 +1103,6 @@
       if (leftTabsWrapper) leftTabsWrapper.style.display = _currentActivity === 'none' ? 'none' : 'flex';
       if (slidesLeftQR) slidesLeftQR.style.display = _currentActivity === 'none' ? 'flex' : 'none';
       if (pptxDrop) pptxDrop.style.display = 'none';
-      const pptxName2 = document.getElementById('talk-pptx-name');
-      if (pptxName2) pptxName2.style.display = 'none';
       confQR.style.display = 'none';
       if (debateTab) debateTab.style.display = '';
       if (tokenCost) tokenCost.style.display = '';
@@ -3614,8 +3610,8 @@ function onTalkPptxSelected(input) {
   const file = input.files[0];
   if (!file) return;
   input.value = '';  // reset so same file can be re-selected
-  const nameEl = document.getElementById('talk-pptx-name');
-  if (nameEl) nameEl.textContent = file.name.replace(/\.pptx?$/i, '');
+  const labelEl = document.getElementById('talk-pptx-label');
+  if (labelEl) labelEl.textContent = '📂 ' + file.name.replace(/\.pptx?$/i, '');
   fetch('/api/session/talk-presentation-path', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},

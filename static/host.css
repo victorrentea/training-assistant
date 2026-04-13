@@ -1421,13 +1421,14 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
   color: #f5a623;
   font-size: .8rem;
   padding: .3rem .8rem .4rem;
-  border: none;
+  border: 2px dashed #f5a623;
+  border-radius: 4px;
   background: transparent;
-  border-bottom: 2px solid #f5a623;
   white-space: nowrap;
   align-items: center;
   gap: .3rem;
   line-height: 1;
+  margin: .15rem .4rem;
 }
 .talk-pptx-tab:hover {
   background: rgba(245, 166, 35, .12);
@@ -1482,11 +1483,10 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
   height: 100% !important;
 }
 
-/* Conference mode: left column splits into tabs (top) + QR (bottom) + status bar */
+/* Conference mode: left column shows only QR (fills all space) */
 .host-col-left.conference-layout {
-  display: grid;
-  grid-template-rows: 1fr auto;
-  gap: 0;
+  display: flex;
+  flex-direction: column;
 }
 /* .host-col-left.conference-layout .left-status-bar removed — status bar is now in consolidated footer */
 .left-tabs-wrapper {
