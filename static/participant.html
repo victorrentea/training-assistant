@@ -88,7 +88,7 @@ body{visibility:hidden}
 <div class="flex-1 min-w-0">
 <h1 id="session-title" class="text-xl font-extrabold text-on-surface leading-tight tracking-tight truncate">Event-Driven Architectures</h1>
 <p class="text-base font-medium text-primary flex items-center justify-between">
-<span id="session-org">orange.ro</span>
+<span id="session-org"></span>
 <span id="pax-count-display" class="flex items-center gap-1" style="display:none">👥 <span id="pax-count">0</span></span>
 </p>
 </div>
@@ -1686,9 +1686,7 @@ function _applyState(msg) {
     var parts = sn.split('@');
     document.getElementById('session-title').textContent = parts[0].trim();
     var orgEl = document.getElementById('session-org');
-    if (parts.length > 1 && parts[1].trim()) {
-      orgEl.textContent = parts[1].trim();
-    }
+    orgEl.textContent = (parts.length > 1 && parts[1].trim()) ? parts[1].trim() : '';
   }
   if (msg.notes_updated_at !== undefined) {
     document.querySelector('[data-nav="notes"]').style.display = msg.notes_updated_at ? '' : 'none';
