@@ -1416,6 +1416,7 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
 
 .talk-pptx-drop {
   display: none;
+  position: relative;
   cursor: pointer;
   border: 2px dashed #f5a623;
   border-radius: 6px;
