@@ -158,7 +158,7 @@ body{visibility:hidden}
 <img id="my-avatar" alt="Avatar" class="w-full h-full rounded-full object-cover" style="display:none" src=""/>
 <span id="my-avatar-letter" class="w-full h-full rounded-full flex items-center justify-center text-white font-extrabold text-xs" style="display:none"></span>
 </div>
-<span id="display-name" class="text-base font-medium text-on-surface cursor-pointer hover:underline" title="Click to edit name" style="display:none"></span>
+<span id="display-name" class="text-base font-medium text-on-surface cursor-pointer hover:underline" title="Click to edit name" style="display:none"><span class="display-name-text"></span><span class="material-symbols-outlined text-sm opacity-0 group-hover:opacity-60 transition-opacity ml-1" style="font-size:14px;vertical-align:middle">edit</span></span>
 <span id="name-edit-wrap" style="display:none" class="flex-1">
 <input id="name-edit-input" type="text" maxlength="32" class="text-base font-medium text-on-surface bg-surface-container-high rounded px-1 py-0 w-full outline-none border border-primary" />
 </span>
@@ -1284,7 +1284,7 @@ function _updateProfileCard(name, avatarStr) {
   if (name) {
     _myName = name;
     var el = document.getElementById('display-name');
-    if (el) { el.textContent = name; el.style.display = ''; }
+    if (el) { el.querySelector('.display-name-text').textContent = name; el.style.display = ''; }
   }
   if (avatarStr) _applyAvatar(avatarStr);
 }
@@ -1434,7 +1434,7 @@ function _confirmNameEdit() {
     _myName = newName;
     localStorage.setItem(LS_NAME_KEY, _myName);
     localStorage.setItem(LS_CUSTOM_NAME_KEY, '1');
-    document.getElementById('display-name').textContent = _myName;
+    document.querySelector('#display-name .display-name-text').textContent = _myName;
     fetch('/' + _sessionId + '/api/participant/name', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', 'X-Participant-ID': _myUUID },
@@ -1591,7 +1591,7 @@ function _applyState(msg) {
   if (msg.my_name && msg.my_name !== _myName) {
     _myName = _applyHostSuffix(msg.my_name);
     localStorage.setItem(LS_NAME_KEY, _myName);
-    document.getElementById('display-name').textContent = _myName;
+    document.querySelector('#display-name .display-name-text').textContent = _myName;
   }
   // Sync avatar from server
   if (msg.my_avatar) {
