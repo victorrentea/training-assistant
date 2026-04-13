@@ -151,13 +151,17 @@ async def resume_session(body: ResumeSessionRequest):
     folder_name = normalize_session_name(body.folder)
     session_id = _resolve_session_id_for_folder(folder_name)
 
+    root = _get_sessions_root()
+    state = load_session_state(root / folder_name) if root else {}
+    session_type = state.get("mode") or state.get("session_type") or "workshop"
+
     session_pending.put("session_request", {
         "action": "create",
         "name": folder_name,
-        "type": "workshop",
+        "type": session_type,
         "session_id": session_id,
     })
-    announce_session_id(session_id)
+    announce_session_id(session_id, session_type=session_type)
     return SessionStartResponse(session_name=folder_name, session_id=session_id)
 
 
