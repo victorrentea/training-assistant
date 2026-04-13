@@ -168,8 +168,12 @@ body{visibility:hidden}
 </div>
 <!-- Navigation Cluster -->
 <nav class="flex flex-col space-y-2 flex-1 overflow-y-hidden min-h-0" style="row-gap:0.189rem;">
+<a data-nav="activity" onclick="showView('activity')" class="nav-item rounded-full px-2 py-2 flex items-center gap-3 transition-all cursor-pointer">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">bolt</span>
+<span class="text-base">Activity</span>
+</a>
 <div>
-<a data-nav="slides" onclick="toggleSlidesMenu()" class="nav-item nav-active rounded-full px-2 py-2 font-semibold flex items-center gap-3 transition-all cursor-pointer">
+<a data-nav="slides" onclick="toggleSlidesMenu()" class="nav-item rounded-full px-2 py-2 font-semibold flex items-center gap-3 transition-all cursor-pointer">
 <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">slideshow</span>
 <span class="inline-flex items-center gap-1">
 <span class="text-base">Slides</span>
@@ -253,6 +257,12 @@ body{visibility:hidden}
 </aside>
 <!-- MAIN CONTENT (80%) -->
 <main class="flex-1 h-full relative flex flex-col overflow-hidden bg-surface">
+<!-- Activity View -->
+<div id="activity-view" style="display:none" class="h-full flex flex-col items-center justify-center px-16 py-12">
+  <span class="material-symbols-outlined text-6xl mb-4 text-on-surface-variant" style="font-variation-settings: 'FILL' 1;">bolt</span>
+  <p class="text-lg font-semibold text-on-surface-variant">No activity right now</p>
+  <p class="text-sm text-on-surface-variant opacity-60 mt-1">The host will start an activity soon</p>
+</div>
 <!-- AI Summary View -->
 <div id="notes-view" style="display:none;font-size:120%" class="h-full overflow-y-auto px-16 py-12" onscroll="saveScroll('notes',this)">
   <div id="notes-content" class="text-on-surface leading-relaxed whitespace-pre-wrap">Loading…</div>
@@ -489,7 +499,7 @@ var LS = {
   setEmoji:  function(arr)  { localStorage.setItem(LS.EMOJI_PROMOTED, JSON.stringify(arr)); },
   getScroll: function(view) { return localStorage.getItem(LS.scrollKey(view)); },
   setScroll: function(view, val) { localStorage.setItem(LS.scrollKey(view), val); },
-  getView:   function()     { return localStorage.getItem(LS.VIEW) || 'slides'; },
+  getView:   function()     { return localStorage.getItem(LS.VIEW) || 'activity'; },
   setView:   function(name) { localStorage.setItem(LS.VIEW, name); },
   clear:     function()     {
     localStorage.removeItem(LS.EMOJI_PROMOTED);
@@ -1184,7 +1194,7 @@ function scheduleHideOverflow() {
     el.classList.add('opacity-0', 'pointer-events-none', 'translate-y-1');
   }, 120);
 }
-var VIEWS = ['slides', 'summary', 'notes', 'agenda', 'feedback', 'paste', 'upload'];
+var VIEWS = ['activity', 'slides', 'summary', 'notes', 'agenda', 'feedback', 'paste', 'upload'];
 function saveScroll(name, el) {
   LS.setScroll(name, el.scrollTop);
 }
