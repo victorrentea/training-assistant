@@ -1681,6 +1681,7 @@ async function _refreshParticipantState() {
     // Apply name/avatar from state
     if (state.my_name) _updateProfileCard(_applyHostSuffix(state.my_name), null);
     if (state.my_avatar) _applyAvatar(state.my_avatar);
+    _applyState(state);
 
     document.querySelector('[data-nav="agenda"]').style.display = state.has_agenda ? '' : 'none';
     document.querySelector('[data-nav="notes"]').style.display = state.notes_updated_at ? '' : 'none';
