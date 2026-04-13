@@ -367,6 +367,56 @@ body{visibility:hidden}
       if (i === totalPages) section.classList.add('pb-32');
       container.appendChild(section);
       await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+      const annotations = await page.getAnnotations({ intent: 'display' });
+      if (annotations && annotations.length) {
+        const annLayer = document.createElement('div');
+        annLayer.style.cssText = 'position:absolute;inset:0;pointer-events:none;';
+        section.appendChild(annLayer);
+        for (const ann of annotations) {
+          if (!ann || ann.subtype !== 'Link' || !Array.isArray(ann.rect)) continue;
+          const rect = viewport.convertToViewportRectangle(ann.rect);
+          const left = Math.min(rect[0], rect[2]);
+          const top = Math.min(rect[1], rect[3]);
+          const width = Math.abs(rect[0] - rect[2]);
+          const height = Math.abs(rect[1] - rect[3]);
+          if (!(width > 0 && height > 0)) continue;
+          const link = document.createElement('a');
+          link.style.cssText = [
+            'position:absolute',
+            `left:${left}px`,
+            `top:${top}px`,
+            `width:${width}px`,
+            `height:${height}px`,
+            'pointer-events:auto',
+            'cursor:pointer',
+            'background:transparent'
+          ].join(';');
+          if (ann.url || ann.unsafeUrl) {
+            link.href = ann.url || ann.unsafeUrl;
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
+          } else if (ann.dest) {
+            link.href = '#';
+            link.addEventListener('click', async (ev) => {
+              ev.preventDefault();
+              try {
+                const dest = Array.isArray(ann.dest) ? ann.dest : await pdfDoc.getDestination(ann.dest);
+                if (!dest || !dest[0]) return;
+                const pageRef = dest[0];
+                const pageIndex = await pdfDoc.getPageIndex(pageRef);
+                const targetPage = pageIndex + 1;
+                const targetSection = container.querySelector(`section[data-page="${targetPage}"]`);
+                if (targetSection) targetSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              } catch (_) {
+                // Ignore malformed destinations.
+              }
+            });
+          } else {
+            continue;
+          }
+          annLayer.appendChild(link);
+        }
+      }
     }
     updatePageInfo();
   }
