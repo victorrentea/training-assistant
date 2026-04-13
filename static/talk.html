@@ -244,17 +244,13 @@
         _renderedPages = 0;
       }
       pageNum = Math.max(1, Math.min(pageNum || 1, _pdfDoc.numPages));
-      if (pageNum < _renderedPages) {
-        // Host went back — remove pages beyond current
-        const canvases = container.querySelectorAll('canvas');
-        for (let i = pageNum; i < canvases.length; i++) canvases[i].remove();
-        _renderedPages = pageNum;
-      } else {
-        // Render any new pages up to pageNum
-        for (let i = _renderedPages + 1; i <= pageNum; i++) {
+      // Render all pages on first load of this PDF
+      if (_renderedPages === 0) {
+        for (let i = 1; i <= _pdfDoc.numPages; i++) {
           const page = await _pdfDoc.getPage(i);
           const viewport = page.getViewport({ scale: 1.5 });
           const section = document.createElement('section');
+          section.dataset.page = i;
           section.style.cssText = 'position:relative';
           const canvas = document.createElement('canvas');
           canvas.width = viewport.width;
@@ -285,9 +281,11 @@
             }
           }
         }
-        _renderedPages = Math.max(_renderedPages, pageNum);
+        _renderedPages = _pdfDoc.numPages;
       }
-      container.scrollTop = container.scrollHeight;
+      // Scroll to current page
+      const target = container.querySelector(`section[data-page="${pageNum}"]`);
+      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
       if (placeholder) placeholder.style.display = 'none';
     } catch (e) {
       console.error('[talk] PDF render error', e);
