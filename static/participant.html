@@ -14,6 +14,8 @@ body{visibility:hidden}
 #past-slides-badge{background:#9ca3af;transition:background-color 3s ease}
 @keyframes live-blink{0%,100%{opacity:1}50%{opacity:0.2}}
 @keyframes spin{to{transform:rotate(360deg)}}
+@keyframes follow-pulse{0%,100%{border-color:black;background-color:transparent}50%{border-color:var(--color-primary,#4555ba);background-color:var(--color-primary-container,#dfe0ff)}}
+.follow-notify{animation:follow-pulse 1.2s ease-in-out infinite}
 .nav-item{color:var(--color-on-surface-variant,#5e6b70)}
 .nav-item:hover{color:var(--color-on-surface,#161d1f);background-color:var(--color-surface-container-high,#dde3e5)}
 .nav-active{background-color:var(--color-primary-container,#dfe0ff)!important;color:var(--color-on-primary-container,#3747ac)!important;font-weight:600}
@@ -167,7 +169,7 @@ body{visibility:hidden}
 </div>
 </div>
 <!-- Navigation Cluster -->
-<nav class="flex flex-col space-y-2 flex-1 overflow-y-hidden min-h-0" style="row-gap:0.189rem;">
+<nav class="flex flex-col space-y-2 flex-1 overflow-y-hidden min-h-0" style="row-gap:0.189rem;" onmouseenter="clearTimeout(_menuCollapseTimer)" onmouseleave="_startMenuCollapseTimer()">
 <a data-nav="activity" onclick="showView('activity')" class="nav-item rounded-full px-2 py-2 flex items-center gap-3 transition-all cursor-pointer">
 <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">bolt</span>
 <span class="text-base">Activity</span>
@@ -180,7 +182,7 @@ body{visibility:hidden}
 <span class="material-symbols-outlined topics-arrow text-xl transition-transform duration-300">chevron_right</span>
 </span>
 <label for="slides-follow-checkbox" onclick="event.stopPropagation()" class="ml-auto inline-flex items-center gap-1 text-base font-medium whitespace-nowrap cursor-pointer rounded-full px-2 py-1 transition-colors hover:bg-surface-container-high" style="border:1px dotted black;">
-<input id="slides-follow-checkbox" type="checkbox" checked tabindex="-1" onfocus="this.blur()" onchange="if(this.checked)_applyHostSlideFollow(_hostSlidesCurrent).catch(function(){})" style="width:0.8rem;height:0.8rem;accent-color:var(--color-primary,#4555ba);outline:none;box-shadow:none;" />
+<input id="slides-follow-checkbox" type="checkbox" checked tabindex="-1" onfocus="this.blur()" onchange="_onFollowChange(this.checked)" style="width:0.8rem;height:0.8rem;accent-color:var(--color-primary,#4555ba);outline:none;box-shadow:none;" />
 <span>Follow</span>
 </label>
 </a>
@@ -556,6 +558,26 @@ function closePastSlides(options) {
 function openSlides() { openPastSlides(); }
 function closeSlides(options) { closePastSlides(options); }
 var _slideHistoryTimer = null;
+var _menuCollapseTimer = null;
+function _startMenuCollapseTimer() {
+  clearTimeout(_menuCollapseTimer);
+  _menuCollapseTimer = setTimeout(function() {
+    closeTopics();
+    closeRepos();
+    closePastSlides({ focusAllTopics: false });
+  }, 10000);
+}
+function _onFollowChange(checked) {
+  var label = document.querySelector('label[for="slides-follow-checkbox"]');
+  if (label) label.classList.remove('follow-notify');
+  if (!checked) return;
+  if (!_isSlidesViewSelected()) {
+    showView('slides');
+    openTopics();
+  } else {
+    _applyHostSlideFollow(_hostSlidesCurrent).catch(function(){});
+  }
+}
 function _normalizeSlideMatchToken(value) {
   return String(value || '')
     .replace(/\.pptx$/i, '')
@@ -699,7 +721,11 @@ async function _applyHostSlideFollow(slidesCurrent) {
 }
 function _onIncomingHostSlidesCurrent(slidesCurrent) {
   _hostSlidesCurrent = slidesCurrent || null;
-  if (!_isSlidesViewSelected()) return;
+  if (!_isSlidesViewSelected()) {
+    var label = document.querySelector('label[for="slides-follow-checkbox"]');
+    if (label) label.classList.add('follow-notify');
+    return;
+  }
   var key = _hostSlidesCurrentKey(_hostSlidesCurrent);
   if (key === _lastHostSlidesCurrentKey) return;
   _lastHostSlidesCurrentKey = key;
@@ -1265,7 +1291,13 @@ async function selectTopic(el, event, slide) {
   }
 }
 function showView(name) {
-  if (name !== 'slides') closeSlides({ focusAllTopics: false });
+  if (name !== 'slides') {
+    closeSlides({ focusAllTopics: false });
+    var cb = document.getElementById('slides-follow-checkbox');
+    if (cb) cb.checked = false;
+  }
+  var followLabel = document.querySelector('label[for="slides-follow-checkbox"]');
+  if (followLabel) followLabel.classList.remove('follow-notify');
   document.querySelectorAll('.topic-item').forEach(function(n) { n.classList.remove('topic-active'); });
   setActive(name);
   LS.setView(name);
