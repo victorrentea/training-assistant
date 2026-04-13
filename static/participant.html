@@ -833,7 +833,17 @@ function openTopics(options) {
     while (sib) { siblingsH += sib.getBoundingClientRect().height + 8; sib = sib.nextElementSibling; }
     var available = nav.getBoundingClientRect().bottom - list.getBoundingClientRect().top - siblingsH - 4;
     list.style.maxHeight = Math.max(available, 0) + 'px';
-    setTimeout(function() { list.style.overflowY = 'auto'; }, 620);
+    setTimeout(function() {
+      list.style.overflowY = 'auto';
+      var active = document.querySelector('.topic-item.topic-active');
+      if (!active && _activeSlideId) {
+        active = document.querySelector('.topic-item[data-slide-id="' + _activeSlideId + '"]');
+        if (active) active.classList.add('topic-active');
+      }
+      if (active && typeof active.scrollIntoView === 'function') {
+        active.scrollIntoView({ block: 'nearest' });
+      }
+    }, 630);
   });
   arrow.style.transform = 'rotate(90deg)';
 }
