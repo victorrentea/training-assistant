@@ -189,7 +189,7 @@
 </main>
 <!-- Floating Action Button -->
 <div class="fixed bottom-24 right-4 z-50">
-<button class="kinetic-gradient text-on-primary font-bold py-3 px-5 rounded-full flex items-center gap-2 shadow-[0_8px_24px_rgba(163,166,255,0.4)] hover:scale-105 active:scale-95 transition-transform">
+<button onclick="scrollToCurrentSlide()" class="kinetic-gradient text-on-primary font-bold py-3 px-5 rounded-full flex items-center gap-2 shadow-[0_8px_24px_rgba(163,166,255,0.4)] hover:scale-105 active:scale-95 transition-transform">
 <span class="text-lg">Current Slide 🎯</span>
 </button>
 </div>
@@ -283,9 +283,6 @@
         }
         _renderedPages = _pdfDoc.numPages;
       }
-      // Scroll to current page
-      const target = container.querySelector(`section[data-page="${pageNum}"]`);
-      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
       if (placeholder) placeholder.style.display = 'none';
     } catch (e) {
       console.error('[talk] PDF render error', e);
@@ -296,9 +293,16 @@
   var _sessionId = null;
   var _slidesCatalog = [];
   var _ws = null;
+  var _currentPage = 1;
   var _uuid = sessionStorage.getItem('talk_uuid') || (function() {
     var u = crypto.randomUUID(); sessionStorage.setItem('talk_uuid', u); return u;
   })();
+
+  function scrollToCurrentSlide() {
+    var container = document.getElementById('pdf-pages');
+    var target = container && container.querySelector('section[data-page="' + _currentPage + '"]');
+    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
 
   function _getPage(sc) { return sc.page ?? sc.current_page ?? sc.slide ?? 1; }
 
@@ -310,7 +314,8 @@
     if (!sc || !sc.slug) return;
     var slide = _findSlide(sc.slug);
     if (!slide || !slide.url) return;
-    if (window.renderPage) await window.renderPage(slide.url, _getPage(sc));
+    _currentPage = _getPage(sc);
+    if (window.renderPage) await window.renderPage(slide.url, _currentPage);
   }
 
   async function _loadCatalog() {
