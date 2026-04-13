@@ -180,7 +180,8 @@ class DaemonWsClient:
                         self._work_queue.put((msg_type, data))
                 elif msg_type == "slide_log":
                     # Logging can happen on WS thread (no shared state mutation)
-                    log.info("railway", f"slide_log: {data.get('event')} {data.get('slug')}")
+                    _arrow = "↓" if data.get("event", "").endswith("_completed") else "↑"
+                    log.info("railway", f"{_arrow} {data.get('event')} {data.get('slug')}")
         except ConnectionClosed:
             pass
         finally:

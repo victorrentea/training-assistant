@@ -240,14 +240,14 @@ async def do_download(slug: str, url: str) -> Path:
     """
     dest = _cache_path(slug)
     _set_status(slug, "downloading")
-    await _push_log(slug, "download_start", url)
+    await _push_log(slug, "download_slide_start", url)
     try:
         size = await _download_pdf(url, dest)
         downloaded_at = datetime.now(timezone.utc).isoformat()
         _set_status(slug, "cached", size_bytes=size, downloaded_at=downloaded_at)
         size_mb = size / (1024 * 1024)
         size_str = f"{size_mb:.1f} MB" if size_mb >= 1 else f"{size / 1024:.0f} KB"
-        await _push_log(slug, "download_complete", f"Downloaded PDF from Google Drive: {size_str}")
+        await _push_log(slug, "download_slide_completed", f"Downloaded PDF from Google Drive: {size_str}")
         return dest
     except Exception as exc:
         _set_status(slug, "download_failed", error=str(exc))
