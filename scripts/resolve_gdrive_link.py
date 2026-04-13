@@ -68,6 +68,46 @@ def resolve_gdrive_url(local_path: str) -> str | None:
     return f"https://drive.google.com/drive/folders/{cloud_id}"
 
 
+def resolve_gdrive_file_url(local_path: str) -> str | None:
+    """Resolve a local Google Drive file path to a Google Drive web URL (view link)."""
+    dbs = find_drive_dbs()
+    if not dbs:
+        return None
+    mirror_db, meta_db = dbs
+
+    file_name = Path(local_path).name
+
+    conn = sqlite3.connect(f"file:{mirror_db}?mode=ro", uri=True)
+    try:
+        rows = conn.execute(
+            "SELECT stable_id FROM mirror_item WHERE local_filename = ?",
+            (file_name,),
+        ).fetchall()
+    finally:
+        conn.close()
+
+    if not rows:
+        return None
+
+    stable_ids = [r[0] for r in rows]
+
+    conn = sqlite3.connect(f"file:{meta_db}?mode=ro", uri=True)
+    try:
+        placeholders = ",".join("?" for _ in stable_ids)
+        cloud_rows = conn.execute(
+            f"SELECT stable_id, cloud_id FROM stable_ids WHERE stable_id IN ({placeholders})",
+            stable_ids,
+        ).fetchall()
+    finally:
+        conn.close()
+
+    if not cloud_rows:
+        return None
+
+    cloud_id = max(cloud_rows, key=lambda r: r[0])[1]
+    return f"https://drive.google.com/file/d/{cloud_id}/view"
+
+
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         print("Usage: python3 scripts/resolve_gdrive_link.py <local_folder_path>", file=sys.stderr)
