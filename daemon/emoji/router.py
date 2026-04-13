@@ -37,7 +37,14 @@ async def _broadcast_emoji_counters_now() -> None:
     global _last_broadcast_time, _pending_broadcast_handle
     _pending_broadcast_handle = None
     _last_broadcast_time = time.monotonic()
-    broadcast(EmojiCountersUpdatedMsg(counters=dict(participant_state.emoji_counters)))
+    counters = dict(participant_state.emoji_counters)
+    broadcast(EmojiCountersUpdatedMsg(counters=counters))
+    # Persist to session-state.json
+    from daemon.misc.content_files import get_active_session_folder
+    from daemon.session_state import save_session_state
+    folder = get_active_session_folder()
+    if folder:
+        save_session_state(folder, participant_state.snapshot())
 
 
 def _schedule_emoji_broadcast() -> None:

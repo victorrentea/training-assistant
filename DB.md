@@ -74,6 +74,7 @@ git_repos?: list[PersistedGitRepoActivity {
   branch?:string
   files?:list[string]  # File paths opened in this repo+branch
 }]  # Accumulated git file-open events for this session
+emoji_counters?: dict[str, int]  # emoji → cumulative reaction count (talk mode)
 ```
 
 ### `PersistedSessionMeta`
