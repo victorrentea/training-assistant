@@ -170,9 +170,11 @@ body{visibility:hidden}
 <div>
 <a onclick="togglePastSlides()" class="nav-item rounded-full px-2 h-10 flex items-center gap-3 transition-all cursor-pointer">
 <span class="material-symbols-outlined">history</span>
+<span class="inline-flex items-center gap-1">
 <span class="text-base">Past Slides</span>
-<span id="past-slides-badge" class="badge-new ml-auto" style="display:none"></span>
 <span class="material-symbols-outlined past-slides-arrow text-xl transition-transform duration-300">chevron_right</span>
+</span>
+<span id="past-slides-badge" class="badge-new ml-auto" style="display:none"></span>
 </a>
 <div id="slide-history-list" class="mx-2 mt-1 rounded-xl overflow-hidden" style="display:none"></div>
 </div>
