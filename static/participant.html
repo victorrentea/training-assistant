@@ -1811,13 +1811,26 @@ function addAgendaProgress(container) {
   const blocks = Array.from(container.querySelectorAll('p, h1, h2, h3, h4, h5, h6'));
   let sectionEl = null, total = 0, crossed = 0, grandTotal = 0, grandCrossed = 0;
 
+  function makePieSvg(ratio) {
+    const r = 7, cx = 8, cy = 8, size = 16;
+    const bg = 'var(--color-primary-container,#dfe0ff)';
+    const fg = 'var(--color-on-primary-container,#3747ac)';
+    if (ratio <= 0) return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"><circle cx="${cx}" cy="${cy}" r="${r}" fill="${bg}"/></svg>`;
+    if (ratio >= 1) return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"><circle cx="${cx}" cy="${cy}" r="${r}" fill="${fg}"/></svg>`;
+    const angle = ratio * 2 * Math.PI;
+    const x = +(cx + r * Math.sin(angle)).toFixed(3);
+    const y = +(cy - r * Math.cos(angle)).toFixed(3);
+    const large = ratio > 0.5 ? 1 : 0;
+    return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"><circle cx="${cx}" cy="${cy}" r="${r}" fill="${bg}"/><path d="M${cx},${cy} L${cx},${cy-r} A${r},${r} 0 ${large},1 ${x},${y} Z" fill="${fg}"/></svg>`;
+  }
+
   function finishSection() {
     if (!sectionEl) return;
-    const pct = total > 0 ? Math.round(crossed / total * 100) : 0;
-    const badge = document.createElement('span');
-    badge.textContent = pct + '%';
-    badge.style.cssText = 'display:inline-block;margin-left:10px;font-size:0.72rem;font-weight:700;padding:1px 9px;border-radius:999px;background:var(--color-primary-container,#dfe0ff);color:var(--color-on-primary-container,#3747ac);vertical-align:middle';
-    sectionEl.appendChild(badge);
+    const ratio = total > 0 ? crossed / total : 0;
+    const pie = document.createElement('span');
+    pie.innerHTML = makePieSvg(ratio);
+    pie.style.cssText = 'display:inline-block;margin-left:8px;vertical-align:middle;line-height:0';
+    sectionEl.appendChild(pie);
     grandTotal += total;
     grandCrossed += crossed;
     sectionEl = null;
